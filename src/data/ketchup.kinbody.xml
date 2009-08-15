@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<KinBody name="Target">
+  <Body name="body" type="dynamic">
+
+    <Translation>0 0 0</Translation>
+    <Geom type="trimesh">
+      <data>models/objects/ketchup.iv 0.001</data>
+      <Render>models/objects/ketchup.iv 0.001</Render>
+    </Geom>
+  </Body>
+</KinBody>

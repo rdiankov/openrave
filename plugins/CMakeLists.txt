@@ -1,0 +1,34 @@
+if( MSVC )
+  # have to include the module definition file
+  set(PLUGIN_LINK_FLAGS "/DEF:\"${CMAKE_CURRENT_SOURCE_DIR}/openraveplugin.def\"")
+elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+  set(PLUGIN_LINK_FLAGS "")
+endif()
+
+if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+  set(PLUGIN_COMPILE_FLAGS "-fPIC")
+else()
+  set(PLUGIN_COMPILE_FLAGS "")
+endif()
+
+
+add_subdirectory(basemanipulation)
+add_subdirectory(basecontrollers)
+add_subdirectory(baserobots)
+add_subdirectory(basesensors)
+add_subdirectory(basicrrt)
+add_subdirectory(bispace)
+add_subdirectory(bulletrave)
+add_subdirectory(grasper)
+add_subdirectory(ikfastsolvers)
+add_subdirectory(oderave)
+add_subdirectory(logging)
+add_subdirectory(pqprave)
+add_subdirectory(qtcoinrave)
+add_subdirectory(rplanners)
+add_subdirectory(taskcaging)
+
+#add_subdirectory(birrt) # don't install since it is old, not maintained, and buggy
+
+
+

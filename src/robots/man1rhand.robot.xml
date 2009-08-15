@@ -1,0 +1,333 @@
+<!-- Right Hand of simple Man Model by James Kuffner -->
+<Robot name="man1rhand">
+  <KinBody>
+    <Body name="RHand3">
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/RPalm.iv</data>
+        <render>models/man1/complexHands/RPalm.iv</render>
+      </Geom>
+    </Body>
+    <Body name="RThumbBase">
+      <offsetfrom>RHand3</offsetfrom>
+      <translation>0.00739791 -0.0156321 0.0177</translation>
+      <Geom type="box">
+        <diffusecolor>1.0  0.3  0.5</diffusecolor>
+        <extents>0.005 0.005 0.005</extents>
+      </Geom>
+    </Body>
+    <!-- right hand -->
+    <Joint name="JRThumbBase" type="Hinge">
+      <Body>RHand3</Body>
+      <Body>RThumbBase</Body>
+      <offsetfrom>RThumbBase</offsetfrom>
+      <axis>1 0 0</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>1</weight>
+      <maxvel>2</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+    <Body name="RThumbBase2">
+      <offsetfrom>RThumbBase</offsetfrom>
+      <Geom type="box">
+        <diffusecolor>0.5  0.3  1.0</diffusecolor>
+        <extents>0.005 0.005 0.005</extents>
+      </Geom>
+    </Body>
+    <Joint name="JRThumbBase2" type="Hinge">
+      <Body>RThumbBase</Body>
+      <Body>RThumbBase2</Body>
+      <offsetfrom>RThumbBase2</offsetfrom>
+      <axis>0 -1 0</axis>
+      <lostop>-170</lostop>
+      <histop>100</histop>
+      <weight>1</weight>
+      <maxvel>2</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+    <Body name="RThumb0">
+      <offsetfrom>RThumbBase2</offsetfrom>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/RThumb0.iv</data>
+        <render>models/man1/complexHands/RThumb0.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JRThumb0" type="Hinge">
+      <Body>RThumbBase2</Body>
+      <Body>RThumb0</Body>
+      <offsetfrom>RThumb0</offsetfrom>
+      <axis>0 0 -1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>1</weight>
+      <maxvel>2</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+    <Body name="RThumb1">
+      <offsetfrom>RThumb0</offsetfrom>
+      <translation>-0.0081383 -0.046155 0.012558</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/RThumb1.iv</data>
+        <render>models/man1/complexHands/RThumb1.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JRThumb1" type="Hinge">
+      <Body>RThumb0</Body>
+      <Body>RThumb1</Body>
+      <offsetfrom>RThumb1</offsetfrom>
+      <axis>0 0 -1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>1</weight>
+      <maxvel>2</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+    <Body name="RThumb2">
+      <offsetfrom>RThumb1</offsetfrom>
+      <translation>-0.006355 -0.03604 0.009807</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/RThumb2.iv</data>
+        <render>models/man1/complexHands/RThumb2.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JRThumb2" type="Hinge">
+      <Body>RThumb1</Body>
+      <Body>RThumb2</Body>
+      <offsetfrom>RThumb2</offsetfrom>
+      <axis>0 0 -1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>0.5</weight>
+      <maxvel>2</maxvel>
+      <resolution>5</resolution>
+    </Joint>
+    <Body name="RFing40">
+      <offsetfrom>RHand3</offsetfrom>
+      <translation>-0.0123516 -0.0700494 -0.0363</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/RFing40.iv</data>
+        <render>models/man1/complexHands/RFing40.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JRFing40" type="Hinge">
+      <Body>RHand3</Body>
+      <Body>RFing40</Body>
+      <offsetfrom>RFing40</offsetfrom>
+      <axis>0 0 -1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>1</weight>
+      <maxvel>2</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+    <Body name="RFing41">
+      <offsetfrom>RFing40</offsetfrom>
+      <translation>-0.00684694 -0.038831 0</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/RFing41.iv</data>
+        <render>models/man1/complexHands/RFing41.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JRFing41" type="Hinge">
+      <Body>RFing40</Body>
+      <Body>RFing41</Body>
+      <offsetfrom>RFing41</offsetfrom>
+      <axis>0 0 -1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>1</weight>
+      <maxvel>2</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+    <Body name="RFing42">
+      <offsetfrom>RFing41</offsetfrom>
+      <translation>-0.00392792 -0.0222764 0</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/RFing42.iv</data>
+        <render>models/man1/complexHands/RFing42.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JRFing42" type="Hinge">
+      <Body>RFing41</Body>
+      <Body>RFing42</Body>
+      <offsetfrom>RFing42</offsetfrom>
+      <axis>0 0 -1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>0.5</weight>
+      <maxvel>2</maxvel>
+      <resolution>5</resolution>
+    </Joint>
+    <Body name="RFing30">
+      <offsetfrom>RHand3</offsetfrom>
+      <translation>-0.0137286 -0.077859 -0.0186</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/RFing30.iv</data>
+        <render>models/man1/complexHands/RFing30.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JRFing30" type="Hinge">
+      <Body>RHand3</Body>
+      <Body>RFing30</Body>
+      <offsetfrom>RFing30</offsetfrom>
+      <axis>0 0 -1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>1</weight>
+      <maxvel>2</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+    <Body name="RFing31">
+      <offsetfrom>RFing30</offsetfrom>
+      <translation>-0.00819098 -0.0464534 0</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/RFing31.iv</data>
+        <render>models/man1/complexHands/RFing31.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JRFing31" type="Hinge">
+      <Body>RFing30</Body>
+      <Body>RFing31</Body>
+      <offsetfrom>RFing31</offsetfrom>
+      <axis>0 0 -1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>1</weight>
+      <maxvel>2</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+    <Body name="RFing32">
+      <offsetfrom>RFing31</offsetfrom>
+      <translation>-0.00553764 -0.0314055 0</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/RFing32.iv</data>
+        <render>models/man1/complexHands/RFing32.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JRFing32" type="Hinge">
+      <Body>RFing31</Body>
+      <Body>RFing32</Body>
+      <offsetfrom>RFing32</offsetfrom>
+      <axis>0 0 -1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>0.5</weight>
+      <maxvel>2</maxvel>
+      <resolution>5</resolution>
+    </Joint>
+    <Body name="RFing20">
+      <offsetfrom>RHand3</offsetfrom>
+      <translation>-0.0149702 -0.0849003 0</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/RFing20.iv</data>
+        <render>models/man1/complexHands/RFing20.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JRFing20" type="Hinge">
+      <Body>RHand3</Body>
+      <Body>RFing20</Body>
+      <offsetfrom>RFing20</offsetfrom>
+      <axis>0 0 -1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>1</weight>
+      <maxvel>2</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+    <Body name="RFing21">
+      <offsetfrom>RFing20</offsetfrom>
+      <translation>-0.00892898 -0.0506388 0</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/RFing21.iv</data>
+        <render>models/man1/complexHands/RFing21.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JRFing21" type="Hinge">
+      <Body>RFing20</Body>
+      <Body>RFing21</Body>
+      <offsetfrom>RFing21</offsetfrom>
+      <axis>0 0 -1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>1</weight>
+      <maxvel>2</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+    <Body name="RFing22">
+      <offsetfrom>RFing21</offsetfrom>
+      <translation>-0.00570608 -0.0323608 0</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/RFing22.iv</data>
+        <render>models/man1/complexHands/RFing22.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JRFing22" type="Hinge">
+      <Body>RFing21</Body>
+      <Body>RFing22</Body>
+      <offsetfrom>RFing22</offsetfrom>
+      <axis>0 0 -1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>0.5</weight>
+      <maxvel>2</maxvel>
+      <resolution>5</resolution>
+    </Joint>
+    <Body name="RFing10">
+      <offsetfrom>RHand3</offsetfrom>
+      <translation>-0.0150049 -0.0850973 0.02267</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/RFing10.iv</data>
+        <render>models/man1/complexHands/RFing10.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JRFing10" type="Hinge">
+      <Body>RHand3</Body>
+      <Body>RFing10</Body>
+      <offsetfrom>RFing10</offsetfrom>
+      <axis>0 0 -1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>1</weight>
+      <maxvel>2</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+    <Body name="RFing11">
+      <offsetfrom>RFing10</offsetfrom>
+      <translation>-0.00822397 -0.0466405 0</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/RFing11.iv</data>
+        <render>models/man1/complexHands/RFing11.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JRFing11" type="Hinge">
+      <Body>RFing10</Body>
+      <Body>RFing11</Body>
+      <offsetfrom>RFing11</offsetfrom>
+      <axis>0 0 -1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>1</weight>
+      <maxvel>2</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+    <Body name="RFing12">
+      <offsetfrom>RFing11</offsetfrom>
+      <translation>-0.004817 -0.0273186 0</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/RFing12.iv</data>
+        <render>models/man1/complexHands/RFing12.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JRFing12" type="Hinge">
+      <Body>RFing11</Body>
+      <Body>RFing12</Body>
+      <offsetfrom>RFing12</offsetfrom>
+      <axis>0 0 -1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>0.5</weight>
+      <maxvel>2</maxvel>
+      <resolution>5</resolution>
+    </Joint>
+  </KinBody>
+</Robot>

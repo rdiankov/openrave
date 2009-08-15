@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<KinBody name="Lego4">
+  <!-- Possible attributes are: name, type (static, dynamic(def)) -->
+  <Body type="dynamic">
+    <!-- The body transform affects all geometry objects -->
+    <Mass type="mimicgeom">
+      <density>100</density>
+    </Mass>
+
+    <Geom type="box">
+      <diffuseColor>0.5 0 0</diffuseColor>
+      <Translation>0 0 0</Translation>
+      <Extents>0.02 0.01 0.04</Extents>
+    </Geom>
+    <Geom type="cylinder">
+      <diffuseColor>0.5 0 0</diffuseColor>
+      <Translation>-0.01 0.0125 -0.01</Translation>
+      <radius>0.008</radius>
+      <height>0.01</height>
+    </Geom>
+    <Geom type="cylinder">
+      <diffuseColor>0.5 0 0</diffuseColor>
+      <Translation>0.01 0.0125 -0.01</Translation>
+      <radius>0.008</radius>
+      <height>0.01</height>
+    </Geom>
+    <Geom type="cylinder">
+      <diffuseColor>0.5 0 0</diffuseColor>
+      <Translation>-0.01 0.0125 0.01</Translation>
+      <radius>0.008</radius>
+      <height>0.01</height>
+    </Geom>
+    <Geom type="cylinder">
+      <diffuseColor>0.5 0 0</diffuseColor>
+      <Translation>0.01 0.0125 0.01</Translation>
+      <radius>0.008</radius>
+      <height>0.01</height>
+    </Geom>
+    <Geom type="cylinder">
+      <diffuseColor>0.5 0 0</diffuseColor>
+      <Translation>-0.01 0.0125 -0.03</Translation>
+      <radius>0.008</radius>
+      <height>0.01</height>
+    </Geom>
+    <Geom type="cylinder">
+      <diffuseColor>0.5 0 0</diffuseColor>
+      <Translation>0.01 0.0125 -0.03</Translation>
+      <radius>0.008</radius>
+      <height>0.01</height>
+    </Geom>
+    <Geom type="cylinder">
+      <diffuseColor>0.5 0 0</diffuseColor>
+      <Translation>-0.01 0.0125 0.03</Translation>
+      <radius>0.008</radius>
+      <height>0.01</height>
+    </Geom>
+    <Geom type="cylinder">
+      <diffuseColor>0.5 0 0</diffuseColor>
+      <Translation>0.01 0.0125 0.03</Translation>
+      <radius>0.008</radius>
+      <height>0.01</height>
+    </Geom>
+  </Body>
+
+  <ColorDistribution>
+    <gauss>
+      <mean>0.027197     0.12182     0.47464</mean>
+      <covar>0.00085232   0.0011444  0.00085107   0.0011444   0.0024207   0.0020682  0.00085107   0.0020682   0.0031333</covar>
+    </gauss>
+    <gauss>
+      <mean>0.56959      0.5984     0.57889</mean>
+      <covar>0.020583    0.014105 -0.00079025    0.014105    0.011249    0.002861 -0.00079025    0.002861    0.011136</covar>
+    </gauss>
+    <thresh>-35</thresh>
+  </ColorDistribution>
+
+</KinBody>

@@ -1,0 +1,6 @@
+LIBRARY "BiRRT"
+
+EXPORTS
+	ORCreate			@2
+	GetPluginAttributes	@3
+	OpenPlugin @4

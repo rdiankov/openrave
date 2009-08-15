@@ -1,0 +1,213 @@
+<Robot name="PumaBarrett">
+  <!-- include the barrett hand -->
+  <KinBody file="pumaarm.kinbody.xml">
+    <Body name="Puma6">
+      <Geom type="trimesh">
+        <RotationAxis>1 0 0 -90</RotationAxis>
+        <data>models/WAM/wam7.iv 1.0</data>
+        <Render>models/WAM/wam7.iv 1.0</Render>
+      </Geom>
+      <Geom type="trimesh">
+        <Translation>0  0.1515  0</Translation>
+        <RotationMat>-1 0 0 0 -1 0 0 0 1</RotationMat>
+        <RotationAxis>1 0 0 -90</RotationAxis>
+        <data>models/barrett/link1.iv 0.001</data>
+        <Render>models/barrett/link1.iv 0.001</Render>
+      </Geom>
+      <mass type="custom">
+        <total>1.18</total>
+      </mass>
+    </Body>
+
+    <!-- finger 0-->
+    <Body name="Finger0-0" type="dynamic">
+      <offsetfrom>Puma6</offsetfrom>
+      <Translation>0 0.1515 -0.025</Translation>
+      <RotationAxis>1 0 0 -90</RotationAxis>
+      <Geom type="trimesh">
+        <data>models/barrett/link1.iv 0.001</data>
+        <Render>models/barrett/link1.iv 0.001</Render>
+      </Geom>
+    </Body>
+    <Body name="Finger0-1" type="dynamic" >
+      <offsetfrom>Finger0-0</offsetfrom>
+      <Translation>0.05 0 0</Translation>
+      <RotationMat>1 0 0 0 0 -1 0 1 0</RotationMat>
+      <Geom type="trimesh">
+      <Translation>0 0 0</Translation>
+        <data>models/barrett/link2.iv 0.001</data>
+        <Render>models/barrett/link2.iv 0.001</Render>
+      </Geom>
+    </Body>
+    <Joint type="hinge" name="JF1">
+      <Body>Finger0-0</Body>
+      <Body>Finger0-1</Body>
+      <offsetfrom>Finger0-1</offsetfrom>
+      <weight>4</weight>
+      <lostop>0</lostop>
+      <histop>140</histop>
+      <axis>0 1 0</axis>
+      <maxvel>2</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+    <Body name="Finger0-2" type="dynamic" >
+      <offsetfrom>Finger0-1</offsetfrom>
+      <Translation>0.07 0 0</Translation>
+      <RotationMat>1 0 0 0 1 0 0 0 1</RotationMat>
+      <Geom type="trimesh">
+      <Translation>0 0 0</Translation>
+        <data>models/barrett/link3.iv 0.001</data>
+        <Render>models/barrett/link3.iv 0.001</Render>
+      </Geom>
+    </Body>
+    <Joint type="hinge" enable="false" mimic="JF1 0.33333 0.8727">
+      <Body>Finger0-1</Body>
+      <Body>Finger0-2</Body>
+      <offsetfrom>Finger0-2</offsetfrom>
+      <weight>4</weight>
+      <lostop>0</lostop>
+      <histop>90</histop>
+      <axis>0 0 -1</axis>
+      <maxvel>1</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+    <!-- finger 1-->
+    <Body name="Finger1-0" type="dynamic">
+      <offsetfrom>Puma6</offsetfrom>
+      <Translation>0 0.1515 0.025</Translation>
+      <RotationAxis>1 0 0 -90</RotationAxis>
+      <Geom type="trimesh">
+        <data>models/barrett/link1.iv 0.001</data>
+        <Render>models/barrett/link1.iv 0.001</Render>
+      </Geom>
+    </Body>
+    <Body name="Finger1-1" type="dynamic" >
+      <offsetfrom>Finger1-0</offsetfrom>
+      <Translation>0.05 0 0</Translation>
+      <RotationMat>1 0 0 0 0 -1 0 1 0</RotationMat>
+      <Geom type="trimesh">
+      <Translation>0 0 0</Translation>
+        <data>models/barrett/link2.iv 0.001</data>
+        <Render>models/barrett/link2.iv 0.001</Render>
+      </Geom>
+    </Body>
+    <Joint type="hinge" name="JF2">
+      <Body>Finger1-0</Body>
+      <Body>Finger1-1</Body>
+      <offsetfrom>Finger1-1</offsetfrom>
+      <weight>4</weight>
+      <lostop>0</lostop>
+      <histop>140</histop>
+      <axis>0 1 0</axis>
+      <maxvel>2</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+    <Body name="Finger1-2" type="dynamic" >
+      <offsetfrom>Finger1-1</offsetfrom>
+      <Translation>0.07 0 0</Translation>
+      <RotationMat>1 0 0 0 1 0 0 0 1</RotationMat>
+      <Geom type="trimesh">
+      <Translation>0 0 0</Translation>
+        <data>models/barrett/link3.iv 0.001</data>
+        <Render>models/barrett/link3.iv 0.001</Render>
+      </Geom>
+    </Body>
+    <Joint type="hinge" enable="false" mimic="JF2 0.33333 0.8727">
+      <Body>Finger1-1</Body>
+      <Body>Finger1-2</Body>
+      <offsetfrom>Finger1-2</offsetfrom>
+      <weight>4</weight>
+      <lostop>0</lostop>
+      <histop>90</histop>
+      <axis>0 0 -1</axis>
+      <maxvel>1</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+    <!-- finger 2-->
+    <Body name="Finger2-1" type="dynamic" >
+      <offsetfrom>Puma6</offsetfrom>
+      <Translation>-0.05 0.1515 0</Translation>
+      <RotationMat>-1 0 0 0 0 1 0 1 0</RotationMat>
+      <RotationAxis>1 0 0 -90</RotationAxis>
+      <Geom type="trimesh">
+      <Translation>0 0 0</Translation>
+        <data>models/barrett/link2.iv 0.001</data>
+        <Render>models/barrett/link2.iv 0.001</Render>
+      </Geom>
+    </Body>
+    <Joint type="hinge" name="JF3">
+      <Body>Puma6</Body>
+      <Body>Finger2-1</Body>
+      <offsetfrom>Finger2-1</offsetfrom>
+      <weight>4</weight>
+      <lostop>0</lostop>
+      <histop>140</histop>
+      <axis>0 0 1</axis>
+      <maxvel>2</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+    <Body name="Finger2-2" type="dynamic" >
+      <offsetfrom>Finger2-1</offsetfrom>
+      <Translation>0.07 0 0</Translation>
+      <RotationMat>1 0 0 0 1 0 0 0 1</RotationMat>
+      <Geom type="trimesh">
+      <Translation>0 0 0</Translation>
+        <data>models/barrett/link3.iv 0.001</data>
+        <Render>models/barrett/link3.iv 0.001</Render>
+      </Geom>
+    </Body>
+    <Joint type="hinge" enable="false" mimic="JF3 0.33333 0.8727">
+      <Body>Finger2-1</Body>
+      <Body>Finger2-2</Body>
+      <offsetfrom>Finger2-2</offsetfrom>
+      <weight>4</weight>
+      <lostop>0</lostop>
+      <histop>90</histop>
+      <axis>0 0 -1</axis>
+      <maxvel>1</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+    <!-- spread -->
+    <Joint name = "JF4" type="hinge">
+      <Body>Puma6</Body>
+      <Body>Finger0-0</Body>
+      <offsetfrom>Finger0-0</offsetfrom>
+      <weight>4</weight>
+      <lostop>-1</lostop>
+      <histop>181</histop>
+      <axis>0 -1 0</axis>
+      <maxvel>2</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+    <Joint type="hinge" enable="false" mimic="JF4">
+      <Body>Puma6</Body>
+      <Body>Finger1-0</Body>
+      <offsetfrom>Finger1-0</offsetfrom>
+      <weight>4</weight>
+      <axis>0 1 0</axis>
+      <maxvel>2</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+    <!-- add adjacent links -->
+    <adjacent>Finger0-0 Finger1-0</adjacent>
+    <adjacent>Puma6 Finger0-1</adjacent>
+    <adjacent>Puma6 Finger1-1</adjacent>
+    <adjacent>Puma6 Finger2-1</adjacent>
+  </KinBody>
+
+  <Manipulator>
+    <effector>Puma6</effector>
+	<base>Base</base>
+    <armjoints>J0 J1 J2 J3 J4 J5</armjoints>
+    <joints>JF1 JF2 JF3</joints>
+    <!-- joint values of the closed and opened positions -->
+    <opened>0 0 0</opened>
+    <closed>1.0 1.0 1.0</closed>
+    <RotationAxis>1 0 0 -90</RotationAxis>
+    <IkSolver>PUMAikfast</IkSolver>
+  </Manipulator>
+</Robot>

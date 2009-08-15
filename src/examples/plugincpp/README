@@ -1,0 +1,4 @@
+Simple stand-alone OpenRAVE plugin using CMake build system.  To compile, type:
+
+cmake .
+make

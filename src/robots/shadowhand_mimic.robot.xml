@@ -1,0 +1,516 @@
+<Robot name="ShadowHand">
+  <KinBody>
+
+
+    <Body name="palm" type="dynamic">
+      <Geom type="trimesh">
+        <data>models/shadow/palm.iv 0.001</data>
+        <Render>models/shadow/palm.iv 0.001</Render>
+      </Geom>
+      <Geom type="trimesh">
+        <data>models/shadow/MKnuckle.iv 0.001</data>
+        <Render>models/shadow/MKnuckle.iv 0.001</Render>
+      </Geom>
+      <Geom type="trimesh">
+        <data>models/shadow/RKnuckle.iv 0.001</data>
+        <Render>models/shadow/RKnuckle.iv 0.001</Render>
+      </Geom>
+      <Geom type="trimesh">
+        <data>models/shadow/FKnuckle.iv 0.001</data>
+        <Render>models/shadow/FKnuckle.iv 0.001</Render>
+      </Geom>
+    </Body>
+
+<!-- little finger (0) -->
+
+    <Body name="LMeta" type="dynamic">
+      <Geom type="trimesh">
+        <data>models/shadow/LMeta.iv 0.001</data>
+        <Render>models/shadow/LMeta.iv 0.001</Render>
+      </Geom>
+      <Geom type="trimesh">
+        <data>models/shadow/LKnuckle.iv 0.001</data>
+        <Render>models/shadow/LKnuckle.iv 0.001</Render>
+      </Geom>
+    </Body>
+
+    <Body name="Finger0-R" type="dynamic">
+      <Geom type="trimesh">
+        <data>models/shadow/LRotor.iv 0.001</data>
+        <Render>models/shadow/LRotor.iv 0.001</Render>
+      </Geom>
+    </Body>
+
+
+    <Body name="Finger0-0" type="dynamic">
+      <Geom type="trimesh">
+        <data>models/shadow/L3.iv 0.001</data>
+        <Render>models/shadow/L3.iv 0.001</Render>
+      </Geom>
+    </Body>
+
+
+    <Body name="Finger0-1" type="dynamic">
+      <Geom type="trimesh">
+        <data>models/shadow/L2.iv 0.001</data>
+        <Render>models/shadow/L2.iv 0.001</Render>
+      </Geom>
+    </Body>
+
+
+    <Body name="Finger0-2" type="dynamic">
+      <Geom type="trimesh">
+        <data>models/shadow/L1.iv 0.001</data>
+        <Render>models/shadow/L1.iv 0.001</Render>
+      </Geom>
+    </Body>
+
+
+    <Joint type="hinge" name="JF0_1">
+      <Body>palm</Body>
+      <Body>LMeta</Body>
+      <offsetfrom>palm</offsetfrom>
+      <weight>4</weight>
+      <lostop>0</lostop>
+      <histop>40</histop>
+      <axis>-0.8275 0 0.5615</axis>
+      <anchor>0.0451 -0.0059 0.0043</anchor>
+      <maxvel>2</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+   <Joint type="hinge" name="JF0_2">
+      <Body>LMeta</Body>
+      <Body>Finger0-R</Body>
+      <offsetfrom>Finger0-R</offsetfrom>
+      <weight>4</weight>
+      <lostop>-25</lostop>
+      <histop>25</histop>
+      <axis>0 1 0</axis>
+      <anchor>0.0865 -0.0043 0.0204</anchor>
+      <maxvel>2</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+
+
+    <Joint type="hinge" name="JF0_3">
+      <Body>Finger0-R</Body>
+      <Body>Finger0-0</Body>
+      <offsetfrom>Finger0-0</offsetfrom>
+      <weight>4</weight>
+      <lostop>-20</lostop>
+      <histop>90</histop>
+      <axis>0 0 1</axis>
+      <anchor>0.0865 -0.0043 0.0204</anchor>
+      <maxvel>2</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+
+    <Joint type="hinge" name="JF0_4" enable="false" mimic="JF0_3 1.0 0">
+      <Body>Finger0-0</Body>
+      <Body>Finger0-1</Body>
+      <offsetfrom>Finger0-0</offsetfrom>
+      <weight>4</weight>
+      <lostop>0</lostop>
+      <histop>90</histop>
+      <axis>0 0 1</axis>
+      <anchor>0.1315 -0.0043 0.0204</anchor>
+      <maxvel>2</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+    <Joint type="hinge" name="JF0_5" enable="false" mimic="JF0_3 1.0 0">
+      <Body>Finger0-1</Body>
+      <Body>Finger0-2</Body>
+      <offsetfrom>Finger0-0</offsetfrom>
+      <weight>4</weight>
+      <lostop>-20</lostop>
+      <histop>90</histop>
+      <axis>0 0 1</axis>
+      <anchor>0.1572 -0.0043 0.0204</anchor>
+      <maxvel>2</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+<!-- ring finger (1) -->
+
+    <Body name="Finger1-R" type="dynamic">
+      <Geom type="trimesh">
+        <data>models/shadow/RRotor.iv 0.001</data>
+        <Render>models/shadow/RRotor.iv 0.001</Render>
+      </Geom>
+    </Body>
+
+    <Body name="Finger1-0" type="dynamic">
+      <Geom type="trimesh">
+        <data>models/shadow/R3.iv 0.001</data>
+        <Render>models/shadow/R3.iv 0.001</Render>
+      </Geom>
+    </Body>
+
+
+    <Body name="Finger1-1" type="dynamic">
+      <Geom type="trimesh">
+        <data>models/shadow/R2.iv 0.001</data>
+        <Render>models/shadow/R2.iv 0.001</Render>
+      </Geom>
+    </Body>
+
+
+    <Body name="Finger1-2" type="dynamic">
+      <Geom type="trimesh">
+        <data>models/shadow/R1.iv 0.001</data>
+        <Render>models/shadow/R1.iv 0.001</Render>
+      </Geom>
+    </Body>
+
+   <Joint type="hinge" name="JF1_1">
+      <Body>palm</Body>
+      <Body>Finger1-R</Body>
+      <offsetfrom>Finger1-R</offsetfrom>
+      <weight>4</weight>
+      <lostop>-25</lostop>
+      <histop>25</histop>
+      <axis>0 1 0</axis>
+      <anchor>0.0954 -0.0051 -0.0004</anchor>
+      <maxvel>2</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+
+    <Joint type="hinge" name="JF1_2">
+      <Body>Finger1-R</Body>
+      <Body>Finger1-0</Body>
+      <offsetfrom>Finger1-0</offsetfrom>
+      <weight>4</weight>
+      <lostop>-20</lostop>
+      <histop>90</histop>
+      <axis>0 0 1</axis>    
+      <anchor>0.0954 -0.0051 -0.0004</anchor>
+      <maxvel>2</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+
+    <Joint type="hinge" name="JF1_3" enable="false" mimic="JF1_2 1.0 0">
+      <Body>Finger1-0</Body>
+      <Body>Finger1-1</Body>
+      <offsetfrom>Finger1-0</offsetfrom>
+      <weight>4</weight>
+      <lostop>0</lostop>
+      <histop>90</histop>
+      <axis>0 0 1</axis>
+      <anchor>0.1407 -0.0051 -0.0004</anchor>
+      <maxvel>2</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+    <Joint type="hinge" name="JF1_4" enable="false" mimic="JF1_2 1.0 0">
+      <Body>Finger1-1</Body>
+      <Body>Finger1-2</Body>
+      <offsetfrom>Finger1-0</offsetfrom>
+      <weight>4</weight>
+      <lostop>-20</lostop>
+      <histop>90</histop>
+      <axis>0 0 1</axis>
+      <anchor>0.1655 -0.0051 -0.0004</anchor>
+      <maxvel>2</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+
+<!-- middle finger (2) -->
+
+    <Body name="Finger2-R" type="dynamic">
+      <Geom type="trimesh">
+        <data>models/shadow/MRotor.iv 0.001</data>
+        <Render>models/shadow/MRotor.iv 0.001</Render>
+      </Geom>
+    </Body>
+
+    <Body name="Finger2-0" type="dynamic">
+      <Geom type="trimesh">
+        <data>models/shadow/M3.iv 0.001</data>
+        <Render>models/shadow/M3.iv 0.001</Render>
+      </Geom>
+    </Body>
+
+
+    <Body name="Finger2-1" type="dynamic">
+      <Geom type="trimesh">
+        <data>models/shadow/M2.iv 0.001</data>
+        <Render>models/shadow/M2.iv 0.001</Render>
+      </Geom>
+    </Body>
+
+
+    <Body name="Finger2-2" type="dynamic">
+      <Geom type="trimesh">
+        <data>models/shadow/M1.iv 0.001</data>
+        <Render>models/shadow/M1.iv 0.001</Render>
+      </Geom>
+    </Body>
+
+
+   <Joint type="hinge" name="JF2_1">
+      <Body>palm</Body>
+      <Body>Finger2-R</Body>
+      <offsetfrom>Finger2-R</offsetfrom>
+      <weight>4</weight>
+      <lostop>-25</lostop>
+      <histop>25</histop>
+      <axis>0 1 0</axis>
+      <anchor>0.0987   -0.0052   -0.0226</anchor>
+      <maxvel>2</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+    <Joint type="hinge" name="JF2_2">
+      <Body>Finger2-R</Body>
+      <Body>Finger2-0</Body>
+      <offsetfrom>Finger2-0</offsetfrom>
+      <weight>4</weight>
+      <lostop>-20</lostop>
+      <histop>90</histop>
+      <axis>0 0 1</axis>
+      <anchor>0.0987   -0.0052   -0.0226</anchor>
+      <maxvel>2</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+
+    <Joint type="hinge" name="JF2_3" enable="false" mimic="JF2_2 1.0 0">
+      <Body>Finger2-0</Body>
+      <Body>Finger2-1</Body>
+      <offsetfrom>Finger2-0</offsetfrom>
+      <weight>4</weight>
+      <lostop>0</lostop>
+      <histop>90</histop>
+      <axis>0 0 1</axis>
+      <anchor>0.1446   -0.0052   -0.0226</anchor>
+      <maxvel>2</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+    <Joint type="hinge" name="JF2_4" enable="false" mimic="JF2_2 1.0 0">
+      <Body>Finger2-1</Body>
+      <Body>Finger2-2</Body>
+      <offsetfrom>Finger2-0</offsetfrom>
+      <weight>4</weight>
+      <lostop>-20</lostop>
+      <histop>90</histop>
+      <axis>0 0 1</axis>
+      <anchor> 0.1701 -0.0052   -0.0226</anchor>
+      <maxvel>2</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+<!-- index finger (3) -->
+    <Body name="Finger3-R" type="dynamic">
+      <Geom type="trimesh">
+        <data>models/shadow/FRotor.iv 0.001</data>
+        <Render>models/shadow/FRotor.iv 0.001</Render>
+      </Geom>
+    </Body>
+
+    <Body name="Finger3-0" type="dynamic">
+      <Geom type="trimesh">
+        <data>models/shadow/F3.iv 0.001</data>
+        <Render>models/shadow/F3.iv 0.001</Render>
+      </Geom>
+    </Body>
+
+
+    <Body name="Finger3-1" type="dynamic">
+      <Geom type="trimesh">
+        <data>models/shadow/F2.iv 0.001</data>
+        <Render>models/shadow/F2.iv 0.001</Render>
+      </Geom>
+    </Body>
+
+
+    <Body name="Finger3-2" type="dynamic">
+      <Geom type="trimesh">
+        <data>models/shadow/F1.iv 0.001</data>
+        <Render>models/shadow/F1.iv 0.001</Render>
+      </Geom>
+    </Body>
+
+   <Joint type="hinge" name="JF3_1">
+      <Body>palm</Body>
+      <Body>Finger3-R</Body>
+      <offsetfrom>Finger3-R</offsetfrom>
+      <weight>4</weight>
+      <lostop>-25</lostop>
+      <histop>25</histop>
+      <axis>0 1 0</axis>
+      <anchor>0.0960   -0.0050   -0.0445</anchor>
+      <maxvel>2</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+    <Joint type="hinge" name="JF3_2">
+      <Body>Finger3-R</Body>
+      <Body>Finger3-0</Body>
+      <offsetfrom>Finger3-0</offsetfrom>
+      <weight>4</weight>
+      <lostop>-20</lostop>
+      <histop>90</histop>
+      <axis>0 0 1</axis>
+      <anchor>0.0960   -0.0050   -0.0445</anchor>
+      <maxvel>2</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+
+    <Joint type="hinge" name="JF3_3" enable="false" mimic="JF3_2 1.0 0">
+      <Body>Finger3-0</Body>
+      <Body>Finger3-1</Body>
+      <offsetfrom>Finger3-0</offsetfrom>
+      <weight>4</weight>
+      <lostop>0</lostop>
+      <histop>90</histop>
+      <axis>0 0 1</axis>
+      <anchor>0.1410   -0.0050   -0.0445</anchor>
+      <maxvel>2</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+    <Joint type="hinge" name="JF3_4" enable="false" mimic="JF3_2 1.0 0">
+      <Body>Finger3-1</Body>
+      <Body>Finger3-2</Body>
+      <offsetfrom>Finger3-0</offsetfrom>
+      <weight>4</weight>
+      <lostop>-20</lostop>
+      <histop>90</histop>
+      <axis>0 0 1</axis>
+      <anchor>0.1665   -0.0050   -0.0445</anchor>
+      <maxvel>2</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+<!-- thumb (4) -->
+
+    <Body name="Finger4-dummy1" type="dynamic">
+      <Geom type="sphere">
+        <Translation>0.0386 -0.0134 -0.0401</Translation>
+        <radius>0.00013</radius>
+        <diffusecolor>0 0 0.4</diffusecolor>
+      </Geom>
+    </Body>
+
+    <Body name="Finger4-0" type="dynamic">
+      <Geom type="trimesh">
+        <data>models/shadow/TH3.iv 0.001</data>
+        <Render>models/shadow/TH3.iv 0.001</Render>
+      </Geom>
+    </Body>
+
+    <Body name="Finger4-dummy2" type="dynamic">
+      <Geom type="sphere">
+        <Translation>0.0667 -0.0134 -0.0685</Translation>
+        <radius>0.00013</radius>
+        <diffusecolor>0 0 0.4</diffusecolor>
+      </Geom>
+    </Body>
+
+    <Body name="Finger4-1" type="dynamic">
+      <Geom type="trimesh">
+        <data>models/shadow/TH2.iv 0.001</data>
+        <Render>models/shadow/TH2.iv 0.001</Render>
+      </Geom>
+    </Body>
+
+    <Body name="Finger4-2" type="dynamic">
+      <Geom type="trimesh">
+        <data>models/shadow/TH1.iv 0.001</data>
+        <Render>models/shadow/TH1.iv 0.001</Render>
+      </Geom>
+    </Body>
+
+
+    <Joint type="hinge" name="JF4_1">
+      <Body>palm</Body>
+      <Body>Finger4-dummy1</Body>
+      <offsetfrom>Finger4-dummy1</offsetfrom>
+      <weight>4</weight>
+      <lostop>-60</lostop>
+      <histop>60</histop>
+      <axis>0.7071 0 -0.7071</axis>
+      <anchor>0.0386 -0.0134 -0.0401</anchor>
+      <maxvel>2</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+
+    <Joint type="hinge" name="JF4_2">
+      <Body>Finger4-dummy1</Body>
+      <Body>Finger4-0</Body>
+      <offsetfrom>Finger4-0</offsetfrom>
+      <weight>4</weight>
+      <lostop>0</lostop>
+      <histop>80</histop>
+      <axis>0.7071 0 0.7071</axis>
+      <anchor>0.0386 -0.0134 -0.0401</anchor>
+      <maxvel>2</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+
+    <Joint type="hinge" name="JF4_3">
+      <Body>Finger4-0</Body>
+      <Body>Finger4-dummy2</Body>
+      <offsetfrom>Finger4-dummy2</offsetfrom>
+      <weight>4</weight>
+      <lostop>-15</lostop>
+      <histop>15</histop>
+      <axis>0.7071 0 0.7071</axis>
+      <anchor>0.0667 -0.0134 -0.0685</anchor>
+      <maxvel>2</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+   <Joint type="hinge" name="JF4_4">
+      <Body>Finger4-dummy2</Body>
+      <Body>Finger4-1</Body>
+      <offsetfrom>Finger4-1</offsetfrom>
+      <weight>4</weight>
+      <lostop>-40</lostop>
+      <histop>40</histop>
+      <axis>0 1 0</axis>
+      <anchor>0.0667 -0.0134 -0.0685</anchor>
+      <maxvel>2</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+    <Joint type="hinge" name="JF4_5" enable="false" mimic="JF4_4 1.0 0">
+      <Body>Finger4-1</Body>
+      <Body>Finger4-2</Body>
+      <offsetfrom>Finger4-2</offsetfrom>
+      <weight>4</weight>
+      <lostop>-20</lostop>
+      <histop>90</histop>
+      <axis>0 1 0</axis>
+      <anchor>0.0901 -0.0133 -0.0934</anchor>
+      <maxvel>2</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+  </KinBody>
+  <Controller>IdealController</Controller>
+
+
+  <Manipulator>
+    <base>palm</base>
+    <effector>palm</effector>
+    <Translation>0.06 -0.025 -0.015</Translation>
+    <joints>JF0_3 JF1_2 JF2_2 JF3_2 JF4_4</joints>
+    <opened>0.0 0.0 0.0 0.0 0.0</opened>
+    <closed>1.0 1.0 1.0 1.0 1.0</closed>
+  </Manipulator>
+
+
+</Robot>
+

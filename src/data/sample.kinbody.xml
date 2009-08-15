@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!-- Create a KinBody with a name TestChain. Note that the name is
+     ignored when opening with KinBody::Init because it is an 'instance' variable
+-->
+<KinBody name="TestChain">
+  <!-- Possible attributes are: name, type (static, dynamic(def)) -->
+  <Body name="Body1" type="dynamic">
+    <!-- The body transform affects all geometry objects -->
+    <Translation>0 0 0</Translation>
+    <RotationAxis>1 0 0 0</RotationAxis>
+
+    <!-- possible mass types
+      mimicgeom - <density>. Adds a mass equivalent to all the geometry
+	    objects. trimesh and plane are not supported.
+	    box - <density>(or <mass>), <extents> Adds a simple box
+        sphere - <density>(or <mass>), <radius>
+     -->
+    <Mass type="mimicgeom">
+      <density>1000</density>
+    </Mass>
+    <!-- All geom types have Rotation(Mat/Quat), Translation, and Render components
+      Possible geom types are box, sphere, trimesh, plane.
+  	  *box - extents
+	    *sphere - radius
+	    *cylinder - radius, height (axis is along y)
+	    *trimesh - data
+	    *plane - <eqn>(a,b,c,d) such that a*x+b*y+c*z+d=0 (Rotation and Translation are ignored) -->
+    <Geom type="box">
+      <Extents>1 1 1</Extents>
+      <Translation>1 0 0</Translation>
+      <!-- rotation axis: axis_x axis_y axis_z angle(degrees)
+           quat: w x y z
+      -->
+      <RotationAxis>0 1 0 45</RotationAxis>
+     </Geom>
+    <Geom type="box">
+      <Extents>2 1 2</Extents>
+      <Translation>0 1 0</Translation>
+      <RotationMat>1 0 0 0 1 0 0 0 1</RotationMat>
+    </Geom>
+
+    <!-- Special command for hierarchies(body cannot be static) offsetfrom: bodyname -->
+  </Body>
+  <Body name="Body2" type="dynamic">
+    <Mass type="mimicgeom">
+      <density>0.1</density>
+    </Mass>
+    <Geom type="sphere">
+      <Render>models/objects/coffeepot.iv</Render>
+      <Translation>0 -1.5 0</Translation>
+      <Radius>1.5</Radius>
+    </Geom>
+    <Geom type="trimesh">
+      <Render>models/objects/cup.iv 0.01</Render>
+      <data>models/objects/cup.iv 0.01</data>
+      <Translation>1.5 -2 0</Translation>
+    </Geom>
+  </Body>
+
+  <!-- Any bodies mentioned in the joints have to already be specified. Possible joint types are: hinge, slider,
+    universal, hinge2, and amotor.
+	  For amotors, can specify mode, axis1, axis2, axis3. For each axis, for 3 values are the axis
+	  and the last value is the relative coord system (see ODE documentation).
+	  Every joint can have certain properties:
+      <lostop>, <histop>, and <maxforce> are in number of degrees of freedom.
+      <maxvel>, <resolution>, <damping>, <stiffness> are scalar and apply to all DOFs.
+   -->
+  <Joint name="j1" type="hinge">
+    <!-- Weight for configuration distance, for joints with > 1 DOF, specify 2+ values (<>1.0 2.0</>) -->
+    <Weight>1.0</Weight>
+    <Anchor>0 0 0</Anchor>
+    <Axis>0 1 0</Axis>
+    <!-- Names are not case sensitive -->
+    <Body>Body1</Body>
+    <Body>Body2</Body>
+  </Joint>
+
+</KinBody>

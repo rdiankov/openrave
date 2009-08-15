@@ -1,0 +1,135 @@
+<Robot>
+  <KinBody name="Test1">
+
+    <Body name="Base" type="dynamic">
+      <Translation>0.0  0.0  0.0</Translation>
+      <Geom type="cylinder">
+        <radius>0.03</radius>
+        <height>0.02</height>
+        <diffuseColor>0.05 0.05 0.05</diffuseColor>
+      </Geom>
+    </Body>
+
+	<Body name="Arm0" type="dynamic">
+	  <offsetfrom>Base</offsetfrom>
+      <Translation>0 0.005 0</Translation>
+      <Geom type="box">
+        <Translation>0.08 0 0</Translation>
+        <Extents>0.08 0.005 0.01</Extents>
+      </Geom>
+    </Body>
+
+    <Joint type="hinge">
+      <Body>Base</Body>
+      <Body>Arm0</Body>
+      <offsetfrom>Arm0</offsetfrom>
+      <weight>4</weight>
+      <lostop>-90</lostop>
+      <histop>270</histop>
+      <axis>0 1 0</axis>
+      <maxvel>3</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+    <Body name="Arm1" type="dynamic">
+	  <offsetfrom>Arm0</offsetfrom>
+      <Translation>0.14 0.01 0</Translation>
+      <Geom type="box">
+        <Translation>0.08 0.0 0</Translation>
+        <Extents>0.08 0.005 0.0075</Extents>
+      </Geom>
+    </Body>
+
+    <Joint type="hinge">
+      <Body>Arm0</Body>
+      <Body>Arm1</Body>
+      <offsetfrom>Arm1</offsetfrom>
+      <weight>3</weight>
+      <lostop>-180</lostop>
+      <histop>180</histop>
+      <axis>0 1 0</axis>
+      <maxvel>4</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+    <Body name="Arm2" type="dynamic">
+	  <offsetfrom>Arm1</offsetfrom>
+      <Translation>0.14 -0.01 0</Translation>
+      <Geom type="box">
+        <Translation>0.04 0 0</Translation>
+        <Extents>0.04 0.005 0.005</Extents>
+      </Geom>
+    </Body>
+
+    <Joint type="hinge">
+      <Body>Arm1</Body>
+      <Body>Arm2</Body>
+      <offsetfrom>Arm2</offsetfrom>
+      <weight>3</weight>
+      <lostop>-180</lostop>
+      <histop>180</histop>
+      <axis>0 1 0</axis>
+      <maxvel>2</maxvel>
+      <resolution>2</resolution>
+    </Joint>
+
+    <!-- Manipulator -->
+    <Body name="RClaw" type="dynamic">
+	  <offsetfrom>Arm2</offsetfrom>
+      <Translation>0.06 0.005 0</Translation>
+      <RotationMat>0 0 1 -1 0 0 0 1 0</RotationMat>
+      <Geom type="trimesh">
+        <Data>models/puma/RClaw.iv</Data>
+        <Render>models/puma/RClaw.iv</Render>
+      </Geom>
+    </Body>
+
+    <Joint name="j1" type="hinge">
+      <Body>Arm2</Body>
+      <Body>RClaw</Body>
+      <offsetfrom>RClaw</offsetfrom>
+      <weight>0.2</weight>
+      <lostop>-56</lostop>
+      <histop>16</histop>
+      <axis>0 1 0</axis>
+      <maxvel>0.4</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+
+    <Body name="LClaw" type="dynamic">
+	  <Translation>0.06 0.005 0</Translation>
+	  <offsetfrom>Arm2</offsetfrom>
+      <RotationMat>0 0 1 -1 0 0 0 1 0</RotationMat>
+      <Geom type="trimesh">
+        <Data>models/puma/LClaw.iv</Data>
+        <Render>models/puma/LClaw.iv</Render>
+      </Geom>
+    </Body>
+
+    <Joint name="j2" type="hinge">
+      <Body>Arm2</Body>
+      <Body>LClaw</Body>
+      <offsetfrom>LClaw</offsetfrom>
+      <weight>0.2</weight>
+      <lostop>-56</lostop>
+      <histop>16</histop>
+      <axis>0 -1 0</axis>
+      <maxvel>0.4</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+  </KinBody>
+
+  <Manipulator>
+    <effector>Arm2</effector>
+	<base>Base</base>
+    <joints>j1 j2</joints>
+    <armjoints>Arm0 Arm1 Arm2</armjoints>
+    <iksolver>MyTriDOFSolver</iksolver>
+    <!-- joint values of the closed and opened positions -->
+    <closed>2 2</closed>
+    <opened>-40 -40</opened>
+    <!-- grasp goal with respect to the effector -->
+    <Translation>0.125 0 0</Translation>
+    <RotationAxis>1 0 0 90</RotationAxis>
+  </Manipulator>
+</Robot>

@@ -1,0 +1,51 @@
+OpenRAVE - Open-source Robotics and Animation Virtual Environment (under the LGPL)
+
+Linux/MacOSX
+============
+
+Read the wiki at http://openrave.programmingvision.com/ for installation for the required packages.
+
+make
+make install
+
+This will install everything in ${CURRENT_SOURCE_DIR}/localinstall where CURRENT_SOURCE_DIR is the directory make is called in. To change the install path use
+
+make prefix=/usr/local
+
+On older cmake builds (version <= 2.4.3), the build could fail because libopenrave.so could not be found. There seems to be a possible issue with creating the symbolic link libopenrave.so in build/src. If this happens, create the symbolic link manually in that directory from build/src/libopenrave.so.X
+
+Windows
+=======
+
+Make sure Visual Studio is installed.
+Download cmake from http://www.cmake.org. When installing, make to click the option to put it in the environment path.
+
+Run runcmake_win.bat, this will create a build folder with visual studio project files in it. Open openrave.sln and compile the Release configuration.
+
+CMake Configure Options
+=======================
+
+The OpenRAVE build can be configured in several ways. When executing cmake (see Makefile for example), use these options:
+
+QTCOINBUILD - Enable SoQt viewer (default is on). When disabled, OpenRAVE can compile without Coin3D and Qt libraries.
+ENABLE_FFMPEG - Enable ffmpeg suite library (default is on)
+PLUGINS - Build all the pluings (default is on)
+DOUBLE_PRECISION - Use double precision (default is off)
+
+
+Environment Variables
+=====================
+
+Before running openrave, some environment variables have to be set. These environment variables control where openrave looks for plugins and data files.
+
+Example for linux bash use (can put it ~/.bashrc):
+export OPENRAVE_PLUGINS=/usr/local/share/openrave/plugins:/my/other/plugins/dir
+export OPENRAVE_DATA=/usr/local/share/openrave:/my/other/data/dir
+
+Example for windows:
+OPENRAVE_PLUGINS="C:\openrave\bin\plugins":"C:\my\other\plugins\dir"
+OPENRAVE_DATA="C:\openrave\data":"C:\my\other\data\dir"
+
+Note that mulitple directories can be set by separating them with ':'. If any of the variables are not set, OpenRAVE will use the default installation directories.
+
+Once everything is compiled, in the visual studio solution explorer build the project named INSTALL. This will install all files to c:\program files\openrave. Go to c:\program files\openrave\bin and run openrave

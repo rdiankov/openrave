@@ -1,0 +1,107 @@
+<!-- Manus Arm End-effector from Exact Dynamics BV -->
+<Robot name="ManusHand">
+  <KinBody>
+    <Body name="hand-base" type="dynamic">
+      <Translation>0.3119275 0.5599238 1.2538517</Translation>
+      <RotationAxis>1 0 0 90</RotationAxis>
+      <Geom type="trimesh">
+        <Render>models/manusarm/hand-base.wrl 0.001</Render>
+        <data>models/manusarm/hand-base.wrl 0.001</data>
+      </Geom>
+    </Body>
+    <Body name="hand-proximal-r" type="dynamic">
+      <Translation>-0.0285686 0.0621171 0</Translation>
+      <RotationAxis>0 0 1 90</RotationAxis>
+      <RotationAxis>0 1 0 -90</RotationAxis>
+      <offsetfrom>hand-base</offsetfrom>
+      <Geom type="trimesh">
+        <Render>models/manusarm/hand-proximal-b.wrl 0.001</Render>
+        <data>models/manusarm/hand-proximal-b.wrl 0.001</data>
+      </Geom>
+    </Body>
+    <Body name="hand-proximal-l" type="dynamic">
+      <Translation>0.0285686 0.0621171 0</Translation>
+      <RotationAxis>0 0 1 90</RotationAxis>
+      <RotationAxis>0 1 0 90</RotationAxis>
+      <offsetfrom>hand-base</offsetfrom>
+      <Geom type="trimesh">
+        <Render>models/manusarm/hand-proximal-b.wrl 0.001</Render>
+        <data>models/manusarm/hand-proximal-b.wrl 0.001</data>
+      </Geom>
+    </Body>
+    <Body name="hand-distal-r" type="dynamic">
+      <Translation>-0.0285686 0.1261 0</Translation>
+      <RotationAxis>0 0 1 90</RotationAxis>
+      <RotationAxis>0 1 0 90</RotationAxis>
+      <RotationAxis>0 0 1 -90</RotationAxis>
+      <offsetfrom>hand-base</offsetfrom>
+      <Geom type="trimesh">
+        <Render>models/manusarm/hand-distal.wrl 0.001</Render>
+        <data>models/manusarm/hand-distal.wrl 0.001</data>
+      </Geom>
+    </Body>
+    <Body name="hand-distal-l" type="dynamic">
+      <Translation>0.0285686 0.1261 0</Translation>
+      <RotationAxis>0 0 1 90</RotationAxis>
+      <RotationAxis>0 1 0 -90</RotationAxis>
+      <RotationAxis>0 0 1 90</RotationAxis>
+      <offsetfrom>hand-base</offsetfrom>
+      <Geom type="trimesh">
+        <Render>models/manusarm/hand-distal.wrl 0.001</Render>
+        <data>models/manusarm/hand-distal.wrl 0.001</data>
+      </Geom>
+    </Body>
+    <Joint name="J-gripper" type="hinge">
+      <Body>hand-base</Body>
+      <Body>hand-proximal-r</Body>
+      <offsetfrom>hand-proximal-r</offsetfrom>
+      <weight>1</weight>
+      <lostop>-45</lostop>
+      <histop>6</histop>
+      <axis>0 0 1</axis>
+      <maxvel>1</maxvel>
+      <resolution>4</resolution>
+    </Joint>
+    <Joint type="hinge" enable="false" mimic="J-gripper 1 0">
+      <Body>hand-proximal-r</Body>
+      <Body>hand-distal-r</Body>
+      <offsetfrom>hand-distal-r</offsetfrom>
+      <weight>1</weight>
+      <lostop>-179</lostop>
+      <histop>179</histop>
+      <axis>0 1 0</axis>
+      <maxvel>1</maxvel>
+      <resolution>4</resolution>
+    </Joint>
+    <Joint type="hinge" enable="false" mimic="J-gripper 1 0">
+      <Body>hand-base</Body>
+      <Body>hand-proximal-l</Body>
+      <offsetfrom>hand-proximal-l</offsetfrom>
+      <weight>1</weight>
+      <lostop>-179</lostop>
+      <histop>179</histop>
+      <axis>0 0 -1</axis>
+      <maxvel>1</maxvel>
+      <resolution>4</resolution>
+    </Joint>
+    <Joint type="hinge" enable="false" mimic="J-gripper 1 0">
+      <Body>hand-proximal-l</Body>
+      <Body>hand-distal-l</Body>
+      <offsetfrom>hand-distal-l</offsetfrom>
+      <weight>1</weight>
+      <lostop>-179</lostop>
+      <histop>179</histop>
+      <axis>0 1 0</axis>
+      <maxvel>1</maxvel>
+      <resolution>4</resolution>
+    </Joint>
+  </KinBody>
+  
+  <Manipulator>
+    <base>hand-base</base>
+    <effector>hand-base</effector>
+    <joints>J-gripper</joints>
+    <opened>-0.78</opened>
+    <closed>0.1</closed>
+  </Manipulator>
+</Robot>

@@ -1,0 +1,333 @@
+<!-- Left Hand of simple Man Model by James Kuffner -->
+<Robot name="man1lhand">
+  <KinBody>
+    <Body name="LHand3">
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/LPalm.iv</data>
+        <render>models/man1/complexHands/LPalm.iv</render>
+      </Geom>
+    </Body>
+    <Body name="LThumbBase">
+      <offsetfrom>LHand3</offsetfrom>
+      <translation>-0.00739791 -0.0156321 0.0177</translation>
+      <Geom type="box">
+        <diffusecolor>1.0  0.3  0.5</diffusecolor>
+        <extents>0.005 0.005 0.005</extents>
+      </Geom>
+    </Body>
+    <!-- left hand -->
+    <Joint name="JLThumbBase" type="Hinge">
+      <Body>LHand3</Body>
+      <Body>LThumbBase</Body>
+      <offsetfrom>LThumbBase</offsetfrom>
+      <axis>1 0 0</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>1</weight>
+      <maxvel>2</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+    <Body name="LThumbBase2">
+      <offsetfrom>LThumbBase</offsetfrom>
+      <Geom type="box">
+        <diffusecolor>0.5  0.3  1.0</diffusecolor>
+        <extents>0.005 0.005 0.005</extents>
+      </Geom>
+    </Body>
+    <Joint name="JLThumbBase2" type="Hinge">
+      <Body>LThumbBase</Body>
+      <Body>LThumbBase2</Body>
+      <offsetfrom>LThumbBase2</offsetfrom>
+      <axis>0 1 0</axis>
+      <lostop>-100</lostop>
+      <histop>170</histop>
+      <weight>1</weight>
+      <maxvel>2</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+    <Body name="LThumb0">
+      <offsetfrom>LThumbBase2</offsetfrom>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/LThumb0.iv</data>
+        <render>models/man1/complexHands/LThumb0.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JLThumb0" type="Hinge">
+      <Body>LThumbBase2</Body>
+      <Body>LThumb0</Body>
+      <offsetfrom>LThumb0</offsetfrom>
+      <axis>0 0 1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>1</weight>
+      <maxvel>2</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+    <Body name="LThumb1">
+      <offsetfrom>LThumb0</offsetfrom>
+      <translation>0.0081383 -0.046155 0.012558</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/LThumb1.iv</data>
+        <render>models/man1/complexHands/LThumb1.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JLThumb1" type="Hinge">
+      <Body>LThumb0</Body>
+      <Body>LThumb1</Body>
+      <offsetfrom>LThumb1</offsetfrom>
+      <axis>0 0 1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>1</weight>
+      <maxvel>2</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+    <Body name="LThumb2">
+      <offsetfrom>LThumb1</offsetfrom>
+      <translation>0.006355 -0.036043 0.0098067</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/LThumb2.iv</data>
+        <render>models/man1/complexHands/LThumb2.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JLThumb2" type="Hinge">
+      <Body>LThumb1</Body>
+      <Body>LThumb2</Body>
+      <offsetfrom>LThumb2</offsetfrom>
+      <axis>0 0 1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>0.5</weight>
+      <maxvel>2</maxvel>
+      <resolution>5</resolution>
+    </Joint>
+    <Body name="LFing40">
+      <offsetfrom>LHand3</offsetfrom>
+      <translation>0.0123516 -0.0700494 -0.0363</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/LFing40.iv</data>
+        <render>models/man1/complexHands/LFing40.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JLFing40" type="Hinge">
+      <Body>LHand3</Body>
+      <Body>LFing40</Body>
+      <offsetfrom>LFing40</offsetfrom>
+      <axis>0 0 1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>1</weight>
+      <maxvel>2</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+    <Body name="LFing41">
+      <offsetfrom>LFing40</offsetfrom>
+      <translation>0.00684694 -0.038831 0</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/LFing41.iv</data>
+        <render>models/man1/complexHands/LFing41.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JLFing41" type="Hinge">
+      <Body>LFing40</Body>
+      <Body>LFing41</Body>
+      <offsetfrom>LFing41</offsetfrom>
+      <axis>0 0 1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>1</weight>
+      <maxvel>2</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+    <Body name="LFing42">
+      <offsetfrom>LFing41</offsetfrom>
+      <translation>0.0039279 -0.0222763 0</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/LFing42.iv</data>
+        <render>models/man1/complexHands/LFing42.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JLFing42" type="Hinge">
+      <Body>LFing41</Body>
+      <Body>LFing42</Body>
+      <offsetfrom>LFing42</offsetfrom>
+      <axis>0 0 1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>0.5</weight>
+      <maxvel>2</maxvel>
+      <resolution>5</resolution>
+    </Joint>
+    <Body name="LFing30">
+      <offsetfrom>LHand3</offsetfrom>
+      <translation>0.0137286 -0.077859 -0.0186</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/LFing30.iv</data>
+        <render>models/man1/complexHands/LFing30.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JLFing30" type="Hinge">
+      <Body>LHand3</Body>
+      <Body>LFing30</Body>
+      <offsetfrom>LFing30</offsetfrom>
+      <axis>0 0 1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>1</weight>
+      <maxvel>2</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+    <Body name="LFing31">
+      <offsetfrom>LFing30</offsetfrom>
+      <translation>0.00819098 -0.0464534 0</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/LFing31.iv</data>
+        <render>models/man1/complexHands/LFing31.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JLFing31" type="Hinge">
+      <Body>LFing30</Body>
+      <Body>LFing31</Body>
+      <offsetfrom>LFing31</offsetfrom>
+      <axis>0 0 1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>1</weight>
+      <maxvel>2</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+    <Body name="LFing32">
+      <offsetfrom>LFing31</offsetfrom>
+      <translation>0.00553764 -0.0314055 0</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/LFing32.iv</data>
+        <render>models/man1/complexHands/LFing32.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JLFing32" type="Hinge">
+      <Body>LFing31</Body>
+      <Body>LFing32</Body>
+      <offsetfrom>LFing32</offsetfrom>
+      <axis>0 0 1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>0.5</weight>
+      <maxvel>2</maxvel>
+      <resolution>5</resolution>
+    </Joint>
+    <Body name="LFing20">
+      <offsetfrom>LHand3</offsetfrom>
+      <translation>0.0149702 -0.0849003 0</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/LFing20.iv</data>
+        <render>models/man1/complexHands/LFing20.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JLFing20" type="Hinge">
+      <Body>LHand3</Body>
+      <Body>LFing20</Body>
+      <offsetfrom>LFing20</offsetfrom>
+      <axis>0 0 1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>1</weight>
+      <maxvel>2</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+    <Body name="LFing21">
+      <offsetfrom>LFing20</offsetfrom>
+      <translation>0.00892898 -0.0506388 0</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/LFing21.iv</data>
+        <render>models/man1/complexHands/LFing21.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JLFing21" type="Hinge">
+      <Body>LFing20</Body>
+      <Body>LFing21</Body>
+      <offsetfrom>LFing21</offsetfrom>
+      <axis>0 0 1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>1</weight>
+      <maxvel>2</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+    <Body name="LFing22">
+      <offsetfrom>LFing21</offsetfrom>
+      <translation>0.00570608 -0.0323608 0</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/LFing22.iv</data>
+        <render>models/man1/complexHands/LFing22.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JLFing22" type="Hinge">
+      <Body>LFing21</Body>
+      <Body>LFing22</Body>
+      <offsetfrom>LFing22</offsetfrom>
+      <axis>0 0 1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>0.5</weight>
+      <maxvel>2</maxvel>
+      <resolution>5</resolution>
+    </Joint>
+    <Body name="LFing10">
+      <offsetfrom>LHand3</offsetfrom>
+      <translation>0.0150049 -0.0850973 0.02267</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/LFing10.iv</data>
+        <render>models/man1/complexHands/LFing10.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JLFing10" type="Hinge">
+      <Body>LHand3</Body>
+      <Body>LFing10</Body>
+      <offsetfrom>LFing10</offsetfrom>
+      <axis>0 0 1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>1</weight>
+      <maxvel>2</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+    <Body name="LFing11">
+      <offsetfrom>LFing10</offsetfrom>
+      <translation>0.00822397 -0.0466405 0</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/LFing11.iv</data>
+        <render>models/man1/complexHands/LFing11.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JLFing11" type="Hinge">
+      <Body>LFing10</Body>
+      <Body>LFing11</Body>
+      <offsetfrom>LFing11</offsetfrom>
+      <axis>0 0 1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>1</weight>
+      <maxvel>2</maxvel>
+      <resolution>3</resolution>
+    </Joint>
+    <Body name="LFing12">
+      <offsetfrom>LFing11</offsetfrom>
+      <translation>0.004817 -0.0273186 0</translation>
+      <Geom type="trimesh">
+        <data>models/man1/complexHands/LFing12.iv</data>
+        <render>models/man1/complexHands/LFing12.iv</render>
+      </Geom>
+    </Body>
+    <Joint name="JLFing12" type="Hinge">
+      <Body>LFing11</Body>
+      <Body>LFing12</Body>
+      <offsetfrom>LFing12</offsetfrom>
+      <axis>0 0 1</axis>
+      <lostop>-100</lostop>
+      <histop>100</histop>
+      <weight>0.5</weight>
+      <maxvel>2</maxvel>
+      <resolution>5</resolution>
+    </Joint>
+  </KinBody>
+</Robot>

@@ -1,0 +1,51 @@
+<KinBody name="ikeashelf">
+<Body>
+  <!-- horizontal shelf -->
+  <Geom type="box">
+    <Translation>0 0 1.050</Translation>
+    <extents>0.14 0.4 0.01</extents>
+    <diffusecolor>0.4 0 0.1</diffusecolor>
+  </Geom>
+  <Geom type="box">
+    <Translation>0 0 0.764</Translation>
+    <extents>0.14 0.4 0.01</extents>
+    <diffusecolor>0.4 0 0.1</diffusecolor>
+  </Geom>
+  <Geom type="box">
+    <Translation>0 0 0.467</Translation>
+    <extents>0.14 0.4 0.01</extents>
+    <diffusecolor>0.4 0 0.1</diffusecolor>
+  </Geom>
+    <Geom type="box">
+    <Translation>0 0 0.095</Translation>
+    <extents>0.14 0.4 0.01</extents>
+    <diffusecolor>0.4 0 0.1</diffusecolor>
+  </Geom>
+  <!-- vertical -->
+  <Geom type="box">
+    <Translation>0 0.39 0.53</Translation>
+    <extents>0.14 0.01 0.53</extents>
+    <diffusecolor>0.4 0 0.1</diffusecolor>
+  </Geom>
+  <Geom type="box">
+    <Translation>0 -0.39 0.53</Translation>
+    <extents>0.14 0.01 0.53</extents>
+    <diffusecolor>0.4 0 0.1</diffusecolor>
+  </Geom>
+  <Geom type="box">
+    <Translation>-0.13 0 0.53</Translation>
+    <extents>0.01 0.4 0.53</extents>
+    <diffusecolor>0.4 0 0.1</diffusecolor>
+  </Geom>
+  <Geom type="box">
+    <Translation>0.1 0 0.0425</Translation>
+    <extents>0.01 0.4 0.0425</extents>
+    <diffusecolor>0.4 0 0.1</diffusecolor>
+  </Geom>
+</Body>
+<visiontracking>
+   <pretranslation>0 -0.335 -1.06</pretranslation>
+   <prerotationaxis>0 0 1 180</prerotationaxis>
+   <modelname>data/ikeashelf.kinbody.xml</modelname>
+</visiontracking>
+</KinBody>

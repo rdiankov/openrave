@@ -1,0 +1,177 @@
+<!-- just the kinematic body of the Puma,
+     real robots are defined in other files and have attached hands -->
+<KinBody name="PUMA">
+  <Body name="Base" type="dynamic">
+    <Translation>0.0  0.0  0.0</Translation>
+    <Geom type="trimesh">
+      <Data>models/puma/pumaB.iv</Data>
+      <Render>models/puma/pumaB.iv</Render>
+    </Geom>
+    <Geom type="cylinder">
+      <radius>0.2</radius>
+      <height>0.01</height>
+      <diffuseColor>0.05 0.05 0.05</diffuseColor>
+    </Geom>
+    <Geom type="trimesh">
+      <Data>models/puma/puma0.iv</Data>
+      <Render>models/puma/puma0.iv</Render>
+      <Translation>0.0 0.701 0.0</Translation>
+    </Geom>
+    <mass type="sphere">
+      <total>25.0</total>
+      <radius>1</radius>
+    </mass>
+  </Body>
+  <Body name="Puma1" type="dynamic">
+    <!--0 0.67 0 -->
+	<Translation>0 1.371 0</Translation>
+	<offsetfrom>Base</offsetfrom>
+    <Geom type="trimesh">
+      <Data>models/puma/puma1.iv</Data>
+      <Render>models/puma/puma1.iv</Render>
+    </Geom>
+    <mass type="sphere">
+      <total>34.4</total>
+      <radius>1</radius>
+    </mass>
+  </Body>
+  
+  <Joint name="J0" type="hinge">
+    <Body>Base</Body>
+    <Body>Puma1</Body>
+    <offsetfrom>Puma1</offsetfrom>
+    <weight>2</weight>
+    <lostop>-160</lostop>
+    <histop>160</histop>
+    <axis>0 -1 0</axis>
+    <maxvel>2</maxvel>
+    <resolution>1</resolution>
+  </Joint>
+  
+  <Body name="Puma2" type="dynamic">
+	<Translation>0 0 -0.2435</Translation>
+	<offsetfrom>Puma1</offsetfrom>
+    <Geom type="trimesh">
+      <Data>models/puma/puma2.iv</Data>
+      <Render>models/puma/puma2.iv</Render>
+    </Geom>
+    <mass type="sphere">
+      <total>17.4</total>
+      <radius>1</radius>
+    </mass>
+  </Body>
+  
+  <Joint name="J1" type="hinge">
+    <Body>Puma1</Body>
+    <Body>Puma2</Body>
+    <offsetfrom>Puma2</offsetfrom>
+    <weight>1.5</weight>
+    <lostop>-223</lostop>
+    <histop>43</histop>
+    <axis>0 0 1</axis>
+    <maxvel>1.5</maxvel>
+    <resolution>1</resolution>
+  </Joint>
+  
+  <Body name="Puma3" type="dynamic">
+	<Translation>0.4318 0 0.0934</Translation>
+	<offsetfrom>Puma2</offsetfrom>
+    <Geom type="trimesh">
+      <Data>models/puma/puma3.iv</Data>
+      <Render>models/puma/puma3.iv</Render>
+    </Geom>
+    <mass type="sphere">
+      <total>6.04</total>
+      <radius>1</radius>
+    </mass>
+  </Body>
+  
+  <Joint name="J2" type="hinge">
+    <Body>Puma2</Body>
+    <Body>Puma3</Body>
+    <offsetfrom>Puma3</offsetfrom>
+    <weight>1.5</weight>
+    <lostop>-40</lostop>
+    <histop>240</histop>
+    <axis>0 0 1</axis>
+    <maxvel>1.5</maxvel>
+    <resolution>0.5</resolution>
+  </Joint>
+
+  <Body name="Puma4" type="dynamic">
+	<Translation>-0.0203 0.4331 0</Translation>
+	<offsetfrom>Puma3</offsetfrom>
+    <Geom type="trimesh">
+      <Data>models/puma/puma4.iv</Data>
+      <Render>models/puma/puma4.iv</Render>
+    </Geom>
+    <mass type="sphere">
+      <total>0.82</total>
+      <radius>1</radius>
+    </mass>
+  </Body>
+
+  <Joint name="J3" type="hinge">
+    <Body>Puma3</Body>
+    <Body>Puma4</Body>
+    <offsetfrom>Puma4</offsetfrom>
+    <weight>1</weight>
+    <lostop>-130</lostop>
+    <histop>180</histop>
+    <axis>0 -1 0</axis>
+    <maxvel>2</maxvel>
+    <resolution>1</resolution>
+  </Joint>
+
+  <Body name="Puma5" type="dynamic">
+	<Translation>0 0 0</Translation>
+	<offsetfrom>Puma4</offsetfrom>
+    <Geom type="trimesh">
+      <Data>models/puma/puma5.iv</Data>
+      <Render>models/puma/puma5.iv</Render>
+    </Geom>
+    <mass type="sphere">
+      <total>0.34</total>
+      <radius>1</radius>
+    </mass>
+  </Body>
+
+  <Joint name="J4" type="hinge">
+    <Body>Puma4</Body>
+    <Body>Puma5</Body>
+    <offsetfrom>Puma5</offsetfrom>
+    <weight>1</weight>
+    <lostop>-100</lostop>
+    <histop>100</histop>
+    <axis>0 0 1</axis>
+    <maxvel>2</maxvel>
+    <resolution>1</resolution>
+  </Joint>
+
+  <Body name="Puma6" type="dynamic">
+	<Translation>0 0 0</Translation>
+	<offsetfrom>Puma5</offsetfrom>
+    <Geom type="trimesh">
+      <Data>models/puma/puma6.iv</Data>
+      <Render>models/puma/puma6.iv</Render>
+    </Geom>
+    <mass type="sphere">
+      <total>0.24</total>
+      <radius>1</radius>
+    </mass>
+  </Body>
+
+  <Joint name="J5" type="hinge">
+    <Body>Puma5</Body>
+    <Body>Puma6</Body>
+    <offsetfrom>Puma6</offsetfrom>
+    <weight>0.5</weight>
+    <lostop>-180</lostop>
+    <histop>180</histop>
+    <axis>0 -1 0</axis>
+    <maxvel>2</maxvel>
+    <resolution>2</resolution>
+  </Joint>
+
+  <adjacent>Puma4 Puma6</adjacent>
+</KinBody>

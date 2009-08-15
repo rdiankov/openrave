@@ -1,0 +1,4 @@
+EXPORTS
+	ORCreate			@2
+	GetPluginAttributes	@3
+	DestroyPlugin       @4

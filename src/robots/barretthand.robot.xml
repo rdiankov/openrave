@@ -1,0 +1,11 @@
+<Robot>
+  <KinBody file="barretthand.kinbody.xml"/>
+  <Manipulator>
+    <base>wam7</base>
+    <effector>wam7</effector>
+    <Translation>0 0 0.22</Translation>
+    <joints>JF1 JF2 JF3</joints>
+    <opened>0 0 0</opened>
+    <closed>1.0 1.0 1.0</closed>
+  </Manipulator>
+</Robot>
