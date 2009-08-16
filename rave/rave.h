@@ -911,6 +911,7 @@ inline DebugLevel RaveGetDebugLevel(void) {
 // register for typeof (MSVC only)
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
+BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::PluginType)
 
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::ProblemInstance)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::CmdProblemInstance)
