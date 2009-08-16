@@ -447,6 +447,20 @@ public:
     string _args;
 };
 
+class ProblemXMLReader : public InterfaceXMLReader
+{
+public:
+    ProblemXMLReader(Environment* penv, InterfaceBase* pinterface, const char** atts);
+    virtual ~ProblemXMLReader() {}
+
+    virtual void startElement(void *ctx ATTRIBUTE_UNUSED, const char *name, const char **atts);
+    virtual bool endElement(void *ctx ATTRIBUTE_UNUSED, const char *name);
+    virtual void characters(void *ctx ATTRIBUTE_UNUSED, const char *ch, int len);
+
+    boost::shared_ptr<BaseXMLReader> _pcurreader;
+    string _args;
+};
+
 class EnvironmentXMLReader : public BaseXMLReader
 {
 public:

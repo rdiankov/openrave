@@ -359,7 +359,7 @@ InterfaceXMLReader* CreateInterfaceReader(Environment* penv, PluginType type, In
     case PT_Robot: return new RobotXMLReader(penv,(RobotBase*)pinterface,atts);
     case PT_SensorSystem: return new DummyInterfaceXMLReader<PT_SensorSystem>(penv,pinterface,xmltag,atts);
     case PT_Controller: return new ControllerXMLReader(penv,pinterface,atts);
-    case PT_ProblemInstance: return new DummyInterfaceXMLReader<PT_ProblemInstance>(penv,pinterface,xmltag,atts);
+    case PT_ProblemInstance: return new ProblemXMLReader(penv,pinterface,atts);
     case PT_InverseKinematicsSolver: return new DummyInterfaceXMLReader<PT_InverseKinematicsSolver>(penv,pinterface,xmltag,atts);
     case PT_KinBody: return new KinBodyXMLReader(penv,type, (KinBody*)pinterface,atts);
     case PT_PhysicsEngine: return new DummyInterfaceXMLReader<PT_PhysicsEngine>(penv,pinterface,xmltag,atts);
@@ -2578,6 +2578,52 @@ void ControllerXMLReader::characters(void *ctx ATTRIBUTE_UNUSED, const char *ch,
         InterfaceXMLReader::characters(ctx,ch,len);
 }
 
+ProblemXMLReader::ProblemXMLReader(Environment* penv, InterfaceBase* pinterface, const char** atts) : InterfaceXMLReader(penv,PT_ProblemInstance,pinterface,g_mapInterfaceNames[PT_ProblemInstance],atts)
+{
+    if( atts != NULL ) {
+        for (int i = 0;(atts[i] != NULL);i+=2) {
+            if( stricmp((const char*)atts[i], "args") == 0 ) {
+                _args = (const char*)atts[i+1];
+            }
+        }
+    }
+}
+
+void ProblemXMLReader::startElement(void *ctx ATTRIBUTE_UNUSED, const char *name, const char **atts)
+{
+    if( !!_pcurreader ) {
+        _pcurreader->startElement(ctx, name, atts);
+        return;
+    }
+
+    InterfaceXMLReader::startElement(ctx,name,atts);
+    if( !!_pcustomreader )
+        return;
+
+    _pcurreader.reset(new DummyXMLReader(name, g_mapInterfaceNames[PT_ProblemInstance].c_str()));
+}
+
+bool ProblemXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *name)
+{
+    if( !!_pcurreader ) {
+        if( _pcurreader->endElement(ctx, name) )
+            _pcurreader.reset();
+    }
+    else if( InterfaceXMLReader::endElement(ctx,name) ) {
+        _penv->LoadProblem((ProblemInstance*)_pinterface,_args.c_str());
+        return true;
+    }
+    return false;
+}
+
+void ProblemXMLReader::characters(void *ctx ATTRIBUTE_UNUSED, const char *ch, int len)
+{
+    if( !!_pcurreader )
+        _pcurreader->characters(ctx,ch,len);
+    else
+        InterfaceXMLReader::characters(ctx,ch,len);
+}
+
 //// Environment Reader ////
 EnvironmentXMLReader::EnvironmentXMLReader(Environment* penv, const char **atts)
 {
@@ -2654,9 +2700,6 @@ bool EnvironmentXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *na
                 if( !_bInEnvironment )
                     ((KinBodyXMLReader*)_pcurreader.get())->SetXMLFilename(_filename);
                 _penv->AddKinBody((KinBody*)_pcurreader->Release());
-            }
-            else if( dynamic_cast<DummyInterfaceXMLReader<PT_ProblemInstance> * > (_pcurreader.get()) ) {
-                _penv->LoadProblem((ProblemInstance*)_pcurreader->Release(),NULL);
             }
             else {
                 //RAVELOG_WARNA("losing pointer to environment %s",name);
