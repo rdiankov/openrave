@@ -385,6 +385,11 @@ public:
     inline EnvironmentBase* GetEnv() const { return __penv; }
 
     inline const std::map<std::string, XMLReadable* >& GetReadableInterfaces() const { return __mapReadableInterfaces; }
+    inline XMLReadable* GetReadableInterface(const std::string& xmltag) const
+    {
+        std::map<std::string, XMLReadable* >::const_iterator it = __mapReadableInterfaces.find(xmltag);
+        return it != __mapReadableInterfaces.end() ? it->second : NULL;
+    }
 
     virtual void SetUserData(void* pdata) { __pUserData = pdata; }
     virtual void* GetUserData() const { return __pUserData; }
