@@ -497,11 +497,7 @@
       <maxvel>2</maxvel>
       <resolution>1</resolution>
     </Joint>
-
   </KinBody>
-  <Controller>IdealController</Controller>
-
-
   <Manipulator>
     <base>palm</base>
     <effector>palm</effector>
@@ -510,7 +506,6 @@
     <opened>0.0 0.0 0.0 0.0 0.0</opened>
     <closed>1.0 1.0 1.0 1.0 1.0</closed>
   </Manipulator>
-
 
 </Robot>
 

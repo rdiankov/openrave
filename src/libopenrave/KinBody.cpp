@@ -547,13 +547,13 @@ KinBody::KinBodyStateSaver::~KinBodyStateSaver()
     _pbody->SetBodyTransformations(_vtransPrev);
 }
 
-KinBody::KinBody(EnvironmentBase* penv) : InterfaceBase(penv)
+KinBody::KinBody(PluginType type, EnvironmentBase* penv) : InterfaceBase(type, penv)
 {
     DestroyCallback = NULL;
     networkid = 0;
     
     _nUpdateStampId = 0;
-    _pUserData = _pGuiData = _pCollisionData = _pPhysicsData = NULL;
+    _pGuiData = _pCollisionData = _pPhysicsData = NULL;
 }
 
 KinBody::~KinBody()
@@ -578,11 +578,6 @@ void KinBody::Destroy()
     _veclinks.clear();
     _vecJointIndices.clear();
     _vecJointWeights.clear();
-
-    vector<XMLReadable*>::iterator itreadable;
-    FORIT(itreadable, _vReadableInterfaces)
-        delete *itreadable;
-    _vReadableInterfaces.clear();
 
     _setAttachedBodies.clear();
 }
@@ -1414,7 +1409,7 @@ void KinBody::ComputeJointHierarchy()
         }
 
         if( cursize == (int)ljoints.size() ) {
-            RAVELOG_ERRORA("Cannot compute joint hierarchy for number of joints %"PRIdS"!\n", _vecjoints.size());
+            RAVELOG_ERRORA("Cannot compute joint hierarchy for number of joints %"PRIdS"! Part of robot might not be moveable\n", _vecjoints.size());
             break;
         }
     }
@@ -1695,36 +1690,6 @@ bool KinBody::IsEnabled() const
     }
 
     return false;
-}
-
-bool KinBody::AddExtraInterface(XMLReadable* preadable)
-{
-    assert( preadable != NULL );
-    if( GetExtraInterface(preadable->GetXMLId()) != NULL )
-        return false;
-
-    _vReadableInterfaces.push_back(preadable);
-    return true;
-}
-
-XMLReadable* KinBody::GetExtraInterface(const char* pid) const
-{
-    assert( pid != NULL );
-
-    vector<XMLReadable*>::const_iterator it;
-    FORIT(it, _vReadableInterfaces) {
-        if( stricmp((*it)->GetXMLId(), pid) == 0 )
-            return *it;
-    }
-
-    return NULL;
-}
-
-void KinBody::RemoveExtraInterface(XMLReadable* preadable)
-{
-    vector<XMLReadable*>::iterator it = find(_vReadableInterfaces.begin(), _vReadableInterfaces.end(), preadable);
-    if( it != _vReadableInterfaces.end() )
-        _vReadableInterfaces.erase(it);
 }
 
 int KinBody::GetNetworkId() const

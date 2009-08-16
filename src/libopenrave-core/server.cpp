@@ -36,16 +36,6 @@ static map<int, pair<ProblemInstance*, wstring> > s_mapProblems;
 static map<int, void*> s_mapFigureIds;
 static int s_NextFigureId = 1;
 
-class LockEnvironment
-{
-public:
-    LockEnvironment(EnvironmentBase* penv) : _penv(penv) { _penv->LockPhysics(true); }
-    ~LockEnvironment() { _penv->LockPhysics(false); }
-
-private:
-    EnvironmentBase* _penv;
-};
-
 /// Macros
 KinBody* orMacroGetBody(EnvironmentBase* penv, char* in)
 {

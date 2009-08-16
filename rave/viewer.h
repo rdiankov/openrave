@@ -23,7 +23,7 @@ namespace OpenRAVE {
 class RaveViewerBase : public InterfaceBase
 {
 public:
-    RaveViewerBase(EnvironmentBase* penv) : InterfaceBase(penv) {}
+    RaveViewerBase(EnvironmentBase* penv) : InterfaceBase(PT_Viewer, penv) {}
     virtual ~RaveViewerBase() {}
 
     /// reset the camera depending on its mode

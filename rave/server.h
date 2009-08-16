@@ -22,7 +22,7 @@ namespace OpenRAVE {
 class RaveServerBase : public InterfaceBase
 {
 public:
-    RaveServerBase(EnvironmentBase* penv) : InterfaceBase(penv) {}
+    RaveServerBase(EnvironmentBase* penv) : InterfaceBase(PT_Server, penv) {}
     virtual ~RaveServerBase() {}
 
     virtual void Destroy() = 0;

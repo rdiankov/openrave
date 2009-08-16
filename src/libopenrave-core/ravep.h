@@ -153,6 +153,7 @@ inline float RANDOM_FLOAT(float maximum)
 // need the prototypes in order to keep them free of the OpenRAVE namespace
 class LinkXMLReader;
 class KinBodyXMLReader;
+class InterfaceXMLReader;
 class JointXMLReader;
 class RobotXMLReader;
 class ManipulatorXMLReader;
@@ -304,6 +305,16 @@ public:
     MutexLock(pthread_mutex_t* pmutex) : _pmutex(pmutex) { pthread_mutex_lock(_pmutex); }
     ~MutexLock() { pthread_mutex_unlock(_pmutex); }
     pthread_mutex_t* _pmutex;
+};
+
+class LockEnvironment
+{
+public:
+    LockEnvironment(EnvironmentBase* penv) : _penv(penv) { _penv->LockPhysics(true); }
+    ~LockEnvironment() { _penv->LockPhysics(false); }
+
+private:
+    EnvironmentBase* _penv;
 };
 
 #include "server.h"

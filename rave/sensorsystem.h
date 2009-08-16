@@ -51,7 +51,7 @@ public:
         virtual bool Lock(bool bDoLock) = 0;
     };
 
-    SensorSystemBase(EnvironmentBase* penv) : InterfaceBase(penv) {}
+    SensorSystemBase(EnvironmentBase* penv) : InterfaceBase(PT_SensorSystem, penv) {}
     virtual ~SensorSystemBase() {}
 
     /// initializes the sensor system

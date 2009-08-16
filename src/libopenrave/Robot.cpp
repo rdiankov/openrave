@@ -215,7 +215,7 @@ RobotBase::RobotStateSaver::~RobotStateSaver()
     _probot->SetActiveDOFs(vactivedofs, affinedofs, &rotationaxis);
 }
 
-RobotBase::RobotBase(EnvironmentBase* penv) : KinBody(penv)
+RobotBase::RobotBase(EnvironmentBase* penv) : KinBody(PT_Robot, penv)
 {
     _nAffineDOFs = 0;
     _nActiveDOF = 0;

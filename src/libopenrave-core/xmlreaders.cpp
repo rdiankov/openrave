@@ -116,16 +116,13 @@ static bool xmlDetectSAX2(xmlParserCtxtPtr ctxt)
          (ctxt->sax->endElementNs != NULL))) ctxt->sax2 = 1;
 #else
     ctxt->sax2 = 1;
-#endif /* LIBXML_SAX1_ENABLED */
+#endif // LIBXML_SAX1_ENABLED
 
     ctxt->str_xml = xmlDictLookup(ctxt->dict, BAD_CAST "xml", 3);
     ctxt->str_xmlns = xmlDictLookup(ctxt->dict, BAD_CAST "xmlns", 5);
     ctxt->str_xml_ns = xmlDictLookup(ctxt->dict, XML_XML_NAMESPACE, 36);
-    if ((ctxt->str_xml==NULL) || (ctxt->str_xmlns==NULL) || 
-        (ctxt->str_xml_ns == NULL)) {
+    if ((ctxt->str_xml==NULL) || (ctxt->str_xmlns==NULL) || (ctxt->str_xml_ns == NULL))
         return false;
-    }
-
     return true;
 }
 
@@ -336,22 +333,62 @@ bool RaveParseXMLData(Environment* penv, BaseXMLReader* preader, const char* pda
     return raveXmlSAXUserParseMemory(&s_DefaultSAXHandler, preader, pdata, len)==0;
 }
 
-static map<string, EnvironmentBase::CreateXMLReaderFn> s_mapKinBodyReaders;
+map<PluginType, string> InitInterfaceNames()
+{
+    map<PluginType, string> m;
+    m[PT_Planner] = "Planner";
+    m[PT_Robot] = "Robot";
+    m[PT_SensorSystem] = "SensorSystem";
+    m[PT_Controller] = "Controller";
+    m[PT_ProblemInstance] = "ProblemInstance";
+    m[PT_InverseKinematicsSolver] = "InverseKinematicsSolver";
+    m[PT_KinBody] = "KinBody";
+    m[PT_PhysicsEngine] = "PhysicsEngine";
+    m[PT_Sensor] = "Sensor";
+    m[PT_CollisionChecker] = "CollisionChecker";
+    m[PT_Trajectory] = "Trajectory";
+    m[PT_Viewer] = "Viewer";
+    m[PT_Server] = "Server";
+    return m;
+}
+
+InterfaceXMLReader* CreateInterfaceReader(Environment* penv, PluginType type, InterfaceBase* pinterface, const string& xmltag, const char** atts)
+{
+    switch(type) {
+    case PT_Planner: return new DummyInterfaceXMLReader<PT_Planner>(penv,pinterface,xmltag,atts);
+    case PT_Robot: return new RobotXMLReader(penv,(RobotBase*)pinterface,atts);
+    case PT_SensorSystem: return new DummyInterfaceXMLReader<PT_SensorSystem>(penv,pinterface,xmltag,atts);
+    case PT_Controller: return new ControllerXMLReader(penv,pinterface,atts);
+    case PT_ProblemInstance: return new DummyInterfaceXMLReader<PT_ProblemInstance>(penv,pinterface,xmltag,atts);
+    case PT_InverseKinematicsSolver: return new DummyInterfaceXMLReader<PT_InverseKinematicsSolver>(penv,pinterface,xmltag,atts);
+    case PT_KinBody: return new KinBodyXMLReader(penv,type, (KinBody*)pinterface,atts);
+    case PT_PhysicsEngine: return new DummyInterfaceXMLReader<PT_PhysicsEngine>(penv,pinterface,xmltag,atts);
+    case PT_Sensor: return new DummyInterfaceXMLReader<PT_Sensor>(penv,pinterface,xmltag,atts);
+    case PT_CollisionChecker: return new DummyInterfaceXMLReader<PT_CollisionChecker>(penv,pinterface,xmltag,atts);
+    case PT_Trajectory: return new DummyInterfaceXMLReader<PT_Trajectory>(penv,pinterface,xmltag,atts);
+    case PT_Viewer: return new DummyInterfaceXMLReader<PT_Viewer>(penv,pinterface,xmltag,atts);
+    case PT_Server: return new DummyInterfaceXMLReader<PT_Server>(penv,pinterface,xmltag,atts);
+    }
+    return NULL;
+}
+
+map<PluginType, string> g_mapInterfaceNames = InitInterfaceNames();
+static map<PluginType, map<string, EnvironmentBase::CreateXMLReaderFn> > s_mmReaders;
 static pthread_mutex_t s_mutexxmlreaders = PTHREAD_MUTEX_INITIALIZER;
 
-void KinBodyRegisterXMLReader(const char* ptype, EnvironmentBase::CreateXMLReaderFn pfn)
+void RegisterXMLReader(PluginType type, const char* xmltag, EnvironmentBase::CreateXMLReaderFn pfn)
 {
-    if( pfn != NULL && ptype != NULL ) {
+    if( pfn != NULL && xmltag != NULL ) {
         MutexLock m(&s_mutexxmlreaders);
-        s_mapKinBodyReaders[ptype] = pfn;
+        s_mmReaders[type][xmltag] = pfn;
     }
 }
 
-void KinBodyUnregisterXMLReader(const char* ptype)
+void UnregisterXMLReader(PluginType type, const char* xmltag)
 {
-    if( ptype != NULL ) {
+    if( xmltag != NULL ) {
         MutexLock m(&s_mutexxmlreaders);
-        s_mapKinBodyReaders.erase(ptype);
+        s_mmReaders[type].erase(xmltag);
     }
 }
   
@@ -462,7 +499,6 @@ LinkXMLReader::LinkXMLReader(KinBody::Link* plink, KinBody* pparent, const char 
     _fTotalMass = 1;
     _pgeomprop = NULL;
     pKinBodyReader = NULL;
-    _pcurreader = NULL;
     _massCustom = MASS::GetSphericalMass(1,Vector(0,0,0),1);
     _plink = NULL;
 
@@ -526,7 +562,7 @@ void LinkXMLReader::SetMassType(MassType type, float fValue, const Vector& vMass
 
 void LinkXMLReader::startElement(void *ctx ATTRIBUTE_UNUSED, const char *name, const char **atts)
 {
-    if( _pcurreader != NULL ) {
+    if( !!_pcurreader ) {
         _pcurreader->startElement(ctx, name, atts);
     }
     else if( _pgeomprop != NULL ) {
@@ -566,7 +602,7 @@ void LinkXMLReader::startElement(void *ctx ATTRIBUTE_UNUSED, const char *name, c
     else if( stricmp((const char*)name, "body") == 0 ) {
         tOrigTrans = _plink->GetTransform();
         _plink->SetTransform(Transform());
-        _pcurreader = new LinkXMLReader(_plink, _pparent, atts);
+        _pcurreader.reset(new LinkXMLReader(_plink, _pparent, atts));
     }
     else if( stricmp((const char*)name, "geom") == 0 ) {
         assert( _pgeomprop == NULL );
@@ -653,7 +689,7 @@ void LinkXMLReader::startElement(void *ctx ATTRIBUTE_UNUSED, const char *name, c
     }
     else {
         // start a new field
-        _pcurreader = new DummyXMLReader(name,"body");
+        _pcurreader.reset(new DummyXMLReader(name,"body"));
     }
 }
 
@@ -661,7 +697,7 @@ bool LinkXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *name)
 {
     dReal* pf = _pcurparser != NULL ? (dReal*)_pcurparser->GetData() : NULL;
 
-    if( _pcurreader != NULL ) {
+    if( !!_pcurreader ) {
         if( _pcurreader->endElement(ctx, name) ) {
             if( stricmp((const char*)name, "body") == 0 ) {
                 KinBody::Link* pnewlink = (KinBody::Link*)_pcurreader->Release();
@@ -678,7 +714,7 @@ bool LinkXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *name)
                 _plink->SetTransform(tOrigTrans);
             }
 
-            delete _pcurreader; _pcurreader = NULL;
+            _pcurreader.reset();
         }
     }
     else if( _pgeomprop != NULL ) {
@@ -969,7 +1005,7 @@ bool LinkXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *name)
 
 void LinkXMLReader::characters(void *ctx ATTRIBUTE_UNUSED, const char *ch, int len)
 {
-    if( _pcurreader != NULL )
+    if( !!_pcurreader )
         _pcurreader->characters(ctx, ch, len);
     else if( _pcurparser != NULL )
         _pcurparser->Format((const char*)ch, len);
@@ -987,7 +1023,6 @@ JointXMLReader::JointXMLReader(KinBody* pparent, const char **atts)
     _pcurparser = NULL;
     _offsetfrom = NULL;
     pKinBodyReader = NULL;
-    _pcurreader = NULL;
     fWeights[0] = fWeights[1] = fWeights[2] = 1;
     _pjoint->type = KinBody::Joint::JointHinge;
 
@@ -1045,7 +1080,7 @@ JointXMLReader::~JointXMLReader()
 
 void JointXMLReader::startElement(void *ctx ATTRIBUTE_UNUSED, const char *name, const char **atts)
 {
-    if( _pcurreader != NULL ) {
+    if( !!_pcurreader ) {
         _pcurreader->startElement(ctx, name, atts);
     }
     else if( stricmp((const char*)name, "body") == 0 || stricmp((const char*)name, "offsetfrom") == 0) {
@@ -1069,7 +1104,7 @@ void JointXMLReader::startElement(void *ctx ATTRIBUTE_UNUSED, const char *name, 
     }
     else {
         // start a new field
-        _pcurreader = new DummyXMLReader(name,"joint");
+        _pcurreader.reset(new DummyXMLReader(name,"joint"));
     }
 }
 
@@ -1079,9 +1114,9 @@ bool JointXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *name)
     int numindices = _pjoint->GetDOF();
     dReal fRatio = _pjoint->type == KinBody::Joint::JointSlider ? (dReal)1 : (dReal)PI / 180.0f; // most, but not all, joint take degrees
 
-    if( _pcurreader != NULL ) {
+    if( !!_pcurreader ) {
         if( _pcurreader->endElement(ctx, name) ) {
-            delete _pcurreader; _pcurreader = NULL;
+            _pcurreader.reset();
         }
     }
     else if( stricmp((const char*)name, "joint") == 0 ) {
@@ -1302,19 +1337,119 @@ bool JointXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *name)
 
 void JointXMLReader::characters(void *ctx ATTRIBUTE_UNUSED, const char *ch, int len)
 {
-    if( _pcurreader != NULL )
+    if( !!_pcurreader )
         _pcurreader->characters(ctx, ch, len);
     else if( _pcurparser != NULL )
         _pcurparser->Format((const char*)ch, len);
 }
 
+InterfaceXMLReader::InterfaceXMLReader(Environment* penv, PluginType type, InterfaceBase* pinterface, const string& xmltag, const char **atts) : _penv(penv), _type(type), _pinterface(pinterface), _xmltag(xmltag)
+{
+    const char* ptype = NULL;
+    if( atts != NULL ) {
+        for (int i = 0;(atts[i] != NULL);i+=2) {
+            if( stricmp((const char*)atts[i], "type") == 0 ) {
+                ptype = (const char*)atts[i+1];
+            }
+            else if( stricmp((const char*)atts[i], "file") == 0 ) {
+                strcpy((char*)atts[i], ""); // delete file attr
+                boost::shared_ptr<BaseXMLReader> preader(CreateInterfaceReader(_penv,_type,_pinterface, xmltag, atts));
+                bool bSuccess = RaveParseXMLFile(_penv,preader.get(), (const char*)atts[i+1]);
+                if( !bSuccess ) {
+                    preader->Release();
+                    RAVELOG(L"Failed to load kinbody filename %s\n", atts[i+1]);
+                    g_XMLErrorCount++;
+                    break;
+                }
+                
+                _pinterface = (InterfaceBase*)preader->Release();
+                //_pchain->strXMLFilename = reader._filename;
+            }
+        }
+    }
+
+    if( _pinterface == NULL ) {
+        if( ptype != NULL ) {
+            _pinterface = _penv->CreateInterface(type,ptype);
+            if( _pinterface == NULL )
+                g_XMLErrorCount++;
+        }
+        
+        if( _pinterface == NULL ) {
+            switch(type) {
+            case PT_KinBody:
+                _pinterface = penv->CreateKinBody();
+                break;
+            case PT_Robot:
+                _pinterface = _penv->CreateInterface(PT_Robot, "GenericRobot");
+                if( _pinterface == NULL )
+                    _penv->CreateInterface(PT_Robot, "");
+                break;
+            case PT_Controller:
+                assert(0);
+                _pinterface = _penv->CreateInterface(PT_Controller, "IdealController");
+                break;
+            default:
+                _pinterface = _penv->CreateInterface(type, "");
+                break;
+            }
+        }
+    }
+
+    if( _pinterface == NULL )
+        RAVELOG_ERRORA("xml readers failed to create instance of type %d\n",type);
+    else
+        _type = _pinterface->GetInterfaceType();
+
+    if( _xmltag.size() == 0 )
+        _xmltag = g_mapInterfaceNames[_type];
+}
+
+void InterfaceXMLReader::startElement(void *ctx ATTRIBUTE_UNUSED, const char *name, const char **atts)
+{
+    if( _pinterface == NULL )
+        return;
+
+    if( !!_pcustomreader ) {
+        _pcustomreader->startElement(ctx, name, atts);
+    }
+    else {
+        // check for registers readers
+        map<string, EnvironmentBase::CreateXMLReaderFn>::iterator it = s_mmReaders[_type].find(name);
+        if( it != s_mmReaders[_type].end() ) {
+            _readername = name;
+            _pcustomreader.reset(it->second(_pinterface, atts));
+        }
+    }
+}
+
+bool InterfaceXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *name)
+{
+    if( !!_pcustomreader ) {
+        if( _pcustomreader->endElement(ctx, name) ) {
+            if( _readername.size() > 0 )
+                _pinterface->__mapReadableInterfaces[_readername] = (XMLReadable*)_pcustomreader->Release();
+            _pcustomreader.reset();
+        }
+    }
+    else if( stricmp((const char*)name, _xmltag.c_str()) == 0 )
+        return true;
+    return false;
+}
+
+void InterfaceXMLReader::characters(void *ctx ATTRIBUTE_UNUSED, const char *ch, int len)
+{
+    if( !!_pcustomreader )
+        _pcustomreader->characters(ctx, ch, len);
+}
+
 //// KinBody Reader ////
-KinBodyXMLReader::KinBodyXMLReader(Environment* penv, KinBody* pchain, const char **atts)
+KinBodyXMLReader::KinBodyXMLReader(Environment* penv, PluginType type, KinBody* pchain, const char **atts) : InterfaceXMLReader(penv,type,pchain,"kinbody",atts)
 {
     _penv = penv;
-    _pcurreader = NULL;
     _pcurparser = NULL;
-    _pchain = pchain;
+    _pchain = (KinBody*)_pinterface;
+    assert( _pchain != NULL );
     _masstype = LinkXMLReader::MT_None;
     _fMassValue = 1;
     _vMassExtents = Vector(1,1,1);
@@ -1323,39 +1458,19 @@ KinBodyXMLReader::KinBodyXMLReader(Environment* penv, KinBody* pchain, const cha
     _bOverwriteAmbient = false;
     _bOverwriteTransparency = false;
 
-    rootoffset = 0;
-
-    if( _pchain != NULL ) {
-        _pchain->GetBodyTransformations(_vTransforms);
+    if( pchain != NULL ) {
+        pchain->GetBodyTransformations(_vTransforms);
         rootoffset = _vTransforms.size();
-        rootjoffset = (int)_pchain->GetJoints().size();
+        rootjoffset = (int)pchain->GetJoints().size();
     }
-    
-    if( _pchain == NULL )
-        _pchain = _penv->CreateKinBody();
+    else {
+        rootoffset = 0;
+        rootjoffset = 0;
+    }
 
     if( atts != NULL ) {
         for (int i = 0;(atts[i] != NULL);i+=2) {
-            if( stricmp((const char*)atts[i], "file") == 0 ) {
-                strcpy((char*)atts[i], ""); // delete file attr
-                //_pchain->Init((const char*)atts[i+1], (const char**)atts);
-                {
-                    if( _pchain != NULL )
-                        _pchain->SetGuiData(NULL);
-                    KinBodyXMLReader reader(_penv,_pchain, atts);
-                    bool bSuccess = RaveParseXMLFile(_penv,&reader, (const char*)atts[i+1]);
-                    if( !bSuccess ) {
-                        reader.Release();
-                        RAVELOG(L"Failed to load kinbody filename %s\n", atts[i+1]);
-                        g_XMLErrorCount++;
-                        break;
-                    }
-    
-                    _pchain = (RobotBase*)reader.Release();
-                    _pchain->strXMLFilename = reader._filename;
-                }
-            }
-            else if( stricmp((const char*)atts[i], "prefix") == 0 ) {
+            if( stricmp((const char*)atts[i], "prefix") == 0 ) {
                 prefix = (const char*)atts[i+1];
                 wprefix = _ravembstowcs((const char*)atts[i+1]);
             }
@@ -1365,10 +1480,9 @@ KinBodyXMLReader::KinBodyXMLReader(Environment* penv, KinBody* pchain, const cha
         }
     }
 
-    if( _pchain != NULL ) {
-        // reisze _vTransforms to be the same size as the initial number of links
-        _pchain->GetBodyTransformations(_vTransforms);
-    }
+    // reisze _vTransforms to be the same size as the initial number of links
+    _pchain->GetBodyTransformations(_vTransforms);
+    _pchain->SetGuiData(NULL);
 }
 
 const Transform KinBodyXMLReader::GetOffsetFrom(KinBody::Link* plink)
@@ -1445,14 +1559,22 @@ string KinBodyXMLReader::GetModelsDir(const char* pfilename) const
 
 void KinBodyXMLReader::startElement(void *ctx ATTRIBUTE_UNUSED, const char *name, const char **atts)
 {
-    if( _pcurreader != NULL ) {
+    if( !!_pcurreader ) {
         _pcurreader->startElement(ctx, name, atts);
+        return;
     }
-    else if( _bProcessingMass ) {
+
+    if( _bProcessingMass ) {
         _pcurparser = &g_realparser;
+        return;
     }
-    else if( stricmp((const char*)name, "kinbody") == 0 ) {
-        _pcurreader = new KinBodyXMLReader(_penv,_pchain, atts);
+    
+    InterfaceXMLReader::startElement(ctx,name,atts);
+    if( !!_pcustomreader )
+        return;
+
+    if( stricmp((const char*)name, "kinbody") == 0 ) {
+        _pcurreader.reset(new KinBodyXMLReader(_penv,_pchain->GetInterfaceType(),_pchain, atts));
 //        if( atts != NULL ) {
 //            for (int i = 0;(atts[i] != NULL);i+=2) {
 //                if( stricmp((const char*)atts[i], "file") == 0 ) {
@@ -1472,14 +1594,16 @@ void KinBodyXMLReader::startElement(void *ctx ATTRIBUTE_UNUSED, const char *name
 //        }
     }
     else if( stricmp((const char*)name, "body") == 0 ) {
-        _pcurreader = new LinkXMLReader(NULL, _pchain, atts);
-        ((LinkXMLReader*)_pcurreader)->SetMassType(_masstype, _fMassValue, _vMassExtents);
-        ((LinkXMLReader*)_pcurreader)->pKinBodyReader = this;
+        LinkXMLReader* plinkreader = new LinkXMLReader(NULL, _pchain, atts);
+        plinkreader->SetMassType(_masstype, _fMassValue, _vMassExtents);
+        plinkreader->pKinBodyReader = this;
+        _pcurreader.reset(plinkreader);
     }
     else if( stricmp((const char*)name, "joint") == 0 ) {
         _pchain->_vecJointIndices.push_back((int)_pchain->_vecJointWeights.size());
-        _pcurreader = new JointXMLReader(_pchain, atts);
-        ((JointXMLReader*)_pcurreader)->pKinBodyReader = this;
+        JointXMLReader* pjointreader = new JointXMLReader(_pchain, atts);
+        pjointreader->pKinBodyReader = this;
+        _pcurreader.reset(pjointreader);
     }
     else if( stricmp((const char*)name, "translation") == 0 || stricmp((const char*)name, "rotationmat") == 0 ||
              stricmp((const char*)name, "rotationaxis") == 0 || stricmp((const char*)name, "quat") == 0 ||
@@ -1526,15 +1650,7 @@ void KinBodyXMLReader::startElement(void *ctx ATTRIBUTE_UNUSED, const char *name
         _pcurparser = &g_realparser;
     }
     else {
-        // check for registers readers
-        map<string, EnvironmentBase::CreateXMLReaderFn>::iterator it = s_mapKinBodyReaders.find(name);
-        if( it != s_mapKinBodyReaders.end() ) {
-            _pcurreader = it->second(_pchain, atts);
-            _strRegReaderId = name;
-        }
-        else {
-            _pcurreader = new DummyXMLReader(name, "KinBody");
-        }
+        _pcurreader.reset(new DummyXMLReader(name, "KinBody"));
     }
 }
 
@@ -1542,7 +1658,7 @@ bool KinBodyXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *name)
 {
     dReal* pf = _pcurparser != NULL ? (dReal*)_pcurparser->GetData() : NULL;
 
-    if( _pcurreader != NULL ) {
+    if( !!_pcurreader ) {
         if( _pcurreader->endElement(ctx, name) ) {
             if( stricmp((const char*)name, "body") == 0 ) {
                 KinBody::Link* plink = (KinBody::Link*)_pcurreader->Release();
@@ -1554,7 +1670,7 @@ bool KinBodyXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *name)
                 }
 
                 // do this later, or else offsetfrom will be messed up!
-                _vTransforms[plink->GetIndex()] = dynamic_cast<LinkXMLReader*>(_pcurreader)->GetOrigTransform();
+                _vTransforms[plink->GetIndex()] = dynamic_cast<LinkXMLReader*>(_pcurreader.get())->GetOrigTransform();
             }
             else if( stricmp((const char*)name, "joint") == 0 ) {
                 KinBody::Joint* pnewjoint = (KinBody::Joint*)_pcurreader->Release();
@@ -1562,10 +1678,10 @@ bool KinBodyXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *name)
                 
                 assert( pnewjoint->dofindex < _pchain->GetDOF());
 
-                if( ((JointXMLReader*)_pcurreader)->IsMimic() )
-                    listMimicJoints.push_back(pair<KinBody::Joint*,string>(pnewjoint,((JointXMLReader*)_pcurreader)->GetMimicJoint()));
+                if( ((JointXMLReader*)_pcurreader.get())->IsMimic() )
+                    listMimicJoints.push_back(pair<KinBody::Joint*,string>(pnewjoint,((JointXMLReader*)_pcurreader.get())->GetMimicJoint()));
 
-                if( ((JointXMLReader*)_pcurreader)->IsDisabled() ) {
+                if( ((JointXMLReader*)_pcurreader.get())->IsDisabled() ) {
                     for(int i = 0; i < pnewjoint->GetDOF(); ++i)
                         _pchain->_vecJointWeights.pop_back();
                     _pchain->_vecJointIndices.pop_back();
@@ -1584,11 +1700,10 @@ bool KinBodyXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *name)
                 // most likely new transforms were added, so update
                 _pchain->GetBodyTransformations(_vTransforms);
             }
-            else if( stricmp(name, _strRegReaderId.c_str()) == 0 ) {
-                _pchain->AddExtraInterface((XMLReadable*)_pcurreader->Release());
-            }
+            else
+                RAVELOG_INFOA("releasing unknown tag %s\n",name);
 
-            delete _pcurreader; _pcurreader = NULL;
+            _pcurreader.reset();
         }
     }
     else if( _bProcessingMass ) {
@@ -1614,78 +1729,7 @@ bool KinBodyXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *name)
             _bProcessingMass = false;
         }
     }
-    else if( stricmp((const char*)name, "translation") == 0 ) {
-        assert( _pcurparser->GetCount() == 3 );
-        _trans.trans = Vector(pf[0], pf[1], pf[2]);
-    }
-    else if( stricmp((const char*)name, "rotationaxis") == 0 ) {
-        // check if quaternion or rotation matrix
-        assert( _pcurparser->GetCount() == 4 );
-        
-        Transform tnew;
-        normalize3(pf, pf);
-        tnew.rotfromaxisangle(Vector(pf[0], pf[1], pf[2]), pf[3] * PI / 180.0f);
-        _trans.rot = (tnew*_trans).rot;
-    }
-    else if( stricmp((const char*)name, "quat") == 0 ) {
-        // check if quaternion or rotation matrix
-        assert( _pcurparser->GetCount() == 4 );
-        
-        Transform tnew;
-        normalize4(tnew.rot, pf);
-        _trans.rot = (tnew*_trans).rot;
-    }
-    else if( stricmp((const char*)name, "rotationmat") == 0 ) {
-        // check if quaternion or rotation matrix
-        assert( _pcurparser->GetCount() == 9 );
-
-        TransformMatrix tnew;
-        tnew.m[0] = pf[0]; tnew.m[1] = pf[1]; tnew.m[2] = pf[2]; tnew.m[3] = 0;
-        tnew.m[4] = pf[3]; tnew.m[5] = pf[4]; tnew.m[6] = pf[5]; tnew.m[7] = 0;
-        tnew.m[8] = pf[6]; tnew.m[9] = pf[7]; tnew.m[10] = pf[8]; tnew.m[11] = 0;
-        _trans.rot = (Transform(tnew)*_trans).rot;
-    }
-    else if( stricmp((const char*)name, "adjacent") == 0 ) {
-        if( _pcurparser->GetData() != NULL ) {
-            wchar_t* ptr=NULL;
-            wchar_t* p = WCSTOK((wchar_t*)_pcurparser->GetData(), L" ,\t", &ptr);
-            pair<wstring, wstring> entry;
-
-            if(p != NULL) {
-                entry.first = p;
-                p = WCSTOK(NULL, L" ,\t", &ptr);
-                if( p != NULL ) {
-                    entry.second = p;
-                    _pchain->_vForcedAdjacentLinks.push_back(entry);
-                }
-            }
-        }
-    }
-    else if( stricmp((const char*)name, "modelsdir") == 0 ) {
-        _strModelsDir = (const char*)_pcurparser->GetData();
-        _strModelsDir += "/";
-    }
-    else if( stricmp((const char*)name, "diffuseColor") == 0 ) {
-        // check attributes for format (default is vrml)
-        _diffusecol = Vector(pf[0], pf[1], pf[2]);
-        _bOverwriteDiffuse = true;
-    }
-    else if( stricmp((const char*)name, "ambientColor") == 0 ) {
-        // check attributes for format (default is vrml)
-        _ambientcol = Vector(pf[0], pf[1], pf[2]);
-        _bOverwriteAmbient = true;
-    }
-    else if( stricmp((const char*)name, "transparency") == 0 ) {
-        _transparency = *(float*)_pcurparser->GetData();
-        _bOverwriteTransparency = true;
-    }
-    else if( stricmp((const char*)name, "jointvalues") == 0 ) {
-        _vjointvalues.resize(_pcurparser->GetCount());
-        for(int i = 0; i < _pcurparser->GetCount(); ++i)
-            _vjointvalues[i] = pf[i];
-    }
-    else if( stricmp((const char*)name, "kinbody") == 0 ) {
-
+    else if( InterfaceXMLReader::endElement(ctx,name) ) {
         // go through all mimic joints and assign the correct indices
         FOREACH(itmimic, listMimicJoints) {
             itmimic->first->nMimicJointIndex = _pchain->GetJointIndex(_ravembstowcs(itmimic->second.c_str()).c_str());
@@ -1758,20 +1802,90 @@ bool KinBodyXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *name)
         RAVELOGA("%S: COM = (%f,%f,%f)\n", _pchain->GetName(), com.x, com.y, com.z);
 
         // output AABB per link
-//        RAVEPRINT(L"processing\n");
-//        wstringstream ss; ss << "Links: " << endl;
-//        int linkindex = 0;
-//        FORIT(itlink, _pchain->_veclinks) {
-//            Transform t = (*itlink)->GetTransform();
-//            AABB ab = (*itlink)->ComputeAABB();
-//            ab.pos = t.inverse()*ab.pos;
-//            ss << "      <Geom name = \"" << (*itlink)->GetName() << "\" type=\"box\">" << endl
-//                << "        <extents>" << ab.extents.x << " " << ab.extents.y << " " << ab.extents.z << "</extents>" << endl
-//                << "        <translation>" << ab.pos.x << " " << ab.pos.y << " " << ab.pos.z << "</translation>" << endl
-//                << "      </Geom>" << endl;
-//        }
-//        RAVEPRINT(ss.str().c_str());
+        //        RAVEPRINT(L"processing\n");
+        //        wstringstream ss; ss << "Links: " << endl;
+        //        int linkindex = 0;
+        //        FORIT(itlink, _pchain->_veclinks) {
+        //            Transform t = (*itlink)->GetTransform();
+        //            AABB ab = (*itlink)->ComputeAABB();
+        //            ab.pos = t.inverse()*ab.pos;
+        //            ss << "      <Geom name = \"" << (*itlink)->GetName() << "\" type=\"box\">" << endl
+        //                << "        <extents>" << ab.extents.x << " " << ab.extents.y << " " << ab.extents.z << "</extents>" << endl
+        //                << "        <translation>" << ab.pos.x << " " << ab.pos.y << " " << ab.pos.z << "</translation>" << endl
+        //                << "      </Geom>" << endl;
+        //        }
+        //        RAVEPRINT(ss.str().c_str());
         return true;
+    }
+    else if( stricmp((const char*)name, "translation") == 0 ) {
+        assert( _pcurparser->GetCount() == 3 );
+        _trans.trans = Vector(pf[0], pf[1], pf[2]);
+    }
+    else if( stricmp((const char*)name, "rotationaxis") == 0 ) {
+        // check if quaternion or rotation matrix
+        assert( _pcurparser->GetCount() == 4 );
+        
+        Transform tnew;
+        normalize3(pf, pf);
+        tnew.rotfromaxisangle(Vector(pf[0], pf[1], pf[2]), pf[3] * PI / 180.0f);
+        _trans.rot = (tnew*_trans).rot;
+    }
+    else if( stricmp((const char*)name, "quat") == 0 ) {
+        // check if quaternion or rotation matrix
+        assert( _pcurparser->GetCount() == 4 );
+        
+        Transform tnew;
+        normalize4(tnew.rot, pf);
+        _trans.rot = (tnew*_trans).rot;
+    }
+    else if( stricmp((const char*)name, "rotationmat") == 0 ) {
+        // check if quaternion or rotation matrix
+        assert( _pcurparser->GetCount() == 9 );
+
+        TransformMatrix tnew;
+        tnew.m[0] = pf[0]; tnew.m[1] = pf[1]; tnew.m[2] = pf[2]; tnew.m[3] = 0;
+        tnew.m[4] = pf[3]; tnew.m[5] = pf[4]; tnew.m[6] = pf[5]; tnew.m[7] = 0;
+        tnew.m[8] = pf[6]; tnew.m[9] = pf[7]; tnew.m[10] = pf[8]; tnew.m[11] = 0;
+        _trans.rot = (Transform(tnew)*_trans).rot;
+    }
+    else if( stricmp((const char*)name, "adjacent") == 0 ) {
+        if( _pcurparser->GetData() != NULL ) {
+            wchar_t* ptr=NULL;
+            wchar_t* p = WCSTOK((wchar_t*)_pcurparser->GetData(), L" ,\t", &ptr);
+            pair<wstring, wstring> entry;
+
+            if(p != NULL) {
+                entry.first = p;
+                p = WCSTOK(NULL, L" ,\t", &ptr);
+                if( p != NULL ) {
+                    entry.second = p;
+                    _pchain->_vForcedAdjacentLinks.push_back(entry);
+                }
+            }
+        }
+    }
+    else if( stricmp((const char*)name, "modelsdir") == 0 ) {
+        _strModelsDir = (const char*)_pcurparser->GetData();
+        _strModelsDir += "/";
+    }
+    else if( stricmp((const char*)name, "diffuseColor") == 0 ) {
+        // check attributes for format (default is vrml)
+        _diffusecol = Vector(pf[0], pf[1], pf[2]);
+        _bOverwriteDiffuse = true;
+    }
+    else if( stricmp((const char*)name, "ambientColor") == 0 ) {
+        // check attributes for format (default is vrml)
+        _ambientcol = Vector(pf[0], pf[1], pf[2]);
+        _bOverwriteAmbient = true;
+    }
+    else if( stricmp((const char*)name, "transparency") == 0 ) {
+        _transparency = *(float*)_pcurparser->GetData();
+        _bOverwriteTransparency = true;
+    }
+    else if( stricmp((const char*)name, "jointvalues") == 0 ) {
+        _vjointvalues.resize(_pcurparser->GetCount());
+        for(int i = 0; i < _pcurparser->GetCount(); ++i)
+            _vjointvalues[i] = pf[i];
     }
 
     _pcurparser = NULL;
@@ -1780,10 +1894,12 @@ bool KinBodyXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *name)
 
 void KinBodyXMLReader::characters(void *ctx ATTRIBUTE_UNUSED, const char *ch, int len)
 {
-    if( _pcurreader != NULL )
+    if( !!_pcurreader )
         _pcurreader->characters(ctx, ch, len);
     else if( _pcurparser != NULL )
         _pcurparser->Format((const char*)ch, len);
+    else
+        InterfaceXMLReader::characters(ctx,ch,len);
 }
 
 //// Manipulator Reader ////
@@ -1805,12 +1921,11 @@ ManipulatorXMLReader::ManipulatorXMLReader(RobotBase::Manipulator* pmanip, Robot
 
     _probot = probot;
     _pcurparser = NULL;
-    _pcurreader = NULL;
 }
 
 void ManipulatorXMLReader::startElement(void *ctx ATTRIBUTE_UNUSED, const char *name, const char **atts)
 {
-    if( _pcurreader != NULL ) {
+    if( !!_pcurreader ) {
         _pcurreader->startElement(ctx, name, atts);
     }
     else if( stricmp((const char*)name, "effector") == 0 ||
@@ -1831,16 +1946,16 @@ void ManipulatorXMLReader::startElement(void *ctx ATTRIBUTE_UNUSED, const char *
         _pcurparser = &g_realparser;
     }
     else {
-        _pcurreader = new DummyXMLReader(name, "Manipulator");
+        _pcurreader.reset(new DummyXMLReader(name, "Manipulator"));
     }
 }
 
 /// if returns true, XMLReader has finished parsing
 bool ManipulatorXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *name)
 {
-    if( _pcurreader != NULL ) {
+    if( !!_pcurreader ) {
         if( _pcurreader->endElement(ctx, name) ) {
-            delete _pcurreader; _pcurreader = NULL;
+            _pcurreader.reset();
         }
     }
     else if( stricmp((const char*)name, "manipulator") == 0 ) {
@@ -1971,7 +2086,7 @@ bool ManipulatorXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *na
 
 void ManipulatorXMLReader::characters(void *ctx ATTRIBUTE_UNUSED, const char *ch, int len)
 {
-    if( _pcurreader != NULL )
+    if( !!_pcurreader )
         _pcurreader->characters(ctx, ch, len);
     else if( _pcurparser != NULL )
         _pcurparser->Format((const char*)ch, len);
@@ -1996,12 +2111,11 @@ AttachedSensorXMLReader::AttachedSensorXMLReader(RobotBase::AttachedSensor* psen
 
     _probot = probot;
     _pcurparser = NULL;
-    _pcurreader = NULL;
 }
 
 void AttachedSensorXMLReader::startElement(void *ctx ATTRIBUTE_UNUSED, const char *name, const char **atts)
 {
-    if( _pcurreader != NULL ) {
+    if( !!_pcurreader ) {
         _pcurreader->startElement(ctx, name, atts);
     }
     else if( stricmp((const char*)name, "link") == 0 ) {
@@ -2039,30 +2153,30 @@ void AttachedSensorXMLReader::startElement(void *ctx ATTRIBUTE_UNUSED, const cha
                 RAVEPRINT(L"failed to create sensor %s\n", ptype);
             }
             else {
-                _pcurreader = _psensor->psensor->CreateXMLReader();
+                _pcurreader.reset(_psensor->psensor->CreateXMLReader());
             }
         }
 
         if( _psensor->psensor != NULL )
             _psensor->psensor->SetName(pname);
 
-        if( _pcurreader == NULL ) {
+        if( !_pcurreader ) {
             // create a dummy
-            _pcurreader = new DummyXMLReader(name, "AttachedSensor");
+            _pcurreader.reset(new DummyXMLReader(name, "AttachedSensor"));
         }
     }
     else {
-        _pcurreader = new DummyXMLReader(name, "AttachedSensor");
+        _pcurreader.reset(new DummyXMLReader(name, "AttachedSensor"));
     }
 }
 
 /// if returns true, XMLReader has finished parsing
 bool AttachedSensorXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *name)
 {
-    if( _pcurreader != NULL ) {
+    if( !!_pcurreader ) {
         if( _pcurreader->endElement(ctx, name) ) {
             _pcurreader->Release();
-            delete _pcurreader; _pcurreader = NULL;
+            _pcurreader.reset();
         }
     }
     else if( stricmp((const char*)name, "attachedsensor") == 0 ) {
@@ -2132,7 +2246,7 @@ bool AttachedSensorXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char 
 
 void AttachedSensorXMLReader::characters(void *ctx ATTRIBUTE_UNUSED, const char *ch, int len)
 {
-    if( _pcurreader != NULL )
+    if( !!_pcurreader )
         _pcurreader->characters(ctx, ch, len);
     else if( _pcurparser != NULL )
         _pcurparser->Format((const char*)ch, len);
@@ -2140,73 +2254,30 @@ void AttachedSensorXMLReader::characters(void *ctx ATTRIBUTE_UNUSED, const char 
 
 
 //// Robot Reader ////
-RobotXMLReader::RobotXMLReader(Environment* penv, RobotBase* probot, const char **atts)
+RobotXMLReader::RobotXMLReader(Environment* penv, RobotBase* probot, const char **atts) : InterfaceXMLReader(penv,PT_Robot,probot,"robot",atts)
 {
-    _penv = penv;
-    _pcurreader = NULL;
-    _probot = probot;
+    _probot = (RobotBase*)_pinterface;
     _pcurparser = NULL;
     bRobotInit = false;
     pNewController = NULL;
-
-    const char* ptype = NULL;
+    assert( _probot != NULL );
     rootoffset = rootjoffset = rootsoffset = rootmoffset = 0;
-    if( _probot != NULL ) {
-        rootoffset = (int)_probot->GetLinks().size();
-        rootjoffset = (int)_probot->GetJoints().size();
-        rootsoffset = (int)_probot->GetSensors().size();
-        rootmoffset = (int)_probot->GetManipulators().size();
+    if( probot != NULL ) {
+        rootoffset = (int)probot->GetLinks().size();
+        rootjoffset = (int)probot->GetJoints().size();
+        rootsoffset = (int)probot->GetSensors().size();
+        rootmoffset = (int)probot->GetManipulators().size();
     }
 
     if( atts != NULL ) {
         for (int i = 0;(atts[i] != NULL);i+=2) {
-            if( stricmp((const char*)atts[i], "file") == 0 ) {
-                // open from file
-                strcpy((char*)atts[i], ""); // delete file attr
-
-                {
-                    assert(_probot==NULL||_probot->GetEnv()==_penv);
-                    RobotXMLReader reader(_penv,_probot, atts);                    
-                    bool bSuccess = RaveParseXMLFile(_penv,&reader, (const char*)atts[i+1]);
-                    if( !bSuccess ) {
-                        reader.Release();
-                        RAVELOG(L"Failed to load robot filename %s\n", atts[i+1]);
-                        g_XMLErrorCount++;
-                        break;
-                    }
-    
-                    _probot = (RobotBase*)reader.Release();
-                    _probot->strXMLFilename = reader._filename;
-                }
-
-                bRobotInit = true;
-            }
-            else if( stricmp((const char*)atts[i], "name") == 0 ) {
+            if( stricmp((const char*)atts[i], "name") == 0 ) {
                 _robotname = (const char*)atts[i+1];
-            }
-            else if( stricmp((const char*)atts[i], "type") == 0 ) {
-                ptype = (const char*)atts[i+1];
             }
             else if( stricmp((const char*)atts[i], "prefix") == 0 ) {
                 prefix = (const char*)atts[i+1];
                 wprefix = _ravembstowcs((const char*)atts[i+1]);
             }
-        }
-    }
-
-    if( _probot == NULL ) {
-        // create the robot
-        if( ptype != NULL ) {
-            _probot = _penv->CreateRobot(_ravembstowcs(ptype).c_str());
-            if( _probot == NULL ) {
-                RAVELOGA("Failed to find robot %s\n", ptype);
-                g_XMLErrorCount++;
-            }
-        }
-        else {
-            _probot = _penv->CreateRobot(L"GenericRobot");
-            if( _probot == NULL )
-                _probot = _penv->CreateRobot((char*)NULL);
         }
     }
 }
@@ -2215,13 +2286,18 @@ void RobotXMLReader::startElement(void *ctx ATTRIBUTE_UNUSED, const char *name, 
 {
     assert( _probot != NULL );
 
-    if( _pcurreader != NULL ) {
+    if( !!_pcurreader ) {
         _pcurreader->startElement(ctx, name, atts);
+        return;
     }
-    else if( stricmp((const char*)name, "robot") == 0 ) {
-        //const char* ptype = NULL;
 
-        _pcurreader = new RobotXMLReader(_penv, _probot, atts);
+    InterfaceXMLReader::startElement(ctx,name,atts);
+    if( !!_pcustomreader )
+        return;
+
+    if( stricmp((const char*)name, "robot") == 0 ) {
+        //const char* ptype = NULL;
+        _pcurreader.reset(new RobotXMLReader(_penv, _probot, atts));
 //        if( atts != NULL ) {
 //            for (int i = 0;(atts[i] != NULL);i+=2) {
 //                if( stricmp((const char*)atts[i], "file") == 0 ) {
@@ -2265,19 +2341,19 @@ void RobotXMLReader::startElement(void *ctx ATTRIBUTE_UNUSED, const char *name, 
 //
 //        if( _probot == NULL ) {
 //            RAVELOGA("Failed to find GenericRobot\n");
-//            _probot = new RobotBase(&g_Environ);
+//            _probot = (RobotBase*)_penv->CreateInterface(PT_Robot, "");
 //        }
     }
     else if( stricmp((const char*)name, "kinbody") == 0 ) {
-        _pcurreader = new KinBodyXMLReader(_penv,_probot, atts);
+        _pcurreader.reset(new KinBodyXMLReader(_penv,_probot->GetInterfaceType(),_probot, atts));
     }
     else if( stricmp((const char*)name, "manipulator") == 0 ) {
         _probot->_vecManipulators.push_back(RobotBase::Manipulator(_probot));
-        _pcurreader = new ManipulatorXMLReader(&_probot->_vecManipulators.back(), _probot, atts);
+        _pcurreader.reset(new ManipulatorXMLReader(&_probot->_vecManipulators.back(), _probot, atts));
     }
     else if( stricmp((const char*)name, "attachedsensor") == 0 ) {
         _probot->_vecSensors.push_back(RobotBase::AttachedSensor(_probot));
-        _pcurreader = new AttachedSensorXMLReader(&_probot->_vecSensors.back(), _probot, atts);
+        _pcurreader.reset(new AttachedSensorXMLReader(&_probot->_vecSensors.back(), _probot, atts));
     }
     else if( stricmp((const char*)name, "controller") == 0 ) {
         _pcurparser = &g_stringparser;
@@ -2288,15 +2364,7 @@ void RobotXMLReader::startElement(void *ctx ATTRIBUTE_UNUSED, const char *name, 
         _pcurparser = &g_realparser;
     }
     else {
-        // check for registers readers
-        map<string, EnvironmentBase::CreateXMLReaderFn>::iterator it = s_mapKinBodyReaders.find(name);
-        if( it != s_mapKinBodyReaders.end() ) {
-            _pcurreader = it->second(_probot, atts);
-            _strRegReaderId = name;
-        }
-        else {
-            _pcurreader = new DummyXMLReader(name, "Robot");
-        }
+        _pcurreader.reset(new DummyXMLReader(name, "Robot"));
     }
 }
 
@@ -2305,74 +2373,13 @@ bool RobotXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *name)
 {
     dReal* pf = _pcurparser != NULL ? (dReal*)_pcurparser->GetData() : NULL;
 
-    if( _pcurreader != NULL ) {
+    if( !!_pcurreader ) {
         if( _pcurreader->endElement(ctx, name) ) {
-
-            if( stricmp(name, _strRegReaderId.c_str()) == 0 ) {
-                _probot->AddExtraInterface((XMLReadable*)_pcurreader->Release());
-            }
-            else
-                _pcurreader->Release();
-            delete _pcurreader; _pcurreader = NULL;
+            _pcurreader->Release();
+            _pcurreader.reset();
         }
     }
-    else if( stricmp((const char*)name, "translation") == 0 ) {
-        assert( _pcurparser->GetCount() == 3 );
-        _trans.trans = Vector(pf[0], pf[1], pf[2]);
-    }
-    else if( stricmp((const char*)name, "rotationaxis") == 0 ) {
-        // check if quaternion or rotation matrix
-        assert( _pcurparser->GetCount() == 4 );
-        
-        Transform tnew;
-        normalize3(pf, pf);
-        tnew.rotfromaxisangle(Vector(pf[0], pf[1], pf[2]), pf[3] * PI / 180.0f);
-        _trans.rot = (tnew*_trans).rot;
-    }
-    else if( stricmp((const char*)name, "quat") == 0 ) {
-        // check if quaternion or rotation matrix
-        assert( _pcurparser->GetCount() == 4 );
-        
-        Transform tnew;
-        normalize4(tnew.rot, pf);
-        _trans.rot = (tnew*_trans).rot;
-    }
-    else if( stricmp((const char*)name, "rotationmat") == 0 ) {
-        // check if quaternion or rotation matrix
-        assert( _pcurparser->GetCount() == 9 );
-        
-        TransformMatrix tnew;
-        tnew.m[0] = pf[0]; tnew.m[1] = pf[1]; tnew.m[2] = pf[2]; tnew.m[3] = 0;
-        tnew.m[4] = pf[3]; tnew.m[5] = pf[4]; tnew.m[6] = pf[5]; tnew.m[7] = 0;
-        tnew.m[8] = pf[6]; tnew.m[9] = pf[7]; tnew.m[10] = pf[8]; tnew.m[11] = 0;
-        _trans.rot = (Transform(tnew)*_trans).rot;
-    }
-    else if( stricmp((const char*)name, "controller") == 0 ) {
-
-        char* pstr = (char*)_pcurparser->GetData();
-        // format: controllername args
-        char* args = strchr(pstr, ' ');
-        if( args != NULL ) {
-            *args++ = 0;
-            strControllerArgs = args;
-        }
-        else
-            strControllerArgs = "";
-
-        pNewController = _probot->GetEnv()->CreateController(_ravembstowcs(pstr).c_str());
-
-        if( pNewController == NULL ) {
-            RAVELOGA("Failed to find controller %s\n", pstr);
-            g_XMLErrorCount++;
-        }
-    }
-    else if( stricmp((const char*)name, "jointvalues") == 0 ) {
-        _vjointvalues.resize(_pcurparser->GetCount());
-        for(int i = 0; i < _pcurparser->GetCount(); ++i)
-            _vjointvalues[i] = pf[i];
-    }
-    else if( stricmp((const char*)name, "robot") == 0 ) {
-        
+    else if( InterfaceXMLReader::endElement(ctx,name) ) {
         if( _robotname.size() > 0 )
             _probot->SetName(_robotname.c_str());
 
@@ -2440,8 +2447,62 @@ bool RobotXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *name)
         
         if( !_probot->GetEnv()->GetPhysicsEngine()->InitKinBody(_probot) )
             RAVELOG(L"physics engine failed to init robot %S\n", _probot->GetName());
-
         return true;
+    }
+    else if( stricmp((const char*)name, "translation") == 0 ) {
+        assert( _pcurparser->GetCount() == 3 );
+        _trans.trans = Vector(pf[0], pf[1], pf[2]);
+    }
+    else if( stricmp((const char*)name, "rotationaxis") == 0 ) {
+        // check if quaternion or rotation matrix
+        assert( _pcurparser->GetCount() == 4 );
+        
+        Transform tnew;
+        normalize3(pf, pf);
+        tnew.rotfromaxisangle(Vector(pf[0], pf[1], pf[2]), pf[3] * PI / 180.0f);
+        _trans.rot = (tnew*_trans).rot;
+    }
+    else if( stricmp((const char*)name, "quat") == 0 ) {
+        // check if quaternion or rotation matrix
+        assert( _pcurparser->GetCount() == 4 );
+        
+        Transform tnew;
+        normalize4(tnew.rot, pf);
+        _trans.rot = (tnew*_trans).rot;
+    }
+    else if( stricmp((const char*)name, "rotationmat") == 0 ) {
+        // check if quaternion or rotation matrix
+        assert( _pcurparser->GetCount() == 9 );
+        
+        TransformMatrix tnew;
+        tnew.m[0] = pf[0]; tnew.m[1] = pf[1]; tnew.m[2] = pf[2]; tnew.m[3] = 0;
+        tnew.m[4] = pf[3]; tnew.m[5] = pf[4]; tnew.m[6] = pf[5]; tnew.m[7] = 0;
+        tnew.m[8] = pf[6]; tnew.m[9] = pf[7]; tnew.m[10] = pf[8]; tnew.m[11] = 0;
+        _trans.rot = (Transform(tnew)*_trans).rot;
+    }
+    else if( stricmp((const char*)name, "controller") == 0 ) {
+
+        char* pstr = (char*)_pcurparser->GetData();
+        // format: controllername args
+        char* args = strchr(pstr, ' ');
+        if( args != NULL ) {
+            *args++ = 0;
+            strControllerArgs = args;
+        }
+        else
+            strControllerArgs = "";
+
+        pNewController = _probot->GetEnv()->CreateController(_ravembstowcs(pstr).c_str());
+
+        if( pNewController == NULL ) {
+            RAVELOGA("Failed to find controller %s\n", pstr);
+            g_XMLErrorCount++;
+        }
+    }
+    else if( stricmp((const char*)name, "jointvalues") == 0 ) {
+        _vjointvalues.resize(_pcurparser->GetCount());
+        for(int i = 0; i < _pcurparser->GetCount(); ++i)
+            _vjointvalues[i] = pf[i];
     }
 
     _pcurparser = NULL;
@@ -2450,10 +2511,71 @@ bool RobotXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *name)
 
 void RobotXMLReader::characters(void *ctx ATTRIBUTE_UNUSED, const char *ch, int len)
 {
-    if( _pcurparser != NULL )
-        _pcurparser->Format((const char*)ch, len);
-    else if( _pcurreader != NULL )
+    if( !!_pcurreader )
         _pcurreader->characters(ctx, ch, len);
+    else if( _pcurparser != NULL )
+        _pcurparser->Format((const char*)ch, len);
+    else
+        InterfaceXMLReader::characters(ctx,ch,len);
+}
+
+ControllerXMLReader::ControllerXMLReader(Environment* penv, InterfaceBase* pinterface, const char** atts) : InterfaceXMLReader(penv,PT_Controller,pinterface,g_mapInterfaceNames[PT_Controller],atts)
+{
+    if( atts != NULL ) {
+        for (int i = 0;(atts[i] != NULL);i+=2) {
+            if( stricmp((const char*)atts[i], "robot") == 0 ) {
+                _robotname = _ravembstowcs((const char*)atts[i+1]);
+            }
+            else if( stricmp((const char*)atts[i], "args") == 0 ) {
+                _args = (const char*)atts[i+1];
+            }
+        }
+    }
+}
+
+void ControllerXMLReader::startElement(void *ctx ATTRIBUTE_UNUSED, const char *name, const char **atts)
+{
+    if( !!_pcurreader ) {
+        _pcurreader->startElement(ctx, name, atts);
+        return;
+    }
+
+    InterfaceXMLReader::startElement(ctx,name,atts);
+    if( !!_pcustomreader )
+        return;
+
+    _pcurreader.reset(new DummyXMLReader(name, g_mapInterfaceNames[PT_Controller].c_str()));
+}
+
+bool ControllerXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *name)
+{
+    if( !!_pcurreader ) {
+        if( _pcurreader->endElement(ctx, name) )
+            _pcurreader.reset();
+    }
+    else if( InterfaceXMLReader::endElement(ctx,name) ) {
+        RobotBase* probot = NULL;
+        if( _robotname.size() > 0 ) {
+            KinBody* pbody = _penv->GetKinBody(_robotname.c_str());
+            if( pbody->IsRobot() )
+                probot = (RobotBase*)pbody;
+        }
+
+        if( probot )
+            probot->SetController((ControllerBase*)_pinterface,_args.c_str());
+        else
+            RAVELOG_WARNA("controller is unused\n");
+        return true;
+    }
+    return false;
+}
+
+void ControllerXMLReader::characters(void *ctx ATTRIBUTE_UNUSED, const char *ch, int len)
+{
+    if( !!_pcurreader )
+        _pcurreader->characters(ctx,ch,len);
+    else
+        InterfaceXMLReader::characters(ctx,ch,len);
 }
 
 //// Environment Reader ////
@@ -2462,7 +2584,6 @@ EnvironmentXMLReader::EnvironmentXMLReader(Environment* penv, const char **atts)
     _penv = penv;
     if( _penv == NULL )
         _penv = new Environment;
-    _pcurreader = NULL;
     _pcurparser = NULL;
     _bInEnvironment = false;
 
@@ -2479,21 +2600,27 @@ EnvironmentXMLReader::~EnvironmentXMLReader()
 
 void EnvironmentXMLReader::startElement(void *ctx ATTRIBUTE_UNUSED, const char *name, const char **atts)
 {
-    if( _pcurreader != NULL ) {
+    if( !!_pcurreader ) {
         _pcurreader->startElement(ctx, name, atts);
+        return;
     }
-    else if( stricmp((const char*)name, "kinbody") == 0 ) {
-        _pcurreader = new KinBodyXMLReader(_penv,NULL, atts);
-    }
-    else if( stricmp((const char*)name, "robot") == 0 ) {
-        RobotXMLReader* probotreader = new RobotXMLReader(_penv,NULL, atts);
-        if( probotreader->GetRobot() == NULL ) {
-            RAVEPRINT(L"failed to create robot!\n");
+
+    // check for any plugins
+    FOREACH(itname,g_mapInterfaceNames) {
+        if( stricmp((const char*)name, itname->second.c_str()) == 0 ) {
+            InterfaceXMLReader* preader = CreateInterfaceReader(_penv,itname->first,NULL,"",atts);
+            if( preader->GetInterface() == NULL ) {
+                RAVELOG_WARNA("failed to create interface %s in <environment>\n", itname->second.c_str());
+                delete preader;
+                _pcurreader.reset(new DummyXMLReader(name,"environment"));
+            }
+            else
+                _pcurreader.reset(preader);
             return;
         }
-        _pcurreader = probotreader;
     }
-    else if( stricmp((const char*)name, "environment") == 0 ) {
+
+    if( stricmp((const char*)name, "environment") == 0 ) {
         _bInEnvironment = true;
     }
     else if( stricmp((const char*)name, "bkgndcolor") == 0 ||
@@ -2503,8 +2630,11 @@ void EnvironmentXMLReader::startElement(void *ctx ATTRIBUTE_UNUSED, const char *
              stricmp((const char*)name, "bkgndcolor") == 0 ) {
         _pcurparser = &g_realparser;
     }
+    else if( stricmp((const char*)name, "plugin") == 0 ) {
+        _pcurparser = &g_stringparser;
+    }
     else {
-        _pcurreader = new DummyXMLReader(name, "Environment");
+        _pcurreader.reset(new DummyXMLReader(name, "environment"));
     }
 }
 
@@ -2513,20 +2643,26 @@ bool EnvironmentXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *na
 {
     dReal* pf = _pcurparser != NULL ? (dReal*)_pcurparser->GetData() : NULL;
     
-    if( _pcurreader != NULL ) {
+    if( !!_pcurreader ) {
         if( _pcurreader->endElement(ctx, name) ) {
-            if( stricmp((const char*)name, "robot") == 0 ) {
+            if( dynamic_cast<RobotXMLReader*>(_pcurreader.get()) ) {
                 if( !_bInEnvironment )
-                    ((RobotXMLReader*)_pcurreader)->SetXMLFilename(_filename);
+                    ((RobotXMLReader*)_pcurreader.get())->SetXMLFilename(_filename);
                 _penv->AddRobot((RobotBase*)_pcurreader->Release());
             }
-            else if( stricmp((const char*)name, "kinbody") == 0 ) {
+            else if( dynamic_cast<KinBodyXMLReader*>(_pcurreader.get()) ) {
                 if( !_bInEnvironment )
-                    ((KinBodyXMLReader*)_pcurreader)->SetXMLFilename(_filename);
+                    ((KinBodyXMLReader*)_pcurreader.get())->SetXMLFilename(_filename);
                 _penv->AddKinBody((KinBody*)_pcurreader->Release());
             }
-            else _pcurreader->Release();
-            delete _pcurreader; _pcurreader = NULL;
+            else if( dynamic_cast<DummyInterfaceXMLReader<PT_ProblemInstance> * > (_pcurreader.get()) ) {
+                _penv->LoadProblem((ProblemInstance*)_pcurreader->Release(),NULL);
+            }
+            else {
+                //RAVELOG_WARNA("losing pointer to environment %s",name);
+                _pcurreader->Release();
+            }
+            _pcurreader.reset();
         }
     }
     else if( stricmp((const char*)name, "bkgndcolor") == 0 ) {
@@ -2563,6 +2699,9 @@ bool EnvironmentXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *na
         }
         else RAVELOG(L"camtrans error");
     }
+    else if( stricmp((const char*)name, "plugin") == 0 ) {
+        _penv->LoadPlugin((char*)_pcurparser->GetData());
+    }
     else if( stricmp((const char*)name, "environment") == 0 ) {
         // commit changes
 
@@ -2595,6 +2734,6 @@ void EnvironmentXMLReader::characters(void *ctx ATTRIBUTE_UNUSED, const char *ch
 {
     if( _pcurparser != NULL )
         _pcurparser->Format((const char*)ch, len);
-    else if( _pcurreader != NULL )
+    else if( !!_pcurreader )
         _pcurreader->characters(ctx, ch, len);
 }

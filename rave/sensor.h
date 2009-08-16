@@ -133,7 +133,7 @@ public:
         int width, height; ///< width and height of image
     };
 
-    SensorBase(EnvironmentBase* penv) : InterfaceBase(penv) {}
+    SensorBase(EnvironmentBase* penv) : InterfaceBase(PT_Sensor, penv) {}
     virtual ~SensorBase() {}
 
     /// Initializes the sensor

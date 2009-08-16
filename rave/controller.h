@@ -33,7 +33,7 @@ public:
         AS_Braked=4, ///< the actuator is braked
     };
 
-    ControllerBase(EnvironmentBase* penv) : InterfaceBase(penv) {}
+    ControllerBase(EnvironmentBase* penv) : InterfaceBase(PT_Controller, penv) {}
     virtual ~ControllerBase() {}
     
     /// Initializes the controller

@@ -42,7 +42,7 @@ inline dReal  START_A(const Trajectory::TSEGMENT& seg, int d)    { return seg.Ge
 inline dReal& END_A(Trajectory::TSEGMENT& seg, int d)            { return seg.Get(5, d); }
 inline dReal  END_A(const Trajectory::TSEGMENT& seg, int d)      { return seg.Get(5, d); }
 
-Trajectory::Trajectory(EnvironmentBase* penv, int nDOF) : InterfaceBase(penv)
+Trajectory::Trajectory(EnvironmentBase* penv, int nDOF) : InterfaceBase(PT_Trajectory, penv)
 {
     //assert( nDOF > 0 );
     _nDOF = nDOF;

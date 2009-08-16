@@ -493,12 +493,6 @@ public:
     /// \return true if this body is derived from RobotBase
     virtual bool IsRobot() const { return false; }
 
-    /// extra readable interfaces
-    /// will not add the interface if there is already one with the same id
-    virtual bool AddExtraInterface(XMLReadable* preadable);
-    virtual XMLReadable* GetExtraInterface(const char* pid) const;
-    virtual void RemoveExtraInterface(XMLReadable* preadable);
-
     virtual int GetNetworkId() const;
     static KinBody* GetBodyFromNetworkId(int id);
     
@@ -518,9 +512,6 @@ public:
     virtual void SetGuiData(void* pdata) { _pGuiData = pdata; }
     virtual void* GetGuiData() const { return _pGuiData; }
 
-    virtual void SetUserData(void* pdata) { _pUserData = pdata; }
-    virtual void* GetUserData() const { return _pUserData; }
-    
     virtual const std::string GetXMLFilename() const { return strXMLFilename; }
 
     virtual const std::set<int>& GetNonAdjacentLinks() const {return _setNonAdjacentLinks;}   
@@ -540,8 +531,8 @@ public:
     virtual bool Clone(const InterfaceBase* preference, int cloningoptions);
 
 protected:
-    /// cnostructors declared protected so that user always goes through environment to create bodies
-    KinBody(EnvironmentBase* penv);
+    /// constructors declared protected so that user always goes through environment to create bodies
+    KinBody(PluginType type, EnvironmentBase* penv);
     
     /// specific data about physics engine, should be set only by the current PhysicsEngineBase
     virtual void SetPhysicsData(void* pdata) { _pPhysicsData = pdata; }
@@ -571,7 +562,6 @@ protected:
 
     std::set<KinBody*> _setAttachedBodies;
 
-    std::vector<XMLReadable*> _vReadableInterfaces; ///< pointers to extra interfaces that are included with this object
     std::string strXMLFilename;             ///< xml file used to load the body
     mutable std::vector<dReal> _vTempJoints;        ///< used as a temporary buffer
 
@@ -579,7 +569,6 @@ protected:
     int _nUpdateStampId;                         ///< unique id for every unique transformation change of any link,
                                             ////< monotically increases as body is updated.
     void* _pGuiData;                        ///< GUI data to let the viewer store specific graphic handles for the object
-    void* _pUserData;                       ///< data set by the user
     void* _pPhysicsData;                ///< data set by the physics engine
     void* _pCollisionData; ///< internal collision model
 

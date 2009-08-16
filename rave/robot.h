@@ -385,10 +385,12 @@ private:
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
     friend class RobotXMLReader;
+    friend class InterfaceXMLReader;
     friend class RaveDatabase;
     friend class Environment;
 #else
     friend class ::RobotXMLReader;
+    friend class ::InterfaceXMLReader;
     friend class ::RaveDatabase;
     friend class ::Environment;
 #endif

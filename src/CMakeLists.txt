@@ -104,7 +104,7 @@ install(FILES ${example_grasping_files} DESTINATION share/openrave/examples/gras
 file(GLOB example_grasping2_files ${CMAKE_CURRENT_SOURCE_DIR}/examples/grasping/grasptables/*.mat)
 install(FILES ${example_grasping2_files} DESTINATION share/openrave/examples/grasping/grasptables)
 set(PLUGINCPP ${CMAKE_CURRENT_SOURCE_DIR}/examples/plugincpp)
-install(FILES ${PLUGINCPP}/CMakeLists.txt ${PLUGINCPP}/README ${PLUGINCPP}/plugincpp.cpp ${PLUGINCPP}/FindOpenRAVE.cmake DESTINATION share/openrave/examples/plugincpp)
+install(FILES ${PLUGINCPP}/CMakeLists.txt ${PLUGINCPP}/README ${PLUGINCPP}/plugincpp.cpp ${PLUGINCPP}/customreader.cpp ${PLUGINCPP}/customreader.env.xml ${PLUGINCPP}/FindOpenRAVE.cmake DESTINATION share/openrave/examples/plugincpp)
 if( MSVC )
   install(FILES ${CMAKE_SOURCE_DIR}/runcmake_win.bat DESTINATION share/openrave/examples/plugincpp)
   install(FILES ${CMAKE_SOURCE_DIR}/plugins/openraveplugin.def DESTINATION share/openrave/examples/plugincpp)

@@ -31,7 +31,7 @@ enum CollisionOptions
 class CollisionCheckerBase : public InterfaceBase
 {
 public:
-    CollisionCheckerBase(EnvironmentBase* penv) : InterfaceBase(penv) {}
+    CollisionCheckerBase(EnvironmentBase* penv) : InterfaceBase(PT_CollisionChecker, penv) {}
     virtual ~CollisionCheckerBase() {}
 
     /// called when environment sets this collision checker, checker assumes responsibility for KinBody::_pCollisionData

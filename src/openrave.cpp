@@ -67,6 +67,16 @@ using namespace std;
 #define ARRAYSIZE(x) (sizeof(x)/(sizeof( (x)[0] )))
 #endif
 
+class LockEnvironment
+{
+public:
+    LockEnvironment(EnvironmentBase* penv) : _penv(penv) { _penv->LockPhysics(true); }
+    ~LockEnvironment() { _penv->LockPhysics(false); }
+
+private:
+    EnvironmentBase* _penv;
+};
+
 inline string _stdwcstombs(const wchar_t* pname)
 {
     string s;
@@ -127,10 +137,6 @@ int main(int argc, char ** argv)
 
     int nServPort = 4765;
     
-#ifndef _WIN32
-    mkdir("~/.openrave",644);
-#endif
-
     DebugLevel debuglevel = Level_Info;    
     list<string> listLoadPlugins;
     bool bListPlugins = false;
@@ -266,6 +272,7 @@ int main(int argc, char ** argv)
                 return -2;
             }
 
+            LockEnvironment lockenv(penv);
             penv->SetDebugLevel(debuglevel);
             if( !penv->Load(robotfile.c_str()) ) {
                 RAVELOG_ERRORA("Generate IK: failed to open %s robot file.\n", robotfile.c_str());
@@ -289,8 +296,7 @@ int main(int argc, char ** argv)
             }
 
 #ifndef _WIN32
-            string strhome = string(getenv("HOME"))+string("/.openrave");
-            char* tempfilename = tempnam(strhome.c_str(), "ik");
+            char* tempfilename = tempnam(penv->GetHomeDirectory(), "ik");
 #else
             char* tempfilename = tempnam(NULL, "ik");
 #endif

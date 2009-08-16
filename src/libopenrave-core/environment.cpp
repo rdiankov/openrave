@@ -25,6 +25,7 @@
 #define PLUGIN_EXT ".dll"
 #else
 #include <dlfcn.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <dirent.h>
 
@@ -72,7 +73,7 @@ RaveDatabase::RaveDatabase()
     _mapinterfacenames[PT_Controller] = "Controller";
     _mapinterfacenames[PT_ProblemInstance] = "ProblemInstance";
     _mapinterfacenames[PT_InverseKinematicsSolver] = "InverseKinematicsSolver";
-    _mapinterfacenames[PT_Object] = "Object";
+    _mapinterfacenames[PT_KinBody] = "KinBody";
     _mapinterfacenames[PT_PhysicsEngine] = "PhysicsEngine";
     _mapinterfacenames[PT_Sensor] = "Sensor";
     _mapinterfacenames[PT_CollisionChecker] = "CollisionChecker";
@@ -172,7 +173,7 @@ RobotBase* RaveDatabase::CreateRobot(EnvironmentBase* penv, const wchar_t* pname
 
 RobotBase* RaveDatabase::CreateRobot(EnvironmentBase* penv, const char* pname)
 {
-    RobotBase* probot = (RobotBase*)CreateMBS(penv, PT_Robot, pname, OPENRAVE_ROBOT_HASH);
+    RobotBase* probot = (RobotBase*)Create(penv, PT_Robot, pname, OPENRAVE_ROBOT_HASH);
     if( probot != NULL ) {
         if( strcmp(probot->GetKinBodyHash(), OPENRAVE_KINBODY_HASH) ) {
             RAVELOG_FATALA("plugin interface Robot, name %s has invalid hash, might be compiled with stale openrave files\n", pname);
@@ -182,6 +183,28 @@ RobotBase* RaveDatabase::CreateRobot(EnvironmentBase* penv, const char* pname)
 
     assert( probot == NULL || probot->IsRobot() );
     return probot;
+}
+
+void* RaveDatabase::Create(EnvironmentBase* penv, PluginType type, const char* pname)
+{
+    switch(type) {
+    case PT_Planner: return Create(penv,type,pname,OPENRAVE_PLANNER_HASH);
+    case PT_Robot: return Create(penv,type,pname,OPENRAVE_ROBOT_HASH);
+    case PT_SensorSystem: return Create(penv,type,pname,OPENRAVE_SENSORSYSTEM_HASH);
+    case PT_Controller: return Create(penv,type,pname,OPENRAVE_CONTROLLER_HASH);
+    case PT_ProblemInstance: return Create(penv,type,pname,OPENRAVE_PROBLEM_HASH);
+    case PT_InverseKinematicsSolver: return Create(penv,type,pname,OPENRAVE_IKSOLVER_HASH);
+    case PT_KinBody: return Create(penv,type,pname,OPENRAVE_KINBODY_HASH);
+    case PT_PhysicsEngine: return Create(penv,type,pname,OPENRAVE_PHYSICSENGINE_HASH);
+    case PT_Sensor: return Create(penv,type,pname,OPENRAVE_SENSOR_HASH);
+    case PT_CollisionChecker: return Create(penv,type,pname,OPENRAVE_COLLISIONCHECKER_HASH);
+    case PT_Trajectory: return Create(penv,type,pname,OPENRAVE_TRAJECTORY_HASH);
+    case PT_Viewer: return Create(penv,type,pname,OPENRAVE_VIEWER_HASH);
+    case PT_Server: return Create(penv,type,pname,OPENRAVE_SERVER_HASH);
+    }
+    
+    RAVELOG_WARNA("failed to find type %d:%s\n",type,pname);
+    return NULL;
 }
 
 void* RaveDatabase::Create(EnvironmentBase* penv, PluginType type, const wchar_t* pname, const char* hash)
@@ -209,12 +232,20 @@ void* RaveDatabase::Create(EnvironmentBase* penv, PluginType type, const wchar_t
         }
     }
 
-    RAVELOG_WARNA("Failed to create name %S, interface %s\n", pname, _mapinterfacenames[type].c_str());
-    
+    if( pname == NULL || pname[0] == 0 ) {
+        switch(type) {
+        case PT_KinBody: return penv->CreateKinBody();
+        case PT_Trajectory: return penv->CreateTrajectory(0);
+        default:
+            break;
+        }
+    }
+
+    RAVELOG_WARNA("Failed to create name %S, interface %s\n", pname, _mapinterfacenames[type].c_str());    
     return NULL;
 }
 
-void* RaveDatabase::CreateMBS(EnvironmentBase* penv, PluginType type, const char* pname, const char* hash)
+void* RaveDatabase::Create(EnvironmentBase* penv, PluginType type, const char* pname, const char* hash)
 {
     if( pname == NULL || hash == NULL ) {
         RAVELOG_ERRORA("RaveDatabase::Create bad parameters");
@@ -331,6 +362,11 @@ bool RaveDatabase::AddDirectory(const char* pdir)
 
 bool RaveDatabase::AddPlugin(const char* pname)
 {
+    if( pname == NULL ) {
+        RAVELOG_WARNA("plugin name is NULL\n");
+        return false;
+    }
+
     // first delete it
     DeletePlugin(pname);
 
@@ -396,6 +432,13 @@ bool Environment::DummyPhysicsEngine::GetJointVelocity(const KinBody::Joint* pjo
 /////////////////
 Environment::Environment(bool bLoadAllPlugins) : _dummyphysics(this), _dummychecker(this), _dummyviewer(this)
 {
+#ifndef _WIN32
+    _homedirectory = string(getenv("HOME"))+string("/.openrave");
+    mkdir("~/.openrave",644);
+#else
+    _homedirectory = string(getenv("HOMEPATH"))+string("\\.openrave");
+#endif
+
     _nBodiesModifiedStamp = 0;
     _bPublishBodiesAnytime = false;
 
@@ -519,7 +562,7 @@ Environment::Environment(const Environment& r, int options) : _dummyphysics(this
         FOREACHC(itbody, r._vecbodies) {
             if( _mapBodies.find((*itbody)->GetNetworkId()) != _mapBodies.end() )
                 continue;
-            KinBody* pnewbody = new KinBody(this);
+            KinBody* pnewbody = new KinBody(PT_KinBody,this);
             if( !pnewbody->Clone(*itbody,options) ) {
                 RAVELOG_ERRORA("failed to clone body %S\n", (*itbody)->GetName());
                 delete pnewbody;
@@ -746,6 +789,35 @@ EnvironmentBase* Environment::CloneSelf(int options)
     return new Environment(*this, options);
 }
 
+InterfaceBase* Environment::CreateInterface(PluginType type,const char* pinterfacename)
+{
+    WaitForPlugins();
+    InterfaceBase* pinterface = (InterfaceBase*)_pdatabase->Create(this,type,pinterfacename);
+    switch(type) {
+    case PT_KinBody:
+        if( pinterface == NULL )
+            return CreateKinBody();
+        else {
+            KinBody* pbody = (KinBody*)pinterface;
+            SetUniqueNetworkId(pbody, &pbody->networkid);
+            pbody->DestroyCallback = KinBodyDestroyCallback;
+        }
+        break;
+    case PT_Robot:
+        if( pinterface == NULL )
+            return CreateRobot((char*)NULL);
+        else {
+            RobotBase* probot = (RobotBase*)pinterface;
+            SetUniqueNetworkId(probot, &probot->networkid);
+            probot->DestroyCallback = KinBodyDestroyCallback;
+        }
+        break;
+    default:
+        break;
+    }
+    return pinterface;
+}
+
 RobotBase* Environment::CreateRobot(const wchar_t* pname)
 {
     RobotBase* probot;
@@ -949,7 +1021,7 @@ KinBody* Environment::CreateKinBody()
         RAVELOG_ERRORA("CreateKinBody physics needs to be locked! Ignoring lock...\n");
     }
 
-    KinBody* pbody = new KinBody(this);
+    KinBody* pbody = new KinBody(PT_KinBody,this);
     SetUniqueNetworkId(pbody, &pbody->networkid);
     pbody->DestroyCallback = KinBodyDestroyCallback;
 
@@ -1241,7 +1313,7 @@ KinBody* Environment::ReadKinBodyXML(KinBody* body, const char* filename, const 
             return NULL;
     }
     else {
-        KinBodyXMLReader reader(this,body, atts);
+        KinBodyXMLReader reader(this,PT_KinBody,body, atts);
         bool bSuccess = ParseXMLFile(&reader, filename);
         if( !bSuccess ) {
             reader.Release();
@@ -1255,14 +1327,14 @@ KinBody* Environment::ReadKinBodyXML(KinBody* body, const char* filename, const 
     return body;
 }
 
-void Environment::RegisterXMLReader(const char* ptype, CreateXMLReaderFn pfn)
+void Environment::RegisterXMLReader(PluginType type, const char* xmltag, CreateXMLReaderFn pfn)
 {
-    KinBodyRegisterXMLReader(ptype, pfn);
+    ::RegisterXMLReader(type, xmltag, pfn);
 }
 
-void Environment::UnregisterXMLReader(const char* ptype)
+void Environment::UnregisterXMLReader(PluginType type, const char* xmltag)
 {
-    KinBodyUnregisterXMLReader(ptype);
+    ::UnregisterXMLReader(type, xmltag);
 }
 
 bool Environment::ParseXMLFile(BaseXMLReader* preader, const char* filename)

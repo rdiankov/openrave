@@ -1208,9 +1208,6 @@
       <resolution>1</resolution>
     </Joint>
   </KinBody>
-
-  <Controller>IdealController</Controller>
-
   <Manipulator>
     <base>LCollar</base>
     <effector>LHand3</effector>

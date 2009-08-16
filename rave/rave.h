@@ -28,22 +28,32 @@
 #include <cstdlib>
 #include <stdint.h>
 
-#include <vector>
-#include <list>
-#include <string>
-#include <set>
-#include <map>
-#include <iomanip>
-#include <fstream>
-#include <sstream>
-
 #ifdef _MSC_VER
+// needed to get typeof working
+//#include <boost/typeof/std/string.hpp>
+//#include <boost/typeof/std/vector.hpp>
+//#include <boost/typeof/std/list.hpp>
+//#include <boost/typeof/std/map.hpp>
+//#include <boost/typeof/std/set.hpp>
+//#include <boost/typeof/std/string.hpp>
 
 #ifndef __PRETTY_FUNCTION__
 #define __PRETTY_FUNCTION__ __FUNCDNAME__
 #endif
 
+#else
 #endif
+
+#include <string>
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <string>
+
+#include <iomanip>
+#include <fstream>
+#include <sstream>
 
 namespace OpenRAVE {
 
@@ -302,7 +312,7 @@ enum PluginType
     PT_Controller=4, ///< ControllerBase interface
     PT_ProblemInstance=5, ///< ProblemInstance interface
     PT_InverseKinematicsSolver=6, ///< IkSolverBase interface
-    PT_Object=7, ///< arbitrary KinBody
+    PT_KinBody=7, ///< arbitrary KinBody
     PT_PhysicsEngine=8, ///< physics simulation engine
     PT_Sensor=9, ///< sensor like camera, laser range finder, tactile
     PT_CollisionChecker=10, ///< collision checker
@@ -329,15 +339,6 @@ class RaverServerBase;
 
 class EnvironmentBase;
 
-/// base class for readable interfaces
-class XMLReadable
-{
-public:
-	virtual ~XMLReadable() {}
-
-    virtual const char* GetXMLId() = 0;
-};
-
 ///< Cloning Options for interfaces and environments
 enum CloningOptions {
     Clone_Bodies = 1, ///< clone all the bodies/robots of the environment
@@ -346,12 +347,30 @@ enum CloningOptions {
     Clone_RealControllers = 8 ///< if specified, will clone the real controllers of all the robots, otherwise each robot gets ideal controller
 };
 
+/// base class for readable interfaces
+class XMLReadable
+{
+public:
+    XMLReadable(const std::string& xmlid) : __xmlid(xmlid) {}
+	virtual ~XMLReadable() {}
+    virtual const std::string& GetXMLId() const { return __xmlid; }
+private:
+    std::string __xmlid;
+};
+
 /// base class for all interfaces that OpenRAVE provides
 class InterfaceBase
 {
 public:
-    InterfaceBase(EnvironmentBase* penv) : __penv(penv) {}
-	virtual ~InterfaceBase() {}
+    InterfaceBase(PluginType type, EnvironmentBase* penv) : __type(type), __penv(penv), __pUserData(NULL) {}
+	virtual ~InterfaceBase() {
+        for(std::map<std::string, XMLReadable* >::iterator it = __mapReadableInterfaces.begin(); it != __mapReadableInterfaces.end(); ++it) {
+            delete it->second;
+        }
+        __mapReadableInterfaces.clear();
+    }
+
+    inline PluginType GetInterfaceType() const { return __type; }
 
     /// set internally by RaveDatabase
 	/// \return the unique identifier that describes this class type, case is ignored
@@ -365,22 +384,33 @@ public:
     /// \return the environment that this interface is attached to
     inline EnvironmentBase* GetEnv() const { return __penv; }
 
-    /// clone the contents to the current interface
+    inline const std::map<std::string, XMLReadable* >& GetReadableInterfaces() const { return __mapReadableInterfaces; }
+
+    virtual void SetUserData(void* pdata) { __pUserData = pdata; }
+    virtual void* GetUserData() const { return __pUserData; }
+    
+    /// clone the contents of an interface to the current interface
     /// \param preference the interface whose information to clone
     /// \param cloningoptions mask of CloningOptions
     virtual bool Clone(const InterfaceBase* preference, int cloningoptions) { return true; }
 
 protected:
     virtual const char* GetHash() const = 0;
-    
+
 private:
     std::string __strpluginname, __strxmlid;
+    PluginType __type;
     EnvironmentBase* __penv;
+    void* __pUserData;                       ///< data set by the user
+    std::map<std::string, XMLReadable* > __mapReadableInterfaces; ///< pointers to extra interfaces that are included with this object
+
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
     friend class RaveDatabase;
+    friend class InterfaceXMLReader;
 #else
     friend class ::RaveDatabase;
+    friend class ::InterfaceXMLReader;
 #endif
 #endif
 };
@@ -480,7 +510,7 @@ namespace OpenRAVE {
 class EnvironmentBase
 {
 public:
-    typedef BaseXMLReader* (*CreateXMLReaderFn)(KinBody* parent, const char **atts);
+    typedef BaseXMLReader* (*CreateXMLReaderFn)(InterfaceBase* pinterface, const char **atts);
 
     // gets the state of all bodies that should be published to the GUI
     struct BODYSTATE
@@ -518,6 +548,7 @@ public:
     virtual bool LoadPlugin(const char* pname) = 0;
     //@}
 
+    virtual InterfaceBase* CreateInterface(PluginType type,const char* pinterfacename)=0;
     virtual RobotBase* CreateRobot(const wchar_t* pname)=0;
     virtual RobotBase* CreateRobot(const char* pname)=0;
     virtual PlannerBase* CreatePlanner(const wchar_t* pname)=0;
@@ -803,14 +834,19 @@ public:
     /// \return returns a pointer to a Lock
     virtual EnvLock* GetLockedRobots(std::vector<RobotBase*>& robots) const = 0;
 
+    /// returns the openrave home directory where settings, cache, and other files are stored.
+    /// On Linux/Unix systems, this is usually $HOME/.openrave, on Windows this is $HOMEPATH/.openrave
+    virtual const char* GetHomeDirectory() const = 0;
+
     /// XML processing functions.
     //@{
 
-    /// registers a custom xml reader for KinBody objects
-    virtual void RegisterXMLReader(const char* ptype, CreateXMLReaderFn pfn) = 0;
+    /// registers a custom xml reader for a particular interface. Once registered, anytime
+    /// the tag specified in xmltag is seen in the interface, the the custom reader will be created.
+    virtual void RegisterXMLReader(PluginType type, const char* xmltag, CreateXMLReaderFn pfn) = 0;
 
     /// unregisters the xml reader
-    virtual void UnregisterXMLReader(const char* ptype) = 0;
+    virtual void UnregisterXMLReader(PluginType type, const char* xmltag) = 0;
     
     /// Parses a file for XML data
     virtual bool ParseXMLFile(BaseXMLReader* preader, const char* filename) = 0;

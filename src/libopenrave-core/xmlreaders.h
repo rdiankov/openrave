@@ -19,6 +19,7 @@
 #include <libxml/xmlstring.h>
 
 extern int g_XMLErrorCount;
+extern map<PluginType, string> g_mapInterfaceNames;
 
 /// Base class for parsing data. Used mostly for XML readers
 class BasicStreamParser
@@ -120,8 +121,8 @@ private:
     char* p;
 };
 
-void KinBodyRegisterXMLReader(const char* ptype, EnvironmentBase::CreateXMLReaderFn pfn);
-void KinBodyUnregisterXMLReader(const char* ptype);
+void RegisterXMLReader(PluginType type, const char* ptype, EnvironmentBase::CreateXMLReaderFn pfn);
+void UnregisterXMLReader(PluginType type, const char* ptype);
 
 /////////////////
 // XML Readers //
@@ -134,8 +135,7 @@ bool RaveParseXMLData(Environment* penv, BaseXMLReader* preader, const char* pda
 // mass of objects
 struct MASS
 {
-MASS() : fTotalMass(0) {}
-        
+    MASS() : fTotalMass(0) {}        
     static MASS GetBoxMass(Vector extents, Vector pos, dReal totalmass);
     static MASS GetBoxMassD(Vector extents, Vector pos, dReal density);
     static MASS GetSphericalMass(dReal radius, Vector pos, dReal totalmass);
@@ -188,7 +188,7 @@ private:
     bool endElement(void *ctx ATTRIBUTE_UNUSED, const char *name);
     void characters(void *ctx ATTRIBUTE_UNUSED, const char *ch, int len);
 
-    BaseXMLReader* _pcurreader;
+    boost::shared_ptr<BaseXMLReader> _pcurreader;
     BasicStreamParser* _pcurparser; ///< reads the character streams
     MASS _mass;                    ///< current mass of the object
     KinBody::Link* _plink;
@@ -227,7 +227,7 @@ private:
     bool endElement(void *ctx ATTRIBUTE_UNUSED, const char *name);
     void characters(void *ctx ATTRIBUTE_UNUSED, const char *ch, int len);
 
-    BaseXMLReader* _pcurreader;
+    boost::shared_ptr<BaseXMLReader> _pcurreader;
     BasicStreamParser* _pcurparser; ///< reads the character streams
 
     float fWeights[3];
@@ -239,15 +239,35 @@ private:
     bool _bMimicJoint;
 };
 
-// KinBody reader
-/// reads kinematic chain specific entries, can instantiate this reader from another reader
-class KinBodyXMLReader : public BaseXMLReader
+class InterfaceXMLReader : public BaseXMLReader
 {
 public:
-    KinBodyXMLReader(Environment* penv, KinBody* pchain, const char **atts);
-    virtual ~KinBodyXMLReader() { delete _pchain; }
+    InterfaceXMLReader(Environment* penv, PluginType type, InterfaceBase* pinterface, const string& xmltag, const char **atts);
+    virtual ~InterfaceXMLReader() { assert(_pinterface==NULL); delete _pinterface; }
 
-    void* Release() { KinBody* temp = _pchain; _pchain = NULL; return temp; }
+    virtual void* Release() { InterfaceBase* temp = _pinterface; _pinterface = NULL; return temp; }
+    InterfaceBase* GetInterface() { return _pinterface; }
+
+protected:
+    virtual void startElement(void *ctx ATTRIBUTE_UNUSED, const char *name, const char **atts);
+    virtual bool endElement(void *ctx ATTRIBUTE_UNUSED, const char *name);
+    virtual void characters(void *ctx ATTRIBUTE_UNUSED, const char *ch, int len);
+
+    Environment* _penv;
+    PluginType _type;
+    InterfaceBase* _pinterface;
+    string _xmltag;
+    boost::shared_ptr<BaseXMLReader> _pcustomreader;
+    string _interfacename, _readername;
+};
+
+// KinBody reader
+/// reads kinematic chain specific entries, can instantiate this reader from another reader
+class KinBodyXMLReader : public InterfaceXMLReader
+{
+public:
+    KinBodyXMLReader(Environment* penv, PluginType type, KinBody* pchain, const char **atts);
+    virtual ~KinBodyXMLReader() { assert(!_pcurreader); }
 
     const Transform GetOffsetFrom(KinBody::Link* plink);
 
@@ -261,10 +281,9 @@ protected:
     virtual bool endElement(void *ctx ATTRIBUTE_UNUSED, const char *name);
     virtual void characters(void *ctx ATTRIBUTE_UNUSED, const char *ch, int len);
 
-    Environment* _penv;
     KinBody* _pchain;
-    BaseXMLReader* _pcurreader;
     Transform _trans;
+    boost::shared_ptr<BaseXMLReader> _pcurreader;
 
     // default mass type passed to every LinkXMLReader
     int rootoffset, rootjoffset;                 ///< the initial number of links when KinBody is created (so that global translations and rotations only affect the new links)
@@ -272,7 +291,6 @@ protected:
     float _fMassValue;               ///< density or total mass
     Vector _vMassExtents;
 
-    string _strRegReaderId;
     vector<Transform> _vTransforms;     ///< original transforms of the bodies for offsetfrom
 
     string _strModelsDir, _bodyname;
@@ -308,7 +326,7 @@ protected:
     RobotBase* _probot;
     RobotBase::Manipulator* _pmanip;
     BasicStreamParser* _pcurparser; ///< reads the character streams
-    BaseXMLReader* _pcurreader;
+    boost::shared_ptr<BaseXMLReader> _pcurreader;
 };
 
 /// sensors specifically attached to a robot
@@ -331,16 +349,14 @@ protected:
     RobotBase::AttachedSensor* _psensor;
     string args; ///< arguments to pass to sensor when initializing
     BasicStreamParser* _pcurparser; ///< reads the character streams
-    BaseXMLReader* _pcurreader;
+    boost::shared_ptr<BaseXMLReader> _pcurreader;
 };
 
-class RobotXMLReader : public BaseXMLReader
+class RobotXMLReader : public InterfaceXMLReader
 {
 public:
     RobotXMLReader(Environment* penv, RobotBase* probot, const char **atts);
-    virtual ~RobotXMLReader() { delete[] _probot; }
-
-    void* Release() { RobotBase* temp = _probot; _probot = NULL; return temp; }
+    virtual ~RobotXMLReader() { assert(!_pcurreader); }
 
     void SetXMLFilename(const string& filename) { if( _probot != NULL && _probot->strXMLFilename.size() == 0 ) _probot->strXMLFilename = filename; }
 
@@ -353,10 +369,9 @@ protected:
     virtual bool endElement(void *ctx ATTRIBUTE_UNUSED, const char *name);
     virtual void characters(void *ctx ATTRIBUTE_UNUSED, const char *ch, int len);
 
-    Environment* _penv;
     RobotBase* _probot;
     BasicStreamParser* _pcurparser; ///< reads the character streams
-    BaseXMLReader* _pcurreader;
+    boost::shared_ptr<BaseXMLReader> _pcurreader;
 
     ControllerBase* pNewController; ///< controller to set the robot at
     string strControllerArgs, _strRegReaderId, _robotname;
@@ -371,6 +386,65 @@ protected:
     int rootsoffset; ///< the initial number of attached sensors when Robot is created
     int rootmoffset; ///< the initial number of manipulators when Robot is created
     bool bRobotInit;
+};
+
+template <PluginType type>
+class DummyInterfaceXMLReader : public InterfaceXMLReader
+{
+public:
+    DummyInterfaceXMLReader(Environment* penv, InterfaceBase* pinterface, const string& xmltag, const char** atts) : InterfaceXMLReader(penv,type,pinterface,xmltag,atts) {}
+    virtual ~DummyInterfaceXMLReader() {}
+
+    virtual void startElement(void *ctx ATTRIBUTE_UNUSED, const char *name, const char **atts)
+    {
+        if( !!_pcurreader ) {
+            _pcurreader->startElement(ctx, name, atts);
+            return;
+        }
+
+        InterfaceXMLReader::startElement(ctx,name,atts);
+        if( !!_pcustomreader )
+            return;
+        _pcurreader.reset(new DummyXMLReader(name, g_mapInterfaceNames[_type].c_str()));
+    }
+
+    virtual bool endElement(void *ctx ATTRIBUTE_UNUSED, const char *name)
+    {
+        if( !!_pcurreader ) {
+            if( _pcurreader->endElement(ctx, name) )
+                _pcurreader.reset();
+        }
+        else {
+            if( InterfaceXMLReader::endElement(ctx,name) )
+                return true;
+        }
+        return false;
+    }
+
+    virtual void characters(void *ctx ATTRIBUTE_UNUSED, const char *ch, int len)
+    {
+        if( !!_pcurreader )
+            _pcurreader->characters(ctx,ch,len);
+        else
+            InterfaceXMLReader::characters(ctx,ch,len);
+    }
+
+    boost::shared_ptr<BaseXMLReader> _pcurreader;
+};
+
+class ControllerXMLReader : public InterfaceXMLReader
+{
+public:
+    ControllerXMLReader(Environment* penv, InterfaceBase* pinterface, const char** atts);
+    virtual ~ControllerXMLReader() {}
+
+    virtual void startElement(void *ctx ATTRIBUTE_UNUSED, const char *name, const char **atts);
+    virtual bool endElement(void *ctx ATTRIBUTE_UNUSED, const char *name);
+    virtual void characters(void *ctx ATTRIBUTE_UNUSED, const char *ch, int len);
+
+    boost::shared_ptr<BaseXMLReader> _pcurreader;
+    wstring _robotname;
+    string _args;
 };
 
 class EnvironmentXMLReader : public BaseXMLReader
@@ -390,7 +464,7 @@ protected:
 
     Environment* _penv;
     BasicStreamParser* _pcurparser; ///< reads the character streams
-    BaseXMLReader* _pcurreader;
+    boost::shared_ptr<BaseXMLReader> _pcurreader;
 
     Vector vBkgndColor;
     Transform tCamera; ///< default camera transformationn

@@ -206,7 +206,7 @@ public:
         friend std::istream& operator>>(std::istream& I, PlannerParameters& v);
     };
 
-    PlannerBase(EnvironmentBase* penv) : InterfaceBase(penv) {}
+    PlannerBase(EnvironmentBase* penv) : InterfaceBase(PT_Planner, penv) {}
     virtual ~PlannerBase() {}
 
     /// Setup scene, robot, and properties of the plan, and reset all structures with pparams

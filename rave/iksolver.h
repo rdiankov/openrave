@@ -27,7 +27,7 @@ namespace OpenRAVE {
 class IkSolverBase : public InterfaceBase
 {
 public:
-    IkSolverBase(EnvironmentBase* penv) : InterfaceBase(penv) {}
+    IkSolverBase(EnvironmentBase* penv) : InterfaceBase(PT_InverseKinematicsSolver, penv) {}
     virtual ~IkSolverBase() {}
 
     /// sets the IkSolverBase attached to a specific robot and sets IkSolverBase specific options

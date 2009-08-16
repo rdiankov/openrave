@@ -49,26 +49,27 @@ public:
 
     RobotBase* CreateRobot(EnvironmentBase* penv, const wchar_t* pname);
     RobotBase* CreateRobot(EnvironmentBase* penv, const char* pname);
+
     PlannerBase* CreatePlanner(EnvironmentBase* penv, const wchar_t* pname) { return (PlannerBase*)Create(penv, PT_Planner, pname, OPENRAVE_PLANNER_HASH); }
-    PlannerBase* CreatePlanner(EnvironmentBase* penv, const char* pname) { return (PlannerBase*)CreateMBS(penv, PT_Planner, pname, OPENRAVE_PLANNER_HASH); }
+    PlannerBase* CreatePlanner(EnvironmentBase* penv, const char* pname) { return (PlannerBase*)Create(penv, PT_Planner, pname, OPENRAVE_PLANNER_HASH); }
     SensorSystemBase* CreateSensorSystem(EnvironmentBase* penv, const wchar_t* pname) { return (SensorSystemBase*)Create(penv, PT_SensorSystem, pname, OPENRAVE_SENSORSYSTEM_HASH); }
-    SensorSystemBase* CreateSensorSystem(EnvironmentBase* penv, const char* pname) { return (SensorSystemBase*)CreateMBS(penv, PT_SensorSystem, pname, OPENRAVE_SENSORSYSTEM_HASH); }
+    SensorSystemBase* CreateSensorSystem(EnvironmentBase* penv, const char* pname) { return (SensorSystemBase*)Create(penv, PT_SensorSystem, pname, OPENRAVE_SENSORSYSTEM_HASH); }
     ControllerBase* CreateController(EnvironmentBase* penv, const wchar_t* pname) { return (ControllerBase*)Create(penv, PT_Controller, pname, OPENRAVE_CONTROLLER_HASH); }
-    ControllerBase* CreateController(EnvironmentBase* penv, const char* pname) { return (ControllerBase*)CreateMBS(penv, PT_Controller, pname, OPENRAVE_CONTROLLER_HASH); }
+    ControllerBase* CreateController(EnvironmentBase* penv, const char* pname) { return (ControllerBase*)Create(penv, PT_Controller, pname, OPENRAVE_CONTROLLER_HASH); }
     ProblemInstance* CreateProblem(EnvironmentBase* penv, const wchar_t* pname) { return (ProblemInstance*)Create(penv, PT_ProblemInstance, pname, OPENRAVE_PROBLEM_HASH); }
-    ProblemInstance* CreateProblem(EnvironmentBase* penv, const char* pname) { return (ProblemInstance*)CreateMBS(penv, PT_ProblemInstance, pname, OPENRAVE_PROBLEM_HASH); }
+    ProblemInstance* CreateProblem(EnvironmentBase* penv, const char* pname) { return (ProblemInstance*)Create(penv, PT_ProblemInstance, pname, OPENRAVE_PROBLEM_HASH); }
     IkSolverBase* CreateIkSolver(EnvironmentBase* penv, const wchar_t* pname) { return (IkSolverBase*)Create(penv, PT_InverseKinematicsSolver, pname, OPENRAVE_IKSOLVER_HASH); }
-    IkSolverBase* CreateIkSolver(EnvironmentBase* penv, const char* pname) { return (IkSolverBase*)CreateMBS(penv, PT_InverseKinematicsSolver, pname, OPENRAVE_IKSOLVER_HASH); }
+    IkSolverBase* CreateIkSolver(EnvironmentBase* penv, const char* pname) { return (IkSolverBase*)Create(penv, PT_InverseKinematicsSolver, pname, OPENRAVE_IKSOLVER_HASH); }
     PhysicsEngineBase* CreatePhysicsEngine(EnvironmentBase* penv, const wchar_t* pname) { return (PhysicsEngineBase*)Create(penv, PT_PhysicsEngine, pname, OPENRAVE_PHYSICSENGINE_HASH); }
-    PhysicsEngineBase* CreatePhysicsEngine(EnvironmentBase* penv, const char* pname) { return (PhysicsEngineBase*)CreateMBS(penv, PT_PhysicsEngine, pname, OPENRAVE_PHYSICSENGINE_HASH); }
+    PhysicsEngineBase* CreatePhysicsEngine(EnvironmentBase* penv, const char* pname) { return (PhysicsEngineBase*)Create(penv, PT_PhysicsEngine, pname, OPENRAVE_PHYSICSENGINE_HASH); }
     SensorBase* CreateSensor(EnvironmentBase* penv, const wchar_t* pname) { return (SensorBase*)Create(penv, PT_Sensor, pname, OPENRAVE_SENSOR_HASH); }
-    SensorBase* CreateSensor(EnvironmentBase* penv, const char* pname) { return (SensorBase*)CreateMBS(penv, PT_Sensor, pname, OPENRAVE_SENSOR_HASH); }
+    SensorBase* CreateSensor(EnvironmentBase* penv, const char* pname) { return (SensorBase*)Create(penv, PT_Sensor, pname, OPENRAVE_SENSOR_HASH); }
     CollisionCheckerBase* CreateCollisionChecker(EnvironmentBase* penv, const wchar_t* pname) { return (CollisionCheckerBase*)Create(penv, PT_CollisionChecker, pname, OPENRAVE_COLLISIONCHECKER_HASH); }
-    CollisionCheckerBase* CreateCollisionChecker(EnvironmentBase* penv, const char* pname) { return (CollisionCheckerBase*)CreateMBS(penv, PT_CollisionChecker, pname, OPENRAVE_COLLISIONCHECKER_HASH); }
+    CollisionCheckerBase* CreateCollisionChecker(EnvironmentBase* penv, const char* pname) { return (CollisionCheckerBase*)Create(penv, PT_CollisionChecker, pname, OPENRAVE_COLLISIONCHECKER_HASH); }
     RaveViewerBase* CreateViewer(EnvironmentBase* penv, const wchar_t* pname) { return (RaveViewerBase*)Create(penv, PT_Viewer, pname, OPENRAVE_VIEWER_HASH); }
-    RaveViewerBase* CreateViewer(EnvironmentBase* penv, const char* pname) { return (RaveViewerBase*)CreateMBS(penv, PT_Viewer, pname, OPENRAVE_VIEWER_HASH); }
+    RaveViewerBase* CreateViewer(EnvironmentBase* penv, const char* pname) { return (RaveViewerBase*)Create(penv, PT_Viewer, pname, OPENRAVE_VIEWER_HASH); }
     RaveServerBase* CreateServer(EnvironmentBase* penv, const wchar_t* pname) { return (RaveServerBase*)Create(penv, PT_Server, pname, OPENRAVE_SERVER_HASH); }
-    RaveServerBase* CreateServer(EnvironmentBase* penv, const char* pname) { return (RaveServerBase*)CreateMBS(penv, PT_Server, pname, OPENRAVE_SERVER_HASH); }
+    RaveServerBase* CreateServer(EnvironmentBase* penv, const char* pname) { return (RaveServerBase*)Create(penv, PT_Server, pname, OPENRAVE_SERVER_HASH); }
 
     /// Destroy all plugins and directories
     virtual void Destroy();
@@ -79,8 +80,9 @@ public:
 
     const std::list<PLUGIN>& GetPlugins() { return _listplugins; }
     
+    void* Create(EnvironmentBase* penv, PluginType type, const char* pname);
     void* Create(EnvironmentBase* penv, PluginType type, const wchar_t* pname, const char* hash);
-    void* CreateMBS(EnvironmentBase* penv, PluginType type, const char* pname, const char* hash);
+    void* Create(EnvironmentBase* penv, PluginType type, const char* pname, const char* hash);
 
     /// loads all the plugins in this dir
     /// If pdir is already specified, reloads all 
@@ -135,6 +137,7 @@ public:
     virtual void GetLoadedInterfaces(PLUGININFO& info);
     virtual bool LoadPlugin(const char* pname) { WaitForPlugins(); return GetDatabase().AddPlugin(pname); }
 
+    virtual InterfaceBase* CreateInterface(PluginType type,const char* pinterfacename);
     virtual RobotBase* CreateRobot(const wchar_t* pname);
     virtual RobotBase* CreateRobot(const char* pname);
     virtual PlannerBase* CreatePlanner(const wchar_t* pname) { WaitForPlugins(); return _pdatabase->CreatePlanner(this,pname); }
@@ -229,13 +232,15 @@ public:
     /// general triangulation of the whole scene. trimesh will be appended the new data.
     virtual bool TriangulateScene(KinBody::Link::TRIMESH& trimesh, TriangulateOptions opts, const wchar_t* pName);
 
+    virtual const char* GetHomeDirectory() const { return _homedirectory.c_str(); }
+
     /// public XML readers.
     //@{
     virtual RobotBase* ReadRobotXML(RobotBase* robot, const char* filename, const char** atts);
     virtual KinBody* ReadKinBodyXML(KinBody* robot, const char* filename, const char** atts);
 
-    virtual void RegisterXMLReader(const char* ptype, CreateXMLReaderFn pfn);
-    virtual void UnregisterXMLReader(const char* ptype);
+    virtual void RegisterXMLReader(PluginType type, const char* xmltag, CreateXMLReaderFn pfn);
+    virtual void UnregisterXMLReader(PluginType type, const char* xmltag);
     
     virtual bool ParseXMLFile(BaseXMLReader* preader, const char* filename);
     virtual bool ParseXMLData(BaseXMLReader* preader, const char* pdata, int len);
@@ -402,6 +407,7 @@ protected:
 
             return 0;
         }
+        
         virtual void quitmainloop() {
             if( !_bQuitMainLoop ) {
                 _penv->StopSimulation();
@@ -522,6 +528,7 @@ protected:
                                            
     vector<BODYSTATE> _vPublishedBodies;
     vector<string> _vplugindirs, _vdatadirs;
+    string _homedirectory;
 
     //bool _bSelfCollision;           ///< check collision between KinBody links for contact forces
     bool _bDestroying;              ///< destroying envrionment, so exit from all processes

@@ -28,7 +28,7 @@ enum PhysicsEngineOptions
 class PhysicsEngineBase : public InterfaceBase
 {
 public:
-    PhysicsEngineBase(EnvironmentBase* penv) : InterfaceBase(penv) {}
+    PhysicsEngineBase(EnvironmentBase* penv) : InterfaceBase(PT_PhysicsEngine, penv) {}
     virtual ~PhysicsEngineBase() {}
 
     /// Set basic physics engine using the PhysicsEngineOptions enum

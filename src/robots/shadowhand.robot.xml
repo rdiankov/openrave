@@ -527,9 +527,6 @@
     </Joint>
 
   </KinBody>
-  <Controller>IdealController</Controller>
-
-
   <Manipulator>
     <base>palm</base>
     <effector>palm</effector>

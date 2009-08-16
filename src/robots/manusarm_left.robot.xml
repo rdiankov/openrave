@@ -224,9 +224,6 @@
     <adjacent>l-lift-arm left-arm3</adjacent>
     <adjacent>left-hand-distal-r left-hand-distal-l</adjacent>
   </KinBody>
-
-  <Controller>IdealController</Controller>
-  
   <Manipulator>
     <base>l-lift-arm</base>
     <effector>left-hand-base</effector>

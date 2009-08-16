@@ -1,22 +1,6 @@
+// A simple openrave plugin that creates a problem instance and registers two functions
+// for that problem instance which can then be called through the network/scripts
 #include <rave/rave.h>
-
-#ifndef _WIN32
-#define strnicmp strncasecmp
-#define stricmp strcasecmp
-#endif
-
-#if defined(__APPLE_CC__)
-inline int wcsicmp(const wchar_t* s1, const wchar_t* s2)
-{
-  char str1[128], str2[128];
-  sprintf(str1, "%S", s1);
-  sprintf(str2, "%S", s2);
-  return stricmp(str1, str2);
-}
-#elif !defined(_WIN32)
-#define wcsnicmp wcsncasecmp
-#define wcsicmp wcscasecmp
-#endif
 
 using namespace std;
 using namespace OpenRAVE;
@@ -26,6 +10,7 @@ class MyProblemInstance : public CmdProblemInstance
 public:
     MyProblemInstance(EnvironmentBase* penv) : CmdProblemInstance(penv)
     {
+        
         RegisterCommand("numbodies",(CommandFn)&MyProblemInstance::NumBodies, "returns bodies");
         RegisterCommand("load",(CommandFn)&MyProblemInstance::Load, "loads a given file");
     }
@@ -67,14 +52,13 @@ public:
 #endif
 #endif // _MSC_VER
 
-// for some reason windows complains when the prototypes are different
 extern "C" InterfaceBase* DECL_STDCALL(ORCreate, (PluginType type, wchar_t* name, EnvironmentBase* penv))
 {
     if( name == NULL ) return NULL;
     
     switch(type) {
         case PT_ProblemInstance:
-            if( wcsicmp(name, L"MyProblem") == 0 )
+            if( wcscmp(name, L"MyProblem") == 0 )
                 return new MyProblemInstance(penv);
             break;
         default:

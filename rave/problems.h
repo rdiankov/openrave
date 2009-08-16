@@ -25,7 +25,7 @@ namespace OpenRAVE {
 class ProblemInstance : public InterfaceBase
 {
 public:
-    ProblemInstance(EnvironmentBase* penv) : InterfaceBase(penv) {}
+    ProblemInstance(EnvironmentBase* penv) : InterfaceBase(PT_ProblemInstance, penv) {}
     virtual ~ProblemInstance() {}
 
     virtual void Destroy() = 0;
