@@ -356,12 +356,33 @@ InterfaceXMLReader* CreateInterfaceReader(Environment* penv, PluginType type, In
 {
     switch(type) {
     case PT_Planner: return new DummyInterfaceXMLReader<PT_Planner>(penv,pinterface,xmltag,atts);
-    case PT_Robot: return new RobotXMLReader(penv,(RobotBase*)pinterface,atts);
+    case PT_Robot: {
+        RobotBase* probot = (RobotBase*)pinterface;
+        int rootoffset = 0, rootjoffset = 0, rootsoffset = 0, rootmoffset = 0;
+        if( probot != NULL ) {
+            rootoffset = (int)probot->GetLinks().size();
+            rootjoffset = (int)probot->GetJoints().size();
+            rootsoffset = (int)probot->GetSensors().size();
+            rootmoffset = (int)probot->GetManipulators().size();
+        }
+        return new RobotXMLReader(penv,(RobotBase*)pinterface,atts,rootoffset,rootjoffset,rootsoffset,rootmoffset);
+    }
     case PT_SensorSystem: return new DummyInterfaceXMLReader<PT_SensorSystem>(penv,pinterface,xmltag,atts);
     case PT_Controller: return new ControllerXMLReader(penv,pinterface,atts);
     case PT_ProblemInstance: return new ProblemXMLReader(penv,pinterface,atts);
     case PT_InverseKinematicsSolver: return new DummyInterfaceXMLReader<PT_InverseKinematicsSolver>(penv,pinterface,xmltag,atts);
-    case PT_KinBody: return new KinBodyXMLReader(penv,type, (KinBody*)pinterface,atts);
+    case PT_KinBody: {
+        KinBody* pbody = (KinBody*)pinterface;
+        int rootoffset = 0, rootjoffset = 0;
+        if( pbody != NULL ) {
+            vector<Transform> vTransforms;
+            pbody->GetBodyTransformations(vTransforms);
+            rootoffset = vTransforms.size();
+            rootjoffset = (int)pbody->GetJoints().size();
+        }
+
+        return new KinBodyXMLReader(penv,type,pbody,atts,rootoffset,rootjoffset);
+    }
     case PT_PhysicsEngine: return new DummyInterfaceXMLReader<PT_PhysicsEngine>(penv,pinterface,xmltag,atts);
     case PT_Sensor: return new DummyInterfaceXMLReader<PT_Sensor>(penv,pinterface,xmltag,atts);
     case PT_CollisionChecker: return new DummyInterfaceXMLReader<PT_CollisionChecker>(penv,pinterface,xmltag,atts);
@@ -1444,7 +1465,7 @@ void InterfaceXMLReader::characters(void *ctx ATTRIBUTE_UNUSED, const char *ch, 
 }
 
 //// KinBody Reader ////
-KinBodyXMLReader::KinBodyXMLReader(Environment* penv, PluginType type, KinBody* pchain, const char **atts) : InterfaceXMLReader(penv,type,pchain,"kinbody",atts)
+KinBodyXMLReader::KinBodyXMLReader(Environment* penv, PluginType type, KinBody* pchain, const char **atts, int rootoffset, int rootjoffset) : InterfaceXMLReader(penv,type,pchain,"kinbody",atts), rootoffset(rootoffset), rootjoffset(rootjoffset)
 {
     _penv = penv;
     _pcurparser = NULL;
@@ -1457,16 +1478,6 @@ KinBodyXMLReader::KinBodyXMLReader(Environment* penv, PluginType type, KinBody* 
     _bOverwriteDiffuse = false;
     _bOverwriteAmbient = false;
     _bOverwriteTransparency = false;
-
-    if( pchain != NULL ) {
-        pchain->GetBodyTransformations(_vTransforms);
-        rootoffset = _vTransforms.size();
-        rootjoffset = (int)pchain->GetJoints().size();
-    }
-    else {
-        rootoffset = 0;
-        rootjoffset = 0;
-    }
 
     if( atts != NULL ) {
         for (int i = 0;(atts[i] != NULL);i+=2) {
@@ -1574,7 +1585,7 @@ void KinBodyXMLReader::startElement(void *ctx ATTRIBUTE_UNUSED, const char *name
         return;
 
     if( stricmp((const char*)name, "kinbody") == 0 ) {
-        _pcurreader.reset(new KinBodyXMLReader(_penv,_pchain->GetInterfaceType(),_pchain, atts));
+        _pcurreader.reset(CreateInterfaceReader(_penv,PT_KinBody,_pchain, name, atts));
 //        if( atts != NULL ) {
 //            for (int i = 0;(atts[i] != NULL);i+=2) {
 //                if( stricmp((const char*)atts[i], "file") == 0 ) {
@@ -2254,20 +2265,13 @@ void AttachedSensorXMLReader::characters(void *ctx ATTRIBUTE_UNUSED, const char 
 
 
 //// Robot Reader ////
-RobotXMLReader::RobotXMLReader(Environment* penv, RobotBase* probot, const char **atts) : InterfaceXMLReader(penv,PT_Robot,probot,"robot",atts)
+RobotXMLReader::RobotXMLReader(Environment* penv, RobotBase* probot, const char **atts, int rootoffset, int rootjoffset, int rootsoffset, int rootmoffset) : InterfaceXMLReader(penv,PT_Robot,probot,"robot",atts), rootoffset(rootoffset), rootjoffset(rootjoffset), rootsoffset(rootsoffset), rootmoffset(rootmoffset)
 {
     _probot = (RobotBase*)_pinterface;
     _pcurparser = NULL;
     bRobotInit = false;
     pNewController = NULL;
     assert( _probot != NULL );
-    rootoffset = rootjoffset = rootsoffset = rootmoffset = 0;
-    if( probot != NULL ) {
-        rootoffset = (int)probot->GetLinks().size();
-        rootjoffset = (int)probot->GetJoints().size();
-        rootsoffset = (int)probot->GetSensors().size();
-        rootmoffset = (int)probot->GetManipulators().size();
-    }
 
     if( atts != NULL ) {
         for (int i = 0;(atts[i] != NULL);i+=2) {
@@ -2297,7 +2301,7 @@ void RobotXMLReader::startElement(void *ctx ATTRIBUTE_UNUSED, const char *name, 
 
     if( stricmp((const char*)name, "robot") == 0 ) {
         //const char* ptype = NULL;
-        _pcurreader.reset(new RobotXMLReader(_penv, _probot, atts));
+        _pcurreader.reset(CreateInterfaceReader(_penv, PT_Robot, _probot, name, atts));
 //        if( atts != NULL ) {
 //            for (int i = 0;(atts[i] != NULL);i+=2) {
 //                if( stricmp((const char*)atts[i], "file") == 0 ) {
@@ -2345,7 +2349,7 @@ void RobotXMLReader::startElement(void *ctx ATTRIBUTE_UNUSED, const char *name, 
 //        }
     }
     else if( stricmp((const char*)name, "kinbody") == 0 ) {
-        _pcurreader.reset(new KinBodyXMLReader(_penv,_probot->GetInterfaceType(),_probot, atts));
+        _pcurreader.reset(CreateInterfaceReader(_penv,PT_KinBody,_probot, name, atts));
     }
     else if( stricmp((const char*)name, "manipulator") == 0 ) {
         _probot->_vecManipulators.push_back(RobotBase::Manipulator(_probot));

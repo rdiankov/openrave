@@ -132,6 +132,8 @@ bool RaveParseXMLFile(Environment* penv, BaseXMLReader* preader, const char* fil
 bool RaveParseXMLFile(Environment* penv, BaseXMLReader* preader, const wchar_t* filename);
 bool RaveParseXMLData(Environment* penv, BaseXMLReader* preader, const char* pdata, int len);
 
+InterfaceXMLReader* CreateInterfaceReader(Environment* penv, PluginType type, InterfaceBase* pinterface, const string& xmltag, const char** atts);
+
 // mass of objects
 struct MASS
 {
@@ -266,7 +268,7 @@ protected:
 class KinBodyXMLReader : public InterfaceXMLReader
 {
 public:
-    KinBodyXMLReader(Environment* penv, PluginType type, KinBody* pchain, const char **atts);
+    KinBodyXMLReader(Environment* penv, PluginType type, KinBody* pchain, const char **atts, int rootoffset, int rootjoffset);
     virtual ~KinBodyXMLReader() { assert(!_pcurreader); }
 
     const Transform GetOffsetFrom(KinBody::Link* plink);
@@ -355,7 +357,7 @@ protected:
 class RobotXMLReader : public InterfaceXMLReader
 {
 public:
-    RobotXMLReader(Environment* penv, RobotBase* probot, const char **atts);
+    RobotXMLReader(Environment* penv, RobotBase* probot, const char **atts, int rootoffset, int rootjoffset, int rootsoffset, int rootmoffset);
     virtual ~RobotXMLReader() { assert(!_pcurreader); }
 
     void SetXMLFilename(const string& filename) { if( _probot != NULL && _probot->strXMLFilename.size() == 0 ) _probot->strXMLFilename = filename; }

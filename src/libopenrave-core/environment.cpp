@@ -1291,14 +1291,14 @@ RobotBase* Environment::ReadRobotXML(RobotBase* robot, const char* filename, con
             return NULL;
     }
     else {
-        RobotXMLReader reader(this,robot, atts);
-        bool bSuccess = ParseXMLFile(&reader, filename);
+        boost::shared_ptr<InterfaceXMLReader> preader(CreateInterfaceReader(this, PT_Robot, robot, "robot", atts));
+        bool bSuccess = ParseXMLFile(preader.get(), filename);
         if( !bSuccess ) {
-            reader.Release();
+            preader->Release();
             return NULL;
         }
-        robot = (RobotBase*)reader.Release();
-        robot->strXMLFilename = reader._filename;
+        robot = (RobotBase*)preader->Release();
+        robot->strXMLFilename = preader->_filename;
     }
     
     return robot;
@@ -1313,15 +1313,15 @@ KinBody* Environment::ReadKinBodyXML(KinBody* body, const char* filename, const 
             return NULL;
     }
     else {
-        KinBodyXMLReader reader(this,PT_KinBody,body, atts);
-        bool bSuccess = ParseXMLFile(&reader, filename);
+        boost::shared_ptr<InterfaceXMLReader> preader(CreateInterfaceReader(this, PT_KinBody, body, "kinbody", atts));
+        bool bSuccess = ParseXMLFile(preader.get(), filename);
         if( !bSuccess ) {
-            reader.Release();
+            preader->Release();
             return NULL;
         }
 
-        body = (KinBody*)reader.Release();
-        body->strXMLFilename = reader._filename;
+        body = (KinBody*)preader->Release();
+        body->strXMLFilename = preader->_filename;
     }
 
     return body;
