@@ -9,7 +9,8 @@
 
 using namespace std;
 
-string getmd5hash(const char* fname);
+void getTokenData(const char* fname, vector<char>& vdata);
+string getmd5hash(const char* fname, const vector<char>& vbasedata);
 
 int main(int argc, char* argv[])
 {
@@ -22,8 +23,11 @@ int main(int argc, char* argv[])
         return 2;
     }    
     
-    for(int i = 1; i < argc; i += 2) {
-        string md5hash = getmd5hash(argv[i]);
+    vector<char> vbasedata;
+    getTokenData(argv[1],vbasedata);
+
+    for(int i = 2; i < argc; i += 2) {
+        string md5hash = getmd5hash(argv[i],vbasedata);
         if( md5hash == "" )
             return 1;
 
@@ -36,13 +40,13 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-string getmd5hash(const char* fname)
+void getTokenData(const char* fname,vector<char>& vdata)
 {
     // Read the input file into a buffer.
     FILE* f = fopen(fname, "rb");
     if (!f) {
         cerr << "Cannot open input file: " << fname << endl;
-        return "";
+        return;
     }
 
     fseek(f, 0, SEEK_END);
@@ -55,7 +59,6 @@ string getmd5hash(const char* fname)
     cpp::lexer_iterator first(cpp::NewLexer(&buf[0], &buf[0]+buf.size(), fname));
     cpp::lexer_iterator last;
 
-    vector<char> vdata; vdata.reserve(10000);
     while (first != last) {
         cpp::Token const& token = *first;
         //cpp::PrintToken(token);
@@ -89,6 +92,13 @@ string getmd5hash(const char* fname)
                
         ++first;
     }
+}
+
+string getmd5hash(const char* fname, const vector<char>& vbasedata)
+{
+    vector<char> vdata = vbasedata;
+    vdata.reserve(vdata.capacity()+10000);
+    getTokenData(fname,vdata);
 
     md5_state_t state;
 	md5_byte_t digest[16];

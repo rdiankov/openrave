@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2009 Carnegie Mellon University (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -358,68 +358,6 @@ private:
     std::string __xmlid;
 };
 
-/// base class for all interfaces that OpenRAVE provides
-class InterfaceBase
-{
-public:
-    InterfaceBase(PluginType type, EnvironmentBase* penv) : __type(type), __penv(penv), __pUserData(NULL) {}
-	virtual ~InterfaceBase() {
-        for(std::map<std::string, XMLReadable* >::iterator it = __mapReadableInterfaces.begin(); it != __mapReadableInterfaces.end(); ++it) {
-            delete it->second;
-        }
-        __mapReadableInterfaces.clear();
-    }
-
-    inline PluginType GetInterfaceType() const { return __type; }
-
-    /// set internally by RaveDatabase
-	/// \return the unique identifier that describes this class type, case is ignored
-    /// should be the same id used to create the object
-    inline const char* GetXMLId() const { return __strxmlid.c_str(); }
-
-    /// set internally by RaveDatabase
-    /// \return the pluginname this interface was loaded from
-    inline const char* GetPluginName() const { return __strpluginname.c_str(); }
-
-    /// \return the environment that this interface is attached to
-    inline EnvironmentBase* GetEnv() const { return __penv; }
-
-    inline const std::map<std::string, XMLReadable* >& GetReadableInterfaces() const { return __mapReadableInterfaces; }
-    inline XMLReadable* GetReadableInterface(const std::string& xmltag) const
-    {
-        std::map<std::string, XMLReadable* >::const_iterator it = __mapReadableInterfaces.find(xmltag);
-        return it != __mapReadableInterfaces.end() ? it->second : NULL;
-    }
-
-    virtual void SetUserData(void* pdata) { __pUserData = pdata; }
-    virtual void* GetUserData() const { return __pUserData; }
-    
-    /// clone the contents of an interface to the current interface
-    /// \param preference the interface whose information to clone
-    /// \param cloningoptions mask of CloningOptions
-    virtual bool Clone(const InterfaceBase* preference, int cloningoptions) { return true; }
-
-protected:
-    virtual const char* GetHash() const = 0;
-
-private:
-    std::string __strpluginname, __strxmlid;
-    PluginType __type;
-    EnvironmentBase* __penv;
-    void* __pUserData;                       ///< data set by the user
-    std::map<std::string, XMLReadable* > __mapReadableInterfaces; ///< pointers to extra interfaces that are included with this object
-
-#ifdef RAVE_PRIVATE
-#ifdef _MSC_VER
-    friend class RaveDatabase;
-    friend class InterfaceXMLReader;
-#else
-    friend class ::RaveDatabase;
-    friend class ::InterfaceXMLReader;
-#endif
-#endif
-};
-
 inline DebugLevel RaveGetDebugLevel(void);
 
 /// base class for all xml readers. XMLReaders are used to process data from
@@ -492,6 +430,7 @@ private:
 
 
 #include <rave/math.h>
+#include <rave/interface.h>
 #include <rave/kinbody.h>
 #include <rave/trajectory.h>
 #include <rave/problems.h>
