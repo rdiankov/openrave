@@ -243,7 +243,7 @@ class InterfaceXMLReader : public BaseXMLReader
 {
 public:
     InterfaceXMLReader(Environment* penv, PluginType type, InterfaceBase* pinterface, const string& xmltag, const char **atts);
-    virtual ~InterfaceXMLReader() { assert(_pinterface==NULL); delete _pinterface; }
+    virtual ~InterfaceXMLReader() { delete _pinterface; }
 
     virtual void* Release() { InterfaceBase* temp = _pinterface; _pinterface = NULL; return temp; }
     InterfaceBase* GetInterface() { return _pinterface; }
