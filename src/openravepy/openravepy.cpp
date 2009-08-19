@@ -2543,6 +2543,10 @@ BOOST_PYTHON_MODULE(openravepy)
         .value("RealControllers",Clone_RealControllers)
         ;
 
+    enum_<PhysicsEngineOptions>("PhysicsEngineOptions")
+        .value("SelfCollisions",PEO_SelfCollisions)
+        ;
+
     class_<PyEnvironmentBase> classenv("Environment");
     class_<PyGraphHandle>("GraphHandle");
     class_<PyRay>("Ray")

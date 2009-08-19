@@ -169,7 +169,7 @@ bool worSetOptions(char* in, void* pData, RaveServer* pserv)
                 RAVELOG_DEBUGA("resetting physics engine\n");
             }
         }
-        if( stricmp(p, "collision") == 0 ) {
+        else if( stricmp(p, "collision") == 0 ) {
             p = strtok(NULL, pdelim);
             CollisionCheckerBase* pchecker = NULL;
             if( p != NULL )
@@ -197,7 +197,7 @@ bool worSetOptions(char* in, void* pData, RaveServer* pserv)
                 RAVELOG_DEBUGA("resetting collision checker\n");
             }
         }
-        if( stricmp(p, "simulation") == 0 ) {
+        else if( stricmp(p, "simulation") == 0 ) {
             p = strtok(NULL, pdelim);
             if( p != NULL ) {
                 if( stricmp(p, "start") == 0 || stricmp(p, "on") == 0 ) {
@@ -248,6 +248,19 @@ bool worSetOptions(char* in, void* pData, RaveServer* pserv)
             //pserv->GetEnv()->Reset();
             //delete pserv->GetEnv();
             exit(0);
+        }
+        else if( stricmp(p, "selfcollision") == 0 ) {
+            p = strtok(NULL, pdelim);
+            if( p != NULL ) {
+                if( stricmp(p, "on") == 0 ) {
+                    pserv->GetEnv()->GetPhysicsEngine()->SetPhysicsOptions(OpenRAVE::PEO_SelfCollisions);
+                    RAVELOG_DEBUGA("set self collisions to on\n");
+                }
+                else {
+                    pserv->GetEnv()->GetPhysicsEngine()->SetPhysicsOptions(pserv->GetEnv()->GetPhysicsEngine()->GetPhysicsOptions()&~OpenRAVE::PEO_SelfCollisions);
+                    RAVELOG_DEBUGA("set self collisions to off\n");
+                }
+            }
         }
         p = strtok(NULL, pdelim);
     }
