@@ -8,6 +8,7 @@
 % - physics engine_name - switches the physics engine to another one with id 'engine_name'
 % - collision checker_name - switches the collision checker to a new one with id 'checker_name'
 % - gravity [x y z] - changes to gravity vector
+% - selfcollision [on/off] - sets the self collision settings for the current physics engine
 % - publishanytime [1/0] - switch between publishing the body transformations
 %           to the GUI anytime or only between stepsimulation and server  messsages.
 %           When publishing anytime, the GUI will reflect the body movements after every
