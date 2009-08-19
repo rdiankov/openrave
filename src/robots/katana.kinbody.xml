@@ -14,7 +14,6 @@
   <Body name="L1" type="dynamic">
 	<offsetfrom>Base</offsetfrom>
 	<Translation>0.0 0.0 0.135</Translation>
-	<RotationAxis>0 0 1 180</RotationAxis>
 	<Geom type="trimesh">
 	  <Data>L1.wrl 0.001</Data>
 	  <Render>L1.wrl 0.001</Render>
@@ -54,7 +53,6 @@
   <Body name="L5" type="dynamic">
 	<offsetfrom>L4</offsetfrom>
 	<Translation>0.0 0.0 0.12</Translation>
-	<RotationAxis>0 0 1 180</RotationAxis>
 	<Geom type="trimesh">
 	  <Data>L5.wrl 0.001</Data>
 	  <Render>L5.wrl 0.001</Render>
@@ -96,7 +94,7 @@
 	<weight>1</weight>
 	<lostop>-169.5</lostop>
 	<histop>169.5</histop>
-	<axis>0 0 -1</axis>
+	<axis>0 0 1</axis>
 	<maxvel>1</maxvel>
 	<resolution>1</resolution>
   </Joint>
@@ -104,8 +102,8 @@
 	<Body>L1</Body>
 	<Body>L2</Body>
 	<offsetfrom>L2</offsetfrom>
-	<lostop>-30</lostop>
-	<histop>102</histop>
+	<lostop>-34.25</lostop>
+	<histop>108.75</histop>
 	<axis>0 -1 0</axis>
 	<maxvel>1</maxvel>
 	<resolution>1</resolution>
@@ -114,8 +112,8 @@
 	<Body>L2</Body>
 	<Body>L3</Body>
 	<offsetfrom>L3</offsetfrom>
-	<lostop>-122.5</lostop>
-	<histop>122.5</histop>
+	<lostop>-122.7</lostop>
+	<histop>127.3</histop>
 	<axis>0 -1 0</axis>
 	<maxvel>1</maxvel>
 	<resolution>1</resolution>
@@ -126,8 +124,8 @@
 	<Body>L3</Body>
 	<Body>dummylink</Body>
 	<offsetfrom>dummylink</offsetfrom>
-	<lostop>-0.1</lostop>
-	<histop>0.1</histop>
+	<lostop>-0.01</lostop>
+	<histop>0.01</histop>
 	<axis>0 0 1</axis>
 	<maxvel>1</maxvel>
 	<resolution>1</resolution>
@@ -136,9 +134,9 @@
 	<Body>dummylink</Body>
 	<Body>L4</Body>
 	<offsetfrom>L4</offsetfrom>
-	<lostop>-112</lostop>
-	<histop>112</histop>
-	<axis>0 -1 0</axis>
+	<lostop>-116.5</lostop>
+	<histop>116.5</histop>
+	<axis>0 1 0</axis>
 	<maxvel>1</maxvel>
 	<resolution>1</resolution>
   </Joint>
@@ -146,8 +144,8 @@
 	<Body>L4</Body>
 	<Body>L5</Body>
 	<offsetfrom>L5</offsetfrom>
-	<lostop>-168</lostop>
-	<histop>168</histop>
+	<lostop>-171.5</lostop>
+	<histop>171.5</histop>
 	<axis>0 0 -1</axis>
 	<maxvel>1</maxvel>
 	<resolution>1</resolution>

@@ -138,16 +138,16 @@ bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::ve
     _r22, r22 = eerot[2*3+2],
     _px, _py, _pz, px = eetrans[0], py = eetrans[1], pz = eetrans[2];
     
-    _r00=((-1.00000000000000)*(r00));
-    _r01=((-1.00000000000000)*(r01));
+    _r00=r00;
+    _r01=r01;
     _r02=r02;
     _px=((((-0.120000000000000)*(r02)))+(px));
-    _r10=((-1.00000000000000)*(r10));
-    _r11=((-1.00000000000000)*(r11));
+    _r10=r10;
+    _r11=r11;
     _r12=r12;
     _py=((py)+(((-0.120000000000000)*(r12))));
-    _r20=((-1.00000000000000)*(r20));
-    _r21=((-1.00000000000000)*(r21));
+    _r20=r20;
+    _r21=r21;
     _r22=r22;
     _pz=((-0.201500000000000)+(pz)+(((-0.120000000000000)*(r22))));
     r00 = _r00; r01 = _r01; r02 = _r02; r10 = _r10; r11 = _r11; r12 = _r12; r20 = _r20; r21 = _r21; r22 = _r22; px = _px; py = _py; pz = _pz;
@@ -179,11 +179,12 @@ bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::ve
     IKReal j0array[2], cj0array[2], sj0array[2];
     bool j0valid[2]={false};
     IKReal x0=((-1.00000000000000)*(py));
-    IKReal x1=IKatan2(x0, px);
-    j0array[0]=((-1.00000000000000)*(x1));
+    IKReal x1=((-1.00000000000000)*(px));
+    IKReal x2=IKatan2(x0, x1);
+    j0array[0]=((-1.00000000000000)*(x2));
     sj0array[0]=IKsin(j0array[0]);
     cj0array[0]=IKcos(j0array[0]);
-    j0array[1]=((3.14159265358979)+(((-1.00000000000000)*(x1))));
+    j0array[1]=((3.14159265358979)+(((-1.00000000000000)*(x2))));
     sj0array[1]=IKsin(j0array[1]);
     cj0array[1]=IKcos(j0array[1]);
     if( j0array[0] > IKPI )
@@ -206,16 +207,17 @@ bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::ve
     {
     IKReal j1array[1], cj1array[1], sj1array[1];
     bool j1valid[1]={false};
-    IKReal x2=((0.138999999999214)*(cj2));
-    IKReal x3=((0.190000000000509)+(x2));
-    IKReal x4=((py)*(sj0));
-    IKReal x5=((cj0)*(px));
-    IKReal x6=((x5)+(x4));
-    IKReal x7=((pz)*(x3));
-    IKReal x8=((0.138999999999214)*(sj2)*(x6));
-    IKReal x9=((x7)+(((-1.00000000000000)*(x8))));
-    IKReal x10=((IKReal)1/(x9));
-    j1array[0]=IKatan2(((x10)*(((((-0.138999999999214)*(sj2)*(x3)))+(((pz)*(x6)))))), ((x10)*(((((-0.0193209999997634)*((sj2)*(sj2))))+((pz)*(pz))))));
+    IKReal x3=((py)*(sj0));
+    IKReal x4=((cj0)*(px));
+    IKReal x5=((x3)+(((-1.00000000000000)*(x4))));
+    IKReal x6=((0.138999999999214)*(cj2));
+    IKReal x7=((0.190000000000509)+(x6));
+    IKReal x8=((0.138999999999214)*(sj2)*(x5));
+    IKReal x9=((pz)*(x7));
+    IKReal x10=((x9)+(x8));
+    IKReal x11=((-1.00000000000000)*(x10));
+    IKReal x12=((IKReal)1/(x11));
+    j1array[0]=IKatan2(((x12)*(((((pz)*(x5)))+(((0.138999999999214)*(sj2)*(x7)))))), ((x12)*(((((0.0193209999997634)*((sj2)*(sj2))))+(((-1.00000000000000)*((pz)*(pz))))))));
     sj1array[0]=IKsin(j1array[0]);
     cj1array[0]=IKcos(j1array[0]);
     if( j1array[0] > IKPI )
@@ -228,15 +230,15 @@ bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::ve
         continue;
     j1 = j1array[0]; cj1 = cj1array[0]; sj1 = sj1array[0];
     
-    _r00=((((-1.00000000000000)*(cj2)*(r20)*(sj1)))+(((-1.00000000000000)*(cj0)*(r00)*(sj1)*(sj2)))+(((-1.00000000000000)*(r10)*(sj0)*(sj1)*(sj2)))+(((cj0)*(cj1)*(cj2)*(r00)))+(((-1.00000000000000)*(cj1)*(r20)*(sj2)))+(((cj1)*(cj2)*(r10)*(sj0))));
-    _r01=((((-1.00000000000000)*(cj2)*(r21)*(sj1)))+(((-1.00000000000000)*(r11)*(sj0)*(sj1)*(sj2)))+(((-1.00000000000000)*(cj0)*(r01)*(sj1)*(sj2)))+(((cj0)*(cj1)*(cj2)*(r01)))+(((-1.00000000000000)*(cj1)*(r21)*(sj2)))+(((cj1)*(cj2)*(r11)*(sj0))));
-    _r02=((((cj0)*(cj1)*(cj2)*(r02)))+(((cj1)*(cj2)*(r12)*(sj0)))+(((-1.00000000000000)*(cj2)*(r22)*(sj1)))+(((-1.00000000000000)*(cj1)*(r22)*(sj2)))+(((-1.00000000000000)*(r12)*(sj0)*(sj1)*(sj2)))+(((-1.00000000000000)*(cj0)*(r02)*(sj1)*(sj2))));
-    _r10=((((-1.00000000000000)*(r00)*(sj0)))+(((cj0)*(r10))));
-    _r11=((((-1.00000000000000)*(r01)*(sj0)))+(((cj0)*(r11))));
-    _r12=((((-1.00000000000000)*(r02)*(sj0)))+(((cj0)*(r12))));
-    _r20=((((cj1)*(cj2)*(r20)))+(((cj0)*(cj2)*(r00)*(sj1)))+(((-1.00000000000000)*(r20)*(sj1)*(sj2)))+(((cj1)*(r10)*(sj0)*(sj2)))+(((cj0)*(cj1)*(r00)*(sj2)))+(((cj2)*(r10)*(sj0)*(sj1))));
-    _r21=((((cj0)*(cj1)*(r01)*(sj2)))+(((cj2)*(r11)*(sj0)*(sj1)))+(((cj1)*(r11)*(sj0)*(sj2)))+(((-1.00000000000000)*(r21)*(sj1)*(sj2)))+(((cj1)*(cj2)*(r21)))+(((cj0)*(cj2)*(r01)*(sj1))));
-    _r22=((((cj0)*(cj1)*(r02)*(sj2)))+(((cj2)*(r12)*(sj0)*(sj1)))+(((-1.00000000000000)*(r22)*(sj1)*(sj2)))+(((cj1)*(r12)*(sj0)*(sj2)))+(((cj1)*(cj2)*(r22)))+(((cj0)*(cj2)*(r02)*(sj1))));
+    _r00=((((-1.00000000000000)*(cj2)*(r20)*(sj1)))+(((-1.00000000000000)*(cj0)*(r00)*(sj1)*(sj2)))+(((r10)*(sj0)*(sj1)*(sj2)))+(((-1.00000000000000)*(cj1)*(cj2)*(r10)*(sj0)))+(((cj0)*(cj1)*(cj2)*(r00)))+(((-1.00000000000000)*(cj1)*(r20)*(sj2))));
+    _r01=((((-1.00000000000000)*(cj2)*(r21)*(sj1)))+(((-1.00000000000000)*(cj0)*(r01)*(sj1)*(sj2)))+(((cj0)*(cj1)*(cj2)*(r01)))+(((-1.00000000000000)*(cj1)*(r21)*(sj2)))+(((-1.00000000000000)*(cj1)*(cj2)*(r11)*(sj0)))+(((r11)*(sj0)*(sj1)*(sj2))));
+    _r02=((((r12)*(sj0)*(sj1)*(sj2)))+(((cj0)*(cj1)*(cj2)*(r02)))+(((-1.00000000000000)*(cj2)*(r22)*(sj1)))+(((-1.00000000000000)*(cj1)*(cj2)*(r12)*(sj0)))+(((-1.00000000000000)*(cj1)*(r22)*(sj2)))+(((-1.00000000000000)*(cj0)*(r02)*(sj1)*(sj2))));
+    _r10=((((r00)*(sj0)))+(((cj0)*(r10))));
+    _r11=((((cj0)*(r11)))+(((r01)*(sj0))));
+    _r12=((((r02)*(sj0)))+(((cj0)*(r12))));
+    _r20=((((cj1)*(cj2)*(r20)))+(((cj0)*(cj2)*(r00)*(sj1)))+(((-1.00000000000000)*(r20)*(sj1)*(sj2)))+(((-1.00000000000000)*(cj2)*(r10)*(sj0)*(sj1)))+(((cj0)*(cj1)*(r00)*(sj2)))+(((-1.00000000000000)*(cj1)*(r10)*(sj0)*(sj2))));
+    _r21=((((cj0)*(cj1)*(r01)*(sj2)))+(((-1.00000000000000)*(cj1)*(r11)*(sj0)*(sj2)))+(((-1.00000000000000)*(r21)*(sj1)*(sj2)))+(((-1.00000000000000)*(cj2)*(r11)*(sj0)*(sj1)))+(((cj1)*(cj2)*(r21)))+(((cj0)*(cj2)*(r01)*(sj1))));
+    _r22=((((cj0)*(cj1)*(r02)*(sj2)))+(((-1.00000000000000)*(cj1)*(r12)*(sj0)*(sj2)))+(((-1.00000000000000)*(cj2)*(r12)*(sj0)*(sj1)))+(((-1.00000000000000)*(r22)*(sj1)*(sj2)))+(((cj1)*(cj2)*(r22)))+(((cj0)*(cj2)*(r02)*(sj1))));
     IKReal j4eval;
     j4eval=_r22;
     if( j4eval >= -1.000100 && j4eval <= -0.999900 ) {
@@ -315,7 +317,7 @@ bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::ve
         {
         IKReal j4array[1], cj4array[1], sj4array[1];
         bool j4valid[1]={false};
-        j4array[0]=IKatan2(((_r02)*(((IKReal)1/(cj3)))), _r22);
+        j4array[0]=IKatan2(((-1.00000000000000)*(_r02)*(((IKReal)1/(cj3)))), _r22);
         sj4array[0]=IKsin(j4array[0]);
         cj4array[0]=IKcos(j4array[0]);
         if( j4array[0] > IKPI )
@@ -329,18 +331,18 @@ bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::ve
         j4 = j4array[0]; cj4 = cj4array[0]; sj4 = sj4array[0];
         
         IKReal j5quoteval;
-        j5quoteval=((-1.00000000000000)*(IKsin(j4)));
+        j5quoteval=IKsin(j4);
         if( j5quoteval >= -0.000100 && j5quoteval <= 0.000100 ) {
             {
             IKReal j5array[1], cj5array[1], sj5array[1];
             bool j5valid[1]={false};
-            IKReal x11=(cj3)*(cj3);
-            IKReal x12=(cj4)*(cj4);
-            IKReal x13=((x11)*(x12));
-            IKReal x14=(sj3)*(sj3);
-            IKReal x15=((x13)+(x14));
-            IKReal x16=((IKReal)1/(x15));
-            j5array[0]=IKatan2(((x16)*(((((-1.00000000000000)*(_r01)*(cj3)*(cj4)))+(((_r00)*(sj3)))))), ((x16)*(((((_r00)*(cj3)*(cj4)))+(((_r01)*(sj3)))))));
+            IKReal x13=(cj3)*(cj3);
+            IKReal x14=(cj4)*(cj4);
+            IKReal x15=((x13)*(x14));
+            IKReal x16=(sj3)*(sj3);
+            IKReal x17=((x15)+(x16));
+            IKReal x18=((IKReal)1/(x17));
+            j5array[0]=IKatan2(((x18)*(((((-1.00000000000000)*(_r01)*(cj3)*(cj4)))+(((_r00)*(sj3)))))), ((x18)*(((((_r00)*(cj3)*(cj4)))+(((_r01)*(sj3)))))));
             sj5array[0]=IKsin(j5array[0]);
             cj5array[0]=IKcos(j5array[0]);
             if( j5array[0] > IKPI )
@@ -360,8 +362,8 @@ bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::ve
             {
             IKReal j5array[1], cj5array[1], sj5array[1];
             bool j5valid[1]={false};
-            IKReal x17=((IKReal)1/(sj4));
-            j5array[0]=IKatan2(((_r21)*(x17)), ((-1.00000000000000)*(_r20)*(x17)));
+            IKReal x19=((IKReal)1/(sj4));
+            j5array[0]=IKatan2(((-1.00000000000000)*(_r21)*(x19)), ((_r20)*(x19)));
             sj5array[0]=IKsin(j5array[0]);
             cj5array[0]=IKcos(j5array[0]);
             if( j5array[0] > IKPI )

@@ -102,13 +102,14 @@ bool RandomizedAStarPlanner::InitPlan(RobotBase* pbase, const PlannerParameters*
     if( _parameters.pConfigState == NULL )
         _parameters.pConfigState = &_defaultstate;
 
+    _parameters.pConfigState->SetRobot(_robot);
+
     if( _parameters.pSampleFn == NULL ) {
         RAVELOG(L"using default sampling function\n");
         _defaultsampler.Init(_parameters.pConfigState, _parameters.pdistmetric);
         _parameters.pSampleFn = &_defaultsampler;
     }
     
-    _parameters.pConfigState->SetRobot(_robot);
     _parameters.pgoalfn->SetRobot(_robot);
     _parameters.pdistmetric->SetRobot(_robot);
 
