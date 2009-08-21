@@ -1588,6 +1588,9 @@ void Environment::StepSimulation(dReal fTimeStep)
     uint64_t step = (uint64_t)ceilf(1000000.0 * (double)fTimeStep);
     fTimeStep = (dReal)((double)step * 0.000001);
 
+    // call the physics first to get forces
+    _pPhysicsEngine->SimulateStep(fTimeStep);
+
     vector<KinBody*> vecbodies;
     int nbodiesstamp;
 
@@ -1614,7 +1617,6 @@ void Environment::StepSimulation(dReal fTimeStep)
             (*itprob)->SimulationStep(fTimeStep);
     }
     
-    _pPhysicsEngine->SimulateStep(fTimeStep);
     _nCurSimTime += step;
 }
 

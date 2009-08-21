@@ -1410,6 +1410,9 @@ void RobotBase::SimulationStep(dReal fElapsedTime)
         if( itsensor->psensor != NULL )
             itsensor->psensor->SimulationStep(fElapsedTime);
     }
+
+    _UpdateGrabbedBodies();
+    _UpdateAttachedSensors();
 }
 
 bool RobotBase::Clone(const InterfaceBase* preference, int cloningoptions)
