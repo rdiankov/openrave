@@ -156,10 +156,11 @@ bool BaseLaser2DSensor::SimulationStep(dReal fTimeElapsed)
                     break;
             
                 trot.rotfromaxisangle(rotaxis, (dReal)frotangle);
-                r.dir = _geom.max_range*t.rotate(trot.rotate(Vector(1,0,0)));
+                Vector vdir(t.rotate(trot.rotate(Vector(1,0,0))));
+                r.dir = _geom.max_range*vdir;
             
                 if( GetEnv()->CheckCollision(r, &report)) {
-                    _data.ranges[index] = r.dir*report.minDistance;
+                    _data.ranges[index] = vdir*report.minDistance;
                     _data.intensity[index] = 1;
                     // store the colliding bodies
                     KinBody::Link* plink = report.plink1 != NULL ? report.plink1 : report.plink2;
@@ -170,7 +171,7 @@ bool BaseLaser2DSensor::SimulationStep(dReal fTimeElapsed)
                 }
                 else {
                     _databodyids[index] = 0;
-                    _data.ranges[index] = r.dir*_geom.max_range;
+                    _data.ranges[index] = vdir*_geom.max_range;
                     _data.intensity[index] = 0;
                 }
             }

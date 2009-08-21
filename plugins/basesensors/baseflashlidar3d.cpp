@@ -160,15 +160,17 @@ bool BaseFlashLidar3DSensor::SimulationStep(dReal fTimeElapsed)
 
             for(int w = 0; w < _geom.width; ++w) {
                 for(int h = 0; h < _geom.height; ++h) {
-                    r.dir.x = (float)w*_iKK[0] + _iKK[2];
-                    r.dir.y = (float)h*_iKK[1] + _iKK[3];
-                    r.dir.z = 1.0f;
-                    r.dir = _geom.max_range*_data.t.rotate(r.dir.normalize3());
+                    Vector vdir;
+                    vdir.x = (float)w*_iKK[0] + _iKK[2];
+                    vdir.y = (float)h*_iKK[1] + _iKK[3];
+                    vdir.z = 1.0f;
+                    vdir = _data.t.rotate(vdir.normalize3());
+                    r.dir = _geom.max_range*vdir;
 
                     int index = w*_geom.height+h;
 
                     if( GetEnv()->CheckCollision(r, &report)) {
-                        _data.ranges[index] = r.dir*report.minDistance;
+                        _data.ranges[index] = vdir*report.minDistance;
                         _data.intensity[index] = 1;
                         // store the colliding bodies
                         KinBody::Link* plink = report.plink1 != NULL ? report.plink1 : report.plink2;
@@ -179,7 +181,7 @@ bool BaseFlashLidar3DSensor::SimulationStep(dReal fTimeElapsed)
                     }
                     else {
                         _databodyids[index] = 0;
-                        _data.ranges[index] = r.dir*_geom.max_range;
+                        _data.ranges[index] = vdir*_geom.max_range;
                         _data.intensity[index] = 0;
                     }
                 }

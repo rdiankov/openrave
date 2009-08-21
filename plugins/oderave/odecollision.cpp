@@ -492,7 +492,8 @@ void ODECollisionChecker::_RayCollisionCallback (dGeomID o1, dGeomID o2,dReal fm
         return;
 
     if (dGeomIsSpace(o1) || dGeomIsSpace(o2)) {    
-        dSpaceCollide2(o1,o2,this,RayCollisionCallback);
+        void* pdata[2] = {this,&fmaxdist};
+        dSpaceCollide2(o1,o2,pdata,RayCollisionCallback);
         return;
     }
 
