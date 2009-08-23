@@ -24,6 +24,8 @@ inline T SQR(T x) { return x * x; }
 WAMArmIK::WAMArmIK(EnvironmentBase* penv, bool bFullDOF) : IkSolverBase(penv)
 {
     _bFullDOF = bFullDOF;
+    if( !_bFullDOF )
+        _bUseGraspTrans = true;
 }
 
 /// WAMIK author: Rosen Diankov (email rdiankov@cs.cmu.edu for bugs, comments, etc)
@@ -34,7 +36,7 @@ bool WAMArmIK::Init(RobotBase* probot, const RobotBase::Manipulator* pmanip, int
     if( _probot == NULL || pmanip == NULL )
         return false;
 
-    _bUseGraspTrans = _bFullDOF ? false : !!(options&WAMOPT_UseGraspTrans);
+    //_bUseGraspTrans = _bFullDOF ? false : !!(options&WAMOPT_UseGraspTrans);
 
     // get the joint limits
     const vector<int>& vjoints = pmanip->_vecarmjoints;

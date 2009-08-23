@@ -23,7 +23,7 @@ robotid = orEnvCreateRobot('robot',robotfile);
 if( exist('ikfastlib','var') )
     manips = orRobotGetManipulators(robotid);
     ikfastprobid = orEnvCreateProblem ('IKFast');
-    orProblemSendCommand (['AddIkLibrary ' manips{manipid+1}.iksolvername ' ' ikfastlib],ikfastprobid);
+    orProblemSendCommand (['AddIkLibrary ' strtok(manips{manipid+1}.iksolvername) ' ' ikfastlib],ikfastprobid);
     %% have to reload robot
     orBodyDestroy(robotid);
     robotid = orEnvCreateRobot('robot',robotfile);

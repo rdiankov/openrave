@@ -87,6 +87,7 @@ InterfaceBase* DECL_STDCALL(ORCreate, (PluginType type, wchar_t* name, Environme
         wstring name_ik;
         wstringstream ss(name);
         ss >> name_ik >> freeinc;
+
         if( wcsicmp(name_ik.c_str(),L"WAM7ikfast") == 0 ) {
             vector<int> vfree(barrettwam::getNumFreeParameters());
             for(size_t i = 0; i < vfree.size(); ++i)

@@ -1511,8 +1511,13 @@ bool BaseManipulationProblem::DebugIK(ostream& sout, istream& sinput)
             fsfile >> twrist;
         }
         else {
-            for(int j = 0; j < (int)vjoints.size(); j++)
-                vjoints[j] = vlowerlimit[j] + (vupperlimit[j]-vlowerlimit[j])*GetEnv()->RandomFloat();
+            for(int j = 0; j < (int)vjoints.size(); j++) {
+                if( GetEnv()->RandomFloat() > 0.4f ) {
+                    vjoints[j] = vlowerlimit[j] + (vupperlimit[j]-vlowerlimit[j])*GetEnv()->RandomFloat();
+                }
+                else
+                    vjoints[j] = 0;
+            }
         }
 
         robot->SetActiveDOFValues(NULL,&vjoints[0],true);

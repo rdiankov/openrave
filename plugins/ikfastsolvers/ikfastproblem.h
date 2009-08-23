@@ -236,12 +236,15 @@ public:
             return false;
         string ikname, libraryname;
         sinput >> ikname >> libraryname;
-        if( !sinput || libraryname.size() == 0 || ikname.size() == 0 )
+        if( !sinput || libraryname.size() == 0 || ikname.size() == 0 ) {
+            RAVELOG_DEBUGA("bad input\n");
             return false;
-        
+        }
         boost::shared_ptr<IKLibrary> lib(new IKLibrary);
-        if( !lib->Init(ikname, libraryname) )
+        if( !lib->Init(ikname, libraryname) ) {
+            RAVELOG_DEBUGA("failed to init library\n");
             return false;
+        }
 
         _vlibraries.push_back(lib);
         return true;

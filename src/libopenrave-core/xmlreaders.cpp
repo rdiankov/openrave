@@ -2038,9 +2038,7 @@ bool ManipulatorXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *na
     }
     else if( stricmp((const char*)name, "iksolver") == 0 ) {
         if( _pcurparser->GetData() != NULL ) {
-            stringstream ss((char*)_pcurparser->GetData());
-            string ikname;
-            ss >> ikname >> _pmanip->_ikoptions;
+            string ikname = (char*)_pcurparser->GetData();
             
             IkSolverBase* piksolver = _probot->GetEnv()->CreateIkSolver(ikname.c_str());
             if( piksolver == NULL ) {
