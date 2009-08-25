@@ -7,7 +7,7 @@
     <base>wam0</base>
     <effector>wam7</effector>
     <armjoints>Shoulder_Yaw Shoulder_Pitch Shoulder_Roll Elbow Wrist_Yaw Wrist_Pitch Wrist_Roll</armjoints>
-    <iksolver>WAM7ikfast</iksolver>
+    <iksolver>WAM7ikfast 0.1</iksolver>
     <joints>JF1 JF2 JF3</joints>
     <opened>0 0 0</opened>
     <closed>1.0 1.0 1.0</closed>

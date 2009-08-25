@@ -81,6 +81,18 @@ class AutoReloader(InstanceTracker):
     def change_class(self, new_class):
         self.__class__ = new_class
 
+def customcse(exprs,symbols=None):
+    replacements,reduced_exprs = cse(exprs,symbols=symbols)
+    newreplacements = []
+    # look for any expressions of the order of (x**(1/a))**b, usually computer wants x^(b/a)
+    for r in replacements:
+        if r[1].is_Pow and r[1].exp.is_real and r[1].base.is_Symbol:
+            baseexpr = r[1].base.subs(replacements)
+            if baseexpr.is_Pow and baseexpr.exp.is_real:
+                newreplacements.append((r[0],baseexpr.base**(r[1].exp*baseexpr.exp)))
+                continue
+        newreplacements.append(r)
+    return newreplacements,reduced_exprs
 
 class SolverSolution:
     jointname = None
@@ -95,6 +107,15 @@ class SolverSolution:
         self.jointevalsin = jointevalsin
         self.AddPi = AddPi
         assert(jointeval is not None or jointevalcos is not None or jointevalsin is not None)
+
+    def subs(self,solsubs):
+        if self.jointeval is not None:
+            self.jointeval = [e.subs(solsubs) for e in self.jointeval]
+        if self.jointevalcos is not None:
+            self.jointevalcos = [e.subs(solsubs) for e in self.jointevalcos]
+        if self.jointevalsin is not None:
+            self.jointevalsin = [e.subs(solsubs) for e in self.jointevalsin]
+        return self
 
     def generate(self, generator):
         return generator.generateSolution(self)
@@ -117,6 +138,34 @@ class SolverBranch(AutoReloader):
         return generator.generateBranch(self)
     def end(self, generator):
         return generator.endBranch(self)
+
+class SolverBranchConds(AutoReloader):
+    jointbranches = None
+    def __init__(self, jointbranches):
+        self.jointbranches = jointbranches
+
+    def generate(self, generator):
+        return generator.generateBranchConds(self)
+    def end(self, generator):
+        return generator.endBranchConds(self)
+
+class SolverCheckZeros(AutoReloader):
+    jointname = None
+    jointcheckeqs = None # only used for evaluation
+    zerobranch = None
+    nonzerobranch = None
+    def __init__(self, jointname, jointcheckeqs, zerobranch, nonzerobranch,thresh=0.00001,anycondition=True):
+        self.jointname = jointname
+        self.jointcheckeqs = jointcheckeqs
+        self.zerobranch = zerobranch
+        self.nonzerobranch = nonzerobranch
+        self.thresh = thresh
+        self.anycondition = anycondition
+
+    def generate(self, generator):
+        return generator.generateCheckZeros(self)
+    def end(self, generator):
+        return generator.endCheckZeros(self)
 
 class SolverFreeParameter(AutoReloader):
     jointname = None
@@ -186,6 +235,12 @@ class SolverSetJoint(AutoReloader):
         return generator.generateSetJoint(self)
     def end(self, generator):
         return generator.endSetJoint(self)
+
+class SolverBreak(AutoReloader):
+    def generate(self,generator):
+        return generator.generateBreak(self)
+    def end(self,generator):
+        return generator.endBreak(self)
 
 class CppGenerator(AutoReloader):
     """Generates C++ code from an AST"""
@@ -384,14 +439,15 @@ int main(int argc, char** argv)
         code += "/// solves the inverse kinematics equations.\n"
         code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
         code += "bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
+        code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
         fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"
-        fcode += "IKReal "
+        fcode += 'IKReal '
         
         for var in node.solvejointvars:
-            fcode += "%s, c%s, s%s,\n"%(var[0].name,var[0].name,var[0].name)
+            fcode += '%s, c%s, s%s,\n'%(var[0].name,var[0].name,var[0].name)
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
-            fcode += "%s=pfree[%d], c%s=cos(pfree[%d]), s%s=sin(pfree[%d]),\n"%(name,i,name,i,name,i)
+            fcode += '%s=pfree[%d], c%s=cos(pfree[%d]), s%s=sin(pfree[%d]),\n'%(name,i,name,i,name,i)
 
         for i in range(3):
             for j in range(3):
@@ -412,15 +468,15 @@ int main(int argc, char** argv)
         fcode += "px = _px; py = _py; pz = _pz;\n"
 
         fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + "return vsolutions.size()>0;\n}\n"
+        code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
         return code
     def endChain(self, node):
         return ""
 
     def generateSolution(self, node):
-        code = ""
+        code = ''
         numsolutions = 0
-        eqcode = ""
+        eqcode = ''
         name = node.jointname
         node.HasFreeVar = False
 
@@ -429,225 +485,279 @@ int main(int argc, char** argv)
             equations = []
             names = []
             for i,expr in enumerate(node.jointeval):
-
+                
                 m = None
                 for freevar in self.freevars:
                     if expr.has_any_symbols(Symbol(freevar)):
                         # has free variables, so have to look for a*freevar+b form
-                        a = Wild("a",exclude=[Symbol(freevar)])
-                        b = Wild("b",exclude=[Symbol(freevar)])
+                        a = Wild('a',exclude=[Symbol(freevar)])
+                        b = Wild('b',exclude=[Symbol(freevar)])
                         m = expr.match(a*Symbol(freevar)+b)
-                        if m is None:
-                            print 'failed to extract free solution'
-                            m = dict()
-                            m[a] = Real(-1,30)
-                            m[b] = Real(0,30)
-                        self.freevardependencies.append((freevar,name))
-                        
-                        assert(len(node.jointeval)==1)
-                        code += "IKReal " + self.writeEquations(lambda i: "%smul"%name, m[a])
-                        code += self.writeEquations(lambda i: name, m[b])
-                        node.HasFreeVar = True
-                        return code
+                        if m is not None:
+                            self.freevardependencies.append((freevar,name))
+                            assert(len(node.jointeval)==1)
+                            code += 'IKReal ' + self.writeEquations(lambda i: '%smul'%name, m[a])
+                            code += self.writeEquations(lambda i: name, m[b])
+                            node.HasFreeVar = True
+                            return code
+                        else:
+                            print 'failed to extract free variable %s for %s from'%(freevar,node.jointname), expr
+#                             m = dict()
+#                             m[a] = Real(-1,30)
+#                             m[b] = Real(0,30)
 
                 equations.append(expr)
-                names.append("%sarray[%d]"%(name,i))
-                equations.append(sin(Symbol("%sarray[%d]"%(name,i))))
-                names.append("s%sarray[%d]"%(name,i))
-                equations.append(cos(Symbol("%sarray[%d]"%(name,i))))
-                names.append("c%sarray[%d]"%(name,i))
+                names.append('%sarray[%d]'%(name,i))
+                equations.append(sin(Symbol('%sarray[%d]'%(name,i))))
+                names.append('s%sarray[%d]'%(name,i))
+                equations.append(cos(Symbol('%sarray[%d]'%(name,i))))
+                names.append('c%sarray[%d]'%(name,i))
             eqcode += self.writeEquations(lambda i: names[i], equations)
 
             if node.AddPi:
                 for i in range(numsolutions):
-                    eqcode += "%sarray[%d] = %sarray[%d] > 0 ? %sarray[%d]-IKPI : %sarray[%d]+IKPI;\n"%(name,numsolutions+i,name,i,name,i,name,i)
-                    eqcode += "s%sarray[%d] = -s%sarray[%d];\n"%(name,numsolutions+i,name,i)
-                    eqcode += "c%sarray[%d] = -c%sarray[%d];\n"%(name,numsolutions+i,name,i)
+                    eqcode += '%sarray[%d] = %sarray[%d] > 0 ? %sarray[%d]-IKPI : %sarray[%d]+IKPI;\n'%(name,numsolutions+i,name,i,name,i,name,i)
+                    eqcode += 's%sarray[%d] = -s%sarray[%d];\n'%(name,numsolutions+i,name,i)
+                    eqcode += 'c%sarray[%d] = -c%sarray[%d];\n'%(name,numsolutions+i,name,i)
                 numsolutions *= 2
             
             for i in range(numsolutions):
-                eqcode += "if( %sarray[%d] > IKPI )\n    %sarray[%d]-=IK2PI;\nelse if( %sarray[%d] < -IKPI )\n    %sarray[%d]+=IK2PI;\n"%(name,i,name,i,name,i,name,i)
-                eqcode += "%svalid[%d] = true;\n"%(name,i)
+                eqcode += 'if( %sarray[%d] > IKPI )\n    %sarray[%d]-=IK2PI;\nelse if( %sarray[%d] < -IKPI )\n    %sarray[%d]+=IK2PI;\n'%(name,i,name,i,name,i,name,i)
+                eqcode += '%svalid[%d] = true;\n'%(name,i)
         elif node.jointevalcos is not None:
             numsolutions = 2*len(node.jointevalcos)
-            eqcode += self.writeEquations(lambda i: "c%sarray[%d]"%(name,2*i),node.jointevalcos)
+            eqcode += self.writeEquations(lambda i: 'c%sarray[%d]'%(name,2*i),node.jointevalcos)
             for i in range(len(node.jointevalcos)):
-                eqcode += "if( c%sarray[%d] >= -1.0001 && c%sarray[%d] <= 1.0001 ) {\n"%(name,2*i,name,2*i)
-                eqcode += "    %svalid[%d] = %svalid[%d] = true;\n"%(name,2*i,name,2*i+1)
-                eqcode += "    %sarray[%d] = IKacos(c%sarray[%d]);\n"%(name,2*i,name,2*i)
-                eqcode += "    s%sarray[%d] = IKsin(%sarray[%d]);\n"%(name,2*i,name,2*i)
+                eqcode += 'if( c%sarray[%d] >= -1.0001 && c%sarray[%d] <= 1.0001 ) {\n'%(name,2*i,name,2*i)
+                eqcode += '    %svalid[%d] = %svalid[%d] = true;\n'%(name,2*i,name,2*i+1)
+                eqcode += '    %sarray[%d] = IKacos(c%sarray[%d]);\n'%(name,2*i,name,2*i)
+                eqcode += '    s%sarray[%d] = IKsin(%sarray[%d]);\n'%(name,2*i,name,2*i)
                 # second solution
-                eqcode += "    c%sarray[%d] = c%sarray[%d];\n"%(name,2*i+1,name,2*i)
-                eqcode += "    %sarray[%d] = -%sarray[%d];\n"%(name,2*i+1,name,2*i)
-                eqcode += "    s%sarray[%d] = -s%sarray[%d];\n"%(name,2*i+1,name,2*i)
-                eqcode += "}\n"
-                eqcode += "else if( isnan(c%sarray[%d]) ) {\n"%(name,2*i)
-                eqcode += "    // probably any value will work\n"
-                eqcode += "    %svalid[%d] = true;\n"%(name,2*i)
-                eqcode += "    c%sarray[%d] = 1; s%sarray[%d] = 0; %sarray[%d] = 0;\n"%(name,2*i,name,2*i,name,2*i)
-                eqcode += "}\n"
+                eqcode += '    c%sarray[%d] = c%sarray[%d];\n'%(name,2*i+1,name,2*i)
+                eqcode += '    %sarray[%d] = -%sarray[%d];\n'%(name,2*i+1,name,2*i)
+                eqcode += '    s%sarray[%d] = -s%sarray[%d];\n'%(name,2*i+1,name,2*i)
+                eqcode += '}\n'
+                eqcode += 'else if( isnan(c%sarray[%d]) ) {\n'%(name,2*i)
+                eqcode += '    // probably any value will work\n'
+                eqcode += '    %svalid[%d] = true;\n'%(name,2*i)
+                eqcode += '    c%sarray[%d] = 1; s%sarray[%d] = 0; %sarray[%d] = 0;\n'%(name,2*i,name,2*i,name,2*i)
+                eqcode += '}\n'
         elif node.jointevalsin is not None:
             numsolutions = 2*len(node.jointevalsin)
-            eqcode += self.writeEquations(lambda i: "s%sarray[%d]"%(name,2*i),node.jointevalsin)
+            eqcode += self.writeEquations(lambda i: 's%sarray[%d]'%(name,2*i),node.jointevalsin)
             for i in range(len(node.jointevalsin)):
-                eqcode += "if( s%sarray[%d] >= -1.0001 && s%sarray[%d] <= 1.0001 ) {\n"%(name,2*i,name,2*i)
-                eqcode += "    %svalid[%d] = %svalid[%d] = true;\n"%(name,2*i,name,2*i+1)
-                eqcode += "    %sarray[%d] = IKasin(s%sarray[%d]);\n"%(name,2*i,name,2*i)
-                eqcode += "    c%sarray[%d] = IKcos(%sarray[%d]);\n"%(name,2*i,name,2*i)
+                eqcode += 'if( s%sarray[%d] >= -1.0001 && s%sarray[%d] <= 1.0001 ) {\n'%(name,2*i,name,2*i)
+                eqcode += '    %svalid[%d] = %svalid[%d] = true;\n'%(name,2*i,name,2*i+1)
+                eqcode += '    %sarray[%d] = IKasin(s%sarray[%d]);\n'%(name,2*i,name,2*i)
+                eqcode += '    c%sarray[%d] = IKcos(%sarray[%d]);\n'%(name,2*i,name,2*i)
                 # second solution
-                eqcode += "    s%sarray[%d] = s%sarray[%d];\n"%(name,2*i+1,name,2*i)
-                eqcode += "    %sarray[%d] = %sarray[%d] > 0 ? (IKPI-%sarray[%d]) : (-IKPI-%sarray[%d]);\n"%(name,2*i+1,name,2*i,name,2*i,name,2*i)
-                eqcode += "    c%sarray[%d] = -c%sarray[%d];\n"%(name,2*i+1,name,2*i)
-                eqcode += "}\n"
-                eqcode += "else if( isnan(s%sarray[%d]) ) {\n"%(name,2*i)
-                eqcode += "    // probably any value will work\n"
-                eqcode += "    %svalid[%d] = true;\n"%(name,2*i)
-                eqcode += "    c%sarray[%d] = 1; s%sarray[%d] = 0; %sarray[%d] = 0;\n"%(name,2*i,name,2*i,name,2*i)
-                eqcode += "}\n"
+                eqcode += '    s%sarray[%d] = s%sarray[%d];\n'%(name,2*i+1,name,2*i)
+                eqcode += '    %sarray[%d] = %sarray[%d] > 0 ? (IKPI-%sarray[%d]) : (-IKPI-%sarray[%d]);\n'%(name,2*i+1,name,2*i,name,2*i,name,2*i)
+                eqcode += '    c%sarray[%d] = -c%sarray[%d];\n'%(name,2*i+1,name,2*i)
+                eqcode += '}\n'
+                eqcode += 'else if( isnan(s%sarray[%d]) ) {\n'%(name,2*i)
+                eqcode += '    // probably any value will work\n'
+                eqcode += '    %svalid[%d] = true;\n'%(name,2*i)
+                eqcode += '    c%sarray[%d] = 1; s%sarray[%d] = 0; %sarray[%d] = 0;\n'%(name,2*i,name,2*i,name,2*i)
+                eqcode += '}\n'
 
-        code += "{\nIKReal %sarray[%d], c%sarray[%d], s%sarray[%d];\n"%(name,numsolutions,name,numsolutions,name,numsolutions)
+        code += '{\nIKReal %sarray[%d], c%sarray[%d], s%sarray[%d];\n'%(name,numsolutions,name,numsolutions,name,numsolutions)
 
-        code += "bool %svalid[%d]={false};\n"%(name,numsolutions)
+        code += 'bool %svalid[%d]={false};\n'%(name,numsolutions)
         code += eqcode
         for i,j in xcombinations(range(numsolutions),2):
-            code += "if( %svalid[%d] && %svalid[%d] && IKabs(c%sarray[%d]-c%sarray[%d]) < 0.0001 && IKabs(s%sarray[%d]-s%sarray[%d]) < 0.0001 )\n    %svalid[%d]=false;\n"%(name,i,name,j,name,i,name,j,name,i,name,j,name,j)
+            code += 'if( %svalid[%d] && %svalid[%d] && IKabs(c%sarray[%d]-c%sarray[%d]) < 0.0001 && IKabs(s%sarray[%d]-s%sarray[%d]) < 0.0001 )\n    %svalid[%d]=false;\n'%(name,i,name,j,name,i,name,j,name,i,name,j,name,j)
         if numsolutions > 1:
-            code += "for(int i%s = 0; i%s < %d; ++i%s) {\n"%(name,name,numsolutions,name)
+            code += 'for(int i%s = 0; i%s < %d; ++i%s) {\n'%(name,name,numsolutions,name)
         else:
-            code += "{ int i%s = 0;\n"%(name)
-        code += "if( !%svalid[i%s] )\n    continue;\n"%(name,name)
+            code += '{ int i%s = 0;\n'%(name)
+        code += 'if( !%svalid[i%s] )\n    continue;\n'%(name,name)
 
         if numsolutions > 1:
-            code += "%s = %sarray[i%s]; c%s = c%sarray[i%s]; s%s = s%sarray[i%s];\n\n"%(name,name,name,name,name,name,name,name,name)
+            code += '%s = %sarray[i%s]; c%s = c%sarray[i%s]; s%s = s%sarray[i%s];\n\n'%(name,name,name,name,name,name,name,name,name)
         else:
-            code += "%s = %sarray[0]; c%s = c%sarray[0]; s%s = s%sarray[0];\n\n"%(name,name,name,name,name,name)
+            code += '%s = %sarray[0]; c%s = c%sarray[0]; s%s = s%sarray[0];\n\n'%(name,name,name,name,name,name)
         return code
 
     def endSolution(self, node):
         if node.HasFreeVar:
             self.freevardependencies.pop()
-            return ""
-        return "}\n}\n"
+            return ''
+        return '}\n}\n'
 
     def generateBranch(self, node):
+        origequations = copy.copy(self.dictequations)
         name = node.jointname
-        code = "IKReal %seval;\n"%name
-        code += self.writeEquations(lambda x: "%seval"%name,[node.jointeval]);
+        code = '{\nIKReal %seval;\n'%name
+        code += self.writeEquations(lambda x: '%seval'%name,[node.jointeval])
         for branch in node.jointbranches:
-            branchcode = ""
+            branchcode = ''
+            self.dictequations = copy.copy(origequations)
             for n in branch[1]:
                 branchcode += n.generate(self)
             for n in reversed(branch[1]):
                 branchcode += n.end(self)
             branchcode = self.indentCode(branchcode,4)
             if branch[0] is None:
-                code += "{\n" + branchcode + "}\n"
+                code += '{\n' + branchcode + '}\n'
             else:
-                code += "if( %seval >= %f && %seval <= %f ) {\n"%(name,branch[0]-0.0001,name,branch[0]+0.0001)
-                code += branchcode + "}\nelse "
+                code += 'if( %seval >= %f && %seval <= %f ) {\n'%(name,branch[0]-0.00001,name,branch[0]+0.00001)
+                code += branchcode + '}\nelse '
+        code += '}\n'
+        self.dictequations = origequations
         return code
     def endBranch(self, node):
-        return ""
+        return ''
+    def generateBranchConds(self, node):
+        origequations = copy.copy(self.dictequations)
+        code = '{\n'
+        if any([branch[0] for branch in node.jointbranches]):
+            code += 'IKReal evalcond;\n'
+        for branch in node.jointbranches:
+            if branch[0] is None:
+                branchcode = 'if( 1 ) {\n'
+            else:
+                branchcode = self.writeEquations(lambda x: 'evalcond',branch[0])
+                branchcode += 'if( IKabs(evalcond) < 0.00001 ) {\n'
+            self.dictequations = copy.copy(origequations)
+            for n in branch[1]:
+                branchcode += n.generate(self)
+            for n in reversed(branch[1]):
+                branchcode += n.end(self)
+            code += self.indentCode(branchcode,4)+'} else {\n'
+        code += '}\n'*(len(node.jointbranches)+1)
+        self.dictequations = origequations
+        return code
+    def endBranchConds(self, node):
+        return ''
+    def generateCheckZeros(self, node):
+        origequations = copy.copy(self.dictequations)
+        name = node.jointname
+        code = 'IKReal %seval[%d];\n'%(name,len(node.jointcheckeqs))
+        code += self.writeEquations(lambda i: '%seval[%d]'%(name,i),node.jointcheckeqs);
+        code += 'if( '
+        for i in range(len(node.jointcheckeqs)):
+            if i != 0:
+                if node.anycondition:
+                    code += ' || '
+                else:
+                    code += ' && '
+            code += 'IKabs(%seval[%d]) < %f '%(name,i,node.thresh)
+        code += ' ) {\n'
+        self.dictequations = copy.copy(origequations)
+        code += self.indentCode(self.generateTree(node.zerobranch),4)
+        code += '\n} else {\n'
+        self.dictequations = copy.copy(origequations)
+        code += self.indentCode(self.generateTree(node.nonzerobranch),4)
+        code += '\n}\n'
+        self.dictequations = origequations
+        return '{\n' + self.indentCode(code,4) + '}\n'
+    def endCheckZeros(self, node):
+        return ''
     def generateFreeParameter(self, node):
+        #print 'free variable ',node.jointname,': ',self.freevars
         self.freevars.append(node.jointname)
         self.freevardependencies.append((node.jointname,node.jointname))
-        code = "IKReal %smul = 1;\n%s=0;\n"%(node.jointname,node.jointname)
+        code = 'IKReal %smul = 1;\n%s=0;\n'%(node.jointname,node.jointname)
         return code+self.generateTree(node.jointtree)
     def endFreeParameter(self, node):
         self.freevars.pop()
         self.freevardependencies.pop()
-        return ""
+        return ''
     def generateSetJoint(self, node):
-        code = "{\n%s = %f; s%s = %f; c%s = %f;\n"%(node.jointname,node.jointvalue,node.jointname,sin(node.jointvalue),node.jointname,cos(node.jointvalue))
+        code = '{\n%s = %f; s%s = %f; c%s = %f;\n'%(node.jointname,node.jointvalue,node.jointname,sin(node.jointvalue),node.jointname,cos(node.jointvalue))
         return code
     def endSetJoint(self, node):
-        return "}\n"
+        return '}\n'
+    def generateBreak(self,node):
+        return 'continue;\n'
+    def endBreak(self,node):
+        return ''
     def generateRotation(self, node):
-        code = "";
-
+        code = ''
         listequations = []
         names = []
         for i in range(3):
             for j in range(3):
                 listequations.append(node.T[i*4+j])
-                names.append(Symbol("_r%d%d"%(i,j)))
+                names.append(Symbol('_r%d%d'%(i,j)))
         code += self.writeEquations(lambda i: names[i],listequations)
         code += self.generateTree(node.jointtree)
         return code
     def endRotation(self, node):
-        return ""
+        return ''
     def generateStoreSolution(self, node):
-        code = "vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();\n"
-        code += "solution.basesol.resize(%d);\n"%len(node.alljointvars)
+        code = 'vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();\n'
+        code += 'solution.basesol.resize(%d);\n'%len(node.alljointvars)
         for i,var in enumerate(node.alljointvars):
-            code += "solution.basesol[%d].foffset = %s;\n"%(i,var)
+            code += 'solution.basesol[%d].foffset = %s;\n'%(i,var)
             
             vardeps = [vardep for vardep in self.freevardependencies if vardep[1]==var.name]
             if len(vardeps) > 0:
                 freevarname = vardeps[0][0]
                 ifreevar = [j for j in range(len(self.freevars)) if freevarname==self.freevars[j]]
-                code += "solution.basesol[%d].fmul = %smul;\n"%(i,var.name)
-                code += "solution.basesol[%d].freeind = %d;\n"%(i,ifreevar[0])
-        code += "solution.vfree.resize(%d);\n"%len(self.freevars)
+                code += 'solution.basesol[%d].fmul = %smul;\n'%(i,var.name)
+                code += 'solution.basesol[%d].freeind = %d;\n'%(i,ifreevar[0])
+        code += 'solution.vfree.resize(%d);\n'%len(self.freevars)
         for i,varname in enumerate(self.freevars):
             ind = [j for j in range(len(node.alljointvars)) if varname==node.alljointvars[j].name]
-            code += "solution.vfree[%d] = %d;\n"%(i,ind[0])
+            code += 'solution.vfree[%d] = %d;\n'%(i,ind[0])
         return code
     def endStoreSolution(self, node):
-        return ""
+        return ''
     def generateSequence(self, node):
-        code = ""
+        code = ''
         for tree in node.jointtrees:
             code += self.generateTree(tree)
         return code
     def endSequence(self, node):
-        return ""
+        return ''
     def generateTree(self,tree):
-        code = ""
+        code = ''
         for n in tree:
             code += n.generate(self)
         for n in reversed(tree):
             code += n.end(self)
         return code
     def writeEquations(self, varnamefn, exprs):
-        code = ""
-        [replacements,reduced_exprs] = cse(exprs,symbols=self.symbolgen)
+        code = ''
+        [replacements,reduced_exprs] = customcse(exprs,symbols=self.symbolgen)
         for rep in replacements:                
             eqns = filter(lambda x: rep[1]-x[1]==0, self.dictequations)
             if len(eqns) > 0:
                 self.dictequations.append((rep[0],eqns[0][0]))
-                code += "IKReal %s=%s;\n"%(rep[0],eqns[0][0])
+                code += 'IKReal %s=%s;\n'%(rep[0],eqns[0][0])
             else:
                 self.dictequations.append(rep)
                 code2,sepcode2 = self.writeExprCode(rep[1])
-                code += sepcode2+"IKReal %s=%s;\n"%(rep[0],code2)
+                code += sepcode2+'IKReal %s=%s;\n'%(rep[0],code2)
 
         for i,rexpr in enumerate(reduced_exprs):
             code2,sepcode2 = self.writeExprCode(rexpr)
-            code += sepcode2+"%s=%s;\n"%(varnamefn(i), code2)
+            code += sepcode2+'%s=%s;\n'%(varnamefn(i), code2)
         return code
 
     def writeExprCode(self, expr):
         # go through all arguments and chop them
-        code = ""
-        sepcode = ""
+        code = ''
+        sepcode = ''
         if expr.is_Function:
             if expr.func == abs:
-                code += "IKabs("
+                code += 'IKabs('
                 code2,sepcode = self.writeExprCode(expr.args[0])
                 code += code2
             elif expr.func == acos:
-                code += "IKacos("
+                code += 'IKacos('
                 code2,sepcode = self.writeExprCode(expr.args[0])
                 code += code2
-                sepcode += "if( (%s) < -1.0001 || (%s) > 1.0001 )\n    return false;\n"%(code2,code2)
+                sepcode += 'if( (%s) < -1.0001 || (%s) > 1.0001 )\n    continue;\n'%(code2,code2)
             elif expr.func == asin:
-                code += "IKasin("
+                code += 'IKasin('
                 code2,sepcode = self.writeExprCode(expr.args[0])
                 code += code2
-                sepcode += "if( (%s) < -1.0001 || (%s) > 1.0001 )\n    return false;\n"%(code2,code2)
+                sepcode += 'if( (%s) < -1.0001 || (%s) > 1.0001 )\n    continue;\n'%(code2,code2)
             elif expr.func == atan2:
-                code += "IKatan2("
+                code += 'IKatan2('
                 # check for divides by 0 in arguments, this could give two possible solutions?!?
                 # if common arguments is nan! solution is lost!
                 code2,sepcode = self.writeExprCode(expr.args[0])
@@ -660,7 +770,7 @@ int main(int argc, char** argv)
 #                     # probably already have initialized
 #                     code += '(s%s'%expr.args[0].name
 #                 else:
-                code += "IKsin("
+                code += 'IKsin('
                 code2,sepcode = self.writeExprCode(expr.args[0])
                 code += code2
             elif expr.func == cos:
@@ -668,52 +778,56 @@ int main(int argc, char** argv)
 #                     # probably already have initialized
 #                     code += '(c%s'%expr.args[0].name
 #                 else:
-                code += "IKcos("
+                code += 'IKcos('
                 code2,sepcode = self.writeExprCode(expr.args[0])
                 code += code2
             else:
-                code += expr.func.__name__ + "(";
+                code += expr.func.__name__ + '(';
                 for arg in expr.args:
                     code2,sepcode2 = self.writeExprCode(arg)
                     code += code2
                     sepcode += sepcode2
                     if not arg == expr.args[-1]:
-                        code += ","
-            return code + ")",sepcode
+                        code += ','
+            return code + ')',sepcode
         elif expr.is_Mul:
-            code += "("
+            code += '('
             for arg in expr.args:
                 code2,sepcode2 = self.writeExprCode(arg)
-                code += "("+code2+")"
+                code += '('+code2+')'
                 sepcode += sepcode2
                 if not arg == expr.args[-1]:
-                    code += "*"
-            return code + ")",sepcode
+                    code += '*'
+            return code + ')',sepcode
         elif expr.is_Pow:
             exprbase,sepcode = self.writeExprCode(expr.base)
             if expr.exp.is_real:
                 if expr.exp.is_integer and expr.exp.evalf() > 0:
-                    code += "("+exprbase+")"
+                    code += '('+exprbase+')'
                     for i in range(1,expr.exp.evalf()):
-                        code += "*("+exprbase+")"
+                        code += '*('+exprbase+')'
                     return code,sepcode
                 elif expr.exp-0.5 == 0:
-                    sepcode += "if( (%s) < (IKReal)-0.00001 )\n    return false;\n"%exprbase
-                    return "IKsqrt("+exprbase+")",sepcode
-                elif expr.exp+1 == 0:
-                    return "((IKReal)1/("+exprbase+"))",sepcode
+                    sepcode += 'if( (%s) < (IKReal)-0.00001 )\n    continue;\n'%exprbase
+                    return 'IKsqrt('+exprbase+')',sepcode
+                elif expr.exp < 0:
+                    # check if exprbase is 0
+                    if expr.exp+1 == 0:
+                        return '((IKabs('+exprbase+') != 0)?((IKReal)1/('+exprbase+')):(IKReal)1.0e30)',sepcode
+                    return '((IKabs('+exprbase+') != 0)?(pow(' + exprbase + ',' + str(expr.exp.evalf()) + ')):(IKReal)1.0e30)',sepcode
+                    
             exprexp,sepcode2 = self.writeExprCode(expr.exp)
             sepcode += sepcode2
-            return "pow(" + exprbase + "," + exprexp + ")",sepcode
+            return 'pow(' + exprbase + ',' + exprexp + ')',sepcode
         elif expr.is_Add:
-            code += "("
+            code += '('
             for arg in expr.args:
                 code2,sepcode2 = self.writeExprCode(arg)
-                code += "("+code2+")"
+                code += '('+code2+')'
                 sepcode += sepcode2
                 if not arg == expr.args[-1]:
-                    code += "+"
-            return code + ")",sepcode
+                    code += '+'
+            return code + ')',sepcode
 
         return self.strprinter.doprint(expr.evalf()),sepcode
 
@@ -782,7 +896,7 @@ class RobotKinematics(AutoReloader):
             joint.isfreejoint = False
             joint.isdummy = False
             alljoints.append(joint)
-            offset = offset + 33;
+            offset = offset + 33
             self.numlinks = max(self.numlinks,joint.linkcur)
 
         # order with respect to joint index
@@ -1003,16 +1117,20 @@ class RobotKinematics(AutoReloader):
         return Matrix(4,4,map(lambda x: self.chop(trigsimp(trigsimp(self.chop(trigsimp(x),precision))),precision), T))
 
     def fk(self, chain, joints):
-        Tlinks = [eye(4)]
+        Tlast = eye(4)
+        Tlinks = []
         for i,joint in enumerate(chain):
             R = eye(4)
+            value = joints[joint.jointindex]
             if joint.type == 'hinge':
-                R[0:3,0:3] = self.rodrigues(joint.axis,joint.jcoeff[0]*joints[i]+joint.jcoeff[1])
+                R[0:3,0:3] = self.rodrigues(joint.axis,joint.jcoeff[0]*value+joint.jcoeff[1])
             elif joint.type == 'slider':
-                R[0:3,3] = joint.axis*(joint.jcoeff[0]*joints[i]+joint.jcoeff[1])
+                R[0:3,3] = joint.axis*(joint.jcoeff[0]*value+joint.jcoeff[1])
             else:
                 raise ValueError('undefined joint type %s'%joint.type)
-            Tlinks.append(Tlinks[-1] * joint.Tleft * R * joint.Tright)
+            Tlast = (Tlast * joint.Tleft * R * joint.Tright).evalf()
+            if not joint.isdummy:
+                Tlinks.append(Tlast)
         return Tlinks
 
     def solveFullIK_Rotation3D(self,chain,Tee):
@@ -1070,13 +1188,13 @@ class RobotKinematics(AutoReloader):
         rotindex = 0
 
         if rotindex < 0:
-            print "Current joints cannot solve for a full 3D rotation"
+            print 'Current joints cannot solve for a full 3D rotation'
 
         storesolutiontree = [SolverStoreSolution (jointvars)]
-        rotsubs = [(Symbol("r%d%d"%(i,j)),Symbol("_r%d%d"%(i,j))) for i in range(3) for j in range(3)]
+        rotsubs = [(Symbol('r%d%d'%(i,j)),Symbol('_r%d%d'%(i,j))) for i in range(3) for j in range(3)]
         R = Matrix(3,3, map(lambda x: x.subs(self.freevarsubs), LinksAccumRight[rotindex][0:3,0:3]))
         rotvars = [var for var in jointvars[rotindex:] if any([var==svar for svar in solvejointvars])]
-        solvertree = self.solveIKRotation(R=R,Ree = Tee[0:3,0:3].subs(rotsubs),rawvars = rotvars,endbranchtree=storesolutiontree)
+        solvertree = self.solveIKRotation(R=R,Ree = Tee[0:3,0:3].subs(rotsubs),rawvars = rotvars,endbranchtree=storesolutiontree,solvedvarsubs=self.freevarsubs)
         return SolverIKChain([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], Tfirstleft.inv() * Tee * Tfirstright.inv(), solvertree)
         
     def solveFullIK_6D(self, chain, Tee):
@@ -1086,12 +1204,16 @@ class RobotKinematics(AutoReloader):
         LinksInv = [self.affineInverse(link) for link in Links]
         solvejointvars = [jointvars[i] for i in isolvejointvars]
         freejointvars = [jointvars[i] for i in ifreejointvars]
+
+        #valuesubs = [(jointvars[i],jointvalues[i]) for i in range(7)]+[(Tee[i],Teevalue[i]) for i in range(12)]+[(Symbol('cj%d'%i),cos(jointvalues[i])) for i in range(7)]+[(Symbol('sj%d'%i),sin(jointvalues[i])) for i in range(7)]
         
         # when solving equations, convert all free variables to constants
         self.freevarsubs = []
+        self.freevars = []
         for freevar in freejointvars:
             var = self.Variable(freevar)
             self.freevarsubs += [(cos(var.var), var.cvar), (sin(var.var), var.svar)]
+            self.freevars += [var.cvar,var.svar]
         
         #Tee = Tfirstleft.inv() * Tee_in * Tfirstright.inv()
         # LinksAccumLeftInv[x] * Tee = LinksAccumRight[x]
@@ -1130,7 +1252,7 @@ class RobotKinematics(AutoReloader):
                 break
         
         if lastsepindex < 0:
-            print "failed to find joint index to separate translation and rotation"
+            print 'failed to find joint index to separate translation and rotation'
             return None
         
         # find a set of joints starting from the last that can solve for a full 3D rotation
@@ -1142,7 +1264,7 @@ class RobotKinematics(AutoReloader):
             rotindex = rotindex-1
 
         if rotindex < 0:
-            print "Current joints cannot solve for a full 3D rotation"
+            print 'Current joints cannot solve for a full 3D rotation'
 
         # add all but first 3 vars to free parameters
         rotvars = []
@@ -1154,97 +1276,111 @@ class RobotKinematics(AutoReloader):
                 transvars.append(svar)
         #transvars = solvejointvars[0:min(3,lastsepindex)]
 
-        solvertree = []
+        if len(rotvars) != 3 or len(transvars) != 3:
+            print 'rotvars: ',rotvars,' transvars: ',transvars,' not 3 dims'
+            return None
 
-        Positions = [self.affineSimplify(LinksAccumRightAll[i])[0:3,3] for i in range(0,1+lastsepindex*2)]
-        Positionsee = [(LinksAccumLeftInvAll[i]*Tee)[0:3,3] for i in range(0,1+lastsepindex*2)]
-        
-        # try to shift all the constants of each Position expression to one side
-        for i in range(len(Positions)):
-            for j in range(3):
-                p = Positions[i][j]
-                pee = Positionsee[i][j]
-                
-                pconstterm = None
-                peeconstterm = None
-                if p.is_Add:
-                    pconstterm = [term for term in p.args if term.is_number]
-                elif p.is_number:
-                    pconstterm = [p]
-                else:
-                    continue
-                
-                if pee.is_Add:
-                    peeconstterm = [term for term in pee.args if term.is_number]
-                elif pee.is_number:
-                    peeconstterm = [pee]
-                else:
-                    continue
-                
-                if len(pconstterm) > 0 and len(peeconstterm) > 0:
-                    # shift it to the one that has the least terms
-                    for term in peeconstterm if len(p.args) < len(pee.args) else pconstterm:
-                        Positions[i][j] -= term
-                        Positionsee[i][j] -= term
-        
-        transtree = []
-        transvarsubs = []
-        solvedvars = self.solveIKTranslationLength(Positions, Positionsee, rawvars = transvars)
-        if len(solvedvars) > 0:
-            bestindex = min([(1000*len(solvedvar[2])+reduce(lambda x,y:x+y,solvedvar[2]),i) for i,solvedvar in enumerate(solvedvars)])[1]
-            solvedvar = solvedvars[bestindex]
-            var = solvedvar[0]
-            subvars = [(cos(var),self.Variable(var).cvar),(sin(var),self.Variable(var).svar)]
-            transvarsubs += subvars
-            transvars.remove(var)
-            transtree += [solvedvar[1]]
-            Positions = map(lambda x: x.subs(subvars), Positions)
-            Positionsee = map(lambda x: x.subs(subvars), Positionsee)
+        # check if the translation variables affect rotation or the rotation variables affect translation.
+        # If translation variables do not affect rotation, solve for rotation first.
+        solveRotationFirst = None
+        if not any([LinksAccumRight[0][i,j].has_any_symbols(*transvars) for i in range(3) for j in range(3)]):
+            solveRotationFirst = True
+        # If rotation variables do not affect translation, solve for translation first
+        elif not any([LinksAccumRight[0][i,3].has_any_symbols(*rotvars) for i in range(3)]):
+            solveRotationFirst = False
         else:
-            print "Could not solve variable from length of translation"
-        
-        while len(transvars)>0:
-            solvedvars = self.solveIKTranslation(Positions,Positionsee,rawvars = transvars)
-            if len(solvedvars) == 0:
-                break
-            
-            # pick only one solution, and let that be the smallest one
-            bestindex = min([(1000*len(solvedvar[2])+reduce(lambda x,y:x+y,solvedvar[2]),i) for i,solvedvar in enumerate(solvedvars)])[1]
-            
-            var = solvedvars[bestindex][0]
-            subvars = [(cos(var),self.Variable(var).cvar),(sin(var),self.Variable(var).svar)]
-            transvarsubs += subvars
-            transvars.remove(var)
-            Positions = map(lambda x: x.subs(subvars), Positions)
-            Positionsee = map(lambda x: x.subs(subvars), Positionsee)
-            transtree += [solvedvars[bestindex][1]]
-        
-        if len(transvars) > 0:
-            print "error, cannot solve anymore variables"
+            # If both affect each other, fail
+            print 'could not divide translation/rotation'
             return None
-        
-#         for i in range(3,lastsepindex): 3 should be number of solved vars
-#             transtree = [SolverFreeParameter(solvejointvars[i].name, transtree)]
-        solvertree += transtree
-        
-        # substitute all known variables
-        storesolutiontree = [SolverStoreSolution (jointvars)]
-        rotsubs = [(Symbol("r%d%d"%(i,j)),Symbol("_r%d%d"%(i,j))) for i in range(3) for j in range(3)]
-        R = Matrix(3,3, map(lambda x: x.subs(self.freevarsubs+transvarsubs), LinksAccumRight[rotindex][0:3,0:3]))
-        #rotvars = [var for var in jointvars[rotindex:] if any([var==svar for svar in solvejointvars])]
-        tree = self.solveIKRotation(R=R,Ree = Tee[0:3,0:3].subs(rotsubs),rawvars = rotvars,endbranchtree=storesolutiontree)
-        
-        if len(tree) == 0:
-            print "could not solve for all rotation variables"
+
+        solverbranches = []
+        # depending on the free variable values, sometimes the rotation matrix can have zeros where it does not expect zeros. Therefore, test all boundaries of all free variables
+        for freevar in freejointvars+[None]:
+            freevalues = [0,pi/2,pi,-pi/2] if freevar is not None else [None]
+            for freevalue in freevalues:
+                if freevar is not None and freevalue is not None:
+                    var = self.Variable(freevar)
+                    valuesubs = [(var.var,freevalue),(var.svar,sin(freevalue)),(var.cvar,cos(freevalue))] if freevalue is not None else []
+                    freevarcond = freevar-freevalue
+                else:
+                    valuesubs = []
+                    freevarcond = None
+                
+                Positions = [Matrix(3,1,map(lambda x: self.customtrigsimp(x), LinksAccumRightAll[i][0:3,3].subs(valuesubs))) for i in range(0,1+lastsepindex*2)]
+                Positionsee = [Matrix(3,1,map(lambda x: self.customtrigsimp(x), (LinksAccumLeftInvAll[i]*Tee)[0:3,3].subs(valuesubs))) for i in range(0,1+lastsepindex*2)]
+                
+                # try to shift all the constants of each Position expression to one side
+                for i in range(len(Positions)):
+                    for j in range(3):
+                        p = Positions[i][j]
+                        pee = Positionsee[i][j]
+                        pconstterm = None
+                        peeconstterm = None
+                        if p.is_Add:
+                            pconstterm = [term for term in p.args if term.is_number]
+                        elif p.is_number:
+                            pconstterm = [p]
+                        else:
+                            continue
+                        if pee.is_Add:
+                            peeconstterm = [term for term in pee.args if term.is_number]
+                        elif pee.is_number:
+                            peeconstterm = [pee]
+                        else:
+                            continue
+                        if len(pconstterm) > 0 and len(peeconstterm) > 0:
+                            # shift it to the one that has the least terms
+                            for term in peeconstterm if len(p.args) < len(pee.args) else pconstterm:
+                                Positions[i][j] -= term
+                                Positionsee[i][j] -= term
+                
+                rottree = []
+                solsubs = self.freevarsubs[:]
+                if solveRotationFirst:
+                    for rvar in rotvars:
+                        solsubs += [(cos(rvar),self.Variable(rvar).cvar),(sin(rvar),self.Variable(rvar).svar)]
+                    endbranchtree = [SolverStoreSolution (jointvars)]
+                else:
+                    endbranchtree = [SolverSequence([rottree])]
+                
+                curtransvars = transvars[:]
+                transtree = self.solveIKTranslationAll(Positions,Positionsee,curtransvars,
+                                                       otherunsolvedvars = [] if solveRotationFirst else rotvars,
+                                                       othersolvedvars = rotvars+freejointvars if solveRotationFirst else freejointvars,
+                                                       endbranchtree=endbranchtree,
+                                                       solsubs = solsubs)
+                
+                if len(curtransvars) > 0:
+                    print 'error, cannot solve translation for ',freevar,freevalue
+                    continue
+                
+                solvertree = []
+                solvedvarsubs = valuesubs+self.freevarsubs
+                if solveRotationFirst:
+                    storesolutiontree = transtree
+                else:
+                    solvertree += transtree
+                    storesolutiontree = [SolverStoreSolution (jointvars)]
+                    for tvar in transvars:
+                        solvedvarsubs += [(cos(tvar),self.Variable(tvar).cvar),(sin(tvar),self.Variable(tvar).svar)]
+                
+                rotsubs = [(Symbol('r%d%d'%(i,j)),Symbol('_r%d%d'%(i,j))) for i in range(3) for j in range(3)]
+                R = Matrix(3,3, map(lambda x: x.subs(solvedvarsubs), LinksAccumRight[rotindex][0:3,0:3]))
+                rottree += self.solveIKRotation(R=R,Ree = Tee[0:3,0:3].subs(rotsubs),rawvars = rotvars,endbranchtree=storesolutiontree,solvedvarsubs=solvedvarsubs)
+                
+                if len(rottree) == 0:
+                    print 'could not solve for all rotation variables',freevar,freevalue
+                    continue
+                if solveRotationFirst:
+                    solvertree.append(SolverRotation(LinksAccumLeftInv[rotindex].subs(solvedvarsubs)*Tee, rottree))
+                else:
+                    rottree[:] = [SolverRotation(LinksAccumLeftInv[rotindex].subs(solvedvarsubs)*Tee, rottree[:])]
+                solverbranches.append((freevarcond,solvertree))
+
+        if len(solverbranches) == 0 or not solverbranches[-1][0] is None:
+            print 'failed to solve for kinematics'
             return None
-        
-        solvertree.append(SolverRotation(LinksAccumLeftInv[rotindex].subs(self.freevarsubs+transvarsubs)*Tee, tree))
-        
-        if not rotindex == lastsepindex:
-            print "TODO: did not separate translation and rotation cleanly"
-            return None
-        
-        return SolverIKChain([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], Tfirstleft.inv() * Tee * Tfirstright.inv(), solvertree)
+        return SolverIKChain([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], Tfirstleft.inv() * Tee * Tfirstright.inv(), [SolverBranchConds(solverbranches)])
 
     def isExpressionUnique(self, exprs, expr):
         for exprtest in exprs:
@@ -1252,6 +1388,157 @@ class RobotKinematics(AutoReloader):
             if e.is_number and abs(e) < 1e-10:
                 return False
         return True
+
+    def solveIKTranslationAll(self,Positions,Positionsee,transvars,otherunsolvedvars,othersolvedvars,endbranchtree=None,solsubs=[]):
+        allsolvedvars = othersolvedvars[:]
+        transtree = []
+        solsubs = solsubs[:]
+        while len(transvars)>0:
+            unsolvedvariables = transvars + otherunsolvedvars
+            solvedvars = self.solveIKTranslation(Positions,Positionsee,rawvars = transvars)
+            if len(solvedvars) == 0:
+                solvedvars = self.solveIKTranslationLength(Positions, Positionsee, rawvars = transvars)
+                if len(solvedvars) == 0:
+                    raise ValueError('Could not solve variable from length of translation')
+
+            # for all solutions, check if there is a divide by zero
+            checkforzeros = []
+            scores = []
+            for solvedvar in solvedvars:
+                score = 1000*len(solvedvar[2])+reduce(lambda x,y:x+y,solvedvar[2])
+                checkforzero = []
+                if solvedvar[1].jointeval is not None:
+                    subexprs,reduced_exprs = customcse(solvedvar[1].jointeval)
+                elif solvedvar[1].jointevalsin is not None:
+                    subexprs,reduced_exprs = customcse(solvedvar[1].jointevalsin)
+                elif solvedvar[1].jointevalcos is not None:
+                    subexprs,reduced_exprs = customcse(solvedvar[1].jointevalcos)
+                else:
+                    continue
+                
+                def checkpow(expr):
+                    score = 0
+                    if expr.is_Pow and expr.exp.is_real and expr.exp < 0:
+                        exprbase = self.subsExpressions(expr.base,subexprs)
+                        # check if exprbase contains any variables that have already been solved
+                        containsjointvar = exprbase.has_any_symbols(*allsolvedvars)
+                        cancheckexpr = not exprbase.has_any_symbols(*unsolvedvariables)
+                        score += 10000
+                        if not cancheckexpr:
+                            score += 100000
+                        else:
+                            checkforzero.append(exprbase)
+                    return score
+                
+                for sexpr in [subexpr[1] for subexpr in subexprs]+reduced_exprs:
+                    if sexpr.is_Add:
+                        for arg in sexpr.args:
+                            if arg.is_Mul:
+                                for arg2 in arg.args:
+                                    score += checkpow(arg2)
+                            else:
+                                score += checkpow(arg)
+                    elif sexpr.is_Mul:
+                        for arg in sexpr.args:
+                            score += checkpow(arg)
+                    else:
+                        score += checkpow(sexpr)
+                scores.append(score)
+                checkforzeros.append(checkforzero)
+
+            # pick only one solution, and let that be the smallest one
+            bestindex = min([(score,i) for i,score in enumerate(scores)])[1]
+            var = solvedvars[bestindex][0]
+            
+            zerobranches = []
+            if len(checkforzeros[bestindex]) > 0:
+                for checkzero in checkforzeros[bestindex]:
+                    if len(zerobranches)>0:
+                        break
+                    for svar in allsolvedvars:
+                        if len(zerobranches)>0:
+                            break
+                        covered = False
+                        if checkzero.has_any_symbols(svar):
+                            try:
+                                solutions = self.customtsolve(Eq(checkzero,0),svar)
+                                covered = True
+                            except:
+                                solutions = []
+                            for s in solutions:
+                                if s.is_real:
+                                    # can actually simplify Positions and possibly get a new solution!
+                                    NewPositions = copy.copy(Positions)
+                                    for i in range(len(NewPositions)):
+                                        NewPositions[i] = NewPositions[i].subs(svar,s)
+                                    NewPositionsee = copy.copy(Positionsee)
+                                    for i in range(len(NewPositionsee)):
+                                        NewPositionsee[i] = NewPositionsee[i].subs(svar,s)
+                                    try:
+                                        newbranch = self.solveIKTranslationAll(NewPositions,NewPositionsee,transvars[:],otherunsolvedvars[:],allsolvedvars,endbranchtree,solsubs)
+                                    except ValueError:
+                                        newbranch = []
+                                    if len(newbranch) > 0:
+                                        zerobranches.append((svar-s,newbranch))
+                                    else:
+                                        covered = False
+                                else:
+                                    covered = False
+                        if not covered and len(transvars) > 1:
+                            # test several values for all variables
+                            valuebranches = []
+                            for targetvar in transvars:
+                            # force the value of the variable. The variable should in fact be *free*, but things get complicated with checking conditions, therefore, pick a couple of values and manually set them
+                                for value in [0]:
+                                    newtransvars = transvars[:]
+                                    newtransvars.remove(targetvar)
+                                    NewPositions2 = copy.copy(Positions)
+                                    for i in range(len(NewPositions2)):
+                                        NewPositions2[i] = NewPositions2[i].subs(targetvar,value)
+                                    NewPositionsee2 = copy.copy(Positionsee)
+                                    for i in range(len(NewPositionsee2)):
+                                        NewPositionsee2[i] = NewPositionsee2[i].subs(targetvar,value)
+                                    # have to check if positions is still consistent
+                                    checkconsistenteqs = []
+                                    for i in range(len(NewPositions2)):
+                                        for j in range(3):
+                                            expr = NewPositions2[i][j]-NewPositionsee2[i][j]
+                                            if not expr.has_any_symbols(*unsolvedvariables) and (self.isExpressionUnique(checkconsistenteqs,expr) or self.isExpressionUnique(checkconsistenteqs,-expr)):
+                                                checkconsistenteqs.append(expr.subs(solsubs))
+                                    try:
+                                        newbranch = self.solveIKTranslationAll(NewPositions2,NewPositionsee2,newtransvars,otherunsolvedvars[:],allsolvedvars+[targetvar],endbranchtree,solsubs)
+                                    except:
+                                        newbranch = []
+                                    if len(newbranch) > 0:
+                                        valuebranches.append(SolverCheckZeros(targetvar.name,checkconsistenteqs,[SolverSetJoint(targetvar,value)]+newbranch,[SolverBreak()],thresh=0.0001,anycondition=False))
+                            if len(valuebranches) > 0:
+                                zerobranches.append((checkzero,valuebranches))
+
+            allsolvedvars.append(var)
+            transvars.remove(var)
+            solsubs += [(cos(var),self.Variable(var).cvar),(sin(var),self.Variable(var).svar)]
+
+            if len(transvars) > 0 and len(checkforzeros[bestindex]) > 0:
+                childbranch = self.solveIKTranslationAll(Positions,Positionsee,transvars,otherunsolvedvars,allsolvedvars,endbranchtree,solsubs)
+                if len(zerobranches) > 0:
+                    zerobranch = [SolverBranchConds(zerobranches+[(None,[solvedvars[bestindex][1].subs(solsubs)]+childbranch)])]
+                else:
+                    zerobranch = [SolverBreak()] # in this case, cannot handle zeros, so don't output solution
+
+                #TODO: cannot handle free parameters yet since it requires subroutines for evaluating the nonlinearities.
+                transtree.append(SolverCheckZeros(var.name,checkforzeros[bestindex],zerobranch,[solvedvars[bestindex][1].subs(solsubs)]+childbranch))
+                return transtree
+            else:
+                if len(zerobranches) > 0:
+                    childbranch = self.solveIKTranslationAll(Positions,Positionsee,transvars,otherunsolvedvars,allsolvedvars,endbranchtree,solsubs)
+                    transtree.append(SolverBranchConds(zerobranches+[(None,[solvedvars[bestindex][1].subs(solsubs)]+childbranch)]))
+                    return transtree
+                else:
+                    transtree.append(solvedvars[bestindex][1].subs(solsubs))
+
+        if len(transvars) == 0 and endbranchtree is not None:
+            transtree += endbranchtree
+        return transtree
 
     # solve for just the translation component
     def solveIKTranslationLength(self, Positions, Positionsee, rawvars):
@@ -1269,10 +1556,13 @@ class RobotKinematics(AutoReloader):
                 if eq.has_any_symbols(var.var) and (len(othervars) == 0 or not eq.has_any_symbols(*othervars)):
                     
                     symbolgen = cse_main.numbered_symbols('const')
-                    eqnew, symbols = self.removeConstants(eq.subs(self.freevarsubs+[(sin(var.var),var.svar),(cos(var.var),var.cvar)]),[var.cvar,var.svar], symbolgen)
-                    eqnew2,symbols2 = self.factorLinearTerms(eqnew,[var.svar,var.cvar],symbolgen)
+                    eqnew, symbols = self.removeConstants(eq.subs(self.freevarsubs+[(sin(var.var),var.svar),(cos(var.var),var.cvar)]),[var.cvar,var.svar,var.var], symbolgen)
+                    eqnew2,symbols2 = self.factorLinearTerms(eqnew,[var.svar,var.cvar,var.var],symbolgen)
                     symbols += [(s[0],s[1].subs(symbols)) for s in symbols2]
-                    if self.countVariables(eqnew2,var.cvar) == 1 and self.countVariables(eqnew2,var.svar) == 1:
+
+                    numcvar = self.countVariables(eqnew2,var.cvar)
+                    numsvar = self.countVariables(eqnew2,var.svar)
+                    if numcvar == 1 and numsvar == 1:
                         a = Wild('a',exclude=[var.svar,var.cvar])
                         b = Wild('b',exclude=[var.svar,var.cvar])
                         c = Wild('c',exclude=[var.svar,var.cvar])
@@ -1284,32 +1574,42 @@ class RobotKinematics(AutoReloader):
                             jointsolutions = [constsol+asinsol,constsol+pi.evalf()-asinsol]
                             solvedvars.append((var.var,SolverSolution(var.var.name,jointeval=jointsolutions), [self.codeComplexity(s) for s in jointsolutions]))
                             continue
-                    
-                    try:
-                        # substitute sin                        
-                        if self.countVariables(eq.subs(cos(var.var),var.cvar),var.cvar) <= 1: # anything more than 1 implies quartic equation
-                            eqnew = eq.subs(self.freevarsubs+[(cos(var.var),sqrt(Real(1,30)-var.svar**2)),(sin(var.var),var.svar)])
-                            eqnew,symbols = self.factorLinearTerms(eqnew,[var.svar])
-                            solutions = self.customtsolve(eqnew,var.svar)
-                            jointsolutions = [s.subs(symbols+[(var.svar,sin(var.var))]) for s in solutions]
-                            solvedvars.append((var.var,SolverSolution(var.var.name, jointevalsin=jointsolutions), [self.codeComplexity(s) for s in jointsolutions]))
-                    except (ValueError, AttributeError):
-                        pass
 
-                    # substite cos
-                    try:
-                        if self.countVariables(eq.subs(sin(var.var),var.svar),var.svar) <= 1: # anything more than 1 implies quartic equation
-                            eqnew = eq.subs(self.freevarsubs+[(sin(var.var),sqrt(Real(1,30)-var.cvar**2)),(cos(var.var),var.cvar)])
-                            eqnew,symbols = self.factorLinearTerms(eqnew,[var.cvar])
-                            solutions = self.customtsolve(eqnew,var.cvar)
-                            jointsolutions = [s.subs(symbols+[(var.cvar,cos(var.var))]) for s in solutions]
-                            solvedvars.append((var.var,SolverSolution(var.var.name, jointevalcos=jointsolutions), [self.codeComplexity(s) for s in jointsolutions]))
-                    except (ValueError, AttributeError):
-                        pass
+                    if numsvar > 0:
+                        try:
+                            # substitute cos
+                            if self.countVariables(eq.subs(cos(var.var),var.cvar),var.cvar) <= 1: # anything more than 1 implies quartic equation
+                                eqnew = eq.subs(self.freevarsubs+[(cos(var.var),sqrt(Real(1,30)-var.svar**2)),(sin(var.var),var.svar)])
+                                eqnew,symbols = self.factorLinearTerms(eqnew,[var.svar])
+                                solutions = self.customtsolve(eqnew,var.svar)
+                                jointsolutions = [s.subs(symbols+[(var.svar,sin(var.var))]) for s in solutions]
+                                solvedvars.append((var.var,SolverSolution(var.var.name, jointevalsin=jointsolutions), [self.codeComplexity(s) for s in jointsolutions]))
+                        except (ValueError, AttributeError):
+                            pass
+
+                    if numcvar > 0:
+                        # substite sin
+                        try:
+                            if self.countVariables(eq.subs(sin(var.var),var.svar),var.svar) <= 1: # anything more than 1 implies quartic equation
+                                eqnew = eq.subs(self.freevarsubs+[(sin(var.var),sqrt(Real(1,30)-var.cvar**2)),(cos(var.var),var.cvar)])
+                                eqnew,symbols = self.factorLinearTerms(eqnew,[var.cvar])
+                                solutions = self.customtsolve(eqnew,var.cvar)
+                                jointsolutions = [s.subs(symbols+[(var.cvar,cos(var.var))]) for s in solutions]
+                                solvedvars.append((var.var,SolverSolution(var.var.name, jointevalcos=jointsolutions), [self.codeComplexity(s) for s in jointsolutions]))
+                        except (ValueError, AttributeError):
+                            pass
+
+                    if numsvar == 0 and numcvar == 0:
+                        eqnew = eq.subs(self.freevarsubs)
+                        eqnew,symbols = self.factorLinearTerms(eqnew,[var.var])
+                        solutions = self.customtsolve(eqnew,var.var)
+                        jointsolutions = [s.subs(symbols) for s in solutions]
+                        solvedvars.append((var.var,SolverSolution(var.var.name, jointeval=jointsolutions), [self.codeComplexity(s) for s in jointsolutions]))
         return solvedvars
 
     # solve for just the translation component
     def solveIKTranslation(self, Positions, Positionsee, rawvars):
+        freevarinvsubs = [(f[1],f[0]) for f in self.freevarsubs]
         vars = map(lambda rawvar: self.Variable(rawvar), rawvars)
         solvedvars = []
 
@@ -1322,17 +1622,17 @@ class RobotKinematics(AutoReloader):
                     if p[j].has_any_symbols(var.var) and (len(othervars)==0 or not p[j].has_any_symbols(*othervars)):
                         if self.isExpressionUnique(eqns,p[j]) and self.isExpressionUnique(eqns,-p[j]):
                             eqns.append(p[j])
-            
+
             if len(eqns) == 0:
                 continue
-            
+
             if len(eqns) > 1:
                 neweqns = []
                 listsymbols = []
                 symbolgen = cse_main.numbered_symbols('const')
                 for e in eqns:
-                    enew, symbols = self.removeConstants(e.subs(self.freevarsubs+[(sin(var.var),var.svar),(cos(var.var),var.cvar)]),[var.cvar,var.svar], symbolgen)
-                    enew2,symbols2 = self.factorLinearTerms(enew,[var.svar,var.cvar],symbolgen)
+                    enew, symbols = self.removeConstants(e.subs(self.freevarsubs+[(sin(var.var),var.svar),(cos(var.var),var.cvar)]),[var.cvar,var.svar,var.var], symbolgen)
+                    enew2,symbols2 = self.factorLinearTerms(enew,[var.svar,var.cvar,var.var],symbolgen)
                     symbols += [(s[0],s[1].subs(symbols)) for s in symbols2]
                     rank = self.codeComplexity(enew2)+reduce(lambda x,y: x+self.codeComplexity(y[1]),symbols,0)
                     neweqns.append((rank,enew2))
@@ -1350,93 +1650,124 @@ class RobotKinematics(AutoReloader):
                     # try to solve for both sin and cos terms
                     s = solve(comb[1],[var.svar,var.cvar])
                     if s is not None and s.has_key(var.svar) and s.has_key(var.cvar):
+                        
+                        if self.chop((s[var.svar]-s[var.cvar]).subs(listsymbols),6) == 0:
+                            continue
+                        if s[var.svar].is_fraction() and s[var.cvar].is_fraction():
+                            # check the numerator and denominator
+                            if self.chop((s[var.svar].args[0]-s[var.cvar].args[0]).subs(listsymbols),6) == 0 and self.chop((s[var.svar].args[1]-s[var.cvar].args[1]).subs(listsymbols),6) == 0:
+                                continue
                         solution = s
                         break
                 if solution is not None:
-                    jointsolution = [self.customtrigsimp(atan2(solution[var.svar],solution[var.cvar]).subs(listsymbols), deep=True)]
+                    jointsolution = [self.customtrigsimp(atan2(solution[var.svar],solution[var.cvar]).subs(listsymbols), deep=True).subs(freevarinvsubs)]
                     solvedvars.append((var.var,SolverSolution(var.var.name,jointsolution), [self.codeComplexity(s) for s in jointsolution]))
                     continue
             
             # solve one equation
             eq = eqns[0]
             symbolgen = cse_main.numbered_symbols('const')
-            eqnew, symbols = self.removeConstants(eq.subs(self.freevarsubs+[(sin(var.var),var.svar),(cos(var.var),var.cvar)]), [var.cvar,var.svar], symbolgen)
-            eqnew2,symbols2 = self.factorLinearTerms(eqnew,[var.cvar,var.svar], symbolgen)
+            eqnew, symbols = self.removeConstants(eq.subs(self.freevarsubs+[(sin(var.var),var.svar),(cos(var.var),var.cvar)]), [var.cvar,var.svar,var.var], symbolgen)
+            eqnew2,symbols2 = self.factorLinearTerms(eqnew,[var.cvar,var.svar,var.var], symbolgen)
             symbols += [(s[0],s[1].subs(symbols)) for s in symbols2]
 
-            if self.countVariables(eqnew2,var.cvar) == 1 and self.countVariables(eqnew2,var.svar) == 1:
+            numcvar = self.countVariables(eqnew2,var.cvar)
+            numsvar = self.countVariables(eqnew2,var.svar)
+            if numcvar == 1 and numsvar == 1:
                 a = Wild('a',exclude=[var.svar,var.cvar])
                 b = Wild('b',exclude=[var.svar,var.cvar])
                 c = Wild('c',exclude=[var.svar,var.cvar])
                 m = eqnew2.match(a*var.cvar+b*var.svar+c)
                 if m is not None:
-                    symbols += [(var.svar,sin(var.var)),(var.cvar,cos(var.var))]
-                    asinsol = asin(-m[c]/sqrt(m[a]*m[a]+m[b]*m[b])).subs(symbols)
+                    symbols += [(var.svar,sin(var.var)),(var.cvar,cos(var.var))]+freevarinvsubs
+                    asinsol = trigsimp(asin(-m[c]/sqrt(m[a]*m[a]+m[b]*m[b])).subs(symbols),deep=True)
                     constsol = -atan2(m[a],m[b]).subs(symbols).evalf()
                     jointsolutions = [constsol+asinsol,constsol+pi.evalf()-asinsol]
                     solvedvars.append((var.var,SolverSolution(var.var.name,jointeval=jointsolutions), [self.codeComplexity(s) for s in jointsolutions]))
                     continue
-
-            try:
-                # substitute cos
-                if self.countVariables(eqnew2,var.svar) <= 1: # anything more than 1 implies quartic equation
-                    solutions = self.customtsolve(eqnew2.subs(var.svar,sqrt(1-var.cvar**2)),var.cvar)
-                    jointsolutions = [s.subs(symbols+[(var.cvar,cos(var.var))]) for s in solutions]
-                    solvedvars.append((var.var,SolverSolution(var.var.name, jointevalcos=jointsolutions), [self.codeComplexity(s) for s in jointsolutions]))
-            except (ValueError):
-                pass
             
-            # substitute sin
-            try:
-                if self.countVariables(eqnew2,var.svar) <= 1: # anything more than 1 implies quartic equation
-                    solutions = self.customtsolve(eqnew2.subs(var.cvar,sqrt(1-var.svar**2)),var.svar)
-                    jointsolutions = [trigsimp(s.subs(symbols+[(var.svar,sin(var.var))])) for s in solutions]
-                    solvedvars.append((var.var,SolverSolution(var.var.name, jointevalsin=jointsolutions), [self.codeComplexity(s) for s in jointsolutions]))
-            except (ValueError):
-                pass
+            if numcvar > 0:
+                try:
+                    # substitute cos
+                    if self.countVariables(eqnew2,var.svar) <= 1: # anything more than 1 implies quartic equation
+                        solutions = self.customtsolve(eqnew2.subs(var.svar,sqrt(1-var.cvar**2)),var.cvar)
+                        jointsolutions = [s.subs(symbols+[(var.cvar,cos(var.var))]) for s in solutions]
+                        solvedvars.append((var.var,SolverSolution(var.var.name, jointevalcos=jointsolutions), [self.codeComplexity(s) for s in jointsolutions]))
+                except (ValueError):
+                    pass
+
+            if numsvar > 0:
+                # substitute sin
+                try:
+                    if self.countVariables(eqnew2,var.svar) <= 1: # anything more than 1 implies quartic equation
+                        solutions = self.customtsolve(eqnew2.subs(var.cvar,sqrt(1-var.svar**2)),var.svar)
+                        jointsolutions = [trigsimp(s.subs(symbols+[(var.svar,sin(var.var))])) for s in solutions]
+                        solvedvars.append((var.var,SolverSolution(var.var.name, jointevalsin=jointsolutions), [self.codeComplexity(s) for s in jointsolutions]))
+                except (ValueError):
+                    pass
+
+            if numcvar == 0 and numsvar == 0:
+                solutions = self.customtsolve(eqnew2,var.var)
+                jointsolutions = [self.customtrigsimp(s.subs(symbols)) for s in solutions]
+                solvedvars.append((var.var,SolverSolution(var.var.name, jointeval=jointsolutions), [self.codeComplexity(s) for s in jointsolutions]))
         return solvedvars
 
     # solve for just the rotation component
-    def solveIKRotation(self, R, Ree, rawvars,endbranchtree=None):
+    def solveIKRotation(self, R, Ree, rawvars,endbranchtree=None,solvedvarsubs=[],ignorezerochecks=[]):
         vars = map(lambda rawvar: self.Variable(rawvar), rawvars)
         subreal = [(cos(var.var),var.cvar) for var in vars]+[(sin(var.var),var.svar) for var in vars]
+        subrealinv = [(var.cvar,cos(var.var)) for var in vars]+[(var.svar,sin(var.var)) for var in vars]
         Rsolve = R.subs(subreal)
         roottree = []
         curtree = roottree
-        
+        invsolvedvarsubs = [(s[1],s[0]) for s in solvedvarsubs]
+
         while len(vars)>0:
             solvedvars, checkzerovars = self.checkStandaloneVariables(R, Rsolve, Ree, vars)
             solvedvars2 = self.checkQuotientVariables(R, Rsolve, Ree, vars)
 
-            solutiontrees = dict()
             # for every solved variable in solvedvars, check that there isn't a cleaner solution in solvedvars2
             for var,solutions in solvedvars.iteritems():
                 if solvedvars2.has_key(var) and not solvedvars2[var][1]:
-                    divisor = solvedvars2[var][2]
-                    if divisor.has_any_symbols(*rawvars):
-                        # can solve for divisor ahead of time and branch out to better solution
-                        solutiontrees[var] = SolverBranch('%squot'%(var.name),divisor,[(0,[SolverSolution(var.name, jointeval=solutions)]),(None,[SolverSolution(var.name,solvedvars2[var][0])])])
-                    elif self.codeComplexity(solutions[0]) > self.codeComplexity(solvedvars2[var][0][0]):
+                    if self.codeComplexity(solutions[0]) > self.codeComplexity(solvedvars2[var][0][0]):
                         solvedvars[var] = solvedvars2[var][0] # replace
 
-            vars = filter(lambda var: not solvedvars.has_key(var.var), vars)
-            
+            # check if there is a divide by zero
             for var,solutions in solvedvars.iteritems():
-                if solutiontrees.has_key(var):
-                    curtree.append(solutiontrees[var])
+                jointbranches = []
+                for solution in solutions:
+                    checkforzero = self.checkDivideByZero(self.customtrigsimp(solution.subs(subrealinv+invsolvedvarsubs),deep=True))
+                    if len(checkforzero) > 0:
+                        for sraw in checkforzero:
+                            s = sraw.subs(solvedvarsubs)
+                            if self.isExpressionUnique(ignorezerochecks+[b[0] for b in jointbranches],s):
+                                Rsubs = Matrix(3,3,map(lambda x: x.subs(s,0), R))
+                                if not all([r==0 for r in R-Rsubs]):
+                                    addignore = []
+                                    if s.is_Function:
+                                        if s.func == cos:
+                                            addignore.append(sin(*s.args))
+                                        elif s.func == sin:
+                                            addignore.append(cos(*s.args))
+                                    jointbranches.append((s,self.solveIKRotation(Rsubs,Ree,[v.var for v in vars],endbranchtree,solvedvarsubs,ignorezerochecks+addignore)))
+                if len(jointbranches) > 0:
+                    newrawvars = [v.var for v in vars if v.var != var]
+                    curtree.append(SolverBranchConds(jointbranches+[(None,[SolverSolution(var.name, jointeval=solutions)]+self.solveIKRotation(R,Ree,newrawvars,endbranchtree,solvedvarsubs,ignorezerochecks))]))
+                    return roottree
                 else:
                     curtree.append(SolverSolution(var.name, jointeval=solutions))
-            
+                vars = [v for v in vars if v.var!=var]
+
             if len(vars) == 0:
                 break
 
             solvedvars2 = self.checkQuotientVariables(R, Rsolve, Ree, vars)
             if len(solvedvars2) == 0:
                 newrawvars = [var.var for var in vars]
-                print "picking free parameter for potential degenerate case: ",newrawvars[0]
-                print "R = "
-                pprint(R)
-                tree = self.solveIKRotation(R,Ree,newrawvars[1:],endbranchtree)
+                #print 'picking free parameter for potential degenerate case: ',newrawvars[0]
+                #print 'R = '
+                #pprint(R)
+                tree = self.solveIKRotation(R,Ree,newrawvars[1:],endbranchtree,solvedvarsubs,ignorezerochecks)
                 curtree.append(SolverFreeParameter(newrawvars[0].name,tree))
                 return roottree
 
@@ -1473,7 +1804,7 @@ class RobotKinematics(AutoReloader):
                         checkeq = checkeq.args[1].args[0]
                         valuestotest = [(-c,[pi]),(c,[0])]
                 else:
-                    print "unknown function when checking for 0s",checkeq
+                    print 'unknown function when checking for 0s',checkeq
                     valuestotest = [(0,[checkeq.subs(checkvar,0)])]
 
                 newrawvars = [var.var for var in vars if not var.var == checkvar]
@@ -1481,7 +1812,7 @@ class RobotKinematics(AutoReloader):
                 for checkvalue in valuestotest:
                     subtree = []
                     for value in checkvalue[1]:
-                        subtree += [[SolverSetJoint(checkvar,value)]+self.solveIKRotation(R.subs(checkvar,value), Ree, newrawvars,endbranchtree)]
+                        subtree += [[SolverSetJoint(checkvar,value)]+self.solveIKRotation(R.subs(checkvar,value), Ree, newrawvars,endbranchtree,solvedvarsubs,ignorezerochecks)]
                     subtrees.append((checkvalue[0],[SolverSequence(subtree)]))
                 branchtree = SolverBranch(checkvar, checkeq, subtrees+[(None,nexttree)])
                 curtree.append(branchtree)
@@ -1508,6 +1839,18 @@ class RobotKinematics(AutoReloader):
             if len(inds) > 2:
                 inds = inds[0:2]
 
+            if len(inds) == 1 and Rsolve[inds[0]].has_any_symbols(var.svar) and Rsolve[inds[0]].has_any_symbols(var.cvar):
+                # have to solve with atan2
+                a = Wild('a',exclude=[var.svar,var.cvar])
+                b = Wild('b',exclude=[var.svar,var.cvar])
+                c = Wild('c',exclude=[var.svar,var.cvar])
+                m = (Rsolve[inds[0]]-Ree[inds[0]]).match(a*var.cvar+b*var.svar+c)
+                if m is not None:
+                    symbols = [(var.svar,sin(var.var)),(var.cvar,cos(var.var))]
+                    asinsol = asin(-m[c]/sqrt(m[a]*m[a]+m[b]*m[b])).subs(symbols)
+                    constsol = -atan2(m[a],m[b]).subs(symbols).evalf()
+                    solvedvars[var.var] = [constsol+asinsol,constsol+pi.evalf()-asinsol]
+                    continue
             solution = solve([Eq(Rsolve[i],Ree[i]) for i in inds],[var.svar,var.cvar])
             if solution is None:
                 continue
@@ -1528,51 +1871,56 @@ class RobotKinematics(AutoReloader):
         solvedvars = dict()
 
         for var in vars:
-            othervars = [v.var for v in vars if not v == var]
-            
-            taninds = None
+            othervars = [v.var for v in vars if not v == var]+[v.cvar for v in vars if not v == var]+[v.svar for v in vars if not v == var]
+
+            listsymbols = []
+            newR = []
+            symbolgen = cse_main.numbered_symbols('const')
+            for i in range(9):
+                enew, symbols = self.removeConstants(Rsolve[i],[var.cvar,var.svar,var.var], symbolgen)
+                enew2,symbols2 = self.factorLinearTerms(enew,[var.svar,var.cvar,var.var],symbolgen)
+                symbols += [(s[0],s[1].subs(symbols)) for s in symbols2]
+                #rank = self.codeComplexity(enew2)+reduce(lambda x,y: x+self.codeComplexity(y[1]),symbols,0)
+                newR.append(enew2)
+                listsymbols += symbols
+
+            havegoodsol = False
             for i in range(9):
                 if not R[i].has_any_symbols(var.var):
                     continue
-                
-                for j in range(i+1,9):
-                    if not R[j].has_any_symbols(var.var):
-                        continue
-                    
-                    Q = R[i]/R[j]
-                    if Q.has_any_symbols(var.var) and (len(othervars)==0 or not Q.has_any_symbols(*othervars)):
-                        ## found something, check if tan or cotan or variable
-                        Qsub = Q.subs(sin(var.var)/cos(var.var),var.tvar)
-                        if not Q == Qsub: # if substitution was successful
-                            divisor = R[i]/fraction(Q)[0]
-                            taninds = (Qsub,i,j,True if len(othervars)>0 and divisor.has_any_symbols(*othervars) else False,divisor)
-                        else:
-                            Q = R[j]/R[i]
-                            Qsub = Q.subs(sin(var.var)/cos(var.var),var.tvar)
-                            if not Q == Qsub: # if substitution was successful
-                                divisor = R[j]/fraction(Q)[0]
-                                taninds = (Qsub,j,i,True if len(othervars)>0 and divisor.has_any_symbols(*othervars) else False,divisor)
-                            #else:
-                            #    print "There is no tangent in division expression? ",Q
-                    if not taninds is None:
-                        break
-                if not taninds is None:
-                    break
-            if taninds is None:
-                continue
-            
-            if taninds[3]:
-                solutions = solve(Eq(taninds[0],Ree[taninds[1]]/Ree[taninds[2]]),var.tvar)
-                solvedvars[var.var] = ([self.customtrigsimp(atan2(*fraction(self.customtrigsimp(solution))), deep=True) for solution in solutions], taninds[3],taninds[4])
-            else:
-                sinvarsols = solve(Eq(Rsolve[taninds[1]],Ree[taninds[1]]),var.svar)
-                cosvarsols = solve(Eq(Rsolve[taninds[2]],Ree[taninds[2]]),var.cvar)
+                for i2 in [i]:#range(9):
+                    for isign in [1.0]:#[-1.0,1.0]:
+                        for j in range(i+1,9):
+                            if not R[j].has_any_symbols(var.var):
+                                continue
+                            for j2 in [j]:#range(i+1,9):
+                                for jsign in [1.0]:#[-1.0,1.0]:
+                                    solution = solve([Eq(newR[i]+isign*newR[i2],Ree[i]+isign*Ree[i2]), Eq(newR[j]+jsign*newR[j2],Ree[j]+jsign*Ree[j2])],[var.svar,var.cvar])
+                                    if solution is not None and solution.has_key(var.svar) and solution.has_key(var.cvar):
+                                        divisor = self.customtrigsimp(solution[var.cvar].subs(listsymbols))
+                                        numerator = self.customtrigsimp(solution[var.svar].subs(listsymbols))
+                                        simplified = self.customtrigsimp(numerator/divisor,deep=True)
+                                        if len(othervars) == 0 or not simplified.has_any_symbols(*othervars):
+                                            varsolution = self.customtrigsimp(atan2(numerator, divisor), deep=True)
+                                            if len(othervars) > 0 and varsolution.has_any_symbols(*othervars):
+                                                # have to use the simplified solution
+                                                solvedvars[var.var] = [[atan2(*fraction(simplified))],True,divisor]
+                                            else:
+                                                solvedvars[var.var] = [[varsolution],False,divisor]
+                                                havegoodsol = True
 
-                solutions = []
-                for sinvarsol in sinvarsols:
-                    for cosvarsol in cosvarsols:
-                        solutions.append(self.customtrigsimp(atan2(self.customtrigsimp(sinvarsol),self.customtrigsimp(cosvarsol)),deep=True))
-                solvedvars[var.var] = (solutions,taninds[3],taninds[4])
+                                    if havegoodsol:
+                                        break
+                                if havegoodsol:
+                                    break
+                            if havegoodsol:
+                                break
+                        if havegoodsol:
+                            break
+                    if havegoodsol:
+                        break
+                if havegoodsol:
+                    break
         
         return solvedvars
 
@@ -1629,7 +1977,7 @@ class RobotKinematics(AutoReloader):
                 newexpr += term
         
         for var,cexpr in cexprs.iteritems():
-            c = symbolgen.next();
+            c = symbolgen.next()
             newexpr += c*var
             symbols.append((c,cexpr))
         return newexpr,symbols
@@ -1651,7 +1999,7 @@ class RobotKinematics(AutoReloader):
                     cexpr += term
 
             if not cexpr == 0:
-                c = symbolgen.next();
+                c = symbolgen.next()
                 newexpr += c
                 symbols.append((c,cexpr))
             return newexpr,symbols
@@ -1668,12 +2016,30 @@ class RobotKinematics(AutoReloader):
                     cexpr *= term
 
             if not cexpr == 0:
-                c = symbolgen.next();
+                c = symbolgen.next()
                 newexpr *= c
                 symbols.append((c,cexpr))
             return newexpr,symbols
         return expr,[]
 
+    def subsExpressions(self, expr, subexprs):
+        changed = True
+        while changed:
+            newexpr = expr.subs(subexprs)
+            if simplify(expr-newexpr) == 0:
+                break
+            expr = newexpr
+        return expr
+
+    def checkDivideByZero(self,expr):
+        checkforzero = []                
+        if expr.is_Function or expr.is_Add or expr.is_Mul:
+            for arg in expr.args:
+                checkforzero += self.checkDivideByZero(arg)
+        elif expr.is_Pow and expr.exp.is_real and expr.exp < 0:
+            checkforzero.append(expr.base)
+        return checkforzero
+                
     def customtrigsimp(self,expr, deep=False):
         """
         Usage
@@ -1701,9 +2067,38 @@ class RobotKinematics(AutoReloader):
         sin, cos, tan, cot, atan2 = C.sin, C.cos, C.tan, C.cot, C.atan2
         
         #XXX this stopped working:
-        if expr == 1/cos(Symbol("x"))**2 - 1:
-            return tan(Symbol("x"))**2
-        
+        if expr == 1/cos(Symbol('x'))**2 - 1:
+            return tan(Symbol('x'))**2
+
+        a,b,c = map(Wild, 'abc')
+        artifacts = [
+            (a*cos(2.0*b), a*cos(b)**2-a*sin(b)**2, []),
+            (a*sin(2.0*b), 2.0*a*cos(b)*sin(b), [])
+            ]
+        for pattern, result, ex in artifacts:
+            # Substitute a new wild that excludes some function(s)
+            # to help influence a better match. This is because
+            # sometimes, for example, 'a' would match sec(x)**2
+            a_t = Wild('a', exclude=ex)
+            pattern = pattern.subs(a, a_t)
+            result = result.subs(a, a_t)
+
+            if expr.is_number:
+                return expr
+
+            try:
+                m = expr.match(pattern)
+            except TypeError:
+                break
+
+            if m is not None:
+                if m[a_t] == 0 or not m[b].is_Symbol:
+                    break
+                # make sure none of the coefficients have divides
+                if m[a_t].is_Mul and any([e.is_fraction() for e in m[a_t].args]):
+                    break
+                expr = result.subs(m)
+
         if expr.is_Function:
             if deep:
                 newargs = [self.customtrigsimp(a, deep) for a in expr.args]
@@ -1734,13 +2129,12 @@ class RobotKinematics(AutoReloader):
             ret = S.One
             for x in expr.args:
                 ret *= self.customtrigsimp(x, deep)
-            return ret
+            return ret.expand()
         elif expr.is_Pow:
             return Pow(self.customtrigsimp(expr.base, deep), self.customtrigsimp(expr.exp, deep))
         elif expr.is_Add:
             # TODO this needs to be faster
             # The types of trig functions we are looking for
-            a,b,c = map(Wild, 'abc')
             matchers = (
                 (a*sin(b)**2, a - a*cos(b)**2),
                 (a*tan(b)**2, a*(1/cos(b))**2 - a),
@@ -1762,19 +2156,20 @@ class RobotKinematics(AutoReloader):
             
             # Reduce any lingering artifacts, such as sin(x)**2 changing
             # to 1-cos(x)**2 when sin(x)**2 was "simpler"
-            artifacts = (
+            artifacts = [
                 (a - a*cos(b)**2 + c, a*sin(b)**2 + c, []),
                 (a*cos(b)**2 - a*cos(b)**4 + c, a*cos(b)**2*sin(b)**2 + c, []),
                 (a*sin(b)**2 - a*sin(b)**4 + c, a*cos(b)**2*sin(b)**2 + c, []),
                 (a*sin(b)**2 + c*sin(b)**2, sin(b)**2*(a+c), []),
-                (a*sin(b)**2 + a*cos(b)**2, a, []),
+                (a*sin(b)**2 + a*cos(b)**2 + c, a + c, [])
+                #(a*cos(b)*cos(2.0*b)+a*sin(b)*sin(2.0*b)+a*cos(2.0*b)*sin(b) - a*cos(b)*sin(2.0*b) + c, cos(b)-sin(b) + c,[])
                 # tangets should go after all identities with cos/sin (otherwise infinite looping)!!
                 #(a - a*(1/cos(b))**2 + c, -a*tan(b)**2 + c, [cos]),
                 #(a - a*(1/sin(b))**2 + c, -a*cot(b)**2 + c, [sin]),
                 #(a*cos(b)**2*tan(b)**2 + c, a*sin(b)**2+c, [sin,cos,tan]),
                 #(a*sin(b)**2/tan(b)**2 + c, a*cos(b)**2+c, [sin,cos,tan]),
-                )
-            
+                ]
+
             expr = ret
             Changed = True
             while Changed:
@@ -1801,6 +2196,8 @@ class RobotKinematics(AutoReloader):
                         if not m.has_key(c):
                             break
                         if m[a_t] == 0 or -m[a_t] in m[c].args or m[a_t] + m[c] == 0:
+                            break
+                        if m[a_t].is_Mul and any([e.is_fraction() for e in m[a_t].args]):
                             break
                         exprnew = result.subs(m)
                         if len(exprnew.args) > len(expr.args):
@@ -1962,9 +2359,9 @@ class RobotKinematics(AutoReloader):
                             sols.append(newsol)
                 return sols
         
-        raise ValueError("unable to solve the equation")
+        raise ValueError('unable to solve the equation')
 
-if __name__ == "__main__":
+if __name__ == '__main__':
 
     parser = OptionParser(usage='usage: %prog [options] [solve joint indices]',
                           description="""
@@ -2001,7 +2398,7 @@ ikfast.py --fkfile=fk_WAM7.txt --baselink=0 --eelink=7 --savefile=ik.cpp 1 2 3 4
                       help='If true, need to specify only 3 solve joints and will solve for a target rotation')
 #     parser.add_option('--rotation2donly', action='store_true', dest='rotation2donly',default=False,
 #                       help='If true, need to specify only 2 solve joints and will solve for a target direction')
-    parser.add_option('--usedummyjoints', action="store_true",dest='usedummyjoints',default=False,
+    parser.add_option('--usedummyjoints', action='store_true',dest='usedummyjoints',default=False,
                       help='Treat the unspecified joints in the kinematic chain as dummy and set them to 0. If not specified, treats all unspecified joints as free parameters.')
 
     (options, args) = parser.parse_args()
@@ -2024,7 +2421,7 @@ ikfast.py --fkfile=fk_WAM7.txt --baselink=0 --eelink=7 --savefile=ik.cpp 1 2 3 4
 
     success = True if len(code) > 0 else False
 
-    print "total time for ik generation of %s is %fs"%(options.savefile,time.time()-tstart)
+    print 'total time for ik generation of %s is %fs'%(options.savefile,time.time()-tstart)
     if success:
         open(options.savefile,'w').write(code)
 

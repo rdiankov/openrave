@@ -5,6 +5,6 @@
     <base>link0</base>
     <effector>link7</effector>
     <armjoints>S1 S2 S3 E1 E2 W1 W2</armjoints>
-    <iksolver>PA10ikfast</iksolver>
+    <iksolver>PA10ikfast 0.1</iksolver>
   </Manipulator>
 </Robot>

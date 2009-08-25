@@ -80,7 +80,7 @@ public:
         TransformMatrix t = transEE;
         IKReal eetrans[3] = {t.trans.x, t.trans.y, t.trans.z};
         IKReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
-
+        
         return ComposeSolution(_vfreeparams, vfree.size()>0?&vfree[0]:NULL, 0, q0, boost::bind(&IkFastSolver::_SolveSingle,this, eerot,eetrans,vfree.size()>0?&vfree[0]:NULL,q0,bCheckEnvCollision,qResult));
     }
 
@@ -209,12 +209,20 @@ private:
                 return true;
         }
 
+        // explicitly test 0 since many edge cases involve 0s
+        if( _qlower[vfreeparams[freeindex]] <= 0 && _qupper[vfreeparams[freeindex]] >= 0 ) {
+            pfree[freeindex] = 0;
+            if( ComposeSolution(_vfreeparams, pfree, freeindex+1,q0, fn) )
+                return true;
+        }
+
         return false;
     }
 
     bool _SolveSingle(const IKReal* eerot, const IKReal* eetrans, const IKReal* pfree, const dReal* q0, bool bCheckEnvCollision, dReal* qResult)
     {
         std::vector<Solution> vsolutions;
+
         if( _pfnik(eetrans, eerot, pfree, vsolutions) ) {
             vector<IKReal> vsolfree;
 

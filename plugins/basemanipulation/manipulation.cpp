@@ -1531,6 +1531,7 @@ bool BaseManipulationProblem::DebugIK(ostream& sout, istream& sinput)
             continue;
         }
 
+        RAVELOG_DEBUGA("iteration %d\n",i);
         twrist = pmanip->GetEndEffectorTransform();
 
         if(bGenFile) {
