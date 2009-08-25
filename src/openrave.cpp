@@ -363,6 +363,7 @@ int main(int argc, char ** argv)
     }
 
     // create environment and start a command-line controlled simulation 
+    RaveSetDebugLevel(debuglevel);
     penv = CreateEnvironment(true);
     if( penv == NULL )
         return -1;

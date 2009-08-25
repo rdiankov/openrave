@@ -242,7 +242,7 @@ public:
         }
         boost::shared_ptr<IKLibrary> lib(new IKLibrary);
         if( !lib->Init(ikname, libraryname) ) {
-            RAVELOG_DEBUGA("failed to init library\n");
+            RAVELOG_DEBUGA("failed to init library %s\n",libraryname.c_str());
             return false;
         }
 

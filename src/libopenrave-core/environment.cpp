@@ -432,12 +432,22 @@ bool Environment::DummyPhysicsEngine::GetJointVelocity(const KinBody::Joint* pjo
 /////////////////
 Environment::Environment(bool bLoadAllPlugins) : _dummyphysics(this), _dummychecker(this), _dummyviewer(this)
 {
+    char* phomedir = getenv("OPENRAVE_CACHEPATH");
+    if( phomedir == NULL ) {
 #ifndef _WIN32
-    _homedirectory = string(getenv("HOME"))+string("/.openrave");
-    mkdir("~/.openrave",644);
+        _homedirectory = string(getenv("HOME"))+string("/.openrave");
 #else
-    _homedirectory = string(getenv("HOMEPATH"))+string("\\.openrave");
+        _homedirectory = string(getenv("HOMEPATH"))+string("\\.openrave");
 #endif
+    }
+    else
+        _homedirectory = phomedir;
+#ifndef _WIN32
+    mkdir(_homedirectory.c_str(),S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH | S_IRWXU);
+#else
+    //CreateDirectory(_homedirectory.c_str());
+#endif
+    RAVELOG_DEBUGA("setting openrave cache directory to %s\n",_homedirectory.c_str());
 
     _nBodiesModifiedStamp = 0;
     _bPublishBodiesAnytime = false;
@@ -481,7 +491,7 @@ Environment::Environment(bool bLoadAllPlugins) : _dummyphysics(this), _dummychec
         RAVELOG_INFOA("could not find OPENRAVE_DATA variable, setting to %s\n", OPENRAVE_DATA_INSTALL_DIR);
         _vdatadirs.push_back(OPENRAVE_DATA_INSTALL_DIR);
     }
-    
+
     pthread_create(&_threadLoop, NULL, main, this);
 }
 
@@ -850,6 +860,30 @@ RobotBase* Environment::CreateRobot(const char* pname)
         probot->DestroyCallback = KinBodyDestroyCallback;
     }
     return probot;
+}
+
+void Environment::AddIKSolvers()
+{
+    // don't wait for plugins
+    ifstream f((_homedirectory + "/ikfastsolvers").c_str());
+    if( !f )
+        return;
+
+    if( !_pIKFastLoader ) {
+        _pIKFastLoader.reset(_pdatabase->CreateProblem(this,"IKFast"));
+        if( !_pIKFastLoader )
+            return;
+    }
+
+    while(!f.eof()) {
+        string ikname, iklibrary, response;
+        f >> ikname >> iklibrary;
+        if( !f )
+            break;
+        stringstream ss;
+        ss << "AddIkLibrary " << ikname << " " << iklibrary;
+        _pIKFastLoader->SendCommand(ss.str().c_str(),response);
+    }
 }
 
 bool Environment::Load(const wchar_t *filename)
@@ -1662,7 +1696,9 @@ void* Environment::_main()
     else
         RAVELOG_WARNA("failed to find any collision checker.\n");
     SetCollisionChecker(_localchecker.get());
+    AddIKSolvers();
     _bPluginsLoaded = true;
+
     uint64_t nLastSleptTime = GetMicroTime();
     uint64_t nMaxConsecutiveSimTime = 500000; // force reupdate every 500ms
 

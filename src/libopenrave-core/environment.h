@@ -486,6 +486,7 @@ protected:
     static void KinBodyDestroyCallback(EnvironmentBase* penv, KinBody* pbody);
 
     void WaitForPlugins() const;
+    void AddIKSolvers();
 
     // grasping & manipulation
     bool _GraspObject();
@@ -530,6 +531,7 @@ protected:
     vector<string> _vplugindirs, _vdatadirs;
     string _homedirectory;
 
+    boost::shared_ptr<ProblemInstance> _pIKFastLoader; ///< used to load ikfast solvers
     //bool _bSelfCollision;           ///< check collision between KinBody links for contact forces
     bool _bDestroying;              ///< destroying envrionment, so exit from all processes
     bool _bDestroyed;               ///< environment has been destroyed
