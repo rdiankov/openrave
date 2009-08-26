@@ -442,6 +442,9 @@ public:
     /// \param angularvel is the rotation axis * angular speed
     virtual void GetVelocity(Vector& linearvel, Vector& angularvel) const;
 
+    /// Returns the linear and angular velocities for each link
+    virtual void GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const;
+
     /// set the transform of the first link (the rest of the links are computed based on the joint values)
     virtual void SetTransform(const Transform& trans);
     /// applies the transform to the current link's transforamtion

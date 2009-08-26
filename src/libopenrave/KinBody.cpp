@@ -515,7 +515,8 @@ int KinBody::Joint::GetVelocities(dReal* pVelocities) const
 {
     if( pVelocities != NULL ) {
         assert( _parent->GetEnv() != NULL );
-        _parent->GetEnv()->GetPhysicsEngine()->GetJointVelocity(this, pVelocities);
+        if( !_parent->GetEnv()->GetPhysicsEngine()->GetJointVelocity(this, pVelocities) )
+            return 0;
     }
     
     return GetDOF();
@@ -783,6 +784,163 @@ void KinBody::GetVelocity(Vector& linearvel, Vector& angularvel) const
     GetEnv()->GetPhysicsEngine()->GetBodyVelocity(this, linearvel, angularvel, NULL);
 }
 
+void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const
+{
+    velocities.resize(_veclinks.size());
+    if( velocities.size() == 0 )
+        return;
+    GetVelocity(velocities[0].first,velocities[0].second);
+
+    // set the first body and all static bodies to computed
+    _veclinks[0]->userdata = 1;
+    int numleft = (int)_veclinks.size()-1;
+    for(size_t i = 1; i < _veclinks.size(); ++i) {
+        if( _veclinks[i]->IsStatic() ) {
+            numleft--;
+            _veclinks[i]->userdata = 1;
+            velocities[i] = velocities[0];
+        }
+        else _veclinks[i]->userdata = 0;
+    }
+
+    const vector<Joint*>* alljoints[2] = {&_vecjoints, &_vecPassiveJoints};
+    dReal fjointang[3] = {0},fjointvel[3] = {0};
+
+    while(numleft > 0) {
+        int org = numleft;
+
+        // iterate through the two sets of joints: active and passive
+        // for active joints, read the angle from pJointValues, for passive joints
+        // check if they have corresponding mimic joints, if they do, take those angles
+        // otherwise set to 0
+        for(size_t j = 0; j < ARRAYSIZE(alljoints); ++j) {
+            FOREACHC(itjoint, *alljoints[j]) {
+                (*itjoint)->GetValues(fjointang);
+                fjointvel[0] = fjointvel[1] = fjointvel[2] = 0;
+                if( (*itjoint)->GetMimicJointIndex() >= 0 ) {
+                    int dof = _vecjoints[(*itjoint)->GetMimicJointIndex()]->GetVelocities(fjointvel);
+                    while(dof-->0)
+                        fjointvel[dof] *= (*itjoint)->fMimicCoeffs[0];
+                }
+                else
+                    (*itjoint)->GetVelocities(fjointvel);
+
+                Link** bodies = (*itjoint)->bodies;
+                if( bodies[0] != NULL && bodies[1] != NULL && !bodies[1]->IsStatic()) {
+                    if( bodies[0]->userdata ) {
+                        if( !bodies[1]->userdata ) {
+                            Vector w,v;
+                            // init 1 from 0
+                            switch((*itjoint)->GetType()) {
+                            case Joint::JointHinge:
+                                w = -fjointvel[0]*(*itjoint)->vAxes[0];
+                                break;
+                            case Joint::JointHinge2: {
+                                Transform tfirst;
+                                tfirst.rotfromaxisangle((*itjoint)->vAxes[0], -fjointang[0]);
+                                w = -fjointvel[0]*(*itjoint)->vAxes[0] + tfirst.rotate(-fjointvel[1]*(*itjoint)->vAxes[1]);
+                                break;
+                            }
+                            case Joint::JointSlider:
+                                v = -fjointvel[0]*(*itjoint)->vAxes[0];
+                                break;
+                            default:
+                                RAVELOG_WARNA("forward kinematic type %d not supported\n", (*itjoint)->GetType());
+                                break;
+                            }
+                            
+                            Transform tbody0 = bodies[0]->GetTransform();
+                            Transform tdelta = tbody0 * (*itjoint)->tLeft;
+                            Vector vparent = velocities[bodies[0]->GetIndex()].first;
+                            Vector wparent = velocities[bodies[0]->GetIndex()].second;
+                            velocities[bodies[1]->GetIndex()].first = vparent + tdelta.rotate(v) + Vector().Cross(wparent,tdelta.trans-tbody0.trans);
+                            velocities[bodies[1]->GetIndex()].second = wparent + tdelta.rotate(w);
+
+                            bodies[1]->userdata = 1;
+                            numleft--;
+                        }
+                    }
+                    else if( bodies[1]->userdata ) {
+                        Vector w,v;
+                        // init 1 from 0
+                        switch((*itjoint)->GetType()) {
+                        case Joint::JointHinge:
+                            w = fjointvel[0]*(*itjoint)->vAxes[0];
+                            break;
+                        case Joint::JointHinge2: {
+                            Transform tfirst;
+                            tfirst.rotfromaxisangle((*itjoint)->vAxes[0], fjointang[0]);
+                            w = fjointvel[0]*(*itjoint)->vAxes[0] + tfirst.rotate(fjointvel[1]*(*itjoint)->vAxes[1]);
+                            break;
+                        }
+                        case Joint::JointSlider:
+                            v = fjointvel[0]*(*itjoint)->vAxes[0];
+                            break;
+                        default:
+                            RAVELOG_WARNA("forward kinematic type %d not supported\n", (*itjoint)->GetType());
+                            break;
+                        }
+
+                        Transform tbody1 = bodies[1]->GetTransform();
+                        Transform tdelta = tbody1 * (*itjoint)->tinvRight;
+                        Vector vparent = velocities[bodies[1]->GetIndex()].first;
+                        Vector wparent = velocities[bodies[1]->GetIndex()].second;
+                        velocities[bodies[0]->GetIndex()].first = vparent + tdelta.rotate(v) + Vector().Cross(wparent,tdelta.trans-tbody1.trans);
+                        velocities[bodies[0]->GetIndex()].second = wparent + tdelta.rotate(w);
+
+                        bodies[0]->userdata = 1;
+                        numleft--;
+                    }
+                }
+                else if( bodies[0] != NULL && !bodies[0]->userdata ) {
+                    Vector w,v;
+                    // joint attached to static environment (it will never be [1])
+                    switch((*itjoint)->GetType()) {
+                    case Joint::JointHinge:
+                        w = -fjointvel[0]*(*itjoint)->vAxes[0];
+                        break;
+                    case Joint::JointHinge2: {
+                        Transform tfirst;
+                        tfirst.rotfromaxisangle((*itjoint)->vAxes[0], -fjointang[0]);
+                        w = -fjointvel[0]*(*itjoint)->vAxes[0] + tfirst.rotate(-fjointvel[1]*(*itjoint)->vAxes[1]);
+                        break;
+                    }
+                    case Joint::JointSlider:
+                        v = -fjointvel[0]*(*itjoint)->vAxes[0];
+                        break;
+                    default:
+                        RAVELOG_WARNA("forward kinematic type %d not supported\n", (*itjoint)->GetType());
+                        break;
+                    }
+                    
+                    Transform tbody = GetTransform();
+                    Transform tdelta = tbody * (*itjoint)->tLeft;
+                    Vector vparent = velocities[0].first;
+                    Vector wparent = velocities[0].second;
+                    velocities[bodies[0]->GetIndex()].first = vparent + tdelta.rotate(v) + Vector().Cross(wparent,tdelta.trans-tbody.trans);
+                    velocities[bodies[0]->GetIndex()].second = wparent + tdelta.rotate(w);
+
+                    bodies[0]->userdata = 1;
+                    numleft--;
+                }
+            }
+        }
+
+        // nothing changed so exit
+        if( org == numleft )
+            break;
+    }
+
+    // some links might not be connected to any joints. In this case, transform them by tbase
+    if( numleft > 0 ) {
+        for(size_t i = 1; i < _veclinks.size(); ++i) {
+            if( _veclinks[i]->userdata == 0 ) {
+                velocities[i] = velocities[0];
+            }
+        }
+    }
+}
+
 void KinBody::ApplyTransform(const Transform& trans)
 {
     FOREACH(itlink, _veclinks) {
@@ -1012,10 +1170,13 @@ void KinBody::SetJointValues(vector<Transform>* pvbodies, const Transform* ptran
                 Link** bodies = (*itjoint)->bodies;
 
                 // make sure there is no wrap around for limits close to pi
-                dReal fjointang = pvalues[0]-(*itjoint)->GetOffset();
-                if( (*itjoint)->GetType() != Joint::JointSlider ) {
-                    if( fjointang < -PI+0.001f ) fjointang = -PI+0.001f;
-                    else if( fjointang > PI-0.001f ) fjointang = PI-0.001f;
+                dReal fjointang[3];
+                for(int iang = 0; iang < (*itjoint)->GetDOF(); ++iang) { 
+                    fjointang[iang] = pvalues[iang]-(*itjoint)->GetOffset();
+                    if( (*itjoint)->GetType() != Joint::JointSlider ) {
+                        if( fjointang[iang] < -PI+0.001f ) fjointang[iang] = -PI+0.001f;
+                        else if( fjointang[iang] > PI-0.001f ) fjointang[iang] = PI-0.001f;
+                    }
                 }
 
                 if( bodies[0] != NULL && bodies[1] != NULL && !bodies[1]->IsStatic()) {
@@ -1028,19 +1189,18 @@ void KinBody::SetJointValues(vector<Transform>* pvbodies, const Transform* ptran
                             // init 1 from 0
                             switch((*itjoint)->GetType()) {
                             case Joint::JointHinge:
-                                tjoint.rotfromaxisangle(axis, -fjointang);
+                                tjoint.rotfromaxisangle(axis, -fjointang[0]);
                                 break;
-                            case Joint::JointHinge2:
-                                {
-                                    Transform tfirst;
-                                    tfirst.rotfromaxisangle((*itjoint)->vAxes[0], -pvalues[0]);
-                                    Transform tsecond;
-                                    tsecond.rotfromaxisangle(tfirst.rotate((*itjoint)->vAxes[1]), -pvalues[1]);
-                                    tjoint = tsecond * tfirst;
-                                }
+                            case Joint::JointHinge2: {
+                                Transform tfirst;
+                                tfirst.rotfromaxisangle((*itjoint)->vAxes[0], -fjointang[0]);
+                                Transform tsecond;
+                                tsecond.rotfromaxisangle(tfirst.rotate((*itjoint)->vAxes[1]), -fjointang[1]);
+                                tjoint = tsecond * tfirst;
                                 break;
+                            }
                             case Joint::JointSlider:
-                                tjoint.trans = -axis * fjointang;
+                                tjoint.trans = -axis * fjointang[0];
                                 break;
                             default:
                                 RAVELOG_WARNA("forward kinematic type %d not supported\n", (*itjoint)->GetType());
@@ -1066,7 +1226,7 @@ void KinBody::SetJointValues(vector<Transform>* pvbodies, const Transform* ptran
                             {
                                 dReal angs[3];
                                 (*itjoint)->GetValues(angs);
-                                assert( fabsf(fjointang+(*itjoint)->GetOffset()-angs[0]) < 0.03f );
+                                assert( fabsf(fjointang[0]+(*itjoint)->GetOffset()-angs[0]) < 0.03f );
                             }
 #endif
                         }
@@ -1078,10 +1238,18 @@ void KinBody::SetJointValues(vector<Transform>* pvbodies, const Transform* ptran
                         // init 1 from 0
                         switch((*itjoint)->GetType()) {
                         case Joint::JointHinge:
-                            tjoint.rotfromaxisangle(axis, fjointang);
+                            tjoint.rotfromaxisangle(axis, fjointang[0]);
                             break;
+                        case Joint::JointHinge2: {
+                            Transform tfirst;
+                            tfirst.rotfromaxisangle((*itjoint)->vAxes[0], fjointang[0]);
+                            Transform tsecond;
+                            tsecond.rotfromaxisangle(tfirst.rotate((*itjoint)->vAxes[1]), fjointang[1]);
+                            tjoint = tsecond * tfirst;
+                            break;
+                        }
                         case Joint::JointSlider:
-                            tjoint.trans = axis * fjointang;
+                            tjoint.trans = axis * fjointang[0];
                             break;
                         default:
                             RAVELOG_WARNA("forward kinematic type %d not supported\n", (*itjoint)->GetType());
@@ -1107,7 +1275,7 @@ void KinBody::SetJointValues(vector<Transform>* pvbodies, const Transform* ptran
                         {
                             dReal angs[3];
                             (*itjoint)->GetValues(angs);
-                            assert( fabsf(fjointang+(*itjoint)->GetOffset()-angs[0]) < 0.03f );
+                            assert( fabsf(fjointang[0]+(*itjoint)->GetOffset()-angs[0]) < 0.03f );
                         }
 #endif
                     }
@@ -1120,19 +1288,18 @@ void KinBody::SetJointValues(vector<Transform>* pvbodies, const Transform* ptran
                     // joint attached to static environment (it will never be [1])
                     switch((*itjoint)->GetType()) {
                     case Joint::JointHinge:
-                        tjoint.rotfromaxisangle(axis, -fjointang);
+                        tjoint.rotfromaxisangle(axis, -fjointang[0]);
                         break;
-                    case Joint::JointHinge2:
-                        {
-                            Transform tfirst;
-                            tfirst.rotfromaxisangle((*itjoint)->vAxes[0], -pvalues[0]);
-                            Transform tsecond;
-                            tsecond.rotfromaxisangle(tfirst.rotate((*itjoint)->vAxes[1]), -pvalues[1]);
-                            tjoint = tsecond * tfirst;
-                        }
+                    case Joint::JointHinge2: {
+                        Transform tfirst;
+                        tfirst.rotfromaxisangle((*itjoint)->vAxes[0], -fjointang[0]);
+                        Transform tsecond;
+                        tsecond.rotfromaxisangle(tfirst.rotate((*itjoint)->vAxes[1]), -fjointang[1]);
+                        tjoint = tsecond * tfirst;
                         break;
+                    }
                     case Joint::JointSlider:
-                        tjoint.trans = -axis * fjointang;
+                        tjoint.trans = -axis * fjointang[0];
                         break;
                     default:
                         RAVELOG_WARNA("forward kinematic type %d not supported\n", (*itjoint)->GetType());
@@ -1155,7 +1322,7 @@ void KinBody::SetJointValues(vector<Transform>* pvbodies, const Transform* ptran
                     {
                         dReal angs[3];
                         (*itjoint)->GetValues(angs);
-                        assert( fabsf(fjointang+(*itjoint)->GetOffset()-angs[0]) < 0.03f );
+                        assert( fabsf(fjointang[0]+(*itjoint)->GetOffset()-angs[0]) < 0.03f );
                     }
 #endif
                     bodies[0]->userdata = 1;

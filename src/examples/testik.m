@@ -29,7 +29,6 @@ if( exist('ikfastlib','var') )
     robotid = orEnvCreateRobot('robot',robotfile);
 end
 probid = orEnvCreateProblem('basemanipulation','robot');
-
 manips = orRobotGetManipulators(robotid);
 
 cmd = 'debugik numtests 200 ';

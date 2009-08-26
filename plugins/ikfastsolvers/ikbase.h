@@ -263,8 +263,14 @@ private:
         for(int i = 0; i < (int)sol.size(); ++i)
             vravesol[i] = (dReal)sol[i];
 
-        if( !checkjointangles(vravesol) )
+        if( !checkjointangles(vravesol) ) {
+//            stringstream ss; ss << "bad joint angles: ";
+//            FOREACH(it,vravesol)
+//                ss << *it << " ";
+//            ss << endl;
+//            RAVELOG_VERBOSEA(ss.str().c_str());
             return false;
+        }
 
         // check for self collisions
         _probot->SetActiveDOFValues(NULL, &vravesol[0]);
@@ -277,6 +283,8 @@ private:
             if( report.plink1 != NULL && report.plink2 != NULL ) {
                 RAVELOG_VERBOSEA("WAMIK: collision %S:%S with %S:%S\n", report.plink1->GetParent()->GetName(), report.plink1->GetName(), report.plink2->GetParent()->GetName(), report.plink2->GetName());
             }
+            else
+                RAVELOG_VERBOSEA("ik collision\n");
             return false;
         }
 
@@ -352,8 +360,9 @@ private:
                 vravesol[j] -= 2*PI;
             if( _qupper[j] > PI && vravesol[j] < _qlower[j] )
                 vravesol[j] += 2*PI;
-            if( vravesol[j] < _qlower[j] || vravesol[j] > _qupper[j] )
+            if( vravesol[j] < _qlower[j] || vravesol[j] > _qupper[j] ) {
                 return false;
+            }
         }
 
         return true;

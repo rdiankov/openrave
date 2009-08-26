@@ -1231,7 +1231,7 @@ bool BaseManipulationProblem::IKtest(ostream& sout, istream& sinput)
 bool DebugIKFindSolution(RobotBase::Manipulator* pmanip, const Transform& twrist,
                          vector<dReal>& viksolution, bool bEnvCollision, dReal* parameters, int paramindex)
 {
-    for(dReal f = 0; f <= 1; f += 0.01f) {
+    for(dReal f = 0; f <= 1; f += 0.001f) {
         parameters[paramindex] = f;
         if( paramindex > 0 ) {
             if( DebugIKFindSolution(pmanip, twrist, viksolution, bEnvCollision, parameters, paramindex-1) )
@@ -1250,7 +1250,7 @@ void DebugIKFindSolutions(RobotBase::Manipulator* pmanip, const Transform& twris
                           vector< vector<dReal> >& viksolutions, bool bEnvCollision,
                           dReal* parameters, int paramindex)
 {
-    for(dReal f = 0; f <= 1; f += 0.01f) {
+    for(dReal f = 0; f <= 1; f += 0.001f) {
         parameters[paramindex] = f;
         if( paramindex > 0 ) {
             DebugIKFindSolutions(pmanip, twrist, viksolutions, bEnvCollision, parameters, paramindex-1);
@@ -1512,7 +1512,7 @@ bool BaseManipulationProblem::DebugIK(ostream& sout, istream& sinput)
         }
         else {
             for(int j = 0; j < (int)vjoints.size(); j++) {
-                if( GetEnv()->RandomFloat() > 0.4f ) {
+                if( GetEnv()->RandomFloat() > 0.05f ) {
                     vjoints[j] = vlowerlimit[j] + (vupperlimit[j]-vlowerlimit[j])*GetEnv()->RandomFloat();
                 }
                 else

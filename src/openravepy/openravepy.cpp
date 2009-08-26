@@ -746,6 +746,24 @@ public:
         return transforms;
     }
 
+    object GetLinkVelocities() const
+    {
+        CHECK_POINTER(_pbody);
+        std::vector<std::pair<Vector,Vector> > velocities;
+        _pbody->GetLinkVelocities(velocities);
+
+        npy_intp dims[] = {velocities.size(),3};
+        PyObject *pylinear = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
+        PyObject *pyangular = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
+        dReal* plinear = (dReal*)PyArray_DATA(pylinear);
+        dReal* pangular = (dReal*)PyArray_DATA(pyangular);
+        FOREACH(it,velocities) {
+            *plinear++ = it->first.x; *plinear++ = it->first.y; *plinear++ = it->first.z;
+            *pangular++ = it->second.x; *pangular++ = it->second.y; *pangular++ = it->second.z;
+        }
+        return make_tuple(static_cast<numeric::array>(handle<>(pylinear)),static_cast<numeric::array>(handle<>(pyangular)));
+    }
+
     PyAABB* ComputeAABB() { CHECK_POINTER(_pbody); return new PyAABB(_pbody->ComputeAABB()); }
     void Enable(bool bEnable) { CHECK_POINTER(_pbody); _pbody->Enable(bEnable); }
     bool IsEnabled() const { CHECK_POINTER(_pbody); return _pbody->IsEnabled(); }
@@ -2598,6 +2616,7 @@ BOOST_PYTHON_MODULE(openravepy)
             .def("GetJoints",&PyKinBody::GetJoints)
             .def("GetTransform",&PyKinBody::GetTransform)
             .def("GetBodyTransformations",&PyKinBody::GetBodyTransformations)
+            .def("GetLinkVelocities",&PyKinBody::GetLinkVelocities)
             .def("ComputeAABB",&PyKinBody::ComputeAABB, return_value_policy<manage_new_object>())
             .def("Enable",&PyKinBody::Enable)
             .def("IsEnabled",&PyKinBody::IsEnabled)
