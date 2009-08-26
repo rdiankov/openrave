@@ -853,7 +853,7 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
                             Transform tdelta = tbody0 * (*itjoint)->tLeft;
                             Vector vparent = velocities[bodies[0]->GetIndex()].first;
                             Vector wparent = velocities[bodies[0]->GetIndex()].second;
-                            velocities[bodies[1]->GetIndex()].first = vparent + tdelta.rotate(v) + Vector().Cross(wparent,tdelta.trans-tbody0.trans);
+                            velocities[bodies[1]->GetIndex()].first = vparent + tdelta.rotate(v) + Vector().Cross(wparent,bodies[1]->GetTransform().trans-tbody0.trans);
                             velocities[bodies[1]->GetIndex()].second = wparent + tdelta.rotate(w);
 
                             bodies[1]->userdata = 1;
@@ -885,7 +885,7 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
                         Transform tdelta = tbody1 * (*itjoint)->tinvRight;
                         Vector vparent = velocities[bodies[1]->GetIndex()].first;
                         Vector wparent = velocities[bodies[1]->GetIndex()].second;
-                        velocities[bodies[0]->GetIndex()].first = vparent + tdelta.rotate(v) + Vector().Cross(wparent,tdelta.trans-tbody1.trans);
+                        velocities[bodies[0]->GetIndex()].first = vparent + tdelta.rotate(v) + Vector().Cross(wparent,bodies[0]->GetTransform().trans-tbody1.trans);
                         velocities[bodies[0]->GetIndex()].second = wparent + tdelta.rotate(w);
 
                         bodies[0]->userdata = 1;
@@ -917,7 +917,7 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
                     Transform tdelta = tbody * (*itjoint)->tLeft;
                     Vector vparent = velocities[0].first;
                     Vector wparent = velocities[0].second;
-                    velocities[bodies[0]->GetIndex()].first = vparent + tdelta.rotate(v) + Vector().Cross(wparent,tdelta.trans-tbody.trans);
+                    velocities[bodies[0]->GetIndex()].first = vparent + tdelta.rotate(v) + Vector().Cross(wparent,bodies[0]->GetTransform().trans-tbody.trans);
                     velocities[bodies[0]->GetIndex()].second = wparent + tdelta.rotate(w);
 
                     bodies[0]->userdata = 1;

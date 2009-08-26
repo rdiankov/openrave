@@ -99,9 +99,9 @@ class ReachabilityModel(object):
         self.reachabilitydensity3d = reshape(reachabilitydensity3d,shape)
         print 'reachability finished in %fs'%(time.time()-starttime)
 
-    def showdensity(self,showrobot=True,contours=[0.1,0.5,0.9,0.99],xrange=None):
+    def showdensity(self,showrobot=True,contours=[0.1,0.5,0.9,0.99],figureid=1, xrange=None):
         from enthought.mayavi import mlab
-        mlab.figure(1,fgcolor=(0,0,0), bgcolor=(1,1,1),size=(1024,768))
+        mlab.figure(figureid,fgcolor=(0,0,0), bgcolor=(1,1,1),size=(1024,768))
         mlab.clf()
         if xrange is None:
             offset = array((0,0,0))
