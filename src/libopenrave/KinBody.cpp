@@ -1622,9 +1622,8 @@ void KinBody::ComputeJointHierarchy()
 
     //RAVEPRINT(L"nonadj: %"PRIdS"\n", _setNonAdjacentLinks.size());
     // save the forward kinematics
-    char filename[100];
-    sprintf(filename, "fk_%S.txt", GetName());
-    ofstream f(filename);
+    string filename = GetEnv()->GetHomeDirectory() + string("/fk_") + _stdwcstombs(GetName());
+    ofstream f(filename.c_str());
     WriteForwardKinematics(f);
     SetJointValues(NULL, NULL, &prevvalues[0], true);
 }

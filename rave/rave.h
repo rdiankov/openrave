@@ -778,10 +778,6 @@ public:
     /// \return returns a pointer to a Lock
     virtual EnvLock* GetLockedRobots(std::vector<RobotBase*>& robots) const = 0;
 
-    /// returns the openrave home directory where settings, cache, and other files are stored.
-    /// On Linux/Unix systems, this is usually $HOME/.openrave, on Windows this is $HOMEPATH/.openrave
-    virtual const char* GetHomeDirectory() const = 0;
-
     /// XML processing functions.
     //@{
 
@@ -816,6 +812,10 @@ public:
     /// general triangulation of the whole scene. trimesh will be appended the new data.
     /// \param opts - Controlls what to triangulate
     virtual bool TriangulateScene(KinBody::Link::TRIMESH& trimesh, TriangulateOptions opts, const wchar_t* pName) = 0;
+
+    /// returns the openrave home directory where settings, cache, and other files are stored.
+    /// On Linux/Unix systems, this is usually $HOME/.openrave, on Windows this is $HOMEPATH/.openrave
+    virtual const std::string& GetHomeDirectory() const = 0;
 
     //@{ debug/global commands
     

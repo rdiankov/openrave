@@ -157,6 +157,21 @@ inline std::wstring _ravembstowcs(const char* pstr)
     return w;
 }
 
+inline std::string _stdwcstombs(const wchar_t* pname)
+{
+    if( pname == NULL )
+        return std::string();
+
+    std::string s;
+    size_t len = wcstombs(NULL, pname, 0);
+    if( len != (size_t)-1 ) {
+        s.resize(len);
+        wcstombs(&s[0], pname, len);
+    }
+
+    return s;
+}
+
 // need the prototypes in order to keep them free of the OpenRAVE namespace
 class LinkXMLReader;
 class KinBodyXMLReader;

@@ -232,7 +232,7 @@ public:
     /// general triangulation of the whole scene. trimesh will be appended the new data.
     virtual bool TriangulateScene(KinBody::Link::TRIMESH& trimesh, TriangulateOptions opts, const wchar_t* pName);
 
-    virtual const char* GetHomeDirectory() const { return _homedirectory.c_str(); }
+    virtual const std::string& GetHomeDirectory() const { return _homedirectory; }
 
     /// public XML readers.
     //@{

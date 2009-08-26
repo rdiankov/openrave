@@ -296,7 +296,7 @@ int main(int argc, char ** argv)
             }
 
 #ifndef _WIN32
-            char* tempfilename = tempnam(penv->GetHomeDirectory(), "ik");
+            char* tempfilename = tempnam(penv->GetHomeDirectory().c_str(), "ik");
 #else
             char* tempfilename = tempnam(NULL, "ik");
 #endif

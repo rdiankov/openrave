@@ -136,6 +136,21 @@ inline int wcsicmp(const wchar_t* s1, const wchar_t* s2)
 
 #endif
 
+inline std::string _stdwcstombs(const wchar_t* pname)
+{
+    if( pname == NULL )
+        return std::string();
+
+    std::string s;
+    size_t len = wcstombs(NULL, pname, 0);
+    if( len != (size_t)-1 ) {
+        s.resize(len);
+        wcstombs(&s[0], pname, len);
+    }
+
+    return s;
+}
+
 #include <pthread.h>
 
 #include <rave/rave.h>

@@ -2397,6 +2397,8 @@ public:
     bool AttachServer(PyRaveServerBase* pserver) { return _penv->AttachServer(pserver->GetServer()); }
     PyRaveServerBase* GetServer() { return new PyRaveServerBase(_penv->GetServer(),this,false); }
 
+    string GetHomeDirectory() { return _penv->GetHomeDirectory(); }
+
     // private interface stuff
     void AddInterface(PyInterfaceBase* p) { _setInterfaces.insert(p); }
     void RemoveInterface(PyInterfaceBase* p) { _setInterfaces.erase(p); }
@@ -3023,6 +3025,7 @@ BOOST_PYTHON_MODULE(openravepy)
             .def("GetDebugLevel",&PyEnvironmentBase::GetDebugLevel)
             .def("AttachServer",&PyEnvironmentBase::AttachServer)
             .def("GetServer",&PyEnvironmentBase::GetServer, return_value_policy<manage_new_object>())
+            .def("GetHomeDirectory",&PyEnvironmentBase::GetHomeDirectory)
             ;
 
         enum_<EnvironmentBase::TriangulateOptions>("TriangulateOptions")
