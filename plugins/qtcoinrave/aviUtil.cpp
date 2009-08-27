@@ -537,7 +537,7 @@ bool START_AVI(const char* filename, int _frameRate, int width, int height, int 
 	codec_ctx = stream->codec;
 	codec_ctx->codec_id = video_codec;
 	codec_ctx->codec_type = CODEC_TYPE_VIDEO;
-	codec_ctx->bit_rate = 1000000;
+	codec_ctx->bit_rate = 4000000;
 	codec_ctx->width = width;
 	codec_ctx->height = height;
 	codec_ctx->time_base= (AVRational){1,_frameRate};

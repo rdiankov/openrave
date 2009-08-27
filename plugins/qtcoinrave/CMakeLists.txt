@@ -70,6 +70,7 @@ if (GLEW_FOUND AND QT_FOUND AND SOQT_LIBRARY_FOUND)
 
       pkg_check_modules(FFMPEG_SWSCALE libswscale)
 
+      set(CMAKE_REQUIRED_INCLUDES ${FFMPEG_libavformat_INCLUDEDIR} ${FFMPEG_libavcodec_INCLUDEDIR} ${FFMPEG_libswscale_INCLUDEDIR})
       check_include_file(libswscale/swscale.h HAVE_NEW_SWSCALE_H)
       check_include_file(libavformat/avformat.h HAVE_NEW_AVFORMAT_H)
       check_include_file(libavcodec/avcodec.h HAVE_NEW_AVCODEC_H)
@@ -99,7 +100,7 @@ if (GLEW_FOUND AND QT_FOUND AND SOQT_LIBRARY_FOUND)
   endif()
 
   target_link_libraries (qtcoinrave ${extLIBS} libopenrave)
-  include_directories("${CMAKE_SOURCE_DIR}")
+  include_directories(${CMAKE_SOURCE_DIR} ${FFMPEG_libavformat_INCLUDEDIR} ${FFMPEG_libavcodec_INCLUDEDIR} ${FFMPEG_libswscale_INCLUDEDIR})
   add_dependencies(qtcoinrave libopenrave libopenrave_static)
   set_target_properties(qtcoinrave PROPERTIES COMPILE_FLAGS "${QTCOIN_COMPILE_FLAGS}"
                                       LINK_FLAGS "${QTCOIN_LINK_FLAGS}")
