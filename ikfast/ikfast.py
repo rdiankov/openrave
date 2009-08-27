@@ -635,18 +635,20 @@ int main(int argc, char** argv)
         name = node.jointname
         code = 'IKReal %seval[%d];\n'%(name,len(node.jointcheckeqs))
         code += self.writeEquations(lambda i: '%seval[%d]'%(name,i),node.jointcheckeqs);
-        code += 'if( '
-        for i in range(len(node.jointcheckeqs)):
-            if i != 0:
-                if node.anycondition:
-                    code += ' || '
-                else:
-                    code += ' && '
-            code += 'IKabs(%seval[%d]) < %f '%(name,i,node.thresh)
-        code += ' ) {\n'
-        self.dictequations = copy.copy(origequations)
-        code += self.indentCode(self.generateTree(node.zerobranch),4)
-        code += '\n} else {\n'
+        if len(node.jointcheckeqs) > 0:
+            code += 'if( '
+            for i in range(len(node.jointcheckeqs)):
+                if i != 0:
+                    if node.anycondition:
+                        code += ' || '
+                    else:
+                        code += ' && '
+                code += 'IKabs(%seval[%d]) < %f '%(name,i,node.thresh)
+            code += ' ) {\n'
+            self.dictequations = copy.copy(origequations)
+            code += self.indentCode(self.generateTree(node.zerobranch),4)
+            code += '\n} else\n'
+        code += '{\n'
         self.dictequations = copy.copy(origequations)
         code += self.indentCode(self.generateTree(node.nonzerobranch),4)
         code += '\n}\n'
