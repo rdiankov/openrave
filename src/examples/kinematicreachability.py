@@ -19,7 +19,7 @@ import time,pickle
 from optparse import OptionParser
 
 class ReachabilityModel(object):
-    def __init__(self,robotfile=None,iklibrary=None,showviewer=False):
+    def __init__(self,robotfile=None,showviewer=False):
         self.orenv = Environment()
         if showviewer:
             self.orenv.SetViewer('qtcoin')
@@ -27,13 +27,6 @@ class ReachabilityModel(object):
         self.orrobot = None
         if robotfile is not None:
             self.loadrobot(robotfile)
-            if iklibrary is not None:
-                self.prob = self.orenv.CreateProblem('IKFast')
-                if self.prob is None:
-                    raise ValueError('failed to create IKFast problem')
-                for m in self.orrobot.GetManipulators():
-                    self.prob.SendCommand('AddIkLibrary %s %s'%(m.GetIKSolverName().split()[0],iklibrary))
-                self.loadrobot(robotfile)
                 
         self.reachabilitystats = None
         self.reachabilitydensity3d = None

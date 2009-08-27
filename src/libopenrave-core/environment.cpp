@@ -671,6 +671,7 @@ Environment::~Environment()
     SetCollisionChecker(NULL);
     SetPhysicsEngine(NULL);
     AttachViewer(NULL);
+    _pIKFastLoader.reset();
     _localchecker.reset();
     _localphysics.reset();
     _localviewer.reset();

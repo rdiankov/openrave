@@ -918,7 +918,8 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                             }
                             }
                             
-                        } else {
+                        } else
+                        {
                             continue;
                             
                         }
@@ -1253,7 +1254,8 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                             }
                             }
                             
-                        } else {
+                        } else
+                        {
                             continue;
                             
                         }
@@ -1603,7 +1605,8 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                 }
                 }
                 
-            } else {
+            } else
+            {
                 {
                 IKReal j1array[2], cj1array[2], sj1array[2];
                 bool j1valid[2]={false};
@@ -2425,7 +2428,8 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                             }
                             }
                             
-                        } else {
+                        } else
+                        {
                             continue;
                             
                         }
@@ -2616,7 +2620,8 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                             }
                             }
                             
-                        } else {
+                        } else
+                        {
                             continue;
                             
                         }
@@ -2822,7 +2827,8 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                 }
                 }
                 
-            } else {
+            } else
+            {
                 {
                 IKReal j1array[2], cj1array[2], sj1array[2];
                 bool j1valid[2]={false};
@@ -3399,7 +3405,8 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                             }
                             }
                             
-                        } else {
+                        } else
+                        {
                             continue;
                             
                         }
@@ -3737,7 +3744,8 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                             }
                             }
                             
-                        } else {
+                        } else
+                        {
                             continue;
                             
                         }
@@ -4108,7 +4116,8 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                 }
                 }
                 
-            } else {
+            } else
+            {
                 {
                 IKReal j0array[2], cj0array[2], sj0array[2];
                 bool j0valid[2]={false};

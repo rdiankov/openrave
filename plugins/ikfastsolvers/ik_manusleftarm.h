@@ -160,7 +160,8 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
             if( IKabs(j0eval[0]) < 0.000010  ) {
                 continue;
                 
-            } else {
+            } else
+            {
                 {
                 IKReal j0array[2], cj0array[2], sj0array[2];
                 bool j0valid[2]={false};
