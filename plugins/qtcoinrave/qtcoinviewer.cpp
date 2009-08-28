@@ -2030,7 +2030,7 @@ void QtCoinViewer::UpdateFromModel()
 
 void QtCoinViewer::_Reset()
 {
-    deselect();
+    _deselect();
 
     UpdateFromModel();
     FOREACH(itbody, _mapbodies) {
@@ -2126,7 +2126,7 @@ void QtCoinViewer::ViewGeometryChanged(QAction* pact)
     _viewGeometryMode = (ViewGeometry)pact->data().toInt();
     
     // destroy all bodies
-    deselect();
+    _deselect();
 
     UpdateFromModel();
     FOREACH(itbody, _mapbodies) {
