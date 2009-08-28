@@ -363,6 +363,7 @@ public:
     virtual const std::vector<int>& GetJointIndices() const { return _vecJointIndices; }
 
     const std::vector<Joint*>& GetJoints() const { return _vecjoints; }
+    const std::vector<Joint*>& GetPassiveJoints() const { return _vecPassiveJoints; }
     const std::vector<Link*>& GetLinks() const { return _veclinks; }
 
 	//! return a pointer to the link with the given name
