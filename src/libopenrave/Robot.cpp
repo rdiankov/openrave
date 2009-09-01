@@ -177,10 +177,13 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBase* probot, const AttachedSenso
     assert(probot != NULL);
     *this = sensor;
     _probot = probot;
-    psensor = _probot->GetEnv()->CreateSensor(sensor.psensor->GetXMLId());
-    if( psensor != NULL ) {
-        psensor->Clone(sensor.psensor,cloningoptions);
-        pdata = psensor != NULL ? psensor->CreateSensorData() : NULL;
+    psensor = NULL;
+    if( sensor.psensor != NULL ) {
+        psensor = _probot->GetEnv()->CreateSensor(sensor.psensor->GetXMLId());
+        if( psensor != NULL ) {
+            psensor->Clone(sensor.psensor,cloningoptions);
+            pdata = psensor != NULL ? psensor->CreateSensorData() : NULL;
+        }
     }
     
     int index = sensor.pattachedlink->GetIndex();
