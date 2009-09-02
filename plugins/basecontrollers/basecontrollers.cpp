@@ -38,7 +38,7 @@ bool IdealController::Init(RobotBase* robot, const char* args)
         string filename = GetEnv()->GetHomeDirectory() + string("/traj_") + _stdwcstombs(_probot->GetName());
         flog.open(filename.c_str());
         if( !flog )
-            RAVEPRINT(L"failed to open %s\n", filename);
+            RAVEPRINT(L"failed to open %s\n", filename.c_str());
         flog << "IdealController " << filename << endl << endl;
     }
     _bPause = false;
