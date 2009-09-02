@@ -499,7 +499,7 @@ Environment::Environment(const Environment& r, int options) : _dummyphysics(this
 {
     _nBodiesModifiedStamp = 0;
     _bPublishBodiesAnytime = r._bPublishBodiesAnytime;
-
+    _homedirectory = r._homedirectory;
     _pCurrentViewer = &_dummyviewer;
     _pserver = NULL;
     _fDeltaSimTime = r._fDeltaSimTime;
