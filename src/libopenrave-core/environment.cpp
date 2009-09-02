@@ -535,6 +535,8 @@ Environment::Environment(const Environment& r, int options) : _dummyphysics(this
     _vplugindirs = r._vplugindirs;
     _vdatadirs = r._vdatadirs;
 
+    LockPhysics(true);
+
     // clone collision and physics
     if( r.GetCollisionChecker() != NULL ) {
         SetCollisionChecker(NULL);
@@ -634,6 +636,8 @@ Environment::Environment(const Environment& r, int options) : _dummyphysics(this
         _bEnableSimulation = r._bEnableSimulation;
         _nCurSimTime = r._nCurSimTime;
     }
+
+    LockPhysics(false);
 }
 
 Environment::~Environment()
