@@ -148,7 +148,9 @@ bool worSetOptions(char* in, void* pData, RaveServer* pserv)
                 pnewengine = pserv->GetEnv()->CreatePhysicsEngine(_ravembstowcs(p).c_str());
             
             if( pnewengine != NULL ) {
+                pserv->GetEnv()->LockPhysics(true);
                 pserv->GetEnv()->SetPhysicsEngine(pnewengine);
+                pserv->GetEnv()->LockPhysics(false);
                 
                 if( pData != NULL ) {
                     delete ((RaveServer*)pData)->_pphysics; // delete the old
@@ -159,7 +161,9 @@ bool worSetOptions(char* in, void* pData, RaveServer* pserv)
                     RAVELOG_DEBUGA("setting physics engine to %s\n", p);
             }
             else {
+                pserv->GetEnv()->LockPhysics(true);
                 pserv->GetEnv()->SetPhysicsEngine(NULL);
+                pserv->GetEnv()->LockPhysics(false);
 
                 if( pData != NULL ) {
                     delete ((RaveServer*)pData)->_pphysics; // delete the old
@@ -274,7 +278,9 @@ bool orEnvLoadScene(char* in, string& out, void **ppPassData, RaveServer* pserv)
     if( in == NULL || in[0] == 0 ) {
         // if empty, clear the scene
         RAVELOG_DEBUGA("Destroying scene\n");
+        pserv->GetEnv()->LockPhysics(true);
         pserv->GetEnv()->SetPhysicsEngine(NULL);
+        pserv->GetEnv()->LockPhysics(false);
         if( pserv != NULL ) {
             delete pserv->_pphysics; // delete the old
             pserv->_pphysics = NULL;

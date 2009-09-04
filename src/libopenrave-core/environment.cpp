@@ -1075,7 +1075,9 @@ void Environment::KinBodyDestroyCallback(EnvironmentBase* penv, KinBody* pbody)
 
 bool Environment::SetPhysicsEngine(PhysicsEngineBase* pengine)
 {
-    LockPhysics(true);
+    if( !IsPhysicsLocked() )
+        RAVELOG_WARNA("Setting physics engine without locking physics\n");
+
     assert( _pPhysicsEngine != NULL );
     _pPhysicsEngine->DestroyEnvironment();
     _pPhysicsEngine = pengine;
@@ -1084,7 +1086,6 @@ bool Environment::SetPhysicsEngine(PhysicsEngineBase* pengine)
         _pPhysicsEngine = &_dummyphysics;
     }
     _pPhysicsEngine->InitEnvironment();
-    LockPhysics(false);
     return true;
 }
 

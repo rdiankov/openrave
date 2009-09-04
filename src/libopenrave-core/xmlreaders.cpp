@@ -2703,6 +2703,12 @@ bool EnvironmentXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *na
                     ((KinBodyXMLReader*)_pcurreader.get())->SetXMLFilename(_filename);
                 _penv->AddKinBody((KinBody*)_pcurreader->Release());
             }
+            else if( dynamic_cast< DummyInterfaceXMLReader<PT_PhysicsEngine>* >(_pcurreader.get()) ) {
+                _penv->SetPhysicsEngine((PhysicsEngineBase*)_pcurreader->Release());
+            }
+            else if( dynamic_cast< DummyInterfaceXMLReader<PT_CollisionChecker>* >(_pcurreader.get()) ) {
+                _penv->SetCollisionChecker((CollisionCheckerBase*)_pcurreader->Release());
+            }
             else {
                 //RAVELOG_WARNA("losing pointer to environment %s",name);
                 _pcurreader->Release();
