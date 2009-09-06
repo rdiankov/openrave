@@ -366,6 +366,19 @@ inline double IKatan2(double fy, double fx) {
         return 0;
     return atan2(fy,fx);
 }
+
+// define when creating a shared object/dll
+#ifdef IKFAST_CLIBRARY
+extern "C"
+{
+    bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions);
+    int getNumFreeParameters();
+    int* getFreeParameters();
+    int getNumJoints();
+    int getIKRealSize();
+}
+#endif
+
 """
         code += solvertree.generate(self)
         code += solvertree.end(self)
@@ -2419,7 +2432,7 @@ ikfast.py --fkfile=fk_WAM7.txt --baselink=0 --eelink=7 --savefile=ik.cpp 1 2 3 4
 
     tstart = time.time()
     kinematics = RobotKinematics(options.fkfile)
-    code = kinematics.generateIkSolver(options.baselink,options.eelink,solvejoints,options.freeparams,options.usedummyjoints)
+    code = kinematics.generateIkSolver(options.baselink,options.eelink,solvejoints,options.freeparams,options.usedummyjoints,rotation3donly=options.rotation3donly)
 
     success = True if len(code) > 0 else False
 

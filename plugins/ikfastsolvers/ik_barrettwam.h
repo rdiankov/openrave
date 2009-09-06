@@ -111,6 +111,19 @@ inline double IKatan2(double fy, double fx) {
         return 0;
     return atan2(fy,fx);
 }
+
+// define when creating a shared object/dll
+#ifdef IKFAST_CLIBRARY
+extern "C"
+{
+    bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions);
+    int getNumFreeParameters();
+    int* getFreeParameters();
+    int getNumJoints();
+    int getIKRealSize();
+}
+#endif
+
 int getNumFreeParameters() { return 1; }
 int* getFreeParameters() { static int freeparams[] = {2}; return freeparams; }
 int getNumJoints() { return 7; }
