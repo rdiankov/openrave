@@ -869,25 +869,45 @@ RobotBase* Environment::CreateRobot(const char* pname)
 
 void Environment::AddIKSolvers()
 {
-    // don't wait for plugins
-    ifstream f((_homedirectory + "/ikfastsolvers").c_str());
-    if( !f )
-        return;
-
     if( !_pIKFastLoader ) {
         _pIKFastLoader.reset(_pdatabase->CreateProblem(this,"IKFast"));
         if( !_pIKFastLoader )
             return;
     }
 
-    while(!f.eof()) {
-        string ikname, iklibrary, response;
-        f >> ikname >> iklibrary;
-        if( !f )
-            break;
-        stringstream ss;
-        ss << "AddIkLibrary " << ikname << " " << iklibrary;
-        _pIKFastLoader->SendCommand(ss.str().c_str(),response);
+    string ikname, iklibrary, response;
+    stringstream ss;
+    // don't wait for plugins
+    ifstream f((_homedirectory + "/ikfastsolvers").c_str());
+    if( !!f ) {
+        while(!f.eof()) {
+            f >> ikname >> iklibrary;
+            if( !f )
+                break;
+            ss.str("");
+            ss << "AddIkLibrary " << ikname << " " << iklibrary;
+            if( !_pIKFastLoader->SendCommand(ss.str().c_str(),response) )
+                RAVELOG_WARNA("failed to load %s",iklibrary.c_str());
+        }
+    }
+
+    vector<string> vikfastsolvers;
+    if( ParseDirectories(getenv("OPENRAVE_IKFAST"), vikfastsolvers) ) {
+        FOREACH(it,vikfastsolvers) {
+            string::size_type pos = it->find('=');
+            if( pos == string::npos ) {
+                if( it->size() > 0 )
+                    RAVELOG_WARNA("cannot extract name and file from OPENRAVE_IKFAST string %s (no =)\n",it->c_str());
+            }
+            else {
+                ikname = it->substr(0,pos);
+                iklibrary = it->substr(pos+1);
+                ss.str("");
+                ss << "AddIkLibrary " << ikname << " " << iklibrary;
+                if( !_pIKFastLoader->SendCommand(ss.str().c_str(),response) )
+                    RAVELOG_WARNA("failed to load %s",iklibrary.c_str());
+            }
+        }
     }
 }
 
