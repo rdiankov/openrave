@@ -892,10 +892,13 @@ bool LinkXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *name)
                 switch(itgeom->type) {
                 case KinBody::Link::GEOMPROPERTIES::GeomSphere:
                     mass = MASS::GetSphericalMassD(itgeom->GetSphereRadius(), Vector(),_fMassDensity);
+                    break;
                 case KinBody::Link::GEOMPROPERTIES::GeomBox:
                     mass = MASS::GetBoxMassD(itgeom->GetBoxExtents(), Vector(), _fMassDensity);
+                    break;
                 case KinBody::Link::GEOMPROPERTIES::GeomCylinder:
                     mass = MASS::GetCylinderMassD(itgeom->GetCylinderRadius(), itgeom->GetCylinderHeight(), Vector(), _fMassDensity);
+                    break;
                 default:
                     break;
                 }
@@ -912,7 +915,7 @@ bool LinkXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *name)
         else if( _masstype == MT_Custom )
             totalmass = _massCustom;
         else
-            totalmass = MASS::GetSphericalMassD(_vMassExtents.x, Vector(), _fTotalMass);
+            totalmass = MASS::GetSphericalMass(_vMassExtents.x, Vector(), _fTotalMass);
         
         _plink->_transMass = totalmass.t;
         _plink->_mass = totalmass.fTotalMass;
