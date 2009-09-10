@@ -253,6 +253,9 @@ void* ODESpace::InitKinBody(KinBody* pbody)
             case KinBody::Joint::JointHinge2:
                 joint = dJointCreateHinge2(GetWorld(), pinfo->jointgroup);
                 break;
+            case KinBody::Joint::JointSpherical:
+                joint = dJointCreateBall(GetWorld(),pinfo->jointgroup);
+                break;
             default:
                 break;
             }
@@ -281,6 +284,9 @@ void* ODESpace::InitKinBody(KinBody* pbody)
                 dJointSetHinge2Anchor(joint,anchor.x,anchor.y,anchor.z);
                 dJointSetHinge2Axis1(joint,axis0.x,axis0.y,axis0.z);
                 dJointSetHinge2Axis2(joint,axis1.x,axis1.y,axis1.z);
+                break;
+            case KinBody::Joint::JointSpherical:
+                dJointSetBallAnchor(joint,anchor.x,anchor.y,anchor.z);
                 break;
             default:
                 break;

@@ -72,7 +72,7 @@ public:
     JointSetFn _jointset[12];
     JointGetParamFn _jointgetparam[12];
     JointAddForceFn _jointadd[12];
-    vector<JointGetFn> _jointgetpos[12], _jointgetvel[12];
+    vector<JointGetFn> _jointgetvel[12];
 };
 
 #endif

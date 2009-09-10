@@ -437,13 +437,11 @@ int KinBody::Joint::GetDOF() const
 {
     switch(type) {
     case JointHinge:
-    case JointSlider:
-        return 1;
+    case JointSlider: return 1;
     case JointHinge2:
-    case JointUniversal:
-        return 2;
-    default: 
-        return 0;
+    case JointUniversal: return 2;
+    case JointSpherical: return 3;
+    default: return 0;
     }
 }
 
@@ -480,6 +478,18 @@ int KinBody::Joint::GetValues(dReal *pValues) const
         case JointSlider:
             pValues[0] = offset-(tjoint.trans.x*vAxes[0].x+tjoint.trans.y*vAxes[0].y+tjoint.trans.z*vAxes[0].z);
             break;
+        case JointSpherical: {
+            dReal fsinang2 = tjoint.rot.y*tjoint.rot.y+tjoint.rot.z*tjoint.rot.z+tjoint.rot.w*tjoint.rot.w;
+            if( fsinang2 > 1e-10f ) {
+                dReal fsinang = RaveSqrt(fsinang2);
+                dReal fmult = 2*RaveAtan2(fsinang,tjoint.rot.x)/fsinang;
+                pValues[0] = tjoint.rot.y*fmult; pValues[1] = tjoint.rot.z*fmult; pValues[2] = tjoint.rot.w*fmult;
+            }
+            else {
+                pValues[0] = 0; pValues[1] = 0; pValues[2] = 0;
+            }
+            break;
+        }
         default:
             RAVELOG_WARNA("unknown joint type %d\n", type);
             if( GetDOF() > 0 )
@@ -685,7 +695,6 @@ void KinBody::GetJointValues(std::vector<dReal>& v) const
         GetJointValues(&v[0]);
 }
 
-
 void KinBody::GetJointVelocities(dReal* pRates) const
 {
     assert( pRates != NULL );
@@ -844,6 +853,9 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
                             case Joint::JointSlider:
                                 v = -fjointvel[0]*(*itjoint)->vAxes[0];
                                 break;
+                            case Joint::JointSpherical:
+                                w.x = fjointvel[0]; w.y = fjointvel[1]; w.z = fjointvel[2];
+                                break;
                             default:
                                 RAVELOG_WARNA("forward kinematic type %d not supported\n", (*itjoint)->GetType());
                                 break;
@@ -876,6 +888,9 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
                         case Joint::JointSlider:
                             v = fjointvel[0]*(*itjoint)->vAxes[0];
                             break;
+                        case Joint::JointSpherical:
+                            w.x = -fjointvel[0]; w.y = -fjointvel[1]; w.z = -fjointvel[2];
+                            break;
                         default:
                             RAVELOG_WARNA("forward kinematic type %d not supported\n", (*itjoint)->GetType());
                             break;
@@ -907,6 +922,9 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
                     }
                     case Joint::JointSlider:
                         v = -fjointvel[0]*(*itjoint)->vAxes[0];
+                        break;
+                    case Joint::JointSpherical:
+                        w.x = fjointvel[0]; w.y = fjointvel[1]; w.z = fjointvel[2];
                         break;
                     default:
                         RAVELOG_WARNA("forward kinematic type %d not supported\n", (*itjoint)->GetType());
@@ -1081,10 +1099,36 @@ void KinBody::SetJointValues(vector<Transform>* pvbodies, const Transform* ptran
             const dReal* p = pJointValues+*itindex++;
             assert( (*it)->GetDOF() <= 3 );
             (*it)->GetLimits(lowerlim, upperlim);
-            for(int i = 0; i < (*it)->GetDOF(); ++i) {
-                if( p[i] < lowerlim[i] ) *ptempjoints++ = lowerlim[i];
-                else if( p[i] > upperlim[i] ) *ptempjoints++ = upperlim[i];
-                else *ptempjoints++ = p[i];
+            if( (*it)->GetType() == Joint::JointSpherical ) {
+                dReal fcurang = fmodf(RaveSqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]),2*PI);
+                if( fcurang < lowerlim[0] ) {
+                    if( fcurang < 1e-10 ) {
+                        *ptempjoints++ = lowerlim[0]; *ptempjoints++ = 0; *ptempjoints++ = 0;
+                    }
+                    else {
+                        dReal fmult = lowerlim[0]/fcurang;
+                        *ptempjoints++ = p[0]*fmult; *ptempjoints++ = p[1]*fmult; *ptempjoints++ = p[2]*fmult;
+                    }
+                }
+                else if( fcurang > upperlim[0] ) {
+                    if( fcurang < 1e-10 ) {
+                        *ptempjoints++ = upperlim[0]; *ptempjoints++ = 0; *ptempjoints++ = 0;
+                    }
+                    else {
+                        dReal fmult = upperlim[0]/fcurang;
+                        *ptempjoints++ = p[0]*fmult; *ptempjoints++ = p[1]*fmult; *ptempjoints++ = p[2]*fmult;
+                    }
+                }
+                else {
+                    *ptempjoints++ = p[0]; *ptempjoints++ = p[1]; *ptempjoints++ = p[2];
+                }
+            }
+            else {
+                for(int i = 0; i < (*it)->GetDOF(); ++i) {
+                    if( p[i] < lowerlim[i] ) *ptempjoints++ = lowerlim[i];
+                    else if( p[i] > upperlim[i] ) *ptempjoints++ = upperlim[i];
+                    else *ptempjoints++ = p[i];
+                }
             }
         }
 
@@ -1173,7 +1217,7 @@ void KinBody::SetJointValues(vector<Transform>* pvbodies, const Transform* ptran
                 dReal fjointang[3];
                 for(int iang = 0; iang < (*itjoint)->GetDOF(); ++iang) { 
                     fjointang[iang] = pvalues[iang]-(*itjoint)->GetOffset();
-                    if( (*itjoint)->GetType() != Joint::JointSlider ) {
+                    if( (*itjoint)->GetType() != Joint::JointSlider && (*itjoint)->GetType() != Joint::JointSpherical ) {
                         if( fjointang[iang] < -PI+0.001f ) fjointang[iang] = -PI+0.001f;
                         else if( fjointang[iang] > PI-0.001f ) fjointang[iang] = PI-0.001f;
                     }
@@ -1202,6 +1246,15 @@ void KinBody::SetJointValues(vector<Transform>* pvbodies, const Transform* ptran
                             case Joint::JointSlider:
                                 tjoint.trans = -axis * fjointang[0];
                                 break;
+                            case Joint::JointSpherical: {
+                                dReal fang = fjointang[0]*fjointang[0]+fjointang[1]*fjointang[1]+fjointang[2]*fjointang[2];
+                                if( fang > 1e-10 ) {
+                                    fang = RaveSqrt(fang);
+                                    dReal fiang = 1/fang;
+                                    tjoint.rotfromaxisangle(Vector(fjointang[0]*fiang,fjointang[1]*fiang,fjointang[2]*fiang),fang);
+                                }
+                                break;
+                            }
                             default:
                                 RAVELOG_WARNA("forward kinematic type %d not supported\n", (*itjoint)->GetType());
                                 break;
@@ -1251,6 +1304,15 @@ void KinBody::SetJointValues(vector<Transform>* pvbodies, const Transform* ptran
                         case Joint::JointSlider:
                             tjoint.trans = axis * fjointang[0];
                             break;
+                        case Joint::JointSpherical: {
+                            dReal fang = fjointang[0]*fjointang[0]+fjointang[1]*fjointang[1]+fjointang[2]*fjointang[2];
+                            if( fang > 1e-10 ) {
+                                fang = RaveSqrt(fang);
+                                dReal fiang = 1/fang;
+                                tjoint.rotfromaxisangle(Vector(fjointang[0]*fiang,fjointang[1]*fiang,fjointang[2]*fiang),-fang);
+                            }
+                            break;
+                        }
                         default:
                             RAVELOG_WARNA("forward kinematic type %d not supported\n", (*itjoint)->GetType());
                             break;
@@ -1301,6 +1363,15 @@ void KinBody::SetJointValues(vector<Transform>* pvbodies, const Transform* ptran
                     case Joint::JointSlider:
                         tjoint.trans = -axis * fjointang[0];
                         break;
+                    case Joint::JointSpherical: {
+                        dReal fang = fjointang[0]*fjointang[0]+fjointang[1]*fjointang[1]+fjointang[2]*fjointang[2];
+                        if( fang > 1e-10 ) {
+                            fang = RaveSqrt(fang);
+                            dReal fiang = 1/fang;
+                            tjoint.rotfromaxisangle(Vector(fjointang[0]*fiang,fjointang[1]*fiang,fjointang[2]*fiang),fang);
+                        }
+                        break;
+                    }
                     default:
                         RAVELOG_WARNA("forward kinematic type %d not supported\n", (*itjoint)->GetType());
                         break;
@@ -1395,7 +1466,7 @@ void KinBody::CalculateJacobian(int index, const Vector& trans, dReal* pfJacobia
         pfJacobian[GetDOF()*2] = v.z;
 
         ++jointindex;
-        ++pfJacobian;
+        pfJacobian += (*itjoint)->GetDOF();
     }
 }
 
@@ -1435,7 +1506,7 @@ void KinBody::CalculateRotationJacobian(int index, const Vector& q, dReal* pfJac
         pfJacobian[GetDOF()*3] =    q.x*v.z - q.y*v.y + q.z*v.x;
 
         ++jointindex;
-        ++pfJacobian;
+        pfJacobian += (*itjoint)->GetDOF();
     }
 }
 
@@ -1473,9 +1544,8 @@ void KinBody::CalculateAngularVelocityJacobian(int index, dReal* pfJacobian) con
         pfJacobian[GetDOF()] =     v.y;
         pfJacobian[GetDOF()*2] =   v.z;
 
-
         ++jointindex;
-        ++pfJacobian;
+        pfJacobian += (*itjoint)->GetDOF();
     }
 }
 
@@ -1710,6 +1780,18 @@ void KinBody::WriteForwardKinematics(std::ostream& f)
                                 listlinkinfo.push_back(info);
                                 break;
                             }
+                            case Joint::JointSpherical: {
+                                info.type = "spherical";
+                                info.vjointaxis = Vector(1,1,1);
+                                info.Tright = (*itjoint)->tRight;
+                                info.Tleft = (*itjoint)->tLeft;
+                                info.linkcur = bodies[1]->GetIndex();
+                                info.linkbase = bodies[0]->GetIndex();
+                                info.jointindex = jointindex;
+                                info.bRecord = true;
+                                listlinkinfo.push_back(info);
+                                break;
+                            }
                             default:
                                 RAVELOG_WARNA("forward kinematic type %d not supported\n", (*itjoint)->GetType());
                                 break;
@@ -1733,6 +1815,18 @@ void KinBody::WriteForwardKinematics(std::ostream& f)
                             else
                                 tjoint.trans = info.vjointaxis*(*itjoint)->offset;
                             info.Tleft = (*itjoint)->tinvRight*tjoint;
+                            info.linkcur = bodies[0]->GetIndex();
+                            info.linkbase = bodies[1]->GetIndex();
+                            info.jointindex = jointindex;
+                            info.bRecord = true;
+                            listlinkinfo.push_back(info);
+                            break;
+                        }
+                        case Joint::JointSpherical: {
+                            info.type = "spherical";
+                            info.vjointaxis = Vector(-1,-1,-1);
+                            info.Tright = (*itjoint)->tinvLeft;
+                            info.Tleft = (*itjoint)->tinvRight;
                             info.linkcur = bodies[0]->GetIndex();
                             info.linkbase = bodies[1]->GetIndex();
                             info.jointindex = jointindex;
@@ -1764,6 +1858,21 @@ void KinBody::WriteForwardKinematics(std::ostream& f)
                         info.jointindex = jointindex;
                         info.bRecord =true;
                         
+                        info.Tright = (*itjoint)->tRight;
+                        info.Tleft = (*itjoint)->tLeft;
+                        listlinkinfo.push_back(info);
+                        
+                        break;
+                    }
+                    case Joint::JointSpherical: {
+                        // reset body
+                        LINKTRANSINFO info;
+                        info.type = "spherical";
+                        info.vjointaxis = Vector(1,1,1);
+                        info.linkcur = bodies[0]->GetIndex();
+                        info.linkbase = -1;
+                        info.jointindex = jointindex;
+                        info.bRecord =true;
                         info.Tright = (*itjoint)->tRight;
                         info.Tleft = (*itjoint)->tLeft;
                         listlinkinfo.push_back(info);

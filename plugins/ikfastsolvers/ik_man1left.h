@@ -408,6 +408,39 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                         
                                         {
                                         IKReal evalcond;
+                                            evalcond=IKsin(j4);
+                                            if( IKabs(evalcond) < 0.00001 ) {
+                                            {
+                                            IKReal j6array[1], cj6array[1], sj6array[1];
+                                            bool j6valid[1]={false};
+                                            IKReal x7=IKcos(j4);
+                                            IKReal x8=((IKabs(x7) != 0)?((IKReal)1/(x7)):(IKReal)1.0e30);
+                                            j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x8)), ((_r00)*(x8)));
+                                            sj6array[0]=IKsin(j6array[0]);
+                                            cj6array[0]=IKcos(j6array[0]);
+                                            if( j6array[0] > IKPI )
+                                                j6array[0]-=IK2PI;
+                                            else if( j6array[0] < -IKPI )
+                                                j6array[0]+=IK2PI;
+                                            j6valid[0] = true;
+                                            { int ij6 = 0;
+                                            if( !j6valid[ij6] )
+                                                continue;
+                                            j6 = j6array[0]; cj6 = cj6array[0]; sj6 = sj6array[0];
+                                            
+                                            vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();
+                                            solution.basesol.resize(7);
+                                            solution.basesol[0].foffset = j0;
+                                            solution.basesol[1].foffset = j1;
+                                            solution.basesol[2].foffset = j2;
+                                            solution.basesol[3].foffset = j3;
+                                            solution.basesol[4].foffset = j4;
+                                            solution.basesol[5].foffset = j5;
+                                            solution.basesol[6].foffset = j6;
+                                            solution.vfree.resize(0);
+                                            }
+                                            }
+                                            } else {
                                             evalcond=IKsin(j5);
                                             if( IKabs(evalcond) < 0.00001 ) {
                                             {
@@ -417,9 +450,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                                 {
                                                 IKReal j6array[1], cj6array[1], sj6array[1];
                                                 bool j6valid[1]={false};
-                                                IKReal x7=IKcos(j5);
-                                                IKReal x8=((IKabs(x7) != 0)?((IKReal)1/(x7)):(IKReal)1.0e30);
-                                                j6array[0]=IKatan2(((_r10)*(x8)), ((_r11)*(x8)));
+                                                IKReal x9=IKcos(j5);
+                                                IKReal x10=((IKabs(x9) != 0)?((IKReal)1/(x9)):(IKReal)1.0e30);
+                                                j6array[0]=IKatan2(((_r10)*(x10)), ((_r11)*(x10)));
                                                 sj6array[0]=IKsin(j6array[0]);
                                                 cj6array[0]=IKcos(j6array[0]);
                                                 if( j6array[0] > IKPI )
@@ -449,9 +482,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                                 {
                                                 IKReal j6array[1], cj6array[1], sj6array[1];
                                                 bool j6valid[1]={false};
-                                                IKReal x9=IKcos(j4);
-                                                IKReal x10=((IKabs(x9) != 0)?((IKReal)1/(x9)):(IKReal)1.0e30);
-                                                j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x10)), ((_r00)*(x10)));
+                                                IKReal x11=IKcos(j4);
+                                                IKReal x12=((IKabs(x11) != 0)?((IKReal)1/(x11)):(IKReal)1.0e30);
+                                                j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x12)), ((_r00)*(x12)));
                                                 sj6array[0]=IKsin(j6array[0]);
                                                 cj6array[0]=IKcos(j6array[0]);
                                                 if( j6array[0] > IKPI )
@@ -485,17 +518,18 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                             {
                                             IKReal j6array[1], cj6array[1], sj6array[1];
                                             bool j6valid[1]={false};
-                                            IKReal x11=IKsin(j5);
-                                            IKReal x12=IKcos(j4);
-                                            IKReal x13=(x12)*(x12);
-                                            IKReal x14=((IKabs(x11) != 0)?(pow(x11,-2.00000000000000)):(IKReal)1.0e30);
-                                            IKReal x15=((x13)*(x14));
-                                            IKReal x16=((1.00000000000000)+(x15));
-                                            IKReal x17=((x16)+(((-1.00000000000000)*(x13))));
-                                            IKReal x18=((IKabs(x17) != 0)?((IKReal)1/(x17)):(IKReal)1.0e30);
-                                            IKReal x19=((IKabs(x11) != 0)?((IKReal)1/(x11)):(IKReal)1.0e30);
-                                            IKReal x20=IKsin(j4);
-                                            j6array[0]=IKatan2(((((_r00)*(x18)*(x19)*(x20)))+(((-1.00000000000000)*(_r01)*(x12)*(x14)*(x18)))), ((((_r00)*(x12)*(x14)*(x18)))+(((_r01)*(x18)*(x19)*(x20)))));
+                                            IKReal x13=IKsin(j4);
+                                            IKReal x14=IKsin(j5);
+                                            IKReal x15=IKcos(j4);
+                                            IKReal x16=(x15)*(x15);
+                                            IKReal x17=((IKabs(x13) != 0)?(pow(x13,-2.00000000000000)):(IKReal)1.0e30);
+                                            IKReal x18=((IKabs(x14) != 0)?(pow(x14,-2.00000000000000)):(IKReal)1.0e30);
+                                            IKReal x19=((x16)*(x17)*(x18));
+                                            IKReal x20=((1.00000000000000)+(x19));
+                                            IKReal x21=((IKabs(x20) != 0)?((IKReal)1/(x20)):(IKReal)1.0e30);
+                                            IKReal x22=((IKabs(x13) != 0)?((IKReal)1/(x13)):(IKReal)1.0e30);
+                                            IKReal x23=((IKabs(x14) != 0)?((IKReal)1/(x14)):(IKReal)1.0e30);
+                                            j6array[0]=IKatan2(((((-1.00000000000000)*(_r01)*(x15)*(x17)*(x18)*(x21)))+(((_r00)*(x21)*(x22)*(x23)))), ((((_r00)*(x15)*(x17)*(x18)*(x21)))+(((_r01)*(x21)*(x22)*(x23)))));
                                             sj6array[0]=IKsin(j6array[0]);
                                             cj6array[0]=IKcos(j6array[0]);
                                             if( j6array[0] > IKPI )
@@ -526,6 +560,7 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                         }
                                         }
                                         }
+                                        }
                                         } else {
                                     }
                                     }
@@ -541,8 +576,8 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 {
                                 IKReal j2array[1], cj2array[1], sj2array[1];
                                 bool j2valid[1]={false};
-                                IKReal x21=((IKabs(sj3) != 0)?((IKReal)1/(sj3)):(IKReal)1.0e30);
-                                j2array[0]=IKatan2(((-3.82116927779862)*(px)*(x21)), ((-3.82116927779862)*(pz)*(x21)));
+                                IKReal x24=((IKabs(sj3) != 0)?((IKReal)1/(sj3)):(IKReal)1.0e30);
+                                j2array[0]=IKatan2(((-3.82116927779862)*(px)*(x24)), ((-3.82116927779862)*(pz)*(x24)));
                                 sj2array[0]=IKsin(j2array[0]);
                                 cj2array[0]=IKcos(j2array[0]);
                                 if( j2array[0] > IKPI )
@@ -665,9 +700,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                         {
                                         IKReal j6array[1], cj6array[1], sj6array[1];
                                         bool j6valid[1]={false};
-                                        IKReal x22=IKcos(j4);
-                                        IKReal x23=((IKabs(x22) != 0)?((IKReal)1/(x22)):(IKReal)1.0e30);
-                                        j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x23)), ((_r00)*(x23)));
+                                        IKReal x25=IKcos(j4);
+                                        IKReal x26=((IKabs(x25) != 0)?((IKReal)1/(x25)):(IKReal)1.0e30);
+                                        j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x26)), ((_r00)*(x26)));
                                         sj6array[0]=IKsin(j6array[0]);
                                         cj6array[0]=IKcos(j6array[0]);
                                         if( j6array[0] > IKPI )
@@ -714,6 +749,39 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                         
                                         {
                                         IKReal evalcond;
+                                            evalcond=IKsin(j4);
+                                            if( IKabs(evalcond) < 0.00001 ) {
+                                            {
+                                            IKReal j6array[1], cj6array[1], sj6array[1];
+                                            bool j6valid[1]={false};
+                                            IKReal x27=IKcos(j4);
+                                            IKReal x28=((IKabs(x27) != 0)?((IKReal)1/(x27)):(IKReal)1.0e30);
+                                            j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x28)), ((_r00)*(x28)));
+                                            sj6array[0]=IKsin(j6array[0]);
+                                            cj6array[0]=IKcos(j6array[0]);
+                                            if( j6array[0] > IKPI )
+                                                j6array[0]-=IK2PI;
+                                            else if( j6array[0] < -IKPI )
+                                                j6array[0]+=IK2PI;
+                                            j6valid[0] = true;
+                                            { int ij6 = 0;
+                                            if( !j6valid[ij6] )
+                                                continue;
+                                            j6 = j6array[0]; cj6 = cj6array[0]; sj6 = sj6array[0];
+                                            
+                                            vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();
+                                            solution.basesol.resize(7);
+                                            solution.basesol[0].foffset = j0;
+                                            solution.basesol[1].foffset = j1;
+                                            solution.basesol[2].foffset = j2;
+                                            solution.basesol[3].foffset = j3;
+                                            solution.basesol[4].foffset = j4;
+                                            solution.basesol[5].foffset = j5;
+                                            solution.basesol[6].foffset = j6;
+                                            solution.vfree.resize(0);
+                                            }
+                                            }
+                                            } else {
                                             evalcond=IKsin(j5);
                                             if( IKabs(evalcond) < 0.00001 ) {
                                             {
@@ -723,9 +791,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                                 {
                                                 IKReal j6array[1], cj6array[1], sj6array[1];
                                                 bool j6valid[1]={false};
-                                                IKReal x24=IKcos(j5);
-                                                IKReal x25=((IKabs(x24) != 0)?((IKReal)1/(x24)):(IKReal)1.0e30);
-                                                j6array[0]=IKatan2(((_r10)*(x25)), ((_r11)*(x25)));
+                                                IKReal x29=IKcos(j5);
+                                                IKReal x30=((IKabs(x29) != 0)?((IKReal)1/(x29)):(IKReal)1.0e30);
+                                                j6array[0]=IKatan2(((_r10)*(x30)), ((_r11)*(x30)));
                                                 sj6array[0]=IKsin(j6array[0]);
                                                 cj6array[0]=IKcos(j6array[0]);
                                                 if( j6array[0] > IKPI )
@@ -755,9 +823,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                                 {
                                                 IKReal j6array[1], cj6array[1], sj6array[1];
                                                 bool j6valid[1]={false};
-                                                IKReal x26=IKcos(j4);
-                                                IKReal x27=((IKabs(x26) != 0)?((IKReal)1/(x26)):(IKReal)1.0e30);
-                                                j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x27)), ((_r00)*(x27)));
+                                                IKReal x31=IKcos(j4);
+                                                IKReal x32=((IKabs(x31) != 0)?((IKReal)1/(x31)):(IKReal)1.0e30);
+                                                j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x32)), ((_r00)*(x32)));
                                                 sj6array[0]=IKsin(j6array[0]);
                                                 cj6array[0]=IKcos(j6array[0]);
                                                 if( j6array[0] > IKPI )
@@ -791,17 +859,18 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                             {
                                             IKReal j6array[1], cj6array[1], sj6array[1];
                                             bool j6valid[1]={false};
-                                            IKReal x28=IKsin(j5);
-                                            IKReal x29=IKcos(j4);
-                                            IKReal x30=(x29)*(x29);
-                                            IKReal x31=((IKabs(x28) != 0)?(pow(x28,-2.00000000000000)):(IKReal)1.0e30);
-                                            IKReal x32=((x30)*(x31));
-                                            IKReal x33=((1.00000000000000)+(x32));
-                                            IKReal x34=((((-1.00000000000000)*(x30)))+(x33));
-                                            IKReal x35=((IKabs(x34) != 0)?((IKReal)1/(x34)):(IKReal)1.0e30);
-                                            IKReal x36=((IKabs(x28) != 0)?((IKReal)1/(x28)):(IKReal)1.0e30);
-                                            IKReal x37=IKsin(j4);
-                                            j6array[0]=IKatan2(((((_r00)*(x35)*(x36)*(x37)))+(((-1.00000000000000)*(_r01)*(x29)*(x31)*(x35)))), ((((_r00)*(x29)*(x31)*(x35)))+(((_r01)*(x35)*(x36)*(x37)))));
+                                            IKReal x33=IKsin(j4);
+                                            IKReal x34=IKsin(j5);
+                                            IKReal x35=IKcos(j4);
+                                            IKReal x36=(x35)*(x35);
+                                            IKReal x37=((IKabs(x33) != 0)?(pow(x33,-2.00000000000000)):(IKReal)1.0e30);
+                                            IKReal x38=((IKabs(x34) != 0)?(pow(x34,-2.00000000000000)):(IKReal)1.0e30);
+                                            IKReal x39=((x36)*(x37)*(x38));
+                                            IKReal x40=((1.00000000000000)+(x39));
+                                            IKReal x41=((IKabs(x40) != 0)?((IKReal)1/(x40)):(IKReal)1.0e30);
+                                            IKReal x42=((IKabs(x33) != 0)?((IKReal)1/(x33)):(IKReal)1.0e30);
+                                            IKReal x43=((IKabs(x34) != 0)?((IKReal)1/(x34)):(IKReal)1.0e30);
+                                            j6array[0]=IKatan2(((((_r00)*(x41)*(x42)*(x43)))+(((-1.00000000000000)*(_r01)*(x35)*(x37)*(x38)*(x41)))), ((((_r01)*(x41)*(x42)*(x43)))+(((_r00)*(x35)*(x37)*(x38)*(x41)))));
                                             sj6array[0]=IKsin(j6array[0]);
                                             cj6array[0]=IKcos(j6array[0]);
                                             if( j6array[0] > IKPI )
@@ -832,6 +901,7 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                         }
                                         }
                                         }
+                                        }
                                         } else {
                                     }
                                     }
@@ -856,26 +926,26 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                         }
                     {
                         IKReal j2eval[7];
-                        IKReal x38=((0.261699999999109)*(sj3));
-                        IKReal x39=((x38)+(pz));
-                        IKReal x40=((-1.00000000000000)*(x39));
-                        j2eval[0]=x40;
-                        j2eval[1]=x40;
-                        j2eval[2]=x40;
-                        j2eval[3]=x40;
-                        j2eval[4]=x40;
-                        j2eval[5]=x40;
-                        j2eval[6]=x40;
+                        IKReal x44=((0.261699999999109)*(sj3));
+                        IKReal x45=((x44)+(pz));
+                        IKReal x46=((-1.00000000000000)*(x45));
+                        j2eval[0]=x46;
+                        j2eval[1]=x46;
+                        j2eval[2]=x46;
+                        j2eval[3]=x46;
+                        j2eval[4]=x46;
+                        j2eval[5]=x46;
+                        j2eval[6]=x46;
                         if( IKabs(j2eval[0]) < 0.000100  && IKabs(j2eval[1]) < 0.000100  && IKabs(j2eval[2]) < 0.000100  && IKabs(j2eval[3]) < 0.000100  && IKabs(j2eval[4]) < 0.000100  && IKabs(j2eval[5]) < 0.000100  && IKabs(j2eval[6]) < 0.000100  ) {
                             {
                             j2 = 0.000000; sj2 = 0.000000; cj2 = 1.000000;
                             {
                             IKReal j1array[1], cj1array[1], sj1array[1];
                             bool j1valid[1]={false};
-                            IKReal x41=((0.261699999999109)*(cj3));
-                            IKReal x42=((0.310199999999895)+(x41));
-                            IKReal x43=((IKabs(x42) != 0)?((IKReal)1/(x42)):(IKReal)1.0e30);
-                            j1array[0]=IKatan2(((-1.00000000000000)*(px)*(x43)), ((-1.00000000000000)*(py)*(x43)));
+                            IKReal x47=((0.261699999999109)*(cj3));
+                            IKReal x48=((0.310199999999895)+(x47));
+                            IKReal x49=((IKabs(x48) != 0)?((IKReal)1/(x48)):(IKReal)1.0e30);
+                            j1array[0]=IKatan2(((-1.00000000000000)*(px)*(x49)), ((-1.00000000000000)*(py)*(x49)));
                             sj1array[0]=IKsin(j1array[0]);
                             cj1array[0]=IKcos(j1array[0]);
                             if( j1array[0] > IKPI )
@@ -998,9 +1068,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                     {
                                     IKReal j6array[1], cj6array[1], sj6array[1];
                                     bool j6valid[1]={false};
-                                    IKReal x44=IKcos(j4);
-                                    IKReal x45=((IKabs(x44) != 0)?((IKReal)1/(x44)):(IKReal)1.0e30);
-                                    j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x45)), ((_r00)*(x45)));
+                                    IKReal x50=IKcos(j4);
+                                    IKReal x51=((IKabs(x50) != 0)?((IKReal)1/(x50)):(IKReal)1.0e30);
+                                    j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x51)), ((_r00)*(x51)));
                                     sj6array[0]=IKsin(j6array[0]);
                                     cj6array[0]=IKcos(j6array[0]);
                                     if( j6array[0] > IKPI )
@@ -1047,6 +1117,39 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                     
                                     {
                                     IKReal evalcond;
+                                        evalcond=IKsin(j4);
+                                        if( IKabs(evalcond) < 0.00001 ) {
+                                        {
+                                        IKReal j6array[1], cj6array[1], sj6array[1];
+                                        bool j6valid[1]={false};
+                                        IKReal x52=IKcos(j4);
+                                        IKReal x53=((IKabs(x52) != 0)?((IKReal)1/(x52)):(IKReal)1.0e30);
+                                        j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x53)), ((_r00)*(x53)));
+                                        sj6array[0]=IKsin(j6array[0]);
+                                        cj6array[0]=IKcos(j6array[0]);
+                                        if( j6array[0] > IKPI )
+                                            j6array[0]-=IK2PI;
+                                        else if( j6array[0] < -IKPI )
+                                            j6array[0]+=IK2PI;
+                                        j6valid[0] = true;
+                                        { int ij6 = 0;
+                                        if( !j6valid[ij6] )
+                                            continue;
+                                        j6 = j6array[0]; cj6 = cj6array[0]; sj6 = sj6array[0];
+                                        
+                                        vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();
+                                        solution.basesol.resize(7);
+                                        solution.basesol[0].foffset = j0;
+                                        solution.basesol[1].foffset = j1;
+                                        solution.basesol[2].foffset = j2;
+                                        solution.basesol[3].foffset = j3;
+                                        solution.basesol[4].foffset = j4;
+                                        solution.basesol[5].foffset = j5;
+                                        solution.basesol[6].foffset = j6;
+                                        solution.vfree.resize(0);
+                                        }
+                                        }
+                                        } else {
                                         evalcond=IKsin(j5);
                                         if( IKabs(evalcond) < 0.00001 ) {
                                         {
@@ -1056,9 +1159,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                             {
                                             IKReal j6array[1], cj6array[1], sj6array[1];
                                             bool j6valid[1]={false};
-                                            IKReal x46=IKcos(j5);
-                                            IKReal x47=((IKabs(x46) != 0)?((IKReal)1/(x46)):(IKReal)1.0e30);
-                                            j6array[0]=IKatan2(((_r10)*(x47)), ((_r11)*(x47)));
+                                            IKReal x54=IKcos(j5);
+                                            IKReal x55=((IKabs(x54) != 0)?((IKReal)1/(x54)):(IKReal)1.0e30);
+                                            j6array[0]=IKatan2(((_r10)*(x55)), ((_r11)*(x55)));
                                             sj6array[0]=IKsin(j6array[0]);
                                             cj6array[0]=IKcos(j6array[0]);
                                             if( j6array[0] > IKPI )
@@ -1088,9 +1191,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                             {
                                             IKReal j6array[1], cj6array[1], sj6array[1];
                                             bool j6valid[1]={false};
-                                            IKReal x48=IKcos(j4);
-                                            IKReal x49=((IKabs(x48) != 0)?((IKReal)1/(x48)):(IKReal)1.0e30);
-                                            j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x49)), ((_r00)*(x49)));
+                                            IKReal x56=IKcos(j4);
+                                            IKReal x57=((IKabs(x56) != 0)?((IKReal)1/(x56)):(IKReal)1.0e30);
+                                            j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x57)), ((_r00)*(x57)));
                                             sj6array[0]=IKsin(j6array[0]);
                                             cj6array[0]=IKcos(j6array[0]);
                                             if( j6array[0] > IKPI )
@@ -1124,17 +1227,18 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                         {
                                         IKReal j6array[1], cj6array[1], sj6array[1];
                                         bool j6valid[1]={false};
-                                        IKReal x50=IKsin(j5);
-                                        IKReal x51=IKcos(j4);
-                                        IKReal x52=(x51)*(x51);
-                                        IKReal x53=((IKabs(x50) != 0)?(pow(x50,-2.00000000000000)):(IKReal)1.0e30);
-                                        IKReal x54=((x52)*(x53));
-                                        IKReal x55=((1.00000000000000)+(x54));
-                                        IKReal x56=((x55)+(((-1.00000000000000)*(x52))));
-                                        IKReal x57=((IKabs(x56) != 0)?((IKReal)1/(x56)):(IKReal)1.0e30);
-                                        IKReal x58=((IKabs(x50) != 0)?((IKReal)1/(x50)):(IKReal)1.0e30);
-                                        IKReal x59=IKsin(j4);
-                                        j6array[0]=IKatan2(((((-1.00000000000000)*(_r01)*(x51)*(x53)*(x57)))+(((_r00)*(x57)*(x58)*(x59)))), ((((_r01)*(x57)*(x58)*(x59)))+(((_r00)*(x51)*(x53)*(x57)))));
+                                        IKReal x58=IKsin(j4);
+                                        IKReal x59=IKsin(j5);
+                                        IKReal x60=IKcos(j4);
+                                        IKReal x61=(x60)*(x60);
+                                        IKReal x62=((IKabs(x58) != 0)?(pow(x58,-2.00000000000000)):(IKReal)1.0e30);
+                                        IKReal x63=((IKabs(x59) != 0)?(pow(x59,-2.00000000000000)):(IKReal)1.0e30);
+                                        IKReal x64=((x61)*(x62)*(x63));
+                                        IKReal x65=((1.00000000000000)+(x64));
+                                        IKReal x66=((IKabs(x65) != 0)?((IKReal)1/(x65)):(IKReal)1.0e30);
+                                        IKReal x67=((IKabs(x58) != 0)?((IKReal)1/(x58)):(IKReal)1.0e30);
+                                        IKReal x68=((IKabs(x59) != 0)?((IKReal)1/(x59)):(IKReal)1.0e30);
+                                        j6array[0]=IKatan2(((((-1.00000000000000)*(_r01)*(x60)*(x62)*(x63)*(x66)))+(((_r00)*(x66)*(x67)*(x68)))), ((((_r01)*(x66)*(x67)*(x68)))+(((_r00)*(x60)*(x62)*(x63)*(x66)))));
                                         sj6array[0]=IKsin(j6array[0]);
                                         cj6array[0]=IKcos(j6array[0]);
                                         if( j6array[0] > IKPI )
@@ -1160,6 +1264,7 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                         }
                                         }
                                         } else {
+                                    }
                                     }
                                     }
                                     }
@@ -1212,12 +1317,12 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                     {
                     IKReal j1array[1], cj1array[1], sj1array[1];
                     bool j1valid[1]={false};
-                    IKReal x60=(px)*(px);
-                    IKReal x61=(py)*(py);
-                    IKReal x62=((x60)+(x61));
-                    IKReal x63=((-1.00000000000000)*(x62));
-                    IKReal x64=((IKabs(x63) != 0)?((IKReal)1/(x63)):(IKReal)1.0e30);
-                    j1array[0]=IKatan2(((((0.310199999999895)*(px)*(x64)))+(((-0.261699999999109)*(py)*(sj2)*(sj3)*(x64)))+(((0.261699999999109)*(cj3)*(px)*(x64)))), ((((0.261699999999109)*(cj3)*(py)*(x64)))+(((0.261699999999109)*(px)*(sj2)*(sj3)*(x64)))+(((0.310199999999895)*(py)*(x64)))));
+                    IKReal x69=(px)*(px);
+                    IKReal x70=(py)*(py);
+                    IKReal x71=((x69)+(x70));
+                    IKReal x72=((-1.00000000000000)*(x71));
+                    IKReal x73=((IKabs(x72) != 0)?((IKReal)1/(x72)):(IKReal)1.0e30);
+                    j1array[0]=IKatan2(((((0.310199999999895)*(px)*(x73)))+(((-0.261699999999109)*(py)*(sj2)*(sj3)*(x73)))+(((0.261699999999109)*(cj3)*(px)*(x73)))), ((((0.261699999999109)*(cj3)*(py)*(x73)))+(((0.310199999999895)*(py)*(x73)))+(((0.261699999999109)*(px)*(sj2)*(sj3)*(x73)))));
                     sj1array[0]=IKsin(j1array[0]);
                     cj1array[0]=IKcos(j1array[0]);
                     if( j1array[0] > IKPI )
@@ -1340,9 +1445,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                             {
                             IKReal j6array[1], cj6array[1], sj6array[1];
                             bool j6valid[1]={false};
-                            IKReal x65=IKcos(j4);
-                            IKReal x66=((IKabs(x65) != 0)?((IKReal)1/(x65)):(IKReal)1.0e30);
-                            j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x66)), ((_r00)*(x66)));
+                            IKReal x74=IKcos(j4);
+                            IKReal x75=((IKabs(x74) != 0)?((IKReal)1/(x74)):(IKReal)1.0e30);
+                            j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x75)), ((_r00)*(x75)));
                             sj6array[0]=IKsin(j6array[0]);
                             cj6array[0]=IKcos(j6array[0]);
                             if( j6array[0] > IKPI )
@@ -1389,6 +1494,39 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                             
                             {
                             IKReal evalcond;
+                                evalcond=IKsin(j4);
+                                if( IKabs(evalcond) < 0.00001 ) {
+                                {
+                                IKReal j6array[1], cj6array[1], sj6array[1];
+                                bool j6valid[1]={false};
+                                IKReal x76=IKcos(j4);
+                                IKReal x77=((IKabs(x76) != 0)?((IKReal)1/(x76)):(IKReal)1.0e30);
+                                j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x77)), ((_r00)*(x77)));
+                                sj6array[0]=IKsin(j6array[0]);
+                                cj6array[0]=IKcos(j6array[0]);
+                                if( j6array[0] > IKPI )
+                                    j6array[0]-=IK2PI;
+                                else if( j6array[0] < -IKPI )
+                                    j6array[0]+=IK2PI;
+                                j6valid[0] = true;
+                                { int ij6 = 0;
+                                if( !j6valid[ij6] )
+                                    continue;
+                                j6 = j6array[0]; cj6 = cj6array[0]; sj6 = sj6array[0];
+                                
+                                vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();
+                                solution.basesol.resize(7);
+                                solution.basesol[0].foffset = j0;
+                                solution.basesol[1].foffset = j1;
+                                solution.basesol[2].foffset = j2;
+                                solution.basesol[3].foffset = j3;
+                                solution.basesol[4].foffset = j4;
+                                solution.basesol[5].foffset = j5;
+                                solution.basesol[6].foffset = j6;
+                                solution.vfree.resize(0);
+                                }
+                                }
+                                } else {
                                 evalcond=IKsin(j5);
                                 if( IKabs(evalcond) < 0.00001 ) {
                                 {
@@ -1398,9 +1536,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                     {
                                     IKReal j6array[1], cj6array[1], sj6array[1];
                                     bool j6valid[1]={false};
-                                    IKReal x67=IKcos(j5);
-                                    IKReal x68=((IKabs(x67) != 0)?((IKReal)1/(x67)):(IKReal)1.0e30);
-                                    j6array[0]=IKatan2(((_r10)*(x68)), ((_r11)*(x68)));
+                                    IKReal x78=IKcos(j5);
+                                    IKReal x79=((IKabs(x78) != 0)?((IKReal)1/(x78)):(IKReal)1.0e30);
+                                    j6array[0]=IKatan2(((_r10)*(x79)), ((_r11)*(x79)));
                                     sj6array[0]=IKsin(j6array[0]);
                                     cj6array[0]=IKcos(j6array[0]);
                                     if( j6array[0] > IKPI )
@@ -1430,9 +1568,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                     {
                                     IKReal j6array[1], cj6array[1], sj6array[1];
                                     bool j6valid[1]={false};
-                                    IKReal x69=IKcos(j4);
-                                    IKReal x70=((IKabs(x69) != 0)?((IKReal)1/(x69)):(IKReal)1.0e30);
-                                    j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x70)), ((_r00)*(x70)));
+                                    IKReal x80=IKcos(j4);
+                                    IKReal x81=((IKabs(x80) != 0)?((IKReal)1/(x80)):(IKReal)1.0e30);
+                                    j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x81)), ((_r00)*(x81)));
                                     sj6array[0]=IKsin(j6array[0]);
                                     cj6array[0]=IKcos(j6array[0]);
                                     if( j6array[0] > IKPI )
@@ -1466,17 +1604,18 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 {
                                 IKReal j6array[1], cj6array[1], sj6array[1];
                                 bool j6valid[1]={false};
-                                IKReal x71=IKsin(j5);
-                                IKReal x72=IKcos(j4);
-                                IKReal x73=(x72)*(x72);
-                                IKReal x74=((IKabs(x71) != 0)?(pow(x71,-2.00000000000000)):(IKReal)1.0e30);
-                                IKReal x75=((x73)*(x74));
-                                IKReal x76=((1.00000000000000)+(x75));
-                                IKReal x77=((x76)+(((-1.00000000000000)*(x73))));
-                                IKReal x78=((IKabs(x77) != 0)?((IKReal)1/(x77)):(IKReal)1.0e30);
-                                IKReal x79=((IKabs(x71) != 0)?((IKReal)1/(x71)):(IKReal)1.0e30);
-                                IKReal x80=IKsin(j4);
-                                j6array[0]=IKatan2(((((-1.00000000000000)*(_r01)*(x72)*(x74)*(x78)))+(((_r00)*(x78)*(x79)*(x80)))), ((((_r01)*(x78)*(x79)*(x80)))+(((_r00)*(x72)*(x74)*(x78)))));
+                                IKReal x82=IKsin(j4);
+                                IKReal x83=IKsin(j5);
+                                IKReal x84=IKcos(j4);
+                                IKReal x85=(x84)*(x84);
+                                IKReal x86=((IKabs(x82) != 0)?(pow(x82,-2.00000000000000)):(IKReal)1.0e30);
+                                IKReal x87=((IKabs(x83) != 0)?(pow(x83,-2.00000000000000)):(IKReal)1.0e30);
+                                IKReal x88=((x85)*(x86)*(x87));
+                                IKReal x89=((1.00000000000000)+(x88));
+                                IKReal x90=((IKabs(x89) != 0)?((IKReal)1/(x89)):(IKReal)1.0e30);
+                                IKReal x91=((IKabs(x82) != 0)?((IKReal)1/(x82)):(IKReal)1.0e30);
+                                IKReal x92=((IKabs(x83) != 0)?((IKReal)1/(x83)):(IKReal)1.0e30);
+                                j6array[0]=IKatan2(((((_r00)*(x90)*(x91)*(x92)))+(((-1.00000000000000)*(_r01)*(x84)*(x86)*(x87)*(x90)))), ((((_r01)*(x90)*(x91)*(x92)))+(((_r00)*(x84)*(x86)*(x87)*(x90)))));
                                 sj6array[0]=IKsin(j6array[0]);
                                 cj6array[0]=IKcos(j6array[0]);
                                 if( j6array[0] > IKPI )
@@ -1502,6 +1641,7 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 }
                                 }
                                 } else {
+                            }
                             }
                             }
                             }
@@ -1553,12 +1693,12 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                 {
                 IKReal j1array[1], cj1array[1], sj1array[1];
                 bool j1valid[1]={false};
-                IKReal x81=(px)*(px);
-                IKReal x82=(py)*(py);
-                IKReal x83=((x82)+(x81));
-                IKReal x84=((-1.00000000000000)*(x83));
-                IKReal x85=((IKabs(x84) != 0)?((IKReal)1/(x84)):(IKReal)1.0e30);
-                j1array[0]=IKatan2(((((0.310199999999895)*(px)*(x85)))+(((0.261699999999109)*(cj3)*(px)*(x85)))+(((-0.261699999999109)*(py)*(sj2)*(sj3)*(x85)))), ((((0.261699999999109)*(px)*(sj2)*(sj3)*(x85)))+(((0.310199999999895)*(py)*(x85)))+(((0.261699999999109)*(cj3)*(py)*(x85)))));
+                IKReal x93=(px)*(px);
+                IKReal x94=(py)*(py);
+                IKReal x95=((x93)+(x94));
+                IKReal x96=((-1.00000000000000)*(x95));
+                IKReal x97=((IKabs(x96) != 0)?((IKReal)1/(x96)):(IKReal)1.0e30);
+                j1array[0]=IKatan2(((((0.310199999999895)*(px)*(x97)))+(((-0.261699999999109)*(py)*(sj2)*(sj3)*(x97)))+(((0.261699999999109)*(cj3)*(px)*(x97)))), ((((0.261699999999109)*(cj3)*(py)*(x97)))+(((0.261699999999109)*(px)*(sj2)*(sj3)*(x97)))+(((0.310199999999895)*(py)*(x97)))));
                 sj1array[0]=IKsin(j1array[0]);
                 cj1array[0]=IKcos(j1array[0]);
                 if( j1array[0] > IKPI )
@@ -1681,9 +1821,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                         {
                         IKReal j6array[1], cj6array[1], sj6array[1];
                         bool j6valid[1]={false};
-                        IKReal x86=IKcos(j4);
-                        IKReal x87=((IKabs(x86) != 0)?((IKReal)1/(x86)):(IKReal)1.0e30);
-                        j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x87)), ((_r00)*(x87)));
+                        IKReal x98=IKcos(j4);
+                        IKReal x99=((IKabs(x98) != 0)?((IKReal)1/(x98)):(IKReal)1.0e30);
+                        j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x99)), ((_r00)*(x99)));
                         sj6array[0]=IKsin(j6array[0]);
                         cj6array[0]=IKcos(j6array[0]);
                         if( j6array[0] > IKPI )
@@ -1730,6 +1870,39 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                         
                         {
                         IKReal evalcond;
+                            evalcond=IKsin(j4);
+                            if( IKabs(evalcond) < 0.00001 ) {
+                            {
+                            IKReal j6array[1], cj6array[1], sj6array[1];
+                            bool j6valid[1]={false};
+                            IKReal x100=IKcos(j4);
+                            IKReal x101=((IKabs(x100) != 0)?((IKReal)1/(x100)):(IKReal)1.0e30);
+                            j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x101)), ((_r00)*(x101)));
+                            sj6array[0]=IKsin(j6array[0]);
+                            cj6array[0]=IKcos(j6array[0]);
+                            if( j6array[0] > IKPI )
+                                j6array[0]-=IK2PI;
+                            else if( j6array[0] < -IKPI )
+                                j6array[0]+=IK2PI;
+                            j6valid[0] = true;
+                            { int ij6 = 0;
+                            if( !j6valid[ij6] )
+                                continue;
+                            j6 = j6array[0]; cj6 = cj6array[0]; sj6 = sj6array[0];
+                            
+                            vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();
+                            solution.basesol.resize(7);
+                            solution.basesol[0].foffset = j0;
+                            solution.basesol[1].foffset = j1;
+                            solution.basesol[2].foffset = j2;
+                            solution.basesol[3].foffset = j3;
+                            solution.basesol[4].foffset = j4;
+                            solution.basesol[5].foffset = j5;
+                            solution.basesol[6].foffset = j6;
+                            solution.vfree.resize(0);
+                            }
+                            }
+                            } else {
                             evalcond=IKsin(j5);
                             if( IKabs(evalcond) < 0.00001 ) {
                             {
@@ -1739,9 +1912,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 {
                                 IKReal j6array[1], cj6array[1], sj6array[1];
                                 bool j6valid[1]={false};
-                                IKReal x88=IKcos(j5);
-                                IKReal x89=((IKabs(x88) != 0)?((IKReal)1/(x88)):(IKReal)1.0e30);
-                                j6array[0]=IKatan2(((_r10)*(x89)), ((_r11)*(x89)));
+                                IKReal x102=IKcos(j5);
+                                IKReal x103=((IKabs(x102) != 0)?((IKReal)1/(x102)):(IKReal)1.0e30);
+                                j6array[0]=IKatan2(((_r10)*(x103)), ((_r11)*(x103)));
                                 sj6array[0]=IKsin(j6array[0]);
                                 cj6array[0]=IKcos(j6array[0]);
                                 if( j6array[0] > IKPI )
@@ -1771,9 +1944,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 {
                                 IKReal j6array[1], cj6array[1], sj6array[1];
                                 bool j6valid[1]={false};
-                                IKReal x90=IKcos(j4);
-                                IKReal x91=((IKabs(x90) != 0)?((IKReal)1/(x90)):(IKReal)1.0e30);
-                                j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x91)), ((_r00)*(x91)));
+                                IKReal x104=IKcos(j4);
+                                IKReal x105=((IKabs(x104) != 0)?((IKReal)1/(x104)):(IKReal)1.0e30);
+                                j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x105)), ((_r00)*(x105)));
                                 sj6array[0]=IKsin(j6array[0]);
                                 cj6array[0]=IKcos(j6array[0]);
                                 if( j6array[0] > IKPI )
@@ -1807,17 +1980,18 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                             {
                             IKReal j6array[1], cj6array[1], sj6array[1];
                             bool j6valid[1]={false};
-                            IKReal x92=IKsin(j5);
-                            IKReal x93=IKcos(j4);
-                            IKReal x94=(x93)*(x93);
-                            IKReal x95=((IKabs(x92) != 0)?(pow(x92,-2.00000000000000)):(IKReal)1.0e30);
-                            IKReal x96=((x94)*(x95));
-                            IKReal x97=((1.00000000000000)+(x96));
-                            IKReal x98=((((-1.00000000000000)*(x94)))+(x97));
-                            IKReal x99=((IKabs(x98) != 0)?((IKReal)1/(x98)):(IKReal)1.0e30);
-                            IKReal x100=((IKabs(x92) != 0)?((IKReal)1/(x92)):(IKReal)1.0e30);
-                            IKReal x101=IKsin(j4);
-                            j6array[0]=IKatan2(((((_r00)*(x100)*(x101)*(x99)))+(((-1.00000000000000)*(_r01)*(x93)*(x95)*(x99)))), ((((_r00)*(x93)*(x95)*(x99)))+(((_r01)*(x100)*(x101)*(x99)))));
+                            IKReal x106=IKsin(j4);
+                            IKReal x107=IKsin(j5);
+                            IKReal x108=IKcos(j4);
+                            IKReal x109=(x108)*(x108);
+                            IKReal x110=((IKabs(x106) != 0)?(pow(x106,-2.00000000000000)):(IKReal)1.0e30);
+                            IKReal x111=((IKabs(x107) != 0)?(pow(x107,-2.00000000000000)):(IKReal)1.0e30);
+                            IKReal x112=((x109)*(x110)*(x111));
+                            IKReal x113=((1.00000000000000)+(x112));
+                            IKReal x114=((IKabs(x113) != 0)?((IKReal)1/(x113)):(IKReal)1.0e30);
+                            IKReal x115=((IKabs(x106) != 0)?((IKReal)1/(x106)):(IKReal)1.0e30);
+                            IKReal x116=((IKabs(x107) != 0)?((IKReal)1/(x107)):(IKReal)1.0e30);
+                            j6array[0]=IKatan2(((((_r00)*(x114)*(x115)*(x116)))+(((-1.00000000000000)*(_r01)*(x108)*(x110)*(x111)*(x114)))), ((((_r01)*(x114)*(x115)*(x116)))+(((_r00)*(x108)*(x110)*(x111)*(x114)))));
                             sj6array[0]=IKsin(j6array[0]);
                             cj6array[0]=IKcos(j6array[0]);
                             if( j6array[0] > IKPI )
@@ -1843,6 +2017,7 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                             }
                             }
                             } else {
+                        }
                         }
                         }
                         }
@@ -1902,16 +2077,16 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                     if( IKabs(evalcond) < 0.00001 ) {
                     {
                         IKReal j1eval[7];
-                        IKReal x102=((0.261699999999109)*(cj3));
-                        IKReal x103=((pz)+(x102));
-                        IKReal x104=((-0.310199999999895)+(((-1.00000000000000)*(x103))));
-                        j1eval[0]=x104;
-                        j1eval[1]=x104;
-                        j1eval[2]=x104;
-                        j1eval[3]=x104;
-                        j1eval[4]=x104;
-                        j1eval[5]=x104;
-                        j1eval[6]=x104;
+                        IKReal x117=((0.261699999999109)*(cj3));
+                        IKReal x118=((pz)+(x117));
+                        IKReal x119=((-0.310199999999895)+(((-1.00000000000000)*(x118))));
+                        j1eval[0]=x119;
+                        j1eval[1]=x119;
+                        j1eval[2]=x119;
+                        j1eval[3]=x119;
+                        j1eval[4]=x119;
+                        j1eval[5]=x119;
+                        j1eval[6]=x119;
                         if( IKabs(j1eval[0]) < 0.000100  && IKabs(j1eval[1]) < 0.000100  && IKabs(j1eval[2]) < 0.000100  && IKabs(j1eval[3]) < 0.000100  && IKabs(j1eval[4]) < 0.000100  && IKabs(j1eval[5]) < 0.000100  && IKabs(j1eval[6]) < 0.000100  ) {
                             {
                             j1 = 0.000000; sj1 = 0.000000; cj1 = 1.000000;
@@ -1922,13 +2097,13 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 {
                                 IKReal j2array[2], cj2array[2], sj2array[2];
                                 bool j2valid[2]={false};
-                                IKReal x105=((-1.00000000000000)*(px));
-                                IKReal x106=((-1.00000000000000)*(py));
-                                IKReal x107=IKatan2(x105, x106);
-                                j2array[0]=((-1.00000000000000)*(x107));
+                                IKReal x120=((-1.00000000000000)*(px));
+                                IKReal x121=((-1.00000000000000)*(py));
+                                IKReal x122=IKatan2(x120, x121);
+                                j2array[0]=((-1.00000000000000)*(x122));
                                 sj2array[0]=IKsin(j2array[0]);
                                 cj2array[0]=IKcos(j2array[0]);
-                                j2array[1]=((3.14159265358979)+(((-1.00000000000000)*(x107))));
+                                j2array[1]=((3.14159265358979)+(((-1.00000000000000)*(x122))));
                                 sj2array[1]=IKsin(j2array[1]);
                                 cj2array[1]=IKcos(j2array[1]);
                                 if( j2array[0] > IKPI )
@@ -2058,9 +2233,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                         {
                                         IKReal j6array[1], cj6array[1], sj6array[1];
                                         bool j6valid[1]={false};
-                                        IKReal x108=IKcos(j4);
-                                        IKReal x109=((IKabs(x108) != 0)?((IKReal)1/(x108)):(IKReal)1.0e30);
-                                        j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x109)), ((_r00)*(x109)));
+                                        IKReal x123=IKcos(j4);
+                                        IKReal x124=((IKabs(x123) != 0)?((IKReal)1/(x123)):(IKReal)1.0e30);
+                                        j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x124)), ((_r00)*(x124)));
                                         sj6array[0]=IKsin(j6array[0]);
                                         cj6array[0]=IKcos(j6array[0]);
                                         if( j6array[0] > IKPI )
@@ -2107,6 +2282,39 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                         
                                         {
                                         IKReal evalcond;
+                                            evalcond=IKsin(j4);
+                                            if( IKabs(evalcond) < 0.00001 ) {
+                                            {
+                                            IKReal j6array[1], cj6array[1], sj6array[1];
+                                            bool j6valid[1]={false};
+                                            IKReal x125=IKcos(j4);
+                                            IKReal x126=((IKabs(x125) != 0)?((IKReal)1/(x125)):(IKReal)1.0e30);
+                                            j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x126)), ((_r00)*(x126)));
+                                            sj6array[0]=IKsin(j6array[0]);
+                                            cj6array[0]=IKcos(j6array[0]);
+                                            if( j6array[0] > IKPI )
+                                                j6array[0]-=IK2PI;
+                                            else if( j6array[0] < -IKPI )
+                                                j6array[0]+=IK2PI;
+                                            j6valid[0] = true;
+                                            { int ij6 = 0;
+                                            if( !j6valid[ij6] )
+                                                continue;
+                                            j6 = j6array[0]; cj6 = cj6array[0]; sj6 = sj6array[0];
+                                            
+                                            vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();
+                                            solution.basesol.resize(7);
+                                            solution.basesol[0].foffset = j0;
+                                            solution.basesol[1].foffset = j1;
+                                            solution.basesol[2].foffset = j2;
+                                            solution.basesol[3].foffset = j3;
+                                            solution.basesol[4].foffset = j4;
+                                            solution.basesol[5].foffset = j5;
+                                            solution.basesol[6].foffset = j6;
+                                            solution.vfree.resize(0);
+                                            }
+                                            }
+                                            } else {
                                             evalcond=IKsin(j5);
                                             if( IKabs(evalcond) < 0.00001 ) {
                                             {
@@ -2116,9 +2324,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                                 {
                                                 IKReal j6array[1], cj6array[1], sj6array[1];
                                                 bool j6valid[1]={false};
-                                                IKReal x110=IKcos(j5);
-                                                IKReal x111=((IKabs(x110) != 0)?((IKReal)1/(x110)):(IKReal)1.0e30);
-                                                j6array[0]=IKatan2(((_r10)*(x111)), ((_r11)*(x111)));
+                                                IKReal x127=IKcos(j5);
+                                                IKReal x128=((IKabs(x127) != 0)?((IKReal)1/(x127)):(IKReal)1.0e30);
+                                                j6array[0]=IKatan2(((_r10)*(x128)), ((_r11)*(x128)));
                                                 sj6array[0]=IKsin(j6array[0]);
                                                 cj6array[0]=IKcos(j6array[0]);
                                                 if( j6array[0] > IKPI )
@@ -2148,9 +2356,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                                 {
                                                 IKReal j6array[1], cj6array[1], sj6array[1];
                                                 bool j6valid[1]={false};
-                                                IKReal x112=IKcos(j4);
-                                                IKReal x113=((IKabs(x112) != 0)?((IKReal)1/(x112)):(IKReal)1.0e30);
-                                                j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x113)), ((_r00)*(x113)));
+                                                IKReal x129=IKcos(j4);
+                                                IKReal x130=((IKabs(x129) != 0)?((IKReal)1/(x129)):(IKReal)1.0e30);
+                                                j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x130)), ((_r00)*(x130)));
                                                 sj6array[0]=IKsin(j6array[0]);
                                                 cj6array[0]=IKcos(j6array[0]);
                                                 if( j6array[0] > IKPI )
@@ -2184,17 +2392,18 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                             {
                                             IKReal j6array[1], cj6array[1], sj6array[1];
                                             bool j6valid[1]={false};
-                                            IKReal x114=IKsin(j5);
-                                            IKReal x115=IKcos(j4);
-                                            IKReal x116=(x115)*(x115);
-                                            IKReal x117=((IKabs(x114) != 0)?(pow(x114,-2.00000000000000)):(IKReal)1.0e30);
-                                            IKReal x118=((x116)*(x117));
-                                            IKReal x119=((1.00000000000000)+(x118));
-                                            IKReal x120=((((-1.00000000000000)*(x116)))+(x119));
-                                            IKReal x121=((IKabs(x120) != 0)?((IKReal)1/(x120)):(IKReal)1.0e30);
-                                            IKReal x122=((IKabs(x114) != 0)?((IKReal)1/(x114)):(IKReal)1.0e30);
-                                            IKReal x123=IKsin(j4);
-                                            j6array[0]=IKatan2(((((_r00)*(x121)*(x122)*(x123)))+(((-1.00000000000000)*(_r01)*(x115)*(x117)*(x121)))), ((((_r00)*(x115)*(x117)*(x121)))+(((_r01)*(x121)*(x122)*(x123)))));
+                                            IKReal x131=IKsin(j4);
+                                            IKReal x132=IKsin(j5);
+                                            IKReal x133=IKcos(j4);
+                                            IKReal x134=(x133)*(x133);
+                                            IKReal x135=((IKabs(x131) != 0)?(pow(x131,-2.00000000000000)):(IKReal)1.0e30);
+                                            IKReal x136=((IKabs(x132) != 0)?(pow(x132,-2.00000000000000)):(IKReal)1.0e30);
+                                            IKReal x137=((x134)*(x135)*(x136));
+                                            IKReal x138=((1.00000000000000)+(x137));
+                                            IKReal x139=((IKabs(x138) != 0)?((IKReal)1/(x138)):(IKReal)1.0e30);
+                                            IKReal x140=((IKabs(x131) != 0)?((IKReal)1/(x131)):(IKReal)1.0e30);
+                                            IKReal x141=((IKabs(x132) != 0)?((IKReal)1/(x132)):(IKReal)1.0e30);
+                                            j6array[0]=IKatan2(((((_r00)*(x139)*(x140)*(x141)))+(((-1.00000000000000)*(_r01)*(x133)*(x135)*(x136)*(x139)))), ((((_r00)*(x133)*(x135)*(x136)*(x139)))+(((_r01)*(x139)*(x140)*(x141)))));
                                             sj6array[0]=IKsin(j6array[0]);
                                             cj6array[0]=IKcos(j6array[0]);
                                             if( j6array[0] > IKPI )
@@ -2225,6 +2434,7 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                         }
                                         }
                                         }
+                                        }
                                         } else {
                                     }
                                     }
@@ -2240,8 +2450,8 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 {
                                 IKReal j2array[1], cj2array[1], sj2array[1];
                                 bool j2valid[1]={false};
-                                IKReal x124=((IKabs(sj3) != 0)?((IKReal)1/(sj3)):(IKReal)1.0e30);
-                                j2array[0]=IKatan2(((-3.82116927779862)*(px)*(x124)), ((3.82116927779862)*(py)*(x124)));
+                                IKReal x142=((IKabs(sj3) != 0)?((IKReal)1/(sj3)):(IKReal)1.0e30);
+                                j2array[0]=IKatan2(((-3.82116927779862)*(px)*(x142)), ((3.82116927779862)*(py)*(x142)));
                                 sj2array[0]=IKsin(j2array[0]);
                                 cj2array[0]=IKcos(j2array[0]);
                                 if( j2array[0] > IKPI )
@@ -2364,9 +2574,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                         {
                                         IKReal j6array[1], cj6array[1], sj6array[1];
                                         bool j6valid[1]={false};
-                                        IKReal x125=IKcos(j4);
-                                        IKReal x126=((IKabs(x125) != 0)?((IKReal)1/(x125)):(IKReal)1.0e30);
-                                        j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x126)), ((_r00)*(x126)));
+                                        IKReal x143=IKcos(j4);
+                                        IKReal x144=((IKabs(x143) != 0)?((IKReal)1/(x143)):(IKReal)1.0e30);
+                                        j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x144)), ((_r00)*(x144)));
                                         sj6array[0]=IKsin(j6array[0]);
                                         cj6array[0]=IKcos(j6array[0]);
                                         if( j6array[0] > IKPI )
@@ -2413,6 +2623,39 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                         
                                         {
                                         IKReal evalcond;
+                                            evalcond=IKsin(j4);
+                                            if( IKabs(evalcond) < 0.00001 ) {
+                                            {
+                                            IKReal j6array[1], cj6array[1], sj6array[1];
+                                            bool j6valid[1]={false};
+                                            IKReal x145=IKcos(j4);
+                                            IKReal x146=((IKabs(x145) != 0)?((IKReal)1/(x145)):(IKReal)1.0e30);
+                                            j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x146)), ((_r00)*(x146)));
+                                            sj6array[0]=IKsin(j6array[0]);
+                                            cj6array[0]=IKcos(j6array[0]);
+                                            if( j6array[0] > IKPI )
+                                                j6array[0]-=IK2PI;
+                                            else if( j6array[0] < -IKPI )
+                                                j6array[0]+=IK2PI;
+                                            j6valid[0] = true;
+                                            { int ij6 = 0;
+                                            if( !j6valid[ij6] )
+                                                continue;
+                                            j6 = j6array[0]; cj6 = cj6array[0]; sj6 = sj6array[0];
+                                            
+                                            vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();
+                                            solution.basesol.resize(7);
+                                            solution.basesol[0].foffset = j0;
+                                            solution.basesol[1].foffset = j1;
+                                            solution.basesol[2].foffset = j2;
+                                            solution.basesol[3].foffset = j3;
+                                            solution.basesol[4].foffset = j4;
+                                            solution.basesol[5].foffset = j5;
+                                            solution.basesol[6].foffset = j6;
+                                            solution.vfree.resize(0);
+                                            }
+                                            }
+                                            } else {
                                             evalcond=IKsin(j5);
                                             if( IKabs(evalcond) < 0.00001 ) {
                                             {
@@ -2422,9 +2665,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                                 {
                                                 IKReal j6array[1], cj6array[1], sj6array[1];
                                                 bool j6valid[1]={false};
-                                                IKReal x127=IKcos(j5);
-                                                IKReal x128=((IKabs(x127) != 0)?((IKReal)1/(x127)):(IKReal)1.0e30);
-                                                j6array[0]=IKatan2(((_r10)*(x128)), ((_r11)*(x128)));
+                                                IKReal x147=IKcos(j5);
+                                                IKReal x148=((IKabs(x147) != 0)?((IKReal)1/(x147)):(IKReal)1.0e30);
+                                                j6array[0]=IKatan2(((_r10)*(x148)), ((_r11)*(x148)));
                                                 sj6array[0]=IKsin(j6array[0]);
                                                 cj6array[0]=IKcos(j6array[0]);
                                                 if( j6array[0] > IKPI )
@@ -2454,9 +2697,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                                 {
                                                 IKReal j6array[1], cj6array[1], sj6array[1];
                                                 bool j6valid[1]={false};
-                                                IKReal x129=IKcos(j4);
-                                                IKReal x130=((IKabs(x129) != 0)?((IKReal)1/(x129)):(IKReal)1.0e30);
-                                                j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x130)), ((_r00)*(x130)));
+                                                IKReal x149=IKcos(j4);
+                                                IKReal x150=((IKabs(x149) != 0)?((IKReal)1/(x149)):(IKReal)1.0e30);
+                                                j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x150)), ((_r00)*(x150)));
                                                 sj6array[0]=IKsin(j6array[0]);
                                                 cj6array[0]=IKcos(j6array[0]);
                                                 if( j6array[0] > IKPI )
@@ -2490,17 +2733,18 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                             {
                                             IKReal j6array[1], cj6array[1], sj6array[1];
                                             bool j6valid[1]={false};
-                                            IKReal x131=IKsin(j5);
-                                            IKReal x132=IKcos(j4);
-                                            IKReal x133=(x132)*(x132);
-                                            IKReal x134=((IKabs(x131) != 0)?(pow(x131,-2.00000000000000)):(IKReal)1.0e30);
-                                            IKReal x135=((x133)*(x134));
-                                            IKReal x136=((1.00000000000000)+(x135));
-                                            IKReal x137=((x136)+(((-1.00000000000000)*(x133))));
-                                            IKReal x138=((IKabs(x137) != 0)?((IKReal)1/(x137)):(IKReal)1.0e30);
-                                            IKReal x139=((IKabs(x131) != 0)?((IKReal)1/(x131)):(IKReal)1.0e30);
-                                            IKReal x140=IKsin(j4);
-                                            j6array[0]=IKatan2(((((_r00)*(x138)*(x139)*(x140)))+(((-1.00000000000000)*(_r01)*(x132)*(x134)*(x138)))), ((((_r01)*(x138)*(x139)*(x140)))+(((_r00)*(x132)*(x134)*(x138)))));
+                                            IKReal x151=IKsin(j4);
+                                            IKReal x152=IKsin(j5);
+                                            IKReal x153=IKcos(j4);
+                                            IKReal x154=(x153)*(x153);
+                                            IKReal x155=((IKabs(x151) != 0)?(pow(x151,-2.00000000000000)):(IKReal)1.0e30);
+                                            IKReal x156=((IKabs(x152) != 0)?(pow(x152,-2.00000000000000)):(IKReal)1.0e30);
+                                            IKReal x157=((x154)*(x155)*(x156));
+                                            IKReal x158=((1.00000000000000)+(x157));
+                                            IKReal x159=((IKabs(x158) != 0)?((IKReal)1/(x158)):(IKReal)1.0e30);
+                                            IKReal x160=((IKabs(x151) != 0)?((IKReal)1/(x151)):(IKReal)1.0e30);
+                                            IKReal x161=((IKabs(x152) != 0)?((IKReal)1/(x152)):(IKReal)1.0e30);
+                                            j6array[0]=IKatan2(((((-1.00000000000000)*(_r01)*(x153)*(x155)*(x156)*(x159)))+(((_r00)*(x159)*(x160)*(x161)))), ((((_r01)*(x159)*(x160)*(x161)))+(((_r00)*(x153)*(x155)*(x156)*(x159)))));
                                             sj6array[0]=IKsin(j6array[0]);
                                             cj6array[0]=IKcos(j6array[0]);
                                             if( j6array[0] > IKPI )
@@ -2531,6 +2775,7 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                         }
                                         }
                                         }
+                                        }
                                         } else {
                                     }
                                     }
@@ -2555,25 +2800,25 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                         }
                     {
                         IKReal j2eval[7];
-                        IKReal x141=((0.261699999999109)*(sj3));
-                        IKReal x142=((((-1.00000000000000)*(x141)))+(py));
-                        j2eval[0]=((((-1.00000000000000)*(py)))+(x141));
-                        j2eval[1]=x142;
-                        j2eval[2]=x142;
-                        j2eval[3]=x142;
-                        j2eval[4]=x142;
-                        j2eval[5]=x142;
-                        j2eval[6]=x142;
+                        IKReal x162=((0.261699999999109)*(sj3));
+                        IKReal x163=((py)+(((-1.00000000000000)*(x162))));
+                        j2eval[0]=((((-1.00000000000000)*(py)))+(x162));
+                        j2eval[1]=x163;
+                        j2eval[2]=x163;
+                        j2eval[3]=x163;
+                        j2eval[4]=x163;
+                        j2eval[5]=x163;
+                        j2eval[6]=x163;
                         if( IKabs(j2eval[0]) < 0.000100  && IKabs(j2eval[1]) < 0.000100  && IKabs(j2eval[2]) < 0.000100  && IKabs(j2eval[3]) < 0.000100  && IKabs(j2eval[4]) < 0.000100  && IKabs(j2eval[5]) < 0.000100  && IKabs(j2eval[6]) < 0.000100  ) {
                             {
                             j2 = 0.000000; sj2 = 0.000000; cj2 = 1.000000;
                             {
                             IKReal j1array[1], cj1array[1], sj1array[1];
                             bool j1valid[1]={false};
-                            IKReal x143=((0.261699999999109)*(cj3));
-                            IKReal x144=((0.310199999999895)+(x143));
-                            IKReal x145=((IKabs(x144) != 0)?((IKReal)1/(x144)):(IKReal)1.0e30);
-                            j1array[0]=IKatan2(((-1.00000000000000)*(px)*(x145)), ((-1.00000000000000)*(pz)*(x145)));
+                            IKReal x164=((0.261699999999109)*(cj3));
+                            IKReal x165=((0.310199999999895)+(x164));
+                            IKReal x166=((IKabs(x165) != 0)?((IKReal)1/(x165)):(IKReal)1.0e30);
+                            j1array[0]=IKatan2(((-1.00000000000000)*(px)*(x166)), ((-1.00000000000000)*(pz)*(x166)));
                             sj1array[0]=IKsin(j1array[0]);
                             cj1array[0]=IKcos(j1array[0]);
                             if( j1array[0] > IKPI )
@@ -2696,9 +2941,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                     {
                                     IKReal j6array[1], cj6array[1], sj6array[1];
                                     bool j6valid[1]={false};
-                                    IKReal x146=IKcos(j4);
-                                    IKReal x147=((IKabs(x146) != 0)?((IKReal)1/(x146)):(IKReal)1.0e30);
-                                    j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x147)), ((_r00)*(x147)));
+                                    IKReal x167=IKcos(j4);
+                                    IKReal x168=((IKabs(x167) != 0)?((IKReal)1/(x167)):(IKReal)1.0e30);
+                                    j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x168)), ((_r00)*(x168)));
                                     sj6array[0]=IKsin(j6array[0]);
                                     cj6array[0]=IKcos(j6array[0]);
                                     if( j6array[0] > IKPI )
@@ -2745,6 +2990,39 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                     
                                     {
                                     IKReal evalcond;
+                                        evalcond=IKsin(j4);
+                                        if( IKabs(evalcond) < 0.00001 ) {
+                                        {
+                                        IKReal j6array[1], cj6array[1], sj6array[1];
+                                        bool j6valid[1]={false};
+                                        IKReal x169=IKcos(j4);
+                                        IKReal x170=((IKabs(x169) != 0)?((IKReal)1/(x169)):(IKReal)1.0e30);
+                                        j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x170)), ((_r00)*(x170)));
+                                        sj6array[0]=IKsin(j6array[0]);
+                                        cj6array[0]=IKcos(j6array[0]);
+                                        if( j6array[0] > IKPI )
+                                            j6array[0]-=IK2PI;
+                                        else if( j6array[0] < -IKPI )
+                                            j6array[0]+=IK2PI;
+                                        j6valid[0] = true;
+                                        { int ij6 = 0;
+                                        if( !j6valid[ij6] )
+                                            continue;
+                                        j6 = j6array[0]; cj6 = cj6array[0]; sj6 = sj6array[0];
+                                        
+                                        vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();
+                                        solution.basesol.resize(7);
+                                        solution.basesol[0].foffset = j0;
+                                        solution.basesol[1].foffset = j1;
+                                        solution.basesol[2].foffset = j2;
+                                        solution.basesol[3].foffset = j3;
+                                        solution.basesol[4].foffset = j4;
+                                        solution.basesol[5].foffset = j5;
+                                        solution.basesol[6].foffset = j6;
+                                        solution.vfree.resize(0);
+                                        }
+                                        }
+                                        } else {
                                         evalcond=IKsin(j5);
                                         if( IKabs(evalcond) < 0.00001 ) {
                                         {
@@ -2754,9 +3032,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                             {
                                             IKReal j6array[1], cj6array[1], sj6array[1];
                                             bool j6valid[1]={false};
-                                            IKReal x148=IKcos(j5);
-                                            IKReal x149=((IKabs(x148) != 0)?((IKReal)1/(x148)):(IKReal)1.0e30);
-                                            j6array[0]=IKatan2(((_r10)*(x149)), ((_r11)*(x149)));
+                                            IKReal x171=IKcos(j5);
+                                            IKReal x172=((IKabs(x171) != 0)?((IKReal)1/(x171)):(IKReal)1.0e30);
+                                            j6array[0]=IKatan2(((_r10)*(x172)), ((_r11)*(x172)));
                                             sj6array[0]=IKsin(j6array[0]);
                                             cj6array[0]=IKcos(j6array[0]);
                                             if( j6array[0] > IKPI )
@@ -2786,9 +3064,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                             {
                                             IKReal j6array[1], cj6array[1], sj6array[1];
                                             bool j6valid[1]={false};
-                                            IKReal x150=IKcos(j4);
-                                            IKReal x151=((IKabs(x150) != 0)?((IKReal)1/(x150)):(IKReal)1.0e30);
-                                            j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x151)), ((_r00)*(x151)));
+                                            IKReal x173=IKcos(j4);
+                                            IKReal x174=((IKabs(x173) != 0)?((IKReal)1/(x173)):(IKReal)1.0e30);
+                                            j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x174)), ((_r00)*(x174)));
                                             sj6array[0]=IKsin(j6array[0]);
                                             cj6array[0]=IKcos(j6array[0]);
                                             if( j6array[0] > IKPI )
@@ -2822,17 +3100,18 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                         {
                                         IKReal j6array[1], cj6array[1], sj6array[1];
                                         bool j6valid[1]={false};
-                                        IKReal x152=IKsin(j5);
-                                        IKReal x153=IKcos(j4);
-                                        IKReal x154=(x153)*(x153);
-                                        IKReal x155=((IKabs(x152) != 0)?(pow(x152,-2.00000000000000)):(IKReal)1.0e30);
-                                        IKReal x156=((x154)*(x155));
-                                        IKReal x157=((1.00000000000000)+(x156));
-                                        IKReal x158=((((-1.00000000000000)*(x154)))+(x157));
-                                        IKReal x159=((IKabs(x158) != 0)?((IKReal)1/(x158)):(IKReal)1.0e30);
-                                        IKReal x160=((IKabs(x152) != 0)?((IKReal)1/(x152)):(IKReal)1.0e30);
-                                        IKReal x161=IKsin(j4);
-                                        j6array[0]=IKatan2(((((-1.00000000000000)*(_r01)*(x153)*(x155)*(x159)))+(((_r00)*(x159)*(x160)*(x161)))), ((((_r00)*(x153)*(x155)*(x159)))+(((_r01)*(x159)*(x160)*(x161)))));
+                                        IKReal x175=IKsin(j4);
+                                        IKReal x176=IKsin(j5);
+                                        IKReal x177=IKcos(j4);
+                                        IKReal x178=(x177)*(x177);
+                                        IKReal x179=((IKabs(x175) != 0)?(pow(x175,-2.00000000000000)):(IKReal)1.0e30);
+                                        IKReal x180=((IKabs(x176) != 0)?(pow(x176,-2.00000000000000)):(IKReal)1.0e30);
+                                        IKReal x181=((x178)*(x179)*(x180));
+                                        IKReal x182=((1.00000000000000)+(x181));
+                                        IKReal x183=((IKabs(x182) != 0)?((IKReal)1/(x182)):(IKReal)1.0e30);
+                                        IKReal x184=((IKabs(x175) != 0)?((IKReal)1/(x175)):(IKReal)1.0e30);
+                                        IKReal x185=((IKabs(x176) != 0)?((IKReal)1/(x176)):(IKReal)1.0e30);
+                                        j6array[0]=IKatan2(((((_r00)*(x183)*(x184)*(x185)))+(((-1.00000000000000)*(_r01)*(x177)*(x179)*(x180)*(x183)))), ((((_r00)*(x177)*(x179)*(x180)*(x183)))+(((_r01)*(x183)*(x184)*(x185)))));
                                         sj6array[0]=IKsin(j6array[0]);
                                         cj6array[0]=IKcos(j6array[0]);
                                         if( j6array[0] > IKPI )
@@ -2858,6 +3137,7 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                         }
                                         }
                                         } else {
+                                    }
                                     }
                                     }
                                     }
@@ -2910,12 +3190,12 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                     {
                     IKReal j1array[1], cj1array[1], sj1array[1];
                     bool j1valid[1]={false};
-                    IKReal x162=(px)*(px);
-                    IKReal x163=(pz)*(pz);
-                    IKReal x164=((x162)+(x163));
-                    IKReal x165=((-1.00000000000000)*(x164));
-                    IKReal x166=((IKabs(x165) != 0)?((IKReal)1/(x165)):(IKReal)1.0e30);
-                    j1array[0]=IKatan2(((((-0.261699999999109)*(pz)*(sj2)*(sj3)*(x166)))+(((0.310199999999895)*(px)*(x166)))+(((0.261699999999109)*(cj3)*(px)*(x166)))), ((((0.261699999999109)*(px)*(sj2)*(sj3)*(x166)))+(((0.261699999999109)*(cj3)*(pz)*(x166)))+(((0.310199999999895)*(pz)*(x166)))));
+                    IKReal x186=(px)*(px);
+                    IKReal x187=(pz)*(pz);
+                    IKReal x188=((x186)+(x187));
+                    IKReal x189=((-1.00000000000000)*(x188));
+                    IKReal x190=((IKabs(x189) != 0)?((IKReal)1/(x189)):(IKReal)1.0e30);
+                    j1array[0]=IKatan2(((((0.261699999999109)*(cj3)*(px)*(x190)))+(((-0.261699999999109)*(pz)*(sj2)*(sj3)*(x190)))+(((0.310199999999895)*(px)*(x190)))), ((((0.310199999999895)*(pz)*(x190)))+(((0.261699999999109)*(cj3)*(pz)*(x190)))+(((0.261699999999109)*(px)*(sj2)*(sj3)*(x190)))));
                     sj1array[0]=IKsin(j1array[0]);
                     cj1array[0]=IKcos(j1array[0]);
                     if( j1array[0] > IKPI )
@@ -3038,9 +3318,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                             {
                             IKReal j6array[1], cj6array[1], sj6array[1];
                             bool j6valid[1]={false};
-                            IKReal x167=IKcos(j4);
-                            IKReal x168=((IKabs(x167) != 0)?((IKReal)1/(x167)):(IKReal)1.0e30);
-                            j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x168)), ((_r00)*(x168)));
+                            IKReal x191=IKcos(j4);
+                            IKReal x192=((IKabs(x191) != 0)?((IKReal)1/(x191)):(IKReal)1.0e30);
+                            j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x192)), ((_r00)*(x192)));
                             sj6array[0]=IKsin(j6array[0]);
                             cj6array[0]=IKcos(j6array[0]);
                             if( j6array[0] > IKPI )
@@ -3087,6 +3367,39 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                             
                             {
                             IKReal evalcond;
+                                evalcond=IKsin(j4);
+                                if( IKabs(evalcond) < 0.00001 ) {
+                                {
+                                IKReal j6array[1], cj6array[1], sj6array[1];
+                                bool j6valid[1]={false};
+                                IKReal x193=IKcos(j4);
+                                IKReal x194=((IKabs(x193) != 0)?((IKReal)1/(x193)):(IKReal)1.0e30);
+                                j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x194)), ((_r00)*(x194)));
+                                sj6array[0]=IKsin(j6array[0]);
+                                cj6array[0]=IKcos(j6array[0]);
+                                if( j6array[0] > IKPI )
+                                    j6array[0]-=IK2PI;
+                                else if( j6array[0] < -IKPI )
+                                    j6array[0]+=IK2PI;
+                                j6valid[0] = true;
+                                { int ij6 = 0;
+                                if( !j6valid[ij6] )
+                                    continue;
+                                j6 = j6array[0]; cj6 = cj6array[0]; sj6 = sj6array[0];
+                                
+                                vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();
+                                solution.basesol.resize(7);
+                                solution.basesol[0].foffset = j0;
+                                solution.basesol[1].foffset = j1;
+                                solution.basesol[2].foffset = j2;
+                                solution.basesol[3].foffset = j3;
+                                solution.basesol[4].foffset = j4;
+                                solution.basesol[5].foffset = j5;
+                                solution.basesol[6].foffset = j6;
+                                solution.vfree.resize(0);
+                                }
+                                }
+                                } else {
                                 evalcond=IKsin(j5);
                                 if( IKabs(evalcond) < 0.00001 ) {
                                 {
@@ -3096,9 +3409,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                     {
                                     IKReal j6array[1], cj6array[1], sj6array[1];
                                     bool j6valid[1]={false};
-                                    IKReal x169=IKcos(j5);
-                                    IKReal x170=((IKabs(x169) != 0)?((IKReal)1/(x169)):(IKReal)1.0e30);
-                                    j6array[0]=IKatan2(((_r10)*(x170)), ((_r11)*(x170)));
+                                    IKReal x195=IKcos(j5);
+                                    IKReal x196=((IKabs(x195) != 0)?((IKReal)1/(x195)):(IKReal)1.0e30);
+                                    j6array[0]=IKatan2(((_r10)*(x196)), ((_r11)*(x196)));
                                     sj6array[0]=IKsin(j6array[0]);
                                     cj6array[0]=IKcos(j6array[0]);
                                     if( j6array[0] > IKPI )
@@ -3128,9 +3441,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                     {
                                     IKReal j6array[1], cj6array[1], sj6array[1];
                                     bool j6valid[1]={false};
-                                    IKReal x171=IKcos(j4);
-                                    IKReal x172=((IKabs(x171) != 0)?((IKReal)1/(x171)):(IKReal)1.0e30);
-                                    j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x172)), ((_r00)*(x172)));
+                                    IKReal x197=IKcos(j4);
+                                    IKReal x198=((IKabs(x197) != 0)?((IKReal)1/(x197)):(IKReal)1.0e30);
+                                    j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x198)), ((_r00)*(x198)));
                                     sj6array[0]=IKsin(j6array[0]);
                                     cj6array[0]=IKcos(j6array[0]);
                                     if( j6array[0] > IKPI )
@@ -3164,17 +3477,18 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 {
                                 IKReal j6array[1], cj6array[1], sj6array[1];
                                 bool j6valid[1]={false};
-                                IKReal x173=IKsin(j5);
-                                IKReal x174=IKcos(j4);
-                                IKReal x175=(x174)*(x174);
-                                IKReal x176=((IKabs(x173) != 0)?(pow(x173,-2.00000000000000)):(IKReal)1.0e30);
-                                IKReal x177=((x175)*(x176));
-                                IKReal x178=((1.00000000000000)+(x177));
-                                IKReal x179=((((-1.00000000000000)*(x175)))+(x178));
-                                IKReal x180=((IKabs(x179) != 0)?((IKReal)1/(x179)):(IKReal)1.0e30);
-                                IKReal x181=((IKabs(x173) != 0)?((IKReal)1/(x173)):(IKReal)1.0e30);
-                                IKReal x182=IKsin(j4);
-                                j6array[0]=IKatan2(((((_r00)*(x180)*(x181)*(x182)))+(((-1.00000000000000)*(_r01)*(x174)*(x176)*(x180)))), ((((_r00)*(x174)*(x176)*(x180)))+(((_r01)*(x180)*(x181)*(x182)))));
+                                IKReal x199=IKsin(j4);
+                                IKReal x200=IKsin(j5);
+                                IKReal x201=IKcos(j4);
+                                IKReal x202=(x201)*(x201);
+                                IKReal x203=((IKabs(x199) != 0)?(pow(x199,-2.00000000000000)):(IKReal)1.0e30);
+                                IKReal x204=((IKabs(x200) != 0)?(pow(x200,-2.00000000000000)):(IKReal)1.0e30);
+                                IKReal x205=((x202)*(x203)*(x204));
+                                IKReal x206=((1.00000000000000)+(x205));
+                                IKReal x207=((IKabs(x206) != 0)?((IKReal)1/(x206)):(IKReal)1.0e30);
+                                IKReal x208=((IKabs(x199) != 0)?((IKReal)1/(x199)):(IKReal)1.0e30);
+                                IKReal x209=((IKabs(x200) != 0)?((IKReal)1/(x200)):(IKReal)1.0e30);
+                                j6array[0]=IKatan2(((((-1.00000000000000)*(_r01)*(x201)*(x203)*(x204)*(x207)))+(((_r00)*(x207)*(x208)*(x209)))), ((((_r01)*(x207)*(x208)*(x209)))+(((_r00)*(x201)*(x203)*(x204)*(x207)))));
                                 sj6array[0]=IKsin(j6array[0]);
                                 cj6array[0]=IKcos(j6array[0]);
                                 if( j6array[0] > IKPI )
@@ -3200,6 +3514,7 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 }
                                 }
                                 } else {
+                            }
                             }
                             }
                             }
@@ -3251,12 +3566,12 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                 {
                 IKReal j1array[1], cj1array[1], sj1array[1];
                 bool j1valid[1]={false};
-                IKReal x183=(px)*(px);
-                IKReal x184=(pz)*(pz);
-                IKReal x185=((x184)+(x183));
-                IKReal x186=((-1.00000000000000)*(x185));
-                IKReal x187=((IKabs(x186) != 0)?((IKReal)1/(x186)):(IKReal)1.0e30);
-                j1array[0]=IKatan2(((((0.310199999999895)*(px)*(x187)))+(((0.261699999999109)*(cj3)*(px)*(x187)))+(((-0.261699999999109)*(pz)*(sj2)*(sj3)*(x187)))), ((((0.261699999999109)*(cj3)*(pz)*(x187)))+(((0.261699999999109)*(px)*(sj2)*(sj3)*(x187)))+(((0.310199999999895)*(pz)*(x187)))));
+                IKReal x210=(px)*(px);
+                IKReal x211=(pz)*(pz);
+                IKReal x212=((x210)+(x211));
+                IKReal x213=((-1.00000000000000)*(x212));
+                IKReal x214=((IKabs(x213) != 0)?((IKReal)1/(x213)):(IKReal)1.0e30);
+                j1array[0]=IKatan2(((((0.261699999999109)*(cj3)*(px)*(x214)))+(((-0.261699999999109)*(pz)*(sj2)*(sj3)*(x214)))+(((0.310199999999895)*(px)*(x214)))), ((((0.261699999999109)*(px)*(sj2)*(sj3)*(x214)))+(((0.310199999999895)*(pz)*(x214)))+(((0.261699999999109)*(cj3)*(pz)*(x214)))));
                 sj1array[0]=IKsin(j1array[0]);
                 cj1array[0]=IKcos(j1array[0]);
                 if( j1array[0] > IKPI )
@@ -3379,9 +3694,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                         {
                         IKReal j6array[1], cj6array[1], sj6array[1];
                         bool j6valid[1]={false};
-                        IKReal x188=IKcos(j4);
-                        IKReal x189=((IKabs(x188) != 0)?((IKReal)1/(x188)):(IKReal)1.0e30);
-                        j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x189)), ((_r00)*(x189)));
+                        IKReal x215=IKcos(j4);
+                        IKReal x216=((IKabs(x215) != 0)?((IKReal)1/(x215)):(IKReal)1.0e30);
+                        j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x216)), ((_r00)*(x216)));
                         sj6array[0]=IKsin(j6array[0]);
                         cj6array[0]=IKcos(j6array[0]);
                         if( j6array[0] > IKPI )
@@ -3428,6 +3743,39 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                         
                         {
                         IKReal evalcond;
+                            evalcond=IKsin(j4);
+                            if( IKabs(evalcond) < 0.00001 ) {
+                            {
+                            IKReal j6array[1], cj6array[1], sj6array[1];
+                            bool j6valid[1]={false};
+                            IKReal x217=IKcos(j4);
+                            IKReal x218=((IKabs(x217) != 0)?((IKReal)1/(x217)):(IKReal)1.0e30);
+                            j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x218)), ((_r00)*(x218)));
+                            sj6array[0]=IKsin(j6array[0]);
+                            cj6array[0]=IKcos(j6array[0]);
+                            if( j6array[0] > IKPI )
+                                j6array[0]-=IK2PI;
+                            else if( j6array[0] < -IKPI )
+                                j6array[0]+=IK2PI;
+                            j6valid[0] = true;
+                            { int ij6 = 0;
+                            if( !j6valid[ij6] )
+                                continue;
+                            j6 = j6array[0]; cj6 = cj6array[0]; sj6 = sj6array[0];
+                            
+                            vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();
+                            solution.basesol.resize(7);
+                            solution.basesol[0].foffset = j0;
+                            solution.basesol[1].foffset = j1;
+                            solution.basesol[2].foffset = j2;
+                            solution.basesol[3].foffset = j3;
+                            solution.basesol[4].foffset = j4;
+                            solution.basesol[5].foffset = j5;
+                            solution.basesol[6].foffset = j6;
+                            solution.vfree.resize(0);
+                            }
+                            }
+                            } else {
                             evalcond=IKsin(j5);
                             if( IKabs(evalcond) < 0.00001 ) {
                             {
@@ -3437,9 +3785,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 {
                                 IKReal j6array[1], cj6array[1], sj6array[1];
                                 bool j6valid[1]={false};
-                                IKReal x190=IKcos(j5);
-                                IKReal x191=((IKabs(x190) != 0)?((IKReal)1/(x190)):(IKReal)1.0e30);
-                                j6array[0]=IKatan2(((_r10)*(x191)), ((_r11)*(x191)));
+                                IKReal x219=IKcos(j5);
+                                IKReal x220=((IKabs(x219) != 0)?((IKReal)1/(x219)):(IKReal)1.0e30);
+                                j6array[0]=IKatan2(((_r10)*(x220)), ((_r11)*(x220)));
                                 sj6array[0]=IKsin(j6array[0]);
                                 cj6array[0]=IKcos(j6array[0]);
                                 if( j6array[0] > IKPI )
@@ -3469,9 +3817,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 {
                                 IKReal j6array[1], cj6array[1], sj6array[1];
                                 bool j6valid[1]={false};
-                                IKReal x192=IKcos(j4);
-                                IKReal x193=((IKabs(x192) != 0)?((IKReal)1/(x192)):(IKReal)1.0e30);
-                                j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x193)), ((_r00)*(x193)));
+                                IKReal x221=IKcos(j4);
+                                IKReal x222=((IKabs(x221) != 0)?((IKReal)1/(x221)):(IKReal)1.0e30);
+                                j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x222)), ((_r00)*(x222)));
                                 sj6array[0]=IKsin(j6array[0]);
                                 cj6array[0]=IKcos(j6array[0]);
                                 if( j6array[0] > IKPI )
@@ -3505,17 +3853,18 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                             {
                             IKReal j6array[1], cj6array[1], sj6array[1];
                             bool j6valid[1]={false};
-                            IKReal x194=IKsin(j5);
-                            IKReal x195=IKcos(j4);
-                            IKReal x196=(x195)*(x195);
-                            IKReal x197=((IKabs(x194) != 0)?(pow(x194,-2.00000000000000)):(IKReal)1.0e30);
-                            IKReal x198=((x196)*(x197));
-                            IKReal x199=((1.00000000000000)+(x198));
-                            IKReal x200=((x199)+(((-1.00000000000000)*(x196))));
-                            IKReal x201=((IKabs(x200) != 0)?((IKReal)1/(x200)):(IKReal)1.0e30);
-                            IKReal x202=((IKabs(x194) != 0)?((IKReal)1/(x194)):(IKReal)1.0e30);
-                            IKReal x203=IKsin(j4);
-                            j6array[0]=IKatan2(((((_r00)*(x201)*(x202)*(x203)))+(((-1.00000000000000)*(_r01)*(x195)*(x197)*(x201)))), ((((_r01)*(x201)*(x202)*(x203)))+(((_r00)*(x195)*(x197)*(x201)))));
+                            IKReal x223=IKsin(j4);
+                            IKReal x224=IKsin(j5);
+                            IKReal x225=IKcos(j4);
+                            IKReal x226=(x225)*(x225);
+                            IKReal x227=((IKabs(x223) != 0)?(pow(x223,-2.00000000000000)):(IKReal)1.0e30);
+                            IKReal x228=((IKabs(x224) != 0)?(pow(x224,-2.00000000000000)):(IKReal)1.0e30);
+                            IKReal x229=((x226)*(x227)*(x228));
+                            IKReal x230=((1.00000000000000)+(x229));
+                            IKReal x231=((IKabs(x230) != 0)?((IKReal)1/(x230)):(IKReal)1.0e30);
+                            IKReal x232=((IKabs(x223) != 0)?((IKReal)1/(x223)):(IKReal)1.0e30);
+                            IKReal x233=((IKabs(x224) != 0)?((IKReal)1/(x224)):(IKReal)1.0e30);
+                            j6array[0]=IKatan2(((((-1.00000000000000)*(_r01)*(x225)*(x227)*(x228)*(x231)))+(((_r00)*(x231)*(x232)*(x233)))), ((((_r00)*(x225)*(x227)*(x228)*(x231)))+(((_r01)*(x231)*(x232)*(x233)))));
                             sj6array[0]=IKsin(j6array[0]);
                             cj6array[0]=IKcos(j6array[0]);
                             if( j6array[0] > IKPI )
@@ -3541,6 +3890,7 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                             }
                             }
                             } else {
+                        }
                         }
                         }
                         }
@@ -3600,16 +3950,16 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                     if( IKabs(evalcond) < 0.00001 ) {
                     {
                         IKReal j1eval[7];
-                        IKReal x204=((0.261699999999109)*(cj3));
-                        IKReal x205=((-0.310199999999895)+(py));
-                        IKReal x206=((((-1.00000000000000)*(x204)))+(x205));
-                        j1eval[0]=((0.310199999999895)+(((-1.00000000000000)*(py)))+(x204));
-                        j1eval[1]=x206;
-                        j1eval[2]=x206;
-                        j1eval[3]=x206;
-                        j1eval[4]=x206;
-                        j1eval[5]=x206;
-                        j1eval[6]=x206;
+                        IKReal x234=((0.261699999999109)*(cj3));
+                        IKReal x235=((-0.310199999999895)+(py));
+                        IKReal x236=((x235)+(((-1.00000000000000)*(x234))));
+                        j1eval[0]=((0.310199999999895)+(((-1.00000000000000)*(py)))+(x234));
+                        j1eval[1]=x236;
+                        j1eval[2]=x236;
+                        j1eval[3]=x236;
+                        j1eval[4]=x236;
+                        j1eval[5]=x236;
+                        j1eval[6]=x236;
                         if( IKabs(j1eval[0]) < 0.000100  && IKabs(j1eval[1]) < 0.000100  && IKabs(j1eval[2]) < 0.000100  && IKabs(j1eval[3]) < 0.000100  && IKabs(j1eval[4]) < 0.000100  && IKabs(j1eval[5]) < 0.000100  && IKabs(j1eval[6]) < 0.000100  ) {
                             {
                             j1 = 0.000000; sj1 = 0.000000; cj1 = 1.000000;
@@ -3620,13 +3970,13 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 {
                                 IKReal j2array[2], cj2array[2], sj2array[2];
                                 bool j2valid[2]={false};
-                                IKReal x207=((-1.00000000000000)*(px));
-                                IKReal x208=((-1.00000000000000)*(pz));
-                                IKReal x209=IKatan2(x207, x208);
-                                j2array[0]=((-1.00000000000000)*(x209));
+                                IKReal x237=((-1.00000000000000)*(px));
+                                IKReal x238=((-1.00000000000000)*(pz));
+                                IKReal x239=IKatan2(x237, x238);
+                                j2array[0]=((-1.00000000000000)*(x239));
                                 sj2array[0]=IKsin(j2array[0]);
                                 cj2array[0]=IKcos(j2array[0]);
-                                j2array[1]=((3.14159265358979)+(((-1.00000000000000)*(x209))));
+                                j2array[1]=((3.14159265358979)+(((-1.00000000000000)*(x239))));
                                 sj2array[1]=IKsin(j2array[1]);
                                 cj2array[1]=IKcos(j2array[1]);
                                 if( j2array[0] > IKPI )
@@ -3752,13 +4102,13 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                     {
                                     IKReal j6array[1], cj6array[1], sj6array[1];
                                     bool j6valid[1]={false};
-                                    IKReal x210=(cj4)*(cj4);
-                                    IKReal x211=(sj4)*(sj4);
-                                    IKReal x212=(sj5)*(sj5);
-                                    IKReal x213=((x211)*(x212));
-                                    IKReal x214=((x210)+(x213));
-                                    IKReal x215=((IKabs(x214) != 0)?((IKReal)1/(x214)):(IKReal)1.0e30);
-                                    j6array[0]=IKatan2(((((-1.00000000000000)*(_r01)*(cj4)*(x215)))+(((_r00)*(sj4)*(sj5)*(x215)))), ((((_r00)*(cj4)*(x215)))+(((_r01)*(sj4)*(sj5)*(x215)))));
+                                    IKReal x240=(cj4)*(cj4);
+                                    IKReal x241=(sj4)*(sj4);
+                                    IKReal x242=(sj5)*(sj5);
+                                    IKReal x243=((x241)*(x242));
+                                    IKReal x244=((x243)+(x240));
+                                    IKReal x245=((IKabs(x244) != 0)?((IKReal)1/(x244)):(IKReal)1.0e30);
+                                    j6array[0]=IKatan2(((((-1.00000000000000)*(_r01)*(cj4)*(x245)))+(((_r00)*(sj4)*(sj5)*(x245)))), ((((_r00)*(cj4)*(x245)))+(((_r01)*(sj4)*(sj5)*(x245)))));
                                     sj6array[0]=IKsin(j6array[0]);
                                     cj6array[0]=IKcos(j6array[0]);
                                     if( j6array[0] > IKPI )
@@ -3796,8 +4146,8 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 {
                                 IKReal j2array[1], cj2array[1], sj2array[1];
                                 bool j2valid[1]={false};
-                                IKReal x216=((IKabs(sj3) != 0)?((IKReal)1/(sj3)):(IKReal)1.0e30);
-                                j2array[0]=IKatan2(((-3.82116927779862)*(px)*(x216)), ((3.82116927779862)*(pz)*(x216)));
+                                IKReal x246=((IKabs(sj3) != 0)?((IKReal)1/(sj3)):(IKReal)1.0e30);
+                                j2array[0]=IKatan2(((-3.82116927779862)*(px)*(x246)), ((3.82116927779862)*(pz)*(x246)));
                                 sj2array[0]=IKsin(j2array[0]);
                                 cj2array[0]=IKcos(j2array[0]);
                                 if( j2array[0] > IKPI )
@@ -3916,13 +4266,13 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                     {
                                     IKReal j6array[1], cj6array[1], sj6array[1];
                                     bool j6valid[1]={false};
-                                    IKReal x217=(cj4)*(cj4);
-                                    IKReal x218=(sj4)*(sj4);
-                                    IKReal x219=(sj5)*(sj5);
-                                    IKReal x220=((x218)*(x219));
-                                    IKReal x221=((x217)+(x220));
-                                    IKReal x222=((IKabs(x221) != 0)?((IKReal)1/(x221)):(IKReal)1.0e30);
-                                    j6array[0]=IKatan2(((((_r00)*(sj4)*(sj5)*(x222)))+(((-1.00000000000000)*(_r01)*(cj4)*(x222)))), ((((_r00)*(cj4)*(x222)))+(((_r01)*(sj4)*(sj5)*(x222)))));
+                                    IKReal x247=(cj4)*(cj4);
+                                    IKReal x248=(sj4)*(sj4);
+                                    IKReal x249=(sj5)*(sj5);
+                                    IKReal x250=((x248)*(x249));
+                                    IKReal x251=((x250)+(x247));
+                                    IKReal x252=((IKabs(x251) != 0)?((IKReal)1/(x251)):(IKReal)1.0e30);
+                                    j6array[0]=IKatan2(((((_r00)*(sj4)*(sj5)*(x252)))+(((-1.00000000000000)*(_r01)*(cj4)*(x252)))), ((((_r01)*(sj4)*(sj5)*(x252)))+(((_r00)*(cj4)*(x252)))));
                                     sj6array[0]=IKsin(j6array[0]);
                                     cj6array[0]=IKcos(j6array[0]);
                                     if( j6array[0] > IKPI )
@@ -3969,25 +4319,25 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                         }
                     {
                         IKReal j2eval[7];
-                        IKReal x223=((0.261699999999109)*(sj3));
-                        IKReal x224=((((-1.00000000000000)*(x223)))+(pz));
-                        j2eval[0]=((((-1.00000000000000)*(pz)))+(x223));
-                        j2eval[1]=x224;
-                        j2eval[2]=x224;
-                        j2eval[3]=x224;
-                        j2eval[4]=x224;
-                        j2eval[5]=x224;
-                        j2eval[6]=x224;
+                        IKReal x253=((0.261699999999109)*(sj3));
+                        IKReal x254=((pz)+(((-1.00000000000000)*(x253))));
+                        j2eval[0]=((((-1.00000000000000)*(pz)))+(x253));
+                        j2eval[1]=x254;
+                        j2eval[2]=x254;
+                        j2eval[3]=x254;
+                        j2eval[4]=x254;
+                        j2eval[5]=x254;
+                        j2eval[6]=x254;
                         if( IKabs(j2eval[0]) < 0.000100  && IKabs(j2eval[1]) < 0.000100  && IKabs(j2eval[2]) < 0.000100  && IKabs(j2eval[3]) < 0.000100  && IKabs(j2eval[4]) < 0.000100  && IKabs(j2eval[5]) < 0.000100  && IKabs(j2eval[6]) < 0.000100  ) {
                             {
                             j2 = 0.000000; sj2 = 0.000000; cj2 = 1.000000;
                             {
                             IKReal j1array[1], cj1array[1], sj1array[1];
                             bool j1valid[1]={false};
-                            IKReal x225=((0.261699999999109)*(cj3));
-                            IKReal x226=((0.310199999999895)+(x225));
-                            IKReal x227=((IKabs(x226) != 0)?((IKReal)1/(x226)):(IKReal)1.0e30);
-                            j1array[0]=IKatan2(((-1.00000000000000)*(px)*(x227)), ((py)*(x227)));
+                            IKReal x255=((0.261699999999109)*(cj3));
+                            IKReal x256=((0.310199999999895)+(x255));
+                            IKReal x257=((IKabs(x256) != 0)?((IKReal)1/(x256)):(IKReal)1.0e30);
+                            j1array[0]=IKatan2(((-1.00000000000000)*(px)*(x257)), ((py)*(x257)));
                             sj1array[0]=IKsin(j1array[0]);
                             cj1array[0]=IKcos(j1array[0]);
                             if( j1array[0] > IKPI )
@@ -4106,13 +4456,13 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 {
                                 IKReal j6array[1], cj6array[1], sj6array[1];
                                 bool j6valid[1]={false};
-                                IKReal x228=(cj4)*(cj4);
-                                IKReal x229=(sj4)*(sj4);
-                                IKReal x230=(sj5)*(sj5);
-                                IKReal x231=((x229)*(x230));
-                                IKReal x232=((x231)+(x228));
-                                IKReal x233=((IKabs(x232) != 0)?((IKReal)1/(x232)):(IKReal)1.0e30);
-                                j6array[0]=IKatan2(((((_r00)*(sj4)*(sj5)*(x233)))+(((-1.00000000000000)*(_r01)*(cj4)*(x233)))), ((((_r01)*(sj4)*(sj5)*(x233)))+(((_r00)*(cj4)*(x233)))));
+                                IKReal x258=(cj4)*(cj4);
+                                IKReal x259=(sj4)*(sj4);
+                                IKReal x260=(sj5)*(sj5);
+                                IKReal x261=((x259)*(x260));
+                                IKReal x262=((x258)+(x261));
+                                IKReal x263=((IKabs(x262) != 0)?((IKReal)1/(x262)):(IKReal)1.0e30);
+                                j6array[0]=IKatan2(((((-1.00000000000000)*(_r01)*(cj4)*(x263)))+(((_r00)*(sj4)*(sj5)*(x263)))), ((((_r00)*(cj4)*(x263)))+(((_r01)*(sj4)*(sj5)*(x263)))));
                                 sj6array[0]=IKsin(j6array[0]);
                                 cj6array[0]=IKcos(j6array[0]);
                                 if( j6array[0] > IKPI )
@@ -4182,12 +4532,12 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                     {
                     IKReal j1array[1], cj1array[1], sj1array[1];
                     bool j1valid[1]={false};
-                    IKReal x234=(px)*(px);
-                    IKReal x235=(py)*(py);
-                    IKReal x236=((x234)+(x235));
-                    IKReal x237=((-1.00000000000000)*(x236));
-                    IKReal x238=((IKabs(x237) != 0)?((IKReal)1/(x237)):(IKReal)1.0e30);
-                    j1array[0]=IKatan2(((((0.261699999999109)*(cj3)*(px)*(x238)))+(((0.261699999999109)*(py)*(sj2)*(sj3)*(x238)))+(((0.310199999999895)*(px)*(x238)))), ((((-0.310199999999895)*(py)*(x238)))+(((-0.261699999999109)*(cj3)*(py)*(x238)))+(((0.261699999999109)*(px)*(sj2)*(sj3)*(x238)))));
+                    IKReal x264=(px)*(px);
+                    IKReal x265=(py)*(py);
+                    IKReal x266=((x265)+(x264));
+                    IKReal x267=((-1.00000000000000)*(x266));
+                    IKReal x268=((IKabs(x267) != 0)?((IKReal)1/(x267)):(IKReal)1.0e30);
+                    j1array[0]=IKatan2(((((0.261699999999109)*(cj3)*(px)*(x268)))+(((0.310199999999895)*(px)*(x268)))+(((0.261699999999109)*(py)*(sj2)*(sj3)*(x268)))), ((((-0.261699999999109)*(cj3)*(py)*(x268)))+(((-0.310199999999895)*(py)*(x268)))+(((0.261699999999109)*(px)*(sj2)*(sj3)*(x268)))));
                     sj1array[0]=IKsin(j1array[0]);
                     cj1array[0]=IKcos(j1array[0]);
                     if( j1array[0] > IKPI )
@@ -4306,13 +4656,13 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                         {
                         IKReal j6array[1], cj6array[1], sj6array[1];
                         bool j6valid[1]={false};
-                        IKReal x239=(cj4)*(cj4);
-                        IKReal x240=(sj4)*(sj4);
-                        IKReal x241=(sj5)*(sj5);
-                        IKReal x242=((x240)*(x241));
-                        IKReal x243=((x239)+(x242));
-                        IKReal x244=((IKabs(x243) != 0)?((IKReal)1/(x243)):(IKReal)1.0e30);
-                        j6array[0]=IKatan2(((((_r00)*(sj4)*(sj5)*(x244)))+(((-1.00000000000000)*(_r01)*(cj4)*(x244)))), ((((_r01)*(sj4)*(sj5)*(x244)))+(((_r00)*(cj4)*(x244)))));
+                        IKReal x269=(cj4)*(cj4);
+                        IKReal x270=(sj4)*(sj4);
+                        IKReal x271=(sj5)*(sj5);
+                        IKReal x272=((x270)*(x271));
+                        IKReal x273=((x272)+(x269));
+                        IKReal x274=((IKabs(x273) != 0)?((IKReal)1/(x273)):(IKReal)1.0e30);
+                        j6array[0]=IKatan2(((((_r00)*(sj4)*(sj5)*(x274)))+(((-1.00000000000000)*(_r01)*(cj4)*(x274)))), ((((_r00)*(cj4)*(x274)))+(((_r01)*(sj4)*(sj5)*(x274)))));
                         sj6array[0]=IKsin(j6array[0]);
                         cj6array[0]=IKcos(j6array[0]);
                         if( j6array[0] > IKPI )
@@ -4381,12 +4731,12 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                 {
                 IKReal j1array[1], cj1array[1], sj1array[1];
                 bool j1valid[1]={false};
-                IKReal x245=(px)*(px);
-                IKReal x246=(py)*(py);
-                IKReal x247=((x246)+(x245));
-                IKReal x248=((-1.00000000000000)*(x247));
-                IKReal x249=((IKabs(x248) != 0)?((IKReal)1/(x248)):(IKReal)1.0e30);
-                j1array[0]=IKatan2(((((0.261699999999109)*(py)*(sj2)*(sj3)*(x249)))+(((0.261699999999109)*(cj3)*(px)*(x249)))+(((0.310199999999895)*(px)*(x249)))), ((((-0.310199999999895)*(py)*(x249)))+(((-0.261699999999109)*(cj3)*(py)*(x249)))+(((0.261699999999109)*(px)*(sj2)*(sj3)*(x249)))));
+                IKReal x275=(px)*(px);
+                IKReal x276=(py)*(py);
+                IKReal x277=((x276)+(x275));
+                IKReal x278=((-1.00000000000000)*(x277));
+                IKReal x279=((IKabs(x278) != 0)?((IKReal)1/(x278)):(IKReal)1.0e30);
+                j1array[0]=IKatan2(((((0.261699999999109)*(cj3)*(px)*(x279)))+(((0.261699999999109)*(py)*(sj2)*(sj3)*(x279)))+(((0.310199999999895)*(px)*(x279)))), ((((-0.261699999999109)*(cj3)*(py)*(x279)))+(((0.261699999999109)*(px)*(sj2)*(sj3)*(x279)))+(((-0.310199999999895)*(py)*(x279)))));
                 sj1array[0]=IKsin(j1array[0]);
                 cj1array[0]=IKcos(j1array[0]);
                 if( j1array[0] > IKPI )
@@ -4505,13 +4855,13 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                     {
                     IKReal j6array[1], cj6array[1], sj6array[1];
                     bool j6valid[1]={false};
-                    IKReal x250=(cj4)*(cj4);
-                    IKReal x251=(sj4)*(sj4);
-                    IKReal x252=(sj5)*(sj5);
-                    IKReal x253=((x251)*(x252));
-                    IKReal x254=((x250)+(x253));
-                    IKReal x255=((IKabs(x254) != 0)?((IKReal)1/(x254)):(IKReal)1.0e30);
-                    j6array[0]=IKatan2(((((-1.00000000000000)*(_r01)*(cj4)*(x255)))+(((_r00)*(sj4)*(sj5)*(x255)))), ((((_r00)*(cj4)*(x255)))+(((_r01)*(sj4)*(sj5)*(x255)))));
+                    IKReal x280=(cj4)*(cj4);
+                    IKReal x281=(sj4)*(sj4);
+                    IKReal x282=(sj5)*(sj5);
+                    IKReal x283=((x281)*(x282));
+                    IKReal x284=((x283)+(x280));
+                    IKReal x285=((IKabs(x284) != 0)?((IKReal)1/(x284)):(IKReal)1.0e30);
+                    j6array[0]=IKatan2(((((-1.00000000000000)*(_r01)*(cj4)*(x285)))+(((_r00)*(sj4)*(sj5)*(x285)))), ((((_r01)*(sj4)*(sj5)*(x285)))+(((_r00)*(cj4)*(x285)))));
                     sj6array[0]=IKsin(j6array[0]);
                     cj6array[0]=IKcos(j6array[0]);
                     if( j6array[0] > IKPI )
@@ -4588,16 +4938,16 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                     if( IKabs(evalcond) < 0.00001 ) {
                     {
                         IKReal j1eval[7];
-                        IKReal x256=((0.261699999999109)*(cj3));
-                        IKReal x257=((-0.310199999999895)+(pz));
-                        IKReal x258=((((-1.00000000000000)*(x256)))+(x257));
-                        j1eval[0]=((0.310199999999895)+(((-1.00000000000000)*(pz)))+(x256));
-                        j1eval[1]=x258;
-                        j1eval[2]=x258;
-                        j1eval[3]=x258;
-                        j1eval[4]=x258;
-                        j1eval[5]=x258;
-                        j1eval[6]=x258;
+                        IKReal x286=((0.261699999999109)*(cj3));
+                        IKReal x287=((-0.310199999999895)+(pz));
+                        IKReal x288=((x287)+(((-1.00000000000000)*(x286))));
+                        j1eval[0]=((0.310199999999895)+(((-1.00000000000000)*(pz)))+(x286));
+                        j1eval[1]=x288;
+                        j1eval[2]=x288;
+                        j1eval[3]=x288;
+                        j1eval[4]=x288;
+                        j1eval[5]=x288;
+                        j1eval[6]=x288;
                         if( IKabs(j1eval[0]) < 0.000100  && IKabs(j1eval[1]) < 0.000100  && IKabs(j1eval[2]) < 0.000100  && IKabs(j1eval[3]) < 0.000100  && IKabs(j1eval[4]) < 0.000100  && IKabs(j1eval[5]) < 0.000100  && IKabs(j1eval[6]) < 0.000100  ) {
                             {
                             j1 = 0.000000; sj1 = 0.000000; cj1 = 1.000000;
@@ -4608,12 +4958,12 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 {
                                 IKReal j2array[2], cj2array[2], sj2array[2];
                                 bool j2valid[2]={false};
-                                IKReal x259=((-1.00000000000000)*(px));
-                                IKReal x260=IKatan2(x259, py);
-                                j2array[0]=((-1.00000000000000)*(x260));
+                                IKReal x289=((-1.00000000000000)*(px));
+                                IKReal x290=IKatan2(x289, py);
+                                j2array[0]=((-1.00000000000000)*(x290));
                                 sj2array[0]=IKsin(j2array[0]);
                                 cj2array[0]=IKcos(j2array[0]);
-                                j2array[1]=((3.14159265358979)+(((-1.00000000000000)*(x260))));
+                                j2array[1]=((3.14159265358979)+(((-1.00000000000000)*(x290))));
                                 sj2array[1]=IKsin(j2array[1]);
                                 cj2array[1]=IKcos(j2array[1]);
                                 if( j2array[0] > IKPI )
@@ -4739,13 +5089,13 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                     {
                                     IKReal j6array[1], cj6array[1], sj6array[1];
                                     bool j6valid[1]={false};
-                                    IKReal x261=(cj4)*(cj4);
-                                    IKReal x262=(sj4)*(sj4);
-                                    IKReal x263=(sj5)*(sj5);
-                                    IKReal x264=((x262)*(x263));
-                                    IKReal x265=((x264)+(x261));
-                                    IKReal x266=((IKabs(x265) != 0)?((IKReal)1/(x265)):(IKReal)1.0e30);
-                                    j6array[0]=IKatan2(((((_r00)*(sj4)*(sj5)*(x266)))+(((-1.00000000000000)*(_r01)*(cj4)*(x266)))), ((((_r00)*(cj4)*(x266)))+(((_r01)*(sj4)*(sj5)*(x266)))));
+                                    IKReal x291=(cj4)*(cj4);
+                                    IKReal x292=(sj4)*(sj4);
+                                    IKReal x293=(sj5)*(sj5);
+                                    IKReal x294=((x292)*(x293));
+                                    IKReal x295=((x291)+(x294));
+                                    IKReal x296=((IKabs(x295) != 0)?((IKReal)1/(x295)):(IKReal)1.0e30);
+                                    j6array[0]=IKatan2(((((_r00)*(sj4)*(sj5)*(x296)))+(((-1.00000000000000)*(_r01)*(cj4)*(x296)))), ((((_r00)*(cj4)*(x296)))+(((_r01)*(sj4)*(sj5)*(x296)))));
                                     sj6array[0]=IKsin(j6array[0]);
                                     cj6array[0]=IKcos(j6array[0]);
                                     if( j6array[0] > IKPI )
@@ -4783,8 +5133,8 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 {
                                 IKReal j2array[1], cj2array[1], sj2array[1];
                                 bool j2valid[1]={false};
-                                IKReal x267=((IKabs(sj3) != 0)?((IKReal)1/(sj3)):(IKReal)1.0e30);
-                                j2array[0]=IKatan2(((-3.82116927779862)*(px)*(x267)), ((-3.82116927779862)*(py)*(x267)));
+                                IKReal x297=((IKabs(sj3) != 0)?((IKReal)1/(sj3)):(IKReal)1.0e30);
+                                j2array[0]=IKatan2(((-3.82116927779862)*(px)*(x297)), ((-3.82116927779862)*(py)*(x297)));
                                 sj2array[0]=IKsin(j2array[0]);
                                 cj2array[0]=IKcos(j2array[0]);
                                 if( j2array[0] > IKPI )
@@ -4903,13 +5253,13 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                     {
                                     IKReal j6array[1], cj6array[1], sj6array[1];
                                     bool j6valid[1]={false};
-                                    IKReal x268=(cj4)*(cj4);
-                                    IKReal x269=(sj4)*(sj4);
-                                    IKReal x270=(sj5)*(sj5);
-                                    IKReal x271=((x269)*(x270));
-                                    IKReal x272=((x271)+(x268));
-                                    IKReal x273=((IKabs(x272) != 0)?((IKReal)1/(x272)):(IKReal)1.0e30);
-                                    j6array[0]=IKatan2(((((-1.00000000000000)*(_r01)*(cj4)*(x273)))+(((_r00)*(sj4)*(sj5)*(x273)))), ((((_r01)*(sj4)*(sj5)*(x273)))+(((_r00)*(cj4)*(x273)))));
+                                    IKReal x298=(cj4)*(cj4);
+                                    IKReal x299=(sj4)*(sj4);
+                                    IKReal x300=(sj5)*(sj5);
+                                    IKReal x301=((x299)*(x300));
+                                    IKReal x302=((x301)+(x298));
+                                    IKReal x303=((IKabs(x302) != 0)?((IKReal)1/(x302)):(IKReal)1.0e30);
+                                    j6array[0]=IKatan2(((((-1.00000000000000)*(_r01)*(cj4)*(x303)))+(((_r00)*(sj4)*(sj5)*(x303)))), ((((_r01)*(sj4)*(sj5)*(x303)))+(((_r00)*(cj4)*(x303)))));
                                     sj6array[0]=IKsin(j6array[0]);
                                     cj6array[0]=IKcos(j6array[0]);
                                     if( j6array[0] > IKPI )
@@ -4956,26 +5306,26 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                         }
                     {
                         IKReal j2eval[7];
-                        IKReal x274=((0.261699999999109)*(sj3));
-                        IKReal x275=((x274)+(py));
-                        IKReal x276=((-1.00000000000000)*(x275));
-                        j2eval[0]=x276;
-                        j2eval[1]=x276;
-                        j2eval[2]=x276;
-                        j2eval[3]=x276;
-                        j2eval[4]=x276;
-                        j2eval[5]=x276;
-                        j2eval[6]=x276;
+                        IKReal x304=((0.261699999999109)*(sj3));
+                        IKReal x305=((x304)+(py));
+                        IKReal x306=((-1.00000000000000)*(x305));
+                        j2eval[0]=x306;
+                        j2eval[1]=x306;
+                        j2eval[2]=x306;
+                        j2eval[3]=x306;
+                        j2eval[4]=x306;
+                        j2eval[5]=x306;
+                        j2eval[6]=x306;
                         if( IKabs(j2eval[0]) < 0.000100  && IKabs(j2eval[1]) < 0.000100  && IKabs(j2eval[2]) < 0.000100  && IKabs(j2eval[3]) < 0.000100  && IKabs(j2eval[4]) < 0.000100  && IKabs(j2eval[5]) < 0.000100  && IKabs(j2eval[6]) < 0.000100  ) {
                             {
                             j2 = 0.000000; sj2 = 0.000000; cj2 = 1.000000;
                             {
                             IKReal j1array[1], cj1array[1], sj1array[1];
                             bool j1valid[1]={false};
-                            IKReal x277=((0.261699999999109)*(cj3));
-                            IKReal x278=((0.310199999999895)+(x277));
-                            IKReal x279=((IKabs(x278) != 0)?((IKReal)1/(x278)):(IKReal)1.0e30);
-                            j1array[0]=IKatan2(((-1.00000000000000)*(px)*(x279)), ((pz)*(x279)));
+                            IKReal x307=((0.261699999999109)*(cj3));
+                            IKReal x308=((0.310199999999895)+(x307));
+                            IKReal x309=((IKabs(x308) != 0)?((IKReal)1/(x308)):(IKReal)1.0e30);
+                            j1array[0]=IKatan2(((-1.00000000000000)*(px)*(x309)), ((pz)*(x309)));
                             sj1array[0]=IKsin(j1array[0]);
                             cj1array[0]=IKcos(j1array[0]);
                             if( j1array[0] > IKPI )
@@ -5094,13 +5444,13 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 {
                                 IKReal j6array[1], cj6array[1], sj6array[1];
                                 bool j6valid[1]={false};
-                                IKReal x280=(cj4)*(cj4);
-                                IKReal x281=(sj4)*(sj4);
-                                IKReal x282=(sj5)*(sj5);
-                                IKReal x283=((x281)*(x282));
-                                IKReal x284=((x283)+(x280));
-                                IKReal x285=((IKabs(x284) != 0)?((IKReal)1/(x284)):(IKReal)1.0e30);
-                                j6array[0]=IKatan2(((((-1.00000000000000)*(_r01)*(cj4)*(x285)))+(((_r00)*(sj4)*(sj5)*(x285)))), ((((_r01)*(sj4)*(sj5)*(x285)))+(((_r00)*(cj4)*(x285)))));
+                                IKReal x310=(cj4)*(cj4);
+                                IKReal x311=(sj4)*(sj4);
+                                IKReal x312=(sj5)*(sj5);
+                                IKReal x313=((x311)*(x312));
+                                IKReal x314=((x310)+(x313));
+                                IKReal x315=((IKabs(x314) != 0)?((IKReal)1/(x314)):(IKReal)1.0e30);
+                                j6array[0]=IKatan2(((((-1.00000000000000)*(_r01)*(cj4)*(x315)))+(((_r00)*(sj4)*(sj5)*(x315)))), ((((_r01)*(sj4)*(sj5)*(x315)))+(((_r00)*(cj4)*(x315)))));
                                 sj6array[0]=IKsin(j6array[0]);
                                 cj6array[0]=IKcos(j6array[0]);
                                 if( j6array[0] > IKPI )
@@ -5170,12 +5520,12 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                     {
                     IKReal j1array[1], cj1array[1], sj1array[1];
                     bool j1valid[1]={false};
-                    IKReal x286=(px)*(px);
-                    IKReal x287=(pz)*(pz);
-                    IKReal x288=((x287)+(x286));
-                    IKReal x289=((-1.00000000000000)*(x288));
-                    IKReal x290=((IKabs(x289) != 0)?((IKReal)1/(x289)):(IKReal)1.0e30);
-                    j1array[0]=IKatan2(((((0.310199999999895)*(px)*(x290)))+(((0.261699999999109)*(pz)*(sj2)*(sj3)*(x290)))+(((0.261699999999109)*(cj3)*(px)*(x290)))), ((((-0.261699999999109)*(cj3)*(pz)*(x290)))+(((-0.310199999999895)*(pz)*(x290)))+(((0.261699999999109)*(px)*(sj2)*(sj3)*(x290)))));
+                    IKReal x316=(px)*(px);
+                    IKReal x317=(pz)*(pz);
+                    IKReal x318=((x317)+(x316));
+                    IKReal x319=((-1.00000000000000)*(x318));
+                    IKReal x320=((IKabs(x319) != 0)?((IKReal)1/(x319)):(IKReal)1.0e30);
+                    j1array[0]=IKatan2(((((0.310199999999895)*(px)*(x320)))+(((0.261699999999109)*(pz)*(sj2)*(sj3)*(x320)))+(((0.261699999999109)*(cj3)*(px)*(x320)))), ((((-0.310199999999895)*(pz)*(x320)))+(((0.261699999999109)*(px)*(sj2)*(sj3)*(x320)))+(((-0.261699999999109)*(cj3)*(pz)*(x320)))));
                     sj1array[0]=IKsin(j1array[0]);
                     cj1array[0]=IKcos(j1array[0]);
                     if( j1array[0] > IKPI )
@@ -5294,13 +5644,13 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                         {
                         IKReal j6array[1], cj6array[1], sj6array[1];
                         bool j6valid[1]={false};
-                        IKReal x291=(cj4)*(cj4);
-                        IKReal x292=(sj4)*(sj4);
-                        IKReal x293=(sj5)*(sj5);
-                        IKReal x294=((x292)*(x293));
-                        IKReal x295=((x291)+(x294));
-                        IKReal x296=((IKabs(x295) != 0)?((IKReal)1/(x295)):(IKReal)1.0e30);
-                        j6array[0]=IKatan2(((((_r00)*(sj4)*(sj5)*(x296)))+(((-1.00000000000000)*(_r01)*(cj4)*(x296)))), ((((_r00)*(cj4)*(x296)))+(((_r01)*(sj4)*(sj5)*(x296)))));
+                        IKReal x321=(cj4)*(cj4);
+                        IKReal x322=(sj4)*(sj4);
+                        IKReal x323=(sj5)*(sj5);
+                        IKReal x324=((x322)*(x323));
+                        IKReal x325=((x324)+(x321));
+                        IKReal x326=((IKabs(x325) != 0)?((IKReal)1/(x325)):(IKReal)1.0e30);
+                        j6array[0]=IKatan2(((((_r00)*(sj4)*(sj5)*(x326)))+(((-1.00000000000000)*(_r01)*(cj4)*(x326)))), ((((_r00)*(cj4)*(x326)))+(((_r01)*(sj4)*(sj5)*(x326)))));
                         sj6array[0]=IKsin(j6array[0]);
                         cj6array[0]=IKcos(j6array[0]);
                         if( j6array[0] > IKPI )
@@ -5369,12 +5719,12 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                 {
                 IKReal j1array[1], cj1array[1], sj1array[1];
                 bool j1valid[1]={false};
-                IKReal x297=(px)*(px);
-                IKReal x298=(pz)*(pz);
-                IKReal x299=((x298)+(x297));
-                IKReal x300=((-1.00000000000000)*(x299));
-                IKReal x301=((IKabs(x300) != 0)?((IKReal)1/(x300)):(IKReal)1.0e30);
-                j1array[0]=IKatan2(((((0.261699999999109)*(cj3)*(px)*(x301)))+(((0.310199999999895)*(px)*(x301)))+(((0.261699999999109)*(pz)*(sj2)*(sj3)*(x301)))), ((((-0.261699999999109)*(cj3)*(pz)*(x301)))+(((-0.310199999999895)*(pz)*(x301)))+(((0.261699999999109)*(px)*(sj2)*(sj3)*(x301)))));
+                IKReal x327=(px)*(px);
+                IKReal x328=(pz)*(pz);
+                IKReal x329=((x327)+(x328));
+                IKReal x330=((-1.00000000000000)*(x329));
+                IKReal x331=((IKabs(x330) != 0)?((IKReal)1/(x330)):(IKReal)1.0e30);
+                j1array[0]=IKatan2(((((0.261699999999109)*(pz)*(sj2)*(sj3)*(x331)))+(((0.310199999999895)*(px)*(x331)))+(((0.261699999999109)*(cj3)*(px)*(x331)))), ((((-0.261699999999109)*(cj3)*(pz)*(x331)))+(((0.261699999999109)*(px)*(sj2)*(sj3)*(x331)))+(((-0.310199999999895)*(pz)*(x331)))));
                 sj1array[0]=IKsin(j1array[0]);
                 cj1array[0]=IKcos(j1array[0]);
                 if( j1array[0] > IKPI )
@@ -5493,13 +5843,13 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                     {
                     IKReal j6array[1], cj6array[1], sj6array[1];
                     bool j6valid[1]={false};
-                    IKReal x302=(cj4)*(cj4);
-                    IKReal x303=(sj4)*(sj4);
-                    IKReal x304=(sj5)*(sj5);
-                    IKReal x305=((x303)*(x304));
-                    IKReal x306=((x305)+(x302));
-                    IKReal x307=((IKabs(x306) != 0)?((IKReal)1/(x306)):(IKReal)1.0e30);
-                    j6array[0]=IKatan2(((((-1.00000000000000)*(_r01)*(cj4)*(x307)))+(((_r00)*(sj4)*(sj5)*(x307)))), ((((_r00)*(cj4)*(x307)))+(((_r01)*(sj4)*(sj5)*(x307)))));
+                    IKReal x332=(cj4)*(cj4);
+                    IKReal x333=(sj4)*(sj4);
+                    IKReal x334=(sj5)*(sj5);
+                    IKReal x335=((x333)*(x334));
+                    IKReal x336=((x332)+(x335));
+                    IKReal x337=((IKabs(x336) != 0)?((IKReal)1/(x336)):(IKReal)1.0e30);
+                    j6array[0]=IKatan2(((((-1.00000000000000)*(_r01)*(cj4)*(x337)))+(((_r00)*(sj4)*(sj5)*(x337)))), ((((_r01)*(sj4)*(sj5)*(x337)))+(((_r00)*(cj4)*(x337)))));
                     sj6array[0]=IKsin(j6array[0]);
                     cj6array[0]=IKcos(j6array[0]);
                     if( j6array[0] > IKPI )
@@ -5575,17 +5925,17 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                     if( IKabs(evalcond) < 0.00001 ) {
                     {
                         IKReal j1eval[6];
-                        IKReal x308=((0.261699999999109)*(cj3));
-                        IKReal x309=((pz)*(sj0));
-                        IKReal x310=((cj0)*(py));
-                        IKReal x311=((x308)+(x309)+(x310));
-                        IKReal x312=((-0.310199999999895)+(((-1.00000000000000)*(x311))));
-                        j1eval[0]=x312;
-                        j1eval[1]=x312;
-                        j1eval[2]=x312;
-                        j1eval[3]=x312;
-                        j1eval[4]=x312;
-                        j1eval[5]=x312;
+                        IKReal x338=((0.261699999999109)*(cj3));
+                        IKReal x339=((pz)*(sj0));
+                        IKReal x340=((cj0)*(py));
+                        IKReal x341=((x339)+(x338)+(x340));
+                        IKReal x342=((-0.310199999999895)+(((-1.00000000000000)*(x341))));
+                        j1eval[0]=x342;
+                        j1eval[1]=x342;
+                        j1eval[2]=x342;
+                        j1eval[3]=x342;
+                        j1eval[4]=x342;
+                        j1eval[5]=x342;
                         if( IKabs(j1eval[0]) < 0.000100  && IKabs(j1eval[1]) < 0.000100  && IKabs(j1eval[2]) < 0.000100  && IKabs(j1eval[3]) < 0.000100  && IKabs(j1eval[4]) < 0.000100  && IKabs(j1eval[5]) < 0.000100  ) {
                             {
                             j1 = 0.000000; sj1 = 0.000000; cj1 = 1.000000;
@@ -5596,15 +5946,15 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 {
                                 IKReal j2array[2], cj2array[2], sj2array[2];
                                 bool j2valid[2]={false};
-                                IKReal x313=((-1.00000000000000)*(px));
-                                IKReal x314=((cj0)*(pz));
-                                IKReal x315=((py)*(sj0));
-                                IKReal x316=((((-1.00000000000000)*(x315)))+(x314));
-                                IKReal x317=IKatan2(x313, x316);
-                                j2array[0]=((-1.00000000000000)*(x317));
+                                IKReal x343=((-1.00000000000000)*(px));
+                                IKReal x344=((cj0)*(pz));
+                                IKReal x345=((py)*(sj0));
+                                IKReal x346=((((-1.00000000000000)*(x345)))+(x344));
+                                IKReal x347=IKatan2(x343, x346);
+                                j2array[0]=((-1.00000000000000)*(x347));
                                 sj2array[0]=IKsin(j2array[0]);
                                 cj2array[0]=IKcos(j2array[0]);
-                                j2array[1]=((3.14159265358979)+(((-1.00000000000000)*(x317))));
+                                j2array[1]=((3.14159265358979)+(((-1.00000000000000)*(x347))));
                                 sj2array[1]=IKsin(j2array[1]);
                                 cj2array[1]=IKcos(j2array[1]);
                                 if( j2array[0] > IKPI )
@@ -5734,9 +6084,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                         {
                                         IKReal j6array[1], cj6array[1], sj6array[1];
                                         bool j6valid[1]={false};
-                                        IKReal x318=IKcos(j4);
-                                        IKReal x319=((IKabs(x318) != 0)?((IKReal)1/(x318)):(IKReal)1.0e30);
-                                        j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x319)), ((_r00)*(x319)));
+                                        IKReal x348=IKcos(j4);
+                                        IKReal x349=((IKabs(x348) != 0)?((IKReal)1/(x348)):(IKReal)1.0e30);
+                                        j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x349)), ((_r00)*(x349)));
                                         sj6array[0]=IKsin(j6array[0]);
                                         cj6array[0]=IKcos(j6array[0]);
                                         if( j6array[0] > IKPI )
@@ -5783,6 +6133,39 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                         
                                         {
                                         IKReal evalcond;
+                                            evalcond=IKsin(j4);
+                                            if( IKabs(evalcond) < 0.00001 ) {
+                                            {
+                                            IKReal j6array[1], cj6array[1], sj6array[1];
+                                            bool j6valid[1]={false};
+                                            IKReal x350=IKcos(j4);
+                                            IKReal x351=((IKabs(x350) != 0)?((IKReal)1/(x350)):(IKReal)1.0e30);
+                                            j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x351)), ((_r00)*(x351)));
+                                            sj6array[0]=IKsin(j6array[0]);
+                                            cj6array[0]=IKcos(j6array[0]);
+                                            if( j6array[0] > IKPI )
+                                                j6array[0]-=IK2PI;
+                                            else if( j6array[0] < -IKPI )
+                                                j6array[0]+=IK2PI;
+                                            j6valid[0] = true;
+                                            { int ij6 = 0;
+                                            if( !j6valid[ij6] )
+                                                continue;
+                                            j6 = j6array[0]; cj6 = cj6array[0]; sj6 = sj6array[0];
+                                            
+                                            vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();
+                                            solution.basesol.resize(7);
+                                            solution.basesol[0].foffset = j0;
+                                            solution.basesol[1].foffset = j1;
+                                            solution.basesol[2].foffset = j2;
+                                            solution.basesol[3].foffset = j3;
+                                            solution.basesol[4].foffset = j4;
+                                            solution.basesol[5].foffset = j5;
+                                            solution.basesol[6].foffset = j6;
+                                            solution.vfree.resize(0);
+                                            }
+                                            }
+                                            } else {
                                             evalcond=IKsin(j5);
                                             if( IKabs(evalcond) < 0.00001 ) {
                                             {
@@ -5792,9 +6175,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                                 {
                                                 IKReal j6array[1], cj6array[1], sj6array[1];
                                                 bool j6valid[1]={false};
-                                                IKReal x320=IKcos(j5);
-                                                IKReal x321=((IKabs(x320) != 0)?((IKReal)1/(x320)):(IKReal)1.0e30);
-                                                j6array[0]=IKatan2(((_r10)*(x321)), ((_r11)*(x321)));
+                                                IKReal x352=IKcos(j5);
+                                                IKReal x353=((IKabs(x352) != 0)?((IKReal)1/(x352)):(IKReal)1.0e30);
+                                                j6array[0]=IKatan2(((_r10)*(x353)), ((_r11)*(x353)));
                                                 sj6array[0]=IKsin(j6array[0]);
                                                 cj6array[0]=IKcos(j6array[0]);
                                                 if( j6array[0] > IKPI )
@@ -5824,9 +6207,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                                 {
                                                 IKReal j6array[1], cj6array[1], sj6array[1];
                                                 bool j6valid[1]={false};
-                                                IKReal x322=IKcos(j4);
-                                                IKReal x323=((IKabs(x322) != 0)?((IKReal)1/(x322)):(IKReal)1.0e30);
-                                                j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x323)), ((_r00)*(x323)));
+                                                IKReal x354=IKcos(j4);
+                                                IKReal x355=((IKabs(x354) != 0)?((IKReal)1/(x354)):(IKReal)1.0e30);
+                                                j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x355)), ((_r00)*(x355)));
                                                 sj6array[0]=IKsin(j6array[0]);
                                                 cj6array[0]=IKcos(j6array[0]);
                                                 if( j6array[0] > IKPI )
@@ -5860,17 +6243,18 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                             {
                                             IKReal j6array[1], cj6array[1], sj6array[1];
                                             bool j6valid[1]={false};
-                                            IKReal x324=IKsin(j5);
-                                            IKReal x325=IKcos(j4);
-                                            IKReal x326=(x325)*(x325);
-                                            IKReal x327=((IKabs(x324) != 0)?(pow(x324,-2.00000000000000)):(IKReal)1.0e30);
-                                            IKReal x328=((x326)*(x327));
-                                            IKReal x329=((1.00000000000000)+(x328));
-                                            IKReal x330=((((-1.00000000000000)*(x326)))+(x329));
-                                            IKReal x331=((IKabs(x330) != 0)?((IKReal)1/(x330)):(IKReal)1.0e30);
-                                            IKReal x332=((IKabs(x324) != 0)?((IKReal)1/(x324)):(IKReal)1.0e30);
-                                            IKReal x333=IKsin(j4);
-                                            j6array[0]=IKatan2(((((_r00)*(x331)*(x332)*(x333)))+(((-1.00000000000000)*(_r01)*(x325)*(x327)*(x331)))), ((((_r01)*(x331)*(x332)*(x333)))+(((_r00)*(x325)*(x327)*(x331)))));
+                                            IKReal x356=IKsin(j4);
+                                            IKReal x357=IKsin(j5);
+                                            IKReal x358=IKcos(j4);
+                                            IKReal x359=(x358)*(x358);
+                                            IKReal x360=((IKabs(x356) != 0)?(pow(x356,-2.00000000000000)):(IKReal)1.0e30);
+                                            IKReal x361=((IKabs(x357) != 0)?(pow(x357,-2.00000000000000)):(IKReal)1.0e30);
+                                            IKReal x362=((x359)*(x360)*(x361));
+                                            IKReal x363=((1.00000000000000)+(x362));
+                                            IKReal x364=((IKabs(x363) != 0)?((IKReal)1/(x363)):(IKReal)1.0e30);
+                                            IKReal x365=((IKabs(x356) != 0)?((IKReal)1/(x356)):(IKReal)1.0e30);
+                                            IKReal x366=((IKabs(x357) != 0)?((IKReal)1/(x357)):(IKReal)1.0e30);
+                                            j6array[0]=IKatan2(((((-1.00000000000000)*(_r01)*(x358)*(x360)*(x361)*(x364)))+(((_r00)*(x364)*(x365)*(x366)))), ((((_r01)*(x364)*(x365)*(x366)))+(((_r00)*(x358)*(x360)*(x361)*(x364)))));
                                             sj6array[0]=IKsin(j6array[0]);
                                             cj6array[0]=IKcos(j6array[0]);
                                             if( j6array[0] > IKPI )
@@ -5901,6 +6285,7 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                         }
                                         }
                                         }
+                                        }
                                         } else {
                                     }
                                     }
@@ -5916,8 +6301,8 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 {
                                 IKReal j2array[1], cj2array[1], sj2array[1];
                                 bool j2valid[1]={false};
-                                IKReal x334=((IKabs(sj3) != 0)?((IKReal)1/(sj3)):(IKReal)1.0e30);
-                                j2array[0]=IKatan2(((-3.82116927779862)*(px)*(x334)), ((((3.82116927779862)*(py)*(sj0)*(x334)))+(((-3.82116927779862)*(cj0)*(pz)*(x334)))));
+                                IKReal x367=((IKabs(sj3) != 0)?((IKReal)1/(sj3)):(IKReal)1.0e30);
+                                j2array[0]=IKatan2(((-3.82116927779862)*(px)*(x367)), ((((3.82116927779862)*(py)*(sj0)*(x367)))+(((-3.82116927779862)*(cj0)*(pz)*(x367)))));
                                 sj2array[0]=IKsin(j2array[0]);
                                 cj2array[0]=IKcos(j2array[0]);
                                 if( j2array[0] > IKPI )
@@ -6040,9 +6425,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                         {
                                         IKReal j6array[1], cj6array[1], sj6array[1];
                                         bool j6valid[1]={false};
-                                        IKReal x335=IKcos(j4);
-                                        IKReal x336=((IKabs(x335) != 0)?((IKReal)1/(x335)):(IKReal)1.0e30);
-                                        j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x336)), ((_r00)*(x336)));
+                                        IKReal x368=IKcos(j4);
+                                        IKReal x369=((IKabs(x368) != 0)?((IKReal)1/(x368)):(IKReal)1.0e30);
+                                        j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x369)), ((_r00)*(x369)));
                                         sj6array[0]=IKsin(j6array[0]);
                                         cj6array[0]=IKcos(j6array[0]);
                                         if( j6array[0] > IKPI )
@@ -6089,6 +6474,39 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                         
                                         {
                                         IKReal evalcond;
+                                            evalcond=IKsin(j4);
+                                            if( IKabs(evalcond) < 0.00001 ) {
+                                            {
+                                            IKReal j6array[1], cj6array[1], sj6array[1];
+                                            bool j6valid[1]={false};
+                                            IKReal x370=IKcos(j4);
+                                            IKReal x371=((IKabs(x370) != 0)?((IKReal)1/(x370)):(IKReal)1.0e30);
+                                            j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x371)), ((_r00)*(x371)));
+                                            sj6array[0]=IKsin(j6array[0]);
+                                            cj6array[0]=IKcos(j6array[0]);
+                                            if( j6array[0] > IKPI )
+                                                j6array[0]-=IK2PI;
+                                            else if( j6array[0] < -IKPI )
+                                                j6array[0]+=IK2PI;
+                                            j6valid[0] = true;
+                                            { int ij6 = 0;
+                                            if( !j6valid[ij6] )
+                                                continue;
+                                            j6 = j6array[0]; cj6 = cj6array[0]; sj6 = sj6array[0];
+                                            
+                                            vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();
+                                            solution.basesol.resize(7);
+                                            solution.basesol[0].foffset = j0;
+                                            solution.basesol[1].foffset = j1;
+                                            solution.basesol[2].foffset = j2;
+                                            solution.basesol[3].foffset = j3;
+                                            solution.basesol[4].foffset = j4;
+                                            solution.basesol[5].foffset = j5;
+                                            solution.basesol[6].foffset = j6;
+                                            solution.vfree.resize(0);
+                                            }
+                                            }
+                                            } else {
                                             evalcond=IKsin(j5);
                                             if( IKabs(evalcond) < 0.00001 ) {
                                             {
@@ -6098,9 +6516,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                                 {
                                                 IKReal j6array[1], cj6array[1], sj6array[1];
                                                 bool j6valid[1]={false};
-                                                IKReal x337=IKcos(j5);
-                                                IKReal x338=((IKabs(x337) != 0)?((IKReal)1/(x337)):(IKReal)1.0e30);
-                                                j6array[0]=IKatan2(((_r10)*(x338)), ((_r11)*(x338)));
+                                                IKReal x372=IKcos(j5);
+                                                IKReal x373=((IKabs(x372) != 0)?((IKReal)1/(x372)):(IKReal)1.0e30);
+                                                j6array[0]=IKatan2(((_r10)*(x373)), ((_r11)*(x373)));
                                                 sj6array[0]=IKsin(j6array[0]);
                                                 cj6array[0]=IKcos(j6array[0]);
                                                 if( j6array[0] > IKPI )
@@ -6130,9 +6548,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                                 {
                                                 IKReal j6array[1], cj6array[1], sj6array[1];
                                                 bool j6valid[1]={false};
-                                                IKReal x339=IKcos(j4);
-                                                IKReal x340=((IKabs(x339) != 0)?((IKReal)1/(x339)):(IKReal)1.0e30);
-                                                j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x340)), ((_r00)*(x340)));
+                                                IKReal x374=IKcos(j4);
+                                                IKReal x375=((IKabs(x374) != 0)?((IKReal)1/(x374)):(IKReal)1.0e30);
+                                                j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x375)), ((_r00)*(x375)));
                                                 sj6array[0]=IKsin(j6array[0]);
                                                 cj6array[0]=IKcos(j6array[0]);
                                                 if( j6array[0] > IKPI )
@@ -6166,17 +6584,18 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                             {
                                             IKReal j6array[1], cj6array[1], sj6array[1];
                                             bool j6valid[1]={false};
-                                            IKReal x341=IKsin(j5);
-                                            IKReal x342=IKcos(j4);
-                                            IKReal x343=(x342)*(x342);
-                                            IKReal x344=((IKabs(x341) != 0)?(pow(x341,-2.00000000000000)):(IKReal)1.0e30);
-                                            IKReal x345=((x343)*(x344));
-                                            IKReal x346=((1.00000000000000)+(x345));
-                                            IKReal x347=((((-1.00000000000000)*(x343)))+(x346));
-                                            IKReal x348=((IKabs(x347) != 0)?((IKReal)1/(x347)):(IKReal)1.0e30);
-                                            IKReal x349=((IKabs(x341) != 0)?((IKReal)1/(x341)):(IKReal)1.0e30);
-                                            IKReal x350=IKsin(j4);
-                                            j6array[0]=IKatan2(((((-1.00000000000000)*(_r01)*(x342)*(x344)*(x348)))+(((_r00)*(x348)*(x349)*(x350)))), ((((_r00)*(x342)*(x344)*(x348)))+(((_r01)*(x348)*(x349)*(x350)))));
+                                            IKReal x376=IKsin(j4);
+                                            IKReal x377=IKsin(j5);
+                                            IKReal x378=IKcos(j4);
+                                            IKReal x379=(x378)*(x378);
+                                            IKReal x380=((IKabs(x376) != 0)?(pow(x376,-2.00000000000000)):(IKReal)1.0e30);
+                                            IKReal x381=((IKabs(x377) != 0)?(pow(x377,-2.00000000000000)):(IKReal)1.0e30);
+                                            IKReal x382=((x379)*(x380)*(x381));
+                                            IKReal x383=((1.00000000000000)+(x382));
+                                            IKReal x384=((IKabs(x383) != 0)?((IKReal)1/(x383)):(IKReal)1.0e30);
+                                            IKReal x385=((IKabs(x376) != 0)?((IKReal)1/(x376)):(IKReal)1.0e30);
+                                            IKReal x386=((IKabs(x377) != 0)?((IKReal)1/(x377)):(IKReal)1.0e30);
+                                            j6array[0]=IKatan2(((((-1.00000000000000)*(_r01)*(x378)*(x380)*(x381)*(x384)))+(((_r00)*(x384)*(x385)*(x386)))), ((((_r00)*(x378)*(x380)*(x381)*(x384)))+(((_r01)*(x384)*(x385)*(x386)))));
                                             sj6array[0]=IKsin(j6array[0]);
                                             cj6array[0]=IKcos(j6array[0]);
                                             if( j6array[0] > IKPI )
@@ -6207,6 +6626,7 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                         }
                                         }
                                         }
+                                        }
                                         } else {
                                     }
                                     }
@@ -6231,27 +6651,27 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                         }
                     {
                         IKReal j2eval[6];
-                        IKReal x351=((py)*(sj0));
-                        IKReal x352=((cj0)*(pz));
-                        IKReal x353=((0.261699999999109)*(sj3));
-                        IKReal x354=((x353)+(x352));
-                        IKReal x355=((((-1.00000000000000)*(x354)))+(x351));
-                        j2eval[0]=x355;
-                        j2eval[1]=x355;
-                        j2eval[2]=x355;
-                        j2eval[3]=x355;
-                        j2eval[4]=x355;
-                        j2eval[5]=x355;
+                        IKReal x387=((py)*(sj0));
+                        IKReal x388=((cj0)*(pz));
+                        IKReal x389=((0.261699999999109)*(sj3));
+                        IKReal x390=((x388)+(x389));
+                        IKReal x391=((x387)+(((-1.00000000000000)*(x390))));
+                        j2eval[0]=x391;
+                        j2eval[1]=x391;
+                        j2eval[2]=x391;
+                        j2eval[3]=x391;
+                        j2eval[4]=x391;
+                        j2eval[5]=x391;
                         if( IKabs(j2eval[0]) < 0.000100  && IKabs(j2eval[1]) < 0.000100  && IKabs(j2eval[2]) < 0.000100  && IKabs(j2eval[3]) < 0.000100  && IKabs(j2eval[4]) < 0.000100  && IKabs(j2eval[5]) < 0.000100  ) {
                             {
                             j2 = 0.000000; sj2 = 0.000000; cj2 = 1.000000;
                             {
                             IKReal j1array[1], cj1array[1], sj1array[1];
                             bool j1valid[1]={false};
-                            IKReal x356=((0.261699999999109)*(cj3));
-                            IKReal x357=((0.310199999999895)+(x356));
-                            IKReal x358=((IKabs(x357) != 0)?((IKReal)1/(x357)):(IKReal)1.0e30);
-                            j1array[0]=IKatan2(((-1.00000000000000)*(px)*(x358)), ((((-1.00000000000000)*(pz)*(sj0)*(x358)))+(((-1.00000000000000)*(cj0)*(py)*(x358)))));
+                            IKReal x392=((0.261699999999109)*(cj3));
+                            IKReal x393=((0.310199999999895)+(x392));
+                            IKReal x394=((IKabs(x393) != 0)?((IKReal)1/(x393)):(IKReal)1.0e30);
+                            j1array[0]=IKatan2(((-1.00000000000000)*(px)*(x394)), ((((-1.00000000000000)*(cj0)*(py)*(x394)))+(((-1.00000000000000)*(pz)*(sj0)*(x394)))));
                             sj1array[0]=IKsin(j1array[0]);
                             cj1array[0]=IKcos(j1array[0]);
                             if( j1array[0] > IKPI )
@@ -6374,9 +6794,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                     {
                                     IKReal j6array[1], cj6array[1], sj6array[1];
                                     bool j6valid[1]={false};
-                                    IKReal x359=IKcos(j4);
-                                    IKReal x360=((IKabs(x359) != 0)?((IKReal)1/(x359)):(IKReal)1.0e30);
-                                    j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x360)), ((_r00)*(x360)));
+                                    IKReal x395=IKcos(j4);
+                                    IKReal x396=((IKabs(x395) != 0)?((IKReal)1/(x395)):(IKReal)1.0e30);
+                                    j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x396)), ((_r00)*(x396)));
                                     sj6array[0]=IKsin(j6array[0]);
                                     cj6array[0]=IKcos(j6array[0]);
                                     if( j6array[0] > IKPI )
@@ -6423,6 +6843,39 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                     
                                     {
                                     IKReal evalcond;
+                                        evalcond=IKsin(j4);
+                                        if( IKabs(evalcond) < 0.00001 ) {
+                                        {
+                                        IKReal j6array[1], cj6array[1], sj6array[1];
+                                        bool j6valid[1]={false};
+                                        IKReal x397=IKcos(j4);
+                                        IKReal x398=((IKabs(x397) != 0)?((IKReal)1/(x397)):(IKReal)1.0e30);
+                                        j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x398)), ((_r00)*(x398)));
+                                        sj6array[0]=IKsin(j6array[0]);
+                                        cj6array[0]=IKcos(j6array[0]);
+                                        if( j6array[0] > IKPI )
+                                            j6array[0]-=IK2PI;
+                                        else if( j6array[0] < -IKPI )
+                                            j6array[0]+=IK2PI;
+                                        j6valid[0] = true;
+                                        { int ij6 = 0;
+                                        if( !j6valid[ij6] )
+                                            continue;
+                                        j6 = j6array[0]; cj6 = cj6array[0]; sj6 = sj6array[0];
+                                        
+                                        vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();
+                                        solution.basesol.resize(7);
+                                        solution.basesol[0].foffset = j0;
+                                        solution.basesol[1].foffset = j1;
+                                        solution.basesol[2].foffset = j2;
+                                        solution.basesol[3].foffset = j3;
+                                        solution.basesol[4].foffset = j4;
+                                        solution.basesol[5].foffset = j5;
+                                        solution.basesol[6].foffset = j6;
+                                        solution.vfree.resize(0);
+                                        }
+                                        }
+                                        } else {
                                         evalcond=IKsin(j5);
                                         if( IKabs(evalcond) < 0.00001 ) {
                                         {
@@ -6432,9 +6885,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                             {
                                             IKReal j6array[1], cj6array[1], sj6array[1];
                                             bool j6valid[1]={false};
-                                            IKReal x361=IKcos(j5);
-                                            IKReal x362=((IKabs(x361) != 0)?((IKReal)1/(x361)):(IKReal)1.0e30);
-                                            j6array[0]=IKatan2(((_r10)*(x362)), ((_r11)*(x362)));
+                                            IKReal x399=IKcos(j5);
+                                            IKReal x400=((IKabs(x399) != 0)?((IKReal)1/(x399)):(IKReal)1.0e30);
+                                            j6array[0]=IKatan2(((_r10)*(x400)), ((_r11)*(x400)));
                                             sj6array[0]=IKsin(j6array[0]);
                                             cj6array[0]=IKcos(j6array[0]);
                                             if( j6array[0] > IKPI )
@@ -6464,9 +6917,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                             {
                                             IKReal j6array[1], cj6array[1], sj6array[1];
                                             bool j6valid[1]={false};
-                                            IKReal x363=IKcos(j4);
-                                            IKReal x364=((IKabs(x363) != 0)?((IKReal)1/(x363)):(IKReal)1.0e30);
-                                            j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x364)), ((_r00)*(x364)));
+                                            IKReal x401=IKcos(j4);
+                                            IKReal x402=((IKabs(x401) != 0)?((IKReal)1/(x401)):(IKReal)1.0e30);
+                                            j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x402)), ((_r00)*(x402)));
                                             sj6array[0]=IKsin(j6array[0]);
                                             cj6array[0]=IKcos(j6array[0]);
                                             if( j6array[0] > IKPI )
@@ -6500,17 +6953,18 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                         {
                                         IKReal j6array[1], cj6array[1], sj6array[1];
                                         bool j6valid[1]={false};
-                                        IKReal x365=IKsin(j5);
-                                        IKReal x366=IKcos(j4);
-                                        IKReal x367=(x366)*(x366);
-                                        IKReal x368=((IKabs(x365) != 0)?(pow(x365,-2.00000000000000)):(IKReal)1.0e30);
-                                        IKReal x369=((x367)*(x368));
-                                        IKReal x370=((1.00000000000000)+(x369));
-                                        IKReal x371=((((-1.00000000000000)*(x367)))+(x370));
-                                        IKReal x372=((IKabs(x371) != 0)?((IKReal)1/(x371)):(IKReal)1.0e30);
-                                        IKReal x373=((IKabs(x365) != 0)?((IKReal)1/(x365)):(IKReal)1.0e30);
-                                        IKReal x374=IKsin(j4);
-                                        j6array[0]=IKatan2(((((-1.00000000000000)*(_r01)*(x366)*(x368)*(x372)))+(((_r00)*(x372)*(x373)*(x374)))), ((((_r00)*(x366)*(x368)*(x372)))+(((_r01)*(x372)*(x373)*(x374)))));
+                                        IKReal x403=IKsin(j4);
+                                        IKReal x404=IKsin(j5);
+                                        IKReal x405=IKcos(j4);
+                                        IKReal x406=(x405)*(x405);
+                                        IKReal x407=((IKabs(x403) != 0)?(pow(x403,-2.00000000000000)):(IKReal)1.0e30);
+                                        IKReal x408=((IKabs(x404) != 0)?(pow(x404,-2.00000000000000)):(IKReal)1.0e30);
+                                        IKReal x409=((x406)*(x407)*(x408));
+                                        IKReal x410=((1.00000000000000)+(x409));
+                                        IKReal x411=((IKabs(x410) != 0)?((IKReal)1/(x410)):(IKReal)1.0e30);
+                                        IKReal x412=((IKabs(x403) != 0)?((IKReal)1/(x403)):(IKReal)1.0e30);
+                                        IKReal x413=((IKabs(x404) != 0)?((IKReal)1/(x404)):(IKReal)1.0e30);
+                                        j6array[0]=IKatan2(((((_r00)*(x411)*(x412)*(x413)))+(((-1.00000000000000)*(_r01)*(x405)*(x407)*(x408)*(x411)))), ((((_r01)*(x411)*(x412)*(x413)))+(((_r00)*(x405)*(x407)*(x408)*(x411)))));
                                         sj6array[0]=IKsin(j6array[0]);
                                         cj6array[0]=IKcos(j6array[0]);
                                         if( j6array[0] > IKPI )
@@ -6536,6 +6990,7 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                         }
                                         }
                                         } else {
+                                    }
                                     }
                                     }
                                     }
@@ -6588,18 +7043,18 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                     {
                     IKReal j1array[1], cj1array[1], sj1array[1];
                     bool j1valid[1]={false};
-                    IKReal x375=(px)*(px);
-                    IKReal x376=((2.00000000000000)*(cj0)*(py)*(pz)*(sj0));
-                    IKReal x377=(pz)*(pz);
-                    IKReal x378=(sj0)*(sj0);
-                    IKReal x379=((x377)*(x378));
-                    IKReal x380=(cj0)*(cj0);
-                    IKReal x381=(py)*(py);
-                    IKReal x382=((x380)*(x381));
-                    IKReal x383=((x382)+(x379)+(x376)+(x375));
-                    IKReal x384=((-1.00000000000000)*(x383));
-                    IKReal x385=((IKabs(x384) != 0)?((IKReal)1/(x384)):(IKReal)1.0e30);
-                    j1array[0]=IKatan2(((((0.261699999999109)*(cj3)*(px)*(x385)))+(((-0.261699999999109)*(cj0)*(py)*(sj2)*(sj3)*(x385)))+(((0.310199999999895)*(px)*(x385)))+(((-0.261699999999109)*(pz)*(sj0)*(sj2)*(sj3)*(x385)))), ((((0.310199999999895)*(cj0)*(py)*(x385)))+(((0.261699999999109)*(cj3)*(pz)*(sj0)*(x385)))+(((0.261699999999109)*(px)*(sj2)*(sj3)*(x385)))+(((0.261699999999109)*(cj0)*(cj3)*(py)*(x385)))+(((0.310199999999895)*(pz)*(sj0)*(x385)))));
+                    IKReal x414=(px)*(px);
+                    IKReal x415=((2.00000000000000)*(cj0)*(py)*(pz)*(sj0));
+                    IKReal x416=(pz)*(pz);
+                    IKReal x417=(sj0)*(sj0);
+                    IKReal x418=((x416)*(x417));
+                    IKReal x419=(cj0)*(cj0);
+                    IKReal x420=(py)*(py);
+                    IKReal x421=((x419)*(x420));
+                    IKReal x422=((x421)+(x414)+(x415)+(x418));
+                    IKReal x423=((-1.00000000000000)*(x422));
+                    IKReal x424=((IKabs(x423) != 0)?((IKReal)1/(x423)):(IKReal)1.0e30);
+                    j1array[0]=IKatan2(((((0.310199999999895)*(px)*(x424)))+(((0.261699999999109)*(cj3)*(px)*(x424)))+(((-0.261699999999109)*(pz)*(sj0)*(sj2)*(sj3)*(x424)))+(((-0.261699999999109)*(cj0)*(py)*(sj2)*(sj3)*(x424)))), ((((0.310199999999895)*(cj0)*(py)*(x424)))+(((0.310199999999895)*(pz)*(sj0)*(x424)))+(((0.261699999999109)*(px)*(sj2)*(sj3)*(x424)))+(((0.261699999999109)*(cj0)*(cj3)*(py)*(x424)))+(((0.261699999999109)*(cj3)*(pz)*(sj0)*(x424)))));
                     sj1array[0]=IKsin(j1array[0]);
                     cj1array[0]=IKcos(j1array[0]);
                     if( j1array[0] > IKPI )
@@ -6722,9 +7177,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                             {
                             IKReal j6array[1], cj6array[1], sj6array[1];
                             bool j6valid[1]={false};
-                            IKReal x386=IKcos(j4);
-                            IKReal x387=((IKabs(x386) != 0)?((IKReal)1/(x386)):(IKReal)1.0e30);
-                            j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x387)), ((_r00)*(x387)));
+                            IKReal x425=IKcos(j4);
+                            IKReal x426=((IKabs(x425) != 0)?((IKReal)1/(x425)):(IKReal)1.0e30);
+                            j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x426)), ((_r00)*(x426)));
                             sj6array[0]=IKsin(j6array[0]);
                             cj6array[0]=IKcos(j6array[0]);
                             if( j6array[0] > IKPI )
@@ -6771,6 +7226,39 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                             
                             {
                             IKReal evalcond;
+                                evalcond=IKsin(j4);
+                                if( IKabs(evalcond) < 0.00001 ) {
+                                {
+                                IKReal j6array[1], cj6array[1], sj6array[1];
+                                bool j6valid[1]={false};
+                                IKReal x427=IKcos(j4);
+                                IKReal x428=((IKabs(x427) != 0)?((IKReal)1/(x427)):(IKReal)1.0e30);
+                                j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x428)), ((_r00)*(x428)));
+                                sj6array[0]=IKsin(j6array[0]);
+                                cj6array[0]=IKcos(j6array[0]);
+                                if( j6array[0] > IKPI )
+                                    j6array[0]-=IK2PI;
+                                else if( j6array[0] < -IKPI )
+                                    j6array[0]+=IK2PI;
+                                j6valid[0] = true;
+                                { int ij6 = 0;
+                                if( !j6valid[ij6] )
+                                    continue;
+                                j6 = j6array[0]; cj6 = cj6array[0]; sj6 = sj6array[0];
+                                
+                                vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();
+                                solution.basesol.resize(7);
+                                solution.basesol[0].foffset = j0;
+                                solution.basesol[1].foffset = j1;
+                                solution.basesol[2].foffset = j2;
+                                solution.basesol[3].foffset = j3;
+                                solution.basesol[4].foffset = j4;
+                                solution.basesol[5].foffset = j5;
+                                solution.basesol[6].foffset = j6;
+                                solution.vfree.resize(0);
+                                }
+                                }
+                                } else {
                                 evalcond=IKsin(j5);
                                 if( IKabs(evalcond) < 0.00001 ) {
                                 {
@@ -6780,9 +7268,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                     {
                                     IKReal j6array[1], cj6array[1], sj6array[1];
                                     bool j6valid[1]={false};
-                                    IKReal x388=IKcos(j5);
-                                    IKReal x389=((IKabs(x388) != 0)?((IKReal)1/(x388)):(IKReal)1.0e30);
-                                    j6array[0]=IKatan2(((_r10)*(x389)), ((_r11)*(x389)));
+                                    IKReal x429=IKcos(j5);
+                                    IKReal x430=((IKabs(x429) != 0)?((IKReal)1/(x429)):(IKReal)1.0e30);
+                                    j6array[0]=IKatan2(((_r10)*(x430)), ((_r11)*(x430)));
                                     sj6array[0]=IKsin(j6array[0]);
                                     cj6array[0]=IKcos(j6array[0]);
                                     if( j6array[0] > IKPI )
@@ -6812,9 +7300,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                     {
                                     IKReal j6array[1], cj6array[1], sj6array[1];
                                     bool j6valid[1]={false};
-                                    IKReal x390=IKcos(j4);
-                                    IKReal x391=((IKabs(x390) != 0)?((IKReal)1/(x390)):(IKReal)1.0e30);
-                                    j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x391)), ((_r00)*(x391)));
+                                    IKReal x431=IKcos(j4);
+                                    IKReal x432=((IKabs(x431) != 0)?((IKReal)1/(x431)):(IKReal)1.0e30);
+                                    j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x432)), ((_r00)*(x432)));
                                     sj6array[0]=IKsin(j6array[0]);
                                     cj6array[0]=IKcos(j6array[0]);
                                     if( j6array[0] > IKPI )
@@ -6848,17 +7336,18 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 {
                                 IKReal j6array[1], cj6array[1], sj6array[1];
                                 bool j6valid[1]={false};
-                                IKReal x392=IKsin(j5);
-                                IKReal x393=IKcos(j4);
-                                IKReal x394=(x393)*(x393);
-                                IKReal x395=((IKabs(x392) != 0)?(pow(x392,-2.00000000000000)):(IKReal)1.0e30);
-                                IKReal x396=((x394)*(x395));
-                                IKReal x397=((1.00000000000000)+(x396));
-                                IKReal x398=((((-1.00000000000000)*(x394)))+(x397));
-                                IKReal x399=((IKabs(x398) != 0)?((IKReal)1/(x398)):(IKReal)1.0e30);
-                                IKReal x400=((IKabs(x392) != 0)?((IKReal)1/(x392)):(IKReal)1.0e30);
-                                IKReal x401=IKsin(j4);
-                                j6array[0]=IKatan2(((((-1.00000000000000)*(_r01)*(x393)*(x395)*(x399)))+(((_r00)*(x399)*(x400)*(x401)))), ((((_r01)*(x399)*(x400)*(x401)))+(((_r00)*(x393)*(x395)*(x399)))));
+                                IKReal x433=IKsin(j4);
+                                IKReal x434=IKsin(j5);
+                                IKReal x435=IKcos(j4);
+                                IKReal x436=(x435)*(x435);
+                                IKReal x437=((IKabs(x433) != 0)?(pow(x433,-2.00000000000000)):(IKReal)1.0e30);
+                                IKReal x438=((IKabs(x434) != 0)?(pow(x434,-2.00000000000000)):(IKReal)1.0e30);
+                                IKReal x439=((x436)*(x437)*(x438));
+                                IKReal x440=((1.00000000000000)+(x439));
+                                IKReal x441=((IKabs(x440) != 0)?((IKReal)1/(x440)):(IKReal)1.0e30);
+                                IKReal x442=((IKabs(x433) != 0)?((IKReal)1/(x433)):(IKReal)1.0e30);
+                                IKReal x443=((IKabs(x434) != 0)?((IKReal)1/(x434)):(IKReal)1.0e30);
+                                j6array[0]=IKatan2(((((-1.00000000000000)*(_r01)*(x435)*(x437)*(x438)*(x441)))+(((_r00)*(x441)*(x442)*(x443)))), ((((_r01)*(x441)*(x442)*(x443)))+(((_r00)*(x435)*(x437)*(x438)*(x441)))));
                                 sj6array[0]=IKsin(j6array[0]);
                                 cj6array[0]=IKcos(j6array[0]);
                                 if( j6array[0] > IKPI )
@@ -6884,6 +7373,7 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 }
                                 }
                                 } else {
+                            }
                             }
                             }
                             }
@@ -6935,18 +7425,18 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                 {
                 IKReal j1array[1], cj1array[1], sj1array[1];
                 bool j1valid[1]={false};
-                IKReal x402=(px)*(px);
-                IKReal x403=((2.00000000000000)*(cj0)*(py)*(pz)*(sj0));
-                IKReal x404=(pz)*(pz);
-                IKReal x405=(sj0)*(sj0);
-                IKReal x406=((x404)*(x405));
-                IKReal x407=(cj0)*(cj0);
-                IKReal x408=(py)*(py);
-                IKReal x409=((x407)*(x408));
-                IKReal x410=((x403)+(x402)+(x406)+(x409));
-                IKReal x411=((-1.00000000000000)*(x410));
-                IKReal x412=((IKabs(x411) != 0)?((IKReal)1/(x411)):(IKReal)1.0e30);
-                j1array[0]=IKatan2(((((-0.261699999999109)*(cj0)*(py)*(sj2)*(sj3)*(x412)))+(((0.310199999999895)*(px)*(x412)))+(((-0.261699999999109)*(pz)*(sj0)*(sj2)*(sj3)*(x412)))+(((0.261699999999109)*(cj3)*(px)*(x412)))), ((((0.310199999999895)*(pz)*(sj0)*(x412)))+(((0.310199999999895)*(cj0)*(py)*(x412)))+(((0.261699999999109)*(px)*(sj2)*(sj3)*(x412)))+(((0.261699999999109)*(cj0)*(cj3)*(py)*(x412)))+(((0.261699999999109)*(cj3)*(pz)*(sj0)*(x412)))));
+                IKReal x444=(px)*(px);
+                IKReal x445=((2.00000000000000)*(cj0)*(py)*(pz)*(sj0));
+                IKReal x446=(pz)*(pz);
+                IKReal x447=(sj0)*(sj0);
+                IKReal x448=((x446)*(x447));
+                IKReal x449=(cj0)*(cj0);
+                IKReal x450=(py)*(py);
+                IKReal x451=((x449)*(x450));
+                IKReal x452=((x451)+(x448)+(x445)+(x444));
+                IKReal x453=((-1.00000000000000)*(x452));
+                IKReal x454=((IKabs(x453) != 0)?((IKReal)1/(x453)):(IKReal)1.0e30);
+                j1array[0]=IKatan2(((((0.310199999999895)*(px)*(x454)))+(((0.261699999999109)*(cj3)*(px)*(x454)))+(((-0.261699999999109)*(pz)*(sj0)*(sj2)*(sj3)*(x454)))+(((-0.261699999999109)*(cj0)*(py)*(sj2)*(sj3)*(x454)))), ((((0.310199999999895)*(cj0)*(py)*(x454)))+(((0.261699999999109)*(cj0)*(cj3)*(py)*(x454)))+(((0.261699999999109)*(px)*(sj2)*(sj3)*(x454)))+(((0.261699999999109)*(cj3)*(pz)*(sj0)*(x454)))+(((0.310199999999895)*(pz)*(sj0)*(x454)))));
                 sj1array[0]=IKsin(j1array[0]);
                 cj1array[0]=IKcos(j1array[0]);
                 if( j1array[0] > IKPI )
@@ -7069,9 +7559,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                         {
                         IKReal j6array[1], cj6array[1], sj6array[1];
                         bool j6valid[1]={false};
-                        IKReal x413=IKcos(j4);
-                        IKReal x414=((IKabs(x413) != 0)?((IKReal)1/(x413)):(IKReal)1.0e30);
-                        j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x414)), ((_r00)*(x414)));
+                        IKReal x455=IKcos(j4);
+                        IKReal x456=((IKabs(x455) != 0)?((IKReal)1/(x455)):(IKReal)1.0e30);
+                        j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x456)), ((_r00)*(x456)));
                         sj6array[0]=IKsin(j6array[0]);
                         cj6array[0]=IKcos(j6array[0]);
                         if( j6array[0] > IKPI )
@@ -7118,6 +7608,39 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                         
                         {
                         IKReal evalcond;
+                            evalcond=IKsin(j4);
+                            if( IKabs(evalcond) < 0.00001 ) {
+                            {
+                            IKReal j6array[1], cj6array[1], sj6array[1];
+                            bool j6valid[1]={false};
+                            IKReal x457=IKcos(j4);
+                            IKReal x458=((IKabs(x457) != 0)?((IKReal)1/(x457)):(IKReal)1.0e30);
+                            j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x458)), ((_r00)*(x458)));
+                            sj6array[0]=IKsin(j6array[0]);
+                            cj6array[0]=IKcos(j6array[0]);
+                            if( j6array[0] > IKPI )
+                                j6array[0]-=IK2PI;
+                            else if( j6array[0] < -IKPI )
+                                j6array[0]+=IK2PI;
+                            j6valid[0] = true;
+                            { int ij6 = 0;
+                            if( !j6valid[ij6] )
+                                continue;
+                            j6 = j6array[0]; cj6 = cj6array[0]; sj6 = sj6array[0];
+                            
+                            vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();
+                            solution.basesol.resize(7);
+                            solution.basesol[0].foffset = j0;
+                            solution.basesol[1].foffset = j1;
+                            solution.basesol[2].foffset = j2;
+                            solution.basesol[3].foffset = j3;
+                            solution.basesol[4].foffset = j4;
+                            solution.basesol[5].foffset = j5;
+                            solution.basesol[6].foffset = j6;
+                            solution.vfree.resize(0);
+                            }
+                            }
+                            } else {
                             evalcond=IKsin(j5);
                             if( IKabs(evalcond) < 0.00001 ) {
                             {
@@ -7127,9 +7650,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 {
                                 IKReal j6array[1], cj6array[1], sj6array[1];
                                 bool j6valid[1]={false};
-                                IKReal x415=IKcos(j5);
-                                IKReal x416=((IKabs(x415) != 0)?((IKReal)1/(x415)):(IKReal)1.0e30);
-                                j6array[0]=IKatan2(((_r10)*(x416)), ((_r11)*(x416)));
+                                IKReal x459=IKcos(j5);
+                                IKReal x460=((IKabs(x459) != 0)?((IKReal)1/(x459)):(IKReal)1.0e30);
+                                j6array[0]=IKatan2(((_r10)*(x460)), ((_r11)*(x460)));
                                 sj6array[0]=IKsin(j6array[0]);
                                 cj6array[0]=IKcos(j6array[0]);
                                 if( j6array[0] > IKPI )
@@ -7159,9 +7682,9 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 {
                                 IKReal j6array[1], cj6array[1], sj6array[1];
                                 bool j6valid[1]={false};
-                                IKReal x417=IKcos(j4);
-                                IKReal x418=((IKabs(x417) != 0)?((IKReal)1/(x417)):(IKReal)1.0e30);
-                                j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x418)), ((_r00)*(x418)));
+                                IKReal x461=IKcos(j4);
+                                IKReal x462=((IKabs(x461) != 0)?((IKReal)1/(x461)):(IKReal)1.0e30);
+                                j6array[0]=IKatan2(((-1.00000000000000)*(_r01)*(x462)), ((_r00)*(x462)));
                                 sj6array[0]=IKsin(j6array[0]);
                                 cj6array[0]=IKcos(j6array[0]);
                                 if( j6array[0] > IKPI )
@@ -7195,17 +7718,18 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                             {
                             IKReal j6array[1], cj6array[1], sj6array[1];
                             bool j6valid[1]={false};
-                            IKReal x419=IKsin(j5);
-                            IKReal x420=IKcos(j4);
-                            IKReal x421=(x420)*(x420);
-                            IKReal x422=((IKabs(x419) != 0)?(pow(x419,-2.00000000000000)):(IKReal)1.0e30);
-                            IKReal x423=((x421)*(x422));
-                            IKReal x424=((1.00000000000000)+(x423));
-                            IKReal x425=((x424)+(((-1.00000000000000)*(x421))));
-                            IKReal x426=((IKabs(x425) != 0)?((IKReal)1/(x425)):(IKReal)1.0e30);
-                            IKReal x427=((IKabs(x419) != 0)?((IKReal)1/(x419)):(IKReal)1.0e30);
-                            IKReal x428=IKsin(j4);
-                            j6array[0]=IKatan2(((((_r00)*(x426)*(x427)*(x428)))+(((-1.00000000000000)*(_r01)*(x420)*(x422)*(x426)))), ((((_r01)*(x426)*(x427)*(x428)))+(((_r00)*(x420)*(x422)*(x426)))));
+                            IKReal x463=IKsin(j4);
+                            IKReal x464=IKsin(j5);
+                            IKReal x465=IKcos(j4);
+                            IKReal x466=(x465)*(x465);
+                            IKReal x467=((IKabs(x463) != 0)?(pow(x463,-2.00000000000000)):(IKReal)1.0e30);
+                            IKReal x468=((IKabs(x464) != 0)?(pow(x464,-2.00000000000000)):(IKReal)1.0e30);
+                            IKReal x469=((x466)*(x467)*(x468));
+                            IKReal x470=((1.00000000000000)+(x469));
+                            IKReal x471=((IKabs(x470) != 0)?((IKReal)1/(x470)):(IKReal)1.0e30);
+                            IKReal x472=((IKabs(x463) != 0)?((IKReal)1/(x463)):(IKReal)1.0e30);
+                            IKReal x473=((IKabs(x464) != 0)?((IKReal)1/(x464)):(IKReal)1.0e30);
+                            j6array[0]=IKatan2(((((_r00)*(x471)*(x472)*(x473)))+(((-1.00000000000000)*(_r01)*(x465)*(x467)*(x468)*(x471)))), ((((_r01)*(x471)*(x472)*(x473)))+(((_r00)*(x465)*(x467)*(x468)*(x471)))));
                             sj6array[0]=IKsin(j6array[0]);
                             cj6array[0]=IKcos(j6array[0]);
                             if( j6array[0] > IKPI )
@@ -7231,6 +7755,7 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                             }
                             }
                             } else {
+                        }
                         }
                         }
                         }

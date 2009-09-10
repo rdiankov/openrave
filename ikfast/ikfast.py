@@ -1034,20 +1034,22 @@ class RobotKinematics(AutoReloader):
 
         return Links, jointvars, isolvejointvars, ifreejointvars
         
-    def generateIkSolver(self, baselink, eelink, solvejoints, freejoints, usedummyjoints,rotation3donly=False):
+    def generateIkSolver(self, baselink, eelink, solvejoints, freeparams, usedummyjoints,solvefn=None):
+        if solvefn is None:
+            solvefn = RobotKinematics.solveFullIK_6D
         alljoints = self.getJointsInChain(baselink, eelink)
         
         # mark the free joints and form the chain
         chain = []
         for joint in alljoints:
             issolvejoint = any([i == joint.jointindex for i in solvejoints])
-            joint.isdummy = usedummyjoints and not issolvejoint and not any([i == joint.jointindex for i in freejoints])
+            joint.isdummy = usedummyjoints and not issolvejoint and not any([i == joint.jointindex for i in freeparams])
             joint.isfreejoint = not issolvejoint and not joint.isdummy
             chain.append(joint)
         
-        return self.generateIkSolverChain(chain,rotation3donly=rotation3donly)
+        return self.generateIkSolverChain(chain,solvefn)
         
-    def generateIkSolverChain(self, chain, rotation3donly=False):
+    def generateIkSolverChain(self, chain, solvefn):
         Tee = eye(4)
         for i in range(0,3):
             for j in range(0,3):
@@ -1056,10 +1058,7 @@ class RobotKinematics(AutoReloader):
         Tee[1,3] = Symbol("py")
         Tee[2,3] = Symbol("pz")
         
-        if rotation3donly:
-            chaintree = self.solveFullIK_Rotation3D(chain, Tee)
-        else:
-            chaintree = self.solveFullIK_6D(chain, Tee)
+        chaintree = solvefn(self,chain, Tee)
         if chaintree is None:
             print "failed to genreate ik solution"
             return ""
@@ -1147,6 +1146,70 @@ class RobotKinematics(AutoReloader):
             if not joint.isdummy:
                 Tlinks.append(Tlast)
         return Tlinks
+
+    def solveFullIK_Direction3D(self,chain,Tee):
+        Links, jointvars, isolvejointvars, ifreejointvars = self.forwardKinematicsChain(chain)
+        Tfirstleft = Links.pop(0)
+        Tfirstright = Links.pop()
+        LinksInv = [self.affineInverse(link) for link in Links]
+        solvejointvars = [jointvars[i] for i in isolvejointvars]
+        freejointvars = [jointvars[i] for i in ifreejointvars]
+
+        if not len(solvejointvars) == 3:
+            raise ValueError('solve joints needs to be 3')
+
+        # when solving equations, convert all free variables to constants
+        self.freevarsubs = []
+        for freevar in freejointvars:
+            var = self.Variable(freevar)
+            self.freevarsubs += [(cos(var.var), var.cvar), (sin(var.var), var.svar)]
+        
+        #Tee = Tfirstleft.inv() * Tee_in * Tfirstright.inv()
+        # LinksAccumLeftInv[x] * Tee = LinksAccumRight[x]
+        # LinksAccumLeftInv[x] = InvLinks[x-1] * ... * InvLinks[0]
+        # LinksAccumRight[x] = Links[x]*Links[x+1]...*Links[-1]
+        LinksAccumLeftAll = [eye(4)]
+        LinksAccumLeftInvAll = [eye(4)]
+        LinksAccumRightAll = [eye(4)]
+        for i in range(len(Links)):
+            LinksAccumLeftAll.append(LinksAccumLeftAll[-1]*Links[i])
+            LinksAccumLeftInvAll.append(LinksInv[i]*LinksAccumLeftInvAll[-1])
+            LinksAccumRightAll.append(Links[len(Links)-i-1]*LinksAccumRightAll[-1])
+        LinksAccumRightAll.reverse()
+        
+        LinksAccumLeftAll = map(lambda T: self.affineSimplify(T), LinksAccumLeftAll)
+        LinksAccumLeftInvAll = map(lambda T: self.affineSimplify(T), LinksAccumLeftInvAll)
+        LinksAccumRightAll = map(lambda T: self.affineSimplify(T), LinksAccumRightAll)
+        
+        # create LinksAccumX indexed by joint indices
+        assert( len(LinksAccumLeftAll)%2 == 0 )
+        LinksAccumLeft = []
+        LinksAccumLeftInv = []
+        LinksAccumRight = []
+        for i in range(0,len(LinksAccumLeftAll),2)+[len(LinksAccumLeftAll)-1]:
+            LinksAccumLeft.append(LinksAccumLeftAll[i])
+            LinksAccumLeftInv.append(LinksAccumLeftInvAll[i])
+            LinksAccumRight.append(LinksAccumRightAll[i])
+        assert( len(LinksAccumLeft) == len(jointvars)+1 )
+        
+        # find a set of joints starting from the last that can solve for a full 3D rotation
+#         rotindex = len(jointvars)
+#         while rotindex>=0:
+#             # check if any entries are constant
+#             if all([not LinksAccumRight[rotindex][i,j].is_zero for i in range(3) for j in range(3)]):
+#                 break
+#             rotindex = rotindex-1
+        rotindex = 0
+
+        if rotindex < 0:
+            print 'Current joints cannot solve for a full 3D rotation'
+
+        storesolutiontree = [SolverStoreSolution (jointvars)]
+        rotsubs = [(Symbol('r%d%d'%(i,j)),Symbol('_r%d%d'%(i,j))) for i in range(3) for j in range(3)]
+        R = Matrix(3,3, map(lambda x: x.subs(self.freevarsubs), LinksAccumRight[rotindex][0:3,0:3]))
+        rotvars = [var for var in jointvars[rotindex:] if any([var==svar for svar in solvejointvars])]
+        solvertree = self.solveIKRotation(R=R,Ree = Tee[0:3,0:3].subs(rotsubs),rawvars = rotvars,endbranchtree=storesolutiontree,solvedvarsubs=self.freevarsubs)
+        return SolverIKChain([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], Tfirstleft.inv() * Tee * Tfirstright.inv(), solvertree)
 
     def solveFullIK_Rotation3D(self,chain,Tee):
         Links, jointvars, isolvejointvars, ifreejointvars = self.forwardKinematicsChain(chain)
@@ -2411,8 +2474,8 @@ ikfast.py --fkfile=fk_WAM7.txt --baselink=0 --eelink=7 --savefile=ik.cpp 1 2 3 4
                       help='Optional joint index specifying a free parameter of the manipulator. If not specified, assumes all joints not solving for are free parameters. Can be specified multiple times for multiple free parameters.')
     parser.add_option('--rotation3donly', action='store_true', dest='rotation3donly',default=False,
                       help='If true, need to specify only 3 solve joints and will solve for a target rotation')
-#     parser.add_option('--rotation2donly', action='store_true', dest='rotation2donly',default=False,
-#                       help='If true, need to specify only 2 solve joints and will solve for a target direction')
+    parser.add_option('--rotation2donly', action='store_true', dest='rotation2donly',default=False,
+                      help='If true, need to specify only 2 solve joints and will solve for a target direction')
     parser.add_option('--usedummyjoints', action='store_true',dest='usedummyjoints',default=False,
                       help='Treat the unspecified joints in the kinematic chain as dummy and set them to 0. If not specified, treats all unspecified joints as free parameters.')
 
@@ -2422,9 +2485,14 @@ ikfast.py --fkfile=fk_WAM7.txt --baselink=0 --eelink=7 --savefile=ik.cpp 1 2 3 4
         sys.exit(1)
 
     solvejoints = [atoi(joint) for joint in args]
+    solvefn = solvefn=RobotKinematics.solveFullIK_6D
     numexpected = 6
     if options.rotation3donly:
         numexpected = 3
+        solvefn = solvefn=RobotKinematics.solveFullIK_Rotation3D
+    elif options.rotation2donly:
+        numexpected = 2
+        solvefn = solvefn=RobotKinematics.solveFullIK_Direction3D
 
     if not len(solvejoints) == numexpected:
         print 'Need ',numexpected, 'solve joints, got: ', solvejoints
@@ -2432,7 +2500,7 @@ ikfast.py --fkfile=fk_WAM7.txt --baselink=0 --eelink=7 --savefile=ik.cpp 1 2 3 4
 
     tstart = time.time()
     kinematics = RobotKinematics(options.fkfile)
-    code = kinematics.generateIkSolver(options.baselink,options.eelink,solvejoints,options.freeparams,options.usedummyjoints,rotation3donly=options.rotation3donly)
+    code = kinematics.generateIkSolver(options.baselink,options.eelink,solvejoints,options.freeparams,options.usedummyjoints,solvefn=solvefn)
 
     success = True if len(code) > 0 else False
 

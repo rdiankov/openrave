@@ -36,64 +36,47 @@ static void dJointAddHingeTorque_(dJointID id, const dReal* vals) { dJointAddHin
 static void dJointAddSliderForce_(dJointID id, const dReal* vals) { dJointAddSliderForce(id, vals[0]); }
 static void dJointAddUniversalTorques_(dJointID id, const dReal* vals) { dJointAddUniversalTorques(id, vals[0], vals[1]); }
 static void dJointAddHinge2Torques_(dJointID id, const dReal* vals) { dJointAddHinge2Torques(id, vals[0], vals[1]); }
-static void dJointAddAMotorTorques_(dJointID id, const dReal* vals) { dJointAddAMotorTorques(id, vals[0], vals[1], vals[2]); }
 
 static dReal dJointGetHinge2Angle2_(dJointID id) { return 0; }
 
-static dReal dJointGetAMotorAngle1(dJointID id) { return dJointGetAMotorAngle(id, 0); }
-static dReal dJointGetAMotorAngle2(dJointID id) { return dJointGetAMotorAngle(id, 1); }
-static dReal dJointGetAMotorAngle3(dJointID id) { return dJointGetAMotorAngle(id, 2); }
-static dReal dJointGetAMotorAngle1Rate(dJointID id) { return dJointGetAMotorAngleRate(id, 0); }
-static dReal dJointGetAMotorAngle2Rate(dJointID id) { return dJointGetAMotorAngleRate(id, 1); }
-static dReal dJointGetAMotorAngle3Rate(dJointID id) { return dJointGetAMotorAngleRate(id, 2); }
+static dReal JointGetBallVelocityX(dJointID) { return 0; }
+static dReal JointGetBallVelocityY(dJointID) { return 0; }
+static dReal JointGetBallVelocityZ(dJointID) { return 0; }
 
 ODEPhysicsEngine::ODEPhysicsEngine(OpenRAVE::EnvironmentBase* penv) : OpenRAVE::PhysicsEngineBase(penv), odespace(penv, GetPhysicsInfo, true)
 {
     odespace.SetSynchornizationCallback(SyncCallback, this);
 
     memset(_jointset, 0, sizeof(_jointset));
-    _jointset[1] = DummySetParam;
-    _jointset[2] = dJointSetHingeParam;
-    _jointset[3] = dJointSetSliderParam;
-    _jointset[5] = dJointSetUniversalParam;
-    _jointset[6] = dJointSetHinge2Param;
-    _jointset[9] = dJointSetAMotorParam;
+    _jointset[dJointTypeBall] = dJointSetBallParam;
+    _jointset[dJointTypeHinge] = dJointSetHingeParam;
+    _jointset[dJointTypeSlider] = dJointSetSliderParam;
+    _jointset[dJointTypeUniversal] = dJointSetUniversalParam;
+    _jointset[dJointTypeHinge2] = dJointSetHinge2Param;
 
     memset(_jointadd, 0, sizeof(_jointadd));
-    _jointadd[1] = DummyAddForce;
-    _jointadd[2] = dJointAddHingeTorque_;
-    _jointadd[3] = dJointAddSliderForce_;
-    _jointadd[5] = dJointAddUniversalTorques_;
-    _jointadd[6] = dJointAddHinge2Torques_;
-    _jointadd[9] = dJointAddAMotorTorques_;
+    _jointadd[dJointTypeBall] = DummyAddForce;
+    _jointadd[dJointTypeHinge] = dJointAddHingeTorque_;
+    _jointadd[dJointTypeSlider] = dJointAddSliderForce_;
+    _jointadd[dJointTypeUniversal] = dJointAddUniversalTorques_;
+    _jointadd[dJointTypeHinge2] = dJointAddHinge2Torques_;
 
     memset(_jointgetparam, 0, sizeof(_jointgetparam));
-    _jointgetparam[1] = DummyGetParam;
-    _jointgetparam[2] = dJointGetHingeParam;
-    _jointgetparam[3] = dJointGetSliderParam;
-    _jointgetparam[5] = dJointGetUniversalParam;
-    _jointgetparam[6] = dJointGetHinge2Param;
-    _jointgetparam[9] = dJointGetAMotorParam;
-
-    _jointgetpos[2].push_back(dJointGetHingeAngle);
-    _jointgetpos[3].push_back(dJointGetSliderPosition);
-    _jointgetpos[5].push_back(dJointGetUniversalAngle1);
-    _jointgetpos[5].push_back(dJointGetUniversalAngle2);
-    _jointgetpos[6].push_back(dJointGetHinge2Angle1);
-    _jointgetpos[6].push_back(dJointGetHinge2Angle2_);
-    _jointgetpos[9].push_back(dJointGetAMotorAngle1);
-    _jointgetpos[9].push_back(dJointGetAMotorAngle2);
-    _jointgetpos[9].push_back(dJointGetAMotorAngle3);
+    _jointgetparam[dJointTypeBall] = dJointGetBallParam;
+    _jointgetparam[dJointTypeHinge] = dJointGetHingeParam;
+    _jointgetparam[dJointTypeSlider] = dJointGetSliderParam;
+    _jointgetparam[dJointTypeUniversal] = dJointGetUniversalParam;
+    _jointgetparam[dJointTypeHinge2] = dJointGetHinge2Param;
     
-    _jointgetvel[2].push_back(dJointGetHingeAngleRate);
-    _jointgetvel[3].push_back(dJointGetSliderPositionRate);
-    _jointgetvel[5].push_back(dJointGetUniversalAngle1Rate);
-    _jointgetvel[5].push_back(dJointGetUniversalAngle2Rate);
-    _jointgetvel[6].push_back(dJointGetHinge2Angle1Rate);
-    _jointgetvel[6].push_back(dJointGetHinge2Angle2Rate);
-    _jointgetvel[9].push_back(dJointGetAMotorAngle1Rate);
-    _jointgetvel[9].push_back(dJointGetAMotorAngle2Rate);
-    _jointgetvel[9].push_back(dJointGetAMotorAngle3Rate);
+    _jointgetvel[dJointTypeBall].push_back(JointGetBallVelocityX);
+    _jointgetvel[dJointTypeBall].push_back(JointGetBallVelocityY);
+    _jointgetvel[dJointTypeBall].push_back(JointGetBallVelocityZ);
+    _jointgetvel[dJointTypeHinge].push_back(dJointGetHingeAngleRate);
+    _jointgetvel[dJointTypeSlider].push_back(dJointGetSliderPositionRate);
+    _jointgetvel[dJointTypeUniversal].push_back(dJointGetUniversalAngle1Rate);
+    _jointgetvel[dJointTypeUniversal].push_back(dJointGetUniversalAngle2Rate);
+    _jointgetvel[dJointTypeHinge2].push_back(dJointGetHinge2Angle1Rate);
+    _jointgetvel[dJointTypeHinge2].push_back(dJointGetHinge2Angle2Rate);
 }
 
 bool ODEPhysicsEngine::InitEnvironment()

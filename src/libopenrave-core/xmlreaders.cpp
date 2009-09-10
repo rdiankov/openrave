@@ -1064,6 +1064,12 @@ JointXMLReader::JointXMLReader(KinBody* pparent, const char **atts)
                     _pjoint->type = KinBody::Joint::JointUniversal;
                 else if( stricmp((const char*)atts[i+1], "hinge2") == 0 )
                     _pjoint->type = KinBody::Joint::JointHinge2;
+                else if( stricmp((const char*)atts[i+1], "spherical") == 0 ) {
+                    _pjoint->type = KinBody::Joint::JointSpherical;
+                    _pjoint->vAxes[0] = Vector(1,0,0);
+                    _pjoint->vAxes[1] = Vector(0,1,0);
+                    _pjoint->vAxes[2] = Vector(0,0,1);
+                }
                 else {
                     RAVEPRINT(L"unrecognized joint type: %s, setting to hinge\n", atts[i+1]);
                     _pjoint->type = KinBody::Joint::JointHinge;
@@ -1091,9 +1097,23 @@ JointXMLReader::JointXMLReader(KinBody* pparent, const char **atts)
 
     _pjoint->_vlowerlimit.resize(_pjoint->GetDOF());
     _pjoint->_vupperlimit.resize(_pjoint->GetDOF());
-    for(int i = 0; i < _pjoint->GetDOF(); ++i) {
-        _pjoint->_vlowerlimit[i] = -PI;
-        _pjoint->_vupperlimit[i] = PI;
+    if( _pjoint->GetType() == KinBody::Joint::JointSlider ) {
+        for(int i = 0; i < _pjoint->GetDOF(); ++i) {
+            _pjoint->_vlowerlimit[i] = -100000;
+            _pjoint->_vupperlimit[i] = 100000;
+        }
+    }
+    else if( _pjoint->GetType() == KinBody::Joint::JointSpherical ) {
+        for(int i = 0; i < _pjoint->GetDOF(); ++i) {
+            _pjoint->_vlowerlimit[i] = -1000;
+            _pjoint->_vupperlimit[i] = 1000;
+        }
+    }
+    else {
+        for(int i = 0; i < _pjoint->GetDOF(); ++i) {
+            _pjoint->_vlowerlimit[i] = -PI;
+            _pjoint->_vupperlimit[i] = PI;
+        }
     }
 }
 
@@ -1240,6 +1260,11 @@ bool JointXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *name)
             _pjoint->tRight.trans = -_pjoint->vanchor;
             _pjoint->tRight = _pjoint->tRight * trel;
             break;
+        case KinBody::Joint::JointSpherical:
+            _pjoint->tLeft.trans = _pjoint->vanchor;
+            _pjoint->tRight.trans = -_pjoint->vanchor;
+            _pjoint->tRight = _pjoint->tRight * trel;
+            break;
         default:
             RAVEPRINT(L"unknown joint type %d\n", _pjoint->type);
             _pjoint->tLeft.identity();
@@ -1348,6 +1373,9 @@ bool JointXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *name)
             if( stricmp((const char*)name, "anchor") == 0 ) _pjoint->vanchor = Vector(pf[0], pf[1], pf[2]);
             else if( stricmp((const char*)name, "axis1") == 0 ) _pjoint->vAxes[0] = Vector(pf[0], pf[1], pf[2]).normalize3();
             else if( stricmp((const char*)name, "axis2") == 0 ) _pjoint->vAxes[1] = Vector(pf[0], pf[1], pf[2]).normalize3();
+            break;
+        case KinBody::Joint::JointSpherical:
+            if( stricmp((const char*)name, "anchor") == 0 ) _pjoint->vanchor = Vector(pf[0], pf[1], pf[2]);
             break;
         default:
             assert(0);

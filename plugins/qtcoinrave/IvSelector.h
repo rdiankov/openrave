@@ -93,7 +93,7 @@ protected:
     void _SetColor(const SbColor &);
     RaveVector<float> GetJointOffset();
 
-    Vector vaxes[2];
+    Vector vaxes[3];
     SoSeparator* _pLinkNode; // node of the link of the target body
     SoSeparator*         _draggerRoot;
     SoTranslation*       _offset;

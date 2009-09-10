@@ -495,7 +495,7 @@ bool orEnvGetBody(char* in, string& out, void **ppPassData, RaveServer* pserv)
 {
     pserv->SyncWithWorkerThread();
 
-    // thread safe?
+    LockEnvironment envlock(pserv->GetEnv());
     KinBody* pbody = pserv->GetEnv()->GetKinBody(_ravembstowcs(in).c_str());
     if( pbody == NULL ) {
         out = "0";
@@ -513,7 +513,7 @@ bool orEnvGetRobots(char* in, string& out, void **ppPassData, RaveServer* pserv)
 {
     pserv->SyncWithWorkerThread();
 
-    // thread safe?
+    LockEnvironment envlock(pserv->GetEnv());
     vector<RobotBase*> currobots = pserv->GetEnv()->GetRobots();
 
     char str[32];
@@ -674,7 +674,7 @@ bool orBodyGetLinks(char* in, string& out, void **ppPassData, RaveServer* pserv)
     vector<Transform> trans;
     {
         LockEnvironment envlock(pserv->GetEnv());
-        body->GetBodyTransformations(trans); // thread safe?
+        body->GetBodyTransformations(trans);
     }
 
     stringstream ss;
@@ -1261,14 +1261,14 @@ bool orBodyGetJointValues(char* in, string& out, void **ppPassData, RaveServer* 
     }
 
     if( values.size() == 0 ) {
-        body->GetJointValues(values); // thread safe?
+        LockEnvironment envlock(pserv->GetEnv());
+        body->GetJointValues(values);
     }
 
     stringstream ss;
     FOREACH(it,values)
         ss << *it << " ";
     out = ss.str();
-
     return true;
 }
 
@@ -1309,8 +1309,10 @@ bool orRobotGetDOFValues(char* in, string& out, void **ppPassData, RaveServer* p
         }
     }
 
-    if( values.size() == 0 )
-        robot->GetActiveDOFValues(values); // thread safe?
+    if( values.size() == 0 ) {
+        LockEnvironment envlock(pserv->GetEnv());
+        robot->GetActiveDOFValues(values);
+    }
 
     stringstream ss;
     FOREACH(it, values)
@@ -1328,8 +1330,9 @@ bool orRobotGetDOFLimits(char* in, string& out, void **ppPassData, RaveServer* p
     if( robot == NULL )
         return false;
 
+    LockEnvironment envlock(pserv->GetEnv());
     vector<dReal> lower(robot->GetActiveDOF()), upper(robot->GetActiveDOF());
-    robot->GetActiveDOFLimits(&lower[0], &upper[0]); // thread safe?
+    robot->GetActiveDOFLimits(&lower[0], &upper[0]);
 
     stringstream ss;
     ss << lower.size() << " ";

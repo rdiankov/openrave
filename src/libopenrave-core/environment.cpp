@@ -456,7 +456,8 @@ Environment::Environment(bool bLoadAllPlugins) : _dummyphysics(this), _dummychec
     _pserver = NULL;
     _fDeltaSimTime = 0.002f;
     _nCurSimTime = 0;
-    _nLastSimTime = 0;
+    _nStartSimTime = GetMicroTime();
+    _bRealTime = true;
 
     _bPluginsLoaded = false;
     //_bSelfCollision = false;
@@ -503,10 +504,11 @@ Environment::Environment(const Environment& r, int options) : _dummyphysics(this
     _pCurrentViewer = &_dummyviewer;
     _pserver = NULL;
     _fDeltaSimTime = r._fDeltaSimTime;
-    _nLastSimTime = 0;
+    _nStartSimTime = GetMicroTime();
     _nCurSimTime = 0;
     nNetworkIndex = r.nNetworkIndex;
-    
+    _bRealTime = r._bRealTime;
+
     _bPluginsLoaded = false; // not loading plugins from this environment
     _bDestroying = false;
     _bDestroyed = false;
@@ -789,8 +791,8 @@ void Environment::GetLoadedInterfaces(PLUGININFO& info)
     WRITE_PLUGINNAMES(itplugin->info.sensors, info.sensors);
     WRITE_PLUGINNAMES(itplugin->info.collisioncheckers, info.collisioncheckers);
     WRITE_PLUGINNAMES(itplugin->info.trajectories, info.trajectories);
-    WRITE_PLUGINNAMES(itplugin->info.trajectories, info.viewers);
-    WRITE_PLUGINNAMES(itplugin->info.trajectories, info.servers);
+    WRITE_PLUGINNAMES(itplugin->info.viewers, info.viewers);
+    WRITE_PLUGINNAMES(itplugin->info.servers, info.servers);
 }
 
 void Environment::WaitForPlugins() const
@@ -1586,13 +1588,16 @@ bool Environment::WriteCameraImage(int width, int height, const RaveTransform<fl
     return _pCurrentViewer->WriteCameraImage(width, height, t, pKK, fileName, extension);
 }  
 
-void Environment::StartSimulation(dReal fDeltaTime)
+void Environment::StartSimulation(dReal fDeltaTime, bool bRealTime)
 {
     if( !IsPhysicsLocked() ) {
         RAVELOG_ERRORA("StartSimulation need to lock physics! Ignoring lock...\n");
     }
     _fDeltaSimTime = fDeltaTime;
     _bEnableSimulation = true;
+    _bRealTime = bRealTime;
+    _nCurSimTime = 0;
+    _nStartSimTime = GetMicroTime();
 }
 
 void Environment::StopSimulation()
@@ -1687,8 +1692,6 @@ void* Environment::main(void* p)
 
 void* Environment::_main()
 {
-    _nLastSimTime = GetMicroTime();
-
     FOREACH(it, _vplugindirs) {
         if( it->size() > 0 )
             GetDatabase().AddDirectory(it->c_str());
@@ -1724,6 +1727,7 @@ void* Environment::_main()
     SetCollisionChecker(_localchecker.get());
     AddIKSolvers();
     _bPluginsLoaded = true;
+    _nStartSimTime = GetMicroTime();
 
     uint64_t nLastSleptTime = GetMicroTime();
     uint64_t nMaxConsecutiveSimTime = 500000; // force reupdate every 500ms
@@ -1735,15 +1739,13 @@ void* Environment::_main()
         }
 
         uint64_t curtime = GetMicroTime();
-        bool bDoSimulation = curtime-_nLastSimTime > (uint64_t)(100000.0f * _fDeltaSimTime);
+        bool bDoSimulation = !_bRealTime || curtime-_nStartSimTime >= _nCurSimTime+(uint64_t)(100000.0f * _fDeltaSimTime);
         if( bDoSimulation ) {
             if( _bEnableSimulation ) {
                 LockPhysics(true);
                 StepSimulation(_fDeltaSimTime);
                 LockPhysics(false);
             }
-
-            _nLastSimTime = curtime;
         }
 
         if( !bDoSimulation || curtime-nLastSleptTime > nMaxConsecutiveSimTime ) {

@@ -47,8 +47,6 @@ typedef float dReal;
 #define PI ((dReal)3.141592654)
 #endif
 
-#define rswap(x, y) *(int*)&(x) ^= *(int*)&(y) ^= *(int*)&(x) ^= *(int*)&(y);
-
 #define g_fEpsilon 1e-8
 #define distinctRoots	0			// roots r0 < r1 < r2
 #define singleRoot		1			// root r0
@@ -1090,9 +1088,9 @@ inline T* _transpose3(const T* pf, T* pfres)
 	assert( pf != NULL && pfres != NULL );
 
 	if( pf == pfres ) {
-		rswap(pfres[1], pfres[3]);
-		rswap(pfres[2], pfres[6]);
-		rswap(pfres[5], pfres[7]);
+        std::swap(pfres[1], pfres[3]);
+		std::swap(pfres[2], pfres[6]);
+		std::swap(pfres[5], pfres[7]);
 		return pfres;
 	}
 
@@ -1109,12 +1107,12 @@ inline T* _transpose4(const T* pf, T* pfres)
 	assert( pf != NULL && pfres != NULL );
 
 	if( pf == pfres ) {
-		rswap(pfres[1], pfres[4]);
-		rswap(pfres[2], pfres[8]);
-		rswap(pfres[3], pfres[12]);
-		rswap(pfres[6], pfres[9]);
-		rswap(pfres[7], pfres[13]);
-		rswap(pfres[11], pfres[15]);
+		std::swap(pfres[1], pfres[4]);
+		std::swap(pfres[2], pfres[8]);
+		std::swap(pfres[3], pfres[12]);
+		std::swap(pfres[6], pfres[9]);
+		std::swap(pfres[7], pfres[13]);
+		std::swap(pfres[11], pfres[15]);
 		return pfres;
 	}
 

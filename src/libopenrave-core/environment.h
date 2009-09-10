@@ -284,7 +284,7 @@ public:
 
     void AdvanceFrame(bool bForward);
         
-    virtual void StartSimulation(dReal fDeltaTime);
+    virtual void StartSimulation(dReal fDeltaTime, bool bRealTime);
     virtual void StopSimulation();
     virtual uint64_t GetSimulationTime() { return _nCurSimTime; }
 
@@ -398,7 +398,7 @@ protected:
         virtual int main(bool bShow) {
             _bQuitMainLoop = false;
             _penv->LockPhysics(true);
-            _penv->StartSimulation(0.01f);
+            _penv->StartSimulation(0.01f,true);
             _penv->LockPhysics(false);
 
             while(!_bQuitMainLoop) {
@@ -494,7 +494,7 @@ protected:
     bool _ReturnToRest();
     void _CleanRemovedBodies();
 
-    uint64_t _nLastSimTime;
+    uint64_t _nStartSimTime;
     boost::shared_ptr<RaveDatabase> _pdatabase;
 
     std::vector<RobotBase*> _vecrobots;  ///< robots (possibly controlled)
@@ -506,6 +506,7 @@ protected:
     dReal _fDeltaSimTime;                ///< delta time for simulate step
     uint64_t _nCurSimTime;                    ///< simulation time since the start of the environment
     int _nBodiesModifiedStamp; ///< incremented every tiem bodies vector is modified
+    bool _bRealTime;
 
     PhysicsEngineBase* _pPhysicsEngine;
     

@@ -204,7 +204,8 @@ public:
             JointSlider = 2,
             JointPrismatic = 2,
             JointUniversal = 3,
-            JointHinge2 = 4
+            JointHinge2 = 4,
+            JointSpherical = 5,
         };
 
         Joint(KinBody* parent);

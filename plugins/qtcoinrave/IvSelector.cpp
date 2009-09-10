@@ -220,7 +220,8 @@ IvObjectDragger::~IvObjectDragger()
     _SetColor(_normalColor);
 
     _transformBox->removeMotionCallback(_MotionHandler, this);
-    _selectedItem->GetIvRoot()->removeChild(_draggerRoot);
+    if( _draggerRoot != NULL )
+        _selectedItem->GetIvRoot()->removeChild(_draggerRoot);
 }
 
 // Set the color of the dragger.
@@ -370,7 +371,7 @@ IvJointDragger::IvJointDragger(QtCoinViewer *viewer, Item *pItem, int iSelectedL
         _material->setOverride(true);
         _pLinkNode->insertChild(_material, 1);
     }
-    
+
     for(int i = 0; i < pjoint->GetDOF(); ++i)
         vaxes[i] = pjoint->GetAxis(i);
 
@@ -437,6 +438,7 @@ RaveVector<float> IvJointDragger::GetJointOffset()
     case KinBody::Joint::JointHinge:
     case KinBody::Joint::JointUniversal:
     case KinBody::Joint::JointHinge2:
+    case KinBody::Joint::JointSpherical:
         vtrans = pjoint->GetAnchor() - vlinkoffset;
         break;
     default:            
@@ -453,7 +455,8 @@ IvJointDragger::~IvJointDragger()
     if( _trackball != NULL )
         _trackball->removeMotionCallback(_MotionHandler, this);
     if( _pLinkNode != NULL ) {
-        _pLinkNode->removeChild(_draggerRoot);
+        if(_draggerRoot != NULL )
+            _pLinkNode->removeChild(_draggerRoot);
         if (_bHilitJoint)
             _pLinkNode->removeChild(_material);
     }
@@ -525,7 +528,16 @@ void IvJointDragger::UpdateSkeleton()
     // update the joint's transform
     vector<dReal> vjoints;
     pbody->GetBody()->GetJointValues(vjoints);
-    vjoints[_iJointIndex] = fang;
+    dReal* pvalues = &vjoints[pjoint->GetDOFIndex()];
+    if( pjoint->GetType() == KinBody::Joint::JointSpherical ) {
+        SbVec3f axis; float angle;
+        _trackball->rotation.getValue(axis,angle);
+        pvalues[0] = axis[0]*angle;
+        pvalues[1] = axis[1]*angle;
+        pvalues[2] = axis[2]*angle;
+    }
+    else
+        pvalues[0] = fang;
 
     if( probotitem != NULL && probotitem->GetRobot()->GetController() != NULL ) {
         probotitem->GetRobot()->GetController()->SetDesired(&vjoints[0]);
@@ -556,21 +568,29 @@ void IvJointDragger::UpdateDragger()
     _viewer->GetEnv()->LockPhysics(true);
     vector<dReal> vjoints;
     pbody->GetBody()->GetJointValues(vjoints);
-    float fang = vjoints[_iJointIndex];
-
     KinBody::Joint* pjoint = pbody->GetBody()->GetJoints()[_iJointIndex];
-    vector<dReal> vlower(pjoint->GetDOF()), vupper(pjoint->GetDOF());
-    pjoint->GetLimits(&vlower[0], &vupper[0]);
-    if( pjoint->GetType() == KinBody::Joint::JointSlider ) {
-        if( vupper[0] > vlower[0] )
-            fang = (fang-vlower[0])/(vupper[0]-vlower[0]);
-        else
-            fang = 0;
-    }
 
+    if( pjoint->GetType() == KinBody::Joint::JointSpherical ) {
+        Vector vaxis(vjoints[pjoint->GetDOFIndex()+0],vjoints[pjoint->GetDOFIndex()+1],vjoints[pjoint->GetDOFIndex()+2]);
+        dReal fang = RaveSqrt(vaxis.lengthsqr3());
+        _trackball->rotation = SbRotation(fang > 0 ? SbVec3f(vaxis.x/fang,vaxis.y/fang,vaxis.z/fang) : SbVec3f(1,0,0), fang);
+    }
+    else {
+        float fang = vjoints[pjoint->GetDOFIndex()];
+        vector<dReal> vlower(pjoint->GetDOF()), vupper(pjoint->GetDOF());
+        pjoint->GetLimits(&vlower[0], &vupper[0]);
+        if( pjoint->GetType() == KinBody::Joint::JointSlider ) {
+            if( vupper[0] > vlower[0] )
+                fang = (fang-vlower[0])/(vupper[0]-vlower[0]);
+            else
+                fang = 0;
+        }
+        _trackball->rotation = SbRotation(SbVec3f(1,0,0), -fang);
+    }
+    
     _viewer->GetEnv()->LockPhysics(false);
 
-    _trackball->rotation = SbRotation(SbVec3f(1,0,0), -fang);
+    assert(_draggerRoot != NULL );
     ((SoTransform*)_draggerRoot->getChild(0))->translation.setValue(GetJointOffset());
 }
 
