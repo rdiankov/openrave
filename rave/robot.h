@@ -388,11 +388,15 @@ private:
     friend class InterfaceXMLReader;
     friend class RaveDatabase;
     friend class Environment;
+    friend class ColladaReader;
+    friend class ColladaWriter;
 #else
     friend class ::RobotXMLReader;
     friend class ::InterfaceXMLReader;
     friend class ::RaveDatabase;
     friend class ::Environment;
+    friend class ::ColladaReader;
+    friend class ::ColladaWriter;
 #endif
 #endif
 };
