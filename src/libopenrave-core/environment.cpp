@@ -454,7 +454,7 @@ Environment::Environment(bool bLoadAllPlugins) : _dummyphysics(this), _dummychec
 
     _pCurrentViewer = &_dummyviewer;
     _pserver = NULL;
-    _fDeltaSimTime = 0.002f;
+    _fDeltaSimTime = 0.01f;
     _nCurSimTime = 0;
     _nStartSimTime = GetMicroTime();
     _bRealTime = true;
@@ -1735,7 +1735,9 @@ void* Environment::_main()
     while( !_bDestroying ) {
 
         if( _pserver != NULL && _pserver->IsInit() ) {
+            uint64_t startwork = GetMicroTime();
             _pserver->Worker();
+            _nStartSimTime += GetMicroTime()-startwork;
         }
 
         uint64_t curtime = GetMicroTime();
