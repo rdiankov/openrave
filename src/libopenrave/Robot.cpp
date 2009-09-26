@@ -168,6 +168,73 @@ bool RobotBase::Manipulator::FindIKSolutions(const Transform& goal, const dReal*
     return pFreeParameters == NULL ? _pIkSolver->Solve(tgoal,bColCheck,solutions) : _pIkSolver->Solve(tgoal,pFreeParameters,bColCheck,solutions);
 }
 
+void RobotBase::Manipulator::GetChildJoints(std::set<Joint*>& vjoints)
+{
+    if( pEndEffector == NULL )
+        return;
+
+    // get all child links of the manipualtor
+    int iattlink = pEndEffector->GetIndex();
+    FOREACHC(itlink, _probot->GetLinks()) {
+        int ilink = (*itlink)->GetIndex();
+        if( ilink == iattlink )
+            continue;
+        if( _vecarmjoints.size() > 0 && !_probot->DoesAffect(_vecarmjoints[0],ilink) )
+            continue;
+        for(int ijoint = 0; ijoint < _probot->GetDOF(); ++ijoint) {
+            if( _probot->DoesAffect(ijoint,ilink) && !_probot->DoesAffect(ijoint,iattlink) ) {
+                vjoints.insert(_probot->GetJoints()[ijoint]);
+            }
+        }
+    }
+}
+
+void RobotBase::Manipulator::GetChildDOFIndices(std::set<int>& vdofndices)
+{
+    if( pEndEffector == NULL )
+        return;
+
+    // get all child links of the manipualtor
+    int iattlink = pEndEffector->GetIndex();
+    FOREACHC(itlink, _probot->GetLinks()) {
+        int ilink = (*itlink)->GetIndex();
+        if( ilink == iattlink )
+            continue;
+        if( _vecarmjoints.size() > 0 && !_probot->DoesAffect(_vecarmjoints[0],ilink) )
+            continue;
+        for(int ijoint = 0; ijoint < _probot->GetDOF(); ++ijoint) {
+            if( _probot->DoesAffect(ijoint,ilink) && !_probot->DoesAffect(ijoint,iattlink) ) {
+                int idofbase = _probot->GetJoints()[ijoint]->GetDOFIndex();
+                for(int idof = 0; idof < _probot->GetJoints()[ijoint]->GetDOF(); ++idof)
+                    vdofndices.insert(idofbase+idof);
+            }
+        }
+    }
+}
+
+void RobotBase::Manipulator::GetChildLinks(std::set<Link*>& vlinks)
+{
+    if( pEndEffector == NULL )
+        return;
+
+    // get all child links of the manipualtor
+    vlinks.insert(pEndEffector);
+    int iattlink = pEndEffector->GetIndex();
+    FOREACHC(itlink, _probot->GetLinks()) {
+        int ilink = (*itlink)->GetIndex();
+        if( ilink == iattlink )
+            continue;
+        if( _vecarmjoints.size() > 0 && !_probot->DoesAffect(_vecarmjoints[0],ilink) )
+            continue;
+        for(int ijoint = 0; ijoint < _probot->GetDOF(); ++ijoint) {
+            if( _probot->DoesAffect(ijoint,ilink) && !_probot->DoesAffect(ijoint,iattlink) ) {
+                vlinks.insert(*itlink);
+                break;
+            }
+        }
+    }
+}
+
 RobotBase::AttachedSensor::AttachedSensor(RobotBase* probot) : _probot(probot), psensor(NULL), pattachedlink(NULL), pdata(NULL)
 {
 }

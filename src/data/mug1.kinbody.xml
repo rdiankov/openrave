@@ -6,11 +6,4 @@
       <Render>models/objects/blue_mug_y_up.iv</Render>
     </Geom>      
   </Body>
-      
-  <visiontracking>
-    <!-- vision will give the position of the top of the cup -->
-    <prerotationaxis>0 0 1 -90</prerotationaxis>
-    <modelname>data/intel/mug1.kinbody.xml</modelname>
-    <translation>0 0 -0.11</translation>
-  </visiontracking>
 </KinBody>

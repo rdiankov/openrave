@@ -69,6 +69,15 @@ public:
         virtual bool FindIKSolutions(const Transform& goal, std::vector<std::vector<dReal> >& solutions, bool bColCheck) const;
         virtual bool FindIKSolutions(const Transform& goal, const dReal* pFreeParameters, std::vector<std::vector<dReal> >& solutions, bool bColCheck) const;
 
+        /// get all child joints of the manipulator starting at the pEndEffector link
+        virtual void GetChildJoints(std::set<Joint*>& vjoints);
+
+        /// get all child DOF indices of the manipulator starting at the pEndEffector link
+        virtual void GetChildDOFIndices(std::set<int>& vdofndices);
+
+        /// get all child links of the manipulator starting at pEndEffector link
+        virtual void GetChildLinks(std::set<Link*>& vlinks);
+
         Link* pBase;				///< the base used for the iksolver
 		Link* pEndEffector;         ///< the end effector link (used to define workspace distance)
         Transform tGrasp;           ///< transform with respect to end effector for grasping goals

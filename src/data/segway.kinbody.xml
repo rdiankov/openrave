@@ -11,8 +11,4 @@
       <diffusecolor>1 1 1</diffusecolor>
     </Geom>
   </Body>
-
-  <visiontracking>
-    <modelname>data/intel/segway.kinbody.xml</modelname>
-  </visiontracking>
 </KinBody>

@@ -19,27 +19,28 @@ import time,pickle
 from optparse import OptionParser
 
 class ReachabilityModel(object):
-    def __init__(self,robotfile=None,showviewer=False):
+    def __init__(self,robotfile=None,manipname=None,showviewer=False):
         self.orenv = Environment()
         if showviewer:
             self.orenv.SetViewer('qtcoin')
         self.robotfile = None
         self.orrobot = None
         if robotfile is not None:
-            self.loadrobot(robotfile)
+            self.loadrobot(robotfile,manipname)
                 
         self.reachabilitystats = None
         self.reachabilitydensity3d = None
 
-    def save(self,filename='reachability.txt'):
+    def save(self,filename='reachability.pp'):
         f = open(filename,'w')
-        pickle.dump((self.robotfile,self.reachabilitystats,self.reachabilitydensity3d,self.pointscale), f)
+        pickle.dump((self.robotfile,self.manipname,self.reachabilitystats,self.reachabilitydensity3d,self.pointscale), f)
         f.close()
-    def load(self,filename='reachability.txt'):
+    def load(self,filename='reachability.pp'):
         f = open(filename, 'r')
-        self.robotfile,self.reachabilitystats,self.reachabilitydensity3d,self.pointscale = pickle.load(f)
-        self.loadrobot(self.robotfile)
-    def loadrobot(self,robotfile):
+        self.robotfile,self.manipname,self.reachabilitystats,self.reachabilitydensity3d,self.pointscale = pickle.load(f)
+        self.loadrobot(self.robotfile,self.manipname)
+
+    def loadrobot(self,robotfile,manipname):
         if self.orrobot is not None:
             self.orenv.RemoveKinBody(self.orrobot)
             self.orrobot = None
@@ -51,21 +52,27 @@ class ReachabilityModel(object):
         self.orrobot.SetTransform(eye(4))
         self.trimesh = self.orenv.Triangulate(self.orrobot)
 
-    def ComputeReachability(self,manipname=None):
-        starttime = time.time()
         if manipname is None:
             manips = [m for m in self.orrobot.GetManipulators() if m.HasIKSolver()]
             if len(manips) == 0:
                 raise ValueError('no valid manipulator')
-            manip = manips[0]
+            self.manip = manips[0]
         else:
             manips = [m for m in self.orrobot.GetManipulators() if m.GetName()==manipname and m.HasIKSolver()]
             if len(manips) == 0:
                 raise ValueError('no valid manipulator')
-            manip = manips[0]
+            self.manip = manips[0]
+        self.manipname = self.manip.GetName()
 
-        Tgrasp = dot(linalg.inv(manip.GetBase().GetTransform()),manip.GetEndEffectorTransform())
-        maxradius = 1.5*sqrt(sum(Tgrasp[0:3,3]**2))
+    def ComputeReachability(self,maxradius):
+        starttime = time.time()
+        Tgrasp = dot(linalg.inv(self.manip.GetBase().GetTransform()),self.manip.GetEndEffectorTransform())
+        armlength = sqrt(sum(Tgrasp[0:3,3]**2))
+        if maxradius is None:
+            maxradius = 1.5*armlength
+        else:
+            maxradius = max(1.5*armlength,maxradius)
+        print 'radius: ',maxradius
 
         allpoints,insideinds,shape,self.pointscale = self.UniformlySampleSpace(maxradius,delta=0.02)
         rotations = self.GetUniformRotations(spherelevel=0,rolldelta=pi/8.0)
@@ -80,7 +87,7 @@ class ReachabilityModel(object):
                 T[0:3,3] = allpoints[ind]
                 for rotation in rotations:
                     T[0:3,0:3] = rotation
-                    solution = manip.FindIKSolution(T,True)
+                    solution = self.manip.FindIKSolution(T,True)
                     if solution is not None:
                         self.reachabilitystats.append(T)
                         numvalid += 1
@@ -174,18 +181,27 @@ class ReachabilityModel(object):
         return array(vertices),triindices
 
 if __name__=='__main__':
-    parser = OptionParser(description='Computes the reachability region of a robot.')
-    parser.add_option('--robot',action='store',type='string',dest='robot',default='data/barrettwam.robot.xml',
+    parser = OptionParser(description='Computes the reachability region of a robot and python pickles it into a file.')
+    parser.add_option('--robot',action='store',type='string',dest='robot',default='robots/barrettwam.robot.xml',
                       help='OpenRAVE robot to load')
-    parser.add_option('--savereachability', action='store',type='string',dest='savereachability',default=None,
+    parser.add_option('--savereachability', action='store',type='string',dest='savereachability',default='reachability.pp',
                       help='Compute the statistics and save in this file')
     parser.add_option('--loadreachability', action='store',type='string',dest='loadreachability',default=None,
                       help='Load the reachability statistics')
     parser.add_option('--manipname',action='store',type='string',dest='manipname',default=None,
                       help='The name of the manipulator')
+    parser.add_option('--maxradius',action='store',type='float',dest='maxradius',default=None,
+                      help='The name of the manipulator')
+    parser.add_option('--show',action='store_true',dest='show',default=False,
+                      help='If set, uses mayavi (v3+) to display the reachability')
     (options, args) = parser.parse_args()
     
-    model = ReachabilityModel(options.robot)
+    model = ReachabilityModel(options.robot,manipname=options.manipname)
+    if options.loadreachability:
+        model.load(options.loadreachability)
     if options.savereachability:
-        model.ComputeReachability(options.manipname)
+        model.ComputeReachability(maxradius=options.maxradius)
         model.save(options.savereachability)
+    if options.show:
+        model.showdensity()
+        input('press any key to exit')

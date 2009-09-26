@@ -979,6 +979,32 @@ public:
         object GetGraspTransform() { return ReturnTransform(_pmanip->tGrasp); }
         object GetJoints() { return toPyList(_pmanip->_vecjoints); }
         object GetArmJoints() { return toPyList(_pmanip->_vecarmjoints); }
+        
+        object GetChildJoints() {
+            std::set<KinBody::Joint*> vjoints;
+            _pmanip->GetChildJoints(vjoints);
+            boost::python::list joints;
+            FOREACH(itjoint,vjoints)
+                joints.append(PyJoint(*itjoint, _pyenv));
+            return joints;
+        }
+        object GetChildDOFIndices() {
+            std::set<int> vdofindices;
+            _pmanip->GetChildDOFIndices(vdofindices);
+            boost::python::list dofindices;
+            FOREACH(itindex,vdofindices)
+                dofindices.append(*itindex);
+            return dofindices;
+        }
+
+        object GetChildLinks() {
+            std::set<KinBody::Link*> vlinks;
+            _pmanip->GetChildLinks(vlinks);
+            boost::python::list links;
+            FOREACH(itlink,vlinks)
+                links.append(PyLink(*itlink,_pyenv));
+            return links;
+        }
     };
 
     class PyAttachedSensor
@@ -2784,6 +2810,9 @@ BOOST_PYTHON_MODULE(openravepy)
             .def("GetGraspTransform",&PyRobotBase::PyManipulator::GetGraspTransform)
             .def("GetJoints",&PyRobotBase::PyManipulator::GetJoints)
             .def("GetArmJoints",&PyRobotBase::PyManipulator::GetArmJoints)
+            .def("GetChildJoints",&PyRobotBase::PyManipulator::GetChildJoints)
+            .def("GetChildDOFIndices",&PyRobotBase::PyManipulator::GetChildDOFIndices)
+            .def("GetChildLinks",&PyRobotBase::PyManipulator::GetChildLinks)
             ;
 
         class_<PyRobotBase::PyAttachedSensor>("AttachedSensor", no_init)

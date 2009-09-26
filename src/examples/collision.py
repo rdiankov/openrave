@@ -22,8 +22,8 @@ if __name__ == "__main__":
     env.Load('robots/barrettwam.robot.xml')
     orobj = env.GetRobots()[0]
     # when doing fast ray collision checking, can specify multiple rays where each column is one ray
-    ray1 = array((0,0,-10,0,0,100))
-    ray2 = array((0,0,10,0,0,-100))
+    ray1 = array((0,0,-10,0,0,100)) # specify dir*range, pos
+    ray2 = array((0,0,10,0,0,-100)) # specify dir*range, pos
     inliers,hitpoints = env.CheckCollisionRays(c_[ray1,ray2],orobj)
     print 'rays hit:',inliers,'hit points:',hitpoints
 
