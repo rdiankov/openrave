@@ -48,7 +48,7 @@ ODEPhysicsEngine::ODEPhysicsEngine(OpenRAVE::EnvironmentBase* penv) : OpenRAVE::
     odespace.SetSynchornizationCallback(SyncCallback, this);
 
     memset(_jointset, 0, sizeof(_jointset));
-    _jointset[dJointTypeBall] = dJointSetBallParam;
+    _jointset[dJointTypeBall] = DummySetParam;
     _jointset[dJointTypeHinge] = dJointSetHingeParam;
     _jointset[dJointTypeSlider] = dJointSetSliderParam;
     _jointset[dJointTypeUniversal] = dJointSetUniversalParam;
@@ -60,13 +60,6 @@ ODEPhysicsEngine::ODEPhysicsEngine(OpenRAVE::EnvironmentBase* penv) : OpenRAVE::
     _jointadd[dJointTypeSlider] = dJointAddSliderForce_;
     _jointadd[dJointTypeUniversal] = dJointAddUniversalTorques_;
     _jointadd[dJointTypeHinge2] = dJointAddHinge2Torques_;
-
-    memset(_jointgetparam, 0, sizeof(_jointgetparam));
-    _jointgetparam[dJointTypeBall] = dJointGetBallParam;
-    _jointgetparam[dJointTypeHinge] = dJointGetHingeParam;
-    _jointgetparam[dJointTypeSlider] = dJointGetSliderParam;
-    _jointgetparam[dJointTypeUniversal] = dJointGetUniversalParam;
-    _jointgetparam[dJointTypeHinge2] = dJointGetHinge2Param;
     
     _jointgetvel[dJointTypeBall].push_back(JointGetBallVelocityX);
     _jointgetvel[dJointTypeBall].push_back(JointGetBallVelocityY);

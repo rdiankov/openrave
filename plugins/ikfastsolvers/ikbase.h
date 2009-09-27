@@ -70,7 +70,7 @@ public:
         pmanip->GetChildLinks(setlinks);
         _vChildGripperLinks.clear();
         Transform tbaseinv = pmanip->GetEndEffectorTransform().inverse();
-        FOREACH(itlink,setlinks)
+        for(std::set<KinBody::Link*>::iterator itlink = setlinks.begin(); itlink != setlinks.end(); ++itlink)
             _vChildGripperLinks.push_back(make_pair(*itlink,tbaseinv*(*itlink)->GetTransform()));
 
         return true;

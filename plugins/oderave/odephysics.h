@@ -66,11 +66,9 @@ public:
     
     typedef void (*JointSetFn)(dJointID, int param, dReal val);
     typedef dReal (*JointGetFn)(dJointID);
-    typedef dReal (*JointGetParamFn)(dJointID, int param);
     typedef void (*JointAddForceFn)(dJointID, const dReal* vals);
 
     JointSetFn _jointset[12];
-    JointGetParamFn _jointgetparam[12];
     JointAddForceFn _jointadd[12];
     vector<JointGetFn> _jointgetvel[12];
 };
