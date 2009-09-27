@@ -32,12 +32,12 @@ class TaskReachability(metaclass.AutoReloader):
 
     def save(self,filename='taskreachability.pp'):
         f = open(filename,'w')
-        pickle.dump((self.reachabilitystats,self.reachabilitydensity3d,self.pointscale), f)
+        pickle.dump((self.reachabilitystats,self.reachabilitydensity3d,self.workscale,self.Twork), f)
         f.close()
 
     def load(self,filename='taskreachability.pp'):
         f = open(filename, 'r')
-        self.reachabilitystats,self.reachabilitydensity3d,self.pointscale = pickle.load(f)
+        self.reachabilitystats,self.reachabilitydensity3d,self.workscale,self.Twork = pickle.load(f)
 
     def loadscene(self,scenefile,targetname,robotname,manipname):
         self.ortarget = None
@@ -92,9 +92,10 @@ class TaskReachability(metaclass.AutoReloader):
             dim = 12 + len(gripperindices)
             grasptable = reshape(grasptable,(len(grasptable)/dim,dim))
 
-            txrange = arange(-workextents[0],workextents[0],0.02)
-            tyrange = arange(-workextents[1],workextents[1],0.02)
-            trrange = arange(-workextents[2],workextents[2],0.2)
+            self.workscale = array([0.02,0.02,0.2])
+            txrange = arange(-workextents[0],workextents[0],self.workscale[0])
+            tyrange = arange(-workextents[1],workextents[1],self.workscale[1])
+            trrange = arange(-workextents[2],workextents[2],self.workscale[2])
             shape = (len(txrange),len(tyrange),len(trrange))
             reachabilitydensity3d = zeros(prod(shape))
             self.reachabilitystats = []
@@ -107,6 +108,7 @@ class TaskReachability(metaclass.AutoReloader):
             orwork = self.orenv.GetKinBody(workobjectspace)
             if orwork is not None:
                 Twork = dot(orwork.GetTransform(),Twork)
+            self.Twork = Twork
 
             Tobj = self.ortarget.GetTransform()
             Tlocal = eye(4)
@@ -120,7 +122,7 @@ class TaskReachability(metaclass.AutoReloader):
                         Tlocal[0:3,0:3] = array(((cos(tr),-sin(tr),0),(sin(tr),cos(tr),0),(0,0,1)))
                         Tlocal[0,3] = tx
                         Tlocal[1,3] = ty
-                        Tobject = dot(Twork,Tlocal)
+                        Tobject = dot(self.Twork,Tlocal)
                         self.ortarget.SetTransform(Tobject)
                         if not self.orenv.CheckCollision(self.ortarget):
                             # check if at least one grasp is satisfied
