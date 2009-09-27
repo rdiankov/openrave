@@ -732,6 +732,7 @@ bool LinkXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *name)
                 Transform tnew = _plink->GetTransform();
                 FOREACH(itgeom, _plink->_listGeomProperties)
                     itgeom->_t = tnew * itgeom->_t;
+                _plink->collision.ApplyTransform(tnew);
                 _plink->SetTransform(tOrigTrans);
             }
 

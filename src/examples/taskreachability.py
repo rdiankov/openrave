@@ -69,7 +69,7 @@ class TaskReachability(metaclass.AutoReloader):
         self.ortarget = [body for body in self.orenv.GetBodies() if body.GetName() == targetname][0]
         self.targetname = self.ortarget.GetName()
 
-        self.trimesh = self.orenv.TriangulateScene(Environment.TriangulateOptions.Everything,'')
+        self.trimesh = self.orenv.TriangulateScene(Environment.TriangulateOptions.AllExceptBody,self.targetname)
 
     def CheckGripperCollision(self,Tgripper):
         for link,trelative in self.gripperlinks:
@@ -91,11 +91,12 @@ class TaskReachability(metaclass.AutoReloader):
             print 'gripper indices: ',gripperindices
             dim = 12 + len(gripperindices)
             grasptable = reshape(grasptable,(len(grasptable)/dim,dim))
-
-            self.workscale = array([0.02,0.02,0.2])
-            txrange = arange(-workextents[0],workextents[0],self.workscale[0])
-            tyrange = arange(-workextents[1],workextents[1],self.workscale[1])
-            trrange = arange(-workextents[2],workextents[2],self.workscale[2])
+            
+            steps = array([0.02,0.02,0.2])
+            self.workscale = 1.0/steps
+            txrange = arange(-workextents[0],workextents[0],steps[0])
+            tyrange = arange(-workextents[1],workextents[1],steps[1])
+            trrange = arange(-workextents[2],workextents[2],steps[2])
             shape = (len(txrange),len(tyrange),len(trrange))
             reachabilitydensity3d = zeros(prod(shape))
             self.reachabilitystats = []
@@ -132,31 +133,35 @@ class TaskReachability(metaclass.AutoReloader):
                                 Tgrasp = dot(Tobject,Tgrasp)
                                 if not self.CheckGripperCollision(Tgrasp) and self.manip.FindIKSolution(Tgrasp,True) is not None:
                                     self.reachabilitystats.append(array((tx,ty,tr)))
-                                    reachabilitydensity3d[index] += 1
+                                    reachabilitydensity3d[index] += 1.0
                                     break
                         index += 1
         finally:
             self.orenv.LockPhysics(False)
-        self.reachabilitydensity3d = reshape(reachabilitydensity3d,shape)
+        self.reachabilitydensity3d = reshape(reachabilitydensity3d,shape)/len(trrange)
         print 'reachability finished in %fs'%(time.time()-starttime)
 
-    def showdensity(self,showrobot=True,contours=[0.1,0.5,0.9,0.99],figureid=1, xrange=None):
+    def showdensity(self,showrobot=True,contours=[0.1,0.5,0.9,0.99],figureid=1):
         from enthought.mayavi import mlab
         mlab.figure(figureid,fgcolor=(0,0,0), bgcolor=(1,1,1),size=(1024,768))
         mlab.clf()
-        if xrange is None:
-            offset = array((0,0,0))
-            src = mlab.pipeline.scalar_field(self.reachabilitydensity3d)
-        else:
-            offset = array((xrange[0]-1,0,0))
-            src = mlab.pipeline.scalar_field(r_[zeros((1,)+self.reachabilitydensity3d.shape[1:]),self.reachabilitydensity3d[xrange,:,:],zeros((1,)+self.reachabilitydensity3d.shape[1:])])
-            
+        offset = array((0,0,0))
+        density3d = zeros((self.reachabilitydensity3d.shape[0]+2,self.reachabilitydensity3d.shape[1]+2,3))
+        density3d[1:-1,1:-1,1] = sum(self.reachabilitydensity3d,2)/float(self.reachabilitydensity3d.shape[2])
+        src = mlab.pipeline.scalar_field(density3d)
         for c in contours:
             mlab.pipeline.iso_surface(src,contours=[c],opacity=c*0.3)
-        #mlab.pipeline.volume(mlab.pipeline.scalar_field(self.reachabilitydensity3d*100))
+#         density3d = zeros((density2d.shape[0],density2d.shape[1],3))
+#         density3d[:,:,1] = density2d
+#         mlab.pipeline.volume(mlab.pipeline.scalar_field(density3d*200))
         if showrobot:
-            v = self.pointscale[0]*self.trimesh.vertices+self.pointscale[1]
-            mlab.triangular_mesh(v[:,0]-offset[0],v[:,1]-offset[1],v[:,2]-offset[2],self.trimesh.indices,color=(0.5,0.5,0.5))
+            Tscale = diag([self.workscale[0],self.workscale[1],0.5*(self.workscale[0]+self.workscale[1]),1])
+            Tscale[0,3] += self.reachabilitydensity3d.shape[0]/2+1
+            Tscale[1,3] += self.reachabilitydensity3d.shape[1]/2+1
+            T = dot(Tscale,linalg.inv(self.Twork))
+            v = dot(self.trimesh.vertices,transpose(T[0:-1,0:-1]))
+            v += tile(transpose(T[0:-1,-1:]),(v.shape[0],1))
+            mlab.triangular_mesh(v[:,0],v[:,1],v[:,2],self.trimesh.indices,color=(0.5,0.5,0.5))
 
 if __name__=='__main__':
     parser = OptionParser(description='Given a robot, a sampling function for obstacles, a workspace for possible target object locations, computes the feasibilyt of the robot reaching those locations given its current position.')
@@ -194,4 +199,4 @@ if __name__=='__main__':
 
 def test1():
     self = TaskReachability('data/tablewam.env.xml','frootloops','BarrettWAM',None)
-    self.ComputeReachability('table',[1,0,0,0,1,0,0,0,0.015],[0.2,0.2,pi/2],'cereal_grasps_barrett.mat')
+    self.ComputeReachability('table',[1,0,0,0,1,0,0,0,0.015],[0.3,0.25,pi/2],'cereal_grasps_barrett.mat')
