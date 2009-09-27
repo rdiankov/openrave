@@ -69,3 +69,6 @@ orBodySetTransform(Target.id, [0 0 0], [1 0 0 0]); % identity
 % save the table
 GraspTable = GraspTable(find(GraspStats(:,1) > 0),:);
 save('-v6',grasptablefilename,'GraspTable','robot','targetfilename');
+
+GraspTableSimple = GraspTable(:,[(end-11):end robot.grasp.joints]);
+save('-ascii',['simple_' grasptablefilename],'GraspTableSimple');

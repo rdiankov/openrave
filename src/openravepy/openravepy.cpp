@@ -149,24 +149,24 @@ private:
     EnvironmentBase* _penv;
 };
 
-inline RaveVector<float> ExtractFloat3(object& o)
+inline RaveVector<float> ExtractFloat3(const object& o)
 {
     return RaveVector<float>(extract<float>(o[0]), extract<float>(o[1]), extract<float>(o[2]));
 }
 
 template <typename T>
-inline Vector ExtractVector3Type(object& o)
+inline Vector ExtractVector3Type(const object& o)
 {
     return Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]));
 }
 
 template <typename T>
-inline Vector ExtractVector4Type(object& o)
+inline Vector ExtractVector4Type(const object& o)
 {
     return Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3]));
 }
 
-inline Vector ExtractVector3(object& oraw)
+inline Vector ExtractVector3(const object& oraw)
 {
     object o = oraw.attr("flat");
 
@@ -195,7 +195,7 @@ inline Vector ExtractVector3(object& oraw)
     return ExtractVector3Type<double>(onew); // python should raise exception
 }
 
-inline Vector ExtractVector4(object& oraw)
+inline Vector ExtractVector4(const object& oraw)
 {
     object o = oraw.attr("flat");
 
@@ -224,7 +224,7 @@ inline Vector ExtractVector4(object& oraw)
     return ExtractVector4Type<double>(onew); // python should raise exception
 }
 
-inline Vector ExtractVector34(object& oraw)
+inline Vector ExtractVector34(const object& oraw)
 {
     int n = len(oraw);
     if( n == 3 )
@@ -235,7 +235,7 @@ inline Vector ExtractVector34(object& oraw)
 }
 
 template <typename T>
-inline Transform ExtractTransformType(object& o)
+inline Transform ExtractTransformType(const object& o)
 {
     if( len(o) == 7 )
         return Transform(Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3])),
@@ -250,7 +250,7 @@ inline Transform ExtractTransformType(object& o)
     return t;
 }
 
-inline Transform ExtractTransform(object& oraw)
+inline Transform ExtractTransform(const object& oraw)
 {
     object o = oraw.attr("flat");
     // check the types of o
@@ -279,7 +279,7 @@ inline Transform ExtractTransform(object& oraw)
 }
 
 template <typename T>
-inline vector<T> ExtractArray(object o)
+inline vector<T> ExtractArray(const object& o)
 {
     vector<T> v(len(o));
     for(size_t i = 0; i < v.size(); ++i)
@@ -287,7 +287,7 @@ inline vector<T> ExtractArray(object o)
     return v;
 }
 
-inline vector<dReal> ExtractRealArray(object o)
+inline vector<dReal> ExtractRealArray(const object& o)
 {
     // check the types of o
     extract<dReal> xr(o[0]);
@@ -317,7 +317,7 @@ inline vector<dReal> ExtractRealArray(object o)
     return v;
 }
 
-inline vector<float> ExtractFloatArray(object o)
+inline vector<float> ExtractFloatArray(const object& o)
 {
     // check the types of o
     extract<float> xr(o[0]);
@@ -331,7 +331,7 @@ inline vector<float> ExtractFloatArray(object o)
     return v;
 }
 
-inline vector<int> ExtractArrayInt(object o)
+inline vector<int> ExtractArrayInt(const object& o)
 {
     // check the types of o
     extract<int> xi(o[0]);
@@ -347,7 +347,7 @@ inline vector<int> ExtractArrayInt(object o)
 }
 
 template <typename T>
-inline set<T> ExtractSet(object o)
+inline set<T> ExtractSet(const object& o)
 {
     set<T> v;
     size_t nlen = len(o);
@@ -356,7 +356,7 @@ inline set<T> ExtractSet(object o)
     return v;
 }
 
-inline object toPyArray(TransformMatrix t)
+inline object toPyArray(const TransformMatrix& t)
 {
     npy_intp dims[] = {4,4};
     PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
@@ -368,7 +368,7 @@ inline object toPyArray(TransformMatrix t)
     return static_cast<numeric::array>(handle<>(pyvalues));
 }
 
-inline object toPyArray(Transform t)
+inline object toPyArray(const Transform& t)
 {
     npy_intp dims[] = {7};
     PyObject *pyvalues = PyArray_SimpleNew(1,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
@@ -378,7 +378,7 @@ inline object toPyArray(Transform t)
     return static_cast<numeric::array>(handle<>(pyvalues));
 }
 
-inline object toPyArray3(vector<RaveVector<float> >& v)
+inline object toPyArray3(const vector<RaveVector<float> >& v)
 {
     npy_intp dims[] = {v.size(),3};
     PyObject *pyvalues = PyArray_SimpleNew(2,dims, PyArray_FLOAT);
@@ -556,6 +556,16 @@ public:
     string GetXMLId() const { CHECK_POINTER(_pbase); return _pbase->GetXMLId(); }
     string GetPluginName() const {  CHECK_POINTER(_pbase); return _pbase->GetPluginName(); }
     PyEnvironmentBase* GetEnv() const { return _pyenv; }
+    
+    bool Clone(PyInterfaceBase* preference, int cloningoptions) {
+        CHECK_POINTER(_pbase); 
+        return _pbase->Clone(preference->GetInterfaceBase(),cloningoptions);
+    }
+
+    void SetUserData(uintptr_t pdata) { CHECK_POINTER(_pbase); return _pbase->SetUserData((void*)pdata); }
+    uintptr_t GetUserData() const { CHECK_POINTER(_pbase); return (uintptr_t)_pbase->GetUserData(); }
+
+    virtual InterfaceBase* GetInterfaceBase() { return _pbase; }
     virtual void Invalidate() { _pbase = NULL; _bOwnObject = false; }
 };
 
@@ -618,6 +628,10 @@ public:
         object GetCOMOffset() const { return toPyVector3(_plink->GetCOMOffset()); }
         object GetInertia() const { return ReturnTransform(_plink->GetInertia()); }
         dReal GetMass() const { return _plink->GetMass(); }
+
+        void SetTransform(object otrans) { _plink->SetTransform(ExtractTransform(otrans)); }
+        void SetForce(object oforce, object opos, bool bAdd) { return _plink->SetForce(ExtractVector3(oforce),ExtractVector3(opos),bAdd); }
+        void SetTorque(object otorque, bool bAdd) { return _plink->SetTorque(ExtractVector3(otorque),bAdd); }
     };
 
     class PyJoint
@@ -746,6 +760,19 @@ public:
         return transforms;
     }
 
+    void SetBodyTransformations(object transforms)
+    {
+        CHECK_POINTER(_pbody);
+        size_t numtransforms = len(transforms);
+        if( numtransforms != _pbody->GetLinks().size() )
+            throw openrave_exception("number of input transforms not equal to links");
+
+        std::vector<Transform> vtransforms(numtransforms);
+        for(size_t i = 0; i < numtransforms; ++i)
+            vtransforms[i] = ExtractTransform(transforms[i]);
+        _pbody->SetBodyTransformations(vtransforms);
+    }
+
     object GetLinkVelocities() const
     {
         CHECK_POINTER(_pbody);
@@ -780,6 +807,22 @@ public:
             throw openrave_exception("values do not equal to body degrees of freedom");
         _pbody->SetJointValues(NULL,NULL,&values[0],true);
     }
+    void SetTransformWithJointValues(object otrans,object ojoints)
+    {
+        CHECK_POINTER(_pbody);
+        if( _pbody->GetDOF() == 0 ) {
+            _pbody->SetTransform(ExtractTransform(otrans));
+            return;
+        }
+
+        vector<dReal> values = ExtractRealArray(ojoints);
+        if( (int)values.size() != GetDOF() )
+            throw openrave_exception("values do not equal to body degrees of freedom");
+
+        Transform t = ExtractTransform(otrans);
+        _pbody->SetJointValues(NULL,&t,&values[0],true);
+    }
+
     void SetJointValues(object o,object indices)
     {
         CHECK_POINTER(_pbody);
@@ -843,6 +886,65 @@ public:
         return _pbody->CheckSelfCollision();
     }
     bool CheckSelfCollision(PyCollisionReport* pReport);
+
+    void AttachBody(PyKinBody* pattachbody) {
+        CHECK_POINTER(_pbody);
+        CHECK_POINTER(pattachbody); CHECK_POINTER(pattachbody->GetBody());
+        _pbody->AttachBody(pattachbody->GetBody());
+    }
+    void RemoveBody(PyKinBody* pbody) {
+        CHECK_POINTER(_pbody);
+        if( pbody == NULL )
+            _pbody->RemoveBody(NULL);
+        else {
+            CHECK_POINTER(pbody->GetBody());
+            _pbody->RemoveBody(pbody->GetBody());
+        }
+    }
+    bool IsAttached(PyKinBody* pattachbody) {
+        CHECK_POINTER(_pbody);
+        CHECK_POINTER(pattachbody); CHECK_POINTER(pattachbody->GetBody());
+        return _pbody->IsAttached(pattachbody->GetBody());
+    }
+    object GetAttached() const {
+        CHECK_POINTER(_pbody);
+        boost::python::list attached;
+        FOREACHC(it,_pbody->GetAttached())
+            attached.append(new PyKinBody(*it,_pyenv,false));
+        return attached;
+    }
+            
+    bool IsRobot() const { CHECK_POINTER(_pbody); return _pbody->IsRobot(); }
+    int GetNetworkId() const { CHECK_POINTER(_pbody); return _pbody->GetNetworkId(); }
+
+    int DoesAffect(int jointindex, int linkindex ) const {
+        CHECK_POINTER(_pbody); 
+        return _pbody->DoesAffect(jointindex,linkindex);
+    }
+
+    void SetGuiData(uintptr_t pdata) { CHECK_POINTER(_pbody); _pbody->SetGuiData((void*)pdata); }
+    uintptr_t GetGuiData() const { CHECK_POINTER(_pbody); return (uintptr_t)_pbody->GetGuiData(); }
+
+    std::string GetXMLFilename() const { CHECK_POINTER(_pbody); return _pbody->GetXMLFilename(); }
+
+    object GetNonAdjacentLinks() const {
+        CHECK_POINTER(_pbody);
+        boost::python::list nonadjacent;
+        FOREACHC(it,_pbody->GetNonAdjacentLinks())
+            nonadjacent.append(make_tuple((int)(*it)&0xffff,(int)(*it)>>16));
+        return nonadjacent;
+    }
+    object GetAdjacentLinks() const {
+        CHECK_POINTER(_pbody);
+        boost::python::list adjacent;
+        FOREACHC(it,_pbody->GetAdjacentLinks())
+            adjacent.append(make_tuple((int)(*it)&0xffff,(int)(*it)>>16));
+        return adjacent;
+    }
+    
+    uintptr_t GetPhysicsData() const { CHECK_POINTER(_pbody); return (uintptr_t)_pbody->GetPhysicsData(); }
+    uintptr_t GetCollisionData() const { CHECK_POINTER(_pbody); return (uintptr_t)_pbody->GetCollisionData(); }
+    int GetUpdateStamp() const { CHECK_POINTER(_pbody); return _pbody->GetUpdateStamp(); }
 };
 
 class PyCollisionReport
@@ -921,7 +1023,7 @@ public:
         object GetEndEffectorTransform() const { return ReturnTransform(_pmanip->GetEndEffectorTransform()); }
 
 		void SetIKSolver(PyIkSolverBase* iksolver);
-        bool InitIKSolver(int options) { return _pmanip->InitIKSolver(options); }
+        bool InitIKSolver() { return _pmanip->InitIKSolver(); }
         string GetIKSolverName() const { return _pmanip->GetIKSolverName(); }
         bool HasIKSolver() const { return _pmanip->HasIKSolver(); }
         string GetName() const { return _pmanip->GetName(); }
@@ -2644,6 +2746,7 @@ BOOST_PYTHON_MODULE(openravepy)
             .def("GetJoints",&PyKinBody::GetJoints)
             .def("GetTransform",&PyKinBody::GetTransform)
             .def("GetBodyTransformations",&PyKinBody::GetBodyTransformations)
+            .def("SetBodyTransformations",&PyKinBody::SetBodyTransformations)
             .def("GetLinkVelocities",&PyKinBody::GetLinkVelocities)
             .def("ComputeAABB",&PyKinBody::ComputeAABB, return_value_policy<manage_new_object>())
             .def("Enable",&PyKinBody::Enable)
@@ -2651,11 +2754,27 @@ BOOST_PYTHON_MODULE(openravepy)
             .def("SetTransform",&PyKinBody::SetTransform)
             .def("SetJointValues",psetjointvalues1)
             .def("SetJointValues",psetjointvalues2)
+            .def("SetTransformWithJointValues",&PyKinBody::SetTransformWithJointValues)
             .def("CalculateJacobian",&PyKinBody::CalculateJacobian)
             .def("CalculateRotationJacobian",&PyKinBody::CalculateRotationJacobian)
             .def("CalculateAngularVelocityJacobian",&PyKinBody::CalculateAngularVelocityJacobian)
             .def("CheckSelfCollision",pkinbodyself)
             .def("CheckSelfCollision",pkinbodyselfr)
+            .def("AttachBody",&PyKinBody::AttachBody)
+            .def("RemoveBody",&PyKinBody::RemoveBody)
+            .def("IsAttached",&PyKinBody::IsAttached)
+            .def("GetAttached",&PyKinBody::GetAttached)
+            .def("IsRobot",&PyKinBody::IsRobot)
+            .def("GetNetworkId",&PyKinBody::GetNetworkId)
+            .def("DoesAffect",&PyKinBody::DoesAffect)
+            .def("SetGuiData",&PyKinBody::SetGuiData)
+            .def("GetGuiData",&PyKinBody::GetGuiData)
+            .def("GetXMLFilename",&PyKinBody::GetXMLFilename)
+            .def("GetNonAdjacentLinks",&PyKinBody::GetNonAdjacentLinks)
+            .def("GetAdjacentLinks",&PyKinBody::GetAdjacentLinks)
+            .def("GetPhysicsData",&PyKinBody::GetPhysicsData)
+            .def("GetCollisionData",&PyKinBody::GetCollisionData)
+            .def("GetUpdateStamp",&PyKinBody::GetUpdateStamp)
             ;
 
         {        
@@ -2672,6 +2791,9 @@ BOOST_PYTHON_MODULE(openravepy)
                 .def("GetCOMOffset",&PyKinBody::PyLink::GetCOMOffset)
                 .def("GetInertia",&PyKinBody::PyLink::GetInertia)
                 .def("GetMass",&PyKinBody::PyLink::GetMass)
+                .def("SetTransform",&PyKinBody::PyLink::SetTransform)
+                .def("SetForce",&PyKinBody::PyLink::SetForce)
+                .def("SetTorque",&PyKinBody::PyLink::SetTorque)
                 ;
 
             class_<PyKinBody::PyLink::PyTriMesh>("TriMesh",no_init)

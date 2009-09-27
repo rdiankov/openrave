@@ -1606,7 +1606,7 @@ void Environment::StopSimulation()
         RAVELOG_ERRORA("StopSimulation need to lock physics! Ignoring lock...\n");
     }
     _bEnableSimulation = false;
-    _fDeltaSimTime = 0;
+    _fDeltaSimTime = 1.0f;
 }
 
 unsigned int Environment::RandomInt()
@@ -1681,8 +1681,6 @@ void Environment::StepSimulation(dReal fTimeStep)
         FOREACH(itprob, listProblems)
             (*itprob)->SimulationStep(fTimeStep);
     }
-    
-    _nCurSimTime += step;
 }
 
 void* Environment::main(void* p)
@@ -1731,6 +1729,7 @@ void* Environment::_main()
 
     uint64_t nLastSleptTime = GetMicroTime();
     uint64_t nMaxConsecutiveSimTime = 500000; // force reupdate every 500ms
+    uint64_t nLastUpdateTime = GetMicroTime();
 
     while( !_bDestroying ) {
 
@@ -1741,13 +1740,15 @@ void* Environment::_main()
         }
 
         uint64_t curtime = GetMicroTime();
-        bool bDoSimulation = !_bRealTime || curtime-_nStartSimTime >= _nCurSimTime+(uint64_t)(100000.0f * _fDeltaSimTime);
+        uint64_t deltatime = (uint64_t)(1000000.0 * _fDeltaSimTime);
+        bool bDoSimulation = !_bRealTime || curtime-_nStartSimTime >= _nCurSimTime+deltatime;
         if( bDoSimulation ) {
             if( _bEnableSimulation ) {
                 LockPhysics(true);
                 StepSimulation(_fDeltaSimTime);
                 LockPhysics(false);
             }
+            _nCurSimTime += deltatime;
         }
 
         if( !bDoSimulation || curtime-nLastSleptTime > nMaxConsecutiveSimTime ) {
@@ -1755,28 +1756,31 @@ void* Environment::_main()
             Sleep(1);
         }
 
-        LockPhysics(true);
-        {
-            MutexLock mbodies(&_mutexBodies);
+        if( GetMicroTime()-nLastUpdateTime > 10000 ) {
+            LockPhysics(true);
+            nLastUpdateTime = GetMicroTime();
+            {
+                MutexLock mbodies(&_mutexBodies);
 
-            // remove destroyed bodies
-            _CleanRemovedBodies();
+                // remove destroyed bodies
+                _CleanRemovedBodies();
 
-            // updated the published bodies
-            _vPublishedBodies.resize(_vecbodies.size());
+                // updated the published bodies
+                _vPublishedBodies.resize(_vecbodies.size());
             
-            vector<BODYSTATE>::iterator itstate = _vPublishedBodies.begin();
-            FOREACH(itbody, _vecbodies) {
-                itstate->pbody = *itbody;
-                (*itbody)->GetBodyTransformations(itstate->vectrans);
-                (*itbody)->GetJointValues(itstate->jointvalues);
-                itstate->strname =(*itbody)->GetName();
-                itstate->pguidata = (*itbody)->GetGuiData();
-                itstate->networkid = (*itbody)->GetNetworkId();
-                ++itstate;
+                vector<BODYSTATE>::iterator itstate = _vPublishedBodies.begin();
+                FOREACH(itbody, _vecbodies) {
+                    itstate->pbody = *itbody;
+                    (*itbody)->GetBodyTransformations(itstate->vectrans);
+                    (*itbody)->GetJointValues(itstate->jointvalues);
+                    itstate->strname =(*itbody)->GetName();
+                    itstate->pguidata = (*itbody)->GetGuiData();
+                    itstate->networkid = (*itbody)->GetNetworkId();
+                    ++itstate;
+                }
             }
+            LockPhysics(false);
         }
-        LockPhysics(false);
     }
 
     {

@@ -2001,9 +2001,6 @@ bool ManipulatorXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *na
         }
     }
     else if( stricmp((const char*)name, "manipulator") == 0 ) {
-
-        if( _pmanip->_pIkSolver != NULL )
-            _pmanip->_pIkSolver->Init(_probot, _pmanip, _pmanip->_ikoptions);
         if( _pmanip->_vecjoints.size() != _pmanip->_vClosedGrasp.size() || _pmanip->_vecjoints.size() != _pmanip->_vOpenGrasp.size() ) {
             RAVELOG(L"Manipulator has open/closed grasps wrong\n");
             _pmanip->_vClosedGrasp.clear();

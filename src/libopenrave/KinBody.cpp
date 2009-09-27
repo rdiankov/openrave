@@ -560,6 +560,7 @@ KinBody::KinBodyStateSaver::~KinBodyStateSaver()
 
 KinBody::KinBody(PluginType type, EnvironmentBase* penv) : InterfaceBase(type, penv)
 {
+    _bHierarchyComputed = false;
     DestroyCallback = NULL;
     networkid = 0;
     
@@ -591,6 +592,7 @@ void KinBody::Destroy()
     _vecJointWeights.clear();
 
     _setAttachedBodies.clear();
+    _bHierarchyComputed = false;
 }
 
 bool KinBody::Init(const char* filename, const char**atts)
@@ -1556,6 +1558,7 @@ bool KinBody::CheckSelfCollision(COLLISIONREPORT* pReport) const
 
 void KinBody::ComputeJointHierarchy()
 {
+    _bHierarchyComputed = true;
     _vecJointHierarchy.resize(_vecjoints.size()*_veclinks.size());
     if( _vecJointHierarchy.size() == 0 )
         return;
@@ -1971,6 +1974,33 @@ int KinBody::GetNetworkId() const
 {
     assert( networkid != 0 );
     return networkid;
+}
+
+char KinBody::DoesAffect(int jointindex, int linkindex ) const
+{
+    if( !_bHierarchyComputed ) {
+        RAVELOG_WARNA("DoesAffect: joint hierarchy needs to be computed\n");
+        return 0;
+    }
+    return _vecJointHierarchy[jointindex*_veclinks.size()+linkindex];
+}
+
+const std::set<int>& KinBody::GetNonAdjacentLinks() const
+{
+    if( !_bHierarchyComputed ) {
+        RAVELOG_WARNA("GetNonAdjacentLinks: joint hierarchy needs to be computed\n");
+    }
+
+    return _setNonAdjacentLinks;
+}
+
+const std::set<int>& KinBody::GetAdjacentLinks() const
+{
+    if( !_bHierarchyComputed ) {
+        RAVELOG_WARNA("GetAdjacentLinks: joint hierarchy needs to be computed\n");
+    }
+
+    return _setAdjacentLinks;
 }
 
 bool KinBody::Clone(const InterfaceBase* preference, int cloningoptions)

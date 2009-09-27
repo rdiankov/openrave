@@ -503,7 +503,7 @@ public:
     
     /// returns how the joint effects the link. If zero, link is unaffected.
     /// If negative, the partial derivative of the Jacobian should be negated.
-    virtual char DoesAffect(int jointindex, int linkindex ) const { return _vecJointHierarchy[jointindex*_veclinks.size()+linkindex]; }
+    virtual char DoesAffect(int jointindex, int linkindex) const;
 
     /// writes a string for the forward kinematics of the robot (only hinge joints are handled)
     /// format of the string is:
@@ -519,8 +519,8 @@ public:
 
     virtual const std::string GetXMLFilename() const { return strXMLFilename; }
 
-    virtual const std::set<int>& GetNonAdjacentLinks() const {return _setNonAdjacentLinks;}   
-    virtual const std::set<int>& GetAdjacentLinks() const {return _setAdjacentLinks;}   
+    virtual const std::set<int>& GetNonAdjacentLinks() const;
+    virtual const std::set<int>& GetAdjacentLinks() const;
     
     virtual void* GetPhysicsData() const { return _pPhysicsData; }
     virtual void* GetCollisionData() const { return _pCollisionData; }
@@ -577,6 +577,7 @@ protected:
     void* _pPhysicsData;                ///< data set by the physics engine
     void* _pCollisionData; ///< internal collision model
 
+    bool _bHierarchyComputed; ///< true if the joint heirarchy and other cached information is computed
 private:
     virtual const char* GetHash() const { return OPENRAVE_KINBODY_HASH; }
     void (*DestroyCallback)(EnvironmentBase* penv, KinBody* pbody);

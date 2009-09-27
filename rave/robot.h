@@ -41,7 +41,7 @@ public:
         virtual const char* GetName() const { return _name.c_str(); }
 
 		virtual void SetIKSolver(IkSolverBase* iksolver);
-        virtual bool InitIKSolver(int options);
+        virtual bool InitIKSolver();
         virtual const std::string& GetIKSolverName() const;
         virtual bool HasIKSolver() const;
 
@@ -70,13 +70,13 @@ public:
         virtual bool FindIKSolutions(const Transform& goal, const dReal* pFreeParameters, std::vector<std::vector<dReal> >& solutions, bool bColCheck) const;
 
         /// get all child joints of the manipulator starting at the pEndEffector link
-        virtual void GetChildJoints(std::set<Joint*>& vjoints);
+        virtual void GetChildJoints(std::set<Joint*>& vjoints) const;
 
         /// get all child DOF indices of the manipulator starting at the pEndEffector link
-        virtual void GetChildDOFIndices(std::set<int>& vdofndices);
+        virtual void GetChildDOFIndices(std::set<int>& vdofndices) const;
 
         /// get all child links of the manipulator starting at pEndEffector link
-        virtual void GetChildLinks(std::set<Link*>& vlinks);
+        virtual void GetChildLinks(std::set<Link*>& vlinks) const;
 
         Link* pBase;				///< the base used for the iksolver
 		Link* pEndEffector;         ///< the end effector link (used to define workspace distance)
@@ -362,6 +362,8 @@ public:
     /// \return true if this body is derived from RobotBase
     virtual bool IsRobot() const { return true; }
 
+    virtual void ComputeJointHierarchy();
+    
 protected:
     RobotBase(EnvironmentBase* penv);
 

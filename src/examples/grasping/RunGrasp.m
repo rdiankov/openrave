@@ -48,7 +48,7 @@ command_string = [command_string, ' roll ' num2str(grasp(robot.grasp.roll))];
 command_string = [command_string, ' standoff ' num2str(grasp(robot.grasp.standoff))];
 command_string = [command_string, ' centeroffset ' sprintf('%f ', grasp(robot.grasp.center)-targtrans)];
 command_string = [command_string, ' palmdir ' sprintf('%f ', robot.palmdir)];
-command_string = [command_string, ' collision pqp ' ];
+#command_string = [command_string, ' collision pqp ' ];
 
 data = orProblemSendCommand(['exec ', command_string], probs.grasp);
 orEnvWait(robot.id);

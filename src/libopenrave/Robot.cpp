@@ -82,9 +82,9 @@ void RobotBase::Manipulator::SetIKSolver(IkSolverBase* iksolver)
     }
 }
 
-bool RobotBase::Manipulator::InitIKSolver(int options)
+bool RobotBase::Manipulator::InitIKSolver()
 {
-    return _pIkSolver != NULL && _pIkSolver->Init(_probot, this, options);
+    return _pIkSolver != NULL && _pIkSolver->Init(_probot, this, _ikoptions);
 }
 
 const std::string& RobotBase::Manipulator::GetIKSolverName() const
@@ -168,7 +168,7 @@ bool RobotBase::Manipulator::FindIKSolutions(const Transform& goal, const dReal*
     return pFreeParameters == NULL ? _pIkSolver->Solve(tgoal,bColCheck,solutions) : _pIkSolver->Solve(tgoal,pFreeParameters,bColCheck,solutions);
 }
 
-void RobotBase::Manipulator::GetChildJoints(std::set<Joint*>& vjoints)
+void RobotBase::Manipulator::GetChildJoints(std::set<Joint*>& vjoints) const
 {
     if( pEndEffector == NULL )
         return;
@@ -189,7 +189,7 @@ void RobotBase::Manipulator::GetChildJoints(std::set<Joint*>& vjoints)
     }
 }
 
-void RobotBase::Manipulator::GetChildDOFIndices(std::set<int>& vdofndices)
+void RobotBase::Manipulator::GetChildDOFIndices(std::set<int>& vdofndices) const
 {
     if( pEndEffector == NULL )
         return;
@@ -212,7 +212,7 @@ void RobotBase::Manipulator::GetChildDOFIndices(std::set<int>& vdofndices)
     }
 }
 
-void RobotBase::Manipulator::GetChildLinks(std::set<Link*>& vlinks)
+void RobotBase::Manipulator::GetChildLinks(std::set<Link*>& vlinks) const
 {
     if( pEndEffector == NULL )
         return;
@@ -1483,6 +1483,13 @@ void RobotBase::SimulationStep(dReal fElapsedTime)
 
     _UpdateGrabbedBodies();
     _UpdateAttachedSensors();
+}
+
+void RobotBase::ComputeJointHierarchy()
+{
+    KinBody::ComputeJointHierarchy();
+    FOREACH(itmanip,_vecManipulators)
+        itmanip->InitIKSolver();
 }
 
 bool RobotBase::Clone(const InterfaceBase* preference, int cloningoptions)
