@@ -257,6 +257,7 @@ public:
 
         /// \return degrees of freedom of the joint
         virtual int GetLimits(dReal* pLowerLimit, dReal* pUpperLimit) const;
+        virtual int GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const;
         
     private:
         Link* bodies[2];

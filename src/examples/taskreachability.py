@@ -194,9 +194,29 @@ if __name__=='__main__':
     
     model = TaskReachability(options.scenefile,options.targetname,options.robotname,options.manipname)
     if options.savereachability:
-        model.ComputeReachability(options.workobjectspace,options.workspace,options.workextents,options.grasptablefilex)
+        model.ComputeReachability(options.workobjectspace,[float(token) for token in options.workspace.split()],[float(token) for token in options.workextents.split()],options.grasptablefile)
         model.save(options.savereachability)
 
 def test1():
+    """
+    WAM
+    ./taskreachability.py --scenefile=data/tablewam.env.xml --robotname=BarrettWAM --targetname=frootloops --grasptablefile=cereal_grasps_barrett.mat --workobjectspace=table --workspace='1 0 0 0 1 0 0 0 0.015' --workextents='0.3 0.25 1.57' --savereachability=reach_tablewam.pp
+
+    ./taskreachability.py --scenefile=data/reach_wam1.env.xml --robotname=BarrettWAM --targetname=target_cereal --grasptablefile=cereal_grasps_barrett.mat --workobjectspace=table --workspace='1 0 0 0 1 0 0 0 0.015' --workextents='0.3 0.25 1.57' --savereachability=reach_wam1_tablecereal.pp
+
+    ./taskreachability.py --scenefile=data/reach_wam1.env.xml --robotname=BarrettWAM --targetname=target_cereal --grasptablefile=cereal_grasps_barrett.mat --workobjectspace=cabinetshelf --workspace='1 0 0 0 1 0 0 -0.1 0.005' --workextents='0.2 0.2 1.57' --savereachability=reach_wam1_shelfcereal.pp
+
+    ./taskreachability.py --scenefile=data/reach_wam1.env.xml --robotname=BarrettWAM --targetname=target_cereal --grasptablefile=cereal_grasps_barrett.mat --workobjectspace=cabinetshelf --workspace='1 0 0 0 1 0 0 -0.1 0.165' --workextents='0.2 0.2 1.57' --savereachability=reach_wam1_uppercereal.pp
+
+    PRISM
+    ./taskreachability.py --scenefile=scenes/reach_prism1.env.xml --robotname=PRISM --targetname=target_cereal --grasptablefile=cereal_grasps_prism1.mat --workobjectspace=table --workspace='1 0 0 0 1 0 0 0 0.015' --workextents='0.3 0.25 1.57' --savereachability=reach_prism1_tablecereal.pp
+    
+    ./taskreachability.py --scenefile=scenes/reach_prism2.env.xml --robotname=PRISM --targetname=target_cereal --grasptablefile=cereal_grasps_prism1.mat --workobjectspace=cabinetshelf --workspace='1 0 0 0 1 0 0 0 0.015' --workextents='0.2 0.2 1.57' --savereachability=reach_prism1_shelfcereal.pp
+
+    ./taskreachability.py --scenefile=scenes/reach_prism2.env.xml --robotname=PRISM --targetname=target_cereal --grasptablefile=cereal_grasps_prism1.mat --workobjectspace=cabinetshelf --workspace='1 0 0 0 1 0 0 0 0.165' --workextents='0.2 0.2 1.57' --savereachability=reach_prism1_uppercereal.pp
+    """
     self = TaskReachability('data/tablewam.env.xml','frootloops','BarrettWAM',None)
     self.ComputeReachability('table',[1,0,0,0,1,0,0,0,0.015],[0.3,0.25,pi/2],'cereal_grasps_barrett.mat')
+    
+    self = TaskReachability('data/reach_wam1.env.xml','target_cereal','BarrettWAM',None)
+    self = TaskReachability('scenes/reach_prism1.env.xml','target_cereal','PRISM',None)

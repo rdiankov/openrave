@@ -174,6 +174,7 @@ void RobotBase::Manipulator::GetChildJoints(std::set<Joint*>& vjoints) const
         return;
 
     // get all child links of the manipualtor
+    vector<dReal> lower,upper;
     int iattlink = pEndEffector->GetIndex();
     FOREACHC(itlink, _probot->GetLinks()) {
         int ilink = (*itlink)->GetIndex();
@@ -183,7 +184,14 @@ void RobotBase::Manipulator::GetChildJoints(std::set<Joint*>& vjoints) const
             continue;
         for(int ijoint = 0; ijoint < _probot->GetDOF(); ++ijoint) {
             if( _probot->DoesAffect(ijoint,ilink) && !_probot->DoesAffect(ijoint,iattlink) ) {
-                vjoints.insert(_probot->GetJoints()[ijoint]);
+                // only insert if its limits are different (ie, not a dummy joint)
+                _probot->GetJoints()[ijoint]->GetLimits(lower,upper);
+                for(int i = 0; i < _probot->GetJoints()[ijoint]->GetDOF(); ++i) {
+                    if( lower[i] != upper[i] ) {
+                        vjoints.insert(_probot->GetJoints()[ijoint]);
+                        break;
+                    }
+                }
             }
         }
     }
@@ -195,6 +203,7 @@ void RobotBase::Manipulator::GetChildDOFIndices(std::set<int>& vdofndices) const
         return;
 
     // get all child links of the manipualtor
+    vector<dReal> lower,upper;
     int iattlink = pEndEffector->GetIndex();
     FOREACHC(itlink, _probot->GetLinks()) {
         int ilink = (*itlink)->GetIndex();
@@ -204,9 +213,16 @@ void RobotBase::Manipulator::GetChildDOFIndices(std::set<int>& vdofndices) const
             continue;
         for(int ijoint = 0; ijoint < _probot->GetDOF(); ++ijoint) {
             if( _probot->DoesAffect(ijoint,ilink) && !_probot->DoesAffect(ijoint,iattlink) ) {
-                int idofbase = _probot->GetJoints()[ijoint]->GetDOFIndex();
-                for(int idof = 0; idof < _probot->GetJoints()[ijoint]->GetDOF(); ++idof)
-                    vdofndices.insert(idofbase+idof);
+                // only insert if its limits are different (ie, not a dummy joint)
+                _probot->GetJoints()[ijoint]->GetLimits(lower,upper);
+                for(int i = 0; i < _probot->GetJoints()[ijoint]->GetDOF(); ++i) {
+                    if( lower[i] != upper[i] ) {
+                        int idofbase = _probot->GetJoints()[ijoint]->GetDOFIndex();
+                        for(int idof = 0; idof < _probot->GetJoints()[ijoint]->GetDOF(); ++idof)
+                            vdofndices.insert(idofbase+idof);
+                        break;
+                    }
+                }
             }
         }
     }

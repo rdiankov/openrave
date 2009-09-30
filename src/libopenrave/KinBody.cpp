@@ -542,6 +542,12 @@ int KinBody::Joint::GetLimits(dReal* pLowerLimit, dReal* pUpperLimit) const
     return GetDOF();
 }
 
+int KinBody::Joint::GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const
+{
+    vLowerLimit.resize(GetDOF()); vUpperLimit.resize(GetDOF());
+    return GetDOF() > 0 ? GetLimits(&vLowerLimit[0],&vUpperLimit[0]) : 0;
+}
+
 void KinBody::Joint::AddTorque(const dReal* pTorques)
 {
     assert( _parent->GetEnv() != NULL );
