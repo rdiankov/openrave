@@ -294,6 +294,7 @@ public:
     virtual DebugLevel GetDebugLevel() const { return RaveGetDebugLevel(); }
 
     virtual void GetPublishedBodies(std::vector<BODYSTATE>& vbodies);
+    virtual void UpdatePublishedBodies();
     virtual void SetPublishBodiesAnytime(bool bAnytime) { _bPublishBodiesAnytime = bAnytime; }
     virtual bool GetPublishBodiesAnytime() const { return _bPublishBodiesAnytime; }
 

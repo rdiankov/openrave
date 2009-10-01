@@ -146,11 +146,13 @@ class TaskReachability(metaclass.AutoReloader):
         mlab.figure(figureid,fgcolor=(0,0,0), bgcolor=(1,1,1),size=(1024,768))
         mlab.clf()
         offset = array((0,0,0))
+        density2d = sum(self.reachabilitydensity3d,2)/float(self.reachabilitydensity3d.shape[2])
+        print 'percent covered: ',sum(density2d)/float(density2d.size)
         density3d = zeros((self.reachabilitydensity3d.shape[0]+2,self.reachabilitydensity3d.shape[1]+2,3))
-        density3d[1:-1,1:-1,1] = sum(self.reachabilitydensity3d,2)/float(self.reachabilitydensity3d.shape[2])
+        density3d[1:-1,1:-1,1] = sign(density2d)
         src = mlab.pipeline.scalar_field(density3d)
         for c in contours:
-            mlab.pipeline.iso_surface(src,contours=[c],opacity=c*0.3)
+            mlab.pipeline.iso_surface(src,contours=[c])
 #         density3d = zeros((density2d.shape[0],density2d.shape[1],3))
 #         density3d[:,:,1] = density2d
 #         mlab.pipeline.volume(mlab.pipeline.scalar_field(density3d*200))

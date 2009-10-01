@@ -760,6 +760,13 @@ public:
     /// retrieve published bodies, note that the pbody pointer might become invalid
     /// as soon as GetPublishedBodies returns
     virtual void GetPublishedBodies(std::vector<BODYSTATE>& vbodies) = 0;
+
+    /// updates the published bodies that viewers and other programs listening in on the environment see.
+    /// For example, calling this function inside a planning loop allows the viewer to update the environment
+    /// reflecting the status of the planner.
+    /// Assumes that the physics are locked. 
+    virtual void UpdatePublishedBodies() = 0;
+
     virtual void SetPublishBodiesAnytime(bool bAnytime) = 0;
     virtual bool GetPublishBodiesAnytime() const = 0;
 

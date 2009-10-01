@@ -16,12 +16,16 @@
 %
 % You should have received a copy of the GNU General Public License
 % along with this program.  If not, see <http://www.gnu.org/licenses/>.
-function RunGrasps(tablefilename)
+function RunGrasps(tablefilename,pausetime)
 
 global probs
 addopenravepaths_grasping();
 
 load(tablefilename);
+
+if( ~exist('pausetime','var') )
+    pausetime = 0.5;
+end
 
 orEnvLoadScene('',1); % reset
 robot.id = orEnvCreateRobot(robot.name,robot.filename);
@@ -45,6 +49,6 @@ for i = 1:size(grasps,1)
         contacts = reshape(contacts, [6 length(contacts)/6]);
         DrawContacts(contacts,0.6);
         disp(sprintf('grasp %d',i));
-        pause(0.5);
+        pause(pausetime);
     end
 end

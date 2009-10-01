@@ -18,7 +18,9 @@ from numpy import *
 import time,pickle
 from optparse import OptionParser
 
-class ReachabilityModel(object):
+import metaclass
+
+class ReachabilityModel(metaclass.AutoReloader):
     def __init__(self,robotfile=None,manipname=None,showviewer=False):
         self.orenv = Environment()
         if showviewer:
@@ -99,7 +101,7 @@ class ReachabilityModel(object):
         self.reachabilitydensity3d = reshape(reachabilitydensity3d,shape)
         print 'reachability finished in %fs'%(time.time()-starttime)
 
-    def showdensity(self,showrobot=True,contours=[0.1,0.5,0.9,0.99],figureid=1, xrange=None):
+    def showdensity(self,showrobot=True,contours=[0.1,0.5,0.9,0.99],opacity=None,figureid=1, xrange=None):
         from enthought.mayavi import mlab
         mlab.figure(figureid,fgcolor=(0,0,0), bgcolor=(1,1,1),size=(1024,768))
         mlab.clf()
@@ -110,8 +112,8 @@ class ReachabilityModel(object):
             offset = array((xrange[0]-1,0,0))
             src = mlab.pipeline.scalar_field(r_[zeros((1,)+self.reachabilitydensity3d.shape[1:]),self.reachabilitydensity3d[xrange,:,:],zeros((1,)+self.reachabilitydensity3d.shape[1:])])
             
-        for c in contours:
-            mlab.pipeline.iso_surface(src,contours=[c],opacity=c*0.3)
+        for i,c in enumerate(contours):
+            mlab.pipeline.iso_surface(src,contours=[c],opacity=0.5*c if opacity is None else opacity[i])
         #mlab.pipeline.volume(mlab.pipeline.scalar_field(self.reachabilitydensity3d*100))
         if showrobot:
             v = self.pointscale[0]*self.trimesh.vertices+self.pointscale[1]

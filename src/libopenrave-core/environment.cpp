@@ -1174,6 +1174,33 @@ void Environment::GetPublishedBodies(vector<BODYSTATE>& vbodies)
     }
 }
 
+void Environment::UpdatePublishedBodies()
+{
+    if( !IsPhysicsLocked() ) {
+        RAVELOG_WARNA("UpdatePublishedBodies requires locked physics!\n");
+        return;
+    }
+
+    MutexLock mbodies(&_mutexBodies);
+
+    // remove destroyed bodies
+    _CleanRemovedBodies();
+
+    // updated the published bodies
+    _vPublishedBodies.resize(_vecbodies.size());
+            
+    vector<BODYSTATE>::iterator itstate = _vPublishedBodies.begin();
+    FOREACH(itbody, _vecbodies) {
+        itstate->pbody = *itbody;
+        (*itbody)->GetBodyTransformations(itstate->vectrans);
+        (*itbody)->GetJointValues(itstate->jointvalues);
+        itstate->strname =(*itbody)->GetName();
+        itstate->pguidata = (*itbody)->GetGuiData();
+        itstate->networkid = (*itbody)->GetNetworkId();
+        ++itstate;
+    }
+}
+
 bool Environment::SetCollisionChecker(CollisionCheckerBase* pchecker)
 {
     if( pCurrentChecker == pchecker )
@@ -1759,26 +1786,7 @@ void* Environment::_main()
         if( GetMicroTime()-nLastUpdateTime > 10000 ) {
             LockPhysics(true);
             nLastUpdateTime = GetMicroTime();
-            {
-                MutexLock mbodies(&_mutexBodies);
-
-                // remove destroyed bodies
-                _CleanRemovedBodies();
-
-                // updated the published bodies
-                _vPublishedBodies.resize(_vecbodies.size());
-            
-                vector<BODYSTATE>::iterator itstate = _vPublishedBodies.begin();
-                FOREACH(itbody, _vecbodies) {
-                    itstate->pbody = *itbody;
-                    (*itbody)->GetBodyTransformations(itstate->vectrans);
-                    (*itbody)->GetJointValues(itstate->jointvalues);
-                    itstate->strname =(*itbody)->GetName();
-                    itstate->pguidata = (*itbody)->GetGuiData();
-                    itstate->networkid = (*itbody)->GetNetworkId();
-                    ++itstate;
-                }
-            }
+            UpdatePublishedBodies();
             LockPhysics(false);
         }
     }
