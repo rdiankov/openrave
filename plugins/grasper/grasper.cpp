@@ -352,8 +352,8 @@ bool GrasperPlanner::PlanPath(Trajectory *ptraj, std::ostream* pOutStream)
             
             for(int q = 0; q < (int)vlinks.size(); q++)
             {
-                if((robot->DoesAffect(robot->GetActiveJointIndex(ifing),q)  && (GetEnv()->CheckCollision(vlinks[q]) || robot->CheckSelfCollision()) ) )
-                {  
+                bool bSelfCollision=false;
+                if(robot->DoesAffect(robot->GetActiveJointIndex(ifing),q)  && (GetEnv()->CheckCollision(vlinks[q])||(bSelfCollision=robot->CheckSelfCollision())) ) {
                     if(coarse_pass)
                     {
                         //coarse step collided, back up and shrink step
@@ -378,6 +378,11 @@ bool GrasperPlanner::PlanPath(Trajectory *ptraj, std::ostream* pOutStream)
                             }
                                 //vbcollidedlinks[q] = true;
                             //vijointresponsible[q] = robot->GetActiveJointIndex(ifing);
+                            if( bSelfCollision ) {
+                                // don't want the robot to end up in self collision, so back up
+                                dofvals[ifing] -= vclosingsign[ifing] * step_size;
+                            }
+
                             ncollided++;
                             collision = true;
                             break;
@@ -392,7 +397,11 @@ bool GrasperPlanner::PlanPath(Trajectory *ptraj, std::ostream* pOutStream)
                             ss << endl;
                             RAVELOG_VERBOSEA(ss.str().c_str());
                         }
-                        
+                     
+                        if( bSelfCollision ) {
+                            // don't want the robot to end up in self collision, so back up
+                            dofvals[ifing] -= vclosingsign[ifing] * step_size;
+                        }
                         ncollided++;
                         collision = true;
                         break;
