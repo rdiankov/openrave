@@ -1842,12 +1842,12 @@ public:
     }
     PyEnvironmentBase(const PyEnvironmentBase& pyenv)
     {
-        RAVELOG_WARNA("cloning environment without permission!\n");
-        _penv.reset(pyenv._penv->CloneSelf(Clone_Bodies|Clone_Simulation|Clone_RealControllers));
-        if( _penv->GetViewer() != NULL )
+        _bShutdown = false;
+        _penv = pyenv._penv;
+        if( !!_penv && _penv->GetViewer() != NULL )
             SetViewer(_penv->GetViewer()->GetXMLId());
     }
-    PyEnvironmentBase(EnvironmentBase* penv) : _penv(penv) {}
+    PyEnvironmentBase(EnvironmentBase* penv) : _penv(penv), _bShutdown(false) {}
     virtual ~PyEnvironmentBase()
     {
         {
@@ -1935,7 +1935,7 @@ public:
 
     PyEnvironmentBase* CloneSelf(int options)
     {
-        RAVELOG_WARNA("cloning environment without permission!\n");
+        //RAVELOG_WARNA("cloning environment without permission!\n");
         string strviewer;
         if( options & Clone_Viewer ) {
             boost::mutex::scoped_lock lockcreate(_mutexViewer);
@@ -2713,7 +2713,9 @@ BOOST_PYTHON_MODULE(openravepy)
         .def("GetXMLId",&PyInterfaceBase::GetXMLId)
         .def("GetPluginName",&PyInterfaceBase::GetPluginName)
         .def("GetEnv",&PyInterfaceBase::GetEnv, return_internal_reference<1>())
-        .def("Invalidate",&PyInterfaceBase::Invalidate)
+        .def("Clone",&PyInterfaceBase::Clone)
+        .def("SetUserData",&PyInterfaceBase::SetUserData)
+        .def("GetUserData",&PyInterfaceBase::GetUserData)
         ;
 
     class_<PyPluginInfo>("PluginInfo",no_init)
@@ -3104,6 +3106,7 @@ BOOST_PYTHON_MODULE(openravepy)
             .def("CreateViewer", &PyEnvironmentBase::CreateViewer, return_value_policy<manage_new_object>() )
             .def("CreateServer", &PyEnvironmentBase::CreateServer, return_value_policy<manage_new_object>() )
         
+            .def("CloneSelf",&PyEnvironmentBase::CloneSelf, return_value_policy<manage_new_object>())
             .def("SetCollisionChecker",&PyEnvironmentBase::SetCollisionChecker)
             .def("GetCollisionChecker",&PyEnvironmentBase::GetCollisionChecker, return_value_policy<manage_new_object>() )
 

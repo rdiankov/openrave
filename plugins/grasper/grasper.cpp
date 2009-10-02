@@ -352,7 +352,7 @@ bool GrasperPlanner::PlanPath(Trajectory *ptraj, std::ostream* pOutStream)
             
             for(int q = 0; q < (int)vlinks.size(); q++)
             {
-                if((robot->DoesAffect(robot->GetActiveJointIndex(ifing),q)  && GetEnv()->CheckCollision(vlinks[q])) )
+                if((robot->DoesAffect(robot->GetActiveJointIndex(ifing),q)  && (GetEnv()->CheckCollision(vlinks[q]) || robot->CheckSelfCollision()) ) )
                 {  
                     if(coarse_pass)
                     {
