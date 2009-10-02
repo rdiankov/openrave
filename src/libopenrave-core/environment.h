@@ -495,7 +495,6 @@ protected:
     bool _ReturnToRest();
     void _CleanRemovedBodies();
 
-    uint64_t _nStartSimTime;
     boost::shared_ptr<RaveDatabase> _pdatabase;
 
     std::vector<RobotBase*> _vecrobots;  ///< robots (possibly controlled)

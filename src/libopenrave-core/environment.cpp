@@ -456,7 +456,6 @@ Environment::Environment(bool bLoadAllPlugins) : _dummyphysics(this), _dummychec
     _pserver = NULL;
     _fDeltaSimTime = 0.01f;
     _nCurSimTime = 0;
-    _nStartSimTime = GetMicroTime();
     _bRealTime = true;
 
     _bPluginsLoaded = false;
@@ -504,7 +503,6 @@ Environment::Environment(const Environment& r, int options) : _dummyphysics(this
     _pCurrentViewer = &_dummyviewer;
     _pserver = NULL;
     _fDeltaSimTime = r._fDeltaSimTime;
-    _nStartSimTime = GetMicroTime();
     _nCurSimTime = 0;
     nNetworkIndex = r.nNetworkIndex;
     _bRealTime = r._bRealTime;
@@ -1624,7 +1622,6 @@ void Environment::StartSimulation(dReal fDeltaTime, bool bRealTime)
     _bEnableSimulation = true;
     _bRealTime = bRealTime;
     _nCurSimTime = 0;
-    _nStartSimTime = GetMicroTime();
 }
 
 void Environment::StopSimulation()
@@ -1752,30 +1749,27 @@ void* Environment::_main()
     SetCollisionChecker(_localchecker.get());
     AddIKSolvers();
     _bPluginsLoaded = true;
-    _nStartSimTime = GetMicroTime();
 
     uint64_t nLastSleptTime = GetMicroTime();
     uint64_t nMaxConsecutiveSimTime = 500000; // force reupdate every 500ms
     uint64_t nLastUpdateTime = GetMicroTime();
+    uint64_t nCurSimTime = GetMicroTime();
 
     while( !_bDestroying ) {
 
         if( _pserver != NULL && _pserver->IsInit() ) {
-            uint64_t startwork = GetMicroTime();
             _pserver->Worker();
-            _nStartSimTime += GetMicroTime()-startwork;
         }
 
         uint64_t curtime = GetMicroTime();
-        uint64_t deltatime = (uint64_t)(1000000.0 * _fDeltaSimTime);
-        bool bDoSimulation = !_bRealTime || curtime-_nStartSimTime >= _nCurSimTime+deltatime;
+        bool bDoSimulation = !_bRealTime || curtime-nCurSimTime >= (uint64_t)(1000000.0 * _fDeltaSimTime);
         if( bDoSimulation ) {
             if( _bEnableSimulation ) {
                 LockPhysics(true);
                 StepSimulation(_fDeltaSimTime);
+                nCurSimTime = curtime;
                 LockPhysics(false);
             }
-            _nCurSimTime += deltatime;
         }
 
         if( !bDoSimulation || curtime-nLastSleptTime > nMaxConsecutiveSimTime ) {
