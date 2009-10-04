@@ -1074,6 +1074,7 @@ void RobotBase::GetFullTrajectoryFromActive(Trajectory* pFullTraj, const Traject
             }
 
             p.time = itp->time;
+            p.qtorque = itp->qtorque;
             pFullTraj->AddPoint(p);
         }
     }
