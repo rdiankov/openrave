@@ -189,6 +189,14 @@ bool Trajectory::SampleTrajectory(dReal time, TPOINT &sample) const
     assert (p1.time != p0.time);
     assert (seg._fduration > 0.0);
 
+    if( _nDOF == (int)p0.qtorque.size() && _nDOF == (int)p1.qtorque.size() ) {
+        sample.qtorque.resize(_nDOF);
+        dReal fscale = p1.time == p0.time ? 0.0f : (time - p0.time)/(p1.time-p0.time);
+        for (int d = 0; d < _nDOF; d++) {
+            sample.qtorque[d] = p0.qtorque[d] * (1-fscale) + p1.qtorque[d]*fscale;
+        }
+    }
+
     // sample using the given method
     switch (_interpMethod) {
         case LINEAR:
@@ -212,14 +220,6 @@ bool Trajectory::SampleTrajectory(dReal time, TPOINT &sample) const
 
         default:
             assert(0);
-    }
-
-    if( _nDOF == (int)p0.qtorque.size() && _nDOF == (int)p1.qtorque.size() ) {
-        sample.qtorque.resize(_nDOF);
-        dReal fscale = p1.time == p0.time ? 0.0f : (time - p0.time)/(p1.time-p0.time);
-        for (int d = 0; d < _nDOF; d++) {
-            sample.qtorque[d] = p0.qtorque[d] * (1-fscale) + p1.qtorque[d]*fscale;
-        }
     }
 
     return false;
