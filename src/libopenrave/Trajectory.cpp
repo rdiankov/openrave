@@ -214,6 +214,14 @@ bool Trajectory::SampleTrajectory(dReal time, TPOINT &sample) const
             assert(0);
     }
 
+    if( _nDOF == (int)p0.qtorque.size() && _nDOF == (int)p1.qtorque.size() ) {
+        sample.qtorque.resize(_nDOF);
+        dReal fscale = p1.time == p0.time ? 0.0f : (time - p0.time)/(p1.time-p0.time);
+        for (int d = 0; d < _nDOF; d++) {
+            sample.qtorque[d] = p0.qtorque[d] * (1-fscale) + p1.qtorque[d]*fscale;
+        }
+    }
+
     return false;
 }
 
@@ -882,6 +890,7 @@ inline bool Trajectory::_SampleLinear(const TPOINT& p0, const TPOINT& p1,
         sample.qdot[d]   = seg.Get(1, d);
         //sample.qaccel[d] = 0.0;
     }
+
     //NEED TO do t/(seg._fduration-step)
     sample.time = time;
     sample.trans.trans = p0.trans.trans + (t/(seg._fduration))*(p1.trans.trans - p0.trans.trans);
@@ -1046,12 +1055,19 @@ bool Trajectory::Write(std::ostream& f, int options) const
             f << it->trans << " ";
 
         if( options & TO_IncludeVelocities ) {
+            assert((int)it->qdot.size()==GetDOF());
             FOREACHC(itvel, it->qdot)
                 f << *itvel << " ";
 
             if( options & TO_IncludeBaseTransformation )
                 f << it->linearvel.x << " " << it->linearvel.y << " " << it->linearvel.z << " "
                   << it->angularvel.x << " " << it->angularvel.y << " " << it->angularvel.z << " ";
+        }
+
+        if( options & TO_IncludeTorques ) {
+            assert((int)it->qtorque.size()==GetDOF());
+            FOREACHC(ittorque,it->qtorque)
+                f << *ittorque << " ";
         }
 
         if( !(options&TO_OneLine) )
@@ -1113,6 +1129,12 @@ bool Trajectory::Read(std::istream& f, RobotBase* robot)
             if( options & TO_IncludeBaseTransformation )
                 f >> it->linearvel.x >> it->linearvel.y >> it->linearvel.z
                   >> it->angularvel.x >> it->angularvel.y >> it->angularvel.z;
+        }
+
+        if( options & TO_IncludeVelocities ) {
+            it->qtorque.resize(dof);
+            FOREACH(ittorque, it->qtorque)
+                f >> *ittorque;
         }
     }
 

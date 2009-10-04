@@ -47,6 +47,7 @@ public:
         TO_IncludeBaseTransformation = 8,
         TO_IncludeVelocities = 16, ///< include velocities. If TO_IncludeBaseTransformation is also set, include the base
                                    ///< base link velocity in terms of linear and angular velocity
+        TO_IncludeTorques = 32, ///< include torques
     };
     
     /// trajectory interpolation and sampling methods 
@@ -85,6 +86,7 @@ public:
         Vector angularvel;          ///< instanteneous angular velocity
         std::vector<dReal> q;       ///< joint configuration
         std::vector<dReal> qdot;    ///< instantaneous joint velocities
+        std::vector<dReal> qtorque; ///< feedforward torque [optional]
         dReal  time;                ///< time stamp of trajectory point   
         dReal  blend_radius;
     };
