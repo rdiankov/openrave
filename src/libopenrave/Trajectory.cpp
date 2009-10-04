@@ -97,7 +97,6 @@ bool Trajectory::CalcTrajTiming(const RobotBase* pRobot, InterpEnum interpolatio
     }
 
     if( pRobot != NULL ) {
-
         if( bActiveDOFs ) {
             if( pRobot->GetActiveDOF() != GetDOF() ) {
                 RAVELOG(L"trajectory has different degrees of freedom %d != %d\n", pRobot->GetActiveDOF(), GetDOF());
@@ -264,14 +263,12 @@ bool Trajectory::_SetLinear(bool bAutoCalcTiming, bool bActiveDOFs)
     _vecsegments.resize(_vecpoints.size());
 
     // if needed, preallocate all velocities, accelerations, and coefficients.
-    if (bAutoCalcTiming) {    
-        FOREACH(itp, _vecpoints) {
-            itp->qdot.resize(_nDOF);
-            itp->linearvel = Vector();
-            itp->angularvel = Vector();
-            memset(&itp->qdot[0], 0, _nDOF*sizeof(dReal));
-            //memset(&itp->qaccel[0], 0, _nDOF*sizeof(dReal));
-        }
+    FOREACH(itp, _vecpoints) {
+        itp->qdot.resize(_nDOF);
+        itp->linearvel = Vector();
+        itp->angularvel = Vector();
+        memset(&itp->qdot[0], 0, _nDOF*sizeof(dReal));
+        //memset(&itp->qaccel[0], 0, _nDOF*sizeof(dReal));
     }
 
     _vecsegments.resize(_vecpoints.size());
@@ -311,29 +308,28 @@ bool Trajectory::_SetLinear(bool bAutoCalcTiming, bool bActiveDOFs)
     }
 
     // set the via point velocities if needed
-    if (bAutoCalcTiming) {
-        // init the start point velocity and accel
-        dReal prevSlope, nextSlope;
+    // init the start point velocity and accel
+    dReal prevSlope, nextSlope;
 
-        _vecpoints[0].linearvel = _vecsegments[0].linearvel;
-        _vecpoints[0].angularvel = _vecsegments[0].angularvel;
+    _vecpoints[0].linearvel = _vecsegments[0].linearvel;
+    _vecpoints[0].angularvel = _vecsegments[0].angularvel;
 
-        // set the via point velocities to zero for slope direction
-        // reversals.  Otherwise, use the average of the slopes of
-        // the preceding and subsequent trajectory segments.
-        assert(_vecpoints.size()>0);
-        for (size_t i = 1; i < _vecpoints.size()-1; i++) {
+    // set the via point velocities to zero for slope direction
+    // reversals.  Otherwise, use the average of the slopes of
+    // the preceding and subsequent trajectory segments.
+    assert(_vecpoints.size()>0);
+    for (size_t i = 1; i < _vecpoints.size()-1; i++) {
             
-            _vecpoints[i].linearvel = (dReal)0.5f*(_vecsegments[i-1].linearvel+_vecsegments[i].linearvel);
-            _vecpoints[i].angularvel = (dReal)0.5f*(_vecsegments[i-1].angularvel+_vecsegments[i].angularvel);
+        _vecpoints[i].linearvel = (dReal)0.5f*(_vecsegments[i-1].linearvel+_vecsegments[i].linearvel);
+        _vecpoints[i].angularvel = (dReal)0.5f*(_vecsegments[i-1].angularvel+_vecsegments[i].angularvel);
 
-            for (int d = 0; d < _nDOF; d++) {
-                prevSlope = _vecsegments[i-1].Get(1, d);
-                nextSlope = _vecsegments[i].Get(1, d);
+        for (int d = 0; d < _nDOF; d++) {
+            prevSlope = _vecsegments[i-1].Get(1, d);
+            nextSlope = _vecsegments[i].Get(1, d);
 
-                // check for the same slope directions
-                if (( prevSlope > 0 && nextSlope > 0 ) ||
-                    ( prevSlope < 0 && nextSlope < 0))
+            // check for the same slope directions
+            if (( prevSlope > 0 && nextSlope > 0 ) ||
+                ( prevSlope < 0 && nextSlope < 0))
                 {
                     // use the slope average velocities
                     _vecpoints[i].qdot[d] = (dReal)0.5 * (prevSlope + nextSlope);
@@ -341,10 +337,9 @@ bool Trajectory::_SetLinear(bool bAutoCalcTiming, bool bActiveDOFs)
                     //     << " \t" << _vecpoints[i].qdot[d] << endl;
                     //_vecpoints[i].qdot[d] = 0.0;
                 }
-                else {
-                    // otherwise use a zero velocity
-                    _vecpoints[i].qdot[d] = 0.0;
-                }
+            else {
+                // otherwise use a zero velocity
+                _vecpoints[i].qdot[d] = 0.0;
             }
         }
     }

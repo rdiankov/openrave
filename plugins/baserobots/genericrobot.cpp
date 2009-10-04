@@ -41,11 +41,13 @@ void GenericRobot::SetMotion(const Trajectory* ptraj)
 {
     assert( ptraj != NULL );
     
-    if( ptraj->GetPoints().size() == 0 )
+    if( ptraj->GetPoints().size() == 0 ) {
+        RAVELOG_WARNA("trajectory has no points\n");
         return;
+    }
 
     if( ptraj->GetDOF() != GetDOF() )
-        RAVEPRINT(L"trajectory of wrong dimension (traj dof=%d), needs to be %d dof\n", ptraj->GetDOF(), GetDOF());
+        RAVELOG_WARNA("trajectory of wrong dimension (traj dof=%d), needs to be %d dof\n", ptraj->GetDOF(), GetDOF());
     assert( ptraj->GetDOF() == GetDOF() );
     if( !_curTrajectory || _curTrajectory->GetDOF() != ptraj->GetDOF() )
         _curTrajectory.reset(GetEnv()->CreateTrajectory(ptraj->GetDOF()));
@@ -54,6 +56,8 @@ void GenericRobot::SetMotion(const Trajectory* ptraj)
 
     if( _pController != NULL )
         _pController->SetPath(_curTrajectory.get());
+    else
+        RAVELOG_WARNA("controller is not set\n");
 }
 
 void GenericRobot::SetActiveMotion(const Trajectory* ptraj)
