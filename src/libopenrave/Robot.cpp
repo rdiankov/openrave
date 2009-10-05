@@ -35,13 +35,10 @@ RobotBase::Manipulator::~Manipulator()
 RobotBase::Manipulator::Manipulator(const RobotBase::Manipulator& r)
 {
     *this = r;
+    _pIkSolver = NULL;
     assert( _probot != NULL );
     if( _probot != NULL && _strIkSolver.size() > 0 ) {
         _pIkSolver = _probot->GetEnv()->CreateIkSolver(_strIkSolver.c_str());
-        if( _pIkSolver != NULL ) {
-            if( !_pIkSolver->Init(_probot, this, _ikoptions) )
-                RAVELOG_WARNA("ik solver %S failed to init\n", _strIkSolver.c_str());
-        }
     }
 }
 
@@ -58,10 +55,8 @@ RobotBase::Manipulator::Manipulator(RobotBase* probot, const RobotBase::Manipula
         pEndEffector = probot->GetLinks()[r.pEndEffector->GetIndex()];
     
     _pIkSolver = NULL;
-    if( _strIkSolver.size() > 0 ) {
-        _pIkSolver = probot->GetEnv()->CreateIkSolver(_strIkSolver.c_str());
-        if( !_pIkSolver->Init(_probot, this, _ikoptions) )
-            RAVELOG_WARNA("ik solver %S failed to init\n", _strIkSolver.c_str());
+    if( _probot != NULL && _strIkSolver.size() > 0 ) {
+        _pIkSolver = _probot->GetEnv()->CreateIkSolver(_strIkSolver.c_str());
     }
 }
 
