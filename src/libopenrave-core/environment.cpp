@@ -617,6 +617,7 @@ Environment::Environment(const Environment& r, int options) : _dummyphysics(this
         FOREACH(itbody, _vecbodies) {
             GetCollisionChecker()->InitKinBody(*itbody);
             GetPhysicsEngine()->InitKinBody(*itbody);
+            (*itbody)->ComputeJointHierarchy();
         }
     }
     if( options & Clone_Viewer ) {
