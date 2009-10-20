@@ -233,6 +233,7 @@ int main(int argc, char ** argv)
                 return -1;
             penv->SetDebugLevel(debuglevel);
             // parse until a regular option arrives
+            LockEnvironment lockenv(penv);
             penv->StopSimulation(); // don't want simulation eating up time
             vector<string> vfreeparamnames;
             string robotfile, ikfast_executable = IKFAST_EXECUTABLE, outputfile = "ik.cpp";
@@ -272,7 +273,6 @@ int main(int argc, char ** argv)
                 return -2;
             }
 
-            LockEnvironment lockenv(penv);
             penv->SetDebugLevel(debuglevel);
             if( !penv->Load(robotfile.c_str()) ) {
                 RAVELOG_ERRORA("Generate IK: failed to open %s robot file.\n", robotfile.c_str());

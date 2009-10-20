@@ -302,6 +302,7 @@ struct PLUGININFO
     std::vector<std::wstring> trajectories;
     std::vector<std::wstring> viewers;
     std::vector<std::wstring> servers;
+    std::vector<std::wstring> kinbodies;
 };
 
 enum PluginType
@@ -490,6 +491,9 @@ public:
 
     /// load a plugin and its interfaces
     virtual bool LoadPlugin(const char* pname) = 0;
+
+    /// returns true if interface can be loaded from a plugin, otherwise false
+    virtual bool HasInterface(PluginType type, const std::string& interfacename) = 0;
     //@}
 
     virtual InterfaceBase* CreateInterface(PluginType type,const char* pinterfacename)=0;

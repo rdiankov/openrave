@@ -46,6 +46,12 @@ WStringStreamParser g_wstringparser;
 static string s_strParseDirectory;
 static string s_strFullFilename;
 
+#ifdef _WIN32
+static const char s_filesep = '\\';
+#else
+static const char s_filesep = '/';
+#endif
+
 int g_XMLErrorCount = 0;
 
 namespace OpenRAVE {
@@ -238,12 +244,6 @@ bool RaveParseXMLFile(Environment* penv, BaseXMLReader* preader, const char* fil
         s_strParseDirectory += temp.c_str();
     }
 
-#ifdef _WIN32
-    const char filesep = '\\';
-#else
-    const char filesep = '/';
-#endif
-
     // test if exists
     FILE* ftest = NULL;
 
@@ -262,7 +262,7 @@ bool RaveParseXMLFile(Environment* penv, BaseXMLReader* preader, const char* fil
         // try the set openrave directories
         FOREACHC(itdir, penv->GetDataDirs()) {
             string newparse;
-            newparse = *itdir; newparse.push_back(filesep);
+            newparse = *itdir; newparse.push_back(s_filesep);
             newparse += s_strParseDirectory;
             s_strFullFilename = newparse; s_strFullFilename += filename;
             //RAVEPRINT(L"trying %s\n", s_strFullFilename.c_str());
@@ -273,7 +273,7 @@ bool RaveParseXMLFile(Environment* penv, BaseXMLReader* preader, const char* fil
                 break;
             }
             
-            newparse = *itdir; newparse.push_back(filesep);
+            newparse = *itdir; newparse.push_back(s_filesep);
             s_strFullFilename = newparse; s_strFullFilename += filename;
             //RAVEPRINT(L"trying %s\n", s_strFullFilename.c_str());
 
@@ -1547,17 +1547,11 @@ string KinBodyXMLReader::GetModelsDir(const char* pfilename) const
         return string(pfilename);
 #endif
 
-#ifdef _WIN32
-    const char filesep = '\\';
-#else
-    const char filesep = '/';
-#endif
-
     list<string> listmodelsdir;
     listmodelsdir.push_back(_strModelsDir);
     if( s_strParseDirectory.size() > 0 ) {
         listmodelsdir.push_back(s_strParseDirectory);
-        listmodelsdir.back().push_back(filesep);
+        listmodelsdir.back().push_back(s_filesep);
         listmodelsdir.back() += _strModelsDir;
     }
 
@@ -1572,7 +1566,7 @@ string KinBodyXMLReader::GetModelsDir(const char* pfilename) const
         }
 
         FOREACHC(itdir, _penv->GetDataDirs()) {
-            temp = *itdir; temp.push_back(filesep);
+            temp = *itdir; temp.push_back(s_filesep);
             temp += *itmodelsdir;
             temp += pfilename;
             //RAVELOG_INFOA("name: %s\n", temp.c_str());
@@ -1586,7 +1580,7 @@ string KinBodyXMLReader::GetModelsDir(const char* pfilename) const
 
 //    if( strModelsDir.size() > 0 ) {
 //        FOREACHC(itdir, g_Environ.GetDataDirs()) {
-//            temp = *itdir; temp.push_back(filesep);
+//            temp = *itdir; temp.push_back(s_filesep);
 //            temp += pfilename;
 //            //RAVEPRINT(L"name: %s\n", temp.c_str());
 //            ftest = fopen(temp.c_str(), "r");
@@ -1977,7 +1971,7 @@ void ManipulatorXMLReader::startElement(void *ctx ATTRIBUTE_UNUSED, const char *
         stricmp((const char*)name, "base") == 0) {
         _pcurparser = &g_wstringparser;
     }
-    else if( stricmp((const char*)name, "iksolver") == 0 ) {
+    else if( stricmp((const char*)name, "iksolver") == 0 || stricmp((const char*)name, "iksolverlibrary") == 0 ) {
         _pcurparser = &g_stringparser;
     }
     else if( stricmp((const char*)name, "opened") == 0 ||
@@ -2067,17 +2061,60 @@ bool ManipulatorXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *na
     }
     else if( stricmp((const char*)name, "iksolver") == 0 ) {
         if( _pcurparser->GetData() != NULL ) {
-            string ikname = (char*)_pcurparser->GetData();
-            
-            IkSolverBase* piksolver = _probot->GetEnv()->CreateIkSolver(ikname.c_str());
+            string iklibraryname = (char*)_pcurparser->GetData();
+
+            IkSolverBase* piksolver = _probot->GetEnv()->HasInterface(PT_InverseKinematicsSolver,iklibraryname) ? _probot->GetEnv()->CreateIkSolver(iklibraryname.c_str()) : NULL;
             if( piksolver == NULL ) {
-                RAVELOG(L"failed to create iksolver %s\n", ikname.c_str());
-                _pmanip->_strIkSolver = ikname;
+                // try adding the current directory
+                string fullname = s_strParseDirectory; fullname.push_back(s_filesep); fullname += iklibraryname;
+                piksolver = _probot->GetEnv()->HasInterface(PT_InverseKinematicsSolver,fullname) ? _probot->GetEnv()->CreateIkSolver(fullname.c_str()) : NULL;
+
+                if( piksolver == NULL ) {
+                    // try loading the shared object
+                    ProblemInstance* pIKFastLoader = NULL;
+                    FOREACHC(itprob, _probot->GetEnv()->GetProblems()) {
+                        if( strcmp((*itprob)->GetXMLId(),"IKFast") == 0 ) {
+                            pIKFastLoader = *itprob;
+                            break;
+                        }
+                    }
+
+                    if( pIKFastLoader == NULL ) {
+                        pIKFastLoader = _probot->GetEnv()->CreateProblem("IKFast");
+                        if( pIKFastLoader != NULL )
+                            _probot->GetEnv()->LoadProblem(pIKFastLoader,"");
+                    }
+
+                    if( pIKFastLoader != NULL ) {
+                        stringstream ss(iklibraryname);
+                        string response,ikonly;
+                        ss >> ikonly;
+                        string cmd = string("AddIkLibrary ") + ikonly + string(" ") + ikonly;
+                        if( !ifstream(ikonly.c_str()) || !pIKFastLoader->SendCommand(cmd.c_str(), response)) {
+                            fullname = s_strParseDirectory; fullname.push_back(s_filesep); fullname += ikonly;
+                            cmd = string("AddIkLibrary ") + fullname + string(" ") + fullname;
+                            if( !ifstream(fullname.c_str()) || !pIKFastLoader->SendCommand(cmd.c_str(), response)) {
+                            }
+                            else
+                                piksolver = _probot->GetEnv()->CreateIkSolver(fullname.c_str());
+                        }
+                        else
+                            piksolver = _probot->GetEnv()->CreateIkSolver(iklibraryname.c_str());
+                    }
+                    else {
+                        RAVELOG_WARNA("Failed to load IKFast problem\n");
+                    }
+                }
             }
+            
+            if( piksolver == NULL )
+                RAVELOG_WARNA("failed to create iksolver %s\n", iklibraryname.c_str());
             else {
-                _pmanip->SetIKSolver(piksolver);
-                // don't init here
+                _pmanip->_strIkSolver = piksolver->GetXMLId();
             }
+
+            _pmanip->SetIKSolver(piksolver);
+            // don't init here
         }
     }
     else if( stricmp((const char*)name, "opened") == 0 ) {

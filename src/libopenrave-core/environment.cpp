@@ -676,7 +676,6 @@ Environment::~Environment()
     SetCollisionChecker(NULL);
     SetPhysicsEngine(NULL);
     AttachViewer(NULL);
-    _pIKFastLoader.reset();
     _localchecker.reset();
     _localphysics.reset();
     _localviewer.reset();
@@ -697,8 +696,8 @@ void Environment::Destroy()
     RAVELOG_DEBUGA("destroy problems\n");
     {
         MutexLock m(&_mutexProblems);
-        FOREACH(it, listProblems) delete *it;
-        listProblems.clear();
+        FOREACH(it, _listProblems) delete *it;
+        _listProblems.clear();
     }
 
     _bEnableSimulation = bOldSim;
@@ -792,6 +791,39 @@ void Environment::GetLoadedInterfaces(PLUGININFO& info)
     WRITE_PLUGINNAMES(itplugin->info.trajectories, info.trajectories);
     WRITE_PLUGINNAMES(itplugin->info.viewers, info.viewers);
     WRITE_PLUGINNAMES(itplugin->info.servers, info.servers);
+    WRITE_PLUGINNAMES(itplugin->info.kinbodies, info.kinbodies);
+}
+
+#define CHECK_INTERFACE(vtype) { \
+        FOREACHC(itplugin, GetDatabase().GetPlugins()) { \
+            FOREACHC(itnames, itplugin->info.vtype) { \
+                if( wcsicmp(itnames->c_str(),winterfacename.c_str()) == 0 ) \
+                    return true; \
+            } \
+        } \
+    }
+
+bool Environment::HasInterface(PluginType type, const string& interfacename)
+{
+    wstring winterfacename = _ravembstowcs(interfacename.c_str());
+
+    switch(type) {
+    case PT_Planner: CHECK_INTERFACE(planners); break;
+    case PT_Robot: CHECK_INTERFACE(robots); break;
+    case PT_SensorSystem: CHECK_INTERFACE(sensorsystems); break;
+    case PT_Controller: CHECK_INTERFACE(controllers); break;
+    case PT_ProblemInstance: CHECK_INTERFACE(problems); break;
+    case PT_InverseKinematicsSolver: CHECK_INTERFACE(iksolvers); break;
+    case PT_KinBody: CHECK_INTERFACE(kinbodies); break;
+    case PT_PhysicsEngine: CHECK_INTERFACE(physicsengines); break;
+    case PT_Sensor: CHECK_INTERFACE(sensors); break;
+    case PT_CollisionChecker: CHECK_INTERFACE(collisioncheckers); break;
+    case PT_Trajectory: CHECK_INTERFACE(trajectories); break;
+    case PT_Viewer: CHECK_INTERFACE(viewers); break;
+    case PT_Server: CHECK_INTERFACE(servers); break;
+    }
+
+    return false;
 }
 
 void Environment::WaitForPlugins() const
@@ -870,28 +902,38 @@ RobotBase* Environment::CreateRobot(const char* pname)
 
 void Environment::AddIKSolvers()
 {
-    if( !_pIKFastLoader ) {
-        _pIKFastLoader.reset(_pdatabase->CreateProblem(this,"IKFast"));
-        if( !_pIKFastLoader )
+    LockPhysics(true);
+    ProblemInstance* pIKFastLoader = NULL;
+    FOREACHC(itprob, GetProblems()) {
+        if( strcmp((*itprob)->GetXMLId(),"IKFast") == 0 ) {
+            pIKFastLoader = *itprob;
+            break;
+        }
+    }
+
+    if( pIKFastLoader == NULL ) {
+        pIKFastLoader = _pdatabase->CreateProblem(this,"IKFast");
+        if( pIKFastLoader == NULL ) {
+            LockPhysics(false);
+            RAVELOG_WARNA("Failed to load IKFast problem\n");
             return;
+        }
+        else {
+            int ret = pIKFastLoader->main("");
+            if( ret != 0 ) {
+                LockPhysics(false);
+                RAVELOG_WARNA("Error %d with executing IKFast problem\n", ret);
+                return;
+            }
+            else {
+                MutexLock m(&_mutexProblems);
+                _listProblems.push_back(pIKFastLoader);
+            }
+        }
     }
 
     string ikname, iklibrary, response;
     stringstream ss;
-    // don't wait for plugins
-    ifstream f((_homedirectory + "/ikfastsolvers").c_str());
-    if( !!f ) {
-        while(!f.eof()) {
-            f >> ikname >> iklibrary;
-            if( !f )
-                break;
-            ss.str("");
-            ss << "AddIkLibrary " << ikname << " " << iklibrary;
-            if( !_pIKFastLoader->SendCommand(ss.str().c_str(),response) )
-                RAVELOG_WARNA("failed to load %s",iklibrary.c_str());
-        }
-    }
-
     vector<string> vikfastsolvers;
     if( ParseDirectories(getenv("OPENRAVE_IKFAST"), vikfastsolvers) ) {
         FOREACH(it,vikfastsolvers) {
@@ -905,11 +947,13 @@ void Environment::AddIKSolvers()
                 iklibrary = it->substr(pos+1);
                 ss.str("");
                 ss << "AddIkLibrary " << ikname << " " << iklibrary;
-                if( !_pIKFastLoader->SendCommand(ss.str().c_str(),response) )
+                if( !pIKFastLoader->SendCommand(ss.str().c_str(),response) )
                     RAVELOG_WARNA("failed to load %s",iklibrary.c_str());
             }
         }
     }
+
+    LockPhysics(false);
 }
 
 bool Environment::Load(const wchar_t *filename)
@@ -957,7 +1001,7 @@ int Environment::LoadProblem(ProblemInstance* prob, const char* cmdargs)
         RAVELOG_WARNA("Error %d with executing problem\n", ret);
     else {
         MutexLock m(&_mutexProblems);
-        listProblems.push_back(prob);
+        _listProblems.push_back(prob);
     }
 
     return ret;
@@ -966,9 +1010,9 @@ int Environment::LoadProblem(ProblemInstance* prob, const char* cmdargs)
 bool Environment::RemoveProblem(ProblemInstance* prob)
 {
     MutexLock m(&_mutexProblems);
-    list<ProblemInstance*>::iterator itprob = find(listProblems.begin(), listProblems.end(), prob);
-    if( itprob != listProblems.end() ) {
-        listProblems.erase(itprob);
+    list<ProblemInstance*>::iterator itprob = find(_listProblems.begin(), _listProblems.end(), prob);
+    if( itprob != _listProblems.end() ) {
+        _listProblems.erase(itprob);
         return true;
     }
 
@@ -1703,7 +1747,7 @@ void Environment::StepSimulation(dReal fTimeStep)
 
     {
         MutexLock m(&_mutexProblems);
-        FOREACH(itprob, listProblems)
+        FOREACH(itprob, _listProblems)
             (*itprob)->SimulationStep(fTimeStep);
     }
 }

@@ -137,6 +137,8 @@ public:
     virtual void GetLoadedInterfaces(PLUGININFO& info);
     virtual bool LoadPlugin(const char* pname) { WaitForPlugins(); return GetDatabase().AddPlugin(pname); }
 
+    virtual bool HasInterface(PluginType type, const string& interfacename);
+
     virtual InterfaceBase* CreateInterface(PluginType type,const char* pinterfacename);
     virtual RobotBase* CreateRobot(const wchar_t* pname);
     virtual RobotBase* CreateRobot(const char* pname);
@@ -165,7 +167,7 @@ public:
     
     int LoadProblem(ProblemInstance* prob, const char* cmdargs);
     bool RemoveProblem(ProblemInstance* prob);
-    virtual const std::list<ProblemInstance*>& GetProblems() const { return listProblems; }
+    virtual const std::list<ProblemInstance*>& GetProblems() const { return _listProblems; }
 
     virtual bool Load(const wchar_t *filename);
     virtual bool Load(const char *filename);
@@ -500,7 +502,7 @@ protected:
     std::vector<RobotBase*> _vecrobots;  ///< robots (possibly controlled)
     std::vector<KinBody*> _vecbodies; ///< all objects that are collidable (includes robots)
 
-    list<ProblemInstance*> listProblems; ///< problems loaded in the environment
+    list<ProblemInstance*> _listProblems; ///< problems loaded in the environment
     list<KinBody*> _listRemovedBodies;
 
     dReal _fDeltaSimTime;                ///< delta time for simulate step
@@ -532,7 +534,6 @@ protected:
     vector<string> _vplugindirs, _vdatadirs;
     string _homedirectory;
 
-    boost::shared_ptr<ProblemInstance> _pIKFastLoader; ///< used to load ikfast solvers
     //bool _bSelfCollision;           ///< check collision between KinBody links for contact forces
     bool _bDestroying;              ///< destroying envrionment, so exit from all processes
     bool _bDestroyed;               ///< environment has been destroyed
