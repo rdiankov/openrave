@@ -1971,7 +1971,7 @@ void ManipulatorXMLReader::startElement(void *ctx ATTRIBUTE_UNUSED, const char *
         stricmp((const char*)name, "base") == 0) {
         _pcurparser = &g_wstringparser;
     }
-    else if( stricmp((const char*)name, "iksolver") == 0 || stricmp((const char*)name, "iksolverlibrary") == 0 ) {
+    else if( stricmp((const char*)name, "iksolver") == 0 ) {
         _pcurparser = &g_stringparser;
     }
     else if( stricmp((const char*)name, "opened") == 0 ||
@@ -2062,12 +2062,17 @@ bool ManipulatorXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *na
     else if( stricmp((const char*)name, "iksolver") == 0 ) {
         if( _pcurparser->GetData() != NULL ) {
             string iklibraryname = (char*)_pcurparser->GetData();
+            stringstream ss(iklibraryname);
+            string response,ikonly;
+            ss >> ikonly;
 
-            IkSolverBase* piksolver = _probot->GetEnv()->HasInterface(PT_InverseKinematicsSolver,iklibraryname) ? _probot->GetEnv()->CreateIkSolver(iklibraryname.c_str()) : NULL;
+            IkSolverBase* piksolver = _probot->GetEnv()->HasInterface(PT_InverseKinematicsSolver,ikonly) ? _probot->GetEnv()->CreateIkSolver(iklibraryname.c_str()) : NULL;
             if( piksolver == NULL ) {
                 // try adding the current directory
-                string fullname = s_strParseDirectory; fullname.push_back(s_filesep); fullname += iklibraryname;
-                piksolver = _probot->GetEnv()->HasInterface(PT_InverseKinematicsSolver,fullname) ? _probot->GetEnv()->CreateIkSolver(fullname.c_str()) : NULL;
+                if( _probot->GetEnv()->HasInterface(PT_InverseKinematicsSolver,s_strParseDirectory+s_filesep+ikonly)) {
+                    string fullname = s_strParseDirectory; fullname.push_back(s_filesep); fullname += iklibraryname;
+                    piksolver = _probot->GetEnv()->CreateIkSolver(fullname.c_str());
+                }
 
                 if( piksolver == NULL ) {
                     // try loading the shared object
@@ -2086,12 +2091,9 @@ bool ManipulatorXMLReader::endElement(void *ctx ATTRIBUTE_UNUSED, const char *na
                     }
 
                     if( pIKFastLoader != NULL ) {
-                        stringstream ss(iklibraryname);
-                        string response,ikonly;
-                        ss >> ikonly;
                         string cmd = string("AddIkLibrary ") + ikonly + string(" ") + ikonly;
                         if( !ifstream(ikonly.c_str()) || !pIKFastLoader->SendCommand(cmd.c_str(), response)) {
-                            fullname = s_strParseDirectory; fullname.push_back(s_filesep); fullname += ikonly;
+                            string fullname = s_strParseDirectory; fullname.push_back(s_filesep); fullname += ikonly;
                             cmd = string("AddIkLibrary ") + fullname + string(" ") + fullname;
                             if( !ifstream(fullname.c_str()) || !pIKFastLoader->SendCommand(cmd.c_str(), response)) {
                             }
