@@ -902,7 +902,6 @@ RobotBase* Environment::CreateRobot(const char* pname)
 
 void Environment::AddIKSolvers()
 {
-    LockPhysics(true);
     ProblemInstance* pIKFastLoader = NULL;
     FOREACHC(itprob, GetProblems()) {
         if( strcmp((*itprob)->GetXMLId(),"IKFast") == 0 ) {
@@ -952,8 +951,6 @@ void Environment::AddIKSolvers()
             }
         }
     }
-
-    LockPhysics(false);
 }
 
 bool Environment::Load(const wchar_t *filename)
