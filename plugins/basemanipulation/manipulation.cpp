@@ -187,21 +187,24 @@ bool BaseManipulationProblem::SimulationStep(dReal fElapsedTime)
 bool BaseManipulationProblem::SetActiveManip(ostream& sout, istream& sinput)
 {
     RAVELOG_DEBUGA("Starting SetActiveManip...\n");
-    string cmd;
+    string manipname;
     int index = -1;
 
     if(!sinput.eof()) {
-        sinput >> cmd;
+        sinput >> manipname;
         if( !sinput )
             return false;
         
-        if( stricmp(cmd.c_str(), "rightarm") == 0 ) index = 4;
-        else if( stricmp(cmd.c_str(), "leftarm") == 0 ) index = 3;
-        else if( stricmp(cmd.c_str(), "leftleg") == 0 ) index = 1;
-        else if( stricmp(cmd.c_str(), "rightleg") == 0 ) index = 2;
-        else if( stricmp(cmd.c_str(), "head") == 0 ) index = 0;
-        else {
-            index = atoi(cmd.c_str());
+        // find the manipulator with the right name
+        index = 0;
+        FOREACHC(itmanip, robot->GetManipulators()) {
+            if( manipname == itmanip->GetName() )
+                break;
+            ++index;
+        }
+
+        if( index >= (int)robot->GetManipulators().size() ) {
+            index = atoi(manipname.c_str());
         }
     }
 
