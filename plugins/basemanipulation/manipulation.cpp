@@ -1149,6 +1149,14 @@ bool BaseManipulationProblem::ReleaseFingers(ostream& sout, istream& sinput)
         return false;
     }   
 
+    // check final trajectory for colliding points
+    if( ptraj->GetPoints().size() > 0 ) {
+        RobotBase::RobotStateSaver saver(robot);
+        robot->SetActiveDOFValues(NULL,&ptraj->GetPoints().back().q[0]);
+        if( JitterActiveDOF(robot) )
+            robot->GetActiveDOFValues(ptraj->GetPoints().back().q);
+    }
+
     if( ptarget != NULL )
         robot->Release(ptarget);
 
