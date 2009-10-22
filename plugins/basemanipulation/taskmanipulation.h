@@ -56,11 +56,14 @@ public:
         bool operator()(const vector<dReal> & v1, const vector<dReal>& v2) const
         {
             if( v1.size() != v2.size() )
-                return false;
+                return true;
 
-            for(size_t i = 0; i < v1.size(); ++i)
+            for(size_t i = 0; i < v1.size(); ++i) {
                 if( v1[i] < v2[i]-GRASPTHRESH2 )
                     return true;
+                else if( v1[i] > v2[i]+GRASPTHRESH2 )
+                    return false;
+            }
 
             return false;
         }
@@ -161,22 +164,11 @@ public:
         _vvManipChildLinks.clear();
         FOREACH(itmanip, _robot->GetManipulators()) {
             vector<pair<KinBody::Link*,Transform> > _vChildLinks;
+            set<KinBody::Link*> setChildLinks;
             Transform tbaseinv = itmanip->GetEndEffectorTransform().inverse();
-            _vChildLinks.push_back(make_pair(itmanip->pEndEffector,tbaseinv*itmanip->pEndEffector->GetTransform()));
-            int iattlink = itmanip->pEndEffector->GetIndex();
-            FOREACHC(itlink, _robot->GetLinks()) {
-                int ilink = (*itlink)->GetIndex();
-                if( ilink == iattlink )
-                    continue;
-                if( itmanip->_vecarmjoints.size() > 0 && !_robot->DoesAffect(itmanip->_vecarmjoints[0],ilink) )
-                    continue;
-                for(int ijoint = 0; ijoint < _robot->GetDOF(); ++ijoint) {
-                    if( _robot->DoesAffect(ijoint,ilink) && !_robot->DoesAffect(ijoint,iattlink) ) {
-                        _vChildLinks.push_back(make_pair(*itlink,tbaseinv*(*itlink)->GetTransform()));
-                        break;
-                    }
-                }
-            }
+            itmanip->GetChildLinks(setChildLinks);
+            FOREACH(itlink,setChildLinks)
+                _vChildLinks.push_back(make_pair(*itlink,tbaseinv*(*itlink)->GetTransform()));
             _vvManipChildLinks.push_back(_vChildLinks);
         }
     }
@@ -465,6 +457,7 @@ public:
                 // start planning
                 SWITCHMODELS(true);
 
+                RAVELOG_VERBOSEA("planning grasps %"PRIdS"\n",listGraspGoals.size());
                 uint64_t basestart = GetMicroTime();
                 ptraj = _PlanGrasp(listGraspGoals, vHandJointsRobot, nMaxSeedIkSolutions, goalFound, nMaxIterations,mapPreshapeTrajectories);
                 nSearchTime += GetMicroTime() - basestart;
@@ -574,7 +567,7 @@ public:
                 // first test the IK solution at the destination transRobot
                 // don't check for collisions since grasper plugins should have done that
                 if( !pmanip->FindIKSolution(tnewrobot, viksolution, iGraspTransform >= 0 || _pGrasperProblem == NULL) ) {
-                    RAVEPRINT(L"grasp %d: No IK solution found (final)\n", igrasp);
+                    RAVELOG_DEBUGA("grasp %d: No IK solution found (final)\n", igrasp);
                     continue;
                 }
 
@@ -619,8 +612,6 @@ public:
             // should test destination with thin models
             SWITCHMODELS(false);
 
-            _robot->Enable(false); // remove from target collisions
-
             // Disable destination checking
             list< TransformMatrix > listDests;
 
@@ -632,16 +623,19 @@ public:
                 transDestHand = transDestTarget * transInvTarget * transRobot;
                  
                 ptarget->SetTransform(transDestTarget);
-                if( GetEnv()->CheckCollision(ptarget) ) {
+                _robot->Enable(false); // remove from target collisions
+                bool bTargetCollision = GetEnv()->CheckCollision(ptarget);
+                _robot->Enable(true); // remove from target collisions
+                ptarget->SetTransform(transTarg);
+                if( bTargetCollision ) {
                     RAVELOG_VERBOSE(L"target collision at dest\n");
-                    ptarget->SetTransform(transTarg);
                     continue;
                 }
-                ptarget->SetTransform(transTarg);
                 
                 if( !bMobileBase ) {
-                    if( pmanip->FindIKSolution(transDestHand, vikgoal, true) )
+                    if( pmanip->FindIKSolution(transDestHand, vikgoal, true) ) {
                         listDests.push_back(transDestHand);
+                    }
                 }
                 else
                     listDests.push_back(transDestHand);
@@ -715,6 +709,7 @@ public:
             iCountdown = 40;
 
             if( (int)listGraspGoals.size() >= nMaxSeedGrasps ) {
+                RAVELOG_VERBOSEA("planning grasps %"PRIdS"\n",listGraspGoals.size());
                 uint64_t basestart = GetMicroTime();
                 ptraj = _PlanGrasp(listGraspGoals, vHandJointsRobot, nMaxSeedGrasps, goalFound, nMaxIterations,mapPreshapeTrajectories);
                 nSearchTime += GetMicroTime() - basestart;
@@ -730,6 +725,7 @@ public:
         // if there's left over goal positions, start planning
         while( !ptraj && listGraspGoals.size() > 0 ) {
             //TODO have to update ptrajToPreshape
+            RAVELOG_VERBOSEA("planning grasps %"PRIdS"\n",listGraspGoals.size());
             uint64_t basestart = GetMicroTime();
             ptraj = _PlanGrasp(listGraspGoals, vHandJointsRobot, nMaxSeedGrasps, goalFound, nMaxIterations,mapPreshapeTrajectories);
             nSearchTime += GetMicroTime() - basestart;
@@ -747,7 +743,10 @@ public:
         if( !!ptraj ) {
             PRESHAPETRAJMAP::iterator itpreshapetraj = mapPreshapeTrajectories.find(goalFound.vpreshape);
             if( itpreshapetraj == mapPreshapeTrajectories.end() ) {
-                RAVELOG_ERRORA("no preshape trajectory!");
+                RAVELOG_ERRORA("no preshape trajectory!\n");
+                FOREACH(itpreshape,mapPreshapeTrajectories) {
+                    RAVELOG_ERRORA("%f %f %f %f %f %f\n",itpreshape->first[0],itpreshape->first[1],itpreshape->first[2],itpreshape->first[3],itpreshape->first[4],itpreshape->first[5]);
+                }
                 return false;
             }
 
@@ -1194,12 +1193,13 @@ protected:
         listgraspsused.splice(listgraspsused.end(), listGraspGoals, itgoals++);
     
         while(itgoals != listGraspGoals.end()) {
-            float fdif = 0;
-            for(int i = 0; i < (int)vpreshape.size(); ++i) {
-                fdif += fabsf(vpreshape[i] - itgoals->vpreshape[i]);
+            int ipreshape=0;
+            for(ipreshape = 0; ipreshape < (int)vpreshape.size(); ++ipreshape) {
+                if( fabsf(vpreshape[ipreshape] - itgoals->vpreshape[ipreshape]) > 2.0*GRASPTHRESH2 )
+                    break;
             }
 
-            if( fdif < GRASPTHRESH2 ) {
+            if( ipreshape == vpreshape.size() ) {
                 // accept
                 listgraspsused.splice(listgraspsused.end(), listGraspGoals, itgoals++);
             }
