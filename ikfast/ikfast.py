@@ -51,7 +51,7 @@ class InstanceTracker(object):
         self = super(InstanceTracker, cls).__new__(*args, **kwargs)
         cls.__instance_refs__.append(weakref.ref(self))
         return self
-
+    
     def __reduce_ex__(self, proto):
         return super(InstanceTracker, self).__reduce_ex__(2)
 
@@ -65,7 +65,6 @@ class MetaAutoReloader(MetaInstanceTracker):
                 for instance in old_class.__instances__():
                     instance.change_class(cls)
                     cls.__instance_refs__.append(weakref.ref(instance))
-
                 for subcls in old_class.__subclasses__():
                     newbases = []
                     for base in subcls.__bases__:
@@ -2485,7 +2484,7 @@ ikfast.py --fkfile=fk_WAM7.txt --baselink=0 --eelink=7 --savefile=ik.cpp 1 2 3 4
         sys.exit(1)
 
     solvejoints = [atoi(joint) for joint in args]
-    solvefn = solvefn=RobotKinematics.solveFullIK_6D
+    solvefn=RobotKinematics.solveFullIK_6D
     numexpected = 6
     if options.rotation3donly:
         numexpected = 3

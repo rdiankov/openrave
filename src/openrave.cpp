@@ -152,7 +152,7 @@ int main(int argc, char ** argv)
                 L"-server [port]     start up the server on a specific port (default is 4765)\n"
                 L"-d [debug-level]   start up OpenRAVE with the specified debug level (higher numbers print more).\n"
                 L"                   Default level is 2 for release builds, and 4 for debug builds.\n"
-                L"--generateik robot [robotfile] ikfast [ikfast_executable] [freeparam [joint index]] output [filename] manipulator [index]"
+                L"--generateik robot [robotfile] [freeparam [joint name]] manipulator [index] manipulatorname [name] output [filename] ikfast [ikfast_executable]\n"
                 L"-wdims [width] [height] start up the GUI window with these dimensions\n"
                 L"-wpos x y set the position of the GUI window\n"
                 L"-problem [problemname] [args] Start openrave with a problem instance. If args involves spaces, surround it with double quotes. args is optional.\n"
@@ -238,6 +238,7 @@ int main(int argc, char ** argv)
             vector<string> vfreeparamnames;
             string robotfile, ikfast_executable = IKFAST_EXECUTABLE, outputfile = "ik.cpp";
             int manipindex = 0;
+            string manipname;
             bool bRotation3DOnly = false;
 
             while(++i < argc) {
@@ -264,6 +265,10 @@ int main(int argc, char ** argv)
                     manipindex = atoi(argv[i+1]);
                     i++;
                 }
+                else if( stricmp(argv[i],"manipulatorname") == 0 ) {
+                    manipname = argv[i+1];
+                    i++;
+                }
                 else if( stricmp(argv[i],"rotation3donly") == 0 )
                     bRotation3DOnly = true;
             }
@@ -284,6 +289,14 @@ int main(int argc, char ** argv)
                 return -3;
 
             RobotBase* probot = penv->GetRobots().front();
+
+            if( manipname.size() > 0 ) {
+                for(manipindex = 0; manipindex < (int)probot->GetManipulators().size(); ++manipindex) {
+                    if( strcmp(probot->GetManipulators()[manipindex].GetName(),manipname.c_str()) == 0 )
+                        break;
+                }
+            }
+
             if( manipindex >= (int)probot->GetManipulators().size() ) {
                 RAVELOG_ERRORA("Generate IK: manipulator index %d not valid.\n", manipindex);
                 return -5;
