@@ -1076,8 +1076,8 @@ public:
             return solutions;
         }
 
-        PyLink* GetBase() { return new PyLink(_pmanip->pBase,_pyenv); }
-        PyLink* GetEndEffector() { return new PyLink(_pmanip->pEndEffector,_pyenv); }
+        PyLink* GetBase() { CHECK_POINTER(_pmanip->pBase); return new PyLink(_pmanip->pBase,_pyenv); }
+        PyLink* GetEndEffector() { CHECK_POINTER(_pmanip->pEndEffector); return new PyLink(_pmanip->pEndEffector,_pyenv); }
         object GetGraspTransform() { return ReturnTransform(_pmanip->tGrasp); }
         object GetJoints() { return toPyList(_pmanip->_vecjoints); }
         object GetArmJoints() { return toPyList(_pmanip->_vecarmjoints); }

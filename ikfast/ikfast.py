@@ -2623,13 +2623,13 @@ ikfast.py --fkfile=fk_WAM7.txt --baselink=0 --eelink=7 --savefile=ik.cpp 1 2 3 4
     numexpected = 6
     if options.rotation3donly:
         numexpected = 3
-        solvefn = solvefn=RobotKinematics.solveFullIK_Rotation3D
+        solvefn = RobotKinematics.solveFullIK_Rotation3D
     elif options.rotation2donly:
         numexpected = 2
-        solvefn = solvefn=RobotKinematics.solveFullIK_Direction3D
+        solvefn = RobotKinematics.solveFullIK_Direction3D
     elif options.translation3donly:
         numexpected = 3
-        solvefn = solvefn=RobotKinematics.solveFullIK_Translation3D
+        solvefn = RobotKinematics.solveFullIK_Translation3D
 
     if not len(solvejoints) == numexpected:
         print 'Need ',numexpected, 'solve joints, got: ', solvejoints
