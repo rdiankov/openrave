@@ -152,12 +152,12 @@ int main(int argc, char ** argv)
                 L"-server [port]     start up the server on a specific port (default is 4765)\n"
                 L"-d [debug-level]   start up OpenRAVE with the specified debug level (higher numbers print more).\n"
                 L"                   Default level is 2 for release builds, and 4 for debug builds.\n"
-                L"--generateik robot [robotfile] [freeparam [joint name]] manipulator [index] manipulatorname [name] output [filename] ikfast [ikfast_executable]\n"
+                L"--generateik robot [robotfile] [freeparam [joint name]] manipulator [index] manipulatorname [name] output [filename] ikfast [ikfast_executable] [translation3donly] [rotation3donly]\n"
                 L"-wdims [width] [height] start up the GUI window with these dimensions\n"
                 L"-wpos x y set the position of the GUI window\n"
                 L"-problem [problemname] [args] Start openrave with a problem instance. If args involves spaces, surround it with double quotes. args is optional.\n"
                 L"-f [scene]         Load a openrave environment file\n"
-                      L"-testscene         If specified, openrave will exit after the scene is loaded. A non-zero values means something went wrong with the loading process.");
+                      L"-testscene         If specified, openrave will exit after the scene is loaded. A non-zero values means something went wrong with the loading process.\n\n");
             return 0;
         }
         else if( stricmp(argv[i], "-loadplugin") == 0 ) {
@@ -240,6 +240,7 @@ int main(int argc, char ** argv)
             int manipindex = 0;
             string manipname;
             bool bRotation3DOnly = false;
+            bool bTranslation3DOnly = false;
 
             while(++i < argc) {
                 if( argv[i][0] == 0 || argv[i][0] == '-')
@@ -271,6 +272,8 @@ int main(int argc, char ** argv)
                 }
                 else if( stricmp(argv[i],"rotation3donly") == 0 )
                     bRotation3DOnly = true;
+                else if( stricmp(argv[i],"translation3donly") == 0 )
+                    bTranslation3DOnly = true;
             }
             
             if( ikfast_executable.size() == 0 ) {
@@ -303,7 +306,7 @@ int main(int argc, char ** argv)
             }
 
             const RobotBase::Manipulator& manip = probot->GetManipulators()[manipindex];
-            if( manip.pBase == NULL || manip.pEndEffector == NULL || (!bRotation3DOnly && manip._vecarmjoints.size() < 6) ) {
+            if( manip.pBase == NULL || manip.pEndEffector == NULL || (!bRotation3DOnly && !bTranslation3DOnly && manip._vecarmjoints.size() < 6) ) {
                 RAVELOG_ERRORA("Generate IK: Manipulator not valid, needs to be >= 6 joints (%"PRIdS").\n", manip._vecarmjoints.size());
                 return -6;
             }
@@ -328,6 +331,8 @@ int main(int argc, char ** argv)
                   << " --eelink=" << manip.pEndEffector->GetIndex();
             if( bRotation3DOnly )
                 sscmd << " --rotation3donly ";
+            if( bTranslation3DOnly )
+                sscmd << " --translation3donly ";
             vector<int> vfreeparams, vsolvejoints;
             for(vector<int>::const_iterator it = manip._vecarmjoints.begin(); it != manip._vecarmjoints.end(); ++it) {
                 string jointname = _stdwcstombs(probot->GetJoints()[*it]->GetName());
@@ -337,7 +342,7 @@ int main(int argc, char ** argv)
                     vfreeparams.push_back(*it);
             }
 
-            if( !bRotation3DOnly && vsolvejoints.size() != 6 ) {
+            if( !bRotation3DOnly && !bTranslation3DOnly && vsolvejoints.size() != 6 ) {
                 RAVELOG_ERRORA("need 6 solve joints, currently have %"PRIdS"\n", vsolvejoints.size());
                 remove(tempfilename);
                 return -7;
@@ -351,7 +356,7 @@ int main(int argc, char ** argv)
                 sscmd << *it << " ";
 
             RAVELOG_INFOA("executing: %s\n", sscmd.str().c_str());
-            RAVELOG_FATALA("generating ik could take up to a minute...\n");
+            RAVELOG_FATALA("generating ik could take up to 10 minutes...\n");
             int status = system(sscmd.str().c_str());
 #ifdef _WIN32
             int exitcode = status;

@@ -902,11 +902,12 @@ class RobotKinematics(AutoReloader):
             joint.linkbase = atoi(tokens[offset+2])
             joint.jointindex = atoi(tokens[offset+3])
             joint.axis = Matrix(3,1,[Real(round(atof(x),4),30) for x in tokens[offset+4:offset+7]])
+            joint.axis /= sqrt(joint.axis.dot(joint.axis))
             joint.jcoeff = [round(atof(x),5) for x in tokens[offset+7:offset+9]]
             joint.Tleft = eye(4)
-            joint.Tleft[0:3,0:4] = Matrix(3,4,[Real(round(atof(x),5),30) for x in tokens[offset+9:offset+21]])
+            joint.Tleft[0:3,0:4] = self.normalizeRotation(Matrix(3,4,[Real(round(atof(x),5),30) for x in tokens[offset+9:offset+21]]))
             joint.Tright = eye(4)
-            joint.Tright[0:3,0:4] = Matrix(3,4,[Real(round(atof(x),5),30) for x in tokens[offset+21:offset+33]])
+            joint.Tright[0:3,0:4] = self.normalizeRotation(Matrix(3,4,[Real(round(atof(x),5),30) for x in tokens[offset+21:offset+33]]))
             joint.isfreejoint = False
             joint.isdummy = False
             alljoints.append(joint)
@@ -918,6 +919,15 @@ class RobotKinematics(AutoReloader):
         self.joints = [[] for i in range(numjoints)]
         for joint in alljoints:
             self.joints[joint.jointindex].append(joint)
+
+    def normalizeRotation(self,M):
+        right = M[0,0:3]/sqrt(M[0,0:3].dot(M[0,0:3]))
+        up = M[1,0:3] - right*right.dot(M[1,0:3])
+        up = up/sqrt(up.dot(up))
+        M[0,0:3] = right
+        M[1,0:3] = up
+        M[2,0:3] = right.cross(up)
+        return M
 
     def getJointsInChain(self, baselink, eelink):
         # find a path of joints between baselink and eelink using BFS
@@ -942,8 +952,8 @@ class RobotKinematics(AutoReloader):
         return alljoints
 
     def rodrigues(self, axis, angle):
-        skewsymmetric = Matrix(3, 3, [0,-axis[2],axis[1],axis[2],0,-axis[0],-axis[1],axis[0],0])
-        return eye(3) + sin(angle) * skewsymmetric + (1-cos(angle))*skewsymmetric*skewsymmetric
+        skewsymmetric = Matrix(3, 3, [S.Zero,-axis[2],axis[1],axis[2],S.Zero,-axis[0],-axis[1],axis[0],S.Zero])
+        return eye(3) + sin(angle) * skewsymmetric + (S.One-cos(angle))*skewsymmetric*skewsymmetric
 
     # The first and last matrices returned are always numerical
     def forwardKinematics(self, baselink, eelink):
@@ -1072,27 +1082,26 @@ class RobotKinematics(AutoReloader):
         return T
 
     # deep chopping of tiny numbers due to floating point precision errors
-    def chop(self,expr,precision=10):
+    def chop(self,expr,precision=10,accuracy=1e-7):
         # go through all arguments and chop them
         if expr.is_Function:
-            return expr.func( self.chop(expr.args[0], precision) )
+            return expr.func( self.chop(expr.args[0], precision,accuracy) )
         elif expr.is_Mul:
             ret = S.One
             for x in expr.args:
-                ret *= self.chop(x, precision)
+                ret *= self.chop(x, precision, accuracy)
             return ret
         elif expr.is_Pow:
-            return Pow(self.chop(expr.base, precision), expr.exp)
+            return Pow(self.chop(expr.base, precision, accuracy), expr.exp)
         elif expr.is_Add:
             # Scan for the terms we need
             ret = S.Zero
             for term in expr.args:
-                term = self.chop(term, precision)
+                term = self.chop(term, precision, accuracy)
                 ret += term
-
             return ret
-
-        return expr.evalf(precision,chop=True)
+        e = expr.evalf(precision,chop=True)
+        return e if abs(e) > accuracy else S.Zero
 
     def countVariables(self,expr,var):
         """Counts number of terms variable appears in"""
@@ -1125,9 +1134,13 @@ class RobotKinematics(AutoReloader):
         
         return complexity
 
-    def affineSimplify(self, T, precision=10):
+    def affineSimplify(self, T, precision=10,accuracy=1e-7):
         # yes, it is necessary to call self.trigsimp so many times since it gives up too easily
-        return Matrix(4,4,map(lambda x: self.chop(trigsimp(trigsimp(self.chop(trigsimp(x),precision))),precision), T))
+        values = map(lambda x: self.chop(trigsimp(trigsimp(self.chop(trigsimp(x),precision,accuracy=accuracy))),precision,accuracy=accuracy), T)
+        # rotation should have bigger accuracy threshold
+        for i in [0,1,2,4,5,6,8,9,10]:
+            values[i] = self.chop(values[i],precision,accuracy*10)
+        return Matrix(4,4,values)
 
     def fk(self, chain, joints):
         Tlast = eye(4)
@@ -1262,17 +1275,137 @@ class RobotKinematics(AutoReloader):
 #             if all([not LinksAccumRight[rotindex][i,j].is_zero for i in range(3) for j in range(3)]):
 #                 break
 #             rotindex = rotindex-1
-        rotindex = 0
 
-        if rotindex < 0:
-            print 'Current joints cannot solve for a full 3D rotation'
+        solverbranches = []
+        # depending on the free variable values, sometimes the rotation matrix can have zeros where it does not expect zeros. Therefore, test all boundaries of all free variables
+        for freevar in freejointvars+[None]:
+            freevalues = [0,pi/2,pi,-pi/2] if freevar is not None else [None]
+            for freevalue in freevalues:
+                if freevar is not None and freevalue is not None:
+                    var = self.Variable(freevar)
+                    valuesubs = [(var.var,freevalue),(var.svar,sin(freevalue)),(var.cvar,cos(freevalue))] if freevalue is not None else []
+                    freevarcond = freevar-freevalue
+                else:
+                    valuesubs = []
+                    freevarcond = None
 
-        storesolutiontree = [SolverStoreSolution (jointvars)]
-        rotsubs = [(Symbol('r%d%d'%(i,j)),Symbol('_r%d%d'%(i,j))) for i in range(3) for j in range(3)]
-        R = Matrix(3,3, map(lambda x: x.subs(self.freevarsubs), LinksAccumRight[rotindex][0:3,0:3]))
-        rotvars = [var for var in jointvars[rotindex:] if any([var==svar for svar in solvejointvars])]
-        solvertree = self.solveIKRotation(R=R,Ree = Tee[0:3,0:3].subs(rotsubs),rawvars = rotvars,endbranchtree=storesolutiontree,solvedvarsubs=self.freevarsubs)
-        return SolverIKChain([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], Tfirstleft.inv() * Tee * Tfirstright.inv(), solvertree)
+                storesolutiontree = [SolverStoreSolution (jointvars)]
+                solvedvarsubs = valuesubs+self.freevarsubs
+                rotsubs = [(Symbol('r%d%d'%(i,j)),Symbol('_r%d%d'%(i,j))) for i in range(3) for j in range(3)]
+                rotvars = [var for var in jointvars if any([var==svar for svar in solvejointvars])]
+                R = Matrix(3,3, map(lambda x: x.subs(solvedvarsubs), LinksAccumRight[0][0:3,0:3]))
+                rottree = self.solveIKRotation(R=R,Ree = Tee[0:3,0:3].subs(rotsubs),rawvars = rotvars,endbranchtree=storesolutiontree,solvedvarsubs=solvedvarsubs)
+                solverbranches.append((freevarcond,[SolverRotation(LinksAccumLeftInv[0].subs(solvedvarsubs)*Tee, rottree)]))
+
+        if len(solverbranches) == 0 or not solverbranches[-1][0] is None:
+            print 'failed to solve for kinematics'
+            return None
+        return SolverIKChain([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], Tfirstleft.inv() * Tee * Tfirstright.inv(), [SolverBranchConds(solverbranches)])
+
+    def solveFullIK_Translation3D(self,chain,Tee):
+        Links, jointvars, isolvejointvars, ifreejointvars = self.forwardKinematicsChain(chain)
+        Tfirstleft = Links.pop(0)
+        Tfirstright = Links.pop()
+        LinksInv = [self.affineInverse(link) for link in Links]
+        solvejointvars = [jointvars[i] for i in isolvejointvars]
+        freejointvars = [jointvars[i] for i in ifreejointvars]
+
+        if not len(solvejointvars) == 3:
+            raise ValueError('solve joints needs to be 3')
+
+        # when solving equations, convert all free variables to constants
+        self.freevarsubs = []
+        for freevar in freejointvars:
+            var = self.Variable(freevar)
+            self.freevarsubs += [(cos(var.var), var.cvar), (sin(var.var), var.svar)]
+        
+        #Tee = Tfirstleft.inv() * Tee_in * Tfirstright.inv()
+        # LinksAccumLeftInv[x] * Tee = LinksAccumRight[x]
+        # LinksAccumLeftInv[x] = InvLinks[x-1] * ... * InvLinks[0]
+        # LinksAccumRight[x] = Links[x]*Links[x+1]...*Links[-1]
+        LinksAccumLeftAll = [eye(4)]
+        LinksAccumLeftInvAll = [eye(4)]
+        LinksAccumRightAll = [eye(4)]
+        for i in range(len(Links)):
+            LinksAccumLeftAll.append(LinksAccumLeftAll[-1]*Links[i])
+            LinksAccumLeftInvAll.append(LinksInv[i]*LinksAccumLeftInvAll[-1])
+            LinksAccumRightAll.append(Links[len(Links)-i-1]*LinksAccumRightAll[-1])
+        LinksAccumRightAll.reverse()
+        
+        LinksAccumLeftAll = map(lambda T: self.affineSimplify(T), LinksAccumLeftAll)
+        LinksAccumLeftInvAll = map(lambda T: self.affineSimplify(T), LinksAccumLeftInvAll)
+        LinksAccumRightAll = map(lambda T: self.affineSimplify(T), LinksAccumRightAll)
+        
+        # create LinksAccumX indexed by joint indices
+        assert( len(LinksAccumLeftAll)%2 == 0 )
+        LinksAccumLeft = []
+        LinksAccumLeftInv = []
+        LinksAccumRight = []
+        for i in range(0,len(LinksAccumLeftAll),2)+[len(LinksAccumLeftAll)-1]:
+            LinksAccumLeft.append(LinksAccumLeftAll[i])
+            LinksAccumLeftInv.append(LinksAccumLeftInvAll[i])
+            LinksAccumRight.append(LinksAccumRightAll[i])
+        assert( len(LinksAccumLeft) == len(jointvars)+1 )
+        
+        solverbranches = []
+        # depending on the free variable values, sometimes the rotation matrix can have zeros where it does not expect zeros. Therefore, test all boundaries of all free variables
+        for freevar in freejointvars+[None]:
+            freevalues = [0,pi/2,pi,-pi/2] if freevar is not None else [None]
+            for freevalue in freevalues:
+                if freevar is not None and freevalue is not None:
+                    var = self.Variable(freevar)
+                    valuesubs = [(var.var,freevalue),(var.svar,sin(freevalue)),(var.cvar,cos(freevalue))] if freevalue is not None else []
+                    freevarcond = freevar-freevalue
+                else:
+                    valuesubs = []
+                    freevarcond = None
+                
+                Positions = [Matrix(3,1,map(lambda x: self.customtrigsimp(x), LinksAccumRightAll[i][0:3,3].subs(valuesubs))) for i in range(len(LinksAccumRightAll))]
+                Positionsee = [Matrix(3,1,map(lambda x: self.customtrigsimp(x), (LinksAccumLeftInvAll[i]*Tee)[0:3,3].subs(valuesubs))) for i in range(len(LinksAccumLeftInvAll))]
+                
+                # try to shift all the constants of each Position expression to one side
+                for i in range(len(Positions)):
+                    for j in range(3):
+                        p = Positions[i][j]
+                        pee = Positionsee[i][j]
+                        pconstterm = None
+                        peeconstterm = None
+                        if p.is_Add:
+                            pconstterm = [term for term in p.args if term.is_number]
+                        elif p.is_number:
+                            pconstterm = [p]
+                        else:
+                            continue
+                        if pee.is_Add:
+                            peeconstterm = [term for term in pee.args if term.is_number]
+                        elif pee.is_number:
+                            peeconstterm = [pee]
+                        else:
+                            continue
+                        if len(pconstterm) > 0 and len(peeconstterm) > 0:
+                            # shift it to the one that has the least terms
+                            for term in peeconstterm if len(p.args) < len(pee.args) else pconstterm:
+                                Positions[i][j] -= term
+                                Positionsee[i][j] -= term
+                
+                solsubs = self.freevarsubs[:]
+                endbranchtree = [SolverStoreSolution (jointvars)]                
+                curtransvars = solvejointvars[:]
+                transtree = self.solveIKTranslationAll(Positions,Positionsee,curtransvars,
+                                                       otherunsolvedvars = [],
+                                                       othersolvedvars = freejointvars,
+                                                       endbranchtree=endbranchtree,
+                                                       solsubs = solsubs)
+                
+                if len(curtransvars) > 0:
+                    print 'error, cannot solve translation for ',freevar,freevalue
+                    continue
+                solverbranches.append((freevarcond,transtree))
+
+        if len(solverbranches) == 0 or not solverbranches[-1][0] is None:
+            print 'failed to solve for kinematics'
+            return None
+        return SolverIKChain([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], Tfirstleft.inv() * Tee * Tfirstright.inv(), [SolverBranchConds(solverbranches)])
         
     def solveFullIK_6D(self, chain, Tee):
         Links, jointvars, isolvejointvars, ifreejointvars = self.forwardKinematicsChain(chain)
@@ -2475,6 +2608,8 @@ ikfast.py --fkfile=fk_WAM7.txt --baselink=0 --eelink=7 --savefile=ik.cpp 1 2 3 4
                       help='If true, need to specify only 3 solve joints and will solve for a target rotation')
     parser.add_option('--rotation2donly', action='store_true', dest='rotation2donly',default=False,
                       help='If true, need to specify only 2 solve joints and will solve for a target direction')
+    parser.add_option('--translation3donly', action='store_true', dest='translation3donly',default=False,
+                      help='If true, need to specify only 3 solve joints and will solve for a target translation')
     parser.add_option('--usedummyjoints', action='store_true',dest='usedummyjoints',default=False,
                       help='Treat the unspecified joints in the kinematic chain as dummy and set them to 0. If not specified, treats all unspecified joints as free parameters.')
 
@@ -2492,6 +2627,9 @@ ikfast.py --fkfile=fk_WAM7.txt --baselink=0 --eelink=7 --savefile=ik.cpp 1 2 3 4
     elif options.rotation2donly:
         numexpected = 2
         solvefn = solvefn=RobotKinematics.solveFullIK_Direction3D
+    elif options.translation3donly:
+        numexpected = 3
+        solvefn = solvefn=RobotKinematics.solveFullIK_Translation3D
 
     if not len(solvejoints) == numexpected:
         print 'Need ',numexpected, 'solve joints, got: ', solvejoints
