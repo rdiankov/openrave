@@ -253,7 +253,8 @@ public:
     IkSolverBase* CreateIkSolver(const wchar_t* pname, dReal freeinc, EnvironmentBase* penv)
     {
         string name = _stdwcstombs(pname);
-        for(vector< boost::shared_ptr<IKLibrary> >::iterator itlib = _vlibraries.begin(); itlib != _vlibraries.end(); ++itlib) {
+        /// start from the newer libraries
+        for(vector< boost::shared_ptr<IKLibrary> >::reverse_iterator itlib = _vlibraries.rbegin(); itlib != _vlibraries.rend(); ++itlib) {
             if( name == (*itlib)->GetIKName() )
                 return (*itlib)->CreateSolver(penv,freeinc);
         }
