@@ -885,11 +885,14 @@ class RobotKinematics(AutoReloader):
             self.cvar = Symbol("c%s"%var.name)
             self.tvar = Symbol("t%s"%var.name)
 
-    def __init__(self, robotfile):
+    def __init__(self, robotfile=None,robotfiledata=None):
         self.joints = []
         self.freevarsubs = []
-        f=open(robotfile, "r")
-        tokens = f.read().split()
+        if robotfiledata is not None:
+            tokens = robotfiledata.split()
+        else:
+            f=open(robotfile, "r")
+            tokens = f.read().split()
         numdof = atoi(tokens[0])
         offset = 1
 

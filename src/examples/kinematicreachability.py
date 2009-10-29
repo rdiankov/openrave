@@ -66,18 +66,18 @@ class ReachabilityModel(metaclass.AutoReloader):
             self.manip = manips[0]
         self.manipname = self.manip.GetName()
 
-    def ComputeReachability(self,maxradius):
+    def ComputeReachability(self,maxradius,translationonly=False):
         starttime = time.time()
         Tgrasp = dot(linalg.inv(self.manip.GetBase().GetTransform()),self.manip.GetEndEffectorTransform())
         armlength = sqrt(sum(Tgrasp[0:3,3]**2))
         if maxradius is None:
             maxradius = 1.5*armlength
-        else:
-            maxradius = max(1.5*armlength,maxradius)
+#        else:
+#            maxradius = max(1.5*armlength,maxradius)
         print 'radius: ',maxradius
 
         allpoints,insideinds,shape,self.pointscale = self.UniformlySampleSpace(maxradius,delta=0.02)
-        rotations = self.GetUniformRotations(spherelevel=0,rolldelta=pi/8.0)
+        rotations = [eye(3)] if translationonly else self.GetUniformRotations(spherelevel=0,rolldelta=pi/8.0)
         T = zeros((3,4))
 
         reachabilitydensity3d = zeros(prod(shape))
@@ -89,16 +89,17 @@ class ReachabilityModel(metaclass.AutoReloader):
                 T[0:3,3] = allpoints[ind]
                 for rotation in rotations:
                     T[0:3,0:3] = rotation
-                    solution = self.manip.FindIKSolution(T,True)
-                    if solution is not None:
-                        self.reachabilitystats.append(T)
-                        numvalid += 1
+                    solutions = self.manip.FindIKSolutions(T,True)
+                    if solutions is not None:
+                        self.reachabilitystats.append(allpoints[ind])
+                        numvalid += len(solutions)
                 if mod(i,1000)==0:
                     print '%d/%d'%(i,len(insideinds))
-                reachabilitydensity3d[ind] = numvalid/float(len(rotations))
+                reachabilitydensity3d[ind] = numvalid/(100*float(len(rotations)))
         finally:
             self.orenv.LockPhysics(False)
         self.reachabilitydensity3d = reshape(reachabilitydensity3d,shape)
+        self.reachabilitydensity3d[0,0,0] = 1
         print 'reachability finished in %fs'%(time.time()-starttime)
 
     def showdensity(self,showrobot=True,contours=[0.1,0.5,0.9,0.99],opacity=None,figureid=1, xrange=None):
@@ -113,11 +114,20 @@ class ReachabilityModel(metaclass.AutoReloader):
             src = mlab.pipeline.scalar_field(r_[zeros((1,)+self.reachabilitydensity3d.shape[1:]),self.reachabilitydensity3d[xrange,:,:],zeros((1,)+self.reachabilitydensity3d.shape[1:])])
             
         for i,c in enumerate(contours):
-            mlab.pipeline.iso_surface(src,contours=[c],opacity=0.5*c if opacity is None else opacity[i])
+            mlab.pipeline.iso_surface(src,contours=[c],opacity=min(1,0.5*c if opacity is None else opacity[i]))
         #mlab.pipeline.volume(mlab.pipeline.scalar_field(self.reachabilitydensity3d*100))
         if showrobot:
             v = self.pointscale[0]*self.trimesh.vertices+self.pointscale[1]
             mlab.triangular_mesh(v[:,0]-offset[0],v[:,1]-offset[1],v[:,2]-offset[2],self.trimesh.indices,color=(0.5,0.5,0.5))
+
+    def showrobotlimits(self):
+        from enthought.mayavi import mlab
+        showvalues = self.orrobot.GetJointLimits()
+        for values in showvalues:
+            self.orrobot.SetJointValues(values)
+            trimesh = self.orenv.Triangulate(self.orrobot)
+            v = self.pointscale[0]*trimesh.vertices+self.pointscale[1]
+            mlab.triangular_mesh(v[:,0],v[:,1],v[:,2],trimesh.indices,color=(0.5,0.5,0.5))
 
     def UniformlySampleSpace(self,maxradius,delta=0.02):
         nsteps = floor(maxradius/delta)

@@ -922,6 +922,13 @@ public:
         return _pbody->DoesAffect(jointindex,linkindex);
     }
 
+    std::string GetForwardKinematics() const {
+        CHECK_POINTER(_pbody); 
+        stringstream ss;
+        _pbody->WriteForwardKinematics(ss);
+        return ss.str();
+    }
+
     void SetGuiData(uintptr_t pdata) { CHECK_POINTER(_pbody); _pbody->SetGuiData((void*)pdata); }
     uintptr_t GetGuiData() const { CHECK_POINTER(_pbody); return (uintptr_t)_pbody->GetGuiData(); }
 
@@ -2769,6 +2776,7 @@ BOOST_PYTHON_MODULE(openravepy)
             .def("IsRobot",&PyKinBody::IsRobot)
             .def("GetNetworkId",&PyKinBody::GetNetworkId)
             .def("DoesAffect",&PyKinBody::DoesAffect)
+            .def("GetForwardKinematics",&PyKinBody::GetForwardKinematics)
             .def("SetGuiData",&PyKinBody::SetGuiData)
             .def("GetGuiData",&PyKinBody::GetGuiData)
             .def("GetXMLFilename",&PyKinBody::GetXMLFilename)
