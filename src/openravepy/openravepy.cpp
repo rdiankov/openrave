@@ -65,6 +65,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/format.hpp>
 #include <boost/enable_shared_from_this.hpp> 
+#include <boost/version.hpp>
 
 #define PY_ARRAY_UNIQUE_SYMBOL PyArrayHandle
 #include <boost/python.hpp>
@@ -1769,7 +1770,7 @@ public:
         _penv = CreateEnvironment(true);
         _bShutdown = false;
 #if BOOST_VERSION >= 103500
-        _envlock.reset(new EnvironmentMutex::scoped_lock(_penv->GetMutex()),boost::defer_lock_t());
+        _envlock.reset(new EnvironmentMutex::scoped_lock(_penv->GetMutex(),boost::defer_lock_t()));
 #else
         _envlock.reset(new EnvironmentMutex::scoped_lock(_penv->GetMutex()));
         _envlock->unlock();
@@ -1782,7 +1783,7 @@ public:
         _bShutdown = false;
         _penv = pyenv._penv;
 #if BOOST_VERSION >= 103500
-        _envlock.reset(new EnvironmentMutex::scoped_lock(_penv->GetMutex()),boost::defer_lock_t());
+        _envlock.reset(new EnvironmentMutex::scoped_lock(_penv->GetMutex(),boost::defer_lock_t()));
 #else
         _envlock.reset(new EnvironmentMutex::scoped_lock(_penv->GetMutex()));
         _envlock->unlock();

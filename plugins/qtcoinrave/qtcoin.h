@@ -104,6 +104,7 @@ inline uint64_t GetMicroTime()
 #include <boost/format.hpp>
 #include <boost/assert.hpp>
 #include <boost/thread/condition.hpp>
+#include <boost/version.hpp>
 
 using namespace OpenRAVE;
 using namespace std;
