@@ -24,13 +24,6 @@ namespace OpenRAVE {
 class SensorSystemBase : public InterfaceBase
 {
 public:
-    class BodyData
-    {
-        virtual ~BodyData() {}
-    };
-    typedef boost::shared_ptr<BodyData> BodyDataPtr;
-    typedef boost::shared_ptr<BodyData const> BodyDataConstPtr;
-
     class BodyBase
     {
     public:
@@ -39,7 +32,7 @@ public:
         /// returns a pointer to the data used to initialize the BODY with AddKinBody.
         /// if psize is not NULL, will be filled with the size of the data in bytes
         /// This function will be used to restore bodies that were removed
-        virtual BodyDataConstPtr GetData() const = 0;
+        virtual boost::shared_ptr<void> GetData() const = 0;
 
         /// particular link that sensor system is tracking.
         /// All transformations describe this link.
@@ -73,7 +66,7 @@ public:
 
     /// add body for registering with sensor system
     /// pdata is a pointer to a data structor holding tracking/registration information for the system
-    virtual BodyBasePtr AddKinBody(KinBodyPtr pbody, BodyDataConstPtr pdata) = 0;
+    virtual BodyBasePtr AddKinBody(KinBodyPtr pbody, boost::shared_ptr<void> pdata) = 0;
     /// remove body from sensory system. If bDestroy is true, will also deallocate the memory
     virtual bool RemoveKinBody(KinBodyPtr pbody) = 0;
     /// returns true if body is present

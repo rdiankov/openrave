@@ -1337,7 +1337,7 @@ public:
             }
 
             if( !_pinterface )
-                RAVELOG_ERRORA("xml readers failed to create instance of type %d\n",type);
+                RAVELOG_ERRORA(str(boost::format("xml readers failed to create instance of type %s:%s\n")%RaveGetInterfaceName(type)%strtype));
             else {
                 _type = _pinterface->GetInterfaceType();
 

@@ -646,20 +646,6 @@ class Environment : public EnvironmentBase
         robots = _vecrobots;
     }
     
-    boost::shared_ptr<void> GetLockedBodies(std::vector<KinBodyPtr>& bodies) const
-    {
-        boost::shared_ptr<boost::mutex::scoped_lock> plock(new boost::mutex::scoped_lock(_mutexBodies));
-        bodies = _vecbodies;
-        return plock;
-    }
-
-    boost::shared_ptr<void> GetLockedRobots(std::vector<RobotBasePtr>& robots) const
-    {
-        boost::shared_ptr<boost::mutex::scoped_lock> plock(new boost::mutex::scoped_lock(_mutexBodies));
-        robots = _vecrobots;
-        return plock;
-    }
-
     /// triangulation of the body including its current transformation. trimesh will be appended the new data.
     virtual bool Triangulate(KinBody::Link::TRIMESH& trimesh, KinBodyConstPtr pbody)
     {

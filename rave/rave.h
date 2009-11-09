@@ -805,20 +805,6 @@ public:
     /// Assumes that the physics are locked. 
     virtual void UpdatePublishedBodies() = 0;
 
-    /// Returns a set of bodies and locks the environment from creating and destroying new bodies
-    /// (ie, body creation of and destruction functions will block until lock is released).
-    /// This function is independent of the environment lock
-    /// \param bodies Fills with all the body pointers in the environment
-    /// \return returns a pointer to a Lock. Destroying the shared_ptr will release the lock
-    virtual boost::shared_ptr<void> GetLockedBodies(std::vector<KinBodyPtr>& bodies) const = 0;
-
-    /// Returns a set of robots and locks the environment from creating and destroying new bodies
-    /// (ie, body creation of and destruction functions will block until lock is released).
-    /// This function is independent of the environment lock
-    /// \param bodies Fills with all the body pointers in the environment
-    /// \return returns a pointer to a Lock. Destroying the shared_ptr will release the lock
-    virtual boost::shared_ptr<void> GetLockedRobots(std::vector<RobotBasePtr>& robots) const = 0;
-
     /// XML processing functions.
     //@{
     typedef boost::function<BaseXMLReaderPtr(InterfaceBasePtr, const std::list<std::pair<std::string,std::string> >&)> CreateXMLReaderFn;

@@ -31,3 +31,9 @@ set_target_properties(customreader PROPERTIES COMPILE_FLAGS ${OPENRAVE_CXXFLAGS}
 set_target_properties(customreader PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS} ${PLUGIN_LINK_FLAGS}")
 target_link_libraries(customreader ${OPENRAVE_LIBRARY})
 install(TARGETS customreader DESTINATION . )
+
+add_executable(orcollision orcollision.cpp)
+set_target_properties(orcollision PROPERTIES COMPILE_FLAGS ${OPENRAVE_CXXFLAGS})
+set_target_properties(orcollision PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS} ${PLUGIN_LINK_FLAGS}")
+target_link_libraries(orcollision ${OPENRAVE_LIBRARY} openrave-core)
+install(TARGETS orcollision DESTINATION . )
