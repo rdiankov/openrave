@@ -403,7 +403,7 @@ class SimpleTextServer : public ProblemInstance
             }
             _listReadThreads.clear();
             _condHasWork.notify_all();
-            _workerthread->join();
+            _workerthread.reset();
 
             bCloseThread = false;
             bInitThread = false;
@@ -468,7 +468,7 @@ class SimpleTextServer : public ProblemInstance
 
                 if( listWorkers.size() == 0 ) {
                     _condWorker.notify_all();
-                    return;
+                    continue;
                 }
             
                 *(volatile bool*)&_bWorking = true;

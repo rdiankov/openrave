@@ -1737,7 +1737,9 @@ public:
 
 class PyEnvironmentBase : public boost::enable_shared_from_this<PyEnvironmentBase>
 {
+#if BOOST_VERSION < 103500
     boost::shared_ptr<EnvironmentMutex::scoped_lock> _envlock;
+#endif
 protected:
     EnvironmentBasePtr _penv;
     boost::shared_ptr<boost::thread> _threadviewer;
@@ -1769,19 +1771,13 @@ public:
     {
         _penv = CreateEnvironment(true);
         _bShutdown = false;
-#if BOOST_VERSION >= 103500
-        _envlock.reset(new EnvironmentMutex::scoped_lock(_penv->GetMutex(),boost::defer_lock_t()));
-#else
-        _envlock.reset(new EnvironmentMutex::scoped_lock(_penv->GetMutex()));
-        _envlock->unlock();
+#if BOOST_VERSION < 103500
+        _envlock.reset(new EnvironmentMutex::scoped_lock(_penv->GetMutex(),false));
 #endif
     }
     PyEnvironmentBase(EnvironmentBasePtr penv) : _penv(penv), _bShutdown(false) {
-#if BOOST_VERSION >= 103500
-        _envlock.reset(new EnvironmentMutex::scoped_lock(_penv->GetMutex(),boost::defer_lock_t()));
-#else
-        _envlock.reset(new EnvironmentMutex::scoped_lock(_penv->GetMutex()));
-        _envlock->unlock();
+#if BOOST_VERSION < 103500
+        _envlock.reset(new EnvironmentMutex::scoped_lock(_penv->GetMutex(),false));
 #endif
     }
 
@@ -1789,11 +1785,8 @@ public:
     {
         _bShutdown = false;
         _penv = pyenv._penv;
-#if BOOST_VERSION >= 103500
-        _envlock.reset(new EnvironmentMutex::scoped_lock(_penv->GetMutex(),boost::defer_lock_t()));
-#else
-        _envlock.reset(new EnvironmentMutex::scoped_lock(_penv->GetMutex()));
-        _envlock->unlock();
+#if BOOST_VERSION < 103500
+        _envlock.reset(new EnvironmentMutex::scoped_lock(_penv->GetMutex(),false));
 #endif
     }
 
@@ -2256,17 +2249,31 @@ public:
 
     void LockPhysics(bool bLock)
     {
+#if BOOST_VERSION < 103500
         if( bLock )
             _envlock->lock();
         else
             _envlock->unlock();
+#else
+        if( bLock )
+            _penv->GetMutex().lock();
+        else
+            _penv->GetMutex().unlock();
+#endif
     }
     void LockPhysics(bool bLock, float timeout)
     {
+#if BOOST_VERSION < 103500
         if( bLock )
             _envlock->lock();
         else
             _envlock->unlock();
+#else
+        if( bLock )
+            _penv->GetMutex().lock();
+        else
+            _penv->GetMutex().unlock();
+#endif
     }
 
     bool SetViewer(const string& viewername, bool showviewer=true)
