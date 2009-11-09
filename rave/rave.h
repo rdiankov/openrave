@@ -200,6 +200,12 @@ enum DebugLevel {
     }
 
 #define DefineRavePrintfA(LEVEL) \
+    inline int RavePrintfA##LEVEL(const std::string& s) \
+    { \
+        printf ("%s", s.c_str()); \
+        return s.size(); \
+    } \
+    \
     inline int RavePrintfA##LEVEL(const char *fmt, ...) \
     { \
         /*ChangeTextColor (stdout, 0, OPENRAVECOLOR##LEVEL);*/ \
@@ -234,6 +240,12 @@ enum DebugLevel {
 // the L in front, we will take their regular string and widen it
 // for them.
 #define DefineRavePrintfA(LEVEL) \
+    inline int RavePrintfA##LEVEL(const std::string& s) \
+    { \
+        printf ("%c[0;%d;%dm%s%c[0;38;48m", 0x1B, OPENRAVECOLOR##LEVEL + 30,8+40,s.c_str(),0x1B); \
+        return s.size(); \
+    } \
+    \
     inline int RavePrintfA##LEVEL(const char *fmt, ...) \
     { \
         va_list list; \
@@ -242,12 +254,6 @@ enum DebugLevel {
         va_end(list); \
         return r; \
     } \
-    \
-    inline int RavePrintfA##LEVEL(const std::string& s) \
-    { \
-        printf ("%c[0;%d;%dm%s%c[0;38;48m", 0x1B, OPENRAVECOLOR##LEVEL + 30,8+40,s.c_str(),0x1B); \
-        return s.size(); \
-    }
 
 #endif
 

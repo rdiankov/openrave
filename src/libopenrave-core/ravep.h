@@ -83,9 +83,36 @@ build openrave must include (used in place of rave.h). Precompiled header.
 #include <winsock2.h>
 #endif
 
+#if _WIN32
+
+inline uint32_t GetMilliTime()
+{
+    LARGE_INTEGER count, freq;
+    QueryPerformanceCounter(&count);
+    QueryPerformanceFrequency(&freq);
+    return (uint32_t)((count.QuadPart * 1000) / freq.QuadPart);
+}
+
+inline uint64_t GetMicroTime()
+{
+    LARGE_INTEGER count, freq;
+    QueryPerformanceCounter(&count);
+    QueryPerformanceFrequency(&freq);
+    return (count.QuadPart * 1000000) / freq.QuadPart;
+}
+
+inline uint64_t GetNanoTime()
+{
+    LARGE_INTEGER count, freq;
+    QueryPerformanceCounter(&count);
+    QueryPerformanceFrequency(&freq);
+    return (count.QuadPart * 1000000000) / freq.QuadPart;
+}
+
+#else
+
 inline void getWallTime(uint32_t& sec, uint32_t& nsec)
 {
-#ifndef WIN32
 #if POSIX_TIMERS > 0
   struct timespec start;
   clock_gettime(CLOCK_REALTIME, &start);
@@ -96,54 +123,6 @@ inline void getWallTime(uint32_t& sec, uint32_t& nsec)
   gettimeofday(&timeofday,NULL);
   sec  = timeofday.tv_sec;
   nsec = timeofday.tv_usec * 1000;
-#endif
-#else
-  // unless I've missed something obvious, the only way to get high-precision
-  // time on Windows is via the QueryPerformanceCounter() call. However,
-  // this is somewhat problematic in Windows XP on some processors, especially
-  // AMD, because the Windows implementation can freak out when the CPU clocks
-  // down to save power. Time can jump or even go backwards. Microsoft has
-  // fixed this bug for most systems now, but it can still show up if you have
-  // not installed the latest CPU drivers (an oxymoron). They fixed all these
-  // problems in Windows Vista, and this API is by far the most accurate that
-  // I know of in Windows, so I'll use it here despite all these caveats
-  static LARGE_INTEGER cpu_freq, init_cpu_time;
-  static Time start_time;
-  if (start_time.isZero())
-  {
-    QueryPerformanceFrequency(&cpu_freq);
-    if (cpu_freq.QuadPart == 0)
-    {
-      abort();
-    }
-    QueryPerformanceCounter(&init_cpu_time);
-    // compute an offset from the Epoch using the lower-performance timer API
-    FILETIME ft;
-    GetSystemTimeAsFileTime(&ft);
-    LARGE_INTEGER start_li;
-    start_li.LowPart = ft.dwLowDateTime;
-    start_li.HighPart = ft.dwHighDateTime;
-    // why did they choose 1601 as the time zero, instead of 1970?
-    // there were no outstanding hard rock bands in 1601.
-#ifdef _MSC_VER
-    start_li.QuadPart -= 116444736000000000Ui64;
-#else
-    start_li.QuadPart -= 116444736000000000ULL;
-#endif
-    start_time.sec = (uint32_t)(start_li.QuadPart / 10000000); // 100-ns units. odd.
-    start_time.nsec = (start_li.LowPart % 10000000) * 100;
-  }
-  LARGE_INTEGER cur_time;
-  QueryPerformanceCounter(&cur_time);
-  LARGE_INTEGER delta_cpu_time;
-  delta_cpu_time.QuadPart = cur_time.QuadPart - init_cpu_time.QuadPart;
-  // todo: how to handle cpu clock drift. not sure it's a big deal for us.
-  // also, think about clock wraparound. seems extremely unlikey, but possible
-  double d_delta_cpu_time = delta_cpu_time.QuadPart / (double)cpu_freq.QuadPart;
-  Time t(start_time + Duration(d_delta_cpu_time));
-
-  sec = t.sec;
-  nsec = t.nsec;
 #endif
 }
 
@@ -167,6 +146,8 @@ inline uint32_t GetMilliTime()
     getWallTime(sec,nsec);
     return (uint64_t)sec*1000 + (uint64_t)nsec/1000000;
 }
+
+#endif
 
 inline int RANDOM_INT(int maximum)
 {

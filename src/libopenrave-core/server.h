@@ -1841,7 +1841,7 @@ protected:
         FOREACH(itid,bodyids) {
             KinBodyPtr pignore = GetEnv()->GetBodyFromNetworkId(*itid);
             if( !pignore )
-                RAVELOG_WARNA("failed to find body %d",index);
+                RAVELOG_WARNA("failed to find body %d",*itid);
             else
                 vignore.push_back(pignore);
         }

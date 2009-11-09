@@ -422,7 +422,7 @@ KinBody::Joint::Joint(KinBodyPtr parent)
     _parent = parent;
     vMimicCoeffs.resize(2); vMimicCoeffs[0] = 1; vMimicCoeffs[1] = 0;
     nMimicJointIndex = -1;
-    fResolution = 0.02;
+    fResolution = dReal(0.02);
     fMaxVel = 1e5f;
     fMaxAccel = 1e5f;
     fMaxTorque = 1e5f;
@@ -1371,7 +1371,7 @@ KinBody::LinkPtr KinBody::GetLink(const std::string& linkname) const
 int KinBody::GetJointIndex(const std::string& jointname) const
 {
     int index = 0;
-    FOREACH(it,_vecjoints) {
+    FOREACHC(it,_vecjoints) {
         if ((*it)->GetName() == jointname )
             return index;
         ++index;
@@ -1381,7 +1381,7 @@ int KinBody::GetJointIndex(const std::string& jointname) const
 
 KinBody::JointPtr KinBody::GetJoint(const std::string& jointname) const
 {
-    FOREACH(it,_vecjoints) {
+    FOREACHC(it,_vecjoints) {
         if ((*it)->GetName() == jointname )
             return *it;
     }

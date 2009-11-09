@@ -11,7 +11,7 @@ endif()
 
 add_library(libopenrave-core SHARED ${openrave_core_SOURCES})
 
-add_dependencies(libopenrave-core libopenrave libopenrave_static collada15reader)
+add_dependencies(libopenrave-core libopenrave libopenrave_static)
 set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave-core
                                   SOVERSION "${RAVE_CURRENT}"
                                   VERSION "${RAVE_RELEASE}"
@@ -27,7 +27,7 @@ install(FILES openrave-core.h DESTINATION include)
 # visual studio needs static built
 add_library(libopenrave-core_static STATIC ${openrave_core_SOURCES})
 
-add_dependencies(libopenrave-core_static libopenrave libopenrave_static collada15reader)
+add_dependencies(libopenrave-core_static libopenrave libopenrave_static)
 set_target_properties(libopenrave-core_static PROPERTIES OUTPUT_NAME openrave-core
                                   SOVERSION "${RAVE_CURRENT}"
                                   VERSION "${RAVE_RELEASE}"

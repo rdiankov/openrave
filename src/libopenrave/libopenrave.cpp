@@ -306,7 +306,7 @@ public:
             pNewSample[i] = pCurSample[i] + 10.0f*fRadius*(RaveRandomFloat()-0.5f);
 
         // normalize
-        dReal fRatio = fRatio*RaveRandomFloat();
+        dReal fRatio = fRadius*RaveRandomFloat();
             
         //assert(_robot->ConfigDist(&_vzero[0], &_vSampleConfig[0]) < B+1);
         while(_distmetricfn(pNewSample,pCurSample) > fRatio ) {
@@ -475,7 +475,7 @@ bool ParseXMLData(BaseXMLReader* preader, const char* buffer, int size)
     xmlParserCtxtPtr ctxt;
     
     ctxt = xmlCreateMemoryParserCtxt(buffer, size);
-    if (ctxt == NULL) return -1;
+    if (ctxt == NULL) return false;
     if (ctxt->sax != (xmlSAXHandlerPtr) &xmlDefaultSAXHandler)
         xmlFree(ctxt->sax);
     ctxt->sax = sax;
