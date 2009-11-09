@@ -182,6 +182,17 @@ protected:
         return v;
     }
 
+    // needed because the public headers can only declare friendship with OpenRAVEXMLReaders (doing this because of MSVC)
+    static vector<dReal>& GetJointLowerLimit(KinBody::JointPtr pjoint) { return pjoint->_vlowerlimit; }
+    static vector<dReal>& GetJointUpperLimit(KinBody::JointPtr pjoint) { return pjoint->_vupperlimit; }
+    static std::list<KinBody::Link::GEOMPROPERTIES>& GetLinkGeometries(KinBody::LinkPtr plink) { return plink->_listGeomProperties; }
+    static TransformMatrix& GetLinkTransMass(KinBody::LinkPtr plink) { return plink->_transMass; }
+    static dReal& GetLinkMass(KinBody::LinkPtr plink) { return plink->_mass; }
+    static KinBody::LinkPtr* GetJointBodies(KinBody::JointPtr pjoint) { return pjoint->bodies; }
+    static KinBody::Link::TRIMESH& GetLinkCollision(KinBody::LinkPtr plink) { return plink->collision; }
+    static bool& GetLinkStatic(KinBody::LinkPtr plink) { return plink->bStatic; }
+    static Transform& GetGeomTransform(KinBody::Link::GEOMPROPERTIES& geom) { return geom._t; }
+    static Transform& GetLinkTransform(KinBody::LinkPtr plink) { return plink->_t; }
 
     struct XMLREADERDATA
     {
@@ -385,7 +396,7 @@ public:
         }
         static MASS GetSphericalMassD(dReal radius, Vector pos, dReal density)
         {
-            return GetSphericalMass(radius, pos, (dReal)4.0/(dReal)3.0 * M_PI * radius * radius * radius * density);
+            return GetSphericalMass(radius, pos, dReal(4.0)/dReal(3.0) * PI * radius * radius * radius * density);
         }
         static MASS GetCylinderMass(dReal radius, dReal height, Vector pos, dReal totalmass)
         {
@@ -400,7 +411,7 @@ public:
         }
         static MASS GetCylinderMassD(dReal radius, dReal height, Vector pos, dReal density)
         {
-            return GetCylinderMass(radius, height, pos, M_PI*radius*radius*height*density);
+            return GetCylinderMass(radius, height, pos, PI*radius*radius*height*density);
         }
 
         /// adds two masses together
@@ -502,7 +513,7 @@ public:
             bool bStatic = false;
             string linkname, linkfilename;
 
-            FOREACH(itatt,atts) {
+            FOREACHC(itatt,atts) {
                 if( itatt->first == "name" ) {
                     linkname = itatt->second;
                     _plink = pparent->GetLink(linkname);
@@ -532,9 +543,9 @@ public:
                 _plink->name = linkname;
     
             if( bStaticSet )
-                _plink->bStatic = bStatic;
+                GetLinkStatic(_plink) = bStatic;
 
-            _itgeomprop = _plink->_listGeomProperties.end();
+            _itgeomprop = GetLinkGeometries(_plink).end();
         }
         virtual ~LinkXMLReader() {}
 
@@ -543,7 +554,7 @@ public:
             if( !!_pcurreader ) {
                 _pcurreader->startElement(xmlname, atts);
             }
-            else if( _itgeomprop != _plink->_listGeomProperties.end() ) {
+            else if( _itgeomprop != GetLinkGeometries(_plink).end() ) {
                 if( xmlname != "translation" && xmlname!="rotationmat" && xmlname!="rotationaxis" && xmlname!="quat" && xmlname!="diffusecolor" && xmlname != "ambientcolor" && xmlname != "transparency" && xmlname!="render" &&
                     xmlname != "extents" && xmlname != "radius" && xmlname != "height" &&
                     !(_itgeomprop->GetType() == KinBody::Link::GEOMPROPERTIES::GeomTrimesh && xmlname=="data") ) {
@@ -566,7 +577,7 @@ public:
             else if( xmlname == "geom" ) {
                 string type;
                 bool bDraw = true;
-                FOREACH(itatt,atts) {
+                FOREACHC(itatt,atts) {
                     if( itatt->first == "type") {
                         type = itatt->second;
                     }
@@ -581,7 +592,7 @@ public:
                     type = "box";
                 }
 
-                _itgeomprop = _plink->_listGeomProperties.insert(_plink->_listGeomProperties.end(),KinBody::Link::GEOMPROPERTIES());
+                _itgeomprop = GetLinkGeometries(_plink).insert(GetLinkGeometries(_plink).end(),KinBody::Link::GEOMPROPERTIES());
                 if( stricmp(type.c_str(), "box") == 0 )
                     _itgeomprop->type = KinBody::Link::GEOMPROPERTIES::GeomBox;
                 else if( stricmp(type.c_str(), "sphere") == 0 )
@@ -602,7 +613,7 @@ public:
             else if( xmlname == "mass" ) {
                 // find the type of mass and create
                 _masstype = MT_Sphere;
-                FOREACH(itatt,atts) {
+                FOREACHC(itatt,atts) {
                     if( itatt->first == "type") {
                         if( stricmp(itatt->second.c_str(), "mimicgeom") == 0 ) {
                             _masstype = MT_MimicGeom;
@@ -635,35 +646,35 @@ public:
                     if( xmlname == "body" ) {
                         // directly apply transform to all geomteries
                         Transform tnew = _plink->GetTransform();
-                        FOREACH(itgeom, _plink->_listGeomProperties)
-                            itgeom->_t = tnew * itgeom->_t;
-                        _plink->collision.ApplyTransform(tnew);
+                        FOREACH(itgeom, GetLinkGeometries(_plink))
+                            GetGeomTransform(*itgeom) = tnew * GetGeomTransform(*itgeom);
+                        GetLinkCollision(_plink).ApplyTransform(tnew);
                         _plink->SetTransform(tOrigTrans);
                     }
 
                     _pcurreader.reset();
                 }
             }
-            else if( _itgeomprop != _plink->_listGeomProperties.end() ) {
+            else if( _itgeomprop != GetLinkGeometries(_plink).end() ) {
                 if( xmlname == "translation" ) {
-                    _ss >> _itgeomprop->_t.trans.x >> _itgeomprop->_t.trans.y >> _itgeomprop->_t.trans.z;
+                    _ss >> GetGeomTransform(*_itgeomprop).trans.x >> GetGeomTransform(*_itgeomprop).trans.y >> GetGeomTransform(*_itgeomprop).trans.z;
                 }
                 else if( xmlname == "rotationmat" ) {
                     TransformMatrix tnew;
                     _ss >> tnew.m[0] >> tnew.m[1] >> tnew.m[2] >> tnew.m[4] >> tnew.m[5] >> tnew.m[6] >> tnew.m[8] >> tnew.m[9] >> tnew.m[10];
-                    _itgeomprop->_t.rot = (Transform(tnew)*_itgeomprop->_t).rot;
+                    GetGeomTransform(*_itgeomprop).rot = (Transform(tnew)*GetGeomTransform(*_itgeomprop)).rot;
                 }
                 else if( xmlname == "rotationaxis" ) {
                     Vector vaxis; dReal fangle=0;
                     _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
                     Transform tnew; tnew.rotfromaxisangle(vaxis.normalize3(), fangle * PI / 180.0f);
-                    _itgeomprop->_t.rot = (tnew*_itgeomprop->_t).rot;
+                    GetGeomTransform(*_itgeomprop).rot = (tnew*GetGeomTransform(*_itgeomprop)).rot;
                 }
                 else if( xmlname == "quat" ) {
                     Transform tnew;
                     _ss >> tnew.rot.x >> tnew.rot.y >> tnew.rot.z >> tnew.rot.w;
                     tnew.rot.normalize4();
-                    _itgeomprop->_t.rot = (tnew*_itgeomprop->_t).rot;
+                    GetGeomTransform(*_itgeomprop).rot = (tnew*GetGeomTransform(*_itgeomprop)).rot;
                 }
                 else if( xmlname == "render" ) {
                     // check attributes for format (default is vrml)
@@ -688,7 +699,7 @@ public:
                         // rotate on x axis by pi/2
                         Transform trot;
                         trot.rotfromaxisangle(Vector(1, 0, 0), PI/2);
-                        _itgeomprop->_t.rot = (_itgeomprop->_t*trot).rot;
+                        GetGeomTransform(*_itgeomprop).rot = (GetGeomTransform(*_itgeomprop)*trot).rot;
                     }
 
                     // call before attaching the geom
@@ -697,9 +708,9 @@ public:
                     }
 
                     KinBody::Link::TRIMESH trimesh = _itgeomprop->GetCollisionMesh();
-                    trimesh.ApplyTransform(_itgeomprop->_t);
-                    _plink->collision.Append(trimesh);
-                    _itgeomprop = _plink->_listGeomProperties.end();
+                    trimesh.ApplyTransform(GetGeomTransform(*_itgeomprop));
+                    GetLinkCollision(_plink).Append(trimesh);
+                    _itgeomprop = GetLinkGeometries(_plink).end();
                 }
                 else {
                     // could be type specific features
@@ -804,8 +815,8 @@ public:
                 else
                     totalmass = MASS::GetSphericalMass(_vMassExtents.x, Vector(), _fTotalMass);
         
-                _plink->_transMass = totalmass.t;
-                _plink->_mass = totalmass.fTotalMass;
+                GetLinkTransMass(_plink) = totalmass.t;
+                GetLinkMass(_plink) = totalmass.fTotalMass;
                 tOrigTrans = _plink->GetTransform();
 
                 Transform cur;
@@ -849,8 +860,8 @@ public:
                 }
                 else if( _masstype == MT_Custom ) {
                     if( xmlname == "com" ) {
-                        _ss >> _plink->_transMass.trans.x >> _plink->_transMass.trans.y >> _plink->_transMass.trans.z;
-                        _massCustom.t.trans = _plink->_transMass.trans;
+                        _ss >> GetLinkTransMass(_plink).trans.x >> GetLinkTransMass(_plink).trans.y >> GetLinkTransMass(_plink).trans.z;
+                        _massCustom.t.trans = GetLinkTransMass(_plink).trans;
                     }
                     else if( xmlname == "inertia" ) {
                         _ss >> _massCustom.t.m[0] >> _massCustom.t.m[1] >> _massCustom.t.m[2] >> _massCustom.t.m[4] >> _massCustom.t.m[5] >> _massCustom.t.m[6] >> _massCustom.t.m[8] >> _massCustom.t.m[9] >> _massCustom.t.m[10];
@@ -865,24 +876,24 @@ public:
             else if( xmlname == "translation" ) {
                 Vector v;
                 _ss >> v.x >> v.y >> v.z;
-                _plink->_t.trans += v;
+                GetLinkTransform(_plink).trans += v;
             }
             else if( xmlname == "rotationmat" ) {
                 TransformMatrix tnew;
                 _ss >> tnew.m[0] >> tnew.m[1] >> tnew.m[2] >> tnew.m[4] >> tnew.m[5] >> tnew.m[6] >> tnew.m[8] >> tnew.m[9] >> tnew.m[10];
-                _plink->_t.rot = (Transform(tnew)*_plink->_t).rot;
+                GetLinkTransform(_plink).rot = (Transform(tnew)*GetLinkTransform(_plink)).rot;
             }
             else if( xmlname == "rotationaxis" ) {
                 Vector vaxis; dReal fangle=0;
                 _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
                 Transform tnew; tnew.rotfromaxisangle(vaxis.normalize3(), fangle * PI / 180.0f);
-                _plink->_t.rot = (tnew*_plink->_t).rot;
+                GetLinkTransform(_plink).rot = (tnew*GetLinkTransform(_plink)).rot;
             }
             else if( xmlname == "quat" ) {
                 Transform tnew;
                 _ss >> tnew.rot.x >> tnew.rot.y >> tnew.rot.z >> tnew.rot.w;
                 tnew.rot.normalize4();
-                _plink->_t.rot = (tnew*_plink->_t).rot;
+                GetLinkTransform(_plink).rot = (tnew*GetLinkTransform(_plink)).rot;
             }
             else if( xmlname == "offsetfrom" ) {
                 // figure out which body
@@ -937,7 +948,7 @@ public:
             fWeights[0] = fWeights[1] = fWeights[2] = 1;
             _pjoint->type = KinBody::Joint::JointHinge;
 
-            FOREACH(itatt,atts) {
+            FOREACHC(itatt,atts) {
                 if( itatt->first == "name" ) {
                     _pjoint->name = itatt->second;
                 }
@@ -974,24 +985,24 @@ public:
                 }
             }
 
-            _pjoint->_vlowerlimit.resize(_pjoint->GetDOF());
-            _pjoint->_vupperlimit.resize(_pjoint->GetDOF());
+            GetJointLowerLimit(_pjoint).resize(_pjoint->GetDOF());
+            GetJointUpperLimit(_pjoint).resize(_pjoint->GetDOF());
             if( _pjoint->GetType() == KinBody::Joint::JointSlider ) {
                 for(int i = 0; i < _pjoint->GetDOF(); ++i) {
-                    _pjoint->_vlowerlimit[i] = -100000;
-                    _pjoint->_vupperlimit[i] = 100000;
+                    GetJointLowerLimit(_pjoint)[i] = -100000;
+                    GetJointUpperLimit(_pjoint)[i] = 100000;
                 }
             }
             else if( _pjoint->GetType() == KinBody::Joint::JointSpherical ) {
                 for(int i = 0; i < _pjoint->GetDOF(); ++i) {
-                    _pjoint->_vlowerlimit[i] = -1000;
-                    _pjoint->_vupperlimit[i] = 1000;
+                    GetJointLowerLimit(_pjoint)[i] = -1000;
+                    GetJointUpperLimit(_pjoint)[i] = 1000;
                 }
             }
             else {
                 for(int i = 0; i < _pjoint->GetDOF(); ++i) {
-                    _pjoint->_vlowerlimit[i] = -PI;
-                    _pjoint->_vupperlimit[i] = PI;
+                    GetJointLowerLimit(_pjoint)[i] = -PI;
+                    GetJointUpperLimit(_pjoint)[i] = PI;
                 }
             }
         }
@@ -1039,8 +1050,8 @@ public:
                     _pjoint->type == KinBody::Joint::JointHinge2 ) {
             
                     for(int i = 0; i < numindices; ++i) {
-                        if( _pjoint->_vlowerlimit[i] < -PI || _pjoint->_vupperlimit[i] > PI ) {
-                            _pjoint->offset += 0.5f * (_pjoint->_vlowerlimit[i] + _pjoint->_vupperlimit[i]);
+                        if( GetJointLowerLimit(_pjoint)[i] < -PI || GetJointUpperLimit(_pjoint)[i] > PI ) {
+                            _pjoint->offset += 0.5f * (GetJointLowerLimit(_pjoint)[i] + GetJointUpperLimit(_pjoint)[i]);
                             ++numbad;
                         }
                     }
@@ -1052,25 +1063,25 @@ public:
 
                 Transform tbody0, tbody1;
 
-                if( !_pjoint->bodies[0] || !_pjoint->bodies[1] ) {
+                if( !GetJointBodies(_pjoint)[0] || !GetJointBodies(_pjoint)[1] ) {
                     RAVELOG_WARNA("one or more attached bodies are invalid for joint %s\n", _pjoint->GetName().c_str());
-                    if( !_pjoint->bodies[1] )
-                        _pjoint->bodies[1] = _pparent->GetLinks().front();
-                    if( !_pjoint->bodies[0] )
-                        _pjoint->bodies[0] = _pparent->GetLinks().front();
+                    if( !GetJointBodies(_pjoint)[1] )
+                        GetJointBodies(_pjoint)[1] = _pparent->GetLinks().front();
+                    if( !GetJointBodies(_pjoint)[0] )
+                        GetJointBodies(_pjoint)[0] = _pparent->GetLinks().front();
                 }
 
                 // make sure first body is always closer to the root, unless the second body is static
-                if( !_pjoint->bodies[1]->IsStatic() ) {
-                    if( _pjoint->bodies[0]->IsStatic() || (_pjoint->bodies[0]->GetIndex() > _pjoint->bodies[1]->GetIndex() && !_pjoint->bodies[1]->IsStatic()) ) {
+                if( !GetJointBodies(_pjoint)[1]->IsStatic() ) {
+                    if( GetJointBodies(_pjoint)[0]->IsStatic() || (GetJointBodies(_pjoint)[0]->GetIndex() > GetJointBodies(_pjoint)[1]->GetIndex() && !GetJointBodies(_pjoint)[1]->IsStatic()) ) {
                         for(int i = 0; i < _pjoint->GetDOF(); ++i)
                             _pjoint->vAxes[i] = -_pjoint->vAxes[i];
-                        swap(_pjoint->bodies[0], _pjoint->bodies[1]);
+                        swap(GetJointBodies(_pjoint)[0], GetJointBodies(_pjoint)[1]);
                     }
                 }
 
-                tbody0 = _pjoint->bodies[0]->GetTransform();
-                tbody1 = _pjoint->bodies[1]->GetTransform();
+                tbody0 = GetJointBodies(_pjoint)[0]->GetTransform();
+                tbody1 = GetJointBodies(_pjoint)[1]->GetTransform();
 
                 Transform toffsetfrom;
                 if( !!_offsetfrom ) {
@@ -1081,7 +1092,7 @@ public:
                 }
 
                 Transform trel;
-                if( _pjoint->bodies[1]->IsStatic() ) {
+                if( GetJointBodies(_pjoint)[1]->IsStatic() ) {
                     trel = tbody1.inverse() * tbody0;
                     toffsetfrom = tbody1.inverse() * toffsetfrom;
                 }
@@ -1090,7 +1101,7 @@ public:
                     toffsetfrom = tbody0.inverse() * toffsetfrom;
                 }
 
-                if( _pjoint->bodies[0]->IsStatic() ) {
+                if( GetJointBodies(_pjoint)[0]->IsStatic() ) {
                     RAVELOG_WARNA("joint %s: all attached links are static!\n", _pjoint->GetName().c_str());
                 }
 
@@ -1127,12 +1138,12 @@ public:
                     throw openrave_exception(str(boost::format("unknown joint type %d")%_pjoint->type));
                 }
 
-                if( _pjoint->bodies[1]->IsStatic() ) {
+                if( GetJointBodies(_pjoint)[1]->IsStatic() ) {
                     _pjoint->tLeft = _pparent->GetTransform().inverse() * tbody1 * _pjoint->tLeft;
-                    _pjoint->bodies[0]->SetTransform(_pjoint->tLeft * _pjoint->tRight);
+                    GetJointBodies(_pjoint)[0]->SetTransform(_pjoint->tLeft * _pjoint->tRight);
                 }
                 else
-                    _pjoint->bodies[1]->SetTransform(tbody0 * _pjoint->tLeft * _pjoint->tRight);
+                    GetJointBodies(_pjoint)[1]->SetTransform(tbody0 * _pjoint->tLeft * _pjoint->tRight);
 
                 _pjoint->tinvRight = _pjoint->tRight.inverse();
                 _pjoint->tinvLeft = _pjoint->tLeft.inverse();
@@ -1141,10 +1152,10 @@ public:
                     _pparent->_vecJointWeights.push_back(fWeights[i]);
 
                 // have to transform back
-                if( !!_pjoint->bodies[0] )
-                    _pjoint->bodies[0]->SetTransform(tbody0);
-                if( !!_pjoint->bodies[1] )
-                    _pjoint->bodies[1]->SetTransform(tbody1);
+                if( !!GetJointBodies(_pjoint)[0] )
+                    GetJointBodies(_pjoint)[0]->SetTransform(tbody0);
+                if( !!GetJointBodies(_pjoint)[1] )
+                    GetJointBodies(_pjoint)[1]->SetTransform(tbody1);
 
                 return true;
             }
@@ -1154,7 +1165,7 @@ public:
             }
             else if( xmlname == "body" ) {
                 // figure out which body
-                int index = !_pjoint->bodies[0] ? 0 : 1;
+                int index = !GetJointBodies(_pjoint)[0] ? 0 : 1;
                 bool bQuery = true;
                 string linkname;
                 _ss >> linkname;
@@ -1162,26 +1173,26 @@ public:
                 FOREACHC(itlink, _pparent->GetLinks()) {
                     if( stricmp((*itlink)->GetName().c_str(), linkname.c_str()) == 0 ) {
                         bQuery = !(*itlink)->IsStatic();
-                        _pjoint->bodies[index] = *itlink;
+                        GetJointBodies(_pjoint)[index] = *itlink;
                         break;
                     }
                 }
             
-                if( !_pjoint->bodies[index] && bQuery ) {
+                if( !GetJointBodies(_pjoint)[index] && bQuery ) {
                     RAVELOG_WARNA("Failed to find body %s for joint %s\n", linkname.c_str(), _pjoint->name.c_str());
                     GetXMLErrorCount()++;
                 }
             }
             else if( xmlname == "lostop" ) {
-                _pjoint->_vlowerlimit.resize(numindices);
-                FOREACH(it,_pjoint->_vlowerlimit) {
+                GetJointLowerLimit(_pjoint).resize(numindices);
+                FOREACH(it,GetJointLowerLimit(_pjoint)) {
                     _ss >> *it;
                     *it *= fRatio;
                 }
             }
             else if( xmlname == "histop" ) {
-                _pjoint->_vupperlimit.resize(numindices);
-                FOREACH(it,_pjoint->_vupperlimit) {
+                GetJointUpperLimit(_pjoint).resize(numindices);
+                FOREACH(it,GetJointUpperLimit(_pjoint)) {
                     _ss >> *it;
                     *it *= fRatio;
                 }
@@ -1277,13 +1288,13 @@ public:
     public:
     InterfaceXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pinterface, PluginType type, const string& xmltag, const std::list<std::pair<std::string,std::string> >& atts) : _penv(penv), _type(type), _pinterface(pinterface), _xmltag(xmltag) {
             string strtype;
-            FOREACH(itatt,atts) {
+            FOREACHC(itatt,atts) {
                 if( itatt->first == "type" ) {
                     strtype = itatt->second;
                 }
                 else if( itatt->first == "file" ) {
                     std::list<std::pair<std::string,std::string> > listnewatts;
-                    FOREACH(itatt2,atts) {
+                    FOREACHC(itatt2,atts) {
                         if( itatt2->first != "file" )
                             listnewatts.push_back(*itatt2);
                     }
@@ -1451,7 +1462,7 @@ public:
             _bOverwriteAmbient = false;
             _bOverwriteTransparency = false;
 
-            FOREACH(itatt,atts) {
+            FOREACHC(itatt,atts) {
                 if( itatt->first == "prefix" ) {
                     _prefix = itatt->second;
                 }
@@ -1550,7 +1561,7 @@ public:
             else if( xmlname == "mass" ) {
                 // find the type of mass and create
                 _masstype = LinkXMLReader::MT_Sphere;
-                FOREACH(itatt, atts) {
+                FOREACHC(itatt, atts) {
                     if( itatt->first == "type" ) {
                         if( stricmp(itatt->second.c_str(), "mimicgeom") == 0 ) {
                             _masstype = LinkXMLReader::MT_MimicGeom;
@@ -1678,21 +1689,21 @@ public:
                 if( _bOverwriteDiffuse ) {
                     // overwrite the color
                     FOREACH(itlink, _pchain->_veclinks) {
-                        FOREACH(itprop, (*itlink)->_listGeomProperties)
+                        FOREACH(itprop, GetLinkGeometries(*itlink))
                             itprop->diffuseColor = _diffusecol;
                     }
                 }
                 if( _bOverwriteAmbient ) {
                     // overwrite the color
                     FOREACH(itlink, _pchain->_veclinks) {
-                        FOREACH(itprop, (*itlink)->_listGeomProperties)
+                        FOREACH(itprop, GetLinkGeometries(*itlink))
                             itprop->ambientColor = _ambientcol;
                     }
                 }
                 if( _bOverwriteTransparency ) {
                     // overwrite the color
                     FOREACH(itlink, _pchain->_veclinks) {
-                        FOREACH(itprop, (*itlink)->_listGeomProperties)
+                        FOREACH(itprop, GetLinkGeometries(*itlink))
                             itprop->ftransparency = _transparency;
                     }
                 }
@@ -1798,7 +1809,7 @@ public:
             if( !_pmanip )
                 _pmanip.reset(new RobotBase::Manipulator(probot));
 
-            FOREACH(itatt,atts) {
+            FOREACHC(itatt,atts) {
                 if( itatt->first == "name" ) {
                     _pmanip->_name = itatt->second;
                 }
@@ -1994,7 +2005,7 @@ public:
             if( !_psensor )
                 _psensor.reset(new RobotBase::AttachedSensor(probot));
             
-            FOREACH(itatt, atts) {
+            FOREACHC(itatt, atts) {
                 if( itatt->first == "name" ) {
                     _psensor->_name = itatt->second;
                 }

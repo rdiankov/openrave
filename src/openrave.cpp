@@ -48,6 +48,11 @@ using namespace std;
 //#include <signal.h>
 //#endif
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <winsock2.h>
+#endif
+
 
 #ifdef _MSC_VER
 #define PRIdS "Id"

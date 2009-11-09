@@ -99,7 +99,7 @@ public:
             
             virtual AABB ComputeAABB(const Transform& t) const;
 
-        private:
+//        private:
             /// triangulates the geometry object and initializes collisionmesh. GeomTrimesh types must already be triangulated
             /// \param fTesselation to control how fine the triangles need to be
             /// 1.0f is the default value that 

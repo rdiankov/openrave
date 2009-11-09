@@ -397,7 +397,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
     void _SyncCallback(ODESpace::KinBodyInfoConstPtr pinfo)
     {
         // reset dynamics
-        FOREACH(itlink, pinfo->vlinks) {
+        FOREACHC(itlink, pinfo->vlinks) {
             if( (*itlink)->body != NULL ) {
                 dBodySetAngularVel((*itlink)->body, 0, 0, 0);
                 dBodySetLinearVel((*itlink)->body, 0, 0, 0);

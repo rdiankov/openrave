@@ -1578,7 +1578,7 @@ protected:
             FOREACHC(it, (*itmanip)->GetArmJoints())
                 os << *it << " ";
             os << (*itmanip)->GetClosingDirection().size() << " ";
-            FOREACH(it, (*itmanip)->GetClosingDirection())
+            FOREACHC(it, (*itmanip)->GetClosingDirection())
                 os << *it << " ";
             if( (*itmanip)->GetIKSolverName().size() == 0 )
                 os << "0 ";
