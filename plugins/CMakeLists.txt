@@ -12,7 +12,7 @@ else()
 endif()
 
 add_subdirectory(basecontrollers)
-add_subdirectory(basemanipulation)
+add_subdirectory(rmanipulation)
 add_subdirectory(baserobots)
 add_subdirectory(basesensors)
 add_subdirectory(bulletrave)
