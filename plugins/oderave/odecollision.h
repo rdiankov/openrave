@@ -32,7 +32,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         KinBody::LinkConstPtr _plink;
         bool _bCollision;
         bool _bOneCollision;
-        dReal fraymaxdist;
+        OpenRAVE::dReal fraymaxdist;
     };
 
     inline boost::shared_ptr<ODECollisionChecker> shared_checker() { return boost::static_pointer_cast<ODECollisionChecker>(shared_from_this()); }
@@ -48,7 +48,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
             dGeomDestroy(geomray);
     }
 
-    virtual void SetTolerance(dReal tolerance) {}
+    virtual void SetTolerance(OpenRAVE::dReal tolerance) {}
     
     virtual bool InitEnvironment()
     {
@@ -341,7 +341,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         }
 
         odespace->Synchronize();
-        dReal fmaxdist = OpenRAVE::RaveSqrt(ray.dir.lengthsqr3());
+        OpenRAVE::dReal fmaxdist = OpenRAVE::RaveSqrt(ray.dir.lengthsqr3());
         if( fabsf(fmaxdist-1) < 1e-4 )
             RAVELOG_DEBUGA("CheckCollision: ray direction length is 1.0, note that only collisions within a distance of 1.0 will be checked\n");
         

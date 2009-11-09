@@ -125,7 +125,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         RAVELOG_ERRORA("setting ode body velocities not supported!\n");
         return false;
     }
-    virtual bool SetBodyVelocity(KinBodyPtr pbody, const Vector& linearvel, const Vector& angularvel, const std::vector<dReal>& pJointVelocity)
+    virtual bool SetBodyVelocity(KinBodyPtr pbody, const Vector& linearvel, const Vector& angularvel, const std::vector<OpenRAVE::dReal>& pJointVelocity)
     {
         RAVELOG_ERRORA("setting ode body velocities not supported!\n");
         return false;
@@ -151,7 +151,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         return true;
     }
 
-    virtual bool GetBodyVelocity(KinBodyConstPtr pbody, Vector& linearvel, Vector& angularvel, std::vector<dReal>& pJointVelocity)
+    virtual bool GetBodyVelocity(KinBodyConstPtr pbody, Vector& linearvel, Vector& angularvel, std::vector<OpenRAVE::dReal>& pJointVelocity)
     {
         GetBodyVelocity(pbody,linearvel,angularvel);
 
@@ -159,7 +159,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         vector<JointGetFn>::iterator itfn;
         FOREACHC(it, pbody->GetJoints()) {
             dJointID joint = odespace->GetJoint(*it);
-            vector<dReal>::iterator itvel = pJointVelocity.begin()+(*it)->GetDOFIndex();
+            vector<OpenRAVE::dReal>::iterator itvel = pJointVelocity.begin()+(*it)->GetDOFIndex();
             FORIT(itfn, _jointgetvel[dJointGetType(joint)])
                 *itvel++ = (*itfn)(joint);
         }
@@ -191,19 +191,19 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         return true;
     }
 
-    virtual bool SetJointVelocity(KinBody::JointPtr pjoint, const std::vector<dReal>& pJointVelocity)
+    virtual bool SetJointVelocity(KinBody::JointPtr pjoint, const std::vector<OpenRAVE::dReal>& pJointVelocity)
     {
         dJointID joint = odespace->GetJoint(pjoint);
         BOOST_ASSERT( joint != NULL );
 
-        std::vector<dReal>::const_iterator itvel = pJointVelocity.begin();
+        std::vector<OpenRAVE::dReal>::const_iterator itvel = pJointVelocity.begin();
         odespace->Synchronize(KinBodyConstPtr(pjoint->GetParent()));
         for(int i = 0; i < pjoint->GetDOF(); ++i)
             _jointset[dJointGetType(joint)](joint, dParamVel + dParamGroup * i, *itvel++);
         return true;
     }
 
-    virtual bool GetJointVelocity(KinBody::JointConstPtr pjoint, std::vector<dReal>& pJointVelocity)
+    virtual bool GetJointVelocity(KinBody::JointConstPtr pjoint, std::vector<OpenRAVE::dReal>& pJointVelocity)
     {
         dJointID joint = odespace->GetJoint(pjoint);
         BOOST_ASSERT( joint != NULL );
@@ -211,7 +211,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         odespace->Synchronize(KinBodyConstPtr(pjoint->GetParent()));
         vector<JointGetFn>::iterator itfn;
         pJointVelocity.resize(pjoint->GetDOF());
-        vector<dReal>::iterator itvel = pJointVelocity.begin();
+        vector<OpenRAVE::dReal>::iterator itvel = pJointVelocity.begin();
         FORIT(itfn, _jointgetvel[dJointGetType(joint)])
             *itvel++ = (*itfn)(joint);
         return true;
@@ -246,7 +246,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         return true;
     }
 
-    virtual bool AddJointTorque(KinBody::JointPtr pjoint, const std::vector<dReal>& pTorques)
+    virtual bool AddJointTorque(KinBody::JointPtr pjoint, const std::vector<OpenRAVE::dReal>& pTorques)
     {
         dJointID joint = odespace->GetJoint(pjoint);
         BOOST_ASSERT( joint != NULL );
