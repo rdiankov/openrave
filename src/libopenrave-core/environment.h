@@ -147,7 +147,6 @@ class Environment : public EnvironmentBase
 
         // dont' join, might not return
         RAVELOG_DEBUGA("Environment destructor\n");
-        _threadSimulation->join();
         _threadSimulation.reset();
 
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
@@ -159,8 +158,10 @@ class Environment : public EnvironmentBase
             _listProblems.clear();
         }
 
-        _pPhysicsEngine->DestroyEnvironment();
-        _pCurrentChecker->DestroyEnvironment();
+        if( !!_pPhysicsEngine )
+            _pPhysicsEngine->DestroyEnvironment();
+        if( !!_pCurrentChecker )
+            _pCurrentChecker->DestroyEnvironment();
 
         RAVELOG_DEBUGA("destroying plugins\n");
 
@@ -179,13 +180,17 @@ class Environment : public EnvironmentBase
     virtual void Reset()
     {
         RAVELOG_DEBUGA("resetting raveviewer\n");
-        _pCurrentViewer->deselect();
-        _pCurrentViewer->Reset();
+        if( !!_pCurrentViewer ) {
+            _pCurrentViewer->deselect();
+            _pCurrentViewer->Reset();
+        }
     
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
-        _pPhysicsEngine->DestroyEnvironment();
-        _pCurrentChecker->DestroyEnvironment();
+        if( !!_pPhysicsEngine )
+            _pPhysicsEngine->DestroyEnvironment();
+        if( !!_pCurrentChecker )
+            _pCurrentChecker->DestroyEnvironment();
 
         {
             boost::mutex::scoped_lock lock(_mutexBodies);
@@ -212,8 +217,10 @@ class Environment : public EnvironmentBase
 //        }
         _listOwnedObjects.clear();
 
-        _pCurrentChecker->InitEnvironment();
-        _pPhysicsEngine->InitEnvironment();
+        if( !!_pCurrentChecker )
+            _pCurrentChecker->InitEnvironment();
+        if( !!_pPhysicsEngine )
+            _pPhysicsEngine->InitEnvironment();
     }
 
     virtual void GetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins)
@@ -465,7 +472,8 @@ class Environment : public EnvironmentBase
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
-        _pPhysicsEngine->DestroyEnvironment();
+        if( !!_pPhysicsEngine )
+            _pPhysicsEngine->DestroyEnvironment();
         _pPhysicsEngine = pengine;
         if( !_pPhysicsEngine ) {
             RAVELOG_DEBUGA("disabling physics\n");
@@ -485,7 +493,8 @@ class Environment : public EnvironmentBase
         if( _pCurrentChecker == pchecker )
             return true;
         
-        _pCurrentChecker->DestroyEnvironment(); // delete all resources
+        if( !!_pCurrentChecker )
+            _pCurrentChecker->DestroyEnvironment(); // delete all resources
         _pCurrentChecker = pchecker;
         if( !_pCurrentChecker ) {
             RAVELOG_DEBUGA("disabling collisions\n");
@@ -981,6 +990,10 @@ protected:
     virtual void Clone(boost::shared_ptr<Environment const> r, int options)
     {
         Destroy();
+        AttachViewer(RaveViewerBasePtr());
+        SetCollisionChecker(CollisionCheckerBasePtr());
+        SetPhysicsEngine(PhysicsEngineBasePtr());
+
         _nBodiesModifiedStamp = r->_nBodiesModifiedStamp;
         _homedirectory = r->_homedirectory;
         _pCurrentViewer.reset(new DummyRaveViewer(shared_from_this()));
@@ -992,7 +1005,7 @@ protected:
 
         _bDestroying = false;
         _bDestroyed = false;
-        _bEnableSimulation = false;
+        _bEnableSimulation = r->_bEnableSimulation;
 
         SetDebugLevel(r->GetDebugLevel());
 
@@ -1092,8 +1105,9 @@ protected:
             FOREACH(itbody, _vecbodies) {
                 GetCollisionChecker()->InitKinBody(*itbody);
                 GetPhysicsEngine()->InitKinBody(*itbody);
-                (*itbody)->ComputeJointHierarchy();
             }
+            FOREACH(itbody,_vecbodies)
+                (*itbody)->ComputeJointHierarchy();
         }
         if( options & Clone_Viewer ) {
             if( !!r->GetViewer() ) {

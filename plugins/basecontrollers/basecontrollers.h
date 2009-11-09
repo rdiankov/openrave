@@ -130,8 +130,14 @@ class IdealController : public ControllerBase
 
         throw openrave_exception("not commands supported",ORE_CommandNotSupported);
     }
-    virtual bool IsDone() { return _ptraj == NULL || _bIsDone; }
-    virtual dReal GetTime() const { return fTime; }
+    virtual bool IsDone()
+    {
+        return _ptraj == NULL || _bIsDone;
+    }
+    virtual dReal GetTime() const
+    {
+        return fTime;
+    }
     virtual RobotBasePtr GetRobot() const { return _probot; }
 
 private:

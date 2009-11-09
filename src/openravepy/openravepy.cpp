@@ -1776,7 +1776,14 @@ public:
         _envlock->unlock();
 #endif
     }
-    PyEnvironmentBase(EnvironmentBasePtr penv) : _penv(penv), _bShutdown(false) {}
+    PyEnvironmentBase(EnvironmentBasePtr penv) : _penv(penv), _bShutdown(false) {
+#if BOOST_VERSION >= 103500
+        _envlock.reset(new EnvironmentMutex::scoped_lock(_penv->GetMutex(),boost::defer_lock_t()));
+#else
+        _envlock.reset(new EnvironmentMutex::scoped_lock(_penv->GetMutex()));
+        _envlock->unlock();
+#endif
+    }
 
     PyEnvironmentBase(const PyEnvironmentBase& pyenv)
     {

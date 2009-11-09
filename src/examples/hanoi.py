@@ -173,17 +173,21 @@ if __name__ == "__main__":
                       help='Name of collision checker to use when solving')
     (options, args) = parser.parse_args()
 
-    env = Environment()
-    env.SetViewer('qtcoin')
+    oldenv = Environment()
 
     if options.collision is not None:
-        c = env.CreateCollisionChecker(options.collision)
+        c = oldenv.CreateCollisionChecker(options.collision)
         if c is not None:
             print('setting %s collision checker'%options.collision)
-            env.SetCollisionChecker(c)
+            oldenv.SetCollisionChecker(c)
 
-    env.Reset()
-    env.Load('data/hanoi_complex.env.xml')
+    # test cloning
+    oldenv.Reset()
+    oldenv.Load('data/hanoi_complex.env.xml')
+    env = oldenv.CloneSelf(CloningOptions.Bodies+CloningOptions.RealControllers)
+    env.SetViewer('qtcoin')
+    oldenv.Destroy() # destroy the old environment
+
     robot = env.GetRobots()[0]
 
     g_probsmanip = env.CreateProblem('basemanipulation')
