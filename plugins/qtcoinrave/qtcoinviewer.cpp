@@ -15,7 +15,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "qtcoin.h"
 
-#include <GL/glew.h> // Handles OpenGL extensions
 #include <Inventor/elements/SoGLCacheContextElement.h>
 
 #include <Inventor/actions/SoWriteAction.h>
@@ -42,44 +41,38 @@ const float TIMER_SENSOR_INTERVAL = (1.0f/60.0f);
 #define VIDEO_HEIGHT 480
 #define VIDEO_FRAMERATE 30 //60
 
-//class MySoQtExaminerViewer : public SoQtExaminerViewer
-//{
-//public:
-//    MySoQtExaminerViewer(QWidget *parent=NULL) : SoQtExaminerViewer(parent) {}
-//    
-//protected:
-//    
-//    SbBool processSoEvent(const SoEvent *const event)
-//    {
-//        if( event->getTypeId() == SoLocation2Event::getClassTypeId() ) {
-//            RAVELOG_INFOA("mouse: %d, %d\n",(int)event->getPosition()[0],(int)event->getPosition()[1]);
-//        }
-//            
-//        return SoQtExaminerViewer::processSoEvent(event);
-//    }
-//};
-
 int QtCoinViewer::s_InitRefCount = 0;
 
-QtCoinViewer::QtCoinViewer(EnvironmentBase* penv)
+static SoErrorCB* s_DefaultHandlerCB=NULL;
+void CustomCoinHandlerCB(const class SoError * error, void * data)
+{
+    if( error != NULL )
+        // extremely annoying errors
+        if( strstr(error->getDebugString().getString(),"Coin warning in SbLine::setValue()") != NULL ||
+            strstr(error->getDebugString().getString(),"Coin warning in SbDPLine::setValue()") != NULL ||
+            strstr(error->getDebugString().getString(),"Coin warning in SbVec3f::setValue()") != NULL )
+            return;
+
+    if( s_DefaultHandlerCB != NULL )
+        s_DefaultHandlerCB(error,data);
+}
+
+QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
 #if QT_VERSION >= 0x040000 // check for qt4
     : QMainWindow(NULL, Qt::Window), RaveViewerBase(penv),
 #else
       : QMainWindow(NULL, "OpenRAVE", Qt::WType_TopLevel), RaveViewerBase(penv),
 #endif
-_ivOffscreen(SbViewportRegion(VIDEO_WIDTH, VIDEO_HEIGHT))
+      _ivOffscreen(SbViewportRegion(VIDEO_WIDTH, VIDEO_HEIGHT))
 {
 #if QT_VERSION >= 0x040000 // check for qt4
     setWindowTitle("OpenRAVE");
     statusBar()->showMessage(tr("Status Bar"));
 #endif
+    _bLockEnvironment = true;
     _bAVIInit = false;
-    pTogglePublishAnytime = pToggleDynamicSimulation = NULL;
+    pToggleDynamicSimulation = NULL;
     _pToggleDebug = NULL;
-
-    pthread_mutex_init(&_mutexMessages, NULL);
-    pthread_mutex_init(&_mutexUpdating, NULL);
-    pthread_mutex_init(&_mutexMouseMove, NULL);
 
     //vlayout = new QVBoxLayout(this);
     view1 = new QGroupBox(this);
@@ -90,9 +83,9 @@ _ivOffscreen(SbViewportRegion(VIDEO_WIDTH, VIDEO_HEIGHT))
 
     _pviewer = new SoQtExaminerViewer(view1);
 
-    _pdragger = NULL;
     _selectedNode = NULL;
-    _pSelectedItem = NULL;
+    s_DefaultHandlerCB = SoDebugError::getHandlerCallback();
+    SoDebugError::setHandlerCallback(CustomCoinHandlerCB,NULL);
 
     // initialize the environment
     _ivRoot = new SoSelection();
@@ -155,7 +148,6 @@ _ivOffscreen(SbViewportRegion(VIDEO_WIDTH, VIDEO_HEIGHT))
     _timerVideo = new SoTimerSensor(GlobVideoFrame, this);
     _timerVideo->setInterval(SbTime(1/(float)VIDEO_FRAMERATE));
 
-    _renderAction = NULL;
     _altDown[0] = _altDown[1]  = false;
     _ctrlDown[0] = _ctrlDown[1] = false;
     _bAVIInit = false;
@@ -181,7 +173,6 @@ _ivOffscreen(SbViewportRegion(VIDEO_WIDTH, VIDEO_HEIGHT))
     _bShareBitmap = true;
     _bManipTracking = false;
     _bAntialiasing = false;
-    _glInit = false;
     _viewGeometryMode = VG_RenderOnly;
     _bSelfCollision = false;
 
@@ -191,8 +182,6 @@ _ivOffscreen(SbViewportRegion(VIDEO_WIDTH, VIDEO_HEIGHT))
 
     if (!_timerVideo->isScheduled())
         _timerVideo->schedule(); 
-
-    pphysics = NULL;
 }
 
 QtCoinViewer::~QtCoinViewer()
@@ -200,29 +189,19 @@ QtCoinViewer::~QtCoinViewer()
     RAVELOG_DEBUGA("destroying qtcoinviewer\n");
 
     {
-        MutexLock m(&_mutexMessages);
+        boost::mutex::scoped_lock lock(_mutexMessages);
 
-        list<EnvMessage*>::iterator itmsg;
+        list<EnvMessagePtr>::iterator itmsg;
         FORIT(itmsg, _listMessages)
             (*itmsg)->viewerexecute(); // have to execute instead of deleteing since there can be threads waiting
 
-        list<pthread_mutex_t*>::iterator it = listMsgMutexes.begin();
-        FORIT(it, listMsgMutexes) {
-            pthread_mutex_destroy(*it);
-            delete *it;
-        }
-        
         _listMessages.clear();
-        listMsgMutexes.clear();
     }
 
     if( _bAVIInit ) {
-        RAVEPRINT(L"stopping avi\n");
+        RAVELOG_INFOA("stopping avi\n");
         STOP_AVI();
     }
-
-    if(_glInit)
-      FinishGL();
 
     _ivRoot->unref();
     _pOffscreenVideo->unref();
@@ -238,9 +217,7 @@ QtCoinViewer::~QtCoinViewer()
     _ivRoot->removeDeselectionCallback(_DeselectHandler, this);
     _eventKeyboardCB->unref();
 
-    pthread_mutex_destroy(&_mutexMessages);
-    pthread_mutex_destroy(&_mutexUpdating);
-    pthread_mutex_destroy(&_mutexMouseMove);
+    _condUpdateModels.notify_all();
 
     // don't dereference
 //    if( --s_InitRefCount <= 0 )
@@ -270,32 +247,34 @@ void QtCoinViewer::_mousemove_cb(SoEventCallback * node)
     SoPickedPoint * pt = rp.getPickedPoint(0);
     if( pt != NULL ) {
         SoPath* path = pt->getPath();
-        Item *pItem = NULL;
+        ItemPtr pItem;
         SoNode* node = NULL;
         for(int i = path->getLength()-1; i >= 0; --i) {
             node = path->getNode(i);
 
             // search the environment
             FOREACH(it, _mapbodies) {
-                assert( it->second != NULL );
+                BOOST_ASSERT( !!it->second );
                 if (it->second->ContainsIvNode(node)) {
                     pItem = it->second;
                     break;
                 }
             }
 
-            if( pItem != NULL )
+            if( !!pItem )
                 break;
         }
         
-        if (pItem != NULL) {
-            KinBodyItem* pKinBody = dynamic_cast<KinBodyItem*>(pItem);
-            KinBody::Link* pSelectedLink = pKinBody != NULL ? pKinBody->GetLinkFromIv(node) : NULL;
+        if (!!pItem) {
+            KinBodyItemPtr pKinBody = boost::dynamic_pointer_cast<KinBodyItem>(pItem);
+            KinBody::LinkPtr pSelectedLink;
+            if( !!pKinBody )
+                pSelectedLink = pKinBody->GetLinkFromIv(node);
 
             stringstream ss;
-            ss << "mouse on " << _stdwcstombs(pKinBody->GetBody()->GetName()) << ":";
-            if( pSelectedLink != NULL )
-                ss << _stdwcstombs(pSelectedLink->GetName());
+            ss << "mouse on " << pKinBody->GetBody()->GetName() << ":";
+            if( !!pSelectedLink )
+                ss << pSelectedLink->GetName();
             else
                 ss << "(NULL)";
             ss << " (" << std::fixed << std::setprecision(4)
@@ -303,16 +282,16 @@ void QtCoinViewer::_mousemove_cb(SoEventCallback * node)
                << std::setw(8) << std::left << pt->getPoint()[1] << ", "
                << std::setw(8) << std::left << pt->getPoint()[2] << ")" << endl;
 
-            MutexLock m(&_mutexMessages);
+            boost::mutex::scoped_lock lock(_mutexMessages);
             _strMouseMove = ss.str();
         }
         else {
-            MutexLock m(&_mutexMessages);
+            boost::mutex::scoped_lock lock(_mutexMessages);
             _strMouseMove.resize(0);
         }
     }
     else {
-        MutexLock m(&_mutexMessages);
+        boost::mutex::scoped_lock lock(_mutexMessages);
         _strMouseMove.resize(0);
     }
 }
@@ -320,7 +299,7 @@ void QtCoinViewer::_mousemove_cb(SoEventCallback * node)
 class ViewerSetSizeMessage : public QtCoinViewer::EnvMessage
 {
 public:
-    ViewerSetSizeMessage(QtCoinViewer* pviewer, void** ppreturn, int width, int height)
+    ViewerSetSizeMessage(QtCoinViewerPtr pviewer, void** ppreturn, int width, int height)
         : EnvMessage(pviewer, ppreturn, false), _width(width), _height(height) {}
     
     virtual void viewerexecute() {
@@ -334,7 +313,7 @@ private:
 
 void QtCoinViewer::ViewerSetSize(int w, int h)
 {
-    EnvMessage* pmsg = new ViewerSetSizeMessage(this, NULL, w, h);
+    EnvMessagePtr pmsg(new ViewerSetSizeMessage(shared_viewer(), (void**)NULL, w, h));
     pmsg->callerexecute();
 }
 
@@ -346,7 +325,7 @@ void QtCoinViewer::_ViewerSetSize(int w, int h)
 class ViewerMoveMessage : public QtCoinViewer::EnvMessage
 {
 public:
-    ViewerMoveMessage(QtCoinViewer* pviewer, void** ppreturn, int x, int y)
+    ViewerMoveMessage(QtCoinViewerPtr pviewer, void** ppreturn, int x, int y)
         : EnvMessage(pviewer, ppreturn, false), _x(x), _y(y) {}
     
     virtual void viewerexecute() {
@@ -360,7 +339,7 @@ private:
 
 void QtCoinViewer::ViewerMove(int x, int y)
 {
-    EnvMessage* pmsg = new ViewerMoveMessage(this, NULL, x, y);
+    EnvMessagePtr pmsg(new ViewerMoveMessage(shared_viewer(), (void**)NULL, x, y));
     pmsg->callerexecute();
 }
 
@@ -372,7 +351,7 @@ void QtCoinViewer::_ViewerMove(int x, int y)
 class ViewerSetTitleMessage : public QtCoinViewer::EnvMessage
 {
 public:
-    ViewerSetTitleMessage(QtCoinViewer* pviewer, void** ppreturn, const char* ptitle)
+    ViewerSetTitleMessage(QtCoinViewerPtr pviewer, void** ppreturn, const string& ptitle)
         : EnvMessage(pviewer, ppreturn, false), _title(ptitle) {}
     
     virtual void viewerexecute() {
@@ -381,30 +360,24 @@ public:
     }
 
 private:
-    string _title;
+    const string& _title;
 };
 
-void QtCoinViewer::ViewerSetTitle(const char* ptitle)
+void QtCoinViewer::ViewerSetTitle(const string& ptitle)
 {
-    if( ptitle == NULL )
-        return;
-
-    EnvMessage* pmsg = new ViewerSetTitleMessage(this, NULL, ptitle);
+    EnvMessagePtr pmsg(new ViewerSetTitleMessage(shared_viewer(), (void**)NULL, ptitle));
     pmsg->callerexecute();
 }
 
-void QtCoinViewer::_ViewerSetTitle(const char* ptitle)
+void QtCoinViewer::_ViewerSetTitle(const string& ptitle)
 {
-    setWindowTitle(ptitle);
+    setWindowTitle(ptitle.c_str());
 }
 
-bool QtCoinViewer::LoadModel(const char* pfilename)
+bool QtCoinViewer::LoadModel(const string& pfilename)
 {
-    if( pfilename == NULL )
-        return false;
-
     SoInput mySceneInput;
-    if (mySceneInput.openFile(pfilename)) {
+    if (mySceneInput.openFile(pfilename.c_str())) {
         GetRoot()->addChild(SoDB::readAll(&mySceneInput));
         return true;
     }
@@ -415,80 +388,52 @@ bool QtCoinViewer::LoadModel(const char* pfilename)
 void QtCoinViewer::_StartPlaybackTimer()
 {
     if (!_timerSensor->isScheduled())
-        _timerSensor->schedule(); 
+        _timerSensor->schedule();
 }
 
 void QtCoinViewer::_StopPlaybackTimer()
 {
     if (_timerSensor->isScheduled())
         _timerSensor->unschedule(); 
-}
-
-class GetFractionOccludedMessage : public QtCoinViewer::EnvMessage
-{
-public:
-    GetFractionOccludedMessage(QtCoinViewer* pviewer, void** ppreturn, KinBody* pbody, int width, int height,
-                               float nearPlane, float farPlane, const RaveTransform<float>& extrinsic,
-                               const float* pKK, double& fracOccluded)
-            : EnvMessage(pviewer, ppreturn, true), _pbody(pbody), _width(width), _height(height), _nearPlane(nearPlane),
-              _farPlane(farPlane), _extrinsic(extrinsic), _pKK(pKK), _fracOccluded(fracOccluded) {}
-    
-    virtual void viewerexecute() {
-        void* ret = (void*)_pviewer->_GetFractionOccluded(_pbody, _width, _height, _nearPlane, _farPlane, _extrinsic, _pKK, _fracOccluded);
-        if( _ppreturn != NULL )
-            *_ppreturn = ret;
-        EnvMessage::viewerexecute();
-    }
-
-private:
-    KinBody* _pbody;
-    int _width, _height;
-    float _nearPlane, _farPlane;
-    const RaveTransform<float>& _extrinsic;
-    const float* _pKK;
-    double& _fracOccluded;
-};
-
-bool QtCoinViewer::GetFractionOccluded(KinBody* pbody, int width, int height, float nearPlane, float farPlane, const RaveTransform<float>& extrinsic, const float* pKK, double& fracOccluded)
-{
-    void* ret;
-    if (_timerSensor->isScheduled()) {
-        EnvMessage* pmsg = new GetFractionOccludedMessage(this, &ret, pbody, width, height, nearPlane, farPlane, extrinsic, pKK, fracOccluded);
-        pmsg->callerexecute();
-    }
-    
-    return *(bool*)&ret;
+    boost::mutex::scoped_lock lock(_mutexUpdateModels);
+    _condUpdateModels.notify_all();
 }
 
 class GetCameraImageMessage : public QtCoinViewer::EnvMessage
 {
 public:
-    GetCameraImageMessage(QtCoinViewer* pviewer, void** ppreturn,
-                            void* pMemory, int width, int height, const RaveTransform<float>& extrinsic, const float* pKK)
-            : EnvMessage(pviewer, ppreturn, true), _pMemory(pMemory), _width(width), _height(height), _extrinsic(extrinsic), _pKK(pKK) {
+    GetCameraImageMessage(QtCoinViewerPtr pviewer, void** ppreturn,
+                          std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& extrinsic, const SensorBase::CameraIntrinsics& KK)
+            : EnvMessage(pviewer, ppreturn, true), _memory(memory), _width(width), _height(height), _extrinsic(extrinsic), _KK(KK) {
     }
     
     virtual void viewerexecute() {
-        void* ret = (void*)_pviewer->_GetCameraImage(_pMemory, _width, _height, _extrinsic, _pKK);
+        void* ret = (void*)_pviewer->_GetCameraImage(_memory, _width, _height, _extrinsic, _KK);
         if( _ppreturn != NULL )
             *_ppreturn = ret;
         EnvMessage::viewerexecute();
     }
 
 private:
-    void* _pMemory;
+    vector<uint8_t>& _memory;
     int _width, _height;
     const RaveTransform<float>& _extrinsic;
-    const float* _pKK;
+    const SensorBase::CameraIntrinsics& _KK;
 };
 
-bool QtCoinViewer::GetCameraImage(void* pMemory, int width, int height, const RaveTransform<float>& extrinsic, const float* pKK)
+bool QtCoinViewer::GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK)
 {
     void* ret = NULL;
-    if (_timerSensor->isScheduled()) {
-        EnvMessage* pmsg = new GetCameraImageMessage(this, &ret, pMemory, width, height, extrinsic, pKK);
+    if (_timerSensor->isScheduled() && _bUpdateEnvironment) {
+        if( !ForceUpdatePublishedBodies() ) {
+            RAVELOG_WARNA("failed to GetCameraImage: force update failed\n");
+            return false;
+        }
+        EnvMessagePtr pmsg(new GetCameraImageMessage(shared_viewer(), &ret, memory, width, height, t, KK));
         pmsg->callerexecute();
     }
+    else
+        RAVELOG_WARNA("failed to GetCameraImage: viewer is not updating\n");
     
     return *(bool*)&ret;
 }
@@ -496,13 +441,13 @@ bool QtCoinViewer::GetCameraImage(void* pMemory, int width, int height, const Ra
 class WriteCameraImageMessage : public QtCoinViewer::EnvMessage
 {
 public:
-    WriteCameraImageMessage(QtCoinViewer* pviewer, void** ppreturn, int width, int height,
-                            const RaveTransform<float>& t, const float* pKK, const char* fileName, const char* extension)
+    WriteCameraImageMessage(QtCoinViewerPtr pviewer, void** ppreturn,
+                            int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& fileName, const std::string& extension)
             : EnvMessage(pviewer, ppreturn, true), _width(width), _height(height), _t(t),
-              _pKK(pKK), _fileName(fileName), _extension(extension) {}
+              _KK(KK), _fileName(fileName), _extension(extension) {}
     
     virtual void viewerexecute() {
-        void* ret = (void*)_pviewer->_WriteCameraImage(_width, _height, _t, _pKK, _fileName, _extension);
+        void* ret = (void*)_pviewer->_WriteCameraImage(_width, _height, _t, _KK, _fileName, _extension);
         if( _ppreturn != NULL )
             *_ppreturn = ret;
         EnvMessage::viewerexecute();
@@ -511,17 +456,23 @@ public:
 private:
     int _width, _height;
     const RaveTransform<float>& _t;
-    const float *_pKK;
-    const char* _fileName, *_extension;
+    const SensorBase::CameraIntrinsics& _KK;
+    const string& _fileName, &_extension;
 };
 
-bool QtCoinViewer::WriteCameraImage(int width, int height, const RaveTransform<float>& t, const float* pKK, const char* fileName, const char* extension)
+bool QtCoinViewer::WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& fileName, const std::string& extension)
 {
     void* ret;
-    if (_timerSensor->isScheduled()) {
-        EnvMessage* pmsg = new WriteCameraImageMessage(this, &ret, width, height, t, pKK, fileName, extension);
+    if (_timerSensor->isScheduled() && _bUpdateEnvironment) {
+        if( !ForceUpdatePublishedBodies() ) {
+            RAVELOG_WARNA("failed to WriteCameraImage\n");
+            return false;
+        }
+        EnvMessagePtr pmsg(new WriteCameraImageMessage(shared_viewer(), &ret, width, height, t, KK, fileName, extension));
         pmsg->callerexecute();
     }
+    else
+        RAVELOG_WARNA("failed to WriteCameraImage: viewer is not updating\n");
     
     return *(bool*)&ret;
 }
@@ -529,7 +480,7 @@ bool QtCoinViewer::WriteCameraImage(int width, int height, const RaveTransform<f
 class SetCameraMessage : public QtCoinViewer::EnvMessage
 {
 public:
-    SetCameraMessage(QtCoinViewer* pviewer, void** ppreturn,
+    SetCameraMessage(QtCoinViewerPtr pviewer, void** ppreturn,
                      const RaveVector<float>& pos, const RaveVector<float>& quat)
             : EnvMessage(pviewer, ppreturn, false), _pos(pos), _quat(quat) {}
     
@@ -544,14 +495,14 @@ private:
 
 void QtCoinViewer::SetCamera(const RaveVector<float>& pos, const RaveVector<float>& quat)
 {
-    EnvMessage* pmsg = new SetCameraMessage(this, NULL, pos, quat);
+    EnvMessagePtr pmsg(new SetCameraMessage(shared_viewer(), (void**)NULL, pos, quat));
     pmsg->callerexecute();
 }
 
 class SetCameraLookAtMessage : public QtCoinViewer::EnvMessage
 {
 public:
-    SetCameraLookAtMessage(QtCoinViewer* pviewer, void** ppreturn, const RaveVector<float>& lookat,
+    SetCameraLookAtMessage(QtCoinViewerPtr pviewer, void** ppreturn, const RaveVector<float>& lookat,
                            const RaveVector<float>& campos, const RaveVector<float>& camup)
         : EnvMessage(pviewer, ppreturn, false), _lookat(lookat), _campos(campos), _camup(camup) {}
     
@@ -566,7 +517,7 @@ private:
 
 void QtCoinViewer::SetCameraLookAt(const RaveVector<float>& lookat, const RaveVector<float>& campos, const RaveVector<float>& camup)
 {
-    EnvMessage* pmsg = new SetCameraLookAtMessage(this, NULL, lookat, campos, camup);
+    EnvMessagePtr pmsg(new SetCameraLookAtMessage(shared_viewer(), (void**)NULL, lookat, campos, camup));
     pmsg->callerexecute();
 }
 
@@ -581,7 +532,7 @@ public:
         DT_LineList,
     };
 
-    DrawMessage(QtCoinViewer* pviewer, SoSeparator* pparent, const float* ppoints, int numPoints,
+    DrawMessage(QtCoinViewerPtr pviewer, SoSeparator* pparent, const float* ppoints, int numPoints,
                 int stride, float fwidth, const float* colors, DrawType type)
         : EnvMessage(pviewer, NULL, false), _numPoints(numPoints),
           _fwidth(fwidth), _pparent(pparent), _type(type)
@@ -601,7 +552,7 @@ public:
 
         _bManyColors = true;
     }
-    DrawMessage(QtCoinViewer* pviewer, SoSeparator* pparent, const float* ppoints, int numPoints,
+    DrawMessage(QtCoinViewerPtr pviewer, SoSeparator* pparent, const float* ppoints, int numPoints,
                         int stride, float fwidth, const RaveVector<float>& color, DrawType type)
         : EnvMessage(pviewer, NULL, false), _numPoints(numPoints),
           _fwidth(fwidth), _color(color), _pparent(pparent), _type(type)
@@ -649,7 +600,7 @@ public:
             break;
         }
         
-        assert( _pparent == ret);
+        BOOST_ASSERT( _pparent == ret);
         EnvMessage::viewerexecute();
     }
     
@@ -668,7 +619,7 @@ private:
 void* QtCoinViewer::plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle)
 {
     void* pret = new SoSeparator();
-    EnvMessage* pmsg = new DrawMessage(this, (SoSeparator*)pret, ppoints, numPoints, stride, fPointSize, color, drawstyle ? DrawMessage::DT_Sphere : DrawMessage::DT_Point);
+    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), (SoSeparator*)pret, ppoints, numPoints, stride, fPointSize, color, drawstyle ? DrawMessage::DT_Sphere : DrawMessage::DT_Point));
     pmsg->callerexecute();
 
     return pret;
@@ -677,7 +628,7 @@ void* QtCoinViewer::plot3(const float* ppoints, int numPoints, int stride, float
 void* QtCoinViewer::plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle)
 {
     void* pret = new SoSeparator();
-    EnvMessage* pmsg = new DrawMessage(this, (SoSeparator*)pret, ppoints, numPoints, stride, fPointSize, colors, drawstyle ? DrawMessage::DT_Sphere : DrawMessage::DT_Point);
+    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), (SoSeparator*)pret, ppoints, numPoints, stride, fPointSize, colors, drawstyle ? DrawMessage::DT_Sphere : DrawMessage::DT_Point));
     pmsg->callerexecute();
 
     return pret;
@@ -686,7 +637,7 @@ void* QtCoinViewer::plot3(const float* ppoints, int numPoints, int stride, float
 void* QtCoinViewer::drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
 {
     void* pret = new SoSeparator();
-    EnvMessage* pmsg = new DrawMessage(this, (SoSeparator*)pret, ppoints, numPoints, stride, fwidth, color,DrawMessage::DT_LineStrip);
+    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), (SoSeparator*)pret, ppoints, numPoints, stride, fwidth, color,DrawMessage::DT_LineStrip));
     pmsg->callerexecute();
 
     return pret;
@@ -695,7 +646,7 @@ void* QtCoinViewer::drawlinestrip(const float* ppoints, int numPoints, int strid
 void* QtCoinViewer::drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
 {
     void* pret = new SoSeparator();
-    EnvMessage* pmsg = new DrawMessage(this, (SoSeparator*)pret, ppoints, numPoints, stride, fwidth, colors, DrawMessage::DT_LineStrip);
+    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), (SoSeparator*)pret, ppoints, numPoints, stride, fwidth, colors, DrawMessage::DT_LineStrip));
     pmsg->callerexecute();
 
     return pret;
@@ -704,7 +655,7 @@ void* QtCoinViewer::drawlinestrip(const float* ppoints, int numPoints, int strid
 void* QtCoinViewer::drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
 {
     void* pret = new SoSeparator();
-    EnvMessage* pmsg = new DrawMessage(this, (SoSeparator*)pret, ppoints, numPoints, stride, fwidth, color, DrawMessage::DT_LineList);
+    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), (SoSeparator*)pret, ppoints, numPoints, stride, fwidth, color, DrawMessage::DT_LineList));
     pmsg->callerexecute();
 
     return pret;
@@ -713,7 +664,7 @@ void* QtCoinViewer::drawlinelist(const float* ppoints, int numPoints, int stride
 void* QtCoinViewer::drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
 {
     void* pret = new SoSeparator();
-    EnvMessage* pmsg = new DrawMessage(this, (SoSeparator*)pret, ppoints, numPoints, stride, fwidth, colors, DrawMessage::DT_LineList);
+    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), (SoSeparator*)pret, ppoints, numPoints, stride, fwidth, colors, DrawMessage::DT_LineList));
     pmsg->callerexecute();
 
     return pret;
@@ -722,13 +673,13 @@ void* QtCoinViewer::drawlinelist(const float* ppoints, int numPoints, int stride
 class DrawArrowMessage : public QtCoinViewer::EnvMessage
 {
 public:
-    DrawArrowMessage(QtCoinViewer* pviewer, SoSeparator* pparent, const RaveVector<float>& p1,
+    DrawArrowMessage(QtCoinViewerPtr pviewer, SoSeparator* pparent, const RaveVector<float>& p1,
                      const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color)
         : EnvMessage(pviewer, NULL, false), _p1(p1), _p2(p2), _color(color), _pparent(pparent), _fwidth(fwidth) {}
     
     virtual void viewerexecute() {
         void* ret = _pviewer->_drawarrow(_pparent, _p1, _p2, _fwidth, _color);
-        assert( _pparent == ret );
+        BOOST_ASSERT( _pparent == ret );
         EnvMessage::viewerexecute();
     }
 
@@ -741,7 +692,7 @@ private:
 void* QtCoinViewer::drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color)
 {
     void* pret = new SoSeparator();
-    EnvMessage* pmsg = new DrawArrowMessage(this, (SoSeparator*)pret, p1, p2, fwidth, color);
+    EnvMessagePtr pmsg(new DrawArrowMessage(shared_viewer(), (SoSeparator*)pret, p1, p2, fwidth, color));
     pmsg->callerexecute();
 
     return pret;
@@ -750,13 +701,13 @@ void* QtCoinViewer::drawarrow(const RaveVector<float>& p1, const RaveVector<floa
 class DrawBoxMessage : public QtCoinViewer::EnvMessage
 {
 public:
-    DrawBoxMessage(QtCoinViewer* pviewer, SoSeparator* pparent,
+    DrawBoxMessage(QtCoinViewerPtr pviewer, SoSeparator* pparent,
                    const RaveVector<float>& vpos, const RaveVector<float>& vextents)
         : EnvMessage(pviewer, NULL, false), _vpos(vpos), _vextents(vextents), _pparent(pparent) {}
     
     virtual void viewerexecute() {
         void* ret = _pviewer->_drawbox(_pparent, _vpos, _vextents);
-        assert( _ppreturn == ret );
+        BOOST_ASSERT( _ppreturn == ret );
         EnvMessage::viewerexecute();
     }
     
@@ -768,7 +719,7 @@ private:
 void* QtCoinViewer::drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents)
 {
     void* pret = new SoSeparator();
-    EnvMessage* pmsg = new DrawBoxMessage(this, (SoSeparator*)pret, vpos, vextents);
+    EnvMessagePtr pmsg(new DrawBoxMessage(shared_viewer(), (SoSeparator*)pret, vpos, vextents));
     pmsg->callerexecute();
 
     return pret;
@@ -777,7 +728,7 @@ void* QtCoinViewer::drawbox(const RaveVector<float>& vpos, const RaveVector<floa
 class DrawTriMeshMessage : public QtCoinViewer::EnvMessage
 {
 public:
-    DrawTriMeshMessage(QtCoinViewer* pviewer, SoSeparator* pparent, const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color)
+    DrawTriMeshMessage(QtCoinViewerPtr pviewer, SoSeparator* pparent, const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color)
         : EnvMessage(pviewer, NULL, false), _color(color), _pparent(pparent)
     {
         _vpoints.resize(3*3*numTriangles);
@@ -808,7 +759,7 @@ public:
         //else
         //ret = _pviewer->_drawtrimesh(_pparent, &_vpoints[0], _numPoints, _stride, _fwidth, _color, _drawstyle);
         
-        assert( _pparent == ret);
+        BOOST_ASSERT( _pparent == ret);
         EnvMessage::viewerexecute();
     }
     
@@ -824,7 +775,7 @@ private:
 void* QtCoinViewer::drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color)
 {
     void* pret = new SoSeparator();
-    EnvMessage* pmsg = new DrawTriMeshMessage(this, (SoSeparator*)pret, ppoints, stride, pIndices, numTriangles, color);
+    EnvMessagePtr pmsg(new DrawTriMeshMessage(shared_viewer(), (SoSeparator*)pret, ppoints, stride, pIndices, numTriangles, color));
     pmsg->callerexecute();
 
     return pret;
@@ -833,7 +784,7 @@ void* QtCoinViewer::drawtrimesh(const float* ppoints, int stride, const int* pIn
 class CloseGraphMessage : public QtCoinViewer::EnvMessage
 {
 public:
-    CloseGraphMessage(QtCoinViewer* pviewer, void** ppreturn, void* handle)
+    CloseGraphMessage(QtCoinViewerPtr pviewer, void** ppreturn, void* handle)
         : EnvMessage(pviewer, ppreturn, false), _handle(handle) {}
     
     virtual void viewerexecute() {
@@ -847,14 +798,14 @@ private:
 
 void QtCoinViewer::closegraph(void* handle)
 {
-    EnvMessage* pmsg = new CloseGraphMessage(this, NULL, handle);
+    EnvMessagePtr pmsg(new CloseGraphMessage(shared_viewer(), (void**)NULL, handle));
     pmsg->callerexecute();
 }
 
 class DeselectMessage : public QtCoinViewer::EnvMessage
 {
 public:
-    DeselectMessage(QtCoinViewer* pviewer, void** ppreturn)
+    DeselectMessage(QtCoinViewerPtr pviewer, void** ppreturn)
         : EnvMessage(pviewer, ppreturn, false) {}
     
     virtual void viewerexecute() {
@@ -865,14 +816,14 @@ public:
 
 void QtCoinViewer::deselect()
 {
-    EnvMessage* pmsg = new DeselectMessage(this, NULL);
+    EnvMessagePtr pmsg(new DeselectMessage(shared_viewer(), (void**)NULL));
     pmsg->callerexecute();
 }
 
 class ResetMessage : public QtCoinViewer::EnvMessage
 {
 public:
-    ResetMessage(QtCoinViewer* pviewer, void** ppreturn)
+    ResetMessage(QtCoinViewerPtr pviewer, void** ppreturn)
         : EnvMessage(pviewer, ppreturn, true) {}
     
     virtual void viewerexecute() {
@@ -884,7 +835,7 @@ public:
 void QtCoinViewer::Reset()
 {
     if (_timerSensor->isScheduled()) {
-        EnvMessage* pmsg = new ResetMessage(this, NULL);
+        EnvMessagePtr pmsg(new ResetMessage(shared_viewer(), (void**)NULL));
         pmsg->callerexecute();
     }
 }
@@ -892,7 +843,7 @@ void QtCoinViewer::Reset()
 class SetBkgndColorMessage : public QtCoinViewer::EnvMessage
 {
 public:
-    SetBkgndColorMessage(QtCoinViewer* pviewer, void** ppreturn, const RaveVector<float>& color)
+    SetBkgndColorMessage(QtCoinViewerPtr pviewer, void** ppreturn, const RaveVector<float>& color)
         : EnvMessage(pviewer, ppreturn, false), _color(color) {}
     
     virtual void viewerexecute() {
@@ -907,21 +858,25 @@ private:
 void QtCoinViewer::SetBkgndColor(const RaveVector<float>& color)
 {
     if (_timerSensor->isScheduled()) {
-        EnvMessage* pmsg = new SetBkgndColorMessage(this, NULL, color);
+        EnvMessagePtr pmsg(new SetBkgndColorMessage(shared_viewer(), (void**)NULL, color));
         pmsg->callerexecute();
     }
 }
 
-void QtCoinViewer::StartPlaybackTimer()
+void QtCoinViewer::SetEnvironmentSync(bool bUpdate)
 {
-    MutexLock m(&_mutexUpdating);
-    _bUpdateEnvironment = true;
-}
-
-void QtCoinViewer::StopPlaybackTimer()
-{
-    MutexLock m(&_mutexUpdating);
-    _bUpdateEnvironment = false;
+    boost::mutex::scoped_lock lockupdating(_mutexUpdating);
+    boost::mutex::scoped_lock lock(_mutexUpdateModels);
+    _bUpdateEnvironment = bUpdate;
+    _condUpdateModels.notify_all();
+ 
+    if( !bUpdate ) {
+        // remove all messages in order to release the locks
+        boost::mutex::scoped_lock lockmsg(_mutexMessages);
+        FOREACH(it,_listMessages)
+            (*it)->releasemutex();
+        _listMessages.clear();
+    }
 }
 
 void QtCoinViewer::_SetCamera(const RaveVector<float>& pos, const RaveVector<float>& quat)
@@ -980,17 +935,17 @@ void QtCoinViewer::PrintCamera()
     float fangle;
     GetCamera()->orientation.getValue(axis, fangle);
 
-    RAVEPRINT(L"Camera Transformation:\n"
-              L"position: %f %f %f\n"
-              L"orientation: axis=(%f %f %f), angle = %f (%f deg)\n"
-              L"height angle: %f, focal dist: %f\n", pos[0], pos[1], pos[2],
-              axis[0], axis[1], axis[2], fangle, fangle*180.0f/PI, GetCamera()->heightAngle.getValue(),
-              GetCamera()->focalDistance.getValue());
+    RAVELOG_INFOA("Camera Transformation:\n"
+                  "position: %f %f %f\n"
+                  "orientation: axis=(%f %f %f), angle = %f (%f deg)\n"
+                  "height angle: %f, focal dist: %f\n", pos[0], pos[1], pos[2],
+                  axis[0], axis[1], axis[2], fangle, fangle*180.0f/PI, GetCamera()->heightAngle.getValue(),
+                  GetCamera()->focalDistance.getValue());
 }
 
 RaveTransform<float> QtCoinViewer::GetCameraTransform()
 {
-    MutexLock m(&_mutexMessages);
+    boost::mutex::scoped_lock lock(_mutexMessages);
     RaveTransform<float> t = Tcam;
     return t;
 }
@@ -1351,7 +1306,7 @@ void* QtCoinViewer::_drawarrow(SoSeparator* pparent, const RaveVector<float>& p1
     //check to make sure points aren't the same
     if(sqrt(lengthsqr3(direction)) < 0.9f)
     {
-        RAVEPRINT(L"QtCoinViewer::drawarrow - Error: End points are the same.\n");
+        RAVELOG_WARNA("QtCoinViewer::drawarrow - Error: End points are the same.\n");
         return pparent;
     }
 
@@ -1419,7 +1374,7 @@ void* QtCoinViewer::_drawbox(SoSeparator* pparent, const RaveVector<float>& vpos
 {
     if( pparent == NULL )
         return pparent;
-    RAVEPRINT(L"drawbox not implemented\n");
+    RAVELOG_ERRORA("drawbox not implemented\n");
 
     _pFigureRoot->addChild(pparent);
     return pparent;
@@ -1553,9 +1508,6 @@ void QtCoinViewer::SetupMenus()
     connect( pgroup, SIGNAL(triggered(QAction*)), this, SLOT(ViewGeometryChanged(QAction*)) );
     pgroup = NULL;
 
-    ADD_MENU("Pubilsh Bodies Anytime", true, NULL, "Toggle publishing bodies anytime to the GUI", ViewPublishAnytime);
-    pTogglePublishAnytime = pact;
-
     // add debug levels
     psubmenu = pcurmenu->addMenu(tr("&Debug Levels"));
     _pToggleDebug = new QActionGroup(this);
@@ -1650,7 +1602,7 @@ int QtCoinViewer::main(bool bShow)
 
 void QtCoinViewer::quitmainloop()
 {
-    StopPlaybackTimer();
+    SetEnvironmentSync(false);
     SoQt::exitMainLoop();
 }
 
@@ -1705,12 +1657,12 @@ void QtCoinViewer::_DeselectHandler(void * userData, class SoPath * path)
 
 bool QtCoinViewer::_HandleSelection(SoPath *path)
 {
-    Item *pItem = NULL;
+    ItemPtr pItem;
     float scale = 1.0;
     bool bAllowRotation = true;
 
     // search the robots
-    KinBody::Joint* pjoint = NULL;
+    KinBody::JointPtr pjoint;
     bool bIK = false;
 
     // for loop necessary for 3D models that include files
@@ -1720,14 +1672,14 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
 
         // search the environment
         FOREACH(it, _mapbodies) {
-            assert( it->second != NULL );
+            BOOST_ASSERT( !!it->second );
             if (it->second->ContainsIvNode(node)) {
                 pItem = it->second;
                 break;
             }
         }
 
-        if( pItem != NULL )
+        if( !!pItem )
             break;
     }
         
@@ -1735,16 +1687,33 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
         // the object cannot be selected
         return false;
     }
-        
-    KinBodyItem* pKinBody = dynamic_cast<KinBodyItem*>(pItem);
-    KinBody::Link* pSelectedLink = pKinBody != NULL ? pKinBody->GetLinkFromIv(node) : NULL;
+
+    // try to acquire the environment lock
+    EnvironmentMutex::scoped_try_lock lockenv(GetEnv()->GetMutex(),boost::defer_lock_t());
+    uint64_t basetime = GetMicroTime();
+    while(GetMicroTime()-basetime<100000 ) {
+        lockenv.try_lock();
+        if( !!lockenv )
+            break;
+    }
+
+    if( !lockenv ) {
+        _ivRoot->deselectAll();
+        RAVELOG_WARNA("failed to grab environment lock\n");
+        return false;
+    }
+            
+    KinBodyItemPtr pKinBody = boost::dynamic_pointer_cast<KinBodyItem>(pItem);
+    KinBody::LinkPtr pSelectedLink;
+    if( !!pKinBody )
+        pSelectedLink = pKinBody->GetLinkFromIv(node);
     int jindex=-1;
-    
+
     if( ControlDown() ) {
         
-        if( pSelectedLink != NULL ) {
+        if( !!pSelectedLink ) {
             // search the joint nodes
-            vector<KinBody::Joint*>::const_iterator itjoint;
+            vector<KinBody::JointPtr>::const_iterator itjoint;
             jindex = 0;
             FORIT(itjoint, pKinBody->GetBody()->GetJoints()) {
                 if( pKinBody->GetBody()->DoesAffect(jindex, pSelectedLink->GetIndex()) && 
@@ -1757,16 +1726,12 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
         }
     }
     
-    if( pKinBody != NULL ) {
-        
-    }
-
     // construct an appropriate _pdragger
-    if (pjoint != NULL) {
-        _pdragger = new IvJointDragger(this, pItem, pSelectedLink->GetIndex(), scale, jindex, _bJointHilit);
+    if (!!pjoint) {
+        _pdragger.reset(new IvJointDragger(shared_viewer(), pItem, pSelectedLink->GetIndex(), scale, jindex, _bJointHilit));
     }
     else if (!bIK) {
-        _pdragger = new IvObjectDragger(this, pItem, scale, bAllowRotation);
+        _pdragger.reset(new IvObjectDragger(shared_viewer(), pItem, scale, bAllowRotation));
     }
     else {
         //_pdragger = new IvIKDragger(this, pItem, scale, bAxis);
@@ -1775,7 +1740,7 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
     _pdragger->CheckCollision(true);
     pItem->SetGrab(true);
 
-    assert(_pSelectedItem == NULL);
+    BOOST_ASSERT(!_pSelectedItem);
     _pSelectedItem = pItem;
 
     // record the initially selected transform
@@ -1786,21 +1751,20 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
 
 void QtCoinViewer::_deselect()
 {
-    delete _pdragger; _pdragger = NULL;
-    if( _pSelectedItem != NULL ) {
+    _pdragger.reset();
+    if( !!_pSelectedItem ) {
         _pSelectedItem->SetGrab(false);
-        _pSelectedItem = NULL;
+        _pSelectedItem.reset();
         _ivRoot->deselectAll();
     }
 }
 
 bool QtCoinViewer::_HandleDeselection(SoNode *node)
 {
-    delete _pdragger; _pdragger = NULL;
-    
-    if( _pSelectedItem != NULL ) {
+    _pdragger.reset();
+    if( !!_pSelectedItem ) {
         _pSelectedItem->SetGrab(false);
-        _pSelectedItem = NULL;
+        _pSelectedItem.reset();
     }
     return true;
 }
@@ -1837,7 +1801,7 @@ void QtCoinViewer::_KeyHandler(void * userData, class SoEventCallback * eventCB)
 
 void QtCoinViewer::GlobAdvanceFrame(void* p, SoSensor*)
 {
-    assert( p != NULL );
+    BOOST_ASSERT( p != NULL );
     ((QtCoinViewer*)p)->AdvanceFrame(true);
 }
 
@@ -1870,11 +1834,11 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
             ss << "fps: " << fixed << setprecision(2) << fFPS << endl;
 
         if( !_pviewer->isViewing() ) {
-            MutexLock m(&_mutexMessages);
+            boost::mutex::scoped_lock lock(_mutexMessages);
             ss << _strMouseMove;
         }
 
-        if( _pdragger != NULL )
+        if( !!_pdragger )
             _pdragger->GetMessage(ss);
 
         // search for all new lines
@@ -1898,35 +1862,51 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
 
     if( _pToggleDebug != NULL )
         _pToggleDebug->actions().at(GetEnv()->GetDebugLevel())->setChecked(true);
-    if( pTogglePublishAnytime != NULL )
-        pTogglePublishAnytime->setChecked(GetEnv()->GetPublishBodiesAnytime());
     if( pToggleDynamicSimulation != NULL )
-        pToggleDynamicSimulation->setChecked(stricmp(GetEnv()->GetPhysicsEngine()->GetXMLId(), "ODE")==0);
+        pToggleDynamicSimulation->setChecked(GetEnv()->GetPhysicsEngine()->GetXMLId().size()>0);
 
-    MutexLock m(&_mutexUpdating);
+    boost::mutex::scoped_lock lockupd(_mutexUpdating);
 
     if( _bUpdateEnvironment ) {
-        
         // process all messages
-        list<EnvMessage*> listmessages;
+        list<EnvMessagePtr> listmessages;
         {
-            MutexLock m(&_mutexMessages);
+            boost::mutex::scoped_lock lockmsg(_mutexMessages);
             listmessages.swap(_listMessages);
-            assert( _listMessages.size() == 0 );
+            BOOST_ASSERT( _listMessages.size() == 0 );
         }
         
         FOREACH(itmsg, listmessages)
             (*itmsg)->viewerexecute();
         
-        // have to update model after messages since it can call LockPhysics
+        // have to update model after messages since it can lock the environment
         UpdateFromModel();
         UpdateCameraTransform();
     }
 }
 
+bool QtCoinViewer::ForceUpdatePublishedBodies()
+{
+    {
+        boost::mutex::scoped_lock lockupdating(_mutexUpdating);
+        if( !_bUpdateEnvironment )
+            return false;
+    }
+
+    boost::mutex::scoped_lock lock(_mutexUpdateModels);
+    EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
+    GetEnv()->UpdatePublishedBodies();
+
+    _bModelsUpdated = false;
+    _bLockEnvironment = false; // notify UpdateFromModel to update without acquiring the lock
+    _condUpdateModels.wait(_mutexUpdateModels);
+    _bLockEnvironment = true; // reste
+    return _bModelsUpdated;
+}
+
 void QtCoinViewer::GlobVideoFrame(void* p, SoSensor*)
 {
-    assert( p != NULL );
+    BOOST_ASSERT( p != NULL );
     ((QtCoinViewer*)p)->VideoFrame();
 }
 
@@ -1938,106 +1918,117 @@ void QtCoinViewer::VideoFrame()
 
 void QtCoinViewer::UpdateFromModel()
 {
-    vector<EnvironmentBase::BODYSTATE> vecbodies;
+    boost::mutex::scoped_lock lock(_mutexUpdateModels);
+
+    vector<KinBody::BodyState> vecbodies;
 
     GetEnv()->GetPublishedBodies(vecbodies);
 
     FOREACH(it, _mapbodies)
         it->second->SetUserData(0);
 
+    EnvironmentMutex::scoped_try_lock lockenv(GetEnv()->GetMutex(),boost::defer_lock_t());
+
     FOREACH(itbody, vecbodies) {
-        assert( itbody->pbody != NULL );
-        KinBody* pbody = itbody->pbody; // try to use only as an id, don't call any methods!
+        BOOST_ASSERT( !!itbody->pbody );
+        KinBodyPtr pbody = itbody->pbody; // try to use only as an id, don't call any methods!
+        KinBodyItemPtr pitem = boost::static_pointer_cast<KinBodyItem>(itbody->pguidata);
 
-        KinBodyItem* pitem = static_cast<KinBodyItem*>(itbody->pguidata);
-
-        if( pitem == NULL ) {
-            // create a new body
-            GetEnv()->LockPhysics(true);
-
+        if( !pitem ) {
             // make sure pbody is actually present
             if( GetEnv()->GetBodyFromNetworkId(itbody->networkid) == pbody ) {
             
                 // check to make sure the real GUI data is also NULL
-                if( pbody->GetGuiData() == NULL ) {
+                if( !pbody->GetGuiData() ) {
                     if( _mapbodies.find(pbody) != _mapbodies.end() ) {
-                        RAVELOG(L"body %S already registered!\n", pbody->GetName());
-                        GetEnv()->LockPhysics(false);
+                        RAVELOG_WARNA("body %s already registered!\n", pbody->GetName().c_str());
                         continue;
                     }
 
+                    if( _bLockEnvironment && !lockenv ) {
+//                        boosboost::system_time xt;
+//                        boost::xtime_get(&xt,boost::TIME_UTC);
+//                        xt.nsec += 100000; // wait 100us
+//                        if( xt.nsec >= 1000000000 ) {
+//                            xt.nsec -= 1000000000;
+//                            xt.sec += 1;
+//                        }
+//                        lockenv.timed_lock(xt);
+                        uint64_t basetime = GetMicroTime();
+                        while(GetMicroTime()-basetime<1000 ) {
+                            lockenv.try_lock();
+                            if( !!lockenv )
+                                break;
+                        }
+                        if( !lockenv ) {
+                            RAVELOG_VERBOSEA("couldn't acquire viewer lock\n");
+                            return; // couldn't acquire the lock, try next time. This prevents deadlock situations
+                        }
+                    }
+
                     if( pbody->IsRobot() )
-                        pitem = new RobotItem(this, (RobotBase*)pbody, _viewGeometryMode);
+                        pitem.reset(new RobotItem(shared_viewer(), boost::static_pointer_cast<RobotBase>(pbody), _viewGeometryMode));
                     else
-                        pitem = new KinBodyItem(this, pbody, _viewGeometryMode);
+                        pitem.reset(new KinBodyItem(shared_viewer(), pbody, _viewGeometryMode));
                         
                     pbody->SetGuiData(pitem);
-                    GetEnv()->LockPhysics(false);
-                    
                     _mapbodies[pbody] = pitem;
                 }
                 else {
-                    pitem = static_cast<KinBodyItem*>(pbody->GetGuiData());
-                    assert( _mapbodies.find(pbody) != _mapbodies.end() && _mapbodies[pbody] == pitem );
-                    GetEnv()->LockPhysics(false);
+                    pitem = boost::static_pointer_cast<KinBodyItem>(pbody->GetGuiData());
+                    BOOST_ASSERT( _mapbodies.find(pbody) != _mapbodies.end() && _mapbodies[pbody] == pitem );
                 }
             }
             else {
                 // body is gone
-                GetEnv()->LockPhysics(false);
                 continue;
             }
         }
         
-        map<KinBody*, KinBodyItem*>::iterator itmap = _mapbodies.find(pbody);
+        map<KinBodyPtr, KinBodyItemPtr>::iterator itmap = _mapbodies.find(pbody);
 
         if( itmap == _mapbodies.end() ) {
-            RAVELOG(L"body %S doesn't have a map associated with it!\n", itbody->strname.c_str());
+            RAVELOG_VERBOSEA("body %s doesn't have a map associated with it!\n", itbody->strname.c_str());
             continue;
         }
 
-        assert( pitem->GetBody() == pbody);
-        assert( itmap->second == pitem );
+        BOOST_ASSERT( pitem->GetBody() == pbody);
+        BOOST_ASSERT( itmap->second == pitem );
 
         pitem->SetUserData(1);
-        pitem->UpdateFromModel(itbody->vectrans);
+        pitem->UpdateFromModel(itbody->jointvalues,itbody->vectrans);
     }
 
     FOREACH_NOINC(it, _mapbodies) {
-        if( it->second->GetUserData() == 0 ) {
+        if( !it->second->GetUserData() ) {
             // item doesn't exist anymore, remove it
-            GetEnv()->LockPhysics(true);
-            if( GetEnv()->GetBodyFromNetworkId(it->second->GetNetworkId()) == it->first ) {
-                RAVEPRINT(L"not possible!\n");
-                it->first->SetGuiData(NULL);
-            }
-            GetEnv()->LockPhysics(false);
+            it->first->SetGuiData(boost::shared_ptr<void>());
 
             if( _pSelectedItem == it->second ) {
-                delete _pdragger; _pdragger = NULL;
-                _pSelectedItem = NULL;
+                _pdragger.reset();
+                _pSelectedItem.reset();
                 _ivRoot->deselectAll();
             }
-
-            delete it->second;
 
             _mapbodies.erase(it++);
         }
         else
             ++it;
     }
+
+    _bModelsUpdated = true;
+    _condUpdateModels.notify_all();
 }
 
 void QtCoinViewer::_Reset()
 {
     _deselect();
-
     UpdateFromModel();
+    _condUpdateModels.notify_all();
+
     FOREACH(itbody, _mapbodies) {
-        assert( itbody->first->GetGuiData() == itbody->second );
-        //RAVEPRINT(L"reset %x\n", itbody->first);
-        itbody->first->SetGuiData(NULL);
-        delete itbody->second;
+        BOOST_ASSERT( itbody->first->GetGuiData() == itbody->second );
+        itbody->first->SetGuiData(boost::shared_ptr<void>());
     }
     _mapbodies.clear();
 }
@@ -2047,7 +2038,7 @@ void QtCoinViewer::UpdateCameraTransform()
     // set the camera depending on its mode
 
     // get the camera
-    MutexLock m(&_mutexMessages);
+    boost::mutex::scoped_lock lock(_mutexMessages);
     SbVec3f pos = GetCamera()->position.getValue();
 
     Tcam.trans = RaveVector<float>(pos[0], pos[1], pos[2]);
@@ -2075,10 +2066,7 @@ void QtCoinViewer::LoadEnvironment()
     _Reset();
     GetEnv()->Reset();
 
-    GetEnv()->LockPhysics(true);
     GetEnv()->Load(s.toAscii().data());
-    GetEnv()->LockPhysics(false);
-
     if( bReschedule ) {
         _timerSensor->schedule();
     }
@@ -2092,9 +2080,7 @@ void QtCoinViewer::ImportEnvironment()
     if( s.length() == 0 )
         return;
 
-    GetEnv()->LockPhysics(true);
     GetEnv()->Load(s.toAscii().data());
-    GetEnv()->LockPhysics(false);
 #endif
 }
 
@@ -2105,9 +2091,7 @@ void QtCoinViewer::SaveEnvironment()
     if( s.length() == 0 )
         return;
 
-    GetEnv()->LockPhysics(true);
     GetEnv()->Save(s.toAscii().data());
-    GetEnv()->LockPhysics(false);
 #endif
 }
 
@@ -2130,16 +2114,10 @@ void QtCoinViewer::ViewGeometryChanged(QAction* pact)
 
     UpdateFromModel();
     FOREACH(itbody, _mapbodies) {
-        assert( itbody->first->GetGuiData() == itbody->second );
-        itbody->first->SetGuiData(NULL);
-        delete itbody->second;
+        BOOST_ASSERT( itbody->first->GetGuiData() == itbody->second );
+        itbody->first->SetGuiData(boost::shared_ptr<void>());
     }
     _mapbodies.clear();
-}
-
-void QtCoinViewer::ViewPublishAnytime(bool on)
-{
-    GetEnv()->SetPublishBodiesAnytime(on);
 }
 
 void QtCoinViewer::ViewDebugLevelChanged(QAction* pact)
@@ -2166,17 +2144,11 @@ void QtCoinViewer::ViewToggleFeedBack(bool on)
 void QtCoinViewer::StartPlayback()
 {
     _StartPlaybackTimer();
-    GetEnv()->LockPhysics(true);
-    GetEnv()->StartSimulation(0.002f);
-    GetEnv()->LockPhysics(false);
 }
 
 void QtCoinViewer::StopPlayback()
 {
     _StopPlaybackTimer();
-    GetEnv()->LockPhysics(true);
-    GetEnv()->StopSimulation();
-    GetEnv()->LockPhysics(false);
 }
 
 void QtCoinViewer::RecordSimtimeVideo(bool on)
@@ -2226,219 +2198,12 @@ void QtCoinViewer::RecordSetup()
 #endif
 }
 
-#ifdef _DEBUG
-#define GL_REPORT_ERRORD() { GLenum err = glGetError(); if( err != GL_NO_ERROR ) { RAVEPRINT(L"%s:%d: gl error 0x%x\n", __FILE__, (int)__LINE__, err); } }
-#else
-#define GL_REPORT_ERRORD()
-#endif
-
-bool QtCoinViewer::InitGL(int width, int height)
+bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& _t, const SensorBase::CameraIntrinsics& KK)
 {
-  // Get OpenGL context, set it
-  QGLWidget * glwidget = (QGLWidget *)(_pviewer->getNormalWidget());
-  glwidget->makeCurrent();
-
-  // Set up GLEW, obtain function pointers
-  int err = glewInit();
-  if (GLEW_OK != err) {
-    RAVEPRINT(L"Error initializing OpenGL extensions!\n");
-    return false;
-  }
-
-  // Setup the FBO and bind it for use (needs to be reset to the default buffer (0) later)
-  glGenFramebuffersEXT(1, (GLuint*)&_fb);
-  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, _fb);
-  
-  // Setup the output texture and bind it to the framebuffer
-  glGenTextures(1, (GLuint*)&_outTex);
-  glBindTexture(GL_TEXTURE_RECTANGLE_ARB, _outTex);
-  glTexImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, 4, width, height, 0, GL_RGBA, GL_FLOAT, 0); // Define the texture format
-  glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_NEAREST); // Turn off texture filtering
-  glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_NEAREST); // Turn off texture filtering
-  glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_S, GL_CLAMP); // Turn off texture wrapping
-  glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T, GL_CLAMP); // Turn off texture wrapping
-  glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_RECTANGLE_ARB, _outTex, 0); // Bind it to the framebuffer
-  
-  // Set up the renderbuffer for depth/stencil
-  glGenRenderbuffersEXT(1, (GLuint*)&_rb);
-  glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, _rb);
-  
-  // TODO: Should eventually be GL_DEPTH_STENCIL_EXT. If we don't need stencil, use GL_DEPTH_COMPONENT24
-  glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_DEPTH_STENCIL_NV, width, height); 
-  if( glGetError() != GL_NO_ERROR ) {
-      // can't support stencil buffer, so try just depth
-      glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT, width, height);
-      if( glGetError() != GL_NO_ERROR ) {
-          RAVEPRINT(L"Failed to create renderbuffer\n");
-          return false;
-      }
-  }
-  else
-      glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_STENCIL_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, _rb);
-
-  glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, _rb);
-
-  GLenum status;
-  status = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
-  if(status != GL_FRAMEBUFFER_COMPLETE_EXT) {
-    RAVEPRINT(L"Error setting up output framebuffer\n");
-    return false;
-  }
-  
-  // Unbind texture
-  glBindTexture(GL_TEXTURE_RECTANGLE_ARB, 0);
-
-  // Restore original buffer (so OpenGL code in calling app won't draw to our framebuffer by default)
-  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
-
-  GLint bitsSupported;
-  // check to make sure occlusion query functionality is supported
-  glGetQueryiv(GL_SAMPLES_PASSED, GL_QUERY_COUNTER_BITS_ARB, &bitsSupported);
-  if (bitsSupported == 0) {
-    RAVEPRINT(L"Occlusion query not supported\n");
-    return false;
-  }
-
-  glGenQueriesARB(1, (GLuint*)&_queryBodyAlone);
-  glGenQueriesARB(1, (GLuint*)&_queryWithEnv);
-
-  _renderAction = new SoGLRenderAction(SbViewportRegion(width, height));
-  _renderAction->setTransparencyType(SoGLRenderAction::SORTED_OBJECT_BLEND);
-  _renderAction->setCacheContext(SoGLCacheContextElement::getUniqueCacheContext());
-
-  _pmycam = new SoPerspectiveCamera();
-  _pmycam->ref();
-
-  return true;
-}
-
-void QtCoinViewer::FinishGL() {
-  glDeleteFramebuffersEXT(1, (GLuint*)&_fb);
-  glDeleteRenderbuffersEXT(1, (GLuint*)&_rb);
-  glDeleteTextures(1, (GLuint*)&_outTex);
-
-  glDeleteQueriesARB(1, (GLuint*)&_queryBodyAlone);
-  glDeleteQueriesARB(1, (GLuint*)&_queryWithEnv);
-
-  delete _renderAction;
-  _pmycam->unref();
-}
-
-bool QtCoinViewer::_GetFractionOccluded(KinBody* pbody, int width, int height, float nearPlane, float farPlane, const RaveTransform<float>& extrinsic, const float* pKK, double& fracOccluded)
-{
-     // Create Scenegraph of just this KinBody
-    SoSeparator* root = new SoSeparator();
-    root->ref();
-
-    KinBodyItem* pitem = static_cast<KinBodyItem*>(pbody->GetGuiData());
-    pitem->UpdateFromModel();
-    UpdateFromModel();
-
-    if(!_glInit) {
-        if(!InitGL(width, height)) return false;
-        else _glInit = true;
-    }
-
-    // Set up the camera as required
-    SbViewportRegion vpr(width, height);
-
-    vpr.setViewport(SbVec2f(pKK[2]/(float)(width/2)-1.0f, pKK[3]/(float)(height/2)-1.0f), SbVec2f(1,1));
-    _renderAction->setViewportRegion(vpr);
-    _pmycam->position.setValue(extrinsic.trans.x, extrinsic.trans.y, extrinsic.trans.z);
-    _pmycam->orientation.setValue(extrinsic.rot.y, extrinsic.rot.z, extrinsic.rot.w, extrinsic.rot.x);
-    _pmycam->aspectRatio = (pKK[0]/(float)width) / (pKK[1]/(float)height);
-    _pmycam->heightAngle = atanf(2.0f*pKK[1]/(float)height);
-    _pmycam->nearDistance = nearPlane;
-    _pmycam->farDistance = farPlane;
-
-    root->addChild(_pviewer->getHeadlight()); 
-    root->addChild(_pmycam);
-    root->addChild(_ivStyle);
-    root->addChild(pitem->GetIvRoot());
-
-    // Swap in mycam to the scenegraph
-    _ivRoot->replaceChild(GetCamera(), _pmycam);
-    
-    // Bind to framebuffer
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, _fb);
-
-    // Set the framebuffer as the draw target target
-    glDrawBuffer(GL_COLOR_ATTACHMENT0_EXT);
-
-    // Save OpenGL attributes
-    glPushAttrib(GL_ALL_ATTRIB_BITS);
-
-    // Clear stuff
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LEQUAL);
-    glClearColor(0.0, 0.0, 0.0, 0.0);
-    glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-
-    // Render the body once
-    _renderAction->apply(root);
-
-    // Render the body we're interested in with occlusion querying.
-    glDepthFunc(GL_EQUAL);
-    glBeginQueryARB(GL_SAMPLES_PASSED_ARB, _queryBodyAlone);
-    _renderAction->apply(root);
-    glEndQueryARB(GL_SAMPLES_PASSED_ARB);
-
-    glFlush();
-
-    // Clear stuff
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LEQUAL);
-    glClearColor(0.0, 0.0, 0.0, 0.0);
-    glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-
-    // Render whole scenegraph once
-    _renderAction->apply(_pOffscreenVideo);
-
-    // Render the body we're interested in with occlusion querying against the scenegraph we just rendered
-    glDepthFunc(GL_EQUAL);
-    glBeginQueryARB(GL_SAMPLES_PASSED_ARB, _queryWithEnv);
-    _renderAction->apply(root);
-    glEndQueryARB(GL_SAMPLES_PASSED_ARB);
-
-    glFlush();
-
-    // Wait until the last query (scenegraph query) we issued is done. This implies the previous one (one-body query) is also done
-    do {
-        glGetQueryObjectivARB(_queryWithEnv, GL_QUERY_RESULT_AVAILABLE_ARB, (GLint*)&_available);
-    } while (!_available);
-
-    // Get body query results
-    glGetQueryObjectuivARB(_queryBodyAlone, GL_QUERY_RESULT_ARB, (GLuint*)&_sampleCountAlone);
-
-    // Get body vs. scenegraph results
-    glGetQueryObjectuivARB(_queryWithEnv, GL_QUERY_RESULT_ARB, (GLuint*)&_sampleCountWithEnv);
-
-    if(_sampleCountAlone == 0)
-        fracOccluded = 1;
-    else
-        fracOccluded = 1.0 - (double)_sampleCountWithEnv/(double)_sampleCountAlone;
-
-    //RAVEPRINT(L"frac occluded : %.2f\n", fracOccluded*100);
-
-    // Restore OpenGL attribute state
-    glPopAttrib();
-
-    // Restore the original draw buffer
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
-
-    // Delete our 'one-body' scenegraph
-    root->unref();
-
-    // Restore camera
-    _ivRoot->replaceChild(_pmycam, GetCamera());
-
-    return true;
-}
-
-bool QtCoinViewer::_GetCameraImage(void* pMemory, int width, int height, const RaveTransform<float>& _t, const float* pKK)
-{
-    if( pKK == NULL || pMemory == NULL || !_bCanRenderOffscreen )
+    if( !_bCanRenderOffscreen ) {
+        RAVELOG_WARNA("cannot render offscreen\n");
         return false;
+    }
 
     // have to flip Z axis
     RaveTransform<float> trot; trot.rotfromaxisangle(Vector(1,0,0),PI);
@@ -2452,13 +2217,13 @@ bool QtCoinViewer::_GetCameraImage(void* pMemory, int width, int height, const R
     SoSFFloat farDistance = GetCamera()->farDistance;
 
     SbViewportRegion vpr(width, height);
-    vpr.setViewport(SbVec2f(pKK[2]/(float)(width)-0.5f, 0.5f-pKK[3]/(float)(height)), SbVec2f(1,1));
+    vpr.setViewport(SbVec2f(KK.cx/(float)(width)-0.5f, 0.5f-KK.cy/(float)(height)), SbVec2f(1,1));
     _ivOffscreen.setViewportRegion(vpr);
 
     GetCamera()->position.setValue(t.trans.x, t.trans.y, t.trans.z);
     GetCamera()->orientation.setValue(t.rot.y, t.rot.z, t.rot.w, t.rot.x);
-    GetCamera()->aspectRatio = (pKK[1]/(float)height) / (pKK[0]/(float)width);
-    GetCamera()->heightAngle = 2.0f*atanf(0.5f*height/pKK[1]);
+    GetCamera()->aspectRatio = (KK.fy/(float)height) / (KK.fx/(float)width);
+    GetCamera()->heightAngle = 2.0f*atanf(0.5f*height/KK.fy);
     GetCamera()->nearDistance = 0.01f;
     GetCamera()->farDistance = 100.0f;
     GetCamera()->viewportMapping = SoCamera::LEAVE_ALONE;
@@ -2471,11 +2236,12 @@ bool QtCoinViewer::_GetCameraImage(void* pMemory, int width, int height, const R
 
     if( bSuccess ) {
         // vertically flip since we want upper left corner to correspond to (0,0)
+        memory.resize(width*height*3);
         for(int i = 0; i < height; ++i)
-            memcpy((char*)pMemory+i*width*3, _ivOffscreen.getBuffer()+(height-i-1)*width*3, width*3);
+            memcpy(&memory[i*width*3], _ivOffscreen.getBuffer()+(height-i-1)*width*3, width*3);
     }
     else {
-        RAVEPRINT(L"offscreen renderer failed (check video driver), disabling\n");
+        RAVELOG_WARNA("offscreen renderer failed (check video driver), disabling\n");
         _bCanRenderOffscreen = false; // need this or _ivOffscreen.render will freeze next time
     }
 
@@ -2489,9 +2255,9 @@ bool QtCoinViewer::_GetCameraImage(void* pMemory, int width, int height, const R
     return bSuccess;
 }
 
-bool QtCoinViewer::_WriteCameraImage(int width, int height, const RaveTransform<float>& _t, const float* pKK, const char* fileName, const char* extension)
+bool QtCoinViewer::_WriteCameraImage(int width, int height, const RaveTransform<float>& _t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension)
 {
-    if( pKK == NULL || !_bCanRenderOffscreen )
+    if( !_bCanRenderOffscreen )
         return false;
 
     // have to flip Z axis
@@ -2506,13 +2272,13 @@ bool QtCoinViewer::_WriteCameraImage(int width, int height, const RaveTransform<
     SoSFFloat farDistance = GetCamera()->farDistance;
     
     SbViewportRegion vpr(width, height);
-    vpr.setViewport(SbVec2f(pKK[2]/(float)(width)-0.5f, 0.5f-pKK[3]/(float)(height)), SbVec2f(1,1));
+    vpr.setViewport(SbVec2f(KK.cx/(float)(width)-0.5f, 0.5f-KK.cy/(float)(height)), SbVec2f(1,1));
     _ivOffscreen.setViewportRegion(vpr);
 
     GetCamera()->position.setValue(t.trans.x, t.trans.y, t.trans.z);
     GetCamera()->orientation.setValue(t.rot.y, t.rot.z, t.rot.w, t.rot.x);
-    GetCamera()->aspectRatio = (pKK[1]/(float)height) / (pKK[0]/(float)width);
-    GetCamera()->heightAngle = 2.0f*atanf(0.5f*height/pKK[1]);
+    GetCamera()->aspectRatio = (KK.fy/(float)height) / (KK.fx/(float)width);
+    GetCamera()->heightAngle = 2.0f*atanf(0.5f*height/KK.fy);
     GetCamera()->nearDistance = 0.01f;
     GetCamera()->farDistance = 100.0f;
     GetCamera()->viewportMapping = SoCamera::LEAVE_ALONE;
@@ -2522,14 +2288,14 @@ bool QtCoinViewer::_WriteCameraImage(int width, int height, const RaveTransform<
 
     bool bSuccess = true;
     if( !_ivOffscreen.render(_pOffscreenVideo) ) {
-        RAVEPRINT(L"offscreen renderer failed (check video driver), disabling\n");
+        RAVELOG_WARNA("offscreen renderer failed (check video driver), disabling\n");
         _bCanRenderOffscreen = false;
         bSuccess = false;
     }
     else {
-        if( !_ivOffscreen.isWriteSupported(extension) ) {
-            RAVEPRINT(L"file type %s not supported, supported filetypes are\n", extension);
-            wstringstream ss;
+        if( !_ivOffscreen.isWriteSupported(extension.c_str()) ) {
+            RAVELOG_WARNA("file type %s not supported, supported filetypes are\n", extension.c_str());
+            stringstream ss;
             
             for(int i = 0; i < _ivOffscreen.getNumWriteFiletypes(); ++i) {
                 SbPList extlist;
@@ -2542,11 +2308,11 @@ bool QtCoinViewer::_WriteCameraImage(int width, int height, const RaveTransform<
                 ss << ")" << endl;
             }
             
-            RAVEPRINT(ss.str().c_str());
+            RAVELOG_INFO(ss.str().c_str());
             bSuccess = false;
         }
         else
-            bSuccess = _ivOffscreen.writeToFile(SbString(fileName), SbString(extension));
+            bSuccess = _ivOffscreen.writeToFile(SbString(filename.c_str()), SbString(extension.c_str()));
     }
 
     _ivRoot->addChild(_pFigureRoot);
@@ -2571,7 +2337,7 @@ bool QtCoinViewer::_RecordVideo()
     _ivOffscreen.render(_pOffscreenVideo);
     
     if( _ivOffscreen.getBuffer() == NULL ) {
-        RAVEPRINT(L"offset buffer null, disabling\n");
+        RAVELOG_WARNA("offset buffer null, disabling\n");
         _bCanRenderOffscreen = false;
         return false;
     }
@@ -2589,7 +2355,7 @@ bool QtCoinViewer::_RecordVideo()
     
     while(_nVideoTimeOffset >= (1000000/VIDEO_FRAMERATE) ) {
         if( !ADD_FRAME_FROM_DIB_TO_AVI(_ivOffscreen.getBuffer()) ) {
-            RAVEPRINT(L"Failed adding frames, stopping avi recording\n");
+            RAVELOG_WARNA("Failed adding frames, stopping avi recording\n");
             _bSaveVideo = false;
             SoDB::enableRealTimeSensor(!_bSaveVideo);
             SoSceneManager::enableRealTimeUpdate(!_bSaveVideo);
@@ -2645,13 +2411,13 @@ bool QtCoinViewer::_RecordVideo()
 
 void QtCoinViewer::DynamicSimulation(bool on)
 {
-    GetEnv()->SetPhysicsEngine(NULL);
-    delete pphysics; pphysics = NULL;
-
     if( on ) {
-        pphysics = GetEnv()->CreatePhysicsEngine("ode");
-        GetEnv()->SetPhysicsEngine(pphysics);
+        PhysicsEngineBasePtr pphysics = GetEnv()->CreatePhysicsEngine("ode");
+        if( !pphysics )
+            GetEnv()->SetPhysicsEngine(pphysics);
     }
+    else
+        GetEnv()->SetPhysicsEngine(PhysicsEngineBasePtr());
 }
 
 void QtCoinViewer::DynamicSelfCollision(bool on)
@@ -2671,40 +2437,23 @@ void QtCoinViewer::DynamicGravity(bool on)
 
 void QtCoinViewer::About() {}
 
-QtCoinViewer::EnvMessage::EnvMessage(QtCoinViewer* pviewer, void** ppreturn, bool bWaitForMutex)
+QtCoinViewer::EnvMessage::EnvMessage(QtCoinViewerPtr pviewer, void** ppreturn, bool bWaitForMutex)
     : _pviewer(pviewer), _ppreturn(ppreturn), _bWaitForMutex(bWaitForMutex)
 {
-    pmymutex = NULL;
-
     // get a mutex
     if( bWaitForMutex ) {
-        if( pviewer->listMsgMutexes.size() > 0 ) {
-            MutexLock m(&_pviewer->_mutexMessages);
-            pmymutex = pviewer->listMsgMutexes.front();
-            pviewer->listMsgMutexes.pop_front();
-        }
-        else {
-            pmymutex = new pthread_mutex_t;
-            pthread_mutex_init(pmymutex, NULL);
-        }
-        
-        pthread_mutex_lock(pmymutex);
+        _pmutex = boost::shared_ptr<boost::mutex>(new boost::mutex());
+        _pmutex->lock();
     }
 }
 
 QtCoinViewer::EnvMessage::~EnvMessage()
 {
-    assert(!_bWaitForMutex);
+    BOOST_ASSERT(!_bWaitForMutex);
     
     if( _bWaitForMutex ) {
-        pthread_mutex_unlock(pmymutex);
+        _pmutex->unlock();
         _bWaitForMutex = false;
-    }
-    
-    // push the mutex back
-    if( pmymutex != NULL ) {
-        MutexLock m(&_pviewer->_mutexMessages);
-        _pviewer->listMsgMutexes.push_back(pmymutex);
     }
 }
 
@@ -2714,15 +2463,12 @@ void QtCoinViewer::EnvMessage::callerexecute()
     bool bWaitForMutex = _bWaitForMutex;
     
     {
-        MutexLock m(&_pviewer->_mutexMessages);
-        _pviewer->_listMessages.push_back(this);
+        boost::mutex::scoped_lock lock(_pviewer->_mutexMessages);
+        _pviewer->_listMessages.push_back(shared_from_this());
     }
     
-    if( bWaitForMutex ) {
-        pthread_mutex_lock(pmymutex); // wait for it
-        pthread_mutex_unlock(pmymutex);
-        delete this; // yea hack, but works
-    }
+    if( bWaitForMutex )
+        boost::mutex::scoped_lock lock(*_pmutex);
 }
 
 /// execute the command in the viewer
@@ -2730,8 +2476,6 @@ void QtCoinViewer::EnvMessage::viewerexecute()
 {
     if( _bWaitForMutex ) {
         _bWaitForMutex = false;
-        pthread_mutex_unlock(pmymutex);
+        _pmutex->unlock();
     }
-    else
-        delete this; // yea, hack, but works
 }

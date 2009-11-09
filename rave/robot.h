@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -27,23 +27,54 @@ namespace OpenRAVE {
 class RobotBase : public KinBody
 {
 public:
+    /// A set of properties for the kinbody. These properties are used to describe a set of variables used in KinBody.
+    enum RobotProperty {
+        Prop_Manipulators = 0x00010000, ///< all properties of all manipulators
+        Prop_Sensors = 0x00020000, ///< all properties of all sensors
+        Prop_SensorPlacement = 0x00040000, ///< relative sensor placement of sensors
+    };
+
     /// handles manipulators of the robot (usually 1 dim)
-    class Manipulator
+    class Manipulator : public boost::enable_shared_from_this<Manipulator>
     {
+        Manipulator(RobotBasePtr probot);
+        Manipulator(const Manipulator& r);
+        Manipulator(RobotBasePtr probot, const Manipulator& r);
+
     public:
-        Manipulator(RobotBase* probot);
-        Manipulator(const RobotBase::Manipulator& r);
-        Manipulator(RobotBase* probot, const Manipulator& r);
         virtual ~Manipulator();
 
         virtual Transform GetEndEffectorTransform() const;
 
-        virtual const char* GetName() const { return _name.c_str(); }
+        virtual const std::string& GetName() const { return _name; }
+        virtual RobotBasePtr GetRobot() const { return RobotBasePtr(_probot); }
 
-		virtual void SetIKSolver(IkSolverBase* iksolver);
+		virtual void SetIKSolver(IkSolverBasePtr iksolver);
         virtual bool InitIKSolver();
         virtual const std::string& GetIKSolverName() const;
         virtual bool HasIKSolver() const;
+
+        /// the base used for the iksolver
+        virtual LinkPtr GetBase() const { return _pBase; }
+
+        /// the end effector link (used to define workspace distance)
+        virtual LinkPtr GetEndEffector() const { return _pEndEffector; }
+
+        /// transform with respect to end effector for grasping goals
+        virtual Transform GetGraspTransform() const { return _tGrasp; }
+
+        /// gripper indices of the joints that the  manipulator controls
+        virtual const std::vector<int>& GetGripperJoints() const { return _vgripperjoints; }
+
+        /// indices of the joints of the arm (used for IK, etc).
+        /// They are usually the joints from pBase to pEndEffector
+        virtual const std::vector<int>& GetArmJoints() const { return _varmjoints; }
+
+        /// normal direction to move joints to 'close' the hand
+        virtual const std::vector<dReal>& GetClosingDirection() const { return _vClosingDirection; }
+
+        /// direction of palm used for approaching 
+        virtual Vector GetPalmDirection() const { return _vpalmdirection; }
 
         /// \return Number of free parameters defining the null solution space.
         ///         Each parameter is always in the range of [0,1].
@@ -52,100 +83,103 @@ public:
         /// gets the free parameters from the current robot configuration
         /// \param pFreeParameters is filled with GetNumFreeParameters() parameters in [0,1] range
         /// \return true if succeeded
-        virtual bool GetFreeParameters(dReal* pFreeParameters) const;
+        virtual bool GetFreeParameters(std::vector<dReal>& vFreeParameters) const;
 
         /// will find the closest solution to the current robot's joint values
         /// Note that this does NOT use the active dof of the robot
         /// \param goal The transformation of the end-effector in the global coord system
-        /// \param solution Will be of size _vecarmjoints.size() and contain the best solution
+        /// \param solution Will be of size _varmjoints.size() and contain the best solution
         /// \param bColCheck If true, will check collision with the environment. If false, will ignore environment. In every case, self-collisions with the robot are checked.
         virtual bool FindIKSolution(const Transform& goal, std::vector<dReal>& solution, bool bColCheck) const;
-        virtual bool FindIKSolution(const Transform& goal, const dReal* pFreeParameters, std::vector<dReal>& solution, bool bColCheck) const;
+        virtual bool FindIKSolution(const Transform& goal, const std::vector<dReal>& vFreeParameters, std::vector<dReal>& solution, bool bColCheck) const;
 
         /// will find all the IK solutions for the given end effector transform
         /// \param goal The transformation of the end-effector in the global coord system
-        /// \param solutions An array of all solutions, each element in solutions is of size _vecarmjoints.size()
+        /// \param solutions An array of all solutions, each element in solutions is of size _varmjoints.size()
         /// \param bColCheck If true, will check collision with the environment. If false, will ignore environment. In every case, self-collisions with the robot are checked.
         virtual bool FindIKSolutions(const Transform& goal, std::vector<std::vector<dReal> >& solutions, bool bColCheck) const;
-        virtual bool FindIKSolutions(const Transform& goal, const dReal* pFreeParameters, std::vector<std::vector<dReal> >& solutions, bool bColCheck) const;
+        virtual bool FindIKSolutions(const Transform& goal, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, bool bColCheck) const;
 
         /// get all child joints of the manipulator starting at the pEndEffector link
-        virtual void GetChildJoints(std::set<Joint*>& vjoints) const;
+        virtual void GetChildJoints(std::set<JointPtr>& vjoints) const;
 
         /// get all child DOF indices of the manipulator starting at the pEndEffector link
         virtual void GetChildDOFIndices(std::set<int>& vdofndices) const;
 
         /// get all child links of the manipulator starting at pEndEffector link
-        virtual void GetChildLinks(std::set<Link*>& vlinks) const;
+        virtual void GetChildLinks(std::set<LinkPtr>& vlinks) const;
 
-        Link* pBase;				///< the base used for the iksolver
-		Link* pEndEffector;         ///< the end effector link (used to define workspace distance)
-        Transform tGrasp;           ///< transform with respect to end effector for grasping goals
-        std::vector<int> _vecjoints; ///< indices of the joints that the  manipulator controls
-        std::vector<int> _vecarmjoints; ///< indices of the joints of the arm (used for IK, etc). They are usually the joints from pBase to pEndEffector
-        std::vector<dReal> _vClosedGrasp, _vOpenGrasp; ///< closed and open grasps
-        
     private:
-        RobotBase* _probot;
-		IkSolverBase* _pIkSolver;
+        RobotBaseWeakPtr _probot;
+        LinkPtr _pBase;
+		LinkPtr _pEndEffector;
+        Transform _tGrasp;
+        std::vector<int> _vgripperjoints;
+        std::vector<int> _varmjoints;
+        
+        std::vector<dReal> _vClosingDirection;
+        Vector _vpalmdirection;
+
+		IkSolverBasePtr _pIkSolver;
         std::string _strIkSolver;         ///< string name of the iksolver
-        int _ikoptions;
         std::string _name;
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
-        friend class ManipulatorXMLReader;
-        friend class RobotXMLReader;
+        friend class OpenRAVEXMLParser;
 #else
-        friend class ::ManipulatorXMLReader;
-        friend class ::RobotXMLReader;
+        friend class ::OpenRAVEXMLParser;
 #endif
 #endif
+        friend class RobotBase;
     };
+    typedef boost::shared_ptr<Manipulator> ManipulatorPtr;
+    typedef boost::shared_ptr<Manipulator const> ManipulatorConstPtr;
 
-    class AttachedSensor
+    class AttachedSensor : public boost::enable_shared_from_this<AttachedSensor>
     {
     public:
-        AttachedSensor(RobotBase* probot);
-        AttachedSensor(RobotBase* probot, const AttachedSensor& sensor, int cloningoptions);
+        AttachedSensor(RobotBasePtr probot);
+        AttachedSensor(RobotBasePtr probot, const AttachedSensor& sensor, int cloningoptions);
         virtual ~AttachedSensor();
         
-        virtual SensorBase* GetSensor() const { return psensor; }
-        virtual Link* GetAttachingLink() const { return pattachedlink; }
+        virtual SensorBasePtr GetSensor() const { return psensor; }
+        virtual LinkPtr GetAttachingLink() const { return pattachedlink; }
         virtual Transform GetRelativeTransform() const { return trelative; }
-        virtual RobotBase* GetRobot() const { return _probot; }
-        virtual const char* GetName() const { return _name.c_str(); }
+        virtual RobotBasePtr GetRobot() const { return RobotBasePtr(_probot); }
+        virtual const std::string& GetName() const { return _name; }
 
         // retrieves the current data from the sensor
-        virtual SensorBase::SensorData* GetData() const;
-        
-    private:
-        RobotBase* _probot;
-        SensorBase* psensor;
-        Link* pattachedlink; ///< the robot link that the sensor is attached to
-        Transform trelative; ///< relative transform of the sensor with respect to the attached link
-        SensorBase::SensorData* pdata; ///< pointer to a preallocated data struct using psensor->CreateSensorData()
-        std::string _name; ///< name of the attached sensor
+        virtual SensorBase::SensorDataPtr GetData() const;
 
-        friend class RobotBase;
+        virtual void SetRelativeTransform(const Transform& t);
+
+    private:
+        RobotBaseWeakPtr _probot;
+        SensorBasePtr psensor;
+        LinkPtr pattachedlink; ///< the robot link that the sensor is attached to
+        Transform trelative; ///< relative transform of the sensor with respect to the attached link
+        SensorBase::SensorDataPtr pdata; ///< pointer to a preallocated data struct using psensor->CreateSensorData()
+        std::string _name; ///< name of the attached sensor
         
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
-        friend class AttachedSensorXMLReader;
-        friend class RobotXMLReader;
+        friend class OpenRAVEXMLParser;
 #else
-        friend class ::AttachedSensorXMLReader;
-        friend class ::RobotXMLReader;
+        friend class ::OpenRAVEXMLParser;
 #endif
 #endif
+        friend class RobotBase;
     };
+    typedef boost::shared_ptr<AttachedSensor> AttachedSensorPtr;
+    typedef boost::shared_ptr<AttachedSensor const> AttachedSensorConstPtr;
 
     /// describes the currently grabbed bodies
     struct GRABBED
     {
-        KinBody* pbody; ///< the grabbed body
-        Link* plinkrobot; ///< robot link that is grabbing the body
-        std::set<KinBody::Link*> sValidColLinks; ///< links that are initially in collision
+        KinBodyWeakPtr pbody; ///< the grabbed body
+        LinkWeakPtr plinkrobot; ///< robot link that is grabbing the body
+        std::set<LinkWeakPtr> sValidColLinks; ///< links that are initially in collision
                                                ///< with the robot, used for self collisions
         Transform troot; // root transform (of first link) relative to end effector
     };
@@ -155,51 +189,45 @@ public:
     class RobotStateSaver : public KinBodyStateSaver
     {
     public:
-        RobotStateSaver(RobotBase* probot);
+        RobotStateSaver(RobotBasePtr probot);
         virtual ~RobotStateSaver();
         
     protected:
         std::vector<int> vactivedofs;
         int affinedofs;
         Vector rotationaxis;
-        RobotBase* _probot;
+        RobotBasePtr _probot;
     };
 
     virtual ~RobotBase();
 
-	virtual const char* GetXMLId() { return "RobotBase"; }
-
     virtual void Destroy();
 
     /// Build the robot from a file
-    virtual bool Init(const char* filename, const char**atts);
+    virtual bool InitFromFile(const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts);
+    virtual bool InitFromData(const std::string& data, const std::list<std::pair<std::string,std::string> >& atts);
 
     /// returns true if reached goal
-    virtual std::vector<Manipulator>& GetManipulators() { return _vecManipulators; }
-    virtual void SetMotion(const Trajectory* ptraj) {}
+    virtual std::vector<ManipulatorPtr>& GetManipulators() { return _vecManipulators; }
+    virtual void SetMotion(TrajectoryBaseConstPtr ptraj) {}
 
     /// manipulators, grasping (KinBodys), usually involves the active manipulator
     virtual void SetActiveManipulator(int index);
-    virtual Manipulator* GetActiveManipulator();
+    virtual ManipulatorPtr GetActiveManipulator();
+    virtual ManipulatorConstPtr GetActiveManipulator() const;
     virtual int GetActiveManipulatorIndex() const { return _nActiveManip; }
 
-    virtual std::vector<AttachedSensor>& GetSensors() { return _vecSensors; }
-    
-    virtual ControllerBase* GetController() const { return NULL; }
-
-    /// set a controller for a robot and destroy the old
-    /// \param pname - name of controller to query from environment
-    /// \param args - the argument list to pass when initializing the controller
-    /// \param bDestroyOldController - if true, will destroy the old controller
-    virtual bool SetController(const wchar_t* pname, const char* args=NULL, bool bDestroyOldController=true) {return false;}
+    virtual std::vector<AttachedSensorPtr>& GetSensors() { return _vecSensors; }    
+    virtual ControllerBasePtr GetController() const { return ControllerBasePtr(); }
     
     /// set a controller for a robot and destroy the old
     /// \param pController - if NULL, sets the controller of this robot to NULL. otherwise attemps to set the controller to this robot.
     /// \param args - the argument list to pass when initializing the controller
     /// \param bDestroyOldController - if true, will destroy the old controller
-    virtual bool SetController(ControllerBase * pController, const char* args=NULL, bool bDestroyOldController=true) {return false;}
-    
-    virtual void SetJointValues(std::vector<Transform>* pvbodies, const Transform* ptrans, const dReal* pJointValues, bool bCheckLimits=false);
+    virtual bool SetController(ControllerBasePtr pController, const std::string& args) {return false;}
+    virtual void SetJointValues(const std::vector<dReal>& vJointValues, bool bCheckLimits = false);
+    virtual void SetJointValues(const std::vector<dReal>& vJointValues, const Transform& transbase, bool bCheckLimits = false);
+
     virtual void SetBodyTransformations(const std::vector<Transform>& vbodies);
     virtual void SetTransform(const Transform& trans);
     virtual void ApplyTransform(const Transform& trans);
@@ -230,7 +258,8 @@ public:
     /// Set the joint indices and affine transformation dofs that the planner should use
     /// \param nAffineDOsBitmask A bitmask of DOFAffine values (DOF_X)
     /// if DOF_RotationAxis is specified, pRotationAxis is used as the axis
-    virtual void SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffineDOsBitmask = DOF_NoTransform, const Vector* pRotationAxis = NULL);
+    virtual void SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffineDOsBitmask = DOF_NoTransform);
+    virtual void SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffineDOsBitmask, const Vector& pRotationAxis);
     virtual int GetActiveDOF() const { return _nActiveDOF != 0 ? _nActiveDOF : GetDOF(); }
     virtual int GetAffineDOF() const { return _nAffineDOFs; }
 
@@ -264,19 +293,13 @@ public:
     virtual Vector GetAffineRotation3DResolution() const { return _vRotation3DResolutions; }
     virtual Vector GetAffineRotationQuatResolution() const { return _vRotationQuatResolutions; }
 
-    virtual void SetActiveDOFValues(std::vector<Transform>* pvbodies, const dReal* pValues, bool bCheckLimits=false);
-    virtual void GetActiveDOFValues(dReal* pValues) const;
+    virtual void SetActiveDOFValues(const std::vector<dReal>& values, bool bCheckLimits=false);
     virtual void GetActiveDOFValues(std::vector<dReal>& v) const;
-    virtual void SetActiveDOFVelocities(dReal* pVelocities);
-    virtual void GetActiveDOFVelocities(dReal* pVelocities) const;
+    virtual void SetActiveDOFVelocities(const std::vector<dReal>& velocities);
     virtual void GetActiveDOFVelocities(std::vector<dReal>& velocities) const;
-    virtual void GetActiveDOFLimits(dReal* pLowerLimit, dReal* pUpperLimit) const;
     virtual void GetActiveDOFLimits(std::vector<dReal>& lower, std::vector<dReal>& upper) const;
-    virtual void GetActiveDOFResolutions(dReal* pResolution) const;
     virtual void GetActiveDOFResolutions(std::vector<dReal>& v) const;
-    virtual void GetActiveDOFMaxVel(dReal* pMaxVel) const;
     virtual void GetActiveDOFMaxVel(std::vector<dReal>& v) const;
-    virtual void GetActiveDOFMaxAccel(dReal* pMaxAccel) const;
     virtual void GetActiveDOFMaxAccel(std::vector<dReal>& v) const;
 
     /// Specifies the controlled degrees of freedom used to control the robot through torque
@@ -289,16 +312,15 @@ public:
     /// of freedom; the max torques for affine dofs are 0 in this case.
     //@{
     virtual int GetControlDOF() const { return GetActiveDOF(); }
-    virtual void GetControlMaxTorques(dReal* pMaxTorque) const;
     virtual void GetControlMaxTorques(std::vector<dReal>& vmaxtorque) const;
-    virtual void SetControlTorques(dReal* pTorques);
+    virtual void SetControlTorques(const std::vector<dReal>& pTorques);
     //@}
 
     /// Converts a trajectory specified with the current active degrees of freedom to a full joint/transform trajectory
     /// \param pFullTraj written with the final trajectory,
     /// \param pActiveTraj the input active dof trajectory
     /// \param bOverwriteTransforms if true will use the current robot transform as the base (ie will ignore any transforms specified in pActiveTraj). If false, will use the pActiveTraj transforms specified
-    virtual void GetFullTrajectoryFromActive(Trajectory* pFullTraj, const Trajectory* pActiveTraj, bool bOverwriteTransforms = true);
+    virtual void GetFullTrajectoryFromActive(TrajectoryBasePtr pFullTraj, TrajectoryBaseConstPtr pActiveTraj, bool bOverwriteTransforms = true);
     virtual int GetActiveJointIndex(int active_index) const {
         if( _nActiveDOF == 0 )
             return active_index;
@@ -306,21 +328,30 @@ public:
     }
     virtual const std::vector<int>& GetActiveJointIndices();
 
-    virtual void SetActiveMotion(const Trajectory* ptraj) {}
+    virtual void SetActiveMotion(TrajectoryBaseConstPtr ptraj) {}
 
     /// the speed at which the robot should go at
-    virtual void SetActiveMotion(const Trajectory* ptraj, dReal fSpeed) { SetActiveMotion(ptraj); }
+    virtual void SetActiveMotion(TrajectoryBaseConstPtr ptraj, dReal fSpeed) { SetActiveMotion(ptraj); }
     //@}
 
     /// gets the jacobian with respect to a link, pfArray is a 3 x ActiveDOF matrix (rotations are not taken into account)
     /// Calculates the partial differentials for the active degrees of freedom that in the path from the root node to _veclinks[index]
     /// (doesn't touch the rest of the values)
-    virtual void CalculateActiveJacobian(int index, const Vector& offset, dReal* pfJacobian) const;
-    virtual void CalculateActiveRotationJacobian(int index, const Vector& qInitialRot, dReal* pfJacobian) const;
+    virtual void CalculateActiveJacobian(int index, const Vector& offset, std::vector<dReal>& pfJacobian) const;
+    virtual void CalculateActiveRotationJacobian(int index, const Vector& qInitialRot, std::vector<dReal>& pfJacobian) const;
     /// calculates the angular velocity jacobian of a specified link about the axes of world coordinates
     /// \param index of the link that the rotation is attached to
     /// \param pfJacobian 3x(num ACTIVE DOF) matrix
-    virtual void CalculateActiveAngularVelocityJacobian(int index, dReal* pfJacobian) const;
+    virtual void CalculateActiveAngularVelocityJacobian(int index, std::vector<dReal>& pfJacobian) const;
+
+    /// grab and release the body with the active manipulator. A grabbed body becomes part of the robot
+    /// and its relative pose with respect to a robot's link will be fixed. AttachBody is called for every
+    /// grabbed body, so KinBody::GetAttached() can be used to figure out if anything is grabbing a body.
+    //@{
+    /// grabs a body with the current active manipulator. Body will be attached to the manipulator's end-effector
+    /// \param pbody the body to be grabbed
+    /// \return true if successful
+    virtual bool Grab(KinBodyPtr pbody);
 
     /// grab and release the body with the active manipulator. A grabbed body becomes part of the robot
     /// and its relative pose with respect to a robot's link will be fixed. AttachBody is called for every
@@ -331,33 +362,42 @@ public:
     /// \param setRobotLinksToIgnore Additional robot link indices that collision checker ignore
     ///        when checking collisions between the grabbed body and the robot.
     /// \return true if successful
-    virtual bool Grab(KinBody* pbody, const std::set<int>* psetRobotLinksToIgnore = NULL);
-    /// grabs a body with a robot's links pecified by linkindex
+    virtual bool Grab(KinBodyPtr pbody, const std::set<int>& setRobotLinksToIgnore);
+
+    /// grabs a body with a specified robot link
     /// \param pbody the body to be grabbed
+    /// \param plink the link of this robot that will perform the grab
+    /// \return true if successful
+    virtual bool Grab(KinBodyPtr pbody, LinkPtr plink);
+
+    /// grabs a body with a specified robot link
+    /// \param pbody the body to be grabbed
+    /// \param plink the link of this robot that will perform the grab
     /// \param setRobotLinksToIgnore Additional robot link indices that collision checker ignore
     ///        when checking collisions between the grabbed body and the robot.
     /// \return true if successful
-    virtual bool Grab(KinBody* pbody, int linkindex, const std::set<int>* psetRobotLinksToIgnore);
-    virtual void Release(KinBody* pbody); ///< release the body
+    virtual bool Grab(KinBodyPtr pbody, LinkPtr plink, const std::set<int>& setRobotLinksToIgnore);
+
+    virtual void Release(KinBodyPtr pbody); ///< release the body
     virtual void ReleaseAllGrabbed(); ///< release all bodies
 
     /// releases and grabs all bodies, has the effect of recalculating all the initial collision with the bodies.
     /// In other words, the current collisions any grabbed body makes with the robot will be re-inserted into an ignore list
     virtual void RegrabAll();
-    virtual bool IsGrabbing(KinBody* pbody) const;
-    
-    /// get the grabbed bodies
-    virtual const std::vector<GRABBED>& GetGrabbed() const { return _vGrabbedBodies; }
+
+    /// get the robot link that is currently grabbing the body. If the body is not grabbed, will return an  empty pointer.
+    virtual LinkPtr IsGrabbing(KinBodyPtr pbody) const;
+
     //@}
 
     /// Add simulating attached sensors
     virtual void SimulationStep(dReal fElapsedTime);
 
     /// Check if body is self colliding. Links that are joined together are ignored.
-    virtual bool CheckSelfCollision(COLLISIONREPORT* pReport = NULL) const;
+    virtual bool CheckSelfCollision(boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>()) const;
     
     /// does not clone the grabbed bodies since it requires pointers from other bodies (that might not be initialized yet)
-    virtual bool Clone(const InterfaceBase* preference, int cloningoptions);
+    virtual bool Clone(InterfaceBaseConstPtr preference, int cloningoptions);
 
     /// \return true if this body is derived from RobotBase
     virtual bool IsRobot() const { return true; }
@@ -365,17 +405,20 @@ public:
     virtual void ComputeJointHierarchy();
     
 protected:
-    RobotBase(EnvironmentBase* penv);
+    RobotBase(EnvironmentBasePtr penv);
+
+    inline RobotBasePtr shared_robot() { return boost::static_pointer_cast<RobotBase>(shared_from_this()); }
+    inline RobotBaseConstPtr shared_robot_const() const { return boost::static_pointer_cast<RobotBase const>(shared_from_this()); }
 
     std::vector<GRABBED> _vGrabbedBodies;   ///vector of grabbed bodies
     virtual void _UpdateGrabbedBodies();
     virtual void _UpdateAttachedSensors();
 
     /// manipulation planning
-    std::vector<Manipulator> _vecManipulators;
+    std::vector<ManipulatorPtr> _vecManipulators;
     int _nActiveManip;                  ///< active manipulator
 
-    std::vector<AttachedSensor> _vecSensors;
+    std::vector<AttachedSensorPtr> _vecSensors;
 
     std::vector<int> _vActiveJointIndices, _vAllJointIndices;
     Vector vActvAffineRotationAxis;
@@ -386,24 +429,20 @@ protected:
     Vector _vRotationAxisLowerLimits, _vRotationAxisUpperLimits, _vRotationAxisMaxVels, _vRotationAxisResolutions;
     Vector _vRotation3DLowerLimits, _vRotation3DUpperLimits, _vRotation3DMaxVels, _vRotation3DResolutions;
     Vector _vRotationQuatLowerLimits, _vRotationQuatUpperLimits, _vRotationQuatMaxVels, _vRotationQuatResolutions;
-
-    mutable std::vector<dReal> _vtempjoints; ///< used for temp access
-
-private:    
+private:
+    mutable std::vector<dReal> _vTempRobotJoints;
     virtual const char* GetHash() const { return OPENRAVE_ROBOT_HASH; }
     virtual const char* GetKinBodyHash() const { return OPENRAVE_KINBODY_HASH; }
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
-    friend class RobotXMLReader;
-    friend class InterfaceXMLReader;
+    friend class OpenRAVEXMLParser;
     friend class RaveDatabase;
     friend class Environment;
     friend class ColladaReader;
     friend class ColladaWriter;
 #else
-    friend class ::RobotXMLReader;
-    friend class ::InterfaceXMLReader;
+    friend class ::OpenRAVEXMLParser;
     friend class ::RaveDatabase;
     friend class ::Environment;
     friend class ::ColladaReader;

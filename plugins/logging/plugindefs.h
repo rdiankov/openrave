@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -12,18 +12,14 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-//This file contains includes of necessary headers and several useful macros and functions
 #ifndef OPENRAVE_PLUGINDEFS_H
 #define OPENRAVE_PLUGINDEFS_H
 
-#include <assert.h>
 #include <cstdio>
 #include <cmath>
-#include <cstring>
 #include <cstdlib>
-#include <pthread.h>
 
+// include boost for vc++ only (to get typeof working)
 #ifdef _MSC_VER
 #include <boost/typeof/std/string.hpp>
 #include <boost/typeof/std/vector.hpp>
@@ -32,7 +28,10 @@
 #include <boost/typeof/std/string.hpp>
 
 #define FOREACH(it, v) for(BOOST_TYPEOF(v)::iterator it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACH_NOINC(it, v) for(BOOST_TYPEOF(v)::iterator it = (v).begin(); it != (v).end(); )
+
 #define FOREACHC(it, v) for(BOOST_TYPEOF(v)::const_iterator it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACHC_NOINC(it, v) for(BOOST_TYPEOF(v)::const_iterator it = (v).begin(); it != (v).end(); )
 #define RAVE_REGISTER_BOOST
 #else
 
@@ -43,30 +42,39 @@
 #include <string>
 
 #define FOREACH(it, v) for(typeof((v).begin()) it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACH_NOINC(it, v) for(typeof((v).begin()) it = (v).begin(); it != (v).end(); )
+
 #define FOREACHC FOREACH
+#define FOREACHC_NOINC FOREACH_NOINC
 
 #endif
 
 #include <stdint.h>
 #include <fstream>
 #include <iostream>
-#include <sstream>
 
-#ifndef _WIN32
+#include <boost/assert.hpp>
+#include <boost/bind.hpp>
+#include <boost/format.hpp>
+#include <boost/thread.hpp>
 
-#include <sys/time.h>
-#define Sleep(milli) usleep(1000*milli)
+#ifdef _MSC_VER
+#define PRIdS "Id"
 #else
-
-#define WIN32_LEAN_AND_MEAN
-#include <winsock2.h>
-#define CLOSESOCKET closesocket
-
+#define PRIdS "zd"
 #endif
 
 using namespace std;
 
 #include <sys/timeb.h>    // ftime(), struct timeb
+
+#ifndef _WIN32
+#include <sys/time.h>
+#define Sleep(milli) usleep(1000*milli)
+#else
+#define WIN32_LEAN_AND_MEAN
+#include <winsock2.h>
+#endif
 
 template<class T>
 inline T CLAMP_ON_RANGE(T value, T min, T max)
@@ -89,6 +97,8 @@ inline uint32_t timeGetTime()
     return (uint32_t)(t.time*1000+t.millitm);
 }
 
+#define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
+
 inline uint64_t GetMicroTime()
 {
 #ifdef _WIN32
@@ -103,74 +113,12 @@ inline uint64_t GetMicroTime()
 #endif
 }
 
-inline float RANDOM_FLOAT()
+struct null_deleter
 {
-#if defined(__IRIX__)
-    return drand48();
-#else
-    return rand()/((float)RAND_MAX);
-#endif
-}
-
-inline float RANDOM_FLOAT(float maximum)
-{
-#if defined(__IRIX__)
-    return (drand48() * maximum);
-#else
-    return (RANDOM_FLOAT() * maximum);
-#endif
-}
-
-inline int RANDOM_INT(int maximum)
-{
-#if defined(__IRIX__)
-    return (random() % maximum);
-#else
-    return (rand() % maximum);
-#endif
-}
-
-#ifndef ARRAYSIZE
-#define ARRAYSIZE(x) (sizeof(x)/(sizeof( (x)[0] )))
-#endif
-
-#define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
-
-#ifdef _WIN32
-
-#define WCSTOK(str, delim, ptr) wcstok(str, delim)
-
-// define wcsicmp for MAC OS X
-#elif defined(__APPLE_CC__)
-
-#define WCSTOK(str, delim, ptr) wcstok(str, delim, ptr);
-
-#define strnicmp strncasecmp
-#define stricmp strcasecmp
-
-inline int wcsicmp(const wchar_t* s1, const wchar_t* s2)
-{
-  char str1[128], str2[128];
-  sprintf(str1, "%S", s1);
-  sprintf(str2, "%S", s2);
-  return stricmp(str1, str2);
-}
-
-
-#else
-
-#define WCSTOK(str, delim, ptr) wcstok(str, delim, ptr)
-
-#define strnicmp strncasecmp
-#define stricmp strcasecmp
-#define wcsnicmp wcsncasecmp
-#define wcsicmp wcscasecmp
-
-#endif
+    void operator()(void const *) const {}
+};
 
 #include <rave/rave.h>
 using namespace OpenRAVE;
-
-#include "loggingproblem.h"
 
 #endif

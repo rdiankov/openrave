@@ -35,9 +35,10 @@
 # include <fstream>
 # include <cstring>
 
-#include "ravep.h"
+#include "rave/rave.h"
 
 using namespace std;
+using namespace OpenRAVE;
 
 # define ERROR 1
 # define G1_SECTION_MODEL_QUADS 18
@@ -2652,7 +2653,7 @@ void data_init ( void )
   return;
 }
 //****************************************************************************80
-static pthread_mutex_t s_mutexread = PTHREAD_MUTEX_INITIALIZER;
+static boost::mutex s_mutexread;
 
 bool ReadFile(const char* pfilename, KinBody::Link::TRIMESH& mesh)
 {
@@ -2662,16 +2663,14 @@ bool ReadFile(const char* pfilename, KinBody::Link::TRIMESH& mesh)
     if( pfilename == NULL )
         return false;
 
-    pthread_mutex_lock(&s_mutexread);
+    boost::mutex::scoped_lock lock(s_mutexread);
     init_program_data();
     filein_name = strdup(pfilename);
     bool bsuccess = data_read();
     free(filein_name);
 
-    if( !bsuccess ) {
-        pthread_mutex_unlock(&s_mutexread);
+    if( !bsuccess )
         return false;
-    }
 
     // read in the data
     mesh.vertices.resize(cor3_num);
@@ -2714,7 +2713,6 @@ bool ReadFile(const char* pfilename, KinBody::Link::TRIMESH& mesh)
         }
     }
 
-    pthread_mutex_unlock(&s_mutexread);
     return true;
 }
 
@@ -7635,7 +7633,7 @@ void init_program_data ( void )
 
 int iv_read_binary ( FILE *filein )
 {
-    RAVEPRINT(L"does not support binary IV files\n");
+    RAVELOG_WARNA("does not support binary IV files\n");
     return 1;
 }
 

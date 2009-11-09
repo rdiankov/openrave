@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -31,7 +31,7 @@ enum CollisionOptions
 class CollisionCheckerBase : public InterfaceBase
 {
 public:
-    CollisionCheckerBase(EnvironmentBase* penv) : InterfaceBase(PT_CollisionChecker, penv) {}
+    CollisionCheckerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_CollisionChecker, penv) {}
     virtual ~CollisionCheckerBase() {}
 
     /// called when environment sets this collision checker, checker assumes responsibility for KinBody::_pCollisionData
@@ -43,18 +43,15 @@ public:
     virtual void DestroyEnvironment() = 0;
 
     /// notified when a new body has been initialized in the environment
-    virtual bool InitKinBody(KinBody* pbody) = 0;
-
-    /// notified when a body is about to be destroyed
-    virtual bool DestroyKinBody(KinBody* pbody) = 0;
+    virtual bool InitKinBody(KinBodyPtr pbody) = 0;
 
     /// enables or disables a kinematic body from being considered in collisions
     /// \return true if operation succeeded
-    virtual bool Enable(const KinBody* pbody, bool bEnable) = 0;
+    virtual bool Enable(KinBodyConstPtr pbody, bool bEnable) = 0;
     
     /// enables or disables a link from being considered in collisions
     /// \return true if operation succeeded
-    virtual bool EnableLink(const KinBody::Link* pbody, bool bEnable) = 0;
+    virtual bool EnableLink(KinBody::LinkConstPtr pbody, bool bEnable) = 0;
 
     /// Set basic collision options using the CollisionOptions enum
     virtual bool SetCollisionOptions(int collisionoptions) = 0;
@@ -64,28 +61,25 @@ public:
     /// \return true if command succeeded
     virtual bool SetCollisionOptions(std::ostream& sout, std::istream& sinput) = 0;
 
-    virtual bool CheckCollision(const KinBody* pbody1, COLLISIONREPORT*)=0;
-    virtual bool CheckCollision(const KinBody* pbody1, const KinBody* pbody2, COLLISIONREPORT*)=0;
-    virtual bool CheckCollision(const KinBody::Link* plink, COLLISIONREPORT*)=0;
-    virtual bool CheckCollision(const KinBody::Link* plink1, const KinBody::Link* plink2, COLLISIONREPORT*)=0;
-    virtual bool CheckCollision(const KinBody::Link* plink, const KinBody* pbody, COLLISIONREPORT*)=0;
+    virtual bool CheckCollision(KinBodyConstPtr pbody1, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())=0;
+    virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())=0;
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())=0;
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())=0;
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())=0;
     
-    virtual bool CheckCollision(const KinBody::Link* plink, const std::set<KinBody*>& vbodyexcluded, const std::set<KinBody::Link *>& vlinkexcluded, COLLISIONREPORT*)=0;
-    virtual bool CheckCollision(const KinBody* pbody, const std::set<KinBody*>& vbodyexcluded, const std::set<KinBody::Link *>& vlinkexcluded, COLLISIONREPORT*)=0;
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())=0;
+    virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())=0;
     
-    virtual bool CheckCollision(const RAY& ray, const KinBody::Link* plink, COLLISIONREPORT* pReport) = 0;
-    virtual bool CheckCollision(const RAY& ray, const KinBody* pbody, COLLISIONREPORT* pReport) = 0;
-    virtual bool CheckCollision(const RAY& ray, COLLISIONREPORT* pReport) = 0;
+    virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>()) = 0;
+    virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>()) = 0;
+    virtual bool CheckCollision(const RAY& ray, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>()) = 0;
+    virtual bool CheckSelfCollision(KinBodyConstPtr pbody, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>()) = 0;
 
-    //tolerance check
-    virtual bool CheckCollision(const KinBody::Link* plink, const std::set<KinBody*>& vbodyexcluded, const std::set<KinBody::Link*>& vlinkexcluded, dReal tolerance)= 0;
-    virtual bool CheckCollision(const KinBody* pbody, const std::set<KinBody*>& vbodyexcluded, const std::set<KinBody::Link*>& vlinkexcluded, dReal tolerance)= 0;
-
-    virtual bool CheckSelfCollision(const KinBody* pbody, COLLISIONREPORT* pReport) = 0;
+    virtual void SetTolerance(dReal tolerance) = 0;
 
 protected:
-	virtual void SetCollisionData(KinBody* pbody, void* data) {
-		if( pbody != NULL )
+	virtual void SetCollisionData(KinBodyPtr pbody, boost::shared_ptr<void> data) {
+		if( !!pbody )
 			pbody->SetCollisionData(data);
 	}
 

@@ -27,26 +27,23 @@ enum ViewGeometry {
     VG_RenderCollision = 2,
 };
 
-// My classes
-class Item;
-
 /// Encapsulate the Inventor rendering of an Item
-class Item
+class Item : public boost::enable_shared_from_this<Item>
 {
 public:
-    Item(QtCoinViewer* viewer);
+    Item(QtCoinViewerPtr viewer);
     virtual ~Item();
 
     // general methods
-    virtual const wchar_t* GetName() const        { return (_pname ? _pname : L"(NULL)"); }
-    virtual void SetName(const wchar_t* pNewName);
+    virtual const string& GetName() const        { return _name; }
+    virtual void SetName(const string& newname) { _name = newname; }
 
     /// update underlying model from Inventor's transformation
     virtual bool UpdateFromIv() { return true; }
     virtual bool UpdateFromModel() { return true; }
 
     /// update Inventor nodes from model
-    virtual bool UpdateFromModel(const vector<RaveTransform<dReal> >& vtrans) { return true; }
+    virtual bool UpdateFromModel(const vector<dReal>& vjointvalues, const vector<Transform>& vtrans) { return true; }
 
     inline RaveTransform<float> GetTransform() { return GetRaveTransform(_ivXform); }
 
@@ -67,54 +64,71 @@ public:
 protected:
 
     // Instance Data
-    QtCoinViewer* _viewer;
-    wchar_t* _pname;            //!< item name
+    QtCoinViewerPtr _viewer;
+    string _name;
 
     SoSeparator*   _ivRoot;           //!< root of Inventor data hierarchy
     SoTransform*   _ivXform;          //!< item Inventor transform
     SoSwitch*      _ivGeom;           //!< item geometry hierarchy
     SoTransparencyType* _ivTransparency;
 };
+typedef boost::shared_ptr<Item> ItemPtr;
+typedef boost::shared_ptr<Item const> ItemConstPtr;
 
 // handles KinBodys
 class KinBodyItem : public Item
 {
-public:
-    KinBodyItem(QtCoinViewer* viewer, KinBody*, ViewGeometry viewmode);
-    virtual ~KinBodyItem();
+ protected:
+    struct LINK
+    {
+        SoSeparator* psep;
+        SoTransform* ptrans;
+        KinBody::LinkWeakPtr plink;
+    };
 
-    const wchar_t* GetName() const        { return _pchain->GetName(); }
-    void SetName(const wchar_t* pNewName) { _pchain->SetName(pNewName); }
+public:
+    KinBodyItem(QtCoinViewerPtr viewer, KinBodyPtr, ViewGeometry viewmode);
+    virtual ~KinBodyItem() {}
+
+    const string& GetName() const        { return _pchain->GetName(); }
+    void SetName(const string& pNewName) { _pchain->SetName(pNewName); }
 
     virtual bool UpdateFromIv();
     virtual bool UpdateFromModel();
-    virtual bool UpdateFromModel(const vector<RaveTransform<dReal> >& vtrans);
+    virtual bool UpdateFromModel(const vector<dReal>& vjointvalues, const vector<Transform>& vtrans);
 
     virtual void SetGrab(bool bGrab, bool bUpdate=true);
 
-    inline KinBody* GetBody() const { return _pchain; }
+    inline KinBodyPtr GetBody() const { return _pchain; }
 
     // gets the link from IV
-    KinBody::Link* GetLinkFromIv(SoNode* plinknode) const;
+    virtual KinBody::LinkPtr GetLinkFromIv(SoNode* plinknode) const;
     
     // gets the link from the index
-    SoSeparator* GetIvLink(int index) const { return _veclinks[index].first; }
+    virtual SoSeparator* GetIvLink(int index) const { return _veclinks[index].psep; }
 
-    void SetUserData(int userdata) { _userdata = userdata; }
-    int GetUserData() { return _userdata; }
+    virtual void SetUserData(int userdata) { _userdata = userdata; }
+    virtual int GetUserData() { return _userdata; }
     
-    int GetNetworkId() { return networkid; }
+    virtual int GetNetworkId() { return networkid; }
+
+    virtual void GetJointValues(vector<dReal>& vjoint) const;
+    virtual void GetBodyTransformations(vector<Transform>& vtrans) const;
 
 protected:
-    typedef std::pair<SoSeparator*, SoTransform*> LINK;
-
-    KinBody* _pchain;
+    KinBodyPtr _pchain;
     int networkid;        ///< _pchain->GetNetworkId()
     std::vector< LINK > _veclinks; ///< render items for each link, indexed same as links
     bool bGrabbed, bEnabled;
     ViewGeometry _viewmode;
     int _userdata;
+
+    vector<dReal> _vjointvalues;
+    vector<Transform> _vtrans;
+    mutable boost::mutex _mutexjoints;
 };
+typedef boost::shared_ptr<KinBodyItem> KinBodyItemPtr;
+typedef boost::shared_ptr<KinBodyItem const> KinBodyItemConstPtr;
 
 class RobotItem : public KinBodyItem
 {
@@ -130,18 +144,20 @@ public:
         SoSwitch* _pswitch;
     };
 
-    RobotItem(QtCoinViewer* viewer, RobotBase* robot, ViewGeometry viewmode);
+    RobotItem(QtCoinViewerPtr viewer, RobotBasePtr robot, ViewGeometry viewmode);
 
     virtual bool UpdateFromIv();
-    virtual bool UpdateFromModel(const vector<RaveTransform<dReal> >& vtrans);
+    virtual bool UpdateFromModel(const vector<dReal>& vjointvalues, const vector<Transform>& vtrans);
 
-    RobotBase* GetRobot() { return (RobotBase*)_pchain; }
+    RobotBasePtr GetRobot() { return boost::static_pointer_cast<RobotBase>(_pchain); }
     
     virtual void SetGrab(bool bGrab, bool bUpdate=true);
 
 private:
     std::vector< EE > _vEndEffectors;
 };
+typedef boost::shared_ptr<RobotItem> RobotItemPtr;
+typedef boost::shared_ptr<RobotItem const> RobotItemConstPtr;
 
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()

@@ -70,8 +70,7 @@
     <armjoints>J0 J1 J2 J3 J4 J5</armjoints>
     <joints>m1</joints>
     <!-- joint values of the closed and opened positions -->
-    <closed>-0</closed>
-    <opened>-30</opened>
+    <closingdirection>1</closingdirection>
     <!-- grasp goal with respect to the effector -->
     <Translation>0 0.175 0</Translation>
     <IkSolver>PUMAikfast</IkSolver>

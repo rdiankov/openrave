@@ -27,7 +27,7 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
       include_directories(${PYTHON_INCLUDE_PATH})
 
       add_library(openravepy SHARED openravepy.cpp)
-      target_link_libraries(openravepy libopenrave-core ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY})
+      target_link_libraries(openravepy libopenrave libopenrave-core ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY})
       add_dependencies(openravepy libopenrave libopenrave_static libopenrave-core libopenrave-core_static)
       set_target_properties(openravepy PROPERTIES PREFIX "")
       install(TARGETS openravepy DESTINATION share/openrave)

@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -33,126 +33,18 @@ namespace OpenRAVE {
 class PlannerBase : public InterfaceBase
 {
 public:
-    /// evaluator class for a cost function used by planners
-    class CostFunction
-    {
-    public:
-        virtual ~CostFunction() {}
-
-        virtual float Eval(const void* pConfiguration) = 0;
-
-        /// output the cost function parameters in a string (usually in XML format)
-        virtual bool serialize(std::ostream& O) const { return true; }
-    };
-
-    /// evaluator class for a goal function used by planners
-    class GoalFunction
-    {
-    public:
-        virtual ~GoalFunction() {}
-
-        virtual float Eval(const void* pConfiguration) = 0;
-        virtual float GetGoalThresh() = 0; ///< in goal if Eval() < GetGoalThresh()
-        virtual void SetRobot(RobotBase* robot) = 0;
-
-        /// output the cost function parameters in a string (usually in XML format)
-        virtual bool serialize(std::ostream& O) const { return true; }
-    };
-
-    /// evaluator class for a state space distance metric used by planners
-    class DistanceMetric
-    {
-    public:
-        virtual ~DistanceMetric() {}
-
-        /// evaluates two configurations of the robot (usually joint angles)
-        virtual float Eval(const void* c0, const void* c1) = 0;
-      
-        virtual void SetRobot(RobotBase* robot) { _robot = robot; }
-
-        /// output the cost function parameters in a string (usually in XML format)
-        virtual bool serialize(std::ostream& O) const { return true; }
-
-        float thresh; ///< if Eval() < thresh, then the two configurations can be considered the same
-
-    protected:
-        RobotBase* _robot;
-    };
-
-    /// Fills pNewSample with a new sample configuration that is close to pCurSample (pCurSample can be ignored)
-    class SampleFunction
-    {
-    public:
-        virtual ~SampleFunction() {}
-
-        /// fills a random configuration. The dimension of pNewSample is usually the dimension the planner is planning in
-        virtual void Sample(dReal* pNewSample) = 0;
-
-        /// returns a random configuration around pCurSample
-        /// pCurSample - the neighborhood to sample around
-        /// fRadius - specifies the max distance of sampling. The higher the value, the farther the samples will go
-        ///             The distance metric can be arbitrary, but is usually PlannerParameters::pdistmetric.
-        /// \return if sample was successfully generated return true, otherwise false
-        virtual bool Sample(dReal* pNewSample, const dReal* pCurSample, dReal fRadius) = 0;
-
-        /// output the cost function parameters in a string (usually in XML format)
-        virtual bool serialize(std::ostream& O) const { return true; }
-    };
-
-    /// used to set the configuration state and gets its degrees of freedom
-    class ConfigurationState
-    {
-    public:
-        virtual ~ConfigurationState() {}
-
-        virtual void SetRobot(RobotBase* probot)=0;
-        virtual void SetState(const dReal* pstate)=0;
-        virtual void GetState(dReal* pstate)=0;
-        virtual void GetLimits(dReal* plower, dReal* pupper)=0;
-        
-        // helper functions
-        virtual void SetState(const std::vector<dReal>& state) { assert((int)state.size()==GetDOF()); SetState(&state[0]); }
-        virtual void GetState(std::vector<dReal>& state) { state.resize(GetDOF()); GetState(&state[0]); }
-        virtual void GetLimits(std::vector<dReal>& vlower, std::vector<dReal>& vupper) {
-            vlower.resize(GetDOF()); vupper.resize(GetDOF());
-            GetLimits(&vlower[0], &vupper[0]);
-        }
-
-        virtual int GetDOF() const = 0;
-
-        /// output the cost function parameters in a string (usually in XML format)
-        virtual bool serialize(std::ostream& O) const { return true; }
-    };
-
     enum ConstraintSettings  {
         CS_TimeBackward=1, ///< if not specified, time is forward
-    };
-    
-    /// used to maintain certains a movement from a src robot configuration to robot configuration.
-    /// pSrcConf is the configuration the robot is currently at
-    /// pDestConf is the configuration the robot should mvoe to
-    /// The function returns true if pConf is accepted. Note that the function can also modify
-    /// pDestConf (projecting onto a constraint manifold), therefore use the new pDestConf value after this call
-    /// ptrans is the transformations of all the links in the robot (can be NULL)
-    class ConstraintFunction
-    {
-    public:
-        virtual ~ConstraintFunction() {}
-        
-        virtual bool Constraint(const dReal* pSrcConf, dReal* pDestConf, Transform* ptrans, int settings) = 0;
-
-        /// output the cost function parameters in a string (usually in XML format)
-        virtual bool serialize(std::ostream& O) const { return true; }
     };
 
     /// Describes a common interface for planning parameters.
     /// If extra parameters need to be specified, 
     /// derive from this class and override the startElement, endElement, and possibly characters calls
     /// The class can be serialized using the <<, >>, and serialize
-    class PlannerParameters : public BaseXMLReader
+    class PlannerParameters : public BaseXMLReader, public XMLReadable
     {
     public:
-        PlannerParameters() : pcostfn(NULL), pgoalfn(NULL), pdistmetric(NULL), pconstraintfn(NULL), pSampleFn(NULL), pConfigState(NULL), nMaxIterations(0), bHasWorkspaceGoal(false), _pcurreader(NULL) {}
+        PlannerParameters();
         PlannerParameters(const PlannerParameters& r);
         virtual ~PlannerParameters() {}
 
@@ -160,71 +52,104 @@ public:
         /// First serializes the data of the right hand into a string, then initializes the current parameters struct via >>
         /// pointers to functions are copied directly
         virtual PlannerParameters& operator=(const PlannerParameters& r);
-        virtual void copy(const PlannerParameters& r);
+        virtual void copy(boost::shared_ptr<PlannerParameters const> r);
 
-        CostFunction* pcostfn;          ///< Cost function on the state pace
-        GoalFunction* pgoalfn;          ///< Goal heuristic function
-        DistanceMetric* pdistmetric;    ///< Distance metric between configuration spaces
+        /// sets up the planner parameters to use the active joints of the robot
+        void SetRobotActiveJoints(RobotBasePtr robot);
 
-        std::vector<dReal> vinitialconfig, vgoalconfig; ///to specify multiple goal configurations, put them into the vector in series (note: not all planners support multiple goals)
+        /// optional, Cost function on the state pace: costfn(config)
+        boost::function<dReal(const std::vector<dReal>&)> _costfn;
 
-        ConstraintFunction* pconstraintfn; ///< if not null, use it to constrain all new configurations
+        /// optional, Goal heuristic function, goal is complete when 0: goalfn(config)
+        boost::function<dReal(const std::vector<dReal>&)> _goalfn;
 
-        SampleFunction* pSampleFn;             ///< use for sampling random states
-        ConfigurationState* pConfigState;      ///< used to set/get the configuration state for the planner
-                                               ///< by default a planner should use the Active degrees of freedom of the robot
+        /// optional, Distance metric between configuration spaces, two configurations are considered the same when this returns 0: distmetric(config1,config2)
+        boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _distmetricfn;
 
-        Transform tWorkspaceGoal;       ///< goal transformation in workspace, can be the end effector or absolute transformation ,etc
+        /// optional, used to maintain certains a movement from a src robot configuration to robot configuration: constraintfn(srcconf,destconf,settings)
+        /// The function returns true if pConf is accepted. Note that the function can also modify
+        /// pDestConf (projecting onto a constraint manifold), therefore use the new pDestConf value after this call
+        /// \param pSrcConf is the configuration the robot is currently at
+        /// \param pDestConf is the configuration the robot should mvoe to
+        /// \param settings options specified in ConstraingSettings 
+        boost::function<bool(const std::vector<dReal>&, std::vector<dReal>&, int)> _constraintfn;
 
-        std::vector<float> vParameters; ///< extra float parameters that are specific to the planner (if absolutely necessary)
-        std::vector<int>  vnParameters; ///< extra int parameters that are specific to the planner (if absolutely necessary)
-        int nMaxIterations;             ///< maximum number of iterations before the planner gives up. If < 0, ignored
+        /// optional, fills a random configuration. The dimension of pNewSample is usually the dimension the planner is planning in:
+        /// samplefn(newsample)
+        boost::function<bool(std::vector<dReal>&)> _samplefn;
 
-        bool bHasWorkspaceGoal;         ///< true if tWorkspaceGoal is valid
+        /// optional, returns a random configuration around pCurSample
+        /// _sampleneighfn(newsample,sample,radius)
+        /// pCurSample - the neighborhood to sample around
+        /// fRadius - specifies the max distance of sampling. The higher the value, the farther the samples will go
+        ///             The distance metric can be arbitrary, but is usually PlannerParameters::pdistmetric.
+        /// \return if sample was successfully generated return true, otherwise false
+        boost::function<bool(std::vector<dReal>&, const std::vector<dReal>&, dReal)> _sampleneighfn;
+
+        /// sets the state of the robot. Default is active robot joints
+        boost::function<void(const std::vector<dReal>&)> _setstatefn;
+        /// gets the state of the robot. Default is active robot joints
+        boost::function<void(std::vector<dReal>&)> _getstatefn;
+
+        /// to specify multiple goal configurations, put them into the vector in series (note: not all planners support multiple goals)
+        std::vector<dReal> vinitialconfig, vgoalconfig;
+
+        /// goal transformation in workspace, can be the end effector or absolute transformation ,etc
+        boost::shared_ptr<Transform> _tWorkspaceGoal;
+
+        /// the absolute limits of the configuration space.
+        std::vector<dReal> _vConfigLowerLimit,_vConfigUpperLimit;
+
+        /// the discretization resolution of each dimension of the configuration space
+        std::vector<dReal> _vConfigResolution;
+        
+        /// a minimum distance between neighbors when searching
+        dReal _fStepLength;
+
+        /// maximum number of iterations before the planner gives up.
+        int _nMaxIterations;
+
+        virtual int GetDOF() const { return (int)_vConfigLowerLimit.size(); }
 
     protected:
-
         /// output the planner parameters in a string (usually in XML format)
         /// don't use PlannerParameters as a tag!
         virtual bool serialize(std::ostream& O) const;
                                
         //@{ XML parsing functions, parses the default parameters
-        virtual void* Release() { return this; }
-        virtual void startElement(void *ctx, const char *name, const char **atts);
-        
-        virtual bool endElement(void *ctx, const char *name);
-        virtual void characters(void *ctx, const char *ch, int len);
+        virtual void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts);
+        virtual bool endElement(const std::string& name);
+        virtual void characters(const std::string& ch);
         std::stringstream _ss; ///< holds the data read by characters
         //@}
 
     private:
-        BaseXMLReader* _pcurreader; ///< temporary reader
+        BaseXMLReaderPtr _pcurreader; ///< temporary reader
 
         /// outputs the data and surrounds it with <PlannerParameters> tags
         friend std::ostream& operator<<(std::ostream& O, const PlannerParameters& v);
         /// expects <PlannerParameters> to be the first token. Parses stream until </PlannerParameters> reached
         friend std::istream& operator>>(std::istream& I, PlannerParameters& v);
     };
+    typedef boost::shared_ptr<PlannerParameters> PlannerParametersPtr;
+    typedef boost::shared_ptr<PlannerParameters const> PlannerParametersConstPtr;
 
-    PlannerBase(EnvironmentBase* penv) : InterfaceBase(PT_Planner, penv) {}
+    PlannerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Planner, penv) {}
     virtual ~PlannerBase() {}
 
     /// Setup scene, robot, and properties of the plan, and reset all structures with pparams
     /// \param pbase The robot will be planning for.
     /// \param pparams The parameters of the planner, any class derived from PlannerParameters can be passed
-    virtual bool InitPlan(RobotBase* pbase, const PlannerParameters* pparams) = 0;
+    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams) = 0;
 
     /// Executes the main planner trying to solve for the goal condition. Fill ptraj with the trajectory
     /// of the planned path that the robot needs to execute
     /// \param ptraj The trajectory the robot has to follow in order to successfully complete the plan
     /// \param pOutStream If specified, planner will output any other special data
     /// \return true if planner is successful
-    virtual bool PlanPath(Trajectory* ptraj, std::ostream* pOutStream = NULL) = 0;
-    
-    /// returns a string describing planner and specification of what values are used in PlannerParameters
-    virtual const wchar_t* GetDescription() const = 0;
+    virtual bool PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream = boost::shared_ptr<std::ostream>()) = 0;
 
-    virtual RobotBase* GetRobot() const = 0;
+    virtual RobotBasePtr GetRobot() = 0;
 
 private:
     virtual const char* GetHash() const { return OPENRAVE_PLANNER_HASH; }

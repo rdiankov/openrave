@@ -5,7 +5,7 @@ if(APPLE)
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup")
 endif(APPLE)
 
-add_library(logging SHARED loggingmain.cpp loggingproblem.cpp)
+add_library(logging SHARED loggingmain.cpp)
 
 target_link_libraries(logging libopenrave ${PTHREADS_LIBRARY})
 include_directories(logging "${CMAKE_SOURCE_DIR}")

@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -37,9 +37,9 @@ public:
     int options;        ///< the options that the COLLISIONREPORT was called with
 
     /// Always filled
-    KinBody::Link* plink1, *plink2; ///< colliding links
+    KinBody::LinkConstPtr plink1, plink2; ///< colliding links
     int numCols;            ///< this is the number of objects that collide with the object of interest
-    std::vector<KinBody::Link*> vLinkColliding; ///< objects colliding with this object
+    std::vector<KinBody::LinkConstPtr> vLinkColliding; ///< objects colliding with this object
 
     /// CO_Distance
     dReal minDistance;      ///< minimum distance from last query
@@ -52,8 +52,7 @@ public:
 
     void Reset(int coloptions = 0) {
         options = coloptions;
-        plink1 = plink2 = NULL;
-        minDistance = 0;
+        minDistance = 1e20f;
         numCols = 0;
         numWithinTol = 0;
         contacts.resize(0);

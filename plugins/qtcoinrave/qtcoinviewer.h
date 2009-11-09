@@ -42,7 +42,7 @@ class QtCoinViewer : public QMainWindow, public RaveViewerBase
     Q_OBJECT
 
 public:
-    QtCoinViewer(EnvironmentBase* penv);
+    QtCoinViewer(EnvironmentBasePtr penv);
     ~QtCoinViewer();
 
     //! the kinds of toggle switches
@@ -94,18 +94,19 @@ public:
 
     virtual void ViewerSetSize(int w, int h);
     virtual void ViewerMove(int x, int y);
-    virtual void ViewerSetTitle(const char* ptitle);
+    virtual void ViewerSetTitle(const string& ptitle);
     
-    virtual bool LoadModel(const char* filename);
+    virtual bool LoadModel(const string& filename);
+
+    virtual bool ForceUpdatePublishedBodies();
 
     /// updates all render objects from the internal openrave classes
     virtual void UpdateFromModel();
 
     virtual void Reset();
 
-    virtual bool GetFractionOccluded(KinBody* pbody, int width, int height, float nearPlane, float farPlane, const RaveTransform<float>& extrinsic, const float* pKK, double& fracOccluded);
-    virtual bool GetCameraImage(void* pMemory, int width, int height, const RaveTransform<float>& extrinsic, const float* pKK);
-    virtual bool WriteCameraImage(int width, int height, const RaveTransform<float>& t, const float* pKK, const char* fileName, const char* extension);
+    virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK);
+    virtual bool WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension);
     virtual void SetCamera(const RaveVector<float>& pos, const RaveVector<float>& quat);
     virtual void SetCameraLookAt(const RaveVector<float>& lookat, const RaveVector<float>& campos, const RaveVector<float>& camup);
     virtual void SetBkgndColor(const RaveVector<float>& color);
@@ -125,8 +126,7 @@ public:
     virtual void* drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color);
     virtual void closegraph(void* handle);
 
-    virtual void StartPlaybackTimer();
-    virtual void StopPlaybackTimer();
+    virtual void SetEnvironmentSync(bool bUpdate);
 
     virtual bool _RecordVideo();
 
@@ -142,7 +142,6 @@ public slots:
 
     void ViewCameraParams();
     void ViewGeometryChanged(QAction*);
-    void ViewPublishAnytime(bool on);
     void ViewDebugLevelChanged(QAction*);
     void ViewToggleFPS(bool on);
     void ViewToggleFeedBack(bool on);
@@ -163,10 +162,10 @@ public slots:
     void actionTriggered(QAction *action);
 
 public:
-    class EnvMessage
+    class EnvMessage : public boost::enable_shared_from_this<EnvMessage>
     {
     public:
-        EnvMessage(QtCoinViewer* pviewer, void** ppreturn, bool bWaitForMutex);
+        EnvMessage(QtCoinViewerPtr pviewer, void** ppreturn, bool bWaitForMutex);
         virtual ~EnvMessage();
 
         /// execute the command in the caller
@@ -174,28 +173,38 @@ public:
         /// execute the command in the viewer
         virtual void viewerexecute();
 
+        virtual void releasemutex()
+        {
+            if( _bWaitForMutex ) {
+                _bWaitForMutex = false;
+                _pmutex->unlock();
+            }
+        }
+
     protected:
-        QtCoinViewer* _pviewer;
+        QtCoinViewerPtr _pviewer;
         void** _ppreturn;
-        pthread_mutex_t* pmymutex;
+        boost::shared_ptr<boost::mutex> _pmutex;
         bool _bWaitForMutex;
     };
+    typedef boost::shared_ptr<EnvMessage> EnvMessagePtr;
+    typedef boost::shared_ptr<EnvMessage const> EnvMessageConstPtr;
 
     static int s_InitRefCount;
 
 protected:
+    inline QtCoinViewerPtr shared_viewer() { return boost::static_pointer_cast<QtCoinViewer>(shared_from_this()); }
+    inline QtCoinViewerConstPtr shared_viewer_const() const { return boost::static_pointer_cast<QtCoinViewer const>(shared_from_this()); }
 
     static void mousemove_cb(void * userdata, SoEventCallback * node);
     void _mousemove_cb(SoEventCallback * node);
 
     virtual void _ViewerSetSize(int w, int h);
     virtual void _ViewerMove(int x, int y);
-    virtual void _ViewerSetTitle(const char* ptitle);
+    virtual void _ViewerSetTitle(const string& ptitle);
 
-    virtual bool _GetFractionOccluded(KinBody* pbody, int width, int height, float nearPlane, float farPlane, const RaveTransform<float>& extrinsic, const float* pKK, double& fracOccluded);
-
-    virtual bool _GetCameraImage(void* pMemory, int width, int height, const RaveTransform<float>& extrinsic, const float* pKK);
-    virtual bool _WriteCameraImage(int width, int height, const RaveTransform<float>& t, const float* pKK, const char* fileName, const char* extension);
+    virtual bool _GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK);
+    virtual bool _WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension);
     virtual void _SetCamera(const RaveVector<float>& pos, const RaveVector<float>& quat);
     virtual void _SetCameraLookAt(const RaveVector<float>& lookat, const RaveVector<float>& campos, const RaveVector<float>& camup);
 
@@ -228,9 +237,6 @@ protected:
     virtual void InitOffscreenRenderer();
     virtual void SetupMenus();
 
-    virtual bool InitGL(int width, int height);
-    virtual void FinishGL();
-
     // selection and deselection handling
     static void _SelectHandler(void *, class SoPath *); 
     static void _DeselectHandler(void *, class SoPath *);
@@ -242,9 +248,8 @@ protected:
     int _nFrameNum; ///< frame number for recording
     string _strMouseMove; ///< mouse move message
     // Message Queue
-    list<EnvMessage*> _listMessages;
-    list<pthread_mutex_t*> listMsgMutexes;
-    pthread_mutex_t _mutexMessages, _mutexUpdating, _mutexMouseMove; ///< mutex protected messages
+    list<EnvMessagePtr> _listMessages;
+    boost::mutex _mutexMessages, _mutexUpdating, _mutexMouseMove; ///< mutex protected messages
 
     QVBoxLayout * vlayout;
     QGroupBox * view1;
@@ -261,11 +266,11 @@ protected:
     // the GUI
     QWidget       *_pQtWidget;
     SoQtExaminerViewer* _pviewer;
-    QAction *pTogglePublishAnytime, *pToggleDynamicSimulation;
+    QAction *pToggleDynamicSimulation;
     QActionGroup* _pToggleDebug;
 
     SoNode*       _selectedNode;
-    IvDragger*    _pdragger;
+    boost::shared_ptr<IvDragger>    _pdragger;
     SoEventCallback* _eventKeyboardCB;
 
     SoText2* _messageNode;
@@ -275,9 +280,9 @@ protected:
     bool _bAVIInit;
     int  _VideoFrameRate;
 
-    std::map<KinBody*, KinBodyItem*> _mapbodies;    ///< all the bodies created
+    std::map<KinBodyPtr, KinBodyItemPtr> _mapbodies;    ///< all the bodies created
     
-    Item*          _pSelectedItem;      ///< the currently selected item
+    ItemPtr          _pSelectedItem;      ///< the currently selected item
 
     /// for movie recording
     SoOffscreenRenderer _ivOffscreen;
@@ -296,14 +301,13 @@ protected:
     unsigned int _sampleCountAlone;
     unsigned int _sampleCountWithEnv;
     int _available;
-    SoGLRenderAction* _renderAction;
-    SoPerspectiveCamera* _pmycam;
 
-    timeval timestruct;
-
-    PhysicsEngineBase* pphysics;
+    bool _bLockEnvironment;
+    boost::mutex _mutexUpdateModels;
+    boost::condition _condUpdateModels; ///< signaled everytime environment models are updated
 
     // toggle switches
+    bool _bModelsUpdated;
     bool _bSelfCollision;
     bool         _bDisplayGrid;
     bool         _bDisplayIK;
@@ -331,8 +335,6 @@ protected:
     time_t       _prevSec;
     long         _prevMicSec;
 
-    bool         _glInit;
-
     bool _bTimeElapsed;
     //bool _bRecordMotion;
     bool _bSaveVideo;
@@ -347,7 +349,6 @@ protected:
     friend class ViewerSetSizeMessage;
     friend class ViewerMoveMessage;
     friend class ViewerSetTitleMessage;
-    friend class GetFractionOccludedMessage;
     friend class GetCameraImageMessage;
     friend class WriteCameraImageMessage;
     friend class SetCameraMessage;

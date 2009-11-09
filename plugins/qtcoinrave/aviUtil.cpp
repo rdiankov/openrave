@@ -338,18 +338,15 @@ bool START_AVI(const char* file_name, int _frameRate, int width, int height, int
 {
     if(! AVI_Init())
 	{
-		//RAVEPRINT(L"Error - AVI_Init()\n");
 		return false;
 	}
 
     if(! AVI_FileOpenWrite(&pfile, file_name))
 	{
-		//RAVEPRINT(L"Error - AVI_FileOpenWrite()\n");
 		return false;
 	}
 
     if(! AVI_CreateStream(pfile, &ps, _frameRate, width*height/bits, width, height, "none")) {
-        //RAVEPRINT(L"Error - AVI_CreateStream()\n");
         return false;
     } 
 
@@ -369,28 +366,6 @@ bool START_AVI(const char* file_name, int _frameRate, int width, int height, int
     s_biSizeImage = bi.biSizeImage;
 	return true;
 }
- 
-//bool ADD_FRAME_FROM_DIB_TO_AVI(void* pdata)
-//{
-//	HRESULT hr = AVIStreamWrite(psCompressed, // stream pointer
-//		count, // time of this frame
-//		1, // number to write
-//        pdata,
-//        s_biSizeImage, // lpbi->biSizeImage, // size of this frame
-//		AVIIF_KEYFRAME, // flags....
-//		NULL,
-//		NULL);
-//	if (hr != AVIERR_OK)
-//	{
-//		wchar_t strMsg[255];
-//		_snwprintf(strMsg, 255, L"Error: AVIStreamWrite, error %d", hr);
-//		MessageBox(NULL, strMsg, L"", MB_OK);
-//		return FALSE;
-//	}
-//	
-//	count++;
-//	return true;
-//}
 
 //Now we can add frames
 // ie. ADD_FRAME_FROM_DIB_TO_AVI(yourDIB, "CVID", 25);
@@ -422,19 +397,16 @@ bool STOP_AVI()
     count = 0;
     if(! AVI_CloseStream(ps, psCompressed, NULL))
     {
-        //RAVEPRINT(L"Error - AVI_CloseStream()\n");
         return false;
     }
 
     if(! AVI_CloseFile(pfile))
     {
-        //RAVEPRINT(L"Error - AVI_CloseFile()\n");
         return false;
     }
 
     if(! AVI_Exit())
     {
-        //RAVEPRINT(L"Error - AVI_Exit()\n");
         return false;
     }
 
@@ -473,7 +445,7 @@ bool STOP_AVI()
     if( output == NULL )
         return false;
 
-    RAVEPRINT(L"stopping avi\n");
+    RAVELOG_INFOA("stopping avi\n");
 	free(picture_buf); picture_buf = NULL;
 	free(picture); picture = NULL;
 	free(yuv420p); yuv420p = NULL;
@@ -495,7 +467,7 @@ bool STOP_AVI()
 bool START_AVI(const char* filename, int _frameRate, int width, int height, int bits)
 {
     if( bits != 24 ) {
-        RAVEPRINT(L"START_AVI only supports 24bits\n");
+        RAVELOG_WARNA("START_AVI only supports 24bits\n");
         return false;
     }
     
@@ -546,7 +518,7 @@ bool START_AVI(const char* filename, int _frameRate, int width, int height, int 
     codec_ctx->pix_fmt = PIX_FMT_YUV420P;
 
 	if (av_set_parameters(output, NULL) < 0) {
-		RAVEPRINT(L"START_AVI: set parameters failed\n");
+		RAVELOG_WARNA("START_AVI: set parameters failed\n");
         return false;
 	}
 
@@ -559,7 +531,7 @@ bool START_AVI(const char* filename, int _frameRate, int width, int height, int 
     RAVELOG_DEBUGA("opening %s, w:%d h:%dx fps:%d, codec: %s\n", output->filename, width, height, _frameRate, codec->name);
 
 	if (avcodec_open(codec_ctx, codec) < 0) {
-		RAVEPRINT(L"START_AVI: Unable to open codec\n");
+		RAVELOG_WARNA("START_AVI: Unable to open codec\n");
         return false;
 	}
 
@@ -576,14 +548,14 @@ bool START_AVI(const char* filename, int _frameRate, int width, int height, int 
 	outbuf_size = 100000;
 	outbuf = (char*)malloc(outbuf_size);
 	if (outbuf == NULL) {
-		RAVEPRINT(L"START_AVI: Out of Memory\n");
+		RAVELOG_WARNA("START_AVI: Out of Memory\n");
         return false;
 	}
 
 	picture_size = avpicture_get_size(PIX_FMT_YUV420P, codec_ctx->width, codec_ctx->height);
     picture_buf = (char*)malloc(picture_size);
 	if (picture_buf == NULL) {
-		RAVEPRINT(L"START_AVI: Out of Memory\n");
+		RAVELOG_WARNA("START_AVI: Out of Memory\n");
         return false;
 	}
 
@@ -638,7 +610,7 @@ bool ADD_FRAME_FROM_DIB_TO_AVI(void* pdata)
     
     size = avcodec_encode_video(stream->codec, (uint8_t*)outbuf, outbuf_size, yuv420p);
 	if (size == -1) {
-		RAVEPRINT(L"error encoding frame\n");
+		RAVELOG_WARNA("error encoding frame\n");
         return false;
 	}
 
@@ -648,7 +620,7 @@ bool ADD_FRAME_FROM_DIB_TO_AVI(void* pdata)
     pkt.size = size;
     pkt.stream_index = stream->index;
 	if( av_write_frame(output, &pkt) < 0)
-        RAVEPRINT(L"av_write_frame failed\n");
+        RAVELOG_WARNA("av_write_frame failed\n");
     
     return true;
 }
@@ -659,7 +631,7 @@ bool ADD_FRAME_FROM_DIB_TO_AVI(void* pdata)
 bool STOP_AVI() { return false; }
 bool START_AVI(const char* filename, int _frameRate, int width, int height, int bits)
 {
-    RAVEPRINT(L"avi recording to file %s not enabled\n", filename);
+    RAVELOG_WARNA("avi recording to file %s not enabled\n", filename);
     return false;
 }
 bool ADD_FRAME_FROM_DIB_TO_AVI(void* pdata)

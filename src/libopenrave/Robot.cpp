@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2008 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -22,64 +22,51 @@
 
 namespace OpenRAVE {
 
-RobotBase::Manipulator::Manipulator(RobotBase* probot)
-  : pBase(NULL), pEndEffector(NULL), _probot(probot), _pIkSolver(NULL), _ikoptions(0)
+RobotBase::Manipulator::Manipulator(RobotBasePtr probot) : _probot(probot), _vpalmdirection(0,0,1)
 {
 }
 
 RobotBase::Manipulator::~Manipulator()
 {
-    delete _pIkSolver; _pIkSolver = NULL;
 }
 
 RobotBase::Manipulator::Manipulator(const RobotBase::Manipulator& r)
 {
     *this = r;
-    _pIkSolver = NULL;
-    assert( _probot != NULL );
-    if( _probot != NULL && _strIkSolver.size() > 0 ) {
-        _pIkSolver = _probot->GetEnv()->CreateIkSolver(_strIkSolver.c_str());
-    }
+    _pIkSolver.reset();
+    if( _strIkSolver.size() > 0 )
+        _pIkSolver = GetRobot()->GetEnv()->CreateIkSolver(_strIkSolver);
 }
 
-RobotBase::Manipulator::Manipulator(RobotBase* probot, const RobotBase::Manipulator& r)
+RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::Manipulator& r)
 {
-    assert( probot != NULL );
-    assert( r._probot != NULL );
-
     *this = r;
     _probot = probot;
-    if( r.pBase != NULL )
-        pBase = probot->GetLinks()[r.pBase->GetIndex()];
-    if( r.pEndEffector != NULL )
-        pEndEffector = probot->GetLinks()[r.pEndEffector->GetIndex()];
+    if( !!r.GetBase() )
+        _pBase = probot->GetLinks()[r.GetBase()->GetIndex()];
+    if( !!r.GetEndEffector() )
+        _pEndEffector = probot->GetLinks()[r.GetEndEffector()->GetIndex()];
     
-    _pIkSolver = NULL;
-    if( _probot != NULL && _strIkSolver.size() > 0 ) {
-        _pIkSolver = _probot->GetEnv()->CreateIkSolver(_strIkSolver.c_str());
-    }
+    _pIkSolver.reset();
+    if( _strIkSolver.size() > 0 )
+        _pIkSolver = probot->GetEnv()->CreateIkSolver(_strIkSolver);
 }
 
 Transform RobotBase::Manipulator::GetEndEffectorTransform() const
 {
-    assert( pEndEffector != NULL );
-    return pEndEffector->GetTransform() * tGrasp;
+    return _pEndEffector->GetTransform() * _tGrasp;
 }
 
-void RobotBase::Manipulator::SetIKSolver(IkSolverBase* iksolver)
+void RobotBase::Manipulator::SetIKSolver(IkSolverBasePtr iksolver)
 {
-    if( iksolver != _pIkSolver) {
-        delete _pIkSolver; _pIkSolver = iksolver;
-        if( _pIkSolver != NULL )
-            _strIkSolver = _pIkSolver->GetXMLId();
-        else
-            _strIkSolver.clear();
-    }
+    _pIkSolver = iksolver;
+    if( !!_pIkSolver )
+        _strIkSolver = _pIkSolver->GetXMLId();
 }
 
 bool RobotBase::Manipulator::InitIKSolver()
 {
-    return _pIkSolver != NULL && _pIkSolver->Init(_probot, this, _ikoptions);
+    return !_pIkSolver ? false : _pIkSolver->Init(shared_from_this());
 }
 
 const std::string& RobotBase::Manipulator::GetIKSolverName() const
@@ -89,101 +76,90 @@ const std::string& RobotBase::Manipulator::GetIKSolverName() const
 
 bool RobotBase::Manipulator::HasIKSolver() const
 {
-    return _pIkSolver != NULL;
+    return !!_pIkSolver;
 }
 
 int RobotBase::Manipulator::GetNumFreeParameters() const
 {
-    return _pIkSolver != NULL ? _pIkSolver->GetNumFreeParameters() : 0;
+    return !_pIkSolver ? 0 : _pIkSolver->GetNumFreeParameters();
 }
 
-bool RobotBase::Manipulator::GetFreeParameters(dReal* pFreeParameters) const
+bool RobotBase::Manipulator::GetFreeParameters(std::vector<dReal>& vFreeParameters) const
 {
-    assert( pFreeParameters != NULL );
-    if( _pIkSolver == NULL )
-        return false;
-    return _pIkSolver->GetFreeParameters(pFreeParameters);
+    return !_pIkSolver ? false : _pIkSolver->GetFreeParameters(vFreeParameters);
 }
 
 bool RobotBase::Manipulator::FindIKSolution(const Transform& goal, vector<dReal>& solution, bool bColCheck) const
 {
-    return FindIKSolution(goal, NULL, solution, bColCheck);
+    return FindIKSolution(goal, vector<dReal>(), solution, bColCheck);
 }
 
-bool RobotBase::Manipulator::FindIKSolution(const Transform& goal, const dReal* pFreeParameters, vector<dReal>& solution, bool bColCheck) const
+bool RobotBase::Manipulator::FindIKSolution(const Transform& goal, const std::vector<dReal>& vFreeParameters, vector<dReal>& solution, bool bColCheck) const
 {
-    if( _pIkSolver == NULL ) {
-        RAVELOG(L"Need to set IK solver for robot\n");
+    if( !_pIkSolver ) {
+        RAVELOG_WARNA("Need to set IK solver for robot\n");
         return false;
     }
-    assert( _pIkSolver->GetRobot() != NULL );
+    if( _pIkSolver->GetManipulator() != shared_from_this() )
+        throw openrave_exception("ik needs to be set to robot");
 
     vector<dReal> temp;
-    _pIkSolver->GetRobot()->GetJointValues(temp);
+    GetRobot()->GetJointValues(temp);
 
-    solution.resize(_vecarmjoints.size());
-    for(size_t i = 0; i < _vecarmjoints.size(); ++i)
-        solution[i] = temp[_vecarmjoints[i]];
+    solution.resize(_varmjoints.size());
+    for(size_t i = 0; i < _varmjoints.size(); ++i)
+        solution[i] = temp[_varmjoints[i]];
 
-    Transform tgoal;
+    Transform tgoal = goal*_tGrasp.inverse();
+    if( !!_pBase )
+        tgoal = _pBase->GetTransform().inverse() * tgoal;
 
-    if( pBase != NULL ) {
-        Transform tEE = pBase->GetTransform();
-        tgoal = tEE.inverse() * goal*tGrasp.inverse();
-    }
-    else tgoal = goal;
-
-    return pFreeParameters == NULL ? _pIkSolver->Solve(tgoal, &solution[0], bColCheck, &solution[0]) : _pIkSolver->Solve(tgoal, &solution[0], pFreeParameters, bColCheck, &solution[0]);
+    boost::shared_ptr< vector<dReal> > psolution(&solution, null_deleter());
+    return vFreeParameters.size() == 0 ? _pIkSolver->Solve(IkSolverBase::Parameterization(tgoal), solution, bColCheck, psolution) : _pIkSolver->Solve(IkSolverBase::Parameterization(tgoal), solution, vFreeParameters, bColCheck, psolution);
 }
-
+    
 bool RobotBase::Manipulator::FindIKSolutions(const Transform& goal, std::vector<std::vector<dReal> >& solutions, bool bColCheck) const
 {
-    return FindIKSolutions(goal, NULL, solutions, bColCheck);
+    return FindIKSolutions(goal, vector<dReal>(), solutions, bColCheck);
 }
 
-bool RobotBase::Manipulator::FindIKSolutions(const Transform& goal, const dReal* pFreeParameters, std::vector<std::vector<dReal> >& solutions, bool bColCheck) const
+bool RobotBase::Manipulator::FindIKSolutions(const Transform& goal, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, bool bColCheck) const
 {
-    if( _pIkSolver == NULL ) {
-        RAVELOG(L"Need to set IK solver for robot\n");
+    if( !_pIkSolver ) {
+        RAVELOG_WARNA("Need to set IK solver for robot\n");
         return false;
     }
-    assert( _pIkSolver->GetRobot() != NULL );
+    if( _pIkSolver->GetManipulator() != shared_from_this() )
+        throw openrave_exception("ik needs to be set to robot");
 
-    Transform tgoal;
-    Transform tEE;
-
-    if( pBase != NULL ) {
-        
-        tEE = pBase->GetTransform();
-        tgoal = tEE.inverse() * goal*tGrasp.inverse();
-        
-    }
-    else tgoal = goal;
-
-    return pFreeParameters == NULL ? _pIkSolver->Solve(tgoal,bColCheck,solutions) : _pIkSolver->Solve(tgoal,pFreeParameters,bColCheck,solutions);
+    Transform tgoal = goal*_tGrasp.inverse();
+    if( !!_pBase )
+        tgoal = _pBase->GetTransform().inverse() * tgoal;
+    return vFreeParameters.size() == 0 ? _pIkSolver->Solve(IkSolverBase::Parameterization(tgoal),bColCheck,solutions) : _pIkSolver->Solve(IkSolverBase::Parameterization(tgoal),vFreeParameters,bColCheck,solutions);
 }
 
-void RobotBase::Manipulator::GetChildJoints(std::set<Joint*>& vjoints) const
+void RobotBase::Manipulator::GetChildJoints(std::set<JointPtr>& vjoints) const
 {
-    if( pEndEffector == NULL )
-        return;
+    if( !_pEndEffector )
+        throw openrave_exception("invalid end effector");
 
     // get all child links of the manipualtor
+    RobotBasePtr probot(_probot);
     vector<dReal> lower,upper;
-    int iattlink = pEndEffector->GetIndex();
-    FOREACHC(itlink, _probot->GetLinks()) {
+    int iattlink = _pEndEffector->GetIndex();
+    FOREACHC(itlink, probot->GetLinks()) {
         int ilink = (*itlink)->GetIndex();
         if( ilink == iattlink )
             continue;
-        if( _vecarmjoints.size() > 0 && !_probot->DoesAffect(_vecarmjoints[0],ilink) )
+        if( _varmjoints.size() > 0 && !probot->DoesAffect(_varmjoints[0],ilink) )
             continue;
-        for(int ijoint = 0; ijoint < _probot->GetDOF(); ++ijoint) {
-            if( _probot->DoesAffect(ijoint,ilink) && !_probot->DoesAffect(ijoint,iattlink) ) {
+        for(int ijoint = 0; ijoint < probot->GetDOF(); ++ijoint) {
+            if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
                 // only insert if its limits are different (ie, not a dummy joint)
-                _probot->GetJoints()[ijoint]->GetLimits(lower,upper);
-                for(int i = 0; i < _probot->GetJoints()[ijoint]->GetDOF(); ++i) {
+                probot->GetJoints()[ijoint]->GetLimits(lower,upper);
+                for(int i = 0; i < probot->GetJoints()[ijoint]->GetDOF(); ++i) {
                     if( lower[i] != upper[i] ) {
-                        vjoints.insert(_probot->GetJoints()[ijoint]);
+                        vjoints.insert(probot->GetJoints()[ijoint]);
                         break;
                     }
                 }
@@ -194,26 +170,24 @@ void RobotBase::Manipulator::GetChildJoints(std::set<Joint*>& vjoints) const
 
 void RobotBase::Manipulator::GetChildDOFIndices(std::set<int>& vdofndices) const
 {
-    if( pEndEffector == NULL )
-        return;
-
     // get all child links of the manipualtor
+    RobotBasePtr probot(_probot);
     vector<dReal> lower,upper;
-    int iattlink = pEndEffector->GetIndex();
-    FOREACHC(itlink, _probot->GetLinks()) {
+    int iattlink = _pEndEffector->GetIndex();
+    FOREACHC(itlink, probot->GetLinks()) {
         int ilink = (*itlink)->GetIndex();
         if( ilink == iattlink )
             continue;
-        if( _vecarmjoints.size() > 0 && !_probot->DoesAffect(_vecarmjoints[0],ilink) )
+        if( _varmjoints.size() > 0 && !probot->DoesAffect(_varmjoints[0],ilink) )
             continue;
-        for(int ijoint = 0; ijoint < _probot->GetDOF(); ++ijoint) {
-            if( _probot->DoesAffect(ijoint,ilink) && !_probot->DoesAffect(ijoint,iattlink) ) {
+        for(int ijoint = 0; ijoint < probot->GetDOF(); ++ijoint) {
+            if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
                 // only insert if its limits are different (ie, not a dummy joint)
-                _probot->GetJoints()[ijoint]->GetLimits(lower,upper);
-                for(int i = 0; i < _probot->GetJoints()[ijoint]->GetDOF(); ++i) {
+                probot->GetJoints()[ijoint]->GetLimits(lower,upper);
+                for(int i = 0; i < probot->GetJoints()[ijoint]->GetDOF(); ++i) {
                     if( lower[i] != upper[i] ) {
-                        int idofbase = _probot->GetJoints()[ijoint]->GetDOFIndex();
-                        for(int idof = 0; idof < _probot->GetJoints()[ijoint]->GetDOF(); ++idof)
+                        int idofbase = probot->GetJoints()[ijoint]->GetDOFIndex();
+                        for(int idof = 0; idof < probot->GetJoints()[ijoint]->GetDOF(); ++idof)
                             vdofndices.insert(idofbase+idof);
                         break;
                     }
@@ -223,22 +197,20 @@ void RobotBase::Manipulator::GetChildDOFIndices(std::set<int>& vdofndices) const
     }
 }
 
-void RobotBase::Manipulator::GetChildLinks(std::set<Link*>& vlinks) const
+void RobotBase::Manipulator::GetChildLinks(std::set<LinkPtr>& vlinks) const
 {
-    if( pEndEffector == NULL )
-        return;
-
+    RobotBasePtr probot(_probot);
     // get all child links of the manipualtor
-    vlinks.insert(pEndEffector);
-    int iattlink = pEndEffector->GetIndex();
-    FOREACHC(itlink, _probot->GetLinks()) {
+    vlinks.insert(_pEndEffector);
+    int iattlink = _pEndEffector->GetIndex();
+    FOREACHC(itlink, probot->GetLinks()) {
         int ilink = (*itlink)->GetIndex();
         if( ilink == iattlink )
             continue;
-        if( _vecarmjoints.size() > 0 && !_probot->DoesAffect(_vecarmjoints[0],ilink) )
+        if( _varmjoints.size() > 0 && !probot->DoesAffect(_varmjoints[0],ilink) )
             continue;
-        for(int ijoint = 0; ijoint < _probot->GetDOF(); ++ijoint) {
-            if( _probot->DoesAffect(ijoint,ilink) && !_probot->DoesAffect(ijoint,iattlink) ) {
+        for(int ijoint = 0; ijoint < probot->GetDOF(); ++ijoint) {
+            if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
                 vlinks.insert(*itlink);
                 break;
             }
@@ -246,46 +218,50 @@ void RobotBase::Manipulator::GetChildLinks(std::set<Link*>& vlinks) const
     }
 }
 
-RobotBase::AttachedSensor::AttachedSensor(RobotBase* probot) : _probot(probot), psensor(NULL), pattachedlink(NULL), pdata(NULL)
+RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot) : _probot(probot)
 {
 }
 
-RobotBase::AttachedSensor::AttachedSensor(RobotBase* probot, const AttachedSensor& sensor,int cloningoptions)
+RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const AttachedSensor& sensor,int cloningoptions)
 {
-    assert(probot != NULL);
     *this = sensor;
     _probot = probot;
-    psensor = NULL;
+    psensor.reset();
+    pdata.reset();
+    pattachedlink.reset();
     if( sensor.psensor != NULL ) {
-        psensor = _probot->GetEnv()->CreateSensor(sensor.psensor->GetXMLId());
-        if( psensor != NULL ) {
+        psensor = probot->GetEnv()->CreateSensor(sensor.psensor->GetXMLId());
+        if( !!psensor ) {
             psensor->Clone(sensor.psensor,cloningoptions);
-            pdata = psensor != NULL ? psensor->CreateSensorData() : NULL;
+            if( !!psensor )
+                pdata = psensor->CreateSensorData();
         }
     }
     
     int index = sensor.pattachedlink->GetIndex();
-    if( index >= 0 && index < (int)_probot->GetLinks().size())
-        pattachedlink = _probot->GetLinks()[index];
+    if( index >= 0 && index < (int)probot->GetLinks().size())
+        pattachedlink = probot->GetLinks()[index];
 }
 
 RobotBase::AttachedSensor::~AttachedSensor()
 {
 }
 
-SensorBase::SensorData* RobotBase::AttachedSensor::GetData() const
+SensorBase::SensorDataPtr RobotBase::AttachedSensor::GetData() const
 {
-    if( psensor != NULL ) {
-        if( psensor->GetSensorData(pdata) )
-            return pdata;
-    }
-
-    return NULL;
+    if( psensor->GetSensorData(pdata) )
+        return pdata;
+    return SensorBase::SensorDataPtr();
 }
 
-RobotBase::RobotStateSaver::RobotStateSaver(RobotBase* probot) : KinBodyStateSaver(probot), _probot(probot)
+void RobotBase::AttachedSensor::SetRelativeTransform(const Transform& t)
 {
-    assert( _probot != NULL );
+    trelative = t;
+    GetRobot()->ParametersChanged(Prop_SensorPlacement);
+}
+
+RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot) : KinBodyStateSaver(probot), _probot(probot)
+{
     vactivedofs = _probot->GetActiveJointIndices();
     affinedofs = _probot->GetAffineDOF();
     rotationaxis = _probot->GetAffineRotationAxis();
@@ -293,13 +269,14 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBase* probot) : KinBodyStateSav
 
 RobotBase::RobotStateSaver::~RobotStateSaver()
 {
-    _probot->SetActiveDOFs(vactivedofs, affinedofs, &rotationaxis);
+    _probot->SetActiveDOFs(vactivedofs, affinedofs, rotationaxis);
 }
 
-RobotBase::RobotBase(EnvironmentBase* penv) : KinBody(PT_Robot, penv)
+RobotBase::RobotBase(EnvironmentBasePtr penv) : KinBody(PT_Robot, penv)
 {
     _nAffineDOFs = 0;
     _nActiveDOF = 0;
+    vActvAffineRotationAxis = Vector(0,0,1);
 
     _nActiveManip = 0;
     _vecManipulators.reserve(16); // make sure to reseve enough, otherwise pIkSolver pointer might get messed up when resizing
@@ -335,21 +312,21 @@ void RobotBase::Destroy()
 {
     _vGrabbedBodies.clear();
     _vecManipulators.clear();
-
-    FOREACH(itsensor, _vecSensors) {
-        delete itsensor->pdata;
-        delete itsensor->psensor;
-    }
     _vecSensors.clear();
     
     KinBody::Destroy();
 }
 
-void RobotBase::SetJointValues(std::vector<Transform>* pvbodies, const Transform* ptrans, const dReal* pJointValues, bool bCheckLimits)
+void RobotBase::SetJointValues(const std::vector<dReal>& vJointValues, bool bCheckLimits)
 {
-    KinBody::SetJointValues(pvbodies, ptrans, pJointValues, bCheckLimits);
+    KinBody::SetJointValues(vJointValues, bCheckLimits);
     _UpdateGrabbedBodies();
     _UpdateAttachedSensors();
+}
+
+void RobotBase::SetJointValues(const std::vector<dReal>& vJointValues, const Transform& transbase, bool bCheckLimits)
+{
+    KinBody::SetJointValues(vJointValues, transbase, bCheckLimits); // should call RobotBase::SetJointValues
 }
 
 void RobotBase::SetBodyTransformations(const std::vector<Transform>& vbodies)
@@ -376,17 +353,23 @@ void RobotBase::ApplyTransform(const Transform& trans)
 void RobotBase::_UpdateGrabbedBodies()
 {
     // update grabbed objects
-    FOREACH(itbody, _vGrabbedBodies) {
-        assert( itbody->pbody != NULL && itbody->plinkrobot != NULL );
-        itbody->pbody->SetTransform(itbody->plinkrobot->GetTransform() * itbody->troot);
+    vector<GRABBED>::iterator itbody;
+    FORIT(itbody, _vGrabbedBodies) {
+        KinBodyPtr pbody(itbody->pbody);
+        if( !!pbody )
+            pbody->SetTransform(LinkPtr(itbody->plinkrobot)->GetTransform() * itbody->troot);
+        else {
+            RAVELOG_DEBUGA(str(boost::format("erasing invaliding grabbed body from %s")%GetName()));
+            itbody = _vGrabbedBodies.erase(itbody);
+        }
     }
 }
 
 void RobotBase::_UpdateAttachedSensors()
 {
     FOREACH(itsensor, _vecSensors) {
-        if( itsensor->psensor != NULL && itsensor->pattachedlink != NULL )
-            itsensor->psensor->SetTransform(itsensor->pattachedlink->GetTransform()*itsensor->trelative);
+        if( !!(*itsensor)->psensor && !!(*itsensor)->pattachedlink )
+            (*itsensor)->psensor->SetTransform((*itsensor)->pattachedlink->GetTransform()*(*itsensor)->trelative);
     }
 }
 
@@ -409,8 +392,7 @@ int RobotBase::GetAffineDOFIndex(DOFAffine dof) const
     if( dof&DOF_Rotation3D ) return index;
     if( dof&DOF_RotationQuat ) return index;
 
-    assert(0); // unspecified dof
-    return index;
+    throw openrave_exception("unspecified dow",ORE_InvalidArguments);
 }
 
 void RobotBase::SetAffineTranslationLimits(const Vector& lower, const Vector& upper)
@@ -501,10 +483,19 @@ void RobotBase::GetAffineRotationQuatLimits(Vector& lower, Vector& upper) const
     upper = _vRotationQuatUpperLimits;
 }
 
-void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffineDOFBitmask, const Vector* pRotationAxis)
+
+void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffineDOFBitmask, const Vector& vRotationAxis)
+{
+    vActvAffineRotationAxis = vRotationAxis;
+    SetActiveDOFs(vJointIndices,nAffineDOFBitmask);
+}
+
+void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffineDOFBitmask)
 {
     FOREACHC(itj, vJointIndices)
-        assert( *itj >= 0 && *itj < (int)GetDOF());
+        if( *itj < 0 || *itj >= (int)GetDOF() )
+            throw openrave_exception("bad indices",ORE_InvalidArguments);
+
     _vActiveJointIndices = vJointIndices;
     _nAffineDOFs = nAffineDOFBitmask;
 
@@ -522,8 +513,6 @@ void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffine
     if( _nAffineDOFs & DOF_Z ) _nActiveDOF++;
     if( _nAffineDOFs & DOF_RotationAxis ) {
         _nActiveDOF++; 
-        if( pRotationAxis != NULL )
-            vActvAffineRotationAxis = *pRotationAxis;
     }
     else if( _nAffineDOFs & DOF_Rotation3D ) _nActiveDOF += 3;
     else if( _nAffineDOFs & DOF_RotationQuat ) _nActiveDOF += 4;
@@ -531,21 +520,20 @@ void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffine
     _nActiveDOF += vJointIndices.size();
 }
 
-void RobotBase::SetActiveDOFValues(std::vector<Transform>* pvbodies, const dReal* pValues, bool bCheckLimits)
+void RobotBase::SetActiveDOFValues(const std::vector<dReal>& values, bool bCheckLimits)
 {
-    assert(pValues != NULL);
-
     if(_nActiveDOF == 0) {
-        SetJointValues(pvbodies, NULL, pValues, bCheckLimits);
+        SetJointValues(values,bCheckLimits);
         return;
     }
 
-    Transform t;
-    Transform* pglobtrans = NULL;
+    if( (int)values.size() != GetActiveDOF() )
+        throw openrave_exception(str(boost::format("dof not equal %d!=%d")%values.size()%GetActiveDOF()));
 
+    Transform t;
     if( (int)_vActiveJointIndices.size() < _nActiveDOF ) {
         // first set the affine transformation of the first link before setting joints
-        const dReal* pAffineValues = pValues + _vActiveJointIndices.size();
+        const dReal* pAffineValues = &values[_vActiveJointIndices.size()];
 
         t = GetTransform();
         
@@ -579,35 +567,39 @@ void RobotBase::SetActiveDOFValues(std::vector<Transform>* pvbodies, const dReal
             else t.rot = Vector(1,0,0,0);
         }
 
-        pglobtrans = &t;
         if( _vActiveJointIndices.size() == 0 )
             SetTransform(t);
     }
 
     if( _vActiveJointIndices.size() > 0 ) {
-        GetJointValues(_vtempjoints);
+        GetJointValues(_vTempRobotJoints);
 
         for(size_t i = 0; i < _vActiveJointIndices.size(); ++i)
-            _vtempjoints[_vActiveJointIndices[i]] = *pValues++;
+            _vTempRobotJoints[_vActiveJointIndices[i]] = values[i];
 
-        SetJointValues(pvbodies, pglobtrans, &_vtempjoints[0], bCheckLimits);
+        if( (int)_vActiveJointIndices.size() < _nActiveDOF )
+            SetJointValues(_vTempRobotJoints, t, bCheckLimits);
+        else
+            SetJointValues(_vTempRobotJoints, bCheckLimits);
     }
-    
 }
 
-void RobotBase::GetActiveDOFValues(dReal* pValues) const
+void RobotBase::GetActiveDOFValues(std::vector<dReal>& values) const
 {
-    assert(pValues != NULL);
     if( _nActiveDOF == 0 ) {
-        GetJointValues(pValues);
+        GetJointValues(values);
         return;
     }
 
+    values.resize(GetActiveDOF());
+    if( values.size() == 0 )
+        return;
+    dReal* pValues = &values[0];
     if( _vActiveJointIndices.size() != 0 ) {
-        GetJointValues(_vtempjoints);
+        GetJointValues(_vTempRobotJoints);
 
         FOREACHC(it, _vActiveJointIndices)
-            *pValues++ = _vtempjoints[*it];
+            *pValues++ = _vTempRobotJoints[*it];
     }
 
     if( _nAffineDOFs == DOF_NoTransform )
@@ -648,18 +640,10 @@ void RobotBase::GetActiveDOFValues(dReal* pValues) const
     }
 }
 
-void RobotBase::GetActiveDOFValues(std::vector<dReal>& v) const
+void RobotBase::SetActiveDOFVelocities(const std::vector<dReal>& velocities)
 {
-    v.resize(GetActiveDOF());
-    GetActiveDOFValues(&v[0]);
-}
-
-void RobotBase::SetActiveDOFVelocities(dReal* pVelocities)
-{
-    assert(pVelocities != NULL);
-
     if(_nActiveDOF == 0) {
-        SetJointVelocities(pVelocities);
+        SetJointVelocities(velocities);
         return;
     }
 
@@ -667,7 +651,7 @@ void RobotBase::SetActiveDOFVelocities(dReal* pVelocities)
 
     if( (int)_vActiveJointIndices.size() < _nActiveDOF ) {
         // first set the affine transformation of the first link before setting joints
-        const dReal* pAffineValues = pVelocities + _vActiveJointIndices.size();
+        const dReal* pAffineValues = &velocities[_vActiveJointIndices.size()];
 
         GetVelocity(linearvel, angularvel);
         
@@ -683,7 +667,7 @@ void RobotBase::SetActiveDOFVelocities(dReal* pVelocities)
             angularvel.z = *pAffineValues++;
         }
         else if( _nAffineDOFs & DOF_RotationQuat ) {
-            assert(0);
+            throw openrave_exception("quaternions not supported",ORE_InvalidArguments);
         }
 
         if( _vActiveJointIndices.size() == 0 )
@@ -691,28 +675,30 @@ void RobotBase::SetActiveDOFVelocities(dReal* pVelocities)
     }
 
     if( _vActiveJointIndices.size() > 0 ) {
-        GetJointVelocities(_vtempjoints);
-
+        GetJointVelocities(_vTempRobotJoints);
+        std::vector<dReal>::const_iterator itvel = velocities.begin();
         FOREACHC(it, _vActiveJointIndices)
-            _vtempjoints[*it] = *pVelocities++;
-
-        SetJointVelocities(&_vtempjoints[0]);
+            _vTempRobotJoints[*it] = *itvel++;
+        SetJointVelocities(_vTempRobotJoints);
     }
 }
 
-void RobotBase::GetActiveDOFVelocities(dReal* pVelocities) const
+void RobotBase::GetActiveDOFVelocities(std::vector<dReal>& velocities) const
 {
-    assert(pVelocities != NULL);
     if( _nActiveDOF == 0 ) {
-        GetJointVelocities(pVelocities);
+        GetJointVelocities(velocities);
         return;
     }
 
+    velocities.resize(GetActiveDOF());
+    if( velocities.size() == 0 )
+        return;
+    dReal* pVelocities = &velocities[0];
     if( _vActiveJointIndices.size() != 0 ) {
-        GetJointVelocities(_vtempjoints);
+        GetJointVelocities(_vTempRobotJoints);
 
         FOREACHC(it, _vActiveJointIndices)
-            *pVelocities++ = _vtempjoints[*it];
+            *pVelocities++ = _vTempRobotJoints[*it];
     }
 
     if( _nAffineDOFs == DOF_NoTransform )
@@ -734,123 +720,84 @@ void RobotBase::GetActiveDOFVelocities(dReal* pVelocities) const
         *pVelocities++ = angularvel.z;
     }
     else if( _nAffineDOFs & DOF_RotationQuat ) {
-        assert(0);
+        throw openrave_exception("quaternions not supported",ORE_InvalidArguments);
     }
 }
-
-void RobotBase::GetActiveDOFVelocities(std::vector<dReal>& velocities) const
-{
-    velocities.resize(GetDOF());
-    GetActiveDOFVelocities(&velocities[0]);
-}
-
-void RobotBase::GetActiveDOFLimits(dReal* pLowerLimit, dReal* pUpperLimit) const
-{
-    // lower
-    if( pLowerLimit != NULL ) {
-
-        if( _nAffineDOFs == 0 ) {
-
-            if( _nActiveDOF == 0 )
-                GetJointLimits(pLowerLimit, NULL);
-            else {
-                _vtempjoints.resize(GetDOF());
-                GetJointLimits(&_vtempjoints[0], NULL);
-                FOREACHC(it, _vActiveJointIndices)
-                    *pLowerLimit++ = _vtempjoints[*it];
-            }
-        }
-        else {
-
-            if( _vActiveJointIndices.size() > 0 ) {
-                _vtempjoints.resize(GetDOF());
-                GetJointLimits(&_vtempjoints[0], NULL);
-                FOREACHC(it, _vActiveJointIndices)
-                    *pLowerLimit++ = _vtempjoints[*it];
-            }
-
-            if( _nAffineDOFs & DOF_X ) { *pLowerLimit++ = _vTranslationLowerLimits.x; }
-            if( _nAffineDOFs & DOF_Y ) { *pLowerLimit++ = _vTranslationLowerLimits.y; }
-            if( _nAffineDOFs & DOF_Z ) { *pLowerLimit++ = _vTranslationLowerLimits.z; }
-
-            if( _nAffineDOFs & DOF_RotationAxis ) { *pLowerLimit++ = _vRotationAxisLowerLimits.x; }
-            else if( _nAffineDOFs & DOF_Rotation3D ) {
-                //should this be *pLowerLimit++ instead of pLowerLimit[0]?
-                *pLowerLimit++ = _vRotation3DLowerLimits.x;
-                *pLowerLimit++ = _vRotation3DLowerLimits.y;
-                *pLowerLimit++ = _vRotation3DLowerLimits.z;
-            }
-            else if( _nAffineDOFs & DOF_RotationQuat ) {
-                //should this be *pLowerLimit++ instead of pLowerLimit[0]?
-                *pLowerLimit++ = _vRotationQuatLowerLimits.x;
-                *pLowerLimit++ = _vRotationQuatLowerLimits.y;
-                *pLowerLimit++ = _vRotationQuatLowerLimits.z;
-                *pLowerLimit++ = _vRotationQuatLowerLimits.w;
-            }
-        }
-    }
-
-    // upper limit
-    if( pUpperLimit != NULL ) {
-
-        if( _nAffineDOFs == 0 ) {
-            if( _nActiveDOF == 0 )
-                GetJointLimits(NULL, pUpperLimit);
-            else {
-                _vtempjoints.resize(GetDOF());
-                GetJointLimits(NULL, &_vtempjoints[0]);
-                FOREACHC(it, _vActiveJointIndices)
-                    *pUpperLimit++ = _vtempjoints[*it];
-            }
-        }
-        else {
-
-            if( _vActiveJointIndices.size() > 0 ) {
-                _vtempjoints.resize(GetDOF());
-                GetJointLimits(NULL, &_vtempjoints[0]);
-                FOREACHC(it, _vActiveJointIndices)
-                    *pUpperLimit++ = _vtempjoints[*it];
-            }
-
-            if( _nAffineDOFs & DOF_X ) { *pUpperLimit++ = _vTranslationUpperLimits.x; }
-            if( _nAffineDOFs & DOF_Y ) { *pUpperLimit++ = _vTranslationUpperLimits.y; }
-            if( _nAffineDOFs & DOF_Z ) { *pUpperLimit++ = _vTranslationUpperLimits.z; }
-
-            if( _nAffineDOFs & DOF_RotationAxis ) { *pUpperLimit++ = _vRotationAxisUpperLimits.x; }
-            else if( _nAffineDOFs & DOF_Rotation3D ) {
-                //should this be *pUpperLimit++ instead of pUpperLimit[0]?
-                *pUpperLimit++ = _vRotation3DUpperLimits.x;
-                *pUpperLimit++ = _vRotation3DUpperLimits.y;
-                *pUpperLimit++ = _vRotation3DUpperLimits.z;
-            }
-            else if( _nAffineDOFs & DOF_RotationQuat ) {
-                //should this be *pUpperLimit++ instead of pUpperLimit[0]?
-                *pUpperLimit++ = _vRotationQuatUpperLimits.x;
-                *pUpperLimit++ = _vRotationQuatUpperLimits.y;
-                *pUpperLimit++ = _vRotationQuatUpperLimits.z;
-                *pUpperLimit++ = _vRotationQuatUpperLimits.w;
-            }
-        }
-    }
-}    
 
 void RobotBase::GetActiveDOFLimits(std::vector<dReal>& lower, std::vector<dReal>& upper) const
 {
     lower.resize(GetActiveDOF());
     upper.resize(GetActiveDOF());
-    GetActiveDOFLimits(&lower[0], &upper[0]);
-}
+    if( GetActiveDOF() == 0 )
+        return;
 
-void RobotBase::GetActiveDOFResolutions(dReal* pResolution) const
+    dReal* pLowerLimit = &lower[0];
+    dReal* pUpperLimit = &upper[0];
+    vector<dReal> alllower,allupper;
+
+    if( _nAffineDOFs == 0 ) {
+        if( _nActiveDOF == 0 ) {
+            GetJointLimits(lower,upper);
+            return;
+        }
+        else {
+            GetJointLimits(alllower,allupper);
+            FOREACHC(it, _vActiveJointIndices) {
+                *pLowerLimit++ = alllower[*it];
+                *pUpperLimit++ = allupper[*it];
+            }
+        }
+    }
+    else {
+        if( _vActiveJointIndices.size() > 0 ) {
+            GetJointLimits(alllower,allupper);
+            FOREACHC(it, _vActiveJointIndices) {
+                *pLowerLimit++ = alllower[*it];
+                *pUpperLimit++ = allupper[*it];
+            }
+        }
+
+        if( _nAffineDOFs & DOF_X ) { *pLowerLimit++ = _vTranslationLowerLimits.x; *pUpperLimit++ = _vTranslationUpperLimits.x; }
+        if( _nAffineDOFs & DOF_Y ) { *pLowerLimit++ = _vTranslationLowerLimits.y; *pUpperLimit++ = _vTranslationUpperLimits.y; }
+        if( _nAffineDOFs & DOF_Z ) { *pLowerLimit++ = _vTranslationLowerLimits.z; *pUpperLimit++ = _vTranslationUpperLimits.z; }
+
+        if( _nAffineDOFs & DOF_RotationAxis ) { *pLowerLimit++ = _vRotationAxisLowerLimits.x; *pUpperLimit++ = _vRotationAxisUpperLimits.x; }
+        else if( _nAffineDOFs & DOF_Rotation3D ) {
+            *pLowerLimit++ = _vRotation3DLowerLimits.x;
+            *pLowerLimit++ = _vRotation3DLowerLimits.y;
+            *pLowerLimit++ = _vRotation3DLowerLimits.z;
+            *pUpperLimit++ = _vRotation3DUpperLimits.x;
+            *pUpperLimit++ = _vRotation3DUpperLimits.y;
+            *pUpperLimit++ = _vRotation3DUpperLimits.z;
+        }
+        else if( _nAffineDOFs & DOF_RotationQuat ) {
+            *pLowerLimit++ = _vRotationQuatLowerLimits.x;
+            *pLowerLimit++ = _vRotationQuatLowerLimits.y;
+            *pLowerLimit++ = _vRotationQuatLowerLimits.z;
+            *pLowerLimit++ = _vRotationQuatLowerLimits.w;
+            *pUpperLimit++ = _vRotationQuatUpperLimits.x;
+            *pUpperLimit++ = _vRotationQuatUpperLimits.y;
+            *pUpperLimit++ = _vRotationQuatUpperLimits.z;
+            *pUpperLimit++ = _vRotationQuatUpperLimits.w;
+        }
+    }
+}    
+
+void RobotBase::GetActiveDOFResolutions(std::vector<dReal>& resolution) const
 {
     if( _nActiveDOF == 0 ) {
-        GetJointResolutions(pResolution);
+        GetJointResolutions(resolution);
         return;
     }
+    
+    resolution.resize(GetActiveDOF());
+    if( resolution.size() == 0 )
+        return;
+    dReal* pResolution = &resolution[0];
 
-    GetJointResolutions(_vtempjoints);
+    GetJointResolutions(_vTempRobotJoints);
     FOREACHC(it, _vActiveJointIndices)
-        *pResolution++ = _vtempjoints[*it];
+        *pResolution++ = _vTempRobotJoints[*it];
 
     // set some default limits 
     if( _nAffineDOFs & DOF_X ) { *pResolution++ = _vTranslationResolutions.x;}
@@ -871,22 +818,21 @@ void RobotBase::GetActiveDOFResolutions(dReal* pResolution) const
     }
 }
 
-void RobotBase::GetActiveDOFResolutions(std::vector<dReal>& v) const
-{
-    v.resize(GetActiveDOF());
-    GetActiveDOFResolutions(&v[0]);
-}
-
-void RobotBase::GetActiveDOFMaxVel(dReal* pMaxVel) const
+void RobotBase::GetActiveDOFMaxVel(std::vector<dReal>& maxvel) const
 {
     if( _nActiveDOF == 0 ) {
-        GetJointMaxVel(pMaxVel);
+        GetJointMaxVel(maxvel);
         return;
     }
 
-    GetJointMaxVel(_vtempjoints);
+    maxvel.resize(GetActiveDOF());
+    if( maxvel.size() == 0 )
+        return;
+    dReal* pMaxVel = &maxvel[0];
+
+    GetJointMaxVel(_vTempRobotJoints);
     FOREACHC(it, _vActiveJointIndices)
-        *pMaxVel++ = _vtempjoints[*it];
+        *pMaxVel++ = _vTempRobotJoints[*it];
 
     if( _nAffineDOFs & DOF_X ) { *pMaxVel++ = _vTranslationMaxVels.x;}
     if( _nAffineDOFs & DOF_Y ) { *pMaxVel++ = _vTranslationMaxVels.y;}
@@ -906,22 +852,21 @@ void RobotBase::GetActiveDOFMaxVel(dReal* pMaxVel) const
     }
 }
 
-void RobotBase::GetActiveDOFMaxVel(std::vector<dReal>& v) const
-{
-    v.resize(GetActiveDOF());
-    GetActiveDOFMaxVel(&v[0]);
-}
-
-void RobotBase::GetActiveDOFMaxAccel(dReal* pMaxAccel) const
+void RobotBase::GetActiveDOFMaxAccel(std::vector<dReal>& maxaccel) const
 {
     if( _nActiveDOF == 0 ) {
-        GetJointMaxAccel(pMaxAccel);
+        GetJointMaxAccel(maxaccel);
         return;
     }
 
-    GetJointMaxAccel(_vtempjoints);
+    maxaccel.resize(GetActiveDOF());
+    if( maxaccel.size() == 0 )
+        return;
+    dReal* pMaxAccel = &maxaccel[0];
+
+    GetJointMaxAccel(_vTempRobotJoints);
     FOREACHC(it, _vActiveJointIndices)
-        *pMaxAccel++ = _vtempjoints[*it];
+        *pMaxAccel++ = _vTempRobotJoints[*it];
 
     if( _nAffineDOFs & DOF_X ) { *pMaxAccel++ = _vTranslationMaxVels.x;} // wrong
     if( _nAffineDOFs & DOF_Y ) { *pMaxAccel++ = _vTranslationMaxVels.y;} // wrong
@@ -941,25 +886,23 @@ void RobotBase::GetActiveDOFMaxAccel(dReal* pMaxAccel) const
     }
 }
 
-void RobotBase::GetActiveDOFMaxAccel(std::vector<dReal>& v) const
+void RobotBase::GetControlMaxTorques(std::vector<dReal>& maxtorques) const
 {
-    v.resize(GetActiveDOF());
-    GetActiveDOFMaxAccel(&v[0]);
-}
-
-void RobotBase::GetControlMaxTorques(dReal* pMaxTorques) const
-{
-    assert(pMaxTorques != NULL);
     if( _nActiveDOF == 0 ) {
-        GetJointMaxTorque(pMaxTorques);
+        GetJointMaxTorque(maxtorques);
         return;
     }
 
+    maxtorques.resize(GetActiveDOF());
+    if( maxtorques.size() == 0 )
+        return;
+    dReal* pMaxTorques = &maxtorques[0];
+
     if( _vActiveJointIndices.size() != 0 ) {
-        GetJointMaxTorque(_vtempjoints);
+        GetJointMaxTorque(_vTempRobotJoints);
 
         FOREACHC(it, _vActiveJointIndices)
-            *pMaxTorques++ = _vtempjoints[*it];
+            *pMaxTorques++ = _vTempRobotJoints[*it];
     }
 
     if( _nAffineDOFs == DOF_NoTransform )
@@ -982,35 +925,26 @@ void RobotBase::GetControlMaxTorques(dReal* pMaxTorques) const
     }
 }
 
-void RobotBase::GetControlMaxTorques(std::vector<dReal>& vmaxtorque) const
+void RobotBase::SetControlTorques(const std::vector<dReal>& vtorques)
 {
-    vmaxtorque.resize(GetControlDOF());
-    GetControlMaxTorques(&vmaxtorque[0]);
-}
-
-void RobotBase::SetControlTorques(dReal* pTorques)
-{
-    assert(pTorques != NULL);
-
     if(_nActiveDOF == 0) {
-        SetJointTorques(pTorques, false);
+        SetJointTorques(vtorques, false);
         return;
     }
 
     if( _vActiveJointIndices.size() > 0 ) {
-        _vtempjoints.resize(GetDOF());
-
+        _vTempRobotJoints.resize(GetDOF());
+        std::vector<dReal>::const_iterator ittorque = vtorques.begin();
         FOREACHC(it, _vActiveJointIndices)
-            _vtempjoints[*it] = *pTorques++;
-
-        SetJointTorques(&_vtempjoints[0], false);
+            _vTempRobotJoints[*it] = *ittorque++;
+        SetJointTorques(_vTempRobotJoints,false);
     }
 }
 
-void RobotBase::GetFullTrajectoryFromActive(Trajectory* pFullTraj, const Trajectory* pActiveTraj, bool bOverwriteTransforms)
+void RobotBase::GetFullTrajectoryFromActive(TrajectoryBasePtr pFullTraj, TrajectoryBaseConstPtr pActiveTraj, bool bOverwriteTransforms)
 {
-    assert( pFullTraj != NULL && pActiveTraj != NULL );
-    assert( pFullTraj != pActiveTraj );
+    BOOST_ASSERT( !!pFullTraj && !!pActiveTraj );
+    BOOST_ASSERT( pFullTraj != pActiveTraj );
 
     pFullTraj->Reset(GetDOF());
 
@@ -1074,7 +1008,7 @@ void RobotBase::GetFullTrajectoryFromActive(Trajectory* pFullTraj, const Traject
         }
     }
 
-    pFullTraj->CalcTrajTiming(this, pActiveTraj->GetInterpMethod(), false, false);
+    pFullTraj->CalcTrajTiming(shared_robot(), pActiveTraj->GetInterpMethod(), false, false);
 }
 
 const std::vector<int>& RobotBase::GetActiveJointIndices()
@@ -1087,16 +1021,19 @@ const std::vector<int>& RobotBase::GetActiveJointIndices()
     return _nActiveDOF == 0 ? _vAllJointIndices : _vActiveJointIndices;
 }
 
-void RobotBase::CalculateActiveJacobian(int index, const Vector& offset, dReal* pfJacobian) const
+void RobotBase::CalculateActiveJacobian(int index, const Vector& offset, vector<dReal>& vjacobian) const
 {
     if( _nActiveDOF == 0 ) {
-        CalculateJacobian(index, offset, pfJacobian);
+        CalculateJacobian(index, offset, vjacobian);
         return;
     }
 
+    vjacobian.resize(GetActiveDOF()*3);
+    dReal* pfJacobian = &vjacobian[0];
+
     if( _vActiveJointIndices.size() != 0 ) {
-        vector<dReal> jac(3*GetDOF());
-        CalculateJacobian(index, offset, &jac[0]);
+        vector<dReal> jac;
+        CalculateJacobian(index, offset, jac);
 
         for(int i = 0; i < (int)_vActiveJointIndices.size(); ++i) {
             pfJacobian[i] = jac[_vActiveJointIndices[i]];
@@ -1195,16 +1132,19 @@ void RobotBase::CalculateActiveJacobian(int index, const Vector& offset, dReal* 
     }
 }
 
-void RobotBase::CalculateActiveRotationJacobian(int index, const Vector& q, dReal* pfJacobian) const
+void RobotBase::CalculateActiveRotationJacobian(int index, const Vector& q, std::vector<dReal>& vjacobian) const
 {
     if( _nActiveDOF == 0 ) {
-        CalculateJacobian(index, q, pfJacobian);
+        CalculateJacobian(index, q, vjacobian);
         return;
     }
 
+    vjacobian.resize(GetActiveDOF()*4);
+    dReal* pfJacobian = &vjacobian[0];
+
     if( _vActiveJointIndices.size() != 0 ) {
-        vector<dReal> jac(4*GetDOF());
-        CalculateRotationJacobian(index, q, &jac[0]);
+        vector<dReal> jac;
+        CalculateRotationJacobian(index, q, jac);
 
         for(int i = 0; i < (int)_vActiveJointIndices.size(); ++i) {
             pfJacobian[i] = jac[_vActiveJointIndices[i]];
@@ -1247,8 +1187,7 @@ void RobotBase::CalculateActiveRotationJacobian(int index, const Vector& q, dRea
         pfJacobian[GetActiveDOF()*3] =    q.x*v.z - q.y*v.y + q.z*v.x;
     }
     else if( _nAffineDOFs & DOF_Rotation3D ) {
-        assert(0);
-        // todo
+        throw openrave_exception("rotation 3d not supported",ORE_InvalidArguments);
     }
     else if( _nAffineDOFs & DOF_RotationQuat ) {
         pfJacobian[0] = 1;
@@ -1259,16 +1198,19 @@ void RobotBase::CalculateActiveRotationJacobian(int index, const Vector& q, dRea
 }
 
 
-void RobotBase::CalculateActiveAngularVelocityJacobian(int index, dReal* pfJacobian) const
+void RobotBase::CalculateActiveAngularVelocityJacobian(int index, std::vector<dReal>& vjacobian) const
 {
     if( _nActiveDOF == 0 ) {
-        CalculateAngularVelocityJacobian(index, pfJacobian);
+        CalculateAngularVelocityJacobian(index, vjacobian);
         return;
     }
 
+    vjacobian.resize(GetActiveDOF()*3);
+    dReal* pfJacobian = &vjacobian[0];
+
     if( _vActiveJointIndices.size() != 0 ) {
-        vector<dReal> jac(3*GetDOF());
-        CalculateAngularVelocityJacobian(index, &jac[0]);
+        vector<dReal> jac;
+        CalculateAngularVelocityJacobian(index, jac);
 
         for(int i = 0; i < (int)_vActiveJointIndices.size(); ++i) {
             pfJacobian[i] = jac[_vActiveJointIndices[i]];
@@ -1307,11 +1249,11 @@ void RobotBase::CalculateActiveAngularVelocityJacobian(int index, dReal* pfJacob
 
     }
     else if( _nAffineDOFs & DOF_Rotation3D ) {
-        assert(0);
-        // todo
+        throw openrave_exception("rotation 3d not supported",ORE_InvalidArguments);
     }
     else if( _nAffineDOFs & DOF_RotationQuat ) {
-        assert(0);
+        throw openrave_exception("quaternions not supported",ORE_InvalidArguments);
+
         // most likely wrong
         Transform t = GetTransform();
         dReal fnorm = RaveSqrt(t.rot.y*t.rot.y+t.rot.z*t.rot.z+t.rot.w*t.rot.w);
@@ -1329,90 +1271,126 @@ void RobotBase::CalculateActiveAngularVelocityJacobian(int index, dReal* pfJacob
     }
 }
 
-
-bool RobotBase::Init(const char* strData, const char**atts)
+bool RobotBase::InitFromFile(const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts)
 {
-    assert( GetEnv() != NULL );
-
-    // check if added
-    FOREACHC(itbody, GetEnv()->GetBodies()) {
-        if( *itbody == this ) {
-            RAVEPRINT(L"Robot::Init for %S, cannot Init a body while it is added to the environment\n", GetName());
-            return false;
-        }
-    }
-
-    SetGuiData(NULL);
-
-    bool bSuccess = GetEnv()->ReadRobotXML(this, strData, atts)==this;
-
+    bool bSuccess = GetEnv()->ReadRobotXMLFile(shared_robot(), filename, atts)==shared_robot();
     if( !bSuccess ) {
         Destroy();
         return false;
     }
 
-    strXMLFilename = strData;
+    strXMLFilename = filename;
+    return true;
+}
+
+bool RobotBase::InitFromData(const std::string& data, const std::list<std::pair<std::string,std::string> >& atts)
+{
+    bool bSuccess = GetEnv()->ReadRobotXMLData(shared_robot(), data, atts)==shared_robot();
+    if( !bSuccess ) {
+        Destroy();
+        return false;
+    }
 
     return true;
 }
 
-bool RobotBase::Grab(KinBody* pbody, const std::set<int>* psetRobotLinksToIgnore)
+bool RobotBase::Grab(KinBodyPtr pbody)
 {
-    Manipulator* pmanip = GetActiveManipulator();
-    if( pmanip == NULL || pmanip->pEndEffector == NULL )
+    ManipulatorPtr pmanip = GetActiveManipulator();
+    if( !pmanip )
         return false;
-    return Grab(pbody, pmanip->pEndEffector->GetIndex(), psetRobotLinksToIgnore);
+    return Grab(pbody, pmanip->GetEndEffector());
 }
 
-bool RobotBase::Grab(KinBody* pbody, int linkindex, const std::set<int>* psetRobotLinksToIgnore)
+bool RobotBase::Grab(KinBodyPtr pbody, const std::set<int>& setRobotLinksToIgnore)
 {
-    if( pbody == NULL || linkindex < 0 || linkindex >= (int)GetLinks().size() )
+    ManipulatorPtr pmanip = GetActiveManipulator();
+    if( !pmanip )
         return false;
+    return Grab(pbody, pmanip->GetEndEffector(), setRobotLinksToIgnore);
+}
+
+bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
+{
+    if( !pbody || !plink || plink->GetParent() != shared_kinbody() )
+        throw openrave_exception("invalid grab arguments",ORE_InvalidArguments);
+    if( pbody == shared_kinbody() )
+        throw openrave_exception("robot cannot grab itself",ORE_InvalidArguments);
 
     if( IsGrabbing(pbody) ) {
-        RAVELOG(L"Robot %S: body %S already grabbed\n", GetName(), pbody->GetName());
+        RAVELOG_VERBOSEA("Robot %s: body %s already grabbed\n", GetName().c_str(), pbody->GetName().c_str());
         return true;
     }
 
     _vGrabbedBodies.push_back(GRABBED());
     GRABBED& g = _vGrabbedBodies.back();
     g.pbody = pbody;
-    g.plinkrobot = _veclinks[linkindex];
-    g.troot = g.plinkrobot->GetTransform().inverse() * pbody->GetTransform();
+    g.plinkrobot = plink;
+    g.troot = plink->GetTransform().inverse() * pbody->GetTransform();
 
     // check collision with all links to see which are valid
     FOREACH(itlink, _veclinks) {
-        if( psetRobotLinksToIgnore != NULL && psetRobotLinksToIgnore->find((*itlink)->GetIndex()) != psetRobotLinksToIgnore->end() )
+        if( !GetEnv()->CheckCollision(*itlink, pbody) )
+            g.sValidColLinks.insert(*itlink);
+    }
+
+    AttachBody(pbody);
+    return true;
+}
+
+bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink, const std::set<int>& setRobotLinksToIgnore)
+{
+    if( !pbody || !plink || plink->GetParent() != shared_kinbody() )
+        throw openrave_exception("invalid grab arguments",ORE_InvalidArguments);
+    if( pbody == shared_kinbody() )
+        throw openrave_exception("robot cannot grab itself",ORE_InvalidArguments);
+
+    if( IsGrabbing(pbody) ) {
+        RAVELOG_VERBOSEA("Robot %s: body %s already grabbed\n", GetName().c_str(), pbody->GetName().c_str());
+        return true;
+    }
+
+    _vGrabbedBodies.push_back(GRABBED());
+    GRABBED& g = _vGrabbedBodies.back();
+    g.pbody = pbody;
+    g.plinkrobot = plink;
+    g.troot = plink->GetTransform().inverse() * pbody->GetTransform();
+
+    // check collision with all links to see which are valid
+    FOREACH(itlink, _veclinks) {
+        if( setRobotLinksToIgnore.find((*itlink)->GetIndex()) != setRobotLinksToIgnore.end() )
             continue;
         if( !GetEnv()->CheckCollision(*itlink, pbody) )
             g.sValidColLinks.insert(*itlink);
     }
 
-    this->AttachBody(pbody);
+    AttachBody(pbody);
     return true;
 }
 
-void RobotBase::Release(KinBody* pbody)
+void RobotBase::Release(KinBodyPtr pbody)
 {
     vector<GRABBED>::iterator itbody;
     FORIT(itbody, _vGrabbedBodies) {
-        if( itbody->pbody == pbody )
+        if( KinBodyPtr(itbody->pbody) == pbody )
             break;
     }
 
     if( itbody == _vGrabbedBodies.end() ) {
-        RAVELOG(L"Robot %S: body %S not grabbed\n", GetName(), pbody->GetName());
+        RAVELOG_DEBUGA(str(boost::format("Robot %s: body %s not grabbed\n")%GetName()%pbody->GetName()));
         return;
     }
 
     _vGrabbedBodies.erase(itbody);
-    this->RemoveBody(pbody);
+    RemoveBody(pbody);
 }
 
 void RobotBase::ReleaseAllGrabbed()
 {
     FOREACH(itbody, _vGrabbedBodies) {
-        this->RemoveBody(itbody->pbody);
+        KinBodyPtr pbody(itbody->pbody);
+        if( !!pbody )
+            RemoveBody(pbody);
     }
     _vGrabbedBodies.clear();
 }
@@ -1420,62 +1398,73 @@ void RobotBase::ReleaseAllGrabbed()
 void RobotBase::RegrabAll()
 {
     FOREACH(itbody, _vGrabbedBodies) {
-        // check collision with all links to see which are valid
-        itbody->sValidColLinks.clear();
-        FOREACH(itlink, _veclinks) {
-            if( !GetEnv()->CheckCollision(*itlink, itbody->pbody) )
-                itbody->sValidColLinks.insert(*itlink);
+        KinBodyPtr pbody(itbody->pbody);
+        if( !!pbody ) {
+            // check collision with all links to see which are valid
+            itbody->sValidColLinks.clear();
+            FOREACH(itlink, _veclinks) {
+                if( !GetEnv()->CheckCollision(*itlink, pbody) )
+                    itbody->sValidColLinks.insert(*itlink);
+            }
         }
     }
 }
 
-bool RobotBase::IsGrabbing(KinBody* pbody) const
+RobotBase::LinkPtr RobotBase::IsGrabbing(KinBodyPtr pbody) const
 {
     vector<GRABBED>::const_iterator itbody;
     FORIT(itbody, _vGrabbedBodies) {
-        if( itbody->pbody == pbody )
-            return true;
+        if( KinBodyPtr(itbody->pbody) == pbody )
+            return LinkPtr(itbody->plinkrobot);
     }
 
-    return false;
+    return LinkPtr();
 }
 
 void RobotBase::SetActiveManipulator(int index)
 {
-    assert( index >= 0 && index < (int)_vecManipulators.size());
+    if( index < 0 && index >= (int)_vecManipulators.size())
+        throw openrave_exception(str(boost::format("bad manipulator index")%index),ORE_InvalidArguments);
     _nActiveManip = index;
 }
 
-RobotBase::Manipulator* RobotBase::GetActiveManipulator()
+RobotBase::ManipulatorPtr RobotBase::GetActiveManipulator()
 {
-    if(_nActiveManip >= 0 && _nActiveManip < (int)_vecManipulators.size() ) {
-        return &_vecManipulators[_nActiveManip];
-    }
-    return NULL;
+    if(_nActiveManip < 0 && _nActiveManip >= (int)_vecManipulators.size() )
+        throw openrave_exception(str(boost::format("bad active manipulator index")%_nActiveManip),ORE_InvalidArguments);
+    return _vecManipulators[_nActiveManip];
+}
+
+RobotBase::ManipulatorConstPtr RobotBase::GetActiveManipulator() const
+{
+    if(_nActiveManip < 0 && _nActiveManip >= (int)_vecManipulators.size() )
+        throw openrave_exception(str(boost::format("bad active manipulator index")%_nActiveManip),ORE_InvalidArguments);
+    return _vecManipulators[_nActiveManip];
 }
 
 /// Check if body is self colliding. Links that are joined together are ignored.
-bool RobotBase::CheckSelfCollision(COLLISIONREPORT* pReport) const
+bool RobotBase::CheckSelfCollision(boost::shared_ptr<COLLISIONREPORT> report) const
 {
-    if( KinBody::CheckSelfCollision(pReport) )
+    if( KinBody::CheckSelfCollision(report) )
         return true;
 
     // check all grabbed bodies with 
     vector<GRABBED>::const_iterator itbody;
-    set<Link*>::const_iterator itlink;
-
-    COLLISIONREPORT report;
-    if( pReport == NULL )
-        pReport = &report;
+    set<LinkWeakPtr>::const_iterator itlink;
 
     FORIT(itbody, _vGrabbedBodies) {
+        KinBodyPtr pbody(itbody->pbody);
+        if( !pbody )
+            continue;
         FORIT(itlink, itbody->sValidColLinks) {
-            if( GetEnv()->CheckCollision(*itlink, itbody->pbody, pReport) && pReport != NULL ) {
-                RAVELOG(L"Self collision: (%S:%S)x(%S:%S).\n",
-                          pReport->plink1!=NULL?pReport->plink1->GetParent()->GetName():L"",
-                          pReport->plink1!=NULL?pReport->plink1->GetName():L"",
-                          pReport->plink2!=NULL?pReport->plink2->GetParent()->GetName():L"",
-                          pReport->plink2!=NULL?pReport->plink2->GetName():L"");
+            if( GetEnv()->CheckCollision(KinBody::LinkPtr(*itlink), pbody, report) ) {
+                if( !!report ) {
+                    RAVELOG_DEBUGA("Self collision: (%s:%s)x(%s:%s).\n",
+                                   report->plink1!=NULL?report->plink1->GetParent()->GetName().c_str():"",
+                                   report->plink1!=NULL?report->plink1->GetName().c_str():"",
+                                   report->plink2!=NULL?report->plink2->GetParent()->GetName().c_str():"",
+                                   report->plink2!=NULL?report->plink2->GetName().c_str():"");
+                }
                 return true;
             }
         }
@@ -1489,8 +1478,8 @@ void RobotBase::SimulationStep(dReal fElapsedTime)
     KinBody::SimulationStep(fElapsedTime);
 
     FOREACH(itsensor, _vecSensors) {
-        if( itsensor->psensor != NULL )
-            itsensor->psensor->SimulationStep(fElapsedTime);
+        if( !!(*itsensor)->psensor )
+            (*itsensor)->psensor->SimulationStep(fElapsedTime);
     }
 
     _UpdateGrabbedBodies();
@@ -1501,60 +1490,60 @@ void RobotBase::ComputeJointHierarchy()
 {
     KinBody::ComputeJointHierarchy();
     FOREACH(itmanip,_vecManipulators)
-        itmanip->InitIKSolver();
+        (*itmanip)->InitIKSolver();
 }
 
-bool RobotBase::Clone(const InterfaceBase* preference, int cloningoptions)
+bool RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 {
     // note that grabbed bodies are not cloned (check out Environment::Clone)
     if( !KinBody::Clone(preference,cloningoptions) )
         return false;
-    const RobotBase& r = *(const RobotBase*)preference;
+
+    RobotBaseConstPtr r = boost::static_pointer_cast<RobotBase const>(preference);
 
     _vecManipulators.clear();
-    FOREACHC(itmanip, r._vecManipulators)
-        _vecManipulators.push_back(Manipulator(this,*itmanip));
+    FOREACHC(itmanip, r->_vecManipulators)
+        _vecManipulators.push_back(ManipulatorPtr(new Manipulator(shared_robot(),**itmanip)));
 
     _vecSensors.clear();
-    FOREACHC(itsensor, r._vecSensors)
-        _vecSensors.push_back(AttachedSensor(this,*itsensor,cloningoptions));
+    FOREACHC(itsensor, r->_vecSensors)
+        _vecSensors.push_back(AttachedSensorPtr(new AttachedSensor(shared_robot(),**itsensor,cloningoptions)));
     _UpdateAttachedSensors();
 
-    _vActiveJointIndices = r._vActiveJointIndices;
-    _vAllJointIndices = r._vAllJointIndices;
-    vActvAffineRotationAxis = r.vActvAffineRotationAxis;
-    _nActiveManip = r._nActiveManip;
-    _nActiveDOF = r._nActiveDOF;
-    _nAffineDOFs = r._nAffineDOFs;
-    _vtempjoints = r._vtempjoints;
+    _vActiveJointIndices = r->_vActiveJointIndices;
+    _vAllJointIndices = r->_vAllJointIndices;
+    vActvAffineRotationAxis = r->vActvAffineRotationAxis;
+    _nActiveManip = r->_nActiveManip;
+    _nActiveDOF = r->_nActiveDOF;
+    _nAffineDOFs = r->_nAffineDOFs;
     
-    _vTranslationLowerLimits = r._vTranslationLowerLimits;
-    _vTranslationUpperLimits = r._vTranslationUpperLimits;
-    _vTranslationMaxVels = r._vTranslationMaxVels;
-    _vTranslationResolutions = r._vTranslationResolutions;
-    _vRotationAxisLowerLimits = r._vRotationAxisLowerLimits;
-    _vRotationAxisUpperLimits = r._vRotationAxisUpperLimits;
-    _vRotationAxisMaxVels = r._vRotationAxisMaxVels;
-    _vRotationAxisResolutions = r._vRotationAxisResolutions;
-    _vRotation3DLowerLimits = r._vRotation3DLowerLimits;
-    _vRotation3DUpperLimits = r._vRotation3DUpperLimits;
-    _vRotation3DMaxVels = r._vRotation3DMaxVels;
-    _vRotation3DResolutions = r._vRotation3DResolutions;
-    _vRotationQuatLowerLimits = r._vRotationQuatLowerLimits;
-    _vRotationQuatUpperLimits = r._vRotationQuatUpperLimits;
-    _vRotationQuatMaxVels = r._vRotationQuatMaxVels;
-    _vRotationQuatResolutions = r._vRotationQuatResolutions;
+    _vTranslationLowerLimits = r->_vTranslationLowerLimits;
+    _vTranslationUpperLimits = r->_vTranslationUpperLimits;
+    _vTranslationMaxVels = r->_vTranslationMaxVels;
+    _vTranslationResolutions = r->_vTranslationResolutions;
+    _vRotationAxisLowerLimits = r->_vRotationAxisLowerLimits;
+    _vRotationAxisUpperLimits = r->_vRotationAxisUpperLimits;
+    _vRotationAxisMaxVels = r->_vRotationAxisMaxVels;
+    _vRotationAxisResolutions = r->_vRotationAxisResolutions;
+    _vRotation3DLowerLimits = r->_vRotation3DLowerLimits;
+    _vRotation3DUpperLimits = r->_vRotation3DUpperLimits;
+    _vRotation3DMaxVels = r->_vRotation3DMaxVels;
+    _vRotation3DResolutions = r->_vRotation3DResolutions;
+    _vRotationQuatLowerLimits = r->_vRotationQuatLowerLimits;
+    _vRotationQuatUpperLimits = r->_vRotationQuatUpperLimits;
+    _vRotationQuatMaxVels = r->_vRotationQuatMaxVels;
+    _vRotationQuatResolutions = r->_vRotationQuatResolutions;
 
     // clone the controller
-    if( (cloningoptions&Clone_RealControllers) && r.GetController() != NULL ) {
-        if( !SetController(_ravembstowcs(r.GetController()->GetXMLId()).c_str()) ) {
-            RAVEPRINT(L"failed to set %S controller for robot %S\n", r.GetController()->GetXMLId(), GetName());
+    if( (cloningoptions&Clone_RealControllers) && !!r->GetController() ) {
+        if( !SetController(GetEnv()->CreateController(r->GetController()->GetXMLId()),"") ) {
+            RAVELOG_WARNA("failed to set %s controller for robot %s\n", r->GetController()->GetXMLId().c_str(), GetName().c_str());
         }
     }
 
-    if( GetController() == NULL ) {
-        if( !SetController(L"IdealController") ) {
-            RAVEPRINT(L"failed to set IdealController\n");
+    if( !GetController() ) {
+        if( !SetController(GetEnv()->CreateController("IdealController"),"") ) {
+            RAVELOG_WARNA("failed to set IdealController\n");
             return false;
         }
     }

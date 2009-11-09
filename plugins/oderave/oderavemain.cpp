@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -14,50 +14,43 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
 
-#include "odephysics.h"
 #include "odecollision.h"
-
-// declaring variables with stdcall can be a little complex
-#ifdef _MSC_VER
-
-#define PROT_STDCALL(name, paramlist) __stdcall name paramlist
-#define DECL_STDCALL(name, paramlist) __stdcall name paramlist
-
-#else
-
-#ifdef __x86_64__
-#define DECL_STDCALL(name, paramlist) name paramlist
-#else
-#define DECL_STDCALL(name, paramlist) __attribute__((stdcall)) name paramlist
-#endif
-
-#endif // _MSC_VER
+#include "odephysics.h"
 
 // need c linkage
 extern "C" {
 
-// for some reason windows complains when the prototypes are different
-InterfaceBase* DECL_STDCALL(ORCreate, (PluginType type, wchar_t* name, EnvironmentBase* penv))
+InterfaceBasePtr CreateInterface(PluginType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv)
 {
-    if( name == NULL ) return NULL;
+    if( strcmp(pluginhash,RaveGetInterfaceHash(type)) ) {
+        RAVELOG_WARNA("plugin type hash is wrong");
+        throw openrave_exception("bad plugin hash");
+    }
+    if( !penv )
+        return InterfaceBasePtr();
     
+    stringstream ss(name);
+    string interfacename;
+    ss >> interfacename;
+    std::transform(interfacename.begin(), interfacename.end(), interfacename.begin(), ::tolower);
+
     switch(type) {
     case OpenRAVE::PT_CollisionChecker:
-            if( wcsicmp(name, L"ode") == 0 )
-                return new ODECollisionChecker(penv);
-            break;
+        if( interfacename == "ode")
+            return InterfaceBasePtr(new ODECollisionChecker(penv));
+        break;
     case OpenRAVE::PT_PhysicsEngine:
-            if( wcsicmp(name, L"ode") == 0 )
-                return new ODEPhysicsEngine(penv);
-            break;
-        default:
-            break;
+        if( interfacename == "ode" )
+            return InterfaceBasePtr(new ODEPhysicsEngine(penv));
+        break;
+    default:
+        break;
     }
 
-    return NULL;
+    return InterfaceBasePtr();
 }
 
-bool DECL_STDCALL(GetPluginAttributes, (PLUGININFO* pinfo, int size))
+bool GetPluginAttributes(PLUGININFO* pinfo, int size)
 {
     if( pinfo == NULL ) return false;
     if( size != sizeof(PLUGININFO) ) {
@@ -65,12 +58,13 @@ bool DECL_STDCALL(GetPluginAttributes, (PLUGININFO* pinfo, int size))
         return false;
     }
 
-    pinfo->collisioncheckers.push_back(L"ode");
-    pinfo->physicsengines.push_back(L"ode");
+    // fill pinfo
+    pinfo->interfacenames[OpenRAVE::PT_CollisionChecker].push_back("ode");
+    pinfo->interfacenames[OpenRAVE::PT_PhysicsEngine].push_back("ode");
     return true;
 }
 
-void DECL_STDCALL(DestroyPlugin, ())
+void DestroyPlugin()
 {
 }
 

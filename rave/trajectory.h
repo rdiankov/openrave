@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -23,7 +23,7 @@
 namespace OpenRAVE {
 
 /// Encapsulate a time-parameterized trajectories of robot configurations
-class Trajectory : public InterfaceBase
+class TrajectoryBase : public InterfaceBase
 {
 public:
     /// exporting options
@@ -114,11 +114,11 @@ public:
         int _curvedegrees;
         std::vector<dReal> coeff;       ///< num_degrees x num_dof coefficients of the segment
 
-        friend class Trajectory;
+        friend class TrajectoryBase;
     };
 
-    Trajectory(EnvironmentBase* penv, int nDOF);
-    virtual ~Trajectory() {}
+    TrajectoryBase(EnvironmentBasePtr penv, int nDOF);
+    virtual ~TrajectoryBase() {}
 
     /// clears all points and resets the dof of the trajectory
     virtual void Reset(int nDOF);
@@ -151,7 +151,7 @@ public:
     /// and the maximum velocities and accelerations will be extracted appropriately. Affine transformations
     /// are ignored in the retiming if true. If false, then use the
     /// robot's full joint configuration and affine transformation for max velocities.
-    virtual bool CalcTrajTiming(const RobotBase* pRobot, InterpEnum interpolationMethod, bool bAutoCalcTiming, bool bActiveDOFs, dReal fMaxVelMult=1);
+    virtual bool CalcTrajTiming(RobotBaseConstPtr pRobot, InterpEnum interpolationMethod, bool bAutoCalcTiming, bool bActiveDOFs, dReal fMaxVelMult=1);
 
     /// perform basic error checking on the trajectory internal data
     virtual bool IsValid() const;
@@ -166,7 +166,7 @@ public:
 
     /// Write to a filename, see TrajectoryOptions for file format.
     /// \param options a combination of enums in TrajectoryOptions
-    virtual bool Write(const char* filename, int options) const;
+    virtual bool Write(const std::string& filename, int options) const;
 
     /// Write to a FILE, see TrajectoryOptions for file format.
     /// \param options a combination of enums in TrajectoryOptions
@@ -179,8 +179,8 @@ public:
     /// Reads the trajectory, expects the filename to have a header.
     /// \param robot The robot to attach the trajrectory to, if specified, will
     ///              call CalcTrajTiming to get the correct trajectory velocities.
-    virtual bool Read(const char* filename, RobotBase* robot);
-    virtual bool Read(std::istream& f, RobotBase* robot);
+    virtual bool Read(const std::string& filename, RobotBasePtr robot);
+    virtual bool Read(std::istream& f, RobotBasePtr robot);
     //@}
 
     virtual int GetDOF() const { return _nDOF; }
@@ -229,6 +229,8 @@ private:
 
     virtual const char* GetHash() const { return OPENRAVE_TRAJECTORY_HASH; }
 };
+
+typedef TrajectoryBase Trajectory;
 
 } // end namespace OpenRAVE
 

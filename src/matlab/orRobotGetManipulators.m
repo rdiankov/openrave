@@ -53,6 +53,14 @@ for i = 1:nummanips
     end
 
     [tok, rem] = strtok(rem, ' ');
+    numclosing = str2num(tok);
+    manipulators{i}.closingdir = zeros(1,numclosing);
+    for j = 1:numclosing
+        [tok, rem] = strtok(rem, ' ');
+        manipulators{i}.closingdir(j) = str2num(tok);
+    end
+
+    [tok, rem] = strtok(rem, ' ');
     striklen = floor(str2num(tok));
     manipulators{i}.iksolvername = rem(2:(striklen+1));
     rem = rem((striklen+2):end);

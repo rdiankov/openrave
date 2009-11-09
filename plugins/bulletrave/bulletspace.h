@@ -15,19 +15,24 @@
 #ifndef OPENRAVE_BULLET_SPACE
 #define OPENRAVE_BULLET_SPACE
 
+#include "plugindefs.h"
+
 #include "btBulletCollisionCommon.h"
 #include "btBulletDynamicsCommon.h"
+#include <BulletCollision/Gimpact/btGImpactShape.h>
+#include <BulletCollision/Gimpact/btGImpactCollisionAlgorithm.h>
+//#include <BulletCollision/Gimpact/btConcaveConcaveCollisionAlgorithm.h>
 
 // groups bits for bullet
 #define ENABLED_GROUP 1 // mask ENABLED_GROUP
 #define DISABLED_GROUP 256 // mask 0
 
 // manages a space of ODE objects
-class BulletSpace
+class BulletSpace : public boost::enable_shared_from_this<BulletSpace>
 {
 public:
     // information about the kinematics of the body
-    struct KINBODYINFO
+    struct KinBodyInfo
     {
         struct LINK
         {
@@ -45,42 +50,273 @@ public:
             boost::shared_ptr<btCollisionShape> shape;
             list<boost::shared_ptr<btCollisionShape> > listchildren;
             list<boost::shared_ptr<btStridingMeshInterface> > listmeshes;
-            
+
+            KinBody::LinkPtr plink;            
             Transform tlocal; /// local offset transform to account for inertias not aligned to axes
         };
+        
+    KinBodyInfo(boost::shared_ptr<btCollisionWorld> world, bool bPhysics) : _world(world), _bPhysics(bPhysics) { nLastStamp = 0; }
+        virtual ~KinBodyInfo() {
+            FOREACH(itlink, vlinks) {
+                if( _bPhysics )
+                    ((btDynamicsWorld*)_world.get())->removeRigidBody((btRigidBody*)(*itlink)->obj.get());
+                else
+                    _world->removeCollisionObject((*itlink)->obj.get());
+            }
+        }
 
-        KINBODYINFO();
-        virtual ~KINBODYINFO();
-
-        KinBody* pbody; ///< body associated with this structure
+        KinBodyPtr pbody; ///< body associated with this structure
         int nLastStamp;
         
-        vector<LINK> vlinks; ///< if body is disabled, then geom is static (it can't be connected to a joint!)
+        vector<boost::shared_ptr<LINK> > vlinks; ///< if body is disabled, then geom is static (it can't be connected to a joint!)
                                 ///< the pointer to this Link is the userdata
         vector< boost::shared_ptr<btTypedConstraint> > vjoints;
+    private:
+        boost::shared_ptr<btCollisionWorld> _world;
+        bool _bPhysics;
     };
 
-    typedef void* (*GetInfoFn)(const KinBody* pbody);
-    typedef void (*SynchornizeCallbackFn)(void* userdata, KINBODYINFO* pinfo);
+    typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
+    typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
+    typedef boost::function<boost::shared_ptr<void>(KinBodyConstPtr)> GetInfoFn;
+    typedef boost::function<void(KinBodyInfoPtr)> SynchornizeCallbackFn;
 
-    BulletSpace(EnvironmentBase* penv, GetInfoFn infofn, bool bPhysics);
-    ~BulletSpace();
+ BulletSpace(EnvironmentBasePtr penv, const GetInfoFn& infofn, bool bPhysics) : _penv(penv), GetInfo(infofn), _bPhysics(bPhysics)
+{
+}
+    virtual ~BulletSpace() {}
+    
+    bool InitEnvironment(boost::shared_ptr<btCollisionWorld>& world)
+    {
+        RAVELOG_VERBOSEA("init bullet collision environment\n");
 
-    bool InitEnvironment(boost::shared_ptr<btCollisionWorld>& world);
-    void DestroyEnvironment();
-    void* InitKinBody(KinBody* pbody); /// returns data to set
-    bool DestroyKinBody(KinBody* pbody);
+        _world = world;
+        btGImpactCollisionAlgorithm::registerAlgorithm((btCollisionDispatcher*)_world->getDispatcher());
+        //btConcaveConcaveCollisionAlgorithm::registerAlgorithm(_world->getDispatcher());
 
-    bool Enable(const KinBody* pbody, bool bEnable);
-    bool EnableLink(const KinBody::Link* pbody, bool bEnable);
+        return true;
+    }
 
-    void Synchronize();
-    void Synchronize(const KinBody* pbody);
+    void DestroyEnvironment()
+    {
+        RAVELOG_VERBOSEA("destroying bullet collision environment\n");
+        _world.reset();
+    }
 
-    btCollisionObject* GetLinkObj(const KinBody::Link* plink);
-    btTypedConstraint* GetJoint(const KinBody::Joint*);
+    boost::shared_ptr<void> InitKinBody(KinBodyPtr pbody) {
+        // create all ode bodies and joints
+        KinBodyInfoPtr pinfo(new KinBodyInfo(_world,_bPhysics));
+        pinfo->pbody = pbody;
+        pinfo->vlinks.reserve(pbody->GetLinks().size());
+        pinfo->vjoints.reserve(pbody->GetJoints().size());
+    
+        pinfo->vlinks.reserve(pbody->GetLinks().size());
 
-    void SetSynchornizationCallback(SynchornizeCallbackFn synccallback, void* userdata);
+        FOREACHC(itlink, pbody->GetLinks()) {
+            boost::shared_ptr<KinBodyInfo::LINK> link(new KinBodyInfo::LINK());
+
+            btCompoundShape* pshapeparent = new btCompoundShape();
+            link->shape.reset(pshapeparent);
+            pshapeparent->setMargin(0.0004f); // need to set margin very small (we're not simulating anyway)
+        
+            // add all the correct geometry objects
+            FOREACHC(itgeom, (*itlink)->GetGeometries()) {
+                boost::shared_ptr<btCollisionShape> child;
+                switch(itgeom->GetType()) {
+                case KinBody::Link::GEOMPROPERTIES::GeomBox:
+                    child.reset(new btBoxShape(GetBtVector(itgeom->GetBoxExtents())));
+                    break;
+                case KinBody::Link::GEOMPROPERTIES::GeomSphere:
+                    child.reset(new btSphereShape(itgeom->GetSphereRadius()));
+                    break;
+                case KinBody::Link::GEOMPROPERTIES::GeomCylinder:
+                    // cylinder axis aligned to Y
+                    child.reset(new btCylinderShapeZ(btVector3(itgeom->GetCylinderRadius(),itgeom->GetCylinderRadius(),itgeom->GetCylinderHeight()*0.5f)));
+                    break;
+                case KinBody::Link::GEOMPROPERTIES::GeomTrimesh: {
+                    if( itgeom->GetCollisionMesh().indices.size() >= 3 ) {
+                        btTriangleMesh* ptrimesh = new btTriangleMesh();
+
+                        // for some reason adding indices makes everything crash
+                        for(size_t i = 0; i < itgeom->GetCollisionMesh().indices.size(); i += 3)
+                            ptrimesh->addTriangle(GetBtVector(itgeom->GetCollisionMesh().vertices[i]),
+                                                  GetBtVector(itgeom->GetCollisionMesh().vertices[i+1]),
+                                                  GetBtVector(itgeom->GetCollisionMesh().vertices[i+2]));
+
+                        //child.reset(new btBvhTriangleMeshShape(ptrimesh, true, true)); // doesn't do tri-tri collisions!
+                        btGImpactMeshShape* pgimpact = new btGImpactMeshShape(ptrimesh);
+                        pgimpact->setMargin(0.0004f); // need to set margin very small (we're not simulating anyway)
+                        pgimpact->updateBound();
+                        child.reset(pgimpact);
+                        link->listmeshes.push_back(boost::shared_ptr<btStridingMeshInterface>(ptrimesh));
+                    }
+                    break;
+                }
+                default:
+                    break;
+                }
+
+                if( !child ) {
+                    RAVELOG_WARNA("did not create geom type %d\n", itgeom->GetType());
+                    continue;
+                }
+
+                link->listchildren.push_back(child);
+                child->setMargin(0.0004f); // need to set margin very small (we're not simulating anyway)
+                pshapeparent->addChildShape(GetBtTransform(itgeom->GetTransform()), child.get());
+            }
+
+            if( _bPhysics ) {
+
+                // set the mass and inertia and extract the eigenvectors of the tensor
+                btTransform startTransform;
+                startTransform.setOrigin(GetBtVector((*itlink)->GetInertia().trans));
+                btVector3 localInertia;
+                link->tlocal = Transform();
+                assert(0); // need more work with setting inertia transform
+        
+                link->motionstate.reset(new btDefaultMotionState(startTransform));
+                btRigidBody::btRigidBodyConstructionInfo rbInfo((*itlink)->GetMass(),link->motionstate.get(),pshapeparent,localInertia);
+
+                link->obj.reset(new btRigidBody(rbInfo));
+                // setCenterOfMassTransform - updates inertia
+            }
+            else {
+                link->obj.reset(new btCollisionObject());
+                link->obj->setCollisionShape(pshapeparent);
+            }
+
+            link->plink = *itlink;
+            link->obj->setWorldTransform(GetBtTransform((*itlink)->GetTransform()*link->tlocal));
+            link->obj->setUserPointer(&link->plink);
+            link->obj->setCollisionFlags((*itlink)->IsStatic() ? btCollisionObject::CF_KINEMATIC_OBJECT : 0);
+        
+            if( _bPhysics && !(*itlink)->IsStatic() )
+                ((btDynamicsWorld*)_world.get())->addRigidBody((btRigidBody*)link->obj.get());
+            else
+                _world->addCollisionObject(link->obj.get());
+
+            link->obj->activate(true);
+            pinfo->vlinks.push_back(link);
+        }
+
+        if( _bPhysics ) {
+            pinfo->vjoints.reserve(pbody->GetJoints().size());
+
+            FOREACHC(itjoint, pbody->GetJoints()) {
+                RaveVector<dReal> anchor = (*itjoint)->GetAnchor();
+                RaveVector<dReal> axis0 = (*itjoint)->GetAxis(0);
+                RaveVector<dReal> axis1 = (*itjoint)->GetAxis(1);
+
+                btRigidBody* body0 = NULL;
+                if( ((*itjoint)->GetFirstAttached() != NULL && !(*itjoint)->GetFirstAttached()->IsStatic()) )
+                    body0 = (btRigidBody*)pinfo->vlinks[(*itjoint)->GetFirstAttached()->GetIndex()]->obj.get();
+            
+                btRigidBody* body1 = NULL;
+                if( ((*itjoint)->GetSecondAttached() != NULL && !(*itjoint)->GetSecondAttached()->IsStatic()) )
+                    body1 = (btRigidBody*)pinfo->vlinks[(*itjoint)->GetSecondAttached()->GetIndex()]->obj.get();
+            
+                if( body0 == NULL || body1 == NULL ) {
+                    RAVELOG_ERRORA(str(boost::format("joint %s needs to be attached to two bodies!\n")%(*itjoint)->GetName()));
+                    continue;
+                }
+
+                Transform t0inv = (*itjoint)->GetFirstAttached()->GetTransform().inverse();
+                Transform t1inv = (*itjoint)->GetSecondAttached()->GetTransform().inverse();
+                boost::shared_ptr<btTypedConstraint> joint;
+
+                switch((*itjoint)->GetType()) {
+                case KinBody::Joint::JointHinge: {
+                    btVector3 pivotInA = GetBtVector(t0inv * anchor);
+                    btVector3 pivotInB = GetBtVector(t1inv * anchor);
+                    btVector3 axisInA = GetBtVector(t0inv.rotate(axis0));
+                    btVector3 axisInB = GetBtVector(t1inv.rotate(axis1));
+                    joint.reset(new btHingeConstraint(*body0, *body1, pivotInA, pivotInB, axisInA, axisInB));
+                    break;
+                }
+                case KinBody::Joint::JointSlider: {
+                    TransformMatrix tslider;
+                    Vector vup(1,1,1);
+                    vup -= axis0*dot3(axis0,vup);
+                    if( vup.lengthsqr3() < 0.05 ) {
+                        vup = Vector(0,1,0);
+                        vup -= axis0*dot3(axis0,vup);
+                    }
+                    vup.normalize3();
+                    Vector vdir; vdir.Cross(axis0,vup);
+                
+                    tslider.m[0] = axis0.x; tslider.m[1] = vup.x; tslider.m[2] = vdir.x;
+                    tslider.m[4] = axis0.y; tslider.m[5] = vup.y; tslider.m[6] = vdir.y;
+                    tslider.m[8] = axis0.z; tslider.m[9] = vup.z; tslider.m[10] = vdir.z;
+                
+                    btTransform frameInA = GetBtTransform(tslider*t0inv);
+                    btTransform frameInB = GetBtTransform(tslider*t1inv);
+                    joint.reset(new btSliderConstraint(*body0, *body1, frameInA, frameInB, true));
+                    break;
+                }
+                case KinBody::Joint::JointUniversal:
+                    RAVELOG_ERRORA("universal joint not supported by bullet\n");
+                    break;
+                case KinBody::Joint::JointHinge2:
+                    RAVELOG_ERRORA("hinge2 joint not supported by bullet\n");
+                    break;
+                default:
+                    RAVELOG_ERRORA("unknown joint type %d\n", (*itjoint)->GetType());
+                    break;
+                }
+            
+                if( !!joint ) {
+                    ((btDynamicsWorld*)_world.get())->addConstraint(joint.get(), true);
+                    pinfo->vjoints.push_back(joint);
+                }
+            }
+        }
+
+        Synchronize(pinfo);
+        return pinfo;
+    }
+
+    bool Enable(KinBodyConstPtr pbody, bool bEnable) { return true; }
+    bool EnableLink(KinBody::LinkConstPtr pbody, bool bEnable) { return true; }
+
+    void Synchronize()
+    {
+        vector<KinBodyPtr> vbodies;
+        _penv->GetBodies(vbodies);
+        FOREACHC(itbody, vbodies) {
+            KinBodyInfoPtr pinfo = boost::static_pointer_cast<KinBodyInfo>(GetInfo(*itbody));
+            BOOST_ASSERT( pinfo->pbody == *itbody );
+            if( pinfo->nLastStamp != (*itbody)->GetUpdateStamp() )
+                Synchronize(pinfo);
+        }
+    }
+
+    void Synchronize(KinBodyConstPtr pbody)
+    {
+        KinBodyInfoPtr pinfo = boost::static_pointer_cast<KinBodyInfo>(GetInfo(pbody));
+        BOOST_ASSERT( pinfo->pbody == pbody );
+        if( pinfo->nLastStamp != pbody->GetUpdateStamp() )
+            Synchronize(pinfo);
+    }
+
+    boost::shared_ptr<btCollisionObject> GetLinkObj(KinBody::LinkConstPtr plink)
+    {
+        KinBodyInfoPtr pinfo = boost::static_pointer_cast<KinBodyInfo>(GetInfo(plink->GetParent()));
+        BOOST_ASSERT(pinfo->pbody == plink->GetParent() );
+        BOOST_ASSERT( plink->GetIndex() >= 0 && plink->GetIndex() < (int)pinfo->vlinks.size());
+        return pinfo->vlinks[plink->GetIndex()]->obj;
+    }
+
+    boost::shared_ptr<btTypedConstraint> GetJoint(KinBody::JointConstPtr pjoint)
+    {
+        KinBodyInfoPtr pinfo = boost::static_pointer_cast<KinBodyInfo>(GetInfo(pjoint->GetParent()));
+        BOOST_ASSERT(pinfo->pbody == pjoint->GetParent() );
+        BOOST_ASSERT( pjoint->GetParent()->GetJointFromDOFIndex(pjoint->GetDOFIndex()) == pjoint );
+        BOOST_ASSERT( pjoint->GetJointIndex() >= 0 && pjoint->GetJointIndex() < (int)pinfo->vjoints.size());
+        return pinfo->vjoints[pjoint->GetJointIndex()];
+    }
+
+    void SetSynchornizationCallback(const SynchornizeCallbackFn& synccallback) { _synccallback = synccallback; }
 
     static inline btTransform GetBtTransform(const Transform& t)
     {
@@ -94,24 +330,31 @@ public:
 
 private:
     
-    void Synchronize(KINBODYINFO* pinfo);
-    void RestoreJoints(KinBody* pbody);
+    void Synchronize(KinBodyInfoPtr pinfo)
+    {
+        vector<Transform> vtrans;
+        pinfo->pbody->GetBodyTransformations(vtrans);
+        pinfo->nLastStamp = pinfo->pbody->GetUpdateStamp();
+        assert( vtrans.size() == pinfo->vlinks.size() );
+        for(size_t i = 0; i < vtrans.size(); ++i)
+            pinfo->vlinks[i]->obj->getWorldTransform() = GetBtTransform(vtrans[i]*pinfo->vlinks[i]->tlocal);
 
-    EnvironmentBase* _penv;
+        if( !!_synccallback )
+            _synccallback(pinfo);
+    }
+
+    EnvironmentBasePtr _penv;
     GetInfoFn GetInfo;
     boost::shared_ptr<btCollisionWorld> _world;
-
     SynchornizeCallbackFn _synccallback;
-    void* _userdata;
-
     bool _bPhysics;
 };
 
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
 BOOST_TYPEOF_REGISTER_TYPE(BulletSpace)
-BOOST_TYPEOF_REGISTER_TYPE(BulletSpace::KINBODYINFO)
-BOOST_TYPEOF_REGISTER_TYPE(BulletSpace::KINBODYINFO::LINK)
+BOOST_TYPEOF_REGISTER_TYPE(BulletSpace::KinBodyInfo)
+BOOST_TYPEOF_REGISTER_TYPE(BulletSpace::KinBodyInfo::LINK)
 BOOST_TYPEOF_REGISTER_TYPE(dJointID)
 #endif
 

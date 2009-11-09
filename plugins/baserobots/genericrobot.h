@@ -12,62 +12,97 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#ifndef RAVE_GENERIC_ROBOT_H
+#define RAVE_GENERIC_ROBOT_H
 
-#include <boost/shared_ptr.hpp>
-
-/// A generic robot
 class GenericRobot : public RobotBase
 {
-public:
+ public:
     enum RobotState { ST_NONE=0, ST_PD_CONTROL, ST_PATH_FOLLOW };
-    //ST_SINGLE_MOTION, ST_REACH,
-	//	    ST_GRAB,   ST_TRANSFER,    ST_LOOP_MOTION,   ST_RELEASE,
-	//	    ST_RETURN, ST_DYN_SIM,     NUM_STATES };
+ GenericRobot(EnvironmentBasePtr penv) : RobotBase(penv), _state(ST_NONE) {}
+    virtual ~GenericRobot() {}
 
-    GenericRobot(EnvironmentBase* penv);
-    virtual ~GenericRobot();
+    virtual bool SetController(ControllerBasePtr p, const string& args)
+    {
+        _pController = p;
+        if( !!_pController ) {
+            if( !_pController->Init(shared_robot(),args) ) {
+                RAVELOG_WARNA("GenericRobot %s: Failed to init controller\n", GetName().c_str());
+                _pController.reset();
+                return false;
+            }
 
-    virtual void Destroy();
+            if( _state == ST_PATH_FOLLOW )
+                _pController->SetPath(_trajcur);
+        }
+        return true;
+    }
 
-    virtual const char* GetXMLId() { return "GenericRobot"; }
+    virtual void SetMotion(TrajectoryBaseConstPtr ptraj)
+    {
+        _trajcur = ptraj;
+        if( _trajcur->GetPoints().size() == 0 ) {
+            RAVELOG_WARNA("trajectory has no points\n");
+            return;
+        }
 
-#ifdef RAVE_GUIBUILD
-    /** @name Visual Aids
-    * Markers and visual aids used for GUI and rendering */
-    //@{
-    void SetPathVisibility(bool bFlag);
-    void SetTrackingVisibility(bool bFlag);
-    void SetIKHandleVisibility(bool bFlag);
-    void SetViewFrustumVisibility(bool bFlag);
-    void SetCentroidVisibility(bool bFlag);
-    void SetSkeletonVisibility(bool bFlag);
-    //@}
-#endif
+        if( _trajcur->GetDOF() != GetDOF() )
+            RAVELOG_WARNA("trajectory of wrong dimension (traj dof=%d), needs to be %d dof\n", _trajcur->GetDOF(), GetDOF());
+        assert( _trajcur->GetDOF() == GetDOF() );
+        _trajcur = ptraj;
+        _state = ST_PATH_FOLLOW;
 
-    virtual void SetMotion(const Trajectory* ptraj);
-    virtual bool SetController(const wchar_t* pname, const char* args=NULL, bool bDestroyOldController=true);
-    virtual bool SetController(ControllerBase * p, const char* args=NULL, bool bDestroyOldController=true);
+        if( !!_pController )
+            _pController->SetPath(_trajcur);
+        else
+            RAVELOG_WARNA("controller is not set\n");
+    }
+ 
+    virtual void SetActiveMotion(TrajectoryBaseConstPtr ptraj)
+    {
+        if( ptraj->GetPoints().size() == 0 ) {
+            RAVELOG_WARNA("trajectory has no points\n");
+            return;
+        }
 
-    virtual void SetActiveMotion(const Trajectory* ptraj);
+        if( ptraj->GetDOF() != GetActiveDOF() ) {
+            RAVELOG_WARNA("trajectory of wrong dimension (traj dof=%d), needs to be %d dof\n", ptraj->GetDOF(), GetActiveDOF());
+            return;
+        }
+        BOOST_ASSERT( ptraj->GetDOF() == GetActiveDOF() );
+
+        TrajectoryBasePtr pfulltraj = GetEnv()->CreateTrajectory(ptraj->GetDOF());
+        GetFullTrajectoryFromActive(pfulltraj, ptraj);
+        _trajcur = pfulltraj;
+
+        _state = ST_PATH_FOLLOW;
+
+        if( !!_pController )
+            _pController->SetPath(_trajcur);
+        else
+            RAVELOG_WARNA("controller is not set\n");
+    }
+
 
     RobotState GetState() { return _state; }
 
-    virtual ControllerBase* GetController() const { return _pController; }
+    virtual ControllerBasePtr GetController() const { return _pController; }
 
-    virtual void SimulationStep(dReal fElapsedTime);
+    virtual void SimulationStep(dReal fElapsedTime)
+    {
+        RobotBase::SimulationStep(fElapsedTime);
+        if( !!_pController ) {
+            if( _pController->SimulationStep(fElapsedTime) ) {
+                _state = ST_NONE;
+            }
+        }
+    }
 
-protected:
-
-    // manipulators
-    ControllerBase* _pController;       ///< follows a trajectory
-    boost::shared_ptr<Trajectory> _curTrajectory;
-
+ protected:
+    TrajectoryBaseConstPtr _trajcur;
+    ControllerBasePtr _pController;
     RobotState _state;
 
-    // markers and visual aids
-    bool        _bDisplayTrack;
-    bool        _bDisplayCentroid;
-    bool        _bUseController;
-
-    friend class RobotXMLReader;
 };
+
+#endif

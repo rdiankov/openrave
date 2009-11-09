@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -28,7 +28,7 @@ enum PhysicsEngineOptions
 class PhysicsEngineBase : public InterfaceBase
 {
 public:
-    PhysicsEngineBase(EnvironmentBase* penv) : InterfaceBase(PT_PhysicsEngine, penv) {}
+    PhysicsEngineBase(EnvironmentBasePtr penv) : InterfaceBase(PT_PhysicsEngine, penv) {}
     virtual ~PhysicsEngineBase() {}
 
     /// Set basic physics engine using the PhysicsEngineOptions enum
@@ -47,54 +47,61 @@ public:
     virtual void DestroyEnvironment() = 0;
 
     /// notified when a new body has been initialized in the environment
-    virtual bool InitKinBody(KinBody* pbody) = 0;
-
-    /// notified when a body is about to be destroyed
-    virtual bool DestroyKinBody(KinBody* pbody) = 0;
+    virtual bool InitKinBody(KinBodyPtr pbody) = 0;
 
     /// sets the body velocity
     /// \param linearvel linear velocity of base link
     /// \param angularvel angular velocity rotation_axis*theta_dot
-    /// \param pJointVelocity (optional) - the joint velocities of the robot
-    virtual bool SetBodyVelocity(KinBody* pbody, const Vector& linearvel, const Vector& angularvel, const dReal* pJointVelocity) = 0;
+    virtual bool SetBodyVelocity(KinBodyPtr pbody, const Vector& linearvel, const Vector& angularvel) = 0;
+
+    /// sets the body velocity
+    /// \param linearvel linear velocity of base link
+    /// \param angularvel angular velocity rotation_axis*theta_dot
+    /// \param pJointVelocity - the joint velocities of the robot
+    virtual bool SetBodyVelocity(KinBodyPtr pbody, const Vector& linearvel, const Vector& angularvel, const std::vector<dReal>& pJointVelocity) = 0;
 
     /// sets the velocities for each link
     /// \param pLinearVelocities the linear velocities for each link
     /// \param pAngularVelocities the angular velocities for each link (axis * angular_speed)
-    virtual bool SetBodyVelocity(KinBody* pbody, const Vector* pLinearVelocities, const Vector* pAngularVelocities) = 0;
+    virtual bool SetBodyVelocity(KinBodyPtr pbody, const std::vector<Vector>& pLinearVelocities, const std::vector<Vector>& pAngularVelocities) = 0;
 
     /// gets the velocity
     /// \param linearvel - linear velocity of base link
     /// \param angularvel - angular velocity rotation_axis*theta_dot
-    virtual bool GetBodyVelocity(const KinBody* pbody, Vector& linearvel, Vector& angularvel, dReal* pJointVelocity) = 0;
+    virtual bool GetBodyVelocity(KinBodyConstPtr pbody, Vector& linearvel, Vector& angularvel) = 0;
+
+    /// gets the velocity
+    /// \param linearvel - linear velocity of base link
+    /// \param angularvel - angular velocity rotation_axis*theta_dot
+    virtual bool GetBodyVelocity(KinBodyConstPtr pbody, Vector& linearvel, Vector& angularvel, std::vector<dReal>& pJointVelocity) = 0;
 
     /// sets the velocities for each link
     /// \param pLinearVelocities the linear velocities for each link, has to be a valid pointer
     /// \param pAngularVelocities the angular velocities for each link (axis * angular_speed), has to be a valid pointer
-    virtual bool GetBodyVelocity(KinBody* pbody, Vector* pLinearVelocities, Vector* pAngularVelocities) = 0;
+    virtual bool GetBodyVelocity(KinBodyConstPtr pbody, std::vector<Vector>& pLinearVelocities, std::vector<Vector>& pAngularVelocities) = 0;
 
     /// sets the body joint
-    virtual bool SetJointVelocity(KinBody::Joint* pjoint, const dReal* pJointVelocity) = 0;
+    virtual bool SetJointVelocity(KinBody::JointPtr pjoint, const std::vector<dReal>& pJointVelocity) = 0;
 
     /// gets the joint velocity
-    virtual bool GetJointVelocity(const KinBody::Joint* pjoint, dReal* pJointVelocity) = 0;
+    virtual bool GetJointVelocity(KinBody::JointConstPtr pjoint, std::vector<dReal>& pJointVelocity) = 0;
 
     /// add a force at a particular position in a link
     /// \param force the direction and magnitude of the force
     /// \param pos in the world where the force is getting applied
     /// \param bAdd if true, force is added to previous forces, otherwise it is set
-    virtual bool SetBodyForce(KinBody::Link* plink, const Vector& force, const Vector& position, bool bAdd) = 0;
+    virtual bool SetBodyForce(KinBody::LinkPtr plink, const Vector& force, const Vector& position, bool bAdd) = 0;
 
     /// adds torque to a body (absolute coords)
     /// \param plink the link to add a torque to
     /// \param torque torque vector
     /// \param bAdd if true, torque is added to previous torques, otherwise it is set
-    virtual bool SetBodyTorque(KinBody::Link* plink, const Vector& torque, bool bAdd) = 0;
+    virtual bool SetBodyTorque(KinBody::LinkPtr plink, const Vector& torque, bool bAdd) = 0;
 
     /// adds torque to a joint
     /// \param pjoint - the joint the torque is added to
     /// \param pTorques - the torques added to the joint. Pointer because the joint dof can be greater than 1.
-    virtual bool AddJointTorque(KinBody::Joint* pjoint, const dReal* pTorques) = 0;
+    virtual bool AddJointTorque(KinBody::JointPtr pjoint, const std::vector<dReal>& pTorques) = 0;
 
     /// set the gravity direction
     virtual void SetGravity(const Vector& gravity) = 0;
@@ -107,8 +114,8 @@ public:
 protected:
     virtual const char* GetHash() const { return OPENRAVE_PHYSICSENGINE_HASH; }
 
-	virtual void SetPhysicsData(KinBody* pbody, void* data) {
-		if( pbody != NULL )
+	virtual void SetPhysicsData(KinBodyPtr pbody, boost::shared_ptr<void> data) {
+		if( !!pbody )
 			pbody->SetPhysicsData(data);
 	}
 };

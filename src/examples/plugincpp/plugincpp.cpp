@@ -1,18 +1,18 @@
 // A simple openrave plugin that creates a problem instance and registers two functions
 // for that problem instance which can then be called through the network/scripts
 #include <rave/rave.h>
+#include <boost/bind.hpp>
 
 using namespace std;
 using namespace OpenRAVE;
 
-class MyProblemInstance : public CmdProblemInstance
+class MyProblemInstance : public ProblemInstance
 {
 public:
-    MyProblemInstance(EnvironmentBase* penv) : CmdProblemInstance(penv)
-    {
-        
-        RegisterCommand("numbodies",(CommandFn)&MyProblemInstance::NumBodies, "returns bodies");
-        RegisterCommand("load",(CommandFn)&MyProblemInstance::Load, "loads a given file");
+    MyProblemInstance(EnvironmentBasePtr penv) : ProblemInstance(penv)
+    {        
+        RegisterCommand("numbodies",boost::bind(&MyProblemInstance::NumBodies,this,_1,_2),"returns bodies");
+        RegisterCommand("load",boost::bind(&MyProblemInstance::Load, this,_1,_2),"loads a given file");
     }
 
     void Destroy() {
@@ -27,7 +27,9 @@ public:
 
     bool NumBodies(ostream& sout, istream& sinput)
     {
-        sout << GetEnv()->GetBodies().size();
+        vector<KinBodyPtr> vbodies;
+        GetEnv()->GetBodies(vbodies);
+        sout << vbodies.size();
         return true;
     }
 
@@ -41,47 +43,49 @@ public:
     }
 };
 
-#ifdef _MSC_VER
-#define PROT_STDCALL(name, paramlist) __stdcall name paramlist
-#define DECL_STDCALL(name, paramlist) __stdcall name paramlist
-#else
-#ifdef __x86_64__
-#define DECL_STDCALL(name, paramlist) name paramlist
-#else
-#define DECL_STDCALL(name, paramlist) __attribute__((stdcall)) name paramlist
-#endif
-#endif // _MSC_VER
-
-extern "C" InterfaceBase* DECL_STDCALL(ORCreate, (PluginType type, wchar_t* name, EnvironmentBase* penv))
+// need c linkage
+extern "C" {
+InterfaceBasePtr CreateInterface(PluginType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv)
 {
-    if( name == NULL ) return NULL;
+    if( strcmp(pluginhash,RaveGetInterfaceHash(type)) ) {
+        RAVELOG_WARNA("plugin type hash is wrong");
+        throw openrave_exception("bad plugin hash");
+    }
+    if( !penv )
+        return InterfaceBasePtr();
     
+    stringstream ss(name);
+    string interfacename;
+    ss >> interfacename;
+    std::transform(interfacename.begin(), interfacename.end(), interfacename.begin(), ::tolower);
+
     switch(type) {
-        case PT_ProblemInstance:
-            if( wcscmp(name, L"MyProblem") == 0 )
-                return new MyProblemInstance(penv);
-            break;
-        default:
-            break;
+    case PT_ProblemInstance:
+        if( interfacename == "myproblem")
+            return InterfaceBasePtr(new MyProblemInstance(penv));
+        break;
+    default:
+        break;
     }
 
-    return NULL;
+    return InterfaceBasePtr();
 }
 
-extern "C" bool DECL_STDCALL(GetPluginAttributes, (PLUGININFO* pinfo, int size))
+bool GetPluginAttributes(PLUGININFO* pinfo, int size)
 {
     if( pinfo == NULL ) return false;
     if( size != sizeof(PLUGININFO) ) {
-        printf("bad plugin info sizes %d != %d\n", size, sizeof(PLUGININFO));
+        RAVELOG_ERRORA("bad plugin info sizes %d != %d\n", size, sizeof(PLUGININFO));
         return false;
     }
 
     // fill pinfo
-    pinfo->problems.push_back(L"MyProblem");
+    pinfo->interfacenames[PT_ProblemInstance].push_back("MyProblem");
     return true;
 }
 
-extern "C"void DECL_STDCALL(DestroyPlugin, ())
+void DestroyPlugin()
 {
-    RAVELOG_INFOA("destroying plugincpp");
+}
+
 }

@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -23,7 +23,7 @@ namespace OpenRAVE {
 class RaveViewerBase : public InterfaceBase
 {
 public:
-    RaveViewerBase(EnvironmentBase* penv) : InterfaceBase(PT_Viewer, penv) {}
+    RaveViewerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Viewer, penv) {}
     virtual ~RaveViewerBase() {}
 
     /// reset the camera depending on its mode
@@ -34,14 +34,12 @@ public:
     virtual int main(bool bShow = true) = 0;
     /// destroys the main loop
     virtual void quitmainloop() = 0;
-    
-    virtual bool GetFractionOccluded(KinBody* pbody, int width, int height, float nearPlane, float farPlane, const RaveTransform<float>& extrinsic, const float* pKK, double& fracOccluded) = 0;
 
     /// Retries a 24bit RGB image of dimensions width and height from the current scene
     /// extrinsic is the rotation and translation of the camera
     /// pKK is 4 values such that the intrinsic matrix can be reconstructed [pKK[0] 0 pKK[2]; 0 pKK[1] pKK[3]; 0 0 1];
-    virtual bool GetCameraImage(void* pMemory, int width, int height, const RaveTransform<float>& extrinsic, const float* pKK) = 0;
-    virtual bool WriteCameraImage(int width, int height, const RaveTransform<float>& t, const float* pKK, const char* fileName, const char* extension) = 0;
+    virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK) = 0;
+    virtual bool WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension) = 0;
     virtual void SetCamera(const RaveVector<float>& pos, const RaveVector<float>& quat) = 0;
     virtual void SetCameraLookAt(const RaveVector<float>& lookat, const RaveVector<float>& campos, const RaveVector<float>& camup) = 0;
     virtual RaveTransform<float> GetCameraTransform() = 0;
@@ -67,14 +65,14 @@ public:
     virtual void Reset() = 0;
     virtual void SetBkgndColor(const RaveVector<float>& color) = 0;
 
-    virtual void StartPlaybackTimer() = 0;
-    virtual void StopPlaybackTimer() = 0;
+    /// controls whether the viewer synchronizes with the newest environment
+    virtual void SetEnvironmentSync(bool bUpdate) = 0;
 
     virtual void ViewerSetSize(int w, int h) = 0;
     virtual void ViewerMove(int x, int y) = 0;
-    virtual void ViewerSetTitle(const char* ptitle) = 0;
+    virtual void ViewerSetTitle(const std::string& ptitle) = 0;
+    virtual bool LoadModel(const std::string& pfilename) = 0;
 
-    virtual bool LoadModel(const char* pfilename) = 0;
 private:
     virtual const char* GetHash() const { return OPENRAVE_VIEWER_HASH; }
 };

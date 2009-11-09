@@ -177,6 +177,17 @@ else()
   message(FATAL_ERROR "Could not find boost libraries!")
 endif()
 
+set(OPENRAVE_BOOST_INCLUDE_DIRS)
+foreach(idir ${Boost_INCLUDE_DIRS})
+  set(OPENRAVE_BOOST_INCLUDE_DIRS "${OPENRAVE_BOOST_INCLUDE_DIRS} -I${idir}")
+endforeach()
+
+set(OPENRAVE_BOOST_LIB_DIRS)
+foreach(ldir ${Boost_LIBRARY_DIRS})
+  set(OPENRAVE_BOOST_LIB_DIRS "${OPENRAVE_BOOST_LIB_DIRS} -L${ldir}")
+endforeach()
+
+
 # generate the md5 sum for all OpenRAVE interfaces
 add_subdirectory(cpp-gen-md5)
 
@@ -202,7 +213,6 @@ add_custom_command(
        "${CMAKE_SOURCE_DIR}/rave/physicsengine.h" OPENRAVE_PHYSICSENGINE_HASH
        "${CMAKE_SOURCE_DIR}/rave/sensor.h" OPENRAVE_SENSOR_HASH
        "${CMAKE_SOURCE_DIR}/rave/viewer.h" OPENRAVE_VIEWER_HASH
-       "${CMAKE_SOURCE_DIR}/rave/server.h" OPENRAVE_SERVER_HASH
        "${CMAKE_SOURCE_DIR}/rave/trajectory.h" OPENRAVE_TRAJECTORY_HASH
        > "${CMAKE_SOURCE_DIR}/rave/classhashes.h"
   DEPENDS cpp-gen-md5
@@ -217,7 +227,6 @@ add_custom_command(
   ${CMAKE_SOURCE_DIR}/rave/physicsengine.h
   ${CMAKE_SOURCE_DIR}/rave/sensor.h
   ${CMAKE_SOURCE_DIR}/rave/viewer.h
-  ${CMAKE_SOURCE_DIR}/rave/server.h
   ${CMAKE_SOURCE_DIR}/rave/trajectory.h)
 
 add_custom_target(classhashes_h ALL DEPENDS ${CMAKE_SOURCE_DIR}/rave/classhashes.h ${EXTRA_MSVC_DEPEND})
@@ -249,20 +258,6 @@ else()
     message(FATAL_ERROR "Could not find libxml2")
   endif()
 endif()
-
-#pthreads
-find_package(Pthreads)
-if(PTHREADS_FOUND)
-  include_directories(${PTHREADS_INCLUDE_DIR})
-  # Pthreads definitions
-  add_definitions(${PTHREADS_DEFINITIONS})
-else(PTHREADS_FOUND)
-  if( MSVC )
-    set(PTHREADS_LIBRARY pthreadVC2)
-  else()
-    message (FATAL_ERROR, "This program needs the posix library threads (pthreads)")
-  endif()
-endif(PTHREADS_FOUND)
 
 # zlib
 check_library_exists(z deflate "/lib;/usr/lib;/usr/local/lib;/usr/pkg/lib" HAVE_ZLIB)

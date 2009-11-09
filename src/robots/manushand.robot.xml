@@ -101,7 +101,6 @@
     <base>hand-base</base>
     <effector>hand-base</effector>
     <joints>J-gripper</joints>
-    <opened>-0.78</opened>
-    <closed>0.1</closed>
+    <closingdirection>1</closingdirection>
   </Manipulator>
 </Robot>

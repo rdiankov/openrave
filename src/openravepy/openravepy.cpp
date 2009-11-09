@@ -58,10 +58,13 @@
 
 #include <sstream>
 
+#include <boost/array.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/condition.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/format.hpp>
+#include <boost/enable_shared_from_this.hpp> 
 
 #define PY_ARRAY_UNIQUE_SYMBOL PyArrayHandle
 #include <boost/python.hpp>
@@ -70,35 +73,12 @@
 #include <numpy/arrayobject.h>
 
 #define CHECK_POINTER(p) { \
-    if( (p) == NULL ) throw openrave_exception("invalid pointer"); \
+    if( !(p) ) throw openrave_exception("invalid pointer"); \
 }
 
 using namespace boost::python;
 using namespace std;
 using namespace OpenRAVE;
-
-inline std::wstring _stdmbstowcs(const char* pstr)
-{
-    size_t len = mbstowcs(NULL, pstr, 0);
-    std::wstring w; w.resize(len);
-    mbstowcs(&w[0], pstr, len);
-    return w;
-}
-
-inline std::string _stdwcstombs(const wchar_t* pname)
-{
-    if( pname == NULL )
-        return std::string();
-
-    std::string s;
-    size_t len = wcstombs(NULL, pname, 0);
-    if( len != (size_t)-1 ) {
-        s.resize(len);
-        wcstombs(&s[0], pname, len);
-    }
-
-    return s;
-}
 
 uint64_t GetMicroTime()
 {
@@ -114,40 +94,67 @@ uint64_t GetMicroTime()
 #endif
 }
 
+struct null_deleter
+{
+    void operator()(void const *) const {}
+};
+
 /// if set, will return all transforms are 1x7 vectors where first 4 compoonents are quaternion
 static bool s_bReturnTransformQuaternions = false;
 struct DummyStruct {};
 
+class PyInterfaceBase;
+class PyKinBody;
+class PyRobotBase;
 class PyEnvironmentBase;
 class PyCollisionReport;
+class PyPhysicsEngineBase;
+class PyCollisionCheckerBase;
 class PyIkSolverBase;
+class PyPlannerBase;
 class PySensorBase;
+class PySensorSystemBase;
 class PyControllerBase;
 class PyTrajectoryBase;
+class PyProblemInstance;
+class PyRaveViewerBase;
 
-struct openrave_exception : std::exception
-{
-    openrave_exception() : std::exception(), _s("unknown exception") {}
-    openrave_exception(const string& s) : std::exception() { _s = "OpenRAVE: " + s; }
-    virtual ~openrave_exception() throw() {}
-    char const* what() const throw() { return _s.c_str(); }
-    string _s;
-};
+typedef boost::shared_ptr<PyInterfaceBase> PyInterfaceBasePtr;
+typedef boost::shared_ptr<PyInterfaceBase const> PyInterfaceBaseConstPtr;
+typedef boost::shared_ptr<PyKinBody> PyKinBodyPtr;
+typedef boost::shared_ptr<PyKinBody const> PyKinBodyConstPtr;
+typedef boost::shared_ptr<PyRobotBase> PyRobotBasePtr;
+typedef boost::shared_ptr<PyRobotBase const> PyRobotBaseConstPtr;
+typedef boost::shared_ptr<PyEnvironmentBase> PyEnvironmentBasePtr;
+typedef boost::shared_ptr<PyEnvironmentBase const> PyEnvironmentBaseConstPtr;
+typedef boost::shared_ptr<PyIkSolverBase> PyIkSolverBasePtr;
+typedef boost::shared_ptr<PyIkSolverBase const> PyIkSolverBaseConstPtr;
+typedef boost::shared_ptr<PyTrajectoryBase> PyTrajectoryBasePtr;
+typedef boost::shared_ptr<PyTrajectoryBase const> PyTrajectoryBaseConstPtr;
+typedef boost::shared_ptr<PyCollisionReport> PyCollisionReportPtr;
+typedef boost::shared_ptr<PyCollisionReport const> PyCollisionReportConstPtr;
+typedef boost::shared_ptr<PyPhysicsEngineBase> PyPhysicsEngineBasePtr;
+typedef boost::shared_ptr<PyPhysicsEngineBase const> PyPhysicsEngineBaseConstPtr;
+typedef boost::shared_ptr<PyCollisionCheckerBase> PyCollisionCheckerBasePtr;
+typedef boost::shared_ptr<PyCollisionCheckerBase const> PyCollisionCheckerBaseConstPtr;
+typedef boost::shared_ptr<PyPlannerBase> PyPlannerBasePtr;
+typedef boost::shared_ptr<PyPlannerBase const> PyPlannerBaseConstPtr;
+typedef boost::shared_ptr<PySensorBase> PySensorBasePtr;
+typedef boost::shared_ptr<PySensorBase const> PySensorBaseConstPtr;
+typedef boost::shared_ptr<PySensorSystemBase> PySensorSystemBasePtr;
+typedef boost::shared_ptr<PySensorSystemBase const> PySensorSystemBaseConstPtr;
+typedef boost::shared_ptr<PyControllerBase> PyControllerBasePtr;
+typedef boost::shared_ptr<PyControllerBase const> PyControllerBaseConstPtr;
+typedef boost::shared_ptr<PyProblemInstance> PyProblemInstancePtr;
+typedef boost::shared_ptr<PyProblemInstance const> PyProblemInstanceConstPtr;
+typedef boost::shared_ptr<PyRaveViewerBase> PyRaveViewerBasePtr;
+typedef boost::shared_ptr<PyRaveViewerBase const> PyRaveViewerBaseConstPtr;
 
 void translate_openrave_exception(openrave_exception const& e)
 {
     // Use the Python 'C' API to set up an exception object
     PyErr_SetString(PyExc_RuntimeError, e.what());
 }
-
-class LockEnvironment
-{
-public:
-    LockEnvironment(EnvironmentBase* penv) : _penv(penv) { _penv->LockPhysics(true); }
-    ~LockEnvironment() { _penv->LockPhysics(false); }
-private:
-    EnvironmentBase* _penv;
-};
 
 inline RaveVector<float> ExtractFloat3(const object& o)
 {
@@ -425,12 +432,45 @@ inline object toPyArrayN(const float* pvalues, int N)
     return static_cast<numeric::array>(handle<>(pyvalues));
 }
 
+inline object toPyArrayN(const float* pvalues, vector<npy_intp>& dims)
+{
+    uint64_t totalsize = 1;
+    FOREACH(it,dims)
+        totalsize *= *it;
+    PyObject *pyvalues = PyArray_SimpleNew(dims.size(),&dims[0], PyArray_FLOAT);
+    if( pvalues != NULL )
+        memcpy(PyArray_DATA(pyvalues),pvalues,totalsize*sizeof(float));
+    return static_cast<numeric::array>(handle<>(pyvalues));
+}
+
 inline object toPyArrayN(const double* pvalues, int N)
 {
     npy_intp dims[] = {N};
     PyObject *pyvalues = PyArray_SimpleNew(1,dims, PyArray_DOUBLE);
     if( pvalues != NULL )
         memcpy(PyArray_DATA(pyvalues),pvalues,N*sizeof(double));
+    return static_cast<numeric::array>(handle<>(pyvalues));
+}
+
+inline object toPyArrayN(const double* pvalues, vector<npy_intp>& dims)
+{
+    uint64_t totalsize = 1;
+    FOREACH(it,dims)
+        totalsize *= *it;
+    PyObject *pyvalues = PyArray_SimpleNew(dims.size(),&dims[0], PyArray_DOUBLE);
+    if( pvalues != NULL )
+        memcpy(PyArray_DATA(pyvalues),pvalues,totalsize*sizeof(double));
+    return static_cast<numeric::array>(handle<>(pyvalues));
+}
+
+inline object toPyArrayN(const uint8_t* pvalues, vector<npy_intp>& dims)
+{
+    uint64_t totalsize = 1;
+    FOREACH(it,dims)
+        totalsize *= *it;
+    PyObject *pyvalues = PyArray_SimpleNew(dims.size(),&dims[0], PyArray_UINT8);
+    if( pvalues != NULL )
+        memcpy(PyArray_DATA(pyvalues),pvalues,totalsize*sizeof(uint8_t));
     return static_cast<numeric::array>(handle<>(pyvalues));
 }
 
@@ -451,46 +491,44 @@ inline object toPyArray(const vector<T>& v)
     return toPyArrayN(&v[0],v.size());
 }
 
+template <typename T>
+inline object toPyArray(const vector<T>& v, vector<npy_intp>& dims)
+{
+    if( v.size() == 0 )
+        return object();
+    uint64_t totalsize = 1;
+    FOREACH(it,dims)
+        totalsize *= *it;
+    if( totalsize != v.size() )
+        throw openrave_exception("dimensions and vector size do not match");
+
+    return toPyArrayN(&v[0],dims);
+}
+
 class PyPluginInfo
 {
 public:
     PyPluginInfo(const PLUGININFO& info)
     {
-        FOREACH(it, info.robots)
-            robots.append(_stdwcstombs(it->c_str()));
-        FOREACH(it, info.planners)
-            planners.append(_stdwcstombs(it->c_str()));
-        FOREACH(it, info.sensorsystems)
-            sensorsystems.append(_stdwcstombs(it->c_str()));
-        FOREACH(it, info.controllers)
-            controllers.append(_stdwcstombs(it->c_str()));
-        FOREACH(it, info.problems)
-            problems.append(_stdwcstombs(it->c_str()));
-        FOREACH(it, info.iksolvers)
-            iksolvers.append(_stdwcstombs(it->c_str()));
-        FOREACH(it, info.physicsengines)
-            physicsengines.append(_stdwcstombs(it->c_str()));
-        FOREACH(it, info.sensors)
-            sensors.append(_stdwcstombs(it->c_str()));
-        FOREACH(it, info.collisioncheckers)
-            collisioncheckers.append(_stdwcstombs(it->c_str()));
-        FOREACH(it, info.trajectories)
-            trajectories.append(_stdwcstombs(it->c_str()));
-        FOREACH(it, info.viewers)
-            viewers.append(_stdwcstombs(it->c_str()));
-        FOREACH(it, info.servers)
-            servers.append(_stdwcstombs(it->c_str()));
+        FOREACH(it, info.interfacenames) {
+            boost::python::list names;
+            FOREACH(itname,it->second)
+                names.append(*itname);
+            interfacenames.append(make_tuple(it->first,names));
+        }
     }
 
-    boost::python::list robots, planners, sensorsystems, controllers, problems, iksolvers, physicsengines,sensors, collisioncheckers, trajectories, viewers, servers;
+    boost::python::list interfacenames;
 };
 
 class PyGraphHandle
 {
 public:
-    PyGraphHandle() : _handle(NULL) {}
-    PyGraphHandle(void* handle) : _handle(handle) {}
-    void* _handle;
+    PyGraphHandle() {}
+    PyGraphHandle(EnvironmentBase::GraphHandlePtr handle) : _handle(handle) {}
+
+private:
+    EnvironmentBase::GraphHandlePtr _handle;
 };
 
 class PyRay
@@ -544,43 +582,50 @@ public:
 
 class PyInterfaceBase
 {
-    friend class PyEnvironmentBase;
 protected:
-    InterfaceBase* _pbase;
-    PyEnvironmentBase* _pyenv;
-    bool _bOwnObject;
+    InterfaceBasePtr _pbase;
+    PyEnvironmentBasePtr _pyenv;
 public:
-    PyInterfaceBase(InterfaceBase* pbase, PyEnvironmentBase* pyenv, bool bOwnObject);
-    virtual ~PyInterfaceBase();
+    PyInterfaceBase(InterfaceBasePtr pbase, PyEnvironmentBasePtr pyenv) : _pbase(pbase), _pyenv(pyenv)
+    {
+        CHECK_POINTER(_pbase);
+        CHECK_POINTER(_pyenv);
+    }
+    virtual ~PyInterfaceBase() {}
 
-    string GetXMLId() const { CHECK_POINTER(_pbase); return _pbase->GetXMLId(); }
-    string GetPluginName() const {  CHECK_POINTER(_pbase); return _pbase->GetPluginName(); }
-    PyEnvironmentBase* GetEnv() const { return _pyenv; }
+    PluginType GetInterfaceType() const { return _pbase->GetInterfaceType(); }
+    string GetXMLId() const { return _pbase->GetXMLId(); }
+    string GetPluginName() const { return _pbase->GetPluginName(); }
+    string GetDescription() const { return _pbase->GetDescription(); }
+    PyEnvironmentBasePtr GetEnv() const { return _pyenv; }
     
-    bool Clone(PyInterfaceBase* preference, int cloningoptions) {
-        CHECK_POINTER(_pbase); 
+    bool Clone(PyInterfaceBasePtr preference, int cloningoptions) {
+        CHECK_POINTER(preference); 
         return _pbase->Clone(preference->GetInterfaceBase(),cloningoptions);
     }
 
-    void SetUserData(uintptr_t pdata) { CHECK_POINTER(_pbase); return _pbase->SetUserData((void*)pdata); }
-    uintptr_t GetUserData() const { CHECK_POINTER(_pbase); return (uintptr_t)_pbase->GetUserData(); }
+    void SetUserData(boost::shared_ptr<void> pdata) { _pbase->SetUserData(pdata); }
+    boost::shared_ptr<void> GetUserData() const { return _pbase->GetUserData(); }
 
-    virtual InterfaceBase* GetInterfaceBase() { return _pbase; }
-    virtual void Invalidate() { _pbase = NULL; _bOwnObject = false; }
+    object SendCommand(const string& in) {
+        stringstream sin(in), sout;
+        if( !_pbase->SendCommand(sout,sin) )
+            return object();
+        return object(sout.str());
+    }
+
+    virtual InterfaceBasePtr GetInterfaceBase() { return _pbase; }
 };
 
 class PyKinBody : public PyInterfaceBase
 {
-    friend class PyEnvironmentBase;
 protected:
-    KinBody* _pbody;
-    virtual void Invalidate() { _pbody = NULL; PyInterfaceBase::Invalidate(); }
+    KinBodyPtr _pbody;
 public:
     class PyLink
     {
-        friend class PyEnvironmentBase;
-        KinBody::Link* _plink;
-        PyEnvironmentBase* _pyenv;
+        KinBody::LinkPtr _plink;
+        PyEnvironmentBasePtr _pyenv;
     public:
         class PyTriMesh
         {
@@ -607,22 +652,21 @@ public:
             object vertices,indices;
         };
 
-        PyLink(KinBody::Link* plink, PyEnvironmentBase* pyenv) : _plink(plink), _pyenv(pyenv) {}
+        PyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv) : _plink(plink), _pyenv(pyenv) {}
         virtual ~PyLink() {}
 
-        KinBody::Link* GetLink() { return _plink; }
+        KinBody::LinkPtr GetLink() { return _plink; }
 
-        void init(KinBody::Link* plink, PyEnvironmentBase* pyenv) { _plink=plink; _pyenv=pyenv; }
-        string GetName() { return _stdwcstombs(_plink->GetName()); }
+        string GetName() { return _plink->GetName(); }
         int GetIndex() { return _plink->GetIndex(); }
         bool IsEnabled() const { return _plink->IsEnabled(); }
         bool IsStatic() const { return _plink->IsStatic(); }
         void Enable(bool bEnable) { _plink->Enable(bEnable); }
 
-        PyKinBody* GetParent() const { return new PyKinBody(_plink->GetParent(),_pyenv,false); }
+        PyKinBodyPtr GetParent() const { return PyKinBodyPtr(new PyKinBody(_plink->GetParent(),_pyenv)); }
         
-        PyTriMesh* GetCollisionData() { return new PyTriMesh(_plink->GetCollisionData()); }
-        PyAABB* ComputeAABB() const { return new PyAABB(_plink->ComputeAABB()); }
+        boost::shared_ptr<PyTriMesh> GetCollisionData() { return boost::shared_ptr<PyTriMesh>(new PyTriMesh(_plink->GetCollisionData())); }
+        boost::shared_ptr<PyAABB> ComputeAABB() const { return boost::shared_ptr<PyAABB>(new PyAABB(_plink->ComputeAABB())); }
         object GetTransform() const { return ReturnTransform(_plink->GetTransform()); }
         
         object GetCOMOffset() const { return toPyVector3(_plink->GetCOMOffset()); }
@@ -633,21 +677,22 @@ public:
         void SetForce(object oforce, object opos, bool bAdd) { return _plink->SetForce(ExtractVector3(oforce),ExtractVector3(opos),bAdd); }
         void SetTorque(object otorque, bool bAdd) { return _plink->SetTorque(ExtractVector3(otorque),bAdd); }
     };
+    typedef boost::shared_ptr<PyLink> PyLinkPtr;
+    typedef boost::shared_ptr<PyLink const> PyLinkConstPtr;
 
     class PyJoint
     {
-        friend class PyEnvironmentBase;
-        KinBody::Joint* _pjoint;
-        PyEnvironmentBase* _pyenv;
+        KinBody::JointPtr _pjoint;
+        PyEnvironmentBasePtr _pyenv;
     public:
-        PyJoint(KinBody::Joint* pjoint, PyEnvironmentBase* pyenv) : _pjoint(pjoint), _pyenv(pyenv) {}
+        PyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr pyenv) : _pjoint(pjoint), _pyenv(pyenv) {}
         virtual ~PyJoint() {}
 
-        KinBody::Joint* GetJoint() { return _pjoint; }
+        KinBody::JointPtr GetJoint() { return _pjoint; }
 
-        string GetName() { return _stdwcstombs(_pjoint->GetName()); }
+        string GetName() { return _pjoint->GetName(); }
         int GetMimicJointIndex() const { return _pjoint->GetMimicJointIndex(); }
-        object GetMimicCoeffs() const { return toPyArrayN(_pjoint->GetMimicCoeffs(),2); }
+        object GetMimicCoeffs() const { return toPyArray(_pjoint->GetMimicCoeffs()); }
 
         dReal GetMaxVel() const { return _pjoint->GetMaxVel(); }
         dReal GetMaxAccel() const { return _pjoint->GetMaxAccel(); }
@@ -656,104 +701,91 @@ public:
         int GetDOFIndex() const { return _pjoint->GetDOFIndex(); }
         int GetJointIndex() const { return _pjoint->GetJointIndex(); }
         
-        PyKinBody* GetParent() const { return new PyKinBody(_pjoint->GetParent(),_pyenv,false); }
+        PyKinBodyPtr GetParent() const { return PyKinBodyPtr(new PyKinBody(_pjoint->GetParent(),_pyenv)); }
 
-        PyLink* GetFirstAttached() const { return new PyLink(_pjoint->GetFirstAttached(), _pyenv); }
-        PyLink* GetSecondAttached() const { return new PyLink(_pjoint->GetSecondAttached(), _pyenv); }
+        PyLinkPtr GetFirstAttached() const { return PyLinkPtr(new PyLink(_pjoint->GetFirstAttached(), _pyenv)); }
+        PyLinkPtr GetSecondAttached() const { return PyLinkPtr(new PyLink(_pjoint->GetSecondAttached(), _pyenv)); }
 
         int GetType() const { return _pjoint->GetType(); }
 
         int GetDOF() const { return _pjoint->GetDOF(); }
         object GetValues() const
         {
-            if( GetDOF() == 0 )
-                return object();
-            npy_intp dims[] = {GetDOF()};
-            PyObject *pyvalues = PyArray_SimpleNew(1,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-            _pjoint->GetValues((dReal*)PyArray_DATA(pyvalues));
-            return static_cast<numeric::array>(handle<>(pyvalues));
+            vector<dReal> values;
+            _pjoint->GetValues(values);
+            return toPyArray(values);
         }
         object GetVelocities() const
         {
-            if( GetDOF() == 0 )
-                return object();
-            npy_intp dims[] = {GetDOF()};
-            PyObject *pyvalues = PyArray_SimpleNew(1,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-            _pjoint->GetVelocities((dReal*)PyArray_DATA(pyvalues));
-            return static_cast<numeric::array>(handle<>(pyvalues));
+            vector<dReal> values;
+            _pjoint->GetVelocities(values);
+            return toPyArray(values);
         }
 
         object GetAnchor() const { return toPyVector3(_pjoint->GetAnchor()); }
         object GetAxis(int iaxis) { return toPyVector3(_pjoint->GetAxis(iaxis)); }
         object GetLimits() const {
-            if( GetDOF() == 0 )
-                return object();
-            npy_intp dims[] = {GetDOF()};
-            PyObject *pyvalues1 = PyArray_SimpleNew(1,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-            PyObject *pyvalues2 = PyArray_SimpleNew(1,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-            _pjoint->GetLimits((dReal*)PyArray_DATA(pyvalues1), (dReal*)PyArray_DATA(pyvalues2));
-            return make_tuple(static_cast<numeric::array>(handle<>(pyvalues1)), static_cast<numeric::array>(handle<>(pyvalues2)));
+            vector<dReal> lower, upper;
+            _pjoint->GetLimits(lower,upper);
+            return make_tuple(toPyArray(lower),toPyArray(upper));
         }
+
+        void SetJointOffset(dReal offset) { _pjoint->SetJointOffset(offset); }
+        void SetJointLimits(object olower, object oupper) {
+            vector<dReal> vlower = ExtractRealArray(olower);
+            vector<dReal> vupper = ExtractRealArray(oupper);
+            if( vlower.size() != vupper.size() || (int)vlower.size() != _pjoint->GetDOF() )
+                throw openrave_exception("limits are wrong dimensions");
+            _pjoint->SetJointLimits(vlower,vupper);
+        }
+        void SetResolution(dReal resolution) { _pjoint->SetResolution(resolution); }
     };
+    typedef boost::shared_ptr<PyJoint> PyJointPtr;
+    typedef boost::shared_ptr<PyJoint const> PyJointConstPtr;
 
-    PyKinBody(KinBody* pbody, PyEnvironmentBase* pyenv, bool bOwnObject=true) : PyInterfaceBase(pbody,pyenv, bOwnObject), _pbody(pbody) {}
-    PyKinBody(const PyKinBody& r) : PyInterfaceBase(r._pbody,r._pyenv,false) { _pbody = r._pbody; }
-    virtual ~PyKinBody();
-    KinBody* GetBody() { return _pbody; }
+    PyKinBody(KinBodyPtr pbody, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pbody,pyenv), _pbody(pbody) {}
+    PyKinBody(const PyKinBody& r) : PyInterfaceBase(r._pbody,r._pyenv) { _pbody = r._pbody; }
+    virtual ~PyKinBody() {}
+    KinBodyPtr GetBody() { return _pbody; }
 
-    bool Init(const string& filename)
-    {
-        CHECK_POINTER(_pbody);
-        return _pbody->Init(filename.c_str(),NULL);
-    }
+    bool InitFromFile(const string& filename) { return _pbody->InitFromFile(filename,std::list<std::pair<std::string,std::string> >()); }
+    bool InitFromData(const string& data) { return _pbody->InitFromData(data,std::list<std::pair<std::string,std::string> >()); }
 
-    string GetName() const { CHECK_POINTER(_pbody); return _stdwcstombs(_pbody->GetName()); }
-    int GetDOF() const { CHECK_POINTER(_pbody); return _pbody->GetDOF(); }
+    string GetName() const { return _pbody->GetName(); }
+    int GetDOF() const { return _pbody->GetDOF(); }
 
     object GetJointValues() const
     {
-        CHECK_POINTER(_pbody);
-        if( _pbody->GetDOF() == 0 )
-            return object();
-        npy_intp dims[] = {_pbody->GetDOF()};
-        PyObject *pyvalues = PyArray_SimpleNew(1,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-        _pbody->GetJointValues((dReal*)PyArray_DATA(pyvalues));
-        return static_cast<numeric::array>(handle<>(pyvalues));
+        vector<dReal> values;
+        _pbody->GetJointValues(values);
+        return toPyArray(values);
     }
     object GetJointLimits() const
     {
-        CHECK_POINTER(_pbody);
-        if( _pbody->GetDOF() == 0 )
-            return object();
-        npy_intp dims[] = {_pbody->GetDOF()};
-        PyObject *pyvalues1 = PyArray_SimpleNew(1,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-        PyObject *pyvalues2 = PyArray_SimpleNew(1,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-        _pbody->GetJointLimits((dReal*)PyArray_DATA(pyvalues1), (dReal*)PyArray_DATA(pyvalues2));
-        return make_tuple(static_cast<numeric::array>(handle<>(pyvalues1)), static_cast<numeric::array>(handle<>(pyvalues2)));
+        vector<dReal> vlower, vupper;
+        _pbody->GetJointLimits(vlower,vupper);
+        return make_tuple(toPyArray(vlower),toPyArray(vupper));
     }
     
     object GetLinks()
     {
-        CHECK_POINTER(_pbody);
         boost::python::list links;
         FOREACH(itlink, _pbody->GetLinks())
-            links.append(PyLink(*itlink, GetEnv()));
+            links.append(PyLinkPtr(new PyLink(*itlink, GetEnv())));
         return links;
     }
     object GetJoints()
     {
-        CHECK_POINTER(_pbody);
         boost::python::list joints;
         FOREACH(itjoint, _pbody->GetJoints())
-            joints.append(PyJoint(*itjoint, GetEnv()));
+            joints.append(PyJointPtr(new PyJoint(*itjoint, GetEnv())));
         return joints;
     }
 
-    object GetTransform() const { CHECK_POINTER(_pbody); return ReturnTransform(_pbody->GetTransform()); }
+    object GetTransform() const { return ReturnTransform(_pbody->GetTransform()); }
     
     object GetBodyTransformations() const
     {
-        CHECK_POINTER(_pbody);
         boost::python::list transforms;
         FOREACHC(itlink, _pbody->GetLinks())
             transforms.append(ReturnTransform((*itlink)->GetTransform()));
@@ -762,7 +794,6 @@ public:
 
     void SetBodyTransformations(object transforms)
     {
-        CHECK_POINTER(_pbody);
         size_t numtransforms = len(transforms);
         if( numtransforms != _pbody->GetLinks().size() )
             throw openrave_exception("number of input transforms not equal to links");
@@ -775,7 +806,6 @@ public:
 
     object GetLinkVelocities() const
     {
-        CHECK_POINTER(_pbody);
         std::vector<std::pair<Vector,Vector> > velocities;
         _pbody->GetLinkVelocities(velocities);
 
@@ -791,25 +821,23 @@ public:
         return make_tuple(static_cast<numeric::array>(handle<>(pylinear)),static_cast<numeric::array>(handle<>(pyangular)));
     }
 
-    PyAABB* ComputeAABB() { CHECK_POINTER(_pbody); return new PyAABB(_pbody->ComputeAABB()); }
-    void Enable(bool bEnable) { CHECK_POINTER(_pbody); _pbody->Enable(bEnable); }
-    bool IsEnabled() const { CHECK_POINTER(_pbody); return _pbody->IsEnabled(); }
+    boost::shared_ptr<PyAABB> ComputeAABB() { return boost::shared_ptr<PyAABB>(new PyAABB(_pbody->ComputeAABB())); }
+    void Enable(bool bEnable) { _pbody->Enable(bEnable); }
+    bool IsEnabled() const { return _pbody->IsEnabled(); }
 
-    void SetTransform(object transform) { CHECK_POINTER(_pbody); _pbody->SetTransform(ExtractTransform(transform)); }
+    void SetTransform(object transform) { _pbody->SetTransform(ExtractTransform(transform)); }
     void SetJointValues(object o)
     {
-        CHECK_POINTER(_pbody);
         if( _pbody->GetDOF() == 0 )
             return;
 
         vector<dReal> values = ExtractRealArray(o);
         if( (int)values.size() != GetDOF() )
             throw openrave_exception("values do not equal to body degrees of freedom");
-        _pbody->SetJointValues(NULL,NULL,&values[0],true);
+        _pbody->SetJointValues(values,true);
     }
     void SetTransformWithJointValues(object otrans,object ojoints)
     {
-        CHECK_POINTER(_pbody);
         if( _pbody->GetDOF() == 0 ) {
             _pbody->SetTransform(ExtractTransform(otrans));
             return;
@@ -819,13 +847,11 @@ public:
         if( (int)values.size() != GetDOF() )
             throw openrave_exception("values do not equal to body degrees of freedom");
 
-        Transform t = ExtractTransform(otrans);
-        _pbody->SetJointValues(NULL,&t,&values[0],true);
+        _pbody->SetJointValues(values,ExtractTransform(otrans),true);
     }
 
     void SetJointValues(object o,object indices)
     {
-        CHECK_POINTER(_pbody);
         if( _pbody->GetDOF() == 0 || len(indices) == 0 )
             return;
 
@@ -844,120 +870,103 @@ public:
             values[*it] = *itv++;
         }
 
-        _pbody->SetJointValues(NULL,NULL,&values[0],true);
+        _pbody->SetJointValues(values,true);
     }
 
     object CalculateJacobian(int index, object offset)
     {
-        CHECK_POINTER(_pbody);
         if( _pbody->GetDOF() == 0 )
             return object();
-        npy_intp dims[] = {3,_pbody->GetDOF()};
-        PyObject *pyjacobian = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-        _pbody->CalculateJacobian(index,ExtractVector3(offset),(dReal*)PyArray_DATA(pyjacobian));
-        return static_cast<numeric::array>(handle<>(pyjacobian));
+        vector<dReal> vjacobian;
+        _pbody->CalculateJacobian(index,ExtractVector3(offset),vjacobian);
+        vector<npy_intp> dims(2); dims[0] = 3; dims[1] = _pbody->GetDOF();
+        return toPyArray(vjacobian,dims);
     }
 
     object CalculateRotationJacobian(int index, object q) const
     {
-        CHECK_POINTER(_pbody);
         if( _pbody->GetDOF() == 0 )
             return object();
-        npy_intp dims[] = {4,_pbody->GetDOF()};
-        PyObject *pyjacobian = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-        _pbody->CalculateRotationJacobian(index,ExtractVector4(q),(dReal*)PyArray_DATA(pyjacobian));
-        return static_cast<numeric::array>(handle<>(pyjacobian));
+        vector<dReal> vjacobian;
+        _pbody->CalculateRotationJacobian(index,ExtractVector4(q),vjacobian);
+        vector<npy_intp> dims(2); dims[0] = 4; dims[1] = _pbody->GetDOF();
+        return toPyArray(vjacobian,dims);
     }
 
     object CalculateAngularVelocityJacobian(int index) const
     {
-        CHECK_POINTER(_pbody);
         if( _pbody->GetDOF() == 0 )
             return object();
-        npy_intp dims[] = {3,_pbody->GetDOF()};
-        PyObject *pyjacobian = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-        _pbody->CalculateAngularVelocityJacobian(index,(dReal*)PyArray_DATA(pyjacobian));
-        return static_cast<numeric::array>(handle<>(pyjacobian));
+        vector<dReal> vjacobian;
+        _pbody->CalculateAngularVelocityJacobian(index,vjacobian);
+        vector<npy_intp> dims(2); dims[0] = 3; dims[1] = _pbody->GetDOF();
+        return toPyArray(vjacobian,dims);
     }
 
-    bool CheckSelfCollision()
-    {
-        CHECK_POINTER(_pbody);
-        return _pbody->CheckSelfCollision();
-    }
-    bool CheckSelfCollision(PyCollisionReport* pReport);
+    bool CheckSelfCollision() { return _pbody->CheckSelfCollision(); }
+    bool CheckSelfCollision(PyCollisionReportPtr pReport);
 
-    void AttachBody(PyKinBody* pattachbody) {
-        CHECK_POINTER(_pbody);
-        CHECK_POINTER(pattachbody); CHECK_POINTER(pattachbody->GetBody());
+    void AttachBody(PyKinBodyPtr pattachbody) {
+        CHECK_POINTER(pattachbody);
         _pbody->AttachBody(pattachbody->GetBody());
     }
-    void RemoveBody(PyKinBody* pbody) {
-        CHECK_POINTER(_pbody);
-        if( pbody == NULL )
-            _pbody->RemoveBody(NULL);
-        else {
-            CHECK_POINTER(pbody->GetBody());
+    void RemoveBody(PyKinBodyPtr pbody) {
+        if( !pbody )
+            _pbody->RemoveBody(KinBodyPtr());
+        else
             _pbody->RemoveBody(pbody->GetBody());
-        }
     }
-    bool IsAttached(PyKinBody* pattachbody) {
-        CHECK_POINTER(_pbody);
-        CHECK_POINTER(pattachbody); CHECK_POINTER(pattachbody->GetBody());
+    bool IsAttached(PyKinBodyPtr pattachbody) {
+        CHECK_POINTER(pattachbody);
         return _pbody->IsAttached(pattachbody->GetBody());
     }
     object GetAttached() const {
-        CHECK_POINTER(_pbody);
         boost::python::list attached;
-        FOREACHC(it,_pbody->GetAttached())
-            attached.append(new PyKinBody(*it,_pyenv,false));
+        std::vector<KinBodyPtr> vattached;
+        _pbody->GetAttached(vattached);
+        FOREACHC(it,vattached)
+            attached.append(PyKinBodyPtr(new PyKinBody(*it,_pyenv)));
         return attached;
     }
-            
-    bool IsRobot() const { CHECK_POINTER(_pbody); return _pbody->IsRobot(); }
-    int GetNetworkId() const { CHECK_POINTER(_pbody); return _pbody->GetNetworkId(); }
 
-    int DoesAffect(int jointindex, int linkindex ) const {
-        CHECK_POINTER(_pbody); 
-        return _pbody->DoesAffect(jointindex,linkindex);
-    }
+    bool IsRobot() const { return _pbody->IsRobot(); }
+    int GetNetworkId() const { return _pbody->GetNetworkId(); }
+
+    int DoesAffect(int jointindex, int linkindex ) const { return _pbody->DoesAffect(jointindex,linkindex); }
 
     std::string GetForwardKinematics() const {
-        CHECK_POINTER(_pbody); 
         stringstream ss;
         _pbody->WriteForwardKinematics(ss);
         return ss.str();
     }
 
-    void SetGuiData(uintptr_t pdata) { CHECK_POINTER(_pbody); _pbody->SetGuiData((void*)pdata); }
-    uintptr_t GetGuiData() const { CHECK_POINTER(_pbody); return (uintptr_t)_pbody->GetGuiData(); }
+    void SetGuiData(boost::shared_ptr<void> pdata) { _pbody->SetGuiData(pdata); }
+    boost::shared_ptr<void> GetGuiData() const { return _pbody->GetGuiData(); }
 
-    std::string GetXMLFilename() const { CHECK_POINTER(_pbody); return _pbody->GetXMLFilename(); }
+    std::string GetXMLFilename() const { return _pbody->GetXMLFilename(); }
 
     object GetNonAdjacentLinks() const {
-        CHECK_POINTER(_pbody);
         boost::python::list nonadjacent;
         FOREACHC(it,_pbody->GetNonAdjacentLinks())
             nonadjacent.append(make_tuple((int)(*it)&0xffff,(int)(*it)>>16));
         return nonadjacent;
     }
     object GetAdjacentLinks() const {
-        CHECK_POINTER(_pbody);
         boost::python::list adjacent;
         FOREACHC(it,_pbody->GetAdjacentLinks())
             adjacent.append(make_tuple((int)(*it)&0xffff,(int)(*it)>>16));
         return adjacent;
     }
     
-    uintptr_t GetPhysicsData() const { CHECK_POINTER(_pbody); return (uintptr_t)_pbody->GetPhysicsData(); }
-    uintptr_t GetCollisionData() const { CHECK_POINTER(_pbody); return (uintptr_t)_pbody->GetCollisionData(); }
-    int GetUpdateStamp() const { CHECK_POINTER(_pbody); return _pbody->GetUpdateStamp(); }
+    boost::shared_ptr<void> GetPhysicsData() const { return _pbody->GetPhysicsData(); }
+    boost::shared_ptr<void> GetCollisionData() const { return _pbody->GetCollisionData(); }
+    int GetUpdateStamp() const { return _pbody->GetUpdateStamp(); }
 };
 
 class PyCollisionReport
 {
 public:
-    PyCollisionReport() : plink1(NULL,NULL),plink2(NULL,NULL) {}
+    PyCollisionReport() : report(new COLLISIONREPORT()) {}
     virtual ~PyCollisionReport() {}
 
     struct PYCONTACT
@@ -972,76 +981,237 @@ public:
         object pos, norm;
     };
 
-    void init(const COLLISIONREPORT& r, PyEnvironmentBase* pyenv)
+    void init(PyEnvironmentBasePtr pyenv)
     {
-        options = r.options;
-        numCols = r.numCols;
-        minDistance = r.minDistance;
-        numWithinTol = r.numWithinTol;
-        if( r.plink1 != NULL )
-            plink1.init(r.plink1, pyenv);
+        options = report->options;
+        numCols = report->numCols;
+        minDistance = report->minDistance;
+        numWithinTol = report->numWithinTol;
+        if( report->plink1 != NULL )
+            plink1.reset(new PyKinBody::PyLink(boost::const_pointer_cast<KinBody::Link>(report->plink1), pyenv));
         else
-            plink1.init(NULL,NULL);
-        if( r.plink2 != NULL )
-            plink2.init(r.plink2, pyenv);
+            plink1.reset();
+        if( report->plink2 != NULL )
+            plink2.reset(new PyKinBody::PyLink(boost::const_pointer_cast<KinBody::Link>(report->plink2), pyenv));
         else
-            plink2.init(NULL,NULL);
+            plink2.reset();
         boost::python::list newcontacts;
-        FOREACH(itc, r.contacts)
+        FOREACH(itc, report->contacts)
             newcontacts.append(PYCONTACT(*itc));
         contacts = newcontacts;
     }
 
     int options;
-    PyKinBody::PyLink plink1, plink2;
+    boost::shared_ptr<PyKinBody::PyLink> plink1, plink2;
     int numCols;
     //std::vector<KinBody::Link*> vLinkColliding;
     dReal minDistance;
     int numWithinTol;
     boost::python::list contacts;
+
+    boost::shared_ptr<COLLISIONREPORT> report;
 };
 
-bool PyKinBody::CheckSelfCollision(PyCollisionReport* pReport)
+bool PyKinBody::CheckSelfCollision(PyCollisionReportPtr pReport)
 {
-    CHECK_POINTER(_pbody);
-    COLLISIONREPORT report;
-    bool bSuccess = _pbody->CheckSelfCollision(&report);
-    pReport->init(report,GetEnv());
+    if( !pReport )
+        return _pbody->CheckSelfCollision();
+
+    bool bSuccess = _pbody->CheckSelfCollision(pReport->report);
+    pReport->init(GetEnv());
     return bSuccess;
 }
 
+class PyControllerBase : public PyInterfaceBase
+{
+protected:
+    ControllerBasePtr _pcontroller;
+public:
+    PyControllerBase(ControllerBasePtr pcontroller, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pcontroller, pyenv), _pcontroller(pcontroller) {}
+    virtual ~PyControllerBase() {}
+
+    ControllerBasePtr GetController() { return _pcontroller; }
+
+    bool Init(PyRobotBasePtr robot, const string& args);
+    void Reset(int options) { _pcontroller->Reset(options); }
+
+    bool SetDesired(object o)
+    {
+        vector<dReal> values = ExtractRealArray(o);
+        if( values.size() == 0 )
+            throw openrave_exception("no values specified");
+        return _pcontroller->SetDesired(values);
+    }
+    
+    bool SetPath(PyTrajectoryBasePtr ptraj);
+    bool SimulationStep(dReal fTimeElapsed) { return _pcontroller->SimulationStep(fTimeElapsed); }
+
+    bool IsDone() { return _pcontroller->IsDone(); }
+    dReal GetTime() { return _pcontroller->GetTime(); }
+
+    object GetVelocity()
+    {
+        vector<dReal> velocity;
+        _pcontroller->GetVelocity(velocity);
+        return toPyArray(velocity);
+    }
+
+    object GetTorque()
+    {
+        vector<dReal> torque;
+        _pcontroller->GetTorque(torque);
+        return toPyArray(torque);
+    }
+};
+
+class PySensorBase : public PyInterfaceBase
+{
+protected:
+    SensorBasePtr _psensor;
+    SensorBase::SensorDataPtr _psensordata;
+public:
+    class PySensorData
+    {
+    public:
+        PySensorData(SensorBase::SensorDataPtr pdata)
+        {
+            type = pdata->GetType();
+        }
+        virtual ~PySensorData() {}
+        
+        SensorBase::SensorType type;
+    };
+
+    class PyLaserSensorData : public PySensorData
+    {
+    public:
+        PyLaserSensorData(boost::shared_ptr<SensorBase::LaserGeomData> pgeom, boost::shared_ptr<SensorBase::LaserSensorData> pdata) : PySensorData(pdata)
+        {
+            transform = ReturnTransform(pdata->t);
+            positions = toPyArray3(pdata->positions);
+            ranges = toPyArray3(pdata->ranges);
+            intensity = toPyArrayN(pdata->intensity.size()>0?&pdata->intensity[0]:NULL,pdata->intensity.size());
+            id = pdata->id;
+        }
+        virtual ~PyLaserSensorData() {}
+
+        object transform, positions, ranges, intensity;
+        int id;
+    };
+
+    class PyCameraSensorData : public PySensorData
+    {
+    public:
+        PyCameraSensorData(boost::shared_ptr<SensorBase::CameraGeomData> pgeom, boost::shared_ptr<SensorBase::CameraSensorData> pdata) : PySensorData(pdata)
+        {
+            if( (int)pdata->vimagedata.size() != pgeom->height*pgeom->width*3 )
+                throw openrave_exception("bad image data");
+
+            transform = ReturnTransform(pdata->t);
+            {
+                npy_intp dims[] = {pgeom->height,pgeom->width,3};
+                PyObject *pyvalues = PyArray_SimpleNew(3,dims, PyArray_UINT8);
+                if( pdata->vimagedata.size() > 0 )
+                    memcpy(PyArray_DATA(pyvalues),&pdata->vimagedata[0],pdata->vimagedata.size());
+                imagedata = static_cast<numeric::array>(handle<>(pyvalues));
+            }
+            {
+                numeric::array arr(make_tuple(pgeom->KK.fx,0,pgeom->KK.cx,0,pgeom->KK.fy,pgeom->KK.cy,0,0,1));
+                arr.resize(3,3);
+                KK = arr;
+            }
+            id = pdata->id;
+        }
+        virtual ~PyCameraSensorData() {}
+
+        object transform, imagedata;
+        object KK;
+        int id;
+    };
+
+    PySensorBase(SensorBasePtr psensor, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(psensor, pyenv), _psensor(psensor)
+    {
+        _psensordata = _psensor->CreateSensorData();
+    }
+    virtual ~PySensorBase() { }
+
+    SensorBasePtr GetSensor() { return _psensor; }
+    boost::shared_ptr<PySensorData> GetSensorData()
+    {
+        if( !_psensor->GetSensorData(_psensordata) )
+            throw openrave_exception("SensorData failed");
+        switch(_psensordata->GetType()) {
+        case SensorBase::ST_Laser:
+            return boost::shared_ptr<PySensorData>(new PyLaserSensorData(boost::static_pointer_cast<SensorBase::LaserGeomData>(_psensor->GetSensorGeometry()),
+                                                                         boost::static_pointer_cast<SensorBase::LaserSensorData>(_psensordata)));
+            
+        case SensorBase::ST_Camera:
+            return boost::shared_ptr<PySensorData>(new PyCameraSensorData(boost::static_pointer_cast<SensorBase::CameraGeomData>(_psensor->GetSensorGeometry()),
+                                                                          boost::static_pointer_cast<SensorBase::CameraSensorData>(_psensordata)));
+        default: {
+            stringstream ss;
+            ss << "unknown sensor data type: " << _psensordata->GetType() << endl;
+            throw openrave_exception(ss.str());
+        }
+        }
+    }
+    
+    void SetTransform(object transform) { _psensor->SetTransform(ExtractTransform(transform)); }
+    object GetTransform() { return ReturnTransform(_psensor->GetTransform()); }
+
+    string GetName() { return _psensor->GetName(); }
+};
+
+class PyIkSolverBase : public PyInterfaceBase
+{
+protected:
+    IkSolverBasePtr _pIkSolver;
+public:
+    PyIkSolverBase(IkSolverBasePtr pIkSolver, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pIkSolver, pyenv), _pIkSolver(pIkSolver) {}
+    virtual ~PyIkSolverBase() {}
+
+    IkSolverBasePtr GetIkSolver() { return _pIkSolver; }
+};
+
 class PyRobotBase : public PyKinBody
 {
-    friend class PyEnvironmentBase;
 protected:
-    RobotBase* _probot;
-    virtual void Invalidate() { _probot = NULL; PyKinBody::Invalidate(); }
+    RobotBasePtr _probot;
 public:
-
-    RobotBase* GetRobot() { return _probot; }
+    RobotBasePtr GetRobot() { return _probot; }
 
     class PyManipulator
     {
-        RobotBase::Manipulator* _pmanip;
-        PyEnvironmentBase* _pyenv;
+        RobotBase::ManipulatorPtr _pmanip;
+        PyEnvironmentBasePtr _pyenv;
     public:
-        PyManipulator(RobotBase::Manipulator* pmanip, PyEnvironmentBase* pyenv) : _pmanip(pmanip),_pyenv(pyenv) {}
+        PyManipulator(RobotBase::ManipulatorPtr pmanip, PyEnvironmentBasePtr pyenv) : _pmanip(pmanip),_pyenv(pyenv) {}
 
         object GetEndEffectorTransform() const { return ReturnTransform(_pmanip->GetEndEffectorTransform()); }
 
-		void SetIKSolver(PyIkSolverBase* iksolver);
+        string GetName() const { return _pmanip->GetName(); }
+        PyRobotBasePtr GetRobot() { return PyRobotBasePtr(new PyRobotBase(_pmanip->GetRobot(),_pyenv)); }
+
+		void SetIKSolver(PyIkSolverBasePtr iksolver) { CHECK_POINTER(iksolver); _pmanip->SetIKSolver(iksolver->GetIkSolver()); }
         bool InitIKSolver() { return _pmanip->InitIKSolver(); }
         string GetIKSolverName() const { return _pmanip->GetIKSolverName(); }
         bool HasIKSolver() const { return _pmanip->HasIKSolver(); }
-        string GetName() const { return _pmanip->GetName(); }
+
+        boost::shared_ptr<PyLink> GetBase() { return PyLinkPtr(new PyLink(_pmanip->GetBase(),_pyenv)); }
+        boost::shared_ptr<PyLink> GetEndEffector() { return PyLinkPtr(new PyLink(_pmanip->GetEndEffector(),_pyenv)); }
+        object GetGraspTransform() { return ReturnTransform(_pmanip->GetGraspTransform()); }
+        object GetGripperJoints() { return toPyList(_pmanip->GetGripperJoints()); }
+        object GetArmJoints() { return toPyList(_pmanip->GetArmJoints()); }
+        object GetClosingDirection() { return toPyList(_pmanip->GetClosingDirection()); }
+
+        int GetNumFreeParameters() const { return _pmanip->GetNumFreeParameters(); }
 
         object GetFreeParameters() const {
             if( _pmanip->GetNumFreeParameters() == 0 )
                 return object();
-            npy_intp dims[] = {_pmanip->GetNumFreeParameters()};
-            PyObject *pyvalues = PyArray_SimpleNew(1,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-            _pmanip->GetFreeParameters((dReal*)PyArray_DATA(pyvalues));
-            return static_cast<numeric::array>(handle<>(pyvalues));
+            vector<dReal> values;
+            _pmanip->GetFreeParameters(values);
+            return toPyArray(values);
         }
 
         object FindIKSolution(object transform, bool bColCheck) const
@@ -1055,9 +1225,9 @@ public:
         object FindIKSolution(object transform, object freeparams, bool bColCheck) const
         {
             vector<dReal> solution, vfreeparams = ExtractRealArray(freeparams);
-            if( !_pmanip->FindIKSolution(ExtractTransform(transform),vfreeparams.size()>0?&vfreeparams[0]:NULL, solution,bColCheck) )
+            if( !_pmanip->FindIKSolution(ExtractTransform(transform),vfreeparams, solution,bColCheck) )
                 return object();
-            return toPyArrayN(&solution[0],solution.size());
+            return toPyArray(solution);
         }
 
         object FindIKSolutions(object transform, bool bColCheck) const
@@ -1075,26 +1245,20 @@ public:
         {
             std::vector<std::vector<dReal> > vsolutions;
             vector<dReal> vfreeparams = ExtractRealArray(freeparams);
-            if( !_pmanip->FindIKSolutions(ExtractTransform(transform),vfreeparams.size()>0?&vfreeparams[0]:NULL, vsolutions,bColCheck) )
+            if( !_pmanip->FindIKSolutions(ExtractTransform(transform),vfreeparams, vsolutions,bColCheck) )
                 return object();
             boost::python::list solutions;
             FOREACH(itsol,vsolutions)
-                solutions.append(toPyArrayN(&(*itsol)[0],itsol->size()));
+                solutions.append(toPyArray(*itsol));
             return solutions;
         }
-
-        PyLink* GetBase() { CHECK_POINTER(_pmanip->pBase); return new PyLink(_pmanip->pBase,_pyenv); }
-        PyLink* GetEndEffector() { CHECK_POINTER(_pmanip->pEndEffector); return new PyLink(_pmanip->pEndEffector,_pyenv); }
-        object GetGraspTransform() { return ReturnTransform(_pmanip->tGrasp); }
-        object GetJoints() { return toPyList(_pmanip->_vecjoints); }
-        object GetArmJoints() { return toPyList(_pmanip->_vecarmjoints); }
         
         object GetChildJoints() {
-            std::set<KinBody::Joint*> vjoints;
+            std::set<KinBody::JointPtr> vjoints;
             _pmanip->GetChildJoints(vjoints);
             boost::python::list joints;
             FOREACH(itjoint,vjoints)
-                joints.append(PyJoint(*itjoint, _pyenv));
+                joints.append(PyJointPtr(new PyJoint(*itjoint, _pyenv)));
             return joints;
         }
         object GetChildDOFIndices() {
@@ -1107,187 +1271,167 @@ public:
         }
 
         object GetChildLinks() {
-            std::set<KinBody::Link*> vlinks;
+            std::set<KinBody::LinkPtr> vlinks;
             _pmanip->GetChildLinks(vlinks);
             boost::python::list links;
             FOREACH(itlink,vlinks)
-                links.append(PyLink(*itlink,_pyenv));
+                links.append(PyLinkPtr(new PyLink(*itlink,_pyenv)));
             return links;
         }
     };
 
     class PyAttachedSensor
     {
-        RobotBase::AttachedSensor* _pattached;
-        PyEnvironmentBase* _pyenv;
+        RobotBase::AttachedSensorPtr _pattached;
+        PyEnvironmentBasePtr _pyenv;
     public:
-        PyAttachedSensor(RobotBase::AttachedSensor* pattached, PyEnvironmentBase* pyenv) : _pattached(pattached),_pyenv(pyenv) {}
+        PyAttachedSensor(RobotBase::AttachedSensorPtr pattached, PyEnvironmentBasePtr pyenv) : _pattached(pattached),_pyenv(pyenv) {}
         
-        PySensorBase* GetSensor();
-        PyLink* GetAttachingLink() const { return new PyLink(_pattached->GetAttachingLink(), _pyenv); }
+        PySensorBasePtr GetSensor() { return PySensorBasePtr(new PySensorBase(_pattached->GetSensor(),_pyenv)); }
+        PyLinkPtr GetAttachingLink() const { return PyLinkPtr(new PyLink(_pattached->GetAttachingLink(), _pyenv)); }
         object GetRelativeTransform() const { return ReturnTransform(_pattached->GetRelativeTransform()); }
-        PyRobotBase* GetRobot() const { return new PyRobotBase(_pattached->GetRobot(), _pyenv, false); }
+        PyRobotBasePtr GetRobot() const { return PyRobotBasePtr(new PyRobotBase(_pattached->GetRobot(), _pyenv)); }
         string GetName() const { return _pattached->GetName(); }
     };
 
     class PyGrabbed
     {
     public:
-        PyGrabbed(const RobotBase::GRABBED& grabbed, PyEnvironmentBase* pyenv) {
-            grabbedbody = object(PyKinBody(grabbed.pbody,pyenv,false));
-            linkrobot = object(PyLink(grabbed.plinkrobot,pyenv));
+        PyGrabbed(const RobotBase::GRABBED& grabbed, PyEnvironmentBasePtr pyenv) {
+            grabbedbody.reset(new PyKinBody(KinBodyPtr(grabbed.pbody),pyenv));
+            linkrobot.reset(new PyLink(KinBody::LinkPtr(grabbed.plinkrobot),pyenv));
 
             FOREACH(it, grabbed.sValidColLinks)
-                validColLinks.append(PyLink(*it,pyenv));
+                validColLinks.append(PyLinkPtr(new PyLink(KinBody::LinkPtr(*it),pyenv)));
             
             troot = ReturnTransform(grabbed.troot);
         }
 
-        object grabbedbody;
-        object linkrobot;
+        PyKinBodyPtr grabbedbody;
+        PyLinkPtr linkrobot;
         boost::python::list validColLinks;
         object troot;
     };
 
-    PyRobotBase(RobotBase* probot, PyEnvironmentBase* pyenv, bool bOwnObject=true) : PyKinBody(probot,pyenv,bOwnObject), _probot(probot) {}
-    PyRobotBase(const PyRobotBase& r) : PyKinBody(r._probot,r._pyenv,false) { _probot = r._probot; }
-    virtual ~PyRobotBase();
+    PyRobotBase(RobotBasePtr probot, PyEnvironmentBasePtr pyenv) : PyKinBody(probot,pyenv), _probot(probot) {}
+    PyRobotBase(const PyRobotBase& r) : PyKinBody(r._probot,r._pyenv) { _probot = r._probot; }
+    virtual ~PyRobotBase() {}
 
     object GetManipulators()
     {
-        CHECK_POINTER(_probot);
         boost::python::list manips;
         FOREACH(it, _probot->GetManipulators())
-            manips.append(PyManipulator(&(*it),_pyenv));
+            manips.append(boost::shared_ptr<PyManipulator>(new PyManipulator(*it,_pyenv)));
         return manips;
     }
 
-    void SetActiveManipulator(int index) { CHECK_POINTER(_probot); _probot->SetActiveManipulator(index); }
-    PyManipulator* GetActiveManipulator() { CHECK_POINTER(_probot); return new PyManipulator(_probot->GetActiveManipulator(),_pyenv); }
-    int GetActiveManipulatorIndex() const { CHECK_POINTER(_probot); return _probot->GetActiveManipulatorIndex(); }
+    void SetActiveManipulator(int index) { _probot->SetActiveManipulator(index); }
+    boost::shared_ptr<PyManipulator> GetActiveManipulator() { return boost::shared_ptr<PyManipulator>(new PyManipulator(_probot->GetActiveManipulator(),_pyenv)); }
+    int GetActiveManipulatorIndex() const { return _probot->GetActiveManipulatorIndex(); }
 
     object GetSensors()
     {
-        CHECK_POINTER(_probot);
         boost::python::list sensors;
         FOREACH(itsensor, _probot->GetSensors())
-            sensors.append(PyAttachedSensor(&(*itsensor),_pyenv));
+            sensors.append(boost::shared_ptr<PyAttachedSensor>(new PyAttachedSensor(*itsensor,_pyenv)));
         return sensors;
     }
     
-    PyControllerBase* GetController() const;
-    bool SetController(const string& name, const string& args);
-    bool SetController(PyControllerBase * pController, const string& args);
+    PyControllerBasePtr GetController() const { return PyControllerBasePtr(new PyControllerBase(_probot->GetController(),_pyenv)); }
+    bool SetController(PyControllerBasePtr pController, const string& args) { CHECK_POINTER(pController); return _probot->SetController(pController->GetController(),args.c_str()); }
     
-    void SetActiveDOFs(object jointindices) { CHECK_POINTER(_probot); _probot->SetActiveDOFs(ExtractArrayInt(jointindices)); }
-    void SetActiveDOFs(object jointindices, int nAffineDOsBitmask) { CHECK_POINTER(_probot); _probot->SetActiveDOFs(ExtractArrayInt(jointindices), nAffineDOsBitmask); }
+    void SetActiveDOFs(object jointindices) { _probot->SetActiveDOFs(ExtractArrayInt(jointindices)); }
+    void SetActiveDOFs(object jointindices, int nAffineDOsBitmask) { _probot->SetActiveDOFs(ExtractArrayInt(jointindices), nAffineDOsBitmask); }
     void SetActiveDOFs(object jointindices, int nAffineDOsBitmask, object rotationaxis) {
-        CHECK_POINTER(_probot);
-        Vector vaxis = ExtractVector3(rotationaxis);
-        _probot->SetActiveDOFs(ExtractArrayInt(jointindices), nAffineDOsBitmask, &vaxis);
+        _probot->SetActiveDOFs(ExtractArrayInt(jointindices), nAffineDOsBitmask, ExtractVector3(rotationaxis));
     }
 
-    int GetActiveDOF() const { CHECK_POINTER(_probot); return _probot->GetActiveDOF(); }
-    int GetAffineDOF() const { CHECK_POINTER(_probot); return _probot->GetAffineDOF(); }
-    int GetAffineDOFIndex(RobotBase::DOFAffine dof) const { CHECK_POINTER(_probot); return _probot->GetAffineDOFIndex(dof); }
+    int GetActiveDOF() const { return _probot->GetActiveDOF(); }
+    int GetAffineDOF() const { return _probot->GetAffineDOF(); }
+    int GetAffineDOFIndex(RobotBase::DOFAffine dof) const { return _probot->GetAffineDOFIndex(dof); }
 
-    object GetAffineRotationAxis() const { CHECK_POINTER(_probot); return toPyVector3(_probot->GetAffineRotationAxis()); }
-    void SetAffineTranslationLimits(object lower, object upper) { CHECK_POINTER(_probot); return _probot->SetAffineTranslationLimits(ExtractVector3(lower),ExtractVector3(upper)); }
-    void SetAffineRotationAxisLimits(object lower, object upper) { CHECK_POINTER(_probot); return _probot->SetAffineRotationAxisLimits(ExtractVector3(lower),ExtractVector3(upper)); }
-    void SetAffineRotation3DLimits(object lower, object upper) { CHECK_POINTER(_probot); return _probot->SetAffineRotation3DLimits(ExtractVector3(lower),ExtractVector3(upper)); }
-    void SetAffineRotationQuatLimits(object lower, object upper) { CHECK_POINTER(_probot); return _probot->SetAffineRotationQuatLimits(ExtractVector4(lower),ExtractVector4(upper)); }
-    void SetAffineTranslationMaxVels(object vels) { CHECK_POINTER(_probot); _probot->SetAffineTranslationMaxVels(ExtractVector3(vels)); }
-    void SetAffineRotationAxisMaxVels(object vels) { CHECK_POINTER(_probot); _probot->SetAffineRotationAxisMaxVels(ExtractVector3(vels)); }
-    void SetAffineRotation3DMaxVels(object vels) { CHECK_POINTER(_probot); _probot->SetAffineRotation3DMaxVels(ExtractVector3(vels)); }
-    void SetAffineRotationQuatMaxVels(object vels) { CHECK_POINTER(_probot); _probot->SetAffineRotationQuatMaxVels(ExtractVector4(vels)); }
-    void SetAffineTranslationResolution(object resolution) { CHECK_POINTER(_probot); _probot->SetAffineTranslationResolution(ExtractVector3(resolution)); }
-    void SetAffineRotationAxisResolution(object resolution) { CHECK_POINTER(_probot); _probot->SetAffineRotationAxisResolution(ExtractVector3(resolution)); }
-    void SetAffineRotation3DResolution(object resolution) { CHECK_POINTER(_probot); _probot->SetAffineRotation3DResolution(ExtractVector3(resolution)); }
-    void SetAffineRotationQuatResolution(object resolution) { CHECK_POINTER(_probot); _probot->SetAffineRotationQuatResolution(ExtractVector4(resolution)); }
+    object GetAffineRotationAxis() const { return toPyVector3(_probot->GetAffineRotationAxis()); }
+    void SetAffineTranslationLimits(object lower, object upper) { return _probot->SetAffineTranslationLimits(ExtractVector3(lower),ExtractVector3(upper)); }
+    void SetAffineRotationAxisLimits(object lower, object upper) { return _probot->SetAffineRotationAxisLimits(ExtractVector3(lower),ExtractVector3(upper)); }
+    void SetAffineRotation3DLimits(object lower, object upper) { return _probot->SetAffineRotation3DLimits(ExtractVector3(lower),ExtractVector3(upper)); }
+    void SetAffineRotationQuatLimits(object lower, object upper) { return _probot->SetAffineRotationQuatLimits(ExtractVector4(lower),ExtractVector4(upper)); }
+    void SetAffineTranslationMaxVels(object vels) { _probot->SetAffineTranslationMaxVels(ExtractVector3(vels)); }
+    void SetAffineRotationAxisMaxVels(object vels) { _probot->SetAffineRotationAxisMaxVels(ExtractVector3(vels)); }
+    void SetAffineRotation3DMaxVels(object vels) { _probot->SetAffineRotation3DMaxVels(ExtractVector3(vels)); }
+    void SetAffineRotationQuatMaxVels(object vels) { _probot->SetAffineRotationQuatMaxVels(ExtractVector4(vels)); }
+    void SetAffineTranslationResolution(object resolution) { _probot->SetAffineTranslationResolution(ExtractVector3(resolution)); }
+    void SetAffineRotationAxisResolution(object resolution) { _probot->SetAffineRotationAxisResolution(ExtractVector3(resolution)); }
+    void SetAffineRotation3DResolution(object resolution) { _probot->SetAffineRotation3DResolution(ExtractVector3(resolution)); }
+    void SetAffineRotationQuatResolution(object resolution) { _probot->SetAffineRotationQuatResolution(ExtractVector4(resolution)); }
 
     object GetAffineTranslationLimits() const
     {
-        CHECK_POINTER(_probot);
         Vector lower, upper;
         _probot->GetAffineTranslationLimits(lower,upper);
         return make_tuple(toPyVector3(lower),toPyVector3(upper));
     }
     object GetAffineRotationAxisLimits() const
     {
-        CHECK_POINTER(_probot);
         Vector lower, upper;
         _probot->GetAffineRotationAxisLimits(lower,upper);
         return make_tuple(toPyVector3(lower),toPyVector3(upper));
     }
     object GetAffineRotation3DLimits() const
     {
-        CHECK_POINTER(_probot);
         Vector lower, upper;
         _probot->GetAffineRotation3DLimits(lower,upper);
         return make_tuple(toPyVector3(lower),toPyVector3(upper));
     }
     object GetAffineRotationQuatLimits() const
     {
-        CHECK_POINTER(_probot);
         Vector lower, upper;
         _probot->GetAffineRotationQuatLimits(lower,upper);
         return make_tuple(toPyVector4(lower),toPyVector4(upper));
     }
-    object GetAffineTranslationMaxVels() const { CHECK_POINTER(_probot); return toPyVector3(_probot->GetAffineTranslationMaxVels()); }
-    object GetAffineRotationAxisMaxVels() const { CHECK_POINTER(_probot); return toPyVector3(_probot->GetAffineRotationAxisMaxVels()); }
-    object GetAffineRotation3DMaxVels() const { CHECK_POINTER(_probot); return toPyVector3(_probot->GetAffineRotation3DMaxVels()); }
-    object GetAffineRotationQuatMaxVels() const { CHECK_POINTER(_probot); return toPyVector4(_probot->GetAffineRotationQuatMaxVels()); }
-    object GetAffineTranslationResolution() const { CHECK_POINTER(_probot); return toPyVector3(_probot->GetAffineTranslationResolution()); }
-    object GetAffineRotationAxisResolution() const { CHECK_POINTER(_probot); return toPyVector3(_probot->GetAffineRotationAxisResolution()); }
-    object GetAffineRotation3DResolution() const { CHECK_POINTER(_probot); return toPyVector3(_probot->GetAffineRotation3DResolution()); }
-    object GetAffineRotationQuatResolution() const { CHECK_POINTER(_probot); return toPyVector4(_probot->GetAffineRotationQuatResolution()); }
+    object GetAffineTranslationMaxVels() const { return toPyVector3(_probot->GetAffineTranslationMaxVels()); }
+    object GetAffineRotationAxisMaxVels() const { return toPyVector3(_probot->GetAffineRotationAxisMaxVels()); }
+    object GetAffineRotation3DMaxVels() const { return toPyVector3(_probot->GetAffineRotation3DMaxVels()); }
+    object GetAffineRotationQuatMaxVels() const { return toPyVector4(_probot->GetAffineRotationQuatMaxVels()); }
+    object GetAffineTranslationResolution() const { return toPyVector3(_probot->GetAffineTranslationResolution()); }
+    object GetAffineRotationAxisResolution() const { return toPyVector3(_probot->GetAffineRotationAxisResolution()); }
+    object GetAffineRotation3DResolution() const { return toPyVector3(_probot->GetAffineRotation3DResolution()); }
+    object GetAffineRotationQuatResolution() const { return toPyVector4(_probot->GetAffineRotationQuatResolution()); }
 
     void SetActiveDOFValues(object values) const
     {
-        CHECK_POINTER(_probot);
         vector<dReal> vvalues = ExtractRealArray(values);
         if( vvalues.size() > 0 )
-            _probot->SetActiveDOFValues(NULL,&vvalues[0],true);
+            _probot->SetActiveDOFValues(vvalues,true);
     }
     object GetActiveDOFValues() const
     {
-        CHECK_POINTER(_probot);
         if( _probot->GetActiveDOF() == 0 )
             return object();
-        npy_intp dims[] = {_probot->GetActiveDOF()};
-        PyObject *pyvalues = PyArray_SimpleNew(1,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-        _probot->GetActiveDOFValues((dReal*)PyArray_DATA(pyvalues));
-        return static_cast<numeric::array>(handle<>(pyvalues));
+        vector<dReal> values;
+        _probot->GetActiveDOFValues(values);
+        return toPyArray(values);
     }
 
     void SetActiveDOFVelocities(object velocities)
     {
-        CHECK_POINTER(_probot);
-        vector<dReal> vvelocities = ExtractRealArray(velocities);
-        if( vvelocities.size() > 0 )
-            _probot->SetActiveDOFVelocities(&vvelocities[0]);
+        _probot->SetActiveDOFVelocities(ExtractRealArray(velocities));
     }
     object GetActiveDOFVelocities() const
     {
-        CHECK_POINTER(_probot);
         if( _probot->GetActiveDOF() == 0 )
             return object();
-        npy_intp dims[] = {_probot->GetActiveDOF()};
-        PyObject *pyvalues = PyArray_SimpleNew(1,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-        _probot->GetActiveDOFVelocities((dReal*)PyArray_DATA(pyvalues));
-        return static_cast<numeric::array>(handle<>(pyvalues));
+        vector<dReal> values;
+        _probot->GetActiveDOFVelocities(values);
+        return toPyArray(values);
     }
 
     object GetActiveDOFLimits() const
     {
-        CHECK_POINTER(_probot);
         if( _probot->GetActiveDOF() == 0 )
             return object();
-        npy_intp dims[] = {_probot->GetActiveDOF()};
-        PyObject *pyvalues1 = PyArray_SimpleNew(1,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-        PyObject *pyvalues2 = PyArray_SimpleNew(1,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-        _probot->GetActiveDOFLimits((dReal*)PyArray_DATA(pyvalues1), (dReal*)PyArray_DATA(pyvalues1));
-        return make_tuple(static_cast<numeric::array>(handle<>(pyvalues1)), static_cast<numeric::array>(handle<>(pyvalues2)));
+        vector<dReal> lower, upper;
+        _probot->GetActiveDOFLimits(lower,upper);
+        return make_tuple(toPyArray(lower),toPyArray(upper));
     }
 
 //    void GetActiveDOFResolutions(dReal* pResolution) const;
@@ -1305,78 +1449,80 @@ public:
 //    void GetFullTrajectoryFromActive(PyTrajectory* pFullTraj, PyTrajectory* pActiveTraj, bool bOverwriteTransforms);
 //    void SetActiveMotion(PyTrajectory* ptraj);
 
-    int GetActiveJointIndex(int active_index) const { CHECK_POINTER(_probot); return _probot->GetActiveJointIndex(active_index); }
-    object GetActiveJointIndices() { CHECK_POINTER(_probot); return toPyList(_probot->GetActiveJointIndices()); }
+    int GetActiveJointIndex(int active_index) const { return _probot->GetActiveJointIndex(active_index); }
+    object GetActiveJointIndices() { return toPyList(_probot->GetActiveJointIndices()); }
 
     object CalculateActiveJacobian(int index, object offset) const
     {
-        CHECK_POINTER(_probot);
         if( _probot->GetActiveDOF() == 0 )
             return object();
-        npy_intp dims[] = {3,_probot->GetActiveDOF()};
-        PyObject *pyjacobian = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-        _probot->CalculateActiveJacobian(index,ExtractVector3(offset),(dReal*)PyArray_DATA(pyjacobian));
-        return static_cast<numeric::array>(handle<>(pyjacobian));
+        vector<dReal> vjacobian;
+        _probot->CalculateActiveJacobian(index,ExtractVector3(offset),vjacobian);
+        vector<npy_intp> dims(2); dims[0] = 3; dims[1] = _pbody->GetDOF();
+        return toPyArray(vjacobian,dims);
     }
 
     object CalculateActiveRotationJacobian(int index, object q) const
     {
-        CHECK_POINTER(_probot);
         if( _probot->GetActiveDOF() == 0 )
             return object();
-        npy_intp dims[] = {4,_probot->GetActiveDOF()};
-        PyObject *pyjacobian = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-        _probot->CalculateActiveJacobian(index,ExtractVector4(q),(dReal*)PyArray_DATA(pyjacobian));
-        return static_cast<numeric::array>(handle<>(pyjacobian));
+        vector<dReal> vjacobian;
+        _probot->CalculateActiveJacobian(index,ExtractVector4(q),vjacobian);
+        vector<npy_intp> dims(2); dims[0] = 4; dims[1] = _pbody->GetDOF();
+        return toPyArray(vjacobian,dims);
     }
 
     object CalculateActiveAngularVelocityJacobian(int index) const
     {
-        CHECK_POINTER(_probot);
         if( _probot->GetActiveDOF() == 0 )
             return object();
-        npy_intp dims[] = {3,_probot->GetActiveDOF()};
-        PyObject *pyjacobian = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-        _probot->CalculateActiveAngularVelocityJacobian(index,(dReal*)PyArray_DATA(pyjacobian));
-        return static_cast<numeric::array>(handle<>(pyjacobian));
+        vector<dReal> vjacobian;
+        _probot->CalculateActiveAngularVelocityJacobian(index,vjacobian);
+        vector<npy_intp> dims(2); dims[0] = 3; dims[1] = _pbody->GetDOF();
+        return toPyArray(vjacobian,dims);
     }
 
-    bool Grab(PyKinBody* pbody) { CHECK_POINTER(_probot); CHECK_POINTER(pbody); return _probot->Grab(pbody->GetBody()); }
-    bool Grab(PyKinBody* pbody, object linkstoignore)
+    bool Grab(PyKinBodyPtr pbody) { CHECK_POINTER(pbody); return _probot->Grab(pbody->GetBody()); }
+    bool Grab(PyKinBodyPtr pbody, object linkstoignore)
     {
-        CHECK_POINTER(_probot);
+        CHECK_POINTER(pbody);
         std::set<int> setlinkstoignore = ExtractSet<int>(linkstoignore);
-        return _probot->Grab(pbody->GetBody(), &setlinkstoignore);
+        return _probot->Grab(pbody->GetBody(), setlinkstoignore);
     }
-    bool Grab(PyKinBody* pbody, int linkindex, object linkstoignore)
+    bool Grab(PyKinBodyPtr pbody, PyKinBody::PyLinkPtr plink)
     {
-        CHECK_POINTER(_probot);
-        std::set<int> setlinkstoignore = ExtractSet<int>(linkstoignore);
-        return _probot->Grab(pbody->GetBody(), linkindex, &setlinkstoignore);
+        CHECK_POINTER(pbody);
+        CHECK_POINTER(plink);
+        return _probot->Grab(pbody->GetBody(), plink->GetLink());
     }
-    void Release(PyKinBody* pbody) { CHECK_POINTER(_probot); _probot->Release(pbody->GetBody()); }
-    void ReleaseAllGrabbed() { CHECK_POINTER(_probot); _probot->ReleaseAllGrabbed(); }
-    void RegrabAll() { CHECK_POINTER(_probot); _probot->RegrabAll(); }
-    bool IsGrabbing(PyKinBody* pbody) const { CHECK_POINTER(_probot); return _probot->IsGrabbing(pbody->GetBody()); }
-    object GetGrabbed() const {
-        CHECK_POINTER(_probot);
-        boost::python::list grabbed;
-        FOREACHC(it, _probot->GetGrabbed())
-            grabbed.append(object(PyGrabbed(*it,_pyenv)));
-        return grabbed;
+    bool Grab(PyKinBodyPtr pbody, PyKinBody::PyLinkPtr plink, object linkstoignore)
+    {
+        CHECK_POINTER(pbody);
+        CHECK_POINTER(plink);
+        std::set<int> setlinkstoignore = ExtractSet<int>(linkstoignore);
+        return _probot->Grab(pbody->GetBody(), plink->GetLink(), setlinkstoignore);
+    }
+    void Release(PyKinBodyPtr pbody) { CHECK_POINTER(pbody); _probot->Release(pbody->GetBody()); }
+    void ReleaseAllGrabbed() { _probot->ReleaseAllGrabbed(); }
+    void RegrabAll() { _probot->RegrabAll(); }
+    PyLinkPtr IsGrabbing(PyKinBodyPtr pbody) const {
+        CHECK_POINTER(pbody);
+        KinBody::LinkPtr plink = _probot->IsGrabbing(pbody->GetBody());
+        if( !plink )
+            return PyLinkPtr();
+        else
+            return PyLinkPtr(new PyLink(plink,_pyenv));
     }
 
     bool WaitForController(float ftimeout)
     {
-        CHECK_POINTER(_probot);
-        if( _probot->GetController() == NULL )
+        if( !_probot->GetController() )
             return false;
 
         uint64_t starttime = GetMicroTime();
         uint64_t deltatime = (uint64_t)(ftimeout*1000000.0);
         while( !_probot->GetController()->IsDone() ) {
-            Sleep(1);
-            
+            Sleep(1);            
             if( deltatime > 0 && (GetMicroTime()-starttime)>deltatime  )
                 return false;
         }
@@ -1385,162 +1531,93 @@ public:
     }
 };
 
+bool PyControllerBase::Init(PyRobotBasePtr robot, const string& args)
+{
+    CHECK_POINTER(robot);
+    return _pcontroller->Init(robot->GetRobot(), args);
+}
+
 class PyPlannerBase : public PyInterfaceBase
 {
-    friend class PyEnvironmentBase;
 protected:
-    PlannerBase* _pplanner;
-    virtual void Invalidate() { _pplanner = NULL; PyInterfaceBase::Invalidate(); }
+    PlannerBasePtr _pplanner;
 public:
-    PyPlannerBase(PlannerBase* pplanner, PyEnvironmentBase* pyenv, bool bOwnObject=true) : PyInterfaceBase(pplanner, pyenv, bOwnObject), _pplanner(pplanner) {}
-    virtual ~PyPlannerBase() { if( _bOwnObject ) { _bOwnObject = false; delete _pplanner; } }
+    PyPlannerBase(PlannerBasePtr pplanner, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pplanner, pyenv), _pplanner(pplanner) {}
+    virtual ~PyPlannerBase() {}
 };
 
 class PySensorSystemBase : public PyInterfaceBase
 {
     friend class PyEnvironmentBase;
 private:
-    SensorSystemBase* _psensorsystem;
-    virtual void Invalidate() { _psensorsystem = NULL; PyInterfaceBase::Invalidate(); }
+    SensorSystemBasePtr _psensorsystem;
 public:
-    PySensorSystemBase(SensorSystemBase* psensorsystem, PyEnvironmentBase* pyenv, bool bOwnObject=true) : PyInterfaceBase(psensorsystem, pyenv, bOwnObject), _psensorsystem(psensorsystem) {}
-    virtual ~PySensorSystemBase() { if( _bOwnObject ) { _bOwnObject = false; delete _psensorsystem; } }
+    PySensorSystemBase(SensorSystemBasePtr psensorsystem, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(psensorsystem, pyenv), _psensorsystem(psensorsystem) {}
+    virtual ~PySensorSystemBase() {}
 };
 
 class PyTrajectoryBase : public PyInterfaceBase
 {
 protected:
-    Trajectory* _ptrajectory;
-    virtual void Invalidate() { _ptrajectory = NULL; PyInterfaceBase::Invalidate(); }
+    TrajectoryBasePtr _ptrajectory;
 public:
-    PyTrajectoryBase(Trajectory* pTrajectory, PyEnvironmentBase* pyenv, bool bOwnObject=true) : PyInterfaceBase(pTrajectory, pyenv, bOwnObject),_ptrajectory(pTrajectory) {}
-    virtual ~PyTrajectoryBase() { if( _bOwnObject ) { _bOwnObject = false; delete _ptrajectory; } }
+    PyTrajectoryBase(TrajectoryBasePtr pTrajectory, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pTrajectory, pyenv),_ptrajectory(pTrajectory) {}
+    virtual ~PyTrajectoryBase() {}
 
-    Trajectory* GetTrajectory() { return _ptrajectory; }
+    TrajectoryBasePtr GetTrajectory() { return _ptrajectory; }
 };
 
-class PyControllerBase : public PyInterfaceBase
+bool PyControllerBase::SetPath(PyTrajectoryBasePtr ptraj)
 {
-    friend class PyEnvironmentBase;
-protected:
-    ControllerBase* _pcontroller;
-    virtual void Invalidate() { _pcontroller = NULL; PyInterfaceBase::Invalidate(); }
-public:
-    PyControllerBase(ControllerBase* pcontroller, PyEnvironmentBase* pyenv, bool bOwnObject=true) : PyInterfaceBase(pcontroller, pyenv, bOwnObject), _pcontroller(pcontroller) {}
-    virtual ~PyControllerBase() { if( _bOwnObject ) { _bOwnObject = false; delete _pcontroller; } }
-
-    ControllerBase* GetController() { return _pcontroller; }
-
-    bool Init(PyRobotBase* robot, const string& args) { CHECK_POINTER(_pcontroller); return _pcontroller->Init(robot->GetRobot(), args.c_str()); }
-    void Reset(int options) { CHECK_POINTER(_pcontroller); _pcontroller->Reset(options); }
-
-    bool SetDesired(object o)
-    {
-        CHECK_POINTER(_pcontroller);
-        vector<dReal> values = ExtractRealArray(o);
-        if( values.size() == 0 )
-            throw openrave_exception("no values specified");
-        return _pcontroller->SetDesired(&values[0]);
-    }
-    
-    bool SetPath(PyTrajectoryBase* ptraj) { CHECK_POINTER(_pcontroller); return _pcontroller->SetPath(ptraj != NULL ? ptraj->GetTrajectory() : NULL); }
-    //bool SetPath(PyTrajectoryBase* ptraj, int nTrajectoryId, float fDivergenceTime) = 0;
-    bool SimulationStep(dReal fTimeElapsed) { CHECK_POINTER(_pcontroller); return _pcontroller->SimulationStep(fTimeElapsed); }
-
-    bool IsDone() { CHECK_POINTER(_pcontroller); return _pcontroller->IsDone(); }
-    dReal GetTime() { CHECK_POINTER(_pcontroller); return _pcontroller->GetTime(); }
-
-    object GetVelocity()
-    {
-        CHECK_POINTER(_pcontroller);
-        vector<dReal> velocity;
-        _pcontroller->GetVelocity(velocity);
-        return toPyArray(velocity);
-    }
-
-    object GetTorque()
-    {
-        CHECK_POINTER(_pcontroller);
-        vector<dReal> torque;
-        _pcontroller->GetTorque(torque);
-        return toPyArray(torque);
-    }
-    
-    bool SendCmd(const string& cmd) { CHECK_POINTER(_pcontroller); return _pcontroller->SendCmd(cmd.c_str()); }
-    bool SupportsCmd(const string& cmd) { CHECK_POINTER(_pcontroller); return _pcontroller->SupportsCmd(cmd.c_str()); }
-};
+    CHECK_POINTER(ptraj);
+    return _pcontroller->SetPath(!ptraj ? TrajectoryBasePtr() : ptraj->GetTrajectory());
+}
 
 class PyProblemInstance : public PyInterfaceBase
 {
 protected:
-    ProblemInstance* _pproblem;
-    virtual void Invalidate() { _pproblem = NULL; PyInterfaceBase::Invalidate(); }
+    ProblemInstancePtr _pproblem;
 public:
-    PyProblemInstance(ProblemInstance* pproblem, PyEnvironmentBase* pyenv, bool bOwnObject=true) : PyInterfaceBase(pproblem, pyenv, bOwnObject), _pproblem(pproblem) {}
-    virtual ~PyProblemInstance();
-    ProblemInstance* GetProblem() { return _pproblem; }
+    PyProblemInstance(ProblemInstancePtr pproblem, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pproblem, pyenv), _pproblem(pproblem) {}
+    virtual ~PyProblemInstance() {}
+    ProblemInstancePtr GetProblem() { return _pproblem; }
 
-    bool SimulationStep(dReal fElapsedTime) { CHECK_POINTER(_pproblem); return _pproblem->SimulationStep(fElapsedTime); }
-    object SendCommand(const string& cmd) {
-        CHECK_POINTER(_pproblem);
-        //LockEnvironment envlock(_pproblem->GetEnv());
-        string response;
-        if( !_pproblem->SendCommand(cmd.c_str(),response) )
-            return object();
-        return object(response);
-    }
-
-//    void Query(const char* cmd, std::string& response) {}
-};
-
-class PyIkSolverBase : public PyInterfaceBase
-{
-    friend class PyEnvironmentBase;
-    friend class RobotBase;
-protected:
-    IkSolverBase* _pIkSolver;
-    virtual void Invalidate() { _pIkSolver = NULL; PyInterfaceBase::Invalidate(); }
-public:
-    PyIkSolverBase(IkSolverBase* pIkSolver, PyEnvironmentBase* pyenv, bool bOwnObject=true) : PyInterfaceBase(pIkSolver, pyenv, bOwnObject), _pIkSolver(pIkSolver) {}
-    virtual ~PyIkSolverBase() { if( _bOwnObject ) { _bOwnObject = false; delete _pIkSolver; } }
-
-    IkSolverBase* GetIkSolver() { return _pIkSolver; }
+    bool SimulationStep(dReal fElapsedTime) { return _pproblem->SimulationStep(fElapsedTime); }
 };
 
 class PyPhysicsEngineBase : public PyInterfaceBase
 {
 protected:
-    PhysicsEngineBase* _pPhysicsEngine;
-    virtual void Invalidate() { _pPhysicsEngine = NULL; PyInterfaceBase::Invalidate(); }
+    PhysicsEngineBasePtr _pPhysicsEngine;
 public:
-    PyPhysicsEngineBase(PhysicsEngineBase* pPhysicsEngine, PyEnvironmentBase* pyenv, bool bOwnObject=true) : PyInterfaceBase(pPhysicsEngine, pyenv, bOwnObject),_pPhysicsEngine(pPhysicsEngine) {}
-    virtual ~PyPhysicsEngineBase();
+    PyPhysicsEngineBase(PhysicsEngineBasePtr pPhysicsEngine, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pPhysicsEngine, pyenv),_pPhysicsEngine(pPhysicsEngine) {}
+    virtual ~PyPhysicsEngineBase() {}
 
-    PhysicsEngineBase* GetPhysicsEngine() { return _pPhysicsEngine; }
+    PhysicsEngineBasePtr GetPhysicsEngine() { return _pPhysicsEngine; }
 
-    bool SetPhysicsOptions(int physicsoptions) { CHECK_POINTER(_pPhysicsEngine); return _pPhysicsEngine->SetPhysicsOptions(physicsoptions); }
-    int GetPhysicsOptions() const { CHECK_POINTER(_pPhysicsEngine); return _pPhysicsEngine->GetPhysicsOptions(); }
+    bool SetPhysicsOptions(int physicsoptions) { return _pPhysicsEngine->SetPhysicsOptions(physicsoptions); }
+    int GetPhysicsOptions() const { return _pPhysicsEngine->GetPhysicsOptions(); }
 
     object SetPhysicsOptions(const string& s) {
-        CHECK_POINTER(_pPhysicsEngine);
         stringstream sinput(s), sout;
         if( !_pPhysicsEngine->SetPhysicsOptions(sout,sinput) )
             return object();
         return object(sout.str());
     }
-    bool InitEnvironment() { CHECK_POINTER(_pPhysicsEngine); return _pPhysicsEngine->InitEnvironment(); }
-    void DestroyEnvironment() { CHECK_POINTER(_pPhysicsEngine); _pPhysicsEngine->DestroyEnvironment(); }
-    bool InitKinBody(PyKinBody* pbody) { CHECK_POINTER(_pPhysicsEngine); CHECK_POINTER(pbody); CHECK_POINTER(pbody->GetBody()); return _pPhysicsEngine->InitKinBody(pbody->GetBody()); }
-    bool DestroyKinBody(PyKinBody* pbody) { CHECK_POINTER(_pPhysicsEngine); CHECK_POINTER(pbody); CHECK_POINTER(pbody->GetBody()); return _pPhysicsEngine->DestroyKinBody(pbody->GetBody()); }
-    bool SetBodyVelocity(PyKinBody* pbody, object linearvel, object angularvel, object jointvelocity)
+    bool InitEnvironment() { return _pPhysicsEngine->InitEnvironment(); }
+    void DestroyEnvironment() { _pPhysicsEngine->DestroyEnvironment(); }
+    bool InitKinBody(PyKinBodyPtr pbody) { CHECK_POINTER(pbody); return _pPhysicsEngine->InitKinBody(pbody->GetBody()); }
+
+    bool SetBodyVelocity(PyKinBodyPtr pbody, object linearvel, object angularvel, object jointvelocity)
     {
-        CHECK_POINTER(_pPhysicsEngine); CHECK_POINTER(pbody); CHECK_POINTER(pbody->GetBody());
-        vector<dReal> vJointVelocity = ExtractRealArray(jointvelocity);
-        return _pPhysicsEngine->SetBodyVelocity(pbody->GetBody(),ExtractVector3(linearvel),ExtractVector3(angularvel),vJointVelocity.size()>0?&vJointVelocity[0]:NULL);
+        CHECK_POINTER(pbody);
+        if( !jointvelocity )
+            return _pPhysicsEngine->SetBodyVelocity(pbody->GetBody(),ExtractVector3(linearvel),ExtractVector3(angularvel));
+        return _pPhysicsEngine->SetBodyVelocity(pbody->GetBody(),ExtractVector3(linearvel),ExtractVector3(angularvel),ExtractRealArray(jointvelocity));
     }
-    bool SetBodyVelocity(PyKinBody* pbody, object LinearVelocities, object AngularVelocities)
+    bool SetBodyVelocity(PyKinBodyPtr pbody, object LinearVelocities, object AngularVelocities)
     {
-        CHECK_POINTER(_pPhysicsEngine); CHECK_POINTER(pbody); CHECK_POINTER(pbody->GetBody());
+        CHECK_POINTER(pbody);
         vector<dReal> vLinearVelocities = ExtractRealArray(LinearVelocities);
         vector<dReal> vAngularVelocities = ExtractRealArray(AngularVelocities);
         vector<Vector> linearvel(vLinearVelocities.size()/3);
@@ -1549,31 +1626,28 @@ public:
         vector<Vector> angularvel(vAngularVelocities.size()/3);
         for(size_t i = 0; i < vAngularVelocities.size()/3; ++i)
             angularvel[i] = Vector(vAngularVelocities[3*i],vAngularVelocities[3*i+1],vAngularVelocities[3*i+2]);
-        return _pPhysicsEngine->SetBodyVelocity(pbody->GetBody(),linearvel.size()>0?&linearvel[0]:NULL,
-                                                angularvel.size()>0?&angularvel[0]:NULL);
+        return _pPhysicsEngine->SetBodyVelocity(pbody->GetBody(),linearvel,angularvel);
     }
 
-    object GetBodyVelocityJoints(PyKinBody* pbody)
+    object GetBodyVelocityJoints(PyKinBodyPtr pbody)
     {
-        CHECK_POINTER(_pPhysicsEngine); CHECK_POINTER(pbody); CHECK_POINTER(pbody->GetBody());
+        CHECK_POINTER(pbody);
         Vector linearvel, angularvel;
-        npy_intp dims[] = {pbody->GetBody()->GetDOF()};
-        PyObject *pyvalues = PyArray_SimpleNew(1,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-        if( !_pPhysicsEngine->GetBodyVelocity(pbody->GetBody(),linearvel,angularvel,(dReal*)PyArray_DATA(pyvalues)) ) {
-            decref(pyvalues);
+        vector<dReal> vjointvel;
+        if( !_pPhysicsEngine->GetBodyVelocity(pbody->GetBody(),linearvel,angularvel,vjointvel) ) {
             return make_tuple(object(),object(),object());
         }
 
-        return make_tuple(toPyVector3(linearvel),toPyVector3(angularvel),static_cast<numeric::array>(handle<>(pyvalues)));
+        return make_tuple(toPyVector3(linearvel),toPyVector3(angularvel),toPyArray(vjointvel));
     }
 
-    object GetBodyVelocityLinks(PyKinBody* pbody, Vector* pLinearVelocities, Vector* pAngularVelocities)
+    object GetBodyVelocityLinks(PyKinBodyPtr pbody, Vector* pLinearVelocities, Vector* pAngularVelocities)
     {
-        CHECK_POINTER(_pPhysicsEngine); CHECK_POINTER(pbody); CHECK_POINTER(pbody->GetBody());
+        CHECK_POINTER(pbody);
         if( pbody->GetBody()->GetDOF() == 0 )
             return make_tuple(object(),object());
         vector<Vector> linearvel(pbody->GetBody()->GetDOF()),angularvel(pbody->GetBody()->GetDOF());
-        if( !_pPhysicsEngine->GetBodyVelocity(pbody->GetBody(),&linearvel[0],&angularvel[0]) )
+        if( !_pPhysicsEngine->GetBodyVelocity(pbody->GetBody(),linearvel,angularvel) )
             return make_tuple(object(),object());
 
         npy_intp dims[] = {pbody->GetBody()->GetDOF(),3};
@@ -1588,221 +1662,82 @@ public:
         return make_tuple(static_cast<numeric::array>(handle<>(pylinear)),static_cast<numeric::array>(handle<>(pyangular)));
     }
 
-    bool SetJointVelocity(PyKinBody::PyJoint* pjoint, object jointvelocity)
+    bool SetJointVelocity(PyKinBody::PyJointPtr pjoint, object jointvelocity)
     {
-        CHECK_POINTER(_pPhysicsEngine); CHECK_POINTER(pjoint); CHECK_POINTER(pjoint->GetParent()); CHECK_POINTER(pjoint->GetParent()->GetBody());
-        vector<dReal> velocity = ExtractRealArray(jointvelocity);
-        return _pPhysicsEngine->SetJointVelocity(pjoint->GetJoint(),velocity.size()>0?&velocity[0]:NULL);
+        CHECK_POINTER(pjoint);
+        return _pPhysicsEngine->SetJointVelocity(pjoint->GetJoint(),ExtractRealArray(jointvelocity));
     }
 
-    object GetJointVelocity(PyKinBody::PyJoint* pjoint)
+    object GetJointVelocity(PyKinBody::PyJointPtr pjoint)
     {
-        CHECK_POINTER(_pPhysicsEngine); CHECK_POINTER(pjoint); CHECK_POINTER(pjoint->GetParent()); CHECK_POINTER(pjoint->GetParent()->GetBody());
-        Vector linearvel, angularvel;
-        npy_intp dims[] = {pjoint->GetJoint()->GetDOF()};
-        PyObject *pyvalues = PyArray_SimpleNew(1,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-        if( !_pPhysicsEngine->GetJointVelocity(pjoint->GetJoint(),(dReal*)PyArray_DATA(pyvalues)) ) {
-            decref(pyvalues);
+        CHECK_POINTER(pjoint);
+        vector<dReal> vel;
+        if( !_pPhysicsEngine->GetJointVelocity(pjoint->GetJoint(),vel) )
             return object();
-        }
-
-        return static_cast<numeric::array>(handle<>(pyvalues));
+        return toPyArray(vel);
     }
 
-    bool SetBodyForce(PyKinBody::PyLink* plink, object force, object position, bool bAdd)
+    bool SetBodyForce(PyKinBody::PyLinkPtr plink, object force, object position, bool bAdd)
     {
-        CHECK_POINTER(_pPhysicsEngine); CHECK_POINTER(plink); CHECK_POINTER(plink->GetParent()); CHECK_POINTER(plink->GetParent()->GetBody());
+        CHECK_POINTER(plink);
         return _pPhysicsEngine->SetBodyForce(plink->GetLink(),ExtractVector3(force),ExtractVector3(position),bAdd);
     }
 
-    bool SetBodyTorque(PyKinBody::PyLink* plink, object torque, bool bAdd)
+    bool SetBodyTorque(PyKinBody::PyLinkPtr plink, object torque, bool bAdd)
     {
-        CHECK_POINTER(_pPhysicsEngine); CHECK_POINTER(plink); CHECK_POINTER(plink->GetParent()); CHECK_POINTER(plink->GetParent()->GetBody());
+        CHECK_POINTER(plink);
         return _pPhysicsEngine->SetBodyTorque(plink->GetLink(),ExtractVector3(torque),bAdd);
     }
 
-    bool AddJointTorque(PyKinBody::PyJoint* pjoint, object torques)
+    bool AddJointTorque(PyKinBody::PyJointPtr pjoint, object torques)
     {
-        CHECK_POINTER(_pPhysicsEngine); CHECK_POINTER(pjoint); CHECK_POINTER(pjoint->GetParent()); CHECK_POINTER(pjoint->GetParent()->GetBody());
-        vector<dReal> vtorques = ExtractRealArray(torques);
-        return _pPhysicsEngine->AddJointTorque(pjoint->GetJoint(),vtorques.size()>0?&vtorques[0]:NULL);
+        CHECK_POINTER(pjoint);
+        return _pPhysicsEngine->AddJointTorque(pjoint->GetJoint(),ExtractRealArray(torques));
     }
 
-    void SetGravity(object gravity)
-    {
-        CHECK_POINTER(_pPhysicsEngine);
-        _pPhysicsEngine->SetGravity(ExtractVector3(gravity));
-    }
-    object GetGravity() { CHECK_POINTER(_pPhysicsEngine); return toPyVector3(_pPhysicsEngine->GetGravity()); }
+    void SetGravity(object gravity) { _pPhysicsEngine->SetGravity(ExtractVector3(gravity)); }
+    object GetGravity() { return toPyVector3(_pPhysicsEngine->GetGravity()); }
 
-    void SimulateStep(dReal fTimeElapsed)
-    {
-        CHECK_POINTER(_pPhysicsEngine);
-        _pPhysicsEngine->SimulateStep(fTimeElapsed);
-    }
-};
-
-class PySensorBase : public PyInterfaceBase
-{
-protected:
-    SensorBase* _psensor;
-    boost::shared_ptr<SensorBase::SensorData> _psensordata;
-    virtual void Invalidate() { _psensor = NULL; PyInterfaceBase::Invalidate(); }
-public:
-    class PySensorData
-    {
-    public:
-        PySensorData(SensorBase::SensorData* pdata)
-        {
-            type = pdata->GetType();
-        }
-        virtual ~PySensorData() {}
-        
-        SensorBase::SensorType type;
-    };
-
-    class PyLaserSensorData : public PySensorData
-    {
-    public:
-        PyLaserSensorData(SensorBase::LaserGeomData* pgeom, SensorBase::LaserSensorData* pdata) : PySensorData(pdata)
-        {
-            transform = ReturnTransform(pdata->t);
-            positions = toPyArray3(pdata->positions);
-            ranges = toPyArray3(pdata->ranges);
-            intensity = toPyArrayN(pdata->intensity.size()>0?&pdata->intensity[0]:NULL,pdata->intensity.size());
-            id = pdata->id;
-        }
-        virtual ~PyLaserSensorData() {}
-
-        object transform, positions, ranges, intensity;
-        int id;
-    };
-
-    class PyCameraSensorData : public PySensorData
-    {
-    public:
-        PyCameraSensorData(SensorBase::CameraGeomData* pgeom, SensorBase::CameraSensorData* pdata) : PySensorData(pdata)
-        {
-            if( (int)pdata->vimagedata.size() != pgeom->height*pgeom->width*3 )
-                throw openrave_exception("bad image data");
-
-            transform = ReturnTransform(pdata->t);
-            {
-                npy_intp dims[] = {pgeom->height,pgeom->width,3};
-                PyObject *pyvalues = PyArray_SimpleNew(3,dims, PyArray_UINT8);
-                if( pdata->vimagedata.size() > 0 )
-                    memcpy(PyArray_DATA(pyvalues),&pdata->vimagedata[0],pdata->vimagedata.size());
-                imagedata = static_cast<numeric::array>(handle<>(pyvalues));
-            }
-            {
-                numeric::array arr(make_tuple(pgeom->KK[0],0,pgeom->KK[2],0,pgeom->KK[1],pgeom->KK[3],0,0,1));
-                arr.resize(3,3);
-                KK = arr;
-            }
-            id = pdata->id;
-        }
-        virtual ~PyCameraSensorData() {}
-
-        object transform, imagedata;
-        object KK;
-        int id;
-    };
-
-    PySensorBase(SensorBase* psensor, PyEnvironmentBase* pyenv, bool bOwnObject=true) : PyInterfaceBase(psensor, pyenv, bOwnObject), _psensor(psensor)
-    {
-        _psensordata.reset(_psensor->CreateSensorData());
-    }
-    virtual ~PySensorBase() { if( _bOwnObject ) { _bOwnObject = false; delete _psensor; } }
-
-    SensorBase* GetSensor() { return _psensor; }
-
-    PySensorData* GetSensorData()
-    {
-        CHECK_POINTER(_psensor);
-        if( !_psensor->GetSensorData(_psensordata.get()) )
-            throw openrave_exception("SensorData failed");
-        switch(_psensordata->GetType()) {
-        case SensorBase::ST_Laser:
-            return new PyLaserSensorData((SensorBase::LaserGeomData*)_psensor->GetSensorGeometry(),
-                                                (SensorBase::LaserSensorData*)_psensordata.get());
-
-        case SensorBase::ST_Camera:
-            return new PyCameraSensorData((SensorBase::CameraGeomData*)_psensor->GetSensorGeometry(),
-                                                 (SensorBase::CameraSensorData*)_psensordata.get());
-        default: {
-            stringstream ss;
-            ss << "unknown sensor data type: " << _psensordata->GetType() << endl;
-            throw openrave_exception(ss.str());
-        }
-        }
-    }
-
-    object SendCmd(const string& cmd)
-    {
-        CHECK_POINTER(_psensor);
-        std::stringstream ss(cmd), ssout;
-        if( !_psensor->SendCmd(ss,ssout) )
-            return object();
-        return object(ssout.str());
-    }
-    
-    bool SupportsCmd(const string& cmd) { CHECK_POINTER(_psensor); return _psensor->SupportsCmd(cmd.c_str()); }
-    
-    void SetTransform(object transform) { CHECK_POINTER(_psensor); _psensor->SetTransform(ExtractTransform(transform)); }
-    object GetTransform() { CHECK_POINTER(_psensor); return ReturnTransform(_psensor->GetTransform()); }
-
-    string GetName() { CHECK_POINTER(_psensor); return _stdwcstombs(_psensor->GetName()); }
+    void SimulateStep(dReal fTimeElapsed) { _pPhysicsEngine->SimulateStep(fTimeElapsed); }
 };
 
 class PyCollisionCheckerBase : public PyInterfaceBase
 {
 protected:
-    CollisionCheckerBase* _pCollisionChecker;
-    virtual void Invalidate() { _pCollisionChecker = NULL; PyInterfaceBase::Invalidate(); }
+    CollisionCheckerBasePtr _pCollisionChecker;
 public:
-    PyCollisionCheckerBase(CollisionCheckerBase* pCollisionChecker, PyEnvironmentBase* pyenv, bool bOwnObject=true) : PyInterfaceBase(pCollisionChecker, pyenv, bOwnObject), _pCollisionChecker(pCollisionChecker) {}
-    virtual ~PyCollisionCheckerBase();
+    PyCollisionCheckerBase(CollisionCheckerBasePtr pCollisionChecker, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pCollisionChecker, pyenv), _pCollisionChecker(pCollisionChecker) {}
+    virtual ~PyCollisionCheckerBase() {}
 
-    CollisionCheckerBase* GetCollisionChecker() { return _pCollisionChecker; }
+    CollisionCheckerBasePtr GetCollisionChecker() { return _pCollisionChecker; }
+
+    bool SetCollisionOptions(int options) { return _pCollisionChecker->SetCollisionOptions(options); }
+    int GetCollisionOptions() const { return _pCollisionChecker->GetCollisionOptions(); }
 };
 
 class PyRaveViewerBase : public PyInterfaceBase
 {
 protected:
-    RaveViewerBase* _pviewer;
-    virtual void Invalidate() { _pviewer = NULL; PyInterfaceBase::Invalidate(); }
+    RaveViewerBasePtr _pviewer;
 public:
-    PyRaveViewerBase(RaveViewerBase* pviewer, PyEnvironmentBase* pyenv, bool bOwnObject=true) : PyInterfaceBase(pviewer, pyenv, bOwnObject), _pviewer(pviewer) {}
-    virtual ~PyRaveViewerBase() { if( _bOwnObject ) { _bOwnObject = false; delete _pviewer; } }
+    PyRaveViewerBase(RaveViewerBasePtr pviewer, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pviewer, pyenv), _pviewer(pviewer) {}
+    virtual ~PyRaveViewerBase() {}
 
-    RaveViewerBase* GetViewer() { return _pviewer; }
+    RaveViewerBasePtr GetViewer() { return _pviewer; }
 
-    int main(bool bShow) { CHECK_POINTER(_pviewer); return _pviewer->main(bShow); }
-    void quitmainloop() { CHECK_POINTER(_pviewer); return _pviewer->quitmainloop(); }
+    int main(bool bShow) { return _pviewer->main(bShow); }
+    void quitmainloop() { return _pviewer->quitmainloop(); }
 
-    void ViewerSetSize(int w, int h) { CHECK_POINTER(_pviewer); _pviewer->ViewerSetSize(w,h); }
-    void ViewerMove(int x, int y) { CHECK_POINTER(_pviewer); _pviewer->ViewerMove(x,y); }
-    void ViewerSetTitle(const string& title) { CHECK_POINTER(_pviewer); _pviewer->ViewerSetTitle(title.c_str()); }
-    bool LoadModel(const string& filename) { CHECK_POINTER(_pviewer); return _pviewer->LoadModel(filename.c_str()); }
+    void ViewerSetSize(int w, int h) { _pviewer->ViewerSetSize(w,h); }
+    void ViewerMove(int x, int y) { _pviewer->ViewerMove(x,y); }
+    void ViewerSetTitle(const string& title) { _pviewer->ViewerSetTitle(title.c_str()); }
+    bool LoadModel(const string& filename) { return _pviewer->LoadModel(filename.c_str()); }
 };
 
-class PyRaveServerBase : public PyInterfaceBase
+class PyEnvironmentBase : public boost::enable_shared_from_this<PyEnvironmentBase>
 {
 protected:
-    RaveServerBase* _pserver;
-    virtual void Invalidate() { _pserver = NULL; PyInterfaceBase::Invalidate(); }
-public:
-    PyRaveServerBase(RaveServerBase* pserver, PyEnvironmentBase* pyenv, bool bOwnObject=true) : PyInterfaceBase(pserver, pyenv, bOwnObject), _pserver(pserver) {}
-    virtual ~PyRaveServerBase() { if( _bOwnObject ) { _bOwnObject = false; delete _pserver; } }
-
-    RaveServerBase* GetServer() { return _pserver; }
-};
-
-class PyEnvironmentBase
-{
-protected:
-    boost::shared_ptr<EnvironmentBase> _penv;
-    boost::shared_ptr<RaveViewerBase> _pviewer;
+    EnvironmentBasePtr _penv;
     boost::shared_ptr<boost::thread> _threadviewer;
     boost::mutex _mutexViewer;
     boost::condition _conditionViewer;
@@ -1810,104 +1745,52 @@ protected:
 
     void _ViewerThread(const string& strviewer, bool bShowViewer)
     {
+        RaveViewerBasePtr pviewer;
         {
             boost::mutex::scoped_lock lock(_mutexViewer);
-            _pviewer.reset(_penv->CreateViewer(strviewer.c_str()));
-            if( !!_pviewer ) {
-                _penv->AttachViewer(_pviewer.get());
+            pviewer = _penv->CreateViewer(strviewer.c_str());
+            if( !!pviewer ) {
+                _penv->AttachViewer(pviewer);
             }
             _conditionViewer.notify_all();
         }
 
-        if( !_pviewer )
+        if( !pviewer )
             return;
 
-        _pviewer->main(bShowViewer); // spin until quitfrommainloop is called
+        pviewer->main(bShowViewer); // spin until quitfrommainloop is called
         RAVELOG_DEBUGA("destroying viewer\n");
-        _pviewer.reset();
     }
-
-    PyKinBody* toPyKinBody(KinBody* pbody, bool bOwnObject) { return pbody != NULL ? new PyKinBody(pbody,this,bOwnObject) : NULL; }
-    PyRobotBase* toPyRobot(RobotBase* probot, bool bOwnObject) { return probot != NULL ? new PyRobotBase(probot,this,bOwnObject) : NULL; }
-    PyPlannerBase* toPyPlanner(PlannerBase* pplanner, bool bOwnObject) { return pplanner != NULL ? new PyPlannerBase(pplanner,this,bOwnObject) : NULL; }
-    PySensorSystemBase* toPySensorSystem(SensorSystemBase* pSensorSystem, bool bOwnObject) { return pSensorSystem != NULL ? new PySensorSystemBase(pSensorSystem,this,bOwnObject) : NULL; }
-    PyControllerBase* toPyController(ControllerBase* pcontroller, bool bOwnObject) { return pcontroller != NULL ? new PyControllerBase(pcontroller,this,bOwnObject) : NULL; }
-    PyProblemInstance* toPyProblemInstance(ProblemInstance* pProblemInstance, bool bOwnObject) { return pProblemInstance != NULL ? new PyProblemInstance(pProblemInstance,this,bOwnObject) : NULL; }
-    PyIkSolverBase* toPyIkSolver(IkSolverBase* pIkSolver, bool bOwnObject) { return pIkSolver != NULL ? new PyIkSolverBase(pIkSolver,this,bOwnObject) : NULL; }
-    PyPhysicsEngineBase* toPyPhysicsEngine(PhysicsEngineBase* pPhysicsEngine, bool bOwnObject) { return pPhysicsEngine != NULL ? new PyPhysicsEngineBase(pPhysicsEngine,this,bOwnObject) : NULL; }
-    PySensorBase* toPySensor(SensorBase* psensor, bool bOwnObject) { return psensor != NULL ? new PySensorBase(psensor,this,bOwnObject) : NULL; }
-    PyCollisionCheckerBase* toPyCollisionChecker(CollisionCheckerBase* pCollisionChecker, bool bOwnObject) { return pCollisionChecker != NULL ? new PyCollisionCheckerBase(pCollisionChecker,this,bOwnObject) : NULL; }
-    PyRaveViewerBase* toPyRaveViewer(RaveViewerBase* pRaveViewer, bool bOwnObject) { return pRaveViewer != NULL ? new PyRaveViewerBase(pRaveViewer,this,bOwnObject) : NULL; }
-    PyRaveServerBase* toPyServer(RaveServerBase* pserver, bool bOwnObject) { return pserver != NULL ? new PyRaveServerBase(pserver,this,bOwnObject) : NULL; }
-
 
 public:
     PyEnvironmentBase()
     {
-        _penv.reset(CreateEnvironment());
+        _penv = CreateEnvironment(true);
         _bShutdown = false;
     }
+    PyEnvironmentBase(EnvironmentBasePtr penv) : _penv(penv), _bShutdown(false) {}
+
     PyEnvironmentBase(const PyEnvironmentBase& pyenv)
     {
         _bShutdown = false;
         _penv = pyenv._penv;
-        if( !!_penv && _penv->GetViewer() != NULL )
-            SetViewer(_penv->GetViewer()->GetXMLId());
     }
-    PyEnvironmentBase(EnvironmentBase* penv) : _penv(penv), _bShutdown(false) {}
+
     virtual ~PyEnvironmentBase()
     {
         {
             boost::mutex::scoped_lock lockcreate(_mutexViewer);
-            _penv->AttachViewer(NULL);
+            _penv->AttachViewer(RaveViewerBasePtr());
         }
         _bShutdown = true;
         if( !!_threadviewer ) {
             _threadviewer->join();
             _threadviewer.reset();
         }
-        _pviewer.reset();
-
-        // get rid of any pointers
-        _penv->SetCollisionChecker(NULL);
-        _penv->SetPhysicsEngine(NULL);
-
-        // destroy all allocated objects
-        FOREACH(it, _setInterfaces) {
-            if( (*it)->_bOwnObject ) {
-                (*it)->_bOwnObject = false;
-                // have to remove anything from deleting
-                if( dynamic_cast<PyKinBody*>(*it) )
-                    _penv->RemoveKinBody(dynamic_cast<PyKinBody*>(*it)->GetBody(),false);
-                if( dynamic_cast<PyProblemInstance*>(*it) )
-                    _penv->RemoveProblem(dynamic_cast<PyProblemInstance*>(*it)->GetProblem());
-                delete (*it)->_pbase;
-            }
-            (*it)->Invalidate();
-        }
-        _setInterfaces.clear();
     }
 
-    void Reset() {
-        _penv->Reset();
-
-        // have to invalidate all bodies/robots
-        std::set<PyInterfaceBase*>::iterator it = _setInterfaces.begin();
-        while( it != _setInterfaces.end()) {
-            if( dynamic_cast<PyKinBody*>(*it) != NULL || dynamic_cast<PyRobotBase*>(*it) != NULL ) {
-                (*it)->Invalidate();
-                _setInterfaces.erase(it++);
-            }
-            else
-                ++it;
-        }
-    }
-//    void Destroy()
-//    {
-//        FOREACH(it, _setInterfaces) {
-//            (*it)->_bOwnObject = false;
-//        _penv->Destroy();
-//    }
+    void Reset() { _penv->Reset(); }
+    void Destroy() { _penv->Destroy(); }
 
     object GetPluginInfo()
     {
@@ -1915,224 +1798,318 @@ public:
         std::list< std::pair<std::string, PLUGININFO> > listplugins;
         _penv->GetPluginInfo(listplugins);
         FOREACH(itplugin, listplugins)
-            plugins.append(make_tuple(itplugin->first,object(PyPluginInfo(itplugin->second))));
+            plugins.append(make_tuple(itplugin->first,object(boost::shared_ptr<PyPluginInfo>(new PyPluginInfo(itplugin->second)))));
         return plugins;
     }
 
-    PyPluginInfo* GetLoadedInterfaces()
+    boost::shared_ptr<PyPluginInfo> GetLoadedInterfaces()
     {
         PLUGININFO info;
         _penv->GetLoadedInterfaces(info);
-        return new PyPluginInfo(info);
+        return boost::shared_ptr<PyPluginInfo>(new PyPluginInfo(info));
     }
 
     bool LoadPlugin(const string& name) { return _penv->LoadPlugin(name.c_str()); }
 
-    PyRobotBase* CreateRobot(const string& name) { return new PyRobotBase(_penv->CreateRobot(name.c_str()), this, true); }
-    PyPlannerBase* CreatePlanner(const string& name) { return new PyPlannerBase(_penv->CreatePlanner(name.c_str()), this, true); }
-    PySensorSystemBase* CreateSensorSystem(const string& name) { return new PySensorSystemBase(_penv->CreateSensorSystem(name.c_str()), this, true); }
-    PyControllerBase* CreateController(const string& name) { return new PyControllerBase(_penv->CreateController(name.c_str()), this, true); }
-    PyProblemInstance* CreateProblem(const string& name) { return new PyProblemInstance(_penv->CreateProblem(name.c_str()), this, true); }
-    PyIkSolverBase* CreateIkSolver(const string& name) { return new PyIkSolverBase(_penv->CreateIkSolver(name.c_str()), this, true); }
-    PyPhysicsEngineBase* CreatePhysicsEngine(const string& name) { return new PyPhysicsEngineBase(_penv->CreatePhysicsEngine(name.c_str()), this, true); }
-    PySensorBase* CreateSensor(const string& name) { return new PySensorBase(_penv->CreateSensor(name.c_str()), this, true); }
-    PyCollisionCheckerBase* CreateCollisionChecker(const string& name) { return new PyCollisionCheckerBase(_penv->CreateCollisionChecker(name.c_str()), this, true); }
-    PyRaveViewerBase* CreateViewer(const string& name) { return new PyRaveViewerBase(_penv->CreateViewer(name.c_str()), this, true); }
-    PyRaveServerBase* CreateServer(const string& name) { return new PyRaveServerBase(_penv->CreateServer(name.c_str()), this, true); }
+    PyInterfaceBasePtr CreateInterface(PluginType type, const string& name)
+    {
+        InterfaceBasePtr p = _penv->CreateInterface(type,name);
+        if( !p )
+            return PyInterfaceBasePtr();
+        return PyInterfaceBasePtr(new PyInterfaceBase(p,shared_from_this()));
+    }
+    PyRobotBasePtr CreateRobot(const string& name)
+    {
+        RobotBasePtr p = _penv->CreateRobot(name);
+        if( !p )
+            return PyRobotBasePtr();
+        return PyRobotBasePtr(new PyRobotBase(p, shared_from_this()));
+    }
+    PyPlannerBasePtr CreatePlanner(const string& name)
+    {
+        PlannerBasePtr p = _penv->CreatePlanner(name);
+        if( !p )
+            return PyPlannerBasePtr();
+        return PyPlannerBasePtr(new PyPlannerBase(p, shared_from_this()));
+    }
+    PySensorSystemBasePtr CreateSensorSystem(const string& name)
+    {
+        SensorSystemBasePtr p = _penv->CreateSensorSystem(name);
+        if( !p )
+            return PySensorSystemBasePtr();
+        return PySensorSystemBasePtr(new PySensorSystemBase(p, shared_from_this()));
+    }
+    PyControllerBasePtr CreateController(const string& name)
+    {
+        ControllerBasePtr p = _penv->CreateController(name);
+        if( !p )
+            return PyControllerBasePtr();
+        return PyControllerBasePtr(new PyControllerBase(p, shared_from_this()));
+    }
+    PyProblemInstancePtr CreateProblem(const string& name)
+    {
+        ProblemInstancePtr p = _penv->CreateProblem(name);
+        if( !p )
+            return PyProblemInstancePtr();
+        return PyProblemInstancePtr(new PyProblemInstance(p, shared_from_this()));
+    }
+    PyIkSolverBasePtr CreateIkSolver(const string& name)
+    {
+        IkSolverBasePtr p = _penv->CreateIkSolver(name);
+        if( !p )
+            return PyIkSolverBasePtr();
+        return PyIkSolverBasePtr(new PyIkSolverBase(p, shared_from_this()));
+    }
+    PyPhysicsEngineBasePtr CreatePhysicsEngine(const string& name)
+    {
+        PhysicsEngineBasePtr p = _penv->CreatePhysicsEngine(name);
+        if( !p )
+            return PyPhysicsEngineBasePtr();
+        return PyPhysicsEngineBasePtr(new PyPhysicsEngineBase(p, shared_from_this()));
+    }
+    PySensorBasePtr CreateSensor(const string& name)
+    {
+        SensorBasePtr p = _penv->CreateSensor(name);
+        if( !p )
+            return PySensorBasePtr();
+        return PySensorBasePtr(new PySensorBase(p, shared_from_this()));
+    }
+    PyCollisionCheckerBasePtr CreateCollisionChecker(const string& name)
+    {
+        CollisionCheckerBasePtr p = _penv->CreateCollisionChecker(name);
+        if( !p )
+            return PyCollisionCheckerBasePtr();
+        return PyCollisionCheckerBasePtr(new PyCollisionCheckerBase(p, shared_from_this()));
+    }
+    PyRaveViewerBasePtr CreateViewer(const string& name)
+    {
+        RaveViewerBasePtr p = _penv->CreateViewer(name);
+        if( !p )
+            return PyRaveViewerBasePtr();
+        return PyRaveViewerBasePtr(new PyRaveViewerBase(p, shared_from_this()));
+    }
 
-    PyEnvironmentBase* CloneSelf(int options)
+    PyEnvironmentBasePtr CloneSelf(int options)
     {
         //RAVELOG_WARNA("cloning environment without permission!\n");
         string strviewer;
         if( options & Clone_Viewer ) {
             boost::mutex::scoped_lock lockcreate(_mutexViewer);
-            if( _penv->GetViewer() != NULL )
+            if( !!_penv->GetViewer() )
                 strviewer = _penv->GetViewer()->GetXMLId();
         }
-        PyEnvironmentBase* pnewenv = new PyEnvironmentBase(_penv->CloneSelf(options));
+        PyEnvironmentBasePtr pnewenv(new PyEnvironmentBase(_penv->CloneSelf(options)));
         if( strviewer.size() > 0 )
             pnewenv->SetViewer(strviewer);
         return pnewenv;
     }
 
-    bool SetCollisionChecker(PyCollisionCheckerBase* pchecker) {
-        if( pchecker == NULL )
-            return _penv->SetCollisionChecker(NULL);
-        CHECK_POINTER(pchecker->GetCollisionChecker());
+    bool SetCollisionChecker(PyCollisionCheckerBasePtr pchecker) {
+        if( !pchecker )
+            return _penv->SetCollisionChecker(CollisionCheckerBasePtr());
         return _penv->SetCollisionChecker(pchecker->GetCollisionChecker());
     }
-    PyCollisionCheckerBase* GetCollisionChecker() { return new PyCollisionCheckerBase(_penv->GetCollisionChecker(), this, false); }
+    PyCollisionCheckerBasePtr GetCollisionChecker() { return PyCollisionCheckerBasePtr(new PyCollisionCheckerBase(_penv->GetCollisionChecker(), shared_from_this())); }
 
-    bool SetCollisionOptions(int options) { return _penv->SetCollisionOptions(options); }
-    int GetCollisionOptions() const { return _penv->GetCollisionOptions(); }
-
-    bool CheckCollision(PyKinBody* pbody1)
+    bool CheckCollision(PyKinBodyPtr pbody1)
     {
-        return _penv->CheckCollision(pbody1->_pbody);
+        CHECK_POINTER(pbody1);
+        return _penv->CheckCollision(pbody1->GetBody());
     }
-    bool CheckCollision(PyKinBody* pbody1, PyCollisionReport* pReport)
+    bool CheckCollision(PyKinBodyPtr pbody1, PyCollisionReportPtr pReport)
     {
-        COLLISIONREPORT report;
-        bool bSuccess = _penv->CheckCollision(pbody1->_pbody, &report);
-        pReport->init(report,this);
+        CHECK_POINTER(pbody1);
+        if( !pReport )
+            return _penv->CheckCollision(pbody1->GetBody());
+
+        bool bSuccess = _penv->CheckCollision(pbody1->GetBody(), pReport->report);
+        pReport->init(shared_from_this());
         return bSuccess;
     }
     
-    bool CheckCollision(PyKinBody* pbody1, PyKinBody* pbody2)
+    bool CheckCollision(PyKinBodyPtr pbody1, PyKinBodyPtr pbody2)
     {
-        return _penv->CheckCollision(pbody1->_pbody, pbody2->_pbody);
+        CHECK_POINTER(pbody1);
+        CHECK_POINTER(pbody2);
+        return _penv->CheckCollision(pbody1->GetBody(), pbody2->GetBody());
     }
 
-    bool CheckCollision(PyKinBody* pbody1, PyKinBody* pbody2, PyCollisionReport* pReport)
+    bool CheckCollision(PyKinBodyPtr pbody1, PyKinBodyPtr pbody2, PyCollisionReportPtr pReport)
     {
-        COLLISIONREPORT report;
-        bool bSuccess = _penv->CheckCollision(pbody1->_pbody, pbody2->_pbody, &report);
-        pReport->init(report,this);
+        CHECK_POINTER(pbody1);
+        CHECK_POINTER(pbody2);
+        if( !pReport )
+            return _penv->CheckCollision(pbody1->GetBody(), pbody2->GetBody());
+
+        bool bSuccess = _penv->CheckCollision(pbody1->GetBody(), pbody2->GetBody(), pReport->report);
+        pReport->init(shared_from_this());
         return bSuccess;
     }
 
-    bool CheckCollision(PyKinBody::PyLink* plink)
+    bool CheckCollision(PyKinBody::PyLinkPtr plink)
     {
-        return _penv->CheckCollision(plink->_plink);
+        CHECK_POINTER(plink);
+        return _penv->CheckCollision(plink->GetLink());
     }
 
-    bool CheckCollision(PyKinBody::PyLink* plink, PyCollisionReport* pReport)
+    bool CheckCollision(PyKinBody::PyLinkPtr plink, PyCollisionReportPtr pReport)
     {
-        COLLISIONREPORT report;
-        bool bSuccess = _penv->CheckCollision(plink->_plink, &report);
-        pReport->init(report,this);
+        CHECK_POINTER(plink);
+        if( !pReport )
+            return _penv->CheckCollision(plink->GetLink());
+
+        bool bSuccess = _penv->CheckCollision(plink->GetLink(), pReport->report);
+        pReport->init(shared_from_this());
         return bSuccess;
     }
 
-    bool CheckCollision(PyKinBody::PyLink* plink1, PyKinBody::PyLink* plink2)
+    bool CheckCollision(PyKinBody::PyLinkPtr plink1, PyKinBody::PyLinkPtr plink2)
     {
-        return _penv->CheckCollision(plink1->_plink, plink2->_plink);
+        CHECK_POINTER(plink1);
+        CHECK_POINTER(plink2);
+        return _penv->CheckCollision(plink1->GetLink(), plink2->GetLink());
     }
-    bool CheckCollision(PyKinBody::PyLink* plink1, PyKinBody::PyLink* plink2, PyCollisionReport* pReport)
+    bool CheckCollision(PyKinBody::PyLinkPtr plink1, PyKinBody::PyLinkPtr plink2, PyCollisionReportPtr pReport)
     {
-        COLLISIONREPORT report;
-        bool bSuccess = _penv->CheckCollision(plink1->_plink, plink2->_plink, &report);
-        pReport->init(report,this);
+        CHECK_POINTER(plink1);
+        CHECK_POINTER(plink2);
+        if( !pReport )
+            return _penv->CheckCollision(plink1->GetLink(), plink2->GetLink());
+
+        bool bSuccess = _penv->CheckCollision(plink1->GetLink(), plink2->GetLink(), pReport->report);
+        pReport->init(shared_from_this());
         return bSuccess;
     }
     
-    bool CheckCollision(PyKinBody::PyLink* plink, PyKinBody* pbody)
+    bool CheckCollision(PyKinBody::PyLinkPtr plink, PyKinBodyPtr pbody)
     {
-        return _penv->CheckCollision(plink->_plink, pbody->_pbody);
+        CHECK_POINTER(plink);
+        CHECK_POINTER(pbody);
+        return _penv->CheckCollision(plink->GetLink(), pbody->GetBody());
     }
-    bool CheckCollision(PyKinBody::PyLink* plink, PyKinBody* pbody, PyCollisionReport* pReport)
+
+    bool CheckCollision(PyKinBody::PyLinkPtr plink, PyKinBodyPtr pbody, PyCollisionReportPtr pReport)
     {
-        COLLISIONREPORT report;
-        bool bSuccess = _penv->CheckCollision(plink->_plink, pbody->_pbody, &report);
-        pReport->init(report,this);
+        CHECK_POINTER(plink);
+        CHECK_POINTER(pbody);
+        if( !pReport )
+            return _penv->CheckCollision(plink->GetLink(), pbody->GetBody());
+
+        bool bSuccess = _penv->CheckCollision(plink->GetLink(), pbody->GetBody(), pReport->report);
+        pReport->init(shared_from_this());
         return bSuccess;
     }
     
-    bool CheckCollision(PyKinBody::PyLink* plink, object bodyexcluded, object linkexcluded)
+    bool CheckCollision(PyKinBody::PyLinkPtr plink, object bodyexcluded, object linkexcluded)
     {
-        std::set<KinBody*> vbodyexcluded;
+        std::vector<KinBodyConstPtr> vbodyexcluded;
         for(int i = 0; i < len(bodyexcluded); ++i) {
-            PyKinBody* pbody = extract<PyKinBody*>(bodyexcluded[i]);
-            if( pbody != NULL )
-                vbodyexcluded.insert(pbody->_pbody);
+            PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
+            if( !!pbody )
+                vbodyexcluded.push_back(pbody->GetBody());
             else
                 RAVELOG_ERRORA("failed to get excluded body\n");
         }
-        std::set<KinBody::Link*> vlinkexcluded;
+        std::vector<KinBody::LinkConstPtr> vlinkexcluded;
         for(int i = 0; i < len(bodyexcluded); ++i) {
-            PyKinBody::PyLink* plink = extract<PyKinBody::PyLink*>(linkexcluded[i]);
-            if( plink != NULL )
-                vlinkexcluded.insert(plink->_plink);
+            PyKinBody::PyLinkPtr plink = extract<PyKinBody::PyLinkPtr>(linkexcluded[i]);
+            if( !!plink )
+                vlinkexcluded.push_back(plink->GetLink());
             else
                 RAVELOG_ERRORA("failed to get excluded link\n");
         }
-        return _penv->CheckCollision(plink->_plink,vbodyexcluded,vlinkexcluded);
+        return _penv->CheckCollision(plink->GetLink(),vbodyexcluded,vlinkexcluded);
     }
 
-    bool CheckCollision(PyKinBody::PyLink* plink, object bodyexcluded, object linkexcluded, PyCollisionReport* pReport)
+    bool CheckCollision(PyKinBody::PyLinkPtr plink, object bodyexcluded, object linkexcluded, PyCollisionReportPtr pReport)
     {
-        COLLISIONREPORT report;
-        std::set<KinBody*> vbodyexcluded;
+        std::vector<KinBodyConstPtr> vbodyexcluded;
         for(int i = 0; i < len(bodyexcluded); ++i) {
-            PyKinBody* pbody = extract<PyKinBody*>(bodyexcluded[i]);
-            if( pbody != NULL )
-                vbodyexcluded.insert(pbody->_pbody);
+            PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
+            if( !!pbody )
+                vbodyexcluded.push_back(pbody->GetBody());
             else
                 RAVELOG_ERRORA("failed to get excluded body\n");
         }
-        std::set<KinBody::Link*> vlinkexcluded;
+        std::vector<KinBody::LinkConstPtr> vlinkexcluded;
         for(int i = 0; i < len(bodyexcluded); ++i) {
-            PyKinBody::PyLink* plink = extract<PyKinBody::PyLink*>(linkexcluded[i]);
-            if( plink != NULL )
-                vlinkexcluded.insert(plink->_plink);
+            PyKinBody::PyLinkPtr plink = extract<PyKinBody::PyLinkPtr>(linkexcluded[i]);
+            if( !!plink )
+                vlinkexcluded.push_back(plink->GetLink());
             else
                 RAVELOG_ERRORA("failed to get excluded link\n");
         }
-        bool bSuccess = _penv->CheckCollision(plink->_plink, vbodyexcluded, vlinkexcluded, &report);
-        pReport->init(report,this);
+
+        if( !pReport )
+            return _penv->CheckCollision(plink->GetLink(),vbodyexcluded,vlinkexcluded);
+
+        bool bSuccess = _penv->CheckCollision(plink->GetLink(), vbodyexcluded, vlinkexcluded, pReport->report);
+        pReport->init(shared_from_this());
         return bSuccess;
     }
 
-    bool CheckCollision(PyKinBody* pbody, object bodyexcluded, object linkexcluded)
+    bool CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, object linkexcluded)
     {
-        std::set<KinBody*> vbodyexcluded;
+        std::vector<KinBodyConstPtr> vbodyexcluded;
         for(int i = 0; i < len(bodyexcluded); ++i) {
-            PyKinBody* pbody = extract<PyKinBody*>(bodyexcluded[i]);
+            PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
             if( pbody != NULL )
-                vbodyexcluded.insert(pbody->_pbody);
+                vbodyexcluded.push_back(pbody->GetBody());
             else
                 RAVELOG_ERRORA("failed to get excluded body\n");
         }
-        std::set<KinBody::Link*> vlinkexcluded;
+        std::vector<KinBody::LinkConstPtr> vlinkexcluded;
         for(int i = 0; i < len(bodyexcluded); ++i) {
-            PyKinBody::PyLink* plink = extract<PyKinBody::PyLink*>(linkexcluded[i]);
+            PyKinBody::PyLinkPtr plink = extract<PyKinBody::PyLinkPtr>(linkexcluded[i]);
             if( plink != NULL )
-                vlinkexcluded.insert(plink->_plink);
+                vlinkexcluded.push_back(plink->GetLink());
             else
                 RAVELOG_ERRORA("failed to get excluded link\n");
         }
-        return _penv->CheckCollision(pbody->_pbody,vbodyexcluded,vlinkexcluded);
+        return _penv->CheckCollision(pbody->GetBody(),vbodyexcluded,vlinkexcluded);
     }
 
-    bool CheckCollision(PyKinBody* pbody, object bodyexcluded, object linkexcluded, PyCollisionReport* pReport)
+    bool CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, object linkexcluded, PyCollisionReportPtr pReport)
     {
-        COLLISIONREPORT report;
-        std::set<KinBody*> vbodyexcluded;
+        std::vector<KinBodyConstPtr> vbodyexcluded;
         for(int i = 0; i < len(bodyexcluded); ++i) {
-            PyKinBody* pbody = extract<PyKinBody*>(bodyexcluded[i]);
+            PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
             if( pbody != NULL )
-                vbodyexcluded.insert(pbody->_pbody);
+                vbodyexcluded.push_back(pbody->GetBody());
             else
                 RAVELOG_ERRORA("failed to get excluded body\n");
         }
-        std::set<KinBody::Link*> vlinkexcluded;
+        std::vector<KinBody::LinkConstPtr> vlinkexcluded;
         for(int i = 0; i < len(bodyexcluded); ++i) {
-            PyKinBody::PyLink* plink = extract<PyKinBody::PyLink*>(linkexcluded[i]);
+            PyKinBody::PyLinkPtr plink = extract<PyKinBody::PyLinkPtr>(linkexcluded[i]);
             if( plink != NULL )
-                vlinkexcluded.insert(plink->_plink);
+                vlinkexcluded.push_back(plink->GetLink());
             else
                 RAVELOG_ERRORA("failed to get excluded link\n");
         }
-        bool bSuccess = _penv->CheckCollision(pbody->_pbody, vbodyexcluded, vlinkexcluded, &report);
-        pReport->init(report,this);
+
+        if( !pReport )
+            return _penv->CheckCollision(pbody->GetBody(),vbodyexcluded,vlinkexcluded);
+
+        bool bSuccess = _penv->CheckCollision(pbody->GetBody(), vbodyexcluded, vlinkexcluded, pReport->report);
+        pReport->init(shared_from_this());
         return bSuccess;
     }
 
-    bool CheckCollision(PyRay* pyray, PyKinBody* pbody)
+    bool CheckCollision(PyRay* pyray, PyKinBodyPtr pbody)
     {
-        return _penv->CheckCollision(pyray->r,pbody->_pbody);
+        return _penv->CheckCollision(pyray->r,pbody->GetBody());
     }
 
-    bool CheckCollision(PyRay* pyray, PyKinBody* pbody, PyCollisionReport* pReport)
+    bool CheckCollision(PyRay* pyray, PyKinBodyPtr pbody, PyCollisionReportPtr pReport)
     {
-        COLLISIONREPORT report;
-        bool bSuccess = _penv->CheckCollision(pyray->r, pbody->_pbody, &report);
-        pReport->init(report,this);
+        bool bSuccess = _penv->CheckCollision(pyray->r, pbody->GetBody(), pReport->report);
+        pReport->init(shared_from_this());
         return bSuccess;
     }
 
     /// check if any rays hit the body and returns their contact points along with a vector specifying if a collision occured or not
-    object CheckCollisionRays(object rays, PyKinBody* pbody,bool bFrontFacingOnly=false)
+    object CheckCollisionRays(object rays, PyKinBodyPtr pbody,bool bFrontFacingOnly=false)
     {
         object shape = rays.attr("shape");
         int num = extract<int>(shape[1]);
@@ -2140,6 +2117,8 @@ public:
             throw openrave_exception("rays object needs to be a 6xN vector\n");
 
         COLLISIONREPORT report;
+        boost::shared_ptr<COLLISIONREPORT> preport(&report,null_deleter());
+
         RAY r;
         npy_intp dims[] = {3,num};
         PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
@@ -2153,7 +2132,7 @@ public:
             r.dir.x = extract<dReal>(rays[3][i]);
             r.dir.y = extract<dReal>(rays[4][i]);
             r.dir.z = extract<dReal>(rays[5][i]);
-            bool bCollision = _penv->CheckCollision(r, pbody->_pbody, &report);
+            bool bCollision = _penv->CheckCollision(r, pbody->GetBody(), preport);
             pcollision[i] = false;
             if( bCollision && report.contacts.size() > 0 ) {
                 if( !bFrontFacingOnly || dot3(report.contacts[0].norm,r.dir)<0 ) {
@@ -2173,96 +2152,81 @@ public:
         return _penv->CheckCollision(pyray->r);
     }
     
-    bool CheckCollision(PyRay* pyray, PyCollisionReport* pReport)
+    bool CheckCollision(PyRay* pyray, PyCollisionReportPtr pReport)
     {
-        COLLISIONREPORT report;
-        bool bSuccess = _penv->CheckCollision(pyray->r, &report);
-        pReport->init(report,this);
+        bool bSuccess = _penv->CheckCollision(pyray->r, pReport->report);
+        pReport->init(shared_from_this());
         return bSuccess;
     }
 	
-    bool Load(const string& filename, bool bLockPhysics=true)
+    bool Load(const string& filename) { return _penv->Load(filename); }
+    bool Save(const string& filename) { return _penv->Save(filename.c_str()); }
+
+    PyRobotBasePtr ReadRobotXMLFile(const string& filename)
     {
-        boost::shared_ptr<LockEnvironment> envlock;
-        if(bLockPhysics)
-            envlock.reset(new LockEnvironment(_penv.get()));
-        return _penv->Load(filename.c_str());
+        return PyRobotBasePtr(new PyRobotBase(_penv->ReadRobotXMLFile(RobotBasePtr(), filename, std::list<std::pair<std::string,std::string> >()),shared_from_this()));
     }
-    bool Save(const string& filename, bool bLockPhysics=true)
+    PyRobotBasePtr ReadRobotXMLData(const string& data)
     {
-        boost::shared_ptr<LockEnvironment> envlock;
-        if(bLockPhysics)
-            envlock.reset(new LockEnvironment(_penv.get()));
-        return _penv->Save(filename.c_str());
+        return PyRobotBasePtr(new PyRobotBase(_penv->ReadRobotXMLData(RobotBasePtr(), data, std::list<std::pair<std::string,std::string> >()),shared_from_this()));
     }
 
-    PyRobotBase* ReadRobotXML(const string& filename)
+    PyKinBodyPtr ReadKinBodyXMLFile(const string& filename)
     {
-        LockEnvironment envlock(_penv.get());
-        return toPyRobot(_penv->ReadRobotXML(NULL,filename.c_str(),NULL),true);
-    }
-    PyRobotBase* ReadRobotXML(const string& filename, bool lockphysics=true)
-    {
-        boost::shared_ptr<LockEnvironment> envlock;
-        if(lockphysics)
-            envlock.reset(new LockEnvironment(_penv.get()));
-        return toPyRobot(_penv->ReadRobotXML(NULL,filename.c_str(),NULL),true);
+        return PyKinBodyPtr(new PyKinBody(_penv->ReadKinBodyXMLFile(KinBodyPtr(), filename, std::list<std::pair<std::string,std::string> >()),shared_from_this()));
     }
 
-    PyKinBody* ReadKinBodyXML(const string& filename)
+    PyKinBodyPtr ReadKinBodyXMLData(const string& data)
     {
-        LockEnvironment envlock(_penv.get());
-        return toPyKinBody(_penv->ReadKinBodyXML(NULL,filename.c_str(),NULL),true);
+        return PyKinBodyPtr(new PyKinBody(_penv->ReadKinBodyXMLData(KinBodyPtr(), data, std::list<std::pair<std::string,std::string> >()),shared_from_this()));
     }
 
-    PyKinBody* ReadKinBodyXML(const string& filename, bool lockphysics=true)
-    {
-        boost::shared_ptr<LockEnvironment> envlock;
-        if(lockphysics)
-            envlock.reset(new LockEnvironment(_penv.get()));
-        return toPyKinBody(_penv->ReadKinBodyXML(NULL,filename.c_str(),NULL),true);
-    }
-
-    bool AddKinBody(PyKinBody* pbody) { CHECK_POINTER(pbody); CHECK_POINTER(pbody->GetBody()); return _penv->AddKinBody(pbody->GetBody()); }
-    bool AddRobot(PyRobotBase* robot) { CHECK_POINTER(robot); CHECK_POINTER(robot->GetRobot()); return _penv->AddRobot(robot->GetRobot()); }
-    bool RemoveKinBody(PyKinBody* pbody) { CHECK_POINTER(pbody); CHECK_POINTER(pbody->GetBody()); return _penv->RemoveKinBody(pbody->GetBody(),false); }
+    bool AddKinBody(PyKinBodyPtr pbody) { CHECK_POINTER(pbody); return _penv->AddKinBody(pbody->GetBody()); }
+    bool AddRobot(PyRobotBasePtr robot) { CHECK_POINTER(robot); return _penv->AddRobot(robot->GetRobot()); }
+    bool RemoveKinBody(PyKinBodyPtr pbody) { CHECK_POINTER(pbody); return _penv->RemoveKinBody(pbody->GetBody()); }
     
-    PyKinBody* GetKinBody(const string& name) { return toPyKinBody(_penv->GetKinBody(_stdmbstowcs(name.c_str()).c_str()),false); }
-    PyKinBody* GetBodyFromNetworkId(int id) { return toPyKinBody(_penv->GetBodyFromNetworkId(id),false); }
-
-    PyKinBody* CreateKinBody()
+    PyKinBodyPtr GetKinBody(const string& name)
     {
-        LockEnvironment envlock(_penv.get());
-        return toPyKinBody(_penv->CreateKinBody(),true);
+        KinBodyPtr pbody = _penv->GetKinBody(name);
+        if( !pbody )
+            throw openrave_exception(boost::str(boost::format("failed to get body %s")%name));
+        return PyKinBodyPtr(new PyKinBody(pbody,shared_from_this()));
     }
-    PyKinBody* CreateKinBody(bool lockphysics=true)
+    PyKinBodyPtr GetBodyFromNetworkId(int id)
     {
-        boost::shared_ptr<LockEnvironment> envlock;
-        if(lockphysics)
-            envlock.reset(new LockEnvironment(_penv.get()));
-        return toPyKinBody(_penv->CreateKinBody(),true);
+        KinBodyPtr pbody = _penv->GetBodyFromNetworkId(id);
+        if( !pbody )
+            throw openrave_exception(boost::str(boost::format("failed to get body id %d")%id));
+        return PyKinBodyPtr(new PyKinBody(pbody,shared_from_this()));
     }
 
-//    Trajectory* CreateTrajectory(int nDOF) {}
-//
-    int LoadProblem(PyProblemInstance* prob, const string& args) { CHECK_POINTER(prob); CHECK_POINTER(prob->GetProblem()); return _penv->LoadProblem(prob->GetProblem(),args.c_str()); }
-    bool RemoveProblem(PyProblemInstance* prob) { CHECK_POINTER(prob); CHECK_POINTER(prob->GetProblem()); return _penv->RemoveProblem(prob->GetProblem()); }
-    object GetProblems()
+    PyKinBodyPtr CreateKinBody()
     {
+        return PyKinBodyPtr(new PyKinBody(_penv->CreateKinBody(),shared_from_this()));
+    }
+
+    PyTrajectoryBasePtr CreateTrajectory(int nDOF) { return PyTrajectoryBasePtr(new PyTrajectoryBase(_penv->CreateTrajectory(nDOF),shared_from_this())); }
+
+    int LoadProblem(PyProblemInstancePtr prob, const string& args) { CHECK_POINTER(prob); return _penv->LoadProblem(prob->GetProblem(),args); }
+    bool RemoveProblem(PyProblemInstancePtr prob) { CHECK_POINTER(prob); return _penv->RemoveProblem(prob->GetProblem()); }
+    
+    object GetLoadedProblems()
+    {
+        std::list<ProblemInstancePtr> listProblems;
+        boost::shared_ptr<boost::mutex> lock = _penv->GetLoadedProblems(listProblems);
         boost::python::list problems;
-        FOREACHC(itprob, _penv->GetProblems())
-            problems.append(object(PyProblemInstance(*itprob,this,false)));
+        FOREACHC(itprob, listProblems)
+            problems.append(PyProblemInstancePtr(new PyProblemInstance(*itprob,shared_from_this())));
         return problems;
     }
 
-    bool SetPhysicsEngine(PyPhysicsEngineBase* pengine)
+    bool SetPhysicsEngine(PyPhysicsEngineBasePtr pengine)
     {
-        if( pengine == NULL )
-            return _penv->SetPhysicsEngine(NULL);
-        CHECK_POINTER(pengine->GetPhysicsEngine());
+        if( !pengine )
+            return _penv->SetPhysicsEngine(PhysicsEngineBasePtr());
         return _penv->SetPhysicsEngine(pengine->GetPhysicsEngine());
     }
-    PyPhysicsEngineBase* GetPhysicsEngine() { return new PyPhysicsEngineBase(_penv->GetPhysicsEngine(),this,false); }
+    PyPhysicsEngineBasePtr GetPhysicsEngine() { return PyPhysicsEngineBasePtr(new PyPhysicsEngineBase(_penv->GetPhysicsEngine(),shared_from_this())); }
 
     void StepSimulation(dReal timeStep) { _penv->StepSimulation(timeStep); }
     void StartSimulation(dReal fDeltaTime) { _penv->StartSimulation(fDeltaTime); }
@@ -2271,13 +2235,17 @@ public:
 
     void LockPhysics(bool bLock)
     {
-        if( !_penv->LockPhysics(bLock) )
-            throw openrave_exception(bLock?"failed to lock physics\n":"failed to unlock physics");
+        if( bLock )
+            _penv->GetMutex().lock();
+        else
+            _penv->GetMutex().unlock();
     }
     void LockPhysics(bool bLock, float timeout)
     {
-        if( !_penv->LockPhysics(bLock, timeout) )
-            throw openrave_exception(bLock?"failed to lock physics\n":"failed to unlock physics");
+        if( bLock )
+            _penv->GetMutex().lock();
+        else
+            _penv->GetMutex().unlock();
     }
 
     bool SetViewer(const string& viewername, bool showviewer=true)
@@ -2285,28 +2253,28 @@ public:
         if( !!_threadviewer ) { // wait for the viewer
             _threadviewer->join();
             _threadviewer.reset();
-        }
+        }        
         
-        
+        _penv->AttachViewer(RaveViewerBasePtr());
+
         if( viewername.size() > 0 ) {
             boost::mutex::scoped_lock lock(_mutexViewer);
-            _threadviewer.reset(new boost::thread(boost::bind(&PyEnvironmentBase::_ViewerThread, this, viewername, showviewer)));
+            _threadviewer.reset(new boost::thread(boost::bind(&PyEnvironmentBase::_ViewerThread, shared_from_this(), viewername, showviewer)));
             _conditionViewer.wait(lock);
             
-            if( !_pviewer ) {
+            if( !_penv->GetViewer() || _penv->GetViewer()->GetXMLId() != viewername ) {
                 RAVELOG_WARNA("failed to create viewer %s\n", viewername.c_str());
-                _threadviewer->join();
                 _threadviewer.reset();
                 return false;
             }
             else
                 RAVELOG_INFOA("viewer %s successfully attached\n", viewername.c_str());
         }
-
+        
         return true;
     }
 
-    PyRaveViewerBase* GetViewer() { return new PyRaveViewerBase(_penv->GetViewer(),this,false); }
+    PyRaveViewerBasePtr GetViewer() { return PyRaveViewerBasePtr(new PyRaveViewerBase(_penv->GetViewer(),shared_from_this())); }
 
     object plot3(object opoints,float pointsize,object ocolors=object(),int drawstyle=0)
     {
@@ -2448,11 +2416,6 @@ public:
         
         return object(PyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,vcolor)));
     }
-    
-    void closegraph(PyGraphHandle& phandle)
-    {
-        _penv->closegraph(phandle._handle);
-    }
 
     void SetCamera(object transform) { _penv->SetCamera(ExtractTransform(transform)); }
 
@@ -2461,9 +2424,9 @@ public:
     }
     object GetCameraTransform() { return ReturnTransform(_penv->GetCameraTransform()); }
 
-//    object GetFractionOccluded(PyKinBody* pbody, int width, int height, float nearPlane, float farPlane, object extrinsic, object KK, double& fracOccluded)
+//    object GetFractionOccluded(PyKinBodyPtr pbody, int width, int height, float nearPlane, float farPlane, object extrinsic, object KK, double& fracOccluded)
 //    {
-//        PyKinBody* pbody, int width, int height, float nearPlane, float farPlane, object extrinsic, object KK, double& fracOccluded
+//        PyKinBodyPtr pbody, int width, int height, float nearPlane, float farPlane, object extrinsic, object KK, double& fracOccluded
 //    }
 
     object GetCameraImage(int width, int height, object extrinsic, object oKK)
@@ -2471,13 +2434,12 @@ public:
         vector<float> vKK = ExtractFloatArray(oKK);
         if( vKK.size() != 4 )
             throw openrave_exception("KK needs to be of size 4");
-        npy_intp dims[] = {height,width,3};
-        PyObject *pymem = PyArray_SimpleNew(3,dims, PyArray_UBYTE);
-        if( !_penv->GetCameraImage(PyArray_DATA(pymem), width,height,RaveTransform<float>(ExtractTransform(extrinsic)), &vKK[0]) ) {
-            decref(pymem);
+        SensorBase::CameraIntrinsics KK(vKK[0],vKK[1],vKK[2],vKK[3]);
+        vector<uint8_t> memory;
+        if( !_penv->GetCameraImage(memory, width,height,RaveTransform<float>(ExtractTransform(extrinsic)), KK) )
             return object();
-        }
-        return static_cast<numeric::array>(handle<>(pymem));
+        std::vector<npy_intp> dims(3); dims[0] = height; dims[1] = width; dims[2] = 3;
+        return toPyArray(memory,dims);
     }
 
     bool WriteCameraImage(int width, int height, object extrinsic, object oKK, const string& filename, const string& extension)
@@ -2485,159 +2447,51 @@ public:
         vector<float> vKK = ExtractFloatArray(oKK);
         if( vKK.size() != 4 )
             throw openrave_exception("KK needs to be of size 4");
-        return _penv->WriteCameraImage(width,height,RaveTransform<float>(ExtractTransform(extrinsic)), &vKK[0], filename.c_str(), extension.c_str());
-    }
-
-    object GetRobots()
-    {
-        boost::python::list robots;
-        FOREACHC(itrobot, _penv->GetRobots())
-            robots.append(PyRobotBase(*itrobot,this,false));
-        return robots;
+        SensorBase::CameraIntrinsics KK(vKK[0],vKK[1],vKK[2],vKK[3]);
+        return _penv->WriteCameraImage(width,height,RaveTransform<float>(ExtractTransform(extrinsic)), KK, filename, extension);
     }
 
     object GetBodies()
     {
+        std::vector<KinBodyPtr> vbodies;
+        _penv->GetBodies(vbodies);
         boost::python::list bodies;
-        FOREACHC(itbody, _penv->GetBodies())
-            bodies.append(PyKinBody(*itbody,this,false));
+        FOREACHC(itbody, vbodies)
+            bodies.append(PyKinBodyPtr(new PyKinBody(*itbody,shared_from_this())));
         return bodies;
     }
 
-//    void GetPublishedBodies(std::vector<EnvironmentBase::BODYSTATE>& vbodies) {}
-    void SetPublishBodiesAnytime(bool bAnytime) { _penv->SetPublishBodiesAnytime(bAnytime); }
-    bool GetPublishBodiesAnytime() const { return _penv->GetPublishBodiesAnytime(); }
-
-//    EnvironmentBase::EnvLock* GetLockedBodies(std::vector<KinBody*>& bodies) const {}
-//    EnvironmentBase::EnvLock* GetLockedRobots(std::vector<RobotBase*>& robots) const {}
-
-    PyKinBody::PyLink::PyTriMesh* Triangulate(PyKinBody* pbody)
+    object GetRobots()
     {
+        std::vector<RobotBasePtr> vrobots;
+        _penv->GetRobots(vrobots);
+        boost::python::list robots;
+        FOREACHC(itrobot, vrobots)
+            robots.append(PyRobotBasePtr(new PyRobotBase(*itrobot,shared_from_this())));
+        return robots;
+    }
+
+    boost::shared_ptr<PyKinBody::PyLink::PyTriMesh> Triangulate(PyKinBodyPtr pbody)
+    {
+        CHECK_POINTER(pbody);
         KinBody::Link::TRIMESH mesh;
         if( !_penv->Triangulate(mesh,pbody->GetBody()) )
-            return NULL;
-        return new PyKinBody::PyLink::PyTriMesh(mesh);
+            throw openrave_exception(boost::str(boost::format("failed to triangulate body %s")%pbody->GetBody()->GetName()));
+        return boost::shared_ptr<PyKinBody::PyLink::PyTriMesh>(new PyKinBody::PyLink::PyTriMesh(mesh));
     }
-    PyKinBody::PyLink::PyTriMesh* TriangulateScene(EnvironmentBase::TriangulateOptions opts, const string& name)
+    boost::shared_ptr<PyKinBody::PyLink::PyTriMesh> TriangulateScene(EnvironmentBase::TriangulateOptions opts, const string& name)
     {
         KinBody::Link::TRIMESH mesh;
-        if( !_penv->TriangulateScene(mesh,opts,_stdmbstowcs(name.c_str()).c_str()) )
-            return NULL;
-        return new PyKinBody::PyLink::PyTriMesh(mesh);
+        if( !_penv->TriangulateScene(mesh,opts,name) )
+            throw openrave_exception(boost::str(boost::format("failed to triangulate scene: %d, %s")%opts%name));
+        return boost::shared_ptr<PyKinBody::PyLink::PyTriMesh>(new PyKinBody::PyLink::PyTriMesh(mesh));
     }
 
     void SetDebugLevel(DebugLevel level) { _penv->SetDebugLevel(level); }
     DebugLevel GetDebugLevel() const { return _penv->GetDebugLevel(); }
 
-    bool AttachServer(PyRaveServerBase* pserver) { return _penv->AttachServer(pserver->GetServer()); }
-    PyRaveServerBase* GetServer() { return new PyRaveServerBase(_penv->GetServer(),this,false); }
-
     string GetHomeDirectory() { return _penv->GetHomeDirectory(); }
-
-    // private interface stuff
-    void AddInterface(PyInterfaceBase* p) { _setInterfaces.insert(p); }
-    void RemoveInterface(PyInterfaceBase* p) { _setInterfaces.erase(p); }
-
-protected:
-    std::set<PyInterfaceBase*> _setInterfaces;
 };
-
-PyInterfaceBase::PyInterfaceBase(InterfaceBase* pbase, PyEnvironmentBase* pyenv, bool bOwnObject) : _pbase(pbase), _pyenv(pyenv), _bOwnObject(bOwnObject)
-{
-    _pyenv->AddInterface(this);
-}
-
-PyInterfaceBase::~PyInterfaceBase()
-{
-    if( _bOwnObject ) {
-        _bOwnObject = false;
-        delete _pbase;
-    }
-
-    if( _pbase != NULL )
-        _pyenv->RemoveInterface(this);
-}
-
-PyKinBody::~PyKinBody()
-{
-    if( _bOwnObject ) {
-        LockEnvironment envlock(_pbody->GetEnv());
-        _pbody->GetEnv()->RemoveKinBody(_pbody,false);
-        _bOwnObject = false;
-        delete _pbody;
-    }
-}
-
-PyRobotBase::~PyRobotBase()
-{
-    if( _bOwnObject ) {
-        LockEnvironment envlock(_pbody->GetEnv());
-        _pbody->GetEnv()->RemoveKinBody(_probot,false);
-        _bOwnObject = false;
-        delete _probot;
-    }
-}
-
-void PyRobotBase::PyManipulator::SetIKSolver(PyIkSolverBase* iksolver)
-{
-    _pmanip->SetIKSolver(iksolver->GetIkSolver());
-}
-
-PySensorBase* PyRobotBase::PyAttachedSensor::GetSensor()
-{
-    return new PySensorBase(_pattached->GetSensor(),_pyenv,false);
-}
-
-PyControllerBase* PyRobotBase::GetController() const
-{
-    return new PyControllerBase(_probot->GetController(),_pyenv,false);
-}
-
-bool PyRobotBase::SetController(const string& name, const string& args)
-{
-    return _probot->SetController(_stdmbstowcs(name.c_str()).c_str(),args.c_str(),false);
-}
-
-bool PyRobotBase::SetController(PyControllerBase * pController, const string& args)
-{
-    return _probot->SetController(pController->GetController(),args.c_str(),false);
-}
-
-PyProblemInstance::~PyProblemInstance()
-{
-    if( _bOwnObject ) {
-        LockEnvironment envlock(_pproblem->GetEnv());
-        _pproblem->GetEnv()->RemoveProblem(_pproblem);
-        _bOwnObject = false;
-        delete _pproblem; _pproblem = NULL;
-    }
-}
-
-PyCollisionCheckerBase::~PyCollisionCheckerBase()
-{
-    if( _bOwnObject ) {
-        _bOwnObject = false;
-        LockEnvironment envlock(_pCollisionChecker->GetEnv());
-        if( _pCollisionChecker->GetEnv()->GetCollisionChecker() == _pCollisionChecker ) {
-            RAVELOG_WARNA("resetting environment collision checker\n");
-            _pCollisionChecker->GetEnv()->SetCollisionChecker(NULL);
-        }
-        delete _pCollisionChecker; _pCollisionChecker = NULL;
-    }
-}
-
-PyPhysicsEngineBase::~PyPhysicsEngineBase()
-{
-    if( _bOwnObject ) {
-        _bOwnObject = false;
-        LockEnvironment envlock(_pPhysicsEngine->GetEnv());
-        if( _pPhysicsEngine->GetEnv()->GetPhysicsEngine() == _pPhysicsEngine ) {
-            RAVELOG_WARNA("resetting environment physics engine\n");
-            _pPhysicsEngine->GetEnv()->SetCollisionOptions(NULL);
-        }
-        delete _pPhysicsEngine; _pPhysicsEngine = NULL;
-    }
-}
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetViewer_overloads, SetViewer, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckCollisionRays_overloads, CheckCollisionRays, 2, 3)
@@ -2682,7 +2536,6 @@ BOOST_PYTHON_MODULE(openravepy)
         .value("CollisionChecker",PT_CollisionChecker)
         .value("Trajectory",PT_Trajectory)
         .value("Viewer",PT_Viewer)
-        .value("Server",PT_Server)
         ;
     enum_<CollisionOptions>("CollisionOptions")
         .value("Distance",CO_Distance)
@@ -2702,51 +2555,44 @@ BOOST_PYTHON_MODULE(openravepy)
         .value("SelfCollisions",PEO_SelfCollisions)
         ;
 
-    class_<PyEnvironmentBase> classenv("Environment");
-    class_<PyGraphHandle>("GraphHandle");
-    class_<PyRay>("Ray")
+    class_<PyEnvironmentBase, boost::shared_ptr<PyEnvironmentBase> > classenv("Environment");
+    class_<PyGraphHandle, boost::shared_ptr<PyGraphHandle> >("GraphHandle");
+    class_<PyRay, boost::shared_ptr<PyRay> >("Ray")
         .def(init<object,object>())
         .def("dir",&PyRay::dir)
         .def("pos",&PyRay::pos)
         .def_pickle(Ray_pickle_suite())
         ;
-    class_<PyAABB>("AABB")
+    class_<PyAABB, boost::shared_ptr<PyAABB> >("AABB")
         .def(init<object,object>())
         .def("extents",&PyAABB::extents)
         .def("pos",&PyAABB::pos)
         .def_pickle(AABB_pickle_suite())
         ;
-    class_<PyInterfaceBase>("Interface", no_init)
+    class_<PyInterfaceBase, boost::shared_ptr<PyInterfaceBase> >("Interface", no_init)
+        .def("GetInterfaceType",&PyInterfaceBase::GetInterfaceType)
         .def("GetXMLId",&PyInterfaceBase::GetXMLId)
         .def("GetPluginName",&PyInterfaceBase::GetPluginName)
-        .def("GetEnv",&PyInterfaceBase::GetEnv, return_internal_reference<1>())
+        .def("GetDescription",&PyInterfaceBase::GetDescription)
+        .def("GetEnv",&PyInterfaceBase::GetEnv)
         .def("Clone",&PyInterfaceBase::Clone)
         .def("SetUserData",&PyInterfaceBase::SetUserData)
         .def("GetUserData",&PyInterfaceBase::GetUserData)
+        .def("SendCommand",&PyInterfaceBase::SendCommand)
         ;
 
-    class_<PyPluginInfo>("PluginInfo",no_init)
-        .def_readonly("robots",&PyPluginInfo::robots)
-        .def_readonly("planners",&PyPluginInfo::planners)
-        .def_readonly("sensorsystems",&PyPluginInfo::sensorsystems)
-        .def_readonly("controllers",&PyPluginInfo::controllers)
-        .def_readonly("problems",&PyPluginInfo::problems)
-        .def_readonly("iksolvers",&PyPluginInfo::iksolvers)
-        .def_readonly("physicsengines",&PyPluginInfo::physicsengines)
-        .def_readonly("sensors",&PyPluginInfo::sensors)
-        .def_readonly("collisioncheckers",&PyPluginInfo::collisioncheckers)
-        .def_readonly("trajectories",&PyPluginInfo::trajectories)
-        .def_readonly("viewers",&PyPluginInfo::viewers)
-        .def_readonly("servers",&PyPluginInfo::servers)
+    class_<PyPluginInfo, boost::shared_ptr<PyPluginInfo> >("PluginInfo",no_init)
+        .def_readonly("interfacenames",&PyPluginInfo::interfacenames)
         ;
 
     {    
         bool (PyKinBody::*pkinbodyself)() = &PyKinBody::CheckSelfCollision;
-        bool (PyKinBody::*pkinbodyselfr)(PyCollisionReport*) = &PyKinBody::CheckSelfCollision;
+        bool (PyKinBody::*pkinbodyselfr)(PyCollisionReportPtr) = &PyKinBody::CheckSelfCollision;
         void (PyKinBody::*psetjointvalues1)(object) = &PyKinBody::SetJointValues;
         void (PyKinBody::*psetjointvalues2)(object,object) = &PyKinBody::SetJointValues;
-        scope kinbody = class_<PyKinBody, bases<PyInterfaceBase> >("KinBody", no_init)
-            .def("Init",&PyKinBody::Init)
+        scope kinbody = class_<PyKinBody, boost::shared_ptr<PyKinBody>, bases<PyInterfaceBase> >("KinBody", no_init)
+            .def("InitFromFile",&PyKinBody::InitFromFile)
+            .def("InitFromData",&PyKinBody::InitFromData)
             .def("GetName",&PyKinBody::GetName)
             .def("GetDOF",&PyKinBody::GetDOF)
             .def("GetJointValues",&PyKinBody::GetJointValues)
@@ -2757,7 +2603,7 @@ BOOST_PYTHON_MODULE(openravepy)
             .def("GetBodyTransformations",&PyKinBody::GetBodyTransformations)
             .def("SetBodyTransformations",&PyKinBody::SetBodyTransformations)
             .def("GetLinkVelocities",&PyKinBody::GetLinkVelocities)
-            .def("ComputeAABB",&PyKinBody::ComputeAABB, return_value_policy<manage_new_object>())
+            .def("ComputeAABB",&PyKinBody::ComputeAABB)
             .def("Enable",&PyKinBody::Enable)
             .def("IsEnabled",&PyKinBody::IsEnabled)
             .def("SetTransform",&PyKinBody::SetTransform)
@@ -2788,15 +2634,15 @@ BOOST_PYTHON_MODULE(openravepy)
             ;
 
         {        
-            scope link = class_<PyKinBody::PyLink>("Link", no_init)
+            scope link = class_<PyKinBody::PyLink, boost::shared_ptr<PyKinBody::PyLink> >("Link", no_init)
                 .def("GetName",&PyKinBody::PyLink::GetName)
                 .def("GetIndex",&PyKinBody::PyLink::GetIndex)
                 .def("IsEnabled",&PyKinBody::PyLink::IsEnabled)
                 .def("IsStatic",&PyKinBody::PyLink::IsStatic)
                 .def("Enable",&PyKinBody::PyLink::Enable)
-                .def("GetParent",&PyKinBody::PyLink::GetParent, return_value_policy<manage_new_object>())
-                .def("GetCollisionData",&PyKinBody::PyLink::GetCollisionData, return_value_policy<manage_new_object>())
-                .def("ComputeAABB",&PyKinBody::PyLink::ComputeAABB, return_value_policy<manage_new_object>())
+                .def("GetParent",&PyKinBody::PyLink::GetParent)
+                .def("GetCollisionData",&PyKinBody::PyLink::GetCollisionData)
+                .def("ComputeAABB",&PyKinBody::PyLink::ComputeAABB)
                 .def("GetTransform",&PyKinBody::PyLink::GetTransform)
                 .def("GetCOMOffset",&PyKinBody::PyLink::GetCOMOffset)
                 .def("GetInertia",&PyKinBody::PyLink::GetInertia)
@@ -2806,13 +2652,13 @@ BOOST_PYTHON_MODULE(openravepy)
                 .def("SetTorque",&PyKinBody::PyLink::SetTorque)
                 ;
 
-            class_<PyKinBody::PyLink::PyTriMesh>("TriMesh",no_init)
+            class_<PyKinBody::PyLink::PyTriMesh, boost::shared_ptr<PyKinBody::PyLink::PyTriMesh> >("TriMesh",no_init)
                 .def_readwrite("vertices",&PyKinBody::PyLink::PyTriMesh::vertices)
                 .def_readwrite("indices",&PyKinBody::PyLink::PyTriMesh::indices)
                 ;
         }
 
-        class_<PyKinBody::PyJoint>("Joint",no_init)
+        class_<PyKinBody::PyJoint, boost::shared_ptr<PyKinBody::PyJoint> >("Joint",no_init)
             .def("GetName", &PyKinBody::PyJoint::GetName)
             .def("GetMimicJointIndex", &PyKinBody::PyJoint::GetMimicJointIndex)
             .def("GetMimicCoeffs", &PyKinBody::PyJoint::GetMimicCoeffs)
@@ -2821,9 +2667,9 @@ BOOST_PYTHON_MODULE(openravepy)
             .def("GetMaxTorque", &PyKinBody::PyJoint::GetMaxTorque)
             .def("GetDOFIndex", &PyKinBody::PyJoint::GetDOFIndex)
             .def("GetJointIndex", &PyKinBody::PyJoint::GetJointIndex)
-            .def("GetParent", &PyKinBody::PyJoint::GetParent, return_value_policy<manage_new_object>())
-            .def("GetFirstAttached", &PyKinBody::PyJoint::GetFirstAttached, return_value_policy<manage_new_object>())
-            .def("GetSecondAttached", &PyKinBody::PyJoint::GetSecondAttached, return_value_policy<manage_new_object>())
+            .def("GetParent", &PyKinBody::PyJoint::GetParent)
+            .def("GetFirstAttached", &PyKinBody::PyJoint::GetFirstAttached)
+            .def("GetSecondAttached", &PyKinBody::PyJoint::GetSecondAttached)
             .def("GetType", &PyKinBody::PyJoint::GetType)
             .def("GetDOF", &PyKinBody::PyJoint::GetDOF)
             .def("GetValues", &PyKinBody::PyJoint::GetValues)
@@ -2831,14 +2677,17 @@ BOOST_PYTHON_MODULE(openravepy)
             .def("GetAnchor", &PyKinBody::PyJoint::GetAnchor)
             .def("GetAxis", &PyKinBody::PyJoint::GetAxis)
             .def("GetLimits", &PyKinBody::PyJoint::GetLimits)
+            .def("SetJointOffset",&PyKinBody::PyJoint::SetJointOffset)
+            .def("SetJointLimits",&PyKinBody::PyJoint::SetJointLimits)
+            .def("SetResolution",&PyKinBody::PyJoint::SetResolution)
             ;
     }
 
-    class_<PyCollisionReport::PYCONTACT>("Contact")
+    class_<PyCollisionReport::PYCONTACT, boost::shared_ptr<PyCollisionReport::PYCONTACT> >("Contact")
         .def_readwrite("pos",&PyCollisionReport::PYCONTACT::pos)
         .def_readwrite("norm",&PyCollisionReport::PYCONTACT::norm)
         ;
-    class_<PyCollisionReport>("CollisionReport")
+    class_<PyCollisionReport, boost::shared_ptr<PyCollisionReport> >("CollisionReport")
         .def_readwrite("options",&PyCollisionReport::options)
         .def_readwrite("plink1",&PyCollisionReport::plink1)
         .def_readwrite("plink2",&PyCollisionReport::plink2)
@@ -2849,26 +2698,23 @@ BOOST_PYTHON_MODULE(openravepy)
         ;
 
     {
-        bool (PyRobotBase::*psetcontroller1)(const string&,const string&) = &PyRobotBase::SetController;
-        bool (PyRobotBase::*psetcontroller2)(PyControllerBase*,const string&) = &PyRobotBase::SetController;
-
         void (PyRobotBase::*psetactivedofs1)(object) = &PyRobotBase::SetActiveDOFs;
         void (PyRobotBase::*psetactivedofs2)(object, int) = &PyRobotBase::SetActiveDOFs;
         void (PyRobotBase::*psetactivedofs3)(object, int, object) = &PyRobotBase::SetActiveDOFs;
 
-        bool (PyRobotBase::*pgrab1)(PyKinBody*) = &PyRobotBase::Grab;
-        bool (PyRobotBase::*pgrab2)(PyKinBody*,object) = &PyRobotBase::Grab;
-        bool (PyRobotBase::*pgrab3)(PyKinBody*,int,object) = &PyRobotBase::Grab;
+        bool (PyRobotBase::*pgrab1)(PyKinBodyPtr) = &PyRobotBase::Grab;
+        bool (PyRobotBase::*pgrab2)(PyKinBodyPtr,object) = &PyRobotBase::Grab;
+        bool (PyRobotBase::*pgrab3)(PyKinBodyPtr,PyKinBody::PyLinkPtr) = &PyRobotBase::Grab;
+        bool (PyRobotBase::*pgrab4)(PyKinBodyPtr,PyKinBody::PyLinkPtr,object) = &PyRobotBase::Grab;
 
-        scope robot = class_<PyRobotBase, bases<PyKinBody, PyInterfaceBase> >("Robot", no_init)
+        scope robot = class_<PyRobotBase, boost::shared_ptr<PyRobotBase>, bases<PyKinBody, PyInterfaceBase> >("Robot", no_init)
             .def("GetManipulators",&PyRobotBase::GetManipulators)
             .def("SetActiveManipulator",&PyRobotBase::SetActiveManipulator)
-            .def("GetActiveManipulator",&PyRobotBase::GetActiveManipulator, return_value_policy<manage_new_object>())
+            .def("GetActiveManipulator",&PyRobotBase::GetActiveManipulator)
             .def("GetActiveManipulatorIndex",&PyRobotBase::GetActiveManipulatorIndex)
             .def("GetSensors",&PyRobotBase::GetSensors)
-            .def("GetController",&PyRobotBase::GetController, return_value_policy<manage_new_object>())
-            .def("SetController",psetcontroller1)
-            .def("SetController",psetcontroller2)
+            .def("GetController",&PyRobotBase::GetController)
+            .def("SetController",&PyRobotBase::SetController)
             .def("SetActiveDOFs",psetactivedofs1)
             .def("SetActiveDOFs",psetactivedofs2)
             .def("SetActiveDOFs",psetactivedofs3)
@@ -2912,11 +2758,11 @@ BOOST_PYTHON_MODULE(openravepy)
             .def("Grab",pgrab1)
             .def("Grab",pgrab2)
             .def("Grab",pgrab3)
+            .def("Grab",pgrab4)
             .def("Release",&PyRobotBase::Release)
             .def("ReleaseAllGrabbed",&PyRobotBase::ReleaseAllGrabbed)
             .def("RegrabAll",&PyRobotBase::RegrabAll)
             .def("IsGrabbing",&PyRobotBase::IsGrabbing)
-            .def("GetGrabbed",&PyRobotBase::GetGrabbed)
             .def("WaitForController",&PyRobotBase::WaitForController)
             ;
         
@@ -2925,37 +2771,40 @@ BOOST_PYTHON_MODULE(openravepy)
         object (PyRobotBase::PyManipulator::*pmanipiks)(object, bool) const = &PyRobotBase::PyManipulator::FindIKSolutions;
         object (PyRobotBase::PyManipulator::*pmanipiksf)(object, object, bool) const = &PyRobotBase::PyManipulator::FindIKSolutions;
 
-        class_<PyRobotBase::PyManipulator>("Manipulator", no_init)
+        class_<PyRobotBase::PyManipulator, boost::shared_ptr<PyRobotBase::PyManipulator> >("Manipulator", no_init)
             .def("GetEndEffectorTransform", &PyRobotBase::PyManipulator::GetEndEffectorTransform)
+            .def("GetName",&PyRobotBase::PyManipulator::GetName)
+            .def("GetRobot",&PyRobotBase::PyManipulator::GetRobot)
             .def("SetIKSolver",&PyRobotBase::PyManipulator::SetIKSolver)
             .def("InitIKSolver",&PyRobotBase::PyManipulator::InitIKSolver)
             .def("GetIKSolverName",&PyRobotBase::PyManipulator::GetIKSolverName)
             .def("HasIKSolver",&PyRobotBase::PyManipulator::HasIKSolver)
-            .def("GetName",&PyRobotBase::PyManipulator::GetName)
+            .def("GetNumFreeParameters",&PyRobotBase::PyManipulator::GetNumFreeParameters)
             .def("GetFreeParameters",&PyRobotBase::PyManipulator::GetFreeParameters)
             .def("FindIKSolution",pmanipik)
             .def("FindIKSolution",pmanipikf)
             .def("FindIKSolutions",pmanipiks)
             .def("FindIKSolutions",pmanipiksf)
-            .def("GetBase",&PyRobotBase::PyManipulator::GetBase, return_value_policy<manage_new_object>())
-            .def("GetEndEffector",&PyRobotBase::PyManipulator::GetEndEffector, return_value_policy<manage_new_object>())
+            .def("GetBase",&PyRobotBase::PyManipulator::GetBase)
+            .def("GetEndEffector",&PyRobotBase::PyManipulator::GetEndEffector)
             .def("GetGraspTransform",&PyRobotBase::PyManipulator::GetGraspTransform)
-            .def("GetJoints",&PyRobotBase::PyManipulator::GetJoints)
+            .def("GetGripperJoints",&PyRobotBase::PyManipulator::GetGripperJoints)
             .def("GetArmJoints",&PyRobotBase::PyManipulator::GetArmJoints)
+            .def("GetClosingDirection",&PyRobotBase::PyManipulator::GetClosingDirection)
             .def("GetChildJoints",&PyRobotBase::PyManipulator::GetChildJoints)
             .def("GetChildDOFIndices",&PyRobotBase::PyManipulator::GetChildDOFIndices)
             .def("GetChildLinks",&PyRobotBase::PyManipulator::GetChildLinks)
             ;
 
-        class_<PyRobotBase::PyAttachedSensor>("AttachedSensor", no_init)
-            .def("GetSensor",&PyRobotBase::PyAttachedSensor::GetSensor, return_value_policy<manage_new_object>())
-            .def("GetAttachingLink",&PyRobotBase::PyAttachedSensor::GetAttachingLink, return_value_policy<manage_new_object>())
+        class_<PyRobotBase::PyAttachedSensor, boost::shared_ptr<PyRobotBase::PyAttachedSensor> >("AttachedSensor", no_init)
+            .def("GetSensor",&PyRobotBase::PyAttachedSensor::GetSensor)
+            .def("GetAttachingLink",&PyRobotBase::PyAttachedSensor::GetAttachingLink)
             .def("GetRelativeTransform",&PyRobotBase::PyAttachedSensor::GetRelativeTransform)
-            .def("GetRobot",&PyRobotBase::PyAttachedSensor::GetRobot,return_value_policy<manage_new_object>())
+            .def("GetRobot",&PyRobotBase::PyAttachedSensor::GetRobot)
             .def("GetName",&PyRobotBase::PyAttachedSensor::GetName)
             ;
 
-        class_<PyRobotBase::PyGrabbed>("Grabbed",no_init)
+        class_<PyRobotBase::PyGrabbed, boost::shared_ptr<PyRobotBase::PyGrabbed> >("Grabbed",no_init)
             .def_readwrite("grabbedbody",&PyRobotBase::PyGrabbed::grabbedbody)
             .def_readwrite("linkrobot",&PyRobotBase::PyGrabbed::linkrobot)
             .def_readwrite("validColLinks",&PyRobotBase::PyGrabbed::validColLinks)
@@ -2973,10 +2822,10 @@ BOOST_PYTHON_MODULE(openravepy)
             ;
     }
 
-    class_<PyPlannerBase, bases<PyInterfaceBase> >("Planner", no_init);
-    class_<PySensorSystemBase, bases<PyInterfaceBase> >("SensorSystem", no_init);
-    class_<PyTrajectoryBase, bases<PyInterfaceBase> >("Trajectory", no_init);
-    class_<PyControllerBase, bases<PyInterfaceBase> >("Controller", no_init)
+    class_<PyPlannerBase, boost::shared_ptr<PyPlannerBase>, bases<PyInterfaceBase> >("Planner", no_init);
+    class_<PySensorSystemBase, boost::shared_ptr<PySensorSystemBase>, bases<PyInterfaceBase> >("SensorSystem", no_init);
+    class_<PyTrajectoryBase, boost::shared_ptr<PyTrajectoryBase>, bases<PyInterfaceBase> >("Trajectory", no_init);
+    class_<PyControllerBase, boost::shared_ptr<PyControllerBase>, bases<PyInterfaceBase> >("Controller", no_init)
         .def("Init",&PyControllerBase::Init)
         .def("Reset",&PyControllerBase::Reset)
         .def("SetDesired",&PyControllerBase::SetDesired)
@@ -2986,27 +2835,23 @@ BOOST_PYTHON_MODULE(openravepy)
         .def("GetTime",&PyControllerBase::GetTime)
         .def("GetVelocity",&PyControllerBase::GetVelocity)
         .def("GetTorque",&PyControllerBase::GetTorque)
-        .def("SendCmd",&PyControllerBase::SendCmd)
-        .def("SupportsCmd",&PyControllerBase::SupportsCmd)
         ;
-    class_<PyProblemInstance, bases<PyInterfaceBase> >("Problem", no_init)
+    class_<PyProblemInstance, boost::shared_ptr<PyProblemInstance>, bases<PyInterfaceBase> >("Problem", no_init)
         .def("SimulationStep",&PyProblemInstance::SimulationStep)
-        .def("SendCommand",&PyProblemInstance::SendCommand)
         ;
-    class_<PyIkSolverBase, bases<PyInterfaceBase> >("IkSolver", no_init);
+    class_<PyIkSolverBase, boost::shared_ptr<PyIkSolverBase>, bases<PyInterfaceBase> >("IkSolver", no_init);
 
     object (PyPhysicsEngineBase::*SetPhysicsOptions1)(const string&) = &PyPhysicsEngineBase::SetPhysicsOptions;
     bool (PyPhysicsEngineBase::*SetPhysicsOptions2)(int) = &PyPhysicsEngineBase::SetPhysicsOptions;
-    bool (PyPhysicsEngineBase::*SetBodyVelocity1)(PyKinBody*, object, object, object) = &PyPhysicsEngineBase::SetBodyVelocity;
-    bool (PyPhysicsEngineBase::*SetBodyVelocity2)(PyKinBody*, object, object) = &PyPhysicsEngineBase::SetBodyVelocity;
-    class_<PyPhysicsEngineBase, bases<PyInterfaceBase> >("PhysicsEngine", no_init)
+    bool (PyPhysicsEngineBase::*SetBodyVelocity1)(PyKinBodyPtr, object, object, object) = &PyPhysicsEngineBase::SetBodyVelocity;
+    bool (PyPhysicsEngineBase::*SetBodyVelocity2)(PyKinBodyPtr, object, object) = &PyPhysicsEngineBase::SetBodyVelocity;
+    class_<PyPhysicsEngineBase, boost::shared_ptr<PyPhysicsEngineBase>, bases<PyInterfaceBase> >("PhysicsEngine", no_init)
         .def("GetPhysicsOptions",&PyPhysicsEngineBase::GetPhysicsOptions)
         .def("GetPhysicsOptions",SetPhysicsOptions1)
         .def("SetPhysicsOptions",SetPhysicsOptions2)
         .def("InitEnvironment",&PyPhysicsEngineBase::InitEnvironment)
         .def("DestroyEnvironment",&PyPhysicsEngineBase::DestroyEnvironment)
         .def("InitKinBody",&PyPhysicsEngineBase::InitKinBody)
-        .def("DestroyKinBody",&PyPhysicsEngineBase::DestroyKinBody)
         .def("SetBodyVelocity",SetBodyVelocity1)
         .def("SetBodyVelocity",SetBodyVelocity2)
         .def("GetBodyVelocityJoints",&PyPhysicsEngineBase::GetBodyVelocityJoints)
@@ -3021,26 +2866,24 @@ BOOST_PYTHON_MODULE(openravepy)
         .def("SimulateStep",&PyPhysicsEngineBase::SimulateStep)
         ;
     {
-        scope sensor = class_<PySensorBase, bases<PyInterfaceBase> >("Sensor", no_init)
-            .def("GetSensorData",&PySensorBase::GetSensorData,return_value_policy<manage_new_object>())
-            .def("SendCmd",&PySensorBase::SendCmd)
-            .def("SupportsCmd",&PySensorBase::SupportsCmd)
+        scope sensor = class_<PySensorBase, boost::shared_ptr<PySensorBase>, bases<PyInterfaceBase> >("Sensor", no_init)
+            .def("GetSensorData",&PySensorBase::GetSensorData)
             .def("SetTransform",&PySensorBase::SetTransform)
             .def("GetTransform",&PySensorBase::GetTransform)
             .def("GetName",&PySensorBase::GetName)
             ;
 
-        class_<PySensorBase::PySensorData>("SensorData",no_init)
+        class_<PySensorBase::PySensorData, boost::shared_ptr<PySensorBase::PySensorData> >("SensorData",no_init)
             .def_readonly("type",&PySensorBase::PySensorData::type)
             ;
-        class_<PySensorBase::PyLaserSensorData, bases<PySensorBase::PySensorData> >("LaserSensorData",no_init)
+        class_<PySensorBase::PyLaserSensorData, boost::shared_ptr<PySensorBase::PyLaserSensorData>, bases<PySensorBase::PySensorData> >("LaserSensorData",no_init)
             .def_readonly("transform",&PySensorBase::PyLaserSensorData::transform)
             .def_readonly("positions",&PySensorBase::PyLaserSensorData::positions)
             .def_readonly("ranges",&PySensorBase::PyLaserSensorData::ranges)
             .def_readonly("intensity",&PySensorBase::PyLaserSensorData::intensity)
             .def_readonly("id",&PySensorBase::PyLaserSensorData::id)
             ;
-        class_<PySensorBase::PyCameraSensorData, bases<PySensorBase::PySensorData> >("CameraSensorData",no_init)
+        class_<PySensorBase::PyCameraSensorData, boost::shared_ptr<PySensorBase::PyCameraSensorData>, bases<PySensorBase::PySensorData> >("CameraSensorData",no_init)
             .def_readonly("transform",&PySensorBase::PyCameraSensorData::transform)
             .def_readonly("imagedata",&PySensorBase::PyCameraSensorData::imagedata)
             .def_readonly("KK",&PySensorBase::PyCameraSensorData::KK)
@@ -3056,8 +2899,11 @@ BOOST_PYTHON_MODULE(openravepy)
             ;
     }
 
-    class_<PyCollisionCheckerBase, bases<PyInterfaceBase> >("CollisionChecker", no_init);
-    class_<PyRaveViewerBase, bases<PyInterfaceBase> >("Viewer", no_init)
+    class_<PyCollisionCheckerBase, boost::shared_ptr<PyCollisionCheckerBase>, bases<PyInterfaceBase> >("CollisionChecker", no_init)
+        .def("SetCollisionOptions",&PyCollisionCheckerBase::SetCollisionOptions)
+        .def("GetCollisionOptions",&PyCollisionCheckerBase::GetCollisionOptions)
+        ;
+    class_<PyRaveViewerBase, boost::shared_ptr<PyRaveViewerBase>, bases<PyInterfaceBase> >("Viewer", no_init)
         .def("main",&PyRaveViewerBase::main)
         .def("quitmainloop",&PyRaveViewerBase::quitmainloop)
         .def("SetSize",&PyRaveViewerBase::ViewerSetSize)
@@ -3065,33 +2911,25 @@ BOOST_PYTHON_MODULE(openravepy)
         .def("SetTitle",&PyRaveViewerBase::ViewerSetTitle)
         .def("LoadModel",&PyRaveViewerBase::LoadModel)
         ;
-    class_<PyRaveServerBase, bases<PyInterfaceBase> >("Server", no_init);
 
-    bool (PyEnvironmentBase::*pcolb)(PyKinBody*) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcolbr)(PyKinBody*, PyCollisionReport*) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcolbb)(PyKinBody*,PyKinBody*) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcolbbr)(PyKinBody*, PyKinBody*,PyCollisionReport*) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcoll)(PyKinBody::PyLink*) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcollr)(PyKinBody::PyLink*, PyCollisionReport*) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcolll)(PyKinBody::PyLink*,PyKinBody::PyLink*) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcolllr)(PyKinBody::PyLink*,PyKinBody::PyLink*, PyCollisionReport*) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcollb)(PyKinBody::PyLink*, PyKinBody*) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcollbr)(PyKinBody::PyLink*, PyKinBody*, PyCollisionReport*) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcolle)(PyKinBody::PyLink*,object,object) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcoller)(PyKinBody::PyLink*, object,object,PyCollisionReport*) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcolbe)(PyKinBody*,object,object) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcolber)(PyKinBody*, object,object,PyCollisionReport*) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcolyb)(PyRay*,PyKinBody*) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcolybr)(PyRay*, PyKinBody*, PyCollisionReport*) = &PyEnvironmentBase::CheckCollision;
+    bool (PyEnvironmentBase::*pcolb)(PyKinBodyPtr) = &PyEnvironmentBase::CheckCollision;
+    bool (PyEnvironmentBase::*pcolbr)(PyKinBodyPtr, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
+    bool (PyEnvironmentBase::*pcolbb)(PyKinBodyPtr,PyKinBodyPtr) = &PyEnvironmentBase::CheckCollision;
+    bool (PyEnvironmentBase::*pcolbbr)(PyKinBodyPtr, PyKinBodyPtr,PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
+    bool (PyEnvironmentBase::*pcoll)(PyKinBody::PyLinkPtr) = &PyEnvironmentBase::CheckCollision;
+    bool (PyEnvironmentBase::*pcollr)(PyKinBody::PyLinkPtr, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
+    bool (PyEnvironmentBase::*pcolll)(PyKinBody::PyLinkPtr,PyKinBody::PyLinkPtr) = &PyEnvironmentBase::CheckCollision;
+    bool (PyEnvironmentBase::*pcolllr)(PyKinBody::PyLinkPtr,PyKinBody::PyLinkPtr, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
+    bool (PyEnvironmentBase::*pcollb)(PyKinBody::PyLinkPtr, PyKinBodyPtr) = &PyEnvironmentBase::CheckCollision;
+    bool (PyEnvironmentBase::*pcollbr)(PyKinBody::PyLinkPtr, PyKinBodyPtr, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
+    bool (PyEnvironmentBase::*pcolle)(PyKinBody::PyLinkPtr,object,object) = &PyEnvironmentBase::CheckCollision;
+    bool (PyEnvironmentBase::*pcoller)(PyKinBody::PyLinkPtr, object,object,PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
+    bool (PyEnvironmentBase::*pcolbe)(PyKinBodyPtr,object,object) = &PyEnvironmentBase::CheckCollision;
+    bool (PyEnvironmentBase::*pcolber)(PyKinBodyPtr, object,object,PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
+    bool (PyEnvironmentBase::*pcolyb)(PyRay*,PyKinBodyPtr) = &PyEnvironmentBase::CheckCollision;
+    bool (PyEnvironmentBase::*pcolybr)(PyRay*, PyKinBodyPtr, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
     bool (PyEnvironmentBase::*pcoly)(PyRay*) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcolyr)(PyRay*, PyCollisionReport*) = &PyEnvironmentBase::CheckCollision;
-
-    PyRobotBase* (PyEnvironmentBase::*ReadRobotXML1)(const string&) = &PyEnvironmentBase::ReadRobotXML;
-    PyRobotBase* (PyEnvironmentBase::*ReadRobotXML2)(const string&,bool) = &PyEnvironmentBase::ReadRobotXML;
-    PyKinBody* (PyEnvironmentBase::*ReadKinBodyXML1)(const string&) = &PyEnvironmentBase::ReadKinBodyXML;
-    PyKinBody* (PyEnvironmentBase::*ReadKinBodyXML2)(const string&,bool) = &PyEnvironmentBase::ReadKinBodyXML;
-    PyKinBody* (PyEnvironmentBase::*CreateKinBody0)() = &PyEnvironmentBase::CreateKinBody;
-    PyKinBody* (PyEnvironmentBase::*CreateKinBody1)(bool) = &PyEnvironmentBase::CreateKinBody;
+    bool (PyEnvironmentBase::*pcolyr)(PyRay*, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
 
     void (PyEnvironmentBase::*LockPhysics1)(bool) = &PyEnvironmentBase::LockPhysics;
     void (PyEnvironmentBase::*LockPhysics2)(bool, float) = &PyEnvironmentBase::LockPhysics;
@@ -3099,24 +2937,25 @@ BOOST_PYTHON_MODULE(openravepy)
     {
         scope env = classenv
             .def("Reset",&PyEnvironmentBase::Reset)
+            .def("Destroy",&PyEnvironmentBase::Destroy)
             .def("GetPluginInfo",&PyEnvironmentBase::GetPluginInfo)
-            .def("GetLoadedInterfaces",&PyEnvironmentBase::GetLoadedInterfaces, return_value_policy<manage_new_object>())
+            .def("GetLoadedInterfaces",&PyEnvironmentBase::GetLoadedInterfaces)
             .def("LoadPlugin",&PyEnvironmentBase::LoadPlugin)
-            .def("CreateRobot", &PyEnvironmentBase::CreateRobot, return_value_policy<manage_new_object>() )
-            .def("CreatePlanner", &PyEnvironmentBase::CreatePlanner, return_value_policy<manage_new_object>() )
-            .def("CreateSensorSystem", &PyEnvironmentBase::CreateSensorSystem, return_value_policy<manage_new_object>() )
-            .def("CreateController", &PyEnvironmentBase::CreateController, return_value_policy<manage_new_object>() )
-            .def("CreateProblem", &PyEnvironmentBase::CreateProblem, return_value_policy<manage_new_object>() )
-            .def("CreateIkSolver", &PyEnvironmentBase::CreateIkSolver, return_value_policy<manage_new_object>() )
-            .def("CreatePhysicsEngine", &PyEnvironmentBase::CreatePhysicsEngine, return_value_policy<manage_new_object>() )
-            .def("CreateSensor", &PyEnvironmentBase::CreateSensor, return_value_policy<manage_new_object>() )
-            .def("CreateCollisionChecker", &PyEnvironmentBase::CreateCollisionChecker, return_value_policy<manage_new_object>() )
-            .def("CreateViewer", &PyEnvironmentBase::CreateViewer, return_value_policy<manage_new_object>() )
-            .def("CreateServer", &PyEnvironmentBase::CreateServer, return_value_policy<manage_new_object>() )
-        
-            .def("CloneSelf",&PyEnvironmentBase::CloneSelf, return_value_policy<manage_new_object>())
+            .def("CreateInterface", &PyEnvironmentBase::CreateInterface )
+            .def("CreateRobot", &PyEnvironmentBase::CreateRobot )
+            .def("CreatePlanner", &PyEnvironmentBase::CreatePlanner )
+            .def("CreateSensorSystem", &PyEnvironmentBase::CreateSensorSystem )
+            .def("CreateController", &PyEnvironmentBase::CreateController )
+            .def("CreateProblem", &PyEnvironmentBase::CreateProblem )
+            .def("CreateIkSolver", &PyEnvironmentBase::CreateIkSolver )
+            .def("CreatePhysicsEngine", &PyEnvironmentBase::CreatePhysicsEngine )
+            .def("CreateSensor", &PyEnvironmentBase::CreateSensor )
+            .def("CreateCollisionChecker", &PyEnvironmentBase::CreateCollisionChecker )
+            .def("CreateViewer", &PyEnvironmentBase::CreateViewer )
+            
+            .def("CloneSelf",&PyEnvironmentBase::CloneSelf)
             .def("SetCollisionChecker",&PyEnvironmentBase::SetCollisionChecker)
-            .def("GetCollisionChecker",&PyEnvironmentBase::GetCollisionChecker, return_value_policy<manage_new_object>() )
+            .def("GetCollisionChecker",&PyEnvironmentBase::GetCollisionChecker )
 
             .def("CheckCollision",pcolb)
             .def("CheckCollision",pcolbr )
@@ -3138,25 +2977,24 @@ BOOST_PYTHON_MODULE(openravepy)
             .def("CheckCollision",pcolyr)
             .def("CheckCollisionRays",&PyEnvironmentBase::CheckCollisionRays,CheckCollisionRays_overloads(args("rays","body","front_facing_only")))
         
-            .def("Load",&PyEnvironmentBase::Load, Load_overloads(args("filename","lockphysics")))
-            .def("Save",&PyEnvironmentBase::Save, Save_overloads(args("filename","lockphysics")))
-            .def("ReadRobotXML",ReadRobotXML1, return_value_policy<manage_new_object>())
-            .def("ReadRobotXML",ReadRobotXML2, return_value_policy<manage_new_object>())
-            .def("ReadKinBodyXML",ReadKinBodyXML1, return_value_policy<manage_new_object>())
-            .def("ReadKinBodyXML",ReadKinBodyXML2, return_value_policy<manage_new_object>())
+            .def("Load",&PyEnvironmentBase::Load)
+            .def("Save",&PyEnvironmentBase::Save)
+            .def("ReadRobotXMLFile",&PyEnvironmentBase::ReadRobotXMLFile)
+            .def("ReadRobotXMLData",&PyEnvironmentBase::ReadRobotXMLData)
+            .def("ReadKinBodyXMLFile",&PyEnvironmentBase::ReadKinBodyXMLFile)
+            .def("ReadKinBodyXMLData",&PyEnvironmentBase::ReadKinBodyXMLData)
             .def("AddKinBody",&PyEnvironmentBase::AddKinBody)
             .def("AddRobot",&PyEnvironmentBase::AddRobot)
             .def("RemoveKinBody",&PyEnvironmentBase::RemoveKinBody)
-            .def("GetKinBody",&PyEnvironmentBase::GetKinBody, return_value_policy<manage_new_object>())
-            .def("GetBodyFromNetworkId",&PyEnvironmentBase::GetBodyFromNetworkId, return_value_policy<manage_new_object>() )
-            .def("CreateKinBody",CreateKinBody0, return_value_policy<manage_new_object>() )
-            .def("CreateKinBody",CreateKinBody1, return_value_policy<manage_new_object>() )
-
+            .def("GetKinBody",&PyEnvironmentBase::GetKinBody)
+            .def("GetBodyFromNetworkId",&PyEnvironmentBase::GetBodyFromNetworkId )
+            .def("CreateKinBody",&PyEnvironmentBase::CreateKinBody)
+            .def("CreateTrajectory",&PyEnvironmentBase::CreateTrajectory)
             .def("LoadProblem",&PyEnvironmentBase::LoadProblem)
             .def("RemoveProblem",&PyEnvironmentBase::RemoveProblem)
-            .def("GetProblems",&PyEnvironmentBase::GetProblems)
+            .def("GetLoadedProblems",&PyEnvironmentBase::GetLoadedProblems)
             .def("SetPhysicsEngine",&PyEnvironmentBase::SetPhysicsEngine)
-            .def("GetPhysicsEngine",&PyEnvironmentBase::GetPhysicsEngine, return_value_policy<manage_new_object>())
+            .def("GetPhysicsEngine",&PyEnvironmentBase::GetPhysicsEngine)
             .def("StepSimulation",&PyEnvironmentBase::StepSimulation)
             .def("StartSimulation",&PyEnvironmentBase::StartSimulation)
             .def("StopSimulation",&PyEnvironmentBase::StopSimulation)
@@ -3164,14 +3002,13 @@ BOOST_PYTHON_MODULE(openravepy)
             .def("LockPhysics",LockPhysics1)
             .def("LockPhysics",LockPhysics2)
             .def("SetViewer",&PyEnvironmentBase::SetViewer,SetViewer_overloads(args("viewername","showviewer")))
-            .def("GetViewer",&PyEnvironmentBase::GetViewer, return_value_policy<manage_new_object>())
+            .def("GetViewer",&PyEnvironmentBase::GetViewer)
             .def("plot3",&PyEnvironmentBase::plot3,plot3_overloads(args("points","pointsize","colors","drawstyle")))
             .def("drawlinestrip",&PyEnvironmentBase::drawlinestrip,drawlinestrip_overloads(args("points","linewidth","colors","drawstyle")))
             .def("drawlinelist",&PyEnvironmentBase::drawlinelist,drawlinelist_overloads(args("points","linewidth","colors","drawstyle")))
             .def("drawarrow",&PyEnvironmentBase::drawarrow,drawarrow_overloads(args("p1","p2","linewidth","color")))
             .def("drawbox",&PyEnvironmentBase::drawbox,drawbox_overloads(args("pos","extents","color")))
             .def("drawtrimesh",&PyEnvironmentBase::drawtrimesh,drawtrimesh_overloads(args("points","indices","colors")))
-            .def("closegraph",&PyEnvironmentBase::closegraph)
             .def("SetCamera",&PyEnvironmentBase::SetCamera)
             .def("SetCameraLookAt",&PyEnvironmentBase::SetCameraLookAt)
             .def("GetCameraTransform",&PyEnvironmentBase::GetCameraTransform)
@@ -3179,14 +3016,10 @@ BOOST_PYTHON_MODULE(openravepy)
             .def("WriteCameraImage",&PyEnvironmentBase::WriteCameraImage)
             .def("GetRobots",&PyEnvironmentBase::GetRobots)
             .def("GetBodies",&PyEnvironmentBase::GetBodies)
-            .def("SetPublishBodiesAnytime",&PyEnvironmentBase::SetPublishBodiesAnytime)
-            .def("GetPublishBodiesAnytime",&PyEnvironmentBase::GetPublishBodiesAnytime)
-            .def("Triangulate",&PyEnvironmentBase::Triangulate, return_value_policy<manage_new_object>())
-            .def("TriangulateScene",&PyEnvironmentBase::TriangulateScene, return_value_policy<manage_new_object>())
+            .def("Triangulate",&PyEnvironmentBase::Triangulate)
+            .def("TriangulateScene",&PyEnvironmentBase::TriangulateScene)
             .def("SetDebugLevel",&PyEnvironmentBase::SetDebugLevel)
             .def("GetDebugLevel",&PyEnvironmentBase::GetDebugLevel)
-            .def("AttachServer",&PyEnvironmentBase::AttachServer)
-            .def("GetServer",&PyEnvironmentBase::GetServer, return_value_policy<manage_new_object>())
             .def("GetHomeDirectory",&PyEnvironmentBase::GetHomeDirectory)
             ;
 

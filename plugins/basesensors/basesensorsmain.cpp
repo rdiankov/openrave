@@ -17,49 +17,50 @@
 #include "baseflashlidar3d.h"
 #include "basecamera.h"
 
-// declaring variables with stdcall can be a little complex
-#ifdef _MSC_VER
-
-#define PROT_STDCALL(name, paramlist) __stdcall name paramlist
-#define DECL_STDCALL(name, paramlist) __stdcall name paramlist
-
-#else
-
-#ifdef __x86_64__
-#define DECL_STDCALL(name, paramlist) name paramlist
-#else
-#define DECL_STDCALL(name, paramlist) __attribute__((stdcall)) name paramlist
-#endif
-
-#endif // _MSC_VER
-
 // need c linkage
 extern "C" {
 
-// for some reason windows complains when the prototypes are different
-InterfaceBase* DECL_STDCALL(ORCreate, (PluginType type, wchar_t* name, EnvironmentBase* penv))
+static list< boost::shared_ptr<void> > s_listRegisteredReaders;
+InterfaceBasePtr CreateInterface(PluginType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv)
 {
-    if( name == NULL ) return NULL;
+    if( strcmp(pluginhash,RaveGetInterfaceHash(type)) ) {
+        RAVELOG_WARNA("plugin type hash is wrong");
+        throw openrave_exception("bad plugin hash");
+    }
+    if( !penv )
+        return InterfaceBasePtr();
     
-    switch(type) {
-        case PT_Sensor:
-            if( wcsicmp(name, L"BaseLaser2D") == 0 ) 
-                return new BaseLaser2DSensor(penv);
-            else if( wcsicmp(name, L"BaseSpinningLaser2D") == 0 ) 
-                return new BaseSpinningLaser2DSensor(penv);
-            else if( wcsicmp(name, L"BaseFlashLidar3D") == 0 )
-                return new BaseFlashLidar3DSensor(penv);
-            else if( wcsicmp(name, L"BaseCamera") == 0 )
-                return new BaseCameraSensor(penv);
-            break;
-        default:
-            break;
+    if( s_listRegisteredReaders.size() == 0 ) {
+        s_listRegisteredReaders.push_back(penv->RegisterXMLReader(PT_Sensor,"baselaser2d",BaseLaser2DSensor::CreateXMLReader));
+        s_listRegisteredReaders.push_back(penv->RegisterXMLReader(PT_Sensor,"basespinninglaser2d",BaseSpinningLaser2DSensor::CreateXMLReader));
+        s_listRegisteredReaders.push_back(penv->RegisterXMLReader(PT_Sensor,"baseflashlidar3d",BaseFlashLidar3DSensor::CreateXMLReader));
+        s_listRegisteredReaders.push_back(penv->RegisterXMLReader(PT_Sensor,"basecamera",BaseCameraSensor::CreateXMLReader));
     }
 
-    return NULL;
+    stringstream ss(name);
+    string interfacename;
+    ss >> interfacename;
+    std::transform(interfacename.begin(), interfacename.end(), interfacename.begin(), ::tolower);
+
+    switch(type) {
+    case PT_Sensor:
+        if( interfacename == "baselaser2d" )
+            return InterfaceBasePtr(new BaseLaser2DSensor(penv));
+        else if( interfacename == "basespinninglaser2d" )
+            return InterfaceBasePtr(new BaseSpinningLaser2DSensor(penv));
+        else if( interfacename == "baseflashlidar3d" )
+            return InterfaceBasePtr(new BaseFlashLidar3DSensor(penv));
+        else if( interfacename == "basecamera" )
+            return InterfaceBasePtr(new BaseCameraSensor(penv));
+        break;
+    default:
+        break;
+    }
+
+    return InterfaceBasePtr();
 }
 
-bool DECL_STDCALL(GetPluginAttributes, (PLUGININFO* pinfo, int size))
+bool GetPluginAttributes(PLUGININFO* pinfo, int size)
 {
     if( pinfo == NULL ) return false;
     if( size != sizeof(PLUGININFO) ) {
@@ -68,15 +69,16 @@ bool DECL_STDCALL(GetPluginAttributes, (PLUGININFO* pinfo, int size))
     }
 
     // fill pinfo
-    pinfo->sensors.push_back(L"BaseLaser2D");
-    pinfo->sensors.push_back(L"BaseSpinningLaser2D");
-    pinfo->sensors.push_back(L"BaseFlashLidar3D");
-    pinfo->sensors.push_back(L"BaseCamera");
+    pinfo->interfacenames[OpenRAVE::PT_Sensor].push_back("BaseLaser2D");
+    pinfo->interfacenames[OpenRAVE::PT_Sensor].push_back("BaseSpinningLaser2D");
+    pinfo->interfacenames[OpenRAVE::PT_Sensor].push_back("BaseFlashLidar3D");
+    pinfo->interfacenames[OpenRAVE::PT_Sensor].push_back("BaseCamera");
     return true;
 }
 
-void DECL_STDCALL(DestroyPlugin, ())
+void DestroyPlugin()
 {
+    s_listRegisteredReaders.clear();
 }
 
 }

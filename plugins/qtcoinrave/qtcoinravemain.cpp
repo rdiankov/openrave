@@ -33,34 +33,43 @@ EnvironmentBase* g_pEnviron = NULL;
 
 #endif // _MSC_VER
 
+static int s_SoQtArgc = 0; // has to be static!!
+
 // need c linkage
 extern "C" {
 
-static int s_SoQtArgc = 0; // has to be static!!
-
-// for some reason windows complains when the prototypes are different
-InterfaceBase* DECL_STDCALL(ORCreate, (PluginType type, wchar_t* name, EnvironmentBase* penv))
+InterfaceBasePtr CreateInterface(PluginType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv)
 {
-    if( name == NULL ) return NULL;
-    
+    if( strcmp(pluginhash,RaveGetInterfaceHash(type)) ) {
+        RAVELOG_WARNA("plugin type hash is wrong");
+        throw openrave_exception("bad plugin hash");
+    }
+    if( !penv )
+        return InterfaceBasePtr();
+
+    stringstream ss(name);
+    string interfacename;
+    ss >> interfacename;
+    std::transform(interfacename.begin(), interfacename.end(), interfacename.begin(), ::tolower);
+
     switch(type) {
     case PT_Viewer:
-        if( wcsicmp(name, L"qtcoin") == 0 ) {
+        if( interfacename == "qtcoin" ) {
             if( QtCoinViewer::s_InitRefCount == 0 ) {
                 SoQt::init(s_SoQtArgc, NULL, NULL);
                 ++QtCoinViewer::s_InitRefCount;
             }
-            return new QtCoinViewer(penv);
+            return InterfaceBasePtr(new QtCoinViewer(penv));
         }
         break;
     default:
         break;
     }
     
-    return NULL;
+    return InterfaceBasePtr();
 }
 
-bool DECL_STDCALL(GetPluginAttributes, (PLUGININFO* pinfo, int size))
+bool GetPluginAttributes(PLUGININFO* pinfo, int size)
 {
     if( pinfo == NULL ) return false;
     if( size != sizeof(PLUGININFO) ) {
@@ -68,12 +77,11 @@ bool DECL_STDCALL(GetPluginAttributes, (PLUGININFO* pinfo, int size))
         return false;
     }
 
-    // fill pinfo
-    pinfo->viewers.push_back(L"qtcoin");
+    pinfo->interfacenames[PT_Viewer].push_back("qtcoin");
     return true;
 }
 
-void DECL_STDCALL(DestroyPlugin, ())
+void DestroyPlugin()
 {
 }
 

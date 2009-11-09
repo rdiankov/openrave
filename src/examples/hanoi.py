@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from openravepy import *
 from numpy import *
+from optparse import OptionParser
 
 g_probsmanip = None
 
@@ -118,7 +119,7 @@ def GetGrasp(Tdisk, radius, angles):
 def hanoimove(robot, disk, srcpeg, destpeg, height):
     """Moves the arm and manipulator to grasp a peg and place it on a different peg"""
     global g_probsmanip
-    openhandfn = lambda: MoveToPosition(robot,[-0.7],robot.GetActiveManipulator().GetJoints())
+    openhandfn = lambda: MoveToPosition(robot,[-0.7],robot.GetActiveManipulator().GetGripperJoints())
     openhandfn()
     Tdisk = disk.GetTransform()
 
@@ -166,8 +167,20 @@ def hanoisolve(n, pegfrom, pegto, pegby, robot, heights):
         hanoisolve(n-1, pegby, pegto, pegfrom, robot, heights)
 
 if __name__ == "__main__":
+    parser = OptionParser(description='Manipulation planning example solving the hanoi problem.')
+    parser.add_option('--collision',
+                      action="store",type='string',dest='collision',default=None,
+                      help='Name of collision checker to use when solving')
+    (options, args) = parser.parse_args()
+
     env = Environment()
     env.SetViewer('qtcoin')
+
+    if options.collision is not None:
+        c = env.CreateCollisionChecker(options.collision)
+        if c is not None:
+            print('setting %s collision checker'%options.collision)
+            env.SetCollisionChecker(c)
 
     env.Reset()
     env.Load('data/hanoi_complex.env.xml')

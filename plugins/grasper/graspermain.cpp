@@ -13,52 +13,43 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
-#include "graspexplorationplanner.h"
-
-// declaring variables with stdcall can be a little complex
-#ifdef _MSC_VER
-
-#define PROT_STDCALL(name, paramlist) __stdcall name paramlist
-#define DECL_STDCALL(name, paramlist) __stdcall name paramlist
-
-#else
-
-#ifdef __x86_64__
-#define DECL_STDCALL(name, paramlist) name paramlist
-#else
-#define DECL_STDCALL(name, paramlist) __attribute__((stdcall)) name paramlist
-#endif
-
-#endif // _MSC_VER
+#include "grasperplanner.h"
+#include "grasper.h"
 
 // need c linkage
 extern "C" {
 
-// for some reason windows complains when the prototypes are different
-InterfaceBase* DECL_STDCALL(ORCreate, (PluginType type, wchar_t* name, EnvironmentBase* penv))
+InterfaceBasePtr CreateInterface(PluginType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv)
 {
+    if( strcmp(pluginhash,RaveGetInterfaceHash(type)) ) {
+        RAVELOG_WARNA("plugin type hash is wrong");
+        throw openrave_exception("bad plugin hash");
+    }
+    if( !penv )
+        return InterfaceBasePtr();
+    
+    stringstream ss(name);
+    string interfacename;
+    ss >> interfacename;
+    std::transform(interfacename.begin(), interfacename.end(), interfacename.begin(), ::tolower);
+
     switch(type) {
-        case PT_Planner:
-            if( wcsicmp(name, L"Grasper") == 0 )
-                return new GrasperPlanner(penv);
-            if( wcsicmp(name, L"GraspExploration") == 0 )
-                return new GraspExplorationPlanner(penv);
-            break;
-
-        case PT_ProblemInstance:
-            if( wcsicmp(name, L"GrasperProblem") == 0 )
-                return new GrasperProblem(penv);
-            break;
-
-        default:
-            break;
+    case PT_Planner:
+        if( interfacename == "grasper" )
+            return InterfaceBasePtr(new GrasperPlanner(penv));
+        break;
+    case PT_ProblemInstance:
+        if( interfacename == "grasperproblem")
+            return InterfaceBasePtr(new GrasperProblem(penv));
+        break;
+    default:
+        break;
     }
 
-
-    return NULL;
+    return InterfaceBasePtr();
 }
 
-bool DECL_STDCALL(GetPluginAttributes, (PLUGININFO* pinfo, int size))
+bool GetPluginAttributes(PLUGININFO* pinfo, int size)
 {
     if( pinfo == NULL ) return false;
     if( size != sizeof(PLUGININFO) ) {
@@ -66,13 +57,13 @@ bool DECL_STDCALL(GetPluginAttributes, (PLUGININFO* pinfo, int size))
         return false;
     }
 
-    pinfo->planners.push_back(L"Grasper");
-    pinfo->planners.push_back(L"GraspExploration");
-    pinfo->problems.push_back(L"GrasperProblem");
+    // fill pinfo
+    pinfo->interfacenames[OpenRAVE::PT_Planner].push_back("Grasper");
+    pinfo->interfacenames[OpenRAVE::PT_ProblemInstance].push_back("GrasperProblem");
     return true;
 }
 
-void DECL_STDCALL(DestroyPlugin, ())
+void DestroyPlugin()
 {
 }
 

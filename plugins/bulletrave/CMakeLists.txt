@@ -11,7 +11,7 @@ if(bullet_FOUND)
   include_directories(${CMAKE_SOURCE_DIR} ${bullet_INCLUDE_DIRS})
   link_directories(${OPENRAVE_LINK_DIRS} ${bullet_LIBRARY_DIRS})
 
-  add_library(bulletrave SHARED bulletravemain.cpp bulletspace.cpp)
+  add_library(bulletrave SHARED bulletravemain.cpp)
 
   #message(STATUS "Bullet found ${bullet_INCLUDE_DIRS}, libs: ${bullet_LIBRARIES}, cflags=${bullet_CFLAGS_OTHER}, lflags=${bullet_LDFLAGS_OTHER}, building bulletrave plugin")
 

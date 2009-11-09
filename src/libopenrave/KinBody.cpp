@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2008 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -163,7 +163,8 @@ void GenerateSphereTriangulation(KinBody::Link::TRIMESH& tri, int levels)
     temp.vertices.push_back(Vector(-GTS_M_ICOSAHEDRON_X, -GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z));
     temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_Z, -GTS_M_ICOSAHEDRON_X, +GTS_M_ICOSAHEDRON_Y));
 
-    int indices[] = {
+    const int nindices=60;
+    int indices[nindices] = {
         0, 1, 2,
         1, 3, 4,
         3, 5, 6,
@@ -189,7 +190,7 @@ void GenerateSphereTriangulation(KinBody::Link::TRIMESH& tri, int levels)
     Vector v[3];
     
     // make sure oriented CCW 
-    for(size_t i = 0; i < ARRAYSIZE(indices); i += 3 ) {
+    for(int i = 0; i < nindices; i += 3 ) {
         v[0] = temp.vertices[indices[i]];
         v[1] = temp.vertices[indices[i+1]];
         v[2] = temp.vertices[indices[i+2]];
@@ -197,8 +198,8 @@ void GenerateSphereTriangulation(KinBody::Link::TRIMESH& tri, int levels)
             swap(indices[i], indices[i+1]);
     }
 
-    temp.indices.resize(ARRAYSIZE(indices));
-    memcpy(&temp.indices[0], indices, sizeof(indices));
+    temp.indices.resize(nindices);
+    std::copy(&indices[0],&indices[nindices],temp.indices.begin());
 
     KinBody::Link::TRIMESH* pcur = &temp;
     KinBody::Link::TRIMESH* pnew = &temp2;
@@ -277,6 +278,7 @@ bool KinBody::Link::GEOMPROPERTIES::InitCollisionMesh(float fTessellation)
                         Vector(-ex.x, ex.y, -ex.z),
                         Vector(-ex.x, -ex.y, ex.z),
                         Vector(-ex.x, -ex.y, -ex.z) };
+        const int nindices = 36;
         int indices[] = {
             0, 1, 2,
             1, 2, 3,
@@ -292,7 +294,7 @@ bool KinBody::Link::GEOMPROPERTIES::InitCollisionMesh(float fTessellation)
             3, 5, 7
         };
 
-        for(size_t i = 0; i < ARRAYSIZE(indices); i += 3 ) {
+        for(int i = 0; i < nindices; i += 3 ) {
             Vector v1 = v[indices[i]];
             Vector v2 = v[indices[i+1]];
             Vector v3 = v[indices[i+2]];
@@ -302,9 +304,9 @@ bool KinBody::Link::GEOMPROPERTIES::InitCollisionMesh(float fTessellation)
         }
 
         collisionmesh.vertices.resize(8);
-        memcpy(&collisionmesh.vertices[0], v, sizeof(v));
-        collisionmesh.indices.resize(ARRAYSIZE(indices));
-        memcpy(&collisionmesh.indices[0], indices, sizeof(indices));
+        std::copy(&v[0],&v[8],collisionmesh.vertices.begin());
+        collisionmesh.indices.resize(nindices);
+        std::copy(&indices[0],&indices[nindices],collisionmesh.indices.begin());
         break;
     }
     case KinBody::Link::GEOMPROPERTIES::GeomCylinder: {
@@ -334,14 +336,13 @@ bool KinBody::Link::GEOMPROPERTIES::InitCollisionMesh(float fTessellation)
         break;
     }
     default:
-        RAVELOG(L"unrecognized geom type %d!\n", GetType());
-        return false;
+        throw openrave_exception(str(boost::format("unrecognized geom type %d!\n")%GetType()));
     }
 
     return true;
 }
 
-KinBody::Link::Link(KinBody* parent)
+KinBody::Link::Link(KinBodyPtr parent)
 {
     _parent = parent;
     bStatic = false;
@@ -352,7 +353,7 @@ KinBody::Link::Link(KinBody* parent)
 
 KinBody::Link::~Link()
 {
-    RAVELOG_VERBOSEA("destroy body %S\n", GetName());
+    //RAVELOG_VERBOSEA(str(boost::format("destroy link %s\n")%GetName()));
 }
 
 bool KinBody::Link::IsEnabled() const
@@ -362,7 +363,7 @@ bool KinBody::Link::IsEnabled() const
 
 void KinBody::Link::Enable(bool bEnable)
 {
-    GetParent()->GetEnv()->GetCollisionChecker()->EnableLink(this,bEnable);
+    GetParent()->GetEnv()->GetCollisionChecker()->EnableLink(shared_from_this(),bEnable);
     _bIsEnabled = bEnable;
 }
 
@@ -395,7 +396,7 @@ AABB KinBody::Link::ComputeAABB() const
 void KinBody::Link::SetTransform(const Transform& t)
 {
     _t = t;
-    _parent->_nUpdateStampId++;
+    GetParent()->_nUpdateStampId++;
 }
 
 Transform KinBody::Link::GetTransform() const
@@ -406,25 +407,25 @@ Transform KinBody::Link::GetTransform() const
 void KinBody::Link::SetForce(const Vector& force, const Vector& pos, bool bAdd)
 {
     assert( GetParent()->GetEnv() != NULL );
-    GetParent()->GetEnv()->GetPhysicsEngine()->SetBodyForce(this, force, pos, bAdd);
+    GetParent()->GetEnv()->GetPhysicsEngine()->SetBodyForce(shared_from_this(), force, pos, bAdd);
 }
 
 void KinBody::Link::SetTorque(const Vector& torque, bool bAdd)
 {
     assert( GetParent()->GetEnv() != NULL );
-    GetParent()->GetEnv()->GetPhysicsEngine()->SetBodyTorque(this, torque, bAdd);
+    GetParent()->GetEnv()->GetPhysicsEngine()->SetBodyTorque(shared_from_this(), torque, bAdd);
 }
 
-KinBody::Joint::Joint(KinBody* parent)
+KinBody::Joint::Joint(KinBodyPtr parent)
 {
     assert( parent != NULL );
     _parent = parent;
+    vMimicCoeffs.resize(2); vMimicCoeffs[0] = 1; vMimicCoeffs[1] = 0;
     nMimicJointIndex = -1;
     fResolution = 0.02;
     fMaxVel = 1e5f;
     fMaxAccel = 1e5f;
     fMaxTorque = 1e5f;
-    bodies[0] = bodies[1] = NULL;
     offset = 0;
     dofindex = -1; // invalid index
 }
@@ -445,59 +446,60 @@ int KinBody::Joint::GetDOF() const
     }
 }
 
-int KinBody::Joint::GetValues(dReal *pValues) const
+void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
 {
-    if( pValues != NULL ) {
-        Transform tjoint;
-        if ( bodies[1] != NULL && !bodies[1]->IsStatic() )
-            tjoint = tinvLeft * bodies[0]->GetTransform().inverse() * bodies[1]->GetTransform() * tinvRight;
-        else
-            tjoint = tinvLeft * _parent->GetTransform().inverse() * bodies[0]->GetTransform() * tinvRight;
+    Transform tjoint;
+    if ( bodies[1] != NULL && !bodies[1]->IsStatic() )
+        tjoint = tinvLeft * bodies[0]->GetTransform().inverse() * bodies[1]->GetTransform() * tinvRight;
+    else
+        tjoint = tinvLeft * GetParent()->GetTransform().inverse() * bodies[0]->GetTransform() * tinvRight;
         
-        switch(type) {
-        case JointHinge:
-            pValues[0] = offset-2.0f*RaveAtan2(tjoint.rot.y*vAxes[0].x+tjoint.rot.z*vAxes[0].y+tjoint.rot.w*vAxes[0].z, tjoint.rot.x);
-            break;
-        case JointHinge2:
-        	{
-                Vector axis1cur = tjoint.rotate(vAxes[0]);
-			    Vector axis2cur = tjoint.rotate(vAxes[1]);
-                Vector vec1;
-                Vector vec2;
-                Vector vec3;
-                vec1 = (vAxes[1] - vAxes[0].dot(vAxes[1])*vAxes[0]).normalize();
-                vec2 = (axis2cur - vAxes[0].dot(axis2cur)*vAxes[0]).normalize();
-                vec3 = vAxes[0]; vec3.Cross(vec1);
-                pValues[0] = -RaveAtan2(vec3.dot(vec2), vec1.dot(vec2));
-                vec1 = (vAxes[0] - axis2cur.dot(vAxes[0])*axis2cur).normalize();
-                vec2 = (axis1cur - axis2cur.dot(axis1cur)*axis2cur).normalize();
-                vec3 = axis2cur; vec3.Cross(vec1);
-                pValues[1] = -RaveAtan2(vec3.dot(vec2), vec1.dot(vec2));
-			}
-            break;
-        case JointSlider:
-            pValues[0] = offset-(tjoint.trans.x*vAxes[0].x+tjoint.trans.y*vAxes[0].y+tjoint.trans.z*vAxes[0].z);
-            break;
-        case JointSpherical: {
-            dReal fsinang2 = tjoint.rot.y*tjoint.rot.y+tjoint.rot.z*tjoint.rot.z+tjoint.rot.w*tjoint.rot.w;
-            if( fsinang2 > 1e-10f ) {
-                dReal fsinang = RaveSqrt(fsinang2);
-                dReal fmult = 2*RaveAtan2(fsinang,tjoint.rot.x)/fsinang;
-                pValues[0] = tjoint.rot.y*fmult; pValues[1] = tjoint.rot.z*fmult; pValues[2] = tjoint.rot.w*fmult;
-            }
-            else {
-                pValues[0] = 0; pValues[1] = 0; pValues[2] = 0;
-            }
-            break;
-        }
-        default:
-            RAVELOG_WARNA("unknown joint type %d\n", type);
-            if( GetDOF() > 0 )
-                memset(pValues,0,sizeof(dReal)*GetDOF());
-        }
-    }
+    if( !bAppend )
+        pValues.resize(0);
 
-    return GetDOF();
+    switch(type) {
+    case JointHinge:
+        pValues.push_back(offset-2.0f*RaveAtan2(tjoint.rot.y*vAxes[0].x+tjoint.rot.z*vAxes[0].y+tjoint.rot.w*vAxes[0].z, tjoint.rot.x));
+        break;
+    case JointHinge2:
+        {
+            Vector axis1cur = tjoint.rotate(vAxes[0]);
+            Vector axis2cur = tjoint.rotate(vAxes[1]);
+            Vector vec1;
+            Vector vec2;
+            Vector vec3;
+            vec1 = (vAxes[1] - vAxes[0].dot(vAxes[1])*vAxes[0]).normalize();
+            vec2 = (axis2cur - vAxes[0].dot(axis2cur)*vAxes[0]).normalize();
+            vec3 = vAxes[0]; vec3.Cross(vec1);
+            pValues.push_back(-RaveAtan2(vec3.dot(vec2), vec1.dot(vec2)));
+            vec1 = (vAxes[0] - axis2cur.dot(vAxes[0])*axis2cur).normalize();
+            vec2 = (axis1cur - axis2cur.dot(axis1cur)*axis2cur).normalize();
+            vec3 = axis2cur; vec3.Cross(vec1);
+            pValues.push_back(-RaveAtan2(vec3.dot(vec2), vec1.dot(vec2)));
+        }
+        break;
+    case JointSlider:
+        pValues.push_back(offset-(tjoint.trans.x*vAxes[0].x+tjoint.trans.y*vAxes[0].y+tjoint.trans.z*vAxes[0].z));
+        break;
+    case JointSpherical: {
+        dReal fsinang2 = tjoint.rot.y*tjoint.rot.y+tjoint.rot.z*tjoint.rot.z+tjoint.rot.w*tjoint.rot.w;
+        if( fsinang2 > 1e-10f ) {
+            dReal fsinang = RaveSqrt(fsinang2);
+            dReal fmult = 2*RaveAtan2(fsinang,tjoint.rot.x)/fsinang;
+            pValues.push_back(tjoint.rot.y*fmult);
+            pValues.push_back(tjoint.rot.z*fmult);
+            pValues.push_back(tjoint.rot.w*fmult);
+        }
+        else {
+            pValues.push_back(0);
+            pValues.push_back(0);
+            pValues.push_back(0);
+        }
+        break;
+    }
+    default:
+        throw openrave_exception(str(boost::format("unknown joint type %d\n")%type));
+    }
 }
 
 Vector KinBody::Joint::GetAnchor() const
@@ -521,40 +523,52 @@ Vector KinBody::Joint::GetAxis(int iaxis ) const
         return bodies[0]->GetTransform().rotate(vAxes[iaxis]);
 }
 
-int KinBody::Joint::GetVelocities(dReal* pVelocities) const
+void KinBody::Joint::GetVelocities(std::vector<dReal>& pVelocities, bool bAppend) const
 {
-    if( pVelocities != NULL ) {
-        assert( _parent->GetEnv() != NULL );
-        if( !_parent->GetEnv()->GetPhysicsEngine()->GetJointVelocity(this, pVelocities) )
-            return 0;
+    vector<dReal> dummy;
+    if( !GetParent()->GetEnv()->GetPhysicsEngine()->GetJointVelocity(shared_from_this(), bAppend ? dummy : pVelocities) )
+        throw openrave_exception("Failed to get velocities");
+    if( bAppend )
+        pVelocities.insert(pVelocities.end(),dummy.begin(),dummy.end());
+}
+
+void KinBody::Joint::GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit, bool bAppend) const
+{
+    if( bAppend ) {
+        vLowerLimit.insert(vLowerLimit.end(),_vlowerlimit.begin(),_vlowerlimit.end());
+        vUpperLimit.insert(vUpperLimit.end(),_vupperlimit.begin(),_vupperlimit.end());
     }
-    
-    return GetDOF();
+    else {
+        vLowerLimit = _vlowerlimit;
+        vUpperLimit = _vupperlimit;
+    }
 }
 
-int KinBody::Joint::GetLimits(dReal* pLowerLimit, dReal* pUpperLimit) const
+void KinBody::Joint::SetJointOffset(dReal newoffset)
 {
-    assert( (int)_vlowerlimit.size() == GetDOF() && (int)_vupperlimit.size() == GetDOF() );
-    if( pLowerLimit != NULL )
-        memcpy(pLowerLimit,&_vlowerlimit[0],GetDOF()*sizeof(dReal));
-    if( pUpperLimit != NULL )
-        memcpy(pUpperLimit,&_vupperlimit[0],GetDOF()*sizeof(dReal));
-    return GetDOF();
+    offset = newoffset;
+    GetParent()->ParametersChanged(Prop_JointOffset);
 }
 
-int KinBody::Joint::GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const
+void KinBody::Joint::SetJointLimits(const std::vector<dReal>& vLowerLimit, const std::vector<dReal>& vUpperLimit)
 {
-    vLowerLimit.resize(GetDOF()); vUpperLimit.resize(GetDOF());
-    return GetDOF() > 0 ? GetLimits(&vLowerLimit[0],&vUpperLimit[0]) : 0;
+    _vlowerlimit = vLowerLimit;
+    _vupperlimit = vUpperLimit;
+    GetParent()->ParametersChanged(Prop_JointLimits);
 }
 
-void KinBody::Joint::AddTorque(const dReal* pTorques)
+void KinBody::Joint::SetResolution(dReal resolution)
 {
-    assert( _parent->GetEnv() != NULL );
-    _parent->GetEnv()->GetPhysicsEngine()->AddJointTorque(this, pTorques);
+    fResolution = resolution;
+    GetParent()->ParametersChanged(Prop_JointProperties);
 }
 
-KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBody* pbody) : _pbody(pbody)
+void KinBody::Joint::AddTorque(const std::vector<dReal>& pTorques)
+{
+    GetParent()->GetEnv()->GetPhysicsEngine()->AddJointTorque(shared_from_this(), pTorques);
+}
+
+KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody) : _pbody(pbody)
 {
     _pbody->GetBodyTransformations(_vtransPrev);
 }
@@ -564,59 +578,43 @@ KinBody::KinBodyStateSaver::~KinBodyStateSaver()
     _pbody->SetBodyTransformations(_vtransPrev);
 }
 
-KinBody::KinBody(PluginType type, EnvironmentBase* penv) : InterfaceBase(type, penv)
+KinBody::KinBody(PluginType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)
 {
     _bHierarchyComputed = false;
-    DestroyCallback = NULL;
     networkid = 0;
     
     _nUpdateStampId = 0;
-    _pGuiData = _pCollisionData = _pPhysicsData = NULL;
 }
 
 KinBody::~KinBody()
 {
-    RAVELOG_VERBOSEA("destroying kinbody: %S\n", GetName());
-    
+    RAVELOG_VERBOSEA(str(boost::format("destroying kinbody: %s\n")%GetName()));
     Destroy();
-
-    if( DestroyCallback != NULL )
-        DestroyCallback(GetEnv(), this);
 }
 
 void KinBody::Destroy()
 {
-    name.clear();
-    FOREACH(itlink, _veclinks) delete *itlink;
-    FOREACH(itjoint, _vecjoints) delete *itjoint;
-    FOREACH(itjoint, _vecPassiveJoints) delete *itjoint;
-
+    _veclinks.clear();
     _vecjoints.clear();
     _vecPassiveJoints.clear();
-    _veclinks.clear();
     _vecJointIndices.clear();
     _vecJointWeights.clear();
+    _vecJointHierarchy.clear();
 
     _setAttachedBodies.clear();
+    _setAdjacentLinks.clear();
+    _setNonAdjacentLinks.clear();
+    _vForcedAdjacentLinks.clear();
     _bHierarchyComputed = false;
+    _pGuiData.reset();
+    _pPhysicsData.reset();
+    _pCollisionData.reset();
+    _listRegisteredCallbacks.clear();
 }
 
-bool KinBody::Init(const char* filename, const char**atts)
+bool KinBody::InitFromFile(const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts)
 {
-    // check if added
-    FOREACHC(itbody, GetEnv()->GetBodies()) {
-        if( *itbody == this ) {
-            RAVELOG_ERRORA("KinBody::Init for %S, cannot Init a body while it is added to the environment, please remove it first\n", GetName());
-            return false;
-        }
-    }
-
-    SetGuiData(NULL);
-
-    //Destroy(); // don't destroy! operation should append to current bodies
-
-    bool bSuccess = GetEnv()->ReadKinBodyXML(this, filename, atts)==this;
-
+    bool bSuccess = GetEnv()->ReadKinBodyXMLFile(shared_kinbody(), filename, atts)==shared_kinbody();
     if( !bSuccess ) {
         Destroy();
         return false;
@@ -626,20 +624,27 @@ bool KinBody::Init(const char* filename, const char**atts)
     return true;
 }
 
-bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool bDraw)
+bool KinBody::InitFromData(const std::string& data, const std::list<std::pair<std::string,std::string> >& atts)
 {
-    // check if added
-    FOREACHC(itbody, GetEnv()->GetBodies()) {
-        if( *itbody == this ) {
-            RAVELOG_ERRORA("KinBody::Init for %S, cannot Init a body while it is added to the environment, please remove it first\n", GetName());
-            return false;
-        }
+    bool bSuccess = GetEnv()->ReadKinBodyXMLData(shared_kinbody(), data, atts)==shared_kinbody();
+    if( !bSuccess ) {
+        Destroy();
+        return false;
     }
 
+    return true;
+}
+
+bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool bDraw)
+{
+    bool bAddedToEnv = GetEnv()->RemoveKinBody(shared_kinbody());
+    if( bAddedToEnv )
+        throw openrave_exception(str(boost::format("KinBody::Init for %s, cannot Init a body while it is added to the environment\n")%GetName()));
+
     Destroy();
-    Link* plink = new Link(this);
+    LinkPtr plink(new Link(shared_kinbody()));
     plink->index = 0;
-    plink->name = L"base";
+    plink->name = "base";
     Link::TRIMESH trimesh;
     FOREACHC(itab, vaabbs) {
         plink->_listGeomProperties.push_back(Link::GEOMPROPERTIES());
@@ -658,22 +663,16 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool bDraw)
     return true;
 }
 
-void KinBody::SetName(const wchar_t* pNewName)
+void KinBody::SetName(const std::string& newname)
 {
-    name = pNewName;
+    name = newname;
 }
 
-void KinBody::SetName(const char* pNewName)
+void KinBody::SetJointTorques(const std::vector<dReal>& torques, bool bAdd)
 {
-    name.clear();
-    if( pNewName == NULL )
-        return;
+    if( (int)torques.size() != GetDOF() )
+        throw openrave_exception(str(boost::format("dof not equal %d!=%d")%torques.size()%GetDOF()),ORE_InvalidArguments);
 
-    name = _ravembstowcs(pNewName);
-}
-
-void KinBody::SetJointTorques(const dReal* pValues, bool bAdd)
-{
     if( !bAdd ) {
         FOREACH(itlink, _veclinks) {
             (*itlink)->SetForce(Vector(),Vector(),false);
@@ -682,94 +681,78 @@ void KinBody::SetJointTorques(const dReal* pValues, bool bAdd)
     }
 
     vector<int>::iterator itindex = _vecJointIndices.begin();
+    std::vector<dReal> jointtorques;
     FOREACH(it, _vecjoints) {
-        /// check limits
-        assert( pValues[0] >= -(*it)->fMaxTorque && pValues[0] <= (*it)->fMaxTorque );
-        (*it)->AddTorque(pValues+*itindex++);
+        jointtorques.resize((*it)->GetDOF());
+        std::copy(torques.begin()+*itindex,torques.begin()+*itindex+(*it)->GetDOF(),jointtorques.begin());
+        (*it)->AddTorque(jointtorques);
     }
-}
-
-void KinBody::GetJointValues(dReal *jointAngles) const
-{
-    assert( jointAngles != NULL );
-    FOREACHC(it, _vecjoints)
-        jointAngles += (*it)->GetValues(jointAngles);
 }
 
 void KinBody::GetJointValues(std::vector<dReal>& v) const
 {
-    v.resize(GetDOF());
-    if( GetDOF() > 0 )
-        GetJointValues(&v[0]);
-}
-
-void KinBody::GetJointVelocities(dReal* pRates) const
-{
-    assert( pRates != NULL );
+    v.resize(0);
+    if( (int)v.capacity() < GetDOF() )
+        v.reserve(GetDOF());
     FOREACHC(it, _vecjoints)
-        pRates += (*it)->GetVelocities(pRates);
+        (*it)->GetValues(v,true);
 }
 
-void KinBody::GetJointLimits(dReal* pLowerLimit, dReal* pUpperLimit) const
+void KinBody::GetJointVelocities(std::vector<dReal>& v) const
 {
-    FOREACHC(it, _vecjoints) {
-        int dof = (*it)->GetLimits(pLowerLimit, pUpperLimit);
-        if( pLowerLimit != NULL )
-            pLowerLimit += dof;
-        if( pUpperLimit != NULL )
-            pUpperLimit += dof;
-    }
+    v.resize(0);
+    if( (int)v.capacity() < GetDOF() )
+        v.reserve(GetDOF());
+    FOREACHC(it, _vecjoints)
+        (*it)->GetVelocities(v,true);
 }
 
 void KinBody::GetJointLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const
 {
-    vLowerLimit.resize(GetDOF());
-    vUpperLimit.resize(GetDOF());
-    GetJointLimits(&vLowerLimit[0], &vUpperLimit[0]);
+    vLowerLimit.resize(0);
+    if( (int)vLowerLimit.capacity() < GetDOF() )
+        vLowerLimit.reserve(GetDOF());
+    vUpperLimit.resize(0);
+    if( (int)vUpperLimit.capacity() < GetDOF() )
+        vUpperLimit.reserve(GetDOF());
+    FOREACHC(it,_vecjoints)
+        (*it)->GetLimits(vLowerLimit,vUpperLimit,true);
 }
 
-void KinBody::GetJointMaxVel(dReal* pValues) const
+void KinBody::GetJointMaxVel(std::vector<dReal>& v) const
 {
-    assert( pValues != NULL );
-
-    FOREACHC(it, _vecjoints) {
-        int num = (*it)->GetDOF();
-        while(num-- > 0 )
-            *pValues++ = (*it)->fMaxVel;
-    }
+    v.resize(0);
+    if( (int)v.capacity() < GetDOF() )
+        v.reserve(GetDOF());
+    FOREACHC(it, _vecjoints)
+        v.insert(v.end(),(*it)->GetDOF(),(*it)->GetMaxVel());
 }
 
-void KinBody::GetJointMaxAccel(dReal* pValues) const
+void KinBody::GetJointMaxAccel(std::vector<dReal>& v) const
 {
-    assert( pValues != NULL );
-
-    FOREACHC(it, _vecjoints) {
-        int num = (*it)->GetDOF();
-        while(num-- > 0 )
-            *pValues++ = (*it)->fMaxAccel;
-    }
+    v.resize(0);
+    if( (int)v.capacity() < GetDOF() )
+        v.reserve(GetDOF());
+    FOREACHC(it, _vecjoints)
+        v.insert(v.end(),(*it)->GetDOF(),(*it)->GetMaxAccel());
 }
 
-void KinBody::GetJointMaxTorque(dReal* pValues) const
+void KinBody::GetJointMaxTorque(std::vector<dReal>& v) const
 {
-    assert( pValues != NULL );
-
-    FOREACHC(it, _vecjoints) {
-        int num = (*it)->GetDOF();
-        while(num-- > 0 )
-            *pValues++ = (*it)->fMaxTorque;
-    }
+    v.resize(0);
+    if( (int)v.capacity() < GetDOF() )
+        v.reserve(GetDOF());
+    FOREACHC(it, _vecjoints)
+        v.insert(v.end(),(*it)->GetDOF(),(*it)->GetMaxTorque());
 }
 
-void KinBody::GetJointResolutions(dReal* pValues) const
+void KinBody::GetJointResolutions(std::vector<dReal>& v) const
 {
-    assert( pValues != NULL );
-
-    FOREACHC(it, _vecjoints) {
-        int num = (*it)->GetDOF();
-        while(num-- > 0 )
-            *pValues++ = (*it)->fResolution;
-    }
+    v.resize(0);
+    if( (int)v.capacity() < GetDOF() )
+        v.reserve(GetDOF());
+    FOREACHC(it, _vecjoints)
+        v.insert(v.end(),(*it)->GetDOF(),(*it)->GetResolution());
 }
 
 void KinBody::SimulationStep(dReal fElapsedTime)
@@ -793,12 +776,12 @@ Transform KinBody::GetTransform() const
 
 void KinBody::SetVelocity(const Vector& linearvel, const Vector& angularvel)
 {
-    GetEnv()->GetPhysicsEngine()->SetBodyVelocity(this, linearvel, angularvel, NULL);
+    GetEnv()->GetPhysicsEngine()->SetBodyVelocity(shared_kinbody(), linearvel, angularvel);
 }
 
 void KinBody::GetVelocity(Vector& linearvel, Vector& angularvel) const
 {
-    GetEnv()->GetPhysicsEngine()->GetBodyVelocity(this, linearvel, angularvel, NULL);
+    GetEnv()->GetPhysicsEngine()->GetBodyVelocity(shared_kinbody_const(), linearvel, angularvel);
 }
 
 void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const
@@ -820,8 +803,8 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
         else _veclinks[i]->userdata = 0;
     }
 
-    const vector<Joint*>* alljoints[2] = {&_vecjoints, &_vecPassiveJoints};
-    dReal fjointang[3] = {0},fjointvel[3] = {0};
+    const vector<JointPtr>* alljoints[2] = {&_vecjoints, &_vecPassiveJoints};
+    vector<dReal> vjointang,vjointvel;
 
     while(numleft > 0) {
         int org = numleft;
@@ -830,19 +813,18 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
         // for active joints, read the angle from pJointValues, for passive joints
         // check if they have corresponding mimic joints, if they do, take those angles
         // otherwise set to 0
-        for(size_t j = 0; j < ARRAYSIZE(alljoints); ++j) {
+        for(size_t j = 0; j < 2; ++j) {
             FOREACHC(itjoint, *alljoints[j]) {
-                (*itjoint)->GetValues(fjointang);
-                fjointvel[0] = fjointvel[1] = fjointvel[2] = 0;
+                (*itjoint)->GetValues(vjointang);
                 if( (*itjoint)->GetMimicJointIndex() >= 0 ) {
-                    int dof = _vecjoints[(*itjoint)->GetMimicJointIndex()]->GetVelocities(fjointvel);
-                    while(dof-->0)
-                        fjointvel[dof] *= (*itjoint)->fMimicCoeffs[0];
+                    _vecjoints[(*itjoint)->GetMimicJointIndex()]->GetVelocities(vjointvel);
+                    FOREACH(itv,vjointvel)
+                        *itv *= (*itjoint)->GetMimicCoeffs()[0];
                 }
                 else
-                    (*itjoint)->GetVelocities(fjointvel);
+                    (*itjoint)->GetVelocities(vjointvel);
 
-                Link** bodies = (*itjoint)->bodies;
+                LinkPtr* bodies = (*itjoint)->bodies;
                 if( bodies[0] != NULL && bodies[1] != NULL && !bodies[1]->IsStatic()) {
                     if( bodies[0]->userdata ) {
                         if( !bodies[1]->userdata ) {
@@ -850,19 +832,19 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
                             // init 1 from 0
                             switch((*itjoint)->GetType()) {
                             case Joint::JointHinge:
-                                w = -fjointvel[0]*(*itjoint)->vAxes[0];
+                                w = -vjointvel[0]*(*itjoint)->vAxes[0];
                                 break;
                             case Joint::JointHinge2: {
                                 Transform tfirst;
-                                tfirst.rotfromaxisangle((*itjoint)->vAxes[0], -fjointang[0]);
-                                w = -fjointvel[0]*(*itjoint)->vAxes[0] + tfirst.rotate(-fjointvel[1]*(*itjoint)->vAxes[1]);
+                                tfirst.rotfromaxisangle((*itjoint)->vAxes[0], -vjointang[0]);
+                                w = -vjointvel[0]*(*itjoint)->vAxes[0] + tfirst.rotate(-vjointvel[1]*(*itjoint)->vAxes[1]);
                                 break;
                             }
                             case Joint::JointSlider:
-                                v = -fjointvel[0]*(*itjoint)->vAxes[0];
+                                v = -vjointvel[0]*(*itjoint)->vAxes[0];
                                 break;
                             case Joint::JointSpherical:
-                                w.x = fjointvel[0]; w.y = fjointvel[1]; w.z = fjointvel[2];
+                                w.x = vjointvel[0]; w.y = vjointvel[1]; w.z = vjointvel[2];
                                 break;
                             default:
                                 RAVELOG_WARNA("forward kinematic type %d not supported\n", (*itjoint)->GetType());
@@ -885,19 +867,19 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
                         // init 1 from 0
                         switch((*itjoint)->GetType()) {
                         case Joint::JointHinge:
-                            w = fjointvel[0]*(*itjoint)->vAxes[0];
+                            w = vjointvel[0]*(*itjoint)->vAxes[0];
                             break;
                         case Joint::JointHinge2: {
                             Transform tfirst;
-                            tfirst.rotfromaxisangle((*itjoint)->vAxes[0], fjointang[0]);
-                            w = fjointvel[0]*(*itjoint)->vAxes[0] + tfirst.rotate(fjointvel[1]*(*itjoint)->vAxes[1]);
+                            tfirst.rotfromaxisangle((*itjoint)->vAxes[0], vjointang[0]);
+                            w = vjointvel[0]*(*itjoint)->vAxes[0] + tfirst.rotate(vjointvel[1]*(*itjoint)->vAxes[1]);
                             break;
                         }
                         case Joint::JointSlider:
-                            v = fjointvel[0]*(*itjoint)->vAxes[0];
+                            v = vjointvel[0]*(*itjoint)->vAxes[0];
                             break;
                         case Joint::JointSpherical:
-                            w.x = -fjointvel[0]; w.y = -fjointvel[1]; w.z = -fjointvel[2];
+                            w.x = -vjointvel[0]; w.y = -vjointvel[1]; w.z = -vjointvel[2];
                             break;
                         default:
                             RAVELOG_WARNA("forward kinematic type %d not supported\n", (*itjoint)->GetType());
@@ -920,19 +902,19 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
                     // joint attached to static environment (it will never be [1])
                     switch((*itjoint)->GetType()) {
                     case Joint::JointHinge:
-                        w = -fjointvel[0]*(*itjoint)->vAxes[0];
+                        w = -vjointvel[0]*(*itjoint)->vAxes[0];
                         break;
                     case Joint::JointHinge2: {
                         Transform tfirst;
-                        tfirst.rotfromaxisangle((*itjoint)->vAxes[0], -fjointang[0]);
-                        w = -fjointvel[0]*(*itjoint)->vAxes[0] + tfirst.rotate(-fjointvel[1]*(*itjoint)->vAxes[1]);
+                        tfirst.rotfromaxisangle((*itjoint)->vAxes[0], -vjointang[0]);
+                        w = -vjointvel[0]*(*itjoint)->vAxes[0] + tfirst.rotate(-vjointvel[1]*(*itjoint)->vAxes[1]);
                         break;
                     }
                     case Joint::JointSlider:
-                        v = -fjointvel[0]*(*itjoint)->vAxes[0];
+                        v = -vjointvel[0]*(*itjoint)->vAxes[0];
                         break;
                     case Joint::JointSpherical:
-                        w.x = fjointvel[0]; w.y = fjointvel[1]; w.z = fjointvel[2];
+                        w.x = vjointvel[0]; w.y = vjointvel[1]; w.z = vjointvel[2];
                         break;
                     default:
                         RAVELOG_WARNA("forward kinematic type %d not supported\n", (*itjoint)->GetType());
@@ -981,13 +963,13 @@ void KinBody::GetBodyTransformations(vector<Transform>& vtrans) const
     vtrans.resize(_veclinks.size());
 
     vector<Transform>::iterator it;
-    vector<Link*>::const_iterator itlink;
+    vector<LinkPtr>::const_iterator itlink;
     
     for(it = vtrans.begin(), itlink = _veclinks.begin(); it != vtrans.end(); ++it, ++itlink)
         *it = (*itlink)->GetTransform();
 }
 
-KinBody::Joint* KinBody::GetJointFromDOFIndex(int dofindex) const
+KinBody::JointPtr KinBody::GetJointFromDOFIndex(int dofindex) const
 {
     int jointindex = 0;
     FOREACHC(it, _vecJointIndices) {
@@ -995,9 +977,9 @@ KinBody::Joint* KinBody::GetJointFromDOFIndex(int dofindex) const
             break;
         ++jointindex;
     }
-    if( jointindex >= (int)_vecjoints.size() )
-        return NULL;
-    return _vecjoints[jointindex];
+    if( jointindex < (int)_vecjoints.size() )
+        return _vecjoints[jointindex];
+    return JointPtr();
 }
 
 AABB KinBody::ComputeAABB() const
@@ -1006,7 +988,7 @@ AABB KinBody::ComputeAABB() const
         return AABB();
     
     Vector vmin, vmax;
-    std::vector<Link*>::const_iterator itlink = _veclinks.begin();
+    std::vector<LinkPtr>::const_iterator itlink = _veclinks.begin();
 
     AABB ab = (*itlink++)->ComputeAABB();
     vmin = ab.pos - ab.extents;
@@ -1046,40 +1028,45 @@ Vector KinBody::GetCenterOfMass() const
     return center;
 }
 
-dReal KinBody::ConfigDist(const dReal *q1) const
+dReal KinBody::ConfigDist(const std::vector<dReal>& q1) const
 {
+    if( (int)q1.size() != GetDOF() )
+        throw openrave_exception(str(boost::format("configs %"PRIdS" now equal to body dof %d")%q1.size()%GetDOF()));
+
     dReal dist = 0;
-    vector<Joint*>::const_iterator it;
+    vector<JointPtr>::const_iterator it;
     vector<dReal>::const_iterator itweight = _vecJointWeights.begin();
 
-    GetJointValues(_vTempJoints);
+    std::vector<dReal> vTempJoints;
+    GetJointValues(vTempJoints);
 
     for(int i = 0; i < GetDOF(); ++i) {
-        dReal s = _vTempJoints[i]-*q1++;
+        dReal s = vTempJoints[i]-q1[i];
         dist += s * s * *itweight++;
     }
 
     return RaveSqrt(dist);
 }
 
-dReal KinBody::ConfigDist(const dReal *q1, const dReal *q2, int dof) const
+dReal KinBody::ConfigDist(const std::vector<dReal>& q1, const std::vector<dReal>& q2) const
 {
+    if( (int)q1.size() != GetDOF() || (int)q2.size() != GetDOF() )
+        throw openrave_exception(str(boost::format("configs %"PRIdS" %"PRIdS" now equal to body dof %d")%q1.size()%q2.size()%GetDOF()));
+
     dReal dist = 0.0;
-    for (size_t i = 0; i < min((size_t)dof, _vecJointWeights.size()); i++) {
+    for (size_t i = 0; i < _vecJointWeights.size(); i++) {
         dist += _vecJointWeights[i] * (q2[i] - q1[i]) * (q2[i] - q1[i]);
     }
-    return sqrtf(dist);
+    return RaveSqrt(dist);
 }
 
 void KinBody::SetBodyTransformations(const std::vector<Transform>& vbodies)
 {
-    if( vbodies.size() != _veclinks.size() ) {
-        RAVELOG_ERRORA("wrong number of transforms passed! %"PRIdS" != %"PRIdS"\n", vbodies.size(), _veclinks.size());
-        return;
-    }
+    if( vbodies.size() != _veclinks.size() )
+        throw openrave_exception(str(boost::format("links not equal %d!=%d")%vbodies.size()%_veclinks.size()),ORE_InvalidArguments);
     
     vector<Transform>::const_iterator it;
-    vector<Link*>::iterator itlink;
+    vector<LinkPtr>::iterator itlink;
     
     for(it = vbodies.begin(), itlink = _veclinks.begin(); it != vbodies.end(); ++it, ++itlink)
         (*itlink)->SetTransform(*it);
@@ -1087,14 +1074,36 @@ void KinBody::SetBodyTransformations(const std::vector<Transform>& vbodies)
     _nUpdateStampId++;
 }
 
-void KinBody::SetJointValues(vector<Transform>* pvbodies, const Transform* ptrans, const dReal* _pJointValues, bool bCheckLimits)
+void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, const Transform& transBase, bool bCheckLimits)
 {
-    if( pvbodies != NULL ) pvbodies->resize(_veclinks.size());
-    
-    const dReal* pJointValues = _pJointValues;
+    Transform tbase = _veclinks.front()->GetTransform().inverse() * transBase;
+    _veclinks.front()->SetTransform(transBase);
 
+    for(size_t i = 1; i < _veclinks.size(); ++i) {
+        if( _veclinks[i]->IsStatic() ) {
+            // if static and trans is valid, then apply the relative transformation to the link
+            _veclinks[i]->SetTransform(_veclinks[i]->GetTransform()*tbase);
+        }
+        else _veclinks[i]->userdata = 0;
+    }
+
+    SetJointValues(vJointValues,bCheckLimits);
+
+    // some links might not be connected to any joints. In this case, transform them by tbase
+    for(size_t i = 1; i < _veclinks.size(); ++i) {
+        if( _veclinks[i]->userdata == 0 ) {
+            _veclinks[i]->SetTransform(_veclinks[i]->GetTransform()*tbase);
+        }
+    }
+}
+
+void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, bool bCheckLimits)
+{
+    if( (int)vJointValues.size() != GetDOF() )
+        throw openrave_exception(str(boost::format("dof not equal %d!=%d")%vJointValues.size()%GetDOF()),ORE_InvalidArguments);
+
+    const dReal* pJointValues = &vJointValues[0];
     if( bCheckLimits ) {
-
         _vTempJoints.resize(GetDOF());
 
         dReal* ptempjoints = &_vTempJoints[0];
@@ -1102,7 +1111,7 @@ void KinBody::SetJointValues(vector<Transform>* pvbodies, const Transform* ptran
         // check the limits
         vector<int>::const_iterator itindex = _vecJointIndices.begin();
 
-        dReal upperlim[3], lowerlim[3];
+        vector<dReal> upperlim, lowerlim;
         FOREACHC(it, _vecjoints) {
             const dReal* p = pJointValues+*itindex++;
             assert( (*it)->GetDOF() <= 3 );
@@ -1143,18 +1152,6 @@ void KinBody::SetJointValues(vector<Transform>* pvbodies, const Transform* ptran
         pJointValues = &_vTempJoints[0];
     }
 
-    Transform tbase; // base transform of first link
-
-    if( ptrans != NULL ) {
-        tbase = _veclinks.front()->GetTransform().inverse() * *ptrans;
-        if( pvbodies != NULL ) (*pvbodies)[0] = *ptrans;
-        _veclinks.front()->SetTransform(*ptrans);
-    }
-    else {
-        if( pvbodies != NULL )
-            pvbodies->front() = _veclinks.front()->GetTransform();
-    }
-
     // set the first body and all static bodies to computed
     _veclinks[0]->userdata = 1;
     int numleft = (int)_veclinks.size()-1;
@@ -1163,17 +1160,6 @@ void KinBody::SetJointValues(vector<Transform>* pvbodies, const Transform* ptran
         if( _veclinks[i]->IsStatic() ) {
             numleft--;
             _veclinks[i]->userdata = 1;
-
-            if( ptrans != NULL ) {
-                // if static and trans is valid, then apply the relative transformation to the link
-                Transform tcur = _veclinks[i]->GetTransform();
-                // might be wrong
-                _veclinks[i]->SetTransform(tcur*tbase);
-            }
-            
-            if( pvbodies != NULL ) {
-                (*pvbodies)[i] = _veclinks[i]->GetTransform();
-            }
         }
         else _veclinks[i]->userdata = 0;
     }
@@ -1182,7 +1168,8 @@ void KinBody::SetJointValues(vector<Transform>* pvbodies, const Transform* ptran
     Vector axis, anchor;
     Transform trans;
     Transform identity;
-    vector<Joint*>* alljoints[2] = {&_vecjoints, &_vecPassiveJoints};
+    vector<JointPtr>* alljoints[2] = {&_vecjoints, &_vecPassiveJoints};
+    vector<dReal> vjointang;
 
     while(numleft > 0) {
         int org = numleft;
@@ -1192,7 +1179,7 @@ void KinBody::SetJointValues(vector<Transform>* pvbodies, const Transform* ptran
         // check if they have corresponding mimic joints, if they do, take those angles
         // otherwise set to 0
         vector<int>::const_iterator itindex = _vecJointIndices.begin();
-        for(size_t j = 0; j < ARRAYSIZE(alljoints); ++j) {
+        for(size_t j = 0; j < 2; ++j) {
             
             FOREACH(itjoint, *alljoints[j]) {
                 const dReal* pvalues;
@@ -1219,47 +1206,46 @@ void KinBody::SetJointValues(vector<Transform>* pvbodies, const Transform* ptran
                     }
                 }
 
-                Link** bodies = (*itjoint)->bodies;
+                LinkPtr* bodies = (*itjoint)->bodies;
 
                 // make sure there is no wrap around for limits close to pi
-                dReal fjointang[3];
+                vjointang.resize((*itjoint)->GetDOF());
                 for(int iang = 0; iang < (*itjoint)->GetDOF(); ++iang) { 
-                    fjointang[iang] = pvalues[iang]-(*itjoint)->GetOffset();
+                    vjointang[iang] = pvalues[iang]-(*itjoint)->GetOffset();
                     if( (*itjoint)->GetType() != Joint::JointSlider && (*itjoint)->GetType() != Joint::JointSpherical ) {
-                        if( fjointang[iang] < -PI+0.001f ) fjointang[iang] = -PI+0.001f;
-                        else if( fjointang[iang] > PI-0.001f ) fjointang[iang] = PI-0.001f;
+                        if( vjointang[iang] < -PI+0.001f ) vjointang[iang] = -PI+0.001f;
+                        else if( vjointang[iang] > PI-0.001f ) vjointang[iang] = PI-0.001f;
                     }
                 }
 
                 if( bodies[0] != NULL && bodies[1] != NULL && !bodies[1]->IsStatic()) {
                     if( bodies[0]->userdata ) {
                         if( !bodies[1]->userdata ) {
-                            //RAVELOG_INFOA("reg %S:%S!\n",bodies[0]->GetName(),bodies[1]->GetName());
                             Transform tjoint;
                             axis = (*itjoint)->vAxes[0];
 
                             // init 1 from 0
                             switch((*itjoint)->GetType()) {
                             case Joint::JointHinge:
-                                tjoint.rotfromaxisangle(axis, -fjointang[0]);
+                                tjoint.rotfromaxisangle(axis, -vjointang[0]);
                                 break;
                             case Joint::JointHinge2: {
                                 Transform tfirst;
-                                tfirst.rotfromaxisangle((*itjoint)->vAxes[0], -fjointang[0]);
+                                tfirst.rotfromaxisangle((*itjoint)->vAxes[0], -vjointang[0]);
                                 Transform tsecond;
-                                tsecond.rotfromaxisangle(tfirst.rotate((*itjoint)->vAxes[1]), -fjointang[1]);
+                                tsecond.rotfromaxisangle(tfirst.rotate((*itjoint)->vAxes[1]), -vjointang[1]);
                                 tjoint = tsecond * tfirst;
                                 break;
                             }
                             case Joint::JointSlider:
-                                tjoint.trans = -axis * fjointang[0];
+                                tjoint.trans = -axis * vjointang[0];
                                 break;
                             case Joint::JointSpherical: {
-                                dReal fang = fjointang[0]*fjointang[0]+fjointang[1]*fjointang[1]+fjointang[2]*fjointang[2];
+                                dReal fang = vjointang[0]*vjointang[0]+vjointang[1]*vjointang[1]+vjointang[2]*vjointang[2];
                                 if( fang > 1e-10 ) {
                                     fang = RaveSqrt(fang);
                                     dReal fiang = 1/fang;
-                                    tjoint.rotfromaxisangle(Vector(fjointang[0]*fiang,fjointang[1]*fiang,fjointang[2]*fiang),fang);
+                                    tjoint.rotfromaxisangle(Vector(vjointang[0]*fiang,vjointang[1]*fiang,vjointang[2]*fiang),fang);
                                 }
                                 break;
                             }
@@ -1271,25 +1257,8 @@ void KinBody::SetJointValues(vector<Transform>* pvbodies, const Transform* ptran
                             trans = bodies[0]->GetTransform() * (*itjoint)->tLeft * tjoint * (*itjoint)->tRight;
                             bodies[1]->SetTransform(trans);
 
-                            if( pvbodies != NULL ) {
-                                for(size_t i = 0; i < _veclinks.size(); ++i) {
-                                    if( _veclinks[i] == bodies[1] ) {
-                                        (*pvbodies)[i] = trans;
-                                        break;
-                                    }
-                                }
-                            }
-
                             bodies[1]->userdata = 1;
                             numleft--;
-
-#ifdef _DEBUG
-                            {
-                                dReal angs[3];
-                                (*itjoint)->GetValues(angs);
-                                assert( fabsf(fjointang[0]+(*itjoint)->GetOffset()-angs[0]) < 0.03f );
-                            }
-#endif
                         }
                     }
                     else if( bodies[1]->userdata ) {
@@ -1299,25 +1268,25 @@ void KinBody::SetJointValues(vector<Transform>* pvbodies, const Transform* ptran
                         // init 1 from 0
                         switch((*itjoint)->GetType()) {
                         case Joint::JointHinge:
-                            tjoint.rotfromaxisangle(axis, fjointang[0]);
+                            tjoint.rotfromaxisangle(axis, vjointang[0]);
                             break;
                         case Joint::JointHinge2: {
                             Transform tfirst;
-                            tfirst.rotfromaxisangle((*itjoint)->vAxes[0], fjointang[0]);
+                            tfirst.rotfromaxisangle((*itjoint)->vAxes[0], vjointang[0]);
                             Transform tsecond;
-                            tsecond.rotfromaxisangle(tfirst.rotate((*itjoint)->vAxes[1]), fjointang[1]);
+                            tsecond.rotfromaxisangle(tfirst.rotate((*itjoint)->vAxes[1]), vjointang[1]);
                             tjoint = tsecond * tfirst;
                             break;
                         }
                         case Joint::JointSlider:
-                            tjoint.trans = axis * fjointang[0];
+                            tjoint.trans = axis * vjointang[0];
                             break;
                         case Joint::JointSpherical: {
-                            dReal fang = fjointang[0]*fjointang[0]+fjointang[1]*fjointang[1]+fjointang[2]*fjointang[2];
+                            dReal fang = vjointang[0]*vjointang[0]+vjointang[1]*vjointang[1]+vjointang[2]*vjointang[2];
                             if( fang > 1e-10 ) {
                                 fang = RaveSqrt(fang);
                                 dReal fiang = 1/fang;
-                                tjoint.rotfromaxisangle(Vector(fjointang[0]*fiang,fjointang[1]*fiang,fjointang[2]*fiang),-fang);
+                                tjoint.rotfromaxisangle(Vector(vjointang[0]*fiang,vjointang[1]*fiang,vjointang[2]*fiang),-fang);
                             }
                             break;
                         }
@@ -1328,26 +1297,8 @@ void KinBody::SetJointValues(vector<Transform>* pvbodies, const Transform* ptran
 
                         trans = bodies[1]->GetTransform() * (*itjoint)->tinvRight * tjoint * (*itjoint)->tinvLeft;
                         bodies[0]->SetTransform(trans);
-
-                        if( pvbodies != NULL ) {
-                            for(size_t i = 0; i < _veclinks.size(); ++i) {
-                                if( _veclinks[i] == bodies[0] ) {
-                                    (*pvbodies)[i] = trans;
-                                    break;
-                                }
-                            }
-                        }
-
                         bodies[0]->userdata = 1;
                         numleft--;
-
-#ifdef _DEBUG
-                        {
-                            dReal angs[3];
-                            (*itjoint)->GetValues(angs);
-                            assert( fabsf(fjointang[0]+(*itjoint)->GetOffset()-angs[0]) < 0.03f );
-                        }
-#endif
                     }
                 }
                 else if( bodies[0] != NULL && !bodies[0]->userdata ) {
@@ -1358,25 +1309,25 @@ void KinBody::SetJointValues(vector<Transform>* pvbodies, const Transform* ptran
                     // joint attached to static environment (it will never be [1])
                     switch((*itjoint)->GetType()) {
                     case Joint::JointHinge:
-                        tjoint.rotfromaxisangle(axis, -fjointang[0]);
+                        tjoint.rotfromaxisangle(axis, -vjointang[0]);
                         break;
                     case Joint::JointHinge2: {
                         Transform tfirst;
-                        tfirst.rotfromaxisangle((*itjoint)->vAxes[0], -fjointang[0]);
+                        tfirst.rotfromaxisangle((*itjoint)->vAxes[0], -vjointang[0]);
                         Transform tsecond;
-                        tsecond.rotfromaxisangle(tfirst.rotate((*itjoint)->vAxes[1]), -fjointang[1]);
+                        tsecond.rotfromaxisangle(tfirst.rotate((*itjoint)->vAxes[1]), -vjointang[1]);
                         tjoint = tsecond * tfirst;
                         break;
                     }
                     case Joint::JointSlider:
-                        tjoint.trans = -axis * fjointang[0];
+                        tjoint.trans = -axis * vjointang[0];
                         break;
                     case Joint::JointSpherical: {
-                        dReal fang = fjointang[0]*fjointang[0]+fjointang[1]*fjointang[1]+fjointang[2]*fjointang[2];
+                        dReal fang = vjointang[0]*vjointang[0]+vjointang[1]*vjointang[1]+vjointang[2]*vjointang[2];
                         if( fang > 1e-10 ) {
                             fang = RaveSqrt(fang);
                             dReal fiang = 1/fang;
-                            tjoint.rotfromaxisangle(Vector(fjointang[0]*fiang,fjointang[1]*fiang,fjointang[2]*fiang),fang);
+                            tjoint.rotfromaxisangle(Vector(vjointang[0]*fiang,vjointang[1]*fiang,vjointang[2]*fiang),fang);
                         }
                         break;
                     }
@@ -1387,23 +1338,6 @@ void KinBody::SetJointValues(vector<Transform>* pvbodies, const Transform* ptran
                     
                     trans = GetTransform() * (*itjoint)->tLeft * tjoint * (*itjoint)->tRight;
                     bodies[0]->SetTransform(trans);
-
-                    if( pvbodies != NULL ) {
-                        for(size_t i = 0; i < _veclinks.size(); ++i) {
-                            if( _veclinks[i] == bodies[0] ) {
-                                (*pvbodies)[i] = trans;
-                                break;
-                            }
-                        }
-                    }
-
-#ifdef _DEBUG
-                    {
-                        dReal angs[3];
-                        (*itjoint)->GetValues(angs);
-                        assert( fabsf(fjointang[0]+(*itjoint)->GetOffset()-angs[0]) < 0.03f );
-                    }
-#endif
                     bodies[0]->userdata = 1;
                     numleft--;
                 }
@@ -1414,34 +1348,55 @@ void KinBody::SetJointValues(vector<Transform>* pvbodies, const Transform* ptran
         if( org == numleft )
             break;
     }
+}
 
-    // some links might not be connected to any joints. In this case, transform them by tbase
-    if( numleft > 0 ) {
-        for(size_t i = 1; i < _veclinks.size(); ++i) {
-            if( _veclinks[i]->userdata == 0 ) {
-                _veclinks[i]->SetTransform(_veclinks[i]->GetTransform()*tbase);
-                
-                if( pvbodies != NULL ) {
-                    (*pvbodies)[i] = _veclinks[i]->GetTransform();
-                }
-            }
-        }
+void KinBody::SetJointVelocities(const std::vector<dReal>& pJointVelocities)
+{
+    Vector linearvel, angularvel;
+    GetVelocity(linearvel, angularvel);
+    GetEnv()->GetPhysicsEngine()->SetBodyVelocity(shared_kinbody(), linearvel, angularvel, pJointVelocities);
+}
+
+KinBody::LinkPtr KinBody::GetLink(const std::string& linkname) const
+{
+    for(std::vector<LinkPtr>::const_iterator it = _veclinks.begin(); it != _veclinks.end(); ++it) {
+        if ( (*it)->GetName() == linkname )
+            return *it;
     }
+    RAVELOG_VERBOSEA("Link::GetLink - Error Unknown Link %s\n",linkname.c_str());
+    return LinkPtr();
 }
 
-void KinBody::SetJointVelocities(const dReal* pJointVelocities)
+//! return a pointer to the joint with the given name, else -1
+int KinBody::GetJointIndex(const std::string& jointname) const
 {
-	if( pJointVelocities != NULL ) {
-		assert( GetEnv() != NULL );
-		Vector linearvel, angularvel;
-		GetVelocity(linearvel, angularvel);
-	    GetEnv()->GetPhysicsEngine()->SetBodyVelocity(this, linearvel, angularvel, pJointVelocities);
-	}
+    int index = 0;
+    FOREACH(it,_vecjoints) {
+        if ((*it)->GetName() == jointname )
+            return index;
+        ++index;
+    }
+    return -1;
 }
 
-void KinBody::CalculateJacobian(int index, const Vector& trans, dReal* pfJacobian) const
+KinBody::JointPtr KinBody::GetJoint(const std::string& jointname) const
 {
-    assert( index >= 0 && index < (int)_veclinks.size() && pfJacobian != NULL );
+    FOREACH(it,_vecjoints) {
+        if ((*it)->GetName() == jointname )
+            return *it;
+    }
+    return JointPtr();
+}
+
+void KinBody::CalculateJacobian(int index, const Vector& trans, vector<dReal>& vJacobian) const
+{
+    if( index < 0 || index >= (int)_veclinks.size() )
+        throw openrave_exception(str(boost::format("bad index %d")%index),ORE_InvalidArguments);
+
+    vJacobian.resize(GetDOF()*3);
+    if( GetDOF() == 0 )
+        return;
+    dReal* pfJacobian = &vJacobian[0];
 
     //Vector trans = _veclinks[index]->GetTransform() * offset;
     Vector v, anchor, axis;
@@ -1478,9 +1433,15 @@ void KinBody::CalculateJacobian(int index, const Vector& trans, dReal* pfJacobia
     }
 }
 
-void KinBody::CalculateRotationJacobian(int index, const Vector& q, dReal* pfJacobian) const
+void KinBody::CalculateRotationJacobian(int index, const Vector& q, vector<dReal>& vJacobian) const
 {
-    assert( index >= 0 && index < (int)_veclinks.size() && pfJacobian != NULL );
+    if( index < 0 || index >= (int)_veclinks.size() )
+        throw openrave_exception(str(boost::format("bad index %d")%index),ORE_InvalidArguments);
+
+    vJacobian.resize(GetDOF()*4);
+    if( GetDOF() == 0 )
+        return;
+    dReal* pfJacobian = &vJacobian[0];
 
     //Vector trans = _veclinks[index]->GetTransform() * offset;
     Vector v, anchor, axis;
@@ -1518,9 +1479,15 @@ void KinBody::CalculateRotationJacobian(int index, const Vector& q, dReal* pfJac
     }
 }
 
-void KinBody::CalculateAngularVelocityJacobian(int index, dReal* pfJacobian) const
+void KinBody::CalculateAngularVelocityJacobian(int index, std::vector<dReal>& vJacobian) const
 {
-    assert( index >= 0 && index < (int)_veclinks.size() && pfJacobian != NULL );
+    if( index < 0 || index >= (int)_veclinks.size() )
+        throw openrave_exception(str(boost::format("bad index %d")%index),ORE_InvalidArguments);
+
+    vJacobian.resize(GetDOF()*3);
+    if( GetDOF() == 0 )
+        return;
+    dReal* pfJacobian = &vJacobian[0];
 
     //Vector trans = _veclinks[index]->GetTransform() * offset;
     Vector v, anchor, axis;
@@ -1557,9 +1524,9 @@ void KinBody::CalculateAngularVelocityJacobian(int index, dReal* pfJacobian) con
     }
 }
 
-bool KinBody::CheckSelfCollision(COLLISIONREPORT* pReport) const
+bool KinBody::CheckSelfCollision(boost::shared_ptr<COLLISIONREPORT> report) const
 {
-    return GetEnv()->GetCollisionChecker()->CheckSelfCollision(this, pReport);
+    return GetEnv()->GetCollisionChecker()->CheckSelfCollision(shared_kinbody_const(), report);
 }
 
 void KinBody::ComputeJointHierarchy()
@@ -1576,7 +1543,7 @@ void KinBody::ComputeJointHierarchy()
     }
     _veclinks[0]->userdata = 1; // always set the first to be a root
 
-    typedef pair<Joint*, int> JOINTPAIR;
+    typedef pair<JointPtr, int> JOINTPAIR;
     list<JOINTPAIR> ljoints;
     for(int i = 0; i < (int)_vecjoints.size(); ++i) {
         ljoints.push_back(JOINTPAIR(_vecjoints[i], i));
@@ -1604,7 +1571,7 @@ void KinBody::ComputeJointHierarchy()
 
             char* pvalues = &_vecJointHierarchy[!bIsPassive ? itjoint->second*_veclinks.size() : itjoint->first->GetMimicJointIndex() * _veclinks.size()];
 
-            Link** bodies = itjoint->first->bodies;
+            LinkPtr* bodies = itjoint->first->bodies;
             if( bodies[0] != NULL ) {
                 
                 if( bodies[1] != NULL ) {
@@ -1666,7 +1633,7 @@ void KinBody::ComputeJointHierarchy()
     // create the adjacency list
     vector<dReal> prevvalues; GetJointValues(prevvalues);
     vector<dReal> vzero(GetDOF());
-    SetJointValues(NULL, NULL, &vzero[0]);
+    SetJointValues(vzero);
     _setAdjacentLinks.clear();
     _setNonAdjacentLinks.clear();  
 
@@ -1680,8 +1647,8 @@ void KinBody::ComputeJointHierarchy()
     }
 
     FOREACH(itadj, _vForcedAdjacentLinks) {
-        Link* pl0 = GetLink(itadj->first.c_str());
-        Link* pl1 = GetLink(itadj->second.c_str());
+        LinkPtr pl0 = GetLink(itadj->first.c_str());
+        LinkPtr pl1 = GetLink(itadj->second.c_str());
         if( pl0 != NULL && pl1 != NULL ) {
             int ind0 = pl0->GetIndex();
             int ind1 = pl1->GetIndex();
@@ -1701,20 +1668,20 @@ void KinBody::ComputeJointHierarchy()
 
     //RAVEPRINT(L"nonadj: %"PRIdS"\n", _setNonAdjacentLinks.size());
     // save the forward kinematics
-    string filename = GetEnv()->GetHomeDirectory() + string("/fk_") + _stdwcstombs(GetName());
+    string filename = GetEnv()->GetHomeDirectory() + string("/fk_") + GetName();
     ofstream f(filename.c_str());
     WriteForwardKinematics(f);
-    SetJointValues(NULL, NULL, &prevvalues[0], true);
+    SetJointValues(prevvalues, true);
 }
 
 struct LINKTRANSINFO
 {
-    LINKTRANSINFO() : bRecord(false) { fJointCoeffs[0] = 1; fJointCoeffs[1] = 0; }
+    LINKTRANSINFO() : bRecord(false) { vJointCoeffs.resize(2); vJointCoeffs[0] = 1; vJointCoeffs[1] = 0; }
     int linkcur;
     int linkbase;
     int jointindex;
     Vector vjointaxis;
-    dReal fJointCoeffs[2]; ///< use (jointangle*coeffs[0]+coeffs[1]) for the rotation around the axis
+    vector<dReal> vJointCoeffs; ///< use (jointangle*coeffs[0]+coeffs[1]) for the rotation around the axis
     Transform Tleft, Tright;
     string type; ///< joint type
     bool bRecord;
@@ -1741,7 +1708,7 @@ void KinBody::WriteForwardKinematics(std::ostream& f)
     Vector anchor;
     Transform trans;
     Transform identity;
-    vector<Joint*>* alljoints[2] = {&_vecjoints, &_vecPassiveJoints};
+    vector<JointPtr>* alljoints[2] = {&_vecjoints, &_vecPassiveJoints};
 
     while(numleft > 0) {
         int org = numleft;
@@ -1750,21 +1717,21 @@ void KinBody::WriteForwardKinematics(std::ostream& f)
         // for active joints, read the angle from pJointValues, for passive joints
         // check if they have corresponding mimic joints, if they do, take those angles
         // otherwise set to 0
-        for(size_t j = 0; j < ARRAYSIZE(alljoints); ++j) {
+        for(size_t j = 0; j < 2; ++j) {
             
             FOREACH(itjoint, *alljoints[j]) {
 
                 int jointindex = 0;
                 if( (*itjoint)->GetMimicJointIndex() >= 0 ) {
                     jointindex = (*itjoint)->GetMimicJointIndex();
-                    memcpy(info.fJointCoeffs, (*itjoint)->GetMimicCoeffs(), sizeof(info.fJointCoeffs));
+                    info.vJointCoeffs = (*itjoint)->GetMimicCoeffs();
                 }
                 else if( j == 0 ) {
                     jointindex = (int)(itjoint-alljoints[j]->begin());
-                    info.fJointCoeffs[0] = 1; info.fJointCoeffs[1] = 0;
+                    info.vJointCoeffs[0] = 1; info.vJointCoeffs[1] = 0;
                 }
 
-                Link** bodies = (*itjoint)->bodies;
+                LinkPtr* bodies = (*itjoint)->bodies;
 
                 if( bodies[0] != NULL && bodies[1] != NULL && !bodies[1]->IsStatic()) {
                     if( bodies[0]->userdata ) {
@@ -1913,7 +1880,7 @@ void KinBody::WriteForwardKinematics(std::ostream& f)
 
         f << it->type << " " << it->linkcur << " " << it->linkbase << " " << it->jointindex << " "
           << it->vjointaxis.x << " " << it->vjointaxis.y << " " << it->vjointaxis.z << " "
-          << it->fJointCoeffs[0] << " " << it->fJointCoeffs[1] <<  endl << endl;
+          << it->vJointCoeffs[0] << " " << it->vJointCoeffs[1] <<  endl << endl;
         TransformMatrix m(it->Tleft);
         for(int j = 0; j < 3; ++j) {
             for(int k = 0; k < 3; ++k)
@@ -1933,34 +1900,48 @@ void KinBody::WriteForwardKinematics(std::ostream& f)
     }
 }
 
-void KinBody::AttachBody(KinBody* pbody)
+void KinBody::AttachBody(KinBodyPtr pbody)
 {
-    assert( pbody != NULL );
     _setAttachedBodies.insert(pbody);
-    pbody->_setAttachedBodies.insert(this);
+    pbody->_setAttachedBodies.insert(shared_kinbody());
 }
 
-void KinBody::RemoveBody(KinBody* pbody)
+void KinBody::RemoveBody(KinBodyPtr pbody)
 {
-    if( pbody != NULL ) {
-        _setAttachedBodies.erase(pbody);
-        pbody->_setAttachedBodies.erase(this);
-    }
-    else {
-        FOREACH(it, _setAttachedBodies)
-            (*it)->_setAttachedBodies.erase(this);
+    if( !pbody ) {
+        FOREACH(it, _setAttachedBodies) {
+            KinBodyPtr p(*it);
+            if( !!p )
+                p->_setAttachedBodies.erase(KinBodyWeakPtr(shared_kinbody()));
+        }
         _setAttachedBodies.clear();
     }
+    else {
+        _setAttachedBodies.erase(pbody);
+        pbody->_setAttachedBodies.erase(KinBodyWeakPtr(shared_kinbody()));
+    }
 }
 
-bool KinBody::IsAttached(const KinBody* pbody) const
+bool KinBody::IsAttached(KinBodyConstPtr pbody) const
 {
-    return pbody != NULL && _setAttachedBodies.find((KinBody*)pbody) != _setAttachedBodies.end();
+    return _setAttachedBodies.find(boost::const_pointer_cast<KinBody>(pbody)) != _setAttachedBodies.end();
+}
+
+void KinBody::GetAttached(std::vector<KinBodyPtr>& attached) const
+{
+    attached.resize(0);
+    FOREACHC(it,_setAttachedBodies) {
+        KinBodyPtr p(*it);
+        if( !!p )
+            attached.push_back(p);
+        else
+            RAVELOG_DEBUGA("attached body is invalid\n");
+    }
 }
 
 void KinBody::Enable(bool bEnable)
 {
-    GetEnv()->GetCollisionChecker()->Enable(this,bEnable);
+    GetEnv()->GetCollisionChecker()->Enable(shared_kinbody(),bEnable);
     FOREACH(it, _veclinks)
         (*it)->_bIsEnabled = bEnable;
 }
@@ -2009,27 +1990,28 @@ const std::set<int>& KinBody::GetAdjacentLinks() const
     return _setAdjacentLinks;
 }
 
-bool KinBody::Clone(const InterfaceBase* preference, int cloningoptions)
+bool KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 {
-    if( preference == NULL )
+    if( !InterfaceBase::Clone(preference,cloningoptions) )
         return false;
-    const KinBody& r = *(const KinBody*)preference;
 
-    name = r.name;
+    KinBodyConstPtr r = boost::static_pointer_cast<KinBody const>(preference);
+
+    name = r->name;
     
-    _veclinks.resize(0); _veclinks.reserve(r._veclinks.size());
-    FOREACHC(itlink, r._veclinks) {
-        Link* pnewlink = new Link(this);
+    _veclinks.resize(0); _veclinks.reserve(r->_veclinks.size());
+    FOREACHC(itlink, r->_veclinks) {
+        LinkPtr pnewlink(new Link(shared_kinbody()));
         *pnewlink = **itlink; // be careful of copying pointers
-        pnewlink->_parent = this;
+        pnewlink->_parent = shared_kinbody();
         _veclinks.push_back(pnewlink);
     }
 
-    _vecjoints.resize(0); _vecjoints.reserve(r._vecjoints.size());
-    FOREACHC(itjoint, r._vecjoints) {
-        Joint* pnewjoint = new Joint(this);
+    _vecjoints.resize(0); _vecjoints.reserve(r->_vecjoints.size());
+    FOREACHC(itjoint, r->_vecjoints) {
+        JointPtr pnewjoint(new Joint(shared_kinbody()));
         *pnewjoint = **itjoint; // be careful of copying pointers!
-        pnewjoint->_parent = this;
+        pnewjoint->_parent = shared_kinbody();
         if( (*itjoint)->bodies[0] != NULL )
             pnewjoint->bodies[0] = _veclinks[(*itjoint)->bodies[0]->GetIndex()];
         if( (*itjoint)->bodies[1] != NULL )
@@ -2037,11 +2019,11 @@ bool KinBody::Clone(const InterfaceBase* preference, int cloningoptions)
         _vecjoints.push_back(pnewjoint);
     }
 
-    _vecPassiveJoints.reserve(r._vecPassiveJoints.size());
-    FOREACHC(itjoint, r._vecPassiveJoints) {
-        Joint* pnewjoint = new Joint(this);
+    _vecPassiveJoints.reserve(r->_vecPassiveJoints.size());
+    FOREACHC(itjoint, r->_vecPassiveJoints) {
+        JointPtr pnewjoint(new Joint(shared_kinbody()));
         *pnewjoint = **itjoint; // be careful of copying pointers!
-        pnewjoint->_parent = this;
+        pnewjoint->_parent = shared_kinbody();
         if( (*itjoint)->bodies[0] != NULL )
             pnewjoint->bodies[0] = _veclinks[(*itjoint)->bodies[0]->GetIndex()];
         if( (*itjoint)->bodies[1] != NULL )
@@ -2049,19 +2031,34 @@ bool KinBody::Clone(const InterfaceBase* preference, int cloningoptions)
         _vecPassiveJoints.push_back(pnewjoint);
     }
 
-    _vecJointIndices = r._vecJointIndices;
-    _vecJointWeights = r._vecJointWeights;
-    _vecJointHierarchy = r._vecJointHierarchy;
+    _vecJointIndices = r->_vecJointIndices;
+    _vecJointWeights = r->_vecJointWeights;
+    _vecJointHierarchy = r->_vecJointHierarchy;
     
-    _setAdjacentLinks = r._setAdjacentLinks;
-    _setNonAdjacentLinks = r._setNonAdjacentLinks;
-    _vForcedAdjacentLinks = r._vForcedAdjacentLinks;
+    _setAdjacentLinks = r->_setAdjacentLinks;
+    _setNonAdjacentLinks = r->_setNonAdjacentLinks;
+    _vForcedAdjacentLinks = r->_vForcedAdjacentLinks;
 
-    strXMLFilename = r.strXMLFilename;
-    _vTempJoints = r._vTempJoints;
+    strXMLFilename = r->strXMLFilename;
+    _vTempJoints = r->_vTempJoints;
 
     _nUpdateStampId++;
     return true;
+}
+
+void KinBody::ParametersChanged(int parameters)
+{
+    FOREACH(itfns,_listRegisteredCallbacks) {
+        if( itfns->first & parameters )
+            itfns->second();
+    }
+}
+
+void __erase_iterator(std::list<std::pair<int,const boost::function<void()> > >& l, std::list<std::pair<int,const boost::function<void()> > >::iterator* pit) { l.erase(*pit); }
+
+boost::shared_ptr<void> KinBody::RegisterChangeCallback(int properties, const boost::function<void()>& callback)
+{
+    return boost::shared_ptr<void>(new std::list<std::pair<int,const boost::function<void()> > >::iterator(_listRegisteredCallbacks.insert(_listRegisteredCallbacks.end(),make_pair(properties,callback))), boost::bind(__erase_iterator,boost::ref(_listRegisteredCallbacks),_1));
 }
 
 } // end namespace OpenRAVE

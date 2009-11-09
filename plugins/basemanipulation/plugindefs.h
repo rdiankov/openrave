@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,25 +15,26 @@
 #ifndef OPENRAVE_PLUGINDEFS_H
 #define OPENRAVE_PLUGINDEFS_H
 
-#include <assert.h>
 #include <cstdio>
 #include <cmath>
 #include <cstdlib>
 
-#include <boost/shared_ptr.hpp>
-
+// include boost for vc++ only (to get typeof working)
 #ifdef _MSC_VER
-#include <math.h>
-#include <float.h>
-
 #include <boost/typeof/std/string.hpp>
 #include <boost/typeof/std/vector.hpp>
 #include <boost/typeof/std/list.hpp>
 #include <boost/typeof/std/map.hpp>
 #include <boost/typeof/std/string.hpp>
+#include <boost/typeof/std/queue.hpp>
 
 #define FOREACH(it, v) for(BOOST_TYPEOF(v)::iterator it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACHR(it, v) for(BOOST_TYPEOF(v)::reverse_iterator it = (v).rbegin(); it != (v).rend(); (it)++)
+#define FOREACH_NOINC(it, v) for(BOOST_TYPEOF(v)::iterator it = (v).begin(); it != (v).end(); )
+
 #define FOREACHC(it, v) for(BOOST_TYPEOF(v)::const_iterator it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACHRC(it, v) for(BOOST_TYPEOF(v)::const_reverse_iterator it = (v).rbegin(); it != (v).rend(); (it)++)
+#define FOREACHC_NOINC(it, v) for(BOOST_TYPEOF(v)::const_iterator it = (v).begin(); it != (v).end(); )
 #define RAVE_REGISTER_BOOST
 #else
 
@@ -42,23 +43,34 @@
 #include <list>
 #include <map>
 #include <string>
+#include <queue>
 
 #define FOREACH(it, v) for(typeof((v).begin()) it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACHR(it, v) for(typeof((v).rbegin()) it = (v).rbegin(); it != (v).rend(); (it)++)
+#define FOREACH_NOINC(it, v) for(typeof((v).begin()) it = (v).begin(); it != (v).end(); )
+
 #define FOREACHC FOREACH
+#define FOREACHRC FOREACHR
+#define FOREACHC_NOINC FOREACH_NOINC
+
 #endif
 
 #include <stdint.h>
 #include <fstream>
 #include <iostream>
-#include <sstream>
 
-using namespace std;
+#include <boost/assert.hpp>
+#include <boost/bind.hpp>
+#include <boost/format.hpp>
+#include <boost/array.hpp>
 
 #ifdef _MSC_VER
 #define PRIdS "Id"
 #else
 #define PRIdS "zd"
 #endif
+
+using namespace std;
 
 #include <sys/timeb.h>    // ftime(), struct timeb
 
@@ -69,15 +81,6 @@ using namespace std;
 #define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
 #endif
-
-// declaring variables with stdcall can be a little complex
-#ifdef _MSC_VER
-#ifndef isnan
-#define isnan _isnan
-#endif
-
-#define snprintf _snprintf
-#endif // _MSC_VER
 
 template<class T>
 inline T CLAMP_ON_RANGE(T value, T min, T max)
@@ -100,6 +103,8 @@ inline uint32_t timeGetTime()
     return (uint32_t)(t.time*1000+t.millitm);
 }
 
+#define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
+
 inline uint64_t GetMicroTime()
 {
 #ifdef _WIN32
@@ -114,104 +119,33 @@ inline uint64_t GetMicroTime()
 #endif
 }
 
-inline float RANDOM_FLOAT()
-{
-#if defined(__IRIX__)
-    return drand48();
-#else
-    return rand()/((float)RAND_MAX);
-#endif
-}
-
-inline float RANDOM_FLOAT(float maximum)
-{
-#if defined(__IRIX__)
-    return (drand48() * maximum);
-#else
-    return (RANDOM_FLOAT() * maximum);
-#endif
-}
-
-inline int RANDOM_INT(int maximum)
-{
-#if defined(__IRIX__)
-    return (random() % maximum);
-#else
-    return (rand() % maximum);
-#endif
-}
-
-#ifndef ARRAYSIZE
-#define ARRAYSIZE(x) (sizeof(x)/(sizeof( (x)[0] )))
-#endif
-
-#define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
-
-#ifdef _WIN32
-
-#define WCSTOK(str, delim, ptr) wcstok(str, delim)
-
-// define wcsicmp for MAC OS X
-#elif defined(__APPLE_CC__)
-
-#define WCSTOK(str, delim, ptr) wcstok(str, delim, ptr);
-
-#define strnicmp strncasecmp
-#define stricmp strcasecmp
-
-inline int wcsicmp(const wchar_t* s1, const wchar_t* s2)
-{
-  char str1[128], str2[128];
-  sprintf(str1, "%S", s1);
-  sprintf(str2, "%S", s2);
-  return stricmp(str1, str2);
-}
-
-
-#else
-
-#define WCSTOK(str, delim, ptr) wcstok(str, delim, ptr)
-
-#define strnicmp strncasecmp
-#define stricmp strcasecmp
-#define wcsnicmp wcsncasecmp
-#define wcsicmp wcscasecmp
-
-#endif
-
-inline std::wstring _ravembstowcs(const char* pstr)
-{
-    size_t len = mbstowcs(NULL, pstr, 0);
-    std::wstring w; w.resize(len);
-    mbstowcs(&w[0], pstr, len);
-    return w;
-}
-
-inline std::string _stdwcstombs(const wchar_t* pname)
-{
-    if( pname == NULL )
-        return std::string();
-
-    std::string s;
-    size_t len = wcstombs(NULL, pname, 0);
-    if( len != (size_t)-1 ) {
-        s.resize(len);
-        wcstombs(&s[0], pname, len);
-    }
-
-    return s;
-}
-
 #include <rave/rave.h>
 using namespace OpenRAVE;
 
-/// returns a random sequence of permuations
-template <class T> void PermutateRandomly(vector<T>& vpermutation)
+struct null_deleter
 {
-    if( vpermutation.size() <= 1 )
-        return;
-    for(size_t i = 0; i < vpermutation.size()-1; ++i)
-        std::swap(vpermutation[i], vpermutation[i+(rand()%(vpermutation.size()-i))]);
+    void operator()(void const *) const {}
+};
+
+inline string getfilename_withseparator(istream& sinput, char separator)
+{
+    string filename;
+    if( !getline(sinput, filename, separator) ) {
+        // just input directly
+        RAVELOG_ERRORA("graspset filename not terminated with ';'\n");
+        sinput >> filename;
+    }
+
+    // trim leading spaces
+    size_t startpos = filename.find_first_not_of(" \t");
+    size_t endpos = filename.find_last_not_of(" \t");
+
+    // if all spaces or empty return an empty string  
+    if(( string::npos == startpos ) || ( string::npos == endpos))
+        return "";
+
+    filename = filename.substr( startpos, endpos-startpos+1 );
+    return filename;
 }
 
 #endif

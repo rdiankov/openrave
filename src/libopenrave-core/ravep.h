@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -25,7 +25,6 @@ build openrave must include (used in place of rave.h). Precompiled header.
 #define RAVE_PRIVATE
 
 /// functions that allow plugins to program for the RAVE simulator
-#include <assert.h>
 #include <cstdio>
 #include <cmath>
 #include <cstdlib>
@@ -84,44 +83,90 @@ build openrave must include (used in place of rave.h). Precompiled header.
 #include <winsock2.h>
 #endif
 
-//#pragma warning(disable:4996) // 'function': was declared deprecated
-//#pragma warning(disable:4267) // conversion from 'size_t' to 'type', possible loss of data
-//#pragma warning(disable:4018) // '<' : signed/unsigned mismatch
-
-inline uint32_t timeGetTime()
+inline void getWallTime(uint32_t& sec, uint32_t& nsec)
 {
-#ifdef _WIN32
-    _timeb t;
-    _ftime(&t);
+#ifndef WIN32
+#if POSIX_TIMERS > 0
+  struct timespec start;
+  clock_gettime(CLOCK_REALTIME, &start);
+  sec  = start.tv_sec;
+  nsec = start.tv_nsec;
 #else
-    timeb t;
-    ftime(&t);
+  struct timeval timeofday;
+  gettimeofday(&timeofday,NULL);
+  sec  = timeofday.tv_sec;
+  nsec = timeofday.tv_usec * 1000;
 #endif
+#else
+  // unless I've missed something obvious, the only way to get high-precision
+  // time on Windows is via the QueryPerformanceCounter() call. However,
+  // this is somewhat problematic in Windows XP on some processors, especially
+  // AMD, because the Windows implementation can freak out when the CPU clocks
+  // down to save power. Time can jump or even go backwards. Microsoft has
+  // fixed this bug for most systems now, but it can still show up if you have
+  // not installed the latest CPU drivers (an oxymoron). They fixed all these
+  // problems in Windows Vista, and this API is by far the most accurate that
+  // I know of in Windows, so I'll use it here despite all these caveats
+  static LARGE_INTEGER cpu_freq, init_cpu_time;
+  static Time start_time;
+  if (start_time.isZero())
+  {
+    QueryPerformanceFrequency(&cpu_freq);
+    if (cpu_freq.QuadPart == 0)
+    {
+      abort();
+    }
+    QueryPerformanceCounter(&init_cpu_time);
+    // compute an offset from the Epoch using the lower-performance timer API
+    FILETIME ft;
+    GetSystemTimeAsFileTime(&ft);
+    LARGE_INTEGER start_li;
+    start_li.LowPart = ft.dwLowDateTime;
+    start_li.HighPart = ft.dwHighDateTime;
+    // why did they choose 1601 as the time zero, instead of 1970?
+    // there were no outstanding hard rock bands in 1601.
+#ifdef _MSC_VER
+    start_li.QuadPart -= 116444736000000000Ui64;
+#else
+    start_li.QuadPart -= 116444736000000000ULL;
+#endif
+    start_time.sec = (uint32_t)(start_li.QuadPart / 10000000); // 100-ns units. odd.
+    start_time.nsec = (start_li.LowPart % 10000000) * 100;
+  }
+  LARGE_INTEGER cur_time;
+  QueryPerformanceCounter(&cur_time);
+  LARGE_INTEGER delta_cpu_time;
+  delta_cpu_time.QuadPart = cur_time.QuadPart - init_cpu_time.QuadPart;
+  // todo: how to handle cpu clock drift. not sure it's a big deal for us.
+  // also, think about clock wraparound. seems extremely unlikey, but possible
+  double d_delta_cpu_time = delta_cpu_time.QuadPart / (double)cpu_freq.QuadPart;
+  Time t(start_time + Duration(d_delta_cpu_time));
 
-    return (uint32_t)(t.time*1000+t.millitm);
+  sec = t.sec;
+  nsec = t.nsec;
+#endif
+}
+
+inline uint64_t GetNanoTime()
+{
+    uint32_t sec,nsec;
+    getWallTime(sec,nsec);
+    return (uint64_t)sec*1000000000 + (uint64_t)nsec;
 }
 
 inline uint64_t GetMicroTime()
 {
-#ifdef _WIN32
-    LARGE_INTEGER count, freq;
-    QueryPerformanceCounter(&count);
-    QueryPerformanceFrequency(&freq);
-    return (count.QuadPart * 1000000) / freq.QuadPart;
-#else
-    struct timeval t;
-    gettimeofday(&t, NULL);
-    return (uint64_t)t.tv_sec*1000000+t.tv_usec;
-#endif
+    uint32_t sec,nsec;
+    getWallTime(sec,nsec);
+    return (uint64_t)sec*1000000 + (uint64_t)nsec/1000;
 }
 
-#ifndef ARRAYSIZE
-#define ARRAYSIZE(x) (sizeof(x)/(sizeof( (x)[0] )))
-#endif
-
-#ifndef C_ASSERT
-#define C_ASSERT(e) typedef char __C_ASSERT__[(e)?1:-1]
-#endif
+inline uint32_t GetMilliTime()
+{
+    uint32_t sec,nsec;
+    getWallTime(sec,nsec);
+    return (uint64_t)sec*1000 + (uint64_t)nsec/1000000;
+}
 
 inline int RANDOM_INT(int maximum)
 {
@@ -151,13 +196,7 @@ inline float RANDOM_FLOAT(float maximum)
 }
 
 // need the prototypes in order to keep them free of the OpenRAVE namespace
-class LinkXMLReader;
-class KinBodyXMLReader;
-class InterfaceXMLReader;
-class JointXMLReader;
-class RobotXMLReader;
-class ManipulatorXMLReader;
-class AttachedSensorXMLReader;
+class OpenRAVEXMLParser;
 class Environment;
 class RaveDatabase;
 class ColladaReader;
@@ -182,83 +221,13 @@ void CreateTriMeshData(SoNode* pnode, KinBody::Link::TRIMESH& tri);
 #endif
 
 #ifdef _WIN32
-
-#define WCSTOK(str, delim, ptr) wcstok(str, delim)
-
-// define wcsicmp for MAC OS X
 #elif defined(__APPLE_CC__)
-
-#define WCSTOK(str, delim, ptr) wcstok(str, delim, ptr);
-
 #define strnicmp strncasecmp
 #define stricmp strcasecmp
-
-inline int wcsicmp(const wchar_t* s1, const wchar_t* s2)
-{
-  char str1[128], str2[128];
-  sprintf(str1, "%S", s1);
-  sprintf(str2, "%S", s2);
-  return stricmp(str1, str2);
-}
-
 #else
-
-#define WCSTOK(str, delim, ptr) wcstok(str, delim, ptr)
-
 #define strnicmp strncasecmp
 #define stricmp strcasecmp
-#define wcsnicmp wcsncasecmp
-#define wcsicmp wcscasecmp
-
 #endif
-
-inline char* _ravestrdup(const char* pstr)
-{
-    if( pstr == NULL )
-        return NULL;
-    size_t len = strlen(pstr);
-    char* p = new char[len+1];
-    memcpy(p, pstr, len*sizeof(char));
-    p[len] = 0;
-    return p;
-}
-
-// Common functions and defines
-inline wchar_t* _ravewcsdup(const wchar_t* pstr)
-{
-    if( pstr == NULL )
-        return NULL;
-    size_t len = wcslen(pstr);
-    wchar_t* p = new wchar_t[len+1];
-    memcpy(p, pstr, len*sizeof(wchar_t));
-    p[len] = 0;
-    return p;
-}
-
-inline std::wstring _ravembstowcs(const char* pstr)
-{
-    if( pstr == NULL )
-        return std::wstring();
-    size_t len = mbstowcs(NULL, pstr, 0);
-    std::wstring w; w.resize(len);
-    mbstowcs(&w[0], pstr, len);
-    return w;
-}
-
-inline std::string _stdwcstombs(const wchar_t* pname)
-{
-    if( pname == NULL )
-        return std::string();
-
-    std::string s;
-    size_t len = wcstombs(NULL, pname, 0);
-    if( len != (size_t)-1 ) {
-        s.resize(len);
-        wcstombs(&s[0], pname, len);
-    }
-
-    return s;
-}
 
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
 
@@ -270,56 +239,53 @@ inline T CLAMP_ON_RANGE(T value, T min, T max)
     return value;
 }
 
-// declaring variables with stdcall can be a little complex
-#ifdef _MSC_VER
+#include <boost/bind.hpp>
+#include <boost/format.hpp>
+#include <boost/array.hpp>
+#include <boost/thread/thread.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/condition.hpp>
+#include <boost/tuple/tuple.hpp>
+#include <boost/assert.hpp>
 
-#define DECLPTR_STDCALL(name, paramlist) (__stdcall *name)paramlist
-
-#else
-
-#ifdef __x86_64__
-#define DECLPTR_STDCALL(name, paramlist) (*name) paramlist
-#else
-#define DECLPTR_STDCALL(name, paramlist) (__attribute__((stdcall)) *name) paramlist
-#endif
-
-#endif // _MSC_VER
-
-#include <pthread.h>
-#include <boost/shared_ptr.hpp>
-
-bool RaveParseColladaFile(EnvironmentBase* penv, const char* filename);
-bool RaveParseColladaFile(EnvironmentBase* penv, KinBody** ppbody, const char* filename);
-bool RaveParseColladaFile(EnvironmentBase* penv, RobotBase** pprobot, const char* filename);
-bool RaveParseColladaData(EnvironmentBase* penv, const char* pdata, int len);
-bool RaveParseColladaData(EnvironmentBase* penv, KinBody** ppbody, const char* pdata, int len);
-bool RaveParseColladaData(EnvironmentBase* penv, RobotBase** pprobot, const char* pdata, int len);
-
-bool RaveWriteColladaFile(EnvironmentBase* penv, const char* filename);
-bool RaveWriteColladaFile(KinBody* pbody, const char* filename);
-bool RaveWriteColladaFile(RobotBase* probot, const char* filename);
-
-class MutexLock
+template<class P>
+struct smart_pointer_deleter
 {
-public:
-    MutexLock(pthread_mutex_t* pmutex) : _pmutex(pmutex) { pthread_mutex_lock(_pmutex); }
-    ~MutexLock() { pthread_mutex_unlock(_pmutex); }
-    pthread_mutex_t* _pmutex;
-};
-
-class LockEnvironment
-{
-public:
-    LockEnvironment(EnvironmentBase* penv) : _penv(penv) { _penv->LockPhysics(true); }
-    ~LockEnvironment() { _penv->LockPhysics(false); }
-
 private:
-    EnvironmentBase* _penv;
+    P p_;
+    boost::function<void(void const*)> _deleterfn;
+public:
+smart_pointer_deleter(P const & p, const boost::function<void(void const*)>& deleterfn): p_(p), _deleterfn(deleterfn)
+    {
+    }
+
+    void operator()(void const * x)
+    {
+        _deleterfn(x);
+        p_.reset();
+    }
+    
+    P const & get() const
+    {
+        return p_;
+    }
 };
+
+bool RaveParseColladaFile(EnvironmentBasePtr penv, const std::string& filename) { return false; }
+bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename) { return false; }
+bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename) { return false; }
+bool RaveParseColladaData(EnvironmentBasePtr penv, const std::string& data) { return false; }
+bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data) { return false; }
+bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data) { return false; }
+
+bool RaveWriteColladaFile(EnvironmentBasePtr penv, const std::string& filename) { return false; }
+bool RaveWriteColladaFile(KinBodyPtr pbody, const std::string& filename) { return false; }
+bool RaveWriteColladaFile(RobotBasePtr probot, const std::string& filename) { return false; }
 
 #include "server.h"
-#include "xmlreaders.h"
-#include "environment.h"
 #include "ivcon.h"
+#include "xmlreaders.h"
+#include "plugindatabase.h"
+#include "environment.h"
 
 #endif

@@ -1,4 +1,4 @@
-# Populates sources list
+# Populates ssources list
 set (openrave_SOURCES openrave.cpp)
 
 include_directories(${CMAKE_SOURCE_DIR})
@@ -35,7 +35,7 @@ else()
   set(SOCKET_LIBS)
 endif()
 
-target_link_libraries (openrave ${PTHREADS_LIBRARY} libopenrave-core ${SOCKET_LIBS})
+target_link_libraries (openrave ${Boost_THREAD_LIBRARY} libopenrave-core ${SOCKET_LIBS})
 
 # untar the resource files
 add_custom_command(

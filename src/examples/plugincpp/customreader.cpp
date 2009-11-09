@@ -19,156 +19,141 @@ public:
     class PIDXMLReader : public BaseXMLReader
     {
     public:
-        PIDXMLReader(XMLData* piddata, const char **atts) {
+        PIDXMLReader(boost::shared_ptr<XMLData> piddata, const std::list<std::pair<std::string,std::string> >& atts) {
             _piddata = piddata;
-            if( _piddata == NULL )
-                _piddata = new XMLData();
+            if( !_piddata )
+                _piddata.reset(new XMLData());
+            RAVELOG_INFOA("the attributes piddata is created with are:\n");
+            for(std::list<std::pair<std::string,std::string> >::const_iterator itatt = atts.begin(); itatt != atts.end(); ++itatt)
+                RAVELOG_INFOA("%s=%s\n",itatt->first.c_str(),itatt->second.c_str());
         }
-        virtual ~PIDXMLReader() { delete _piddata; }
-        
-        void* Release() { XMLData* temp = _piddata; _piddata = NULL; return temp; }
 
-        virtual void startElement(void *ctx, const char *name, const char **atts) {}
-        virtual bool endElement(void *ctx, const char *name)
+        virtual XMLReadablePtr GetReadable() { return _piddata; }
+
+        virtual void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts) {}
+
+        virtual bool endElement(const std::string& name)
         {
-            if( strcmp((const char*)name, "piddata") == 0 )
+            if( name == "piddata" )
                 return true;
-
-            if( strcmp((const char*)name, "pgains") == 0 ) {
-                _piddata->pgains.clear();
-                while(!ss.eof()) {
-                    dReal f;
-                    ss >> f;
-                    if( !ss )
-                        break;
-                    _piddata->pgains.push_back(f);
-                }
-            }
-            else if( strcmp((const char*)name, "igains") == 0 ) {
-                _piddata->igains.clear();
-                while(!ss.eof()) {
-                    dReal f;
-                    ss >> f;
-                    if( !ss )
-                        break;
-                    _piddata->igains.push_back(f);
-                }
-            }
+            else if( name == "pgains" )
+                // read all the float values into a vector
+                _piddata->pgains = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
+            else if( name == "igains" )
+                // read all the float values into a vector
+                _piddata->igains = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
             else
-                RAVELOG_ERRORA("unknown field %s\n", name);
-
-            if( !ss )
-                RAVELOG_ERRORA("PIDXMLReader error parsing %s\n", name);
+                RAVELOG_ERRORA("unknown field %s\n", name.c_str());
 
             return false;
         }
 
-        virtual void characters(void *ctx, const char *ch, int len)
+        virtual void characters(const std::string& ch)
         {
-            if( len > 0 ) {
-                ss.clear();
-                ss.str(string(ch, len));
-            }
-            else
-                ss.str(""); // reset
+            _ss.clear();
+            _ss.str(ch);
         }
 
     protected:
-        XMLData* _piddata;
-        stringstream ss;
+        boost::shared_ptr<XMLData> _piddata;
+        stringstream _ss;
     };
 
-    CustomController(EnvironmentBase* penv) : ControllerBase(penv), _probot(NULL)
+    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const std::list<std::pair<std::string,std::string> >& atts)
     {
-        RegisterXMLReader(GetEnv());
+        // ptr is the robot interface that this reader is being created for
+        return BaseXMLReaderPtr(new PIDXMLReader(boost::shared_ptr<XMLData>(),atts));
     }
 
-    static void RegisterXMLReader(EnvironmentBase* penv)
+    CustomController(EnvironmentBasePtr penv) : ControllerBase(penv)
     {
-        if( penv != NULL )
-            penv->RegisterXMLReader(PT_Controller, "piddata", CustomController::CreateXMLReader);
     }
 
-    static BaseXMLReader* CreateXMLReader(InterfaceBase* pinterface, const char **atts)
+    virtual bool Init(RobotBasePtr robot, const std::string& args)
     {
-        return new PIDXMLReader(NULL, atts);
-    }
-
-    virtual bool Init(RobotBase* robot, const char* args = NULL) {
         _probot = robot;
 
         // read the gains from the XML
-        std::map<std::string, XMLReadable* >::const_iterator it = GetReadableInterfaces().find("piddata");
-        if( it != GetReadableInterfaces().end() ) {
+        boost::shared_ptr<XMLData> piddata = boost::dynamic_pointer_cast<XMLData>(GetReadableInterface("piddata"));
+        if( !!piddata ) {
             stringstream ss;
             ss << "piddata from custom XML reader is" << endl << "pgains: ";
-            XMLData* pdata = (XMLData*)it->second;
-            for(vector<dReal>::iterator it = pdata->pgains.begin(); it != pdata->pgains.end(); ++it)
+            for(vector<dReal>::iterator it = piddata->pgains.begin(); it != piddata->pgains.end(); ++it)
                 ss << *it << " ";
             ss << endl << "igains: ";
-            for(vector<dReal>::iterator it = pdata->igains.begin(); it != pdata->igains.end(); ++it)
+            for(vector<dReal>::iterator it = piddata->igains.begin(); it != piddata->igains.end(); ++it)
                 ss << *it << " ";
             ss << endl;
-            RAVELOG_INFOA(ss.str().c_str());
+            RAVELOG_INFOA(ss.str());
         }
         else
             RAVELOG_WARNA("failed to find piddata\n");
         return true;
     }
+
     virtual void Reset(int options) {}
-    virtual bool SetDesired(const dReal* pValues) { return false; }
-    virtual bool SetPath(const Trajectory* ptraj) { return false; }
-    virtual bool SetPath(const Trajectory* ptraj, int nTrajectoryId, float fDivergenceTime) { return false; }
+    virtual bool SetDesired(const std::vector<dReal>& values) { return false; }
+    virtual bool SetPath(TrajectoryBaseConstPtr ptraj) { return false; }
     virtual bool SimulationStep(dReal fTimeElapsed) { return false; }
     virtual bool IsDone() { return false; }
-    virtual float GetTime() const { return 0; }
-    virtual RobotBase* GetRobot() const { return _probot; }
+    virtual dReal GetTime() const { return 0; }
+    virtual RobotBasePtr GetRobot() const { return _probot; }
 
 protected:
-    RobotBase* _probot;
+    RobotBasePtr _probot;
 };
 
-#ifdef _MSC_VER
-#define PROT_STDCALL(name, paramlist) __stdcall name paramlist
-#define DECL_STDCALL(name, paramlist) __stdcall name paramlist
-#else
-#ifdef __x86_64__
-#define DECL_STDCALL(name, paramlist) name paramlist
-#else
-#define DECL_STDCALL(name, paramlist) __attribute__((stdcall)) name paramlist
-#endif
-#endif // _MSC_VER
+static boost::shared_ptr<void> s_RegisteredReader;
 
-extern "C" InterfaceBase* DECL_STDCALL(ORCreate, (PluginType type, wchar_t* name, EnvironmentBase* penv))
+// need c linkage
+extern "C" {
+InterfaceBasePtr CreateInterface(PluginType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv)
 {
-    if( name == NULL ) return NULL;
-    
-    switch(type) {
-        case PT_Controller:
-            if( wcscmp(name, L"CustomController") == 0 )
-                return new CustomController(penv);
-            break;
-        default:
-            break;
+    if( strcmp(pluginhash,RaveGetInterfaceHash(type)) ) {
+        RAVELOG_WARNA("plugin type hash is wrong");
+        throw openrave_exception("bad plugin hash");
+    }
+    if( !penv )
+        return InterfaceBasePtr();
+ 
+    if( !s_RegisteredReader ) {
+        /// as long as this pointer is valid, the reader will remain registered
+        s_RegisteredReader = penv->RegisterXMLReader(PT_Controller,"piddata",CustomController::CreateXMLReader);
     }
 
-    return NULL;
+    stringstream ss(name);
+    string interfacename;
+    ss >> interfacename;
+    std::transform(interfacename.begin(), interfacename.end(), interfacename.begin(), ::tolower);
+
+    switch(type) {
+    case PT_Controller:
+        if( interfacename == "customcontroller")
+            return InterfaceBasePtr(new CustomController(penv));
+        break;
+    default:
+        break;
+    }
+
+    return InterfaceBasePtr();
 }
 
-extern "C" bool DECL_STDCALL(GetPluginAttributes, (PLUGININFO* pinfo, int size))
+bool GetPluginAttributes(PLUGININFO* pinfo, int size)
 {
     if( pinfo == NULL ) return false;
     if( size != sizeof(PLUGININFO) ) {
-        printf("bad plugin info sizes %d != %d\n", size, sizeof(PLUGININFO));
+        RAVELOG_ERRORA("bad plugin info sizes %d != %d\n", size, sizeof(PLUGININFO));
         return false;
     }
 
     // fill pinfo
-    pinfo->controllers.push_back(L"CustomController");
+    pinfo->interfacenames[PT_Controller].push_back("CustomController");
     return true;
 }
 
-extern "C"void DECL_STDCALL(DestroyPlugin, ())
+void DestroyPlugin()
 {
-    RAVELOG_INFOA("destroying customreader plugin");
+    s_RegisteredReader.reset(); // unregister the reader
+}
+
 }

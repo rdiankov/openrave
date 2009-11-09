@@ -205,8 +205,7 @@
     <armjoints>J0 J1 J2 J3 J4 J5</armjoints>
     <joints>JF1 JF2 JF3</joints>
     <!-- joint values of the closed and opened positions -->
-    <opened>0 0 0</opened>
-    <closed>1.0 1.0 1.0</closed>
+    <closingdirection>1.0 1.0 1.0</closingdirection>
     <RotationAxis>1 0 0 -90</RotationAxis>
     <IkSolver>PUMAikfast</IkSolver>
   </Manipulator>

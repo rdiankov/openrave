@@ -18,185 +18,145 @@
 #include <boost/bind.hpp>
 #include <boost/tuple/tuple.hpp>
 
-template <typename IKReal, typename Solution>
+template <typename IKReal, IkSolverBase::Parameterization::Type IKType, typename Solution>
 class IkFastSolver : public IkSolverBase
 {
-public:
+ public:
     typedef bool (*IkFn)(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<Solution>& vsolutions);
+    
+ IkFastSolver(IkFn pfnik, const std::vector<int>& vfreeparams, dReal fFreeInc, int nTotalJoints, EnvironmentBasePtr penv) : IkSolverBase(penv), _vfreeparams(vfreeparams), _pfnik(pfnik), _fFreeInc(fFreeInc), _nTotalJoints(nTotalJoints) {}
 
-    IkFastSolver(IkFn pfnik, const std::vector<int>& vfreeparams, dReal fFreeInc, int nTotalJoints, EnvironmentBase* penv) : IkSolverBase(penv), _probot(NULL), _vfreeparams(vfreeparams), _pfnik(pfnik), _fFreeInc(fFreeInc)
+    inline boost::shared_ptr<IkFastSolver<IKReal,IKType,Solution> > shared_solver() { return boost::static_pointer_cast<IkFastSolver<IKReal,IKType, Solution> >(shared_from_this()); }
+    inline boost::shared_ptr<IkFastSolver<IKReal,IKType,Solution> const> shared_solver_const() const { return boost::static_pointer_cast<IkFastSolver<IKReal,IKType,Solution> const>(shared_from_this()); }
+
+    virtual void SetJointLimits()
     {
-        _varmjoints.resize(nTotalJoints);
-    }
-
-    virtual bool Init(RobotBase* probot, const RobotBase::Manipulator* pmanip, int options)
-    {
-        assert( probot != NULL );
-        _probot = probot;
-        if( _probot == NULL || pmanip == NULL )
-            return false;
-
-        if( _varmjoints.size() != pmanip->_vecarmjoints.size() ) {
-            RAVELOG_ERRORA("ik %s configured with different number of joints than robot manipulator (%"PRIdS"!=%"PRIdS")\n", GetXMLId(), _varmjoints.size(), pmanip->_vecarmjoints.size());
-            return false;
-        }
-
-        _varmjoints = pmanip->_vecarmjoints;
-
-        // get the joint limits
-        std::vector<dReal> qlower, qupper;
-        _probot->GetJointLimits(qlower, qupper);
-        _qlower.resize(_varmjoints.size()); _qupper.resize(_varmjoints.size());
-
-        for(int i = 0; i < (int)_varmjoints.size(); ++i) {
-            _qlower[i] = qlower[_varmjoints[i]];
-            _qupper[i] = qupper[_varmjoints[i]];
-        }
-
-        _vfreeparamscales.clear();
+        _probot->GetActiveDOFLimits(_qlower,_qupper);
+        _vfreeparamscales.resize(0);
         FOREACH(itfree, _vfreeparams) {
-            if( *itfree < 0 || *itfree >= (int)_qlower.size() ) {
-                RAVELOG_ERRORA("free parameter idx %d out of bounds\n", *itfree);
-                return false;
-            }
+            if( *itfree < 0 || *itfree >= (int)_qlower.size() )
+                throw openrave_exception(str(boost::format("free parameter idx %d out of bounds\n")%*itfree));
 
             if( _qupper[*itfree] > _qlower[*itfree] )
                 _vfreeparamscales.push_back(1.0f/(_qupper[*itfree]-_qlower[*itfree]));
             else
                 _vfreeparamscales.push_back(0.0f);
         }
+    }
 
-        std::set<KinBody::Link*> setlinks;
-        pmanip->GetChildLinks(setlinks);
+    virtual bool Init(RobotBase::ManipulatorConstPtr pmanip)
+    {
+        _pmanip = pmanip;
+        _probot = _pmanip->GetRobot();
+        _cblimits = _probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IkFastSolver<IKReal,IKType,Solution>::SetJointLimits,shared_solver()));
+
+        if( _nTotalJoints != (int)_pmanip->GetArmJoints().size() ) {
+            RAVELOG_ERRORA(str(boost::format("ik %s configured with different number of joints than robot manipulator (%d!=%d\n")%GetXMLId()%_pmanip->GetArmJoints().size()%_nTotalJoints));
+            return false;
+        }
+
+        // get the joint limits
+        RobotBase::RobotStateSaver saver(_probot);
+        _probot->SetActiveDOFs(_pmanip->GetArmJoints());
+        SetJointLimits();
+
+        std::set<KinBody::LinkPtr> setlinks;
+        _pmanip->GetChildLinks(setlinks);
         _vChildGripperLinks.clear();
-        Transform tbaseinv = pmanip->GetEndEffectorTransform().inverse();
-        for(std::set<KinBody::Link*>::iterator itlink = setlinks.begin(); itlink != setlinks.end(); ++itlink)
+        Transform tbaseinv = _pmanip->GetEndEffectorTransform().inverse();
+        for(std::set<KinBody::LinkPtr>::iterator itlink = setlinks.begin(); itlink != setlinks.end(); ++itlink)
             _vChildGripperLinks.push_back(make_pair(*itlink,tbaseinv*(*itlink)->GetTransform()));
 
         return true;
     }
-    
-    virtual bool Solve(const Transform &transEE, const dReal* q0, bool bCheckEnvCollision, dReal* qResult)
+
+    virtual bool Solve(const Parameterization& param, const std::vector<dReal>& q0, bool bCheckEnvCollision, boost::shared_ptr< std::vector<dReal> > result)
     {
-        assert( _probot != NULL );
-
-        RobotBase::RobotStateSaver saver(_probot);
-
-        _probot->SetActiveDOFs(_varmjoints);
-
-        std::vector<IKReal> vfree(_vfreeparams.size());
-        
-        TransformMatrix t = transEE;
-        IKReal eetrans[3] = {t.trans.x, t.trans.y, t.trans.z};
-        IKReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
-        
-        vector<dReal> vresultsol;
-        ComposeSolution(_vfreeparams, vfree.size()>0?&vfree[0]:NULL, 0, q0, boost::bind(&IkFastSolver::_SolveSingle,this, eerot,eetrans,vfree.size()>0?&vfree[0]:NULL,q0,bCheckEnvCollision,boost::ref(vresultsol),boost::ref(transEE)));
-        if( vresultsol.size()==_varmjoints.size() ) {
-            if( qResult != NULL )
-                std::copy(vresultsol.begin(),vresultsol.end(),qResult);
-            return true;
+        if( param.GetType() != IKType ) {
+            RAVELOG_WARNA("ik solver only supports type %d",IKType);
+            return false;
         }
-        return false;
+        RobotBase::RobotStateSaver saver(_probot);
+        _probot->SetActiveDOFs(_pmanip->GetArmJoints());
+        std::vector<IKReal> vfree(_vfreeparams.size());
+        return ComposeSolution(_vfreeparams, vfree, 0, q0, boost::bind(&IkFastSolver::_SolveSingle,shared_solver(), boost::ref(param),boost::ref(vfree),boost::ref(q0),bCheckEnvCollision,result));
     }
 
-    virtual bool Solve(const Transform &transEE, bool bCheckEnvCollision, std::vector< std::vector<dReal> >& qSolutions)
+    virtual bool Solve(const Parameterization& param, bool bCheckEnvCollision, std::vector< std::vector<dReal> >& qSolutions)
     {
-        assert( _probot != NULL );
+        if( param.GetType() != IKType ) {
+            RAVELOG_WARNA("ik solver only supports type %d",IKType);
+            return false;
+        }
 
         RobotBase::RobotStateSaver saver(_probot);
-
-        _probot->SetActiveDOFs(_varmjoints);
-
+        _probot->SetActiveDOFs(_pmanip->GetArmJoints());
         std::vector<IKReal> vfree(_vfreeparams.size());
-        
-        TransformMatrix t = transEE;
-        IKReal eetrans[3] = {t.trans.x, t.trans.y, t.trans.z};
-        IKReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
-
         qSolutions.resize(0);
-        ComposeSolution(_vfreeparams, vfree.size()>0?&vfree[0]:NULL, 0, NULL, boost::bind(&IkFastSolver::_SolveAll,this, eerot,eetrans,vfree.size()>0?&vfree[0]:NULL,bCheckEnvCollision,boost::ref(qSolutions)));
-
+        ComposeSolution(_vfreeparams, vfree, 0, vector<dReal>(), boost::bind(&IkFastSolver::_SolveAll,shared_solver(), param,vfree,bCheckEnvCollision,boost::ref(qSolutions)));
         return qSolutions.size()>0;
     }
 
-    virtual bool Solve(const Transform &transEE, const dReal* q0, const dReal* pFreeParameters, bool bCheckEnvCollision, dReal* qResult)
+    virtual bool Solve(const Parameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, bool bCheckEnvCollision, boost::shared_ptr< std::vector<dReal> > result)
     {
-        if( pFreeParameters == NULL )
-            return Solve(transEE,q0,bCheckEnvCollision,qResult);
-
-        assert( _probot != NULL );
-
-        RobotBase::RobotStateSaver saver(_probot);
-
-        _probot->SetActiveDOFs(_varmjoints);
-
-        std::vector<IKReal> vfree(_vfreeparams.size());
-        for(size_t i = 0; i < _vfreeparams.size(); ++i)
-            vfree[i] = pFreeParameters[i]*(_qupper[_vfreeparams[i]]-_qlower[_vfreeparams[i]]) + _qlower[_vfreeparams[i]];
-
-        TransformMatrix t = transEE;
-        IKReal eetrans[3] = {t.trans.x, t.trans.y, t.trans.z};
-        IKReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
-        
-        vector<dReal> vresultsol;
-        _SolveSingle(eerot,eetrans,vfree.size()>0?&vfree[0]:NULL,q0,bCheckEnvCollision,boost::ref(vresultsol),boost::ref(transEE));
-        if( vresultsol.size()==_varmjoints.size() ) {
-            if( qResult != NULL )
-                std::copy(vresultsol.begin(),vresultsol.end(),qResult);
-            return true;
+        if( param.GetType() != IKType ) {
+            RAVELOG_WARNA("ik solver only supports type %d",IKType);
+            return false;
         }
-        return false;
-    }
 
-    virtual bool Solve(const Transform &transEE, const dReal* pFreeParameters, bool bCheckEnvCollision, std::vector< std::vector<dReal> >& qSolutions)
-    {
-        if( pFreeParameters == NULL )
-            return Solve(transEE,bCheckEnvCollision,qSolutions);
-
-        assert( _probot != NULL );
+        if( vFreeParameters.size() != _vfreeparams.size() )
+            throw openrave_exception("free parameters not equal",ORE_InvalidArguments);
 
         RobotBase::RobotStateSaver saver(_probot);
-
-        _probot->SetActiveDOFs(_varmjoints);
-
+        _probot->SetActiveDOFs(_pmanip->GetArmJoints());
         std::vector<IKReal> vfree(_vfreeparams.size());
         for(size_t i = 0; i < _vfreeparams.size(); ++i)
-            vfree[i] = pFreeParameters[i]*(_qupper[_vfreeparams[i]]-_qlower[_vfreeparams[i]]) + _qlower[_vfreeparams[i]];
-        
-        TransformMatrix t = transEE;
-        IKReal eetrans[3] = {t.trans.x, t.trans.y, t.trans.z};
-        IKReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
+            vfree[i] = vFreeParameters[i]*(_qupper[_vfreeparams[i]]-_qlower[_vfreeparams[i]]) + _qlower[_vfreeparams[i]];
+        return _SolveSingle(param,vfree,q0,bCheckEnvCollision,result);
+    }
+    virtual bool Solve(const Parameterization& param, const std::vector<dReal>& vFreeParameters, bool bCheckEnvCollision, std::vector< std::vector<dReal> >& qSolutions)
+    {
+        if( param.GetType() != IKType ) {
+            RAVELOG_WARNA("ik solver only supports type %d",IKType);
+            return false;
+        }
 
+        if( vFreeParameters.size() != _vfreeparams.size() )
+            throw openrave_exception("free parameters not equal",ORE_InvalidArguments);
+
+        RobotBase::RobotStateSaver saver(_probot);
+        _probot->SetActiveDOFs(_pmanip->GetArmJoints());
+        std::vector<IKReal> vfree(_vfreeparams.size());
+        for(size_t i = 0; i < _vfreeparams.size(); ++i)
+            vfree[i] = vFreeParameters[i]*(_qupper[_vfreeparams[i]]-_qlower[_vfreeparams[i]]) + _qlower[_vfreeparams[i]];
         qSolutions.resize(0);
-        _SolveAll(eerot,eetrans,vfree.size()>0?&vfree[0]:NULL,bCheckEnvCollision,qSolutions);
+        _SolveAll(param,vfree,bCheckEnvCollision,qSolutions);
         return qSolutions.size()>0;
     }
 
     virtual int GetNumFreeParameters() const { return (int)_vfreeparams.size(); }
-    virtual bool GetFreeParameters(dReal* pFreeParameters) const
+    virtual bool GetFreeParameters(std::vector<dReal>& pFreeParameters) const
     {
-        assert( _probot != NULL && pFreeParameters != NULL );
-
         std::vector<dReal> values;
         std::vector<dReal>::const_iterator itscale = _vfreeparamscales.begin();
         _probot->GetJointValues(values);
-        FOREACHC(itfree, _vfreeparams)
-            *pFreeParameters++ = (values[_varmjoints[*itfree]]-_qlower[*itfree]) * *itscale++;
+        pFreeParameters.resize(_vfreeparams.size());
+        for(size_t i = 0; i < _vfreeparams.size(); ++i)
+            pFreeParameters[i] = (values[_pmanip->GetArmJoints()[_vfreeparams[i]]]-_qlower[_vfreeparams[i]]) * *itscale++;
 
         return true;
     }
-    virtual RobotBase* GetRobot() const { return _probot; }
+
+    virtual RobotBase::ManipulatorConstPtr GetManipulator() const { return _pmanip; }
 
 private:
-    template <class SolveFn>
-    bool ComposeSolution(const std::vector<int>& vfreeparams, IKReal* pfree, int freeindex, const dReal* q0, const SolveFn& fn)
+    bool ComposeSolution(const std::vector<int>& vfreeparams, vector<IKReal>& vfree, int freeindex, const vector<dReal>& q0, const boost::function<bool()>& fn)
     {
         if( freeindex >= (int)vfreeparams.size())
             return fn();
 
         // start searching for phi close to q0, as soon as a solution is found for the curphi, return it
-        dReal startphi = q0 != NULL ? q0[vfreeparams[freeindex]] : 0;
+        dReal startphi = q0.size() == _qlower.size() ? q0[vfreeparams[freeindex]] : 0;
         dReal upperphi = _qupper[vfreeparams[freeindex]], lowerphi = _qlower[vfreeparams[freeindex]], deltaphi = 0;
         int iter = 0;
 
@@ -229,45 +189,48 @@ private:
 
             iter++;
 
-            pfree[freeindex] = curphi;
-            if( ComposeSolution(_vfreeparams, pfree, freeindex+1,q0, fn) )
+            vfree[freeindex] = curphi;
+            if( ComposeSolution(_vfreeparams, vfree, freeindex+1,q0, fn) )
                 return true;
         }
 
         // explicitly test 0 since many edge cases involve 0s
         if( _qlower[vfreeparams[freeindex]] <= 0 && _qupper[vfreeparams[freeindex]] >= 0 ) {
-            pfree[freeindex] = 0;
-            if( ComposeSolution(_vfreeparams, pfree, freeindex+1,q0, fn) )
+            vfree[freeindex] = 0;
+            if( ComposeSolution(_vfreeparams, vfree, freeindex+1,q0, fn) )
                 return true;
         }
 
         return false;
     }
 
-    bool _SolveSingle(const IKReal* eerot, const IKReal* eetrans, const IKReal* pfree, const dReal* q0, bool bCheckEnvCollision, vector<dReal>& vresultsol, const Transform& transEE)
+    bool _SolveSingle(const Parameterization& param, const vector<IKReal>& vfree, const vector<dReal>& q0, bool bCheckEnvCollision, boost::shared_ptr< std::vector<dReal> > result)
     {
-        vresultsol.resize(0);
+        TransformMatrix t = param.GetTransform();
+        IKReal eetrans[3] = {t.trans.x, t.trans.y, t.trans.z};
+        IKReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
+
         std::vector<Solution> vsolutions;
         bool bStopSearching = false;
 
-        if( _pfnik(eetrans, eerot, pfree, vsolutions) ) {
+        if( _pfnik(eetrans, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions) ) {
             vector<IKReal> vsolfree;
 
-            dReal bestdist = 1000; // only valid if q0 != NULL
-            std::vector<dReal> vravesol(_varmjoints.size());
+            dReal bestdist = 1000;
+            std::vector<dReal> vravesol(_pmanip->GetArmJoints().size());
             std::vector<dReal> vbest;
-            std::vector<IKReal> sol(_varmjoints.size());
+            std::vector<IKReal> sol(_pmanip->GetArmJoints().size());
             // find the first valid solution that satisfies joint constraints and collisions
             FOREACH(itsol, vsolutions) {
                 if( itsol->GetFree().size() > 0 ) {
                     // have to search over all the free parameters of the solution!
                     vsolfree.resize(itsol->GetFree().size());
 
-                    if( ComposeSolution(itsol->GetFree(), &vsolfree[0], 0, q0, boost::bind(&IkFastSolver::_ValidateSolutionSingle,this, boost::ref(*itsol), boost::make_tuple(&vsolfree[0], q0, bCheckEnvCollision), boost::ref(sol), boost::ref(vravesol), boost::ref(vbest), boost::ref(bestdist), boost::ref(transEE), boost::ref(bStopSearching))) )
+                    if( ComposeSolution(itsol->GetFree(), vsolfree, 0, q0, boost::bind(&IkFastSolver::_ValidateSolutionSingle,shared_solver(), boost::ref(*itsol), boost::make_tuple(vsolfree, q0, bCheckEnvCollision), boost::ref(sol), boost::ref(vravesol), boost::ref(vbest), boost::ref(bestdist), boost::ref(param), boost::ref(bStopSearching))) )
                         break;
                 }
                 else {
-                    if( _ValidateSolutionSingle(*itsol, boost::make_tuple((const IKReal*)NULL,q0,bCheckEnvCollision), sol, vravesol, vbest, bestdist, transEE, bStopSearching) )
+                    if( _ValidateSolutionSingle(*itsol, boost::make_tuple(vector<IKReal>(),q0,bCheckEnvCollision), sol, vravesol, vbest, bestdist, param, bStopSearching) )
                         break;
                 }
             }
@@ -278,19 +241,20 @@ private:
             // return as soon as a solution is found, since we're visiting phis starting from q0, we are guaranteed
             // that the solution will be close (ie, phi's dominate in the search). This is to speed things up
             if( vbest.size() == _qlower.size() ) {
-                vresultsol.resize(_qlower.size());
-                memcpy(&vresultsol[0], &vbest[0], sizeof(dReal)*_qlower.size());
+                if( !!result )
+                    *result = vbest;
                 return true;
             }
         }
 
         return false;
     }
-
+    
     // validate a solution
-    bool _ValidateSolutionSingle(const Solution& iksol, boost::tuple<const IKReal*, const dReal*,bool> freeq0check, std::vector<IKReal>& sol, std::vector<dReal>& vravesol, std::vector<dReal>& vbest, dReal& bestdist, const Transform& transEE, bool& bStopSearching)
+    bool _ValidateSolutionSingle(const Solution& iksol, boost::tuple<const vector<IKReal>&, const vector<dReal>&,bool> freeq0check, std::vector<IKReal>& sol, std::vector<dReal>& vravesol, std::vector<dReal>& vbest, dReal& bestdist, const Parameterization& param, bool& bStopSearching)
     {
-        iksol.GetSolution(&sol[0],boost::get<0>(freeq0check));
+        const vector<IKReal>& vfree = boost::get<0>(freeq0check);
+        iksol.GetSolution(&sol[0],vfree.size()>0?&vfree[0]:NULL);
 
         for(int i = 0; i < (int)sol.size(); ++i)
             vravesol[i] = (dReal)sol[i];
@@ -305,32 +269,31 @@ private:
         }
 
         // check for self collisions
-        _probot->SetActiveDOFValues(NULL, &vravesol[0]);
-
+        _probot->SetActiveDOFValues(vravesol);
         if( _probot->CheckSelfCollision() )
             return false;
 
         COLLISIONREPORT report;
-        if( boost::get<2>(freeq0check) && GetEnv()->CheckCollision(_probot, &report) ) {
-            if( report.plink1 != NULL && report.plink2 != NULL ) {
-                RAVELOG_VERBOSEA("WAMIK: collision %S:%S with %S:%S\n", report.plink1->GetParent()->GetName(), report.plink1->GetName(), report.plink2->GetParent()->GetName(), report.plink2->GetName());
+        if( boost::get<2>(freeq0check) && GetEnv()->CheckCollision(_probot, boost::shared_ptr<COLLISIONREPORT>(&report,null_deleter())) ) {
+            if( !!report.plink1 && !!report.plink2 ) {
+                RAVELOG_VERBOSEA(str(boost::format("WAMIK: collision %s:%s with %s:%s\n")%report.plink1->GetParent()->GetName()%report.plink1->GetName()%report.plink2->GetParent()->GetName()%report.plink2->GetName()));
             }
             else
-                RAVELOG_VERBOSEA("ik collision\n");
+                RAVELOG_VERBOSEA("ik collision, no link\n");
 
             // if gripper is colliding, solutions will always fail, so completely stop solution process
-            if( _CheckGripperEnvironmentCollision(transEE) ) {
+            if( param.GetType() == Parameterization::Type_Transform6D && _CheckGripperEnvironmentCollision(param.GetTransform()) ) {
                 bStopSearching = true;
                 return true; // return true to stop the search
             }
+
             return false;
         }
 
         // solution is valid, check with q0
-        if( boost::get<1>(freeq0check) != NULL ) {
-
+        if( boost::get<1>(freeq0check).size() == _pmanip->GetArmJoints().size() ) {
             dReal d = 0;
-            for(int k = 0; k < (int)_varmjoints.size(); ++k)
+            for(int k = 0; k < (int)_pmanip->GetArmJoints().size(); ++k)
                 d += SQR(vravesol[k]-boost::get<1>(freeq0check)[k]);
 
             if( bestdist > d ) {
@@ -343,22 +306,26 @@ private:
         return true;
     }
 
-    bool _SolveAll(const IKReal* eerot, const IKReal* eetrans, const IKReal* pfree, bool bCheckEnvCollision, std::vector< std::vector<dReal> >& qSolutions)
+    bool _SolveAll(const Parameterization& param, const vector<IKReal>& vfree, bool bCheckEnvCollision, std::vector< std::vector<dReal> >& qSolutions)
     {
+        TransformMatrix t = param.GetTransform();
+        IKReal eetrans[3] = {t.trans.x, t.trans.y, t.trans.z};
+        IKReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
+
         std::vector<Solution> vsolutions;
-        if( _pfnik(eetrans, eerot, pfree, vsolutions) ) {
+        if( _pfnik(eetrans, eerot, vfree.size() > 0 ? &vfree[0] : NULL, vsolutions) ) {
             vector<IKReal> vsolfree;
-            vector<dReal> vravesol(_varmjoints.size());
-            std::vector<IKReal> sol(_varmjoints.size());
+            vector<dReal> vravesol(_pmanip->GetArmJoints().size());
+            std::vector<IKReal> sol(_pmanip->GetArmJoints().size());
             FOREACH(itsol, vsolutions) {
                 if( itsol->GetFree().size() > 0 ) {
                     // have to search over all the free parameters of the solution!
                     vsolfree.resize(itsol->GetFree().size());
                     
-                    ComposeSolution(itsol->GetFree(), &vsolfree[0], 0, NULL, boost::bind(&IkFastSolver::_ValidateSolutionAll,this, boost::ref(*itsol), &vsolfree[0], bCheckEnvCollision, boost::ref(sol), boost::ref(vravesol), boost::ref(qSolutions)));
+                    ComposeSolution(itsol->GetFree(), vsolfree, 0, vector<dReal>(), boost::bind(&IkFastSolver::_ValidateSolutionAll,shared_solver(),boost::ref(*itsol), vsolfree, bCheckEnvCollision, boost::ref(sol), boost::ref(vravesol), boost::ref(qSolutions)));
                 }
                 else {
-                    if( _ValidateSolutionAll(*itsol, NULL, bCheckEnvCollision, sol, vravesol, qSolutions) )
+                    if( _ValidateSolutionAll(*itsol, vector<IKReal>(), bCheckEnvCollision, sol, vravesol, qSolutions) )
                         break;
                 }
             }
@@ -367,9 +334,9 @@ private:
         return false;
     }
 
-    bool _ValidateSolutionAll(const Solution& iksol, const IKReal* pfree, bool bCheckEnvCollision, std::vector<IKReal>& sol, std::vector<dReal>& vravesol, std::vector< std::vector<dReal> >& qSolutions)
+    bool _ValidateSolutionAll(const Solution& iksol, const vector<IKReal>& vfree, bool bCheckEnvCollision, std::vector<IKReal>& sol, std::vector<dReal>& vravesol, std::vector< std::vector<dReal> >& qSolutions)
     {
-        iksol.GetSolution(&sol[0],pfree);
+        iksol.GetSolution(&sol[0],vfree.size()>0?&vfree[0]:NULL);
 
         for(int i = 0; i < (int)sol.size(); ++i)
             vravesol[i] = (dReal)sol[i];
@@ -379,8 +346,7 @@ private:
             return false;
 
         // check for self collisions
-        _probot->SetActiveDOFValues(NULL, &vravesol[0]);
-
+        _probot->SetActiveDOFValues(vravesol);
         if( _probot->CheckSelfCollision() )
             return false;
 
@@ -418,12 +384,15 @@ private:
 
     template <typename U> U SQR(U t) { return t*t; }
 
-    RobotBase* _probot;
-    std::vector<int> _vfreeparams, _varmjoints;
+    RobotBase::ManipulatorConstPtr _pmanip;
+    RobotBasePtr _probot;
+    std::vector<int> _vfreeparams;
     std::vector<dReal> _vfreeparamscales;
-    std::vector<pair<KinBody::Link*,Transform> > _vChildGripperLinks;
+    std::vector<pair<KinBody::LinkPtr,Transform> > _vChildGripperLinks;
+    boost::shared_ptr<void> _cblimits;
     IkFn _pfnik;
     dReal _fFreeInc;
+    int _nTotalJoints;
     std::vector<dReal> _qlower, _qupper;
 };
 

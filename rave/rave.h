@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2009 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -50,15 +50,43 @@
 #include <map>
 #include <set>
 #include <string>
+#include <exception>
 
 #include <iomanip>
 #include <fstream>
 #include <sstream>
 
+#include <boost/shared_ptr.hpp>
+#include <boost/weak_ptr.hpp>
+#include <boost/tuple/tuple.hpp>
+#include <boost/enable_shared_from_this.hpp> 
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/recursive_mutex.hpp>
+#include <boost/static_assert.hpp>
+
 namespace OpenRAVE {
 
 #include <rave/defines.h>
 #include <rave/classhashes.h>
+
+enum OpenRAVEErrorCode {
+    ORE_Failed=0,
+    ORE_InvalidArguments=1,
+    ORE_EnvironmentNotLocked=2,
+    ORE_CommandNotSupported=3,
+};
+
+struct openrave_exception : std::exception
+{
+    openrave_exception() : std::exception(), _s("unknown exception"), _error(ORE_Failed) {}
+    openrave_exception(const std::string& s, OpenRAVEErrorCode error=ORE_Failed) : std::exception() { _s = "OpenRAVE: " + s; _error = error; }
+    virtual ~openrave_exception() throw() {}
+    char const* what() const throw() { return _s.c_str(); }
+    OpenRAVEErrorCode GetCode() const { return _error; }
+private:
+    std::string _s;
+    OpenRAVEErrorCode _error;
+};
 
 // terminal attributes
 //#define RESET           0
@@ -87,13 +115,6 @@ inline std::string ChangeTextColor (int attribute, int fg, int bg)
     return command;
 }
 
-inline std::wstring ChangeTextColorW (int attribute, int fg, int bg)
-{
-    wchar_t command[13];
-    swprintf (command, 13, L"%c[%d;%d;%dm", 0x1B, attribute, fg + 30, bg + 40);
-    return command;
-}
-
 /// Change the text color (on either stdout or stderr) with an attr:fg (thanks to Radu Rusu for the code)
 inline std::string ChangeTextColor (int attribute, int fg)
 {
@@ -114,16 +135,9 @@ inline std::wstring ChangeTextColorW (int attribute, int fg)
 inline std::string ResetTextColor ()
 {
     char command[13];
-    sprintf (command, "%c[0;m", 0x1B);
+    sprintf (command, "%c[0;38;48m", 0x1B);
     return command;
     //fwprintf (stream, L"%s", command);
-}
-
-inline std::wstring ResetTextColorW ()
-{
-    wchar_t command[13];
-    swprintf (command, 13, L"%c[0;m", 0x1B);
-    return command;
 }
 
 inline std::wstring RavePrintTransformString(const wchar_t* fmt)
@@ -206,7 +220,7 @@ enum DebugLevel {
         /* Allocate memory on the stack to avoid heap fragmentation */ \
         size_t allocsize = wcstombs(NULL, wfmt, 0)+32; \
         char* fmt = (char*)alloca(allocsize); \
-        strcpy(fmt, ChangeTextColor(0, OPENRAVECOLOR##LEVEL).c_str()); \
+        strcpy(fmt, ChangeTextColor(0, OPENRAVECOLOR##LEVEL,8).c_str()); \
         snprintf(fmt+strlen(fmt),allocsize-16,"%S",wfmt); \
         strcat(fmt, ResetTextColor().c_str()); \
         int r = vprintf(fmt, list);        \
@@ -223,9 +237,15 @@ enum DebugLevel {
     { \
         va_list list; \
 	    va_start(list,fmt); \
-        int r = vprintf((ChangeTextColor(0, OPENRAVECOLOR##LEVEL) + std::string(fmt) + ResetTextColor()).c_str(), list); \
+        int r = vprintf((ChangeTextColor(0, OPENRAVECOLOR##LEVEL,8) + std::string(fmt) + ResetTextColor()).c_str(), list); \
         va_end(list); \
         return r; \
+    } \
+    \
+    inline int RavePrintfA##LEVEL(const std::string& s) \
+    { \
+        printf ("%c[0;%d;%dm%s%c[0;38;48m", 0x1B, OPENRAVECOLOR##LEVEL + 30,8+40,s.c_str(),0x1B); \
+        return s.size(); \
     }
 
 #endif
@@ -259,7 +279,7 @@ inline const char* RaveGetSourceFilename(const char* pfilename)
     return p+1;
 }
 
-#define RAVEPRINTHEADER(LEVEL) OpenRAVE::RavePrintfW##LEVEL(L"[%s:%d] ", OpenRAVE::RaveGetSourceFilename(__FILE__), __LINE__)
+#define RAVEPRINTHEADER(LEVEL) OpenRAVE::RavePrintfA##LEVEL("[%s:%d] ", OpenRAVE::RaveGetSourceFilename(__FILE__), __LINE__)
 
 // different logging levels. The higher the suffix number, the less important the information is.
 // 0 log level logs all the time. OpenRAVE starts up with a log level of 0.
@@ -267,43 +287,36 @@ inline const char* RaveGetSourceFilename(const char* pfilename)
 #define RAVELOG_LEVELA(LEVEL,level) OpenRAVE::RaveGetDebugLevel()>=(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfA##LEVEL
 
 // define log4cxx equivalents (eventually OpenRAVE will move to log4cxx logging)
-#define RAVELOG_FATAL RAVELOG_LEVEL(_FATALLEVEL,OpenRAVE::Level_Fatal)
+#define RAVELOG_FATALW RAVELOG_LEVEL(_FATALLEVEL,OpenRAVE::Level_Fatal)
 #define RAVELOG_FATALA RAVELOG_LEVELA(_FATALLEVEL,OpenRAVE::Level_Fatal)
-#define RAVELOG_ERROR RAVELOG_LEVEL(_ERRORLEVEL,OpenRAVE::Level_Error)
+#define RAVELOG_FATAL RAVELOG_FATALA
+#define RAVELOG_ERRORW RAVELOG_LEVEL(_ERRORLEVEL,OpenRAVE::Level_Error)
 #define RAVELOG_ERRORA RAVELOG_LEVELA(_ERRORLEVEL,OpenRAVE::Level_Error)
-#define RAVELOG_WARN RAVELOG_LEVEL(_WARNLEVEL,OpenRAVE::Level_Warn)
+#define RAVELOG_ERROR RAVELOG_ERRORA
+#define RAVELOG_WARNW RAVELOG_LEVEL(_WARNLEVEL,OpenRAVE::Level_Warn)
 #define RAVELOG_WARNA RAVELOG_LEVELA(_WARNLEVEL,OpenRAVE::Level_Warn)
-#define RAVELOG_INFO RAVELOG_LEVEL(_INFOLEVEL,OpenRAVE::Level_Info)
+#define RAVELOG_WARN RAVELOG_WARNA
+#define RAVELOG_INFOW RAVELOG_LEVEL(_INFOLEVEL,OpenRAVE::Level_Info)
 #define RAVELOG_INFOA RAVELOG_LEVELA(_INFOLEVEL,OpenRAVE::Level_Info)
-#define RAVELOG_DEBUG RAVELOG_LEVEL(_DEBUGLEVEL,OpenRAVE::Level_Debug)
+#define RAVELOG_INFO RAVELOG_INFOA
+#define RAVELOG_DEBUGW RAVELOG_LEVEL(_DEBUGLEVEL,OpenRAVE::Level_Debug)
 #define RAVELOG_DEBUGA RAVELOG_LEVELA(_DEBUGLEVEL,OpenRAVE::Level_Debug)
-#define RAVELOG_VERBOSE RAVELOG_LEVEL(_VERBOSELEVEL,OpenRAVE::Level_Verbose)
+#define RAVELOG_DEBUG RAVELOG_DEBUGA
+#define RAVELOG_VERBOSEW RAVELOG_LEVEL(_VERBOSELEVEL,OpenRAVE::Level_Verbose)
 #define RAVELOG_VERBOSEA RAVELOG_LEVELA(_VERBOSELEVEL,OpenRAVE::Level_Verbose)
-
-// deprecated
-#define RAVELOG RAVELOG_DEBUG
-#define RAVELOGA RAVELOG_DEBUGA
-#define RAVEPRINT RAVELOG_INFO
-#define RAVEPRINTA RAVELOG_INFOA
+#define RAVELOG_VERBOSE RAVELOG_VERBOSEA
 
 #define IS_DEBUGLEVEL(level) (OpenRAVE::RaveGetDebugLevel()>=(level))
 
-struct PLUGININFO
-{
-    std::vector<std::wstring> robots;
-    std::vector<std::wstring> planners;
-    std::vector<std::wstring> sensorsystems;
-    std::vector<std::wstring> controllers;
-    std::vector<std::wstring> problems;
-    std::vector<std::wstring> iksolvers;
-    std::vector<std::wstring> physicsengines;
-    std::vector<std::wstring> sensors;
-    std::vector<std::wstring> collisioncheckers;
-    std::vector<std::wstring> trajectories;
-    std::vector<std::wstring> viewers;
-    std::vector<std::wstring> servers;
-    std::vector<std::wstring> kinbodies;
-};
+inline void RaveSetDebugLevel(DebugLevel level) {
+    extern DebugLevel g_nDebugLevel;
+    g_nDebugLevel = level;
+}
+
+inline DebugLevel RaveGetDebugLevel(void) {
+    extern DebugLevel g_nDebugLevel;
+    return g_nDebugLevel;
+}
 
 enum PluginType
 {
@@ -319,12 +332,17 @@ enum PluginType
     PT_CollisionChecker=10, ///< collision checker
     PT_Trajectory=11, ///< holds a trajectory of configuration space points (also performs various smoothing and filtering steps)
     PT_Viewer=12,///< a viewer for the OpenRAVE state. Each environment can attach one viewer to it
-    PT_Server=13,///< a server used for communicating OpenRAVE state across the network
+};
+
+struct PLUGININFO
+{
+    std::map<PluginType, std::vector<std::string> > interfacenames;
 };
 
 class COLLISIONREPORT;
+class InterfaceBase;
 class IkSolverBase;
-class Trajectory;
+class TrajectoryBase;
 class ControllerBase;
 class PlannerBase;
 class RobotBase;
@@ -336,9 +354,48 @@ class PhysicsEngineBase;
 class SensorBase;
 class CollisionCheckerBase;
 class RaveViewerBase;
-class RaverServerBase;
 
-class EnvironmentBase;
+typedef boost::shared_ptr<InterfaceBase> InterfaceBasePtr;
+typedef boost::shared_ptr<InterfaceBase const> InterfaceBaseConstPtr;
+typedef boost::weak_ptr<InterfaceBase> InterfaceBaseWeakPtr;
+typedef boost::shared_ptr<KinBody> KinBodyPtr;
+typedef boost::shared_ptr<KinBody const> KinBodyConstPtr;
+typedef boost::weak_ptr<KinBody> KinBodyWeakPtr;
+typedef boost::shared_ptr<RobotBase> RobotBasePtr;
+typedef boost::shared_ptr<RobotBase const> RobotBaseConstPtr;
+typedef boost::weak_ptr<RobotBase> RobotBaseWeakPtr;
+typedef boost::shared_ptr<CollisionCheckerBase> CollisionCheckerBasePtr;
+typedef boost::shared_ptr<CollisionCheckerBase const> CollisionCheckerBaseConstPtr;
+typedef boost::weak_ptr<CollisionCheckerBase> CollisionCheckerBaseWeakPtr;
+typedef boost::shared_ptr<ControllerBase> ControllerBasePtr;
+typedef boost::shared_ptr<ControllerBase const> ControllerBaseConstPtr;
+typedef boost::weak_ptr<ControllerBase> ControllerBaseWeakPtr;
+typedef boost::shared_ptr<IkSolverBase> IkSolverBasePtr;
+typedef boost::shared_ptr<IkSolverBase const> IkSolverBaseConstPtr;
+typedef boost::weak_ptr<IkSolverBase> IkSolverBaseWeakPtr;
+typedef boost::shared_ptr<PhysicsEngineBase> PhysicsEngineBasePtr;
+typedef boost::shared_ptr<PhysicsEngineBase const> PhysicsEngineBaseConstPtr;
+typedef boost::weak_ptr<PhysicsEngineBase> PhysicsEngineBaseWeakPtr;
+typedef boost::shared_ptr<PlannerBase> PlannerBasePtr;
+typedef boost::shared_ptr<PlannerBase const> PlannerBaseConstPtr;
+typedef boost::weak_ptr<PlannerBase> PlannerBaseWeakPtr;
+typedef boost::shared_ptr<ProblemInstance> ProblemInstancePtr;
+typedef boost::shared_ptr<ProblemInstance const> ProblemInstanceConstPtr;
+typedef boost::weak_ptr<ProblemInstance> ProblemInstanceWeakPtr;
+typedef boost::shared_ptr<SensorBase> SensorBasePtr;
+typedef boost::shared_ptr<SensorBase const> SensorBaseConstPtr;
+typedef boost::weak_ptr<SensorBase> SensorBaseWeakPtr;
+typedef boost::shared_ptr<SensorSystemBase> SensorSystemBasePtr;
+typedef boost::shared_ptr<SensorSystemBase const> SensorSystemBaseConstPtr;
+typedef boost::weak_ptr<SensorSystemBase> SensorSystemBaseWeakPtr;
+typedef boost::shared_ptr<TrajectoryBase> TrajectoryBasePtr;
+typedef boost::shared_ptr<TrajectoryBase const> TrajectoryBaseConstPtr;
+typedef boost::weak_ptr<TrajectoryBase> TrajectoryBaseWeakPtr;
+typedef boost::shared_ptr<RaveViewerBase> RaveViewerBasePtr;
+typedef boost::shared_ptr<RaveViewerBase const> RaveViewerBaseConstPtr;
+typedef boost::weak_ptr<RaveViewerBase> RaveViewerBaseWeakPtr;
+typedef boost::shared_ptr<EnvironmentBase> EnvironmentBasePtr;
+typedef boost::shared_ptr<EnvironmentBase const> EnvironmentBaseConstPtr;
 
 ///< Cloning Options for interfaces and environments
 enum CloningOptions {
@@ -359,70 +416,66 @@ private:
     std::string __xmlid;
 };
 
-inline DebugLevel RaveGetDebugLevel(void);
+typedef boost::shared_ptr<XMLReadable> XMLReadablePtr;
+typedef boost::shared_ptr<XMLReadable const> XMLReadableConstPtr;
 
 /// base class for all xml readers. XMLReaders are used to process data from
 /// xml files. Custom readers can be registered through EnvironmentBase
-class BaseXMLReader
+class BaseXMLReader : public boost::enable_shared_from_this<BaseXMLReader>
 {
 public:
     virtual ~BaseXMLReader() {}
 
-    virtual void* Release() = 0;
+    /// a readable interface that stores the information processsed for the current tag
+    /// This pointer is used to the InterfaceBase class registered readers
+    virtual XMLReadablePtr GetReadable() { return XMLReadablePtr(); }
 
     /// Gets called in the beginning of each "<type>" expression. In this case, name is "type"
-    /// \param ctx context of the XML parser
-    /// \param name of the tag
-    /// \param atts NULL terminated arary of string of attributes. For example in <type myatt="openrave">
-    ///             atts[0] = "myatt", atts[1] = "openrave", atts[2] = NULL
-    virtual void startElement(void *ctx, const char *name, const char **atts) = 0;
+    /// \param name of the tag, will be always lower case
+    /// \param atts string of attributes where the first std::string is the attribute name and second is the value
+    virtual void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts) = 0;
 
     /// Gets called at the end of each "</type>" expression. In this case, name is "type"
-    /// \param ctx context of the XML parser
-    /// \param name of the tag
+    /// \param name of the tag, will be always lower case
     /// \return true if XMLReader has finished parsing, otherwise false
-    virtual bool endElement(void *ctx, const char *name) = 0;
+    virtual bool endElement(const std::string& name) = 0;
 
     /// gets called for all data in between tags.
-    /// \param ctx context of the XML parser
-    /// \param ch pointer to the data, only the first len characters are valid (not NULL terminated!)
-    /// \param len length of valid data
-    virtual void characters(void *ctx, const char *ch, int len) = 0;
+    /// \param ch a string to the data
+    virtual void characters(const std::string& ch) = 0;
 
     std::string _filename; /// XML filename
 };
+typedef boost::shared_ptr<BaseXMLReader> BaseXMLReaderPtr;
+typedef boost::shared_ptr<BaseXMLReader const> BaseXMLReaderConstPtr;
 
 class DummyXMLReader : public BaseXMLReader
 {
 public:
-    DummyXMLReader(const char* pfieldname, const char* pparentname);
+    DummyXMLReader(const std::string& pfieldname, const std::string& pparentname);
     
-    virtual void* Release();
-    
-    virtual void startElement(void *ctx, const char *name, const char **atts);
+    virtual void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts);
     
     /// if returns true, XMLReader has finished parsing
-    virtual bool endElement(void *ctx, const char *name);
-    virtual void characters(void *ctx, const char *ch, int len) {}
+    virtual bool endElement(const std::string& name);
+    virtual void characters(const std::string& ch) {}
     
 private:
     std::string _fieldname, _parentname; /// XML filename
-    BaseXMLReader* _pcurreader;
+    boost::shared_ptr<BaseXMLReader> _pcurreader;
 };
 
 class OneTagReader : public BaseXMLReader
 {
 public:
-    OneTagReader(std::string tag, BaseXMLReader* preader);
+    OneTagReader(const std::string& tag, BaseXMLReaderPtr preader);
 
-    virtual void* Release();
-
-    virtual void startElement(void *ctx, const char *name, const char **atts);
-    virtual bool endElement(void *ctx, const char *name);
-    virtual void characters(void *ctx, const char *ch, int len);
+    virtual void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts);
+    virtual bool endElement(const std::string& name);
+    virtual void characters(const std::string& ch);
 
 private:
-    BaseXMLReader* _preader;
+    boost::shared_ptr<BaseXMLReader> _preader;
     std::string _tag;
     int _numtags;
 };
@@ -445,39 +498,25 @@ private:
 #include <rave/sensorsystem.h>
 #include <rave/iksolver.h>
 #include <rave/viewer.h>
-#include <rave/server.h>
 
 namespace OpenRAVE {
+
+typedef boost::recursive_try_mutex EnvironmentMutex;
 
 /// Environment class
 /// Holds everything necessary to load the environment, simulate a problem, and gather statistics.
 /// It should be free of rendering and GUI work.
-class EnvironmentBase
+class EnvironmentBase : public boost::enable_shared_from_this<EnvironmentBase>
 {
 public:
-    typedef BaseXMLReader* (*CreateXMLReaderFn)(InterfaceBase* pinterface, const char **atts);
-
-    // gets the state of all bodies that should be published to the GUI
-    struct BODYSTATE
-    {
-        BODYSTATE() : pbody(NULL) {}
-        KinBody* pbody;
-        std::vector<RaveTransform<dReal> > vectrans;
-        std::vector<dReal> jointvalues;
-        void* pguidata;
-        std::wstring strname; ///< name of the body
-        int networkid; ///< unique network id
-    };
-
-    class EnvLock
-    {
-    public:
-        virtual ~EnvLock() {}
-    };
-
+    EnvironmentBase() {}
     virtual ~EnvironmentBase() {}
 
-    /// Resets all objects of the scene (preserves all problems, planners, and server state)
+    /// releases all environment resources. Should be called whenever the environment stops being used
+    /// (removing all environment pointer might not be enough to destroy the environment resources)
+    virtual void Destroy()=0;
+
+    /// Resets all objects of the scene (preserves all problems, planners)
     /// do not call inside a SimulationStep call
     virtual void Reset()=0;
 
@@ -490,35 +529,35 @@ public:
     virtual void GetLoadedInterfaces(PLUGININFO& info) = 0;
 
     /// load a plugin and its interfaces
-    virtual bool LoadPlugin(const char* pname) = 0;
+    virtual bool LoadPlugin(const std::string& pname) = 0;
 
     /// returns true if interface can be loaded from a plugin, otherwise false
     virtual bool HasInterface(PluginType type, const std::string& interfacename) = 0;
     //@}
 
-    virtual InterfaceBase* CreateInterface(PluginType type,const char* pinterfacename)=0;
-    virtual RobotBase* CreateRobot(const wchar_t* pname)=0;
-    virtual RobotBase* CreateRobot(const char* pname)=0;
-    virtual PlannerBase* CreatePlanner(const wchar_t* pname)=0;
-    virtual PlannerBase* CreatePlanner(const char* pname)=0;
-    virtual SensorSystemBase* CreateSensorSystem(const wchar_t* pname)=0;
-    virtual SensorSystemBase* CreateSensorSystem(const char* pname)=0;
-    virtual ControllerBase* CreateController(const wchar_t* pname)=0;
-    virtual ControllerBase* CreateController(const char* pname)=0;
-    virtual ProblemInstance* CreateProblem(const wchar_t* pname)=0;
-    virtual ProblemInstance* CreateProblem(const char* pname)=0;
-    virtual IkSolverBase* CreateIkSolver(const wchar_t* pname)=0;
-    virtual IkSolverBase* CreateIkSolver(const char* pname)=0;
-    virtual PhysicsEngineBase* CreatePhysicsEngine(const wchar_t* pname)=0;
-    virtual PhysicsEngineBase* CreatePhysicsEngine(const char* pname)=0;
-    virtual SensorBase* CreateSensor(const wchar_t* pname)=0;
-    virtual SensorBase* CreateSensor(const char* pname)=0;
-    virtual CollisionCheckerBase* CreateCollisionChecker(const wchar_t* pname)=0;
-    virtual CollisionCheckerBase* CreateCollisionChecker(const char* pname)=0;
-    virtual RaveViewerBase* CreateViewer(const wchar_t* pname)=0;
-    virtual RaveViewerBase* CreateViewer(const char* pname)=0;
-    virtual RaveServerBase* CreateServer(const wchar_t* pname)=0;
-    virtual RaveServerBase* CreateServer(const char* pname)=0;
+    virtual InterfaceBasePtr CreateInterface(PluginType type,const std::string& interfacename)=0;
+    virtual RobotBasePtr CreateRobot(const std::string& name="")=0;
+    virtual PlannerBasePtr CreatePlanner(const std::string& name)=0;
+    virtual SensorSystemBasePtr CreateSensorSystem(const std::string& name)=0;
+    virtual ControllerBasePtr CreateController(const std::string& name)=0;
+    virtual ProblemInstancePtr CreateProblem(const std::string& name)=0;
+    virtual IkSolverBasePtr CreateIkSolver(const std::string& name)=0;
+    virtual PhysicsEngineBasePtr CreatePhysicsEngine(const std::string& name)=0;
+    virtual SensorBasePtr CreateSensor(const std::string& name)=0;
+    virtual CollisionCheckerBasePtr CreateCollisionChecker(const std::string& name)=0;
+    virtual RaveViewerBasePtr CreateViewer(const std::string& name)=0;
+
+    /// \return an empty KinBody instance, deallocate with delete, physics needs to be locked
+    virtual KinBodyPtr CreateKinBody(const std::string& name="") = 0;
+
+    /// \return an empty trajectory instance initialized to nDOF degrees of freedom. Deallocate with delete.
+    virtual TrajectoryBasePtr CreateTrajectory(int nDOF) = 0;
+
+    /// environment will own the interface until Destroy is called
+    virtual void OwnInterface(InterfaceBasePtr pinterface) = 0;
+
+    /// environment owner if interface is removed
+    virtual void DisownInterface(InterfaceBasePtr pinterface) = 0;
 
     /// Returns a clone of the current environment. Clones do not share any memory or resource between each other
     /// or their parent making them ideal for performing separte planning experiments while keeping
@@ -526,115 +565,102 @@ public:
     /// By default a clone only copies the collision checkers and physics engine.
     /// When bodies are cloned, the unique ids are preserved across environments (each body can be referenced with its id in both environments). The attached and grabbed bodies of each body/robot are also copied to the new environment.
     /// \param options A set of CloningOptions describing what is actually cloned.
-    virtual EnvironmentBase* CloneSelf(int options) = 0;
+    virtual EnvironmentBasePtr CloneSelf(int options) = 0;
 
     /// Collision specific functions
     //@{
-    virtual bool SetCollisionChecker(CollisionCheckerBase* pchecker)=0;
-    virtual CollisionCheckerBase* GetCollisionChecker() const =0;
+    virtual bool SetCollisionChecker(CollisionCheckerBasePtr pchecker)=0;
+    virtual CollisionCheckerBasePtr GetCollisionChecker() const =0;
 
-    virtual bool SetCollisionOptions(int options)=0;
-    virtual int GetCollisionOptions() const = 0;
+    virtual bool CheckCollision(KinBodyConstPtr pbody1, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())=0;
+    virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())=0;
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())=0;
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())=0;
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())=0;
+    
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())=0;
+    virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())=0;
 
-    virtual bool CheckCollision(const KinBody* pbody1, COLLISIONREPORT* pReport = NULL)=0;
-    virtual bool CheckCollision(const KinBody* pbody1, const KinBody* pbody2, COLLISIONREPORT* pReport = NULL)=0;
+    /// Check collision with a link and a ray with a specified length.
+    /// \param ray holds the origin and direction. The length of the ray is the length of the direction.
+    /// \param plink the link to collide with        
+    virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>()) = 0;
 
-    virtual bool CheckCollision(const KinBody::Link* plink, COLLISIONREPORT* pReport = NULL)=0;
-    virtual bool CheckCollision(const KinBody::Link* plink1, const KinBody::Link* plink2, COLLISIONREPORT* pReport = NULL)=0;
-    
-    virtual bool CheckCollision(const KinBody::Link* plink, const KinBody* pbody, COLLISIONREPORT* pReport = NULL)=0;
-    
-    virtual bool CheckCollision(const KinBody::Link* plink, const std::set<KinBody *>& vbodyexcluded, const std::set<KinBody::Link *>& vlinkexcluded, COLLISIONREPORT* pReport = NULL)=0;
-    virtual bool CheckCollision(const KinBody* pbody, const std::set<KinBody *>& vbodyexcluded, const std::set<KinBody::Link *>& vlinkexcluded, COLLISIONREPORT* pReport = NULL)=0;
-    
     /// Check collision with a link and a ray with a specified length.
     /// \param ray holds the origin and direction. The length of the ray is the length of the direction.
     /// \param plink the link to collide with
-    virtual bool CheckCollision(const RAY& ray, const KinBody::Link* plink, COLLISIONREPORT* pReport = NULL) = 0;
+    virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>()) = 0;
 
     /// Check collision with a body and a ray with a specified length.
     /// \param ray holds the origin and direction. The length of the ray is the length of the direction.
     /// \param pbody the kinbody to look for collisions
-    virtual bool CheckCollision(const RAY& ray, const KinBody* pbody, COLLISIONREPORT* pReport = NULL) = 0;
+    virtual bool CheckCollision(const RAY& ray, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>()) = 0;
 
-    /// Check collision with the environment and a ray with a specified length.
-    /// \param ray holds the origin and direction. The length of the ray is the length of the direction.
-    virtual bool CheckCollision(const RAY& ray, COLLISIONREPORT* pReport = NULL) = 0;
-	
-    //tolerance check
-    virtual bool CheckCollision(const KinBody::Link* plink, const std::set<KinBody *>& vbodyexcluded, const std::set<KinBody::Link *>& vlinkexcluded, dReal tolerance)= 0;
-    virtual bool CheckCollision(const KinBody* pbody, const std::set<KinBody *>& vbodyexcluded, const std::set<KinBody::Link *>& vlinkexcluded, dReal tolerance)= 0;
+    virtual bool CheckSelfCollision(KinBodyConstPtr pbody, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>()) = 0;
     //@}
 
     ///@{ file I/O
 
-    /// Loads a scene, need to LockPhysics if calling outside simulation thread
-    virtual bool   Load(const char *filename) = 0;
-    /// Loads a scene, need to LockPhysics if calling outside simulation thread
-    virtual bool   Load(const wchar_t *filename) = 0;
+    /// Loads a scene, need to Lock if calling outside simulation thread
+    virtual bool Load(const std::string& filename) = 0;
     /// Saves a scene depending on the filename extension. Default is in COLLADA format
-    virtual bool   Save(const char* filename) = 0;
+    virtual bool Save(const std::string& filename) = 0;
 
-    /// Initializes a robot from an XML file.
+    /// Initializes a robot from an XML file. The robot should not be added the environment when calling this function.
     /// \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled
-    virtual RobotBase* ReadRobotXML(RobotBase* robot, const char* filename, const char** atts) = 0;
+    /// \param filename the name of the file to open
+    virtual RobotBasePtr ReadRobotXMLFile(RobotBasePtr robot, const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts) = 0;
+    /// Initialize a robot from an XML formatted string
+    /// The robot should not be added the environment when calling this function.
+    /// \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled
+    virtual RobotBasePtr ReadRobotXMLData(RobotBasePtr robot, const std::string& data, const std::list<std::pair<std::string,std::string> >& atts) = 0;
 
-    /// Initializes a kinematic body from an XML file.
-    /// \param robot If a null pointer is passed, a new body will be created, otherwise an existing robot will be filled
-    virtual KinBody* ReadKinBodyXML(KinBody* robot, const char* filename, const char** atts) = 0;
+    /// Initializes a kinematic body from an XML file. The body should not be added to the environment when calling this function.
+    /// \param filename the name of the file to open
+    /// \param body If a null pointer is passed, a new body will be created, otherwise an existing robot will be filled
+    virtual KinBodyPtr ReadKinBodyXMLFile(KinBodyPtr body, const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts) = 0;
+
+    /// Initializes a kinematic body from an XML formatted string.
+    // The body should not be added to the environment when calling this function.
+    /// \param body If a null pointer is passed, a new body will be created, otherwise an existing robot will be filled
+    virtual KinBodyPtr ReadKinBodyXMLData(KinBodyPtr body, const std::string& data, const std::list<std::pair<std::string,std::string> >& atts) = 0;
     ///@}
 
     /// Objects
-    virtual bool AddKinBody(KinBody* pbody) = 0;
-    virtual bool AddRobot(RobotBase* robot) = 0;
+    virtual bool AddKinBody(KinBodyPtr pbody) = 0;
+    virtual bool AddRobot(RobotBasePtr robot) = 0;
 
     /// Removes  KinBody from the environment. If bDestroy is true, also
     /// deallocates the KinBody memory (physics also needs to be locked!). 
-    virtual bool RemoveKinBody(KinBody* pbody, bool bDestroy = true) = 0;
+    virtual bool RemoveKinBody(KinBodyPtr pbody) = 0;
 
-    /// \return first KinBody (including robots) that matches with pname
-    virtual KinBody* GetKinBody(const wchar_t* pname)=0;
+    /// \return first KinBody (including robots) that matches with name
+    virtual KinBodyPtr GetKinBody(const std::string& name)=0;
+
+    /// \return first Robot that matches with name
+    virtual RobotBasePtr GetRobot(const std::string& name)=0;
 
     /// Get the corresponding body from its unique network id
-    virtual KinBody* GetBodyFromNetworkId(int id) = 0;
+    virtual KinBodyPtr GetBodyFromNetworkId(int id) = 0;
 
-    /// \return an empty KinBody instance, deallocate with delete, physics needs to be locked
-    virtual KinBody* CreateKinBody() = 0;
+    /// Load a new problem, need to Lock if calling outside simulation thread
+    virtual int LoadProblem(ProblemInstancePtr prob, const std::string& cmdargs) = 0;
+    /// Load a new problem, need to Lock if calling outside simulation thread
+    virtual bool RemoveProblem(ProblemInstancePtr prob) = 0;
 
-    /// \return an empty trajectory instance initialized to nDOF degrees of freedom. Deallocate with delete.
-    virtual Trajectory* CreateTrajectory(int nDOF) = 0;
-
-    /// Load a new problem, need to LockPhysics if calling outside simulation thread
-    virtual int LoadProblem(ProblemInstance* prob, const char* cmdargs) = 0;
-    /// Load a new problem, need to LockPhysics if calling outside simulation thread
-    virtual bool RemoveProblem(ProblemInstance* prob) = 0;
-    /// Get a list of loaded problems
-    virtual const std::list<ProblemInstance*>& GetProblems() const = 0;
-
-    /// Random number generation
-    //@{
-    /// generate a random integer, 32bit precision
-    virtual unsigned int RandomInt() = 0;
-    /// generate n random integers, 32bit precision
-    virtual void RandomInt(unsigned int n, std::vector<int>& v) = 0;
-    /// generate a random float in [0,1], 32bit precision
-    virtual float RandomFloat() = 0;
-    /// generate n random floats in [0,1], 32bit precision
-    virtual void RandomFloat(unsigned int n, std::vector<float>& v) = 0;
-    /// generate a random double in [0,1], 53bit precision
-    virtual double RandomDouble() = 0;
-    /// generate n random doubles in [0,1], 53bit precision
-    virtual void RandomDouble(unsigned int n, std::vector<double>& v) = 0;
-    //@}
+    /// Returns a list of loaded problems with a lock. As long as the lock is held, the problems
+    /// are guaranteed to stay loaded in the environment.
+    /// \return returns a pointer to a Lock. Destroying the shared_ptr will release the lock
+    virtual boost::shared_ptr<boost::mutex> GetLoadedProblems(std::list<ProblemInstancePtr>& listProblems) const = 0;
 
     //@{ Physics/Simulation methods
 
     /// set the physics engine, disabled by default
     /// \param the engine to set, if NULL, environment sets an dummy physics engine
-    virtual bool SetPhysicsEngine(PhysicsEngineBase* pengine) = 0;
-    virtual PhysicsEngineBase* GetPhysicsEngine() const = 0;
+    virtual bool SetPhysicsEngine(PhysicsEngineBasePtr pengine) = 0;
+    virtual PhysicsEngineBasePtr GetPhysicsEngine() const = 0;
 
-    /// Makes one simulation step (will be rounded up to the nearest microsecond)
+    /// Makes one simulation step
     virtual void StepSimulation(dReal timeStep) = 0;
 
     /// Start the internal physics engine loop, calls SimulateStep for all modules
@@ -649,56 +675,62 @@ public:
     virtual uint64_t GetSimulationTime() = 0;
     //@}
 
-    /// Lock/unlock a mutex controlling the physics simulation thread.
-    /// If this mutex is locked, then the simulation thread will block
-    /// without calling any phsyics functions. Any SimulationStep functions across
-    /// interfaces automatically have physics locked.
-    /// \param bLock if true will acquire the lock
-    /// \param timeout if nonzero, will wait that many seconds until giving up. if zero, will wait forever
-    /// \return returns true if the operation successfully completed
-    virtual bool LockPhysics(bool bLock, float timeout=0) = 0;
+    /// Lock/unlock the environment mutex. Accessing environment body information and adding/removing bodies
+    /// or changing any type of scene property should have the environment lock acquired. Once the environment
+    /// is locked, the user is guaranteed that nnothing will change in the environment.
+    /// \return the mutex used to control the lock.
+    virtual EnvironmentMutex& GetMutex() const = 0;
 
-    virtual bool AttachViewer(RaveViewerBase* pnewviewer) = 0;
-    virtual RaveViewerBase* GetViewer() const = 0;
+    virtual bool AttachViewer(RaveViewerBasePtr pnewviewer) = 0;
+    virtual RaveViewerBasePtr GetViewer() const = 0;
 
     /// All plotting calls are thread safe
     //@{ 3D drawing methods
 
+    typedef boost::shared_ptr<void> GraphHandlePtr;
+
     /// plots 3D points.
-    /// \return handle to plotted points
+    /// \return handle to plotted points, graph is removed when handle is reset
     /// \param ppoints array of points
     /// \param numPoints number of points to plot
     /// \param stride stride in bytes to next point, ie: nextpoint = (float*)((char*)ppoints+stride)
     /// \param fPointSize size of a point in pixels
     /// \param color the rgb color of the point. The last component of the color is used for alpha blending
     /// \param drawstyle if 0 will draw pixels. if 1, will draw 3D spheres
-    virtual void* plot3(const float* ppoints, int numPoints, int stride, float fPointSize = 1.0f, const RaveVector<float>& color = RaveVector<float>(1,0.5,0.5,1), int drawstyle = 0) = 0;
+    virtual GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color = RaveVector<float>(1,0.5,0.5,1), int drawstyle = 0) = 0;
 
     /// plots 3D points. Arguments same as plot3 with one color, except has an individual color for every point
     /// \param colors An array of rgb colors of size numPoints where each channel is in [0,1].
     ///               colors+3 points to the second color.
     /// \param drawstyle if 0 will draw pixels. if 1, will draw 3D spherse
-    /// \return handle to plotted points
-    virtual void* plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle = 0) = 0;
+    /// \return handle to plotted points, graph is removed when handle is reset
+    virtual GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle = 0) = 0;
     
     /// draws a series of connected lines
     /// \param color the rgb color of the point. The last component of the color is used for alpha blending
-    virtual void* drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth = 1.0f, const RaveVector<float>& color = RaveVector<float>(1,0.5,0.5,1)) = 0;
-    virtual void* drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors) = 0;
+    /// \return handle to plotted points, graph is removed when handle is reset
+    virtual GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color = RaveVector<float>(1,0.5,0.5,1)) = 0;
+
+    /// \return handle to plotted points, graph is removed when handle is reset
+    virtual GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors) = 0;
 
     /// draws a list of individual lines, each specified by a succeeding pair of points
     /// \param color the rgb color of the point. The last component of the color is used for alpha blending.
-    virtual void* drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth = 1.0f, const RaveVector<float>& color = RaveVector<float>(1,0.5,0.5,1)) = 0;
-    virtual void* drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors) = 0;
+    /// \return handle to plotted points, graph is removed when handle is reset
+    virtual GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color = RaveVector<float>(1,0.5,0.5,1)) = 0;
+
+    /// \return handle to plotted points, graph is removed when handle is reset
+    virtual GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors) = 0;
 
     /// draws an arrow p1 is start, p2 is finish
     /// \param color the rgb color of the point. The last component of the color is used for alpha blending.
-    virtual void* drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth = 0.002f, const RaveVector<float>& color = RaveVector<float>(1,0.5,0.5,1)) = 0;
+    /// \return handle to plotted points, graph is removed when handle is reset
+    virtual GraphHandlePtr drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color = RaveVector<float>(1,0.5,0.5,1)) = 0;
     
     /// draws a box
     /// extents are half the width, height, and depth of the box
-    /// \return handle to box
-    virtual void* drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents) = 0;
+    /// \return handle to plotted points, graph is removed when handle is reset
+    virtual GraphHandlePtr drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents) = 0;
 
     /// draws a triangle mesh, each vertices of each triangle should be counter-clockwise.
     /// \param ppoints - array of 3D points
@@ -707,11 +739,8 @@ public:
     /// should be of size numTriangles. If pIndices is NULL, ppoints is assumed to contain numTriangles*3
     /// points and triangles will be rendered in list order.
     /// \param color The color of the triangle. The last component of the color is used for alpha blending
-    virtual void* drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color = RaveVector<float>(1,0.5,0.5,1)) = 0;
-    //virtual void* drawtrimesh(const float* ppoints, const int* pIndices, int numTriangles, const float* colors);
-
-    /// closes previous graphs
-    virtual void closegraph(void* handle) = 0;
+    /// \return handle to plotted points, graph is removed when handle is reset
+    virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color) = 0;
     //@}
 
     //@{ Other GUI interaction methods
@@ -731,8 +760,6 @@ public:
     virtual void SetCameraLookAt(const RaveVector<float>& lookat, const RaveVector<float>& campos, const RaveVector<float>& camup) = 0;
     virtual RaveTransform<float> GetCameraTransform() = 0;
 
-    virtual bool GetFractionOccluded(KinBody* pbody, int width, int height, float nearPlane, float farPlane, const RaveTransform<float>& extrinsic, const float* pKK, double& fracOccluded) = 0;
-
     /// Renders a 24bit RGB image of dimensions width and height from the current scene. The camera
     /// is meant to show the underlying OpenRAVE world as a robot would see it, so all graphs
     /// rendered with the plotX and drawX functions are hidden.
@@ -742,7 +769,7 @@ public:
     /// \param t the rotation and translation of the camera. Note that z is treated as the front of the camera!
     ///        So all points in front of the camera have a positive dot product with its direction.
     /// \param pKK 4 values such that the intrinsic matrix can be reconstructed [pKK[0] 0 pKK[2]; 0 pKK[1] pKK[3]; 0 0 1];
-    virtual bool GetCameraImage(void* pMemory, int width, int height, const RaveTransform<float>& t, const float* pKK) = 0;
+    virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK) = 0;
 
     /// Renders a 24bit RGB image of dimensions width and height from the current scene and saves it to a file.
     /// The camera is meant to show the underlying OpenRAVE world as a robot would see it, so all graphs
@@ -752,18 +779,18 @@ public:
     /// \param t the rotation and translation of the camera. Note that z is treated as the front of the camera!
     ///        So all points in front of the camera have a positive dot product with its direction.
     /// \param pKK 4 values such that the intrinsic matrix can be reconstructed [pKK[0] 0 pKK[2]; 0 pKK[1] pKK[3]; 0 0 1];
-    virtual bool WriteCameraImage(int width, int height, const RaveTransform<float>& t, const float* pKK, const char* fileName, const char* extension) = 0;
+    virtual bool WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension) = 0;
     //@}
 
-    /// return all robots
-    virtual const std::vector<RobotBase*>& GetRobots() const = 0;
-
     /// fill an array with all bodies loaded in the environment (including roobts)
-    virtual void GetBodies(std::vector<KinBody*>& bodies) const = 0;
+    virtual void GetBodies(std::vector<KinBodyPtr>& bodies) const = 0;
+
+    /// fill an array with all robots loaded in the environment
+    virtual void GetRobots(std::vector<RobotBasePtr>& robots) const = 0;
     
     /// retrieve published bodies, note that the pbody pointer might become invalid
     /// as soon as GetPublishedBodies returns
-    virtual void GetPublishedBodies(std::vector<BODYSTATE>& vbodies) = 0;
+    virtual void GetPublishedBodies(std::vector<KinBody::BodyState>& vbodies) = 0;
 
     /// updates the published bodies that viewers and other programs listening in on the environment see.
     /// For example, calling this function inside a planning loop allows the viewer to update the environment
@@ -771,43 +798,37 @@ public:
     /// Assumes that the physics are locked. 
     virtual void UpdatePublishedBodies() = 0;
 
-    virtual void SetPublishBodiesAnytime(bool bAnytime) = 0;
-    virtual bool GetPublishBodiesAnytime() const = 0;
-
-    /// returns the global kinbody array
-    virtual const std::vector<KinBody*>& GetBodies() const = 0;
-
     /// Returns a set of bodies and locks the environment from creating and destroying new bodies
-    /// (ie, creation of and destruction functions will block until lock is released).
-    /// In order to release the lock, delete the EnvLock pointer returned.
+    /// (ie, body creation of and destruction functions will block until lock is released).
+    /// This function is independent of the environment lock
     /// \param bodies Fills with all the body pointers in the environment
-    /// \return returns a pointer to a Lock
-    virtual EnvLock* GetLockedBodies(std::vector<KinBody*>& bodies) const = 0;
+    /// \return returns a pointer to a Lock. Destroying the shared_ptr will release the lock
+    virtual boost::shared_ptr<boost::mutex> GetLockedBodies(std::vector<KinBodyPtr>& bodies) const = 0;
 
     /// Returns a set of robots and locks the environment from creating and destroying new bodies
-    /// (ie, creation of and destruction functions will block until lock is released).
-    /// In order to release the lock, delete the EnvLock pointer returned.
+    /// (ie, body creation of and destruction functions will block until lock is released).
+    /// This function is independent of the environment lock
     /// \param bodies Fills with all the body pointers in the environment
-    /// \return returns a pointer to a Lock
-    virtual EnvLock* GetLockedRobots(std::vector<RobotBase*>& robots) const = 0;
+    /// \return returns a pointer to a Lock. Destroying the shared_ptr will release the lock
+    virtual boost::shared_ptr<boost::mutex> GetLockedRobots(std::vector<RobotBasePtr>& robots) const = 0;
 
     /// XML processing functions.
     //@{
+    typedef boost::function<BaseXMLReaderPtr(InterfaceBasePtr, const std::list<std::pair<std::string,std::string> >&)> CreateXMLReaderFn;
 
     /// registers a custom xml reader for a particular interface. Once registered, anytime
+    /// CreateXMLReaderFn(pinterface,atts)
     /// the tag specified in xmltag is seen in the interface, the the custom reader will be created.
-    virtual void RegisterXMLReader(PluginType type, const char* xmltag, CreateXMLReaderFn pfn) = 0;
-
-    /// unregisters the xml reader
-    virtual void UnregisterXMLReader(PluginType type, const char* xmltag) = 0;
+    /// \return a pointer holding the registration, releasing the pointer will unregister the XML reader
+    virtual boost::shared_ptr<void> RegisterXMLReader(PluginType type, const std::string& xmltag, const CreateXMLReaderFn& ) = 0;
     
     /// Parses a file for XML data
-    virtual bool ParseXMLFile(BaseXMLReader* preader, const char* filename) = 0;
+    virtual bool ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename) = 0;
 
     /// Parses a data file for XML data
     /// \param pdata The data of the buffer
     /// \param len the number of bytes valid in pdata
-    virtual bool ParseXMLData(BaseXMLReader* preader, const char* pdata, int len) = 0;
+    virtual bool ParseXMLData(BaseXMLReaderPtr preader, const std::string& data) = 0;
     //@}
 
     enum TriangulateOptions
@@ -820,11 +841,11 @@ public:
     };
     
     /// triangulation of the body including its current transformation. trimesh will be appended the new data.
-    virtual bool Triangulate(KinBody::Link::TRIMESH& trimesh, const KinBody* pbody) = 0;
+    virtual bool Triangulate(KinBody::Link::TRIMESH& trimesh, KinBodyConstPtr pbody) = 0;
 
     /// general triangulation of the whole scene. trimesh will be appended the new data.
     /// \param opts - Controlls what to triangulate
-    virtual bool TriangulateScene(KinBody::Link::TRIMESH& trimesh, TriangulateOptions opts, const wchar_t* pName) = 0;
+    virtual bool TriangulateScene(KinBody::Link::TRIMESH& trimesh, TriangulateOptions opts, const std::string& name) = 0;
 
     /// returns the openrave home directory where settings, cache, and other files are stored.
     /// On Linux/Unix systems, this is usually $HOME/.openrave, on Windows this is $HOMEPATH/.openrave
@@ -839,23 +860,49 @@ public:
     virtual void SetDebugLevel(DebugLevel level) = 0;
     virtual DebugLevel GetDebugLevel() const = 0;
     //@}
-
-    //@{ environment server
-    virtual bool AttachServer(RaveServerBase* pserver) = 0;
-    virtual RaveServerBase* GetServer() const = 0;
-    //@}
 };
 
-inline void RaveSetDebugLevel(DebugLevel level) {
-    extern DebugLevel g_nDebugLevel;
-    g_nDebugLevel = level;
+/// returns the a 16 character string specifying a hash of the interfaces used for checking changes
+inline const char* RaveGetInterfaceHash(PluginType type)
+{
+    switch(type) {
+    case PT_Planner: return OPENRAVE_PLANNER_HASH;
+    case PT_Robot: return OPENRAVE_ROBOT_HASH;
+    case PT_SensorSystem: return OPENRAVE_SENSORSYSTEM_HASH;
+    case PT_Controller: return OPENRAVE_CONTROLLER_HASH;
+    case PT_ProblemInstance: return OPENRAVE_PROBLEM_HASH;
+    case PT_InverseKinematicsSolver: return OPENRAVE_IKSOLVER_HASH;
+    case PT_KinBody: return OPENRAVE_KINBODY_HASH;
+    case PT_PhysicsEngine: return OPENRAVE_PHYSICSENGINE_HASH;
+    case PT_Sensor: return OPENRAVE_SENSOR_HASH;
+    case PT_CollisionChecker: return OPENRAVE_COLLISIONCHECKER_HASH;
+    case PT_Trajectory: return OPENRAVE_TRAJECTORY_HASH;
+    case PT_Viewer: return OPENRAVE_VIEWER_HASH;
+    default:
+        throw openrave_exception("failed to find openrave interface type",ORE_InvalidArguments);
+        return NULL;
+    }
 }
 
-inline DebugLevel RaveGetDebugLevel(void) {
-    extern DebugLevel g_nDebugLevel;
-    return g_nDebugLevel;
-}
+/// returns the a lower case string of the interface type
+const std::map<PluginType,std::string>& RaveGetInterfaceNamesMap();
+const std::string& RaveGetInterfaceName(PluginType type);
 
+/// Random number generation
+//@{
+void RaveInitRandomGeneration(uint32_t seed);
+/// generate a random integer, 32bit precision
+uint32_t RaveRandomInt();
+/// generate n random integers, 32bit precision
+void RaveRandomInt(int n, std::vector<int>& v);
+/// generate a random float in [0,1], 32bit precision
+float RaveRandomFloat();
+/// generate n random floats in [0,1], 32bit precision
+void RaveRandomFloat(int n, std::vector<float>& v);
+/// generate a random double in [0,1], 53bit precision
+double RaveRandomDouble();
+/// generate n random doubles in [0,1], 53bit precision
+void RaveRandomDouble(int n, std::vector<double>& v);
 //@}
 
 } // end namespace OpenRAVE
@@ -891,9 +938,9 @@ BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::RobotBase::AttachedSensor)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::RobotBase::GRABBED)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::RobotBase::RobotStateSaver)
 
-BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::Trajectory)
-BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::Trajectory::TPOINT)
-BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::Trajectory::TSEGMENT)
+BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::TrajectoryBase)
+BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::TrajectoryBase::TPOINT)
+BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::TrajectoryBase::TSEGMENT)
 
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::PLUGININFO)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::XMLReadable)

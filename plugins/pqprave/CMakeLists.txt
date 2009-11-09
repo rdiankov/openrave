@@ -7,7 +7,7 @@ endif(APPLE)
 
 add_subdirectory(pqp)
 
-add_library(pqprave SHARED collisionPQP.cpp pqpravemain.cpp)
+add_library(pqprave SHARED pqpravemain.cpp)
 
 target_link_libraries(pqprave libopenrave PQP)
 include_directories(pqprave "${CMAKE_SOURCE_DIR}")

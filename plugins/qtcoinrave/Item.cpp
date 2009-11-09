@@ -23,10 +23,8 @@
 #include <Inventor/nodes/SoFaceSet.h>
 #include <Inventor/nodes/SoMaterialBinding.h>
 
-Item::Item(QtCoinViewer* viewer) : _viewer(viewer)
+Item::Item(QtCoinViewerPtr viewer) : _viewer(viewer)
 {
-    _pname = NULL;
-
     // set up the Inventor nodes
     _ivXform = new SoTransform;
     _ivRoot = new SoSeparator;
@@ -46,18 +44,11 @@ Item::Item(QtCoinViewer* viewer) : _viewer(viewer)
 
 Item::~Item()
 {
-    delete[] _pname;
     if( _ivRoot != NULL ) {
         _viewer->GetRoot()->removeChild(_ivRoot);
         _ivRoot->unref();
     }
     
-}
-
-//! set the item name
-void Item::SetName(const wchar_t* pNewName)
-{
-    delete[] _pname; _pname = _ravewcsdup(pNewName);
 }
 
 /// returns true if the given node is in the inventor hierarchy
@@ -98,29 +89,28 @@ void Item::SetUnpickable()
 }
 
 /// KinBodyItem class
-KinBodyItem::KinBodyItem(QtCoinViewer* viewer, KinBody* pchain, ViewGeometry viewmode) : Item(viewer), _viewmode(viewmode)
+KinBodyItem::KinBodyItem(QtCoinViewerPtr viewer, KinBodyPtr pchain, ViewGeometry viewmode) : Item(viewer), _viewmode(viewmode)
 {
-    assert( pchain != NULL );
     _pchain = pchain;
     bGrabbed = false;
     bEnabled = pchain->IsEnabled();
     _userdata = 0;
 
     networkid = pchain->GetNetworkId();
-
-    vector<KinBody::Link*>::const_iterator it;
+    vector<KinBody::LinkPtr>::const_iterator it;
 
     FORIT(it, _pchain->GetLinks()) {
         LINK lnk;
-        lnk.first = new SoSeparator();
-        lnk.second = new SoTransform();
+        lnk.psep = new SoSeparator();
+        lnk.ptrans = new SoTransform();
+        lnk.plink = *it;
 
         RaveTransform<float> tbody = (*it)->GetTransform();
-        lnk.second->rotation.setValue(tbody.rot.y, tbody.rot.z, tbody.rot.w, tbody.rot.x);
-        lnk.second->translation.setValue(tbody.trans.x, tbody.trans.y, tbody.trans.z);
+        lnk.ptrans->rotation.setValue(tbody.rot.y, tbody.rot.z, tbody.rot.w, tbody.rot.x);
+        lnk.ptrans->translation.setValue(tbody.trans.x, tbody.trans.y, tbody.trans.z);
                     
-        lnk.first->addChild(lnk.second);
-        _ivGeom->addChild(lnk.first);
+        lnk.psep->addChild(lnk.ptrans);
+        _ivGeom->addChild(lnk.psep);
         
         _veclinks.push_back(lnk);
 
@@ -266,28 +256,22 @@ KinBodyItem::KinBodyItem(QtCoinViewer* viewer, KinBody* pchain, ViewGeometry vie
                     break;
                 }
                 default:
-                    RAVEPRINT(L"No render data for link %S:%S, geom type = %d\n", _pchain->GetName(), (*it)->GetName(), itgeom->GetType());
+                    RAVELOG_WARNA("No render data for link %s:%s, geom type = %d\n", _pchain->GetName().c_str(), (*it)->GetName().c_str(), itgeom->GetType());
                     break;
                 }
             }
 
             if( psep != NULL ) {
                 psep->insertChild(ptrans, 0);
-                lnk.first->addChild(psep);
+                lnk.psep->addChild(psep);
             }
         }
     }
 }
 
-KinBodyItem::~KinBodyItem()
-{
-    //delete _pchain; // pointer doesn't belong to gui
-    _veclinks.clear();
-}
-
 bool KinBodyItem::UpdateFromIv()
 {
-    if( _pchain == NULL )
+    if( !_pchain )
         return false;
 
     vector<Transform> vtrans(_veclinks.size());
@@ -296,66 +280,78 @@ bool KinBodyItem::UpdateFromIv()
     vector<Transform>::iterator ittrans = vtrans.begin();
     FOREACH(it, _veclinks) {
         // propagate the rotations down and reset the centroid
-        *ittrans = GetRaveTransform(it->second);
+        *ittrans = GetRaveTransform(it->ptrans);
         *ittrans = tglob * *ittrans;
         ++ittrans;
     }
 
-    _pchain->GetEnv()->LockPhysics(true);
+    EnvironmentMutex::scoped_lock lock(_pchain->GetEnv()->GetMutex());
     _pchain->SetBodyTransformations(vtrans);
-    _pchain->GetEnv()->LockPhysics(false);
     return true;
 }
 
 bool KinBodyItem::UpdateFromModel()
 {
-    if( _pchain == NULL )
+    if( !_pchain )
         return false;
 
     vector<Transform> vtrans;
-    vector<RaveTransform<dReal> > vguitrans;
+    vector<dReal> vjointvalues;
 
-    _pchain->GetEnv()->LockPhysics(true);
-   
-    // make sure the body is still present!
-    if( _pchain->GetEnv()->GetBodyFromNetworkId(networkid) == _pchain ) {
-        _pchain->GetBodyTransformations(vtrans);
+    {
+        EnvironmentMutex::scoped_lock lock(_pchain->GetEnv()->GetMutex());
+        
+        // make sure the body is still present!
+        if( _pchain->GetEnv()->GetBodyFromNetworkId(networkid) == _pchain ) {
+            _pchain->GetBodyTransformations(_vtrans);
+            _pchain->GetJointValues(vjointvalues);
+        }
+        else
+            _pchain.reset();
     }
-    else {
-        _pchain = NULL;
-    }
-    _pchain->GetEnv()->LockPhysics(false);
 
-    vguitrans.resize(vtrans.size());
-    for(size_t i = 0; i < vtrans.size(); ++i)
-        vguitrans[i] = vtrans[i];
-    return UpdateFromModel(vguitrans);    
+    return UpdateFromModel(vjointvalues,vtrans);
 }
 
-bool KinBodyItem::UpdateFromModel(const vector<RaveTransform<dReal> >& vtrans)
+void KinBodyItem::GetJointValues(vector<dReal>& vjoints) const
 {
-    if(_pchain == NULL ) {
+    boost::mutex::scoped_lock lock(_mutexjoints);
+    vjoints = _vjointvalues;
+}
+
+void KinBodyItem::GetBodyTransformations(vector<Transform>& vtrans) const
+{
+    boost::mutex::scoped_lock lock(_mutexjoints);
+    vtrans = _vtrans;
+}
+
+bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<Transform>& vtrans)
+{
+    if( !_pchain ) {
         // don't update, physics is disabled anyway
         return false;
     }
 
-    if( vtrans.size() == 0 || _veclinks.size() != vtrans.size() )
+    boost::mutex::scoped_lock lock(_mutexjoints);
+    _vjointvalues = vjointvalues;
+    _vtrans = vtrans;
+    
+    if( _vtrans.size() == 0 || _veclinks.size() != _vtrans.size() )
         // something's wrong, so just return
         return false;
 
-    Transform tglob = vtrans.front();//_pchain->GetCenterOfMass();
+    Transform tglob = _vtrans.front();//_pchain->GetCenterOfMass();
     SbMatrix m; m.makeIdentity();
     _ivXform->setMatrix(m);
     _ivXform->translation.setValue(tglob.trans.x, tglob.trans.y, tglob.trans.z);
     _ivXform->rotation.setValue(tglob.rot.y, tglob.rot.z, tglob.rot.w, tglob.rot.x);
 
     vector<LINK>::iterator it = _veclinks.begin();
-    FOREACHC(ittrans, vtrans) {
-
+    FOREACHC(ittrans, _vtrans) {
         Transform tlocal = tglob.inverse() * *ittrans;
 
-        it->second->rotation.setValue(tlocal.rot.y, tlocal.rot.z, tlocal.rot.w, tlocal.rot.x);
-        it->second->translation.setValue(tlocal.trans.x, tlocal.trans.y, tlocal.trans.z);
+        it->ptrans->rotation.setValue(tlocal.rot.y, tlocal.rot.z, tlocal.rot.w, tlocal.rot.x);
+        it->ptrans->translation.setValue(tlocal.trans.x, tlocal.trans.y, tlocal.trans.z);
         ++it;
     }
 
@@ -364,7 +360,7 @@ bool KinBodyItem::UpdateFromModel(const vector<RaveTransform<dReal> >& vtrans)
 
 void KinBodyItem::SetGrab(bool bGrab, bool bUpdate)
 {
-    if(_pchain == NULL )
+    if(!_pchain )
         return;
 
     // need to preserve enabled state
@@ -383,31 +379,28 @@ void KinBodyItem::SetGrab(bool bGrab, bool bUpdate)
         _pchain->Enable(!bGrab);
 }
 
-KinBody::Link* KinBodyItem::GetLinkFromIv(SoNode* plinknode) const
+KinBody::LinkPtr KinBodyItem::GetLinkFromIv(SoNode* plinknode) const
 {
     vector<LINK>::const_iterator it;
-    vector<KinBody::Link*>::const_iterator itlink = _pchain->GetLinks().begin();
     SoSearchAction search;
     
     FORIT(it, _veclinks) {
         search.setNode(plinknode);   
-        search.apply(it->first);
+        search.apply(it->psep);
         
         if (search.getPath())
-            return *itlink;
-    
-        ++itlink;
+            return KinBody::LinkPtr(it->plink);
     }
     
-    return NULL;
+    return KinBody::LinkPtr();
 }
 
-RobotItem::RobotItem(QtCoinViewer* viewer, RobotBase* robot, ViewGeometry viewgeom) : KinBodyItem(viewer, robot, viewgeom)
+RobotItem::RobotItem(QtCoinViewerPtr viewer, RobotBasePtr robot, ViewGeometry viewgeom) : KinBodyItem(viewer, robot, viewgeom)
 {
     int index = 0;
     FOREACHC(itmanip, robot->GetManipulators()) {
 
-        if(itmanip->pEndEffector != NULL) {
+        if( !!(*itmanip)->GetEndEffector() ) {
             
             SoSwitch* peeswitch = new SoSwitch();
             SoSeparator* peesep = new SoSeparator();
@@ -513,13 +506,13 @@ RobotItem::RobotItem(QtCoinViewer* viewer, RobotBase* robot, ViewGeometry viewge
 
 void RobotItem::SetGrab(bool bGrab, bool bUpdate)
 {
-    if( GetRobot() == NULL )
+    if( !GetRobot() )
         return;
 
     if( bGrab ) {
         // turn off any controller commands if a robot
-        if( GetRobot()->GetController() != NULL )
-            GetRobot()->GetController()->SetPath(NULL);
+        if( !!GetRobot()->GetController() )
+            GetRobot()->GetController()->SetPath(TrajectoryBaseConstPtr());
     }
 
     FOREACH(itee, _vEndEffectors)
@@ -536,9 +529,9 @@ bool RobotItem::UpdateFromIv()
     return true;
 }
 
-bool RobotItem::UpdateFromModel(const vector<RaveTransform<dReal> >& vtrans)
+bool RobotItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<Transform>& vtrans)
 {
-    if( !KinBodyItem::UpdateFromModel(vtrans) )
+    if( !KinBodyItem::UpdateFromModel(vjointvalues,vtrans) )
         return false;
 
     if( bGrabbed ) {
@@ -546,12 +539,10 @@ bool RobotItem::UpdateFromModel(const vector<RaveTransform<dReal> >& vtrans)
         RaveTransform<float> transInvRoot = GetRaveTransform(_ivXform).inverse();
         
         FOREACH(itee, _vEndEffectors) {
-            if( itee->_index >= 0 && itee->_index < GetRobot()->GetManipulators().size()) {
-            
-                // not thread safe!
-                const RobotBase::Manipulator& manip = GetRobot()->GetManipulators()[itee->_index];
-                if( manip.pEndEffector != NULL ) {
-                    RaveTransform<float> tgrasp = vtrans[manip.pEndEffector->GetIndex()]*manip.tGrasp;
+            if( itee->_index >= 0 && itee->_index < (int)GetRobot()->GetManipulators().size()) {
+                RobotBase::ManipulatorConstPtr manip = GetRobot()->GetManipulators()[itee->_index];
+                if( !!manip->GetEndEffector() ) {
+                    RaveTransform<float> tgrasp = vtrans[manip->GetEndEffector()->GetIndex()]*manip->GetGraspTransform();
                     SetSoTransform(itee->_ptrans, transInvRoot * tgrasp);
                 }
             }
@@ -560,24 +551,3 @@ bool RobotItem::UpdateFromModel(const vector<RaveTransform<dReal> >& vtrans)
 
     return true;
 }
-
-
-//                    SoGetBoundingBoxAction bbact(g_pEnviron->GetViewer()->GetViewer()->getViewportRegion());
-//                    psep->ref();
-//                    bbact.apply(psep);
-//                    //psep->unref();
-//                    SbXfBox3f box = bbact.getXfBoundingBox();
-//                    Vector size;
-//                    box.getSize(size.x, size.y, size.z);
-//                    SbVec3f center = box.getCenter();
-//                    SbMatrix mat = box.getTransform();
-//                    const SbMat& m = mat.getValue();
-//                    printf("%S:\n\t<Translation>%f %f %f</Translation>\n\t<Extents>%f %f %f</Extents>\n", (*it)->GetName(), center.getValue()[0], center.getValue()[1], center.getValue()[2], size.x/2, size.y/2, size.z/2);
-//                    for(int k = 0; k < 3; ++k) {
-//                        printf("%\tf %f %f %f\n", m[k][0], m[k][1], m[k][2], m[k][3]);
-//                    }
-//                    printf("\t<RotationMat>");
-//                    for(int k = 0; k < 3; ++k) {
-//                        printf("%f %f %f ", m[k][0], m[k][1], m[k][2]);
-//                    }
-//                    printf("</RotationMat>\n");

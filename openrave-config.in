@@ -39,25 +39,25 @@ while test $# -gt 0; do
       echo @RAVE_RELEASE@
       ;;
     --cflags)
-      echo  -I@CMAKE_INSTALL_PREFIX@/include
+      echo  -I@CMAKE_INSTALL_PREFIX@/include @OPENRAVE_BOOST_INCLUDE_DIRS@
       ;;
     --cppflags)
-      echo  -I@CMAKE_INSTALL_PREFIX@/include
+      echo  -I@CMAKE_INSTALL_PREFIX@/include @OPENRAVE_BOOST_INCLUDE_DIRS@
       ;;
     --cflags-only-I)
-      echo -I@CMAKE_INSTALL_PREFIX@/include
+      echo -I@CMAKE_INSTALL_PREFIX@/include @OPENRAVE_BOOST_INCLUDE_DIRS@
       ;;
     --libs)
-      echo -L@CMAKE_INSTALL_PREFIX@/lib -lopenrave
+      echo -L@CMAKE_INSTALL_PREFIX@/lib -lopenrave @OPENRAVE_BOOST_LIB_DIRS@
       ;;
     --libs-only-l)
       echo -lopenrave
       ;;
     --libs-only-L)
-      echo -L@CMAKE_INSTALL_PREFIX@/lib
+      echo -L@CMAKE_INSTALL_PREFIX@/lib @OPENRAVE_BOOST_LIB_DIRS@
       ;;
     --shared-libs)
-      echo  -L@CMAKE_INSTALL_PREFIX@/lib -lopenrave.so
+      echo  -L@CMAKE_INSTALL_PREFIX@/lib -lopenrave.so @OPENRAVE_BOOST_LIB_DIRS@
       ;;
     *)
       echo "${usage}" 1>&2

@@ -21,8 +21,8 @@ addopenravepaths_hanoi();
 % initialize the scene
 orEnvLoadScene('data/hanoi_complex.env.xml',1);
 %orEnvLoadScene('data/hanoi.env.xml',1);
-probs.manip = orEnvCreateProblem('basemanipulation','puma');
-robot = RobotCreatePuma('puma');
+probs.manip = orEnvCreateProblem('basemanipulation','Puma');
+robot = RobotCreatePuma('Puma');
 
 % gather data about pegs and disks
 disknames = {'disk0','disk1','disk2'};

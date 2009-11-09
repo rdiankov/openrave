@@ -40,10 +40,13 @@ using namespace std;
 
 #include <stdio.h>
 #include <boost/shared_ptr.hpp>
+#include <boost/thread/thread.hpp>
+#include <boost/array.hpp>
 
-#ifndef _WIN32
-#include <signal.h>
-#endif
+//#ifndef _WIN32
+//#include <signal.h>
+//#endif
+
 
 #ifdef _MSC_VER
 #define PRIdS "Id"
@@ -67,44 +70,23 @@ using namespace std;
 #define ARRAYSIZE(x) (sizeof(x)/(sizeof( (x)[0] )))
 #endif
 
-class LockEnvironment
-{
-public:
-    LockEnvironment(EnvironmentBase* penv) : _penv(penv) { _penv->LockPhysics(true); }
-    ~LockEnvironment() { _penv->LockPhysics(false); }
-
-private:
-    EnvironmentBase* _penv;
-};
-
-inline string _stdwcstombs(const wchar_t* pname)
-{
-    string s;
-    size_t len = wcstombs(NULL, pname, 0);
-    if( len != (size_t)-1 ) {
-        s.resize(len);
-        wcstombs(&s[0], pname, len);
-    }
-
-    return s;
-}
-
-void sigint_handler(int);
-void* MainOpenRAVEThread(void*p);
+//void sigint_handler(int);
+void MainOpenRAVEThread();
 
 static bool bDisplayGUI = true, bShowGUI = true;
 
-static EnvironmentBase* penv = NULL;
-static boost::shared_ptr<RaveViewerBase> s_viewer;
-static boost::shared_ptr<RaveServerBase> s_server;
-static pthread_t s_mainThread;
-static char *sceneFile = NULL;
-static char *s_saveScene = NULL; // if not NULL, saves the scene and exits
+static EnvironmentBasePtr penv;
+static RaveViewerBasePtr s_viewer;
+static ProblemInstancePtr s_server;
+static boost::thread s_mainThread;
+static string s_sceneFile;
+static string s_saveScene; // if not NULL, saves the scene and exits
+static string s_viewerName;
 static bool s_bTestScene = false;
 
-static list< pair<char*, char*> > s_listProblems; // problems to initially create
-static vector<char*> vIvFiles; // iv files to open
-static vector<char*> vXMLFiles; // xml files to open
+static list< pair<string, string> > s_listProblems; // problems to initially create
+static vector<string> vIvFiles; // iv files to open
+static vector<string> vXMLFiles; // xml files to open
 static int s_WindowWidth = 1024, s_WindowHeight = 768;
 static int s_WindowPosX, s_WindowPosY;
 static bool s_bSetWindowPosition = false;
@@ -116,11 +98,10 @@ bool bThreadDestroyed = false;
         names.resize(0); \
         FORIT(itplugin, plugins) { \
             FORIT(itnames, vtype) { \
-                sprintf(buf, "  %S - %s", itnames->c_str(), itplugin->first.c_str()); \
+                sprintf(buf, "  %s - %s", itnames->c_str(), itplugin->first.c_str()); \
                 names.push_back(buf); \
             } \
         } \
-        /* sort */ \
         sort(names.begin(), names.end()); \
         FORIT(itname, names) ss << itname->c_str() << endl; \
     }
@@ -139,25 +120,29 @@ int main(int argc, char ** argv)
     
     DebugLevel debuglevel = Level_Info;    
     list<string> listLoadPlugins;
+    string collisionchecker, physicsengine;
     bool bListPlugins = false;
     // parse command line arguments
     int i = 1;
     while(i < argc) {
         if( stricmp(argv[i], "-h") == 0 || stricmp(argv[i], "-?") == 0 || stricmp(argv[i], "/?") == 0 || stricmp(argv[i], "--help") == 0 || stricmp(argv[i], "-help") == 0 ) {
-            RAVEPRINT(L"RAVE Simulator Usage\n"
-                L"-nogui             Run without a GUI (does not initialize the graphics engine nor communicate with any window manager)\n"
-                L"-hidegui           Run with a hidden GUI, this allows 3D rendering and images to be captured\n"
-                L"-listplugins       List all plugins and the interfaces they provide\n"
-                L"-loadplugin [path] load a plugin at the following path\n"
-                L"-server [port]     start up the server on a specific port (default is 4765)\n"
-                L"-d [debug-level]   start up OpenRAVE with the specified debug level (higher numbers print more).\n"
-                L"                   Default level is 2 for release builds, and 4 for debug builds.\n"
-                L"--generateik robot [robotfile] [freeparam [joint name]] manipulator [index] manipulatorname [name] output [filename] ikfast [ikfast_executable] [translation3donly] [rotation3donly]\n"
-                L"-wdims [width] [height] start up the GUI window with these dimensions\n"
-                L"-wpos x y set the position of the GUI window\n"
-                L"-problem [problemname] [args] Start openrave with a problem instance. If args involves spaces, surround it with double quotes. args is optional.\n"
-                L"-f [scene]         Load a openrave environment file\n"
-                      L"-testscene         If specified, openrave will exit after the scene is loaded. A non-zero values means something went wrong with the loading process.\n\n");
+            RAVELOG_INFO("RAVE Simulator Usage\n"
+                         "-nogui             Run without a GUI (does not initialize the graphics engine nor communicate with any window manager)\n"
+                         "-hidegui           Run with a hidden GUI, this allows 3D rendering and images to be captured\n"
+                         "-listplugins       List all plugins and the interfaces they provide\n"
+                         "-loadplugin [path] load a plugin at the following path\n"
+                         "-server [port]     start up the server on a specific port (default is 4765)\n"
+                         "-collision [name]  Default collision checker to use\n"
+                         "-viewer [name]     Default viewer to use\n"
+                         "-physics [name]    Default physics engine to use\n"
+                         "-d [debug-level]   start up OpenRAVE with the specified debug level (higher numbers print more).\n"
+                         "                   Default level is 2 for release builds, and 4 for debug builds.\n"
+                         "--generateik robot [robotfile] [freeparam [joint name]] manipulator [index] manipulatorname [name] output [filename] ikfast [ikfast_executable] [translation3donly] [rotation3donly]\n"
+                         "-wdims [width] [height] start up the GUI window with these dimensions\n"
+                         "-wpos x y set the position of the GUI window\n"
+                         "-problem [problemname] [args] Start openrave with a problem instance. If args involves spaces, surround it with double quotes. args is optional.\n"
+                         "-f [scene]         Load a openrave environment file\n"
+                         "-testscene         If specified, openrave will exit after the scene is loaded. A non-zero values means something went wrong with the loading process.\n\n");
             return 0;
         }
         else if( stricmp(argv[i], "-loadplugin") == 0 ) {
@@ -169,15 +154,27 @@ int main(int argc, char ** argv)
             i++;
         }
         else if( stricmp(argv[i], "-f") == 0 ) {
-            sceneFile = argv[i+1];
+            s_sceneFile = argv[i+1];
             i += 2;
         }
         else if( stricmp(argv[i], "-save") == 0 ) {
             s_saveScene = argv[i+1];
             i += 2;
         }
+        else if( stricmp(argv[i], "-collision") == 0 ) {
+            collisionchecker = argv[i+1];
+            i += 2;
+        }
+        else if( stricmp(argv[i], "-viewer") == 0 ) {
+            s_viewerName = argv[i+1];
+            i += 2;
+        }
+        else if( stricmp(argv[i], "-physics") == 0 ) {
+            physicsengine = argv[i+1];
+            i += 2;
+        }
         else if( stricmp(argv[i], "-problem") == 0 ) {
-            s_listProblems.push_back(pair<char*, char*>(argv[i+1], NULL));
+            s_listProblems.push_back(pair<string, string>(argv[i+1], ""));
             i += 2;
 
             if( i < argc && argv[i][0] != '-' ) {
@@ -229,11 +226,13 @@ int main(int argc, char ** argv)
 
             // create environment and start a command-line controlled simulation 
             penv = CreateEnvironment(false);
-            if( penv == NULL )
+            if( !penv )
                 return -1;
             penv->SetDebugLevel(debuglevel);
             // parse until a regular option arrives
-            LockEnvironment lockenv(penv);
+            
+            EnvironmentMutex::scoped_lock lock(penv->GetMutex());
+
             penv->StopSimulation(); // don't want simulation eating up time
             vector<string> vfreeparamnames;
             string robotfile, ikfast_executable = IKFAST_EXECUTABLE, outputfile = "ik.cpp";
@@ -288,14 +287,16 @@ int main(int argc, char ** argv)
             }
 
             // get the first robot
-            if( penv->GetRobots().size() == 0 )
+            vector<RobotBasePtr> vrobots;
+            penv->GetRobots(vrobots);
+            if( vrobots.size() == 0 )
                 return -3;
 
-            RobotBase* probot = penv->GetRobots().front();
+            RobotBasePtr probot = vrobots[0];
 
             if( manipname.size() > 0 ) {
                 for(manipindex = 0; manipindex < (int)probot->GetManipulators().size(); ++manipindex) {
-                    if( strcmp(probot->GetManipulators()[manipindex].GetName(),manipname.c_str()) == 0 )
+                    if( probot->GetManipulators()[manipindex]->GetName() == manipname )
                         break;
                 }
             }
@@ -305,9 +306,9 @@ int main(int argc, char ** argv)
                 return -5;
             }
 
-            const RobotBase::Manipulator& manip = probot->GetManipulators()[manipindex];
-            if( manip.pBase == NULL || manip.pEndEffector == NULL || (!bRotation3DOnly && !bTranslation3DOnly && manip._vecarmjoints.size() < 6) ) {
-                RAVELOG_ERRORA("Generate IK: Manipulator not valid, needs to be >= 6 joints (%"PRIdS").\n", manip._vecarmjoints.size());
+            RobotBase::ManipulatorConstPtr manip = probot->GetManipulators()[manipindex];
+            if( !manip->GetBase() || !manip->GetEndEffector() || (!bRotation3DOnly && !bTranslation3DOnly && manip->GetArmJoints().size() < 6) ) {
+                RAVELOG_ERRORA("Generate IK: Manipulator not valid, needs to be >= 6 joints (%"PRIdS").\n", manip->GetArmJoints().size());
                 return -6;
             }
 
@@ -327,16 +328,15 @@ int main(int argc, char ** argv)
 
             stringstream sscmd;
             sscmd << ikfast_executable << " --fkfile=" << tempfilename
-                  << " --baselink=" << manip.pBase->GetIndex()
-                  << " --eelink=" << manip.pEndEffector->GetIndex();
+                  << " --baselink=" << manip->GetBase()->GetIndex()
+                  << " --eelink=" << manip->GetEndEffector()->GetIndex();
             if( bRotation3DOnly )
                 sscmd << " --rotation3donly ";
             if( bTranslation3DOnly )
                 sscmd << " --translation3donly ";
             vector<int> vfreeparams, vsolvejoints;
-            for(vector<int>::const_iterator it = manip._vecarmjoints.begin(); it != manip._vecarmjoints.end(); ++it) {
-                string jointname = _stdwcstombs(probot->GetJoints()[*it]->GetName());
-                if( find(vfreeparamnames.begin(), vfreeparamnames.end(), jointname) == vfreeparamnames.end() )
+            for(vector<int>::const_iterator it = manip->GetArmJoints().begin(); it != manip->GetArmJoints().end(); ++it) {
+                if( find(vfreeparamnames.begin(), vfreeparamnames.end(), probot->GetJoints()[*it]->GetName()) == vfreeparamnames.end() )
                     vsolvejoints.push_back(*it);
                 else
                     vfreeparams.push_back(*it);
@@ -375,7 +375,7 @@ int main(int argc, char ** argv)
             }
         }
         else {
-            RAVEPRINT(L"Error in input parameters at %s\ntype --help to see a list of command line options\n", argv[i]);
+            RAVELOG_INFOA("Error in input parameters at %s\ntype --help to see a list of command line options\n", argv[i]);
             return 0;
         }
     }
@@ -383,16 +383,16 @@ int main(int argc, char ** argv)
     // create environment and start a command-line controlled simulation 
     RaveSetDebugLevel(debuglevel);
     penv = CreateEnvironment(true);
-    if( penv == NULL )
+    if( !penv )
         return -1;
     penv->SetDebugLevel(debuglevel);
     for(list<string>::iterator it = listLoadPlugins.begin(); it != listLoadPlugins.end(); ++it)
         penv->LoadPlugin(it->c_str());
 
-#ifndef _WIN32
-    // add a signal handler
-    signal(SIGINT,sigint_handler); // control C
-#endif
+//#ifndef _WIN32
+//    // add a signal handler
+//    signal(SIGINT,sigint_handler); // control C
+//#endif
 
     if( bListPlugins ) {
 
@@ -401,51 +401,48 @@ int main(int argc, char ** argv)
         penv->GetPluginInfo(plugins);
 
         // output all the plugins and exit
-        vector<wstring>::const_iterator itnames;     
+        vector<string>::const_iterator itnames;     
         vector<string> names;
         vector<string>::iterator itname;
-        wstringstream ss;
+        stringstream ss;
             
-        ss << endl << L"Number of plugins: " << plugins.size() << endl;
+        ss << endl << "Number of plugins: " << plugins.size() << endl;
 
         char  buf[256];
-        ss << L"Collision Checkers:" << endl;
-        OUTPUT_PLUGINS(itplugin->second.collisioncheckers);
+        ss << "Collision Checkers:" << endl;
+        OUTPUT_PLUGINS(itplugin->second.interfacenames[PT_CollisionChecker]);
 
-        ss << L"Controllers:" << endl;
-        OUTPUT_PLUGINS(itplugin->second.controllers);
+        ss << "Controllers:" << endl;
+        OUTPUT_PLUGINS(itplugin->second.interfacenames[PT_Controller]);
             
-        ss << L"Inverse Kinematics Solvers:" << endl;
-        OUTPUT_PLUGINS(itplugin->second.iksolvers);
+        ss << "Inverse Kinematics Solvers:" << endl;
+        OUTPUT_PLUGINS(itplugin->second.interfacenames[PT_InverseKinematicsSolver]);
             
-        ss << L"Physics Engines:" << endl;
-        OUTPUT_PLUGINS(itplugin->second.physicsengines);
+        ss << "Physics Engines:" << endl;
+        OUTPUT_PLUGINS(itplugin->second.interfacenames[PT_PhysicsEngine]);
             
-        ss << L"Planners:" << endl;
-        OUTPUT_PLUGINS(itplugin->second.planners);
+        ss << "Planners:" << endl;
+        OUTPUT_PLUGINS(itplugin->second.interfacenames[PT_Planner]);
             
-        ss << L"Problems:" << endl;
-        OUTPUT_PLUGINS(itplugin->second.problems);
+        ss << "Problems:" << endl;
+        OUTPUT_PLUGINS(itplugin->second.interfacenames[PT_ProblemInstance]);
             
-        ss << L"Robots:" << endl;
-        OUTPUT_PLUGINS(itplugin->second.robots);
+        ss << "Robots:" << endl;
+        OUTPUT_PLUGINS(itplugin->second.interfacenames[PT_Robot]);
             
-        ss << L"Sensors:" << endl;
-        OUTPUT_PLUGINS(itplugin->second.sensors);
+        ss << "Sensors:" << endl;
+        OUTPUT_PLUGINS(itplugin->second.interfacenames[PT_Sensor]);
             
-        ss << L"Sensor Systems:" << endl;
-        OUTPUT_PLUGINS(itplugin->second.sensorsystems);
+        ss << "Sensor Systems:" << endl;
+        OUTPUT_PLUGINS(itplugin->second.interfacenames[PT_SensorSystem]);
             
-        ss << L"Trajectories:" << endl;
-        OUTPUT_PLUGINS(itplugin->second.trajectories);
+        ss << "Trajectories:" << endl;
+        OUTPUT_PLUGINS(itplugin->second.interfacenames[PT_Trajectory]);
 
-        ss << L"Viewers:" << endl;
-        OUTPUT_PLUGINS(itplugin->second.viewers);
+        ss << "Viewers:" << endl;
+        OUTPUT_PLUGINS(itplugin->second.interfacenames[PT_Viewer]);
 
-        ss << L"Servers:" << endl;
-        OUTPUT_PLUGINS(itplugin->second.servers);
-
-        RAVEPRINT(ss.str().c_str());
+        RAVELOG_INFOA(ss.str().c_str());
 
         return 0;
     }
@@ -462,16 +459,28 @@ int main(int argc, char ** argv)
         }
 #endif
 
-        s_server.reset(CreateSimpleTextServer(penv));
-        if( !!s_server && s_server->Init(nServPort) ) {
-            penv->AttachServer(s_server.get());
+        s_server = CreateSimpleTextServer(penv);
+        if( !!s_server ) {
+            stringstream ss;
+            ss << nServPort;
+            if( penv->LoadProblem(s_server,ss.str()) != 0 )
+                RAVELOG_WARNA("failed to load server\n");
         }
     }
 
-    bThreadDestroyed = false;
-    if( pthread_create(&s_mainThread, NULL, MainOpenRAVEThread, NULL) ) {
-        RAVEPRINT(L"failed to create main openrave thread\n");
+    if( collisionchecker.size() > 0 ) {
+        CollisionCheckerBasePtr p = penv->CreateCollisionChecker(collisionchecker);
+        if( !!p )
+            penv->SetCollisionChecker(p);
     }
+    if( physicsengine.size() > 0 ) {
+        PhysicsEngineBasePtr p = penv->CreatePhysicsEngine(physicsengine);
+        if( !!p )
+            penv->SetPhysicsEngine(p);
+    }
+
+    bThreadDestroyed = false;
+    s_mainThread = boost::thread(boost::bind(MainOpenRAVEThread));
  
     while(!bThreadDestroyed) {
 #ifdef _WIN32
@@ -482,101 +491,100 @@ int main(int argc, char ** argv)
 #endif
     }
 
-    if( penv != NULL ) {
-        penv->AttachViewer(NULL);
-        s_viewer.reset();
-        penv->AttachServer(NULL);
-        s_server.reset();
-
-        RAVELOG_DEBUGA("deleting the environment\n");
-        delete penv; penv = NULL;
-    }
-
+    penv->AttachViewer(RaveViewerBasePtr());
+    s_viewer.reset();
+    s_server.reset();
+    penv->Destroy();
+    penv.reset();
     return 0;
 }
 
 // use to control openrave
-void* MainOpenRAVEThread(void*p)
+void MainOpenRAVEThread()
 {
     if( bDisplayGUI ) {
         // find a viewer
-        const char* viewer_prefs[] = {"qtcoin"};
-        for(int i = 0; i < (int)ARRAYSIZE(viewer_prefs); ++i) {
-            s_viewer.reset(penv->CreateViewer(viewer_prefs[i]));
-            if( !!s_viewer )
-                break;
+        if( s_viewerName.size() > 0 )
+            s_viewer = penv->CreateViewer(s_viewerName);
+
+        if( !s_viewer ) {
+            boost::array<string,1> viewer_prefs = {{"qtcoin"}};
+            for(size_t i = 0; i < viewer_prefs.size(); ++i) {
+                s_viewer = penv->CreateViewer(viewer_prefs[i]);
+                if( !!s_viewer )
+                    break;
+            }
         }
 
-        if( !s_viewer ) { // take any collision checker
+        if( !s_viewer ) { // take any viewer
             PLUGININFO info;
             penv->GetLoadedInterfaces(info);
-            std::vector<std::wstring>::const_iterator itname;
-            FORIT(itname, info.viewers) {
-                s_viewer.reset(penv->CreateViewer(itname->c_str()));
+            std::vector<std::string>::const_iterator itname;
+            FORIT(itname, info.interfacenames[PT_Viewer]) {
+                s_viewer = penv->CreateViewer(*itname);
                 if( !!s_viewer )
                     break;
             }
         }
         
         if( !s_viewer )
-            RAVEPRINT(L"failed to find an OpenRAVE viewer.\n");
+            RAVELOG_WARNA("failed to find an OpenRAVE viewer.\n");
         else {
-            RAVELOG(L"using %s viewer\n", s_viewer->GetXMLId());
+            RAVELOG_INFOA("using %s viewer\n", s_viewer->GetXMLId().c_str());
 
             s_viewer->ViewerSetSize(s_WindowWidth, s_WindowHeight);
             if( s_bSetWindowPosition )
                 s_viewer->ViewerMove(s_WindowPosX,s_WindowPosY);
-            penv->AttachViewer(s_viewer.get());
+            penv->AttachViewer(s_viewer);
 
             for(size_t i = 0; i < vIvFiles.size(); ++i) {
                 if( !s_viewer->LoadModel(vIvFiles[i]) )
-                    RAVEPRINT(L"failed to open %s\n", vIvFiles[i]);
+                    RAVELOG_INFOA("failed to open %s\n", vIvFiles[i].c_str());
             }
         }
     }
 
-    penv->LockPhysics(true);
+    {
+        EnvironmentMutex::scoped_lock lock(penv->GetMutex());
 
-    if( sceneFile != NULL )
-        penv->Load(sceneFile);
-        
-    vector<char*>::iterator it;
-    FORIT(it, vXMLFiles)
-        penv->Load(*it);
+        if( s_sceneFile.size() > 0 )
+            penv->Load(s_sceneFile);
 
-    list< pair<char*, char*> >::iterator itprob;
-    FORIT(itprob, s_listProblems) {
-        ProblemInstance* prob = penv->CreateProblem(itprob->first);
-        if( prob != NULL )
-            penv->LoadProblem(prob, itprob->second);
+        vector<string>::iterator it;
+        FORIT(it, vXMLFiles)
+            penv->Load(*it);
+
+        list< pair<string, string> >::iterator itprob;
+        FORIT(itprob, s_listProblems) {
+            ProblemInstancePtr prob = penv->CreateProblem(itprob->first);
+            if( !!prob )
+                penv->LoadProblem(prob, itprob->second);
+        }
+
+        if( s_bTestScene ) {
+            int xmlerror = GetXMLErrorCount();
+            RAVELOG_ERRORA("xml error count: %d\n", xmlerror);
+            exit(xmlerror);
+        }
+
+        if( s_saveScene.size() > 0 ) {
+            penv->Save(s_saveScene);
+    //        if( !bSaveScene )
+    //            RAVELOG_ERRORA("save scene at file %s failed\n", s_saveScene);
+    //        else
+    //            RAVELOG_INFOA("save scene at file %s succeeded\n", s_saveScene);
+
+            bThreadDestroyed = true;
+            return;
+        }
     }
-
-    if( s_bTestScene ) {
-        int xmlerror = GetXMLErrorCount();
-        RAVEPRINT(L"xml error count: %d\n", xmlerror);
-        exit(xmlerror);
-    }
-
-    if( s_saveScene != NULL ) {
-        bool bSaveScene = penv->Save(s_saveScene);
-//        if( !bSaveScene )
-//            RAVELOG_ERRORA("save scene at file %s failed\n", s_saveScene);
-//        else
-//            RAVELOG_INFOA("save scene at file %s succeeded\n", s_saveScene);
-
-        penv->LockPhysics(false);
-        bThreadDestroyed = true;
-        return NULL;
-    }
-
-    penv->LockPhysics(false);
     
     penv->GetViewer()->main(bShowGUI);
 
     if( !bThreadDestroyed ) {
-        penv->AttachViewer(NULL);
+        penv->AttachViewer(RaveViewerBasePtr());
         s_viewer.reset();
-        penv->AttachServer(NULL);
+        penv->RemoveProblem(s_server);
         s_server.reset();
         
 //        if( penv != NULL ) {        
@@ -585,18 +593,16 @@ void* MainOpenRAVEThread(void*p)
 
         bThreadDestroyed = true;
     }
-    
-    return NULL;
 }
 
-void sigint_handler(int)
-{
-    if( !bThreadDestroyed ) {
-#ifndef _WIN32
-        pthread_kill(s_mainThread, SIGINT);
-#else
-        pthread_kill(s_mainThread, 0);
-#endif
-        bThreadDestroyed = true;
-    }
-}
+//void sigint_handler(int)
+//{
+//    if( !bThreadDestroyed ) {
+//#ifndef _WIN32
+//        s_mainThread.kill(SIGINT);
+//#else
+//        s_mainThread.kill(SIGINT);
+//#endif
+//        bThreadDestroyed = true;
+//    }
+//}

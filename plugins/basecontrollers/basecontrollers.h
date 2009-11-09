@@ -18,32 +18,126 @@
 // controller for the SSC-32 board
 class IdealController : public ControllerBase
 {
-public:
-    IdealController(EnvironmentBase* penv);
-    virtual ~IdealController();
+ public:
+    IdealController(EnvironmentBasePtr penv) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true) {
+        fTime = 0;
+        _fSpeed = 1;
+    }
+    virtual ~IdealController() {}
 
-    virtual bool Init(RobotBase* robot, const char* args = NULL);
+    virtual bool Init(RobotBasePtr robot, const std::string& args)
+    {
+        _probot = robot;
+        if( flog.is_open() )
+            flog.close();
 
-    virtual bool SetDesired(const dReal* pValues);
-    virtual bool SetPath(const Trajectory* ptraj);
-    virtual bool SetPath(const Trajectory* ptraj, int nTrajectoryId, float fDivergenceTime);
+        if( !!_probot ) {
+            string filename = GetEnv()->GetHomeDirectory() + string("/traj_") + _probot->GetName();
+            flog.open(filename.c_str());
+            if( !flog )
+                RAVELOG_WARNA("failed to open %s\n", filename.c_str());
+            flog << "IdealController " << filename << endl << endl;
+        }
+        _bPause = false;
+        return true;
+    }
+
+    virtual void Reset(int options)
+    {
+        _ptraj.reset();
+        _vecdesired.resize(0);
+        if( flog.is_open() )
+            flog.close();
+    }
+
+    virtual bool SetDesired(const std::vector<dReal>& values)
+    {
+        if( (int)values.size() != _probot->GetDOF() )
+            return false;
+
+        fTime = 0;
+        _ptraj.reset();
+        _bIsDone = true;
+        _probot->SetJointValues(values);
+
+        if( !_bPause )
+            _vecdesired = values;
+        return true;
+    }
+
+    virtual bool SetPath(TrajectoryBaseConstPtr ptraj)
+    {
+        if( _bPause ) {
+            RAVELOG_DEBUGA("IdealController cannot player trajectories when paused\n");
+            _ptraj.reset();
+            _bIsDone = true;
+            return false;
+        }
+
+        _ptraj = ptraj;
+        fTime = 0;
+        _bIsDone = false;
+        _vecdesired.resize(0);
+
+        if( !!_ptraj && !!flog ) {
+            flog << endl << "trajectory: " << ++cmdid << endl;
+            _ptraj->Write(flog, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
+        }
+
+        return true;
+    }
+
+    virtual bool SimulationStep(dReal fTimeElapsed)
+    {
+        if( _bPause )
+            return true;
     
-    virtual bool SimulationStep(dReal fTimeElapsed);
-    virtual int GetDOF() { return _probot != NULL ? _probot->GetDOF() : 0; }
+        if( !!_ptraj ) {
+            Trajectory::TPOINT tp;
+            if( !_ptraj->SampleTrajectory(fTime, tp) )
+                return true;
 
+            if( tp.q.size() > 0 )
+                _probot->SetJointValues(tp.q,tp.trans,true);
+            else
+                _probot->SetTransform(tp.trans);
+
+            if( fTime > _ptraj->GetTotalDuration() ) {
+                fTime = _ptraj->GetTotalDuration();
+                _bIsDone = true;
+            }
+
+            fTime += _fSpeed * fTimeElapsed;
+        }
+
+        if( _vecdesired.size() > 0 ) {
+            _probot->SetJointValues(_vecdesired,true);
+        }
+    
+        return _bIsDone;
+    }
+
+    virtual bool SendCommand(std::ostream& os, std::istream& is)
+    {
+        string cmd;
+        is >> cmd;
+        if( !is )
+            throw openrave_exception("invalid argument",ORE_InvalidArguments);
+
+        std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+        if( cmd == "pause" )
+            is >> _bPause;
+
+        throw openrave_exception("not commands supported",ORE_CommandNotSupported);
+    }
     virtual bool IsDone() { return _ptraj == NULL || _bIsDone; }
-    virtual void Reset(int options);
-
-    virtual bool SendCmd(const char* pcmd);
-    virtual bool SupportsCmd(const char* pcmd);
-    
-    virtual float GetTime() const { return fTime; }
-    virtual RobotBase* GetRobot() const { return _probot; }
+    virtual dReal GetTime() const { return fTime; }
+    virtual RobotBasePtr GetRobot() const { return _probot; }
 
 private:
-    RobotBase* _probot;           ///< controlled body
+    RobotBasePtr _probot;           ///< controlled body
     float _fSpeed;                ///< how fast the robot should go
-    const Trajectory* _ptraj;     ///< computed trajectory robot needs to follow in chunks of _pbody->GetDOF()
+    TrajectoryBaseConstPtr _ptraj;     ///< computed trajectory robot needs to follow in chunks of _pbody->GetDOF()
 
     float fTime;
 

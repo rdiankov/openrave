@@ -100,7 +100,7 @@ class IKSolutionDouble
     std::vector<int> vfree;
 };
 
-class IKFastProblem : public CmdProblemInstance
+class IKFastProblem : public ProblemInstance
 {
     typedef int DECLFNPTR(getNumFreeParametersFn, ());
     typedef int* DECLFNPTR(getFreeParametersFn, ());
@@ -155,13 +155,13 @@ class IKFastProblem : public CmdProblemInstance
             return true;
         }
 
-        IkSolverBase* CreateSolver(EnvironmentBase* penv, dReal ffreedelta=0.04f)
+        IkSolverBasePtr CreateSolver(EnvironmentBasePtr penv, dReal ffreedelta=0.04f)
         {
             if( getIKRealSize() == 4 )
-                return new IkFastSolver<float,IKSolutionFloat >((IkFastSolver<float,IKSolutionFloat >::IkFn)ikfn,vfree,ffreedelta,getNumJoints(),penv);
+                return IkSolverBasePtr(new IkFastSolver<float,IkSolverBase::Parameterization::Type_Transform6D,IKSolutionFloat >((IkFastSolver<float,IkSolverBase::Parameterization::Type_Transform6D,IKSolutionFloat >::IkFn)ikfn,vfree,ffreedelta,getNumJoints(),penv));
             else if( getIKRealSize() == 8 )
-                return new IkFastSolver<double,IKSolutionDouble >((IkFastSolver<double,IKSolutionDouble >::IkFn)ikfn,vfree,ffreedelta,getNumJoints(),penv);
-            return NULL;
+                return IkSolverBasePtr(new IkFastSolver<double,IkSolverBase::Parameterization::Type_Transform6D,IKSolutionDouble >((IkFastSolver<double,IkSolverBase::Parameterization::Type_Transform6D,IKSolutionDouble >::IkFn)ikfn,vfree,ffreedelta,getNumJoints(),penv));
+            throw openrave_exception("bad real size");
         }
 
         const string& GetIKName() { return _ikname; }
@@ -212,22 +212,30 @@ class IKFastProblem : public CmdProblemInstance
         vector<int> vfree;
     };
 
+    inline boost::shared_ptr<IKFastProblem> shared_problem() { return boost::static_pointer_cast<IKFastProblem>(shared_from_this()); }
+    inline boost::shared_ptr<IKFastProblem const> shared_problem_const() const { return boost::static_pointer_cast<IKFastProblem const>(shared_from_this()); }
+
 public:
-    IKFastProblem(EnvironmentBase* penv) : CmdProblemInstance(penv)
+    IKFastProblem(EnvironmentBasePtr penv) : ProblemInstance(penv)
     {
-        GetProblems().push_back(this);
-        RegisterCommand("AddIkLibrary",(CommandFn)&IKFastProblem::AddIkLibrary,"Dynamically adds an ik solver to openrave (based on ikfast code generation).\nUsage:\n    AddIkLibrary iksolvername iklibrarypath");
     }
 
-    virtual ~IKFastProblem()
-    {
-        vector<IKFastProblem*>::iterator it = find(GetProblems().begin(),GetProblems().end(),this);
-        GetProblems().erase(it);
-    }
+    virtual ~IKFastProblem() { Destroy(); }
 
-    int main(const char* cmd)
+    int main(const string& cmd)
     {
+        GetProblems().push_back(shared_problem());
+
+        __mapCommands.clear();
+        RegisterCommand("AddIkLibrary",boost::bind(&IKFastProblem::AddIkLibrary,shared_problem(),_1,_2),
+                        "Dynamically adds an ik solver to openrave (based on ikfast code generation).\nUsage:\n    AddIkLibrary iksolvername iklibrarypath");
+
         return 0;
+    }
+
+    virtual void Destroy()
+    {
+        GetProblems().erase(find(GetProblems().begin(),GetProblems().end(),shared_problem()));   
     }
 
     bool AddIkLibrary(ostream& sout, istream& sinput)
@@ -250,20 +258,19 @@ public:
         return true;
     }
 
-    IkSolverBase* CreateIkSolver(const wchar_t* pname, dReal freeinc, EnvironmentBase* penv)
+    IkSolverBasePtr CreateIkSolver(const string& name, dReal freeinc, EnvironmentBasePtr penv)
     {
-        string name = _stdwcstombs(pname);
         /// start from the newer libraries
         for(vector< boost::shared_ptr<IKLibrary> >::reverse_iterator itlib = _vlibraries.rbegin(); itlib != _vlibraries.rend(); ++itlib) {
             if( name == (*itlib)->GetIKName() )
                 return (*itlib)->CreateSolver(penv,freeinc);
         }
-        return NULL;
+        return IkSolverBasePtr();
     }
-
-    static vector<IKFastProblem*>& GetProblems()
+    
+    static vector< boost::shared_ptr<IKFastProblem> >& GetProblems()
     {
-        static vector<IKFastProblem*> s_vStaticProblems;
+        static vector< boost::shared_ptr<IKFastProblem> > s_vStaticProblems;
         return s_vStaticProblems;
     }
 

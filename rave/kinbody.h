@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2009 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -26,15 +26,23 @@ namespace OpenRAVE {
 class KinBody : public InterfaceBase
 {
 public:
+    /// A set of properties for the kinbody. These properties are used to describe a set of variables used in KinBody.
+    enum KinBodyProperty {
+        Prop_Joints=0x1, ///< all properties of all joints
+        Prop_JointLimits=0x2,
+        Prop_JointOffset=0x4,
+        Prop_JointProperties=0x8, ///< max velocity, max acceleration, resolution, max torque
+        Prop_Links=0x10, ///< all properties of all links
+    };
 
     /// rigid body defined by an arbitrary ODE body and a render object
-    class Link
+    class Link : public boost::enable_shared_from_this<Link>
     {
     public:
-        Link(KinBody* parent); ///< pass in a ODE world
+        Link(KinBodyPtr parent); ///< pass in a ODE world
         virtual ~Link();
         
-        inline const wchar_t* GetName() const { return name.size() > 0 ? name.c_str() : L"(NULL)"; }
+        inline const std::string& GetName() const { return name; }
 
         inline bool IsStatic() const { return bStatic; }
         virtual bool IsEnabled() const; ///< returns true if enabled
@@ -114,21 +122,17 @@ public:
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
-            friend class LinkXMLReader;
-            friend class KinBodyXMLReader;
-            friend class RobotXMLReader;
+            friend class OpenRAVEXMLParser;
             friend class ColladaReader;
 #else
-            friend class ::LinkXMLReader;
-            friend class ::KinBodyXMLReader;
-            friend class ::RobotXMLReader;
+            friend class ::OpenRAVEXMLParser;
             friend class ::ColladaReader;
 #endif
 #endif
             friend class KinBody;
         };
 
-        inline KinBody* GetParent() const { return _parent; }
+        inline KinBodyPtr GetParent() const { return KinBodyPtr(_parent); }
 
         inline int GetIndex() const { return index; }
         inline const TRIMESH& GetCollisionData() const { return collision; }
@@ -164,9 +168,9 @@ public:
         TRIMESH collision; ///< triangles for collision checking, triangles are always the triangulation
                            ///< of the body when it is at the identity transformation
 
-        std::wstring name;     ///< optional link name
+        std::string name;     ///< optional link name
         int index;          ///< index into parent KinBody::_veclinks
-        KinBody* _parent; ///< body that link belong to
+        KinBodyWeakPtr _parent; ///< body that link belong to
         
         std::list<GEOMPROPERTIES> _listGeomProperties; ///< a list of all the extra geometry properties
         
@@ -177,24 +181,21 @@ public:
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
-        friend class LinkXMLReader;
-        friend class JointXMLReader;
-        friend class KinBodyXMLReader;
-        friend class RobotXMLReader;
+        friend class OpenRAVEXMLParser;
         friend class ColladaReader;
 #else
-        friend class ::LinkXMLReader;
-        friend class ::JointXMLReader;
-        friend class ::KinBodyXMLReader;
-        friend class ::RobotXMLReader;
+        friend class ::OpenRAVEXMLParser;
         friend class ::ColladaReader;
 #endif
 #endif
         friend class KinBody;
     };
+    typedef boost::shared_ptr<Link> LinkPtr;
+    typedef boost::shared_ptr<Link const> LinkConstPtr;
+    typedef boost::weak_ptr<Link> LinkWeakPtr;
 
     /// Information about a joint
-    class Joint
+    class Joint : public boost::enable_shared_from_this<Joint>
     {
     public:
         enum JointType {
@@ -208,12 +209,12 @@ public:
             JointSpherical = 5,
         };
 
-        Joint(KinBody* parent);
+        Joint(KinBodyPtr parent);
         virtual ~Joint();
 
-        inline const wchar_t* GetName() const { return name.c_str(); }
+        inline const std::string& GetName() const { return name; }
         inline int GetMimicJointIndex() const { return nMimicJointIndex; }
-        inline const dReal* GetMimicCoeffs() const { return fMimicCoeffs; }
+        inline const std::vector<dReal>& GetMimicCoeffs() const { return vMimicCoeffs; }
 
         inline dReal GetMaxVel() const { return fMaxVel; }
         inline dReal GetMaxAccel() const { return fMaxAccel; }
@@ -228,10 +229,10 @@ public:
         /// Get the joint index into KinBody::_vecjoints
         inline int GetJointIndex() const { return jointindex; }
         
-        inline KinBody* GetParent() const { return _parent; }
+        inline KinBodyPtr GetParent() const { return KinBodyPtr(_parent); }
 
-        inline Link* GetFirstAttached() const { return bodies[0]; }
-        inline Link* GetSecondAttached() const { return bodies[1]; }
+        inline LinkPtr GetFirstAttached() const { return bodies[0]; }
+        inline LinkPtr GetSecondAttached() const { return bodies[1]; }
 
         inline dReal GetResolution() const { return fResolution; }
         inline JointType GetType() const { return type; }
@@ -239,15 +240,17 @@ public:
         virtual int GetDOF() const;
 
         /// Gets the joint values with the correct offsets applied
+        /// \param bAppend if true will append to the end of the vector instead of erasing it
         /// \return degrees of freedom of the joint (even if pValues is NULL)
-        virtual int GetValues(dReal* pValues) const;
+        virtual void GetValues(std::vector<dReal>& values, bool bAppend=false) const;
 
         /// Gets the joint velocities
+        /// \param bAppend if true will append to the end of the vector instead of erasing it
         /// \return the degrees of freedom of the joint (even if pValues is NULL)
-        virtual int GetVelocities(dReal* pValues) const;
+        virtual void GetVelocities(std::vector<dReal>& values, bool bAppend=false) const;
 
         /// add torque
-        virtual void AddTorque(const dReal* pTorques);
+        virtual void AddTorque(const std::vector<dReal>& torques);
 
         /// \return the anchor of the joint in global coordinates
         virtual Vector GetAnchor() const;
@@ -255,14 +258,17 @@ public:
         /// \return the axis of the joint in global coordinates
         virtual Vector GetAxis(int iaxis = 0) const;
 
+        /// \param bAppend if true will append to the end of the vector instead of erasing it
         /// \return degrees of freedom of the joint
-        virtual int GetLimits(dReal* pLowerLimit, dReal* pUpperLimit) const;
-        virtual int GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const;
-        
-    private:
-        Link* bodies[2];
-        dReal fResolution;      ///< interpolation resolution
+        virtual void GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit, bool bAppend=false) const;
 
+        virtual void SetJointOffset(dReal offset);
+        virtual void SetJointLimits(const std::vector<dReal>& vLowerLimit, const std::vector<dReal>& vUpperLimit);
+        virtual void SetResolution(dReal resolution);
+
+    private:
+        LinkPtr bodies[2];
+        dReal fResolution;      ///< interpolation resolution
         dReal fMaxVel;          ///< the maximum velocity (rad/s) of the joint
         dReal fMaxAccel;        ///< the maximum acceleration (rad/s^2) of the joint
         dReal fMaxTorque;       ///< maximum torque (N.m, kg m^2/s^2) that can be applied to the joint
@@ -276,52 +282,64 @@ public:
                                 ///< converts the ode joint angle to the expected joint angle
         std::vector<dReal> _vlowerlimit, _vupperlimit; ///< joint limits
         int nMimicJointIndex;   ///< only valid for passive joints and if value is >= 0
-        dReal fMimicCoeffs[2];  ///< the angular position of this joint should be fMimicCoeffs[0]*mimic_joint+fMimicCoeffs[1]
+        std::vector<dReal> vMimicCoeffs;  ///< the angular position of this joint should be fMimicCoeffs[0]*mimic_joint+fMimicCoeffs[1]
                                 ///< when specifying joint limits, note that they are still in terms of this joint
         int dofindex;           ///< the degree of freedom index in the body's DOF array, does not index in KinBody::_vecjoints!
         int jointindex;         ///< the joint index into KinBody::_vecjoints
-        KinBody* _parent;       ///< body that joint belong to
+        KinBodyWeakPtr _parent;       ///< body that joint belong to
         JointType type;
 
-        std::wstring name; ///< optional joint name
+        std::string name; ///< optional joint name
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
-        friend class JointXMLReader;
-        friend class KinBodyXMLReader;
-        friend class RobotXMLReader;
+        friend class OpenRAVEXMLParser;
         friend class ColladaReader;
         friend class ColladaWriter;
 #else
-        friend class ::JointXMLReader;
-        friend class ::KinBodyXMLReader;
-        friend class ::RobotXMLReader;
+        friend class ::OpenRAVEXMLParser;
         friend class ::ColladaReader;
         friend class ::ColladaWriter;
 #endif
 #endif
         friend class KinBody;
     };
+    typedef boost::shared_ptr<Joint> JointPtr;
+    typedef boost::shared_ptr<Joint const> JointConstPtr;
+
+    // gets the state of all bodies that should be published to the GUI
+    class BodyState
+    {
+    public:
+        BodyState() {}
+        KinBodyPtr pbody;
+        std::vector<RaveTransform<dReal> > vectrans;
+        std::vector<dReal> jointvalues;
+        boost::shared_ptr<void> pguidata, puserdata;
+        std::string strname; ///< name of the body
+        int networkid; ///< unique network id
+    };
+    typedef boost::shared_ptr<BodyState> BodyStatePtr;
+    typedef boost::shared_ptr<BodyState const> BodyStateConstPtr;
 
     /// Helper class to save the entire kinbody state
     class KinBodyStateSaver
     {
     public:
-        KinBodyStateSaver(KinBody* pbody);
+        KinBodyStateSaver(KinBodyPtr pbody);
         virtual ~KinBodyStateSaver();
     protected:
         std::vector<Transform> _vtransPrev;
-        KinBody* _pbody;
+        KinBodyPtr _pbody;
     };
 
     virtual ~KinBody();
 
-	virtual const char* GetXMLId() { return "KinBody"; }
-
     virtual void Destroy();
 
     /// Build the robot from an XML filename
-    virtual bool Init(const char* filename, const char**atts);
+    virtual bool InitFromFile(const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts);
+    virtual bool InitFromData(const std::string& data, const std::list<std::pair<std::string,std::string> >& atts);
 
     /// Create a kinbody with one link composed of an array of aligned bounding boxes
     /// \param vaabbs the array of aligned bounding boxes that will comprise of the body
@@ -329,91 +347,51 @@ public:
     virtual bool InitFromBoxes(const std::vector<AABB>& vaabbs, bool bDraw);
 
     //! Get the name of the robot
-    virtual const wchar_t* GetName() const           { return name.size() > 0 ? name.c_str() : L"(NULL)"; }
-    virtual void SetName(const wchar_t* pNewName);
-    virtual void SetName(const char* pNewName);
+    virtual const std::string& GetName() const           { return name; }
+    virtual void SetName(const std::string& newname);
 
-    /** @name Basic Information
-    *  Methods for accessing basic information about joints */
+    /// @name Basic Information
+    /// Methods for accessing basic information about joints
     //@{
 
     /// \return number of joints of the body
     virtual int GetDOF() const { return (int)_vecJointWeights.size(); }
 
-    virtual void GetJointValues(dReal* pValues) const;    ///< gets the current values
     virtual void GetJointValues(std::vector<dReal>& v) const;
-    virtual void GetJointVelocities(dReal* pValues) const;    ///< gets the current velocities
-    virtual void GetJointVelocities(std::vector<dReal>& v) const { v.resize(GetDOF()); if( GetDOF() > 0 ) GetJointVelocities(&v[0]); }
-    virtual void GetJointLimits(dReal* pLowerLimit, dReal* pUpperLimit) const;
+    virtual void GetJointVelocities(std::vector<dReal>& v) const;
     virtual void GetJointLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const;
-    
-    virtual void GetJointMaxVel(dReal* pValues) const;
-    virtual void GetJointMaxVel(std::vector<dReal>& v) const { v.resize(GetDOF()); if( GetDOF() > 0 ) GetJointMaxVel(&v[0]); }
-    virtual void GetJointMaxAccel(dReal* pValues) const;
-    virtual void GetJointMaxAccel(std::vector<dReal>& v) const { v.resize(GetDOF()); if( GetDOF() > 0 ) GetJointMaxVel(&v[0]); }
-    virtual void GetJointMaxTorque(dReal* pValues) const;
-    virtual void GetJointMaxTorque(std::vector<dReal>& v) const { v.resize(GetDOF()); if( GetDOF() > 0 ) GetJointMaxTorque(&v[0]); }
-    virtual void GetJointResolutions(dReal* pValues) const;
-    virtual void GetJointResolutions(std::vector<dReal>& v) const { v.resize(GetDOF()); if( GetDOF() > 0 ) GetJointResolutions(&v[0]); }
+    virtual void GetJointMaxVel(std::vector<dReal>& v) const;
+    virtual void GetJointMaxAccel(std::vector<dReal>& v) const;
+    virtual void GetJointMaxTorque(std::vector<dReal>& v) const;
+    virtual void GetJointResolutions(std::vector<dReal>& v) const;
     //@}
 
     /// adds a torque to every joint
     /// \param bAdd if true, adds to previous torques, otherwise resets the torques on all bodies and starts from 0
-    virtual void SetJointTorques(const dReal* pValues, bool bAdd);
+    virtual void SetJointTorques(const std::vector<dReal>& torques, bool bAdd);
 
     ///< gets the start index of the joint arrays returned by GetJointValues() of the joint
     virtual const std::vector<int>& GetJointIndices() const { return _vecJointIndices; }
 
-    const std::vector<Joint*>& GetJoints() const { return _vecjoints; }
-    const std::vector<Joint*>& GetPassiveJoints() const { return _vecPassiveJoints; }
-    const std::vector<Link*>& GetLinks() const { return _veclinks; }
+    const std::vector<JointPtr>& GetJoints() const { return _vecjoints; }
+    const std::vector<JointPtr>& GetPassiveJoints() const { return _vecPassiveJoints; }
+    const std::vector<LinkPtr>& GetLinks() const { return _veclinks; }
 
-	//! return a pointer to the link with the given name
-    virtual Link* GetLink(const wchar_t* name) const
-    {
-        if( name == NULL )
-            return NULL;
-        
-        for(std::vector<Link*>::const_iterator it = _veclinks.begin(); it != _veclinks.end(); ++it) {
-            if ((*it)->GetName() != NULL && wcscmp((*it)->GetName(), name) == 0)
-                return *it;
-        }
-        RAVELOG_VERBOSEA("Link::GetLink - Error Unknown Link %S\n",name);
-        return NULL;
-    }
+	/// return a pointer to the link with the given name
+    virtual LinkPtr GetLink(const std::string& linkname) const;
 
-    //! return a pointer to the joint with the given name, else -1
-    virtual int GetJointIndex(const wchar_t* name) const
-    {
-        int index = 0;
-        for(std::vector<Joint*>::const_iterator it = _vecjoints.begin(); it != _vecjoints.end(); ++it, index++) {
-            if ((*it)->GetName() != NULL && wcscmp((*it)->GetName(), name) == 0)
-                return index;
-        }
-
-        return -1;
-    }
-    
+    /// return a pointer to the joint with the given name, else -1
     /// gets a joint indexed from GetJoints(). Note that the mapping of joint structures is not the same as
     /// the values in GetJointValues since each joint can have more than one degree of freedom.
-    virtual Joint* GetJoint(int index) const { assert(index >= 0 && index < (int)_vecjoints.size()); return _vecjoints[index]; }
+    virtual int GetJointIndex(const std::string& jointname) const;
+    virtual JointPtr GetJoint(const std::string& jointname) const;
 
     /// gets the joint that covers the degree of freedom index
-    virtual Joint* GetJointFromDOFIndex(int dofindex) const;
+    virtual JointPtr GetJointFromDOFIndex(int dofindex) const;
 
     ///  Computes a state space metric
-    virtual dReal ConfigDist(const dReal *q1) const;
-
-    virtual dReal ConfigDist(const dReal *q1, const dReal *q2) const
-    {
-        dReal dist = 0.0;
-        for (size_t i = 0; i < _vecJointWeights.size(); i++) {
-            dist += _vecJointWeights[i] * (q2[i] - q1[i]) * (q2[i] - q1[i]);
-        }
-        return sqrtf(dist);
-    }
-
-    virtual dReal ConfigDist(const dReal *q1, const dReal *q2, int dof) const;
+    virtual dReal ConfigDist(const std::vector<dReal>& q1) const;
+    virtual dReal ConfigDist(const std::vector<dReal>& q1, const std::vector<dReal>& q2) const;
 
     virtual void SetDOFWeight(int nJointIndex, dReal weight) { _vecJointWeights[nJointIndex] = weight; }
 
@@ -430,9 +408,6 @@ public:
     /// Updates the bounding box and any other parameters that could have changed by a simulation step
     virtual void SimulationStep(dReal fElapsedTime);
     virtual void GetBodyTransformations(std::vector<Transform>& vtrans) const;
-
-    /// returns true if the joint values satisfy all constraints
-    //virtual bool IsValidJoint(const dReal* pJointValues, const dReal* pJointVelocities);
 
     /// queries the transfromation of the first link of the body
     virtual Transform GetTransform() const;
@@ -461,46 +436,46 @@ public:
 
     /// sets the joint angles manually, if ptrans is not NULL, represents the transformation of the first body
     /// calculates the transformations of every body by treating the first body as set with transformation ptrans
-    /// if ptrans is NULL, takes current body transformation
-    /// if pvbodies is not NULL, fills it with the values of all the transformations
-    virtual void SetJointValues(std::vector<Transform>* pvbodies, const Transform* ptrans, const dReal* pJointValues, bool bCheckLimits = false);
+    virtual void SetJointValues(const std::vector<dReal>& vJointValues, const Transform& transBase, bool bCheckLimits = false);
+
+    /// sets the joint angles manually, if ptrans is not NULL, represents the transformation of the first body
+    /// calculates the transformations of every body by treating the first body as set with transformation ptrans
+    virtual void SetJointValues(const std::vector<dReal>& vJointValues, bool bCheckLimits = false);
 
     virtual void SetBodyTransformations(const std::vector<Transform>& vbodies);
-
-    virtual void SetJointVelocities(const dReal* pJointVelocities);
+    virtual void SetJointVelocities(const std::vector<dReal>& pJointVelocities);
 
     /// gets the jacobian with respect to a link, pfArray is a 3 x DOF matrix (rotations are not taken into account)
     /// Calculates the partial differentials for all joints that in the path from the root node to _veclinks[index]
     /// (doesn't touch the rest of the values)
-    virtual void CalculateJacobian(int index, const Vector& offset, dReal* pfJacobian) const;
+    virtual void CalculateJacobian(int index, const Vector& offset, std::vector<dReal>& pfJacobian) const;
 
     /// calculates the rotational jacobian as a quaternion with respect to an initial rotation
     /// \param index of the link that the rotation is attached to
     /// \param pfJacobian 4xDOF matrix
-    virtual void CalculateRotationJacobian(int index, const Vector& qInitialRot, dReal* pfJacobian) const;
+    virtual void CalculateRotationJacobian(int index, const Vector& qInitialRot, std::vector<dReal>& pfJacobian) const;
 
     /// calculates the angular velocity jacobian of a specified link about the axes of world coordinates
     /// \param index of the link that the rotation is attached to
     /// \param pfJacobian 3xDOF matrix
-    virtual void CalculateAngularVelocityJacobian(int index, dReal* pfJacobian) const;
+    virtual void CalculateAngularVelocityJacobian(int index, std::vector<dReal>& pfJacobian) const;
 
     /// Check if body is self colliding. Links that are joined together are ignored.
-    virtual bool CheckSelfCollision(COLLISIONREPORT* pReport = NULL) const;
+    virtual bool CheckSelfCollision(boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>()) const;
 
     /// used to attach bodies so the collision detection ignores them for planning purposes
     /// this doesn't physically attach them in any way to the bodies. So attached objects can be
     /// far apart.
     /// both bodies are affected!
-    virtual void AttachBody(KinBody* pbody);
-    virtual void RemoveBody(KinBody* pbody); ///< if pbody is NULL, removes all ignored bodies
-    virtual bool IsAttached(const KinBody* pbody) const;
-    virtual const std::set<KinBody*>& GetAttached() const { return _setAttachedBodies; }
+    virtual void AttachBody(KinBodyPtr pbody);
+    virtual void RemoveBody(KinBodyPtr pbody); ///< if pbody is NULL, removes all ignored bodies
+    virtual bool IsAttached(KinBodyConstPtr pbody) const;
+    virtual void GetAttached(std::vector<KinBodyPtr>& vattached) const;
 
     /// \return true if this body is derived from RobotBase
     virtual bool IsRobot() const { return false; }
 
     virtual int GetNetworkId() const;
-    static KinBody* GetBodyFromNetworkId(int id);
     
     /// returns how the joint effects the link. If zero, link is unaffected.
     /// If negative, the partial derivative of the Jacobian should be negated.
@@ -515,41 +490,52 @@ public:
     /// if link_base is -1, attached to static environment
     virtual void WriteForwardKinematics(std::ostream& f);
 
-    virtual void SetGuiData(void* pdata) { _pGuiData = pdata; }
-    virtual void* GetGuiData() const { return _pGuiData; }
+    virtual void SetGuiData(boost::shared_ptr<void> pdata) { _pGuiData = pdata; }
+    virtual boost::shared_ptr<void> GetGuiData() const { return _pGuiData; }
 
     virtual const std::string GetXMLFilename() const { return strXMLFilename; }
 
     virtual const std::set<int>& GetNonAdjacentLinks() const;
     virtual const std::set<int>& GetAdjacentLinks() const;
     
-    virtual void* GetPhysicsData() const { return _pPhysicsData; }
-    virtual void* GetCollisionData() const { return _pCollisionData; }
+    virtual boost::shared_ptr<void> GetPhysicsData() const { return _pPhysicsData; }
+    virtual boost::shared_ptr<void> GetCollisionData() const { return _pCollisionData; }
 
     /// The stamp is used by the collision checkers, physics engines, or any other item
     /// that needs to keep track of any changes of the KinBody as it moves.
     /// Currently stamps monotonically increment for every transformation/joint angle change.
     virtual int GetUpdateStamp() const { return _nUpdateStampId; }
 
-    /// Preserves the collision, physics, user, gui data fields. 
+    /// Preserves the collision, physics, user, gui data fields.
     /// Preserves the attached bodies
     /// Preserves the XML readers
-    virtual bool Clone(const InterfaceBase* preference, int cloningoptions);
+    virtual bool Clone(InterfaceBaseConstPtr preference, int cloningoptions);
+
+    /// Register a callback with the interface. Everytime a static property of the interface changes, all
+    /// registered callbacks are called to update the users of the changes. Note that the callbacks will
+    /// block the thread that made the parameter change.
+    /// \param callback 
+    /// \param properties a mask of the set of properties that the callback should be called for when they change
+    virtual boost::shared_ptr<void> RegisterChangeCallback(int properties, const boost::function<void()>& callback);
 
 protected:
     /// constructors declared protected so that user always goes through environment to create bodies
-    KinBody(PluginType type, EnvironmentBase* penv);
+    KinBody(PluginType type, EnvironmentBasePtr penv);
     
     /// specific data about physics engine, should be set only by the current PhysicsEngineBase
-    virtual void SetPhysicsData(void* pdata) { _pPhysicsData = pdata; }
-    virtual void SetCollisionData(void* pdata) { _pCollisionData = pdata; }
+    virtual void SetPhysicsData(boost::shared_ptr<void> pdata) { _pPhysicsData = pdata; }
+    virtual void SetCollisionData(boost::shared_ptr<void> pdata) { _pCollisionData = pdata; }
 
     virtual void ComputeJointHierarchy();
+    virtual void ParametersChanged(int parmameters);
 
-    std::wstring name; ///< name of body
+    inline KinBodyPtr shared_kinbody() { return boost::static_pointer_cast<KinBody>(shared_from_this()); }
+    inline KinBodyConstPtr shared_kinbody_const() const { return boost::static_pointer_cast<KinBody const>(shared_from_this()); }
 
-    std::vector<Joint*> _vecjoints;     ///< all the joints of the body, joints contain limits, torques, and velocities
-    std::vector<Link*> _veclinks;       ///< children, unlike render hierarchies, transformations
+    std::string name; ///< name of body
+
+    std::vector<JointPtr> _vecjoints;     ///< all the joints of the body, joints contain limits, torques, and velocities
+    std::vector<LinkPtr> _veclinks;       ///< children, unlike render hierarchies, transformations
                                         ///< of the children are with respect to the global coordinate system
 
     std::vector<int> _vecJointIndices;  ///< cached start indices, indexed by joint indices
@@ -559,42 +545,39 @@ protected:
     std::vector<char> _vecJointHierarchy;   ///< joint x link, entry is non-zero if the joint affects the link in the forward kinematics
                                             ///< if negative, the partial derivative of ds/dtheta should be negated
 
-    std::vector<Joint*> _vecPassiveJoints; ///< joints not directly controlled
+    std::vector<JointPtr> _vecPassiveJoints; ///< joints not directly controlled
 
     std::set<int> _setAdjacentLinks;        ///< a set of which links are connected to which if link i and j are connected then
                                             ///< i|(j<<16) will be in the set where i<j.
     std::set<int> _setNonAdjacentLinks;     ///< the not of _setAdjacentLinks
-    std::vector< std::pair<std::wstring, std::wstring> > _vForcedAdjacentLinks; ///< internally stores forced adjacent links
+    std::vector< std::pair<std::string, std::string> > _vForcedAdjacentLinks; ///< internally stores forced adjacent links
 
-    std::set<KinBody*> _setAttachedBodies;
+    std::set<KinBodyWeakPtr> _setAttachedBodies;
 
     std::string strXMLFilename;             ///< xml file used to load the body
-    mutable std::vector<dReal> _vTempJoints;        ///< used as a temporary buffer
 
     int networkid;                          ///< unique id of the body used in the network interface
     int _nUpdateStampId;                         ///< unique id for every unique transformation change of any link,
                                             ////< monotically increases as body is updated.
-    void* _pGuiData;                        ///< GUI data to let the viewer store specific graphic handles for the object
-    void* _pPhysicsData;                ///< data set by the physics engine
-    void* _pCollisionData; ///< internal collision model
+    boost::shared_ptr<void> _pGuiData;                        ///< GUI data to let the viewer store specific graphic handles for the object
+    boost::shared_ptr<void> _pPhysicsData;                ///< data set by the physics engine
+    boost::shared_ptr<void> _pCollisionData; ///< internal collision model
+
+    std::list<std::pair<int,const boost::function<void()> > > _listRegisteredCallbacks; ///< callbacks to call when particular properties of the body change.
 
     bool _bHierarchyComputed; ///< true if the joint heirarchy and other cached information is computed
 private:
+    mutable std::vector<dReal> _vTempJoints;
     virtual const char* GetHash() const { return OPENRAVE_KINBODY_HASH; }
-    void (*DestroyCallback)(EnvironmentBase* penv, KinBody* pbody);
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
-    friend class KinBodyXMLReader;
-    friend class JointXMLReader;
-    friend class RobotXMLReader;
+    friend class OpenRAVEXMLParser;
     friend class Environment;
     friend class ColladaReader;
     friend class ColladaWriter;
 #else
-    friend class ::KinBodyXMLReader;
-    friend class ::JointXMLReader;
-    friend class ::RobotXMLReader;
+    friend class ::OpenRAVEXMLParser;
     friend class ::Environment;
     friend class ::ColladaReader;
     friend class ::ColladaWriter;

@@ -14,51 +14,44 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
 
-#include "manipulation.h"
+#include "basemanipulation.h"
 #include "taskmanipulation.h"
-#include "WAMarmik.h"
-
-// declaring variables with stdcall can be a little complex
-#ifdef _MSC_VER
-
-#define PROT_STDCALL(name, paramlist) __stdcall name paramlist
-#define DECL_STDCALL(name, paramlist) __stdcall name paramlist
-
-#else
-
-#ifdef __x86_64__
-#define DECL_STDCALL(name, paramlist) name paramlist
-#else
-#define DECL_STDCALL(name, paramlist) __attribute__((stdcall)) name paramlist
-#endif
-
-#endif // _MSC_VER
+#include "taskcaging.h"
 
 // need c linkage
 extern "C" {
 
-InterfaceBase* DECL_STDCALL(ORCreate, (PluginType type, wchar_t* name, EnvironmentBase* penv))
+InterfaceBasePtr CreateInterface(PluginType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv)
 {
+    if( strcmp(pluginhash,RaveGetInterfaceHash(type)) ) {
+        RAVELOG_WARNA("plugin type hash is wrong");
+        throw openrave_exception("bad plugin hash");
+    }
+    if( !penv )
+        return InterfaceBasePtr();
+    
+    stringstream ss(name);
+    string interfacename;
+    ss >> interfacename;
+    std::transform(interfacename.begin(), interfacename.end(), interfacename.begin(), ::tolower);
+
     switch(type) {
     case PT_ProblemInstance:
-        if( wcsicmp(name, L"BaseManipulation") == 0 )
-            return new BaseManipulationProblem(penv);
-        else if( wcsicmp(name, L"TaskManipulation") == 0 )
-            return new TaskManipulationProblem(penv);
-        break;
-        
-    case PT_InverseKinematicsSolver:
-        if( wcsicmp(name, L"WAM4") == 0 )
-            return new WAMArmIK(penv,false);
+        if( interfacename == "basemanipulation")
+            return InterfaceBasePtr(new BaseManipulation(penv));
+        else if( interfacename == "taskmanipulation" )
+            return InterfaceBasePtr(new TaskManipulation(penv));
+        else if( interfacename == "taskcaging")
+            return InterfaceBasePtr(new TaskCagingProblem(penv));
         break;
     default:
         break;
     }
 
-    return NULL;
+    return InterfaceBasePtr();
 }
 
-bool DECL_STDCALL(GetPluginAttributes, (PLUGININFO* pinfo, int size))
+bool GetPluginAttributes(PLUGININFO* pinfo, int size)
 {
     if( pinfo == NULL ) return false;
     if( size != sizeof(PLUGININFO) ) {
@@ -66,13 +59,14 @@ bool DECL_STDCALL(GetPluginAttributes, (PLUGININFO* pinfo, int size))
         return false;
     }
 
-    pinfo->problems.push_back(L"BaseManipulation");
-    pinfo->problems.push_back(L"TaskManipulation");
-    pinfo->iksolvers.push_back(L"WAM4");
+    // fill pinfo
+    pinfo->interfacenames[PT_ProblemInstance].push_back("BaseManipulation");
+    pinfo->interfacenames[PT_ProblemInstance].push_back("TaskManipulation");
+    pinfo->interfacenames[PT_ProblemInstance].push_back("TaskCaging");
     return true;
 }
 
-void DECL_STDCALL(DestroyPlugin, ())
+void DestroyPlugin()
 {
 }
 

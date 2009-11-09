@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -24,19 +24,26 @@ namespace OpenRAVE {
 class SensorSystemBase : public InterfaceBase
 {
 public:
-    class BODYBASE
+    class BodyData
+    {
+        virtual ~BodyData() {}
+    };
+    typedef boost::shared_ptr<BodyData> BodyDataPtr;
+    typedef boost::shared_ptr<BodyData const> BodyDataConstPtr;
+
+    class BodyBase
     {
     public:
-        virtual ~BODYBASE() {}
+        virtual ~BodyBase() {}
 
         /// returns a pointer to the data used to initialize the BODY with AddKinBody.
         /// if psize is not NULL, will be filled with the size of the data in bytes
         /// This function will be used to restore bodies that were removed
-        virtual void* GetInitData(int* psize) const = 0;
+        virtual BodyDataConstPtr GetData() const = 0;
 
         /// particular link that sensor system is tracking.
         /// All transformations describe this link.
-        virtual KinBody::Link* GetOffsetLink() const = 0;
+        virtual KinBody::LinkPtr GetOffsetLink() const = 0;
 
         /// true if the object is being updated by the system due to its presence in the real environment
         virtual bool IsPresent() const = 0;
@@ -50,8 +57,10 @@ public:
         /// set a lock on a particular body
         virtual bool Lock(bool bDoLock) = 0;
     };
+    typedef boost::shared_ptr<BodyBase> BodyBasePtr;
+    typedef boost::shared_ptr<BodyBase const> BodyBaseConstPtr;
 
-    SensorSystemBase(EnvironmentBase* penv) : InterfaceBase(PT_SensorSystem, penv) {}
+    SensorSystemBase(EnvironmentBasePtr penv) : InterfaceBase(PT_SensorSystem, penv) {}
     virtual ~SensorSystemBase() {}
 
     /// initializes the sensor system
@@ -60,24 +69,24 @@ public:
     virtual void Destroy() = 0;
 
     /// automatically register bodies that have some type of SensorSystem data (usually done through xml)
-    virtual void AddRegisteredBodies(const std::vector<KinBody*>& vbodies) = 0;
+    virtual void AddRegisteredBodies(const std::vector<KinBodyPtr>& vbodies) = 0;
 
     /// add body for registering with sensor system
     /// pdata is a pointer to a data structor holding tracking/registration information for the system
-    virtual BODYBASE*  AddKinBody(KinBody* pbody, const void* pdata) = 0;
+    virtual BodyBasePtr AddKinBody(KinBodyPtr pbody, BodyDataConstPtr pdata) = 0;
     /// remove body from sensory system. If bDestroy is true, will also deallocate the memory
-    virtual bool RemoveKinBody(KinBody* pbody) = 0;
+    virtual bool RemoveKinBody(KinBodyPtr pbody) = 0;
     /// returns true if body is present
-    virtual bool IsBodyPresent(KinBody* pbody) = 0;
+    virtual bool IsBodyPresent(KinBodyPtr pbody) = 0;
     /// enable/disable a body from being updated by the sensor system
-    virtual bool EnableBody(KinBody* pbody, bool bEnable) = 0;
+    virtual bool EnableBody(KinBodyPtr pbody, bool bEnable) = 0;
     /// get a pointer to the BODYBASE struct (can be also used for checking inclusion)
-    virtual BODYBASE* GetBody(KinBody* pbody) = 0;
+    virtual BodyBasePtr GetBody(KinBodyPtr pbody) = 0;
 
     /// switches the registrations of two bodies. Can be used to quickly change the models of the current bodies
     /// \param pbody1 First body to switch
     /// \param pbody2 Second body to switch
-    virtual bool SwitchBody(KinBody* pbody1, KinBody* pbody2) = 0;
+    virtual bool SwitchBody(KinBodyPtr pbody1, KinBodyPtr pbody2) = 0;
 
 private:
     virtual const char* GetHash() const { return OPENRAVE_SENSORSYSTEM_HASH; }

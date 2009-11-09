@@ -27,7 +27,7 @@ const SbColor IvDragger::COLLISION_COLOR(1.0f, 0.4f, 0.0f);
 // IvDragger class
 // Construct a new dragger given the root of the scene graph and
 // the selected node.
-IvDragger::IvDragger(QtCoinViewer* viewer, Item *pItem, float draggerScale)
+IvDragger::IvDragger(QtCoinViewerPtr viewer, ItemPtr pItem, float draggerScale)
 {
     _selectedItem = pItem;
     _viewer = viewer;
@@ -40,7 +40,7 @@ IvDragger::IvDragger(QtCoinViewer* viewer, Item *pItem, float draggerScale)
     _prevtransparency = pItem->GetIvTransparency()->value;
     pItem->GetIvTransparency()->value = SoGLRenderAction::SCREEN_DOOR;
 
-    if( _selectedItem != NULL && _selectedItem->GetIvRoot() != NULL ) {
+    if( !!_selectedItem && _selectedItem->GetIvRoot() != NULL ) {
 
         _GetBounds(_selectedItem->GetIvRoot(), _ab);
 
@@ -105,7 +105,7 @@ IvDragger::IvDragger(QtCoinViewer* viewer, Item *pItem, float draggerScale)
 // Destructor
 IvDragger::~IvDragger()
 {
-    if( _selectedItem != NULL && _selectedItem->GetIvRoot() != NULL ) {
+    if( !!_selectedItem && _selectedItem->GetIvRoot() != NULL ) {
         _selectedItem->GetIvRoot()->removeChild(_axes);
 
         // revert transparency
@@ -164,12 +164,12 @@ void IvDragger::_MotionHandler(void *userData, SoDragger *)
 // Class to represent an object dragger. This allows general
 // translation and rotation, and checks for collision against
 // the rest of the world if requested.
-IvObjectDragger::IvObjectDragger(QtCoinViewer* viewer, Item *pItem, float draggerScale, bool bAllowRotation)
+IvObjectDragger::IvObjectDragger(QtCoinViewerPtr viewer, ItemPtr pItem, float draggerScale, bool bAllowRotation)
 : IvDragger(viewer, pItem, draggerScale)
 {
     //if( _ptext != NULL ) {
 //        char str[256];
-//        sprintf(str,"%S", _selectedItem->GetName());
+//        sprintf(str,"%s", _selectedItem->GetName().c_str());
 //        _ptext->string.setValue(str);
 //    }
 
@@ -239,37 +239,36 @@ void IvObjectDragger::CheckCollision(bool flag)
 
     if (_checkCollision) {
         // synchronize the collision model transform
-        KinBodyItem* pbody = dynamic_cast<KinBodyItem*>(_selectedItem);
-        if( pbody != NULL ) {
-            _viewer->GetEnv()->LockPhysics(true);
-            bool bPrevEnable = pbody->GetBody()->IsEnabled();
-            if( !bPrevEnable )
-                pbody->GetBody()->Enable(true);
+        KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(_selectedItem);
+        if( !!pbody ) {
+            EnvironmentMutex::scoped_try_lock lock(_viewer->GetEnv()->GetMutex());
+            if( !!lock ) {
+                bool bPrevEnable = pbody->GetBody()->IsEnabled();
+                if( !bPrevEnable )
+                    pbody->GetBody()->Enable(true);
 
-            COLLISIONREPORT report;
+                boost::shared_ptr<COLLISIONREPORT> preport(new COLLISIONREPORT());
+                if( pbody->GetBody()->CheckSelfCollision(preport) ) {
+                    RAVELOG_VERBOSEA("self collisionp  %s, links %s:%s\n", pbody->GetBody()->GetName().c_str(),
+                                     !!preport->plink1 ? preport->plink1->GetName().c_str() : "(NULL)",
+                                     !!preport->plink2 ? preport->plink2->GetName().c_str() : "(NULL)");
+                    _SetColor(COLLISION_COLOR);
+                }
+                else if( _viewer->GetEnv()->CheckCollision(pbody->GetBody(), preport)) {
+                    // if there is a collision, revert to the original transform
+                    RAVELOG_VERBOSEA("collision %s:%s with %s:%s\n",
+                                     !!preport->plink1?preport->plink1->GetParent()->GetName().c_str():"(NULL",
+                                     !!preport->plink1?preport->plink1->GetName().c_str():"(NULL)",
+                                     !!preport->plink2?preport->plink2->GetParent()->GetName().c_str():"(NULL)",
+                                     !!preport->plink2?preport->plink2->GetName().c_str():"(NULL)");
+                    _SetColor(COLLISION_COLOR);
+                }
+                else
+                    _SetColor(CHECK_COLOR);
 
-            if( pbody->GetBody()->CheckSelfCollision(&report) ) {
-                RAVELOG_VERBOSEA("self collisionp  %S, links %S:%S\n", pbody->GetBody()->GetName(),
-                                 report.plink1 != NULL ? report.plink1->GetName() : L"(NULL)",
-                                 report.plink2 != NULL ? report.plink2->GetName() : L"(NULL)");
-                _SetColor(COLLISION_COLOR);
+                if( !bPrevEnable )
+                    pbody->GetBody()->Enable(false);
             }
-            else if( _viewer->GetEnv()->CheckCollision(pbody->GetBody(), &report)) {
-                // if there is a collision, revert to the original transform
-                RAVELOG_VERBOSEA("collision %S:%S with %S:%S\n",
-                                 report.plink1?report.plink1->GetParent()->GetName():L"(NULL",
-                                 report.plink1?report.plink1->GetName():L"(NULL)",
-                                 report.plink2?report.plink2->GetParent()->GetName():L"(NULL)",
-                                 report.plink2?report.plink2->GetName():L"(NULL)");
-                _SetColor(COLLISION_COLOR);
-            }
-            else
-                _SetColor(CHECK_COLOR);
-
-            if( !bPrevEnable )
-                pbody->GetBody()->Enable(false);
-            
-            _viewer->GetEnv()->LockPhysics(false);
         }
     }
 }
@@ -288,9 +287,8 @@ void IvObjectDragger::UpdateSkeleton()
     RaveTransform<float> tnew = tbox*told*_toffset;
     SetSoTransform(_selectedItem->GetIvTransform(), tnew);
 
-    KinBodyItem* pbody = dynamic_cast<KinBodyItem*>(_selectedItem);
-
-    if( pbody != NULL ) {
+    KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(_selectedItem);
+    if( !!pbody ) {
         pbody->UpdateFromIv();
         CheckCollision(_checkCollision);
     }
@@ -300,16 +298,12 @@ void IvObjectDragger::UpdateSkeleton()
 
 void IvObjectDragger::GetMessage(ostream& sout)
 {
-    KinBodyItem* pbody = dynamic_cast<KinBodyItem*>(_selectedItem);
-    if( pbody == NULL )
+    KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(_selectedItem);
+    if( !pbody )
         return;
 
     Transform t = pbody->GetTransform();
-
-    string name; name.resize(wcslen(_selectedItem->GetName()));
-    sprintf(&name[0], "%S", _selectedItem->GetName());
-                       
-    sout << "Selected " << name << " (id=" << pbody->GetNetworkId() << ")" << endl
+    sout << "Selected " << _selectedItem->GetName() << " (id=" << pbody->GetNetworkId() << ")" << endl
          << "  translation = ("
          << std::fixed << std::setprecision(3) 
          << std::setw(8) << std::left << t.trans.x << ", "
@@ -326,16 +320,15 @@ void IvObjectDragger::GetMessage(ostream& sout)
 // Class to represent an joint rotation dragger. This allows
 // rotation relative to the parent joint. It honors joint limits
 // and checks for collision between the world and the joint's subtree.
-IvJointDragger::IvJointDragger(QtCoinViewer *viewer, Item *pItem, int iSelectedLink, float draggerScale, int iJointIndex, bool bHilitJoint)
-                               : IvDragger(viewer, pItem, draggerScale)
+IvJointDragger::IvJointDragger(QtCoinViewerPtr viewer, ItemPtr pItem, int iSelectedLink, float draggerScale, int iJointIndex, bool bHilitJoint) : IvDragger(viewer, pItem, draggerScale)
 {
-    KinBodyItem* pbody = dynamic_cast<KinBodyItem*>(pItem);
-    assert( pItem != NULL );
+    KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(pItem);
+    assert( !!pItem );
 
     _trackball = NULL;
     _draggerRoot = NULL;
 
-    if( pbody == NULL || pbody->GetBody() == NULL )
+    if( !pbody || !pbody->GetBody() )
         return;
     if( iSelectedLink < 0 || iSelectedLink >= (int)pbody->GetBody()->GetLinks().size() )
         return;
@@ -344,19 +337,17 @@ IvJointDragger::IvJointDragger(QtCoinViewer *viewer, Item *pItem, int iSelectedL
 
     _iSelectedLink = iSelectedLink;
     _iJointIndex = iJointIndex;
-    const KinBody::Joint* pjoint = pbody->GetBody()->GetJoints()[iJointIndex];
+    KinBody::JointConstPtr pjoint = pbody->GetBody()->GetJoints()[iJointIndex];
+
+    _jointtype = pjoint->GetType();
+    _dofindex = pjoint->GetDOFIndex();
+    pjoint->GetLimits(_vlower,_vupper);
 
     _pLinkNode = pbody->GetIvLink(iSelectedLink);
     if( _pLinkNode == NULL ) {
-        RAVELOG(L"no link is selected\n");
+        RAVELOG_WARNA("no link is selected\n");
         return;
     }
-
-    //if( _ptext != NULL ) {
-//        char str[256];
-//        sprintf(str,"%S:joint %d", _selectedItem->GetName(), _iJointIndex);
-//        _ptext->string.setValue(str);
-//    }
 
     // create a root node for the dragger nodes
     _draggerRoot = new SoSeparator;
@@ -424,8 +415,8 @@ IvJointDragger::IvJointDragger(QtCoinViewer *viewer, Item *pItem, int iSelectedL
 
 RaveVector<float> IvJointDragger::GetJointOffset()
 {
-    KinBodyItem* pbody = dynamic_cast<KinBodyItem*>(_selectedItem);
-    if( pbody == NULL )
+    KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(_selectedItem);
+    if( !pbody )
         return Vector();
 
     // offset the dragger based on the joint offset so that it appears
@@ -433,7 +424,7 @@ RaveVector<float> IvJointDragger::GetJointOffset()
     Vector vtrans, vlinkoffset;
     vlinkoffset = Vector(_selectedItem->GetIvTransform()->translation.getValue().getValue());
     
-    const KinBody::Joint* pjoint = pbody->GetBody()->GetJoints()[_iJointIndex];
+    const KinBody::JointPtr pjoint = pbody->GetBody()->GetJoints()[_iJointIndex];
     switch(pjoint->GetType()) {
     case KinBody::Joint::JointHinge:
     case KinBody::Joint::JointUniversal:
@@ -478,24 +469,23 @@ void IvJointDragger::CheckCollision(bool flag)
     _checkCollision = flag;
 
     if (_checkCollision) {
-        KinBodyItem* pbody = dynamic_cast<KinBodyItem*>(_selectedItem);
+        KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(_selectedItem);
         
-        if( pbody != NULL ) {
-            _viewer->GetEnv()->LockPhysics(true);
+        if( !!pbody ) {
+            EnvironmentMutex::scoped_try_lock lock(_viewer->GetEnv()->GetMutex());
+            if( !!lock ) {
+                bool bPrevEnable = pbody->GetBody()->IsEnabled();
+                if( !bPrevEnable )
+                    pbody->GetBody()->Enable(true);
 
-            bool bPrevEnable = pbody->GetBody()->IsEnabled();
-            if( !bPrevEnable )
-                pbody->GetBody()->Enable(true);
+                if (_viewer->GetEnv()->CheckCollision(pbody->GetBody()) || pbody->GetBody()->CheckSelfCollision())
+                    _SetColor(COLLISION_COLOR);
+                else
+                    _SetColor(CHECK_COLOR);
 
-            if (_viewer->GetEnv()->CheckCollision(pbody->GetBody()) || pbody->GetBody()->CheckSelfCollision())
-                _SetColor(COLLISION_COLOR);
-            else
-                _SetColor(CHECK_COLOR);
-
-            if( !bPrevEnable )
-                pbody->GetBody()->Enable(false);
-
-            _viewer->GetEnv()->LockPhysics(false);
+                if( !bPrevEnable )
+                    pbody->GetBody()->Enable(false);
+            }
         }
     }
 }
@@ -503,8 +493,8 @@ void IvJointDragger::CheckCollision(bool flag)
 // Update the skeleton transforms based on the dragger.
 void IvJointDragger::UpdateSkeleton()
 {
-    KinBodyItem* pbody = dynamic_cast<KinBodyItem*>(_selectedItem);
-    if( pbody == NULL )
+    KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(_selectedItem);
+    if( !pbody )
         return;
 
     // save the transform of the object before dragging
@@ -514,38 +504,41 @@ void IvJointDragger::UpdateSkeleton()
     float fang = atan2f(mrot[2][1], mrot[1][1]);
 
     // if a robot, reset the controller
-    RobotItem* probotitem = dynamic_cast<RobotItem*>(pbody);
+    RobotItemPtr probotitem = boost::dynamic_pointer_cast<RobotItem>(pbody);
 
-    _viewer->GetEnv()->LockPhysics(true);
+    {
+        EnvironmentMutex::scoped_try_lock lock(_viewer->GetEnv()->GetMutex());
 
-    KinBody::Joint* pjoint = pbody->GetBody()->GetJoints()[_iJointIndex];
-    vector<dReal> vlower(pjoint->GetDOF()), vupper(pjoint->GetDOF());
-    pjoint->GetLimits(&vlower[0], &vupper[0]);
+        if( !!lock ) {
+            KinBody::JointPtr pjoint = pbody->GetBody()->GetJoints()[_iJointIndex];
+            vector<dReal> vlower,vupper;
+            pjoint->GetLimits(vlower, vupper);
 
-    if( pjoint->GetType() == KinBody::Joint::JointSlider )
-        fang = fang*(vupper[0]-vlower[0])+vlower[0];
+            if( pjoint->GetType() == KinBody::Joint::JointSlider )
+                fang = fang*(vupper[0]-vlower[0])+vlower[0];
 
-    // update the joint's transform
-    vector<dReal> vjoints;
-    pbody->GetBody()->GetJointValues(vjoints);
-    dReal* pvalues = &vjoints[pjoint->GetDOFIndex()];
-    if( pjoint->GetType() == KinBody::Joint::JointSpherical ) {
-        SbVec3f axis; float angle;
-        _trackball->rotation.getValue(axis,angle);
-        pvalues[0] = axis[0]*angle;
-        pvalues[1] = axis[1]*angle;
-        pvalues[2] = axis[2]*angle;
+            // update the joint's transform
+            vector<dReal> vjoints;
+            pbody->GetBody()->GetJointValues(vjoints);
+            dReal* pvalues = &vjoints[pjoint->GetDOFIndex()];
+            if( pjoint->GetType() == KinBody::Joint::JointSpherical ) {
+                SbVec3f axis; float angle;
+                _trackball->rotation.getValue(axis,angle);
+                pvalues[0] = axis[0]*angle;
+                pvalues[1] = axis[1]*angle;
+                pvalues[2] = axis[2]*angle;
+            }
+            else
+                pvalues[0] = fang;
+
+            if( !!probotitem && !!probotitem->GetRobot()->GetController() ) {
+                probotitem->GetRobot()->GetController()->SetDesired(vjoints);
+            }
+            else {
+                pbody->GetBody()->SetJointValues(vjoints,true);
+            }
+        }
     }
-    else
-        pvalues[0] = fang;
-
-    if( probotitem != NULL && probotitem->GetRobot()->GetController() != NULL ) {
-        probotitem->GetRobot()->GetController()->SetDesired(&vjoints[0]);
-    }
-    else {
-        pbody->GetBody()->SetJointValues(NULL, NULL,&vjoints[0],true);
-    }
-    _viewer->GetEnv()->LockPhysics(false);
 
     _viewer->UpdateCameraTransform();
 
@@ -561,34 +554,28 @@ void IvJointDragger::UpdateSkeleton()
 // Update the dragger based on the skeleton.
 void IvJointDragger::UpdateDragger()
 {
-    KinBodyItem* pbody = dynamic_cast<KinBodyItem*>(_selectedItem);
-    if( pbody == NULL )
+    KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(_selectedItem);
+    if( !pbody )
         return;
     
-    _viewer->GetEnv()->LockPhysics(true);
     vector<dReal> vjoints;
-    pbody->GetBody()->GetJointValues(vjoints);
-    KinBody::Joint* pjoint = pbody->GetBody()->GetJoints()[_iJointIndex];
+    pbody->GetJointValues(vjoints);
 
-    if( pjoint->GetType() == KinBody::Joint::JointSpherical ) {
-        Vector vaxis(vjoints[pjoint->GetDOFIndex()+0],vjoints[pjoint->GetDOFIndex()+1],vjoints[pjoint->GetDOFIndex()+2]);
+    if( _jointtype == KinBody::Joint::JointSpherical ) {
+        Vector vaxis(vjoints[_dofindex+0],vjoints[_dofindex+1],vjoints[_dofindex+2]);
         dReal fang = RaveSqrt(vaxis.lengthsqr3());
         _trackball->rotation = SbRotation(fang > 0 ? SbVec3f(vaxis.x/fang,vaxis.y/fang,vaxis.z/fang) : SbVec3f(1,0,0), fang);
     }
     else {
-        float fang = vjoints[pjoint->GetDOFIndex()];
-        vector<dReal> vlower(pjoint->GetDOF()), vupper(pjoint->GetDOF());
-        pjoint->GetLimits(&vlower[0], &vupper[0]);
-        if( pjoint->GetType() == KinBody::Joint::JointSlider ) {
-            if( vupper[0] > vlower[0] )
-                fang = (fang-vlower[0])/(vupper[0]-vlower[0]);
+        float fang = vjoints[_dofindex];
+        if( _jointtype == KinBody::Joint::JointSlider ) {
+            if( _vupper[0] > _vlower[0] )
+                fang = (fang-_vlower[0])/(_vupper[0]-_vlower[0]);
             else
                 fang = 0;
         }
         _trackball->rotation = SbRotation(SbVec3f(1,0,0), -fang);
     }
-    
-    _viewer->GetEnv()->LockPhysics(false);
 
     assert(_draggerRoot != NULL );
     ((SoTransform*)_draggerRoot->getChild(0))->translation.setValue(GetJointOffset());
@@ -596,17 +583,14 @@ void IvJointDragger::UpdateDragger()
 
 void IvJointDragger::GetMessage(ostream& sout)
 {
-    KinBodyItem* pbody = dynamic_cast<KinBodyItem*>(_selectedItem);
-    if( pbody == NULL )
+    KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(_selectedItem);
+    if( !pbody )
         return;
 
     vector<dReal> vjoints;
     pbody->GetBody()->GetJointValues(vjoints);
     
-    string name; name.resize(wcslen(_selectedItem->GetName()));
-    sprintf(&name[0], "%S", _selectedItem->GetName());
-
-    sout << "Selected " << name << " (id=" << pbody->GetNetworkId() << ")" << endl
+    sout << "Selected " << _selectedItem->GetName() << " (id=" << pbody->GetNetworkId() << ")" << endl
          << std::fixed << std::setprecision(3)
          << "  joint " << _iJointIndex << " = " << vjoints[_iJointIndex];
 

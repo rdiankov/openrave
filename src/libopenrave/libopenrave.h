@@ -108,69 +108,25 @@ inline uint64_t GetMicroTime()
 #endif
 }
 
-#ifndef ARRAYSIZE
-#define ARRAYSIZE(x) (sizeof(x)/(sizeof( (x)[0] )))
-#endif
-
-#ifndef C_ASSERT
-#define C_ASSERT(e) typedef char __C_ASSERT__[(e)?1:-1]
-#endif
-
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
 
 #ifdef _WIN32
-
-#define WCSTOK(str, delim, ptr) wcstok(str, delim)
-
-// define wcsicmp for MAC OS X
 #elif defined(__APPLE_CC__)
-
-#define WCSTOK(str, delim, ptr) wcstok(str, delim, ptr);
-
 #define strnicmp strncasecmp
 #define stricmp strcasecmp
-
-inline int wcsicmp(const wchar_t* s1, const wchar_t* s2)
-{
-  char str1[128], str2[128];
-  sprintf(str1, "%S", s1);
-  sprintf(str2, "%S", s2);
-  return stricmp(str1, str2);
-}
-
 #else
-
-#define WCSTOK(str, delim, ptr) wcstok(str, delim, ptr)
-
 #define strnicmp strncasecmp
 #define stricmp strcasecmp
-#define wcsnicmp wcsncasecmp
-#define wcsicmp wcscasecmp
 
 #endif
 
-inline std::wstring _ravembstowcs(const char* pstr)
+#include <boost/format.hpp>
+#include <boost/bind.hpp>
+
+struct null_deleter
 {
-    size_t len = mbstowcs(NULL, pstr, 0);
-    std::wstring w; w.resize(len);
-    mbstowcs(&w[0], pstr, len);
-    return w;
-}
-
-inline std::string _stdwcstombs(const wchar_t* pname)
-{
-    if( pname == NULL )
-        return std::string();
-
-    std::string s;
-    size_t len = wcstombs(NULL, pname, 0);
-    if( len != (size_t)-1 ) {
-        s.resize(len);
-        wcstombs(&s[0], pname, len);
-    }
-
-    return s;
-}
+    void operator()(void const *) const {}
+};
 
 // need the prototypes in order to keep them free of the OpenRAVE namespace
 class LinkXMLReader;

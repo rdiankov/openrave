@@ -14,60 +14,49 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
 
-// declaring variables with stdcall can be a little complex
-#ifdef _MSC_VER
-
-#define PROT_STDCALL(name, paramlist) __stdcall name paramlist
-#define DECL_STDCALL(name, paramlist) __stdcall name paramlist
-
-#else
-
-#ifdef __x86_64__
-#define DECL_STDCALL(name, paramlist) name paramlist
-#else
-#define DECL_STDCALL(name, paramlist) __attribute__((stdcall)) name paramlist
-#endif
-
-#endif // _MSC_VER
-
-
 // need c linkage
 extern "C" {
 
-// for some reason windows complains when the prototypes are different
-InterfaceBase* DECL_STDCALL(ORCreate, (PluginType type, wchar_t* name, EnvironmentBase* penv))
+InterfaceBasePtr CreateInterface(PluginType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv)
 {
-    if( name == NULL ) return NULL;
+    if( strcmp(pluginhash,RaveGetInterfaceHash(type)) ) {
+        RAVELOG_WARNA("plugin type hash is wrong");
+        throw openrave_exception("bad plugin hash");
+    }
+    if( !penv )
+        return InterfaceBasePtr();
     
+    stringstream ss(name);
+    string interfacename;
+    ss >> interfacename;
+    std::transform(interfacename.begin(), interfacename.end(), interfacename.begin(), ::tolower);
+
     switch(type) {
-        case PT_Robot:
-            if( wcsicmp(name, L"GenericRobot") == 0 )
-                return new GenericRobot(penv);
-            else if( wcsicmp(name, L"Humanoid") == 0 )
-                return new Humanoid(penv);
-            break;
-        default:
-            break;
+    case PT_Robot:
+        if( interfacename == "genericrobot")
+            return InterfaceBasePtr(new GenericRobot(penv));
+        break;
+    default:
+        break;
     }
 
-    return NULL;
+    return InterfaceBasePtr();
 }
 
-bool DECL_STDCALL(GetPluginAttributes, (PLUGININFO* pinfo, int size))
+bool GetPluginAttributes(PLUGININFO* pinfo, int size)
 {
     if( pinfo == NULL ) return false;
     if( size != sizeof(PLUGININFO) ) {
-        RAVEPRINT(L"bad plugin info sizes %d != %d\n", size, sizeof(PLUGININFO));
+        RAVELOG_ERRORA("bad plugin info sizes %d != %d\n", size, sizeof(PLUGININFO));
         return false;
     }
 
     // fill pinfo
-    pinfo->robots.push_back(L"GenericRobot");
-    pinfo->robots.push_back(L"Humanoid");
+    pinfo->interfacenames[PT_Robot].push_back("GenericRobot");
     return true;
 }
 
-void DECL_STDCALL(DestroyPlugin, ())
+void DestroyPlugin()
 {
 }
 

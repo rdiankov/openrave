@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,7 +15,6 @@
 #ifndef OPENRAVE_PLUGINDEFS_H
 #define OPENRAVE_PLUGINDEFS_H
 
-#include <assert.h>
 #include <cstdio>
 #include <cmath>
 #include <cstdlib>
@@ -29,9 +28,10 @@
 #include <boost/typeof/std/string.hpp>
 
 #define FOREACH(it, v) for(BOOST_TYPEOF(v)::iterator it = (v).begin(); it != (v).end(); (it)++)
-#define FOREACHC(it, v) for(BOOST_TYPEOF(v)::const_iterator it = (v).begin(); it != (v).end(); (it)++)
-#define TYPEOF BOOST_TYPEOF
+#define FOREACH_NOINC(it, v) for(BOOST_TYPEOF(v)::iterator it = (v).begin(); it != (v).end(); )
 
+#define FOREACHC(it, v) for(BOOST_TYPEOF(v)::const_iterator it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACHC_NOINC(it, v) for(BOOST_TYPEOF(v)::const_iterator it = (v).begin(); it != (v).end(); )
 #define RAVE_REGISTER_BOOST
 #else
 
@@ -42,8 +42,10 @@
 #include <string>
 
 #define FOREACH(it, v) for(typeof((v).begin()) it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACH_NOINC(it, v) for(typeof((v).begin()) it = (v).begin(); it != (v).end(); )
+
 #define FOREACHC FOREACH
-#define TYPEOF typeof
+#define FOREACHC_NOINC FOREACH_NOINC
 
 #endif
 
@@ -51,20 +53,19 @@
 #include <fstream>
 #include <iostream>
 
-using namespace std;
-
-#include <sys/timeb.h>    // ftime(), struct timeb
+#include <boost/assert.hpp>
+#include <boost/bind.hpp>
+#include <boost/format.hpp>
 
 #ifdef _MSC_VER
-#include <float.h>
-#ifndef isnan
-#define isnan _isnan
-#endif
 #define PRIdS "Id"
 #else
 #define PRIdS "zd"
-#endif // _MSC_VER
+#endif
 
+using namespace std;
+
+#include <sys/timeb.h>    // ftime(), struct timeb
 
 #ifndef _WIN32
 #include <sys/time.h>
@@ -95,6 +96,8 @@ inline uint32_t timeGetTime()
     return (uint32_t)(t.time*1000+t.millitm);
 }
 
+#define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
+
 inline uint64_t GetMicroTime()
 {
 #ifdef _WIN32
@@ -109,86 +112,10 @@ inline uint64_t GetMicroTime()
 #endif
 }
 
-inline float RANDOM_FLOAT()
+struct null_deleter
 {
-#if defined(__IRIX__)
-    return drand48();
-#else
-    return rand()/((float)RAND_MAX);
-#endif
-}
-
-inline float RANDOM_FLOAT(float maximum)
-{
-#if defined(__IRIX__)
-    return (drand48() * maximum);
-#else
-    return (RANDOM_FLOAT() * maximum);
-#endif
-}
-
-inline int RANDOM_INT(int maximum)
-{
-#if defined(__IRIX__)
-    return (random() % maximum);
-#else
-    return (rand() % maximum);
-#endif
-}
-
-#ifndef ARRAYSIZE
-#define ARRAYSIZE(x) (sizeof(x)/(sizeof( (x)[0] )))
-#endif
-
-#define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
-
-#ifdef _WIN32
-
-#define WCSTOK(str, delim, ptr) wcstok(str, delim)
-
-// define wcsicmp for MAC OS X
-#elif defined(__APPLE_CC__)
-
-#define WCSTOK(str, delim, ptr) wcstok(str, delim, ptr);
-
-#define strnicmp strncasecmp
-#define stricmp strcasecmp
-
-inline int wcsicmp(const wchar_t* s1, const wchar_t* s2)
-{
-  char str1[128], str2[128];
-  sprintf(str1, "%S", s1);
-  sprintf(str2, "%S", s2);
-  return stricmp(str1, str2);
-}
-
-#else
-
-#define WCSTOK(str, delim, ptr) wcstok(str, delim, ptr)
-
-#define strnicmp strncasecmp
-#define stricmp strcasecmp
-#define wcsnicmp wcsncasecmp
-#define wcsicmp wcscasecmp
-
-#endif
-
-inline std::string _stdwcstombs(const wchar_t* pname)
-{
-    if( pname == NULL )
-        return std::string();
-
-    std::string s;
-    size_t len = wcstombs(NULL, pname, 0);
-    if( len != (size_t)-1 ) {
-        s.resize(len);
-        wcstombs(&s[0], pname, len);
-    }
-
-    return s;
-}
-
-#include <pthread.h>
+    void operator()(void const *) const {}
+};
 
 #include <rave/rave.h>
 using namespace OpenRAVE;

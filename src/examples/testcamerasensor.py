@@ -89,7 +89,7 @@ class OpenRAVEScene:
             if attachedsensor.GetSensor() is not None:
                 sensordata = attachedsensor.GetSensor().GetSensorData()
                 if sensordata is not None and sensordata.type == Sensor.SensorType.Camera:
-                    attachedsensor.GetSensor().SendCmd('power 1')
+                    attachedsensor.GetSensor().SendCommand('power 1')
                     title = attachedsensor.GetName()
                     if len(title) == 0:
                         title = attachedsensor.GetSensor().GetName()

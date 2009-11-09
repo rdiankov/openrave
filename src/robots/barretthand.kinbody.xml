@@ -193,7 +193,7 @@
     <maxvel>2</maxvel>
     <resolution>1</resolution>
   </Joint>
-  <Joint name="JF4mimic" type="hinge" enable="false" mimic="JF4">
+  <Joint name="JF4mimic" type="hinge" enable="false" mimic="JF4 1 0">
     <Body>wam7</Body>
     <Body>Finger1-0</Body>
     <offsetfrom>Finger1-0</offsetfrom>

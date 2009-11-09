@@ -15,6 +15,7 @@ out = orCommunicator(['robot_controllerset ' num2str(robotid) ' ' controllername
 if strcmp('error',sscanf(out,'%s',1))
     %this error can be ok sometimes
     disp(['Error setting controller']);
+    success = 0;
+else
+    success = 1;
 end
-
-success = str2double(out);

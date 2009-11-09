@@ -126,8 +126,7 @@
     <armjoints>Arm0 Arm1 Arm2</armjoints>
     <iksolver>MyTriDOFSolver</iksolver>
     <!-- joint values of the closed and opened positions -->
-    <closed>2 2</closed>
-    <opened>-40 -40</opened>
+    <closingdirection>2 2</closingdirection>
     <!-- grasp goal with respect to the effector -->
     <Translation>0.125 0 0</Translation>
     <RotationAxis>1 0 0 90</RotationAxis>

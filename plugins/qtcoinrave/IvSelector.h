@@ -25,7 +25,7 @@
 class IvDragger
 {
 public:
-    IvDragger(QtCoinViewer *viewer, Item *pItem, float draggerScale);
+    IvDragger(QtCoinViewerPtr viewer, ItemPtr pItem, float draggerScale);
     virtual ~IvDragger();
 
     virtual void CheckCollision(bool flag) = 0;
@@ -45,8 +45,8 @@ protected:
 
     bool        _checkCollision;
     SbColor     _normalColor;
-    Item*       _selectedItem;
-    QtCoinViewer*    _viewer;
+    ItemPtr       _selectedItem;
+    QtCoinViewerPtr    _viewer;
     SoSeparator* _axes; // axes of the object's origin
     vector<float> vtransparency;
     float       _scale;
@@ -59,7 +59,7 @@ protected:
 class IvObjectDragger : public IvDragger
 {
 public:
-    IvObjectDragger(QtCoinViewer *viewer, Item *pItem, float draggerScale, bool bAllowRotation = true);
+    IvObjectDragger(QtCoinViewerPtr viewer, ItemPtr pItem, float draggerScale, bool bAllowRotation = true);
     ~IvObjectDragger();
 
     void CheckCollision(bool flag);
@@ -80,7 +80,7 @@ protected:
 /// Class to represent a joint rotation dragger.
 class IvJointDragger : public IvDragger {
 public:
-    IvJointDragger(QtCoinViewer *viewer, Item *pItem, int iSelectedLink, float draggerScale, int iJointIndex, bool bHilitJoint);
+    IvJointDragger(QtCoinViewerPtr viewer, ItemPtr pItem, int iSelectedLink, float draggerScale, int iJointIndex, bool bHilitJoint);
     ~IvJointDragger();
 
     void CheckCollision(bool flag);
@@ -93,6 +93,10 @@ protected:
     void _SetColor(const SbColor &);
     RaveVector<float> GetJointOffset();
 
+    KinBody::Joint::JointType _jointtype;
+    int _dofindex;
+    vector<dReal> _vlower, _vupper;
+
     Vector vaxes[3];
     SoSeparator* _pLinkNode; // node of the link of the target body
     SoSeparator*         _draggerRoot;
@@ -103,25 +107,5 @@ protected:
     int _iJointIndex, _iSelectedLink;
     bool                _bHilitJoint;
 };
-
-////! Class to represent an IK dragger.
-//
-//class IvIKDragger : public IvDragger {
-//public:
-//  IvIKDragger(QtCoinViewer *viewer, Item *pItem, float draggerScale, LinkNode* pLink,
-//	      bool bAxis[3]);
-//  ~IvIKDragger();
-//
-//  void CheckCollision(bool flag);
-//  void UpdateSkeleton();
-//  void UpdateDragger();
-//
-//protected:
-//  void _SetColor(const SbColor &);
-//
-//  SoSeparator*           _draggerRoot;
-//  SoTransformBoxDragger* _transformBox;
-//  SoMaterial*            _draggerMaterial;
-//};
 
 #endif // IV_SELECTOR_H

@@ -1,8 +1,4 @@
-// Copyright (C) 2003-2008 Rosen Diankov
-// Computer Science Department
-// Carnegie Mellon University, Robotics Institute
-// 5000 Forbes Ave. Pittsburgh, PA  15213
-// U.S.A.
+// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify

@@ -5,11 +5,6 @@ if(APPLE)
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup")
 endif(APPLE)
 
-find_package(GLEW)
-if (NOT GLEW_FOUND)
-  message(STATUS "WARNING: GLEW not found, disabling QtCoin GUI plugin")
-endif ()
-
 if( MSVC )
   set(QT_MOC_EXECUTABLE "${CMAKE_CURRENT_SOURCE_DIR}/moc.exe")
   set(QT_FOUND 1)
@@ -28,12 +23,11 @@ endif ()
 find_package(OpenGL REQUIRED)
 include_directories(${OPENGL_INCLUDE_DIR})
 
-if (GLEW_FOUND AND QT_FOUND AND SOQT_LIBRARY_FOUND)
+if (QT_FOUND AND SOQT_LIBRARY_FOUND)
 
   message(STATUS "Detected SoQt/Coin3D GUI, making plugin")
 
   include_directories(${CMAKE_SOURCE_DIR})
-  include_directories(${GLEW_INCLUDE_DIRS})
   include_directories(${QT_INCLUDE_DIRS})
   include_directories(${SOQT_INCLUDE_DIRS})
 
@@ -88,7 +82,7 @@ if (GLEW_FOUND AND QT_FOUND AND SOQT_LIBRARY_FOUND)
     set(FFMPEG_LIBRARIES)
   endif()
 
-  set (extLIBS ${QT_LIBRARIES} ${LIBXML2_LIBRARIES} ${COIN_LIBRARY} ${SOQT_LIBRARY} ${GLEW_LIBRARY} ${PTHREADS_LIBRARY} ${FFMPEG_LIBRARIES})
+  set (extLIBS ${QT_LIBRARIES} ${LIBXML2_LIBRARIES} ${COIN_LIBRARY} ${SOQT_LIBRARY} ${PTHREADS_LIBRARY} ${FFMPEG_LIBRARIES})
 
   set(QTCOIN_COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}")
   set(QTCOIN_LINK_FLAGS "${PLUGIN_LINK_FLAGS} ${COIN_LINK_FLAGS} ${SOQT_LINK_FLAGS}")
@@ -107,5 +101,5 @@ if (GLEW_FOUND AND QT_FOUND AND SOQT_LIBRARY_FOUND)
   install(TARGETS qtcoinrave DESTINATION share/openrave/plugins)
 
 else()
-    message(SEND_ERROR "ERROR: Could not find SoQt/Qt/GLEW.")
+    message(SEND_ERROR "ERROR: Could not find SoQt/Qt.")
 endif()

@@ -345,8 +345,7 @@
 	<base>Link0</base>
     <joints>JR JL</joints>
     <!-- joint values of the closed and opened positions -->
-    <closed>-14 -14</closed>
-    <opened>20 20</opened>
+    <closingdirection>-1.0 -1.0</closingdirection>
     <!-- grasp goal with respect to the effector -->
     <Translation>0.08 0 0</Translation>
   </Manipulator>

@@ -5,7 +5,7 @@ if(APPLE)
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup")
 endif(APPLE)
 
-add_library(grasper SHARED graspermain.cpp grasper.cpp graspexplorationplanner.cpp)
+add_library(grasper SHARED graspermain.cpp)
 
 target_link_libraries(grasper libopenrave)
 include_directories(grasper "${CMAKE_SOURCE_DIR}")

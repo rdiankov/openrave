@@ -532,10 +532,7 @@
     <effector>palm</effector>
     <Translation>0.06 -0.025 -0.015</Translation>
     <joints>JF0_3 JF0_4 JF1_2 JF1_3 JF2_2 JF2_3 JF3_2 JF3_3 JF4_4 JF4_5</joints>
-    <opened>0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0</opened>
-    <closed>1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0</closed>
+    <closingdirection>1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0</closingdirection>
   </Manipulator>
-
-
 </Robot>
 

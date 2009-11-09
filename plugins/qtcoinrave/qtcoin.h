@@ -17,7 +17,6 @@
 #define OPENRAVE_QTCOIN_H
 
 /// functions that allow plugins to program for the RAVE simulator
-#include <assert.h>
 #include <cstdio>
 #include <cmath>
 
@@ -100,121 +99,23 @@ inline uint64_t GetMicroTime()
 #endif
 }
 
-#ifndef ARRAYSIZE
-#define ARRAYSIZE(x) (sizeof(x)/(sizeof( (x)[0] )))
-#endif
-
-#ifndef C_ASSERT
-#define C_ASSERT(e) typedef char __C_ASSERT__[(e)?1:-1]
-#endif
-
-inline int RANDOM_INT(int maximum)
-{
-#if defined(__IRIX__)
-    return (random() % maximum);
-#else
-    return (rand() % maximum);
-#endif
-}
-
-inline float RANDOM_FLOAT()
-{
-#if defined(__IRIX__)
-    return drand48();
-#else
-    return rand()/((float)RAND_MAX);
-#endif
-}
-
-inline float RANDOM_FLOAT(float maximum)
-{
-#if defined(__IRIX__)
-    return (drand48() * maximum);
-#else
-    return (RANDOM_FLOAT() * maximum);
-#endif
-}
-
 #include <rave/rave.h>
-#include <pthread.h>
+
+#include <boost/format.hpp>
+#include <boost/assert.hpp>
+#include <boost/thread/condition.hpp>
 
 using namespace OpenRAVE;
 using namespace std;
 
 #ifdef _WIN32
-
-#define WCSTOK(str, delim, ptr) wcstok(str, delim)
-
-// define wcsicmp for MAC OS X
 #elif defined(__APPLE_CC__)
-
-#define WCSTOK(str, delim, ptr) wcstok(str, delim, ptr);
-
 #define strnicmp strncasecmp
 #define stricmp strcasecmp
-
-inline int wcsicmp(const wchar_t* s1, const wchar_t* s2)
-{
-  char str1[128], str2[128];
-  sprintf(str1, "%S", s1);
-  sprintf(str2, "%S", s2);
-  return stricmp(str1, str2);
-}
-
 #else
-
-#define WCSTOK(str, delim, ptr) wcstok(str, delim, ptr)
-
 #define strnicmp strncasecmp
 #define stricmp strcasecmp
-#define wcsnicmp wcsncasecmp
-#define wcsicmp wcscasecmp
-
 #endif
-
-inline char* _ravestrdup(const char* pstr)
-{
-    if( pstr == NULL ) return NULL;
-    size_t len = strlen(pstr);
-    char* p = new char[len+1];
-    memcpy(p, pstr, len*sizeof(char));
-    p[len] = 0;
-    return p;
-}
-
-// Common functions and defines
-inline wchar_t* _ravewcsdup(const wchar_t* pstr)
-{
-    if( pstr == NULL ) return NULL;
-    size_t len = wcslen(pstr);
-    wchar_t* p = new wchar_t[len+1];
-    memcpy(p, pstr, len*sizeof(wchar_t));
-    p[len] = 0;
-    return p;
-}
-
-inline std::wstring _ravembstowcs(const char* pstr)
-{
-    size_t len = mbstowcs(NULL, pstr, 0);
-    std::wstring w; w.resize(len);
-    mbstowcs(&w[0], pstr, len);
-    return w;
-}
-
-inline std::string _stdwcstombs(const wchar_t* pname)
-{
-    if( pname == NULL )
-        return std::string();
-
-    std::string s;
-    size_t len = wcstombs(NULL, pname, 0);
-    if( len != (size_t)-1 ) {
-        s.resize(len);
-        wcstombs(&s[0], pname, len);
-    }
-
-    return s;
-}
 
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
 
@@ -225,31 +126,6 @@ inline T CLAMP_ON_RANGE(T value, T min, T max)
     if (value > max) return max;
     return value;
 }
-
-// declaring variables with stdcall can be a little complex
-#ifdef _MSC_VER
-
-#define DECLPTR_STDCALL(name, paramlist) (__stdcall *name)paramlist
-
-#else
-
-#ifdef __x86_64__
-#define DECLPTR_STDCALL(name, paramlist) (*name) paramlist
-#else
-#define DECLPTR_STDCALL(name, paramlist) (__attribute__((stdcall)) *name) paramlist
-#endif
-
-#endif // _MSC_VER
-
-#include <pthread.h>
-
-class MutexLock
-{
-public:
-    MutexLock(pthread_mutex_t* pmutex) : _pmutex(pmutex) { pthread_mutex_lock(_pmutex); }
-    ~MutexLock() { pthread_mutex_unlock(_pmutex); }
-    pthread_mutex_t* _pmutex;
-};
 
 #include <Inventor/SbColor.h>
 #include <Inventor/SoDB.h>
@@ -322,6 +198,11 @@ inline void SetSoTransform(SoTransform* ptrans, const RaveTransform<float>& t)
     ptrans->translation.setValue(t.trans.x, t.trans.y, t.trans.z);
 }
 
+struct null_deleter
+{
+    void operator()(void const *) const {}
+};
+
 //@{ video recording
 bool START_AVI(const char* file_name, int _frameRate, int width, int height, int bits);
 bool ADD_FRAME_FROM_DIB_TO_AVI(void* pdata);
@@ -329,6 +210,8 @@ bool STOP_AVI();
 //@}
 
 class QtCoinViewer;
+typedef boost::shared_ptr<QtCoinViewer> QtCoinViewerPtr;
+typedef boost::shared_ptr<QtCoinViewer const> QtCoinViewerConstPtr;
 
 #include "Item.h"
 #include "IvSelector.h"

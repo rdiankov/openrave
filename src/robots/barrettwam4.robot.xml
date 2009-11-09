@@ -25,7 +25,6 @@
     <iksolver>WAM4</iksolver>
     <translation>0 0 0.22</translation>
     <joints>JF1 JF2 JF3</joints>
-    <opened>0 0 0</opened>
-    <closed>1.0 1.0 1.0</closed>
+    <closingdirection>1.0 1.0 1.0</closingdirection>
   </Manipulator>
 </Robot>

@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,46 +15,48 @@
 #include "plugindefs.h"
 
 #include "randomized-astar.h"
-#include "rbirrt.h"
-
-// declaring variables with stdcall can be a little complex
-#ifdef _MSC_VER
-
-#define PROT_STDCALL(name, paramlist) __stdcall name paramlist
-#define DECL_STDCALL(name, paramlist) __stdcall name paramlist
-
-#else
-
-#ifdef __x86_64__
-#define DECL_STDCALL(name, paramlist) name paramlist
-#else
-#define DECL_STDCALL(name, paramlist) __attribute__((stdcall)) name paramlist
-#endif
-
-#endif // _MSC_VER
+#include "rrt.h"
 
 // need c linkage
 extern "C" {
 
-// for some reason windows complains when the prototypes are different
-InterfaceBase* DECL_STDCALL(ORCreate, (PluginType type, wchar_t* name, EnvironmentBase* penv))
+InterfaceBasePtr CreateInterface(PluginType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv)
 {
-    switch(type) {
-        case PT_Planner:
-            if( wcsicmp(name, L"RA*") == 0 )
-                return new RandomizedAStarPlanner(penv);
-            else if( wcsicmp(name, L"rBiRRT") == 0 )
-                return new BirrtPlanner(penv);
+    if( strcmp(pluginhash,RaveGetInterfaceHash(type)) ) {
+        RAVELOG_WARNA("plugin type hash is wrong");
+        throw openrave_exception("bad plugin hash");
+    }
+    if( !penv )
+        return InterfaceBasePtr();
+    
+    stringstream ss(name);
+    string interfacename;
+    ss >> interfacename;
+    std::transform(interfacename.begin(), interfacename.end(), interfacename.begin(), ::tolower);
 
-            break;
-        default:
-            break;
+    switch(type) {
+    case OpenRAVE::PT_Planner:
+        if( interfacename == "ra*")
+            return InterfaceBasePtr(new RandomizedAStarPlanner(penv));
+        else if( interfacename == "birrt")
+            return InterfaceBasePtr(new BirrtPlanner(penv));
+        else if( interfacename == "rbirrt") {
+            RAVELOG_WARNA("rBiRRT is deprecated, use BiRRT\n");
+            return InterfaceBasePtr(new BirrtPlanner(penv));
+        }
+        else if( interfacename == "basicrrt")
+            return InterfaceBasePtr(new BasicRrtPlanner(penv));
+        else if( name == "explorationrrt" )
+            return InterfaceBasePtr(new ExplorationPlanner(penv));
+        break;
+    default:
+        break;
     }
 
-    return NULL;
+    return InterfaceBasePtr();
 }
 
-bool DECL_STDCALL(GetPluginAttributes, (PLUGININFO* pinfo, int size))
+bool GetPluginAttributes(PLUGININFO* pinfo, int size)
 {
     if( pinfo == NULL ) return false;
     if( size != sizeof(PLUGININFO) ) {
@@ -62,12 +64,15 @@ bool DECL_STDCALL(GetPluginAttributes, (PLUGININFO* pinfo, int size))
         return false;
     }
 
-    pinfo->planners.push_back(L"RA*");
-    pinfo->planners.push_back(L"rBiRRT");
+    // fill pinfo
+    pinfo->interfacenames[OpenRAVE::PT_Planner].push_back("RA*");
+    pinfo->interfacenames[OpenRAVE::PT_Planner].push_back("BiRRT");
+    pinfo->interfacenames[OpenRAVE::PT_Planner].push_back("BasicRRT");
+    pinfo->interfacenames[OpenRAVE::PT_Planner].push_back("ExplorationRRT");
     return true;
 }
 
-void DECL_STDCALL(DestroyPlugin, ())
+void DestroyPlugin()
 {
 }
 

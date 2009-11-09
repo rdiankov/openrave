@@ -5,7 +5,7 @@ if(APPLE)
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup")
 endif(APPLE)
 
-add_library(rplanners SHARED rplannersmain.cpp randomized-astar.cpp rbirrt.cpp)
+add_library(rplanners SHARED rplannersmain.cpp)
 
 target_link_libraries(rplanners libopenrave)
 include_directories(rplanners "${CMAKE_SOURCE_DIR}")

@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -15,8 +15,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef OPENRAVE_SENSOR_H
 #define OPENRAVE_SENSOR_H
-
-
 
 namespace OpenRAVE {
 
@@ -37,6 +35,13 @@ public:
         ST_Force6D=4,
     };
 
+    struct CameraIntrinsics
+    {
+        CameraIntrinsics() : fx(0),fy(0),cx(0),cy(0) {}
+        CameraIntrinsics(float fx, float fy, float cx, float cy) : fx(fx), fy(fy), cx(cx), cy(cy) {}
+        float fx,fy, cx,cy;
+    };
+
     /// used to pass sensor data around
     class SensorData
     {
@@ -47,6 +52,9 @@ public:
         /// Serialize the sensor data to stream in XML format
         virtual bool serialize(std::ostream& O) const { return true; }
     };
+    typedef boost::shared_ptr<SensorData> SensorDataPtr;
+    typedef boost::shared_ptr<SensorData const> SensorDataConstPtr;
+
     class LaserSensorData : public SensorData
     {
     public:
@@ -67,7 +75,7 @@ public:
         virtual SensorType GetType() { return ST_Camera; }
         
         Transform t;     ///< the coordinate system all the measurements were taken in
-        std::vector<char> vimagedata; ///< rgb image data, if camera only outputs in grayscale, fill each channel with the same value
+        std::vector<uint8_t> vimagedata; ///< rgb image data, if camera only outputs in grayscale, fill each channel with the same value
         
         int id; ///< A unique, increasing, ID for the image
 
@@ -115,6 +123,9 @@ public:
         virtual ~SensorGeometry() {}
         virtual SensorType GetType() = 0;
     };
+    typedef boost::shared_ptr<SensorGeometry> SensorGeometryPtr;
+    typedef boost::shared_ptr<SensorGeometry const> SensorGeometryConstPtr;
+
     class LaserGeomData : public SensorGeometry
     {
     public:
@@ -129,17 +140,17 @@ public:
     {
     public:
         virtual SensorType GetType() { return ST_Camera; }
-        float KK[4]; ///< intrinsic matrix
+        CameraIntrinsics KK; ///< intrinsic matrix
         int width, height; ///< width and height of image
     };
 
-    SensorBase(EnvironmentBase* penv) : InterfaceBase(PT_Sensor, penv) {}
+    SensorBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Sensor, penv) {}
     virtual ~SensorBase() {}
 
     /// Initializes the sensor
     /// \param args extra arguments that the sensor takes, can be NULL
     /// \return true on successful initialization
-    virtual bool Init(const char* args) = 0;
+    virtual bool Init(const std::string& cmd) = 0;
 
     /// Resets any state associated with the sensor
     virtual void Reset(int options) = 0;
@@ -150,46 +161,28 @@ public:
 
     /// Returns the sensor geometry. This method is thread safe.
     /// \return sensor geometry pointer, use delete to destroy it
-    virtual SensorGeometry* GetSensorGeometry() = 0;
+    virtual SensorGeometryPtr GetSensorGeometry() = 0;
 
     /// Creates the sensor data struct to be specifically used by this class
     /// \return new SensorData class, destroy with delete
-    virtual SensorData* CreateSensorData() = 0;
+    virtual SensorDataPtr CreateSensorData() = 0;
 
     /// Copy the most recent published data of the sensor. Once GetSensorData returns, the
     /// caller has full access to the data. This method is thread safe.
     /// \param psensordata A pointer to SensorData returned from CreateSensorData
-    virtual bool GetSensorData(SensorData* psensordata) = 0;
-
-    /// Used to send special commands to the sensor
-    /// \param is the input stream containing the command
-    /// \param os the output stream containing the output
-    /// \return true if the command is successfully processed by the sensor
-    virtual bool SendCmd(std::istream& is, std::ostream& os) = 0;
-
-    /// Thread safe way of checking if a sensor supports a command
-    /// \return true if the sensor supports the specified command
-    virtual bool SupportsCmd(const char* pcmd) = 0;
+    virtual bool GetSensorData(SensorDataPtr psensordata) = 0;
 
     /// Set the transform of a sensor.
     /// \param trans - The transform defining the frame of the sensor.
     virtual void SetTransform(const Transform& trans) = 0;
     virtual Transform GetTransform() = 0;
-
-    /// Create a reader to parse the XML file data for this sensor
-    /// If returns NULL, XML data will be ignored
-    /// The reader has to return true when BaseXMLReader::endElement encounters "sensor" as a top-level name
-    /// because this marks the end of the sensor data.
-    /// The reader should be deleted by the calling once done processing.
-    virtual BaseXMLReader* CreateXMLReader() = 0;
 	
     /// \return the name of the sensor
-	virtual const wchar_t* GetName() const           { return _name.size() > 0 ? _name.c_str() : L"(NULL)"; }
-    virtual void SetName(const wchar_t* pNewName);
-    virtual void SetName(const char* pNewName);
+	virtual const std::string& GetName() const { return _name; }
+    virtual void SetName(const std::string& newname) { _name = newname; }
 
 protected:
-    std::wstring _name; ///< name of the sensor
+    std::string _name; ///< name of the sensor
 
 private:
     virtual const char* GetHash() const { return OPENRAVE_SENSOR_HASH; }

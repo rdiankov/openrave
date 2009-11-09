@@ -20,16 +20,13 @@
 // public headers
 #include <rave/rave.h>
 
-#include <pthread.h>
-
 namespace OpenRAVE
 {
-    
 
 /// Creates an OpenRAVE environment.
 /// \param bLoadAllPlugins, if true will load all the openrave plugins automatically that can be found in the OPENRAVE_PLUGINS environment path
-EnvironmentBase* CreateEnvironment(bool bLoadAllPlugins=true);
-RaveServerBase* CreateSimpleTextServer(EnvironmentBase* penv);
+EnvironmentBasePtr CreateEnvironment(bool bLoadAllPlugins=true);
+ProblemInstancePtr CreateSimpleTextServer(EnvironmentBasePtr penv);
 
 /// count of errors since last GetXMLErrorCount() call
 int GetXMLErrorCount();

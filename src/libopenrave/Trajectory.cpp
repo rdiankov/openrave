@@ -22,40 +22,40 @@
 namespace OpenRAVE {
 
 //  convenience inline functions for accessing linear blend params
-inline dReal& SEG_OFFSET(Trajectory::TSEGMENT& seg, int d)       { return seg.Get(0, d); }
-inline dReal  SEG_OFFSET(const Trajectory::TSEGMENT& seg, int d) { return seg.Get(0, d); }
+inline dReal& SEG_OFFSET(TrajectoryBase::TSEGMENT& seg, int d)       { return seg.Get(0, d); }
+inline dReal  SEG_OFFSET(const TrajectoryBase::TSEGMENT& seg, int d) { return seg.Get(0, d); }
 
-inline dReal& SEG_SLOPE(Trajectory::TSEGMENT& seg, int d)        { return seg.Get(1, d); }
-inline dReal  SEG_SLOPE(const Trajectory::TSEGMENT& seg, int d)  { return seg.Get(1, d); }
+inline dReal& SEG_SLOPE(TrajectoryBase::TSEGMENT& seg, int d)        { return seg.Get(1, d); }
+inline dReal  SEG_SLOPE(const TrajectoryBase::TSEGMENT& seg, int d)  { return seg.Get(1, d); }
 
-inline dReal& START_BLEND_TIME(Trajectory::TSEGMENT& seg, int d) { return seg.Get(2, d); }
-inline dReal  START_BLEND_TIME(const Trajectory::TSEGMENT& seg, int d)
+inline dReal& START_BLEND_TIME(TrajectoryBase::TSEGMENT& seg, int d) { return seg.Get(2, d); }
+inline dReal  START_BLEND_TIME(const TrajectoryBase::TSEGMENT& seg, int d)
 { return seg.Get(2, d); }
 
-inline dReal& END_BLEND_TIME(Trajectory::TSEGMENT& seg, int d)   { return seg.Get(3, d); }
-inline dReal  END_BLEND_TIME(const Trajectory::TSEGMENT& seg, int d)
+inline dReal& END_BLEND_TIME(TrajectoryBase::TSEGMENT& seg, int d)   { return seg.Get(3, d); }
+inline dReal  END_BLEND_TIME(const TrajectoryBase::TSEGMENT& seg, int d)
 { return seg.Get(3, d); }
 
-inline dReal& START_A(Trajectory::TSEGMENT& seg, int d)          { return seg.Get(4, d); }
-inline dReal  START_A(const Trajectory::TSEGMENT& seg, int d)    { return seg.Get(4, d); }
+inline dReal& START_A(TrajectoryBase::TSEGMENT& seg, int d)          { return seg.Get(4, d); }
+inline dReal  START_A(const TrajectoryBase::TSEGMENT& seg, int d)    { return seg.Get(4, d); }
 
-inline dReal& END_A(Trajectory::TSEGMENT& seg, int d)            { return seg.Get(5, d); }
-inline dReal  END_A(const Trajectory::TSEGMENT& seg, int d)      { return seg.Get(5, d); }
+inline dReal& END_A(TrajectoryBase::TSEGMENT& seg, int d)            { return seg.Get(5, d); }
+inline dReal  END_A(const TrajectoryBase::TSEGMENT& seg, int d)      { return seg.Get(5, d); }
 
-Trajectory::Trajectory(EnvironmentBase* penv, int nDOF) : InterfaceBase(PT_Trajectory, penv)
+TrajectoryBase::TrajectoryBase(EnvironmentBasePtr penv, int nDOF) : InterfaceBase(PT_Trajectory, penv)
 {
     //assert( nDOF > 0 );
     _nDOF = nDOF;
     _interpMethod  = LINEAR;
 }
 
-void Trajectory::Reset(int nDOF)
+void TrajectoryBase::Reset(int nDOF)
 {
     Clear();
     _nDOF = nDOF;
 }
 
-void Trajectory::Clear()
+void TrajectoryBase::Clear()
 {
     _vecpoints.resize(0);
     _lowerJointLimit.resize(0);
@@ -65,7 +65,7 @@ void Trajectory::Clear()
     _vecsegments.resize(0);
 }
 
-bool Trajectory::SetFromRawPathData(const dReal* pPathData, int numFrames)
+bool TrajectoryBase::SetFromRawPathData(const dReal* pPathData, int numFrames)
 {
     // error checking
     assert(pPathData != NULL );
@@ -86,20 +86,20 @@ bool Trajectory::SetFromRawPathData(const dReal* pPathData, int numFrames)
 //  if the 'bAutoCalTiming' flag is set, then the timing of the
 //  trajectory is automatically calculated based on the maximum
 //  joint velocities and accelerations.
-bool Trajectory::CalcTrajTiming(const RobotBase* pRobot, InterpEnum interpolationMethod, bool bAutoCalcTiming, bool bActiveDOFs, dReal fMaxVelMult)
+bool TrajectoryBase::CalcTrajTiming(RobotBaseConstPtr pRobot, InterpEnum interpolationMethod, bool bAutoCalcTiming, bool bActiveDOFs, dReal fMaxVelMult)
 {
     if( _vecpoints.size() == 0 )
         return false;
 
     if( pRobot == NULL && bAutoCalcTiming ) {
-        RAVELOG(L"need to specify a robot if calculating trajectory timings\n");
+        RAVELOG_WARNA("need to specify a robot if calculating trajectory timings\n");
         return false;
     }
 
     if( pRobot != NULL ) {
         if( bActiveDOFs ) {
             if( pRobot->GetActiveDOF() != GetDOF() ) {
-                RAVELOG(L"trajectory has different degrees of freedom %d != %d\n", pRobot->GetActiveDOF(), GetDOF());
+                RAVELOG_WARNA("trajectory has different degrees of freedom %d != %d\n", pRobot->GetActiveDOF(), GetDOF());
                 return false;
             }
             
@@ -144,23 +144,23 @@ bool Trajectory::CalcTrajTiming(const RobotBase* pRobot, InterpEnum interpolatio
 //        bSuccess = _SetQuintic(bAutoCalcTiming);
 //        break;
     default:
-        RAVELOG_ERRORA("Trajectory:: ERROR - bad interpolation method: %d\n", interpolationMethod);
+        RAVELOG_ERRORA("TrajectoryBase:: ERROR - bad interpolation method: %d\n", interpolationMethod);
         break;
     }
 
     if( bSuccess )
-        RAVELOG_VERBOSEA("Total Duration = %f\n", GetTotalDuration());
+        RAVELOG_VERBOSEA("Total Trajectory Duration = %f\n", GetTotalDuration());
     return bSuccess;
 }
 
 //! sample the trajectory at a given time using the current
 //   interpolation  method 
-bool Trajectory::SampleTrajectory(dReal time, TPOINT &sample) const
+bool TrajectoryBase::SampleTrajectory(dReal time, TPOINT &sample) const
 {
     if (_vecpoints.size() < 2) {
 
         if( _vecpoints.size() == 0 ) {
-            RAVELOG_ERRORA("Trajectory:: ERROR unable to sample.  numpoints = %"PRIdS"\n", _vecpoints.size());
+            RAVELOG_ERRORA("TrajectoryBase:: ERROR unable to sample.  numpoints = %"PRIdS"\n", _vecpoints.size());
             return false;
         }
 
@@ -173,7 +173,7 @@ bool Trajectory::SampleTrajectory(dReal time, TPOINT &sample) const
         return true;
     }
     else if (time >= GetTotalDuration()) {
-        //if (time > GetTotalDuration()) RAVELOG(L"Trajectory::WARNING- sample time > duration: %f\n", time);
+        //if (time > GetTotalDuration()) RAVELOG(L"TrajectoryBase::WARNING- sample time > duration: %f\n", time);
         sample = _vecpoints.back();
         return true;
     }
@@ -230,9 +230,9 @@ bool Trajectory::SampleTrajectory(dReal time, TPOINT &sample) const
 //  checks internal data structures and verifies that all trajectory
 //  via points do not violate joint position, velocity, and
 //  acceleration limits.
-bool Trajectory::IsValid() const
+bool TrajectoryBase::IsValid() const
 {
-    RAVELOG(L"Checking validity of trajectory points...\n");
+    RAVELOG_VERBOSEA("Checking validity of trajectory points...\n");
     bool bResult = true;
 
     // check joint limits, velocity and acceleration bounds
@@ -240,15 +240,15 @@ bool Trajectory::IsValid() const
     FORIT(it, _vecpoints) {
         for (int d = 0; d < _nDOF; d++) {
             if (it->q[d] < _lowerJointLimit[d]) {
-                RAVELOG(L"Trajectory: WARNING! dof %d exceeds lower joint limit (%f)! q = %f\n", d, _lowerJointLimit[d], it->q[d]);
+                RAVELOG_WARNA("Trajectory: WARNING! dof %d exceeds lower joint limit (%f)! q = %f\n", d, _lowerJointLimit[d], it->q[d]);
                 bResult = false;
             }
             if (it->q[d] > _upperJointLimit[d]) {
-                RAVELOG(L"Trajectory: WARNING! dof %d exceeds upper joint limit (%f)! q = %f\n", d, _upperJointLimit[d], it->q[d]);
+                RAVELOG_WARNA("Trajectory: WARNING! dof %d exceeds upper joint limit (%f)! q = %f\n", d, _upperJointLimit[d], it->q[d]);
                 bResult = false;
             }
             if (fabs(it->qdot[d]) > _maxJointVel[d]) {
-                RAVELOG(L"Trajectory: WARNING! dof %d exceeds max joint velocity (%f)! q = %f\n", d, _lowerJointLimit[d], it->qdot[d]);
+                RAVELOG_WARNA("Trajectory: WARNING! dof %d exceeds max joint velocity (%f)! q = %f\n", d, _lowerJointLimit[d], it->qdot[d]);
                 bResult = false;
             }
             //        if (fabs(tp.qaccel[d]) > _maxJointAccel[d]) {
@@ -266,7 +266,7 @@ bool Trajectory::IsValid() const
 // PRIVATE METHODS
 
 //! linear interpolation using the maximum joint velocities for timing
-bool Trajectory::_SetLinear(bool bAutoCalcTiming, bool bActiveDOFs)
+bool TrajectoryBase::_SetLinear(bool bAutoCalcTiming, bool bActiveDOFs)
 {
     _vecsegments.resize(_vecpoints.size());
 
@@ -280,9 +280,6 @@ bool Trajectory::_SetLinear(bool bAutoCalcTiming, bool bActiveDOFs)
     }
 
     _vecsegments.resize(_vecpoints.size());
-
-    // initialize 
-    RAVELOG_VERBOSEA("Setting linear trajectory...\n");
 
     _vecpoints[0].time = 0.0;
     dReal timeInterval;
@@ -357,7 +354,7 @@ bool Trajectory::_SetLinear(bool bAutoCalcTiming, bool bActiveDOFs)
 }
 
 ////! linear interpolation with parabolic blends
-//bool Trajectory::_SetLinearBlend(bool bAutoCalcTiming)
+//bool TrajectoryBase::_SetLinearBlend(bool bAutoCalcTiming)
 //{
 //    cerr << "Setting linear blend trajectory..." << endl;
 //    _totalDuration = 0.0;
@@ -425,7 +422,7 @@ bool Trajectory::_SetLinear(bool bAutoCalcTiming, bool bActiveDOFs)
 //
 ////! calculate the coefficients of a the parabolic and linear blends
 ////  with continuous endpoint positions and velocities for via points.
-//inline bool Trajectory::_CalculateLinearBlendCoefficients(TSEGMENT::Type segType,
+//inline bool TrajectoryBase::_CalculateLinearBlendCoefficients(TSEGMENT::Type segType,
 //                                                          TSEGMENT& seg, TSEGMENT& prev,
 //                                                          TPOINT& p0, TPOINT& p1,
 //                                                          const float blendAccel[])
@@ -504,7 +501,7 @@ bool Trajectory::_SetLinear(bool bAutoCalcTiming, bool bActiveDOFs)
 //
 
 /// cubic spline interpolation
-bool Trajectory::_SetCubic(bool bAutoCalcTiming, bool bActiveDOFs)
+bool TrajectoryBase::_SetCubic(bool bAutoCalcTiming, bool bActiveDOFs)
 {
     RAVELOG_VERBOSEA("Setting cubic trajectory...\n");
     if (bAutoCalcTiming) {
@@ -552,7 +549,7 @@ bool Trajectory::_SetCubic(bool bAutoCalcTiming, bool bActiveDOFs)
 
 /// calculate the coefficients of a smooth cubic spline with
 ///  continuous endpoint positions and velocities for via points.
-void Trajectory::_CalculateCubicCoefficients(Trajectory::TSEGMENT& seg, const TPOINT& tp0, const TPOINT& tp1)
+void TrajectoryBase::_CalculateCubicCoefficients(TrajectoryBase::TSEGMENT& seg, const TPOINT& tp0, const TPOINT& tp1)
 {
     dReal t = tp1.time - tp0.time; // extract duration
     assert ( t > 0.0 );
@@ -570,7 +567,7 @@ void Trajectory::_CalculateCubicCoefficients(Trajectory::TSEGMENT& seg, const TP
 }
 
 ////! smooth quintic spline interpolation with minimum jerk criteria
-//bool Trajectory::_SetQuintic(bool bAutoCalcTiming)
+//bool TrajectoryBase::_SetQuintic(bool bAutoCalcTiming)
 //{
 //    cerr << "Setting minimum-jerk quintic trajectory..." << endl;
 //    _totalDuration = 0.0;
@@ -630,7 +627,7 @@ void Trajectory::_CalculateCubicCoefficients(Trajectory::TSEGMENT& seg, const TP
 //}
 
 //! recalculate all via point velocities and accelerations
-void Trajectory::_RecalculateViaPointDerivatives()
+void TrajectoryBase::_RecalculateViaPointDerivatives()
 {
     float prevSlope, nextSlope;
     float prevDur, nextDur;
@@ -673,7 +670,7 @@ void Trajectory::_RecalculateViaPointDerivatives()
 ////! calculate the coefficients of a smooth quintic spline with
 ////  continuous endpoint positions and velocities for via points
 ////  using minimum jerk heuristics
-//inline bool Trajectory::_CalculateQuinticCoefficients(JointConfig a[],
+//inline bool TrajectoryBase::_CalculateQuinticCoefficients(JointConfig a[],
 //                                                      TPOINT& tp0,
 //                                                      TPOINT& tp1)
 //{
@@ -719,7 +716,7 @@ void Trajectory::_RecalculateViaPointDerivatives()
 
 /// computes minimum time interval for linear interpolation between
 ///  path points that does not exceed the maximum joint velocities 
-inline dReal Trajectory::_MinimumTimeLinear(const TPOINT& tp0, const TPOINT& tp1, bool bActiveDOFs)
+inline dReal TrajectoryBase::_MinimumTimeLinear(const TPOINT& tp0, const TPOINT& tp1, bool bActiveDOFs)
 {
     dReal minJointTime;
     dReal minPathTime = 0.0;
@@ -747,7 +744,7 @@ inline dReal Trajectory::_MinimumTimeLinear(const TPOINT& tp0, const TPOINT& tp1
 /// computes minimum time interval for cubic interpolation between
 ///  path points that does not exceed the maximum joint velocities 
 ///  or accelerations
-dReal Trajectory::_MinimumTimeCubic(const TPOINT& tp0, const TPOINT& tp1, bool bActiveDOFs)
+dReal TrajectoryBase::_MinimumTimeCubic(const TPOINT& tp0, const TPOINT& tp1, bool bActiveDOFs)
 {
     dReal minJointTime, jointDiff;
     dReal velocityConstraint, accelConstraint;
@@ -781,7 +778,7 @@ dReal Trajectory::_MinimumTimeCubic(const TPOINT& tp0, const TPOINT& tp1, bool b
 /// computes minimum time interval for cubic interpolation between
 ///  path points that does not exceed the maximum joint velocities 
 ///  or accelerations assuming zero velocities at endpoints
-dReal Trajectory::_MinimumTimeCubicZero(const TPOINT& tp0, const TPOINT& tp1, bool bActiveDOFs)
+dReal TrajectoryBase::_MinimumTimeCubicZero(const TPOINT& tp0, const TPOINT& tp1, bool bActiveDOFs)
 {
     dReal minJointTime, jointDiff;
     dReal velocityConstraint, accelConstraint;
@@ -813,7 +810,7 @@ dReal Trajectory::_MinimumTimeCubicZero(const TPOINT& tp0, const TPOINT& tp1, bo
 /// computes minimum time interval for quintic interpolation between
 ///  path points that does not exceed the maximum joint velocities 
 ///  or accelerations
-dReal Trajectory::_MinimumTimeQuintic(const TPOINT& tp0, const TPOINT& tp1, bool bActiveDOFs)
+dReal TrajectoryBase::_MinimumTimeQuintic(const TPOINT& tp0, const TPOINT& tp1, bool bActiveDOFs)
 {
     RAVELOG_ERRORA("Trajectory: ERROR - inaccurate minimum time quintic calculation used.\n");
 
@@ -846,7 +843,7 @@ dReal Trajectory::_MinimumTimeQuintic(const TPOINT& tp0, const TPOINT& tp1, bool
     return minPathTime;
 }
 
-dReal Trajectory::_MinimumTimeTransform(const Transform& t0, const Transform& t1)
+dReal TrajectoryBase::_MinimumTimeTransform(const Transform& t0, const Transform& t1)
 {
     //calc time for translation
     dReal x_time = fabs(t1.trans.x - t0.trans.x) / _maxAffineTranslationVel.x;
@@ -858,7 +855,7 @@ dReal Trajectory::_MinimumTimeTransform(const Transform& t0, const Transform& t1
 
 /// find the active trajectory interval covering the given time
 ///  (returns the index of the start point of the interval)
-int Trajectory::_FindActiveInterval(dReal time) const
+int TrajectoryBase::_FindActiveInterval(dReal time) const
 {
     int index = 0;
 
@@ -871,7 +868,7 @@ int Trajectory::_FindActiveInterval(dReal time) const
 }
 
 /// sample the trajectory using linear interpolation.
-inline bool Trajectory::_SampleLinear(const TPOINT& p0, const TPOINT& p1,
+inline bool TrajectoryBase::_SampleLinear(const TPOINT& p0, const TPOINT& p1,
                                       const TSEGMENT& seg, dReal time,
                                       TPOINT& sample) const
 {
@@ -900,7 +897,7 @@ inline bool Trajectory::_SampleLinear(const TPOINT& p0, const TPOINT& p1,
 }
 
 /// sample using linear interpolation with parabolic blends.
-inline bool Trajectory::_SampleLinearBlend(const TPOINT& p0, const TPOINT& p1,
+inline bool TrajectoryBase::_SampleLinearBlend(const TPOINT& p0, const TPOINT& p1,
                                            const TSEGMENT& seg, dReal time,
                                            TPOINT& sample) const
 {
@@ -940,7 +937,7 @@ inline bool Trajectory::_SampleLinearBlend(const TPOINT& p0, const TPOINT& p1,
 }
 
 /// sample the trajectory using cubic interpolation.
-inline bool Trajectory::_SampleCubic(const TPOINT& p0, const TPOINT& p1,
+inline bool TrajectoryBase::_SampleCubic(const TPOINT& p0, const TPOINT& p1,
                                      const TSEGMENT& seg, dReal time,
                                      TPOINT& sample) const
 {
@@ -970,7 +967,7 @@ inline bool Trajectory::_SampleCubic(const TPOINT& p0, const TPOINT& p1,
 }
 
 //! sample the trajectory using quintic interpolation with minimum jerk.
-inline bool Trajectory::_SampleQuintic(const TPOINT& p0, const TPOINT& p1,
+inline bool TrajectoryBase::_SampleQuintic(const TPOINT& p0, const TPOINT& p1,
                                        const TSEGMENT& seg, dReal time,
                                        TPOINT& sample) const
 {
@@ -1004,23 +1001,21 @@ inline bool Trajectory::_SampleQuintic(const TPOINT& p0, const TPOINT& p1,
     return true;
 }
 
-bool Trajectory::Write(const char* filename, int options) const
+bool TrajectoryBase::Write(const std::string& filename, int options) const
 {
-    assert(filename != NULL);
-
-    ofstream of(filename);
+    ofstream of(filename.c_str());
     if( !of ) {
-        RAVELOG(L"failed to write to file %s\n", filename);
+        RAVELOG_WARNA(str(boost::format("failed to write to file %s\n")%filename));
         return false;
     }
 
     return Write(of, options);
 }
 
-bool Trajectory::Write(FILE* f, int options) const
+bool TrajectoryBase::Write(FILE* f, int options) const
 {
     if( f == NULL ) {
-        RAVELOG(L"invalid file handle\n");
+        RAVELOG_WARNA("invalid file handle\n");
         return false;
     }
 
@@ -1031,7 +1026,7 @@ bool Trajectory::Write(FILE* f, int options) const
     return fwrite(ss.str().c_str(), ss.str().size(), 1, f) != 0;
 }
 
-bool Trajectory::Write(std::ostream& f, int options) const
+bool TrajectoryBase::Write(std::ostream& f, int options) const
 {
     if( !(options&TO_NoHeader) ) {
         if( !(options&TO_OneLine) )
@@ -1079,21 +1074,18 @@ bool Trajectory::Write(std::ostream& f, int options) const
     return !!f;
 }
 
-bool Trajectory::Read(const char* filename, RobotBase* robot)
+bool TrajectoryBase::Read(const std::string& filename, RobotBasePtr robot)
 {
-    if(filename == NULL)
-        return false;
-
-    ifstream fi(filename);
+    ifstream fi(filename.c_str());
     if( !fi ) {
-        RAVELOG(L"failed to read file %s\n", filename);
+        RAVELOG_WARNA(str(boost::format("failed to read file %s\n")%filename));
         return false;
     }
 
     return Read(fi, robot);
 }
 
-bool Trajectory::Read(std::istream& f, RobotBase* robot)
+bool TrajectoryBase::Read(std::istream& f, RobotBasePtr robot)
 {
     int size, dof, options;
     f >> size >> dof >> options;
