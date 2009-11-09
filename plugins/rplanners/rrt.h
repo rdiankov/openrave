@@ -119,7 +119,7 @@ public:
             if( pvCheckedConfigurations != NULL )
                 pvCheckedConfigurations->push_back(pQ1);
             GetParameters()._setstatefn(pQ1);
-            if (GetEnv()->CheckCollision(_robot) || _robot->CheckSelfCollision() )
+            if (GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || _robot->CheckSelfCollision() )
                 return true;
         }
 
@@ -147,7 +147,7 @@ public:
             if( pvCheckedConfigurations != NULL )
                 pvCheckedConfigurations->push_back(vtempconfig);
             GetParameters()._setstatefn(vtempconfig);
-            if( GetEnv()->CheckCollision(_robot) || _robot->CheckSelfCollision() )
+            if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || _robot->CheckSelfCollision() )
                 return true;
         }
 
@@ -158,7 +158,7 @@ public:
     virtual bool _CheckCollision(const vector<dReal>& pConfig, bool breport=false)
     {
         GetParameters()._setstatefn(pConfig);
-        bool bCol = GetEnv()->CheckCollision(_robot, breport?_report:boost::shared_ptr<COLLISIONREPORT>())
+        bool bCol = GetEnv()->CheckCollision(KinBodyConstPtr(_robot), breport?_report:boost::shared_ptr<COLLISIONREPORT>())
             || _robot->CheckSelfCollision(breport?_report:boost::shared_ptr<COLLISIONREPORT>());
         if( bCol && breport ) {
             RAVELOG_WARNA(str(boost::format("fcollision %s:%s with %s:%s\n")%_report->plink1->GetParent()->GetName()%_report->plink1->GetName()%_report->plink2->GetParent()->GetName()%_report->plink2->GetName()));
@@ -285,7 +285,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
             }
             else {
                 RAVELOG_WARNA("goal in collision %s\n", _robot->CheckSelfCollision()?"(self)":NULL);
-                if( GetEnv()->CheckCollision(_robot, _report) ) {
+                if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot), _report) ) {
                     RAVELOG_WARNA("birrt: robot initially in collision %s:%s!\n",
                                   _report->plink1!=NULL?_report->plink1->GetName().c_str():"(NULL)",
                                   _report->plink2!=NULL?_report->plink2->GetName().c_str():"(NULL)");
@@ -468,7 +468,7 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
             }
             else {
                 RAVELOG_WARNA("goal in collision %s\n", _robot->CheckSelfCollision()?"(self)":NULL);
-                if( GetEnv()->CheckCollision(_robot, _report) ) {
+                if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot), _report) ) {
                     RAVELOG_WARNA("birrt: robot initially in collision %s:%s!\n",
                                   _report->plink1!=NULL?_report->plink1->GetName().c_str():"(NULL)",
                                   _report->plink2!=NULL?_report->plink2->GetName().c_str():"(NULL)");

@@ -143,7 +143,7 @@ class TaskManipulation : public ProblemInstance
         FOREACH(itlink,_vvManipChildLinks[imanip]) {
             Transform torg = itlink->first->GetTransform();
             itlink->first->SetTransform(tgripper*itlink->second);
-            bool bCollision = _robot->GetEnv()->CheckCollision(itlink->first);
+            bool bCollision = _robot->GetEnv()->CheckCollision(KinBody::LinkConstPtr(itlink->first));
             itlink->first->SetTransform(torg);
             if( bCollision )
                 return true;
@@ -347,7 +347,7 @@ class TaskManipulation : public ProblemInstance
 
         SWITCHMODELS(true);
         // check if robot is in collision with padded models
-        if( GetEnv()->CheckCollision(_robot) ) {
+        if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) ) {
             _robot->SetActiveDOFs(pmanip->GetArmJoints());
             if( !CM::JitterActiveDOF(_robot) ) {
                 RAVELOG_ERRORA("failed to jitter robot\n");
@@ -598,7 +598,7 @@ class TaskManipulation : public ProblemInstance
                  
                 ptarget->SetTransform(transDestTarget);
                 _robot->Enable(false); // remove from target collisions
-                bool bTargetCollision = GetEnv()->CheckCollision(ptarget);
+                bool bTargetCollision = GetEnv()->CheckCollision(KinBodyConstPtr(ptarget));
                 _robot->Enable(true); // remove from target collisions
                 ptarget->SetTransform(transTarg);
                 if( bTargetCollision ) {
@@ -965,7 +965,7 @@ protected:
             return ptraj;
         }
 
-        if( GetEnv()->CheckCollision(_robot) )
+        if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) )
             RAVELOG_WARNA("Hand in collision\n");
     
         PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());

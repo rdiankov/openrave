@@ -372,8 +372,8 @@ class SimpleTextServer : public ProblemInstance
 #endif
 #endif
 
-        _servthread = boost::thread(boost::bind(&SimpleTextServer::_listen_threadcb,shared_server()));
-        _workerthread = boost::thread(boost::bind(&SimpleTextServer::_worker_threadcb,shared_server()));
+        _servthread.reset(new boost::thread(boost::bind(&SimpleTextServer::_listen_threadcb,shared_server())));
+        _workerthread.reset(new boost::thread(boost::bind(&SimpleTextServer::_worker_threadcb,shared_server())));
         bInitThread = true;
         return 0;
     }
@@ -395,7 +395,7 @@ class SimpleTextServer : public ProblemInstance
         if( bInitThread ) {
             bCloseThread = true;
             _condWorker.notify_all();
-            _servthread.join();
+            _servthread->join();
 
             FOREACH(it, _listReadThreads) {
                 _condWorker.notify_all();
@@ -403,7 +403,7 @@ class SimpleTextServer : public ProblemInstance
             }
             _listReadThreads.clear();
             _condHasWork.notify_all();
-            _workerthread.join();
+            _workerthread->join();
 
             bCloseThread = false;
             bInitThread = false;
@@ -417,7 +417,7 @@ class SimpleTextServer : public ProblemInstance
     virtual void Reset()
     {
         {
-            boost::mutex::scoped_lock(_mutexWorker);
+            boost::mutex::scoped_lock lock(_mutexWorker);
             listWorkers.clear();
             _mapFigureIds.clear();
         }
@@ -596,7 +596,7 @@ class SimpleTextServer : public ProblemInstance
 
     int _nPort; ///< port used for listening to incoming connections
 
-    boost::thread _servthread, _workerthread;
+    boost::shared_ptr<boost::thread> _servthread, _workerthread;
     list<boost::shared_ptr<boost::thread> > _listReadThreads;
 
     boost::mutex _mutexWorker;
@@ -1848,7 +1848,7 @@ protected:
 
         boost::shared_ptr<COLLISIONREPORT> preport(new COLLISIONREPORT());
         vector<KinBody::LinkConstPtr> empty;
-        if( GetEnv()->CheckCollision(pbody, vignore, empty,preport)) {
+        if( GetEnv()->CheckCollision(KinBodyConstPtr(pbody), vignore, empty,preport)) {
             os << "1 ";
             RAVELOG_VERBOSEA("collision %s:%s with %s:%s\n",
                              preport->plink1?preport->plink1->GetParent()->GetName().c_str():"(NULL)",
@@ -1895,7 +1895,7 @@ protected:
             if(!pbody)
                 bcollision = GetEnv()->CheckCollision(r, preport);
             else
-                bcollision = GetEnv()->CheckCollision(r, pbody, preport);
+                bcollision = GetEnv()->CheckCollision(r, KinBodyConstPtr(pbody), preport);
 
             if(bcollision) {
                 BOOST_ASSERT(preport->contacts.size()>0);

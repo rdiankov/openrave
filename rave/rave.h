@@ -56,6 +56,7 @@
 #include <fstream>
 #include <sstream>
 
+#include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
 #include <boost/tuple/tuple.hpp>
@@ -651,7 +652,7 @@ public:
     /// Returns a list of loaded problems with a lock. As long as the lock is held, the problems
     /// are guaranteed to stay loaded in the environment.
     /// \return returns a pointer to a Lock. Destroying the shared_ptr will release the lock
-    virtual boost::shared_ptr<boost::mutex> GetLoadedProblems(std::list<ProblemInstancePtr>& listProblems) const = 0;
+    virtual boost::shared_ptr<void> GetLoadedProblems(std::list<ProblemInstancePtr>& listProblems) const = 0;
 
     //@{ Physics/Simulation methods
 
@@ -803,14 +804,14 @@ public:
     /// This function is independent of the environment lock
     /// \param bodies Fills with all the body pointers in the environment
     /// \return returns a pointer to a Lock. Destroying the shared_ptr will release the lock
-    virtual boost::shared_ptr<boost::mutex> GetLockedBodies(std::vector<KinBodyPtr>& bodies) const = 0;
+    virtual boost::shared_ptr<void> GetLockedBodies(std::vector<KinBodyPtr>& bodies) const = 0;
 
     /// Returns a set of robots and locks the environment from creating and destroying new bodies
     /// (ie, body creation of and destruction functions will block until lock is released).
     /// This function is independent of the environment lock
     /// \param bodies Fills with all the body pointers in the environment
     /// \return returns a pointer to a Lock. Destroying the shared_ptr will release the lock
-    virtual boost::shared_ptr<boost::mutex> GetLockedRobots(std::vector<RobotBasePtr>& robots) const = 0;
+    virtual boost::shared_ptr<void> GetLockedRobots(std::vector<RobotBasePtr>& robots) const = 0;
 
     /// XML processing functions.
     //@{

@@ -313,7 +313,7 @@ protected:
         boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(robot->GetActiveDOF()));
         Trajectory::TPOINT point;
         vector<dReal> vPrevValues;
-        bool bPrevInCollision = GetEnv()->CheckCollision(robot)||robot->CheckSelfCollision();
+        bool bPrevInCollision = GetEnv()->CheckCollision(KinBodyConstPtr(robot))||robot->CheckSelfCollision();
         robot->GetActiveDOFValues(vPrevValues);
 
         if( bPrevInCollision && !bIgnoreFirstCollision ) {
@@ -347,7 +347,7 @@ protected:
         
             robot->SetActiveDOFValues(point.q);
         
-            bool bInCollision = GetEnv()->CheckCollision(robot)||robot->CheckSelfCollision();
+            bool bInCollision = GetEnv()->CheckCollision(KinBodyConstPtr(robot))||robot->CheckSelfCollision();
             if(bInCollision && !bPrevInCollision && i >= minsteps) {
                 RAVELOG_DEBUGA("Arm Lifting: broke due to collision\n");
                 break;
@@ -998,7 +998,7 @@ protected:
 
         // have to add the first point
         Trajectory::TPOINT ptfirst;
-        if( GetEnv()->CheckCollision(robot) ) {
+        if( GetEnv()->CheckCollision(KinBodyConstPtr(robot)) ) {
             robot->GetActiveDOFValues(ptfirst.q);
             ptraj->AddPoint(ptfirst);
 
@@ -1158,7 +1158,7 @@ protected:
                 vtempconfig[i] = q0[i] + (jointIncrement[i] * f);
         
             probot->SetJointValues(vtempconfig);
-            if( probot->GetEnv()->CheckCollision(probot) || probot->CheckSelfCollision() )
+            if( probot->GetEnv()->CheckCollision(KinBodyConstPtr(probot)) || probot->CheckSelfCollision() )
                 return true;
         }
 
@@ -1419,7 +1419,7 @@ protected:
 
             robot->SetActiveDOFValues(vjoints,true);
 
-            if(GetEnv()->CheckCollision(robot) ) {
+            if(GetEnv()->CheckCollision(KinBodyConstPtr(robot)) ) {
                 RAVELOG_VERBOSEA("robot in collision\n");
                 continue;
             }
@@ -1443,7 +1443,7 @@ protected:
                     vrand[j] = vlowerlimit[j] + (vupperlimit[j]-vlowerlimit[j])*RaveRandomFloat();
         
                 robot->SetActiveDOFValues(vrand, true);
-                if(!GetEnv()->CheckCollision(robot) && !robot->CheckSelfCollision())
+                if(!GetEnv()->CheckCollision(KinBodyConstPtr(robot)) && !robot->CheckSelfCollision())
                     break;
             }
             

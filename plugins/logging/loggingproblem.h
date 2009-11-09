@@ -35,7 +35,7 @@ class LoggingProblem : public ProblemInstance
         bDestroyThread = true;
         bDoLog = false;
         bAbsoluteTiem = false;
-        _threadlog.join();
+        _threadlog->join();
     }
 
     virtual int main(const string& cmd)
@@ -59,7 +59,7 @@ class LoggingProblem : public ProblemInstance
         RegisterCommand("help",boost::bind(&LoggingProblem::Help,shared_problem(),_1,_2), "display this message.");
 
         bDestroyThread = false;
-        _threadlog = boost::thread(boost::bind(&LoggingProblem::_log_thread,shared_problem()));
+        _threadlog.reset(new boost::thread(boost::bind(&LoggingProblem::_log_thread,shared_problem())));
         return 0;
     }
     
@@ -226,7 +226,7 @@ class LoggingProblem : public ProblemInstance
         }
     }
 
-    boost::thread _threadlog;
+    boost::shared_ptr<boost::thread> _threadlog;
     bool bDoLog, bDestroyThread, bAbsoluteTiem;
 };
 

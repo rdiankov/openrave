@@ -20,7 +20,7 @@ class CM
         if(robot->CheckSelfCollision())
             RAVELOG_WARNA("JitterActiveDOFs: initial config in self collision!\n");
 
-        while(robot->GetEnv()->CheckCollision(robot) || robot->CheckSelfCollision() ) {
+        while(robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || robot->CheckSelfCollision() ) {
             if( iter > 5000 ) {
                 RAVELOG_WARNA("Failed to find noncolliding position for robot\n");
 
@@ -28,7 +28,7 @@ class CM
 
                 // display collision report
                 COLLISIONREPORT report;
-                if( robot->GetEnv()->CheckCollision(robot, boost::shared_ptr<COLLISIONREPORT>(&report,null_deleter())) ) {
+                if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot), boost::shared_ptr<COLLISIONREPORT>(&report,null_deleter())) ) {
                     if( !!report.plink1 && !!report.plink2 ) {
                         RAVELOG_WARNA(str(boost::format("Jitter collision %s:%s with %s:%s\n")%report.plink1->GetParent()->GetName()%report.plink1->GetName()%report.plink2->GetParent()->GetName()%report.plink2->GetName()));
                     }
@@ -59,7 +59,7 @@ class CM
         Transform transorig = pbody->GetTransform();
         Transform transnew = transorig;
         int iter = 0;
-        while(pbody->GetEnv()->CheckCollision(pbody) ) {
+        while(pbody->GetEnv()->CheckCollision(KinBodyConstPtr(pbody)) ) {
             if( iter > 1000 )
                 return false;
 
@@ -140,7 +140,7 @@ class CM
                 _robot->SetActiveDOFValues(vhandvalues);
                 
                 // don't check self collisions!!!!
-                if( _robot->GetEnv()->CheckCollision(_robot))
+                if( _robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot)))
                     return 1000;
             }
 
@@ -158,7 +158,7 @@ class CM
                 if( _robot->CheckSelfCollision() )
                     continue;
 
-                if( _robot->GetEnv()->CheckCollision(_robot) )
+                if( _robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) )
                     return 1000;
                 --numiter;
             }

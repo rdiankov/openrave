@@ -175,17 +175,14 @@ public:
 
         virtual void releasemutex()
         {
-            if( _bWaitForMutex ) {
-                _bWaitForMutex = false;
-                _pmutex->unlock();
-            }
+            _plock.reset();
         }
 
     protected:
         QtCoinViewerPtr _pviewer;
         void** _ppreturn;
-        boost::shared_ptr<boost::mutex> _pmutex;
-        bool _bWaitForMutex;
+        boost::mutex _mutex;
+        boost::shared_ptr<boost::mutex::scoped_lock> _plock;
     };
     typedef boost::shared_ptr<EnvMessage> EnvMessagePtr;
     typedef boost::shared_ptr<EnvMessage const> EnvMessageConstPtr;

@@ -274,7 +274,7 @@ private:
             return false;
 
         COLLISIONREPORT report;
-        if( boost::get<2>(freeq0check) && GetEnv()->CheckCollision(_probot, boost::shared_ptr<COLLISIONREPORT>(&report,null_deleter())) ) {
+        if( boost::get<2>(freeq0check) && GetEnv()->CheckCollision(KinBodyConstPtr(_probot), boost::shared_ptr<COLLISIONREPORT>(&report,null_deleter())) ) {
             if( !!report.plink1 && !!report.plink2 ) {
                 RAVELOG_VERBOSEA(str(boost::format("WAMIK: collision %s:%s with %s:%s\n")%report.plink1->GetParent()->GetName()%report.plink1->GetName()%report.plink2->GetParent()->GetName()%report.plink2->GetName()));
             }
@@ -350,7 +350,7 @@ private:
         if( _probot->CheckSelfCollision() )
             return false;
 
-        if( bCheckEnvCollision && GetEnv()->CheckCollision(_probot) )
+        if( bCheckEnvCollision && GetEnv()->CheckCollision(KinBodyConstPtr(_probot)) )
             return false;
 
         qSolutions.push_back(vravesol);
@@ -376,7 +376,7 @@ private:
     {
         FOREACH(itlink,_vChildGripperLinks) {
             itlink->first->SetTransform(transEE*itlink->second);
-            if( GetEnv()->CheckCollision(itlink->first) )
+            if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(itlink->first)) )
                 return true;
         }
         return false;

@@ -254,7 +254,7 @@ void IvObjectDragger::CheckCollision(bool flag)
                                      !!preport->plink2 ? preport->plink2->GetName().c_str() : "(NULL)");
                     _SetColor(COLLISION_COLOR);
                 }
-                else if( _viewer->GetEnv()->CheckCollision(pbody->GetBody(), preport)) {
+                else if( _viewer->GetEnv()->CheckCollision(KinBodyConstPtr(pbody->GetBody()), preport)) {
                     // if there is a collision, revert to the original transform
                     RAVELOG_VERBOSEA("collision %s:%s with %s:%s\n",
                                      !!preport->plink1?preport->plink1->GetParent()->GetName().c_str():"(NULL",
@@ -478,7 +478,7 @@ void IvJointDragger::CheckCollision(bool flag)
                 if( !bPrevEnable )
                     pbody->GetBody()->Enable(true);
 
-                if (_viewer->GetEnv()->CheckCollision(pbody->GetBody()) || pbody->GetBody()->CheckSelfCollision())
+                if (_viewer->GetEnv()->CheckCollision(KinBodyConstPtr(pbody->GetBody())) || pbody->GetBody()->CheckSelfCollision())
                     _SetColor(COLLISION_COLOR);
                 else
                     _SetColor(CHECK_COLOR);

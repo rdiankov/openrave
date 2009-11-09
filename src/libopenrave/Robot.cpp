@@ -1330,7 +1330,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
 
     // check collision with all links to see which are valid
     FOREACH(itlink, _veclinks) {
-        if( !GetEnv()->CheckCollision(*itlink, pbody) )
+        if( !GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) )
             g.sValidColLinks.insert(*itlink);
     }
 
@@ -1360,7 +1360,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink, const std::set<int>& setRo
     FOREACH(itlink, _veclinks) {
         if( setRobotLinksToIgnore.find((*itlink)->GetIndex()) != setRobotLinksToIgnore.end() )
             continue;
-        if( !GetEnv()->CheckCollision(*itlink, pbody) )
+        if( !GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) )
             g.sValidColLinks.insert(*itlink);
     }
 
@@ -1403,7 +1403,7 @@ void RobotBase::RegrabAll()
             // check collision with all links to see which are valid
             itbody->sValidColLinks.clear();
             FOREACH(itlink, _veclinks) {
-                if( !GetEnv()->CheckCollision(*itlink, pbody) )
+                if( !GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) )
                     itbody->sValidColLinks.insert(*itlink);
             }
         }
@@ -1457,7 +1457,7 @@ bool RobotBase::CheckSelfCollision(boost::shared_ptr<COLLISIONREPORT> report) co
         if( !pbody )
             continue;
         FORIT(itlink, itbody->sValidColLinks) {
-            if( GetEnv()->CheckCollision(KinBody::LinkPtr(*itlink), pbody, report) ) {
+            if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(*itlink), KinBodyConstPtr(pbody), report) ) {
                 if( !!report ) {
                     RAVELOG_DEBUGA("Self collision: (%s:%s)x(%s:%s).\n",
                                    report->plink1!=NULL?report->plink1->GetParent()->GetName().c_str():"",

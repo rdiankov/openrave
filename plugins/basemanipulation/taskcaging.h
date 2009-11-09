@@ -157,7 +157,7 @@ public:
             // first make sure the end is free
             if (bCheckEnd) {
                 SetState(pQ1);
-                if (_robot->GetEnv()->CheckCollision(_robot) || _robot->CheckSelfCollision() )
+                if (_robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || _robot->CheckSelfCollision() )
                     return true;
             }
 
@@ -184,7 +184,7 @@ public:
                     v[i] = pQ0[i] + (_jointIncrement[i] * f);
 
                 SetState(v);
-                if( _robot->GetEnv()->CheckCollision(_robot) || _robot->CheckSelfCollision() )
+                if( _robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || _robot->CheckSelfCollision() )
                     return true;
             }
 
@@ -590,7 +590,7 @@ public:
         
             _robot->SetActiveDOFValues(pDestConf);
 
-            if( _robot->GetEnv()->CheckCollision(_robot) || _robot->CheckSelfCollision() )
+            if( _robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || _robot->CheckSelfCollision() )
                 return false;
 
             bool bCaged = false;
@@ -609,7 +609,7 @@ public:
                             vrobotconfig[i] = pDestConf[i] + fRandPerturb[i]*(RaveRandomFloat()-0.5f);
 
                         _robot->SetActiveDOFValues(vrobotconfig);
-                        if( !_robot->GetEnv()->CheckCollision(_robot) && !_robot->CheckSelfCollision() )
+                        if( !_robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) && !_robot->CheckSelfCollision() )
                             break;
                     }
                 }
@@ -620,7 +620,7 @@ public:
                     FOREACH(itv, *itvv) {
                         plink->GetParent()->SetBodyTransformations(*itv);
                     
-                        if( _robot->GetEnv()->CheckCollision(_robot, plink->GetParent()) ) {
+                        if( _robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot), KinBodyConstPtr(plink->GetParent())) ) {
                             bCaged = true;
                             break;
                         }
@@ -918,7 +918,7 @@ private:
 
                     ptarget->SetJointValues(vtargetvalues, true);
 
-                    if( GetEnv()->CheckCollision(_robot, ptarget) ) {
+                    if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot), KinBodyConstPtr(ptarget)) ) {
                         // in collision, so part of contact set
                         nContact |= (1<<i);
                     }

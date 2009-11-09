@@ -322,7 +322,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         // check collision, ignore adjacent bodies
         FOREACHC(itset, pbody->GetNonAdjacentLinks()) {
             BOOST_ASSERT( (*itset&0xffff) < (int)pbody->GetLinks().size() && (*itset>>16) < (int)pbody->GetLinks().size() );
-            if( GetEnv()->CheckCollision(pbody->GetLinks()[*itset&0xffff], pbody->GetLinks()[*itset>>16], report) ) {
+            if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(pbody->GetLinks()[*itset&0xffff]), KinBody::LinkConstPtr(pbody->GetLinks()[*itset>>16]), report) ) {
                 RAVELOG_VERBOSEA(str(boost::format("selfcol %s, Links %s %s are colliding\n")%pbody->GetName()%pbody->GetLinks()[*itset&0xffff]->GetName()%pbody->GetLinks()[*itset>>16]->GetName()));
                 return true;
             }

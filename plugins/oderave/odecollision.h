@@ -250,7 +250,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
         odespace->Synchronize();
         FOREACHC(itlink, pbody->GetLinks()) {
-            if( CheckCollision(plink, *itlink, report) )
+            if( CheckCollision(plink, KinBody::LinkConstPtr(*itlink), report) )
                 return true;
         }
         return false;
@@ -465,7 +465,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         // check collision, ignore adjacent bodies
         FOREACHC(itset, pbody->GetNonAdjacentLinks()) {
             assert( (*itset&0xffff) < (int)pbody->GetLinks().size() && (*itset>>16) < (int)pbody->GetLinks().size() );
-            if( GetEnv()->CheckCollision(pbody->GetLinks()[*itset&0xffff], pbody->GetLinks()[*itset>>16], report) ) {
+            if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(pbody->GetLinks()[*itset&0xffff]), KinBody::LinkConstPtr(pbody->GetLinks()[*itset>>16]), report) ) {
                 RAVELOG_VERBOSEA(str(boost::format("selfcol %s, Links %s %s are colliding\n")%pbody->GetName()%pbody->GetLinks()[*itset&0xffff]->GetName()%pbody->GetLinks()[*itset>>16]->GetName()));
                 return true;
             }
@@ -752,7 +752,8 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
                 pcb->_report->numCols = 1;
                 pcb->_report->minDistance = contact[index].geom.depth;
-                pcb->_report->plink1 = dBodyGetData(b) ? *(KinBody::LinkPtr*)dBodyGetData(b) : KinBody::LinkConstPtr();
+                if( dBodyGetData(b) )
+                    pcb->_report->plink1 = *(KinBody::LinkPtr*)dBodyGetData(b);
 
                 // always return contacts since it isn't that much computation (openravepy expects this!)
                 //if( pcb->_report->options & OpenRAVE::CO_Contacts) {

@@ -119,7 +119,7 @@ public:
     
             while(num_iters-- > 0) {
                 for(int q = 0; q < (int)vlinks.size(); q++) {
-                    if(GetEnv()->CheckCollision(vlinks[q])) {   
+                    if(GetEnv()->CheckCollision(KinBody::LinkConstPtr(vlinks[q]))) {   
                         if(coarse_pass) {
                             //coarse step collided, back up and shrink step
                             if(bMoved) {
@@ -232,7 +232,7 @@ public:
                 for(int q = 0; q < (int)vlinks.size(); q++)
                     {
                         bool bSelfCollision=false;
-                        if(_robot->DoesAffect(_robot->GetActiveJointIndex(ifing),q)  && (GetEnv()->CheckCollision(vlinks[q])||(bSelfCollision=_robot->CheckSelfCollision())) ) {
+                        if(_robot->DoesAffect(_robot->GetActiveJointIndex(ifing),q)  && (GetEnv()->CheckCollision(KinBody::LinkConstPtr(vlinks[q]))||(bSelfCollision=_robot->CheckSelfCollision())) ) {
                             if(coarse_pass) {
                                 //coarse step collided, back up and shrink step
                                 coarse_pass = false;

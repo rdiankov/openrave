@@ -42,6 +42,7 @@ using namespace std;
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/array.hpp>
+#include <boost/bind.hpp>
 
 //#ifndef _WIN32
 //#include <signal.h>
@@ -78,7 +79,7 @@ static bool bDisplayGUI = true, bShowGUI = true;
 static EnvironmentBasePtr penv;
 static RaveViewerBasePtr s_viewer;
 static ProblemInstancePtr s_server;
-static boost::thread s_mainThread;
+static boost::shared_ptr<boost::thread> s_mainThread;
 static string s_sceneFile;
 static string s_saveScene; // if not NULL, saves the scene and exits
 static string s_viewerName;
@@ -480,16 +481,8 @@ int main(int argc, char ** argv)
     }
 
     bThreadDestroyed = false;
-    s_mainThread = boost::thread(boost::bind(MainOpenRAVEThread));
- 
-    while(!bThreadDestroyed) {
-#ifdef _WIN32
-        Sleep(100);
-#else
-        usleep(100000);
-        //pthread_yield();
-#endif
-    }
+    s_mainThread.reset(new boost::thread(boost::bind(MainOpenRAVEThread)));
+    s_mainThread->join();
 
     penv->AttachViewer(RaveViewerBasePtr());
     s_viewer.reset();

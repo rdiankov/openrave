@@ -197,7 +197,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         BOOST_ASSERT( joint != NULL );
 
         std::vector<dReal>::const_iterator itvel = pJointVelocity.begin();
-        odespace->Synchronize(pjoint->GetParent());
+        odespace->Synchronize(KinBodyConstPtr(pjoint->GetParent()));
         for(int i = 0; i < pjoint->GetDOF(); ++i)
             _jointset[dJointGetType(joint)](joint, dParamVel + dParamGroup * i, *itvel++);
         return true;
@@ -208,7 +208,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         dJointID joint = odespace->GetJoint(pjoint);
         BOOST_ASSERT( joint != NULL );
 
-        odespace->Synchronize(pjoint->GetParent());
+        odespace->Synchronize(KinBodyConstPtr(pjoint->GetParent()));
         vector<JointGetFn>::iterator itfn;
         pJointVelocity.resize(pjoint->GetDOF());
         vector<dReal>::iterator itvel = pJointVelocity.begin();
@@ -223,7 +223,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         if( body == NULL )
             return false;
 
-        odespace->Synchronize(plink->GetParent());
+        odespace->Synchronize(KinBodyConstPtr(plink->GetParent()));
     
         if( !bAdd )
             dBodySetForce(body, 0, 0, 0);
@@ -237,7 +237,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         if( body == NULL )
             return false;
 
-        odespace->Synchronize(plink->GetParent());
+        odespace->Synchronize(KinBodyConstPtr(plink->GetParent()));
 
         if( !bAdd )
             dBodySetTorque(body, torque.x, torque.y, torque.z);
@@ -251,7 +251,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         dJointID joint = odespace->GetJoint(pjoint);
         BOOST_ASSERT( joint != NULL );
 
-        odespace->Synchronize(pjoint->GetParent());
+        odespace->Synchronize(KinBodyConstPtr(pjoint->GetParent()));
         _jointadd[dJointGetType(joint)](joint, &pTorques[0]);
         return true;
     }

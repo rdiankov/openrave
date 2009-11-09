@@ -1736,6 +1736,7 @@ public:
 
 class PyEnvironmentBase : public boost::enable_shared_from_this<PyEnvironmentBase>
 {
+    boost::shared_ptr<EnvironmentMutex::scoped_lock> _envlock;
 protected:
     EnvironmentBasePtr _penv;
     boost::shared_ptr<boost::thread> _threadviewer;
@@ -1767,6 +1768,12 @@ public:
     {
         _penv = CreateEnvironment(true);
         _bShutdown = false;
+#if BOOST_VERSION >= 103500
+        _envlock.reset(new EnvironmentMutex::scoped_lock(_penv->GetMutex()),boost::defer_lock_t());
+#else
+        _envlock.reset(new EnvironmentMutex::scoped_lock(_penv->GetMutex()));
+        _envlock->unlock();
+#endif
     }
     PyEnvironmentBase(EnvironmentBasePtr penv) : _penv(penv), _bShutdown(false) {}
 
@@ -1774,6 +1781,12 @@ public:
     {
         _bShutdown = false;
         _penv = pyenv._penv;
+#if BOOST_VERSION >= 103500
+        _envlock.reset(new EnvironmentMutex::scoped_lock(_penv->GetMutex()),boost::defer_lock_t());
+#else
+        _envlock.reset(new EnvironmentMutex::scoped_lock(_penv->GetMutex()));
+        _envlock->unlock();
+#endif
     }
 
     virtual ~PyEnvironmentBase()
@@ -1914,15 +1927,15 @@ public:
     bool CheckCollision(PyKinBodyPtr pbody1)
     {
         CHECK_POINTER(pbody1);
-        return _penv->CheckCollision(pbody1->GetBody());
+        return _penv->CheckCollision(KinBodyConstPtr(pbody1->GetBody()));
     }
     bool CheckCollision(PyKinBodyPtr pbody1, PyCollisionReportPtr pReport)
     {
         CHECK_POINTER(pbody1);
         if( !pReport )
-            return _penv->CheckCollision(pbody1->GetBody());
+            return _penv->CheckCollision(KinBodyConstPtr(pbody1->GetBody()));
 
-        bool bSuccess = _penv->CheckCollision(pbody1->GetBody(), pReport->report);
+        bool bSuccess = _penv->CheckCollision(KinBodyConstPtr(pbody1->GetBody()), pReport->report);
         pReport->init(shared_from_this());
         return bSuccess;
     }
@@ -1931,7 +1944,7 @@ public:
     {
         CHECK_POINTER(pbody1);
         CHECK_POINTER(pbody2);
-        return _penv->CheckCollision(pbody1->GetBody(), pbody2->GetBody());
+        return _penv->CheckCollision(KinBodyConstPtr(pbody1->GetBody()), KinBodyConstPtr(pbody2->GetBody()));
     }
 
     bool CheckCollision(PyKinBodyPtr pbody1, PyKinBodyPtr pbody2, PyCollisionReportPtr pReport)
@@ -1939,9 +1952,9 @@ public:
         CHECK_POINTER(pbody1);
         CHECK_POINTER(pbody2);
         if( !pReport )
-            return _penv->CheckCollision(pbody1->GetBody(), pbody2->GetBody());
+            return _penv->CheckCollision(KinBodyConstPtr(pbody1->GetBody()), KinBodyConstPtr(pbody2->GetBody()));
 
-        bool bSuccess = _penv->CheckCollision(pbody1->GetBody(), pbody2->GetBody(), pReport->report);
+        bool bSuccess = _penv->CheckCollision(KinBodyConstPtr(pbody1->GetBody()), KinBodyConstPtr(pbody2->GetBody()), pReport->report);
         pReport->init(shared_from_this());
         return bSuccess;
     }
@@ -1949,16 +1962,16 @@ public:
     bool CheckCollision(PyKinBody::PyLinkPtr plink)
     {
         CHECK_POINTER(plink);
-        return _penv->CheckCollision(plink->GetLink());
+        return _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()));
     }
 
     bool CheckCollision(PyKinBody::PyLinkPtr plink, PyCollisionReportPtr pReport)
     {
         CHECK_POINTER(plink);
         if( !pReport )
-            return _penv->CheckCollision(plink->GetLink());
+            return _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()));
 
-        bool bSuccess = _penv->CheckCollision(plink->GetLink(), pReport->report);
+        bool bSuccess = _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()), pReport->report);
         pReport->init(shared_from_this());
         return bSuccess;
     }
@@ -1967,16 +1980,16 @@ public:
     {
         CHECK_POINTER(plink1);
         CHECK_POINTER(plink2);
-        return _penv->CheckCollision(plink1->GetLink(), plink2->GetLink());
+        return _penv->CheckCollision(KinBody::LinkConstPtr(plink1->GetLink()), KinBody::LinkConstPtr(plink2->GetLink()));
     }
     bool CheckCollision(PyKinBody::PyLinkPtr plink1, PyKinBody::PyLinkPtr plink2, PyCollisionReportPtr pReport)
     {
         CHECK_POINTER(plink1);
         CHECK_POINTER(plink2);
         if( !pReport )
-            return _penv->CheckCollision(plink1->GetLink(), plink2->GetLink());
+            return _penv->CheckCollision(KinBody::LinkConstPtr(plink1->GetLink()), KinBody::LinkConstPtr(plink2->GetLink()));
 
-        bool bSuccess = _penv->CheckCollision(plink1->GetLink(), plink2->GetLink(), pReport->report);
+        bool bSuccess = _penv->CheckCollision(KinBody::LinkConstPtr(plink1->GetLink()), KinBody::LinkConstPtr(plink2->GetLink()), pReport->report);
         pReport->init(shared_from_this());
         return bSuccess;
     }
@@ -1985,7 +1998,7 @@ public:
     {
         CHECK_POINTER(plink);
         CHECK_POINTER(pbody);
-        return _penv->CheckCollision(plink->GetLink(), pbody->GetBody());
+        return _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()), KinBodyConstPtr(pbody->GetBody()));
     }
 
     bool CheckCollision(PyKinBody::PyLinkPtr plink, PyKinBodyPtr pbody, PyCollisionReportPtr pReport)
@@ -1993,9 +2006,9 @@ public:
         CHECK_POINTER(plink);
         CHECK_POINTER(pbody);
         if( !pReport )
-            return _penv->CheckCollision(plink->GetLink(), pbody->GetBody());
+            return _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()), KinBodyConstPtr(pbody->GetBody()));
 
-        bool bSuccess = _penv->CheckCollision(plink->GetLink(), pbody->GetBody(), pReport->report);
+        bool bSuccess = _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()), KinBodyConstPtr(pbody->GetBody()), pReport->report);
         pReport->init(shared_from_this());
         return bSuccess;
     }
@@ -2018,7 +2031,7 @@ public:
             else
                 RAVELOG_ERRORA("failed to get excluded link\n");
         }
-        return _penv->CheckCollision(plink->GetLink(),vbodyexcluded,vlinkexcluded);
+        return _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()),vbodyexcluded,vlinkexcluded);
     }
 
     bool CheckCollision(PyKinBody::PyLinkPtr plink, object bodyexcluded, object linkexcluded, PyCollisionReportPtr pReport)
@@ -2041,9 +2054,9 @@ public:
         }
 
         if( !pReport )
-            return _penv->CheckCollision(plink->GetLink(),vbodyexcluded,vlinkexcluded);
+            return _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()),vbodyexcluded,vlinkexcluded);
 
-        bool bSuccess = _penv->CheckCollision(plink->GetLink(), vbodyexcluded, vlinkexcluded, pReport->report);
+        bool bSuccess = _penv->CheckCollision(KinBody::LinkConstPtr(plink->GetLink()), vbodyexcluded, vlinkexcluded, pReport->report);
         pReport->init(shared_from_this());
         return bSuccess;
     }
@@ -2066,7 +2079,7 @@ public:
             else
                 RAVELOG_ERRORA("failed to get excluded link\n");
         }
-        return _penv->CheckCollision(pbody->GetBody(),vbodyexcluded,vlinkexcluded);
+        return _penv->CheckCollision(KinBodyConstPtr(pbody->GetBody()),vbodyexcluded,vlinkexcluded);
     }
 
     bool CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, object linkexcluded, PyCollisionReportPtr pReport)
@@ -2089,21 +2102,21 @@ public:
         }
 
         if( !pReport )
-            return _penv->CheckCollision(pbody->GetBody(),vbodyexcluded,vlinkexcluded);
+            return _penv->CheckCollision(KinBodyConstPtr(pbody->GetBody()),vbodyexcluded,vlinkexcluded);
 
-        bool bSuccess = _penv->CheckCollision(pbody->GetBody(), vbodyexcluded, vlinkexcluded, pReport->report);
+        bool bSuccess = _penv->CheckCollision(KinBodyConstPtr(pbody->GetBody()), vbodyexcluded, vlinkexcluded, pReport->report);
         pReport->init(shared_from_this());
         return bSuccess;
     }
 
     bool CheckCollision(PyRay* pyray, PyKinBodyPtr pbody)
     {
-        return _penv->CheckCollision(pyray->r,pbody->GetBody());
+        return _penv->CheckCollision(pyray->r,KinBodyConstPtr(pbody->GetBody()));
     }
 
     bool CheckCollision(PyRay* pyray, PyKinBodyPtr pbody, PyCollisionReportPtr pReport)
     {
-        bool bSuccess = _penv->CheckCollision(pyray->r, pbody->GetBody(), pReport->report);
+        bool bSuccess = _penv->CheckCollision(pyray->r, KinBodyConstPtr(pbody->GetBody()), pReport->report);
         pReport->init(shared_from_this());
         return bSuccess;
     }
@@ -2132,7 +2145,7 @@ public:
             r.dir.x = extract<dReal>(rays[3][i]);
             r.dir.y = extract<dReal>(rays[4][i]);
             r.dir.z = extract<dReal>(rays[5][i]);
-            bool bCollision = _penv->CheckCollision(r, pbody->GetBody(), preport);
+            bool bCollision = _penv->CheckCollision(r, KinBodyConstPtr(pbody->GetBody()), preport);
             pcollision[i] = false;
             if( bCollision && report.contacts.size() > 0 ) {
                 if( !bFrontFacingOnly || dot3(report.contacts[0].norm,r.dir)<0 ) {
@@ -2213,7 +2226,7 @@ public:
     object GetLoadedProblems()
     {
         std::list<ProblemInstancePtr> listProblems;
-        boost::shared_ptr<boost::mutex> lock = _penv->GetLoadedProblems(listProblems);
+        boost::shared_ptr<void> lock = _penv->GetLoadedProblems(listProblems);
         boost::python::list problems;
         FOREACHC(itprob, listProblems)
             problems.append(PyProblemInstancePtr(new PyProblemInstance(*itprob,shared_from_this())));
@@ -2236,16 +2249,16 @@ public:
     void LockPhysics(bool bLock)
     {
         if( bLock )
-            _penv->GetMutex().lock();
+            _envlock->lock();
         else
-            _penv->GetMutex().unlock();
+            _envlock->unlock();
     }
     void LockPhysics(bool bLock, float timeout)
     {
         if( bLock )
-            _penv->GetMutex().lock();
+            _envlock->lock();
         else
-            _penv->GetMutex().unlock();
+            _envlock->unlock();
     }
 
     bool SetViewer(const string& viewername, bool showviewer=true)

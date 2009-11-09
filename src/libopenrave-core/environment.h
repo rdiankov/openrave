@@ -137,7 +137,7 @@ class Environment : public EnvironmentBase
 
         AddIKSolvers();
 
-        _threadSimulation = boost::thread(boost::bind(&Environment::_SimulationThread,this));
+        _threadSimulation.reset(new boost::thread(boost::bind(&Environment::_SimulationThread,this)));
     }
 
     virtual void Destroy()
@@ -147,7 +147,8 @@ class Environment : public EnvironmentBase
 
         // dont' join, might not return
         RAVELOG_DEBUGA("Environment destructor\n");
-        _threadSimulation.join();
+        _threadSimulation->join();
+        _threadSimulation.reset();
 
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         _bEnableSimulation = false;
@@ -343,11 +344,11 @@ class Environment : public EnvironmentBase
         return false;
     }
 
-    boost::shared_ptr<boost::mutex> GetLoadedProblems(std::list<ProblemInstancePtr>& listProblems) const
+    boost::shared_ptr<void> GetLoadedProblems(std::list<ProblemInstancePtr>& listProblems) const
     {
-        _mutexProblems.lock();
+        boost::shared_ptr<boost::mutex::scoped_lock> plock(new boost::mutex::scoped_lock(_mutexProblems));
         listProblems = _listProblems;
-        return boost::shared_ptr<boost::mutex>(&_mutexProblems, boost::mem_fn(&boost::mutex::unlock));
+        return plock;
     }
 
     virtual bool Load(const std::string& filename)
@@ -632,22 +633,22 @@ class Environment : public EnvironmentBase
 
     virtual void GetRobots(std::vector<RobotBasePtr>& robots) const
     {
-        boost::mutex::scoped_lock lock(_mutexBodies);
+        boost::shared_ptr<boost::mutex::scoped_lock> plock(new boost::mutex::scoped_lock(_mutexBodies));
         robots = _vecrobots;
     }
     
-    boost::shared_ptr<boost::mutex> GetLockedBodies(std::vector<KinBodyPtr>& bodies) const
+    boost::shared_ptr<void> GetLockedBodies(std::vector<KinBodyPtr>& bodies) const
     {
-        _mutexBodies.lock();
+        boost::shared_ptr<boost::mutex::scoped_lock> plock(new boost::mutex::scoped_lock(_mutexBodies));
         bodies = _vecbodies;
-        return boost::shared_ptr<boost::mutex>(&_mutexBodies, boost::mem_fn(&boost::mutex::unlock));
+        return plock;
     }
 
-    boost::shared_ptr<boost::mutex> GetLockedRobots(std::vector<RobotBasePtr>& robots) const
+    boost::shared_ptr<void> GetLockedRobots(std::vector<RobotBasePtr>& robots) const
     {
-        _mutexBodies.lock();
+        boost::shared_ptr<boost::mutex::scoped_lock> plock(new boost::mutex::scoped_lock(_mutexBodies));
         robots = _vecrobots;
-        return boost::shared_ptr<boost::mutex>(&_mutexBodies, boost::mem_fn(&boost::mutex::unlock));
+        return plock;
     }
 
     /// triangulation of the body including its current transformation. trimesh will be appended the new data.
@@ -1111,7 +1112,7 @@ protected:
         }
 
         AddIKSolvers();
-        _threadSimulation = boost::thread(boost::bind(&Environment::_SimulationThread,this));
+        _threadSimulation.reset(new boost::thread(boost::bind(&Environment::_SimulationThread,this)));
     }
 
     class DummyPhysicsEngine : public PhysicsEngineBase
@@ -1463,7 +1464,7 @@ protected:
     int _nNetworkIndex;               ///< next network index
     std::map<int, KinBodyWeakPtr> _mapBodies; ///< a map of all the bodies in the environment. Controlled through the KinBody constructor and destructors
     
-    boost::thread _threadSimulation;                  ///< main loop for environment simulation
+    boost::shared_ptr<boost::thread> _threadSimulation;                  ///< main loop for environment simulation
 
     mutable EnvironmentMutex _mutexEnvironment;      ///< protects internal data from multithreading issues
 

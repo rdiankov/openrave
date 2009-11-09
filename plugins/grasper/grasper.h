@@ -238,7 +238,7 @@ class GrasperProblem : public ProblemInstance
                 return false;
             }
         
-            if(GetEnv()->CheckCollision(robot,pbody)) {
+            if(GetEnv()->CheckCollision(KinBodyConstPtr(robot),KinBodyConstPtr(pbody))) {
                 //backup the robot until it is no longer colliding with the object
                 Transform Ti;
                 Ti = robot->GetTransform();
@@ -247,7 +247,7 @@ class GrasperProblem : public ProblemInstance
                 dReal step_size = 0.015f;
                 while(1) {
                     robot->SetTransform(Ti);
-                    if(!GetEnv()->CheckCollision(robot))
+                    if(!GetEnv()->CheckCollision(KinBodyConstPtr(robot)))
                         break;
                     Ti.trans = Ti.trans + step_size*direction; //note: moves positively along direction
                 }               
@@ -255,7 +255,7 @@ class GrasperProblem : public ProblemInstance
                 step_size = step_size/15.0f;
                 while(1) {
                     robot->SetTransform(Ti);
-                    if(GetEnv()->CheckCollision(robot,pbody))
+                    if(GetEnv()->CheckCollision(KinBodyConstPtr(robot),KinBodyConstPtr(pbody)))
                         break;
                     Ti.trans = Ti.trans - step_size*direction; 
                 }
@@ -319,7 +319,7 @@ class GrasperProblem : public ProblemInstance
                     }
                     
                 }
-            } while(GetEnv()->CheckCollision(pbody));
+            } while(GetEnv()->CheckCollision(KinBodyConstPtr(pbody)));
         }
 
         if( bTransRobot ) {
@@ -396,7 +396,7 @@ class GrasperProblem : public ProblemInstance
             dReal step_size = 0.05f;
             while(1) {
                 robot->SetTransform(Ti);
-                if(!GetEnv()->CheckCollision(robot,pbody))
+                if(!GetEnv()->CheckCollision(KinBodyConstPtr(robot),KinBodyConstPtr(pbody)))
                     break;
                 Ti.trans = Ti.trans - step_size*direction;
             }
@@ -462,7 +462,7 @@ class GrasperProblem : public ProblemInstance
         if( bNoise )
             pbody->SetTransform(transBodyOriginal);
 
-        bool get_contacts = !GetEnv()->CheckCollision(robot,vbodyexcluded,vlinkexcluded,report) && !robot->CheckSelfCollision();
+        bool get_contacts = !GetEnv()->CheckCollision(KinBodyConstPtr(robot),vbodyexcluded,vlinkexcluded,report) && !robot->CheckSelfCollision();
 
         if( get_contacts ) {
             if(bcheck_stability)
@@ -473,7 +473,7 @@ class GrasperProblem : public ProblemInstance
                 vector<KinBody::Link*>::const_iterator itlink;
                 int icont=0;
                 FOREACHC(itlink, robot->GetLinks()) {
-                    if( GetEnv()->CheckCollision(*itlink, pbody, report) ) {
+                    if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(*itlink), KinBodyConstPtr(pbody), report) ) {
                         RAVELOG_DEBUGA(str(boost::format("contact %s:%s with %s:%s\n")%report->plink1->GetParent()->GetName()%report->plink1->GetName()%report->plink2->GetParent()->GetName()%report->plink2->GetName()));
 
                         for(size_t i = 0; i < report->contacts.size(); i++) {
@@ -537,7 +537,7 @@ class GrasperProblem : public ProblemInstance
             r.pos = com - 10.0f*r.dir;
             r.dir *= 1000;
 
-            if( GetEnv()->CheckCollision(r, pbody, report) ) {
+            if( GetEnv()->CheckCollision(r, KinBodyConstPtr(pbody), report) ) {
                 vpoints[i].norm = report->contacts.front().norm;
                 vpoints[i].pos = report->contacts.front().pos + 0.001f * vpoints[i].norm; // extrude a little
                 vpoints[i].dist = 0;
@@ -567,7 +567,7 @@ class GrasperProblem : public ProblemInstance
         
             r.pos = com - 10.0f*r.dir;
             SURFACEPOINT p;
-            if( GetEnv()->CheckCollision(r, pbody, report) ) {
+            if( GetEnv()->CheckCollision(r, KinBodyConstPtr(pbody), report) ) {
                 p.norm = -report->contacts.front().norm;//-r.dir//report->contacts.front().norm1;
                 p.pos = report->contacts.front().pos + 0.001f * p.norm; // extrude a little
                 p.dist = 0;
@@ -721,7 +721,7 @@ class GrasperProblem : public ProblemInstance
                         break;
                     }
                 
-                    if( GetEnv()->CheckCollision(r, pbody, report) ) {
+                    if( GetEnv()->CheckCollision(r, KinBodyConstPtr(pbody), report) ) {
                         p.norm = -report->contacts.front().norm;//-r.dir//report->contacts.front().norm1;
                         p.pos = report->contacts.front().pos;// + 0.001f * p.norm; // extrude a little
                         p.dist = 0;
@@ -773,7 +773,7 @@ class GrasperProblem : public ProblemInstance
                 r.pos = vpoints[i].pos;
 
                 for(int k = 0; k < (int)vbodies.size(); ++k) {
-                    if( GetEnv()->CheckCollision(r, vbodies[k], report) ) {
+                    if( GetEnv()->CheckCollision(r, KinBodyConstPtr(vbodies[k]), report) ) {
                         if( report->minDistance < fMinDist )
                             fMinDist = report->minDistance;
                     }
@@ -793,7 +793,7 @@ class GrasperProblem : public ProblemInstance
 
         bool bdraw = false;
 
-        if(!GetEnv()->CheckCollision(robot,ptarget)) {
+        if(!GetEnv()->CheckCollision(KinBodyConstPtr(robot),KinBodyConstPtr(ptarget))) {
             RAVELOG_ERRORA("GrasperProblem::GetStableContacts - Error: Robot is not colliding with the target.\n");
             return;
         }
@@ -823,7 +823,7 @@ class GrasperProblem : public ProblemInstance
     
         std::vector<KinBody::LinkPtr> vbodies = robot->GetLinks();
         for(int ilink = 0; ilink < (int)vbodies.size(); ilink++) {
-            if( GetEnv()->CheckCollision(vbodies[ilink],ptarget, report) )  {
+            if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(vbodies[ilink]),KinBodyConstPtr(ptarget), report) )  {
          
                 RAVELOG_WARNA(str(boost::format("contact %s:%s with %s:%s\n")%report->plink1->GetParent()->GetName()%report->plink1->GetName()%report->plink2->GetParent()->GetName()%report->plink2->GetName()));
 

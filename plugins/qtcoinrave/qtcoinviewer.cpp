@@ -1689,7 +1689,11 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
     }
 
     // try to acquire the environment lock
+#if BOOST_VERSION >= 103500
     EnvironmentMutex::scoped_try_lock lockenv(GetEnv()->GetMutex(),boost::defer_lock_t());
+#else
+    EnvironmentMutex::scoped_try_lock lockenv(GetEnv()->GetMutex(),false);
+#endif
     uint64_t basetime = GetMicroTime();
     while(GetMicroTime()-basetime<100000 ) {
         lockenv.try_lock();
@@ -1899,7 +1903,7 @@ bool QtCoinViewer::ForceUpdatePublishedBodies()
 
     _bModelsUpdated = false;
     _bLockEnvironment = false; // notify UpdateFromModel to update without acquiring the lock
-    _condUpdateModels.wait(_mutexUpdateModels);
+    _condUpdateModels.wait(lock);
     _bLockEnvironment = true; // reste
     return _bModelsUpdated;
 }
@@ -1927,7 +1931,11 @@ void QtCoinViewer::UpdateFromModel()
     FOREACH(it, _mapbodies)
         it->second->SetUserData(0);
 
+#if BOOST_VERSION >= 103500
     EnvironmentMutex::scoped_try_lock lockenv(GetEnv()->GetMutex(),boost::defer_lock_t());
+#else
+    EnvironmentMutex::scoped_try_lock lockenv(GetEnv()->GetMutex(),false);
+#endif
 
     FOREACH(itbody, vecbodies) {
         BOOST_ASSERT( !!itbody->pbody );
@@ -2438,29 +2446,23 @@ void QtCoinViewer::DynamicGravity(bool on)
 void QtCoinViewer::About() {}
 
 QtCoinViewer::EnvMessage::EnvMessage(QtCoinViewerPtr pviewer, void** ppreturn, bool bWaitForMutex)
-    : _pviewer(pviewer), _ppreturn(ppreturn), _bWaitForMutex(bWaitForMutex)
+    : _pviewer(pviewer), _ppreturn(ppreturn)
 {
     // get a mutex
     if( bWaitForMutex ) {
-        _pmutex = boost::shared_ptr<boost::mutex>(new boost::mutex());
-        _pmutex->lock();
+        _plock.reset(new boost::mutex::scoped_lock(_mutex));
     }
 }
 
 QtCoinViewer::EnvMessage::~EnvMessage()
 {
-    BOOST_ASSERT(!_bWaitForMutex);
-    
-    if( _bWaitForMutex ) {
-        _pmutex->unlock();
-        _bWaitForMutex = false;
-    }
+    _plock.reset();
 }
 
 /// execute the command in the caller
 void QtCoinViewer::EnvMessage::callerexecute()
 {
-    bool bWaitForMutex = _bWaitForMutex;
+    bool bWaitForMutex = !!_plock;
     
     {
         boost::mutex::scoped_lock lock(_pviewer->_mutexMessages);
@@ -2468,14 +2470,11 @@ void QtCoinViewer::EnvMessage::callerexecute()
     }
     
     if( bWaitForMutex )
-        boost::mutex::scoped_lock lock(*_pmutex);
+        boost::mutex::scoped_lock lock(_mutex);
 }
 
 /// execute the command in the viewer
 void QtCoinViewer::EnvMessage::viewerexecute()
 {
-    if( _bWaitForMutex ) {
-        _bWaitForMutex = false;
-        _pmutex->unlock();
-    }
+    _plock.reset();
 }

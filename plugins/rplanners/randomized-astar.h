@@ -168,7 +168,7 @@ public:
         _parameters._setstatefn(_parameters.vinitialconfig);
         pcurrent = CreateNode(0, NULL, _parameters.vinitialconfig);
 
-        if( GetEnv()->CheckCollision(_robot, _report) ) {
+        if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot), _report) ) {
             RAVELOG_WARNA("RA*: robot initially in collision %s:%s!\n",
                           _report->plink1!=NULL?_report->plink1->GetName().c_str():"(NULL)",
                           _report->plink2!=NULL?_report->plink2->GetName().c_str():"(NULL)");
@@ -226,7 +226,7 @@ public:
                         continue;
                 
                     _parameters._setstatefn(_vSampleConfig);
-                    if( GetEnv()->CheckCollision(_robot) || _robot->CheckSelfCollision() )
+                    if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || _robot->CheckSelfCollision() )
                         continue;
 
                     break;
@@ -261,7 +261,7 @@ public:
         RAVELOG_DEBUGA("Path found, final node: %f, %f\n", pbest->fcost, pbest->ftotal-pbest->fcost);
 
         _parameters._setstatefn(pbest->q);
-        if( GetEnv()->CheckCollision(_robot) || _robot->CheckSelfCollision() )
+        if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || _robot->CheckSelfCollision() )
             RAVELOG_WARNA("RA* collision\n");
     
         stringstream ss;
@@ -373,7 +373,7 @@ private:
             if( pvCheckedConfigurations != NULL )
                 pvCheckedConfigurations->push_back(pQ1);
             _parameters._setstatefn(pQ1);
-            if (GetEnv()->CheckCollision(_robot) || _robot->CheckSelfCollision() )
+            if (GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || _robot->CheckSelfCollision() )
                 return true;
         }
 
@@ -401,7 +401,7 @@ private:
             if( pvCheckedConfigurations != NULL )
                 pvCheckedConfigurations->push_back(vtempconfig);
             _parameters._setstatefn(vtempconfig);
-            if( GetEnv()->CheckCollision(_robot) || _robot->CheckSelfCollision() )
+            if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || _robot->CheckSelfCollision() )
                 return true;
         }
 

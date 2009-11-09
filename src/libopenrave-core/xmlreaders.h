@@ -1901,7 +1901,7 @@ public:
                         ProblemInstancePtr pIKFastLoader;
                         {
                             list<ProblemInstancePtr> listProblems;
-                            boost::shared_ptr<boost::mutex> pmutex = _probot->GetEnv()->GetLoadedProblems(listProblems);
+                            boost::shared_ptr<void> pmutex = _probot->GetEnv()->GetLoadedProblems(listProblems);
                             FOREACHC(itprob, listProblems) {
                                 if( stricmp((*itprob)->GetXMLId().c_str(),"ikfast") == 0 ) {
                                     pIKFastLoader = *itprob;
