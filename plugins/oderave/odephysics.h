@@ -252,7 +252,9 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         BOOST_ASSERT( joint != NULL );
 
         odespace->Synchronize(KinBodyConstPtr(pjoint->GetParent()));
-        _jointadd[dJointGetType(joint)](joint, &pTorques[0]);
+        std::vector<dReal> vtorques(pTorques.size());
+        std::copy(pTorques.begin(),pTorques.end(),vtorques.begin());
+        _jointadd[dJointGetType(joint)](joint, &vtorques[0]);
         return true;
     }
 
