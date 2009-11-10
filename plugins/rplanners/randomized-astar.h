@@ -134,9 +134,9 @@ public:
 
         RobotBase::RobotStateSaver savestate(_robot);
 
-        if( !!_parameters._goalfn )
+        if( !_parameters._goalfn )
             _parameters._goalfn = boost::bind(&SimpleGoalMetric::Eval,boost::shared_ptr<SimpleGoalMetric>(new SimpleGoalMetric(_robot)),_1);
-        if( !!_parameters._costfn )
+        if( !_parameters._costfn )
             _parameters._costfn = boost::bind(&SimpleCostMetric::Eval,boost::shared_ptr<SimpleCostMetric>(new SimpleCostMetric(_robot)),_1);
 
         _vSampleConfig.resize(GetDOF());

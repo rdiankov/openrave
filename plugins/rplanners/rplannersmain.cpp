@@ -46,7 +46,7 @@ InterfaceBasePtr CreateInterface(PluginType type, const std::string& name, const
         }
         else if( interfacename == "basicrrt")
             return InterfaceBasePtr(new BasicRrtPlanner(penv));
-        else if( name == "explorationrrt" )
+        else if( interfacename == "explorationrrt" )
             return InterfaceBasePtr(new ExplorationPlanner(penv));
         break;
     default:

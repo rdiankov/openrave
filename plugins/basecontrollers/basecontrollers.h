@@ -53,15 +53,16 @@ class IdealController : public ControllerBase
     virtual bool SetDesired(const std::vector<dReal>& values)
     {
         if( (int)values.size() != _probot->GetDOF() )
-            return false;
+            throw openrave_exception(str(boost::format("wrong dimensions %d!=%d")%values.size()%_probot->GetDOF()),ORE_InvalidArguments);
 
         fTime = 0;
         _ptraj.reset();
         _bIsDone = true;
-        _probot->SetJointValues(values);
 
-        if( !_bPause )
+        if( !_bPause ) {
+            _probot->SetJointValues(values);
             _vecdesired = values;
+        }
         return true;
     }
 
@@ -127,8 +128,9 @@ class IdealController : public ControllerBase
         std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
         if( cmd == "pause" )
             is >> _bPause;
-
-        throw openrave_exception("not commands supported",ORE_CommandNotSupported);
+        else
+            throw openrave_exception("not commands supported",ORE_CommandNotSupported);
+        return true;
     }
     virtual bool IsDone()
     {

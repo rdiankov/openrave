@@ -60,7 +60,7 @@ if( withhand )
     orBodySetTransform(robot.id, Trobot{index});
     offset = 0;
 else
-    robot = RobotCreateBarrettWAM('barrettwam');
+    robot = RobotCreateBarrettWAM('BarrettWAM');
     offset = robot.handoffset;
 end
 

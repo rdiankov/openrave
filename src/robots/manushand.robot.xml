@@ -58,7 +58,7 @@
       <weight>1</weight>
       <lostop>-45</lostop>
       <histop>6</histop>
-      <axis>0 0 1</axis>
+      <axis>0 -1 0</axis>
       <maxvel>1</maxvel>
       <resolution>4</resolution>
     </Joint>
@@ -69,7 +69,7 @@
       <weight>1</weight>
       <lostop>-179</lostop>
       <histop>179</histop>
-      <axis>0 1 0</axis>
+      <axis>0 -1 0</axis>
       <maxvel>1</maxvel>
       <resolution>4</resolution>
     </Joint>
@@ -80,7 +80,7 @@
       <weight>1</weight>
       <lostop>-179</lostop>
       <histop>179</histop>
-      <axis>0 0 -1</axis>
+      <axis>0 -1 0</axis>
       <maxvel>1</maxvel>
       <resolution>4</resolution>
     </Joint>
@@ -91,7 +91,7 @@
       <weight>1</weight>
       <lostop>-179</lostop>
       <histop>179</histop>
-      <axis>0 1 0</axis>
+      <axis>0 -1 0</axis>
       <maxvel>1</maxvel>
       <resolution>4</resolution>
     </Joint>

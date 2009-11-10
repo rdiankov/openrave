@@ -125,6 +125,9 @@ public:
     
     InterfaceBasePtr Create(EnvironmentBasePtr penv, PluginType type, const std::string& name)
     {
+        if( name.size() == 0 )
+            return InterfaceBasePtr();
+
         EnvironmentMutex::scoped_lock lock(_mutex);
         const char* hash = RaveGetInterfaceHash(type);
         for(list<PluginPtr>::iterator itplugin = _listplugins.begin(); itplugin != _listplugins.end(); ++itplugin) {

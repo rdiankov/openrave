@@ -81,6 +81,8 @@ inline uint32_t timeGetTime()
 
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
 
+#include <boost/format.hpp>
+
 #include <rave/rave.h>
 using namespace OpenRAVE;
 

@@ -1760,7 +1760,6 @@ protected:
     /// - starts a trajectory on the robot with the active degrees of freedom
     bool worRobotStartActiveTrajectory(boost::shared_ptr<istream> is, boost::shared_ptr<void> pdata)
     {
-        SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr probot = orMacroGetRobot(*is);
         if( !probot )
@@ -1839,11 +1838,13 @@ protected:
         vector<int> bodyids = vector<int>((istream_iterator<int>(is)), istream_iterator<int>());
         vector<KinBodyConstPtr> vignore; vignore.reserve(bodyids.size());
         FOREACH(itid,bodyids) {
-            KinBodyPtr pignore = GetEnv()->GetBodyFromNetworkId(*itid);
-            if( !pignore )
-                RAVELOG_WARNA("failed to find body %d",*itid);
-            else
-                vignore.push_back(pignore);
+            if( *itid ) {
+                KinBodyPtr pignore = GetEnv()->GetBodyFromNetworkId(*itid);
+                if( !pignore )
+                    RAVELOG_WARNA("failed to find body %d",*itid);
+                else
+                    vignore.push_back(pignore);
+            }
         }
 
         boost::shared_ptr<COLLISIONREPORT> preport(new COLLISIONREPORT());

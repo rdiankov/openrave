@@ -188,7 +188,7 @@ class GraspParameters : public PlannerBase::PlannerParameters
             _ss >> direction;
         else if( name == "palmnormal")
             _ss >> palmnormal;
-        else if( name == "bReturnTrajectory")
+        else if( name == "returntrajectory")
             _ss >> bReturnTrajectory;
         else // give a chance for the default parameters to get processed
             return PlannerParameters::endElement(name);

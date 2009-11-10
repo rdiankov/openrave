@@ -63,6 +63,7 @@ end
 
 home = orBodyGetJointValues(robot.id);
 
+plannertype = 1; %% for now force to discretized version
 switch plannertype
     case 1
         disp('using discrete relaxed caging planner (slow, but succeeds often)');

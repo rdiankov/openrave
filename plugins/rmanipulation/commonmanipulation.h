@@ -387,7 +387,7 @@ class GraspParameters : public PlannerBase::PlannerParameters {
         O << "<roll_hand>" << roll_hand << "</roll_hand>" << endl;
         O << "<direction>" << direction << "</direction>" << endl;
         O << "<palmnormal>" << palmnormal << "</palmnormal>" << endl;
-        O << "<bReturnTrajectory>" << bReturnTrajectory << "</bReturnTrajectory>" << endl;
+        O << "<returntrajectory>" << bReturnTrajectory << "</returntrajectory>" << endl;
         return !!O;
     }
  
@@ -405,7 +405,7 @@ class GraspParameters : public PlannerBase::PlannerParameters {
             _ss >> direction;
         else if( name == "palmnormal")
             _ss >> palmnormal;
-        else if( name == "bReturnTrajectory")
+        else if( name == "returntrajectory")
             _ss >> bReturnTrajectory;
         else // give a chance for the default parameters to get processed
             return PlannerParameters::endElement(name);

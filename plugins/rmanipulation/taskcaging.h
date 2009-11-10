@@ -113,7 +113,7 @@ public:
 
         virtual void SetState(const vector<dReal>& pstate)
         {
-            _robot->SetActiveDOFValues(pstate);
+            _robot->SetActiveDOFValues(vector<dReal>(pstate.begin(),pstate.begin()+_robot->GetActiveDOF()));
             vector<dReal>::const_iterator ittarget = pstate.begin()+_robot->GetActiveDOF();
             for(size_t i = 0; i < _vtargetjoints.size(); ++i)
                 vtargvalues[_vtargetjoints[i]] = *ittarget++;
@@ -377,7 +377,7 @@ public:
                     continue; // sample again
                 }
         
-                _robot->SetActiveDOFValues(pCurSample);
+                _robot->SetActiveDOFValues(vector<dReal>(pCurSample.begin(),pCurSample.begin()+_robot->GetActiveDOF()));
                 if( !SampleIkSolution(pdata->tlink * pdata->pgrasps->at(index), pCurSample, _vsample) )
                     continue;
         
@@ -839,7 +839,7 @@ private:
         if( vTargetSides.size() == 0 )
             vTargetSides.resize(graspfn->vtargetjoints.size(),0);
 
-        string plannername = "GraspExploration";
+        string plannername = "ExplorationRRT";
         PlannerBasePtr planner = GetEnv()->CreatePlanner(plannername);
         if( !planner ) {
             RAVELOG_WARNA(str(boost::format("failed to find planner %s\n")%plannername));
@@ -1247,7 +1247,7 @@ private:
                 Transform Ttarget = taskdata->ptargetlink->GetTransform();
                 bHasIK = false;
             
-                boost::shared_ptr< vector< Transform > > pvGraspSet = (realindex == 0 && taskdata->pvGraspStartSet->size()>0)?taskdata->pvGraspStartSet:taskdata->pvGraspSet;
+                boost::shared_ptr< vector< Transform > > pvGraspSet = (realindex == 0 && !!taskdata->pvGraspStartSet && taskdata->pvGraspStartSet->size()>0)?taskdata->pvGraspStartSet:taskdata->pvGraspSet;
                 FOREACH(it, *pvGraspSet) {
                     Transform tgrasp = Ttarget * *it;
                 
@@ -1661,7 +1661,8 @@ private:
     
         taskdata->ptarget->SetJointValues(taskdata->vtargettraj[j]);
     
-        _robot->SetActiveDOFValues(qprev);
+        vector<dReal> qprevrobot(qprev.begin(),qprev.begin()+_robot->GetActiveDOF());
+        _robot->SetActiveDOFValues(qprevrobot);
         Transform tprevgrasp = pmanip->GetEndEffectorTransform();
     
         vector<dReal> preshape;
@@ -1701,7 +1702,7 @@ private:
                     }
                 }
 
-                _robot->SetActiveDOFValues(qprev);
+                _robot->SetActiveDOFValues(qprevrobot);
             }
 
             FOREACH_NOINC(itsol, grasp.iksolutions) {

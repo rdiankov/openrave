@@ -516,7 +516,12 @@ public:
             FOREACHC(itatt,atts) {
                 if( itatt->first == "name" ) {
                     linkname = itatt->second;
-                    _plink = pparent->GetLink(linkname);
+                    FOREACHC(itcurlink,pparent->GetLinks()) {
+                        if( (*itcurlink)->GetName() == linkname ) {
+                            _plink = *itcurlink;
+                            break;
+                        }
+                    }
                 }
                 else if( itatt->first == "type" ) {
                     bStaticSet = true;
