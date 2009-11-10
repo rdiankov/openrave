@@ -172,7 +172,7 @@ public:
                     r.dir = _pgeom->max_range*vdir;
                     
                     if( GetEnv()->CheckCollision(r, _report)) {
-                        _pdata->ranges[index] = vdir*max(0.0001f,_report->minDistance);
+                        _pdata->ranges[index] = vdir*max(dReal(0.0001f),_report->minDistance);
                         _pdata->intensity[index] = 1;
                         // store the colliding bodies
                         KinBody::LinkConstPtr plink = !!_report->plink1 ? _report->plink1 : _report->plink2;
