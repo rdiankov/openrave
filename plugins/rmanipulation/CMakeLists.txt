@@ -5,7 +5,7 @@ if(APPLE)
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup")
 endif(APPLE)
 
-add_library(rmanipulation SHARED basemanipulationmain.cpp)
+add_library(rmanipulation SHARED rmanipulation.cpp)
 
 # check boost regex
 if( Boost_REGEX_FOUND )

@@ -113,11 +113,6 @@ inline uint64_t GetMicroTime()
 #endif
 }
 
-struct null_deleter
-{
-    void operator()(void const *) const {}
-};
-
 #include <rave/rave.h>
 using namespace OpenRAVE;
 

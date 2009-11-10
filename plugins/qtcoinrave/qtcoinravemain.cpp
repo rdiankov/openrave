@@ -14,32 +14,13 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "qtcoin.h"
 
-typedef void (*CREATECALLBACK)(PluginType type, const wchar_t* pname);
-EnvironmentBase* g_pEnviron = NULL;
-
-// declaring variables with stdcall can be a little complex
-#ifdef _MSC_VER
-
-#define PROT_STDCALL(name, paramlist) __stdcall name paramlist
-#define DECL_STDCALL(name, paramlist) __stdcall name paramlist
-
-#else
-
-#ifdef __x86_64__
-#define DECL_STDCALL(name, paramlist) name paramlist
-#else
-#define DECL_STDCALL(name, paramlist) __attribute__((stdcall)) name paramlist
-#endif
-
-#endif // _MSC_VER
-
-static int s_SoQtArgc = 0; // has to be static!!
-
 // need c linkage
 extern "C" {
 
 InterfaceBasePtr CreateInterface(PluginType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv)
 {
+    static int s_SoQtArgc = 0; // has to be static!!
+
     if( strcmp(pluginhash,RaveGetInterfaceHash(type)) ) {
         RAVELOG_WARNA("plugin type hash is wrong");
         throw openrave_exception("bad plugin hash");

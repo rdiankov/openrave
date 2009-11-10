@@ -144,7 +144,7 @@ public:
                     }
                 }
                 catch(const openrave_exception& ex) {
-                    RAVELOG_ERRORA(ex.what());
+                    RAVELOG_ERRORA("plugin %s: %s\n",(*itplugin)->ppluginname.c_str(),ex.what());
                 }
             }
         }

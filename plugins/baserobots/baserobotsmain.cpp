@@ -20,7 +20,7 @@ extern "C" {
 InterfaceBasePtr CreateInterface(PluginType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv)
 {
     if( strcmp(pluginhash,RaveGetInterfaceHash(type)) ) {
-        RAVELOG_WARNA("plugin type hash is wrong");
+        RAVELOG_WARNA("plugin type hash is wrong\n");
         throw openrave_exception("bad plugin hash");
     }
     if( !penv )
