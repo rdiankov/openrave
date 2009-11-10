@@ -131,7 +131,7 @@ InterfaceBasePtr CreateInterface(PluginType type, const std::string& name, const
 
         // look at all the ikfast problem solvers
         FOREACHC(itprob, IKFastProblem::GetProblems()) {
-            IkSolverBasePtr psolver = (*itprob)->CreateIkSolver(name, freeinc, penv);
+            IkSolverBasePtr psolver = (*itprob)->CreateIkSolver(interfacename, freeinc, penv);
             if( !!psolver )
                 return psolver;
         }
