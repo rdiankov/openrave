@@ -15,19 +15,36 @@
 #include <stdio.h>
 #include <limits.h> // INT_MAX needed by boost spirit
 
+#include <boost/version.hpp>
+
+#if BOOST_VERSION < 103700
+#include <boost/spirit/symbols.hpp>
+#include <boost/spirit/attribute.hpp>
 #include <boost/spirit/core.hpp>
 #include <boost/spirit/utility/functor_parser.hpp>
-#include <boost/spirit/attribute.hpp>
-#include <boost/spirit/symbols.hpp>
 
 #include <boost/spirit/phoenix/primitives.hpp>
 #include <boost/spirit/phoenix/casts.hpp>
 #include <boost/spirit/phoenix/binders.hpp>
 
+using namespace boost::spirit;
+
+#else
+#include <boost/spirit/include/classic_symbols.hpp>
+#include <boost/spirit/include/classic_attribute.hpp>
+#include <boost/spirit/include/classic_core.hpp>
+#include <boost/spirit/include/classic_functor_parser.hpp>
+
+#include <boost/spirit/include/phoenix1_primitives.hpp>
+#include <boost/spirit/include/phoenix1_casts.hpp>
+#include <boost/spirit/include/phoenix1_binders.hpp>
+
+using namespace boost::spirit::classic;
+#endif
+
+
 ///////////////////////////////////////////////////////////////////////////////
 // Used namespaces and identifiers.
-
-using namespace boost::spirit;
 
 using std::stringstream;
 using std::string;
@@ -105,8 +122,8 @@ namespace private_stuff { // Private stuff.
     };
 
     template <>
-    struct result_closure<nil_t> {
-        typedef parser_context<nil_t> context_t; 
+        struct result_closure<nil_t> {
+            typedef parser_context<nil_t> context_t; 
     };
 
     // Parser to extract the current file position from the scanner.
@@ -157,7 +174,7 @@ namespace private_stuff { // Private stuff.
 
             definition(IDENTIFIER const& self) {
                 main = (
-                    lexeme_d[
+                        lexeme_d[
                         ((alpha_p | '_' | '$') >> *(alnum_p | '_' | '$'))
                         [self.result_ = construct_<std::string>(arg1, arg2)]
                     ]

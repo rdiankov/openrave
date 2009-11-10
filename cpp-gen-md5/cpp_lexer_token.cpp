@@ -9,7 +9,16 @@
 
 #include "cpp_lexer_token.hpp"
 
+#include <boost/version.hpp>
+
+#if BOOST_VERSION < 103700
 #include <boost/spirit/symbols.hpp>
+namespace bs = boost::spirit;
+#else
+#include <boost/spirit/include/classic_symbols.hpp>
+namespace bs = boost::spirit::classic;
+#endif
+
 #include <vector>
 #include <iostream>
 
@@ -19,8 +28,7 @@
 // TODO: Move this to the definition within Spirit?
 
 namespace std {
-
-    std::ostream& operator<<(std::ostream& out, boost::spirit::file_position const& lc)
+    std::ostream& operator<<(std::ostream& out, bs::file_position const& lc)
     {
         return out <<
                 lc.file   << ":" <<
@@ -32,8 +40,8 @@ namespace std {
 
 namespace cpp {
 
-using boost::spirit::parser;
-using boost::spirit::symbols;
+using bs::parser;
+using bs::symbols;
 
 ///////////////////////////////////////////////////////////////////////////////
 // TokenID database definition.
@@ -92,7 +100,7 @@ public:
     }
 
     TokenID* find(char const* text) const {
-        return boost::spirit::find(
+        return bs::find(
             *static_cast<super_t const*>(this),
             text
         );

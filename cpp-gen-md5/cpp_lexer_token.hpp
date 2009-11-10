@@ -17,7 +17,17 @@
 
 #include "lexer_token_base.hpp"
 
+#include <boost/version.hpp>
+
+#if BOOST_VERSION < 103700
 #include <boost/spirit/iterator/position_iterator.hpp>
+namespace bs = boost::spirit;
+#else
+#include <boost/spirit/include/classic_position_iterator.hpp>
+#include <boost/spirit/include/classic_typeof.hpp>
+namespace bs = boost::spirit::classic;
+#endif
+
 #include <string>
 #include <iosfwd>
 
@@ -28,7 +38,7 @@
 
 namespace std {
 
-    std::ostream& operator<<(std::ostream& out, boost::spirit::file_position const& lc);
+    std::ostream& operator<<(std::ostream& out, bs::file_position const& lc);
 
 } // std
 
@@ -36,8 +46,8 @@ namespace cpp {
 
 ///////////////////////////////////////////////////////////////////////////////
 // File position structure.
+typedef bs::file_position file_position;
 
-typedef boost::spirit::file_position file_position;
 //typedef int file_position;
 
 ///////////////////////////////////////////////////////////////////////////////

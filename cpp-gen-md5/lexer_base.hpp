@@ -28,8 +28,18 @@
 
 #include "lexer_token_base.hpp"
 
-#include <boost/spirit/iterator/multi_pass.hpp>
+#include <boost/version.hpp>
+
+#if BOOST_VERSION < 103700
 #include <boost/spirit/iterator/position_iterator.hpp>
+#include <boost/spirit/iterator/multi_pass.hpp>
+namespace bs = boost::spirit;
+#else
+#include <boost/spirit/include/classic_position_iterator.hpp>
+#include <boost/spirit/include/classic_multi_pass.hpp>
+#include <boost/spirit/include/classic_typeof.hpp>
+namespace bs = boost::spirit::classic;
+#endif
 
 namespace lexer {
 
@@ -138,9 +148,9 @@ input_policy<TokenT>::eof
 template < typename TokenT >
 class my_iterator_base {
 public:
-    typedef boost::spirit::multi_pass<
-               input_policy<TokenT>,
-               boost::spirit::multi_pass_policies::functor_input
+    typedef bs::multi_pass<
+    input_policy<TokenT>,
+               bs::multi_pass_policies::functor_input
 /* defaulted    ,
                 multi_pass_policies::first_owner,
                 multi_pass_policies::no_check,
