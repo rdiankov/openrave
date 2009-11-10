@@ -1247,30 +1247,33 @@ private:
                 Transform Ttarget = taskdata->ptargetlink->GetTransform();
                 bHasIK = false;
             
-                boost::shared_ptr< vector< Transform > > pvGraspSet = (realindex == 0 && !!taskdata->pvGraspStartSet && taskdata->pvGraspStartSet->size()>0)?taskdata->pvGraspStartSet:taskdata->pvGraspSet;
-                FOREACH(it, *pvGraspSet) {
-                    Transform tgrasp = Ttarget * *it;
+                // check if non-manipulator links are in collision
+                if( !pmanip->CheckIndependentCollision() ) {
+                    boost::shared_ptr< vector< Transform > > pvGraspSet = (realindex == 0 && !!taskdata->pvGraspStartSet && taskdata->pvGraspStartSet->size()>0)?taskdata->pvGraspStartSet:taskdata->pvGraspSet;
+                    FOREACH(it, *pvGraspSet) {
+                        Transform tgrasp = Ttarget * *it;
                 
-                    // make sure that there exists at least 1 IK solution for every
-                    // trajectory point of the target configruation space
-                    if( !bHasIK ) {
-                    
-                        if( pmanip->FindIKSolutions(tgrasp, solutions, true) ) {
-                            bHasIK = true;
-                            taskdata->vlistGraspSet[realindex].push_back(ConstrainedTaskData::GRASP(tgrasp));
-                            taskdata->FillIkSolutions(taskdata->vlistGraspSet[realindex].back(), solutions);
-                            if( taskdata->bCheckFullCollision ) {
-                                FOREACH(itsol, taskdata->vlistGraspSet[realindex].back().iksolutions) {
-                                    FOREACH(itindex, taskdata->_vtargetjoints)
-                                        itsol->first.push_back(taskdata->vtargettraj[realindex][*itindex]);
+                        // make sure that there exists at least 1 IK solution for every
+                        // trajectory point of the target configruation space
+                        if( !bHasIK ) {
+                            
+                            if( pmanip->FindIKSolutions(tgrasp, solutions, true) ) {
+                                bHasIK = true;
+                                taskdata->vlistGraspSet[realindex].push_back(ConstrainedTaskData::GRASP(tgrasp));
+                                taskdata->FillIkSolutions(taskdata->vlistGraspSet[realindex].back(), solutions);
+                                if( taskdata->bCheckFullCollision ) {
+                                    FOREACH(itsol, taskdata->vlistGraspSet[realindex].back().iksolutions) {
+                                        FOREACH(itindex, taskdata->_vtargetjoints)
+                                            itsol->first.push_back(taskdata->vtargettraj[realindex][*itindex]);
+                                    }
                                 }
-                            }
                         
+                            }
                         }
-                    }
-                    else {
-                        // add without testing ik (lazy computation)
-                        taskdata->vlistGraspSet[realindex].push_back(ConstrainedTaskData::GRASP(tgrasp));
+                        else {
+                            // add without testing ik (lazy computation)
+                            taskdata->vlistGraspSet[realindex].push_back(ConstrainedTaskData::GRASP(tgrasp));
+                        }
                     }
                 }
             

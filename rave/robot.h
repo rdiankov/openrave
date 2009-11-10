@@ -101,13 +101,26 @@ public:
         virtual bool FindIKSolutions(const Transform& goal, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, bool bColCheck) const;
 
         /// get all child joints of the manipulator starting at the pEndEffector link
-        virtual void GetChildJoints(std::set<JointPtr>& vjoints) const;
+        virtual void GetChildJoints(std::vector<JointPtr>& vjoints) const;
 
         /// get all child DOF indices of the manipulator starting at the pEndEffector link
-        virtual void GetChildDOFIndices(std::set<int>& vdofndices) const;
+        virtual void GetChildDOFIndices(std::vector<int>& vdofndices) const;
 
         /// get all child links of the manipulator starting at pEndEffector link
-        virtual void GetChildLinks(std::set<LinkPtr>& vlinks) const;
+        virtual void GetChildLinks(std::vector<LinkPtr>& vlinks) const;
+
+        /// Get all links that are independent of the arm and gripper joints  conditioned that the base and end effector links are static.
+        /// In other words, returns all links not on the path from the base to the end effector and not children of the end effector.
+        virtual void GetIndependentLinks(std::vector<LinkPtr>& vlinks) const;
+
+        /// checks collision with only the gripper given its end-effector transform
+        /// \param tEE the end effector transform
+        /// \return true if a collision occurred
+        bool CheckEndEffectorCollision(const Transform& tEE, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>()) const;
+
+        /// checks collision with the environment with all the independent links of the robot
+        /// \return true if a collision occurred
+        bool CheckIndependentCollision(boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>()) const;
 
     private:
         RobotBaseWeakPtr _probot;

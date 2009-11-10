@@ -138,13 +138,11 @@ bool RobotBase::Manipulator::FindIKSolutions(const Transform& goal, const std::v
     return vFreeParameters.size() == 0 ? _pIkSolver->Solve(IkSolverBase::Parameterization(tgoal),bColCheck,solutions) : _pIkSolver->Solve(IkSolverBase::Parameterization(tgoal),vFreeParameters,bColCheck,solutions);
 }
 
-void RobotBase::Manipulator::GetChildJoints(std::set<JointPtr>& vjoints) const
+void RobotBase::Manipulator::GetChildJoints(std::vector<JointPtr>& vjoints) const
 {
-    if( !_pEndEffector )
-        throw openrave_exception("invalid end effector");
-
     // get all child links of the manipualtor
     RobotBasePtr probot(_probot);
+    vjoints.resize(0);
     vector<dReal> lower,upper;
     int iattlink = _pEndEffector->GetIndex();
     FOREACHC(itlink, probot->GetLinks()) {
@@ -159,7 +157,7 @@ void RobotBase::Manipulator::GetChildJoints(std::set<JointPtr>& vjoints) const
                 probot->GetJoints()[ijoint]->GetLimits(lower,upper);
                 for(int i = 0; i < probot->GetJoints()[ijoint]->GetDOF(); ++i) {
                     if( lower[i] != upper[i] ) {
-                        vjoints.insert(probot->GetJoints()[ijoint]);
+                        vjoints.push_back(probot->GetJoints()[ijoint]);
                         break;
                     }
                 }
@@ -168,10 +166,11 @@ void RobotBase::Manipulator::GetChildJoints(std::set<JointPtr>& vjoints) const
     }
 }
 
-void RobotBase::Manipulator::GetChildDOFIndices(std::set<int>& vdofndices) const
+void RobotBase::Manipulator::GetChildDOFIndices(std::vector<int>& vdofindices) const
 {
     // get all child links of the manipualtor
     RobotBasePtr probot(_probot);
+    vdofindices.resize(0);
     vector<dReal> lower,upper;
     int iattlink = _pEndEffector->GetIndex();
     FOREACHC(itlink, probot->GetLinks()) {
@@ -188,7 +187,7 @@ void RobotBase::Manipulator::GetChildDOFIndices(std::set<int>& vdofndices) const
                     if( lower[i] != upper[i] ) {
                         int idofbase = probot->GetJoints()[ijoint]->GetDOFIndex();
                         for(int idof = 0; idof < probot->GetJoints()[ijoint]->GetDOF(); ++idof)
-                            vdofndices.insert(idofbase+idof);
+                            vdofindices.push_back(idofbase+idof);
                         break;
                     }
                 }
@@ -197,11 +196,12 @@ void RobotBase::Manipulator::GetChildDOFIndices(std::set<int>& vdofndices) const
     }
 }
 
-void RobotBase::Manipulator::GetChildLinks(std::set<LinkPtr>& vlinks) const
+void RobotBase::Manipulator::GetChildLinks(std::vector<LinkPtr>& vlinks) const
 {
     RobotBasePtr probot(_probot);
     // get all child links of the manipualtor
-    vlinks.insert(_pEndEffector);
+    vlinks.resize(0);
+    vlinks.push_back(_pEndEffector);
     int iattlink = _pEndEffector->GetIndex();
     FOREACHC(itlink, probot->GetLinks()) {
         int ilink = (*itlink)->GetIndex();
@@ -211,11 +211,98 @@ void RobotBase::Manipulator::GetChildLinks(std::set<LinkPtr>& vlinks) const
             continue;
         for(int ijoint = 0; ijoint < probot->GetDOF(); ++ijoint) {
             if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
-                vlinks.insert(*itlink);
+                vlinks.push_back(*itlink);
                 break;
             }
         }
     }
+}
+
+void RobotBase::Manipulator::GetIndependentLinks(std::vector<LinkPtr>& vlinks) const
+{
+    RobotBasePtr probot(_probot);
+    FOREACHC(itlink, probot->GetLinks()) {
+        bool bAffected = false;
+        FOREACHC(itindex,_varmjoints) {
+            if( probot->DoesAffect(*itindex,(*itlink)->GetIndex()) ) {
+                bAffected = true;
+                break;
+            }
+        }
+        FOREACHC(itindex,_vgripperjoints) {
+            if( probot->DoesAffect(*itindex,(*itlink)->GetIndex()) ) {
+                bAffected = true;
+                break;
+            }
+        }
+
+        if( !bAffected )
+            vlinks.push_back(*itlink);
+    }
+}
+
+template <typename T>
+class TransformSaver
+{
+public:
+    TransformSaver(T plink) : _plink(plink) { _t = _plink->GetTransform(); }
+    ~TransformSaver() { _plink->SetTransform(_t); }
+    const Transform& GetTransform() { return _t; }
+private:
+    T _plink;
+    Transform _t;
+};
+
+bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, boost::shared_ptr<COLLISIONREPORT> report) const
+{
+    RobotBasePtr probot(_probot);
+    Transform toldEE = _pEndEffector->GetTransform();
+    Transform tdelta = tEE*toldEE.inverse();
+
+    // get all child links of the manipualtor
+    int iattlink = _pEndEffector->GetIndex();
+    FOREACHC(itlink, probot->GetLinks()) {
+        int ilink = (*itlink)->GetIndex();
+        if( ilink == iattlink )
+            continue;
+        if( _varmjoints.size() > 0 && !probot->DoesAffect(_varmjoints[0],ilink) )
+            continue;
+        for(int ijoint = 0; ijoint < probot->GetDOF(); ++ijoint) {
+            if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
+                TransformSaver<RobotBase::LinkPtr> linksaver(*itlink);
+                (*itlink)->SetTransform(tdelta*linksaver.GetTransform());
+                if( probot->GetEnv()->CheckCollision(*itlink,report) )
+                    return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool RobotBase::Manipulator::CheckIndependentCollision(boost::shared_ptr<COLLISIONREPORT> report) const
+{
+    RobotBasePtr probot(_probot);
+    FOREACHC(itlink, probot->GetLinks()) {
+        bool bAffected = false;
+        FOREACHC(itindex,_varmjoints) {
+            if( probot->DoesAffect(*itindex,(*itlink)->GetIndex()) ) {
+                bAffected = true;
+                break;
+            }
+        }
+        FOREACHC(itindex,_vgripperjoints) {
+            if( probot->DoesAffect(*itindex,(*itlink)->GetIndex()) ) {
+                bAffected = true;
+                break;
+            }
+        }
+
+        if( !bAffected ) {
+            if( probot->GetEnv()->CheckCollision(*itlink,report) )
+                return true;
+        }
+    }
+    return false;
 }
 
 RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot) : _probot(probot)

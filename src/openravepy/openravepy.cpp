@@ -1255,7 +1255,7 @@ public:
         }
         
         object GetChildJoints() {
-            std::set<KinBody::JointPtr> vjoints;
+            std::vector<KinBody::JointPtr> vjoints;
             _pmanip->GetChildJoints(vjoints);
             boost::python::list joints;
             FOREACH(itjoint,vjoints)
@@ -1263,7 +1263,7 @@ public:
             return joints;
         }
         object GetChildDOFIndices() {
-            std::set<int> vdofindices;
+            std::vector<int> vdofindices;
             _pmanip->GetChildDOFIndices(vdofindices);
             boost::python::list dofindices;
             FOREACH(itindex,vdofindices)
@@ -1272,12 +1272,30 @@ public:
         }
 
         object GetChildLinks() {
-            std::set<KinBody::LinkPtr> vlinks;
+            std::vector<KinBody::LinkPtr> vlinks;
             _pmanip->GetChildLinks(vlinks);
             boost::python::list links;
             FOREACH(itlink,vlinks)
                 links.append(PyLinkPtr(new PyLink(*itlink,_pyenv)));
             return links;
+        }
+
+        object GetIndependentLinks() {
+            std::vector<KinBody::LinkPtr> vlinks;
+            _pmanip->GetIndependentLinks(vlinks);
+            boost::python::list links;
+            FOREACH(itlink,vlinks)
+                links.append(PyLinkPtr(new PyLink(*itlink,_pyenv)));
+            return links;
+        }
+
+        bool CheckEndEffectorCollision(object otrans, PyCollisionReportPtr pReport)
+        {
+            return _pmanip->CheckEndEffectorCollision(ExtractTransform(otrans),!pReport ? boost::shared_ptr<COLLISIONREPORT>() : pReport->report);
+        }
+        bool CheckIndependentCollision(PyCollisionReportPtr pReport)
+        {
+            return _pmanip->CheckIndependentCollision(!pReport ? boost::shared_ptr<COLLISIONREPORT>() : pReport->report);
         }
     };
 
@@ -2822,6 +2840,9 @@ BOOST_PYTHON_MODULE(openravepy)
             .def("GetChildJoints",&PyRobotBase::PyManipulator::GetChildJoints)
             .def("GetChildDOFIndices",&PyRobotBase::PyManipulator::GetChildDOFIndices)
             .def("GetChildLinks",&PyRobotBase::PyManipulator::GetChildLinks)
+            .def("GetIndependentLinks",&PyRobotBase::PyManipulator::GetIndependentLinks)
+            .def("CheckEndEffectorCollision",&PyRobotBase::PyManipulator::CheckEndEffectorCollision)
+            .def("CheckIndependentCollision",&PyRobotBase::PyManipulator::CheckIndependentCollision)
             ;
 
         class_<PyRobotBase::PyAttachedSensor, boost::shared_ptr<PyRobotBase::PyAttachedSensor> >("AttachedSensor", no_init)
@@ -3060,8 +3081,8 @@ BOOST_PYTHON_MODULE(openravepy)
             ;
     }
     
-    {
-        scope options = class_<DummyStruct>("options")
-            .def_readwrite("ReturnTransformQuaternions",&s_bReturnTransformQuaternions);
-    }
+//    {
+//        scope options = class_<DummyStruct>("options")
+//            .def_readwrite("ReturnTransformQuaternions",&s_bReturnTransformQuaternions);
+//    }
 }

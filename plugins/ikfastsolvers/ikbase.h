@@ -59,14 +59,6 @@ class IkFastSolver : public IkSolverBase
         RobotBase::RobotStateSaver saver(_probot);
         _probot->SetActiveDOFs(_pmanip->GetArmJoints());
         SetJointLimits();
-
-        std::set<KinBody::LinkPtr> setlinks;
-        _pmanip->GetChildLinks(setlinks);
-        _vChildGripperLinks.clear();
-        Transform tbaseinv = _pmanip->GetEndEffectorTransform().inverse();
-        for(std::set<KinBody::LinkPtr>::iterator itlink = setlinks.begin(); itlink != setlinks.end(); ++itlink)
-            _vChildGripperLinks.push_back(make_pair(*itlink,tbaseinv*(*itlink)->GetTransform()));
-
         return true;
     }
 
@@ -76,6 +68,9 @@ class IkFastSolver : public IkSolverBase
             RAVELOG_WARNA("ik solver only supports type %d",IKType);
             return false;
         }
+        if( bCheckEnvCollision && _pmanip->CheckIndependentCollision() )
+            return false;
+
         RobotBase::RobotStateSaver saver(_probot);
         _probot->SetActiveDOFs(_pmanip->GetArmJoints());
         std::vector<IKReal> vfree(_vfreeparams.size());
@@ -88,12 +83,14 @@ class IkFastSolver : public IkSolverBase
             RAVELOG_WARNA("ik solver only supports type %d",IKType);
             return false;
         }
+        if( bCheckEnvCollision && _pmanip->CheckIndependentCollision() )
+            return false;
 
         RobotBase::RobotStateSaver saver(_probot);
         _probot->SetActiveDOFs(_pmanip->GetArmJoints());
         std::vector<IKReal> vfree(_vfreeparams.size());
         qSolutions.resize(0);
-        ComposeSolution(_vfreeparams, vfree, 0, vector<dReal>(), boost::bind(&IkFastSolver::_SolveAll,shared_solver(), param,vfree,bCheckEnvCollision,boost::ref(qSolutions)));
+        ComposeSolution(_vfreeparams, vfree, 0, vector<dReal>(), boost::bind(&IkFastSolver::_SolveAll,shared_solver(), param,boost::ref(vfree),bCheckEnvCollision,boost::ref(qSolutions)));
         return qSolutions.size()>0;
     }
 
@@ -106,6 +103,9 @@ class IkFastSolver : public IkSolverBase
 
         if( vFreeParameters.size() != _vfreeparams.size() )
             throw openrave_exception("free parameters not equal",ORE_InvalidArguments);
+
+        if( bCheckEnvCollision && _pmanip->CheckIndependentCollision() )
+            return false;
 
         RobotBase::RobotStateSaver saver(_probot);
         _probot->SetActiveDOFs(_pmanip->GetArmJoints());
@@ -123,6 +123,9 @@ class IkFastSolver : public IkSolverBase
 
         if( vFreeParameters.size() != _vfreeparams.size() )
             throw openrave_exception("free parameters not equal",ORE_InvalidArguments);
+
+        if( bCheckEnvCollision && _pmanip->CheckIndependentCollision() )
+            return false;
 
         RobotBase::RobotStateSaver saver(_probot);
         _probot->SetActiveDOFs(_pmanip->GetArmJoints());
@@ -282,7 +285,7 @@ private:
                 RAVELOG_VERBOSEA("ik collision, no link\n");
 
             // if gripper is colliding, solutions will always fail, so completely stop solution process
-            if( param.GetType() == Parameterization::Type_Transform6D && _CheckGripperEnvironmentCollision(param.GetTransform()) ) {
+            if( param.GetType() == Parameterization::Type_Transform6D && _pmanip->CheckEndEffectorCollision(param.GetTransform()*_pmanip->GetGraspTransform()) ) {
                 bStopSearching = true;
                 return true; // return true to stop the search
             }
@@ -322,7 +325,7 @@ private:
                     // have to search over all the free parameters of the solution!
                     vsolfree.resize(itsol->GetFree().size());
                     
-                    ComposeSolution(itsol->GetFree(), vsolfree, 0, vector<dReal>(), boost::bind(&IkFastSolver::_ValidateSolutionAll,shared_solver(),boost::ref(*itsol), vsolfree, bCheckEnvCollision, boost::ref(sol), boost::ref(vravesol), boost::ref(qSolutions)));
+                    ComposeSolution(itsol->GetFree(), vsolfree, 0, vector<dReal>(), boost::bind(&IkFastSolver::_ValidateSolutionAll,shared_solver(),boost::ref(*itsol), boost::ref(vsolfree), bCheckEnvCollision, boost::ref(sol), boost::ref(vravesol), boost::ref(qSolutions)));
                 }
                 else {
                     if( _ValidateSolutionAll(*itsol, vector<IKReal>(), bCheckEnvCollision, sol, vravesol, qSolutions) )
@@ -371,16 +374,6 @@ private:
 
         return true;
     }
-    
-    bool _CheckGripperEnvironmentCollision(const Transform& transEE)
-    {
-        FOREACH(itlink,_vChildGripperLinks) {
-            itlink->first->SetTransform(transEE*itlink->second);
-            if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(itlink->first)) )
-                return true;
-        }
-        return false;
-    }
 
     template <typename U> U SQR(U t) { return t*t; }
 
@@ -388,7 +381,6 @@ private:
     RobotBasePtr _probot;
     std::vector<int> _vfreeparams;
     std::vector<dReal> _vfreeparamscales;
-    std::vector<pair<KinBody::LinkPtr,Transform> > _vChildGripperLinks;
     boost::shared_ptr<void> _cblimits;
     IkFn _pfnik;
     dReal _fFreeInc;

@@ -133,41 +133,10 @@ class TaskManipulation : public ProblemInstance
         return 0;
     }
 
-    bool IsGripperCollision(int imanip, const Transform& tgripper)
-    {
-        if( _robot )
-            return false;
-        if( imanip < 0 || imanip >= (int)_vvManipChildLinks.size() )
-            return false;
-        
-        FOREACH(itlink,_vvManipChildLinks[imanip]) {
-            Transform torg = itlink->first->GetTransform();
-            itlink->first->SetTransform(tgripper*itlink->second);
-            bool bCollision = _robot->GetEnv()->CheckCollision(KinBody::LinkConstPtr(itlink->first));
-            itlink->first->SetTransform(torg);
-            if( bCollision )
-                return true;
-        }
-        
-        return false;
-    }
-
     virtual bool SendCommand(std::ostream& sout, std::istream& sinput)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _robot = GetEnv()->GetRobot(_strRobotName);
-
-        // get all child links of all the manipualtor
-        _vvManipChildLinks.resize(0);
-        FOREACH(itmanip, _robot->GetManipulators()) {
-            vector<pair<KinBody::LinkPtr,Transform> > _vChildLinks;
-            set<KinBody::LinkPtr> setChildLinks;
-            Transform tbaseinv = (*itmanip)->GetEndEffectorTransform().inverse();
-            (*itmanip)->GetChildLinks(setChildLinks);
-            FOREACH(itlink,setChildLinks)
-                _vChildLinks.push_back(make_pair(*itlink,tbaseinv*(*itlink)->GetTransform()));
-            _vvManipChildLinks.push_back(_vChildLinks);
-        }
 
         if( !_robot ) {
             RAVELOG_ERRORA(str(boost::format("could not find %s robot, send command failed\n")%_strRobotName));
@@ -470,7 +439,7 @@ class TaskManipulation : public ProblemInstance
                 tm.m[8] = pm[2]; tm.m[9] = pm[5]; tm.m[10] = pm[8]; tm.trans.z = pm[11];
                 transRobot = tm;
 
-                if( IsGripperCollision(_robot->GetActiveManipulatorIndex(),transRobot) ) {
+                if( _robot->GetActiveManipulator()->CheckEndEffectorCollision(transRobot) ) {
                     RAVELOG_DEBUGA("grasp %d: in collision\n", igrasp);
                     continue;
                 }
@@ -1120,7 +1089,6 @@ protected:
     list<SensorSystemBasePtr > listsystems;
     ProblemInstancePtr _pGrasperProblem;
     PlannerBasePtr _pRRTPlanner;
-    vector< vector<pair<KinBody::LinkPtr,Transform> > > _vvManipChildLinks;
 };
     
 #endif
