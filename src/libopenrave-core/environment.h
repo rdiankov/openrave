@@ -204,11 +204,15 @@ class Environment : public EnvironmentBase
             _nBodiesModifiedStamp++;
         }
 
+        list<ProblemInstancePtr> listProblems;
         {
             boost::mutex::scoped_lock lock(_mutexProblems);
-            FOREACH(itproblem,_listProblems)
-                (*itproblem)->Reset();
+            listProblems = _listProblems;
         }
+
+        FOREACH(itproblem,listProblems)
+            (*itproblem)->Reset();
+        listProblems.clear();
 
 //        {
 //            boost::mutex::scoped_lock locknetworkid(_mutexNetworkIds);

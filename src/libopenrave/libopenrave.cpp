@@ -300,30 +300,34 @@ public:
     virtual bool SampleNeigh(vector<dReal>& pNewSample, const vector<dReal>& pCurSample, dReal fRadius)
     {
         BOOST_ASSERT(pCurSample.size()==lower.size());
-        pNewSample.resize(lower.size());
+        sample.resize(lower.size());
         int dof = lower.size();
         for (int i = 0; i < dof; i++)
-            pNewSample[i] = pCurSample[i] + 10.0f*fRadius*(RaveRandomFloat()-0.5f);
+            sample[i] = pCurSample[i] + 10.0f*fRadius*(RaveRandomFloat()-0.5f);
 
         // normalize
         dReal fRatio = fRadius*RaveRandomFloat();
             
         //assert(_robot->ConfigDist(&_vzero[0], &_vSampleConfig[0]) < B+1);
-        while(_distmetricfn(pNewSample,pCurSample) > fRatio ) {
+        while(_distmetricfn(sample,pCurSample) > fRatio ) {
             for (int i = 0; i < dof; i++)
-                pNewSample[i] = 0.5f*pCurSample[i]+0.5f*pNewSample[i];
+                sample[i] = 0.5f*pCurSample[i]+0.5f*sample[i];
         }
             
-        while(_distmetricfn(pNewSample, pCurSample) < fRatio ) {
-            for (int i = 0; i < dof; i++)
-                pNewSample[i] = 1.2f*pNewSample[i]-0.2f*pCurSample[i];
+        for(int iter = 0; iter < 20; ++iter) {
+            while(_distmetricfn(sample, pCurSample) < fRatio ) {
+                for (int i = 0; i < dof; i++)
+                    sample[i] = 1.2f*sample[i]-0.2f*pCurSample[i];
+            }
         }
 
         for (int i = 0; i < dof; i++) {
-            if( pNewSample[i] < lower[i] )
+            if( sample[i] < lower[i] )
                 pNewSample[i] = lower[i];
-            else if( pNewSample[i] > upper[i] )
+            else if( sample[i] > upper[i] )
                 pNewSample[i] = upper[i];
+            else
+                pNewSample[i] = sample[i];
         }
 
         return true;
@@ -331,7 +335,7 @@ public:
 
  protected:
     RobotBasePtr _robot;
-    vector<dReal> lower, upper, range;
+    vector<dReal> lower, upper, range,sample;
     boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _distmetricfn;
 };
 
