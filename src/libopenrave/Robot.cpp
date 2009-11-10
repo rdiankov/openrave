@@ -271,7 +271,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, boo
             if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
                 TransformSaver<RobotBase::LinkPtr> linksaver(*itlink);
                 (*itlink)->SetTransform(tdelta*linksaver.GetTransform());
-                if( probot->GetEnv()->CheckCollision(*itlink,report) )
+                if( probot->GetEnv()->CheckCollision(KinBody::LinkConstPtr(*itlink),report) )
                     return true;
             }
         }
@@ -298,7 +298,7 @@ bool RobotBase::Manipulator::CheckIndependentCollision(boost::shared_ptr<COLLISI
         }
 
         if( !bAffected ) {
-            if( probot->GetEnv()->CheckCollision(*itlink,report) )
+            if( probot->GetEnv()->CheckCollision(KinBody::LinkConstPtr(*itlink),report) )
                 return true;
         }
     }
