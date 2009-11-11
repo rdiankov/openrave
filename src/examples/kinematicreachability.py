@@ -46,7 +46,7 @@ class ReachabilityModel(metaclass.AutoReloader):
         if self.orrobot is not None:
             self.orenv.RemoveKinBody(self.orrobot)
             self.orrobot = None
-        self.orrobot = self.orenv.ReadRobotXML(robotfile)
+        self.orrobot = self.orenv.ReadRobotXMLFile(robotfile)
         if self.orrobot is None:
             raise ValueError('failed to open %s openrave file'%robotfile)
         self.robotfile = robotfile
@@ -203,7 +203,7 @@ if __name__=='__main__':
     parser.add_option('--manipname',action='store',type='string',dest='manipname',default=None,
                       help='The name of the manipulator')
     parser.add_option('--maxradius',action='store',type='float',dest='maxradius',default=None,
-                      help='The name of the manipulator')
+                      help='The max radius of the arm to perform the computation')
     parser.add_option('--show',action='store_true',dest='show',default=False,
                       help='If set, uses mayavi (v3+) to display the reachability')
     (options, args) = parser.parse_args()
