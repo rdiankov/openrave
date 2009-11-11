@@ -1768,10 +1768,6 @@ public:
                 RAVELOG_ERRORA("exception occured in python viewer callback\n");
             }
             PyGILState_Release(gstate);
-            if( !res ) {
-                RAVELOG_WARNA("python viewer callback failed\n");
-                return true;
-            }
             extract<bool> xb(res);
             if( xb.check() )
                 return (bool)xb;

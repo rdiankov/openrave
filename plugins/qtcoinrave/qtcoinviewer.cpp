@@ -1697,7 +1697,7 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
     }
         
     if (!pItem) {
-        // the object cannot be selected
+        _ivRoot->deselectAll();
         return false;
     }
 
@@ -1724,6 +1724,11 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
                 }
             }
         }
+    }
+
+    if( !bProceedSelection ) {
+        _ivRoot->deselectAll();
+        return false;
     }
 
     // try to acquire the environment lock

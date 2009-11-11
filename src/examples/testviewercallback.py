@@ -20,9 +20,9 @@ from optparse import OptionParser
 ghandle = None
 def itemselectioncb(link,pos,org,env):
     global ghandle
-    print 'link ',link.GetName(),'is select at: ',pos
+    print 'body ',link.GetParent().GetName(),':',link.GetName(),'is select at ',reshape(pos,(3))
     ghandle = env.plot3(points=reshape(pos,(3)),pointsize=25.0,colors=array((1,0,0)))
-    return True
+    return 0
 
 if __name__=='__main__':
     global env
