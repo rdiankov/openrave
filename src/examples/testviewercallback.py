@@ -20,7 +20,7 @@ from optparse import OptionParser
 ghandle = None
 def itemselectioncb(link,pos,org,env):
     global ghandle
-    print 'body ',link.GetParent().GetName(),':',link.GetName(),'is select at ',reshape(pos,(3))
+    print 'in python: body ',link.GetParent().GetName(),':',link.GetName(),'at',reshape(pos,(3))
     ghandle = env.plot3(points=reshape(pos,(3)),pointsize=25.0,colors=array((1,0,0)))
     return 0
 

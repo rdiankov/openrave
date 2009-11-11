@@ -639,6 +639,19 @@ public:
             return bCaged;
         }
 
+        dReal Dist6D(const vector<dReal>& v1, const vector<dReal>& v2)
+        {
+            BOOST_ASSERT(v1.size()==7&&v2.size()==7);
+            dReal frot1=0,frot2=0,ftrans=0;
+            for(int i = 0; i < 3; ++i)
+                ftrans += (v1[i]-v2[i])*(v1[i]-v2[i]);
+            for(int i = 3; i < 7; ++i) {
+                frot1 += (v1[i]-v2[i])*(v1[i]-v2[i]);
+                frot2 += (v1[i]+v2[i])*(v1[i]+v2[i]);
+            }
+            return RaveSqrt(min(frot1,frot2)+0.2f*ftrans);
+        }
+
         // \param vTargetSides - -1 for only negative sides, 0 for both, 1 for only positive sides)
         void CacheTransforms(const vector<int>& vTargetSides)
         {
@@ -785,7 +798,6 @@ private:
     
         boost::shared_ptr<ExplorationParameters> params(new ExplorationParameters());
         params->_nExpectedDataSize = 1000;
-        params->_constraintfn = boost::bind(&GraspConstraint::Constraint,graspfn,_1,_2,_3);
 
         vector<int> vTargetSides;
     
@@ -872,13 +884,14 @@ private:
             return false;
         }
 
+        Transform trobot = _robot->GetTransform();
+        _robot->SetAffineTranslationLimits(trobot.trans-Vector(0.5f,0.5f,0.5f),trobot.trans+Vector(0.5f,0.5f,0.5f));
         _robot->SetActiveDOFs(vector<int>(), RobotBase::DOF_X|RobotBase::DOF_Y|RobotBase::DOF_Z|RobotBase::DOF_RotationQuat);
         _robot->GetActiveDOFValues(params->vinitialconfig);
         params->SetRobotActiveJoints(_robot);
-    
-        Transform trobot = _robot->GetTransform();
-        _robot->SetAffineTranslationLimits(trobot.trans-Vector(0.5f,0.5f,0.5f),trobot.trans+Vector(0.5f,0.5f,0.5f));
-
+        params->_constraintfn = boost::bind(&GraspConstraint::Constraint,graspfn,_1,_2,_3);
+        params->_distmetricfn = boost::bind(&GraspConstraint::Dist6D,graspfn,_1,_2);
+   
         params->_fStepLength = fStep;
         params->_fExploreProb = fExploreProb;
         params->_nMaxIterations = params->_nExpectedDataSize*5;
@@ -1226,6 +1239,7 @@ private:
             }
         }
         else {
+            boost::shared_ptr<COLLISIONREPORT> report(new COLLISIONREPORT());
 
             if( taskdata->vtargettraj.size() < 2 ) {
                 RAVELOG_WARNA("not enough trajectory points\n");
@@ -1246,9 +1260,9 @@ private:
                 taskdata->ptarget->SetJointValues(taskdata->vtargettraj[realindex]);
                 Transform Ttarget = taskdata->ptargetlink->GetTransform();
                 bHasIK = false;
-            
+                bool bIndependentCollision = pmanip->CheckIndependentCollision(report);
                 // check if non-manipulator links are in collision
-                if( !pmanip->CheckIndependentCollision() ) {
+                if( !bIndependentCollision ) {
                     boost::shared_ptr< vector< Transform > > pvGraspSet = (realindex == 0 && !!taskdata->pvGraspStartSet && taskdata->pvGraspStartSet->size()>0)?taskdata->pvGraspStartSet:taskdata->pvGraspSet;
                     FOREACH(it, *pvGraspSet) {
                         Transform tgrasp = Ttarget * *it;
@@ -1279,7 +1293,9 @@ private:
             
                 if( !bHasIK ) {
                     // no ik solution found for this grasp, so quit
-                    RAVELOG_ERRORA("failure, due to ik time=%dms, %d/%"PRIdS"\n", timeGetTime()-basetime, realindex, taskdata->vtargettraj.size());
+                    RAVELOG_ERRORA(str(boost::format("failure, due to ik time=%dms, %d/%d, col=%d\n")%(timeGetTime()-basetime)%realindex%taskdata->vtargettraj.size()%bIndependentCollision));
+                    if( bIndependentCollision )
+                        RAVELOG_ERRORA(str(boost::format("colliding %s:%s with %s:%s\n")%report->plink1->GetParent()->GetName()%report->plink1->GetName()%report->plink2->GetParent()->GetName()%report->plink2->GetName()));
                     break;
                 }
             }

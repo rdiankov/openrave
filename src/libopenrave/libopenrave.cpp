@@ -306,7 +306,7 @@ public:
             sample[i] = pCurSample[i] + 10.0f*fRadius*(RaveRandomFloat()-0.5f);
 
         // normalize
-        dReal fRatio = fRadius*RaveRandomFloat();
+        dReal fRatio = fRadius*(0.1f+0.9f*RaveRandomFloat());
             
         //assert(_robot->ConfigDist(&_vzero[0], &_vSampleConfig[0]) < B+1);
         while(_distmetricfn(sample,pCurSample) > fRatio ) {
@@ -321,6 +321,7 @@ public:
             }
         }
 
+        pNewSample.resize(lower.size());
         for (int i = 0; i < dof; i++) {
             if( sample[i] < lower[i] )
                 pNewSample[i] = lower[i];

@@ -1415,16 +1415,18 @@ protected:
                 StepSimulation(_fDeltaSimTime);
                 uint64_t passedtime = GetMicroTime()-_nSimStartTime;
                 if( _bRealTime ) {
-                    if( passedtime+1000 < _nCurSimTime ) {
+                    if( (int64_t)(_nCurSimTime-passedtime) > 1000 ) {
                         uint64_t sleeptime = _nCurSimTime-passedtime;
                         lockenv.unlock();
                         Sleep( sleeptime/1000 );
                         nLastSleptTime = GetMicroTime();
                     }
-                    else if( passedtime-_nCurSimTime > 5000 ) // simulation is getting late, so catch up
+                    else if( (int64_t)(passedtime-_nCurSimTime) > 20000 ) {
+                        // simulation is getting late, so catch up
                         _nSimStartTime += passedtime-_nCurSimTime;
+                    }
                 }
-
+                
                 //RAVELOG_INFOA("sim: %f, real: %f\n",_nCurSimTime*1e-6f,(GetMicroTime()-_nSimStartTime)*1e-6f);
             }
 

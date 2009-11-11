@@ -290,10 +290,12 @@ bool RobotBase::Manipulator::CheckIndependentCollision(boost::shared_ptr<COLLISI
                 break;
             }
         }
-        FOREACHC(itindex,_vgripperjoints) {
-            if( probot->DoesAffect(*itindex,(*itlink)->GetIndex()) ) {
-                bAffected = true;
-                break;
+        if( !bAffected ) {
+            FOREACHC(itindex,_vgripperjoints) {
+                if( probot->DoesAffect(*itindex,(*itlink)->GetIndex()) ) {
+                    bAffected = true;
+                    break;
+                }
             }
         }
 
