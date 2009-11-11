@@ -563,7 +563,7 @@ protected:
     boost::shared_ptr<void> _pPhysicsData;                ///< data set by the physics engine
     boost::shared_ptr<void> _pCollisionData; ///< internal collision model
 
-    std::list<std::pair<int,const boost::function<void()> > > _listRegisteredCallbacks; ///< callbacks to call when particular properties of the body change.
+    std::list<std::pair<int,boost::function<void()> > > _listRegisteredCallbacks; ///< callbacks to call when particular properties of the body change.
 
     bool _bHierarchyComputed; ///< true if the joint heirarchy and other cached information is computed
 private:

@@ -101,6 +101,7 @@ inline uint64_t GetMicroTime()
 
 #include <rave/rave.h>
 
+#include <boost/bind.hpp>
 #include <boost/format.hpp>
 #include <boost/assert.hpp>
 #include <boost/thread/condition.hpp>

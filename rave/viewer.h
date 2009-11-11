@@ -23,6 +23,13 @@ namespace OpenRAVE {
 class RaveViewerBase : public InterfaceBase
 {
 public:
+    enum ViewerEvents
+    {
+        /// mouse button is clicked. If the function
+        /// returns true, then the object will be selected. Otherwise, the object remains unselected.
+        VE_ItemSelection = 1,
+    };
+
     RaveViewerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Viewer, penv) {}
     virtual ~RaveViewerBase() {}
 
@@ -64,6 +71,16 @@ public:
 
     virtual void Reset() = 0;
     virtual void SetBkgndColor(const RaveVector<float>& color) = 0;
+
+    /// callback viewer function when for viewer events
+    /// first parameter - target openrave link
+    /// second parameter - offset
+    /// third parameter - direction
+    typedef boost::function<bool(KinBody::LinkPtr plink,RaveVector<float>,RaveVector<float>)> ViewerCallbackFn;
+
+    /// registers a function with the viewer that gets called everytime a specified event occurs (part of ViewerEvents enum)
+    /// \return a handle to the callback. If this handle is deleted, the callback will be unregistered
+    virtual boost::shared_ptr<void> RegisterCallback(int properties, const ViewerCallbackFn& fncallback) = 0;
 
     /// controls whether the viewer synchronizes with the newest environment
     virtual void SetEnvironmentSync(bool bUpdate) = 0;

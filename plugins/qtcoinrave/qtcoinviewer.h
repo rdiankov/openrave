@@ -132,6 +132,17 @@ public:
 
     virtual RaveTransform<float> GetCameraTransform();
 
+    virtual void UnregisterCallback(std::list<std::pair<int,ViewerCallbackFn > >::iterator it)
+    {
+        boost::mutex::scoped_lock lock(_mutexCallbacks);
+        _listRegisteredCallbacks.erase(it);
+        
+    }
+    virtual boost::shared_ptr<void> RegisterCallback(int properties, const ViewerCallbackFn& fncallback) {
+        boost::mutex::scoped_lock lock(_mutexCallbacks);
+        return boost::shared_ptr<void>((void*)1,boost::bind(&QtCoinViewer::UnregisterCallback,this,_listRegisteredCallbacks.insert(_listRegisteredCallbacks.end(),make_pair(properties,fncallback))));
+    }
+
 public slots:
 
     // menu items
@@ -280,6 +291,8 @@ protected:
     std::map<KinBodyPtr, KinBodyItemPtr> _mapbodies;    ///< all the bodies created
     
     ItemPtr          _pSelectedItem;      ///< the currently selected item
+    KinBody::LinkWeakPtr _pMouseOverLink;
+    RaveVector<float> _vMouseSurfacePosition,_vMouseRayDirection;
 
     /// for movie recording
     SoOffscreenRenderer _ivOffscreen;
@@ -300,7 +313,7 @@ protected:
     int _available;
 
     bool _bLockEnvironment;
-    boost::mutex _mutexUpdateModels;
+    boost::mutex _mutexUpdateModels, _mutexCallbacks;
     boost::condition _condUpdateModels; ///< signaled everytime environment models are updated
 
     // toggle switches
@@ -341,6 +354,8 @@ protected:
     bool _bQuitMainLoop;
     bool _bUpdateEnvironment;
     ViewGeometry _viewGeometryMode;
+
+    std::list<std::pair<int,ViewerCallbackFn > > _listRegisteredCallbacks; ///< callbacks to call when particular properties of the body change.
 
     friend class EnvMessage;
     friend class ViewerSetSizeMessage;

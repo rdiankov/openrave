@@ -110,6 +110,7 @@ class OpenRAVEScene:
             viewer.main.quit()
     def __del__(self):
         self.quitviewers()
+        self.orenv.Destroy()
 
 if __name__=='__main__':
     parser = OptionParser(description='Displays all images of all camera sensors attached to a robot.')

@@ -266,11 +266,24 @@ void QtCoinViewer::_mousemove_cb(SoEventCallback * node)
         }
         
         if (!!pItem) {
+            boost::mutex::scoped_lock lock(_mutexMessages);
+            
             KinBodyItemPtr pKinBody = boost::dynamic_pointer_cast<KinBodyItem>(pItem);
             KinBody::LinkPtr pSelectedLink;
             if( !!pKinBody )
                 pSelectedLink = pKinBody->GetLinkFromIv(node);
 
+            _pMouseOverLink = pSelectedLink;
+            _vMouseSurfacePosition.x = pt->getPoint()[0];
+            _vMouseSurfacePosition.y = pt->getPoint()[1];
+            _vMouseSurfacePosition.z = pt->getPoint()[2];
+            SbVec3f camerapos = rp.getViewVolume().getProjectionPoint();
+            _vMouseRayDirection = _vMouseSurfacePosition-Vector(camerapos[0],camerapos[1],camerapos[2]);
+            if( _vMouseRayDirection.lengthsqr3() > 0 )
+                _vMouseRayDirection.normalize3();
+            else
+                _vMouseRayDirection = Vector(0,0,0);
+            
             stringstream ss;
             ss << "mouse on " << pKinBody->GetBody()->GetName() << ":";
             if( !!pSelectedLink )
@@ -282,7 +295,6 @@ void QtCoinViewer::_mousemove_cb(SoEventCallback * node)
                << std::setw(8) << std::left << pt->getPoint()[1] << ", "
                << std::setw(8) << std::left << pt->getPoint()[2] << ")" << endl;
 
-            boost::mutex::scoped_lock lock(_mutexMessages);
             _strMouseMove = ss.str();
         }
         else {
@@ -834,7 +846,7 @@ public:
 
 void QtCoinViewer::Reset()
 {
-    if (_timerSensor->isScheduled()) {
+    if (_timerSensor->isScheduled() && _bUpdateEnvironment) {
         EnvMessagePtr pmsg(new ResetMessage(shared_viewer(), (void**)NULL));
         pmsg->callerexecute();
     }
@@ -857,7 +869,7 @@ private:
 
 void QtCoinViewer::SetBkgndColor(const RaveVector<float>& color)
 {
-    if (_timerSensor->isScheduled()) {
+    if (_timerSensor->isScheduled() && _bUpdateEnvironment) {
         EnvMessagePtr pmsg(new SetBkgndColorMessage(shared_viewer(), (void**)NULL, color));
         pmsg->callerexecute();
     }
@@ -1066,7 +1078,7 @@ void* QtCoinViewer::_drawspheres(SoSeparator* pparent, const float* ppoints, int
         
         ppoints = (float*)((char*)ppoints + stride);
     }
-
+    
     _pFigureRoot->addChild(pparent);
     return pparent;
 }
@@ -1597,6 +1609,7 @@ int QtCoinViewer::main(bool bShow)
         SoQt::show(this);
     }
     SoQt::mainLoop();
+    SetEnvironmentSync(false);
     return 0;
 }
 
@@ -1688,6 +1701,31 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
         return false;
     }
 
+    KinBodyItemPtr pKinBody = boost::dynamic_pointer_cast<KinBodyItem>(pItem);
+    KinBody::LinkPtr pSelectedLink;
+    if( !!pKinBody )
+        pSelectedLink = pKinBody->GetLinkFromIv(node);
+
+    bool bProceedSelection = true;
+
+    // check the callbacks
+    if( !!pSelectedLink ) {
+        boost::mutex::scoped_lock lock(_mutexCallbacks);
+        FOREACH(itcallback,_listRegisteredCallbacks) {
+            if( itcallback->first & VE_ItemSelection ) {
+                bool bSame;
+                {
+                    boost::mutex::scoped_lock lock(_mutexMessages);
+                    bSame = !_pMouseOverLink.expired() && KinBody::LinkPtr(_pMouseOverLink) == pSelectedLink;
+                }
+                if( bSame ) {
+                    if( !itcallback->second(pSelectedLink,_vMouseSurfacePosition,_vMouseRayDirection) )
+                        bProceedSelection = false;
+                }
+            }
+        }
+    }
+
     // try to acquire the environment lock
 #if BOOST_VERSION >= 103500
     EnvironmentMutex::scoped_try_lock lockenv(GetEnv()->GetMutex(),boost::defer_lock_t());
@@ -1706,11 +1744,7 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
         RAVELOG_WARNA("failed to grab environment lock\n");
         return false;
     }
-            
-    KinBodyItemPtr pKinBody = boost::dynamic_pointer_cast<KinBodyItem>(pItem);
-    KinBody::LinkPtr pSelectedLink;
-    if( !!pKinBody )
-        pSelectedLink = pKinBody->GetLinkFromIv(node);
+
     int jindex=-1;
 
     if( ControlDown() ) {
@@ -2039,6 +2073,13 @@ void QtCoinViewer::_Reset()
         itbody->first->SetGuiData(boost::shared_ptr<void>());
     }
     _mapbodies.clear();
+
+    std::list<std::pair<int,ViewerCallbackFn > > listRegisteredCallbacks;
+    {
+        boost::mutex::scoped_lock lock(_mutexCallbacks);
+        listRegisteredCallbacks.swap(_listRegisteredCallbacks);
+    }
+    listRegisteredCallbacks.clear();
 }
 
 void QtCoinViewer::UpdateCameraTransform()

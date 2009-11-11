@@ -815,7 +815,7 @@ class Environment : public EnvironmentBase
     virtual boost::shared_ptr<void> RegisterXMLReader(PluginType type, const std::string& xmltag, const CreateXMLReaderFn& fn)
     {
         CreateXMLReaderFn oldfn = OpenRAVEXMLParser::RegisterXMLReader(type,xmltag,fn);
-        return boost::shared_ptr<void>((void*)NULL, boost::bind(&OpenRAVEXMLParser::UnregisterXMLReader,type,xmltag,oldfn));
+        return boost::shared_ptr<void>((void*)1, boost::bind(&OpenRAVEXMLParser::UnregisterXMLReader,type,xmltag,oldfn));
     }
     
     virtual bool ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename)
@@ -1298,6 +1298,7 @@ protected:
 
         virtual bool _RecordVideo() { return false; }
 
+        virtual boost::shared_ptr<void> RegisterCallback(int properties, const ViewerCallbackFn& fncallback) { return boost::shared_ptr<void>(); }
         virtual void SetEnvironmentSync(bool) {}
 
         virtual void ViewerSetSize(int w, int h) {}

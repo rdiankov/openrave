@@ -157,6 +157,14 @@ void translate_openrave_exception(openrave_exception const& e)
     PyErr_SetString(PyExc_RuntimeError, e.what());
 }
 
+class LockPythonInterpreter
+{
+    LockPythonInterpreter() {  RAVELOG_INFOA("PIL locked2\n"); gstate = PyGILState_Ensure(); RAVELOG_INFOA("PIL locked\n");}
+    ~LockPythonInterpreter() { RAVELOG_INFOA("PIL unlocked2\n"); PyGILState_Release(gstate); RAVELOG_INFOA("PIL unlocked\n"); }
+private:
+    PyGILState_STATE gstate;
+};
+
 inline RaveVector<float> ExtractFloat3(const object& o)
 {
     return RaveVector<float>(extract<float>(o[0]), extract<float>(o[1]), extract<float>(o[2]));
@@ -1739,6 +1747,47 @@ class PyRaveViewerBase : public PyInterfaceBase
 protected:
     RaveViewerBasePtr _pviewer;
 public:
+    class PyViewerCallbackFn
+    {
+        boost::weak_ptr<PyEnvironmentBase> _pyenv;
+    public:
+        PyViewerCallbackFn(PyEnvironmentBasePtr pyenv) : _pyenv(pyenv) {}
+        void Unregister() { _p.reset(); _fncallback = object(); }
+
+        bool callback(KinBody::LinkPtr plink,RaveVector<float> position,RaveVector<float> direction)
+        {
+            if( !_fncallback )
+                return true;
+
+            object res;
+            PyGILState_STATE gstate = PyGILState_Ensure();
+            try {
+                res = _fncallback(PyKinBody::PyLinkPtr(new PyKinBody::PyLink(plink,PyEnvironmentBasePtr(_pyenv))),toPyVector3(position),toPyVector3(direction));
+            }
+            catch(...) {
+                RAVELOG_ERRORA("exception occured in python viewer callback\n");
+            }
+            PyGILState_Release(gstate);
+            if( !res ) {
+                RAVELOG_WARNA("python viewer callback failed\n");
+                return true;
+            }
+            extract<bool> xb(res);
+            if( xb.check() )
+                return (bool)xb;
+            extract<int> xi(res);
+            if( xi.check() )
+                return (int)xi;
+            extract<double> xd(res);
+            if( xd.check() )
+                return (double)xd>0;
+            return true;
+        }
+
+        boost::shared_ptr<void> _p;
+        object _fncallback;
+    };
+
     PyRaveViewerBase(RaveViewerBasePtr pviewer, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pviewer, pyenv), _pviewer(pviewer) {}
     virtual ~PyRaveViewerBase() {}
 
@@ -1751,6 +1800,16 @@ public:
     void ViewerMove(int x, int y) { _pviewer->ViewerMove(x,y); }
     void ViewerSetTitle(const string& title) { _pviewer->ViewerSetTitle(title.c_str()); }
     bool LoadModel(const string& filename) { return _pviewer->LoadModel(filename.c_str()); }
+
+    boost::shared_ptr<PyViewerCallbackFn> RegisterCallback(RaveViewerBase::ViewerEvents properties, object fncallback)
+    {
+        boost::shared_ptr<PyViewerCallbackFn> pyfn(new PyViewerCallbackFn(GetEnv()));
+        pyfn->_fncallback = fncallback;
+        pyfn->_p = _pviewer->RegisterCallback(properties,boost::bind(&PyViewerCallbackFn::callback,pyfn,_1,_2,_3));
+        if( !pyfn->_p )
+            return boost::shared_ptr<PyViewerCallbackFn>();
+        return pyfn;
+    }
 };
 
 class PyEnvironmentBase : public boost::enable_shared_from_this<PyEnvironmentBase>
@@ -2952,14 +3011,27 @@ BOOST_PYTHON_MODULE(openravepy)
         .def("SetCollisionOptions",&PyCollisionCheckerBase::SetCollisionOptions)
         .def("GetCollisionOptions",&PyCollisionCheckerBase::GetCollisionOptions)
         ;
-    class_<PyRaveViewerBase, boost::shared_ptr<PyRaveViewerBase>, bases<PyInterfaceBase> >("Viewer", no_init)
-        .def("main",&PyRaveViewerBase::main)
-        .def("quitmainloop",&PyRaveViewerBase::quitmainloop)
-        .def("SetSize",&PyRaveViewerBase::ViewerSetSize)
-        .def("Move",&PyRaveViewerBase::ViewerMove)
-        .def("SetTitle",&PyRaveViewerBase::ViewerSetTitle)
-        .def("LoadModel",&PyRaveViewerBase::LoadModel)
-        ;
+
+
+    {
+        scope viewer = class_<PyRaveViewerBase, boost::shared_ptr<PyRaveViewerBase>, bases<PyInterfaceBase> >("Viewer", no_init)
+            .def("main",&PyRaveViewerBase::main)
+            .def("quitmainloop",&PyRaveViewerBase::quitmainloop)
+            .def("SetSize",&PyRaveViewerBase::ViewerSetSize)
+            .def("Move",&PyRaveViewerBase::ViewerMove)
+            .def("SetTitle",&PyRaveViewerBase::ViewerSetTitle)
+            .def("LoadModel",&PyRaveViewerBase::LoadModel)
+            .def("RegisterCallback",&PyRaveViewerBase::RegisterCallback)
+            ;
+
+        class_<PyRaveViewerBase::PyViewerCallbackFn, boost::shared_ptr<PyRaveViewerBase::PyViewerCallbackFn> >("ViewerCallbackFn",no_init)
+            .def("Unregister",&PyRaveViewerBase::PyViewerCallbackFn::Unregister)
+            ;
+
+        enum_<RaveViewerBase::ViewerEvents>("ViewerEvents")
+            .value("ItemSelection",RaveViewerBase::VE_ItemSelection)
+            ;
+    }
 
     bool (PyEnvironmentBase::*pcolb)(PyKinBodyPtr) = &PyEnvironmentBase::CheckCollision;
     bool (PyEnvironmentBase::*pcolbr)(PyKinBodyPtr, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
