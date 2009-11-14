@@ -1319,8 +1319,11 @@ public:
         PySensorBasePtr GetSensor() { return PySensorBasePtr(new PySensorBase(_pattached->GetSensor(),_pyenv)); }
         PyLinkPtr GetAttachingLink() const { return PyLinkPtr(new PyLink(_pattached->GetAttachingLink(), _pyenv)); }
         object GetRelativeTransform() const { return ReturnTransform(_pattached->GetRelativeTransform()); }
+        object GetTransform() const { return ReturnTransform(_pattached->GetTransform()); }
         PyRobotBasePtr GetRobot() const { return PyRobotBasePtr(new PyRobotBase(_pattached->GetRobot(), _pyenv)); }
         string GetName() const { return _pattached->GetName(); }
+
+        void SetRelativeTransform(object transform) { _pattached->SetRelativeTransform(ExtractTransform(transform)); }
     };
 
     class PyGrabbed
@@ -1859,10 +1862,9 @@ public:
             _penv->AttachViewer(RaveViewerBasePtr());
         }
         _bShutdown = true;
-        if( !!_threadviewer ) {
+        if( !!_threadviewer )
             _threadviewer->join();
-            _threadviewer.reset();
-        }
+        _threadviewer.reset();
     }
 
     void Reset() { _penv->Reset(); }
@@ -2340,10 +2342,9 @@ public:
 
     bool SetViewer(const string& viewername, bool showviewer=true)
     {
-        if( !!_threadviewer ) { // wait for the viewer
+        if( !!_threadviewer ) // wait for the viewer
             _threadviewer->join();
-            _threadviewer.reset();
-        }        
+        _threadviewer.reset();
         
         _penv->AttachViewer(RaveViewerBasePtr());
 
@@ -2910,8 +2911,10 @@ BOOST_PYTHON_MODULE(openravepy)
             .def("GetSensor",&PyRobotBase::PyAttachedSensor::GetSensor)
             .def("GetAttachingLink",&PyRobotBase::PyAttachedSensor::GetAttachingLink)
             .def("GetRelativeTransform",&PyRobotBase::PyAttachedSensor::GetRelativeTransform)
+            .def("GetTransform",&PyRobotBase::PyAttachedSensor::GetTransform)
             .def("GetRobot",&PyRobotBase::PyAttachedSensor::GetRobot)
             .def("GetName",&PyRobotBase::PyAttachedSensor::GetName)
+            .def("SetRelativeTransform",&PyRobotBase::PyAttachedSensor::SetRelativeTransform)
             ;
 
         class_<PyRobotBase::PyGrabbed, boost::shared_ptr<PyRobotBase::PyGrabbed> >("Grabbed",no_init)

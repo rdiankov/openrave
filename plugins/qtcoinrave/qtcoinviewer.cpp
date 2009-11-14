@@ -73,6 +73,7 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     _bAVIInit = false;
     pToggleDynamicSimulation = NULL;
     _pToggleDebug = NULL;
+    _bInIdleThread = false;
 
     //vlayout = new QVBoxLayout(this);
     view1 = new QGroupBox(this);
@@ -850,6 +851,14 @@ void QtCoinViewer::Reset()
         EnvMessagePtr pmsg(new ResetMessage(shared_viewer(), (void**)NULL));
         pmsg->callerexecute();
     }
+}
+
+boost::shared_ptr<void> QtCoinViewer::LockGUI()
+{
+    boost::shared_ptr<boost::mutex::scoped_lock> lock(new boost::mutex::scoped_lock(_mutexGUI));
+    while(!_bInIdleThread)
+        Sleep(1);
+    return lock;
 }
     
 class SetBkgndColorMessage : public QtCoinViewer::EnvMessage
@@ -1857,7 +1866,14 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
     static uint32_t basetime = timeGetTime();
     static uint32_t nFrame = 0;
     static float fFPS = 0;
+
     
+//    {
+//        _bInIdleThread = true;
+//        boost::mutex::scoped_lock lock(_mutexGUI);
+//        _bInIdleThread = false;
+//    }
+
     if( --nToNextFPSUpdate <= 0 ) {
         uint32_t newtime = timeGetTime();
         fFPS = UPDATE_FRAMES * 1000.0f / (float)max((int)(newtime-basetime),1);

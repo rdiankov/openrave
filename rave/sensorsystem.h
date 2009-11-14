@@ -20,69 +20,152 @@ namespace OpenRAVE {
 
 /// used to manage objects through a sensor system.
 ///
-/// New objects can be created, existing objects can be updated.
+/// New objects can be created, existing objects can be updated. Every managed
+/// object should set the kinbody's Manager pointer
 class SensorSystemBase : public InterfaceBase
 {
 public:
-    class BodyBase
-    {
-    public:
-        virtual ~BodyBase() {}
-
-        /// returns a pointer to the data used to initialize the BODY with AddKinBody.
-        /// if psize is not NULL, will be filled with the size of the data in bytes
-        /// This function will be used to restore bodies that were removed
-        virtual boost::shared_ptr<void> GetData() const = 0;
-
-        /// particular link that sensor system is tracking.
-        /// All transformations describe this link.
-        virtual KinBody::LinkPtr GetOffsetLink() const = 0;
-
-        /// true if the object is being updated by the system due to its presence in the real environment
-        virtual bool IsPresent() const = 0;
-
-        /// true if should update openrave body
-        virtual bool IsEnabled() const = 0;
-
-        /// if true, the vision system should not destroy this object once it stops being present
-        virtual bool IsLocked() const = 0;
-
-        /// set a lock on a particular body
-        virtual bool Lock(bool bDoLock) = 0;
-    };
-    typedef boost::shared_ptr<BodyBase> BodyBasePtr;
-    typedef boost::shared_ptr<BodyBase const> BodyBaseConstPtr;
-
     SensorSystemBase(EnvironmentBasePtr penv) : InterfaceBase(PT_SensorSystem, penv) {}
     virtual ~SensorSystemBase() {}
 
-    /// initializes the sensor system
-    /// \param args string of arguments
-    virtual bool Init(std::istream& sinput) = 0;
-    virtual void Destroy() = 0;
+    /// resets the system and stops managing all objects. Any objects that are not locked, are deleted
+    virtual void Reset() = 0;
 
     /// automatically register bodies that have some type of SensorSystem data (usually done through xml)
     virtual void AddRegisteredBodies(const std::vector<KinBodyPtr>& vbodies) = 0;
 
     /// add body for registering with sensor system
     /// pdata is a pointer to a data structor holding tracking/registration information for the system
-    virtual BodyBasePtr AddKinBody(KinBodyPtr pbody, boost::shared_ptr<void> pdata) = 0;
+    virtual KinBody::ManageDataPtr AddKinBody(KinBodyPtr pbody, XMLReadableConstPtr pdata) = 0;
     /// remove body from sensory system. If bDestroy is true, will also deallocate the memory
     virtual bool RemoveKinBody(KinBodyPtr pbody) = 0;
     /// returns true if body is present
     virtual bool IsBodyPresent(KinBodyPtr pbody) = 0;
     /// enable/disable a body from being updated by the sensor system
     virtual bool EnableBody(KinBodyPtr pbody, bool bEnable) = 0;
-    /// get a pointer to the BODYBASE struct (can be also used for checking inclusion)
-    virtual BodyBasePtr GetBody(KinBodyPtr pbody) = 0;
 
     /// switches the registrations of two bodies. Can be used to quickly change the models of the current bodies
     /// \param pbody1 First body to switch
     /// \param pbody2 Second body to switch
     virtual bool SwitchBody(KinBodyPtr pbody1, KinBodyPtr pbody2) = 0;
 
+protected:
+	virtual void SetManageData(KinBodyPtr pbody, KinBody::ManageDataPtr data) {
+        pbody->SetManageData(data);
+	}
+
 private:
     virtual const char* GetHash() const { return OPENRAVE_SENSORSYSTEM_HASH; }
+};
+
+/// A very simple sensor system example that manages raw detection data
+class SimpleSensorSystem : public SensorSystemBase
+{
+public:
+    class XMLData : public XMLReadable {
+    public:
+    XMLData(const std::string& xmlid) : XMLReadable(xmlid) {}
+        virtual void copy(boost::shared_ptr<XMLData const> pdata) { *this = *pdata; }
+
+        std::string sid; ///< global id for the system id 
+        int id;
+        std::string strOffsetLink; ///< the link where the markers are attached (if any)
+        Transform transOffset,transPreOffset; // final offset = transOffset * transReturnedFromVision * transPreOffset
+
+        friend class SimpleSensorSystem;
+    };
+
+    class BodyData : public KinBody::ManageData {
+    public:
+    BodyData(SensorSystemBasePtr psensorsystem, KinBodyPtr pbody, boost::shared_ptr<XMLData> initdata) : KinBody::ManageData(psensorsystem), _initdata(initdata), bPresent(false), bEnabled(true), bLock(false)
+        {
+            SetBody(pbody);
+        }
+
+        virtual XMLReadableConstPtr GetData() const { return _initdata; }
+        virtual KinBody::LinkPtr GetOffsetLink() const { return KinBody::LinkPtr(_plink); }
+
+        virtual bool IsPresent() const { return bPresent; }
+        virtual bool IsEnabled() const { return bEnabled; }
+        virtual bool IsLocked() const { return bLock; }
+        virtual bool Lock(bool bDoLock) { bLock = bDoLock; return true; }
+
+        virtual int GetId() { return _initdata->id; }
+        virtual const std::string& GetSid() { return _initdata->sid; }
+        virtual const Transform& GetRecentTransform() { return tnew; }
+
+    protected:
+        virtual void SetBody(KinBodyPtr pbody)
+        {
+            KinBody::LinkPtr plink;
+            if( _initdata->strOffsetLink.size() > 0 )
+                plink = pbody->GetLink(_initdata->strOffsetLink);
+            if( !plink )
+                plink = pbody->GetLinks().front();
+            _plink = plink;
+        }
+
+        boost::shared_ptr<XMLData> _initdata;
+        uint64_t lastupdated;
+        Transform tnew; ///< most recent transform that is was set
+
+        bool bPresent; 
+        bool bEnabled; 
+        bool bLock;
+
+        KinBody::LinkWeakPtr _plink;
+        friend class SimpleSensorSystem;
+    };
+
+    class SimpleXMLReader : public BaseXMLReader
+    {
+    public:
+        SimpleXMLReader(boost::shared_ptr<XMLData>);
+        virtual XMLReadablePtr GetReadable() { return _pdata; }
+        virtual void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts);
+        virtual bool endElement(const std::string& name);
+        virtual void characters(const std::string& ch);
+
+    protected:
+        boost::shared_ptr<XMLData> _pdata;
+        BaseXMLReaderPtr _pcurreader;
+        std::stringstream ss;
+    };
+
+    /// registers the XML reader, do not call in the constructor of this class!
+    static boost::shared_ptr<void> RegisterXMLReaderId(EnvironmentBasePtr penv, const std::string& xmlid);
+
+    SimpleSensorSystem(const std::string& xmlid, EnvironmentBasePtr penv);
+    virtual ~SimpleSensorSystem();
+
+    virtual void Reset();
+    
+    virtual void AddRegisteredBodies(const std::vector<KinBodyPtr>& vbodies);
+    virtual KinBody::ManageDataPtr AddKinBody(KinBodyPtr pbody, XMLReadableConstPtr pdata);
+
+    virtual bool RemoveKinBody(KinBodyPtr pbody);
+    virtual bool IsBodyPresent(KinBodyPtr pbody);
+    virtual bool EnableBody(KinBodyPtr pbody, bool bEnable);
+    virtual bool SwitchBody(KinBodyPtr pbody1, KinBodyPtr pbody2);
+
+protected:
+    typedef std::pair<boost::shared_ptr<BodyData>, Transform > SNAPSHOT;
+    typedef std::map<int,boost::shared_ptr<BodyData> > BODIES;
+    virtual boost::shared_ptr<BodyData> CreateBodyData(KinBodyPtr pbody, boost::shared_ptr<XMLData const> pdata);
+    virtual void _UpdateBodies(std::list<SNAPSHOT>& listbodies);
+    virtual void _UpdateBodiesThread();
+
+    virtual void SetRecentTransform(boost::shared_ptr<BodyData> pdata, const Transform& t) { pdata->tnew = t; }
+
+    /// creates a reader to parse the data
+    static BaseXMLReaderPtr CreateXMLReaderId(const std::string& xmlid, InterfaceBasePtr ptr, const std::list<std::pair<std::string,std::string> >& atts);
+
+    std::string _xmlid;
+    BODIES _mapbodies;
+    boost::mutex _mutex;
+    uint64_t _expirationtime; ///< expiration time in us
+    bool _bShutdown;
+    boost::thread _threadUpdate;
 };
 
 } // end namespace OpenRAVE

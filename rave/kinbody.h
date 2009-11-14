@@ -307,7 +307,8 @@ public:
     typedef boost::shared_ptr<Joint> JointPtr;
     typedef boost::shared_ptr<Joint const> JointConstPtr;
 
-    // gets the state of all bodies that should be published to the GUI
+    /// Holds the state of the current body that is published in a thread safe way
+    /// from the environment without requiring locking the environment.
     class BodyState
     {
     public:
@@ -321,6 +322,45 @@ public:
     };
     typedef boost::shared_ptr<BodyState> BodyStatePtr;
     typedef boost::shared_ptr<BodyState const> BodyStateConstPtr;
+
+    /// Access point of the sensor system that manages the body.
+    class ManageData
+    {
+    public:
+    ManageData(SensorSystemBasePtr psensorsystem) : _psensorsystem(psensorsystem) {}
+        virtual ~ManageData() {}
+
+        virtual SensorSystemBasePtr GetSystem() { return SensorSystemBasePtr(_psensorsystem); }
+
+        /// returns a pointer to the data used to initialize the BODY with AddKinBody.
+        /// if psize is not NULL, will be filled with the size of the data in bytes
+        /// This function will be used to restore bodies that were removed
+        virtual XMLReadableConstPtr GetData() const = 0;
+
+        /// particular link that sensor system is tracking.
+        /// All transformations describe this link.
+        virtual KinBody::LinkPtr GetOffsetLink() const = 0;
+
+        /// true if the object is being updated by the system due to its presence in the real environment
+        virtual bool IsPresent() const = 0;
+
+        /// true if should update openrave body
+        virtual bool IsEnabled() const = 0;
+
+        /// if true, the vision system should not destroy this object once it stops being present
+        virtual bool IsLocked() const = 0;
+
+        /// set a lock on a particular body
+        virtual bool Lock(bool bDoLock) = 0;
+
+    private:
+        /// the system that owns this class, note that it is a weak pointer in order because
+        /// this object is managed by the sensor system and should be deleted when it goes out of scope.
+        SensorSystemBaseWeakPtr _psensorsystem;
+    };
+
+    typedef boost::shared_ptr<ManageData> ManageDataPtr;
+    typedef boost::shared_ptr<ManageData const> ManageDataConstPtr;
 
     /// Helper class to save the entire kinbody state
     class KinBodyStateSaver
@@ -500,6 +540,7 @@ public:
     
     virtual boost::shared_ptr<void> GetPhysicsData() const { return _pPhysicsData; }
     virtual boost::shared_ptr<void> GetCollisionData() const { return _pCollisionData; }
+    virtual ManageDataPtr GetManageData() const { return _pManageData; }
 
     /// The stamp is used by the collision checkers, physics engines, or any other item
     /// that needs to keep track of any changes of the KinBody as it moves.
@@ -525,6 +566,7 @@ protected:
     /// specific data about physics engine, should be set only by the current PhysicsEngineBase
     virtual void SetPhysicsData(boost::shared_ptr<void> pdata) { _pPhysicsData = pdata; }
     virtual void SetCollisionData(boost::shared_ptr<void> pdata) { _pCollisionData = pdata; }
+    virtual void SetManageData(ManageDataPtr pdata) { _pManageData = pdata; }
 
     virtual void ComputeJointHierarchy();
     virtual void ParametersChanged(int parmameters);
@@ -562,6 +604,7 @@ protected:
     boost::shared_ptr<void> _pGuiData;                        ///< GUI data to let the viewer store specific graphic handles for the object
     boost::shared_ptr<void> _pPhysicsData;                ///< data set by the physics engine
     boost::shared_ptr<void> _pCollisionData; ///< internal collision model
+    ManageDataPtr _pManageData;
 
     std::list<std::pair<int,boost::function<void()> > > _listRegisteredCallbacks; ///< callbacks to call when particular properties of the body change.
 
@@ -586,6 +629,7 @@ private:
 
     friend class PhysicsEngineBase;
     friend class CollisionCheckerBase;
+    friend class SensorSystemBase;
 };
 
 } // end namespace OpenRAVE

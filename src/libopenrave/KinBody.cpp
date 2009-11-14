@@ -406,19 +406,16 @@ Transform KinBody::Link::GetTransform() const
 
 void KinBody::Link::SetForce(const Vector& force, const Vector& pos, bool bAdd)
 {
-    assert( GetParent()->GetEnv() != NULL );
     GetParent()->GetEnv()->GetPhysicsEngine()->SetBodyForce(shared_from_this(), force, pos, bAdd);
 }
 
 void KinBody::Link::SetTorque(const Vector& torque, bool bAdd)
 {
-    assert( GetParent()->GetEnv() != NULL );
     GetParent()->GetEnv()->GetPhysicsEngine()->SetBodyTorque(shared_from_this(), torque, bAdd);
 }
 
 KinBody::Joint::Joint(KinBodyPtr parent)
 {
-    assert( parent != NULL );
     _parent = parent;
     vMimicCoeffs.resize(2); vMimicCoeffs[0] = 1; vMimicCoeffs[1] = 0;
     nMimicJointIndex = -1;
@@ -449,7 +446,7 @@ int KinBody::Joint::GetDOF() const
 void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
 {
     Transform tjoint;
-    if ( bodies[1] != NULL && !bodies[1]->IsStatic() )
+    if ( !!bodies[1] && !bodies[1]->IsStatic() ) 
         tjoint = tinvLeft * bodies[0]->GetTransform().inverse() * bodies[1]->GetTransform() * tinvRight;
     else
         tjoint = tinvLeft * GetParent()->GetTransform().inverse() * bodies[0]->GetTransform() * tinvRight;
@@ -504,9 +501,9 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
 
 Vector KinBody::Joint::GetAnchor() const
 {
-    if( bodies[0] == NULL )
+    if( !bodies[0] )
         return vanchor;
-    else if( bodies[1] != NULL && bodies[1]->IsStatic() )
+    else if( !!bodies[1] && bodies[1]->IsStatic() )
         return bodies[1]->GetTransform() * vanchor;
     else
         return bodies[0]->GetTransform() * vanchor;
@@ -515,9 +512,9 @@ Vector KinBody::Joint::GetAnchor() const
 Vector KinBody::Joint::GetAxis(int iaxis ) const
 {
     assert(iaxis >= 0 && iaxis < 3 );
-    if( bodies[0] == NULL )
+    if( !bodies[0] )
         return vAxes[iaxis];
-    else if( bodies[1] != NULL && bodies[1]->IsStatic() )
+    else if( !!bodies[1] && bodies[1]->IsStatic() )
         return bodies[1]->GetTransform().rotate(vAxes[iaxis]);
     else
         return bodies[0]->GetTransform().rotate(vAxes[iaxis]);
@@ -609,6 +606,7 @@ void KinBody::Destroy()
     _pGuiData.reset();
     _pPhysicsData.reset();
     _pCollisionData.reset();
+    _pManageData.reset();
     _listRegisteredCallbacks.clear();
 }
 
@@ -825,7 +823,7 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
                     (*itjoint)->GetVelocities(vjointvel);
 
                 LinkPtr* bodies = (*itjoint)->bodies;
-                if( bodies[0] != NULL && bodies[1] != NULL && !bodies[1]->IsStatic()) {
+                if( !!bodies[0] && !!bodies[1] && !bodies[1]->IsStatic()) {
                     if( bodies[0]->userdata ) {
                         if( !bodies[1]->userdata ) {
                             Vector w,v;
@@ -897,7 +895,7 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
                         numleft--;
                     }
                 }
-                else if( bodies[0] != NULL && !bodies[0]->userdata ) {
+                else if( !!bodies[0] && !bodies[0]->userdata ) {
                     Vector w,v;
                     // joint attached to static environment (it will never be [1])
                     switch((*itjoint)->GetType()) {
@@ -1218,7 +1216,7 @@ void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, bool bCheck
                     }
                 }
 
-                if( bodies[0] != NULL && bodies[1] != NULL && !bodies[1]->IsStatic()) {
+                if( !!bodies[0] && !!bodies[1] && !bodies[1]->IsStatic()) {
                     if( bodies[0]->userdata ) {
                         if( !bodies[1]->userdata ) {
                             Transform tjoint;
@@ -1301,7 +1299,7 @@ void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, bool bCheck
                         numleft--;
                     }
                 }
-                else if( bodies[0] != NULL && !bodies[0]->userdata ) {
+                else if( !!bodies[0] && !bodies[0]->userdata ) {
 
                     Transform tjoint;
                     axis = (*itjoint)->vAxes[0];
@@ -1572,9 +1570,8 @@ void KinBody::ComputeJointHierarchy()
             char* pvalues = &_vecJointHierarchy[!bIsPassive ? itjoint->second*_veclinks.size() : itjoint->first->GetMimicJointIndex() * _veclinks.size()];
 
             LinkPtr* bodies = itjoint->first->bodies;
-            if( bodies[0] != NULL ) {
-                
-                if( bodies[1] != NULL ) {
+            if( !!bodies[0] ) {
+                if( !!bodies[1] ) {
 
                     if( bodies[0]->userdata ) {
                         
@@ -1638,7 +1635,7 @@ void KinBody::ComputeJointHierarchy()
     _setNonAdjacentLinks.clear();  
 
     FOREACH(itj, _vecjoints) {
-        if( (*itj)->bodies[0] != NULL && (*itj)->bodies[1] != NULL ) {
+        if( !!(*itj)->bodies[0] && !!(*itj)->bodies[1] ) {
             int ind0 = (*itj)->bodies[0]->GetIndex();
             int ind1 = (*itj)->bodies[1]->GetIndex();
             if( ind1 < ind0 ) _setAdjacentLinks.insert(ind1|(ind0<<16));
@@ -1649,7 +1646,7 @@ void KinBody::ComputeJointHierarchy()
     FOREACH(itadj, _vForcedAdjacentLinks) {
         LinkPtr pl0 = GetLink(itadj->first.c_str());
         LinkPtr pl1 = GetLink(itadj->second.c_str());
-        if( pl0 != NULL && pl1 != NULL ) {
+        if( !!pl0 && !!pl1 ) {
             int ind0 = pl0->GetIndex();
             int ind1 = pl1->GetIndex();
             if( ind1 < ind0 ) _setAdjacentLinks.insert(ind1|(ind0<<16));
@@ -1733,7 +1730,7 @@ void KinBody::WriteForwardKinematics(std::ostream& f)
 
                 LinkPtr* bodies = (*itjoint)->bodies;
 
-                if( bodies[0] != NULL && bodies[1] != NULL && !bodies[1]->IsStatic()) {
+                if( !!bodies[0] && !!bodies[1] && !bodies[1]->IsStatic()) {
                     if( bodies[0]->userdata ) {
                         if( !bodies[1]->userdata ) {
                             // init 1 from 0
@@ -1819,7 +1816,7 @@ void KinBody::WriteForwardKinematics(std::ostream& f)
                         numleft--;
                     }
                 }
-                else if( bodies[0] != NULL && !bodies[0]->userdata ) {
+                else if( !!bodies[0] && !bodies[0]->userdata ) {
 
                     // joint attached to static environment (it will never be [1])
                     switch( (*itjoint)->GetType() ) {
@@ -2012,9 +2009,9 @@ bool KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         JointPtr pnewjoint(new Joint(shared_kinbody()));
         *pnewjoint = **itjoint; // be careful of copying pointers!
         pnewjoint->_parent = shared_kinbody();
-        if( (*itjoint)->bodies[0] != NULL )
+        if( !!(*itjoint)->bodies[0] )
             pnewjoint->bodies[0] = _veclinks[(*itjoint)->bodies[0]->GetIndex()];
-        if( (*itjoint)->bodies[1] != NULL )
+        if( !!(*itjoint)->bodies[1] )
             pnewjoint->bodies[1] = _veclinks[(*itjoint)->bodies[1]->GetIndex()];
         _vecjoints.push_back(pnewjoint);
     }
@@ -2024,9 +2021,9 @@ bool KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         JointPtr pnewjoint(new Joint(shared_kinbody()));
         *pnewjoint = **itjoint; // be careful of copying pointers!
         pnewjoint->_parent = shared_kinbody();
-        if( (*itjoint)->bodies[0] != NULL )
+        if( !!(*itjoint)->bodies[0] )
             pnewjoint->bodies[0] = _veclinks[(*itjoint)->bodies[0]->GetIndex()];
-        if( (*itjoint)->bodies[1] != NULL )
+        if( !!(*itjoint)->bodies[1] )
             pnewjoint->bodies[1] = _veclinks[(*itjoint)->bodies[1]->GetIndex()];
         _vecPassiveJoints.push_back(pnewjoint);
     }

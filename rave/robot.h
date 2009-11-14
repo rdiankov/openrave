@@ -157,8 +157,9 @@ public:
         virtual ~AttachedSensor();
         
         virtual SensorBasePtr GetSensor() const { return psensor; }
-        virtual LinkPtr GetAttachingLink() const { return pattachedlink; }
+        virtual LinkPtr GetAttachingLink() const { return LinkPtr(pattachedlink); }
         virtual Transform GetRelativeTransform() const { return trelative; }
+        virtual Transform GetTransform() const { return LinkPtr(pattachedlink)->GetTransform()*trelative; }
         virtual RobotBasePtr GetRobot() const { return RobotBasePtr(_probot); }
         virtual const std::string& GetName() const { return _name; }
 
@@ -170,7 +171,7 @@ public:
     private:
         RobotBaseWeakPtr _probot;
         SensorBasePtr psensor;
-        LinkPtr pattachedlink; ///< the robot link that the sensor is attached to
+        LinkWeakPtr pattachedlink; ///< the robot link that the sensor is attached to
         Transform trelative; ///< relative transform of the sensor with respect to the attached link
         SensorBase::SensorDataPtr pdata; ///< pointer to a preallocated data struct using psensor->CreateSensorData()
         std::string _name; ///< name of the attached sensor

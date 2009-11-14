@@ -62,6 +62,7 @@
 #include <boost/tuple/tuple.hpp>
 #include <boost/enable_shared_from_this.hpp> 
 #include <boost/thread/mutex.hpp>
+#include <boost/thread/thread.hpp>
 #include <boost/thread/recursive_mutex.hpp>
 #include <boost/static_assert.hpp>
 
@@ -906,14 +907,16 @@ void RaveRandomDouble(int n, std::vector<double>& v);
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::PluginType)
 
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::ProblemInstance)
-BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::CmdProblemInstance)
-BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::SensorSystemBase)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::ControllerBase)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::PlannerBase)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::PlannerBase::PlannerParameters)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::IkSolverBase)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::SensorBase)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::SensorBase::SensorData)
+BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::SensorSystemBase)
+BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::SimpleSensorSystem)
+BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::SimpleSensorSystem::XMLData)
+BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::IkSolverBase)
 BOOST_TYPEOF_REGISTER_TEMPLATE(OpenRAVE::RaveVector, 1)
 BOOST_TYPEOF_REGISTER_TEMPLATE(OpenRAVE::RaveTransform, 1)
 BOOST_TYPEOF_REGISTER_TEMPLATE(OpenRAVE::RaveTransformMatrix, 1)
@@ -924,6 +927,8 @@ BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::KinBody::Link)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::KinBody::Link::GEOMPROPERTIES)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::KinBody::Link::TRIMESH)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::KinBody::KinBodyStateSaver)
+BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::KinBody::BodyState)
+BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::KinBody::ManageData)
 
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::RobotBase)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::RobotBase::Manipulator)

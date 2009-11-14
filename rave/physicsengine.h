@@ -112,12 +112,10 @@ public:
     virtual void SimulateStep(dReal fTimeElapsed)=0;
     
 protected:
-    virtual const char* GetHash() const { return OPENRAVE_PHYSICSENGINE_HASH; }
+	virtual void SetPhysicsData(KinBodyPtr pbody, boost::shared_ptr<void> data) { pbody->SetPhysicsData(data); }
 
-	virtual void SetPhysicsData(KinBodyPtr pbody, boost::shared_ptr<void> data) {
-		if( !!pbody )
-			pbody->SetPhysicsData(data);
-	}
+private:
+    virtual const char* GetHash() const { return OPENRAVE_PHYSICSENGINE_HASH; }
 };
 
 } // end namespace OpenRAVE

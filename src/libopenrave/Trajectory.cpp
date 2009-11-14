@@ -91,12 +91,12 @@ bool TrajectoryBase::CalcTrajTiming(RobotBaseConstPtr pRobot, InterpEnum interpo
     if( _vecpoints.size() == 0 )
         return false;
 
-    if( pRobot == NULL && bAutoCalcTiming ) {
+    if( !pRobot && bAutoCalcTiming ) {
         RAVELOG_WARNA("need to specify a robot if calculating trajectory timings\n");
         return false;
     }
 
-    if( pRobot != NULL ) {
+    if( !!pRobot ) {
         if( bActiveDOFs ) {
             if( pRobot->GetActiveDOF() != GetDOF() ) {
                 RAVELOG_WARNA("trajectory has different degrees of freedom %d != %d\n", pRobot->GetActiveDOF(), GetDOF());
@@ -1095,7 +1095,7 @@ bool TrajectoryBase::Read(std::istream& f, RobotBasePtr robot)
 
     Reset(dof);
     Transform tbody;
-    if( robot != NULL )
+    if( !!robot )
         tbody = robot->GetTransform();
 
     _vecpoints.resize(size);

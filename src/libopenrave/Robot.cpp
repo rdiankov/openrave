@@ -318,7 +318,7 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const AttachedSen
     psensor.reset();
     pdata.reset();
     pattachedlink.reset();
-    if( sensor.psensor != NULL ) {
+    if( !!sensor.psensor ) {
         psensor = probot->GetEnv()->CreateSensor(sensor.psensor->GetXMLId());
         if( !!psensor ) {
             psensor->Clone(sensor.psensor,cloningoptions);
@@ -327,7 +327,7 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const AttachedSen
         }
     }
     
-    int index = sensor.pattachedlink->GetIndex();
+    int index = LinkPtr(sensor.pattachedlink)->GetIndex();
     if( index >= 0 && index < (int)probot->GetLinks().size())
         pattachedlink = probot->GetLinks()[index];
 }
@@ -457,8 +457,8 @@ void RobotBase::_UpdateGrabbedBodies()
 void RobotBase::_UpdateAttachedSensors()
 {
     FOREACH(itsensor, _vecSensors) {
-        if( !!(*itsensor)->psensor && !!(*itsensor)->pattachedlink )
-            (*itsensor)->psensor->SetTransform((*itsensor)->pattachedlink->GetTransform()*(*itsensor)->trelative);
+        if( !!(*itsensor)->psensor && !(*itsensor)->pattachedlink.expired() )
+            (*itsensor)->psensor->SetTransform(LinkPtr((*itsensor)->pattachedlink)->GetTransform()*(*itsensor)->trelative);
     }
 }
 
@@ -615,6 +615,9 @@ void RobotBase::SetActiveDOFValues(const std::vector<dReal>& values, bool bCheck
         SetJointValues(values,bCheckLimits);
         return;
     }
+
+    if( (int)values.size() != GetActiveDOF() )
+        throw openrave_exception(str(boost::format("dof not equal %d!=%d")%values.size()%GetActiveDOF()),ORE_InvalidArguments);
 
     if( (int)values.size() != GetActiveDOF() )
         throw openrave_exception(str(boost::format("dof not equal %d!=%d")%values.size()%GetActiveDOF()));
@@ -1549,10 +1552,10 @@ bool RobotBase::CheckSelfCollision(boost::shared_ptr<COLLISIONREPORT> report) co
             if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(*itlink), KinBodyConstPtr(pbody), report) ) {
                 if( !!report ) {
                     RAVELOG_DEBUGA("Self collision: (%s:%s)x(%s:%s).\n",
-                                   report->plink1!=NULL?report->plink1->GetParent()->GetName().c_str():"",
-                                   report->plink1!=NULL?report->plink1->GetName().c_str():"",
-                                   report->plink2!=NULL?report->plink2->GetParent()->GetName().c_str():"",
-                                   report->plink2!=NULL?report->plink2->GetName().c_str():"");
+                                   !!report->plink1?report->plink1->GetParent()->GetName().c_str():"",
+                                   !!report->plink1?report->plink1->GetName().c_str():"",
+                                   !!report->plink2?report->plink2->GetParent()->GetName().c_str():"",
+                                   !!report->plink2?report->plink2->GetName().c_str():"");
                 }
                 return true;
             }

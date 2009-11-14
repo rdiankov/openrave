@@ -104,6 +104,7 @@ public:
     virtual void UpdateFromModel();
 
     virtual void Reset();
+    virtual boost::shared_ptr<void> LockGUI();
 
     virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK);
     virtual bool WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension);
@@ -315,6 +316,8 @@ protected:
     bool _bLockEnvironment;
     boost::mutex _mutexUpdateModels, _mutexCallbacks;
     boost::condition _condUpdateModels; ///< signaled everytime environment models are updated
+    boost::mutex _mutexGUI;
+    bool _bInIdleThread;
 
     // toggle switches
     bool _bModelsUpdated;

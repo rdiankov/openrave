@@ -2007,16 +2007,30 @@ public:
     {
     public:
     AttachedSensorXMLReader(RobotBase::AttachedSensorPtr& psensor, RobotBasePtr probot, const std::list<std::pair<std::string,std::string> >& atts) : _psensor(psensor) {
-            if( !_psensor )
-                _psensor.reset(new RobotBase::AttachedSensor(probot));
-            
+            string name;
             FOREACHC(itatt, atts) {
                 if( itatt->first == "name" ) {
-                    _psensor->_name = itatt->second;
+                    name = itatt->second;
                 }
             }
             
-            _probot = psensor->GetRobot();
+            if( !_psensor ) {
+                // check for current sensors
+                FOREACH(itsensor,probot->GetSensors()) {
+                    if( (*itsensor)->GetName() == name ) {
+                        _psensor = *itsensor;
+                        break;
+                    }
+                }
+
+                if( !_psensor ) {
+                    _psensor.reset(new RobotBase::AttachedSensor(probot));
+                    probot->_vecSensors.push_back(_psensor);
+                }
+            }
+
+            _psensor->_name = name;
+            _probot = _psensor->GetRobot();
         }
         
         virtual void startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
@@ -2045,7 +2059,7 @@ public:
             }
             else if( xmlname == "attachedsensor" ) {
                 if( !_psensor->psensor ) {
-                    RAVELOG_WARNA("Attached robot sensor points to no real sensor!\n");
+                    RAVELOG_VERBOSEA("Attached robot sensor points to no real sensor!\n");
                 }
                 else {
                     if( !_psensor->psensor->Init(args) ) {
@@ -2054,7 +2068,7 @@ public:
                     }
                     else {
                         _psensor->pdata = _psensor->psensor->CreateSensorData();
-                        if( !_psensor->pattachedlink ) {
+                        if( _psensor->pattachedlink.expired() ) {
                             RAVELOG_INFOA("no attached link, setting to base of robot\n");
                             if( _probot->GetLinks().size() == 0 ) {
                                 RAVELOG_INFOA("robot has no links!\n");
@@ -2073,7 +2087,7 @@ public:
                 _ss >> linkname;
                 _psensor->pattachedlink = _probot->GetLink(linkname);
         
-                if( !_psensor->pattachedlink ) {
+                if( _psensor->pattachedlink.expired() ) {
                     RAVELOG_WARNA("Failed to find attached sensor link %s\n", linkname.c_str());
                     GetXMLErrorCount()++;
                 }
@@ -2114,7 +2128,6 @@ public:
     public:
     RobotXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& probot, const std::list<std::pair<std::string,std::string> >& atts, int rootoffset, int rootjoffset, int rootsoffset, int rootmoffset) : InterfaceXMLReader(penv,probot,PT_Robot,"robot",atts), rootoffset(rootoffset), rootjoffset(rootjoffset), rootsoffset(rootsoffset), rootmoffset(rootmoffset) {
             _probot = boost::static_pointer_cast<RobotBase>(_pinterface);
-            bRobotInit = false;
             FOREACH(itatt, atts) {
                 if( itatt->first == "name" )
                     _robotname = itatt->second;
@@ -2147,24 +2160,12 @@ public:
                 _pcurreader.reset(new ManipulatorXMLReader(_probot->_vecManipulators.back(), _probot, atts));
             }
             else if( xmlname == "attachedsensor" ) {
-                _probot->_vecSensors.push_back(RobotBase::AttachedSensorPtr(new RobotBase::AttachedSensor(_probot)));
-                _pcurreader.reset(new AttachedSensorXMLReader(_probot->_vecSensors.back(), _probot, atts));
+                _psensor.reset();
+                _pcurreader.reset(new AttachedSensorXMLReader(_psensor, _probot, atts));
             }
             else if( xmlname == "controller" ) {
-                string type;
-                FOREACH(itatt,atts) {
-                    if( itatt->first == "type" )
-                        type = itatt->second;
-                    else if( itatt->first == "args" )
-                        _strControllerArgs = itatt->second;
-                }
-                
-                pNewController = _probot->GetEnv()->CreateController(type);
-
-                if( !pNewController ) {
-                    RAVELOG_WARNA("Failed to find controller %s\n", type.c_str());
-                    GetXMLErrorCount()++;
-                }
+                _pcontroller.reset();
+                _pcurreader.reset(new ControllerXMLReader(_probot->GetEnv(),_pcontroller,atts,_probot));
             }
             else if( xmlname == "translation" || xmlname == "rotationmat" || xmlname == "rotationaxis" || xmlname == "quat" || xmlname == "jointvalues") {
             }
@@ -2222,24 +2223,12 @@ public:
                         RAVELOG_WARNA("jointvalues for body %s wrong number (%"PRIdS"!=%"PRIdS")\n", _probot->GetName().c_str(), _vjointvalues.size(), _probot->GetJoints().size());
                 }
 
-                if( !!pNewController ) {
-                    RAVELOG_VERBOSEA("setting controller %s, args=%s\n", pNewController->GetXMLId().c_str(), _strControllerArgs.c_str());
-                    _probot->SetController(pNewController, _strControllerArgs);
-                }
-                else if( !_probot->GetController() ) {
+                if( !_probot->GetController() ) {
                     // create a default controller
                     ControllerBasePtr pcontrol = _probot->GetEnv()->CreateController("IdealController");
                     if( !pcontrol )
                         pcontrol = _probot->GetEnv()->CreateController("ControllerPD");
-                    _probot->SetController(pcontrol,_strControllerArgs);
-                }
-                else {
-                    if( !bRobotInit && !!_probot->GetController() && _probot->GetDOF() > 0 ) {
-                        _probot->GetController()->Init(_probot,_strControllerArgs);
-                        //vector<dReal> vals;
-                        //_probot->GetJointValues(vals);
-                        //_probot->GetController()->SetDesired(&vals[0]);
-                    }
+                    _probot->SetController(pcontrol,"");
                 }
 
                 // forces robot to reupdate its internal objects
@@ -2280,18 +2269,18 @@ public:
 
     protected:
         RobotBasePtr _probot;
-        ControllerBasePtr pNewController; ///< controller to set the robot at
-        string _strControllerArgs, _robotname;
+        InterfaceBasePtr _pcontroller; ///< controller to set the robot at
+        string _robotname;
         string _prefix;
 
         vector<dReal> _vjointvalues;
+        RobotBase::AttachedSensorPtr _psensor;
 
         Transform _trans;
         int rootoffset;                 ///< the initial number of links when Robot is created (so that global translations and rotations only affect the new links)
         int rootjoffset; ///< the initial number of joints when Robot is created
         int rootsoffset; ///< the initial number of attached sensors when Robot is created
         int rootmoffset; ///< the initial number of manipulators when Robot is created
-        bool bRobotInit;
     };
 
     template <PluginType type> class DummyInterfaceXMLReader : public InterfaceXMLReader
@@ -2331,8 +2320,9 @@ public:
     class ControllerXMLReader : public InterfaceXMLReader
     {
     public:
-    ControllerXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pinterface, const std::list<std::pair<std::string,std::string> >& atts) : InterfaceXMLReader(penv,pinterface,PT_Controller,RaveGetInterfaceName(PT_Controller),atts)
+    ControllerXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pinterface, const std::list<std::pair<std::string,std::string> >& atts,RobotBasePtr probot=RobotBasePtr()) : InterfaceXMLReader(penv,pinterface,PT_Controller,RaveGetInterfaceName(PT_Controller),atts)
             {
+                _probot = probot;
                 FOREACH(itatt, atts) {
                     if( itatt->first == "robot" )
                         _robotname = itatt->second;
@@ -2362,15 +2352,16 @@ public:
                     _pcurreader.reset();
             }
             else if( InterfaceXMLReader::endElement(xmlname) ) {
-                RobotBasePtr probot;
-                if( _robotname.size() > 0 ) {
-                    KinBodyPtr pbody = _penv->GetKinBody(_robotname.c_str());
-                    if( pbody->IsRobot() )
-                        probot = boost::static_pointer_cast<RobotBase>(pbody);
+                if( !_probot ) {
+                    if( _robotname.size() > 0 ) {
+                        KinBodyPtr pbody = _penv->GetKinBody(_robotname.c_str());
+                        if( pbody->IsRobot() )
+                            _probot = boost::static_pointer_cast<RobotBase>(pbody);
+                    }
                 }
 
-                if( probot )
-                    probot->SetController(boost::static_pointer_cast<ControllerBase>(_pinterface),_args);
+                if( !!_probot )
+                    _probot->SetController(boost::static_pointer_cast<ControllerBase>(_pinterface),_args);
                 else
                     RAVELOG_WARNA("controller is unused\n");
                 return true;
@@ -2379,6 +2370,7 @@ public:
         }
 
         string _robotname, _args;
+        RobotBasePtr _probot;
     };
 
     class ProblemXMLReader : public InterfaceXMLReader

@@ -78,10 +78,7 @@ public:
     virtual void SetTolerance(dReal tolerance) = 0;
 
 protected:
-	virtual void SetCollisionData(KinBodyPtr pbody, boost::shared_ptr<void> data) {
-		if( !!pbody )
-			pbody->SetCollisionData(data);
-	}
+	virtual void SetCollisionData(KinBodyPtr pbody, boost::shared_ptr<void> data) { pbody->SetCollisionData(data); }
 
 private:
     virtual const char* GetHash() const { return OPENRAVE_COLLISIONCHECKER_HASH; }

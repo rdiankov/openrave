@@ -137,6 +137,8 @@ class Environment : public EnvironmentBase
 
         AddIKSolvers();
 
+        if( !!_threadSimulation )
+            _threadSimulation->join();
         _threadSimulation.reset(new boost::thread(boost::bind(&Environment::_SimulationThread,this)));
     }
 
@@ -147,6 +149,8 @@ class Environment : public EnvironmentBase
 
         // dont' join, might not return
         RAVELOG_DEBUGA("Environment destructor\n");
+        if( !!_threadSimulation )
+            _threadSimulation->join();
         _threadSimulation.reset();
 
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
@@ -1116,6 +1120,8 @@ protected:
         }
 
         AddIKSolvers();
+        if( !!_threadSimulation )
+            _threadSimulation->join();
         _threadSimulation.reset(new boost::thread(boost::bind(&Environment::_SimulationThread,this)));
     }
 
@@ -1265,6 +1271,8 @@ protected:
             // process sensors (camera images)
             Sleep(1);
         }
+
+        virtual boost::shared_ptr<void> LockGUI() { return boost::shared_ptr<void>(); }
     
         /// Retries a 24bit RGB image of dimensions width and height from the current scene
         /// extrinsic is the rotation and translation of the camera

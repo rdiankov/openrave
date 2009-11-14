@@ -156,8 +156,6 @@ class TaskManipulation : public ProblemInstance
         SensorSystemBasePtr psystem = GetEnv()->CreateSensorSystem(systemname);
         if( !psystem )
             return false;
-        if( !psystem->Init(sinput) )
-            return false;
 
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);

@@ -372,8 +372,8 @@ class SimpleTextServer : public ProblemInstance
 #endif
 #endif
 
-        _servthread.reset(new boost::thread(boost::bind(&SimpleTextServer::_listen_threadcb,shared_server())));
-        _workerthread.reset(new boost::thread(boost::bind(&SimpleTextServer::_worker_threadcb,shared_server())));
+        _servthread.reset(new boost::thread(boost::bind(&SimpleTextServer::_listen_threadcb,this)));
+        _workerthread.reset(new boost::thread(boost::bind(&SimpleTextServer::_worker_threadcb,this)));
         bInitThread = true;
         return 0;
     }
@@ -395,7 +395,9 @@ class SimpleTextServer : public ProblemInstance
         if( bInitThread ) {
             bCloseThread = true;
             _condWorker.notify_all();
-            _servthread->join();
+            if( !!_servthread )
+                _servthread->join();
+            _servthread.reset();
 
             FOREACH(it, _listReadThreads) {
                 _condWorker.notify_all();
@@ -403,6 +405,8 @@ class SimpleTextServer : public ProblemInstance
             }
             _listReadThreads.clear();
             _condHasWork.notify_all();
+            if( !!_workerthread )
+                _workerthread->join();
             _workerthread.reset();
 
             bCloseThread = false;

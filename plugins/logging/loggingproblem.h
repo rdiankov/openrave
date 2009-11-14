@@ -35,7 +35,9 @@ class LoggingProblem : public ProblemInstance
         bDestroyThread = true;
         bDoLog = false;
         bAbsoluteTiem = false;
-        _threadlog->join();
+        if( !!_threadlog )
+            _threadlog->join();
+        _threadlog.reset();
     }
 
     virtual int main(const string& cmd)
