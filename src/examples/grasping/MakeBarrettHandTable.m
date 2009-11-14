@@ -71,4 +71,5 @@ GraspTable = GraspTable(find(GraspStats(:,1) > 0),:);
 save('-v6',grasptablefilename,'GraspTable','robot','targetfilename');
 
 GraspTableSimple = GraspTable(:,[(end-11):end robot.grasp.joints]);
-save('-ascii',['simple_' grasptablefilename],'GraspTableSimple');
+[d,n,e] = fileparts(grasptablefilename);
+save('-ascii',fullfile(d,['simple_' n e],'GraspTableSimple');
