@@ -253,7 +253,7 @@ private:
     Transform _t;
 };
 
-bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, boost::shared_ptr<COLLISIONREPORT> report) const
+bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, CollisionReportPtr report) const
 {
     RobotBasePtr probot(_probot);
     Transform toldEE = _pEndEffector->GetTransform();
@@ -279,7 +279,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, boo
     return false;
 }
 
-bool RobotBase::Manipulator::CheckIndependentCollision(boost::shared_ptr<COLLISIONREPORT> report) const
+bool RobotBase::Manipulator::CheckIndependentCollision(CollisionReportPtr report) const
 {
     RobotBasePtr probot(_probot);
     FOREACHC(itlink, probot->GetLinks()) {
@@ -1535,7 +1535,7 @@ RobotBase::ManipulatorConstPtr RobotBase::GetActiveManipulator() const
 }
 
 /// Check if body is self colliding. Links that are joined together are ignored.
-bool RobotBase::CheckSelfCollision(boost::shared_ptr<COLLISIONREPORT> report) const
+bool RobotBase::CheckSelfCollision(CollisionReportPtr report) const
 {
     if( KinBody::CheckSelfCollision(report) )
         return true;

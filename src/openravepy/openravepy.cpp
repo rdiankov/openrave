@@ -1020,7 +1020,7 @@ public:
     int numWithinTol;
     boost::python::list contacts;
 
-    boost::shared_ptr<COLLISIONREPORT> report;
+    CollisionReportPtr report;
 };
 
 bool PyKinBody::CheckSelfCollision(PyCollisionReportPtr pReport)
@@ -1301,11 +1301,11 @@ public:
 
         bool CheckEndEffectorCollision(object otrans, PyCollisionReportPtr pReport)
         {
-            return _pmanip->CheckEndEffectorCollision(ExtractTransform(otrans),!pReport ? boost::shared_ptr<COLLISIONREPORT>() : pReport->report);
+            return _pmanip->CheckEndEffectorCollision(ExtractTransform(otrans),!pReport ? CollisionReportPtr() : pReport->report);
         }
         bool CheckIndependentCollision(PyCollisionReportPtr pReport)
         {
-            return _pmanip->CheckIndependentCollision(!pReport ? boost::shared_ptr<COLLISIONREPORT>() : pReport->report);
+            return _pmanip->CheckIndependentCollision(!pReport ? CollisionReportPtr() : pReport->report);
         }
     };
 
@@ -2195,7 +2195,7 @@ public:
             throw openrave_exception("rays object needs to be a 6xN vector\n");
 
         COLLISIONREPORT report;
-        boost::shared_ptr<COLLISIONREPORT> preport(&report,null_deleter());
+        CollisionReportPtr preport(&report,null_deleter());
 
         RAY r;
         npy_intp dims[] = {3,num};

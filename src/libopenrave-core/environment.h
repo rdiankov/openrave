@@ -515,67 +515,67 @@ class Environment : public EnvironmentBase
 
     virtual CollisionCheckerBasePtr GetCollisionChecker() const { return _pCurrentChecker; }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody1, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())
+    virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report = CollisionReportPtr())
     {
         CHECK_COLLISION_BODY(pbody1);
         return _pCurrentChecker->CheckCollision(pbody1,report);
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())
+    virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report = CollisionReportPtr())
     {
         CHECK_COLLISION_BODY(pbody1);
         CHECK_COLLISION_BODY(pbody2);
         return _pCurrentChecker->CheckCollision(pbody1,pbody2,report);
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr())
     {
         CHECK_COLLISION_BODY(plink->GetParent());
         return _pCurrentChecker->CheckCollision(plink,report);
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report = CollisionReportPtr())
     {
         CHECK_COLLISION_BODY(plink1->GetParent());
         CHECK_COLLISION_BODY(plink2->GetParent());
         return _pCurrentChecker->CheckCollision(plink1,plink2,report);
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
     {
         CHECK_COLLISION_BODY(plink->GetParent());
         CHECK_COLLISION_BODY(pbody);
         return _pCurrentChecker->CheckCollision(plink,pbody,report);
     }
     
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report = CollisionReportPtr())
     {
         CHECK_COLLISION_BODY(plink->GetParent());
         return _pCurrentChecker->CheckCollision(plink,vbodyexcluded,vlinkexcluded,report);
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())
+    virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report = CollisionReportPtr())
     {
         CHECK_COLLISION_BODY(pbody);
         return _pCurrentChecker->CheckCollision(pbody,vbodyexcluded,vlinkexcluded,report);
     }
     
-    virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())
+    virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr())
     {
         CHECK_COLLISION_BODY(plink->GetParent());
         return _pCurrentChecker->CheckCollision(ray,plink,report);
     }
-    virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())
+    virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
     {
         CHECK_COLLISION_BODY(pbody);
         return _pCurrentChecker->CheckCollision(ray,pbody,report);
     }
-    virtual bool CheckCollision(const RAY& ray, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())
+    virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report = CollisionReportPtr())
     {
         return _pCurrentChecker->CheckCollision(ray,report);
     }
 
-    virtual bool CheckSelfCollision(KinBodyConstPtr pbody, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())
+    virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
     {
         CHECK_COLLISION_BODY(pbody);
         return _pCurrentChecker->CheckCollision(pbody,report);
@@ -1210,19 +1210,19 @@ protected:
 
         virtual bool SetCollisionOptions(std::ostream& sout, std::istream& sinput) { return true; }
 
-        virtual bool CheckCollision(KinBodyConstPtr pbody1, boost::shared_ptr<COLLISIONREPORT>) { return false; }
-        virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, boost::shared_ptr<COLLISIONREPORT>) { return false; }
-        virtual bool CheckCollision(KinBody::LinkConstPtr plink, boost::shared_ptr<COLLISIONREPORT>) { return false; }
-        virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, boost::shared_ptr<COLLISIONREPORT>) { return false; }
-        virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, boost::shared_ptr<COLLISIONREPORT>) { return false; }
+        virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr) { return false; }
+        virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr) { return false; }
+        virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr) { return false; }
+        virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr) { return false; }
+        virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr) { return false; }
     
-        virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, boost::shared_ptr<COLLISIONREPORT>) { return false; }
-        virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, boost::shared_ptr<COLLISIONREPORT>) { return false; }
+        virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr) { return false; }
+        virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr) { return false; }
     
-        virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, boost::shared_ptr<COLLISIONREPORT>) { return false; }
-        virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, boost::shared_ptr<COLLISIONREPORT>) { return false; }
-        virtual bool CheckCollision(const RAY& ray, boost::shared_ptr<COLLISIONREPORT>) { return false; }
-        virtual bool CheckSelfCollision(KinBodyConstPtr pbody, boost::shared_ptr<COLLISIONREPORT>) { return false; }
+        virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr) { return false; }
+        virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr) { return false; }
+        virtual bool CheckCollision(const RAY& ray, CollisionReportPtr) { return false; }
+        virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr) { return false; }
 
         virtual void SetTolerance(dReal tolerance) {}
     };

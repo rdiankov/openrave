@@ -1522,7 +1522,7 @@ void KinBody::CalculateAngularVelocityJacobian(int index, std::vector<dReal>& vJ
     }
 }
 
-bool KinBody::CheckSelfCollision(boost::shared_ptr<COLLISIONREPORT> report) const
+bool KinBody::CheckSelfCollision(CollisionReportPtr report) const
 {
     return GetEnv()->GetCollisionChecker()->CheckSelfCollision(shared_kinbody_const(), report);
 }

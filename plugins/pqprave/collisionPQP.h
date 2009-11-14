@@ -145,14 +145,14 @@ class CollisionCheckerPQP : public CollisionCheckerBase
 
     virtual bool SetCollisionOptions(std::ostream& sout, std::istream& sinput) { return false; }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody1, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report)
     {
         std::vector<KinBodyConstPtr> vexcluded;
         vexcluded.push_back(pbody1);
         return CheckCollision(pbody1,vexcluded,std::vector<KinBody::LinkConstPtr>(),report);
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report)
     {
         std::vector<KinBodyConstPtr> vexcluded;
         std::vector<KinBodyPtr> vecbodies;
@@ -165,12 +165,12 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         return CheckCollision(pbody1,vexcluded,std::vector<KinBody::LinkConstPtr>(),report);
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report)
     {
         return CheckCollision(plink, vector<KinBodyConstPtr>(), vector<KinBody::LinkConstPtr>(),report);
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report)
     {
         //does not check for self collision
         std::vector<KinBodyConstPtr> vbodyexcluded;
@@ -196,7 +196,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         return CheckCollision(plink1, vbodyexcluded, vlinkexcluded,report);
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         //does not check for self collision
         std::vector<KinBodyConstPtr> vbodyexcluded;
@@ -212,7 +212,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         return CheckCollision(plink, vbodyexcluded, vlinkexcluded,report);
     }
     
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
     {
         if(!!report) {
             report->Reset();
@@ -286,7 +286,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
 
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
     {
         if( CheckCollisionP(pbody, vbodyexcluded, vlinkexcluded, report) )
             return true;
@@ -302,19 +302,19 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         return false;
     }
     
-    virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())
+    virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr())
     {
         throw openrave_exception("PQP collision checker does not support ray collision queries\n");
     }
-    virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())
+    virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
     {
         throw openrave_exception("PQP collision checker does not support ray collision queries\n");
     }
-    virtual bool CheckCollision(const RAY& ray, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())
+    virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report = CollisionReportPtr())
     {
         throw openrave_exception("PQP collision checker does not support ray collision queries\n");
     }
-    virtual bool CheckSelfCollision(KinBodyConstPtr pbody, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         if( pbody->GetLinks().size() <= 1 )
             return false;
@@ -343,7 +343,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
 
  private:
     // does not check attached
-    bool CheckCollisionP(KinBodyConstPtr pbody1, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, boost::shared_ptr<COLLISIONREPORT> report)
+    bool CheckCollisionP(KinBodyConstPtr pbody1, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
     {
         if(!!report ) {
             report->Reset();
@@ -437,7 +437,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         out.z = out.z + (dReal)T[2];
     }
 
-    bool DoPQP(KinBody::LinkConstPtr link1, PQP_REAL R1[3][3], PQP_REAL T1[3], KinBody::LinkConstPtr link2, PQP_REAL R2[3][3], PQP_REAL T2[3], boost::shared_ptr<COLLISIONREPORT> report)
+    bool DoPQP(KinBody::LinkConstPtr link1, PQP_REAL R1[3][3], PQP_REAL T1[3], KinBody::LinkConstPtr link2, PQP_REAL R2[3][3], PQP_REAL T2[3], CollisionReportPtr report)
     {
         if( !link1->IsEnabled() || !link2->IsEnabled() )
             return false;

@@ -21,13 +21,13 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 {
     struct COLLISIONCALLBACK
     {
-    COLLISIONCALLBACK(boost::shared_ptr<ODECollisionChecker> pchecker, boost::shared_ptr<COLLISIONREPORT> report, KinBodyConstPtr pbody, KinBody::LinkConstPtr plink) : _pchecker(pchecker), _report(report), _pbody(pbody), _plink(plink), _bCollision(false), _bOneCollision(false), fraymaxdist(0)
+    COLLISIONCALLBACK(boost::shared_ptr<ODECollisionChecker> pchecker, CollisionReportPtr report, KinBodyConstPtr pbody, KinBody::LinkConstPtr plink) : _pchecker(pchecker), _report(report), _pbody(pbody), _plink(plink), _bCollision(false), _bOneCollision(false), fraymaxdist(0)
         {
             if( !!_report )
                 _report->Reset(pchecker->GetCollisionOptions());
         }
         boost::shared_ptr<ODECollisionChecker> _pchecker;
-        boost::shared_ptr<COLLISIONREPORT> _report;
+        CollisionReportPtr _report;
         KinBodyConstPtr _pbody;
         KinBody::LinkConstPtr _plink;
         bool _bCollision;
@@ -113,7 +113,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         return odespace->EnableLink(plink,bEnable);
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         COLLISIONCALLBACK cb(shared_checker(),report,pbody,KinBody::LinkConstPtr());
         if( pbody->GetLinks().size() == 0 || !pbody->IsEnabled() ) {
@@ -140,7 +140,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         return false;
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report)
     {
         COLLISIONCALLBACK cb(shared_checker(),report,KinBodyPtr(),KinBody::LinkConstPtr());
 
@@ -162,7 +162,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         return cb._bCollision;
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report)
     {
         COLLISIONCALLBACK cb(shared_checker(),report,KinBodyPtr(),plink);
         if( !plink->IsEnabled() ) {
@@ -175,7 +175,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         return cb._bCollision;
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report)
     {
         if( !!report )
             report->Reset(_options);
@@ -236,7 +236,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         return false;
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         if( pbody->GetLinks().size() == 0 || !pbody->IsEnabled()  ) {
             RAVELOG_WARNA("body %s not valid\n", pbody->GetName().c_str());
@@ -259,7 +259,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         //    dSpaceCollide2((dGeomID)pbody->GetSpace(), plink1->GetGeom(), plink1, LinkCollisionCallback);
     }
     
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
     {
         if( vlinkexcluded.size() == 0 && vbodyexcluded.size() == 0 )
             return CheckCollision(plink,report);
@@ -270,7 +270,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         return false;
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
     {
         if( vbodyexcluded.size() == 0 && vlinkexcluded.size() == 0 )
             return CheckCollision(pbody, report);
@@ -330,7 +330,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         return cb._bCollision;
     }
     
-    virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report)
     {
         if( !!report )
             report->Reset(_options);
@@ -411,7 +411,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         return bCollision;
     }
 
-    virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         COLLISIONCALLBACK cb(shared_checker(),report,KinBodyPtr(),KinBody::LinkConstPtr());
 
@@ -435,7 +435,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         return cb._bOneCollision;
     }
 
-    virtual bool CheckCollision(const RAY& ray, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report)
     {
         COLLISIONCALLBACK cb(shared_checker(),report,KinBodyPtr(),KinBody::LinkConstPtr());
 
@@ -457,7 +457,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         return cb._bOneCollision;
     }
 
-    virtual bool CheckSelfCollision(KinBodyConstPtr pbody, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         if( pbody->GetLinks().size() <= 1 )
             return false;

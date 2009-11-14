@@ -363,6 +363,8 @@ class SensorBase;
 class CollisionCheckerBase;
 class RaveViewerBase;
 
+typedef boost::shared_ptr<COLLISIONREPORT> CollisionReportPtr;
+typedef boost::shared_ptr<COLLISIONREPORT const> CollisionReportConstPtr;
 typedef boost::shared_ptr<InterfaceBase> InterfaceBasePtr;
 typedef boost::shared_ptr<InterfaceBase const> InterfaceBaseConstPtr;
 typedef boost::weak_ptr<InterfaceBase> InterfaceBaseWeakPtr;
@@ -580,31 +582,31 @@ public:
     virtual bool SetCollisionChecker(CollisionCheckerBasePtr pchecker)=0;
     virtual CollisionCheckerBasePtr GetCollisionChecker() const =0;
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody1, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())=0;
-    virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())=0;
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())=0;
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())=0;
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())=0;
+    virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report = CollisionReportPtr())=0;
+    virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report = CollisionReportPtr())=0;
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr())=0;
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report = CollisionReportPtr())=0;
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())=0;
     
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())=0;
-    virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>())=0;
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report = CollisionReportPtr())=0;
+    virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report = CollisionReportPtr())=0;
 
     /// Check collision with a link and a ray with a specified length.
     /// \param ray holds the origin and direction. The length of the ray is the length of the direction.
     /// \param plink the link to collide with        
-    virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>()) = 0;
+    virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
     /// Check collision with a link and a ray with a specified length.
     /// \param ray holds the origin and direction. The length of the ray is the length of the direction.
     /// \param plink the link to collide with
-    virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>()) = 0;
+    virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
     /// Check collision with a body and a ray with a specified length.
     /// \param ray holds the origin and direction. The length of the ray is the length of the direction.
     /// \param pbody the kinbody to look for collisions
-    virtual bool CheckCollision(const RAY& ray, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>()) = 0;
+    virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
-    virtual bool CheckSelfCollision(KinBodyConstPtr pbody, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>()) = 0;
+    virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
     //@}
 
     ///@{ file I/O
@@ -698,46 +700,46 @@ public:
     typedef boost::shared_ptr<void> GraphHandlePtr;
 
     /// plots 3D points.
-    /// \return handle to plotted points, graph is removed when handle is reset
     /// \param ppoints array of points
     /// \param numPoints number of points to plot
     /// \param stride stride in bytes to next point, ie: nextpoint = (float*)((char*)ppoints+stride)
     /// \param fPointSize size of a point in pixels
     /// \param color the rgb color of the point. The last component of the color is used for alpha blending
     /// \param drawstyle if 0 will draw pixels. if 1, will draw 3D spheres
+    /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color = RaveVector<float>(1,0.5,0.5,1), int drawstyle = 0) = 0;
 
     /// plots 3D points. Arguments same as plot3 with one color, except has an individual color for every point
     /// \param colors An array of rgb colors of size numPoints where each channel is in [0,1].
     ///               colors+3 points to the second color.
     /// \param drawstyle if 0 will draw pixels. if 1, will draw 3D spherse
-    /// \return handle to plotted points, graph is removed when handle is reset
+    /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle = 0) = 0;
     
     /// draws a series of connected lines
     /// \param color the rgb color of the point. The last component of the color is used for alpha blending
-    /// \return handle to plotted points, graph is removed when handle is reset
+    /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color = RaveVector<float>(1,0.5,0.5,1)) = 0;
 
-    /// \return handle to plotted points, graph is removed when handle is reset
+    /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors) = 0;
 
     /// draws a list of individual lines, each specified by a succeeding pair of points
     /// \param color the rgb color of the point. The last component of the color is used for alpha blending.
-    /// \return handle to plotted points, graph is removed when handle is reset
+    /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color = RaveVector<float>(1,0.5,0.5,1)) = 0;
 
-    /// \return handle to plotted points, graph is removed when handle is reset
+    /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors) = 0;
 
     /// draws an arrow p1 is start, p2 is finish
     /// \param color the rgb color of the point. The last component of the color is used for alpha blending.
-    /// \return handle to plotted points, graph is removed when handle is reset
+    /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual GraphHandlePtr drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color = RaveVector<float>(1,0.5,0.5,1)) = 0;
     
     /// draws a box
     /// extents are half the width, height, and depth of the box
-    /// \return handle to plotted points, graph is removed when handle is reset
+    /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual GraphHandlePtr drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents) = 0;
 
     /// draws a triangle mesh, each vertices of each triangle should be counter-clockwise.
@@ -747,7 +749,7 @@ public:
     /// should be of size numTriangles. If pIndices is NULL, ppoints is assumed to contain numTriangles*3
     /// points and triangles will be rendered in list order.
     /// \param color The color of the triangle. The last component of the color is used for alpha blending
-    /// \return handle to plotted points, graph is removed when handle is reset
+    /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color) = 0;
     //@}
 

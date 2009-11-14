@@ -116,11 +116,11 @@ public:
         /// checks collision with only the gripper given its end-effector transform
         /// \param tEE the end effector transform
         /// \return true if a collision occurred
-        bool CheckEndEffectorCollision(const Transform& tEE, boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>()) const;
+        bool CheckEndEffectorCollision(const Transform& tEE, CollisionReportPtr report = CollisionReportPtr()) const;
 
         /// checks collision with the environment with all the independent links of the robot
         /// \return true if a collision occurred
-        bool CheckIndependentCollision(boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>()) const;
+        bool CheckIndependentCollision(CollisionReportPtr report = CollisionReportPtr()) const;
 
     private:
         RobotBaseWeakPtr _probot;
@@ -412,7 +412,7 @@ public:
     virtual void SimulationStep(dReal fElapsedTime);
 
     /// Check if body is self colliding. Links that are joined together are ignored.
-    virtual bool CheckSelfCollision(boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>()) const;
+    virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr()) const;
     
     /// does not clone the grabbed bodies since it requires pointers from other bodies (that might not be initialized yet)
     virtual bool Clone(InterfaceBaseConstPtr preference, int cloningoptions);

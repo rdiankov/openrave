@@ -501,7 +501,7 @@ public:
     virtual void CalculateAngularVelocityJacobian(int index, std::vector<dReal>& pfJacobian) const;
 
     /// Check if body is self colliding. Links that are joined together are ignored.
-    virtual bool CheckSelfCollision(boost::shared_ptr<COLLISIONREPORT> report = boost::shared_ptr<COLLISIONREPORT>()) const;
+    virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr()) const;
 
     /// used to attach bodies so the collision detection ignores them for planning purposes
     /// this doesn't physically attach them in any way to the bodies. So attached objects can be

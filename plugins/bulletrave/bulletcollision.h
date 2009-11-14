@@ -230,7 +230,7 @@ private:
         KinBody::LinkConstPtr _plink;
 	};
 
-    bool CheckCollisionP(btOverlapFilterCallback* poverlapfilt, boost::shared_ptr<COLLISIONREPORT> report)
+    bool CheckCollisionP(btOverlapFilterCallback* poverlapfilt, CollisionReportPtr report)
     {
         if( !!report )
             report->Reset(_options);
@@ -358,7 +358,7 @@ public:
         return bulletspace->EnableLink(plink,bEnable);
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         if( pbody->GetLinks().size() == 0 || !pbody->IsEnabled() ) {
             RAVELOG_WARNA(str(boost::format("body %s not valid\n")%pbody->GetName()));
@@ -385,7 +385,7 @@ public:
         return false;
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report)
     {
         if( pbody1->GetLinks().size() == 0 || !pbody1->IsEnabled()  ) {
             RAVELOG_WARNA(str(boost::format("body1 %s not valid\n")%pbody1->GetName()));
@@ -405,7 +405,7 @@ public:
         _kinbodycallback._pbody1 = pbody2;
         return CheckCollisionP(&_kinbodycallback, report);
     }
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report)
     {
         if( !plink->IsEnabled() ) {
             RAVELOG_WARNA(str(boost::format("calling collision on disabled link %s\n")%plink->GetName()));
@@ -419,7 +419,7 @@ public:
         return CheckCollisionP(&_linkcallback, report);
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report)
     {
         if( !plink1->IsEnabled() ) {
             RAVELOG_WARNA(str(boost::format("calling collision on disabled link1 %s\n")%plink1->GetName()));
@@ -439,7 +439,7 @@ public:
         return CheckCollisionP(&_linkcallback, report);
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         if( pbody->GetLinks().size() == 0 || !pbody->IsEnabled()  ) { // 
             RAVELOG_WARNA(str(boost::format("body %s not valid\n")%pbody->GetName()));
@@ -461,7 +461,7 @@ public:
         return CheckCollisionP(&_kinbodylinkcallback, report);
     }
     
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
     {
         RAVELOG_FATALA("This type of collision checking is not yet implemented in the Bullet collision checker.\n"); 
         BOOST_ASSERT(0);
@@ -469,7 +469,7 @@ public:
         return false;
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
     {
         if( vbodyexcluded.size() == 0 && vlinkexcluded.size() == 0 )
             return CheckCollision(pbody, report);
@@ -487,7 +487,7 @@ public:
         return CheckCollisionP(&_kinbodyexcallback, report);
     }
 
-    virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report)
     {
         if( !plink->IsEnabled() ) {
             RAVELOG_WARNA(str(boost::format("calling collision on disabled link %s\n")%plink->GetName()));
@@ -521,7 +521,7 @@ public:
 
         return bCollision;
     }    
-    virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         if( pbody->GetLinks().size() == 0 || !pbody->IsEnabled()  ) {
             RAVELOG_WARNA(str(boost::format("body %s not valid\n")%pbody->GetName()));
@@ -556,7 +556,7 @@ public:
         return bCollision;
     }
 
-    virtual bool CheckCollision(const RAY& ray, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report)
     {
         if( !!report )
             report->Reset();
@@ -586,7 +586,7 @@ public:
         return bCollision;
     }
 	
-    virtual bool CheckSelfCollision(KinBodyConstPtr pbody, boost::shared_ptr<COLLISIONREPORT> report)
+    virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         if( pbody->GetLinks().size() == 0 || !pbody->IsEnabled()  ) {
             RAVELOG_WARNA(str(boost::format("body %s not valid\n")%pbody->GetName()));

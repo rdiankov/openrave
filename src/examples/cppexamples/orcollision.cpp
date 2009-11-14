@@ -135,7 +135,7 @@ int main(int argc, char ** argv)
     probot->SetJointValues(values,true);
 
     int contactpoints = 0;
-    boost::shared_ptr<COLLISIONREPORT> report(new COLLISIONREPORT());
+    CollisionReportPtr report(new COLLISIONREPORT());
     penv->GetCollisionChecker()->SetCollisionOptions(CO_Contacts);
     if( probot->CheckSelfCollision(report) ) {
         contactpoints = (int)report->contacts.size();
