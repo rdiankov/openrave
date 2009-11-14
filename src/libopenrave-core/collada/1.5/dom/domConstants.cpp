@@ -1205,3 +1205,8 @@ DLLSPEC daeString COLLADA_ELEMENT_SCENE = "scene";
 DLLSPEC daeString COLLADA_ELEMENT_INSTANCE_PHYSICS_SCENE = "instance_physics_scene";
 DLLSPEC daeString COLLADA_ELEMENT_INSTANCE_VISUAL_SCENE = "instance_visual_scene";
 DLLSPEC daeString COLLADA_ELEMENT_INSTANCE_KINEMATICS_SCENE = "instance_kinematics_scene";
+
+//	OpenRAVE sensors
+DLLSPEC daeString COLLADA_ELEMENT_SENSOR = "sensor";
+DLLSPEC daeString COLLADA_ELEMENT_INSTANCE_SENSOR = "instance_sensor";
+DLLSPEC daeString COLLADA_ELEMENT_LIBRARY_SENSORS = "library_sensors";

@@ -157,7 +157,6 @@ public:
         return errorcount;
     }
 
-protected:
     typedef map<string, EnvironmentBase::CreateXMLReaderFn, CaseInsentiveCompare> READERSMAP;
     static map<PluginType, READERSMAP >& GetRegisteredReaders()
     {
@@ -171,6 +170,7 @@ protected:
         return mapreaders;
     }
 
+protected:
     /// the directory of the file currently parsing
     static string& GetParseDirectory() { static string s; return s; }
     /// full filename currently parsing

@@ -140,8 +140,10 @@ public:
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
         friend class OpenRAVEXMLParser;
+        friend class ColladaReader;
 #else
         friend class ::OpenRAVEXMLParser;
+        friend class ::ColladaReader;
 #endif
 #endif
         friend class RobotBase;
@@ -179,8 +181,10 @@ public:
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
         friend class OpenRAVEXMLParser;
+        friend class ColladaReader;
 #else
         friend class ::OpenRAVEXMLParser;
+        friend class ::ColladaReader;
 #endif
 #endif
         friend class RobotBase;

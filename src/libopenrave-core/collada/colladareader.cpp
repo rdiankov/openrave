@@ -57,6 +57,7 @@
 #include <sstream>
 
 #include <boost/shared_ptr.hpp>
+#include <boost/assert.hpp>
 
 class ColladaReader;
 
@@ -73,260 +74,1445 @@ using namespace std;
 #include "dae/domAny.h"
 #include "dom/domConstants.h"
 #include "dom/domTriangles.h"
+#include "dae/daeStandardURIResolver.h"
 
-class ColladaReader : public daeErrorHandler
-{
-    struct KINEMATICSBINDING
-    {
-        KINEMATICSBINDING(daeElementRef pvisualtrans, domAxis_constraintRef pkinematicaxis, dReal fjointvalue) : pvisualtrans(pvisualtrans), pkinematicaxis(pkinematicaxis), fjointvalue(fjointvalue) {
-            assert( pkinematicaxis != NULL );
+class ColladaReader: public daeErrorHandler {
+    struct KINEMATICSBINDING {
+
+        KINEMATICSBINDING(daeElementRef pvisualtrans,
+                domAxis_constraintRef pkinematicaxis, dReal fjointvalue, domKinematics_axis_infoRef dkai, domMotion_axis_infoRef dmai) :
+                    pvisualtrans(pvisualtrans), pkinematicaxis(pkinematicaxis), fjointvalue(
+                            fjointvalue), pkinematicaxisinfo(dkai), pmotionaxisinfo(dmai) {
+
+            BOOST_ASSERT( pkinematicaxis != NULL );
+
             pvisualnode = NULL;
+
             daeElement* pae = pvisualtrans->getParentElement();
-            while(pae != NULL) {
-                pvisualnode = daeSafeCast<domNode>(pae);
-                if( pvisualnode != NULL )
+
+            while (pae != NULL)
+            {
+                pvisualnode = daeSafeCast<domNode> (pae);
+
+                if (pvisualnode != NULL)
+                {
                     break;
+                }
+
                 pae = pae->getParentElement();
             }
 
-            if( pvisualnode == NULL )
-                RAVELOG_WARNA("couldn't find parent node of element id %s, sid %s\n", pkinematicaxis->getID(), pkinematicaxis->getSid());
+            if (pvisualnode == NULL)
+            {
+                RAVELOG_WARNA("couldn't find parent node of element id %s, sid %s\n",
+                        pkinematicaxis->getID(), pkinematicaxis->getSid());
+            }
         }
-        daeElementRef pvisualtrans;
-        domAxis_constraintRef pkinematicaxis;
-        dReal fjointvalue;
-        domNodeRef pvisualnode;
+
+        daeElementRef                   pvisualtrans;
+        domAxis_constraintRef   pkinematicaxis;
+        dReal                                   fjointvalue;
+        domNodeRef                      pvisualnode;
+        domKinematics_axis_infoRef  pkinematicaxisinfo;
+        domMotion_axis_infoRef          pmotionaxisinfo;
     };
 
-    struct USERDATA
-    {
-        USERDATA() {}
-        USERDATA(dReal scale) : scale(scale) {}
+    struct USERDATA {
+        USERDATA() {
+        }
+        USERDATA(dReal scale) :
+            scale(scale) {
+        }
         dReal scale;
     };
 
 public:
-    ColladaReader(EnvironmentBase* penv) : _dom(NULL), _penv(penv)
-    {
+    ColladaReader(EnvironmentBasePtr penv) :
+        _dom(NULL), _penv(penv) {
         daeErrorHandler::setErrorHandler(this);
     }
-    virtual ~ColladaReader()
-    {
+    virtual ~ColladaReader() {
         _collada.reset();
         DAE::cleanup();
     }
 
-    bool Init(const string& filename)
-    {
-        RAVELOG_VERBOSEA("init COLLADA reader version: %s, namespace: %s, filename: %s\n", COLLADA_VERSION, COLLADA_NAMESPACE, filename.c_str());
+    bool InitFromFile(const string& filename) {
+        RAVELOG_VERBOSEA(
+                "init COLLADA reader version: %s, namespace: %s, filename: %s\n",
+                COLLADA_VERSION, COLLADA_NAMESPACE, filename.c_str());
         _collada.reset(new DAE);
+
+        //  Debug
+        RAVELOG_VERBOSEA("Open file %s\n",filename.c_str());
+
         _dom = _collada->open(filename);
-        if( !_dom )
+        if (!_dom)
             return false;
 
+        //  Debug
+        RAVELOG_VERBOSEA("File Opened!!!\n");
+
         size_t maxchildren = countChildren(_dom);
-        _vuserdata.resize(0); _vuserdata.reserve(maxchildren);
-        processUserData(_dom,1);
-        RAVELOG_VERBOSEA("processed children: %d/%d\n", _vuserdata.size(), maxchildren);
+        _vuserdata.resize(0);
+        _vuserdata.reserve(maxchildren);
+
+        //  Debug
+        dReal dScale = 1.0;
+        processUserData(_dom, dScale);
+        RAVELOG_VERBOSEA("processed children: %d/%d\n", _vuserdata.size(),
+                maxchildren);
         return true;
     }
-    bool Init(const char* pdata, int len)
-    {
-        assert(0);
+    bool InitFromData(const string& pdata) {
+        BOOST_ASSERT(0);
         return false;
     }
 
-    size_t countChildren(daeElement* pelt)
-    {
+    size_t countChildren(daeElement* pelt) {
         size_t c = 1;
-        for(size_t i = 0; i < pelt->getChildren().getCount(); ++i)
+        for (size_t i = 0; i < pelt->getChildren().getCount(); ++i)
             c += countChildren(pelt->getChildren()[i]);
         return c;
     }
 
-    void processUserData(daeElement* pelt, dReal scale)
-    {
+    void processUserData(daeElement* pelt, dReal scale) {
+
         // getChild could be optimized since asset tag is supposed to appear as the first element
-        domAssetRef passet = daeSafeCast<domAsset>(pelt->getChild("asset"));
-        if( passet != NULL && passet->getUnit() != NULL )
+        domAssetRef passet = daeSafeCast<domAsset> (pelt->getChild("asset"));
+        if (passet != NULL && passet->getUnit() != NULL)
+        {
             scale = passet->getUnit()->getMeter();
+        }
 
         _vuserdata.push_back(USERDATA(scale));
         pelt->setUserData(&_vuserdata.back());
 
-        for(size_t i = 0; i < pelt->getChildren().getCount(); ++i) {
-            if( pelt->getChildren()[i] != passet )
+        for (size_t i = 0; i < pelt->getChildren().getCount(); ++i) {
+            if (pelt->getChildren()[i] != passet)
                 processUserData(pelt->getChildren()[i], scale);
         }
     }
 
-    bool Extract(EnvironmentBase* penv)
+    //  TODO :  Search axis info corresponding to the axis given
+    template <typename T,typename U>
+    const daeSmartRef<T> getAxisInfo(daeString axis, const U& axis_array)
     {
+        //  Debug
+        RAVELOG_VERBOSEA("Axis to find: %s\n",axis);
+
+        for (uint i = 0; i < axis_array.getCount(); i++)
+        {
+            if (strcmp(axis_array[i]->getAxis(),axis) == 0)
+            {
+                //  Debug
+                RAVELOG_DEBUGA("Axis found: %s\n",axis);
+                return axis_array[i];
+            }
+        }
+
+        return NULL;
+    }
+
+    /// Extract environment from a COLLADA Scene
+    /// This is the main proccess in the parser
+    bool Extract(EnvironmentBasePtr penv) {
+        bool                                        isRobot;        //  Distinguish between a Kinematic Model that is a Robot or not
+        daeString                               robotName = NULL;   //  Articulated System ID. Describes the Robot
+        domKinematics_frameRef  pframe_origin = NULL;   //  Manipulator Base
+        domKinematics_frameRef  pframe_tip      = NULL; //  Manipulator Effector
+
         domCOLLADA::domSceneRef allscene = _dom->getScene();
-        assert(allscene != NULL);
+        BOOST_ASSERT(allscene != NULL);
         vector<domKinematics_newparam*> vnewparams;
 
-        for (size_t iscene = 0; iscene < allscene->getInstance_kinematics_scene_array().getCount(); iscene++) {
-            domInstance_kinematics_sceneRef kiscene = allscene->getInstance_kinematics_scene_array()[iscene];
-            domKinematics_sceneRef kscene = daeSafeCast<domKinematics_scene>(kiscene->getUrl().getElement().cast());
-            if( !kscene )
+        //  All bindings of the kinematics models presents in the scene
+        vector<KINEMATICSBINDING> v_all_bindings;
+
+        //  For each Kinematics Scene
+        for (size_t iscene = 0; iscene < allscene->getInstance_kinematics_scene_array().getCount(); iscene++)
+        {
+            //  Gets the Scene
+            domInstance_kinematics_sceneRef kiscene =
+                allscene->getInstance_kinematics_scene_array()[iscene];
+
+            domKinematics_sceneRef kscene = daeSafeCast<domKinematics_scene> (
+                    kiscene->getUrl().getElement().cast());
+
+            // If there is not Kinematic Scene
+            if (!kscene)
+            {
                 continue;
-            for(size_t imodel = 0; imodel < kiscene->getBind_kinematics_model_array().getCount(); imodel++) {
-                domBind_kinematics_modelRef kbindmodel = kiscene->getBind_kinematics_model_array()[imodel];
-                if( kbindmodel->getNode() == NULL ) {
-                    RAVELOG_WARNA("do not support kinematics models without references to nodes\n");
+            }
+
+            //  For each Bind of Kinematics Model
+            for (size_t imodel = 0; imodel
+            < kiscene->getBind_kinematics_model_array().getCount(); imodel++) {
+
+                //  Kinimatics model may NOT be a Robot
+                domArticulated_systemRef articulated_system =   NULL;
+
+                //  Initially kinematics model is NOT a Robot
+                isRobot = false;
+
+                // Gets Bind of Kinematics Model
+                domBind_kinematics_modelRef kbindmodel =
+                    kiscene->getBind_kinematics_model_array()[imodel];
+
+                //  If there is no model
+                if (kbindmodel->getNode() == NULL) {
+                    RAVELOG_WARNA(
+                            "do not support kinematics models without references to nodes\n");
                     continue;
                 }
 
-                domNodeRef pnode = daeSafeCast<domNode>(daeSidRef(kbindmodel->getNode(), kbindmodel).resolve().elt);
-                if( pnode == NULL || pnode->typeID() != domNode::ID() ) {
-                    RAVELOG_WARNA("bind_kinematics_model does not reference valid node %s\n", kbindmodel->getNode());
+                //  Debug
+                RAVELOG_WARNA("Node: %s\n",kbindmodel->getNode());
+
+                // Gets the Node of the Kinematics Model
+                domNodeRef pnode = daeSafeCast<domNode> (daeSidRef(
+                        kbindmodel->getNode(), kbindmodel).resolve().elt);
+                if (pnode == NULL || pnode->typeID() != domNode::ID()) {
+                    RAVELOG_WARNA(
+                            "bind_kinematics_model does not reference valid node %s\n",
+                            kbindmodel->getNode());
                     continue;
                 }
 
-                domInstance_kinematics_modelRef kimodel = resolve<domInstance_kinematics_model>(kbindmodel, kscene->getInstance_kinematics_model_array());
-                if( kimodel == NULL ) {
-                    RAVELOG_WARNA("bind_kinematics_model does not reference valid kinematics\n");
-                    continue;
+                //  Instance Kinematics Model
+                domInstance_kinematics_modelRef kimodel;
+                kimodel = getSidRef<domInstance_kinematics_model> (kbindmodel,kscene);
+                if (kimodel == NULL)
+                {
+                    RAVELOG_WARNA(
+                            "bind_kinematics_model does not reference valid kinematics\n");
+                }
+                else
+                {
+                    //  TODO : Debug
+                    RAVELOG_DEBUGA("Instance Kinematics model %s\n",kimodel->getSid());
                 }
 
-                domKinematics_modelRef kmodel = daeSafeCast<domKinematics_model>(kimodel->getUrl().getElement().cast());
-                if( !kmodel ) {
-                    RAVELOG_WARNA("bind_kinematics_model does not reference valid kinematics\n");
+
+                if (getElement()->typeID() == domArticulated_system::ID())
+                {
+                    articulated_system = daeSafeCast<domArticulated_system>(getElement().cast());
+
+                    //  Debug
+                    RAVELOG_DEBUGA("Got articulated_system!!!\n");
+
+                    isRobot     = true;
+                    robotName   = articulated_system->getId();
+
+                    //  Check if there is a technique_common section
+                    if (!articulated_system->getKinematics()->getTechnique_common())
+                    {
+                        RAVELOG_VERBOSEA("Skip technique_common in articulated_system/kinematics\n");
+                    }
+                    else
+                    {
+                        RAVELOG_VERBOSEA("Kinematics Model is an Articulated System (Robot)\n");
+
+                        pframe_origin   = articulated_system->getKinematics()->getTechnique_common()->getFrame_origin();
+                        pframe_tip      = articulated_system->getKinematics()->getTechnique_common()->getFrame_tip();
+                    }
+                }
+
+                // Kinematics Model
+                domKinematics_modelRef kmodel = daeSafeCast<domKinematics_model> (
+                        kimodel->getUrl().getElement().cast());
+                if (!kmodel) {
+                    RAVELOG_WARNA(
+                            "bind_kinematics_model does not reference valid kinematics\n");
                     return false;
                 }
 
-                // get the joint indices
+                // TODO : Get the joint binds
                 vector<KINEMATICSBINDING> vbindings;
-                for(size_t ijoint = 0; ijoint < kiscene->getBind_joint_axis_array().getCount(); ++ijoint) {
-                    domBind_joint_axisRef bindjoint = kiscene->getBind_joint_axis_array()[ijoint];
+                for (size_t ijoint = 0; ijoint
+                < kiscene->getBind_joint_axis_array().getCount(); ++ijoint) {
 
-                    daeElementRef pjtarget = daeSidRef(bindjoint->getTarget(), bindjoint).resolve().elt;
+                    int pos;
 
-                    if( pjtarget == NULL ) {
+                    domBind_joint_axisRef bindjoint =   kiscene->getBind_joint_axis_array()[ijoint];
+
+                    string  strNode     =   string(kbindmodel->getParam()->getValue());
+                    string  strTarget   =   string(bindjoint->getAxis()->getParam()->getValue());
+
+                    pos =   strTarget.find(strNode);
+
+                    //  Debug
+                    RAVELOG_DEBUGA("Kinematics Node %s Target %s Pos %d\n",strNode.c_str(),strTarget.c_str(),pos);
+
+                    if (pos == -1)
+                    {
+                        RAVELOG_VERBOSEA("This Axis NOT belongs to the Kinematics Model\n");
+                        continue;
+                    }
+
+                    domKinematics_axis_infoRef  dkai    = NULL;
+                    domMotion_axis_infoRef          dmai    = NULL;
+
+
+                    daeElementRef pjtarget =    daeSidRef(bindjoint->getTarget(), bindjoint).resolve().elt;
+
+                    if (pjtarget == NULL) {
                         RAVELOG_WARNA("target node %s not found\n", bindjoint->getTarget());
                         continue;
                     }
 
-                    domAxis_constraintRef pjointaxis = resolve<domAxis_constraint>(bindjoint->getAxis(), kscene->getInstance_kinematics_model_array());
-                    if( pjointaxis == NULL ) {
-                        RAVELOG_WARNA("joint axis not found\n");
+                    //  Retrieve the joint
+                    domAxis_constraintRef pjointaxis = getSidRef<domAxis_constraint> (
+                            bindjoint->getAxis(),
+                            kscene);
+
+                    if (pjointaxis == NULL) {
+                        RAVELOG_WARNA("joint axis %s not found\n",getRef());
                         continue;
                     }
 
-                    domFloat fdefjointvalue = resolveFloat(bindjoint->getValue(), kscene->getInstance_kinematics_model_array());
-                    vbindings.push_back(KINEMATICSBINDING(pjtarget,pjointaxis,fdefjointvalue));
+                    domInstance_kinematics_model_Array instance_kinematics_array;
+
+                    //  If the system is NOT a Robot
+                    if (getElement()->typeID() == domKinematics_scene::ID())
+                    {
+                        RAVELOG_WARNA("Kinematics Scene Element \n");
+                        domKinematics_sceneRef dks = daeSafeCast<domKinematics_scene>(getElement().cast());
+                        instance_kinematics_array = dks->getInstance_kinematics_model_array();
+                    }
+                    //  If the system is a Robot
+                    else if (getElement()->typeID() == domArticulated_system::ID())
+                    {
+                        RAVELOG_WARNA("Articulated System Element \n");
+                        //  Gets articulated system KINEMATICS
+                        //domArticulated_systemRef das = daeSafeCast<domArticulated_system>(getElement().cast());
+                        instance_kinematics_array = articulated_system->getKinematics()->getInstance_kinematics_model_array();
+
+                        // Search and fill Joint properties
+                        domKinematics_axis_info_Array dkai_array =  articulated_system->getKinematics()->getTechnique_common()->getAxis_info_array();
+
+                        string strAxis  =   string(getSidRef_value());
+                        pos =   strAxis.find_last_of("/");
+                        pos =   strAxis.find_last_of("/",pos-1);
+
+                        RAVELOG_DEBUGA("Kmodel %s Axis/Joint: %s\n",kimodel->getUrl().fragment().c_str(),strAxis.substr(pos).c_str());
+
+                        strAxis =   kimodel->getUrl().fragment() + strAxis.substr(pos).c_str();
+
+                        //  Gets axis info of the articulated system KINEMATICS
+                        dkai = getAxisInfo<domKinematics_axis_info>(strAxis.c_str(),dkai_array);
+
+                        //  Check if there is a 'technique_common' section
+                        if (!!_motion_element->getTechnique_common())
+                        {
+                            domMotion_axis_info_Array dmai_array = _motion_element->getTechnique_common()->getAxis_info_array();
+
+                            RAVELOG_VERBOSEA("Check out articulated system ID\n");
+
+                            if (articulated_system->getID() == NULL)
+                            {
+                                RAVELOG_WARNA("ARTICULATED SYSTEM KINEMATICS Id is NULL ...\n");
+                            }
+
+                            RAVELOG_VERBOSEA("SidRef: %s\n",getSidRef_value());
+
+
+//                          //  Build the TAG for search axis info in the articulated system MOTION section. Dot format!!!
+//                          char axis_tag[256];
+//                          strcpy(axis_tag,articulated_system->getID());
+//                          strcat(axis_tag,"/");
+//                          strcat(axis_tag,dkai->getSid());
+
+                            strAxis =   string(articulated_system->getID()) + string("/") + string(dkai->getSid());
+
+                            //  Debug
+                            RAVELOG_WARNA("str: %s\n",strAxis.c_str());
+
+                            //  Gets axis info of the articulated system MOTION
+                            dmai    =   getAxisInfo<domMotion_axis_info>(strAxis.c_str(),dmai_array);
+
+                            //  Debug
+                            RAVELOG_WARNA("End of the search for AXIS INFO ...\n");
+                        }
+                    }
+
+                    domFloat fdefjointvalue = resolveFloat(bindjoint->getValue(),
+                            instance_kinematics_array);
+
+                    //  Stores joint info
+                    vbindings.push_back(KINEMATICSBINDING(pjtarget, pjointaxis,
+                            fdefjointvalue, dkai, dmai));
+
+                    //  Store joint info used for the visual scene
+                    v_all_bindings.push_back(KINEMATICSBINDING(pjtarget, pjointaxis,
+                                                fdefjointvalue, dkai, dmai));
                 }
 
+                //  Obtain Kinmodel from COLLADA
                 domPhysics_modelRef pmodel = NULL;
-                KinBody* pbody = NULL;
-                if( !Extract(&pbody, kmodel, pmodel, pnode, vbindings) ) {
-                    RAVELOG_WARNA("failed to load kinbody from kin instance %s\n", kimodel->getID());
+                KinBodyPtr pbody;
+                RobotBasePtr probot;
+                if (!Extract(pbody, kmodel, pmodel, pnode, vbindings)) {
+                    RAVELOG_WARNA("failed to load kinbody from kin instance %s\n",
+                            kimodel->getID());
                     continue;
                 }
 
-                _penv->AddKinBody(pbody);
+                //  The kinbody is NOT a Robot
+                if (!isRobot)
+                {
+                    //  Adds a Kinbody to the Environment
+                    RAVELOG_VERBOSEA("Kinbody %s added to the environment\n",pbody->GetName().c_str());
+                    _penv->AddKinBody(pbody);
+                }
+                else
+                {
+                    //  Create Robot
+                    probot  = _penv->CreateRobot("");
+
+                    //  Copy the kinbody information into the Robot structure
+                    probot->KinBody::Clone(pbody,0);
+
+                    //  Extract instances of sensors
+                    ExtractSensors<domArticulated_system>(articulated_system,probot);
+
+                    //  Debug
+                    RAVELOG_INFO("Number of sensors of the Robot: %d\n",(int)probot->GetSensors().size());
+
+                    //  Setup Manipulator of the Robot
+                    RobotBase::ManipulatorPtr manipulator(new RobotBase::Manipulator(probot));
+                    probot->GetManipulators().push_back(manipulator);
+
+                    //  Debug
+                    RAVELOG_WARNA("Number of Manipulators %d ¡¡¡\n",probot->GetManipulators().size());
+
+                    char*           linkName            =   NULL;
+                    linkName = getLinkName(pframe_origin->getLink());
+
+                    //  Sets frame_origin and frame_tip
+                    manipulator->_pBase              = probot->GetLink(linkName);
+
+                    if (!!manipulator->_pBase)
+                    {
+                        RAVELOG_WARNA("Manipulator::pBase ... %s\n",manipulator->_pBase->GetName().c_str());
+                    }
+                    else
+                    {
+                        RAVELOG_WARNA("Error initializing Manipulator::pBase\n");
+                    }
+
+                    linkName = getLinkName(pframe_tip->getLink());
+                    manipulator->_pEndEffector   = probot->GetLink(linkName);
+
+                    if (!!manipulator->_pEndEffector)
+                    {
+                        RAVELOG_WARNA("Manipulator::pEndEffector ... %s\n",manipulator->_pEndEffector->GetName().c_str());
+                    }
+                    else
+                    {
+                        RAVELOG_WARNA("Error initializing Manipulator::pEndEffector\n");
+                    }
+
+                    //  Initialize indices that then manipulator controls
+                    for (size_t i   =   0;  i < probot->GetJointIndices().size();   i++)
+                    {
+                        manipulator->_vgripperjoints.push_back(probot->GetJointIndices()[i]);
+                    }
+
+                    //  Add the robot to the environment
+                    _penv->AddRobot(probot);
+
+                    RAVELOG_WARNA("Robot %s created ...\n",robotName);
+                }
+
+            }// End Kinematics model Process
+
+        }// End Instance Kinematics scene Process
+
+        //  TODO : Add Rigid objects without joints
+        //  Visual Scene process
+        if (allscene->getInstance_visual_scene() != NULL)
+        {
+            domVisual_sceneRef visual_scene = daeSafeCast<domVisual_scene>(allscene->getInstance_visual_scene()->getUrl().getElement().cast());
+
+            for (size_t node = 0; node < visual_scene->getNode_array().getCount(); node++)
+            {
+                KinBodyPtr rigid_body;
+                domNodeRef pnode        =   visual_scene->getNode_array()[node];
+
+                if (!Extract(rigid_body, NULL, NULL, pnode, v_all_bindings))
+                {
+                    RAVELOG_WARNA("failed to load kinbody WIHTOUT Joints\n");
+                    continue;
+                }
+
+                _penv->AddKinBody(rigid_body);
+
+                RAVELOG_VERBOSEA("Found node %s\n",visual_scene->getNode_array()[node]->getName());
             }
+        }// End Visual Scene Process
+
+        return true;
+    } // End Extract(EnvironmentBasePtr penv)
+
+    /// Extract Sensors attached to a Robot
+    template <typename T>
+    bool ExtractSensors(const T* parent, RobotBasePtr probot)
+    {
+        if (parent->getExtra_array().getCount() == 0)
+        {
+            RAVELOG_WARNA("There is not an Extra Label\n");
+            return false;
+        }
+
+        for (size_t i = 0; i < parent->getExtra_array().getCount(); i++)
+        {
+            domExtraRef extra = parent->getExtra_array()[i];
+
+            RAVELOG_WARNA("Extra type: %s\n",extra->getType());
+
+            for (size_t j = 0; j < extra->getTechnique_array().getCount(); j++)
+            {
+                domTechniqueRef technique = extra->getTechnique_array()[j];
+
+                if (strcmp(technique->getProfile(),"OpenRAVE") == 0)
+                {
+                    RAVELOG_WARNA("Technique Profile: %s\n",technique->getProfile());
+
+                    if (strcmp(extra->getType(),"sensors") == 0)
+                    {
+                        //  Debug
+                        RAVELOG_WARNA("Extract Intance sensors\n");
+                        ExtractInstance_sensor(technique->getInstance_sensor_array(),probot);
+                    }
+                }
+            }
+        }
+
+        return  true;
+    }
+
+    /// Extract instance sensor info
+    /// Extract instances of sensors located in articulated_systems extra node
+    bool ExtractInstance_sensor(domInstance_sensor_Array instances, RobotBasePtr probot)
+    {
+        RAVELOG_INFOA("Number of sensor instances %d\n",instances.getCount());
+
+        for (size_t i = 0; i < instances.getCount(); i++)
+        {
+            domInstance_sensorRef instance_sensor;
+            domSensorRef                    dom_sensor;
+
+            instance_sensor =   instances[i];
+            dom_sensor          =   getElementFromUrl<domSensor>(instance_sensor->getUrl());
+
+            //  Debug
+            RAVELOG_WARNA("Sensor type %s\n",dom_sensor->getType());
+
+            RobotBase::AttachedSensorPtr att_sensor(new RobotBase::AttachedSensor(probot));
+            probot->GetSensors().push_back(att_sensor);
+            
+
+            //  Create sensor of the TYPE required
+            att_sensor->psensor = probot->GetEnv()->CreateSensor(dom_sensor->getType());
+
+            RAVELOG_WARNA("Sensor of type: %s created\n",dom_sensor->getType());
+
+            //  Sets attached sensor name from instance sensor Id
+            att_sensor->_name   =   instance_sensor->getId();
+
+            //  Sets sensor name from dom sensor Id
+            att_sensor->psensor->SetName(dom_sensor->getId());
+
+            RAVELOG_WARNA("Name of sensor attached to the Robot: %s\n",
+                          att_sensor->GetSensor()->GetName().c_str());
+
+            //  Create XML reader for this sensor TYPE
+            OpenRAVEXMLParser::READERSMAP::iterator it = OpenRAVEXMLParser::GetRegisteredReaders()[PT_Sensor].find(att_sensor->psensor->GetXMLId());
+            if( it != OpenRAVEXMLParser::GetRegisteredReaders()[PT_Sensor].end() )
+                _pcurreader = it->second(att_sensor->psensor, std::list<std::pair<std::string,std::string> >());
+            else
+                _pcurreader.reset();
+
+            RAVELOG_VERBOSEA("XML Reader Initialized\n");
+
+            //  Fill params from the COLLADA's file
+            setSensorParams(dom_sensor,att_sensor);
+
+            //  Close the sensor reader
+            _pcurreader.reset();
+
+            //  Initialize sensor
+            if( !att_sensor->psensor->Init("") )
+            {
+                RAVELOG_INFOA("failed to initialize sensor %s\n", att_sensor->GetName().c_str());
+                att_sensor->psensor.reset();
+            }
+            else
+            {
+                att_sensor->pdata = att_sensor->psensor->CreateSensorData();
+
+                if( att_sensor->pattachedlink.expired() ) {
+                    RAVELOG_DEBUGA("attached link is NULL, setting to base of robot\n");
+                    if( probot->GetLinks().size() == 0 )
+                    {
+                        RAVELOG_WARNA("robot has no links!\n");
+                    }
+                    else
+                    {
+                        size_t  pos;
+                        string  link_name   =   string(instance_sensor->getLink());
+                        pos =   link_name.find_last_of("/");
+                        link_name   =   link_name.substr(pos + 1);
+
+                        //  TODO : Get link in which the sensor will be attached
+                        for (size_t i = 0; i < probot->GetLinks().size(); i++)
+                        {
+                            string robot_link   = probot->GetLinks()[i]->GetName();
+                            RAVELOG_DEBUGA("link_name: %s robot_link: %s\n",link_name.c_str(),robot_link.c_str());
+                            if (link_name == robot_link)
+                            {
+                                att_sensor->pattachedlink = probot->GetLinks()[i];
+                                break;
+                            }
+                        }
+                        //att_sensor->pattachedlink = probot->GetLinks().front();
+                    }
+                }
+            }
+
+            //  Set sensor relative translation
+            if (!!instance_sensor->getTranslate())
+            {
+                RAVELOG_INFOA("Translate %f, %f, %f\n",instance_sensor->getTranslate()->getValue()[0],
+                              instance_sensor->getTranslate()->getValue()[1],
+                              instance_sensor->getTranslate()->getValue()[2]);
+
+                att_sensor->trelative.trans =   Vector( instance_sensor->getTranslate()->getValue()[0],
+                                                        instance_sensor->getTranslate()->getValue()[1],
+                                                        instance_sensor->getTranslate()->getValue()[2]);
+            }
+
+            //  Set sensor relative rotation
+            if (!!instance_sensor->getRotate())
+            {
+                RAVELOG_INFOA("Rotate %f, %f, %f, %f\n",instance_sensor->getRotate()->getValue()[0],
+                                                                                        instance_sensor->getRotate()->getValue()[1],
+                                                                                        instance_sensor->getRotate()->getValue()[2],
+                                                                                        instance_sensor->getRotate()->getValue()[3]);
+
+                Transform tnew;
+                tnew.rotfromaxisangle(Vector(   instance_sensor->getRotate()->getValue()[0],
+                                                                            instance_sensor->getRotate()->getValue()[1],
+                                                                            instance_sensor->getRotate()->getValue()[2] ),
+                                                            (float)(instance_sensor->getRotate()->getValue()[3])*PI/180.0f);
+                att_sensor->trelative.rot = (tnew* att_sensor->trelative).rot;
+            }
+
+        }
+
+        return true;
+    }
+
+    /// Fills sensor params from COLLADAS's file
+    /// dom_sensor  COLLADA sensor info
+    /// sensor          OpenRAVE sensor attached to a robot
+    bool setSensorParams(domSensorRef dom_sensor,RobotBase::AttachedSensorPtr att_sensor)
+    {
+        for (size_t i = 0; i < dom_sensor->getContents().getCount(); i++)
+        {
+            RAVELOG_INFOA("%s: %s\n",dom_sensor->getContents()[i]->getElementName(),dom_sensor->getContents()[i]->getCharData().c_str());
+            _pcurreader->characters(dom_sensor->getContents()[i]->getCharData());
+            string xmltag = dom_sensor->getContents()[i]->getElementName();
+            std::transform(xmltag.begin(), xmltag.end(), xmltag.begin(), ::tolower);
+            _pcurreader->endElement(xmltag);
+        }
+
+        return true;
+    }
+
+    /// Search the Link Name that is in the Robot structure
+    char* getLinkName(const string& link)
+    {
+        char*       token       = NULL;
+        char*       link_name   = NULL;
+        char* line = new char[link.size()+1];
+
+        strcpy(line,link.c_str());
+
+        token   = strtok(line,"/");
+        while (token != NULL)
+        {
+            link_name = token;
+            token = strtok(NULL,"/");
         }
         
-        return true;
+        delete line;
+        return link_name;
     }
 
-    bool Extract(RobotBase** pprobot)
-    {
-        return true;
-    }
-
-    bool Extract(KinBody** ppbody)
-    {
-        return true;
-    }
-
-    // create an openrave body
-    bool Extract(KinBody** ppkinbody, domKinematics_modelRef kmodel, domPhysics_modelRef pmodel, domNodeRef pnode, const vector<KINEMATICSBINDING>& vbindings)
-    {
-        if( *ppkinbody == NULL )
-            *ppkinbody = _penv->CreateKinBody();
-        KinBody* pkinbody = *ppkinbody;
-        pkinbody->SetName(kmodel->getName());
-
-        vector<domJointRef> vdomjoints;
-        domKinematics_model_techniqueRef ktec = kmodel->getTechnique_common();
-        for(size_t ijoint = 0; ijoint < ktec->getJoint_array().getCount(); ++ijoint)
-            vdomjoints.push_back(ktec->getJoint_array()[ijoint]);
-        for(size_t ijoint = 0; ijoint < ktec->getInstance_joint_array().getCount(); ++ijoint) {
-            domJointRef pelt = daeSafeCast<domJoint>(ktec->getInstance_joint_array()[ijoint]->getUrl().getElement());
-            if( !pelt )
-                RAVELOG_WARNA("failed to get joint from instance\n");
-            else
-                vdomjoints.push_back(pelt);
+    bool Extract(RobotBasePtr& probot, domArticulated_systemRef partic) {
+        if (!probot) {
+            probot = _penv->CreateRobot(partic->getID());
         }
-                
-        for(size_t ilink = 0; ilink < ktec->getLink_array().getCount(); ++ilink) {
-            domLinkRef plink = ktec->getLink_array()[ilink];
-            ExtractLink(pkinbody, plink, pnode, Transform(), vdomjoints, vbindings);
-        }
+        return true;
+    }
 
-        for(size_t iform = 0; iform < ktec->getFormula_array().getCount(); ++iform) {
-            domFormulaRef pf = ktec->getFormula_array()[iform];
-            for(size_t ichild = 0; ichild < pf->getTechnique_common()->getChildren().getCount(); ++ichild) {
-                daeElementRef pelt = pf->getTechnique_common()->getChildren()[ichild];
-                RAVELOG_WARNA("collada formulas not supported\n");
+    bool Extract(RobotBasePtr& probot) {
+
+        //  Debug
+        RAVELOG_VERBOSEA("Executing Extract(RobotBasePtr&) !!!!!!!!!!!!!!!!!!\n");
+
+        bool                                        isRobot;        //  Distinguish between a Kinematic Model that is a Robot or not
+        daeString                               robotName = NULL;   //  Articulated System ID. Describes the Robot
+        domKinematics_frameRef  pframe_origin = NULL;   //  Manipulator Base
+        domKinematics_frameRef  pframe_tip      = NULL; //  Manipulator Effector
+
+        domCOLLADA::domSceneRef allscene = _dom->getScene();
+        BOOST_ASSERT(allscene != NULL);
+        vector<domKinematics_newparam*> vnewparams;
+
+        //  For each Kinematics Scene
+        for (size_t iscene = 0; iscene < allscene->getInstance_kinematics_scene_array().getCount(); iscene++) {
+            //  Gets the Scene
+            domInstance_kinematics_sceneRef kiscene =
+                allscene->getInstance_kinematics_scene_array()[iscene];
+            domKinematics_sceneRef kscene = daeSafeCast<domKinematics_scene> (
+                    kiscene->getUrl().getElement().cast());
+
+            // If there is not Kinematic Scene
+            if (!kscene) {
+                continue;
+            }
+
+            //  For each Bind of Kinematics Model
+            for (size_t imodel = 0; imodel
+            < kiscene->getBind_kinematics_model_array().getCount(); imodel++) {
+
+                //  Initially kinematics model is NOT a Robot
+                isRobot = false;
+
+                // Gets Bind of Kinematics Model
+                domBind_kinematics_modelRef kbindmodel =
+                    kiscene->getBind_kinematics_model_array()[imodel];
+
+                //  If there is no model
+                if (kbindmodel->getNode() == NULL) {
+                    RAVELOG_WARNA(
+                            "do not support kinematics models without references to nodes\n");
+                    continue;
+                }
+
+                //  Debug
+                RAVELOG_WARNA("Node: %s\n",kbindmodel->getNode());
+
+                // Gets the Node of the Kinematics Model
+                domNodeRef pnode = daeSafeCast<domNode> (daeSidRef(
+                        kbindmodel->getNode(), kbindmodel).resolve().elt);
+                if (pnode == NULL || pnode->typeID() != domNode::ID()) {
+                    RAVELOG_WARNA(
+                            "bind_kinematics_model does not reference valid node %s\n",
+                            kbindmodel->getNode());
+                    continue;
+                }
+
+                //  Instance Kinematics Model
+                domInstance_kinematics_modelRef kimodel;
+                kimodel = getSidRef<domInstance_kinematics_model> (kbindmodel,kscene);
+                if (kimodel == NULL)
+                {
+                    RAVELOG_WARNA(
+                            "bind_kinematics_model does not reference valid kinematics\n");
+                }
+
+                //  Debug
+                if (getElement()->typeID() == domArticulated_system::ID())
+                {
+                    domArticulated_systemRef das = daeSafeCast<domArticulated_system>(getElement().cast());
+                    isRobot     = true;
+                    robotName   = das->getId();
+                    pframe_origin   = das->getKinematics()->getTechnique_common()->getFrame_origin();
+                    pframe_tip      = das->getKinematics()->getTechnique_common()->getFrame_tip();
+                    RAVELOG_WARNA("Kinematics Model is an Articulated System (Robot)\n");
+                }
+
+                // Kinematics Model
+                domKinematics_modelRef kmodel = daeSafeCast<domKinematics_model> (
+                        kimodel->getUrl().getElement().cast());
+                if (!kmodel) {
+                    RAVELOG_WARNA(
+                            "bind_kinematics_model does not reference valid kinematics\n");
+                    return false;
+                }
+
+                // Get the joint indices
+                vector<KINEMATICSBINDING> vbindings;
+                for (size_t ijoint = 0; ijoint
+                < kiscene->getBind_joint_axis_array().getCount(); ++ijoint) {
+
+                    domKinematics_axis_infoRef  dkai    = NULL;
+                    domMotion_axis_infoRef          dmai    = NULL;
+
+                    domBind_joint_axisRef bindjoint =   kiscene->getBind_joint_axis_array()[ijoint];
+
+                    daeElementRef pjtarget =    daeSidRef(bindjoint->getTarget(), bindjoint).resolve().elt;
+
+                    if (pjtarget == NULL) {
+                        RAVELOG_WARNA("target node %s not found\n", bindjoint->getTarget());
+                        continue;
+                    }
+
+                    //  Retrieve the joint
+                    domAxis_constraintRef pjointaxis = getSidRef<domAxis_constraint> (
+                            bindjoint->getAxis(),
+                            kscene);
+                    if (pjointaxis == NULL) {
+                        RAVELOG_WARNA("joint axis %s not found\n",getRef());
+                        continue;
+                    }
+
+                    domInstance_kinematics_model_Array instance_kinematics_array;
+
+                    //  If the system is NOT a Robot
+                    if (getElement()->typeID() == domKinematics_scene::ID())
+                    {
+                        RAVELOG_WARNA("Kinematics Scene Element \n");
+                        domKinematics_sceneRef dks = daeSafeCast<domKinematics_scene>(getElement().cast());
+                        instance_kinematics_array = dks->getInstance_kinematics_model_array();
+                    }
+                    //  If the system is a Robot
+                    else if (getElement()->typeID() == domArticulated_system::ID())
+                    {
+                        RAVELOG_WARNA("Articulated System Element \n");
+                        //  Gets articulated system KINEMATICS
+                        domArticulated_systemRef das = daeSafeCast<domArticulated_system>(getElement().cast());
+                        instance_kinematics_array = das->getKinematics()->getInstance_kinematics_model_array();
+
+                        // Search and fill Joint properties
+                        domKinematics_axis_info_Array dkai_array =  das->getKinematics()->getTechnique_common()->getAxis_info_array();
+
+                        //  Gets axis info of the articulated system KINEMATICS
+                        dkai = getAxisInfo<domKinematics_axis_info>(getRef(),dkai_array);
+
+                        domMotion_axis_info_Array dmai_array = _motion_element->getTechnique_common()->getAxis_info_array();
+                        char axis_tag[256];
+                        RAVELOG_WARNA("Build axis TAG for search the axis info...\n");
+                        if (das->getID() == NULL)
+                        {
+                            RAVELOG_WARNA("ARTICULATED SYSTEM KINEMATICS Id is NULL ...\n");
+                        }
+
+                        //  Build the TAG for search axis info in the articulated system MOTION section
+                        strcpy(axis_tag,das->getID());
+                        strcat(axis_tag,"/");
+                        strcat(axis_tag,dkai->getSid());
+
+                        //  Debug
+                        RAVELOG_WARNA("str: %s\n",axis_tag);
+
+                        //  Gets axis info of the articulated system MOTION
+                        dmai    =   getAxisInfo<domMotion_axis_info>(axis_tag,dmai_array);
+
+                        //  Debug
+                        RAVELOG_WARNA("End of the search for AXIS INFO ...\n");
+                    }
+
+                    domFloat fdefjointvalue = resolveFloat(bindjoint->getValue(),
+                            instance_kinematics_array);
+
+                    //  Stores joint info
+                    vbindings.push_back(KINEMATICSBINDING(pjtarget, pjointaxis,
+                            fdefjointvalue, dkai, dmai));
+                }
+
+                //  Obtain Kinmodel from COLLADA
+                domPhysics_modelRef pmodel = NULL;
+                KinBodyPtr pbody = probot;
+                if (!Extract(pbody, kmodel, pmodel, pnode, vbindings)) {
+                    RAVELOG_WARNA("failed to load kinbody from kin instance %s\n",
+                            kimodel->getID());
+                    continue;
+                }
+
+                return true;
             }
         }
+        return true;
+    }
 
+    bool Extract(KinBodyPtr& ppbody) {
+        return true;
+    }
+
+    /// Create an openrave body
+    bool Extract(KinBodyPtr& pkinbody, domKinematics_modelRef kmodel,
+            domPhysics_modelRef pmodel, domNodeRef pnode, const vector<KINEMATICSBINDING>& vbindings)
+    {
+        vector<domJointRef> vdomjoints;
+
+        // If there is NO kinbody create one
+        if (!pkinbody)
+        {
+            //  Debug
+            RAVELOG_WARNA("Create a KINBODY......................\n");
+            pkinbody = _penv->CreateKinBody();
+        }
+
+        //  If there is a Kinematic Model
+        if (kmodel != NULL)
+        {
+            pkinbody->SetName(kmodel->getName());
+
+            //  Debug.
+            RAVELOG_WARNA("KinBody Name: %s\n", pkinbody->GetName().c_str());
+            RAVELOG_VERBOSEA("Kinbody node: %s\n",pnode->getId());
+
+            //  Process joint of the kinbody
+            domKinematics_model_techniqueRef ktec = kmodel->getTechnique_common();
+
+            //  Store joints
+            for (size_t ijoint = 0; ijoint < ktec->getJoint_array().getCount(); ++ijoint)
+            {
+                vdomjoints.push_back(ktec->getJoint_array()[ijoint]);
+            }
+
+            //  Store instances of joints
+            for (size_t ijoint = 0; ijoint < ktec->getInstance_joint_array().getCount(); ++ijoint)
+            {
+                domJointRef pelt = daeSafeCast<domJoint> (
+                        ktec->getInstance_joint_array()[ijoint]->getUrl().getElement());
+
+                if (!pelt)
+                {
+                    RAVELOG_WARNA("failed to get joint from instance\n");
+                }
+                else
+                {
+                    vdomjoints.push_back(pelt);
+                }
+            }
+
+            //  Debug
+            RAVELOG_VERBOSEA("Number of links in the kmodel %d\n",ktec->getLink_array().getCount());
+
+            //  Extract all links into the kinematics_model
+            for (size_t ilink = 0; ilink < ktec->getLink_array().getCount(); ++ilink)
+            {
+                domLinkRef plink = ktec->getLink_array()[ilink];
+
+                //  Debug
+                RAVELOG_VERBOSEA("Node Name out of ExtractLink: %s\n",pnode->getName());
+
+                ExtractLink(pkinbody, plink, pnode, Transform(), vdomjoints, vbindings);
+            }
+
+            //  TODO : Extract FORMULAS of the kinematics_model
+            for (size_t iform = 0; iform < ktec->getFormula_array().getCount(); ++iform)
+            {
+                domFormulaRef pf = ktec->getFormula_array()[iform];
+
+                for (size_t ichild = 0; ichild
+                < pf->getTechnique_common()->getChildren().getCount(); ++ichild)
+                {
+                    daeElementRef pelt = pf->getTechnique_common()->getChildren()[ichild];
+                    RAVELOG_WARNA("collada formulas not supported\n");
+                }
+            }
+        }
+        //  This Maybe is a NO Kinematics object
+        else
+        {
+            ExtractLink(pkinbody, NULL, pnode, Transform(), vdomjoints, vbindings);
+        }
         //pkinbody->_vForcedAdjacentLinks.push_back(entry);
         return true;
     }
 
-    KinBody::Link* ExtractLink(KinBody* pkinbody, const domLinkRef pdomlink, const domNodeRef pdomnode, Transform tParentLink, const vector<domJointRef>& vdomjoints, const vector<KINEMATICSBINDING>& vbindings)
-    {
-        KinBody::Link* plink = new KinBody::Link(pkinbody);
-        plink->name = _ravembstowcs(pdomlink->getName());
-        plink->bStatic = false;
-        plink->index = (int)pkinbody->_veclinks.size();
+    //  Extract Link info and adds it to OpenRAVE
+    KinBody::LinkPtr  ExtractLink(KinBodyPtr pkinbody, const domLinkRef pdomlink,
+            const domNodeRef pdomnode, Transform tParentLink, const vector<
+            domJointRef>& vdomjoints, const vector<KINEMATICSBINDING>& vbindings) {
+
+
+        KinBody::LinkPtr plink(new KinBody::Link(pkinbody));
+
+        //  Initialize Link Mass
+        plink->_mass        =   1.0;
+
+        plink->bStatic  = false;
+        plink->index        = (int) pkinbody->_veclinks.size();
+
         pkinbody->_veclinks.push_back(plink);
-        RAVELOG_VERBOSEA("adding link %S to kinbody %S\n", plink->GetName(), pkinbody->GetName());
-        
-        Transform tlink = getFullTransform(pdomlink);
-        plink->_t = tParentLink * tlink;  // use the kinematics coordinate system for each link
+
+        RAVELOG_VERBOSEA("Node Id %s and Name %s\n", pdomnode->getId(), pdomnode->getName());
+
+        //  Initially the link has the name of the node
+        plink->name = pdomnode->getName();
+
+        if (!pdomlink)
+        {
+            //  Debug
+            RAVELOG_VERBOSEA("Extract object NOT kinematics !!!\n");
+
+            // Get the geometry
+            ExtractGeometry(pdomnode,plink,vbindings);
+        }
+        else
+        {
+            //  Debug
+            RAVELOG_VERBOSEA("ExtractLink !!!\n");
+
+            Transform tlink = getFullTransform(pdomlink);
+            plink->_t = tParentLink * tlink; // use the kinematics coordinate system for each link
+
+            // Get the geometry
+            ExtractGeometry(pdomnode,plink,vbindings);
+
+            //  Set link name with the name of the COLLADA's Link
+            plink->name = pdomlink->getName();
+
+            //  Process all atached links
+            for (size_t iatt = 0; iatt
+            < pdomlink->getAttachment_full_array().getCount(); ++iatt) {
+                domLink::domAttachment_fullRef pattfull =
+                    pdomlink->getAttachment_full_array()[iatt];
+
+                // get link kinematics transformation
+                TransformMatrix tatt = getFullTransform(pattfull);
+
+                // process attached links
+                daeElement* peltjoint =
+                    daeSidRef(pattfull->getJoint(), pattfull).resolve().elt;
+                domJointRef pdomjoint = daeSafeCast<domJoint> (peltjoint);
+
+                if (!pdomjoint) {
+                    domInstance_jointRef pdomijoint = daeSafeCast<domInstance_joint> (
+                            peltjoint);
+                    if (!!pdomijoint)
+                        pdomjoint = daeSafeCast<domJoint> (
+                                pdomijoint->getUrl().getElement().cast());
+                }
+
+                if (!pdomjoint || pdomjoint->typeID() != domJoint::ID()) {
+                    RAVELOG_WARNA("could not find attached joint %s!\n",
+                            pattfull->getJoint());
+                    return KinBody::LinkPtr();
+                }
+
+                // get direct child link
+                if (!pattfull->getLink()) {
+                    RAVELOG_WARNA("joint %s needs to be attached to a valid link\n",
+                            pdomjoint->getID());
+                    continue;
+                }
+
+                // find the correct node in vbindings
+                daeTArray<domAxis_constraintRef>    vdomaxes        = pdomjoint->getChildrenByType<domAxis_constraint> ();
+                domNodeRef                                              pchildnode  = NULL;
+                daeElementRef                                           paxisnode       = NULL;
+                domKinematics_axis_infoRef              pkinematicaxisinfo  = NULL;
+                domMotion_axis_infoRef                      pmotionaxisinfo         = NULL;
+
+                for (size_t ibind = 0; ibind < vbindings.size() && !pchildnode
+                && !paxisnode; ++ibind)
+                {
+                    domAxis_constraintRef   paxisfound  = NULL;
+                    for (size_t ic = 0; ic < vdomaxes.getCount(); ++ic)
+                    {
+                        //  If the binding for the joint axis is found, retrieve the info
+                        if (vdomaxes[ic] == vbindings[ibind].pkinematicaxis)
+                        {
+                            pchildnode                  = vbindings[ibind].pvisualnode;
+                            paxisnode                       = vbindings[ibind].pvisualtrans;
+                            pkinematicaxisinfo  = vbindings[ibind].pkinematicaxisinfo;
+                            pmotionaxisinfo         = vbindings[ibind].pmotionaxisinfo;
+                            break;
+                        }
+                    }
+                }
+
+                if (!pchildnode) {
+                    RAVELOG_INFOA("failed to find associating node for joint %s\n",
+                            pdomjoint->getID());
+                    continue;
+                }
+
+                // create the joints before creating the child links
+                dReal fJointWeight = 1;
+                vector<KinBody::JointPtr> vjoints(vdomaxes.getCount());
+                for (size_t ic = 0; ic < vdomaxes.getCount(); ++ic) {
+                    KinBody::JointPtr pjoint(new KinBody::Joint(pkinbody));
+                    pjoint->bodies[0] = plink;
+                    pjoint->bodies[1].reset();
+                    pjoint->name = pdomjoint->getName();
+                    pjoint->jointindex = (int) pkinbody->_vecjoints.size();
+                    pjoint->dofindex = (int) pkinbody->_vecJointWeights.size();
+                    pkinbody->_vecJointIndices.push_back(
+                            (int) pkinbody->_vecJointWeights.size());
+                    pkinbody->_vecjoints.push_back(pjoint);
+                    pkinbody->_vecJointWeights.push_back(fJointWeight);
+                    vjoints[ic] = pjoint;
+                }
+
+                KinBody::LinkPtr pchildlink = ExtractLink(pkinbody, pattfull->getLink(),
+                        pchildnode, plink->_t * tatt, vdomjoints, vbindings);
+
+                if (pchildlink == NULL) {
+                    //  Debug
+                    RAVELOG_WARNA("Link NULL: %s \n", plink->GetName().c_str());
+
+                    continue;
+                }
+
+                int numjoints = 0;
+                for (size_t ic = 0; ic < vdomaxes.getCount(); ++ic) {
+                    domAxis_constraintRef pdomaxis = vdomaxes[ic];
+
+                    if (!pchildlink) {
+                        // create dummy child link
+                        // multiple axes can be easily done with "empty links"
+                        RAVELOG_WARNA(
+                                "openrave does not support collada joints with > 1 degrees: \n");
+
+                        //      Debug.
+                        RAVELOG_WARNA("Link: %s Num joints %d\n", plink->GetName().c_str(), numjoints);
+
+                        stringstream ss;
+                        ss << plink->name;
+                        ss <<"_dummy" << numjoints;
+                        pchildlink.reset(new KinBody::Link(pkinbody));
+                        pchildlink->name = ss.str().c_str();
+                        pchildlink->bStatic = false;
+                        pchildlink->index = (int)pkinbody->_veclinks.size();
+                        pkinbody->_veclinks.push_back(pchildlink);
+                    }
+
+                    RAVELOG_WARNA("Joint assigned %d \n",ic);
+
+                    KinBody::JointPtr pjoint = vjoints[ic];
+                    pjoint->bodies[1] = pchildlink;
+
+                    if( strcmp(pdomaxis->getElementName(), "revolute") == 0 )
+                    {
+                        RAVELOG_WARNA("Revolute joint\n");
+                        pjoint->type = KinBody::Joint::JointRevolute;
+                    }
+                    else if( strcmp(pdomaxis->getElementName(), "prismatic") == 0 )
+                    {
+                        RAVELOG_WARNA("Prismatic joint\n");
+                        pjoint->type = KinBody::Joint::JointPrismatic;
+                    }
+
+                    //  Axes and Anchor assignment.
+                    pjoint->vAxes[0] = Vector(pdomaxis->getAxis()->getValue()[0], pdomaxis->getAxis()->getValue()[1], pdomaxis->getAxis()->getValue()[2]).normalize3();
+                    pjoint->vanchor = Vector(0,0,0);
+
+                    int numbad = 0;
+                    pjoint->offset = 0; // to overcome -pi to pi boundary
+
+                    if (!pmotionaxisinfo)
+                    {
+                        RAVELOG_ERRORA("Not Exists Motion axis info\n");
+                    }
+
+                    //  Sets the Speed and the Acceleration of the joint
+                    if (pmotionaxisinfo != NULL)
+                    {
+                        if (pmotionaxisinfo->getSpeed() != NULL)
+                        {
+                            pjoint->fMaxVel = pmotionaxisinfo->getSpeed()->getFloat()->getValue();
+
+                            //  Debug
+                            RAVELOG_VERBOSEA("... Joint Speed: %f...\n",pjoint->GetMaxVel());
+                        }
+                        if (pmotionaxisinfo->getAcceleration())
+                        {
+                            pjoint->fMaxAccel = pmotionaxisinfo->getAcceleration()->getFloat()->getValue();
+
+                            //  Debug
+                            RAVELOG_VERBOSEA("... Joint Acceleration: %f...\n",pjoint->GetMaxAccel());
+                        }
+                    }
+
+                    //  If the joint is locked or NOT
+                    bool    joint_locked            = false;
+                    bool    kinematics_limits   =    false;
+
+                    //  If there is NO kinematicaxisinfo
+                    if (!!pkinematicaxisinfo)
+                    {
+                        //  Debug
+                        RAVELOG_VERBOSEA("Axis_info Start...\n");
+
+                        if (!pkinematicaxisinfo->getActive())
+                        {
+                            //  Debug
+                            RAVELOG_WARNA("Joint Disable...\n");
+                            pjoint->GetParent()->Enable(false);
+                        }
+
+                        if (!!pkinematicaxisinfo->getLocked())
+                        {
+                            if (pkinematicaxisinfo->getLocked()->getBool()->getValue())
+                            {
+                                //  Debug
+                                RAVELOG_WARNA("Joint Locked...\n");
+                                joint_locked = true;
+                            }
+                        }
+
+                        // If joint is locked set limits to 0. There is NO move
+                        if (joint_locked)
+                        {
+                            if( pjoint->type == KinBody::Joint::JointRevolute )
+                            {
+                                pjoint->_vlowerlimit.push_back(0.0f);
+                                pjoint->_vupperlimit.push_back(0.0f);
+                            }
+                        }
+                        // If there are articulated system kinematics limits
+                        else if (pkinematicaxisinfo->getLimits())
+                        {
+                            //  There is a kinematics limits
+                            kinematics_limits   = true;
+
+                            RAVELOG_WARNA("Articulated System Joint Limit Min: %f, Max: %f\n",
+                                    pkinematicaxisinfo->getLimits()->getMin()->getFloat()->getValue(),
+                                    pkinematicaxisinfo->getLimits()->getMax()->getFloat()->getValue());
+
+                            if( pjoint->type == KinBody::Joint::JointRevolute )
+                            {
+                                pjoint->_vlowerlimit.push_back((dReal)(pkinematicaxisinfo->getLimits()->getMin()->getFloat()->getValue()));
+                                pjoint->_vupperlimit.push_back((dReal)(pkinematicaxisinfo->getLimits()->getMax()->getFloat()->getValue()));
+                            }
+                        }
+                    }
+
+                    //  Search limits in the joints section
+                    if ((!joint_locked && !kinematics_limits) || !pkinematicaxisinfo)
+                    {
+                        RAVELOG_WARNA("Degrees of Freedom: %d\n",pjoint->GetDOF());
+
+                        for(int i = 0; i < pjoint->GetDOF(); ++i)
+                        {
+                            //  Debug
+                            RAVELOG_WARNA("DOF Number %d...\n",i);
+
+                            //  If there are NOT LIMITS
+                            if( !pdomaxis->getLimits() )
+                            {
+                                //  Debug
+                                RAVELOG_WARNA("There are NO LIMITS in the joint ...\n");
+
+                                if( pjoint->type == KinBody::Joint::JointRevolute )
+                                {
+                                    pjoint->_vlowerlimit.push_back(-PI);
+                                    pjoint->_vupperlimit.push_back(PI);
+                                }
+                                else
+                                {
+                                    pjoint->_vlowerlimit.push_back(-100000);
+                                    pjoint->_vupperlimit.push_back(100000);
+                                }
+                            }
+                            //  If there are LIMITS
+                            else
+                            {
+                                //  Debug
+                                RAVELOG_WARNA("There are LIMITS in the joint ...\n");
+
+                                dReal fscale = (pjoint->type == KinBody::Joint::JointRevolute)?(PI/180.0f):1.0f;
+
+                                //  Debug
+                                RAVELOG_WARNA("Joint Limits ...\n");
+
+                                pjoint->_vlowerlimit.push_back(pdomaxis->getLimits()->getMin()->getValue()*fscale);
+                                pjoint->_vupperlimit.push_back(pdomaxis->getLimits()->getMax()->getValue()*fscale);
+
+                                //  Debug
+                                RAVELOG_WARNA("Joint offset ...\n");
+
+                                if( pjoint->type == KinBody::Joint::JointRevolute )
+                                {
+                                    if( pjoint->_vlowerlimit.back() < -PI || pjoint->_vupperlimit.back()> PI )
+                                    {
+                                        pjoint->offset += 0.5f * (pjoint->_vlowerlimit[i] + pjoint->_vupperlimit[i]);
+                                        ++numbad;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if( numbad> 0 )
+                    {
+                        pjoint->offset *= 1.0f / (dReal)numbad;
+                        RAVELOG_VERBOSEA("joint %s offset is %f\n", pjoint->GetName().c_str(), (float)pjoint->offset);
+                    }
+
+                    // get node transforms before and after references axis
+                    //                TransformMatrix tchildnodeleft, tchildnoderight;
+                    //                if( !!pchildnode ) {
+                    //                    tchildnodeleft = pchildlink->_t.inverse() * getNodeParentTransform(pchildnode);
+                    //                    size_t ic = 0;
+                    //                    for(; ic < pchildnode->getContents().getCount(); ++ic) {
+                    //                        if( pchildnode->getContents()[ic].cast() == paxisnode.cast() )
+                    //                            break;
+                    //                        tchildnodeleft = tchildnodeleft * getTransform(pchildnode->getContents()[ic]);
+                    //                    }
+                    //
+                    //                    ic++; // skip current node
+                    //                    for(;ic < pchildnode->getContents().getCount(); ++ic) {
+                    //                        tchildnoderight = tchildnoderight * getTransform(pchildnode->getContents()[ic]);
+                    //                    }
+                    //                }
+
+                    //                FOREACH(itgeom, pchildlink->_listGeomProperties) {
+                    //                    itgeom->_t = tchildnoderight.inverse() * itgeom->_t;
+                    //                }
+
+                    //  Debug
+                    RAVELOG_WARNA("Get kinematics transforms... \n");
+
+                    // get kinematics transforms
+                    pjoint->tLeft = tatt;// * tchildnodeleft;
+                    pjoint->tRight = getFullTransform(pattfull->getLink());//*tchildnoderight;
+
+                    if( pjoint->type == KinBody::Joint::JointRevolute )
+                    {
+                        pjoint->tLeft = pjoint->tLeft * Transform().rotfromaxisangle(pjoint->vAxes[0], -pjoint->offset);
+                    }
+
+                    pjoint->tinvLeft = pjoint->tLeft.inverse();
+                    pjoint->tinvRight = pjoint->tRight.inverse();
+
+                    // mimic joints
+                    //pjoint->nMimicJointIndex = -1;
+                    //pjoint->fMimicCoeffs[0] = 1; pjoint->fMimicCoeffs[1] = 0;
+                    //            _pchain->_vecPassiveJoints.push_back(pnewjoint);
+                    // physics, control?
+                    //                pjoint->fMaxVel;
+                    //                pjoint->fMaxAccel;
+                    //                pjoint->fMaxTorque;
+                    //                pjoint->fResolution;
+
+                    pchildlink.reset();
+                    ++numjoints;
+                }
+            }
+
+        }
+        //pdomlink->getAttachment_start_array();
+        //pdomlink->getAttachment_end_array();
+
+        return plink;
+    }
+
+    /// Extract Geometry and apply the transformations of the node
+    /// \param pdomnode Node to extract the goemetry
+    /// \param plink    Link of the kinematics model
+    void ExtractGeometry(const domNodeRef pdomnode,KinBody::LinkPtr plink, const vector<KINEMATICSBINDING> &vbindings)
+    {
+        //  Debug
+        RAVELOG_WARNA("ExtractGeometry(node,link) of %s\n",pdomnode->getName());
+
+
+        for (size_t i = 0; i < pdomnode->getNode_array().getCount(); i++)
+        {
+            RAVELOG_VERBOSEA("[stef] (%d/%d) Children %s (%s)\n",i,pdomnode->getNode_array().getCount(),pdomnode->getNode_array()[i]->getID(), pdomnode->getID());
+        }
+
+        // For all child nodes of pdomnode
+        for (size_t i = 0; i < pdomnode->getNode_array().getCount(); i++)
+        {
+            RAVELOG_VERBOSEA("[stef]  %s: Process Children Children %s (%d/%d) \n",pdomnode->getID(),pdomnode->getNode_array()[i]->getID(),i,pdomnode->getNode_array().getCount());
+            // check if contains a joint
+            bool contains=false;
+            for (vector<KINEMATICSBINDING>::const_iterator it=vbindings.begin(); it!= vbindings.end();it++){
+                RAVELOG_VERBOSEA("[stef] child node '%s' ?=  link node '%s'",pdomnode->getNode_array()[i]->getID(), it->pvisualnode->getID());
+
+                // don't check ID's check if the reference is the same!
+                //if (string(pdomnode->getNode_array()[i]->getID()).compare(string(it->pvisualnode->getID()))==0){
+                if ( (pdomnode->getNode_array()[i])  == (it->pvisualnode)){
+                //domNode *pv = *(it->pvisualnode);
+                //domNode *child = *(pdomnode->getNode_array()[i]);
+                //if ( (child) == pv){
+                    contains=true;
+                    RAVELOG_VERBOSEA(" yes\n");
+                    break;
+                }
+                RAVELOG_VERBOSEA(" no\n");
+            }
+            if (contains) continue;
+
+            RAVELOG_VERBOSEA("[stef] Process child node: %s\n", pdomnode->getNode_array()[i]->getID());
+
+            ExtractGeometry(pdomnode->getNode_array()[i],plink, vbindings);
+            // Plink stayes the same for all children
+            // replace pdomnode by child = pdomnode->getNode_array()[i]
+            // hope for the best!
+            // put everything in a subroutine in order to process pdomnode too!
+        }
+
+
+        unsigned int nGeomBefore =  plink->_listGeomProperties.size(); // #of Meshes already associated to this link
 
         // get the geometry
-        for(size_t igeom = 0; igeom < pdomnode->getInstance_geometry_array().getCount(); ++igeom) {
-            domInstance_geometryRef domigeom = pdomnode->getInstance_geometry_array()[igeom];
-            domGeometryRef domgeom = daeSafeCast<domGeometry>(domigeom->getUrl().getElement());
-            if( !domgeom ) {
-                RAVELOG_WARNA("link %S does not have valid geometry\n", plink->GetName());
+        for (size_t igeom = 0; igeom
+        < pdomnode->getInstance_geometry_array().getCount(); ++igeom) {
+
+            domInstance_geometryRef domigeom =
+                pdomnode->getInstance_geometry_array()[igeom];
+
+            domGeometryRef domgeom = daeSafeCast<domGeometry> (
+                    domigeom->getUrl().getElement());
+
+            if (!domgeom) {
+                RAVELOG_WARNA("link %s does not have valid geometry\n",
+                              plink->GetName().c_str());
                 continue;
             }
 
-            map<string,domMaterialRef> mapmaterials;
-            if( !!domigeom->getBind_material() && !!domigeom->getBind_material()->getTechnique_common() ) {
-                const domInstance_material_Array& matarray = domigeom->getBind_material()->getTechnique_common()->getInstance_material_array();
-                for(size_t imat = 0; imat < matarray.getCount(); ++imat) {
-                    domMaterialRef pmat = daeSafeCast<domMaterial>(matarray[imat]->getTarget().getElement());
-                    if( !!pmat )
+            //  Gets materials
+            map<string, domMaterialRef> mapmaterials;
+            if (!!domigeom->getBind_material()
+                    && !!domigeom->getBind_material()->getTechnique_common()) {
+                const domInstance_material_Array
+                & matarray =
+                    domigeom->getBind_material()->getTechnique_common()->getInstance_material_array();
+                for (size_t imat = 0; imat < matarray.getCount(); ++imat) {
+                    domMaterialRef pmat = daeSafeCast<domMaterial> (
+                            matarray[imat]->getTarget().getElement());
+                    if (!!pmat)
                         mapmaterials[matarray[imat]->getSymbol()] = pmat;
                 }
             }
+
+            //  Gets the geometry
             ExtractGeometry(domgeom, mapmaterials, plink);
         }
-
-        TransformMatrix tmnodegeom = (TransformMatrix)plink->_t.inverse() * getNodeParentTransform(pdomnode) * getFullTransform(pdomnode);
-        Transform tnodegeom; Vector vscale;
+        TransformMatrix tmnodegeom = (TransformMatrix) plink->_t.inverse()
+            * getNodeParentTransform(pdomnode) * getFullTransform(pdomnode);
+        Transform tnodegeom;
+        Vector vscale;
         decompose(tmnodegeom, tnodegeom, vscale);
 
-        FOREACHC(itgeom, plink->_listGeomProperties) {
+
+        list<KinBody::Link::GEOMPROPERTIES>::iterator itgeom= plink->_listGeomProperties.begin();
+        for (unsigned int i=0; i< nGeomBefore; i++) itgeom++; // change only the transformations of the newly found geometries.
+
+        //  Switch between different type of geometry PRIMITIVES
+        for (; itgeom != plink->_listGeomProperties.end(); itgeom++)
+        {
             itgeom->_t = tnodegeom;
-            switch(itgeom->GetType()) {
+            switch (itgeom->GetType()) {
             case KinBody::Link::GEOMPROPERTIES::GeomBox:
                 itgeom->vGeomData *= vscale;
                 break;
             case KinBody::Link::GEOMPROPERTIES::GeomSphere:
-                itgeom->vGeomData *= max(vscale.z,max(vscale.x,vscale.y));
+                itgeom->vGeomData *= max(vscale.z, max(vscale.x, vscale.y));
                 break;
             case KinBody::Link::GEOMPROPERTIES::GeomCylinder:
-                itgeom->vGeomData.x *= max(vscale.x,vscale.y);
+                itgeom->vGeomData.x *= max(vscale.x, vscale.y);
                 itgeom->vGeomData.y *= vscale.z;
                 break;
             case KinBody::Link::GEOMPROPERTIES::GeomTrimesh:
@@ -337,211 +1523,55 @@ public:
                 RAVELOG_WARNA("unknown geometry type: %d\n", itgeom->GetType());
             }
 
+            //  Gets collision mesh
             KinBody::Link::TRIMESH trimesh = itgeom->GetCollisionMesh();
             trimesh.ApplyTransform(itgeom->_t);
             plink->collision.Append(trimesh);
         }
-
-        for(size_t iatt = 0; iatt < pdomlink->getAttachment_full_array().getCount(); ++iatt) {
-            domLink::domAttachment_fullRef pattfull = pdomlink->getAttachment_full_array()[iatt];
-
-            // get link kinematics transformation
-            TransformMatrix tatt = getFullTransform(pattfull);
-
-            // process attached links
-            daeElement* peltjoint = daeSidRef(pattfull->getJoint(), pattfull).resolve().elt;
-            domJointRef pdomjoint = daeSafeCast<domJoint>(peltjoint);
-
-            if( !pdomjoint ) {
-                domInstance_jointRef pdomijoint = daeSafeCast<domInstance_joint>(peltjoint);
-                if( !!pdomijoint )
-                    pdomjoint = daeSafeCast<domJoint>(pdomijoint->getUrl().getElement().cast());
-            }
-   
-            if( !pdomjoint || pdomjoint->typeID() != domJoint::ID() ) {
-                RAVELOG_WARNA("could not find attached joint %s!\n", pattfull->getJoint());
-                return false;
-            }
-
-            // get direct child link
-            if( !pattfull->getLink() ) {
-                RAVELOG_WARNA("joint %s needs to be attached to a valid link\n", pdomjoint->getID());
-                continue;
-            }
-
-            // find the correct node in vbindings
-            daeTArray<domAxis_constraintRef> vdomaxes = pdomjoint->getChildrenByType<domAxis_constraint>();
-            domNodeRef pchildnode = NULL;
-            daeElementRef paxisnode = NULL;
-            for(size_t ibind = 0; ibind < vbindings.size() && !pchildnode && !paxisnode; ++ibind) {
-                domAxis_constraintRef paxisfound = NULL;
-                for(size_t ic = 0; ic < vdomaxes.getCount(); ++ic) {
-                    if( vdomaxes[ic] == vbindings[ibind].pkinematicaxis ) {
-                        pchildnode = vbindings[ibind].pvisualnode;
-                        paxisnode = vbindings[ibind].pvisualtrans;
-                        break;
-                    }
-                }
-            }
-
-            if( !pchildnode ) {
-                RAVELOG_INFOA("failed to find associating node for joint %s\n", pdomjoint->getID());
-                continue;
-            }
-
-            // create the joints before creating the child links
-            dReal fJointWeight = 1;
-            vector<KinBody::Joint*> vjoints(vdomaxes.getCount());
-            for(size_t ic = 0; ic < vdomaxes.getCount(); ++ic) {
-                KinBody::Joint* pjoint = new KinBody::Joint(pkinbody);
-                pjoint->bodies[0] = plink;
-                pjoint->bodies[1] = NULL;
-                pjoint->name = _ravembstowcs(pdomjoint->getName());
-                pjoint->jointindex = (int)pkinbody->_vecjoints.size();
-                pjoint->dofindex = (int)pkinbody->_vecJointWeights.size();
-                pkinbody->_vecJointIndices.push_back((int)pkinbody->_vecJointWeights.size());
-                pkinbody->_vecjoints.push_back(pjoint);
-                pkinbody->_vecJointWeights.push_back(fJointWeight);
-                vjoints[ic] = pjoint;
-            }
-
-            KinBody::Link* pchildlink = ExtractLink(pkinbody, pattfull->getLink(), pchildnode, plink->_t*tatt, vdomjoints, vbindings);
-            if( pchildlink == NULL )
-                continue;
-
-            int numjoints = 0;
-            for(size_t ic = 0; ic < vdomaxes.getCount(); ++ic) {
-                domAxis_constraintRef pdomaxis = vdomaxes[ic];
-
-                if( pchildlink == NULL ) {
-                    // create dummy child link
-                    // multiple axes can be easily done with "empty links"
-                    RAVELOG_WARNA("openrave does not support collada joints with > 1 degrees\n");
-
-                    wstringstream ss; ss << plink->name;
-                    ss << L"_dummy" << numjoints;
-                    pchildlink = new KinBody::Link(pkinbody);
-                    pchildlink->name = ss.str().c_str();
-                    pchildlink->bStatic = false;
-                    pchildlink->index = (int)pkinbody->_veclinks.size();
-                    pkinbody->_veclinks.push_back(pchildlink);
-                }                
-
-                KinBody::Joint* pjoint = vjoints[ic];
-                pjoint->bodies[1] = pchildlink;
-
-                // forward kinematics
-                if( strcmp(pdomaxis->getElementName(), "revolute") == 0 )
-                    pjoint->type = KinBody::Joint::JointRevolute;
-                else if( strcmp(pdomaxis->getElementName(), "prismatic") == 0 )
-                    pjoint->type = KinBody::Joint::JointPrismatic;
-
-                pjoint->vAxes[0] = Vector(pdomaxis->getAxis()->getValue()[0], pdomaxis->getAxis()->getValue()[1], pdomaxis->getAxis()->getValue()[2]).normalize3();
-                pjoint->vanchor = Vector(0,0,0);
-                
-                int numbad = 0;
-                pjoint->offset = 0; // to overcome -pi to pi boundary
-                for(int i = 0; i < pjoint->GetDOF(); ++i) {
-                    if( !pdomaxis->getLimits() ) {
-                        
-                        if( pjoint->type == KinBody::Joint::JointRevolute ) {
-                            pjoint->_vlowerlimit.push_back(-PI);
-                            pjoint->_vupperlimit.push_back(PI);
-                        }
-                        else {
-                            pjoint->_vlowerlimit.push_back(-100000);
-                            pjoint->_vupperlimit.push_back(100000);
-                        }
-                    }
-                    else {
-                        dReal fscale = (pjoint->type == KinBody::Joint::JointRevolute)?(PI/180.0f):1.0f;
-                        pjoint->_vlowerlimit.push_back(pdomaxis->getLimits()->getMin()->getValue()*fscale);
-                        pjoint->_vupperlimit.push_back(pdomaxis->getLimits()->getMax()->getValue()*fscale);
-
-                        if( pjoint->type == KinBody::Joint::JointRevolute ) {
-                            if( pjoint->_vlowerlimit.back() < -PI || pjoint->_vupperlimit.back() > PI ) {
-                                pjoint->offset += 0.5f * (pjoint->_vlowerlimit[i] + pjoint->_vupperlimit[i]);
-                                ++numbad;
-                            }
-                        }
-                    }
-                }
-                if( numbad > 0 ) {
-                    pjoint->offset *= 1.0f / (dReal)numbad;
-                    RAVELOG_VERBOSEA("joint %S offset is %f\n", pjoint->GetName(), (float)pjoint->offset);
-                }
-                
-                // get node transforms before and after references axis
-//                TransformMatrix tchildnodeleft, tchildnoderight;
-//                if( !!pchildnode ) {
-//                    tchildnodeleft = pchildlink->_t.inverse() * getNodeParentTransform(pchildnode);
-//                    size_t ic = 0;
-//                    for(; ic < pchildnode->getContents().getCount(); ++ic) {
-//                        if( pchildnode->getContents()[ic].cast() == paxisnode.cast() )
-//                            break;
-//                        tchildnodeleft = tchildnodeleft * getTransform(pchildnode->getContents()[ic]);
-//                    }
-//
-//                    ic++; // skip current node
-//                    for(;ic < pchildnode->getContents().getCount(); ++ic) {
-//                        tchildnoderight = tchildnoderight * getTransform(pchildnode->getContents()[ic]);
-//                    }
-//                }
-
-//                FOREACH(itgeom, pchildlink->_listGeomProperties) {
-//                    itgeom->_t = tchildnoderight.inverse() * itgeom->_t;
-//                }
-
-                // get kinematics transforms
-                pjoint->tLeft = tatt;// * tchildnodeleft;
-                pjoint->tRight = getFullTransform(pattfull->getLink());//*tchildnoderight;
-                
-                if( pjoint->type == KinBody::Joint::JointRevolute ) {
-                    pjoint->tLeft = pjoint->tLeft * Transform().rotfromaxisangle(pjoint->vAxes[0], -pjoint->offset);
-                }
-
-                pjoint->tinvLeft = pjoint->tLeft.inverse();
-                pjoint->tinvRight = pjoint->tRight.inverse();
-
-                // mimic joints
-                //pjoint->nMimicJointIndex = -1;
-                //pjoint->fMimicCoeffs[0] = 1; pjoint->fMimicCoeffs[1] = 0;
-                //            _pchain->_vecPassiveJoints.push_back(pnewjoint);
-                // physics, control?
-//                pjoint->fMaxVel;
-//                pjoint->fMaxAccel;
-//                pjoint->fMaxTorque;
-//                pjoint->fResolution;
-            
-                pchildlink = NULL;
-                ++numjoints;
-            }
-        }
-
-        //pdomlink->getAttachment_start_array();
-        //pdomlink->getAttachment_end_array();
-
-        return plink;
+//      RAVELOG_VERBOSEA("End Extract Geometry (%s)\n",pdomnode->getID());
     }
 
+    /// Paint the Geometry with the color material
+    /// \param  pmat    Material info of the COLLADA's model
+    /// \param  geom    Geometry properties in OpenRAVE
     void FillGeometryColor(const domMaterialRef pmat, KinBody::Link::GEOMPROPERTIES& geom)
     {
-        if( !!pmat && !!pmat->getInstance_effect() ) {
+        if( !!pmat && !!pmat->getInstance_effect() )
+        {
             domEffectRef peffect = daeSafeCast<domEffect>(pmat->getInstance_effect()->getUrl().getElement().cast());
-            if( !!peffect ) {
+            if( !!peffect )
+            {
                 domProfile_common::domTechnique::domPhongRef pphong = daeSafeCast<domProfile_common::domTechnique::domPhong>(peffect->getDescendant(daeElement::matchType(domProfile_common::domTechnique::domPhong::ID())));
-                if( !!pphong ) {
+                if( !!pphong )
+                {
+
                     if( !!pphong->getAmbient() && !!pphong->getAmbient()->getColor() )
+                    {
+//                      RAVELOG_VERBOSEA("Set ambient color ...\n");
                         geom.ambientColor = getVector4(pphong->getAmbient()->getColor()->getValue());
+                    }
                     if( !!pphong->getDiffuse() && !!pphong->getDiffuse()->getColor() )
+                    {
+//                      RAVELOG_VERBOSEA("Set diffuse color ...\n");
                         geom.diffuseColor = getVector4(pphong->getDiffuse()->getColor()->getValue());
+                    }
                 }
             }
         }
     }
 
-    bool ExtractGeometry(const domTrianglesRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::Link* plink)
+    /// Extract the Geometry in TRIANGLES and adds it to OpenRave
+    /// \param  triRef  Array of triangles of the COLLADA's model
+    /// \param  vertsRef    Array of vertices of the COLLADA's model
+    /// \param  mapmaterials    Materials applied to the geometry
+    /// \param  plink   Link of the kinematics model
+    bool ExtractGeometry(const domTrianglesRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::LinkPtr plink)
     {
+        //  Debug
+        RAVELOG_VERBOSEA("ExtractGeometry in TRIANGLES and adds to OpenRAVE............\n");
+        if( triRef == NULL )
+            return false;
+
         plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES());
         KinBody::Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
         KinBody::Link::TRIMESH& trimesh = geom.collisionmesh;
@@ -556,30 +1586,37 @@ public:
         int vertexoffset = -1;
         domInput_local_offsetRef indexOffsetRef;
 
-        for (unsigned int w=0;w<triRef->getInput_array().getCount();w++) {
+        for (unsigned int w=0;w<triRef->getInput_array().getCount();w++)
+        {
             int offset = triRef->getInput_array()[w]->getOffset();
             daeString str = triRef->getInput_array()[w]->getSemantic();
-            if (!strcmp(str,"VERTEX")) {
+            if (!strcmp(str,"VERTEX"))
+            {
                 indexOffsetRef = triRef->getInput_array()[w];
                 vertexoffset = offset;
             }
-            if (offset > triangleIndexStride) {
+            if (offset> triangleIndexStride)
+            {
                 triangleIndexStride = offset;
             }
         }
+
         triangleIndexStride++;
         const domList_of_uints& indexArray =triRef->getP()->getValue();
 
-        for (size_t i=0;i<vertsRef->getInput_array().getCount();++i) {
+        for (size_t i=0;i<vertsRef->getInput_array().getCount();++i)
+        {
             domInput_localRef localRef = vertsRef->getInput_array()[i];
             daeString str = localRef->getSemantic();
-            if ( strcmp(str,"POSITION") == 0 ) {
+            if ( strcmp(str,"POSITION") == 0 )
+            {
                 const domSourceRef node = daeSafeCast<domSource>(localRef->getSource().getElement());
                 if( !node )
                     continue;
                 dReal fUnitScale = GetUnitScale(node);
                 const domFloat_arrayRef flArray = node->getFloat_array();
-                if (!!flArray) {
+                if (!!flArray)
+                {
                     const domList_of_floats& listFloats = flArray->getValue();
                     int k=vertexoffset;
                     int vertexStride = 3;//instead of hardcoded stride, should use the 'accessor'
@@ -588,12 +1625,18 @@ public:
                         trimesh.indices.reserve(trimesh.indices.size()+triRef->getCount());
                     if( trimesh.vertices.capacity() < trimesh.vertices.size()+triRef->getCount() )
                         trimesh.vertices.reserve(trimesh.vertices.size()+triRef->getCount());
-                    while(k < (int)indexArray.getCount() ) {
-                        for (int i=0;i<3;i++) {
+                    while(k < (int)indexArray.getCount() )
+                    {
+                        for (int i=0;i<3;i++)
+                        {
                             int index0 = indexArray.get(k)*vertexStride;
                             domFloat fl0 = listFloats.get(index0);
                             domFloat fl1 = listFloats.get(index0+1);
                             domFloat fl2 = listFloats.get(index0+2);
+
+
+                            //RAVELOG_VERBOSEA("fUnitScale %f \n",fUnitScale);
+
                             k+=triangleIndexStride;
                             trimesh.indices.push_back(trimesh.vertices.size());
                             trimesh.vertices.push_back(Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
@@ -603,12 +1646,31 @@ public:
             }
         }
 
+
+        //  Debug trimesh with 0.0 positions
+//      for (size_t i = 0;i < trimesh.vertices.size();i++)
+//      {
+//          float fl0 = trimesh.vertices[i].x;
+//          float fl1 = trimesh.vertices[i].y;
+//          float fl2 = trimesh.vertices[i].z;
+//
+//          RAVELOG_VERBOSEA("Trimesh Position %f, %f, %f\n",fl0,fl1,fl2);
+//      }
+
         geom.InitCollisionMesh();
         return true;
     }
 
-    bool ExtractGeometry(const domTrifansRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::Link* plink)
+    /// Extract the Geometry in TRIGLE FANS and adds it to OpenRave
+    /// \param  triRef  Array of triangle fans of the COLLADA's model
+    /// \param  vertsRef    Array of vertices of the COLLADA's model
+    /// \param  mapmaterials    Materials applied to the geometry
+    /// \param  plink   Link of the kinematics model
+    bool ExtractGeometry(const domTrifansRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::LinkPtr plink)
     {
+        //  Debug
+        RAVELOG_WARNA("ExtractGeometry in TRIANGLE FANS and adds to OpenRAVE............\n");
+
         plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES());
         KinBody::Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
         KinBody::Link::TRIMESH& trimesh = geom.collisionmesh;
@@ -623,32 +1685,39 @@ public:
         int vertexoffset = -1;
         domInput_local_offsetRef indexOffsetRef;
 
-        for (unsigned int w=0;w<triRef->getInput_array().getCount();w++) {
+        for (unsigned int w=0;w<triRef->getInput_array().getCount();w++)
+        {
             int offset = triRef->getInput_array()[w]->getOffset();
             daeString str = triRef->getInput_array()[w]->getSemantic();
-            if (!strcmp(str,"VERTEX")) {
+            if (!strcmp(str,"VERTEX"))
+            {
                 indexOffsetRef = triRef->getInput_array()[w];
                 vertexoffset = offset;
             }
-            if (offset > triangleIndexStride) {
+            if (offset> triangleIndexStride)
+            {
                 triangleIndexStride = offset;
             }
         }
         triangleIndexStride++;
-        
-        for(size_t ip = 0; ip < triRef->getP_array().getCount(); ++ip) {
+
+        for(size_t ip = 0; ip < triRef->getP_array().getCount(); ++ip)
+        {
             domList_of_uints indexArray =triRef->getP_array()[ip]->getValue();
 
-            for (size_t i=0;i<vertsRef->getInput_array().getCount();++i) {
+            for (size_t i=0;i<vertsRef->getInput_array().getCount();++i)
+            {
                 domInput_localRef localRef = vertsRef->getInput_array()[i];
                 daeString str = localRef->getSemantic();
-                if ( strcmp(str,"POSITION") == 0 ) {
+                if ( strcmp(str,"POSITION") == 0 )
+                {
                     const domSourceRef node = daeSafeCast<domSource>(localRef->getSource().getElement());
                     if( !node )
                         continue;
                     dReal fUnitScale = GetUnitScale(node);
                     const domFloat_arrayRef flArray = node->getFloat_array();
-                    if (!!flArray) {
+                    if (!!flArray)
+                    {
                         const domList_of_floats& listFloats = flArray->getValue();
                         int k=vertexoffset;
                         int vertexStride = 3;//instead of hardcoded stride, should use the 'accessor'
@@ -659,8 +1728,9 @@ public:
                             trimesh.vertices.reserve(trimesh.vertices.size()+triRef->getCount());
 
                         size_t startoffset = (int)trimesh.vertices.size();
-                        
-                        while(k < (int)indexArray.getCount() ) {
+
+                        while(k < (int)indexArray.getCount() )
+                        {
                             int index0 = indexArray.get(k)*vertexStride;
                             domFloat fl0 = listFloats.get(index0);
                             domFloat fl1 = listFloats.get(index0+1);
@@ -669,7 +1739,8 @@ public:
                             trimesh.vertices.push_back(Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
                         }
 
-                        for(size_t ivert = startoffset+2; ivert < trimesh.vertices.size(); ++ivert) {
+                        for(size_t ivert = startoffset+2; ivert < trimesh.vertices.size(); ++ivert)
+                        {
                             trimesh.indices.push_back(startoffset);
                             trimesh.indices.push_back(ivert-1);
                             trimesh.indices.push_back(ivert);
@@ -683,8 +1754,16 @@ public:
         return false;
     }
 
-    bool ExtractGeometry(const domTristripsRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::Link* plink)
+    /// Extract the Geometry in TRIANGLE STRIPS and adds it to OpenRave
+    /// \param  triRef  Array of Triangle Strips of the COLLADA's model
+    /// \param  vertsRef    Array of vertices of the COLLADA's model
+    /// \param  mapmaterials    Materials applied to the geometry
+    /// \param  plink   Link of the kinematics model
+    bool ExtractGeometry(const domTristripsRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::LinkPtr plink)
     {
+        //  Debug
+        RAVELOG_WARNA("ExtractGeometry in TRIANGLE STRIPS and adds to OpenRAVE............\n");
+
         plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES());
         KinBody::Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
         KinBody::Link::TRIMESH& trimesh = geom.collisionmesh;
@@ -699,32 +1778,39 @@ public:
         int vertexoffset = -1;
         domInput_local_offsetRef indexOffsetRef;
 
-        for (unsigned int w=0;w<triRef->getInput_array().getCount();w++) {
+        for (unsigned int w=0;w<triRef->getInput_array().getCount();w++)
+        {
             int offset = triRef->getInput_array()[w]->getOffset();
             daeString str = triRef->getInput_array()[w]->getSemantic();
-            if (!strcmp(str,"VERTEX")) {
+            if (!strcmp(str,"VERTEX"))
+            {
                 indexOffsetRef = triRef->getInput_array()[w];
                 vertexoffset = offset;
             }
-            if (offset > triangleIndexStride) {
+            if (offset> triangleIndexStride)
+            {
                 triangleIndexStride = offset;
             }
         }
         triangleIndexStride++;
-        
-        for(size_t ip = 0; ip < triRef->getP_array().getCount(); ++ip) {
+
+        for(size_t ip = 0; ip < triRef->getP_array().getCount(); ++ip)
+        {
             domList_of_uints indexArray =triRef->getP_array()[ip]->getValue();
 
-            for (size_t i=0;i<vertsRef->getInput_array().getCount();++i) {
+            for (size_t i=0;i<vertsRef->getInput_array().getCount();++i)
+            {
                 domInput_localRef localRef = vertsRef->getInput_array()[i];
                 daeString str = localRef->getSemantic();
-                if ( strcmp(str,"POSITION") == 0 ) {
+                if ( strcmp(str,"POSITION") == 0 )
+                {
                     const domSourceRef node = daeSafeCast<domSource>(localRef->getSource().getElement());
                     if( !node )
                         continue;
                     dReal fUnitScale = GetUnitScale(node);
                     const domFloat_arrayRef flArray = node->getFloat_array();
-                    if (!!flArray) {
+                    if (!!flArray)
+                    {
                         const domList_of_floats& listFloats = flArray->getValue();
                         int k=vertexoffset;
                         int vertexStride = 3;//instead of hardcoded stride, should use the 'accessor'
@@ -735,8 +1821,9 @@ public:
                             trimesh.vertices.reserve(trimesh.vertices.size()+triRef->getCount());
 
                         size_t startoffset = (int)trimesh.vertices.size();
-                        
-                        while(k < (int)indexArray.getCount() ) {
+
+                        while(k < (int)indexArray.getCount() )
+                        {
                             int index0 = indexArray.get(k)*vertexStride;
                             domFloat fl0 = listFloats.get(index0);
                             domFloat fl1 = listFloats.get(index0+1);
@@ -746,7 +1833,8 @@ public:
                         }
 
                         bool bFlip = false;
-                        for(size_t ivert = startoffset+2; ivert < trimesh.vertices.size(); ++ivert) {
+                        for(size_t ivert = startoffset+2; ivert < trimesh.vertices.size(); ++ivert)
+                        {
                             trimesh.indices.push_back(ivert-2);
                             trimesh.indices.push_back(bFlip ? ivert : ivert-1);
                             trimesh.indices.push_back(bFlip ? ivert-1 : ivert);
@@ -761,67 +1849,85 @@ public:
         return false;
     }
 
-    bool ExtractGeometry(const domGeometryRef geom, const map<string,domMaterialRef>& mapmaterials, KinBody::Link* plink)
+    /// Extract the Geometry and adds it to OpenRave
+    /// \param  geom    Geometry to extract of the COLLADA's model
+    /// \param  mapmaterials    Materials applied to the geometry
+    /// \param  plink   Link of the kinematics model
+    bool ExtractGeometry(const domGeometryRef geom, const map<string,domMaterialRef>& mapmaterials, KinBody::LinkPtr plink)
     {
         vector<Vector> vconvexhull;
-        if (!!geom && geom->getMesh()) {
+        if (!!geom && geom->getMesh())
+        {
             const domMeshRef meshRef = geom->getMesh();
 
-            for (size_t tg = 0;tg<meshRef->getTriangles_array().getCount();tg++) {
+            //  Extract Geometry of all array of TRIANGLES
+            for (size_t tg = 0;tg<meshRef->getTriangles_array().getCount();tg++)
+            {
                 ExtractGeometry(meshRef->getTriangles_array()[tg], meshRef->getVertices(), mapmaterials, plink);
             }
-            for (size_t tg = 0;tg<meshRef->getTrifans_array().getCount();tg++) {
+
+            //  Extract Geometry of all array of TRIANGLE FANS
+            for (size_t tg = 0;tg<meshRef->getTrifans_array().getCount();tg++)
+            {
                 ExtractGeometry(meshRef->getTrifans_array()[tg], meshRef->getVertices(), mapmaterials, plink);
             }
-            for (size_t tg = 0;tg<meshRef->getTristrips_array().getCount();tg++) {
+
+            // Extract Geometry of all array of TRIANGLE STRIPS
+            for (size_t tg = 0;tg<meshRef->getTristrips_array().getCount();tg++)
+            {
                 ExtractGeometry(meshRef->getTristrips_array()[tg], meshRef->getVertices(), mapmaterials, plink);
             }
-            if( meshRef->getPolylist_array().getCount() > 0 )
+
+            // Types of PRIMITIVES NOT SUPPORTED by OpenRAVE
+            if( meshRef->getPolylist_array().getCount()> 0 )
                 RAVELOG_WARNA("openrave does not support collada polylists\n");
-            if( meshRef->getPolygons_array().getCount() > 0 )
+            if( meshRef->getPolygons_array().getCount()> 0 )
                 RAVELOG_WARNA("openrave does not support collada polygons\n");
 
-//            if( alltrimesh.vertices.size() == 0 ) {
-//                const domVerticesRef vertsRef = meshRef->getVertices();
-//                for (size_t i=0;i<vertsRef->getInput_array().getCount();i++) {
-//                    domInput_localRef localRef = vertsRef->getInput_array()[i];
-//                    daeString str = localRef->getSemantic();
-//                    if ( strcmp(str,"POSITION") == 0 ) {
-//                        const domSourceRef node = daeSafeCast<domSource>(localRef->getSource().getElement());
-//                        if( !node )
-//                            continue;
-//                        dReal fUnitScale = GetUnitScale(node);
-//                        const domFloat_arrayRef flArray = node->getFloat_array();
-//                        if (!!flArray) {
-//                            const domList_of_floats& listFloats = flArray->getValue();
-//                            int vertexStride = 3;//instead of hardcoded stride, should use the 'accessor'
-//                            vconvexhull.reserve(vconvexhull.size()+listFloats.getCount());
-//                            for (size_t vertIndex = 0;vertIndex < listFloats.getCount();vertIndex+=vertexStride) {
-//                                //btVector3 verts[3];
-//                                domFloat fl0 = listFloats.get(vertIndex);
-//                                domFloat fl1 = listFloats.get(vertIndex+1);
-//                                domFloat fl2 = listFloats.get(vertIndex+2);
-//                                vconvexhull.push_back(Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
-//                            }
-//                        }
-//                    }
-//                }
-//
-//                computeConvexHull(vconvexhull,alltrimesh);
-//            }
+            //            if( alltrimesh.vertices.size() == 0 ) {
+            //                const domVerticesRef vertsRef = meshRef->getVertices();
+            //                for (size_t i=0;i<vertsRef->getInput_array().getCount();i++) {
+            //                    domInput_localRef localRef = vertsRef->getInput_array()[i];
+            //                    daeString str = localRef->getSemantic();
+            //                    if ( strcmp(str,"POSITION") == 0 ) {
+            //                        const domSourceRef node = daeSafeCast<domSource>(localRef->getSource().getElement());
+            //                        if( !node )
+            //                            continue;
+            //                        dReal fUnitScale = GetUnitScale(node);
+            //                        const domFloat_arrayRef flArray = node->getFloat_array();
+            //                        if (!!flArray) {
+            //                            const domList_of_floats& listFloats = flArray->getValue();
+            //                            int vertexStride = 3;//instead of hardcoded stride, should use the 'accessor'
+            //                            vconvexhull.reserve(vconvexhull.size()+listFloats.getCount());
+            //                            for (size_t vertIndex = 0;vertIndex < listFloats.getCount();vertIndex+=vertexStride) {
+            //                                //btVector3 verts[3];
+            //                                domFloat fl0 = listFloats.get(vertIndex);
+            //                                domFloat fl1 = listFloats.get(vertIndex+1);
+            //                                domFloat fl2 = listFloats.get(vertIndex+2);
+            //                                vconvexhull.push_back(Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
+            //                            }
+            //                        }
+            //                    }
+            //                }
+            //
+            //                computeConvexHull(vconvexhull,alltrimesh);
+            //            }
 
             return true;
         }
 
-        if (!!geom && geom->getConvex_mesh()) {
+        if (!!geom && geom->getConvex_mesh())
+        {
             {
                 const domConvex_meshRef convexRef = geom->getConvex_mesh();
                 daeElementRef otherElemRef = convexRef->getConvex_hull_of().getElement();
-                if ( otherElemRef != NULL ) {
+                if ( otherElemRef != NULL )
+                {
                     domGeometryRef linkedGeom = *(domGeometryRef*)&otherElemRef;
                     printf( "otherLinked\n");
                 }
-                else {
+                else
+                {
                     printf("convexMesh polyCount = %d\n",(int)convexRef->getPolygons_array().getCount());
                     printf("convexMesh triCount = %d\n",(int)convexRef->getTriangles_array().getCount());
                 }
@@ -830,33 +1936,42 @@ public:
             const domConvex_meshRef convexRef = geom->getConvex_mesh();
             //daeString urlref = convexRef->getConvex_hull_of().getURI();
             daeString urlref2 = convexRef->getConvex_hull_of().getOriginalURI();
-            if (urlref2) {
+            if (urlref2)
+            {
                 daeElementRef otherElemRef = convexRef->getConvex_hull_of().getElement();
 
                 // Load all the geometry libraries
-                for ( size_t i = 0; i < _dom->getLibrary_geometries_array().getCount(); i++) {
+                for ( size_t i = 0; i < _dom->getLibrary_geometries_array().getCount(); i++)
+                {
                     domLibrary_geometriesRef libgeom = _dom->getLibrary_geometries_array()[i];
 
-                    for (size_t  i = 0; i < libgeom->getGeometry_array().getCount(); i++) {
+                    for (size_t i = 0; i < libgeom->getGeometry_array().getCount(); i++)
+                    {
                         domGeometryRef lib = libgeom->getGeometry_array()[i];
-                        if (!strcmp(lib->getId(),urlref2+1)) { // skip the # at the front of urlref2
+                        if (!strcmp(lib->getId(),urlref2+1))
+                        { // skip the # at the front of urlref2
                             //found convex_hull geometry
                             domMesh *meshElement = lib->getMesh();//linkedGeom->getMesh();
-                            if (meshElement) {
+                            if (meshElement)
+                            {
                                 const domVerticesRef vertsRef = meshElement->getVertices();
-                                for (size_t i=0;i<vertsRef->getInput_array().getCount();i++) {
+                                for (size_t i=0;i<vertsRef->getInput_array().getCount();i++)
+                                {
                                     domInput_localRef localRef = vertsRef->getInput_array()[i];
                                     daeString str = localRef->getSemantic();
-                                    if ( strcmp(str,"POSITION") == 0) {
+                                    if ( strcmp(str,"POSITION") == 0)
+                                    {
                                         const domSourceRef node = daeSafeCast<domSource>(localRef->getSource().getElement());
                                         if( !node )
                                             continue;
                                         dReal fUnitScale = GetUnitScale(node);
                                         const domFloat_arrayRef flArray = node->getFloat_array();
-                                        if (!!flArray) {
+                                        if (!!flArray)
+                                        {
                                             vconvexhull.reserve(vconvexhull.size()+flArray->getCount());
                                             const domList_of_floats& listFloats = flArray->getValue();
-                                            for (size_t k=0;k+2<flArray->getCount();k+=3) {
+                                            for (size_t k=0;k+2<flArray->getCount();k+=3)
+                                            {
                                                 domFloat fl0 = listFloats.get(k);
                                                 domFloat fl1 = listFloats.get(k+1);
                                                 domFloat fl2 = listFloats.get(k+2);
@@ -870,22 +1985,27 @@ public:
                     }
                 }
             }
-            else {
+            else
+            {
                 //no getConvex_hull_of but direct vertices
                 const domVerticesRef vertsRef = convexRef->getVertices();
-                for (size_t i=0;i<vertsRef->getInput_array().getCount();i++) {
+                for (size_t i=0;i<vertsRef->getInput_array().getCount();i++)
+                {
                     domInput_localRef localRef = vertsRef->getInput_array()[i];
                     daeString str = localRef->getSemantic();
-                    if ( strcmp(str,"POSITION") == 0 ) {
+                    if ( strcmp(str,"POSITION") == 0 )
+                    {
                         const domSourceRef node = daeSafeCast<domSource>(localRef->getSource().getElement());
                         if( !node )
                             continue;
                         dReal fUnitScale = GetUnitScale(node);
                         const domFloat_arrayRef flArray = node->getFloat_array();
-                        if (!!flArray) {
+                        if (!!flArray)
+                        {
                             const domList_of_floats& listFloats = flArray->getValue();
                             vconvexhull.reserve(vconvexhull.size()+flArray->getCount());
-                            for (size_t k=0;k+2<flArray->getCount();k+=3) {
+                            for (size_t k=0;k+2<flArray->getCount();k+=3)
+                            {
                                 domFloat fl0 = listFloats.get(k);
                                 domFloat fl1 = listFloats.get(k+1);
                                 domFloat fl2 = listFloats.get(k+2);
@@ -896,7 +2016,8 @@ public:
                 }
             }
 
-            if( vconvexhull.size() > 0 ) {
+            if( vconvexhull.size()> 0 )
+            {
                 plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES());
                 KinBody::Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
                 KinBody::Link::TRIMESH& trimesh = geom.collisionmesh;
@@ -911,46 +2032,240 @@ public:
         return false;
     }
 
-    template <typename T, typename U>
-    daeSmartRef<T> resolve(domCommon_sidref_or_paramRef paddr, const U& paramArray)
+    /// Get daeElement of a given URI
+    template <typename T>
+    daeSmartRef<T> getElementFromUrl(daeURI &uri)
     {
-        daeElement* pref = paddr;
+        daeStandardURIResolver* daeURIRes = new daeStandardURIResolver(*(_collada.get()));
+        daeElementRef   element =   daeURIRes->resolveElement(uri);
+        return daeSafeCast<T>(element.cast());
+    }
+
+    template <typename T, typename U>
+    daeSmartRef<T> getSidRef(domCommon_sidref_or_paramRef paddr, const U& element)
+    {
         domSidref sidref = NULL;
 
+        //  If SIDREF founded
         if( paddr->getSIDREF() != NULL )
+        {
             sidref = paddr->getSIDREF()->getValue();
-        else if( paddr->getParam() != NULL ) { // parameter of kinematics
-            // search children parameters of kscene whose sid's match
-            for(size_t iikm = 0; iikm < paramArray.getCount(); ++iikm) {
-                for(size_t iparam = 0; iparam < paramArray[iikm]->getNewparam_array().getCount(); ++iparam) {
-                    // take the SIDREF of those parameters to get the real kinematics model
-                    if( strcmp(paramArray[iikm]->getNewparam_array()[iparam]->getSid(), paddr->getParam()->getValue()) == 0 ) {
-                        if( paramArray[iikm]->getNewparam_array()[iparam]->getSIDREF() != NULL ) {
-                            sidref = paramArray[iikm]->getNewparam_array()[iparam]->getSIDREF()->getValue();
-                            pref = paramArray[iikm]->getNewparam_array()[iparam];
-                            break;
-                        }
-                    }
+        }
+        //  If Parameter founded
+        else if (paddr->getParam() != NULL)
+        {
+            if (searchIKM(paddr->getParam()->getValue(),element))
+            {
+                domInstance_kinematics_model_Array instance_kinematics_array;
+                if (getElement()->typeID() == domKinematics_scene::ID())
+                {
+                    RAVELOG_WARNA("Kinematics Scene Element \n");
+                    domKinematics_sceneRef dks = daeSafeCast<domKinematics_scene>(getElement().cast());
+                    instance_kinematics_array = dks->getInstance_kinematics_model_array();
                 }
-
-                if( sidref != NULL )
-                    break;
+                else if (getElement()->typeID() == domArticulated_system::ID())
+                {
+                    RAVELOG_WARNA("Articulated System Element \n");
+                    domArticulated_systemRef das = daeSafeCast<domArticulated_system>(getElement().cast());
+                    instance_kinematics_array = das->getKinematics()->getInstance_kinematics_model_array();
+                }
+                return getObject<T>(getRef(),instance_kinematics_array);
             }
         }
 
-        if( sidref == NULL ) {
+        //  Debug
+        return NULL;
+    }
+
+    /// Search Intance Kinematics Model
+    /// This recursive procedure stops when find IKM
+    bool searchIKM(daeString ref, daeElementRef element)
+    {
+        if (element->typeID() == domKinematics_scene::ID()){
+
+            //  Debug
+            RAVELOG_WARNA("Kinematics Scene: %s\n",ref);
+
+            domKinematics_sceneRef ks = daeSafeCast<domKinematics_scene>(element.cast());
+
+            //  If the parameter is in articulated system
+            if (ks->getInstance_articulated_system_array().getCount() != 0)
+            {
+                if (searchParam(ref, ks->getInstance_articulated_system_array()))
+                {
+                    //  Debug
+                    RAVELOG_VERBOSEA("Articulated system found !!!\n");
+                    return searchIKM(getRef(),getElement());
+                }
+            }
+
+            //  If the parameter there is not in articulated system find in kinematics model
+            if (ks->getInstance_kinematics_model_array().getCount() != 0)
+            {
+                //  Debug
+                RAVELOG_VERBOSEA("Kinematics model found !!!\n");
+
+                setRef(ref);
+                setElement(element);
+                return true;
+            }
+        }
+        else if (element->typeID() == domArticulated_system::ID()){
+            RAVELOG_WARNA("Articulated System \n");
+            domArticulated_systemRef as = daeSafeCast<domArticulated_system>(element.cast());
+            if (as->getKinematics() != NULL){
+                RAVELOG_WARNA("Kinematics \n");
+                return true;
+            }
+            else if (as->getMotion() != NULL){
+                //  Gets the motion element;
+                _motion_element = as->getMotion();
+
+                daeTArray <domInstance_articulated_systemRef> instance_articulated_array;
+                instance_articulated_array.append(as->getMotion()->getInstance_articulated_system());
+                if (searchParam(ref, instance_articulated_array))
+                {
+                    RAVELOG_WARNA("Motion \n");
+                    return searchIKM(getRef(),getElement());
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// Store parameter reference
+    void setRef(daeString ref)
+    {
+        _ref =  ref;
+    }
+
+    /// Store element reference
+    void setElement(daeElementRef element)
+    {
+        _element = element;
+    }
+
+    /// Retrieve element stored
+    daeElementRef getElement()
+    {
+        return _element;
+    }
+
+    /// Retrieve parameter reference stored
+    daeString getRef()
+    {
+        return _ref;
+    }
+
+    daeString getSidRef_value()
+    {
+        return  _sidref;
+    }
+
+    /// Search a given parameter reference and stores the new reference to search
+    /// \param ref The reference to search
+    /// \param paramArray The array of parameter where the method searchs
+    template <typename T>
+    bool searchParam(daeString ref, const T& paramArray)
+    {
+        bool param_founded = false;
+
+        //  Debug
+        RAVELOG_WARNA("search Param: %s\n",ref);
+
+        // For each Instance find binds
+        for(size_t iikm = 0; iikm < paramArray.getCount(); ++iikm)
+        {
+            //  Debug
+            RAVELOG_WARNA("Number of Binds: %d\n",paramArray[iikm]->getBind_array().getCount());
+
+            //  For each Bind
+            for (size_t iparam = 0; iparam < paramArray[iikm]->getBind_array().getCount(); ++iparam)
+            {
+                // Compare bind parameter and given param
+                if( strcmp(paramArray[iikm]->getBind_array()[iparam]->getSymbol(), ref) == 0 )
+                {
+                    if( paramArray[iikm]->getBind_array()[iparam]->getParam() != NULL )
+                    {
+                        //  Debug
+                        RAVELOG_WARNA("Ref: %s\n",paramArray[iikm]->getBind_array()[iparam]->getParam()->getRef());
+
+                        setRef(paramArray[iikm]->getBind_array()[iparam]->getParam()->getRef());
+                        setElement(paramArray[iikm]->getUrl().getElement());
+
+                        param_founded = true;
+                        break;
+                    }
+                }
+            }
+
+            //  If found parameter
+            if( param_founded )
+                break;
+        }
+
+        return param_founded;
+    }
+
+    /// Gets the object that points SIDREF
+    template <typename T, typename U>
+    daeSmartRef<T> getObject(daeString ref, const U& paramArray)
+    {
+        domSidref sidref = NULL;
+        daeElement* pref = NULL;
+
+        //  Debug
+        RAVELOG_WARNA("Number of instances: %d\n",paramArray.getCount());
+
+        // parameter of kinematics
+        // search children parameters of kscene whose sid's match
+        for(size_t iikm = 0; iikm < paramArray.getCount(); ++iikm)
+        {
+            //  Debug
+            RAVELOG_WARNA("Number of newparam: %d\n",paramArray[iikm]->getNewparam_array().getCount());
+
+            for(size_t iparam = 0; iparam < paramArray[iikm]->getNewparam_array().getCount(); ++iparam)
+            {
+                // take the SIDREF of those parameters to get the real kinematics model
+                if( strcmp(paramArray[iikm]->getNewparam_array()[iparam]->getSid(), ref) == 0 )
+                {
+                    if( paramArray[iikm]->getNewparam_array()[iparam]->getSIDREF() != NULL )
+                    {
+                        sidref = paramArray[iikm]->getNewparam_array()[iparam]->getSIDREF()->getValue();
+                        pref = paramArray[iikm]->getNewparam_array()[iparam];
+                        break;
+                    }
+                }
+            }
+
+            if( sidref != NULL )
+                break;
+        }
+
+        if( sidref == NULL )
+        {
             RAVELOG_WARNA("failed to find instance kinematics sidref\n");
+
+            _sidref =   NULL;
+
             return NULL;
         }
+
+        //  Store sidref value
+        _sidref = sidref;
 
         // SID path to kinematics
         daeSmartRef<T> ptarget = daeSafeCast<T>(daeSidRef(sidref, pref).resolve().elt);
-        if( ptarget == NULL ) {
-            RAVELOG_WARNA("failed to resolve %s from %s\n", sidref, paddr->getID());
+
+        if( ptarget == NULL )
+        {
+            RAVELOG_WARNA("failed to resolve %s from %s\n", sidref, ref);
             return NULL;
         }
 
-        if( ptarget->typeID() != T::ID() ) {
+        if( ptarget->typeID() != T::ID() )
+        {
             RAVELOG_WARNA("unexpected resolved type (%s) \n", ptarget->getTypeName());
             return NULL;
         }
@@ -964,25 +2279,32 @@ public:
         if( paddr->getFloat() != NULL )
             return paddr->getFloat()->getValue();
 
-        if( paddr->getParam() == NULL ) {
+        if( paddr->getParam() == NULL )
+        {
             RAVELOG_WARNA("joint value not specified, setting to 0\n");
             return 0;
         }
 
-        for(size_t iikm = 0; iikm < paramArray.getCount(); ++iikm) {
-            for(size_t iparam = 0; iparam < paramArray[iikm]->getNewparam_array().getCount(); ++iparam) {
+        for(size_t iikm = 0; iikm < paramArray.getCount(); ++iikm)
+        {
+            for(size_t iparam = 0; iparam < paramArray[iikm]->getNewparam_array().getCount(); ++iparam)
+            {
                 domKinematics_newparamRef pnewparam = paramArray[iikm]->getNewparam_array()[iparam];
-                if( strcmp(pnewparam->getSid(), paddr->getParam()->getValue()) == 0 ) {
+                if( strcmp(pnewparam->getSid(), paddr->getParam()->getValue()) == 0 )
+                {
                     if( pnewparam->getFloat() != NULL )
                         return pnewparam->getFloat()->getValue();
-                    else if( pnewparam->getSIDREF() != NULL ) {
+                    else if( pnewparam->getSIDREF() != NULL )
+                    {
                         domKinematics_newparam::domFloatRef ptarget = daeSafeCast<domKinematics_newparam::domFloat>(daeSidRef(pnewparam->getSIDREF()->getValue(), pnewparam).resolve().elt);
-                        if( ptarget == NULL ) {
+                        if( ptarget == NULL )
+                        {
                             RAVELOG_WARNA("failed to resolve %s from %s\n", pnewparam->getSIDREF()->getValue(), paddr->getID());
                             continue;
                         }
 
-                        if( ptarget->getElementType() != COLLADA_TYPE::FLOAT ) {
+                        if( ptarget->getElementType() != COLLADA_TYPE::FLOAT )
+                        {
                             RAVELOG_WARNA("unexpected resolved element type (%d) \n", ptarget->getElementType());
                             continue;
                         }
@@ -992,29 +2314,34 @@ public:
                 }
             }
         }
-                    
+
         return NULL;
     }
 
+    /// Gets all transformations applied to the node
     TransformMatrix getTransform(daeElementRef pelt)
     {
         TransformMatrix t;
         domRotateRef protate = daeSafeCast<domRotate>(pelt);
-        if( !!protate ) {            
+        if( !!protate )
+        {
             t.rotfromaxisangle(Vector(protate->getValue()[0],protate->getValue()[1],protate->getValue()[2]), (dReal)(protate->getValue()[3]*(PI/180.0)));
             return t;
         }
 
         domTranslateRef ptrans = daeSafeCast<domTranslate>(pelt);
-        if( !!ptrans ) {
+        if( !!ptrans )
+        {
             t.trans = Vector(ptrans->getValue()[0], ptrans->getValue()[1], ptrans->getValue()[2]);
             t.trans *= GetUnitScale(pelt);
             return t;
         }
-    
+
         domMatrixRef pmat = daeSafeCast<domMatrix>(pelt);
-        if( !!pmat ) {
-            for(int i = 0; i < 3; ++i) {
+        if( !!pmat )
+        {
+            for(int i = 0; i < 3; ++i)
+            {
                 t.m[4*i+0] = pmat->getValue()[4*i+0];
                 t.m[4*i+1] = pmat->getValue()[4*i+1];
                 t.m[4*i+2] = pmat->getValue()[4*i+2];
@@ -1025,7 +2352,8 @@ public:
         }
 
         domScaleRef pscale = daeSafeCast<domScale>(pelt);
-        if( !!pscale ) {
+        if( !!pscale )
+        {
             t.m[0] = pscale->getValue()[0];
             t.m[4*1+1] = pscale->getValue()[1];
             t.m[4*2+2] = pscale->getValue()[2];
@@ -1033,26 +2361,29 @@ public:
         }
 
         domLookatRef pcamera = daeSafeCast<domLookat>(pelt);
-        if( pelt->typeID() == domLookat::ID() ) {
+        if( pelt->typeID() == domLookat::ID() )
+        {
             Vector campos(pcamera->getValue()[0], pcamera->getValue()[1], pcamera->getValue()[2]);
             Vector lookat(pcamera->getValue()[3], pcamera->getValue()[4], pcamera->getValue()[5]);
             Vector camup(pcamera->getValue()[6], pcamera->getValue()[7], pcamera->getValue()[8]);
-            
+
             Vector dir = -(lookat - campos);
             dReal len = RaveSqrt(dir.lengthsqr3());
 
-            if( len > 1e-6 )
+            if( len> 1e-6 )
                 dir *= 1/len;
             else
                 dir = Vector(0,0,1);
 
             Vector up = camup - dir * dot3(dir,camup);
             len = up.lengthsqr3();
-            if( len < 1e-8 ) {
+            if( len < 1e-8 )
+            {
                 up = Vector(0,1,0);
                 up -= dir * dot3(dir,up);
                 len = up.lengthsqr3();
-                if( len < 1e-8 ) {
+                if( len < 1e-8 )
+                {
                     up = Vector(1,0,0);
                     up -= dir * dot3(dir,up);
                     len = up.lengthsqr3();
@@ -1060,7 +2391,7 @@ public:
             }
 
             up *= 1/RaveSqrt(len);
-    
+
             Vector right; right.Cross(up,dir);
             t.m[0] = right.x; t.m[1] = up.x; t.m[2] = dir.x;
             t.m[4] = right.y; t.m[5] = up.y; t.m[6] = dir.y;
@@ -1070,13 +2401,16 @@ public:
         }
 
         domSkewRef pskew = daeSafeCast<domSkew>(pelt);
-        if( !!pskew ) {
+        if( !!pskew )
+        {
             RAVELOG_ERRORA("skew transform not implemented\n");
         }
 
         return t;
     }
 
+    /// Travels recursively the node parents of the given one
+    /// to extract the Transform arrays that affects the node given
     template <typename T>
     TransformMatrix getNodeParentTransform(const T pelt)
     {
@@ -1086,12 +2420,16 @@ public:
         return getNodeParentTransform(pnode) * getFullTransform(pnode);
     }
 
+    /// Travel by the transformation array and calls the getTransform method
     template <typename T>
     TransformMatrix getFullTransform(const T pelt)
     {
         TransformMatrix t;
+
         for(size_t i = 0; i < pelt->getContents().getCount(); ++i)
+        {
             t = t * getTransform(pelt->getContents()[i]);
+        }
         return t;
     }
 
@@ -1113,15 +2451,18 @@ public:
         tout = tm;
     }
 
-    virtual void handleError( daeString msg ) {
+    virtual void handleError( daeString msg )
+    {
         RAVELOG_ERRORA("COLLADA error: %s\n", msg);
     }
 
-	virtual void handleWarning( daeString msg ) {
+    virtual void handleWarning( daeString msg )
+    {
         RAVELOG_WARNA("COLLADA warning: %s\n", msg);
     }
 
-    inline dReal GetUnitScale(daeElement* pelt) {
+    inline dReal GetUnitScale(daeElement* pelt)
+    {
         return ((USERDATA*)pelt->getUserData())->scale;
     }
 
@@ -1131,132 +2472,140 @@ private:
     {
         RAVELOG_ERRORA("convex hulls not supported\n");
         return false;
-//        if( verts.size() <= 3 )
-//            return false;
-//
-//        int dim = 3;  	              // dimension of points
-//        vector<coordT> qpoints(3*verts.size());
-//        for(size_t i = 0; i < verts.size(); ++i) {
-//            qpoints[3*i+0] = verts[i].x;
-//            qpoints[3*i+1] = verts[i].y;
-//            qpoints[3*i+2] = verts[i].z;
-//        }
-//        
-//        bool bSuccess = false;
-//        boolT ismalloc = 0;           // True if qhull should free points in qh_freeqhull() or reallocation  
-//        char flags[]= "qhull Tv"; // option flags for qhull, see qh_opt.htm 
-//        FILE *outfile = NULL;    // stdout, output from qh_produce_output(), use NULL to skip qh_produce_output()  
-//        FILE *errfile = tmpfile();    // stderr, error messages from qhull code  
-//        
-//        int exitcode= qh_new_qhull (dim, qpoints.size()/3, &qpoints[0], ismalloc, flags, outfile, errfile);
-//        if (!exitcode) { // no error
-//            vconvexplanes.reserve(100);
-//
-//            facetT *facet;	          // set by FORALLfacets 
-//            FORALLfacets { // 'qh facet_list' contains the convex hull
-//                vconvexplanes.push_back(Vector(facet->normal[0], facet->normal[1], facet->normal[2], facet->offset));
-//            }
-//
-//            bSuccess = true;
-//        }
-//
-//        qh_freeqhull(!qh_ALL);
-//        int curlong, totlong;	  // memory remaining after qh_memfreeshort 
-//        qh_memfreeshort (&curlong, &totlong);
-//        if (curlong || totlong)
-//            ROS_ERROR("qhull internal warning (main): did not free %d bytes of long memory (%d pieces)", totlong, curlong);
-//     
-//        fclose(errfile);
-//        return bSuccess;
+        //        if( verts.size() <= 3 )
+        //            return false;
+        //
+        //        int dim = 3;                    // dimension of points
+        //        vector<coordT> qpoints(3*verts.size());
+        //        for(size_t i = 0; i < verts.size(); ++i) {
+        //            qpoints[3*i+0] = verts[i].x;
+        //            qpoints[3*i+1] = verts[i].y;
+        //            qpoints[3*i+2] = verts[i].z;
+        //        }
+        //
+        //        bool bSuccess = false;
+        //        boolT ismalloc = 0;           // True if qhull should free points in qh_freeqhull() or reallocation
+        //        char flags[]= "qhull Tv"; // option flags for qhull, see qh_opt.htm
+        //        FILE *outfile = NULL;    // stdout, output from qh_produce_output(), use NULL to skip qh_produce_output()
+        //        FILE *errfile = tmpfile();    // stderr, error messages from qhull code
+        //
+        //        int exitcode= qh_new_qhull (dim, qpoints.size()/3, &qpoints[0], ismalloc, flags, outfile, errfile);
+        //        if (!exitcode) { // no error
+        //            vconvexplanes.reserve(100);
+        //
+        //            facetT *facet;              // set by FORALLfacets
+        //            FORALLfacets { // 'qh facet_list' contains the convex hull
+        //                vconvexplanes.push_back(Vector(facet->normal[0], facet->normal[1], facet->normal[2], facet->offset));
+        //            }
+        //
+        //            bSuccess = true;
+        //        }
+        //
+        //        qh_freeqhull(!qh_ALL);
+        //        int curlong, totlong;   // memory remaining after qh_memfreeshort
+        //        qh_memfreeshort (&curlong, &totlong);
+        //        if (curlong || totlong)
+        //            ROS_ERROR("qhull internal warning (main): did not free %d bytes of long memory (%d pieces)", totlong, curlong);
+        //
+        //        fclose(errfile);
+        //        return bSuccess;
     }
 
-    boost::shared_ptr<DAE> _collada;
-    domCOLLADA* _dom;
-    EnvironmentBase* _penv;
-    vector<USERDATA> _vuserdata; // all userdata
+    boost::shared_ptr<DAE>  _collada;
+    domCOLLADA*                         _dom;
+    EnvironmentBasePtr              _penv;
+    vector<USERDATA>                _vuserdata; // all userdata
+
+    //  Parameters of the searchParam
+    daeString           _ref;
+    daeString           _sidref;
+    daeElementRef   _element;
+    domMotionRef    _motion_element;
+
+    //  Reader needed to Sensors
+    boost::shared_ptr<BaseXMLReader> _pcurreader;
 };
 
-bool RaveParseColladaFile(EnvironmentBase* penv, const char* filename)
+bool RaveParseColladaFile(EnvironmentBasePtr penv, const string& filename)
 {
     ColladaReader reader(penv);
-    if( !reader.Init(filename) )
+    if (!reader.InitFromFile(filename))
         return false;
     return reader.Extract(penv);
 }
 
-bool RaveParseColladaFile(EnvironmentBase* penv, KinBody** pbody, const char* filename)
+bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& filename)
 {
     ColladaReader reader(penv);
-    if( !reader.Init(filename) )
+    if (!reader.InitFromFile(filename))
         return false;
     return reader.Extract(pbody);
 }
 
-bool RaveParseColladaFile(EnvironmentBase* penv, RobotBase** probot, const char* filename)
+bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& filename)
 {
     ColladaReader reader(penv);
-    if( !reader.Init(filename) )
+    if (!reader.InitFromFile(filename))
         return false;
     return reader.Extract(probot);
 }
 
-bool RaveParseColladaData(EnvironmentBase* penv, const char* pdata, int len)
-{
+bool RaveParseColladaData(EnvironmentBasePtr penv, const string& pdata) {
     ColladaReader reader(penv);
-    if( !reader.Init(pdata, len) )
+    if (!reader.InitFromData(pdata))
         return false;
     return reader.Extract(penv);
 }
 
-bool RaveParseColladaData(EnvironmentBase* penv, KinBody** pbody, const char* pdata, int len)
+bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& pdata)
 {
     ColladaReader reader(penv);
-    if( !reader.Init(pdata, len) )
+    if (!reader.InitFromData(pdata))
         return false;
     return reader.Extract(pbody);
 }
 
-bool RaveParseColladaData(EnvironmentBase* penv, RobotBase** probot, const char* pdata, int len)
+bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& pdata)
 {
     ColladaReader reader(penv);
-    if( !reader.Init(pdata, len) )
+    if (!reader.InitFromData(pdata))
         return false;
     return reader.Extract(probot);
 }
 
 #else
 
-bool RaveParseColladaFile(EnvironmentBase* penv, const char* filename)
+bool RaveParseColladaFile(EnvironmentBasePtr penv, const string& filename)
 {
     RAVELOG_ERRORA("collada files not supported\n");
     return false;
 }
 
-bool RaveParseColladaFile(EnvironmentBase* penv, KinBody** pbody, const char* filename)
+bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& filename)
 {
     RAVELOG_ERRORA("collada files not supported\n");
     return false;
 }
 
-bool RaveParseColladaFile(EnvironmentBase* penv, RobotBase** probot, const char* filename)
+bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& filename)
 {
     RAVELOG_ERRORA("collada files not supported\n");
     return false;
 }
 
-bool RaveParseColladaData(EnvironmentBase* penv, const char* pdata, int len)
+bool RaveParseColladaData(EnvironmentBasePtr penv, const string& pdata)
 {
     RAVELOG_ERRORA("collada files not supported\n");
     return false;
 }
 
-bool RaveParseColladaData(EnvironmentBase* penv, KinBody** pbody, const char* pdata, int len)
+bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& pdata)
 {
     RAVELOG_ERRORA("collada files not supported\n");
     return false;
 }
 
-bool RaveParseColladaData(EnvironmentBase* penv, RobotBase** probot, const char* pdata, int len)
+bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& pdata)
 {
     RAVELOG_ERRORA("collada files not supported\n");
     return false;

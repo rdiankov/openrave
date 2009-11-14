@@ -1168,6 +1168,22 @@ class domCOLLADA;
 typedef daeSmartRef<domCOLLADA> domCOLLADARef;
 typedef daeTArray<domCOLLADARef> domCOLLADA_Array;
 
+//	Debug. Library sensors
+class domLibrary_sensors;
+
+typedef daeSmartRef<domLibrary_sensors> domLibrary_sensorsRef;
+typedef daeTArray<domLibrary_sensorsRef> domLibrary_sensors_Array;
+
+class	domSensor;
+
+typedef daeSmartRef<domSensor> domSensorRef;
+typedef daeTArray<domSensorRef> domSensor_Array;
+
+class	domInstance_sensor;
+
+typedef daeSmartRef<domInstance_sensor> domInstance_sensorRef;
+typedef daeTArray<domInstance_sensorRef> domInstance_sensor_Array;
+//
 
 #endif //__DOM_ELEMENTS_H__
 

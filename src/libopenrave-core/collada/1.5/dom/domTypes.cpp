@@ -19,7 +19,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Float");
 	}
-	
+
 	// TYPEDEF: Int	//check if this type has an existing base
 	type = atomicTypes.get("xsLong");
 	if ( type == NULL ) { //register as a raw type
@@ -30,7 +30,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Int");
 	}
-	
+
 	// TYPEDEF: Uint	//check if this type has an existing base
 	type = atomicTypes.get("xsUnsignedLong");
 	if ( type == NULL ) { //register as a raw type
@@ -41,7 +41,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Uint");
 	}
-	
+
 	// TYPEDEF: Sidref	//check if this type has an existing base
 	type = atomicTypes.get("xsString");
 	if ( type == NULL ) { //register as a raw type
@@ -52,7 +52,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Sidref");
 	}
-	
+
 	// TYPEDEF: Sid	//check if this type has an existing base
 	type = atomicTypes.get("xsNCName");
 	if ( type == NULL ) { //register as a raw type
@@ -63,7 +63,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Sid");
 	}
-	
+
 	// TYPEDEF: List_of_bools	//check if this type has an existing base
 	type = atomicTypes.get("xsBoolean");
 	if ( type == NULL ) { //register as a raw type
@@ -74,7 +74,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("List_of_bools");
 	}
-	
+
 	// TYPEDEF: List_of_floats	//check if this type has an existing base
 	type = atomicTypes.get("Float");
 	if ( type == NULL ) { //register as a raw type
@@ -85,7 +85,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("List_of_floats");
 	}
-	
+
 	// TYPEDEF: List_of_hex_binary	//check if this type has an existing base
 	type = atomicTypes.get("xsHexBinary");
 	if ( type == NULL ) { //register as a raw type
@@ -96,7 +96,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("List_of_hex_binary");
 	}
-	
+
 	// TYPEDEF: List_of_ints	//check if this type has an existing base
 	type = atomicTypes.get("Int");
 	if ( type == NULL ) { //register as a raw type
@@ -107,7 +107,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("List_of_ints");
 	}
-	
+
 	// TYPEDEF: List_of_names	//check if this type has an existing base
 	type = atomicTypes.get("xsName");
 	if ( type == NULL ) { //register as a raw type
@@ -118,7 +118,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("List_of_names");
 	}
-	
+
 	// TYPEDEF: List_of_idrefs	//check if this type has an existing base
 	type = atomicTypes.get("xsName");
 	if ( type == NULL ) { //register as a raw type
@@ -129,7 +129,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("List_of_idrefs");
 	}
-	
+
 	// TYPEDEF: List_of_sidrefs	//check if this type has an existing base
 	type = atomicTypes.get("Sidref");
 	if ( type == NULL ) { //register as a raw type
@@ -140,7 +140,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("List_of_sidrefs");
 	}
-	
+
 	// TYPEDEF: List_of_tokens	//check if this type has an existing base
 	type = atomicTypes.get("xsToken");
 	if ( type == NULL ) { //register as a raw type
@@ -151,7 +151,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("List_of_tokens");
 	}
-	
+
 	// TYPEDEF: List_of_uints	//check if this type has an existing base
 	type = atomicTypes.get("Uint");
 	if ( type == NULL ) { //register as a raw type
@@ -162,7 +162,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("List_of_uints");
 	}
-	
+
 	// TYPEDEF: Bool2	//check if this type has an existing base
 	type = atomicTypes.get("List_of_bools");
 	if ( type == NULL ) { //register as a raw type
@@ -173,7 +173,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Bool2");
 	}
-	
+
 	// TYPEDEF: Bool3	//check if this type has an existing base
 	type = atomicTypes.get("List_of_bools");
 	if ( type == NULL ) { //register as a raw type
@@ -184,7 +184,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Bool3");
 	}
-	
+
 	// TYPEDEF: Bool4	//check if this type has an existing base
 	type = atomicTypes.get("List_of_bools");
 	if ( type == NULL ) { //register as a raw type
@@ -195,7 +195,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Bool4");
 	}
-	
+
 	// TYPEDEF: Bool2x2	//check if this type has an existing base
 	type = atomicTypes.get("List_of_bools");
 	if ( type == NULL ) { //register as a raw type
@@ -206,7 +206,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Bool2x2");
 	}
-	
+
 	// TYPEDEF: Bool2x3	//check if this type has an existing base
 	type = atomicTypes.get("List_of_bools");
 	if ( type == NULL ) { //register as a raw type
@@ -217,7 +217,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Bool2x3");
 	}
-	
+
 	// TYPEDEF: Bool2x4	//check if this type has an existing base
 	type = atomicTypes.get("List_of_bools");
 	if ( type == NULL ) { //register as a raw type
@@ -228,7 +228,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Bool2x4");
 	}
-	
+
 	// TYPEDEF: Bool3x2	//check if this type has an existing base
 	type = atomicTypes.get("List_of_bools");
 	if ( type == NULL ) { //register as a raw type
@@ -239,7 +239,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Bool3x2");
 	}
-	
+
 	// TYPEDEF: Bool3x3	//check if this type has an existing base
 	type = atomicTypes.get("List_of_bools");
 	if ( type == NULL ) { //register as a raw type
@@ -250,7 +250,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Bool3x3");
 	}
-	
+
 	// TYPEDEF: Bool3x4	//check if this type has an existing base
 	type = atomicTypes.get("List_of_bools");
 	if ( type == NULL ) { //register as a raw type
@@ -261,7 +261,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Bool3x4");
 	}
-	
+
 	// TYPEDEF: Bool4x2	//check if this type has an existing base
 	type = atomicTypes.get("List_of_bools");
 	if ( type == NULL ) { //register as a raw type
@@ -272,7 +272,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Bool4x2");
 	}
-	
+
 	// TYPEDEF: Bool4x3	//check if this type has an existing base
 	type = atomicTypes.get("List_of_bools");
 	if ( type == NULL ) { //register as a raw type
@@ -283,7 +283,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Bool4x3");
 	}
-	
+
 	// TYPEDEF: Bool4x4	//check if this type has an existing base
 	type = atomicTypes.get("List_of_bools");
 	if ( type == NULL ) { //register as a raw type
@@ -294,7 +294,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Bool4x4");
 	}
-	
+
 	// TYPEDEF: Float2	//check if this type has an existing base
 	type = atomicTypes.get("List_of_floats");
 	if ( type == NULL ) { //register as a raw type
@@ -305,7 +305,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Float2");
 	}
-	
+
 	// TYPEDEF: Float3	//check if this type has an existing base
 	type = atomicTypes.get("List_of_floats");
 	if ( type == NULL ) { //register as a raw type
@@ -316,7 +316,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Float3");
 	}
-	
+
 	// TYPEDEF: Float4	//check if this type has an existing base
 	type = atomicTypes.get("List_of_floats");
 	if ( type == NULL ) { //register as a raw type
@@ -327,7 +327,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Float4");
 	}
-	
+
 	// TYPEDEF: Float7	//check if this type has an existing base
 	type = atomicTypes.get("List_of_floats");
 	if ( type == NULL ) { //register as a raw type
@@ -338,7 +338,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Float7");
 	}
-	
+
 	// TYPEDEF: Float2x2	//check if this type has an existing base
 	type = atomicTypes.get("List_of_floats");
 	if ( type == NULL ) { //register as a raw type
@@ -349,7 +349,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Float2x2");
 	}
-	
+
 	// TYPEDEF: Float2x3	//check if this type has an existing base
 	type = atomicTypes.get("List_of_floats");
 	if ( type == NULL ) { //register as a raw type
@@ -360,7 +360,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Float2x3");
 	}
-	
+
 	// TYPEDEF: Float2x4	//check if this type has an existing base
 	type = atomicTypes.get("List_of_floats");
 	if ( type == NULL ) { //register as a raw type
@@ -371,7 +371,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Float2x4");
 	}
-	
+
 	// TYPEDEF: Float3x2	//check if this type has an existing base
 	type = atomicTypes.get("List_of_floats");
 	if ( type == NULL ) { //register as a raw type
@@ -382,7 +382,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Float3x2");
 	}
-	
+
 	// TYPEDEF: Float3x3	//check if this type has an existing base
 	type = atomicTypes.get("List_of_floats");
 	if ( type == NULL ) { //register as a raw type
@@ -393,7 +393,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Float3x3");
 	}
-	
+
 	// TYPEDEF: Float3x4	//check if this type has an existing base
 	type = atomicTypes.get("List_of_floats");
 	if ( type == NULL ) { //register as a raw type
@@ -404,7 +404,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Float3x4");
 	}
-	
+
 	// TYPEDEF: Float4x2	//check if this type has an existing base
 	type = atomicTypes.get("List_of_floats");
 	if ( type == NULL ) { //register as a raw type
@@ -415,7 +415,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Float4x2");
 	}
-	
+
 	// TYPEDEF: Float4x3	//check if this type has an existing base
 	type = atomicTypes.get("List_of_floats");
 	if ( type == NULL ) { //register as a raw type
@@ -426,7 +426,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Float4x3");
 	}
-	
+
 	// TYPEDEF: Float4x4	//check if this type has an existing base
 	type = atomicTypes.get("List_of_floats");
 	if ( type == NULL ) { //register as a raw type
@@ -437,7 +437,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Float4x4");
 	}
-	
+
 	// TYPEDEF: Int2	//check if this type has an existing base
 	type = atomicTypes.get("List_of_ints");
 	if ( type == NULL ) { //register as a raw type
@@ -448,7 +448,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Int2");
 	}
-	
+
 	// TYPEDEF: Int3	//check if this type has an existing base
 	type = atomicTypes.get("List_of_ints");
 	if ( type == NULL ) { //register as a raw type
@@ -459,7 +459,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Int3");
 	}
-	
+
 	// TYPEDEF: Int4	//check if this type has an existing base
 	type = atomicTypes.get("List_of_ints");
 	if ( type == NULL ) { //register as a raw type
@@ -470,7 +470,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Int4");
 	}
-	
+
 	// TYPEDEF: Int2x2	//check if this type has an existing base
 	type = atomicTypes.get("List_of_ints");
 	if ( type == NULL ) { //register as a raw type
@@ -481,7 +481,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Int2x2");
 	}
-	
+
 	// TYPEDEF: Int2x3	//check if this type has an existing base
 	type = atomicTypes.get("List_of_ints");
 	if ( type == NULL ) { //register as a raw type
@@ -492,7 +492,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Int2x3");
 	}
-	
+
 	// TYPEDEF: Int2x4	//check if this type has an existing base
 	type = atomicTypes.get("List_of_ints");
 	if ( type == NULL ) { //register as a raw type
@@ -503,7 +503,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Int2x4");
 	}
-	
+
 	// TYPEDEF: Int3x2	//check if this type has an existing base
 	type = atomicTypes.get("List_of_ints");
 	if ( type == NULL ) { //register as a raw type
@@ -514,7 +514,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Int3x2");
 	}
-	
+
 	// TYPEDEF: Int3x3	//check if this type has an existing base
 	type = atomicTypes.get("List_of_ints");
 	if ( type == NULL ) { //register as a raw type
@@ -525,7 +525,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Int3x3");
 	}
-	
+
 	// TYPEDEF: Int3x4	//check if this type has an existing base
 	type = atomicTypes.get("List_of_ints");
 	if ( type == NULL ) { //register as a raw type
@@ -536,7 +536,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Int3x4");
 	}
-	
+
 	// TYPEDEF: Int4x2	//check if this type has an existing base
 	type = atomicTypes.get("List_of_ints");
 	if ( type == NULL ) { //register as a raw type
@@ -547,7 +547,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Int4x2");
 	}
-	
+
 	// TYPEDEF: Int4x3	//check if this type has an existing base
 	type = atomicTypes.get("List_of_ints");
 	if ( type == NULL ) { //register as a raw type
@@ -558,7 +558,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Int4x3");
 	}
-	
+
 	// TYPEDEF: Int4x4	//check if this type has an existing base
 	type = atomicTypes.get("List_of_ints");
 	if ( type == NULL ) { //register as a raw type
@@ -569,7 +569,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Int4x4");
 	}
-	
+
 	// TYPEDEF: Digits	//check if this type has an existing base
 	type = atomicTypes.get("xsUnsignedByte");
 	if ( type == NULL ) { //register as a raw type
@@ -580,7 +580,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Digits");
 	}
-	
+
 	// TYPEDEF: Magnitude	//check if this type has an existing base
 	type = atomicTypes.get("xsShort");
 	if ( type == NULL ) { //register as a raw type
@@ -591,7 +591,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Magnitude");
 	}
-	
+
 	// ENUM: Morph_method
 	type = new daeEnumType(dae);
 	type->_nameBindings.append("Morph_method");
@@ -643,7 +643,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Urifragment");
 	}
-	
+
 	// ENUM: Up_axis
 	type = new daeEnumType(dae);
 	type->_nameBindings.append("Up_axis");
@@ -759,7 +759,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Fx_color");
 	}
-	
+
 	// ENUM: Fx_opaque
 	type = new daeEnumType(dae);
 	type->_nameBindings.append("Fx_opaque");
@@ -860,7 +860,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Fx_draw");
 	}
-	
+
 	// ENUM: Fx_pipeline_stage
 	type = new daeEnumType(dae);
 	type->_nameBindings.append("Fx_pipeline_stage");
@@ -886,7 +886,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Gl_max_lights_index");
 	}
-	
+
 	// TYPEDEF: Gl_max_clip_planes_index	//check if this type has an existing base
 	type = atomicTypes.get("xsNonNegativeInteger");
 	if ( type == NULL ) { //register as a raw type
@@ -897,7 +897,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Gl_max_clip_planes_index");
 	}
-	
+
 	// TYPEDEF: Gl_max_texture_image_units_index	//check if this type has an existing base
 	type = atomicTypes.get("xsNonNegativeInteger");
 	if ( type == NULL ) { //register as a raw type
@@ -908,7 +908,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Gl_max_texture_image_units_index");
 	}
-	
+
 	// ENUM: Gl_blend
 	type = new daeEnumType(dae);
 	type->_nameBindings.append("Gl_blend");
@@ -1156,7 +1156,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Gl_alpha_value");
 	}
-	
+
 	// ENUM: Gl_enumeration
 	type = new daeEnumType(dae);
 	type->_nameBindings.append("Gl_enumeration");
@@ -1316,7 +1316,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Gles_max_lights_index");
 	}
-	
+
 	// TYPEDEF: Gles_max_clip_planes_index	//check if this type has an existing base
 	type = atomicTypes.get("xsNonNegativeInteger");
 	if ( type == NULL ) { //register as a raw type
@@ -1327,7 +1327,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Gles_max_clip_planes_index");
 	}
-	
+
 	// TYPEDEF: Gles_max_texture_coords_index	//check if this type has an existing base
 	type = atomicTypes.get("xsNonNegativeInteger");
 	if ( type == NULL ) { //register as a raw type
@@ -1338,7 +1338,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Gles_max_texture_coords_index");
 	}
-	
+
 	// TYPEDEF: Gles_max_texture_image_units_index	//check if this type has an existing base
 	type = atomicTypes.get("xsNonNegativeInteger");
 	if ( type == NULL ) { //register as a raw type
@@ -1349,7 +1349,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Gles_max_texture_image_units_index");
 	}
-	
+
 	// ENUM: Gles_texenv_mode
 	type = new daeEnumType(dae);
 	type->_nameBindings.append("Gles_texenv_mode");
@@ -1460,7 +1460,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Gles_texcombiner_argument_index");
 	}
-	
+
 	// ENUM: Gles_sampler_wrap
 	type = new daeEnumType(dae);
 	type->_nameBindings.append("Gles_sampler_wrap");
@@ -1651,7 +1651,7 @@ void registerDomTypes(DAE& dae)
 	else { //add binding to existing type
 		type->_nameBindings.append("Dynamic_limit");
 	}
-	
+
 }
 
 daeMetaElement* registerDomElements(DAE& dae)
@@ -1659,9 +1659,9 @@ daeMetaElement* registerDomElements(DAE& dae)
 	daeMetaElement* meta = domCOLLADA::registerElement(dae);
 	// Enable tracking of top level object by default
 	meta->setIsTrackableForQueries(true);
-	return meta;	
+	return meta;
 }
 
 daeInt DLLSPEC colladaTypeCount() {
-	return 969;
+	return 971;
 }

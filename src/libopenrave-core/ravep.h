@@ -252,16 +252,16 @@ smart_pointer_deleter(P const & p, const boost::function<void(void const*)>& del
     }
 };
 
-bool RaveParseColladaFile(EnvironmentBasePtr penv, const std::string& filename) { return false; }
-bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename) { return false; }
-bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename) { return false; }
-bool RaveParseColladaData(EnvironmentBasePtr penv, const std::string& data) { return false; }
-bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data) { return false; }
-bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data) { return false; }
+bool RaveParseColladaFile(EnvironmentBasePtr penv, const std::string& filename);
+bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename);
+bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename);
+bool RaveParseColladaData(EnvironmentBasePtr penv, const std::string& data);
+bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data);
+bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data);
 
-bool RaveWriteColladaFile(EnvironmentBasePtr penv, const std::string& filename) { return false; }
-bool RaveWriteColladaFile(KinBodyPtr pbody, const std::string& filename) { return false; }
-bool RaveWriteColladaFile(RobotBasePtr probot, const std::string& filename) { return false; }
+bool RaveWriteColladaFile(EnvironmentBasePtr penv, const std::string& filename);
+bool RaveWriteColladaFile(KinBodyPtr pbody, const std::string& filename);
+bool RaveWriteColladaFile(RobotBasePtr probot, const std::string& filename);
 
 #include "server.h"
 #include "ivcon.h"
