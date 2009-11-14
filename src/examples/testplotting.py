@@ -19,23 +19,24 @@ from numpy import *
 if __name__=='__main__':
     orenv = Environment()
     orenv.SetViewer('qtcoin')
-    orenv.plot3(points=array((-1.5,-1,0)),
+    h1 = orenv.plot3(points=array((-1.5,-1,0)),
                 pointsize=5.0,
                 colors=array((1,0,0)))
-    orenv.plot3(points=array(((-1.5,-0.5,0),(-1.5,0.5,0))),
+    h2 = orenv.plot3(points=array(((-1.5,-0.5,0),(-1.5,0.5,0))),
                 pointsize=15.0,
                 colors=array(((0,1,0),(0,0,0))))
-    orenv.drawlinestrip(points=array(((-1.25,-0.5,0),(-1.25,0.5,0),(-1.5,1,0))),
+    h3 = orenv.drawlinestrip(points=array(((-1.25,-0.5,0),(-1.25,0.5,0),(-1.5,1,0))),
                         linewidth=3.0,
                         colors=array(((0,1,0),(0,0,1),(1,0,0))))
-    orenv.plot3(points=array(((-0.5,-0.5,0),(-0.5,0.5,0))),
+    h4 = orenv.plot3(points=array(((-0.5,-0.5,0),(-0.5,0.5,0))),
                 pointsize=0.05,
                 colors=array(((0,1,0),(1,1,0))),
                 drawstyle=1)
-    orenv.drawtrimesh(points=array(((0,0,0),(0.5,0,0),(0,0.5,0))),
+    h5 = orenv.drawtrimesh(points=array(((0,0,0),(0.5,0,0),(0,0.5,0))),
                       indices=None,
                       colors=array(((0,1,0),(0,0,1),(1,0,0))))
-    orenv.drawtrimesh(points=array(((0,0,0.5),(0.5,0,0.5),(0,0.5,0.5),(0.5,0.5,0.5))),
+    h6 = orenv.drawtrimesh(points=array(((0,0,0.5),(0.5,0,0.5),(0,0.5,0.5),(0.5,0.5,0.5))),
                       indices=array(((0,1,2),(2,1,3))),
                       colors=array((1,0,0,0.5)))
     raw_input('Enter any key to quit. ')
+    orenv.Destroy()
