@@ -833,7 +833,10 @@ private:
                 FOREACH(it, vTargetSides)
                     sinput >> *it;
             }
-            else break;
+            else {
+                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
 
             if( !sinput ) {
                 RAVELOG_ERRORA("failed\n");
@@ -1083,7 +1086,10 @@ private:
                 sinput >> filename;
                 taskdata->SetGenerateFeatures(filename);
             }
-            else break;
+            else {
+                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
 
             if( !sinput ) {
                 RAVELOG_ERRORA("failed\n");
@@ -1473,7 +1479,10 @@ private:
             }
             else if( cmd == "fullcol" )
                 taskdata->bCheckFullCollision = true;
-            else break;
+            else {
+                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
 
             if( !sinput ) {
                 RAVELOG_ERRORA("failed\n");
@@ -1640,7 +1649,10 @@ private:
                 string name; sinput >> name;
                 body.ptarget = GetEnv()->GetKinBody(name);
             }
-            else break;
+            else {
+                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
 
             if( !sinput ) {
                 RAVELOG_ERRORA("failed\n");

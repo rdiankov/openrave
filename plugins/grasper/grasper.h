@@ -100,7 +100,7 @@ class GrasperProblem : public ProblemInstance
                 string name; sinput >> name;
                 pbody = GetEnv()->GetKinBody(name);
             }
-            if( cmd == "bodyid" ) {
+            else if( cmd == "bodyid" ) {
                 int id = 0; sinput >> id;
                 pbody = GetEnv()->GetBodyFromNetworkId(id);
             }
@@ -168,8 +168,10 @@ class GrasperProblem : public ProblemInstance
                 string name; sinput >> name;
                 pcheckermngr.reset(new CollisionCheckerMngr(GetEnv(), name));
             }
-            else
+            else {
+                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
+            }
 
             if( !sinput ) {
                 RAVELOG_ERRORA("failed\n");

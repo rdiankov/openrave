@@ -272,9 +272,8 @@ protected:
                 break;
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
         
-            if( cmd == "minsteps" ) {
+            if( cmd == "minsteps" )
                 sinput >> minsteps;
-            }
             else if( cmd == "outputtraj")
                 pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
             else if( cmd == "maxsteps")
@@ -289,8 +288,10 @@ protected:
                 sinput >> direction.x >> direction.y >> direction.z;
             else if( cmd == "ignorefirstcollision")
                 sinput >> bIgnoreFirstCollision;
-            else
+            else {
+                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
+            }
 
             if( !sinput ) {
                 RAVELOG_ERRORA("failed\n");
@@ -397,7 +398,10 @@ protected:
                 sinput >> bExecute;
             else if( cmd == "writetraj" )
                 sinput >> strtrajfilename;
-            else break;
+            else {
+                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
 
             if( !sinput ) {
                 RAVELOG_ERRORA("failed\n");
@@ -495,7 +499,10 @@ protected:
                 sinput >> bExecute;
             else if( cmd == "writetraj" )
                 sinput >> strtrajfilename;
-            else break;
+            else {
+                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
 
             if( !sinput ) {
                 RAVELOG_ERRORA("failed\n");
@@ -616,7 +623,10 @@ protected:
                 sinput >> strtrajfilename;
             else if( cmd == "seedik" )
                 sinput >> nSeedIkSolutions;
-            else break;
+            else {
+                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
 
             if( !sinput ) {
                 RAVELOG_ERRORA("failed\n");
@@ -785,7 +795,10 @@ protected:
             }
             else if( cmd == "execute" )
                 sinput >> bExecute;
-            else break;
+            else {
+                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
 
             if( !sinput ) {
                 RAVELOG_ERRORA("failed\n");
@@ -846,7 +859,10 @@ protected:
                 FOREACH(it, voffset)
                     sinput >> *it;
             }
-            else break;
+            else {
+                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
 
             if( !sinput ) {
                 RAVELOG_ERRORA("failed\n");
@@ -982,7 +998,10 @@ protected:
                 FOREACH(it, movingdir)
                     sinput >> *it;
             }
-            else break;
+            else {
+                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
 
             if( !sinput ) {
                 RAVELOG_ERRORA("failed\n");
@@ -1086,7 +1105,10 @@ protected:
             else if( cmd == "nocol" ) {
                 bCheckCollision = false;
             }
-            else break;
+            else {
+                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
 
             if( !sinput ) {
                 RAVELOG_ERRORA("failed\n");
@@ -1257,7 +1279,10 @@ protected:
             }
             else if( cmd == "execute" )
                 sinput >> bExecute;
-            else break;
+            else {
+                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
 
             if( !sinput ) {
                 RAVELOG_ERRORA("failed\n");
@@ -1359,7 +1384,10 @@ protected:
                 sinput >> num_itrs;
             else if( cmd == "rotonly" )
                 ftransweight = 0;
-            else break;
+            else {
+                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
 
             if( !sinput ) {
                 RAVELOG_ERRORA("failed\n");

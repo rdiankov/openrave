@@ -283,7 +283,10 @@ class TaskManipulation : public ProblemInstance
 //            else if( cmd == "combinepreshapetraj" ) {
 //                bCombinePreShapeTraj = true;
 //            }
-            else break;
+            else {
+                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
 
             if( !sinput ) {
                 RAVELOG_WARNA("failed\n");
@@ -820,7 +823,10 @@ class TaskManipulation : public ProblemInstance
                 sinput >> padded;
                 vpadded.push_back(padded>0);
             }
-            else break;
+            else {
+                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
 
             if( !sinput ) {
                 RAVELOG_ERRORA("failed\n");
