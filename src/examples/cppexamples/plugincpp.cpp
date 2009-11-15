@@ -19,7 +19,7 @@ public:
         RAVELOG_INFOA("problem unloaded from environment\n");
     }
 
-    int main(const char* cmd)
+    int main(const string& cmd)
     {
         RAVELOG_INFOA("problem initialized cmd; %s\n", cmd);
         return 0;

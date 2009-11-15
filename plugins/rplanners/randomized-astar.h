@@ -490,7 +490,7 @@ private:
     RAStarParameters _parameters;
     SpatialTree _spatialtree;
     BinarySearchTree<Node*, dReal> _sortedtree;   // sorted by decreasing value
-    boost::shared_ptr<COLLISIONREPORT> _report;
+    CollisionReportPtr _report;
 
     RobotBasePtr _robot;
 

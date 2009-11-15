@@ -58,7 +58,20 @@ class TaskManipulation : public ProblemInstance
  public:
     typedef std::map<vector<dReal>, boost::shared_ptr<Trajectory>, GraspVectorCompare > PRESHAPETRAJMAP;
 
- TaskManipulation(EnvironmentBasePtr penv) : ProblemInstance(penv) {}
+ TaskManipulation(EnvironmentBasePtr penv) : ProblemInstance(penv) {
+        RegisterCommand("createsystem",boost::bind(&TaskManipulation::CreateSystem,this,_1,_2),
+                        "creates a sensor system and initializes it with the current bodies");
+//        RegisterCommand("HeadLookAt",(CommandFn)&TaskManipulation::HeadLookAt,
+//                        "Calculates the joint angles for the head to look at a specific target.\n"
+//                        "Can optionally move the head there");
+#ifdef HAVE_BOOST_REGEX
+        RegisterCommand("switchmodels",boost::bind(&TaskManipulation::SwitchModels,this,_1,_2),
+                        "Switches between thin and fat models for planning.");
+#endif
+        RegisterCommand("TestAllGrasps",boost::bind(&TaskManipulation::TestAllGrasps,this,_1,_2),
+                        "Grasp planning, pick a grasp from a grasp set and use it for manipulation.\n"
+                        "Can optionally use bispace for mobile platforms");
+    }
     virtual ~TaskManipulation()
     {
         Destroy();
@@ -77,21 +90,6 @@ class TaskManipulation : public ProblemInstance
     {
         string name;
         stringstream ss(args);
-
-        __mapCommands.clear();
-        RegisterCommand("createsystem",boost::bind(&TaskManipulation::CreateSystem,shared_problem(),_1,_2),
-                        "creates a sensor system and initializes it with the current bodies");
-//        RegisterCommand("HeadLookAt",(CommandFn)&TaskManipulation::HeadLookAt,
-//                        "Calculates the joint angles for the head to look at a specific target.\n"
-//                        "Can optionally move the head there");
-        RegisterCommand("Help", boost::bind(&TaskManipulation::Help,shared_problem(),_1,_2),"Help message");
-#ifdef HAVE_BOOST_REGEX
-        RegisterCommand("switchmodels",boost::bind(&TaskManipulation::SwitchModels,shared_problem(),_1,_2),
-                        "Switches between thin and fat models for planning.");
-#endif
-        RegisterCommand("TestAllGrasps",boost::bind(&TaskManipulation::TestAllGrasps,shared_problem(),_1,_2),
-                        "Grasp planning, pick a grasp from a grasp set and use it for manipulation.\n"
-                        "Can optionally use bispace for mobile platforms");
 
         ss >> _strRobotName;
     
@@ -138,10 +136,8 @@ class TaskManipulation : public ProblemInstance
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _robot = GetEnv()->GetRobot(_strRobotName);
 
-        if( !_robot ) {
-            RAVELOG_ERRORA(str(boost::format("could not find %s robot, send command failed\n")%_strRobotName));
-            return false;
-        }
+        if( !_robot )
+            throw openrave_exception(str(boost::format("could not find %s robot, send command failed\n")%_strRobotName));
 
         return ProblemInstance::SendCommand(sout,sinput);
     }
@@ -901,15 +897,6 @@ class TaskManipulation : public ProblemInstance
         return true;
     }
 #endif
-
-    bool Help(ostream& sout, istream& sinput)
-    {
-        sout << "----------------------------------" << endl
-             << "TaskManipulation Problem Commands:" << endl;
-        GetCommandHelp(sout);
-        sout << "----------------------------------" << endl;
-        return true;
-    }
 
 protected:
     inline boost::shared_ptr<TaskManipulation> shared_problem() { return boost::static_pointer_cast<TaskManipulation>(shared_from_this()); }

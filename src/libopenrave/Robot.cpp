@@ -144,6 +144,7 @@ void RobotBase::Manipulator::GetChildJoints(std::vector<JointPtr>& vjoints) cons
     RobotBasePtr probot(_probot);
     vjoints.resize(0);
     vector<dReal> lower,upper;
+    vector<uint8_t> vhasjoint(probot->GetJoints().size(),false);
     int iattlink = _pEndEffector->GetIndex();
     FOREACHC(itlink, probot->GetLinks()) {
         int ilink = (*itlink)->GetIndex();
@@ -157,7 +158,10 @@ void RobotBase::Manipulator::GetChildJoints(std::vector<JointPtr>& vjoints) cons
                 probot->GetJoints()[ijoint]->GetLimits(lower,upper);
                 for(int i = 0; i < probot->GetJoints()[ijoint]->GetDOF(); ++i) {
                     if( lower[i] != upper[i] ) {
-                        vjoints.push_back(probot->GetJoints()[ijoint]);
+                        if( !vhasjoint[ijoint] ) {
+                            vjoints.push_back(probot->GetJoints()[ijoint]);
+                            vhasjoint[ijoint] = true;
+                        }
                         break;
                     }
                 }
@@ -171,6 +175,7 @@ void RobotBase::Manipulator::GetChildDOFIndices(std::vector<int>& vdofindices) c
     // get all child links of the manipualtor
     RobotBasePtr probot(_probot);
     vdofindices.resize(0);
+    vector<uint8_t> vhasjoint(probot->GetJoints().size(),false);
     vector<dReal> lower,upper;
     int iattlink = _pEndEffector->GetIndex();
     FOREACHC(itlink, probot->GetLinks()) {
@@ -185,9 +190,12 @@ void RobotBase::Manipulator::GetChildDOFIndices(std::vector<int>& vdofindices) c
                 probot->GetJoints()[ijoint]->GetLimits(lower,upper);
                 for(int i = 0; i < probot->GetJoints()[ijoint]->GetDOF(); ++i) {
                     if( lower[i] != upper[i] ) {
-                        int idofbase = probot->GetJoints()[ijoint]->GetDOFIndex();
-                        for(int idof = 0; idof < probot->GetJoints()[ijoint]->GetDOF(); ++idof)
-                            vdofindices.push_back(idofbase+idof);
+                        if( !vhasjoint[ijoint] ) {
+                            vhasjoint[ijoint] = true;
+                            int idofbase = probot->GetJoints()[ijoint]->GetDOFIndex();
+                            for(int idof = 0; idof < probot->GetJoints()[ijoint]->GetDOF(); ++idof)
+                                vdofindices.push_back(idofbase+idof);
+                        }
                         break;
                     }
                 }

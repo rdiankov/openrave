@@ -158,8 +158,8 @@ public:
     virtual bool _CheckCollision(const vector<dReal>& pConfig, bool breport=false)
     {
         GetParameters()._setstatefn(pConfig);
-        bool bCol = GetEnv()->CheckCollision(KinBodyConstPtr(_robot), breport?_report:boost::shared_ptr<COLLISIONREPORT>())
-            || _robot->CheckSelfCollision(breport?_report:boost::shared_ptr<COLLISIONREPORT>());
+        bool bCol = GetEnv()->CheckCollision(KinBodyConstPtr(_robot), breport?_report:CollisionReportPtr())
+            || _robot->CheckSelfCollision(breport?_report:CollisionReportPtr());
         if( bCol && breport ) {
             RAVELOG_WARNA(str(boost::format("fcollision %s:%s with %s:%s\n")%_report->plink1->GetParent()->GetName()%_report->plink1->GetName()%_report->plink2->GetParent()->GetName()%_report->plink2->GetName()));
         }
@@ -219,7 +219,7 @@ protected:
     std::vector<dReal>          _jointResolutionInv;
     std::vector<dReal>          _jointIncrement;
     std::vector<dReal>          _validRange;
-    boost::shared_ptr<COLLISIONREPORT> _report;
+    CollisionReportPtr _report;
 
     SpatialTree< boost::shared_ptr<RrtPlanner<Node> >, Node > _treeForward;
 

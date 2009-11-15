@@ -218,6 +218,8 @@ class IKFastProblem : public ProblemInstance
 public:
     IKFastProblem(EnvironmentBasePtr penv) : ProblemInstance(penv)
     {
+        RegisterCommand("AddIkLibrary",boost::bind(&IKFastProblem::AddIkLibrary,this,_1,_2),
+                        "Dynamically adds an ik solver to openrave (based on ikfast code generation).\nUsage:\n    AddIkLibrary iksolvername iklibrarypath");
     }
 
     virtual ~IKFastProblem() { Destroy(); }
@@ -225,10 +227,6 @@ public:
     int main(const string& cmd)
     {
         GetProblems().push_back(shared_problem());
-
-        __mapCommands.clear();
-        RegisterCommand("AddIkLibrary",boost::bind(&IKFastProblem::AddIkLibrary,shared_problem(),_1,_2),
-                        "Dynamically adds an ik solver to openrave (based on ikfast code generation).\nUsage:\n    AddIkLibrary iksolvername iklibrarypath");
 
         return 0;
     }

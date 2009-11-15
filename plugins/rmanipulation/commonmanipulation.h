@@ -28,7 +28,7 @@ class CM
 
                 // display collision report
                 COLLISIONREPORT report;
-                if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot), boost::shared_ptr<COLLISIONREPORT>(&report,null_deleter())) ) {
+                if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot), CollisionReportPtr(&report,null_deleter())) ) {
                     if( !!report.plink1 && !!report.plink2 ) {
                         RAVELOG_WARNA(str(boost::format("Jitter collision %s:%s with %s:%s\n")%report.plink1->GetParent()->GetName()%report.plink1->GetName()%report.plink2->GetParent()->GetName()%report.plink2->GetName()));
                     }
@@ -563,6 +563,7 @@ enum IntervalType {
 class RandomPermuationExecutor
 {
 public:
+ RandomPermuationExecutor() : nextindex(-1) {}
  RandomPermuationExecutor(const boost::function<bool(int)>& fn) : nextindex(-1), _fn(fn) {}
 
     /// returns the index of the permutation that the function returned true in

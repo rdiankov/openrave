@@ -27,15 +27,14 @@ class CaseInsentiveCompare
         std::string::const_iterator it2=s2.begin();
         
         //has the end of at least one of the strings been reached?
-        while ( (it1!=s1.end()) && (it2!=s2.end()) ) 
-            { 
-                if(::toupper(*it1) != ::toupper(*it2)) //letters differ?
-                    // return -1 to indicate 'smaller than', 1 otherwise
-                    return ::toupper(*it1) < ::toupper(*it2);
-                //proceed to the next character in each string
-                ++it1;
-                ++it2;
-            }
+        while ( (it1!=s1.end()) && (it2!=s2.end()) )  { 
+            if(::toupper(*it1) != ::toupper(*it2)) //letters differ?
+                // return -1 to indicate 'smaller than', 1 otherwise
+                return ::toupper(*it1) < ::toupper(*it2);
+            //proceed to the next character in each string
+            ++it1;
+            ++it2;
+        }
         std::size_t size1=s1.size(), size2=s2.size();// cache lengths
         //return -1,0 or 1 according to strings' lengths
         if (size1==size2) 
@@ -70,7 +69,7 @@ protected:
     CMDMAP __mapCommands; ///< all registered commands
 
 public:
-    ProblemInstance(EnvironmentBasePtr penv) : InterfaceBase(PT_ProblemInstance, penv) {}
+    ProblemInstance(EnvironmentBasePtr penv);
     virtual ~ProblemInstance() {}
 
     /// gets called every time a problem instance is loaded to initialize the problem.
@@ -91,6 +90,10 @@ public:
     /// Might be called in a different thread from the main thread, so make sure to lock the openrave environment when using environment calls.
     virtual bool SendCommand(std::ostream& sout, std::istream& sinput);
     
+    /// Write the help commands to an output stream
+    virtual bool GetCommandHelp(std::ostream& sout, std::istream& sinput) const;
+
+protected:
     /// Registers a command and its help string
     /// \param cmdname - command name
     /// \param fncmd function to execute for the command
@@ -102,9 +105,6 @@ public:
 
     /// get all the registered commands
     virtual const CMDMAP& GetCommands() const;
-
-    /// Write the help commands to an output stream
-    virtual void GetCommandHelp(std::ostream& o) const;
 
 private:
     virtual const char* GetHash() const { return OPENRAVE_PROBLEM_HASH; }

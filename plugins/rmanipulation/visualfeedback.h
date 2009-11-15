@@ -8,11 +8,11 @@ struct FRUSTUM
     dReal ffovx,ffovy;
     dReal fcosfovx,fsinfovx,fcosfovy,fsinfovy;
 
-    void Init(const float* pKK,int width, int height)
+    void Init(const SensorBase::CameraIntrinsics& KK,int width, int height)
     {
-        ffovx = atanf(0.5f*width/pKK[0]);
+        ffovx = atanf(0.5f*width/KK.fx);
         fcosfovx = cosf(ffovx); fsinfovx = sinf(ffovx);
-        ffovy = atanf(0.5f*height/pKK[1]);
+        ffovy = atanf(0.5f*height/KK.fy);
         fcosfovy = cosf(ffovy); fsinfovy = sinf(ffovy);
     }
 };
@@ -75,8 +75,7 @@ inline bool IsOBBinConvexHull(const OBB& o, const vector<Vector>& vplanes)
 
 /// samples rays from the projected OBB and returns true if the test function returns true
 /// for all the rays. Otherwise, returns false
-template <class TestFn>
-bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const TestFn testfn)
+bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::function<bool(const Vector&)>& testfn)
 {
     dReal fscalefactor = 0.95f; // have to make box smaller or else rays might miss
     Vector vpoints[8] = {obb.pos + fscalefactor*(obb.right*obb.extents.x + obb.up*obb.extents.y + obb.dir*obb.extents.z),
@@ -171,7 +170,7 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const TestFn testfn
     return true;
 }
 
-class VisualFeedbackProblem : public CmdProblemInstance
+class VisualFeedbackProblem : public ProblemInstance
 {
 public:
     struct ASSEMBLYOBJECT
@@ -180,57 +179,27 @@ public:
         dReal _fAppearProb;
     };
 
-    class VisibilityConstraintFunction : public PlannerBase::ConstraintFunction
+    class VisibilityConstraintFunction
     {
     public:
-        VisibilityConstraintFunction(RobotBase* probot, KinBody* ptarget, const string& convexfilename, int sensorindex=0) : _probot(probot), _ptarget(ptarget), _sensorindex(sensorindex) {
-            _psensor = &_probot->GetSensors().at(_sensorindex);
-            if( _psensor->GetSensor() == NULL ) {
-                RAVELOG_ERRORA("no vaild sensor attached\n");
-                throw;
-            }
-            if( _psensor->GetSensor()->GetSensorGeometry()->GetType() != SensorBase::ST_Camera) {
-                RAVELOG_ERRORA("sensor is not a camera\n");
-                throw;
-            }
+        VisibilityConstraintFunction(RobotBasePtr robot, KinBodyPtr ptarget, const string& convexfilename, int sensorindex=0) : _robot(robot), _ptarget(ptarget), _sensorindex(sensorindex) {
+            _psensor = _robot->GetSensors().at(_sensorindex);
+            if( _psensor->GetSensor()->GetSensorGeometry()->GetType() != SensorBase::ST_Camera)
+                throw openrave_exception("sensor is not a camera");
 
             // check if there is a manipulator with the same end effector as camera
-            _pmanip = NULL;
-            FOREACHC(itmanip,_probot->GetManipulators()) {
-                if( itmanip->pEndEffector == _psensor->GetAttachingLink() ) {
-                    _pmanip = &(*itmanip);
+            FOREACHC(itmanip,_robot->GetManipulators()) {
+                if( (*itmanip)->GetEndEffector() == _psensor->GetAttachingLink() ) {
+                    _pmanip = *itmanip;
                     break;
                 }
             }
 
-            if( _pmanip == NULL ) {
-                RAVELOG_ERRORA("failed to find manipulator with end effector similar to sensor link\n");
-                throw;
-            }
+            if( !_pmanip )
+                throw openrave_exception("failed to find manipulator with end effector similar to sensor link.");
 
             _tlocalsensorinv = _psensor->GetRelativeTransform().inverse();
-            SensorBase::CameraGeomData *pgeom = (SensorBase::CameraGeomData*)_psensor->GetSensor()->GetSensorGeometry();
-
-            // get all child links of the camera
-            _vChildLinks.push_back(make_pair(_psensor->GetAttachingLink(),_tlocalsensorinv));
-            Transform tbaseinv = _tlocalsensorinv*_psensor->GetAttachingLink()->GetTransform().inverse();
-            int iattlink = _psensor->GetAttachingLink()->GetIndex();
-            FOREACH(itlink, _probot->GetLinks()) {
-                int ilink = (*itlink)->GetIndex();
-                if( ilink == _psensor->GetAttachingLink()->GetIndex() )
-                    continue;
-
-                // have to be affected by arm
-                if( _pmanip->_vecarmjoints.size() > 0 && !_probot->DoesAffect(_pmanip->_vecarmjoints[0],ilink) )
-                    continue;
-                for(int ijoint = 0; ijoint < _probot->GetDOF(); ++ijoint) {
-                    if( _probot->DoesAffect(ijoint,ilink) && !_probot->DoesAffect(ijoint,iattlink) ) {
-                        RAVELOG_DEBUGA("child link %S, joint: %S\n", (*itlink)->GetName(), _probot->GetJoints()[ijoint]->GetName() );
-                        _vChildLinks.push_back(make_pair(*itlink,tbaseinv*(*itlink)->GetTransform()));
-                        break;
-                    }
-                }
-            }
+            boost::shared_ptr<SensorBase::CameraGeomData> pgeom = boost::static_pointer_cast<SensorBase::CameraGeomData>(_psensor->GetSensor()->GetSensorGeometry());
 
             _vTargetOBBs.reserve(_ptarget->GetLinks().size());
             FOREACHC(itlink, _ptarget->GetLinks())
@@ -243,14 +212,12 @@ public:
                 _ptarget->SetTransform(Transform());
                 vector<AABB> vboxes; vboxes.push_back(_ptarget->ComputeAABB());
 
-                //_ptarget->GetEnv()->LockPhysics(true);
                 _ptargetbox.reset(_ptarget->GetEnv()->CreateKinBody());
                 _ptargetbox->InitFromBoxes(vboxes,false);
                 _ptargetbox->GetEnv()->AddKinBody(_ptargetbox.get());
                 _ptargetbox->Enable(false);
                 _ptargetbox->SetTransform(_ptarget->GetTransform());
-                _ptargetbox->SetName(L"dummytarget");
-                //_ptarget->GetEnv()->LockPhysics(false);
+                _ptargetbox->SetName("dummytarget");
             }
 
             if( convexfilename.size() > 0 ) {
@@ -258,7 +225,7 @@ public:
                 Vector vprev,vprev2,v,vdir,vnorm,vcenter;
                 ifstream f(convexfilename.c_str());
                 if( !f )
-                    throw string("failed to open convex filename");
+                    throw openrave_exception("failed to open convex filename");
                 while(!f.eof()) {
                     f >> v.x >> v.y;
                     if( !f )
@@ -320,7 +287,7 @@ public:
             //_ptargetbox->GetEnv()->LockPhysics(false);
         }
         
-        virtual bool Constraint(const dReal* pSrcConf, dReal* pDestConf, Transform* ptrans, int settings)
+        virtual bool Constraint(const vector<dReal>& pSrcConf, vector<dReal>& pDestConf, int settings)
         {
             TransformMatrix tcamera = _psensor->GetSensor()->GetTransform();
             if( !InConvexHull(tcamera) )
@@ -328,12 +295,14 @@ public:
             // no need to check gripper collision
 
             bool bOcclusion = IsOccluded(tcamera);
-            if( !bOcclusion )
-                memcpy(pDestConf,pSrcConf,sizeof(dReal)*_probot->GetActiveDOF());
-            return !bOcclusion;
+            if( bOcclusion )
+                false;
+            
+            pDestConf = pSrcConf;
+            return true;
         }
 
-        bool SampleWithCamera(const TransformMatrix& tcamera, dReal* pNewSample)
+        bool SampleWithCamera(const TransformMatrix& tcamera, vector<dReal>& pNewSample)
         {
             if( !InConvexHull(tcamera) )
                 return false;
@@ -348,13 +317,13 @@ public:
             }
 
             // convert the solution into active dofs
-            _probot->GetActiveDOFValues(pNewSample);
+            _robot->GetActiveDOFValues(pNewSample);
             FOREACH(itarm,_pmanip->_vecarmjoints) {
-                vector<int>::const_iterator itactive = find(_probot->GetActiveJointIndices().begin(),_probot->GetActiveJointIndices().end(),*itarm);
-                if( itactive != _probot->GetActiveJointIndices().end() )
-                    pNewSample[(int)(itactive-_probot->GetActiveJointIndices().begin())] = _vsolution[(int)(itarm-_pmanip->_vecarmjoints.begin())];
+                vector<int>::const_iterator itactive = find(_robot->GetActiveJointIndices().begin(),_robot->GetActiveJointIndices().end(),*itarm);
+                if( itactive != _robot->GetActiveJointIndices().end() )
+                    pNewSample[(int)(itactive-_robot->GetActiveJointIndices().begin())] = _vsolution.at((int)(itarm-_pmanip->_vecarmjoints.begin()));
             }
-            _probot->SetActiveDOFValues(NULL,pNewSample);
+            _robot->SetActiveDOFValues(pNewSample);
             
             return !IsOccluded(tcamera);
         }
@@ -402,23 +371,12 @@ public:
             return bOcclusion;
         }
 
-        bool IsGripperCollision(const Transform& tcamera)
-        {
-            FOREACH(itlink,_vChildLinks) {
-                itlink->first->SetTransform(tcamera*itlink->second);
-                if( _probot->GetEnv()->CheckCollision(itlink->first) )
-                    return true;
-
-            }
-            return false;
-        }
-
         bool TestRay(const Vector& v, const TransformMatrix& tcamera)
         {
             RAY r;
             r.dir = tcamera.rotate(v*(1.0f/RaveSqrt(v.lengthsqr3())));
             r.pos = tcamera.trans + 0.05f*r.dir; // move the rays a little forward
-            if( !_probot->GetEnv()->CheckCollision(r,&_report) ) {
+            if( !_robot->GetEnv()->CheckCollision(r,_report) ) {
                 RAVELOG_DEBUGA("no collision!?\n");
                 return true; // not supposed to happen, but it is OK
             }
@@ -427,30 +385,29 @@ public:
 //            vpoints[0] = r.pos;
 //            assert(_report.contacts.size() == 1 );
 //            vpoints[1] = _report.contacts[0].pos;
-//            _probot->GetEnv()->drawlinestrip(vpoints[0],2,16,1.0f,Vector(0,0,1));
-            if( !(_report.plink1 != NULL && _report.plink1->GetParent() == _ptargetbox.get()) )
-                RAVELOG_DEBUGA("bad collision: %S:%S\n", _report.plink1->GetParent()->GetName(), _report.plink1->GetName());
-            return _report.plink1 != NULL && _report.plink1->GetParent() == _ptargetbox.get();
+//            _robot->GetEnv()->drawlinestrip(vpoints[0],2,16,1.0f,Vector(0,0,1));
+            if( !(!!_report->plink1 && _report->plink1->GetParent() == _ptargetbox) )
+                RAVELOG_DEBUGA(str(boost::format("bad collision: %s:%s\n")%_report->plink1->GetParent()->GetName()%_report->plink1->GetName()));
+            return !!_report->plink1 && _report->plink1->GetParent() == _ptargetbox;
         }
 
-        inline RobotBase* GetRobot() const { return _probot; }
+        inline RobotBasePtr GetRobot() const { return _robot; }
         inline Vector GetConvexCenter() const { return _vcenterconvex; }
-        inline RobotBase::Manipulator* GetManipulator() const { return _pmanip; }
-        inline KinBody* GetTarget() const { return _ptarget; }
+        inline RobotBase::ManipulatorPtr GetManipulator() const { return _pmanip; }
+        inline KinBodyPtr GetTarget() const { return _ptarget; }
 
     private:
-        RobotBase* _probot;
-        KinBody* _ptarget;
-        boost::shared_ptr<KinBody> _ptargetbox; ///< box to represent the target for simulating ray collisions
+        RobotBasePtr _robot;
+        KinBodyPtr _ptarget;
+        KinBodyPtr _ptargetbox; ///< box to represent the target for simulating ray collisions
         Transform _ttarget; ///< transform of target
         Transform _tlocalsensorinv; ///< local sensor transform (with respect to link)
-        RobotBase::AttachedSensor* _psensor;
-        RobotBase::Manipulator* _pmanip;
-        vector<pair<KinBody::Link*,Transform> > _vChildLinks; ///< all child links of the links attached to the camera
+        RobotBase::AttachedSensorPtr _psensor;
+        RobotBase::ManipulatorPtr _pmanip;
         int _sensorindex;
         vector<OBB> _vTargetOBBs; // object links local AABBs
         vector<dReal> _vsolution;
-        COLLISIONREPORT _report;
+        CollisionReportPtr _report;
         AABB _abTarget; // target aabb
         dReal _fSampleRayDensity;
         
@@ -461,7 +418,7 @@ public:
     class GoalSampleFunction : public PlannerBase::SampleFunction
     {
     public:
-        GoalSampleFunction(RobotBase* probot, KinBody* ptarget, const string& convexfilename, const string& visibilityfilename, bool bVisibilityTransforms, int sensorindex=0) : _vconstraint(probot,ptarget,convexfilename,sensorindex)
+        GoalSampleFunction(RobotBasePtr robot, KinBodyPtr ptarget, const string& convexfilename, const string& visibilityfilename, bool bVisibilityTransforms, int sensorindex=0) : _vconstraint(robot,ptarget,convexfilename,sensorindex)
         {
             {
                 KinBody::KinBodyStateSaver saver(_vconstraint.GetTarget());
@@ -479,14 +436,14 @@ public:
                 int nNumDists = 5;
                 dReal fmindist = 0.2f, fdeltadist = 0.06f;
                 _vcameras.resize(vspheredirs.size()*nNumDists*nNumRolls);
-                Transform* pcamera = &_vcameras[0];
+                vector<Transform>::iterator itcamera = _vcameras.begin();
                 
                 for(size_t j = 0; j < vspheredirs.size(); ++j) {
                     Vector v = vspheredirs[j];
                     for(int i = 0; i < nNumDists; ++i) {
                         dReal froll = 0;
                         for(int iroll = 0; iroll < nNumRolls; ++iroll, froll += deltaroll) {
-                            *pcamera++ = ComputeCameraMatrix(vspheredirs[j],fmindist + fdeltadist*i,froll,Vector());
+                            *itcamera++ = ComputeCameraMatrix(vspheredirs[j],fmindist + fdeltadist*i,froll,Vector());
                         }
                     }
                 }
@@ -494,7 +451,7 @@ public:
             else {
                 fstream fextents(visibilityfilename.c_str());
                 if( !fextents )
-                    throw string("failed to open visiblity file");
+                    throw openrave_exception("failed to open visiblity file");
 
                 _vcameras.reserve(400);
 
@@ -523,27 +480,27 @@ public:
                 }
             }
             
-            RAVELOG_DEBUGA("have %"PRIdS" detection extents hypotheses\n", _vcameras.size());
+            RAVELOG_DEBUGA(str(boost::format("have %d detection extents hypotheses\n")%_vcameras.size()));
             _sphereperms.PermuteStart(_vcameras.size());
         }
         virtual ~GoalSampleFunction() {
         }
 
-        virtual void Sample(dReal* pNewSample)
+        virtual bool Sample(vector<dReal>& pNewSample)
         {
             RobotBase::RobotStateSaver state(_vconstraint.GetRobot());
 
             if( _sphereperms.PermuteContinue(boost::bind(&GoalSampleFunction::SampleWithParameters,this,_1,pNewSample)) >= 0 ) {
-                return;
+                return true;
             }
 
             // start from the beginning, if nothing, throw
             _sphereperms.PermuteStart(_vcameras.size());
             if( _sphereperms.PermuteContinue(boost::bind(&GoalSampleFunction::SampleWithParameters,this,_1,pNewSample)) >= 0 ) {
-                return;
+                return true;
             }
 
-            throw string("failed to get new sample!!\n");
+            return false;
         }
 
         virtual bool Sample(dReal* pNewSample, const dReal* pCurSample, dReal fRadius)
@@ -592,17 +549,20 @@ public:
         vector<Transform> _vcameras; ///< camera transformations in local coord systems
     };
 
-    VisualFeedbackProblem(EnvironmentBase* penv) : CmdProblemInstance(penv)
+    VisualFeedbackProblem(EnvironmentBasePtr penv) : ProblemInstance(penv)
     {
         _fAssemblySpeed = 0;
-        RegisterCommand("ProcessVisibilityExtents",(CommandFn)&VisualFeedbackProblem::ProcessVisibilityExtents,"Processes the visibility directions for containment of the object inside the gripper mask");
-        RegisterCommand("ComputeVisibility",(CommandFn)&VisualFeedbackProblem::ComputeVisibility,"Computes the visibility of the current robot configuration");
-        RegisterCommand("SampleVisibilityGoal",(CommandFn)&VisualFeedbackProblem::SampleVisibilityGoal,"Samples a goal maintaining camera visibility constraints");
-        RegisterCommand("MoveToObserveTarget",(CommandFn)&VisualFeedbackProblem::MoveToObserveTarget, "Approaches a target object while choosing a goal such that the robot's camera sensor sees the object ");
-        RegisterCommand("VisualFeedbackGrasping",(CommandFn)&VisualFeedbackProblem::VisualFeedbackGrasping,"Stochastic greedy grasp planner considering visibility");
-        RegisterCommand("AssemblyLine",(CommandFn)&VisualFeedbackProblem::AssemblyLine,"");
-        RegisterCommand("TestIK",(CommandFn)&VisualFeedbackProblem::TestIK,"");
-        RegisterCommand("help", (CommandFn)&VisualFeedbackProblem::Help,"Help message");
+        RegisterCommand("ProcessVisibilityExtents",boost::bind(&VisualFeedbackProblem::ProcessVisibilityExtents,this,_1,_2),
+                        "Processes the visibility directions for containment of the object inside the gripper mask");
+        RegisterCommand("ComputeVisibility",boost::bind(&VisualFeedbackProblem::ComputeVisibility,this,_1,_2),
+                        "Computes the visibility of the current robot configuration");
+        RegisterCommand("SampleVisibilityGoal",boost::bind(&VisualFeedbackProblem::SampleVisibilityGoal,this,_1,_2),
+                        "Samples a goal maintaining camera visibility constraints");
+        RegisterCommand("MoveToObserveTarget",boost::bind(&VisualFeedbackProblem::MoveToObserveTarget,this,_1,_2),
+                        "Approaches a target object while choosing a goal such that the robot's camera sensor sees the object ");
+        RegisterCommand("VisualFeedbackGrasping",boost::bind(&VisualFeedbackProblem::VisualFeedbackGrasping,this,_1,_2),
+                        "Stochastic greedy grasp planner considering visibility");
+        RegisterCommand("AssemblyLine",boost::bind(&VisualFeedbackProblem::AssemblyLine,this,_1,_2),"");
     }
 
     ~VisualFeedbackProblem() {
@@ -615,53 +575,22 @@ public:
         RAVELOG_INFOA("problem unloaded from environment\n");
     }
 
-    int main(const char* cmd)
+    int main(const string& cmd)
     {
-        if( cmd == NULL )
-            return 0;
-
-        const char* delim = " \r\n\t";
-        string mycmd = cmd;
-        char* p = strtok(&mycmd[0], delim);
-        if( p != NULL )
-            _strRobotName = _stdmbstowcs(p);
-    
-        SetActiveRobots(GetEnv()->GetRobots()); 
+        stringstream ss(cmd);
+        ss >> _strRobotName;
         return 0;
     }
 
-    void SetActiveRobots(const std::vector<RobotBase*>& robots)
+    virtual bool SendCommand(std::ostream& sout, std::istream& sinput)
     {
-        _probot = NULL;
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        _robot = GetEnv()->GetRobot(_strRobotName);
 
-        if( robots.size() == 0 ) {
-            RAVELOG_WARNA("No robots to plan for\n");
-            return;
-        }
+        if( !_robot )
+            throw openrave_exception(str(boost::format("could not find %s robot, send command failed\n")%_strRobotName));
 
-        vector<RobotBase*>::const_iterator itrobot;
-        FORIT(itrobot, robots) {
-            if( wcsicmp((*itrobot)->GetName(), _strRobotName.c_str() ) == 0  ) {
-                _probot = *itrobot;
-                break;
-            }
-        }
-
-        if( _probot == NULL ) {
-            RAVELOG_ERRORA("Failed to find %S\n", _strRobotName.c_str());
-            return;
-        }
-    }
-
-    bool SendCommand(const char* cmd, string& response)
-    {
-        //LockEnvironment envlock(GetEnv());
-        SetActiveRobots(GetEnv()->GetRobots());
-        if( _probot == NULL ) {
-            RAVELOG_ERRORA("robot is NULL, send command failed\n");
-            return false;
-        }
-        return CmdProblemInstance::SendCommand(cmd, response);
+        return ProblemInstance::SendCommand(sout,sinput);
     }
 
     bool ProcessVisibilityExtents(ostream& sout, istream& sinput)
@@ -669,13 +598,14 @@ public:
         string cmd;
 
         int sensorindex=0;
-        KinBody* ptarget = NULL;
+        KinBodyPtr ptarget;
         string convexfilename,visibilityfile;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput )
                 break;
-        
+            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+
             if( cmd == "target" ) {
                 string name; sinput >> name;
                 ptarget = GetEnv()->GetKinBody(_stdmbstowcs(name.c_str()).c_str());
@@ -694,21 +624,13 @@ public:
             }
         }
 
-        if( ptarget == NULL )
+        if( !ptarget )
             return false;
 
         KinBody::KinBodyStateSaver saver(ptarget);
         ptarget->SetTransform(Transform());
 
-        boost::shared_ptr<GoalSampleFunction> pgoalfn;
-        try {
-            pgoalfn.reset(new GoalSampleFunction(_probot,ptarget,convexfilename, visibilityfile, false, sensorindex));
-        }
-
-        catch(const string& err) {
-            RAVELOG_ERRORA(err.c_str());
-            return false;
-        }
+        boost::shared_ptr<GoalSampleFunction> pgoalfn(new GoalSampleFunction(_robot,ptarget,convexfilename, visibilityfile, false, sensorindex));
 
         // get all the camera positions and test them
         FOREACHC(itcamera, pgoalfn->GetCameraTransforms()) {
@@ -724,13 +646,14 @@ public:
         string cmd;
 
         int sensorindex=0;
-        KinBody* ptarget = NULL;
+        KinBodyPtr ptarget;
         string convexfilename;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput )
                 break;
-        
+            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+
             if( cmd == "target" ) {
                 string name; sinput >> name;
                 ptarget = GetEnv()->GetKinBody(_stdmbstowcs(name.c_str()).c_str());
@@ -747,17 +670,10 @@ public:
             }
         }
 
-        boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn;
-        try {
-            pconstraintfn.reset(new VisibilityConstraintFunction(_probot,ptarget,convexfilename, sensorindex));
-        }
-        catch(const string& err) {
-            RAVELOG_ERRORA(err.c_str());
-            return false;
-        }
+        boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(_robot,ptarget,convexfilename, sensorindex));
 
         vector<dReal> v;
-        _probot->GetActiveDOFValues(v);
+        _robot->GetActiveDOFValues(v);
         sout << pconstraintfn->Constraint(&v[0],&v[0],NULL,0);
         return true;
     }
@@ -767,7 +683,7 @@ public:
         string cmd;
 
         int sensorindex=0;
-        KinBody* ptarget = NULL;
+        KinBodyPtr ptarget;
         string convexfilename,visibilityfilename;
         int numsamples=1;
         bool bVisibilityTransforms=false;
@@ -775,6 +691,7 @@ public:
             sinput >> cmd;
             if( !sinput )
                 break;
+            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
         
             if( cmd == "target" ) {
                 string name; sinput >> name;
@@ -800,29 +717,20 @@ public:
             }
         }
 
-        boost::shared_ptr<GoalSampleFunction> pgoalsampler;
-
-        try {
-            pgoalsampler.reset(new GoalSampleFunction(_probot,ptarget,convexfilename,visibilityfilename,bVisibilityTransforms,sensorindex));
+        boost::shared_ptr<GoalSampleFunction> pgoalsampler(new GoalSampleFunction(_robot,ptarget,convexfilename,visibilityfilename,bVisibilityTransforms,sensorindex));
      
-            uint64_t starttime = GetMicroTime();
-            vector<dReal> vsamples(_probot->GetActiveDOF()*numsamples);
-            for(int i = 0; i < numsamples; ++i) {
-                pgoalsampler->Sample(&vsamples[i*_probot->GetActiveDOF()]);
-            }
-
-            float felapsed = (GetMicroTime()-starttime)*1e-6f;
-
-            RAVELOG_INFOA("total time for %d samples is %fs, %f avg\n", numsamples,felapsed,felapsed/numsamples);
-            FOREACH(it,vsamples)
-                sout << *it << " ";
-            sout << felapsed;
-        }
-        catch(const string& err) {
-            RAVELOG_ERRORA(err.c_str());
-            return false;
+        uint64_t starttime = GetMicroTime();
+        vector<dReal> vsamples(_robot->GetActiveDOF()*numsamples);
+        for(int i = 0; i < numsamples; ++i) {
+            pgoalsampler->Sample(&vsamples[i*_robot->GetActiveDOF()]);
         }
 
+        float felapsed = (GetMicroTime()-starttime)*1e-6f;
+
+        RAVELOG_INFOA("total time for %d samples is %fs, %f avg\n", numsamples,felapsed,felapsed/numsamples);
+        FOREACH(it,vsamples)
+            sout << *it << " ";
+        sout << felapsed;
         return true;
     }
 
@@ -834,14 +742,15 @@ public:
         VisualApproachParameters params;
         params.nMaxIterations = 4000;
         int affinedofs=0, sensorindex=0;
-        KinBody* ptarget = NULL;
+        KinBodyPtr ptarget;
         string cmd, plannername="GoalSampler",convexfilename,visibilityfilename;
         bool bVisibilityTransforms=false;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput )
                 break;
-        
+            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+
             if( cmd == "outputtraj" )
                 bOutputTraj = true;
             else if( cmd == "affinedofs" )
@@ -856,7 +765,7 @@ public:
                 sinput >> params._nSmoothPath;
             else if( cmd == "target" ) {
                 string name; sinput >> name;
-                ptarget = GetEnv()->GetKinBody(_stdmbstowcs(name.c_str()).c_str());
+                ptarget = GetEnv()->GetKinBody(name);
             }
             else if( cmd == "sensorindex" )
                 sinput >> sensorindex;
@@ -880,39 +789,31 @@ public:
             }
         }
 
-        if( ptarget == NULL ) {
+        if( !ptarget ) {
             RAVELOG_ERRORA("no target specified\n");
             return false;
         }
 
-        boost::shared_ptr<GoalSampleFunction> pgoalsampler;
-
-        try {
-            pgoalsampler.reset(new GoalSampleFunction(_probot,ptarget,convexfilename,visibilityfilename,bVisibilityTransforms,sensorindex));
-        }
-        catch(const string& err) {
-            RAVELOG_ERRORA(err.c_str());
-            return false;
-        }
+        boost::shared_ptr<GoalSampleFunction> pgoalsampler(new GoalSampleFunction(_robot,ptarget,convexfilename,visibilityfilename,bVisibilityTransforms,sensorindex));
 
         params._pgoals = pgoalsampler;
-        _probot->RegrabAll();
+        _robot->RegrabAll();
         
-        _probot->SetActiveDOFs(pgoalsampler->GetManipulator()->_vecarmjoints, affinedofs);
-        _probot->GetActiveDOFValues(params.vinitialconfig);
+        _robot->SetActiveDOFs(pgoalsampler->GetManipulator()->_vecarmjoints, affinedofs);
+        _robot->GetActiveDOFValues(params.vinitialconfig);
 
-        boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(_probot->GetActiveDOF()));
+        boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(_robot->GetActiveDOF()));
 
         Trajectory::TPOINT pt;
         pt.q = params.vinitialconfig;
         ptraj->AddPoint(pt);
     
         // jitter for initial collision
-        if( !JitterActiveDOF(_probot) ) {
+        if( !JitterActiveDOF(_robot) ) {
             RAVELOG_WARNA("jitter failed for initial\n");
             return false;
         }
-        _probot->GetActiveDOFValues(params.vinitialconfig);
+        _robot->GetActiveDOFValues(params.vinitialconfig);
 
         // check if grasped 
         boost::shared_ptr<PlannerBase> planner(GetEnv()->CreatePlanner(plannername.c_str()));
@@ -926,7 +827,7 @@ public:
         RAVELOG_INFOA("starting planning\n");
         uint64_t starttime = GetMicroTime();
         for(int iter = 0; iter < 1; ++iter) {
-            if( !planner->InitPlan(_probot, &params) ) {
+            if( !planner->InitPlan(_robot, &params) ) {
                 RAVELOG_ERRORA("InitPlan failed\n");
                 return false;
             }
@@ -957,7 +858,7 @@ public:
         GraspSetParameters params(GetEnv());
         params.nMaxIterations = 4000;
         int sensorindex=0;
-        KinBody* ptarget = NULL;
+        KinBodyPtr ptarget;
         string cmd, plannername="GraspGradient",convexfilename;
         params._fVisibiltyGraspThresh = 0.05f;
         dReal fMaxVelMult = 1;
@@ -966,6 +867,7 @@ public:
             sinput >> cmd;
             if( !sinput )
                 break;
+            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
         
             if( cmd == "outputtraj" )
                 bOutputTraj = true;
@@ -981,7 +883,7 @@ public:
                 sinput >> fMaxVelMult;
             else if( cmd == "target" ) {
                 string name; sinput >> name;
-                ptarget = GetEnv()->GetKinBody(_stdmbstowcs(name.c_str()).c_str());
+                ptarget = GetEnv()->GetKinBody(name);
             }
             else if( cmd == "sensorindex" )
                 sinput >> sensorindex;
@@ -1015,32 +917,26 @@ public:
             }
         }
 
-        if( ptarget == NULL ) {
+        if( !ptarget ) {
             RAVELOG_ERRORA("no target specified\n");
             return false;
         }
 
-        _probot->SetActiveDOFs(_probot->GetActiveManipulator()->_vecarmjoints);
+        _robot->SetActiveDOFs(_robot->GetActiveManipulator()->_vecarmjoints);
 
         boost::shared_ptr<VisibilityConstraintFunction> pconstraint;
         if( convexfilename.size() > 0 ) {
             RAVELOG_DEBUGA("using visibility constraint with %s\n", convexfilename.c_str());
-            try {
-                pconstraint.reset(new VisibilityConstraintFunction(_probot,ptarget,convexfilename,sensorindex));
-            }
-            catch(const string& err) {
-                RAVELOG_ERRORA(err.c_str());
-                return false;
-            }
+            pconstraint.reset(new VisibilityConstraintFunction(_robot,ptarget,convexfilename,sensorindex));
         }
 
         params._ptarget = ptarget;
         params.pconstraintfn = pconstraint.get();
-        _probot->GetActiveDOFValues(params.vinitialconfig);
+        _robot->GetActiveDOFValues(params.vinitialconfig);
 
-        boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(_probot->GetActiveDOF()));
-        boost::shared_ptr<PlannerBase> planner(GetEnv()->CreatePlanner(plannername.c_str()));
-        if( planner.get() == NULL ) {
+        TrajectoryBasePtr ptraj = GetEnv()->CreateTrajectory(_robot->GetActiveDOF());
+        PlannerBasePtr planner = GetEnv()->CreatePlanner(plannername);
+        if( !planner ) {
             RAVELOG_ERRORA("failed to create BiRRTs\n");
             return false;
         }
@@ -1048,7 +944,7 @@ public:
         bool bSuccess = false;
         RAVELOG_INFOA("starting planning\n");
         uint64_t starttime = GetMicroTime();
-        if( !planner->InitPlan(_probot, &params) ) {
+        if( !planner->InitPlan(_robot, &params) ) {
             RAVELOG_ERRORA("InitPlan failed\n");
             return false;
         }
@@ -1066,44 +962,6 @@ public:
         SetTrajectory(ptraj.get(), bExecute, strtrajfilename, bOutputTraj?&sout:NULL,fMaxVelMult);
         sout << felapsed;
         return true;
-    }
-
-    bool SetTrajectory(Trajectory* pActiveTraj, bool bExecute, const string& strsavetraj, ostream* pout,dReal fMaxVelMult=1)
-    {
-        assert( pActiveTraj != NULL );
-        if( pActiveTraj->GetPoints().size() == 0 )
-            return false;
-
-        pActiveTraj->CalcTrajTiming(_probot, pActiveTraj->GetInterpMethod(), true, true,fMaxVelMult);
-
-        bool bExecuted = false;
-        if( bExecute ) {
-            if( pActiveTraj->GetPoints().size() > 1 ) {
-                _probot->SetActiveMotion(pActiveTraj);
-                bExecute = true;
-            }
-            // have to set anyway since calling script will orEnvWait!
-            else if( _probot->GetController() != NULL ) {
-                boost::shared_ptr<Trajectory> pfulltraj(GetEnv()->CreateTrajectory(_probot->GetDOF()));
-                _probot->GetFullTrajectoryFromActive(pfulltraj.get(), pActiveTraj);
-
-                if( _probot->GetController()->SetDesired(&pfulltraj->GetPoints()[0].q[0]))
-                    bExecuted = true;
-            }
-        }
-
-        if( strsavetraj.size() || pout != NULL ) {
-            boost::shared_ptr<Trajectory> pfulltraj(GetEnv()->CreateTrajectory(_probot->GetDOF()));
-            _probot->GetFullTrajectoryFromActive(pfulltraj.get(), pActiveTraj);
-
-            if( strsavetraj.size() > 0 )
-                pfulltraj->Write(strsavetraj.c_str(), Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
-
-            if( pout != NULL )
-                pfulltraj->Write(*pout, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation|Trajectory::TO_OneLine);
-        }
-    
-        return bExecuted;
     }
 
     bool AssemblyLine(ostream& sout, istream& sinput)
@@ -1215,45 +1073,15 @@ public:
         }
         return false;
     }
-
-    bool TestIK(ostream& sout, istream& sinput)
-    {
-        TransformMatrix tgrasp;
-        string cmd;
-        while(!sinput.eof()) {
-            sinput >> cmd;
-            if( !sinput )
-                break;
-        
-            if( cmd == "matrix" )
-                sinput >> tgrasp;
-            if( !sinput ) {
-                RAVELOG_ERRORA("failed\n");
-                return false;
-            }
-        }
-        
-
-        return true;
-    }
-
-    bool Help(ostream& sout, istream& sinput)
-    {
-        sout << "------------------------" << endl
-             << "VisualServoing Problem Commands:" << endl;
-        GetCommandHelp(sout);
-        sout << "------------------------" << endl;
-        return true;
-    }
     
 protected:
-    RobotBase* _probot;
-    wstring _strRobotName;
+    RobotBasePtr _robot;
+    string _strRobotName;
     AABB _abAssemblyStart;
     Vector _vAssemblyDirection;
     dReal _fAssemblyDistance, _fOutputProbability, _fAssemblySpeed;
     list<ASSEMBLYOBJECT> _listAssemblyTypes;
-    list<boost::shared_ptr<KinBody> > _listAssemblyObjects;
+    list<KinBodyPtr> _listAssemblyObjects;
     
 };
 

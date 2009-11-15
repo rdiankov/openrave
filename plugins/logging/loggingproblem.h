@@ -24,6 +24,21 @@ class LoggingProblem : public ProblemInstance
  public:
  LoggingProblem(EnvironmentBasePtr penv) : ProblemInstance(penv)
     {
+        RegisterCommand("savescene",boost::bind(&LoggingProblem::SaveScene,this,_1,_2),
+                        "Saves the entire scene in an xml file. If paths are relative,\n"
+                        "should only be opened from the dirctory openrave was launched in\n"
+                        "Usage: [filename %s] [absolute (default is relative)]");
+        RegisterCommand("startreplay",boost::bind(&LoggingProblem::StartReplay,this,_1,_2),
+                        "Starts replaying a recording given a speed (can be negative).\n"
+                        "Usage: [speed %f] [filename %s]");
+        RegisterCommand("startrecording",boost::bind(&LoggingProblem::StartRecording,this,_1,_2),
+                        "Starts recording the scene given a realtime delta.\n"
+                        "If a current recording is in progress, stop it.\n"
+                        "Usage: [filename %s] [realtime %f]");
+        RegisterCommand("stoprecording",boost::bind(&LoggingProblem::StopRecording,this,_1,_2),
+                        "Stop recording.\n"
+                        "Usage: [speed %f] [filename %s]");
+
         bDestroyThread = false;
         bAbsoluteTiem = false;
         bDoLog = false;
@@ -43,22 +58,6 @@ class LoggingProblem : public ProblemInstance
     virtual int main(const string& cmd)
     {
         Destroy();
-        __mapCommands.clear();
-        RegisterCommand("savescene",boost::bind(&LoggingProblem::SaveScene,shared_problem(),_1,_2),
-                        "Saves the entire scene in an xml file. If paths are relative,\n"
-                        "should only be opened from the dirctory openrave was launched in\n"
-                        "Usage: [filename %s] [absolute (default is relative)]");
-        RegisterCommand("startreplay",boost::bind(&LoggingProblem::StartReplay,shared_problem(),_1,_2),
-                        "Starts replaying a recording given a speed (can be negative).\n"
-                        "Usage: [speed %f] [filename %s]");
-        RegisterCommand("startrecording",boost::bind(&LoggingProblem::StartRecording,shared_problem(),_1,_2),
-                        "Starts recording the scene given a realtime delta.\n"
-                        "If a current recording is in progress, stop it.\n"
-                        "Usage: [filename %s] [realtime %f]");
-        RegisterCommand("stoprecording",boost::bind(&LoggingProblem::StopRecording,shared_problem(),_1,_2),
-                        "Stop recording.\n"
-                        "Usage: [speed %f] [filename %s]");
-        RegisterCommand("help",boost::bind(&LoggingProblem::Help,shared_problem(),_1,_2), "display this message.");
 
         bDestroyThread = false;
         _threadlog.reset(new boost::thread(boost::bind(&LoggingProblem::_log_thread,shared_problem())));
@@ -176,15 +175,6 @@ class LoggingProblem : public ProblemInstance
     {
         RAVELOG_ERRORA("not implemented\n");
         return false;
-    }
-
-    virtual bool Help(ostream& sout, istream& sinput)
-    {
-        sout << "----------------------------------" << endl
-             << "Logging Problem Commands:" << endl;
-        GetCommandHelp(sout);
-        sout << "----------------------------------" << endl;
-        return true;
     }
 
     void _log_thread()

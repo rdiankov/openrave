@@ -20,7 +20,41 @@
 class BaseManipulation : public ProblemInstance
 {
 public:
- BaseManipulation(EnvironmentBasePtr penv) : ProblemInstance(penv) {}
+ BaseManipulation(EnvironmentBasePtr penv) : ProblemInstance(penv) {
+        RegisterCommand("SetActiveManip",boost::bind(&BaseManipulation::SetActiveManip,this,_1,_2),
+                        "Set the active manipulator");
+        RegisterCommand("Traj",boost::bind(&BaseManipulation::Traj,this,_1,_2),
+                        "Execute a trajectory from a file on the local filesystem");
+        RegisterCommand("GrabBody",boost::bind(&BaseManipulation::GrabBody,this,_1,_2),
+                        "Robot calls ::Grab on a body with its current manipulator");
+        RegisterCommand("ReleaseAll",boost::bind(&BaseManipulation::ReleaseAll,this,_1,_2),
+                        "Releases all grabbed bodies (RobotBase::ReleaseAllGrabbed).");
+        RegisterCommand("MoveHandStraight",boost::bind(&BaseManipulation::MoveHandStraight,this,_1,_2),
+                        "Move the active end-effector in a straight line until collision or IK fails.");
+        RegisterCommand("MoveManipulator",boost::bind(&BaseManipulation::MoveManipulator,this,_1,_2),
+                        "Moves arm joints of active manipulator to a given set of joint values");
+        RegisterCommand("MoveActiveJoints",boost::bind(&BaseManipulation::MoveActiveJoints,this,_1,_2),
+                        "Moves the current active joints to a specified goal destination\n");
+        RegisterCommand("MoveToHandPosition",boost::bind(&BaseManipulation::MoveToHandPosition,this,_1,_2),
+                        "Move the manipulator's end effector to some 6D pose.");
+        RegisterCommand("MoveUnsyncJoints",boost::bind(&BaseManipulation::MoveUnsyncJoints,this,_1,_2),
+                        "Moves the active joints to a position where the inactive (hand) joints can\n"
+                        "fully move to their goal. This is necessary because synchronization with arm\n"
+                        "and hand isn't guaranteed.\n"
+                        "Options: handjoints savetraj planner");
+        RegisterCommand("CloseFingers",boost::bind(&BaseManipulation::CloseFingers,this,_1,_2),
+                        "Closes the active manipulator fingers using the grasp planner.");
+        RegisterCommand("ReleaseFingers",boost::bind(&BaseManipulation::ReleaseFingers,this,_1,_2),
+                        "Releases the active manipulator fingers using the grasp planner.\n"
+                        "Also releases the given object.");
+        RegisterCommand("IKTest",boost::bind(&BaseManipulation::IKtest,this,_1,_2),
+                        "Tests for an IK solution if active manipulation has an IK solver attached");
+        RegisterCommand("DebugIK",boost::bind(&BaseManipulation::DebugIK,this,_1,_2),
+                        "Function used for debugging and testing an IK solver");
+        RegisterCommand("SmoothTrajectory",boost::bind(&BaseManipulation::SmoothTrajectory,this,_1,_2),
+                        "Smooths a trajectory of points and returns the new trajectory such that\n"
+                        "it is guaranteed to contain no co-linear points in configuration space\n");
+    }
 
     virtual ~BaseManipulation() {}
 
@@ -33,43 +67,6 @@ public:
 
     virtual int main(const std::string& args)
     {
-        __mapCommands.clear();
-        RegisterCommand("SetActiveManip",boost::bind(&BaseManipulation::SetActiveManip,shared_problem(),_1,_2),
-                        "Set the active manipulator");
-        RegisterCommand("Traj",boost::bind(&BaseManipulation::Traj,shared_problem(),_1,_2),
-                        "Execute a trajectory from a file on the local filesystem");
-        RegisterCommand("GrabBody",boost::bind(&BaseManipulation::GrabBody,shared_problem(),_1,_2),
-                        "Robot calls ::Grab on a body with its current manipulator");
-        RegisterCommand("ReleaseAll",boost::bind(&BaseManipulation::ReleaseAll,shared_problem(),_1,_2),
-                        "Releases all grabbed bodies (RobotBase::ReleaseAllGrabbed).");
-        RegisterCommand("MoveHandStraight",boost::bind(&BaseManipulation::MoveHandStraight,shared_problem(),_1,_2),
-                        "Move the active end-effector in a straight line until collision or IK fails.");
-        RegisterCommand("MoveManipulator",boost::bind(&BaseManipulation::MoveManipulator,shared_problem(),_1,_2),
-                        "Moves arm joints of active manipulator to a given set of joint values");
-        RegisterCommand("MoveActiveJoints",boost::bind(&BaseManipulation::MoveActiveJoints,shared_problem(),_1,_2),
-                        "Moves the current active joints to a specified goal destination\n");
-        RegisterCommand("MoveToHandPosition",boost::bind(&BaseManipulation::MoveToHandPosition,shared_problem(),_1,_2),
-                        "Move the manipulator's end effector to some 6D pose.");
-        RegisterCommand("MoveUnsyncJoints",boost::bind(&BaseManipulation::MoveUnsyncJoints,shared_problem(),_1,_2),
-                        "Moves the active joints to a position where the inactive (hand) joints can\n"
-                        "fully move to their goal. This is necessary because synchronization with arm\n"
-                        "and hand isn't guaranteed.\n"
-                        "Options: handjoints savetraj planner");
-        RegisterCommand("CloseFingers",boost::bind(&BaseManipulation::CloseFingers,shared_problem(),_1,_2),
-                        "Closes the active manipulator fingers using the grasp planner.");
-        RegisterCommand("ReleaseFingers",boost::bind(&BaseManipulation::ReleaseFingers,shared_problem(),_1,_2),
-                        "Releases the active manipulator fingers using the grasp planner.\n"
-                        "Also releases the given object.");
-        RegisterCommand("IKTest",boost::bind(&BaseManipulation::IKtest,shared_problem(),_1,_2),
-                        "Tests for an IK solution if active manipulation has an IK solver attached");
-        RegisterCommand("DebugIK",boost::bind(&BaseManipulation::DebugIK,shared_problem(),_1,_2),
-                        "Function used for debugging and testing an IK solver");
-        RegisterCommand("SmoothTrajectory",boost::bind(&BaseManipulation::SmoothTrajectory,shared_problem(),_1,_2),
-                        "Smooths a trajectory of points and returns the new trajectory such that\n"
-                        "it is guaranteed to contain no co-linear points in configuration space\n");
-        RegisterCommand("Help", boost::bind(&BaseManipulation::Help,shared_problem(),_1,_2),
-                        "Help message");
-
         stringstream ss(args);
         ss >> _strRobotName;
 
@@ -116,13 +113,12 @@ public:
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         robot = GetEnv()->GetRobot(_strRobotName);
-        if( !robot ) {
-            RAVELOG_ERRORA(str(boost::format("could not find %s robot, send command failed\n")%_strRobotName));
-            return false;
-        }
+
+        if( !robot )
+            throw openrave_exception(str(boost::format("could not find %s robot, send command failed\n")%_strRobotName));
+
         return ProblemInstance::SendCommand(sout,sinput);
     }
-    
 protected:
 
     inline boost::shared_ptr<BaseManipulation> shared_problem() { return boost::static_pointer_cast<BaseManipulation>(shared_from_this()); }
@@ -1621,15 +1617,6 @@ protected:
 
         RAVELOG_INFOA("DebugIK done, success rate %f.\n", (float)success/(float)num_itrs);
         sout << (float)success/(float)num_itrs;
-        return true;
-    }
-
-    bool Help(ostream& sout, istream& sinput)
-    {
-        sout << "----------------------------------" << endl
-             << "BaseManipulation Problem Commands:" << endl;
-        GetCommandHelp(sout);
-        sout << "----------------------------------" << endl;
         return true;
     }
 

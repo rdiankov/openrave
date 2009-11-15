@@ -540,6 +540,12 @@ std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameters& pp)
     return I;
 }
 
+ProblemInstance::ProblemInstance(EnvironmentBasePtr penv) : InterfaceBase(PT_ProblemInstance, penv)
+{
+    RegisterCommand("help",boost::bind(&ProblemInstance::GetCommandHelp,this,_1,_2),
+                    "display help message.");
+}
+
 bool ProblemInstance::SendCommand(ostream& sout, istream& sinput)
 {
     string cmd;
@@ -576,7 +582,7 @@ const ProblemInstance::CMDMAP& ProblemInstance::GetCommands() const
     return __mapCommands;
 }
 
-void ProblemInstance::GetCommandHelp(std::ostream& o) const
+bool ProblemInstance::GetCommandHelp(std::ostream& o, std::istream& sinput) const
 {
     int maxlen = 0;
     CMDMAP::const_iterator it;
@@ -585,6 +591,8 @@ void ProblemInstance::GetCommandHelp(std::ostream& o) const
             maxlen = (int)it->first.size();
     }
     
+    o << "----------------------------------" << endl
+      << GetXMLId() << " Commands:" << endl;
     for(it = __mapCommands.begin(); it != __mapCommands.end(); ++it) {
         // search for all new lines
         std::string::size_type pos = 0, newpos=0;
@@ -605,6 +613,8 @@ void ProblemInstance::GetCommandHelp(std::ostream& o) const
             pos = newpos+1;
         }
     }
+    o << "----------------------------------" << endl;
+    return true;
 }
 
 bool SensorBase::LaserSensorData::serialize(std::ostream& O) const

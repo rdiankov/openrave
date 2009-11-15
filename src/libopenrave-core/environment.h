@@ -18,7 +18,7 @@
 
 #define KINBODY_DELETER boost::bind(&Environment::_KinBodyDestroyCallback,boost::static_pointer_cast<Environment>(shared_from_this()),_1)
 #define KINBODY_DELETER_SHARED boost::bind(&Environment::_KinBodyDestroyCallbackShared,boost::static_pointer_cast<Environment>(shared_from_this()),_1)
-#define GRAPH_DELETER boost::bind(&Environment::_CloseGraphCallback,boost::static_pointer_cast<Environment>(shared_from_this()),_pCurrentViewer,_1)
+#define GRAPH_DELETER boost::bind(&Environment::_CloseGraphCallback,boost::static_pointer_cast<Environment>(shared_from_this()),RaveViewerBaseWeakPtr(_pCurrentViewer),_1)
 
 #define CHECK_INTERFACE(pinterface) { \
         if( (pinterface)->GetEnv() != shared_from_this() ) \
@@ -908,9 +908,11 @@ class Environment : public EnvironmentBase
         return GraphHandlePtr(_pCurrentViewer->drawtrimesh(ppoints, stride, pIndices, numTriangles, color), GRAPH_DELETER);
     }
 
-    virtual void _CloseGraphCallback(RaveViewerBasePtr viewer, void* handle)
+    virtual void _CloseGraphCallback(RaveViewerBaseWeakPtr wviewer, void* handle)
     {
-        viewer->closegraph(handle);
+        RaveViewerBasePtr viewer(wviewer);
+        if( !!viewer )
+            viewer->closegraph(handle);
     }
 
     virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK)

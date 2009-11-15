@@ -718,7 +718,18 @@ public:
     inline boost::shared_ptr<TaskCagingProblem const> shared_problem_const() const { return boost::static_pointer_cast<TaskCagingProblem const>(shared_from_this()); }
 
 public:
- TaskCagingProblem(EnvironmentBasePtr penv) : ProblemInstance(penv) {}
+ TaskCagingProblem(EnvironmentBasePtr penv) : ProblemInstance(penv) {
+        RegisterCommand("graspset",boost::bind(&TaskCagingProblem::CreateGraspSet, this, _1, _2),
+                        "Creates a grasp set given a robot end-effector floating in space.\n"
+                        "Options: step exploreprob size target targetjoint contactconfigdelta cagedconfig");
+        RegisterCommand("taskconstraintplan", boost::bind(&TaskCagingProblem::TaskConstrainedPlanner, this, _1, _2),
+                        "Invokes the relaxed task constrained planner");
+        RegisterCommand("simpleconstraintplan", boost::bind(&TaskCagingProblem::SimpleConstrainedPlanner, this, _1, _2),
+                        "Invokes a simple one grasp planner");
+        RegisterCommand("bodytraj",boost::bind(&TaskCagingProblem::BodyTrajectory, this, _1, _2),
+                        "Starts a body to follow a trajectory. The trajrectory must contain timestamps\n"
+                        "Options: target targettraj");
+    }
     virtual ~TaskCagingProblem() {}
     virtual void Destroy()
     {
@@ -728,19 +739,6 @@ public:
 
     virtual int main(const string& args)
     {
-        __mapCommands.clear();
-        RegisterCommand("graspset",boost::bind(&TaskCagingProblem::CreateGraspSet, shared_problem(), _1, _2),
-                        "Creates a grasp set given a robot end-effector floating in space.\n"
-                        "Options: step exploreprob size target targetjoint contactconfigdelta cagedconfig");
-        RegisterCommand("taskconstraintplan", boost::bind(&TaskCagingProblem::TaskConstrainedPlanner, shared_problem(), _1, _2),
-                        "Invokes the relaxed task constrained planner");
-        RegisterCommand("simpleconstraintplan", boost::bind(&TaskCagingProblem::SimpleConstrainedPlanner, shared_problem(), _1, _2),
-                        "Invokes a simple one grasp planner");
-        RegisterCommand("bodytraj",boost::bind(&TaskCagingProblem::BodyTrajectory, shared_problem(), _1, _2),
-                        "Starts a body to follow a trajectory. The trajrectory must contain timestamps\n"
-                        "Options: target targettraj");
-        RegisterCommand("help", boost::bind(&TaskCagingProblem::Help,shared_problem(),_1,_2),"Help message");
-
         stringstream ss(args);
         ss >> _strRobotName;
         return 0;
@@ -774,13 +772,13 @@ public:
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _robot = GetEnv()->GetRobot(_strRobotName);
-        if( !_robot ) {
-            RAVELOG_ERRORA(str(boost::format("could not find %s robot, send command failed\n")%_strRobotName));
-            return false;
-        }
+
+        if( !_robot )
+            throw openrave_exception(str(boost::format("could not find %s robot, send command failed\n")%_strRobotName));
+
         return ProblemInstance::SendCommand(sout,sinput);
     }
- 
+
 private:
 
     bool CreateGraspSet(ostream& sout, istream& sinput)
@@ -1239,7 +1237,7 @@ private:
             }
         }
         else {
-            boost::shared_ptr<COLLISIONREPORT> report(new COLLISIONREPORT());
+            CollisionReportPtr report(new COLLISIONREPORT());
 
             if( taskdata->vtargettraj.size() < 2 ) {
                 RAVELOG_WARNA("not enough trajectory points\n");
@@ -1659,15 +1657,6 @@ private:
             return false;
         }
         _listBodyTrajs.push_back(body);
-        return true;
-    }
-
-    bool Help(ostream& sout, istream& sinput)
-    {
-        sout << "------------------------" << endl
-             << "TaskCaging Problem Commands:" << endl;
-        GetCommandHelp(sout);
-        sout << "------------------------" << endl;
         return true;
     }
 
