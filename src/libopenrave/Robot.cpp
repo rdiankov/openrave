@@ -154,14 +154,14 @@ void RobotBase::Manipulator::GetChildJoints(std::vector<JointPtr>& vjoints) cons
             continue;
         for(int idof = 0; idof < probot->GetDOF(); ++idof) {
             KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(idof);
-            if( probot->DoesAffect(pjoint->GetIndex(),ilink) && !probot->DoesAffect(pjoint->GetIndex(),iattlink) ) {
+            if( probot->DoesAffect(pjoint->GetJointIndex(),ilink) && !probot->DoesAffect(pjoint->GetJointIndex(),iattlink) ) {
                 // only insert if its limits are different (ie, not a dummy joint)
                 pjoint->GetLimits(lower,upper);
-                for(int i = 0; i < probot->GetJoints()[ijoint]->GetDOF(); ++i) {
+                for(int i = 0; i < pjoint->GetDOF(); ++i) {
                     if( lower[i] != upper[i] ) {
-                        if( !vhasjoint[pjoint->GetIndex()] ) {
+                        if( !vhasjoint[pjoint->GetJointIndex()] ) {
                             vjoints.push_back(pjoint);
-                            vhasjoint[pjoint->GetIndex()] = true;
+                            vhasjoint[pjoint->GetJointIndex()] = true;
                         }
                         break;
                     }
@@ -187,13 +187,13 @@ void RobotBase::Manipulator::GetChildDOFIndices(std::vector<int>& vdofindices) c
             continue;
         for(int idof = 0; idof < probot->GetDOF(); ++idof) {
             KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(idof);
-            if( probot->DoesAffect(pjoint->GetIndex(),ilink) && !probot->DoesAffect(pjoint->GetIndex(),iattlink) ) {
+            if( probot->DoesAffect(pjoint->GetJointIndex(),ilink) && !probot->DoesAffect(pjoint->GetJointIndex(),iattlink) ) {
                 // only insert if its limits are different (ie, not a dummy joint)
                 pjoint->GetLimits(lower,upper);
                 for(int i = 0; i < pjoint->GetDOF(); ++i) {
                     if( lower[i] != upper[i] ) {
-                        if( !vhasjoint[pjoint->GetIndex()] ) {
-                            vhasjoint[pjoint->GetIndex()] = true;
+                        if( !vhasjoint[pjoint->GetJointIndex()] ) {
+                            vhasjoint[pjoint->GetJointIndex()] = true;
                             int idofbase = pjoint->GetDOFIndex();
                             for(int idof = 0; idof < pjoint->GetDOF(); ++idof)
                                 vdofindices.push_back(idofbase+idof);

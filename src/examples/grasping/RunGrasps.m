@@ -35,6 +35,8 @@ Target.id = orEnvCreateKinBody(Target.name,targetfilename);
 
 probs.grasp = orEnvCreateProblem('GrasperProblem', robot.name);
 
+orProblemSendCommand('exec direction 0 0 -1 body mug1 robot 1 roll 1.57 standoff 0 0 .025 centeroffset 0 0 -.2 collision pqp ',probs.grasp)
+
 %% run the grasps
 grasps = GraspTable;
 TargTrans = reshape(orBodyGetLinks(Target.id), [3 4]);

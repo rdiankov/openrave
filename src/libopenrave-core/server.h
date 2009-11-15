@@ -487,6 +487,9 @@ class SimpleTextServer : public ProblemInstance
                 catch(const openrave_exception& ex) {
                     RAVELOG_FATALA("%s\n",ex.what());
                 }
+                catch(...) {
+                    RAVELOG_FATAL("unknown exception!!\n");
+                }
             }
             listlocalworkers.clear();
     
