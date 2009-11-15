@@ -28,7 +28,7 @@ orBodySetJointValues(robot.id,grasp(robot.grasp.joints));
 orRobotSetActiveDOFs(robot.id, robot.handjoints, affinedof);
 
 command_string = ['direction ', sprintf('%f ', grasp(robot.grasp.direction)), ...
-                  ' body ' Target.name ' robot ', num2str(robot.id), ' ',];
+                  ' body ' Target.name ' ',];
 
 if( exist('noise','var') && noise )
     command_string =  [command_string, ' noise 0.1 0.005 '];

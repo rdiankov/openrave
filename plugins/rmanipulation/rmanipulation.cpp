@@ -17,6 +17,7 @@
 #include "basemanipulation.h"
 #include "taskmanipulation.h"
 #include "taskcaging.h"
+#include "visualfeedback.h"
 
 // need c linkage
 extern "C" {
@@ -43,6 +44,8 @@ InterfaceBasePtr CreateInterface(PluginType type, const std::string& name, const
             return InterfaceBasePtr(new TaskManipulation(penv));
         else if( interfacename == "taskcaging")
             return InterfaceBasePtr(new TaskCagingProblem(penv));
+        else if( interfacename == "visualfeedback")
+            return InterfaceBasePtr(new VisualFeedbackProblem(penv));
         break;
     default:
         break;
@@ -63,6 +66,7 @@ bool GetPluginAttributes(PLUGININFO* pinfo, int size)
     pinfo->interfacenames[PT_ProblemInstance].push_back("BaseManipulation");
     pinfo->interfacenames[PT_ProblemInstance].push_back("TaskManipulation");
     pinfo->interfacenames[PT_ProblemInstance].push_back("TaskCaging");
+    pinfo->interfacenames[PT_ProblemInstance].push_back("VisualFeedback");
     return true;
 }
 

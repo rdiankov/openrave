@@ -296,7 +296,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
                 break;
         }
     
-        if( num_goals == 0 ) {
+        if( num_goals == 0 && !GetParameters()._samplegoalfn ) {
             RAVELOG_WARNA("no goals specified\n");
             return false;
         }    

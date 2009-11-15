@@ -528,7 +528,7 @@ void MainOpenRAVEThread()
         if( !s_viewer )
             RAVELOG_WARNA("failed to find an OpenRAVE viewer.\n");
         else {
-            RAVELOG_INFOA("using %s viewer\n", s_viewer->GetXMLId().c_str());
+            RAVELOG_DEBUGA("using %s viewer\n", s_viewer->GetXMLId().c_str());
 
             s_viewer->ViewerSetSize(s_WindowWidth, s_WindowHeight);
             if( s_bSetWindowPosition )
@@ -537,7 +537,7 @@ void MainOpenRAVEThread()
 
             for(size_t i = 0; i < vIvFiles.size(); ++i) {
                 if( !s_viewer->LoadModel(vIvFiles[i]) )
-                    RAVELOG_INFOA("failed to open %s\n", vIvFiles[i].c_str());
+                    RAVELOG_WARNA("failed to open %s\n", vIvFiles[i].c_str());
             }
         }
     }

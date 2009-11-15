@@ -413,7 +413,6 @@ class CM
 
         tri = *pcur;
     }
-
 };
 
 class RAStarParameters : public PlannerBase::PlannerParameters
@@ -540,6 +539,61 @@ class GraspParameters : public PlannerBase::PlannerParameters
     }
 };
 
+class GraspSetParameters : public PlannerBase::PlannerParameters
+{
+public:
+ GraspSetParameters(EnvironmentBasePtr penv) : _fVisibiltyGraspThresh(0), _fGraspDistThresh(1.4f), _penv(penv) {}
+    
+    vector<Transform> _vgrasps; ///< grasps with respect to the target object
+    KinBodyPtr _ptarget;
+    int _nGradientSamples;
+    dReal _fVisibiltyGraspThresh; ///< if current grasp is less than this threshold, then visibilty is not checked
+    dReal _fGraspDistThresh; ///< target grasps beyond this distance are ignored
+
+ protected:
+    EnvironmentBasePtr _penv;
+
+    virtual bool serialize(std::ostream& O) const
+    {
+        if( !PlannerParameters::serialize(O) )
+            return false;
+        O << "<grasps>" << _vgrasps.size() << " ";
+        FOREACH(it, _vgrasps)
+            O << *it << " ";
+        O << "</grasps>" << endl;
+        O << "<target>" << (!!_ptarget?_ptarget->GetNetworkId():0) << "</target>" << endl;
+        O << "<numGradSamples>" << _nGradientSamples << "</numGradSamples>" << endl;
+        O << "<visgraspthresh>" << _fVisibiltyGraspThresh << "</visgraspthresh>" << endl;
+        O << "<graspdistthresh>" << _fGraspDistThresh << "</graspdistthresh>" << endl;
+        return !!O;
+    }
+        
+    virtual bool endElement(const string& name)
+    {
+        if( name == "grasps" ) {
+            int ngrasps=0;
+            _ss >> ngrasps;
+            _vgrasps.resize(ngrasps);
+            FOREACH(it, _vgrasps)
+                _ss >> *it;
+        }
+        else if( name == "target" ) {
+            int id = 0;
+            _ss >> id;
+            _ptarget = _penv->GetBodyFromNetworkId(id);
+        }
+        else if( name == "numGradSamples" )
+            _ss >> _nGradientSamples;
+        else if( name == "visgraspthresh" )
+            _ss >> _fVisibiltyGraspThresh;
+        else if( name == "graspdistthresh")
+            _ss >> _fGraspDistThresh;
+        else
+            return PlannerParameters::endElement(name);
+        return false;
+    }
+};
+
 /// returns a random sequence of permuations
 template <class T> void PermutateRandomly(vector<T>& vpermutation)
 {
@@ -564,12 +618,12 @@ class RandomPermuationExecutor
 {
 public:
  RandomPermuationExecutor() : nextindex(-1) {}
- RandomPermuationExecutor(const boost::function<bool(int)>& fn) : nextindex(-1), _fn(fn) {}
+ RandomPermuationExecutor(const boost::function<bool(int)>& fn) : _fn(fn), nextindex(-1) {}
 
     /// returns the index of the permutation that the function returned true in
     /// or -1 if function never returned true
     void PermuteStart(unsigned int permutationsize) {
-        assert( permutationsize > 0);
+        BOOST_ASSERT( permutationsize > 0);
         vpermutation.resize(permutationsize);
         for(unsigned int i = 0; i < permutationsize; ++i)
             vpermutation[i] = i;
@@ -594,10 +648,11 @@ public:
         return -1;
     }
 
+    boost::function<bool(int)> _fn;
+
 private:
     std::vector<unsigned int> vpermutation;
     unsigned int nextindex;
-    boost::function<bool(int)> _fn;
 };
 
 class RealVectorCompare

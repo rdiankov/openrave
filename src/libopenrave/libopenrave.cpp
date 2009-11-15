@@ -355,7 +355,8 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
     _getstatefn = boost::bind(&RobotBase::GetActiveDOFValues,robot,_1);
     robot->GetActiveDOFLimits(_vConfigLowerLimit,_vConfigUpperLimit);
     robot->GetActiveDOFResolutions(_vConfigResolution);
-    BOOST_ASSERT(_vConfigResolution.size()>0);
+    robot->GetActiveDOFValues(vinitialconfig);
+    BOOST_ASSERT((int)_vConfigResolution.size()==robot->GetActiveDOF());
 }
 
 #ifdef _WIN32
