@@ -152,15 +152,16 @@ void RobotBase::Manipulator::GetChildJoints(std::vector<JointPtr>& vjoints) cons
             continue;
         if( _varmjoints.size() > 0 && !probot->DoesAffect(_varmjoints[0],ilink) )
             continue;
-        for(int ijoint = 0; ijoint < probot->GetDOF(); ++ijoint) {
-            if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
+        for(int idof = 0; idof < probot->GetDOF(); ++idof) {
+            KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(idof);
+            if( probot->DoesAffect(pjoint->GetIndex(),ilink) && !probot->DoesAffect(pjoint->GetIndex(),iattlink) ) {
                 // only insert if its limits are different (ie, not a dummy joint)
-                probot->GetJoints()[ijoint]->GetLimits(lower,upper);
+                pjoint->GetLimits(lower,upper);
                 for(int i = 0; i < probot->GetJoints()[ijoint]->GetDOF(); ++i) {
                     if( lower[i] != upper[i] ) {
-                        if( !vhasjoint[ijoint] ) {
-                            vjoints.push_back(probot->GetJoints()[ijoint]);
-                            vhasjoint[ijoint] = true;
+                        if( !vhasjoint[pjoint->GetIndex()] ) {
+                            vjoints.push_back(pjoint);
+                            vhasjoint[pjoint->GetIndex()] = true;
                         }
                         break;
                     }
@@ -184,16 +185,17 @@ void RobotBase::Manipulator::GetChildDOFIndices(std::vector<int>& vdofindices) c
             continue;
         if( _varmjoints.size() > 0 && !probot->DoesAffect(_varmjoints[0],ilink) )
             continue;
-        for(int ijoint = 0; ijoint < probot->GetDOF(); ++ijoint) {
-            if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
+        for(int idof = 0; idof < probot->GetDOF(); ++idof) {
+            KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(idof);
+            if( probot->DoesAffect(pjoint->GetIndex(),ilink) && !probot->DoesAffect(pjoint->GetIndex(),iattlink) ) {
                 // only insert if its limits are different (ie, not a dummy joint)
-                probot->GetJoints()[ijoint]->GetLimits(lower,upper);
-                for(int i = 0; i < probot->GetJoints()[ijoint]->GetDOF(); ++i) {
+                pjoint->GetLimits(lower,upper);
+                for(int i = 0; i < pjoint->GetDOF(); ++i) {
                     if( lower[i] != upper[i] ) {
-                        if( !vhasjoint[ijoint] ) {
-                            vhasjoint[ijoint] = true;
-                            int idofbase = probot->GetJoints()[ijoint]->GetDOFIndex();
-                            for(int idof = 0; idof < probot->GetJoints()[ijoint]->GetDOF(); ++idof)
+                        if( !vhasjoint[pjoint->GetIndex()] ) {
+                            vhasjoint[pjoint->GetIndex()] = true;
+                            int idofbase = pjoint->GetDOFIndex();
+                            for(int idof = 0; idof < pjoint->GetDOF(); ++idof)
                                 vdofindices.push_back(idofbase+idof);
                         }
                         break;
