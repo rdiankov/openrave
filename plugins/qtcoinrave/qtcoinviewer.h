@@ -144,6 +144,12 @@ public:
         return boost::shared_ptr<void>((void*)1,boost::bind(&QtCoinViewer::UnregisterCallback,this,_listRegisteredCallbacks.insert(_listRegisteredCallbacks.end(),make_pair(properties,fncallback))));
     }
 
+    virtual void _DeleteItemCallback(Item* pItem)
+    {
+        boost::mutex::scoped_lock lock(_mutexItems);
+        _listRemoveItems.push_back(pItem);
+    }
+
 public slots:
 
     // menu items
@@ -258,7 +264,8 @@ protected:
     string _strMouseMove; ///< mouse move message
     // Message Queue
     list<EnvMessagePtr> _listMessages;
-    boost::mutex _mutexMessages, _mutexUpdating, _mutexMouseMove; ///< mutex protected messages
+    list<Item*> _listRemoveItems;
+    boost::mutex _mutexItems, _mutexMessages, _mutexUpdating, _mutexMouseMove; ///< mutex protected messages
 
     QVBoxLayout * vlayout;
     QGroupBox * view1;

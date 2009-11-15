@@ -128,6 +128,7 @@
     <!-- joint values of the closed and opened positions -->
     <closingdirection>2 2</closingdirection>
     <!-- grasp goal with respect to the effector -->
+    <palmdirection>1 0 0</palmdirection>
     <Translation>0.125 0 0</Translation>
     <RotationAxis>1 0 0 90</RotationAxis>
   </Manipulator>

@@ -13,15 +13,4 @@
       <Extents>0.01 0.01 0.01</Extents>
     </Geom>
   </Body>
-  <ColorDistribution>
-    <gauss>
-      <mean>0.8615     0.43019     0.41256</mean>
-      <covar>0.0086717   0.0091311    0.008291   0.0091311    0.019697    0.017206    0.008291    0.017206    0.018954</covar>
-    </gauss>
-    <gauss>
-      <mean>0.58976     0.16157      0.1198</mean>
-      <covar>0.0041079   0.0011002   0.0012059   0.0011002  0.00090109  0.00071209   0.0012059  0.00071209   0.0011606</covar>
-    </gauss>
-    <thresh>-35</thresh>
-  </ColorDistribution>
 </KinBody>

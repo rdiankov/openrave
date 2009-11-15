@@ -102,5 +102,6 @@
     <effector>hand-base</effector>
     <joints>J-gripper</joints>
     <closingdirection>1</closingdirection>
+    <palmdirection>0 1 0</palmdirection>
   </Manipulator>
 </Robot>

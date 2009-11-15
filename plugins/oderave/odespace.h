@@ -92,6 +92,8 @@ public:
 
         virtual ~KinBodyInfo()
         {
+            EnvironmentMutex::scoped_lock lock(pbody->GetEnv()->GetMutex()); // protected ode calls
+
             FOREACH(itlink, vlinks) {
                 dGeomID curgeom = (*itlink)->geom;
                 while(curgeom) {
@@ -178,6 +180,8 @@ public:
     }
 
     boost::shared_ptr<void> InitKinBody(KinBodyPtr pbody) {
+        EnvironmentMutex::scoped_lock lock(pbody->GetEnv()->GetMutex());
+
         // create all ode bodies and joints
         KinBodyInfoPtr pinfo(new KinBodyInfo(_ode));
         pinfo->pbody = pbody;

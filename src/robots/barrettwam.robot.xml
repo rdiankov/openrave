@@ -10,5 +10,6 @@
     <iksolver>WAM7ikfast 0.05</iksolver>
     <joints>JF1 JF2 JF3</joints>
     <closingdirection>1 1 1</closingdirection>
+    <palmdirection>0 0 1</palmdirection>
   </Manipulator>
 </Robot>

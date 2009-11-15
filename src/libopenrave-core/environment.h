@@ -225,6 +225,9 @@ class Environment : public EnvironmentBase
 //        }
         _listOwnedObjects.clear();
 
+        // load the dummy physics engine
+        SetPhysicsEngine(PhysicsEngineBasePtr());
+
         if( !!_pCurrentChecker )
             _pCurrentChecker->InitEnvironment();
         if( !!_pPhysicsEngine )

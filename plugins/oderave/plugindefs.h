@@ -135,6 +135,7 @@ using OpenRAVE::InterfaceBasePtr;
 using OpenRAVE::InterfaceBaseConstPtr;
 using OpenRAVE::PLUGININFO;
 using OpenRAVE::openrave_exception;
+using OpenRAVE::EnvironmentMutex;
 
 // define ODE_LIB for static linking
 #include <ode/ode.h>

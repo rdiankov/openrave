@@ -62,17 +62,4 @@
       <height>0.01</height>
     </Geom>
   </Body>
-
-  <ColorDistribution>
-    <gauss>
-      <mean>0.027197     0.12182     0.47464</mean>
-      <covar>0.00085232   0.0011444  0.00085107   0.0011444   0.0024207   0.0020682  0.00085107   0.0020682   0.0031333</covar>
-    </gauss>
-    <gauss>
-      <mean>0.56959      0.5984     0.57889</mean>
-      <covar>0.020583    0.014105 -0.00079025    0.014105    0.011249    0.002861 -0.00079025    0.002861    0.011136</covar>
-    </gauss>
-    <thresh>-35</thresh>
-  </ColorDistribution>
-
 </KinBody>

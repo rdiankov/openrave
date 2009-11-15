@@ -43,6 +43,8 @@ const float TIMER_SENSOR_INTERVAL = (1.0f/60.0f);
 
 int QtCoinViewer::s_InitRefCount = 0;
 
+#define ITEM_DELETER boost::bind(&QtCoinViewer::_DeleteItemCallback,shared_viewer(),_1)
+
 static SoErrorCB* s_DefaultHandlerCB=NULL;
 void CustomCoinHandlerCB(const class SoError * error, void * data)
 {
@@ -1977,6 +1979,13 @@ void QtCoinViewer::VideoFrame()
 
 void QtCoinViewer::UpdateFromModel()
 {
+    {
+        boost::mutex::scoped_lock lock(_mutexItems);
+        FOREACH(it,_listRemoveItems)
+            delete *it;
+        _listRemoveItems.clear();
+    }
+
     boost::mutex::scoped_lock lock(_mutexUpdateModels);
 
     vector<KinBody::BodyState> vecbodies;
@@ -2030,9 +2039,9 @@ void QtCoinViewer::UpdateFromModel()
                     }
 
                     if( pbody->IsRobot() )
-                        pitem.reset(new RobotItem(shared_viewer(), boost::static_pointer_cast<RobotBase>(pbody), _viewGeometryMode));
+                        pitem = boost::shared_ptr<RobotItem>(new RobotItem(shared_viewer(), boost::static_pointer_cast<RobotBase>(pbody), _viewGeometryMode),ITEM_DELETER);
                     else
-                        pitem.reset(new KinBodyItem(shared_viewer(), pbody, _viewGeometryMode));
+                        pitem = boost::shared_ptr<KinBodyItem>(new KinBodyItem(shared_viewer(), pbody, _viewGeometryMode),ITEM_DELETER);
                         
                     pbody->SetGuiData(pitem);
                     _mapbodies[pbody] = pitem;
@@ -2101,6 +2110,13 @@ void QtCoinViewer::_Reset()
         listRegisteredCallbacks.swap(_listRegisteredCallbacks);
     }
     listRegisteredCallbacks.clear();
+
+    {
+        boost::mutex::scoped_lock lock(_mutexItems);
+        FOREACH(it,_listRemoveItems)
+            delete *it;
+        _listRemoveItems.clear();
+    }
 }
 
 void QtCoinViewer::UpdateCameraTransform()
@@ -2188,6 +2204,13 @@ void QtCoinViewer::ViewGeometryChanged(QAction* pact)
         itbody->first->SetGuiData(boost::shared_ptr<void>());
     }
     _mapbodies.clear();
+
+    {
+        boost::mutex::scoped_lock lock(_mutexItems);
+        FOREACH(it,_listRemoveItems)
+            delete *it;
+        _listRemoveItems.clear();
+    }
 }
 
 void QtCoinViewer::ViewDebugLevelChanged(QAction* pact)
