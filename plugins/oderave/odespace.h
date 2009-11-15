@@ -18,6 +18,30 @@
 // manages a space of ODE objects
 class ODESpace : public boost::enable_shared_from_this<ODESpace>
 {
+    class ODEResources
+    {
+    public:
+        ODEResources() {
+#ifdef ODE_HAVE_ALLOCATE_DATA_THREAD
+            dAllocateODEDataForThread(dAllocateMaskAll);
+#endif
+            world = dWorldCreate();
+            space = dHashSpaceCreate(0);
+            contactgroup = dJointGroupCreate(0);
+        }
+        virtual ~ODEResources() {
+            if( contactgroup )
+                dJointGroupDestroy(contactgroup);
+            if( space )
+                dSpaceDestroy(space);
+            if( world )
+                dWorldDestroy(world);
+        }
+        dWorldID world;  ///< the dynamics world
+        dSpaceID space;  ///< the collision world
+        dJointGroupID contactgroup;
+    };
+
 public:
     // information about the kinematics of the body
     class KinBodyInfo : public boost::enable_shared_from_this<KinBodyInfo>
@@ -58,10 +82,10 @@ public:
             KinBody::LinkPtr plink;
         };
 
-        KinBodyInfo(dSpaceID odespace)
+    KinBodyInfo(boost::shared_ptr<ODEResources> ode) : _ode(ode)
         {
             jointgroup = dJointGroupCreate(0);
-            space = dHashSpaceCreate(odespace);
+            space = dHashSpaceCreate(_ode->space);
             nLastStamp = 0;
         }
 
@@ -119,6 +143,9 @@ public:
 
         dSpaceID space;                     ///< space that contanis all the collision objects of this chain
         dJointGroupID jointgroup;
+
+    private:
+        boost::shared_ptr<ODEResources> _ode;
     };
 
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
@@ -139,33 +166,20 @@ public:
 
     bool InitEnvironment()
     {
-#ifdef ODE_HAVE_ALLOCATE_DATA_THREAD
-        dAllocateODEDataForThread(dAllocateMaskAll);
-#endif
         RAVELOG_VERBOSEA("init ode collision environment\n");
-        world = dWorldCreate();
-        space = dHashSpaceCreate(0);
-        contactgroup = dJointGroupCreate(0);
+        _ode.reset(new ODEResources());
         return true;
     }
 
     void DestroyEnvironment()
     {
         RAVELOG_VERBOSEA("destroying ode collision environment\n");
-        if( contactgroup ) {
-            dJointGroupDestroy(contactgroup); contactgroup = NULL;
-        }
-        if( space ) {
-            dSpaceDestroy(space); space = NULL;
-        }
-        if( world ) {
-            dWorldDestroy(world); world = NULL;
-        }
+        _ode.reset();
     }
 
     boost::shared_ptr<void> InitKinBody(KinBodyPtr pbody) {
         // create all ode bodies and joints
-        KinBodyInfoPtr pinfo(new KinBodyInfo(GetSpace()));
+        KinBodyInfoPtr pinfo(new KinBodyInfo(_ode));
         pinfo->pbody = pbody;
         pinfo->vlinks.reserve(pbody->GetLinks().size());
         pinfo->vjoints.reserve(pbody->GetJoints().size());
@@ -174,7 +188,7 @@ public:
         pinfo->vlinks.reserve(pbody->GetLinks().size());
         FOREACHC(itlink, pbody->GetLinks()) {
             boost::shared_ptr<KinBodyInfo::LINK> link(new KinBodyInfo::LINK());
-            link->body = dBodyCreate(world);
+            link->body = dBodyCreate(GetWorld());
 
             if( (*itlink)->IsStatic() )
                 dBodyDisable(link->body);
@@ -400,9 +414,9 @@ public:
         return pinfo->vjoints[pjoint->GetJointIndex()];
     }
 
-    dWorldID GetWorld() const { return world; }
-    dSpaceID GetSpace() const { return space; }
-    dJointGroupID GetContactGroup() const { return contactgroup; }
+    dWorldID GetWorld() const { return _ode->world; }
+    dSpaceID GetSpace() const { return _ode->space; }
+    dJointGroupID GetContactGroup() const { return _ode->contactgroup; }
 
     void SetSynchornizationCallback(const SynchornizeCallbackFn& synccallback) { _synccallback = synccallback; }
 
@@ -424,9 +438,7 @@ private:
     }
 
     EnvironmentBasePtr _penv;
-    dWorldID world;  ///< the dynamics world
-    dSpaceID space;  ///< the collision world
-    dJointGroupID contactgroup;
+    boost::shared_ptr<ODEResources> _ode;
     GetInfoFn GetInfo;
 
     SynchornizeCallbackFn _synccallback;
