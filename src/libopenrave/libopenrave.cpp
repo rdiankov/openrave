@@ -124,7 +124,7 @@ void OneTagReader::characters(const std::string& ch)
 }
 
 // PlannerParameters class
-PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0)
+PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _bComputeSmoothPath(true)
 {
 }
 
@@ -142,6 +142,7 @@ PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const 
     _constraintfn = r._constraintfn;
     _samplefn = r._samplefn;
     _sampleneighfn = r._sampleneighfn;
+    _samplegoalfn = r._samplegoalfn;
     _setstatefn = r._setstatefn;
     _getstatefn = r._getstatefn;
     
@@ -192,6 +193,7 @@ bool PlannerBase::PlannerParameters::serialize(std::ostream& O) const
     
     O << "<maxiterations>" << _nMaxIterations << "</maxiterations>" << endl;
     O << "<steplength>" << _fStepLength << "</steplength>" << endl;
+    O << "<computesmoothpath>" << _bComputeSmoothPath << "</computesmoothpath>" << endl;
     
     return !!O;
 }
@@ -226,6 +228,8 @@ bool PlannerBase::PlannerParameters::endElement(const std::string& name)
         _ss >> _nMaxIterations;
     else if( name == "steplength")
         _ss >> _fStepLength;
+    else if( name == "computesmoothpath")
+        _ss >> _bComputeSmoothPath;
     else
         _pcurreader.reset(new DummyXMLReader(name,GetXMLId()));
 

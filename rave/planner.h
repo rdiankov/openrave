@@ -57,10 +57,14 @@ public:
         /// sets up the planner parameters to use the active joints of the robot
         void SetRobotActiveJoints(RobotBasePtr robot);
 
-        /// optional, Cost function on the state pace: costfn(config)
+        /// optional, Cost function on the state pace:
+        /// cost = costfn(config)
+        /// \param cost the cost of being in the current state
         boost::function<dReal(const std::vector<dReal>&)> _costfn;
 
-        /// optional, Goal heuristic function, goal is complete when 0: goalfn(config)
+        /// optional, Goal heuristic function, goal is complete when returns 0:
+        /// distance = goalfn(config)
+        /// \param distance - distance to closest goal
         boost::function<dReal(const std::vector<dReal>&)> _goalfn;
 
         /// optional, Distance metric between configuration spaces, two configurations are considered the same when this returns 0: distmetric(config1,config2)
@@ -69,19 +73,27 @@ public:
         /// optional, used to maintain certains a movement from a src robot configuration to robot configuration: constraintfn(srcconf,destconf,settings)
         /// The function returns true if pConf is accepted. Note that the function can also modify
         /// pDestConf (projecting onto a constraint manifold), therefore use the new pDestConf value after this call
+        /// success = _constraintfn(pSrcConf,pDestConf,settings)
         /// \param pSrcConf is the configuration the robot is currently at
         /// \param pDestConf is the configuration the robot should mvoe to
         /// \param settings options specified in ConstraingSettings 
         boost::function<bool(const std::vector<dReal>&, std::vector<dReal>&, int)> _constraintfn;
 
-        /// optional, fills a random configuration. The dimension of pNewSample is usually the dimension the planner is planning in:
-        /// samplefn(newsample)
+        /// optional, fills a random configuration.
+        /// The dimension of the returned sample is the dimension of the configuration space.
+        /// success = samplefn(newsample)
         boost::function<bool(std::vector<dReal>&)> _samplefn;
 
+        /// optional, samples a valid goal configuration at random. If valid, the function should be called
+        /// at every iteration. Any type of goal sampling probabilities and conditions can be encoded inside the function.
+        // The dimension of the returned sample is the dimension of the configuration space.
+        // success = samplegoalfn(newsample)
+        boost::function<bool(std::vector<dReal>&)> _samplegoalfn;
+
         /// optional, returns a random configuration around pCurSample
-        /// _sampleneighfn(newsample,sample,radius)
-        /// pCurSample - the neighborhood to sample around
-        /// fRadius - specifies the max distance of sampling. The higher the value, the farther the samples will go
+        /// _sampleneighfn(newsample,pCurSample,fRadius)
+        /// \param pCurSample - the neighborhood to sample around
+        /// \param  fRadius - specifies the max distance of sampling. The higher the value, the farther the samples will go
         ///             The distance metric can be arbitrary, but is usually PlannerParameters::pdistmetric.
         /// \return if sample was successfully generated return true, otherwise false
         boost::function<bool(std::vector<dReal>&, const std::vector<dReal>&, dReal)> _sampleneighfn;
@@ -108,6 +120,10 @@ public:
 
         /// maximum number of iterations before the planner gives up.
         int _nMaxIterations;
+
+        /// if true will smooth the path before returning (takes time, but higher quality paths).
+        // If false, will return the raw trajectory (used to measure algorithm time).
+        bool _bComputeSmoothPath;
 
         virtual int GetDOF() const { return (int)_vConfigLowerLimit.size(); }
 

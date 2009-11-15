@@ -331,6 +331,15 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
         while(!bConnected && iter < 3*_parameters._nMaxIterations) {
             RAVELOG_VERBOSEA("iter: %d\n", iter);
             ++iter;
+
+            if( !!_parameters._samplegoalfn ) {
+                vector<dReal> vgoal;
+                if( _parameters._samplegoalfn(vgoal) ) {
+                    RAVELOG_VERBOSEA("found goal\n");
+                    _treeBackward.AddNode(-10000,vgoal);
+                }
+            }
+
             if( !_parameters._samplefn(_randomConfig) )
                 continue;
             
@@ -509,6 +518,14 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
 
         while(!bSuccess && iter < _parameters._nMaxIterations) {
             iter++;
+
+            if( !!_parameters._samplegoalfn ) {
+                vector<dReal> vgoal;
+                if( _parameters._samplegoalfn(vgoal) ) {
+                    RAVELOG_VERBOSEA("found goal\n");
+                    _vecGoals.push_back(vgoal);
+                }
+            }
 
             if( RaveRandomFloat() < _fGoalBiasProb && _vecGoals.size() > 0 )
                 _randomConfig = _vecGoals[RaveRandomInt()%_vecGoals.size()];

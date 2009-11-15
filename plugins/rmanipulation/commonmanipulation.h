@@ -288,6 +288,132 @@ class CM
         dReal e2 = (t1.rot+t2.rot).lengthsqr4();
         return RaveSqrt((t1.trans-t2.trans).lengthsqr3() + frotweight*min(e1,e2));
     }
+
+    Vector SampleQuaternion()
+    {
+        Vector v;
+        while(1) {
+            v.x = 2*RaveRandomFloat()-1;
+            v.y = 2*RaveRandomFloat()-1;
+            v.z = 2*RaveRandomFloat()-1;
+            v.w = 2*RaveRandomFloat()-1;
+            dReal flen = v.lengthsqr4();
+            if( flen > 1 )
+                continue;
+            flen = 1.0f/RaveSqrt(flen);
+            return v*(1.0f/RaveSqrt(flen));
+        }
+        return Vector();
+    }
+
+#define GTS_M_ICOSAHEDRON_X /* sqrt(sqrt(5)+1)/sqrt(2*sqrt(5)) */   \
+        (dReal)0.850650808352039932181540497063011072240401406
+#define GTS_M_ICOSAHEDRON_Y /* sqrt(2)/sqrt(5+sqrt(5))         */   \
+        (dReal)0.525731112119133606025669084847876607285497935
+#define GTS_M_ICOSAHEDRON_Z (dReal)0.0
+
+    // generate a sphere triangulation starting with an icosahedron
+    // all triangles are oriented counter clockwise
+    static void GenerateSphereTriangulation(KinBody::Link::TRIMESH& tri, int levels)
+    {
+        KinBody::Link::TRIMESH temp, temp2;
+
+        temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_Z, +GTS_M_ICOSAHEDRON_X, -GTS_M_ICOSAHEDRON_Y));
+        temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_X, +GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z));
+        temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z, -GTS_M_ICOSAHEDRON_X));
+        temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z, +GTS_M_ICOSAHEDRON_X));
+        temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_X, -GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z));
+        temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_Z, +GTS_M_ICOSAHEDRON_X, +GTS_M_ICOSAHEDRON_Y));
+        temp.vertices.push_back(Vector(-GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z, +GTS_M_ICOSAHEDRON_X));
+        temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_Z, -GTS_M_ICOSAHEDRON_X, -GTS_M_ICOSAHEDRON_Y));
+        temp.vertices.push_back(Vector(-GTS_M_ICOSAHEDRON_X, +GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z));
+        temp.vertices.push_back(Vector(-GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z, -GTS_M_ICOSAHEDRON_X));
+        temp.vertices.push_back(Vector(-GTS_M_ICOSAHEDRON_X, -GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z));
+        temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_Z, -GTS_M_ICOSAHEDRON_X, +GTS_M_ICOSAHEDRON_Y));
+
+        const int nindices=60;
+        int indices[nindices] = {
+            0, 1, 2,
+            1, 3, 4,
+            3, 5, 6,
+            2, 4, 7,
+            5, 6, 8,
+            2, 7, 9,
+            0, 5, 8,
+            7, 9, 10,
+            0, 1, 5,
+            7, 10, 11,
+            1, 3, 5,
+            6, 10, 11,
+            3, 6, 11,
+            9, 10, 8,
+            3, 4, 11,
+            6, 8, 10,
+            4, 7, 11,
+            1, 2, 4,
+            0, 8, 9,
+            0, 2, 9
+        };
+
+        Vector v[3];
+    
+        // make sure oriented CCW 
+        for(int i = 0; i < nindices; i += 3 ) {
+            v[0] = temp.vertices[indices[i]];
+            v[1] = temp.vertices[indices[i+1]];
+            v[2] = temp.vertices[indices[i+2]];
+            if( dot3(v[0], (v[1]-v[0]).Cross(v[2]-v[0])) < 0 )
+                swap(indices[i], indices[i+1]);
+        }
+
+        temp.indices.resize(nindices);
+        std::copy(&indices[0],&indices[nindices],temp.indices.begin());
+
+        KinBody::Link::TRIMESH* pcur = &temp;
+        KinBody::Link::TRIMESH* pnew = &temp2;
+        while(levels-- > 0) {
+
+            pnew->vertices.resize(0);
+            pnew->vertices.reserve(2*pcur->vertices.size());
+            pnew->vertices.insert(pnew->vertices.end(), pcur->vertices.begin(), pcur->vertices.end());
+            pnew->indices.resize(0);
+            pnew->indices.reserve(4*pcur->indices.size());
+
+            map< uint64_t, int > mapnewinds;
+            map< uint64_t, int >::iterator it;
+
+            for(size_t i = 0; i < pcur->indices.size(); i += 3) {
+                // for ever tri, create 3 new vertices and 4 new triangles.
+                v[0] = pcur->vertices[pcur->indices[i]];
+                v[1] = pcur->vertices[pcur->indices[i+1]];
+                v[2] = pcur->vertices[pcur->indices[i+2]];
+
+                int inds[3];
+                for(int j = 0; j < 3; ++j) {
+                    uint64_t key = ((uint64_t)pcur->indices[i+j]<<32)|(uint64_t)pcur->indices[i + ((j+1)%3) ];
+                    it = mapnewinds.find(key);
+
+                    if( it == mapnewinds.end() ) {
+                        inds[j] = mapnewinds[key] = mapnewinds[(key<<32)|(key>>32)] = (int)pnew->vertices.size();
+                        pnew->vertices.push_back((v[j]+v[(j+1)%3 ]).normalize3());
+                    }
+                    else {
+                        inds[j] = it->second;
+                    }
+                }
+
+                pnew->indices.push_back(pcur->indices[i]);    pnew->indices.push_back(inds[0]);    pnew->indices.push_back(inds[2]);
+                pnew->indices.push_back(inds[0]);    pnew->indices.push_back(pcur->indices[i+1]);    pnew->indices.push_back(inds[1]);
+                pnew->indices.push_back(inds[2]);    pnew->indices.push_back(inds[0]);    pnew->indices.push_back(inds[1]);
+                pnew->indices.push_back(inds[2]);    pnew->indices.push_back(inds[1]);    pnew->indices.push_back(pcur->indices[i+2]);
+            }
+
+            swap(pnew,pcur);
+        }
+
+        tri = *pcur;
+    }
+
 };
 
 class RAStarParameters : public PlannerBase::PlannerParameters
@@ -366,7 +492,8 @@ class ExplorationParameters : public PlannerBase::PlannerParameters
     }
 };
 
-class GraspParameters : public PlannerBase::PlannerParameters {
+class GraspParameters : public PlannerBase::PlannerParameters
+{
  public:
  GraspParameters() : stand_off(0), roll_hand(0), face_target(false), bReturnTrajectory(false) {}
         
@@ -465,9 +592,7 @@ public:
         nextindex = -1;
         return -1;
     }
-    
-    void* _userdata;
-    
+
 private:
     std::vector<unsigned int> vpermutation;
     unsigned int nextindex;
