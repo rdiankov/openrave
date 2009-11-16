@@ -1,6 +1,6 @@
 <Robot>
   <KinBody file="katana.kinbody.xml"/>
-  <Manipulator>
+  <Manipulator name="arm">
 	<effector>L5</effector>
 	<base>Base</base>
 	<joints>gj1</joints>

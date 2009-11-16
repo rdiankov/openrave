@@ -64,7 +64,7 @@
     </Joint>
   </KinBody>
 
-  <Manipulator>
+  <Manipulator name="arm">
     <effector>Puma6</effector>
 	<base>Base</base>
     <armjoints>J0 J1 J2 J3 J4 J5</armjoints>

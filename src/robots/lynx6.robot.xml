@@ -340,7 +340,7 @@
 
   <!-- Items needs to be declared after KinBody -->
 
-  <Manipulator>
+  <Manipulator name="arm">
     <effector>Link5</effector>
 	<base>Link0</base>
     <joints>JR JL</joints>

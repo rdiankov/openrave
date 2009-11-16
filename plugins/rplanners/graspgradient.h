@@ -30,23 +30,24 @@ public:
         bool bProcessed; ///< set to true if grasp has already been used in gradient descend
     };
 
-    GraspGradientPlanner(EnvironmentBasePtr penv) : PlannerBase(penv), _bInit(false) {
+ GraspGradientPlanner(EnvironmentBasePtr penv) : PlannerBase(penv), _parameters(penv), _bInit(false) {
         __description = "Grasp Planning with Stochastic Gradient Descent";
+        _report.reset(new COLLISIONREPORT());
     }
     virtual ~GraspGradientPlanner() {}
     
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {
-        GetParameters().copy(pparams);
+        _parameters.copy(pparams);
         _robot = pbase;
         RobotBase::RobotStateSaver savestate(_robot);
 
-        if( (int)GetParameters().vinitialconfig.size() != GetParameters().GetDOF() ) {
-            RAVELOG_ERRORA("initial config wrong dim: %"PRIdS"\n", GetParameters().vinitialconfig.size());
+        if( (int)_parameters.vinitialconfig.size() != _parameters.GetDOF() ) {
+            RAVELOG_ERRORA("initial config wrong dim: %"PRIdS"\n", _parameters.vinitialconfig.size());
             return false;
         }
 
-        if(_CheckCollision(GetParameters().vinitialconfig, true)) {
+        if(CollisionFunctions::CheckCollision(_parameters,_robot,_parameters.vinitialconfig, _report)) {
             RAVELOG_DEBUGA("BirrtPlanner::InitPlan - Error: Initial configuration in collision\n");
             return false;
         }
@@ -65,62 +66,34 @@ public:
             return false;
         }
 
-        // invert for speed
-        _jointResolutionInv.resize(0);
-        FOREACH(itj, GetParameters()._vConfigResolution) {
-            if( *itj != 0 )
-                _jointResolutionInv.push_back(1 / *itj);
-            else {
-                RAVELOG_WARNA("resolution is 0!\n");
-                _jointResolutionInv.push_back(100);
-            }
-        }
+        _randomConfig.resize(_parameters.GetDOF());
 
-        _randomConfig.resize(GetParameters().GetDOF());
-        _validRange.resize(GetParameters().GetDOF());
-        _jointIncrement.resize(GetParameters().GetDOF());
-    
-        for (int i = 0; i < GetParameters().GetDOF(); i++) {
-            _validRange[i] = GetParameters()._vConfigUpperLimit[i] - GetParameters()._vConfigLowerLimit[i];
-        }
-
-        if( (int)_robot->GetActiveManipulator()->_vecarmjoints.size() != _robot->GetActiveDOF()) {
+        _pmanip = _robot->GetActiveManipulator();
+        if( (int)_pmanip->GetArmJoints().size() != _robot->GetActiveDOF()) {
             RAVELOG_ERRORA("active dof not equal to arm joints\n");
             return false;
         }
 
         for(int i = 0; i < _robot->GetActiveDOF(); ++i) {
-            if( _robot->GetActiveManipulator()->_vecarmjoints[i] != _robot->GetActiveJointIndex(i) ) {
+            if( _pmanip->GetArmJoints()[i] != _robot->GetActiveJointIndex(i) ) {
                 RAVELOG_ERRORA("active dof not equal to arm joints\n");
                 return false;
             }
         }
             
-        // initialize the joint limits
-        _robot->GetActiveDOFLimits(_lowerLimit,_upperLimit);
-    
-        _randomConfig.resize(_robot->GetActiveDOF());
-        _validRange.resize(_robot->GetActiveDOF());
-        _jointIncrement.resize(_robot->GetActiveDOF());
-    
-        for (int i = 0; i < _robot->GetActiveDOF(); i++) {
-            _validRange[i] = _upperLimit[i] - _lowerLimit[i];
-            assert(_validRange[i] > 0);
-        }
-        
         // set up the initial state
-        if( _parameters.pconstraintfn != NULL ) {
+        if( !!_parameters._constraintfn ) {
             // filter
-            _robot->SetActiveDOFValues(NULL, &_parameters.vinitialconfig[0]);
-            if( !_parameters.pconstraintfn->Constraint(&_parameters.vinitialconfig[0], &_parameters.vinitialconfig[0],NULL,0) ) {
+            _parameters._setstatefn(_parameters.vinitialconfig);
+            if( !_parameters._constraintfn(_parameters.vinitialconfig, _parameters.vinitialconfig,0) ) {
                 // failed
                 RAVELOG_WARNA("initial state rejected by constraint fn\n");
                 return false;
             }
         }
 
-        if( _parameters.nMaxIterations <= 0 )
-            _parameters.nMaxIterations = 10000;
+        if( _parameters._nMaxIterations <= 0 )
+            _parameters._nMaxIterations = 10000;
 
         _bInit = true;
         return true;
@@ -144,8 +117,8 @@ public:
         bool bSuccess = false;
 
         // prioritize the grasps and go through each one
-        _robot->SetActiveDOFValues(NULL, &_parameters.vinitialconfig[0]);
-        Transform tcurgrasp = _robot->GetActiveManipulator()->GetEndEffectorTransform();
+        _robot->SetActiveDOFValues(_parameters.vinitialconfig);
+        Transform tcurgrasp = _pmanip->GetEndEffectorTransform();
 
         Transform tobject = _parameters._ptarget->GetTransform();
         vector<GRASP> vgrasps; vgrasps.reserve(_parameters._vgrasps.size());
@@ -182,8 +155,8 @@ public:
 
                 if( itgrasp->bProcessed ) {
                     // find the grasp distance
-                    Transform t = _robot->GetActiveManipulator()->GetEndEffectorTransform();
-                    dReal graspdist = GraspDistance2(t,itgrasp->tgrasp);
+                    Transform t = _pmanip->GetEndEffectorTransform();
+                    dReal graspdist = TransformDistance2(t,itgrasp->tgrasp,0.2f);
                     if( bestgraspdist > graspdist ) {
                         bestgraspdist = graspdist;
                         listbestpath.swap(listpath);
@@ -216,7 +189,7 @@ private:
         vector<dReal> qbest, q(_robot->GetActiveDOF()),qgoaldir;
         listpath.clear();
         
-        _robot->SetActiveDOFValues(NULL, &_parameters.vinitialconfig[0]);
+        _robot->SetActiveDOFValues(_parameters.vinitialconfig);
 
         if( g.bChecked ) {
             if( g.fgoaldist < 0 )
@@ -225,21 +198,21 @@ private:
         else {
             g.bChecked = true;
 
-            if( _IsGripperCollision(g.tgrasp) ) {
+            if( _pmanip->CheckEndEffectorCollision(g.tgrasp) ) {
                 RAVELOG_DEBUGA("gripper collision\n");
                 return false;
             }
 
             bool bGetFirstSolution=true;
             if( bGetFirstSolution ) {
-                if( !_robot->GetActiveManipulator()->FindIKSolution(g.tgrasp,g.qgoal,true) ) {
+                if( !_pmanip->FindIKSolution(g.tgrasp,g.qgoal,true) ) {
                     RAVELOG_DEBUGA("failed to find ik solution\n");
                     return false;
                 }
             }
             else {
                 // get all solutions and find the closest to initial config
-                if( !_robot->GetActiveManipulator()->FindIKSolutions(g.tgrasp,_viksolutions,true) ) {
+                if( !_pmanip->FindIKSolutions(g.tgrasp,_viksolutions,true) ) {
                     RAVELOG_DEBUGA("failed to find ik solutions\n");
                     return false;
                 }
@@ -247,7 +220,7 @@ private:
                 dReal bestdist=1e30;
                 g.qgoal.resize(0);
                 FOREACH(itq,_viksolutions) {
-                    dReal dist = _parameters.pdistmetric->Eval(&_parameters.vinitialconfig[0],&(*itq)[0]);
+                    dReal dist = _parameters._distmetricfn(_parameters.vinitialconfig,*itq);
                     if( bestdist > dist  ) {
                         bestdist = dist;
                         g.qgoal = *itq;
@@ -257,7 +230,7 @@ private:
                 assert(g.qgoal.size()>0);
             }
 
-            g.fgoaldist = _parameters.pdistmetric->Eval(&g.qgoal[0],&_parameters.vinitialconfig[0]);
+            g.fgoaldist = _parameters._distmetricfn(g.qgoal,_parameters.vinitialconfig);
         }
 
         if( g.fgoaldist > fGoalThresh )
@@ -272,7 +245,7 @@ private:
 
         listpath.push_back(_parameters.vinitialconfig);
         dReal fGoalStep = 0.25f*g.qgoal.size();
-        dReal fdistmult = _parameters.pdistmetric->Eval(&_parameters.vinitialconfig[0],&g.qgoal[0]);
+        dReal fdistmult = _parameters._distmetricfn(_parameters.vinitialconfig,g.qgoal);
         if( fdistmult > fGoalStep )
             fdistmult = fGoalStep/fdistmult;
         else
@@ -283,11 +256,11 @@ private:
             qgoaldir[i] = (g.qgoal[i] - _parameters.vinitialconfig[i])*fdistmult;
     
 
-        for(int iter = 0; iter < _parameters.nMaxIterations; ++iter) {
+        for(int iter = 0; iter < _parameters._nMaxIterations; ++iter) {
             dReal fRadius = 0.2f;
             for(int giter = 0; giter < _parameters._nGradientSamples; ++giter, fRadius*=0.96f) {
                 if( giter == 0 ) {
-                    dReal fcurdist = _parameters.pdistmetric->Eval(&listpath.back()[0],&g.qgoal[0]);
+                    dReal fcurdist = _parameters._distmetricfn(listpath.back(),g.qgoal);
                     if( fcurdist < fGoalStep )
                         q = g.qgoal;
                     else {
@@ -296,22 +269,22 @@ private:
                     }
                 }
                 else
-                    _parameters.pSampleFn->Sample(&q[0],&listpath.back()[0],fRadius);
+                    _parameters._sampleneighfn(q,listpath.back(),fRadius);
 
                 vpath.resize(0);
-                if( !_CheckCollision(&listpath.back()[0],&q[0],OPEN_START,&vpath) ) {
+                if( !CollisionFunctions::CheckCollision(_parameters,_robot,listpath.back(),q,OPEN_START,&vpath) ) {
                     assert(vpath.size()>0);
-                    if( _parameters.pconstraintfn != NULL ) {
+                    if( !!_parameters._constraintfn ) {
                         vector<dReal> qnew(_robot->GetActiveDOF());
                         int goodind = -1;
                         FOREACH(itq,vpath) {
-                            _robot->SetActiveDOFValues(NULL,&(*itq)[0]);
+                            _robot->SetActiveDOFValues(*itq);
 
                             // check if grasp is closer than threshold
-                            dReal graspdist = GraspDistance2(_robot->GetActiveManipulator()->GetEndEffectorTransform(),g.tgrasp);
+                            dReal graspdist = TransformDistance2(_pmanip->GetEndEffectorTransform(),g.tgrasp,0.2f);
                             //RAVELOG_DEBUGA("graspdist: %f\n",RaveSqrt(graspdist));
-                            if( graspdist > SQR(_parameters._fVisibiltyGraspThresh) ) {
-                                if( !_parameters.pconstraintfn->Constraint(&(*itq)[0], &qnew[0], NULL, 0) )
+                            if( graspdist > _parameters._fVisibiltyGraspThresh*_parameters._fVisibiltyGraspThresh ) {
+                                if( !_parameters._constraintfn(*itq, qnew, 0) )
                                     break;
                                 q = qnew;
                             }
@@ -328,7 +301,7 @@ private:
                         q = vpath.back();
 
                     // if new sample is closer than the best, accept it
-                    dReal dist = _parameters.pdistmetric->Eval(&q[0],&g.qgoal[0]);
+                    dReal dist = _parameters._distmetricfn(q,g.qgoal);
                     if( qbest.size() == 0 || dist < bestdist ) {
                         RAVELOG_DEBUGA("dist: %f\n",dist);
                         qbest = q;
@@ -351,13 +324,12 @@ private:
         return false;
     }
 
+    RobotBase::ManipulatorPtr _pmanip;
     GraspSetParameters _parameters;
     RobotBasePtr         _robot;
+    CollisionReportPtr _report;
 
-    std::vector<dReal>         _randomConfig;  //!< chain configuration
-    std::vector<dReal>          _jointResolutionInv;
-    std::vector<dReal>          _jointIncrement;
-    std::vector<dReal>          _validRange;
+    std::vector<dReal>         _randomConfig;
     std::vector<std::vector<dReal> > _viksolutions;
 
     bool _bInit;

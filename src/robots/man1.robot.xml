@@ -1208,7 +1208,7 @@
       <resolution>1</resolution>
     </Joint>
   </KinBody>
-  <Manipulator>
+  <Manipulator name="leftarm">
     <base>LCollar</base>
     <effector>LHand3</effector>
     <armjoints>JLShoulder JLShoulder2 JLShoulder3 JLForearm JLHand JLHand2 JLHand3</armjoints>
@@ -1218,7 +1218,7 @@
     <palmdirection>-1 0 0</palmdirection>
   </Manipulator>
 
-  <Manipulator>
+  <Manipulator name="rightarm">
     <base>RCollar</base>
     <effector>RHand3</effector>
     <armjoints>JRShoulder JRShoulder2 JRShoulder3 JRForearm JRHand JRHand2 JRHand3</armjoints>

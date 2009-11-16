@@ -18,7 +18,7 @@
     </Joint>
   </KinBody>
 
-  <Manipulator>
+  <Manipulator name="arm">
     <base>wam0</base>
     <effector>wam4</effector>
     <armjoints>Shoulder_Yaw Shoulder_Pitch Shoulder_Roll Elbow</armjoints>

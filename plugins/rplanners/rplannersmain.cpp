@@ -16,7 +16,7 @@
 
 #include "randomized-astar.h"
 #include "rrt.h"
-//#include "graspgradient.h"
+#include "graspgradient.h"
 
 // need c linkage
 extern "C" {
@@ -49,13 +49,13 @@ InterfaceBasePtr CreateInterface(PluginType type, const std::string& name, const
             return InterfaceBasePtr(new BasicRrtPlanner(penv));
         else if( interfacename == "explorationrrt" )
             return InterfaceBasePtr(new ExplorationPlanner(penv));
-//        else if( interfacename == "graspgradient" )
-//            return InterfaceBasePtr(new GraspGradientPlanner(penv));
+        else if( interfacename == "graspgradient" )
+            return InterfaceBasePtr(new GraspGradientPlanner(penv));
         break;
     default:
         break;
     }
-
+    
     return InterfaceBasePtr();
 }
 
@@ -72,7 +72,7 @@ bool GetPluginAttributes(PLUGININFO* pinfo, int size)
     pinfo->interfacenames[OpenRAVE::PT_Planner].push_back("BiRRT");
     pinfo->interfacenames[OpenRAVE::PT_Planner].push_back("BasicRRT");
     pinfo->interfacenames[OpenRAVE::PT_Planner].push_back("ExplorationRRT");
-    //pinfo->interfacenames[OpenRAVE::PT_Planner].push_back("GraspGradient");
+    pinfo->interfacenames[OpenRAVE::PT_Planner].push_back("GraspGradient");
     return true;
 }
 

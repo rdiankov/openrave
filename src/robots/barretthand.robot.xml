@@ -1,6 +1,6 @@
 <Robot>
   <KinBody file="barretthand.kinbody.xml"/>
-  <Manipulator>
+  <Manipulator name="hand">
     <base>wam7</base>
     <effector>wam7</effector>
     <Translation>0 0 0.22</Translation>

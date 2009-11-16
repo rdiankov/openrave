@@ -1873,7 +1873,7 @@ public:
                 FOREACH(itname,jointnames) {
                     int index = _probot->GetJointIndex(*itname);
                     if( index < 0 )
-                        RAVELOG_WARNA(str(boost::format("failed to find gripper joint name %s")%*itname));
+                        RAVELOG_WARNA(str(boost::format("failed to find gripper joint name %s\n")%*itname));
                     else
                         _pmanip->_vgripperjoints.push_back(index);
                 }
@@ -1884,7 +1884,7 @@ public:
                 FOREACH(itname,jointnames) {
                     int index = _probot->GetJointIndex(*itname);
                     if( index < 0 )
-                        RAVELOG_WARNA(str(boost::format("failed to find arm joint name %s")%*itname));
+                        RAVELOG_WARNA(str(boost::format("failed to find arm joint name %s\n")%*itname));
                     else
                         _pmanip->_varmjoints.push_back(index);
                 }

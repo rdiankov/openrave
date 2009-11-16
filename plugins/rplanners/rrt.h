@@ -45,30 +45,13 @@ public:
             return false;
         }
 
-        if(_CheckCollision(GetParameters().vinitialconfig, true)) {
+        if(CollisionFunctions::CheckCollision(GetParameters(),_robot,GetParameters().vinitialconfig, _report)) {
             RAVELOG_DEBUGA("BirrtPlanner::InitPlan - Error: Initial configuration in collision\n");
             return false;
         }
-
-        // invert for speed
-        _jointResolutionInv.resize(0);
-        FOREACH(itj, GetParameters()._vConfigResolution) {
-            if( *itj != 0 )
-                _jointResolutionInv.push_back(1 / *itj);
-            else {
-                RAVELOG_WARNA("resolution is 0!\n");
-                _jointResolutionInv.push_back(100);
-            }
-        }
             
         _randomConfig.resize(GetParameters().GetDOF());
-        _validRange.resize(GetParameters().GetDOF());
-        _jointIncrement.resize(GetParameters().GetDOF());
     
-        for (int i = 0; i < GetParameters().GetDOF(); i++) {
-            _validRange[i] = GetParameters()._vConfigUpperLimit[i] - GetParameters()._vConfigLowerLimit[i];
-        }
-        
         // set up the initial state
         if( !!GetParameters()._constraintfn ) {
             GetParameters()._setstatefn(GetParameters().vinitialconfig);
@@ -91,80 +74,6 @@ public:
 
     virtual PlannerParameters& GetParameters() = 0;
 
-    virtual bool _CheckCollision(const vector<dReal>& pQ0, const vector<dReal>& pQ1, IntervalType interval, vector< vector<dReal> >* pvCheckedConfigurations = NULL)
-    {
-        // set the bounds based on the interval type
-        int start;
-        bool bCheckEnd;
-        switch (interval) {
-        case OPEN:
-            start = 1;  bCheckEnd = false;
-            break;
-        case OPEN_START:
-            start = 1;  bCheckEnd = true;
-            break;
-        case OPEN_END:
-            start = 0;  bCheckEnd = false;
-            break;
-        case CLOSED:
-            start = 0;  bCheckEnd = true;
-            break;
-        default:
-            assert(0);
-        }
-
-        // first make sure the end is free
-        vector<dReal> vtempconfig(GetParameters().GetDOF());
-        if (bCheckEnd) {
-            if( pvCheckedConfigurations != NULL )
-                pvCheckedConfigurations->push_back(pQ1);
-            GetParameters()._setstatefn(pQ1);
-            if (GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || _robot->CheckSelfCollision() )
-                return true;
-        }
-
-        // compute  the discretization
-        int i, numSteps = 1;
-        dReal* pfresolution = &_jointResolutionInv[0];
-        for (i = 0; i < GetParameters().GetDOF(); i++) {
-            int steps = (int)(fabs(pQ1[i] - pQ0[i]) * pfresolution[i]);
-            if (steps > numSteps)
-                numSteps = steps;
-        }
-
-        // compute joint increments
-        for (i = 0; i < GetParameters().GetDOF(); i++)
-            _jointIncrement[i] = (pQ1[i] - pQ0[i])/((float)numSteps);
-
-        // check for collision along the straight-line path
-        // NOTE: this does not check the end config, and may or may
-        // not check the start based on the value of 'start'
-        for (int f = start; f < numSteps; f++) {
-
-            for (i = 0; i < GetParameters().GetDOF(); i++)
-                vtempconfig[i] = pQ0[i] + (_jointIncrement[i] * f);
-        
-            if( pvCheckedConfigurations != NULL )
-                pvCheckedConfigurations->push_back(vtempconfig);
-            GetParameters()._setstatefn(vtempconfig);
-            if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || _robot->CheckSelfCollision() )
-                return true;
-        }
-
-        return false;
-    }
-
-    /// check collision between body and environment
-    virtual bool _CheckCollision(const vector<dReal>& pConfig, bool breport=false)
-    {
-        GetParameters()._setstatefn(pConfig);
-        bool bCol = GetEnv()->CheckCollision(KinBodyConstPtr(_robot), breport?_report:CollisionReportPtr())
-            || _robot->CheckSelfCollision(breport?_report:CollisionReportPtr());
-        if( bCol && breport ) {
-            RAVELOG_WARNA(str(boost::format("fcollision %s:%s with %s:%s\n")%_report->plink1->GetParent()->GetName()%_report->plink1->GetName()%_report->plink2->GetParent()->GetName()%_report->plink2->GetName()));
-        }
-        return bCol;
-    }
 
     /// optimize the computed path over a number of iterations
     virtual void _OptimizePath(list<Node*>& path)
@@ -193,7 +102,7 @@ public:
 
             // check if the nodes can be connected by a straight line
             vconfigs.resize(0);
-            if (_CheckCollision((*startNode)->q, (*endNode)->q, OPEN, &vconfigs)) {
+            if (CollisionFunctions::CheckCollision(GetParameters(),_robot,(*startNode)->q, (*endNode)->q, OPEN, &vconfigs)) {
 
                 if( nrejected++ > (int)path.size()+8 )
                     break;
@@ -215,10 +124,7 @@ public:
 protected:
     RobotBasePtr         _robot;
 
-    std::vector<dReal>         _randomConfig;  //!< chain configuration
-    std::vector<dReal>          _jointResolutionInv;
-    std::vector<dReal>          _jointIncrement;
-    std::vector<dReal>          _validRange;
+    std::vector<dReal>         _randomConfig;
     CollisionReportPtr _report;
 
     SpatialTree< boost::shared_ptr<RrtPlanner<Node> >, Node > _treeForward;
@@ -265,7 +171,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
                 goal_index++;
             }
         
-            if(!_CheckCollision(vgoal)) {
+            if(!CollisionFunctions::CheckCollision(GetParameters(),_robot,vgoal)) {
 
                 bool bSuccess = true;     
                 if( !!_parameters._constraintfn ) {
@@ -458,7 +364,7 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
                 goal_index++;
             }
         
-            if(!_CheckCollision(vgoal)) {
+            if(!CollisionFunctions::CheckCollision(GetParameters(),_robot,vgoal)) {
 
                 bool bSuccess = true;     
                 if( !!_parameters._constraintfn ) {
@@ -636,7 +542,7 @@ class ExplorationPlanner : public RrtPlanner<SimpleNode>
                         continue;
                 }
 
-                if( !_CheckCollision(pnode->q, vSampleConfig, OPEN_START) ) {
+                if( !CollisionFunctions::CheckCollision(GetParameters(),_robot,pnode->q, vSampleConfig, OPEN_START) ) {
                     _treeForward.AddNode(inode,vSampleConfig);
                     RAVELOG_DEBUGA(str(boost::format("size %d\n")%_treeForward._nodes.size()));
                 }
@@ -664,5 +570,12 @@ private:
     ExplorationParameters _parameters;
     
 };
+
+inline dReal TransformDistance2(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)
+{
+    dReal e1 = (t1.rot-t2.rot).lengthsqr4();
+    dReal e2 = (t1.rot+t2.rot).lengthsqr4();
+    return (t1.trans-t2.trans).lengthsqr3() + frotweight*min(e1,e2);
+}
 
 #endif

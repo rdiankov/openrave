@@ -527,7 +527,7 @@
     </Joint>
 
   </KinBody>
-  <Manipulator>
+  <Manipulator name="hand">
     <base>palm</base>
     <effector>palm</effector>
     <Translation>0.06 -0.025 -0.015</Translation>

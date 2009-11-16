@@ -98,6 +98,89 @@ public:
 	vector<T> blocks;
 };
 
+class CollisionFunctions
+{
+ public:
+    static bool CheckCollision(const PlannerBase::PlannerParameters& params, RobotBasePtr robot, const vector<dReal>& pQ0, const vector<dReal>& pQ1, IntervalType interval, vector< vector<dReal> >* pvCheckedConfigurations = NULL)
+    {
+        // set the bounds based on the interval type
+        int start;
+        bool bCheckEnd;
+        switch (interval) {
+        case OPEN:
+            start = 1;  bCheckEnd = false;
+            break;
+        case OPEN_START:
+            start = 1;  bCheckEnd = true;
+            break;
+        case OPEN_END:
+            start = 0;  bCheckEnd = false;
+            break;
+        case CLOSED:
+            start = 0;  bCheckEnd = true;
+            break;
+        default:
+            assert(0);
+        }
+
+        // first make sure the end is free
+        vector<dReal> vtempconfig(params.GetDOF());
+        if (bCheckEnd) {
+            if( pvCheckedConfigurations != NULL )
+                pvCheckedConfigurations->push_back(pQ1);
+            params._setstatefn(pQ1);
+            if (robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || robot->CheckSelfCollision() )
+                return true;
+        }
+
+        // compute  the discretization
+        int i, numSteps = 1;
+        vector<dReal>::const_iterator itres = params._vConfigResolution.begin();
+        for (i = 0; i < params.GetDOF(); i++,itres++) {
+            int steps;
+            if( *itres != 0 )
+                steps = (int)(fabs(pQ1[i] - pQ0[i]) / *itres);
+            else
+                steps = (int)(fabs(pQ1[i] - pQ0[i]) * 100);
+            if (steps > numSteps)
+                numSteps = steps;
+        }
+
+        // compute joint increments
+        vector<dReal> jointIncrement(params.GetDOF());
+        for (i = 0; i < params.GetDOF(); i++)
+            jointIncrement[i] = (pQ1[i] - pQ0[i])/((float)numSteps);
+
+        // check for collision along the straight-line path
+        // NOTE: this does not check the end config, and may or may
+        // not check the start based on the value of 'start'
+        for (int f = start; f < numSteps; f++) {
+
+            for (i = 0; i < params.GetDOF(); i++)
+                vtempconfig[i] = pQ0[i] + (jointIncrement[i] * f);
+        
+            if( pvCheckedConfigurations != NULL )
+                pvCheckedConfigurations->push_back(vtempconfig);
+            params._setstatefn(vtempconfig);
+            if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || robot->CheckSelfCollision() )
+                return true;
+        }
+
+        return false;
+    }
+
+    /// check collision between body and environment
+    static bool CheckCollision(const PlannerBase::PlannerParameters& params, RobotBasePtr robot, const vector<dReal>& pConfig, CollisionReportPtr report=CollisionReportPtr())
+    {
+        params._setstatefn(pConfig);
+        bool bCol = robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot), report) || robot->CheckSelfCollision(report);
+        if( bCol && !!report ) {
+            RAVELOG_WARNA(str(boost::format("fcollision %s:%s with %s:%s\n")%report->plink1->GetParent()->GetName()%report->plink1->GetName()%report->plink2->GetParent()->GetName()%report->plink2->GetName()));
+        }
+        return bCol;
+    }
+};
+
 class SimpleDistMetric
 {
  public:
@@ -160,7 +243,6 @@ public:
     RobotBasePtr _robot;
     dReal _thresh;
 };
-
 
 class SimpleSampleFunction
 {
@@ -317,7 +399,7 @@ class SpatialTree : public SpatialTreeBase
                 }
             }
 
-            if( _planner->_CheckCollision(pnode->q, _vNewConfig, OPEN_START) ) {
+            if( CollisionFunctions::CheckCollision(_planner->GetParameters(),_planner->GetRobot(),pnode->q, _vNewConfig, OPEN_START) ) {
                 if(bHasAdded)
                     return ET_Sucess;
                 return ET_Failed;

@@ -222,7 +222,7 @@ public:
                         "Dynamically adds an ik solver to openrave (based on ikfast code generation).\nUsage:\n    AddIkLibrary iksolvername iklibrarypath");
     }
 
-    virtual ~IKFastProblem() { Destroy(); }
+    virtual ~IKFastProblem() {}
 
     int main(const string& cmd)
     {

@@ -157,10 +157,15 @@ class Environment : public EnvironmentBase
         _bEnableSimulation = false;
         Reset();
         RAVELOG_DEBUGA("destroy problems\n");
+        list<ProblemInstancePtr> listProblems;
         {
             boost::mutex::scoped_lock lock(_mutexProblems);
-            _listProblems.clear();
+            listProblems.swap(_listProblems);
         }
+        
+        FOREACH(itprob,listProblems)
+            (*itprob)->Destroy();
+        listProblems.clear();
 
         if( !!_pPhysicsEngine )
             _pPhysicsEngine->DestroyEnvironment();
@@ -355,6 +360,7 @@ class Environment : public EnvironmentBase
         boost::mutex::scoped_lock lock(_mutexProblems);
         list<ProblemInstancePtr>::iterator itprob = find(_listProblems.begin(), _listProblems.end(), prob);
         if( itprob != _listProblems.end() ) {
+            (*itprob)->Destroy();
             _listProblems.erase(itprob);
             return true;
         }

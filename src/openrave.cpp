@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -99,18 +99,6 @@ static bool s_bSetWindowPosition = false;
 int g_argc;
 char** g_argv;
 bool bThreadDestroyed = false;
-
-#define OUTPUT_PLUGINS(vtype) { \
-        names.resize(0); \
-        FORIT(itplugin, plugins) { \
-            FORIT(itnames, vtype) { \
-                sprintf(buf, "  %s - %s", itnames->c_str(), itplugin->first.c_str()); \
-                names.push_back(buf); \
-            } \
-        } \
-        sort(names.begin(), names.end()); \
-        FORIT(itname, names) ss << itname->c_str() << endl; \
-    }
 
 #ifndef _WIN32
 #include <sys/stat.h>
@@ -393,7 +381,7 @@ int main(int argc, char ** argv)
         return -1;
     penv->SetDebugLevel(debuglevel);
     for(list<string>::iterator it = listLoadPlugins.begin(); it != listLoadPlugins.end(); ++it)
-        penv->LoadPlugin(it->c_str());
+        penv->LoadPlugin(*it);
 
 //#ifndef _WIN32
 //    // add a signal handler
@@ -408,47 +396,29 @@ int main(int argc, char ** argv)
 
         // output all the plugins and exit
         vector<string>::const_iterator itnames;     
-        vector<string> names;
+
         vector<string>::iterator itname;
         stringstream ss;
             
         ss << endl << "Number of plugins: " << plugins.size() << endl;
 
-        char  buf[256];
-        ss << "Collision Checkers:" << endl;
-        OUTPUT_PLUGINS(itplugin->second.interfacenames[PT_CollisionChecker]);
-
-        ss << "Controllers:" << endl;
-        OUTPUT_PLUGINS(itplugin->second.interfacenames[PT_Controller]);
-            
-        ss << "Inverse Kinematics Solvers:" << endl;
-        OUTPUT_PLUGINS(itplugin->second.interfacenames[PT_InverseKinematicsSolver]);
-            
-        ss << "Physics Engines:" << endl;
-        OUTPUT_PLUGINS(itplugin->second.interfacenames[PT_PhysicsEngine]);
-            
-        ss << "Planners:" << endl;
-        OUTPUT_PLUGINS(itplugin->second.interfacenames[PT_Planner]);
-            
-        ss << "Problems:" << endl;
-        OUTPUT_PLUGINS(itplugin->second.interfacenames[PT_ProblemInstance]);
-            
-        ss << "Robots:" << endl;
-        OUTPUT_PLUGINS(itplugin->second.interfacenames[PT_Robot]);
-            
-        ss << "Sensors:" << endl;
-        OUTPUT_PLUGINS(itplugin->second.interfacenames[PT_Sensor]);
-            
-        ss << "Sensor Systems:" << endl;
-        OUTPUT_PLUGINS(itplugin->second.interfacenames[PT_SensorSystem]);
-            
-        ss << "Trajectories:" << endl;
-        OUTPUT_PLUGINS(itplugin->second.interfacenames[PT_Trajectory]);
-
-        ss << "Viewers:" << endl;
-        OUTPUT_PLUGINS(itplugin->second.interfacenames[PT_Viewer]);
-
-        RAVELOG_INFOA(ss.str().c_str());
+        stringstream buf;
+        std::map<PluginType,std::string>::const_iterator ittype;
+        FORIT(ittype,RaveGetInterfaceNamesMap()) {
+            ss << ChangeTextColor(0,OPENRAVECOLOR_WARNLEVEL) << ittype->second << ":" << ResetTextColor() << endl;
+            vector<string> names;
+            FORIT(itplugin, plugins) {
+                FORIT(itnames, itplugin->second.interfacenames[ittype->first]) {
+                    buf.str("");
+                    buf << "  " << ChangeTextColor(0,OPENRAVECOLOR_DEBUGLEVEL) << *itnames << ResetTextColor() << " - " << itplugin->first;
+                    names.push_back(buf.str());
+                }
+            }
+            sort(names.begin(), names.end());
+            FORIT(itname, names)
+                ss << itname->c_str() << endl;
+        }
+        printf("%s",ss.str().c_str());
 
         return 0;
     }

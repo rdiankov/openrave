@@ -97,7 +97,7 @@
     </Joint>
   </KinBody>
   
-  <Manipulator>
+  <Manipulator name="hand">
     <base>hand-base</base>
     <effector>hand-base</effector>
     <joints>J-gripper</joints>

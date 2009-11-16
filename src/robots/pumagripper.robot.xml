@@ -69,15 +69,14 @@
     </Joint>
   </KinBody>
 
-  <Manipulator>
+  <Manipulator name="hand">
     <effector>Puma6</effector>
 	<base>Puma6</base>
     <joints>m1</joints>
     <!-- joint values of the closed and opened positions -->
-    <closed>-0</closed>
-    <opened>-30</opened>
+    <closingdirection>1</closingdirection>
+    <palmdirection>0 1 0</palmdirection>
     <!-- grasp goal with respect to the effector -->
     <Translation>0 0.175 0</Translation>
-    <IkSolver>PUMAikfast</IkSolver>
   </Manipulator>
 </Robot>

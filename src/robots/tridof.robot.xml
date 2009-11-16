@@ -119,7 +119,7 @@
     </Joint>
   </KinBody>
 
-  <Manipulator>
+  <Manipulator name="arm">
     <effector>Arm2</effector>
 	<base>Base</base>
     <joints>j1 j2</joints>
