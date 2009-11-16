@@ -1059,7 +1059,7 @@ public:
                             t.trans[j] = _abAssemblyStart.pos[j] + (2.0f * RaveRandomFloat() - 1.0f)*_abAssemblyStart.extents[j];
                         }
                         pbody->SetTransform(t);
-                        if( 1||!GetEnv()->CheckCollision(pbody) ) {
+                        if( 1||!GetEnv()->CheckCollision(KinBodyConstPtr(pbody)) ) {
                             bSuccess = true;
                             break;
                         }
