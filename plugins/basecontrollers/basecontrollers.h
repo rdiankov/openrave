@@ -134,7 +134,7 @@ class IdealController : public ControllerBase
     }
     virtual bool IsDone()
     {
-        return _ptraj == NULL || _bIsDone;
+        return !_ptraj || _bIsDone;
     }
     virtual dReal GetTime() const
     {
