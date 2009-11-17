@@ -1548,12 +1548,13 @@ public:
 
     bool WaitForController(float ftimeout)
     {
-        if( !_probot->GetController() )
+        ControllerBasePtr pcontroller = _probot->GetController();
+        if( !pcontroller )
             return false;
 
         uint64_t starttime = GetMicroTime();
         uint64_t deltatime = (uint64_t)(ftimeout*1000000.0);
-        while( !_probot->GetController()->IsDone() ) {
+        while( !pcontroller->IsDone() ) {
             Sleep(1);            
             if( deltatime > 0 && (GetMicroTime()-starttime)>deltatime  )
                 return false;

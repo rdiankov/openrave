@@ -72,11 +72,11 @@ protected:
     std::string __description;
 
 private:
+    boost::shared_ptr<void> __plugin; ///< handle to plugin that controls the executable code. As long as this plugin pointer is present, module will not be unloaded.
     std::string __strpluginname, __strxmlid;
     PluginType __type;
     EnvironmentBasePtr __penv;
     boost::shared_ptr<void> __pUserData;                       ///< data set by the user
-    boost::shared_ptr<void> __plugin; ///< handle to plugin that controls the executable code. As long as this plugin pointer is present, module will not be unloaded.
 
     std::map<std::string, XMLReadablePtr > __mapReadableInterfaces; ///< pointers to extra interfaces that are included with this object
 
