@@ -54,6 +54,29 @@ const std::string& RaveGetInterfaceName(PluginType type)
     return it->second;
 }
 
+void BaseXMLReader::startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+{
+    if( __bRecordXMLData ) {
+        __sxml << "<" << name << " ";
+        FOREACHC(itatt, atts)
+            __sxml << itatt->first << "=\"" << itatt->second << "\" ";
+        __sxml << ">" << endl;
+    }
+}
+
+bool BaseXMLReader::endElement(const std::string& name)
+{
+    if( __bRecordXMLData )
+        __sxml << "</" << name << ">" << endl;
+    return false;
+}
+
+void BaseXMLReader::characters(const std::string& ch)
+{
+    if( __bRecordXMLData )
+        __sxml << ch;
+}
+
 // Dummy Reader
 DummyXMLReader::DummyXMLReader(const std::string& pfieldname, const std::string& pparentname)
 {
@@ -66,6 +89,7 @@ DummyXMLReader::DummyXMLReader(const std::string& pfieldname, const std::string&
 
 void DummyXMLReader::startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
 {
+    BaseXMLReader::startElement(name,atts);
     if( !!_pcurreader ) {
         _pcurreader->startElement(name, atts);
     }
@@ -77,6 +101,8 @@ void DummyXMLReader::startElement(const std::string& name, const std::list<std::
     
 bool DummyXMLReader::endElement(const std::string& name)
 {
+    BaseXMLReader::endElement(name);
+
     if( !!_pcurreader ) {
         if( _pcurreader->endElement(name) )
             _pcurreader.reset();
@@ -98,6 +124,7 @@ OneTagReader::OneTagReader(const std::string& tag, BaseXMLReaderPtr preader) : _
 
 void OneTagReader::startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
 {
+    BaseXMLReader::startElement(name,atts);
     if( name == _tag )
         ++_numtags;
     else if( !!_preader )
@@ -106,6 +133,8 @@ void OneTagReader::startElement(const std::string& name, const std::list<std::pa
 
 bool OneTagReader::endElement(const std::string& name)
 {
+    BaseXMLReader::endElement(name);
+
     if( name == _tag ) {
         --_numtags;
         if( _numtags <= 0 )
@@ -119,6 +148,7 @@ bool OneTagReader::endElement(const std::string& name)
 
 void OneTagReader::characters(const std::string& ch)
 {
+    BaseXMLReader::characters(ch);
     if( !!_preader )
         _preader->characters(ch);
 }

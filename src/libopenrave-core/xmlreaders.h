@@ -2017,7 +2017,7 @@ public:
             if( !_psensor ) {
                 // check for current sensors
                 FOREACH(itsensor,probot->GetSensors()) {
-                    if( (*itsensor)->GetName() == name ) {
+                    if( name.size() > 0 && (*itsensor)->GetName() == name ) {
                         _psensor = *itsensor;
                         break;
                     }

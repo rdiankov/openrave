@@ -434,6 +434,7 @@ typedef boost::shared_ptr<XMLReadable const> XMLReadableConstPtr;
 class BaseXMLReader : public boost::enable_shared_from_this<BaseXMLReader>
 {
 public:
+    BaseXMLReader() : __bRecordXMLData(true) {}
     virtual ~BaseXMLReader() {}
 
     /// a readable interface that stores the information processsed for the current tag
@@ -443,18 +444,25 @@ public:
     /// Gets called in the beginning of each "<type>" expression. In this case, name is "type"
     /// \param name of the tag, will be always lower case
     /// \param atts string of attributes where the first std::string is the attribute name and second is the value
-    virtual void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts) = 0;
+    virtual void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts);
 
     /// Gets called at the end of each "</type>" expression. In this case, name is "type"
     /// \param name of the tag, will be always lower case
     /// \return true if XMLReader has finished parsing, otherwise false
-    virtual bool endElement(const std::string& name) = 0;
+    virtual bool endElement(const std::string& name);
 
     /// gets called for all data in between tags.
     /// \param ch a string to the data
-    virtual void characters(const std::string& ch) = 0;
+    virtual void characters(const std::string& ch);
+    
+    /// returns the XML formatted data that this reader has parsed so far
+    virtual std::string GetXMLData() const { return __sxml.str(); }
 
     std::string _filename; /// XML filename
+
+protected:
+    bool __bRecordXMLData;
+    std::stringstream __sxml; ///< used to store the xml data
 };
 typedef boost::shared_ptr<BaseXMLReader> BaseXMLReaderPtr;
 typedef boost::shared_ptr<BaseXMLReader const> BaseXMLReaderConstPtr;
@@ -468,7 +476,6 @@ public:
     
     /// if returns true, XMLReader has finished parsing
     virtual bool endElement(const std::string& name);
-    virtual void characters(const std::string& ch) {}
     
 private:
     std::string _fieldname, _parentname; /// XML filename

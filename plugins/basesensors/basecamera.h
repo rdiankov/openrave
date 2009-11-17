@@ -25,6 +25,7 @@ class BaseCameraSensor : public SensorBase
         
         virtual void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
         {
+            BaseXMLReader::startElement(name,atts);
             if( !!_pcurreader )
                 _pcurreader->startElement(name,atts);
             else if( name != "sensor" && name != "kk" && name != "width" && name != "height" && name != "framerate" && name != "power" && name != "color" ) {
@@ -34,6 +35,7 @@ class BaseCameraSensor : public SensorBase
 
         virtual bool endElement(const std::string& name)
         {
+            BaseXMLReader::endElement(name);
             if( !!_pcurreader ) {
                 if( _pcurreader->endElement(name) )
                     _pcurreader.reset();
@@ -68,6 +70,7 @@ class BaseCameraSensor : public SensorBase
         
         virtual void characters(const std::string& ch)
         {
+            BaseXMLReader::characters(ch);
             if( !!_pcurreader )
                 _pcurreader->characters(ch);
             else {

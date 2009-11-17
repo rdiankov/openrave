@@ -26,6 +26,7 @@ protected:
         
         virtual void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
         {
+            BaseXMLReader::startElement(name,atts);
             if( !!_pcurreader )
                 _pcurreader->startElement(name,atts);
             else if( name != "sensor" && name != "minangle" && name != "maxangle" && name != "maxrange" && name != "scantime" && name != "color" && name != "resolution" ) {
@@ -35,6 +36,7 @@ protected:
 
         virtual bool endElement(const std::string& name)
         {    
+            BaseXMLReader::endElement(name);
             if( !!_pcurreader ) {
                 if( _pcurreader->endElement(name) )
                     _pcurreader.reset();
@@ -80,6 +82,7 @@ protected:
 
         virtual void characters(const std::string& ch)
         {
+            BaseXMLReader::characters(ch);
             if( !!_pcurreader )
                 _pcurreader->characters(ch);
             else {
@@ -342,10 +345,14 @@ protected:
 
         virtual void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
         {
-            if( !!_pcurreader )
+            if( !!_pcurreader ) {
+                BaseXMLReader::startElement(name,atts);
                 _pcurreader->startElement(name,atts);
+            }
             else if( name != "spinaxis" && name != "spinpos" && name != "spinspeed" )
                 BaseLaser2DXMLReader::startElement(name,atts);
+            else
+                BaseXMLReader::startElement(name,atts);
         }
 
         virtual bool endElement(const string& name)
@@ -364,6 +371,7 @@ protected:
             if( !ss )
                 RAVELOG_WARNA(str(boost::format("error parsing %s\n")%name));
             
+            BaseXMLReader::endElement(name);
             return false;
         }
     };
