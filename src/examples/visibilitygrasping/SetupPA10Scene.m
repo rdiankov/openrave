@@ -1,4 +1,18 @@
 % [robot, scenedata] = SetupPA10Scene(scene,realrobot,randomize)
+
+% Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
+% This program is free software: you can redistribute it and/or modify
+% it under the terms of the GNU Lesser General Public License as published by
+% the Free Software Foundation, either version 3 of the License, or
+% (at your option) any later version.
+%
+% This program is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+% GNU Lesser General Public License for more details.
+%
+% You should have received a copy of the GNU Lesser General Public License
+% along with this program.  If not, see <http://www.gnu.org/licenses/>.
 function [robot, scenedata] = SetupPA10Scene(scene,randomize)
 global updir probs robothome
 if( ~exist('randomize','var') )
@@ -25,6 +39,8 @@ robot.testhandname = 'testhand';
 SetupProblems(robot.name);
 orBodySetJointValues (robot.id,0.03,7); % move the gripper
 
+orRobotSensorSend(robot.id,0,'power','0');
+
 SwitchModelPatterns = {};
 % objind = 1;
 % SwitchModelPatterns{objind}.pattern = '^ricebox(\d)+$';
@@ -44,12 +60,7 @@ scenedata.FindTarget = @() FindTarget('^frootloops');
 [scenedata.targetname,scenedata.targetid] = scenedata.FindTarget();
 scenedata.SwitchModelPatterns = SwitchModelPatterns;
 scenedata.dests = [];
-
-if( realrobot )
-    scenedata.home = orBodyGetJointValues(robot.id);
-else
-    scenedata.home = orBodyGetJointValues(robot.id);
-end
+scenedata.home = orBodyGetJointValues(robot.id);
 
 %% randomize robot position
 if( ~isempty(randomize) )
@@ -66,7 +77,7 @@ end
 
 tablepattern = '^table$';
 tableid = [];
-bodies = orEnvGetBodies(0,openraveros_BodyInfo().Req_Names());
+bodies = orEnvGetBodies();
 for i = 1:length(bodies)
     if( regexp(bodies{i}.name, tablepattern) )
         tableid = bodies{i}.id;

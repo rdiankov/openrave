@@ -65,6 +65,7 @@
 #include <boost/thread/thread.hpp>
 #include <boost/thread/recursive_mutex.hpp>
 #include <boost/static_assert.hpp>
+#include <boost/format.hpp>
 
 namespace OpenRAVE {
 
@@ -76,6 +77,7 @@ enum OpenRAVEErrorCode {
     ORE_InvalidArguments=1,
     ORE_EnvironmentNotLocked=2,
     ORE_CommandNotSupported=3,
+    ORE_Assert=4,
 };
 
 struct openrave_exception : std::exception
@@ -88,6 +90,31 @@ struct openrave_exception : std::exception
 private:
     std::string _s;
     OpenRAVEErrorCode _error;
+};
+
+class CaseInsentiveCompare
+{
+ public:
+    bool operator()(const std::string & s1, const std::string& s2) const
+    {
+        std::string::const_iterator it1=s1.begin();
+        std::string::const_iterator it2=s2.begin();
+        
+        //has the end of at least one of the strings been reached?
+        while ( (it1!=s1.end()) && (it2!=s2.end()) )  { 
+            if(::toupper(*it1) != ::toupper(*it2)) //letters differ?
+                // return -1 to indicate 'smaller than', 1 otherwise
+                return ::toupper(*it1) < ::toupper(*it2);
+            //proceed to the next character in each string
+            ++it1;
+            ++it2;
+        }
+        std::size_t size1=s1.size(), size2=s2.size();// cache lengths
+        //return -1,0 or 1 according to strings' lengths
+        if (size1==size2) 
+            return 0;
+        return size1<size2;
+    }
 };
 
 // terminal attributes
@@ -909,6 +936,18 @@ void RaveRandomDouble(int n, std::vector<double>& v);
 //@}
 
 } // end namespace OpenRAVE
+
+#ifndef RAVE_DISABLE_ASSERT_HANDLER
+#define BOOST_ENABLE_ASSERT_HANDLER
+namespace boost
+{
+inline void assertion_failed(char const * expr, char const * function, char const * file, long line)
+{
+    throw OpenRAVE::openrave_exception(str(boost::format("[%s:%d] -> %s, expr: %s\n")%file%line%function%expr),OpenRAVE::ORE_Assert);
+}
+}
+
+#endif
 
 // register for typeof (MSVC only)
 #ifdef RAVE_REGISTER_BOOST

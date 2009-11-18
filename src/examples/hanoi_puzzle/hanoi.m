@@ -1,6 +1,6 @@
 % demo to solve a hanoi puzzle with a Puma arm using OpenRAVE
 
-% by Rosen Diankov (rdiankov@cs.cmu.edu)
+% Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
 % This program is free software: you can redistribute it and/or modify
 % it under the terms of the GNU Lesser General Public License as published by
 % the Free Software Foundation, either version 3 of the License, or

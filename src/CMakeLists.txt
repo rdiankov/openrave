@@ -51,6 +51,8 @@ install(TARGETS openrave DESTINATION bin)
 # install the resource files
 file(GLOB robot_files ${CMAKE_CURRENT_SOURCE_DIR}/robots/*.xml)
 install(FILES ${robot_files} DESTINATION share/openrave/robots)
+file(GLOB robot_files ${CMAKE_CURRENT_SOURCE_DIR}/robots/schunk_fingers/*.xml)
+install(FILES ${robot_files} DESTINATION share/openrave/robots/schunk_fingers)
 
 file(GLOB data_files ${CMAKE_CURRENT_SOURCE_DIR}/data/*.xml)
 install(FILES ${data_files} DESTINATION share/openrave/data)

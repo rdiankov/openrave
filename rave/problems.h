@@ -18,31 +18,6 @@
 
 namespace OpenRAVE {
 
-class CaseInsentiveCompare
-{
- public:
-    bool operator()(const std::string & s1, const std::string& s2) const
-    {
-        std::string::const_iterator it1=s1.begin();
-        std::string::const_iterator it2=s2.begin();
-        
-        //has the end of at least one of the strings been reached?
-        while ( (it1!=s1.end()) && (it2!=s2.end()) )  { 
-            if(::toupper(*it1) != ::toupper(*it2)) //letters differ?
-                // return -1 to indicate 'smaller than', 1 otherwise
-                return ::toupper(*it1) < ::toupper(*it2);
-            //proceed to the next character in each string
-            ++it1;
-            ++it2;
-        }
-        std::size_t size1=s1.size(), size2=s2.size();// cache lengths
-        //return -1,0 or 1 according to strings' lengths
-        if (size1==size2) 
-            return 0;
-        return size1<size2;
-    }
-};
-
 /// Base class for problem instances the user might want to instantiate. A problem
 /// instance registers itself with OpenRAVE's SimulateStep calls and can accept
 /// commands from the server or other plugins via SendCommand. A problem instance

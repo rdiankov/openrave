@@ -22,6 +22,8 @@ namespace OpenRAVE {
 class InterfaceBase : public boost::enable_shared_from_this<InterfaceBase>
 {
 public:
+    typedef std::map<std::string, XMLReadablePtr, CaseInsentiveCompare> READERSMAP;
+
     InterfaceBase(PluginType type, EnvironmentBasePtr penv) : __type(type), __penv(penv) {}
 	virtual ~InterfaceBase() {}
 
@@ -39,10 +41,10 @@ public:
     /// \return the environment that this interface is attached to
     inline EnvironmentBasePtr GetEnv() const { return __penv; }
 
-    inline const std::map<std::string, XMLReadablePtr >& GetReadableInterfaces() const { return __mapReadableInterfaces; }
+    inline const READERSMAP& GetReadableInterfaces() const { return __mapReadableInterfaces; }
     inline XMLReadablePtr GetReadableInterface(const std::string& xmltag) const
     {
-        std::map<std::string, XMLReadablePtr >::const_iterator it = __mapReadableInterfaces.find(xmltag);
+        READERSMAP::const_iterator it = __mapReadableInterfaces.find(xmltag);
         return it != __mapReadableInterfaces.end() ? it->second : XMLReadablePtr();
     }
 
@@ -78,7 +80,7 @@ private:
     EnvironmentBasePtr __penv;
     boost::shared_ptr<void> __pUserData;                       ///< data set by the user
 
-    std::map<std::string, XMLReadablePtr > __mapReadableInterfaces; ///< pointers to extra interfaces that are included with this object
+    READERSMAP __mapReadableInterfaces; ///< pointers to extra interfaces that are included with this object
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER

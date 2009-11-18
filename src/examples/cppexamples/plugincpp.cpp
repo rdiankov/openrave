@@ -21,7 +21,7 @@ public:
 
     int main(const string& cmd)
     {
-        RAVELOG_INFOA("problem initialized cmd; %s\n", cmd);
+        RAVELOG_INFOA("problem initialized cmd; %s\n", cmd.c_str());
         return 0;
     }
 
