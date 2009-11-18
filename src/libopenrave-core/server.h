@@ -1006,8 +1006,9 @@ protected:
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
         os << vbodies.size() << " ";
-        FOREACHC(it, vbodies)
+        FOREACHC(it, vbodies) {
             os << (*it)->GetNetworkId() << " " << (*it)->GetName() << " " << (*it)->GetXMLId() << " " << (*it)->GetXMLFilename() << "\n ";
+        }
 
         return true;
     }

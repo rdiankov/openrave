@@ -300,8 +300,10 @@ class Environment : public EnvironmentBase
             pbody = _pdatabase->CreateKinBody(shared_from_this(), pname);
             pbody = KinBodyPtr(pbody.get(),smart_pointer_deleter<KinBodyPtr>(pbody,KINBODY_DELETER_SHARED));
         }
-        else
+        else {
             pbody.reset(new KinBody(PT_KinBody,shared_from_this()),KINBODY_DELETER);
+            pbody->__strxmlid = "KinBody";
+        }
         SetUniqueNetworkId(pbody, &pbody->networkid);
         return pbody;
     }

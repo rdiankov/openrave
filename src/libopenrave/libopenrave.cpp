@@ -571,6 +571,15 @@ std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameters& pp)
     return I;
 }
 
+bool InterfaceBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+{
+    if( !preference )
+        throw openrave_exception("invalid cloning reference",ORE_InvalidArguments);
+    __pUserData = preference->__pUserData;
+    __mapReadableInterfaces = preference->__mapReadableInterfaces;
+    return true;
+}
+
 ProblemInstance::ProblemInstance(EnvironmentBasePtr penv) : InterfaceBase(PT_ProblemInstance, penv)
 {
     RegisterCommand("help",boost::bind(&ProblemInstance::GetCommandHelp,this,_1,_2),

@@ -33,6 +33,8 @@ while(1)
 end
 
 robot = robots{1};
+robot.activemanip = 1;
+robot.manips = orRobotGetManipulators(robot.id);
 robot.CreateHandFn = [];%@RobotCreateSchunkHand;
 robot.testhandname = 'testhand';
 

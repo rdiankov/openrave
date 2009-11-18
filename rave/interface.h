@@ -56,11 +56,7 @@ public:
     /// clone the contents of an interface to the current interface
     /// \param preference the interface whose information to clone
     /// \param cloningoptions mask of CloningOptions
-    virtual bool Clone(InterfaceBaseConstPtr preference, int cloningoptions) {
-        if( !preference )
-            throw openrave_exception("invalid cloning reference",ORE_InvalidArguments);
-        return true;
-    }
+    virtual bool Clone(InterfaceBaseConstPtr preference, int cloningoptions);
 
     /// Used to send special commands to the interface
     /// If the command is not supported, will throw an openrave_exception
@@ -85,9 +81,11 @@ private:
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
     friend class RaveDatabase;
+    friend class Environment;
     friend class OpenRAVEXMLParser;
 #else
     friend class ::RaveDatabase;
+    friend class ::Environment;
     friend class ::OpenRAVEXMLParser;
 #endif
 #endif
