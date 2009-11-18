@@ -14,13 +14,14 @@
 global probs
 randomize = struct('createprob',0.15,'obstacles',{{'data/box0.kinbody.xml','data/box1.kinbody.xml','data/box2.kinbody.xml','data/box3.kinbody.xml'}},'maxcreate',4);
 [robot, scenedata] = SetupPA10Scene('data/pa10grasp.env.xml',randomize);
+dopause = 0;
 
 while(1)
     orProblemSendCommand('releaseall',probs.manip);
     RobotGoInitial(robot,scenedata.home);
 
-    [res,success] = orProblemSendCommand(['MoveToObserveTarget target ' scenedata.targetname ' sampleprob 0.001 sensorindex 0 planner GoalSampler maxiter 4000 convexfile ' scenedata.convexfile ' visibilitytrans ' scenedata.visibilityfile],probs.visual,1);
-    if( ~success )
+    res = orProblemSendCommand(['MoveToObserveTarget target ' scenedata.targetname ' sampleprob 0.001 sensorindex 0 maxiter 4000 convexfile ' scenedata.convexfile ' visibilitytrans ' scenedata.visibilityfile],probs.visual,1);
+    if( isempty(res) )
         warning('failed to move to target');
         continue;
     end
@@ -31,8 +32,8 @@ while(1)
         pause;
     end
     %% start visual servoing step
-    [res,success] = orProblemSendCommand(['VisualFeedbackGrasping target ' scenedata.targetname ' sensorindex 0 convexfile ' scenedata.convexfile ' graspset ' scenedata.graspsetfile '; maxiter 100 visgraspthresh 0.1 gradientsamples 5 '],probs.visual,0);
-    if( ~success )
+    res = orProblemSendCommand(['VisualFeedbackGrasping target ' scenedata.targetname ' sensorindex 0 convexfile ' scenedata.convexfile ' graspset ' scenedata.graspsetfile '; maxiter 100 visgraspthresh 0.1 gradientsamples 5 '],probs.visual,0);
+    if( isempty(res) )
         warning('failed to find visual feedback grasp');
         continue;
     end
@@ -48,7 +49,7 @@ while(1)
     orProblemSendCommand(['grabbody name ' scenedata.targetname],probs.manip);
     
     L = orBodyGetLinks(robot.id);
-    Thand = [reshape(L(:,robot.manips{robot.activemanip}.eelink),[3 4]); 0 0 0 1];
+    Thand = [reshape(L(:,robot.manips{robot.activemanip}.eelink+1),[3 4]); 0 0 0 1];
     Tobj = [reshape(orBodyGetTransform(scenedata.targetid),[3 4]); 0 0 0 1];
     Treltrans = inv(Tobj)*Thand;
 
@@ -65,22 +66,24 @@ while(1)
     dests = scenedata.dests(:,inds);
 
     %% continue trying to move to a position until success
+    success = 0;
+    matrices = '';
     for i = 1:size(dests,2)
         T = reshape(dests(:,i),[3 4])*Treltrans;
-        [res,success] = orProblemSendCommand(['MoveToHandPosition matrix ' sprintf('%f ', T)] , probs.manip);
-        if( success )
-            WaitForRobot(robot.id);
-            break;
-        end
-     end
-
-     if( ~success )
-         disp('failed, trying again');
-         continue;
-     end
+        matrices = [matrices ' matrix ' sprintf('%f ',T)];
+    end
+        
+    res = orProblemSendCommand(['MoveToHandPosition ' matrices], probs.manip);
+    if( ~isempty(res) )
+        success = 1;
+        WaitForRobot(robot.id);
+        break;
+    else
+        disp('failed, trying again');
+        continue;
+    end
      
-     orRobotSetActiveDOFs(robot.id,robot.manips{robot.activemanip}.handjoints);
-     movingdir = -ones(1,orRobotGetActiveDOF(robot.id));
-     orProblemSendCommand(['releasefingers target ' scenedata.targetname ' movingdir ' sprintf('%f ',movingdir)],probs.manip);
-     orRobotSetActiveDOFs(robot.id,0:(robot.dof-1));
+    orRobotSetActiveDOFs(robot.id,robot.manips{robot.activemanip}.handjoints);
+    orProblemSendCommand(['releasefingers target ' scenedata.targetname],probs.manip);
+    orRobotSetActiveDOFs(robot.id,0:(robot.dof-1));
 end

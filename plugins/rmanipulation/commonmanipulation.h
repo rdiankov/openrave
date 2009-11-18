@@ -542,7 +542,7 @@ class GraspParameters : public PlannerBase::PlannerParameters
 class GraspSetParameters : public PlannerBase::PlannerParameters
 {
 public:
- GraspSetParameters(EnvironmentBasePtr penv) : _fVisibiltyGraspThresh(0), _fGraspDistThresh(1.4f), _penv(penv) {}
+ GraspSetParameters(EnvironmentBasePtr penv) : _nGradientSamples(5), _fVisibiltyGraspThresh(0), _fGraspDistThresh(1.4f), _penv(penv) {}
     
     vector<Transform> _vgrasps; ///< grasps with respect to the target object
     KinBodyPtr _ptarget;
@@ -562,7 +562,7 @@ public:
             O << *it << " ";
         O << "</grasps>" << endl;
         O << "<target>" << (!!_ptarget?_ptarget->GetNetworkId():0) << "</target>" << endl;
-        O << "<numGradSamples>" << _nGradientSamples << "</numGradSamples>" << endl;
+        O << "<numgradsamples>" << _nGradientSamples << "</numgradsamples>" << endl;
         O << "<visgraspthresh>" << _fVisibiltyGraspThresh << "</visgraspthresh>" << endl;
         O << "<graspdistthresh>" << _fGraspDistThresh << "</graspdistthresh>" << endl;
         return !!O;
@@ -582,7 +582,7 @@ public:
             _ss >> id;
             _ptarget = _penv->GetBodyFromNetworkId(id);
         }
-        else if( name == "numGradSamples" )
+        else if( name == "numgradsamples" )
             _ss >> _nGradientSamples;
         else if( name == "visgraspthresh" )
             _ss >> _fVisibiltyGraspThresh;

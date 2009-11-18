@@ -37,6 +37,8 @@ robot.activemanip = 1;
 robot.manips = orRobotGetManipulators(robot.id);
 robot.CreateHandFn = [];%@RobotCreateSchunkHand;
 robot.testhandname = 'testhand';
+robot.dof = orBodyGetDOF(robot.id);
+orRobotSensorSend(robot.id,0,'power','0')
 
 SetupProblems(robot.name);
 orBodySetJointValues (robot.id,0.03,7); % move the gripper

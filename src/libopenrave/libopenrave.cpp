@@ -340,14 +340,16 @@ public:
             sample[i] = pCurSample[i] + 10.0f*fRadius*(RaveRandomFloat()-0.5f);
 
         // normalize
-        dReal fRatio = fRadius*(0.1f+0.9f*RaveRandomFloat());
+        dReal fRatio = max(1e-5f,fRadius*(0.1f+0.9f*RaveRandomFloat()));
             
         //assert(_robot->ConfigDist(&_vzero[0], &_vSampleConfig[0]) < B+1);
-        while(_distmetricfn(sample,pCurSample) > fRatio ) {
+        dReal fDist = _distmetricfn(sample,pCurSample);
+        while(fDist > fRatio) {
             for (int i = 0; i < dof; i++)
                 sample[i] = 0.5f*pCurSample[i]+0.5f*sample[i];
+            fDist = _distmetricfn(sample,pCurSample);
         }
-            
+    
         for(int iter = 0; iter < 20; ++iter) {
             while(_distmetricfn(sample, pCurSample) < fRatio ) {
                 for (int i = 0; i < dof; i++)

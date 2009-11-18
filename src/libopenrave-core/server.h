@@ -485,7 +485,10 @@ class SimpleTextServer : public ProblemInstance
                     (*it)();
                 }
                 catch(const openrave_exception& ex) {
-                    RAVELOG_FATALA("%s\n",ex.what());
+                    RAVELOG_FATALA("server caught exception: %s\n",ex.what());
+                }
+                catch(const std::logic_error& ex) {
+                    RAVELOG_FATALA("server caught std exception: %s\n",ex.what());
                 }
                 catch(...) {
                     RAVELOG_FATAL("unknown exception!!\n");
@@ -555,7 +558,13 @@ class SimpleTextServer : public ProblemInstance
                             bSuccess = itfn->second.fnSocketThread(*is, sout, pdata);
                         }
                         catch(const openrave_exception& ex) {
-                            RAVELOG_FATALA("%s\n",ex.what());
+                            RAVELOG_FATALA("server caught exception: %s\n",ex.what());
+                        }
+                        catch(const std::logic_error& ex) {
+                            RAVELOG_FATALA("server caught std exception: %s\n",ex.what());
+                        }
+                        catch(...) {
+                            RAVELOG_FATAL("unknown exception!!\n");
                         }
 
                         if( bSuccess ) {

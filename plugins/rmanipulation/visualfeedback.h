@@ -197,6 +197,7 @@ public:
     {
     public:
         VisibilityConstraintFunction(RobotBasePtr robot, KinBodyPtr ptarget, const string& convexfilename, int sensorindex=0) : _robot(robot), _ptarget(ptarget), _sensorindex(sensorindex) {
+            _report.reset(new COLLISIONREPORT());
             _psensor = _robot->GetSensors().at(_sensorindex);
             if( _psensor->GetSensor()->GetSensorGeometry()->GetType() != SensorBase::ST_Camera)
                 throw openrave_exception("sensor is not a camera");
@@ -387,7 +388,7 @@ public:
         bool TestRay(const Vector& v, const TransformMatrix& tcamera)
         {
             RAY r;
-            r.dir = tcamera.rotate(v*(1.0f/RaveSqrt(v.lengthsqr3())));
+            r.dir = tcamera.rotate(2.0f*v);
             r.pos = tcamera.trans + 0.05f*r.dir; // move the rays a little forward
             if( !_robot->GetEnv()->CheckCollision(r,_report) ) {
                 RAVELOG_DEBUGA("no collision!?\n");

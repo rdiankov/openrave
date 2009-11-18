@@ -43,7 +43,8 @@ for i = 1:nummanips
         [tok, rem] = strtok(rem, ' ');
         manipulators{i}.joints(j) = str2num(tok);
     end
-    
+    manipulators{i}.handjoints = manipulators{i}.joints;
+
     [tok, rem] = strtok(rem, ' ');
     numarmjoints = str2num(tok);
     manipulators{i}.armjoints = zeros(1,numarmjoints);

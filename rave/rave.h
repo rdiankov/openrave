@@ -22,6 +22,10 @@
 #ifndef RAVE_RAVE_H
 #define RAVE_RAVE_H
 
+#ifndef RAVE_DISABLE_ASSERT_HANDLER
+#define BOOST_ENABLE_ASSERT_HANDLER
+#endif
+
 #include <cstdio>
 #include <stdarg.h>
 #include <cstring>
@@ -937,8 +941,7 @@ void RaveRandomDouble(int n, std::vector<double>& v);
 
 } // end namespace OpenRAVE
 
-#ifndef RAVE_DISABLE_ASSERT_HANDLER
-#define BOOST_ENABLE_ASSERT_HANDLER
+#if !defined(RAVE_DISABLE_ASSERT_HANDLER) && defined(BOOST_ENABLE_ASSERT_HANDLER)
 namespace boost
 {
 inline void assertion_failed(char const * expr, char const * function, char const * file, long line)
@@ -946,7 +949,6 @@ inline void assertion_failed(char const * expr, char const * function, char cons
     throw OpenRAVE::openrave_exception(str(boost::format("[%s:%d] -> %s, expr: %s\n")%file%line%function%expr),OpenRAVE::ORE_Assert);
 }
 }
-
 #endif
 
 // register for typeof (MSVC only)

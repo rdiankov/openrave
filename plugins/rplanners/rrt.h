@@ -160,7 +160,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
         int num_goals = 0;
         vector<dReal> vgoal(_parameters.GetDOF());
 
-        while(1) {
+        while(goal_index < (int)_parameters.vgoalconfig.size()) {
             for(int i = 0 ; i < _parameters.GetDOF(); i++) {
                 if(goal_index < (int)_parameters.vgoalconfig.size())
                     vgoal[i] = _parameters.vgoalconfig[goal_index];
@@ -197,9 +197,6 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
                                   _report->plink2!=NULL?_report->plink2->GetName().c_str():"(NULL)");
                 }
             }
-        
-            if(goal_index == (int)_parameters.vgoalconfig.size())
-                break;
         }
     
         if( num_goals == 0 && !GetParameters()._samplegoalfn ) {

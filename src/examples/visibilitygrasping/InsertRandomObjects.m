@@ -56,7 +56,7 @@ if( ~isempty(randomize) )
             angs = angs(randperm(length(angs)));
             success = 0;
             for roll = angs
-                T = Ttable*[rodrigues([0 0 roll]) trans(:,i); 0 0 0 1];
+                T = Ttable*[RotationMatrixFromAxisAngle([0;0;roll]) trans(:,i); 0 0 0 1];
                 orBodySetTransform(bodyid,T);
                 success = 1;
                 for id = avoidbodyids
@@ -90,7 +90,7 @@ if( exist('targetid','var') && ~isempty(targetid) )
     dists = [];
     for i = 1:size(trans,2);
         for roll = 0:pi/4:pi
-            T = Ttable*[rodrigues([0 0 roll]) [trans(1:2,i);0]; 0 0 0 1];
+            T = Ttable*[RotationMatrixFromAxisAngle([0;0;roll]) [trans(1:2,i);0]; 0 0 0 1];
             T(3,4) = Torig(12);
             orBodySetTransform(targetid,T);
             if( ~orEnvCheckCollision(targetid) )

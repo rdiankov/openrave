@@ -68,7 +68,7 @@ class IkFastSolver : public IkSolverBase
             RAVELOG_WARNA("ik solver only supports type %d",IKType);
             return false;
         }
-        if( bCheckEnvCollision && _pmanip->CheckIndependentCollision() )
+        if( bCheckEnvCollision && _CheckIndependentCollision() )
             return false;
 
         RobotBase::RobotStateSaver saver(_probot);
@@ -83,7 +83,7 @@ class IkFastSolver : public IkSolverBase
             RAVELOG_WARNA("ik solver only supports type %d",IKType);
             return false;
         }
-        if( bCheckEnvCollision && _pmanip->CheckIndependentCollision() )
+        if( bCheckEnvCollision && _CheckIndependentCollision() )
             return false;
 
         RobotBase::RobotStateSaver saver(_probot);
@@ -104,7 +104,7 @@ class IkFastSolver : public IkSolverBase
         if( vFreeParameters.size() != _vfreeparams.size() )
             throw openrave_exception("free parameters not equal",ORE_InvalidArguments);
 
-        if( bCheckEnvCollision && _pmanip->CheckIndependentCollision() )
+        if( bCheckEnvCollision && _CheckIndependentCollision() )
             return false;
 
         RobotBase::RobotStateSaver saver(_probot);
@@ -124,7 +124,7 @@ class IkFastSolver : public IkSolverBase
         if( vFreeParameters.size() != _vfreeparams.size() )
             throw openrave_exception("free parameters not equal",ORE_InvalidArguments);
 
-        if( bCheckEnvCollision && _pmanip->CheckIndependentCollision() )
+        if( bCheckEnvCollision && _CheckIndependentCollision() )
             return false;
 
         RobotBase::RobotStateSaver saver(_probot);
@@ -279,7 +279,7 @@ private:
         COLLISIONREPORT report;
         if( boost::get<2>(freeq0check) && GetEnv()->CheckCollision(KinBodyConstPtr(_probot), boost::shared_ptr<COLLISIONREPORT>(&report,null_deleter())) ) {
             if( !!report.plink1 && !!report.plink2 ) {
-                RAVELOG_VERBOSEA(str(boost::format("WAMIK: collision %s:%s with %s:%s\n")%report.plink1->GetParent()->GetName()%report.plink1->GetName()%report.plink2->GetParent()->GetName()%report.plink2->GetName()));
+                RAVELOG_VERBOSEA(str(boost::format("IKFastSolver: collision %s:%s with %s:%s\n")%report.plink1->GetParent()->GetName()%report.plink1->GetName()%report.plink2->GetParent()->GetName()%report.plink2->GetName()));
             }
             else
                 RAVELOG_VERBOSEA("ik collision, no link\n");
@@ -373,6 +373,20 @@ private:
         }
 
         return true;
+    }
+
+    bool _CheckIndependentCollision()
+    {
+        COLLISIONREPORT report;
+        if( _pmanip->CheckIndependentCollision(boost::shared_ptr<COLLISIONREPORT>(&report,null_deleter())) ) {
+            if( !!report.plink1 && !!report.plink2 ) {
+                RAVELOG_VERBOSEA(str(boost::format("IKFastSolver: indep collision %s:%s with %s:%s\n")%report.plink1->GetParent()->GetName()%report.plink1->GetName()%report.plink2->GetParent()->GetName()%report.plink2->GetName()));
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
     template <typename U> U SQR(U t) { return t*t; }
