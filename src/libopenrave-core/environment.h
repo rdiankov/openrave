@@ -39,7 +39,9 @@ class Environment : public EnvironmentBase
  public:
     Environment(bool bLoadAllPlugins=true) : EnvironmentBase()
     {
-        char* phomedir = getenv("OPENRAVE_CACHEPATH");
+        char* phomedir = getenv("OPENRAVE_HOME");
+        if( phomedir == NULL )
+            phomedir = getenv("OPENRAVE_CACHEPATH");
         if( phomedir == NULL ) {
 #ifndef _WIN32
             _homedirectory = string(getenv("HOME"))+string("/.openrave");
@@ -144,7 +146,6 @@ class Environment : public EnvironmentBase
 
     virtual void Destroy()
     {
-        bool bOldSim = _bEnableSimulation;
         _bDestroying = true;
 
         // dont' join, might not return
@@ -155,7 +156,31 @@ class Environment : public EnvironmentBase
 
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         _bEnableSimulation = false;
-        Reset();
+
+        RAVELOG_DEBUGA("resetting raveviewer\n");
+        if( !!_pCurrentViewer ) {
+            _pCurrentViewer->deselect();
+            _pCurrentViewer->Reset();
+            _pCurrentViewer->quitmainloop();
+        }
+    
+        if( !!_pPhysicsEngine )
+            _pPhysicsEngine->DestroyEnvironment();
+        if( !!_pCurrentChecker )
+            _pCurrentChecker->DestroyEnvironment();
+
+        {
+            boost::mutex::scoped_lock lock(_mutexBodies);
+            FOREACH(itbody,_vecbodies)
+                (*itbody)->Destroy();
+            _vecbodies.clear();
+            FOREACH(itrobot,_vecrobots)
+                (*itrobot)->Destroy();
+            _vecrobots.clear();
+            _vPublishedBodies.clear();
+            _nBodiesModifiedStamp++;
+        }
+
         RAVELOG_DEBUGA("destroy problems\n");
         list<ProblemInstancePtr> listProblems;
         {
@@ -166,24 +191,12 @@ class Environment : public EnvironmentBase
         FOREACH(itprob,listProblems)
             (*itprob)->Destroy();
         listProblems.clear();
+        _listOwnedObjects.clear();
 
-        if( !!_pPhysicsEngine )
-            _pPhysicsEngine->DestroyEnvironment();
-        if( !!_pCurrentChecker )
-            _pCurrentChecker->DestroyEnvironment();
-
-        RAVELOG_DEBUGA("destroying plugins\n");
-
-        SetCollisionChecker(CollisionCheckerBasePtr());
-        SetPhysicsEngine(PhysicsEngineBasePtr());
-        AttachViewer(RaveViewerBasePtr());
         _pCurrentChecker.reset();
-        _pCurrentViewer.reset();
         _pPhysicsEngine.reset();
-
+        _pCurrentViewer.reset();
         _pdatabase.reset();
-
-        _bEnableSimulation = bOldSim;
     }
 
     virtual void Reset()

@@ -2516,11 +2516,6 @@ public:
     }
     object GetCameraTransform() { return ReturnTransform(_penv->GetCameraTransform()); }
 
-//    object GetFractionOccluded(PyKinBodyPtr pbody, int width, int height, float nearPlane, float farPlane, object extrinsic, object KK, double& fracOccluded)
-//    {
-//        PyKinBodyPtr pbody, int width, int height, float nearPlane, float farPlane, object extrinsic, object KK, double& fracOccluded
-//    }
-
     object GetCameraImage(int width, int height, object extrinsic, object oKK)
     {
         vector<float> vKK = ExtractFloatArray(oKK);
