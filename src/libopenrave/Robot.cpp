@@ -1514,13 +1514,22 @@ void RobotBase::RegrabAll()
 
 RobotBase::LinkPtr RobotBase::IsGrabbing(KinBodyPtr pbody) const
 {
-    vector<GRABBED>::const_iterator itbody;
-    FORIT(itbody, _vGrabbedBodies) {
+    FOREACHC(itbody, _vGrabbedBodies) {
         if( KinBodyPtr(itbody->pbody) == pbody )
             return LinkPtr(itbody->plinkrobot);
     }
 
     return LinkPtr();
+}
+
+void RobotBase::GetGrabbed(std::vector<KinBodyPtr>& vbodies) const
+{
+    vbodies.resize(0);
+    FOREACHC(itbody, _vGrabbedBodies) {
+        KinBodyPtr pbody(itbody->pbody);
+        if( !!pbody )
+            vbodies.push_back(pbody);
+    }
 }
 
 void RobotBase::SetActiveManipulator(int index)

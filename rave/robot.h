@@ -405,6 +405,7 @@ public:
 
     /// get the robot link that is currently grabbing the body. If the body is not grabbed, will return an  empty pointer.
     virtual LinkPtr IsGrabbing(KinBodyPtr pbody) const;
+    virtual void GetGrabbed(std::vector<KinBodyPtr>& vbodies) const;
 
     //@}
 

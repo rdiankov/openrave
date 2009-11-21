@@ -136,7 +136,7 @@ public:
         {
             // set the bounds based on the interval type
             int start;
-            bool bCheckEnd;
+            bool bCheckEnd=false;
             switch (interval) {
             case IT_OPEN:
                 start = 1;  bCheckEnd = false;
