@@ -1444,7 +1444,10 @@ protected:
         uint64_t nLastUpdateTime = GetMicroTime();
         uint64_t nLastSleptTime = GetMicroTime();
         while( !_bDestroying ) {
+            bool bNeedSleep = true;
+
             if( _bEnableSimulation ) {
+                bNeedSleep = false;
                 EnvironmentMutex::scoped_lock lockenv(GetMutex());
                 StepSimulation(_fDeltaSimTime);
                 uint64_t passedtime = GetMicroTime()-_nSimStartTime;
@@ -1465,7 +1468,7 @@ protected:
             }
 
             if( GetMicroTime()-nLastSleptTime > 100000 ) {
-                Sleep(1);
+                Sleep(1); bNeedSleep = false;
                 nLastSleptTime = GetMicroTime();
             }
 
@@ -1474,6 +1477,9 @@ protected:
                 nLastUpdateTime = GetMicroTime();
                 UpdatePublishedBodies();
             }
+
+            if( bNeedSleep )
+                Sleep(1);
         }
     }
 

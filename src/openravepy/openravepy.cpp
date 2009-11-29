@@ -1546,6 +1546,16 @@ public:
             return PyLinkPtr(new PyLink(plink,_pyenv));
     }
 
+    object GetGrabbed() const
+    {
+        boost::python::list bodies;
+        std::vector<KinBodyPtr> vbodies;
+        _probot->GetGrabbed(vbodies);
+        FOREACH(itbody, vbodies)
+            bodies.append(PyKinBodyPtr(new PyKinBody(*itbody,_pyenv)));
+        return bodies;
+    }
+
     bool WaitForController(float ftimeout)
     {
         ControllerBasePtr pcontroller = _probot->GetController();
@@ -2204,13 +2214,17 @@ public:
         dReal* ppos = (dReal*)PyArray_DATA(pypos);
         PyObject* pycollision = PyArray_SimpleNew(1,&dims[1], PyArray_BOOL);
         bool* pcollision = (bool*)PyArray_DATA(pycollision);
+        vector<dReal> vrays[6];
+        for(int i = 0; i < 6; ++i)
+            vrays[i] = ExtractRealArray(rays[i]);
         for(int i = 0; i < num; ++i) {
-            r.pos.x = extract<dReal>(rays[0][i]);
-            r.pos.y = extract<dReal>(rays[1][i]);
-            r.pos.z = extract<dReal>(rays[2][i]);
-            r.dir.x = extract<dReal>(rays[3][i]);
-            r.dir.y = extract<dReal>(rays[4][i]);
-            r.dir.z = extract<dReal>(rays[5][i]);
+            r.pos.x = vrays[0][i];
+            r.pos.x = vrays[0][i];
+            r.pos.y = vrays[1][i];
+            r.pos.z = vrays[2][i];
+            r.dir.x = vrays[3][i];
+            r.dir.y = vrays[4][i];
+            r.dir.z = vrays[5][i];
             bool bCollision = _penv->CheckCollision(r, KinBodyConstPtr(pbody->GetBody()), preport);
             pcollision[i] = false;
             if( bCollision && report.contacts.size() > 0 ) {
@@ -2558,6 +2572,11 @@ public:
         return robots;
     }
 
+    void UpdatePublishedBodies()
+    {
+        _penv->UpdatePublishedBodies();
+    }
+
     boost::shared_ptr<PyKinBody::PyLink::PyTriMesh> Triangulate(PyKinBodyPtr pbody)
     {
         CHECK_POINTER(pbody);
@@ -2867,6 +2886,7 @@ BOOST_PYTHON_MODULE(openravepy)
             .def("ReleaseAllGrabbed",&PyRobotBase::ReleaseAllGrabbed)
             .def("RegrabAll",&PyRobotBase::RegrabAll)
             .def("IsGrabbing",&PyRobotBase::IsGrabbing)
+            .def("GetGrabbed",&PyRobotBase::GetGrabbed)
             .def("WaitForController",&PyRobotBase::WaitForController)
             ;
         
@@ -3134,6 +3154,7 @@ BOOST_PYTHON_MODULE(openravepy)
             .def("WriteCameraImage",&PyEnvironmentBase::WriteCameraImage)
             .def("GetRobots",&PyEnvironmentBase::GetRobots)
             .def("GetBodies",&PyEnvironmentBase::GetBodies)
+            .def("UpdatePublishedBodies",&PyEnvironmentBase::UpdatePublishedBodies)
             .def("Triangulate",&PyEnvironmentBase::Triangulate)
             .def("TriangulateScene",&PyEnvironmentBase::TriangulateScene)
             .def("SetDebugLevel",&PyEnvironmentBase::SetDebugLevel)

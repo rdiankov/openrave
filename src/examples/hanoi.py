@@ -215,3 +215,4 @@ if __name__ == "__main__":
     env.LockPhysics(True)
     hanoisolve(3,srcpeg,destpeg,peg,robot,heights)
     env.LockPhysics(False)
+    env.Destroy()

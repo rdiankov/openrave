@@ -135,7 +135,7 @@ public:
         bool CheckCollisionInterval(const vector<dReal>& pQ0, const vector<dReal>& pQ1, IntervalType interval)
         {
             // set the bounds based on the interval type
-            int start;
+            int start=0;
             bool bCheckEnd=false;
             switch (interval) {
             case IT_OPEN:
