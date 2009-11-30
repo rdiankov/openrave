@@ -1809,6 +1809,8 @@ public:
             return object();
         return object(PyVoidHandle(p));
     }
+
+    void EnvironmentSync() { return _pviewer->EnvironmentSync(); }
 };
 
 class PyEnvironmentBase : public boost::enable_shared_from_this<PyEnvironmentBase>
@@ -1821,7 +1823,6 @@ protected:
     boost::shared_ptr<boost::thread> _threadviewer;
     boost::mutex _mutexViewer;
     boost::condition _conditionViewer;
-    bool _bShutdown;
 
     void _ViewerThread(const string& strviewer, bool bShowViewer)
     {
@@ -1839,19 +1840,19 @@ protected:
             return;
 
         pviewer->main(bShowViewer); // spin until quitfrommainloop is called
-        RAVELOG_DEBUGA("destroying viewer\n");
+        _penv->AttachViewer(RaveViewerBasePtr());
+        pviewer.reset();
     }
 
 public:
     PyEnvironmentBase()
     {
         _penv = CreateEnvironment(true);
-        _bShutdown = false;
 #if BOOST_VERSION < 103500
         _envlock.reset(new EnvironmentMutex::scoped_lock(_penv->GetMutex(),false));
 #endif
     }
-    PyEnvironmentBase(EnvironmentBasePtr penv) : _penv(penv), _bShutdown(false) {
+    PyEnvironmentBase(EnvironmentBasePtr penv) : _penv(penv) {
 #if BOOST_VERSION < 103500
         _envlock.reset(new EnvironmentMutex::scoped_lock(_penv->GetMutex(),false));
 #endif
@@ -1859,7 +1860,6 @@ public:
 
     PyEnvironmentBase(const PyEnvironmentBase& pyenv)
     {
-        _bShutdown = false;
         _penv = pyenv._penv;
 #if BOOST_VERSION < 103500
         _envlock.reset(new EnvironmentMutex::scoped_lock(_penv->GetMutex(),false));
@@ -1872,14 +1872,18 @@ public:
             boost::mutex::scoped_lock lockcreate(_mutexViewer);
             _penv->AttachViewer(RaveViewerBasePtr());
         }
-        _bShutdown = true;
+
         if( !!_threadviewer )
             _threadviewer->join();
         _threadviewer.reset();
     }
 
     void Reset() { _penv->Reset(); }
-    void Destroy() { _penv->Destroy(); }
+    void Destroy() {
+        _penv->Destroy();
+        if( !!_threadviewer )
+            _threadviewer->join();
+    }
 
     object GetPluginInfo()
     {
@@ -2370,6 +2374,7 @@ public:
             
             if( !_penv->GetViewer() || _penv->GetViewer()->GetXMLId() != viewername ) {
                 RAVELOG_WARNA("failed to create viewer %s\n", viewername.c_str());
+                _threadviewer->join();
                 _threadviewer.reset();
                 return false;
             }
@@ -3043,6 +3048,7 @@ BOOST_PYTHON_MODULE(openravepy)
             .def("SetTitle",&PyRaveViewerBase::ViewerSetTitle)
             .def("LoadModel",&PyRaveViewerBase::LoadModel)
             .def("RegisterCallback",&PyRaveViewerBase::RegisterCallback)
+            .def("EnvironmentSync",&PyRaveViewerBase::EnvironmentSync)
             ;
 
         enum_<RaveViewerBase::ViewerEvents>("ViewerEvents")

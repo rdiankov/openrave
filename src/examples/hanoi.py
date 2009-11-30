@@ -171,6 +171,9 @@ if __name__ == "__main__":
     parser.add_option('--collision',
                       action="store",type='string',dest='collision',default=None,
                       help='Name of collision checker to use when solving')
+    parser.add_option('--scene',
+                      action="store",type='string',dest='scene',default='data/hanoi_complex.env.xml',
+                      help='Scene file to load')
     (options, args) = parser.parse_args()
 
     oldenv = Environment()
@@ -183,7 +186,7 @@ if __name__ == "__main__":
 
     # test cloning
     oldenv.Reset()
-    oldenv.Load('data/hanoi_complex.env.xml')
+    oldenv.Load(options.scene)
     env = oldenv.CloneSelf(CloningOptions.Bodies+CloningOptions.RealControllers)
     env.SetViewer('qtcoin')
     oldenv.Destroy() # destroy the old environment

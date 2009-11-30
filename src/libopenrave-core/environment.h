@@ -1334,6 +1334,7 @@ protected:
 
         virtual boost::shared_ptr<void> RegisterCallback(int properties, const ViewerCallbackFn& fncallback) { return boost::shared_ptr<void>(); }
         virtual void SetEnvironmentSync(bool) {}
+        virtual void EnvironmentSync() {}
 
         virtual void ViewerSetSize(int w, int h) {}
         virtual void ViewerMove(int x, int y) {}

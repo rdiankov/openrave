@@ -902,6 +902,23 @@ void QtCoinViewer::SetEnvironmentSync(bool bUpdate)
     }
 }
 
+void QtCoinViewer::EnvironmentSync()
+{
+    {
+        boost::mutex::scoped_lock lockupdating(_mutexUpdating);
+        if( !_bUpdateEnvironment ) {
+            RAVELOG_WARNA("cannot update models from environment sync\n");
+            return;
+        }
+    }
+
+    boost::mutex::scoped_lock lock(_mutexUpdateModels);
+    _bModelsUpdated = false;
+    _condUpdateModels.wait(lock);
+    if( !_bModelsUpdated )
+        RAVELOG_WARNA("failed to update models from environment sync\n");
+}
+
 void QtCoinViewer::_SetCamera(const RaveVector<float>& pos, const RaveVector<float>& quat)
 {
     GetCamera()->position.setValue(pos.x, pos.y, pos.z);
@@ -1923,8 +1940,11 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
 
     if( _pToggleDebug != NULL )
         _pToggleDebug->actions().at(GetEnv()->GetDebugLevel())->setChecked(true);
-    if( pToggleDynamicSimulation != NULL )
-        pToggleDynamicSimulation->setChecked(GetEnv()->GetPhysicsEngine()->GetXMLId().size()>0);
+    if( pToggleDynamicSimulation != NULL ) {
+        PhysicsEngineBasePtr p = GetEnv()->GetPhysicsEngine();
+        if( !!p )
+            pToggleDynamicSimulation->setChecked(p->GetXMLId().size()>0);
+    }
 
     boost::mutex::scoped_lock lockupd(_mutexUpdating);
 

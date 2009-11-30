@@ -128,6 +128,7 @@ public:
     virtual void closegraph(void* handle);
 
     virtual void SetEnvironmentSync(bool bUpdate);
+    virtual void EnvironmentSync();
 
     virtual bool _RecordVideo();
 

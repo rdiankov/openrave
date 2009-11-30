@@ -85,6 +85,10 @@ public:
     /// controls whether the viewer synchronizes with the newest environment
     virtual void SetEnvironmentSync(bool bUpdate) = 0;
 
+    /// forces synchronization with the environment, returns when the environment is fully synchronized.
+    /// Note that this method might not work if environment is locked in current thread
+    virtual void EnvironmentSync() = 0;
+
     virtual void ViewerSetSize(int w, int h) = 0;
     virtual void ViewerMove(int x, int y) = 0;
     virtual void ViewerSetTitle(const std::string& ptitle) = 0;
