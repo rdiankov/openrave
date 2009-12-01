@@ -2057,7 +2057,8 @@ protected:
             return false;
 
         SyncWithWorkerThread();
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        // do not need lock
+        //EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
 
         if( problemid > 0 ) {
             map<int, ProblemInstancePtr >::iterator it = _mapProblems.find(problemid);
