@@ -1,0 +1,36 @@
+<Robot name="PA10">
+  <KinBody file="pa10.kinbody.xml">
+    <KinBody file="schunk_manip.kinbody.xml"/>
+    <Joint name="dummy" type="hinge">
+      <body>link7</body>
+      <body>gripper_base</body>
+      <axis>0 0 1</axis>
+      <lostop>0</lostop>
+      <histop>0</histop>
+    </Joint>
+  </KinBody>
+
+  <AttachedSensor name="wristcam">
+    <link>link7</link>
+    <translation>0.049552  -0.042570   0.122668</translation>
+    <rotationmat> -0.639703 -0.726309 -0.251505 0.683733 -0.687206 0.245474 -0.351126 -0.014932 0.936209</rotationmat>
+    <sensor type="BaseCamera" args="">
+      <KK>866.662109 868.02655 515.534058 346.636261</KK>
+      <width>1024</width>
+      <height>768</height>
+      <framerate>5</framerate>
+      <color>0.5 0.5 1</color>
+      <power>0</power>
+    </sensor>
+  </AttachedSensor>
+
+  <Manipulator>
+    <base>link0</base>
+    <effector>link7</effector>
+    <joints>jfinger_L</joints>
+    <armjoints>S1 S2 S3 E1 E2 W1 W2</armjoints>
+    <iksolver>PA10ikfast 0.1</iksolver>
+    <closingdirection>-1</closingdirection>
+    <rotationaxis>0 0 1 135</rotationaxis>
+  </Manipulator>
+</Robot>
