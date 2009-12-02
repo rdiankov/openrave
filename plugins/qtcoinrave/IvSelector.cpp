@@ -341,6 +341,7 @@ IvJointDragger::IvJointDragger(QtCoinViewerPtr viewer, ItemPtr pItem, int iSelec
 
     _jointtype = pjoint->GetType();
     _dofindex = pjoint->GetDOFIndex();
+    _jointname = pjoint->GetName();
     pjoint->GetLimits(_vlower,_vupper);
 
     _pLinkNode = pbody->GetIvLink(iSelectedLink);
@@ -588,11 +589,11 @@ void IvJointDragger::GetMessage(ostream& sout)
         return;
 
     vector<dReal> vjoints;
-    pbody->GetBody()->GetJointValues(vjoints);
+    pbody->GetJointValues(vjoints);
     
     sout << "Selected " << _selectedItem->GetName() << " (id=" << pbody->GetNetworkId() << ")" << endl
          << std::fixed << std::setprecision(3)
-         << "  joint " << _iJointIndex << " = " << vjoints[_iJointIndex];
+         << "  joint " << _jointname << " (" << _iJointIndex << ") "  << " = " << vjoints[_iJointIndex];
 
     if( pbody->GetBody()->GetJoints()[_iJointIndex]->GetType() != KinBody::Joint::JointSlider )
         sout << " rad (" << (vjoints[_iJointIndex]/PI*180.0f) << " deg)" << endl;

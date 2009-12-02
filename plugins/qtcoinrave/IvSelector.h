@@ -96,6 +96,7 @@ protected:
     KinBody::Joint::JointType _jointtype;
     int _dofindex;
     vector<dReal> _vlower, _vupper;
+    string _jointname;
 
     Vector vaxes[3];
     SoSeparator* _pLinkNode; // node of the link of the target body

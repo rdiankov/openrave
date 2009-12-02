@@ -1778,28 +1778,57 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
         return false;
     }
 
-    int jindex=-1;
-
     if( ControlDown() ) {
-        
         if( !!pSelectedLink ) {
             // search the joint nodes
-            vector<KinBody::JointPtr>::const_iterator itjoint;
-            jindex = 0;
-            FORIT(itjoint, pKinBody->GetBody()->GetJoints()) {
-                if( pKinBody->GetBody()->DoesAffect(jindex, pSelectedLink->GetIndex()) && 
-                    ((*itjoint)->GetFirstAttached()==pSelectedLink || (*itjoint)->GetSecondAttached()==pSelectedLink) ) {
-                    pjoint = *itjoint;
-                    break;
+            FOREACH(itjoint, pKinBody->GetBody()->GetJoints()) {
+                if( ((*itjoint)->GetFirstAttached()==pSelectedLink || (*itjoint)->GetSecondAttached()==pSelectedLink) ) {
+                    vector<dReal> lower,upper;
+                    (*itjoint)->GetLimits(lower,upper);
+                    size_t i;
+                    for(i = 0; i < lower.size(); ++i) {
+                        if( RaveFabs(lower[i]-upper[i]) > 1e-6 )
+                            break;
+                    }
+                    if( i != lower.size() ) {
+                        // joint has a range, so consider it for selection
+                        if( pKinBody->GetBody()->DoesAffect((*itjoint)->GetJointIndex(), pSelectedLink->GetIndex()) )
+                            pjoint = *itjoint;
+                    }
+                    else {
+                        KinBody::LinkPtr pother = (*itjoint)->GetFirstAttached()==pSelectedLink ? (*itjoint)->GetSecondAttached() : (*itjoint)->GetFirstAttached();
+                        FOREACH(itjoint2, pKinBody->GetBody()->GetJoints()) {
+                            if( pKinBody->GetBody()->DoesAffect((*itjoint2)->GetJointIndex(), pother->GetIndex()) && 
+                                ((*itjoint2)->GetFirstAttached()==pother || (*itjoint2)->GetSecondAttached()==pother) ) {
+                                pjoint = *itjoint2;
+                                break;
+                            }
+                        }
+                    }
+                        
+                    if( !!pjoint )
+                        break;
                 }
-                ++jindex;
+            }
+
+            if( !pjoint ) {
+                FOREACH(itjoint, pKinBody->GetBody()->GetPassiveJoints()) {
+                    if( (*itjoint)->GetMimicJointIndex() >= 0 ) {
+                        KinBody::JointPtr ptempjoint = pKinBody->GetBody()->GetJoints()[(*itjoint)->GetMimicJointIndex()];
+                        if( pKinBody->GetBody()->DoesAffect(ptempjoint->GetJointIndex(), pSelectedLink->GetIndex()) && 
+                            ((*itjoint)->GetFirstAttached()==pSelectedLink || (*itjoint)->GetSecondAttached()==pSelectedLink) ) {
+                            pjoint = *itjoint;
+                            break;
+                        }
+                    }
+                }
             }
         }
     }
     
     // construct an appropriate _pdragger
     if (!!pjoint) {
-        _pdragger.reset(new IvJointDragger(shared_viewer(), pItem, pSelectedLink->GetIndex(), scale, jindex, _bJointHilit));
+        _pdragger.reset(new IvJointDragger(shared_viewer(), pItem, pSelectedLink->GetIndex(), scale, pjoint->GetJointIndex(), _bJointHilit));
     }
     else if (!bIK) {
         _pdragger.reset(new IvObjectDragger(shared_viewer(), pItem, scale, bAllowRotation));
