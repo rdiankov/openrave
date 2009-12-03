@@ -1817,7 +1817,7 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
                         KinBody::JointPtr ptempjoint = pKinBody->GetBody()->GetJoints()[(*itjoint)->GetMimicJointIndex()];
                         if( pKinBody->GetBody()->DoesAffect(ptempjoint->GetJointIndex(), pSelectedLink->GetIndex()) && 
                             ((*itjoint)->GetFirstAttached()==pSelectedLink || (*itjoint)->GetSecondAttached()==pSelectedLink) ) {
-                            pjoint = *itjoint;
+                            pjoint = ptempjoint;
                             break;
                         }
                     }
