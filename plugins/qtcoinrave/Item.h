@@ -154,7 +154,8 @@ public:
     virtual void SetGrab(bool bGrab, bool bUpdate=true);
 
 private:
-    std::vector< EE > _vEndEffectors;
+    void CreateAxis(EE& ee, const string& name);
+    std::vector< EE > _vEndEffectors, _vAttachedSensors;
 };
 typedef boost::shared_ptr<RobotItem> RobotItemPtr;
 typedef boost::shared_ptr<RobotItem const> RobotItemConstPtr;

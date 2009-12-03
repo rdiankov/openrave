@@ -397,110 +397,123 @@ KinBody::LinkPtr KinBodyItem::GetLinkFromIv(SoNode* plinknode) const
 
 RobotItem::RobotItem(QtCoinViewerPtr viewer, RobotBasePtr robot, ViewGeometry viewgeom) : KinBodyItem(viewer, robot, viewgeom)
 {
+    _vEndEffectors.resize(robot->GetManipulators().size());
     int index = 0;
     FOREACHC(itmanip, robot->GetManipulators()) {
-
         if( !!(*itmanip)->GetEndEffector() ) {
-            
-            SoSwitch* peeswitch = new SoSwitch();
-            SoSeparator* peesep = new SoSeparator();
-            SoTransform* ptrans = new SoTransform();
-            _vEndEffectors.push_back(EE(index, ptrans, peeswitch));
-
-            _ivGeom->addChild(peeswitch);
-            peeswitch->addChild(peesep);
-            peeswitch->whichChild = SO_SWITCH_NONE;
-            peesep->addChild(ptrans);
-
-            // set a diffuse color
-            {
-                SoMaterial* mtrl = new SoMaterial;
-                mtrl->diffuseColor = SbColor(1,0.5,0.5);
-                mtrl->ambientColor = SbColor(1,0.5,0.5);
-                peesep->addChild(mtrl);
-
-                SoSphere* c = new SoSphere();
-                c->radius = 0.004f;
-                peesep->addChild(c);
-            }
-            
-            // add some axes
-            SoSeparator* paxes = new SoSeparator();
-
-            Vector colors[] = {Vector(0,0,1),Vector(0,1,0),Vector(1,0,0)};
-            Vector rotations[] = {Vector(1,0,0,PI/2), Vector(1,0,0,0), Vector(0,0,1,-PI/2)};
-
-            // add 3 cylinder+cone axes
-            for(int i = 0; i < 3; ++i) {
-                // set a diffuse color
-                SoSeparator* psep = new SoSeparator();
-
-                SoMaterial* mtrl = new SoMaterial;
-                mtrl->diffuseColor = SbColor(colors[i].x, colors[i].y, colors[i].z);
-                mtrl->ambientColor = SbColor(colors[i].x, colors[i].y, colors[i].z);
-                mtrl->setOverride(true);
-            
-                SoTransform* protation = new SoTransform();
-                protation->rotation.setValue(SbVec3f(rotations[i].x, rotations[i].y, rotations[i].z), rotations[i].w);
-
-                SoTransform* pcyltrans = new SoTransform();
-                pcyltrans->translation.setValue(0,0.02f,0);
-
-                SoCylinder* c = new SoCylinder();
-                c->radius = 0.002f;
-                c->height = 0.04f;
-            
-                SoCone* cn = new SoCone();
-                cn->bottomRadius = 0.004f;
-                cn->height = 0.02f;
-            
-                SoTransform* pconetrans = new SoTransform();
-                pconetrans->translation.setValue(0,0.02f,0);
-
-                psep->addChild(mtrl);
-                psep->addChild(protation);
-                psep->addChild(pcyltrans);
-                psep->addChild(c);
-                psep->addChild(pconetrans);
-                psep->addChild(cn);
-                paxes->addChild(psep);
-            }
-
-            peesep->addChild(paxes);
-
-            // add text
-            {
-                SoSeparator* ptextsep = new SoSeparator();
-                peesep->addChild(ptextsep);
-        
-                //Transform t = GetRaveTransform(_selectedItem->GetIvTransform());
-                
-                SoTranslation* ptrans = new SoTranslation();
-                ptrans->translation.setValue(SbVec3f(0.02f,0.02f,0.02f));
-                ptextsep->addChild(ptrans);
-        
-                SoTransparencyType* ptype = new SoTransparencyType();
-                ptype->value = SoGLRenderAction::NONE;
-                ptextsep->addChild(ptype);
-
-                SoBaseColor* pcolor = new SoBaseColor();
-                pcolor->rgb.setValue(0,0,0);
-                ptextsep->addChild(pcolor);
-
-                SoFont* pfont = new SoFont();
-                pfont->name = "Courier:Bold";
-                pfont->size = 18;
-                ptextsep->addChild(pfont);
-
-                SoText2 * ptext = new SoText2();
-                char str[256];
-                sprintf(str,"EE%d", index);
-                ptext->string.setValue(str);
-                ptextsep->addChild(ptext);
-            }
+            _vEndEffectors[index]._index = index;
+            CreateAxis(_vEndEffectors[index],str(boost::format("EE%d")%index));
         }
-
         ++index;
+    }
+
+    _vAttachedSensors.resize(robot->GetSensors().size());
+    index = 0;
+    FOREACHC(itsensor, robot->GetSensors()) {
+        if( !!(*itsensor)->GetAttachingLink() ) {
+            _vAttachedSensors[index]._index = index;
+            CreateAxis(_vAttachedSensors[index],str(boost::format("AS%d")%index));
+        }
+        ++index;
+    }
+}
+
+void RobotItem::CreateAxis(RobotItem::EE& ee, const string& name)
+{
+    SoSwitch* peeswitch = new SoSwitch();
+    SoSeparator* peesep = new SoSeparator();
+    SoTransform* ptrans = new SoTransform();
+    ee._ptrans = ptrans;
+    ee._pswitch = peeswitch;
+
+    _ivGeom->addChild(peeswitch);
+    peeswitch->addChild(peesep);
+    peeswitch->whichChild = SO_SWITCH_NONE;
+    peesep->addChild(ptrans);
+
+    // set a diffuse color
+    {
+        SoMaterial* mtrl = new SoMaterial;
+        mtrl->diffuseColor = SbColor(1,0.5,0.5);
+        mtrl->ambientColor = SbColor(1,0.5,0.5);
+        peesep->addChild(mtrl);
+
+        SoSphere* c = new SoSphere();
+        c->radius = 0.004f;
+        peesep->addChild(c);
+    }
+            
+    // add some axes
+    SoSeparator* paxes = new SoSeparator();
+
+    Vector colors[] = {Vector(0,0,1),Vector(0,1,0),Vector(1,0,0)};
+    Vector rotations[] = {Vector(1,0,0,PI/2), Vector(1,0,0,0), Vector(0,0,1,-PI/2)};
+
+    // add 3 cylinder+cone axes
+    for(int i = 0; i < 3; ++i) {
+        // set a diffuse color
+        SoSeparator* psep = new SoSeparator();
+
+        SoMaterial* mtrl = new SoMaterial;
+        mtrl->diffuseColor = SbColor(colors[i].x, colors[i].y, colors[i].z);
+        mtrl->ambientColor = SbColor(colors[i].x, colors[i].y, colors[i].z);
+        mtrl->setOverride(true);
+            
+        SoTransform* protation = new SoTransform();
+        protation->rotation.setValue(SbVec3f(rotations[i].x, rotations[i].y, rotations[i].z), rotations[i].w);
+
+        SoTransform* pcyltrans = new SoTransform();
+        pcyltrans->translation.setValue(0,0.02f,0);
+
+        SoCylinder* c = new SoCylinder();
+        c->radius = 0.002f;
+        c->height = 0.04f;
+            
+        SoCone* cn = new SoCone();
+        cn->bottomRadius = 0.004f;
+        cn->height = 0.02f;
+            
+        SoTransform* pconetrans = new SoTransform();
+        pconetrans->translation.setValue(0,0.02f,0);
+
+        psep->addChild(mtrl);
+        psep->addChild(protation);
+        psep->addChild(pcyltrans);
+        psep->addChild(c);
+        psep->addChild(pconetrans);
+        psep->addChild(cn);
+        paxes->addChild(psep);
+    }
+
+    peesep->addChild(paxes);
+
+    // add text
+    {
+        SoSeparator* ptextsep = new SoSeparator();
+        peesep->addChild(ptextsep);
+        
+        //Transform t = GetRaveTransform(_selectedItem->GetIvTransform());
+                
+        SoTranslation* ptrans = new SoTranslation();
+        ptrans->translation.setValue(SbVec3f(0.02f,0.02f,0.02f));
+        ptextsep->addChild(ptrans);
+        
+        SoTransparencyType* ptype = new SoTransparencyType();
+        ptype->value = SoGLRenderAction::NONE;
+        ptextsep->addChild(ptype);
+
+        SoBaseColor* pcolor = new SoBaseColor();
+        pcolor->rgb.setValue(0,0,0);
+        ptextsep->addChild(pcolor);
+
+        SoFont* pfont = new SoFont();
+        pfont->name = "Courier:Bold";
+        pfont->size = 18;
+        ptextsep->addChild(pfont);
+
+        SoText2 * ptext = new SoText2();
+        ptext->string.setValue(name.c_str());
+        ptextsep->addChild(ptext);
     }
 }
 
@@ -515,8 +528,14 @@ void RobotItem::SetGrab(bool bGrab, bool bUpdate)
             GetRobot()->GetController()->SetPath(TrajectoryBaseConstPtr());
     }
 
-    FOREACH(itee, _vEndEffectors)
-        itee->_pswitch->whichChild = bGrab ? SO_SWITCH_ALL : SO_SWITCH_NONE;
+    FOREACH(itee, _vEndEffectors) {
+        if( !!itee->_pswitch )
+            itee->_pswitch->whichChild = bGrab ? SO_SWITCH_ALL : SO_SWITCH_NONE;
+    }
+    FOREACH(itee, _vAttachedSensors) {
+        if( !!itee->_pswitch )
+            itee->_pswitch->whichChild = bGrab ? SO_SWITCH_ALL : SO_SWITCH_NONE;
+    }
 
     KinBodyItem::SetGrab(bGrab, bUpdate);
 }
@@ -540,9 +559,19 @@ bool RobotItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<
         
         FOREACH(itee, _vEndEffectors) {
             if( itee->_index >= 0 && itee->_index < (int)GetRobot()->GetManipulators().size()) {
-                RobotBase::ManipulatorConstPtr manip = GetRobot()->GetManipulators()[itee->_index];
+                RobotBase::ManipulatorConstPtr manip = GetRobot()->GetManipulators().at(itee->_index);
                 if( !!manip->GetEndEffector() ) {
-                    RaveTransform<float> tgrasp = vtrans[manip->GetEndEffector()->GetIndex()]*manip->GetGraspTransform();
+                    RaveTransform<float> tgrasp = vtrans.at(manip->GetEndEffector()->GetIndex())*manip->GetGraspTransform();
+                    SetSoTransform(itee->_ptrans, transInvRoot * tgrasp);
+                }
+            }
+        }
+
+        FOREACH(itee, _vAttachedSensors) {
+            if( itee->_index >= 0 && itee->_index < (int)GetRobot()->GetSensors().size()) {
+                RobotBase::AttachedSensorConstPtr sensor = GetRobot()->GetSensors().at(itee->_index);
+                if( !!sensor->GetAttachingLink() ) {
+                    RaveTransform<float> tgrasp = vtrans.at(sensor->GetAttachingLink()->GetIndex())*sensor->GetRelativeTransform();
                     SetSoTransform(itee->_ptrans, transInvRoot * tgrasp);
                 }
             }
