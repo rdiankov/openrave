@@ -94,7 +94,7 @@ class BaseCameraSensor : public SensorBase
         _pgeom.reset(new CameraGeomData());
         _pdata.reset(new CameraSensorData());
         _bShowCameraImage = false;
-        _bPower = true;
+        _bPower = false;
         _vColor = RaveVector<float>(0.5f,0.5f,1,1);
         framerate = 5;
         _bUpdateCameraPlot = true;
@@ -124,7 +124,7 @@ class BaseCameraSensor : public SensorBase
     {
         boost::shared_ptr<CameraSensorData> pdata = _pdata;
 
-        if( 0&&_bUpdateCameraPlot ) {
+        if( _bUpdateCameraPlot ) {
             // render a simple frustum outlining camera's dimension
             // the frustum is colored with vColor, the x and y axes are colored separetely
             Vector points[7];

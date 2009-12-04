@@ -284,9 +284,12 @@ bool KinBodyItem::UpdateFromIv()
         *ittrans = tglob * *ittrans;
         ++ittrans;
     }
-
-    EnvironmentMutex::scoped_lock lock(_pchain->GetEnv()->GetMutex());
-    _pchain->SetBodyTransformations(vtrans);
+    
+    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer->LockEnvironment();
+    if( !!lockenv )
+        _pchain->SetBodyTransformations(vtrans);
+    else
+        RAVELOG_WARN("failed to acquire environment lock for updating body\n");
     return true;
 }
 

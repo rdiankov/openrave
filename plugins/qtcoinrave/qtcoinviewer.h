@@ -151,6 +151,8 @@ public:
         _listRemoveItems.push_back(pItem);
     }
 
+    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> LockEnvironment(uint64_t timeout=50000);
+
 public slots:
 
     // menu items
@@ -252,6 +254,8 @@ protected:
 
     virtual void InitOffscreenRenderer();
     virtual void SetupMenus();
+
+    virtual void _UpdateEnvironment();
 
     // selection and deselection handling
     static void _SelectHandler(void *, class SoPath *); 

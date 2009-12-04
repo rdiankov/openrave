@@ -2451,7 +2451,7 @@ public:
             if( xmlname == "environment" ) {
                 _bInEnvironment = true;
             }
-            else if( xmlname == "bkgndcolor" || xmlname == "camrotaxis" || xmlname == "camrotmat" || xmlname == "camtrans" || xmlname == "bkgndcolor" || xmlname == "plugin" ) {
+            else if( xmlname == "bkgndcolor" || xmlname == "camrotaxis" || xmlname == "camrotationaxis" || xmlname == "camrotmat" || xmlname == "camtrans" || xmlname == "bkgndcolor" || xmlname == "plugin" ) {
             }
             else {
                 _pcurreader.reset(new DummyXMLReader(xmlname, "environment"));
@@ -2498,7 +2498,7 @@ public:
             else if( xmlname == "bkgndcolor" ) {
                 _ss >> vBkgndColor.x >> vBkgndColor.y >> vBkgndColor.z;
             }
-            else if( xmlname == "camrotaxis" ) {
+            else if( xmlname == "camrotaxis" || xmlname == "camrotationaxis" ) {
                 Vector vaxis; dReal fangle=0;
                 _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
                 tCamera.rotfromaxisangle(vaxis.normalize3(), fangle * PI / 180.0f);

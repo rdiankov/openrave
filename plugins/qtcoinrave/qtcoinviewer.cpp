@@ -1759,19 +1759,7 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
         return false;
     }
 
-    // try to acquire the environment lock
-#if BOOST_VERSION >= 103500
-    EnvironmentMutex::scoped_try_lock lockenv(GetEnv()->GetMutex(),boost::defer_lock_t());
-#else
-    EnvironmentMutex::scoped_try_lock lockenv(GetEnv()->GetMutex(),false);
-#endif
-    uint64_t basetime = GetMicroTime();
-    while(GetMicroTime()-basetime<100000 ) {
-        lockenv.try_lock();
-        if( !!lockenv )
-            break;
-    }
-
+    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironment(100000);
     if( !lockenv ) {
         _ivRoot->deselectAll();
         RAVELOG_WARNA("failed to grab environment lock\n");
@@ -1857,6 +1845,27 @@ void QtCoinViewer::_deselect()
         _pSelectedItem.reset();
         _ivRoot->deselectAll();
     }
+}
+
+boost::shared_ptr<EnvironmentMutex::scoped_try_lock> QtCoinViewer::LockEnvironment(uint64_t timeout)
+{
+    // try to acquire the lock
+#if BOOST_VERSION >= 103500
+    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),boost::defer_lock_t()));
+#else
+    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
+#endif
+    uint64_t basetime = GetMicroTime();
+    while(GetMicroTime()-basetime<timeout ) {
+        lockenv->try_lock();
+        if( !!*lockenv )
+            break;
+        _UpdateEnvironment();
+    }
+
+    if( !*lockenv )
+        lockenv.reset();
+    return lockenv;
 }
 
 bool QtCoinViewer::_HandleDeselection(SoNode *node)
@@ -1975,6 +1984,11 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
             pToggleDynamicSimulation->setChecked(p->GetXMLId().size()>0);
     }
 
+    _UpdateEnvironment();
+}
+
+void QtCoinViewer::_UpdateEnvironment()
+{
     boost::mutex::scoped_lock lockupd(_mutexUpdating);
 
     if( _bUpdateEnvironment ) {
