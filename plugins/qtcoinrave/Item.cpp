@@ -405,7 +405,7 @@ RobotItem::RobotItem(QtCoinViewerPtr viewer, RobotBasePtr robot, ViewGeometry vi
     FOREACHC(itmanip, robot->GetManipulators()) {
         if( !!(*itmanip)->GetEndEffector() ) {
             _vEndEffectors[index]._index = index;
-            CreateAxis(_vEndEffectors[index],str(boost::format("EE%d: %s")%index%(*itmanip)->GetName()));
+            CreateAxis(_vEndEffectors[index],str(boost::format("EE%d")%index));
         }
         ++index;
     }
@@ -415,7 +415,7 @@ RobotItem::RobotItem(QtCoinViewerPtr viewer, RobotBasePtr robot, ViewGeometry vi
     FOREACHC(itsensor, robot->GetSensors()) {
         if( !!(*itsensor)->GetAttachingLink() ) {
             _vAttachedSensors[index]._index = index;
-            CreateAxis(_vAttachedSensors[index],str(boost::format("AS%d: %s")%index%(*itsensor)->GetName()));
+            CreateAxis(_vAttachedSensors[index],str(boost::format("AS%d")%index));
         }
         ++index;
     }
