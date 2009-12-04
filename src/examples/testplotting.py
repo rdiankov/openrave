@@ -39,4 +39,11 @@ if __name__=='__main__':
                       indices=array(((0,1,2),(2,1,3))),
                       colors=array((1,0,0,0.5)))
     raw_input('Enter any key to quit. ')
+    h1 = None
+    h2 = None
+    h3 = None
+    h4 = None
+    h5 = None
+    h6 = None
     orenv.Destroy()
+    

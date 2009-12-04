@@ -541,6 +541,7 @@ class ExplorationPlanner : public RrtPlanner<SimpleNode>
 
                 if( !CollisionFunctions::CheckCollision(GetParameters(),_robot,pnode->q, vSampleConfig, OPEN_START) ) {
                     _treeForward.AddNode(inode,vSampleConfig);
+                    GetEnv()->UpdatePublishedBodies();
                     RAVELOG_DEBUGA(str(boost::format("size %d\n")%_treeForward._nodes.size()));
                 }
             }

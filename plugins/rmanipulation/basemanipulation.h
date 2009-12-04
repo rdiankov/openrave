@@ -1452,6 +1452,7 @@ protected:
                 continue;
             }
 
+            GetEnv()->UpdatePublishedBodies();
             RAVELOG_DEBUGA("iteration %d\n",i);
             twrist = pmanip->GetEndEffectorTransform();
 

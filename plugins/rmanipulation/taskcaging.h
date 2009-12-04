@@ -604,7 +604,8 @@ public:
                 
                     plink->GetParent()->SetBodyTransformations(_vTargetTransforms);
 
-                    while(1) {
+                    int niter=0;
+                    for(niter = 0; niter < 100; niter++) {
                         for(int i = 0; i < _robot->GetActiveDOF(); ++i)
                             vrobotconfig[i] = pDestConf[i] + fRandPerturb[i]*(RaveRandomFloat()-0.5f);
 
@@ -612,6 +613,9 @@ public:
                         if( !_robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) && !_robot->CheckSelfCollision() )
                             break;
                     }
+
+                    if( niter >= 100 )
+                        continue;
                 }
 
                 FOREACH(itvv, _vvvCachedTransforms) {

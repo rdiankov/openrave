@@ -12,6 +12,8 @@
 % You should have received a copy of the GNU Lesser General Public License
 % along with this program.  If not, see <http://www.gnu.org/licenses/>.
 global probs
+addopenravepaths_visibilitygrasping();
+
 randomize = struct('createprob',0.15,'obstacles',{{'data/box0.kinbody.xml','data/box1.kinbody.xml','data/box2.kinbody.xml','data/box3.kinbody.xml'}},'maxcreate',4);
 [robot, scenedata] = SetupPA10Scene('data/pa10grasp.env.xml',randomize);
 dopause = 0;

@@ -51,9 +51,9 @@ SwitchModelPatterns = {};
 % SwitchModelPatterns{objind}.fatfilename = 'data/riceboxf.kinbody.xml';
 % objind = objind + 1;
 
-scenedata.convexfile = fullfile(pwd,'pa10gripper_convex.mat');
-scenedata.visibilityfile = fullfile(pwd,'cereal_visibility_pa10.mat');
-scenedata.graspsetfile = fullfile(pwd,'cereal_grasps_pa10.mat');
+scenedata.convexfile = fullfile(tempdir(),'pa10gripper_convex.mat');
+scenedata.visibilityfile = fullfile(tempdir(),'cereal_visibility_pa10.mat');
+scenedata.graspsetfile = fullfile(tempdir(),'cereal_grasps_pa10.mat');
 load('pa10_cereal.mat');
 save('-ascii',scenedata.convexfile,'gripper_convex');
 save('-ascii',scenedata.visibilityfile,'visibility');

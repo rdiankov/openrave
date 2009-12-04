@@ -44,9 +44,7 @@ if __name__=='__main__':
         sys.exit(1)
 
     while(True):
-        cmd = raw_input('Enter command (q-quit,c-toggle selection): ')
+        cmd = raw_input('In selection mode, click anywhere on the viewer. Enter command (q-quit): ')
         if cmd == 'q':
             break
-        elif cmd == 'c':
-            g_bSelectItem = not g_bSelectItem
     env.Destroy()
