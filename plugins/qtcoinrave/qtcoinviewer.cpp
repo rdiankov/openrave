@@ -52,7 +52,9 @@ void CustomCoinHandlerCB(const class SoError * error, void * data)
         // extremely annoying errors
         if( strstr(error->getDebugString().getString(),"Coin warning in SbLine::setValue()") != NULL ||
             strstr(error->getDebugString().getString(),"Coin warning in SbDPLine::setValue()") != NULL ||
-            strstr(error->getDebugString().getString(),"Coin warning in SbVec3f::setValue()") != NULL )
+            strstr(error->getDebugString().getString(),"Coin warning in SbVec3f::setValue()") != NULL ||
+            strstr(error->getDebugString().getString(),"Coin warning in SoNormalGenerator::calcFaceNormal()") != NULL ||
+            strstr(error->getDebugString().getString(),"Coin error in SoGroup::removeChild(): tried to remove non-existent child") != NULL )
             return;
 
     if( s_DefaultHandlerCB != NULL )

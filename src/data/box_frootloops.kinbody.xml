@@ -6,4 +6,7 @@
       <diffusecolor>0 1 0</diffusecolor>
     </Geom>
   </Body>
+  <objecttransform>
+    <sid>data/box_frootloops.kinbody.xml</sid>
+  </objecttransform>
 </KinBody>

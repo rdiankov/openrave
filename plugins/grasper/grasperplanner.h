@@ -22,12 +22,31 @@
 // plans a grasp
 class GrasperPlanner:  public PlannerBase
 {
+    enum CollisionType
+    {
+        CT_None = 0,
+        CT_AvoidLinkHit = 1,
+        CT_RegularCollision = 2,
+        CT_SelfCollision = 4,
+    };
+
 public:
-    GrasperPlanner(EnvironmentBasePtr penv) : PlannerBase(penv) {}
+ GrasperPlanner(EnvironmentBasePtr penv) : PlannerBase(penv), _report(new COLLISIONREPORT()) {}
     bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {
         _robot = pbase;
         _parameters.copy(pparams);
+
+        _vAvoidLinkGeometry.resize(0);
+        FOREACH(itavoid,_parameters._vAvoidLinkGeometry) {
+            KinBody::LinkPtr plink = _robot->GetLink(*itavoid);
+            if( !plink ) {
+                RAVELOG_WARNA(str(boost::format("failed to find avoiding link\n")%*itavoid));
+                continue;
+            }
+            _vAvoidLinkGeometry.push_back(plink);
+        }
+
         _bInit = true;
         return true;
     }
@@ -119,7 +138,10 @@ public:
     
             while(num_iters-- > 0) {
                 for(int q = 0; q < (int)vlinks.size(); q++) {
-                    if(GetEnv()->CheckCollision(KinBody::LinkConstPtr(vlinks[q]))) {   
+                    int ct = CheckCollision(vlinks[q]);
+                    if( ct & CT_AvoidLinkHit )
+                        return false;
+                    if( ct != CT_None ){ 
                         if(coarse_pass) {
                             //coarse step collided, back up and shrink step
                             if(bMoved) {
@@ -231,8 +253,10 @@ public:
             
                 for(int q = 0; q < (int)vlinks.size(); q++)
                     {
-                        bool bSelfCollision=false;
-                        if(_robot->DoesAffect(_robot->GetActiveJointIndex(ifing),q)  && (GetEnv()->CheckCollision(KinBody::LinkConstPtr(vlinks[q]))||(bSelfCollision=_robot->CheckSelfCollision())) ) {
+                        int ct;
+                        if(_robot->DoesAffect(_robot->GetActiveJointIndex(ifing),q)  && (ct = CheckCollision(vlinks[q])) != CT_None ) {
+                            if( ct & CT_AvoidLinkHit )
+                                return false;
                             if(coarse_pass) {
                                 //coarse step collided, back up and shrink step
                                 coarse_pass = false;
@@ -255,7 +279,7 @@ public:
                                     }
                                     //vbcollidedlinks[q] = true;
                                     //vijointresponsible[q] = _robot->GetActiveJointIndex(ifing);
-                                    if( bSelfCollision ) {
+                                    if( ct & CT_SelfCollision ) {
                                         // don't want the robot to end up in self collision, so back up
                                         dofvals[ifing] -= vclosingsign[ifing] * step_size;
                                     }
@@ -275,7 +299,7 @@ public:
                                     RAVELOG_VERBOSEA(ss.str());
                                 }
                      
-                                if( bSelfCollision ) {
+                                if( ct & CT_SelfCollision ) {
                                     // don't want the robot to end up in self collision, so back up
                                     dofvals[ifing] -= vclosingsign[ifing] * step_size;
                                 }
@@ -309,6 +333,25 @@ public:
         return true;
     }
 
+    virtual int CheckCollision(KinBody::LinkConstPtr plink)
+    {
+        int ct = 0;
+        if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(plink),_report) ) {
+            ct |= CT_RegularCollision;
+            FOREACH(itavoid,_vAvoidLinkGeometry) {
+                if( *itavoid == _report->plink1 ) {
+                    ct |= CT_AvoidLinkHit;
+                    break;
+                }
+            }
+            return ct;
+        }
+
+        if(_robot->CheckSelfCollision())
+            ct |= CT_SelfCollision;
+        return ct;
+    }
+
     virtual RobotBasePtr GetRobot() {return _robot; }
 
     void UpdateDependents(int ifing, vector<dReal>& dofvals)
@@ -329,8 +372,10 @@ public:
     }
 
 protected:
+    CollisionReportPtr _report;
     GraspParameters _parameters;
     RobotBasePtr _robot;
+    vector<KinBody::LinkPtr> _vAvoidLinkGeometry;
     bool _bInit;
 
 };

@@ -40,10 +40,11 @@ grasps = GraspTable;
 TargTrans = reshape(orBodyGetLinks(Target.id), [3 4]);
 grasps(:,robot.grasp.direction) = grasps(:,robot.grasp.direction) * transpose(TargTrans(:,1:3));
 grasps(:,robot.grasp.center) = grasps(:,robot.grasp.center) * transpose(TargTrans(:,1:3)) + repmat(transpose(TargTrans(:,4)), [size(grasps,1) 1]);
+orEnvSetOptions('collision pqp');
 
 for i = 1:size(grasps,1)
     orEnvClose();
-    contactsraw = RunGrasp(robot, grasps(i,:), Target,0,0);
+    contactsraw = RunGrasp(robot, grasps(i,:), Target,0);
     if( ~isempty(contactsraw) )
         contacts = sscanf(contactsraw,'%f');
         contacts = reshape(contacts, [6 length(contacts)/6]);

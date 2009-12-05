@@ -159,6 +159,8 @@ public:
         /// \param bAdd if true, torque is added to previous torques, otherwise it is set
         virtual void SetTorque(const Vector& torque, bool bAdd);
 
+        //typedef std::list<GEOMPROPERTIES>::iterator GeomPtr;
+        //typedef std::list<GEOMPROPERTIES>::const_iterator GeomConstPtr;
         const std::list<GEOMPROPERTIES>& GetGeometries() const { return _listGeomProperties; }
     private:
         

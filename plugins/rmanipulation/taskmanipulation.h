@@ -289,7 +289,7 @@ class TaskManipulation : public ProblemInstance
             }
 
             if( !sinput ) {
-                RAVELOG_WARNA("failed\n");
+                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -829,7 +829,7 @@ class TaskManipulation : public ProblemInstance
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA("failed\n");
+                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }

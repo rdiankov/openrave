@@ -1082,7 +1082,8 @@ void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, const Trans
             // if static and trans is valid, then apply the relative transformation to the link
             _veclinks[i]->SetTransform(_veclinks[i]->GetTransform()*tbase);
         }
-        else _veclinks[i]->userdata = 0;
+        else
+            _veclinks[i]->userdata = 0;
     }
 
     SetJointValues(vJointValues,bCheckLimits);
@@ -1169,6 +1170,10 @@ void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, bool bCheck
     vector<JointPtr>* alljoints[2] = {&_vecjoints, &_vecPassiveJoints};
     vector<dReal> vjointang;
 
+    vector< vector<dReal> > vPassiveJointValues(_vecPassiveJoints.size());
+    for(size_t i = 0; i < vPassiveJointValues.size(); ++i)
+        _vecPassiveJoints[i]->GetValues(vPassiveJointValues[i]);
+
     while(numleft > 0) {
         int org = numleft;
 
@@ -1180,7 +1185,7 @@ void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, bool bCheck
         for(size_t j = 0; j < 2; ++j) {
             
             FOREACH(itjoint, *alljoints[j]) {
-                const dReal* pvalues;
+                const dReal* pvalues=NULL;
                 
                 if( itindex != _vecJointIndices.end() ) pvalues = pJointValues+*itindex++;
                 else {
@@ -1196,11 +1201,16 @@ void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, bool bCheck
                         pvalues = dummyvalues;
                     }
                     else {
-                        dummyvalues[0] = dummyvalues[1] = dummyvalues[2] = 0;
-                        pvalues = dummyvalues;
-                        (*itjoint)->bodies[0]->userdata = 1;
-                        numleft--;
-                        continue;
+                        if( alljoints[j] == &_vecPassiveJoints ) {
+                            pvalues = &vPassiveJointValues[itjoint-_vecPassiveJoints.begin()][0];
+                        }
+                        else {
+                            dummyvalues[0] = dummyvalues[1] = dummyvalues[2] = 0;
+                            pvalues = dummyvalues;
+                            (*itjoint)->bodies[0]->userdata = 1;
+                            numleft--;
+                            continue;
+                        }
                     }
                 }
 
@@ -1561,15 +1571,29 @@ void KinBody::ComputeJointHierarchy()
             
             bool bDelete = true;
             bool bIsPassive = itjoint->second < 0;
+            LinkPtr* bodies = itjoint->first->bodies;
             if( bIsPassive && itjoint->first->GetMimicJointIndex() < 0 ) {
-                // passive and doesn't affect links in any way, so skip
-                itjoint = ljoints.erase(itjoint);
+                // is not part of the hierarchy, but still used to join links
+                if( !!bodies[0] ) {
+                    if( !!bodies[1] ) {
+                        if( bodies[0]->userdata || bodies[1]->userdata ) {
+                            bodies[0]->userdata = 1;
+                            bodies[1]->userdata = 1;
+                        }
+                        else
+                            bDelete = false;
+                    }
+                    else
+                        bodies[0]->userdata = 1;
+                }
+
+                if( bDelete ) itjoint = ljoints.erase(itjoint);
+                else ++itjoint;
                 continue;
             }
 
             char* pvalues = &_vecJointHierarchy[!bIsPassive ? itjoint->second*_veclinks.size() : itjoint->first->GetMimicJointIndex() * _veclinks.size()];
 
-            LinkPtr* bodies = itjoint->first->bodies;
             if( !!bodies[0] ) {
                 if( !!bodies[1] ) {
 

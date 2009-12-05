@@ -227,7 +227,7 @@ protected:
             else break;
 
             if( !sinput ) {
-                RAVELOG_ERRORA("failed\n");
+                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -294,7 +294,7 @@ protected:
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA("failed\n");
+                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -404,7 +404,7 @@ protected:
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA("failed\n");
+                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -505,7 +505,7 @@ protected:
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA("failed\n");
+                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -801,7 +801,7 @@ protected:
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA("failed\n");
+                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -865,7 +865,7 @@ protected:
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA("failed\n");
+                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -1004,7 +1004,7 @@ protected:
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA("failed\n");
+                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -1111,7 +1111,7 @@ protected:
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA("failed\n");
+                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -1285,7 +1285,7 @@ protected:
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA("failed\n");
+                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -1390,7 +1390,7 @@ protected:
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA("failed\n");
+                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }

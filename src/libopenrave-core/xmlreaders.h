@@ -746,6 +746,7 @@ public:
                             bool bSuccess = false;
                             if( renderfile.size() > 0 ) {
 #ifdef OPENRAVE_COIN3D
+                                SoDB::readlock(); // have to lock coin3d, or otherwise state gets corrupted
                                 SoInput mySceneInput;
                                 if (!mySceneInput.openFile(renderfile.c_str())) {
                                     RAVELOG_WARNA("Failed to open %s for KinBody:TriMesh\n", renderfile.c_str());
@@ -765,6 +766,7 @@ public:
                                 }
                         
                                 mySceneInput.closeFile();
+                                SoDB::readunlock();
 #endif
 
                                 if( !bSuccess ) {

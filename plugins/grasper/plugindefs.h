@@ -153,11 +153,12 @@ class GraspParameters : public PlannerBase::PlannerParameters
  public:
  GraspParameters() : stand_off(0), roll_hand(0), face_target(false), bReturnTrajectory(false) {}
         
-    dReal stand_off; /// start closing fingers when at this distance
-    dReal roll_hand; /// rotate the hand about the palm normal by this many radians
+    dReal stand_off; ///< start closing fingers when at this distance
+    dReal roll_hand; ///< rotate the hand about the palm normal by this many radians
     Vector direction,palmnormal;
-    bool face_target; ///point the hand at the target or not (1 = yes, else no)
+    bool face_target; ///< point the hand at the target or not (1 = yes, else no)
     bool bReturnTrajectory;
+    vector<string> _vAvoidLinkGeometry; ///< list of 
         
  protected:
     // save the extra data to XML
@@ -171,6 +172,10 @@ class GraspParameters : public PlannerBase::PlannerParameters
         O << "<direction>" << direction << "</direction>" << endl;
         O << "<palmnormal>" << palmnormal << "</palmnormal>" << endl;
         O << "<returntrajectory>" << bReturnTrajectory << "</returntrajectory>" << endl;
+        O << "<avoidlinks>" << endl;
+        FOREACH(it,_vAvoidLinkGeometry)
+            O << *it << " ";
+        O << "</avoidlinks>" << endl;
         return !!O;
     }
  
@@ -178,7 +183,9 @@ class GraspParameters : public PlannerBase::PlannerParameters
     virtual bool endElement(const std::string& name)
     {
         // _ss is an internal stringstream that holds the data of the tag
-        if( name == "stand_off")
+        if( name == "avoidlinks" )
+            _vAvoidLinkGeometry = vector<string>((istream_iterator<string>(_ss)), istream_iterator<string>());
+        else if( name == "stand_off")
             _ss >> stand_off;
         else if( name == "face_target")
             _ss >> face_target;

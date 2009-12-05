@@ -38,6 +38,7 @@ public:
 
     /// Always filled
     KinBody::LinkConstPtr plink1, plink2; ///< colliding links
+    //KinBody::Link::GeomConstPtr pgeom1, pgeom2; ///< the specified geometries hit for the given links
     int numCols;            ///< this is the number of objects that collide with the object of interest
     std::vector<KinBody::LinkConstPtr> vLinkColliding; ///< objects colliding with this object
 

@@ -1,4 +1,4 @@
-% data = RunGrasp(robot, grasp, Target, get_clutter, noise, mu, affinedof)
+% data = RunGrasp(robot, grasp, Target, noise, mu, affinedof)
 %
 
 % Copyright (C) 2008 Rosen Diankov (rdiankov@cs.cmu.edu), Dmitry Berenson
@@ -14,7 +14,7 @@
 %
 % You should have received a copy of the GNU General Public License
 % along with this program.  If not, see <http://www.gnu.org/licenses/>.
-function [data,Thand] = RunGrasp(robot, grasp, Target, get_clutter, noise, mu, affinedof)
+function [data,Thand] = RunGrasp(robot, grasp, Target, noise, mu, affinedof)
 
 global probs
 
@@ -33,10 +33,6 @@ command_string = ['direction ', sprintf('%f ', grasp(robot.grasp.direction)), ..
 if( exist('noise','var') && noise )
     command_string =  [command_string, ' noise 0.1 0.005 '];
 end
-if( exist('get_clutter','var') && get_clutter )
-    command_string = [command_string, ' getclutter'];
-end
-
 if( exist('mu', 'var') && mu > 0 )
     command_string = [command_string, ' friction ', num2str(mu)];
 end
@@ -47,8 +43,10 @@ targtrans = transpose(T(10:12,1));
 command_string = [command_string, ' roll ' num2str(grasp(robot.grasp.roll))];
 command_string = [command_string, ' standoff ' num2str(grasp(robot.grasp.standoff))];
 command_string = [command_string, ' centeroffset ' sprintf('%f ', grasp(robot.grasp.center)-targtrans)];
-command_string = [command_string, ' palmdir ' sprintf('%f ', robot.palmdir)];
 #command_string = [command_string, ' collision pqp ' ];
+for i = 1:length(robot.avoidlinks)
+    command_string = [command_string, 'avoidlink ' robot.avoidlinks{i}];
+end
 
 data = orProblemSendCommand(['exec ', command_string], probs.grasp);
 orEnvWait(robot.id);

@@ -64,7 +64,7 @@ class GrasperProblem : public ProblemInstance
         bool bComputeDistMap = false;
         bool bUsePoints = false;
         bool bGetLinkCollisions = false;
-        bool bCenterOnManipulator = false;
+        bool bCenterOnManipulator = true;
 
         bool bExecutePlanner=false;
         bool bTransRobot=true; // if false, don't move the robot
@@ -86,6 +86,7 @@ class GrasperProblem : public ProblemInstance
 
         normalplane = robot->GetActiveManipulator()->GetPalmDirection();
         std::vector<GrasperProblem::SURFACEPOINT> vpoints_in;
+        boost::shared_ptr<GraspParameters> params(new GraspParameters());
 
         boost::shared_ptr<CollisionCheckerMngr> pcheckermngr;
 
@@ -116,6 +117,11 @@ class GrasperProblem : public ProblemInstance
             else if( cmd == "computedistances") {
                 bComputeDistMap = true;
             }
+            else if( cmd == "avoidlink" ) {
+                string linkname;
+                sinput >> linkname;
+                params->_vAvoidLinkGeometry.push_back(linkname);
+            }
             else if( cmd == "usepoints" ) {
                 bUsePoints = true;
                 int numpoints = 0;
@@ -142,8 +148,8 @@ class GrasperProblem : public ProblemInstance
             }
             else if( cmd == "centeroffset" )
                 sinput >> centeroffset.x >> centeroffset.y >> centeroffset.z;
-            else if( cmd == "centermanip" )
-                bCenterOnManipulator = true;
+            else if( cmd == "nocentermanip" )
+                bCenterOnManipulator = false;
             else if( cmd == "fingerspread" )
                 sinput >> fingerspread;
             else if( cmd == "standoff" )
@@ -174,7 +180,7 @@ class GrasperProblem : public ProblemInstance
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA("failed\n");
+                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -348,11 +354,6 @@ class GrasperProblem : public ProblemInstance
             mtrans.m[4] = vright.y;     mtrans.m[5] = vup.y;     mtrans.m[6] = vnewdir.y;
             mtrans.m[8] = vright.z;     mtrans.m[9] = vup.z;     mtrans.m[10] = vnewdir.z;
             mtrans.trans = Tstart.trans;//robot->GetLinks().front()->GetCentroid();
-
-            if( bCenterOnManipulator ) {
-                Transform t = robot->GetActiveManipulator()->GetGraspTransform().inverse();
-                mtrans = mtrans * robot->GetActiveManipulator()->GetGraspTransform().inverse();
-            }
         
             Transform Tfinal(mtrans);
             Transform newrot;
@@ -388,19 +389,18 @@ class GrasperProblem : public ProblemInstance
                 Tfinal = Tfinal * talign;
             }
 
+            if( bCenterOnManipulator && !!robot->GetActiveManipulator() )
+                Tfinal = Tfinal * robot->GetActiveManipulator()->GetGraspTransform().inverse();
+
             robot->SetTransform(Tfinal);    
 
             //backup the robot until it is no longer colliding with the object
-            Transform Ti;
-            Ti.trans = graspcenter;
-            //GetEnv()->plot3(Ti.trans, 1, 0, 0.004f, Vector(0,1,0) );
-            Ti.rot = Tfinal.rot;
             dReal step_size = 0.05f;
             while(1) {
-                robot->SetTransform(Ti);
+                robot->SetTransform(Tfinal);
                 if(!GetEnv()->CheckCollision(KinBodyConstPtr(robot),KinBodyConstPtr(pbody)))
                     break;
-                Ti.trans = Ti.trans - step_size*direction;
+                Tfinal.trans = Tfinal.trans - step_size*direction;
             }
         }
     
@@ -429,7 +429,6 @@ class GrasperProblem : public ProblemInstance
             pbody->ApplyTransform(Trand);
         }
 
-        boost::shared_ptr<GraspParameters> params(new GraspParameters());
         params->SetRobotActiveJoints(robot);
         params->stand_off = standoff;
         params->face_target = false;

@@ -52,7 +52,7 @@ for i = 1:size(K,1)
     % check if 0 is in the center
     V = S(:,K(i,:));
     
-    if( abs(det(V)) < 1e-16 )
+    if( abs(det(V)) < 1e-15 )
         continue;
     end
     
@@ -67,8 +67,8 @@ for i = 1:size(K,1)
         dist = -dist;
     end
     
-    if( dist < 0 )
-        % failed
+    if( dist < 0 || abs(dist-meandist) < 1e-15 )
+        % failed due to center being outside of face or too close to face
         mindist = 0;
         return;
     end

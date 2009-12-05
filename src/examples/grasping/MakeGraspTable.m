@@ -56,6 +56,8 @@ else
     num_tries = 5;
 end
 
+orEnvSetOptions('collision ode');
+
 orBodySetTransform(Target.id, [0 0 0],[1 0 0 0]);
 ab = orBodyGetAABB(Target.id);
 
@@ -95,6 +97,8 @@ grasp = [];
 showhandles = 1;
 oldhandles = [];
 
+orEnvSetOptions('collision pqp');
+
 totalgrasps = size(ApproachDirs,2)*size(preshapes,2)*length(rolls)*length(standoffs);
 for approach = ApproachDirs
     for roll = rolls
@@ -120,9 +124,8 @@ for approach = ApproachDirs
                         grasp(robot.grasp.direction) = newdir/norm(newdir);
                         grasp(robot.grasp.center) = center_offset_backup + 0.03*rand(1,3) - 0.015*ones(1,3);
                     end
-
-                    [contactsraw,Thand] = RunGrasp(robot,grasp,Target,0,0);
-
+                    
+                    [contactsraw,Thand] = RunGrasp(robot,grasp,Target,0);
                     %disp(['Analyzing example ' num2str(counter)]);
 
                     if(size(contactsraw) == 0)
@@ -140,7 +143,7 @@ for approach = ApproachDirs
                             end
                             oldhandles = handles;
                         end
-
+                        
                         newcontacts = SpawnContacts(contacts, friction_mu, 8);
                         [mindist, vol] = AnalyzeGrasp3D(newcontacts);
                         allvol = [allvol vol];
