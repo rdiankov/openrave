@@ -59,9 +59,6 @@ if (QT_FOUND AND SOQT_LIBRARY_FOUND)
 
     if (FFMPEG_FOUND)
       message(STATUS "enabling FFMPEG support")
-      add_definitions(${FFMPEG_CFLAGS})
-      add_definitions(-DENABLE_FFMPEG)
-
       pkg_check_modules(FFMPEG_SWSCALE libswscale)
 
       set(CMAKE_REQUIRED_INCLUDES ${FFMPEG_libavformat_INCLUDEDIR} ${FFMPEG_libavcodec_INCLUDEDIR} ${FFMPEG_libswscale_INCLUDEDIR})
@@ -69,9 +66,17 @@ if (QT_FOUND AND SOQT_LIBRARY_FOUND)
       check_include_file(libavformat/avformat.h HAVE_NEW_AVFORMAT_H)
       check_include_file(libavcodec/avcodec.h HAVE_NEW_AVCODEC_H)
 
+      check_include_file(ffmpeg/avformat.h HAVE_OLD_AVFORMAT_H)
+      check_include_file(ffmpeg/avcodec.h HAVE_OLD_AVCODEC_H)
+
       if( FFMPEG_SWSCALE_FOUND AND HAVE_NEW_SWSCALE_H AND HAVE_NEW_AVFORMAT_H AND HAVE_NEW_AVCODEC_H )
+        add_definitions(${FFMPEG_CFLAGS})
+        add_definitions(-DENABLE_FFMPEG)
         set(FFMPEG_LIBRARIES ${FFMPEG_LIBRARIES} ${FFMPEG_SWSCALE_LIBRARIES})
         add_definitions(-DHAVE_NEW_FFMPEG)
+      elseif(HAVE_OLD_AVFORMAT_H AND HAVE_OLD_AVCODEC_H)
+        add_definitions(${FFMPEG_CFLAGS})
+        add_definitions(-DENABLE_FFMPEG)
       endif()
     elseif(MSVC)
       set (FFMPEG_LIBRARIES vfw32)
