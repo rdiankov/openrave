@@ -24,6 +24,7 @@ def SerializeTransformToCommand(T):
 
 def MoveToHandPosition(T):
     global g_probsmanip
+    print 'movetohandposition '+SerializeTransformToCommand(T)
     success = g_probsmanip.SendCommand('movetohandposition '+SerializeTransformToCommand(T))
     return False if success is None or len(success) == 0 else True
 

@@ -196,7 +196,7 @@ if __name__=='__main__':
     parser = OptionParser(description='Computes the reachability region of a robot and python pickles it into a file.')
     parser.add_option('--robot',action='store',type='string',dest='robot',default='robots/barrettwam.robot.xml',
                       help='OpenRAVE robot to load')
-    parser.add_option('--savereachability', action='store',type='string',dest='savereachability',default='reachability.pp',
+    parser.add_option('--savereachability', action='store',type='string',dest='savereachability',default=None,
                       help='Compute the statistics and save in this file')
     parser.add_option('--loadreachability', action='store',type='string',dest='loadreachability',default=None,
                       help='Load the reachability statistics')
