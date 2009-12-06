@@ -714,8 +714,8 @@ public:
         
         PyKinBodyPtr GetParent() const { return PyKinBodyPtr(new PyKinBody(_pjoint->GetParent(),_pyenv)); }
 
-        PyLinkPtr GetFirstAttached() const { return PyLinkPtr(new PyLink(_pjoint->GetFirstAttached(), _pyenv)); }
-        PyLinkPtr GetSecondAttached() const { return PyLinkPtr(new PyLink(_pjoint->GetSecondAttached(), _pyenv)); }
+        PyLinkPtr GetFirstAttached() const { return !_pjoint->GetFirstAttached() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pjoint->GetFirstAttached(), _pyenv)); }
+        PyLinkPtr GetSecondAttached() const { return !_pjoint->GetSecondAttached() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pjoint->GetSecondAttached(), _pyenv)); }
 
         int GetType() const { return _pjoint->GetType(); }
 
@@ -1208,8 +1208,8 @@ public:
         string GetIKSolverName() const { return _pmanip->GetIKSolverName(); }
         bool HasIKSolver() const { return _pmanip->HasIKSolver(); }
 
-        boost::shared_ptr<PyLink> GetBase() { return PyLinkPtr(new PyLink(_pmanip->GetBase(),_pyenv)); }
-        boost::shared_ptr<PyLink> GetEndEffector() { return PyLinkPtr(new PyLink(_pmanip->GetEndEffector(),_pyenv)); }
+        boost::shared_ptr<PyLink> GetBase() { return !_pmanip->GetBase() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pmanip->GetBase(),_pyenv)); }
+        boost::shared_ptr<PyLink> GetEndEffector() { return !_pmanip->GetEndEffector() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pmanip->GetEndEffector(),_pyenv)); }
         object GetGraspTransform() { return ReturnTransform(_pmanip->GetGraspTransform()); }
         object GetGripperJoints() { return toPyList(_pmanip->GetGripperJoints()); }
         object GetArmJoints() { return toPyList(_pmanip->GetArmJoints()); }
@@ -1316,11 +1316,11 @@ public:
     public:
         PyAttachedSensor(RobotBase::AttachedSensorPtr pattached, PyEnvironmentBasePtr pyenv) : _pattached(pattached),_pyenv(pyenv) {}
         
-        PySensorBasePtr GetSensor() { return PySensorBasePtr(new PySensorBase(_pattached->GetSensor(),_pyenv)); }
-        PyLinkPtr GetAttachingLink() const { return PyLinkPtr(new PyLink(_pattached->GetAttachingLink(), _pyenv)); }
+        PySensorBasePtr GetSensor() { return !_pattached->GetSensor() ? PySensorBasePtr() : PySensorBasePtr(new PySensorBase(_pattached->GetSensor(),_pyenv)); }
+        PyLinkPtr GetAttachingLink() const { return !_pattached->GetAttachingLink() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pattached->GetAttachingLink(), _pyenv)); }
         object GetRelativeTransform() const { return ReturnTransform(_pattached->GetRelativeTransform()); }
         object GetTransform() const { return ReturnTransform(_pattached->GetTransform()); }
-        PyRobotBasePtr GetRobot() const { return PyRobotBasePtr(new PyRobotBase(_pattached->GetRobot(), _pyenv)); }
+        PyRobotBasePtr GetRobot() const { return _pattached->GetRobot() ? PyRobotBasePtr() : PyRobotBasePtr(new PyRobotBase(_pattached->GetRobot(), _pyenv)); }
         string GetName() const { return _pattached->GetName(); }
 
         void SetRelativeTransform(object transform) { _pattached->SetRelativeTransform(ExtractTransform(transform)); }
@@ -1369,7 +1369,7 @@ public:
         return sensors;
     }
     
-    PyControllerBasePtr GetController() const { return PyControllerBasePtr(new PyControllerBase(_probot->GetController(),_pyenv)); }
+    PyControllerBasePtr GetController() const { return !_probot->GetController() ? PyControllerBasePtr() : PyControllerBasePtr(new PyControllerBase(_probot->GetController(),_pyenv)); }
     bool SetController(PyControllerBasePtr pController, const string& args) { CHECK_POINTER(pController); return _probot->SetController(pController->GetController(),args.c_str()); }
     
     void SetActiveDOFs(object jointindices) { _probot->SetActiveDOFs(ExtractArrayInt(jointindices)); }
@@ -2261,21 +2261,33 @@ public:
 
     PyRobotBasePtr ReadRobotXMLFile(const string& filename)
     {
-        return PyRobotBasePtr(new PyRobotBase(_penv->ReadRobotXMLFile(RobotBasePtr(), filename, std::list<std::pair<std::string,std::string> >()),shared_from_this()));
+        RobotBasePtr probot = _penv->ReadRobotXMLFile(RobotBasePtr(), filename, std::list<std::pair<std::string,std::string> >());
+        if( !probot )
+            return PyRobotBasePtr();
+        return PyRobotBasePtr(new PyRobotBase(probot,shared_from_this()));
     }
     PyRobotBasePtr ReadRobotXMLData(const string& data)
     {
-        return PyRobotBasePtr(new PyRobotBase(_penv->ReadRobotXMLData(RobotBasePtr(), data, std::list<std::pair<std::string,std::string> >()),shared_from_this()));
+        RobotBasePtr probot = _penv->ReadRobotXMLData(RobotBasePtr(), data, std::list<std::pair<std::string,std::string> >());
+        if( !probot )
+            return PyRobotBasePtr();
+        return PyRobotBasePtr(new PyRobotBase(probot,shared_from_this()));
     }
 
     PyKinBodyPtr ReadKinBodyXMLFile(const string& filename)
     {
-        return PyKinBodyPtr(new PyKinBody(_penv->ReadKinBodyXMLFile(KinBodyPtr(), filename, std::list<std::pair<std::string,std::string> >()),shared_from_this()));
+        KinBodyPtr pbody = _penv->ReadKinBodyXMLFile(KinBodyPtr(), filename, std::list<std::pair<std::string,std::string> >());
+        if( !pbody )
+            return PyKinBodyPtr();
+        return PyKinBodyPtr(new PyKinBody(pbody,shared_from_this()));
     }
 
     PyKinBodyPtr ReadKinBodyXMLData(const string& data)
     {
-        return PyKinBodyPtr(new PyKinBody(_penv->ReadKinBodyXMLData(KinBodyPtr(), data, std::list<std::pair<std::string,std::string> >()),shared_from_this()));
+        KinBodyPtr pbody = _penv->ReadKinBodyXMLData(KinBodyPtr(), data, std::list<std::pair<std::string,std::string> >());
+        if( !pbody )
+            return PyKinBodyPtr();
+        return PyKinBodyPtr(new PyKinBody(pbody,shared_from_this()));
     }
 
     bool AddKinBody(PyKinBodyPtr pbody) { CHECK_POINTER(pbody); return _penv->AddKinBody(pbody->GetBody()); }

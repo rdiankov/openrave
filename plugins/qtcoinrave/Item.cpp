@@ -302,7 +302,9 @@ bool KinBodyItem::UpdateFromModel()
     vector<dReal> vjointvalues;
 
     {
-        EnvironmentMutex::scoped_lock lock(_pchain->GetEnv()->GetMutex());
+        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer->LockEnvironment();
+        if( !lockenv )
+            return false;
         
         // make sure the body is still present!
         if( _pchain->GetEnv()->GetBodyFromNetworkId(networkid) == _pchain ) {
