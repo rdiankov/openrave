@@ -54,7 +54,8 @@ void CustomCoinHandlerCB(const class SoError * error, void * data)
             strstr(error->getDebugString().getString(),"Coin warning in SbDPLine::setValue()") != NULL ||
             strstr(error->getDebugString().getString(),"Coin warning in SbVec3f::setValue()") != NULL ||
             strstr(error->getDebugString().getString(),"Coin warning in SoNormalGenerator::calcFaceNormal()") != NULL ||
-            strstr(error->getDebugString().getString(),"Coin error in SoGroup::removeChild(): tried to remove non-existent child") != NULL )
+            strstr(error->getDebugString().getString(),"Coin error in SoGroup::removeChild(): tried to remove non-existent child") != NULL ||
+            strstr(error->getDebugString().getString(),"Coin error in SoSwitch::doAction(): whichChild 0 out of range -- switch node has no children!") != NULL )
             return;
 
     if( s_DefaultHandlerCB != NULL )

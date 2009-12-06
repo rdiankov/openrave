@@ -338,12 +338,14 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
     {
         __description = "Rosen's BiRRT planner";
         _fGoalBiasProb = 0.05f;
-        _bOneStep = false;
+        _bOneStep = true;
     }
     virtual ~BasicRrtPlanner() {}
 
     bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
-    {    
+    {
+        if( !RrtPlanner<SimpleNode>::InitPlan(pbase,pparams) )
+            return false;
         //_bOneStep = _parameters.vnParameters[0]>0;
     
         //read in all goals

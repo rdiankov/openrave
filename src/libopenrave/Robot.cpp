@@ -217,7 +217,15 @@ void RobotBase::Manipulator::GetChildLinks(std::vector<LinkPtr>& vlinks) const
         int ilink = (*itlink)->GetIndex();
         if( ilink == iattlink )
             continue;
-        if( _varmjoints.size() > 0 && !probot->DoesAffect(_varmjoints[0],ilink) )
+        // gripper needs to be affected by all joints
+        bool bGripperLink = true;
+        FOREACH(itarmjoint,_varmjoints) {
+            if( !probot->DoesAffect(*itarmjoint,ilink) ) {
+                bGripperLink = false;
+                break;
+            }
+        }
+        if( !bGripperLink )
             continue;
         for(int ijoint = 0; ijoint < probot->GetDOF(); ++ijoint) {
             if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {

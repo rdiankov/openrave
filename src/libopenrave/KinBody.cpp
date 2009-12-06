@@ -1576,9 +1576,23 @@ void KinBody::ComputeJointHierarchy()
                 // is not part of the hierarchy, but still used to join links
                 if( !!bodies[0] ) {
                     if( !!bodies[1] ) {
-                        if( bodies[0]->userdata || bodies[1]->userdata ) {
-                            bodies[0]->userdata = 1;
+                        if( bodies[0]->userdata ) {
                             bodies[1]->userdata = 1;
+                            int srcindex = bodies[0]->GetIndex();
+                            int dstindex = bodies[1]->GetIndex();
+                            // copy the data from bodies[0]
+                            for(int j = 0; j < (int)_vecjoints.size(); ++j) {
+                                _vecJointHierarchy[j*_veclinks.size()+dstindex] = _vecJointHierarchy[j*_veclinks.size()+srcindex];
+                            }
+                        }
+                        else if( bodies[1]->userdata ) {
+                            bodies[0]->userdata = 1;
+                            int srcindex = bodies[1]->GetIndex();
+                            int dstindex = bodies[0]->GetIndex();
+                            // copy the data from bodies[1]
+                            for(int j = 0; j < (int)_vecjoints.size(); ++j) {
+                                _vecJointHierarchy[j*_veclinks.size()+dstindex] = _vecJointHierarchy[j*_veclinks.size()+srcindex];
+                            }
                         }
                         else
                             bDelete = false;
@@ -1600,7 +1614,7 @@ void KinBody::ComputeJointHierarchy()
                     if( bodies[0]->userdata ) {
                         
                         int srcindex = bodies[0]->GetIndex();
-                        int dstindex = bodies[1]->GetIndex();    
+                        int dstindex = bodies[1]->GetIndex();
                     
                         if( bodies[1]->userdata ) {
                             assert( pvalues[dstindex] >= 0 );

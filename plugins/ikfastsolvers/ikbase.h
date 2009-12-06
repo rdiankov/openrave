@@ -176,8 +176,8 @@ private:
             return fn();
 
         // start searching for phi close to q0, as soon as a solution is found for the curphi, return it
-        dReal startphi = q0.size() == _qlower.size() ? q0[vfreeparams[freeindex]] : 0;
-        dReal upperphi = _qupper[vfreeparams[freeindex]], lowerphi = _qlower[vfreeparams[freeindex]], deltaphi = 0;
+        dReal startphi = q0.size() == _qlower.size() ? q0.at(vfreeparams.at(freeindex)) : 0;
+        dReal upperphi = _qupper.at(vfreeparams.at(freeindex)), lowerphi = _qlower.at(vfreeparams.at(freeindex)), deltaphi = 0;
         int iter = 0;
 
         while(1) {
@@ -209,15 +209,15 @@ private:
 
             iter++;
 
-            vfree[freeindex] = curphi;
-            if( ComposeSolution(_vfreeparams, vfree, freeindex+1,q0, fn) )
+            vfree.at(freeindex) = curphi;
+            if( ComposeSolution(vfreeparams, vfree, freeindex+1,q0, fn) )
                 return true;
         }
 
         // explicitly test 0 since many edge cases involve 0s
         if( _qlower[vfreeparams[freeindex]] <= 0 && _qupper[vfreeparams[freeindex]] >= 0 ) {
-            vfree[freeindex] = 0;
-            if( ComposeSolution(_vfreeparams, vfree, freeindex+1,q0, fn) )
+            vfree.at(freeindex) = 0;
+            if( ComposeSolution(vfreeparams, vfree, freeindex+1,q0, fn) )
                 return true;
         }
 
@@ -242,16 +242,19 @@ private:
             std::vector<dReal> vbest;
             std::vector<IKReal> sol(pmanip->GetArmJoints().size());
             // find the first valid solution that satisfies joint constraints and collisions
+            boost::tuple<const vector<IKReal>&, const vector<dReal>&,bool> textra(vsolfree, q0, bCheckEnvCollision);
+
             FOREACH(itsol, vsolutions) {
                 if( itsol->GetFree().size() > 0 ) {
                     // have to search over all the free parameters of the solution!
                     vsolfree.resize(itsol->GetFree().size());
-
-                    if( ComposeSolution(itsol->GetFree(), vsolfree, 0, q0, boost::bind(&IkFastSolver::_ValidateSolutionSingle,shared_solver(), boost::ref(*itsol), boost::make_tuple(vsolfree, q0, bCheckEnvCollision), boost::ref(sol), boost::ref(vravesol), boost::ref(vbest), boost::ref(bestdist), boost::ref(param), boost::ref(bStopSearching))) )
+        
+                    if( ComposeSolution(itsol->GetFree(), vsolfree, 0, q0, boost::bind(&IkFastSolver::_ValidateSolutionSingle,shared_solver(), boost::ref(*itsol), boost::ref(textra), boost::ref(sol), boost::ref(vravesol), boost::ref(vbest), boost::ref(bestdist), boost::ref(param), boost::ref(bStopSearching))) )
                         break;
                 }
                 else {
-                    if( _ValidateSolutionSingle(*itsol, boost::make_tuple(vector<IKReal>(),q0,bCheckEnvCollision), sol, vravesol, vbest, bestdist, param, bStopSearching) )
+                    vsolfree.resize(0);
+                    if( _ValidateSolutionSingle(*itsol, textra, sol, vravesol, vbest, bestdist, param, bStopSearching) )
                         break;
                 }
             }
@@ -272,9 +275,10 @@ private:
     }
     
     // validate a solution
-    bool _ValidateSolutionSingle(const Solution& iksol, boost::tuple<const vector<IKReal>&, const vector<dReal>&,bool> freeq0check, std::vector<IKReal>& sol, std::vector<dReal>& vravesol, std::vector<dReal>& vbest, dReal& bestdist, const Parameterization& param, bool& bStopSearching)
+    bool _ValidateSolutionSingle(const Solution& iksol, boost::tuple<const vector<IKReal>&, const vector<dReal>&,bool>& freeq0check, std::vector<IKReal>& sol, std::vector<dReal>& vravesol, std::vector<dReal>& vbest, dReal& bestdist, const Parameterization& param, bool& bStopSearching)
     {
         const vector<IKReal>& vfree = boost::get<0>(freeq0check);
+        //BOOST_ASSERT(sol.size()== iksol.basesol.size() && vfree.size() == iksol.GetFree().size());
         iksol.GetSolution(&sol[0],vfree.size()>0?&vfree[0]:NULL);
 
         for(int i = 0; i < (int)sol.size(); ++i)

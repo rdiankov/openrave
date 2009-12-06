@@ -330,7 +330,7 @@ public:
             FOREACHC(itarm,_pmanip->GetArmJoints()) {
                 vector<int>::const_iterator itactive = find(_robot->GetActiveJointIndices().begin(),_robot->GetActiveJointIndices().end(),*itarm);
                 if( itactive != _robot->GetActiveJointIndices().end() )
-                    pNewSample[(int)(itactive-_robot->GetActiveJointIndices().begin())] = _vsolution.at((int)(itarm-_pmanip->GetArmJoints().begin()));
+                    pNewSample.at((int)(itactive-_robot->GetActiveJointIndices().begin())) = _vsolution.at((int)(itarm-_pmanip->GetArmJoints().begin()));
             }
             _robot->SetActiveDOFValues(pNewSample);
             
@@ -619,7 +619,7 @@ public:
             else if( cmd == "convexdata" ) {
                 int numpoints=0;
                 sinput >> numpoints;
-                vconvexdata.resize(numpoints);
+                vconvexdata.resize(2*numpoints);
                 FOREACH(it, vconvexdata)
                     sinput >> *it;
             }
@@ -711,7 +711,7 @@ public:
             else if( cmd == "convexdata" ) {
                 int numpoints=0;
                 sinput >> numpoints;
-                vconvexdata.resize(numpoints);
+                vconvexdata.resize(2*numpoints);
                 FOREACH(it, vconvexdata)
                     sinput >> *it;
             }
@@ -768,7 +768,7 @@ public:
             else if( cmd == "convexdata" ) {
                 int numpoints=0;
                 sinput >> numpoints;
-                vconvexdata.resize(numpoints);
+                vconvexdata.resize(2*numpoints);
                 FOREACH(it, vconvexdata)
                     sinput >> *it;
             }
@@ -889,7 +889,7 @@ public:
             else if( cmd == "convexdata" ) {
                 int numpoints=0;
                 sinput >> numpoints;
-                vconvexdata.resize(numpoints);
+                vconvexdata.resize(2*numpoints);
                 FOREACH(it, vconvexdata)
                     sinput >> *it;
             }
@@ -1045,7 +1045,7 @@ public:
             else if( cmd == "convexdata" ) {
                 int numpoints=0;
                 sinput >> numpoints;
-                vconvexdata.resize(numpoints);
+                vconvexdata.resize(2*numpoints);
                 FOREACH(it, vconvexdata)
                     sinput >> *it;
             }
@@ -1063,7 +1063,15 @@ public:
                     }
                     params->_vgrasps.push_back(t);
                 }
-                RAVELOG_DEBUGA("grasp set size = %"PRIdS"\n", params->_vgrasps.size());
+                RAVELOG_DEBUGA(str(boost::format("grasp set size = %d\n")%params->_vgrasps.size()));
+            }
+            else if( cmd == "graspsetdata" ) {
+                int numgrasps=0;
+                sinput >> numgrasps;
+                params->_vgrasps.resize(numgrasps);
+                FOREACH(itgrasp,params->_vgrasps)
+                    sinput >> *itgrasp;
+                RAVELOG_DEBUGA(str(boost::format("grasp set size = %d\n")%params->_vgrasps.size()));
             }
             else if( cmd == "gradientsamples" )
                 sinput >> params->_nGradientSamples;
