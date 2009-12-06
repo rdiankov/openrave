@@ -49,7 +49,7 @@ insidepoints = [size(Imask,2)/2;size(Imask,1)/2;1];
 bestvolume=0;
 bestconvexhull = [];
 bestconvexpoints = [];
-for iter = 1:100000
+for iter = 1:20000
     if( mod(iter,1000)==0)
         disp(iter);
     end
@@ -59,8 +59,11 @@ for iter = 1:100000
         [K, Volume] = convhulln(transpose(activepoints),'Pp');
     catch
         % compute a rough measure of volume
-        meanhull = mean(activepoints,2);
-        Volume = max(sum((activepoints-repmat(meanhull,[1 size(activepoints,2)])).^2,2));
+        meanhull = mean(activepoints(:,K(:)),2);
+        Volume = 0;
+        for i = 1:size(K,1)
+            Volume = Volume + 0.5*abs(det(activepoints(:,K(i,:))-[meanhull meanhull]));
+        end
     end
 
     if( isempty(K) ) % octave needs this

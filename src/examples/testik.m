@@ -6,7 +6,7 @@
 %  manipid [optional] - if specified, only tests ik for those manipulators (zero-indexed)
 %  rotonly [optional] - if specified and true, only test rotation component of ik solution
 %  ikfastlib [optional] - the ikfast shared object to dynamically load as an openrave iksolver
-function testik(robotfile,manipid,rotonly,ikfastlib)
+function testik(robotfile,manipid,rotonly)
 
 more off; % turn off output paging
 addopenravepaths()
@@ -20,14 +20,6 @@ end
 
 orEnvLoadScene('',1);
 robotid = orEnvCreateRobot('robot',robotfile);
-if( exist('ikfastlib','var') )
-    manips = orRobotGetManipulators(robotid);
-    ikfastprobid = orEnvCreateProblem ('IKFast');
-    orProblemSendCommand (['AddIkLibrary ' strtok(manips{manipid+1}.iksolvername) ' ' ikfastlib],ikfastprobid);
-    %% have to reload robot
-    orBodyDestroy(robotid);
-    robotid = orEnvCreateRobot('robot',robotfile);
-end
 probid = orEnvCreateProblem('basemanipulation','robot');
 manips = orRobotGetManipulators(robotid);
 

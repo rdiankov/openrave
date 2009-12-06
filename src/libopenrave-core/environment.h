@@ -931,9 +931,11 @@ class Environment : public EnvironmentBase
 
     virtual void _CloseGraphCallback(RaveViewerBaseWeakPtr wviewer, void* handle)
     {
-        RaveViewerBasePtr viewer(wviewer);
-        if( !!viewer )
-            viewer->closegraph(handle);
+        if( !wviewer.expired() ) {
+            RaveViewerBasePtr viewer(wviewer);
+            if( !!viewer )
+                viewer->closegraph(handle);
+        }
     }
 
     virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK)

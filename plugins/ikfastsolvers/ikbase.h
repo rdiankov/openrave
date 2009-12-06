@@ -51,7 +51,7 @@ class IkFastSolver : public IkSolverBase
         _cblimits = _probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IkFastSolver<IKReal,IKType,Solution>::SetJointLimits,shared_solver()));
 
         if( _nTotalJoints != (int)_pmanip->GetArmJoints().size() ) {
-            RAVELOG_ERRORA(str(boost::format("ik %s configured with different number of joints than robot manipulator (%d!=%d\n")%GetXMLId()%_pmanip->GetArmJoints().size()%_nTotalJoints));
+            RAVELOG_ERRORA(str(boost::format("ik %s configured with different number of joints than robot manipulator (%d!=%d)\n")%GetXMLId()%_pmanip->GetArmJoints().size()%_nTotalJoints));
             return false;
         }
 

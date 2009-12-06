@@ -1786,12 +1786,18 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
                             pjoint = *itjoint;
                     }
                     else {
-                        KinBody::LinkPtr pother = (*itjoint)->GetFirstAttached()==pSelectedLink ? (*itjoint)->GetSecondAttached() : (*itjoint)->GetFirstAttached();
-                        FOREACH(itjoint2, pKinBody->GetBody()->GetJoints()) {
-                            if( pKinBody->GetBody()->DoesAffect((*itjoint2)->GetJointIndex(), pother->GetIndex()) && 
-                                ((*itjoint2)->GetFirstAttached()==pother || (*itjoint2)->GetSecondAttached()==pother) ) {
-                                pjoint = *itjoint2;
-                                break;
+                        KinBody::LinkPtr pother;
+                        if( (*itjoint)->GetFirstAttached()==pSelectedLink )
+                            pother = (*itjoint)->GetSecondAttached();
+                        else if( (*itjoint)->GetSecondAttached()==pSelectedLink )
+                            pother = (*itjoint)->GetFirstAttached();
+                        if( !!pother ) {
+                            FOREACH(itjoint2, pKinBody->GetBody()->GetJoints()) {
+                                if( pKinBody->GetBody()->DoesAffect((*itjoint2)->GetJointIndex(), pother->GetIndex()) && 
+                                    ((*itjoint2)->GetFirstAttached()==pother || (*itjoint2)->GetSecondAttached()==pother) ) {
+                                    pjoint = *itjoint2;
+                                    break;
+                                }
                             }
                         }
                     }
@@ -1808,11 +1814,32 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
                         if( pKinBody->GetBody()->DoesAffect(ptempjoint->GetJointIndex(), pSelectedLink->GetIndex()) && 
                             ((*itjoint)->GetFirstAttached()==pSelectedLink || (*itjoint)->GetSecondAttached()==pSelectedLink) ) {
                             pjoint = ptempjoint;
-                            break;
                         }
+                    }
+                    else {
+                        KinBody::LinkPtr pother;
+                        if( (*itjoint)->GetFirstAttached()==pSelectedLink )
+                            pother = (*itjoint)->GetSecondAttached();
+                        else if( (*itjoint)->GetSecondAttached()==pSelectedLink )
+                            pother = (*itjoint)->GetFirstAttached();
+                        if( !!pother ) {
+                            FOREACH(itjoint2, pKinBody->GetBody()->GetJoints()) {
+                                if( pKinBody->GetBody()->DoesAffect((*itjoint2)->GetJointIndex(), pother->GetIndex()) && 
+                                    ((*itjoint2)->GetFirstAttached()==pother || (*itjoint2)->GetSecondAttached()==pother) ) {
+                                    pjoint = *itjoint2;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if( !!pjoint )
+                            break;
                     }
                 }
             }
+
+            if( !pjoint )
+                return false;
         }
     }
     

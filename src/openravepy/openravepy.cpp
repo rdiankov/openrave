@@ -537,6 +537,7 @@ class PyGraphHandle
 public:
     PyGraphHandle() {}
     PyGraphHandle(EnvironmentBase::GraphHandlePtr handle) : _handle(handle) {}
+    virtual ~PyGraphHandle() {}
 
 private:
     EnvironmentBase::GraphHandlePtr _handle;
@@ -1197,6 +1198,7 @@ public:
         PyEnvironmentBasePtr _pyenv;
     public:
         PyManipulator(RobotBase::ManipulatorPtr pmanip, PyEnvironmentBasePtr pyenv) : _pmanip(pmanip),_pyenv(pyenv) {}
+        virtual ~PyManipulator() {}
 
         object GetEndEffectorTransform() const { return ReturnTransform(_pmanip->GetEndEffectorTransform()); }
 
@@ -1315,6 +1317,7 @@ public:
         PyEnvironmentBasePtr _pyenv;
     public:
         PyAttachedSensor(RobotBase::AttachedSensorPtr pattached, PyEnvironmentBasePtr pyenv) : _pattached(pattached),_pyenv(pyenv) {}
+        virtual ~PyAttachedSensor() {}
         
         PySensorBasePtr GetSensor() { return !_pattached->GetSensor() ? PySensorBasePtr() : PySensorBasePtr(new PySensorBase(_pattached->GetSensor(),_pyenv)); }
         PyLinkPtr GetAttachingLink() const { return !_pattached->GetAttachingLink() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pattached->GetAttachingLink(), _pyenv)); }
@@ -1338,6 +1341,7 @@ public:
             
             troot = ReturnTransform(grabbed.troot);
         }
+        virtual ~PyGrabbed() {}
 
         PyKinBodyPtr grabbedbody;
         PyLinkPtr linkrobot;

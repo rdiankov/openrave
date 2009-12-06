@@ -1666,6 +1666,14 @@ void KinBody::ComputeJointHierarchy()
             else _setAdjacentLinks.insert(ind0|(ind1<<16));
         }
     }
+    FOREACH(itj, _vecPassiveJoints) {
+        if( !!(*itj)->bodies[0] && !!(*itj)->bodies[1] ) {
+            int ind0 = (*itj)->bodies[0]->GetIndex();
+            int ind1 = (*itj)->bodies[1]->GetIndex();
+            if( ind1 < ind0 ) _setAdjacentLinks.insert(ind1|(ind0<<16));
+            else _setAdjacentLinks.insert(ind0|(ind1<<16));
+        }
+    }
 
     FOREACH(itadj, _vForcedAdjacentLinks) {
         LinkPtr pl0 = GetLink(itadj->first.c_str());

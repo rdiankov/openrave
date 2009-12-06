@@ -12,11 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License. 
-import os, time
-import numpy # nice to be able to explicitly call some functions
+import os, time, pickle
+import numpy,scipy # nice to be able to explicitly call some functions
 from numpy import *
 from optparse import OptionParser
 from openravepy import *
+from scipy.io import read_array
+from scipy.io import write_array
 
 def GetCameraRobotMask(robotfile,sensorindex=0,robotjoints=None,robotjointinds=None,gripperjoints=None,rayoffset=0):
     orenv = Environment()
@@ -27,7 +29,7 @@ def GetCameraRobotMask(robotfile,sensorindex=0,robotjoints=None,robotjointinds=N
             print 'setting ode checker'
             orenv.SetCollisionChecker(orcol)
     #orenv.SetViewer('qtcoin',True)
-    orrobot = orenv.ReadRobotXML(robotfile)
+    orrobot = orenv.ReadRobotXMLFile(robotfile)
     orenv.AddRobot(orrobot)
     if robotjoints is not None:
         if robotjointinds is not None:
@@ -36,7 +38,7 @@ def GetCameraRobotMask(robotfile,sensorindex=0,robotjoints=None,robotjointinds=N
             orrobot.SetJointValues(robotjoints)
     
     attached = orrobot.GetSensors()[sensorindex]
-    attached.GetSensor().SendCmd('power 0')
+    attached.GetSensor().SendCommand('power 0')
     Tcamera = attached.GetSensor().GetTransform()
     sensordata = attached.GetSensor().GetSensorData()
     KK = sensordata.KK
@@ -46,8 +48,8 @@ def GetCameraRobotMask(robotfile,sensorindex=0,robotjoints=None,robotjointinds=N
     # find a manipulator whose end effector is the camera
     manip = [m for m in orrobot.GetManipulators() if m.GetEndEffector().GetIndex() == attached.GetAttachingLink().GetIndex()]
     if len(manip) > 0 and gripperjoints is not None:
-        assert len(manip[0].GetJoints()) == len(gripperjoints)
-        orrobot.SetJointValues(gripperjoints,manip[0].GetJoints())
+        assert len(manip[0].GetGripperJoints()) == len(gripperjoints)
+        orrobot.SetJointValues(gripperjoints,manip[0].GetGripperJoints())
     
     inds = array(range(width*height))
     imagepoints = array((mod(inds,width),floor(inds/width)))
@@ -56,8 +58,11 @@ def GetCameraRobotMask(robotfile,sensorindex=0,robotjoints=None,robotjointinds=N
     rays = r_[tile(Tcamera[0:3,3:4],(1,raydirs.shape[1]))+rayoffset*raydirs,100.0*raydirs]
     hitindices,hitpositions = orenv.CheckCollisionRays(rays,orrobot,False)
 
+    attached = None
+    manip = None
+    orenv.Destroy()
     # gather all the rays that hit and form an image
-    return reshape(hitindices,(height,width))
+    return reshape(array(hitindices,'float'),(height,width))
 
 def ProcessVisibilityExtents(robotfile,kinbodyfile,convexfilename,visibilityfilename,sensorindex=0,robotjoints=None,robotjointinds=None,gripperjoints=None):
     orenv = Environment()
@@ -68,9 +73,9 @@ def ProcessVisibilityExtents(robotfile,kinbodyfile,convexfilename,visibilityfile
         if orcol is not None:
             print 'setting ode checker'
             orenv.SetCollisionChecker(orcol)
-    orrobot = orenv.ReadRobotXML(robotfile,False)
+    orrobot = orenv.ReadRobotXMLFile(robotfile,False)
     orenv.AddRobot(orrobot)
-    orobj = orenv.ReadKinBodyXML(kinbodyfile,False)
+    orobj = orenv.ReadKinBodyXMLFile(kinbodyfile,False)
     orenv.AddKinBody(orobj)
 
     if robotjoints is not None:
@@ -83,25 +88,30 @@ def ProcessVisibilityExtents(robotfile,kinbodyfile,convexfilename,visibilityfile
     attached = orrobot.GetSensors()[sensorindex]
     manip = [m for m in orrobot.GetManipulators() if m.GetEndEffector().GetIndex() == attached.GetAttachingLink().GetIndex()]
     if len(manip) > 0 and gripperjoints is not None:
-        assert len(manip[0].GetJoints()) == len(gripperjoints)
-        orrobot.SetJointValues(gripperjoints,manip[0].GetJoints())
+        assert len(manip[0].GetGripperJoints()) == len(gripperjoints)
+        orrobot.SetJointValues(gripperjoints,manip[0].GetGripperJoints())
 
     # move the robot away from the object
     T = eye(4)
     T[0,3] = 4
     orrobot.SetTransform(T)
-
     visualprob = orenv.CreateProblem('VisualFeedback')
     orenv.LoadProblem(visualprob,orrobot.GetName())
     response = visualprob.SendCommand('ProcessVisibilityExtents target %s sensorindex %d convexfile %s visibilityfile %s'%(orobj.GetName(),sensorindex,convexfilename,visibilityfilename))
     orenv.LockPhysics(False)
-
     if response is None:
         raise ValueError('ProcessVisibilityExtents failed')
     
     transforms = [float(s) for s in response.split()]
     if not mod(len(transforms),7) == 0:
         raise ValueError('corrupted transforms')
+    
+    del visualprob
+    del manip
+    del attached
+    del orrobot
+    del orobj
+    orenv.Destroy()
     return reshape(transforms,(len(transforms)/7,7))
 
 if __name__=='__main__':
@@ -118,6 +128,9 @@ if __name__=='__main__':
     parser.add_option('--gripperjoints',
                       action="store",type='string',dest='gripperjoints',default=None,
                       help='OpenRAVE robot file to generate mask')
+    parser.add_option('--graspsetfile',
+                      action="store",type='string',dest='graspsetfile',default=None,
+                      help='OpenRAVE grasp set file to get gripper joints from')
     parser.add_option('--robotjoints',
                       action="store",type='string',dest='robotjoints',default=None,
                       help='Robot joints to preset robot with (used with --robotjointinds)')
@@ -130,6 +143,9 @@ if __name__=='__main__':
     parser.add_option('--savefile',
                       action="store",type='string',dest='savefile',default='mask.mat',
                       help='Filename to save matlab data into (default is mask.mat)')
+    parser.add_option('--savepp',
+                      action="store",type='string',dest='savepp',default=None,
+                      help='Save all data into a pp file')
     parser.add_option('--convexfile',
                       action="store",type='string',dest='convexfile',
                       help='Filename specifying convex polygon of gripper mask')
@@ -147,19 +163,21 @@ if __name__=='__main__':
 
     robotjoints = [float(s) for s in options.robotjoints.split()] if options.robotjoints else None
     robotjointinds = [int(s) for s in options.robotjointinds.split()] if options.robotjointinds else None
-    gripperjoints = [float(s) for s in options.gripperjoints.split()] if options.gripperjoints else None
+    if options.graspsetfile is not None:
+        graspdata = read_array(options.graspsetfile)
+        gripperjoints = graspdata[0][12:]
+    if options.gripperjoints is not None:
+        gripperjoints = [float(s) for s in options.gripperjoints.split()] if options.gripperjoints else None
 
     if options.func == 'mask':
         Imask = GetCameraRobotMask(options.robotfile,sensorindex=options.sensorindex,gripperjoints=gripperjoints,robotjoints=robotjoints,robotjointinds=robotjointinds,rayoffset=options.rayoffset)
         # save as a ascii matfile
-        f = open(options.savefile,'w')
-        for i in xrange(Imask.shape[0]):
-            f.write(' '.join(str(int(val)) for val in Imask[i,:])+'\n')
-        f.close()
-
-        print 'mask saved'
-        imshow(Imask)
-        show()
+        write_array(options.savefile,Imask)
+        print 'mask saved to ' + options.savefile
+        try:
+            scipy.misc.pilutil.imshow(array(Imask*255,'uint8'))
+        except:
+            pass
     elif options.func == 'visibility':
         if not options.convexfile:
             print 'need convexfile'
@@ -171,10 +189,12 @@ if __name__=='__main__':
             print 'need kinbodyfile'
             sys.exit(1)
         
-        transforms = ProcessVisibilityExtents(options.robotfile,kinbodyfile=options.kinbodyfile,convexfilename=options.convexfile,visibilityfilename=options.visibilityfile,sensorindex=options.sensorindex,gripperjoints=gripperjoints,robotjoints=robotjoints,robotjointinds=robotjointinds)
+        visibilitydata = ProcessVisibilityExtents(options.robotfile,kinbodyfile=options.kinbodyfile,convexfilename=options.convexfile,visibilityfilename=options.visibilityfile,sensorindex=options.sensorindex,gripperjoints=gripperjoints,robotjoints=robotjoints,robotjointinds=robotjointinds)
         if options.savefile is not None:
             f = open(options.savefile,'w')
-            for t in transforms:
+            for t in visibilitydata:
                 f.write(' '.join(str(val) for val in t)+'\n')
             f.close()
-            print '%d transforms saved'%transforms.shape[0]
+            print '%d transforms saved'%visibilitydata.shape[0]
+    if options.savepp is not None:
+        pickle.dump((read_array(options.convexfile),visibilitydata,grasps),open(options.savepp,'w'))
