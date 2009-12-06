@@ -150,6 +150,7 @@ public:
     };
     typedef boost::shared_ptr<Manipulator> ManipulatorPtr;
     typedef boost::shared_ptr<Manipulator const> ManipulatorConstPtr;
+    typedef boost::weak_ptr<Manipulator> ManipulatorWeakPtr;
 
     class AttachedSensor : public boost::enable_shared_from_this<AttachedSensor>
     {

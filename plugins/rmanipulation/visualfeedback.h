@@ -196,7 +196,7 @@ public:
     class VisibilityConstraintFunction
     {
     public:
-        VisibilityConstraintFunction(RobotBasePtr robot, KinBodyPtr ptarget, const string& convexfilename, int sensorindex=0) : _robot(robot), _ptarget(ptarget), _sensorindex(sensorindex) {
+        VisibilityConstraintFunction(RobotBasePtr robot, KinBodyPtr ptarget, const vector<dReal>& vconvexdata, int sensorindex=0) : _robot(robot), _ptarget(ptarget), _sensorindex(sensorindex) {
             _report.reset(new COLLISIONREPORT());
             _psensor = _robot->GetSensors().at(_sensorindex);
             if( _psensor->GetSensor()->GetSensorGeometry()->GetType() != SensorBase::ST_Camera)
@@ -236,20 +236,14 @@ public:
                 _ptargetbox->SetName("dummytarget");
             }
 
-            if( convexfilename.size() > 0 ) {
+            if( vconvexdata.size() > 2 ) {
                 vector<Vector> vpoints;
                 Vector vprev,vprev2,v,vdir,vnorm,vcenter;
-                ifstream f(convexfilename.c_str());
-                if( !f )
-                    throw openrave_exception("failed to open convex filename");
-                while(!f.eof()) {
-                    f >> v.x >> v.y;
-                    if( !f )
-                        break;
-                    vpoints.push_back(Vector((v.x-pgeom->KK.cx)/pgeom->KK.fx,(v.y-pgeom->KK.cy)/pgeom->KK.fy,0,0));
+                for(size_t i = 0; i < vconvexdata.size(); i += 2 ){ 
+                    vpoints.push_back(Vector((vconvexdata[i]-pgeom->KK.cx)/pgeom->KK.fx,(vconvexdata[i+1]-pgeom->KK.cy)/pgeom->KK.fy,0,0));
                     vcenter += vpoints.back();
                 }
-                
+
                 if( vpoints.size() > 2 ) {
                     vcenter *= 1.0f/vpoints.size();
 
@@ -265,7 +259,8 @@ public:
                             vnorm = -vnorm;
                         }
                         vnorm.z = -(vnorm.x*vprev.x+vnorm.y*vprev.y);
-                        _vconvexplanes.push_back(vnorm.normalize3());
+                        if( vnorm.lengthsqr3() > 1e-10 )
+                            _vconvexplanes.push_back(vnorm.normalize3());
                         vprev = *itv;
                     }
 
@@ -282,7 +277,7 @@ public:
                     _vcenterconvex /= 3.0f*totalarea; _vcenterconvex.z = 1;
                 }
                 else
-                    RAVELOG_WARNA("convex file %s does not have enough points\n",convexfilename.c_str());
+                    RAVELOG_WARNA(str(boost::format("convex data does not have enough points %d\n")%vconvexdata.size()));
             }
             
             if( _vconvexplanes.size() == 0 ) {
@@ -433,7 +428,7 @@ public:
     class GoalSampleFunction
     {
     public:
-    GoalSampleFunction(RobotBasePtr robot, KinBodyPtr ptarget, const string& convexfilename, const string& visibilityfilename, bool bVisibilityTransforms, int sensorindex=0) : _vconstraint(robot,ptarget,convexfilename,sensorindex), _fSampleGoalProb(1.0f)
+    GoalSampleFunction(RobotBasePtr robot, KinBodyPtr ptarget, const vector<dReal>& vconvexdata, const vector<Transform>& visibilitytransforms, const vector<Vector>& visibilityextents, int sensorindex=0) : _vconstraint(robot,ptarget,vconvexdata,sensorindex), _fSampleGoalProb(1.0f)
         {
             {
                 KinBody::KinBodyStateSaver saver(_vconstraint.GetTarget());
@@ -445,7 +440,20 @@ public:
             int nNumRolls = 8;
             dReal deltaroll = PI*2.0f/(dReal)nNumRolls;
 
-            if( visibilityfilename.size() == 0 ) {
+            if( visibilitytransforms.size() > 0 )
+                _vcameras = visibilitytransforms;
+            else if( visibilityextents.size() > 0 ) {
+                _vcameras.reserve(visibilityextents.size()*nNumRolls);
+                FOREACHC(itv,visibilityextents) {
+                    dReal fdist = RaveSqrt(itv->lengthsqr3());
+                    Vector v = *itv * (1.0f/fdist);
+                    
+                    dReal froll = 0;
+                    for(int iroll = 0; iroll < nNumRolls; ++iroll, froll += deltaroll)
+                        _vcameras.push_back(ComputeCameraMatrix(v,fdist,froll,Vector()));
+                }
+            }
+            else {
                 KinBody::Link::TRIMESH spheremesh;
                 CM::GenerateSphereTriangulation(spheremesh,3);
                 int nNumDists = 5;
@@ -460,37 +468,6 @@ public:
                         for(int iroll = 0; iroll < nNumRolls; ++iroll, froll += deltaroll) {
                             *itcamera++ = ComputeCameraMatrix(spheremesh.vertices[j],fmindist + fdeltadist*i,froll,Vector());
                         }
-                    }
-                }
-            }
-            else {
-                fstream fextents(visibilityfilename.c_str());
-                if( !fextents )
-                    throw openrave_exception("failed to open visiblity file");
-
-                _vcameras.reserve(400);
-
-                if( bVisibilityTransforms ) {
-                    Transform t;
-                    while(!fextents.eof()) {
-                        fextents >> t;
-                        if( !fextents )
-                            break;
-                        _vcameras.push_back(t);
-                    }
-                }
-                else {
-                    Vector v;
-                    while(!fextents.eof()) {
-                        fextents >> v.x >> v.y >> v.z;
-                        if( !fextents )
-                            break;
-                        dReal fdist = RaveSqrt(v.lengthsqr3());
-                        v *= 1.0f/fdist;
-
-                        dReal froll = 0;
-                        for(int iroll = 0; iroll < nNumRolls; ++iroll, froll += deltaroll)
-                            _vcameras.push_back(ComputeCameraMatrix(v,fdist,froll,Vector()));
                     }
                 }
             }
@@ -580,8 +557,16 @@ public:
         _listAssemblyObjects.clear();
     }
 
-    void Destroy() {
-        RAVELOG_INFOA("problem unloaded from environment\n");
+    void Destroy()
+    {
+        ProblemInstance::Destroy();
+    }
+
+    virtual void Reset()
+    {
+        ProblemInstance::Reset();
+        _listAssemblyTypes.clear();
+        _listAssemblyObjects.clear();
     }
 
     int main(const string& cmd)
@@ -608,7 +593,9 @@ public:
 
         int sensorindex=0;
         KinBodyPtr ptarget;
-        string convexfilename,visibilityfile;
+        vector<Transform> visibilitytransforms;
+        vector<Vector> visibilityextents;
+        vector<dReal> vconvexdata;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput )
@@ -621,10 +608,51 @@ public:
             }
             else if( cmd == "sensorindex" )
                 sinput >> sensorindex;
-            else if( cmd == "convexfile" )
+            else if( cmd == "convexfile" ) {
+                string convexfilename;
                 sinput >> convexfilename;
-            else if( cmd == "visibilityfile" )
+                ifstream f(convexfilename.c_str());
+                if( !f )
+                    throw openrave_exception("failed to open convex filename");
+                vconvexdata = vector<dReal>((istream_iterator<dReal>(f)), istream_iterator<dReal>());
+            }
+            else if( cmd == "convexdata" ) {
+                int numpoints=0;
+                sinput >> numpoints;
+                vconvexdata.resize(numpoints);
+                FOREACH(it, vconvexdata)
+                    sinput >> *it;
+            }
+            else if( cmd == "visibilityfile" ) {
+                string visibilityfile;
                 sinput >> visibilityfile;
+                fstream f(visibilityfile.c_str());
+                if( !f )
+                    throw openrave_exception("failed to open visiblity file");
+                visibilitytransforms = vector<Transform>((istream_iterator<Transform>(f)), istream_iterator<Transform>());
+            }
+            else if( cmd == "visibilitydata" ) {
+                int numtrans=0;
+                sinput >> numtrans;
+                visibilitytransforms.resize(numtrans);
+                FOREACH(it,visibilitytransforms)
+                    sinput >> *it;
+            }
+            else if( cmd == "extentsfile" || cmd == "visibilitytrans" ) {
+                string filename;
+                sinput >> filename;
+                fstream f(filename.c_str());
+                if( !f )
+                    throw openrave_exception("failed to open extents file");
+                visibilityextents = vector<Vector>((istream_iterator<Vector>(f)), istream_iterator<Vector>());
+            }
+            else if( cmd == "extentsdata" ) {
+                int numtrans=0;
+                sinput >> numtrans;
+                visibilityextents.resize(numtrans);
+                FOREACH(it,visibilityextents)
+                    sinput >> *it;
+            }
             else {
                 RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -642,7 +670,7 @@ public:
         KinBody::KinBodyStateSaver saver(ptarget);
         ptarget->SetTransform(Transform());
 
-        boost::shared_ptr<GoalSampleFunction> pgoalfn(new GoalSampleFunction(_robot,ptarget,convexfilename, visibilityfile, false, sensorindex));
+        boost::shared_ptr<GoalSampleFunction> pgoalfn(new GoalSampleFunction(_robot,ptarget,vconvexdata, visibilitytransforms, visibilityextents, sensorindex));
 
         // get all the camera positions and test them
         FOREACHC(itcamera, pgoalfn->GetCameraTransforms()) {
@@ -659,7 +687,7 @@ public:
 
         int sensorindex=0;
         KinBodyPtr ptarget;
-        string convexfilename;
+        vector<dReal> vconvexdata;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput )
@@ -672,8 +700,21 @@ public:
             }
             else if( cmd == "sensorindex" )
                 sinput >> sensorindex;
-            else if( cmd == "convexfile" )
+            else if( cmd == "convexfile" ) {
+                string convexfilename;
                 sinput >> convexfilename;
+                ifstream f(convexfilename.c_str());
+                if( !f )
+                    throw openrave_exception("failed to open convex filename");
+                vconvexdata = vector<dReal>((istream_iterator<dReal>(f)), istream_iterator<dReal>());
+            }
+            else if( cmd == "convexdata" ) {
+                int numpoints=0;
+                sinput >> numpoints;
+                vconvexdata.resize(numpoints);
+                FOREACH(it, vconvexdata)
+                    sinput >> *it;
+            }
             else {
                 RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -685,7 +726,7 @@ public:
             }
         }
 
-        boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(_robot,ptarget,convexfilename, sensorindex));
+        boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(_robot,ptarget,vconvexdata, sensorindex));
 
         vector<dReal> v;
         _robot->GetActiveDOFValues(v);
@@ -699,9 +740,11 @@ public:
 
         int sensorindex=0;
         KinBodyPtr ptarget;
-        string convexfilename,visibilityfilename;
+        vector<Transform> visibilitytransforms;
+        vector<Vector> visibilityextents;
+        string visibilityfilename;
+        vector<dReal> vconvexdata;
         int numsamples=1;
-        bool bVisibilityTransforms=false;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput )
@@ -714,16 +757,53 @@ public:
             }
             else if( cmd == "sensorindex" )
                 sinput >> sensorindex;
-            else if( cmd == "convexfile" )
+            else if( cmd == "convexfile" ) {
+                string convexfilename;
                 sinput >> convexfilename;
+                ifstream f(convexfilename.c_str());
+                if( !f )
+                    throw openrave_exception("failed to open convex filename");
+                vconvexdata = vector<dReal>((istream_iterator<dReal>(f)), istream_iterator<dReal>());
+            }
+            else if( cmd == "convexdata" ) {
+                int numpoints=0;
+                sinput >> numpoints;
+                vconvexdata.resize(numpoints);
+                FOREACH(it, vconvexdata)
+                    sinput >> *it;
+            }
+            else if( cmd == "visibilityfile" ) {
+                string visibilityfile;
+                sinput >> visibilityfile;
+                fstream f(visibilityfile.c_str());
+                if( !f )
+                    throw openrave_exception("failed to open visiblity file");
+                visibilitytransforms = vector<Transform>((istream_iterator<Transform>(f)), istream_iterator<Transform>());
+            }
+            else if( cmd == "visibilitydata" ) {
+                int numtrans=0;
+                sinput >> numtrans;
+                visibilitytransforms.resize(numtrans);
+                FOREACH(it,visibilitytransforms)
+                    sinput >> *it;
+            }
+            else if( cmd == "extentsfile" || cmd == "visibilitytrans" ) {
+                string filename;
+                sinput >> filename;
+                fstream f(filename.c_str());
+                if( !f )
+                    throw openrave_exception("failed to open extents file");
+                visibilityextents = vector<Vector>((istream_iterator<Vector>(f)), istream_iterator<Vector>());
+            }
+            else if( cmd == "extentsdata" ) {
+                int numtrans=0;
+                sinput >> numtrans;
+                visibilityextents.resize(numtrans);
+                FOREACH(it,visibilityextents)
+                    sinput >> *it;
+            }
             else if( cmd == "samples" )
                 sinput >> numsamples;
-            else if( cmd == "visibilityfile")
-                sinput >> visibilityfilename;
-            else if( cmd == "visibilitytrans") {
-                sinput >> visibilityfilename;
-                bVisibilityTransforms = true;
-            }
             else {
                 RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -735,7 +815,7 @@ public:
             }
         }
 
-        boost::shared_ptr<GoalSampleFunction> pgoalsampler(new GoalSampleFunction(_robot,ptarget,convexfilename,visibilityfilename,bVisibilityTransforms,sensorindex));
+        boost::shared_ptr<GoalSampleFunction> pgoalsampler(new GoalSampleFunction(_robot,ptarget,vconvexdata,visibilitytransforms, visibilityextents,sensorindex));
      
         uint64_t starttime = GetMicroTime();
         vector<dReal> vsample;
@@ -764,9 +844,12 @@ public:
         params->_nMaxIterations = 4000;
         int affinedofs=0, sensorindex=0;
         KinBodyPtr ptarget;
-        string cmd, plannername="BiRRT",convexfilename,visibilityfilename;
-        bool bVisibilityTransforms=false;
+        string cmd, plannername="BiRRT";
+        vector<dReal> vconvexdata;
         dReal fSampleGoalProb = 0.001f;
+        vector<Transform> visibilitytransforms;
+        vector<Vector> visibilityextents;
+
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput )
@@ -795,13 +878,50 @@ public:
                 sinput >> plannername;
             else if( cmd == "sampleprob" )
                 sinput >> fSampleGoalProb;
-            else if( cmd == "convexfile" )
+            else if( cmd == "convexfile" ) {
+                string convexfilename;
                 sinput >> convexfilename;
-            else if( cmd == "visibilityfile" )
-                sinput >> visibilityfilename;
-            else if( cmd == "visibilitytrans" ) {
-                sinput >> visibilityfilename;
-                bVisibilityTransforms = true;
+                ifstream f(convexfilename.c_str());
+                if( !f )
+                    throw openrave_exception("failed to open convex filename");
+                vconvexdata = vector<dReal>((istream_iterator<dReal>(f)), istream_iterator<dReal>());
+            }
+            else if( cmd == "convexdata" ) {
+                int numpoints=0;
+                sinput >> numpoints;
+                vconvexdata.resize(numpoints);
+                FOREACH(it, vconvexdata)
+                    sinput >> *it;
+            }
+            else if( cmd == "visibilityfile" ) {
+                string visibilityfile;
+                sinput >> visibilityfile;
+                fstream f(visibilityfile.c_str());
+                if( !f )
+                    throw openrave_exception("failed to open visiblity file");
+                visibilitytransforms = vector<Transform>((istream_iterator<Transform>(f)), istream_iterator<Transform>());
+            }
+            else if( cmd == "visibilitydata" ) {
+                int numtrans=0;
+                sinput >> numtrans;
+                visibilitytransforms.resize(numtrans);
+                FOREACH(it,visibilitytransforms)
+                    sinput >> *it;
+            }
+            else if( cmd == "extentsfile" || cmd == "visibilitytrans" ) {
+                string filename;
+                sinput >> filename;
+                fstream f(filename.c_str());
+                if( !f )
+                    throw openrave_exception("failed to open extents file");
+                visibilityextents = vector<Vector>((istream_iterator<Vector>(f)), istream_iterator<Vector>());
+            }
+            else if( cmd == "extentsdata" ) {
+                int numtrans=0;
+                sinput >> numtrans;
+                visibilityextents.resize(numtrans);
+                FOREACH(it,visibilityextents)
+                    sinput >> *it;
             }
             else {
                 RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
@@ -819,7 +939,7 @@ public:
             return false;
         }
 
-        boost::shared_ptr<GoalSampleFunction> pgoalsampler(new GoalSampleFunction(_robot,ptarget,convexfilename,visibilityfilename,bVisibilityTransforms,sensorindex));
+        boost::shared_ptr<GoalSampleFunction> pgoalsampler(new GoalSampleFunction(_robot,ptarget,vconvexdata,visibilitytransforms, visibilityextents,sensorindex));
         pgoalsampler->_fSampleGoalProb = fSampleGoalProb;
         _robot->RegrabAll();
         
@@ -855,7 +975,6 @@ public:
                 RAVELOG_ERRORA("InitPlan failed\n");
                 return false;
             }
-        
             if( planner->PlanPath(ptraj) ) {
                 bSuccess = true;
                 RAVELOG_INFOA("finished planning\n");
@@ -884,7 +1003,8 @@ public:
         params->_nMaxIterations = 4000;
         int sensorindex=0;
         KinBodyPtr ptarget;
-        string cmd, plannername="GraspGradient",convexfilename;
+        string cmd, plannername="GraspGradient";
+        vector<dReal> vconvexdata;
         params->_fVisibiltyGraspThresh = 0.05f;
         dReal fMaxVelMult = 1;
 
@@ -914,8 +1034,21 @@ public:
                 sinput >> sensorindex;
             else if( cmd == "planner" )
                 sinput >> plannername;
-            else if( cmd == "convexfile" )
+            else if( cmd == "convexfile" ) {
+                string convexfilename;
                 sinput >> convexfilename;
+                ifstream f(convexfilename.c_str());
+                if( !f )
+                    throw openrave_exception("failed to open convex filename");
+                vconvexdata = vector<dReal>((istream_iterator<dReal>(f)), istream_iterator<dReal>());
+            }
+            else if( cmd == "convexdata" ) {
+                int numpoints=0;
+                sinput >> numpoints;
+                vconvexdata.resize(numpoints);
+                FOREACH(it, vconvexdata)
+                    sinput >> *it;
+            }
             else if( cmd == "graspdistthresh" )
                 sinput >> params->_fGraspDistThresh;
             else if( cmd == "graspset" ) {
@@ -953,9 +1086,9 @@ public:
         _robot->SetActiveDOFs(_robot->GetActiveManipulator()->GetArmJoints());
         params->SetRobotActiveJoints(_robot);
 
-        if( convexfilename.size() > 0 ) {
-            RAVELOG_DEBUGA("using visibility constraint with %s\n", convexfilename.c_str());
-            boost::shared_ptr<VisibilityConstraintFunction> pconstraint(new VisibilityConstraintFunction(_robot,ptarget,convexfilename,sensorindex));
+        if( vconvexdata.size() > 0 ) {
+            RAVELOG_DEBUGA("using visibility constraints\n");
+            boost::shared_ptr<VisibilityConstraintFunction> pconstraint(new VisibilityConstraintFunction(_robot,ptarget,vconvexdata,sensorindex));
             params->_constraintfn = boost::bind(&VisibilityConstraintFunction::Constraint,pconstraint,_1,_2,_3);
         }
 

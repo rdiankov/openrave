@@ -121,8 +121,7 @@ class HRP2GraspingScene(metaclass.AutoReloader):
         self.manip = [m for m in self.robot.GetManipulators() if m.GetEndEffector().GetIndex() == self.sensor.GetAttachingLink().GetIndex()][0]
 
         if graspingppfile is not None:
-            convexdata,visibilitydata,graspdata = pickle.load(graspingppfile)
-            #self.robot.SetJointValues(gripperjoints,self.manip.GetJoints())
+            convexdata,visibilitydata,graspdata = pickle.load(open(graspingppfile,'r'))
 
     def preprocessdata(self, maskfile = 'hrp2gripper_mask.mat',
                        convexfile = 'hrp2gripper_convex.mat',
@@ -140,8 +139,8 @@ class HRP2GraspingScene(metaclass.AutoReloader):
         ret = os.system("""octave --eval "GetLargestFreeConvexPolygon(load('%s'),'%s');" """%(maskfile,convexfile))
         if ret != 0:
             raise ValueError('failed to compute convex hull')
-        ret = os.system('python visibilityprocessing.py --func=visibility --robotfile=' + robotfile + ' --kinbodyfile=' + targetfile + ' --graspsetfile=' + grapsetfile + ' --savepp=' + graspingppfile + ' --convexfile=' + convexfile + ' --visibilityfile=' + visibilityfile + jointstring)
-                if ret != 0:
+        ret = os.system('python visibilityprocessing.py --func=visibility --robotfile=' + robotfile + ' --kinbodyfile=' + targetfile + ' --graspsetfile=' + graspsetfile + ' --savepp=' + graspingppfile + ' --convexfile=' + convexfile + ' --visibilityfile=' + visibilityfile + jointstring)
+        if ret != 0:
             raise ValueError('failed to process visibility information')
 
     def randomizescene(self):
@@ -209,6 +208,7 @@ class HRP2GraspingScene(metaclass.AutoReloader):
 
         self.robot.ReleaseAllGrabbed()
         self.robotgohome()
+        self.robot.SetJointValues(graspdata[0][12:],self.manip.GetGripperJoints())
 
         self.visualprob.SendCommand('MoveToObserveTarget target ' + self.target.GetName() ' sampleprob 0.001 sensorindex 0 maxiter 4000 convexdata ' scenedata.convexdata ' visibilitydata ' scenedata.visibilitydata],probs.visual,1);
     if( isempty(res) )

@@ -86,6 +86,20 @@ class TaskManipulation : public ProblemInstance
         _robot.reset();
     }
 
+    virtual void Reset()
+    {
+        ProblemInstance::Reset();
+        listsystems.clear();
+        // recreate the planners since they store state
+        if( !!_pRRTPlanner )
+            _pRRTPlanner = GetEnv()->CreatePlanner(_pRRTPlanner->GetXMLId());
+        if( !!_pGrasperProblem ) {
+            _pGrasperProblem = GetEnv()->CreateProblem(_pGrasperProblem->GetXMLId());
+            if( !!_pGrasperProblem && GetEnv()->LoadProblem(_pGrasperProblem,"") != 0)
+                _pGrasperProblem.reset();
+        }
+    }
+
     int main(const string& args)
     {
         string name;

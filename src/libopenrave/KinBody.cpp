@@ -2083,11 +2083,15 @@ void KinBody::ParametersChanged(int parameters)
     }
 }
 
-void __erase_iterator(std::list<std::pair<int,boost::function<void()> > >& l, std::list<std::pair<int,boost::function<void()> > >::iterator* pit) { if( !!pit ) l.erase(*pit); }
+void KinBody::__erase_iterator(std::list<std::pair<int,boost::function<void()> > >::iterator* pit)
+{
+    if( !!pit )
+        _listRegisteredCallbacks.erase(*pit);
+}
 
 boost::shared_ptr<void> KinBody::RegisterChangeCallback(int properties, const boost::function<void()>& callback)
 {
-    return boost::shared_ptr<void>(new std::list<std::pair<int,boost::function<void()> > >::iterator(_listRegisteredCallbacks.insert(_listRegisteredCallbacks.end(),make_pair(properties,callback))), boost::bind(__erase_iterator,boost::ref(_listRegisteredCallbacks),_1));
+    return boost::shared_ptr<void>(new std::list<std::pair<int,boost::function<void()> > >::iterator(_listRegisteredCallbacks.insert(_listRegisteredCallbacks.end(),make_pair(properties,callback))), boost::bind(&KinBody::__erase_iterator,boost::bind(&sptr_from<KinBody>,KinBodyWeakPtr(shared_kinbody())), _1));
 }
 
 } // end namespace OpenRAVE

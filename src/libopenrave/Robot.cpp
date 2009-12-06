@@ -412,6 +412,7 @@ void RobotBase::Destroy()
     _vGrabbedBodies.clear();
     _vecManipulators.clear();
     _vecSensors.clear();
+    SetController(ControllerBasePtr(),"");
     
     KinBody::Destroy();
 }

@@ -68,9 +68,9 @@ public:
     /// \param probot The robot whose active manipulator will be used to solve the inverse kinematics for.
     /// \param pmanip The manipulator the IK solver is attached to
     /// \param options Specific options for the ik solver, refer to each different ik solver for a list of their options
-    virtual bool Init(RobotBase::ManipulatorConstPtr pmanip) = 0;
+    virtual bool Init(RobotBase::ManipulatorPtr pmanip) = 0;
 
-    virtual RobotBase::ManipulatorConstPtr GetManipulator() const = 0;
+    virtual RobotBase::ManipulatorPtr GetManipulator() const = 0;
 
     /// \return Number of free parameters defining the null solution space.
     ///         Each parameter is always in the range of [0,1].

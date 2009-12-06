@@ -739,6 +739,13 @@ public:
     {
         _robot.reset();
         ProblemInstance::Destroy();
+        _listBodyTrajs.clear();
+    }
+
+    virtual void Reset()
+    {
+        ProblemInstance::Reset();
+        _listBodyTrajs.clear();
     }
 
     virtual int main(const string& args)

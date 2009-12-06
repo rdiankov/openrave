@@ -27,6 +27,7 @@ while(1)
         warning('failed to move to target');
         continue;
     end
+
     WaitForRobot(robot.id);
 
     if(dopause)

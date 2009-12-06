@@ -208,7 +208,7 @@ class Environment : public EnvironmentBase
         }
     
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-
+        
         if( !!_pPhysicsEngine )
             _pPhysicsEngine->DestroyEnvironment();
         if( !!_pCurrentChecker )

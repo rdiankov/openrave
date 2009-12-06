@@ -608,6 +608,7 @@ protected:
     boost::shared_ptr<void> _pCollisionData; ///< internal collision model
     ManageDataPtr _pManageData;
 
+    void __erase_iterator(std::list<std::pair<int,boost::function<void()> > >::iterator* pit);
     std::list<std::pair<int,boost::function<void()> > > _listRegisteredCallbacks; ///< callbacks to call when particular properties of the body change.
 
     bool _bHierarchyComputed; ///< true if the joint heirarchy and other cached information is computed

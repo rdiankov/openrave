@@ -15,9 +15,23 @@
 #ifndef OPENRAVE_ODE_SPACE
 #define OPENRAVE_ODE_SPACE
 
+//#include <boost/thread/tss.hpp>
+
 // manages a space of ODE objects
 class ODESpace : public boost::enable_shared_from_this<ODESpace>
 {
+//    static void AllocateODEResources()
+//    {
+//#ifdef ODE_HAVE_ALLOCATE_DATA_THREAD
+//        static boost::thread_specific_ptr<bool> isalloc;
+//        if( !isalloc.get() ) {
+//            RAVELOG_INFO("allocating ode resources\n");
+//            isalloc.reset(new bool(true));
+//            dAllocateODEDataForThread(dAllocateMaskAll);
+//        }
+//#endif
+//    }
+
     class ODEResources
     {
     public:

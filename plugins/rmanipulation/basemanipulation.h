@@ -65,6 +65,17 @@ public:
         ProblemInstance::Destroy();
     }
 
+    virtual void Reset()
+    {
+        ProblemInstance::Reset();
+        // recreate the planners since they store state
+        if( !!_pGrasperProblem ) {
+            _pGrasperProblem = GetEnv()->CreateProblem(_pGrasperProblem->GetXMLId());
+            if( !!_pGrasperProblem && GetEnv()->LoadProblem(_pGrasperProblem,"") != 0)
+                _pGrasperProblem.reset();
+        }
+    }
+
     virtual int main(const std::string& args)
     {
         stringstream ss(args);

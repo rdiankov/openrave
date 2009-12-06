@@ -128,6 +128,11 @@ struct null_deleter
     void operator()(void const *) const {}
 };
 
+template <class T> boost::shared_ptr<T> sptr_from(boost::weak_ptr<T> const& wpt)
+{
+    return boost::shared_ptr<T>(wpt); // throws on wpt.expired()
+}
+
 // need the prototypes in order to keep them free of the OpenRAVE namespace
 class LinkXMLReader;
 class KinBodyXMLReader;

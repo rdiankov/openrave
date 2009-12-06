@@ -62,7 +62,7 @@ public:
             }
         }
 
-        _treeForward.Reset(shared_planner(), GetParameters().GetDOF());
+        _treeForward.Reset(shared_planner(), GetParameters().GetDOF());;
         _treeForward._fStepLength = GetParameters()._fStepLength;
         _treeForward._distmetricfn = GetParameters()._distmetricfn;
         _treeForward.AddNode(-1, GetParameters().vinitialconfig);
@@ -127,7 +127,7 @@ protected:
     std::vector<dReal>         _randomConfig;
     CollisionReportPtr _report;
 
-    SpatialTree< boost::shared_ptr<RrtPlanner<Node> >, Node > _treeForward;
+    SpatialTree< RrtPlanner<Node>, Node > _treeForward;
 
     bool _bInit;
 
@@ -142,12 +142,12 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
     {
         __description = "Rosen's BiRRT planner";
     }
+    virtual ~BirrtPlanner() {}
 
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {
         if( !RrtPlanner<SimpleNode>::InitPlan(pbase,pparams) )
             return false;
-
         _bInit = false;
         RobotBase::RobotStateSaver savestate(_robot);
 
@@ -328,7 +328,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
 
  protected:
     PlannerParameters _parameters;
-    SpatialTree< boost::shared_ptr<RrtPlanner<SimpleNode> >, SimpleNode > _treeBackward;
+    SpatialTree< RrtPlanner<SimpleNode>, SimpleNode > _treeBackward;
 };
 
 class BasicRrtPlanner : public RrtPlanner<SimpleNode>
@@ -340,6 +340,7 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
         _fGoalBiasProb = 0.05f;
         _bOneStep = false;
     }
+    virtual ~BasicRrtPlanner() {}
 
     bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {    
@@ -514,6 +515,7 @@ class ExplorationPlanner : public RrtPlanner<SimpleNode>
     {
         __description = "RRT-based exploration planner";
     }
+    virtual ~ExplorationPlanner() {}
 
     bool PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream)
     {

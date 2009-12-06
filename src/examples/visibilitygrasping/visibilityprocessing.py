@@ -73,9 +73,9 @@ def ProcessVisibilityExtents(robotfile,kinbodyfile,convexfilename,visibilityfile
         if orcol is not None:
             print 'setting ode checker'
             orenv.SetCollisionChecker(orcol)
-    orrobot = orenv.ReadRobotXMLFile(robotfile,False)
+    orrobot = orenv.ReadRobotXMLFile(robotfile)
     orenv.AddRobot(orrobot)
-    orobj = orenv.ReadKinBodyXMLFile(kinbodyfile,False)
+    orobj = orenv.ReadKinBodyXMLFile(kinbodyfile)
     orenv.AddKinBody(orobj)
 
     if robotjoints is not None:
@@ -197,4 +197,4 @@ if __name__=='__main__':
             f.close()
             print '%d transforms saved'%visibilitydata.shape[0]
     if options.savepp is not None:
-        pickle.dump((read_array(options.convexfile),visibilitydata,grasps),open(options.savepp,'w'))
+        pickle.dump((read_array(options.convexfile),visibilitydata,graspdata),open(options.savepp,'w'))

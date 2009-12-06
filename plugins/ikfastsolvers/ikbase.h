@@ -28,10 +28,15 @@ class IkFastSolver : public IkSolverBase
 
     inline boost::shared_ptr<IkFastSolver<IKReal,IKType,Solution> > shared_solver() { return boost::static_pointer_cast<IkFastSolver<IKReal,IKType, Solution> >(shared_from_this()); }
     inline boost::shared_ptr<IkFastSolver<IKReal,IKType,Solution> const> shared_solver_const() const { return boost::static_pointer_cast<IkFastSolver<IKReal,IKType,Solution> const>(shared_from_this()); }
+    inline boost::weak_ptr<IkFastSolver<IKReal,IKType,Solution> > weak_solver() { return shared_solver(); }
 
     virtual void SetJointLimits()
     {
-        _probot->GetActiveDOFLimits(_qlower,_qupper);
+        RobotBase::ManipulatorPtr pmanip(_pmanip);
+        RobotBasePtr probot = pmanip->GetRobot();
+        RobotBase::RobotStateSaver saver(probot);
+        probot->SetActiveDOFs(pmanip->GetArmJoints());
+        probot->GetActiveDOFLimits(_qlower,_qupper);
         _vfreeparamscales.resize(0);
         FOREACH(itfree, _vfreeparams) {
             if( *itfree < 0 || *itfree >= (int)_qlower.size() )
@@ -44,20 +49,20 @@ class IkFastSolver : public IkSolverBase
         }
     }
 
-    virtual bool Init(RobotBase::ManipulatorConstPtr pmanip)
+    virtual bool Init(RobotBase::ManipulatorPtr pmanip)
     {
         _pmanip = pmanip;
-        _probot = _pmanip->GetRobot();
-        _cblimits = _probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IkFastSolver<IKReal,IKType,Solution>::SetJointLimits,shared_solver()));
+        RobotBasePtr probot = pmanip->GetRobot();
+        _cblimits = probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IkFastSolver<IKReal,IKType,Solution>::SetJointLimits,boost::bind(&sptr_from<IkFastSolver<IKReal,IKType,Solution> >, weak_solver())));
 
-        if( _nTotalJoints != (int)_pmanip->GetArmJoints().size() ) {
-            RAVELOG_ERRORA(str(boost::format("ik %s configured with different number of joints than robot manipulator (%d!=%d)\n")%GetXMLId()%_pmanip->GetArmJoints().size()%_nTotalJoints));
+        if( _nTotalJoints != (int)pmanip->GetArmJoints().size() ) {
+            RAVELOG_ERRORA(str(boost::format("ik %s configured with different number of joints than robot manipulator (%d!=%d)\n")%GetXMLId()%pmanip->GetArmJoints().size()%_nTotalJoints));
             return false;
         }
 
         // get the joint limits
-        RobotBase::RobotStateSaver saver(_probot);
-        _probot->SetActiveDOFs(_pmanip->GetArmJoints());
+        RobotBase::RobotStateSaver saver(probot);
+        probot->SetActiveDOFs(pmanip->GetArmJoints());
         SetJointLimits();
         return true;
     }
@@ -68,11 +73,14 @@ class IkFastSolver : public IkSolverBase
             RAVELOG_WARNA("ik solver only supports type %d",IKType);
             return false;
         }
-        if( bCheckEnvCollision && _CheckIndependentCollision() )
-            return false;
 
-        RobotBase::RobotStateSaver saver(_probot);
-        _probot->SetActiveDOFs(_pmanip->GetArmJoints());
+        RobotBase::ManipulatorPtr pmanip(_pmanip);
+        if( bCheckEnvCollision && _CheckIndependentCollision(pmanip) )
+            return false;
+        
+        RobotBasePtr probot = pmanip->GetRobot();
+        RobotBase::RobotStateSaver saver(probot);
+        probot->SetActiveDOFs(pmanip->GetArmJoints());
         std::vector<IKReal> vfree(_vfreeparams.size());
         return ComposeSolution(_vfreeparams, vfree, 0, q0, boost::bind(&IkFastSolver::_SolveSingle,shared_solver(), boost::ref(param),boost::ref(vfree),boost::ref(q0),bCheckEnvCollision,result));
     }
@@ -83,11 +91,14 @@ class IkFastSolver : public IkSolverBase
             RAVELOG_WARNA("ik solver only supports type %d",IKType);
             return false;
         }
-        if( bCheckEnvCollision && _CheckIndependentCollision() )
+
+        RobotBase::ManipulatorPtr pmanip(_pmanip);
+        if( bCheckEnvCollision && _CheckIndependentCollision(pmanip) )
             return false;
 
-        RobotBase::RobotStateSaver saver(_probot);
-        _probot->SetActiveDOFs(_pmanip->GetArmJoints());
+        RobotBasePtr probot = pmanip->GetRobot();
+        RobotBase::RobotStateSaver saver(probot);
+        probot->SetActiveDOFs(pmanip->GetArmJoints());
         std::vector<IKReal> vfree(_vfreeparams.size());
         qSolutions.resize(0);
         ComposeSolution(_vfreeparams, vfree, 0, vector<dReal>(), boost::bind(&IkFastSolver::_SolveAll,shared_solver(), param,boost::ref(vfree),bCheckEnvCollision,boost::ref(qSolutions)));
@@ -104,11 +115,13 @@ class IkFastSolver : public IkSolverBase
         if( vFreeParameters.size() != _vfreeparams.size() )
             throw openrave_exception("free parameters not equal",ORE_InvalidArguments);
 
-        if( bCheckEnvCollision && _CheckIndependentCollision() )
+        RobotBase::ManipulatorPtr pmanip(_pmanip);
+        if( bCheckEnvCollision && _CheckIndependentCollision(pmanip) )
             return false;
 
-        RobotBase::RobotStateSaver saver(_probot);
-        _probot->SetActiveDOFs(_pmanip->GetArmJoints());
+        RobotBasePtr probot = pmanip->GetRobot();
+        RobotBase::RobotStateSaver saver(probot);
+        probot->SetActiveDOFs(pmanip->GetArmJoints());
         std::vector<IKReal> vfree(_vfreeparams.size());
         for(size_t i = 0; i < _vfreeparams.size(); ++i)
             vfree[i] = vFreeParameters[i]*(_qupper[_vfreeparams[i]]-_qlower[_vfreeparams[i]]) + _qlower[_vfreeparams[i]];
@@ -124,11 +137,13 @@ class IkFastSolver : public IkSolverBase
         if( vFreeParameters.size() != _vfreeparams.size() )
             throw openrave_exception("free parameters not equal",ORE_InvalidArguments);
 
-        if( bCheckEnvCollision && _CheckIndependentCollision() )
+        RobotBase::ManipulatorPtr pmanip(_pmanip);
+        if( bCheckEnvCollision && _CheckIndependentCollision(pmanip) )
             return false;
 
-        RobotBase::RobotStateSaver saver(_probot);
-        _probot->SetActiveDOFs(_pmanip->GetArmJoints());
+        RobotBasePtr probot = pmanip->GetRobot();
+        RobotBase::RobotStateSaver saver(probot);
+        probot->SetActiveDOFs(pmanip->GetArmJoints());
         std::vector<IKReal> vfree(_vfreeparams.size());
         for(size_t i = 0; i < _vfreeparams.size(); ++i)
             vfree[i] = vFreeParameters[i]*(_qupper[_vfreeparams[i]]-_qlower[_vfreeparams[i]]) + _qlower[_vfreeparams[i]];
@@ -140,17 +155,19 @@ class IkFastSolver : public IkSolverBase
     virtual int GetNumFreeParameters() const { return (int)_vfreeparams.size(); }
     virtual bool GetFreeParameters(std::vector<dReal>& pFreeParameters) const
     {
+        RobotBase::ManipulatorPtr pmanip(_pmanip);
+        RobotBasePtr probot = pmanip->GetRobot();
         std::vector<dReal> values;
         std::vector<dReal>::const_iterator itscale = _vfreeparamscales.begin();
-        _probot->GetJointValues(values);
+        probot->GetJointValues(values);
         pFreeParameters.resize(_vfreeparams.size());
         for(size_t i = 0; i < _vfreeparams.size(); ++i)
-            pFreeParameters[i] = (values[_pmanip->GetArmJoints()[_vfreeparams[i]]]-_qlower[_vfreeparams[i]]) * *itscale++;
+            pFreeParameters[i] = (values[pmanip->GetArmJoints()[_vfreeparams[i]]]-_qlower[_vfreeparams[i]]) * *itscale++;
 
         return true;
     }
 
-    virtual RobotBase::ManipulatorConstPtr GetManipulator() const { return _pmanip; }
+    virtual RobotBase::ManipulatorPtr GetManipulator() const { return RobotBase::ManipulatorPtr(_pmanip); }
 
 private:
     bool ComposeSolution(const std::vector<int>& vfreeparams, vector<IKReal>& vfree, int freeindex, const vector<dReal>& q0, const boost::function<bool()>& fn)
@@ -219,10 +236,11 @@ private:
         if( _pfnik(eetrans, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions) ) {
             vector<IKReal> vsolfree;
 
+            RobotBase::ManipulatorPtr pmanip(_pmanip);
             dReal bestdist = 1000;
-            std::vector<dReal> vravesol(_pmanip->GetArmJoints().size());
+            std::vector<dReal> vravesol(pmanip->GetArmJoints().size());
             std::vector<dReal> vbest;
-            std::vector<IKReal> sol(_pmanip->GetArmJoints().size());
+            std::vector<IKReal> sol(pmanip->GetArmJoints().size());
             // find the first valid solution that satisfies joint constraints and collisions
             FOREACH(itsol, vsolutions) {
                 if( itsol->GetFree().size() > 0 ) {
@@ -272,12 +290,14 @@ private:
         }
 
         // check for self collisions
-        _probot->SetActiveDOFValues(vravesol);
-        if( _probot->CheckSelfCollision() )
+        RobotBase::ManipulatorPtr pmanip(_pmanip);
+        RobotBasePtr probot = pmanip->GetRobot();
+        probot->SetActiveDOFValues(vravesol);
+        if( probot->CheckSelfCollision() )
             return false;
 
         COLLISIONREPORT report;
-        if( boost::get<2>(freeq0check) && GetEnv()->CheckCollision(KinBodyConstPtr(_probot), boost::shared_ptr<COLLISIONREPORT>(&report,null_deleter())) ) {
+        if( boost::get<2>(freeq0check) && GetEnv()->CheckCollision(KinBodyConstPtr(probot), boost::shared_ptr<COLLISIONREPORT>(&report,null_deleter())) ) {
             if( !!report.plink1 && !!report.plink2 ) {
                 RAVELOG_VERBOSEA(str(boost::format("IKFastSolver: collision %s:%s with %s:%s\n")%report.plink1->GetParent()->GetName()%report.plink1->GetName()%report.plink2->GetParent()->GetName()%report.plink2->GetName()));
             }
@@ -285,7 +305,7 @@ private:
                 RAVELOG_VERBOSEA("ik collision, no link\n");
 
             // if gripper is colliding, solutions will always fail, so completely stop solution process
-            if( param.GetType() == Parameterization::Type_Transform6D && _pmanip->CheckEndEffectorCollision(param.GetTransform()*_pmanip->GetGraspTransform()) ) {
+            if( param.GetType() == Parameterization::Type_Transform6D && pmanip->CheckEndEffectorCollision(param.GetTransform()*pmanip->GetGraspTransform()) ) {
                 bStopSearching = true;
                 return true; // return true to stop the search
             }
@@ -294,9 +314,9 @@ private:
         }
 
         // solution is valid, check with q0
-        if( boost::get<1>(freeq0check).size() == _pmanip->GetArmJoints().size() ) {
+        if( boost::get<1>(freeq0check).size() == pmanip->GetArmJoints().size() ) {
             dReal d = 0;
-            for(int k = 0; k < (int)_pmanip->GetArmJoints().size(); ++k)
+            for(int k = 0; k < (int)pmanip->GetArmJoints().size(); ++k)
                 d += SQR(vravesol[k]-boost::get<1>(freeq0check)[k]);
 
             if( bestdist > d ) {
@@ -315,20 +335,23 @@ private:
         IKReal eetrans[3] = {t.trans.x, t.trans.y, t.trans.z};
         IKReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
 
+        RobotBase::ManipulatorPtr pmanip(_pmanip);
+        RobotBasePtr probot = pmanip->GetRobot();
+        
         std::vector<Solution> vsolutions;
         if( _pfnik(eetrans, eerot, vfree.size() > 0 ? &vfree[0] : NULL, vsolutions) ) {
             vector<IKReal> vsolfree;
-            vector<dReal> vravesol(_pmanip->GetArmJoints().size());
-            std::vector<IKReal> sol(_pmanip->GetArmJoints().size());
+            vector<dReal> vravesol(pmanip->GetArmJoints().size());
+            std::vector<IKReal> sol(pmanip->GetArmJoints().size());
             FOREACH(itsol, vsolutions) {
                 if( itsol->GetFree().size() > 0 ) {
                     // have to search over all the free parameters of the solution!
                     vsolfree.resize(itsol->GetFree().size());
                     
-                    ComposeSolution(itsol->GetFree(), vsolfree, 0, vector<dReal>(), boost::bind(&IkFastSolver::_ValidateSolutionAll,shared_solver(),boost::ref(*itsol), boost::ref(vsolfree), bCheckEnvCollision, boost::ref(sol), boost::ref(vravesol), boost::ref(qSolutions)));
+                    ComposeSolution(itsol->GetFree(), vsolfree, 0, vector<dReal>(), boost::bind(&IkFastSolver::_ValidateSolutionAll,shared_solver(),probot, boost::ref(*itsol), boost::ref(vsolfree), bCheckEnvCollision, boost::ref(sol), boost::ref(vravesol), boost::ref(qSolutions)));
                 }
                 else {
-                    if( _ValidateSolutionAll(*itsol, vector<IKReal>(), bCheckEnvCollision, sol, vravesol, qSolutions) )
+                    if( _ValidateSolutionAll(probot, *itsol, vector<IKReal>(), bCheckEnvCollision, sol, vravesol, qSolutions) )
                         break;
                 }
             }
@@ -337,7 +360,7 @@ private:
         return false;
     }
 
-    bool _ValidateSolutionAll(const Solution& iksol, const vector<IKReal>& vfree, bool bCheckEnvCollision, std::vector<IKReal>& sol, std::vector<dReal>& vravesol, std::vector< std::vector<dReal> >& qSolutions)
+    bool _ValidateSolutionAll(RobotBasePtr probot, const Solution& iksol, const vector<IKReal>& vfree, bool bCheckEnvCollision, std::vector<IKReal>& sol, std::vector<dReal>& vravesol, std::vector< std::vector<dReal> >& qSolutions)
     {
         iksol.GetSolution(&sol[0],vfree.size()>0?&vfree[0]:NULL);
 
@@ -349,11 +372,11 @@ private:
             return false;
 
         // check for self collisions
-        _probot->SetActiveDOFValues(vravesol);
-        if( _probot->CheckSelfCollision() )
+        probot->SetActiveDOFValues(vravesol);
+        if( probot->CheckSelfCollision() )
             return false;
 
-        if( bCheckEnvCollision && GetEnv()->CheckCollision(KinBodyConstPtr(_probot)) )
+        if( bCheckEnvCollision && GetEnv()->CheckCollision(KinBodyConstPtr(probot)) )
             return false;
 
         qSolutions.push_back(vravesol);
@@ -375,10 +398,10 @@ private:
         return true;
     }
 
-    bool _CheckIndependentCollision()
+    bool _CheckIndependentCollision(RobotBase::ManipulatorPtr pmanip)
     {
         COLLISIONREPORT report;
-        if( _pmanip->CheckIndependentCollision(boost::shared_ptr<COLLISIONREPORT>(&report,null_deleter())) ) {
+        if( pmanip->CheckIndependentCollision(boost::shared_ptr<COLLISIONREPORT>(&report,null_deleter())) ) {
             if( !!report.plink1 && !!report.plink2 ) {
                 RAVELOG_VERBOSEA(str(boost::format("IKFastSolver: indep collision %s:%s with %s:%s\n")%report.plink1->GetParent()->GetName()%report.plink1->GetName()%report.plink2->GetParent()->GetName()%report.plink2->GetName()));
             }
@@ -391,8 +414,7 @@ private:
 
     template <typename U> U SQR(U t) { return t*t; }
 
-    RobotBase::ManipulatorConstPtr _pmanip;
-    RobotBasePtr _probot;
+    RobotBase::ManipulatorWeakPtr _pmanip;
     std::vector<int> _vfreeparams;
     std::vector<dReal> _vfreeparamscales;
     boost::shared_ptr<void> _cblimits;

@@ -328,7 +328,7 @@ class SpatialTree : public SpatialTreeBase
 
     ~SpatialTree(){}
     
-    virtual void Reset(Planner planner, int dof=0)
+    virtual void Reset(boost::weak_ptr<Planner> planner, int dof=0)
     {
         _planner = planner;
 
@@ -377,6 +377,7 @@ class SpatialTree : public SpatialTreeBase
         lastindex = GetNN(pTargetConfig);
         Node* pnode = _nodes[lastindex];
         bool bHasAdded = false;
+        boost::shared_ptr<Planner> planner(_planner);
 
         // extend
         while(1) {
@@ -391,15 +392,15 @@ class SpatialTree : public SpatialTreeBase
                 _vNewConfig[i] = pnode->q[i] + (pTargetConfig[i]-pnode->q[i])*fdist;
         
             // project to constraints
-            if( !!_planner->GetParameters()._constraintfn ) {
-                if( !_planner->GetParameters()._constraintfn(pnode->q, _vNewConfig, 0) ) {
+            if( !!planner->GetParameters()._constraintfn ) {
+                if( !planner->GetParameters()._constraintfn(pnode->q, _vNewConfig, 0) ) {
                     if(bHasAdded)
                         return ET_Sucess;
                     return ET_Failed;
                 }
             }
 
-            if( CollisionFunctions::CheckCollision(_planner->GetParameters(),_planner->GetRobot(),pnode->q, _vNewConfig, OPEN_START) ) {
+            if( CollisionFunctions::CheckCollision(planner->GetParameters(),planner->GetRobot(),pnode->q, _vNewConfig, OPEN_START) ) {
                 if(bHasAdded)
                     return ET_Sucess;
                 return ET_Failed;
@@ -426,7 +427,7 @@ class SpatialTree : public SpatialTreeBase
 
  private:
     vector<dReal> _vNewConfig;
-    Planner _planner;
+    boost::weak_ptr<Planner> _planner;
     int _dof;
 };
 
