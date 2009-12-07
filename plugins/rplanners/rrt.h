@@ -111,7 +111,7 @@ public:
 
             ++startNode;
             FOREACHC(itc, vconfigs)
-                path.insert(startNode, _treeForward._nodes[_treeForward.AddNode(-1,*itc)]);
+                path.insert(startNode, _treeForward._nodes.at(_treeForward.AddNode(-1,*itc)));
             // splice out in-between nodes in path
             path.erase(startNode, endNode);
             nrejected = 0;
@@ -235,7 +235,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
             RAVELOG_VERBOSEA("iter: %d\n", iter);
             ++iter;
 
-            if( !!_parameters._samplegoalfn ) {// && _treeBackward._nodes.size() == 0 ) {
+            if( !!_parameters._samplegoalfn ) {//  _treeBackward._nodes.size() == 0 ) {
                 vector<dReal> vgoal;
                 if( _parameters._samplegoalfn(vgoal) ) {
                     RAVELOG_VERBOSEA("found goal\n");
@@ -284,25 +284,25 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
         list<SimpleNode*> vecnodes;
     
         // add nodes from the forward tree
-        SimpleNode* pforward = _treeForward._nodes[TreeA == &_treeForward ? iConnectedA : iConnectedB];
+        SimpleNode* pforward = _treeForward._nodes.at(TreeA == &_treeForward ? iConnectedA : iConnectedB);
         while(1) {
             vecnodes.push_front(pforward);
             if(pforward->parent < 0)
                 break;
-            pforward = _treeForward._nodes[pforward->parent];
+            pforward = _treeForward._nodes.at(pforward->parent);
         }
 
         // add nodes from the backward tree
         int goalindex = -1;
 
-        SimpleNode *pbackward = _treeBackward._nodes[TreeA == &_treeBackward ? iConnectedA : iConnectedB];
+        SimpleNode *pbackward = _treeBackward._nodes.at(TreeA == &_treeBackward ? iConnectedA : iConnectedB);
         while(1) {
             vecnodes.push_back(pbackward);
             if(pbackward->parent < 0) {
                 goalindex = -pbackward->parent-1;
                 break;
             }
-            pbackward = _treeBackward._nodes[pbackward->parent];
+            pbackward = _treeBackward._nodes.at(pbackward->parent);
         }
 
         assert( goalindex >= 0 );
@@ -443,7 +443,7 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
 
             if( et == ET_Connected ) {
                 FOREACH(itgoal, _vecGoals) {
-                    if( _treeForward._distmetricfn(*itgoal, _treeForward._nodes[lastnode]->q) < 2*_treeForward._fStepLength ) {
+                    if( _treeForward._distmetricfn(*itgoal, _treeForward._nodes.at(lastnode)->q) < 2*_treeForward._fStepLength ) {
                         bSuccess = true;
                         igoalindex = (int)(itgoal-_vecGoals.begin());
                         break;
@@ -453,7 +453,7 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
 
             // check the goal heuristic more often
             if( et != ET_Failed && !!_parameters._goalfn ) {
-                if( _parameters._goalfn(_treeForward._nodes[lastnode]->q) <= 1e-4f ) {
+                if( _parameters._goalfn(_treeForward._nodes.at(lastnode)->q) <= 1e-4f ) {
                     bSuccess = true;
                     igoalindex = 0;
                     break;
@@ -475,12 +475,12 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
         list<SimpleNode*> vecnodes;
     
         // add nodes from the forward tree
-        SimpleNode* pforward = _treeForward._nodes[lastnode];
+        SimpleNode* pforward = _treeForward._nodes.at(lastnode);
         while(1) {
             vecnodes.push_front(pforward);
             if(pforward->parent < 0)
                 break;
-            pforward = _treeForward._nodes[pforward->parent];
+            pforward = _treeForward._nodes.at(pforward->parent);
         }
 
         _OptimizePath(vecnodes);
@@ -534,7 +534,7 @@ class ExplorationPlanner : public RrtPlanner<SimpleNode>
             if( RaveRandomFloat() < _parameters._fExploreProb ) {
                 // explore
                 int inode = RaveRandomInt()%_treeForward._nodes.size();            
-                SimpleNode* pnode = _treeForward._nodes[inode];
+                SimpleNode* pnode = _treeForward._nodes.at(inode);
 
                 if( !_parameters._sampleneighfn(vSampleConfig,pnode->q,_parameters._fStepLength) )
                     return false;

@@ -147,6 +147,9 @@ public:
                     continue;
 
                 RAVELOG_DEBUGA("attempting grasp %d, %f\n", (int)(itgrasp-vgrasps.begin()), itgrasp->fgraspdist);
+                RAVELOG_DEBUGA("trans: %f, %f, %f, %f, %f, %f, %f\n",
+                               itgrasp->tgrasp.rot.x,itgrasp->tgrasp.rot.y,itgrasp->tgrasp.rot.z,itgrasp->tgrasp.rot.w,itgrasp->tgrasp.trans.x,itgrasp->tgrasp.trans.y,itgrasp->tgrasp.trans.z);
+                
                 if( StochasticGradientDescent(*itgrasp, fConfigThresh, listpath) ) {
                     listbestpath.swap(listpath);
                     bSuccess = true;
@@ -198,8 +201,13 @@ private:
         else {
             g.bChecked = true;
 
-            if( _pmanip->CheckEndEffectorCollision(g.tgrasp) ) {
-                RAVELOG_DEBUGA("gripper collision\n");
+            if( _pmanip->CheckEndEffectorCollision(g.tgrasp, _report) ) {
+                RAVELOG_DEBUGA("gripper collision: (%s:%s)x(%s:%s).\n",
+                               !!_report->plink1?_report->plink1->GetParent()->GetName().c_str():"",
+                               !!_report->plink1?_report->plink1->GetName().c_str():"",
+                               !!_report->plink2?_report->plink2->GetParent()->GetName().c_str():"",
+                               !!_report->plink2?_report->plink2->GetName().c_str():"");
+                //GetEnv()->UpdatePublishedBodies();
                 return false;
             }
 

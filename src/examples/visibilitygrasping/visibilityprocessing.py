@@ -20,8 +20,8 @@ from openravepy import *
 from scipy.io import read_array
 from scipy.io import write_array
 
-def GetCameraRobotMask(robotfile,sensorindex=0,robotjoints=None,robotjointinds=None,gripperjoints=None,rayoffset=0):
-    orenv = Environment()
+def GetCameraRobotMask(orenv,robotfile,sensorindex=0,robotjoints=None,robotjointinds=None,gripperjoints=None,rayoffset=0):
+    orenv.Reset()
     # ode returns better ray casts
     if not orenv.GetCollisionChecker().GetXMLId() == 'ode':
         orcol = orenv.CreateCollisionChecker('ode')
@@ -60,12 +60,13 @@ def GetCameraRobotMask(robotfile,sensorindex=0,robotjoints=None,robotjointinds=N
 
     attached = None
     manip = None
-    orenv.Destroy()
+    orrobot = None
+    manip = None
     # gather all the rays that hit and form an image
     return reshape(array(hitindices,'float'),(height,width))
 
-def ProcessVisibilityExtents(robotfile,kinbodyfile,convexfilename,visibilityfilename,sensorindex=0,robotjoints=None,robotjointinds=None,gripperjoints=None):
-    orenv = Environment()
+def ProcessVisibilityExtents(orenv,robotfile,kinbodyfile,convexfilename,visibilityfilename,sensorindex=0,robotjoints=None,robotjointinds=None,gripperjoints=None):
+    orenv.Reset()
     orenv.LockPhysics(True)
     # ode returns better ray casts
     if not orenv.GetCollisionChecker().GetXMLId() == 'ode':
@@ -97,7 +98,7 @@ def ProcessVisibilityExtents(robotfile,kinbodyfile,convexfilename,visibilityfile
     orrobot.SetTransform(T)
     visualprob = orenv.CreateProblem('VisualFeedback')
     orenv.LoadProblem(visualprob,orrobot.GetName())
-    response = visualprob.SendCommand('ProcessVisibilityExtents target %s sensorindex %d convexfile %s visibilityfile %s'%(orobj.GetName(),sensorindex,convexfilename,visibilityfilename))
+    response = visualprob.SendCommand('ProcessVisibilityExtents target %s sensorindex %d convexfile %s extentsfile %s'%(orobj.GetName(),sensorindex,convexfilename,visibilityfilename))
     orenv.LockPhysics(False)
     if response is None:
         raise ValueError('ProcessVisibilityExtents failed')
@@ -105,13 +106,12 @@ def ProcessVisibilityExtents(robotfile,kinbodyfile,convexfilename,visibilityfile
     transforms = [float(s) for s in response.split()]
     if not mod(len(transforms),7) == 0:
         raise ValueError('corrupted transforms')
-    
+
     del visualprob
     del manip
     del attached
     del orrobot
     del orobj
-    orenv.Destroy()
     return reshape(transforms,(len(transforms)/7,7))
 
 if __name__=='__main__':
@@ -169,8 +169,9 @@ if __name__=='__main__':
     if options.gripperjoints is not None:
         gripperjoints = [float(s) for s in options.gripperjoints.split()] if options.gripperjoints else None
 
+    orenv = Environment()
     if options.func == 'mask':
-        Imask = GetCameraRobotMask(options.robotfile,sensorindex=options.sensorindex,gripperjoints=gripperjoints,robotjoints=robotjoints,robotjointinds=robotjointinds,rayoffset=options.rayoffset)
+        Imask = GetCameraRobotMask(orenv,options.robotfile,sensorindex=options.sensorindex,gripperjoints=gripperjoints,robotjoints=robotjoints,robotjointinds=robotjointinds,rayoffset=options.rayoffset)
         # save as a ascii matfile
         write_array(options.savefile,Imask)
         print 'mask saved to ' + options.savefile
@@ -189,7 +190,7 @@ if __name__=='__main__':
             print 'need kinbodyfile'
             sys.exit(1)
         
-        visibilitydata = ProcessVisibilityExtents(options.robotfile,kinbodyfile=options.kinbodyfile,convexfilename=options.convexfile,visibilityfilename=options.visibilityfile,sensorindex=options.sensorindex,gripperjoints=gripperjoints,robotjoints=robotjoints,robotjointinds=robotjointinds)
+        visibilitydata = ProcessVisibilityExtents(orenv,options.robotfile,kinbodyfile=options.kinbodyfile,convexfilename=options.convexfile,visibilityfilename=options.visibilityfile,sensorindex=options.sensorindex,gripperjoints=gripperjoints,robotjoints=robotjoints,robotjointinds=robotjointinds)
         if options.savefile is not None:
             f = open(options.savefile,'w')
             for t in visibilitydata:
@@ -197,4 +198,28 @@ if __name__=='__main__':
             f.close()
             print '%d transforms saved'%visibilitydata.shape[0]
     if options.savepp is not None:
+        orenv.Reset()
+        target = orenv.ReadKinBodyXMLFile(options.kinbodyfile)
+        orenv.AddKinBody(target)
+        target.SetTransform(eye(4))
+
+        rhand = orenv.ReadRobotXMLFile('robots/hrp2rhandjsk.robot.xml')
+        orenv.AddRobot(rhand)
+
+        # transform into end effect gripper
+        for g in graspdata:
+            Tgrasp = r_[transpose(reshape(g[0:12],(4,3))),[[0,0,0,1]]]
+            rhand.SetTransform(Tgrasp)
+            rhand.SetJointValues(g[12:])
+        
+            while orenv.CheckCollision(rhand,target):
+                T = array(Tgrasp)
+                T[0:3,3] += 0.004*(random.rand(3)-0.5)
+                rhand.SetTransform(T)
+            T = rhand.GetManipulators()[0].GetEndEffectorTransform()
+            g[0:12] = reshape(transpose(T[0:3,:]),(12,))
+        
         pickle.dump((read_array(options.convexfile),visibilitydata,graspdata),open(options.savepp,'w'))
+        orenv.RemoveKinBody(rhand)
+
+    orenv.Destroy()

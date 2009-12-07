@@ -375,7 +375,9 @@ class SpatialTree : public SpatialTreeBase
     {
         // get the nearest neighbor
         lastindex = GetNN(pTargetConfig);
-        Node* pnode = _nodes[lastindex];
+        if( lastindex < 0 )
+            return ET_Failed;
+        Node* pnode = _nodes.at(lastindex);
         bool bHasAdded = false;
         boost::shared_ptr<Planner> planner(_planner);
 

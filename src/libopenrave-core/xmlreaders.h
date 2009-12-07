@@ -712,9 +712,10 @@ public:
                         _itgeomprop->InitCollisionMesh();
                     }
 
-                    KinBody::Link::TRIMESH trimesh = _itgeomprop->GetCollisionMesh();
-                    trimesh.ApplyTransform(GetGeomTransform(*_itgeomprop));
-                    GetLinkCollision(_plink).Append(trimesh);
+                    // need to put on heap since stack can be too small
+                    boost::shared_ptr<KinBody::Link::TRIMESH> trimesh(new KinBody::Link::TRIMESH(_itgeomprop->GetCollisionMesh()));
+                    trimesh->ApplyTransform(GetGeomTransform(*_itgeomprop));
+                    GetLinkCollision(_plink).Append(*trimesh);
                     _itgeomprop = GetLinkGeometries(_plink).end();
                 }
                 else {

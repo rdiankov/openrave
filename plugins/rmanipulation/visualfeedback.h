@@ -479,7 +479,7 @@ public:
 
         virtual bool Sample(vector<dReal>& pNewSample)
         {
-            if( RaveRandomFloat() < _fSampleGoalProb )
+            if( RaveRandomFloat() > _fSampleGoalProb )
                 return false;
             RobotBase::RobotStateSaver state(_vconstraint.GetRobot());
             _sphereperms._fn = boost::bind(&GoalSampleFunction::SampleWithParameters,this,_1,boost::ref(pNewSample));
@@ -651,7 +651,7 @@ public:
                 sinput >> numtrans;
                 visibilityextents.resize(numtrans);
                 FOREACH(it,visibilityextents)
-                    sinput >> *it;
+                    sinput >> it->x >> it->y >> it->z;
             }
             else {
                 RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
@@ -800,7 +800,7 @@ public:
                 sinput >> numtrans;
                 visibilityextents.resize(numtrans);
                 FOREACH(it,visibilityextents)
-                    sinput >> *it;
+                    sinput >> it->x >> it->y >> it->z;
             }
             else if( cmd == "samples" )
                 sinput >> numsamples;
@@ -921,7 +921,7 @@ public:
                 sinput >> numtrans;
                 visibilityextents.resize(numtrans);
                 FOREACH(it,visibilityextents)
-                    sinput >> *it;
+                    sinput >> it->x >> it->y >> it->z;
             }
             else {
                 RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));

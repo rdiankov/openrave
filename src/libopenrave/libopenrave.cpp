@@ -303,6 +303,7 @@ class SimpleDistMetric
 
     virtual dReal Eval(const std::vector<dReal>& c0, const std::vector<dReal>& c1)
     {
+        BOOST_ASSERT(c0.size()==_robot->GetActiveDOF());
         dReal out = 0;
         for(int i=0; i < _robot->GetActiveDOF(); i++)
             out += weights[i] * (c0[i]-c1[i])*(c0[i]-c1[i]);

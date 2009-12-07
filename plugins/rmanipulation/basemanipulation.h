@@ -1020,6 +1020,8 @@ protected:
             }
         }
 
+        RobotBase::RobotStateSaver saver(robot);
+
         boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(robot->GetActiveDOF()));
 
         // have to add the first point
@@ -1066,7 +1068,7 @@ protected:
 
         // check final trajectory for colliding points
         if( ptraj->GetPoints().size() > 0 ) {
-            RobotBase::RobotStateSaver saver(robot);
+            RobotBase::RobotStateSaver saver2(robot);
             robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
             if( CM::JitterActiveDOF(robot) )
                 robot->GetActiveDOFValues(ptraj->GetPoints().back().q);

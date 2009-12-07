@@ -121,13 +121,20 @@ class HRP2GraspingScene(metaclass.AutoReloader):
         self.manipindex,self.manip = [(i,m) for i,m in enumerate(self.robot.GetManipulators()) if m.GetEndEffector().GetIndex() == self.sensor.GetAttachingLink().GetIndex()][0]
         self.robot.SetActiveManipulator(self.manipindex)
 
+        self.rhand = self.orenv.ReadRobotXMLFile('robots/hrp2rhandjsk.robot.xml')
+        self.orenv.AddRobot(self.rhand)
+        T = eye(4)
+        T[2,3] = 100
+        self.rhand.SetTransform(T)
+
         if graspingppfile is not None:
             self.convexdata,self.visibilitydata,self.graspsetdata = pickle.load(open(graspingppfile,'r'))
+            self.rhand.SetJointValues(self.graspsetdata[0][12:])
 
     def preprocessdata(self, maskfile = 'hrp2gripper_mask.mat',
                        convexfile = 'hrp2gripper_convex.mat',
                        robotfile = 'robots/hrp2jskreal.robot.xml',
-                       graspsetfile = 'simple_grasp_hrp2_cereal.mat',
+                       graspsetfile = 'simple_grasp_hrp2_cereal2.mat',
                        targetfile = 'data/box_frootloops.kinbody.xml',
                        graspingppfile = 'hrp2_frootloops_visibility.pp',
                        visibilityfile = 'cereal_visibility.mat',
@@ -209,6 +216,12 @@ class HRP2GraspingScene(metaclass.AutoReloader):
         self.robot.GetController().SetDesired(values)
         self.waitrobot()
 
+    def testhand(self,pose):
+        import roslib; roslib.load_manifest('rvision')
+        from TransformMath import *
+        T = matrixFromPose(pose)
+        self.rhand.SetTransform(dot(T,linalg.inv(self.manip.GetGraspTransform())))
+
     def testsim(self):
         self.target = self.orenv.ReadKinBodyXMLFile('data/box_frootloops.kinbody.xml')
         self.orenv.AddKinBody(self.target)
@@ -219,31 +232,51 @@ class HRP2GraspingScene(metaclass.AutoReloader):
         dopause = True
         while True:
             self.robot.ReleaseAllGrabbed()
-            self.robotgohome()
+            #self.robotgohome()
             self.movegripper(self.graspsetdata[0][12:])
 
             res = self.visualprob.SendCommand('MoveToObserveTarget target ' + self.target.GetName() + ' sampleprob 0.001 sensorindex 0 maxiter 4000 convexdata ' + str(self.convexdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.convexdata.flat) + ' visibilitydata ' + str(self.visibilitydata.shape[0]) + ' ' + ' '.join(str(f) for f in self.visibilitydata.flat))
             if res is None:
                 print 'failed to move to target'
                 continue
-            vgood = array([ 0.        ,  0.        ,  0.        ,  0.        ,  0.        ,
-                            0.        ,  0.        ,  0.        ,  0.        ,  0.        ,
-                            0.        ,  0.        ,  0.        ,  0.        ,  0.        ,
-                            0.17460616,  0.        ,  0.        ,  1.02095568, -0.85328835,
-                            -0.82049644, -1.89752424,  1.34200633, -0.9686963 , -0.55490541,
-                            0.        ,  0.        ,  0.        ,  0.        ,  0.        ,
-                            0.        ,  0.        , -0.17453289,  1.69599998])
+            if False:
+                vgood = array([ 0.        ,  0.        ,  0.        ,  0.        ,  0.        ,
+                                0.        ,  0.        ,  0.        ,  0.        ,  0.        ,
+                                0.        ,  0.        ,  0.        ,  0.        ,  0.        ,
+                                0.17460616,  0.        ,  0.        ,  1.02095568, -0.85328835,
+                                -0.82049644, -1.89752424,  1.34200633, -0.9686963 , -0.55490541,
+                                0.        ,  0.        ,  0.        ,  0.        ,  0.        ,
+                                0.        ,  0.        , -0.17453289,  1.69599998])
+                self.robot.GetController().SetDesired(vgood)
             self.waitrobot()
 
             if dopause:
                 raw_input('press any key: ')
             # start visual servoing step
-            res = self.visualprob.SendCommand('VisualFeedbackGrasping target ' + self.target.GetName() + ' sensorindex 0 convexdata ' + str(self.convexdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.convexdata.flat) + ' graspsetdata ' + str(self.graspsetdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.graspsetdata[:,0:12].flat) + ' maxiter 100 visgraspthresh 0.1 gradientsamples 5 ')
+            res = self.visualprob.SendCommand('VisualFeedbackGrasping target ' + self.target.GetName() + ' sensorindex 0 convexdata ' + str(self.convexdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.convexdata.flat) + ' graspsetdata ' + str(self.graspsetdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.graspsetdata[:,0:12].flat) + ' maxiter 100 visgraspthresh 0.3 gradientsamples 5 ')
             if res is None:
                 print 'failed to find visual feedback grasp'
                 continue
             self.waitrobot()
-        
+            
+            self.manipprob.SendCommand('closefingers')
+            self.waitrobot()
+            self.robot.Grab(self.target)
+            self.manipprob.SendCommand('movehandstraight direction 0 0 1 stepsize 0.001 maxsteps 100')
+            self.waitrobot()
+            
+            Ttarget = array([[  5.96046377e-08,  -1.00000000e+00,   1.42291853e-07, 8.61060917e-01],
+                             [  1.00000000e+00,   5.96046448e-08,   2.74064149e-08, -6.78065157e+00],
+                             [ -2.74064291e-08,   1.42291853e-07,   1.00000000e+00, 8.79451871e-01],
+                             [  0.00000000e+00,   0.00000000e+00,   0.00000000e+00, 1.00000000e+00]])
+            Tnewee = dot(Ttarget,dot(linalg.inv(self.target.GetTransform()),self.manip.GetEndEffectorTransform()))
+            self.manipprob.SendCommand('movetohandposition maxiter 1000 maxtries 1 seedik 4 matrix ' + ' '.join(str(f) for f in transpose(Tnewee[0:3,0:4]).flat))
+            self.waitrobot()
+
+            self.robot.SetActiveDOFs(self.manip.GetGripperJoints())
+            self.manipprob.SendCommand('releasefingers target ' + self.target.GetName())
+            self.waitrobot()
+
     def sighandle(self,x,y):
         self.quitviewers()
         self.prevaction(x,y)
@@ -268,7 +301,8 @@ if __name__=='__main__':
     scene.quitviewers()
 
 def test():
-    import visibilityplanning
+    import visibilityplanning, time
     self = visibilityplanning.HRP2GraspingScene()
+    time.sleep(0.5)
     self.loadscene()
     self.testsim()
