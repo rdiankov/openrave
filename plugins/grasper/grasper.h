@@ -26,7 +26,6 @@ class GrasperProblem : public ProblemInstance
 {
  public:
  GrasperProblem(EnvironmentBasePtr penv)  : ProblemInstance(penv) {
-        normalplane = Vector(0,0,1);
     }
     
     virtual void Destroy()
@@ -110,7 +109,7 @@ class GrasperProblem : public ProblemInstance
                 bHasDirection = true;
                 direction.normalize3();
             }
-            else if( cmd == "direction" ) {
+            else if( cmd == "randomize" ) {
                 sinput >> random_seed;
                 randomize = true;
             }

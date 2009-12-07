@@ -212,8 +212,8 @@ class HRP2GraspingScene(metaclass.AutoReloader):
     def testsim(self):
         self.target = self.orenv.ReadKinBodyXMLFile('data/box_frootloops.kinbody.xml')
         self.orenv.AddKinBody(self.target)
-        self.target.SetTransform(array([[ 1.        ,  0.        ,  0.        ,  0.93609834],
-                                        [ 0.        ,  1.        ,  0.        , -6.82693148],
+        self.target.SetTransform(array([[ 0.        ,  -1.        ,  0.        ,  0.93609834],
+                                        [ 1.        ,  0.        ,  0.        , -6.82693148],
                                         [ 0.        ,  0.        ,  1.        ,  0.87991142],
                                         [ 0.        ,  0.        ,  0.        ,  1.        ]]))
         dopause = True
@@ -226,12 +226,19 @@ class HRP2GraspingScene(metaclass.AutoReloader):
             if res is None:
                 print 'failed to move to target'
                 continue
+            vgood = array([ 0.        ,  0.        ,  0.        ,  0.        ,  0.        ,
+                            0.        ,  0.        ,  0.        ,  0.        ,  0.        ,
+                            0.        ,  0.        ,  0.        ,  0.        ,  0.        ,
+                            0.17460616,  0.        ,  0.        ,  1.02095568, -0.85328835,
+                            -0.82049644, -1.89752424,  1.34200633, -0.9686963 , -0.55490541,
+                            0.        ,  0.        ,  0.        ,  0.        ,  0.        ,
+                            0.        ,  0.        , -0.17453289,  1.69599998])
             self.waitrobot()
 
             if dopause:
                 raw_input('press any key: ')
             # start visual servoing step
-            res = self.visualprob.SendCommand('VisualFeedbackGrasping target ' + self.target.GetName() + ' sensorindex 0 convexdata ' + str(self.convexdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.convexdata.flat) + ' graspsetdata ' + str(self.graspsetdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.graspsetdata.flat) + ' maxiter 100 visgraspthresh 0.1 gradientsamples 5 ')
+            res = self.visualprob.SendCommand('VisualFeedbackGrasping target ' + self.target.GetName() + ' sensorindex 0 convexdata ' + str(self.convexdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.convexdata.flat) + ' graspsetdata ' + str(self.graspsetdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.graspsetdata[:,0:12].flat) + ' maxiter 100 visgraspthresh 0.1 gradientsamples 5 ')
             if res is None:
                 print 'failed to find visual feedback grasp'
                 continue

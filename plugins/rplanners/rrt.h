@@ -235,7 +235,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
             RAVELOG_VERBOSEA("iter: %d\n", iter);
             ++iter;
 
-            if( !!_parameters._samplegoalfn ) {
+            if( !!_parameters._samplegoalfn ) {// && _treeBackward._nodes.size() == 0 ) {
                 vector<dReal> vgoal;
                 if( _parameters._samplegoalfn(vgoal) ) {
                     RAVELOG_VERBOSEA("found goal\n");
@@ -261,7 +261,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
 
             // extend B toward A
             et = TreeB->Extend(TreeA->GetConfig(iConnectedA), iConnectedB);
-        
+            //GetEnv()->UpdatePublishedBodies();
             // if connected, success
             if( et == ET_Connected ) {
                 bConnected = true;

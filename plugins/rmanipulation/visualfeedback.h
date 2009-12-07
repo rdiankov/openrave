@@ -1069,15 +1069,18 @@ public:
                 int numgrasps=0;
                 sinput >> numgrasps;
                 params->_vgrasps.resize(numgrasps);
-                FOREACH(itgrasp,params->_vgrasps)
-                    sinput >> *itgrasp;
+                TransformMatrix t;
+                FOREACH(itgrasp,params->_vgrasps) {
+                    sinput >> t;
+                    *itgrasp = t;
+                }
                 RAVELOG_DEBUGA(str(boost::format("grasp set size = %d\n")%params->_vgrasps.size()));
             }
             else if( cmd == "gradientsamples" )
                 sinput >> params->_nGradientSamples;
             else {
                 RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
-                break;
+                return false;
             }
 
             if( !sinput ) {

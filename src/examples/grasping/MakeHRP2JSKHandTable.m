@@ -61,11 +61,14 @@ end
 
 orBodySetTransform(Target.id, [0 0 0], [1 0 0 0]); % identity
 
-standoffs = [0 0.025];
-rolls = 0:pi/2:7/4*pi;
+standoffs = [0];
+rolls = 0:pi/4:7/4*pi;
+use_noise = 0;
+stepsize = 0.015;
+add_spherenorms = 1;
 
 % start simulating grasps
-[GraspTable, GraspStats] = MakeGraspTable(robot,Target,preshapes,standoffs,rolls);
+[GraspTable, GraspStats] = MakeGraspTable(robot,Target,preshapes,standoffs,rolls,use_noise,stepsize,add_spherenorms);
 
 % save the table
 GraspTable = GraspTable(find(GraspStats(:,1) > 0),:);
