@@ -2305,6 +2305,14 @@ public:
             throw openrave_exception(boost::str(boost::format("failed to get body %s")%name));
         return PyKinBodyPtr(new PyKinBody(pbody,shared_from_this()));
     }
+    PyRobotBasePtr GetRobot(const string& name)
+    {
+        RobotBasePtr probot = _penv->GetRobot(name);
+        if( !probot )
+            throw openrave_exception(boost::str(boost::format("failed to get robot %s")%name));
+        return PyRobotBasePtr(new PyRobotBase(probot,shared_from_this()));
+    }
+
     PyKinBodyPtr GetBodyFromNetworkId(int id)
     {
         KinBodyPtr pbody = _penv->GetBodyFromNetworkId(id);
@@ -3147,6 +3155,7 @@ BOOST_PYTHON_MODULE(openravepy)
             .def("AddRobot",&PyEnvironmentBase::AddRobot)
             .def("RemoveKinBody",&PyEnvironmentBase::RemoveKinBody)
             .def("GetKinBody",&PyEnvironmentBase::GetKinBody)
+            .def("GetRobot",&PyEnvironmentBase::GetRobot)
             .def("GetBodyFromNetworkId",&PyEnvironmentBase::GetBodyFromNetworkId )
             .def("CreateKinBody",&PyEnvironmentBase::CreateKinBody)
             .def("CreateTrajectory",&PyEnvironmentBase::CreateTrajectory)

@@ -56,7 +56,7 @@ public:
             RAVELOG_ERRORA("no goal sampler specified\n");
             return false;
         }
-        if( _parameters._ptarget == NULL ) {
+        if( !_parameters._ptarget ) {
             RAVELOG_ERRORA("no target specified\n");
             return false;
         }
@@ -88,7 +88,7 @@ public:
             if( !_parameters._constraintfn(_parameters.vinitialconfig, _parameters.vinitialconfig,0) ) {
                 // failed
                 RAVELOG_WARNA("initial state rejected by constraint fn\n");
-                return false;
+                //return false;
             }
         }
 
@@ -207,8 +207,9 @@ private:
                                !!_report->plink1?_report->plink1->GetName().c_str():"",
                                !!_report->plink2?_report->plink2->GetParent()->GetName().c_str():"",
                                !!_report->plink2?_report->plink2->GetName().c_str():"");
-                //GetEnv()->UpdatePublishedBodies();
-                return false;
+                if( !(!!_report->plink1 && _report->plink1->GetParent() == _parameters._ptarget) &&
+                    !(!!_report->plink2 && _report->plink2->GetParent() == _parameters._ptarget) )
+                    return false;
             }
 
             bool bGetFirstSolution=true;
