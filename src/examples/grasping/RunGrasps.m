@@ -32,7 +32,7 @@ robot.id = orEnvCreateRobot(robot.name,robot.filename);
 
 Target.name = 'testobject';
 Target.id = orEnvCreateKinBody(Target.name,targetfilename);
-
+orBodySetTransform(Target.id,[0 0 0],[1 0 0 0])
 probs.grasp = orEnvCreateProblem('GrasperProblem', robot.name);
 
 %% run the grasps
