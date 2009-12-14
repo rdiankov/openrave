@@ -122,11 +122,11 @@ public:
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
-            friend class OpenRAVEXMLParser;
             friend class ColladaReader;
+            friend class OpenRAVEXMLParser::LinkXMLReader;
 #else
-            friend class ::OpenRAVEXMLParser;
             friend class ::ColladaReader;
+            friend class ::OpenRAVEXMLParser::LinkXMLReader;
 #endif
 #endif
             friend class KinBody;
@@ -183,11 +183,15 @@ public:
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
-        friend class OpenRAVEXMLParser;
         friend class ColladaReader;
+        friend class OpenRAVEXMLParser::LinkXMLReader;
+        friend class OpenRAVEXMLParser::KinBodyXMLReader;
+        friend class OpenRAVEXMLParser::RobotXMLReader;
 #else
-        friend class ::OpenRAVEXMLParser;
         friend class ::ColladaReader;
+        friend class ::OpenRAVEXMLParser::LinkXMLReader;
+        friend class ::OpenRAVEXMLParser::KinBodyXMLReader;
+        friend class ::OpenRAVEXMLParser::RobotXMLReader;
 #endif
 #endif
         friend class KinBody;
@@ -295,13 +299,17 @@ public:
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
-        friend class OpenRAVEXMLParser;
         friend class ColladaReader;
         friend class ColladaWriter;
+        friend class OpenRAVEXMLParser::JointXMLReader;
+        friend class OpenRAVEXMLParser::KinBodyXMLReader;
+        friend class OpenRAVEXMLParser::RobotXMLReader;
 #else
-        friend class ::OpenRAVEXMLParser;
         friend class ::ColladaReader;
         friend class ::ColladaWriter;
+        friend class ::OpenRAVEXMLParser::JointXMLReader;
+        friend class ::OpenRAVEXMLParser::KinBodyXMLReader;
+        friend class ::OpenRAVEXMLParser::RobotXMLReader;
 #endif
 #endif
         friend class KinBody;
@@ -618,15 +626,17 @@ private:
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
-    friend class OpenRAVEXMLParser;
     friend class Environment;
     friend class ColladaReader;
     friend class ColladaWriter;
+    friend class OpenRAVEXMLParser::KinBodyXMLReader;
+    friend class OpenRAVEXMLParser::JointXMLReader;
 #else
-    friend class ::OpenRAVEXMLParser;
     friend class ::Environment;
     friend class ::ColladaReader;
     friend class ::ColladaWriter;
+    friend class ::OpenRAVEXMLParser::KinBodyXMLReader;
+    friend class ::OpenRAVEXMLParser::JointXMLReader;
 #endif
 #endif
 

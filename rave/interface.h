@@ -82,11 +82,11 @@ private:
 #ifdef _MSC_VER
     friend class RaveDatabase;
     friend class Environment;
-    friend class OpenRAVEXMLParser;
+    friend class OpenRAVEXMLParser::InterfaceXMLReader;
 #else
     friend class ::RaveDatabase;
     friend class ::Environment;
-    friend class ::OpenRAVEXMLParser;
+    friend class ::OpenRAVEXMLParser::InterfaceXMLReader;
 #endif
 #endif
 };

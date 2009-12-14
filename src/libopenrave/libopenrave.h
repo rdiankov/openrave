@@ -134,12 +134,17 @@ template <class T> boost::shared_ptr<T> sptr_from(boost::weak_ptr<T> const& wpt)
 }
 
 // need the prototypes in order to keep them free of the OpenRAVE namespace
-class LinkXMLReader;
-class KinBodyXMLReader;
-class JointXMLReader;
-class RobotXMLReader;
-class ManipulatorXMLReader;
-class AttachedSensorXMLReader;
+namespace OpenRAVEXMLParser
+{
+    class InterfaceXMLReader;
+    class KinBodyXMLReader;
+    class LinkXMLReader;
+    class JointXMLReader;
+    class ManipulatorXMLReader;
+    class AttachedSensorXMLReader;
+    class RobotXMLReader;
+    class EnvironmentXMLReader;
+}
 class Environment;
 class RaveDatabase;
 

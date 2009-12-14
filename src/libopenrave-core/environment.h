@@ -519,6 +519,11 @@ class Environment : public EnvironmentBase
 
     virtual PhysicsEngineBasePtr GetPhysicsEngine() const { return _pPhysicsEngine; }
 
+    virtual boost::shared_ptr<void> RegisterPhysicsCallback(const boost::function<PhysicsEngineCollisionAction(CollisionReportPtr)>& callback) {
+        BOOST_ASSERT(0);
+        return boost::shared_ptr<void>();
+    }
+
     virtual bool SetCollisionChecker(CollisionCheckerBasePtr pchecker)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());

@@ -177,7 +177,18 @@ inline float RANDOM_FLOAT(float maximum)
 }
 
 // need the prototypes in order to keep them free of the OpenRAVE namespace
-class OpenRAVEXMLParser;
+namespace OpenRAVEXMLParser
+{
+    class InterfaceXMLReader;
+    class KinBodyXMLReader;
+    class LinkXMLReader;
+    class JointXMLReader;
+    class ManipulatorXMLReader;
+    class AttachedSensorXMLReader;
+    class RobotXMLReader;
+    class EnvironmentXMLReader;
+}
+
 class Environment;
 class RaveDatabase;
 class ColladaReader;

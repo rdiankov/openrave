@@ -708,6 +708,11 @@ public:
     virtual bool SetPhysicsEngine(PhysicsEngineBasePtr pengine) = 0;
     virtual PhysicsEngineBasePtr GetPhysicsEngine() const = 0;
 
+    /// Register a callback to be called whenever a collision is detected between between bodies during physics simulation.
+    /// The callback should return an action specifying how the collision should be handled.
+    /// \return a handle to the registration, once the handle loses scope, the callback is unregistered
+    //virtual boost::shared_ptr<void> RegisterPhysicsCallback(const boost::function<PhysicsEngineCollisionAction(CollisionReportPtr)>& callback) = 0;
+
     /// Makes one simulation step
     virtual void StepSimulation(dReal timeStep) = 0;
 

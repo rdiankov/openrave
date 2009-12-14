@@ -335,7 +335,7 @@ public:
     {
         _options = options;
         if( options & CO_Distance ) {
-            RAVELOG_WARNA("bullet checker doesn't support CO_Distance\n");
+            //RAVELOG_WARNA("bullet checker doesn't support CO_Distance\n");
             return false;
         }
 

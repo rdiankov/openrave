@@ -139,11 +139,13 @@ public:
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
-        friend class OpenRAVEXMLParser;
         friend class ColladaReader;
+        friend class OpenRAVEXMLParser::ManipulatorXMLReader;
+        friend class OpenRAVEXMLParser::RobotXMLReader;
 #else
-        friend class ::OpenRAVEXMLParser;
         friend class ::ColladaReader;
+        friend class ::OpenRAVEXMLParser::ManipulatorXMLReader;
+        friend class ::OpenRAVEXMLParser::RobotXMLReader;
 #endif
 #endif
         friend class RobotBase;
@@ -178,14 +180,16 @@ public:
         Transform trelative; ///< relative transform of the sensor with respect to the attached link
         SensorBase::SensorDataPtr pdata; ///< pointer to a preallocated data struct using psensor->CreateSensorData()
         std::string _name; ///< name of the attached sensor
-        
+
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
-        friend class OpenRAVEXMLParser;
         friend class ColladaReader;
+        friend class OpenRAVEXMLParser::AttachedSensorXMLReader;
+        friend class OpenRAVEXMLParser::RobotXMLReader;
 #else
-        friend class ::OpenRAVEXMLParser;
         friend class ::ColladaReader;
+        friend class ::OpenRAVEXMLParser::AttachedSensorXMLReader;
+        friend class ::OpenRAVEXMLParser::RobotXMLReader;
 #endif
 #endif
         friend class RobotBase;
@@ -456,17 +460,21 @@ private:
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
-    friend class OpenRAVEXMLParser;
     friend class RaveDatabase;
     friend class Environment;
     friend class ColladaReader;
     friend class ColladaWriter;
+    friend class OpenRAVEXMLParser::RobotXMLReader;
+    friend class OpenRAVEXMLParser::ManipulatorXMLReader;
+    friend class OpenRAVEXMLParser::AttachedSensorXMLReader;
 #else
-    friend class ::OpenRAVEXMLParser;
     friend class ::RaveDatabase;
     friend class ::Environment;
     friend class ::ColladaReader;
     friend class ::ColladaWriter;
+    friend class ::OpenRAVEXMLParser::RobotXMLReader;
+    friend class ::OpenRAVEXMLParser::ManipulatorXMLReader;
+    friend class ::OpenRAVEXMLParser::AttachedSensorXMLReader;
 #endif
 #endif
 };

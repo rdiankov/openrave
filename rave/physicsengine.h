@@ -24,6 +24,13 @@ enum PhysicsEngineOptions
     PEO_SelfCollisions = 1, ///< if set, physics engine will use contact forces from self-collisions
 };
 
+/// action to perform whenever a collision is detected between objects
+enum PhysicsEngineCollisionAction
+{
+    PEA_Ignore = 0, ///< do nothing
+    PEA_DoPhysics = 1, ///< let the physics engine resolve the action
+};
+
 /// A physics engine supports simulating the dynamics of every object in the environment
 class PhysicsEngineBase : public InterfaceBase
 {

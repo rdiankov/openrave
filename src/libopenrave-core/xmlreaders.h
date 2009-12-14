@@ -43,107 +43,24 @@ const char s_filesep = '\\';
 const char s_filesep = '/';
 #endif
 
-class OpenRAVEXMLParser
+namespace OpenRAVEXMLParser
 {
-public:
-    static bool RaveParseXMLFile(BaseXMLReaderPtr preader, const string& filename)
-    {
-        if( filename.size() == 0 )
-            return false;
-
-        EnvironmentMutex::scoped_lock lock(*GetXMLMutex());
-
-        // init the dir (for some reason msvc confuses the linking of the string class with soqt, so do it the old fashioned way)
-        string olddir = GetParseDirectory();
-        string oldfile = GetFullFilename();
-        string appended;
-        size_t sepindex = filename.find_last_of('/');
-        if( sepindex == string::npos )
-            sepindex = filename.find_last_of('\\');
-
-        // check for absolute paths
-        if( filename[0] == '/' || filename[0] == '~' ) {
-            GetParseDirectory() = "";
-            GetFullFilename() = filename;
-        }
-        else {
-            GetFullFilename().resize(GetParseDirectory().size()+filename.size());
-            GetFullFilename() = GetParseDirectory();
-            GetFullFilename() += filename;
-        }
-
-        if( sepindex != string::npos) {
-            appended = filename.substr(0,sepindex+1);
-            GetParseDirectory() += appended;
-        }
-
-        // test if exists
-        bool bFileFound = false;
-        do {
-            if( !!ifstream(GetFullFilename().c_str()) ) {
-                bFileFound = true;
-                break;
-            }
-        
-            // try the set openrave directories
-            FOREACHC(itdir, GetDataDirs()) {
-                string newparse;
-                newparse = *itdir; newparse.push_back(s_filesep);
-                newparse += GetParseDirectory();
-                GetFullFilename() = newparse; GetFullFilename() += filename;
-                
-                if( !!ifstream(GetFullFilename().c_str()) ) {
-                    GetParseDirectory() = newparse; GetParseDirectory() += appended;
-                    bFileFound = true;
-                    break;
-                }
-            
-                newparse = *itdir; newparse.push_back(s_filesep);
-                GetFullFilename() = newparse; GetFullFilename() += filename;
-                
-                if( !!ifstream(GetFullFilename().c_str()) ) {
-                    GetParseDirectory() = newparse; GetParseDirectory() += appended;
-                    bFileFound = true;
-                    break;
-                }
-            }
-
-            if( bFileFound )
-                break;
-
-        } while(0);
-    
-        if( !bFileFound ) {
-            GetXMLErrorCount()++;
-            GetParseDirectory() = olddir;
-            GetFullFilename() = oldfile;
-            return false;
-        }
-
-        preader->_filename = GetFullFilename();
-
-        int ret = raveXmlSAXUserParseFile(GetSAXHandler(), preader, GetFullFilename().c_str());
-        if( ret != 0 ) {
-            RAVELOG_WARNA("xmlSAXUserParseFile: error parsing %s (error %d)\n", GetFullFilename().c_str(), ret);
-        }
-
-        // restore
-        GetParseDirectory() = olddir;
-        GetFullFilename() = oldfile;
-
-        // hmm....... necessary?
-        //xmlCleanupParser();
-        //xmlMemoryDump();
-
-        return ret == 0;
+    static boost::shared_ptr<EnvironmentMutex> GetXMLMutex() {
+        static boost::shared_ptr<EnvironmentMutex> m; ///< lock for parsing XML
+        if( !m )
+            m.reset(new EnvironmentMutex());
+        return m;
     }
 
-    static bool RaveParseXMLData(BaseXMLReaderPtr preader, const std::string& pdata)
+    /// the directory of the file currently parsing
+    static string& GetParseDirectory() { static string s; return s; }
+    /// full filename currently parsing
+    static string& GetFullFilename() { static string s; return s; }
+
+    static vector<string>& GetDataDirs()
     {
-        if( pdata.size() == 0 )
-            return false;
-        EnvironmentMutex::scoped_lock lock(*GetXMLMutex());
-        return raveXmlSAXUserParseMemory(GetSAXHandler(), preader, pdata.c_str(), pdata.size())==0;
+        static vector<string> v;
+        return v;
     }
 
     static void SetDataDirs(const vector<string>& vdatadirs) {
@@ -169,30 +86,6 @@ public:
 
         return mapreaders;
     }
-
-protected:
-    /// the directory of the file currently parsing
-    static string& GetParseDirectory() { static string s; return s; }
-    /// full filename currently parsing
-    static string& GetFullFilename() { static string s; return s; }
-
-    static vector<string>& GetDataDirs()
-    {
-        static vector<string> v;
-        return v;
-    }
-
-    // needed because the public headers can only declare friendship with OpenRAVEXMLReaders (doing this because of MSVC)
-    static vector<dReal>& GetJointLowerLimit(KinBody::JointPtr pjoint) { return pjoint->_vlowerlimit; }
-    static vector<dReal>& GetJointUpperLimit(KinBody::JointPtr pjoint) { return pjoint->_vupperlimit; }
-    static std::list<KinBody::Link::GEOMPROPERTIES>& GetLinkGeometries(KinBody::LinkPtr plink) { return plink->_listGeomProperties; }
-    static TransformMatrix& GetLinkTransMass(KinBody::LinkPtr plink) { return plink->_transMass; }
-    static dReal& GetLinkMass(KinBody::LinkPtr plink) { return plink->_mass; }
-    static KinBody::LinkPtr* GetJointBodies(KinBody::JointPtr pjoint) { return pjoint->bodies; }
-    static KinBody::Link::TRIMESH& GetLinkCollision(KinBody::LinkPtr plink) { return plink->collision; }
-    static bool& GetLinkStatic(KinBody::LinkPtr plink) { return plink->bStatic; }
-    static Transform& GetGeomTransform(KinBody::Link::GEOMPROPERTIES& geom) { return geom._t; }
-    static Transform& GetLinkTransform(KinBody::LinkPtr plink) { return plink->_t; }
 
     struct XMLREADERDATA
     {
@@ -239,6 +132,20 @@ protected:
         vprintf(msg,args);
         va_end(args);
         GetXMLErrorCount()++;
+    }
+
+    static xmlSAXHandler* GetSAXHandler()
+    {
+        static xmlSAXHandler s_DefaultSAXHandler = {0};
+        if( !s_DefaultSAXHandler.initialized ) {
+            // first time, so init
+            s_DefaultSAXHandler.startElement = DefaultStartElementSAXFunc;
+            s_DefaultSAXHandler.endElement = DefaultEndElementSAXFunc;
+            s_DefaultSAXHandler.characters = DefaultCharactersSAXFunc;
+            s_DefaultSAXHandler.error = RaveXMLErrorFunc;
+            s_DefaultSAXHandler.initialized = 1;
+        }
+        return &s_DefaultSAXHandler;
     }
 
     static bool xmlDetectSAX2(xmlParserCtxtPtr ctxt)
@@ -332,22 +239,107 @@ protected:
     
         return ret;
     }
-    
-    static xmlSAXHandler* GetSAXHandler()
+
+    static bool RaveParseXMLFile(BaseXMLReaderPtr preader, const string& filename)
     {
-        static xmlSAXHandler s_DefaultSAXHandler = {0};
-        if( !s_DefaultSAXHandler.initialized ) {
-            // first time, so init
-            s_DefaultSAXHandler.startElement = DefaultStartElementSAXFunc;
-            s_DefaultSAXHandler.endElement = DefaultEndElementSAXFunc;
-            s_DefaultSAXHandler.characters = DefaultCharactersSAXFunc;
-            s_DefaultSAXHandler.error = RaveXMLErrorFunc;
-            s_DefaultSAXHandler.initialized = 1;
+        if( filename.size() == 0 )
+            return false;
+
+        EnvironmentMutex::scoped_lock lock(*GetXMLMutex());
+
+        // init the dir (for some reason msvc confuses the linking of the string class with soqt, so do it the old fashioned way)
+        string olddir = GetParseDirectory();
+        string oldfile = GetFullFilename();
+        string appended;
+        size_t sepindex = filename.find_last_of('/');
+        if( sepindex == string::npos )
+            sepindex = filename.find_last_of('\\');
+
+        // check for absolute paths
+        if( filename[0] == '/' || filename[0] == '~' ) {
+            GetParseDirectory() = "";
+            GetFullFilename() = filename;
         }
-        return &s_DefaultSAXHandler;
+        else {
+            GetFullFilename().resize(GetParseDirectory().size()+filename.size());
+            GetFullFilename() = GetParseDirectory();
+            GetFullFilename() += filename;
+        }
+
+        if( sepindex != string::npos) {
+            appended = filename.substr(0,sepindex+1);
+            GetParseDirectory() += appended;
+        }
+
+        // test if exists
+        bool bFileFound = false;
+        do {
+            if( !!ifstream(GetFullFilename().c_str()) ) {
+                bFileFound = true;
+                break;
+            }
+        
+            // try the set openrave directories
+            FOREACHC(itdir, GetDataDirs()) {
+                string newparse;
+                newparse = *itdir; newparse.push_back(s_filesep);
+                newparse += GetParseDirectory();
+                GetFullFilename() = newparse; GetFullFilename() += filename;
+                
+                if( !!ifstream(GetFullFilename().c_str()) ) {
+                    GetParseDirectory() = newparse; GetParseDirectory() += appended;
+                    bFileFound = true;
+                    break;
+                }
+            
+                newparse = *itdir; newparse.push_back(s_filesep);
+                GetFullFilename() = newparse; GetFullFilename() += filename;
+                
+                if( !!ifstream(GetFullFilename().c_str()) ) {
+                    GetParseDirectory() = newparse; GetParseDirectory() += appended;
+                    bFileFound = true;
+                    break;
+                }
+            }
+
+            if( bFileFound )
+                break;
+
+        } while(0);
+    
+        if( !bFileFound ) {
+            GetXMLErrorCount()++;
+            GetParseDirectory() = olddir;
+            GetFullFilename() = oldfile;
+            return false;
+        }
+
+        preader->_filename = GetFullFilename();
+
+        int ret = raveXmlSAXUserParseFile(GetSAXHandler(), preader, GetFullFilename().c_str());
+        if( ret != 0 ) {
+            RAVELOG_WARNA("xmlSAXUserParseFile: error parsing %s (error %d)\n", GetFullFilename().c_str(), ret);
+        }
+
+        // restore
+        GetParseDirectory() = olddir;
+        GetFullFilename() = oldfile;
+
+        // hmm....... necessary?
+        //xmlCleanupParser();
+        //xmlMemoryDump();
+
+        return ret == 0;
+    }
+    
+    static bool RaveParseXMLData(BaseXMLReaderPtr preader, const std::string& pdata)
+    {
+        if( pdata.size() == 0 )
+            return false;
+        EnvironmentMutex::scoped_lock lock(*GetXMLMutex());
+        return raveXmlSAXUserParseMemory(GetSAXHandler(), preader, pdata.c_str(), pdata.size())==0;
     }
 
-public:
     static EnvironmentBase::CreateXMLReaderFn RegisterXMLReader(PluginType type, const std::string& xmltag, const EnvironmentBase::CreateXMLReaderFn& fn)
     {
         EnvironmentMutex::scoped_lock lock(*GetXMLMutex());
@@ -548,9 +540,9 @@ public:
                 _plink->name = linkname;
     
             if( bStaticSet )
-                GetLinkStatic(_plink) = bStatic;
+                _plink->bStatic = bStatic;
 
-            _itgeomprop = GetLinkGeometries(_plink).end();
+            _itgeomprop = _plink->_listGeomProperties.end();
         }
         virtual ~LinkXMLReader() {}
 
@@ -559,7 +551,7 @@ public:
             if( !!_pcurreader ) {
                 _pcurreader->startElement(xmlname, atts);
             }
-            else if( _itgeomprop != GetLinkGeometries(_plink).end() ) {
+            else if( _itgeomprop != _plink->_listGeomProperties.end() ) {
                 if( xmlname != "translation" && xmlname!="rotationmat" && xmlname!="rotationaxis" && xmlname!="quat" && xmlname!="diffusecolor" && xmlname != "ambientcolor" && xmlname != "transparency" && xmlname!="render" &&
                     xmlname != "extents" && xmlname != "radius" && xmlname != "height" &&
                     !(_itgeomprop->GetType() == KinBody::Link::GEOMPROPERTIES::GeomTrimesh && xmlname=="data") ) {
@@ -597,7 +589,7 @@ public:
                     type = "box";
                 }
 
-                _itgeomprop = GetLinkGeometries(_plink).insert(GetLinkGeometries(_plink).end(),KinBody::Link::GEOMPROPERTIES());
+                _itgeomprop = _plink->_listGeomProperties.insert(_plink->_listGeomProperties.end(),KinBody::Link::GEOMPROPERTIES());
                 if( stricmp(type.c_str(), "box") == 0 )
                     _itgeomprop->type = KinBody::Link::GEOMPROPERTIES::GeomBox;
                 else if( stricmp(type.c_str(), "sphere") == 0 )
@@ -651,35 +643,35 @@ public:
                     if( xmlname == "body" ) {
                         // directly apply transform to all geomteries
                         Transform tnew = _plink->GetTransform();
-                        FOREACH(itgeom, GetLinkGeometries(_plink))
-                            GetGeomTransform(*itgeom) = tnew * GetGeomTransform(*itgeom);
-                        GetLinkCollision(_plink).ApplyTransform(tnew);
+                        FOREACH(itgeomprop, _plink->_listGeomProperties)
+                            itgeomprop->_t = tnew * itgeomprop->_t;
+                        _plink->collision.ApplyTransform(tnew);
                         _plink->SetTransform(tOrigTrans);
                     }
 
                     _pcurreader.reset();
                 }
             }
-            else if( _itgeomprop != GetLinkGeometries(_plink).end() ) {
+            else if( _itgeomprop != _plink->_listGeomProperties.end() ) {
                 if( xmlname == "translation" ) {
-                    _ss >> GetGeomTransform(*_itgeomprop).trans.x >> GetGeomTransform(*_itgeomprop).trans.y >> GetGeomTransform(*_itgeomprop).trans.z;
+                    _ss >> _itgeomprop->_t.trans.x >> _itgeomprop->_t.trans.y >> _itgeomprop->_t.trans.z;
                 }
                 else if( xmlname == "rotationmat" ) {
                     TransformMatrix tnew;
                     _ss >> tnew.m[0] >> tnew.m[1] >> tnew.m[2] >> tnew.m[4] >> tnew.m[5] >> tnew.m[6] >> tnew.m[8] >> tnew.m[9] >> tnew.m[10];
-                    GetGeomTransform(*_itgeomprop).rot = (Transform(tnew)*GetGeomTransform(*_itgeomprop)).rot;
+                    _itgeomprop->_t.rot = (Transform(tnew)*_itgeomprop->_t).rot;
                 }
                 else if( xmlname == "rotationaxis" ) {
                     Vector vaxis; dReal fangle=0;
                     _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
                     Transform tnew; tnew.rotfromaxisangle(vaxis.normalize3(), fangle * PI / 180.0f);
-                    GetGeomTransform(*_itgeomprop).rot = (tnew*GetGeomTransform(*_itgeomprop)).rot;
+                    _itgeomprop->_t.rot = (tnew*_itgeomprop->_t).rot;
                 }
                 else if( xmlname == "quat" ) {
                     Transform tnew;
                     _ss >> tnew.rot.x >> tnew.rot.y >> tnew.rot.z >> tnew.rot.w;
                     tnew.rot.normalize4();
-                    GetGeomTransform(*_itgeomprop).rot = (tnew*GetGeomTransform(*_itgeomprop)).rot;
+                    _itgeomprop->_t.rot = (tnew*_itgeomprop->_t).rot;
                 }
                 else if( xmlname == "render" ) {
                     // check attributes for format (default is vrml)
@@ -688,7 +680,7 @@ public:
                     _ss >> renderfile;
                     _ss >> _itgeomprop->vRenderScale.x; _itgeomprop->vRenderScale.y = _itgeomprop->vRenderScale.z = _itgeomprop->vRenderScale.x;
                     _ss >> _itgeomprop->vRenderScale.y >> _itgeomprop->vRenderScale.z;
-                    _itgeomprop->renderfile = !pKinBodyReader ? renderfile : pKinBodyReader->GetModelsDir(renderfile);
+                    _itgeomprop->renderfile = !_fnGetModelsDir ? renderfile : _fnGetModelsDir(renderfile);
                 }
                 else if( xmlname == "diffusecolor" ) {
                     _ss >> _itgeomprop->diffuseColor.x >> _itgeomprop->diffuseColor.y >> _itgeomprop->diffuseColor.z;
@@ -704,7 +696,7 @@ public:
                         // rotate on x axis by pi/2
                         Transform trot;
                         trot.rotfromaxisangle(Vector(1, 0, 0), PI/2);
-                        GetGeomTransform(*_itgeomprop).rot = (GetGeomTransform(*_itgeomprop)*trot).rot;
+                        _itgeomprop->_t.rot = (_itgeomprop->_t*trot).rot;
                     }
 
                     // call before attaching the geom
@@ -714,9 +706,9 @@ public:
 
                     // need to put on heap since stack can be too small
                     boost::shared_ptr<KinBody::Link::TRIMESH> trimesh(new KinBody::Link::TRIMESH(_itgeomprop->GetCollisionMesh()));
-                    trimesh->ApplyTransform(GetGeomTransform(*_itgeomprop));
-                    GetLinkCollision(_plink).Append(*trimesh);
-                    _itgeomprop = GetLinkGeometries(_plink).end();
+                    trimesh->ApplyTransform(_itgeomprop->_t);
+                    _plink->collision.Append(*trimesh);
+                    _itgeomprop = _plink->_listGeomProperties.end();
                 }
                 else {
                     // could be type specific features
@@ -742,7 +734,7 @@ public:
                             _ss >> orgrenderfile;
                             _ss >> vScale.x; vScale.y = vScale.z = vScale.x;
                             _ss >> vScale.y >> vScale.z;
-                            string renderfile = !pKinBodyReader ? orgrenderfile : pKinBodyReader->GetModelsDir(orgrenderfile);
+                            string renderfile = !_fnGetModelsDir ? orgrenderfile : _fnGetModelsDir(orgrenderfile);
 
                             bool bSuccess = false;
                             if( renderfile.size() > 0 ) {
@@ -823,16 +815,16 @@ public:
                 else
                     totalmass = MASS::GetSphericalMass(_vMassExtents.x, Vector(), _fTotalMass);
         
-                GetLinkTransMass(_plink) = totalmass.t;
-                GetLinkMass(_plink) = totalmass.fTotalMass;
+                _plink->_transMass = totalmass.t;
+                _plink->_mass = totalmass.fTotalMass;
                 tOrigTrans = _plink->GetTransform();
 
                 Transform cur;
                 if( !!_offsetfrom ) {
                     // recompute new transformation
                     Transform root;
-                    if( !!pKinBodyReader )
-                        root = pKinBodyReader->GetOffsetFrom(_offsetfrom);
+                    if( !!_fnGetOffsetFrom )
+                        root = _fnGetOffsetFrom(_offsetfrom);
                     else
                         root = _offsetfrom->GetTransform();
 
@@ -868,8 +860,8 @@ public:
                 }
                 else if( _masstype == MT_Custom ) {
                     if( xmlname == "com" ) {
-                        _ss >> GetLinkTransMass(_plink).trans.x >> GetLinkTransMass(_plink).trans.y >> GetLinkTransMass(_plink).trans.z;
-                        _massCustom.t.trans = GetLinkTransMass(_plink).trans;
+                        _ss >> _plink->_transMass.trans.x >> _plink->_transMass.trans.y >> _plink->_transMass.trans.z;
+                        _massCustom.t.trans = _plink->_transMass.trans;
                     }
                     else if( xmlname == "inertia" ) {
                         _ss >> _massCustom.t.m[0] >> _massCustom.t.m[1] >> _massCustom.t.m[2] >> _massCustom.t.m[4] >> _massCustom.t.m[5] >> _massCustom.t.m[6] >> _massCustom.t.m[8] >> _massCustom.t.m[9] >> _massCustom.t.m[10];
@@ -884,24 +876,24 @@ public:
             else if( xmlname == "translation" ) {
                 Vector v;
                 _ss >> v.x >> v.y >> v.z;
-                GetLinkTransform(_plink).trans += v;
+                _plink->_t.trans += v;
             }
             else if( xmlname == "rotationmat" ) {
                 TransformMatrix tnew;
                 _ss >> tnew.m[0] >> tnew.m[1] >> tnew.m[2] >> tnew.m[4] >> tnew.m[5] >> tnew.m[6] >> tnew.m[8] >> tnew.m[9] >> tnew.m[10];
-                GetLinkTransform(_plink).rot = (Transform(tnew)*GetLinkTransform(_plink)).rot;
+                _plink->_t.rot = (Transform(tnew)*_plink->_t).rot;
             }
             else if( xmlname == "rotationaxis" ) {
                 Vector vaxis; dReal fangle=0;
                 _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
                 Transform tnew; tnew.rotfromaxisangle(vaxis.normalize3(), fangle * PI / 180.0f);
-                GetLinkTransform(_plink).rot = (tnew*GetLinkTransform(_plink)).rot;
+                _plink->_t.rot = (tnew*_plink->_t).rot;
             }
             else if( xmlname == "quat" ) {
                 Transform tnew;
                 _ss >> tnew.rot.x >> tnew.rot.y >> tnew.rot.z >> tnew.rot.w;
                 tnew.rot.normalize4();
-                GetLinkTransform(_plink).rot = (tnew*GetLinkTransform(_plink)).rot;
+                _plink->_t.rot = (tnew*_plink->_t).rot;
             }
             else if( xmlname == "offsetfrom" ) {
                 // figure out which body
@@ -926,7 +918,9 @@ public:
         }
 
         Transform GetOrigTransform() const { return tOrigTrans; }
-        KinBodyXMLReaderPtr pKinBodyReader; ///< needed for offsetrom
+
+        boost::function<string(const std::string&)> _fnGetModelsDir;
+        boost::function<Transform(KinBody::LinkPtr)> _fnGetOffsetFrom;
 
     private:
         MASS _mass;                    ///< current mass of the object
@@ -993,24 +987,24 @@ public:
                 }
             }
 
-            GetJointLowerLimit(_pjoint).resize(_pjoint->GetDOF());
-            GetJointUpperLimit(_pjoint).resize(_pjoint->GetDOF());
+            _pjoint->_vlowerlimit.resize(_pjoint->GetDOF());
+            _pjoint->_vupperlimit.resize(_pjoint->GetDOF());
             if( _pjoint->GetType() == KinBody::Joint::JointSlider ) {
                 for(int i = 0; i < _pjoint->GetDOF(); ++i) {
-                    GetJointLowerLimit(_pjoint)[i] = -100000;
-                    GetJointUpperLimit(_pjoint)[i] = 100000;
+                    _pjoint->_vlowerlimit[i] = -100000;
+                    _pjoint->_vupperlimit[i] = 100000;
                 }
             }
             else if( _pjoint->GetType() == KinBody::Joint::JointSpherical ) {
                 for(int i = 0; i < _pjoint->GetDOF(); ++i) {
-                    GetJointLowerLimit(_pjoint)[i] = -1000;
-                    GetJointUpperLimit(_pjoint)[i] = 1000;
+                    _pjoint->_vlowerlimit[i] = -1000;
+                    _pjoint->_vupperlimit[i] = 1000;
                 }
             }
             else {
                 for(int i = 0; i < _pjoint->GetDOF(); ++i) {
-                    GetJointLowerLimit(_pjoint)[i] = -PI;
-                    GetJointUpperLimit(_pjoint)[i] = PI;
+                    _pjoint->_vlowerlimit[i] = -PI;
+                    _pjoint->_vupperlimit[i] = PI;
                 }
             }
         }
@@ -1058,8 +1052,8 @@ public:
                     _pjoint->type == KinBody::Joint::JointHinge2 ) {
             
                     for(int i = 0; i < numindices; ++i) {
-                        if( GetJointLowerLimit(_pjoint)[i] < -PI || GetJointUpperLimit(_pjoint)[i] > PI ) {
-                            _pjoint->offset += 0.5f * (GetJointLowerLimit(_pjoint)[i] + GetJointUpperLimit(_pjoint)[i]);
+                        if( _pjoint->_vlowerlimit[i] < -PI || _pjoint->_vupperlimit[i] > PI ) {
+                            _pjoint->offset += 0.5f * (_pjoint->_vlowerlimit[i] + _pjoint->_vupperlimit[i]);
                             ++numbad;
                         }
                     }
@@ -1071,36 +1065,36 @@ public:
 
                 Transform tbody0, tbody1;
 
-                if( !GetJointBodies(_pjoint)[0] || !GetJointBodies(_pjoint)[1] ) {
+                if( !_pjoint->bodies[0] || !_pjoint->bodies[1] ) {
                     RAVELOG_WARNA("one or more attached bodies are invalid for joint %s\n", _pjoint->GetName().c_str());
-                    if( !GetJointBodies(_pjoint)[1] )
-                        GetJointBodies(_pjoint)[1] = _pparent->GetLinks().front();
-                    if( !GetJointBodies(_pjoint)[0] )
-                        GetJointBodies(_pjoint)[0] = _pparent->GetLinks().front();
+                    if( !_pjoint->bodies[1] )
+                        _pjoint->bodies[1] = _pparent->GetLinks().front();
+                    if( !_pjoint->bodies[0] )
+                        _pjoint->bodies[0] = _pparent->GetLinks().front();
                 }
 
                 // make sure first body is always closer to the root, unless the second body is static
-                if( !GetJointBodies(_pjoint)[1]->IsStatic() ) {
-                    if( GetJointBodies(_pjoint)[0]->IsStatic() || (GetJointBodies(_pjoint)[0]->GetIndex() > GetJointBodies(_pjoint)[1]->GetIndex() && !GetJointBodies(_pjoint)[1]->IsStatic()) ) {
+                if( !_pjoint->bodies[1]->IsStatic() ) {
+                    if( _pjoint->bodies[0]->IsStatic() || (_pjoint->bodies[0]->GetIndex() > _pjoint->bodies[1]->GetIndex() && !_pjoint->bodies[1]->IsStatic()) ) {
                         for(int i = 0; i < _pjoint->GetDOF(); ++i)
                             _pjoint->vAxes[i] = -_pjoint->vAxes[i];
-                        swap(GetJointBodies(_pjoint)[0], GetJointBodies(_pjoint)[1]);
+                        swap(_pjoint->bodies[0], _pjoint->bodies[1]);
                     }
                 }
 
-                tbody0 = GetJointBodies(_pjoint)[0]->GetTransform();
-                tbody1 = GetJointBodies(_pjoint)[1]->GetTransform();
+                tbody0 = _pjoint->bodies[0]->GetTransform();
+                tbody1 = _pjoint->bodies[1]->GetTransform();
 
                 Transform toffsetfrom;
                 if( !!_offsetfrom ) {
-                    if( !!pKinBodyReader )
-                        toffsetfrom = pKinBodyReader->GetOffsetFrom(_offsetfrom);
+                    if( !!_fnGetOffsetFrom )
+                        toffsetfrom = _fnGetOffsetFrom(_offsetfrom);
                     else
                         toffsetfrom = _offsetfrom->GetTransform();
                 }
 
                 Transform trel;
-                if( GetJointBodies(_pjoint)[1]->IsStatic() ) {
+                if( _pjoint->bodies[1]->IsStatic() ) {
                     trel = tbody1.inverse() * tbody0;
                     toffsetfrom = tbody1.inverse() * toffsetfrom;
                 }
@@ -1109,7 +1103,7 @@ public:
                     toffsetfrom = tbody0.inverse() * toffsetfrom;
                 }
 
-                if( GetJointBodies(_pjoint)[0]->IsStatic() ) {
+                if( _pjoint->bodies[0]->IsStatic() ) {
                     RAVELOG_WARNA("joint %s: all attached links are static!\n", _pjoint->GetName().c_str());
                 }
 
@@ -1146,12 +1140,12 @@ public:
                     throw openrave_exception(str(boost::format("unknown joint type %d")%_pjoint->type));
                 }
 
-                if( GetJointBodies(_pjoint)[1]->IsStatic() ) {
+                if( _pjoint->bodies[1]->IsStatic() ) {
                     _pjoint->tLeft = _pparent->GetTransform().inverse() * tbody1 * _pjoint->tLeft;
-                    GetJointBodies(_pjoint)[0]->SetTransform(_pjoint->tLeft * _pjoint->tRight);
+                    _pjoint->bodies[0]->SetTransform(_pjoint->tLeft * _pjoint->tRight);
                 }
                 else
-                    GetJointBodies(_pjoint)[1]->SetTransform(tbody0 * _pjoint->tLeft * _pjoint->tRight);
+                    _pjoint->bodies[1]->SetTransform(tbody0 * _pjoint->tLeft * _pjoint->tRight);
 
                 _pjoint->tinvRight = _pjoint->tRight.inverse();
                 _pjoint->tinvLeft = _pjoint->tLeft.inverse();
@@ -1160,10 +1154,10 @@ public:
                     _pparent->_vecJointWeights.push_back(fWeights[i]);
 
                 // have to transform back
-                if( !!GetJointBodies(_pjoint)[0] )
-                    GetJointBodies(_pjoint)[0]->SetTransform(tbody0);
-                if( !!GetJointBodies(_pjoint)[1] )
-                    GetJointBodies(_pjoint)[1]->SetTransform(tbody1);
+                if( !!_pjoint->bodies[0] )
+                    _pjoint->bodies[0]->SetTransform(tbody0);
+                if( !!_pjoint->bodies[1] )
+                    _pjoint->bodies[1]->SetTransform(tbody1);
 
                 return true;
             }
@@ -1173,7 +1167,7 @@ public:
             }
             else if( xmlname == "body" ) {
                 // figure out which body
-                int index = !GetJointBodies(_pjoint)[0] ? 0 : 1;
+                int index = !_pjoint->bodies[0] ? 0 : 1;
                 bool bQuery = true;
                 string linkname;
                 _ss >> linkname;
@@ -1181,26 +1175,26 @@ public:
                 FOREACHC(itlink, _pparent->GetLinks()) {
                     if( stricmp((*itlink)->GetName().c_str(), linkname.c_str()) == 0 ) {
                         bQuery = !(*itlink)->IsStatic();
-                        GetJointBodies(_pjoint)[index] = *itlink;
+                        _pjoint->bodies[index] = *itlink;
                         break;
                     }
                 }
             
-                if( !GetJointBodies(_pjoint)[index] && bQuery ) {
+                if( !_pjoint->bodies[index] && bQuery ) {
                     RAVELOG_WARNA("Failed to find body %s for joint %s\n", linkname.c_str(), _pjoint->name.c_str());
                     GetXMLErrorCount()++;
                 }
             }
             else if( xmlname == "lostop" ) {
-                GetJointLowerLimit(_pjoint).resize(numindices);
-                FOREACH(it,GetJointLowerLimit(_pjoint)) {
+                _pjoint->_vlowerlimit.resize(numindices);
+                FOREACH(it,_pjoint->_vlowerlimit) {
                     _ss >> *it;
                     *it *= fRatio;
                 }
             }
             else if( xmlname == "histop" ) {
-                GetJointUpperLimit(_pjoint).resize(numindices);
-                FOREACH(it,GetJointUpperLimit(_pjoint)) {
+                _pjoint->_vupperlimit.resize(numindices);
+                FOREACH(it,_pjoint->_vupperlimit) {
                     _ss >> *it;
                     *it *= fRatio;
                 }
@@ -1279,7 +1273,8 @@ public:
             return false;
         }
 
-        KinBodyXMLReaderPtr pKinBodyReader; ///< needed for offsetrom
+        boost::function<string(const std::string&)> _fnGetModelsDir;
+        boost::function<Transform(KinBody::LinkPtr)> _fnGetOffsetFrom;
 
     private:
         float fWeights[3];
@@ -1290,6 +1285,12 @@ public:
         bool bDisabled; // if true, joint is not counted as a controllable degree of freedom
         bool _bMimicJoint;
     };
+
+    class InterfaceXMLReader;
+    typedef boost::shared_ptr<InterfaceXMLReader> InterfaceXMLReaderPtr;
+    typedef boost::shared_ptr<InterfaceXMLReader const> InterfaceXMLReaderConstPtr;
+
+    static InterfaceXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, PluginType type, InterfaceBasePtr& pinterface, const string& xmltag, const std::list<std::pair<std::string,std::string> >& atts);
 
     class InterfaceXMLReader : public StreamXMLReader
     {
@@ -1412,48 +1413,6 @@ public:
         string _xmltag;
         string _interfacename, _readername;
     };
-    typedef boost::shared_ptr<InterfaceXMLReader> InterfaceXMLReaderPtr;
-    typedef boost::shared_ptr<InterfaceXMLReader const> InterfaceXMLReaderConstPtr;
-
-    static InterfaceXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, PluginType type, InterfaceBasePtr& pinterface, const string& xmltag, const std::list<std::pair<std::string,std::string> >& atts)
-    {
-        switch(type) {
-        case PT_Planner: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Planner>(penv,pinterface,xmltag,atts));
-        case PT_Robot: {
-            RobotBasePtr probot = boost::static_pointer_cast<RobotBase>(pinterface);
-            int rootoffset = 0, rootjoffset = 0, rootsoffset = 0, rootmoffset = 0;
-            if( !!probot ) {
-                rootoffset = (int)probot->GetLinks().size();
-                rootjoffset = (int)probot->GetJoints().size();
-                rootsoffset = (int)probot->GetSensors().size();
-                rootmoffset = (int)probot->GetManipulators().size();
-            }
-            return InterfaceXMLReaderPtr(new RobotXMLReader(penv,pinterface,atts,rootoffset,rootjoffset,rootsoffset,rootmoffset));
-        }
-        case PT_SensorSystem: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_SensorSystem>(penv,pinterface,xmltag,atts));
-        case PT_Controller: return InterfaceXMLReaderPtr(new ControllerXMLReader(penv,pinterface,atts));
-        case PT_ProblemInstance: return InterfaceXMLReaderPtr(new ProblemXMLReader(penv,pinterface,atts));
-        case PT_InverseKinematicsSolver: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_InverseKinematicsSolver>(penv,pinterface,xmltag,atts));
-        case PT_KinBody: {
-            KinBodyPtr pbody = boost::static_pointer_cast<KinBody>(pinterface);
-            int rootoffset = 0, rootjoffset = 0;
-            if( !!pbody ) {
-                vector<Transform> vTransforms;
-                pbody->GetBodyTransformations(vTransforms);
-                rootoffset = vTransforms.size();
-                rootjoffset = (int)pbody->GetJoints().size();
-            }
-            return InterfaceXMLReaderPtr(new KinBodyXMLReader(penv,pinterface,type,atts,rootoffset,rootjoffset));
-        }
-        case PT_PhysicsEngine: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_PhysicsEngine>(penv,pinterface,xmltag,atts));
-        case PT_Sensor: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Sensor>(penv,pinterface,xmltag,atts));
-        case PT_CollisionChecker: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_CollisionChecker>(penv,pinterface,xmltag,atts));
-        case PT_Trajectory: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Trajectory>(penv,pinterface,xmltag,atts));
-        case PT_Viewer: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Viewer>(penv,pinterface,xmltag,atts));
-        }
-
-        throw openrave_exception(str(boost::format("could not create interface of type %d")%type),ORE_InvalidArguments);
-    }
 
     /// KinBody reader
     /// reads kinematic chain specific entries, can instantiate this reader from another reader
@@ -1484,7 +1443,7 @@ public:
             _pchain->SetGuiData(boost::shared_ptr<void>());
         }
 
-        const Transform GetOffsetFrom(KinBody::LinkPtr plink)
+        Transform GetOffsetFrom(KinBody::LinkPtr plink)
         {
             if( plink->GetIndex() < 0 || plink->GetIndex() >= (int)_vTransforms.size() )
                 return plink->GetTransform();
@@ -1554,14 +1513,16 @@ public:
                 _plink.reset();
                 boost::shared_ptr<LinkXMLReader> plinkreader(new LinkXMLReader(_plink, _pchain, atts));
                 plinkreader->SetMassType(_masstype, _fMassValue, _vMassExtents);
-                plinkreader->pKinBodyReader = boost::static_pointer_cast<KinBodyXMLReader>(shared_from_this());
+                plinkreader->_fnGetModelsDir = boost::bind(&KinBodyXMLReader::GetModelsDir,this,_1);
+                plinkreader->_fnGetOffsetFrom = boost::bind(&KinBodyXMLReader::GetOffsetFrom,this,_1);
                 _pcurreader = plinkreader;
             }
             else if( xmlname == "joint" ) {
                 _pjoint.reset();
                 _pchain->_vecJointIndices.push_back((int)_pchain->_vecJointWeights.size());
                 boost::shared_ptr<JointXMLReader> pjointreader(new  JointXMLReader(_pjoint,_pchain, atts));
-                pjointreader->pKinBodyReader = boost::static_pointer_cast<KinBodyXMLReader>(shared_from_this());
+                pjointreader->_fnGetModelsDir = boost::bind(&KinBodyXMLReader::GetModelsDir,this,_1);
+                pjointreader->_fnGetOffsetFrom = boost::bind(&KinBodyXMLReader::GetOffsetFrom,this,_1);
                 _pcurreader = pjointreader;
             }
             else if( xmlname == "translation" || xmlname == "rotationmat" || xmlname == "rotationaxis" || xmlname == "quat" || xmlname == "jointvalues" ) {
@@ -1697,21 +1658,21 @@ public:
                 if( _bOverwriteDiffuse ) {
                     // overwrite the color
                     FOREACH(itlink, _pchain->_veclinks) {
-                        FOREACH(itprop, GetLinkGeometries(*itlink))
+                        FOREACH(itprop, (*itlink)->_listGeomProperties)
                             itprop->diffuseColor = _diffusecol;
                     }
                 }
                 if( _bOverwriteAmbient ) {
                     // overwrite the color
                     FOREACH(itlink, _pchain->_veclinks) {
-                        FOREACH(itprop, GetLinkGeometries(*itlink))
+                        FOREACH(itprop, (*itlink)->_listGeomProperties)
                             itprop->ambientColor = _ambientcol;
                     }
                 }
                 if( _bOverwriteTransparency ) {
                     // overwrite the color
                     FOREACH(itlink, _pchain->_veclinks) {
-                        FOREACH(itprop, GetLinkGeometries(*itlink))
+                        FOREACH(itprop, (*itlink)->_listGeomProperties)
                             itprop->ftransparency = _transparency;
                     }
                 }
@@ -1808,6 +1769,62 @@ public:
         bool _bOverwriteDiffuse, _bOverwriteAmbient, _bOverwriteTransparency;
 
         list<pair<KinBody::JointPtr,string> > listMimicJoints; ///< mimic joints needed to be resolved
+    };
+
+    class ControllerXMLReader : public InterfaceXMLReader
+    {
+    public:
+    ControllerXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pinterface, const std::list<std::pair<std::string,std::string> >& atts,RobotBasePtr probot=RobotBasePtr()) : InterfaceXMLReader(penv,pinterface,PT_Controller,RaveGetInterfaceName(PT_Controller),atts)
+            {
+                _probot = probot;
+                FOREACH(itatt, atts) {
+                    if( itatt->first == "robot" )
+                        _robotname = itatt->second;
+                    else if( itatt->first == "args" )
+                        _args = itatt->second;
+                }
+            }
+        virtual ~ControllerXMLReader() {}
+
+        virtual void startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
+        {
+            if( !!_pcurreader ) {
+                _pcurreader->startElement(xmlname, atts);
+                return;
+            }
+
+            InterfaceXMLReader::startElement(xmlname,atts);
+            if( !!_pcustomreader )
+                return;
+
+            _pcurreader.reset(new DummyXMLReader(xmlname, RaveGetInterfaceName(PT_Controller)));
+        }
+        virtual bool endElement(const std::string& xmlname)
+        {
+            if( !!_pcurreader ) {
+                if( _pcurreader->endElement(xmlname) )
+                    _pcurreader.reset();
+            }
+            else if( InterfaceXMLReader::endElement(xmlname) ) {
+                if( !_probot ) {
+                    if( _robotname.size() > 0 ) {
+                        KinBodyPtr pbody = _penv->GetKinBody(_robotname.c_str());
+                        if( pbody->IsRobot() )
+                            _probot = boost::static_pointer_cast<RobotBase>(pbody);
+                    }
+                }
+
+                if( !!_probot )
+                    _probot->SetController(boost::static_pointer_cast<ControllerBase>(_pinterface),_args);
+                else
+                    RAVELOG_WARNA("controller is unused\n");
+                return true;
+            }
+            return false;
+        }
+
+        string _robotname, _args;
+        RobotBasePtr _probot;
     };
 
     class ManipulatorXMLReader : public StreamXMLReader
@@ -2062,7 +2079,7 @@ public:
             }
             else if( xmlname == "attachedsensor" ) {
                 if( !_psensor->psensor ) {
-                    RAVELOG_VERBOSEA("Attached robot sensor points to no real sensor!\n");
+                    RAVELOG_VERBOSEA("Attached robot sensor %s points to no real sensor!\n",_psensor->GetName().c_str());
                 }
                 else {
                     if( !_psensor->psensor->Init(args) ) {
@@ -2320,62 +2337,6 @@ public:
         }
     };
 
-    class ControllerXMLReader : public InterfaceXMLReader
-    {
-    public:
-    ControllerXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pinterface, const std::list<std::pair<std::string,std::string> >& atts,RobotBasePtr probot=RobotBasePtr()) : InterfaceXMLReader(penv,pinterface,PT_Controller,RaveGetInterfaceName(PT_Controller),atts)
-            {
-                _probot = probot;
-                FOREACH(itatt, atts) {
-                    if( itatt->first == "robot" )
-                        _robotname = itatt->second;
-                    else if( itatt->first == "args" )
-                        _args = itatt->second;
-                }
-            }
-        virtual ~ControllerXMLReader() {}
-
-        virtual void startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
-        {
-            if( !!_pcurreader ) {
-                _pcurreader->startElement(xmlname, atts);
-                return;
-            }
-
-            InterfaceXMLReader::startElement(xmlname,atts);
-            if( !!_pcustomreader )
-                return;
-
-            _pcurreader.reset(new DummyXMLReader(xmlname, RaveGetInterfaceName(PT_Controller)));
-        }
-        virtual bool endElement(const std::string& xmlname)
-        {
-            if( !!_pcurreader ) {
-                if( _pcurreader->endElement(xmlname) )
-                    _pcurreader.reset();
-            }
-            else if( InterfaceXMLReader::endElement(xmlname) ) {
-                if( !_probot ) {
-                    if( _robotname.size() > 0 ) {
-                        KinBodyPtr pbody = _penv->GetKinBody(_robotname.c_str());
-                        if( pbody->IsRobot() )
-                            _probot = boost::static_pointer_cast<RobotBase>(pbody);
-                    }
-                }
-
-                if( !!_probot )
-                    _probot->SetController(boost::static_pointer_cast<ControllerBase>(_pinterface),_args);
-                else
-                    RAVELOG_WARNA("controller is unused\n");
-                return true;
-            }
-            return false;
-        }
-
-        string _robotname, _args;
-        RobotBasePtr _probot;
-    };
-
     class ProblemXMLReader : public InterfaceXMLReader
     {
     public:
@@ -2557,11 +2518,44 @@ public:
         bool _bInEnvironment;
     };
 
-    static boost::shared_ptr<EnvironmentMutex> GetXMLMutex() {
-        static boost::shared_ptr<EnvironmentMutex> m; ///< lock for parsing XML
-        if( !m )
-            m.reset(new EnvironmentMutex());
-        return m;
+    static InterfaceXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, PluginType type, InterfaceBasePtr& pinterface, const string& xmltag, const std::list<std::pair<std::string,std::string> >& atts)
+    {
+        switch(type) {
+        case PT_Planner: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Planner>(penv,pinterface,xmltag,atts));
+        case PT_Robot: {
+            RobotBasePtr probot = boost::static_pointer_cast<RobotBase>(pinterface);
+            int rootoffset = 0, rootjoffset = 0, rootsoffset = 0, rootmoffset = 0;
+            if( !!probot ) {
+                rootoffset = (int)probot->GetLinks().size();
+                rootjoffset = (int)probot->GetJoints().size();
+                rootsoffset = (int)probot->GetSensors().size();
+                rootmoffset = (int)probot->GetManipulators().size();
+            }
+            return InterfaceXMLReaderPtr(new RobotXMLReader(penv,pinterface,atts,rootoffset,rootjoffset,rootsoffset,rootmoffset));
+        }
+        case PT_SensorSystem: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_SensorSystem>(penv,pinterface,xmltag,atts));
+        case PT_Controller: return InterfaceXMLReaderPtr(new ControllerXMLReader(penv,pinterface,atts));
+        case PT_ProblemInstance: return InterfaceXMLReaderPtr(new ProblemXMLReader(penv,pinterface,atts));
+        case PT_InverseKinematicsSolver: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_InverseKinematicsSolver>(penv,pinterface,xmltag,atts));
+        case PT_KinBody: {
+            KinBodyPtr pbody = boost::static_pointer_cast<KinBody>(pinterface);
+            int rootoffset = 0, rootjoffset = 0;
+            if( !!pbody ) {
+                vector<Transform> vTransforms;
+                pbody->GetBodyTransformations(vTransforms);
+                rootoffset = vTransforms.size();
+                rootjoffset = (int)pbody->GetJoints().size();
+            }
+            return InterfaceXMLReaderPtr(new KinBodyXMLReader(penv,pinterface,type,atts,rootoffset,rootjoffset));
+        }
+        case PT_PhysicsEngine: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_PhysicsEngine>(penv,pinterface,xmltag,atts));
+        case PT_Sensor: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Sensor>(penv,pinterface,xmltag,atts));
+        case PT_CollisionChecker: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_CollisionChecker>(penv,pinterface,xmltag,atts));
+        case PT_Trajectory: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Trajectory>(penv,pinterface,xmltag,atts));
+        case PT_Viewer: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Viewer>(penv,pinterface,xmltag,atts));
+        }
+
+        throw openrave_exception(str(boost::format("could not create interface of type %d")%type),ORE_InvalidArguments);
     }
 };
 
