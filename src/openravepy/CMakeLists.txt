@@ -44,7 +44,7 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
 
       add_library(openravepy SHARED openravepy.cpp)
       # stdc++ has to be included before opengl libraries due to some ATI bug (http://wiki.fifengine.de/Segfault_in_cxa_allocate_exception#Workaround)
-      target_link_libraries(openravepy stdc++ libopenrave libopenrave-core ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY})
+      target_link_libraries(openravepy ${STDC_LIBRARY} libopenrave libopenrave-core ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY})
       add_dependencies(openravepy libopenrave libopenrave-core)
       set_target_properties(openravepy PROPERTIES PREFIX "" COMPILE_FLAGS "-DRAVE_CORE_USEDLL")
       if( WIN32 )

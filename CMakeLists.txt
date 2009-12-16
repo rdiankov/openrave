@@ -117,6 +117,12 @@ if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
   set(CMAKE_CXX_FLAGS_DEBUG "-g -D_DEBUG")
 endif()
 
+if( UNIX OR CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
+  set(STDC_LIBRARY stdc++)
+else()
+  set(STDC_LIBRARY)
+endif()
+
 set(OPENRAVE_LINK_DIRS "")
 
 # to facilitate compilation, all visual studio libraries are included locally
