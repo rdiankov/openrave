@@ -352,17 +352,24 @@ if( UNIX OR NOT PYTHON_EXECUTABLE )
     OUTPUT_VARIABLE _ikfast_output)
   set(IKFAST_INSTALLED_EXECUTABLE ${CMAKE_INSTALL_PREFIX}/share/openrave/ikfast.py)
 else()
-  execute_process(
-    COMMAND ${PYTHON_EXECUTABLE} ${IKFAST_EXECUTABLE} --help
-    RESULT_VARIABLE _ikfast_success
-    OUTPUT_VARIABLE _ikfast_output)
+  set(_ikfast_success 0)
   set(IKFAST_INSTALLED_EXECUTABLE "${PYTHON_EXECUTABLE} \\\"${IKFAST_EXECUTABLE}\\\"")
 endif()
 
-if( _ikfast_success MATCHES 0 )
+if( _ikfast_success MATCHES 0 OR _ikfast_success MATCHES 1 )
   set(IKFAST_FOUND 1)
   message(STATUS "ikfast found (${IKFAST_EXECUTABLE})")
   if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" STRGREATER "2.4.3")
+
+    # untar the resource files
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/ikfast/sympy/__init__.py
+      COMMAND ${CMAKE_COMMAND} -E chdir
+      ARGS "${CMAKE_CURRENT_SOURCE_DIR}/ikfast" ${CMAKE_COMMAND} -E tar xzf "${CMAKE_CURRENT_SOURCE_DIR}/ikfast/sympy_0.6.3.tgz"
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/ikfast/sympy_0.6.3.tgz)
+    add_custom_target(sympy_files ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/ikfast/sympy/__init__.py)
+    add_dependencies(classhashes_h sympy_files)
+
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/ikfast/sympy DESTINATION share/openrave)
   else()
     message(WARNING "Could not install sympy needed by ikfast (cmake version ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION} needs to be >= 2.4.6)")

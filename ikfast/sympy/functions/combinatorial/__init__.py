@@ -1,3 +1,0 @@
-
-import factorials
-import numbers
