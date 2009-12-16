@@ -346,7 +346,7 @@ public:
             sample[i] = pCurSample[i] + 10.0f*fRadius*(RaveRandomFloat()-0.5f);
 
         // normalize
-        dReal fRatio = max(1e-5f,fRadius*(0.1f+0.9f*RaveRandomFloat()));
+        dReal fRatio = max((dReal)1e-5f,fRadius*(0.1f+0.9f*RaveRandomFloat()));
             
         //assert(_robot->ConfigDist(&_vzero[0], &_vSampleConfig[0]) < B+1);
         dReal fDist = _distmetricfn(sample,pCurSample);
