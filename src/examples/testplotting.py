@@ -36,7 +36,7 @@ if __name__=='__main__':
                       indices=None,
                       colors=array(((0,1,0),(0,0,1),(1,0,0))))
     h6 = orenv.drawtrimesh(points=array(((0,0,0.5),(0.5,0,0.5),(0,0.5,0.5),(0.5,0.5,0.5))),
-                      indices=array(((0,1,2),(2,1,3))),
+                      indices=array(((0,1,2),(2,1,3)),int64),
                       colors=array((1,0,0,0.5)))
     raw_input('Enter any key to quit. ')
     h1 = None

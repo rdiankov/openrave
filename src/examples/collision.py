@@ -31,5 +31,6 @@ if __name__ == "__main__":
     report1 = CollisionReport()
     inlier1 = env.CheckCollision(Ray(ray1[0:3],ray1[3:6]),report1)
     print 'numcontacts: ',len(report1.contacts),' pos: ', report1.contacts[0].pos[:,0],' norm: ',report1.contacts[0].norm[:,0]
-    
+
+    orobj = None
     env.Destroy() # done with the environment

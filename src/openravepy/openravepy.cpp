@@ -66,6 +66,7 @@
 #include <boost/format.hpp>
 #include <boost/enable_shared_from_this.hpp> 
 #include <boost/version.hpp>
+#include <boost/multi_array.hpp>
 
 #define PY_ARRAY_UNIQUE_SYMBOL PyArrayHandle
 #include <boost/python.hpp>
@@ -186,60 +187,12 @@ inline Vector ExtractVector4Type(const object& o)
 
 inline Vector ExtractVector3(const object& oraw)
 {
-    object o = oraw.attr("flat");
-
-    // check the types of o
-    extract<dReal> xr(o[0]);
-    if( xr.check() )
-        return ExtractVector3Type<dReal>(o);
-#if OPENRAVE_PRECISION
-    extract<float> xf(o[0]);
-    if( xf.check() )
-        return ExtractVector3Type<float>(o);
-#else
-    extract<double> xd(o[0]);
-    if( xd.check() )
-        return ExtractVector3Type<double>(o);
-#endif
-    // continue
-    extract<int> xi(o[0]);
-    if( xi.check() )
-        return ExtractVector3Type<int>(o);
-    extract<unsigned int> xu(o[0]);
-    if( xu.check() )
-        return ExtractVector3Type<unsigned int>(o);
-
-    object onew = ((numeric::array)oraw).astype("f8").attr("flat");
-    return ExtractVector3Type<double>(onew); // python should raise exception
+    return ExtractVector3Type<dReal>(oraw.attr("flat"));
 }
 
 inline Vector ExtractVector4(const object& oraw)
 {
-    object o = oraw.attr("flat");
-
-    // check the types of o
-    extract<dReal> xr(o[0]);
-    if( xr.check() )
-        return ExtractVector4Type<dReal>(o);
-#if OPENRAVE_PRECISION
-    extract<float> xf(o[0]);
-    if( xf.check() )
-        return ExtractVector4Type<float>(o);
-#else
-    extract<double> xd(o[0]);
-    if( xd.check() )
-        return ExtractVector4Type<double>(o);
-#endif
-    // continue
-    extract<int> xi(o[0]);
-    if( xi.check() )
-        return ExtractVector4Type<int>(o);
-    extract<unsigned int> xu(o[0]);
-    if( xu.check() )
-        return ExtractVector4Type<unsigned int>(o);
-
-    object onew = ((numeric::array)oraw).astype("f8").attr("flat");
-    return ExtractVector4Type<double>(onew); // python should raise exception
+    return ExtractVector4Type<dReal>(oraw.attr("flat"));
 }
 
 inline Vector ExtractVector34(const object& oraw)
@@ -270,30 +223,7 @@ inline Transform ExtractTransformType(const object& o)
 
 inline Transform ExtractTransform(const object& oraw)
 {
-    object o = oraw.attr("flat");
-    // check the types of o
-    extract<dReal> xr(o[0]);
-    if( xr.check() )
-        return ExtractTransformType<dReal>(o);
-#if OPENRAVE_PRECISION
-    extract<float> xf(o[0]);
-    if( xf.check() )
-        return ExtractTransformType<float>(o);
-#else
-    extract<double> xd(o[0]);
-    if( xd.check() )
-        return ExtractTransformType<double>(o);
-#endif
-    // continue
-    extract<int> xi(o[0]);
-    if( xi.check() )
-        return ExtractTransformType<int>(o);
-    extract<unsigned int> xu(o[0]);
-    if( xu.check() )
-        return ExtractTransformType<unsigned int>(o);
-
-    object onew = ((numeric::array)oraw).astype("f8").attr("flat");
-    return ExtractTransformType<double>(onew);
+    return ExtractTransformType<dReal>(oraw.attr("flat"));
 }
 
 template <typename T>
@@ -303,65 +233,6 @@ inline vector<T> ExtractArray(const object& o)
     for(size_t i = 0; i < v.size(); ++i)
         v[i] = extract<T>(o[i]);
     return v;
-}
-
-inline vector<dReal> ExtractRealArray(const object& o)
-{
-    // check the types of o
-    extract<dReal> xr(o[0]);
-    if( xr.check() )
-        return ExtractArray<dReal>(o);
-
-    vector<dReal> v(len(o));
-#if OPENRAVE_PRECISION
-    extract<float> xf(o[0]);
-    if( xf.check() ) {
-        for(size_t i = 0; i < v.size(); ++i)
-            v[i] = (dReal)(extract<float>(o[i]));
-        return v;
-    }
-#else
-    extract<double> xd(o[0]);
-    if( xd.check() ) {
-        for(size_t i = 0; i < v.size(); ++i)
-            v[i] = (dReal)(extract<double>(o[i]));
-        return v;
-    }
-#endif
-    
-    object onew = ((numeric::array)o).astype("f8");
-    for(size_t i = 0; i < v.size(); ++i)
-        v[i] = (dReal)(extract<double>(onew[i]));
-    return v;
-}
-
-inline vector<float> ExtractFloatArray(const object& o)
-{
-    // check the types of o
-    extract<float> xr(o[0]);
-    if( xr.check() )
-        return ExtractArray<float>(o);
-
-    vector<float> v(len(o));
-    object onew = ((numeric::array)o).astype("f8");
-    for(size_t i = 0; i < v.size(); ++i)
-        v[i] = (float)(extract<double>(onew[i]));
-    return v;
-}
-
-inline vector<int> ExtractArrayInt(const object& o)
-{
-    // check the types of o
-    extract<int> xi(o[0]);
-    if( xi.check() )
-        return ExtractArray<int>(o);
-    extract<int64_t> xi64(o[0]);
-    if( xi64.check() ) {
-        vector<int> v(len(o));
-        for(size_t i = 0; i < v.size(); ++i)
-            v[i] = (int)extract<int64_t>(o[i]);
-    }
-    return ExtractArray<int>(o);
 }
 
 template <typename T>
@@ -744,8 +615,8 @@ public:
 
         void SetJointOffset(dReal offset) { _pjoint->SetJointOffset(offset); }
         void SetJointLimits(object olower, object oupper) {
-            vector<dReal> vlower = ExtractRealArray(olower);
-            vector<dReal> vupper = ExtractRealArray(oupper);
+            vector<dReal> vlower = ExtractArray<dReal>(olower);
+            vector<dReal> vupper = ExtractArray<dReal>(oupper);
             if( vlower.size() != vupper.size() || (int)vlower.size() != _pjoint->GetDOF() )
                 throw openrave_exception("limits are wrong dimensions");
             _pjoint->SetJointLimits(vlower,vupper);
@@ -843,7 +714,7 @@ public:
         if( _pbody->GetDOF() == 0 )
             return;
 
-        vector<dReal> values = ExtractRealArray(o);
+        vector<dReal> values = ExtractArray<dReal>(o);
         if( (int)values.size() != GetDOF() )
             throw openrave_exception("values do not equal to body degrees of freedom");
         _pbody->SetJointValues(values,true);
@@ -855,7 +726,7 @@ public:
             return;
         }
 
-        vector<dReal> values = ExtractRealArray(ojoints);
+        vector<dReal> values = ExtractArray<dReal>(ojoints);
         if( (int)values.size() != GetDOF() )
             throw openrave_exception("values do not equal to body degrees of freedom");
 
@@ -867,8 +738,8 @@ public:
         if( _pbody->GetDOF() == 0 || len(indices) == 0 )
             return;
 
-        vector<dReal> vsetvalues = ExtractRealArray(o);
-        vector<int> vindices = ExtractArrayInt(indices);
+        vector<dReal> vsetvalues = ExtractArray<dReal>(o);
+        vector<int> vindices = ExtractArray<int>(indices);
         if( vsetvalues.size() != vindices.size() )
             throw openrave_exception("sizes do not match");
 
@@ -1049,7 +920,7 @@ public:
 
     bool SetDesired(object o)
     {
-        vector<dReal> values = ExtractRealArray(o);
+        vector<dReal> values = ExtractArray<dReal>(o);
         if( values.size() == 0 )
             throw openrave_exception("no values specified");
         return _pcontroller->SetDesired(values);
@@ -1237,7 +1108,7 @@ public:
 
         object FindIKSolution(object transform, object freeparams, bool bColCheck) const
         {
-            vector<dReal> solution, vfreeparams = ExtractRealArray(freeparams);
+            vector<dReal> solution, vfreeparams = ExtractArray<dReal>(freeparams);
             if( !_pmanip->FindIKSolution(ExtractTransform(transform),vfreeparams, solution,bColCheck) )
                 return object();
             return toPyArray(solution);
@@ -1257,7 +1128,7 @@ public:
         object FindIKSolutions(object transform, object freeparams, bool bColCheck) const
         {
             std::vector<std::vector<dReal> > vsolutions;
-            vector<dReal> vfreeparams = ExtractRealArray(freeparams);
+            vector<dReal> vfreeparams = ExtractArray<dReal>(freeparams);
             if( !_pmanip->FindIKSolutions(ExtractTransform(transform),vfreeparams, vsolutions,bColCheck) )
                 return object();
             boost::python::list solutions;
@@ -1376,10 +1247,10 @@ public:
     PyControllerBasePtr GetController() const { return !_probot->GetController() ? PyControllerBasePtr() : PyControllerBasePtr(new PyControllerBase(_probot->GetController(),_pyenv)); }
     bool SetController(PyControllerBasePtr pController, const string& args) { CHECK_POINTER(pController); return _probot->SetController(pController->GetController(),args.c_str()); }
     
-    void SetActiveDOFs(object jointindices) { _probot->SetActiveDOFs(ExtractArrayInt(jointindices)); }
-    void SetActiveDOFs(object jointindices, int nAffineDOsBitmask) { _probot->SetActiveDOFs(ExtractArrayInt(jointindices), nAffineDOsBitmask); }
+    void SetActiveDOFs(object jointindices) { _probot->SetActiveDOFs(ExtractArray<int>(jointindices)); }
+    void SetActiveDOFs(object jointindices, int nAffineDOsBitmask) { _probot->SetActiveDOFs(ExtractArray<int>(jointindices), nAffineDOsBitmask); }
     void SetActiveDOFs(object jointindices, int nAffineDOsBitmask, object rotationaxis) {
-        _probot->SetActiveDOFs(ExtractArrayInt(jointindices), nAffineDOsBitmask, ExtractVector3(rotationaxis));
+        _probot->SetActiveDOFs(ExtractArray<int>(jointindices), nAffineDOsBitmask, ExtractVector3(rotationaxis));
     }
 
     int GetActiveDOF() const { return _probot->GetActiveDOF(); }
@@ -1435,7 +1306,7 @@ public:
 
     void SetActiveDOFValues(object values) const
     {
-        vector<dReal> vvalues = ExtractRealArray(values);
+        vector<dReal> vvalues = ExtractArray<dReal>(values);
         if( vvalues.size() > 0 )
             _probot->SetActiveDOFValues(vvalues,true);
     }
@@ -1450,7 +1321,7 @@ public:
 
     void SetActiveDOFVelocities(object velocities)
     {
-        _probot->SetActiveDOFVelocities(ExtractRealArray(velocities));
+        _probot->SetActiveDOFVelocities(ExtractArray<dReal>(velocities));
     }
     object GetActiveDOFVelocities() const
     {
@@ -1660,13 +1531,13 @@ public:
         CHECK_POINTER(pbody);
         if( !jointvelocity )
             return _pPhysicsEngine->SetBodyVelocity(pbody->GetBody(),ExtractVector3(linearvel),ExtractVector3(angularvel));
-        return _pPhysicsEngine->SetBodyVelocity(pbody->GetBody(),ExtractVector3(linearvel),ExtractVector3(angularvel),ExtractRealArray(jointvelocity));
+        return _pPhysicsEngine->SetBodyVelocity(pbody->GetBody(),ExtractVector3(linearvel),ExtractVector3(angularvel),ExtractArray<dReal>(jointvelocity));
     }
     bool SetBodyVelocity(PyKinBodyPtr pbody, object LinearVelocities, object AngularVelocities)
     {
         CHECK_POINTER(pbody);
-        vector<dReal> vLinearVelocities = ExtractRealArray(LinearVelocities);
-        vector<dReal> vAngularVelocities = ExtractRealArray(AngularVelocities);
+        vector<dReal> vLinearVelocities = ExtractArray<dReal>(LinearVelocities);
+        vector<dReal> vAngularVelocities = ExtractArray<dReal>(AngularVelocities);
         vector<Vector> linearvel(vLinearVelocities.size()/3);
         for(size_t i = 0; i < vLinearVelocities.size()/3; ++i)
             linearvel[i] = Vector(vLinearVelocities[3*i],vLinearVelocities[3*i+1],vLinearVelocities[3*i+2]);
@@ -1712,7 +1583,7 @@ public:
     bool SetJointVelocity(PyKinBody::PyJointPtr pjoint, object jointvelocity)
     {
         CHECK_POINTER(pjoint);
-        return _pPhysicsEngine->SetJointVelocity(pjoint->GetJoint(),ExtractRealArray(jointvelocity));
+        return _pPhysicsEngine->SetJointVelocity(pjoint->GetJoint(),ExtractArray<dReal>(jointvelocity));
     }
 
     object GetJointVelocity(PyKinBody::PyJointPtr pjoint)
@@ -1739,7 +1610,7 @@ public:
     bool AddJointTorque(PyKinBody::PyJointPtr pjoint, object torques)
     {
         CHECK_POINTER(pjoint);
-        return _pPhysicsEngine->AddJointTorque(pjoint->GetJoint(),ExtractRealArray(torques));
+        return _pPhysicsEngine->AddJointTorque(pjoint->GetJoint(),ExtractArray<dReal>(torques));
     }
 
     void SetGravity(object gravity) { _pPhysicsEngine->SetGravity(ExtractVector3(gravity)); }
@@ -2224,7 +2095,7 @@ public:
         bool* pcollision = (bool*)PyArray_DATA(pycollision);
         vector<dReal> vrays[6];
         for(int i = 0; i < 6; ++i)
-            vrays[i] = ExtractRealArray(rays[i]);
+            vrays[i] = ExtractArray<dReal>(rays[i]);
         for(int i = 0; i < num; ++i) {
             r.pos.x = vrays[0][i];
             r.pos.x = vrays[0][i];
@@ -2424,14 +2295,14 @@ public:
                 throw openrave_exception("points array needs to be Nx3 matrix");
         }
 
-        vector<float> vpoints = ExtractFloatArray(opoints.attr("flat"));
+        vector<float> vpoints = ExtractArray<float>(opoints.attr("flat"));
         RaveVector<float> vcolor(1,0.5,0.5,1);
         if( ocolors != object() ) {
             object shape = ocolors.attr("shape");
             if( len(shape) == 1 )
                 vcolor = ExtractVector34(ocolors);
             else {
-                vector<float> vcolors = ExtractFloatArray(ocolors.attr("flat"));
+                vector<float> vcolors = ExtractArray<float>(ocolors.attr("flat"));
                 if( vcolors.size() != vpoints.size() )
                     throw openrave_exception("colors needs to be Nx3 matrix");
                 return object(PyGraphHandle(_penv->plot3(&vpoints[0],vpoints.size()/3,sizeof(float)*3,pointsize,&vcolors[0],drawstyle)));
@@ -2453,14 +2324,14 @@ public:
                 throw openrave_exception("points array needs to be Nx3 matrix");
         }
 
-        vector<float> vpoints = ExtractFloatArray(opoints.attr("flat"));
+        vector<float> vpoints = ExtractArray<float>(opoints.attr("flat"));
         RaveVector<float> vcolor(1,0.5,0.5,1);
         if( ocolors != object() ) {
             object shape = ocolors.attr("shape");
             if( len(shape) == 1 )
                 vcolor = ExtractVector34(ocolors);
             else {
-                vector<float> vcolors = ExtractFloatArray(ocolors.attr("flat"));
+                vector<float> vcolors = ExtractArray<float>(ocolors.attr("flat"));
                 if( vcolors.size() != vpoints.size() )
                     throw openrave_exception("colors needs to be Nx3 matrix");
                 return object(PyGraphHandle(_penv->drawlinestrip(&vpoints[0],vpoints.size()/3,sizeof(float)*3,linewidth,&vcolors[0])));
@@ -2482,14 +2353,14 @@ public:
                 throw openrave_exception("points array needs to be Nx3 matrix");
         }
 
-        vector<float> vpoints = ExtractFloatArray(opoints.attr("flat"));
+        vector<float> vpoints = ExtractArray<float>(opoints.attr("flat"));
         RaveVector<float> vcolor(1,0.5,0.5,1);
         if( ocolors != object() ) {
             object shape = ocolors.attr("shape");
             if( len(shape) == 1 )
                 vcolor = ExtractVector34(ocolors);
             else {
-                vector<float> vcolors = ExtractFloatArray(ocolors.attr("flat"));
+                vector<float> vcolors = ExtractArray<float>(ocolors.attr("flat"));
                 if( vcolors.size() != vpoints.size() )
                     throw openrave_exception("colors needs to be Nx3 matrix");
                 return object(PyGraphHandle(_penv->drawlinelist(&vpoints[0],vpoints.size()/3,sizeof(float)*3,linewidth,&vcolors[0])));
@@ -2523,7 +2394,7 @@ public:
         int dim = extract<int>(shape[1]);
         if( dim != 3 )
             throw openrave_exception("points array needs to be Nx3 matrix");
-        vector<float> vpoints = ExtractFloatArray(opoints.attr("flat"));
+        vector<float> vpoints = ExtractArray<float>(opoints.attr("flat"));
 
         vector<int> vindices;
         int* pindices = NULL;
@@ -2542,7 +2413,7 @@ public:
             if( len(shape) == 1 )
                 vcolor = ExtractVector34(ocolors);
             else {
-                vector<float> vcolors = ExtractFloatArray(ocolors.attr("flat"));
+                vector<float> vcolors = ExtractArray<float>(ocolors.attr("flat"));
                 if( vcolors.size() != vpoints.size() )
                     throw openrave_exception("colors needs to be Nx3 matrix (same size as points)");
                 vcolor = RaveVector<float>(vcolors[0],vcolors[1],vcolors[2],1);
@@ -2561,7 +2432,7 @@ public:
 
     object GetCameraImage(int width, int height, object extrinsic, object oKK)
     {
-        vector<float> vKK = ExtractFloatArray(oKK);
+        vector<float> vKK = ExtractArray<float>(oKK);
         if( vKK.size() != 4 )
             throw openrave_exception("KK needs to be of size 4");
         SensorBase::CameraIntrinsics KK(vKK[0],vKK[1],vKK[2],vKK[3]);
@@ -2574,7 +2445,7 @@ public:
 
     bool WriteCameraImage(int width, int height, object extrinsic, object oKK, const string& filename, const string& extension)
     {
-        vector<float> vKK = ExtractFloatArray(oKK);
+        vector<float> vKK = ExtractArray<float>(oKK);
         if( vKK.size() != 4 )
             throw openrave_exception("KK needs to be of size 4");
         SensorBase::CameraIntrinsics KK(vKK[0],vKK[1],vKK[2],vKK[3]);
@@ -2652,12 +2523,81 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Save_overloads, Save, 1, 2)
 //
 //boost::python::register_ptr_to_python< boost::shared_ptr<const my_class> >();
 
+struct int_from_int
+{
+    int_from_int()
+    {
+        converter::registry::push_back(&convertible, &construct, type_id<int>());
+    }
+
+    static void* convertible( PyObject* obj)
+    {
+        PyObject* newobj = PyNumber_Int(obj);
+        if (!PyString_Check(obj) && newobj) {
+            Py_DECREF(newobj);
+            return obj;
+        }
+        else {
+            if (newobj) {
+                Py_DECREF(newobj);
+            }
+            PyErr_Clear();
+            return 0;
+        }
+    }
+
+    static void construct(PyObject* _obj, converter::rvalue_from_python_stage1_data* data)
+    {
+        PyObject* newobj = PyNumber_Int(_obj);
+        int* storage = (int*)((converter::rvalue_from_python_storage<int>*)data)->storage.bytes;
+        *storage = extract<int>(newobj);
+        Py_DECREF(newobj);
+        data->convertible = storage;
+    }
+};
+
+template<typename T>
+struct T_from_number
+{
+    T_from_number()
+    {
+        converter::registry::push_back(&convertible, &construct, type_id<T>());
+    }
+
+    static void* convertible( PyObject* obj)
+    {
+        PyObject* newobj = PyNumber_Float(obj);
+        if (!PyString_Check(obj) && newobj) {
+            Py_DECREF(newobj);
+            return obj;
+        }
+        else {
+            if (newobj) {
+                Py_DECREF(newobj);
+            }
+            PyErr_Clear();
+            return 0;
+        }
+    }
+
+    static void construct(PyObject* _obj, converter::rvalue_from_python_stage1_data* data)
+    {
+        PyObject* newobj = PyNumber_Float(_obj);
+        T* storage = (T*)((converter::rvalue_from_python_storage<T>*)data)->storage.bytes;
+        *storage = extract<T>(newobj);
+        Py_DECREF(newobj);
+        data->convertible = storage;
+    }
+};
 
 BOOST_PYTHON_MODULE(openravepy)
 {
     import_array();
     numeric::array::set_module_and_type("numpy", "ndarray");
     register_exception_translator<openrave_exception>(&translate_openrave_exception);
+    int_from_int();
+    T_from_number<float>();
+    T_from_number<double>();
 
 #ifndef _WIN32
     mkdir("~/.openrave",644);
