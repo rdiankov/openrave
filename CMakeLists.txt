@@ -28,7 +28,7 @@ if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" GREATER 2.4)
    # enabling this property disables this check in CMake
    # visual studio doesn't like it
    #set_property(GLOBAL PROPERTY ALLOW_DUPLICATE_CUSTOM_TARGETS 1)
-    
+
    # CMP0002: in KDE4 we have multiple targets with the same name for the unit tests
    cmake_policy(SET CMP0002 OLD)
    # CMP0003: add the link paths to the link command as with cmake 2.4
@@ -193,6 +193,11 @@ if( MSVC )
   install(FILES ${CMAKE_SOURCE_DIR}/lib/win32/libxml2.lib DESTINATION lib)
   install(FILES ${CMAKE_SOURCE_DIR}/lib/win32/libxml2d.lib DESTINATION lib)
   install(FILES ${CMAKE_SOURCE_DIR}/inc/stdint.h DESTINATION include)
+  install(DIRECTORY ${CMAKE_SOURCE_DIR}/inc/boost DESTINATION include)
+
+  file(GLOB boost_lib_files ${CMAKE_SOURCE_DIR}/lib/win32/boost_*.lib)
+  install(FILES ${boost_lib_files} DESTINATION lib)
+
 else()
   if( NOT $ENV{BOOST_INCLUDEDIR} STREQUAL "" )
     set(Boost_INCLUDE_DIR $ENV{BOOST_INCLUDEDIR})

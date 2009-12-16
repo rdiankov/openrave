@@ -114,5 +114,5 @@ install(FILES ${example_vg_files3} DESTINATION share/openrave/examples/visibilit
 set(CPPEXAMPLES ${CMAKE_CURRENT_SOURCE_DIR}/examples/cppexamples)
 install(FILES ${CPPEXAMPLES}/CMakeLists.txt ${CPPEXAMPLES}/README ${CPPEXAMPLES}/plugincpp.cpp ${CPPEXAMPLES}/customreader.cpp ${CPPEXAMPLES}/orcollision.cpp ${CPPEXAMPLES}/customreader.env.xml ${CPPEXAMPLES}/FindOpenRAVE.cmake DESTINATION share/openrave/examples/cppexamples)
 if( MSVC )
-  install(FILES ${CMAKE_SOURCE_DIR}/runcmake_win.bat DESTINATION share/openrave/examples/cppexamples)
+  install(FILES ${CPPEXAMPLES}/runcmake_win.bat DESTINATION share/openrave/examples/cppexamples)
 endif()
