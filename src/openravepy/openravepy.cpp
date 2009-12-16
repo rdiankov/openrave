@@ -292,14 +292,14 @@ inline object ReturnTransform(T t)
 
 inline object toPyVector3(Vector v)
 {
-    numeric::array arr(make_tuple(v.x,v.y,v.z));
+    numeric::array arr(boost::python::make_tuple(v.x,v.y,v.z));
     arr.resize(3,1);
     return arr;
 }
 
 inline object toPyVector4(Vector v)
 {
-    numeric::array arr(make_tuple(v.x,v.y,v.z,v.w));
+    numeric::array arr(boost::python::make_tuple(v.x,v.y,v.z,v.w));
     arr.resize(4,1);
     return arr;
 }
@@ -395,7 +395,7 @@ public:
             boost::python::list names;
             FOREACHC(itname,it->second)
                 names.append(*itname);
-            interfacenames.append(make_tuple(it->first,names));
+            interfacenames.append(boost::python::make_tuple(it->first,names));
         }
     }
 
@@ -434,7 +434,7 @@ class Ray_pickle_suite : public pickle_suite
 public:
     static tuple getinitargs(const PyRay& r)
     {
-        return make_tuple(toPyVector3(r.r.pos),toPyVector3(r.r.dir));
+        return boost::python::make_tuple(toPyVector3(r.r.pos),toPyVector3(r.r.dir));
     }
 };
 class PyAABB
@@ -458,7 +458,7 @@ class AABB_pickle_suite : public pickle_suite
 public:
     static tuple getinitargs(const PyAABB& ab)
     {
-        return make_tuple(toPyVector3(ab.ab.pos),toPyVector3(ab.ab.extents));
+        return boost::python::make_tuple(toPyVector3(ab.ab.pos),toPyVector3(ab.ab.extents));
     }
 };
 
@@ -609,7 +609,7 @@ public:
         object GetLimits() const {
             vector<dReal> lower, upper;
             _pjoint->GetLimits(lower,upper);
-            return make_tuple(toPyArray(lower),toPyArray(upper));
+            return boost::python::make_tuple(toPyArray(lower),toPyArray(upper));
         }
 
         void SetJointOffset(dReal offset) { _pjoint->SetJointOffset(offset); }
@@ -646,7 +646,7 @@ public:
     {
         vector<dReal> vlower, vupper;
         _pbody->GetJointLimits(vlower,vupper);
-        return make_tuple(toPyArray(vlower),toPyArray(vupper));
+        return boost::python::make_tuple(toPyArray(vlower),toPyArray(vupper));
     }
     
     object GetLinks()
@@ -700,7 +700,7 @@ public:
             *plinear++ = it->first.x; *plinear++ = it->first.y; *plinear++ = it->first.z;
             *pangular++ = it->second.x; *pangular++ = it->second.y; *pangular++ = it->second.z;
         }
-        return make_tuple(static_cast<numeric::array>(handle<>(pylinear)),static_cast<numeric::array>(handle<>(pyangular)));
+        return boost::python::make_tuple(static_cast<numeric::array>(handle<>(pylinear)),static_cast<numeric::array>(handle<>(pyangular)));
     }
 
     boost::shared_ptr<PyAABB> ComputeAABB() { return boost::shared_ptr<PyAABB>(new PyAABB(_pbody->ComputeAABB())); }
@@ -830,13 +830,13 @@ public:
     object GetNonAdjacentLinks() const {
         boost::python::list nonadjacent;
         FOREACHC(it,_pbody->GetNonAdjacentLinks())
-            nonadjacent.append(make_tuple((int)(*it)&0xffff,(int)(*it)>>16));
+            nonadjacent.append(boost::python::make_tuple((int)(*it)&0xffff,(int)(*it)>>16));
         return nonadjacent;
     }
     object GetAdjacentLinks() const {
         boost::python::list adjacent;
         FOREACHC(it,_pbody->GetAdjacentLinks())
-            adjacent.append(make_tuple((int)(*it)&0xffff,(int)(*it)>>16));
+            adjacent.append(boost::python::make_tuple((int)(*it)&0xffff,(int)(*it)>>16));
         return adjacent;
     }
     
@@ -998,7 +998,7 @@ public:
                 imagedata = static_cast<numeric::array>(handle<>(pyvalues));
             }
             {
-                numeric::array arr(make_tuple(pgeom->KK.fx,0,pgeom->KK.cx,0,pgeom->KK.fy,pgeom->KK.cy,0,0,1));
+                numeric::array arr(boost::python::make_tuple(pgeom->KK.fx,0,pgeom->KK.cx,0,pgeom->KK.fy,pgeom->KK.cy,0,0,1));
                 arr.resize(3,3);
                 KK = arr;
             }
@@ -1274,25 +1274,25 @@ public:
     {
         Vector lower, upper;
         _probot->GetAffineTranslationLimits(lower,upper);
-        return make_tuple(toPyVector3(lower),toPyVector3(upper));
+        return boost::python::make_tuple(toPyVector3(lower),toPyVector3(upper));
     }
     object GetAffineRotationAxisLimits() const
     {
         Vector lower, upper;
         _probot->GetAffineRotationAxisLimits(lower,upper);
-        return make_tuple(toPyVector3(lower),toPyVector3(upper));
+        return boost::python::make_tuple(toPyVector3(lower),toPyVector3(upper));
     }
     object GetAffineRotation3DLimits() const
     {
         Vector lower, upper;
         _probot->GetAffineRotation3DLimits(lower,upper);
-        return make_tuple(toPyVector3(lower),toPyVector3(upper));
+        return boost::python::make_tuple(toPyVector3(lower),toPyVector3(upper));
     }
     object GetAffineRotationQuatLimits() const
     {
         Vector lower, upper;
         _probot->GetAffineRotationQuatLimits(lower,upper);
-        return make_tuple(toPyVector4(lower),toPyVector4(upper));
+        return boost::python::make_tuple(toPyVector4(lower),toPyVector4(upper));
     }
     object GetAffineTranslationMaxVels() const { return toPyVector3(_probot->GetAffineTranslationMaxVels()); }
     object GetAffineRotationAxisMaxVels() const { return toPyVector3(_probot->GetAffineRotationAxisMaxVels()); }
@@ -1337,7 +1337,7 @@ public:
             return object();
         vector<dReal> lower, upper;
         _probot->GetActiveDOFLimits(lower,upper);
-        return make_tuple(toPyArray(lower),toPyArray(upper));
+        return boost::python::make_tuple(toPyArray(lower),toPyArray(upper));
     }
 
 //    void GetActiveDOFResolutions(dReal* pResolution) const;
@@ -1552,20 +1552,20 @@ public:
         Vector linearvel, angularvel;
         vector<dReal> vjointvel;
         if( !_pPhysicsEngine->GetBodyVelocity(pbody->GetBody(),linearvel,angularvel,vjointvel) ) {
-            return make_tuple(object(),object(),object());
+            return boost::python::make_tuple(object(),object(),object());
         }
 
-        return make_tuple(toPyVector3(linearvel),toPyVector3(angularvel),toPyArray(vjointvel));
+        return boost::python::make_tuple(toPyVector3(linearvel),toPyVector3(angularvel),toPyArray(vjointvel));
     }
 
     object GetBodyVelocityLinks(PyKinBodyPtr pbody, Vector* pLinearVelocities, Vector* pAngularVelocities)
     {
         CHECK_POINTER(pbody);
         if( pbody->GetBody()->GetDOF() == 0 )
-            return make_tuple(object(),object());
+            return boost::python::make_tuple(object(),object());
         vector<Vector> linearvel(pbody->GetBody()->GetDOF()),angularvel(pbody->GetBody()->GetDOF());
         if( !_pPhysicsEngine->GetBodyVelocity(pbody->GetBody(),linearvel,angularvel) )
-            return make_tuple(object(),object());
+            return boost::python::make_tuple(object(),object());
 
         npy_intp dims[] = {pbody->GetBody()->GetDOF(),3};
         PyObject *pylinear = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
@@ -1576,7 +1576,7 @@ public:
             pflinear[3*i+0] = linearvel[i].x; pflinear[3*i+1] = linearvel[i].y; pflinear[3*i+2] = linearvel[i].z;
             pfangular[3*i+0] = angularvel[i].x; pfangular[3*i+1] = angularvel[i].y; pfangular[3*i+2] = angularvel[i].z;
         }
-        return make_tuple(static_cast<numeric::array>(handle<>(pylinear)),static_cast<numeric::array>(handle<>(pyangular)));
+        return boost::python::make_tuple(static_cast<numeric::array>(handle<>(pylinear)),static_cast<numeric::array>(handle<>(pyangular)));
     }
 
     bool SetJointVelocity(PyKinBody::PyJointPtr pjoint, object jointvelocity)
@@ -1765,7 +1765,7 @@ public:
         std::list< std::pair<std::string, PLUGININFO> > listplugins;
         _penv->GetPluginInfo(listplugins);
         FOREACH(itplugin, listplugins)
-            plugins.append(make_tuple(itplugin->first,object(boost::shared_ptr<PyPluginInfo>(new PyPluginInfo(itplugin->second)))));
+            plugins.append(boost::python::make_tuple(itplugin->first,object(boost::shared_ptr<PyPluginInfo>(new PyPluginInfo(itplugin->second)))));
         return plugins;
     }
 
@@ -2115,7 +2115,7 @@ public:
             }
         }
 
-        return make_tuple(static_cast<numeric::array>(handle<>(pycollision)),static_cast<numeric::array>(handle<>(pypos)));
+        return boost::python::make_tuple(static_cast<numeric::array>(handle<>(pycollision)),static_cast<numeric::array>(handle<>(pypos)));
     }
 
     bool CheckCollision(PyRay* pyray)
