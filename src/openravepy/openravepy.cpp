@@ -66,7 +66,6 @@
 #include <boost/format.hpp>
 #include <boost/enable_shared_from_this.hpp> 
 #include <boost/version.hpp>
-#include <boost/multi_array.hpp>
 
 #define PY_ARRAY_UNIQUE_SYMBOL PyArrayHandle
 #include <boost/python.hpp>
