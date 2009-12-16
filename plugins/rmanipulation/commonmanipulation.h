@@ -187,7 +187,7 @@ class CM
             params->_goalfn = boost::bind(&MoveUnsync::Eval,pgoalfn,_1);
             params->_nMaxIterations = 20000;
             robot->GetActiveDOFValues(params->vinitialconfig);
-            params->_fStepLength = 0.04;
+            params->_fStepLength = 0.04f;
 
             if( pgoalfn->Eval(params->vinitialconfig) <= pgoalfn->GetGoalThresh() ) {
                 // already done
@@ -558,7 +558,7 @@ public:
         if( !PlannerParameters::serialize(O) )
             return false;
         O << "<grasps>" << _vgrasps.size() << " ";
-        FOREACH(it, _vgrasps)
+        FOREACHC(it, _vgrasps)
             O << *it << " ";
         O << "</grasps>" << endl;
         O << "<target>" << (!!_ptarget?_ptarget->GetNetworkId():0) << "</target>" << endl;

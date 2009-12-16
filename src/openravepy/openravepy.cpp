@@ -13,9 +13,6 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#include "libopenrave-core/openrave-core.h"
-#include <Python.h>
-
 #ifndef _WIN32
 #include <sys/time.h>
 #define Sleep(milli) usleep(1000*milli)
@@ -23,6 +20,9 @@
 #define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
 #endif
+
+#include "libopenrave-core/openrave-core.h"
+#include <Python.h>
 
 #ifdef _MSC_VER
 #include <boost/typeof/std/string.hpp>
@@ -359,7 +359,7 @@ inline vector<int> ExtractArrayInt(const object& o)
     if( xi64.check() ) {
         vector<int> v(len(o));
         for(size_t i = 0; i < v.size(); ++i)
-            v[i] = extract<int64_t>(o[i]);
+            v[i] = (int)extract<int64_t>(o[i]);
     }
     return ExtractArray<int>(o);
 }
@@ -402,7 +402,7 @@ inline object toPyArray3(const vector<RaveVector<float> >& v)
     PyObject *pyvalues = PyArray_SimpleNew(2,dims, PyArray_FLOAT);
     if( v.size() > 0 ) {
         float* pf = (float*)PyArray_DATA(pyvalues);
-        FOREACH(it,v) {
+        FOREACHC(it,v) {
             *pf++ = it->x;
             *pf++ = it->y;
             *pf++ = it->z;
@@ -489,7 +489,7 @@ template <typename T>
 inline object toPyList(const vector<T>& v)
 {
     boost::python::list lvalues;
-    FOREACH(it,v)
+    FOREACHC(it,v)
         lvalues.append(object(*it));
     return lvalues;
 }
@@ -521,9 +521,9 @@ class PyPluginInfo
 public:
     PyPluginInfo(const PLUGININFO& info)
     {
-        FOREACH(it, info.interfacenames) {
+        FOREACHC(it, info.interfacenames) {
             boost::python::list names;
-            FOREACH(itname,it->second)
+            FOREACHC(itname,it->second)
                 names.append(*itname);
             interfacenames.append(make_tuple(it->first,names));
         }
@@ -646,7 +646,7 @@ public:
                 npy_intp dims[] = {mesh.vertices.size(),3};
                 PyObject *pyvertices = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
                 dReal* pvdata = (dReal*)PyArray_DATA(pyvertices);
-                FOREACH(itv, mesh.vertices) {
+                FOREACHC(itv, mesh.vertices) {
                     *pvdata++ = itv->x;
                     *pvdata++ = itv->y;
                     *pvdata++ = itv->z;
@@ -657,7 +657,7 @@ public:
                 dims[1] = 3;
                 PyObject *pyindices = PyArray_SimpleNew(2,dims, PyArray_INT);
                 int* pidata = (int*)PyArray_DATA(pyindices);
-                FOREACH(it, mesh.indices)
+                FOREACHC(it, mesh.indices)
                     *pidata++ = *it;
                 indices = static_cast<numeric::array>(handle<>(pyindices));
             }
@@ -782,14 +782,14 @@ public:
     object GetLinks()
     {
         boost::python::list links;
-        FOREACH(itlink, _pbody->GetLinks())
+        FOREACHC(itlink, _pbody->GetLinks())
             links.append(PyLinkPtr(new PyLink(*itlink, GetEnv())));
         return links;
     }
     object GetJoints()
     {
         boost::python::list joints;
-        FOREACH(itjoint, _pbody->GetJoints())
+        FOREACHC(itjoint, _pbody->GetJoints())
             joints.append(PyJointPtr(new PyJoint(*itjoint, GetEnv())));
         return joints;
     }
@@ -1336,7 +1336,7 @@ public:
             grabbedbody.reset(new PyKinBody(KinBodyPtr(grabbed.pbody),pyenv));
             linkrobot.reset(new PyLink(KinBody::LinkPtr(grabbed.plinkrobot),pyenv));
 
-            FOREACH(it, grabbed.sValidColLinks)
+            FOREACHC(it, grabbed.sValidColLinks)
                 validColLinks.append(PyLinkPtr(new PyLink(KinBody::LinkPtr(*it),pyenv)));
             
             troot = ReturnTransform(grabbed.troot);

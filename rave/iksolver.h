@@ -24,7 +24,7 @@ namespace OpenRAVE {
 /// an IK solver will find the joint configuration to take that end-effector there. 
 /// Because it is common for an IK solution to have a null space, the IK solver
 /// give functionality to expose the free parameters to move the joints in null space.
-class IkSolverBase : public InterfaceBase
+class RAVE_API IkSolverBase : public InterfaceBase
 {
 public:
     class Parameterization

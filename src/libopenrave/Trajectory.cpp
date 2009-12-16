@@ -561,8 +561,8 @@ void TrajectoryBase::_CalculateCubicCoefficients(TrajectoryBase::TSEGMENT& seg, 
         seg.Get(0,d) = tp0.q[d];
         seg.Get(1,d) = tp0.qdot[d];
         dReal qdiff = tp1.q[d] - tp0.q[d];
-        seg.Get(2,d) = (3.0/t_2)*qdiff - (2.0/t)*tp0.qdot[d] - (1.0/t)*tp1.qdot[d];
-        seg.Get(3,d) = (-2.0/t_3)*qdiff + (1.0/t_2)*(tp1.qdot[d] + tp0.qdot[d]);
+        seg.Get(2,d) = (3.0f/t_2)*qdiff - (2.0f/t)*tp0.qdot[d] - (1.0f/t)*tp1.qdot[d];
+        seg.Get(3,d) = (-2.0f/t_3)*qdiff + (1.0f/t_2)*(tp1.qdot[d] + tp0.qdot[d]);
     }
 }
 
@@ -645,21 +645,21 @@ void TrajectoryBase::_RecalculateViaPointDerivatives()
             // check the slope directions at via points
             if (prevSlope < 0) {
                 if (nextSlope > 0) {
-                    _vecpoints[i].qdot[d] = 0.0;
+                    _vecpoints[i].qdot[d] = 0;
                     //_vecpoints[i].qaccel[d] = _maxJointAccel[d];
                 }
                 else {
-                    _vecpoints[i].qdot[d] = 0.5 * (prevSlope + nextSlope);
+                    _vecpoints[i].qdot[d] = 0.5f * (prevSlope + nextSlope);
                     //_vecpoints[i].qaccel[d] = 0.0;
                 }
             }
             else {
                 if (nextSlope > 0) {
-                    _vecpoints[i].qdot[d] = 0.5 * (prevSlope + nextSlope);
+                    _vecpoints[i].qdot[d] = 0.5f * (prevSlope + nextSlope);
                     //_vecpoints[i].qaccel[d] = 0.0;
                 }
                 else {
-                    _vecpoints[i].qdot[d] = 0.0;
+                    _vecpoints[i].qdot[d] = 0;
                     //_vecpoints[i].qaccel[d] = -_maxJointAccel[d];
                 }
             }
@@ -755,8 +755,8 @@ dReal TrajectoryBase::_MinimumTimeCubic(const TPOINT& tp0, const TPOINT& tp1, bo
     for (int d = 0; d < _nDOF; d++) {
         if(_maxJointVel[d] > 0.0 && _maxJointAccel[d] > 0 ) {
             jointDiff = fabs(tp1.q[d] - tp0.q[d]);
-            velocityConstraint = ((dReal)1.5/_maxJointVel[d]) * jointDiff;
-            accelConstraint = RaveSqrt((6.0/_maxJointAccel[d]) * jointDiff);
+            velocityConstraint = (1.5f/_maxJointVel[d]) * jointDiff;
+            accelConstraint = RaveSqrt((6.0f/_maxJointAccel[d]) * jointDiff);
 
             minJointTime = max( velocityConstraint, accelConstraint );
 
@@ -789,8 +789,8 @@ dReal TrajectoryBase::_MinimumTimeCubicZero(const TPOINT& tp0, const TPOINT& tp1
     for (int d = 0; d < _nDOF; d++) {
         if(_maxJointVel[d] > 0.0 && _maxJointAccel[d] > 0 ) {
             jointDiff          = fabs(tp1.q[d] - tp0.q[d]);
-            velocityConstraint = ((dReal)1.5/_maxJointVel[d]) * jointDiff;
-            accelConstraint    = RaveSqrt((6.0/_maxJointAccel[d]) * jointDiff);
+            velocityConstraint = (1.5f/_maxJointVel[d]) * jointDiff;
+            accelConstraint    = RaveSqrt((6.0f/_maxJointAccel[d]) * jointDiff);
 
             minJointTime = max( velocityConstraint, accelConstraint );
 
@@ -824,8 +824,8 @@ dReal TrajectoryBase::_MinimumTimeQuintic(const TPOINT& tp0, const TPOINT& tp1, 
     {
         if(_maxJointVel[d] > 0.0 && _maxJointAccel[d] > 0.0) {
             jointDiff          = fabs(tp1.q[d] - tp0.q[d]);
-            velocityConstraint = ((dReal)1.5/_maxJointVel[d]) * jointDiff;
-            accelConstraint    = RaveSqrt((6.0/_maxJointAccel[d]) * jointDiff);
+            velocityConstraint = (1.5f/_maxJointVel[d]) * jointDiff;
+            accelConstraint    = RaveSqrt((6.0f/_maxJointAccel[d]) * jointDiff);
 
             minJointTime = max( velocityConstraint, accelConstraint );
 

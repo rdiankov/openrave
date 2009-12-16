@@ -30,7 +30,7 @@ namespace OpenRAVE {
  * - Dish Washing - Specific goals are not specified, just a condition that all plates need to be inside.
  * - Foot step planning - Need discrete footsteps and other capabilities from robot.
 */
-class PlannerBase : public InterfaceBase
+class RAVE_API PlannerBase : public InterfaceBase
 {
 public:
     enum ConstraintSettings  {
@@ -41,7 +41,7 @@ public:
     /// If extra parameters need to be specified, 
     /// derive from this class and override the startElement, endElement, and possibly characters calls
     /// The class can be serialized using the <<, >>, and serialize
-    class PlannerParameters : public BaseXMLReader, public XMLReadable
+    class RAVE_API PlannerParameters : public BaseXMLReader, public XMLReadable
     {
     public:
         PlannerParameters();

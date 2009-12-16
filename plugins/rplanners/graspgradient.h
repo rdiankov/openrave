@@ -112,7 +112,7 @@ public:
         RobotBase::RobotStateSaver savestate(_robot);
 
         list<vector<dReal> > listbestpath, listpath;
-        dReal bestgraspdist = 1e37;
+        dReal bestgraspdist = 1e37f;
     
         bool bSuccess = false;
 
@@ -226,7 +226,7 @@ private:
                     return false;
                 }
 
-                dReal bestdist=1e30;
+                dReal bestdist=1e30f;
                 g.qgoal.resize(0);
                 FOREACH(itq,_viksolutions) {
                     dReal dist = _parameters._distmetricfn(_parameters.vinitialconfig,*itq);

@@ -2,7 +2,22 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
   find_package(PythonLibs)
 
   if( PYTHONLIBS_FOUND OR PYTHON_LIBRARIES )
-    set(CMAKE_REQUIRED_INCLUDES ${PYTHON_INCLUDE_PATH} ${Boost_INCLUDE_DIR})
+    if( PYTHON_EXECUTABLE )
+      # get the site-packages directory
+      execute_process(
+        COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()"
+        OUTPUT_VARIABLE _python_sitepackage
+        RESULT_VARIABLE _python_failed)
+      if( ${_python_failed} EQUAL 0 )
+        string(REGEX REPLACE "[\r\n]" "" _python_sitepackage "${_python_sitepackage}")
+        set(PYTHON_INCLUDE_PATH ${PYTHON_INCLUDE_PATH} ${_python_sitepackage}/numpy/core/include)
+      else()
+        message(STATUS "failed to get python site-package directory")
+      endif()
+    endif()
+
+    add_definitions(${Boost_CFLAGS})
+    set(CMAKE_REQUIRED_INCLUDES ${PYTHON_INCLUDE_PATH} ${Boost_INCLUDE_DIR} )
     set(CMAKE_REQUIRED_LIBRARIES ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY})
 
     # check if all header files can be included
@@ -28,8 +43,11 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
 
       add_library(openravepy SHARED openravepy.cpp)
       target_link_libraries(openravepy libopenrave libopenrave-core ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY})
-      add_dependencies(openravepy libopenrave libopenrave_static libopenrave-core libopenrave-core_static)
-      set_target_properties(openravepy PROPERTIES PREFIX "")
+      add_dependencies(openravepy libopenrave libopenrave-core)
+      set_target_properties(openravepy PROPERTIES PREFIX "" COMPILE_FLAGS "-DRAVE_CORE_USEDLL")
+      if( WIN32 )
+        set_target_properties(openravepy PROPERTIES SUFFIX ".pyd")
+      endif()
       install(TARGETS openravepy DESTINATION share/openrave)
     else()
       message(STATUS "failed to use boost python libraries, check if python-numpy is installed.")

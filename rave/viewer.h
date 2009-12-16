@@ -20,7 +20,7 @@ namespace OpenRAVE {
 
 /// Base class for the graphics and gui engine. Derive a class called
 /// RaveViewer for anything more specific
-class RaveViewerBase : public InterfaceBase
+class RAVE_API RaveViewerBase : public InterfaceBase
 {
 public:
     enum ViewerEvents

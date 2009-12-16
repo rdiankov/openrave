@@ -17,10 +17,7 @@
 #include "odecollision.h"
 #include "odephysics.h"
 
-// need c linkage
-extern "C" {
-
-InterfaceBasePtr CreateInterface(PluginType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv)
+RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(PluginType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv)
 {
     if( strcmp(pluginhash,RaveGetInterfaceHash(type)) ) {
         RAVELOG_WARNA("plugin type hash is wrong\n");
@@ -50,7 +47,7 @@ InterfaceBasePtr CreateInterface(PluginType type, const std::string& name, const
     return InterfaceBasePtr();
 }
 
-bool GetPluginAttributes(PLUGININFO* pinfo, int size)
+RAVE_PLUGIN_API bool GetPluginAttributes(PLUGININFO* pinfo, int size)
 {
     if( pinfo == NULL ) return false;
     if( size != sizeof(PLUGININFO) ) {
@@ -64,8 +61,6 @@ bool GetPluginAttributes(PLUGININFO* pinfo, int size)
     return true;
 }
 
-void DestroyPlugin()
+RAVE_PLUGIN_API void DestroyPlugin()
 {
-}
-
 }

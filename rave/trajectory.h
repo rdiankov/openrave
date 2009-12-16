@@ -23,7 +23,7 @@
 namespace OpenRAVE {
 
 /// Encapsulate a time-parameterized trajectories of robot configurations
-class TrajectoryBase : public InterfaceBase
+class RAVE_API TrajectoryBase : public InterfaceBase
 {
 public:
     /// exporting options

@@ -20,16 +20,26 @@
 // public headers
 #include <rave/rave.h>
 
+#if defined(_MSC_VER) && defined(RAVE_CORE_USEDLL)
+#ifdef RAVE_CORE_LIBBUILD
+#define RAVE_CORE_API __declspec(dllexport)
+#else
+#define RAVE_CORE_API __declspec(dllimport)
+#endif
+#else
+#define RAVE_CORE_API 
+#endif
+
 namespace OpenRAVE
 {
 
 /// Creates an OpenRAVE environment.
 /// \param bLoadAllPlugins, if true will load all the openrave plugins automatically that can be found in the OPENRAVE_PLUGINS environment path
-EnvironmentBasePtr CreateEnvironment(bool bLoadAllPlugins=true);
-ProblemInstancePtr CreateSimpleTextServer(EnvironmentBasePtr penv);
+RAVE_CORE_API EnvironmentBasePtr CreateEnvironment(bool bLoadAllPlugins=true);
+RAVE_CORE_API ProblemInstancePtr CreateSimpleTextServer(EnvironmentBasePtr penv);
 
 /// count of errors since last GetXMLErrorCount() call
-int GetXMLErrorCount();
+RAVE_CORE_API int GetXMLErrorCount();
 
 } // end namespace OpenRAVE
 

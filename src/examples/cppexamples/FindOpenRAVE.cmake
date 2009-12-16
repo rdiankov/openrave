@@ -58,6 +58,7 @@ if(OPENRAVE_CONFIG_EXECUTABLE)
   set( OPENRAVE_INCLUDE_DIRS ${_openraveconfig_includedirs})
   set( OPENRAVE_LINK_DIRS ${_openraveconfig_ldirs})
   set( OPENRAVE_LIBRARY ${_openraveconfig_libs})
+  set( OPENRAVE_CORE_LIBRARY openrave-core)
   set( OPENRAVE_LIBRARY_RELEASE ${OPENRAVE_LIBRARY})
   set( OPENRAVE_LIBRARY_DEBUG ${OPENRAVE_LIBRARY})
 else(OPENRAVE_CONFIG_EXECUTABLE)
@@ -68,7 +69,8 @@ else(OPENRAVE_CONFIG_EXECUTABLE)
     set( OPENRAVE_LINK_FLAGS " ")
     set( OPENRAVE_INCLUDE_DIRS "c:/program files/openrave/include")
     set( OPENRAVE_LINK_DIRS "c:/program files/openrave/lib" )
-    set( OPENRAVE_LIBRARY openrave libxml2)
+    set( OPENRAVE_LIBRARY libopenrave-s libxml2)
+    set( OPENRAVE_CORE_LIBRARY libopenrave-core-s libxml2)
     set( OPENRAVE_LIBRARY_RELEASE "openrave libxml2")
     set( OPENRAVE_LIBRARY_DEBUG "openrave libxml2d")
   else( MSVC )
@@ -83,6 +85,7 @@ MARK_AS_ADVANCED(
     OPENRAVE_INCLUDE_DIRS
     OPENRAVE_LINK_DIRS
     OPENRAVE_LIBRARY
+    OPENRAVE_CORE_LIBRARY
     OPENRAVE_LIBRARY_RELEASE
     OPENRAVE_LIBRARY_DEBUG
 )

@@ -23,7 +23,7 @@
 namespace OpenRAVE {
 
 /// Encapsulate a kinematic body of links and joints
-class KinBody : public InterfaceBase
+class RAVE_API KinBody : public InterfaceBase
 {
 public:
     /// A set of properties for the kinbody. These properties are used to describe a set of variables used in KinBody.
@@ -36,7 +36,7 @@ public:
     };
 
     /// rigid body defined by an arbitrary ODE body and a render object
-    class Link : public boost::enable_shared_from_this<Link>
+    class RAVE_API Link : public boost::enable_shared_from_this<Link>
     {
     public:
         Link(KinBodyPtr parent); ///< pass in a ODE world
@@ -51,7 +51,7 @@ public:
         virtual void Enable(bool bEnable);
 
         /// user data for trimesh geometries
-        struct TRIMESH
+        struct RAVE_API TRIMESH
         {
             std::vector<Vector> vertices;
             std::vector<int> indices;
@@ -68,7 +68,7 @@ public:
 
         /// Describes the properties of a basic geometric primitive.
         /// Contains everything associated with a physical body along with a seprate (optional) render file.
-        struct GEOMPROPERTIES
+        struct RAVE_API GEOMPROPERTIES
         {
             enum GeomType {
                 GeomNone = 0,
@@ -201,7 +201,7 @@ public:
     typedef boost::weak_ptr<Link> LinkWeakPtr;
 
     /// Information about a joint
-    class Joint : public boost::enable_shared_from_this<Joint>
+    class RAVE_API Joint : public boost::enable_shared_from_this<Joint>
     {
     public:
         enum JointType {
@@ -334,7 +334,7 @@ public:
     typedef boost::shared_ptr<BodyState const> BodyStateConstPtr;
 
     /// Access point of the sensor system that manages the body.
-    class ManageData
+    class RAVE_API ManageData
     {
     public:
     ManageData(SensorSystemBasePtr psensorsystem) : _psensorsystem(psensorsystem) {}
@@ -373,7 +373,7 @@ public:
     typedef boost::shared_ptr<ManageData const> ManageDataConstPtr;
 
     /// Helper class to save the entire kinbody state
-    class KinBodyStateSaver
+    class RAVE_API KinBodyStateSaver
     {
     public:
         KinBodyStateSaver(KinBodyPtr pbody);

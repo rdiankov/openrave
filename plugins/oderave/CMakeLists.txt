@@ -46,7 +46,7 @@ endif()
 
   target_link_libraries(oderave libopenrave ${ODE_LIBRARY})
   include_directories(${CMAKE_SOURCE_DIR} ${ODE_INCLUDE_DIRS})
-  add_dependencies(oderave libopenrave libopenrave_static)
+  add_dependencies(oderave libopenrave)
   set_target_properties(oderave PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS} ${ODE_CXXFLAGS}"
                                 LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
   install(TARGETS oderave DESTINATION share/openrave/plugins )

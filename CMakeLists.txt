@@ -5,8 +5,6 @@ cmake_minimum_required (VERSION 2.4.6) # need INSTALL(DIRECTORY ...)
 project (openrave)
 set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 
-#set(CMAKE_BUILD_TYPE RelWithDebInfo)
-
 # Define here the needed parameters
 set (RAVE_CURRENT 0)
 set (RAVE_REVISION 2)
@@ -35,7 +33,7 @@ if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" GREATER 2.4)
    cmake_policy(SET CMP0002 OLD)
    # CMP0003: add the link paths to the link command as with cmake 2.4
    cmake_policy(SET CMP0003 OLD)
-   # CMake 2.6 uses the full file names of the libraries when linking and so 
+   # CMake 2.6 uses the full file names of the libraries when linking and so
    # doesn't use -L anymore to list the link dirs. Now the dependencies created
    # export_library_dependencies() lists the in-project libraries without 
    # path, i.e. with only the logical name ("kdecore"), so they don't link
@@ -50,9 +48,9 @@ endif("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" GREATER 2.4)
 if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" GREATER 2.4)
    # CMP0003: add the link paths to the link command as with cmake 2.4
    cmake_policy(SET CMP0003 OLD)
-   # CMake 2.6 uses the full file names of the libraries when linking and so 
+   # CMake 2.6 uses the full file names of the libraries when linking and so
    # doesn't use -L anymore to list the link dirs. Now the dependencies created
-   # export_library_dependencies() lists the in-project libraries without 
+   # export_library_dependencies() lists the in-project libraries without
    # path, i.e. with only the logical name ("kdecore"), so they don't link
    # Setting this variable to true has the effect that the link dirs are
    # listed nevertheless also with CMake 2.6.
@@ -107,6 +105,9 @@ include(CheckCXXSourceRuns)
 include(CheckCXXCompilerFlag)
 include(FindPkgConfig)
 
+# very important to only test release since default is debug, and it usually reuquires special libraries
+set(CMAKE_TRY_COMPILE_CONFIGURATION Release)
+
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
   add_definitions("-fno-strict-aliasing -Wall")
 endif()
@@ -124,6 +125,17 @@ set(Boost_ADDITIONAL_VERSIONS "1.40" "1.39" "1.38" "1.37.0" "1.37" "1.35.0" "1.3
 if( MSVC )
   add_definitions( -D_CRT_SECURE_NO_WARNINGS)
   add_definitions( -D_CRT_SECURE_NO_DEPRECATE)
+
+  #gives linking problems
+  #string(REGEX REPLACE "/MDd" "/MD" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+  #string(REGEX REPLACE "/MDd" "/MD" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+
+  # allow extern "C" functions to throw exceptions
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHc- ")
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /EHc- ")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /EHc- ")
+  set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} /EHc- ")
+  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /EHc- ")
 
   # untar the source files
   add_custom_command(
@@ -146,18 +158,29 @@ if( MSVC )
   set(Boost_INCLUDE_DIRS ${BOOST_ROOT})
   set(Boost_LIBRARY_DIRS)
   set(Boost_REGEX_FOUND 0)
-  set(Boost_FILESYSTEM_FOUND 0)
-  set(Boost_SYSTEM_FOUND 0)
-  set(Boost_PYTHON_FOUND 0)
+  set(Boost_FILESYSTEM_FOUND 1)
+  set(Boost_SYSTEM_FOUND 1)
+  set(Boost_PYTHON_FOUND 1)
   set(Boost_THREAD_FOUND 1)
-  add_definitions(-DBOOST_ALL_DYN_LINK)
-  add_definitions(-DBOOST_THREAD_NO_LIB)
+  set(Boost_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/inc")
+  set(Boost_CFLAGS "-DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB")
+  # have to add to required flags for applications that will test linking with boost
+  set(CMAKE_REQUIRED_FLAGS "-DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB")
   if( MSVC70 OR MSVC71 )
-    set(Boost_THREAD_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_thread-vc71-mt-1_37.lib)
+    set(Boost_THREAD_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_thread-vc71-mt-1_39.lib ${CMAKE_SOURCE_DIR}/lib/win32/boost_date_time-vc71-mt-1_39.lib)
+    set(Boost_SYSTEM_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_system-vc71-mt-1_39.lib)
+    set(Boost_FILESYSTEM_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_filesystem-vc71-mt-1_39.lib)
+    set(Boost_PYTHON_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_python-vc71-mt-1_39.lib)
   elseif( MSVC80 )
-    set(Boost_THREAD_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_thread-vc80-mt-1_37.lib)
+    set(Boost_THREAD_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_thread-vc80-mt-1_39.lib ${CMAKE_SOURCE_DIR}/lib/win32/boost_date_time-vc80-mt-1_39.lib)
+    set(Boost_SYSTEM_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_system-vc80-mt-1_39.lib)
+    set(Boost_FILESYSTEM_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_filesystem-vc80-mt-1_39.lib)
+    set(Boost_PYTHON_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_python-vc80-mt-1_39.lib)
   else()
-    set(Boost_THREAD_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_thread-vc90-mt-1_37.lib)
+    set(Boost_THREAD_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_thread-vc90-mt-1_39.lib ${CMAKE_SOURCE_DIR}/lib/win32/boost_date_time-vc90-mt-1_39.lib)
+    set(Boost_SYSTEM_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_system-vc90-mt-1_39.lib)
+    set(Boost_FILESYSTEM_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_filesystem-vc90-mt-1_39.lib)
+    set(Boost_PYTHON_LIBRARY ${CMAKE_SOURCE_DIR}/lib/win32/boost_python-vc90-mt-1_39.lib)
   endif()
 
   # make sure to install the library since it will be necessary for linking
@@ -268,9 +291,6 @@ else()
   endif()
 endif()
 
-# zlib
-check_library_exists(z deflate "/lib;/usr/lib;/usr/local/lib;/usr/pkg/lib" HAVE_ZLIB)
-
 if(DOUBLE_PRECISION)
   set(OPENRAVE_PRECISION 1)
   message(STATUS "Using double precision")
@@ -306,11 +326,32 @@ link_directories(${OPENRAVE_LINK_DIRS})
 set(OPENRAVE_PLUGINS_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave/plugins")
 set(OPENRAVE_DATA_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave")
 
+find_package(PythonInterp)
+if( NOT PYTHON_EXECUTABLE )
+  # look specifically for 2.6
+  FIND_PROGRAM(PYTHON_EXECUTABLE
+    NAMES python2.6 python
+    PATHS [HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\2.6\\InstallPath])
+  if( PYTHON_EXECUTABLE )
+    message(STATUS "setting PYTHON_EXECUTABLE to ${PYTHON_EXECUTABLE}")
+  endif()
+endif()
+
 # add ikfast program
-set(IKFAST_EXECUTABLE ${CMAKE_SOURCE_DIR}/ikfast/ikfast.py)
-execute_process(
-  COMMAND ${IKFAST_EXECUTABLE} -h
-  RESULT_VARIABLE _ikfast_success)
+  set(IKFAST_EXECUTABLE ${CMAKE_SOURCE_DIR}/ikfast/ikfast.py)
+if( UNIX OR NOT PYTHON_EXECUTABLE )
+  execute_process(
+    COMMAND ${IKFAST_EXECUTABLE} --help
+    RESULT_VARIABLE _ikfast_success
+    OUTPUT_VARIABLE _ikfast_output)
+  set(IKFAST_INSTALLED_EXECUTABLE ${CMAKE_INSTALL_PREFIX}/share/openrave/ikfast.py)
+else()
+  execute_process(
+    COMMAND ${PYTHON_EXECUTABLE} ${IKFAST_EXECUTABLE} --help
+    RESULT_VARIABLE _ikfast_success
+    OUTPUT_VARIABLE _ikfast_output)
+  set(IKFAST_INSTALLED_EXECUTABLE "${PYTHON_EXECUTABLE} \\\"${IKFAST_EXECUTABLE}\\\"")
+endif()
 
 if( _ikfast_success MATCHES 0 )
   set(IKFAST_FOUND 1)
@@ -320,15 +361,44 @@ if( _ikfast_success MATCHES 0 )
   else()
     message(WARNING "Could not install sympy needed by ikfast (cmake version ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION} needs to be >= 2.4.6)")
   endif()
-  set(IKFAST_INSTALLED_EXECUTABLE ${CMAKE_INSTALL_PREFIX}/share/openrave/ikfast.py)
   install(PROGRAMS ${IKFAST_EXECUTABLE} DESTINATION share/openrave)
 else()
   set(IKFAST_INSTALLED_EXECUTABLE "")
   set(IKFAST_FOUND 0)
-  message(STATUS "failed to execute ${IKFAST_EXECUTABLE}")
+  message(STATUS "failed to execute ${IKFAST_EXECUTABLE}, return: ${_ikfast_success}")
+endif()
+
+if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+  set(EXTRA_COMPILE_FLAGS "-fPIC")
+else()
+  set(EXTRA_COMPILE_FLAGS "")
 endif()
 
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/defines.h.in ${CMAKE_CURRENT_SOURCE_DIR}/rave/defines.h)
+
+find_package(ZLIB)
+if( NOT ZLIB_FOUND )
+  # compile from sources
+  add_subdirectory(3rdparty/zlib)
+  set(ZLIB_FOUND 1)
+  set(ZLIB_LIBRARIES zlib)
+  set(ZLIB_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/zlib)
+endif()
+
+add_subdirectory(3rdparty/minizip)
+set(MINIZIP_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/minizip ${ZLIB_INCLUDE_DIR})
+
+pkg_check_modules(libpcrecpp libpcrecpp)
+if( NOT libpcrecpp_FOUND )
+  message(STATUS "System pcre not found, using local from sources")
+  # include the local pcre
+  add_subdirectory(3rdparty/pcre)
+  set(libpcrecpp_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/pcre)
+  set(libpcrecpp_LIBRARY_DIRS)
+  set(libpcrecpp_LIBRARIES pcre_local)
+  set(libpcrecpp_CFLAGS_OTHERS "-DHAVE_CONFIG_H -DPCRE_STATIC")
+  set(libpcrecpp_LDFLAGS_OTHERS)
+endif()
 
 add_subdirectory(src)
 add_subdirectory(plugins)

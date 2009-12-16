@@ -219,7 +219,7 @@ void RobotBase::Manipulator::GetChildLinks(std::vector<LinkPtr>& vlinks) const
             continue;
         // gripper needs to be affected by all joints
         bool bGripperLink = true;
-        FOREACH(itarmjoint,_varmjoints) {
+        FOREACHC(itarmjoint,_varmjoints) {
             if( !probot->DoesAffect(*itarmjoint,ilink) ) {
                 bGripperLink = false;
                 break;
@@ -285,7 +285,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
             continue;
         // gripper needs to be affected by all joints
         bool bGripperLink = true;
-        FOREACH(itarmjoint,_varmjoints) {
+        FOREACHC(itarmjoint,_varmjoints) {
             if( !probot->DoesAffect(*itarmjoint,ilink) ) {
                 bGripperLink = false;
                 break;

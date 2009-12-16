@@ -333,7 +333,7 @@ public:
         vector<KinBody::JointPtr > vjoints;
         vjoints.reserve(pbody->GetJoints().size()+pbody->_vecPassiveJoints.size());
 
-        FOREACH(itj, pbody->GetJoints() )
+        FOREACHC(itj, pbody->GetJoints() )
         {
             KinBody::JointPtr pj(new KinBody::Joint(pbody));
             *pj = **itj;
@@ -775,7 +775,7 @@ public:
         vector<KinBody::JointPtr > vjoints;
         vjoints.reserve(probot->GetJoints().size()+probot->_vecPassiveJoints.size());
 
-        FOREACH(itj, probot->GetJoints() )
+        FOREACHC(itj, probot->GetJoints() )
         {
             KinBody::JointPtr pj(new KinBody::Joint(probot));
             *pj = **itj;
@@ -921,7 +921,7 @@ public:
         daeSafeCast<domKinematics_newparam::domSIDREF>(newparam->createAndPlace(COLLADA_ELEMENT_SIDREF))->setValue(param_base.c_str());
 
         //  Joint parameters
-        FOREACH(itjoint, vjoints)
+        FOREACHC(itjoint, vjoints)
         {
             string jointname = string("joint") + toString((*itjoint)->GetJointIndex());
             KinBody::LinkPtr pchildlink = GetChildLink(*itjoint, vjoints);
@@ -1240,7 +1240,7 @@ public:
     {
         RAVELOG_WARNA("virtual bool Save(const string& filename)\n");
 
-        return _collada->saveAs(filename.c_str());
+        return _collada->saveAs(filename.c_str())>0;
     }
 
     virtual void handleError( daeString msg )

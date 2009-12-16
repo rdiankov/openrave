@@ -173,7 +173,7 @@ class GraspParameters : public PlannerBase::PlannerParameters
         O << "<palmnormal>" << palmnormal << "</palmnormal>" << endl;
         O << "<returntrajectory>" << bReturnTrajectory << "</returntrajectory>" << endl;
         O << "<avoidlinks>" << endl;
-        FOREACH(it,_vAvoidLinkGeometry)
+        FOREACHC(it,_vAvoidLinkGeometry)
             O << *it << " ";
         O << "</avoidlinks>" << endl;
         return !!O;

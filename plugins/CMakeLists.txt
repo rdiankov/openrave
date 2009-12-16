@@ -1,14 +1,9 @@
-if( MSVC )
-  # have to include the module definition file
-  set(PLUGIN_LINK_FLAGS "/DEF:\"${CMAKE_CURRENT_SOURCE_DIR}/openraveplugin.def\"")
-elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
-  set(PLUGIN_LINK_FLAGS "")
-endif()
+set(PLUGIN_LINK_FLAGS "")
 
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
-  set(PLUGIN_COMPILE_FLAGS "-fPIC")
+  set(PLUGIN_COMPILE_FLAGS "-DRAVE_USEDLL ${Boost_CFLAGS} -fPIC")
 else()
-  set(PLUGIN_COMPILE_FLAGS "")
+  set(PLUGIN_COMPILE_FLAGS "-DRAVE_USEDLL ${Boost_CFLAGS}")
 endif()
 
 add_subdirectory(basecontrollers)

@@ -620,28 +620,28 @@ inline dReal* transnorm3(dReal* pfout, const TransformMatrix* pmat, const dReal*
 inline bool eig2(const dReal* pfmat, dReal* peigs, dReal& fv1x, dReal& fv1y, dReal& fv2x, dReal& fv2y);
 
 // Simple routines for linear algebra algorithms //
-int CubicRoots (double c0, double c1, double c2, double *r0, double *r1, double *r2);
+RAVE_API int CubicRoots (double c0, double c1, double c2, double *r0, double *r1, double *r2);
 template <class T, class S> void Tridiagonal3 (S* mat, T* diag, T* subd);
-bool QLAlgorithm3 (float* m_aafEntry, float* afDiag, float* afSubDiag);
-bool QLAlgorithm3 (double* m_aafEntry, double* afDiag, double* afSubDiag);
+RAVE_API bool QLAlgorithm3 (float* m_aafEntry, float* afDiag, float* afSubDiag);
+RAVE_API bool QLAlgorithm3 (double* m_aafEntry, double* afDiag, double* afSubDiag);
 
-void EigenSymmetric3(dReal* fCovariance, dReal* eval, dReal* fAxes);
+RAVE_API void EigenSymmetric3(dReal* fCovariance, dReal* eval, dReal* fAxes);
 
-void GetCovarBasisVectors(dReal fCovariance[3][3], Vector* vRight, Vector* vUp, Vector* vDir);
+RAVE_API void GetCovarBasisVectors(dReal fCovariance[3][3], Vector* vRight, Vector* vUp, Vector* vDir);
 
 /// SVD of a 3x3 matrix A such that A = U*diag(D)*V'
 /// where U is a 3x3 matrix, V is a 3x3 matrix, and D is a 3x1 vector
 /// The row stride for all matrices is 9 bytes
-void svd3(const dReal* A, dReal* U, dReal* D, dReal* V);
+RAVE_API void svd3(const dReal* A, dReal* U, dReal* D, dReal* V);
 
 // first root returned is always >= second, roots are defined if the quadratic doesn't have real solutions
-void QuadraticSolver(dReal* pfQuadratic, dReal* pfRoots);
+RAVE_API void QuadraticSolver(dReal* pfQuadratic, dReal* pfRoots);
 
-int insideQuadrilateral(const Vector* p0,const Vector* p1, const Vector* p2,const Vector* p3);
-int insideTriangle(const Vector* p0, const Vector* p1, const Vector* p2);
+RAVE_API int insideQuadrilateral(const Vector* p0,const Vector* p1, const Vector* p2,const Vector* p3);
+RAVE_API int insideTriangle(const Vector* p0, const Vector* p1, const Vector* p2);
 
-bool RayOBBTest(const RAY& r, const OBB& obb);
-dReal DistVertexOBBSq(const Vector& v, const OBB& o);
+RAVE_API bool RayOBBTest(const RAY& r, const OBB& obb);
+RAVE_API dReal DistVertexOBBSq(const Vector& v, const OBB& o);
 
 template <class T> int Min(T* pts, int stride, int numPts); // returns the index, stride in units of T
 template <class T> int Max(T* pts, int stride, int numPts); // returns the index
@@ -1346,15 +1346,15 @@ inline double* inv4(const double* pf, double* pfres) { return _inv4<double>(pf, 
 // if the two triangles collide, returns true and fills contactpos with the intersection point
 // assuming triangles are declared counter-clockwise!!
 // contactnorm is the normal of the second triangle
-bool TriTriCollision(const RaveVector<float>& u1, const RaveVector<float>& u2, const RaveVector<float>& u3,
+RAVE_API bool TriTriCollision(const RaveVector<float>& u1, const RaveVector<float>& u2, const RaveVector<float>& u3,
                    const RaveVector<float>& v1, const RaveVector<float>& v2, const RaveVector<float>& v3,
                      RaveVector<float>& contactpos, RaveVector<float>& contactnorm);
-bool TriTriCollision(const RaveVector<double>& u1, const RaveVector<double>& u2, const RaveVector<double>& u3,
+RAVE_API bool TriTriCollision(const RaveVector<double>& u1, const RaveVector<double>& u2, const RaveVector<double>& u3,
                    const RaveVector<double>& v1, const RaveVector<double>& v2, const RaveVector<double>& v3,
                      RaveVector<double>& contactpos, RaveVector<double>& contactnorm);
 
-OBB OBBFromAABB(const AABB& ab, const TransformMatrix& t);
-OBB TransformOBB(const OBB& obb, const Transform& t);
+RAVE_API OBB OBBFromAABB(const AABB& ab, const TransformMatrix& t);
+RAVE_API OBB TransformOBB(const OBB& obb, const Transform& t);
 
 template <class T> inline void mult(T* pf, T fa, int r)
 {

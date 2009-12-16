@@ -53,17 +53,6 @@
 #include <fstream>
 #include <iostream>
 
-#include <boost/assert.hpp>
-#include <boost/bind.hpp>
-#include <boost/format.hpp>
-#include <boost/thread.hpp>
-
-#ifdef _MSC_VER
-#define PRIdS "Id"
-#else
-#define PRIdS "zd"
-#endif
-
 using namespace std;
 
 #include <sys/timeb.h>    // ftime(), struct timeb
@@ -112,6 +101,11 @@ inline uint64_t GetMicroTime()
     return (uint64_t)t.tv_sec*1000000+t.tv_usec;
 #endif
 }
+
+#include <boost/assert.hpp>
+#include <boost/bind.hpp>
+#include <boost/format.hpp>
+#include <boost/thread.hpp>
 
 struct null_deleter
 {

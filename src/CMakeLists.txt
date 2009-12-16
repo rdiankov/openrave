@@ -4,7 +4,7 @@ set (openrave_SOURCES openrave.cpp)
 include_directories(${CMAKE_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-set(LIB_COMPILE_FLAGS "-DRAVE_LIBBUILD")
+set(LIB_COMPILE_FLAGS "${Boost_CFLAGS}")
 
 if( NEED_TRIINDEX  )
   set(LIB_COMPILE_FLAGS "${LIB_COMPILE_FLAGS} -DNEED_DTRIINDEX_TYPEDEF")
@@ -16,26 +16,26 @@ endif()
 
 add_subdirectory(libopenrave)
 add_subdirectory(libopenrave-core)
+
 add_subdirectory(openravepy)
 
 add_executable(openrave ${openrave_SOURCES})
-
+set_target_properties(openrave PROPERTIES COMPILE_FLAGS "${Boost_CFLAGS} -DRAVE_CORE_USEDLL")
 # if( MSVC )
 #   # soqt libs not compiled correct so multiply defined symbols
 #   set_target_properties(openrave PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")
 # endif()
 
 add_subdirectory(matlab)
-add_dependencies(openrave libopenrave libopenrave_static libopenrave-core libopenrave-core_static)
-
+add_dependencies(openrave libopenrave libopenrave-core)
 
 if( MSVC )
-  set(SOCKET_LIBS imm32 winmm ws2_32)
+  set(SOCKET_LIBS imm32 winmm ws2_32 )
 else()
   set(SOCKET_LIBS)
 endif()
 
-target_link_libraries (openrave ${Boost_THREAD_LIBRARY} libopenrave-core ${SOCKET_LIBS})
+target_link_libraries (openrave ${Boost_THREAD_LIBRARY} ${SOCKET_LIBS} libopenrave libopenrave-core)
 
 # untar the resource files
 add_custom_command(
@@ -115,5 +115,4 @@ set(CPPEXAMPLES ${CMAKE_CURRENT_SOURCE_DIR}/examples/cppexamples)
 install(FILES ${CPPEXAMPLES}/CMakeLists.txt ${CPPEXAMPLES}/README ${CPPEXAMPLES}/plugincpp.cpp ${CPPEXAMPLES}/customreader.cpp ${CPPEXAMPLES}/orcollision.cpp ${CPPEXAMPLES}/customreader.env.xml ${CPPEXAMPLES}/FindOpenRAVE.cmake DESTINATION share/openrave/examples/cppexamples)
 if( MSVC )
   install(FILES ${CMAKE_SOURCE_DIR}/runcmake_win.bat DESTINATION share/openrave/examples/cppexamples)
-  install(FILES ${CMAKE_SOURCE_DIR}/plugins/openraveplugin.def DESTINATION share/openrave/examples/cppexamples)
 endif()

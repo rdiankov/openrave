@@ -1456,7 +1456,7 @@ namespace OpenRAVEXMLParser
                 return filename;
 #ifdef _WIN32
             if( filename.find_first_of(':') != string::npos )
-                return pfilename;
+                return filename;
 #else
             if( filename[0] == '/' || filename[0] == '~' )
                 return filename;
@@ -1774,16 +1774,15 @@ namespace OpenRAVEXMLParser
     class ControllerXMLReader : public InterfaceXMLReader
     {
     public:
-    ControllerXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pinterface, const std::list<std::pair<std::string,std::string> >& atts,RobotBasePtr probot=RobotBasePtr()) : InterfaceXMLReader(penv,pinterface,PT_Controller,RaveGetInterfaceName(PT_Controller),atts)
-            {
-                _probot = probot;
-                FOREACH(itatt, atts) {
-                    if( itatt->first == "robot" )
-                        _robotname = itatt->second;
-                    else if( itatt->first == "args" )
-                        _args = itatt->second;
-                }
+        ControllerXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pinterface, const std::list<std::pair<std::string,std::string> >& atts,RobotBasePtr probot=RobotBasePtr()) : InterfaceXMLReader(penv,pinterface,PT_Controller,RaveGetInterfaceName(PT_Controller),atts) {
+            _probot = probot;
+            FOREACHC(itatt, atts) {
+                if( itatt->first == "robot" )
+                    _robotname = itatt->second;
+                else if( itatt->first == "args" )
+                    _args = itatt->second;
             }
+        }
         virtual ~ControllerXMLReader() {}
 
         virtual void startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
@@ -2148,7 +2147,7 @@ namespace OpenRAVEXMLParser
     public:
     RobotXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& probot, const std::list<std::pair<std::string,std::string> >& atts, int rootoffset, int rootjoffset, int rootsoffset, int rootmoffset) : InterfaceXMLReader(penv,probot,PT_Robot,"robot",atts), rootoffset(rootoffset), rootjoffset(rootjoffset), rootsoffset(rootsoffset), rootmoffset(rootmoffset) {
             _probot = boost::static_pointer_cast<RobotBase>(_pinterface);
-            FOREACH(itatt, atts) {
+            FOREACHC(itatt, atts) {
                 if( itatt->first == "name" )
                     _robotname = itatt->second;
                 else if( itatt->first == "prefix" )
@@ -2340,13 +2339,12 @@ namespace OpenRAVEXMLParser
     class ProblemXMLReader : public InterfaceXMLReader
     {
     public:
-    ProblemXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pinterface, const std::list<std::pair<std::string,std::string> >& atts) : InterfaceXMLReader(penv,pinterface,PT_ProblemInstance,RaveGetInterfaceName(PT_ProblemInstance),atts)
-            {
-                FOREACH(itatt,atts) {
-                    if( itatt->first == "args" )
-                        _args = itatt->second;
-                }
+        ProblemXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pinterface, const std::list<std::pair<std::string,std::string> >& atts) : InterfaceXMLReader(penv,pinterface,PT_ProblemInstance,RaveGetInterfaceName(PT_ProblemInstance),atts) {
+            FOREACHC(itatt,atts) {
+                if( itatt->first == "args" )
+                    _args = itatt->second;
             }
+        }
 
         virtual void startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
         {

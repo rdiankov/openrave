@@ -81,7 +81,7 @@ build openrave must include (used in place of rave.h). Precompiled header.
 #define PRIdS "zd"
 #endif
 
-inline uint32_t timeGetTime()
+inline static uint32_t timeGetTime()
 {
 #ifdef _WIN32
     _timeb t;
@@ -94,7 +94,7 @@ inline uint32_t timeGetTime()
     return (uint32_t)(t.time*1000+t.millitm);
 }
 
-inline uint64_t GetMicroTime()
+inline static uint64_t GetMicroTime()
 {
 #ifdef _WIN32
     LARGE_INTEGER count, freq;

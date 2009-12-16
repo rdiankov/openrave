@@ -108,7 +108,7 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
 
     SoSeparator* pmsgsep = new SoSeparator();
     SoTranslation* pmsgtrans = new SoTranslation();
-    pmsgtrans->translation.setValue(SbVec3f(-0.98,0.94,0));
+    pmsgtrans->translation.setValue(SbVec3f(-0.98f,0.94f,0));
     pmsgsep->addChild(pmsgtrans);
     SoBaseColor* pcolor = new SoBaseColor();
     pcolor->rgb.setValue(0,0,0);
@@ -1772,7 +1772,7 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
     if( ControlDown() ) {
         if( !!pSelectedLink ) {
             // search the joint nodes
-            FOREACH(itjoint, pKinBody->GetBody()->GetJoints()) {
+            FOREACHC(itjoint, pKinBody->GetBody()->GetJoints()) {
                 if( ((*itjoint)->GetFirstAttached()==pSelectedLink || (*itjoint)->GetSecondAttached()==pSelectedLink) ) {
                     vector<dReal> lower,upper;
                     (*itjoint)->GetLimits(lower,upper);
@@ -1793,7 +1793,7 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
                         else if( (*itjoint)->GetSecondAttached()==pSelectedLink )
                             pother = (*itjoint)->GetFirstAttached();
                         if( !!pother ) {
-                            FOREACH(itjoint2, pKinBody->GetBody()->GetJoints()) {
+                            FOREACHC(itjoint2, pKinBody->GetBody()->GetJoints()) {
                                 if( pKinBody->GetBody()->DoesAffect((*itjoint2)->GetJointIndex(), pother->GetIndex()) && 
                                     ((*itjoint2)->GetFirstAttached()==pother || (*itjoint2)->GetSecondAttached()==pother) ) {
                                     pjoint = *itjoint2;
@@ -1809,7 +1809,7 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
             }
 
             if( !pjoint ) {
-                FOREACH(itjoint, pKinBody->GetBody()->GetPassiveJoints()) {
+                FOREACHC(itjoint, pKinBody->GetBody()->GetPassiveJoints()) {
                     if( (*itjoint)->GetMimicJointIndex() >= 0 ) {
                         KinBody::JointPtr ptempjoint = pKinBody->GetBody()->GetJoints()[(*itjoint)->GetMimicJointIndex()];
                         if( pKinBody->GetBody()->DoesAffect(ptempjoint->GetJointIndex(), pSelectedLink->GetIndex()) && 
@@ -1824,7 +1824,7 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
                         else if( (*itjoint)->GetSecondAttached()==pSelectedLink )
                             pother = (*itjoint)->GetFirstAttached();
                         if( !!pother ) {
-                            FOREACH(itjoint2, pKinBody->GetBody()->GetJoints()) {
+                            FOREACHC(itjoint2, pKinBody->GetBody()->GetJoints()) {
                                 if( pKinBody->GetBody()->DoesAffect((*itjoint2)->GetJointIndex(), pother->GetIndex()) && 
                                     ((*itjoint2)->GetFirstAttached()==pother || (*itjoint2)->GetSecondAttached()==pother) ) {
                                     pjoint = *itjoint2;

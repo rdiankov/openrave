@@ -9,7 +9,7 @@ add_library(baserobots SHARED baserobotsmain.cpp)
 
 target_link_libraries(baserobots libopenrave)
 include_directories(baserobots "${CMAKE_SOURCE_DIR}")
-add_dependencies(baserobots libopenrave libopenrave_static)
+add_dependencies(baserobots libopenrave)
 set_target_properties(baserobots PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}"
                                  LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
 install(TARGETS baserobots DESTINATION share/openrave/plugins )

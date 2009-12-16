@@ -21,12 +21,17 @@
 namespace OpenRAVE {
 
 #ifdef _DEBUG
-DebugLevel g_nDebugLevel = Level_Debug;
+RAVE_API DebugLevel g_nDebugLevel = Level_Debug;
 #else
-DebugLevel g_nDebugLevel = Level_Info;
+RAVE_API DebugLevel g_nDebugLevel = Level_Info;
 #endif
 
-const std::map<PluginType,std::string>& RaveGetInterfaceNamesMap()
+RAVE_API void RaveSetDebugLevel(DebugLevel level)
+{
+    g_nDebugLevel = level;
+}
+
+RAVE_API const std::map<PluginType,std::string>& RaveGetInterfaceNamesMap()
 {
     static map<PluginType,string> m;
     if( m.size() == 0 ) {
@@ -46,7 +51,7 @@ const std::map<PluginType,std::string>& RaveGetInterfaceNamesMap()
     return m;
 }
 
-const std::string& RaveGetInterfaceName(PluginType type)
+RAVE_API const std::string& RaveGetInterfaceName(PluginType type)
 {
     std::map<PluginType,std::string>::const_iterator it = RaveGetInterfaceNamesMap().find(type);
     if( it == RaveGetInterfaceNamesMap().end() )
@@ -814,7 +819,7 @@ KinBody::ManageDataPtr SimpleSensorSystem::AddKinBody(KinBodyPtr pbody, XMLReada
 bool SimpleSensorSystem::RemoveKinBody(KinBodyPtr pbody)
 {
     boost::mutex::scoped_lock lock(_mutex);
-    bool bSuccess = _mapbodies.erase(pbody->GetNetworkId());
+    bool bSuccess = _mapbodies.erase(pbody->GetNetworkId())>0;
     RAVELOG_DEBUGA(str(boost::format("system removing body %s %s\n")%pbody->GetName()%(bSuccess?"succeeded":"failed")));
     return bSuccess;
 }
@@ -935,39 +940,39 @@ void SimpleSensorSystem::_UpdateBodiesThread()
     }
 }
 
-void RaveInitRandomGeneration(uint32_t seed)
+RAVE_API void RaveInitRandomGeneration(uint32_t seed)
 {
     init_genrand(seed);
 }
 
-uint32_t RaveRandomInt()
+RAVE_API uint32_t RaveRandomInt()
 {
     return genrand_int32();
 }
 
-void RaveRandomInt(int n, std::vector<int>& v)
+RAVE_API void RaveRandomInt(int n, std::vector<int>& v)
 {
     v.resize(n);
     FOREACH(it, v) *it = genrand_int32();
 }
 
-float RaveRandomFloat()
+RAVE_API float RaveRandomFloat()
 {
     return (float)genrand_real1();
 }
 
-void RaveRandomFloat(int n, std::vector<float>& v)
+RAVE_API void RaveRandomFloat(int n, std::vector<float>& v)
 {
     v.resize(n);
     FOREACH(it, v) *it = (float)genrand_real1();
 }
 
-double RaveRandomDouble()
+RAVE_API double RaveRandomDouble()
 {
     return genrand_res53();
 }
  
-void RaveRandomDouble(int n, std::vector<double>& v)
+RAVE_API void RaveRandomDouble(int n, std::vector<double>& v)
 {
     v.resize(n);
     FOREACH(it, v) *it = genrand_res53();

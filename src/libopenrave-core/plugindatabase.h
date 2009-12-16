@@ -286,17 +286,43 @@ protected:
         p->ppluginname = libraryname;
         p->plibrary = plibrary;
 
-        p->pfnCreate = (CreateInterfaceFn)SysLoadSym(p->plibrary, "CreateInterface");
-        p->pfnGetPluginAttributes = (GetPluginAttributesFn)SysLoadSym(p->plibrary, "GetPluginAttributes");
-        p->pfnDestroyPlugin = (DestroyPluginFn)SysLoadSym(p->plibrary, "DestroyPlugin");
-
-        if( p->pfnCreate == NULL || p->pfnGetPluginAttributes == NULL ) {
-            RAVELOG_WARNA("%s: can't load ORCreate and GetPluginAttriutes functions (%x,%x)\n", p->ppluginname.c_str(), p->pfnCreate, p->pfnGetPluginAttributes);
-            return PluginPtr();
+#ifdef _MSC_VER
+        p->pfnCreate = (CreateInterfaceFn)SysLoadSym(p->plibrary, "?CreateInterface@@YA?AV?$shared_ptr@VInterfaceBase@OpenRAVE@@@boost@@W4PluginType@OpenRAVE@@ABV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@PBDV?$shared_ptr@VEnvironmentBase@OpenRAVE@@@2@@Z");
+#else
+        p->pfnCreate = (CreateInterfaceFn)SysLoadSym(p->plibrary, "_Z15CreateInterfaceN8OpenRAVE10PluginTypeERKSsPKcN5boost10shared_ptrINS_15EnvironmentBaseEEE");
+#endif
+        if( p->pfnCreate == NULL ) {
+            p->pfnCreate = (CreateInterfaceFn)SysLoadSym(p->plibrary, "CreateInterface");
+            if( p->pfnCreate == NULL ) {
+                RAVELOG_ERRORA(str(boost::format("%s: can't load CreateInterface function\n")%p->ppluginname));
+                return PluginPtr();
+            }
+        }
+      
+#ifdef _MSC_VER
+        p->pfnGetPluginAttributes = (GetPluginAttributesFn)SysLoadSym(p->plibrary, "?GetPluginAttributes@@YA_NPAUPLUGININFO@OpenRAVE@@H@Z");
+#else
+        p->pfnGetPluginAttributes = (GetPluginAttributesFn)SysLoadSym(p->plibrary, "_Z19GetPluginAttributesPN8OpenRAVE10PLUGININFOEi");
+#endif
+        if( p->pfnGetPluginAttributes == NULL ) {
+            p->pfnGetPluginAttributes = (GetPluginAttributesFn)SysLoadSym(p->plibrary, "GetPluginAttributes");
+            if( p->pfnGetPluginAttributes == NULL ) {
+                RAVELOG_ERRORA(str(boost::format("%s: can't load GetPluginAttributes function\n")%p->ppluginname));
+                return PluginPtr();
+            }
         }
 
-        if( p->pfnDestroyPlugin == NULL )
-            RAVELOG_WARNA("plugin %s does not have DestroyPlugin function\n", p->ppluginname.c_str());
+#ifdef _MSC_VER
+        p->pfnDestroyPlugin = (DestroyPluginFn)SysLoadSym(p->plibrary, "?DestroyPlugin@@YAXXZ");
+#else
+        p->pfnDestroyPlugin = (DestroyPluginFn)SysLoadSym(p->plibrary, "_Z13DestroyPluginv");
+#endif
+        if( p->pfnDestroyPlugin == NULL ) {
+            p->pfnDestroyPlugin = (DestroyPluginFn)SysLoadSym(p->plibrary, "DestroyPlugin");
+            if( p->pfnDestroyPlugin == NULL ) {
+                RAVELOG_WARNA(str(boost::format("%s: can't load DestroyPlugin function, passing...\n")%p->ppluginname));
+            }
+        }
         
 #ifndef _WIN32
         Dl_info info;

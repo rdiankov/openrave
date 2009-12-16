@@ -58,6 +58,14 @@ using namespace std;
 
 #include <sys/timeb.h>    // ftime(), struct timeb
 
+#ifndef _WIN32
+#include <sys/time.h>
+#define Sleep(milli) usleep(1000*milli)
+#else
+#define WIN32_LEAN_AND_MEAN
+#include <winsock2.h>
+#endif
+
 template<class T>
 inline T CLAMP_ON_RANGE(T value, T min, T max)
 {

@@ -11,6 +11,6 @@ add_library(pqprave SHARED pqpravemain.cpp)
 
 target_link_libraries(pqprave libopenrave PQP)
 include_directories(pqprave "${CMAKE_SOURCE_DIR}")
-add_dependencies(pqprave libopenrave libopenrave_static PQP)
+add_dependencies(pqprave libopenrave PQP)
 set_target_properties(pqprave PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
 install(TARGETS pqprave DESTINATION share/openrave/plugins )

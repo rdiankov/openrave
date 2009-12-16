@@ -76,7 +76,7 @@ inline bool IsOBBinFrustum(const OBB& o, const FRUSTUM& fr)
 /// planes should be facing inside
 inline bool IsOBBinConvexHull(const OBB& o, const vector<Vector>& vplanes)
 {
-    FOREACH(itplane, vplanes) {
+    FOREACHC(itplane, vplanes) {
         // side planes
         if( dot3(o.pos,*itplane)+itplane->w < o.extents.x * RaveFabs(dot3(*itplane, o.right))
             + o.extents.y * RaveFabs(dot3(*itplane, o.up))
@@ -140,7 +140,7 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
         Vector v3perp(-v3norm.y,v3norm.x,0,0);
         dReal f1proj = RaveFabs(dot2(v3perp,v1)), f2proj = RaveFabs(dot2(v3perp,v2));
         
-        int n1 = f1proj/delta;
+        int n1 = (int)(f1proj/delta);
         dReal n1scale = 1.0f/n1;
         Vector vdelta1 = v1*n1scale;
         Vector vdelta2 = (v1-v3)*n1scale;
@@ -148,7 +148,7 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
         dReal ftotalen = f3length;
         Vector vcur1 = v0, vcur2 = v0+v3;
         for(int j = 0; j <= n1; ++j, vcur1 += vdelta1, vcur2 += vdelta2, ftotalen -= fdeltalen ) {
-            int numsteps = ftotalen/delta;
+            int numsteps = (int)(ftotalen/delta);
             Vector vdelta = (vcur2-vcur1)*(1.0f/numsteps), vcur = vcur1;
             for(int k = 0; k <= numsteps; ++k, vcur += vdelta) {
                 if( !testfn(vcur) )
@@ -160,7 +160,7 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
 //                                vpoints3d[faceindices[i][0]], vpoints3d[faceindices[i][1]], vpoints3d[faceindices[i][3]]};
 //        penv->drawtrimesh(vtripoints[0], 16, NULL, 2);
 
-        int n2 = f2proj/delta;
+        int n2 = (int)(f2proj/delta);
         if( n2 == 0 )
             continue;
 
@@ -172,7 +172,7 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
         vcur1 = v0; vcur2 = v0+v3;
         vcur1 += vdelta1; vcur2 += vdelta2; ftotalen -= fdeltalen; // do one step
         for(int j = 0; j < n2; ++j, vcur1 += vdelta1, vcur2 += vdelta2, ftotalen -= fdeltalen ) {
-            int numsteps = ftotalen/delta;
+            int numsteps = (int)(ftotalen/delta);
             Vector vdelta = (vcur2-vcur1)*(1.0f/numsteps), vcur = vcur1;
             for(int k = 0; k <= numsteps; ++k, vcur += vdelta) {
                 if( !testfn(vcur) )

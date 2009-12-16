@@ -24,7 +24,7 @@
 namespace OpenRAVE {
 
 /// General dynamic body that has manipulators, controllers, and sensors
-class RobotBase : public KinBody
+class RAVE_API RobotBase : public KinBody
 {
 public:
     /// A set of properties for the kinbody. These properties are used to describe a set of variables used in KinBody.
@@ -35,7 +35,7 @@ public:
     };
 
     /// handles manipulators of the robot (usually 1 dim)
-    class Manipulator : public boost::enable_shared_from_this<Manipulator>
+    class RAVE_API Manipulator : public boost::enable_shared_from_this<Manipulator>
     {
         Manipulator(RobotBasePtr probot);
         Manipulator(const Manipulator& r);
@@ -154,7 +154,7 @@ public:
     typedef boost::shared_ptr<Manipulator const> ManipulatorConstPtr;
     typedef boost::weak_ptr<Manipulator> ManipulatorWeakPtr;
 
-    class AttachedSensor : public boost::enable_shared_from_this<AttachedSensor>
+    class RAVE_API AttachedSensor : public boost::enable_shared_from_this<AttachedSensor>
     {
     public:
         AttachedSensor(RobotBasePtr probot);
@@ -209,7 +209,7 @@ public:
 
     /// Helper class to save the entire robot state and its grabbed bodies
     /// Also saves and restores the current active degrees of freedom
-    class RobotStateSaver : public KinBodyStateSaver
+    class RAVE_API RobotStateSaver : public KinBodyStateSaver
     {
     public:
         RobotStateSaver(RobotBasePtr probot);

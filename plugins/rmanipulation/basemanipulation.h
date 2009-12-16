@@ -897,7 +897,7 @@ protected:
         boost::shared_ptr<PlannerBase> graspplanner = GetEnv()->CreatePlanner("Grasper");
         if( !graspplanner ) {
             RAVELOG_ERRORA("grasping planner failure!\n");
-            return -1;
+            return false;
         }
     
         boost::shared_ptr<GraspParameters> graspparams(new GraspParameters());
@@ -1426,7 +1426,7 @@ protected:
             if(!fsfile.is_open())
                 {
                     RAVELOG_ERRORA("BaseManipulation::DebugIK - Error: Cannot open specified file.\n");
-                    return -1;
+                    return false;
                 }
 
             fsfile >> num_itrs;

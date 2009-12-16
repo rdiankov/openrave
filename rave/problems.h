@@ -22,7 +22,7 @@ namespace OpenRAVE {
 /// instance registers itself with OpenRAVE's SimulateStep calls and can accept
 /// commands from the server or other plugins via SendCommand. A problem instance
 /// stops receiving commands when it is destroyed.
-class ProblemInstance : public InterfaceBase
+class RAVE_API ProblemInstance : public InterfaceBase
 {
 protected:
     /// The function to be executed for every command.

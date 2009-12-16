@@ -46,7 +46,7 @@ class Environment : public EnvironmentBase
 #ifndef _WIN32
             _homedirectory = string(getenv("HOME"))+string("/.openrave");
 #else
-            _homedirectory = string(getenv("HOMEPATH"))+string("\\.openrave");
+            _homedirectory = string(getenv("HOMEDRIVE"))+string(getenv("HOMEPATH"))+string("\\.openrave");
 #endif
         }
         else
@@ -54,7 +54,7 @@ class Environment : public EnvironmentBase
 #ifndef _WIN32
         mkdir(_homedirectory.c_str(),S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH | S_IRWXU);
 #else
-        //CreateDirectory(_homedirectory.c_str());
+        CreateDirectory(_homedirectory.c_str(),NULL);
 #endif
         RAVELOG_DEBUGA("setting openrave cache directory to %s\n",_homedirectory.c_str());
 
@@ -267,7 +267,7 @@ class Environment : public EnvironmentBase
         list<RaveDatabase::PluginPtr> listdbplugins;
         _pdatabase->GetPlugins(listdbplugins);
         FOREACHC(itplugin, listdbplugins) {
-            FOREACH(it,(*itplugin)->GetInfo().interfacenames)
+            FOREACHC(it,(*itplugin)->GetInfo().interfacenames)
                 info.interfacenames[it->first].insert(info.interfacenames[it->first].end(),it->second.begin(),it->second.end());
         }
     }
@@ -614,7 +614,7 @@ class Environment : public EnvironmentBase
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
-        uint64_t step = (uint64_t)ceilf(1000000.0 * (double)fTimeStep);
+        uint64_t step = (uint64_t)ceil(1000000.0 * (double)fTimeStep);
         fTimeStep = (dReal)((double)step * 0.000001);
 
         // call the physics first to get forces
@@ -1170,8 +1170,8 @@ protected:
         virtual bool InitEnvironment() { return true; }
         virtual void DestroyEnvironment() {}
         
-        virtual bool InitKinBody(KinBodyPtr pbody) { pbody->SetPhysicsData(shared_from_this()); return true; } 
-        virtual bool DestroyKinBody(KinBodyPtr pbody) { pbody->SetPhysicsData(boost::shared_ptr<void>()); return true; }
+        virtual bool InitKinBody(KinBodyPtr pbody) { SetPhysicsData(pbody, boost::shared_ptr<void>()); return true; } 
+        virtual bool DestroyKinBody(KinBodyPtr pbody) { SetPhysicsData(pbody, boost::shared_ptr<void>()); return true; }
 
         virtual bool SetBodyVelocity(KinBodyPtr pbody, const Vector& linearvel, const Vector& angularvel) { return true; }
         virtual bool SetBodyVelocity(KinBodyPtr pbody, const Vector& linearvel, const Vector& angularvel, const std::vector<dReal>& pJointVelocity) { return true; }
@@ -1233,8 +1233,8 @@ protected:
         virtual bool InitEnvironment() { return true; }
         virtual void DestroyEnvironment() {}
 
-        virtual bool InitKinBody(KinBodyPtr pbody) { pbody->SetCollisionData(boost::shared_ptr<void>()); return true; }
-        virtual bool DestroyKinBody(KinBodyPtr pbody) { pbody->SetCollisionData(boost::shared_ptr<void>()); return true; }
+        virtual bool InitKinBody(KinBodyPtr pbody) { SetCollisionData(pbody, boost::shared_ptr<void>()); return true; }
+        virtual bool DestroyKinBody(KinBodyPtr pbody) { SetCollisionData(pbody, boost::shared_ptr<void>()); return true; }
         virtual bool Enable(KinBodyConstPtr pbody, bool bEnable) { return true; }
         virtual bool EnableLink(KinBody::LinkConstPtr pbody, bool bEnable) { return true; }
 

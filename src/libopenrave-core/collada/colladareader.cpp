@@ -200,7 +200,7 @@ public:
         //  Debug
         RAVELOG_VERBOSEA("Axis to find: %s\n",axis);
 
-        for (uint i = 0; i < axis_array.getCount(); i++)
+        for (uint32_t i = 0; i < axis_array.getCount(); i++)
         {
             if (strcmp(axis_array[i]->getAxis(),axis) == 0)
             {

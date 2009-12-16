@@ -28,7 +28,7 @@ enum CollisionOptions
 };
 
 /// derive from this class for every different collision checker library that OpenRAVE should support
-class CollisionCheckerBase : public InterfaceBase
+class RAVE_API CollisionCheckerBase : public InterfaceBase
 {
 public:
     CollisionCheckerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_CollisionChecker, penv) {}

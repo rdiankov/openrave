@@ -87,7 +87,7 @@ if (QT_FOUND AND SOQT_LIBRARY_FOUND)
     set(FFMPEG_LIBRARIES)
   endif()
 
-  set (extLIBS ${QT_LIBRARIES} ${LIBXML2_LIBRARIES} ${COIN_LIBRARY} ${SOQT_LIBRARY} ${PTHREADS_LIBRARY} ${FFMPEG_LIBRARIES})
+  set (extLIBS ${QT_LIBRARIES} ${LIBXML2_LIBRARIES} ${COIN_LIBRARY} ${SOQT_LIBRARY} ${FFMPEG_LIBRARIES} ${OPENGL_LIBRARIES})
 
   set(QTCOIN_COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}")
   set(QTCOIN_LINK_FLAGS "${PLUGIN_LINK_FLAGS} ${COIN_LINK_FLAGS} ${SOQT_LINK_FLAGS}")
@@ -100,7 +100,7 @@ if (QT_FOUND AND SOQT_LIBRARY_FOUND)
 
   target_link_libraries (qtcoinrave ${extLIBS} libopenrave)
   include_directories(${CMAKE_SOURCE_DIR} ${FFMPEG_libavformat_INCLUDEDIR} ${FFMPEG_libavcodec_INCLUDEDIR} ${FFMPEG_libswscale_INCLUDEDIR})
-  add_dependencies(qtcoinrave libopenrave libopenrave_static)
+  add_dependencies(qtcoinrave libopenrave)
   set_target_properties(qtcoinrave PROPERTIES COMPILE_FLAGS "${QTCOIN_COMPILE_FLAGS}"
                                       LINK_FLAGS "${QTCOIN_LINK_FLAGS}")
   install(TARGETS qtcoinrave DESTINATION share/openrave/plugins)

@@ -23,7 +23,7 @@ namespace OpenRAVE {
 /// particular position in space, has a geometry with 
 /// properties defining the type of sensor, and can be
 /// queried for sensor data.
-class SensorBase : public InterfaceBase
+class RAVE_API SensorBase : public InterfaceBase
 {
 public:
     enum SensorType
@@ -43,7 +43,7 @@ public:
     };
 
     /// used to pass sensor data around
-    class SensorData
+    class RAVE_API SensorData
     {
     public:
         virtual ~SensorData() {}
@@ -55,7 +55,7 @@ public:
     typedef boost::shared_ptr<SensorData> SensorDataPtr;
     typedef boost::shared_ptr<SensorData const> SensorDataConstPtr;
 
-    class LaserSensorData : public SensorData
+    class RAVE_API LaserSensorData : public SensorData
     {
     public:
         virtual SensorType GetType() { return ST_Laser; }
@@ -69,7 +69,7 @@ public:
 
         virtual bool serialize(std::ostream& O) const;
     };
-    class CameraSensorData : public SensorData
+    class RAVE_API CameraSensorData : public SensorData
     {
     public:
         virtual SensorType GetType() { return ST_Camera; }
@@ -82,7 +82,7 @@ public:
         virtual bool serialize(std::ostream& O) const;
     };
     /// Class for storing joint angles and EE position
-    class JointSensorData : public SensorData
+    class RAVE_API JointSensorData : public SensorData
     {
     public:
         public:
@@ -94,7 +94,7 @@ public:
     };
     
      /// Class for storing force data (JR3, etc)
-    class ForceSensorData : public SensorData
+    class RAVE_API ForceSensorData : public SensorData
     {
     public:
         public:
@@ -106,7 +106,7 @@ public:
     };
     
 	/// Class for hardware failure data (singularity, etc)
-    class HardwareFailureData : public SensorData
+    class RAVE_API HardwareFailureData : public SensorData
     {
     public:
         virtual SensorType GetType() { return ST_Invalid; }
@@ -117,7 +117,7 @@ public:
     };
 
     /// permanent properties of the sensors
-    class SensorGeometry
+    class RAVE_API SensorGeometry
     {
     public:
         virtual ~SensorGeometry() {}
@@ -126,7 +126,7 @@ public:
     typedef boost::shared_ptr<SensorGeometry> SensorGeometryPtr;
     typedef boost::shared_ptr<SensorGeometry const> SensorGeometryConstPtr;
 
-    class LaserGeomData : public SensorGeometry
+    class RAVE_API LaserGeomData : public SensorGeometry
     {
     public:
         virtual SensorType GetType() { return ST_Laser; }
@@ -136,7 +136,7 @@ public:
         float resolution[2]; ///< Angular resolutions for each axis of rotation [rad].
         float max_range; ///< Maximum range [m].
     };
-    class CameraGeomData : public SensorGeometry
+    class RAVE_API CameraGeomData : public SensorGeometry
     {
     public:
         virtual SensorType GetType() { return ST_Camera; }

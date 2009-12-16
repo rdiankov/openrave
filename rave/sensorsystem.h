@@ -22,7 +22,7 @@ namespace OpenRAVE {
 ///
 /// New objects can be created, existing objects can be updated. Every managed
 /// object should set the kinbody's Manager pointer
-class SensorSystemBase : public InterfaceBase
+class RAVE_API SensorSystemBase : public InterfaceBase
 {
 public:
     SensorSystemBase(EnvironmentBasePtr penv) : InterfaceBase(PT_SensorSystem, penv) {}

@@ -32,7 +32,7 @@ enum PhysicsEngineCollisionAction
 };
 
 /// A physics engine supports simulating the dynamics of every object in the environment
-class PhysicsEngineBase : public InterfaceBase
+class RAVE_API PhysicsEngineBase : public InterfaceBase
 {
 public:
     PhysicsEngineBase(EnvironmentBasePtr penv) : InterfaceBase(PT_PhysicsEngine, penv) {}

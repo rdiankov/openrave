@@ -85,7 +85,7 @@ build openrave must include (used in place of rave.h). Precompiled header.
 
 #if _WIN32
 
-inline uint32_t GetMilliTime()
+inline static uint32_t GetMilliTime()
 {
     LARGE_INTEGER count, freq;
     QueryPerformanceCounter(&count);
@@ -93,7 +93,7 @@ inline uint32_t GetMilliTime()
     return (uint32_t)((count.QuadPart * 1000) / freq.QuadPart);
 }
 
-inline uint64_t GetMicroTime()
+inline static uint64_t GetMicroTime()
 {
     LARGE_INTEGER count, freq;
     QueryPerformanceCounter(&count);
@@ -101,7 +101,7 @@ inline uint64_t GetMicroTime()
     return (count.QuadPart * 1000000) / freq.QuadPart;
 }
 
-inline uint64_t GetNanoTime()
+inline static uint64_t GetNanoTime()
 {
     LARGE_INTEGER count, freq;
     QueryPerformanceCounter(&count);
@@ -111,7 +111,7 @@ inline uint64_t GetNanoTime()
 
 #else
 
-inline void getWallTime(uint32_t& sec, uint32_t& nsec)
+inline static void getWallTime(uint32_t& sec, uint32_t& nsec)
 {
 #if POSIX_TIMERS > 0
   struct timespec start;
@@ -126,21 +126,21 @@ inline void getWallTime(uint32_t& sec, uint32_t& nsec)
 #endif
 }
 
-inline uint64_t GetNanoTime()
+inline static uint64_t GetNanoTime()
 {
     uint32_t sec,nsec;
     getWallTime(sec,nsec);
     return (uint64_t)sec*1000000000 + (uint64_t)nsec;
 }
 
-inline uint64_t GetMicroTime()
+inline static uint64_t GetMicroTime()
 {
     uint32_t sec,nsec;
     getWallTime(sec,nsec);
     return (uint64_t)sec*1000000 + (uint64_t)nsec/1000;
 }
 
-inline uint32_t GetMilliTime()
+inline static uint32_t GetMilliTime()
 {
     uint32_t sec,nsec;
     getWallTime(sec,nsec);
@@ -149,7 +149,7 @@ inline uint32_t GetMilliTime()
 
 #endif
 
-inline int RANDOM_INT(int maximum)
+inline static int RANDOM_INT(int maximum)
 {
 #if defined(__IRIX__)
     return (random() % maximum);
@@ -158,7 +158,7 @@ inline int RANDOM_INT(int maximum)
 #endif
 }
 
-inline float RANDOM_FLOAT()
+inline static float RANDOM_FLOAT()
 {
 #if defined(__IRIX__)
     return drand48();
@@ -167,7 +167,7 @@ inline float RANDOM_FLOAT()
 #endif
 }
 
-inline float RANDOM_FLOAT(float maximum)
+inline static float RANDOM_FLOAT(float maximum)
 {
 #if defined(__IRIX__)
     return (drand48() * maximum);

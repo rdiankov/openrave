@@ -1,0 +1,5 @@
+include_directories(${ZLIB_INCLUDE_DIR})
+file(GLOB minizip_files ${CMAKE_CURRENT_SOURCE_DIR}/*.c)
+add_library(minizip STATIC ${minizip_files})
+set_target_properties(minizip PROPERTIES COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS}")
+target_link_libraries(minizip ${ZLIB_LIBRARIES})

@@ -33,6 +33,10 @@
 #include <stdint.h>
 
 #ifdef _MSC_VER
+
+#pragma warning(disable:4251) // needs to have dll-interface to be used by clients of class
+#pragma warning(disable:4190) // C-linkage specified, but returns UDT 'boost::shared_ptr<T>' which is incompatible with C
+
 // needed to get typeof working
 //#include <boost/typeof/std/string.hpp>
 //#include <boost/typeof/std/vector.hpp>
@@ -70,6 +74,23 @@
 #include <boost/thread/recursive_mutex.hpp>
 #include <boost/static_assert.hpp>
 #include <boost/format.hpp>
+
+#if defined(_MSC_VER) && (defined(RAVE_USEDLL) || defined(RAVE_CORE_USEDLL))
+#ifdef RAVE_LIBBUILD
+#define RAVE_API __declspec(dllexport)
+#else
+#define RAVE_API __declspec(dllimport)
+#endif
+#else
+#define RAVE_API 
+#endif
+
+// export symbol prefix for plugin functions
+#ifdef _MSC_VER
+#define RAVE_PLUGIN_API extern "C" __declspec(dllexport)
+#else
+#define RAVE_PLUGIN_API extern "C"
+#endif
 
 namespace OpenRAVE {
 
@@ -322,38 +343,39 @@ inline const char* RaveGetSourceFilename(const char* pfilename)
 
 // different logging levels. The higher the suffix number, the less important the information is.
 // 0 log level logs all the time. OpenRAVE starts up with a log level of 0.
-#define RAVELOG_LEVEL(LEVEL,level) OpenRAVE::RaveGetDebugLevel()>=(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfW##LEVEL
+#define RAVELOG_LEVELW(LEVEL,level) OpenRAVE::RaveGetDebugLevel()>=(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfW##LEVEL
 #define RAVELOG_LEVELA(LEVEL,level) OpenRAVE::RaveGetDebugLevel()>=(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfA##LEVEL
 
 // define log4cxx equivalents (eventually OpenRAVE will move to log4cxx logging)
-#define RAVELOG_FATALW RAVELOG_LEVEL(_FATALLEVEL,OpenRAVE::Level_Fatal)
+#define RAVELOG_FATALW RAVELOG_LEVELW(_FATALLEVEL,OpenRAVE::Level_Fatal)
 #define RAVELOG_FATALA RAVELOG_LEVELA(_FATALLEVEL,OpenRAVE::Level_Fatal)
 #define RAVELOG_FATAL RAVELOG_FATALA
-#define RAVELOG_ERRORW RAVELOG_LEVEL(_ERRORLEVEL,OpenRAVE::Level_Error)
+#define RAVELOG_ERRORW RAVELOG_LEVELW(_ERRORLEVEL,OpenRAVE::Level_Error)
 #define RAVELOG_ERRORA RAVELOG_LEVELA(_ERRORLEVEL,OpenRAVE::Level_Error)
 #define RAVELOG_ERROR RAVELOG_ERRORA
-#define RAVELOG_WARNW RAVELOG_LEVEL(_WARNLEVEL,OpenRAVE::Level_Warn)
+#define RAVELOG_WARNW RAVELOG_LEVELW(_WARNLEVEL,OpenRAVE::Level_Warn)
 #define RAVELOG_WARNA RAVELOG_LEVELA(_WARNLEVEL,OpenRAVE::Level_Warn)
 #define RAVELOG_WARN RAVELOG_WARNA
-#define RAVELOG_INFOW RAVELOG_LEVEL(_INFOLEVEL,OpenRAVE::Level_Info)
+#define RAVELOG_INFOW RAVELOG_LEVELW(_INFOLEVEL,OpenRAVE::Level_Info)
 #define RAVELOG_INFOA RAVELOG_LEVELA(_INFOLEVEL,OpenRAVE::Level_Info)
 #define RAVELOG_INFO RAVELOG_INFOA
-#define RAVELOG_DEBUGW RAVELOG_LEVEL(_DEBUGLEVEL,OpenRAVE::Level_Debug)
+#define RAVELOG_DEBUGW RAVELOG_LEVELW(_DEBUGLEVEL,OpenRAVE::Level_Debug)
 #define RAVELOG_DEBUGA RAVELOG_LEVELA(_DEBUGLEVEL,OpenRAVE::Level_Debug)
 #define RAVELOG_DEBUG RAVELOG_DEBUGA
-#define RAVELOG_VERBOSEW RAVELOG_LEVEL(_VERBOSELEVEL,OpenRAVE::Level_Verbose)
+#define RAVELOG_VERBOSEW RAVELOG_LEVELW(_VERBOSELEVEL,OpenRAVE::Level_Verbose)
 #define RAVELOG_VERBOSEA RAVELOG_LEVELA(_VERBOSELEVEL,OpenRAVE::Level_Verbose)
 #define RAVELOG_VERBOSE RAVELOG_VERBOSEA
 
 #define IS_DEBUGLEVEL(level) (OpenRAVE::RaveGetDebugLevel()>=(level))
 
-inline void RaveSetDebugLevel(DebugLevel level) {
-    extern DebugLevel g_nDebugLevel;
-    g_nDebugLevel = level;
-}
+RAVE_API void RaveSetDebugLevel(DebugLevel level);
 
 inline DebugLevel RaveGetDebugLevel(void) {
+#ifdef RAVE_LIBBUILD
     extern DebugLevel g_nDebugLevel;
+#else
+    RAVE_API extern DebugLevel g_nDebugLevel;
+#endif
     return g_nDebugLevel;
 }
 
@@ -447,7 +469,7 @@ enum CloningOptions {
 };
 
 /// base class for readable interfaces
-class XMLReadable
+class RAVE_API XMLReadable
 {
 public:
     XMLReadable(const std::string& xmlid) : __xmlid(xmlid) {}
@@ -462,7 +484,7 @@ typedef boost::shared_ptr<XMLReadable const> XMLReadableConstPtr;
 
 /// base class for all xml readers. XMLReaders are used to process data from
 /// xml files. Custom readers can be registered through EnvironmentBase
-class BaseXMLReader : public boost::enable_shared_from_this<BaseXMLReader>
+class RAVE_API BaseXMLReader : public boost::enable_shared_from_this<BaseXMLReader>
 {
 public:
     BaseXMLReader() : __bRecordXMLData(true) {}
@@ -498,7 +520,7 @@ protected:
 typedef boost::shared_ptr<BaseXMLReader> BaseXMLReaderPtr;
 typedef boost::shared_ptr<BaseXMLReader const> BaseXMLReaderConstPtr;
 
-class DummyXMLReader : public BaseXMLReader
+class RAVE_API DummyXMLReader : public BaseXMLReader
 {
 public:
     DummyXMLReader(const std::string& pfieldname, const std::string& pparentname);
@@ -513,7 +535,7 @@ private:
     boost::shared_ptr<BaseXMLReader> _pcurreader;
 };
 
-class OneTagReader : public BaseXMLReader
+class RAVE_API OneTagReader : public BaseXMLReader
 {
 public:
     OneTagReader(const std::string& tag, BaseXMLReaderPtr preader);
@@ -924,24 +946,24 @@ inline const char* RaveGetInterfaceHash(PluginType type)
 }
 
 /// returns the a lower case string of the interface type
-const std::map<PluginType,std::string>& RaveGetInterfaceNamesMap();
-const std::string& RaveGetInterfaceName(PluginType type);
+RAVE_API const std::map<PluginType,std::string>& RaveGetInterfaceNamesMap();
+RAVE_API const std::string& RaveGetInterfaceName(PluginType type);
 
 /// Random number generation
 //@{
-void RaveInitRandomGeneration(uint32_t seed);
+RAVE_API void RaveInitRandomGeneration(uint32_t seed);
 /// generate a random integer, 32bit precision
-uint32_t RaveRandomInt();
+RAVE_API uint32_t RaveRandomInt();
 /// generate n random integers, 32bit precision
-void RaveRandomInt(int n, std::vector<int>& v);
+RAVE_API void RaveRandomInt(int n, std::vector<int>& v);
 /// generate a random float in [0,1], 32bit precision
-float RaveRandomFloat();
+RAVE_API float RaveRandomFloat();
 /// generate n random floats in [0,1], 32bit precision
-void RaveRandomFloat(int n, std::vector<float>& v);
+RAVE_API void RaveRandomFloat(int n, std::vector<float>& v);
 /// generate a random double in [0,1], 53bit precision
-double RaveRandomDouble();
+RAVE_API double RaveRandomDouble();
 /// generate n random doubles in [0,1], 53bit precision
-void RaveRandomDouble(int n, std::vector<double>& v);
+RAVE_API void RaveRandomDouble(int n, std::vector<double>& v);
 //@}
 
 } // end namespace OpenRAVE

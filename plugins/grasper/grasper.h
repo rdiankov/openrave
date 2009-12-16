@@ -808,7 +808,7 @@ class GrasperProblem : public ProblemInstance
         //make sure we get the right closing direction and don't look at irrelevant joints
         FOREACH(itmanip,robot->GetManipulators()) {
             vector<dReal>::const_iterator itclosing = (*itmanip)->GetClosingDirection().begin();
-            FOREACH(itgripper,(*itmanip)->GetGripperJoints()) {
+            FOREACHC(itgripper,(*itmanip)->GetGripperJoints()) {
                 closingdir[*itgripper] = *itclosing++;
             }
         }

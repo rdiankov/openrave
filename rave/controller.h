@@ -22,7 +22,7 @@ namespace OpenRAVE {
 /// given to the robot are first filtered through here, then translated
 /// to joint commands. The default controller takes angles. Different controllers
 /// have different path inputs (ie: a robot walking on a floor might just have x,y,angle)
-class ControllerBase : public InterfaceBase
+class RAVE_API ControllerBase : public InterfaceBase
 {
 public:
     enum ActuatorState {

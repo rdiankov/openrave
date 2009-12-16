@@ -31,10 +31,15 @@
  source while being able to extend functionality privately without interfering with the core
  code or core executable. The simulator itself will provide the glue and a common format
  for all plugins to talk to each other. Currently the plugins are arranged in 5 groups:
- robots, planners, controllers, sensors, and problems. 
+ robots, planners, controllers, sensors, and problems.
 */
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <winsock2.h>
+#endif
 
 #include "libopenrave-core/openrave-core.h"
+
 using namespace OpenRAVE;
 using namespace std;
 
@@ -48,26 +53,11 @@ using namespace std;
 //#include <signal.h>
 //#endif
 
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <winsock2.h>
-#endif
-
-
-#ifdef _MSC_VER
-#define PRIdS "Id"
-#else
-#define PRIdS "zd"
-#endif
-
 #ifndef _WIN32
 #define strnicmp strncasecmp
 #define stricmp strcasecmp
 #include <sys/time.h>
 #define Sleep(milli) usleep(1000*milli)
-#else
-#define WIN32_LEAN_AND_MEAN
-#include <winsock2.h>
 #endif
 
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
@@ -302,7 +292,7 @@ int main(int argc, char ** argv)
 
             RobotBase::ManipulatorConstPtr manip = probot->GetManipulators()[manipindex];
             if( !manip->GetBase() || !manip->GetEndEffector() || (!bRotation3DOnly && !bTranslation3DOnly && manip->GetArmJoints().size() < 6) ) {
-                RAVELOG_ERRORA("Generate IK: Manipulator not valid, needs to be >= 6 joints (%"PRIdS").\n", manip->GetArmJoints().size());
+                RAVELOG_ERRORA(str(boost::format("Generate IK: Manipulator not valid, needs to be >= 6 joints (%d).\n")%manip->GetArmJoints().size()));
                 return -6;
             }
 
@@ -337,7 +327,7 @@ int main(int argc, char ** argv)
             }
 
             if( !bRotation3DOnly && !bTranslation3DOnly && vsolvejoints.size() != 6 ) {
-                RAVELOG_ERRORA("need 6 solve joints, currently have %"PRIdS"\n", vsolvejoints.size());
+                RAVELOG_ERRORA(str(boost::format("need 6 solve joints, currently have %d\n")%vsolvejoints.size()));
                 remove(tempfilename);
                 return -7;
             }
@@ -430,7 +420,7 @@ int main(int argc, char ** argv)
 
         wVersionRequested = MAKEWORD(1,1);
         if (WSAStartup(wVersionRequested, &wsaData) != 0) {
-            RAVEPRINT(L"Failed to start win socket\n");
+            RAVELOG_ERROR("Failed to start win socket\n");
             return -1;
         }
 #endif
