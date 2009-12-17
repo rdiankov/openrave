@@ -194,7 +194,7 @@ if __name__=='__main__':
             for t in visibilitydata:
                 f.write(' '.join(str(val) for val in t)+'\n')
             f.close()
-            print '%d transforms saved'%visibilitydata.shape[0]
+            print '%d transforms saved to %s'%(visibilitydata.shape[0],options.savefile)
     if options.savepp is not None:
         orenv.Reset()
         target = orenv.ReadKinBodyXMLFile(options.kinbodyfile)

@@ -101,7 +101,7 @@ class VisibilityGrasping(metaclass.AutoReloader):
         ret = os.system("""octave --eval "GetLargestFreeConvexPolygon(load('%s'),'%s');" """%(maskfile,convexfile))
         if ret != 0:
             raise ValueError('failed to compute convex hull')
-        ret = os.system('python visibilityprocessing.py --func=visibility --robotfile=' + robotfile + ' --kinbodyfile=' + targetfile + ' --graspsetfile=' + graspsetfile + ' --savepp=' + graspingppfile + ' --convexfile=' + convexfile + ' --visibilityfile=' + visibilityfile + jointstring)
+        ret = os.system('python visibilityprocessing.py --func=visibility --robotfile=' + robotfile + ' --kinbodyfile=' + targetfile + ' --graspsetfile=' + graspsetfile + ' --savepp=' + graspingppfile + ' --convexfile=' + convexfile + ' --visibilityfile=' + visibilityfile + ' --savefile=visibilitytrans.mat ' + jointstring)
         if ret != 0:
             raise ValueError('failed to process visibility information')
 
@@ -305,7 +305,7 @@ class VisibilityGrasping(metaclass.AutoReloader):
                 v[self.manip.GetGripperJoints()] = self.graspsetdata[0][12:]
                 self.robot.GetController().SetDesired(v)
 
-                trajdata = visualprob.SendCommand('VisualFeedbackGrasping target ' + self.target.GetName() + ' sensorindex 0 convexdata ' + str(self.convexdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.convexdata.flat) + ' graspsetdata ' + str(self.graspsetdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.graspsetdata[:,0:12].flat) + ' maxiter 100 visgraspthresh 5 gradientsamples 5 ' + cmdstr)
+                trajdata = visualprob.SendCommand('VisualFeedbackGrasping target ' + self.target.GetName() + ' sensorindex 0 convexdata ' + str(self.convexdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.convexdata.flat) + ' graspsetdata ' + str(self.graspsetdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.graspsetdata[:,0:12].flat) + ' maxiter 100 visgraspthresh 0.5 gradientsamples 5 ' + cmdstr)
                 if trajdata is not None:
                     break
                 print 'trying visual feedback grasp again'

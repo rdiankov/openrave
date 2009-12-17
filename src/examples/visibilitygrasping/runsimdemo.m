@@ -35,7 +35,7 @@ while(1)
         pause;
     end
     %% start visual servoing step
-    res = orProblemSendCommand(['VisualFeedbackGrasping target ' scenedata.targetname ' sensorindex 0 convexfile ' scenedata.convexfile ' graspset ' scenedata.graspsetfile '; maxiter 100 visgraspthresh 0.1 gradientsamples 5 '],probs.visual,0);
+    res = orProblemSendCommand(['VisualFeedbackGrasping target ' scenedata.targetname ' sensorindex 0 convexfile ' scenedata.convexfile ' graspset ' scenedata.graspsetfile '; maxiter 150 visgraspthresh 0.5 gradientsamples 5 '],probs.visual,0);
     if( isempty(res) )
         warning('failed to find visual feedback grasp');
         continue;
