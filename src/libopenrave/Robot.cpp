@@ -22,13 +22,8 @@
 
 namespace OpenRAVE {
 
-RobotBase::Manipulator::Manipulator(RobotBasePtr probot) : _probot(probot), _vpalmdirection(0,0,1)
-{
-}
-
-RobotBase::Manipulator::~Manipulator()
-{
-}
+RobotBase::Manipulator::Manipulator(RobotBasePtr probot) : _probot(probot), _vpalmdirection(0,0,1) {}
+RobotBase::Manipulator::~Manipulator() {}
 
 RobotBase::Manipulator::Manipulator(const RobotBase::Manipulator& r)
 {

@@ -166,7 +166,7 @@ class BaseCameraSensor : public SensorBase
                 fTimeToImage = 1 / (float)framerate;
                 GetEnv()->UpdatePublishedBodies();
                 if( !GetEnv()->GetCameraImage(vimagedata, _pgeom->width, _pgeom->height, _trans, _pgeom->KK) )
-                    RAVELOG_ERRORA("camera failed to get image\n");
+                    RAVELOG_DEBUGA("camera failed to get image\n");
                 //GetEnv()->WriteCameraImage(_pgeom->width, _pgeom->height, _trans, _pgeom->KK,"cam.jpg","jpg");
                 
                 // copy the data

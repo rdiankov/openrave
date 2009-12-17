@@ -102,6 +102,9 @@ struct null_deleter
 
 /// if set, will return all transforms are 1x7 vectors where first 4 compoonents are quaternion
 static bool s_bReturnTransformQuaternions = false;
+bool GetReturnTransformQuaternions() { return s_bReturnTransformQuaternions; }
+void SetReturnTransformQuaternions(bool bset) { s_bReturnTransformQuaternions = bset; }
+
 struct DummyStruct {};
 
 class PyInterfaceBase;
@@ -220,9 +223,30 @@ inline Transform ExtractTransformType(const object& o)
     return t;
 }
 
+template <typename T>
+inline TransformMatrix ExtractTransformMatrixType(const object& o)
+{
+    if( len(o) == 7 )
+        return Transform(Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3])),
+                         Vector(extract<T>(o[4]), extract<T>(o[5]), extract<T>(o[6])));
+    TransformMatrix t;
+    for(int i = 0; i < 3; ++i) {
+        t.m[4*i+0] = extract<T>(o[4*i+0]);
+        t.m[4*i+1] = extract<T>(o[4*i+1]);
+        t.m[4*i+2] = extract<T>(o[4*i+2]);
+        t.trans[i] = extract<T>(o[4*i+3]);
+    }
+    return t;
+}
+
 inline Transform ExtractTransform(const object& oraw)
 {
     return ExtractTransformType<dReal>(oraw.attr("flat"));
+}
+
+inline TransformMatrix ExtractTransformMatrix(const object& oraw)
+{
+    return ExtractTransformMatrixType<dReal>(oraw.attr("flat"));
 }
 
 template <typename T>
@@ -253,6 +277,17 @@ inline object toPyArray(const TransformMatrix& t)
     pdata[4] = t.m[4]; pdata[5] = t.m[5]; pdata[6] = t.m[6]; pdata[7] = t.trans.y;
     pdata[8] = t.m[8]; pdata[9] = t.m[9]; pdata[10] = t.m[10]; pdata[11] = t.trans.z;
     pdata[12] = 0; pdata[13] = 0; pdata[14] = 0; pdata[15] = 1;
+    return static_cast<numeric::array>(handle<>(pyvalues));
+}
+
+inline object toPyArrayRotation(const TransformMatrix& t)
+{
+    npy_intp dims[] = {3,3};
+    PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
+    dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
+    pdata[0] = t.m[0]; pdata[1] = t.m[1]; pdata[2] = t.m[2];
+    pdata[3] = t.m[4]; pdata[4] = t.m[5]; pdata[5] = t.m[6];
+    pdata[6] = t.m[8]; pdata[7] = t.m[9]; pdata[8] = t.m[10];
     return static_cast<numeric::array>(handle<>(pyvalues));
 }
 
@@ -292,16 +327,12 @@ inline object ReturnTransform(T t)
 
 inline object toPyVector3(Vector v)
 {
-    numeric::array arr(boost::python::make_tuple(v.x,v.y,v.z));
-    arr.resize(3,1);
-    return arr;
+    return numeric::array(boost::python::make_tuple(v.x,v.y,v.z));
 }
 
 inline object toPyVector4(Vector v)
 {
-    numeric::array arr(boost::python::make_tuple(v.x,v.y,v.z,v.w));
-    arr.resize(4,1);
-    return arr;
+    return numeric::array(boost::python::make_tuple(v.x,v.y,v.z,v.w));
 }
 
 inline object toPyArrayN(const float* pvalues, int N)
@@ -633,6 +664,7 @@ public:
     bool InitFromFile(const string& filename) { return _pbody->InitFromFile(filename,std::list<std::pair<std::string,std::string> >()); }
     bool InitFromData(const string& data) { return _pbody->InitFromData(data,std::list<std::pair<std::string,std::string> >()); }
 
+    void SetName(const string& name) { _pbody->SetName(name); }
     string GetName() const { return _pbody->GetName(); }
     int GetDOF() const { return _pbody->GetDOF(); }
 
@@ -2498,6 +2530,141 @@ public:
     string GetHomeDirectory() { return _penv->GetHomeDirectory(); }
 };
 
+object quatFromAxisAngle1(object oaxis)
+{
+    Vector axis = ExtractVector3(oaxis);
+    dReal axislen = RaveSqrt(axis.lengthsqr3());
+    if( axislen < 1e-6 )
+        return numeric::array(boost::python::make_tuple((dReal)1,(dReal)0,(dReal)0,(dReal)0));
+    dReal sang = RaveSin(axislen*0.5f)/axislen;
+    return toPyVector4(Vector(RaveCos(axislen*0.5f),axis[0]*sang,axis[1]*sang,axis[2]*sang));
+}
+
+object quatFromAxisAngle2(object oaxis, object oangle)
+{
+    Vector axis = ExtractVector3(oaxis);
+    dReal axislen = RaveSqrt(axis.lengthsqr3());
+    if( axislen == 0 )
+        return numeric::array(boost::python::make_tuple((dReal)1,(dReal)0,(dReal)0,(dReal)0));
+    dReal angle = extract<dReal>(oangle)*0.5f;
+    dReal sang = RaveSin(angle)/axislen;
+    return toPyVector4(Vector(RaveCos(angle),axis[0]*sang,axis[1]*sang,axis[2]*sang));
+}
+
+object quatFromRotationMatrix(object R)
+{
+    TransformMatrix t;
+    t.rotfrommat(extract<dReal>(R[0][0]), extract<dReal>(R[0][1]), extract<dReal>(R[0][2]),
+                 extract<dReal>(R[1][0]), extract<dReal>(R[1][1]), extract<dReal>(R[1][2]),
+                 extract<dReal>(R[2][0]), extract<dReal>(R[2][1]), extract<dReal>(R[2][2]));
+    return toPyVector4(Transform(t).rot);
+}
+
+object axisAngleFromRotationMatrix(object R)
+{
+    TransformMatrix t;
+    t.rotfrommat(extract<dReal>(R[0][0]), extract<dReal>(R[0][1]), extract<dReal>(R[0][2]),
+                 extract<dReal>(R[1][0]), extract<dReal>(R[1][1]), extract<dReal>(R[1][2]),
+                 extract<dReal>(R[2][0]), extract<dReal>(R[2][1]), extract<dReal>(R[2][2]));
+    Vector quat = Transform(t).rot;
+    if( quat.x < 0 )
+        quat = -quat;
+    dReal sinang = quat.y*quat.y+quat.z*quat.z+quat.w*quat.w;
+    if( RaveFabs(sinang) > 0 ) {
+        sinang = RaveSqrt(sinang);
+        dReal f = 2.0*RaveAtan2(sinang,quat.x)/sinang;
+        return toPyVector3(Vector(quat.y*f,quat.z*f,quat.w*f));
+    }
+    return toPyVector3(Vector(0,0,0));
+}
+
+object rotationMatrixFromQuat(object oquat)
+{
+    Transform t; t.rot = ExtractVector4(oquat);
+    return toPyArrayRotation(TransformMatrix(t));
+}
+
+object matrixFromQuat(object oquat)
+{
+    Transform t; t.rot = ExtractVector4(oquat);
+    return toPyArray(TransformMatrix(t));
+}
+
+object rotationMatrixFromAxisAngle1(object oaxis)
+{
+    Vector axis = ExtractVector3(oaxis);
+    dReal axislen = RaveSqrt(axis.lengthsqr3());
+    if( axislen < 1e-6 )
+        return numeric::array(boost::python::make_tuple((dReal)1,(dReal)0,(dReal)0,(dReal)0));
+    dReal sang = RaveSin(axislen*0.5f)/axislen;
+    Transform t; t.rot = Vector(RaveCos(axislen*0.5f),axis[0]*sang,axis[1]*sang,axis[2]*sang);
+    return toPyArrayRotation(TransformMatrix(t));
+}
+
+object rotationMatrixFromAxisAngle2(object oaxis, object oangle)
+{
+    Vector axis = ExtractVector3(oaxis);
+    dReal axislen = RaveSqrt(axis.lengthsqr3());
+    if( axislen == 0 )
+        return numeric::array(boost::python::make_tuple((dReal)1,(dReal)0,(dReal)0,(dReal)0));
+    dReal angle = extract<dReal>(oangle)*0.5f;
+    dReal sang = RaveSin(angle)/axislen;
+    Transform t; t.rot = Vector(RaveCos(angle),axis[0]*sang,axis[1]*sang,axis[2]*sang);
+    return toPyArrayRotation(TransformMatrix(t));
+}
+
+object matrixFromAxisAngle1(object oaxis)
+{
+    Vector axis = ExtractVector3(oaxis);
+    dReal axislen = RaveSqrt(axis.lengthsqr3());
+    if( axislen < 1e-6 )
+        return numeric::array(boost::python::make_tuple((dReal)1,(dReal)0,(dReal)0,(dReal)0));
+    dReal sang = RaveSin(axislen*0.5f)/axislen;
+    Transform t; t.rot = Vector(RaveCos(axislen*0.5f),axis[0]*sang,axis[1]*sang,axis[2]*sang);
+    return toPyArray(TransformMatrix(t));
+}
+
+object matrixFromAxisAngle2(object oaxis, object oangle)
+{
+    Vector axis = ExtractVector3(oaxis);
+    dReal axislen = RaveSqrt(axis.lengthsqr3());
+    if( axislen == 0 )
+        return numeric::array(boost::python::make_tuple((dReal)1,(dReal)0,(dReal)0,(dReal)0));
+    dReal angle = extract<dReal>(oangle)*0.5f;
+    dReal sang = RaveSin(angle)/axislen;
+    Transform t; t.rot = Vector(RaveCos(angle),axis[0]*sang,axis[1]*sang,axis[2]*sang);
+    return toPyArray(TransformMatrix(t));
+}
+
+object matrixFromPose(object opose)
+{
+    return toPyArray(TransformMatrix(ExtractTransformType<dReal>(opose)));
+}
+
+object poseFromMatrix(object o)
+{
+    TransformMatrix t;
+    for(int i = 0; i < 3; ++i) {
+        t.m[4*i+0] = extract<dReal>(o[i][0]);
+        t.m[4*i+1] = extract<dReal>(o[i][1]);
+        t.m[4*i+2] = extract<dReal>(o[i][2]);
+        t.trans[i] = extract<dReal>(o[i][3]);
+    }
+    return toPyArray(Transform(t));
+}
+
+string matrixSerialization(object o)
+{
+    stringstream ss; ss << ExtractTransformMatrix(o);
+    return ss.str();
+}
+
+string poseSerialization(object o)
+{
+    stringstream ss; ss << ExtractTransform(o);
+    return ss.str();
+}
+
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetViewer_overloads, SetViewer, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckCollisionRays_overloads, CheckCollisionRays, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(plot3_overloads, plot3, 2, 4)
@@ -2684,6 +2851,7 @@ BOOST_PYTHON_MODULE(openravepy)
         scope kinbody = class_<PyKinBody, boost::shared_ptr<PyKinBody>, bases<PyInterfaceBase> >("KinBody", no_init)
             .def("InitFromFile",&PyKinBody::InitFromFile)
             .def("InitFromData",&PyKinBody::InitFromData)
+            .def("SetName", &PyKinBody::SetName)
             .def("GetName",&PyKinBody::GetName)
             .def("GetDOF",&PyKinBody::GetDOF)
             .def("GetJointValues",&PyKinBody::GetJointValues)
@@ -3141,8 +3309,23 @@ BOOST_PYTHON_MODULE(openravepy)
             ;
     }
     
-//    {
-//        scope options = class_<DummyStruct>("options")
-//            .def_readwrite("ReturnTransformQuaternions",&s_bReturnTransformQuaternions);
-//    }
+    {
+        scope options = class_<DummyStruct>("options")
+            .add_property("ReturnTransformQuaternions",GetReturnTransformQuaternions,SetReturnTransformQuaternions);
+    }
+
+    def("quatFromAxisAngle",quatFromAxisAngle1, "Converts an axis-angle rotation into a quaternion");
+    def("quatFromAxisAngle",quatFromAxisAngle2, "Converts an axis-angle rotation into a quaternion");
+    def("quatFromRotationMatrix",quatFromRotationMatrix, "Converts the rotation of a matrix into a quaternion");
+    def("axisAngleFromRotationMatrix",axisAngleFromRotationMatrix, "Converts the rotation of a matrix into axis-angle representation");
+    def("rotationMatrixFromQuat",rotationMatrixFromQuat, "Converts a quaternion to a 3x3 matrix");
+    def("matrixFromQuat",matrixFromQuat, "Converts a quaternion to a 4x4 affine matrix");
+    def("rotationMatrixFromAxisAngle",rotationMatrixFromAxisAngle1, "Converts an axis-angle rotation to a 3x3 matrix");
+    def("rotationMatrixFromAxisAngle",rotationMatrixFromAxisAngle2, "Converts an axis-angle rotation to a 3x3 matrix");
+    def("matrixFromAxisAngle",matrixFromAxisAngle1, "Converts an axis-angle rotation to a 4x4 affine matrix");
+    def("matrixFromAxisAngle",matrixFromAxisAngle2, "Converts an axis-angle rotation to a 4x4 affine matrix");
+    def("matrixFromPose",matrixFromPose, "Converts a 7 element quaterion+translation transform to a 4x4 matrix");
+    def("poseFromMatrix",poseFromMatrix,"Converts a 4x4 matrix to a 7 element quaternion+translation representation");
+    def("matrixSerialization",matrixSerialization,"Serializes a transformation into a string representing a 3x4 matrix");
+    def("poseSerialization",poseSerialization, "Serializes a transformation into a string representing a quaternion with translation");
 }

@@ -21,7 +21,7 @@ ghandle = None
 def itemselectioncb(link,pos,org,env):
     global ghandle
     print 'in python: body ',link.GetParent().GetName(),':',link.GetName(),'at',reshape(pos,(3))
-    ghandle = env.plot3(points=reshape(pos,(3)),pointsize=25.0,colors=array((1,0,0)))
+    ghandle = env.plot3(points=pos,pointsize=25.0,colors=array((1,0,0)))
     return 0
 
 if __name__=='__main__':
@@ -47,4 +47,4 @@ if __name__=='__main__':
         cmd = raw_input('In selection mode, click anywhere on the viewer. Enter command (q-quit): ')
         if cmd == 'q':
             break
-    env.Destroy()
+    env.Destroy() # done with the environment

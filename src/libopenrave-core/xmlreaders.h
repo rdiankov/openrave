@@ -64,7 +64,8 @@ namespace OpenRAVEXMLParser
     }
 
     static void SetDataDirs(const vector<string>& vdatadirs) {
-        EnvironmentMutex::scoped_lock lock(*GetXMLMutex());
+        boost::shared_ptr<EnvironmentMutex> m = GetXMLMutex();
+        EnvironmentMutex::scoped_lock lock(*m);
         GetDataDirs() = vdatadirs;
     }
 
@@ -245,7 +246,8 @@ namespace OpenRAVEXMLParser
         if( filename.size() == 0 )
             return false;
 
-        EnvironmentMutex::scoped_lock lock(*GetXMLMutex());
+        boost::shared_ptr<EnvironmentMutex> m = GetXMLMutex();
+        EnvironmentMutex::scoped_lock lock(*m);
 
         // init the dir (for some reason msvc confuses the linking of the string class with soqt, so do it the old fashioned way)
         string olddir = GetParseDirectory();
@@ -336,13 +338,15 @@ namespace OpenRAVEXMLParser
     {
         if( pdata.size() == 0 )
             return false;
-        EnvironmentMutex::scoped_lock lock(*GetXMLMutex());
+        boost::shared_ptr<EnvironmentMutex> m = GetXMLMutex();
+        EnvironmentMutex::scoped_lock lock(*m);
         return raveXmlSAXUserParseMemory(GetSAXHandler(), preader, pdata.c_str(), pdata.size())==0;
     }
 
     static EnvironmentBase::CreateXMLReaderFn RegisterXMLReader(PluginType type, const std::string& xmltag, const EnvironmentBase::CreateXMLReaderFn& fn)
     {
-        EnvironmentMutex::scoped_lock lock(*GetXMLMutex());
+        boost::shared_ptr<EnvironmentMutex> m = GetXMLMutex();
+        EnvironmentMutex::scoped_lock lock(*m);
         EnvironmentBase::CreateXMLReaderFn oldfn = GetRegisteredReaders()[type][xmltag];
         GetRegisteredReaders()[type][xmltag] = fn;
         return oldfn;
@@ -350,11 +354,8 @@ namespace OpenRAVEXMLParser
 
     static void UnregisterXMLReader(PluginType type, const std::string& xmltag, const EnvironmentBase::CreateXMLReaderFn& oldfn)
     {
-        static boost::shared_ptr<EnvironmentMutex> xmlmutex;
-        if( !xmlmutex )
-            xmlmutex = GetXMLMutex();
-
-        EnvironmentMutex::scoped_lock lock(*xmlmutex);
+        static boost::shared_ptr<EnvironmentMutex> m = GetXMLMutex();
+        EnvironmentMutex::scoped_lock lock(*m);
         GetRegisteredReaders()[type][xmltag] = oldfn;
     }
 
@@ -1315,6 +1316,7 @@ namespace OpenRAVEXMLParser
                         GetXMLErrorCount()++;
                         break;
                     }
+                    _filename = preader->_filename;
                 }
             }
 
@@ -1441,6 +1443,8 @@ namespace OpenRAVEXMLParser
             // reisze _vTransforms to be the same size as the initial number of links
             _pchain->GetBodyTransformations(_vTransforms);
             _pchain->SetGuiData(boost::shared_ptr<void>());
+
+            SetXMLFilename(_filename);
         }
 
         Transform GetOffsetFrom(KinBody::LinkPtr plink)
@@ -2153,6 +2157,8 @@ namespace OpenRAVEXMLParser
                 else if( itatt->first == "prefix" )
                     _prefix = itatt->second;
             }
+
+            SetXMLFilename(_filename);
         }
 
         void SetXMLFilename(const string& filename) { if( !!_probot && _probot->strXMLFilename.size() == 0 ) _probot->strXMLFilename = filename; }
@@ -2255,6 +2261,7 @@ namespace OpenRAVEXMLParser
         
                 if( !_probot->GetEnv()->GetPhysicsEngine()->InitKinBody(_probot) )
                     RAVELOG_WARNA("physics engine failed to init robot %s\n", _probot->GetName().c_str());
+
                 return true;
             }
             else if( xmlname == "translation" ) {

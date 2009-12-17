@@ -111,6 +111,8 @@ file(GLOB example_vg_files2 ${CMAKE_CURRENT_SOURCE_DIR}/examples/visibilitygrasp
 install(FILES ${example_vg_files2} DESTINATION share/openrave/examples/visibilitygrasping)
 file(GLOB example_vg_files3 ${CMAKE_CURRENT_SOURCE_DIR}/examples/visibilitygrasping/*.py)
 install(FILES ${example_vg_files3} DESTINATION share/openrave/examples/visibilitygrasping)
+file(GLOB example_vg_files4 ${CMAKE_CURRENT_SOURCE_DIR}/examples/visibilitygrasping/*.pp)
+install(FILES ${example_vg_files4} DESTINATION share/openrave/examples/visibilitygrasping)
 set(CPPEXAMPLES ${CMAKE_CURRENT_SOURCE_DIR}/examples/cppexamples)
 install(FILES ${CPPEXAMPLES}/CMakeLists.txt ${CPPEXAMPLES}/README ${CPPEXAMPLES}/plugincpp.cpp ${CPPEXAMPLES}/customreader.cpp ${CPPEXAMPLES}/orcollision.cpp ${CPPEXAMPLES}/customreader.env.xml ${CPPEXAMPLES}/FindOpenRAVE.cmake DESTINATION share/openrave/examples/cppexamples)
 if( MSVC )

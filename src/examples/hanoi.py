@@ -19,13 +19,10 @@ from optparse import OptionParser
 
 g_probsmanip = None
 
-def SerializeTransformToCommand(T):
-    return 'trans %s rot %s'%(' '.join(str(f) for f in T[0:3,3]), ' '.join(str(f) for f in reshape(transpose(T[0:3,0:3]),9)))
-
 def MoveToHandPosition(T):
     global g_probsmanip
-    print 'movetohandposition '+SerializeTransformToCommand(T)
-    success = g_probsmanip.SendCommand('movetohandposition '+SerializeTransformToCommand(T))
+    print 'movetohandposition matrix '+ matrixSerialization(T)
+    success = g_probsmanip.SendCommand('movetohandposition matrix '+matrixSerialization(T))
     return False if success is None or len(success) == 0 else True
 
 def WaitForController(robot):
@@ -219,4 +216,4 @@ if __name__ == "__main__":
     env.LockPhysics(True)
     hanoisolve(3,srcpeg,destpeg,peg,robot,heights)
     env.LockPhysics(False)
-    env.Destroy()
+    env.Destroy() # done with the environment

@@ -37,7 +37,7 @@
 #endif
 
 /// database of planners, obstacles, sensors, and problem from plugins
-class RaveDatabase
+class RaveDatabase : public boost::enable_shared_from_this<RaveDatabase>
 {
 public:
     /// create the interfaces
@@ -52,7 +52,7 @@ public:
     class Plugin
     {
     public:
-        Plugin() : plibrary(NULL), pfnCreate(NULL), pfnGetPluginAttributes(NULL), pfnDestroyPlugin(NULL) {}
+        Plugin(boost::shared_ptr<RaveDatabase> pdatabase) : _pdatabase(pdatabase), plibrary(NULL), pfnCreate(NULL), pfnGetPluginAttributes(NULL), pfnDestroyPlugin(NULL) {}
         virtual ~Plugin() {
             // do some more checking here, there still might be instances of robots, planners, and sensors out there
             if (plibrary) {
@@ -61,13 +61,16 @@ public:
                 if( pfnDestroyPlugin != NULL )
                     pfnDestroyPlugin();
                 
-                RaveDatabase::SysCloseLibrary(plibrary);
+                boost::shared_ptr<RaveDatabase> pdatabase = _pdatabase.lock();
+                if( !!pdatabase )
+                    pdatabase->QueueLibraryDestruction(plibrary);
             }
         }
 
         const string& GetName() const { return ppluginname; }
         const PLUGININFO& GetInfo() const { return info; }
     protected:
+        boost::weak_ptr<RaveDatabase> _pdatabase;
         string ppluginname;
         PLUGININFO info;
 
@@ -112,9 +115,12 @@ public:
     /// Destroy all plugins and directories
     virtual void Destroy()
     {
-        EnvironmentMutex::scoped_lock lock(_mutex);
-        _listplugins.clear();
-        vplugindirs.clear();
+        {
+            EnvironmentMutex::scoped_lock lock(_mutex);
+            _listplugins.clear();
+            vplugindirs.clear();
+        }
+        CleanupUnusedLibraries();
     }
 
     void GetPlugins(std::list<PluginPtr>& listplugins)
@@ -263,6 +269,14 @@ public:
         return false;
     }
 
+    void CleanupUnusedLibraries()
+    {
+        EnvironmentMutex::scoped_lock lock(_mutex);
+        FOREACH(it,_listDestroyLibraryQueue)
+            RaveDatabase::SysCloseLibrary(*it);
+        _listDestroyLibraryQueue.clear();
+    }
+
     static const char* GetInterfaceHash(InterfaceBasePtr pint) { return pint->GetHash(); }
 
 protected:
@@ -282,7 +296,8 @@ protected:
                 return PluginPtr();
             }
         }
-        PluginPtr p(new Plugin());
+
+        PluginPtr p(new Plugin(shared_from_this()));
         p->ppluginname = libraryname;
         p->plibrary = plibrary;
 
@@ -369,9 +384,19 @@ protected:
 #endif
     }
 
+    void QueueLibraryDestruction(void* lib)
+    {
+        EnvironmentMutex::scoped_lock lock(_mutex);
+        _listDestroyLibraryQueue.push_back(lib);
+    }
+
     list<PluginPtr> _listplugins;
     vector<string> vplugindirs; ///< local directory for all plugins
     EnvironmentMutex _mutex;
+
+    list<void*> _listDestroyLibraryQueue;
+
+    friend class Plugin;
 };
 
 #ifdef RAVE_REGISTER_BOOST

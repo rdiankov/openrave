@@ -17,8 +17,6 @@ import numpy,scipy # nice to be able to explicitly call some functions
 from numpy import *
 from optparse import OptionParser
 from openravepy import *
-from scipy.io import read_array
-from scipy.io import write_array
 
 def GetCameraRobotMask(orenv,robotfile,sensorindex=0,robotjoints=None,robotjointinds=None,gripperjoints=None,rayoffset=0):
     orenv.Reset()
@@ -164,7 +162,7 @@ if __name__=='__main__':
     robotjoints = [float(s) for s in options.robotjoints.split()] if options.robotjoints else None
     robotjointinds = [int(s) for s in options.robotjointinds.split()] if options.robotjointinds else None
     if options.graspsetfile is not None:
-        graspdata = read_array(options.graspsetfile)
+        graspdata = numpy.loadtxt(options.graspsetfile)
         gripperjoints = graspdata[0][12:]
     if options.gripperjoints is not None:
         gripperjoints = [float(s) for s in options.gripperjoints.split()] if options.gripperjoints else None
@@ -173,7 +171,7 @@ if __name__=='__main__':
     if options.func == 'mask':
         Imask = GetCameraRobotMask(orenv,options.robotfile,sensorindex=options.sensorindex,gripperjoints=gripperjoints,robotjoints=robotjoints,robotjointinds=robotjointinds,rayoffset=options.rayoffset)
         # save as a ascii matfile
-        write_array(options.savefile,Imask)
+        numpy.savetxt(options.savefile,Imask,'%d')
         print 'mask saved to ' + options.savefile
         try:
             scipy.misc.pilutil.imshow(array(Imask*255,'uint8'))
@@ -203,23 +201,28 @@ if __name__=='__main__':
         orenv.AddKinBody(target)
         target.SetTransform(eye(4))
 
-        rhand = orenv.ReadRobotXMLFile('robots/hrp2rhandjsk.robot.xml')
-        orenv.AddRobot(rhand)
+        orrobot = orenv.ReadRobotXMLFile(options.robotfile)
+        orenv.AddRobot(orrobot)
+        if options.robotjoints is not None:
+            if options.robotjointinds is not None:
+                orrobot.SetJointValues(options.robotjoints,options.robotjointinds)
+            else:
+                orrobot.SetJointValues(options.robotjoints)
+
+        attached = orrobot.GetSensors()[options.sensorindex]
+        # find a manipulator whose end effector is the camera
+        manip = [m for m in orrobot.GetManipulators() if m.GetEndEffector().GetIndex() == attached.GetAttachingLink().GetIndex()][0]
 
         # transform into end effect gripper
         for g in graspdata:
-            Tgrasp = r_[transpose(reshape(g[0:12],(4,3))),[[0,0,0,1]]]
-            rhand.SetTransform(Tgrasp)
-            rhand.SetJointValues(g[12:])
-        
-            while orenv.CheckCollision(rhand,target):
+            Tgrasp = dot(r_[transpose(reshape(g[0:12],(4,3))),[[0,0,0,1]]],manip.GetGraspTransform())
+            orrobot.SetJointValues(g[12:],manip.GetGripperJoints())
+            T = Tgrasp
+            while manip.CheckEndEffectorCollision(T,None):
                 T = array(Tgrasp)
                 T[0:3,3] += 0.004*(random.rand(3)-0.5)
-                rhand.SetTransform(T)
-            T = rhand.GetManipulators()[0].GetEndEffectorTransform()
             g[0:12] = reshape(transpose(T[0:3,:]),(12,))
         
-        pickle.dump((read_array(options.convexfile),visibilitydata,graspdata),open(options.savepp,'w'))
-        orenv.RemoveKinBody(rhand)
+        pickle.dump((numpy.loadtxt(options.convexfile),visibilitydata,graspdata),open(options.savepp,'w'))
 
     orenv.Destroy()

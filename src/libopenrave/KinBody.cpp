@@ -607,7 +607,6 @@ void KinBody::Destroy()
     _pPhysicsData.reset();
     _pCollisionData.reset();
     _pManageData.reset();
-    _listRegisteredCallbacks.clear();
 }
 
 bool KinBody::InitFromFile(const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts)
@@ -618,7 +617,6 @@ bool KinBody::InitFromFile(const std::string& filename, const std::list<std::pai
         return false;
     }
 
-    strXMLFilename = filename;
     return true;
 }
 
@@ -2097,15 +2095,19 @@ void KinBody::ParametersChanged(int parameters)
     }
 }
 
-void KinBody::__erase_iterator(std::list<std::pair<int,boost::function<void()> > >::iterator* pit)
+void KinBody::__erase_iterator(KinBodyWeakPtr pweakbody, std::list<std::pair<int,boost::function<void()> > >::iterator* pit)
 {
-    if( !!pit )
-        _listRegisteredCallbacks.erase(*pit);
+    if( !!pit ) {
+        KinBodyPtr pbody = pweakbody.lock();
+        if( !!pbody )
+            pbody->_listRegisteredCallbacks.erase(*pit);
+        delete pit;
+    }
 }
 
 boost::shared_ptr<void> KinBody::RegisterChangeCallback(int properties, const boost::function<void()>& callback)
 {
-    return boost::shared_ptr<void>(new std::list<std::pair<int,boost::function<void()> > >::iterator(_listRegisteredCallbacks.insert(_listRegisteredCallbacks.end(),make_pair(properties,callback))), boost::bind(&KinBody::__erase_iterator,boost::bind(&sptr_from<KinBody>,KinBodyWeakPtr(shared_kinbody())), _1));
+    return boost::shared_ptr<void>(new std::list<std::pair<int,boost::function<void()> > >::iterator(_listRegisteredCallbacks.insert(_listRegisteredCallbacks.end(),make_pair(properties,callback))), boost::bind(KinBody::__erase_iterator,KinBodyWeakPtr(shared_kinbody()), _1));
 }
 
 } // end namespace OpenRAVE

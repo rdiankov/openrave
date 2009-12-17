@@ -25,6 +25,7 @@ class IkFastSolver : public IkSolverBase
     typedef bool (*IkFn)(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<Solution>& vsolutions);
     
  IkFastSolver(IkFn pfnik, const std::vector<int>& vfreeparams, dReal fFreeInc, int nTotalJoints, EnvironmentBasePtr penv) : IkSolverBase(penv), _vfreeparams(vfreeparams), _pfnik(pfnik), _fFreeInc(fFreeInc), _nTotalJoints(nTotalJoints) {}
+    virtual ~IkFastSolver() {}
 
     inline boost::shared_ptr<IkFastSolver<IKReal,IKType,Solution> > shared_solver() { return boost::static_pointer_cast<IkFastSolver<IKReal,IKType, Solution> >(shared_from_this()); }
     inline boost::shared_ptr<IkFastSolver<IKReal,IKType,Solution> const> shared_solver_const() const { return boost::static_pointer_cast<IkFastSolver<IKReal,IKType,Solution> const>(shared_from_this()); }

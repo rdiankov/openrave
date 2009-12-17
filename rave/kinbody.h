@@ -543,7 +543,7 @@ public:
     virtual void SetGuiData(boost::shared_ptr<void> pdata) { _pGuiData = pdata; }
     virtual boost::shared_ptr<void> GetGuiData() const { return _pGuiData; }
 
-    virtual const std::string GetXMLFilename() const { return strXMLFilename; }
+    virtual const std::string& GetXMLFilename() const { return strXMLFilename; }
 
     virtual const std::set<int>& GetNonAdjacentLinks() const;
     virtual const std::set<int>& GetAdjacentLinks() const;
@@ -623,6 +623,8 @@ protected:
 private:
     mutable std::vector<dReal> _vTempJoints;
     virtual const char* GetHash() const { return OPENRAVE_KINBODY_HASH; }
+
+    static void __erase_iterator(KinBodyWeakPtr pweakbody, std::list<std::pair<int,boost::function<void()> > >::iterator* pit);
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER

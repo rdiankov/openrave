@@ -26,7 +26,6 @@
     } \
 
 #define CHECK_COLLISION_BODY(body) { \
-        EnvironmentMutex::scoped_lock lockenv(GetMutex()); \
         CHECK_INTERFACE(body); \
         if( !(body)->GetCollisionData() ) { \
             RAVELOG_WARNA("body %s not added to enviornment!\n", (body)->GetName().c_str()); \
@@ -546,12 +545,14 @@ class Environment : public EnvironmentBase
 
     virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report = CollisionReportPtr())
     {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody1);
         return _pCurrentChecker->CheckCollision(pbody1,report);
     }
 
     virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report = CollisionReportPtr())
     {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody1);
         CHECK_COLLISION_BODY(pbody2);
         return _pCurrentChecker->CheckCollision(pbody1,pbody2,report);
@@ -559,12 +560,14 @@ class Environment : public EnvironmentBase
 
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr())
     {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
         return _pCurrentChecker->CheckCollision(plink,report);
     }
 
     virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report = CollisionReportPtr())
     {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink1->GetParent());
         CHECK_COLLISION_BODY(plink2->GetParent());
         return _pCurrentChecker->CheckCollision(plink1,plink2,report);
@@ -572,6 +575,7 @@ class Environment : public EnvironmentBase
 
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
     {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
         CHECK_COLLISION_BODY(pbody);
         return _pCurrentChecker->CheckCollision(plink,pbody,report);
@@ -579,23 +583,27 @@ class Environment : public EnvironmentBase
     
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report = CollisionReportPtr())
     {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
         return _pCurrentChecker->CheckCollision(plink,vbodyexcluded,vlinkexcluded,report);
     }
 
     virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report = CollisionReportPtr())
     {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
         return _pCurrentChecker->CheckCollision(pbody,vbodyexcluded,vlinkexcluded,report);
     }
     
     virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr())
     {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
         return _pCurrentChecker->CheckCollision(ray,plink,report);
     }
     virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
     {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
         return _pCurrentChecker->CheckCollision(ray,pbody,report);
     }
@@ -606,6 +614,7 @@ class Environment : public EnvironmentBase
 
     virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
     {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
         return _pCurrentChecker->CheckCollision(pbody,report);
     }
@@ -1486,8 +1495,10 @@ protected:
                 UpdatePublishedBodies();
             }
 
-            if( bNeedSleep )
+            if( bNeedSleep ) {
                 Sleep(1);
+                _pdatabase->CleanupUnusedLibraries();
+            }
         }
     }
 

@@ -47,7 +47,5 @@ if __name__ == "__main__":
     env.LockPhysics(False)
     
     raw_input('press any key to exit: ')
-    robot = None
-    manipprob = None
     env.Destroy() # done with the environment
 

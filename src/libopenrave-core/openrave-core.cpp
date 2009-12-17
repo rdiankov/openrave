@@ -125,3 +125,155 @@ void CreateTriMeshData(SoNode* pnode, KinBody::Link::TRIMESH& tri)
 }
 
 #endif
+
+#ifdef OPENRAVE_COLLADA_SUPPORT
+#include "colladareader.h"
+#include "colladawriter.h"
+
+bool RaveParseColladaFile(EnvironmentBasePtr penv, const string& filename)
+{
+    ColladaReader reader(penv);
+    if (!reader.InitFromFile(filename))
+        return false;
+    return reader.Extract(penv);
+}
+
+bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& filename)
+{
+    ColladaReader reader(penv);
+    if (!reader.InitFromFile(filename))
+        return false;
+    return reader.Extract(pbody);
+}
+
+bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& filename)
+{
+    ColladaReader reader(penv);
+    if (!reader.InitFromFile(filename))
+        return false;
+    return reader.Extract(probot);
+}
+
+bool RaveParseColladaData(EnvironmentBasePtr penv, const string& pdata) {
+    ColladaReader reader(penv);
+    if (!reader.InitFromData(pdata))
+        return false;
+    return reader.Extract(penv);
+}
+
+bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& pdata)
+{
+    ColladaReader reader(penv);
+    if (!reader.InitFromData(pdata))
+        return false;
+    return reader.Extract(pbody);
+}
+
+bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& pdata)
+{
+    ColladaReader reader(penv);
+    if (!reader.InitFromData(pdata))
+        return false;
+    return reader.Extract(probot);
+}
+
+bool RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename)
+{
+    RAVELOG_VERBOSEA("bool RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename)\n");
+
+    ColladaWriter writer(penv);
+
+    if( !writer.Write(penv) )
+    {
+        return false;
+    }
+
+    return writer.Save(filename);
+}
+
+bool RaveWriteColladaFile(KinBodyPtr pbody, const string& filename)
+{
+    RAVELOG_VERBOSEA("bool RaveWriteColladaFile(KinBodyPtr pbody, const string& filename)\n");
+
+    ColladaWriter writer(pbody->GetEnv());
+
+    if( !writer.Write(pbody) )
+    {
+        return false;
+    }
+
+    return writer.Save(filename);
+}
+
+bool RaveWriteColladaFile(RobotBasePtr probot, const string& filename)
+{
+    RAVELOG_VERBOSEA("bool RaveWriteColladaFile(RobotBasePtr probot, const string& filename)\n");
+
+    ColladaWriter writer(probot->GetEnv());
+
+    if( !writer.Write(probot) )
+    {
+        return false;
+    }
+
+    return writer.Save(filename);
+}
+
+#else
+
+bool RaveParseColladaFile(EnvironmentBasePtr penv, const string& filename)
+{
+    RAVELOG_ERRORA("collada files not supported\n");
+    return false;
+}
+
+bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& filename)
+{
+    RAVELOG_ERRORA("collada files not supported\n");
+    return false;
+}
+
+bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& filename)
+{
+    RAVELOG_ERRORA("collada files not supported\n");
+    return false;
+}
+
+bool RaveParseColladaData(EnvironmentBasePtr penv, const string& pdata)
+{
+    RAVELOG_ERRORA("collada files not supported\n");
+    return false;
+}
+
+bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& pdata)
+{
+    RAVELOG_ERRORA("collada files not supported\n");
+    return false;
+}
+
+bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& pdata)
+{
+    RAVELOG_ERRORA("collada files not supported\n");
+    return false;
+}
+
+
+bool RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename)
+{
+    RAVELOG_ERRORA("collada files not supported\n");
+    return false;
+}
+
+bool RaveWriteColladaFile(KinBodyPtr pbody, const string& filename)
+{
+    RAVELOG_ERRORA("collada files not supported\n");
+    return false;
+}
+
+bool RaveWriteColladaFile(RobotBasePtr probot, const string& filename)
+{
+    RAVELOG_ERRORA("collada files not supported\n");
+    return false;
+}
+
+#endif

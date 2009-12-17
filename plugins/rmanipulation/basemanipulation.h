@@ -945,6 +945,8 @@ protected:
             if(p.q.size() == voffset.size() ) {
                 for(size_t i = 0; i < voffset.size(); ++i)
                     p.q[i] += voffset[i]*vclosingsign[i];
+                robot->SetActiveDOFValues(p.q,true);
+                robot->GetActiveDOFValues(p.q);
             }
 
             ptraj->Clear();
