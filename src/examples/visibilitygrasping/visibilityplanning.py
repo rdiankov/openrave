@@ -324,7 +324,7 @@ class VisibilityGrasping():
             if trajdata is None:
                 print 'failed to find trajectory'
             self.starttrajectory(trajdata)
-            trajdata = manipprob.SendCommand('movetohandposition maxiter 1000 maxtries 1 seedik 4 matrices ' + str(len(Tnewgoals)) + ' '.join(matrixSerialization(T) for T in Tnewgoals) + cmdstr)
+            trajdata = manipprob.SendCommand('movetohandposition maxiter 1000 maxtries 1 seedik 4 matrices ' + str(len(Tnewgoals)) + ' ' + ' '.join(matrixSerialization(T) for T in Tnewgoals) + cmdstr)
             if trajdata is None:
                 print 'failed to find trajectory'
                 trajdata = manipprob.SendCommand('releasefingers target ' + self.target.GetName() + cmdstr)
