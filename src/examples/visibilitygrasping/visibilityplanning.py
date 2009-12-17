@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License. 
 import sys, os, time, signal, threading, pickle
-import numpy,scipy # nice to be able to explicitly call some functions
+import numpy # nice to be able to explicitly call some functions
 from numpy import *
 from optparse import OptionParser
 from openravepy import *
