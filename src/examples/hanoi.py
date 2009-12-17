@@ -26,9 +26,8 @@ def MoveToHandPosition(T):
     return False if success is None or len(success) == 0 else True
 
 def WaitForController(robot):
-    robot.GetEnv().LockPhysics(False)
-    robot.WaitForController(0)
-    robot.GetEnv().LockPhysics(True)
+    while not robot.GetController().IsDone():
+        robot.WaitForController(1)
 
 def MoveToPosition(robot,values,indices):
     WaitForController(robot)
@@ -213,7 +212,5 @@ if __name__ == "__main__":
     destpeg.disks = []
     peg.disks = []
 
-    env.LockPhysics(True)
     hanoisolve(3,srcpeg,destpeg,peg,robot,heights)
-    env.LockPhysics(False)
     env.Destroy() # done with the environment
