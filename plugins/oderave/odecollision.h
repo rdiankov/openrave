@@ -495,7 +495,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         // ASSUMPTION: every space is attached to a KinBody!
         if( !dGeomIsEnabled(o1) || !dGeomIsEnabled(o2) )
             return;
-    
+
         // only recurse two spaces if one of them is _pbody
         if( dGeomIsSpace(o1) && dGeomIsSpace(o2) && !(o1data != NULL && *o1data == pcb->_pbody) && !(o2data != NULL && *o2data == pcb->_pbody) )
             return;
@@ -504,7 +504,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         if( dGeomIsSpace(o1) ) {
             BOOST_ASSERT(!!o1data);
             if( pcb->_pbody->IsAttached(*o1data) )
-            return;
+                return;
         }
         if( dGeomIsSpace(o2) ) {
             BOOST_ASSERT(!!o2data);
@@ -512,7 +512,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                 return;
         }
 
-        if (dGeomIsSpace(o1) || dGeomIsSpace(o2)) {    
+        if (dGeomIsSpace(o1) || dGeomIsSpace(o2)) {
             dSpaceCollide2(o1,o2,pcb,KinBodyCollisionCallback);
             return;
         }
@@ -531,6 +531,8 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         if( !!pkb1 && !pkb1->IsEnabled() )
             return;
         if( !!pkb2 && !pkb2->IsEnabled() )
+            return;
+        if( !!pkb1 && !!pkb2 && pkb1->GetParent()->IsAttached(pkb2->GetParent()) )
             return;
 
         dContact contact[16];
@@ -588,6 +590,8 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         if( !!pkb1 && !pkb1->IsEnabled() )
             return;
         if( !!pkb2 && !pkb2->IsEnabled() )
+            return;
+        if( !!pkb1 && !!pkb2 && pkb1->GetParent()->IsAttached(pkb2->GetParent()) )
             return;
 
         // only care if one of the bodies is the link
@@ -665,6 +669,8 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         if( !!pkb1 && !pkb1->IsEnabled() )
             return;
         if( !!pkb2 && !pkb2->IsEnabled() )
+            return;
+        if( !!pkb1 && !!pkb2 && pkb1->GetParent()->IsAttached(pkb2->GetParent()) )
             return;
 
         // only care if one of the bodies is the link

@@ -19,10 +19,9 @@ from optparse import OptionParser
 
 g_probsmanip = None
 
-def MoveToHandPosition(T):
-    global g_probsmanip
+def MoveToHandPosition(T,probsmanip):
     print 'movetohandposition matrix '+ matrixSerialization(T)
-    success = g_probsmanip.SendCommand('movetohandposition matrix '+matrixSerialization(T))
+    success = probsmanip.SendCommand('movetohandposition matrix '+matrixSerialization(T))
     return False if success is None or len(success) == 0 else True
 
 def WaitForController(robot):
@@ -83,21 +82,21 @@ def putblock(robot, disk, srcpeg, destpeg, height):
             print('Tnewhand2 invalid')
             continue
         
-        if not MoveToHandPosition(Tnewhand):
+        if not MoveToHandPosition(Tnewhand,g_probsmanip):
             print('failed to move to position above source peg')
             continue
         WaitForController(robot) # wait for robot to complete all trajectories
-        
-        if not MoveToHandPosition(Tnewhand2):
+
+        if not MoveToHandPosition(Tnewhand2,g_probsmanip):
             print('failed to move to position above dest peg')
             continue
         WaitForController(robot) # wait for robot to complete all trajectories
-        
-        if not MoveToHandPosition(T):
+
+        if not MoveToHandPosition(T,g_probsmanip):
             print('failed to move to dest peg')
             continue
         WaitForController(robot) # wait for robot to complete all trajectories
-        
+
         return True
 
     print('failed to put block')
@@ -124,13 +123,13 @@ def hanoimove(robot, disk, srcpeg, destpeg, height):
         for ang1 in arange(-0.8,0,0.2):
             Tgrasps = GetGrasp(Tdisk, disk.radius, [ang1,ang2]) # get the grasp transform given the two angles
             for Tgrasp in Tgrasps: # for each of the grasps
-                if MoveToHandPosition(Tgrasp): # move the hand to that location
+                if MoveToHandPosition(Tgrasp,g_probsmanip): # move the hand to that location
                     # succeeded so grab the disk
                     WaitForController(robot)
                     g_probsmanip.SendCommand('closefingers')
                     WaitForController(robot)
                     robot.Grab(disk)
-                    
+
                     # try to pub the disk in the destination peg
                     if putblock(robot, disk, srcpeg, destpeg, height):
                         # succeeded so release the disk
@@ -138,7 +137,7 @@ def hanoimove(robot, disk, srcpeg, destpeg, height):
                         robot.ReleaseAllGrabbed()
                         openhandfn()
                         return True
-                    
+
                     # open hand and try a different grasp
                     WaitForController(robot) # wait for robot to complete all trajectories
                     robot.ReleaseAllGrabbed()
@@ -154,7 +153,7 @@ def hanoisolve(n, pegfrom, pegto, pegby, robot, heights):
         if not hanoimove(robot, disk, pegfrom, pegto, heights[len(pegto.disks)]):
             print('failed to solve hanoi')
             raise
-        
+
         # add the disk onto the correct peg list
         pegto.disks.append(disk)
         pegfrom.disks.pop()
@@ -195,7 +194,7 @@ if __name__ == "__main__":
 
     disknames = ['disk0','disk1','disk2']
     heights = array([0.021,0.062,0.103])+0.01
-    
+
     disks = []
     diskradius = []
     for name in disknames:
