@@ -22,8 +22,8 @@ from Tkinter import *
 import tkFileDialog
 import Image, ImageDraw, ImageTk
 
-sys.path.append('..')
-import metaclass
+#sys.path.append('..')
+#import metaclass
 
 class CameraViewerGUI(threading.Thread):
     class Container:
@@ -72,7 +72,7 @@ class CameraViewerGUI(threading.Thread):
         self.main.after(0,self.updateimage)
         self.main.mainloop()
 
-class VisibilityGrasping(metaclass.AutoReloader):
+class VisibilityGrasping():
     """Calls on the openrave grasp planners to get a robot to pick up objects while guaranteeing visibility with its cameras"""
     def __init__(self):
         self.orenvreal = Environment()
