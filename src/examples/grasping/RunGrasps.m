@@ -32,14 +32,11 @@ robot.id = orEnvCreateRobot(robot.name,robot.filename);
 
 Target.name = 'testobject';
 Target.id = orEnvCreateKinBody(Target.name,targetfilename);
-orBodySetTransform(Target.id,[0 0 0],[1 0 0 0])
 probs.grasp = orEnvCreateProblem('GrasperProblem', robot.name);
 
 %% run the grasps
 grasps = GraspTable;
 TargTrans = reshape(orBodyGetLinks(Target.id), [3 4]);
-grasps(:,robot.grasp.direction) = grasps(:,robot.grasp.direction) * transpose(TargTrans(:,1:3));
-grasps(:,robot.grasp.center) = grasps(:,robot.grasp.center) * transpose(TargTrans(:,1:3)) + repmat(transpose(TargTrans(:,4)), [size(grasps,1) 1]);
 orEnvSetOptions('collision pqp');
 
 for i = 1:size(grasps,1)
