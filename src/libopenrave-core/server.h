@@ -740,7 +740,7 @@ protected:
                     PhysicsEngineBasePtr pnewengine = GetEnv()->CreatePhysicsEngine(name);
                     
                     if( !!pnewengine ) {
-                        RAVELOG_DEBUGA("setting physics engine to %s",name.c_str());
+                        RAVELOG_DEBUGA("setting physics engine to %s\n",name.c_str());
                         GetEnv()->SetPhysicsEngine(pnewengine);
                     }
                 }
@@ -756,7 +756,7 @@ protected:
                     CollisionCheckerBasePtr p = GetEnv()->CreateCollisionChecker(name);
                     
                     if( !!p ) {
-                        RAVELOG_DEBUGA("setting collision checker to %s",name.c_str());
+                        RAVELOG_DEBUGA("setting collision checker to %s\n",name.c_str());
                         GetEnv()->SetCollisionChecker(p);
                     }
                 }
@@ -1069,7 +1069,7 @@ protected:
         if( pbody->IsRobot() ) {
             RobotBasePtr probot = boost::static_pointer_cast<RobotBase>(pbody);
             ControllerBasePtr pcontroller = probot->GetController();
-            if( !pcontroller )
+            if( !!pcontroller )
                 // if robot, reset the trajectory
                 pcontroller->Reset(0);
         }

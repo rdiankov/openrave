@@ -151,31 +151,40 @@ class CollisionCheckerMngr
 class GraspParameters : public PlannerBase::PlannerParameters
 {
  public:
- GraspParameters() : stand_off(0), roll_hand(0), face_target(false), bReturnTrajectory(false) {}
+ GraspParameters(EnvironmentBasePtr penv) : fstandoff(0), ftargetroll(0), vtargetdirection(0,0,1), btransformrobot(false), breturntrajectory(false), bonlycontacttarget(true), btightgrasp(false), _penv(penv) {}
         
-    dReal stand_off; ///< start closing fingers when at this distance
-    dReal roll_hand; ///< rotate the hand about the palm normal by this many radians
-    Vector direction,palmnormal;
-    bool face_target; ///< point the hand at the target or not (1 = yes, else no)
-    bool bReturnTrajectory;
-    vector<string> _vAvoidLinkGeometry; ///< list of 
+    dReal fstandoff; ///< start closing fingers when at this distance
+    KinBodyPtr targetbody; ///< the target that will be grasped, all parameters will be in this coordinate system. if not present, then below transformations are in absolute coordinate system.
+    dReal ftargetroll; ///< rotate the hand about the palm normal (if one exists) by this many radians
+    Vector vtargetdirection; ///< direction in target space to approach object from
+    Vector vtargetposition; ///< position in target space to start approaching (if in collision with target, gets backed up)
+    bool btransformrobot; ///< if true sets the base link of the robot given the above transformation parameters. If there is an active manipulator
+    bool breturntrajectory; ///< if true, returns how the individual fingers moved instead of just the final grasp
+    bool bonlycontacttarget; ///< if true, then grasp is successful only if contact is made with the target
+    bool btightgrasp; ///< This is tricky, but basically if true will also move the basic link along the negative axes of some of the joints to get a tighter fit.
+    vector<string> vavoidlinkgeometry; ///< list of links on the robot to avoid collisions with (for exmaple, sensors)
         
  protected:
+    EnvironmentBasePtr _penv; ///< environment target belongs to
+
     // save the extra data to XML
     virtual bool serialize(std::ostream& O) const
     {
         if( !PlannerParameters::serialize(O) )
             return false;
-        O << "<stand_off>" << stand_off << "</stand_off>" << endl;
-        O << "<face_target>" << face_target << "</face_target>" << endl;
-        O << "<roll_hand>" << roll_hand << "</roll_hand>" << endl;
-        O << "<direction>" << direction << "</direction>" << endl;
-        O << "<palmnormal>" << palmnormal << "</palmnormal>" << endl;
-        O << "<returntrajectory>" << bReturnTrajectory << "</returntrajectory>" << endl;
-        O << "<avoidlinks>" << endl;
-        FOREACHC(it,_vAvoidLinkGeometry)
+        O << "<fstandoff>" << fstandoff << "</fstandoff>" << endl;
+        O << "<targetbody>" << (int)(!targetbody ? 0 : targetbody->GetNetworkId()) << "</targetbody>" << endl;
+        O << "<ftargetroll>" << ftargetroll << "</ftargetroll>" << endl;
+        O << "<vtargetdirection>" << vtargetdirection << "</vtargetdirection>" << endl;
+        O << "<vtargetposition>" << vtargetposition << "</vtargetposition>" << endl;
+        O << "<btransformrobot>" << btransformrobot << "</btransformrobot>" << endl;
+        O << "<breturntrajectory>" << breturntrajectory << "</breturntrajectory>" << endl;
+        O << "<bonlycontacttarget>" << bonlycontacttarget << "</bonlycontacttarget>" << endl;
+        O << "<btightgrasp>" << btightgrasp << "</btightgrasp>" << endl;
+        O << "<vavoidlinkgeometry>" << endl;
+        FOREACHC(it,vavoidlinkgeometry)
             O << *it << " ";
-        O << "</avoidlinks>" << endl;
+        O << "</vavoidlinkgeometry>" << endl;
         return !!O;
     }
  
@@ -183,20 +192,31 @@ class GraspParameters : public PlannerBase::PlannerParameters
     virtual bool endElement(const std::string& name)
     {
         // _ss is an internal stringstream that holds the data of the tag
-        if( name == "avoidlinks" )
-            _vAvoidLinkGeometry = vector<string>((istream_iterator<string>(_ss)), istream_iterator<string>());
-        else if( name == "stand_off")
-            _ss >> stand_off;
-        else if( name == "face_target")
-            _ss >> face_target;
-        else if( name == "roll_hand")
-            _ss >> roll_hand;
-        else if( name == "direction")
-            _ss >> direction;
-        else if( name == "palmnormal")
-            _ss >> palmnormal;
-        else if( name == "returntrajectory")
-            _ss >> bReturnTrajectory;
+        if( name == "vavoidlinkgeometry" )
+            vavoidlinkgeometry = vector<string>((istream_iterator<string>(_ss)), istream_iterator<string>());
+        else if( name == "fstandoff")
+            _ss >> fstandoff;
+        else if( name == "targetbody") {
+            int id = 0;
+            _ss >> id;
+            targetbody = _penv->GetBodyFromNetworkId(id);
+        }
+        else if( name == "ftargetroll")
+            _ss >> ftargetroll;
+        else if( name == "vtargetdirection") {
+            _ss >> vtargetdirection;
+            vtargetdirection.normalize3();
+        }
+        else if( name == "vtargetposition")
+            _ss >> vtargetposition;
+        else if( name == "btransformrobot")
+            _ss >> btransformrobot;
+        else if( name == "breturntrajectory")
+            _ss >> breturntrajectory;
+        else if( name == "bonlycontacttarget")
+            _ss >> bonlycontacttarget;
+        else if( name == "btightgrasp" )
+            _ss >> btightgrasp;
         else // give a chance for the default parameters to get processed
             return PlannerParameters::endElement(name);
         return false;

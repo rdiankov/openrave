@@ -128,6 +128,7 @@ public:
     ///< manipulator state is also set
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         Destroy();
         _robot = pbase;
         _parameters.copy(pparams);
@@ -160,6 +161,7 @@ public:
 
     virtual bool PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream)
     {
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         Destroy();
 
         RobotBase::RobotStateSaver saver(_robot);

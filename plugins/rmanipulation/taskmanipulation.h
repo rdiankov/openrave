@@ -149,10 +149,6 @@ class TaskManipulation : public ProblemInstance
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _robot = GetEnv()->GetRobot(_strRobotName);
-
-        if( !_robot )
-            throw openrave_exception(str(boost::format("could not find %s robot, send command failed\n")%_strRobotName));
-
         return ProblemInstance::SendCommand(sout,sinput);
     }
 
@@ -471,11 +467,10 @@ class TaskManipulation : public ProblemInstance
                 probotHand->SetActiveDOFs(vHandJoints, RobotBase::DOF_X|RobotBase::DOF_Y|RobotBase::DOF_Z);
 
                 stringstream ss;
-                ss << "exec direction " << pgrasp[iGraspDir] << " " << pgrasp[iGraspDir+1] << " " << pgrasp[iGraspDir+2]
+                ss << "grasp direction " << pgrasp[iGraspDir] << " " << pgrasp[iGraspDir+1] << " " << pgrasp[iGraspDir+2]
                    << " bodyid " << ptarget->GetNetworkId() << " robot " << probotHand->GetNetworkId()
                    << " roll " << pgrasp[iGraspRoll] << " standoff " << pgrasp[iGraspStandoff]
-                   << " centeroffset " << pgrasp[iGraspPos]-transTarg.trans.x << " " << pgrasp[iGraspPos+1]-transTarg.trans.y << " " << pgrasp[iGraspPos+2]-transTarg.trans.z
-                   << " palmdir " << vpalmdir.x << " " << vpalmdir.y << " " << vpalmdir.z;
+                   << " centeroffset " << pgrasp[iGraspPos] << " " << pgrasp[iGraspPos+1] << " " << pgrasp[iGraspPos+2];
 
                 RAVELOG_VERBOSEA("grasper cmd: %s\n", ss.str().c_str());
                 

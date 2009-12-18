@@ -23,7 +23,6 @@ build openrave must include (used in place of rave.h). Precompiled header.
 #define RAVE_LIBOPENRAVE_H
 
 /// functions that allow plugins to program for the RAVE simulator
-#include <assert.h>
 #include <cstdio>
 #include <cmath>
 

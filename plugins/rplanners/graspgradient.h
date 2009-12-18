@@ -38,6 +38,7 @@ public:
     
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.copy(pparams);
         _robot = pbase;
         RobotBase::RobotStateSaver savestate(_robot);
@@ -107,7 +108,8 @@ public:
             RAVELOG_ERRORA("GraspGradientPlanner::PlanPath - Error, planner not initialized\n");
             return false;
         }
-    
+
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());    
         uint32_t basetime = timeGetTime();    
         RobotBase::RobotStateSaver savestate(_robot);
 

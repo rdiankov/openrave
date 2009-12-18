@@ -567,12 +567,19 @@ void KinBody::Joint::AddTorque(const std::vector<dReal>& pTorques)
 
 KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody) : _pbody(pbody)
 {
-    _pbody->GetBodyTransformations(_vtransPrev);
+    _pbody->GetBodyTransformations(_vLinkTransforms);
+    _vEnabledLinks.resize(_vLinkTransforms.size());
+    for(size_t i = 0; i < _vEnabledLinks.size(); ++i)
+        _vEnabledLinks[i] = _pbody->GetLinks().at(i)->IsEnabled();
 }
 
 KinBody::KinBodyStateSaver::~KinBodyStateSaver()
 {
-    _pbody->SetBodyTransformations(_vtransPrev);
+    _pbody->SetBodyTransformations(_vLinkTransforms);
+    for(size_t i = 0; i < _vEnabledLinks.size(); ++i) {
+        if( _pbody->GetLinks().at(i)->IsEnabled() != _vEnabledLinks[i] )
+            _pbody->GetLinks().at(i)->Enable(_vEnabledLinks[i]);
+    }
 }
 
 KinBody::KinBody(PluginType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)
@@ -762,7 +769,9 @@ void KinBody::SetTransform(const Transform& trans)
         return;
 
     Transform tbaseinv = _veclinks.front()->GetTransform().inverse();
-    ApplyTransform(trans * tbaseinv);
+    Transform tapply = trans * tbaseinv;
+    FOREACH(itlink, _veclinks)
+        (*itlink)->SetTransform(tapply * (*itlink)->GetTransform());
 }
 
 Transform KinBody::GetTransform() const
@@ -820,7 +829,7 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
                 else
                     (*itjoint)->GetVelocities(vjointvel);
 
-                LinkPtr* bodies = (*itjoint)->bodies;
+                boost::array<LinkPtr,2>& bodies = (*itjoint)->bodies;
                 if( !!bodies[0] && !!bodies[1] && !bodies[1]->IsStatic()) {
                     if( bodies[0]->userdata ) {
                         if( !bodies[1]->userdata ) {
@@ -945,15 +954,6 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
     }
 }
 
-void KinBody::ApplyTransform(const Transform& trans)
-{
-    FOREACH(itlink, _veclinks) {
-        Transform tlocal = (*itlink)->GetTransform();
-        Transform tfinal = trans * (*itlink)->GetTransform();
-        (*itlink)->SetTransform(trans * (*itlink)->GetTransform());
-    }
-}
-
 void KinBody::GetBodyTransformations(vector<Transform>& vtrans) const
 {
     vtrans.resize(_veclinks.size());
@@ -1054,6 +1054,20 @@ dReal KinBody::ConfigDist(const std::vector<dReal>& q1, const std::vector<dReal>
         dist += _vecJointWeights[i] * (q2[i] - q1[i]) * (q2[i] - q1[i]);
     }
     return RaveSqrt(dist);
+}
+
+void KinBody::SetJointWeight(int nJointIndex, dReal weight)
+{
+    // it is this complicated because each joint can have more than one dof
+    assert( nJointIndex >= 0 && nJointIndex < (int)_vecjoints.size() );
+    int end = nJointIndex == (int)_vecjoints.size()-1 ? (int)_vecJointWeights.size() : _vecJointIndices[nJointIndex+1];
+    for(int i = _vecJointIndices[nJointIndex]; i < end; ++i )
+        _vecJointWeights[i] = weight;
+}
+
+dReal KinBody::GetJointWeight(int nJointIndex) const
+{
+    return _vecJointWeights.at(_vecJointIndices.at(nJointIndex));
 }
 
 void KinBody::SetBodyTransformations(const std::vector<Transform>& vbodies)
@@ -1212,7 +1226,7 @@ void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, bool bCheck
                     }
                 }
 
-                LinkPtr* bodies = (*itjoint)->bodies;
+                boost::array<LinkPtr,2>& bodies = (*itjoint)->bodies;
 
                 // make sure there is no wrap around for limits close to pi
                 vjointang.resize((*itjoint)->GetDOF());
@@ -1569,7 +1583,7 @@ void KinBody::ComputeJointHierarchy()
             
             bool bDelete = true;
             bool bIsPassive = itjoint->second < 0;
-            LinkPtr* bodies = itjoint->first->bodies;
+            boost::array<LinkPtr,2>& bodies = itjoint->first->bodies;
             if( bIsPassive && itjoint->first->GetMimicJointIndex() < 0 ) {
                 // is not part of the hierarchy, but still used to join links
                 if( !!bodies[0] ) {
@@ -1772,7 +1786,7 @@ void KinBody::WriteForwardKinematics(std::ostream& f)
                     info.vJointCoeffs[0] = 1; info.vJointCoeffs[1] = 0;
                 }
 
-                LinkPtr* bodies = (*itjoint)->bodies;
+                boost::array<LinkPtr,2>& bodies = (*itjoint)->bodies;
 
                 if( !!bodies[0] && !!bodies[1] && !bodies[1]->IsStatic()) {
                     if( bodies[0]->userdata ) {

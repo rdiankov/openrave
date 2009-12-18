@@ -74,6 +74,7 @@
 #include <boost/thread/recursive_mutex.hpp>
 #include <boost/static_assert.hpp>
 #include <boost/format.hpp>
+#include <boost/array.hpp>
 
 #if defined(_MSC_VER) && (defined(RAVE_USEDLL) || defined(RAVE_CORE_USEDLL))
 #ifdef RAVE_LIBBUILD
@@ -973,7 +974,7 @@ namespace boost
 {
 inline void assertion_failed(char const * expr, char const * function, char const * file, long line)
 {
-    throw OpenRAVE::openrave_exception(str(boost::format("[%s:%d] -> %s, expr: %s\n")%file%line%function%expr),OpenRAVE::ORE_Assert);
+    throw OpenRAVE::openrave_exception(str(boost::format("[%s:%d] -> %s, expr: %s")%file%line%function%expr),OpenRAVE::ORE_Assert);
 }
 }
 #endif

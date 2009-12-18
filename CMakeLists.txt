@@ -349,7 +349,7 @@ if( NOT PYTHON_EXECUTABLE )
 endif()
 
 # add ikfast program
-  set(IKFAST_EXECUTABLE ${CMAKE_SOURCE_DIR}/ikfast/ikfast.py)
+set(IKFAST_EXECUTABLE ${CMAKE_SOURCE_DIR}/ikfast/ikfast.py)
 if( UNIX OR NOT PYTHON_EXECUTABLE )
   execute_process(
     COMMAND ${IKFAST_EXECUTABLE} --help

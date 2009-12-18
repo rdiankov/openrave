@@ -36,6 +36,7 @@ public:
 
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         GetParameters().copy(pparams);
         _robot = pbase;
 
@@ -146,8 +147,10 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
 
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         if( !RrtPlanner<SimpleNode>::InitPlan(pbase,pparams) )
             return false;
+
         _bInit = false;
         RobotBase::RobotStateSaver savestate(_robot);
 
@@ -219,6 +222,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
             return false;
         }
     
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         uint32_t basetime = timeGetTime();
 
         // the main planning loop
@@ -344,6 +348,7 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
 
     bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         if( !RrtPlanner<SimpleNode>::InitPlan(pbase,pparams) )
             return false;
         //_bOneStep = _parameters.vnParameters[0]>0;
@@ -411,6 +416,7 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
             return false;
         }
     
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         uint32_t basetime = timeGetTime();
 
         int lastnode = 0;    
@@ -524,6 +530,7 @@ class ExplorationPlanner : public RrtPlanner<SimpleNode>
         if( !_bInit )
             return false;
 
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         vector<dReal> vSampleConfig;
 
         RobotBase::RobotStateSaver saver(_robot);    

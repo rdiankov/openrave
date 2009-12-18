@@ -60,7 +60,6 @@ public:
 
     virtual void Destroy()
     {
-        _pGrasperProblem.reset();
         robot.reset();
         ProblemInstance::Destroy();
     }
@@ -68,12 +67,6 @@ public:
     virtual void Reset()
     {
         ProblemInstance::Reset();
-        // recreate the planners since they store state
-        if( !!_pGrasperProblem ) {
-            _pGrasperProblem = GetEnv()->CreateProblem(_pGrasperProblem->GetXMLId());
-            if( !!_pGrasperProblem && GetEnv()->LoadProblem(_pGrasperProblem,"") != 0)
-                _pGrasperProblem.reset();
-        }
     }
 
     virtual int main(const std::string& args)
@@ -105,13 +98,6 @@ public:
         }
 
         RAVELOG_DEBUGA(str(boost::format("BaseManipulation: using %s planner\n")%_strRRTPlannerName));
-
-        _pGrasperProblem = GetEnv()->CreateProblem("GrasperProblem");
-        if( !!_pGrasperProblem && GetEnv()->LoadProblem(_pGrasperProblem,"") != 0)
-            _pGrasperProblem.reset();
-        if( !_pGrasperProblem )
-            RAVELOG_WARNA("Failed to create GrasperProblem\n");
-    
         return 0;
     }
 
@@ -124,10 +110,6 @@ public:
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         robot = GetEnv()->GetRobot(_strRobotName);
-
-        if( !robot )
-            throw openrave_exception(str(boost::format("could not find %s robot, send command failed\n")%_strRobotName));
-
         return ProblemInstance::SendCommand(sout,sinput);
     }
 protected:
@@ -900,17 +882,11 @@ protected:
             return false;
         }
     
-        boost::shared_ptr<GraspParameters> graspparams(new GraspParameters());
+        boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
         graspparams->SetRobotActiveJoints(robot);
- 
         robot->GetActiveDOFValues(graspparams->vinitialconfig);
-  
-        graspparams->stand_off = 0;
-        graspparams->face_target = false;
-        graspparams->roll_hand = 0;
-        graspparams->direction = direction;
-        graspparams->palmnormal = Vector(0,0,0);
-        graspparams->bReturnTrajectory = false;
+        graspparams->btransformrobot = false;
+        graspparams->breturntrajectory = false;
 
         if( !graspplanner->InitPlan(robot, graspparams) ) {
             RAVELOG_ERRORA("InitPlan failed\n");
@@ -1046,17 +1022,12 @@ protected:
             return false;
         }
     
-        boost::shared_ptr<GraspParameters> graspparams(new GraspParameters());
+        boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
         graspparams->SetRobotActiveJoints(robot);
-        robot->GetActiveDOFValues(graspparams->vinitialconfig);
-  
+        robot->GetActiveDOFValues(graspparams->vinitialconfig);  
         graspparams->vgoalconfig = movingdir; // which ways the fingers should move
-        graspparams->stand_off = 0;
-        graspparams->face_target = false;
-        graspparams->roll_hand = 0;
-        graspparams->direction = Vector(0,0,0);
-        graspparams->palmnormal = Vector(0,0,0);
-        graspparams->bReturnTrajectory = false;
+        graspparams->btransformrobot = false;
+        graspparams->breturntrajectory = false;
 
         if( !graspplanner->InitPlan(robot, graspparams) ) {
             RAVELOG_ERRORA("InitPlan failed\n");
@@ -1667,7 +1638,6 @@ protected:
     RobotBasePtr robot;
     string _strRRTPlannerName;
     string _strRobotName; ///< name of the active robot
-    ProblemInstancePtr _pGrasperProblem;
 };
 
 #endif

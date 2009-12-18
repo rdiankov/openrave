@@ -60,7 +60,7 @@ public:
         /// the end effector link (used to define workspace distance)
         virtual LinkPtr GetEndEffector() const { return _pEndEffector; }
 
-        /// transform with respect to end effector for grasping goals
+        /// \return transform with respect to end effector defining the grasp coordinate system
         virtual Transform GetGraspTransform() const { return _tGrasp; }
 
         /// gripper indices of the joints that the  manipulator controls
@@ -73,7 +73,7 @@ public:
         /// normal direction to move joints to 'close' the hand
         virtual const std::vector<dReal>& GetClosingDirection() const { return _vClosingDirection; }
 
-        /// direction of palm used for approaching 
+        /// direction of palm used for approaching inside the grasp coordinate system
         virtual Vector GetPalmDirection() const { return _vpalmdirection; }
 
         /// \return Number of free parameters defining the null solution space.
@@ -253,7 +253,6 @@ public:
 
     virtual void SetBodyTransformations(const std::vector<Transform>& vbodies);
     virtual void SetTransform(const Transform& trans);
-    virtual void ApplyTransform(const Transform& trans);
 
     /** Set of active degrees of freedoms that all planners plan for. Planner should use the corresponding
      *  GetActive* methods rather than the Get* methods when setting joints.

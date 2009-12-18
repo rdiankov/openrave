@@ -19,7 +19,7 @@ if( 0 ) #IKFAST_FOUND )
     DEPENDS ${WAM_ROBOT} ${IKFAST_EXECUTABLE} "${CMAKE_SOURCE_DIR}/src/robots/wam7.kinbody.xml"
     )
   add_custom_target(wamik ALL DEPENDS ${WAM_IK_OUTPUT})
-  add_dependencies(wamik openrave)
+  add_dependencies(wamik openrave openravepy)
 
   set(PA10_ROBOT "${CMAKE_SOURCE_DIR}/src/robots/pa10.robot.xml")
   set(PA10_IK_OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/ik_pa10.h")
@@ -30,7 +30,7 @@ if( 0 ) #IKFAST_FOUND )
     DEPENDS ${PA10_ROBOT} ${IKFAST_EXECUTABLE} "${CMAKE_SOURCE_DIR}/src/robots/pa10.kinbody.xml"
     )
   add_custom_target(pa10ik ALL DEPENDS ${PA10_IK_OUTPUT})
-  add_dependencies(pa10ik openrave)
+  add_dependencies(pa10ik openrave openravepy)
 
   set(PUMA_ROBOT "${CMAKE_SOURCE_DIR}/src/robots/puma.robot.xml")
   set(PUMA_IK_OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/ik_puma.h")
@@ -41,7 +41,7 @@ if( 0 ) #IKFAST_FOUND )
     DEPENDS ${PUMA_ROBOT} ${IKFAST_EXECUTABLE} "${CMAKE_SOURCE_DIR}/src/robots/pumaarm.kinbody.xml"
     )
   add_custom_target(pumaik ALL DEPENDS ${PUMA_IK_OUTPUT})
-  add_dependencies(pumaik openrave)
+  add_dependencies(pumaik openrave openravepy)
 
   set(MANUS_LEFTARM_ROBOT "${CMAKE_SOURCE_DIR}/src/robots/manusarm_left.robot.xml")
   set(MANUS_LEFTARM_IK_OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/ik_manusleftarm.h")
@@ -52,7 +52,7 @@ if( 0 ) #IKFAST_FOUND )
     DEPENDS ${MANUS_LEFTARM_ROBOT} ${IKFAST_EXECUTABLE}
     )
   add_custom_target(manusleftik ALL DEPENDS ${MANUS_LEFTARM_IK_OUTPUT})
-  add_dependencies(manusleftik openrave)
+  add_dependencies(manusleftik openrave openravepy)
 
   set(MAN1_ROBOT "${CMAKE_SOURCE_DIR}/src/robots/man1.robot.xml")
   set(MAN1_LEFT_IK_OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/ik_man1left.h")
@@ -63,7 +63,7 @@ if( 0 ) #IKFAST_FOUND )
     DEPENDS ${MAN1_ROBOT} ${IKFAST_EXECUTABLE}
     )
   add_custom_target(man1leftik ALL DEPENDS ${MAN1_LEFT_IK_OUTPUT})
-  add_dependencies(man1leftik openrave)
+  add_dependencies(man1leftik openrave openravepy)
 
   set(MAN1_RIGHT_IK_OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/ik_man1right.h")
   add_custom_command(
@@ -73,7 +73,7 @@ if( 0 ) #IKFAST_FOUND )
     DEPENDS ${MAN1_ROBOT} ${IKFAST_EXECUTABLE}
     )
   add_custom_target(man1rightik ALL DEPENDS ${MAN1_RIGHT_IK_OUTPUT})
-  add_dependencies(man1rightik openrave)
+  add_dependencies(man1rightik openrave openravepy)
 
   set(KATANA_ROBOT "${CMAKE_SOURCE_DIR}/src/robots/katana.robot.xml")
   set(KATANA_IK_OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/ik_katana.h")
@@ -84,7 +84,7 @@ if( 0 ) #IKFAST_FOUND )
     DEPENDS ${KATANA_ROBOT} ${IKFAST_EXECUTABLE} "${CMAKE_SOURCE_DIR}/src/robots/katana.kinbody.xml"
     )
   add_custom_target(katanaik ALL DEPENDS ${KATANA_IK_OUTPUT})
-  add_dependencies(katanaik openrave)
+  add_dependencies(katanaik openrave openravepy)
 
   set(IKTARGETS wamik pa10ik pumaik manusleftik man1leftik man1rightik katanaik)
 endif()

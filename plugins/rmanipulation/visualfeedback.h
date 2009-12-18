@@ -580,10 +580,6 @@ public:
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _robot = GetEnv()->GetRobot(_strRobotName);
-
-        if( !_robot )
-            throw openrave_exception(str(boost::format("could not find %s robot, send command failed\n")%_strRobotName));
-
         return ProblemInstance::SendCommand(sout,sinput);
     }
 

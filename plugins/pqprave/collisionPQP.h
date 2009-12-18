@@ -172,28 +172,13 @@ class CollisionCheckerPQP : public CollisionCheckerBase
 
     virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report)
     {
-        //does not check for self collision
-        std::vector<KinBodyConstPtr> vbodyexcluded;
-        std::vector<KinBodyPtr> vecbodies;
-        GetEnv()->GetBodies(vecbodies);
-
-        //exclude all kinbodies that aren't parents of plink2
-        //parents of plink1 are excluded in the other CheckCollision function
-        FOREACH(itbody, vecbodies) {
-            if( plink2->GetParent() != *itbody )
-                vbodyexcluded.push_back(*itbody);
-        }
-
-        //exclude all links of plink2's parent that aren't plink2
-        std::vector<KinBody::LinkPtr> veclinks;
-        vector<KinBody::LinkConstPtr> vlinkexcluded;
-        veclinks = plink2->GetParent()->GetLinks();
-        FOREACH(itlink,veclinks) {
-            if(*itlink != plink2)
-                vlinkexcluded.push_back(*itlink);
-        }
-
-        return CheckCollision(plink1, vbodyexcluded, vlinkexcluded,report);
+        if(!!report)
+            report->Reset();
+    
+        PQP_REAL R1[3][3], R2[3][3], T1[3], T2[3];
+        GetPQPTransformFromTransform(plink1->GetTransform(),R1,T1);
+        GetPQPTransformFromTransform(plink2->GetTransform(),R2,T2);
+        return DoPQP(plink1,R1,T1,plink2,R2,T2,report);
     }
 
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report)
@@ -214,10 +199,8 @@ class CollisionCheckerPQP : public CollisionCheckerBase
     
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
     {
-        if(!!report) {
+        if(!!report)
             report->Reset();
-            report->minDistance = 1e20f;
-        }
     
         int tmpnumcols = 0;
         int tmpnumwithintol = 0;
@@ -322,7 +305,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         // check collision, ignore adjacent bodies
         FOREACHC(itset, pbody->GetNonAdjacentLinks()) {
             BOOST_ASSERT( (*itset&0xffff) < (int)pbody->GetLinks().size() && (*itset>>16) < (int)pbody->GetLinks().size() );
-            if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(pbody->GetLinks()[*itset&0xffff]), KinBody::LinkConstPtr(pbody->GetLinks()[*itset>>16]), report) ) {
+            if( CheckCollision(KinBody::LinkConstPtr(pbody->GetLinks()[*itset&0xffff]), KinBody::LinkConstPtr(pbody->GetLinks()[*itset>>16]), report) ) {
                 RAVELOG_VERBOSEA(str(boost::format("selfcol %s, Links %s %s are colliding\n")%pbody->GetName()%pbody->GetLinks()[*itset&0xffff]->GetName()%pbody->GetLinks()[*itset>>16]->GetName()));
                 return true;
             }
@@ -345,10 +328,8 @@ class CollisionCheckerPQP : public CollisionCheckerBase
     // does not check attached
     bool CheckCollisionP(KinBodyConstPtr pbody1, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
     {
-        if(!!report ) {
+        if(!!report )
             report->Reset();
-            report->minDistance = 1e20f;
-        }
 
         int tmpnumcols = 0;
         int tmpnumwithintol = 0;

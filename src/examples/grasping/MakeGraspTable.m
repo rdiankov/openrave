@@ -107,7 +107,7 @@ for approach = ApproachDirs
                 counter = counter+1;
                 disp(['Generating example ' num2str(counter) ' of ' num2str(totalgrasps)]);
 
-                grasp(robot.grasp.center) = approach(1:3)+0.3*approach(4:6); % back off a little
+                grasp(robot.grasp.center) = approach(1:3);
                 grasp(robot.grasp.direction) = -approach(4:6);
                 grasp(robot.grasp.roll) = roll;
                 grasp(robot.grasp.standoff) = standoff;

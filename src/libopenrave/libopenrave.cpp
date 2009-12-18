@@ -202,33 +202,33 @@ void PlannerBase::PlannerParameters::copy(boost::shared_ptr<PlannerParameters co
 
 bool PlannerBase::PlannerParameters::serialize(std::ostream& O) const
 {
-    O << "<initialconfig>";
+    O << "<vinitialconfig>";
     FOREACHC(it, vinitialconfig)
         O << *it << " ";
-    O << "</initialconfig>" << endl;
-    O << "<goalconfig>";
+    O << "</vinitialconfig>" << endl;
+    O << "<vgoalconfig>";
     FOREACHC(it, vgoalconfig)
         O << *it << " ";
-    O << "</goalconfig>" << endl;
-    O << "<configlowerlimit>";
+    O << "</vgoalconfig>" << endl;
+    O << "<_vconfiglowerlimit>";
     FOREACHC(it, _vConfigLowerLimit)
         O << *it << " ";
-    O << "</configlowerlimit>" << endl;
-    O << "<configupperlimit>";
+    O << "</_vconfiglowerlimit>" << endl;
+    O << "<_vconfigupperlimit>";
     FOREACHC(it, _vConfigUpperLimit)
         O << *it << " ";
-    O << "</configupperlimit>" << endl;
-    O << "<configresolution>";
+    O << "</_vconfigupperlimit>" << endl;
+    O << "<_vconfigresolution>";
     FOREACHC(it, _vConfigResolution)
         O << *it << " ";
-    O << "</configresolution>" << endl;
+    O << "</_vconfigresolution>" << endl;
     
     if( !!_tWorkspaceGoal )
-        O << "<workspacegoal>" << *_tWorkspaceGoal << "</workspacegoal>" << endl;
+        O << "<_tworkspacegoal>" << *_tWorkspaceGoal << "</_tworkspacegoal>" << endl;
     
-    O << "<maxiterations>" << _nMaxIterations << "</maxiterations>" << endl;
-    O << "<steplength>" << _fStepLength << "</steplength>" << endl;
-    O << "<computesmoothpath>" << _bComputeSmoothPath << "</computesmoothpath>" << endl;
+    O << "<_nmaxiterations>" << _nMaxIterations << "</_nmaxiterations>" << endl;
+    O << "<_fsteplength>" << _fStepLength << "</_fsteplength>" << endl;
+    O << "<_bcomputesmoothpath>" << _bComputeSmoothPath << "</_bcomputesmoothpath>" << endl;
     
     return !!O;
 }
@@ -245,25 +245,25 @@ bool PlannerBase::PlannerParameters::endElement(const std::string& name)
         if( _pcurreader->endElement(name) )
             _pcurreader.reset();
     }
-    else if( name == "initialconfig")
+    else if( name == "vinitialconfig")
         vinitialconfig = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
-    else if( name == "goalconfig")
+    else if( name == "vgoalconfig")
         vgoalconfig = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
-    else if( name == "configlowerlimit")
+    else if( name == "_vconfiglowerlimit")
         _vConfigLowerLimit = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
-    else if( name == "configupperlimit")
+    else if( name == "_vconfigupperlimit")
         _vConfigUpperLimit = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
-    else if( name == "configresolution")
+    else if( name == "_vconfigresolution")
         _vConfigResolution = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
-    else if( name == "workspacegoal") {
+    else if( name == "_tworkspacegoal") {
         _tWorkspaceGoal.reset(new Transform());
         _ss >> *_tWorkspaceGoal.get();
     }
-    else if( name == "maxiterations")
+    else if( name == "_nmaxiterations")
         _ss >> _nMaxIterations;
-    else if( name == "steplength")
+    else if( name == "_fsteplength")
         _ss >> _fStepLength;
-    else if( name == "computesmoothpath")
+    else if( name == "_bcomputesmoothpath")
         _ss >> _bComputeSmoothPath;
     else
         _pcurreader.reset(new DummyXMLReader(name,GetXMLId()));
@@ -569,7 +569,7 @@ std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameters& pp)
             I.seekg((size_t)pos+((p-buf.str().c_str())+20));
         }
         else
-            throw openrave_exception(str(boost::format("error, failed to find </PlannerParameters> in %s\n")%buf.str()),ORE_InvalidArguments);
+            throw openrave_exception(str(boost::format("error, failed to find </PlannerParameters> in %s")%buf.str()),ORE_InvalidArguments);
 
         OneTagReader tagreader("plannerparameters", boost::shared_ptr<BaseXMLReader>(&pp,null_deleter()));
         pp._pcurreader.reset();

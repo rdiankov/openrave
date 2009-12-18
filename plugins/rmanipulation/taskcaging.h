@@ -783,10 +783,6 @@ public:
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _robot = GetEnv()->GetRobot(_strRobotName);
-
-        if( !_robot )
-            throw openrave_exception(str(boost::format("could not find %s robot, send command failed\n")%_strRobotName));
-
         return ProblemInstance::SendCommand(sout,sinput);
     }
 
@@ -889,7 +885,7 @@ private:
         graspfn->CacheTransforms(vTargetSides);
 
         // move the robot according to the way the target object moved
-        _robot->ApplyTransform(tlinknew*tlinkorig.inverse());
+        _robot->SetTransform(tlinknew*tlinkorig.inverse()*_robot->GetTransform());
     
         if( !CM::JitterTransform(_robot, 0.004f) ) {
             RAVELOG_WARNA("failed to jitter\n");

@@ -15,7 +15,6 @@
 #ifndef OPENRAVE_PLUGINDEFS_H
 #define OPENRAVE_PLUGINDEFS_H
 
-#include <assert.h>
 #include <cstdio>
 #include <cmath>
 #include <cstdlib>

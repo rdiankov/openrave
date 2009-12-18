@@ -454,13 +454,6 @@ void RobotBase::SetTransform(const Transform& trans)
     _UpdateAttachedSensors();
 }
 
-void RobotBase::ApplyTransform(const Transform& trans)
-{
-    KinBody::ApplyTransform(trans);
-    _UpdateGrabbedBodies();
-    _UpdateAttachedSensors();
-}
-
 void RobotBase::_UpdateGrabbedBodies()
 {
     // update grabbed objects
@@ -1546,23 +1539,21 @@ void RobotBase::GetGrabbed(std::vector<KinBodyPtr>& vbodies) const
 
 void RobotBase::SetActiveManipulator(int index)
 {
-    if( index < 0 && index >= (int)_vecManipulators.size())
-        throw openrave_exception(str(boost::format("bad manipulator index")%index),ORE_InvalidArguments);
     _nActiveManip = index;
 }
 
 RobotBase::ManipulatorPtr RobotBase::GetActiveManipulator()
 {
     if(_nActiveManip < 0 && _nActiveManip >= (int)_vecManipulators.size() )
-        throw openrave_exception(str(boost::format("bad active manipulator index")%_nActiveManip),ORE_InvalidArguments);
-    return _vecManipulators[_nActiveManip];
+        throw RobotBase::ManipulatorPtr();
+    return _vecManipulators.at(_nActiveManip);
 }
 
 RobotBase::ManipulatorConstPtr RobotBase::GetActiveManipulator() const
 {
     if(_nActiveManip < 0 && _nActiveManip >= (int)_vecManipulators.size() )
-        throw openrave_exception(str(boost::format("bad active manipulator index")%_nActiveManip),ORE_InvalidArguments);
-    return _vecManipulators[_nActiveManip];
+        return RobotBase::ManipulatorPtr();
+    return _vecManipulators.at(_nActiveManip);
 }
 
 /// Check if body is self colliding. Links that are joined together are ignored.

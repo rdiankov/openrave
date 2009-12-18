@@ -273,7 +273,7 @@ public:
         virtual void SetResolution(dReal resolution);
 
     private:
-        LinkPtr bodies[2];
+        boost::array<LinkPtr,2> bodies;
         dReal fResolution;      ///< interpolation resolution
         dReal fMaxVel;          ///< the maximum velocity (rad/s) of the joint
         dReal fMaxAccel;        ///< the maximum acceleration (rad/s^2) of the joint
@@ -282,7 +282,7 @@ public:
         Transform tRight, tLeft;///< transforms used to get body[1]'s transformation with respect to body[0]'s
                                 ///< Tbody1 = Tbody0 * tLeft * JointRotation * tRight
         Transform tinvRight, tinvLeft; ///< the inverse transformations of tRight and tLeft
-        Vector vAxes[3];        ///< axes in body[0]'s or environment coordinate system used to define joint movement
+        boost::array<Vector,3> vAxes;        ///< axes in body[0]'s or environment coordinate system used to define joint movement
         Vector vanchor;         ///< anchor of the joint
         dReal offset;           ///< needed because ode can only limit joints in the range of -pi to pi
                                 ///< converts the ode joint angle to the expected joint angle
@@ -323,6 +323,7 @@ public:
     {
     public:
         BodyState() {}
+        virtual ~BodyState() {}
         KinBodyPtr pbody;
         std::vector<RaveTransform<dReal> > vectrans;
         std::vector<dReal> jointvalues;
@@ -379,7 +380,8 @@ public:
         KinBodyStateSaver(KinBodyPtr pbody);
         virtual ~KinBodyStateSaver();
     protected:
-        std::vector<Transform> _vtransPrev;
+        std::vector<Transform> _vLinkTransforms;
+        std::vector<uint8_t> _vEnabledLinks;
         KinBodyPtr _pbody;
     };
 
@@ -389,6 +391,7 @@ public:
 
     /// Build the robot from an XML filename
     virtual bool InitFromFile(const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts);
+    /// Build the robot from a string representing XML information
     virtual bool InitFromData(const std::string& data, const std::list<std::pair<std::string,std::string> >& atts);
 
     /// Create a kinbody with one link composed of an array of aligned bounding boxes
@@ -404,7 +407,7 @@ public:
     /// Methods for accessing basic information about joints
     //@{
 
-    /// \return number of joints of the body
+    /// \return number of controllable degrees of freedom of the body
     virtual int GetDOF() const { return (int)_vecJointWeights.size(); }
 
     virtual void GetJointValues(std::vector<dReal>& v) const;
@@ -443,17 +446,9 @@ public:
     virtual dReal ConfigDist(const std::vector<dReal>& q1) const;
     virtual dReal ConfigDist(const std::vector<dReal>& q1, const std::vector<dReal>& q2) const;
 
-    virtual void SetDOFWeight(int nJointIndex, dReal weight) { _vecJointWeights[nJointIndex] = weight; }
-
-    virtual void SetJointWeight(int nJointIndex, dReal weight) {
-        // it is this complicated because each joint can have more than one dof
-        assert( nJointIndex >= 0 && nJointIndex < (int)_vecjoints.size() );
-        int end = nJointIndex == (int)_vecjoints.size()-1 ? (int)_vecJointWeights.size() : _vecJointIndices[nJointIndex+1];
-        for(int i = _vecJointIndices[nJointIndex]; i < end; ++i )
-            _vecJointWeights[i] = weight;
-    }
-
-    virtual dReal GetJointWeight(int nJointIndex) const { return _vecJointWeights[_vecJointIndices[nJointIndex]]; }
+    virtual void SetDOFWeight(int nJointIndex, dReal weight) { _vecJointWeights.at(nJointIndex) = weight; }
+    virtual void SetJointWeight(int nJointIndex, dReal weight);
+    virtual dReal GetJointWeight(int nJointIndex) const;
 
     /// Updates the bounding box and any other parameters that could have changed by a simulation step
     virtual void SimulationStep(dReal fElapsedTime);
@@ -475,14 +470,18 @@ public:
 
     /// set the transform of the first link (the rest of the links are computed based on the joint values)
     virtual void SetTransform(const Transform& trans);
-    /// applies the transform to the current link's transforamtion
-    virtual void ApplyTransform(const Transform& trans);
 
+    /// \return an axis-aligned bounding box of the entire object
     virtual AABB ComputeAABB() const;
 
+    /// \return center of mass of entire robot
     virtual Vector GetCenterOfMass() const;
-    virtual void Enable(bool bEnable); ///< enables or disables the bodies
-    virtual bool IsEnabled() const; ///< returns true if any link of the KinBody is enabled
+
+    /// enables or disables the bodies
+    virtual void Enable(bool bEnable);
+
+    /// \return true if any link of the KinBody is enabled
+    virtual bool IsEnabled() const;
 
     /// sets the joint angles manually, if ptrans is not NULL, represents the transformation of the first body
     /// calculates the transformations of every body by treating the first body as set with transformation ptrans
@@ -520,11 +519,13 @@ public:
     virtual void AttachBody(KinBodyPtr pbody);
     virtual void RemoveBody(KinBodyPtr pbody); ///< if pbody is NULL, removes all ignored bodies
     virtual bool IsAttached(KinBodyConstPtr pbody) const;
+    /// \return all attached bodies
     virtual void GetAttached(std::vector<KinBodyPtr>& vattached) const;
 
     /// \return true if this body is derived from RobotBase
     virtual bool IsRobot() const { return false; }
 
+    /// \return an environment unique id
     virtual int GetNetworkId() const;
     
     /// returns how the joint effects the link. If zero, link is unaffected.
@@ -543,9 +544,12 @@ public:
     virtual void SetGuiData(boost::shared_ptr<void> pdata) { _pGuiData = pdata; }
     virtual boost::shared_ptr<void> GetGuiData() const { return _pGuiData; }
 
+    /// \return the XML filename that this body was loaded from (sometimes this is not possible if the definition lies inside an environment file).
     virtual const std::string& GetXMLFilename() const { return strXMLFilename; }
 
+    /// \return all possible link pairs that could get in collision
     virtual const std::set<int>& GetNonAdjacentLinks() const;
+    /// \return all possible link pairs whose collisions are ignored.
     virtual const std::set<int>& GetAdjacentLinks() const;
     
     virtual boost::shared_ptr<void> GetPhysicsData() const { return _pPhysicsData; }
