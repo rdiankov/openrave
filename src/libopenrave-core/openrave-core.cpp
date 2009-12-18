@@ -46,11 +46,11 @@ bool ParseDirectories(const char* pdirs, std::vector<std::string>& vdirs)
     std::string::size_type pos = 0, newpos=0;
     while( pos < tmp.size() ) {
 
-//#ifdef _WIN32
-//        newpos = tmp.find(';', pos);
-//#else
+#ifdef _WIN32
+        newpos = tmp.find(';', pos);
+#else
 		newpos = tmp.find(':', pos);
-//#endif
+#endif
 
         std::string::size_type n = newpos == std::string::npos ? tmp.size()-pos : (newpos-pos);
         vdirs.push_back(tmp.substr(pos, n));
