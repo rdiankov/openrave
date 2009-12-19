@@ -80,7 +80,7 @@ public:
             pmanip->GetChildLinks(vlinks);
             FOREACHC(itlink,_robot->GetLinks()) {
                 if( std::find(vlinks.begin(),vlinks.end(),*itlink) == vlinks.end() ) {
-                    //RAVELOG_INFO("disabling %s\n",(*itlink)->GetName().c_str());
+                    RAVELOG_INFO("disabling %s\n",(*itlink)->GetName().c_str());
                     (*itlink)->Enable(false);
                 }
             }
@@ -410,8 +410,8 @@ public:
 
             if( _parameters.bonlycontacttarget ) {
                 // check if hit anything besides the target
-                if( (!!_report->plink1 && _report->plink1->GetParent() != plink->GetParent() && _report->plink1->GetParent() == _parameters.targetbody) ||
-                    (!!_report->plink2 && _report->plink2->GetParent() != plink->GetParent() && _report->plink2->GetParent() == _parameters.targetbody) ) {
+                if( (!!_report->plink1 && _report->plink1->GetParent() != plink->GetParent() && _report->plink1->GetParent() != _parameters.targetbody) ||
+                    (!!_report->plink2 && _report->plink2->GetParent() != plink->GetParent() && _report->plink2->GetParent() != _parameters.targetbody) ) {
                     ct |= CT_AvoidLinkHit;
                 }
             }

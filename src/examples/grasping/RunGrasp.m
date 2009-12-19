@@ -47,4 +47,3 @@ command_string
 data = orProblemSendCommand(command_string, probs.grasp);
 orEnvWait(robot.id);
 Thand = reshape(orBodyGetTransform(robot.id),[3 4]);
-error('yo')
