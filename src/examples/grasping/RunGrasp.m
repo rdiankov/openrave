@@ -38,12 +38,13 @@ end
 command_string = [command_string, ' roll ' num2str(grasp(robot.grasp.roll))];
 command_string = [command_string, ' standoff ' num2str(grasp(robot.grasp.standoff))];
 command_string = [command_string, ' centeroffset ' sprintf('%f ', grasp(robot.grasp.center))];
-#command_string = [command_string, ' collision pqp ' ];
+%command_string = [command_string, ' collision pqp ' ];
 for i = 1:length(robot.avoidlinks)
     command_string = [command_string, 'avoidlink ' robot.avoidlinks{i}];
 end
 
-command_string
+disp(command_string);
 data = orProblemSendCommand(command_string, probs.grasp);
 orEnvWait(robot.id);
-Thand = reshape(orBodyGetTransform(robot.id),[3 4]);
+Thand = inv(robot.Tgrasp) * [reshape(orBodyGetTransform(robot.id),[3 4]); 0 0 0 1];
+

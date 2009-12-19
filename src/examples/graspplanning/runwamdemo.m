@@ -1,6 +1,6 @@
 more off;
+addopenravepaths_graspplanning();
 global probs
-%addopenravepaths_graspplanning();
 orEnvSetOptions('debug 4');
 
 scenefile = 'data/lab1.env.xml';

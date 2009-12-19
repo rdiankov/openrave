@@ -155,7 +155,8 @@ for approach = ApproachDirs
                 
                 grasp(robot.grasp.center) = center_offset_backup;
                 grasp(robot.grasp.direction) = direction_backup;
-                GraspTable = [GraspTable; grasp reshape(Thand,[1 12])];
+                grasp(robot.grasp.transform) = reshape(Thand(1:3,1:4),[1 12]);
+                GraspTable = [GraspTable; grasp];
                 GraspStats = [GraspStats; mindist vol allmindist allvol];
 
                 if (mindist > 0 )

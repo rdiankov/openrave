@@ -215,7 +215,7 @@ if __name__=='__main__':
 
         # transform into end effect gripper
         for g in graspdata:
-            Tgrasp = dot(r_[transpose(reshape(g[0:12],(4,3))),[[0,0,0,1]]],manip.GetGraspTransform())
+            Tgrasp = r_[transpose(reshape(g[0:12],(4,3))),[[0,0,0,1]]]
             orrobot.SetJointValues(g[12:],manip.GetGripperJoints())
             T = Tgrasp
             while manip.CheckEndEffectorCollision(T,None):

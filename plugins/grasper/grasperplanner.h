@@ -79,10 +79,8 @@ public:
             pbase = pmanip->GetBase();
             pmanip->GetChildLinks(vlinks);
             FOREACHC(itlink,_robot->GetLinks()) {
-                if( std::find(vlinks.begin(),vlinks.end(),*itlink) == vlinks.end() ) {
-                    RAVELOG_INFO("disabling %s\n",(*itlink)->GetName().c_str());
+                if( std::find(vlinks.begin(),vlinks.end(),*itlink) == vlinks.end() )
                     (*itlink)->Enable(false);
-                }
             }
         }
         else {
