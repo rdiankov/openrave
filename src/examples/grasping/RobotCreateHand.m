@@ -12,7 +12,6 @@ manips = orRobotGetManipulators(robot.id);
 
 robot.name = name;
 robot.totaldof = orBodyGetDOF(robot.id);
-robot.preshapejoints = 3;
 
 % joints that will be controlled by the grasper
 % any joints not specified belong to the preshape

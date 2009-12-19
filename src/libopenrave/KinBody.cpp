@@ -111,7 +111,7 @@ AABB KinBody::Link::GEOMPROPERTIES::ComputeAABB(const Transform& t) const
         ab.extents.x = (dReal)0.5*tglobal.m[2]*vGeomData.y + RaveSqrt(1-tglobal.m[2]*tglobal.m[2])*vGeomData.x;
         ab.extents.y = (dReal)0.5*tglobal.m[6]*vGeomData.y + RaveSqrt(1-tglobal.m[6]*tglobal.m[6])*vGeomData.x;
         ab.extents.z = (dReal)0.5*tglobal.m[10]*vGeomData.y + RaveSqrt(1-tglobal.m[10]*tglobal.m[10])*vGeomData.x;
-        ab.pos = tglobal.trans+(dReal)0.5*vGeomData.y*Vector(tglobal.m[2],tglobal.m[6],tglobal.m[10]);
+        ab.pos = tglobal.trans;//+(dReal)0.5*vGeomData.y*Vector(tglobal.m[2],tglobal.m[6],tglobal.m[10]);
         break;
     case GeomTrimesh:
         // just use collisionmesh

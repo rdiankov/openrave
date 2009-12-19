@@ -61,8 +61,19 @@ for i = 1:nummanips
         manipulators{i}.closingdir(j) = str2num(tok);
     end
 
+    manipulators{i}.palmdir = zeros(3,1);
+    for j = 1:3
+        [tok, rem] = strtok(rem, ' ');
+        manipulators{i}.palmdir(j) = str2num(tok);
+    end
+
+    [tok, rem] = strtok(rem, ' ');
+    striklen = floor(str2num(tok));
+    manipulators{i}.name = rem(2:(striklen+1));
+
     [tok, rem] = strtok(rem, ' ');
     striklen = floor(str2num(tok));
     manipulators{i}.iksolvername = rem(2:(striklen+1));
+
     rem = rem((striklen+2):end);
 end

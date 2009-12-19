@@ -1597,11 +1597,9 @@ protected:
             os << (*itmanip)->GetClosingDirection().size() << " ";
             FOREACHC(it, (*itmanip)->GetClosingDirection())
                 os << *it << " ";
-            if( (*itmanip)->GetIKSolverName().size() == 0 )
-                os << "0 ";
-            else {
-                os << (*itmanip)->GetIKSolverName().size() << " " << (*itmanip)->GetIKSolverName() << " ";
-            }
+            os << (*itmanip)->GetPalmDirection().x << " " << (*itmanip)->GetPalmDirection().y << " " << (*itmanip)->GetPalmDirection().z << " ";
+            os << (*itmanip)->GetName().size() << " " << (*itmanip)->GetName() << " ";
+            os << (*itmanip)->GetIKSolverName().size() << " " << (*itmanip)->GetIKSolverName() << " ";
         }
 
         return true;

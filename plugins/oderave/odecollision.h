@@ -181,11 +181,11 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
             report->Reset(_options);
 
         if( !plink1->IsEnabled() ) {
-            RAVELOG_WARNA("calling collision on disabled link1 %S\n", plink1->GetName().c_str());
+            RAVELOG_WARNA(str(boost::format("calling collision on disabled link1 %s\n")%plink1->GetName()));
             return false;
         }
         if( !plink2->IsEnabled() ) {
-            RAVELOG_WARNA("calling collision on disabled link2 %s\n", plink2->GetName().c_str());
+            RAVELOG_WARNA(str(boost::format("calling collision on disabled link2 %s\n")%plink2->GetName()));
             return false;
         }
 
@@ -465,7 +465,8 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         // check collision, ignore adjacent bodies
         FOREACHC(itset, pbody->GetNonAdjacentLinks()) {
             assert( (*itset&0xffff) < (int)pbody->GetLinks().size() && (*itset>>16) < (int)pbody->GetLinks().size() );
-            if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(pbody->GetLinks()[*itset&0xffff]), KinBody::LinkConstPtr(pbody->GetLinks()[*itset>>16]), report) ) {
+            KinBody::LinkConstPtr plink1(pbody->GetLinks()[*itset&0xffff]), plink2(pbody->GetLinks()[*itset>>16]);
+            if( plink1->IsEnabled() && plink2->IsEnabled() && GetEnv()->CheckCollision(plink1,plink2, report) ) {
                 RAVELOG_VERBOSEA(str(boost::format("selfcol %s, Links %s %s are colliding\n")%pbody->GetName()%pbody->GetLinks()[*itset&0xffff]->GetName()%pbody->GetLinks()[*itset>>16]->GetName()));
                 return true;
             }

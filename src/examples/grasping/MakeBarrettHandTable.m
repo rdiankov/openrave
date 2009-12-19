@@ -44,7 +44,7 @@ end
 orEnvLoadScene('',1); % clear the scene
 
 % setup the robot
-robot = RobotCreateHand('TestHand','robots/barretthand.robot.xml');
+robot = RobotCreateHand('TestHand','robots/barrettwam.robot.xml');
 probs.grasp = orEnvCreateProblem('GrasperProblem', robot.name);
 
 % 3 preshapes

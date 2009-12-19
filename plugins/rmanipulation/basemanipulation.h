@@ -119,7 +119,6 @@ protected:
 
     bool SetActiveManip(ostream& sout, istream& sinput)
     {
-        RAVELOG_DEBUGA("Starting SetActiveManip...\n");
         string manipname;
         int index = -1;
 
@@ -887,6 +886,7 @@ protected:
         robot->GetActiveDOFValues(graspparams->vinitialconfig);
         graspparams->btransformrobot = false;
         graspparams->breturntrajectory = false;
+        graspparams->bonlycontacttarget = false;
 
         if( !graspplanner->InitPlan(robot, graspparams) ) {
             RAVELOG_ERRORA("InitPlan failed\n");
@@ -1028,6 +1028,7 @@ protected:
         graspparams->vgoalconfig = movingdir; // which ways the fingers should move
         graspparams->btransformrobot = false;
         graspparams->breturntrajectory = false;
+        graspparams->bonlycontacttarget = false;
 
         if( !graspplanner->InitPlan(robot, graspparams) ) {
             RAVELOG_ERRORA("InitPlan failed\n");
