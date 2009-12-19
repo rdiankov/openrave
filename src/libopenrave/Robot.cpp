@@ -1571,7 +1571,8 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report) const
         if( !pbody )
             continue;
         FORIT(itlink, itbody->sValidColLinks) {
-            if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(*itlink), KinBodyConstPtr(pbody), report) ) {
+            KinBody::LinkConstPtr plink(*itlink);
+            if( plink->IsEnabled() && GetEnv()->CheckCollision(plink, KinBodyConstPtr(pbody), report) ) {
                 if( !!report ) {
                     RAVELOG_DEBUGA("Self collision: (%s:%s)x(%s:%s).\n",
                                    !!report->plink1?report->plink1->GetParent()->GetName().c_str():"",

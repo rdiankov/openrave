@@ -97,7 +97,7 @@ grasp = [];
 showhandles = 1;
 oldhandles = [];
 
-orEnvSetOptions('collision pqp');
+%orEnvSetOptions('collision pqp');
 
 totalgrasps = size(ApproachDirs,2)*size(preshapes,2)*length(rolls)*length(standoffs);
 for approach = ApproachDirs

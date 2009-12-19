@@ -6,7 +6,7 @@
 class CM
 {
  public:
-    static bool JitterActiveDOF(RobotBasePtr robot)
+    static bool JitterActiveDOF(RobotBasePtr robot,int nMaxIterations=5000)
     {
         RAVELOG_VERBOSEA("starting jitter active dof...\n");
         vector<dReal> curdof, newdof, lower, upper;
@@ -21,7 +21,7 @@ class CM
             RAVELOG_WARNA("JitterActiveDOFs: initial config in self collision!\n");
 
         while(robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || robot->CheckSelfCollision() ) {
-            if( iter > 5000 ) {
+            if( iter > nMaxIterations ) {
                 RAVELOG_WARNA("Failed to find noncolliding position for robot\n");
 
                 robot->SetActiveDOFValues(curdof);
@@ -51,7 +51,7 @@ class CM
         return true;
     }
 
-    static bool JitterTransform(KinBodyPtr pbody, float fJitter)
+    static bool JitterTransform(KinBodyPtr pbody, float fJitter, int nMaxIterations=1000)
     {
         RAVELOG_VERBOSEA("starting jitter transform...\n");
 
@@ -60,7 +60,7 @@ class CM
         Transform transnew = transorig;
         int iter = 0;
         while(pbody->GetEnv()->CheckCollision(KinBodyConstPtr(pbody)) ) {
-            if( iter > 1000 )
+            if( iter > nMaxIterations )
                 return false;
 
             transnew.trans = transorig.trans + fJitter * Vector(RaveRandomFloat()-0.5f, RaveRandomFloat()-0.5f, RaveRandomFloat()-0.5f);

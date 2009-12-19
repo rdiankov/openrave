@@ -27,6 +27,10 @@ function [graspsuccess, full_solution_index] = GraspAndPlaceObject(robot, curobj
 
 global updir probs
 
+if( isempty(updir) )
+    updir = [0;0;1];
+end
+
 test = 0;
 graspsuccess = 0;
 
@@ -51,7 +55,10 @@ handjoints = robot.manip.handjoints;
 wristlinkid = robot.manip.eelink+1;
 robotid = robot.id;
 
-handid = orEnvCreateRobot('TestHand','robots/barretthand.robot.xml');
+handid = orEnvGetBody('TestHand');
+if( handid == 0 )
+    handid = orEnvCreateRobot('TestHand',robot.handfile);
+end
 
 while(curgrasp < size(grasps,1))
     g = grasps(:,curgrasp:end);
@@ -91,7 +98,6 @@ while(curgrasp < size(grasps,1))
     grasp = grasps(:,curgrasp);
     disp(['grasp: ' sprintf('%d ', [curgrasp order(curgrasp)]) ' time: ' sprintf('%fs', toc-basetime)]);
     
-    open_config = grasp(13:(12+length(handjoints)));
     curgrasp = curgrasp+1; % want the next grasp
 
     if(test)
@@ -193,6 +199,8 @@ while(curgrasp < size(grasps,1))
             success = StartTrajectory(robotid,trajdata);
             if( ~success )
                 warning('failed to start trajectory');
+                trajdata = orProblemSendCommand(['ReleaseFingers execute 0 outputtraj target ' curobj.name], probs.manip);
+                success = StartTrajectory(robotid,trajdata);
                 return;
             end
         else
@@ -254,21 +262,16 @@ while(curgrasp < size(grasps,1))
     % reenable hand joints
     %orRobotControllerSend(robotid, 'ignoreproxy');
     orRobotSetActiveDOFs(robotid, handjoints);
-    releasedir = -ones(1,length(open_config));
-    trajdata = orProblemSendCommand(['ReleaseFingers execute 0 outputtraj target ' curobj.name ...
-                                     ' movingdir ' sprintf('%f ', releasedir)], probs.manip);
+    trajdata = orProblemSendCommand(['ReleaseFingers execute 0 outputtraj target ' curobj.name], probs.manip);
 
     %% cannot wait forever since hand might get stuck
     if( isempty(trajdata) )
         warning('problems releasing, releasing target first');
         orProblemSendCommand('releaseall', probs.manip);
-        trajdata = orProblemSendCommand(['ReleaseFingers execute 0 outputtraj ' ...
-                                         ' target ' curobj.name ...
-                                         ' movingdir ' sprintf('%f ', releasedir)], ...
-                                        probs.manip);
+        trajdata = orProblemSendCommand(['ReleaseFingers execute 0 outputtraj target ' curobj.name], probs.manip);
         if( isempty(trajdata) )
             warning('failed to release fingers, forcing open');
-            success = RobotMoveJointValues(robotid,open_config,handjoints);
+            orBodySetJointValues(robotid,grasp(robot.grasp.joints),handjoints);
         else
             success = StartTrajectory(robotid,trajdata,4);
         end
@@ -283,7 +286,19 @@ while(curgrasp < size(grasps,1))
 
     %% now release object
     orProblemSendCommand('releaseall', probs.manip);
+
+    if( orEnvCheckCollision(robotid) )
+        %% move back a little (yes, this disregards the target if already in collision)
+        trajdata = orProblemSendCommand(['MoveHandStraight execute 0 outputtraj direction ' sprintf('%f ',-globalpalmdir) ' stepsize 0.001 minsteps 1 maxsteps 10'], probs.manip);
+        success = StartTrajectory(robotid,trajdata);
     
+        if( orEnvCheckCollision(robotid) )
+            orProblemSendCommand(['grabbody name ' curobj.name], probs.manip);
+            trajdata = orProblemSendCommand(['ReleaseFingers execute 0 outputtraj target ' curobj.name], probs.manip);
+            success = StartTrajectory(robotid,trajdata,2);
+        end
+    end
+
     if( squeezesuccess > 0 && putsuccess > 0 )
         disp('success, putting down');
 

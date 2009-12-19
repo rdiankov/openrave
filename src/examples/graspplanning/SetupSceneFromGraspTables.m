@@ -15,7 +15,7 @@
 function [robot,scenedata] = SetupSceneFromGraspTables(scenefile,grasptablefile)
 global probs
 
-randomize = 0;
+randomize = 1;
 G = load(grasptablefile);
 
 scenedata = [];
@@ -62,6 +62,7 @@ if( isempty(probs.manip) )
     warning('failed to create BaseManipulation problem');
 end
 
+robot.handfile = G.robot.filename; % get the hand filename
 robot.grasp = G.robot.grasp;
 robot.graspavoidlinks = G.robot.avoidlinks;
 

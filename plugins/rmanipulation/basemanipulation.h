@@ -168,7 +168,7 @@ protected:
 
         if( filename == "stream" ) {
             // the trajectory is embedded in the stream
-            RAVELOG_DEBUGA("BaseManipulation: reading trajectory from stream\n");
+            RAVELOG_VERBOSEA("BaseManipulation: reading trajectory from stream\n");
 
             if( !ptraj->Read(sinput, robot) ) {
                 RAVELOG_ERRORA("BaseManipulation: failed to get trajectory\n");
@@ -176,7 +176,7 @@ protected:
             }
         }
         else {
-            RAVELOG_DEBUGA(str(boost::format("BaseManipulation: reading trajectory: %s\n")%filename));
+            RAVELOG_VERBOSEA(str(boost::format("BaseManipulation: reading trajectory: %s\n")%filename));
 
             if( !ptraj->Read(filename, robot) ) {
                 RAVELOG_ERRORA(str(boost::format("BaseManipulation: failed to read trajectory %s\n")%filename));
@@ -297,7 +297,7 @@ protected:
         RobotBase::RobotStateSaver saver(robot);
 
         robot->SetActiveDOFs(pmanip->GetArmJoints());
-        CM::JitterActiveDOF(robot); // try to jitter out, don't worry if it fails
+        CM::JitterActiveDOF(robot,100); // try to jitter out, don't worry if it fails
 
         boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(robot->GetActiveDOF()));
         Trajectory::TPOINT point;

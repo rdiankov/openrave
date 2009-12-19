@@ -19,7 +19,7 @@ MySwitchModels = @(x) 1;
 SwitchModelPatterns = {};
 
 while(1)
-    curobj = scenedata.targetobjs{1};%{floor(length(scenedata.targetobjs)*rand*0.9999+1)};
+    curobj = scenedata.targetobjs{floor(length(scenedata.targetobjs)*rand*0.9999+1)};
     curobj.grasps = scenedata.GraspTable;
     curobj.dests = scenedata.dests;
 
@@ -30,11 +30,4 @@ while(1)
         warning('failed grasp');
         continue;
     end
-
-    orRobotSetActiveDOFs(robot.id,handjoints);
-    orProblemSendCommand(['ReleaseFingers target ' curobj.name],probs.manip);
-    orProblemSendCommand('releaseall',probs.manip);
-    
-    orProblemSendCommand(['movemanipulator armvals ' sprintf('%f ',initvals)], probs.manip);
-    WaitForRobot(robot.id);
 end

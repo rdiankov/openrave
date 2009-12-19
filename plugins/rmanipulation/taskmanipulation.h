@@ -454,24 +454,39 @@ class TaskManipulation : public ProblemInstance
                 if( !_pGrasperPlanner->InitPlan(probotHand,graspparams) ) {
                     probotHand->Enable(false);
                     _robot->Enable(true);
-                    RAVELOG_WARNA("grasp planner failed: %d\n", igrasp);
+                    RAVELOG_DEBUGA("grasp planner failed: %d\n", igrasp);
                     continue; // failed
                 }
 
                 if( !_pGrasperPlanner->PlanPath(phandtraj) ) {
                     probotHand->Enable(false);
                     _robot->Enable(true);
-                    RAVELOG_WARNA("grasp planner failed: %d\n", igrasp);
+                    RAVELOG_DEBUGA("grasp planner failed: %d\n", igrasp);
                     continue; // failed
                 }
 
+                Transform t = phandtraj->GetPoints().back().trans;
+
+                // move back a little due to things being in collision
+                if( !!ptarget ) {
+                    Vector vglobalpalmdir;
+                    if( iGraspDir >= 0 )
+                        vglobalpalmdir = Vector(pgrasp[iGraspDir], pgrasp[iGraspDir+1], pgrasp[iGraspDir+2]);
+                    else
+                        vglobalpalmdir = pmanip->GetPalmDirection();
+                    vglobalpalmdir = (t*pmanip->GetGraspTransform()).rotate(vglobalpalmdir);
+
+                    probotHand->SetTransform(t);
+                    while(GetEnv()->CheckCollision(probotHand,ptarget)) {
+                        t.trans -= vglobalpalmdir*0.001f;
+                        probotHand->SetTransform(t);
+                    }
+                }
+
+                transRobot = t * pmanip->GetGraspTransform(); // get final transform
+
                 probotHand->Enable(false);
                 _robot->Enable(true);
-
-                transRobot = phandtraj->GetPoints().back().trans; // get final transform
-                stringstream s; s << "new hand trans: ";
-                s << transRobot << endl;
-                RAVELOG_INFO(s.str());
 
                 // send the robot somewhere
                 probotHand->GetController()->SetPath(TrajectoryBaseConstPtr()); // reset
@@ -489,7 +504,7 @@ class TaskManipulation : public ProblemInstance
                 // check ik
                 Vector vglobalpalmdir;
                 if( iGraspDir >= 0 )
-                    vglobalpalmdir = Vector(pgrasp[iGraspDir], pgrasp[iGraspDir+1], pgrasp[iGraspDir+2]);
+                    vglobalpalmdir = tnewrobot.rotate(Vector(pgrasp[iGraspDir], pgrasp[iGraspDir+1], pgrasp[iGraspDir+2]));
                 else
                     vglobalpalmdir = tnewrobot.rotate(pmanip->GetPalmDirection());
 
