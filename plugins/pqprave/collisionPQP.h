@@ -125,8 +125,10 @@ class CollisionCheckerPQP : public CollisionCheckerBase
 
     virtual bool SetCollisionOptions(int options)
     {    
-        if(options & CO_Distance) 
+        if(options & CO_Distance) {
+            RAVELOG_DEBUG("setting pqp distance computation\n");
             _benabledis = true;
+        }
         else
             _benabledis = false;
 
@@ -398,8 +400,6 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         }
         return tmpnumcols>0;
     }
-
-    void SetOptions(bool CollisionCheckOnOff, bool DistanceCheckOnOff, bool ToleranceCheckOnOff){_benablecol = CollisionCheckOnOff; _benabledis = DistanceCheckOnOff; _benabletol = ToleranceCheckOnOff;}
 
     void PQPRealToVector(const Vector& in, const PQP_REAL R[3][3], const PQP_REAL T[3], Vector& out)
     {
