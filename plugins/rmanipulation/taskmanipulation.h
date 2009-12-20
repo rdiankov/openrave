@@ -477,7 +477,7 @@ class TaskManipulation : public ProblemInstance
                     vglobalpalmdir = (t*pmanip->GetGraspTransform()).rotate(vglobalpalmdir);
 
                     probotHand->SetTransform(t);
-                    while(GetEnv()->CheckCollision(probotHand,ptarget)) {
+                    while(GetEnv()->CheckCollision(KinBodyConstPtr(probotHand),ptarget)) {
                         t.trans -= vglobalpalmdir*0.001f;
                         probotHand->SetTransform(t);
                     }

@@ -397,7 +397,7 @@ public:
     virtual int CheckCollision(KinBody::LinkConstPtr plink)
     {
         int ct = 0;
-        if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(plink),_report) ) {
+        if( GetEnv()->CheckCollision(plink,_report) ) {
             ct |= CT_RegularCollision;
             FOREACH(itavoid,_vAvoidLinkGeometry) {
                 if( *itavoid == _report->plink1 || *itavoid == _report->plink2 ) {
