@@ -1029,6 +1029,7 @@ protected:
         graspparams->btransformrobot = false;
         graspparams->breturntrajectory = false;
         graspparams->bonlycontacttarget = false;
+        graspparams->bavoidcontact = true;
 
         if( !graspplanner->InitPlan(robot, graspparams) ) {
             RAVELOG_ERRORA("InitPlan failed\n");
@@ -1044,8 +1045,11 @@ protected:
         if( ptraj->GetPoints().size() > 0 ) {
             RobotBase::RobotStateSaver saver2(robot);
             robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
-            if( CM::JitterActiveDOF(robot) )
-                robot->GetActiveDOFValues(ptraj->GetPoints().back().q);
+            if( GetEnv()->CheckCollision(robot) ) {
+                RAVELOG_WARNA("robot final configuration is in collision\n");
+                if( CM::JitterActiveDOF(robot) )
+                    robot->GetActiveDOFValues(ptraj->GetPoints().back().q);
+            }
         }
 
         if( !!ptarget )

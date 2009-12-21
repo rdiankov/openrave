@@ -151,7 +151,7 @@ class CollisionCheckerMngr
 class GraspParameters : public PlannerBase::PlannerParameters
 {
  public:
- GraspParameters(EnvironmentBasePtr penv) : fstandoff(0), ftargetroll(0), vtargetdirection(0,0,1), btransformrobot(false), breturntrajectory(false), bonlycontacttarget(true), btightgrasp(false), fcoarsestep(0.1f), ffinestep(0.001f), ftranslationstepmult(0.1f), _penv(penv) {}
+ GraspParameters(EnvironmentBasePtr penv) : fstandoff(0), ftargetroll(0), vtargetdirection(0,0,1), btransformrobot(false), breturntrajectory(false), bonlycontacttarget(true), btightgrasp(false), bavoidcontact(false), fcoarsestep(0.1f), ffinestep(0.001f), ftranslationstepmult(0.1f), _penv(penv) {}
 
     dReal fstandoff; ///< start closing fingers when at this distance
     KinBodyPtr targetbody; ///< the target that will be grasped, all parameters will be in this coordinate system. if not present, then below transformations are in absolute coordinate system.
@@ -162,6 +162,7 @@ class GraspParameters : public PlannerBase::PlannerParameters
     bool breturntrajectory; ///< if true, returns how the individual fingers moved instead of just the final grasp
     bool bonlycontacttarget; ///< if true, then grasp is successful only if contact is made with the target
     bool btightgrasp; ///< This is tricky, but basically if true will also move the basic link along the negative axes of some of the joints to get a tighter fit.
+    bool bavoidcontact; ///< if true, will return a final robot configuration right before contact is made.
     vector<string> vavoidlinkgeometry; ///< list of links on the robot to avoid collisions with (for exmaple, sensors)
 
     dReal fcoarsestep;  ///< step for coarse planning (in radians)
@@ -185,6 +186,7 @@ class GraspParameters : public PlannerBase::PlannerParameters
         O << "<breturntrajectory>" << breturntrajectory << "</breturntrajectory>" << endl;
         O << "<bonlycontacttarget>" << bonlycontacttarget << "</bonlycontacttarget>" << endl;
         O << "<btightgrasp>" << btightgrasp << "</btightgrasp>" << endl;
+        O << "<bavoidcontact>" << bavoidcontact << "</bavoidcontact>" << endl;
         O << "<vavoidlinkgeometry>" << endl;
         FOREACHC(it,vavoidlinkgeometry)
             O << *it << " ";
@@ -224,6 +226,8 @@ class GraspParameters : public PlannerBase::PlannerParameters
             _ss >> bonlycontacttarget;
         else if( name == "btightgrasp" )
             _ss >> btightgrasp;
+        else if( name == "bavoidcontact" )
+            _ss >> bavoidcontact;
         else if( name == "fcoarsestep" )
             _ss >> fcoarsestep;
         else if( name == "ffinestep" )

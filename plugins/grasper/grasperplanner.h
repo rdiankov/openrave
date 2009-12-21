@@ -341,7 +341,7 @@ public:
                 for(int q = 0; q < (int)vlinks.size(); q++) {
                     int ct;
                     if(_robot->DoesAffect(_robot->GetActiveJointIndex(ifing),vlinks[q]->GetIndex())  && (ct = CheckCollision(vlinks[q])) != CT_None ) {
-                        if( ct & CT_AvoidLinkHit )
+                        if( !coarse_pass && (ct & CT_AvoidLinkHit) )
                             return false;
                         if(coarse_pass) {
                             //coarse step collided, back up and shrink step
@@ -363,8 +363,6 @@ public:
                                     ss << endl;
                                     RAVELOG_VERBOSEA(ss.str());
                                 }
-                                //vbcollidedlinks[q] = true;
-                                //vijointresponsible[q] = _robot->GetActiveJointIndex(ifing);
                                 if( ct & CT_SelfCollision ) {
                                     // don't want the robot to end up in self collision, so back up
                                     dofvals[ifing] -= vclosingdir[ifing] * step_size;
@@ -385,7 +383,7 @@ public:
                                 RAVELOG_VERBOSEA(ss.str());
                             }
                      
-                            if( ct & CT_SelfCollision ) {
+                            if( (ct & CT_SelfCollision) || _parameters.bavoidcontact ) {
                                 // don't want the robot to end up in self collision, so back up
                                 dofvals[ifing] -= vclosingdir[ifing] * step_size;
                             }
@@ -408,9 +406,6 @@ public:
                 dofvals[ifing] += vclosingdir[ifing] * step_size;
                 bMoved = true;
             }
-
-            if(ncollided == (int)vlinks.size())
-                break;
         }
     
         if(!_parameters.breturntrajectory)
