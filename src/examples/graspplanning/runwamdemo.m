@@ -1,5 +1,6 @@
 more off;
 addopenravepaths_graspplanning();
+
 global probs
 orEnvSetOptions('debug 4');
 

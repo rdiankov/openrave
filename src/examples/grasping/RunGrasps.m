@@ -49,4 +49,5 @@ for i = 1:size(grasps,1)
         disp(sprintf('grasp %d',i));
         pause(pausetime);
     end
+    pause;
 end

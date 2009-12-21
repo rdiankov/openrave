@@ -66,7 +66,7 @@ while(curgrasp < size(grasps,1))
     palmoffset = 0.02;
     basetime = toc;
     cmd = ['testallgrasps maxiter 1000 execute 0 outputtraj ' ...
-           ' seedik 1 seedgrasps 5 seeddests 8 randomdests 1 randomgrasps 1 ' ...
+           ' seedik 1 seedgrasps 3 seeddests 8 randomdests 1 randomgrasps 1 ' ...
            ' target ' curobj.name ...
            ' offset ' sprintf('%f',palmoffset) ...
            ' robothand TestHand ' ...
@@ -110,13 +110,13 @@ while(curgrasp < size(grasps,1))
         warning('failed to start initial traj');
         return;
     end
-        
+
     disp('moving hand');
     L = orBodyGetLinks(robot.id);
     Tee = reshape(L(:,wristlinkid),[3 4]) * [robot.manip.Tgrasp; 0 0 0 1];
     globalpalmdir = Tee(1:3,1:3)*robot.manip.palmdir;
     movesteps = floor(palmoffset/0.001);
-    trajdata = orProblemSendCommand(['MoveHandStraight execute 0 outputtraj direction ' sprintf('%f ',globalpalmdir) ' stepsize 0.001 minsteps ' num2str(movesteps-2) ' maxsteps ' num2str(movesteps+1)], probs.manip);
+    trajdata = orProblemSendCommand(['MoveHandStraight ignorefirstcollision 0 execute 0 outputtraj direction ' sprintf('%f ',globalpalmdir) ' stepsize 0.001 minsteps ' num2str(movesteps-2) ' maxsteps ' num2str(movesteps+1)], probs.manip);
     if(isempty(trajdata) )
         disp('failed to move greedily, planning instead...')
         Tfinalgrasp = TargTrans*[reshape(grasp(end-11:end),[3 4]); 0 0 0 1];
@@ -130,14 +130,14 @@ while(curgrasp < size(grasps,1))
         warning('failed to move hand straight');
         return;
     end
-    
+
     if( ~isempty(squeeze) )
         if( ~squeeze(robot,curobj.name) )
             error('failed to start torque');
         end
     else
         disp('closing fingers');
-        closeoffset = 0.12;
+        %closeoffset = 0.12;
         trajdata = orProblemSendCommand(['CloseFingers execute 0 outputtraj'] , probs.manip);
         if( isempty(trajdata) )
             warning('failed to close fingers');
@@ -304,7 +304,7 @@ while(curgrasp < size(grasps,1))
 
         % only break when succeeded        
         %orProblemSendCommand(['MoveHandStraight stepsize 0.003 minsteps ' sprintf('%f ', 90) ' maxsteps ' sprintf('%f ', 100) ' direction ' sprintf('%f ', updir')]);
-        #RobotGoInitial(robot);
+        %RobotGoInitial(robot);
         
         if( MySwitchModels(0) )
             curobj.id = orEnvGetBody(curobj.name);

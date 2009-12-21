@@ -1,9 +1,9 @@
 OpenRAVE - Open-source Robotics and Animation Virtual Environment (under the LGPL)
 
+Read the wiki at http://openrave.programmingvision.com/ for installation for the required packages.
+
 Linux/MacOSX
 ============
-
-Read the wiki at http://openrave.programmingvision.com/ for installation for the required packages.
 
 make
 make install
@@ -38,14 +38,14 @@ Environment Variables
 
 Before running openrave, some environment variables have to be set. These environment variables control where openrave looks for plugins and data files.
 
-Example for linux bash use (can put it ~/.bashrc):
+Example for linux bash use (can put it ~/.bashrc, directory separator is ':'):
 export OPENRAVE_PLUGINS=/usr/local/share/openrave/plugins:/my/other/plugins/dir
 export OPENRAVE_DATA=/usr/local/share/openrave:/my/other/data/dir
 
-Example for windows:
-OPENRAVE_PLUGINS="C:\openrave\bin\plugins":"C:\my\other\plugins\dir"
-OPENRAVE_DATA="C:\openrave\data":"C:\my\other\data\dir"
+Example for windows (directory separator is ';'):
+OPENRAVE_PLUGINS=C:\openrave\bin\plugins;C:\my\other\plugins\dir
+OPENRAVE_DATA=C:\openrave\data;C:\my\other\data\dir
 
-Note that mulitple directories can be set by separating them with ':'. If any of the variables are not set, OpenRAVE will use the default installation directories.
+If any of the variables are not set, OpenRAVE will use the default installation directories.
 
 Once everything is compiled, in the visual studio solution explorer build the project named INSTALL. This will install all files to c:\program files\openrave. Go to c:\program files\openrave\bin and run openrave

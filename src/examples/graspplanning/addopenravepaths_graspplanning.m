@@ -1,4 +1,4 @@
-function addopenravepaths_grasping()
+function addopenravepaths_graspplanning()
 
 if( exist('orEnvSetOptions','file') )
    %% functions already added

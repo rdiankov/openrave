@@ -601,4 +601,10 @@ OBB TransformOBB(const OBB& obb, const Transform& t)
     return newobb;
 }
 
+bool AABBCollision(const AABB& ab1, const AABB& ab2)
+{
+    Vector v = ab1.pos-ab2.pos;
+    return RaveFabs(v.x) <= ab1.extents.x+ab2.extents.x && RaveFabs(v.y) <= ab1.extents.y+ab2.extents.y && RaveFabs(v.z) <= ab1.extents.z+ab2.extents.z;
+}
+
 } // end namespace OpenRAVE

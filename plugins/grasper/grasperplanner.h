@@ -15,10 +15,6 @@
 #ifndef  RAVE_GRASPER_PLANNER_H
 #define  RAVE_GRASPER_PLANNER_H
 
-#define COARSE_STEP 0.1f  ///step for coarse planning
-#define FINE_STEP (COARSE_STEP/(100.0f)) ///step for fine planning, THIS STEP MUST BE VERY SMALL [COARSE_STEP/(100.0f)] OR THE COLLISION CHECKER GIVES WILDLY BOGUS RESULTS
-#define TRANSLATION_LIMIT ((int)(10.0f/step_size)) ///how far to translate before giving up
-
 // plans a grasp
 class GrasperPlanner:  public PlannerBase
 {
@@ -130,8 +126,11 @@ public:
                 // transform into base
                 tbase = tbase * pmanip->GetEndEffectorTransform().inverse() * pbase->GetTransform();
             }
-            else                
+            else {
+                RAVELOG_DEBUGA("no active manipulator for robot, cannot get palm direction\n");
                 tbase.trans = _parameters.vtargetposition;
+            }
+
             if( !!_parameters.targetbody )
                 tbase = _parameters.targetbody->GetTransform() * tbase;
 
@@ -174,84 +173,112 @@ public:
         for(int i = 0; i < _robot->GetActiveDOF(); i++)
             UpdateDependents(i,dofvals);
 
-        //move hand toward object until something collides
-        dReal step_size = 0.25f*COARSE_STEP;
-        bool collision = false;
-    
-        bool coarse_pass = true; ///this parameter controls the coarseness of the step
-    
-        int num_iters = TRANSLATION_LIMIT;
-        bool bMoved = false;
-
-        dReal* pX = NULL, *pY = NULL, *pZ = NULL;
-
-        if( _robot->GetAffineDOF() ) {
-            // if using affine dofs, only get the translations
-            dReal* p = &dofvals[0] + _robot->GetActiveDOF();
-            if( _robot->GetAffineDOF() & RobotBase::DOF_Rotation3D ) p -= 3;
-            else if( _robot->GetAffineDOF() & RobotBase::DOF_RotationAxis ) p -= 1;
-
-            if( _robot->GetAffineDOF() & RobotBase::DOF_Z ) pZ = --p;
-            if( _robot->GetAffineDOF() & RobotBase::DOF_Y ) pY = --p;
-            if( _robot->GetAffineDOF() & RobotBase::DOF_X ) pX = --p;
-    
-            while(num_iters-- > 0) {
-                for(int q = 0; q < (int)vlinks.size(); q++) {
-                    int ct = CheckCollision(vlinks[q]);
-                    if( ct & CT_AvoidLinkHit )
-                        return false;
-                    if( ct != CT_None ){ 
-                        if(coarse_pass) {
-                            //coarse step collided, back up and shrink step
-                            if(bMoved) {
-                                coarse_pass = false;
-
-                                if( pX != NULL )  *pX -= step_size*vapproachdir.x;
-                                if( pY != NULL )  *pY -= step_size*vapproachdir.y;
-                                if( pZ != NULL )  *pZ -= step_size*vapproachdir.z;
-                                step_size = 0.25f*FINE_STEP;
-                                num_iters = (int)(COARSE_STEP/FINE_STEP)+1;
-                                _robot->SetActiveDOFValues(dofvals);
-                                break;
-                            }
-                            else {
-                                collision = true;
-                                break;
-                            }
-                        }
-                        else {
-                            if(_parameters.fstandoff == 0)
-                                ncollided++;
-                       
-                            collision = true;
-                            //move hand back by standoff
-                        
-                            if( pX != NULL )  *pX -= _parameters.fstandoff*vapproachdir.x;
-                            if( pY != NULL )  *pY -= _parameters.fstandoff*vapproachdir.y;
-                            if( pZ != NULL )  *pZ -= _parameters.fstandoff*vapproachdir.z;
-
-                            break;
-                        }
-                    }
+        Vector vTargetCenter;
+        dReal fTargetRadius;
+        if( !_parameters.targetbody ) {
+            vector<KinBodyPtr> vbodies;
+            GetEnv()->GetBodies(vbodies);
+            Vector vmin, vmax;
+            bool bInitialized = false;
+            FOREACH(itbody,vbodies) {
+                if( *itbody == _robot )
+                    continue;
+                AABB ab = (*itbody)->ComputeAABB();
+                if( !bInitialized ) {
+                    vmin = ab.pos-ab.extents;
+                    vmax = ab.pos+ab.extents;
+                    bInitialized = true;
+                    continue;
                 }
 
-                for(int i = 0; i < _robot->GetActiveDOF(); i++)
-                    ptemp.q[i] = dofvals[i];
+                Vector vmin2 = ab.pos-ab.extents, vmax2 = ab.pos+ab.extents;
+                if( vmin.x > vmin2.x ) vmin.x = vmin2.x;
+                if( vmin.y > vmin2.y ) vmin.y = vmin2.y;
+                if( vmin.z > vmin2.z ) vmin.z = vmin2.z;
+                if( vmax.x < vmax2.x ) vmax.x = vmax2.x;
+                if( vmax.y < vmax2.y ) vmax.y = vmax2.y;
+                if( vmax.z < vmax2.z ) vmax.z = vmax2.z;
+            }
+
+            if( !bInitialized ) {
+                RAVELOG_WARNA("no objects in environment\n");
+                return false;
+            }
+
+            vTargetCenter = 0.5f * (vmin+vmax);
+            fTargetRadius = 0.5f * RaveSqrt((vmax-vmin).lengthsqr3());
+        }
+        else {
+            AABB ab = _parameters.targetbody->ComputeAABB();
+            vTargetCenter = ab.pos;
+            fTargetRadius = RaveSqrt(ab.extents.lengthsqr3());
+        }
+
+        if( _robot->GetAffineDOF() ) {
+            dReal* pX = NULL, *pY = NULL, *pZ = NULL;
+            if( _robot->GetAffineDOF() & RobotBase::DOF_X )
+                pX = &dofvals.at(_robot->GetAffineDOFIndex(RobotBase::DOF_X));
+            if( _robot->GetAffineDOF() & RobotBase::DOF_Y )
+                pY = &dofvals.at(_robot->GetAffineDOFIndex(RobotBase::DOF_Y));
+            if( _robot->GetAffineDOF() & RobotBase::DOF_Z )
+                pZ = &dofvals.at(_robot->GetAffineDOFIndex(RobotBase::DOF_Z));
+    
+            Vector v = vapproachdir * (_parameters.fcoarsestep*_parameters.ftranslationstepmult);
+            while(1) {
+                int ct = 0;
+                for(int q = 0; q < (int)vlinks.size(); q++) {
+                    ct = CheckCollision(vlinks[q]);
+                    if( ct&CT_RegularCollision )
+                        break;
+                }
+                if( ct&CT_RegularCollision )
+                    break;
 
                 if(_parameters.breturntrajectory) {
                     ptemp.trans = _robot->GetTransform();
                     ptraj->AddPoint(ptemp); 
                 }
 
-                if(collision)
+                if( pX != NULL )  *pX += v.x;
+                if( pY != NULL )  *pY += v.y;
+                if( pZ != NULL )  *pZ += v.z;
+                _robot->SetActiveDOFValues(dofvals);
+
+                // check if robot is already past all objects
+                AABB abRobot = _robot->ComputeAABB();
+                if( dot3(vapproachdir, abRobot.pos-vTargetCenter) > fTargetRadius + RaveSqrt(abRobot.extents.lengthsqr3()) ) {
+                    RAVELOG_DEBUG("robot did not hit anything, planner failing...\n");
+                    return false;
+                }
+            }
+
+            // move back and try again with a finer step
+            if( pX != NULL )  *pX -= v.x;
+            if( pY != NULL )  *pY -= v.y;
+            if( pZ != NULL )  *pZ -= v.z;            
+
+            v = vapproachdir * (_parameters.ffinestep*_parameters.ftranslationstepmult);
+            while(1) {
+                int ct = 0;
+                for(int q = 0; q < (int)vlinks.size(); q++) {
+                    ct = CheckCollision(vlinks[q]);
+                    if( ct&CT_RegularCollision )
+                        break;
+                }
+                if( ct&CT_AvoidLinkHit )
+                    return false;
+                if( ct&CT_RegularCollision )
                     break;
 
-                if( pX != NULL )  *pX += step_size*vapproachdir.x;
-                if( pY != NULL )  *pY += step_size*vapproachdir.y;
-                if( pZ != NULL )  *pZ += step_size*vapproachdir.z;
-
+                if( pX != NULL )  *pX += v.x;
+                if( pY != NULL )  *pY += v.y;
+                if( pZ != NULL )  *pZ += v.z;
                 _robot->SetActiveDOFValues(dofvals);
-                bMoved = true;
+
+                if(_parameters.breturntrajectory) {
+                    ptemp.trans = _robot->GetTransform();
+                    ptraj->AddPoint(ptemp); 
+                }
             }
         }
     
@@ -280,28 +307,26 @@ public:
 
         ptemp.trans = _robot->GetTransform();
 
+        bool coarse_pass = true; ///this parameter controls the coarseness of the step    
+        bool bMoved = false;
+
         //close the fingers one by one
-        dReal fmult;
+        dReal step_size = 0;
         for(int ifing = 0; ifing < _robot->GetActiveDOF(); ifing++) {
             int nJointIndex = _robot->GetActiveJointIndex(ifing);
             if( vclosingdir[ifing] == 0 || nJointIndex < 0 )
                 // not a real joint, so skip
                 continue;
 
-            switch(_robot->GetJoints().at(nJointIndex)->GetType()) {
-            case KinBody::Joint::JointSlider:
-                fmult = 0.05f;
-                break;
-            default:
-                fmult = 1.0f;
-            }
-        
-            step_size = COARSE_STEP*fmult;
+            dReal fmult = 1;
+            if(_robot->GetJoints().at(nJointIndex)->GetType() == KinBody::Joint::JointSlider )
+                fmult = _parameters.ftranslationstepmult;
+            step_size = _parameters.fcoarsestep*fmult;
 
             coarse_pass = true;
             bool collision = false;
 
-            num_iters = (int)((vupperlim[ifing] - vlowerlim[ifing])/step_size);
+            int num_iters = (int)((vupperlim[ifing] - vlowerlim[ifing])/step_size);
             bMoved = false;
             while(num_iters-- > 0) {
                 // set manip joints that haven't been covered so far
@@ -326,8 +351,8 @@ public:
                                 dofvals[ifing] -= vclosingdir[ifing] * step_size;
                                 UpdateDependents(ifing,dofvals);
                                 _robot->SetActiveDOFValues(dofvals);
-                                step_size = FINE_STEP*fmult;
-                                num_iters = (int)(COARSE_STEP/FINE_STEP)+1;
+                                step_size = _parameters.ffinestep*fmult;
+                                num_iters = (int)(_parameters.fcoarsestep/_parameters.ffinestep)+1;
                             }
                             else {
                                 if( IS_DEBUGLEVEL(Level_Verbose) ) {

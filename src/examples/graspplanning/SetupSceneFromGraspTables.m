@@ -123,17 +123,19 @@ offset = [ab(1,1)-ab(1,2);ab(2,1)-ab(2,2); ab(3,1)+ab(3,2)];
 trans = [offset(1)+2*ab(1,2)*X; offset(2)+2*ab(2,2)*Y; repmat(offset(3),size(X))];
 
 targetid = orEnvCreateKinBody('__testbody__',G.targetfilename);
+%% all transforms should be relative to the current transformation of the body
+Torg = [reshape(orBodyGetTransform(targetid),[3 4]); 0 0 0 1];
 scenedata.dests = [];
 for i = 1:size(trans,2);
     for roll = 0:pi/2:1.5*pi
-        T = Ttable*[RotationMatrixFromAxisAngle([0;0;roll]) trans(:,i); 0 0 0 1];
+        T = Ttable*[RotationMatrixFromAxisAngle([0;0;roll]) trans(:,i); 0 0 0 1]*Torg;
         orBodySetTransform(targetid,T);
         if( ~orEnvCheckCollision(targetid) )
             scenedata.dests = [scenedata.dests T(:)];
         end
     end
-    for roll = [pi/2 1.5*pi]
-        T = Ttable*[RotationMatrixFromAxisAngle([0;0;roll]) trans(:,i); 0 0 0 1];
+    for roll = [pi/2 pi 1.5*pi]
+        T = Ttable*[RotationMatrixFromAxisAngle([roll;0;0]) trans(:,i); 0 0 0 1]*Torg;
         orBodySetTransform(targetid,T);
         if( ~orEnvCheckCollision(targetid) )
             scenedata.dests = [scenedata.dests T(:)];

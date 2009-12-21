@@ -1355,6 +1355,7 @@ RAVE_API bool TriTriCollision(const RaveVector<double>& u1, const RaveVector<dou
 
 RAVE_API OBB OBBFromAABB(const AABB& ab, const TransformMatrix& t);
 RAVE_API OBB TransformOBB(const OBB& obb, const Transform& t);
+RAVE_API bool AABBCollision(const AABB& ab1, const AABB& ab2);
 
 template <class T> inline void mult(T* pf, T fa, int r)
 {

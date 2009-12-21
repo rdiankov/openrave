@@ -494,8 +494,8 @@ class ExplorationParameters : public PlannerBase::PlannerParameters
 class GraspParameters : public PlannerBase::PlannerParameters
 {
  public:
- GraspParameters(EnvironmentBasePtr penv) : fstandoff(0), ftargetroll(0), vtargetdirection(0,0,1), btransformrobot(false), breturntrajectory(false), bonlycontacttarget(true), btightgrasp(false), _penv(penv) {}
-        
+ GraspParameters(EnvironmentBasePtr penv) : fstandoff(0), ftargetroll(0), vtargetdirection(0,0,1), btransformrobot(false), breturntrajectory(false), bonlycontacttarget(true), btightgrasp(false), fcoarsestep(0.1f), ffinestep(0.001f), ftranslationstepmult(0.1f), _penv(penv) {}
+
     dReal fstandoff; ///< start closing fingers when at this distance
     KinBodyPtr targetbody; ///< the target that will be grasped, all parameters will be in this coordinate system. if not present, then below transformations are in absolute coordinate system.
     dReal ftargetroll; ///< rotate the hand about the palm normal (if one exists) by this many radians
@@ -506,6 +506,10 @@ class GraspParameters : public PlannerBase::PlannerParameters
     bool bonlycontacttarget; ///< if true, then grasp is successful only if contact is made with the target
     bool btightgrasp; ///< This is tricky, but basically if true will also move the basic link along the negative axes of some of the joints to get a tighter fit.
     vector<string> vavoidlinkgeometry; ///< list of links on the robot to avoid collisions with (for exmaple, sensors)
+
+    dReal fcoarsestep;  ///< step for coarse planning (in radians)
+    dReal ffinestep; ///< step for fine planning (in radians), THIS STEP MUST BE VERY SMALL OR THE COLLISION CHECKER GIVES WILDLY BOGUS RESULTS
+    dReal ftranslationstepmult; ///< multiplication factor for translational movements of the hand or joints
         
  protected:
     EnvironmentBasePtr _penv; ///< environment target belongs to
@@ -528,6 +532,9 @@ class GraspParameters : public PlannerBase::PlannerParameters
         FOREACHC(it,vavoidlinkgeometry)
             O << *it << " ";
         O << "</vavoidlinkgeometry>" << endl;
+        O << "<fcoarsestep>" << fcoarsestep << "</fcoarsestep>" << endl;
+        O << "<ffinestep>" << ffinestep << "</ffinestep>" << endl;
+        O << "<ftranslationstepmult>" << ftranslationstepmult << "</ftranslationstepmult>" << endl;
         return !!O;
     }
  
@@ -560,6 +567,12 @@ class GraspParameters : public PlannerBase::PlannerParameters
             _ss >> bonlycontacttarget;
         else if( name == "btightgrasp" )
             _ss >> btightgrasp;
+        else if( name == "fcoarsestep" )
+            _ss >> fcoarsestep;
+        else if( name == "ffinestep" )
+            _ss >> ffinestep;
+        else if( name == "ftranslationstepmult" )
+            _ss >> ftranslationstepmult;
         else // give a chance for the default parameters to get processed
             return PlannerParameters::endElement(name);
         return false;

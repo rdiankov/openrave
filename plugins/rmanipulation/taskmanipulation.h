@@ -68,7 +68,7 @@ class TaskManipulation : public ProblemInstance
         RegisterCommand("switchmodels",boost::bind(&TaskManipulation::SwitchModels,this,_1,_2),
                         "Switches between thin and fat models for planning.");
 #endif
-        RegisterCommand("TestAllGrasps",boost::bind(&TaskManipulation::TestAllGrasps,this,_1,_2),
+        RegisterCommand("testallgrasps",boost::bind(&TaskManipulation::TestAllGrasps,this,_1,_2),
                         "Grasp planning, pick a grasp from a grasp set and use it for manipulation.\n"
                         "Can optionally use bispace for mobile platforms");
     }
@@ -471,10 +471,9 @@ class TaskManipulation : public ProblemInstance
                 if( !!ptarget ) {
                     Vector vglobalpalmdir;
                     if( iGraspDir >= 0 )
-                        vglobalpalmdir = Vector(pgrasp[iGraspDir], pgrasp[iGraspDir+1], pgrasp[iGraspDir+2]);
+                        vglobalpalmdir = transTarg.rotate(Vector(pgrasp[iGraspDir], pgrasp[iGraspDir+1], pgrasp[iGraspDir+2]));
                     else
-                        vglobalpalmdir = pmanip->GetPalmDirection();
-                    vglobalpalmdir = (t*pmanip->GetGraspTransform()).rotate(vglobalpalmdir);
+                        vglobalpalmdir = (t*pmanip->GetGraspTransform()).rotate(pmanip->GetPalmDirection());
 
                     probotHand->SetTransform(t);
                     while(GetEnv()->CheckCollision(KinBodyConstPtr(probotHand),KinBodyConstPtr(ptarget))) {
@@ -504,7 +503,7 @@ class TaskManipulation : public ProblemInstance
                 // check ik
                 Vector vglobalpalmdir;
                 if( iGraspDir >= 0 )
-                    vglobalpalmdir = tnewrobot.rotate(Vector(pgrasp[iGraspDir], pgrasp[iGraspDir+1], pgrasp[iGraspDir+2]));
+                    vglobalpalmdir = transTarg.rotate(Vector(pgrasp[iGraspDir], pgrasp[iGraspDir+1], pgrasp[iGraspDir+2]));
                 else
                     vglobalpalmdir = tnewrobot.rotate(pmanip->GetPalmDirection());
 
