@@ -32,9 +32,9 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
         
         const std::list<EnvironmentBase::CollisionCallbackFn>& GetCallbacks() {
-            if( _bHasCallbacks && listcallbacks.size() == 0 )
-                _pchecker->GetEnv()->GetRegisteredCollisionCallbacks(listcallbacks);
-            return listcallbacks;
+            if( _bHasCallbacks && _listcallbacks.size() == 0 )
+                _pchecker->GetEnv()->GetRegisteredCollisionCallbacks(_listcallbacks);
+            return _listcallbacks;
         }
 
         boost::shared_ptr<ODECollisionChecker> _pchecker;
@@ -47,7 +47,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
     private:
         bool _bHasCallbacks;
-        std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
+        std::list<EnvironmentBase::CollisionCallbackFn> _listcallbacks;
     };
 
     inline boost::shared_ptr<ODECollisionChecker> shared_checker() { return boost::static_pointer_cast<ODECollisionChecker>(shared_from_this()); }

@@ -234,6 +234,8 @@ private:
     {
         if( !!report )
             report->Reset(_options);
+        bool bHasCallbacks = GetEnv()->HasRegisteredCollisionCallbacks();
+        std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
 
         _world->getPairCache()->setOverlapFilterCallback(poverlapfilt);
         _dispatcher->_poverlapfilt = poverlapfilt;
@@ -244,7 +246,6 @@ private:
         _broadphase->calculateOverlappingPairs(_world->getDispatcher());
 
         int numManifolds = _world->getDispatcher()->getNumManifolds();
-        bool bCollision = false;
 
         for (int i=0;i<numManifolds;i++) {
             btPersistentManifold* contactManifold = _world->getDispatcher()->getManifoldByIndexInternal(i);
@@ -258,6 +259,11 @@ private:
 
             if( numContacts == 0 )
                 continue;
+
+            if( bHasCallbacks && !report ) {
+                report.reset(new COLLISIONREPORT());
+                report->Reset(_options);
+            }
 
             if( !!report ) {
                 report->numCols = numContacts;
@@ -276,11 +282,31 @@ private:
                 }
             }
 
-            bCollision = true;
             contactManifold->clearManifold();
+
+            if( bHasCallbacks ) {
+                if( listcallbacks.size() == 0 )
+                    GetEnv()->GetRegisteredCollisionCallbacks(listcallbacks);
+                bool bDefaultAction = true;
+                FOREACHC(itfn, listcallbacks) {
+                    OpenRAVE::CollisionAction action = (*itfn)(report,false);
+                    if( action != OpenRAVE::CA_DefaultAction ) {
+                        bDefaultAction = false;
+                        break;
+                    }
+                }
+
+                if( !bDefaultAction )
+                    continue;
+            }
+            
+            // collision, so clear the rest and return
+            for (int j=i+1;j<numManifolds;j++)
+                _world->getDispatcher()->getManifoldByIndexInternal(j)->clearManifold();
+            return true;
         }
 
-        return bCollision;
+        return false;
     }
 
 public:

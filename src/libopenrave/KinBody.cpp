@@ -132,7 +132,7 @@ AABB KinBody::Link::GEOMPROPERTIES::ComputeAABB(const Transform& t) const
         }
         break;
     default:
-        assert(0);
+        BOOST_ASSERT(0);
     }
 
     return ab;
@@ -511,7 +511,7 @@ Vector KinBody::Joint::GetAnchor() const
 
 Vector KinBody::Joint::GetAxis(int iaxis ) const
 {
-    assert(iaxis >= 0 && iaxis < 3 );
+    BOOST_ASSERT(iaxis >= 0 && iaxis < 3 );
     if( !bodies[0] )
         return vAxes[iaxis];
     else if( !!bodies[1] && bodies[1]->IsStatic() )
@@ -1059,7 +1059,7 @@ dReal KinBody::ConfigDist(const std::vector<dReal>& q1, const std::vector<dReal>
 void KinBody::SetJointWeight(int nJointIndex, dReal weight)
 {
     // it is this complicated because each joint can have more than one dof
-    assert( nJointIndex >= 0 && nJointIndex < (int)_vecjoints.size() );
+    BOOST_ASSERT( nJointIndex >= 0 && nJointIndex < (int)_vecjoints.size() );
     int end = nJointIndex == (int)_vecjoints.size()-1 ? (int)_vecJointWeights.size() : _vecJointIndices[nJointIndex+1];
     for(int i = _vecJointIndices[nJointIndex]; i < end; ++i )
         _vecJointWeights[i] = weight;
@@ -1125,7 +1125,7 @@ void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, bool bCheck
         vector<dReal> upperlim, lowerlim;
         FOREACHC(it, _vecjoints) {
             const dReal* p = pJointValues+*itindex++;
-            assert( (*it)->GetDOF() <= 3 );
+            BOOST_ASSERT( (*it)->GetDOF() <= 3 );
             (*it)->GetLimits(lowerlim, upperlim);
             if( (*it)->GetType() == Joint::JointSpherical ) {
                 dReal fcurang = fmodf(RaveSqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]),2*PI);
@@ -1199,30 +1199,30 @@ void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, bool bCheck
             FOREACH(itjoint, *alljoints[j]) {
                 const dReal* pvalues=NULL;
                 
-                if( itindex != _vecJointIndices.end() ) pvalues = pJointValues+*itindex++;
-                else {
-                    assert(j == 1); // passive
-                    if( (*itjoint)->GetMimicJointIndex() >= 0 ) {
-                        int mimicindex = (*itjoint)->GetMimicJointIndex();
-                        int jointsize = mimicindex < (int)_vecJointIndices.size()-1 ? _vecJointIndices[mimicindex+1] : GetDOF();
-                        pvalues = pJointValues+_vecJointIndices[mimicindex];
-                        jointsize -= _vecJointIndices[mimicindex];
+                if( itindex != _vecJointIndices.end() )
+                    pvalues = pJointValues+*itindex++;
 
-                        for(int i = 0; i < jointsize; ++i)
-                            dummyvalues[i] = pvalues[i] * (*itjoint)->GetMimicCoeffs()[0] + (*itjoint)->GetMimicCoeffs()[1];
-                        pvalues = dummyvalues;
+                if( (*itjoint)->GetMimicJointIndex() >= 0 ) {
+                    int mimicindex = (*itjoint)->GetMimicJointIndex();
+                    int jointsize = mimicindex < (int)_vecJointIndices.size()-1 ? _vecJointIndices[mimicindex+1] : GetDOF();
+                    pvalues = pJointValues+_vecJointIndices[mimicindex];
+                    jointsize -= _vecJointIndices[mimicindex];
+                    
+                    for(int i = 0; i < jointsize; ++i)
+                        dummyvalues[i] = pvalues[i] * (*itjoint)->GetMimicCoeffs()[0] + (*itjoint)->GetMimicCoeffs()[1];
+                    pvalues = dummyvalues;
+                }
+                
+                if( pvalues == NULL ) {
+                    if( alljoints[j] == &_vecPassiveJoints ) {
+                        pvalues = &vPassiveJointValues[itjoint-_vecPassiveJoints.begin()][0];
                     }
                     else {
-                        if( alljoints[j] == &_vecPassiveJoints ) {
-                            pvalues = &vPassiveJointValues[itjoint-_vecPassiveJoints.begin()][0];
-                        }
-                        else {
-                            dummyvalues[0] = dummyvalues[1] = dummyvalues[2] = 0;
-                            pvalues = dummyvalues;
-                            (*itjoint)->bodies[0]->userdata = 1;
-                            numleft--;
-                            continue;
-                        }
+                        dummyvalues[0] = dummyvalues[1] = dummyvalues[2] = 0;
+                        pvalues = dummyvalues;
+                        (*itjoint)->bodies[0]->userdata = 1;
+                        numleft--;
+                        continue;
                     }
                 }
 
@@ -1629,7 +1629,7 @@ void KinBody::ComputeJointHierarchy()
                         int dstindex = bodies[1]->GetIndex();
                     
                         if( bodies[1]->userdata ) {
-                            assert( pvalues[dstindex] >= 0 );
+                            BOOST_ASSERT( pvalues[dstindex] >= 0 );
                         }
                         else {
                             // copy the data from bodies[0]
@@ -2014,7 +2014,7 @@ bool KinBody::IsEnabled() const
 
 int KinBody::GetNetworkId() const
 {
-    assert( networkid != 0 );
+    BOOST_ASSERT( networkid != 0 );
     return networkid;
 }
 
