@@ -78,6 +78,8 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
 
     virtual bool InitEnvironment()
     {
+        _report.reset(new COLLISIONREPORT());
+
         odespace->SetSynchornizationCallback(boost::bind(&ODEPhysicsEngine::_SyncCallback, shared_physics(),_1));
         if( !odespace->InitEnvironment() )
             return false;
@@ -94,6 +96,8 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
 
     virtual void DestroyEnvironment()
     {
+        _listcallbacks.clear();
+        _report.reset();
         odespace->DestroyEnvironment();
     }
     
@@ -272,6 +276,13 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
     virtual void SimulateStep(OpenRAVE::dReal fTimeElapsed)
     {
         odespace->Synchronize();
+
+        bool bHasCallbacks = GetEnv()->HasRegisteredCollisionCallbacks();
+        if( bHasCallbacks )
+            GetEnv()->GetRegisteredCollisionCallbacks(_listcallbacks);
+        else
+            _listcallbacks.clear();
+
         dSpaceCollide (odespace->GetSpace(),this,nearCallback);
     
         vector<KinBodyPtr> vbodies;
@@ -302,6 +313,8 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
 
             pinfo->nLastStamp = (*itbody)->GetUpdateStamp();
         }
+
+        _listcallbacks.clear();
     }
 
     
@@ -358,37 +371,59 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         const int N = 16;
         dContact contact[N];
         int n = dCollide (o1,o2,N,&contact[0].geom,sizeof(dContact));
-        for (int i=0; i<n; i++) 
-            {
-                contact[i].surface.mode = 0;
-                contact[i].surface.mu = (dReal)100;
-                contact[i].surface.mu2 = 100;
-                //        contact[i].surface.slip1 = 0.7;
-                //        contact[i].surface.slip2 = 0.7;
-                //        contact[i].surface.mode = dContactSoftERP | dContactSoftCFM | dContactApprox1 | dContactSlip1 | dContactSlip2;
-                //        contact[i].surface.mu = 50.0; // was: dInfinity
-                //        contact[i].surface.soft_erp = 0.96;
-                //        contact[i].surface.soft_cfm = 0.04;
-                dJointID c = dJointCreateContact (odespace->GetWorld(),odespace->GetContactGroup(),contact+i);
+        if( n <= 0 )
+            return;
 
-                // make sure that static objects are not enabled by adding a joint attaching them
-                if( b1 ) b1 = dBodyIsEnabled(b1)?b1:0;
-                if( b2 ) b2 = dBodyIsEnabled(b2)?b2:0;
-                dJointAttach (c, b1, b2);
+        if( _listcallbacks.size() > 0 ) {
+            // fill the collision report
+            _report->Reset(OpenRAVE::CO_Contacts);
+            _report->numCols = N;
+            _report->plink1 = pkb1;
+            _report->plink2 = pkb2;
 
-                //wprintf(L"intersection %s %s\n", ((KinBody::Link*)dBodyGetData(b1))->GetName(), ((KinBody::Link*)dBodyGetData(b2))->GetName());
+            dGeomID checkgeom1 = dGeomGetClass(o1) == dGeomTransformClass ? dGeomTransformGetGeom(o1) : o1;
+            for(int i = 0; i < n; ++i)
+                _report->contacts.push_back(COLLISIONREPORT::CONTACT(contact[i].geom.pos, checkgeom1 != contact[i].geom.g1 ? -Vector(contact[i].geom.normal) : Vector(contact[i].geom.normal), contact[i].geom.depth));
 
-                //        contact[i].surface.slip1 = 0.7;
-                //        contact[i].surface.slip2 = 0.7;
-                //        contact[i].surface.mode = dContactSoftERP | dContactSoftCFM | dContactApprox1 | dContactSlip1 | dContactSlip2;
-                //        contact[i].surface.mu = 50.0; // was: dInfinity
-                //        contact[i].surface.soft_erp = 0.96;
-                //        contact[i].surface.soft_cfm = 0.04;
-                //        dJointID c = dJointCreateContact (world,contactgroup,&contact[i]);
-                //        dJointAttach (c,
-                //            dGeomGetBody(contact[i].geom.g1),
-                //            dGeomGetBody(contact[i].geom.g2));
+
+            FOREACH(itfn, _listcallbacks) {
+                OpenRAVE::CollisionAction action = (*itfn)(_report,true);
+                if( action != OpenRAVE::CA_DefaultAction )
+                    return;
             }
+        }
+
+        // process collisions
+        for (int i=0; i<n; i++) {
+            contact[i].surface.mode = 0;
+            contact[i].surface.mu = (dReal)100;
+            contact[i].surface.mu2 = 100;
+            //        contact[i].surface.slip1 = 0.7;
+            //        contact[i].surface.slip2 = 0.7;
+            //        contact[i].surface.mode = dContactSoftERP | dContactSoftCFM | dContactApprox1 | dContactSlip1 | dContactSlip2;
+            //        contact[i].surface.mu = 50.0; // was: dInfinity
+            //        contact[i].surface.soft_erp = 0.96;
+            //        contact[i].surface.soft_cfm = 0.04;
+            dJointID c = dJointCreateContact (odespace->GetWorld(),odespace->GetContactGroup(),contact+i);
+
+            // make sure that static objects are not enabled by adding a joint attaching them
+            if( b1 ) b1 = dBodyIsEnabled(b1)?b1:0;
+            if( b2 ) b2 = dBodyIsEnabled(b2)?b2:0;
+            dJointAttach (c, b1, b2);
+
+            //wprintf(L"intersection %s %s\n", ((KinBody::Link*)dBodyGetData(b1))->GetName(), ((KinBody::Link*)dBodyGetData(b2))->GetName());
+
+            //        contact[i].surface.slip1 = 0.7;
+            //        contact[i].surface.slip2 = 0.7;
+            //        contact[i].surface.mode = dContactSoftERP | dContactSoftCFM | dContactApprox1 | dContactSlip1 | dContactSlip2;
+            //        contact[i].surface.mu = 50.0; // was: dInfinity
+            //        contact[i].surface.soft_erp = 0.96;
+            //        contact[i].surface.soft_cfm = 0.04;
+            //        dJointID c = dJointCreateContact (world,contactgroup,&contact[i]);
+            //        dJointAttach (c,
+            //            dGeomGetBody(contact[i].geom.g1),
+            //            dGeomGetBody(contact[i].geom.g2));
+        }
         //
         //        dJointID c = dJointCreateContact (GetEnv()->world,GetEnv()->contactgroup,&contact);
         //        dJointAttach (c,b1,b2);
@@ -416,6 +451,8 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
     JointSetFn _jointset[12];
     JointAddForceFn _jointadd[12];
     vector<JointGetFn> _jointgetvel[12];
+    std::list<EnvironmentBase::CollisionCallbackFn> _listcallbacks;
+    CollisionReportPtr _report;
 };
 
 #endif

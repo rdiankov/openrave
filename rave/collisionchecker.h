@@ -27,6 +27,13 @@ enum CollisionOptions
     CO_RayAnyHit = 8, ///< when performing collision with rays, if this is set, algorithm just returns any hit instead of the closest (can be faster)
 };
 
+/// action to perform whenever a collision is detected between objects
+enum CollisionAction
+{
+    CA_Ignore = 0, ///< do nothing
+    CA_DefaultAction = 1, ///< let the physics/collision engine resolve the action
+};
+
 /// derive from this class for every different collision checker library that OpenRAVE should support
 class RAVE_API CollisionCheckerBase : public InterfaceBase
 {

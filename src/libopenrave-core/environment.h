@@ -145,6 +145,7 @@ class Environment : public EnvironmentBase
 
     virtual void Destroy()
     {
+        // destruction order is *very* important, don't touch it without consultation
         _bDestroying = true;
 
         // dont' join, might not return
@@ -200,6 +201,8 @@ class Environment : public EnvironmentBase
 
     virtual void Reset()
     {
+        // destruction order is *very* important, don't touch it without consultation
+
         RAVELOG_DEBUGA("resetting raveviewer\n");
         if( !!_pCurrentViewer ) {
             _pCurrentViewer->deselect();
@@ -518,9 +521,29 @@ class Environment : public EnvironmentBase
 
     virtual PhysicsEngineBasePtr GetPhysicsEngine() const { return _pPhysicsEngine; }
 
-    virtual boost::shared_ptr<void> RegisterPhysicsCallback(const boost::function<PhysicsEngineCollisionAction(CollisionReportPtr)>& callback) {
-        BOOST_ASSERT(0);
-        return boost::shared_ptr<void>();
+    static void __erase_collision_iterator(boost::weak_ptr<Environment> pweak, std::list<CollisionCallbackFn>::iterator* pit)
+    {
+        if( !!pit ) {
+            boost::shared_ptr<Environment> penv = pweak.lock();
+            if( !!penv )
+                penv->_listRegisteredCollisionCallbacks.erase(*pit);
+            delete pit;
+        }
+    }
+
+    virtual boost::shared_ptr<void> RegisterCollisionCallback(const CollisionCallbackFn& callback) {
+        EnvironmentMutex::scoped_lock lock(GetMutex());
+        boost::shared_ptr<Environment> penv = boost::static_pointer_cast<Environment>(shared_from_this());
+        return boost::shared_ptr<void>(new std::list<CollisionCallbackFn>::iterator(_listRegisteredCollisionCallbacks.insert(_listRegisteredCollisionCallbacks.end(),callback)), boost::bind(Environment::__erase_collision_iterator,boost::weak_ptr<Environment>(penv),_1));
+    }
+    virtual bool HasRegisteredCollisionCallbacks() const
+    {
+        EnvironmentMutex::scoped_lock lock(GetMutex());
+        return _listRegisteredCollisionCallbacks.size() > 0;
+    }
+    virtual void GetRegisteredCollisionCallbacks(std::list<CollisionCallbackFn>& listcallbacks) const {
+        EnvironmentMutex::scoped_lock lock(GetMutex());
+        listcallbacks = _listRegisteredCollisionCallbacks;
     }
 
     virtual bool SetCollisionChecker(CollisionCheckerBasePtr pchecker)
@@ -1543,6 +1566,8 @@ protected:
     string _homedirectory;
 
     list<InterfaceBasePtr> _listOwnedObjects;
+
+    std::list<CollisionCallbackFn> _listRegisteredCollisionCallbacks; ///< see EnvironmentBase::RegisterCollisionCallback
 
     bool _bDestroying;              ///< destroying envrionment, so exit from all processes
     bool _bDestroyed;               ///< environment has been destroyed

@@ -460,6 +460,7 @@ typedef boost::shared_ptr<RaveViewerBase const> RaveViewerBaseConstPtr;
 typedef boost::weak_ptr<RaveViewerBase> RaveViewerBaseWeakPtr;
 typedef boost::shared_ptr<EnvironmentBase> EnvironmentBasePtr;
 typedef boost::shared_ptr<EnvironmentBase const> EnvironmentBaseConstPtr;
+typedef boost::weak_ptr<EnvironmentBase> EnvironmentBaseWeakPtr;
 
 ///< Cloning Options for interfaces and environments
 enum CloningOptions {
@@ -670,6 +671,37 @@ public:
     virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
     //@}
 
+    /// Register a callback to be called whenever a collision is detected between between bodies during a CheckCollision call or physics simulation.
+    /// action = callback(CollisionReport,bool IsCalledFromPhysicsEngine)
+    /// The callback should return an action specifying how the collision should be handled.
+    /// \return a handle to the registration, once the handle loses scope, the callback is unregistered
+    typedef boost::function<CollisionAction(CollisionReportPtr,bool)> CollisionCallbackFn;
+    virtual boost::shared_ptr<void> RegisterCollisionCallback(const CollisionCallbackFn& callback) = 0;
+    virtual bool HasRegisteredCollisionCallbacks() const = 0;
+    virtual void GetRegisteredCollisionCallbacks(std::list<CollisionCallbackFn>&) const = 0;
+
+    //@{ Physics/Simulation methods
+
+    /// set the physics engine, disabled by default
+    /// \param the engine to set, if NULL, environment sets an dummy physics engine
+    virtual bool SetPhysicsEngine(PhysicsEngineBasePtr pengine) = 0;
+    virtual PhysicsEngineBasePtr GetPhysicsEngine() const = 0;
+
+    /// Makes one simulation step
+    virtual void StepSimulation(dReal timeStep) = 0;
+
+    /// Start the internal physics engine loop, calls SimulateStep for all modules
+    /// \param fDeltaTime the delta step to take in simulation
+    /// \param bRealTime if false will call SimulateStep as fast as possible, otherwise will time the simulate step calls so that simulation progresses with real system time.
+    virtual void StartSimulation(dReal fDeltaTime, bool bRealTime=true) = 0;
+
+    /// Stops the internal physics loop, stops calling SimulateStep for all modules
+    virtual void StopSimulation() = 0;
+    
+    /// \return simulation time since the start of the environment (in microseconds)
+    virtual uint64_t GetSimulationTime() = 0;
+    //@}
+
     ///@{ file I/O
 
     /// Loads a scene, need to Lock if calling outside simulation thread
@@ -723,33 +755,6 @@ public:
     /// are guaranteed to stay loaded in the environment.
     /// \return returns a pointer to a Lock. Destroying the shared_ptr will release the lock
     virtual boost::shared_ptr<void> GetLoadedProblems(std::list<ProblemInstancePtr>& listProblems) const = 0;
-
-    //@{ Physics/Simulation methods
-
-    /// set the physics engine, disabled by default
-    /// \param the engine to set, if NULL, environment sets an dummy physics engine
-    virtual bool SetPhysicsEngine(PhysicsEngineBasePtr pengine) = 0;
-    virtual PhysicsEngineBasePtr GetPhysicsEngine() const = 0;
-
-    /// Register a callback to be called whenever a collision is detected between between bodies during physics simulation.
-    /// The callback should return an action specifying how the collision should be handled.
-    /// \return a handle to the registration, once the handle loses scope, the callback is unregistered
-    //virtual boost::shared_ptr<void> RegisterPhysicsCallback(const boost::function<PhysicsEngineCollisionAction(CollisionReportPtr)>& callback) = 0;
-
-    /// Makes one simulation step
-    virtual void StepSimulation(dReal timeStep) = 0;
-
-    /// Start the internal physics engine loop, calls SimulateStep for all modules
-    /// \param fDeltaTime the delta step to take in simulation
-    /// \param bRealTime if false will call SimulateStep as fast as possible, otherwise will time the simulate step calls so that simulation progresses with real system time.
-    virtual void StartSimulation(dReal fDeltaTime, bool bRealTime=true) = 0;
-
-    /// Stops the internal physics loop, stops calling SimulateStep for all modules
-    virtual void StopSimulation() = 0;
-    
-    /// \return simulation time since the start of the environment (in microseconds)
-    virtual uint64_t GetSimulationTime() = 0;
-    //@}
 
     /// Lock/unlock the environment mutex. Accessing environment body information and adding/removing bodies
     /// or changing any type of scene property should have the environment lock acquired. Once the environment

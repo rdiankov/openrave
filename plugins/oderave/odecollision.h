@@ -23,9 +23,20 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
     {
     COLLISIONCALLBACK(boost::shared_ptr<ODECollisionChecker> pchecker, CollisionReportPtr report, KinBodyConstPtr pbody, KinBody::LinkConstPtr plink) : _pchecker(pchecker), _report(report), _pbody(pbody), _plink(plink), _bCollision(false), _bOneCollision(false), fraymaxdist(0)
         {
+            _bHasCallbacks = pchecker->GetEnv()->HasRegisteredCollisionCallbacks();
+            if( _bHasCallbacks && !_report )
+                _report.reset(new COLLISIONREPORT());
             if( !!_report )
                 _report->Reset(pchecker->GetCollisionOptions());
         }
+
+        
+        const std::list<EnvironmentBase::CollisionCallbackFn>& GetCallbacks() {
+            if( _bHasCallbacks && listcallbacks.size() == 0 )
+                _pchecker->GetEnv()->GetRegisteredCollisionCallbacks(listcallbacks);
+            return listcallbacks;
+        }
+
         boost::shared_ptr<ODECollisionChecker> _pchecker;
         CollisionReportPtr _report;
         KinBodyConstPtr _pbody;
@@ -33,6 +44,10 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         bool _bCollision;
         bool _bOneCollision;
         OpenRAVE::dReal fraymaxdist;
+
+    private:
+        bool _bHasCallbacks;
+        std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
     };
 
     inline boost::shared_ptr<ODECollisionChecker> shared_checker() { return boost::static_pointer_cast<ODECollisionChecker>(shared_from_this()); }
@@ -552,6 +567,12 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                     for(int i = 0; i < N; ++i)
                         pcb->_report->contacts.push_back(COLLISIONREPORT::CONTACT(contact[i].geom.pos, checkgeom1 != contact[i].geom.g1 ? -Vector(contact[i].geom.normal) : Vector(contact[i].geom.normal), contact[i].geom.depth));
                 }
+
+                FOREACHC(itfn, pcb->GetCallbacks()) {
+                    OpenRAVE::CollisionAction action = (*itfn)(pcb->_report,false);
+                    if( action != OpenRAVE::CA_DefaultAction )
+                        return;
+                }
             }
 
             pcb->_bCollision = true;
@@ -610,6 +631,12 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                     for(int i = 0; i < N; ++i)
                         pcb->_report->contacts.push_back(COLLISIONREPORT::CONTACT(contact[i].geom.pos, checkgeom1 != contact[i].geom.g1 ? -Vector(contact[i].geom.normal) : Vector(contact[i].geom.normal), contact[i].geom.depth));
                 }
+            }
+
+            FOREACHC(itfn, pcb->GetCallbacks()) {
+                OpenRAVE::CollisionAction action = (*itfn)(pcb->_report,false);
+                if( action != OpenRAVE::CA_DefaultAction )
+                    return;
             }
 
             pcb->_bCollision = true;
@@ -700,6 +727,12 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                     }
                 }
 
+                FOREACHC(itfn, pcb->GetCallbacks()) {
+                    OpenRAVE::CollisionAction action = (*itfn)(pcb->_report,false);
+                    if( action != OpenRAVE::CA_DefaultAction )
+                        return;
+                }
+
                 pcb->_bCollision = true;
             }
         }
@@ -773,6 +806,12 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                 else
                     pcb->_report->contacts.front() = COLLISIONREPORT::CONTACT(contact[index].geom.pos, vnorm, contact[index].geom.depth);
                 //}
+
+                FOREACHC(itfn, pcb->GetCallbacks()) {
+                    OpenRAVE::CollisionAction action = (*itfn)(pcb->_report,false);
+                    if( action != OpenRAVE::CA_DefaultAction )
+                        return;
+                }
 
                 if( _options&OpenRAVE::CO_RayAnyHit )
                     pcb->_bCollision = true;
