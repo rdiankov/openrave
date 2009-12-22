@@ -1045,7 +1045,7 @@ protected:
         if( ptraj->GetPoints().size() > 0 ) {
             RobotBase::RobotStateSaver saver2(robot);
             robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
-            if( GetEnv()->CheckCollision(robot) ) {
+            if( GetEnv()->CheckCollision(KinBodyConstPtr(robot)) ) {
                 RAVELOG_WARNA("robot final configuration is in collision\n");
                 if( CM::JitterActiveDOF(robot) )
                     robot->GetActiveDOFValues(ptraj->GetPoints().back().q);
