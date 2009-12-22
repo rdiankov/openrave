@@ -21,15 +21,16 @@ if (NOT SOQT_LIBRARY_FOUND)
 endif ()
 
 find_package(OpenGL REQUIRED)
-include_directories(${OPENGL_INCLUDE_DIR})
+if(NOT OPENGL_FOUND)
+  message(STATUS "WARNING: OpenGL not found")
+endif()
 
-if (QT_FOUND AND SOQT_LIBRARY_FOUND)
+if (QT_FOUND AND SOQT_LIBRARY_FOUND AND OPENGL_FOUND)
 
   message(STATUS "Detected SoQt/Coin3D GUI, making plugin")
 
+  include_directories(${OPENGL_INCLUDE_DIR} ${QT_INCLUDE_DIRS} ${SOQT_INCLUDE_DIRS})
   include_directories(${CMAKE_SOURCE_DIR})
-  include_directories(${QT_INCLUDE_DIRS})
-  include_directories(${SOQT_INCLUDE_DIRS})
 
   add_definitions(${SOQT_CXXFLAGS})
   link_directories(${OPENRAVE_LINK_DIRS} ${SOQT_LINK_DIRS})
@@ -104,7 +105,4 @@ if (QT_FOUND AND SOQT_LIBRARY_FOUND)
   set_target_properties(qtcoinrave PROPERTIES COMPILE_FLAGS "${QTCOIN_COMPILE_FLAGS}"
                                       LINK_FLAGS "${QTCOIN_LINK_FLAGS}")
   install(TARGETS qtcoinrave DESTINATION share/openrave/plugins)
-
-else()
-    message(SEND_ERROR "ERROR: Could not find SoQt/Qt.")
 endif()

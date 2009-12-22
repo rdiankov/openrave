@@ -419,7 +419,9 @@ if( NOT libpcrecpp_FOUND )
 endif()
 
 add_subdirectory(src)
-add_subdirectory(plugins)
+if(PLUGINS)
+  add_subdirectory(plugins)
+endif()
 
 configure_file(
   "${CMAKE_CURRENT_SOURCE_DIR}/openrave-config.in"
