@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -64,11 +64,11 @@ void CustomCoinHandlerCB(const class SoError * error, void * data)
 
 QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
 #if QT_VERSION >= 0x040000 // check for qt4
-    : QMainWindow(NULL, Qt::Window), RaveViewerBase(penv),
+    : QMainWindow(NULL, Qt::Window),
 #else
-      : QMainWindow(NULL, "OpenRAVE", Qt::WType_TopLevel), RaveViewerBase(penv),
+      : QMainWindow(NULL, "OpenRAVE", Qt::WType_TopLevel),
 #endif
-      _ivOffscreen(SbViewportRegion(VIDEO_WIDTH, VIDEO_HEIGHT))
+      RaveViewerBase(penv), _ivOffscreen(SbViewportRegion(VIDEO_WIDTH, VIDEO_HEIGHT))
 {
 #if QT_VERSION >= 0x040000 // check for qt4
     setWindowTitle("OpenRAVE");
@@ -76,9 +76,12 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
 #endif
     _bLockEnvironment = true;
     _bAVIInit = false;
-    pToggleDynamicSimulation = NULL;
     _pToggleDebug = NULL;
+    _pSelectedCollisionChecker = NULL;
+    _pSelectedPhysicsEngine = NULL;
+    _pToggleSimulation = NULL;
     _bInIdleThread = false;
+    _bAutoSetCamera = true;
 
     //vlayout = new QVBoxLayout(this);
     view1 = new QGroupBox(this);
@@ -924,12 +927,15 @@ void QtCoinViewer::EnvironmentSync()
 
 void QtCoinViewer::_SetCamera(const RaveVector<float>& pos, const RaveVector<float>& quat)
 {
+    _bAutoSetCamera = false;
     GetCamera()->position.setValue(pos.x, pos.y, pos.z);
     GetCamera()->orientation.setValue(quat.y, quat.z, quat.w, quat.x);
 }
 
 void QtCoinViewer::_SetCameraLookAt(const RaveVector<float>& lookat, const RaveVector<float>& campos, const RaveVector<float>& camup)
 {
+    _bAutoSetCamera = false;
+
     RaveVector<float> dir = -(lookat - campos);
     float len = RaveSqrt(dir.lengthsqr3());
     GetCamera()->focalDistance = len;
@@ -1607,24 +1613,83 @@ void QtCoinViewer::SetupMenus()
     connect( _pToggleDebug, SIGNAL(triggered(QAction*)), this, SLOT(ViewDebugLevelChanged(QAction*)) );
 
     ADD_MENU("Show Framerate", true, NULL, "Toggle showing the framerate", ViewToggleFPS);
-    ADD_MENU("Show FeedBack visibility", true, NULL, "Toggle showing the axis cross", ViewToggleFeedBack);
-
-    pcurmenu = menuBar()->addMenu(tr("&Animation"));
-    ADD_MENU("Play", false, NULL, NULL, StartPlayback);
-    ADD_MENU("Stop", false, NULL, NULL, StopPlayback);
+    ADD_MENU("Show World Axes", true, NULL, "Toggle showing the axis cross", ViewToggleFeedBack);
 
     pcurmenu = menuBar()->addMenu(tr("&Options"));
-    ADD_MENU("Record &Real-time Video", true, NULL, "Start recording an AVI in real clock time. Clicking this menu item again will pause the recording", RecordRealtimeVideo);
-    ADD_MENU("Record &Sim-time Video", true, NULL, "Start recording an AVI in simulation time. Clicking this menu item again will pause the recording", RecordSimtimeVideo);
+    ADD_MENU("&Record Real-time Video", true, NULL, "Start recording an AVI in real clock time. Clicking this menu item again will pause the recording", RecordRealtimeVideo);
+    ADD_MENU("R&ecord Sim-time Video", true, NULL, "Start recording an AVI in simulation time. Clicking this menu item again will pause the recording", RecordSimtimeVideo);
+    ADD_MENU("&Simulation", true, NULL, "Control environment simulation loop", ToggleSimulation);
+    _pToggleSimulation = pact;
+
+    PLUGININFO info;
+    GetEnv()->GetLoadedInterfaces(info);
+
+    psubmenu = pcurmenu->addMenu(tr("&Collision Checkers"));
+    _pSelectedCollisionChecker = new QActionGroup(this);
+
+    {
+        pact = new QAction(tr("None"), this);
+        pact->setCheckable(true);
+        pact->setChecked(false);
+        pact->setData("");
+        psubmenu->addAction(pact);
+        _pSelectedCollisionChecker->addAction(pact);
+    }
+
+    FOREACH(itname,info.interfacenames[PT_CollisionChecker]) {
+        pact = new QAction(tr(itname->c_str()), this);
+        pact->setCheckable(true);
+        pact->setChecked(false);
+        pact->setData(itname->c_str());
+        psubmenu->addAction(pact);
+        _pSelectedCollisionChecker->addAction(pact);
+    }
+
+    connect( _pSelectedCollisionChecker, SIGNAL(triggered(QAction*)), this, SLOT(CollisionCheckerChanged(QAction*)) );
+
+    psubmenu = pcurmenu->addMenu(tr("&Physics Engines"));
+    _pSelectedPhysicsEngine = new QActionGroup(this);
+
+    {
+        pact = new QAction(tr("None"), this);
+        pact->setCheckable(true);
+        pact->setChecked(false);
+        pact->setData("");
+        psubmenu->addAction(pact);
+        _pSelectedPhysicsEngine->addAction(pact);
+    }
+
+    FOREACH(itname,info.interfacenames[PT_PhysicsEngine]) {
+        pact = new QAction(tr(itname->c_str()), this);
+        pact->setCheckable(true);
+        pact->setChecked(false);
+        pact->setData(itname->c_str());
+        psubmenu->addAction(pact);
+        _pSelectedPhysicsEngine->addAction(pact);
+    }
     
-    pcurmenu = menuBar()->addMenu(tr("D&ynamics"));
-    ADD_MENU("ODE Dynamic Simulation", true, NULL, NULL, DynamicSimulation);
-    pToggleDynamicSimulation = pact;
-    pact->setChecked(false); // physics off
-    ADD_MENU("Self Collision", true, NULL, NULL, DynamicSelfCollision);
-    pact->setChecked(_bSelfCollision);
-    ADD_MENU("Apply Gravity", true, NULL, NULL, DynamicGravity);
-    pact->setChecked(true); // gravity on
+    connect( _pSelectedPhysicsEngine, SIGNAL(triggered(QAction*)), this, SLOT(PhysicsEngineChanged(QAction*)) );
+
+    pcurmenu = menuBar()->addMenu(tr("&Interfaces"));
+    connect(pcurmenu, SIGNAL(aboutToShow()), this, SLOT(UpdateInterfaces()));
+    _pMenuSendCommand = pcurmenu->addMenu(tr("&Send Command"));
+    _pActionSendCommand = new QActionGroup(this);
+
+    psubmenu = pcurmenu->addMenu(tr("&Physics"));
+    {
+        pact = new QAction(tr("Self Collision"), this);
+        pact->setCheckable(true);
+        pact->setChecked(_bSelfCollision);
+        connect(pact, SIGNAL(triggered(bool)), this, SLOT(DynamicSelfCollision(bool)));
+        psubmenu->addAction(pact);
+    }
+    {
+        pact = new QAction(tr("Apply Gravity"), this);
+        pact->setCheckable(true);
+        pact->setChecked(false);
+        connect(pact, SIGNAL(triggered(bool)), this, SLOT(DynamicGravity(bool)));
+        psubmenu->addAction(pact);
+    }
 
     pcurmenu = menuBar()->addMenu(tr("&Help"));
     ADD_MENU("About", false, NULL, NULL, About);
@@ -1634,7 +1699,7 @@ void QtCoinViewer::SetupMenus()
 
 int QtCoinViewer::main(bool bShow)
 {
-    StartPlayback();
+    _StartPlaybackTimer();
     if( bShow ) {
         _pviewer->show();
         SoQt::show(this);
@@ -1648,11 +1713,6 @@ void QtCoinViewer::quitmainloop()
 {
     SetEnvironmentSync(false);
     SoQt::exitMainLoop();
-}
-
-void QtCoinViewer::actionTriggered(QAction *action)
-{
-    //qDebug("action '%s' triggered", action->text().toLocal8Bit().data());
 }
 
 void QtCoinViewer::InitOffscreenRenderer()
@@ -2006,13 +2066,11 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
         }
     }
 
-    if( _pToggleDebug != NULL )
+    if( !!_pToggleDebug )
         _pToggleDebug->actions().at(GetEnv()->GetDebugLevel())->setChecked(true);
-    if( pToggleDynamicSimulation != NULL ) {
-        PhysicsEngineBasePtr p = GetEnv()->GetPhysicsEngine();
-        if( !!p )
-            pToggleDynamicSimulation->setChecked(p->GetXMLId().size()>0);
-    }
+    _UpdateToggleSimulation();
+    _UpdateCollisionChecker();
+    _UpdatePhysicsEngine();
 
     _UpdateEnvironment();
 }
@@ -2183,6 +2241,12 @@ void QtCoinViewer::UpdateFromModel()
 
     _bModelsUpdated = true;
     _condUpdateModels.notify_all();
+
+    if( _bAutoSetCamera ) {
+        RAVELOG_VERBOSE("auto-setting camera location\n");
+        _bAutoSetCamera = false;
+        _pviewer->viewAll();
+    }
 }
 
 void QtCoinViewer::_Reset()
@@ -2245,6 +2309,7 @@ void QtCoinViewer::LoadEnvironment()
     _Reset();
     GetEnv()->Reset();
 
+    _bAutoSetCamera = true;
     GetEnv()->Load(s.toAscii().data());
     if( bReschedule ) {
         _timerSensor->schedule();
@@ -2327,32 +2392,40 @@ void QtCoinViewer::ViewToggleFeedBack(bool on)
 }
 
 
-void QtCoinViewer::StartPlayback()
-{
-    _StartPlaybackTimer();
-}
-
-void QtCoinViewer::StopPlayback()
-{
-    _StopPlaybackTimer();
-}
-
 void QtCoinViewer::RecordSimtimeVideo(bool on)
 {
-    _bRealtimeVideo = false;
-    RecordSetup();
+    _RecordSetup(on,false);
 }
 
 void QtCoinViewer::RecordRealtimeVideo(bool on)
 {
-    _bRealtimeVideo = true;
-    RecordSetup();
+    _RecordSetup(on,true);
 }
 
-void QtCoinViewer::RecordSetup()
+void QtCoinViewer::ToggleSimulation(bool on)
 {
+    if( on )
+        GetEnv()->StartSimulation(0.01f);
+    else
+        GetEnv()->StopSimulation();
+}
+
+void QtCoinViewer::_UpdateToggleSimulation()
+{
+    if( !!_pToggleSimulation )
+        _pToggleSimulation->setChecked(GetEnv()->IsSimulationRunning());
+}
+
+void QtCoinViewer::_RecordSetup(bool bOn, bool bRealtimeVideo)
+{
+    if( bOn == _bSaveVideo ) {
+        RAVELOG_INFO("QtCoinViewer::_RecordSetup ignoring\n");
+        return;
+    }
+
+    _bRealtimeVideo = bRealtimeVideo;
 #if QT_VERSION >= 0x040000 // check for qt4
-    if( !_bSaveVideo ) {
+    if( bOn ) {
         // start
         if( !_bAVIInit ) {
             QString s = QFileDialog::getSaveFileName( this, "Choose video filename", NULL, "AVI Files (*.avi)");
@@ -2372,7 +2445,7 @@ void QtCoinViewer::RecordSetup()
         }
     }
 
-    _bSaveVideo = !_bSaveVideo;
+    _bSaveVideo = bOn;
     SoDB::enableRealTimeSensor(!_bSaveVideo);
     SoSceneManager::enableRealTimeUpdate(!_bSaveVideo);
 
@@ -2552,58 +2625,89 @@ bool QtCoinViewer::_RecordVideo()
     }
     
     _nLastVideoFrame = curtime;
-
-    //stuff to record camera position
-        //    std::vector<RobotBase*> robots = GetEnv()->GetRobots();
-
-    //if(0&&robots.size() != 0)
-//    {
-//        ofstream outfile("positions.txt",ios::app);
-//        RobotBase* robot = robots[0];
-//        if( robot != NULL ) {
-//            RobotBase::Manipulator * pmanip = robot->GetActiveManipulator();
-//            std::vector<dReal> vjointvals;
-//            vjointvals.resize(robot->GetDOF());
-//            robot->GetJointValues(&vjointvals[0]);
-//            if(pmanip != NULL)
-//            {
-//                Transform etm = pmanip->GetEndEffectorTransform();
-//                Transform rtm = robot->GetTransform();
-//    #ifndef _WIN32
-//                gettimeofday(&timestruct,NULL);
-//                outfile << "\n" << timestruct.tv_sec << " " << timestruct.tv_usec << " " << "\t";
-//    #endif
-//
-//                //end eff tm
-//                outfile << etm.rot.x << " " << etm.rot.y << " " << etm.rot.z << " " << etm.rot.w << " ";
-//                outfile << etm.trans.x << " " << etm.trans.y << " " << etm.trans.z << "\t";        
-//
-//                //robot tm
-//                outfile << rtm.rot.x << " " << rtm.rot.y << " " << rtm.rot.z << " " << rtm.rot.w << " ";
-//                outfile << rtm.trans.x << " " << rtm.trans.y << " " << rtm.trans.z << "\t";      
-//
-//                //joint vals
-//                for(int i = 0; i < robot->GetDOF(); i++)
-//                    outfile << " " << vjointvals[i];
-//
-//                outfile.close();
-//                GetEnv()->plot3(etm.trans,1,0,0.004f, RaveVector<float>(1,0,0));
-//            }
-//        }
-//    }
-
     return true;
 }
 
-void QtCoinViewer::DynamicSimulation(bool on)
+void QtCoinViewer::CollisionCheckerChanged(QAction* pact)
 {
-    if( on ) {
-        PhysicsEngineBasePtr pphysics = GetEnv()->CreatePhysicsEngine("ode");
-        if( !pphysics )
-            GetEnv()->SetPhysicsEngine(pphysics);
+    if( pact->data().toString().size() == 0 )
+        GetEnv()->SetCollisionChecker(CollisionCheckerBasePtr());
+    else {
+        CollisionCheckerBasePtr p = GetEnv()->CreateCollisionChecker(pact->data().toString().toStdString());
+        if( !!p )
+            GetEnv()->SetCollisionChecker(p);
+        else
+            _UpdateCollisionChecker();
     }
-    else
+}
+
+void QtCoinViewer::_UpdateCollisionChecker()
+{
+    if( !!_pSelectedCollisionChecker ) {
+        CollisionCheckerBasePtr p = GetEnv()->GetCollisionChecker();
+        for(int i = 0; i < _pSelectedCollisionChecker->actions().size(); ++i) {
+            if( _pSelectedCollisionChecker->actions().at(i)->data().toString().toStdString() == p->GetXMLId() ) {
+                _pSelectedCollisionChecker->actions().at(i)->setChecked(true);
+                return;
+            }
+        }
+
+        if( !!p )
+            RAVELOG_WARN(str(boost::format("cannot find collision checker menu item %s\n")%p->GetXMLId()));
+        // set to default
+        _pSelectedCollisionChecker->actions().at(0)->setChecked(true);
+    }
+}
+
+void QtCoinViewer::PhysicsEngineChanged(QAction* pact)
+{
+    if( pact->data().toString().size() == 0 )
         GetEnv()->SetPhysicsEngine(PhysicsEngineBasePtr());
+    else {
+        PhysicsEngineBasePtr p = GetEnv()->CreatePhysicsEngine(pact->data().toString().toStdString());
+        if( !!p )
+            GetEnv()->SetPhysicsEngine(p);
+        else
+            _UpdatePhysicsEngine();
+    }
+}
+
+void QtCoinViewer::_UpdatePhysicsEngine()
+{
+    if( !!_pSelectedPhysicsEngine ) {
+        PhysicsEngineBasePtr p = GetEnv()->GetPhysicsEngine();
+        for(int i = 0; i < _pSelectedPhysicsEngine->actions().size(); ++i) {
+            if( _pSelectedPhysicsEngine->actions().at(i)->data().toString().toStdString() == p->GetXMLId() ) {
+                _pSelectedPhysicsEngine->actions().at(i)->setChecked(true);
+                return;
+            }
+        }
+
+        if( !!p )
+            RAVELOG_WARN(str(boost::format("cannot find physics engine menu item %s\n")%p->GetXMLId()));
+        // set to default
+        _pSelectedPhysicsEngine->actions().at(0)->setChecked(true);
+    }
+}
+
+void QtCoinViewer::UpdateInterfaces()
+{
+    RAVELOG_WARN("updating send command\n");
+    list<InterfaceBasePtr> listInterfaces;
+    list<ProblemInstancePtr> listProblems;
+    vector<KinBodyPtr> vbodies;
+    GetEnv()->GetLoadedProblems(listProblems);
+
+//_pActionSendCommand
+//        pact = new QAction(tr("Self Collision"), this);
+//        pact->setCheckable(true);
+//        pact->setChecked(_bSelfCollision);
+//        connect(pact, SIGNAL(triggered(bool)), this, SLOT(DynamicSelfCollision(bool)));
+//        psubmenu->addAction(pact);
+}
+
+void QtCoinViewer::InterfaceSendCommand(QAction* pact)
+{
 }
 
 void QtCoinViewer::DynamicSelfCollision(bool on)
@@ -2621,7 +2725,14 @@ void QtCoinViewer::DynamicGravity(bool on)
     GetEnv()->GetPhysicsEngine()->SetGravity(Vector(0, 0, on?-9.8f:0));
 }
 
-void QtCoinViewer::About() {}
+void QtCoinViewer::About()
+{
+    QMessageBox::information(this,"About OpenRAVE...",
+                             "OpenRAVE is a open-source robotics planning and simulation environment\n"
+                             "Lead Developer: Rosen Diankov\n"
+                             "License: Lesser General Public License v3.0 (LGPLv3)\n");
+                             
+}
 
 QtCoinViewer::EnvMessage::EnvMessage(QtCoinViewerPtr pviewer, void** ppreturn, bool bWaitForMutex)
     : _pviewer(pviewer), _ppreturn(ppreturn)

@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -119,7 +119,7 @@ protected:
     KinBodyPtr _pchain;
     int networkid;        ///< _pchain->GetNetworkId()
     std::vector< LINK > _veclinks; ///< render items for each link, indexed same as links
-    bool bGrabbed, bEnabled;
+    bool bGrabbed;
     ViewGeometry _viewmode;
     int _userdata;
 

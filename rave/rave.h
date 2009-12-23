@@ -697,6 +697,9 @@ public:
 
     /// Stops the internal physics loop, stops calling SimulateStep for all modules
     virtual void StopSimulation() = 0;
+
+    /// \return true if inner simulation loop is executing
+    virtual bool IsSimulationRunning() const = 0;
     
     /// \return simulation time since the start of the environment (in microseconds)
     virtual uint64_t GetSimulationTime() = 0;

@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -21,7 +21,7 @@
 #ifndef IV_SELECTOR_H
 #define IV_SELECTOR_H
 
-//! Abstract base class for all draggers.
+/// Construct a new dragger given the root of the scene graph and the selected node.
 class IvDragger
 {
 public:
@@ -39,8 +39,11 @@ public:
 protected:
     static const SbColor CHECK_COLOR, COLLISION_COLOR;
 
+    /// Handler for Inventor motion callbacks.
     static void _MotionHandler(void *, SoDragger *);
     void        _GetBounds(SoSeparator *subtree, AABB& ab);
+
+    /// Get the Inventor transformation matrix that describes the given node relative to the given root.
     void        _GetMatrix(SbMatrix &, SoNode *, SoNode *);
 
     bool        _checkCollision;
@@ -55,7 +58,9 @@ protected:
     AABB _ab;
 };
 
-//! Class to represent an object dragger.
+/// Class to represent an object dragger. This allows general
+/// translation and rotation, and checks for collision against
+/// the rest of the world if requested.
 class IvObjectDragger : public IvDragger
 {
 public:
@@ -69,6 +74,7 @@ public:
     virtual void GetMessage(ostream& sout);
 
 protected:
+    /// Set the color of the dragger.
     void _SetColor(const SbColor &);
 
     SoSeparator*           _draggerRoot;
@@ -77,7 +83,9 @@ protected:
     RaveTransform<float> _toffset;
 };
 
-/// Class to represent a joint rotation dragger.
+/// Class to represent an joint rotation dragger. This allows
+/// rotation relative to the parent joint. It honors joint limits
+/// and checks for collision between the world and the joint's subtree.
 class IvJointDragger : public IvDragger {
 public:
     IvJointDragger(QtCoinViewerPtr viewer, ItemPtr pItem, int iSelectedLink, float draggerScale, int iJointIndex, bool bHilitJoint);
@@ -90,18 +98,17 @@ public:
     virtual void GetMessage(ostream& sout);
 
 protected:
+    /// Set the color of the dragger.
     void _SetColor(const SbColor &);
-    RaveVector<float> GetJointOffset();
 
     KinBody::Joint::JointType _jointtype;
     int _dofindex;
     vector<dReal> _vlower, _vupper;
     string _jointname;
+    dReal _jointoffset;
 
-    Vector vaxes[3];
     SoSeparator* _pLinkNode; // node of the link of the target body
     SoSeparator*         _draggerRoot;
-    SoTranslation*       _offset;
     SoMaterial*          _material;
     SoTrackballDragger*  _trackball;
     SoMaterial*          _draggerMaterial[3];

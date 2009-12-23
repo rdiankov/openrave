@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -93,7 +93,6 @@ KinBodyItem::KinBodyItem(QtCoinViewerPtr viewer, KinBodyPtr pchain, ViewGeometry
 {
     _pchain = pchain;
     bGrabbed = false;
-    bEnabled = pchain->IsEnabled();
     _userdata = 0;
 
     networkid = pchain->GetNetworkId();
@@ -368,20 +367,12 @@ void KinBodyItem::SetGrab(bool bGrab, bool bUpdate)
     if(!_pchain )
         return;
 
-    // need to preserve enabled state
-    if( bGrab && !bGrabbed )
-        bEnabled = _pchain->IsEnabled();
-
     bGrabbed = bGrab;
 
     if( bUpdate ) {
         if( bGrab ) UpdateFromModel();
         else UpdateFromIv();
     }
-
-    // need to preserve enabled state
-    if( bEnabled )
-        _pchain->Enable(!bGrab);
 }
 
 KinBody::LinkPtr KinBodyItem::GetLinkFromIv(SoNode* plinknode) const

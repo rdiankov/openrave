@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -17,16 +17,11 @@
 \file   IvSelector.cpp
 \brief  OpenInventor selection class
 -------------------------------------------------------------------- */
-
 #include "qtcoin.h"
 
 const SbColor IvDragger::CHECK_COLOR(0.2f, 0.8f, 0.3f);
 const SbColor IvDragger::COLLISION_COLOR(1.0f, 0.4f, 0.0f);
 
-///////////////////
-// IvDragger class
-// Construct a new dragger given the root of the scene graph and
-// the selected node.
 IvDragger::IvDragger(QtCoinViewerPtr viewer, ItemPtr pItem, float draggerScale)
 {
     _selectedItem = pItem;
@@ -136,8 +131,6 @@ void IvDragger::_GetBounds(SoSeparator *subtree, AABB& ab)
     ab.extents = 0.5*(vmax-vmin);
 }
 
-// Get the Inventor transformation matrix that describes the given
-// node relative to the given root.
 void IvDragger::_GetMatrix(SbMatrix &matrix, SoNode *root, SoNode *node)
 {
     SoGetMatrixAction getXform(_viewer->GetViewer()->getViewportRegion());
@@ -155,15 +148,11 @@ void IvDragger::_GetMatrix(SbMatrix &matrix, SoNode *root, SoNode *node)
     matrix = getXform.getMatrix();
 }
 
-// Handler for Inventor motion callbacks.
 void IvDragger::_MotionHandler(void *userData, SoDragger *)
 {
     ((IvDragger *) userData)->UpdateSkeleton();
 }
 
-// Class to represent an object dragger. This allows general
-// translation and rotation, and checks for collision against
-// the rest of the world if requested.
 IvObjectDragger::IvObjectDragger(QtCoinViewerPtr viewer, ItemPtr pItem, float draggerScale, bool bAllowRotation)
 : IvDragger(viewer, pItem, draggerScale)
 {
@@ -214,7 +203,6 @@ IvObjectDragger::IvObjectDragger(QtCoinViewerPtr viewer, ItemPtr pItem, float dr
     UpdateDragger();
 }
 
-// Destructor
 IvObjectDragger::~IvObjectDragger()
 {
     _SetColor(_normalColor);
@@ -224,7 +212,6 @@ IvObjectDragger::~IvObjectDragger()
         _selectedItem->GetIvRoot()->removeChild(_draggerRoot);
 }
 
-// Set the color of the dragger.
 void IvObjectDragger::_SetColor(const SbColor &color)
 {
     _draggerMaterial->diffuseColor.setValue(color);
@@ -243,10 +230,6 @@ void IvObjectDragger::CheckCollision(bool flag)
         if( !!pbody ) {
             EnvironmentMutex::scoped_try_lock lock(_viewer->GetEnv()->GetMutex());
             if( !!lock ) {
-                bool bPrevEnable = pbody->GetBody()->IsEnabled();
-                if( !bPrevEnable )
-                    pbody->GetBody()->Enable(true);
-
                 boost::shared_ptr<COLLISIONREPORT> preport(new COLLISIONREPORT());
                 if( pbody->GetBody()->CheckSelfCollision(preport) ) {
                     RAVELOG_VERBOSEA("self collisionp  %s, links %s:%s\n", pbody->GetBody()->GetName().c_str(),
@@ -265,9 +248,6 @@ void IvObjectDragger::CheckCollision(bool flag)
                 }
                 else
                     _SetColor(CHECK_COLOR);
-
-                if( !bPrevEnable )
-                    pbody->GetBody()->Enable(false);
             }
         }
     }
@@ -317,9 +297,6 @@ void IvObjectDragger::GetMessage(ostream& sout)
          << std::setw(8) << std::left << t.rot.w << ")" << endl;
 } 
 
-// Class to represent an joint rotation dragger. This allows
-// rotation relative to the parent joint. It honors joint limits
-// and checks for collision between the world and the joint's subtree.
 IvJointDragger::IvJointDragger(QtCoinViewerPtr viewer, ItemPtr pItem, int iSelectedLink, float draggerScale, int iJointIndex, bool bHilitJoint) : IvDragger(viewer, pItem, draggerScale)
 {
     KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(pItem);
@@ -337,11 +314,12 @@ IvJointDragger::IvJointDragger(QtCoinViewerPtr viewer, ItemPtr pItem, int iSelec
 
     _iSelectedLink = iSelectedLink;
     _iJointIndex = iJointIndex;
-    KinBody::JointConstPtr pjoint = pbody->GetBody()->GetJoints()[iJointIndex];
+    KinBody::JointConstPtr pjoint = pbody->GetBody()->GetJoints().at(iJointIndex);
 
     _jointtype = pjoint->GetType();
     _dofindex = pjoint->GetDOFIndex();
     _jointname = pjoint->GetName();
+    _jointoffset = pjoint->GetOffset();
     pjoint->GetLimits(_vlower,_vupper);
 
     _pLinkNode = pbody->GetIvLink(iSelectedLink);
@@ -350,10 +328,12 @@ IvJointDragger::IvJointDragger(QtCoinViewerPtr viewer, ItemPtr pItem, int iSelec
         return;
     }
 
+    Transform tlink = pbody->GetBody()->GetLinks().at(iSelectedLink)->GetTransform();
+
     // create a root node for the dragger nodes
     _draggerRoot = new SoSeparator;
     SoTransform* draggertrans = new SoTransform();
-    _pLinkNode->insertChild(_draggerRoot, 0);
+    _pLinkNode->insertChild(_draggerRoot, 1); // insert right after transform
 
     // add a new material to change the color of the nodes being dragged
     _bHilitJoint = bHilitJoint;
@@ -364,8 +344,9 @@ IvJointDragger::IvJointDragger(QtCoinViewerPtr viewer, ItemPtr pItem, int iSelec
         _pLinkNode->insertChild(_material, 1);
     }
 
+    Vector vaxes[3];
     for(int i = 0; i < pjoint->GetDOF(); ++i)
-        vaxes[i] = pjoint->GetAxis(i);
+        vaxes[i] = tlink.inverse().rotate(pjoint->GetAxis(i));
 
     // need to make sure the rotation is pointed towards the joint axis
     Vector vnorm; cross3(vnorm, Vector(1,0,0), vaxes[0]);
@@ -374,7 +355,7 @@ IvJointDragger::IvJointDragger(QtCoinViewerPtr viewer, ItemPtr pItem, int iSelec
         vnorm /= fsinang;   
     else vnorm = Vector(1,0,0);
     
-    Vector vtrans = GetJointOffset();
+    Vector vtrans = tlink.inverse()*pjoint->GetAnchor();
     draggertrans->translation.setValue(vtrans.x, vtrans.y, vtrans.z);
     draggertrans->rotation = SbRotation(SbVec3f(vnorm.x, vnorm.y, vnorm.z), atan2f(fsinang,vaxes[0].x));
     _draggerRoot->addChild(draggertrans);
@@ -414,33 +395,6 @@ IvJointDragger::IvJointDragger(QtCoinViewerPtr viewer, ItemPtr pItem, int iSelec
     UpdateDragger();
 }
 
-RaveVector<float> IvJointDragger::GetJointOffset()
-{
-    KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(_selectedItem);
-    if( !pbody )
-        return Vector();
-
-    // offset the dragger based on the joint offset so that it appears
-    // at the joint
-    Vector vtrans, vlinkoffset;
-    vlinkoffset = Vector(_selectedItem->GetIvTransform()->translation.getValue().getValue());
-    
-    const KinBody::JointPtr pjoint = pbody->GetBody()->GetJoints()[_iJointIndex];
-    switch(pjoint->GetType()) {
-    case KinBody::Joint::JointHinge:
-    case KinBody::Joint::JointUniversal:
-    case KinBody::Joint::JointHinge2:
-    case KinBody::Joint::JointSpherical:
-        vtrans = pjoint->GetAnchor() - vlinkoffset;
-        break;
-    default:            
-        vtrans = pbody->GetBody()->GetLinks()[_iSelectedLink]->GetTransform().trans - vlinkoffset;
-    }
-
-    return vtrans;
-}
-
-// Destructor
 IvJointDragger::~IvJointDragger()
 {
     _SetColor(_normalColor);
@@ -454,7 +408,6 @@ IvJointDragger::~IvJointDragger()
     }
 }
 
-// Set the color of the dragger.
 void IvJointDragger::_SetColor(const SbColor &color)
 {
     for (int i = 0; i < 3; i++)
@@ -475,17 +428,10 @@ void IvJointDragger::CheckCollision(bool flag)
         if( !!pbody ) {
             EnvironmentMutex::scoped_try_lock lock(_viewer->GetEnv()->GetMutex());
             if( !!lock ) {
-                bool bPrevEnable = pbody->GetBody()->IsEnabled();
-                if( !bPrevEnable )
-                    pbody->GetBody()->Enable(true);
-
                 if (_viewer->GetEnv()->CheckCollision(KinBodyConstPtr(pbody->GetBody())) || pbody->GetBody()->CheckSelfCollision())
                     _SetColor(COLLISION_COLOR);
                 else
                     _SetColor(CHECK_COLOR);
-
-                if( !bPrevEnable )
-                    pbody->GetBody()->Enable(false);
             }
         }
     }
@@ -530,7 +476,7 @@ void IvJointDragger::UpdateSkeleton()
                 pvalues[2] = axis[2]*angle;
             }
             else
-                pvalues[0] = fang;
+                pvalues[0] = fang+_jointoffset;
 
             if( !!probotitem && !!probotitem->GetRobot()->GetController() ) {
                 probotitem->GetRobot()->GetController()->SetDesired(vjoints);
@@ -564,11 +510,11 @@ void IvJointDragger::UpdateDragger()
 
     if( _jointtype == KinBody::Joint::JointSpherical ) {
         Vector vaxis(vjoints[_dofindex+0],vjoints[_dofindex+1],vjoints[_dofindex+2]);
-        dReal fang = RaveSqrt(vaxis.lengthsqr3());
+        dReal fang = RaveSqrt(vaxis.lengthsqr3())-_jointoffset;
         _trackball->rotation = SbRotation(fang > 0 ? SbVec3f(vaxis.x/fang,vaxis.y/fang,vaxis.z/fang) : SbVec3f(1,0,0), fang);
     }
     else {
-        float fang = vjoints[_dofindex];
+        float fang = vjoints[_dofindex]-_jointoffset;
         if( _jointtype == KinBody::Joint::JointSlider ) {
             if( _vupper[0] > _vlower[0] )
                 fang = (fang-_vlower[0])/(_vupper[0]-_vlower[0]);
@@ -577,9 +523,6 @@ void IvJointDragger::UpdateDragger()
         }
         _trackball->rotation = SbRotation(SbVec3f(1,0,0), -fang);
     }
-
-    assert(_draggerRoot != NULL );
-    ((SoTransform*)_draggerRoot->getChild(0))->translation.setValue(GetJointOffset());
 }
 
 void IvJointDragger::GetMessage(ostream& sout)

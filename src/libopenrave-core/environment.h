@@ -1035,6 +1035,8 @@ class Environment : public EnvironmentBase
         _nSimStartTime = GetMicroTime();
     }
 
+    virtual bool IsSimulationRunning() const { return _bEnableSimulation; }
+
     virtual void StopSimulation()
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());

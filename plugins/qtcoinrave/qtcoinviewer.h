@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -166,21 +166,19 @@ public slots:
     void ViewDebugLevelChanged(QAction*);
     void ViewToggleFPS(bool on);
     void ViewToggleFeedBack(bool on);
-;
-    void StartPlayback();
-    void StopPlayback();
 
     void RecordRealtimeVideo(bool on);
     void RecordSimtimeVideo(bool on);
-    void RecordSetup();
+    void ToggleSimulation(bool on);
+    void CollisionCheckerChanged(QAction*);
+    void PhysicsEngineChanged(QAction*);
 
-    void DynamicSimulation(bool on);
     void DynamicSelfCollision(bool on);
     void DynamicGravity(bool on);
 
+    void UpdateInterfaces();
+    void InterfaceSendCommand(QAction*);
     void About();
-
-    void actionTriggered(QAction *action);
 
 public:
     class EnvMessage : public boost::enable_shared_from_this<EnvMessage>
@@ -251,6 +249,14 @@ protected:
 
     virtual void _StartPlaybackTimer();
     virtual void _StopPlaybackTimer();
+    void _RecordSetup(bool bOn, bool bRealtimeVideo);
+
+    /// find the appropriate collision checker to select, otherwise select None
+    void _UpdateCollisionChecker();
+
+    /// find the appropriate physics engine to select, otherwise select None
+    void _UpdatePhysicsEngine();
+    void _UpdateToggleSimulation();
 
     virtual void InitOffscreenRenderer();
     virtual void SetupMenus();
@@ -287,8 +293,9 @@ protected:
     // the GUI
     QWidget       *_pQtWidget;
     SoQtExaminerViewer* _pviewer;
-    QAction *pToggleDynamicSimulation;
-    QActionGroup* _pToggleDebug;
+    QActionGroup* _pToggleDebug, *_pSelectedCollisionChecker, *_pSelectedPhysicsEngine, *_pActionSendCommand;
+    QAction* _pToggleSimulation;
+    QMenu* _pMenuSendCommand;
 
     SoNode*       _selectedNode;
     boost::shared_ptr<IvDragger>    _pdragger;
@@ -364,6 +371,7 @@ protected:
     //bool _bRecordMotion;
     bool _bSaveVideo;
     bool _bRealtimeVideo;
+    bool _bAutoSetCamera;
     
     // ode thread related
     bool _bQuitMainLoop;
