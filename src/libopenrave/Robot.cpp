@@ -296,17 +296,17 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
                     return true;
 
                 // check if any grabbed bodies are attached to this link
-                FOREACHC(itgrabbed,probot->_vGrabbedBodies) {
-                    if( LinkPtr(itgrabbed->plinkrobot) == *itlink ) {
-                        KinBodyPtr pbody = itgrabbed->pbody.lock();
-                        if( !!pbody ) {
-                            KinBodyStateSaver bodysaver(pbody);
-                            pbody->SetTransform((*itlink)->GetTransform() * itgrabbed->troot);
-                            if( probot->GetEnv()->CheckCollision(KinBodyConstPtr(pbody),report) )
-                                return true;
-                        }
-                    }
-                }
+//                FOREACHC(itgrabbed,probot->_vGrabbedBodies) {
+//                    if( LinkPtr(itgrabbed->plinkrobot) == *itlink ) {
+//                        KinBodyPtr pbody = itgrabbed->pbody.lock();
+//                        if( !!pbody ) {
+//                            KinBodyStateSaver bodysaver(pbody);
+//                            pbody->SetTransform((*itlink)->GetTransform() * itgrabbed->troot);
+//                            if( probot->GetEnv()->CheckCollision(KinBodyConstPtr(pbody),report) )
+//                                return true;
+//                        }
+//                    }
+//                }
                 break;
             }
         }
@@ -339,13 +339,13 @@ bool RobotBase::Manipulator::CheckIndependentCollision(CollisionReportPtr report
                 return true;
 
             // check if any grabbed bodies are attached to this link
-            FOREACHC(itgrabbed,probot->_vGrabbedBodies) {
-                if( LinkPtr(itgrabbed->plinkrobot) == *itlink ) {
-                    KinBodyPtr pbody = itgrabbed->pbody.lock();
-                    if( !!pbody && probot->GetEnv()->CheckCollision(KinBodyConstPtr(pbody),report) )
-                        return true;
-                }
-            }
+//            FOREACHC(itgrabbed,probot->_vGrabbedBodies) {
+//                if( LinkPtr(itgrabbed->plinkrobot) == *itlink ) {
+//                    KinBodyPtr pbody = itgrabbed->pbody.lock();
+//                    if( !!pbody && probot->GetEnv()->CheckCollision(KinBodyConstPtr(pbody),report) )
+//                        return true;
+//                }
+//            }
         }
     }
     return false;
