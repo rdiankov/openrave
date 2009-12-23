@@ -39,6 +39,7 @@ success = 1;
 dowait = 1;
 pause(0.3); % pause a little to give a chance for controller to start
 
+tic;
 basetime = toc;
 while(dowait == 1 & (orEnvWait(robotid, 0.05) == 0) )
     if( timelimit > 0 && toc-basetime > timelimit )
