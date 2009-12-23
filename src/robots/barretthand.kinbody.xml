@@ -82,7 +82,6 @@
     <resolution>1</resolution>
   </Joint>
 
-
   <!-- finger 1-->
   <Body name="Finger1-0" type="dynamic">
     <offsetfrom>wam7</offsetfrom>

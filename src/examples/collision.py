@@ -16,10 +16,26 @@
 from openravepy import *
 from numpy import *
 
+def collisioncallback(report,fromphysics):
+    """Whenever a collision or physics detects a collision, this function is called"""
+    s = 'collision callback with '
+    if report.plink1 is not None:
+        s += '%s:%s '%(report.plink1.GetParent().GetName(),report.plink1.GetName())
+    if report.plink2 is not None:
+        s += ' %s:%s'%(report.plink2.GetParent().GetName(),report.plink2.GetName())
+    
+    print s
+    print 'form physics: ',fromphysics
+    return CollisionAction.DefaultAction
+
 if __name__ == "__main__":
     print 'Example shows how to query collision detection information using openravepy'
     env = Environment()
     env.Load('robots/barrettwam.robot.xml')
+
+    # register an optional collision callback
+    handle = env.RegisterCollisionCallback(collisioncallback)
+
     orobj = env.GetRobots()[0]
     # when doing fast ray collision checking, can specify multiple rays where each column is one ray
     ray1 = array((0,0,-10,0,0,100)) # specify dir*range, pos

@@ -598,6 +598,17 @@ KinBody::~KinBody()
 
 void KinBody::Destroy()
 {
+    if( _listAttachedBodies.size() > 0 ) {
+        stringstream ss; ss << GetName() << " still has attached bodies: ";
+        FOREACHC(it,_listAttachedBodies) {
+            KinBodyPtr pattached = it->lock();
+            if( !!pattached )
+                ss << pattached->GetName();
+        }
+        RAVELOG_WARNA(ss.str());
+    }
+    _listAttachedBodies.clear();
+
     _veclinks.clear();
     _vecjoints.clear();
     _vecPassiveJoints.clear();
@@ -605,7 +616,6 @@ void KinBody::Destroy()
     _vecJointWeights.clear();
     _vecJointHierarchy.clear();
 
-    _setAttachedBodies.clear();
     _setAdjacentLinks.clear();
     _setNonAdjacentLinks.clear();
     _vForcedAdjacentLinks.clear();
@@ -797,7 +807,7 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
     GetVelocity(velocities[0].first,velocities[0].second);
 
     // set the first body and all static bodies to computed
-    _veclinks[0]->userdata = 1;
+    _veclinks.front()->userdata = 1;
     int numleft = (int)_veclinks.size()-1;
     for(size_t i = 1; i < _veclinks.size(); ++i) {
         if( _veclinks[i]->IsStatic() ) {
@@ -1955,43 +1965,62 @@ void KinBody::WriteForwardKinematics(std::ostream& f)
     }
 }
 
-void KinBody::AttachBody(KinBodyPtr pbody)
-{
-    _setAttachedBodies.insert(pbody);
-    pbody->_setAttachedBodies.insert(shared_kinbody());
-}
-
-void KinBody::RemoveBody(KinBodyPtr pbody)
-{
-    if( !pbody ) {
-        FOREACH(it, _setAttachedBodies) {
-            KinBodyPtr p(*it);
-            if( !!p )
-                p->_setAttachedBodies.erase(KinBodyWeakPtr(shared_kinbody()));
-        }
-        _setAttachedBodies.clear();
-    }
-    else {
-        _setAttachedBodies.erase(pbody);
-        pbody->_setAttachedBodies.erase(KinBodyWeakPtr(shared_kinbody()));
-    }
-}
-
 bool KinBody::IsAttached(KinBodyConstPtr pbody) const
 {
-    return _setAttachedBodies.find(boost::const_pointer_cast<KinBody>(pbody)) != _setAttachedBodies.end();
+    if( shared_kinbody_const() == pbody )
+        return true;
+    std::set<KinBodyConstPtr> dummy;
+    return _IsAttached(pbody,dummy);
 }
 
-void KinBody::GetAttached(std::vector<KinBodyPtr>& attached) const
+void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
 {
-    attached.resize(0);
-    FOREACHC(it,_setAttachedBodies) {
-        KinBodyPtr p(*it);
-        if( !!p )
-            attached.push_back(p);
-        else
-            RAVELOG_DEBUGA("attached body is invalid\n");
+    FOREACHC(itbody,_listAttachedBodies) {
+        KinBodyPtr pattached = itbody->lock();
+        if( !!pattached && setAttached.insert(pattached).second )
+            pattached->GetAttached(setAttached);
     }
+}
+
+bool KinBody::_IsAttached(KinBodyConstPtr pbody, std::set<KinBodyConstPtr>& setChecked) const
+{
+    if( !setChecked.insert(shared_kinbody_const()).second )
+        return false;
+    FOREACHC(itbody,_listAttachedBodies) {
+        KinBodyConstPtr pattached = itbody->lock();
+        if( !!pattached && (pattached == pbody || pattached->_IsAttached(pbody,setChecked)) )
+                return true;
+    }
+    return false;
+}
+
+void KinBody::_AttachBody(KinBodyPtr pbody)
+{
+    _listAttachedBodies.push_back(pbody);
+    pbody->_listAttachedBodies.push_back(shared_kinbody());
+}
+
+bool KinBody::_RemoveAttachedBody(KinBodyPtr pbody)
+{
+    int numremoved = 0;
+    FOREACH(it,_listAttachedBodies) {
+        if( it->lock() == pbody ) {
+            _listAttachedBodies.erase(it);
+            numremoved++;
+            break;
+        }
+    }
+
+    KinBodyPtr pthisbody = shared_kinbody();
+    FOREACH(it,pbody->_listAttachedBodies) {
+        if( it->lock() == pthisbody ) {
+            pbody->_listAttachedBodies.erase(it);
+            numremoved++;
+            break;
+        }
+    }
+
+    return numremoved==2;
 }
 
 void KinBody::Enable(bool bEnable)
@@ -2024,7 +2053,8 @@ char KinBody::DoesAffect(int jointindex, int linkindex ) const
         RAVELOG_WARNA("DoesAffect: joint hierarchy needs to be computed\n");
         return 0;
     }
-    return _vecJointHierarchy[jointindex*_veclinks.size()+linkindex];
+    BOOST_ASSERT(jointindex >= 0 && jointindex < (int)_vecjoints.size());
+    return _vecJointHierarchy.at(jointindex*_veclinks.size()+linkindex);
 }
 
 const std::set<int>& KinBody::GetNonAdjacentLinks() const
@@ -2068,9 +2098,9 @@ bool KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         *pnewjoint = **itjoint; // be careful of copying pointers!
         pnewjoint->_parent = shared_kinbody();
         if( !!(*itjoint)->bodies[0] )
-            pnewjoint->bodies[0] = _veclinks[(*itjoint)->bodies[0]->GetIndex()];
+            pnewjoint->bodies[0] = _veclinks.at((*itjoint)->bodies[0]->GetIndex());
         if( !!(*itjoint)->bodies[1] )
-            pnewjoint->bodies[1] = _veclinks[(*itjoint)->bodies[1]->GetIndex()];
+            pnewjoint->bodies[1] = _veclinks.at((*itjoint)->bodies[1]->GetIndex());
         _vecjoints.push_back(pnewjoint);
     }
 
@@ -2080,9 +2110,9 @@ bool KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         *pnewjoint = **itjoint; // be careful of copying pointers!
         pnewjoint->_parent = shared_kinbody();
         if( !!(*itjoint)->bodies[0] )
-            pnewjoint->bodies[0] = _veclinks[(*itjoint)->bodies[0]->GetIndex()];
+            pnewjoint->bodies[0] = _veclinks.at((*itjoint)->bodies[0]->GetIndex());
         if( !!(*itjoint)->bodies[1] )
-            pnewjoint->bodies[1] = _veclinks[(*itjoint)->bodies[1]->GetIndex()];
+            pnewjoint->bodies[1] = _veclinks.at((*itjoint)->bodies[1]->GetIndex());
         _vecPassiveJoints.push_back(pnewjoint);
     }
 

@@ -78,6 +78,11 @@ class CM
         RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();
         if( numsamples <= 0 )
             return 0;
+        // quickly prune grasp is end effector is in collision
+        if( pmanip->CheckEndEffectorCollision(tgrasp) ) {
+            RAVELOG_VERBOSEA("sampleiksolutions: gripper in collision\n");
+            return 0;
+        }
 
         int _numsamples = numsamples;
 
@@ -88,7 +93,6 @@ class CM
                 vfree[i] = RaveRandomFloat();
             
             if( pmanip->FindIKSolutions(tgrasp, vfree, viksolutions, true) ) {
-
                 FOREACH(itsol, viksolutions) {
                     vsolutions.insert(vsolutions.end(), itsol->begin(), itsol->end());
                     if( --_numsamples <= 0 )

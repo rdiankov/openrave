@@ -224,7 +224,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
             }
             KinBodyPtr pbody2 = *itbody;
         
-            if(plink->GetParent() == pbody2 || plink->GetParent()->IsAttached(pbody2) )
+            if(plink->GetParent()->IsAttached(KinBodyConstPtr(pbody2)) )
                 continue;
 
             if( find(vbodyexcluded.begin(),vbodyexcluded.end(),pbody2) != vbodyexcluded.end() )
@@ -277,7 +277,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
             return true;
 
         // check attached objects
-        std::vector<KinBodyPtr> vattached;
+        std::set<KinBodyPtr> vattached;
         pbody->GetAttached(vattached);
         FOREACHC(itbody, vattached) {
             if( CheckCollisionP(*itbody, vbodyexcluded, vlinkexcluded, report) )
@@ -355,7 +355,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
             }
             KinBodyPtr pbody2 = *itbody;
         
-            if(pbody1 == pbody2 || pbody1->IsAttached(pbody2) )
+            if(pbody1->IsAttached(KinBodyConstPtr(pbody2)) )
                 continue;
 
             if( find(vbodyexcluded.begin(),vbodyexcluded.end(),pbody2) != vbodyexcluded.end() )
@@ -429,6 +429,12 @@ class CollisionCheckerPQP : public CollisionCheckerBase
     
         // collision
         if(_benablecol) {
+            
+            if( GetEnv()->HasRegisteredCollisionCallbacks() && !report ) {
+                report.reset(new COLLISIONREPORT());
+                report->Reset(_options);
+            }
+
             if(!report) {
                 PQP_CollideResult _colres;
                 PQP_Collide(&_colres,R1,T1,m1.get(),R2,T2,m2.get());
@@ -458,6 +464,17 @@ class CollisionCheckerPQP : public CollisionCheckerBase
                     if(TriTriCollision(u1,u2,u3,v1,v2,v3,contactpos,contactnorm)) {
                         report->contacts.push_back(COLLISIONREPORT::CONTACT(contactpos,contactnorm,0.));
                     }            
+                }
+
+                if( GetEnv()->HasRegisteredCollisionCallbacks() ) {
+                    std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
+                    GetEnv()->GetRegisteredCollisionCallbacks(listcallbacks);
+
+                    FOREACHC(itfn, listcallbacks) {
+                        OpenRAVE::CollisionAction action = (*itfn)(report,false);
+                        if( action != OpenRAVE::CA_DefaultAction )
+                            return false;
+                    }
                 }
             }
         }

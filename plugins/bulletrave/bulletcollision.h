@@ -185,7 +185,7 @@ private:
                 if( !plink0->IsEnabled() || !plink1->IsEnabled() )
                     return false;
 
-                if( plink0->GetParent()->IsAttached(plink1->GetParent()) )
+                if( plink0->GetParent()->IsAttached(KinBodyConstPtr(plink1->GetParent())) )
                     return false;
 
                 // recheck the broadphase again
@@ -399,7 +399,7 @@ public:
             return true;
 
         // check attached objects
-        std::vector<KinBodyPtr> vattached;
+        std::set<KinBodyPtr> vattached;
         pbody->GetAttached(vattached);
         FOREACHC(itbody, vattached) {
             _kinbodycallback._pbody0 = *itbody;
@@ -456,9 +456,6 @@ public:
             return false;
         }
 
-//        if( plink1->GetParent()->IsAttached(plink2->GetParent()) )
-//            return false;
-
         bulletspace->Synchronize();
         _linkcallback._pcollink0 = plink1;
         _linkcallback._pcollink1 = plink2;
@@ -476,9 +473,6 @@ public:
             RAVELOG_WARNA(str(boost::format("calling collision on disabled link %s\n")%plink->GetName()));
             return false;
         }
-
-//        if( plink->GetParent()->IsAttached(pbody) )
-//            return false;
 
         bulletspace->Synchronize();
 
@@ -535,14 +529,32 @@ public:
         _world->rayTest(from,to, rayCallback);
 
         bool bCollision = rayCallback.hasHit();
-        if( bCollision && !!report ) {
-            report->numCols = 1;
-            report->minDistance = (rayCallback.m_hitPointWorld-rayCallback.m_rayFromWorld).length();
-            report->plink1 = *(KinBody::LinkPtr*)rayCallback.m_collisionObject->getUserPointer();
+        if( bCollision ) {
+            if( GetEnv()->HasRegisteredCollisionCallbacks() && !report ) {
+                report.reset(new COLLISIONREPORT());
+                report->Reset(_options);
+            }
 
-            Vector p(rayCallback.m_hitPointWorld[0], rayCallback.m_hitPointWorld[1], rayCallback.m_hitPointWorld[2]);
-            Vector n(rayCallback.m_hitNormalWorld[0], rayCallback.m_hitNormalWorld[1], rayCallback.m_hitNormalWorld[2]);
-            report->contacts.push_back(COLLISIONREPORT::CONTACT(p,n.normalize3(),report->minDistance));
+            if( !!report ) {
+                report->numCols = 1;
+                report->minDistance = (rayCallback.m_hitPointWorld-rayCallback.m_rayFromWorld).length();
+                report->plink1 = *(KinBody::LinkPtr*)rayCallback.m_collisionObject->getUserPointer();
+                
+                Vector p(rayCallback.m_hitPointWorld[0], rayCallback.m_hitPointWorld[1], rayCallback.m_hitPointWorld[2]);
+                Vector n(rayCallback.m_hitNormalWorld[0], rayCallback.m_hitNormalWorld[1], rayCallback.m_hitNormalWorld[2]);
+                report->contacts.push_back(COLLISIONREPORT::CONTACT(p,n.normalize3(),report->minDistance));
+            }
+
+            if( GetEnv()->HasRegisteredCollisionCallbacks() ) {
+                std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
+                GetEnv()->GetRegisteredCollisionCallbacks(listcallbacks);
+
+                FOREACHC(itfn, listcallbacks) {
+                    OpenRAVE::CollisionAction action = (*itfn)(report,false);
+                    if( action != OpenRAVE::CA_DefaultAction )
+                        return false;
+                }
+            }
         }
 
         return bCollision;
@@ -569,14 +581,32 @@ public:
         _world->rayTest(from,to, rayCallback);
 
         bool bCollision = rayCallback.hasHit();
-        if( bCollision && !!report ) {
-            report->numCols = 1;
-            report->minDistance = (rayCallback.m_hitPointWorld-rayCallback.m_rayFromWorld).length();
-            report->plink1 = *(KinBody::LinkPtr*)rayCallback.m_collisionObject->getUserPointer();
+        if( bCollision ) {
+            if( GetEnv()->HasRegisteredCollisionCallbacks() && !report ) {
+                report.reset(new COLLISIONREPORT());
+                report->Reset(_options);
+            }
 
-            Vector p(rayCallback.m_hitPointWorld[0], rayCallback.m_hitPointWorld[1], rayCallback.m_hitPointWorld[2]);
-            Vector n(rayCallback.m_hitNormalWorld[0], rayCallback.m_hitNormalWorld[1], rayCallback.m_hitNormalWorld[2]);
-            report->contacts.push_back(COLLISIONREPORT::CONTACT(p,n.normalize3(),report->minDistance));
+            if( !!report ) {
+                report->numCols = 1;
+                report->minDistance = (rayCallback.m_hitPointWorld-rayCallback.m_rayFromWorld).length();
+                report->plink1 = *(KinBody::LinkPtr*)rayCallback.m_collisionObject->getUserPointer();
+                
+                Vector p(rayCallback.m_hitPointWorld[0], rayCallback.m_hitPointWorld[1], rayCallback.m_hitPointWorld[2]);
+                Vector n(rayCallback.m_hitNormalWorld[0], rayCallback.m_hitNormalWorld[1], rayCallback.m_hitNormalWorld[2]);
+                report->contacts.push_back(COLLISIONREPORT::CONTACT(p,n.normalize3(),report->minDistance));
+            }
+
+            if( GetEnv()->HasRegisteredCollisionCallbacks() ) {
+                std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
+                GetEnv()->GetRegisteredCollisionCallbacks(listcallbacks);
+
+                FOREACHC(itfn, listcallbacks) {
+                    OpenRAVE::CollisionAction action = (*itfn)(report,false);
+                    if( action != OpenRAVE::CA_DefaultAction )
+                        return false;
+                }
+            }
         }
 
         return bCollision;
@@ -600,13 +630,31 @@ public:
 
         bool bCollision = rayCallback.hasHit();
         if( bCollision ) {
-            report->numCols = 1;
-            report->minDistance = (rayCallback.m_hitPointWorld-rayCallback.m_rayFromWorld).length();
-            report->plink1 = *(KinBody::LinkPtr*)rayCallback.m_collisionObject->getUserPointer();
+            if( GetEnv()->HasRegisteredCollisionCallbacks() && !report ) {
+                report.reset(new COLLISIONREPORT());
+                report->Reset(_options);
+            }
+            
+            if( !!report ) {
+                report->numCols = 1;
+                report->minDistance = (rayCallback.m_hitPointWorld-rayCallback.m_rayFromWorld).length();
+                report->plink1 = *(KinBody::LinkPtr*)rayCallback.m_collisionObject->getUserPointer();
+                
+                Vector p(rayCallback.m_hitPointWorld[0], rayCallback.m_hitPointWorld[1], rayCallback.m_hitPointWorld[2]);
+                Vector n(rayCallback.m_hitNormalWorld[0], rayCallback.m_hitNormalWorld[1], rayCallback.m_hitNormalWorld[2]);
+                report->contacts.push_back(COLLISIONREPORT::CONTACT(p,n.normalize3(),report->minDistance));
+            }
 
-            Vector p(rayCallback.m_hitPointWorld[0], rayCallback.m_hitPointWorld[1], rayCallback.m_hitPointWorld[2]);
-            Vector n(rayCallback.m_hitNormalWorld[0], rayCallback.m_hitNormalWorld[1], rayCallback.m_hitNormalWorld[2]);
-            report->contacts.push_back(COLLISIONREPORT::CONTACT(p,n.normalize3(),report->minDistance));
+            if( GetEnv()->HasRegisteredCollisionCallbacks() ) {
+                std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
+                GetEnv()->GetRegisteredCollisionCallbacks(listcallbacks);
+
+                FOREACHC(itfn, listcallbacks) {
+                    OpenRAVE::CollisionAction action = (*itfn)(report,false);
+                    if( action != OpenRAVE::CA_DefaultAction )
+                        return false;
+                }
+            }
         }
 
         return bCollision;

@@ -1415,7 +1415,6 @@ namespace OpenRAVEXMLParser
         string _xmltag;
         string _interfacename, _readername;
     };
-
     /// KinBody reader
     /// reads kinematic chain specific entries, can instantiate this reader from another reader
     class KinBodyXMLReader : public InterfaceXMLReader

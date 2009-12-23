@@ -213,8 +213,7 @@ public:
             if( !_pmanip )
                 throw openrave_exception("failed to find manipulator with end effector similar to sensor link.");
 
-            _tlocalsensorinv = _psensor->GetRelativeTransform().inverse();
-            _tcameratogripper = _pmanip->GetEndEffectorTransform() * _psensor->GetTransform().inverse();
+            _tcameratogripper = _psensor->GetTransform().inverse()*_pmanip->GetEndEffectorTransform();
             boost::shared_ptr<SensorBase::CameraGeomData> pgeom = boost::static_pointer_cast<SensorBase::CameraGeomData>(_psensor->GetSensor()->GetSensorGeometry());
 
             _vTargetOBBs.reserve(_ptarget->GetLinks().size());
@@ -315,11 +314,9 @@ public:
         {
             if( !InConvexHull(tcamera) )
                 return false;
-            if( _pmanip->CheckEndEffectorCollision(_tcameratogripper*tcamera) )
-                return false;
-            
+
             // object is inside, find an ik solution
-            Transform tgoalee = tcamera*_tlocalsensorinv*_pmanip->GetGraspTransform();
+            Transform tgoalee = tcamera*_tcameratogripper;
             if( !_pmanip->FindIKSolution(tgoalee,_vsolution,true) ) {
                 RAVELOG_VERBOSEA("no valid ik\n");
                 return false;
@@ -410,7 +407,6 @@ public:
         KinBodyPtr _ptarget;
         KinBodyPtr _ptargetbox; ///< box to represent the target for simulating ray collisions
         Transform _ttarget; ///< transform of target
-        Transform _tlocalsensorinv; ///< local sensor transform (with respect to link)
         Transform _tcameratogripper; ///< transforms a camera coord system to the gripper coordsystem
         RobotBase::AttachedSensorPtr _psensor;
         RobotBase::ManipulatorPtr _pmanip;

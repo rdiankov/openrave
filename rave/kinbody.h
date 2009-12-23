@@ -99,7 +99,7 @@ public:
             
             virtual AABB ComputeAABB(const Transform& t) const;
 
-//        private:
+        private:
             /// triangulates the geometry object and initializes collisionmesh. GeomTrimesh types must already be triangulated
             /// \param fTesselation to control how fine the triangles need to be
             /// 1.0f is the default value that 
@@ -124,9 +124,11 @@ public:
 #ifdef _MSC_VER
             friend class ColladaReader;
             friend class OpenRAVEXMLParser::LinkXMLReader;
+            friend class OpenRAVEXMLParser::KinBodyXMLReader
 #else
             friend class ::ColladaReader;
             friend class ::OpenRAVEXMLParser::LinkXMLReader;
+            friend class ::OpenRAVEXMLParser::KinBodyXMLReader;
 #endif
 #endif
             friend class KinBody;
@@ -512,15 +514,11 @@ public:
     /// Check if body is self colliding. Links that are joined together are ignored.
     virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr()) const;
 
-    /// used to attach bodies so the collision detection ignores them for planning purposes
-    /// this doesn't physically attach them in any way to the bodies. So attached objects can be
-    /// far apart.
-    /// both bodies are affected!
-    virtual void AttachBody(KinBodyPtr pbody);
-    virtual void RemoveBody(KinBodyPtr pbody); ///< if pbody is NULL, removes all ignored bodies
+    /// \return true if two bodies should be considered as one during collision (ie one is grabbing the other)
     virtual bool IsAttached(KinBodyConstPtr pbody) const;
-    /// \return all attached bodies
-    virtual void GetAttached(std::vector<KinBodyPtr>& vattached) const;
+
+    /// \param setAttached inserts all attached bodies of this body. If any bodies are already in setAttached, then ignores recursing on their attached bodies.
+    virtual void GetAttached(std::set<KinBodyPtr>& setAttached) const;
 
     /// \return true if this body is derived from RobotBase
     virtual bool IsRobot() const { return false; }
@@ -588,6 +586,16 @@ protected:
     inline KinBodyPtr shared_kinbody() { return boost::static_pointer_cast<KinBody>(shared_from_this()); }
     inline KinBodyConstPtr shared_kinbody_const() const { return boost::static_pointer_cast<KinBody const>(shared_from_this()); }
 
+    /// \return true if two bodies should be considered as one during collision (ie one is grabbing the other)
+    virtual bool _IsAttached(KinBodyConstPtr pbody, std::set<KinBodyConstPtr>& setChecked) const;
+
+    /// adds an attached body
+    virtual void _AttachBody(KinBodyPtr pbody);
+
+    /// removes an attached body
+    /// \return true if pbody was successfully found and removed
+    virtual bool _RemoveAttachedBody(KinBodyPtr pbody);
+
     std::string name; ///< name of body
 
     std::vector<JointPtr> _vecjoints;     ///< all the joints of the body, joints contain limits, torques, and velocities
@@ -608,7 +616,7 @@ protected:
     std::set<int> _setNonAdjacentLinks;     ///< the not of _setAdjacentLinks
     std::vector< std::pair<std::string, std::string> > _vForcedAdjacentLinks; ///< internally stores forced adjacent links
 
-    std::set<KinBodyWeakPtr> _setAttachedBodies;
+    std::list<KinBodyWeakPtr> _listAttachedBodies; ///< list of bodies that are directly attached to this body (can have duplicates)
 
     std::string strXMLFilename;             ///< xml file used to load the body
 

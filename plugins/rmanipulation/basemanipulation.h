@@ -630,6 +630,7 @@ protected:
             listgoals.push_back(handTm);
 
         robot->RegrabAll();
+        RobotBase::RobotStateSaver saver(robot);
 
         std::vector<dReal> viksolution, armgoals;
 
@@ -670,7 +671,7 @@ protected:
             return false;
         }
 
-        RAVELOG_INFOA("MoveToHandPosition found %"PRIdS" solutions\n", armgoals.size()/pmanip->GetArmJoints().size());
+        RAVELOG_INFO(str(boost::format("MoveToHandPosition found %d solutions\n")%(armgoals.size()/pmanip->GetArmJoints().size())));
     
         robot->SetActiveDOFs(pmanip->GetArmJoints(), affinedofs);
         params->SetRobotActiveJoints(robot);

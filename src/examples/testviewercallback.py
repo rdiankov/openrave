@@ -47,4 +47,5 @@ if __name__=='__main__':
         cmd = raw_input('In selection mode, click anywhere on the viewer. Enter command (q-quit): ')
         if cmd == 'q':
             break
+    handle = None
     env.Destroy() # done with the environment

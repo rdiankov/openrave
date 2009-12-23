@@ -171,6 +171,9 @@ class Environment : public EnvironmentBase
 
         {
             boost::mutex::scoped_lock lock(_mutexBodies);
+            // release all grabbed
+            FOREACH(itrobot,_vecrobots)
+                (*itrobot)->ReleaseAllGrabbed();
             FOREACH(itbody,_vecbodies)
                 (*itbody)->Destroy();
             _vecbodies.clear();
@@ -968,11 +971,9 @@ class Environment : public EnvironmentBase
 
     virtual void _CloseGraphCallback(RaveViewerBaseWeakPtr wviewer, void* handle)
     {
-        if( !wviewer.expired() ) {
-            RaveViewerBasePtr viewer(wviewer);
-            if( !!viewer )
-                viewer->closegraph(handle);
-        }
+        RaveViewerBasePtr viewer = wviewer.lock();
+        if( !!viewer )
+            viewer->closegraph(handle);
     }
 
     virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK)
@@ -1109,7 +1110,7 @@ protected:
 
                 // note that pointers will not be correct
                 pnewrobot->_vGrabbedBodies = (*itrobot)->_vGrabbedBodies;
-                pnewrobot->_setAttachedBodies = (*itrobot)->_setAttachedBodies;
+                pnewrobot->_listAttachedBodies = (*itrobot)->_listAttachedBodies;
 
                 assert( _mapBodies.find(pnewrobot->GetNetworkId()) == _mapBodies.end() );
                 _mapBodies[pnewrobot->GetNetworkId()] = pnewrobot;
@@ -1126,27 +1127,29 @@ protected:
                 }
 
                 pnewbody->networkid = (*itbody)->GetNetworkId();
+                
+                // note that pointers will not be correct
+                pnewbody->_listAttachedBodies = (*itbody)->_listAttachedBodies;
 
                 // note that pointers will not be correct
-                pnewbody->_setAttachedBodies = (*itbody)->_setAttachedBodies;
-
                 _mapBodies[pnewbody->GetNetworkId()] = pnewbody;
                 _vecbodies.push_back(pnewbody);
             }
 
-            // process the attached and grabbed bodies
+            // process attached bodies
             FOREACH(itbody, _vecbodies) {
-                set<KinBodyWeakPtr> setnew;
-                FOREACH(itatt, (*itbody)->_setAttachedBodies) {
-                    KinBodyPtr patt(*itatt);
+                list<KinBodyWeakPtr> listnew;
+                FOREACH(itatt, (*itbody)->_listAttachedBodies) {
+                    KinBodyPtr patt = itatt->lock();
                     if( !!patt ) {
-                        BOOST_ASSERT( _mapBodies.find(patt->GetNetworkId()) != _mapBodies.end());
-                        setnew.insert(_mapBodies[patt->GetNetworkId()]);
+                        BOOST_ASSERT( _mapBodies.find(patt->GetNetworkId()) != _mapBodies.end() );
+                        listnew.push_back(_mapBodies[patt->GetNetworkId()]);
                     }
                 }
-                (*itbody)->_setAttachedBodies = setnew;
+                (*itbody)->_listAttachedBodies = listnew;
             }
 
+            // process grabbed bodies
             FOREACH(itrobot, _vecrobots) {
                 FOREACH(itgrab, (*itrobot)->_vGrabbedBodies) {
                     KinBodyPtr pbody(itgrab->pbody);
@@ -1154,10 +1157,10 @@ protected:
                     itgrab->pbody = _mapBodies[pbody->GetNetworkId()];
                     itgrab->plinkrobot = (*itrobot)->GetLinks()[KinBody::LinkPtr(itgrab->plinkrobot)->GetIndex()];
 
-                    set<KinBody::LinkWeakPtr> setnew;
-                    FOREACH(itlink, itgrab->sValidColLinks)
-                        setnew.insert((*itrobot)->_veclinks[KinBody::LinkPtr(*itlink)->GetIndex()]);
-                    itgrab->sValidColLinks = setnew;
+                    list<KinBody::LinkWeakPtr> listnew;
+                    FOREACH(itlink, itgrab->listCollidableLinks)
+                        listnew.push_back((*itrobot)->_veclinks[KinBody::LinkPtr(*itlink)->GetIndex()]);
+                    itgrab->listCollidableLinks = listnew;
                 }
             }
 

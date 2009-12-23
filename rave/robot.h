@@ -202,8 +202,7 @@ public:
     {
         KinBodyWeakPtr pbody; ///< the grabbed body
         LinkWeakPtr plinkrobot; ///< robot link that is grabbing the body
-        std::set<LinkWeakPtr> sValidColLinks; ///< links that are initially in collision
-                                               ///< with the robot, used for self collisions
+        std::list<LinkWeakPtr> listCollidableLinks; ///< links that should still be checked for collisions
         Transform troot; // root transform (of first link) relative to end effector
     };
 
@@ -398,7 +397,7 @@ public:
     /// \param setRobotLinksToIgnore Additional robot link indices that collision checker ignore
     ///        when checking collisions between the grabbed body and the robot.
     /// \return true if successful
-    virtual bool Grab(KinBodyPtr pbody, LinkPtr plink, const std::set<int>& setRobotLinksToIgnore);
+    virtual bool Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore);
 
     virtual void Release(KinBodyPtr pbody); ///< release the body
     virtual void ReleaseAllGrabbed(); ///< release all bodies
@@ -407,10 +406,11 @@ public:
     /// In other words, the current collisions any grabbed body makes with the robot will be re-inserted into an ignore list
     virtual void RegrabAll();
 
-    /// get the robot link that is currently grabbing the body. If the body is not grabbed, will return an  empty pointer.
-    virtual LinkPtr IsGrabbing(KinBodyPtr pbody) const;
-    virtual void GetGrabbed(std::vector<KinBodyPtr>& vbodies) const;
+    /// \return the robot link that is currently grabbing the body. If the body is not grabbed, will return an  empty pointer.
+    virtual LinkPtr IsGrabbing(KinBodyConstPtr pbody) const;
 
+    /// gets all grabbed bodies whose collisions should also be checked
+    virtual void GetGrabbed(std::vector<KinBodyPtr>& vbodies) const;
     //@}
 
     /// Add simulating attached sensors

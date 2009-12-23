@@ -30,8 +30,8 @@ enum CollisionOptions
 /// action to perform whenever a collision is detected between objects
 enum CollisionAction
 {
-    CA_Ignore = 0, ///< do nothing
-    CA_DefaultAction = 1, ///< let the physics/collision engine resolve the action
+    CA_DefaultAction = 0, ///< let the physics/collision engine resolve the action
+    CA_Ignore = 1, ///< do nothing
 };
 
 /// derive from this class for every different collision checker library that OpenRAVE should support

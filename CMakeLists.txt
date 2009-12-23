@@ -354,6 +354,7 @@ if( UNIX OR NOT PYTHON_EXECUTABLE )
   execute_process(
     COMMAND ${IKFAST_EXECUTABLE} --help
     RESULT_VARIABLE _ikfast_success
+    ERROR_VARIABLE _ikfast_error
     OUTPUT_VARIABLE _ikfast_output)
   set(IKFAST_INSTALLED_EXECUTABLE ${CMAKE_INSTALL_PREFIX}/share/openrave/ikfast.py)
 else()

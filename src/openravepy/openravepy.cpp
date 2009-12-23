@@ -820,23 +820,13 @@ public:
     bool CheckSelfCollision() { return _pbody->CheckSelfCollision(); }
     bool CheckSelfCollision(PyCollisionReportPtr pReport);
 
-    void AttachBody(PyKinBodyPtr pattachbody) {
-        CHECK_POINTER(pattachbody);
-        _pbody->AttachBody(pattachbody->GetBody());
-    }
-    void RemoveBody(PyKinBodyPtr pbody) {
-        if( !pbody )
-            _pbody->RemoveBody(KinBodyPtr());
-        else
-            _pbody->RemoveBody(pbody->GetBody());
-    }
     bool IsAttached(PyKinBodyPtr pattachbody) {
         CHECK_POINTER(pattachbody);
         return _pbody->IsAttached(pattachbody->GetBody());
     }
     object GetAttached() const {
         boost::python::list attached;
-        std::vector<KinBodyPtr> vattached;
+        std::set<KinBodyPtr> vattached;
         _pbody->GetAttached(vattached);
         FOREACHC(it,vattached)
             attached.append(PyKinBodyPtr(new PyKinBody(*it,_pyenv)));
@@ -881,6 +871,7 @@ class PyCollisionReport
 {
 public:
     PyCollisionReport() : report(new COLLISIONREPORT()) {}
+    PyCollisionReport(CollisionReportPtr report) : report(report) {}
     virtual ~PyCollisionReport() {}
 
     struct PYCONTACT
@@ -1238,7 +1229,7 @@ public:
             grabbedbody.reset(new PyKinBody(KinBodyPtr(grabbed.pbody),pyenv));
             linkrobot.reset(new PyLink(KinBody::LinkPtr(grabbed.plinkrobot),pyenv));
 
-            FOREACHC(it, grabbed.sValidColLinks)
+            FOREACHC(it, grabbed.listCollidableLinks)
                 validColLinks.append(PyLinkPtr(new PyLink(KinBody::LinkPtr(*it),pyenv)));
             
             troot = ReturnTransform(grabbed.troot);
@@ -1669,12 +1660,12 @@ class PyRaveViewerBase : public PyInterfaceBase
 protected:
     RaveViewerBasePtr _pviewer;
 
-    static bool ViewerCallback(object fncallback, PyEnvironmentBasePtr pyenv, KinBody::LinkPtr plink,RaveVector<float> position,RaveVector<float> direction)
+    static bool _ViewerCallback(object fncallback, PyEnvironmentBasePtr pyenv, KinBody::LinkPtr plink,RaveVector<float> position,RaveVector<float> direction)
     {
         object res;
         PyGILState_STATE gstate = PyGILState_Ensure();
         try {
-            res = fncallback(PyKinBody::PyLinkPtr(new PyKinBody::PyLink(plink,PyEnvironmentBasePtr(pyenv))),toPyVector3(position),toPyVector3(direction));
+            res = fncallback(PyKinBody::PyLinkPtr(new PyKinBody::PyLink(plink,pyenv)),toPyVector3(position),toPyVector3(direction));
         }
         catch(...) {
             RAVELOG_ERRORA("exception occured in python viewer callback\n");
@@ -1710,7 +1701,7 @@ public:
     {
         if( !fncallback )
             throw openrave_exception("callback not specified");
-        boost::shared_ptr<void> p = _pviewer->RegisterCallback(properties,boost::bind(&PyRaveViewerBase::ViewerCallback,fncallback,_pyenv,_1,_2,_3));
+        boost::shared_ptr<void> p = _pviewer->RegisterCallback(properties,boost::bind(&PyRaveViewerBase::_ViewerCallback,fncallback,_pyenv,_1,_2,_3));
         if( !p )
             return object();
         return object(PyVoidHandle(p));
@@ -1748,6 +1739,31 @@ protected:
         pviewer->main(bShowViewer); // spin until quitfrommainloop is called
         _penv->AttachViewer(RaveViewerBasePtr());
         pviewer.reset();
+    }
+
+    CollisionAction _CollisionCallback(object fncallback, CollisionReportPtr preport, bool bFromPhysics)
+    {
+        object res;
+        PyGILState_STATE gstate = PyGILState_Ensure();
+        try {
+            PyCollisionReportPtr pyreport;
+            if( !!preport ) {
+                pyreport.reset(new PyCollisionReport(preport));
+                pyreport->init(shared_from_this());
+            }
+            res = fncallback(pyreport,bFromPhysics);
+        }
+        catch(...) {
+            RAVELOG_ERRORA("exception occured in python collision callback\n");
+        }
+        PyGILState_Release(gstate);
+        if( res == object() || !res )
+            return CA_DefaultAction;
+        extract<int> xi(res);
+        if( xi.check() )
+            return (CollisionAction)(int)xi;
+        RAVELOG_WARNA("collision callback nothing returning, so executing default action\n");
+        return CA_DefaultAction;
     }
 
 public:
@@ -2250,6 +2266,16 @@ public:
         return _penv->SetPhysicsEngine(pengine->GetPhysicsEngine());
     }
     PyPhysicsEngineBasePtr GetPhysicsEngine() { return PyPhysicsEngineBasePtr(new PyPhysicsEngineBase(_penv->GetPhysicsEngine(),shared_from_this())); }
+
+    object RegisterCollisionCallback(object fncallback)
+    {
+        if( !fncallback )
+            throw openrave_exception("callback not specified");
+        boost::shared_ptr<void> p = _penv->RegisterCollisionCallback(boost::bind(&PyEnvironmentBase::_CollisionCallback,shared_from_this(),fncallback,_1,_2));
+        if( !p )
+            return object();
+        return object(PyVoidHandle(p));
+    }
 
     void StepSimulation(dReal timeStep) { _penv->StepSimulation(timeStep); }
     void StartSimulation(dReal fDeltaTime) { _penv->StartSimulation(fDeltaTime); }
@@ -2797,6 +2823,10 @@ BOOST_PYTHON_MODULE(openravepy)
         .value("Contacts",CO_Contacts)
         .value("RayAnyHit",CO_RayAnyHit)
         ;
+    enum_<CollisionAction>("CollisionAction")
+        .value("DefaultAction",CA_DefaultAction)
+        .value("Ignore",CA_Ignore)
+        ;
 
     enum_<CloningOptions>("CloningOptions")
         .value("Bodies",Clone_Bodies)
@@ -2874,8 +2904,6 @@ BOOST_PYTHON_MODULE(openravepy)
             .def("CalculateAngularVelocityJacobian",&PyKinBody::CalculateAngularVelocityJacobian)
             .def("CheckSelfCollision",pkinbodyself)
             .def("CheckSelfCollision",pkinbodyselfr)
-            .def("AttachBody",&PyKinBody::AttachBody)
-            .def("RemoveBody",&PyKinBody::RemoveBody)
             .def("IsAttached",&PyKinBody::IsAttached)
             .def("GetAttached",&PyKinBody::GetAttached)
             .def("IsRobot",&PyKinBody::IsRobot)
@@ -3271,6 +3299,7 @@ BOOST_PYTHON_MODULE(openravepy)
             .def("GetLoadedProblems",&PyEnvironmentBase::GetLoadedProblems)
             .def("SetPhysicsEngine",&PyEnvironmentBase::SetPhysicsEngine)
             .def("GetPhysicsEngine",&PyEnvironmentBase::GetPhysicsEngine)
+            .def("RegisterCollisionCallback",&PyEnvironmentBase::RegisterCollisionCallback)
             .def("StepSimulation",&PyEnvironmentBase::StepSimulation)
             .def("StartSimulation",&PyEnvironmentBase::StartSimulation)
             .def("StopSimulation",&PyEnvironmentBase::StopSimulation)

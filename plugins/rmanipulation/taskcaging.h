@@ -723,7 +723,7 @@ public:
 
 public:
  TaskCagingProblem(EnvironmentBasePtr penv) : ProblemInstance(penv) {
-        RegisterCommand("graspset",boost::bind(&TaskCagingProblem::CreateGraspSet, this, _1, _2),
+        RegisterCommand("graspset",boost::bind(&TaskCagingProblem::GraspSet, this, _1, _2),
                         "Creates a grasp set given a robot end-effector floating in space.\n"
                         "Options: step exploreprob size target targetjoint contactconfigdelta cagedconfig");
         RegisterCommand("taskconstraintplan", boost::bind(&TaskCagingProblem::TaskConstrainedPlanner, this, _1, _2),
@@ -788,7 +788,7 @@ public:
 
 private:
 
-    bool CreateGraspSet(ostream& sout, istream& sinput)
+    bool GraspSet(ostream& sout, istream& sinput)
     {
         dReal fStep = 0.01f;
         dReal fExploreProb = 0.02f;
@@ -918,9 +918,12 @@ private:
         }
     
 
-        RAVELOG_INFOA("finished computing grasp set: pts=%"PRIdS" in %dms\n", ptraj->GetPoints().size(), timeGetTime()-basetime);
+        RAVELOG_INFO(str(boost::format("finished computing grasp set: pts=%d in %dms\n")%ptraj->GetPoints().size()%(timeGetTime()-basetime)));
     
         vtargetvalues = graspfn->vtargetvalues;
+        RobotBase::ManipulatorPtr pmanip = _robot->GetActiveManipulator();
+        if( !pmanip )
+            RAVELOG_WARN("robot doesn't have manipulator defined, storing robot transformation directly\n");
     
         FOREACHC(itp, ptraj->GetPoints()) {
         
@@ -948,7 +951,7 @@ private:
 
             // convert the active dofs to a transform and save
             _robot->SetActiveDOFValues(itp->q, false);
-            sout << tlinknew.inverse() * _robot->GetTransform() << " "  << nContact << " ";
+            sout << tlinknew.inverse() * (!pmanip ? _robot->GetTransform() : pmanip->GetEndEffectorTransform()) << " "  << nContact << " ";
         }
 
         if( !!ptarget )

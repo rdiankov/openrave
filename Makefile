@@ -1,6 +1,5 @@
  all:
 	@mkdir -p build; rm -f build/CMakeCache.txt
-	@cd ikfast && cmake -E tar zxf sympy_0.6.3.tgz
 	@if [ $(prefix) ]; then \
 		cd build && cmake -DCMAKE_INSTALL_PREFIX=$(prefix) -DCMAKE_BUILD_TYPE=RelWithDebInfo ..; \
 	else \

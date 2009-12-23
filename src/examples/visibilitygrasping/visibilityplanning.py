@@ -22,8 +22,8 @@ from Tkinter import *
 import tkFileDialog
 import Image, ImageDraw, ImageTk
 
-#sys.path.append('..')
-#import metaclass
+sys.path.append('..')
+import metaclass
 
 class CameraViewerGUI(threading.Thread):
     class Container:
@@ -72,7 +72,7 @@ class CameraViewerGUI(threading.Thread):
         self.main.after(0,self.updateimage)
         self.main.mainloop()
 
-class VisibilityGrasping():
+class VisibilityGrasping(metaclass.AutoReloader):
     """Calls on the openrave grasp planners to get a robot to pick up objects while guaranteeing visibility with its cameras"""
     def __init__(self):
         self.orenvreal = Environment()
@@ -208,7 +208,8 @@ class VisibilityGrasping():
         # set the real values for simulation
         v = array(self.robotreal.GetJointValues(),'float')
         v[gripperjoints] = grippervalues
-        self.robot.GetController().SetDesired(v)
+        if self.robot is not None:
+            self.robot.GetController().SetDesired(v)
 
     def testhand(self,T=None,pose=None,target=None):
         if pose is not None:
@@ -251,6 +252,7 @@ class VisibilityGrasping():
             self.waitrobot()
             if self.robot is not None:
                 self.robot.GetController().SetDesired(self.robotreal.GetJointValues())
+            time.sleep(0.2) # give some time for GUI to update
 
     def start(self,dopause=False,usevision=False):
         self.robotreal.ReleaseAllGrabbed()
@@ -267,6 +269,11 @@ class VisibilityGrasping():
                 if sensor.GetSensor() is not None:
                     sensor.GetSensor().SendCommand('power 0')
             
+            if self.orenv.CheckCollision(self.robot):
+                print 'robot in collision, trying again...'
+                time.sleep(0.5)
+                continue
+
             taskprob = self.orenv.CreateProblem('TaskManipulation')
             manipprob = self.orenv.CreateProblem('BaseManipulation')
             visualprob = self.orenv.CreateProblem('VisualFeedback')
@@ -280,8 +287,11 @@ class VisibilityGrasping():
 
             trajdata = visualprob.SendCommand('MoveToObserveTarget target ' + self.target.GetName() + ' sampleprob 0.001 sensorindex 0 maxiter 4000 convexdata ' + str(self.convexdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.convexdata.flat) + ' visibilitydata ' + str(self.visibilitydata.shape[0]) + ' ' + ' '.join(str(f) for f in self.visibilitydata.flat) + cmdstr)
             if trajdata is None:
-                raise ValueError('failed to find visual feedback grasp')
+                print 'failed to find visual feedback grasp'
+                continue
             self.starttrajectory(trajdata)
+            if not self.testvisibility(visualprob):
+                raise ValueError('visibility has not been achieved!')
             T = self.target.GetTransform()
             targetfilename = self.target.GetXMLFilename()
             if usevision:
@@ -299,7 +309,8 @@ class VisibilityGrasping():
                 time.sleep(0.1)
 
             # start visual servoing step
-            while True:
+            success = False
+            for iter in range(4):
                 # set the real values for simulation
                 v = array(self.robotreal.GetJointValues(),'float')
                 v[self.manip.GetGripperJoints()] = self.graspsetdata[0][12:]
@@ -307,28 +318,38 @@ class VisibilityGrasping():
 
                 trajdata = visualprob.SendCommand('VisualFeedbackGrasping target ' + self.target.GetName() + ' sensorindex 0 convexdata ' + str(self.convexdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.convexdata.flat) + ' graspsetdata ' + str(self.graspsetdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.graspsetdata[:,0:12].flat) + ' maxiter 100 visgraspthresh 0.5 gradientsamples 5 ' + cmdstr)
                 if trajdata is not None:
+                    success = True
                     break
                 print 'trying visual feedback grasp again'
+            if not success:
+                continue
             self.starttrajectory(trajdata)
 
             trajdata = manipprob.SendCommand('closefingers offset %f '%self.graspoffset + cmdstr)
             if trajdata is None:
                 raise ValueError('failed to find visual feedback grasp')
             self.starttrajectory(trajdata)
+            
             self.robot.Grab(self.target)
             self.robotreal.Grab(self.orenvreal.GetKinBody(self.target.GetName()))
             Trelative = dot(linalg.inv(self.target.GetTransform()),self.manip.GetEndEffectorTransform())
             Tnewgoals = [dot(Tgoal,Trelative) for Tgoal in self.Tgoals]
 
+            print 'moving up'
             trajdata = manipprob.SendCommand('movehandstraight direction 0 0 1 stepsize 0.001 maxsteps 100' + cmdstr)
             if trajdata is None:
                 print 'failed to find trajectory'
             self.starttrajectory(trajdata)
+            print 'moving to destination'
             trajdata = manipprob.SendCommand('movetohandposition maxiter 1000 maxtries 1 seedik 4 matrices ' + str(len(Tnewgoals)) + ' ' + ' '.join(matrixSerialization(T) for T in Tnewgoals) + cmdstr)
             if trajdata is None:
                 print 'failed to find trajectory'
+                self.robot.SetActiveDOFs(self.manip.GetGripperJoints())
                 trajdata = manipprob.SendCommand('releasefingers target ' + self.target.GetName() + cmdstr)
-                self.starttrajectory(trajdata)
+                if trajdata is not None:
+                    self.starttrajectory(trajdata)
+                else:
+                    print 'failed to release'
                 continue
             self.starttrajectory(trajdata)
 
@@ -338,6 +359,28 @@ class VisibilityGrasping():
                 print 'failed to find trajectory'
                 continue
             self.starttrajectory(trajdata)
+
+    def testvisibility(self,visualprob=None):
+        if visualprob is None:
+            visualprob = self.visualprob
+        visualprob.GetEnv().LockPhysics(True)
+        try:
+            res = visualprob.SendCommand('ComputeVisibility target ' + self.target.GetName() + ' sensorindex 0 convexdata ' + str(self.convexdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.convexdata.flat))
+            return int(res)!=0
+        finally:
+            visualprob.GetEnv().LockPhysics(False)
+        return False
+
+    def testvisibilitydata(self,visualprob=None):
+        if visualprob is None:
+            visualprob = self.visualprob
+        visualprob.GetEnv().LockPhysics(True)
+        try:
+            res = visualprob.SendCommand('ProcessVisibilityExtents target ' + self.target.GetName() + ' sensorindex 0 convexdata ' + str(self.convexdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.convexdata.flat) + ' visibilitydata ' + str(self.visibilitydata.shape[0]) + ' ' + ' '.join(str(f) for f in self.visibilitydata.flat))
+            if self.visibilitydata.size != len(res.split()):
+                raise ValueError('bad visibility data')
+        finally:
+            visualprob.GetEnv().LockPhysics(False)
 
     def quitviewers(self):
         for viewer in self.viewers:
@@ -368,12 +411,11 @@ class PA10GraspExample(VisibilityGrasping):
     def preprocessdata(self):
         VisibilityGrasping.preprocessdata(self, maskfile = 'pa10gripper_mask.mat', convexfile = 'pa10gripper_convex.mat', robotfile = 'robots/pa10schunk.robot.xml', graspsetfile = 'simple_cereal_grasps_pa10.mat', targetfile = 'data/box_frootloops.kinbody.xml', graspingppfile = 'pa10_frootloops_visibility.pp', visibilityfile = 'cereal_visibility.mat', robotjointinds = [], robotjoints = [])
         
-    def loadscene(self):
+    def loadscene(self,randomize=True):
         VisibilityGrasping.loadscene(self,scenefilename='data/pa10grasp.env.xml',robotname='PA10',sensorname='wristcam',graspingppfile='pa10_frootloops_visibility.pp', handfilename='robots/schunk_manip.robot.xml')
 
-        createprob = 0.15
-        obstacles = ['data/box0.kinbody.xml','data/box1.kinbody.xml','data/box2.kinbody.xml','data/box3.kinbody.xml']
-        maxcreate = 4
+        if not randomize:
+            return
 
         # randomize robot position
         Trobot = self.robotreal.GetTransform()
@@ -383,6 +425,10 @@ class PA10GraspExample(VisibilityGrasping):
             self.robotreal.SetTransform(Tnew)
             if not self.orenvreal.CheckCollision(self.robotreal):
                 break
+
+        createprob = 0.15
+        obstacles = ['data/box0.kinbody.xml','data/box1.kinbody.xml','data/box2.kinbody.xml','data/box3.kinbody.xml']
+        maxcreate = 6
 
         self.orenvreal.LockPhysics(True)
         try:
@@ -403,7 +449,7 @@ class PA10GraspExample(VisibilityGrasping):
             X = []
             Y = []
             for x in range(Nx):
-                X = r_[X,0.5*random.rand(Ny)/(Nx+1) + (x+1)/(Nx+1)]
+                X = r_[X,0.5*random.rand(Ny)/(Nx+1) + float(x+1)/(Nx+1)]
                 Y = r_[Y,0.5*random.rand(Ny)/(Ny+1) + (arange(Ny)+0.5)/(Ny+1)]
 
             offset = ab.pos() + array([-1,-1,1])*ab.extents()
