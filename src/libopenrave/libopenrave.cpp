@@ -584,6 +584,7 @@ bool InterfaceBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     if( !preference )
         throw openrave_exception("invalid cloning reference",ORE_InvalidArguments);
     __pUserData = preference->__pUserData;
+    __strxmlfilename = preference->__strxmlfilename;
     __mapReadableInterfaces = preference->__mapReadableInterfaces;
     return true;
 }

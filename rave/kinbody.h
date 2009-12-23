@@ -124,7 +124,7 @@ public:
 #ifdef _MSC_VER
             friend class ColladaReader;
             friend class OpenRAVEXMLParser::LinkXMLReader;
-            friend class OpenRAVEXMLParser::KinBodyXMLReader
+            friend class OpenRAVEXMLParser::KinBodyXMLReader;
 #else
             friend class ::ColladaReader;
             friend class ::OpenRAVEXMLParser::LinkXMLReader;
@@ -542,9 +542,6 @@ public:
     virtual void SetGuiData(boost::shared_ptr<void> pdata) { _pGuiData = pdata; }
     virtual boost::shared_ptr<void> GetGuiData() const { return _pGuiData; }
 
-    /// \return the XML filename that this body was loaded from (sometimes this is not possible if the definition lies inside an environment file).
-    virtual const std::string& GetXMLFilename() const { return strXMLFilename; }
-
     /// \return all possible link pairs that could get in collision
     virtual const std::set<int>& GetNonAdjacentLinks() const;
     /// \return all possible link pairs whose collisions are ignored.
@@ -617,8 +614,6 @@ protected:
     std::vector< std::pair<std::string, std::string> > _vForcedAdjacentLinks; ///< internally stores forced adjacent links
 
     std::list<KinBodyWeakPtr> _listAttachedBodies; ///< list of bodies that are directly attached to this body (can have duplicates)
-
-    std::string strXMLFilename;             ///< xml file used to load the body
 
     int networkid;                          ///< unique id of the body used in the network interface
     int _nUpdateStampId;                         ///< unique id for every unique transformation change of any link,

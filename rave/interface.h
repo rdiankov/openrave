@@ -48,11 +48,17 @@ public:
         return it != __mapReadableInterfaces.end() ? it->second : XMLReadablePtr();
     }
 
+    /// \return a user-provided description of the interface
     virtual const std::string& GetDescription() const { return __description; };
 
+    /// set user data
     virtual void SetUserData(boost::shared_ptr<void> pdata) { __pUserData = pdata; }
+    /// \return user data
     virtual boost::shared_ptr<void> GetUserData() const { return __pUserData; }
     
+    /// \return the XML filename that this body was loaded from (sometimes this is not possible if the definition lies inside an environment file).
+    virtual const std::string& GetXMLFilename() const { return __strxmlfilename; }
+
     /// clone the contents of an interface to the current interface
     /// \param preference the interface whose information to clone
     /// \param cloningoptions mask of CloningOptions
@@ -75,6 +81,7 @@ private:
     PluginType __type;
     EnvironmentBasePtr __penv;
     boost::shared_ptr<void> __pUserData;                       ///< data set by the user
+    std::string __strxmlfilename;             ///< xml file used to load the interface, one one exists
 
     READERSMAP __mapReadableInterfaces; ///< pointers to extra interfaces that are included with this object
 

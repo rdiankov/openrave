@@ -2124,7 +2124,6 @@ bool KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _setNonAdjacentLinks = r->_setNonAdjacentLinks;
     _vForcedAdjacentLinks = r->_vForcedAdjacentLinks;
 
-    strXMLFilename = r->strXMLFilename;
     _vTempJoints = r->_vTempJoints;
 
     _nUpdateStampId++;

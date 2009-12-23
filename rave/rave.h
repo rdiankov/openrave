@@ -712,21 +712,38 @@ public:
     /// Initializes a robot from an XML file. The robot should not be added the environment when calling this function.
     /// \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled
     /// \param filename the name of the file to open
+    /// \param atts the XML attributes/value pairs
     virtual RobotBasePtr ReadRobotXMLFile(RobotBasePtr robot, const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts) = 0;
+
     /// Initialize a robot from an XML formatted string
     /// The robot should not be added the environment when calling this function.
     /// \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled
+    /// \param atts the XML attributes/value pairs
     virtual RobotBasePtr ReadRobotXMLData(RobotBasePtr robot, const std::string& data, const std::list<std::pair<std::string,std::string> >& atts) = 0;
 
     /// Initializes a kinematic body from an XML file. The body should not be added to the environment when calling this function.
     /// \param filename the name of the file to open
     /// \param body If a null pointer is passed, a new body will be created, otherwise an existing robot will be filled
+    /// \param atts the XML attributes/value pairs
     virtual KinBodyPtr ReadKinBodyXMLFile(KinBodyPtr body, const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts) = 0;
 
     /// Initializes a kinematic body from an XML formatted string.
     // The body should not be added to the environment when calling this function.
     /// \param body If a null pointer is passed, a new body will be created, otherwise an existing robot will be filled
+    /// \param atts the XML attributes/value pairs
     virtual KinBodyPtr ReadKinBodyXMLData(KinBodyPtr body, const std::string& data, const std::list<std::pair<std::string,std::string> >& atts) = 0;
+
+    /// Initializes an interface from an XML file.
+    /// \param pinterface If a null pointer is passed, a new interface will be created, otherwise an existing interface will be filled
+    /// \param filename the name of the file to open
+    /// \param atts the XML attributes/value pairs
+    virtual InterfaceBasePtr ReadInterfaceXMLFile(InterfaceBasePtr pinterface, PluginType type, const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts) = 0;
+
+    /// Initializes an interface from an XML formatted string.
+    /// \param pinterface If a null pointer is passed, a new interface will be created, otherwise an existing interface will be filled
+    /// \param data string containing XML data
+    /// \param atts the XML attributes/value pairs
+    virtual InterfaceBasePtr ReadInterfaceXMLData(InterfaceBasePtr pinterface, PluginType type, const std::string& data, const std::list<std::pair<std::string,std::string> >& atts) = 0;
     ///@}
 
     /// Objects

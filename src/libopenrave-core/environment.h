@@ -802,7 +802,7 @@ class Environment : public EnvironmentBase
             robot = boost::static_pointer_cast<RobotBase>(pinterface);
             if( !bSuccess || !robot )
                 return RobotBasePtr();
-            robot->strXMLFilename = preader->_filename;
+            robot->__strxmlfilename = preader->_filename;
         }
     
         return robot;
@@ -826,7 +826,7 @@ class Environment : public EnvironmentBase
         robot = boost::static_pointer_cast<RobotBase>(pinterface);
         if( !bSuccess || !robot )
             return RobotBasePtr();
-        robot->strXMLFilename = preader->_filename;
+        robot->__strxmlfilename = preader->_filename;
         return robot;
     }
 
@@ -852,7 +852,7 @@ class Environment : public EnvironmentBase
             body = boost::static_pointer_cast<RobotBase>(pinterface);
             if( !bSuccess || !body )
                 return KinBodyPtr();
-            body->strXMLFilename = preader->_filename;
+            body->__strxmlfilename = preader->_filename;
         }
 
         return body;
@@ -869,15 +869,44 @@ class Environment : public EnvironmentBase
                 throw openrave_exception(str(boost::format("KinBody::Init for %s, cannot Init a body while it is added to the environment\n")%body->GetName()));
         }
 
-        // check for collada
+        // check for collada?
         InterfaceBasePtr pinterface = body;
         OpenRAVEXMLParser::InterfaceXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_KinBody, pinterface, "kinbody", atts);
         bool bSuccess = ParseXMLData(preader, data);
         body = boost::static_pointer_cast<RobotBase>(pinterface);
         if( !bSuccess || !body )
             return KinBodyPtr();
-        body->strXMLFilename = preader->_filename;
+        body->__strxmlfilename = preader->_filename;
         return body;
+    }
+
+    virtual InterfaceBasePtr ReadInterfaceXMLFile(InterfaceBasePtr pinterface, PluginType type, const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts)
+    {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+
+//        if( _IsColladaFile(filename) ) {
+//            if( !RaveParseColladaFile(shared_from_this(), pinterface, type, filename) )
+//                return KinBodyPtr();
+//        }
+        OpenRAVEXMLParser::InterfaceXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), type, pinterface, RaveGetInterfaceName(type), atts);
+        bool bSuccess = ParseXMLFile(preader, filename);
+        if( !bSuccess )
+            return InterfaceBasePtr();
+        pinterface->__strxmlfilename = preader->_filename;
+        return pinterface;
+    }
+
+    virtual InterfaceBasePtr ReadInterfaceXMLData(InterfaceBasePtr pinterface, PluginType type, const std::string& data, const std::list<std::pair<std::string,std::string> >& atts)
+    {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+
+        // check for collada?
+        OpenRAVEXMLParser::InterfaceXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), type, pinterface, RaveGetInterfaceName(type), atts);
+        bool bSuccess = ParseXMLData(preader, data);
+        if( !bSuccess )
+            return InterfaceBasePtr();
+        pinterface->__strxmlfilename = preader->_filename;
+        return pinterface;
     }
 
     virtual boost::shared_ptr<void> RegisterXMLReader(PluginType type, const std::string& xmltag, const CreateXMLReaderFn& fn)

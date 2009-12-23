@@ -1360,7 +1360,11 @@ namespace OpenRAVEXMLParser
 
             if( _xmltag.size() == 0 )
                 _xmltag = RaveGetInterfaceName(_type);
+
+            SetXMLFilename(_filename);
         }
+
+        void SetXMLFilename(const string& filename) { if( !!_pinterface && _pinterface->__strxmlfilename.size() == 0 ) _pinterface->__strxmlfilename = filename; }
 
         virtual void startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
         {
@@ -1442,8 +1446,6 @@ namespace OpenRAVEXMLParser
             // reisze _vTransforms to be the same size as the initial number of links
             _pchain->GetBodyTransformations(_vTransforms);
             _pchain->SetGuiData(boost::shared_ptr<void>());
-
-            SetXMLFilename(_filename);
         }
 
         Transform GetOffsetFrom(KinBody::LinkPtr plink)
@@ -1491,8 +1493,6 @@ namespace OpenRAVEXMLParser
 
             return ""; // bad filename
         }
-
-        void SetXMLFilename(const string& filename) { if( !!_pchain && _pchain->strXMLFilename.size() == 0 ) _pchain->strXMLFilename = filename; }
     
         virtual void startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
         {
@@ -2156,11 +2156,7 @@ namespace OpenRAVEXMLParser
                 else if( itatt->first == "prefix" )
                     _prefix = itatt->second;
             }
-
-            SetXMLFilename(_filename);
         }
-
-        void SetXMLFilename(const string& filename) { if( !!_probot && _probot->strXMLFilename.size() == 0 ) _probot->strXMLFilename = filename; }
 
         virtual void startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
         {
@@ -2430,18 +2426,19 @@ namespace OpenRAVEXMLParser
         {
             if( !!_pcurreader ) {
                 if( _pcurreader->endElement(xmlname) ) {
-                    boost::shared_ptr<RobotXMLReader> probotreader = boost::dynamic_pointer_cast<RobotXMLReader>(_pcurreader);
+                    if( !_bInEnvironment ) {
+                        InterfaceXMLReaderPtr pinterfacereader = boost::dynamic_pointer_cast<InterfaceXMLReader>(_pcurreader);
+                        if( !!pinterfacereader )
+                            pinterfacereader->SetXMLFilename(_filename);
+                    }
+
                     if( !!boost::dynamic_pointer_cast<RobotXMLReader>(_pcurreader) ) {
                         BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_Robot);
-                        if( !_bInEnvironment )
-                            boost::dynamic_pointer_cast<RobotXMLReader>(_pcurreader)->SetXMLFilename(_filename);
                         _penv->AddRobot(boost::static_pointer_cast<RobotBase>(_pinterface));
                         _pinterface.reset();
                     }
                     else if( !!boost::dynamic_pointer_cast<KinBodyXMLReader>(_pcurreader) ) {
                         BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_KinBody);
-                        if( !_bInEnvironment )
-                            boost::dynamic_pointer_cast<KinBodyXMLReader>(_pcurreader)->SetXMLFilename(_filename);
                         _penv->AddKinBody(boost::static_pointer_cast<KinBody>(_pinterface));
                         _pinterface.reset();
                     }

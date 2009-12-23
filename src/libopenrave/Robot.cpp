@@ -1409,7 +1409,6 @@ bool RobotBase::InitFromFile(const std::string& filename, const std::list<std::p
         return false;
     }
 
-    strXMLFilename = filename;
     return true;
 }
 
