@@ -166,7 +166,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         pbody2->GetAttached(s2);
         FOREACH(it1,s1) {
             FOREACH(it2,s2) {
-                if( CheckCollisionP(*it1,*it2,report) )
+                if( CheckCollisionP(KinBodyConstPtr(*it1),KinBodyConstPtr(*it2),report) )
                     return true;
             }
         }
