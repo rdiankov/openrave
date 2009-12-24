@@ -517,7 +517,7 @@ public:
     /// \return true if two bodies should be considered as one during collision (ie one is grabbing the other)
     virtual bool IsAttached(KinBodyConstPtr pbody) const;
 
-    /// \param setAttached inserts all attached bodies of this body. If any bodies are already in setAttached, then ignores recursing on their attached bodies.
+    /// \param setAttached inserts all attached bodies of this body, including this body. If any bodies are already in setAttached, then ignores recursing on their attached bodies.
     virtual void GetAttached(std::set<KinBodyPtr>& setAttached) const;
 
     /// \return true if this body is derived from RobotBase

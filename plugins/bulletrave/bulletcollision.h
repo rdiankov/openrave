@@ -41,17 +41,19 @@ private:
             
             KinBodyPtr pbody0 = plink0->GetParent();
             KinBodyPtr pbody1 = plink1->GetParent();
+            if( pbody0->IsAttached(pbody1) )
+                return false;
 
             if( !!_pbody1 ) {
                 // wants collisions only between _pbody0 and _pbody1
                 BOOST_ASSERT( !!_pbody0 );
-                return (pbody0 == _pbody0 && pbody1 == _pbody1) || (pbody0 == _pbody1 && pbody1 == _pbody0);
+                return (_pbody0->IsAttached(pbody0) && _pbody1->IsAttached(pbody1)) || (_pbody0->IsAttached(pbody1) && _pbody1->IsAttached(pbody0));
             }
 
             BOOST_ASSERT( !!_pbody0 );
             
             // want collisions only with _pbody0
-            return pbody0 != pbody1 && (pbody0 == _pbody0 || pbody1 == _pbody0);
+            return _pbody0->IsAttached(pbody0) || _pbody0->IsAttached(pbody1);
         }
 
         KinBodyConstPtr _pbody0, _pbody1;
@@ -128,10 +130,10 @@ private:
             KinBodyPtr pbody0 = plink0->GetParent();
             KinBodyPtr pbody1 = plink1->GetParent();
 
-            if( (plink0 == _pcollink && pbody1 == _pbody) || (plink1 == _pcollink && pbody0 == _pbody) )
-                return true;
-
-            return false;
+            if( pbody0->IsAttached(pbody1) )
+                return false;
+            
+            return (plink0 == _pcollink && _pbody->IsAttached(pbody1)) || (plink1 == _pcollink && _pbody->IsAttached(pbody0));
         }
 
         KinBody::LinkConstPtr _pcollink;
@@ -157,11 +159,15 @@ private:
             KinBodyPtr pbody0 = plink0->GetParent();
             KinBodyPtr pbody1 = plink1->GetParent();
 
-            if( pbody0 == pbody1 || (pbody0 == _pbody && find(_pvexcluded->begin(),_pvexcluded->end(),pbody1) != _pvexcluded->end()) 
-                || (pbody1 == _pbody && find(_pvexcluded->begin(),_pvexcluded->end(),pbody0) != _pvexcluded->end()))
+            if( find(_pvexcluded->begin(),_pvexcluded->end(),pbody0) != _pvexcluded->end() ||
+                find(_pvexcluded->begin(),_pvexcluded->end(),pbody1) != _pvexcluded->end())
                 return false;
 
-            return true;
+            if( pbody0->IsAttached(pbody1) )
+                return false;
+
+            // want collisions only with _pbody0
+            return _pbody->IsAttached(pbody0) || _pbody->IsAttached(pbody1);
         }
 
         KinBodyConstPtr _pbody;
@@ -291,6 +297,7 @@ private:
                 FOREACHC(itfn, listcallbacks) {
                     OpenRAVE::CollisionAction action = (*itfn)(report,false);
                     if( action != OpenRAVE::CA_DefaultAction ) {
+                        report->Reset();
                         bDefaultAction = false;
                         break;
                     }
@@ -335,6 +342,9 @@ public:
 
     virtual void DestroyEnvironment()
     {
+        _world->getPairCache()->setOverlapFilterCallback(NULL);
+        _dispatcher->_poverlapfilt = NULL;
+
         // go through all the KinBodies and destory their collision pointers
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
@@ -499,7 +509,6 @@ public:
             return false;
         }
 
-        BOOST_ASSERT( vlinkexcluded.size() == 0 );
         bulletspace->Synchronize();
     
         _kinbodyexcallback._pbody = pbody;
@@ -551,8 +560,10 @@ public:
 
                 FOREACHC(itfn, listcallbacks) {
                     OpenRAVE::CollisionAction action = (*itfn)(report,false);
-                    if( action != OpenRAVE::CA_DefaultAction )
+                    if( action != OpenRAVE::CA_DefaultAction ) {
+                        report->Reset();
                         return false;
+                    }
                 }
             }
         }
@@ -603,8 +614,10 @@ public:
 
                 FOREACHC(itfn, listcallbacks) {
                     OpenRAVE::CollisionAction action = (*itfn)(report,false);
-                    if( action != OpenRAVE::CA_DefaultAction )
+                    if( action != OpenRAVE::CA_DefaultAction ) {
+                        report->Reset();
                         return false;
+                    }
                 }
             }
         }
@@ -651,8 +664,10 @@ public:
 
                 FOREACHC(itfn, listcallbacks) {
                     OpenRAVE::CollisionAction action = (*itfn)(report,false);
-                    if( action != OpenRAVE::CA_DefaultAction )
+                    if( action != OpenRAVE::CA_DefaultAction ) {
+                        report->Reset();
                         return false;
+                    }
                 }
             }
         }
@@ -669,7 +684,11 @@ public:
 
         bulletspace->Synchronize();
         LinkAdjacentFilterCallback linkadjacent(pbody, pbody->GetNonAdjacentLinks());
-        return CheckCollisionP(&linkadjacent, report);
+        bool bCollision = CheckCollisionP(&linkadjacent, report);
+        // things get cached and very messy if not released
+        _world->getPairCache()->setOverlapFilterCallback(NULL);
+        _dispatcher->_poverlapfilt = NULL;
+        return bCollision;
     }
 
     virtual void SetTolerance(dReal tolerance) { RAVELOG_WARNA("not implemented\n"); }

@@ -314,10 +314,16 @@ private:
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         RobotBasePtr probot = pmanip->GetRobot();
         probot->SetActiveDOFValues(vravesol);
-        if( probot->CheckSelfCollision() )
-            return SR_Continue;
-
         COLLISIONREPORT report;
+        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+            if( probot->CheckSelfCollision(boost::shared_ptr<COLLISIONREPORT>(&report,null_deleter())) )
+                return SR_Continue;
+        }
+        else {
+            if( probot->CheckSelfCollision() )
+                return SR_Continue;
+        }
+
         if( boost::get<2>(freeq0check) && GetEnv()->CheckCollision(KinBodyConstPtr(probot), boost::shared_ptr<COLLISIONREPORT>(&report,null_deleter())) ) {
             if( !!report.plink1 && !!report.plink2 ) {
                 RAVELOG_VERBOSEA(str(boost::format("IKFastSolver: collision %s:%s with %s:%s\n")%report.plink1->GetParent()->GetName()%report.plink1->GetName()%report.plink2->GetParent()->GetName()%report.plink2->GetName()));
@@ -397,8 +403,15 @@ private:
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         RobotBasePtr probot = pmanip->GetRobot();
         probot->SetActiveDOFValues(vravesol);
-        if( probot->CheckSelfCollision() )
-            return SR_Continue;
+        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+            COLLISIONREPORT report;
+            if( probot->CheckSelfCollision(boost::shared_ptr<COLLISIONREPORT>(&report,null_deleter())) )
+                return SR_Continue;
+        }
+        else {
+            if( probot->CheckSelfCollision() )
+                return SR_Continue;
+        }
 
         if( bCheckEnvCollision ) {
             if( bCheckEndEffector && param.GetType() == Parameterization::Type_Transform6D ) {

@@ -168,28 +168,14 @@ def hanoisolve(n, pegfrom, pegto, pegby, robot, heights):
 
 if __name__ == "__main__":
     parser = OptionParser(description='Manipulation planning example solving the hanoi problem.')
-    parser.add_option('--collision',
-                      action="store",type='string',dest='collision',default=None,
-                      help='Name of collision checker to use when solving')
     parser.add_option('--scene',
                       action="store",type='string',dest='scene',default='data/hanoi_complex.env.xml',
                       help='Scene file to load')
     (options, args) = parser.parse_args()
 
-    oldenv = Environment()
-
-    if options.collision is not None:
-        c = oldenv.CreateCollisionChecker(options.collision)
-        if c is not None:
-            print('setting %s collision checker'%options.collision)
-            oldenv.SetCollisionChecker(c)
-
-    # test cloning
-    oldenv.Reset()
-    oldenv.Load(options.scene)
-    env = oldenv.CloneSelf(CloningOptions.Bodies+CloningOptions.RealControllers)
+    env = Environment()
     env.SetViewer('qtcoin')
-    oldenv.Destroy() # destroy the old environment
+    env.Load(options.scene)
 
     robot = env.GetRobots()[0]
 

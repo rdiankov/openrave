@@ -21,7 +21,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 {
     struct COLLISIONCALLBACK
     {
-    COLLISIONCALLBACK(boost::shared_ptr<ODECollisionChecker> pchecker, CollisionReportPtr report, KinBodyConstPtr pbody, KinBody::LinkConstPtr plink) : _pchecker(pchecker), _report(report), _pbody(pbody), _plink(plink), _bCollision(false), _bOneCollision(false), fraymaxdist(0)
+    COLLISIONCALLBACK(boost::shared_ptr<ODECollisionChecker> pchecker, CollisionReportPtr report, KinBodyConstPtr pbody, KinBody::LinkConstPtr plink) : _pchecker(pchecker), _report(report), _pbody(pbody), _plink(plink), _bCollision(false), _bOneCollision(false), fraymaxdist(0), pvbodyexcluded(NULL), pvlinkexcluded(NULL)
         {
             _bHasCallbacks = pchecker->GetEnv()->HasRegisteredCollisionCallbacks();
             if( _bHasCallbacks && !_report )
@@ -44,7 +44,8 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         bool _bCollision;
         bool _bOneCollision;
         OpenRAVE::dReal fraymaxdist;
-
+        const std::vector<KinBodyConstPtr>* pvbodyexcluded;
+        const std::vector<KinBody::LinkConstPtr>* pvlinkexcluded;
     private:
         bool _bHasCallbacks;
         std::list<EnvironmentBase::CollisionCallbackFn> _listcallbacks;
@@ -138,21 +139,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
         odespace->Synchronize();
         dSpaceCollide(odespace->GetSpace(), &cb, KinBodyCollisionCallback);
-
-        if( cb._bCollision )
-            return true;
-
-        // check attached objects
-        std::set<KinBodyPtr> vattached;
-        pbody->GetAttached(vattached);
-        FOREACHC(itbodies, vattached) {
-            cb._pbody = *itbodies;
-            dSpaceCollide(odespace->GetSpace(), &cb, KinBodyCollisionCallback);
-            if( cb._bCollision )
-                return true;
-        }
-
-        return false;
+        return cb._bCollision;
     }
 
     virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report)
@@ -172,7 +159,18 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
             return false;
 
         odespace->Synchronize();
-        dSpaceCollide2((dGeomID)odespace->GetBodySpace(pbody1),(dGeomID)odespace->GetBodySpace(pbody2),&cb,KinBodyKinBodyCollisionCallback);
+
+        // have to go through all attached bodies manually (not sure if there's a fast way to set temporary groups in ode)
+        std::set<KinBodyPtr> s1, s2;
+        pbody1->GetAttached(s1);
+        pbody2->GetAttached(s2);
+        FOREACH(it1,s1) {
+            FOREACH(it2,s2) {
+                dSpaceCollide2((dGeomID)odespace->GetBodySpace(*it1),(dGeomID)odespace->GetBodySpace(*it2),&cb,KinBodyKinBodyCollisionCallback);
+                if( cb._bCollision )
+                    return true;
+            }
+        }
 
         return cb._bCollision;
     }
@@ -263,14 +261,23 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
             return false;
         }
 
+        if( pbody->IsAttached(plink->GetParent()) )
+            return false;
+
         odespace->Synchronize();
-        FOREACHC(itlink, pbody->GetLinks()) {
-            if( CheckCollision(plink, KinBody::LinkConstPtr(*itlink), report) )
-                return true;
+
+        std::set<KinBodyPtr> setattached;
+        pbody->GetAttached(setattached);
+        FOREACH(itbody,setattached) {
+            FOREACHC(itlink, (*itbody)->GetLinks()) {
+                if( CheckCollision(plink, KinBody::LinkConstPtr(*itlink), report) )
+                    return true;
+            }
         }
+
         return false;
 
-        // doesn't work
+        // doesn't work, but why?
         //    dSpaceCollide2((dGeomID)pbody->GetSpace(), plink1->GetGeom(), plink1, LinkCollisionCallback);
     }
     
@@ -287,60 +294,19 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
     virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
     {
-        if( vbodyexcluded.size() == 0 && vlinkexcluded.size() == 0 )
-            return CheckCollision(pbody, report);
-
-        COLLISIONCALLBACK cb(shared_checker(),report,KinBodyPtr(),KinBody::LinkConstPtr());
-
-        if( pbody->GetLinks().size() == 0 || !pbody->IsEnabled()  ) {
+        COLLISIONCALLBACK cb(shared_checker(),report,pbody,KinBody::LinkConstPtr());
+        if( pbody->GetLinks().size() == 0 || !pbody->IsEnabled() ) {
             RAVELOG_WARNA("body %s not valid\n", pbody->GetName().c_str());
             return false;
         }
 
-        BOOST_ASSERT( vlinkexcluded.size() == 0 );
+        if( vbodyexcluded.size() > 0 )
+            cb.pvbodyexcluded = &vbodyexcluded;
+        if( vlinkexcluded.size() > 0 )
+            cb.pvlinkexcluded = &vlinkexcluded;
+
         odespace->Synchronize();
-
-        vector<KinBodyPtr> vbodies;
-        GetEnv()->GetBodies(vbodies);
-        FOREACHC(itbody, vbodies) {
-            if( *itbody == pbody || find(vbodyexcluded.begin(),vbodyexcluded.end(),*itbody) != vbodyexcluded.end() )
-                continue;
-            if( pbody->IsAttached(KinBodyConstPtr(*itbody)) )
-                continue;
-
-            dSpaceCollide2((dGeomID)odespace->GetBodySpace(pbody),(dGeomID)odespace->GetBodySpace(*itbody),&cb,KinBodyKinBodyCollisionCallback);
-
-            if( cb._bCollision )
-                break;
-        }
-
-        if( cb._bCollision )
-            return true;
-
-        // check all attached bodies
-        std::set<KinBodyPtr> vattached;
-        pbody->GetAttached(vattached);
-        FOREACHC(itattached, vattached) {
-            KinBodyPtr pattbody = *itattached;
-            if( pattbody->GetLinks().size() == 0 || !pattbody->IsEnabled()  ) {
-                RAVELOG_WARNA("body %s not valid\n", pattbody->GetName().c_str());
-                return false;
-            }
-        
-            FOREACHC(itbody, vbodies) {
-                if( *itbody == pattbody || find(vbodyexcluded.begin(),vbodyexcluded.end(),*itbody) != vbodyexcluded.end() )
-                    continue;
-
-                if( pattbody->IsAttached(KinBodyConstPtr(*itbody)) )
-                    continue;
-
-                dSpaceCollide2((dGeomID)odespace->GetBodySpace(pattbody),(dGeomID)odespace->GetBodySpace(*itbody),&cb,KinBodyKinBodyCollisionCallback);
-
-                if( cb._bCollision )
-                    break;
-            }
-        }
-
+        dSpaceCollide(odespace->GetSpace(), &cb, KinBodyCollisionCallback);
         return cb._bCollision;
     }
     
@@ -503,29 +469,29 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
     {
         if( pcb->_bCollision )
             return; // don't test anymore
-
-        KinBodyPtr* o1data = (KinBodyPtr*)dGeomGetData(o1);
-        KinBodyPtr* o2data = (KinBodyPtr*)dGeomGetData(o2);
-
+        
         // ASSUMPTION: every space is attached to a KinBody!
         if( !dGeomIsEnabled(o1) || !dGeomIsEnabled(o2) )
             return;
 
-        // only recurse two spaces if one of them is _pbody
-        if( dGeomIsSpace(o1) && dGeomIsSpace(o2) && !(o1data != NULL && *o1data == pcb->_pbody) && !(o2data != NULL && *o2data == pcb->_pbody) )
-            return;
+        KinBodyPtr* o1data = (KinBodyPtr*)dGeomGetData(o1);
+        KinBodyPtr* o2data = (KinBodyPtr*)dGeomGetData(o2);
+        KinBodyConstPtr pbody1,pbody2;
 
-        // if certain
-        if( dGeomIsSpace(o1) ) {
-            BOOST_ASSERT(!!o1data);
-            if( pcb->_pbody != *o1data && pcb->_pbody->IsAttached(KinBodyConstPtr(*o1data)) )
+        if( dGeomIsSpace(o1) && o1data != NULL )
+            pbody1 = KinBodyConstPtr(*o1data);
+        if( dGeomIsSpace(o2) && o2data != NULL )
+            pbody2 = KinBodyConstPtr(*o2data);
+
+        if( !!pcb->pvbodyexcluded ) {
+            if( std::find(pcb->pvbodyexcluded->begin(),pcb->pvbodyexcluded->end(),pbody1) != pcb->pvbodyexcluded->end() || 
+                std::find(pcb->pvbodyexcluded->begin(),pcb->pvbodyexcluded->end(),pbody2) != pcb->pvbodyexcluded->end() )
                 return;
         }
-        if( dGeomIsSpace(o2) ) {
-            BOOST_ASSERT(!!o2data);
-            if( pcb->_pbody != *o2data && pcb->_pbody->IsAttached(KinBodyConstPtr(*o2data)) )
-                return;
-        }
+
+        // only recurse two spaces if exactly one of them is attached to _pbody
+        if( !!pbody1 && !!pbody2 && pcb->_pbody->IsAttached(pbody1) == pcb->_pbody->IsAttached(pbody2) )
+            return;
 
         if (dGeomIsSpace(o1) || dGeomIsSpace(o2)) {
             dSpaceCollide2(o1,o2,pcb,KinBodyCollisionCallback);
@@ -538,18 +504,32 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         b2 = dGeomGetBody(o2);
 
         KinBody::LinkPtr pkb1,pkb2;
-        if(!!b1 && dBodyGetData(b1))
+        if(!!b1 && dBodyGetData(b1)) {
             pkb1 = *(KinBody::LinkPtr*)dBodyGetData(b1);
-        if(!!b2 && dBodyGetData(b1))
+            if( !!pkb1 && !pkb1->IsEnabled() )
+                return;
+        }
+        if(!!b2 && dBodyGetData(b1)) {
             pkb2 = *(KinBody::LinkPtr*)dBodyGetData(b2);
+            if( !!pkb2 && !pkb2->IsEnabled() )
+                return;
+        }
 
-        if( !!pkb1 && !pkb1->IsEnabled() )
-            return;
-        if( !!pkb2 && !pkb2->IsEnabled() )
-            return;
         // redundant but necessary for some versions of ODE
-        if( !!pkb1 && !!pkb2 && pkb1->GetParent()->IsAttached(KinBodyConstPtr(pkb2->GetParent())) )
-            return;
+        if( !!pkb1 && !!pkb2 ) {
+            if( pkb1->GetParent()->IsAttached(KinBodyConstPtr(pkb2->GetParent())) )
+                return;
+            if( !!pcb->pvbodyexcluded ) {
+                if( std::find(pcb->pvbodyexcluded->begin(),pcb->pvbodyexcluded->end(),KinBodyConstPtr(pkb1->GetParent())) != pcb->pvbodyexcluded->end() || 
+                    std::find(pcb->pvbodyexcluded->begin(),pcb->pvbodyexcluded->end(),KinBodyConstPtr(pkb2->GetParent())) != pcb->pvbodyexcluded->end() )
+                    return;
+            }
+            if( !!pcb->pvlinkexcluded ) {
+                if( std::find(pcb->pvlinkexcluded->begin(),pcb->pvlinkexcluded->end(),KinBody::LinkConstPtr(pkb1)) != pcb->pvlinkexcluded->end() || 
+                    std::find(pcb->pvlinkexcluded->begin(),pcb->pvlinkexcluded->end(),KinBody::LinkConstPtr(pkb2)) != pcb->pvlinkexcluded->end() )
+                    return;
+            }
+        }
 
         dContact contact[16];
         int N = dCollide (o1,o2,16,&contact[0].geom,sizeof(dContact));
@@ -570,8 +550,10 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
                 FOREACHC(itfn, pcb->GetCallbacks()) {
                     OpenRAVE::CollisionAction action = (*itfn)(pcb->_report,false);
-                    if( action != OpenRAVE::CA_DefaultAction )
+                    if( action != OpenRAVE::CA_DefaultAction ) {
+                        pcb->_report->Reset();
                         return;
+                    }
                 }
             }
 
@@ -635,8 +617,10 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
             FOREACHC(itfn, pcb->GetCallbacks()) {
                 OpenRAVE::CollisionAction action = (*itfn)(pcb->_report,false);
-                if( action != OpenRAVE::CA_DefaultAction )
+                if( action != OpenRAVE::CA_DefaultAction ) {
+                    pcb->_report->Reset();
                     return;
+                }
             }
 
             pcb->_bCollision = true;
@@ -670,7 +654,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         if( dGeomIsSpace(o1) ) {
             BOOST_ASSERT(!!o1data);
             if( pbody != *o1data && pbody->IsAttached(KinBodyConstPtr(*o1data)) )
-            return;
+                return;
         }
         if( dGeomIsSpace(o2) ) {
             BOOST_ASSERT(!!o2data);
@@ -689,15 +673,17 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         b2 = dGeomGetBody(o2);
 
         KinBody::LinkPtr pkb1,pkb2;
-        if(!!b1 && dBodyGetData(b1))
+        if(!!b1 && dBodyGetData(b1)) {
             pkb1 = *(KinBody::LinkPtr*)dBodyGetData(b1);
-        if(!!b2 && dBodyGetData(b1))
+            if( !!pkb1 && !pkb1->IsEnabled() )
+                return;
+        }
+        if(!!b2 && dBodyGetData(b1)) {
             pkb2 = *(KinBody::LinkPtr*)dBodyGetData(b2);
+            if( !!pkb2 && !pkb2->IsEnabled() )
+                return;
+        }
 
-        if( !!pkb1 && !pkb1->IsEnabled() )
-            return;
-        if( !!pkb2 && !pkb2->IsEnabled() )
-            return;
         if( !!pkb1 && !!pkb2 && pkb1->GetParent()->IsAttached(KinBodyConstPtr(pkb2->GetParent())) )
             return;
 
@@ -729,8 +715,10 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
                 FOREACHC(itfn, pcb->GetCallbacks()) {
                     OpenRAVE::CollisionAction action = (*itfn)(pcb->_report,false);
-                    if( action != OpenRAVE::CA_DefaultAction )
+                    if( action != OpenRAVE::CA_DefaultAction ) {
+                        pcb->_report->Reset();
                         return;
+                    }
                 }
 
                 pcb->_bCollision = true;
@@ -809,8 +797,10 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
                 FOREACHC(itfn, pcb->GetCallbacks()) {
                     OpenRAVE::CollisionAction action = (*itfn)(pcb->_report,false);
-                    if( action != OpenRAVE::CA_DefaultAction )
+                    if( action != OpenRAVE::CA_DefaultAction ) {
+                        pcb->_report->Reset();
                         return;
+                    }
                 }
 
                 if( _options&OpenRAVE::CO_RayAnyHit )

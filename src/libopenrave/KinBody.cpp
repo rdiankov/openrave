@@ -1556,7 +1556,15 @@ void KinBody::CalculateAngularVelocityJacobian(int index, std::vector<dReal>& vJ
 
 bool KinBody::CheckSelfCollision(CollisionReportPtr report) const
 {
-    return GetEnv()->GetCollisionChecker()->CheckSelfCollision(shared_kinbody_const(), report);
+    if( GetEnv()->GetCollisionChecker()->CheckSelfCollision(shared_kinbody_const(), report) ) {
+        RAVELOG_VERBOSEA("Self collision: (%s:%s)x(%s:%s).\n",
+                         !!report->plink1?report->plink1->GetParent()->GetName().c_str():"",
+                         !!report->plink1?report->plink1->GetName().c_str():"",
+                         !!report->plink2?report->plink2->GetParent()->GetName().c_str():"",
+                         !!report->plink2?report->plink2->GetName().c_str():"");
+        return true;
+    }
+    return false;
 }
 
 void KinBody::ComputeJointHierarchy()
@@ -1975,6 +1983,7 @@ bool KinBody::IsAttached(KinBodyConstPtr pbody) const
 
 void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
 {
+    setAttached.insert(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
     FOREACHC(itbody,_listAttachedBodies) {
         KinBodyPtr pattached = itbody->lock();
         if( !!pattached && setAttached.insert(pattached).second )

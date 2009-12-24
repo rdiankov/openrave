@@ -2485,19 +2485,6 @@ namespace OpenRAVEXMLParser
                 _penv->LoadPlugin(pluginname);
             }
             else if( xmlname == "environment" ) {
-                //if( !bTransSpecified ) {
-                //            // center on first object
-                //            AABB ab;
-                //            if( g_Environ.GetRobots().size() > 0 )
-                //                ab = g_Environ.GetRobots().front()->ComputeAABB();
-                //            else if( g_Environ.GetBodies().size() > 0 )
-                //                ab = g_Environ.GetBodies().front()->ComputeAABB();
-                //            
-                //            TransformMatrix m(tCamera);
-                //            Vector vdir(m.m[2],m.m[6],m.m[10]);
-                //            tCamera.trans = ab.pos + 3*vdir*(fabsf(vdir.x)*ab.extents.x+fabsf(vdir.y)*ab.extents.y+fabsf(vdir.z)*ab.extents.z);
-                //        }
-
                 // only move the camera if trans is specified
                 if( bTransSpecified )
                     _penv->SetCamera(tCamera.trans, tCamera.rot);

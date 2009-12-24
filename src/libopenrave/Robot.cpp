@@ -38,9 +38,9 @@ RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::Manipu
     *this = r;
     _probot = probot;
     if( !!r.GetBase() )
-        _pBase = probot->GetLinks()[r.GetBase()->GetIndex()];
+        _pBase = probot->GetLinks().at(r.GetBase()->GetIndex());
     if( !!r.GetEndEffector() )
-        _pEndEffector = probot->GetLinks()[r.GetEndEffector()->GetIndex()];
+        _pEndEffector = probot->GetLinks().at(r.GetEndEffector()->GetIndex());
     
     _pIkSolver.reset();
     if( _strIkSolver.size() > 0 )
@@ -271,6 +271,8 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
     RobotBasePtr probot(_probot);
     Transform toldEE = GetEndEffectorTransform();
     Transform tdelta = tEE*toldEE.inverse();
+    std::vector<KinBodyConstPtr> vbodyexcluded;
+    std::vector<KinBody::LinkConstPtr> vlinkexcluded;
 
     // get all child links of the manipualtor
     int iattlink = _pEndEffector->GetIndex();
@@ -296,17 +298,19 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
                     return true;
 
                 // check if any grabbed bodies are attached to this link
-//                FOREACHC(itgrabbed,probot->_vGrabbedBodies) {
-//                    if( LinkPtr(itgrabbed->plinkrobot) == *itlink ) {
-//                        KinBodyPtr pbody = itgrabbed->pbody.lock();
-//                        if( !!pbody ) {
-//                            KinBodyStateSaver bodysaver(pbody);
-//                            pbody->SetTransform((*itlink)->GetTransform() * itgrabbed->troot);
-//                            if( probot->GetEnv()->CheckCollision(KinBodyConstPtr(pbody),report) )
-//                                return true;
-//                        }
-//                    }
-//                }
+                FOREACHC(itgrabbed,probot->_vGrabbedBodies) {
+                    if( itgrabbed->plinkrobot == *itlink ) {
+                        KinBodyPtr pbody = itgrabbed->pbody.lock();
+                        if( !!pbody ) {
+                            if( vbodyexcluded.size() == 0 )
+                                vbodyexcluded.push_back(KinBodyConstPtr(probot));
+                            KinBodyStateSaver bodysaver(pbody);
+                            pbody->SetTransform((*itlink)->GetTransform() * itgrabbed->troot);
+                            if( probot->GetEnv()->CheckCollision(KinBodyConstPtr(pbody),vbodyexcluded, vlinkexcluded, report) )
+                                return true;
+                        }
+                    }
+                }
                 break;
             }
         }
@@ -317,6 +321,9 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
 bool RobotBase::Manipulator::CheckIndependentCollision(CollisionReportPtr report) const
 {
     RobotBasePtr probot(_probot);
+    std::vector<KinBodyConstPtr> vbodyexcluded;
+    std::vector<KinBody::LinkConstPtr> vlinkexcluded;
+
     FOREACHC(itlink, probot->GetLinks()) {
         bool bAffected = false;
         FOREACHC(itindex,_varmjoints) {
@@ -339,13 +346,15 @@ bool RobotBase::Manipulator::CheckIndependentCollision(CollisionReportPtr report
                 return true;
 
             // check if any grabbed bodies are attached to this link
-//            FOREACHC(itgrabbed,probot->_vGrabbedBodies) {
-//                if( LinkPtr(itgrabbed->plinkrobot) == *itlink ) {
-//                    KinBodyPtr pbody = itgrabbed->pbody.lock();
-//                    if( !!pbody && probot->GetEnv()->CheckCollision(KinBodyConstPtr(pbody),report) )
-//                        return true;
-//                }
-//            }
+            FOREACHC(itgrabbed,probot->_vGrabbedBodies) {
+                if( itgrabbed->plinkrobot == *itlink ) {
+                    if( vbodyexcluded.size() == 0 )
+                        vbodyexcluded.push_back(KinBodyConstPtr(probot));
+                    KinBodyPtr pbody = itgrabbed->pbody.lock();
+                    if( !!pbody && probot->GetEnv()->CheckCollision(KinBodyConstPtr(pbody),vbodyexcluded, vlinkexcluded, report) )
+                        return true;
+                }
+            }
         }
     }
     return false;
@@ -373,7 +382,7 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const AttachedSen
     
     int index = LinkPtr(sensor.pattachedlink)->GetIndex();
     if( index >= 0 && index < (int)probot->GetLinks().size())
-        pattachedlink = probot->GetLinks()[index];
+        pattachedlink = probot->GetLinks().at(index);
 }
 
 RobotBase::AttachedSensor::~AttachedSensor()
@@ -484,7 +493,7 @@ void RobotBase::_UpdateGrabbedBodies()
     FORIT(itbody, _vGrabbedBodies) {
         KinBodyPtr pbody = itbody->pbody.lock();
         if( !!pbody )
-            pbody->SetTransform(LinkPtr(itbody->plinkrobot)->GetTransform() * itbody->troot);
+            pbody->SetTransform(itbody->plinkrobot->GetTransform() * itbody->troot);
         else {
             RAVELOG_DEBUGA(str(boost::format("erasing invaliding grabbed body from %s")%GetName()));
             itbody = _vGrabbedBodies.erase(itbody);
@@ -1459,8 +1468,8 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
 
     // check collision with all links to see which are valid
     FOREACH(itlink, _veclinks) {
-        if( !GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) )
-            g.listCollidableLinks.push_back(*itlink);
+        if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) )
+            g.vCollidingLinks.push_back(*itlink);
     }
 
     _AttachBody(pbody);
@@ -1489,8 +1498,8 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::
     FOREACH(itlink, _veclinks) {
         if( setRobotLinksToIgnore.find((*itlink)->GetIndex()) != setRobotLinksToIgnore.end() )
             continue;
-        if( !GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) )
-            g.listCollidableLinks.push_back(*itlink);
+        if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) )
+            g.vCollidingLinks.push_back(*itlink);
     }
 
     _AttachBody(pbody);
@@ -1530,11 +1539,13 @@ void RobotBase::RegrabAll()
         KinBodyPtr pbody(itbody->pbody);
         if( !!pbody ) {
             // check collision with all links to see which are valid
-            itbody->listCollidableLinks.clear();
+            itbody->vCollidingLinks.resize(0);
+            _RemoveAttachedBody(pbody);
             FOREACH(itlink, _veclinks) {
-                if( !GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) )
-                    itbody->listCollidableLinks.push_back(*itlink);
+                if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) )
+                    itbody->vCollidingLinks.push_back(*itlink);
             }
+            _AttachBody(pbody);
         }
     }
 }
@@ -1543,7 +1554,7 @@ RobotBase::LinkPtr RobotBase::IsGrabbing(KinBodyConstPtr pbody) const
 {
     FOREACHC(itbody, _vGrabbedBodies) {
         if( KinBodyConstPtr(itbody->pbody) == pbody )
-            return LinkPtr(itbody->plinkrobot);
+            return itbody->plinkrobot;
     }
 
     return LinkPtr();
@@ -1585,25 +1596,23 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report) const
         return true;
 
     // check all grabbed bodies with 
+    std::vector<KinBodyConstPtr> dummy;
     FOREACHC(itbody, _vGrabbedBodies) {
         KinBodyPtr pbody(itbody->pbody);
         if( !pbody )
             continue;
-        FOREACHC(itlink, itbody->listCollidableLinks) {
-            KinBody::LinkConstPtr plink(*itlink);
-            if( plink->IsEnabled() && GetEnv()->CheckCollision(plink, KinBodyConstPtr(pbody), report) ) {
-                if( !!report ) {
-                    RAVELOG_DEBUGA("Self collision: (%s:%s)x(%s:%s).\n",
-                                   !!report->plink1?report->plink1->GetParent()->GetName().c_str():"",
-                                   !!report->plink1?report->plink1->GetName().c_str():"",
-                                   !!report->plink2?report->plink2->GetParent()->GetName().c_str():"",
-                                   !!report->plink2?report->plink2->GetName().c_str():"");
-                }
-                return true;
+        if( GetEnv()->CheckCollision(KinBodyConstPtr(pbody),dummy,itbody->vCollidingLinks,report) ) {
+            if( !!report ) {
+                RAVELOG_VERBOSEA("Self collision: (%s:%s)x(%s:%s).\n",
+                                 !!report->plink1?report->plink1->GetParent()->GetName().c_str():"",
+                                 !!report->plink1?report->plink1->GetName().c_str():"",
+                                 !!report->plink2?report->plink2->GetParent()->GetName().c_str():"",
+                                 !!report->plink2?report->plink2->GetName().c_str():"");
             }
+            return true;
         }
     }
-
+    
     return false;
 }
 

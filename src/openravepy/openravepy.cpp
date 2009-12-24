@@ -1229,8 +1229,8 @@ public:
             grabbedbody.reset(new PyKinBody(KinBodyPtr(grabbed.pbody),pyenv));
             linkrobot.reset(new PyLink(KinBody::LinkPtr(grabbed.plinkrobot),pyenv));
 
-            FOREACHC(it, grabbed.listCollidableLinks)
-                validColLinks.append(PyLinkPtr(new PyLink(KinBody::LinkPtr(*it),pyenv)));
+            FOREACHC(it, grabbed.vCollidingLinks)
+                validColLinks.append(PyLinkPtr(new PyLink(boost::const_pointer_cast<KinBody::Link>(*it),pyenv)));
             
             troot = ReturnTransform(grabbed.troot);
         }

@@ -569,14 +569,14 @@ class Environment : public EnvironmentBase
 
     virtual CollisionCheckerBasePtr GetCollisionChecker() const { return _pCurrentChecker; }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody1);
         return _pCurrentChecker->CheckCollision(pbody1,report);
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody1);
@@ -584,14 +584,14 @@ class Environment : public EnvironmentBase
         return _pCurrentChecker->CheckCollision(pbody1,pbody2,report);
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report )
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
         return _pCurrentChecker->CheckCollision(plink,report);
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink1->GetParent());
@@ -599,7 +599,7 @@ class Environment : public EnvironmentBase
         return _pCurrentChecker->CheckCollision(plink1,plink2,report);
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
@@ -607,38 +607,38 @@ class Environment : public EnvironmentBase
         return _pCurrentChecker->CheckCollision(plink,pbody,report);
     }
     
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
         return _pCurrentChecker->CheckCollision(plink,vbodyexcluded,vlinkexcluded,report);
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
         return _pCurrentChecker->CheckCollision(pbody,vbodyexcluded,vlinkexcluded,report);
     }
     
-    virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
         return _pCurrentChecker->CheckCollision(ray,plink,report);
     }
-    virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
         return _pCurrentChecker->CheckCollision(ray,pbody,report);
     }
-    virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report)
     {
         return _pCurrentChecker->CheckCollision(ray,report);
     }
 
-    virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
@@ -1186,12 +1186,12 @@ protected:
                     KinBodyPtr pbody(itgrab->pbody);
                     BOOST_ASSERT( !!pbody && _mapBodies.find(pbody->GetNetworkId()) != _mapBodies.end());
                     itgrab->pbody = _mapBodies[pbody->GetNetworkId()];
-                    itgrab->plinkrobot = (*itrobot)->GetLinks()[KinBody::LinkPtr(itgrab->plinkrobot)->GetIndex()];
+                    itgrab->plinkrobot = (*itrobot)->GetLinks().at(KinBody::LinkPtr(itgrab->plinkrobot)->GetIndex());
 
-                    list<KinBody::LinkWeakPtr> listnew;
-                    FOREACH(itlink, itgrab->listCollidableLinks)
-                        listnew.push_back((*itrobot)->_veclinks[KinBody::LinkPtr(*itlink)->GetIndex()]);
-                    itgrab->listCollidableLinks = listnew;
+                    vector<KinBody::LinkConstPtr> vnew;
+                    FOREACH(itlink, itgrab->vCollidingLinks)
+                        vnew.push_back((*itrobot)->_veclinks.at((*itlink)->GetIndex()));
+                    itgrab->vCollidingLinks = vnew;
                 }
             }
 

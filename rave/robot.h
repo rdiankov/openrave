@@ -201,8 +201,8 @@ public:
     struct GRABBED
     {
         KinBodyWeakPtr pbody; ///< the grabbed body
-        LinkWeakPtr plinkrobot; ///< robot link that is grabbing the body
-        std::list<LinkWeakPtr> listCollidableLinks; ///< links that should still be checked for collisions
+        LinkPtr plinkrobot; ///< robot link that is grabbing the body
+        std::vector<LinkConstPtr> vCollidingLinks; ///< robot links that already collide with the body
         Transform troot; // root transform (of first link) relative to end effector
     };
 

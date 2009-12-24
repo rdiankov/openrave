@@ -87,7 +87,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         pinfo->vlinks.reserve(pbody->GetLinks().size());
         FOREACHC(itlink, pbody->GetLinks()) {
             boost::shared_ptr<PQP_Model> pm(new PQP_Model());
-        
+
             pm->BeginModel();
             const KinBody::Link::TRIMESH& trimesh = (*itlink)->GetCollisionData();
     
@@ -149,6 +149,8 @@ class CollisionCheckerPQP : public CollisionCheckerBase
 
     virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report)
     {
+        if(!!report)
+            report->Reset();
         std::vector<KinBodyConstPtr> vexcluded;
         vexcluded.push_back(pbody1);
         return CheckCollision(pbody1,vexcluded,std::vector<KinBody::LinkConstPtr>(),report);
@@ -156,15 +158,20 @@ class CollisionCheckerPQP : public CollisionCheckerBase
 
     virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report)
     {
-        std::vector<KinBodyConstPtr> vexcluded;
-        std::vector<KinBodyPtr> vecbodies;
-        GetEnv()->GetBodies(vecbodies);
+        if(!!report)
+            report->Reset();
 
-        FOREACH(itbody,vecbodies) {
-            if( *itbody != pbody2 )
-                vexcluded.push_back(*itbody);
+        std::set<KinBodyPtr> s1, s2;
+        pbody1->GetAttached(s1);
+        pbody2->GetAttached(s2);
+        FOREACH(it1,s1) {
+            FOREACH(it2,s2) {
+                if( CheckCollisionP(*it1,*it2,report) )
+                    return true;
+            }
         }
-        return CheckCollision(pbody1,vexcluded,std::vector<KinBody::LinkConstPtr>(),report);
+
+        return false;
     }
 
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report)
@@ -185,18 +192,18 @@ class CollisionCheckerPQP : public CollisionCheckerBase
 
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report)
     {
-        //does not check for self collision
-        std::vector<KinBodyConstPtr> vbodyexcluded;
-        std::vector<KinBodyPtr> vecbodies;
-        std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-
-        GetEnv()->GetBodies(vecbodies);
-        FOREACH(itbody,vecbodies) {
-            if(pbody != *itbody)
-                vbodyexcluded.push_back(*itbody);
+        if(!!report )
+            report->Reset();
+        if( pbody->IsAttached(plink->GetParent()) )
+            return false;
+        std::set<KinBodyPtr> setattached;
+        pbody->GetAttached(setattached);
+        FOREACH(itbody,setattached) {
+            if( CheckCollisionP(plink,*itbody,report) )
+                return true;
         }
     
-        return CheckCollision(plink, vbodyexcluded, vlinkexcluded,report);
+        return false;
     }
     
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
@@ -273,10 +280,9 @@ class CollisionCheckerPQP : public CollisionCheckerBase
 
     virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
     {
-        if( CheckCollisionP(pbody, vbodyexcluded, vlinkexcluded, report) )
-            return true;
+        if(!!report )
+            report->Reset();
 
-        // check attached objects
         std::set<KinBodyPtr> vattached;
         pbody->GetAttached(vattached);
         FOREACHC(itbody, vattached) {
@@ -289,20 +295,29 @@ class CollisionCheckerPQP : public CollisionCheckerBase
     
     virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr())
     {
+        if(!!report )
+            report->Reset();
         throw openrave_exception("PQP collision checker does not support ray collision queries\n");
     }
     virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
     {
+        if(!!report )
+            report->Reset();
         throw openrave_exception("PQP collision checker does not support ray collision queries\n");
     }
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report = CollisionReportPtr())
     {
+        if(!!report )
+            report->Reset();
         throw openrave_exception("PQP collision checker does not support ray collision queries\n");
     }
     virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         if( pbody->GetLinks().size() <= 1 )
             return false;
+
+        if(!!report )
+            report->Reset();
 
         // check collision, ignore adjacent bodies
         FOREACHC(itset, pbody->GetNonAdjacentLinks()) {
@@ -330,9 +345,6 @@ class CollisionCheckerPQP : public CollisionCheckerBase
     // does not check attached
     bool CheckCollisionP(KinBodyConstPtr pbody1, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
     {
-        if(!!report )
-            report->Reset();
-
         int tmpnumcols = 0;
         int tmpnumwithintol = 0;
         bool retval;
@@ -401,6 +413,46 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         return tmpnumcols>0;
     }
 
+    // does not check attached
+    bool CheckCollisionP(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report)
+    {
+        PQP_REAL R1[3][3], R2[3][3], T1[3], T2[3];
+        FOREACHC(itlink1,pbody1->GetLinks()) {
+            GetPQPTransformFromTransform((*itlink1)->GetTransform(),R1,T1);
+            FOREACHC(itlink2,pbody2->GetLinks()) {
+                GetPQPTransformFromTransform((*itlink2)->GetTransform(),R2,T2);
+                bool retval = DoPQP(*itlink1,R1,T1,*itlink2,R2,T2,report);
+                if(!report && _benablecol && !_benabledis && !_benabletol && retval)
+                    return true;
+                //return tolerance check result when it is the only thing enabled and there is no report
+                if(!report && !_benablecol && !_benabledis && _benabletol && retval)
+                    return true;
+            }
+        }
+
+        return report->numCols>0;
+    }
+
+    // does not check attached
+    bool CheckCollisionP(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report)
+    {
+        bool success = false;
+        PQP_REAL R1[3][3], R2[3][3], T1[3], T2[3];
+        GetPQPTransformFromTransform(plink->GetTransform(),R1,T1);
+        FOREACHC(itlink,pbody->GetLinks()) {
+            GetPQPTransformFromTransform((*itlink)->GetTransform(),R2,T2);
+            bool retval = DoPQP(plink,R1,T1,*itlink,R2,T2,report);
+            success |= retval;
+            if(!report && _benablecol && !_benabledis && !_benabletol && retval)
+                return true;
+            //return tolerance check result when it is the only thing enabled and there is no report
+            if(!report && !_benablecol && !_benabledis && _benabletol && retval)
+                return true;
+        }
+
+        return success;
+    }
+
     void PQPRealToVector(const Vector& in, const PQP_REAL R[3][3], const PQP_REAL T[3], Vector& out)
     {
     
@@ -429,7 +481,6 @@ class CollisionCheckerPQP : public CollisionCheckerBase
     
         // collision
         if(_benablecol) {
-            
             if( GetEnv()->HasRegisteredCollisionCallbacks() && !report ) {
                 report.reset(new COLLISIONREPORT());
                 report->Reset(_options);
@@ -472,8 +523,10 @@ class CollisionCheckerPQP : public CollisionCheckerBase
 
                     FOREACHC(itfn, listcallbacks) {
                         OpenRAVE::CollisionAction action = (*itfn)(report,false);
-                        if( action != OpenRAVE::CA_DefaultAction )
+                        if( action != OpenRAVE::CA_DefaultAction ) {
+                            report->Reset();
                             return false;
+                        }
                     }
                 }
             }
