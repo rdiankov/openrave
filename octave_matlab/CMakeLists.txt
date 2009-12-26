@@ -1,0 +1,22 @@
+set(MATLAB_FILES_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+# install all the script files
+set(MATLAB_FILES orBodyDestroy.m orEnvCheckCollision.m  orEnvLoadScene.m         orRobotControllerSet.m
+orBodyEnable.m          orEnvClose.m           orEnvPlot.m              orRobotGetActiveDOF.m
+orBodyGetAABB.m         orEnvCreateKinBody.m   orEnvRayCollision.m      orRobotGetAttachedSensors.m
+orBodyGetAABBs.m        orEnvCreatePlanner.m   orEnvSetOptions.m        orRobotGetDOFLimits.m
+orBodyGetDOF.m          orEnvCreateProblem.m   orEnvTriangulate.m       orRobotGetDOFValues.m
+orBodyGetJointValues.m  orEnvCreateRobot.m     orEnvWait.m              orRobotGetManipulators.m
+orBodyGetLinks.m        orEnvDestroyProblem.m  orPlannerInit.m          orRobotSensorGetData.m
+orBodyGetTransform.m    orEnvGetBodies.m       orPlannerPlan.m          orRobotSensorSend.m
+orBodySetJointValues.m  orEnvGetBody.m         orProblemSendCommand.m   orRobotSetActiveDOFs.m
+orBodySetTransform.m    orEnvGetRobots.m       orRender.m               orRobotSetDOFValues.m
+orCommunicator.m        orEnvLoadPlugin.m      orRobotControllerSend.m  orRobotStartActiveTrajectory.m
+orSetCommunication.m )
+
+add_subdirectory(matlab)
+add_subdirectory(octave)
+
+install(FILES ${MATLAB_FILES} DESTINATION share/openrave/matlab)
+install(FILES ${MATLAB_FILES} DESTINATION share/openrave/octave)
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/examples" DESTINATION share/openrave/octave PATTERN ".svn" EXCLUDE)
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/examples" DESTINATION share/openrave/matlab PATTERN ".svn" EXCLUDE)

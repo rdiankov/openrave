@@ -61,6 +61,10 @@ if(UNIX AND CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/localinstall" CACHE PATH "openrave install prefix" FORCE )
 endif()
 
+if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" STRLESS "2.4.3")
+  message(STATUS "cmake version too low, might not be able to install directories")
+endif()
+
 ##############################################################################
 # Sets the location of nonstandard shared libraries
 ##############################################################################
@@ -334,66 +338,11 @@ endif()
 
 link_directories(${OPENRAVE_LINK_DIRS})
 
-set(OPENRAVE_PLUGINS_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave/plugins")
-set(OPENRAVE_DATA_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave")
-
-find_package(PythonInterp)
-if( NOT PYTHON_EXECUTABLE )
-  # look specifically for 2.6
-  FIND_PROGRAM(PYTHON_EXECUTABLE
-    NAMES python2.6 python
-    PATHS [HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\2.6\\InstallPath])
-  if( PYTHON_EXECUTABLE )
-    message(STATUS "setting PYTHON_EXECUTABLE to ${PYTHON_EXECUTABLE}")
-  endif()
-endif()
-
-# add ikfast program
-set(IKFAST_EXECUTABLE ${CMAKE_SOURCE_DIR}/ikfast/ikfast.py)
-if( UNIX OR NOT PYTHON_EXECUTABLE )
-  execute_process(
-    COMMAND ${IKFAST_EXECUTABLE} --help
-    RESULT_VARIABLE _ikfast_success
-    ERROR_VARIABLE _ikfast_error
-    OUTPUT_VARIABLE _ikfast_output)
-  set(IKFAST_INSTALLED_EXECUTABLE ${CMAKE_INSTALL_PREFIX}/share/openrave/ikfast.py)
-else()
-  set(_ikfast_success 0)
-  set(IKFAST_INSTALLED_EXECUTABLE "${PYTHON_EXECUTABLE} \\\"${IKFAST_EXECUTABLE}\\\"")
-endif()
-
-if( _ikfast_success MATCHES 0 OR _ikfast_success MATCHES 1 )
-  set(IKFAST_FOUND 1)
-  message(STATUS "ikfast found (${IKFAST_EXECUTABLE})")
-  if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" STRGREATER "2.4.3")
-
-    # untar the resource files
-    add_custom_command(
-      OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/ikfast/sympy/__init__.py
-      COMMAND ${CMAKE_COMMAND} -E chdir
-      ARGS "${CMAKE_CURRENT_SOURCE_DIR}/ikfast" ${CMAKE_COMMAND} -E tar xzf "${CMAKE_CURRENT_SOURCE_DIR}/ikfast/sympy_0.6.3.tgz"
-      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/ikfast/sympy_0.6.3.tgz)
-    add_custom_target(sympy_files ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/ikfast/sympy/__init__.py)
-    add_dependencies(classhashes_h sympy_files)
-
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/ikfast/sympy DESTINATION share/openrave)
-  else()
-    message(WARNING "Could not install sympy needed by ikfast (cmake version ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION} needs to be >= 2.4.6)")
-  endif()
-  install(PROGRAMS ${IKFAST_EXECUTABLE} DESTINATION share/openrave)
-else()
-  set(IKFAST_INSTALLED_EXECUTABLE "")
-  set(IKFAST_FOUND 0)
-  message(STATUS "failed to execute ${IKFAST_EXECUTABLE}, return: ${_ikfast_success}")
-endif()
-
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
   set(EXTRA_COMPILE_FLAGS "-fPIC")
 else()
   set(EXTRA_COMPILE_FLAGS "")
 endif()
-
-CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/defines.h.in ${CMAKE_CURRENT_SOURCE_DIR}/rave/defines.h)
 
 find_package(ZLIB)
 if( NOT ZLIB_FOUND )
@@ -419,7 +368,32 @@ if( NOT libpcrecpp_FOUND )
   set(libpcrecpp_LDFLAGS_OTHERS)
 endif()
 
+find_package(PythonInterp)
+if( NOT PYTHON_EXECUTABLE )
+  # look specifically for 2.6
+  FIND_PROGRAM(PYTHON_EXECUTABLE
+    NAMES python2.6 python
+    PATHS [HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\2.6\\InstallPath])
+endif()
+
+set(OPENRAVE_PLUGINS_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave/plugins")
+set(OPENRAVE_DATA_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave")
+set(OPENRAVEPY_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave/openravepy")
+
+if( PYTHON_EXECUTABLE )
+  message(STATUS "python executable is ${PYTHON_EXECUTABLE}")
+  set(IKFAST_INSTALLED_EXECUTABLE "${PYTHON_EXECUTABLE} \\\"${OPENRAVEPY_INSTALL_DIR}/ikfast.py\\\"")
+else()
+  message(STATUS "python executable not found")
+  set(IKFAST_INSTALLED_EXECUTABLE "")
+endif()
+
+CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/defines.h.in ${CMAKE_CURRENT_SOURCE_DIR}/rave/defines.h)
+
 add_subdirectory(src)
+add_subdirectory(octave_matlab)
+add_subdirectory(python)
+
 if(PLUGINS)
   add_subdirectory(plugins)
 endif()

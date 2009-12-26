@@ -38,6 +38,9 @@ Environment Variables
 
 Before running openrave, some environment variables have to be set. These environment variables control where openrave looks for plugins and data files.
 
+Setting up python:
+export PYTHONPATH=$PYTHONPATH:`openrave-config --prefix`/share/openrave/python
+
 Example for linux bash use (can put it ~/.bashrc, directory separator is ':'):
 export OPENRAVE_PLUGINS=/usr/local/share/openrave/plugins:/my/other/plugins/dir
 export OPENRAVE_DATA=/usr/local/share/openrave:/my/other/data/dir

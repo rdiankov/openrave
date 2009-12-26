@@ -277,7 +277,6 @@ int main(int argc, char ** argv)
                 return -3;
 
             RobotBasePtr probot = vrobots[0];
-
             if( manipname.size() > 0 ) {
                 for(manipindex = 0; manipindex < (int)probot->GetManipulators().size(); ++manipindex) {
                     if( probot->GetManipulators()[manipindex]->GetName() == manipname )

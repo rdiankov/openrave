@@ -17,16 +17,9 @@ endif()
 add_subdirectory(libopenrave)
 add_subdirectory(libopenrave-core)
 
-add_subdirectory(openravepy)
-
 add_executable(openrave ${openrave_SOURCES})
 set_target_properties(openrave PROPERTIES COMPILE_FLAGS "${Boost_CFLAGS} -DRAVE_CORE_USEDLL")
-# if( MSVC )
-#   # soqt libs not compiled correct so multiply defined symbols
-#   set_target_properties(openrave PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")
-# endif()
 
-add_subdirectory(matlab)
 add_dependencies(openrave libopenrave libopenrave-core)
 
 if( MSVC )
@@ -48,20 +41,22 @@ add_dependencies(openrave resource_files)
 
 install(TARGETS openrave DESTINATION bin)
 
-# install the resource files
-file(GLOB robot_files ${CMAKE_CURRENT_SOURCE_DIR}/robots/*.xml)
-install(FILES ${robot_files} DESTINATION share/openrave/robots)
-file(GLOB robot_files ${CMAKE_CURRENT_SOURCE_DIR}/robots/schunk_fingers/*.xml)
-install(FILES ${robot_files} DESTINATION share/openrave/robots/schunk_fingers)
-
-file(GLOB data_files ${CMAKE_CURRENT_SOURCE_DIR}/data/*.xml)
-install(FILES ${data_files} DESTINATION share/openrave/data)
-
 # install resources
 if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" STRGREATER "2.4.3")
-  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/models DESTINATION share/openrave)
+  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/models DESTINATION share/openrave PATTERN ".svn" EXCLUDE)
+  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/robots DESTINATION share/openrave PATTERN ".svn" EXCLUDE)
+  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION share/openrave PATTERN ".svn" EXCLUDE)
+  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/cppexamples  DESTINATION share/openrave PATTERN ".svn" EXCLUDE)
 else()
   # manually install
+  file(GLOB robot_files ${CMAKE_CURRENT_SOURCE_DIR}/robots/*.xml)
+  install(FILES ${robot_files} DESTINATION share/openrave/robots)
+  file(GLOB robot_files ${CMAKE_CURRENT_SOURCE_DIR}/robots/schunk_fingers/*.xml)
+  install(FILES ${robot_files} DESTINATION share/openrave/robots/schunk_fingers)
+  
+  file(GLOB data_files ${CMAKE_CURRENT_SOURCE_DIR}/data/*.xml)
+  install(FILES ${data_files} DESTINATION share/openrave/data)
+  
   file(GLOB models_axes_files ${CMAKE_CURRENT_SOURCE_DIR}/models/axes/*.iv)
   install(FILES ${models_axes_files} DESTINATION share/openrave/models/axes)
   file(GLOB models_barrett_files ${CMAKE_CURRENT_SOURCE_DIR}/models/barrett/*.iv)
@@ -88,38 +83,4 @@ else()
   install(FILES ${models_pa10_files} DESTINATION share/openrave/models/pa10)
   file(GLOB models_katana_files ${CMAKE_CURRENT_SOURCE_DIR}/models/katana6M180/*.iv)
   install(FILES ${models_katana_files} DESTINATION share/openrave/models/katana6M180)
-endif()
-
-# install example scripts
-file(GLOB example_files ${CMAKE_CURRENT_SOURCE_DIR}/examples/*.m)
-install(FILES ${example_files} DESTINATION share/openrave/examples)
-file(GLOB example_files_py ${CMAKE_CURRENT_SOURCE_DIR}/examples/*.py)
-install(PROGRAMS ${example_files_py} DESTINATION share/openrave/examples)
-file(GLOB example_door_files ${CMAKE_CURRENT_SOURCE_DIR}/examples/doormanipulation/*.m)
-install(FILES ${example_door_files} DESTINATION share/openrave/examples/doormanipulation)
-file(GLOB example_door2_files ${CMAKE_CURRENT_SOURCE_DIR}/examples/doormanipulation/*.txt)
-install(FILES ${example_door2_files} DESTINATION share/openrave/examples/doormanipulation)
-file(GLOB example_hanoi_files ${CMAKE_CURRENT_SOURCE_DIR}/examples/hanoi_puzzle/*.m)
-install(FILES ${example_hanoi_files} DESTINATION share/openrave/examples/hanoi_puzzle)
-file(GLOB example_grasping_files ${CMAKE_CURRENT_SOURCE_DIR}/examples/grasping/*.m)
-install(FILES ${example_grasping_files} DESTINATION share/openrave/examples/grasping)
-file(GLOB example_grasping2_files ${CMAKE_CURRENT_SOURCE_DIR}/examples/grasping/grasptables/*.mat)
-install(FILES ${example_grasping2_files} DESTINATION share/openrave/examples/grasping/grasptables)
-
-file(GLOB example_vg_files ${CMAKE_CURRENT_SOURCE_DIR}/examples/visibilitygrasping/*.m)
-install(FILES ${example_vg_files} DESTINATION share/openrave/examples/visibilitygrasping)
-file(GLOB example_vg_files2 ${CMAKE_CURRENT_SOURCE_DIR}/examples/visibilitygrasping/*.mat)
-install(FILES ${example_vg_files2} DESTINATION share/openrave/examples/visibilitygrasping)
-file(GLOB example_vg_files3 ${CMAKE_CURRENT_SOURCE_DIR}/examples/visibilitygrasping/*.py)
-install(FILES ${example_vg_files3} DESTINATION share/openrave/examples/visibilitygrasping)
-file(GLOB example_vg_files4 ${CMAKE_CURRENT_SOURCE_DIR}/examples/visibilitygrasping/*.pp)
-install(FILES ${example_vg_files4} DESTINATION share/openrave/examples/visibilitygrasping)
-
-file(GLOB example_gp_files ${CMAKE_CURRENT_SOURCE_DIR}/examples/graspplanning/*.m)
-install(FILES ${example_gp_files} DESTINATION share/openrave/examples/graspplanning)
-
-set(CPPEXAMPLES ${CMAKE_CURRENT_SOURCE_DIR}/examples/cppexamples)
-install(FILES ${CPPEXAMPLES}/CMakeLists.txt ${CPPEXAMPLES}/README ${CPPEXAMPLES}/plugincpp.cpp ${CPPEXAMPLES}/customreader.cpp ${CPPEXAMPLES}/orcollision.cpp ${CPPEXAMPLES}/customreader.env.xml ${CPPEXAMPLES}/FindOpenRAVE.cmake DESTINATION share/openrave/examples/cppexamples)
-if( MSVC )
-  install(FILES ${CPPEXAMPLES}/runcmake_win.bat DESTINATION share/openrave/examples/cppexamples)
 endif()
