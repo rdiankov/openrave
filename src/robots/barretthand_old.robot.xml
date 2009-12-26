@@ -1,20 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
-
-<!-- Template
-    <Body name="" type="">
-	  <Translation></Translation>
-	  <RotationAxis></RotationAxis>
-      <Geom type="">
-        <Data>=</Data>
-        <Render></Render>
-      </Geom>
-      <mass type="box">
-        <mass></mass>
-        <extents></extents>
-      </mass>
-    </Body>
--->
-
 <Robot>
   <KinBody name="Barrett">
 
@@ -41,7 +24,7 @@
       </Geom>
     </Body>
 
-    <Joint name = "JF0" type="hinge">
+    <Joint name="JF0" type="hinge">
       <Body>Palm</Body>
       <Body>Finger0-0</Body>
       <offsetfrom>Palm</offsetfrom>
@@ -87,7 +70,7 @@
       </Geom>
     </Body>
 
-    <Joint name="JF1m" type="hinge" enable="true" mimic="JF1 0.333333 0.6690">
+    <Joint name="JF1m" type="hinge" enable="false" mimic="JF1 0.333333 0.6690">
       <Body>Finger0-1</Body>
       <Body>Finger0-2</Body>
       <offsetfrom>Finger0-1</offsetfrom>
@@ -112,7 +95,7 @@
       </Geom>
     </Body>
 
-    <Joint type="hinge"  enable="false" mimic="JF0">
+    <Joint type="hinge"  enable="false" mimic="JF0 1 0">
       <Body>Palm</Body>
       <Body>Finger1-0</Body>
       <offsetfrom>Palm</offsetfrom>
@@ -156,7 +139,7 @@
       </Geom>
     </Body>
 
-    <Joint name="JF2m" type="hinge"  enable="true" mimic="JF2 0.333333 0.6690">
+    <Joint name="JF2m" type="hinge"  enable="false" mimic="JF2 0.333333 0.6690">
       <Body>Finger1-1</Body>
       <Body>Finger1-2</Body>
       <offsetfrom>Finger1-1</offsetfrom>
@@ -203,7 +186,7 @@
       </Geom>
     </Body>
 
-    <Joint name="JF3m" type="hinge"  enable="true" mimic="JF3 0.33333 0.9">
+    <Joint name="JF3m" type="hinge"  enable="false" mimic="JF3 0.33333 0.9">
       <Body>Finger2-0</Body>
       <Body>Finger2-1</Body>
       <offsetfrom>Finger2-0</offsetfrom>
@@ -215,4 +198,12 @@
       <resolution>1</resolution>
     </Joint>
   </KinBody>
+
+  <Manipulator name="hand">
+    <base>Palm</base>
+    <effector>Palm</effector>
+    <joints>JF0 JF1 JF2 JF3</joints>
+    <closingdirection>1 1 1 0</closingdirection>
+    <palmdirection>0 0 1</palmdirection>
+  </Manipulator>
 </Robot>
