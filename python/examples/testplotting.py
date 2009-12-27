@@ -16,7 +16,7 @@
 from openravepy import *
 from numpy import *
 
-if __name__=='__main__':
+def run():
     orenv = Environment()
     orenv.SetViewer('qtcoin')
     h1 = orenv.plot3(points=array((-1.5,-1,0)),
@@ -47,3 +47,5 @@ if __name__=='__main__':
     h6 = None
     orenv.Destroy()
     
+if __name__=='__main__':
+    run()

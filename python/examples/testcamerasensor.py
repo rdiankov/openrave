@@ -112,7 +112,7 @@ class OpenRAVEScene:
         self.quitviewers()
         self.orenv.Destroy()
 
-if __name__=='__main__':
+def run():
     parser = OptionParser(description='Displays all images of all camera sensors attached to a robot.')
     parser.add_option('--scene',
                       action="store",type='string',dest='scene',default='data/testwamcamera.env.xml',
@@ -131,3 +131,6 @@ if __name__=='__main__':
                 print 'saving image%d.png'%i
                 viewer.saveimage('image%d.png'%i)
     scene.quitviewers()
+
+if __name__=='__main__':
+    run()

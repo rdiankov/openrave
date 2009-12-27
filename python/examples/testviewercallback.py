@@ -24,8 +24,7 @@ def itemselectioncb(link,pos,org,env):
     ghandle = env.plot3(points=pos,pointsize=25.0,colors=array((1,0,0)))
     return 0
 
-if __name__=='__main__':
-    global env
+def run():
     parser = OptionParser(description='Shows how to attach a callback to a viewer to perform functions.')
     parser.add_option('--scene',
                       action="store",type='string',dest='scene',default='data/lab1.env.xml',
@@ -49,3 +48,6 @@ if __name__=='__main__':
             break
     handle = None
     env.Destroy() # done with the environment
+
+if __name__=='__main__':
+    run()

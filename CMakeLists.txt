@@ -368,6 +368,8 @@ if( NOT libpcrecpp_FOUND )
   set(libpcrecpp_LDFLAGS_OTHERS)
 endif()
 
+add_subdirectory(3rdparty/collada)
+
 find_package(PythonInterp)
 if( NOT PYTHON_EXECUTABLE )
   # look specifically for 2.6

@@ -2,7 +2,6 @@ if( MSVC )
   set (coreLIBS imm32 winmm ws2_32)
 endif()
 
-add_subdirectory(collada)
 if( ZLIB_FOUND AND Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
   set(LIB_COMPILE_FLAGS "${LIB_COMPILE_FLAGS} -DOPENRAVE_COLLADA_SUPPORT")
   include_directories(${CMAKE_CURRENT_SOURCE_DIR}/collada/include ${CMAKE_CURRENT_SOURCE_DIR}/collada/include/1.5)

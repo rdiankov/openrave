@@ -17,7 +17,7 @@ import time
 from openravepy import *
 from numpy import *
 
-if __name__ == "__main__":
+def run():
     print 'Example shows how to manually update the environment published bodies for the viewer while the environment is locked'
     env = Environment()
     env.Load('data/lab1.env.xml')
@@ -49,3 +49,5 @@ if __name__ == "__main__":
     raw_input('press any key to exit: ')
     env.Destroy() # done with the environment
 
+if __name__ == "__main__":
+    run()
