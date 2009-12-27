@@ -369,6 +369,7 @@ if( NOT libpcrecpp_FOUND )
 endif()
 
 add_subdirectory(3rdparty/collada)
+set(COLLADA_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/collada/include ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/collada/include/1.5)
 
 find_package(PythonInterp)
 if( NOT PYTHON_EXECUTABLE )
