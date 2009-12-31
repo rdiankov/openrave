@@ -41,6 +41,16 @@ public:
     CollisionCheckerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_CollisionChecker, penv) {}
     virtual ~CollisionCheckerBase() {}
 
+    /// Set basic collision options using the CollisionOptions enum
+    virtual bool SetCollisionOptions(int collisionoptions) = 0;
+    virtual int GetCollisionOptions() const = 0;
+
+    /// set and get various collision checker options
+    /// \return true if command succeeded
+    virtual bool SetCollisionOptions(std::ostream& sout, std::istream& sinput) = 0;
+    virtual void SetTolerance(dReal tolerance) = 0;
+
+protected:
     /// called when environment sets this collision checker, checker assumes responsibility for KinBody::_pCollisionData
     /// checker should also gather all current bodies in the environment and put them in its collision space
     virtual bool InitEnvironment() = 0;
@@ -60,16 +70,6 @@ public:
     /// \return true if operation succeeded
     virtual bool EnableLink(KinBody::LinkConstPtr pbody, bool bEnable) = 0;
 
-    /// Set basic collision options using the CollisionOptions enum
-    virtual bool SetCollisionOptions(int collisionoptions) = 0;
-    virtual int GetCollisionOptions() const = 0;
-
-    /// set and get various collision checker options
-    /// \return true if command succeeded
-    virtual bool SetCollisionOptions(std::ostream& sout, std::istream& sinput) = 0;
-    virtual void SetTolerance(dReal tolerance) = 0;
-
-protected:
     virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report = CollisionReportPtr())=0;
     virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report = CollisionReportPtr())=0;
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr())=0;
@@ -98,6 +98,7 @@ private:
     friend class ::Environment;
 #endif
 #endif
+    friend class KinBody;
 };
 
 } // end namespace OpenRAVE

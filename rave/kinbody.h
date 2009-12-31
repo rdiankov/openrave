@@ -481,6 +481,7 @@ public:
 
     /// enables or disables the bodies
     virtual void Enable(bool bEnable);
+    virtual void EnableLink(LinkConstPtr plink, bool bEnable);
 
     /// \return true if any link of the KinBody is enabled
     virtual bool IsEnabled() const;

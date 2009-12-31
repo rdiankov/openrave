@@ -31,6 +31,10 @@
 #include <climits>
 #include <cstdlib>
 
+#ifndef RAVE_API
+#define RAVE_API
+#endif
+
 namespace OpenRAVE {
 
 #if OPENRAVE_PRECISION // 1 if double precision
