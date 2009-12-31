@@ -1556,7 +1556,7 @@ void KinBody::CalculateAngularVelocityJacobian(int index, std::vector<dReal>& vJ
 
 bool KinBody::CheckSelfCollision(CollisionReportPtr report) const
 {
-    if( GetEnv()->GetCollisionChecker()->CheckSelfCollision(shared_kinbody_const(), report) ) {
+    if( GetEnv()->CheckSelfCollision(shared_kinbody_const(), report) ) {
         RAVELOG_VERBOSEA("Self collision: (%s:%s)x(%s:%s).\n",
                          !!report->plink1?report->plink1->GetParent()->GetName().c_str():"",
                          !!report->plink1?report->plink1->GetName().c_str():"",

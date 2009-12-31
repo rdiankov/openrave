@@ -67,7 +67,9 @@ public:
     /// set and get various collision checker options
     /// \return true if command succeeded
     virtual bool SetCollisionOptions(std::ostream& sout, std::istream& sinput) = 0;
+    virtual void SetTolerance(dReal tolerance) = 0;
 
+protected:
     virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report = CollisionReportPtr())=0;
     virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report = CollisionReportPtr())=0;
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr())=0;
@@ -84,13 +86,18 @@ public:
     /// checks self collision only with the links of the passed in body
     virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
-    virtual void SetTolerance(dReal tolerance) = 0;
-
-protected:
 	virtual void SetCollisionData(KinBodyPtr pbody, boost::shared_ptr<void> data) { pbody->SetCollisionData(data); }
 
 private:
     virtual const char* GetHash() const { return OPENRAVE_COLLISIONCHECKER_HASH; }
+
+#ifdef RAVE_PRIVATE
+#ifdef _MSC_VER
+    friend class Environment;
+#else
+    friend class ::Environment;
+#endif
+#endif
 };
 
 } // end namespace OpenRAVE

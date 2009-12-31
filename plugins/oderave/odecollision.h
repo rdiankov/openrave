@@ -782,6 +782,8 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                 pcb->_report->minDistance = contact[index].geom.depth;
                 if( dBodyGetData(b) )
                     pcb->_report->plink1 = *(KinBody::LinkPtr*)dBodyGetData(b);
+                else
+                    RAVELOG_WARN("ode body does not have a link attached\n");
 
                 // always return contacts since it isn't that much computation (openravepy expects this!)
                 //if( pcb->_report->options & OpenRAVE::CO_Contacts) {

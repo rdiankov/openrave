@@ -892,11 +892,11 @@ public:
         numCols = report->numCols;
         minDistance = report->minDistance;
         numWithinTol = report->numWithinTol;
-        if( report->plink1 != NULL )
+        if( !!report->plink1 )
             plink1.reset(new PyKinBody::PyLink(boost::const_pointer_cast<KinBody::Link>(report->plink1), pyenv));
         else
             plink1.reset();
-        if( report->plink2 != NULL )
+        if( !!report->plink2 )
             plink2.reset(new PyKinBody::PyLink(boost::const_pointer_cast<KinBody::Link>(report->plink2), pyenv));
         else
             plink2.reset();

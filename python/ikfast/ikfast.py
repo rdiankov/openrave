@@ -316,14 +316,19 @@ inline double IKatan2(double fy, double fx) {
 
 // define when creating a shared object/dll
 #ifdef IKFAST_CLIBRARY
-extern "C"
-{
-    bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions);
-    int getNumFreeParameters();
-    int* getFreeParameters();
-    int getNumJoints();
-    int getIKRealSize();
-}
+
+#ifdef _MSC_VER
+#define IKFAST_API extern "C" __declspec(dllexport)
+#else
+#define IKFAST_API extern "C"
+#endif
+
+IKFAST_API bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions);
+IKFAST_API int getNumFreeParameters();
+IKFAST_API int* getFreeParameters();
+IKFAST_API int getNumJoints();
+IKFAST_API int getIKRealSize();
+
 #endif
 
 """

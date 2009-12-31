@@ -18,99 +18,113 @@ from numpy import *
 from optparse import OptionParser
 from openravepy import *
 
-def GetCameraRobotMask(orenv,robotfile,sensorindex=0,robotjoints=None,robotjointinds=None,gripperjoints=None,rayoffset=0):
-    orenv.Reset()
-    # ode returns better ray casts
-    if not orenv.GetCollisionChecker().GetXMLId() == 'ode':
-        orcol = orenv.CreateCollisionChecker('ode')
-        if orcol is not None:
-            print 'setting ode checker'
-            orenv.SetCollisionChecker(orcol)
-    #orenv.SetViewer('qtcoin',True)
-    orrobot = orenv.ReadRobotXMLFile(robotfile)
-    orenv.AddRobot(orrobot)
-    if robotjoints is not None:
-        if robotjointinds is not None:
-            orrobot.SetJointValues(robotjoints,robotjointinds)
-        else:
-            orrobot.SetJointValues(robotjoints)
-    
-    attached = orrobot.GetSensors()[sensorindex]
-    attached.GetSensor().SendCommand('power 0')
-    Tcamera = attached.GetSensor().GetTransform()
-    sensordata = attached.GetSensor().GetSensorData()
-    KK = sensordata.KK
-    height = sensordata.imagedata.shape[0]
-    width = sensordata.imagedata.shape[1]
+class VisualFeedback:
+    def __init__(self,env,robot,sensorname=None,sensorindex=None):
+        env.LockPhysics(True)
+        try:
+            self.prob = env.CreateProblem('VisualFeedback')
+            self.robot = robot
+            args = self.robot.GetName()
+            if plannername is not None:
+                args += ' planner ' + plannername
+            if env.LoadProblem(self.prob,args) != 0:
+                raise ValueError('problem failed to initialize')
 
-    # find a manipulator whose end effector is the camera
-    manip = [m for m in orrobot.GetManipulators() if m.GetEndEffector().GetIndex() == attached.GetAttachingLink().GetIndex()]
-    if len(manip) > 0 and gripperjoints is not None:
-        assert len(manip[0].GetGripperJoints()) == len(gripperjoints)
-        orrobot.SetJointValues(gripperjoints,manip[0].GetGripperJoints())
-    
-    inds = array(range(width*height))
-    imagepoints = array((mod(inds,width),floor(inds/width)))
-    camerapoints = dot(linalg.inv(KK), r_[imagepoints,ones((1,imagepoints.shape[1]))])
-    raydirs = dot(Tcamera[0:3,0:3], camerapoints / tile(sqrt(sum(camerapoints**2,0)),(3,1)))
-    rays = r_[tile(Tcamera[0:3,3:4],(1,raydirs.shape[1]))+rayoffset*raydirs,100.0*raydirs]
-    hitindices,hitpositions = orenv.CheckCollisionRays(rays,orrobot,False)
+            if sensorindex is not None:
+                self.attached = self.robot.GetSensors()[sensorindex]
+            elif sensorname is not None:
+                self.attached = [s for s in self.robot.GetSensors() if s.GetName() == sensorname][0]
+            else:
+                self.attached = None
 
-    attached = None
-    manip = None
-    orrobot = None
-    manip = None
-    # gather all the rays that hit and form an image
-    return reshape(array(hitindices,'float'),(height,width))
+            sensor = self.attached.GetSensor()
+            if sensor is not None:
+                #sensor.SendCommand('power 0')
+                sensordata = self.attached.GetSensor().GetSensorData()
+                self.KK = sensordata.KK
+                self.height = sensordata.imagedata.shape[0]
+                self.width = sensordata.imagedata.shape[1]
+                
+            # find a manipulator whose end effector is the camera
+            manips = [(i,m) for i,m in enumerate(self.robot.GetManipulators()) if m.GetEndEffector().GetIndex() == self.attached.GetAttachingLink().GetIndex()]
+            self.manip = None
+            if len(manips) > 0:
+                self.manip = manips[0][1]
+                self.robot.SetActiveManipulator(manips[0][0])
+        finally:
+            env.LockPhysics(False)
 
-def ProcessVisibilityExtents(orenv,robotfile,kinbodyfile,convexfilename,visibilityfilename,sensorindex=0,robotjoints=None,robotjointinds=None,gripperjoints=None):
-    orenv.Reset()
-    orenv.LockPhysics(True)
-    # ode returns better ray casts
-    if not orenv.GetCollisionChecker().GetXMLId() == 'ode':
-        orcol = orenv.CreateCollisionChecker('ode')
-        if orcol is not None:
-            print 'setting ode checker'
-            orenv.SetCollisionChecker(orcol)
-    orrobot = orenv.ReadRobotXMLFile(robotfile)
-    orenv.AddRobot(orrobot)
-    orobj = orenv.ReadKinBodyXMLFile(kinbodyfile)
-    orenv.AddKinBody(orobj)
+    def ProcessVisibilityExtents(self,target,convexfile=None,convexdata=None,visibilityfile=None,visibilitydata=None,extentsfile=None,extentsdata=None):
+        cmd = 'ProcessVisibilityExtents target %s '%target.GetName()
+        if convexfile is not None:
+            cmd += 'convexfile %s '%convexfile
+        if convexdata is not None:
+            cmd += 'convexdata %s '%convexdata
+        if visibilityfile is not None:
+            cmd += 'visibilityfile %s '%visibilityfile
+        if visibilitydata is not None:
+            cmd += 'visibilitydata %s '%visibilitydata
+        if extentsfile is not None:
+            cmd += 'extentsfile %s '%extentsfile
+        if extentsdata is not None:
+            cmd += 'extentsdata %s '%extentsdata
+        res = self.prob.SendCommand(cmd)
+        return array([int(isvisible) for isvisible in res])
 
-    if robotjoints is not None:
-        if robotjointinds is not None:
-            orrobot.SetJointValues(robotjoints,robotjointinds)
-        else:
-            orrobot.SetJointValues(robotjoints)
+    def GetCameraRobotMask(self,rayoffset=0):
+        self.prob.GetEnv().LockPhysics(True)
+        try:
+            inds = array(range(self.width*self.height))
+            imagepoints = array((mod(inds,self.width),floor(inds/self.width)))
+            camerapoints = dot(linalg.inv(self.KK), r_[imagepoints,ones((1,imagepoints.shape[1]))])
+            Tcamera = self.attached.GetSensor().GetTransform()
+            raydirs = dot(Tcamera[0:3,0:3], camerapoints / tile(sqrt(sum(camerapoints**2,0)),(3,1)))
+            rays = r_[tile(Tcamera[0:3,3:4],(1,raydirs.shape[1]))+rayoffset*raydirs,100.0*raydirs]
+            hitindices,hitpositions = self.prob.GetEnv().CheckCollisionRays(rays,self.robot,False)
+            # gather all the rays that hit and form an image
+            return reshape(array(hitindices,'float'),(height,width))
+        finally:
+            self.prob.GetEnv().LockPhysics(False)
 
-    # find a manipulator whose end effector is the camera
-    attached = orrobot.GetSensors()[sensorindex]
-    manip = [m for m in orrobot.GetManipulators() if m.GetEndEffector().GetIndex() == attached.GetAttachingLink().GetIndex()]
-    if len(manip) > 0 and gripperjoints is not None:
-        assert len(manip[0].GetGripperJoints()) == len(gripperjoints)
-        orrobot.SetJointValues(gripperjoints,manip[0].GetGripperJoints())
+    def RunProcessVisibilityExtents(orenv,robotfile,kinbodyfile,convexfilename,visibilityfilename,sensorindex=0,robotjoints=None,robotjointinds=None,gripperjoints=None):
+        self.prob.GetEnv().LockPhysics(True)
+        orobj = orenv.ReadKinBodyXMLFile(kinbodyfile)
+        orenv.AddKinBody(orobj)
 
-    # move the robot away from the object
-    T = eye(4)
-    T[0,3] = 4
-    orrobot.SetTransform(T)
-    visualprob = orenv.CreateProblem('VisualFeedback')
-    orenv.LoadProblem(visualprob,orrobot.GetName())
-    response = visualprob.SendCommand('ProcessVisibilityExtents target %s sensorindex %d convexfile %s extentsfile %s'%(orobj.GetName(),sensorindex,convexfilename,visibilityfilename))
-    orenv.LockPhysics(False)
-    if response is None:
-        raise ValueError('ProcessVisibilityExtents failed')
-    
-    transforms = [float(s) for s in response.split()]
-    if not mod(len(transforms),7) == 0:
-        raise ValueError('corrupted transforms')
+        if robotjoints is not None:
+            if robotjointinds is not None:
+                orrobot.SetJointValues(robotjoints,robotjointinds)
+            else:
+                orrobot.SetJointValues(robotjoints)
 
-    del visualprob
-    del manip
-    del attached
-    del orrobot
-    del orobj
-    return reshape(transforms,(len(transforms)/7,7))
+        # find a manipulator whose end effector is the camera
+        attached = orrobot.GetSensors()[sensorindex]
+        manip = [m for m in orrobot.GetManipulators() if m.GetEndEffector().GetIndex() == attached.GetAttachingLink().GetIndex()]
+        if len(manip) > 0 and gripperjoints is not None:
+            assert len(manip[0].GetGripperJoints()) == len(gripperjoints)
+            orrobot.SetJointValues(gripperjoints,manip[0].GetGripperJoints())
+
+        # move the robot away from the object
+        T = eye(4)
+        T[0,3] = 4
+        orrobot.SetTransform(T)
+        visualprob = orenv.CreateProblem('VisualFeedback')
+        orenv.LoadProblem(visualprob,orrobot.GetName())
+        response = visualprob.SendCommand('ProcessVisibilityExtents target %s sensorindex %d convexfile %s extentsfile %s'%(orobj.GetName(),sensorindex,convexfilename,visibilityfilename))
+        orenv.LockPhysics(False)
+        if response is None:
+            raise ValueError('ProcessVisibilityExtents failed')
+
+        transforms = [float(s) for s in response.split()]
+        if not mod(len(transforms),7) == 0:
+            raise ValueError('corrupted transforms')
+
+        del visualprob
+        del manip
+        del attached
+        del orrobot
+        del orobj
+        return reshape(transforms,(len(transforms)/7,7))
 
 if __name__=='__main__':
     parser = OptionParser(description='Helper functions for processing the gripper mask and visiblity extents')

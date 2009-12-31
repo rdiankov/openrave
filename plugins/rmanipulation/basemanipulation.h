@@ -377,7 +377,7 @@ protected:
                 break;
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
-            if( cmd == "armvals" ) {
+            if( cmd == "armvals" || cmd == "goal" ) {
                 goals.resize(pmanip->GetArmJoints().size());
                 FOREACH(it, goals)
                     sinput >> *it;

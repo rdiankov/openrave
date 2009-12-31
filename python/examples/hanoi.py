@@ -22,9 +22,7 @@ class HanoiPuzzle:
     def __init__(self,env):
         self.env = env
         self.robot = self.env.GetRobots()[0]
-
-        self.probsmanip = env.CreateProblem('basemanipulation')
-        env.LoadProblem(self.probsmanip,self.robot.GetName())
+        self.probsmanip = interfaces.BaseManipulation(env,self.robot)
 
         disknames = ['disk0','disk1','disk2']
         self.heights = array([0.021,0.062,0.103])+0.01
@@ -43,11 +41,6 @@ class HanoiPuzzle:
         self.srcpeg.disks = disks
         self.destpeg.disks = []
         self.peg.disks = []
-
-    def MoveToHandPosition(self,T):
-        print 'movetohandposition matrix '+ matrixSerialization(T)
-        success = self.probsmanip.SendCommand('movetohandposition matrix '+matrixSerialization(T))
-        return False if success is None or len(success) == 0 else True
 
     def WaitForController(self):
         self.robot.GetEnv().LockPhysics(False)
@@ -110,17 +103,17 @@ class HanoiPuzzle:
                 print('Tnewhand2 invalid')
                 continue
 
-            if not self.MoveToHandPosition(Tnewhand):
+            if self.probsmanip.MoveToHandPosition(matrices=[Tnewhand]) is None:
                 print('failed to move to position above source peg')
                 continue
             self.WaitForController() # wait for robot to complete all trajectories
 
-            if not self.MoveToHandPosition(Tnewhand2):
+            if self.probsmanip.MoveToHandPosition(matrices=[Tnewhand2]) is None:
                 print('failed to move to position above dest peg')
                 continue
             self.WaitForController() # wait for robot to complete all trajectories
 
-            if not self.MoveToHandPosition(T):
+            if self.probsmanip.MoveToHandPosition(matrices=[T]) is None:
                 print('failed to move to dest peg')
                 continue
             self.WaitForController() # wait for robot to complete all trajectories
@@ -151,10 +144,10 @@ class HanoiPuzzle:
             for ang1 in arange(-0.8,0,0.2):
                 Tgrasps = self.GetGrasp(Tdisk, disk.radius, [ang1,ang2]) # get the grasp transform given the two angles
                 for Tgrasp in Tgrasps: # for each of the grasps
-                    if self.MoveToHandPosition(Tgrasp): # move the hand to that location
+                    if self.probsmanip.MoveToHandPosition(matrices=[Tgrasp]) is not None: # move the hand to that location
                         # succeeded so grab the disk
                         self.WaitForController()
-                        self.probsmanip.SendCommand('closefingers')
+                        self.probsmanip.CloseFingers()
                         self.WaitForController()
                         self.robot.Grab(disk)
 
