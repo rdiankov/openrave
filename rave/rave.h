@@ -639,7 +639,7 @@ public:
     /// \param options A set of CloningOptions describing what is actually cloned.
     virtual EnvironmentBasePtr CloneSelf(int options) = 0;
 
-    /// Collision specific functions
+    /// Collision specific functions. Each function takes an optional pointer to a CollisionReport structure and returns true if collision occurs.
     //@{
     virtual bool SetCollisionChecker(CollisionCheckerBasePtr pchecker)=0;
     virtual CollisionCheckerBasePtr GetCollisionChecker() const =0;
@@ -655,17 +655,20 @@ public:
 
     /// Check collision with a link and a ray with a specified length.
     /// \param ray holds the origin and direction. The length of the ray is the length of the direction.
-    /// \param plink the link to collide with        
+    /// \param plink the link to collide with
+    /// \param report an optional collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
     virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
     /// Check collision with a link and a ray with a specified length.
     /// \param ray holds the origin and direction. The length of the ray is the length of the direction.
     /// \param plink the link to collide with
+    /// \param report an optional collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
     virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
     /// Check collision with a body and a ray with a specified length.
     /// \param ray holds the origin and direction. The length of the ray is the length of the direction.
     /// \param pbody the kinbody to look for collisions
+    /// \param report an optional collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
     virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;

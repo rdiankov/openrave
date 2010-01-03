@@ -36,20 +36,16 @@ public:
 
     int options;        ///< the options that the COLLISIONREPORT was called with
 
-    /// Always filled
-    KinBody::LinkConstPtr plink1, plink2; ///< colliding links
+    KinBody::LinkConstPtr plink1, plink2; ///< the colliding links if a collision involves a bodies. Collisions do not always occur with 2 bodies like ray collisions, so these fields can be empty.
+
     //KinBody::Link::GeomConstPtr pgeom1, pgeom2; ///< the specified geometries hit for the given links
     int numCols;            ///< this is the number of objects that collide with the object of interest
     std::vector<KinBody::LinkConstPtr> vLinkColliding; ///< objects colliding with this object
 
-    /// CO_Distance
-    dReal minDistance;      ///< minimum distance from last query
+    dReal minDistance;      ///< minimum distance from last query, filled if CO_Distance option is set
+    int numWithinTol;       ///< number of objects within tolerance of this object, filled if CO_UseTolerance option is set
 
-    /// CO_UseTolerance
-    int numWithinTol;       ///< number of objects within tolerance of this object
-
-    /// CO_Contacts
-    std::vector<CONTACT> contacts; ///< the convention is that the normal will be "out" of plink1's surface
+    std::vector<CONTACT> contacts; ///< the convention is that the normal will be "out" of plink1's surface. Filled if CO_UseContacts option is set.
 
     void Reset(int coloptions = 0) {
         options = coloptions;

@@ -642,7 +642,7 @@ class Environment : public EnvironmentBase
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
-        return _pCurrentChecker->CheckCollision(pbody,report);
+        return _pCurrentChecker->CheckSelfCollision(pbody,report);
     }
 
     virtual void StepSimulation(dReal fTimeStep)
