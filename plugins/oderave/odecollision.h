@@ -203,6 +203,8 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         }
 
         odespace->Synchronize();
+        bool bHasCallbacks = GetEnv()->HasRegisteredCollisionCallbacks();
+        std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
 
         dContact contact[16];
         dGeomID geom1 = odespace->GetLinkGeom(plink1);
@@ -217,6 +219,10 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
                 int N = dCollide (geom1, geom2,16,&contact[0].geom,sizeof(dContact));
                 if (N) {
+                    if( !report && bHasCallbacks ) {
+                        report.reset(new COLLISIONREPORT());
+                        report->Reset(_options);
+                    }
 
                     if( N > 0 && !!report ) {
                         report->numCols = N;
@@ -233,6 +239,16 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                                     vnorm = -vnorm;
                                 assert( checkgeom1 == contact[i].geom.g1 || checkgeom1 == contact[i].geom.g2 );
                                 report->contacts.push_back(COLLISIONREPORT::CONTACT(contact[i].geom.pos, vnorm, contact[i].geom.depth));
+                            }
+                        }
+
+                        if( listcallbacks.size() == 0 )
+                            GetEnv()->GetRegisteredCollisionCallbacks(listcallbacks);
+                        FOREACHC(itfn, listcallbacks) {
+                            OpenRAVE::CollisionAction action = (*itfn)(report,false);
+                            if( action != OpenRAVE::CA_DefaultAction ) {
+                                report->Reset();
+                                return false;
                             }
                         }
                     }
@@ -329,6 +345,9 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         dGeomRaySet(geomray, ray.pos.x, ray.pos.y, ray.pos.z, vnormdir.x, vnormdir.y, vnormdir.z);
         dGeomRaySetClosestHit(geomray, !(_options&OpenRAVE::CO_RayAnyHit)); // only care about the closest points
 
+        bool bHasCallbacks = GetEnv()->HasRegisteredCollisionCallbacks();
+        std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
+
         bool bCollision = false;
         dContact contact[16];
         dGeomID geom1 = odespace->GetLinkGeom(plink);
@@ -337,6 +356,12 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
             int N = dCollide (geom1, geomray,16,&contact[0].geom,sizeof(dContact));
             if (N > 0) {
+
+                if( !report && bHasCallbacks ) {
+                    report.reset(new COLLISIONREPORT());
+                    report->Reset(_options);
+                }
+
                 int index = 0;
                 for(;index < N; ++index) {
                     if( contact[index].geom.depth <= fmaxdist )
@@ -373,6 +398,16 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                     else
                         report->contacts.front() = COLLISIONREPORT::CONTACT(contact[index].geom.pos, vnorm, contact[index].geom.depth);
                     //}
+
+                    if( listcallbacks.size() == 0 )
+                        GetEnv()->GetRegisteredCollisionCallbacks(listcallbacks);
+                    FOREACHC(itfn, listcallbacks) {
+                        OpenRAVE::CollisionAction action = (*itfn)(report,false);
+                        if( action != OpenRAVE::CA_DefaultAction ) {
+                            report->Reset();
+                            return false;
+                        }
+                    }
 
                     if( report->options&OpenRAVE::CO_RayAnyHit ) {
                         bCollision = true;
@@ -446,7 +481,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         FOREACHC(itset, pbody->GetNonAdjacentLinks()) {
             assert( (*itset&0xffff) < (int)pbody->GetLinks().size() && (*itset>>16) < (int)pbody->GetLinks().size() );
             KinBody::LinkConstPtr plink1(pbody->GetLinks()[*itset&0xffff]), plink2(pbody->GetLinks()[*itset>>16]);
-            if( plink1->IsEnabled() && plink2->IsEnabled() && GetEnv()->CheckCollision(plink1,plink2, report) ) {
+            if( plink1->IsEnabled() && plink2->IsEnabled() && CheckCollision(plink1,plink2, report) ) {
                 RAVELOG_VERBOSEA(str(boost::format("selfcol %s, Links %s %s are colliding\n")%pbody->GetName()%pbody->GetLinks()[*itset&0xffff]->GetName()%pbody->GetLinks()[*itset>>16]->GetName()));
                 return true;
             }
