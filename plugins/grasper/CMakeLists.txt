@@ -7,7 +7,15 @@ endif(APPLE)
 
 add_library(grasper SHARED graspermain.cpp)
 
-target_link_libraries(grasper libopenrave)
+check_library_exists(qhull qh_new_qhull "" QHULL_FOUND)
+
+if( QHULL_FOUND )
+  target_link_libraries(grasper libopenrave qhull)
+  add_definitions(-DQHULL_FOUND)
+else()
+  target_link_libraries(grasper libopenrave)
+endif()
+
 include_directories(grasper "${CMAKE_SOURCE_DIR}")
 add_dependencies(grasper libopenrave)
 set_target_properties(grasper PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}"

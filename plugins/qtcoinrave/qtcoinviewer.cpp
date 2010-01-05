@@ -2243,7 +2243,7 @@ void QtCoinViewer::UpdateFromModel()
     _condUpdateModels.notify_all();
 
     if( _bAutoSetCamera && _mapbodies.size() > 0 ) {
-        RAVELOG_INFO("auto-setting camera location\n");
+        RAVELOG_DEBUG("auto-setting camera location\n");
         _bAutoSetCamera = false;
         _pviewer->viewAll();
     }

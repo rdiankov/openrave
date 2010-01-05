@@ -97,7 +97,6 @@ showhandles = 1;
 oldhandles = [];
 
 %orEnvSetOptions('collision pqp');
-
 totalgrasps = size(ApproachDirs,2)*size(preshapes,2)*length(rolls)*length(standoffs);
 for approach = ApproachDirs
     for roll = rolls
@@ -112,6 +111,7 @@ for approach = ApproachDirs
                 grasp(robot.grasp.standoff) = standoff;
                 grasp(robot.grasp.joints) = preshape;
 
+                cmindist = 0;
                 allvol = [];
                 allmindist = [];
                 center_offset_backup = grasp(robot.grasp.center);
@@ -124,7 +124,7 @@ for approach = ApproachDirs
                         grasp(robot.grasp.center) = center_offset_backup + 0.03*rand(1,3) - 0.015*ones(1,3);
                     end
                     
-                    [contactsraw,Thand] = RunGrasp(robot,grasp,Target,0);
+                    [contactsraw,Thand] = RunGrasp(robot,grasp,Target,0,friction_mu);
                     %disp(['Analyzing example ' num2str(counter)]);
 
                     if(size(contactsraw) == 0)
@@ -133,6 +133,9 @@ for approach = ApproachDirs
                         allmindist = [allmindist 0];
                     else
                         contacts = sscanf(contactsraw,'%f');
+                        mindist = contacts(end-1);
+                        vol = contacts(end);
+                        contacts = contacts(1:(end-2));
                         contacts = reshape(contacts, [6 length(contacts)/6]);
 
                         if( showhandles )
@@ -143,15 +146,13 @@ for approach = ApproachDirs
                             oldhandles = handles;
                         end
                         
-                        newcontacts = SpawnContacts(contacts, friction_mu, 8);
-                        [mindist, vol] = AnalyzeGrasp3D(newcontacts);
                         allvol = [allvol vol];
                         allmindist = [allmindist mindist];
                     end
                 end
                 vol = min(allvol);%mean(allvol,2);
                 mindist = min(allmindist);%mean(allmindist,2);
-                
+
                 grasp(robot.grasp.center) = center_offset_backup;
                 grasp(robot.grasp.direction) = direction_backup;
                 grasp(robot.grasp.transform) = reshape(Thand(1:3,1:4),[1 12]);

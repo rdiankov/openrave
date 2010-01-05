@@ -190,13 +190,11 @@ class TaskManipulation : public ProblemInstance
         boost::shared_ptr<ostream> pOutputTrajStream;
         int nMaxSeedGrasps = 20, nMaxSeedDests = 5, nMaxSeedIkSolutions = 0;
         int nMaxIterations = 4000;
-
-        //bool bBiSpace = false; // use the bispace planner and plan with translation/rotation
         bool bQuitAfterFirstRun = false;
 
         // indices into the grasp table
         int iGraspDir = -1, iGraspPos = -1, iGraspRoll = -1, iGraspPreshape = -1, iGraspStandoff = -1;
-        int iGraspTransform = -1; // if >= 0, use the grasp transform directly without executing the grasper planner
+        int iGraspTransform = -1; // if >= 0, use the grasp transform to check for collisions
 
         string cmd;
     
@@ -226,6 +224,14 @@ class TaskManipulation : public ProblemInstance
                 sinput >> nMaxIterations;
             else if( cmd == "graspindices" )
                 sinput >> iGraspDir >> iGraspPos >> iGraspRoll >> iGraspStandoff >> iGraspPreshape;
+            else if( cmd == "igraspdir" )
+                sinput >> iGraspDir;
+            else if( cmd == "igrasppos" )
+                sinput >> iGraspPos;
+            else if( cmd == "igrasproll" )
+                sinput >> iGraspRoll;
+            else if( cmd == "igraspstandoff" )
+                sinput >> iGraspStandoff;
             else if( cmd == "igrasppreshape" )
                 sinput >> iGraspPreshape;
             else if( cmd == "igrasptrans" )

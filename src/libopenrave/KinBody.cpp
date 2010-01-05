@@ -81,6 +81,16 @@ AABB KinBody::Link::TRIMESH::ComputeAABB() const
     return ab;
 }
 
+void KinBody::Link::TRIMESH::serialize(std::ostream& o, int options) const
+{
+    o << vertices.size() << " ";
+    FOREACHC(it,vertices)
+        o << it->x << " " << it->y << " " << it->z << " ";
+    o << indices.size() << " ";
+    FOREACHC(it,indices)
+        o << *it << " ";
+}
+
 KinBody::Link::GEOMPROPERTIES::GEOMPROPERTIES()
 {
     diffuseColor = Vector(1,1,1);
@@ -342,6 +352,15 @@ bool KinBody::Link::GEOMPROPERTIES::InitCollisionMesh(float fTessellation)
     return true;
 }
 
+void KinBody::Link::GEOMPROPERTIES::serialize(std::ostream& o, int options) const
+{
+    o << _t << " " << type << " " << vRenderScale << " ";
+    if( type == GeomTrimesh )
+        collisionmesh.serialize(o,options);
+    else
+        o << vGeomData.x << " " << vGeomData.y << " " << vGeomData.z << " ";
+}
+
 KinBody::Link::Link(KinBodyPtr parent)
 {
     _parent = parent;
@@ -391,6 +410,18 @@ AABB KinBody::Link::ComputeAABB() const
     }
 
     return AABB();
+}
+
+void KinBody::Link::serialize(std::ostream& o, int options) const
+{
+    o << index << " ";
+    if( options & SO_Kinematics ) {
+        o << _listGeomProperties.size() << " ";
+        FOREACHC(it,_listGeomProperties)
+            it->serialize(o,options);
+    }
+    if( options & SO_Dynamics )
+        o << _transMass << " " << _mass << " ";
 }
 
 void KinBody::Link::SetTransform(const Transform& t)
@@ -565,6 +596,26 @@ void KinBody::Joint::AddTorque(const std::vector<dReal>& pTorques)
     GetParent()->GetEnv()->GetPhysicsEngine()->AddJointTorque(shared_from_this(), pTorques);
 }
 
+void KinBody::Joint::serialize(std::ostream& o, int options) const
+{
+    if( options & SO_Kinematics ) {
+        o << dofindex << " " << jointindex << " " << type << " " << tRight << " " << tLeft << " " << offset << " " << nMimicJointIndex << " ";
+        o << vanchor.x << " " << vanchor.y << " " << vanchor.z << " ";
+        for(int i = 0; i < GetDOF(); ++i)
+            o << vAxes[i].x << " " << vAxes[i].y << " " << vAxes[i].z << " ";
+        FOREACHC(it,vMimicCoeffs)
+            o << *it << " ";
+        o << (!bodies[0]?-1:bodies[0]->GetIndex()) << " " << (!bodies[1]?-1:bodies[1]->GetIndex()) << " ";
+    }
+    if( options & SO_Dynamics ) {
+        o << fMaxVel << " " << fMaxAccel << " " << fMaxTorque << " ";
+        FOREACHC(it,_vlowerlimit)
+            o << *it << " ";
+        FOREACHC(it,_vupperlimit)
+            o << *it << " ";
+    }
+}
+
 KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody) : _pbody(pbody)
 {
     _pbody->GetBodyTransformations(_vLinkTransforms);
@@ -678,7 +729,11 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool bDraw)
 
 void KinBody::SetName(const std::string& newname)
 {
-    name = newname;
+    BOOST_ASSERT(newname.size() > 0);
+    if( name != newname ) {
+        name = newname;
+        ParametersChanged(Prop_Name);
+    }
 }
 
 void KinBody::SetJointTorques(const std::vector<dReal>& torques, bool bAdd)
@@ -2151,6 +2206,38 @@ void KinBody::ParametersChanged(int parameters)
         if( itfns->first & parameters )
             itfns->second();
     }
+}
+
+void KinBody::serialize(std::ostream& o, int options) const
+{
+    if( options & SO_Kinematics ) {
+        o << _veclinks.size() << " ";
+        FOREACHC(it,_veclinks)
+            (*it)->serialize(o,options);
+        o << _vecjoints.size() << " ";
+        FOREACHC(it,_vecjoints)
+            (*it)->serialize(o,options);
+        o << _vecPassiveJoints.size() << " ";
+        FOREACHC(it,_vecPassiveJoints)
+            (*it)->serialize(o,options);
+    }
+}
+
+std::string KinBody::GetKinematicsGeometryHash() const
+{
+    stringstream ss;
+    serialize(ss,SO_Kinematics);
+    
+    md5_state_t state;
+	md5_byte_t digest[16];
+	
+	md5_init(&state);
+	md5_append(&state, (const md5_byte_t *)ss.str().c_str(), ss.str().size());
+	md5_finish(&state, digest);
+    char hex_output[16*2+1]; 
+    for (int di = 0; di < 16; ++di)
+	    sprintf(hex_output + di * 2, "%02x", digest[di]);
+    return string(hex_output);
 }
 
 void KinBody::__erase_iterator(KinBodyWeakPtr pweakbody, std::list<std::pair<int,boost::function<void()> > >::iterator* pit)

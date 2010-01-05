@@ -36,7 +36,11 @@ RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(PluginType type, const std::str
             return InterfaceBasePtr(new GrasperPlanner(penv));
         break;
     case PT_ProblemInstance:
-        if( interfacename == "grasperproblem")
+        if( interfacename == "grasperproblem") {
+            RAVELOG_WARN("grasperproblem name deprecated, please use Grasper\n");
+            return InterfaceBasePtr(new GrasperProblem(penv));
+        }
+        else if( interfacename == "grasper")
             return InterfaceBasePtr(new GrasperProblem(penv));
         break;
     default:

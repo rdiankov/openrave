@@ -865,6 +865,14 @@ public:
     boost::shared_ptr<void> GetPhysicsData() const { return _pbody->GetPhysicsData(); }
     boost::shared_ptr<void> GetCollisionData() const { return _pbody->GetCollisionData(); }
     int GetUpdateStamp() const { return _pbody->GetUpdateStamp(); }
+
+    string serialize(int options) const {
+        stringstream ss;
+        _pbody->serialize(ss,options);
+        return ss.str();
+    }
+
+    string GetKinematicsGeometryHash() const { return _pbody->GetKinematicsGeometryHash(); }
 };
 
 class PyCollisionReport
@@ -2127,38 +2135,39 @@ public:
     object CheckCollisionRays(object rays, PyKinBodyPtr pbody,bool bFrontFacingOnly=false)
     {
         object shape = rays.attr("shape");
-        int num = extract<int>(shape[1]);
-        if( extract<int>(shape[0]) != 6 )
+        int num = extract<int>(shape[0]);
+        if( extract<int>(shape[1]) != 6 )
             throw openrave_exception("rays object needs to be a 6xN vector\n");
 
         COLLISIONREPORT report;
         CollisionReportPtr preport(&report,null_deleter());
 
         RAY r;
-        npy_intp dims[] = {3,num};
+        npy_intp dims[] = {num,6};
         PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
         dReal* ppos = (dReal*)PyArray_DATA(pypos);
-        PyObject* pycollision = PyArray_SimpleNew(1,&dims[1], PyArray_BOOL);
+        PyObject* pycollision = PyArray_SimpleNew(1,&dims[0], PyArray_BOOL);
         bool* pcollision = (bool*)PyArray_DATA(pycollision);
-        vector<dReal> vrays[6];
-        for(int i = 0; i < 6; ++i)
-            vrays[i] = ExtractArray<dReal>(rays[i]);
-        for(int i = 0; i < num; ++i) {
-            r.pos.x = vrays[0][i];
-            r.pos.x = vrays[0][i];
-            r.pos.y = vrays[1][i];
-            r.pos.z = vrays[2][i];
-            r.dir.x = vrays[3][i];
-            r.dir.y = vrays[4][i];
-            r.dir.z = vrays[5][i];
+        for(int i = 0; i < num; ++i, ppos += 6) {
+            vector<dReal> ray = ExtractArray<dReal>(rays[i]);
+            r.pos.x = ray[0];
+            r.pos.y = ray[1];
+            r.pos.z = ray[2];
+            r.dir.x = ray[3];
+            r.dir.y = ray[4];
+            r.dir.z = ray[5];
             bool bCollision = _penv->CheckCollision(r, KinBodyConstPtr(pbody->GetBody()), preport);
             pcollision[i] = false;
+            ppos[0] = 0; ppos[1] = 0; ppos[2] = 0; ppos[3] = 0; ppos[4] = 0; ppos[5] = 0;
             if( bCollision && report.contacts.size() > 0 ) {
                 if( !bFrontFacingOnly || dot3(report.contacts[0].norm,r.dir)<0 ) {
                     pcollision[i] = true;
-                    ppos[i] = report.contacts[0].pos.x;
-                    ppos[i+num] = report.contacts[0].pos.y;
-                    ppos[i+2*num] = report.contacts[0].pos.z;
+                    ppos[0] = report.contacts[0].pos.x;
+                    ppos[1] = report.contacts[0].pos.y;
+                    ppos[2] = report.contacts[0].pos.z;
+                    ppos[3] = report.contacts[0].norm.x;
+                    ppos[4] = report.contacts[0].norm.y;
+                    ppos[5] = report.contacts[0].norm.z;
                 }
             }
         }
@@ -2803,6 +2812,12 @@ BOOST_PYTHON_MODULE(openravepy)
         .value("Debug",Level_Debug)
         .value("Verbose",Level_Verbose)
         ;
+    enum_<SerializationOptions>("SerializationOptions")
+        .value("Kinematics",SO_Kinematics)
+        .value("Dynamics",SO_Dynamics)
+        .value("BodyState",SO_BodyState)
+        .value("NamesAndFiles",SO_NamesAndFiles)
+        ;
     enum_<PluginType>("PluginType")
         .value("Planner",PT_Planner)
         .value("Robot",PT_Robot)
@@ -2918,6 +2933,8 @@ BOOST_PYTHON_MODULE(openravepy)
             .def("GetPhysicsData",&PyKinBody::GetPhysicsData)
             .def("GetCollisionData",&PyKinBody::GetCollisionData)
             .def("GetUpdateStamp",&PyKinBody::GetUpdateStamp)
+            .def("serialize",&PyKinBody::serialize)
+            .def("GetKinematicsGeometryHash",&PyKinBody::GetKinematicsGeometryHash)
             ;
 
         {        

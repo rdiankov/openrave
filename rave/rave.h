@@ -106,6 +106,14 @@ enum OpenRAVEErrorCode {
     ORE_Assert=4,
 };
 
+enum SerializationOptions
+{
+    SO_Kinematics = 1, ///< kinematics information
+    SO_Dynamics = 2, ///< dynamics information
+    SO_BodyState = 4, ///< state of the body
+    SO_NamesAndFiles = 8, ///< resource files and names
+};
+
 struct openrave_exception : std::exception
 {
     openrave_exception() : std::exception(), _s("unknown exception"), _error(ORE_Failed) {}

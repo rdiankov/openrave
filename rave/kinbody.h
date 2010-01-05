@@ -33,6 +33,7 @@ public:
         Prop_JointOffset=0x4,
         Prop_JointProperties=0x8, ///< max velocity, max acceleration, resolution, max torque
         Prop_Links=0x10, ///< all properties of all links
+        Prop_Name=0x20, ///< name changed
     };
 
     /// rigid body defined by an arbitrary ODE body and a render object
@@ -64,6 +65,7 @@ public:
             void Append(const TRIMESH& mesh, const Transform& trans);
 
             AABB ComputeAABB() const;
+            void serialize(std::ostream& o, int options) const;
         };
 
         /// Describes the properties of a basic geometric primitive.
@@ -98,7 +100,7 @@ public:
             inline const TRIMESH& GetCollisionMesh() const { return collisionmesh; }
             
             virtual AABB ComputeAABB(const Transform& t) const;
-
+            virtual void serialize(std::ostream& o, int options) const;
         private:
             /// triangulates the geometry object and initializes collisionmesh. GeomTrimesh types must already be triangulated
             /// \param fTesselation to control how fine the triangles need to be
@@ -164,6 +166,8 @@ public:
         //typedef std::list<GEOMPROPERTIES>::iterator GeomPtr;
         //typedef std::list<GEOMPROPERTIES>::const_iterator GeomConstPtr;
         const std::list<GEOMPROPERTIES>& GetGeometries() const { return _listGeomProperties; }
+
+        virtual void serialize(std::ostream& o, int options) const;
     private:
         
         Transform _t;           ///< current transform of the link
@@ -274,6 +278,7 @@ public:
         virtual void SetJointLimits(const std::vector<dReal>& vLowerLimit, const std::vector<dReal>& vUpperLimit);
         virtual void SetResolution(dReal resolution);
 
+        virtual void serialize(std::ostream& o, int options) const;
     private:
         boost::array<LinkPtr,2> bodies;
         dReal fResolution;      ///< interpolation resolution
@@ -568,6 +573,9 @@ public:
     /// \param callback 
     /// \param properties a mask of the set of properties that the callback should be called for when they change
     virtual boost::shared_ptr<void> RegisterChangeCallback(int properties, const boost::function<void()>& callback);
+
+    virtual void serialize(std::ostream& o, int options) const;
+    virtual std::string GetKinematicsGeometryHash() const;
 
 protected:
     /// constructors declared protected so that user always goes through environment to create bodies

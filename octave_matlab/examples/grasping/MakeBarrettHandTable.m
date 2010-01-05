@@ -44,7 +44,7 @@ orEnvLoadScene('',1); % clear the scene
 
 % setup the robot
 robot = RobotCreateHand('TestHand','robots/barretthand.robot.xml');
-probs.grasp = orEnvCreateProblem('GrasperProblem', robot.name);
+probs.grasp = orEnvCreateProblem('Grasper', robot.name);
 
 % 3 preshapes
 preshapes = transpose([0.5 0.5 0.5 pi/3;

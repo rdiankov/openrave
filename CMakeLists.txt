@@ -237,6 +237,7 @@ endforeach()
 
 # generate the md5 sum for all OpenRAVE interfaces
 add_subdirectory(cpp-gen-md5)
+include_directories("${CMAKE_SOURCE_DIR}/cpp-gen-md5")
 
 if( MSVC )
   add_dependencies(cpp-gen-md5 ${EXTRA_MSVC_DEPEND})

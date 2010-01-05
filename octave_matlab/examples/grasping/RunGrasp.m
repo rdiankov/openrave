@@ -25,7 +25,7 @@ end
 orBodySetJointValues(robot.id,grasp(robot.grasp.joints));
 orRobotSetActiveDOFs(robot.id, robot.handjoints, affinedof);
 
-command_string = ['grasp direction ' sprintf('%f ', grasp(robot.grasp.direction)) ' body ' Target.name ' '];
+command_string = ['grasp forceclosure 1 direction ' sprintf('%f ', grasp(robot.grasp.direction)) ' body ' Target.name ' '];
 
 if( exist('noise','var') && noise )
     command_string =  [command_string, ' noise 0.1 0.005 '];

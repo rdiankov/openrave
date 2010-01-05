@@ -122,6 +122,8 @@ inline static uint64_t GetMicroTime()
 #include <boost/format.hpp>
 #include <boost/bind.hpp>
 
+#include "md5.h"
+
 struct null_deleter
 {
     void operator()(void const *) const {}

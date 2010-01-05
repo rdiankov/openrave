@@ -8,7 +8,7 @@ set_target_properties(libopenrave PROPERTIES OUTPUT_NAME openrave
                                   CLEAN_DIRECT_OUTPUT 1
                                   COMPILE_FLAGS "${LIB_COMPILE_FLAGS} -DRAVE_LIBBUILD -DRAVE_USEDLL"
                                   LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
-target_link_libraries(libopenrave ${LIBXML2_LIBRARIES} ${Boost_THREAD_LIBRARY} )
+target_link_libraries(libopenrave ${LIBXML2_LIBRARIES} ${Boost_THREAD_LIBRARY} openrave-md5)
 if( MSVC )
   install(TARGETS libopenrave RUNTIME DESTINATION bin LIBRARY DESTINATION bin ARCHIVE DESTINATION lib)
 else()
@@ -30,6 +30,6 @@ set_target_properties(libopenrave_static PROPERTIES OUTPUT_NAME ${LIBOPENRAVE_NA
                                          CLEAN_DIRECT_OUTPUT 1
                                          COMPILE_FLAGS "${LIB_COMPILE_FLAGS}"
                                          LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
-target_link_libraries(libopenrave_static ${LIBXML2_LIBRARIES} ${Boost_THREAD_LIBRARY} )
+target_link_libraries(libopenrave_static ${LIBXML2_LIBRARIES} ${Boost_THREAD_LIBRARY} openrave-md5)
 add_dependencies(libopenrave_static classhashes_h)
 install(TARGETS libopenrave_static DESTINATION lib)

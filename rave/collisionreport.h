@@ -27,7 +27,7 @@ public:
     struct CONTACT
     {
         CONTACT() : depth(0) {}
-        CONTACT(const Vector& p, const Vector& n, const dReal& d) : pos(p), norm(n) {depth = d;}
+        CONTACT(const Vector& p, const Vector& n, dReal d) : pos(p), norm(n) {depth = d;}
 
         Vector pos;             ///< where the contact occured
         Vector norm;    ///< the normals of the faces

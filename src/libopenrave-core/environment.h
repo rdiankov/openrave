@@ -422,6 +422,7 @@ class Environment : public EnvironmentBase
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_INTERFACE(pbody);
+        _CheckUniqueName(KinBodyConstPtr(pbody));
         {
             boost::mutex::scoped_lock lock(_mutexBodies);
             _vecbodies.push_back(pbody);
@@ -436,6 +437,7 @@ class Environment : public EnvironmentBase
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_INTERFACE(robot);
+        _CheckUniqueName(KinBodyConstPtr(robot));
         {
             boost::mutex::scoped_lock lock(_mutexBodies);
             _vecbodies.push_back(robot);
@@ -1222,6 +1224,14 @@ protected:
         if( !!_threadSimulation )
             _threadSimulation->join();
         _threadSimulation.reset(new boost::thread(boost::bind(&Environment::_SimulationThread,this)));
+    }
+
+    virtual void _CheckUniqueName(KinBodyConstPtr pbody) const
+    {
+        FOREACHC(itbody,_vecbodies) {
+            if( *itbody != pbody && (*itbody)->GetName() == pbody->GetName() )
+                throw openrave_exception(str(boost::format("body %s does not have unique name")%pbody->GetName()));
+        }
     }
 
     class DummyPhysicsEngine : public PhysicsEngineBase

@@ -284,8 +284,7 @@ public:
     
         std::vector<dReal> vlowerlim, vupperlim;
         _robot->GetActiveDOFLimits(vlowerlim,vupperlim);
-        vector<dReal> vclosingdir(_robot->GetActiveDOF(),1);
-
+        vector<dReal> vclosingdir(_robot->GetActiveDOF(),0);
         if( (int)_parameters.vgoalconfig.size() == _robot->GetActiveDOF() ) {
             vclosingdir = _parameters.vgoalconfig;
         }
@@ -296,7 +295,7 @@ public:
                     vector<dReal>::const_iterator itclosing = (*itmanip)->GetClosingDirection().begin();
                     FOREACHC(itgripper,(*itmanip)->GetGripperJoints()) {
                         if( *itgripper == _robot->GetActiveJointIndices().at(i) ) {
-                            vclosingdir[i] = *itclosing;
+                            vclosingdir.at(i) = *itclosing;
                             break;
                         }
                         itclosing++;
