@@ -54,7 +54,7 @@ class Grasping(metaclass.AutoReloader):
         self._mkdir(os.path.join(self.env.GetHomeDirectory(),self.robot.GetKinematicsGeometryHash()))
         return os.path.join(self.env.GetHomeDirectory(),self.robot.GetKinematicsGeometryHash(),self.target.GetKinematicsGeometryHash()+'.grasp.pp')
 
-    def generateGraspSet(self,preshapes,standoffs,rolls,approachrays, graspingnoise=None,addSphereNorms=False,updateenv=True):
+    def generateGraspSet(self,preshapes,standoffs,rolls,approachrays, graspingnoise=None,addSphereNorms=False,updateenv=True,forceclosurethreshold=1e-9):
         N = approachrays.shape[0]
         approachgraphs = [self.env.plot3(points=approachrays[:,0:3],pointsize=5,colors=array((1,0,0))),
                           self.env.drawlinelist(points=reshape(c_[approachrays[:,0:3],approachrays[:,0:3]+0.005*approachrays[:,3:6]],(2*N,3)),linewidth=4,colors=array((1,0,0,0)))]
@@ -95,7 +95,7 @@ class Grasping(metaclass.AutoReloader):
                 self.env.LockPhysics(False)
             grasp[self.graspindices.get('igrasptrans')] = reshape(transpose(finalconfig[1][0:3,0:4]),12)
             grasp[self.graspindices.get('iforceclosure')] = mindist
-            if mindist > 1e-9:
+            if mindist > forceclosurethreshold:
                 print 'found good grasp'
                 self.grasps.append(grasp)
         self.grasps = array(self.grasps)

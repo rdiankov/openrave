@@ -44,7 +44,7 @@ if( size(preshapes,1) ~= length(robot.grasp.joints) )
     error('preshape sizes not equal to robot.grasp.joints');
 end
 
-friction_mu = 0.5; % make bigger to increase friction
+friction_mu = 0.4; % make bigger to increase friction
 
 GraspTable = [];
 GraspStats = [];
@@ -111,7 +111,6 @@ for approach = ApproachDirs
                 grasp(robot.grasp.standoff) = standoff;
                 grasp(robot.grasp.joints) = preshape;
 
-                cmindist = 0;
                 allvol = [];
                 allmindist = [];
                 center_offset_backup = grasp(robot.grasp.center);
@@ -159,7 +158,7 @@ for approach = ApproachDirs
                 GraspTable = [GraspTable; grasp];
                 GraspStats = [GraspStats; mindist vol allmindist allvol];
 
-                if (mindist > 0 )
+                if (mindist > 1e-9 )
                     disp(sprintf('grasp found %d, total good grasps: %d', counter, sum(GraspStats(:,1) > 0)));
                 end
                 
