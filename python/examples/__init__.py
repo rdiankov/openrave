@@ -1,4 +1,5 @@
 import collision
+import grasping
 import hanoi
 import kinematicreachability
 import reachabilityoptimization

@@ -2131,7 +2131,6 @@ public:
         return bSuccess;
     }
 
-    /// check if any rays hit the body and returns their contact points along with a vector specifying if a collision occured or not
     object CheckCollisionRays(object rays, PyKinBodyPtr pbody,bool bFrontFacingOnly=false)
     {
         object shape = rays.attr("shape");
@@ -2791,7 +2790,7 @@ struct T_from_number
     }
 };
 
-BOOST_PYTHON_MODULE(openravepy)
+BOOST_PYTHON_MODULE(openravepy_int)
 {
     import_array();
     numeric::array::set_module_and_type("numpy", "ndarray");
@@ -3295,8 +3294,9 @@ BOOST_PYTHON_MODULE(openravepy)
             .def("CheckCollision",pcolybr )
             .def("CheckCollision",pcoly)
             .def("CheckCollision",pcolyr)
-            .def("CheckCollisionRays",&PyEnvironmentBase::CheckCollisionRays,CheckCollisionRays_overloads(args("rays","body","front_facing_only")))
-        
+            .def("CheckCollisionRays",&PyEnvironmentBase::CheckCollisionRays,
+                 CheckCollisionRays_overloads(args("rays","body","front_facing_only"), 
+                                              "Check if any rays hit the body and returns their contact points along with a vector specifying if a collision occured or not. Rays is a Nx6 array, first 3 columsn are position, last 3 are direction+range."))
             .def("Load",&PyEnvironmentBase::Load)
             .def("Save",&PyEnvironmentBase::Save)
             .def("ReadRobotXMLFile",&PyEnvironmentBase::ReadRobotXMLFile)

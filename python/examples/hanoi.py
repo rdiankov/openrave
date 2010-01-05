@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License. 
+import openravepy
 from openravepy import *
 from numpy import *
 from optparse import OptionParser
@@ -20,7 +21,7 @@ class HanoiPuzzle:
     def __init__(self,env):
         self.env = env
         self.robot = self.env.GetRobots()[0]
-        self.probsmanip = interfaces.BaseManipulation(env,self.robot)
+        self.probsmanip = openravepy.interfaces.BaseManipulation(env,self.robot)
 
         disknames = ['disk0','disk1','disk2']
         self.heights = array([0.021,0.062,0.103])+0.01

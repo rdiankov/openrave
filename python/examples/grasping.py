@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License. 
 import os,sys,pickle,itertools,traceback
+import openravepy
 from openravepy import *
 from numpy import *
 
@@ -37,12 +38,12 @@ class Grasping(metaclass.AutoReloader):
         self.grasper = None
         try:
             self.grasps,self.graspindices,friction,avoidlinks,plannername = pickle.load(open(self.getGraspFilename(), 'r'))
-            self.grasper = interfaces.Grasper(self.env,self.robot,friction,avoidlinks,plannername)
+            self.grasper = openravepy.interfaces.Grasper(self.env,self.robot,friction,avoidlinks,plannername)
         except IOError:
             print 'failed to find cached grasp set %s'%self.getGraspFilename()
 
     def initGrasper(self,friction,avoidlinks,plannername=None):
-        self.grasper = interfaces.Grasper(self.env,self.robot,friction,avoidlinks,plannername)
+        self.grasper = openravepy.interfaces.Grasper(self.env,self.robot,friction,avoidlinks,plannername)
         self.grasps = []
         self.graspindices = dict()
 
@@ -182,20 +183,24 @@ class Grasping(metaclass.AutoReloader):
 
 def run():
     env = Environment()
-    env.SetViewer('qtcoin')
-    robot = env.ReadRobotXMLFile('robots/barretthand.robot.xml')
-    env.AddRobot(robot)
-    target = env.ReadKinBodyXMLFile('data/mug1.kinbody.xml')
-    target.SetTransform(eye(4))
-    env.AddKinBody(target)
-    self = Grasping(env,robot,target)
-    self.initGrasper(friction=0.4,avoidlinks=[])
-    self.generateGraspSet(preshapes=array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2))),
-                          rolls = arange(0,2*pi,pi/2),
-                          standoffs = array([0,0.25]),
-                          approachrays = self.GetBoxApproachRays(stepsize=0.02),
-                          graspingnoise=None,
-                          addSphereNorms=False)
+    try:
+        env.SetViewer('qtcoin')
+        robot = env.ReadRobotXMLFile('robots/barretthand.robot.xml')
+        env.AddRobot(robot)
+        target = env.ReadKinBodyXMLFile('data/mug1.kinbody.xml')
+        target.SetTransform(eye(4))
+        env.AddKinBody(target)
+        grasping = Grasping(env,robot,target)
+        grasping.initGrasper(friction=0.4,avoidlinks=[])
+        grasping.generateGraspSet(preshapes=array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2))),
+                                  rolls = arange(0,2*pi,pi/2),
+                                  standoffs = array([0,0.25]),
+                                  approachrays = grasping.GetBoxApproachRays(stepsize=0.02),
+                                  graspingnoise=None,
+                                  addSphereNorms=False)
+        grasping.saveGrasps()
+    finally:
+        env.Destroy()
 
 if __name__ == "__main__":
     run()

@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /*! --------------------------------------------------------------------
-  \file   KinBody.h
+  \file   kinbody.h
   \brief  Encapsulate a kinematic chain of links
  -------------------------------------------------------------------- */
 #ifndef  KIN_CHAIN_H
@@ -575,6 +575,12 @@ public:
     virtual boost::shared_ptr<void> RegisterChangeCallback(int properties, const boost::function<void()>& callback);
 
     virtual void serialize(std::ostream& o, int options) const;
+
+    /// A md5 hash unique to the particular kinematic and geometric structure of a KinBody.
+    /// This 16 byte string can be used to check if two bodies have the same kinematic structure and can be used
+    /// to index into tables when looking for body-specific models. OpenRAVE stores all
+    /// such models in the OPENRAVE_HOME directory (usually ~/.openrave), indexed by the particular robot/body hashes.
+    /// \return md5 hash string of kinematics/geometry
     virtual std::string GetKinematicsGeometryHash() const;
 
 protected:

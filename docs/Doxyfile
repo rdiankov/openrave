@@ -83,7 +83,7 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 # configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT                  = ../rave
+INPUT                  = ../rave ../python
 INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.c \
                          *.cc \
@@ -113,7 +113,7 @@ FILE_PATTERNS          = *.c \
                          *.dox \
                          *.py
 RECURSIVE              = YES
-EXCLUDE                = 
+EXCLUDE                = ../python/ikfast/sympy ../python/openravepy
 EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       = 
 EXCLUDE_SYMBOLS        = 
