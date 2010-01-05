@@ -11,10 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License. 
-import os,sys,pickle,itertools,traceback
+import os,pickle,itertools,traceback,time
 import openravepy
 from openravepy import *
 from numpy import *
+from optparse import OptionParser
 
 def myproduct(*args, **kwds):
     # product('ABCD', 'xy') --> Ax Ay Bx By Cx Cy Dx Dy
@@ -117,7 +118,7 @@ class Grasping(metaclass.AutoReloader):
             self.robot.SetJointValues(oldvalues)
             self.env.LockPhysics(False)
 
-    def GetBoxApproachRays(self,stepsize=0.02):
+    def computeBoxApproachRays(self,stepsize=0.02):
         ab = self.target.ComputeAABB()
         p = ab.pos()
         e = ab.extents()
@@ -145,7 +146,7 @@ class Grasping(metaclass.AutoReloader):
             approachrays = r_[approachrays,newinfo]
         return approachrays
 
-    def drawContacts(self,contacts,conelength=0.02,transparency=0.5):
+    def drawContacts(self,contacts,conelength=0.03,transparency=0.5):
         angs = linspace(0,2*pi,10)
         conepoints = r_[[[0,0,0]],conelength*c_[self.grasper.friction*cos(angs),self.grasper.friction*sin(angs),ones(len(angs))]]
         triinds = array(c_[zeros(len(angs)),range(2,1+len(angs))+[1],range(1,1+len(angs))].flatten(),int)
@@ -161,6 +162,13 @@ class Grasping(metaclass.AutoReloader):
             points = dot(conepoints,transpose(R)) + tile(c[0:3],(conepoints.shape[0],1))
             allpoints = r_[allpoints,points[triinds,:]]
         return self.env.drawtrimesh(points=allpoints,indices=None,colors=array((1,0.4,0.4,transparency)))
+
+    def showTable(self,delay=0.5):
+        print 'have %d grasps'%len(self.grasps)
+        for grasp in self.grasps:
+            contacts,finalconfig,mindist,volume = self.runGrasp(grasp,translate=True)
+            contactgraph = self.drawContacts(contacts)
+            time.sleep(delay)
 
     @staticmethod
     def _mkdir(newdir):
@@ -182,20 +190,42 @@ class Grasping(metaclass.AutoReloader):
                 os.mkdir(newdir)
 
 def run():
+    parser = OptionParser(description='Grasp set generation example for any robot/body pair.')
+    parser.add_option('--robot',action="store",type='string',dest='robot',default='robots/barretthand.robot.xml',
+                      help='The filename of the robot to load')
+    parser.add_option('--body',action="store",type='string',dest='body',default='data/mug1.kinbody.xml',
+                      help='The filename of the body whose grasp set to be generated')
+    parser.add_option('--showtable', action='store_true', dest='showtable',default=False,
+                      help='If set, will run the generated table, if one exists. Otherwise will exist with an error')
+    (options, args) = parser.parse_args()
+
     env = Environment()
     try:
-        env.SetViewer('qtcoin')
-        robot = env.ReadRobotXMLFile('robots/barretthand.robot.xml')
+        robot = env.ReadRobotXMLFile(options.robot)
         env.AddRobot(robot)
-        target = env.ReadKinBodyXMLFile('data/mug1.kinbody.xml')
+        target = env.ReadKinBodyXMLFile(options.body)
         target.SetTransform(eye(4))
         env.AddKinBody(target)
+        env.SetViewer('qtcoin')
         grasping = Grasping(env,robot,target)
+        if options.showtable:
+            grasping.showTable()
+            return
+
         grasping.initGrasper(friction=0.4,avoidlinks=[])
-        grasping.generateGraspSet(preshapes=array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2))),
+        if robot.GetName() == 'BarrettHand':
+            preshapes = array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2)))
+        else:
+            manipprob = openravepy.BaseManipulation(env,robot)
+            target.Enable(False)
+            manipprop.ReleaseFingers(True)
+            robot.WaitForController(0)
+            target.Enable(True)
+            preshapes = array([robot.GetJointValues()])
+        grasping.generateGraspSet(preshapes=preshapes,
                                   rolls = arange(0,2*pi,pi/2),
                                   standoffs = array([0,0.25]),
-                                  approachrays = grasping.GetBoxApproachRays(stepsize=0.02),
+                                  approachrays = grasping.computeBoxApproachRays(stepsize=0.02),
                                   graspingnoise=None,
                                   addSphereNorms=False)
         grasping.saveGrasps()
