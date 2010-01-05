@@ -113,7 +113,7 @@ FILE_PATTERNS          = *.c \
                          *.dox \
                          *.py
 RECURSIVE              = YES
-EXCLUDE                = ../python/ikfast/sympy ../python/openravepy
+EXCLUDE                = ../python/ikfast/sympy ../python/openravepy_int
 EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       = 
 EXCLUDE_SYMBOLS        = 
