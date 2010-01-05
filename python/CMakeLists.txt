@@ -1,4 +1,4 @@
-add_subdirectory(openravepy)
+add_subdirectory(openravepy_int)
 
 # add ikfast program
 set(IKFAST_EXECUTABLE ${CMAKE_CURRENT_SOURCE_DIR}/ikfast/ikfast.py)
