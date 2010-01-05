@@ -234,6 +234,11 @@ foreach(ldir ${Boost_LIBRARY_DIRS})
   set(OPENRAVE_BOOST_LIB_DIRS "${OPENRAVE_BOOST_LIB_DIRS} -L${ldir}")
 endforeach()
 
+if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+  set(EXTRA_COMPILE_FLAGS "-fPIC")
+else()
+  set(EXTRA_COMPILE_FLAGS "")
+endif()
 
 # generate the md5 sum for all OpenRAVE interfaces
 add_subdirectory(cpp-gen-md5)
@@ -338,12 +343,6 @@ else()
 endif()
 
 link_directories(${OPENRAVE_LINK_DIRS})
-
-if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
-  set(EXTRA_COMPILE_FLAGS "-fPIC")
-else()
-  set(EXTRA_COMPILE_FLAGS "")
-endif()
 
 find_package(ZLIB)
 if( NOT ZLIB_FOUND )
