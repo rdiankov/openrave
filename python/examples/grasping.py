@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License. 
-import os,sys,pickle,itertools
+import os,sys,pickle,itertools,traceback
 from openravepy import *
 from numpy import *
 
@@ -81,8 +81,9 @@ class Grasping(metaclass.AutoReloader):
             
             try:
                 contacts,finalconfig,mindist,volume = self.runGrasp(grasp,graspingnoise=graspingnoise,translate=True,forceclosure=True)
-            except ValueError:
-                print 'grasp failed'
+            except ValueError, e:
+                print 'Grasp Failed: '
+                traceback.print_exc(e)
                 continue
 
             if updateenv:
