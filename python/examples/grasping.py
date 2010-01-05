@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +14,16 @@
 import os,sys,pickle,itertools
 from openravepy import *
 from numpy import *
+
+def myproduct(*args, **kwds):
+    # product('ABCD', 'xy') --> Ax Ay Bx By Cx Cy Dx Dy
+    # product(range(2), repeat=3) --> 000 001 010 011 100 101 110 111
+    pools = map(tuple, args) * kwds.get('repeat', 1)
+    result = [[]]
+    for pool in pools:
+        result = [x+[y] for x in result for y in pool]
+    for prod in result:
+        yield tuple(prod)
 
 class Grasping(metaclass.AutoReloader):
     """Holds all functions/data related to a grasp between a robot hand and a target"""
@@ -58,7 +69,7 @@ class Grasping(metaclass.AutoReloader):
             totaldof += dof
         counter = 0
         contactgraph = None
-        for approachray,roll,preshape,standoff in itertools.product(approachrays,rolls,preshapes,standoffs):
+        for approachray,roll,preshape,standoff in myproduct(approachrays,rolls,preshapes,standoffs):
             print 'grasp %d/%d'%(counter,totalgrasps)
             counter += 1
             grasp = zeros(totaldof)
@@ -75,10 +86,12 @@ class Grasping(metaclass.AutoReloader):
                 continue
 
             if updateenv:
+                self.env.LockPhysics(True)
                 self.robot.SetJointValues(finalconfig[0])
                 self.robot.SetTransform(finalconfig[1])
                 contactgraph = self.drawContacts(contacts)
                 self.env.UpdatePublishedBodies()
+                self.env.LockPhysics(False)
             grasp[self.graspindices.get('igrasptrans')] = reshape(transpose(finalconfig[1][0:3,0:4]),12)
             grasp[self.graspindices.get('iforceclosure')] = mindist
             if mindist > 1e-9:
@@ -97,7 +110,7 @@ class Grasping(metaclass.AutoReloader):
                                      position=grasp[self.graspindices.get('igrasppos')],
                                      standoff=grasp[self.graspindices.get('igraspstandoff')],
                                      target=self.target,graspingnoise = graspingnoise,
-                                     forceclosure=forceclosure, execute=False, outputfinal=True)
+                                     forceclosure=forceclosure, execute=True, outputfinal=True)
         finally:
             self.robot.SetJointValues(oldvalues)
             self.env.LockPhysics(False)
