@@ -108,10 +108,12 @@ enum OpenRAVEErrorCode {
 
 enum SerializationOptions
 {
-    SO_Kinematics = 1, ///< kinematics information
-    SO_Dynamics = 2, ///< dynamics information
-    SO_BodyState = 4, ///< state of the body
-    SO_NamesAndFiles = 8, ///< resource files and names
+    SO_Kinematics = 0x01, ///< kinematics information
+    SO_Dynamics = 0x02, ///< dynamics information
+    SO_BodyState = 0x04, ///< state of the body
+    SO_NamesAndFiles = 0x08, ///< resource files and names
+    SO_RobotManipulators = 0x10, ///< serialize robot manipulators
+    SO_RobotSensors = 0x20, ///< serialize robot sensors
 };
 
 struct openrave_exception : std::exception

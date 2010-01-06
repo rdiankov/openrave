@@ -360,6 +360,19 @@ bool RobotBase::Manipulator::CheckIndependentCollision(CollisionReportPtr report
     return false;
 }
 
+void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
+{
+    o << (!!_pBase ? -1 : _pBase->GetIndex()) << " " << (!!_pEndEffector ? -1 : _pEndEffector->GetIndex()) << " "
+      << _tGrasp << " " << _vpalmdirection.x << " " << _vpalmdirection.y << " " << _vpalmdirection.z << " "
+      << _vgripperjoints.size() << " " << _varmjoints.size() << " " << _vClosingDirection.size() << " ";
+    FOREACHC(it,_vgripperjoints)
+        o << *it << " ";
+    FOREACHC(it,_varmjoints)
+        o << *it << " ";
+    FOREACHC(it,_vClosingDirection)
+        o << *it << " ";
+}
+
 RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot) : _probot(probot)
 {
 }
@@ -400,6 +413,12 @@ void RobotBase::AttachedSensor::SetRelativeTransform(const Transform& t)
 {
     trelative = t;
     GetRobot()->ParametersChanged(Prop_SensorPlacement);
+}
+
+void RobotBase::AttachedSensor::serialize(std::ostream& o, int options) const
+{
+    o << (pattachedlink.expired() ? -1 : LinkPtr(pattachedlink)->GetIndex()) << " "
+      << trelative << " " << (!pdata ? -1 : pdata->GetType()) << " ";
 }
 
 RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot) : KinBodyStateSaver(probot), _probot(probot)
@@ -1632,8 +1651,16 @@ void RobotBase::SimulationStep(dReal fElapsedTime)
 void RobotBase::ComputeJointHierarchy()
 {
     KinBody::ComputeJointHierarchy();
-    FOREACH(itmanip,_vecManipulators)
+    FOREACH(itmanip,_vecManipulators) {
+        if( (*itmanip)->GetName().size() == 0 )
+            RAVELOG_WARN(str(boost::format("robot %s has a manipulator with no name!\n")%GetName()));
         (*itmanip)->InitIKSolver();
+        vector<ManipulatorPtr>::iterator itmanip2 = itmanip; ++itmanip2;
+        FORIT(itmanip2,_vecManipulators) {
+            if( (*itmanip)->GetName() == (*itmanip2)->GetName() )
+                RAVELOG_WARN(str(boost::format("robot %s has two manipulators with the same name: %s!\n")%GetName()%(*itmanip)->GetName()));
+        }
+    }
 }
 
 bool RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
@@ -1692,6 +1719,26 @@ bool RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     }
     
     return true;
+}
+
+void RobotBase::serialize(std::ostream& o, int options) const
+{
+    KinBody::serialize(o,options);
+    if( options & SO_RobotManipulators ) {
+        FOREACHC(itmanip,_vecManipulators)
+            (*itmanip)->serialize(o,options);
+    }
+    if( options & SO_RobotSensors ) {
+        FOREACHC(itsensor,_vecSensors)
+            (*itsensor)->serialize(o,options);
+    }
+}
+
+std::string RobotBase::GetRobotStructureHash() const
+{
+    stringstream ss;
+    serialize(ss,SO_Kinematics|SO_RobotManipulators|SO_RobotSensors);
+    return GetMD5HashString(ss.str());
 }
 
 } // end namespace OpenRAVE

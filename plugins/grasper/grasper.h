@@ -184,7 +184,7 @@ class GrasperProblem : public ProblemInstance
                 return false;
             }
         }
-    
+
         boost::shared_ptr<KinBody::KinBodyStateSaver> bodysaver;
         if( !!params->targetbody )
             bodysaver.reset(new KinBody::KinBodyStateSaver(params->targetbody));

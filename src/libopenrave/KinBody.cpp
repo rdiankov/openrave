@@ -2227,17 +2227,7 @@ std::string KinBody::GetKinematicsGeometryHash() const
 {
     stringstream ss;
     serialize(ss,SO_Kinematics);
-    
-    md5_state_t state;
-	md5_byte_t digest[16];
-	
-	md5_init(&state);
-	md5_append(&state, (const md5_byte_t *)ss.str().c_str(), ss.str().size());
-	md5_finish(&state, digest);
-    char hex_output[16*2+1]; 
-    for (int di = 0; di < 16; ++di)
-	    sprintf(hex_output + di * 2, "%02x", digest[di]);
-    return string(hex_output);
+    return GetMD5HashString(ss.str());
 }
 
 void KinBody::__erase_iterator(KinBodyWeakPtr pweakbody, std::list<std::pair<int,boost::function<void()> > >::iterator* pit)

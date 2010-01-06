@@ -122,7 +122,7 @@ inline static uint64_t GetMicroTime()
 #include <boost/format.hpp>
 #include <boost/bind.hpp>
 
-#include "md5.h"
+namespace OpenRAVE {
 
 struct null_deleter
 {
@@ -132,6 +132,11 @@ struct null_deleter
 template <class T> boost::shared_ptr<T> sptr_from(boost::weak_ptr<T> const& wpt)
 {
     return boost::shared_ptr<T>(wpt); // throws on wpt.expired()
+}
+
+std::string GetMD5HashString(const std::string& s);
+std::string GetMD5HashString(const std::vector<uint8_t>& v);
+
 }
 
 // need the prototypes in order to keep them free of the OpenRAVE namespace

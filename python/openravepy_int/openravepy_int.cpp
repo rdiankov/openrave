@@ -1477,6 +1477,8 @@ public:
         
         return true;
     }
+
+    string GetRobotStructureHash() const { return _probot->GetRobotStructureHash(); }
 };
 
 bool PyControllerBase::Init(PyRobotBasePtr robot, const string& args)
@@ -3068,6 +3070,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("IsGrabbing",&PyRobotBase::IsGrabbing)
             .def("GetGrabbed",&PyRobotBase::GetGrabbed)
             .def("WaitForController",&PyRobotBase::WaitForController)
+            .def("GetRobotStructureHash",&PyRobotBase::GetRobotStructureHash)
             ;
         
         object (PyRobotBase::PyManipulator::*pmanipik)(object, bool) const = &PyRobotBase::PyManipulator::FindIKSolution;

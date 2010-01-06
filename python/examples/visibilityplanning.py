@@ -17,6 +17,7 @@ import numpy # nice to be able to explicitly call some functions
 from numpy import *
 from optparse import OptionParser
 from openravepy import *
+from openravepy.interfaces import BaseManipulation, TaskManipulation, VisualFeedback
 
 class CameraViewerGUI(threading.Thread):
     class Container:
@@ -511,11 +512,3 @@ if __name__=='__main__':
     scene = PA10GraspExample()
     scene.loadscene()
     scene.start()
-
-def test():
-    import visibilityplanning, time
-    self = visibilityplanning.HRP2GraspingScene()
-    time.sleep(5)
-    self.loadscene(scenefilename='scenes/r602real.env.xml')
-    self.testsim()
-

@@ -17,6 +17,7 @@
 
 #include <streambuf>
 #include "mt19937ar.h"
+#include "md5.h"
 
 namespace OpenRAVE {
 
@@ -977,6 +978,50 @@ RAVE_API void RaveRandomDouble(int n, std::vector<double>& v)
 {
     v.resize(n);
     FOREACH(it, v) *it = genrand_res53();
+}
+
+std::string GetMD5HashString(const std::string& s)
+{
+    if( s.size() == 0 )
+        return "";
+
+    md5_state_t state;
+	md5_byte_t digest[16];
+	
+	md5_init(&state);
+	md5_append(&state, (const md5_byte_t *)s.c_str(), s.size());
+	md5_finish(&state, digest);
+    string hex_output;
+    hex_output.resize(32);
+    for (int di = 0; di < 16; ++di) {
+        int n = (digest[di]&0xf);
+        hex_output[2*di+1] = n > 9 ? ('a'+n-10) : ('0'+n);
+        n = (digest[di]&0xf0)>>4;
+        hex_output[2*di+0] = n > 9 ? ('a'+n-10) : ('0'+n);
+    }
+    return hex_output;
+}
+
+std::string GetMD5HashString(const std::vector<uint8_t>& v)
+{
+    if( v.size() == 0 )
+        return "";
+
+    md5_state_t state;
+	md5_byte_t digest[16];
+	
+	md5_init(&state);
+	md5_append(&state, (const md5_byte_t *)&v[0], v.size());
+	md5_finish(&state, digest);
+    string hex_output;
+    hex_output.resize(32);
+    for (int di = 0; di < 16; ++di) {
+        int n = (digest[di]&0xf);
+        hex_output[2*di+0] = n > 9 ? ('a'+n-10) : ('0'+n);
+        n = (digest[di]&0xf0)>>4;
+        hex_output[2*di+1] = n > 9 ? ('a'+n-10) : ('0'+n);
+    }
+    return hex_output;
 }
 
 } // end namespace OpenRAVE

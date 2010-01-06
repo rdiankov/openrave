@@ -11,9 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License. 
-import os,pickle,itertools,traceback,time
-import openravepy
+import os,sys,pickle,itertools,traceback,time
 from openravepy import *
+from openravepy.interfaces import Grasper, BaseManipulation
 from numpy import *
 from optparse import OptionParser
 
@@ -37,24 +37,30 @@ class Grasping(metaclass.AutoReloader):
         self.grasps = []
         self.graspindices = dict()
         self.grasper = None
-        try:
-            self.grasps,self.graspindices,friction,avoidlinks,plannername = pickle.load(open(self.getGraspFilename(), 'r'))
-            self.grasper = openravepy.interfaces.Grasper(self.env,self.robot,friction,avoidlinks,plannername)
-        except IOError:
-            print 'failed to find cached grasp set %s'%self.getGraspFilename()
+
+    def hasGrasps(self):
+        return len(self.grasps) > 0 and len(self.graspindices) > 0 and self.grasper is not None
 
     def initGrasper(self,friction,avoidlinks,plannername=None):
-        self.grasper = openravepy.interfaces.Grasper(self.env,self.robot,friction,avoidlinks,plannername)
+        self.grasper = Grasper(self.env,self.robot,friction,avoidlinks,plannername)
         self.grasps = []
         self.graspindices = dict()
+
+    def loadGrasps(self):
+        try:
+            self.grasps,self.graspindices,friction,avoidlinks,plannername = pickle.load(open(self.getGraspFilename(), 'r'))
+            self.grasper = Grasper(self.env,self.robot,friction,avoidlinks,plannername)
+            return self.hasGrasps()
+        except IOError:
+            return False
 
     def saveGrasps(self):
         print 'saving grasps to %s'%self.getGraspFilename()
         pickle.dump((self.grasps,self.graspindices,self.grasper.friction,self.grasper.avoidlinks,self.grasper.plannername),open(self.getGraspFilename(), 'w'))
 
     def getGraspFilename(self):
-        self._mkdir(os.path.join(self.env.GetHomeDirectory(),self.robot.GetKinematicsGeometryHash()))
-        return os.path.join(self.env.GetHomeDirectory(),self.robot.GetKinematicsGeometryHash(),self.target.GetKinematicsGeometryHash()+'.grasp.pp')
+        self._mkdir(os.path.join(self.env.GetHomeDirectory(),self.robot.GetRobotStructureHash()))
+        return os.path.join(self.env.GetHomeDirectory(),self.robot.GetRobotStructureHash(),self.manip.GetName() + '.' + self.target.GetKinematicsGeometryHash()+'.grasp.pp')
 
     def generateGraspSet(self,preshapes,standoffs,rolls,approachrays, graspingnoise=None,addSphereNorms=False,updateenv=True,forceclosurethreshold=1e-9):
         N = approachrays.shape[0]
@@ -69,8 +75,10 @@ class Grasping(metaclass.AutoReloader):
         for name,dof in graspdof.iteritems():
             self.graspindices[name] = range(totaldof,totaldof+dof)
             totaldof += dof
-        counter = 0
         contactgraph = None
+        if updateenv:
+            self.env.UpdatePublishedBodies()
+        counter = 0
         for approachray,roll,preshape,standoff in myproduct(approachrays,rolls,preshapes,standoffs):
             print 'grasp %d/%d'%(counter,totalgrasps)
             counter += 1
@@ -164,8 +172,8 @@ class Grasping(metaclass.AutoReloader):
         return self.env.drawtrimesh(points=allpoints,indices=None,colors=array((1,0.4,0.4,transparency)))
 
     def showTable(self,delay=0.5):
-        print 'have %d grasps'%len(self.grasps)
-        for grasp in self.grasps:
+        for i,grasp in enumerate(self.grasps):
+            print 'grasp %d/%d'%(i,len(self.grasps))
             contacts,finalconfig,mindist,volume = self.runGrasp(grasp,translate=True)
             contactgraph = self.drawContacts(contacts)
             time.sleep(delay)
@@ -191,12 +199,14 @@ class Grasping(metaclass.AutoReloader):
 
 def run():
     parser = OptionParser(description='Grasp set generation example for any robot/body pair.')
-    parser.add_option('--robot',action="store",type='string',dest='robot',default='robots/barretthand.robot.xml',
+    parser.add_option('--robot',action="store",type='string',dest='robot',default='robots/barrettwam.robot.xml',
                       help='The filename of the robot to load')
     parser.add_option('--body',action="store",type='string',dest='body',default='data/mug1.kinbody.xml',
                       help='The filename of the body whose grasp set to be generated')
     parser.add_option('--showtable', action='store_true', dest='showtable',default=False,
                       help='If set, will run the generated table, if one exists. Otherwise will exist with an error')
+    parser.add_option('--noviewer', action='store_false', dest='useviewer',default=True,
+                      help='If specified, will generate the tables without launching a viewer')
     (options, args) = parser.parse_args()
 
     env = Environment()
@@ -206,17 +216,21 @@ def run():
         target = env.ReadKinBodyXMLFile(options.body)
         target.SetTransform(eye(4))
         env.AddKinBody(target)
-        env.SetViewer('qtcoin')
+        if options.useviewer:
+            env.SetViewer('qtcoin')
         grasping = Grasping(env,robot,target)
         if options.showtable:
+            if not grasping.loadGrasps():
+                print 'failed to find cached grasp set %s'%self.getGraspFilename()
+                sys.exit(1)
             grasping.showTable()
-            return
+            sys.exit(0)
 
         grasping.initGrasper(friction=0.4,avoidlinks=[])
-        if robot.GetName() == 'BarrettHand':
+        if robot.GetName() == 'BarrettHand' or robot.GetName() == 'BarrettWAM':
             preshapes = array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2)))
         else:
-            manipprob = openravepy.BaseManipulation(env,robot)
+            manipprob = BaseManipulation(env,robot)
             target.Enable(False)
             manipprop.ReleaseFingers(True)
             robot.WaitForController(0)
@@ -224,9 +238,10 @@ def run():
             preshapes = array([robot.GetJointValues()])
         grasping.generateGraspSet(preshapes=preshapes,
                                   rolls = arange(0,2*pi,pi/2),
-                                  standoffs = array([0,0.25]),
+                                  standoffs = array([0,0.025]),
                                   approachrays = grasping.computeBoxApproachRays(stepsize=0.02),
                                   graspingnoise=None,
+                                  updateenv=options.useviewer,
                                   addSphereNorms=False)
         grasping.saveGrasps()
     finally:

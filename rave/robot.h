@@ -116,12 +116,14 @@ public:
         /// checks collision with only the gripper given its end-effector transform
         /// \param tEE the end effector transform
         /// \return true if a collision occurred
-        bool CheckEndEffectorCollision(const Transform& tEE, CollisionReportPtr report = CollisionReportPtr()) const;
+        virtual bool CheckEndEffectorCollision(const Transform& tEE, CollisionReportPtr report = CollisionReportPtr()) const;
 
         /// checks collision with the environment with all the independent links of the robot
         /// \return true if a collision occurred
-        bool CheckIndependentCollision(CollisionReportPtr report = CollisionReportPtr()) const;
+        virtual bool CheckIndependentCollision(CollisionReportPtr report = CollisionReportPtr()) const;
 
+        virtual void serialize(std::ostream& o, int options) const;
+        
     private:
         RobotBaseWeakPtr _probot;
         LinkPtr _pBase;
@@ -168,10 +170,12 @@ public:
         virtual RobotBasePtr GetRobot() const { return RobotBasePtr(_probot); }
         virtual const std::string& GetName() const { return _name; }
 
-        // retrieves the current data from the sensor
+        /// retrieves the current data from the sensor
         virtual SensorBase::SensorDataPtr GetData() const;
 
         virtual void SetRelativeTransform(const Transform& t);
+
+        virtual void serialize(std::ostream& o, int options) const;
 
     private:
         RobotBaseWeakPtr _probot;
@@ -426,6 +430,12 @@ public:
     virtual bool IsRobot() const { return true; }
 
     virtual void ComputeJointHierarchy();
+
+    virtual void serialize(std::ostream& o, int options) const;
+
+    /// A md5 hash unique to the particular robot structure that involves manipulation and sensing components
+    /// The serialization for the attached sensors will not involve any sensor specific properties (since they can change through calibration)
+    virtual std::string GetRobotStructureHash() const;
     
 protected:
     RobotBase(EnvironmentBasePtr penv);

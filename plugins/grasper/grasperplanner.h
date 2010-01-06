@@ -280,6 +280,22 @@ public:
                     ptraj->AddPoint(ptemp); 
                 }
             }
+
+            if( _parameters.fstandoff > 0 ) {
+                v = -vapproachdir*_parameters.fstandoff;
+                if( pX != NULL )  *pX += v.x;
+                if( pY != NULL )  *pY += v.y;
+                if( pZ != NULL )  *pZ += v.z;
+                _robot->SetActiveDOFValues(dofvals);
+                if( (!_parameters.targetbody && GetEnv()->CheckCollision(KinBodyConstPtr(_robot))) || 
+                    (!!_parameters.targetbody && GetEnv()->CheckCollision(KinBodyConstPtr(_robot),KinBodyConstPtr(_parameters.targetbody))) ) {
+                    // in collision, so move back
+                    if( pX != NULL )  *pX -= v.x;
+                    if( pY != NULL )  *pY -= v.y;
+                    if( pZ != NULL )  *pZ -= v.z;
+                    _robot->SetActiveDOFValues(dofvals);
+                }
+            }
         }
     
         std::vector<dReal> vlowerlim, vupperlim;

@@ -11,17 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License. 
-import openravepy
 from openravepy import *
+from openravepy.interfaces import BaseManipulation
 from numpy import *
 from optparse import OptionParser
 
 class HanoiPuzzle:
-    probsmanip = None
+    basemanip = None
     def __init__(self,env):
         self.env = env
         self.robot = self.env.GetRobots()[0]
-        self.probsmanip = openravepy.interfaces.BaseManipulation(env,self.robot)
+        self.basemanip = BaseManipulation(env,self.robot)
 
         disknames = ['disk0','disk1','disk2']
         self.heights = array([0.021,0.062,0.103])+0.01
@@ -102,17 +102,17 @@ class HanoiPuzzle:
                 print('Tnewhand2 invalid')
                 continue
 
-            if self.probsmanip.MoveToHandPosition(matrices=[Tnewhand]) is None:
+            if self.basemanip.MoveToHandPosition(matrices=[Tnewhand]) is None:
                 print('failed to move to position above source peg')
                 continue
             self.WaitForController() # wait for robot to complete all trajectories
 
-            if self.probsmanip.MoveToHandPosition(matrices=[Tnewhand2]) is None:
+            if self.basemanip.MoveToHandPosition(matrices=[Tnewhand2]) is None:
                 print('failed to move to position above dest peg')
                 continue
             self.WaitForController() # wait for robot to complete all trajectories
 
-            if self.probsmanip.MoveToHandPosition(matrices=[T]) is None:
+            if self.basemanip.MoveToHandPosition(matrices=[T]) is None:
                 print('failed to move to dest peg')
                 continue
             self.WaitForController() # wait for robot to complete all trajectories
@@ -143,10 +143,10 @@ class HanoiPuzzle:
             for ang1 in arange(-0.8,0,0.2):
                 Tgrasps = self.GetGrasp(Tdisk, disk.radius, [ang1,ang2]) # get the grasp transform given the two angles
                 for Tgrasp in Tgrasps: # for each of the grasps
-                    if self.probsmanip.MoveToHandPosition(matrices=[Tgrasp]) is not None: # move the hand to that location
+                    if self.basemanip.MoveToHandPosition(matrices=[Tgrasp]) is not None: # move the hand to that location
                         # succeeded so grab the disk
                         self.WaitForController()
-                        self.probsmanip.CloseFingers()
+                        self.basemanip.CloseFingers()
                         self.WaitForController()
                         self.robot.Grab(disk)
 
