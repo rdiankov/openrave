@@ -160,7 +160,7 @@ bool TrajectoryBase::SampleTrajectory(dReal time, TPOINT &sample) const
     if (_vecpoints.size() < 2) {
 
         if( _vecpoints.size() == 0 ) {
-            RAVELOG_ERRORA("TrajectoryBase:: ERROR unable to sample.  numpoints = %"PRIdS"\n", _vecpoints.size());
+            RAVELOG_ERRORA(str(boost::format("TrajectoryBase:: ERROR unable to sample.  numpoints = %d\n")%_vecpoints.size()));
             return false;
         }
 

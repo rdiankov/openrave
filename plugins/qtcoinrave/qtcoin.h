@@ -16,9 +16,7 @@
 #ifndef OPENRAVE_QTCOIN_H
 #define OPENRAVE_QTCOIN_H
 
-/// functions that allow plugins to program for the RAVE simulator
-#include <cstdio>
-#include <cmath>
+#include <rave/rave.h> // should be included first in order to get boost throwing openrave exceptions
 
 // include boost for vc++ only (to get typeof working)
 #ifdef _MSC_VER
@@ -99,10 +97,7 @@ inline uint64_t GetMicroTime()
 #endif
 }
 
-#include <rave/rave.h>
-
 #include <boost/bind.hpp>
-#include <boost/format.hpp>
 #include <boost/assert.hpp>
 #include <boost/thread/condition.hpp>
 #include <boost/version.hpp>

@@ -80,9 +80,7 @@ class TaskReachability(metaclass.AutoReloader):
         if len(grasptable) == 0:
             raise ValueError('grasp table is empty')
 
-        self.orenv.LockPhysics(True)
-
-        try:
+        with self.orenv:
             gripperindices = self.manip.GetChildDOFIndices()
             print 'gripper indices: ',gripperindices
             dim = 12 + len(gripperindices)
@@ -132,8 +130,6 @@ class TaskReachability(metaclass.AutoReloader):
                                     reachabilitydensity3d[index] += 1.0
                                     break
                         index += 1
-        finally:
-            self.orenv.LockPhysics(False)
         self.reachabilitydensity3d = reshape(reachabilitydensity3d,shape)/len(trrange)
         print 'reachability finished in %fs'%(time.time()-starttime)
 

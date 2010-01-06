@@ -78,8 +78,7 @@ class ReachabilityModel(metaclass.AutoReloader):
 
         reachabilitydensity3d = zeros(prod(shape))
         self.reachabilitystats = []
-        self.orenv.LockPhysics(True)
-        try:
+        with self.orenv:
             for i,ind in enumerate(insideinds):
                 numvalid = 0
                 T[0:3,3] = allpoints[ind]
@@ -92,8 +91,6 @@ class ReachabilityModel(metaclass.AutoReloader):
                 if mod(i,1000)==0:
                     print '%d/%d'%(i,len(insideinds))
                 reachabilitydensity3d[ind] = numvalid/(100*float(len(rotations)))
-        finally:
-            self.orenv.LockPhysics(False)
         self.reachabilitydensity3d = reshape(reachabilitydensity3d,shape)
         self.reachabilitydensity3d[0,0,0] = 1
         print 'reachability finished in %fs'%(time.time()-starttime)

@@ -1740,4 +1740,10 @@ void RobotBase::serialize(std::ostream& o, int options) const
     }
 }
 
+std::string RobotBase::GetRobotStructureHash() const
+{
+    BOOST_ASSERT(_bHierarchyComputed);
+    return __hashrobotstructure;
+}
+
 } // end namespace OpenRAVE

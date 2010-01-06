@@ -1037,7 +1037,7 @@ private:
                     }
                     taskdata->pvGraspSet->push_back(t);
                 }
-                RAVELOG_DEBUGA("grasp set size = %"PRIdS"\n", taskdata->pvGraspSet->size());
+                RAVELOG_DEBUGA(str(boost::format("grasp set size = %d\n")%taskdata->pvGraspSet->size()));
             }
             else if( cmd == "graspcontactset") {
                 taskdata->pvGraspContactSet.reset(new vector<Transform>());
@@ -1052,7 +1052,7 @@ private:
                     }
                     taskdata->pvGraspContactSet->push_back(t);
                 }
-                RAVELOG_DEBUGA("grasp contact set size = %"PRIdS"\n", taskdata->pvGraspContactSet->size());
+                RAVELOG_DEBUGA(str(boost::format("grasp contact set size = %d\n")%taskdata->pvGraspContactSet->size()));
             }
             else if( cmd == "graspstartset" ) {
                 taskdata->pvGraspStartSet.reset(new vector<Transform>());
@@ -1067,7 +1067,7 @@ private:
                     }
                     taskdata->pvGraspStartSet->push_back(t);
                 }
-                RAVELOG_DEBUGA("grasp start set size = %"PRIdS"\n", taskdata->pvGraspStartSet->size());
+                RAVELOG_DEBUGA(str(boost::format("grasp start set size = %d\n")%taskdata->pvGraspStartSet->size()));
             }
             else if( cmd == "targettraj" ) {
 
@@ -1227,7 +1227,7 @@ private:
             
                 if( !bHasIK ) {
                     // no ik solution found for this grasp, so quit
-                    RAVELOG_ERRORA("failure, due to ik time=%dms, %d/%"PRIdS"\n", timeGetTime()-basetime, ivgrasp, taskdata->vtargettraj.size());
+                    RAVELOG_ERRORA(str(boost::format("failure, due to ik time=%dms, %d/%d\n")%(timeGetTime()-basetime)%ivgrasp%taskdata->vtargettraj.size()));
                     break;
                 }
             }

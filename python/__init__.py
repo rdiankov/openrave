@@ -1,6 +1,6 @@
 from openravepy_int import *
+from openravepy_ext import *
 import metaclass
-from metaclass import mkdir_recursive
 import ikfast
 import examples
 import interfaces

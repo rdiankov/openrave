@@ -44,7 +44,7 @@ public:
         RobotBase::RobotStateSaver savestate(_robot);
 
         if( (int)_parameters.vinitialconfig.size() != _parameters.GetDOF() ) {
-            RAVELOG_ERRORA("initial config wrong dim: %"PRIdS"\n", _parameters.vinitialconfig.size());
+            RAVELOG_ERRORA(str(boost::format("initial config wrong dim: %d\n")%_parameters.vinitialconfig.size()));
             return false;
         }
 
@@ -63,7 +63,7 @@ public:
         }
 
         if( (int)_parameters.vinitialconfig.size() != _robot->GetActiveDOF() ) {
-            RAVELOG_ERRORA("initial config wrong dim: %"PRIdS"\n", _parameters.vinitialconfig.size());
+            RAVELOG_ERRORA(str(boost::format("initial config wrong dim: %d\n")%_parameters.vinitialconfig.size()));
             return false;
         }
 
@@ -180,7 +180,7 @@ public:
         FOREACH(it, listbestpath)
             ptraj->AddPoint(Trajectory::TPOINT(*it,0));
 
-        RAVELOG_DEBUGA("plan %s, path=%"PRIdS" points in %fs\n", bSuccess?"success":"failure", ptraj->GetPoints().size(), 0.001f*(float)(timeGetTime()-basetime));
+        RAVELOG_DEBUGA(str(boost::format("plan %s, path=%d points in %fs\n")%(bSuccess?"success":"failure")%ptraj->GetPoints().size()%(0.001f*(float)(timeGetTime()-basetime))));
     
         return bSuccess;
     }

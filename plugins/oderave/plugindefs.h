@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,9 +15,7 @@
 #ifndef OPENRAVE_PLUGINDEFS_H
 #define OPENRAVE_PLUGINDEFS_H
 
-#include <cstdio>
-#include <cmath>
-#include <cstdlib>
+#include <rave/rave.h> // should be included first in order to get boost throwing openrave exceptions
 
 // include boost for vc++ only (to get typeof working)
 #ifdef _MSC_VER
@@ -55,13 +53,6 @@
 
 #include <boost/assert.hpp>
 #include <boost/bind.hpp>
-#include <boost/format.hpp>
-
-#ifdef _MSC_VER
-#define PRIdS "Id"
-#else
-#define PRIdS "zd"
-#endif
 
 using namespace std;
 
@@ -111,8 +102,6 @@ inline uint64_t GetMicroTime()
     return (uint64_t)t.tv_sec*1000000+t.tv_usec;
 #endif
 }
-
-#include <rave/rave.h>
 
 // OpenRAVE includes a dReal typedef which could cause conflict with ODEs, so don't include it
 using OpenRAVE::EnvironmentBase;

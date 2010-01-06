@@ -75,12 +75,8 @@ class VisibilityGrasping(metaclass.AutoReloader):
         self.graspoffset = 0
 
     def reloadcontroller(self):
-        self.orenvreal.LockPhysics(True)
-
-        try:
+        with self.orenvreal:
             self.robotreal.GetController().Reset(0)
-        finally:
-            self.orenvreal.LockPhysics(False)
 
     def setjointvalue(self,value,index):
         v = self.robotreal.GetJointValues()
@@ -218,25 +214,19 @@ class VisibilityGrasping(metaclass.AutoReloader):
         return T
 
     def groundrobot(self):
-        self.orenvreal.LockPhysics(True)
-        try:
+        with self.orenvreal:
             #self.robot.GetController().Reset(0)
             ab = self.robotreal.ComputeAABB()
             T = self.robotreal.GetTransform()
             T[2,3] += 0.001-(ab.pos()[2]-ab.extents()[2])
             self.robotreal.SetTransform(T)
-        finally:
-            self.orenvreal.LockPhysics(False)
 
     def gettarget(self,orenv):
-        orenv.LockPhysics(True)
-        try:
+        with orenv:
             bodies = orenv.GetBodies()
             targets = [b for b in bodies if b.GetName().find('frootloops') >=0 ]
             if len(targets) > 0:
                 return targets[0]
-        finally:
-            orenv.LockPhysics(False)
         return None
 
     def starttrajectory(self,trajdata):
@@ -357,24 +347,18 @@ class VisibilityGrasping(metaclass.AutoReloader):
     def testvisibility(self,visualprob=None):
         if visualprob is None:
             visualprob = self.visualprob
-        visualprob.GetEnv().LockPhysics(True)
-        try:
+        with visualprob.GetEnv():
             res = visualprob.SendCommand('ComputeVisibility target ' + self.target.GetName() + ' sensorindex 0 convexdata ' + str(self.convexdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.convexdata.flat))
             return int(res)!=0
-        finally:
-            visualprob.GetEnv().LockPhysics(False)
         return False
 
     def testvisibilitydata(self,visualprob=None):
         if visualprob is None:
             visualprob = self.visualprob
-        visualprob.GetEnv().LockPhysics(True)
-        try:
+        with visualprob.GetEnv():
             res = visualprob.SendCommand('ProcessVisibilityExtents target ' + self.target.GetName() + ' sensorindex 0 convexdata ' + str(self.convexdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.convexdata.flat) + ' visibilitydata ' + str(self.visibilitydata.shape[0]) + ' ' + ' '.join(str(f) for f in self.visibilitydata.flat))
             if self.visibilitydata.size != len(res.split()):
                 raise ValueError('bad visibility data')
-        finally:
-            visualprob.GetEnv().LockPhysics(False)
 
     def quitviewers(self):
         for viewer in self.viewers:
@@ -424,8 +408,7 @@ class PA10GraspExample(VisibilityGrasping):
         obstacles = ['data/box0.kinbody.xml','data/box1.kinbody.xml','data/box2.kinbody.xml','data/box3.kinbody.xml']
         maxcreate = 6
 
-        self.orenvreal.LockPhysics(True)
-        try:
+        with self.orenvreal:
             self.target = self.gettarget(self.orenvreal)
             
             table = [b for b in self.orenvreal.GetBodies() if b.GetName() == 'table'][0]
@@ -495,8 +478,6 @@ class PA10GraspExample(VisibilityGrasping):
                     if not self.orenvreal.CheckCollision(self.target):
                         self.Tgoals.append(T)
             self.target.SetTransform(Torig)
-        finally:
-            self.orenvreal.LockPhysics(False)
 
 if __name__=='__main__':
     from Tkinter import *

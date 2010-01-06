@@ -22,17 +22,17 @@ def run():
     physics = env.CreatePhysicsEngine('ode')
     env.SetPhysicsEngine(physics)
     physics.SetGravity(array((0,-9.8,0)))
-
     bodynames = ['data/lego2.kinbody.xml', 'data/lego4.kinbody.xml', 'data/mug1.kinbody.xml']
     numbodies = 0
     while True: # continually create random kinbodies
-        body = env.ReadKinBodyXMLFile(bodynames[random.randint(len(bodynames))])
-        body.SetName('body%d'%numbodies)
-        numbodies += 1
-        env.AddKinBody(body)
-        T = eye(4)
-        T[0:3,3] = array((-0.5,2,-0.5))+0.4*random.rand(3)
-        body.SetTransform(T)
+        with env:
+            body = env.ReadKinBodyXMLFile(bodynames[random.randint(len(bodynames))])
+            body.SetName('body%d'%numbodies)
+            numbodies += 1
+            env.AddKinBody(body)
+            T = eye(4)
+            T[0:3,3] = array((-0.5,2,-0.5))+0.4*random.rand(3)
+            body.SetTransform(T)
         time.sleep(0.4)
 
 if __name__=='__main__':

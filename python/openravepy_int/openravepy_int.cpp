@@ -74,7 +74,7 @@
 #include <numpy/arrayobject.h>
 
 #define CHECK_POINTER(p) { \
-    if( !(p) ) throw openrave_exception("invalid pointer"); \
+        if( !(p) ) throw openrave_exception(boost::str(boost::format("[%s:%d]: invalid pointer")%__PRETTY_FUNCTION__%__LINE__)); \
 }
 
 using namespace boost::python;
@@ -159,8 +159,7 @@ class PyVoidHandle
 public:
     PyVoidHandle() {}
     PyVoidHandle(boost::shared_ptr<void> handle) : _handle(handle) {}
-
-private:
+    void close() { _handle.reset(); }
     boost::shared_ptr<void> _handle;
 };
 
@@ -468,6 +467,7 @@ public:
         return boost::python::make_tuple(toPyVector3(r.r.pos),toPyVector3(r.r.dir));
     }
 };
+
 class PyAABB
 {
 public:
@@ -517,8 +517,8 @@ public:
         return _pbase->Clone(preference->GetInterfaceBase(),cloningoptions);
     }
 
-    void SetUserData(boost::shared_ptr<void> pdata) { _pbase->SetUserData(pdata); }
-    boost::shared_ptr<void> GetUserData() const { return _pbase->GetUserData(); }
+    void SetUserData(PyVoidHandle pdata) { _pbase->SetUserData(pdata._handle); }
+    PyVoidHandle GetUserData() const { return PyVoidHandle(_pbase->GetUserData()); }
 
     object SendCommand(const string& in) {
         stringstream sin(in), sout;
@@ -534,6 +534,8 @@ class PyKinBody : public PyInterfaceBase
 {
 protected:
     KinBodyPtr _pbody;
+    std::list<boost::shared_ptr<void> > _listStateSavers;
+
 public:
     class PyLink
     {
@@ -844,8 +846,8 @@ public:
         return ss.str();
     }
 
-    void SetGuiData(boost::shared_ptr<void> pdata) { _pbody->SetGuiData(pdata); }
-    boost::shared_ptr<void> GetGuiData() const { return _pbody->GetGuiData(); }
+    void SetGuiData(PyVoidHandle pdata) { _pbody->SetGuiData(pdata._handle); }
+    PyVoidHandle GetGuiData() const { return PyVoidHandle(_pbody->GetGuiData()); }
 
     std::string GetXMLFilename() const { return _pbody->GetXMLFilename(); }
 
@@ -862,8 +864,8 @@ public:
         return adjacent;
     }
     
-    boost::shared_ptr<void> GetPhysicsData() const { return _pbody->GetPhysicsData(); }
-    boost::shared_ptr<void> GetCollisionData() const { return _pbody->GetCollisionData(); }
+    PyVoidHandle GetPhysicsData() const { return PyVoidHandle(_pbody->GetPhysicsData()); }
+    PyVoidHandle GetCollisionData() const { return PyVoidHandle(_pbody->GetCollisionData()); }
     int GetUpdateStamp() const { return _pbody->GetUpdateStamp(); }
 
     string serialize(int options) const {
@@ -873,6 +875,10 @@ public:
     }
 
     string GetKinematicsGeometryHash() const { return _pbody->GetKinematicsGeometryHash(); }
+    PyVoidHandle CreateKinBodyStateSaver() { return PyVoidHandle(boost::shared_ptr<void>(new KinBody::KinBodyStateSaver(_pbody))); }
+
+    virtual void __enter__();
+    virtual void __exit__(object type, object value, object traceback);
 };
 
 class PyCollisionReport
@@ -1466,19 +1472,38 @@ public:
         ControllerBasePtr pcontroller = _probot->GetController();
         if( !pcontroller )
             return false;
+        if( pcontroller->IsDone() )
+            return true;
 
-        uint64_t starttime = GetMicroTime();
-        uint64_t deltatime = (uint64_t)(ftimeout*1000000.0);
-        while( !pcontroller->IsDone() ) {
-            Sleep(1);            
-            if( deltatime > 0 && (GetMicroTime()-starttime)>deltatime  )
-                return false;
+        bool bSuccess = true;
+        Py_BEGIN_ALLOW_THREADS
+
+        try {
+            uint64_t starttime = GetMicroTime();
+            uint64_t deltatime = (uint64_t)(ftimeout*1000000.0);
+            while( !pcontroller->IsDone() ) {
+                Sleep(1);            
+                if( deltatime > 0 && (GetMicroTime()-starttime)>deltatime  ) {
+                    bSuccess = false;
+                    break;
+                }
+            }
+        }
+        catch(...) {
+            RAVELOG_ERROR("exception raised inside WaitForController\n");
+            bSuccess = false;
         }
         
-        return true;
+        Py_END_ALLOW_THREADS;
+
+
+        return bSuccess;
     }
 
     string GetRobotStructureHash() const { return _probot->GetRobotStructureHash(); }
+    PyVoidHandle CreateRobotStateSaver() { return PyVoidHandle(boost::shared_ptr<void>(new RobotBase::RobotStateSaver(_probot))); }
+
+    virtual void __enter__();
 };
 
 bool PyControllerBase::Init(PyRobotBasePtr robot, const string& args)
@@ -1707,14 +1732,14 @@ public:
     void ViewerSetTitle(const string& title) { _pviewer->ViewerSetTitle(title.c_str()); }
     bool LoadModel(const string& filename) { return _pviewer->LoadModel(filename.c_str()); }
 
-    object RegisterCallback(RaveViewerBase::ViewerEvents properties, object fncallback)
+    PyVoidHandle RegisterCallback(RaveViewerBase::ViewerEvents properties, object fncallback)
     {
         if( !fncallback )
             throw openrave_exception("callback not specified");
         boost::shared_ptr<void> p = _pviewer->RegisterCallback(properties,boost::bind(&PyRaveViewerBase::_ViewerCallback,fncallback,_pyenv,_1,_2,_3));
         if( !p )
-            return object();
-        return object(PyVoidHandle(p));
+            throw openrave_exception("no registration callback returned");
+        return PyVoidHandle(p);
     }
 
     void EnvironmentSync() { return _pviewer->EnvironmentSync(); }
@@ -2277,14 +2302,14 @@ public:
     }
     PyPhysicsEngineBasePtr GetPhysicsEngine() { return PyPhysicsEngineBasePtr(new PyPhysicsEngineBase(_penv->GetPhysicsEngine(),shared_from_this())); }
 
-    object RegisterCollisionCallback(object fncallback)
+    PyVoidHandle RegisterCollisionCallback(object fncallback)
     {
         if( !fncallback )
             throw openrave_exception("callback not specified");
         boost::shared_ptr<void> p = _penv->RegisterCollisionCallback(boost::bind(&PyEnvironmentBase::_CollisionCallback,shared_from_this(),fncallback,_1,_2));
         if( !p )
-            return object();
-        return object(PyVoidHandle(p));
+            throw openrave_exception("registration handle is NULL");
+        return PyVoidHandle(p);
     }
 
     void StepSimulation(dReal timeStep) { _penv->StepSimulation(timeStep); }
@@ -2319,6 +2344,16 @@ public:
         else
             _penv->GetMutex().unlock();
 #endif
+    }
+
+    void __enter__()
+    {
+        LockPhysics(true);
+    }
+
+    void __exit__(object type, object value, object traceback)
+    {
+        LockPhysics(false);
     }
 
     bool SetViewer(const string& viewername, bool showviewer=true)
@@ -2565,6 +2600,29 @@ public:
 
     string GetHomeDirectory() { return _penv->GetHomeDirectory(); }
 };
+
+void PyKinBody::__enter__()
+{
+    // necessary to lock physics to prevent multiple threads from interfering
+    if( _listStateSavers.size() == 0 )
+        _pyenv->LockPhysics(true);
+    _listStateSavers.push_back(boost::shared_ptr<void>(new KinBody::KinBodyStateSaver(_pbody)));
+}
+
+void PyKinBody::__exit__(object type, object value, object traceback)
+{
+    _listStateSavers.pop_back();
+    if( _listStateSavers.size() == 0 )
+        _pyenv->LockPhysics(false);
+}
+
+void PyRobotBase::__enter__()
+{
+    // necessary to lock physics to prevent multiple threads from interfering
+    if( _listStateSavers.size() == 0 )
+        _pyenv->LockPhysics(true);
+    _listStateSavers.push_back(boost::shared_ptr<void>(new RobotBase::RobotStateSaver(_probot)));
+}
 
 object quatFromAxisAngle1(object oaxis)
 {
@@ -2860,7 +2918,9 @@ BOOST_PYTHON_MODULE(openravepy_int)
 
     class_<PyEnvironmentBase, boost::shared_ptr<PyEnvironmentBase> > classenv("Environment");
     class_<PyGraphHandle, boost::shared_ptr<PyGraphHandle> >("GraphHandle");
-    class_<PyVoidHandle, boost::shared_ptr<PyVoidHandle> >("VoidHandle");
+    class_<PyVoidHandle, boost::shared_ptr<PyVoidHandle> >("VoidHandle")
+        .def("close",&PyVoidHandle::close)
+        ;
     class_<PyRay, boost::shared_ptr<PyRay> >("Ray")
         .def(init<object,object>())
         .def("dir",&PyRay::dir)
@@ -2936,6 +2996,9 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetUpdateStamp",&PyKinBody::GetUpdateStamp)
             .def("serialize",&PyKinBody::serialize)
             .def("GetKinematicsGeometryHash",&PyKinBody::GetKinematicsGeometryHash)
+            .def("CreateKinBodyStateSaver",&PyKinBody::CreateKinBodyStateSaver)
+            .def("__enter__",&PyKinBody::__enter__)
+            .def("__exit__",&PyKinBody::__exit__)
             ;
 
         {        
@@ -3326,6 +3389,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetSimulationTime",&PyEnvironmentBase::GetSimulationTime)
             .def("LockPhysics",LockPhysics1)
             .def("LockPhysics",LockPhysics2)
+            .def("__enter__",&PyEnvironmentBase::__enter__)
+            .def("__exit__",&PyEnvironmentBase::__exit__)
             .def("SetViewer",&PyEnvironmentBase::SetViewer,SetViewer_overloads(args("viewername","showviewer")))
             .def("GetViewer",&PyEnvironmentBase::GetViewer)
             .def("plot3",&PyEnvironmentBase::plot3,plot3_overloads(args("points","pointsize","colors","drawstyle")))

@@ -1092,7 +1092,7 @@ Vector KinBody::GetCenterOfMass() const
 dReal KinBody::ConfigDist(const std::vector<dReal>& q1) const
 {
     if( (int)q1.size() != GetDOF() )
-        throw openrave_exception(str(boost::format("configs %"PRIdS" now equal to body dof %d")%q1.size()%GetDOF()));
+        throw openrave_exception(str(boost::format("configs %d now equal to body dof %d")%q1.size()%GetDOF()));
 
     dReal dist = 0;
     vector<JointPtr>::const_iterator it;
@@ -1112,7 +1112,7 @@ dReal KinBody::ConfigDist(const std::vector<dReal>& q1) const
 dReal KinBody::ConfigDist(const std::vector<dReal>& q1, const std::vector<dReal>& q2) const
 {
     if( (int)q1.size() != GetDOF() || (int)q2.size() != GetDOF() )
-        throw openrave_exception(str(boost::format("configs %"PRIdS" %"PRIdS" now equal to body dof %d")%q1.size()%q2.size()%GetDOF()));
+        throw openrave_exception(str(boost::format("configs %d %d now equal to body dof %d")%q1.size()%q2.size()%GetDOF()));
 
     dReal dist = 0.0;
     for (size_t i = 0; i < _vecJointWeights.size(); i++) {
@@ -1741,13 +1741,13 @@ void KinBody::ComputeJointHierarchy()
             }
 
             if( cursize == (int)ljoints.size() ) {
-                RAVELOG_ERRORA("Cannot compute joint hierarchy for number of joints %"PRIdS"! Part of robot might not be moveable\n", _vecjoints.size());
+                RAVELOG_ERRORA(str(boost::format("Cannot compute joint hierarchy for number of joints %d! Part of robot might not be moveable\n")%_vecjoints.size()));
                 break;
             }
         }
 
         if( ljoints.size() == 0 )
-            RAVELOG_DEBUGA("Successfully computed joint hierarchy for number of joints %"PRIdS"!\n", _vecjoints.size());
+            RAVELOG_DEBUGA(str(boost::format("Successfully computed joint hierarchy for number of joints %d!\n")%_vecjoints.size()));
     }
 
     // create the adjacency list
@@ -1794,7 +1794,6 @@ void KinBody::ComputeJointHierarchy()
         }
     }
 
-    //RAVEPRINT(L"nonadj: %"PRIdS"\n", _setNonAdjacentLinks.size());
     // save the forward kinematics
     string filename = GetEnv()->GetHomeDirectory() + string("/fk_") + GetName();
     ofstream f(filename.c_str());
@@ -2227,6 +2226,12 @@ void KinBody::serialize(std::ostream& o, int options) const
         FOREACHC(it,_vecPassiveJoints)
             (*it)->serialize(o,options);
     }
+}
+
+std::string KinBody::GetKinematicsGeometryHash() const
+{
+    BOOST_ASSERT(_bHierarchyComputed);
+    return __hashkinematics;
 }
 
 void KinBody::__erase_iterator(KinBodyWeakPtr pweakbody, std::list<std::pair<int,boost::function<void()> > >::iterator* pit)

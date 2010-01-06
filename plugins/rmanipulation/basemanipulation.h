@@ -194,7 +194,7 @@ protected:
                 itpoint->trans = tcur;
         }
 
-        RAVELOG_VERBOSEA("executing traj with %"PRIdS" points\n", ptraj->GetPoints().size());
+        RAVELOG_VERBOSEA(str(boost::format("executing traj with %d points\n")%ptraj->GetPoints().size()));
         robot->SetMotion(ptraj);
         sout << "1";
         return true;

@@ -22,10 +22,10 @@ class HanoiPuzzle:
         self.env = env
         self.robot = self.env.GetRobots()[0]
         self.basemanip = BaseManipulation(env,self.robot)
-
+        
         disknames = ['disk0','disk1','disk2']
         self.heights = array([0.021,0.062,0.103])+0.01
-
+        
         disks = []
         diskradius = []
         for name in disknames:
@@ -33,7 +33,7 @@ class HanoiPuzzle:
             ab = disk.ComputeAABB()
             disk.radius = ab.extents()[1]-0.02
             disks.append(disk)
-
+        
         self.srcpeg = env.GetKinBody('srcpeg')
         self.destpeg = env.GetKinBody('destpeg')
         self.peg = env.GetKinBody('peg')
@@ -59,7 +59,7 @@ class HanoiPuzzle:
     def putblock(self, disk, srcpeg, destpeg, height):
         srcpegbox = srcpeg.ComputeAABB()
         destpegbox = destpeg.ComputeAABB()
-
+        
         # get all the transformations
         Thand = self.robot.GetActiveManipulator().GetEndEffector().GetTransform()
         Tdisk = disk.GetTransform()
@@ -68,12 +68,12 @@ class HanoiPuzzle:
 
         src_upvec = Tsrcpeg[0:3,1:2]
         dest_upvec = Tpeg[0:3,1:2]
-
+        
         # the IK grasp system is [0 0.175 0] from the center of rotation
         Tgrasp = eye(4)
         Tgrasp[1,3] = 0.175
         Tdiff = dot(dot(linalg.inv(Tdisk), Thand), Tgrasp)
-
+        
         # iterate across all possible orientations the destination peg can be in
         for ang in arange(-pi,pi,0.3):
             # find the dest position
@@ -134,11 +134,9 @@ class HanoiPuzzle:
 
     def hanoimove(self, disk, srcpeg, destpeg, height):
         """Moves the arm and manipulator to grasp a peg and place it on a different peg"""
-
         openhandfn = lambda: self.MoveToPosition([-0.7],self.robot.GetActiveManipulator().GetGripperJoints())
         openhandfn()
         Tdisk = disk.GetTransform()
-
         for ang2 in arange(-pi/2,1.5*pi,0.4):
             for ang1 in arange(-0.8,0,0.2):
                 Tgrasps = self.GetGrasp(Tdisk, disk.radius, [ang1,ang2]) # get the grasp transform given the two angles
@@ -162,7 +160,6 @@ class HanoiPuzzle:
                         self.WaitForController() # wait for robot to complete all trajectories
                         self.robot.ReleaseAllGrabbed()
                         openhandfn()
-
         return True
 
     def hanoisolve(self, n, pegfrom, pegto, pegby):
@@ -173,7 +170,6 @@ class HanoiPuzzle:
             if not self.hanoimove(disk, pegfrom, pegto, self.heights[len(pegto.disks)]):
                 print('failed to solve hanoi')
                 raise
-
             # add the disk onto the correct peg list
             pegto.disks.append(disk)
             pegfrom.disks.pop()
@@ -188,18 +184,13 @@ def run():
                       action="store",type='string',dest='scene',default='data/hanoi_complex.env.xml',
                       help='Scene file to load')
     (options, args) = parser.parse_args()
-
+    
     env = Environment()
     env.SetViewer('qtcoin')
     env.Load(options.scene)
-
     hanoi = HanoiPuzzle(env)
-    env.LockPhysics(True)
-    try:
+    with env: # lock the environment
         hanoi.hanoisolve(3,hanoi.srcpeg,hanoi.destpeg,hanoi.peg)
-    finally:
-        env.LockPhysics(False)
-
     env.Destroy() # done with the environment
 
 if __name__ == "__main__":

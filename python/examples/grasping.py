@@ -111,9 +111,7 @@ class Grasping(metaclass.AutoReloader):
         self.grasps = array(self.grasps)
 
     def runGrasp(self,grasp,graspingnoise=None,translate=True,forceclosure=False):
-        self.env.LockPhysics(True)
-        oldvalues = self.robot.GetJointValues()
-        try:
+        with self.robot: # lock the environment and save the robot state
             self.robot.SetJointValues(grasp[self.graspindices.get('igrasppreshape')],self.manip.GetGripperJoints())
             self.robot.SetActiveDOFs(self.manip.GetGripperJoints(),Robot.DOFAffine.X+Robot.DOFAffine.Y+Robot.DOFAffine.Z if translate else 0)
             return self.grasper.Grasp(direction=grasp[self.graspindices.get('igraspdir')],
@@ -122,9 +120,6 @@ class Grasping(metaclass.AutoReloader):
                                      standoff=grasp[self.graspindices.get('igraspstandoff')],
                                      target=self.target,graspingnoise = graspingnoise,
                                      forceclosure=forceclosure, execute=True, outputfinal=True)
-        finally:
-            self.robot.SetJointValues(oldvalues)
-            self.env.LockPhysics(False)
 
     def computeBoxApproachRays(self,stepsize=0.02):
         ab = self.target.ComputeAABB()

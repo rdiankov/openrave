@@ -247,7 +247,7 @@ public:
 
                     if( (_spatialtree._nodes.size() % 50) == 0 ) {
                         //DumpNodes();
-                        RAVELOG_VERBOSEA("trees at %"PRIdS"(%"PRIdS") : to goal at %f,%f\n", _sortedtree.blocks.size(), _spatialtree._nodes.size(), (pcurrent->ftotal-pcurrent->fcost)/_parameters.fGoalCoeff, pcurrent->fcost);
+                        RAVELOG_VERBOSEA(str(boost::format("trees at %d(%d) : to goal at %f,%f\n")%_sortedtree.blocks.size()%_spatialtree._nodes.size()%((pcurrent->ftotal-pcurrent->fcost)/_parameters.fGoalCoeff)%pcurrent->fcost));
                     }
                 }
             }
@@ -482,7 +482,7 @@ private:
         }
 
         fprintf(f ,"];\r\n\r\n");
-        fprintf(f, "startindex = %"PRIdS, _vdeadnodes.size()+1);
+        fprintf(f, "%s", str(boost::format("startindex = %d")%(_vdeadnodes.size()+1)).c_str());
     
         fclose(f);
     }

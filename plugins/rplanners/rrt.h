@@ -42,7 +42,7 @@ public:
 
         RobotBase::RobotStateSaver savestate(_robot);
         if( (int)GetParameters().vinitialconfig.size() != GetParameters().GetDOF() ) {
-            RAVELOG_ERRORA("initial config wrong dim: %"PRIdS"\n", GetParameters().vinitialconfig.size());
+            RAVELOG_ERRORA(str(boost::format("initial config wrong dim: %d\n")%GetParameters().vinitialconfig.size()));
             return false;
         }
 
@@ -323,7 +323,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
             ptraj->AddPoint(pt);
         }
 
-        RAVELOG_DEBUGA("plan success, path=%"PRIdS" points in %fs\n", ptraj->GetPoints().size(), 0.001f*(float)(timeGetTime()-basetime));
+        RAVELOG_DEBUGA(str(boost::format("plan success, path=%d points in %fs\n")%ptraj->GetPoints().size()%(0.001f*(float)(timeGetTime()-basetime))));
     
         return true;
     }
@@ -502,7 +502,7 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
             ptraj->AddPoint(pt);
         }
 
-        RAVELOG_DEBUGA("plan success, path=%"PRIdS" points in %fs\n", ptraj->GetPoints().size(), 0.001f*(float)(timeGetTime()-basetime));
+        RAVELOG_DEBUGA(str(boost::format("plan success, path=%d points in %fs\n")%ptraj->GetPoints().size()%((0.001f*(float)(timeGetTime()-basetime)))));
     
         return true;
     }

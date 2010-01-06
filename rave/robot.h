@@ -217,7 +217,6 @@ public:
     public:
         RobotStateSaver(RobotBasePtr probot);
         virtual ~RobotStateSaver();
-        
     protected:
         std::vector<int> vactivedofs;
         int affinedofs;
@@ -435,7 +434,7 @@ public:
 
     /// A md5 hash unique to the particular robot structure that involves manipulation and sensing components
     /// The serialization for the attached sensors will not involve any sensor specific properties (since they can change through calibration)
-    virtual std::string GetRobotStructureHash() const { return __hashrobotstructure; }
+    virtual std::string GetRobotStructureHash() const;
     
 protected:
     RobotBase(EnvironmentBasePtr penv);

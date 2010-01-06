@@ -389,7 +389,7 @@ class TaskManipulation : public ProblemInstance
                 // start planning
                 SWITCHMODELS(true);
 
-                RAVELOG_VERBOSEA("planning grasps %"PRIdS"\n",listGraspGoals.size());
+                RAVELOG_VERBOSEA(str(boost::format("planning grasps %d\n")%listGraspGoals.size()));
                 uint64_t basestart = GetMicroTime();
                 ptraj = _PlanGrasp(listGraspGoals, nMaxSeedIkSolutions, goalFound, nMaxIterations,mapPreshapeTrajectories);
                 nSearchTime += GetMicroTime() - basestart;
@@ -663,7 +663,7 @@ class TaskManipulation : public ProblemInstance
             iCountdown = 40;
 
             if( (int)listGraspGoals.size() >= nMaxSeedGrasps ) {
-                RAVELOG_VERBOSEA("planning grasps %"PRIdS"\n",listGraspGoals.size());
+                RAVELOG_VERBOSEA(str(boost::format("planning grasps %d\n")%listGraspGoals.size()));
                 uint64_t basestart = GetMicroTime();
                 ptraj = _PlanGrasp(listGraspGoals, nMaxSeedGrasps, goalFound, nMaxIterations,mapPreshapeTrajectories);
                 nSearchTime += GetMicroTime() - basestart;
@@ -679,7 +679,7 @@ class TaskManipulation : public ProblemInstance
         // if there's left over goal positions, start planning
         while( !ptraj && listGraspGoals.size() > 0 ) {
             //TODO have to update ptrajToPreshape
-            RAVELOG_VERBOSEA("planning grasps %"PRIdS"\n",listGraspGoals.size());
+            RAVELOG_VERBOSEA(str(boost::format("planning grasps %d\n")%listGraspGoals.size()));
             uint64_t basestart = GetMicroTime();
             ptraj = _PlanGrasp(listGraspGoals, nMaxSeedGrasps, goalFound, nMaxIterations,mapPreshapeTrajectories);
             nSearchTime += GetMicroTime() - basestart;
@@ -935,7 +935,7 @@ protected:
         }
 
         if( (activegoalconfig.size()%activejoints.size()) != 0 ) {
-            RAVELOG_WARNA("Active goal configurations not a multiple (%"PRIdS"/%"PRIdS")\n", activegoalconfig.size(), activejoints.size());
+            RAVELOG_WARNA(str(boost::format("Active goal configurations not a multiple (%d/%d)\n")%activegoalconfig.size()%activejoints.size()));
             return ptraj;
         }
 

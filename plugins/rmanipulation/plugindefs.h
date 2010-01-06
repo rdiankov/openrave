@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,9 +15,7 @@
 #ifndef OPENRAVE_PLUGINDEFS_H
 #define OPENRAVE_PLUGINDEFS_H
 
-#include <cstdio>
-#include <cmath>
-#include <cstdlib>
+#include <rave/rave.h> // should be included first in order to get boost throwing openrave exceptions
 
 // include boost for vc++ only (to get typeof working)
 #ifdef _MSC_VER
@@ -59,16 +57,8 @@
 #include <fstream>
 #include <iostream>
 
-#include <boost/assert.hpp>
 #include <boost/bind.hpp>
-#include <boost/format.hpp>
 #include <boost/array.hpp>
-
-#ifdef _MSC_VER
-#define PRIdS "Id"
-#else
-#define PRIdS "zd"
-#endif
 
 using namespace std;
 
@@ -119,7 +109,6 @@ inline uint64_t GetMicroTime()
 #endif
 }
 
-#include <rave/rave.h>
 using namespace OpenRAVE;
 
 struct null_deleter

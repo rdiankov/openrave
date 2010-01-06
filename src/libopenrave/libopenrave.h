@@ -22,9 +22,7 @@ build openrave must include (used in place of rave.h). Precompiled header.
 #ifndef RAVE_LIBOPENRAVE_H
 #define RAVE_LIBOPENRAVE_H
 
-/// functions that allow plugins to program for the RAVE simulator
-#include <cstdio>
-#include <cmath>
+#include <rave/rave.h> // should be included first in order to get boost throwing openrave exceptions
 
 // include boost for vc++ only (to get typeof working)
 #ifdef _MSC_VER
@@ -74,12 +72,6 @@ build openrave must include (used in place of rave.h). Precompiled header.
 #include <winsock2.h>
 #endif
 
-#ifdef _MSC_VER
-#define PRIdS "Id"
-#else
-#define PRIdS "zd"
-#endif
-
 inline static uint32_t timeGetTime()
 {
 #ifdef _WIN32
@@ -119,7 +111,6 @@ inline static uint64_t GetMicroTime()
 
 #endif
 
-#include <boost/format.hpp>
 #include <boost/bind.hpp>
 
 namespace OpenRAVE {
@@ -154,7 +145,6 @@ namespace OpenRAVEXMLParser
 class Environment;
 class RaveDatabase;
 
-#include <rave/rave.h>
 using namespace OpenRAVE;
 using namespace std;
 
