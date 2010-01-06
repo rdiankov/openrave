@@ -18,10 +18,6 @@ from numpy import *
 from optparse import OptionParser
 from openravepy import *
 
-from Tkinter import *
-import tkFileDialog
-import Image, ImageDraw, ImageTk
-
 class CameraViewerGUI(threading.Thread):
     class Container:
         pass
@@ -503,6 +499,9 @@ class PA10GraspExample(VisibilityGrasping):
             self.orenvreal.LockPhysics(False)
 
 if __name__=='__main__':
+    from Tkinter import *
+    import tkFileDialog
+    import Image, ImageDraw, ImageTk
     parser = OptionParser(description='Visibility Planning Module.')
     parser.add_option('--examplenum',
                       action="store",type='int',dest='examplenum',default=0,
