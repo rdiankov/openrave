@@ -300,7 +300,7 @@ void IvObjectDragger::GetMessage(ostream& sout)
 IvJointDragger::IvJointDragger(QtCoinViewerPtr viewer, ItemPtr pItem, int iSelectedLink, float draggerScale, int iJointIndex, bool bHilitJoint) : IvDragger(viewer, pItem, draggerScale)
 {
     KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(pItem);
-    assert( !!pItem );
+    BOOST_ASSERT( !!pItem );
 
     _trackball = NULL;
     _draggerRoot = NULL;

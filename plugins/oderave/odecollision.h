@@ -209,13 +209,13 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         dContact contact[16];
         dGeomID geom1 = odespace->GetLinkGeom(plink1);
         while(geom1 != NULL) {
-            assert(dGeomIsEnabled(geom1));
+            BOOST_ASSERT(dGeomIsEnabled(geom1));
 
             dGeomID geom2 = odespace->GetLinkGeom(plink2);
 
             while(geom2 != NULL) {
 
-                assert(dGeomIsEnabled(geom2));
+                BOOST_ASSERT(dGeomIsEnabled(geom2));
 
                 int N = dCollide (geom1, geom2,16,&contact[0].geom,sizeof(dContact));
                 if (N) {
@@ -237,7 +237,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                                 Vector vnorm(contact[i].geom.normal);
                                 if( checkgeom1 != contact[i].geom.g1 )
                                     vnorm = -vnorm;
-                                assert( checkgeom1 == contact[i].geom.g1 || checkgeom1 == contact[i].geom.g2 );
+                                BOOST_ASSERT( checkgeom1 == contact[i].geom.g1 || checkgeom1 == contact[i].geom.g2 );
                                 report->contacts.push_back(COLLISIONREPORT::CONTACT(contact[i].geom.pos, vnorm, contact[i].geom.depth));
                             }
                         }
@@ -352,7 +352,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         dContact contact[16];
         dGeomID geom1 = odespace->GetLinkGeom(plink);
         while(geom1 != NULL) {
-            assert(dGeomIsEnabled(geom1));
+            BOOST_ASSERT(dGeomIsEnabled(geom1));
 
             int N = dCollide (geom1, geomray,16,&contact[0].geom,sizeof(dContact));
             if (N > 0) {
@@ -479,7 +479,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
         // check collision, ignore adjacent bodies
         FOREACHC(itset, pbody->GetNonAdjacentLinks()) {
-            assert( (*itset&0xffff) < (int)pbody->GetLinks().size() && (*itset>>16) < (int)pbody->GetLinks().size() );
+            BOOST_ASSERT( (*itset&0xffff) < (int)pbody->GetLinks().size() && (*itset>>16) < (int)pbody->GetLinks().size() );
             KinBody::LinkConstPtr plink1(pbody->GetLinks()[*itset&0xffff]), plink2(pbody->GetLinks()[*itset>>16]);
             if( plink1->IsEnabled() && plink2->IsEnabled() && CheckCollision(plink1,plink2, report) ) {
                 RAVELOG_VERBOSEA(str(boost::format("selfcol %s, Links %s %s are colliding\n")%pbody->GetName()%pbody->GetLinks()[*itset&0xffff]->GetName()%pbody->GetLinks()[*itset>>16]->GetName()));
@@ -739,7 +739,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                     if( pcb->_report->options & OpenRAVE::CO_Contacts ) {
                         pcb->_report->contacts.reserve(N);
                         for(int i = 0; i < N; ++i) {
-                            assert( checkgeom1 == contact[i].geom.g1 || checkgeom1 == contact[i].geom.g2 );
+                            BOOST_ASSERT( checkgeom1 == contact[i].geom.g1 || checkgeom1 == contact[i].geom.g2 );
                             Vector vnorm(contact[i].geom.normal);
                             if( checkgeom1 != contact[i].geom.g1 )
                                 vnorm = -vnorm;
@@ -800,7 +800,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
             dGeomID geomray = o2;
             dBodyID b = dGeomGetBody(o1);
             if( b == NULL ) {
-                assert( dGeomGetClass(o1) == dRayClass );
+                BOOST_ASSERT( dGeomGetClass(o1) == dRayClass );
                 geomray = o1;
                 b = dGeomGetBody(o2);
             }

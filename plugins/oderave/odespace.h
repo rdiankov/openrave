@@ -444,7 +444,7 @@ private:
         vector<Transform> vtrans;
         pinfo->pbody->GetBodyTransformations(vtrans);
         pinfo->nLastStamp = pinfo->pbody->GetUpdateStamp();
-        assert( vtrans.size() == pinfo->vlinks.size() );
+        BOOST_ASSERT( vtrans.size() == pinfo->vlinks.size() );
         for(size_t i = 0; i < vtrans.size(); ++i) {
             RaveTransform<dReal> t = vtrans[i];
             dBodySetQuaternion(pinfo->vlinks[i]->body, t.rot);

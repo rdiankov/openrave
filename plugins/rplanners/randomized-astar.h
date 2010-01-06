@@ -31,7 +31,7 @@ public:
         // negative because those are most likely to be popped first
         dReal getvalue() { return -ftotal; }
 
-        bool compare(const Node* r) { assert(r != NULL); return ftotal < r->ftotal; }
+        bool compare(const Node* r) { BOOST_ASSERT(r != NULL); return ftotal < r->ftotal; }
         
         dReal fcost, ftotal;
         int level;
@@ -196,7 +196,7 @@ public:
             // delete from current lists
             _sortedtree.blocks.pop_back();
             _vdeadnodes.push_back(pcurrent);
-            assert( pcurrent->numchildren < _parameters.nMaxChildren );
+            BOOST_ASSERT( pcurrent->numchildren < _parameters.nMaxChildren );
 
             if( pcurrent->ftotal - pcurrent->fcost < 1e-4f ) {
                 pbest = pcurrent;
@@ -366,7 +366,7 @@ private:
             start = 0;  bCheckEnd = true;
             break;
         default:
-            assert(0);
+            BOOST_ASSERT(0);
         }
 
         // first make sure the end is free

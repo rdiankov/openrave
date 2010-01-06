@@ -925,7 +925,7 @@ protected:
     TrajectoryBasePtr _MoveArm(const vector<int>& activejoints, const vector<dReal>& activegoalconfig, int& nGoalIndex, int nMaxIterations)
     {
         RAVELOG_DEBUGA("Starting MoveArm...\n");
-        assert( !!_pRRTPlanner );
+        BOOST_ASSERT( !!_pRRTPlanner );
         TrajectoryBasePtr ptraj;
         RobotBase::RobotStateSaver _saver(_robot);
 
@@ -994,7 +994,7 @@ protected:
             if( _pRRTPlanner->PlanPath(ptraj, boost::shared_ptr<ostream>(&ss,null_deleter())) ) {
                 ptraj->CalcTrajTiming(_robot, ptraj->GetInterpMethod(), true, true);
                 ss >> nGoalIndex; // extract the goal index
-                assert( nGoalIndex >= 0 && nGoalIndex < (int)params->vgoalconfig.size()/(int)activejoints.size() );
+                BOOST_ASSERT( nGoalIndex >= 0 && nGoalIndex < (int)params->vgoalconfig.size()/(int)activejoints.size() );
                 bSuccess = true;
                 RAVELOG_INFOA("finished planning, goal index: %d\n", nGoalIndex);
                 break;
@@ -1059,7 +1059,7 @@ protected:
 
         vector<dReal> vgoalconfigs;
         FOREACH(itgoal, listgraspsused) {
-            assert( itgoal->viksolution.size() == pmanip->GetArmJoints().size() );
+            BOOST_ASSERT( itgoal->viksolution.size() == pmanip->GetArmJoints().size() );
             vgoalconfigs.insert(vgoalconfigs.end(), itgoal->viksolution.begin(), itgoal->viksolution.end());
 
             int nsampled = CM::SampleIkSolutions(_robot, itgoal->tgrasp, nSeedIkSolutions, vgoalconfigs);
@@ -1077,7 +1077,7 @@ protected:
             return ptraj;
 
         list<GRASPGOAL>::iterator it = listgraspsused.begin();
-        assert( nGraspIndex >= 0 && nGraspIndex/(1+nSeedIkSolutions) < (int)listgraspsused.size() );
+        BOOST_ASSERT( nGraspIndex >= 0 && nGraspIndex/(1+nSeedIkSolutions) < (int)listgraspsused.size() );
         advance(it,nGraspIndex/(1+nSeedIkSolutions));
         goalfound = *it;
 

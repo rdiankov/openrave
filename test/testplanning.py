@@ -28,8 +28,8 @@ def test_grasping():
 def test_graspplanning():
     import graspplanning
     env = Environment()
-    env.Load('data/lab1.env.xml')
     env.SetViewer('qtcoin')
+    env.Load('data/lab1.env.xml')
     robot = env.GetRobots()[0]
     self = graspplanning.GraspPlanning(env,robot)
     self.graspAndPlaceObject(grasping=self.graspables[0][0],dests=self.graspables[0][1])

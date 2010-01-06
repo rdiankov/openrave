@@ -309,7 +309,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
             pbackward = _treeBackward._nodes.at(pbackward->parent);
         }
 
-        assert( goalindex >= 0 );
+        BOOST_ASSERT( goalindex >= 0 );
         if( pOutStream != NULL )
             *pOutStream << goalindex;
 
@@ -491,7 +491,7 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
 
         _OptimizePath(vecnodes);
     
-        assert( igoalindex >= 0 );
+        BOOST_ASSERT( igoalindex >= 0 );
         if( pOutStream != NULL )
             *pOutStream << igoalindex;
 

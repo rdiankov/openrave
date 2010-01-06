@@ -150,7 +150,7 @@ class BiSpacePlanner : public PlannerBase
 
         int AddNode(dReal fcost, int parent, const dReal* pfConfig)
         {
-            assert( pfConfig != NULL );
+            BOOST_ASSERT( pfConfig != NULL );
 
             void* pmem = malloc(sizeof(Node)+sizeof(dReal)*_dof);
             Node* p = ::new(pmem) Node(); // call constructor explicitly
@@ -166,7 +166,7 @@ class BiSpacePlanner : public PlannerBase
         {
             DVSTARTPROFILE();
 
-            assert( _pDistMetric!= NULL );
+            BOOST_ASSERT( _pDistMetric!= NULL );
             if( _nodes.size() == 0 )
                 return -1;
 
@@ -209,8 +209,8 @@ class BiSpacePlanner : public PlannerBase
             }
             else {
                 if( _planner->_searchtype == ST_rrtwork && RANDOM_FLOAT() < _planner->fConfigFollowProb ) {
-                    assert(!(info & TS_BackwardSearch));
-                    assert(_worknodes.size() == _nodes.size() );
+                    BOOST_ASSERT(!(info & TS_BackwardSearch));
+                    BOOST_ASSERT(_worknodes.size() == _nodes.size() );
 
                     // sample a goal node and take the closest neighbor
                     int index = RANDOM_INT((int)_planner->_vtransWorkGoals.size());
@@ -252,12 +252,12 @@ class BiSpacePlanner : public PlannerBase
         {
             DVSTARTPROFILE();
 
-            assert( _pSampleFn != NULL );
+            BOOST_ASSERT( _pSampleFn != NULL );
             _pSampleFn->Sample(pNewConfig);
 
             // get the nearest neighbor
             int inode = GetNN(pNewConfig);
-            assert(inode >= 0 );
+            BOOST_ASSERT(inode >= 0 );
             Node* pnode = _nodes[inode];
 
             // extend
@@ -558,7 +558,7 @@ class BiSpacePlanner : public PlannerBase
 
         if( _workspacetree._spacetype != SST_Active ) {
 
-            assert( _pmanip != NULL );
+            BOOST_ASSERT( _pmanip != NULL );
             vector<int>::const_iterator itjoint;
 
             Transform tEEinv = _pmanip->GetEndEffectorTransform().inverse();
@@ -644,7 +644,7 @@ class BiSpacePlanner : public PlannerBase
 
     virtual bool PlanPath(Trajectory* ptraj, std::ostream* pOutStream)
     {
-        assert( _robot != NULL && _parameters.pgoalfn!= NULL && _parameters.pcostfn != NULL && _parameters.pdistmetric != NULL );
+        BOOST_ASSERT( _robot != NULL && _parameters.pgoalfn!= NULL && _parameters.pcostfn != NULL && _parameters.pdistmetric != NULL );
 
         if( !_bInit )
             return false;
@@ -727,7 +727,7 @@ class BiSpacePlanner : public PlannerBase
                                 ptargworkconfig = &vworktemp[0];
                                 if( _workspacetree._spacetype == SST_3D ) _SetWorkspace3D(ptargworkconfig, _pmanip->GetEndEffectorTransform());
                                 else {
-                                    assert( _workspacetree._spacetype == SST_6D );
+                                    BOOST_ASSERT( _workspacetree._spacetype == SST_6D );
                                     _SetWorkspace6D(ptargworkconfig, _pmanip->GetEndEffectorTransform());
                                 }
                             }
@@ -927,7 +927,7 @@ class BiSpacePlanner : public PlannerBase
         ss << "\n-------\n";
         RAVEPRINT(ss.str().c_str());
 
-        assert(vecnodes.size() > 0);
+        BOOST_ASSERT(vecnodes.size() > 0);
 
         Trajectory::TPOINT p;
         p.q = _parameters.vinitialconfig;
@@ -977,7 +977,7 @@ class BiSpacePlanner : public PlannerBase
             start = 0;  bCheckEnd = true;
             break;
         default:
-            assert(0);
+            BOOST_ASSERT(0);
         }
 
         // first make sure the end is free
@@ -1033,7 +1033,7 @@ class BiSpacePlanner : public PlannerBase
                 vtempconfig[2] = pQ0[2] + (_jointIncrement[2] * f);
                 *(Vector*)&vtempconfig[3] = q0 * sin((1-time)*theta) + q1 * sin(time*theta);
                 normalize4(&vtempconfig[3], &vtempconfig[3]);
-                //assert( fabsf(1-((Vector*)&vtempconfig[3])->lengthsqr4()) < 0.001f );
+                //BOOST_ASSERT( fabsf(1-((Vector*)&vtempconfig[3])->lengthsqr4()) < 0.001f );
 
                 if( pvCheckedConfigurations != NULL )
                     pvCheckedConfigurations->push_back(vtempconfig);
@@ -1248,7 +1248,7 @@ class BiSpacePlanner : public PlannerBase
     int _AddFwdNode(int iparent, const dReal* pconfig)
     {
         int inode = _configtree.AddNode(0, iparent, pconfig);
-        assert(inode >= 0 && inode < (int)_configtree._worknodes.size());
+        BOOST_ASSERT(inode >= 0 && inode < (int)_configtree._worknodes.size());
 
         // assume the config has already been set
         vector<dReal>& vworkconfig = _configtree._worknodes[inode];
@@ -1606,7 +1606,7 @@ class BiSpacePlanner : public PlannerBase
             return true;
 
         // invalidate path, find the closest node to current robot position
-        //    assert( ifwdnode >= 0 );
+        //    BOOST_ASSERT( ifwdnode >= 0 );
         //
         //    vector<dReal> vtargetconfig;
         //    _SetWorkspaceFromFwdConfig(vtargetconfig, _configtree._nodes[ifwdnode]->q);
@@ -1625,7 +1625,7 @@ class BiSpacePlanner : public PlannerBase
         //        ++i;
         //    }
         //
-        //    assert( nclosest >= 0 );
+        //    BOOST_ASSERT( nclosest >= 0 );
         //    advance(itclosest, ((int)vecnodes.size()-nclosest)/2); // go half to the end
         //
         //    // invalidate everything up to itclosest
@@ -1711,7 +1711,7 @@ class BiSpacePlanner : public PlannerBase
     /// \return if target was successfully approached retursn true
     bool _ApproachTarget(const Transform& target, int& ifwdnode)
     {
-        assert( _pmanip != NULL );
+        BOOST_ASSERT( _pmanip != NULL );
 
         static vector<dReal> J;
         J.resize(_robot->GetActiveDOF()*4);
@@ -1842,7 +1842,7 @@ class BiSpacePlanner : public PlannerBase
 
     void _GetJacboianTransposeStep(dReal* pnewconfig, const dReal* pcurconfig, dReal* ptarget, dReal fStep)
     {
-        assert( _pmanip != NULL );
+        BOOST_ASSERT( _pmanip != NULL );
 
         static vector<dReal> J;
         J.resize(_robot->GetActiveDOF()*7);
@@ -1979,7 +1979,7 @@ class BiSpacePlanner : public PlannerBase
             //checks if pConf is within this cone (note: only works in 3D)
             float Eval(const void* c1)
             {
-                assert( _robot != NULL && _robot->GetActiveManipulator() != NULL && _robot->GetActiveManipulator()->pEndEffector != NULL );
+                BOOST_ASSERT( _robot != NULL && _robot->GetActiveManipulator() != NULL && _robot->GetActiveManipulator()->pEndEffector != NULL );
             
                 _robot->SetActiveDOFValues(NULL,(const dReal *) c1);
                 Transform cur = _robot->GetActiveManipulator()->GetEndEffectorTransform();
@@ -2020,7 +2020,7 @@ class BiSpacePlanner : public PlannerBase
 
             virtual float Eval(const void* c0, const void* c1)
             {
-                assert( _robot->GetActiveDOF() == (int)weights.size() );
+                BOOST_ASSERT( _robot->GetActiveDOF() == (int)weights.size() );
 
                 dReal out = 0;
                 for(int i=0; i < _robot->GetActiveDOF(); i++)

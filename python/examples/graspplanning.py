@@ -125,7 +125,7 @@ class GraspPlanning(metaclass.AutoReloader):
     def graspAndPlaceObject(self,grasping,dests):
         env = self.envreal#.CloneSelf(CloningOptions.Bodies)
         istartgrasp = 0
-        while istartgrasp < len(self.grasping.grasps):
+        while istartgrasp < len(grasping.grasps):
             goals,graspindex,searchtime,trajdata = self.taskmanip.GraspPlanning(graspindices=grasping.graspindices,grasps=grasping.grasps[istartgrasp:],
                                                                                 target=grasping.target,approachoffset=0.02,destposes=dests,
                                                                                 seedgrasps = 3,seeddests=8,seedik=1,maxiter=1000,

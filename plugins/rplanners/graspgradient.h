@@ -238,7 +238,7 @@ private:
                     }
                 }
 
-                assert(g.qgoal.size()>0);
+                BOOST_ASSERT(g.qgoal.size()>0);
             }
 
             g.fgoaldist = _parameters._distmetricfn(g.qgoal,_parameters.vinitialconfig);
@@ -284,7 +284,7 @@ private:
 
                 vpath.resize(0);
                 if( !CollisionFunctions::CheckCollision(_parameters,_robot,listpath.back(),q,OPEN_START,&vpath) ) {
-                    assert(vpath.size()>0);
+                    BOOST_ASSERT(vpath.size()>0);
                     if( !!_parameters._constraintfn ) {
                         vector<dReal> qnew(_robot->GetActiveDOF());
                         int goodind = -1;

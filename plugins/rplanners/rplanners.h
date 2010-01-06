@@ -37,7 +37,7 @@ public:
     // other global definitions
     void Add(T& pex)
     {
-        assert( pex != NULL );
+        BOOST_ASSERT( pex != NULL );
         
         switch(blocks.size()) {
 		    case 0:
@@ -120,7 +120,7 @@ class CollisionFunctions
             start = 0;  bCheckEnd = true;
             break;
         default:
-            assert(0);
+            BOOST_ASSERT(0);
         }
 
         // first make sure the end is free

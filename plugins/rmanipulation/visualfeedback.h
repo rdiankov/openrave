@@ -389,7 +389,7 @@ public:
 
 //            RaveVector<float> vpoints[2];
 //            vpoints[0] = r.pos;
-//            assert(_report.contacts.size() == 1 );
+//            BOOST_ASSERT(_report.contacts.size() == 1 );
 //            vpoints[1] = _report.contacts[0].pos;
 //            _robot->GetEnv()->drawlinestrip(vpoints[0],2,16,1.0f,Vector(0,0,1));
             if( !(!!_report->plink1 && _report->plink1->GetParent() == _ptargetbox) )

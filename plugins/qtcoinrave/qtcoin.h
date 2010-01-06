@@ -180,7 +180,7 @@ inline T CLAMP_ON_RANGE(T value, T min, T max)
 inline RaveTransform<float> GetRaveTransform(const SoTransform* ptrans)
 {
     RaveTransform<float> t;
-    assert( ptrans != NULL );
+    BOOST_ASSERT( ptrans != NULL );
     const float* q = ptrans->rotation.getValue().getValue();
     t.rot = Vector(q[3], q[0], q[1], q[2]);
     SbVec3f v = ptrans->translation.getValue();

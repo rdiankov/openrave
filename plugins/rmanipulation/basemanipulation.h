@@ -826,7 +826,7 @@ protected:
         if( !CM::MoveUnsync::_MoveUnsyncJoints(GetEnv(), robot, ptraj, vhandjoints, vhandgoal, strplanner) )
             return false;
 
-        assert(ptraj->GetPoints().size() > 0);
+        BOOST_ASSERT(ptraj->GetPoints().size() > 0);
 
         bool bExecuted = CM::SetActiveTrajectory(robot, ptraj, bExecute, strsavetraj, pOutputTrajStream);
         sout << (int)bExecuted << " ";
@@ -1157,7 +1157,7 @@ protected:
 
     static bool CheckCollision(RobotBasePtr probot, const vector<dReal>& q0, const vector<dReal>& q1, const vector<dReal>& qresolutioninv)
     {
-        assert( probot->GetDOF() == (int)q0.size() && probot->GetDOF()== (int)q1.size() && probot->GetDOF() == (int)qresolutioninv.size() );
+        BOOST_ASSERT( probot->GetDOF() == (int)q0.size() && probot->GetDOF()== (int)q1.size() && probot->GetDOF() == (int)qresolutioninv.size() );
     
         // set the bounds based on the interval type
         int start = 1;

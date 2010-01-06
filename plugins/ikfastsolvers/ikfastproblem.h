@@ -39,7 +39,7 @@ class IKSolutionFloat
             if( basesol[i].freeind < 0 )
                 psolution[i] = basesol[i].foffset;
             else {
-                assert(pfree != NULL);
+                BOOST_ASSERT(pfree != NULL);
                 psolution[i] = pfree[basesol[i].freeind]*basesol[i].fmul + basesol[i].foffset;
                 if( psolution[i] > IKPI )
                     psolution[i] -= IK2PI;
@@ -74,7 +74,7 @@ class IKSolutionDouble
             if( basesol[i].freeind < 0 )
                 psolution[i] = basesol[i].foffset;
             else {
-                assert(pfree != NULL);
+                BOOST_ASSERT(pfree != NULL);
                 psolution[i] = pfree[basesol[i].freeind]*basesol[i].fmul + basesol[i].foffset;
                 if( psolution[i] > IKPI )
                     psolution[i] -= IK2PI;

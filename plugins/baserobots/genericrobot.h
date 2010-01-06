@@ -48,7 +48,7 @@ class GenericRobot : public RobotBase
 
         if( _trajcur->GetDOF() != GetDOF() )
             RAVELOG_WARNA("trajectory of wrong dimension (traj dof=%d), needs to be %d dof\n", _trajcur->GetDOF(), GetDOF());
-        assert( _trajcur->GetDOF() == GetDOF() );
+        BOOST_ASSERT( _trajcur->GetDOF() == GetDOF() );
         _trajcur = ptraj;
         _state = ST_PATH_FOLLOW;
 

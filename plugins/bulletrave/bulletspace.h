@@ -173,7 +173,7 @@ public:
                 startTransform.setOrigin(GetBtVector((*itlink)->GetInertia().trans));
                 btVector3 localInertia;
                 link->tlocal = Transform();
-                assert(0); // need more work with setting inertia transform
+                BOOST_ASSERT(0); // need more work with setting inertia transform
         
                 link->motionstate.reset(new btDefaultMotionState(startTransform));
                 btRigidBody::btRigidBodyConstructionInfo rbInfo((*itlink)->GetMass(),link->motionstate.get(),pshapeparent,localInertia);
@@ -335,7 +335,7 @@ private:
         vector<Transform> vtrans;
         pinfo->pbody->GetBodyTransformations(vtrans);
         pinfo->nLastStamp = pinfo->pbody->GetUpdateStamp();
-        assert( vtrans.size() == pinfo->vlinks.size() );
+        BOOST_ASSERT( vtrans.size() == pinfo->vlinks.size() );
         for(size_t i = 0; i < vtrans.size(); ++i)
             pinfo->vlinks[i]->obj->getWorldTransform() = GetBtTransform(vtrans[i]*pinfo->vlinks[i]->tlocal);
 
