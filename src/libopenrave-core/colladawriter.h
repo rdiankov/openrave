@@ -1227,7 +1227,7 @@ public:
 
         if( pjoint->GetSecondAttached() != NULL && pbody->DoesAffect(jointindex, pjoint->GetSecondAttached()->GetIndex()) )
         {
-            assert( pjoint->GetMimicJointIndex() >= 0 || pchildlink == NULL );
+            BOOST_ASSERT( pjoint->GetMimicJointIndex() >= 0 || pchildlink == NULL );
             bool bSetSecond = true;
             if( pchildlink != NULL )
             {

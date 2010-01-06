@@ -1953,7 +1953,7 @@ protected:
             GetEnv()->Triangulate(trimesh, *itbody);
         }
 
-        assert( (trimesh.indices.size()%3) == 0 );
+        BOOST_ASSERT( (trimesh.indices.size()%3) == 0 );
         os << trimesh.vertices.size() << " " << trimesh.indices.size()/3 << " ";
         FOREACH(itvert, trimesh.vertices)
             os << itvert->x << " " << itvert->y << " " << itvert->z << " ";

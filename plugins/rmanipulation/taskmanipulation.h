@@ -56,19 +56,16 @@ class GraspVectorCompare : public RealVectorCompare
 class TaskManipulation : public ProblemInstance
 {
  public:
-    typedef std::map<vector<dReal>, boost::shared_ptr<Trajectory>, GraspVectorCompare > PRESHAPETRAJMAP;
+    typedef std::map<vector<dReal>, TrajectoryBasePtr, GraspVectorCompare > PRESHAPETRAJMAP;
 
  TaskManipulation(EnvironmentBasePtr penv) : ProblemInstance(penv) {
         RegisterCommand("createsystem",boost::bind(&TaskManipulation::CreateSystem,this,_1,_2),
                         "creates a sensor system and initializes it with the current bodies");
-//        RegisterCommand("HeadLookAt",(CommandFn)&TaskManipulation::HeadLookAt,
-//                        "Calculates the joint angles for the head to look at a specific target.\n"
-//                        "Can optionally move the head there");
 #ifdef HAVE_BOOST_REGEX
         RegisterCommand("switchmodels",boost::bind(&TaskManipulation::SwitchModels,this,_1,_2),
                         "Switches between thin and fat models for planning.");
 #endif
-        RegisterCommand("testallgrasps",boost::bind(&TaskManipulation::TestAllGrasps,this,_1,_2),
+        RegisterCommand("graspplanning",boost::bind(&TaskManipulation::GraspPlanning,this,_1,_2),
                         "Grasp planning, pick a grasp from a grasp set and use it for manipulation.\n"
                         "Can optionally use bispace for mobile platforms");
     }
@@ -167,7 +164,7 @@ class TaskManipulation : public ProblemInstance
         return true;
     }
 
-    bool TestAllGrasps(ostream& sout, istream& sinput)
+    bool GraspPlanning(ostream& sout, istream& sinput)
     {
         RAVELOG_DEBUG("TestingAllGrasps...\n");
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
@@ -178,7 +175,7 @@ class TaskManipulation : public ProblemInstance
         KinBodyPtr ptarget;
         RobotBasePtr probotHand;
         int nNumGrasps=0, nGraspDim=0;
-        dReal fOffset=0.0f; // offset before approaching to the target
+        dReal fApproachOffset=0.0f; // offset before approaching to the target
         vector<pair<string, string> > vSwitchPatterns;
         string targetname;
         vector<Transform> vObjDestinations;
@@ -244,17 +241,23 @@ class TaskManipulation : public ProblemInstance
                 string name; sinput >> name;
                 probotHand = GetEnv()->GetRobot(name);
             }
-            else if( cmd == "offset" )
-                sinput >> fOffset;
+            else if( cmd == "approachoffset" )
+                sinput >> fApproachOffset;
             else if( cmd == "quitafterfirstrun" )
                 bQuitAfterFirstRun = true;
-            else if( cmd == "destposes" ) {
+            else if( cmd == "matdests" ) {
                 int numdests = 0; sinput >> numdests;
                 vObjDestinations.resize(numdests);
                 FOREACH(ittrans, vObjDestinations) {
                     TransformMatrix m; sinput >> m;
                     *ittrans = m;
                 }
+            }
+            else if( cmd == "posedests" ) {
+                int numdests = 0; sinput >> numdests;
+                vObjDestinations.resize(numdests);
+                FOREACH(ittrans, vObjDestinations)
+                    sinput >> *ittrans;
             }
             else if( cmd == "seedgrasps" )
                 sinput >> nMaxSeedGrasps;
@@ -321,7 +324,7 @@ class TaskManipulation : public ProblemInstance
         PRESHAPETRAJMAP mapPreshapeTrajectories;
         {
             // fill with a trajectory with one point
-            boost::shared_ptr<Trajectory> pstarttraj(GetEnv()->CreateTrajectory(_robot->GetDOF()));
+            TrajectoryBasePtr pstarttraj = GetEnv()->CreateTrajectory(_robot->GetDOF());
             Trajectory::TPOINT tpstarthand;
             _robot->GetJointValues(tpstarthand.q);
             tpstarthand.trans = _robot->GetTransform();
@@ -329,7 +332,7 @@ class TaskManipulation : public ProblemInstance
             mapPreshapeTrajectories[vCurHandValues] = pstarttraj;
         }
 
-        boost::shared_ptr<Trajectory> ptraj;
+        TrajectoryBasePtr ptraj;
         GRASPGOAL goalFound;
         Transform transDestHand;
         int iCountdown = 0;
@@ -473,7 +476,7 @@ class TaskManipulation : public ProblemInstance
 
                 Transform t = phandtraj->GetPoints().back().trans;
 
-                // move back a little due to things being in collision
+                // move back a little if robot/target in collision
                 if( !!ptarget ) {
                     Vector vglobalpalmdir;
                     if( iGraspDir >= 0 )
@@ -525,9 +528,9 @@ class TaskManipulation : public ProblemInstance
                 // switch to fat models
                 SWITCHMODELS(true);
 
-                if( fOffset != 0 ) {
+                if( fApproachOffset != 0 ) {
                     // now test at the approach point (with offset)
-                    tnewrobot.trans -= (fOffset-fSmallOffset) * vglobalpalmdir;
+                    tnewrobot.trans -= (fApproachOffset-fSmallOffset) * vglobalpalmdir;
                     
                     // set the previous robot ik configuration to get the closest configuration!!
                     _robot->SetActiveDOFs(pmanip->GetArmJoints());
@@ -614,7 +617,7 @@ class TaskManipulation : public ProblemInstance
                 _robot->SetActiveDOFValues(vCurHandValues, true);
                 
                 _robot->SetActiveDOFs(pmanip->GetArmJoints());
-                boost::shared_ptr<Trajectory> ptrajToPreshape(GetEnv()->CreateTrajectory(pmanip->GetArmJoints().size()));
+                TrajectoryBasePtr ptrajToPreshape = GetEnv()->CreateTrajectory(pmanip->GetArmJoints().size());
                 bool bSuccess = CM::MoveUnsync::_MoveUnsyncJoints(GetEnv(), _robot, ptrajToPreshape, pmanip->GetGripperJoints(), vgoalpreshape);
                 
                 if( !bSuccess ) {
@@ -624,7 +627,7 @@ class TaskManipulation : public ProblemInstance
                 }
 
                 // get the full trajectory
-                boost::shared_ptr<Trajectory> ptrajToPreshapeFull(GetEnv()->CreateTrajectory(_robot->GetDOF()));
+                TrajectoryBasePtr ptrajToPreshapeFull = GetEnv()->CreateTrajectory(_robot->GetDOF());
                 _robot->GetFullTrajectoryFromActive(ptrajToPreshapeFull, ptrajToPreshape);
 
                 // add a grasp with the full preshape
@@ -701,7 +704,7 @@ class TaskManipulation : public ProblemInstance
                 return false;
             }
 
-            boost::shared_ptr<Trajectory> ptrajfinal(GetEnv()->CreateTrajectory(_robot->GetDOF()));
+            TrajectoryBasePtr ptrajfinal = GetEnv()->CreateTrajectory(_robot->GetDOF());
 
             if( bInitialRobotChanged )
                 ptrajfinal->AddPoint(Trajectory::TPOINT(vOrgRobotValues,_robot->GetTransform(), 0));
@@ -919,11 +922,11 @@ protected:
     inline boost::shared_ptr<TaskManipulation> shared_problem() { return boost::static_pointer_cast<TaskManipulation>(shared_from_this()); }
     inline boost::shared_ptr<TaskManipulation const> shared_problem_const() const { return boost::static_pointer_cast<TaskManipulation const>(shared_from_this()); }
 
-    boost::shared_ptr<Trajectory> _MoveArm(const vector<int>& activejoints, const vector<dReal>& activegoalconfig, int& nGoalIndex, int nMaxIterations)
+    TrajectoryBasePtr _MoveArm(const vector<int>& activejoints, const vector<dReal>& activegoalconfig, int& nGoalIndex, int nMaxIterations)
     {
         RAVELOG_DEBUGA("Starting MoveArm...\n");
         assert( !!_pRRTPlanner );
-        boost::shared_ptr<Trajectory> ptraj;
+        TrajectoryBasePtr ptraj;
         RobotBase::RobotStateSaver _saver(_robot);
 
         if( activejoints.size() == 0 ) {
@@ -1009,8 +1012,7 @@ protected:
     TrajectoryBasePtr _PlanGrasp(list<GRASPGOAL>& listGraspGoals, int nSeedIkSolutions, GRASPGOAL& goalfound, int nMaxIterations,PRESHAPETRAJMAP& mapPreshapeTrajectories)
     {
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
-
-        boost::shared_ptr<Trajectory> ptraj;
+        TrajectoryBasePtr ptraj;
 
         // set all teh goals, be careful! not all goals have the same preshape!!!
         if( listGraspGoals.size() == 0 )
@@ -1079,7 +1081,7 @@ protected:
         advance(it,nGraspIndex/(1+nSeedIkSolutions));
         goalfound = *it;
 
-        boost::shared_ptr<Trajectory> pfulltraj(GetEnv()->CreateTrajectory(_robot->GetDOF()));
+        TrajectoryBasePtr pfulltraj = GetEnv()->CreateTrajectory(_robot->GetDOF());
         _robot->SetActiveDOFs(pmanip->GetArmJoints());
         _robot->GetFullTrajectoryFromActive(pfulltraj, ptraj);
         

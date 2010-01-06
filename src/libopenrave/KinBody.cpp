@@ -1626,129 +1626,129 @@ void KinBody::ComputeJointHierarchy()
 {
     _bHierarchyComputed = true;
     _vecJointHierarchy.resize(_vecjoints.size()*_veclinks.size());
-    if( _vecJointHierarchy.size() == 0 )
-        return;
+    if( _vecJointHierarchy.size() > 0 ) {
 
-    memset(&_vecJointHierarchy[0], 0, _vecJointHierarchy.size() * sizeof(_vecJointHierarchy[0]));
+        memset(&_vecJointHierarchy[0], 0, _vecJointHierarchy.size() * sizeof(_vecJointHierarchy[0]));
     
-    for(size_t i = 0; i < _veclinks.size(); ++i) {
-        _veclinks[i]->userdata = _veclinks[i]->IsStatic();
-    }
-    _veclinks[0]->userdata = 1; // always set the first to be a root
+        for(size_t i = 0; i < _veclinks.size(); ++i) {
+            _veclinks[i]->userdata = _veclinks[i]->IsStatic();
+        }
+        _veclinks[0]->userdata = 1; // always set the first to be a root
 
-    typedef pair<JointPtr, int> JOINTPAIR;
-    list<JOINTPAIR> ljoints;
-    for(int i = 0; i < (int)_vecjoints.size(); ++i) {
-        ljoints.push_back(JOINTPAIR(_vecjoints[i], i));
-    }
-    for(int i = 0; i < (int)_vecPassiveJoints.size(); ++i)
-        ljoints.push_back(JOINTPAIR(_vecPassiveJoints[i], -1));
+        typedef pair<JointPtr, int> JOINTPAIR;
+        list<JOINTPAIR> ljoints;
+        for(int i = 0; i < (int)_vecjoints.size(); ++i) {
+            ljoints.push_back(JOINTPAIR(_vecjoints[i], i));
+        }
+        for(int i = 0; i < (int)_vecPassiveJoints.size(); ++i)
+            ljoints.push_back(JOINTPAIR(_vecPassiveJoints[i], -1));
 
-    list<JOINTPAIR>::iterator itjoint;
+        list<JOINTPAIR>::iterator itjoint;
 
-    // iterate through all the joints and keep track of which joint affects which link
-    while(ljoints.size() > 0) {
+        // iterate through all the joints and keep track of which joint affects which link
+        while(ljoints.size() > 0) {
 
-        int cursize = ljoints.size();
+            int cursize = ljoints.size();
 
-        itjoint = ljoints.begin();
-        while(itjoint != ljoints.end()) {
+            itjoint = ljoints.begin();
+            while(itjoint != ljoints.end()) {
             
-            bool bDelete = true;
-            bool bIsPassive = itjoint->second < 0;
-            boost::array<LinkPtr,2>& bodies = itjoint->first->bodies;
-            if( bIsPassive && itjoint->first->GetMimicJointIndex() < 0 ) {
-                // is not part of the hierarchy, but still used to join links
-                if( !!bodies[0] ) {
-                    if( !!bodies[1] ) {
-                        if( bodies[0]->userdata ) {
-                            bodies[1]->userdata = 1;
-                            int srcindex = bodies[0]->GetIndex();
-                            int dstindex = bodies[1]->GetIndex();
-                            // copy the data from bodies[0]
-                            for(int j = 0; j < (int)_vecjoints.size(); ++j) {
-                                _vecJointHierarchy[j*_veclinks.size()+dstindex] = _vecJointHierarchy[j*_veclinks.size()+srcindex];
+                bool bDelete = true;
+                bool bIsPassive = itjoint->second < 0;
+                boost::array<LinkPtr,2>& bodies = itjoint->first->bodies;
+                if( bIsPassive && itjoint->first->GetMimicJointIndex() < 0 ) {
+                    // is not part of the hierarchy, but still used to join links
+                    if( !!bodies[0] ) {
+                        if( !!bodies[1] ) {
+                            if( bodies[0]->userdata ) {
+                                bodies[1]->userdata = 1;
+                                int srcindex = bodies[0]->GetIndex();
+                                int dstindex = bodies[1]->GetIndex();
+                                // copy the data from bodies[0]
+                                for(int j = 0; j < (int)_vecjoints.size(); ++j) {
+                                    _vecJointHierarchy[j*_veclinks.size()+dstindex] = _vecJointHierarchy[j*_veclinks.size()+srcindex];
+                                }
                             }
-                        }
-                        else if( bodies[1]->userdata ) {
-                            bodies[0]->userdata = 1;
-                            int srcindex = bodies[1]->GetIndex();
-                            int dstindex = bodies[0]->GetIndex();
-                            // copy the data from bodies[1]
-                            for(int j = 0; j < (int)_vecjoints.size(); ++j) {
-                                _vecJointHierarchy[j*_veclinks.size()+dstindex] = _vecJointHierarchy[j*_veclinks.size()+srcindex];
+                            else if( bodies[1]->userdata ) {
+                                bodies[0]->userdata = 1;
+                                int srcindex = bodies[1]->GetIndex();
+                                int dstindex = bodies[0]->GetIndex();
+                                // copy the data from bodies[1]
+                                for(int j = 0; j < (int)_vecjoints.size(); ++j) {
+                                    _vecJointHierarchy[j*_veclinks.size()+dstindex] = _vecJointHierarchy[j*_veclinks.size()+srcindex];
+                                }
                             }
+                            else
+                                bDelete = false;
                         }
                         else
-                            bDelete = false;
+                            bodies[0]->userdata = 1;
                     }
-                    else
+
+                    if( bDelete ) itjoint = ljoints.erase(itjoint);
+                    else ++itjoint;
+                    continue;
+                }
+
+                char* pvalues = &_vecJointHierarchy[!bIsPassive ? itjoint->second*_veclinks.size() : itjoint->first->GetMimicJointIndex() * _veclinks.size()];
+
+                if( !!bodies[0] ) {
+                    if( !!bodies[1] ) {
+
+                        if( bodies[0]->userdata ) {
+                        
+                            int srcindex = bodies[0]->GetIndex();
+                            int dstindex = bodies[1]->GetIndex();
+                    
+                            if( bodies[1]->userdata ) {
+                                BOOST_ASSERT( pvalues[dstindex] >= 0 );
+                            }
+                            else {
+                                // copy the data from bodies[0]
+                                for(int j = 0; j < (int)_vecjoints.size(); ++j) {
+                                    _vecJointHierarchy[j*_veclinks.size()+dstindex] = _vecJointHierarchy[j*_veclinks.size()+srcindex];
+                                }
+                            }
+
+                            bodies[1]->userdata = 1;
+                            pvalues[dstindex] = 1;
+                        }
+                        else {
+
+                            if( bodies[1]->userdata ) {
+                                // copy the data from bodies[1]
+                                int srcindex = bodies[1]->GetIndex();
+                                int dstindex = bodies[0]->GetIndex();
+                            
+                                for(int j = 0; j < (int)_vecjoints.size(); ++j) {
+                                    _vecJointHierarchy[j*_veclinks.size()+dstindex] = _vecJointHierarchy[j*_veclinks.size()+srcindex];
+                                }
+
+                                bodies[0]->userdata = 1;
+                                pvalues[dstindex] = -1;
+                            }
+                            else bDelete = false; // skip
+                        }
+                    }
+                    else {
                         bodies[0]->userdata = 1;
+                        pvalues[bodies[0]->GetIndex()] = 1;
+                    }
                 }
 
                 if( bDelete ) itjoint = ljoints.erase(itjoint);
                 else ++itjoint;
-                continue;
             }
 
-            char* pvalues = &_vecJointHierarchy[!bIsPassive ? itjoint->second*_veclinks.size() : itjoint->first->GetMimicJointIndex() * _veclinks.size()];
-
-            if( !!bodies[0] ) {
-                if( !!bodies[1] ) {
-
-                    if( bodies[0]->userdata ) {
-                        
-                        int srcindex = bodies[0]->GetIndex();
-                        int dstindex = bodies[1]->GetIndex();
-                    
-                        if( bodies[1]->userdata ) {
-                            BOOST_ASSERT( pvalues[dstindex] >= 0 );
-                        }
-                        else {
-                            // copy the data from bodies[0]
-                            for(int j = 0; j < (int)_vecjoints.size(); ++j) {
-                                _vecJointHierarchy[j*_veclinks.size()+dstindex] = _vecJointHierarchy[j*_veclinks.size()+srcindex];
-                            }
-                        }
-
-                        bodies[1]->userdata = 1;
-                        pvalues[dstindex] = 1;
-                    }
-                    else {
-
-                        if( bodies[1]->userdata ) {
-                            // copy the data from bodies[1]
-                            int srcindex = bodies[1]->GetIndex();
-                            int dstindex = bodies[0]->GetIndex();
-                            
-                            for(int j = 0; j < (int)_vecjoints.size(); ++j) {
-                                _vecJointHierarchy[j*_veclinks.size()+dstindex] = _vecJointHierarchy[j*_veclinks.size()+srcindex];
-                            }
-
-                            bodies[0]->userdata = 1;
-                            pvalues[dstindex] = -1;
-                        }
-                        else bDelete = false; // skip
-                    }
-                }
-                else {
-                    bodies[0]->userdata = 1;
-                    pvalues[bodies[0]->GetIndex()] = 1;
-                }
+            if( cursize == (int)ljoints.size() ) {
+                RAVELOG_ERRORA("Cannot compute joint hierarchy for number of joints %"PRIdS"! Part of robot might not be moveable\n", _vecjoints.size());
+                break;
             }
-
-            if( bDelete ) itjoint = ljoints.erase(itjoint);
-            else ++itjoint;
         }
 
-        if( cursize == (int)ljoints.size() ) {
-            RAVELOG_ERRORA("Cannot compute joint hierarchy for number of joints %"PRIdS"! Part of robot might not be moveable\n", _vecjoints.size());
-            break;
-        }
+        if( ljoints.size() == 0 )
+            RAVELOG_DEBUGA("Successfully computed joint hierarchy for number of joints %"PRIdS"!\n", _vecjoints.size());
     }
-
-    if( ljoints.size() == 0 )
-        RAVELOG_DEBUGA("Successfully computed joint hierarchy for number of joints %"PRIdS"!\n", _vecjoints.size());
 
     // create the adjacency list
     vector<dReal> prevvalues; GetJointValues(prevvalues);
@@ -1800,6 +1800,12 @@ void KinBody::ComputeJointHierarchy()
     ofstream f(filename.c_str());
     WriteForwardKinematics(f);
     SetJointValues(prevvalues, true);
+
+    {
+        stringstream ss;
+        serialize(ss,SO_Kinematics);
+        __hashkinematics = GetMD5HashString(ss.str());
+    }
 }
 
 struct LINKTRANSINFO
@@ -2221,13 +2227,6 @@ void KinBody::serialize(std::ostream& o, int options) const
         FOREACHC(it,_vecPassiveJoints)
             (*it)->serialize(o,options);
     }
-}
-
-std::string KinBody::GetKinematicsGeometryHash() const
-{
-    stringstream ss;
-    serialize(ss,SO_Kinematics);
-    return GetMD5HashString(ss.str());
 }
 
 void KinBody::__erase_iterator(KinBodyWeakPtr pweakbody, std::list<std::pair<int,boost::function<void()> > >::iterator* pit)

@@ -1145,7 +1145,7 @@ protected:
                 pnewrobot->_vGrabbedBodies = (*itrobot)->_vGrabbedBodies;
                 pnewrobot->_listAttachedBodies = (*itrobot)->_listAttachedBodies;
 
-                assert( _mapBodies.find(pnewrobot->GetNetworkId()) == _mapBodies.end() );
+                BOOST_ASSERT( _mapBodies.find(pnewrobot->GetNetworkId()) == _mapBodies.end() );
                 _mapBodies[pnewrobot->GetNetworkId()] = pnewrobot;
                 _vecbodies.push_back(pnewrobot);
                 _vecrobots.push_back(pnewrobot);
@@ -1439,7 +1439,7 @@ protected:
         int id = _nNetworkIndex++;
         if( pOutNetworkId )
             *pOutNetworkId = id;
-        assert( _mapBodies.find(id) == _mapBodies.end() );
+        BOOST_ASSERT( _mapBodies.find(id) == _mapBodies.end() );
         _mapBodies[id] = pbody;
     }
 

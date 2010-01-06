@@ -22,6 +22,59 @@ class TaskManipulation:
             args += ' planner ' + plannername
         if env.LoadProblem(self.prob,args) != 0:
             raise ValueError('problem failed to initialize')
+    def  __del__(self):
+        self.prob.GetEnv().RemoveProblem(self.prob)
 
-    def TestAllGrasps(self,grasps,maxiter=None,randomgrasps=None,randomdests=None, execute=None,outputtraj=None):
-        pass
+    def GraspPlanning(self,graspindices,grasps,target,approachoffset=0,destposes=None,seedgrasps=None,seeddests=None,seedik=None,switchpatterns=None,maxiter=None,randomgrasps=None,randomdests=None, execute=None,outputtraj=None):
+        cmd = 'graspplanning target %s approachoffset %f grasps %d %d '%(target.GetName(),approachoffset, grasps.shape[0],grasps.shape[1])
+        for f in grasps.flat:
+            cmd += str(f) + ' '
+        for name,valuerange in graspindices.iteritems():
+            if name[0] == 'i':
+                cmd += name + ' ' + str(valuerange[0]) + ' '
+        if destposes is not None:
+            if len(destposes[0]) == 7: # pose
+                cmd += 'posedests %d '%len(destposes)
+                for pose in destposes:
+                    cmd += poseSerialization(pose) + ' '
+            else:
+                cmd += 'matdests %d '%len(destposes)
+                for mat in destposes:
+                    cmd += matrixSerialization(mat) + ' '
+        if seedgrasps is not None:
+            cmd += 'seedgrasps %d '%seedgrasps
+        if seeddests is not None:
+            cmd += 'seeddests %d '%seeddests
+        if seedik is not None:
+            cmd += 'seedik %d '%seedik
+        if switchpatterns is not None:
+            for pattern in switchpatterns:
+                cmd += 'switch %s %s '%(pattern[0],pattern[1])
+        if maxiter is not None:
+            cmd += 'maxiter %d '%maxiter
+        if randomgrasps is not None:
+            cmd += 'randomgrasps %d '%randomgrasps
+        if randomdests is not None:
+            cmd += 'randomdests %d '%randomdests
+        if execute is not None:
+            cmd += 'execute %d '%execute
+        if outputtraj is not None:
+            cmd += 'outputtraj %d '%outputtraj
+        res = self.prob.SendCommand(cmd)
+        if res is None:
+            raise ValueError('GraspPlanning failed')
+        resvalues = res.split()
+        numgoals = int(resvalues.pop(0))
+        goals = []
+        for i in range(numgoals):
+            T = eye(4)
+            for j in range(4):
+                for k in range(3):
+                    T[k][j] = float(resvalues.pop(0))
+            goals.append(T)
+        graspindex = int(resvalues.pop(0))
+        searchtime = double(resvalues.pop(0))
+        trajdata = None
+        if outputtraj is not None and outputtraj:
+            trajdata = ' '.join(resvalues)
+        return goals,graspindex,searchtime,trajdata

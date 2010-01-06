@@ -97,7 +97,7 @@ public:
             }
         }
 
-        assert( !probot || probot->IsRobot() );
+        BOOST_ASSERT( !probot || probot->IsRobot() );
         return probot;
     }
 

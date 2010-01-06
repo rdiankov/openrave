@@ -25,6 +25,8 @@ class Grasper:
             args += ' plannername %s '%plannername
         if env.LoadProblem(self.prob,args) != 0:
             raise ValueError('problem failed to initialize')
+    def  __del__(self):
+        self.prob.GetEnv().RemoveProblem(self.prob)
 
     def Grasp(self,direction,roll,position,standoff,target=None,stablecontacts=False,forceclosure=False,transformrobot=True,onlycontacttarget=True,tightgrasp=False,graspingnoise=None,execute=None,outputfinal=False):
         cmd = 'Grasp direction %f %f %f roll %f position %f %f %f standoff %f '%(direction[0],direction[1],direction[2],roll,position[0],position[1],position[2],standoff)

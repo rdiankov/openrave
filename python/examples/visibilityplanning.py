@@ -476,7 +476,6 @@ class PA10GraspExample(VisibilityGrasping):
                                 numcreated = numcreated+1
                                 body = None
                                 break
-                        
                         if body is not None:
                             self.orenvreal.RemoveKinBody(body)
                         if numcreated >= maxcreate:

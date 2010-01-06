@@ -93,6 +93,8 @@
 #define RAVE_PLUGIN_API extern "C"
 #endif
 
+#define OPENRAVE_VERSION 000100
+
 namespace OpenRAVE {
 
 #include <rave/defines.h>

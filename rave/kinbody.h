@@ -581,7 +581,7 @@ public:
     /// to index into tables when looking for body-specific models. OpenRAVE stores all
     /// such models in the OPENRAVE_HOME directory (usually ~/.openrave), indexed by the particular robot/body hashes.
     /// \return md5 hash string of kinematics/geometry
-    virtual std::string GetKinematicsGeometryHash() const;
+    virtual std::string GetKinematicsGeometryHash() const { return __hashkinematics; }
 
 protected:
     /// constructors declared protected so that user always goes through environment to create bodies
@@ -642,6 +642,7 @@ protected:
 
     bool _bHierarchyComputed; ///< true if the joint heirarchy and other cached information is computed
 private:
+    std::string __hashkinematics;
     mutable std::vector<dReal> _vTempJoints;
     virtual const char* GetHash() const { return OPENRAVE_KINBODY_HASH; }
 

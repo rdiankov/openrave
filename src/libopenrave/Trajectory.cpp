@@ -44,7 +44,7 @@ inline dReal  END_A(const TrajectoryBase::TSEGMENT& seg, int d)      { return se
 
 TrajectoryBase::TrajectoryBase(EnvironmentBasePtr penv, int nDOF) : InterfaceBase(PT_Trajectory, penv)
 {
-    //assert( nDOF > 0 );
+    //BOOST_ASSERT( nDOF > 0 );
     _nDOF = nDOF;
     _interpMethod  = LINEAR;
 }
@@ -68,7 +68,7 @@ void TrajectoryBase::Clear()
 bool TrajectoryBase::SetFromRawPathData(const dReal* pPathData, int numFrames)
 {
     // error checking
-    assert(pPathData != NULL );
+    BOOST_ASSERT(pPathData != NULL );
     
     _vecpoints.resize(numFrames);
 
@@ -182,12 +182,12 @@ bool TrajectoryBase::SampleTrajectory(dReal time, TPOINT &sample) const
 
     // set up interpolation
     int index = _FindActiveInterval(time);
-    assert (index < (int)_vecpoints.size() - 1);
+    BOOST_ASSERT (index < (int)_vecpoints.size() - 1);
     const TPOINT& p0 = _vecpoints[index];
     const TPOINT& p1 = _vecpoints[index+1];
     const TSEGMENT& seg = _vecsegments[index];
-    assert (p1.time != p0.time);
-    assert (seg._fduration > 0.0);
+    BOOST_ASSERT (p1.time != p0.time);
+    BOOST_ASSERT (seg._fduration > 0.0);
 
     if( _nDOF == (int)p0.qtorque.size() && _nDOF == (int)p1.qtorque.size() ) {
         sample.qtorque.resize(_nDOF);
@@ -219,7 +219,7 @@ bool TrajectoryBase::SampleTrajectory(dReal time, TPOINT &sample) const
           break;
 
         default:
-            assert(0);
+            BOOST_ASSERT(0);
     }
 
     return false;
@@ -322,7 +322,7 @@ bool TrajectoryBase::_SetLinear(bool bAutoCalcTiming, bool bActiveDOFs)
     // set the via point velocities to zero for slope direction
     // reversals.  Otherwise, use the average of the slopes of
     // the preceding and subsequent trajectory segments.
-    assert(_vecpoints.size()>0);
+    BOOST_ASSERT(_vecpoints.size()>0);
     for (size_t i = 1; i < _vecpoints.size()-1; i++) {
             
         _vecpoints[i].linearvel = (dReal)0.5f*(_vecsegments[i-1].linearvel+_vecsegments[i].linearvel);
@@ -429,7 +429,7 @@ bool TrajectoryBase::_SetLinear(bool bAutoCalcTiming, bool bActiveDOFs)
 //{
 //    // extract duration and calculate blend times
 //    float duration = p1.time - p0.time;
-//    assert ( duration > 0.0 );
+//    BOOST_ASSERT ( duration > 0.0 );
 //    float posDiff, slopeDiff, accel, halfBlendTime;
 //
 //    // calculate parabolic and linear blend parameters for all DOFs
@@ -552,7 +552,7 @@ bool TrajectoryBase::_SetCubic(bool bAutoCalcTiming, bool bActiveDOFs)
 void TrajectoryBase::_CalculateCubicCoefficients(TrajectoryBase::TSEGMENT& seg, const TPOINT& tp0, const TPOINT& tp1)
 {
     dReal t = tp1.time - tp0.time; // extract duration
-    assert ( t > 0.0 );
+    BOOST_ASSERT ( t > 0.0 );
     dReal t_2 = t*t;
     dReal t_3 = t * t_2;
 
@@ -676,7 +676,7 @@ void TrajectoryBase::_RecalculateViaPointDerivatives()
 //{
 //    // extract duration
 //    float t = tp1.time - tp0.time;
-//    assert ( t > 0.0 );
+//    BOOST_ASSERT ( t > 0.0 );
 //    float t_2 = SQR(t);
 //    float t_3 = t * t_2;
 //    float t_4 = t * t_3;
@@ -735,7 +735,7 @@ inline dReal TrajectoryBase::_MinimumTimeLinear(const TPOINT& tp0, const TPOINT&
         minPathTime = max(_MinimumTimeTransform(tp0.trans, tp1.trans),minPathTime);
 
 #ifndef _WIN32
-    assert( !isnan(minPathTime));
+    BOOST_ASSERT( !isnan(minPathTime));
 #endif
 
     return minPathTime;
@@ -769,7 +769,7 @@ dReal TrajectoryBase::_MinimumTimeCubic(const TPOINT& tp0, const TPOINT& tp1, bo
         minPathTime = max(_MinimumTimeTransform(tp0.trans, tp1.trans),minPathTime);
 
 #ifndef _WIN32
-    assert( !isnan(minPathTime));
+    BOOST_ASSERT( !isnan(minPathTime));
 #endif
 
     return minPathTime;
@@ -802,7 +802,7 @@ dReal TrajectoryBase::_MinimumTimeCubicZero(const TPOINT& tp0, const TPOINT& tp1
     if( !bActiveDOFs )
         minPathTime = max(_MinimumTimeTransform(tp0.trans, tp1.trans),minPathTime);
 #ifndef _WIN32
-    assert( !isnan(minPathTime));
+    BOOST_ASSERT( !isnan(minPathTime));
 #endif
     return minPathTime;
 }
@@ -837,7 +837,7 @@ dReal TrajectoryBase::_MinimumTimeQuintic(const TPOINT& tp0, const TPOINT& tp1, 
     if( !bActiveDOFs )
         minPathTime = max(_MinimumTimeTransform(tp0.trans, tp1.trans),minPathTime);
 #ifndef _WIN32
-    assert( !isnan(minPathTime));
+    BOOST_ASSERT( !isnan(minPathTime));
 #endif
 
     return minPathTime;
@@ -862,7 +862,7 @@ int TrajectoryBase::_FindActiveInterval(dReal time) const
     // for now, just do a simple linear search
     while (time > _vecpoints[index+1].time)
         index++;
-    assert (index < (int)_vecpoints.size() - 1);
+    BOOST_ASSERT (index < (int)_vecpoints.size() - 1);
 
     return index;
 }
@@ -872,9 +872,9 @@ inline bool TrajectoryBase::_SampleLinear(const TPOINT& p0, const TPOINT& p1,
                                       const TSEGMENT& seg, dReal time,
                                       TPOINT& sample) const
 {
-    assert (time >= p0.time && time <= p1.time);
-    assert (seg._fduration > 0.0);
-    assert (fabs((p1.time - p0.time) - seg._fduration) < 1e-4);
+    BOOST_ASSERT (time >= p0.time && time <= p1.time);
+    BOOST_ASSERT (seg._fduration > 0.0);
+    BOOST_ASSERT (fabs((p1.time - p0.time) - seg._fduration) < 1e-4);
     dReal  t = time - p0.time;
 
     sample.q.resize(_nDOF);
@@ -901,9 +901,9 @@ inline bool TrajectoryBase::_SampleLinearBlend(const TPOINT& p0, const TPOINT& p
                                            const TSEGMENT& seg, dReal time,
                                            TPOINT& sample) const
 {
-    assert (time >= p0.time && time <= p1.time);
-    assert (seg._fduration > 0.0);
-    //assert (fabs((p1.time - p0.time) - seg.duration) < VERY_SMALL);
+    BOOST_ASSERT (time >= p0.time && time <= p1.time);
+    BOOST_ASSERT (seg._fduration > 0.0);
+    //BOOST_ASSERT (fabs((p1.time - p0.time) - seg.duration) < VERY_SMALL);
     dReal  t = time - p0.time;
 
     for (int d = 0; d < _nDOF; d++) {
@@ -941,9 +941,9 @@ inline bool TrajectoryBase::_SampleCubic(const TPOINT& p0, const TPOINT& p1,
                                      const TSEGMENT& seg, dReal time,
                                      TPOINT& sample) const
 {
-    assert (time >= p0.time && time <= p1.time);
-    assert (seg._fduration > 0.0);
-    assert (fabs((p1.time - p0.time) - seg._fduration) < 1e-4);
+    BOOST_ASSERT (time >= p0.time && time <= p1.time);
+    BOOST_ASSERT (seg._fduration > 0.0);
+    BOOST_ASSERT (fabs((p1.time - p0.time) - seg._fduration) < 1e-4);
     dReal t = time - p0.time;
     dReal t_2 = t*t;
     dReal t_3 = t * t_2;
@@ -971,9 +971,9 @@ inline bool TrajectoryBase::_SampleQuintic(const TPOINT& p0, const TPOINT& p1,
                                        const TSEGMENT& seg, dReal time,
                                        TPOINT& sample) const
 {
-    assert (time >= p0.time && time <= p1.time);
-    assert (seg._fduration > 0.0);
-    assert (fabs((p1.time - p0.time) - seg._fduration) < 1e-4);
+    BOOST_ASSERT (time >= p0.time && time <= p1.time);
+    BOOST_ASSERT (seg._fduration > 0.0);
+    BOOST_ASSERT (fabs((p1.time - p0.time) - seg._fduration) < 1e-4);
     dReal t   = time - p0.time;
     dReal t_2 = t*t;
     dReal t_3 = t * t_2;
@@ -1050,7 +1050,7 @@ bool TrajectoryBase::Write(std::ostream& f, int options) const
             f << it->trans << " ";
 
         if( options & TO_IncludeVelocities ) {
-            assert((int)it->qdot.size()==GetDOF());
+            BOOST_ASSERT((int)it->qdot.size()==GetDOF());
             FOREACHC(itvel, it->qdot)
                 f << *itvel << " ";
 
@@ -1060,7 +1060,7 @@ bool TrajectoryBase::Write(std::ostream& f, int options) const
         }
 
         if( options & TO_IncludeTorques ) {
-            assert((int)it->qtorque.size()==GetDOF());
+            BOOST_ASSERT((int)it->qtorque.size()==GetDOF());
             FOREACHC(ittorque,it->qtorque)
                 f << *ittorque << " ";
         }

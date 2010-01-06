@@ -882,7 +882,7 @@ void SimpleSensorSystem::_UpdateBodies(list<SimpleSensorSystem::SNAPSHOT>& listb
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
 
         FOREACH(it, listbodies) {
-            assert( it->first->IsEnabled() );
+            BOOST_ASSERT( it->first->IsEnabled() );
 
             KinBody::LinkPtr plink = it->first->GetOffsetLink();
             if( !plink )

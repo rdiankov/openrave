@@ -47,19 +47,18 @@ class Grasping(metaclass.AutoReloader):
         self.graspindices = dict()
 
     def loadGrasps(self):
-        try:
-            self.grasps,self.graspindices,friction,avoidlinks,plannername = pickle.load(open(self.getGraspFilename(), 'r'))
-            self.grasper = Grasper(self.env,self.robot,friction,avoidlinks,plannername)
-            return self.hasGrasps()
-        except IOError:
+        if not os.path.isfile(self.getGraspFilename()):
             return False
+        self.grasps,self.graspindices,friction,avoidlinks,plannername = pickle.load(open(self.getGraspFilename(), 'r'))
+        self.grasper = Grasper(self.env,self.robot,friction,avoidlinks,plannername)
+        return self.hasGrasps()
 
     def saveGrasps(self):
         print 'saving grasps to %s'%self.getGraspFilename()
+        mkdir_recursive(os.path.join(self.env.GetHomeDirectory(),self.robot.GetRobotStructureHash()))
         pickle.dump((self.grasps,self.graspindices,self.grasper.friction,self.grasper.avoidlinks,self.grasper.plannername),open(self.getGraspFilename(), 'w'))
 
     def getGraspFilename(self):
-        self._mkdir(os.path.join(self.env.GetHomeDirectory(),self.robot.GetRobotStructureHash()))
         return os.path.join(self.env.GetHomeDirectory(),self.robot.GetRobotStructureHash(),self.manip.GetName() + '.' + self.target.GetKinematicsGeometryHash()+'.grasp.pp')
 
     def generateGraspSet(self,preshapes,standoffs,rolls,approachrays, graspingnoise=None,addSphereNorms=False,updateenv=True,forceclosurethreshold=1e-9):
@@ -69,7 +68,8 @@ class Grasping(metaclass.AutoReloader):
         totalgrasps = N*len(preshapes)*len(rolls)*len(standoffs)
         counter = 0
         self.grasps = []
-        graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':preshapes.shape[1],'igrasptrans':12,'iforceclosure':1}
+        # only the indices used by the TaskManipulation plugin should start with an 'i'
+        graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':preshapes.shape[1],'igrasptrans':12,'forceclosure':1}
         self.graspindices = dict()
         totaldof = 0
         for name,dof in graspdof.iteritems():
@@ -104,7 +104,7 @@ class Grasping(metaclass.AutoReloader):
                 self.env.UpdatePublishedBodies()
                 self.env.LockPhysics(False)
             grasp[self.graspindices.get('igrasptrans')] = reshape(transpose(finalconfig[1][0:3,0:4]),12)
-            grasp[self.graspindices.get('iforceclosure')] = mindist
+            grasp[self.graspindices.get('forceclosure')] = mindist
             if mindist > forceclosurethreshold:
                 print 'found good grasp'
                 self.grasps.append(grasp)
@@ -178,28 +178,9 @@ class Grasping(metaclass.AutoReloader):
             contactgraph = self.drawContacts(contacts)
             time.sleep(delay)
 
-    @staticmethod
-    def _mkdir(newdir):
-        """works the way a good mkdir should :)
-            - already exists, silently complete
-            - regular file in the way, raise an exception
-            - parent directory(ies) does not exist, make them as well
-        """
-        if os.path.isdir(newdir):
-            pass
-        elif os.path.isfile(newdir):
-            raise OSError("a file with the same name as the desired " \
-                          "dir, '%s', already exists." % newdir)
-        else:
-            head, tail = os.path.split(newdir)
-            if head and not os.path.isdir(head):
-                Grasping._mkdir(head)
-            if tail:
-                os.mkdir(newdir)
-
 def run():
     parser = OptionParser(description='Grasp set generation example for any robot/body pair.')
-    parser.add_option('--robot',action="store",type='string',dest='robot',default='robots/barrettwam.robot.xml',
+    parser.add_option('--robot',action="store",type='string',dest='robot',default='robots/barrettsegway.robot.xml',
                       help='The filename of the robot to load')
     parser.add_option('--body',action="store",type='string',dest='body',default='data/mug1.kinbody.xml',
                       help='The filename of the body whose grasp set to be generated')

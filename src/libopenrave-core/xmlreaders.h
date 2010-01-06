@@ -655,7 +655,9 @@ namespace OpenRAVEXMLParser
             }
             else if( _itgeomprop != _plink->_listGeomProperties.end() ) {
                 if( xmlname == "translation" ) {
-                    _ss >> _itgeomprop->_t.trans.x >> _itgeomprop->_t.trans.y >> _itgeomprop->_t.trans.z;
+                    Vector v;
+                    _ss >>v .x >> v.y >> v.z;
+                    _itgeomprop->_t.trans += v;
                 }
                 else if( xmlname == "rotationmat" ) {
                     TransformMatrix tnew;
@@ -1698,7 +1700,9 @@ namespace OpenRAVEXMLParser
                 return true;
             }
             else if( xmlname == "translation" ) {
-                _ss >> _trans.trans.x >> _trans.trans.y >> _trans.trans.z;
+                Vector v;
+                _ss >> v.x >> v.y >> v.z;
+                _trans.trans += v;
             }
             else if( xmlname == "rotationaxis" ) {
                 Vector vaxis; dReal fangle=0;
@@ -1996,7 +2000,9 @@ namespace OpenRAVEXMLParser
                 }
             }
             else if( xmlname == "translation" ) {
-                _ss >> _pmanip->_tGrasp.trans.x >> _pmanip->_tGrasp.trans.y >> _pmanip->_tGrasp.trans.z;
+                Vector v;
+                _ss >> v.x >> v.y >> v.z;
+                _pmanip->_tGrasp.trans += v;
             }
             else if( xmlname == "quat" ) {
                 Transform tnew;
@@ -2115,7 +2121,9 @@ namespace OpenRAVEXMLParser
                 }
             }
             else if( xmlname == "translation" ) {
-                _ss >> _psensor->trelative.trans.x >> _psensor->trelative.trans.y >> _psensor->trelative.trans.z;
+                Vector v;
+                _ss >> v.x >> v.y >> v.z;
+                _psensor->trelative.trans += v;
             }
             else if( xmlname == "quat" ) {
                 Transform tnew;
@@ -2260,7 +2268,9 @@ namespace OpenRAVEXMLParser
                 return true;
             }
             else if( xmlname == "translation" ) {
-                _ss >> _trans.trans.x >> _trans.trans.y >> _trans.trans.z;
+                Vector v;
+                _ss >> v.x >> v.y >> v.z;
+                _trans.trans += v;
             }
             else if( xmlname == "rotationaxis" ) {
                 Vector vaxis; dReal fangle=0;

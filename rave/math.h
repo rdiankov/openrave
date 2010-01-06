@@ -25,7 +25,6 @@
 #define RAVE_MATH_H
 
 #include <cmath>
-#include <cassert>
 #include <iostream>
 #include <cstring>
 #include <climits>
@@ -33,6 +32,13 @@
 
 #ifndef RAVE_API
 #define RAVE_API
+#endif
+
+#ifdef BOOST_ASSERT
+#define MATH_ASSERT BOOST_ASSERT
+#else
+#include <cassert>
+#define MATH_ASSERT assert
 #endif
 
 namespace OpenRAVE {
@@ -150,7 +156,7 @@ public:
     template<class U> RaveVector(const RaveVector<U> &vec) : x((T)vec.x), y((T)vec.y), z((T)vec.z), w((T)vec.w) {}
 
     /// note, it only copes 3 values!
-    template<class U> RaveVector(const U* pf) { assert(pf != NULL); x = (T)pf[0]; y = (T)pf[1]; z = (T)pf[2]; w = 0; }
+    template<class U> RaveVector(const U* pf) { MATH_ASSERT(pf != NULL); x = (T)pf[0]; y = (T)pf[1]; z = (T)pf[2]; w = 0; }
     
     T  operator[](int i) const       { return (&x)[i]; }
     T& operator[](int i)             { return (&x)[i]; }
@@ -168,14 +174,14 @@ public:
 
     inline RaveVector<T>& normalize4() {
         T f = x*x+y*y+z*z+w*w;
-        assert( f > 0 );
+        MATH_ASSERT( f > 0 );
         f = 1.0f / RaveSqrt(f);
         x *= f; y *= f; z *= f; w *= f;
         return *this;
     }
     inline RaveVector<T>& normalize3() {
         T f = x*x+y*y+z*z;
-        assert( f > 0 );
+        MATH_ASSERT( f > 0 );
         f = 1.0f / RaveSqrt(f);
         x *= f; y *= f; z *= f;
         return *this;
@@ -266,11 +272,11 @@ public:
         rot = t.rot;
         trans = t.trans;
         T fnorm = rot.lengthsqr4();
-        assert( fnorm > 0.99f && fnorm < 1.01f );
+        MATH_ASSERT( fnorm > 0.99f && fnorm < 1.01f );
     }
     template <class U> RaveTransform(const RaveVector<U>& rot, const RaveVector<U>& trans) : rot(rot), trans(trans) {
         T fnorm = rot.lengthsqr4();
-        assert( fnorm > 0.99f && fnorm < 1.01f );
+        MATH_ASSERT( fnorm > 0.99f && fnorm < 1.01f );
     }
     inline RaveTransform(const RaveTransformMatrix<T>& t);
 
@@ -286,7 +292,7 @@ public:
         rot.z = axis.y*sinang;
         rot.w = axis.z*sinang;
         T fnorm = rot.lengthsqr4();
-        assert( fnorm > 0.99f && fnorm < 1.01f );
+        MATH_ASSERT( fnorm > 0.99f && fnorm < 1.01f );
         return *this;
     }
 
@@ -324,7 +330,7 @@ public:
         t.rot.w = rot.x*r.rot.w + rot.w*r.rot.x + rot.y*r.rot.z - rot.z*r.rot.y;
         // normalize the transformation
         T fnorm = t.rot.lengthsqr4();
-        assert( fnorm > 0.98f && fnorm < 1.02f );
+        MATH_ASSERT( fnorm > 0.98f && fnorm < 1.02f );
         t.rot /= RaveSqrt(fnorm);
         return t;
     }
@@ -339,7 +345,7 @@ public:
         t.rot.w = rot.x*r.rot.w + rot.w*r.rot.x + rot.y*r.rot.z - rot.z*r.rot.y;
         // normalize the transformation
         T fnorm = t.rot.lengthsqr4();
-        assert( fnorm > 0.98f && fnorm < 1.02f );
+        MATH_ASSERT( fnorm > 0.98f && fnorm < 1.02f );
         t.rot /= RaveSqrt(fnorm);
         return t;
     }
@@ -364,7 +370,7 @@ public:
         trans = r.trans;
         rot = r.rot;
         T fnorm = rot.lengthsqr4();
-        assert( fnorm > 0.99f && fnorm < 1.01f );
+        MATH_ASSERT( fnorm > 0.99f && fnorm < 1.01f );
         return *this;
     }
 
@@ -436,11 +442,11 @@ public:
     }
 
     inline T rot(int i, int j) const {
-        assert( i >= 0 && i < 3 && j >= 0 && j < 3);
+        MATH_ASSERT( i >= 0 && i < 3 && j >= 0 && j < 3);
         return m[4*i+j];
     }
     inline T& rot(int i, int j) {
-        assert( i >= 0 && i < 3 && j >= 0 && j < 3);
+        MATH_ASSERT( i >= 0 && i < 3 && j >= 0 && j < 3);
         return m[4*i+j];
     }
     
@@ -768,7 +774,7 @@ inline int solvequad(T a, T b, T c, T& r1, T& r2)
 template <class T>
 inline T* _mult3_s4(T* pfres, const T* pf1, const T* pf2)
 {
-	assert( pf1 != NULL && pf2 != NULL && pfres != NULL );
+	MATH_ASSERT( pf1 != NULL && pf2 != NULL && pfres != NULL );
 
 	T* pfres2;
 	if( pfres == pf1 || pfres == pf2 ) pfres2 = (T*)alloca(12 * sizeof(T));
@@ -785,7 +791,7 @@ inline T* _mult3_s4(T* pfres, const T* pf1, const T* pf2)
 template <class T>
 inline T* _mult3_s3(T* pfres, const T* pf1, const T* pf2)
 {
-	assert( pf1 != NULL && pf2 != NULL && pfres != NULL );
+	MATH_ASSERT( pf1 != NULL && pf2 != NULL && pfres != NULL );
 
 	T* pfres2;
 	if( pfres == pf1 || pfres == pf2 ) pfres2 = (T*)alloca(9 * sizeof(T));
@@ -802,7 +808,7 @@ inline T* _mult3_s3(T* pfres, const T* pf1, const T* pf2)
 template <class T> 
 inline T* _mult4(T* pfres, const T* p1, const T* p2)
 {
-	assert( pfres != NULL && p1 != NULL && p2 != NULL );
+	MATH_ASSERT( pfres != NULL && p1 != NULL && p2 != NULL );
 
 	T* pfres2;
 	if( pfres == p1 || pfres == p2 ) pfres2 = (T*)alloca(16 * sizeof(T));
@@ -1085,7 +1091,7 @@ inline T* _inv4(const T* pf, T* pfres)
 template <class T>
 inline T* _transpose3(const T* pf, T* pfres)
 {
-	assert( pf != NULL && pfres != NULL );
+	MATH_ASSERT( pf != NULL && pfres != NULL );
 
 	if( pf == pfres ) {
         std::swap(pfres[1], pfres[3]);
@@ -1104,7 +1110,7 @@ inline T* _transpose3(const T* pf, T* pfres)
 template <class T>
 inline T* _transpose4(const T* pf, T* pfres)
 {
-	assert( pf != NULL && pfres != NULL );
+	MATH_ASSERT( pf != NULL && pfres != NULL );
 
 	if( pf == pfres ) {
 		std::swap(pfres[1], pfres[4]);
@@ -1126,49 +1132,49 @@ inline T* _transpose4(const T* pf, T* pfres)
 template <class T>
 inline T _dot2(const T* pf1, const T* pf2)
 {
-	assert( pf1 != NULL && pf2 != NULL );
+	MATH_ASSERT( pf1 != NULL && pf2 != NULL );
 	return pf1[0]*pf2[0] + pf1[1]*pf2[1];
 }
 
 template <class T>
 inline T _dot3(const T* pf1, const T* pf2)
 {
-	assert( pf1 != NULL && pf2 != NULL );
+	MATH_ASSERT( pf1 != NULL && pf2 != NULL );
 	return pf1[0]*pf2[0] + pf1[1]*pf2[1] + pf1[2]*pf2[2];
 }
 
 template <class T>
 inline T _dot4(const T* pf1, const T* pf2)
 {
-	assert( pf1 != NULL && pf2 != NULL );
+	MATH_ASSERT( pf1 != NULL && pf2 != NULL );
 	return pf1[0]*pf2[0] + pf1[1]*pf2[1] + pf1[2]*pf2[2] + pf1[3] * pf2[3];
 }
 
 template <class T>
 inline T _lengthsqr2(const T* pf)
 {
-	assert( pf != NULL );
+	MATH_ASSERT( pf != NULL );
 	return pf[0] * pf[0] + pf[1] * pf[1];
 }
 
 template <class T>
 inline T _lengthsqr3(const T* pf)
 {
-	assert( pf != NULL );
+	MATH_ASSERT( pf != NULL );
 	return pf[0] * pf[0] + pf[1] * pf[1] + pf[2] * pf[2];
 }
 
 template <class T>
 inline T _lengthsqr4(const T* pf)
 {
-	assert( pf != NULL );
+	MATH_ASSERT( pf != NULL );
 	return pf[0] * pf[0] + pf[1] * pf[1] + pf[2] * pf[2] + pf[3] * pf[3];
 }
 
 template <class T>
 inline T* _normalize2(T* pfout, const T* pf)
 {
-	assert(pf != NULL);
+	MATH_ASSERT(pf != NULL);
 
 	T f = pf[0]*pf[0] + pf[1]*pf[1];
 	f = 1 / RaveSqrt(f);
@@ -1181,7 +1187,7 @@ inline T* _normalize2(T* pfout, const T* pf)
 template <class T>
 inline T* _normalize3(T* pfout, const T* pf)
 {
-	assert(pf != NULL);
+	MATH_ASSERT(pf != NULL);
 
 	T f = pf[0]*pf[0] + pf[1]*pf[1] + pf[2]*pf[2];
 
@@ -1196,7 +1202,7 @@ inline T* _normalize3(T* pfout, const T* pf)
 template <class T>
 inline T* _normalize4(T* pfout, const T* pf)
 {
-	assert(pf != NULL);
+	MATH_ASSERT(pf != NULL);
 
 	T f = pf[0]*pf[0] + pf[1]*pf[1] + pf[2]*pf[2] + pf[3]*pf[3];
 
@@ -1212,7 +1218,7 @@ inline T* _normalize4(T* pfout, const T* pf)
 template <class T>
 inline T* _cross3(T* pfout, const T* pf1, const T* pf2)
 {
-	assert( pfout != NULL && pf1 != NULL && pf2 != NULL );
+	MATH_ASSERT( pfout != NULL && pf1 != NULL && pf2 != NULL );
 
     T temp[3];
 	temp[0] = pf1[1] * pf2[2] - pf1[2] * pf2[1];
@@ -1226,7 +1232,7 @@ inline T* _cross3(T* pfout, const T* pf1, const T* pf2)
 template <class T>
 inline T* transcoord3(T* pfout, const RaveTransformMatrix<T>* pmat, const T* pf)
 {
-	assert( pfout != NULL && pf != NULL && pmat != NULL );
+	MATH_ASSERT( pfout != NULL && pf != NULL && pmat != NULL );
     
     T dummy[3];
 	T* pfreal = (pfout == pf) ? dummy : pfout;
@@ -1247,7 +1253,7 @@ inline T* transcoord3(T* pfout, const RaveTransformMatrix<T>* pmat, const T* pf)
 template <class T>
 inline T* _transnorm3(T* pfout, const T* pfmat, const T* pf)
 {
-	assert( pfout != NULL && pf != NULL && pfmat != NULL );
+	MATH_ASSERT( pfout != NULL && pf != NULL && pfmat != NULL );
 
     T dummy[3];
 	T* pfreal = (pfout == pf) ? dummy : pfout;
@@ -1268,7 +1274,7 @@ inline T* _transnorm3(T* pfout, const T* pfmat, const T* pf)
 template <class T>
 inline T* transnorm3(T* pfout, const RaveTransformMatrix<T>* pmat, const T* pf)
 {
-	assert( pfout != NULL && pf != NULL && pmat != NULL );
+	MATH_ASSERT( pfout != NULL && pf != NULL && pmat != NULL );
 
 	T dummy[3];
     T* pfreal = (pfout == pf) ? dummy : pfout;
@@ -1363,7 +1369,7 @@ RAVE_API bool AABBCollision(const AABB& ab1, const AABB& ab2);
 
 template <class T> inline void mult(T* pf, T fa, int r)
 {
-	assert( pf != NULL );
+	MATH_ASSERT( pf != NULL );
 
 	while(r > 0) {
 		--r;
@@ -1374,7 +1380,7 @@ template <class T> inline void mult(T* pf, T fa, int r)
 template <class T, class R, class S>
 inline S* mult(T* pf1, R* pf2, int r1, int c1, int c2, S* pfres, bool badd)
 {
-	assert( pf1 != NULL && pf2 != NULL && pfres != NULL);
+	MATH_ASSERT( pf1 != NULL && pf2 != NULL && pfres != NULL);
 	int j, k;
 
 	if( !badd ) memset(pfres, 0, sizeof(S) * r1 * c2);
@@ -1402,7 +1408,7 @@ inline S* mult(T* pf1, R* pf2, int r1, int c1, int c2, S* pfres, bool badd)
 template <class T, class R, class S>
 inline S* multtrans(T* pf1, R* pf2, int r1, int c1, int c2, S* pfres, bool badd)
 {
-	assert( pf1 != NULL && pf2 != NULL && pfres != NULL);
+	MATH_ASSERT( pf1 != NULL && pf2 != NULL && pfres != NULL);
 	int i, j, k;
 
 	if( !badd ) memset(pfres, 0, sizeof(S) * c1 * c2);
@@ -1433,7 +1439,7 @@ inline S* multtrans(T* pf1, R* pf2, int r1, int c1, int c2, S* pfres, bool badd)
 template <class T, class R, class S>
 inline S* multtrans_to2(T* pf1, R* pf2, int r1, int c1, int r2, S* pfres, bool badd)
 {
-	assert( pf1 != NULL && pf2 != NULL && pfres != NULL);
+	MATH_ASSERT( pf1 != NULL && pf2 != NULL && pfres != NULL);
 	int j, k;
 
 	if( !badd ) memset(pfres, 0, sizeof(S) * r1 * r2);
@@ -1460,7 +1466,7 @@ inline S* multtrans_to2(T* pf1, R* pf2, int r1, int c1, int r2, S* pfres, bool b
 
 template <class T> inline T* multto1(T* pf1, T* pf2, int r, int c, T* pftemp)
 {
-	assert( pf1 != NULL && pf2 != NULL );
+	MATH_ASSERT( pf1 != NULL && pf2 != NULL );
 
 	int j, k;
 	bool bdel = false;
@@ -1497,7 +1503,7 @@ template <class T> inline T* multto1(T* pf1, T* pf2, int r, int c, T* pftemp)
 
 template <class T, class S> inline T* multto2(T* pf1, S* pf2, int r2, int c2, S* pftemp)
 {
-	assert( pf1 != NULL && pf2 != NULL );
+	MATH_ASSERT( pf1 != NULL && pf2 != NULL );
 
 	int i, j, k;
 	bool bdel = false;
@@ -1539,7 +1545,7 @@ template <class T, class S> inline T* multto2(T* pf1, S* pf2, int r2, int c2, S*
 
 template <class T> inline void add(T* pf1, T* pf2, int r)
 {
-	assert( pf1 != NULL && pf2 != NULL);
+	MATH_ASSERT( pf1 != NULL && pf2 != NULL);
 
 	while(r > 0) {
 		--r;
@@ -1549,7 +1555,7 @@ template <class T> inline void add(T* pf1, T* pf2, int r)
 
 template <class T> inline void sub(T* pf1, T* pf2, int r)
 {
-	assert( pf1 != NULL && pf2 != NULL);
+	MATH_ASSERT( pf1 != NULL && pf2 != NULL);
 
 	while(r > 0) {
 		--r;
@@ -1559,7 +1565,7 @@ template <class T> inline void sub(T* pf1, T* pf2, int r)
 
 template <class T> inline T normsqr(const T* pf1, int r)
 {
-	assert( pf1 != NULL );
+	MATH_ASSERT( pf1 != NULL );
 
 	T d = 0.0;
 	while(r > 0) {
@@ -1669,7 +1675,7 @@ void Tridiagonal3 (S* mat, T* diag, T* subd)
 template <class T>
 int Min(T* pts, int stride, int numPts)
 {
-    assert( pts != NULL && numPts > 0 && stride > 0 );
+    MATH_ASSERT( pts != NULL && numPts > 0 && stride > 0 );
 
     int best = pts[0]; pts += stride;
     for(int i = 1; i < numPts; ++i, pts += stride) {
@@ -1683,7 +1689,7 @@ int Min(T* pts, int stride, int numPts)
 template <class T>
 int Max(T* pts, int stride, int numPts)
 {
-    assert( pts != NULL && numPts > 0 && stride > 0 );
+    MATH_ASSERT( pts != NULL && numPts > 0 && stride > 0 );
 
     int best = pts[0]; pts += stride;
     for(int i = 1; i < numPts; ++i, pts += stride) {

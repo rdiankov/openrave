@@ -435,7 +435,7 @@ public:
 
     /// A md5 hash unique to the particular robot structure that involves manipulation and sensing components
     /// The serialization for the attached sensors will not involve any sensor specific properties (since they can change through calibration)
-    virtual std::string GetRobotStructureHash() const;
+    virtual std::string GetRobotStructureHash() const { return __hashrobotstructure; }
     
 protected:
     RobotBase(EnvironmentBasePtr penv);
@@ -463,6 +463,7 @@ protected:
     Vector _vRotation3DLowerLimits, _vRotation3DUpperLimits, _vRotation3DMaxVels, _vRotation3DResolutions;
     Vector _vRotationQuatLowerLimits, _vRotationQuatUpperLimits, _vRotationQuatMaxVels, _vRotationQuatResolutions;
 private:
+    std::string __hashrobotstructure;
     mutable std::vector<dReal> _vTempRobotJoints;
     virtual const char* GetHash() const { return OPENRAVE_ROBOT_HASH; }
     virtual const char* GetKinBodyHash() const { return OPENRAVE_KINBODY_HASH; }

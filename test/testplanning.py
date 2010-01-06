@@ -7,7 +7,7 @@ import numpy
 def test_grasping():
     import grasping
     env = Environment()
-    robot = env.ReadRobotXMLFile('robots/barrettwam.robot.xml')
+    robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
     env.AddRobot(robot)
     T = eye(4)
     T[0,3] = 1

@@ -556,7 +556,7 @@ protected:
 
         RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();
 
-        list<TransformMatrix> listgoals;
+        list<Transform> listgoals;
         bool bIncludeHandTm = false;
         TransformMatrix handTm = pmanip->GetEndEffectorTransform();
     
@@ -580,10 +580,12 @@ protected:
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
         
             if( cmd == "trans" ) {
+                RAVELOG_WARN("MoveToHandPosition: trans parameter has been deprecated, switch to matrix/matrices/poses");
                 bIncludeHandTm = true;
                 sinput >> handTm.trans.x >> handTm.trans.y >> handTm.trans.z;
             }
             else if( cmd == "rot" ) {
+                RAVELOG_WARN("MoveToHandPosition: rot parameter has been deprecated, switch to matrix/matrices/poses");
                 bIncludeHandTm = true;
                 sinput >> handTm.m[0] >> handTm.m[4] >> handTm.m[8]
                        >> handTm.m[1] >> handTm.m[5] >> handTm.m[9]
@@ -592,14 +594,28 @@ protected:
             else if( cmd == "outputtraj" )
                 pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
             else if( cmd == "matrix" ) {
-                listgoals.push_back(TransformMatrix());
-                sinput >> listgoals.back();
+                TransformMatrix m;
+                sinput >> m;
+                listgoals.push_back(m);
             }
             else if( cmd == "matrices" ) {
+                TransformMatrix m;
                 int num = 0;
                 sinput >> num;
                 while(num-->0) {
-                    listgoals.push_back(TransformMatrix());
+                    sinput >> m;
+                    listgoals.push_back(m);
+                }
+            }
+            else if( cmd == "pose" ) {
+                listgoals.push_back(Transform());
+                sinput >> listgoals.back();
+            }
+            else if( cmd == "poses" ) {
+                int num = 0;
+                sinput >> num;
+                while(num-->0) {
+                    listgoals.push_back(Transform());
                     sinput >> listgoals.back();
                 }
             }
@@ -1079,9 +1095,11 @@ protected:
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "trans" ) {
+                RAVELOG_WARN("IKtest: trans parameter has been deprecated, switch to matrix/matrices/poses");
                 sinput >> handTm.trans.x >> handTm.trans.y >> handTm.trans.z;
             }
             else if( cmd == "rot" ) {
+                RAVELOG_WARN("IKtest: rot parameter has been deprecated, switch to matrix/matrices/poses");
                 sinput >> handTm.m[0] >> handTm.m[4] >> handTm.m[8]
                        >> handTm.m[1] >> handTm.m[5] >> handTm.m[9]
                        >> handTm.m[2] >> handTm.m[6] >> handTm.m[10];

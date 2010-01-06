@@ -1661,6 +1661,12 @@ void RobotBase::ComputeJointHierarchy()
                 RAVELOG_WARN(str(boost::format("robot %s has two manipulators with the same name: %s!\n")%GetName()%(*itmanip)->GetName()));
         }
     }
+
+    {
+        stringstream ss;
+        serialize(ss,SO_Kinematics|SO_RobotManipulators|SO_RobotSensors);
+        __hashrobotstructure = GetMD5HashString(ss.str());
+    }
 }
 
 bool RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
@@ -1732,13 +1738,6 @@ void RobotBase::serialize(std::ostream& o, int options) const
         FOREACHC(itsensor,_vecSensors)
             (*itsensor)->serialize(o,options);
     }
-}
-
-std::string RobotBase::GetRobotStructureHash() const
-{
-    stringstream ss;
-    serialize(ss,SO_Kinematics|SO_RobotManipulators|SO_RobotSensors);
-    return GetMD5HashString(ss.str());
 }
 
 } // end namespace OpenRAVE

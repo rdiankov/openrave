@@ -51,6 +51,8 @@ class VisualFeedback:
                 self.robot.SetActiveManipulator(manips[0][0])
         finally:
             env.LockPhysics(False)
+    def  __del__(self):
+        self.prob.GetEnv().RemoveProblem(self.prob)
 
     def ProcessVisibilityExtents(self,target,convexfile=None,convexdata=None,visibilityfile=None,visibilitydata=None,extentsfile=None,extentsdata=None):
         cmd = 'ProcessVisibilityExtents target %s '%target.GetName()
