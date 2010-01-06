@@ -1674,6 +1674,7 @@ void QtCoinViewer::SetupMenus()
     connect(pcurmenu, SIGNAL(aboutToShow()), this, SLOT(UpdateInterfaces()));
     _pMenuSendCommand = pcurmenu->addMenu(tr("&Send Command"));
     _pActionSendCommand = new QActionGroup(this);
+    connect( _pActionSendCommand, SIGNAL(triggered(QAction*)), this, SLOT(InterfaceSendCommand(QAction*)) );
 
     psubmenu = pcurmenu->addMenu(tr("&Physics"));
     {
@@ -1930,6 +1931,7 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
 void QtCoinViewer::_deselect()
 {
     _pdragger.reset();
+    _plistdraggers.clear();
     if( !!_pSelectedItem ) {
         _pSelectedItem->SetGrab(false);
         _pSelectedItem.reset();
@@ -1961,6 +1963,7 @@ boost::shared_ptr<EnvironmentMutex::scoped_try_lock> QtCoinViewer::LockEnvironme
 bool QtCoinViewer::_HandleDeselection(SoNode *node)
 {
     _pdragger.reset();
+    _plistdraggers.clear();
     if( !!_pSelectedItem ) {
         _pSelectedItem->SetGrab(false);
         _pSelectedItem.reset();
@@ -2073,6 +2076,10 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
     _UpdatePhysicsEngine();
 
     _UpdateEnvironment();
+
+    if( ControlDown() ) {
+        
+    }
 }
 
 void QtCoinViewer::_UpdateEnvironment()
@@ -2693,17 +2700,18 @@ void QtCoinViewer::_UpdatePhysicsEngine()
 void QtCoinViewer::UpdateInterfaces()
 {
     RAVELOG_WARN("updating send command\n");
-    list<InterfaceBasePtr> listInterfaces;
     list<ProblemInstancePtr> listProblems;
     vector<KinBodyPtr> vbodies;
     GetEnv()->GetLoadedProblems(listProblems);
+    GetEnv()->GetBodies(vbodies);
 
-//_pActionSendCommand
-//        pact = new QAction(tr("Self Collision"), this);
+//    FOREACH(it,listInterfaces) {
+//        pact = new QAction(tr((*it)->GetXMLId().c_str()), this);
 //        pact->setCheckable(true);
 //        pact->setChecked(_bSelfCollision);
 //        connect(pact, SIGNAL(triggered(bool)), this, SLOT(DynamicSelfCollision(bool)));
 //        psubmenu->addAction(pact);
+//    }
 }
 
 void QtCoinViewer::InterfaceSendCommand(QAction* pact)

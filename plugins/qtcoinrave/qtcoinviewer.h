@@ -299,6 +299,7 @@ protected:
 
     SoNode*       _selectedNode;
     boost::shared_ptr<IvDragger>    _pdragger;
+    std::list< boost::shared_ptr<IvDragger> > _plistdraggers; /// draggers drawn
     SoEventCallback* _eventKeyboardCB;
 
     SoText2* _messageNode;

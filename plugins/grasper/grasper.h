@@ -778,7 +778,7 @@ class GrasperProblem : public ProblemInstance
         
         vector<COLLISIONREPORT::CONTACT> newcontacts;
         newcontacts.reserve(contacts.size()*Nconepoints);
-        FOREACH(itcontact,contacts) {
+        FOREACHC(itcontact,contacts) {
             // find a coordinate system where z is the normal
             Vector rottodirection;
             rottodirection.Cross(Vector(0,0,1), itcontact->norm);
@@ -809,7 +809,7 @@ class GrasperProblem : public ProblemInstance
         vector<double> vpoints(6*contacts.size()), vconvexplanes;
 
         vector<double>::iterator itpoint = vpoints.begin();
-        FOREACH(itcontact, contacts) {
+        FOREACHC(itcontact, contacts) {
             *itpoint++ = itcontact->norm.x;
             *itpoint++ = itcontact->norm.y;
             *itpoint++ = itcontact->norm.z;

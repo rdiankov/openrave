@@ -36,6 +36,8 @@ public:
 
     virtual void GetMessage(ostream& sout) { } // text message about the dragger
 
+    virtual ItemPtr GetSelectedItem() { return _selectedItem; }
+
 protected:
     static const SbColor CHECK_COLOR, COLLISION_COLOR;
 
