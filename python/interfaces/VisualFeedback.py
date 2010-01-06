@@ -11,7 +11,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License. 
 import os, time, pickle
-import numpy,scipy # nice to be able to explicitly call some functions
+import numpy # nice to be able to explicitly call some functions
 from numpy import *
 from optparse import OptionParser
 from openravepy import *
@@ -127,6 +127,7 @@ class VisualFeedback:
         return reshape(transforms,(len(transforms)/7,7))
 
 if __name__=='__main__':
+    import scipy
     parser = OptionParser(description='Helper functions for processing the gripper mask and visiblity extents')
     parser.add_option('--func',
                       action="store",type='string',dest='func',default='mask',
