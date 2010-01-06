@@ -1656,7 +1656,7 @@ void RobotBase::ComputeJointHierarchy()
             RAVELOG_WARN(str(boost::format("robot %s has a manipulator with no name!\n")%GetName()));
         (*itmanip)->InitIKSolver();
         vector<ManipulatorPtr>::iterator itmanip2 = itmanip; ++itmanip2;
-        FORIT(itmanip2,_vecManipulators) {
+        for(;itmanip2 != _vecManipulators.end(); ++itmanip2) {
             if( (*itmanip)->GetName() == (*itmanip2)->GetName() )
                 RAVELOG_WARN(str(boost::format("robot %s has two manipulators with the same name: %s!\n")%GetName()%(*itmanip)->GetName()));
         }
