@@ -221,10 +221,12 @@ class GraspPlanning(metaclass.AutoReloader):
 def run():
     env = Environment()
     try:
-        env.Load('data/lab1.env.xml')
         env.SetViewer('qtcoin')
+        env.Load('data/lab1.env.xml')
         robot = env.GetRobots()[0]
-        self = GraspPlanning(env,robot)
+        env.UpdatePublishedBodies()
+        self = GraspPlanning(env,robot,randomize=True)
+        self.performGraspPlanning()
     finally:
         env.Destroy()
 
