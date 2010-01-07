@@ -399,7 +399,11 @@ int main(int argc, char ** argv)
             FORIT(itplugin, plugins) {
                 FORIT(itnames, itplugin->second.interfacenames[ittype->first]) {
                     buf.str("");
+#ifdef _WIN32
+                    buf << "  " << *itnames << " - " << itplugin->first;
+#else
                     buf << "  " << ChangeTextColor(0,OPENRAVECOLOR_DEBUGLEVEL) << *itnames << ResetTextColor() << " - " << itplugin->first;
+#endif
                     names.push_back(buf.str());
                 }
             }

@@ -1177,6 +1177,8 @@ void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, bool bCheck
 {
     if( (int)vJointValues.size() != GetDOF() )
         throw openrave_exception(str(boost::format("dof not equal %d!=%d")%vJointValues.size()%GetDOF()),ORE_InvalidArguments);
+    if( vJointValues.size() == 0 )
+        return;
 
     const dReal* pJointValues = &vJointValues[0];
     if( bCheckLimits ) {
