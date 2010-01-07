@@ -403,6 +403,9 @@ class TaskManipulation : public ProblemInstance
             SWITCHMODELS(false);
 
             Transform tGoalEndEffector;
+            // set the goal preshape
+            _robot->SetActiveDOFs(pmanip->GetGripperJoints(), RobotBase::DOF_NoTransform);
+            _robot->SetActiveDOFValues(vgoalpreshape,true);
         
             if( iGraspTransform >= 0 ) {
                 // use the grasp transform
@@ -411,7 +414,10 @@ class TaskManipulation : public ProblemInstance
                 tm.m[0] = pm[0]; tm.m[1] = pm[3]; tm.m[2] = pm[6]; tm.trans.x = pm[9];
                 tm.m[4] = pm[1]; tm.m[5] = pm[4]; tm.m[6] = pm[7]; tm.trans.y = pm[10];
                 tm.m[8] = pm[2]; tm.m[9] = pm[5]; tm.m[10] = pm[8]; tm.trans.z = pm[11];
-                tGoalEndEffector = tm;
+                if( !ptarget )
+                    tGoalEndEffector = tm;
+                else
+                    tGoalEndEffector = ptarget->GetTransform() * Transform(tm);
 
                 if( pmanip->CheckEndEffectorCollision(tGoalEndEffector) ) {
                     RAVELOG_DEBUGA("grasp %d: in collision\n", igrasp);
@@ -425,10 +431,6 @@ class TaskManipulation : public ProblemInstance
 
             if( !!_pGrasperPlanner ) {
                 // set the preshape
-                if( vgoalpreshape.size() > 0 ) {
-                    _robot->SetActiveDOFs(pmanip->GetGripperJoints(), RobotBase::DOF_NoTransform);
-                    _robot->SetActiveDOFValues(vgoalpreshape,true);
-                }
                 _robot->SetActiveDOFs(pmanip->GetGripperJoints(), RobotBase::DOF_X|RobotBase::DOF_Y|RobotBase::DOF_Z);
 
                 if( !phandtraj )

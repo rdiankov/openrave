@@ -97,7 +97,7 @@ class BaseManipulation:
     def ReleaseFingers(self,target=None,movingdir=None,execute=None,outputtraj=None):
         cmd = 'ReleaseFingers '
         if target is not None:
-            cmd += 'target %s'%target.GetName()
+            cmd += 'target %s '%target.GetName()
         if movingdir is not None:
             assert(len(movingdir) == self.robot.GetActiveDOF())
             cmd += 'movingdir %s '%(' '.join(str(f) for f in movingdir))
@@ -105,3 +105,4 @@ class BaseManipulation:
             cmd += 'execute %d '%execute
         if outputtraj is not None:
             cmd += 'outputtraj %d '%outputtraj
+        return self.prob.SendCommand(cmd)

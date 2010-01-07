@@ -240,7 +240,7 @@ while(curgrasp < size(grasps,1))
     disp('moving hand down');
     trajdata = orProblemSendCommand(['MoveHandStraight ignorefirstcollision 0 execute 0 ' ...
                                      ' outputtraj direction ' sprintf('%f ', -updir) ...
-                                     ' maxdist ' sprintf('%f ', 0.3)],probs.manip);
+                                     ' maxsteps 100 '],probs.manip);
     if( isempty(trajdata) )
         warning('failed to movehandstraight');
     else

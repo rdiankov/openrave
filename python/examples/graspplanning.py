@@ -144,19 +144,79 @@ class GraspPlanning(metaclass.AutoReloader):
 
             print 'moving hand'
             expectedsteps = floor(approachoffset/stepsize)
-            res = self.basemanip.MoveHandStraight(direction=dot(manip.GetEndEffectorTransform()[0:3,0:3],manip.GetPalmDirection()),
-                                                  ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps-2,maxsteps=expectedsteps+1)
+            with env:
+                res = self.basemanip.MoveHandStraight(direction=dot(manip.GetEndEffectorTransform()[0:3,0:3],manip.GetPalmDirection()),
+                                                      ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps-2,maxsteps=expectedsteps+1)
             if res is None:
                 # use a planner to move the rest of the way
-                res = self.basemanip.MoveToHandPosition(matrices=[dot(target.GetTransform(),Tlocalgrasp)],maxiter=1000,maxtries=1,seedik=4)
+                with env:
+                    res = self.basemanip.MoveToHandPosition(matrices=[dot(target.GetTransform(),Tlocalgrasp)],maxiter=1000,maxtries=1,seedik=4)
                 if res is None:
                     print 'failed to reach grasp'
                     continue
             robot.WaitForController(0)
-            break
+
+            self.basemanip.CloseFingers()
+            robot.WaitForController(0)
+            
+            robot.Grab(target)
+            res = self.basemanip.MoveHandStraight(direction=self.updir,stepsize=0.003,minsteps=1,maxsteps=60)
+            robot.WaitForController(0)
+
+            print 'planning to destination'
+            res = self.basemanip.MoveToHandPosition(matrices=goals,maxiter=1000,maxtries=1,seedik=4)
+            if res is None:
+                print 'failed to reach a goal'
+                continue
+            robot.WaitForController(0)
+            
+            print 'moving hand down'
+            res = self.basemanip.MoveHandStraight(direction=-self.updir,stepsize=0.003,minsteps=1,maxsteps=100)
+            robot.WaitForController(0)
+
+            with env:
+                robot.SetActiveDOFs(manip.GetGripperJoints())
+                res = self.basemanip.ReleaseFingers(target=target)
+            if res is None:
+                print 'problems releasing, releasing target first'
+                with env:
+                    robot.ReleaseAllGrabbed()
+                    res = self.basemanip.ReleaseFingers(target=target)
+                if res is None:
+                    print 'forcing fingers'
+                    with env:
+                        robot.SetJointValues(grasping.grasps[graspindex][grasping.graspindices['igrasppreshape']],manip.GetGripperJoints())
+            robot.WaitForController(0)
+            with env:
+                robot.ReleaseAllGrabbed()
+            if env.CheckCollision(robot):
+                print 'robot in collision, moving back a little'
+                with env:
+                    res = self.basemanip.MoveHandStraight(direction=-dot(manip.GetEndEffectorTransform()[0:3,0:3],manip.GetPalmDirection()),
+                                                          stepsize=stepsize,minsteps=1,maxsteps=10)
+                robot.WaitForController(0)
+                if env.CheckCollision(robot):
+                    res = self.basemanip.ReleaseFingers(target=target)
+                    #raise ValueError('robot still in collision?')
+
+            return graspindex # return successful grasp index
+        # exhausted all grasps
+        return -1
 
     def performGraspPlanning(self):
-        pass
+        print 'starting to pick and place random objects'
+        while True:
+            i = random.randint(len(self.graspables))
+            try:
+                print 'grasping object %s'%self.graspables[i][0].target.GetName()
+                with self.envreal:
+                    self.robot.ReleaseAllGrabbed()
+                success = self.graspAndPlaceObject(self.graspables[i][0],self.graspables[i][1])
+                print 'success: ',success
+            except e:
+                print 'failed to grasp object %s'%self.graspables[i][0].target.GetName()
+                print e
+            
 
 def run():
     env = Environment()
