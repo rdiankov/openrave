@@ -439,23 +439,21 @@ namespace OpenRAVEXMLParser
         /// transform the center of mass and inertia matrix by trans
         MASS& transform(const TransformMatrix& trans)
         {
-            TransformMatrix tinvrot;
-            tinvrot.m[0] = trans.m[0]; tinvrot.m[1] = trans.m[4*1+0]; tinvrot.m[2] = trans.m[4*2+0];
-            tinvrot.m[4] = trans.m[1]; tinvrot.m[5] = trans.m[4*1+1]; tinvrot.m[6] = trans.m[4*2+1];
-            tinvrot.m[8] = trans.m[2]; tinvrot.m[9] = trans.m[4*1+2]; tinvrot.m[10] = trans.m[4*2+2];
-            t = trans * t * tinvrot; // rotate mass about rotation
+            dReal x = trans.trans.x, y = trans.trans.y, z = trans.trans.z;
+            TransformMatrix trot;
+            trot = trans; trot.trans = Vector();
+            t = trot * t * trot.inverse(); // rotate mass about rotation
 
             // translate the inertia tensor
-            dReal x = trans.trans.x, y = trans.trans.y, z = trans.trans.z;
             dReal x2 = x*x, y2 = y*y, z2 = z*z;
             t.m[0] += fTotalMass * (y2+z2); t.m[1] -= fTotalMass * x*y; t.m[2] -= fTotalMass * x * z;
             t.m[4] -= fTotalMass * y * z; t.m[5] += fTotalMass * (x2+z2); t.m[6] -= fTotalMass * y * z;
             t.m[8] -= fTotalMass * z * x; t.m[9] -= fTotalMass * z * y; t.m[10] += fTotalMass * (x2+y2);
 
             // ensure perfect symmetry
-            t.m[5] = t.m[1];
-            t.m[8] = t.m[2];
-            t.m[9] = t.m[6];
+            t.m[5] = 0.5*(t.m[1]+t.m[5]);
+            t.m[8] = 0.5*(t.m[2]+t.m[8]);
+            t.m[9] = 0.5*(t.m[6]+t.m[9]);
             return *this;
         }
 
