@@ -371,6 +371,18 @@ endif()
 add_subdirectory(3rdparty/collada)
 set(COLLADA_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/collada/include ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/collada/include/1.5)
 
+check_library_exists(qhull qh_new_qhull "" QHULL_FOUND_LIB)
+check_include_file(qhull/qhull_a.h HAVE_QHULL_H)
+if( QHULL_FOUND_LIB AND HAVE_QHULL_H )
+  set(QHULL_FOUND 1)
+  set(QHULL_INCLUDE_DIR)
+else()
+  # have to compile from sources
+  add_subdirectory(3rdparty/qhull)
+  set(QHULL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty")
+  set(QHULL_FOUND 1)
+endif()
+
 find_package(PythonInterp)
 if( NOT PYTHON_EXECUTABLE )
   # look specifically for 2.6

@@ -196,6 +196,7 @@ def run():
         env.AddKinBody(target)
         if options.useviewer:
             env.SetViewer('qtcoin')
+            env.UpdatePublishedBodies()
         grasping = Grasping(env,robot,target)
         if options.showtable:
             if not grasping.loadGrasps():
