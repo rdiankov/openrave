@@ -585,7 +585,17 @@ public:
         object GetTransform() const { return ReturnTransform(_plink->GetTransform()); }
         
         object GetCOMOffset() const { return toPyVector3(_plink->GetCOMOffset()); }
-        object GetInertia() const { return ReturnTransform(_plink->GetInertia()); }
+        object GetInertia() const
+        {
+            TransformMatrix t = _plink->GetInertia();
+            npy_intp dims[] = {3,4};
+            PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
+            dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
+            pdata[0] = t.m[0]; pdata[1] = t.m[1]; pdata[2] = t.m[2]; pdata[3] = t.trans[0];
+            pdata[4] = t.m[4]; pdata[5] = t.m[5]; pdata[6] = t.m[6]; pdata[7] = t.trans[1];
+            pdata[8] = t.m[8]; pdata[9] = t.m[9]; pdata[10] = t.m[10]; pdata[11] = t.trans[2];
+            return static_cast<numeric::array>(handle<>(pyvalues));
+        }
         dReal GetMass() const { return _plink->GetMass(); }
 
         void SetTransform(object otrans) { _plink->SetTransform(ExtractTransform(otrans)); }
