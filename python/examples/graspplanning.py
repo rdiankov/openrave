@@ -110,29 +110,49 @@ class GraspPlanning(metaclass.AutoReloader):
                             body.SetTransform(dot(Ttable, dot(Troll, Torg)))
                             if not self.envreal.CheckCollision(body):
                                 dests.append(body.GetTransform())
-                    print len(dests)
                     graspable[1] = dests
             for graspable in self.graspables:
                 graspable[0].target.Enable(True)
 
     def viewDestinations(self,graspable,delay=0.5):
         with graspable[0].target:
-            for T in graspable[1]:
+            for i,T in enumerate(graspable[1]):
+                print 'target %s dest %d/%d'%(graspable[0].target.GetName(),i,len(graspable[1]))
                 graspable[0].target.SetTransform(T)
                 graspable[0].target.GetEnv().UpdatePublishedBodies()
                 time.sleep(delay)
             
     def graspAndPlaceObject(self,grasping,dests):
         env = self.envreal#.CloneSelf(CloningOptions.Bodies)
+        robot = self.robot
+        manip = self.robot.GetActiveManipulator()
         istartgrasp = 0
+        approachoffset = 0.02
+        target = grasping.target
+        stepsize = 0.001
+        Tlocalgrasp = eye(4)
+        env.SetDebugLevel(DebugLevel.Debug)
         while istartgrasp < len(grasping.grasps):
             goals,graspindex,searchtime,trajdata = self.taskmanip.GraspPlanning(graspindices=grasping.graspindices,grasps=grasping.grasps[istartgrasp:],
-                                                                                target=grasping.target,approachoffset=0.02,destposes=dests,
+                                                                                target=target,approachoffset=approachoffset,destposes=dests,
                                                                                 seedgrasps = 3,seeddests=8,seedik=1,maxiter=1000,
                                                                                 randomgrasps=True,randomdests=True,switchpatterns=self.switchpatterns)
-            istartgrasp = grasping+1
-            print graspindex, searchtime
-            self.robot.WaitForController(0)
+            istartgrasp = graspindex+1
+            Tlocalgrasp[0:3,0:4] = transpose(reshape(grasping.grasps[graspindex][grasping.graspindices ['igrasptrans']],(4,3)))
+            print 'initial grasp planning time: ', searchtime
+            robot.WaitForController(0)
+
+            print 'moving hand'
+            expectedsteps = floor(approachoffset/stepsize)
+            res = self.basemanip.MoveHandStraight(direction=dot(manip.GetEndEffectorTransform()[0:3,0:3],manip.GetPalmDirection()),
+                                                  ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps-2,maxsteps=expectedsteps+1)
+            if res is None:
+                # use a planner to move the rest of the way
+                res = self.basemanip.MoveToHandPosition(matrices=[dot(target.GetTransform(),Tlocalgrasp)],maxiter=1000,maxtries=1,seedik=4)
+                if res is None:
+                    print 'failed to reach grasp'
+                    continue
+            robot.WaitForController(0)
             break
 
     def performGraspPlanning(self):

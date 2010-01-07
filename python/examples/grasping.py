@@ -96,14 +96,16 @@ class Grasping(metaclass.AutoReloader):
                 traceback.print_exc(e)
                 continue
 
-            if updateenv:
-                self.env.LockPhysics(True)
+            Tgrasp = eye(4)
+            with self.env:
                 self.robot.SetJointValues(finalconfig[0])
                 self.robot.SetTransform(finalconfig[1])
-                contactgraph = self.drawContacts(contacts)
-                self.env.UpdatePublishedBodies()
-                self.env.LockPhysics(False)
-            grasp[self.graspindices.get('igrasptrans')] = reshape(transpose(finalconfig[1][0:3,0:4]),12)
+                Tgrasp = dot(linalg.inv(self.target.GetTransform()),self.manip.GetEndEffectorTransform())
+                if updateenv:
+                    contactgraph = self.drawContacts(contacts)
+                    self.env.UpdatePublishedBodies()
+
+            grasp[self.graspindices.get('igrasptrans')] = reshape(transpose(Tgrasp[0:3,0:4]),12)
             grasp[self.graspindices.get('forceclosure')] = mindist
             if mindist > forceclosurethreshold:
                 print 'found good grasp'

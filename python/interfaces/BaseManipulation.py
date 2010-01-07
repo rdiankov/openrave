@@ -31,9 +31,9 @@ class BaseManipulation:
     def MoveHandStraight(self,direction,minsteps=None,maxsteps=None,stepsize=None,ignorefirstcollision=None,execute=None,outputtraj=None):
         cmd = 'MoveHandStraight direction %f %f %f '%(direction[0],direction[1],direction[2])
         if minsteps is not None:
-            cmd += 'minsteps %f '%minsteps
+            cmd += 'minsteps %d '%minsteps
         if maxsteps is not None:
-            cmd += 'maxsteps %f '%maxsteps
+            cmd += 'maxsteps %d '%maxsteps
         if stepsize is not None:
             cmd += 'stepsize %f '%stepsize
         if execute is not None:

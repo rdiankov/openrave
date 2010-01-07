@@ -360,6 +360,33 @@ bool RobotBase::Manipulator::CheckIndependentCollision(CollisionReportPtr report
     return false;
 }
 
+bool RobotBase::Manipulator::IsGrabbing(KinBodyConstPtr pbody) const
+{
+    RobotBasePtr probot(_probot);
+    KinBody::LinkPtr plink = probot->IsGrabbing(pbody);
+    if( !plink ) {
+        if( plink == _pEndEffector || plink == _pBase )
+            return true;
+        int iattlink = _pEndEffector->GetIndex();
+        FOREACHC(itlink, probot->GetLinks()) {
+            int ilink = (*itlink)->GetIndex();
+            if( ilink == iattlink )
+                continue;
+            // gripper needs to be affected by all joints
+            bool bGripperLink = true;
+            FOREACHC(itarmjoint,_varmjoints) {
+                if( !probot->DoesAffect(*itarmjoint,ilink) ) {
+                    bGripperLink = false;
+                    break;
+                }
+            }
+            if( bGripperLink && plink == *itlink )
+                return true;
+        }
+    }
+    return false;
+}
+
 void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
 {
     o << (!!_pBase ? -1 : _pBase->GetIndex()) << " " << (!!_pEndEffector ? -1 : _pEndEffector->GetIndex()) << " "

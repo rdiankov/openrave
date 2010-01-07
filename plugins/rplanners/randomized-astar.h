@@ -350,8 +350,8 @@ private:
     bool _CheckCollision(const vector<dReal>& pQ0, const vector<dReal>& pQ1, IntervalType interval, vector< vector<dReal> >* pvCheckedConfigurations = NULL)
     {
         // set the bounds based on the interval type
-        int start;
-        bool bCheckEnd;
+        int start=0;
+        bool bCheckEnd=false;
         switch (interval) {
         case OPEN:
             start = 1;  bCheckEnd = false;

@@ -166,14 +166,13 @@ class TaskManipulation : public ProblemInstance
 
     bool GraspPlanning(ostream& sout, istream& sinput)
     {
-        RAVELOG_DEBUG("TestingAllGrasps...\n");
+        RAVELOG_DEBUG("GraspPlanning...\n");
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
 
         vector<dReal> vgrasps;
         boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
 
         KinBodyPtr ptarget;
-        RobotBasePtr probotHand;
         int nNumGrasps=0, nGraspDim=0;
         dReal fApproachOffset=0.0f; // offset before approaching to the target
         vector<pair<string, string> > vSwitchPatterns;
@@ -237,10 +236,6 @@ class TaskManipulation : public ProblemInstance
                 sinput >> targetname;
                 ptarget = GetEnv()->GetKinBody(targetname);
             }
-            else if( cmd == "robothand" ) {
-                string name; sinput >> name;
-                probotHand = GetEnv()->GetRobot(name);
-            }
             else if( cmd == "approachoffset" )
                 sinput >> fApproachOffset;
             else if( cmd == "quitafterfirstrun" )
@@ -289,6 +284,7 @@ class TaskManipulation : public ProblemInstance
             return false;
         }
     
+        BOOST_ASSERT(!pmanip->IsGrabbing(ptarget));
         RobotBase::RobotStateSaver saver(_robot);
 
         bool bMobileBase = _robot->GetAffineDOF()!=0; // if mobile base, cannot rely on IK
@@ -319,7 +315,7 @@ class TaskManipulation : public ProblemInstance
         Transform transTarg = ptarget->GetTransform();
         Transform transInvTarget = transTarg.inverse();
         Transform transDummy(Vector(1,0,0,0), Vector(100,0,0));
-        vector<dReal> viksolution, vikgoal, vjointsvalues;
+        vector<dReal> viksolution, vikgoal, vFinalGripperValues;
         
         PRESHAPETRAJMAP mapPreshapeTrajectories;
         {
@@ -334,7 +330,6 @@ class TaskManipulation : public ProblemInstance
 
         TrajectoryBasePtr ptraj;
         GRASPGOAL goalFound;
-        Transform transDestHand;
         int iCountdown = 0;
         uint64_t nSearchTime = 0;
 
@@ -360,16 +355,6 @@ class TaskManipulation : public ProblemInstance
                 RAVELOG_ERRORA("grasp indices not all initialized\n");
                 return false;
             }
-
-            if( !probotHand ) {
-                RAVELOG_WARNA("Couldn't not find test hand\n");
-                return false;
-            }
-
-            if( (int)pmanip->GetGripperJoints().size() != probotHand->GetDOF() ) {
-                RAVELOG_ERRORA(str(boost::format("robot hand joints (%d) not equal to hand dof (%d)\n")%pmanip->GetGripperJoints().size()%probotHand->GetDOF()));
-                return false;
-            }
         }
         else {
             if( iGraspPreshape < 0 ) {
@@ -378,12 +363,11 @@ class TaskManipulation : public ProblemInstance
             }
         }
 
+        TrajectoryBasePtr phandtraj;
+    
         for(int igraspperm = 0; igraspperm < (int)vgrasppermuation.size(); ++igraspperm) {
             int igrasp = vgrasppermuation[igraspperm];
             dReal* pgrasp = &vgrasps[igrasp*nGraspDim];
-
-            _robot->Enable(true);
-            probotHand->Enable(false);
 
             if( listGraspGoals.size() > 0 && iCountdown-- <= 0 ) {
                 // start planning
@@ -418,7 +402,7 @@ class TaskManipulation : public ProblemInstance
 
             SWITCHMODELS(false);
 
-            Transform transRobot;
+            Transform tGoalEndEffector;
         
             if( iGraspTransform >= 0 ) {
                 // use the grasp transform
@@ -427,9 +411,9 @@ class TaskManipulation : public ProblemInstance
                 tm.m[0] = pm[0]; tm.m[1] = pm[3]; tm.m[2] = pm[6]; tm.trans.x = pm[9];
                 tm.m[4] = pm[1]; tm.m[5] = pm[4]; tm.m[6] = pm[7]; tm.trans.y = pm[10];
                 tm.m[8] = pm[2]; tm.m[9] = pm[5]; tm.m[10] = pm[8]; tm.trans.z = pm[11];
-                transRobot = tm;
+                tGoalEndEffector = tm;
 
-                if( _robot->GetActiveManipulator()->CheckEndEffectorCollision(transRobot) ) {
+                if( pmanip->CheckEndEffectorCollision(tGoalEndEffector) ) {
                     RAVELOG_DEBUGA("grasp %d: in collision\n", igrasp);
                     continue;
                 }
@@ -440,15 +424,17 @@ class TaskManipulation : public ProblemInstance
             }
 
             if( !!_pGrasperPlanner ) {
-                // set the hand joints
-                if( vgoalpreshape.size() > 0 )
-                    probotHand->SetJointValues(vgoalpreshape,true);
+                // set the preshape
+                if( vgoalpreshape.size() > 0 ) {
+                    _robot->SetActiveDOFs(pmanip->GetGripperJoints(), RobotBase::DOF_NoTransform);
+                    _robot->SetActiveDOFValues(vgoalpreshape,true);
+                }
+                _robot->SetActiveDOFs(pmanip->GetGripperJoints(), RobotBase::DOF_X|RobotBase::DOF_Y|RobotBase::DOF_Z);
 
-                _robot->Enable(false);
-                probotHand->Enable(true);
-        
-                probotHand->SetActiveDOFs(probotHand->GetActiveManipulator()->GetGripperJoints(), RobotBase::DOF_X|RobotBase::DOF_Y|RobotBase::DOF_Z);
-                TrajectoryBasePtr phandtraj = GetEnv()->CreateTrajectory(probotHand->GetActiveDOF());
+                if( !phandtraj )
+                    phandtraj = GetEnv()->CreateTrajectory(_robot->GetActiveDOF());
+                else
+                    phandtraj->Reset(_robot->GetActiveDOF());
 
                 graspparams->fstandoff = pgrasp[iGraspStandoff];
                 graspparams->targetbody = ptarget;
@@ -459,17 +445,13 @@ class TaskManipulation : public ProblemInstance
                 graspparams->breturntrajectory = false;
                 graspparams->bonlycontacttarget = true;
                 graspparams->btightgrasp = false;
-                
-                if( !_pGrasperPlanner->InitPlan(probotHand,graspparams) ) {
-                    probotHand->Enable(false);
-                    _robot->Enable(true);
+
+                if( !_pGrasperPlanner->InitPlan(_robot,graspparams) ) {
                     RAVELOG_DEBUGA("grasp planner failed: %d\n", igrasp);
                     continue; // failed
                 }
 
                 if( !_pGrasperPlanner->PlanPath(phandtraj) ) {
-                    probotHand->Enable(false);
-                    _robot->Enable(true);
                     RAVELOG_DEBUGA("grasp planner failed: %d\n", igrasp);
                     continue; // failed
                 }
@@ -478,49 +460,46 @@ class TaskManipulation : public ProblemInstance
 
                 // move back a little if robot/target in collision
                 if( !!ptarget ) {
+                    KinBody::KinBodyStateSaver saverlocal(_robot);
+                    _robot->SetTransform(t);
                     Vector vglobalpalmdir;
                     if( iGraspDir >= 0 )
                         vglobalpalmdir = transTarg.rotate(Vector(pgrasp[iGraspDir], pgrasp[iGraspDir+1], pgrasp[iGraspDir+2]));
                     else
-                        vglobalpalmdir = (t*pmanip->GetGraspTransform()).rotate(pmanip->GetPalmDirection());
+                        vglobalpalmdir = pmanip->GetEndEffectorTransform().rotate(pmanip->GetPalmDirection());
 
-                    probotHand->SetTransform(t);
-                    while(GetEnv()->CheckCollision(KinBodyConstPtr(probotHand),KinBodyConstPtr(ptarget))) {
+                    while(GetEnv()->CheckCollision(KinBodyConstPtr(_robot),KinBodyConstPtr(ptarget))) {
                         t.trans -= vglobalpalmdir*0.001f;
-                        probotHand->SetTransform(t);
+                        _robot->SetTransform(t);
                     }
                 }
 
-                transRobot = t * pmanip->GetGraspTransform(); // get final transform
-
-                probotHand->Enable(false);
-                _robot->Enable(true);
-
-                // send the robot somewhere
-                probotHand->GetController()->SetPath(TrajectoryBaseConstPtr()); // reset
-                probotHand->SetTransform(transDummy);
+                tGoalEndEffector = t * _robot->GetTransform().inverse() * pmanip->GetEndEffectorTransform(); // find the end effector transform
+                vFinalGripperValues.resize(pmanip->GetGripperJoints().size());
+                std::copy(phandtraj->GetPoints().back().q.begin(),phandtraj->GetPoints().back().q.begin()+vFinalGripperValues.size(),vFinalGripperValues.begin());
             }
+            else
+                vFinalGripperValues.resize(0);
 
             // set the initial hand joints
             _robot->SetActiveDOFs(pmanip->GetGripperJoints());
             if( iGraspPreshape >= 0 )
                 _robot->SetActiveDOFValues(vector<dReal>(pgrasp+iGraspPreshape,pgrasp+iGraspPreshape+_robot->GetActiveDOF()),true);
 
-            Transform tnewrobot = transRobot;
-
+            Transform tApproachEndEffector = tGoalEndEffector;
             if( !bMobileBase ) {
                 // check ik
                 Vector vglobalpalmdir;
                 if( iGraspDir >= 0 )
                     vglobalpalmdir = transTarg.rotate(Vector(pgrasp[iGraspDir], pgrasp[iGraspDir+1], pgrasp[iGraspDir+2]));
                 else
-                    vglobalpalmdir = tnewrobot.rotate(pmanip->GetPalmDirection());
+                    vglobalpalmdir = tApproachEndEffector.rotate(pmanip->GetPalmDirection());
 
                 dReal fSmallOffset = 0.002f;
-                tnewrobot.trans -= fSmallOffset * vglobalpalmdir;
+                tApproachEndEffector.trans -= fSmallOffset * vglobalpalmdir;
 
-                // first test the IK solution at the destination transRobot
-                if( !pmanip->FindIKSolution(tnewrobot, viksolution, true) ) {
+                // first test the IK solution at the destination tGoalEndEffector
+                if( !pmanip->FindIKSolution(tApproachEndEffector, viksolution, true) ) {
                     RAVELOG_DEBUGA("grasp %d: No IK solution found (final)\n", igrasp);
                     continue;
                 }
@@ -530,12 +509,12 @@ class TaskManipulation : public ProblemInstance
 
                 if( fApproachOffset != 0 ) {
                     // now test at the approach point (with offset)
-                    tnewrobot.trans -= (fApproachOffset-fSmallOffset) * vglobalpalmdir;
+                    tApproachEndEffector.trans -= (fApproachOffset-fSmallOffset) * vglobalpalmdir;
                     
                     // set the previous robot ik configuration to get the closest configuration!!
                     _robot->SetActiveDOFs(pmanip->GetArmJoints());
                     _robot->SetActiveDOFValues(viksolution);
-                    if( !pmanip->FindIKSolution(tnewrobot, viksolution, true) ) {
+                    if( !pmanip->FindIKSolution(tApproachEndEffector, viksolution, true) ) {
                         _robot->SetJointValues(vCurRobotValues); // reset robot to original position
                         RAVELOG_DEBUGA("grasp %d: No IK solution found (approach)\n", igrasp);
                         continue;
@@ -552,29 +531,22 @@ class TaskManipulation : public ProblemInstance
             }
 
             // set the joints that the grasper plugin calculated
-            // DON'T: gets in collision, and vHandJoints.size is not necessarily equal to pmanip->GetGripperJoints().size()
-            //probotHand->SetActiveDOFs(vHandJoints, 0);
-            //probotHand->GetActiveDOFValues(vjointsvalues);
             _robot->SetActiveDOFs(pmanip->GetGripperJoints());
-            if( !!probotHand ) {
-                probotHand->GetJointValues(vjointsvalues);
-                _robot->SetActiveDOFValues(vjointsvalues, true);
-            }
+            if( vFinalGripperValues.size() > 0 )
+                _robot->SetActiveDOFValues(vFinalGripperValues, true);
 
             //while (getchar() != '\n') usleep(1000);
 
             // should test destination with thin models
             SWITCHMODELS(false);
 
-            // Disable destination checking
             list< TransformMatrix > listDests;
-
             if( bRandomDests )
                 PermutateRandomly(vdestpermuation);
 
             for(int idestperm = 0; idestperm < (int)vdestpermuation.size(); ++idestperm) {
                 Transform& transDestTarget = vObjDestinations[vdestpermuation[idestperm]];
-                transDestHand = transDestTarget * transInvTarget * transRobot;
+                Transform tDestEndEffector = transDestTarget * transInvTarget * tGoalEndEffector;
                  
                 ptarget->SetTransform(transDestTarget);
                 _robot->Enable(false); // remove from target collisions
@@ -587,18 +559,16 @@ class TaskManipulation : public ProblemInstance
                 }
                 
                 if( !bMobileBase ) {
-                    if( pmanip->FindIKSolution(transDestHand, vikgoal, true) ) {
-                        listDests.push_back(transDestHand);
+                    if( pmanip->FindIKSolution(tDestEndEffector, vikgoal, true) ) {
+                        listDests.push_back(tDestEndEffector);
                     }
                 }
                 else
-                    listDests.push_back(transDestHand);
+                    listDests.push_back(tDestEndEffector);
 
                 if( (int)listDests.size() >= nMaxSeedDests )
                     break;
             }
-
-            _robot->Enable(true);
 
             _robot->SetJointValues(vCurRobotValues); // reset robot to original position
 
@@ -650,7 +620,7 @@ class TaskManipulation : public ProblemInstance
             listGraspGoals.push_back(GRASPGOAL());
             GRASPGOAL& goal = listGraspGoals.back();
             goal.index = igrasp;
-            goal.tgrasp = tnewrobot;
+            goal.tgrasp = tApproachEndEffector;
             goal.viksolution = viksolution;
             goal.listDests.swap(listDests);
             goal.vpreshape.resize(pmanip->GetGripperJoints().size());
@@ -683,13 +653,6 @@ class TaskManipulation : public ProblemInstance
             uint64_t basestart = GetMicroTime();
             ptraj = _PlanGrasp(listGraspGoals, nMaxSeedGrasps, goalFound, nMaxIterations,mapPreshapeTrajectories);
             nSearchTime += GetMicroTime() - basestart;
-        }
-
-        if( !!probotHand ) {
-            // send the hand somewhere
-            probotHand->GetController()->SetPath(TrajectoryBaseConstPtr()); // reset
-            probotHand->SetTransform(transDummy);
-            probotHand->Enable(false);
         }
 
         SWITCHMODELS(false);
@@ -728,11 +691,6 @@ class TaskManipulation : public ProblemInstance
 
             // set the trajectory
             CM::SetFullTrajectory(_robot,ptrajfinal, bExecute, strtrajfilename, pOutputTrajStream);
-
-            if( !!probotHand ) {
-                probotHand->SetTransform(transDummy);
-                probotHand->Enable(true);
-            }
             return true;
         }
 

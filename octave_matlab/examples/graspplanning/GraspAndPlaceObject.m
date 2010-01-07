@@ -55,11 +55,6 @@ handjoints = robot.manip.handjoints;
 wristlinkid = robot.manip.eelink+1;
 robotid = robot.id;
 
-handid = orEnvGetBody('TestHand');
-if( handid == 0 )
-    handid = orEnvCreateRobot('TestHand',robot.handfile);
-end
-
 while(curgrasp < size(grasps,1))
     g = grasps(:,curgrasp:end);
 
@@ -69,7 +64,6 @@ while(curgrasp < size(grasps,1))
            ' seedik 1 seedgrasps 3 seeddests 8 randomdests 1 randomgrasps 1 ' ...
            ' target ' curobj.name ...
            ' approachoffset ' sprintf('%f',approachoffset) ...
-           ' robothand TestHand ' ...
            ' graspindices ' sprintf('%d ',[robot.grasp.direction(1),robot.grasp.center(1),robot.grasp.roll(1),robot.grasp.standoff(1),robot.grasp.joints(1)]-1) ...
            ' matdests ' num2str(size(curobj.dests,2)) ' ' sprintf('%f ', curobj.dests) ...
            ];

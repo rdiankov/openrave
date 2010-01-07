@@ -1123,6 +1123,8 @@ public:
         object GetGripperJoints() { return toPyList(_pmanip->GetGripperJoints()); }
         object GetArmJoints() { return toPyList(_pmanip->GetArmJoints()); }
         object GetClosingDirection() { return toPyList(_pmanip->GetClosingDirection()); }
+        object GetPalmDirection() { return toPyVector3(_pmanip->GetPalmDirection()); }
+        bool IsGrabbing(PyKinBodyPtr pbody) { return _pmanip->IsGrabbing(pbody->GetBody()); }
 
         int GetNumFreeParameters() const { return _pmanip->GetNumFreeParameters(); }
 
@@ -3161,6 +3163,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetGripperJoints",&PyRobotBase::PyManipulator::GetGripperJoints)
             .def("GetArmJoints",&PyRobotBase::PyManipulator::GetArmJoints)
             .def("GetClosingDirection",&PyRobotBase::PyManipulator::GetClosingDirection)
+            .def("GetPalmDirection",&PyRobotBase::PyManipulator::GetPalmDirection)
+            .def("IsGrabbing",&PyRobotBase::PyManipulator::IsGrabbing)
             .def("GetChildJoints",&PyRobotBase::PyManipulator::GetChildJoints)
             .def("GetChildDOFIndices",&PyRobotBase::PyManipulator::GetChildDOFIndices)
             .def("GetChildLinks",&PyRobotBase::PyManipulator::GetChildLinks)

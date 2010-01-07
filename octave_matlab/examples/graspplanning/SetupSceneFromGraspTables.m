@@ -62,7 +62,6 @@ if( isempty(probs.manip) )
     warning('failed to create BaseManipulation problem');
 end
 
-robot.handfile = G.robot.filename; % get the hand filename
 robot.grasp = G.robot.grasp;
 robot.graspavoidlinks = G.robot.avoidlinks;
 

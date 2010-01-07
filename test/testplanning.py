@@ -29,10 +29,13 @@ def test_graspplanning():
     import graspplanning
     env = Environment()
     env.SetViewer('qtcoin')
+    env.Reset()
     env.Load('data/lab1.env.xml')
     robot = env.GetRobots()[0]
     self = graspplanning.GraspPlanning(env,robot)
-    self.graspAndPlaceObject(grasping=self.graspables[0][0],dests=self.graspables[0][1])
+    grasping=self.graspables[0][0]
+    dests=self.graspables[0][1]
+    self.graspAndPlaceObject(grasping=grasping,dests=dests)
 
 def test_visibilityplanning():
     import visibilityplanning, time

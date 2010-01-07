@@ -122,6 +122,9 @@ public:
         /// \return true if a collision occurred
         virtual bool CheckIndependentCollision(CollisionReportPtr report = CollisionReportPtr()) const;
 
+        /// \return true if the body is being grabbed by any link on this manipulator
+        virtual bool IsGrabbing(KinBodyConstPtr pbody) const;
+
         virtual void serialize(std::ostream& o, int options) const;
         
     private:
