@@ -16,7 +16,7 @@ endif()
 
 include_directories("${CMAKE_SOURCE_DIR}")
 if( ${QHULL_INCLUDE_DIR} )
-  include_directories("${CMAKE_SOURCE_DIR}")
+  include_directories("${QHULL_INCLUDE_DIR}")
 endif()
 
 add_dependencies(grasper libopenrave)
