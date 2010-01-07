@@ -796,7 +796,7 @@ class GrasperProblem : public ProblemInstance
             FOREACH(it,vsincos)
                 newcontacts.push_back(COLLISIONREPORT::CONTACT(itcontact->pos, (itcontact->norm + mu*it->first*right + mu*it->second*up).normalize3(),0));
         }
-        
+
         return _AnalyzeContacts3D(newcontacts);
     }
 
@@ -821,7 +821,7 @@ class GrasperProblem : public ProblemInstance
 
         analysis.volume = _ComputeConvexHull(vpoints,vconvexplanes,6);
 
-        boost::array<double,6> vmean;
+        boost::array<double,6> vmean={0};
         for(size_t i = 0; i < vpoints.size(); i += 6) {
             for(int j = 0; j < 6; ++j)
                 vmean[j] += vpoints[i+j];
@@ -840,7 +840,6 @@ class GrasperProblem : public ProblemInstance
             
             if( dist < meandist )
                 dist = -dist;
-
             if( dist < 0 || RaveFabs(dist-meandist) < 1e-15 )
                 return analysis;
             mindist = min(mindist,dist);
