@@ -362,7 +362,7 @@ namespace OpenRAVEXMLParser
     /// mass of objects
     struct MASS
     {
-    MASS() : fTotalMass(0) {}        
+    MASS() : fTotalMass(0) { for(int i = 0; i < 12; ++i) t.m[i] = 0; }
         static MASS GetBoxMass(Vector extents, Vector pos, dReal totalmass)
         {
             MASS m;
@@ -411,6 +411,8 @@ namespace OpenRAVEXMLParser
         MASS operator+(const MASS& r) const
         {
             MASS mnew;
+            if( fTotalMass+r.fTotalMass == 0 )
+                MASS();
             mnew.t.trans = (fTotalMass*t.trans+r.fTotalMass*r.t.trans)*((dReal)1.0/(fTotalMass+r.fTotalMass));
             mnew.fTotalMass = fTotalMass + r.fTotalMass;
             mnew.t.m[0] = t.m[0] + r.t.m[0]; mnew.t.m[1] = t.m[1] + r.t.m[1]; mnew.t.m[2] = t.m[2] + r.t.m[2];
@@ -422,11 +424,15 @@ namespace OpenRAVEXMLParser
         /// adds a mass to the current mass
         MASS& operator+=(const MASS& r)
         {
-            t.trans = (fTotalMass*t.trans+r.fTotalMass*r.t.trans)*((dReal)1.0/(fTotalMass+r.fTotalMass));
-            fTotalMass += r.fTotalMass;
-            t.m[0] += r.t.m[0]; t.m[1] += r.t.m[1]; t.m[2] += r.t.m[2];
-            t.m[4] += r.t.m[4]; t.m[5] += r.t.m[5]; t.m[6] += r.t.m[6];
-            t.m[8] += r.t.m[8]; t.m[9] += r.t.m[9]; t.m[10] += r.t.m[10];
+            if( fTotalMass+r.fTotalMass == 0 )
+                *this = MASS();
+            else {
+                t.trans = (fTotalMass*t.trans+r.fTotalMass*r.t.trans)*((dReal)1.0/(fTotalMass+r.fTotalMass));
+                fTotalMass += r.fTotalMass;
+                t.m[0] += r.t.m[0]; t.m[1] += r.t.m[1]; t.m[2] += r.t.m[2];
+                t.m[4] += r.t.m[4]; t.m[5] += r.t.m[5]; t.m[6] += r.t.m[6];
+                t.m[8] += r.t.m[8]; t.m[9] += r.t.m[9]; t.m[10] += r.t.m[10];
+            }
             return *this;
         }
 
