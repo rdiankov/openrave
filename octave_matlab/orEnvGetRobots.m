@@ -21,17 +21,17 @@ numrobots = str2num(tok);
 robots = cell(numrobots,1);
 
 for i = 1:numrobots
-    [tok, rem] = strtok(rem, ' ');
+    [tok, rem] = strtok(rem, [' ' newline]);
     robots{i}.id = str2num(tok);
     robots{i}.name = '';
     robots{i}.type = '';
     [robots{i}.name, rem] = strtok(rem, ' ');
     [robots{i}.type, rem] = strtok(rem, ' ');
     % read until end of line (since filename might contain whitespace)
-    [tok, rem] = strtok(rem, ' ');
+    [tok, rem] = strtok(rem, newline);
     if( strcmp(tok, 'none') )
         robots{i}.filename = '';
     else
-        robots{i}.filename = tok;
+        robots{i}.filename = strtrim(tok);
     end
 end

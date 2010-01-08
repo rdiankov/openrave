@@ -21,15 +21,15 @@ numbodies = str2num(tok);
 bodies = cell(numbodies,1);
 
 for i = 1:numbodies
-    [tok, rem] = strtok(rem, ' ');
+    [tok, rem] = strtok(rem, [' ' newline]);
     bodies{i}.id = str2num(tok);
     [bodies{i}.name, rem] = strtok(rem, ' ');
     [bodies{i}.type, rem] = strtok(rem, ' ');
     % read until end of line (since filename might contain whitespace)
-    [tok, rem] = strtok(rem, ' ');
+    [tok, rem] = strtok(rem, newline);
     if( strcmp(tok, 'none') )
         bodies{i}.filename = '';
     else
-        bodies{i}.filename = tok;
+        bodies{i}.filename = strtrim(tok);
     end
 end
