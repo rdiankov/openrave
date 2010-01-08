@@ -89,7 +89,7 @@ if( 0 ) #IKFAST_FOUND )
   set(IKTARGETS wamik pa10ik pumaik manusleftik man1leftik man1rightik katanaik)
 endif()
 
-add_library(ikfastsolvers SHARED ikfastsolvers.cpp)
+add_library(ikfastsolvers SHARED ikfastsolvers.cpp ikfastproblem.h plugindefs.h)
 target_link_libraries(ikfastsolvers libopenrave)
 include_directories(ikfastsolvers "${CMAKE_SOURCE_DIR}")
 add_dependencies(ikfastsolvers libopenrave ${IKTARGETS})

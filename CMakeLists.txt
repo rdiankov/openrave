@@ -405,6 +405,8 @@ endif()
 
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/defines.h.in ${CMAKE_CURRENT_SOURCE_DIR}/rave/defines.h)
 
+file(GLOB rave_header_files ${CMAKE_CURRENT_SOURCE_DIR}/rave/*.h)
+
 add_subdirectory(src)
 add_subdirectory(octave_matlab)
 add_subdirectory(python)

@@ -19,7 +19,7 @@ if( ODE_HAVE_ALLOCATE_DATA_THREAD )
   add_definitions("-DODE_HAVE_ALLOCATE_DATA_THREAD")
 endif()
 
-  add_library(oderave SHARED oderavemain.cpp)
+  add_library(oderave SHARED oderavemain.cpp odecollision.h odephysics.h odespace.h plugindefs.h)
 
   if( MSVC )
     set(NEED_TRIINDEX 1)

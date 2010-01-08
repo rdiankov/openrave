@@ -9,7 +9,7 @@ if( ZLIB_FOUND AND Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
   set (coreLIBS ${coreLIBS} collada15reader)
 endif()
 
-set (openrave_core_SOURCES openrave-core.cpp ivcon.cpp)
+set (openrave_core_SOURCES openrave-core.cpp ivcon.cpp colladareader.h  environment.h  openrave-core.h ravep.h   xmlreaders.h colladawriter.h  ivcon.h  plugindatabase.h  server.h)
 
 add_library(libopenrave-core SHARED ${openrave_core_SOURCES})
 add_dependencies(libopenrave-core libopenrave)

@@ -61,6 +61,7 @@ build openrave must include (used in place of rave.h). Precompiled header.
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <iomanip>
 
 #include <sys/timeb.h>    // ftime(), struct timeb
 
@@ -127,6 +128,51 @@ template <class T> boost::shared_ptr<T> sptr_from(boost::weak_ptr<T> const& wpt)
 
 std::string GetMD5HashString(const std::string& s);
 std::string GetMD5HashString(const std::vector<uint8_t>& v);
+
+#define SERIALIZATION_PRECISION 4
+template<typename T>
+inline T SerializationValue(T f)
+{
+    return ( f > -1e-4f && f < 1e-4f ) ? static_cast<T>(0) : f;
+}
+
+inline void SerializeRound(std::ostream& o, float f)
+{
+    o << SerializationValue(f) << " ";
+}
+
+inline void SerializeRound(std::ostream& o, double f)
+{
+    o << SerializationValue(f) << " ";
+}
+
+template <class T>
+inline void SerializeRound(std::ostream& o, const RaveVector<T>& v)
+{
+    o << SerializationValue(v.x) << " " << SerializationValue(v.y) << " " << SerializationValue(v.z) << " " << SerializationValue(v.w) << " ";
+}
+
+template <class T>
+inline void SerializeRound3(std::ostream& o, const RaveVector<T>& v)
+{
+    o << SerializationValue(v.x) << " " << SerializationValue(v.y) << " " << SerializationValue(v.z) << " ";
+}
+
+template <class T>
+inline void SerializeRound(std::ostream& o, const RaveTransform<T>& t)
+{
+    SerializeRound(o,t.rot);
+    SerializeRound(o,t.trans);
+}
+
+template <class T>
+inline void SerializeRound(std::ostream& o, const RaveTransformMatrix<T>& t)
+{
+    o << SerializationValue(t.m[0]) << " " << SerializationValue(t.m[4]) << " " << SerializationValue(t.m[8]) << " "
+      << SerializationValue(t.m[1]) << " " << SerializationValue(t.m[5]) << " " << SerializationValue(t.m[9]) << " "
+      << SerializationValue(t.m[2]) << " " << SerializationValue(t.m[6]) << " " << SerializationValue(t.m[10]) << " ";
+    SerializeRound(o,t.trans);
+}
 
 }
 

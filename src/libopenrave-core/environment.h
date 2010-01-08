@@ -16,6 +16,8 @@
 #ifndef RAVE_ENVIRONMENT_H
 #define RAVE_ENVIRONMENT_H
 
+#include <locale>
+
 #define KINBODY_DELETER boost::bind(&Environment::_KinBodyDestroyCallback,boost::static_pointer_cast<Environment>(shared_from_this()),_1)
 #define KINBODY_DELETER_SHARED boost::bind(&Environment::_KinBodyDestroyCallbackShared,boost::static_pointer_cast<Environment>(shared_from_this()),_1)
 #define GRAPH_DELETER boost::bind(&Environment::_CloseGraphCallback,boost::static_pointer_cast<Environment>(shared_from_this()),RaveViewerBaseWeakPtr(_pCurrentViewer),_1)
@@ -38,6 +40,9 @@ class Environment : public EnvironmentBase
  public:
     Environment(bool bLoadAllPlugins=true) : EnvironmentBase()
     {
+        // set to the classic locale so that number serialization/hashing works correctly
+        std::locale::global(std::locale::classic());
+
         char* phomedir = getenv("OPENRAVE_HOME");
         if( phomedir == NULL )
             phomedir = getenv("OPENRAVE_CACHEPATH");

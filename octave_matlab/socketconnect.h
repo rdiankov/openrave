@@ -39,6 +39,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <locale>
 
 #include <string>
 #include <cstring>
@@ -132,6 +133,9 @@ public:
         int                  sck;
         struct sockaddr_in   writer;
         struct hostent       *hp;
+
+        // set to the classic locale so that number serialization/hashing works correctly
+        std::locale::global(std::locale::classic());
 
         if(ip.size() == 0) {
             std::ifstream orHost;

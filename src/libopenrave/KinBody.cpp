@@ -354,11 +354,13 @@ bool KinBody::Link::GEOMPROPERTIES::InitCollisionMesh(float fTessellation)
 
 void KinBody::Link::GEOMPROPERTIES::serialize(std::ostream& o, int options) const
 {
-    o << _t << " " << type << " " << vRenderScale << " ";
+    SerializeRound(o,_t);
+    o << type << " ";
+    SerializeRound3(o,vRenderScale);
     if( type == GeomTrimesh )
         collisionmesh.serialize(o,options);
     else
-        o << vGeomData.x << " " << vGeomData.y << " " << vGeomData.z << " ";
+        SerializeRound3(o,vGeomData);
 }
 
 KinBody::Link::Link(KinBodyPtr parent)
@@ -420,8 +422,10 @@ void KinBody::Link::serialize(std::ostream& o, int options) const
         FOREACHC(it,_listGeomProperties)
             it->serialize(o,options);
     }
-    if( options & SO_Dynamics )
-        o << _transMass << " " << _mass << " ";
+    if( options & SO_Dynamics ) {
+        SerializeRound(o,_transMass);
+        SerializeRound(o,_mass);
+    }
 }
 
 void KinBody::Link::SetTransform(const Transform& t)
@@ -599,20 +603,26 @@ void KinBody::Joint::AddTorque(const std::vector<dReal>& pTorques)
 void KinBody::Joint::serialize(std::ostream& o, int options) const
 {
     if( options & SO_Kinematics ) {
-        o << dofindex << " " << jointindex << " " << type << " " << tRight << " " << tLeft << " " << offset << " " << nMimicJointIndex << " ";
-        o << vanchor.x << " " << vanchor.y << " " << vanchor.z << " ";
+        o << dofindex << " " << jointindex << " " << type << " ";
+        SerializeRound(o,tRight);
+        SerializeRound(o,tLeft);
+        SerializeRound(o,offset);
+        o << nMimicJointIndex << " ";
+        SerializeRound3(o,vanchor);
         for(int i = 0; i < GetDOF(); ++i)
-            o << vAxes[i].x << " " << vAxes[i].y << " " << vAxes[i].z << " ";
+            SerializeRound3(o,vAxes[i]);
         FOREACHC(it,vMimicCoeffs)
-            o << *it << " ";
+            SerializeRound(o,*it);
         o << (!bodies[0]?-1:bodies[0]->GetIndex()) << " " << (!bodies[1]?-1:bodies[1]->GetIndex()) << " ";
     }
     if( options & SO_Dynamics ) {
-        o << fMaxVel << " " << fMaxAccel << " " << fMaxTorque << " ";
+        SerializeRound(o,fMaxVel);
+        SerializeRound(o,fMaxAccel);
+        SerializeRound(o,fMaxTorque);
         FOREACHC(it,_vlowerlimit)
-            o << *it << " ";
+            SerializeRound(o,*it);
         FOREACHC(it,_vupperlimit)
-            o << *it << " ";
+            SerializeRound(o,*it);
     }
 }
 
@@ -1803,7 +1813,8 @@ void KinBody::ComputeJointHierarchy()
     SetJointValues(prevvalues, true);
 
     {
-        stringstream ss;
+        ostringstream ss;
+        ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
         serialize(ss,SO_Kinematics);
         __hashkinematics = GetMD5HashString(ss.str());
     }

@@ -389,15 +389,16 @@ bool RobotBase::Manipulator::IsGrabbing(KinBodyConstPtr pbody) const
 
 void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
 {
-    o << (!!_pBase ? -1 : _pBase->GetIndex()) << " " << (!!_pEndEffector ? -1 : _pEndEffector->GetIndex()) << " "
-      << _tGrasp << " " << _vpalmdirection.x << " " << _vpalmdirection.y << " " << _vpalmdirection.z << " "
-      << _vgripperjoints.size() << " " << _varmjoints.size() << " " << _vClosingDirection.size() << " ";
+    o << (!!_pBase ? -1 : _pBase->GetIndex()) << " " << (!!_pEndEffector ? -1 : _pEndEffector->GetIndex()) << " ";
+    SerializeRound(o,_tGrasp);
+    SerializeRound3(o,_vpalmdirection);
+    o << _vgripperjoints.size() << " " << _varmjoints.size() << " " << _vClosingDirection.size() << " ";
     FOREACHC(it,_vgripperjoints)
         o << *it << " ";
     FOREACHC(it,_varmjoints)
         o << *it << " ";
     FOREACHC(it,_vClosingDirection)
-        o << *it << " ";
+        SerializeRound(o,*it);
 }
 
 RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot) : _probot(probot)
@@ -444,8 +445,9 @@ void RobotBase::AttachedSensor::SetRelativeTransform(const Transform& t)
 
 void RobotBase::AttachedSensor::serialize(std::ostream& o, int options) const
 {
-    o << (pattachedlink.expired() ? -1 : LinkPtr(pattachedlink)->GetIndex()) << " "
-      << trelative << " " << (!pdata ? -1 : pdata->GetType()) << " ";
+    o << (pattachedlink.expired() ? -1 : LinkPtr(pattachedlink)->GetIndex()) << " ";
+    SerializeRound(o,trelative);
+    o << (!pdata ? -1 : pdata->GetType()) << " ";
 }
 
 RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot) : KinBodyStateSaver(probot), _probot(probot)
@@ -1690,7 +1692,8 @@ void RobotBase::ComputeJointHierarchy()
     }
 
     {
-        stringstream ss;
+        ostringstream ss;
+        ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
         serialize(ss,SO_Kinematics|SO_RobotManipulators|SO_RobotSensors);
         __hashrobotstructure = GetMD5HashString(ss.str());
     }

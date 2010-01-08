@@ -43,3 +43,11 @@ def test_visibilityplanning():
     time.sleep(5)
     self.loadscene(scenefilename='scenes/r602real.env.xml')
     self.testsim()
+
+def test_hash():
+    env = Environment()
+    robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
+    env.AddRobot(robot)
+    s = robot.serialize(SerializationOptions.Kinematics)
+    hash = robot.GetKinematicsGeometryHash()
+    print hash

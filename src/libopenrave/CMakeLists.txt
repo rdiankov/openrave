@@ -1,4 +1,4 @@
-set(openrave_lib_SOURCES KinBody.cpp math.cpp libopenrave.cpp Robot.cpp Trajectory.cpp mt19937ar.cpp)
+set(openrave_lib_SOURCES KinBody.cpp math.cpp libopenrave.cpp Robot.cpp Trajectory.cpp mt19937ar.cpp libopenrave.h  mt19937ar.h ${rave_header_files})
 
 add_library(libopenrave SHARED ${openrave_lib_SOURCES})
 add_dependencies(libopenrave classhashes_h)

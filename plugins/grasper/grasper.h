@@ -821,7 +821,7 @@ class GrasperProblem : public ProblemInstance
 
         analysis.volume = _ComputeConvexHull(vpoints,vconvexplanes,6);
 
-        boost::array<double,6> vmean={0};
+        boost::array<double,6> vmean={{0}};
         for(size_t i = 0; i < vpoints.size(); i += 6) {
             for(int j = 0; j < 6; ++j)
                 vmean[j] += vpoints[i+j];
