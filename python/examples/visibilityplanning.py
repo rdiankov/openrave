@@ -12,6 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License. 
+from __future__ import with_statement # for python 2.5
+
 import sys, os, time, signal, threading, pickle
 import numpy # nice to be able to explicitly call some functions
 from numpy import *
