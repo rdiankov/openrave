@@ -204,7 +204,7 @@
       <histop>10</histop>
       <weight>3</weight>
       <maxvel>1</maxvel>
-      <resolution>1</resolution>
+      <resolution>0.5</resolution>
     </Joint>
     <Body name="LShoulder">
       <offsetfrom>LCollar</offsetfrom>
@@ -223,7 +223,7 @@
       <histop>61</histop>
       <weight>3</weight>
       <maxvel>1</maxvel>
-      <resolution>1</resolution>
+      <resolution>0.5</resolution>
     </Joint>
     <Body name="LShoulder2">
       <offsetfrom>LShoulder</offsetfrom>
@@ -241,7 +241,7 @@
       <histop>48</histop>
       <weight>3</weight>
       <maxvel>1</maxvel>
-      <resolution>1</resolution>
+      <resolution>0.5</resolution>
     </Joint>
     <Body name="LShoulder3">
       <offsetfrom>LShoulder2</offsetfrom>
@@ -259,7 +259,7 @@
       <histop>34</histop>
       <weight>3</weight>
       <maxvel>1</maxvel>
-      <resolution>1</resolution>
+      <resolution>0.5</resolution>
     </Joint>
     <Body name="LForearm">
       <offsetfrom>LShoulder3</offsetfrom>
@@ -676,7 +676,7 @@
       <histop>10</histop>
       <weight>3</weight>
       <maxvel>1</maxvel>
-      <resolution>1</resolution>
+      <resolution>0.5</resolution>
     </Joint>
     <Body name="RShoulder">
       <offsetfrom>RCollar</offsetfrom>
@@ -695,7 +695,7 @@
       <histop>61</histop>
       <weight>3</weight>
       <maxvel>1</maxvel>
-      <resolution>1</resolution>
+      <resolution>0.5</resolution>
     </Joint>
     <Body name="RShoulder2">
       <offsetfrom>RShoulder</offsetfrom>
@@ -713,7 +713,7 @@
       <histop>48</histop>
       <weight>3</weight>
       <maxvel>1</maxvel>
-      <resolution>1</resolution>
+      <resolution>0.5</resolution>
     </Joint>
     <Body name="RShoulder3">
       <offsetfrom>RShoulder2</offsetfrom>
@@ -731,7 +731,7 @@
       <histop>34</histop>
       <weight>3</weight>
       <maxvel>1</maxvel>
-      <resolution>1</resolution>
+      <resolution>0.5</resolution>
     </Joint>
     <Body name="RForearm">
       <offsetfrom>RShoulder3</offsetfrom>

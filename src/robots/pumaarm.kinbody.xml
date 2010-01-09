@@ -45,7 +45,7 @@
     <histop>160</histop>
     <axis>0 -1 0</axis>
     <maxvel>2</maxvel>
-    <resolution>1</resolution>
+    <resolution>0.5</resolution>
   </Joint>
   
   <Body name="Puma2" type="dynamic">
@@ -70,7 +70,7 @@
     <histop>43</histop>
     <axis>0 0 1</axis>
     <maxvel>1.5</maxvel>
-    <resolution>1</resolution>
+    <resolution>0.25</resolution>
   </Joint>
   
   <Body name="Puma3" type="dynamic">
