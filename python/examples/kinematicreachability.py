@@ -19,68 +19,46 @@ import time,pickle
 from optparse import OptionParser
 
 class ReachabilityModel(metaclass.AutoReloader):
-    def __init__(self,robotfile=None,manipname=None,showviewer=False):
-        self.orenv = Environment()
-        if showviewer:
-            self.orenv.SetViewer('qtcoin')
-        self.robotfile = None
-        self.orrobot = None
-        if robotfile is not None:
-            self.loadrobot(robotfile,manipname)
-                
+    def __init__(self,env,robot,target=None):
+        self.env = env
+        self.robot = robot
+        self.manip = self.robot.GetActiveManipulator()
+        self.trimesh = self.env.Triangulate(self.robot)
         self.reachabilitystats = None
         self.reachabilitydensity3d = None
+        self.pointscale = None
 
-    def save(self,filename='reachability.pp'):
-        f = open(filename,'w')
-        pickle.dump((self.robotfile,self.manipname,self.reachabilitystats,self.reachabilitydensity3d,self.pointscale), f)
-        f.close()
-    def load(self,filename='reachability.pp'):
-        f = open(filename, 'r')
-        self.robotfile,self.manipname,self.reachabilitystats,self.reachabilitydensity3d,self.pointscale = pickle.load(f)
-        self.loadrobot(self.robotfile,self.manipname)
+    def has(self):
+        return len(self.reachabilitydensity3d) > 0
 
-    def loadrobot(self,robotfile,manipname):
-        if self.orrobot is not None:
-            self.orenv.RemoveKinBody(self.orrobot)
-            self.orrobot = None
-        self.orrobot = self.orenv.ReadRobotXMLFile(robotfile)
-        if self.orrobot is None:
-            raise ValueError('failed to open %s openrave file'%robotfile)
-        self.robotfile = robotfile
-        self.orenv.AddRobot(self.orrobot)
-        self.orrobot.SetTransform(eye(4))
-        self.trimesh = self.orenv.Triangulate(self.orrobot)
+    def getfilename(self):
+        return os.path.join(self.env.GetHomeDirectory(),self.robot.GetRobotStructureHash(),self.manip.GetName() + '.reachability.pp')
 
-        if manipname is None:
-            manips = [m for m in self.orrobot.GetManipulators() if m.HasIKSolver()]
-            if len(manips) == 0:
-                raise ValueError('no valid manipulator')
-            self.manip = manips[0]
-        else:
-            manips = [m for m in self.orrobot.GetManipulators() if m.GetName()==manipname and m.HasIKSolver()]
-            if len(manips) == 0:
-                raise ValueError('no valid manipulator')
-            self.manip = manips[0]
-        self.manipname = self.manip.GetName()
+    def load(self):
+        if not os.path.isfile(self.getfilename()):
+            return False
+        self.reachabilitystats,self.reachabilitydensity3d,self.pointscale = pickle.load(open(self.getfilename(), 'r'))
 
-    def ComputeReachability(self,maxradius,translationonly=False):
+    def save(self):
+        print 'saving grasps to %s'%self.getfilename()
+        mkdir_recursive(os.path.join(self.env.GetHomeDirectory(),self.robot.GetRobotStructureHash()))
+        pickle.dump((self.reachabilitystats,self.reachabilitydensity3d,self.pointscale), open(self.getfilename(), 'w'))
+
+    def generate(self,maxradius,translationonly=False,xyzdelta=0.02,rolldelta=pi/8.0):
         starttime = time.time()
         Tgrasp = dot(linalg.inv(self.manip.GetBase().GetTransform()),self.manip.GetEndEffectorTransform())
         armlength = sqrt(sum(Tgrasp[0:3,3]**2))
         if maxradius is None:
             maxradius = 1.5*armlength
-#        else:
-#            maxradius = max(1.5*armlength,maxradius)
-        print 'radius: ',maxradius
+        print 'radius: %f'%maxradius
 
-        allpoints,insideinds,shape,self.pointscale = self.UniformlySampleSpace(maxradius,delta=0.02)
-        rotations = [eye(3)] if translationonly else self.GetUniformRotations(spherelevel=0,rolldelta=pi/8.0)
-        T = zeros((3,4))
+        allpoints,insideinds,shape,self.pointscale = self.UniformlySampleSpace(maxradius,delta=xyzdelta)
+        rotations = [eye(3)] if translationonly else self.GetUniformRotations(spherelevel=0,rolldelta=rolldelta)
+        T = eye(4)
 
         reachabilitydensity3d = zeros(prod(shape))
         self.reachabilitystats = []
-        with self.orenv:
+        with self.env:
             for i,ind in enumerate(insideinds):
                 numvalid = 0
                 T[0:3,3] = allpoints[ind]
@@ -92,15 +70,15 @@ class ReachabilityModel(metaclass.AutoReloader):
                         numvalid += len(solutions)
                 if mod(i,1000)==0:
                     print '%d/%d'%(i,len(insideinds))
-                reachabilitydensity3d[ind] = numvalid/(100*float(len(rotations)))
+                reachabilitydensity3d[ind] = numvalid/(50.0*len(rotations))
         self.reachabilitydensity3d = reshape(reachabilitydensity3d,shape)
-        self.reachabilitydensity3d[0,0,0] = 1
         print 'reachability finished in %fs'%(time.time()-starttime)
 
-    def showdensity(self,showrobot=True,contours=[0.1,0.5,0.9,0.99],opacity=None,figureid=1, xrange=None):
-        from enthought.mayavi import mlab
+    def show(self,showrobot=True,contours=[0.1,0.5,0.9,0.99],opacity=None,figureid=1, xrange=None):
         mlab.figure(figureid,fgcolor=(0,0,0), bgcolor=(1,1,1),size=(1024,768))
         mlab.clf()
+        reachabilitydensity3d = minimum(self.reachabilitydensity3d,1.0)
+        reachabilitydensity3d[0,0,0] = 1 # have at least one point be at the maximum
         if xrange is None:
             offset = array((0,0,0))
             src = mlab.pipeline.scalar_field(self.reachabilitydensity3d)
@@ -115,14 +93,21 @@ class ReachabilityModel(metaclass.AutoReloader):
             v = self.pointscale[0]*self.trimesh.vertices+self.pointscale[1]
             mlab.triangular_mesh(v[:,0]-offset[0],v[:,1]-offset[1],v[:,2]-offset[2],self.trimesh.indices,color=(0.5,0.5,0.5))
 
-    def showrobotlimits(self):
-        from enthought.mayavi import mlab
-        showvalues = self.orrobot.GetJointLimits()
-        for values in showvalues:
-            self.orrobot.SetJointValues(values)
-            trimesh = self.orenv.Triangulate(self.orrobot)
-            v = self.pointscale[0]*trimesh.vertices+self.pointscale[1]
-            mlab.triangular_mesh(v[:,0],v[:,1],v[:,2],trimesh.indices,color=(0.5,0.5,0.5))
+    def autogenerate(self):
+        """Caches parameters for most commonly used robots and starts the generation process for them"""
+        # disable every body but the target and robot
+        bodies = [b for b in self.env.GetBodies() if b.GetNetworkId() != self.robot.GetNetworkId() and b.GetNetworkId() != self.target.GetNetworkId()]
+        for b in bodies:
+            b.Enable(False)
+        try:
+            if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531' and self.manip.GetName() == 'arm':
+                self.generate(maxradius=1.0)
+            else:
+                raise ValueError('could not auto-generate grasp set for %s:%s'%(self.robot.GetName(),self.manip.GetName()))
+            self.save()
+        finally:
+            for b in bodies:
+                b.Enable(True)
 
     def UniformlySampleSpace(self,maxradius,delta=0.02):
         nsteps = floor(maxradius/delta)
@@ -149,7 +134,8 @@ class ReachabilityModel(metaclass.AutoReloader):
                 rotations.append(dot(Rbase,Rz))
         return rotations
 
-    def GetGeodesicSphere(self,spherelevel=2):
+    @staticmethod
+    def GetGeodesicSphere(spherelevel=2):
         GTS_M_ICOSAHEDRON_X = sqrt(sqrt(5)+1)/sqrt(2*sqrt(5))
         GTS_M_ICOSAHEDRON_Y = sqrt(2)/sqrt(5+sqrt(5))
         GTS_M_ICOSAHEDRON_Z = 0.0
@@ -187,28 +173,50 @@ class ReachabilityModel(metaclass.AutoReloader):
             triindices = newindices
         return array(vertices),triindices
 
-if __name__=='__main__':
+def CreateOptionParser():
     parser = OptionParser(description='Computes the reachability region of a robot and python pickles it into a file.')
-    parser.add_option('--robot',action='store',type='string',dest='robot',default='robots/barrettwam.robot.xml',
+    parser.add_option('--robot',action='store',type='string',dest='robot',default='robots/barrettsegway.robot.xml',
                       help='OpenRAVE robot to load')
-    parser.add_option('--savereachability', action='store',type='string',dest='savereachability',default=None,
-                      help='Compute the statistics and save in this file')
-    parser.add_option('--loadreachability', action='store',type='string',dest='loadreachability',default=None,
-                      help='Load the reachability statistics')
     parser.add_option('--manipname',action='store',type='string',dest='manipname',default=None,
-                      help='The name of the manipulator')
+                      help='The name of the manipulator to use')
     parser.add_option('--maxradius',action='store',type='float',dest='maxradius',default=None,
                       help='The max radius of the arm to perform the computation')
     parser.add_option('--show',action='store_true',dest='show',default=False,
                       help='If set, uses mayavi (v3+) to display the reachability')
+    return parser
+
+def run(Model=ReachabilityModel,parser=CreateOptionParser()):
     (options, args) = parser.parse_args()
-    
-    model = ReachabilityModel(options.robot,manipname=options.manipname)
-    if options.loadreachability:
-        model.load(options.loadreachability)
-    if options.savereachability:
-        model.ComputeReachability(maxradius=options.maxradius)
-        model.save(options.savereachability)
-    if options.show:
-        model.showdensity()
-        input('press any key to exit')
+
+    env = Environment()
+    try:
+        with env:
+            robot = env.ReadRobotXMLFile(options.robot)
+            env.AddRobot(robot)
+            robot.SetTransform(eye(4))
+            if options.manipname is None:
+                robot.SetActiveManipulator([i for i,m in enumerate(robot.GetManipulators()) if m.HasIKSolver()][0])
+            else:
+                robot.SetActiveManipulator([i for i,m in self.robot.GetManipulators() if m.GetName()==options.manipname][0])
+
+        model = Model(env=env,robot=robot)
+        if options.show:
+            from enthought.mayavi import mlab
+            if not model.load():
+                print 'failed to find cached grasp set %s'%self.getfilename()
+                sys.exit(1)
+            while True:
+                model.show()
+        
+        try:
+            model.autogenerate()
+        except ValueError, e:
+            print e
+            print 'attempting preset values'
+            model.generate(maxradius=options.maxradius)
+            model.save()
+    finally:
+        env.Destroy()
+
+if __name__=='__main__':
+    run(ReachabilityModel)

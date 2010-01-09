@@ -16,7 +16,7 @@ from __future__ import with_statement # for python 2.5
 import time,traceback
 from openravepy import *
 from openravepy.interfaces import BaseManipulation, TaskManipulation
-from openravepy.examples.grasping import Grasping
+from openravepy.examples.grasping import GraspingModel
 from numpy import *
 import numpy
 
@@ -34,7 +34,7 @@ class GraspPlanning(metaclass.AutoReloader):
             self.graspables = self.getGraspables(dests=dests)
             if len(self.graspables) == 0:
                 print 'attempting to auto-generate a grasp table'
-                grasping = Grasping(self.envreal,self.robot,self.envreal.GetKinBody('mug1'))
+                grasping = GraspingModel(self.envreal,self.robot,self.envreal.GetKinBody('mug1'))
                 if not grasping.load():
                     grasping.autogenerate()
                     self.graspables = self.getGraspables(dests=dests)
@@ -78,7 +78,7 @@ class GraspPlanning(metaclass.AutoReloader):
         print 'searching for graspable objects...'
         for target in self.envreal.GetBodies():
             if not target.IsRobot():
-                grasping = Grasping(self.envreal,self.robot,target)
+                grasping = GraspingModel(self.envreal,self.robot,target)
                 if grasping.load():
                     print '%s is graspable'%target.GetName()
                     graspables.append([grasping,dests])

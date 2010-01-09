@@ -91,12 +91,9 @@ bool RobotBase::Manipulator::FindIKSolution(const Transform& goal, vector<dReal>
 
 bool RobotBase::Manipulator::FindIKSolution(const Transform& goal, const std::vector<dReal>& vFreeParameters, vector<dReal>& solution, bool bColCheck) const
 {
-    if( !_pIkSolver ) {
-        RAVELOG_WARNA("Need to set IK solver for robot\n");
-        return false;
-    }
-    if( _pIkSolver->GetManipulator() != shared_from_this() )
-        throw openrave_exception("ik needs to be set to robot");
+    if( !_pIkSolver )
+        throw openrave_exception(str(boost::format("manipulator %s:%s does not have an IK solver set")%RobotBasePtr(_probot)->GetName()%GetName()));
+    BOOST_ASSERT(_pIkSolver->GetManipulator() == shared_from_this() );
 
     vector<dReal> temp;
     GetRobot()->GetJointValues(temp);
@@ -120,13 +117,9 @@ bool RobotBase::Manipulator::FindIKSolutions(const Transform& goal, std::vector<
 
 bool RobotBase::Manipulator::FindIKSolutions(const Transform& goal, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, bool bColCheck) const
 {
-    if( !_pIkSolver ) {
-        RAVELOG_WARNA("Need to set IK solver for robot\n");
-        return false;
-    }
-    if( _pIkSolver->GetManipulator() != shared_from_this() )
-        throw openrave_exception("ik needs to be set to robot");
-
+    if( !_pIkSolver )
+        throw openrave_exception(str(boost::format("manipulator %s:%s does not have an IK solver set")%RobotBasePtr(_probot)->GetName()%GetName()));
+    BOOST_ASSERT(_pIkSolver->GetManipulator() == shared_from_this() );
     Transform tgoal = goal*_tGrasp.inverse();
     if( !!_pBase )
         tgoal = _pBase->GetTransform().inverse() * tgoal;
