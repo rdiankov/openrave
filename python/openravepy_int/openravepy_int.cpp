@@ -3146,6 +3146,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetGrabbed",&PyRobotBase::GetGrabbed)
             .def("WaitForController",&PyRobotBase::WaitForController)
             .def("GetRobotStructureHash",&PyRobotBase::GetRobotStructureHash)
+            .def("CreateRobotStateSaver",&PyRobotBase::CreateRobotStateSaver)
             ;
         
         object (PyRobotBase::PyManipulator::*pmanipik)(object, bool) const = &PyRobotBase::PyManipulator::FindIKSolution;

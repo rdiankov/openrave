@@ -314,7 +314,7 @@ class GrasperProblem : public ProblemInstance
                 analysis = _AnalyzeContacts3D(c,friction,8);
             }
             catch(const openrave_exception& ex) {
-                RAVELOG_ERROR("AnalyzeContacts3D: %s\n",ex.what());
+                RAVELOG_WARN("AnalyzeContacts3D: %s\n",ex.what());
             }
             sout << analysis.mindist << " " << analysis.volume << " ";
         }

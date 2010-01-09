@@ -2652,15 +2652,17 @@ void QtCoinViewer::_UpdateCollisionChecker()
 {
     if( !!_pSelectedCollisionChecker ) {
         CollisionCheckerBasePtr p = GetEnv()->GetCollisionChecker();
-        for(int i = 0; i < _pSelectedCollisionChecker->actions().size(); ++i) {
-            if( _pSelectedCollisionChecker->actions().at(i)->data().toString().toStdString() == p->GetXMLId() ) {
-                _pSelectedCollisionChecker->actions().at(i)->setChecked(true);
-                return;
+        if( !!p ) {
+            for(int i = 0; i < _pSelectedCollisionChecker->actions().size(); ++i) {
+                if( _pSelectedCollisionChecker->actions().at(i)->data().toString().toStdString() == p->GetXMLId() ) {
+                    _pSelectedCollisionChecker->actions().at(i)->setChecked(true);
+                    return;
+                }
             }
+
+            RAVELOG_WARN(str(boost::format("cannot find collision checker menu item %s\n")%p->GetXMLId()));
         }
 
-        if( !!p )
-            RAVELOG_WARN(str(boost::format("cannot find collision checker menu item %s\n")%p->GetXMLId()));
         // set to default
         _pSelectedCollisionChecker->actions().at(0)->setChecked(true);
     }
@@ -2683,15 +2685,17 @@ void QtCoinViewer::_UpdatePhysicsEngine()
 {
     if( !!_pSelectedPhysicsEngine ) {
         PhysicsEngineBasePtr p = GetEnv()->GetPhysicsEngine();
-        for(int i = 0; i < _pSelectedPhysicsEngine->actions().size(); ++i) {
-            if( _pSelectedPhysicsEngine->actions().at(i)->data().toString().toStdString() == p->GetXMLId() ) {
-                _pSelectedPhysicsEngine->actions().at(i)->setChecked(true);
-                return;
+        if( !!p ) {
+            for(int i = 0; i < _pSelectedPhysicsEngine->actions().size(); ++i) {
+                if( _pSelectedPhysicsEngine->actions().at(i)->data().toString().toStdString() == p->GetXMLId() ) {
+                    _pSelectedPhysicsEngine->actions().at(i)->setChecked(true);
+                    return;
+                }
             }
+            
+            RAVELOG_WARN(str(boost::format("cannot find physics engine menu item %s\n")%p->GetXMLId()));
         }
 
-        if( !!p )
-            RAVELOG_WARN(str(boost::format("cannot find physics engine menu item %s\n")%p->GetXMLId()));
         // set to default
         _pSelectedPhysicsEngine->actions().at(0)->setChecked(true);
     }

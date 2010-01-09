@@ -64,55 +64,66 @@ class Grasping(metaclass.AutoReloader):
         return os.path.join(self.env.GetHomeDirectory(),self.robot.GetRobotStructureHash(),self.manip.GetName() + '.' + self.target.GetKinematicsGeometryHash()+'.grasp.pp')
 
     def generateGraspSet(self,preshapes,standoffs,rolls,approachrays, graspingnoise=None,addSphereNorms=False,updateenv=True,forceclosurethreshold=1e-9):
+        """all grasp parameters have to be in the bodies's coordinate system (ie: approachrays)"""
         N = approachrays.shape[0]
-        approachgraphs = [self.env.plot3(points=approachrays[:,0:3],pointsize=5,colors=array((1,0,0))),
-                          self.env.drawlinelist(points=reshape(c_[approachrays[:,0:3],approachrays[:,0:3]+0.005*approachrays[:,3:6]],(2*N,3)),linewidth=4,colors=array((1,0,0,0)))]
-        totalgrasps = N*len(preshapes)*len(rolls)*len(standoffs)
-        counter = 0
-        self.grasps = []
-        # only the indices used by the TaskManipulation plugin should start with an 'i'
-        graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':preshapes.shape[1],'igrasptrans':12,'forceclosure':1}
-        self.graspindices = dict()
-        totaldof = 0
-        for name,dof in graspdof.iteritems():
-            self.graspindices[name] = range(totaldof,totaldof+dof)
-            totaldof += dof
+        Ttarget = self.target.GetTransform()
+        # transform each ray into the global coordinate system in order to plot it
+        gapproachrays = c_[dot(approachrays[:,0:3],transpose(Ttarget[0:3,0:3]))+tile(Ttarget[0:3,3],(N,1)),dot(approachrays[:,3:6],transpose(Ttarget[0:3,0:3]))]
+        approachgraphs = [self.env.plot3(points=gapproachrays[:,0:3],pointsize=5,colors=array((1,0,0))),
+                          self.env.drawlinelist(points=reshape(c_[gapproachrays[:,0:3],gapproachrays[:,0:3]+0.005*gapproachrays[:,3:6]],(2*N,3)),linewidth=4,colors=array((1,0,0,0)))]
         contactgraph = None
-        if updateenv:
-            self.env.UpdatePublishedBodies()
-        counter = 0
-        for approachray,roll,preshape,standoff in myproduct(approachrays,rolls,preshapes,standoffs):
-            print 'grasp %d/%d'%(counter,totalgrasps)
-            counter += 1
-            grasp = zeros(totaldof)
-            grasp[self.graspindices.get('igrasppos')] = approachray[0:3]
-            grasp[self.graspindices.get('igraspdir')] = -approachray[3:6]
-            grasp[self.graspindices.get('igrasproll')] = roll
-            grasp[self.graspindices.get('igraspstandoff')] = standoff
-            grasp[self.graspindices.get('igrasppreshape')] = preshape
-            
-            try:
-                contacts,finalconfig,mindist,volume = self.runGrasp(grasp,graspingnoise=graspingnoise,translate=True,forceclosure=True)
-            except ValueError, e:
-                print 'Grasp Failed: '
-                traceback.print_exc(e)
-                continue
+        statesaver = self.robot.CreateKinBodyStateSaver()
+        try:
+            totalgrasps = N*len(preshapes)*len(rolls)*len(standoffs)
+            counter = 0
+            self.grasps = []
+            # only the indices used by the TaskManipulation plugin should start with an 'i'
+            graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':preshapes.shape[1],'igrasptrans':12,'forceclosure':1}
+            self.graspindices = dict()
+            totaldof = 0
+            for name,dof in graspdof.iteritems():
+                self.graspindices[name] = range(totaldof,totaldof+dof)
+                totaldof += dof
+            if updateenv:
+                self.env.UpdatePublishedBodies()
+            counter = 0
+            for approachray,roll,preshape,standoff in myproduct(approachrays,rolls,preshapes,standoffs):
+                print 'grasp %d/%d'%(counter,totalgrasps)
+                counter += 1
+                grasp = zeros(totaldof)
+                grasp[self.graspindices.get('igrasppos')] = approachray[0:3]
+                grasp[self.graspindices.get('igraspdir')] = -approachray[3:6]
+                grasp[self.graspindices.get('igrasproll')] = roll
+                grasp[self.graspindices.get('igraspstandoff')] = standoff
+                grasp[self.graspindices.get('igrasppreshape')] = preshape
 
-            Tgrasp = eye(4)
-            with self.env:
-                self.robot.SetJointValues(finalconfig[0])
-                self.robot.SetTransform(finalconfig[1])
-                Tgrasp = dot(linalg.inv(self.target.GetTransform()),self.manip.GetEndEffectorTransform())
-                if updateenv:
-                    contactgraph = self.drawContacts(contacts)
-                    self.env.UpdatePublishedBodies()
+                try:
+                    contacts,finalconfig,mindist,volume = self.runGrasp(grasp,graspingnoise=graspingnoise,translate=True,forceclosure=True)
+                except ValueError, e:
+                    print 'Grasp Failed: '
+                    traceback.print_exc(e)
+                    continue
 
-            grasp[self.graspindices.get('igrasptrans')] = reshape(transpose(Tgrasp[0:3,0:4]),12)
-            grasp[self.graspindices.get('forceclosure')] = mindist
-            if mindist > forceclosurethreshold:
-                print 'found good grasp'
-                self.grasps.append(grasp)
-        self.grasps = array(self.grasps)
+                Tgrasp = eye(4)
+                with self.env:
+                    self.robot.SetJointValues(finalconfig[0])
+                    self.robot.SetTransform(finalconfig[1])
+                    Tgrasp = dot(linalg.inv(self.target.GetTransform()),self.manip.GetEndEffectorTransform())
+                    if updateenv:
+                        contactgraph = self.drawContacts(contacts) if len(contacts) > 0 else None
+                        self.env.UpdatePublishedBodies()
+
+                grasp[self.graspindices.get('igrasptrans')] = reshape(transpose(Tgrasp[0:3,0:4]),12)
+                grasp[self.graspindices.get('forceclosure')] = mindist
+                if mindist > forceclosurethreshold:
+                    print 'found good grasp'
+                    self.grasps.append(grasp)
+            self.grasps = array(self.grasps)
+        finally:
+            # force closing the handles (if an exception is thrown, python 2.6 does not close them without a finally)
+            approachgraphs = None
+            contactgraph = None
+            statesaver = None
 
     def runGrasp(self,grasp,graspingnoise=None,translate=True,forceclosure=False):
         with self.robot: # lock the environment and save the robot state
@@ -123,35 +134,37 @@ class Grasping(metaclass.AutoReloader):
                                      position=grasp[self.graspindices.get('igrasppos')],
                                      standoff=grasp[self.graspindices.get('igraspstandoff')],
                                      target=self.target,graspingnoise = graspingnoise,
-                                     forceclosure=forceclosure, execute=True, outputfinal=True)
+                                     forceclosure=forceclosure, execute=False, outputfinal=True)
 
     def computeBoxApproachRays(self,stepsize=0.02):
-        ab = self.target.ComputeAABB()
-        p = ab.pos()
-        e = ab.extents()
-        sides = array(((0,0,e[2],0,0,-1,e[0],0,0,0,e[1],0),
-                       (0,0,-e[2],0,0,1,e[0],0,0,0,e[1],0),
-                       (0,e[1],0,0,-1,0,e[0],0,0,0,0,e[2]),
-                       (0,-e[1],0,0,1,0,e[0],0,0,0,0,e[2]),
-                       (e[0],0,0,-1,0,0,0,e[1],0,0,0,e[2]),
-                       (-e[0],0,0,1,0,0,0,e[1],0,0,0,e[2])))
-        maxlen = 2*sqrt(sum(e**2))
-        
-        approachrays = zeros((0,6))
-        for side in sides:
-            ex = sqrt(sum(side[6:9]**2))
-            ey = sqrt(sum(side[9:12]**2))
-            XX,YY = meshgrid(r_[arange(-ex,-0.25*stepsize,stepsize),0,arange(stepsize,ex,stepsize)],
-                             r_[arange(-ey,-0.25*stepsize,stepsize),0,arange(stepsize,ey,stepsize)])
-            localpos = outer(XX.flatten(),side[6:9]/ex)+outer(YY.flatten(),side[9:12]/ey)
-            N = localpos.shape[0]
-            rays = c_[tile(p+side[0:3],(N,1))+localpos,maxlen*tile(side[3:6],(N,1))]
-            collision, info = self.env.CheckCollisionRays(rays,self.target)
-            # make sure all normals are the correct sign: pointing outward from the object)
-            newinfo = info[collision,:]
-            newinfo[sum(rays[collision,3:6]*newinfo[:,3:6],1)>0,3:6] *= -1
-            approachrays = r_[approachrays,newinfo]
-        return approachrays
+        with self.target:
+            self.target.SetTransform(eye(4))
+            ab = self.target.ComputeAABB()
+            p = ab.pos()
+            e = ab.extents()
+            sides = array(((0,0,e[2],0,0,-1,e[0],0,0,0,e[1],0),
+                           (0,0,-e[2],0,0,1,e[0],0,0,0,e[1],0),
+                           (0,e[1],0,0,-1,0,e[0],0,0,0,0,e[2]),
+                           (0,-e[1],0,0,1,0,e[0],0,0,0,0,e[2]),
+                           (e[0],0,0,-1,0,0,0,e[1],0,0,0,e[2]),
+                           (-e[0],0,0,1,0,0,0,e[1],0,0,0,e[2])))
+            maxlen = 2*sqrt(sum(e**2))
+
+            approachrays = zeros((0,6))
+            for side in sides:
+                ex = sqrt(sum(side[6:9]**2))
+                ey = sqrt(sum(side[9:12]**2))
+                XX,YY = meshgrid(r_[arange(-ex,-0.25*stepsize,stepsize),0,arange(stepsize,ex,stepsize)],
+                                 r_[arange(-ey,-0.25*stepsize,stepsize),0,arange(stepsize,ey,stepsize)])
+                localpos = outer(XX.flatten(),side[6:9]/ex)+outer(YY.flatten(),side[9:12]/ey)
+                N = localpos.shape[0]
+                rays = c_[tile(p+side[0:3],(N,1))+localpos,maxlen*tile(side[3:6],(N,1))]
+                collision, info = self.env.CheckCollisionRays(rays,self.target)
+                # make sure all normals are the correct sign: pointing outward from the object)
+                newinfo = info[collision,:]
+                newinfo[sum(rays[collision,3:6]*newinfo[:,3:6],1)>0,3:6] *= -1
+                approachrays = r_[approachrays,newinfo]
+            return approachrays
 
     def drawContacts(self,contacts,conelength=0.03,transparency=0.5):
         angs = linspace(0,2*pi,10)
@@ -165,7 +178,7 @@ class Grasping(metaclass.AutoReloader):
                 R = rotationMatrixFromAxisAngle(rotaxis/sinang,math.atan2(sinang,c[5]))
             else:
                 R = eye(3)
-                R[4] = R[8] = sign(c[5])
+                R[1,1] = R[2,2] = sign(c[5])
             points = dot(conepoints,transpose(R)) + tile(c[0:3],(conepoints.shape[0],1))
             allpoints = r_[allpoints,points[triinds,:]]
         return self.env.drawtrimesh(points=allpoints,indices=None,colors=array((1,0.4,0.4,transparency)))
@@ -176,6 +189,25 @@ class Grasping(metaclass.AutoReloader):
             contacts,finalconfig,mindist,volume = self.runGrasp(grasp,translate=True)
             contactgraph = self.drawContacts(contacts)
             time.sleep(delay)
+
+    def autogenerateGraspSet(self):
+        """Caches parameters for most commonly used robot/object pairs and starts the generation process for them"""
+        # disable every body but the target and robot
+        bodies = [b for b in self.env.GetBodies() if b.GetNetworkId() != self.robot.GetNetworkId() and b.GetNetworkId() != self.target.GetNetworkId()]
+        for b in bodies:
+            b.Enable(False)
+        try:
+            if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531' and self.manip.GetName() == 'arm' and self.target.GetKinematicsGeometryHash() == 'bbf03c6db8efc712a765f955a27b0d0f':
+                self.initGrasper(friction=0.4,avoidlinks=[])
+                self.generateGraspSet(preshapes=array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2))),
+                                      rolls = arange(0,2*pi,pi/2), standoffs = array([0,0.025]),
+                                      approachrays = self.computeBoxApproachRays(stepsize=0.02))
+            else:
+                raise ValueError('could not auto-generate grasp set for %s:%s:%s'%(self.robot.GetName(),self.manip.GetName(),self.target.GetName()))
+            self.saveGrasps()
+        finally:
+            for b in bodies:
+                b.Enable(True)
 
 def run():
     parser = OptionParser(description='Grasp set generation example for any robot/body pair.')
@@ -207,24 +239,29 @@ def run():
             grasping.showTable()
             sys.exit(0)
 
-        grasping.initGrasper(friction=0.4,avoidlinks=[])
-        if robot.GetName() == 'BarrettHand' or robot.GetName() == 'BarrettWAM':
-            preshapes = array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2)))
-        else:
-            manipprob = BaseManipulation(env,robot)
-            target.Enable(False)
-            manipprop.ReleaseFingers(True)
-            robot.WaitForController(0)
-            target.Enable(True)
-            preshapes = array([robot.GetJointValues()])
-        grasping.generateGraspSet(preshapes=preshapes,
-                                  rolls = arange(0,2*pi,pi/2),
-                                  standoffs = array([0,0.025]),
-                                  approachrays = grasping.computeBoxApproachRays(stepsize=0.02),
-                                  graspingnoise=None,
-                                  updateenv=options.useviewer,
-                                  addSphereNorms=False)
-        grasping.saveGrasps()
+        try:
+            grasping.autogenerateGraspSet()
+        except ValueError, e:
+            print e
+            print 'attempting preset values'
+            grasping.initGrasper(friction=0.4,avoidlinks=[])
+            if robot.GetName() == 'BarrettHand' or robot.GetName() == 'BarrettWAM':
+                preshapes = array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2)))
+            else:
+                manipprob = BaseManipulation(env,robot)
+                target.Enable(False)
+                manipprop.ReleaseFingers(True)
+                robot.WaitForController(0)
+                target.Enable(True)
+                preshapes = array([robot.GetJointValues()])
+            grasping.generateGraspSet(preshapes=preshapes,
+                                      rolls = arange(0,2*pi,pi/2),
+                                      standoffs = array([0,0.025]),
+                                      approachrays = grasping.computeBoxApproachRays(stepsize=0.02),
+                                      graspingnoise=None,
+                                      updateenv=options.useviewer,
+                                      addSphereNorms=False)
+            grasping.saveGrasps()
     finally:
         env.Destroy()
 
