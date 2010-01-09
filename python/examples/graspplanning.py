@@ -35,8 +35,8 @@ class GraspPlanning(metaclass.AutoReloader):
             if len(self.graspables) == 0:
                 print 'attempting to auto-generate a grasp table'
                 grasping = Grasping(self.envreal,self.robot,self.envreal.GetKinBody('mug1'))
-                if not grasping.loadGrasps():
-                    grasping.autogenerateGraspSet()
+                if not grasping.load():
+                    grasping.autogenerate()
                     self.graspables = self.getGraspables(dests=dests)
 
             if randomize:
@@ -79,7 +79,7 @@ class GraspPlanning(metaclass.AutoReloader):
         for target in self.envreal.GetBodies():
             if not target.IsRobot():
                 grasping = Grasping(self.envreal,self.robot,target)
-                if grasping.loadGrasps():
+                if grasping.load():
                     print '%s is graspable'%target.GetName()
                     graspables.append([grasping,dests])
         return graspables

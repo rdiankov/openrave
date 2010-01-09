@@ -17,13 +17,13 @@ def test_grasping():
     env.AddKinBody(target)
     env.SetViewer('qtcoin')
     self = grasping.Grasping(env,robot,target)
-    self.initGrasper(friction=0.4,avoidlinks=[])
+    self.init(friction=0.4,avoidlinks=[])
     preshapes = array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2)))
     rolls = arange(0,2*pi,pi/2)
     standoffs = array([0,0.025])
     approachrays = self.computeBoxApproachRays(stepsize=0.02)
     graspingnoise=None
-    self.generateGraspSet(preshapes=preshapes, rolls=rolls, standoffs=standoffs, approachrays=approachrays,graspingnoise=None,addSphereNorms=False)
+    self.generate(preshapes=preshapes, rolls=rolls, standoffs=standoffs, approachrays=approachrays,graspingnoise=None,addSphereNorms=False)
 
 def test_autograsping():
     import grasping
@@ -34,7 +34,7 @@ def test_autograsping():
     robot = env.GetRobots()[0]
     target = env.GetKinBody('mug1')
     self = grasping.Grasping(env=env,robot=robot,target=target)
-    self.autogenerateGraspSet()
+    self.autogenerate()
 
 def test_graspplanning():
     import graspplanning

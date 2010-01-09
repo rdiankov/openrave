@@ -40,30 +40,30 @@ class Grasping(metaclass.AutoReloader):
         self.graspindices = dict()
         self.grasper = None
 
-    def hasGrasps(self):
+    def has(self):
         return len(self.grasps) > 0 and len(self.graspindices) > 0 and self.grasper is not None
 
-    def initGrasper(self,friction,avoidlinks,plannername=None):
+    def init(self,friction,avoidlinks,plannername=None):
         self.grasper = Grasper(self.env,self.robot,friction,avoidlinks,plannername)
         self.grasps = []
         self.graspindices = dict()
 
-    def loadGrasps(self):
-        if not os.path.isfile(self.getGraspFilename()):
+    def load(self):
+        if not os.path.isfile(self.getfilename()):
             return False
-        self.grasps,self.graspindices,friction,avoidlinks,plannername = pickle.load(open(self.getGraspFilename(), 'r'))
+        self.grasps,self.graspindices,friction,avoidlinks,plannername = pickle.load(open(self.getfilename(), 'r'))
         self.grasper = Grasper(self.env,self.robot,friction,avoidlinks,plannername)
-        return self.hasGrasps()
+        return self.has()
 
-    def saveGrasps(self):
-        print 'saving grasps to %s'%self.getGraspFilename()
+    def save(self):
+        print 'saving grasps to %s'%self.getfilename()
         mkdir_recursive(os.path.join(self.env.GetHomeDirectory(),self.robot.GetRobotStructureHash()))
-        pickle.dump((self.grasps,self.graspindices,self.grasper.friction,self.grasper.avoidlinks,self.grasper.plannername),open(self.getGraspFilename(), 'w'))
+        pickle.dump((self.grasps,self.graspindices,self.grasper.friction,self.grasper.avoidlinks,self.grasper.plannername),open(self.getfilename(), 'w'))
 
-    def getGraspFilename(self):
+    def getfilename(self):
         return os.path.join(self.env.GetHomeDirectory(),self.robot.GetRobotStructureHash(),self.manip.GetName() + '.' + self.target.GetKinematicsGeometryHash()+'.grasp.pp')
 
-    def generateGraspSet(self,preshapes,standoffs,rolls,approachrays, graspingnoise=None,addSphereNorms=False,updateenv=True,forceclosurethreshold=1e-9):
+    def generate(self,preshapes,standoffs,rolls,approachrays, graspingnoise=None,addSphereNorms=False,updateenv=True,forceclosurethreshold=1e-9):
         """all grasp parameters have to be in the bodies's coordinate system (ie: approachrays)"""
         N = approachrays.shape[0]
         Ttarget = self.target.GetTransform()
@@ -125,6 +125,39 @@ class Grasping(metaclass.AutoReloader):
             contactgraph = None
             statesaver = None
 
+    def show(self,delay=0.5):
+        statesaver = self.robot.CreateRobotStateSaver()
+        try:
+            for i,grasp in enumerate(self.grasps):
+                print 'grasp %d/%d'%(i,len(self.grasps))
+                contacts,finalconfig,mindist,volume = self.runGrasp(grasp,translate=True)
+                contactgraph = self.drawContacts(contacts) if len(contacts) > 0 else None
+                self.robot.SetJointValues(finalconfig[0])
+                self.robot.SetTransform(finalconfig[1])
+                self.env.UpdatePublishedBodies()
+                time.sleep(delay)
+        finally:
+            statesaver = None # force restoring
+
+    def autogenerate(self):
+        """Caches parameters for most commonly used robot/object pairs and starts the generation process for them"""
+        # disable every body but the target and robot
+        bodies = [b for b in self.env.GetBodies() if b.GetNetworkId() != self.robot.GetNetworkId() and b.GetNetworkId() != self.target.GetNetworkId()]
+        for b in bodies:
+            b.Enable(False)
+        try:
+            if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531' and self.manip.GetName() == 'arm' and self.target.GetKinematicsGeometryHash() == 'bbf03c6db8efc712a765f955a27b0d0f':
+                self.init(friction=0.4,avoidlinks=[])
+                self.generate(preshapes=array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2))),
+                                      rolls = arange(0,2*pi,pi/2), standoffs = array([0,0.025]),
+                                      approachrays = self.computeBoxApproachRays(stepsize=0.02))
+            else:
+                raise ValueError('could not auto-generate grasp set for %s:%s:%s'%(self.robot.GetName(),self.manip.GetName(),self.target.GetName()))
+            self.save()
+        finally:
+            for b in bodies:
+                b.Enable(True)
+
     def runGrasp(self,grasp,graspingnoise=None,translate=True,forceclosure=False):
         with self.robot: # lock the environment and save the robot state
             self.robot.SetJointValues(grasp[self.graspindices.get('igrasppreshape')],self.manip.GetGripperJoints())
@@ -183,39 +216,13 @@ class Grasping(metaclass.AutoReloader):
             allpoints = r_[allpoints,points[triinds,:]]
         return self.env.drawtrimesh(points=allpoints,indices=None,colors=array((1,0.4,0.4,transparency)))
 
-    def showTable(self,delay=0.5):
-        for i,grasp in enumerate(self.grasps):
-            print 'grasp %d/%d'%(i,len(self.grasps))
-            contacts,finalconfig,mindist,volume = self.runGrasp(grasp,translate=True)
-            contactgraph = self.drawContacts(contacts)
-            time.sleep(delay)
-
-    def autogenerateGraspSet(self):
-        """Caches parameters for most commonly used robot/object pairs and starts the generation process for them"""
-        # disable every body but the target and robot
-        bodies = [b for b in self.env.GetBodies() if b.GetNetworkId() != self.robot.GetNetworkId() and b.GetNetworkId() != self.target.GetNetworkId()]
-        for b in bodies:
-            b.Enable(False)
-        try:
-            if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531' and self.manip.GetName() == 'arm' and self.target.GetKinematicsGeometryHash() == 'bbf03c6db8efc712a765f955a27b0d0f':
-                self.initGrasper(friction=0.4,avoidlinks=[])
-                self.generateGraspSet(preshapes=array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2))),
-                                      rolls = arange(0,2*pi,pi/2), standoffs = array([0,0.025]),
-                                      approachrays = self.computeBoxApproachRays(stepsize=0.02))
-            else:
-                raise ValueError('could not auto-generate grasp set for %s:%s:%s'%(self.robot.GetName(),self.manip.GetName(),self.target.GetName()))
-            self.saveGrasps()
-        finally:
-            for b in bodies:
-                b.Enable(True)
-
 def run():
     parser = OptionParser(description='Grasp set generation example for any robot/body pair.')
     parser.add_option('--robot',action="store",type='string',dest='robot',default='robots/barrettsegway.robot.xml',
                       help='The filename of the robot to load')
     parser.add_option('--body',action="store",type='string',dest='body',default='data/mug1.kinbody.xml',
                       help='The filename of the body whose grasp set to be generated')
-    parser.add_option('--showtable', action='store_true', dest='showtable',default=False,
+    parser.add_option('--show', action='store_true', dest='showtable',default=False,
                       help='If set, will run the generated table, if one exists. Otherwise will exist with an error')
     parser.add_option('--noviewer', action='store_false', dest='useviewer',default=True,
                       help='If specified, will generate the tables without launching a viewer')
@@ -233,18 +240,18 @@ def run():
             env.UpdatePublishedBodies()
         grasping = Grasping(env,robot,target)
         if options.showtable:
-            if not grasping.loadGrasps():
-                print 'failed to find cached grasp set %s'%self.getGraspFilename()
+            if not grasping.load():
+                print 'failed to find cached grasp set %s'%self.getfilename()
                 sys.exit(1)
-            grasping.showTable()
+            grasping.show()
             sys.exit(0)
 
         try:
-            grasping.autogenerateGraspSet()
+            grasping.autogenerate()
         except ValueError, e:
             print e
             print 'attempting preset values'
-            grasping.initGrasper(friction=0.4,avoidlinks=[])
+            grasping.init(friction=0.4,avoidlinks=[])
             if robot.GetName() == 'BarrettHand' or robot.GetName() == 'BarrettWAM':
                 preshapes = array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2)))
             else:
@@ -254,14 +261,14 @@ def run():
                 robot.WaitForController(0)
                 target.Enable(True)
                 preshapes = array([robot.GetJointValues()])
-            grasping.generateGraspSet(preshapes=preshapes,
-                                      rolls = arange(0,2*pi,pi/2),
-                                      standoffs = array([0,0.025]),
-                                      approachrays = grasping.computeBoxApproachRays(stepsize=0.02),
-                                      graspingnoise=None,
-                                      updateenv=options.useviewer,
-                                      addSphereNorms=False)
-            grasping.saveGrasps()
+            grasping.generate(preshapes=preshapes,
+                              rolls = arange(0,2*pi,pi/2),
+                              standoffs = array([0,0.025]),
+                              approachrays = grasping.computeBoxApproachRays(stepsize=0.02),
+                              graspingnoise=None,
+                              updateenv=options.useviewer,
+                              addSphereNorms=False)
+            grasping.save()
     finally:
         env.Destroy()
 
