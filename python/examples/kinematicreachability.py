@@ -32,7 +32,7 @@ class ReachabilityModel(metaclass.AutoReloader):
         return len(self.reachabilitydensity3d) > 0
 
     def getfilename(self):
-        return os.path.join(self.env.GetHomeDirectory(),self.robot.GetRobotStructureHash(),self.manip.GetName() + '.reachability.pp')
+        return os.path.join(OpenRAVEModel.getfilename(self),'reachability.' + self.manip.GetName() + '.pp')
 
     def load(self):
         if not os.path.isfile(self.getfilename()):

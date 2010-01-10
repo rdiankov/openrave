@@ -62,7 +62,7 @@ class OpenRAVEModel(metaclass.AutoReloader):
         return pickle.load(open(self.getfilename(), 'r'))
     def save(self,params):
         print 'saving grasps to %s'%self.getfilename()
-        mkdir_recursive(os.path.join(self.env.GetHomeDirectory(),self.robot.GetRobotStructureHash()))
+        mkdir_recursive(os.path.join(self.env.GetHomeDirectory(),'robot.'+self.robot.GetRobotStructureHash()))
         pickle.dump(params, open(self.getfilename(), 'w'))
     def generate(self):
         raise NotImplementedError()

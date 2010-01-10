@@ -57,7 +57,7 @@ class GraspingModel(OpenRAVEModel):
         OpenRAVEModel.save(self,(self.grasps,self.graspindices,self.grasper.friction,self.grasper.avoidlinks,self.grasper.plannername))
 
     def getfilename(self):
-        return os.path.join(OpenRAVEModel.getfilename(self),self.manip.GetName() + '.' + self.target.GetKinematicsGeometryHash()+'.grasp.pp')
+        return os.path.join(OpenRAVEModel.getfilename(self),'graspset.' + self.manip.GetName() + '.' + self.target.GetKinematicsGeometryHash()+'.pp')
 
     def generate(self,preshapes,standoffs,rolls,approachrays, graspingnoise=None,addSphereNorms=False,updateenv=True,forceclosurethreshold=1e-9):
         """all grasp parameters have to be in the bodies's coordinate system (ie: approachrays)"""
