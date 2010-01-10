@@ -44,7 +44,7 @@ class ReachabilityModel(metaclass.AutoReloader):
         mkdir_recursive(os.path.join(self.env.GetHomeDirectory(),self.robot.GetRobotStructureHash()))
         pickle.dump((self.reachabilitystats,self.reachabilitydensity3d,self.pointscale), open(self.getfilename(), 'w'))
 
-    def generate(self,maxradius,translationonly=False,xyzdelta=0.02,rolldelta=pi/8.0):
+    def generate(self,maxradius=None,translationonly=False,xyzdelta=0.02,rolldelta=pi/8.0):
         starttime = time.time()
         Tgrasp = dot(linalg.inv(self.manip.GetBase().GetTransform()),self.manip.GetEndEffectorTransform())
         armlength = sqrt(sum(Tgrasp[0:3,3]**2))
@@ -70,8 +70,8 @@ class ReachabilityModel(metaclass.AutoReloader):
                         numvalid += len(solutions)
                 if mod(i,1000)==0:
                     print '%d/%d'%(i,len(insideinds))
-                reachabilitydensity3d[ind] = numvalid/(50.0*len(rotations))
-        self.reachabilitydensity3d = reshape(reachabilitydensity3d,shape)
+                reachabilitydensity3d[ind] = numvalid/float(len(rotations))
+        self.reachabilitydensity3d = reshape(reachabilitydensity3d/50.0,shape)
         print 'reachability finished in %fs'%(time.time()-starttime)
 
     def show(self,showrobot=True,contours=[0.1,0.5,0.9,0.99],opacity=None,figureid=1, xrange=None):

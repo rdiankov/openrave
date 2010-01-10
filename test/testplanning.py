@@ -36,6 +36,14 @@ def test_autograsping():
     self = grasping.Grasping(env=env,robot=robot,target=target)
     self.autogenerate()
 
+def test_reachability():
+    import kinematicreachability
+    env = Environment()
+    robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
+    env.AddRobot(robot)
+    self = kinematicreachability.ReachabilityModel(env=env,robot=robot)
+    self.generate()
+
 def test_graspplanning():
     import graspplanning
     env = Environment()
