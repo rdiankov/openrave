@@ -371,6 +371,7 @@ endif()
 add_subdirectory(3rdparty/collada)
 set(COLLADA_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/collada/include ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/collada/include/1.5)
 
+## check qhull library
 check_library_exists(qhull qh_new_qhull "" QHULL_FOUND_LIB)
 check_include_file(qhull/qhull_a.h HAVE_QHULL_H)
 if( QHULL_FOUND_LIB AND HAVE_QHULL_H )
@@ -383,6 +384,31 @@ else()
   set(QHULL_FOUND 1)
 endif()
 
+## check ANN library
+check_include_file_cxx(ANN/ANN.h HAVE_ANN_H)
+if( HAVE_ANN_H )
+  # _Z8annClosev is the gcc c++ mangled name of annClose
+  check_library_exists(ann _Z8annClosev "" ANN_FOUND_CXX_LIB)
+  if( NOT ANN_FOUND_CXX_LIB )
+    check_library_exists(ann annClose "" ANN_FOUND_C_LIB)
+  endif()
+  set(ANN_FOUND_LIB ANN_FOUND_C_LIB OR ANN_FOUND_CXX_LIB)
+  if( NOT ANN_FOUND_LIB )
+    message(STATUS "Found ANN headers but not library!")
+  endif()
+endif()
+
+if( ANN_FOUND_LIB AND HAVE_ANN_H )
+  set(ANN_FOUND 1)
+  set(ANN_INCLUDE_DIR)
+else()
+  # have to compile from sources
+  add_subdirectory(3rdparty/ann)
+  set(ANN_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/ann/include")
+  set(ANN_FOUND 1)
+endif()
+
+## check python
 find_package(PythonInterp)
 if( NOT PYTHON_EXECUTABLE )
   # look specifically for 2.6

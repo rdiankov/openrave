@@ -19,7 +19,7 @@ import time,pickle
 from optparse import OptionParser
 
 class ReachabilityModel(metaclass.AutoReloader):
-    def __init__(self,env,robot,target=None):
+    def __init__(self,env,robot):
         self.env = env
         self.robot = robot
         self.manip = self.robot.GetActiveManipulator()
@@ -99,14 +99,14 @@ class ReachabilityModel(metaclass.AutoReloader):
     def autogenerate(self):
         """Caches parameters for most commonly used robots and starts the generation process for them"""
         # disable every body but the target and robot
-        bodies = [b for b in self.env.GetBodies() if b.GetNetworkId() != self.robot.GetNetworkId() and b.GetNetworkId() != self.target.GetNetworkId()]
+        bodies = [b for b in self.env.GetBodies() if b.GetNetworkId() != self.robot.GetNetworkId()]
         for b in bodies:
             b.Enable(False)
         try:
             if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531' and self.manip.GetName() == 'arm':
                 self.generate(maxradius=1.0)
             else:
-                raise ValueError('could not auto-generate grasp set for %s:%s'%(self.robot.GetName(),self.manip.GetName()))
+                raise ValueError('could not auto-generate reachability for %s:%s'%(self.robot.GetName(),self.manip.GetName()))
             self.save()
         finally:
             for b in bodies:
