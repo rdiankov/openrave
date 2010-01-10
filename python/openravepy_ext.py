@@ -11,7 +11,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License. 
 from __future__ import with_statement # for python 2.5
-import os
+import os, pickle, optparse, numpy, openravepy, metaclass
 
 class KinBodyStateSaver:
     def __init__(self,body):
@@ -45,3 +45,79 @@ def mkdir_recursive(newdir):
             mkdir_recursive(head)
         if tail:
             os.mkdir(newdir)
+
+
+class OpenRAVEModel(metaclass.AutoReloader):
+    def __init__(self,env,robot):
+        self.env = env
+        self.robot = robot
+        self.manip = self.robot.GetActiveManipulator()
+    def has(self):
+        raise NotImplementedError()
+    def getfilename(self):
+        return os.path.join(self.env.GetHomeDirectory(),self.robot.GetRobotStructureHash())
+    def load(self):
+        if not os.path.isfile(self.getfilename()):
+            return None
+        return pickle.load(open(self.getfilename(), 'r'))
+    def save(self,params):
+        print 'saving grasps to %s'%self.getfilename()
+        mkdir_recursive(os.path.join(self.env.GetHomeDirectory(),self.robot.GetRobotStructureHash()))
+        pickle.dump(params, open(self.getfilename(), 'w'))
+    def generate(self):
+        raise NotImplementedError()
+    def generateFromOptions(self,options):
+        return self.generate()
+    def show(self):
+        raise NotImplementedError()
+    def autogenerate(self):
+        raise NotImplementedError()
+    @staticmethod
+    def CreateOptionParser():
+        parser = optparse.OptionParser(description='Computes the reachability region of a robot and python pickles it into a file.')
+        parser.add_option('--robot',action='store',type='string',dest='robot',default='robots/barrettsegway.robot.xml',
+                          help='OpenRAVE robot to load')
+        parser.add_option('--manipname',action='store',type='string',dest='manipname',default=None,
+                          help='The name of the manipulator to use')
+        parser.add_option('--show',action='store_true',dest='show',default=False,
+                          help='If set, uses mayavi (v3+) to display the reachability')
+        return parser
+    @staticmethod
+    def RunFromParser(Model,env=None,parser=None):
+        if parser is None:
+            parser = OpenRAVEModel.CreateOptionParser()
+        (options, args) = parser.parse_args()
+        destroyenv = False
+        if env is None:
+            env = openravepy.Environment()
+            destroyenv = True
+        try:
+            with env:
+                robot = env.ReadRobotXMLFile(options.robot)
+                env.AddRobot(robot)
+                robot.SetTransform(numpy.eye(4))
+                if options.manipname is None:
+                    # prioritize manipulators with ik solvers
+                    indices = [i for i,m in enumerate(robot.GetManipulators()) if m.HasIKSolver()]
+                    if len(indices) > 0:
+                        robot.SetActiveManipulator(indices[0])
+                else:
+                    robot.SetActiveManipulator([i for i,m in self.robot.GetManipulators() if m.GetName()==options.manipname][0])
+            model = Model(env=env,robot=robot)
+            if options.show:
+                if not model.load():
+                    print 'failed to find cached grasp set %s'%self.getfilename()
+                    sys.exit(1)
+                while True:
+                    model.show()
+
+            try:
+                model.autogenerate()
+            except ValueError, e:
+                print e
+                print 'attempting preset values'
+                model.generateFromOptions(options)
+                model.save()
+        finally:
+            if destroyenv:
+                env.Destroy()

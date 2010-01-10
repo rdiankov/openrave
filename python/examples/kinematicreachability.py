@@ -44,6 +44,9 @@ class ReachabilityModel(metaclass.AutoReloader):
         mkdir_recursive(os.path.join(self.env.GetHomeDirectory(),self.robot.GetRobotStructureHash()))
         pickle.dump((self.reachabilitystats,self.reachabilitydensity3d,self.pointscale), open(self.getfilename(), 'w'))
 
+    def generateFromOptions(self,options):
+        self.generate(maxradius=options.maxradius,xyzdelta=options.xyzdelta,rolldelta=options.rolldelta)
+
     def generate(self,maxradius=None,translationonly=False,xyzdelta=0.02,rolldelta=pi/8.0):
         starttime = time.time()
         Tgrasp = dot(linalg.inv(self.manip.GetBase().GetTransform()),self.manip.GetEndEffectorTransform())
@@ -172,51 +175,28 @@ class ReachabilityModel(metaclass.AutoReloader):
                 newindices += [[tri[0],inds[0],inds[2]],[inds[0],tri[1],inds[1]],[inds[2],inds[0],inds[1]],[inds[2],inds[1],tri[2]]]
             triindices = newindices
         return array(vertices),triindices
-
-def CreateOptionParser():
-    parser = OptionParser(description='Computes the reachability region of a robot and python pickles it into a file.')
-    parser.add_option('--robot',action='store',type='string',dest='robot',default='robots/barrettsegway.robot.xml',
-                      help='OpenRAVE robot to load')
-    parser.add_option('--manipname',action='store',type='string',dest='manipname',default=None,
-                      help='The name of the manipulator to use')
-    parser.add_option('--maxradius',action='store',type='float',dest='maxradius',default=None,
-                      help='The max radius of the arm to perform the computation')
-    parser.add_option('--show',action='store_true',dest='show',default=False,
-                      help='If set, uses mayavi (v3+) to display the reachability')
-    return parser
-
-def run(Model=ReachabilityModel,parser=CreateOptionParser()):
-    (options, args) = parser.parse_args()
-
-    env = Environment()
-    try:
-        with env:
-            robot = env.ReadRobotXMLFile(options.robot)
-            env.AddRobot(robot)
-            robot.SetTransform(eye(4))
-            if options.manipname is None:
-                robot.SetActiveManipulator([i for i,m in enumerate(robot.GetManipulators()) if m.HasIKSolver()][0])
-            else:
-                robot.SetActiveManipulator([i for i,m in self.robot.GetManipulators() if m.GetName()==options.manipname][0])
-
-        model = Model(env=env,robot=robot)
-        if options.show:
-            from enthought.mayavi import mlab
-            if not model.load():
-                print 'failed to find cached grasp set %s'%self.getfilename()
-                sys.exit(1)
-            while True:
-                model.show()
-        
+    @staticmethod
+    def CreateOptionParser():
+        parser = OpenRAVEModel.CreateOptionParser()
+        parser.add_option('--maxradius',action='store',type='float',dest='maxradius',default=None,
+                          help='The max radius of the arm to perform the computation')
+        parser.add_option('--xyzdelta',action='store',type='float',dest='xyzdelta',default=0.02,
+                          help='The max radius of the arm to perform the computation')
+        parser.add_option('--rolldelta',action='store',type='float',dest='rolldelta',default=pi/8.0,
+                          help='The max radius of the arm to perform the computation')
+        return parser
+    @staticmethod
+    def RunFromParser(Model=None,parser=None):
+        if parser is None:
+            parser = ReachabilityModel.CreateOptionParser()
+        (options, args) = parser.parse_args()
+        env = Environment()
         try:
-            model.autogenerate()
-        except ValueError, e:
-            print e
-            print 'attempting preset values'
-            model.generate(maxradius=options.maxradius)
-            model.save()
-    finally:
-        env.Destroy()
+            if Model is None:
+                Model = lambda env,robot: ReachabilityModel(env=env,robot=robot)
+            OpenRAVEModel.RunFromParser(Model=Model,parser=parser,env=env)
+        finally:
+            env.Destroy()
 
 if __name__=='__main__':
-    run(ReachabilityModel)
+    ReachabilityModel.RunFromParser()

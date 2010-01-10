@@ -29,12 +29,10 @@ def myproduct(*args, **kwds):
     for prod in result:
         yield tuple(prod)
 
-class GraspingModel(metaclass.AutoReloader):
+class GraspingModel(OpenRAVEModel):
     """Holds all functions/data related to a grasp between a robot hand and a target"""
     def __init__(self,env,robot,target):
-        self.env = env
-        self.robot = robot
-        self.manip = self.robot.GetActiveManipulator()
+        OpenRAVEModel.__init__(self,env=env,robot=robot)
         self.target = target
         self.grasps = []
         self.graspindices = dict()
@@ -49,19 +47,17 @@ class GraspingModel(metaclass.AutoReloader):
         self.graspindices = dict()
 
     def load(self):
-        if not os.path.isfile(self.getfilename()):
-            return False
-        self.grasps,self.graspindices,friction,avoidlinks,plannername = pickle.load(open(self.getfilename(), 'r'))
-        self.grasper = Grasper(self.env,self.robot,friction,avoidlinks,plannername)
+        params = OpenRAVEModel.load(self)
+        if params is not None:
+            self.grasps,self.graspindices,friction,avoidlinks,plannername = params
+            self.grasper = Grasper(self.env,self.robot,friction,avoidlinks,plannername)
         return self.has()
 
     def save(self):
-        print 'saving grasps to %s'%self.getfilename()
-        mkdir_recursive(os.path.join(self.env.GetHomeDirectory(),self.robot.GetRobotStructureHash()))
-        pickle.dump((self.grasps,self.graspindices,self.grasper.friction,self.grasper.avoidlinks,self.grasper.plannername),open(self.getfilename(), 'w'))
+        OpenRAVEModel.save(self,(self.grasps,self.graspindices,self.grasper.friction,self.grasper.avoidlinks,self.grasper.plannername))
 
     def getfilename(self):
-        return os.path.join(self.env.GetHomeDirectory(),self.robot.GetRobotStructureHash(),self.manip.GetName() + '.' + self.target.GetKinematicsGeometryHash()+'.grasp.pp')
+        return os.path.join(OpenRAVEModel.getfilename(self),self.manip.GetName() + '.' + self.target.GetKinematicsGeometryHash()+'.grasp.pp')
 
     def generate(self,preshapes,standoffs,rolls,approachrays, graspingnoise=None,addSphereNorms=False,updateenv=True,forceclosurethreshold=1e-9):
         """all grasp parameters have to be in the bodies's coordinate system (ie: approachrays)"""
@@ -152,7 +148,20 @@ class GraspingModel(metaclass.AutoReloader):
                                       rolls = arange(0,2*pi,pi/2), standoffs = array([0,0.025]),
                                       approachrays = self.computeBoxApproachRays(stepsize=0.02))
             else:
-                raise ValueError('could not auto-generate grasp set for %s:%s:%s'%(self.robot.GetName(),self.manip.GetName(),self.target.GetName()))
+                print 'attempting default grasp generation for %s:%s:%s'%(self.robot.GetName(),self.manip.GetName(),self.target.GetName())
+                self.init(friction=0.4,avoidlinks=[])
+                if self.robot.GetName() == 'BarrettHand' or self.robot.GetName() == 'BarrettWAM':
+                    preshapes = array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2)))
+                else:
+                    manipprob = BaseManipulation(self.env,self.robot)
+                    self.target.Enable(False)
+                    manipprop.ReleaseFingers(True)
+                    self.robot.WaitForController(0)
+                    self.target.Enable(True)
+                    preshapes = array([self.robot.GetJointValues()])
+                self.generate(preshapes=preshapes, rolls = arange(0,2*pi,pi/2), standoffs = array([0,0.025]),
+                              approachrays = self.computeBoxApproachRays(stepsize=0.02),
+                              modelnoise=None, updateenv=options.useviewer, addSphereNorms=False)
             self.save()
         finally:
             for b in bodies:
@@ -215,71 +224,34 @@ class GraspingModel(metaclass.AutoReloader):
             points = dot(conepoints,transpose(R)) + tile(c[0:3],(conepoints.shape[0],1))
             allpoints = r_[allpoints,points[triinds,:]]
         return self.env.drawtrimesh(points=allpoints,indices=None,colors=array((1,0.4,0.4,transparency)))
-
-def CreateOptionParser():
-    parser = OptionParser(description='Grasp set generation example for any robot/body pair.')
-    parser.add_option('--robot',action="store",type='string',dest='robot',default='robots/barrettsegway.robot.xml',
-                      help='The filename of the robot to load')
-    parser.add_option('--manipname',action='store',type='string',dest='manipname',default=None,
-                      help='The name of the manipulator to use')
-    parser.add_option('--body',action="store",type='string',dest='body',default='data/mug1.kinbody.xml',
-                      help='The filename of the body whose grasp set to be generated')
-    parser.add_option('--show', action='store_true', dest='show',default=False,
-                      help='If set, will run the generated table, if one exists. Otherwise will exist with an error')
-    parser.add_option('--noviewer', action='store_false', dest='useviewer',default=True,
-                      help='If specified, will generate the tables without launching a viewer')
-    return parser
-
-def run(Model=GraspingModel,parser=CreateOptionParser()):
-    (options, args) = parser.parse_args()
-
-    env = Environment()
-    try:
-        with env:
-            robot = env.ReadRobotXMLFile(options.robot)
-            env.AddRobot(robot)
-            target = env.ReadKinBodyXMLFile(options.body)
-            target.SetTransform(eye(4))
-            env.AddKinBody(target)
-            if options.manipname is not None:
-                robot.SetActiveManipulator([i for i,m in self.robot.GetManipulators() if m.GetName()==options.manipname][0])
-
-        if options.useviewer:
-            env.SetViewer('qtcoin')
-            env.UpdatePublishedBodies()
-        model = Model(env,robot,target)
-        if options.show:
-            if not model.load():
-                print 'failed to find cached grasp set %s'%self.getfilename()
-                sys.exit(1)
-            model.show()
-            sys.exit(0)
-
+    @staticmethod
+    def CreateOptionParser():
+        parser = OpenRAVEModel.CreateOptionParser()
+        parser.description='Grasp set generation example for any robot/body pair.'
+        parser.add_option('--target',action="store",type='string',dest='target',default='data/mug1.kinbody.xml',
+                          help='The filename of the target body whose grasp set to be generated')
+        parser.add_option('--noviewer', action='store_false', dest='useviewer',default=True,
+                          help='If specified, will generate the tables without launching a viewer')
+        return parser
+    @staticmethod
+    def RunFromParser(Model=None,parser=None):
+        if parser is None:
+            parser = GraspingModel.CreateOptionParser()
+        (options, args) = parser.parse_args()
+        env = Environment()
         try:
-            model.autogenerate()
-        except ValueError, e:
-            print e
-            print 'attempting preset values'
-            model.init(friction=0.4,avoidlinks=[])
-            if robot.GetName() == 'BarrettHand' or robot.GetName() == 'BarrettWAM':
-                preshapes = array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2)))
-            else:
-                manipprob = BaseManipulation(env,robot)
-                target.Enable(False)
-                manipprop.ReleaseFingers(True)
-                robot.WaitForController(0)
-                target.Enable(True)
-                preshapes = array([robot.GetJointValues()])
-            model.generate(preshapes=preshapes,
-                              rolls = arange(0,2*pi,pi/2),
-                              standoffs = array([0,0.025]),
-                              approachrays = model.computeBoxApproachRays(stepsize=0.02),
-                              modelnoise=None,
-                              updateenv=options.useviewer,
-                              addSphereNorms=False)
-            model.save()
-    finally:
-        env.Destroy()
+            with env:
+                target = env.ReadKinBodyXMLFile(options.target)
+                target.SetTransform(eye(4))
+                env.AddKinBody(target)
+            if Model is None:
+                Model = lambda env,robot: GraspingModel(env=env,robot=robot,target=target)
+            if options.useviewer:
+                env.SetViewer('qtcoin')
+                env.UpdatePublishedBodies()
+            OpenRAVEModel.RunFromParser(Model=Model,parser=parser,env=env)
+        finally:
+            env.Destroy()
 
 if __name__ == "__main__":
-    run()
+    GraspingModel.RunFromParser()
