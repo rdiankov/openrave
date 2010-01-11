@@ -44,7 +44,7 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
       include_directories("${CMAKE_SOURCE_DIR}")
       include_directories("${CMAKE_SOURCE_DIR}/src/libopenrave-core")
 
-      # openrave bindings
+      ## openrave bindings
       add_library(openravepy_int SHARED openravepy_int.cpp)
       # stdc++ has to be included before opengl libraries due to some ATI bug (http://wiki.fifengine.de/Segfault_in_cxa_allocate_exception#Workaround)
       target_link_libraries(openravepy_int ${STDC_LIBRARY} libopenrave libopenrave-core ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY})
@@ -55,8 +55,16 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
       endif()
       install(TARGETS openravepy_int DESTINATION ${OPENRAVEPY_INSTALL_DIR})
 
-      # ann bindings
-      #add_subdirectory(pyANN)
+      ## ann bindings
+      add_library(pyANN SHARED pyann.cpp)
+      # stdc++ has to be included before opengl libraries due to some ATI bug (http://wiki.fifengine.de/Segfault_in_cxa_allocate_exception#Workaround)
+      target_link_libraries(pyANN ${STDC_LIBRARY} ann ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY})
+      set_target_properties(pyANN PROPERTIES PREFIX "" )
+      add_dependencies(pyANN ann)
+      if( WIN32 )
+        set_target_properties(pyANN PROPERTIES SUFFIX ".pyd")
+      endif()
+      install(TARGETS pyANN DESTINATION ${OPENRAVEPY_INSTALL_DIR})
     else()
       message(STATUS "failed to use boost python libraries, check if python-numpy is installed.")
     endif()
