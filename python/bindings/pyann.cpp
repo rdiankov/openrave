@@ -22,7 +22,7 @@
 #include <boost/array.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/format.hpp>
-#include <boost/functional/hash.hpp>
+//#include <boost/functional/hash.hpp>
 
 #include <ANN/ANN.h>
 
