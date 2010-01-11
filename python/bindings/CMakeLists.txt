@@ -65,6 +65,11 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
         add_dependencies(pyANN ann)
         if( WIN32 )
           set_target_properties(pyANN PROPERTIES SUFFIX ".pyd")
+          if( MSVC )
+            # set "link library dependencies" for visual studio in order to include symbols for other statically linked libs
+            # this is such an unbelievable hack, that it's disgusting
+            set_target_properties(pyANN PROPERTIES STATIC_LIBRARY_FLAGS "\" LinkLibraryDependencies=\"true")
+          endif()
         endif()
         install(TARGETS pyANN DESTINATION ${OPENRAVEPY_INSTALL_DIR})
       endif()

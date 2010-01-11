@@ -78,7 +78,6 @@ static boost::shared_ptr<boost::thread> s_mainThread;
 static string s_sceneFile;
 static string s_saveScene; // if not NULL, saves the scene and exits
 static string s_viewerName;
-static bool s_bTestScene = false;
 
 static list< pair<string, string> > s_listProblems; // problems to initially create
 static vector<string> vIvFiles; // iv files to open
@@ -111,9 +110,9 @@ int main(int argc, char ** argv)
     while(i < argc) {
         if( stricmp(argv[i], "-h") == 0 || stricmp(argv[i], "-?") == 0 || stricmp(argv[i], "/?") == 0 || stricmp(argv[i], "--help") == 0 || stricmp(argv[i], "-help") == 0 ) {
             RAVELOG_INFO("RAVE Simulator Usage\n"
-                         "-nogui             Run without a GUI (does not initialize the graphics engine nor communicate with any window manager)\n"
-                         "-hidegui           Run with a hidden GUI, this allows 3D rendering and images to be captured\n"
-                         "-listplugins       List all plugins and the interfaces they provide\n"
+                         "--nogui             Run without a GUI (does not initialize the graphics engine nor communicate with any window manager)\n"
+                         "--hidegui           Run with a hidden GUI, this allows 3D rendering and images to be captured\n"
+                         "--listplugins       List all plugins and the interfaces they provide\n"
                          "-loadplugin [path] load a plugin at the following path\n"
                          "-server [port]     start up the server on a specific port (default is 4765)\n"
                          "-collision [name]  Default collision checker to use\n"
@@ -125,15 +124,14 @@ int main(int argc, char ** argv)
                          "-wdims [width] [height] start up the GUI window with these dimensions\n"
                          "-wpos x y set the position of the GUI window\n"
                          "-problem [problemname] [args] Start openrave with a problem instance. If args involves spaces, surround it with double quotes. args is optional.\n"
-                         "-f [scene]         Load a openrave environment file\n"
-                         "-testscene         If specified, openrave will exit after the scene is loaded. A non-zero values means something went wrong with the loading process.\n\n");
+                         "-f [scene]         Load a openrave environment file\n\n");
             return 0;
         }
-        else if( stricmp(argv[i], "-loadplugin") == 0 ) {
+        else if( stricmp(argv[i], "--loadplugin") == 0 || stricmp(argv[i], "-loadplugin") == 0 ) {
             listLoadPlugins.push_back(argv[i+1]);
             i += 2;
         }
-        else if( stricmp(argv[i], "-listplugins") == 0 ) {
+        else if( stricmp(argv[i], "--listplugins") == 0 || stricmp(argv[i], "-listplugins") == 0 ) {
             bListPlugins = true;
             i++;
         }
@@ -167,11 +165,11 @@ int main(int argc, char ** argv)
                 i++;
             }
         }
-        else if( stricmp(argv[i], "-nogui") == 0 ) {
+        else if( stricmp(argv[i], "--nogui") == 0 || stricmp(argv[i], "-nogui") == 0 ) {
             bDisplayGUI = false;
             i++;
         }
-        else if( stricmp(argv[i], "-hidegui") == 0 ) {
+        else if( stricmp(argv[i], "--hidegui") == 0 || stricmp(argv[i], "-hidegui") == 0 ) {
             bShowGUI = false;
             i++;
         }
@@ -200,10 +198,6 @@ int main(int argc, char ** argv)
         }
         else if( strstr(argv[i], ".xml") != NULL || strstr(argv[i], ".dae") != NULL ) {
             vXMLFiles.push_back(argv[i]);
-            i++;
-        }
-        else if( stricmp(argv[i], "-testscene") == 0 ) {
-            s_bTestScene = true;
             i++;
         }
         else if( stricmp(argv[i], "--generateik") == 0 ) {
@@ -394,7 +388,6 @@ int main(int argc, char ** argv)
         stringstream buf;
         std::map<PluginType,std::string>::const_iterator ittype;
         FORIT(ittype,RaveGetInterfaceNamesMap()) {
-            ss << ChangeTextColor(0,OPENRAVECOLOR_WARNLEVEL) << ittype->second << ":" << ResetTextColor() << endl;
             vector<string> names;
             FORIT(itplugin, plugins) {
                 FORIT(itnames, itplugin->second.interfacenames[ittype->first]) {
@@ -408,6 +401,11 @@ int main(int argc, char ** argv)
                 }
             }
             sort(names.begin(), names.end());
+#ifdef _WIN32
+            ss << ittype->second << ": " << names.size() << endl;
+#else
+            ss << ChangeTextColor(0,OPENRAVECOLOR_WARNLEVEL) << ittype->second << ": " << ResetTextColor() << names.size() << endl;
+#endif
             FORIT(itname, names)
                 ss << itname->c_str() << endl;
         }
@@ -520,12 +518,6 @@ void MainOpenRAVEThread()
             ProblemInstancePtr prob = penv->CreateProblem(itprob->first);
             if( !!prob )
                 penv->LoadProblem(prob, itprob->second);
-        }
-
-        if( s_bTestScene ) {
-            int xmlerror = GetXMLErrorCount();
-            RAVELOG_ERRORA("xml error count: %d\n", xmlerror);
-            exit(xmlerror);
         }
 
         if( s_saveScene.size() > 0 ) {

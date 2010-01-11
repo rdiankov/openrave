@@ -18,11 +18,9 @@ from numpy import *
 import time,pickle
 from optparse import OptionParser
 
-class ReachabilityModel(metaclass.AutoReloader):
+class ReachabilityModel(OpenRAVEModel):
     def __init__(self,env,robot):
-        self.env = env
-        self.robot = robot
-        self.manip = self.robot.GetActiveManipulator()
+        OpenRAVEModel.__init__(self,env=env,robot=robot)
         self.trimesh = self.env.Triangulate(self.robot)
         self.reachabilitystats = None
         self.reachabilitydensity3d = None
@@ -31,18 +29,18 @@ class ReachabilityModel(metaclass.AutoReloader):
     def has(self):
         return len(self.reachabilitydensity3d) > 0
 
-    def getfilename(self):
-        return os.path.join(OpenRAVEModel.getfilename(self),'reachability.' + self.manip.GetName() + '.pp')
-
     def load(self):
-        if not os.path.isfile(self.getfilename()):
+        params = OpenRAVEModel.load(self)
+        if params is None:
             return False
-        self.reachabilitystats,self.reachabilitydensity3d,self.pointscale = pickle.load(open(self.getfilename(), 'r'))
+        self.reachabilitystats,self.reachabilitydensity3d,self.pointscale = params
+        return self.has()
 
     def save(self):
-        print 'saving grasps to %s'%self.getfilename()
-        mkdir_recursive(os.path.join(self.env.GetHomeDirectory(),self.robot.GetRobotStructureHash()))
-        pickle.dump((self.reachabilitystats,self.reachabilitydensity3d,self.pointscale), open(self.getfilename(), 'w'))
+        OpenRAVEModel.save(self,(self.reachabilitystats,self.reachabilitydensity3d,self.pointscale))
+
+    def getfilename(self):
+        return os.path.join(OpenRAVEModel.getfilename(self),'reachability.' + self.manip.GetName() + '.pp')
 
     def generateFromOptions(self,options):
         self.generate(maxradius=options.maxradius,xyzdelta=options.xyzdelta,rolldelta=options.rolldelta)
@@ -69,12 +67,13 @@ class ReachabilityModel(metaclass.AutoReloader):
                     T[0:3,0:3] = rotation
                     solutions = self.manip.FindIKSolutions(T,True)
                     if solutions is not None:
-                        self.reachabilitystats.append(allpoints[ind])
+                        self.reachabilitystats.append(poseFromMatrix(T))
                         numvalid += len(solutions)
                 if mod(i,1000)==0:
                     print '%d/%d'%(i,len(insideinds))
                 reachabilitydensity3d[ind] = numvalid/float(len(rotations))
         self.reachabilitydensity3d = reshape(reachabilitydensity3d/50.0,shape)
+        self.reachabilitystats = array(self.reachabilitystats)
         print 'reachability finished in %fs'%(time.time()-starttime)
 
     def show(self,showrobot=True,contours=[0.1,0.5,0.9,0.99],opacity=None,figureid=1, xrange=None):

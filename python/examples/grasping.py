@@ -48,9 +48,10 @@ class GraspingModel(OpenRAVEModel):
 
     def load(self):
         params = OpenRAVEModel.load(self)
-        if params is not None:
-            self.grasps,self.graspindices,friction,avoidlinks,plannername = params
-            self.grasper = Grasper(self.env,self.robot,friction,avoidlinks,plannername)
+        if params is None:
+            return False;
+        self.grasps,self.graspindices,friction,avoidlinks,plannername = params
+        self.grasper = Grasper(self.env,self.robot,friction,avoidlinks,plannername)
         return self.has()
 
     def save(self):
