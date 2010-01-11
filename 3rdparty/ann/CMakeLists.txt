@@ -1,4 +1,5 @@
 file(GLOB ann_files ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include")
+add_definitions(-DDLL_EXPORTS) # for windows compilation, just exports the symbols (even though library is being built statically)
 add_library(ann STATIC ${ann_files})
 set_target_properties(ann PROPERTIES COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS}")
