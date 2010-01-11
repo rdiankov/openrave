@@ -53,5 +53,11 @@ set_target_properties(libopenrave-core_static PROPERTIES OUTPUT_NAME ${LIBOPENRA
                                   CLEAN_DIRECT_OUTPUT 1
                                   COMPILE_FLAGS "${LIB_COMPILE_FLAGS}"
                                   LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${COIN_LINK_FLAGS}")
+if( MSVC )
+  # set "link library dependencies" for visual studio in order to include symbols for other statically linked libs
+  # this is such an unbelievable hack, that it's disgusting
+  set_target_properties(libopenrave-core_static PROPERTIES STATIC_LIBRARY_FLAGS "\" LinkLibraryDependencies=\"true")
+endif()
+
 target_link_libraries (libopenrave-core_static ${Boost_THREAD_LIBRARY} ${LIBXML2_LIBRARIES} ${COIN_LIBRARY} libopenrave_static ${coreLIBS})
 install(TARGETS libopenrave-core_static DESTINATION lib)
