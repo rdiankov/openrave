@@ -55,13 +55,13 @@ class OpenRAVEModel(metaclass.AutoReloader):
     def has(self):
         raise NotImplementedError()
     def getfilename(self):
-        return os.path.join(self.env.GetHomeDirectory(),self.robot.GetRobotStructureHash())
+        return os.path.join(self.env.GetHomeDirectory(),'robot.'+self.robot.GetRobotStructureHash())
     def load(self):
         if not os.path.isfile(self.getfilename()):
             return None
         return pickle.load(open(self.getfilename(), 'r'))
     def save(self,params):
-        print 'saving grasps to %s'%self.getfilename()
+        print 'saving model to %s'%self.getfilename()
         mkdir_recursive(os.path.join(self.env.GetHomeDirectory(),'robot.'+self.robot.GetRobotStructureHash()))
         pickle.dump(params, open(self.getfilename(), 'w'))
     def generate(self):
@@ -106,7 +106,7 @@ class OpenRAVEModel(metaclass.AutoReloader):
             model = Model(env=env,robot=robot)
             if options.show:
                 if not model.load():
-                    print 'failed to find cached grasp set %s'%self.getfilename()
+                    print 'failed to find cached model %s'%self.getfilename()
                     sys.exit(1)
                 while True:
                     model.show()
