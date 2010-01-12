@@ -269,17 +269,12 @@ class RaveTransform
 public:
     RaveTransform() { rot.x = 1; }
     template <class U> RaveTransform(const RaveTransform<U>& t) {
-        if(t.rot.x > 0 )
-            rot = t.rot;
-        else
-            rot = -t.rot;
+        rot = t.rot;
         trans = t.trans;
         T fnorm = rot.lengthsqr4();
         MATH_ASSERT( fnorm > 0.99f && fnorm < 1.01f );
     }
-    template <class U> RaveTransform(const RaveVector<U>& newrot, const RaveVector<U>& newtrans) : rot(newrot), trans(newtrans) {
-        if(rot.x < 0 )
-            rot = -rot;
+    template <class U> RaveTransform(const RaveVector<U>& rot, const RaveVector<U>& trans) : rot(rot), trans(trans) {
         T fnorm = rot.lengthsqr4();
         MATH_ASSERT( fnorm > 0.99f && fnorm < 1.01f );
     }
@@ -293,10 +288,6 @@ public:
     template <class U> inline RaveTransform<T>& rotfromaxisangle(const RaveVector<U>& axis, U angle) {
         U sinang = (U)RaveSin(angle/2);
         rot.x = (U)RaveCos(angle/2);
-        if( rot.x < 0 ) { // try to preserve a positive x
-            rot.x = -rot.x;
-            sinang = -sinang;
-        }
         rot.y = axis.x*sinang;
         rot.z = axis.y*sinang;
         rot.w = axis.z*sinang;
@@ -340,8 +331,7 @@ public:
         // normalize the transformation
         T fnorm = t.rot.lengthsqr4();
         MATH_ASSERT( fnorm > 0.98f && fnorm < 1.02f );
-        fnorm = RaveSqrt(fnorm);
-        t.rot /= t.rot.x > 0 ? fnorm : -fnorm; // try to preserve a positive x
+        t.rot /= RaveSqrt(fnorm);
         return t;
     }
 
@@ -356,8 +346,7 @@ public:
         // normalize the transformation
         T fnorm = t.rot.lengthsqr4();
         MATH_ASSERT( fnorm > 0.98f && fnorm < 1.02f );
-        fnorm = RaveSqrt(fnorm);
-        t.rot /= t.rot.x > 0 ? fnorm : -fnorm; // try to preserve a positive x
+        t.rot /= RaveSqrt(fnorm);
         return t;
     }
     
@@ -368,29 +357,18 @@ public:
 
     inline RaveTransform<T> inverse() const {
         RaveTransform<T> inv;
-        // try to preserve a positive x
-        if( rot.x > 0 ) {
-            inv.rot.x = rot.x;
-            inv.rot.y = -rot.y;
-            inv.rot.z = -rot.z;
-            inv.rot.w = -rot.w;
-        }
-        else {
-            inv.rot.x = -rot.x;
-            inv.rot.y = rot.y;
-            inv.rot.z = rot.z;
-            inv.rot.w = rot.w;
-        }        
+        inv.rot.x = rot.x;
+        inv.rot.y = -rot.y;
+        inv.rot.z = -rot.z;
+        inv.rot.w = -rot.w;
+        
         inv.trans = -inv.rotate(trans);
         return inv;
     }
 
     template <class U> inline RaveTransform<T>& operator= (const RaveTransform<U>& r) {
         trans = r.trans;
-        if(r.rot.x > 0 )
-            rot = r.rot;
-        else
-            rot = -r.rot;
+        rot = r.rot;
         T fnorm = rot.lengthsqr4();
         MATH_ASSERT( fnorm > 0.99f && fnorm < 1.01f );
         return *this;
@@ -580,8 +558,7 @@ RaveTransform<T>::RaveTransform(const RaveTransformMatrix<T>& t)
         }
     }
 
-    T fnorm = RaveSqrt(rot.lengthsqr4());
-    rot /= rot.x > 0 ? fnorm : -fnorm;
+    rot *= (T)1 / RaveSqrt(rot.lengthsqr4());
 }
 
 template <class T>
