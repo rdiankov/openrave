@@ -631,7 +631,7 @@ public:
         PyLinkPtr GetFirstAttached() const { return !_pjoint->GetFirstAttached() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pjoint->GetFirstAttached(), _pyenv)); }
         PyLinkPtr GetSecondAttached() const { return !_pjoint->GetSecondAttached() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pjoint->GetSecondAttached(), _pyenv)); }
 
-        int GetType() const { return _pjoint->GetType(); }
+        KinBody::Joint::JointType GetType() const { return _pjoint->GetType(); }
 
         int GetDOF() const { return _pjoint->GetDOF(); }
         object GetValues() const
@@ -649,6 +649,11 @@ public:
 
         object GetAnchor() const { return toPyVector3(_pjoint->GetAnchor()); }
         object GetAxis(int iaxis) { return toPyVector3(_pjoint->GetAxis(iaxis)); }
+        object GetInternalHierarchyAnchor() const { return toPyVector3(_pjoint->GetInternalHierarchyAnchor()); }
+        object GetInternalHierarchyAxis(int iaxis) { return toPyVector3(_pjoint->GetInternalHierarchyAxis(iaxis)); }
+        object GetInternalHierarchyLeftTransform() { return ReturnTransform(_pjoint->GetInternalHierarchyLeftTransform()); }
+        object GetInternalHierarchyRightTransform() { return ReturnTransform(_pjoint->GetInternalHierarchyRightTransform()); }
+
         object GetLimits() const {
             vector<dReal> lower, upper;
             _pjoint->GetLimits(lower,upper);
@@ -700,12 +705,25 @@ public:
             links.append(PyLinkPtr(new PyLink(*itlink, GetEnv())));
         return links;
     }
+
+    PyLinkPtr GetLink(const std::string& linkname) const
+    {
+        KinBody::LinkPtr plink = _pbody->GetLink(linkname);
+        return !plink ? PyLinkPtr() : PyLinkPtr(new PyLink(plink,GetEnv()));
+    }
+
     object GetJoints()
     {
         boost::python::list joints;
         FOREACHC(itjoint, _pbody->GetJoints())
             joints.append(PyJointPtr(new PyJoint(*itjoint, GetEnv())));
         return joints;
+    }
+
+    PyJointPtr GetJoint(const std::string& jointname) const
+    {
+        KinBody::JointPtr pjoint = _pbody->GetJoint(jointname);
+        return !pjoint ? PyJointPtr() : PyJointPtr(new PyJoint(pjoint,GetEnv()));
     }
 
     object GetTransform() const { return ReturnTransform(_pbody->GetTransform()); }
@@ -2975,7 +2993,9 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetJointValues",&PyKinBody::GetJointValues)
             .def("GetJointLimits",&PyKinBody::GetJointLimits)
             .def("GetLinks",&PyKinBody::GetLinks)
+            .def("GetLink",&PyKinBody::GetLink)
             .def("GetJoints",&PyKinBody::GetJoints)
+            .def("GetJoint",&PyKinBody::GetJoint)
             .def("GetTransform",&PyKinBody::GetTransform)
             .def("GetBodyTransformations",&PyKinBody::GetBodyTransformations)
             .def("SetBodyTransformations",&PyKinBody::SetBodyTransformations)
@@ -3038,29 +3058,46 @@ BOOST_PYTHON_MODULE(openravepy_int)
                 ;
         }
 
-        class_<PyKinBody::PyJoint, boost::shared_ptr<PyKinBody::PyJoint> >("Joint",no_init)
-            .def("GetName", &PyKinBody::PyJoint::GetName)
-            .def("GetMimicJointIndex", &PyKinBody::PyJoint::GetMimicJointIndex)
-            .def("GetMimicCoeffs", &PyKinBody::PyJoint::GetMimicCoeffs)
-            .def("GetMaxVel", &PyKinBody::PyJoint::GetMaxVel)
-            .def("GetMaxAccel", &PyKinBody::PyJoint::GetMaxAccel)
-            .def("GetMaxTorque", &PyKinBody::PyJoint::GetMaxTorque)
-            .def("GetDOFIndex", &PyKinBody::PyJoint::GetDOFIndex)
-            .def("GetJointIndex", &PyKinBody::PyJoint::GetJointIndex)
-            .def("GetParent", &PyKinBody::PyJoint::GetParent)
-            .def("GetFirstAttached", &PyKinBody::PyJoint::GetFirstAttached)
-            .def("GetSecondAttached", &PyKinBody::PyJoint::GetSecondAttached)
-            .def("GetType", &PyKinBody::PyJoint::GetType)
-            .def("GetDOF", &PyKinBody::PyJoint::GetDOF)
-            .def("GetValues", &PyKinBody::PyJoint::GetValues)
-            .def("GetVelocities", &PyKinBody::PyJoint::GetVelocities)
-            .def("GetAnchor", &PyKinBody::PyJoint::GetAnchor)
-            .def("GetAxis", &PyKinBody::PyJoint::GetAxis)
-            .def("GetLimits", &PyKinBody::PyJoint::GetLimits)
-            .def("SetJointOffset",&PyKinBody::PyJoint::SetJointOffset)
-            .def("SetJointLimits",&PyKinBody::PyJoint::SetJointLimits)
-            .def("SetResolution",&PyKinBody::PyJoint::SetResolution)
-            ;
+        {
+            scope joint = class_<PyKinBody::PyJoint, boost::shared_ptr<PyKinBody::PyJoint> >("Joint",no_init)
+                .def("GetName", &PyKinBody::PyJoint::GetName)
+                .def("GetMimicJointIndex", &PyKinBody::PyJoint::GetMimicJointIndex)
+                .def("GetMimicCoeffs", &PyKinBody::PyJoint::GetMimicCoeffs)
+                .def("GetMaxVel", &PyKinBody::PyJoint::GetMaxVel)
+                .def("GetMaxAccel", &PyKinBody::PyJoint::GetMaxAccel)
+                .def("GetMaxTorque", &PyKinBody::PyJoint::GetMaxTorque)
+                .def("GetDOFIndex", &PyKinBody::PyJoint::GetDOFIndex)
+                .def("GetJointIndex", &PyKinBody::PyJoint::GetJointIndex)
+                .def("GetParent", &PyKinBody::PyJoint::GetParent)
+                .def("GetFirstAttached", &PyKinBody::PyJoint::GetFirstAttached)
+                .def("GetSecondAttached", &PyKinBody::PyJoint::GetSecondAttached)
+                .def("GetType", &PyKinBody::PyJoint::GetType)
+                .def("GetDOF", &PyKinBody::PyJoint::GetDOF)
+                .def("GetValues", &PyKinBody::PyJoint::GetValues)
+                .def("GetVelocities", &PyKinBody::PyJoint::GetVelocities)
+                .def("GetAnchor", &PyKinBody::PyJoint::GetAnchor)
+                .def("GetAxis", &PyKinBody::PyJoint::GetAxis)
+                .def("GetInternalHierarchyAnchor", &PyKinBody::PyJoint::GetInternalHierarchyAnchor)
+                .def("GetInternalHierarchyAxis", &PyKinBody::PyJoint::GetInternalHierarchyAxis)
+                .def("GetInternalHierarchyLeftTransform",&PyKinBody::PyJoint::GetInternalHierarchyLeftTransform)
+                .def("GetInternalHierarchyRightTransform",&PyKinBody::PyJoint::GetInternalHierarchyRightTransform)
+                .def("GetLimits", &PyKinBody::PyJoint::GetLimits)
+                .def("SetJointOffset",&PyKinBody::PyJoint::SetJointOffset)
+                .def("SetJointLimits",&PyKinBody::PyJoint::SetJointLimits)
+                .def("SetResolution",&PyKinBody::PyJoint::SetResolution)
+                ;
+            
+            enum_<KinBody::Joint::JointType>("Type")
+                .value("None",KinBody::Joint::JointNone)
+                .value("Hinge",KinBody::Joint::JointHinge)
+                .value("Revolute",KinBody::Joint::JointRevolute)
+                .value("Slider",KinBody::Joint::JointSlider)
+                .value("Prismatic",KinBody::Joint::JointPrismatic)
+                .value("Universal",KinBody::Joint::JointUniversal)
+                .value("Hinge2",KinBody::Joint::JointHinge2)
+                .value("Spherical",KinBody::Joint::JointSpherical)
+                ;
+        }
     }
 
     class_<PyCollisionReport::PYCONTACT, boost::shared_ptr<PyCollisionReport::PYCONTACT> >("Contact")

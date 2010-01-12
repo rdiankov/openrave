@@ -15,14 +15,18 @@ from __future__ import with_statement # for python 2.5
 
 from openravepy import *
 from openravepy.interfaces import BaseManipulation
+from openravepy.examples import InverseKinematicsModel
 from numpy import *
 from optparse import OptionParser
 
 class HanoiPuzzle:
     basemanip = None
-    def __init__(self,env):
+    def __init__(self,env,robot):
         self.env = env
-        self.robot = self.env.GetRobots()[0]
+        self.robot = robot
+        self.ikmodel = InverseKinematicsModel(env=env,robot=robot)
+        if not self.ikmodel.load():
+            self.ikmodel.autogenerate()
         self.basemanip = BaseManipulation(env,self.robot)
         
         disknames = ['disk0','disk1','disk2']
@@ -190,7 +194,7 @@ def run():
     env = Environment()
     env.SetViewer('qtcoin')
     env.Load(options.scene)
-    hanoi = HanoiPuzzle(env)
+    hanoi = HanoiPuzzle(env,env.GetRobots()[0])
     with env: # lock the environment
         hanoi.hanoisolve(3,hanoi.srcpeg,hanoi.destpeg,hanoi.peg)
     env.Destroy() # done with the environment

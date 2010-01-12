@@ -1,0 +1,139 @@
+#!/usr/bin/env python
+# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License. 
+from __future__ import with_statement # for python 2.5
+
+from openravepy import *
+from openravepy.ikfast import IKFastSolver
+from numpy import *
+import time,pickle,platform
+from distutils import ccompiler
+from optparse import OptionParser
+
+class InverseKinematicsModel(OpenRAVEModel):
+    def __init__(self,env,robot):
+        OpenRAVEModel.__init__(self,env=env,robot=robot)
+        self.iksolver = None
+        
+    def has(self):
+        return self.iksolver is not None and self.manip.HasIKSolver()
+
+    def load(self):
+        self.iksolver = None
+        if self.manip.HasIKSolver():
+            self.iksolver = self.env.CreateIkSolver(self.manip.GetIKSolverName()) if self.manip.HasIKSolver() else None
+        if self.iksolver is None:
+            with self.env:
+                ikfastproblem = [p for p in self.env.GetLoadedProblems() if p.GetXMLId() == 'IKFast'][0]
+                ikname = 'ikfast.%s.%s'%(self.robot.GetRobotStructureHash(),self.manip.GetName())
+                if ikfastproblem.SendCommand('AddIkLibrary %s %s'%(ikname,self.getfilename())) is None:
+                    return False
+                self.iksolver = self.env.CreateIkSolver(ikname)
+                if self.iksolver:
+                    self.manip.SetIKSolver(self.iksolver)
+                    if not self.manip.InitIKSolver():
+                        return False
+        return self.has()
+
+    def save(self):
+        pass # already saved as a lib
+
+    def getfilename(self,getcppfile=False):
+        if getcppfile:
+            return os.path.join(OpenRAVEModel.getfilename(self),'ikfast.' + self.manip.GetName()+'.cpp')
+        else:
+            compiler = ccompiler.new_compiler()
+            return compiler.shared_object_filename (basename='ikfast.' + self.manip.GetName(),output_dir=OpenRAVEModel.getfilename(self))
+
+    def generateFromOptions(self,options):
+        return self.generate(freejoints=options.freejoints,usedummyjoints=options.usedummyjoints,rotation3donly=options.rotation3donly,rotation2donly=options.rotation2donly,translation3donly=options.translation3donly)
+
+    def generate(self,freejoints=None,usedummyjoints=False,rotation3donly=False,rotation2donly=False,translation3donly=False):
+        solvefn=IKFastSolver.solveFullIK_6D
+        numexpected = 6
+        if rotation3donly:
+            numexpected = 3
+            solvefn = IKFastSolver.solveFullIK_Rotation3D
+        elif rotation2donly:
+            numexpected = 2
+            solvefn = IKFastSolver.solveFullIK_Direction3D
+        elif translation3donly:
+            numexpected = 3
+            solvefn = IKFastSolver.solveFullIK_Translation3D        
+        solvejoints = self.manip.GetArmJoints()
+        if freejoints is not None:
+            for jointname in freejoints:
+                solvejoints.remove(jointname)
+        elif len(solvejoints) > numexpected:
+            for i in range(len(solvejoints) - numexpected):
+                if numexpected == 6:
+                    solvejoints.pop(2)
+                else:
+                    solvejoints.pop(0)
+
+        if not len(solvejoints) == numexpected:
+            raise ValueError('Need %d solve joints, got: %d'%(numexpected, len(solvejoints)))
+
+        sourcefilename = self.getfilename(True)
+        if not os.path.isfile(sourcefilename):
+            print 'generating inverse kinematics file %s'%sourcefilename
+            mkdir_recursive(OpenRAVEModel.getfilename(self))
+            solver = IKFastSolver(kinbody=self.robot)
+            code = solver.generateIkSolver(self.manip.GetBase().GetIndex(),self.manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejoints,usedummyjoints=usedummyjoints,solvefn=solvefn)
+            if len(code) == 0:
+                raise ValueError('failed to generate ik solver for robot %s:%s'%(self.roobt.GetName(),self.manip.GetName()))
+            open(sourcefilename,'w').write(code)
+
+        # compile the code and create the shared object
+        compiler = ccompiler.new_compiler()
+        optimization_options = []
+        if compiler.compiler_type == 'msvc':
+            optimization_options.append('/Ox')
+        else:
+            compiler.add_library('stdc++')
+            if compiler.compiler_type == 'unix':
+                optimization_options.append('-O3')
+        objectfiles = compiler.compile(sources=[sourcefilename],macros=[('IKFAST_CLIBRARY',1)],extra_postargs=optimization_options,output_dir=os.path.relpath('/',os.getcwd()))
+        compiler.link_shared_object(objectfiles,output_filename=self.getfilename())
+        if not self.load():
+            return ValueError('failed to generate ik solver')
+    def autogenerate(self):
+        if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531' and self.manip.GetName() == 'arm':
+            self.generate(freejoints=[self.robot.GetJoint('Shoulder_Roll').GetJointIndex()])
+        else:
+            self.generate()
+    @staticmethod
+    def CreateOptionParser():
+        parser = OpenRAVEModel.CreateOptionParser()
+        parser.description='Computes the closed-form inverse kinematics equations of a robot manipulator, generates a C++ file, and compiles this file into a shared object which can then be loaded by OpenRAVE'
+        parser.add_option('--freejoint', action='append', type='int', dest='freejoints',default=[],
+                          help='Optional joint index specifying a free parameter of the manipulator. If not specified, assumes all joints not solving for are free parameters. Can be specified multiple times for multiple free parameters.')
+        parser.add_option('--rotation3donly', action='store_true', dest='rotation3donly',default=False,
+                          help='If true, need to specify only 3 solve joints and will solve for a target rotation')
+        parser.add_option('--rotation2donly', action='store_true', dest='rotation2donly',default=False,
+                          help='If true, need to specify only 2 solve joints and will solve for a target direction')
+        parser.add_option('--translation3donly', action='store_true', dest='translation3donly',default=False,
+                          help='If true, need to specify only 3 solve joints and will solve for a target translation')
+        parser.add_option('--usedummyjoints', action='store_true',dest='usedummyjoints',default=False,
+                          help='Treat the unspecified joints in the kinematic chain as dummy and set them to 0. If not specified, treats all unspecified joints as free parameters.')
+        return parser
+    @staticmethod
+    def RunFromParser(Model=None,parser=None):
+        if parser is None:
+            parser = InverseKinematicsModel.CreateOptionParser()
+        (options, args) = parser.parse_args()
+        Model = lambda env,robot: InverseKinematicsModel(env=env,robot=robot)
+        OpenRAVEModel.RunFromParser(Model=Model,parser=parser)
+
+if __name__ == "__main__":
+    InverseKinematicsModel.RunFromParser()

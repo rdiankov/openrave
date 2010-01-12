@@ -16,7 +16,7 @@ from __future__ import with_statement # for python 2.5
 import time,traceback
 from openravepy import *
 from openravepy.interfaces import BaseManipulation, TaskManipulation
-from openravepy.examples.grasping import GraspingModel
+from openravepy.examples import GraspingModel,InverseKinematicsModel
 from numpy import *
 import numpy
 
@@ -24,6 +24,9 @@ class GraspPlanning(metaclass.AutoReloader):
     def __init__(self,env,robot,randomize=False,dests=None,switchpatterns=None):
         self.envreal = env
         self.robot = robot
+        self.ikmodel = InverseKinematicsModel(env=env,robot=robot)
+        if not self.ikmodel.load():
+            self.ikmodel.autogenerate()
         self.switchpatterns = switchpatterns
         with self.envreal:
             self.basemanip = BaseManipulation(env,robot)

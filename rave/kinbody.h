@@ -279,6 +279,20 @@ public:
         virtual void SetResolution(dReal resolution);
 
         virtual void serialize(std::ostream& o, int options) const;
+
+        /// @name Internal Hierarchy Methods
+        //@{
+
+        /// \return the anchor of the joint in local coordinates
+        virtual Vector GetInternalHierarchyAnchor() const { return vanchor; }
+        /// \return the axis of the joint in local coordinates
+        virtual Vector GetInternalHierarchyAxis(int iaxis = 0) const;
+        /// left multiply transform given the base body
+        virtual Transform GetInternalHierarchyLeftTransform() const;
+        /// right multiply transform given the base body
+        virtual Transform GetInternalHierarchyRightTransform() const;
+        //@}
+
     private:
         boost::array<LinkPtr,2> bodies;
         dReal fResolution;      ///< interpolation resolution

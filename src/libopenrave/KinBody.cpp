@@ -24,6 +24,13 @@
 
 namespace OpenRAVE {
 
+inline static dReal TransformDistance(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)
+{
+    dReal e1 = (t1.rot-t2.rot).lengthsqr4();
+    dReal e2 = (t1.rot+t2.rot).lengthsqr4();
+    return RaveSqrt((t1.trans-t2.trans).lengthsqr3() + frotweight*min(e1,e2));
+}
+
 void KinBody::Link::TRIMESH::ApplyTransform(const Transform& t)
 {
     FOREACH(it, vertices)
@@ -544,15 +551,44 @@ Vector KinBody::Joint::GetAnchor() const
         return bodies[0]->GetTransform() * vanchor;
 }
 
-Vector KinBody::Joint::GetAxis(int iaxis ) const
+Vector KinBody::Joint::GetAxis(int iaxis) const
 {
-    BOOST_ASSERT(iaxis >= 0 && iaxis < 3 );
     if( !bodies[0] )
-        return vAxes[iaxis];
+        return vAxes.at(iaxis);
     else if( !!bodies[1] && bodies[1]->IsStatic() )
-        return bodies[1]->GetTransform().rotate(vAxes[iaxis]);
+        return bodies[1]->GetTransform().rotate(vAxes.at(iaxis));
     else
-        return bodies[0]->GetTransform().rotate(vAxes[iaxis]);
+        return bodies[0]->GetTransform().rotate(vAxes.at(iaxis));
+}
+
+Vector KinBody::Joint::GetInternalHierarchyAxis(int iaxis) const
+{
+    return -vAxes.at(iaxis);
+}
+
+Transform KinBody::Joint::GetInternalHierarchyLeftTransform() const
+{
+    if( KinBodyPtr(_parent)->DoesAffect(GetJointIndex(),bodies[0]->GetIndex()) ) {
+        // bodies[0] is a child
+        Transform tjoint;
+        if( GetType() == Joint::JointHinge )
+            tjoint.rotfromaxisangle(vAxes.at(0),-GetOffset());
+        else if( GetType() == Joint::JointSlider )
+            tjoint.trans = vAxes.at(0)*(-GetOffset());
+        return tinvRight*tjoint;
+    }
+
+    Transform tjoint;
+    if( GetType() == Joint::JointHinge )
+        tjoint.rotfromaxisangle(vAxes.at(0),GetOffset());
+    else if( GetType() == Joint::JointSlider )
+        tjoint.trans = vAxes.at(0)*GetOffset();
+    return tLeft*tjoint;
+}
+
+Transform KinBody::Joint::GetInternalHierarchyRightTransform() const
+{
+    return KinBodyPtr(_parent)->DoesAffect(GetJointIndex(),bodies[0]->GetIndex()) ? tinvLeft : tRight;
 }
 
 void KinBody::Joint::GetVelocities(std::vector<dReal>& pVelocities, bool bAppend) const
@@ -1640,8 +1676,12 @@ void KinBody::ComputeJointHierarchy()
 {
     _bHierarchyComputed = true;
     _vecJointHierarchy.resize(_vecjoints.size()*_veclinks.size());
-    if( _vecJointHierarchy.size() > 0 ) {
 
+    int jindex=0;
+    FOREACH(itjoint,_vecjoints)
+        BOOST_ASSERT(jindex++==(*itjoint)->GetJointIndex());
+
+    if( _vecJointHierarchy.size() > 0 ) {
         memset(&_vecJointHierarchy[0], 0, _vecJointHierarchy.size() * sizeof(_vecJointHierarchy[0]));
     
         for(size_t i = 0; i < _veclinks.size(); ++i) {
@@ -1894,7 +1934,7 @@ void KinBody::WriteForwardKinematics(std::ostream& f)
                                 Transform tjoint;
                                 if( (*itjoint)->GetType() == Joint::JointHinge )
                                     tjoint.rotfromaxisangle(info.vjointaxis,-(*itjoint)->offset);
-                                else
+                                else if( (*itjoint)->GetType() == Joint::JointSlider )
                                     tjoint.trans = -info.vjointaxis*(*itjoint)->offset;
                                 info.Tleft = (*itjoint)->tLeft*tjoint;
                                 info.linkcur = bodies[1]->GetIndex();
@@ -1936,7 +1976,7 @@ void KinBody::WriteForwardKinematics(std::ostream& f)
                             Transform tjoint;
                             if( (*itjoint)->GetType() == Joint::JointHinge )
                                 tjoint.rotfromaxisangle(info.vjointaxis,(*itjoint)->offset);
-                            else
+                            else if( (*itjoint)->GetType() == Joint::JointSlider )
                                 tjoint.trans = info.vjointaxis*(*itjoint)->offset;
                             info.Tleft = (*itjoint)->tinvRight*tjoint;
                             info.linkcur = bodies[0]->GetIndex();
@@ -2025,6 +2065,11 @@ void KinBody::WriteForwardKinematics(std::ostream& f)
     FORIT(it, listlinkinfo) {
         if( !it->bRecord )
             continue;
+
+        if( _vecjoints.at(it->jointindex)->GetMimicJointIndex() >= 0 ) {
+            BOOST_ASSERT( TransformDistance(_vecjoints.at(it->jointindex)->GetInternalHierarchyLeftTransform(),it->Tleft) < 1e-5f );
+            BOOST_ASSERT( TransformDistance(_vecjoints.at(it->jointindex)->GetInternalHierarchyRightTransform(),it->Tright) < 1e-5f );
+        }
 
         f << it->type << " " << it->linkcur << " " << it->linkbase << " " << it->jointindex << " "
           << it->vjointaxis.x << " " << it->vjointaxis.y << " " << it->vjointaxis.z << " "

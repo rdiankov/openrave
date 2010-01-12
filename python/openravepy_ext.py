@@ -71,10 +71,11 @@ class OpenRAVEModel(metaclass.AutoReloader):
     def show(self):
         raise NotImplementedError()
     def autogenerate(self):
+        """Caches parameters for most commonly used robots/objects and starts the generation process for them"""
         raise NotImplementedError()
     @staticmethod
     def CreateOptionParser():
-        parser = optparse.OptionParser(description='Computes the reachability region of a robot and python pickles it into a file.')
+        parser = optparse.OptionParser(description='Computes an openrave model and caches into file.')
         parser.add_option('--robot',action='store',type='string',dest='robot',default='robots/barrettsegway.robot.xml',
                           help='OpenRAVE robot to load')
         parser.add_option('--manipname',action='store',type='string',dest='manipname',default=None,

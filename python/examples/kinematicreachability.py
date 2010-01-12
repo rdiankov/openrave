@@ -14,6 +14,7 @@
 from __future__ import with_statement # for python 2.5
 
 from openravepy import *
+from openravepy.examples import InverseKinematicsModel
 from numpy import *
 import time,pickle
 from optparse import OptionParser
@@ -21,6 +22,9 @@ from optparse import OptionParser
 class ReachabilityModel(OpenRAVEModel):
     def __init__(self,env,robot):
         OpenRAVEModel.__init__(self,env=env,robot=robot)
+        self.ikmodel = InverseKinematicsModel(env=env,robot=robot)
+        if not self.ikmodel.load():
+            self.ikmodel.autogenerate()
         self.trimesh = self.env.Triangulate(self.robot)
         self.reachabilitystats = None
         self.reachabilitydensity3d = None
@@ -45,7 +49,7 @@ class ReachabilityModel(OpenRAVEModel):
     def generateFromOptions(self,options):
         self.generate(maxradius=options.maxradius,xyzdelta=options.xyzdelta,rolldelta=options.rolldelta)
 
-    def generate(self,maxradius=None,translationonly=False,xyzdelta=0.02,rolldelta=pi/8.0):
+    def generate(self,maxradius=None,translationonly=False,xyzdelta=0.04,rolldelta=pi/8.0):
         starttime = time.time()
         Tgrasp = dot(linalg.inv(self.manip.GetBase().GetTransform()),self.manip.GetEndEffectorTransform())
         armlength = sqrt(sum(Tgrasp[0:3,3]**2))
@@ -111,7 +115,7 @@ class ReachabilityModel(OpenRAVEModel):
             for b in bodies:
                 b.Enable(True)
 
-    def UniformlySampleSpace(self,maxradius,delta=0.02):
+    def UniformlySampleSpace(self,maxradius,delta):
         nsteps = floor(maxradius/delta)
         X,Y,Z = mgrid[-nsteps:nsteps,-nsteps:nsteps,-nsteps:nsteps]
         allpoints = c_[X.flat,Y.flat,Z.flat]*delta
@@ -177,9 +181,10 @@ class ReachabilityModel(OpenRAVEModel):
     @staticmethod
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser()
+        parser.description='Computes the reachability region of a robot manipulator and python pickles it into a file.'
         parser.add_option('--maxradius',action='store',type='float',dest='maxradius',default=None,
                           help='The max radius of the arm to perform the computation')
-        parser.add_option('--xyzdelta',action='store',type='float',dest='xyzdelta',default=0.02,
+        parser.add_option('--xyzdelta',action='store',type='float',dest='xyzdelta',default=0.04,
                           help='The max radius of the arm to perform the computation')
         parser.add_option('--rolldelta',action='store',type='float',dest='rolldelta',default=pi/8.0,
                           help='The max radius of the arm to perform the computation')

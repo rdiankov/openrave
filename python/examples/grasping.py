@@ -137,7 +137,6 @@ class GraspingModel(OpenRAVEModel):
             statesaver = None # force restoring
 
     def autogenerate(self):
-        """Caches parameters for most commonly used robot/object pairs and starts the generation process for them"""
         # disable every body but the target and robot
         bodies = [b for b in self.env.GetBodies() if b.GetNetworkId() != self.robot.GetNetworkId() and b.GetNetworkId() != self.target.GetNetworkId()]
         for b in bodies:

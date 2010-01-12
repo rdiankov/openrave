@@ -15,6 +15,8 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+from __future__ import with_statement # for python 2.5
+
 import sys, copy, time
 from string import atoi,atof
 from sympy import *
@@ -220,6 +222,17 @@ class CppGenerator(metaclass.AutoReloader):
 #endif
 #endif // _MSC_VER
 
+// defined when creating a shared object/dll
+#ifdef IKFAST_CLIBRARY
+#ifdef _MSC_VER
+#define IKFAST_API extern "C" __declspec(dllexport)
+#else
+#define IKFAST_API extern "C"
+#endif
+#else
+#define IKFAST_API
+#endif
+
 typedef double IKReal;
 class IKSolution
 {
@@ -314,23 +327,6 @@ inline double IKatan2(double fy, double fx) {
     return atan2(fy,fx);
 }
 
-// define when creating a shared object/dll
-#ifdef IKFAST_CLIBRARY
-
-#ifdef _MSC_VER
-#define IKFAST_API extern "C" __declspec(dllexport)
-#else
-#define IKFAST_API extern "C"
-#endif
-
-IKFAST_API bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions);
-IKFAST_API int getNumFreeParameters();
-IKFAST_API int* getFreeParameters();
-IKFAST_API int getNumJoints();
-IKFAST_API int getIKRealSize();
-
-#endif
-
 """
         code += solvertree.generate(self)
         code += solvertree.end(self)
@@ -389,21 +385,21 @@ int main(int argc, char** argv)
         self.dictequations = []
         self.symbolgen = cse_main.numbered_symbols('x')
 
-        code = "int getNumFreeParameters() { return %d; }\n"%len(node.freejointvars)
+        code = "IKFAST_API int getNumFreeParameters() { return %d; }\n"%len(node.freejointvars)
         if len(node.freejointvars) == 0:
-            code += "int* getFreeParameters() { return NULL; }\n";
+            code += "IKFAST_API int* getFreeParameters() { return NULL; }\n";
         else:
-            code += "int* getFreeParameters() { static int freeparams[] = {";
+            code += "IKFAST_API int* getFreeParameters() { static int freeparams[] = {";
             for i,freejointvar in enumerate(node.freejointvars):
                 code += "%d"%(freejointvar[1])
                 if i < len(node.freejointvars)-1:
                     code += ", ";
             code += "}; return freeparams; }\n"
-        code += "int getNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
-        code += "int getIKRealSize() { return sizeof(IKReal); }\n\n"
+        code += "IKFAST_API int getNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
+        code += "IKFAST_API int getIKRealSize() { return sizeof(IKReal); }\n\n"
         code += "/// solves the inverse kinematics equations.\n"
         code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
-        code += "bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
+        code += "IKFAST_API bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
         code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
         fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"
         fcode += 'IKReal '
@@ -808,7 +804,7 @@ int main(int argc, char** argv)
         lcode[:0] = insertcode
         return ''.join(lcode)
 
-class RobotKinematics(metaclass.AutoReloader):
+class IKFastSolver(metaclass.AutoReloader):
     """
     Parses the kinematics from an openrave fk file and generates C++ code for analytical inverse kinematics.
     author: Rosen Diankov
@@ -838,37 +834,56 @@ class RobotKinematics(metaclass.AutoReloader):
             self.cvar = Symbol("c%s"%var.name)
             self.tvar = Symbol("t%s"%var.name)
 
-    def __init__(self, robotfile=None,robotfiledata=None):
+    def __init__(self, robotfile=None,robotfiledata=None,kinbody=None):
         self.joints = []
         self.freevarsubs = []
-        if robotfiledata is not None:
-            tokens = robotfiledata.split()
-        else:
-            f=open(robotfile, "r")
-            tokens = f.read().split()
-        numdof = atoi(tokens[0])
-        offset = 1
-
-        self.numlinks = 0
         alljoints = []
-        for i in range(numdof):
-            joint = RobotKinematics.Joint()
-            joint.type = tokens[offset+0]
-            joint.linkcur = atoi(tokens[offset+1])
-            joint.linkbase = atoi(tokens[offset+2])
-            joint.jointindex = atoi(tokens[offset+3])
-            joint.axis = Matrix(3,1,[Real(round(atof(x),4),30) for x in tokens[offset+4:offset+7]])
-            joint.axis /= sqrt(joint.axis.dot(joint.axis))
-            joint.jcoeff = [round(atof(x),5) for x in tokens[offset+7:offset+9]]
-            joint.Tleft = eye(4)
-            joint.Tleft[0:3,0:4] = self.normalizeRotation(Matrix(3,4,[Real(round(atof(x),5),30) for x in tokens[offset+9:offset+21]]))
-            joint.Tright = eye(4)
-            joint.Tright[0:3,0:4] = self.normalizeRotation(Matrix(3,4,[Real(round(atof(x),5),30) for x in tokens[offset+21:offset+33]]))
-            joint.isfreejoint = False
-            joint.isdummy = False
-            alljoints.append(joint)
-            offset = offset + 33
-            self.numlinks = max(self.numlinks,joint.linkcur)
+        if kinbody is not None:
+            # this actually requires openravepy to run, but it isn't a good idea to make ikfast dependent on openravepy
+            with kinbody.GetEnv():
+                for bodyjoint in kinbody.GetJoints():
+                    joint = IKFastSolver.Joint()
+                    joint.type = bodyjoint.GetType().name.lower()
+                    joint.jointindex = bodyjoint.GetJointIndex()
+                    joint.jcoeff = [round(atof(x),5) for x in bodyjoint.GetMimicCoeffs()]
+                    joint.isfreejoint = False
+                    joint.isdummy = False
+                    joint.Tright = self.normalizeRotation(Matrix(4,4,[Real(round(atof(x),5),30) for x in bodyjoint.GetInternalHierarchyRightTransform().flat]))
+                    joint.Tleft = self.normalizeRotation(Matrix(4,4,[Real(round(atof(x),5),30) for x in bodyjoint.GetInternalHierarchyLeftTransform().flat]))
+                    joint.axis = Matrix(3,1,[Real(round(atof(x),4),30) for x in bodyjoint.GetInternalHierarchyAxis(0)])
+                    joint.linkcur = bodyjoint.GetSecondAttached().GetIndex()
+                    joint.linkbase = bodyjoint.GetFirstAttached().GetIndex()
+                    if kinbody.DoesAffect(bodyjoint.GetJointIndex(),bodyjoint.GetFirstAttached().GetIndex()):
+                        # bodies[0] is the child
+                        joint.linkcur,joint.linkbase = joint.linkbase,joint.linkcur
+                    alljoints.append(joint)
+        else:
+            if robotfiledata is not None:
+                tokens = robotfiledata.split()
+            elif robotfile is not None:
+                f=open(robotfile, "r")
+                tokens = f.read().split()
+            else:
+                raise ValueError('no valid way to initialize ikfast solver')
+            numdof = atoi(tokens[0])
+            offset = 1
+            for i in range(numdof):
+                joint = IKFastSolver.Joint()
+                joint.type = tokens[offset+0]
+                joint.linkcur = atoi(tokens[offset+1])
+                joint.linkbase = atoi(tokens[offset+2])
+                joint.jointindex = atoi(tokens[offset+3])
+                joint.axis = Matrix(3,1,[Real(round(atof(x),4),30) for x in tokens[offset+4:offset+7]])
+                joint.axis /= sqrt(joint.axis.dot(joint.axis))
+                joint.jcoeff = [round(atof(x),5) for x in tokens[offset+7:offset+9]]
+                joint.Tleft = eye(4)
+                joint.Tleft[0:3,0:4] = self.normalizeRotation(Matrix(3,4,[Real(round(atof(x),5),30) for x in tokens[offset+9:offset+21]]))
+                joint.Tright = eye(4)
+                joint.Tright[0:3,0:4] = self.normalizeRotation(Matrix(3,4,[Real(round(atof(x),5),30) for x in tokens[offset+21:offset+33]]))
+                joint.isfreejoint = False
+                joint.isdummy = False
+                alljoints.append(joint)
+                offset = offset + 33
 
         # order with respect to joint index
         numjoints = max([joint.jointindex for joint in alljoints])+1
@@ -938,9 +953,9 @@ class RobotKinematics(metaclass.AutoReloader):
                 else:
                     var = Symbol("j%d"%jointindexmap[joint.jointindex])
                 Tjoint = eye(4)
-                if joint.type == 'hinge':
+                if joint.type == 'hinge' or joint.type == 'revolute':
                     Tjoint[0:3,0:3] = self.rodrigues(joint.axis,joint.jcoeff[0]*var+joint.jcoeff[1])
-                elif joint.type == 'slider':
+                elif joint.type == 'slider' or joint.type == 'prismatic':
                     Tjoint[0:3,3] = joint.axis*(joint.jcoeff[0]*var+joint.jcoeff[1])
                 else:
                     raise ValueError('failed to process joint type %s'%joint.type)
@@ -1001,7 +1016,7 @@ class RobotKinematics(metaclass.AutoReloader):
         
     def generateIkSolver(self, baselink, eelink, solvejoints, freeparams, usedummyjoints,solvefn=None):
         if solvefn is None:
-            solvefn = RobotKinematics.solveFullIK_6D
+            solvefn = IKFastSolver.solveFullIK_6D
         alljoints = self.getJointsInChain(baselink, eelink)
         
         # mark the free joints and form the chain
@@ -1104,9 +1119,9 @@ class RobotKinematics(metaclass.AutoReloader):
         for i,joint in enumerate(chain):
             R = eye(4)
             value = joints[joint.jointindex]
-            if joint.type == 'hinge':
+            if joint.type == 'hinge' or joint.type == 'revolute':
                 R[0:3,0:3] = self.rodrigues(joint.axis,joint.jcoeff[0]*value+joint.jcoeff[1])
-            elif joint.type == 'slider':
+            elif joint.type == 'slider' or joint.type == 'prismatic':
                 R[0:3,3] = joint.axis*(joint.jcoeff[0]*value+joint.jcoeff[1])
             else:
                 raise ValueError('undefined joint type %s'%joint.type)
@@ -2575,24 +2590,24 @@ ikfast.py --fkfile=fk_WAM7.txt --baselink=0 --eelink=7 --savefile=ik.cpp 1 2 3 4
         sys.exit(1)
 
     solvejoints = [atoi(joint) for joint in args]
-    solvefn=RobotKinematics.solveFullIK_6D
+    solvefn=IKFastSolver.solveFullIK_6D
     numexpected = 6
     if options.rotation3donly:
         numexpected = 3
-        solvefn = RobotKinematics.solveFullIK_Rotation3D
+        solvefn = IKFastSolver.solveFullIK_Rotation3D
     elif options.rotation2donly:
         numexpected = 2
-        solvefn = RobotKinematics.solveFullIK_Direction3D
+        solvefn = IKFastSolver.solveFullIK_Direction3D
     elif options.translation3donly:
         numexpected = 3
-        solvefn = RobotKinematics.solveFullIK_Translation3D
+        solvefn = IKFastSolver.solveFullIK_Translation3D
 
     if not len(solvejoints) == numexpected:
         print 'Need ',numexpected, 'solve joints, got: ', solvejoints
         sys.exit(1)
 
     tstart = time.time()
-    kinematics = RobotKinematics(options.fkfile)
+    kinematics = IKFastSolver(options.fkfile)
     code = kinematics.generateIkSolver(options.baselink,options.eelink,solvejoints,options.freeparams,options.usedummyjoints,solvefn=solvefn)
 
     success = True if len(code) > 0 else False

@@ -1,6 +1,6 @@
 from openravepy import *
+import openravepy.examples
 from openravepy.interfaces import *
-from openravepy.examples.grasping import Grasping
 from numpy import *
 import numpy
 
@@ -16,7 +16,7 @@ def test_grasping():
     target.SetTransform(T)
     env.AddKinBody(target)
     env.SetViewer('qtcoin')
-    self = grasping.Grasping(env,robot,target)
+    self = grasping.GraspingModel(env,robot,target)
     self.init(friction=0.4,avoidlinks=[])
     preshapes = array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2)))
     rolls = arange(0,2*pi,pi/2)
@@ -70,3 +70,17 @@ def test_hash():
     s = robot.serialize(SerializationOptions.Kinematics)
     hash = robot.GetKinematicsGeometryHash()
     print hash
+
+def test_ikgeneration():
+    import inversekinematics
+    env = Environment()
+    env.SetDebugLevel(DebugLevel.Debug)
+    robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
+    env.AddRobot(robot)
+    self = inversekinematics.InverseKinematicsModel(env=env,robot=robot)
+    freejoints=None
+    usedummyjoints=False
+    rotation3donly=False
+    rotation2donly=False
+    translation3donly=False
+    self.generate(freejoints=freejoints,rotation3donly=rotation3donly,rotation2donly=rotation2donly,translation3donly=translation3donly)

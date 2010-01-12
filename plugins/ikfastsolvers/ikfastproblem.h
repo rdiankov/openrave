@@ -2,7 +2,7 @@
 #define OPENRAVE_IKFAST_PROBLEM
 
 #include "plugindefs.h"
-#include <boost/shared_ptr.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <errno.h>
 
@@ -241,16 +241,17 @@ public:
         if( sinput.eof() )
             return false;
         string ikname, libraryname;
-        sinput >> ikname >> libraryname;
+        sinput >> ikname;
+        if (!getline(sinput, libraryname) )
+            return false;
+        boost::trim(libraryname);
         if( !sinput || libraryname.size() == 0 || ikname.size() == 0 ) {
             RAVELOG_DEBUGA("bad input\n");
             return false;
         }
-        boost::shared_ptr<IKLibrary> lib(new IKLibrary);
-        if( !lib->Init(ikname, libraryname) ) {
-            RAVELOG_DEBUGA("failed to init library %s\n",libraryname.c_str());
+        boost::shared_ptr<IKLibrary> lib(new IKLibrary());
+        if( !lib->Init(ikname, libraryname) )
             return false;
-        }
 
         _vlibraries.push_back(lib);
         return true;
