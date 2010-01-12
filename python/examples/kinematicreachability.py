@@ -76,7 +76,7 @@ class ReachabilityModel(OpenRAVEModel):
                     T[0:3,0:3] = rotation
                     solutions = self.manip.FindIKSolutions(T,True)
                     if solutions is not None:
-                        self.reachabilitystats.append(r_[poseFromMatrix(T),len(solutions)))
+                        self.reachabilitystats.append(r_[poseFromMatrix(T),len(solutions)])
                         numvalid += len(solutions)
                 if mod(i,1000)==0:
                     print '%d/%d'%(i,len(insideinds))
