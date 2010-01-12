@@ -24,7 +24,7 @@
 
 #define CHECK_INTERFACE(pinterface) { \
         if( (pinterface)->GetEnv() != shared_from_this() ) \
-            throw openrave_exception(str(boost::format("Interface %s given is not valid")%(pinterface)->GetXMLId()),ORE_InvalidArguments); \
+            throw openrave_exception(str(boost::format("Interface %s is from a different environment")%(pinterface)->GetXMLId()),ORE_InvalidArguments); \
     } \
 
 #define CHECK_COLLISION_BODY(body) { \

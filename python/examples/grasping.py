@@ -240,6 +240,7 @@ class GraspingModel(OpenRAVEModel):
         (options, args) = parser.parse_args()
         env = Environment()
         try:
+            target = None
             with env:
                 target = env.ReadKinBodyXMLFile(options.target)
                 target.SetTransform(eye(4))
@@ -249,7 +250,7 @@ class GraspingModel(OpenRAVEModel):
             if options.useviewer:
                 env.SetViewer('qtcoin')
                 env.UpdatePublishedBodies()
-            OpenRAVEModel.RunFromParser(Model=Model,parser=parser)
+            OpenRAVEModel.RunFromParser(env=env,Model=Model,parser=parser)
         finally:
             env.Destroy()
 

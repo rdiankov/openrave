@@ -29,15 +29,15 @@ class GraspPlanning(metaclass.AutoReloader):
             self.ikmodel.autogenerate()
         self.switchpatterns = switchpatterns
         with self.envreal:
-            self.basemanip = BaseManipulation(env,robot)
-            self.taskmanip = TaskManipulation(env,robot)
+            self.basemanip = BaseManipulation(self.envreal,robot)
+            self.taskmanip = TaskManipulation(self.envreal,robot)
             self.updir = array((0,0,1))
 
             # find all the bodies to manipulate
             self.graspables = self.getGraspables(dests=dests)
             if len(self.graspables) == 0:
                 print 'attempting to auto-generate a grasp table'
-                grasping = GraspingModel(self.envreal,self.robot,self.envreal.GetKinBody('mug1'))
+                grasping = GraspingModel(robot=self.robot,target=self.envreal.GetKinBody('mug1'))
                 if not grasping.load():
                     grasping.autogenerate()
                     self.graspables = self.getGraspables(dests=dests)
@@ -81,7 +81,7 @@ class GraspPlanning(metaclass.AutoReloader):
         print 'searching for graspable objects...'
         for target in self.envreal.GetBodies():
             if not target.IsRobot():
-                grasping = GraspingModel(self.envreal,self.robot,target)
+                grasping = GraspingModel(robot=self.robot,target=target)
                 if grasping.load():
                     print '%s is graspable'%target.GetName()
                     graspables.append([grasping,dests])

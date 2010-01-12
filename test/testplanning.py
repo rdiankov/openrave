@@ -16,7 +16,7 @@ def test_grasping():
     target.SetTransform(T)
     env.AddKinBody(target)
     env.SetViewer('qtcoin')
-    self = grasping.GraspingModel(env,robot,target)
+    self = grasping.GraspingModel(robot=robot,target=target)
     self.init(friction=0.4,avoidlinks=[])
     preshapes = array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2)))
     rolls = arange(0,2*pi,pi/2)
@@ -28,7 +28,7 @@ def test_grasping():
 def test_autograsping():
     import grasping
     env = Environment()
-    env.SetDebugLevel(DebugL    evel.Debug)
+    env.SetDebugLevel(DebugLevel.Debug)
     env.SetViewer('qtcoin')
     env.Load('data/lab1.env.xml')
     robot = env.GetRobots()[0]
