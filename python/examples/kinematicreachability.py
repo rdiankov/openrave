@@ -123,7 +123,7 @@ class ReachabilityModel(OpenRAVEModel):
         insideinds = flatnonzero(sum(allpoints**2,1)<maxradius**2)
         return allpoints,insideinds,X.shape,array((1.0/delta,nsteps))
 
-    def GetUniformRotations(self,spherelevel=2,rolldelta):
+    def GetUniformRotations(self,rolldelta,spherelevel=2):
         """Generate a discreteized uniform sampling of rotations using geodesic spheres"""
         vertices,triindices = self.GetGeodesicSphere(spherelevel=spherelevel)
         rotations = []
