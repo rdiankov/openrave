@@ -150,21 +150,36 @@ class GraspingModel(OpenRAVEModel):
             preshapes = array([self.robot.GetJointValues()])
         self.generate(preshapes=preshapes, rolls = arange(0,2*pi,pi/2), standoffs = array([0,0.025]),
                       approachrays = self.computeBoxApproachRays(stepsize=0.02),
-                      modelnoise=None, updateenv=options.useviewer, addSphereNorms=False)
+                      updateenv=options.useviewer, addSphereNorms=False)
 
-    def autogenerate(self):
+    def autogenerate(self,forcegenerate=True):
         # disable every body but the target and robot
         bodies = [b for b in self.env.GetBodies() if b.GetNetworkId() != self.robot.GetNetworkId() and b.GetNetworkId() != self.target.GetNetworkId()]
         for b in bodies:
             b.Enable(False)
         try:
-            if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531' and self.manip.GetName() == 'arm' and self.target.GetKinematicsGeometryHash() == 'bbf03c6db8efc712a765f955a27b0d0f':
+            if self.robot.GetRobotStructureHash() == '6bc480d3dd7d363ec3305fdb8437a7cc' and self.manip.GetName() == 'arm' and self.target.GetKinematicsGeometryHash() == 'bbf03c6db8efc712a765f955a27b0d0f':
                 self.init(friction=0.4,avoidlinks=[])
                 self.generate(preshapes=array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2))),
                                       rolls = arange(0,2*pi,pi/2), standoffs = array([0,0.025]),
                                       approachrays = self.computeBoxApproachRays(stepsize=0.02))
             else:
-                raise ValueError('failed to find auto-generation parameters')
+                if not forcegenerate:
+                    raise ValueError('failed to find auto-generation parameters')
+                print 'attempting default grasp generation for %s:%s:%s'%(self.robot.GetName(),self.manip.GetName(),self.target.GetName())
+                self.init(friction=0.4,avoidlinks=[])
+                if self.robot.GetName() == 'BarrettHand' or self.robot.GetName() == 'BarrettWAM':
+                    preshapes = array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2)))
+                else:
+                    manipprob = BaseManipulation(self.env,self.robot)
+                    self.target.Enable(False)
+                    manipprop.ReleaseFingers(True)
+                    self.robot.WaitForController(0)
+                    self.target.Enable(True)
+                    preshapes = array([self.robot.GetJointValues()])
+                self.generate(preshapes=preshapes, rolls = arange(0,2*pi,pi/2), standoffs = array([0,0.025]),
+                              approachrays = self.computeBoxApproachRays(stepsize=0.02),
+                              updateenv=options.useviewer, addSphereNorms=False)
             self.save()
         finally:
             for b in bodies:

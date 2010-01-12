@@ -100,15 +100,18 @@ class ReachabilityModel(OpenRAVEModel):
             mlab.triangular_mesh(v[:,0]-offset[0],v[:,1]-offset[1],v[:,2]-offset[2],self.trimesh.indices,color=(0.5,0.5,0.5))
         mlab.show()
 
-    def autogenerate(self):
+    def autogenerate(self,forcegenerate=True):
         # disable every body but the target and robot
         bodies = [b for b in self.env.GetBodies() if b.GetNetworkId() != self.robot.GetNetworkId()]
         for b in bodies:
             b.Enable(False)
         try:
-            if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531' and self.manip.GetName() == 'arm':
+            if self.robot.GetRobotStructureHash() == '6bc480d3dd7d363ec3305fdb8437a7cc' and self.manip.GetName() == 'arm':
                 self.generate(maxradius=1.1)
             else:
+                if not forcegenerate:
+                    raise ValueError('failed to find auto-generation parameters')
+                self.generate()
                 raise ValueError('could not auto-generate reachability for %s:%s'%(self.robot.GetName(),self.manip.GetName()))
             self.save()
         finally:

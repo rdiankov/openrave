@@ -56,6 +56,14 @@ void translate_pyann_exception(pyann_exception const& e)
     PyErr_SetString(PyExc_RuntimeError, e.what());
 }
 
+class ANNpointManaged
+{
+public: 
+    ANNpointManaged(int n) {pt = annAllocPt(n); }
+    virtual ~ANNpointManaged() { annDeallocPt(pt); }
+    ANNpoint pt;
+};
+
 // Constructor from list        TODO: change to iterator
 boost::shared_ptr<ANNkd_tree>       init_from_list(object lst)
 { 
@@ -86,9 +94,9 @@ void destroy_points(ANNkd_tree& kdtree)
 object search(ANNkd_tree& kdtree, object q, int k, double eps, bool priority = false)
 {
     BOOST_ASSERT(k <= kdtree.nPoints() && kdtree.theDim() == len(q));
-    ANNpoint annq = annAllocPt(kdtree.theDim());
+    ANNpointManaged annq(kdtree.theDim());
     for (int c = 0; c < kdtree.theDim(); ++c)
-        annq[c] = extract<ANNcoord>(q[c]);
+        annq.pt[c] = extract<ANNcoord>(q[c]);
 
     npy_intp dims[] = {k};
     PyObject *pydists = PyArray_SimpleNew(1,dims, sizeof(ANNdist)==8?PyArray_DOUBLE:PyArray_FLOAT);
@@ -100,26 +108,29 @@ object search(ANNkd_tree& kdtree, object q, int k, double eps, bool priority = f
     std::vector<ANNdist> dists(k);
 
     if (priority)
-        kdtree.annkPriSearch(annq, k, pidx, pdists, eps);
+        kdtree.annkPriSearch(annq.pt, k, pidx, pdists, eps);
     else
-        kdtree.annkSearch(annq, k, pidx, pdists, eps);
-    annDeallocPt(annq);
+        kdtree.annkSearch(annq.pt, k, pidx, pdists, eps);
     return boost::python::make_tuple(static_cast<numeric::array>(handle<>(pyidx)), static_cast<numeric::array>(handle<>(pydists)));
 }
 
 object k_fixed_radius_search(ANNkd_tree& kdtree, object q, double sqRad, int k, double eps)
 {
     BOOST_ASSERT(k <= kdtree.nPoints() && kdtree.theDim() == len(q));
-    ANNpoint annq = annAllocPt(kdtree.theDim());
+    ANNpointManaged annq(kdtree.theDim());
     for (int c = 0; c < kdtree.theDim(); ++c)
-        annq[c] = extract<ANNcoord>(q[c]);
+        annq.pt[c] = extract<ANNcoord>(q[c]);
+
+    if( k <= 0 ) {
+        int kball = kdtree.annkFRSearch(annq.pt, sqRad, k, NULL, NULL, eps);
+        return boost::python::make_tuple(numeric::array(boost::python::list()).astype("i4"),numeric::array(boost::python::list()),kball);
+    }
 
     std::vector<ANNdist> dists(k);
     std::vector<ANNidx> nn_idx(k);
-    int kball = kdtree.annkFRSearch(annq, sqRad, k, &nn_idx[0], &dists[0], eps);
-    annDeallocPt(annq);
+    int kball = kdtree.annkFRSearch(annq.pt, sqRad, k, &nn_idx[0], &dists[0], eps);
     if( kball <= 0 )
-        return boost::python::make_tuple(numeric::array(boost::python::list()).astype("i4"),numeric::array(boost::python::list()),0);
+        return boost::python::make_tuple(numeric::array(boost::python::list()).astype("i4"),numeric::array(boost::python::list()),kball);
 
     npy_intp dims[] = {min(k,kball)};
     PyObject *pydists = PyArray_SimpleNew(1,dims, sizeof(ANNdist)==8?PyArray_DOUBLE:PyArray_FLOAT);
@@ -137,6 +148,49 @@ object k_fixed_radius_search(ANNkd_tree& kdtree, object q, double sqRad, int k, 
 
     BOOST_ASSERT(kball > k || addindex==kball);
     return boost::python::make_tuple(static_cast<numeric::array>(handle<>(pyidx)), static_cast<numeric::array>(handle<>(pydists)),kball);
+}
+
+object k_fixed_radius_search_array(ANNkd_tree& kdtree, object qarray, double sqRad, int k, double eps)
+{
+    BOOST_ASSERT(k <= kdtree.nPoints());
+    ANNpointManaged annq(kdtree.theDim());
+    int N = len(qarray);
+    if( N == 0 )
+        return boost::python::make_tuple(numeric::array(boost::python::list()).astype("i4"),numeric::array(boost::python::list()),numeric::array(boost::python::list()));
+
+    BOOST_ASSERT(len(qarray[0])==kdtree.theDim());
+    PyObject *pykball = PyArray_SimpleNew(1,&N, PyArray_INT);
+    int* pkball = (int*)PyArray_DATA(pykball);
+    
+    if( k <= 0 ) {
+        for(int i = 0; i < N; ++i) {
+            object q = qarray[i];
+            for (int c = 0; c < kdtree.theDim(); ++c)
+                annq.pt[c] = extract<ANNcoord>(q[c]);
+            pkball[i] = kdtree.annkFRSearch(annq.pt, sqRad, k, NULL, NULL, eps);
+        }
+        return boost::python::make_tuple(numeric::array(boost::python::list()).astype("i4"),numeric::array(boost::python::list()),static_cast<numeric::array>(handle<>(pykball)));
+    }
+
+    npy_intp dims[] = {N,k};
+    PyObject *pydists = PyArray_SimpleNew(2,dims, sizeof(ANNdist)==8?PyArray_DOUBLE:PyArray_FLOAT);
+    PyObject *pyidx = PyArray_SimpleNew(2,dims, PyArray_INT);
+    ANNdist* pdists = (ANNdist*)PyArray_DATA(pydists);
+    ANNidx* pidx = (ANNidx*)PyArray_DATA(pyidx);
+
+    for(int i = 0; i < N; ++i) {
+        object q = qarray[i];
+        for (int c = 0; c < kdtree.theDim(); ++c)
+            annq.pt[c] = extract<ANNcoord>(q[c]);
+        std::vector<ANNdist> dists(k);
+        std::vector<ANNidx> nn_idx(k);
+        pkball[i] = kdtree.annkFRSearch(annq.pt, sqRad, k, &nn_idx[0], &dists[0], eps);
+
+        std::copy(nn_idx.begin(),nn_idx.end(),pidx); pidx += k;
+        std::copy(dists.begin(),dists.end(),pdists); pdists += k;
+    }
+
+    return boost::python::make_tuple(static_cast<numeric::array>(handle<>(pyidx)), static_cast<numeric::array>(handle<>(pydists)),static_cast<numeric::array>(handle<>(pykball)));
 }
 
 object ksearch(ANNkd_tree& kdtree, object q, int k, double eps)
@@ -226,12 +280,13 @@ BOOST_PYTHON_MODULE(pyANN)
     T_from_number<double>();
 
     class_<ANNkd_tree, boost::shared_ptr<ANNkd_tree> >("KDTree")
-        .def("__init__",            make_constructor(&init_from_list))
-        .def("__del__",             &destroy_points)
+        .def("__init__", make_constructor(&init_from_list))
+        .def("__del__", &destroy_points)
 
-        .def("kSearch",             &ksearch)
-        .def("kPriSearch",          &k_priority_search)
-        .def("kFRSearch",           &k_fixed_radius_search)
+        .def("kSearch", &ksearch)
+        .def("kPriSearch", &k_priority_search)
+        .def("kFRSearch", &k_fixed_radius_search)
+        .def("kFRSearchArray", &k_fixed_radius_search_array)
 
         .def("__len__",             &ANNkd_tree::nPoints)
         .def("dim",                 &ANNkd_tree::theDim)

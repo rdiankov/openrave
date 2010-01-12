@@ -47,8 +47,17 @@ class InverseReachabilityModel(OpenRAVEModel):
         self.generate(xyzthresh=options.xyzthresh,rotthresh=options.rotthresh)
 
     def generate(self,heightthresh=0.05,rotthresh=0.25):
+        # find the density
+        basetrans = c_[invertPoses(self.reachability.reachabilitystats[:,0:7]),self.reachability.reachabilitystats[:,7:]]
+        if basetrans.shape[1] < 8:
+            basetrans = c_[basetrans,ones(basetrans.shape[0])]
+        # find the density of the points
+        searchtrans = c_[basetrans[:,0:4],(rotthresh/heightthresh)*basetrans[:,6:7]]
+        kdtree = pyANN.KDTree(searchtrans)
+        transdensity = kdtree.kFRSearchArray(searchtrans,0.25*rotthresh**2,0,rotthresh*0.2)[2]
+        basetrans = basetrans[argsort(-transdensity),:]
+        
         # find all equivalence classes
-        basetrans = invertPoses(self.reachability.reachabilitystats[:,0:7])
         quatrolls = array([quatFromAxisAngle(array((0,0,1)),roll) for roll in arange(0,2*pi,pi/32)])
         equivalenceclasses = []
         while len(basetrans) > 0:
@@ -67,7 +76,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             equivalenttrans = basetrans[flatnonzero(foundindices),:]
             basetrans = basetrans[flatnonzero(foundindices==False),:]
             
-            # for all the equivalent rotations, find the extract rotation about z that minimizes the distance
+            # for all the equivalent rotations, find the extract rotation about z that minimizes the distance between the root
             cosangs = -p[0]*equivalenttrans[:,3]-p[1]*equivalenttrans[:,2]+p[2]*equivalenttrans[:,1]+p[3]*equivalenttrans[:,0]
             sinangs = p[0]*equivalenttrans[:,0]+p[1]*equivalenttrans[:,1]+p[2]*equivalenttrans[:,2]+p[3]*equivalenttrans[:,3]
             ilengthsq = 1.0/(cosangs**2+sinangs**2)
@@ -80,19 +89,23 @@ class InverseReachabilityModel(OpenRAVEModel):
                             2.0*((0.5-zz)*equivalenttrans[:,4]-zw*equivalenttrans[:,5]),
                             2.0*((0.5-zz)*equivalenttrans[:,4]-zw*equivalenttrans[:,5]),
                             equivalenttrans[:,6]]
+            # make sure all quaternions are on the same hemisphere
+            
             equivalenceclasses.append(finaltrans)
             del kdtree
 
-    def autogenerate(self):
+    def autogenerate(self,forcegenerate=True):
         # disable every body but the target and robot
         bodies = [b for b in self.env.GetBodies() if b.GetNetworkId() != self.robot.GetNetworkId()]
         for b in bodies:
             b.Enable(False)
         try:
-            if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531' and self.manip.GetName() == 'arm':
+            if self.robot.GetRobotStructureHash() == '6bc480d3dd7d363ec3305fdb8437a7cc' and self.manip.GetName() == 'arm':
                 self.generate(heightthresh=0.05,rotthresh=0.25)
             else:
-                raise ValueError('failed to find auto-generation parameters')
+                if not forcegenerate:
+                    raise ValueError('failed to find auto-generation parameters')
+                self.generate()
             self.save()
         finally:
             for b in bodies:

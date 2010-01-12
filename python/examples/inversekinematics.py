@@ -137,11 +137,13 @@ class InverseKinematicsModel(OpenRAVEModel):
         compiler.link_shared_object(objectfiles,output_filename=output_filename)
         if not self.load():
             return ValueError('failed to generate ik solver')
-    def autogenerate(self):
-        if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531' and self.manip.GetName() == 'arm' and self.type == self.Type_6D:
+    def autogenerate(self,forcegenerate=True):
+        if self.robot.GetRobotStructureHash() == '6bc480d3dd7d363ec3305fdb8437a7cc' and self.manip.GetName() == 'arm' and self.type == self.Type_6D:
             self.generate(freejoints=[self.robot.GetJoint('Shoulder_Roll').GetJointIndex()])
         else:
-            raise ValueError('failed to find auto-generation parameters')
+            if not forcegenerate:
+                raise ValueError('failed to find auto-generation parameters')
+            self.generate()
     
     @staticmethod
     def getcompiler():

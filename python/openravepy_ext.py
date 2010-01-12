@@ -70,7 +70,7 @@ class OpenRAVEModel(metaclass.AutoReloader):
         return self.generate()
     def show(self):
         raise NotImplementedError()
-    def autogenerate(self):
+    def autogenerate(self,forcegenerate):
         """Caches parameters for most commonly used robots/objects and starts the generation process for them"""
         raise NotImplementedError()
     @staticmethod
@@ -112,7 +112,7 @@ class OpenRAVEModel(metaclass.AutoReloader):
                 model.show()
                 return
             try:
-                model.autogenerate()
+                model.autogenerate(forcegenerate=False)
             except ValueError, e:
                 print e
                 print 'attempting preset values'
