@@ -2880,6 +2880,19 @@ struct T_from_number
     }
 };
 
+std::string openravepyCompilerVersion()
+{
+    stringstream ss;
+#if defined(_MSC_VER)
+    ss << "msvc " << _MSC_VER;
+#elif defined(__GNUC__)
+    ss << "gcc " << __GNUC__ << "." << __GNUC_MINOR__ << "." << __GNUC_PATCHLEVEL__;
+#elif defined(__MINGW32_VERSION)
+    ss << "mingw " << __MINGW32_VERSION;
+#endif
+    return ss.str();
+}
+
 BOOST_PYTHON_MODULE(openravepy_int)
 {
     import_array();
@@ -3494,4 +3507,5 @@ BOOST_PYTHON_MODULE(openravepy_int)
     def("poseFromMatrix",poseFromMatrix,"Converts a 4x4 matrix to a 7 element quaternion+translation representation");
     def("matrixSerialization",matrixSerialization,"Serializes a transformation into a string representing a 3x4 matrix");
     def("poseSerialization",poseSerialization, "Serializes a transformation into a string representing a quaternion with translation");
+    def("openravepyCompilerVersion",openravepyCompilerVersion,"Returns the compiler version that openravepy_int was compiled with");
 }

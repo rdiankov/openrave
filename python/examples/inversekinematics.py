@@ -17,12 +17,28 @@ from openravepy import *
 from openravepy.ikfast import IKFastSolver
 from numpy import *
 import time,pickle,platform
+import distutils
 from distutils import ccompiler
 from optparse import OptionParser
 
 class InverseKinematicsModel(OpenRAVEModel):
-    def __init__(self,env,robot):
+    Type_6D=0
+    Type_Rotation3D=1
+    Type_Direction3D=2
+    Type_Translation3D=3
+    def __init__(self,env,robot,type=Type_6D):
         OpenRAVEModel.__init__(self,env=env,robot=robot)
+        self.type = type
+        if self.type == self.Type_Rotation3D:
+            self.dofexpected = 3
+        elif self.type == self.Type_Direction3D:
+            self.dofexpected = 2
+        elif self.type == self.Type_Translation3D:
+            self.dofexpected = 3
+        elif self.type == type == self.Type_6D:
+            self.dofexpected = 6
+        else:
+            raise ValueError('bad type')
         self.iksolver = None
         
     def has(self):
@@ -39,7 +55,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                 if ikfastproblem.SendCommand('AddIkLibrary %s %s'%(ikname,self.getfilename())) is None:
                     return False
                 self.iksolver = self.env.CreateIkSolver(ikname)
-                if self.iksolver:
+                if self.iksolver is not None:
                     self.manip.SetIKSolver(self.iksolver)
                     if not self.manip.InitIKSolver():
                         return False
@@ -48,43 +64,54 @@ class InverseKinematicsModel(OpenRAVEModel):
     def save(self):
         pass # already saved as a lib
 
-    def getfilename(self,getcppfile=False):
-        if getcppfile:
-            return os.path.join(OpenRAVEModel.getfilename(self),'ikfast.' + self.manip.GetName()+'.cpp')
+    def getfilename(self):
+        basename = 'ikfast.' + self.manip.GetName()
+        if self.type == self.Type_Rotation3D:
+            sourcefilename += 'r3d'
+        elif self.type == self.Type_Direction3D:
+            sourcefilename += 'd2d'
+        elif self.type == self.Type_Translation3D:
+            basename += 't3d'
+        elif self.type == self.Type_6D:
+            basename += '6d'
         else:
-            compiler = ccompiler.new_compiler()
-            return compiler.shared_object_filename (basename='ikfast.' + self.manip.GetName(),output_dir=OpenRAVEModel.getfilename(self))
+            raise ValueError('bad type')
+        return ccompiler.new_compiler().shared_object_filename(basename=basename,output_dir=OpenRAVEModel.getfilename(self))
 
     def generateFromOptions(self,options):
         return self.generate(freejoints=options.freejoints,usedummyjoints=options.usedummyjoints,rotation3donly=options.rotation3donly,rotation2donly=options.rotation2donly,translation3donly=options.translation3donly)
 
-    def generate(self,freejoints=None,usedummyjoints=False,rotation3donly=False,rotation2donly=False,translation3donly=False):
-        solvefn=IKFastSolver.solveFullIK_6D
-        numexpected = 6
-        if rotation3donly:
-            numexpected = 3
-            solvefn = IKFastSolver.solveFullIK_Rotation3D
-        elif rotation2donly:
-            numexpected = 2
-            solvefn = IKFastSolver.solveFullIK_Direction3D
-        elif translation3donly:
-            numexpected = 3
-            solvefn = IKFastSolver.solveFullIK_Translation3D        
+    def generate(self,freejoints=None,usedummyjoints=False):
+        output_filename = self.getfilename()
+        sourcefilename = os.path.splitext(output_filename)[0]
+        if self.type == self.Type_Rotation3D:
+            solvefn=IKFastSolver.solveFullIK_Rotation3D
+        elif self.type == self.Type_Direction3D:
+            solvefn=IKFastSolver.solveFullIK_Direction3D
+        elif self.type == self.Type_Translation3D:
+            solvefn=IKFastSolver.solveFullIK_Translation3D
+        elif self.type == self.Type_6D:
+            solvefn=IKFastSolver.solveFullIK_6D
+
         solvejoints = self.manip.GetArmJoints()
         if freejoints is not None:
             for jointname in freejoints:
                 solvejoints.remove(jointname)
-        elif len(solvejoints) > numexpected:
-            for i in range(len(solvejoints) - numexpected):
-                if numexpected == 6:
-                    solvejoints.pop(2)
+        elif len(solvejoints) > self.dofexpected:
+            freejoints = []
+            for i in range(len(solvejoints) - self.dofexpected):
+                if self.dofexpected == 6:
+                    freejoints.append(solvejoints.pop(2))
                 else:
-                    solvejoints.pop(0)
+                    freejoints.append(solvejoints.pop(0))
 
-        if not len(solvejoints) == numexpected:
-            raise ValueError('Need %d solve joints, got: %d'%(numexpected, len(solvejoints)))
-
-        sourcefilename = self.getfilename(True)
+        if not len(solvejoints) == self.dofexpected:
+            raise ValueError('Need %d solve joints, got: %d'%(self.dofexpected, len(solvejoints)))
+        
+        sourcefilename += '_' + '_'.join(str(ind) for ind in solvejoints)
+        if len(freejoints)>0:
+            sourcefilename += '_f'+'_'.join(str(ind) for ind in freejoints)
+        sourcefilename += '.cpp'
         if not os.path.isfile(sourcefilename):
             print 'generating inverse kinematics file %s'%sourcefilename
             mkdir_recursive(OpenRAVEModel.getfilename(self))
@@ -95,16 +122,9 @@ class InverseKinematicsModel(OpenRAVEModel):
             open(sourcefilename,'w').write(code)
 
         # compile the code and create the shared object
-        compiler = ccompiler.new_compiler()
-        optimization_options = []
-        if compiler.compiler_type == 'msvc':
-            optimization_options.append('/Ox')
-        else:
-            compiler.add_library('stdc++')
-            if compiler.compiler_type == 'unix':
-                optimization_options.append('-O3')
+        compiler,optimization_options = self.getcompiler()
         objectfiles = compiler.compile(sources=[sourcefilename],macros=[('IKFAST_CLIBRARY',1)],extra_postargs=optimization_options,output_dir=os.path.relpath('/',os.getcwd()))
-        compiler.link_shared_object(objectfiles,output_filename=self.getfilename())
+        compiler.link_shared_object(objectfiles,output_filename=output_filename)
         if not self.load():
             return ValueError('failed to generate ik solver')
     def autogenerate(self):
@@ -112,6 +132,33 @@ class InverseKinematicsModel(OpenRAVEModel):
             self.generate(freejoints=[self.robot.GetJoint('Shoulder_Roll').GetJointIndex()])
         else:
             self.generate()
+
+    @staticmethod
+    def getcompiler():
+        compiler = ccompiler.new_compiler()
+        optimization_options = []
+        if compiler.compiler_type == 'msvc':
+            optimization_options.append('/Ox')
+            try:
+                # make sure it is correct version!
+                cname,cver = openravepyCompilerVersion().split()
+                if cname == 'msvc':
+                    majorVersion = int(cver)/100-6
+                    minorVersion = mod(int(cver),100)/10.0
+                    if abs(compiler._MSVCCompiler__version - majorVersion.minorVersion) > 0.001:
+                        # not the same version, look for a different compiler
+                        distutils.msvc9compiler.VERSION = majorVersion + minorVersion
+                        newcompiler = ccompiler.new_compiler()
+                        if newcompiler is not None:
+                            compiler = newcompiler
+            except:
+                pass
+        else:
+            compiler.add_library('stdc++')
+            if compiler.compiler_type == 'unix':
+                optimization_options.append('-O3')
+        return compiler,optimization_options
+
     @staticmethod
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser()
