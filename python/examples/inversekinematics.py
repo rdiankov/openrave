@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 # Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
-# limitations under the License. 
+# limitations under the License.
 from __future__ import with_statement # for python 2.5
 
 from openravepy import *
@@ -40,7 +40,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         else:
             raise ValueError('bad type')
         self.iksolver = None
-        
+
     def has(self):
         return self.iksolver is not None and self.manip.HasIKSolver()
 
@@ -104,10 +104,11 @@ class InverseKinematicsModel(OpenRAVEModel):
                     freejoints.append(solvejoints.pop(2))
                 else:
                     freejoints.append(solvejoints.pop(0))
-
+        else:
+            freejoints = []
         if not len(solvejoints) == self.dofexpected:
             raise ValueError('Need %d solve joints, got: %d'%(self.dofexpected, len(solvejoints)))
-        
+
         sourcefilename += '_' + '_'.join(str(ind) for ind in solvejoints)
         if len(freejoints)>0:
             sourcefilename += '_f'+'_'.join(str(ind) for ind in freejoints)
@@ -145,7 +146,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                 if cname == 'msvc':
                     majorVersion = int(cver)/100-6
                     minorVersion = mod(int(cver),100)/10.0
-                    if abs(compiler._MSVCCompiler__version - majorVersion.minorVersion) > 0.001:
+                    if abs(compiler._MSVCCompiler__version - majorVersion+minorVersion) > 0.001:
                         # not the same version, look for a different compiler
                         distutils.msvc9compiler.VERSION = majorVersion + minorVersion
                         newcompiler = ccompiler.new_compiler()

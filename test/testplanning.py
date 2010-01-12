@@ -28,7 +28,7 @@ def test_grasping():
 def test_autograsping():
     import grasping
     env = Environment()
-    env.SetDebugLevel(DebugLevel.Debug)
+    env.SetDebugLevel(DebugL    evel.Debug)
     env.SetViewer('qtcoin')
     env.Load('data/lab1.env.xml')
     robot = env.GetRobots()[0]
@@ -83,4 +83,4 @@ def test_ikgeneration():
     rotation3donly=False
     rotation2donly=False
     translation3donly=False
-    self.generate(freejoints=freejoints,rotation3donly=rotation3donly,rotation2donly=rotation2donly,translation3donly=translation3donly)
+    self.generate(freejoints=freejoints)
