@@ -19,11 +19,6 @@ from numpy import *
 import time,pickle
 from optparse import OptionParser
 
-try:
-    from enthought.mayavi import mlab
-except ImportError:
-    pass
-
 class ReachabilityModel(OpenRAVEModel):
     def __init__(self,robot):
         OpenRAVEModel.__init__(self,robot=robot)
@@ -128,7 +123,7 @@ class ReachabilityModel(OpenRAVEModel):
         insideinds = flatnonzero(sum(allpoints**2,1)<maxradius**2)
         return allpoints,insideinds,X.shape,array((1.0/delta,nsteps))
 
-    def GetUniformRotations(self,spherelevel=2,rolldelta=pi/8.0):
+    def GetUniformRotations(self,spherelevel=2,rolldelta):
         """Generate a discreteized uniform sampling of rotations using geodesic spheres"""
         vertices,triindices = self.GetGeodesicSphere(spherelevel=spherelevel)
         rotations = []
@@ -209,4 +204,8 @@ class ReachabilityModel(OpenRAVEModel):
             env.Destroy()
 
 if __name__=='__main__':
+    try:
+        from enthought.mayavi import mlab
+    except ImportError:
+        pass
     ReachabilityModel.RunFromParser()
