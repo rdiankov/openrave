@@ -83,6 +83,21 @@ class InverseReachabilityModel(OpenRAVEModel):
             equivalenceclasses.append(finaltrans)
             del kdtree
 
+    def autogenerate(self):
+        # disable every body but the target and robot
+        bodies = [b for b in self.env.GetBodies() if b.GetNetworkId() != self.robot.GetNetworkId()]
+        for b in bodies:
+            b.Enable(False)
+        try:
+            if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531' and self.manip.GetName() == 'arm':
+                self.generate(heightthresh=0.05,rotthresh=0.25)
+            else:
+                raise ValueError('failed to find auto-generation parameters')
+            self.save()
+        finally:
+            for b in bodies:
+                b.Enable(True)
+
     @staticmethod
     def quatMultArrayT(q,qarray):
         """ multiplies a quaternion q with each quaternion in the Nx4 array qarray"""

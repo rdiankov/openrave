@@ -101,7 +101,6 @@ class ReachabilityModel(OpenRAVEModel):
         mlab.show()
 
     def autogenerate(self):
-        """Caches parameters for most commonly used robots and starts the generation process for them"""
         # disable every body but the target and robot
         bodies = [b for b in self.env.GetBodies() if b.GetNetworkId() != self.robot.GetNetworkId()]
         for b in bodies:

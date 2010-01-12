@@ -40,10 +40,10 @@ class InverseKinematicsModel(OpenRAVEModel):
         else:
             raise ValueError('bad type')
         self.iksolver = None
-
+    
     def has(self):
         return self.iksolver is not None and self.manip.HasIKSolver()
-
+    
     def load(self):
         self.iksolver = None
         if self.manip.HasIKSolver():
@@ -60,10 +60,10 @@ class InverseKinematicsModel(OpenRAVEModel):
                     if not self.manip.InitIKSolver():
                         return False
         return self.has()
-
+    
     def save(self):
         pass # already saved as a lib
-
+    
     def getfilename(self):
         basename = 'ikfast.' + self.manip.GetName()
         if self.type == self.Type_Rotation3D:
@@ -77,7 +77,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         else:
             raise ValueError('bad type')
         return ccompiler.new_compiler().shared_object_filename(basename=basename,output_dir=OpenRAVEModel.getfilename(self))
-
+    
     def generateFromOptions(self,options):
         type = self.Type_6D
         if options.rotation3donly:
@@ -87,7 +87,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         if options.translation3donly:
             type = self.Type_Translation3D
         return self.generate(freejoints=options.freejoints,usedummyjoints=options.usedummyjoints,type=type)
-
+    
     def generate(self,freejoints=None,usedummyjoints=False,type=None):
         if type is not None:
             self.type = type
@@ -138,11 +138,11 @@ class InverseKinematicsModel(OpenRAVEModel):
         if not self.load():
             return ValueError('failed to generate ik solver')
     def autogenerate(self):
-        if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531' and self.manip.GetName() == 'arm':
+        if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531' and self.manip.GetName() == 'arm' and self.type == self.Type_6D:
             self.generate(freejoints=[self.robot.GetJoint('Shoulder_Roll').GetJointIndex()])
         else:
-            self.generate()
-
+            raise ValueError('failed to find auto-generation parameters')
+    
     @staticmethod
     def getcompiler():
         compiler = ccompiler.new_compiler()
@@ -168,7 +168,6 @@ class InverseKinematicsModel(OpenRAVEModel):
             if compiler.compiler_type == 'unix':
                 optimization_options.append('-O3')
         return compiler,optimization_options
-
     @staticmethod
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser()
