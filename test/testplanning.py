@@ -33,7 +33,7 @@ def test_autograsping():
     env.Load('data/lab1.env.xml')
     robot = env.GetRobots()[0]
     target = env.GetKinBody('mug1')
-    self = grasping.Grasping(env=env,robot=robot,target=target)
+    self = grasping.GraspingModel(robot=robot,target=target)
     self.autogenerate()
 
 def test_reachability():
@@ -41,7 +41,7 @@ def test_reachability():
     env = Environment()
     robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
     env.AddRobot(robot)
-    self = kinematicreachability.ReachabilityModel(env=env,robot=robot)
+    self = kinematicreachability.ReachabilityModel(robot=robot)
     self.generate()
 
 def test_graspplanning():
@@ -77,7 +77,7 @@ def test_ikgeneration():
     env.SetDebugLevel(DebugLevel.Debug)
     robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
     env.AddRobot(robot)
-    self = inversekinematics.InverseKinematicsModel(env=env,robot=robot)
+    self = inversekinematics.InverseKinematicsModel(robot=robot)
     freejoints=None
     usedummyjoints=False
     rotation3donly=False

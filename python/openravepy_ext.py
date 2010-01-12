@@ -48,9 +48,9 @@ def mkdir_recursive(newdir):
 
 
 class OpenRAVEModel(metaclass.AutoReloader):
-    def __init__(self,env,robot):
-        self.env = env
+    def __init__(self,robot):
         self.robot = robot
+        self.env = self.robot.GetEnv()
         self.manip = self.robot.GetActiveManipulator()
     def has(self):
         raise NotImplementedError()
@@ -104,7 +104,7 @@ class OpenRAVEModel(metaclass.AutoReloader):
                         robot.SetActiveManipulator(indices[0])
                 else:
                     robot.SetActiveManipulator([i for i,m in self.robot.GetManipulators() if m.GetName()==options.manipname][0])
-            model = Model(env=env,robot=robot)
+            model = Model(robot=robot)
             if options.show:
                 if not model.load():
                     print 'failed to find cached model %s'%self.getfilename()

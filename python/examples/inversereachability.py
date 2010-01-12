@@ -19,8 +19,8 @@ import time,pickle
 from optparse import OptionParser
 
 class InverseReachabilityModel(OpenRAVEModel):
-    def __init__(self,env,robot,target):
-        OpenRAVEModel.__init__(self,env=env,robot=robot)
+    def __init__(self,robot,target):
+        OpenRAVEModel.__init__(self,robot=robot)
         
     def has(self):
         return len(self.reachabilitydensity3d) > 0
@@ -57,7 +57,7 @@ class InverseReachabilityModel(OpenRAVEModel):
         if parser is None:
             parser = ReachabilityModel.CreateOptionParser()
         (options, args) = parser.parse_args()
-        Model = lambda env,robot: InverseReachabilityModel(env=env,robot=robot)
+        Model = lambda env,robot: InverseReachabilityModel(robot=robot)
         OpenRAVEModel.RunFromParser(Model=Model,parser=parser)
 
 if __name__ == "__main__":

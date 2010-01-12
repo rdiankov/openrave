@@ -20,9 +20,9 @@ import time,pickle
 from optparse import OptionParser
 
 class ReachabilityModel(OpenRAVEModel):
-    def __init__(self,env,robot):
-        OpenRAVEModel.__init__(self,env=env,robot=robot)
-        self.ikmodel = InverseKinematicsModel(env=env,robot=robot)
+    def __init__(self,robot):
+        OpenRAVEModel.__init__(self,robot=robot)
+        self.ikmodel = InverseKinematicsModel(robot=robot)
         if not self.ikmodel.load():
             self.ikmodel.autogenerate()
         self.trimesh = self.env.Triangulate(self.robot)
@@ -197,8 +197,8 @@ class ReachabilityModel(OpenRAVEModel):
         env = Environment()
         try:
             if Model is None:
-                Model = lambda env,robot: ReachabilityModel(env=env,robot=robot)
-            OpenRAVEModel.RunFromParser(Model=Model,parser=parser,env=env)
+                Model = lambda env,robot: ReachabilityModel(robot=robot)
+            OpenRAVEModel.RunFromParser(Model=Model,parser=parser)
         finally:
             env.Destroy()
 

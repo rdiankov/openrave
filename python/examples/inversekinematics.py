@@ -26,8 +26,8 @@ class InverseKinematicsModel(OpenRAVEModel):
     Type_Rotation3D=1
     Type_Direction3D=2
     Type_Translation3D=3
-    def __init__(self,env,robot,type=Type_6D):
-        OpenRAVEModel.__init__(self,env=env,robot=robot)
+    def __init__(self,robot,type=Type_6D):
+        OpenRAVEModel.__init__(self,robot=robot)
         self.type = type
         if self.type == self.Type_Rotation3D:
             self.dofexpected = 3
@@ -179,7 +179,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         if parser is None:
             parser = InverseKinematicsModel.CreateOptionParser()
         (options, args) = parser.parse_args()
-        Model = lambda env,robot: InverseKinematicsModel(env=env,robot=robot)
+        Model = lambda env,robot: InverseKinematicsModel(robot=robot)
         OpenRAVEModel.RunFromParser(Model=Model,parser=parser)
 
 if __name__ == "__main__":

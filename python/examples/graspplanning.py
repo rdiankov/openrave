@@ -21,10 +21,10 @@ from numpy import *
 import numpy
 
 class GraspPlanning(metaclass.AutoReloader):
-    def __init__(self,env,robot,randomize=False,dests=None,switchpatterns=None):
-        self.envreal = env
+    def __init__(self,robot,randomize=False,dests=None,switchpatterns=None):
+        self.envreal = robot.GetEnv()
         self.robot = robot
-        self.ikmodel = InverseKinematicsModel(env=env,robot=robot)
+        self.ikmodel = InverseKinematicsModel(robot=robot)
         if not self.ikmodel.load():
             self.ikmodel.autogenerate()
         self.switchpatterns = switchpatterns
@@ -244,7 +244,7 @@ def run():
         robot = env.GetRobots()[0]
         env.UpdatePublishedBodies()
         time.sleep(0.1) # give time for environment to update
-        self = GraspPlanning(env,robot,randomize=True)
+        self = GraspPlanning(robot,randomize=True)
         self.performGraspPlanning()
     finally:
         env.Destroy()

@@ -31,8 +31,8 @@ def myproduct(*args, **kwds):
 
 class GraspingModel(OpenRAVEModel):
     """Holds all functions/data related to a grasp between a robot hand and a target"""
-    def __init__(self,env,robot,target):
-        OpenRAVEModel.__init__(self,env=env,robot=robot)
+    def __init__(self,robot,target):
+        OpenRAVEModel.__init__(self,robot=robot)
         self.target = target
         self.grasps = []
         self.graspindices = dict()
@@ -245,11 +245,11 @@ class GraspingModel(OpenRAVEModel):
                 target.SetTransform(eye(4))
                 env.AddKinBody(target)
             if Model is None:
-                Model = lambda env,robot: GraspingModel(env=env,robot=robot,target=target)
+                Model = lambda env,robot: GraspingModel(robot=robot,target=target)
             if options.useviewer:
                 env.SetViewer('qtcoin')
                 env.UpdatePublishedBodies()
-            OpenRAVEModel.RunFromParser(Model=Model,parser=parser,env=env)
+            OpenRAVEModel.RunFromParser(Model=Model,parser=parser)
         finally:
             env.Destroy()
 
