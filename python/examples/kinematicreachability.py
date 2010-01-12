@@ -19,6 +19,11 @@ from numpy import *
 import time,pickle
 from optparse import OptionParser
 
+try:
+    from enthought.mayavi import mlab
+except ImportError:
+    pass
+
 class ReachabilityModel(OpenRAVEModel):
     def __init__(self,robot):
         OpenRAVEModel.__init__(self,robot=robot)
@@ -71,7 +76,7 @@ class ReachabilityModel(OpenRAVEModel):
                     T[0:3,0:3] = rotation
                     solutions = self.manip.FindIKSolutions(T,True)
                     if solutions is not None:
-                        self.reachabilitystats.append(poseFromMatrix(T))
+                        self.reachabilitystats.append(r_[poseFromMatrix(T),len(solutions)))
                         numvalid += len(solutions)
                 if mod(i,1000)==0:
                     print '%d/%d'%(i,len(insideinds))
@@ -87,17 +92,18 @@ class ReachabilityModel(OpenRAVEModel):
         reachabilitydensity3d[0,0,0] = 1 # have at least one point be at the maximum
         if xrange is None:
             offset = array((0,0,0))
-            src = mlab.pipeline.scalar_field(self.reachabilitydensity3d)
+            src = mlab.pipeline.scalar_field(reachabilitydensity3d)
         else:
             offset = array((xrange[0]-1,0,0))
-            src = mlab.pipeline.scalar_field(r_[zeros((1,)+self.reachabilitydensity3d.shape[1:]),self.reachabilitydensity3d[xrange,:,:],zeros((1,)+self.reachabilitydensity3d.shape[1:])])
+            src = mlab.pipeline.scalar_field(r_[zeros((1,)+reachabilitydensity3d.shape[1:]),reachabilitydensity3d[xrange,:,:],zeros((1,)+reachabilitydensity3d.shape[1:])])
             
         for i,c in enumerate(contours):
-            mlab.pipeline.iso_surface(src,contours=[c],opacity=min(1,0.5*c if opacity is None else opacity[i]))
-        #mlab.pipeline.volume(mlab.pipeline.scalar_field(self.reachabilitydensity3d*100))
+            mlab.pipeline.iso_surface(src,contours=[c],opacity=min(1,0.7*c if opacity is None else opacity[i]))
+        #mlab.pipeline.volume(mlab.pipeline.scalar_field(reachabilitydensity3d*100))
         if showrobot:
             v = self.pointscale[0]*self.trimesh.vertices+self.pointscale[1]
             mlab.triangular_mesh(v[:,0]-offset[0],v[:,1]-offset[1],v[:,2]-offset[2],self.trimesh.indices,color=(0.5,0.5,0.5))
+        mlab.show()
 
     def autogenerate(self):
         """Caches parameters for most commonly used robots and starts the generation process for them"""
@@ -107,7 +113,7 @@ class ReachabilityModel(OpenRAVEModel):
             b.Enable(False)
         try:
             if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531' and self.manip.GetName() == 'arm':
-                self.generate(maxradius=1.0)
+                self.generate(maxradius=1.1)
             else:
                 raise ValueError('could not auto-generate reachability for %s:%s'%(self.robot.GetName(),self.manip.GetName()))
             self.save()

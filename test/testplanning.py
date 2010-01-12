@@ -36,13 +36,34 @@ def test_autograsping():
     self = grasping.GraspingModel(robot=robot,target=target)
     self.autogenerate()
 
+def test_ikgeneration():
+    import inversekinematics
+    env = Environment()
+    env.SetDebugLevel(DebugLevel.Debug)
+    robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
+    env.AddRobot(robot)
+    self = inversekinematics.InverseKinematicsModel(robot=robot)
+    freejoints=None
+    usedummyjoints=False
+    self.generate(freejoints=freejoints,usedummyjoints=usedummyjoints)
+
 def test_reachability():
     import kinematicreachability
     env = Environment()
     robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
     env.AddRobot(robot)
     self = kinematicreachability.ReachabilityModel(robot=robot)
-    self.generate()
+    self.autogenerate()
+
+def test_inversereachability():
+    import inversereachability
+    env = Environment()
+    robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
+    env.AddRobot(robot)
+    self = inversereachability.InverseReachabilityModel(robot=robot)
+    heightthresh=0.05
+    rotthresh=0.25
+    self.generate(heightthresh=heightthresh2,rotthresh=rotthresh)
 
 def test_graspplanning():
     import graspplanning
@@ -71,13 +92,6 @@ def test_hash():
     hash = robot.GetKinematicsGeometryHash()
     print hash
 
-def test_ikgeneration():
-    import inversekinematics
-    env = Environment()
-    env.SetDebugLevel(DebugLevel.Debug)
-    robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
-    env.AddRobot(robot)
-    self = inversekinematics.InverseKinematicsModel(robot=robot)
-    freejoints=None
-    usedummyjoints=False
-    self.generate(freejoints=freejoints,usedummyjoints=usedummyjoints)
+def test_pyann():
+    ktree = pyANN.KDTree(random.rand(10,7))
+    neighs,dists = ktree.kSearch(random.rand(7),5,1e-3);

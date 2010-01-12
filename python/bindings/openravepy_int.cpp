@@ -2192,6 +2192,8 @@ public:
     {
         object shape = rays.attr("shape");
         int num = extract<int>(shape[0]);
+        if( num == 0 )
+            return boost::python::make_tuple(numeric::array(boost::python::list()).astype("i4"),numeric::array(boost::python::list()));
         if( extract<int>(shape[1]) != 6 )
             throw openrave_exception("rays object needs to be a 6xN vector\n");
 
@@ -2775,6 +2777,25 @@ object poseFromMatrix(object o)
         t.trans[i] = extract<dReal>(o[i][3]);
     }
     return toPyArray(Transform(t));
+}
+
+object invertPoses(object o)
+{
+    int N = len(o);
+    if( N == 0 )
+        return numeric::array(boost::python::list());
+
+    npy_intp dims[] = {N,7};
+    PyObject *pytrans = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
+    dReal* ptrans = (dReal*)PyArray_DATA(pytrans);
+    for(int i = 0; i < N; ++i, ptrans += 7) {
+        object oinputtrans = o[i];
+        Transform t = Transform(Vector(extract<dReal>(oinputtrans[0]),extract<dReal>(oinputtrans[1]),extract<dReal>(oinputtrans[2]),extract<dReal>(oinputtrans[3])),
+                                Vector(extract<dReal>(oinputtrans[4]),extract<dReal>(oinputtrans[5]),extract<dReal>(oinputtrans[6]))).inverse();
+        ptrans[0] = t.rot.x; ptrans[1] = t.rot.y; ptrans[2] = t.rot.z; ptrans[3] = t.rot.w;
+        ptrans[4] = t.trans.x; ptrans[5] = t.trans.y; ptrans[6] = t.trans.z;
+    }
+    return static_cast<numeric::array>(handle<>(pytrans));
 }
 
 string matrixSerialization(object o)
@@ -3505,6 +3526,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
     def("matrixFromAxisAngle",matrixFromAxisAngle2, "Converts an axis-angle rotation to a 4x4 affine matrix");
     def("matrixFromPose",matrixFromPose, "Converts a 7 element quaterion+translation transform to a 4x4 matrix");
     def("poseFromMatrix",poseFromMatrix,"Converts a 4x4 matrix to a 7 element quaternion+translation representation");
+    def("invertPoses",invertPoses,"Inverts a Nx7 array of poses where first 4 columns are the quaternion and last 3 are the translation components");
     def("matrixSerialization",matrixSerialization,"Serializes a transformation into a string representing a 3x4 matrix");
     def("poseSerialization",poseSerialization, "Serializes a transformation into a string representing a quaternion with translation");
     def("openravepyCompilerVersion",openravepyCompilerVersion,"Returns the compiler version that openravepy_int was compiled with");

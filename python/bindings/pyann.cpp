@@ -12,6 +12,8 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#define BOOST_ENABLE_ASSERT_HANDLER
+
 #define PY_ARRAY_UNIQUE_SYMBOL PyArrayHandle
 #include <boost/python.hpp>
 #include <boost/python/exception_translator.hpp>
@@ -19,9 +21,10 @@
 #include <pyconfig.h>
 #include <numpy/arrayobject.h>
 
-#include <boost/array.hpp>
+#include <exception>
 #include <boost/shared_ptr.hpp>
 #include <boost/format.hpp>
+#include <boost/assert.hpp>
 //#include <boost/functional/hash.hpp>
 
 #include <ANN/ANN.h>
@@ -29,9 +32,36 @@
 using namespace boost::python;
 using namespace std;
 
+struct pyann_exception : std::exception
+{
+    pyann_exception() : std::exception(), _s("unknown exception") {}
+    pyann_exception(const std::string& s) : std::exception() { _s = "pyANN: " + s; }
+    virtual ~pyann_exception() throw() {}
+    char const* what() const throw() { return _s.c_str(); }
+private:
+    std::string _s;
+};
+
+namespace boost
+{
+inline void assertion_failed(char const * expr, char const * function, char const * file, long line)
+{
+    throw pyann_exception(str(boost::format("[%s:%d] -> %s, expr: %s")%file%line%function%expr));
+}
+}
+
+void translate_pyann_exception(pyann_exception const& e)
+{
+    // Use the Python 'C' API to set up an exception object
+    PyErr_SetString(PyExc_RuntimeError, e.what());
+}
+
 // Constructor from list        TODO: change to iterator
-boost::shared_ptr<ANNkd_tree>       init_from_list(boost::python::list lst)
+boost::shared_ptr<ANNkd_tree>       init_from_list(object lst)
 { 
+    BOOST_ASSERT(sizeof(ANNdist)==8 || sizeof(ANNdist)==4);
+    BOOST_ASSERT(sizeof(ANNidx)==4);
+
     int             dimension   = len(lst[0]);
     int             npts        = len(lst);
     ANNpointArray   dataPts     = annAllocPts(npts, dimension);
@@ -53,59 +83,68 @@ void destroy_points(ANNkd_tree& kdtree)
     annDeallocPts(dataPts);
 }
 
-object search(ANNkd_tree& kdtree, boost::python::list q, int k, double eps, bool priority = false)
+object search(ANNkd_tree& kdtree, object q, int k, double eps, bool priority = false)
 {
-    ANNpoint annq = annAllocPt(len(q));
-    for (int c = 0; c < len(q); ++c)
+    BOOST_ASSERT(k <= kdtree.nPoints() && kdtree.theDim() == len(q));
+    ANNpoint annq = annAllocPt(kdtree.theDim());
+    for (int c = 0; c < kdtree.theDim(); ++c)
         annq[c] = extract<ANNcoord>(q[c]);
 
-    ANNidxArray     nn_idx  = new ANNidx[k];
-    ANNdistArray    dists   = new ANNdist[k];
+    npy_intp dims[] = {k};
+    PyObject *pydists = PyArray_SimpleNew(1,dims, sizeof(ANNdist)==8?PyArray_DOUBLE:PyArray_FLOAT);
+    PyObject *pyidx = PyArray_SimpleNew(1,dims, PyArray_INT);
+    ANNdist* pdists = (ANNdist*)PyArray_DATA(pydists);
+    ANNidx* pidx = (ANNidx*)PyArray_DATA(pyidx);
+
+    std::vector<ANNidx> nn_idx(k);
+    std::vector<ANNdist> dists(k);
 
     if (priority)
-        kdtree.annkPriSearch(annq, k, nn_idx, dists, eps);
+        kdtree.annkPriSearch(annq, k, pidx, pdists, eps);
     else
-        kdtree.annkSearch(annq, k, nn_idx, dists, eps);
-
-    boost::python::list indices, distances;
-    for (int i = 0; i < k; ++i) {
-        indices.append(nn_idx[i]);
-        distances.append(dists[i]);
-    }
-
-    delete nn_idx; delete dists;
-    return boost::python::make_tuple(indices, distances);
+        kdtree.annkSearch(annq, k, pidx, pdists, eps);
+    annDeallocPt(annq);
+    return boost::python::make_tuple(static_cast<numeric::array>(handle<>(pyidx)), static_cast<numeric::array>(handle<>(pydists)));
 }
 
-object k_fixed_radius_search(ANNkd_tree& kdtree, boost::python::list q, double sqRad, int k, double eps)
+object k_fixed_radius_search(ANNkd_tree& kdtree, object q, double sqRad, int k, double eps)
 {
-    ANNpoint annq = annAllocPt(len(q));
-    for (int c = 0; c < len(q); ++c)
+    BOOST_ASSERT(k <= kdtree.nPoints() && kdtree.theDim() == len(q));
+    ANNpoint annq = annAllocPt(kdtree.theDim());
+    for (int c = 0; c < kdtree.theDim(); ++c)
         annq[c] = extract<ANNcoord>(q[c]);
 
-    ANNidxArray     nn_idx  = new ANNidx[k];
-    ANNdistArray    dists   = new ANNdist[k];
+    std::vector<ANNdist> dists(k);
+    std::vector<ANNidx> nn_idx(k);
+    int kball = kdtree.annkFRSearch(annq, sqRad, k, &nn_idx[0], &dists[0], eps);
+    annDeallocPt(annq);
+    if( kball <= 0 )
+        return boost::python::make_tuple(numeric::array(boost::python::list()).astype("i4"),numeric::array(boost::python::list()),0);
 
-    int kball = kdtree.annkFRSearch(annq, sqRad, k, nn_idx, dists, eps);
-
-    boost::python::list indices, distances;
+    npy_intp dims[] = {min(k,kball)};
+    PyObject *pydists = PyArray_SimpleNew(1,dims, sizeof(ANNdist)==8?PyArray_DOUBLE:PyArray_FLOAT);
+    PyObject *pyidx = PyArray_SimpleNew(1,dims, PyArray_INT);
+    ANNdist* pdists = (ANNdist*)PyArray_DATA(pydists);
+    ANNidx* pidx = (ANNidx*)PyArray_DATA(pyidx);
+    int addindex=0;
     for (int i = 0; i < k; ++i) {
-        if (nn_idx[i] != ANN_NULL_IDX)
-            indices.append(nn_idx[i]);
-        if (dists[i] != ANN_DIST_INF)
-            distances.append(dists[i]);
+        if (nn_idx[i] != ANN_NULL_IDX) {
+            pdists[addindex] = dists[i];
+            pidx[addindex] = nn_idx[i];
+            addindex++;
+        }
     }
 
-    delete nn_idx; delete dists;
-    return boost::python::make_tuple(indices, distances, kball);
+    BOOST_ASSERT(kball > k || addindex==kball);
+    return boost::python::make_tuple(static_cast<numeric::array>(handle<>(pyidx)), static_cast<numeric::array>(handle<>(pydists)),kball);
 }
 
-object ksearch(ANNkd_tree& kdtree, boost::python::list q, int k, double eps)
+object ksearch(ANNkd_tree& kdtree, object q, int k, double eps)
 {
     return search(kdtree, q, k, eps, false);
 }
 
-object k_priority_search(ANNkd_tree& kdtree, boost::python::list q, int k, double eps)
+object k_priority_search(ANNkd_tree& kdtree, object q, int k, double eps)
 {
     return search(kdtree, q, k, eps, true);
 }
@@ -181,11 +220,12 @@ BOOST_PYTHON_MODULE(pyANN)
 {
     import_array();
     numeric::array::set_module_and_type("numpy", "ndarray");
+    register_exception_translator<pyann_exception>(&translate_pyann_exception);
     int_from_int();
     T_from_number<float>();
     T_from_number<double>();
 
-    class_<ANNkd_tree>("KDTree")
+    class_<ANNkd_tree, boost::shared_ptr<ANNkd_tree> >("KDTree")
         .def("__init__",            make_constructor(&init_from_list))
         .def("__del__",             &destroy_points)
 

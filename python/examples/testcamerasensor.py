@@ -18,6 +18,13 @@ from numpy import *
 import time, signal, threading
 from optparse import OptionParser
 
+try:
+    from Tkinter import *
+    import tkFileDialog
+    import Image, ImageDraw, ImageTk
+except ImportError:
+    pass
+
 class CameraViewerGUI(threading.Thread):
     class Container:
         pass
@@ -129,7 +136,4 @@ def run():
     scene.quitviewers()
 
 if __name__=='__main__':
-    from Tkinter import *
-    import tkFileDialog
-    import Image, ImageDraw, ImageTk
     run()

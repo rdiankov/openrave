@@ -109,9 +109,8 @@ class OpenRAVEModel(metaclass.AutoReloader):
                 if not model.load():
                     print 'failed to find cached model %s'%self.getfilename()
                     sys.exit(1)
-                while True:
-                    model.show()
-
+                model.show()
+                return
             try:
                 model.autogenerate()
             except ValueError, e:
