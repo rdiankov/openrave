@@ -88,10 +88,14 @@ class InverseReachabilityModel(OpenRAVEModel):
                             cosangs*equivalenttrans[:,3]-sinangs*equivalenttrans[:,0],
                             2.0*((0.5-zz)*equivalenttrans[:,4]-zw*equivalenttrans[:,5]),
                             2.0*((0.5-zz)*equivalenttrans[:,4]-zw*equivalenttrans[:,5]),
-                            equivalenttrans[:,6]]
+                            equivalenttrans[:,6:]]
             # make sure all quaternions are on the same hemisphere
-            
-            equivalenceclasses.append(finaltrans)
+            dists1 = sum( (finaltrans[:,0:4]-tile(p[0:4],(finaltrans.shape[0],1)))**2, 1)
+            dists2 = sum( (finaltrans[:,0:4]+tile(p[0:4],(finaltrans.shape[0],1)))**2, 1)
+            finaltrans[flatnonzero(dists2<dists1),0:4] *= -1
+            meanpose = mean(finaltrans[:,0:7],axis=0)
+            meanpose[0:4] /= sqrt(sum(meanpose[0:4]**2))
+            equivalenceclasses.append((meanpose,finaltrans))
             del kdtree
 
     def autogenerate(self,forcegenerate=True):
@@ -100,7 +104,7 @@ class InverseReachabilityModel(OpenRAVEModel):
         for b in bodies:
             b.Enable(False)
         try:
-            if self.robot.GetRobotStructureHash() == '6bc480d3dd7d363ec3305fdb8437a7cc' and self.manip.GetName() == 'arm':
+            if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531' and self.manip.GetName() == 'arm':
                 self.generate(heightthresh=0.05,rotthresh=0.25)
             else:
                 if not forcegenerate:

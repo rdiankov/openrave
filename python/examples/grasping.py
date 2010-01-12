@@ -158,7 +158,7 @@ class GraspingModel(OpenRAVEModel):
         for b in bodies:
             b.Enable(False)
         try:
-            if self.robot.GetRobotStructureHash() == '6bc480d3dd7d363ec3305fdb8437a7cc' and self.manip.GetName() == 'arm' and self.target.GetKinematicsGeometryHash() == 'bbf03c6db8efc712a765f955a27b0d0f':
+            if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531' and self.manip.GetName() == 'arm' and self.target.GetKinematicsGeometryHash() == 'bbf03c6db8efc712a765f955a27b0d0f':
                 self.init(friction=0.4,avoidlinks=[])
                 self.generate(preshapes=array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2))),
                                       rolls = arange(0,2*pi,pi/2), standoffs = array([0,0.025]),

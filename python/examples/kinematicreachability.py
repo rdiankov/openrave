@@ -106,7 +106,7 @@ class ReachabilityModel(OpenRAVEModel):
         for b in bodies:
             b.Enable(False)
         try:
-            if self.robot.GetRobotStructureHash() == '6bc480d3dd7d363ec3305fdb8437a7cc' and self.manip.GetName() == 'arm':
+            if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531' and self.manip.GetName() == 'arm':
                 self.generate(maxradius=1.1)
             else:
                 if not forcegenerate:
