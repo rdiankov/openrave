@@ -197,7 +197,7 @@ class ReachabilityModel(OpenRAVEModel):
         env = Environment()
         try:
             if Model is None:
-                Model = lambda env,robot: ReachabilityModel(robot=robot)
+                Model = lambda robot: ReachabilityModel(robot=robot)
             OpenRAVEModel.RunFromParser(Model=Model,parser=parser)
         finally:
             env.Destroy()

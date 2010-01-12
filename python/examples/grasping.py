@@ -245,7 +245,7 @@ class GraspingModel(OpenRAVEModel):
                 target.SetTransform(eye(4))
                 env.AddKinBody(target)
             if Model is None:
-                Model = lambda env,robot: GraspingModel(robot=robot,target=target)
+                Model = lambda robot: GraspingModel(robot=robot,target=target)
             if options.useviewer:
                 env.SetViewer('qtcoin')
                 env.UpdatePublishedBodies()

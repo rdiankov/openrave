@@ -79,9 +79,18 @@ class InverseKinematicsModel(OpenRAVEModel):
         return ccompiler.new_compiler().shared_object_filename(basename=basename,output_dir=OpenRAVEModel.getfilename(self))
 
     def generateFromOptions(self,options):
-        return self.generate(freejoints=options.freejoints,usedummyjoints=options.usedummyjoints,rotation3donly=options.rotation3donly,rotation2donly=options.rotation2donly,translation3donly=options.translation3donly)
+        type = self.Type_6D
+        if options.rotation3donly:
+            type = self.Type_Rotation3D
+        if options.rotation2donly:
+            type = self.Type_Direction3D
+        if options.translation3donly:
+            type = self.Type_Translation3D
+        return self.generate(freejoints=options.freejoints,usedummyjoints=options.usedummyjoints,type=type)
 
-    def generate(self,freejoints=None,usedummyjoints=False):
+    def generate(self,freejoints=None,usedummyjoints=False,type=None):
+        if type is not None:
+            self.type = type
         output_filename = self.getfilename()
         sourcefilename = os.path.splitext(output_filename)[0]
         if self.type == self.Type_Rotation3D:
@@ -180,7 +189,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         if parser is None:
             parser = InverseKinematicsModel.CreateOptionParser()
         (options, args) = parser.parse_args()
-        Model = lambda env,robot: InverseKinematicsModel(robot=robot)
+        Model = lambda robot: InverseKinematicsModel(robot=robot)
         OpenRAVEModel.RunFromParser(Model=Model,parser=parser)
 
 if __name__ == "__main__":

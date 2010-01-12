@@ -80,7 +80,4 @@ def test_ikgeneration():
     self = inversekinematics.InverseKinematicsModel(robot=robot)
     freejoints=None
     usedummyjoints=False
-    rotation3donly=False
-    rotation2donly=False
-    translation3donly=False
-    self.generate(freejoints=freejoints)
+    self.generate(freejoints=freejoints,usedummyjoints=usedummyjoints)
