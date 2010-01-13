@@ -159,7 +159,8 @@ object k_fixed_radius_search_array(ANNkd_tree& kdtree, object qarray, double sqR
         return boost::python::make_tuple(numeric::array(boost::python::list()).astype("i4"),numeric::array(boost::python::list()),numeric::array(boost::python::list()));
 
     BOOST_ASSERT(len(qarray[0])==kdtree.theDim());
-    PyObject *pykball = PyArray_SimpleNew(1,&N, PyArray_INT);
+    npy_intp dimsball[] = {N};
+    PyObject *pykball = PyArray_SimpleNew(1,dimsball, PyArray_INT);
     int* pkball = (int*)PyArray_DATA(pykball);
     
     if( k <= 0 ) {

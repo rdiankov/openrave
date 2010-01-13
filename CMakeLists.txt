@@ -432,6 +432,7 @@ else()
   message(STATUS "python executable not found")
   set(IKFAST_INSTALLED_EXECUTABLE "")
 endif()
+set(IKFAST_SYMPY_DIR "${CMAKE_INSTALL_PREFIX}/share/openrave")
 
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/defines.h.in ${CMAKE_CURRENT_SOURCE_DIR}/rave/defines.h)
 

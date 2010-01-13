@@ -48,6 +48,7 @@ using namespace std;
 #include <boost/thread/thread.hpp>
 #include <boost/array.hpp>
 #include <boost/bind.hpp>
+#include <boost/algorithm/string.hpp>
 
 //#ifndef _WIN32
 //#include <signal.h>
@@ -331,6 +332,18 @@ int main(int argc, char ** argv)
             sscmd << " --usedummyjoints ";
             for(vector<int>::iterator it = vsolvejoints.begin(); it != vsolvejoints.end(); ++it)
                 sscmd << *it << " ";
+
+            char* ppythonpath = getenv("PYTHONPATH");
+            string pythonpath;
+            if( ppythonpath != NULL ) {
+                pythonpath = ppythonpath;
+                boost::trim(pythonpath);
+                pythonpath +=":";
+            }
+
+            pythonpath += IKFAST_SYMPY_DIR;
+            printf("newpath: %s\n",pythonpath.c_str());
+            setenv("PYTHONPATH",pythonpath.c_str(),1);
 
             RAVELOG_INFOA("executing: %s\n", sscmd.str().c_str());
             RAVELOG_FATALA("generating ik could take up to 10 minutes...\n");
