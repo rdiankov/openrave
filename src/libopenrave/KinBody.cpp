@@ -800,6 +800,7 @@ void KinBody::SetJointTorques(const std::vector<dReal>& torques, bool bAdd)
         jointtorques.resize((*it)->GetDOF());
         std::copy(torques.begin()+*itindex,torques.begin()+*itindex+(*it)->GetDOF(),jointtorques.begin());
         (*it)->AddTorque(jointtorques);
+		++itindex;
     }
 }
 

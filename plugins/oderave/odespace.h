@@ -324,6 +324,10 @@ public:
                 }
 
                 dJointAttach(joint, body0, body1);
+				if( (*itjoint)->GetSecondAttached()->IsStatic() ) {
+					axis0 = -axis0;
+					axis1 = -axis1;
+				}
 
                 switch((*itjoint)->GetType()) {
                 case KinBody::Joint::JointHinge:
