@@ -26,22 +26,23 @@ class InverseReachabilityModel(OpenRAVEModel):
         self.reachability = ReachabilityModel(robot=robot)
         if not self.reachability.load():
             self.reachability.autogenerate()
+        self.equivalenceclasses = None
 
     def has(self):
-        return len(self.reachabilitydensity3d) > 0
+        return self.equivalenceclasses is not None and len(self.equivalenceclasses) > 0
 
     def load(self):
         params = OpenRAVEModel.load(self)
         if params is None:
             return False
-        self.reachabilitystats,self.reachabilitydensity3d,self.pointscale = params
+        self.equivalenceclasses = params
         return self.has()
 
     def save(self):
-        OpenRAVEModel.save(self,(self.reachabilitystats,self.reachabilitydensity3d,self.pointscale))
+        OpenRAVEModel.save(self,(self.equivalenceclasses))
 
     def getfilename(self):
-        return os.path.join(OpenRAVEModel.getfilename(self),'reachability.' + self.manip.GetName() + '.pp')
+        return os.path.join(OpenRAVEModel.getfilename(self),'invreachability.' + self.manip.GetName() + '.pp')
 
     def generateFromOptions(self,options):
         self.generate(xyzthresh=options.xyzthresh,rotthresh=options.rotthresh)
@@ -59,14 +60,13 @@ class InverseReachabilityModel(OpenRAVEModel):
         
         # find all equivalence classes
         quatrolls = array([quatFromAxisAngle(array((0,0,1)),roll) for roll in arange(0,2*pi,pi/32)])
-        equivalenceclasses = []
+        self.equivalenceclasses = []
         while len(basetrans) > 0:
             print len(basetrans)
             searchtrans = c_[basetrans[:,0:4],(rotthresh/heightthresh)*basetrans[:,6:7]]
             kdtree = pyANN.KDTree(searchtrans)
-            p = searchtrans[0]
             foundindices = zeros(len(searchtrans),bool)
-            querypoints = c_[self.quatMultArrayT(p[0:4],quatrolls),tile(p[4:],(len(quatrolls),1))]
+            querypoints = c_[self.quatMultArrayT(searchtrans[0][0:4],quatrolls),tile(searchtrans[0][4:],(len(quatrolls),1))]
             for querypoint in querypoints:
                 k = min(len(searchtrans),1000)
                 neighs,dists,kball = kdtree.kFRSearch(querypoint,rotthresh**2,k,rotthresh*0.01)
@@ -75,29 +75,40 @@ class InverseReachabilityModel(OpenRAVEModel):
                 foundindices[neighs] = True
             equivalenttrans = basetrans[flatnonzero(foundindices),:]
             basetrans = basetrans[flatnonzero(foundindices==False),:]
-            
-            # for all the equivalent rotations, find the extract rotation about z that minimizes the distance between the root
-            cosangs = -p[0]*equivalenttrans[:,3]-p[1]*equivalenttrans[:,2]+p[2]*equivalenttrans[:,1]+p[3]*equivalenttrans[:,0]
-            sinangs = p[0]*equivalenttrans[:,0]+p[1]*equivalenttrans[:,1]+p[2]*equivalenttrans[:,2]+p[3]*equivalenttrans[:,3]
-            ilengthsq = 1.0/(cosangs**2+sinangs**2)
-            zz = sinangs**2 * ilengthsq
-            zw = cosangs*sinangs*ilengthsq
-            finaltrans = c_[cosangs*equivalenttrans[:,0]-sinangs*equivalenttrans[:,3],
-                            cosangs*equivalenttrans[:,1]-sinangs*equivalenttrans[:,2],
-                            cosangs*equivalenttrans[:,2]-sinangs*equivalenttrans[:,1],
-                            cosangs*equivalenttrans[:,3]-sinangs*equivalenttrans[:,0],
-                            2.0*((0.5-zz)*equivalenttrans[:,4]-zw*equivalenttrans[:,5]),
-                            2.0*((0.5-zz)*equivalenttrans[:,4]-zw*equivalenttrans[:,5]),
-                            equivalenttrans[:,6:]]
+            # for all the equivalent rotations, find the rotation about z that minimizes the distance between the identify (1,0,0,0)
+            zangles = arctan2(equivalenttrans[:,0],-equivalenttrans[:,3])
+            sinangles = sin(zangles)
+            cosangles = cos(zangles)
+            normalizedquat = c_[cosangles*equivalenttrans[:,0]-sinangles*equivalenttrans[:,3],
+                                cosangles*equivalenttrans[:,1]-sinangles*equivalenttrans[:,2],
+                                cosangles*equivalenttrans[:,2]+sinangles*equivalenttrans[:,1],
+                                cosangles*equivalenttrans[:,3]+sinangles*equivalenttrans[:,0]]
             # make sure all quaternions are on the same hemisphere
-            dists1 = sum( (finaltrans[:,0:4]-tile(p[0:4],(finaltrans.shape[0],1)))**2, 1)
-            dists2 = sum( (finaltrans[:,0:4]+tile(p[0:4],(finaltrans.shape[0],1)))**2, 1)
-            finaltrans[flatnonzero(dists2<dists1),0:4] *= -1
-            meanpose = mean(finaltrans[:,0:7],axis=0)
-            meanpose[0:4] /= sqrt(sum(meanpose[0:4]**2))
-            equivalenceclasses.append((meanpose,finaltrans))
-            del kdtree
+            identityquat = tile(array((1.0,0,0,0)),(normalizedquat.shape[0],1))
+            dists1 = sum( (normalizedquat-identityquat)**2, 1)
+            dists2 = sum( (normalizedquat+identityquat)**2,1)
+            normalizedquat[flatnonzero(dists2<dists1),0:4] *= -1
+            # get statistics and store the angle, xy offset, and remaining unprocessed data
+            meanquat = sum(normalizedquat,axis=0)
+            meanquat /= sqrt(sum(meanquat**2))
+            self.equivalenceclasses.append((r_[meanquat,mean(equivalenttrans[:,6])],
+                                            r_[std(normalizedquat,axis=0),std(equivalenttrans[:,6])],
+                                            c_[zangles,equivalenttrans[:,4:6],equivalenttrans[:,7:]]))
+        
+    @staticmethod
+    def __normalizeZRotation(q):
+        angle = arctan2(q[0],-q[3])
+        sinangle = sin(angle)
+        cosangle = cos(angle)
+        return array((cosangle*q[0]-sinangle*q[3], cosangle*q[1]-sinangle*q[:,2], cosangle*q[2]+sinangle*q[1], cosangle*q[3]+sinangle*q[0]))
 
+    def getBaseDistribution(self,Tee,zaxis=None):
+        """Return a function of the distribution of possible positions of the robot that can put their end effector at Tee"""
+        if zaxis is not None:
+            raise NotImplementedError('cannot specify a custom zaxis yet')
+        qtarget = poseFromMatrix(dot(linalg.inv(Tee),self.robot.GetTransform()))
+        
+        
     def autogenerate(self,forcegenerate=True):
         # disable every body but the target and robot
         bodies = [b for b in self.env.GetBodies() if b.GetNetworkId() != self.robot.GetNetworkId()]
@@ -114,6 +125,14 @@ class InverseReachabilityModel(OpenRAVEModel):
         finally:
             for b in bodies:
                 b.Enable(True)
+
+    @staticmethod
+    def __computeBaseDistributionGaussianKernel(equivclass,Trobot,bandwidth):
+        pass
+
+    @staticmethod
+    def __computeBaseDistributionEpanechnikovKernel(equivclass,Trobot,bandwidth):
+        pass
 
     @staticmethod
     def quatMultArrayT(q,qarray):
