@@ -271,8 +271,8 @@ bool KinBody::Link::GEOMPROPERTIES::InitCollisionMesh(float fTessellation)
     collisionmesh.indices.clear();
     collisionmesh.vertices.clear();
 
-    if( fTessellation < (dReal)0.01 )
-        fTessellation = (dReal)0.01;
+    if( fTessellation < 0.01f )
+        fTessellation = 0.01f;
 
     // start tesselating
     switch(GetType()) {
@@ -338,8 +338,8 @@ bool KinBody::Link::GEOMPROPERTIES::InitCollisionMesh(float fTessellation)
         collisionmesh.vertices.push_back(Vector(rad,0,-len));
 
         for(int i = 0; i < numverts+1; ++i) {
-            dReal s = rad * sinf(dtheta * (dReal)i);
-            dReal c = rad * cosf(dtheta * (dReal)i);
+            dReal s = rad * RaveSin(dtheta * (dReal)i);
+            dReal c = rad * RaveCos(dtheta * (dReal)i);
 
             int off = (int)collisionmesh.vertices.size();
             collisionmesh.vertices.push_back(Vector(c, s, len));
@@ -674,8 +674,8 @@ KinBody::KinBodyStateSaver::~KinBodyStateSaver()
 {
     _pbody->SetBodyTransformations(_vLinkTransforms);
     for(size_t i = 0; i < _vEnabledLinks.size(); ++i) {
-        if( _pbody->GetLinks().at(i)->IsEnabled() != _vEnabledLinks[i] )
-            _pbody->GetLinks().at(i)->Enable(_vEnabledLinks[i]);
+        if( _pbody->GetLinks().at(i)->IsEnabled() != !!_vEnabledLinks[i] )
+            _pbody->GetLinks().at(i)->Enable(!!_vEnabledLinks[i]);
     }
 }
 

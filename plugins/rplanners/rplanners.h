@@ -356,9 +356,9 @@ class SpatialTree : public SpatialTreeBase
             return -1;
 
         int ibest = -1;
-        float fbest = 0;
+        dReal fbest = 0;
         FOREACH(itnode, _nodes) {
-            float f = _distmetricfn(q, (*itnode)->q);
+            dReal f = _distmetricfn(q, (*itnode)->q);
             if( ibest < 0 || f < fbest ) {
                 ibest = (int)(itnode-_nodes.begin());
                 fbest = f;
@@ -383,7 +383,7 @@ class SpatialTree : public SpatialTreeBase
 
         // extend
         while(1) {
-            float fdist = _distmetricfn(pnode->q, pTargetConfig);
+            dReal fdist = _distmetricfn(pnode->q, pTargetConfig);
 
             if( fdist > _fStepLength ) fdist = _fStepLength / fdist;
             else {

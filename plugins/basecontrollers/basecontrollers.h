@@ -144,10 +144,10 @@ class IdealController : public ControllerBase
 
 private:
     RobotBasePtr _probot;           ///< controlled body
-    float _fSpeed;                ///< how fast the robot should go
+    dReal _fSpeed;                ///< how fast the robot should go
     TrajectoryBaseConstPtr _ptraj;     ///< computed trajectory robot needs to follow in chunks of _pbody->GetDOF()
 
-    float fTime;
+    dReal fTime;
 
     std::vector<dReal> _vecdesired;     ///< desired values of the joints    
 

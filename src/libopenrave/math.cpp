@@ -277,8 +277,8 @@ void svd3(const dReal* A, dReal* U, dReal* D, dReal* V)
     mult3_s3(U, A, V); // U = A V = U D
 
     for(int i = 0; i < 3; ++i) {
-        D[i] = sqrtf(eigenvalues[i]);
-        float f = 1/D[i];
+        D[i] = RaveSqrt(eigenvalues[i]);
+        dReal f = 1/D[i];
         U[i] *= f;
         U[i+3] *= f;
         U[i+6] *= f;
@@ -332,7 +332,7 @@ void GetCovarBasisVectors(float fCovariance[3][3], Vector* vRight, Vector* vUp, 
 
 void QuadraticSolver(float* pfq, float* pfroots)
 {
-	dReal d = pfq[1] * pfq[1] - 4 * pfq[0] * pfq[2];
+	float d = pfq[1] * pfq[1] - 4 * pfq[0] * pfq[2];
 
 	if( d < 1e-10 ) {
 		pfroots[0] = pfroots[1] = 0;
@@ -372,7 +372,7 @@ int insideQuadrilateral(const Vector* v, const Vector* v0,const Vector* v1, cons
   		if (m1*m2 <= EPSILON)
     		return(1); /* We are on a node, consider this inside */
   		else
-    		costheta = (v4.x*v5.x + v4.y*v5.y + v4.z*v5.z) / sqrtf(m1*m2);
+    		costheta = (v4.x*v5.x + v4.y*v5.y + v4.z*v5.z) / RaveSqrt(m1*m2);
 
   		anglesum += RaveAcos(costheta);
 	}
@@ -413,11 +413,11 @@ int insideTriangle(const Vector* v, const Vector* v0, const Vector* v1, const Ve
   	    if (m1*m2 <= EPSILON)
     	    return(1); /* We are on a node, consider this inside */
   	    else
-    	    costheta = (v4.x*v5.x + v4.y*v5.y + v4.z*v5.z) / sqrtf(m1*m2);
+    	    costheta = (v4.x*v5.x + v4.y*v5.y + v4.z*v5.z) / RaveSqrt(m1*m2);
 
   	    anglesum += acos(costheta);
 	}
-	float diff = anglesum - (dReal)2.0 * PI;
+	dReal diff = anglesum - (dReal)2.0 * PI;
 	if (sqrtf(diff*diff) <= EPSILON) return (1);
 
 	return (0);
@@ -430,21 +430,21 @@ bool RayOBBTest(const RAY& r, const OBB& o)
 
 	vpos.x = dot3(vd, o.right);
 	vdir.x = dot3(r.dir, o.right);
-	if( fabsf(vpos.x) > o.extents.x && vdir.x* vpos.x > 0.0f) return false;
+	if( RaveFabs(vpos.x) > o.extents.x && vdir.x* vpos.x > 0.0f) return false;
 
 	vpos.y = dot3(vd, o.up);
 	vdir.y = dot3(r.dir, o.up);
-	if( fabsf(vpos.y) > o.extents.y && vdir.y * vpos.y > 0.0f) return false;
+	if( RaveFabs(vpos.y) > o.extents.y && vdir.y * vpos.y > 0.0f) return false;
 
 	vpos.z = dot3(vd, o.dir);
 	vdir.z = dot3(r.dir, o.dir);
-	if( fabsf(vpos.z) > o.extents.z && vdir.z * vpos.z > 0.0f) return false;
+	if( RaveFabs(vpos.z) > o.extents.z && vdir.z * vpos.z > 0.0f) return false;
 
 	cross3(vd, vdir, vpos);
 
-	if( fabsf(vd.x) > o.extents.y * fabsf(vdir.z) + o.extents.z * fabsf(vdir.y) ) return false;
-	if( fabsf(vd.y) > o.extents.x * fabsf(vdir.z) + o.extents.z * fabsf(vdir.x) ) return false;
-	if( fabsf(vd.z) > o.extents.x * fabsf(vdir.y) + o.extents.y * fabsf(vdir.x) ) return false;
+	if( RaveFabs(vd.x) > o.extents.y * RaveFabs(vdir.z) + o.extents.z * RaveFabs(vdir.y) ) return false;
+	if( RaveFabs(vd.y) > o.extents.x * RaveFabs(vdir.z) + o.extents.z * RaveFabs(vdir.x) ) return false;
+	if( RaveFabs(vd.z) > o.extents.x * RaveFabs(vdir.y) + o.extents.y * RaveFabs(vdir.x) ) return false;
 
 	return true;
 }

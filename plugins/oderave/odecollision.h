@@ -338,7 +338,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
         odespace->Synchronize();
         OpenRAVE::dReal fmaxdist = OpenRAVE::RaveSqrt(ray.dir.lengthsqr3());
-        if( fabsf(fmaxdist-1) < 1e-4 )
+        if( RaveFabs(fmaxdist-1) < 1e-4 )
             RAVELOG_DEBUGA("CheckCollision: ray direction length is 1.0, note that only collisions within a distance of 1.0 will be checked\n");
         
         Vector vnormdir = ray.dir*(1/fmaxdist);
@@ -437,7 +437,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
         odespace->Synchronize();
         cb.fraymaxdist = OpenRAVE::RaveSqrt(ray.dir.lengthsqr3());
-        if( fabsf(cb.fraymaxdist-1) < 1e-4 )
+        if( RaveFabs(cb.fraymaxdist-1) < 1e-4 )
             RAVELOG_DEBUGA("CheckCollision: ray direction length is 1.0, note that only collisions within a distance of 1.0 will be checked\n");
         Vector vnormdir = ray.dir*(1/cb.fraymaxdist);
         dGeomRaySet(geomray, ray.pos.x, ray.pos.y, ray.pos.z, vnormdir.x, vnormdir.y, vnormdir.z);
@@ -456,7 +456,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 
         cb.fraymaxdist = OpenRAVE::RaveSqrt(ray.dir.lengthsqr3());
         Vector vnormdir = ray.dir*(1/cb.fraymaxdist);
-        if( fabsf(cb.fraymaxdist-1) < 1e-4 )
+        if( RaveFabs(cb.fraymaxdist-1) < 1e-4 )
             RAVELOG_DEBUGA("CheckCollision: ray direction length is 1.0, note that only collisions within a distance of 1.0 will be checked\n");
         dGeomRaySet(geomray, ray.pos.x, ray.pos.y, ray.pos.z, vnormdir.x, vnormdir.y, vnormdir.z);
 

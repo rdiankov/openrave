@@ -743,7 +743,7 @@ void RobotBase::SetActiveDOFValues(const std::vector<dReal>& values, bool bCheck
             // have to normalize since user might not be aware of this particular parameterization of rotations
             t.rot = *(Vector*)pAffineValues;
             dReal flength = t.rot.lengthsqr4();
-            if( flength > 0 ) t.rot /= sqrtf(flength);
+            if( flength > 0 ) t.rot /= RaveSqrt(flength);
             else t.rot = Vector(1,0,0,0);
         }
 
@@ -1275,7 +1275,7 @@ void RobotBase::CalculateActiveJacobian(int index, const Vector& offset, vector<
         dReal Ay = normalizer * t.rot.z;
         dReal Az = normalizer * t.rot.w;
 
-        if( fabsf(fangle) < 1e-8f )
+        if( RaveFabs(fangle) < 1e-8f )
             fangle = 1e-8f;
 
         dReal fangle2 = fangle*fangle;

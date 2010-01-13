@@ -629,8 +629,8 @@ void TrajectoryBase::_CalculateCubicCoefficients(TrajectoryBase::TSEGMENT& seg, 
 //! recalculate all via point velocities and accelerations
 void TrajectoryBase::_RecalculateViaPointDerivatives()
 {
-    float prevSlope, nextSlope;
-    float prevDur, nextDur;
+    dReal prevSlope, nextSlope;
+    dReal prevDur, nextDur;
 
     // set the via point accelerations to max at direction reversals
     for (int i = 1; i < (int)_vecpoints.size()-1; i++) {
@@ -849,7 +849,7 @@ dReal TrajectoryBase::_MinimumTimeTransform(const Transform& t0, const Transform
     dReal x_time = fabs(t1.trans.x - t0.trans.x) / _maxAffineTranslationVel.x;
     dReal y_time = fabs(t1.trans.y - t0.trans.y) / _maxAffineTranslationVel.y;
     dReal z_time = fabs(t1.trans.z - t0.trans.z) / _maxAffineTranslationVel.z;
-    dReal rot_dist = sqrtf(min(lengthsqr4(t1.rot-t0.rot), lengthsqr4(t1.rot+t0.rot)))/_maxAffineRotationQuatVel.x;
+    dReal rot_dist = RaveSqrt(min(lengthsqr4(t1.rot-t0.rot), lengthsqr4(t1.rot+t0.rot)))/_maxAffineRotationQuatVel.x;
     return max(max(max(x_time,y_time),z_time),rot_dist);
 }
 

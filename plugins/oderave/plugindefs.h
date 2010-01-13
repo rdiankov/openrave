@@ -125,12 +125,13 @@ using OpenRAVE::InterfaceBaseConstPtr;
 using OpenRAVE::PLUGININFO;
 using OpenRAVE::openrave_exception;
 using OpenRAVE::EnvironmentMutex;
+using OpenRAVE::RaveFabs;
 
 // define ODE_LIB for static linking
 #include <ode/ode.h>
 
 // needed for ODE 0.10+
-#if defined(_WIN32) || defined(NEED_DTRIINDEX_TYPEDEF)
+#if defined(NEED_DTRIINDEX_TYPEDEF)
 typedef int dTriIndex;
 #endif
 
