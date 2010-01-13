@@ -5,10 +5,9 @@ exec_prefix=@CMAKE_INSTALL_PREFIX@
 exec_prefix_set=no
 
 usage="\
-Usage: rave-config [--prefix[=DIR]] [--exec-prefix[=DIR]] [--version] [--cflags] [--libs] [--libs-only-l] [--libs-only-L] [--cflags-only-I] [--shared-libs]"
+Usage: openrave-config [--prefix[=DIR]] [--exec-prefix[=DIR]] [--version] [--cflags] [--libs] [--libs-only-l] [--libs-only-L] [--cflags-only-I] [--shared-libs] [--python-dir] [--octave-dir] [--matlab-dir] [--usage | --help]"
 
 if test $# -eq 0; then
-      echo "${usage}" 1>&2
       exit 1
 fi
 
@@ -36,7 +35,7 @@ while test $# -gt 0; do
       echo $exec_prefix
       ;;
     --version)
-      echo @RAVE_RELEASE@
+      echo @OPENRAVE_VERSION@
       ;;
     --cflags)
       echo  -I@CMAKE_INSTALL_PREFIX@/include @OPENRAVE_BOOST_INCLUDE_DIRS@
@@ -57,7 +56,24 @@ while test $# -gt 0; do
       echo -L@CMAKE_INSTALL_PREFIX@/lib @OPENRAVE_BOOST_LIB_DIRS@
       ;;
     --shared-libs)
-      echo  -L@CMAKE_INSTALL_PREFIX@/lib -lopenrave.so @OPENRAVE_BOOST_LIB_DIRS@
+      echo -L@CMAKE_INSTALL_PREFIX@/lib -lopenrave.so @OPENRAVE_BOOST_LIB_DIRS@
+      ;;
+    --python-dir)
+      echo @OPENRAVE_PYTHON_INSTALL_DIR@
+      ;;
+    --octave-dir)
+      echo @OPENRAVE_OCTAVE_INSTALL_DIR@
+      ;;
+    --matlab-dir)
+      echo @OPENRAVE_MATLAB_INSTALL_DIR@
+      ;;
+    --usage)
+      echo "${usage}" 1>&2
+      exit 1
+      ;;
+    --help)
+      echo "${usage}" 1>&2
+      exit 1
       ;;
     *)
       echo "${usage}" 1>&2

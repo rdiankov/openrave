@@ -341,7 +341,7 @@ int main(int argc, char ** argv)
                 pythonpath +=":";
             }
 
-            pythonpath += IKFAST_SYMPY_DIR;
+            pythonpath += OPENRAVE_PYTHON_INSTALL_DIR;
             printf("newpath: %s\n",pythonpath.c_str());
             setenv("PYTHONPATH",pythonpath.c_str(),1);
 

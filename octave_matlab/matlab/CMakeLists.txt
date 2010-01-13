@@ -66,7 +66,7 @@ if( USE_MATLAB )
     DEPENDS ${MATLAB_FILES_DIR}/orcreate.cpp ${MATLAB_FILES_DIR}/socketconnect.h
     )
   add_custom_target(orcreate_matlab ALL DEPENDS ${MATLAB_MEX_OUT}/${MATLAB_ORCREATE_MEX})
-  install(FILES ${MATLAB_MEX_OUT}/${MATLAB_ORCREATE_MEX} DESTINATION share/openrave/matlab)
+  install(FILES ${MATLAB_MEX_OUT}/${MATLAB_ORCREATE_MEX} DESTINATION ${OPENRAVE_MATLAB_INSTALL_DIR})
 
   set(MATLAB_ORREAD_MEX "orread.${MEXEXT}")
   add_custom_command(
@@ -76,7 +76,7 @@ if( USE_MATLAB )
     DEPENDS ${MATLAB_FILES_DIR}/orread.cpp ${MATLAB_FILES_DIR}/socketconnect.h
     )
   add_custom_target(orread_matlab ALL DEPENDS ${MATLAB_MEX_OUT}/${MATLAB_ORREAD_MEX})
-  install(FILES ${MATLAB_MEX_OUT}/${MATLAB_ORREAD_MEX} DESTINATION share/openrave/matlab)
+  install(FILES ${MATLAB_MEX_OUT}/${MATLAB_ORREAD_MEX} DESTINATION ${OPENRAVE_MATLAB_INSTALL_DIR})
 
   set(MATLAB_ORWRITE_MEX "orwrite.${MEXEXT}")
   add_custom_command(
@@ -86,7 +86,7 @@ if( USE_MATLAB )
     DEPENDS ${MATLAB_FILES_DIR}/orwrite.cpp ${MATLAB_FILES_DIR}/socketconnect.h
     )
   add_custom_target(orwrite_matlab ALL DEPENDS ${MATLAB_MEX_OUT}/${MATLAB_ORWRITE_MEX})
-  install(FILES ${MATLAB_MEX_OUT}/${MATLAB_ORWRITE_MEX} DESTINATION share/openrave/matlab)
+  install(FILES ${MATLAB_MEX_OUT}/${MATLAB_ORWRITE_MEX} DESTINATION ${OPENRAVE_MATLAB_INSTALL_DIR})
 else()
   message(STATUS "MATLAB installation not found")
 endif()

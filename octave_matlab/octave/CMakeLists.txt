@@ -11,7 +11,7 @@ if(OCTAVE)
     DEPENDS ${MATLAB_FILES_DIR}/orcreate.cpp
     )
   add_custom_target(orcreate_octave ALL DEPENDS ${OCTAVE_ORCREATE_MEX})
-  install(FILES ${OCTAVE_ORCREATE_MEX} DESTINATION share/openrave/octave)
+  install(FILES ${OCTAVE_ORCREATE_MEX} DESTINATION ${OPENRAVE_OCTAVE_INSTALL_DIR})
 
   set(OCTAVE_ORREAD_MEX ${CMAKE_CURRENT_BINARY_DIR}/orread.mex)
   add_custom_command(
@@ -21,7 +21,7 @@ if(OCTAVE)
     DEPENDS ${MATLAB_FILES_DIR}/orread.cpp
     )
   add_custom_target(orread_octave ALL DEPENDS ${OCTAVE_ORREAD_MEX})
-  install(FILES ${OCTAVE_ORREAD_MEX} DESTINATION share/openrave/octave)
+  install(FILES ${OCTAVE_ORREAD_MEX} DESTINATION ${OPENRAVE_OCTAVE_INSTALL_DIR})
 
   set(OCTAVE_ORWRITE_MEX ${CMAKE_CURRENT_BINARY_DIR}/orwrite.mex)
   add_custom_command(
@@ -31,9 +31,7 @@ if(OCTAVE)
     DEPENDS ${MATLAB_FILES_DIR}/orwrite.cpp
     )
   add_custom_target(orwrite_octave ALL DEPENDS ${OCTAVE_ORWRITE_MEX})
-  install(FILES ${OCTAVE_ORWRITE_MEX} DESTINATION share/openrave/octave)
+  install(FILES ${OCTAVE_ORWRITE_MEX} DESTINATION ${OPENRAVE_OCTAVE_INSTALL_DIR})
 else()
-message(STATUS "Octave installation not found")
+  message(STATUS "Octave installation not found")
 endif(OCTAVE)
-
-install(FILES DESTINATION share/openrave/octave)

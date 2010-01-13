@@ -3,8 +3,8 @@ set(openrave_lib_SOURCES KinBody.cpp math.cpp libopenrave.cpp Robot.cpp Trajecto
 add_library(libopenrave SHARED ${openrave_lib_SOURCES})
 add_dependencies(libopenrave classhashes_h openrave-md5)
 set_target_properties(libopenrave PROPERTIES OUTPUT_NAME openrave
-                                  SOVERSION "${RAVE_CURRENT}"
-                                  VERSION "${RAVE_RELEASE}"
+                                  SOVERSION ${OPENRAVE_SOVERSION}
+                                  VERSION ${OPENRAVE_VERSION}
                                   CLEAN_DIRECT_OUTPUT 1
                                   COMPILE_FLAGS "${LIB_COMPILE_FLAGS} -DRAVE_LIBBUILD -DRAVE_USEDLL"
                                   LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
@@ -25,8 +25,8 @@ endif()
 
 add_library(libopenrave_static STATIC ${openrave_lib_SOURCES})
 set_target_properties(libopenrave_static PROPERTIES OUTPUT_NAME ${LIBOPENRAVE_NAME}
-                                         SOVERSION "${RAVE_CURRENT}"
-                                         VERSION "${RAVE_RELEASE}"
+                                         SOVERSION ${OPENRAVE_VERSION}
+                                         VERSION ${OPENRAVE_VERSION}
                                          CLEAN_DIRECT_OUTPUT 1
                                          COMPILE_FLAGS "${LIB_COMPILE_FLAGS}"
                                          LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")

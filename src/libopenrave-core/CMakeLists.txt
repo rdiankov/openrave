@@ -19,8 +19,8 @@ if( USING_COLLADA )
 endif()
 
 set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave-core
-                                  SOVERSION "${RAVE_CURRENT}"
-                                  VERSION "${RAVE_RELEASE}"
+                                  SOVERSION ${OPENRAVE_SOVERSION}
+                                  VERSION ${OPENRAVE_VERSION}
                                   CLEAN_DIRECT_OUTPUT 1
                                   COMPILE_FLAGS "${LIB_COMPILE_FLAGS} -DRAVE_CORE_LIBBUILD -DRAVE_CORE_USEDLL"
                                   LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${COIN_LINK_FLAGS}")
@@ -48,11 +48,11 @@ if( USING_COLLADA )
 endif()
 
 set_target_properties(libopenrave-core_static PROPERTIES OUTPUT_NAME ${LIBOPENRAVE_CORE_NAME}
-                                      SOVERSION "${RAVE_CURRENT}"
-                                  VERSION "${RAVE_RELEASE}"
-                                  CLEAN_DIRECT_OUTPUT 1
-                                  COMPILE_FLAGS "${LIB_COMPILE_FLAGS}"
-                                  LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${COIN_LINK_FLAGS}")
+                                              SOVERSION ${OPENRAVE_SOVERSION}
+                                              VERSION ${OPENRAVE_VERSION}
+                                              CLEAN_DIRECT_OUTPUT 1
+                                              COMPILE_FLAGS "${LIB_COMPILE_FLAGS}"
+                                              LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${COIN_LINK_FLAGS}")
 if( MSVC )
   # set "link library dependencies" for visual studio in order to include symbols for other statically linked libs
   # this is such an unbelievable hack, that it's disgusting
