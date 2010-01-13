@@ -343,7 +343,11 @@ int main(int argc, char ** argv)
 
             pythonpath += OPENRAVE_PYTHON_INSTALL_DIR;
             printf("newpath: %s\n",pythonpath.c_str());
+#ifdef _MSC_VER
+            _putenv(("PYTHONPATH="+pythonpath).c_str());
+#else
             setenv("PYTHONPATH",pythonpath.c_str(),1);
+#endif
 
             RAVELOG_INFOA("executing: %s\n", sscmd.str().c_str());
             RAVELOG_FATALA("generating ik could take up to 10 minutes...\n");
