@@ -19,9 +19,9 @@ from __future__ import with_statement # for python 2.5
 
 import sys, copy, time
 from string import atoi,atof
-from sympy import *
 from optparse import OptionParser
 import metaclass
+from sympy import *
 
 def xcombinations(items,n):
     if n == 0: yield[]

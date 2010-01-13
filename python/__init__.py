@@ -1,14 +1,15 @@
-# when openravepy becomes a more official package, see http://peak.telecommunity.com/DevCenter/setuptools#namespace-packages
-# try: 
-#     __import__('pkg_resources').declare_namespace(__name__) 
-# except ImportError: 
-#     from pkgutil import extend_path 
-#     __path__ = extend_path(__path__, __name__) 
+# unfortunately it is necessary to add openravepy to the path in order to get sympy working since it uses constructs like "from sympy.core import *"
+import sys,pkgutil
+sys.path += pkgutil.extend_path(__path__, __name__)
 
 from openravepy_int import *
 from openravepy_ext import *
 import metaclass
-import ikfast
+try:
+    import sympy
+    import ikfast
+except ImportError, e:
+    print 'openravepy: Failed to import sympy and ikfast: ',e
 import examples
 import interfaces
 import pyANN
