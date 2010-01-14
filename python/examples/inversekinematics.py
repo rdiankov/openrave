@@ -16,7 +16,11 @@ from __future__ import with_statement # for python 2.5
 from openravepy import *
 from openravepy.ikfast import IKFastSolver
 from numpy import *
-import time,pickle,platform
+import time,platform
+try:
+   import cPickle as pickle
+except:
+   import pickle
 import distutils
 from distutils import ccompiler
 from optparse import OptionParser
@@ -194,4 +198,4 @@ class InverseKinematicsModel(OpenRAVEModel):
         OpenRAVEModel.RunFromParser(Model=Model,parser=parser)
 
 if __name__ == "__main__":
-    InverseKinematicsModel.RunFromParser()
+     InverseKinematicsModel.RunFromParser()

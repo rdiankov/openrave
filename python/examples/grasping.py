@@ -13,7 +13,11 @@
 # limitations under the License. 
 from __future__ import with_statement # for python 2.5
 
-import os,sys,pickle,itertools,traceback,time
+import os,sys,itertools,traceback,time
+try:
+   import cPickle as pickle
+except:
+   import pickle
 from openravepy import *
 from openravepy.interfaces import Grasper, BaseManipulation
 from numpy import *
@@ -195,6 +199,29 @@ class GraspingModel(OpenRAVEModel):
                                      standoff=grasp[self.graspindices.get('igraspstandoff')],
                                      target=self.target,graspingnoise = graspingnoise,
                                      forceclosure=forceclosure, execute=False, outputfinal=True)
+
+    def getGlobalGraspTransform(self,grasp):
+        Tlocalgrasp = eye(4)
+        Tlocalgrasp[0:3,0:4] = transpose(reshape(grasp[self.graspindices ['igrasptrans']],(4,3)))
+        return dot(self.target.GetTransform(),Tlocalgrasp)
+
+    def computeValidGrasps(self,checkcollision=True,checkik=True,returnfirst=False):
+        """Returns the set of grasps that satisfy certain conditions"""
+        with self.robot:
+            validgrasps = []
+            for grasp in self.grasps:
+                self.robot.SetJointValues(grasp[self.graspindices['igrasppreshape']],self.manip.GetGripperJoints())
+                Tglobalgrasp = self.getGlobalGraspTransform(grasp)
+                if checkik:
+                    if self.manip.FindIKSolution(Tglobalgrasp,True) is None:
+                        continue
+                elif checkcollision:
+                    if self.manip.CheckEndEffectorCollision(Tglobalgrasp):
+                        continue
+                validgrasps.append(grasp)
+                if returnfirst:
+                    return validgrasps
+            return validgrasps
 
     def computeBoxApproachRays(self,stepsize=0.02):
         with self.target:

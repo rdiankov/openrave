@@ -14,21 +14,28 @@
 from __future__ import with_statement # for python 2.5
 
 from openravepy import *
-from openravepy.examples import InverseKinematicsModel
+from openravepy.examples import inversekinematics
 from numpy import *
-import time,pickle
+import time
+import heapq # for nth smallest element
+try:
+   import cPickle as pickle
+except:
+   import pickle
 from optparse import OptionParser
 
 class ReachabilityModel(OpenRAVEModel):
     def __init__(self,robot):
         OpenRAVEModel.__init__(self,robot=robot)
-        self.ikmodel = InverseKinematicsModel(robot=robot)
+        self.ikmodel = inversekinematics.InverseKinematicsModel(robot=robot)
         if not self.ikmodel.load():
             self.ikmodel.autogenerate()
         self.trimesh = self.env.Triangulate(self.robot)
         self.reachabilitystats = None
         self.reachabilitydensity3d = None
         self.pointscale = None
+        self.xyzdelta = None
+        self.quatdelta = None
 
     def has(self):
         return len(self.reachabilitydensity3d) > 0
@@ -37,11 +44,11 @@ class ReachabilityModel(OpenRAVEModel):
         params = OpenRAVEModel.load(self)
         if params is None:
             return False
-        self.reachabilitystats,self.reachabilitydensity3d,self.pointscale = params
+        self.reachabilitystats,self.reachabilitydensity3d,self.pointscale,self.xyzdelta,self.quatdelta = params
         return self.has()
 
     def save(self):
-        OpenRAVEModel.save(self,(self.reachabilitystats,self.reachabilitydensity3d,self.pointscale))
+        OpenRAVEModel.save(self,(self.reachabilitystats,self.reachabilitydensity3d,self.pointscale,self.xyzdelta,self.quatdelta))
 
     def getfilename(self):
         return os.path.join(OpenRAVEModel.getfilename(self),'reachability.' + self.manip.GetName() + '.pp')
@@ -49,7 +56,7 @@ class ReachabilityModel(OpenRAVEModel):
     def generateFromOptions(self,options):
         self.generate(maxradius=options.maxradius,xyzdelta=options.xyzdelta,rolldelta=options.rolldelta)
 
-    def generate(self,maxradius=None,translationonly=False,xyzdelta=0.04,rolldelta=pi/8.0):
+    def generate(self,maxradius=None,translationonly=False,xyzdelta=0.04,rolldelta=pi/3.0):
         starttime = time.time()
         Tgrasp = dot(linalg.inv(self.manip.GetBase().GetTransform()),self.manip.GetEndEffectorTransform())
         armlength = sqrt(sum(Tgrasp[0:3,3]**2))
@@ -58,9 +65,26 @@ class ReachabilityModel(OpenRAVEModel):
         print 'radius: %f'%maxradius
 
         allpoints,insideinds,shape,self.pointscale = self.UniformlySampleSpace(maxradius,delta=xyzdelta)
-        rotations = [eye(3)] if translationonly else self.GetUniformRotations(spherelevel=0,rolldelta=rolldelta)
+        # select the best sphere level matching rolldelta;
+        # spherelevel=0: (dist=0.2986), rolldelta ~= pi/3
+        # spherelevel=1: (dist=0.0779), rolldelta ~= pi*2/9
+        # spherelevel=2: (dist=0.0198), rolldelta ~= pi/11
+        # -0.63267/rolldelta**2 + 3.60478/rolldelta - 2.86538 ~= spherelevel
+        # 
+        spherelevel = max(0,int((-0.63267/rolldelta**2 + 3.60478/rolldelta - 2.86538)+0.4))
+        rotations = [eye(3)] if translationonly else self.GetUniformRotations(spherelevel=spherelevel,rolldelta=rolldelta)
+        self.xyzdelta = xyzdelta
+        self.quatdelta = 0
+        if not translationonly:
+            # for rotations, get the average distance to the nearest rotation
+            quats = array([quatFromRotationMatrix(r) for r in rotations])
+            neighdists = []
+            for q in quats:
+                dists = minimum(sum((tile(q,(quats.shape[0],1))-quats)**2,axis=1), sum((tile(q,(quats.shape[0],1))+quats)**2,axis=1))
+                neighdists.append(heapq.nsmallest(2,dists)[1])
+            self.quatdelta = mean(neighdists)
+        
         T = eye(4)
-
         reachabilitydensity3d = zeros(prod(shape))
         self.reachabilitystats = []
         with self.env:
@@ -189,7 +213,7 @@ class ReachabilityModel(OpenRAVEModel):
                           help='The max radius of the arm to perform the computation')
         parser.add_option('--xyzdelta',action='store',type='float',dest='xyzdelta',default=0.04,
                           help='The max radius of the arm to perform the computation')
-        parser.add_option('--rolldelta',action='store',type='float',dest='rolldelta',default=pi/8.0,
+        parser.add_option('--rolldelta',action='store',type='float',dest='rolldelta',default=pi/3.0,
                           help='The max radius of the arm to perform the computation')
         return parser
     @staticmethod

@@ -15,7 +15,7 @@ from __future__ import with_statement # for python 2.5
 
 from openravepy import *
 from openravepy.interfaces import BaseManipulation
-from openravepy.examples import InverseKinematicsModel
+from openravepy.examples import inversekinematics
 from numpy import *
 from optparse import OptionParser
 
@@ -24,7 +24,7 @@ class HanoiPuzzle:
     def __init__(self,env,robot):
         self.env = env
         self.robot = robot
-        self.ikmodel = InverseKinematicsModel(robot=robot)
+        self.ikmodel = inversekinematics.InverseKinematicsModel(robot=robot)
         if not self.ikmodel.load():
             self.ikmodel.autogenerate()
         self.basemanip = BaseManipulation(env,self.robot)

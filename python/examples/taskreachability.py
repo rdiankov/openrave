@@ -15,7 +15,11 @@ from __future__ import with_statement # for python 2.5
 
 from openravepy import *
 from numpy import *
-import time,pickle
+import time
+try:
+   import cPickle as pickle
+except:
+   import pickle
 from optparse import OptionParser
 
 class TaskReachability(metaclass.AutoReloader):

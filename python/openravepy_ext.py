@@ -11,7 +11,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License. 
 from __future__ import with_statement # for python 2.5
-import os, pickle, optparse, numpy, openravepy, metaclass
+import openravepy
+import os, optparse, numpy, metaclass
+try:
+   import cPickle as pickle
+except:
+   import pickle
 
 class KinBodyStateSaver:
     def __init__(self,body):

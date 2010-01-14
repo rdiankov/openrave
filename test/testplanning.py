@@ -72,10 +72,26 @@ def test_graspplanning():
     env.Reset()
     env.Load('data/lab1.env.xml')
     robot = env.GetRobots()[0]
-    self = graspplanning.GraspPlanning(env,robot)
-    grasping=self.graspables[0][0]
+    self = graspplanning.GraspPlanning(robot)
+    gm=self.graspables[0][0]
     dests=self.graspables[0][1]
-    self.graspAndPlaceObject(grasping=grasping,dests=dests)
+    self.graspAndPlaceObject(gm=gm,dests=dests)
+
+def test_mobilemanipulation():
+    import mobilemanipulation
+    env = Environment()
+    env.SetViewer('qtcoin')
+    env.Reset()
+    env.Load('data/lab1.env.xml')
+    robot = env.GetRobots()[0]
+    self = mobilemanipulation.MobileManipulationPlanning(robot)
+    gm=self.graspables[0][0]
+    dests=self.graspables[0][1]
+    validgrasps = gm.computeValidGrasps(gm)
+    Tee = gm.getGlobalGraspTransform(validgrasps[0])
+    basedistfn = self.irmodel.getBaseDistribution(Tee,200000)
+    print basedistfn(robot.GetTransform())
+    self.graspAndPlaceObject(gm=gm,dests=dests)
 
 def test_visibilityplanning():
     import visibilityplanning, time

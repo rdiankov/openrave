@@ -14,7 +14,11 @@
 # limitations under the License. 
 from __future__ import with_statement # for python 2.5
 
-import sys, os, time, signal, threading, pickle
+import sys, os, time, signal, threading
+try:
+   import cPickle as pickle
+except:
+   import pickle
 import numpy # nice to be able to explicitly call some functions
 from numpy import *
 from optparse import OptionParser

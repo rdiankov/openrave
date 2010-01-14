@@ -1,12 +1,14 @@
 # models
-from grasping import GraspingModel
-from inversekinematics import InverseKinematicsModel
-from kinematicreachability import ReachabilityModel
-from inversereachability import InverseReachabilityModel
+import grasping
+import inversekinematics
+import kinematicreachability
+import inversereachability
 
 import collision
-import graspplanning
 import hanoi
+import graspplanning
+#import mobilemanipulation
+
 import taskreachability
 import testcamerasensor
 import testplotting

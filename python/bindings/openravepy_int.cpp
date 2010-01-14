@@ -669,6 +669,11 @@ public:
             _pjoint->SetJointLimits(vlower,vupper);
         }
         void SetResolution(dReal resolution) { _pjoint->SetResolution(resolution); }
+
+        void AddTorque(object otorques) {
+            vector<dReal> vtorques = ExtractArray<dReal>(otorques);
+            return _pjoint->AddTorque(vtorques);
+        }
     };
     typedef boost::shared_ptr<PyJoint> PyJointPtr;
     typedef boost::shared_ptr<PyJoint const> PyJointConstPtr;
@@ -809,12 +814,22 @@ public:
         vector<dReal>::iterator itv = vsetvalues.begin();
         FOREACH(it, vindices) {
             if( *it < 0 || *it >= _pbody->GetDOF() )
-                throw openrave_exception("bad index passed");
+                throw openrave_exception(boost::str(boost::format("bad index passed")%(*it)));
 
             values[*it] = *itv++;
         }
 
         _pbody->SetJointValues(values,true);
+    }
+
+    void SetJointTorques(object otorques, bool bAdd)
+    {
+        if( _pbody->GetDOF() == 0 )
+            return;
+
+        vector<dReal> vtorques = ExtractArray<dReal>(otorques);
+        BOOST_ASSERT((int)vtorques.size() != GetDOF() );
+        _pbody->SetJointValues(vtorques,bAdd);
     }
 
     object CalculateJacobian(int index, object offset)
@@ -3040,6 +3055,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("SetTransform",&PyKinBody::SetTransform)
             .def("SetJointValues",psetjointvalues1)
             .def("SetJointValues",psetjointvalues2)
+            .def("SetJointTorques",&PyKinBody::SetJointTorques)
             .def("SetTransformWithJointValues",&PyKinBody::SetTransformWithJointValues)
             .def("CalculateJacobian",&PyKinBody::CalculateJacobian)
             .def("CalculateRotationJacobian",&PyKinBody::CalculateRotationJacobian)
@@ -3119,6 +3135,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
                 .def("SetJointOffset",&PyKinBody::PyJoint::SetJointOffset)
                 .def("SetJointLimits",&PyKinBody::PyJoint::SetJointLimits)
                 .def("SetResolution",&PyKinBody::PyJoint::SetResolution)
+                .def("AddTorque",&PyKinBody::PyJoint::AddTorque)
                 ;
             
             enum_<KinBody::Joint::JointType>("Type")
