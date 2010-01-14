@@ -90,7 +90,8 @@ def test_mobilemanipulation():
     validgrasps = gm.computeValidGrasps(gm)
     Tee = gm.getGlobalGraspTransform(validgrasps[0])
     basedistfn = self.irmodel.getBaseDistribution(Tee,200000)
-    print basedistfn(robot.GetTransform())
+    Trobot = robot.GetTransform()
+    print basedistfn(Trobot)
     self.graspAndPlaceObject(gm=gm,dests=dests)
 
 def test_visibilityplanning():

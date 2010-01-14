@@ -15,6 +15,7 @@ from __future__ import with_statement # for python 2.5
 
 from openravepy import *
 from numpy import *
+from optparse import OptionParser
 
 def collisioncallback(report,fromphysics):
     """Whenever a collision or physics detects a collision, this function is called"""
@@ -29,14 +30,21 @@ def collisioncallback(report,fromphysics):
     else:
         s += '(NONE)'
     print s
-    print 'form physics: ',fromphysics
+    print 'from physics: ',fromphysics
     return CollisionAction.DefaultAction
 
 if __name__ == "__main__":
-    print 'Example shows how to query collision detection information using openravepy'
+    parser = OptionParser(description='Example shows how to query collision detection information using openravepy')
+    parser.add_option('--collision', action="store",type='string',dest='collision',default=None,
+                      help='collision checker')
+    (options, args) = parser.parse_args()
+
+    print 
     env = Environment()
     env.Load('robots/barrettwam.robot.xml')
-    
+    if options.collision is not None:
+        env.SetCollisionChecker(env.CreateCollisionChecker(options.collision))
+
     # register an optional collision callback
     handle = env.RegisterCollisionCallback(collisioncallback)
     
@@ -61,4 +69,10 @@ if __name__ == "__main__":
     env.CheckCollision(robot1,robot2)
     env.CheckCollision(robot1,body1)
     env.CheckCollision(robot2,body1)
+
+    print 'checking self collision'
+    robot1.SetJointValues([2.98],[3])
+    if not robot1.CheckSelfCollision():
+        print 'no collision detected!!, ',env.CheckCollision(robot1.GetLinks()[1],robot1.GetLinks()[13])
+
     env.Destroy() # done with the environment

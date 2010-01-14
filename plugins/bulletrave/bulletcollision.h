@@ -22,10 +22,9 @@ class BulletCollisionChecker : public CollisionCheckerBase
 private:
     static boost::shared_ptr<void> GetCollisionInfo(KinBodyConstPtr pbody) { return pbody->GetCollisionData(); }
 
-    struct KinBodyFilterCallback : public btOverlapFilterCallback
+    struct OpenRAVEFilterCallback : public btOverlapFilterCallback
     {
-    KinBodyFilterCallback() : btOverlapFilterCallback() {}
-        
+        virtual bool CheckLinks(KinBody::LinkPtr plink0, KinBody::LinkPtr plink1) const = 0;
         virtual bool needBroadphaseCollision(btBroadphaseProxy* proxy0,btBroadphaseProxy* proxy1) const
         {
             BOOST_ASSERT( static_cast<btCollisionObject*>(proxy0->m_clientObject) != NULL );
@@ -33,12 +32,18 @@ private:
 
             KinBody::LinkPtr plink0 = *(KinBody::LinkPtr*)static_cast<btCollisionObject*>(proxy0->m_clientObject)->getUserPointer();
             KinBody::LinkPtr plink1 = *(KinBody::LinkPtr*)static_cast<btCollisionObject*>(proxy1->m_clientObject)->getUserPointer();
-
-            if( !plink0->IsEnabled() || !plink1->IsEnabled() ) {
-                //assert(0);
+            if( !plink0->IsEnabled() || !plink1->IsEnabled() )
                 return false;
-            }
-            
+            return CheckLinks(plink0,plink1);
+        }
+    };
+
+    struct KinBodyFilterCallback : public OpenRAVEFilterCallback
+    {
+    KinBodyFilterCallback() : OpenRAVEFilterCallback() {}
+        
+        virtual bool CheckLinks(KinBody::LinkPtr plink0, KinBody::LinkPtr plink1) const
+        {
             KinBodyPtr pbody0 = plink0->GetParent();
             KinBodyPtr pbody1 = plink1->GetParent();
             if( pbody0->IsAttached(pbody1) )
@@ -59,17 +64,12 @@ private:
         KinBodyConstPtr _pbody0, _pbody1;
     };
 
-    struct LinkFilterCallback : public btOverlapFilterCallback
+    struct LinkFilterCallback : public OpenRAVEFilterCallback
     {
-        LinkFilterCallback() : btOverlapFilterCallback() {}
+        LinkFilterCallback() : OpenRAVEFilterCallback() {}
         
-        virtual bool needBroadphaseCollision(btBroadphaseProxy* proxy0,btBroadphaseProxy* proxy1) const
+        virtual bool CheckLinks(KinBody::LinkPtr plink0, KinBody::LinkPtr plink1)  const
         {
-            BOOST_ASSERT( static_cast<btCollisionObject*>(proxy0->m_clientObject) != NULL );
-            BOOST_ASSERT( static_cast<btCollisionObject*>(proxy1->m_clientObject) != NULL );
-
-            KinBody::LinkPtr plink0 = *(KinBody::LinkPtr*)static_cast<btCollisionObject*>(proxy0->m_clientObject)->getUserPointer();
-            KinBody::LinkPtr plink1 = *(KinBody::LinkPtr*)static_cast<btCollisionObject*>(proxy1->m_clientObject)->getUserPointer();
             if( !!_pcollink1 ) {
                 BOOST_ASSERT( !!_pcollink0 );
                 // wants collisions only between specific links
@@ -85,19 +85,13 @@ private:
         KinBody::LinkConstPtr _pcollink0, _pcollink1;
     };
 
-    struct LinkAdjacentFilterCallback : public btOverlapFilterCallback
+    struct LinkAdjacentFilterCallback : public OpenRAVEFilterCallback
     {
-    LinkAdjacentFilterCallback(KinBodyConstPtr pparent, const std::set<int>& setadjacency) : btOverlapFilterCallback(), _pparent(pparent), _setadjacency(setadjacency) {
+    LinkAdjacentFilterCallback(KinBodyConstPtr pparent, const std::set<int>& setadjacency) : OpenRAVEFilterCallback(), _pparent(pparent), _setadjacency(setadjacency) {
         }
         
-        virtual bool needBroadphaseCollision(btBroadphaseProxy* proxy0,btBroadphaseProxy* proxy1) const
+        virtual bool CheckLinks(KinBody::LinkPtr plink0, KinBody::LinkPtr plink1) const
         {
-            BOOST_ASSERT( static_cast<btCollisionObject*>(proxy0->m_clientObject) != NULL );
-            BOOST_ASSERT( static_cast<btCollisionObject*>(proxy1->m_clientObject) != NULL );
-
-            KinBody::LinkPtr plink0 = *(KinBody::LinkPtr*)static_cast<btCollisionObject*>(proxy0->m_clientObject)->getUserPointer();
-            KinBody::LinkPtr plink1 = *(KinBody::LinkPtr*)static_cast<btCollisionObject*>(proxy1->m_clientObject)->getUserPointer();
-
             if( plink0->GetParent() != _pparent || plink1->GetParent() != _pparent )
                 return false;
             // check if links are in adjacency list
@@ -106,27 +100,18 @@ private:
             return _setadjacency.find(index0|(index1<<16)) != _setadjacency.end() ||
                 _setadjacency.find(index1|(index0<<16)) != _setadjacency.end();
         }
-
+        
         KinBodyConstPtr _pparent;
         const std::set<int>& _setadjacency;
     };
 
-    struct KinBodyLinkFilterCallback : public btOverlapFilterCallback
+    struct KinBodyLinkFilterCallback : public OpenRAVEFilterCallback
     {
-        KinBodyLinkFilterCallback() : btOverlapFilterCallback() {}
+        KinBodyLinkFilterCallback() : OpenRAVEFilterCallback() {}
         
-        virtual bool needBroadphaseCollision(btBroadphaseProxy* proxy0, btBroadphaseProxy* proxy1) const
+        virtual bool CheckLinks(KinBody::LinkPtr plink0, KinBody::LinkPtr plink1) const
         {
             BOOST_ASSERT( !!_pcollink && !!_pbody );
-            BOOST_ASSERT( static_cast<btCollisionObject*>(proxy0->m_clientObject) != NULL );
-            BOOST_ASSERT( static_cast<btCollisionObject*>(proxy1->m_clientObject) != NULL );
-
-            KinBody::LinkPtr plink0 = *(KinBody::LinkPtr*)static_cast<btCollisionObject*>(proxy0->m_clientObject)->getUserPointer();
-            KinBody::LinkPtr plink1 = *(KinBody::LinkPtr*)static_cast<btCollisionObject*>(proxy1->m_clientObject)->getUserPointer();
-
-            if( !plink0->IsEnabled() || !plink1->IsEnabled() )
-                return false;
-
             KinBodyPtr pbody0 = plink0->GetParent();
             KinBodyPtr pbody1 = plink1->GetParent();
 
@@ -140,22 +125,13 @@ private:
         KinBodyConstPtr _pbody;
     };
 
-    struct KinBodyFilterExCallback : public btOverlapFilterCallback
+    struct KinBodyFilterExCallback : public OpenRAVEFilterCallback
     {
-        KinBodyFilterExCallback() : btOverlapFilterCallback(), _pvexcluded(NULL) {}
+        KinBodyFilterExCallback() : OpenRAVEFilterCallback(), _pvexcluded(NULL) {}
         
-        virtual bool needBroadphaseCollision(btBroadphaseProxy* proxy0,btBroadphaseProxy* proxy1) const
+        virtual bool CheckLinks(KinBody::LinkPtr plink0, KinBody::LinkPtr plink1) const
         {
-            BOOST_ASSERT( static_cast<btCollisionObject*>(proxy0->m_clientObject) != NULL );
-            BOOST_ASSERT( static_cast<btCollisionObject*>(proxy1->m_clientObject) != NULL );
-
-            KinBody::LinkPtr plink0 = *(KinBody::LinkPtr*)static_cast<btCollisionObject*>(proxy0->m_clientObject)->getUserPointer();
-            KinBody::LinkPtr plink1 = *(KinBody::LinkPtr*)static_cast<btCollisionObject*>(proxy1->m_clientObject)->getUserPointer();
             BOOST_ASSERT( _pvexcluded != NULL );
-            
-            if( !plink0->IsEnabled() || !plink1->IsEnabled() )
-                return false;
-
             KinBodyPtr pbody0 = plink0->GetParent();
             KinBodyPtr pbody1 = plink1->GetParent();
 
@@ -187,13 +163,9 @@ private:
             if( btCollisionDispatcher::needsCollision(co0, co1) ) {
                 KinBody::LinkPtr plink0 = *(KinBody::LinkPtr*)co0->getUserPointer();
                 KinBody::LinkPtr plink1 = *(KinBody::LinkPtr*)co1->getUserPointer();
-
-                if( !plink0->IsEnabled() || !plink1->IsEnabled() )
+                OpenRAVEFilterCallback* popenravefilt = dynamic_cast<OpenRAVEFilterCallback*>(_poverlapfilt);
+                if( !!popenravefilt && !popenravefilt->CheckLinks(plink0,plink1) )
                     return false;
-
-                if( plink0->GetParent()->IsAttached(KinBodyConstPtr(plink1->GetParent())) )
-                    return false;
-
                 // recheck the broadphase again
                 return _poverlapfilt != NULL ? _poverlapfilt->needBroadphaseCollision(co0->getBroadphaseHandle(), co1->getBroadphaseHandle()) : true;
             }
@@ -252,6 +224,7 @@ private:
         _broadphase->calculateOverlappingPairs(_world->getDispatcher());
 
         int numManifolds = _world->getDispatcher()->getNumManifolds();
+        _dispatcher->_poverlapfilt = NULL;
 
         for (int i=0;i<numManifolds;i++) {
             btPersistentManifold* contactManifold = _world->getDispatcher()->getManifoldByIndexInternal(i);
@@ -683,6 +656,7 @@ public:
         }
 
         bulletspace->Synchronize();
+        RAVELOG_INFO("non adj: %d, adj: %d\n",pbody->GetNonAdjacentLinks().size(),pbody->GetAdjacentLinks().size());
         LinkAdjacentFilterCallback linkadjacent(pbody, pbody->GetNonAdjacentLinks());
         bool bCollision = CheckCollisionP(&linkadjacent, report);
         // things get cached and very messy if not released

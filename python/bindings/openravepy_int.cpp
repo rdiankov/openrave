@@ -2938,10 +2938,6 @@ BOOST_PYTHON_MODULE(openravepy_int)
     T_from_number<float>();
     T_from_number<double>();
 
-#ifndef _WIN32
-    mkdir("~/.openrave",644);
-#endif
-
     enum_<DebugLevel>("DebugLevel")
         .value("Fatal",Level_Fatal)
         .value("Error",Level_Error)
@@ -3530,6 +3526,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
         scope options = class_<DummyStruct>("options")
             .add_property("ReturnTransformQuaternions",GetReturnTransformQuaternions,SetReturnTransformQuaternions);
     }
+
+    scope().attr("__version__") = boost::str(boost::format("%.2x.%2.2x.%2.x")%OPENRAVE_VERSION_MAJOR%OPENRAVE_VERSION_MINOR%OPENRAVE_VERSION_PATCH);
 
     def("quatFromAxisAngle",quatFromAxisAngle1, "Converts an axis-angle rotation into a quaternion");
     def("quatFromAxisAngle",quatFromAxisAngle2, "Converts an axis-angle rotation into a quaternion");

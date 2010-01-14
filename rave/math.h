@@ -756,8 +756,6 @@ inline int solvequad(T a, T b, T c, T& r1, T& r2)
     return 2;
 }
 
-//#ifndef TI_USING_IPP
-
 #define MULT3(stride) { \
 	pfres2[0*stride+0] = pf1[0*stride+0]*pf2[0*stride+0]+pf1[0*stride+1]*pf2[1*stride+0]+pf1[0*stride+2]*pf2[2*stride+0]; \
 	pfres2[0*stride+1] = pf1[0*stride+0]*pf2[0*stride+1]+pf1[0*stride+1]*pf2[1*stride+1]+pf1[0*stride+2]*pf2[2*stride+1]; \
