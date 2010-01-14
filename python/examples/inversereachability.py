@@ -13,13 +13,16 @@
 # limitations under the License. 
 from __future__ import with_statement # for python 2.5
 
+import time
+try:
+   import cPickle as pickle
+except:
+   import pickle
 from openravepy import *
 from openravepy.examples import kinematicreachability
 import numpy
 from numpy import *
-import time,pickle
 from optparse import OptionParser
-from itertools import izip
 #from IPython.Debugger import Tracer; debug_here = Tracer()
 
 class InverseReachabilityModel(OpenRAVEModel):
@@ -116,7 +119,7 @@ class InverseReachabilityModel(OpenRAVEModel):
                                             c_[zangles,equivalenttrans[:,4:6],equivalenttrans[:,7:]]))
         self.preprocess()
 
-    def getBaseDistribution(self,Tee,logllthresh=1e5,zaxis=None):
+    def getBaseDistribution(self,Tee,logllthresh=1e6,zaxis=None):
         """Return a function of the distribution of possible positions of the robot that can put their end effector at Tee"""
         if zaxis is not None:
             raise NotImplementedError('cannot specify a custom zaxis yet')
@@ -159,7 +162,7 @@ class InverseReachabilityModel(OpenRAVEModel):
     @staticmethod
     def normalizeZRotation(qarray):
         """for all quaternions, find the rotation about z that minimizes the distance between the identify (1,0,0,0), and transform the quaternions"""
-        zangles = arctan2(qarray[:,3],qarray[:,0])
+        zangles = arctan2(-qarray[:,3],qarray[:,0])
         sinangles = sin(zangles)
         cosangles = cos(zangles)
         return c_[cosangles*qarray[:,0]-sinangles*qarray[:,3], cosangles*qarray[:,1]-sinangles*qarray[:,2], cosangles*qarray[:,2]+sinangles*qarray[:,1], cosangles*qarray[:,3]+sinangles*qarray[:,0]],-zangles
@@ -172,7 +175,7 @@ class InverseReachabilityModel(OpenRAVEModel):
                    q[0]*qarray[:,2] + q[2]*qarray[:,0] + q[3]*qarray[:,1] - q[1]*qarray[:,3],
                    q[0]*qarray[:,3] + q[3]*qarray[:,0] + q[1]*qarray[:,2] - q[2]*qarray[:,1])]
     @staticmethod
-    def __quatMult(q1,q2):
+    def quatMult(q1,q2):
         return array((q1[0]*q2[0] - q1[1]*q2[1] - q1[2]*q2[2] - q1[3]*q2[3],
                       q1[0]*q2[1] + q1[1]*q2[0] + q1[2]*q2[3] - q1[3]*q2[2],
                       q1[0]*q2[2] + q1[2]*q2[0] + q1[3]*q2[1] - q1[1]*q2[3],
