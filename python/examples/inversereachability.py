@@ -201,7 +201,7 @@ class InverseReachabilityModel(OpenRAVEModel):
     @staticmethod
     def RunFromParser(Model=None,parser=None):
         if parser is None:
-            parser = ReachabilityModel.CreateOptionParser()
+            parser = kinematicreachability.ReachabilityModel.CreateOptionParser()
         (options, args) = parser.parse_args()
         Model = lambda robot: InverseReachabilityModel(robot=robot)
         OpenRAVEModel.RunFromParser(Model=Model,parser=parser)
