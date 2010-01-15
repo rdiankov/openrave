@@ -20,32 +20,31 @@ from numpy import *
 def run():
     orenv = Environment()
     orenv.SetViewer('qtcoin')
-    h1 = orenv.plot3(points=array((-1.5,-1,0)),
-                pointsize=5.0,
-                colors=array((1,0,0)))
-    h2 = orenv.plot3(points=array(((-1.5,-0.5,0),(-1.5,0.5,0))),
-                pointsize=15.0,
-                colors=array(((0,1,0),(0,0,0))))
-    h3 = orenv.drawlinestrip(points=array(((-1.25,-0.5,0),(-1.25,0.5,0),(-1.5,1,0))),
-                        linewidth=3.0,
-                        colors=array(((0,1,0),(0,0,1),(1,0,0))))
-    h4 = orenv.plot3(points=array(((-0.5,-0.5,0),(-0.5,0.5,0))),
-                pointsize=0.05,
-                colors=array(((0,1,0),(1,1,0))),
-                drawstyle=1)
-    h5 = orenv.drawtrimesh(points=array(((0,0,0),(0.5,0,0),(0,0.5,0))),
-                      indices=None,
-                      colors=array(((0,1,0),(0,0,1),(1,0,0))))
-    h6 = orenv.drawtrimesh(points=array(((0,0,0.5),(0.5,0,0.5),(0,0.5,0.5),(0.5,0.5,0.5))),
-                      indices=array(((0,1,2),(2,1,3)),int64),
-                      colors=array((1,0,0,0.5)))
+    handles = []
+    handles.append(orenv.plot3(points=array(((-1.5,-0.5,0),(-1.5,0.5,0))),
+                               pointsize=15.0,
+                               colors=array(((0,1,0),(0,0,0)))))
+    handles.append(orenv.plot3(points=array((-1.5,-1,0)),
+                               pointsize=25.0,
+                               colors=array(((0,0,1,0.2)))))
+    handles.append(orenv.drawlinestrip(points=array(((-1.25,-0.5,0),(-1.25,0.5,0),(-1.5,1,0))),
+                                       linewidth=3.0,
+                                       colors=array(((0,1,0),(0,0,1),(1,0,0)))))
+    handles.append(orenv.plot3(points=array(((-0.5,-0.5,0),(-0.5,0.5,0))),
+                               pointsize=0.05,
+                               colors=array(((0,1,0),(1,1,0))),
+                               drawstyle=1))
+    handles.append(orenv.drawtrimesh(points=array(((0,0,0),(0.5,0,0),(0,0.5,0))),
+                                     indices=None,
+                                     colors=array(((0,1,0),(0,0,1),(1,0,0)))))
+    handles.append(orenv.drawtrimesh(points=array(((0,0,0.5),(0.5,0,0.5),(-0.5,0.5,0.5),(1,0.5,0.5))),
+                                     indices=array(((0,1,2),(2,1,3)),int64),
+                                     colors=array((1,0,0,0.5))))
+    handles.append(orenv.plot3(points=array(((0.5,0,1.0),(-0.5,0,1.0))),
+                               pointsize=45.0,
+                               colors=array(((0,0,0,0.1),(0,0,0,0.8)))))
     raw_input('Enter any key to quit. ')
-    h1 = None
-    h2 = None
-    h3 = None
-    h4 = None
-    h5 = None
-    h6 = None
+    handles = None
     orenv.Destroy()
     
 if __name__=='__main__':

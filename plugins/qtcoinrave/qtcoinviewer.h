@@ -114,7 +114,7 @@ public:
 
     virtual void PrintCamera();
     virtual void* plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle = 0);
-    virtual void* plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle = 0);
+    virtual void* plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle = 0, bool bhasalpha=false);
 
     virtual void* drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color);
     virtual void* drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors);
@@ -225,10 +225,10 @@ protected:
     virtual void _SetCameraLookAt(const RaveVector<float>& lookat, const RaveVector<float>& campos, const RaveVector<float>& camup);
 
     virtual void* _plot3(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color);
-    virtual void* _plot3(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors);
+    virtual void* _plot3(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, bool bhasalpha);
     
     virtual void* _drawspheres(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color);
-    virtual void* _drawspheres(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors);
+    virtual void* _drawspheres(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, bool bhasalpha);
 
     virtual void* _drawlinestrip(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color);
     virtual void* _drawlinestrip(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fwidth, const float* colors);

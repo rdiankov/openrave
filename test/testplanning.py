@@ -80,7 +80,8 @@ def test_inversereachabilityrun():
     validgrasps = gm.computeValidGrasps(gm)
     Tee = gm.getGlobalGraspTransform(validgrasps[0])
     densityfn,samplerfn,bounds = self.getBaseDistribution(Tee,2000)
-    h = self.showBaseDistribution(densityfn,bounds,zoffset=1.0,thresh=1.0,maxprob=2000.0)
+    h1 = self.showBaseDistribution(densityfn,bounds,zoffset=1.0,thresh=1.0)
+    h2 = self.showBaseDistribution(densityfn,bounds,zoffset=1.0,thresh=1.0,marginalizeangle=False)
 
 def test_graspplanning():
     import graspplanning

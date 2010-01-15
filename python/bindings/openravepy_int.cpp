@@ -196,13 +196,17 @@ inline Vector ExtractVector4(const object& oraw)
     return ExtractVector4Type<dReal>(oraw.attr("flat"));
 }
 
-inline Vector ExtractVector34(const object& oraw)
+template <typename T>
+inline RaveVector<T> ExtractVector34(const object& oraw,T fdefaultw)
 {
     int n = len(oraw);
-    if( n == 3 )
-        return ExtractVector3(oraw);
+    if( n == 3 ) {
+        RaveVector<T> v = ExtractVector3Type<T>(oraw);
+        v.w = fdefaultw;
+        return v;
+    }
     else if( n == 4 )
-        return ExtractVector4(oraw);
+        return ExtractVector4Type<T>(oraw);
     throw openrave_exception("unexpected vector size");
 }
 
@@ -2445,17 +2449,27 @@ public:
         }
 
         vector<float> vpoints = ExtractArray<float>(opoints.attr("flat"));
-        RaveVector<float> vcolor(1,0.5,0.5,1);
+        RaveVector<float> vcolor(1,0.5,0.5,1.0);
         if( ocolors != object() ) {
-            object shape = ocolors.attr("shape");
-            if( len(shape) == 1 )
-                vcolor = ExtractVector34(ocolors);
-            else {
+            object colorshape = ocolors.attr("shape");
+            if( len(colorshape) == 1 )
+                vcolor = ExtractVector34(ocolors,1.0f);
+            else if( len(colorshape) == 2 ) {
+                int numcolors = extract<int>(colorshape[0]);
+                int colordim = extract<int>(colorshape[1]);
+                if( numcolors*3 != (int)vpoints.size() )
+                    throw openrave_exception(boost::str(boost::format("len colors needs to be %d")%(vpoints.size()/3)));
+                bool bhasalpha = false;
+                if( colordim == 4 )
+                    bhasalpha = true;
+                else if( colordim != 3 )
+                    throw openrave_exception("colors dim needs to be 3 or 4");
+                
                 vector<float> vcolors = ExtractArray<float>(ocolors.attr("flat"));
-                if( vcolors.size() != vpoints.size() )
-                    throw openrave_exception(boost::str(boost::format("colors needs to be %dx3 matrix, it is %dx3")%(vcolors.size()/3)%(vpoints.size()/3)));
-                return object(PyGraphHandle(_penv->plot3(&vpoints[0],vpoints.size()/3,sizeof(float)*3,pointsize,&vcolors[0],drawstyle)));
+                return object(PyGraphHandle(_penv->plot3(&vpoints[0],vpoints.size()/3,sizeof(float)*3,pointsize,&vcolors[0],drawstyle,bhasalpha)));
             }
+            else
+                throw openrave_exception("color is wrong dim");
         }
         return object(PyGraphHandle(_penv->plot3(&vpoints[0],vpoints.size()/3,sizeof(float)*3,pointsize,vcolor,drawstyle)));
     }
@@ -2478,7 +2492,7 @@ public:
         if( ocolors != object() ) {
             object shape = ocolors.attr("shape");
             if( len(shape) == 1 )
-                vcolor = ExtractVector34(ocolors);
+                vcolor = ExtractVector34(ocolors,1.0f);
             else {
                 vector<float> vcolors = ExtractArray<float>(ocolors.attr("flat"));
                 if( vcolors.size() != vpoints.size() )
@@ -2507,7 +2521,7 @@ public:
         if( ocolors != object() ) {
             object shape = ocolors.attr("shape");
             if( len(shape) == 1 )
-                vcolor = ExtractVector34(ocolors);
+                vcolor = ExtractVector34(ocolors,1.0f);
             else {
                 vector<float> vcolors = ExtractArray<float>(ocolors.attr("flat"));
                 if( vcolors.size() != vpoints.size() )
@@ -2522,7 +2536,7 @@ public:
     {
         RaveVector<float> vcolor(1,0.5,0.5,1);
         if( ocolor != object() )
-            vcolor = ExtractVector34(ocolor);
+            vcolor = ExtractVector34(ocolor,1.0f);
         return object(PyGraphHandle(_penv->drawarrow(ExtractVector3(op1),ExtractVector3(op2),linewidth,vcolor)));
     }
 
@@ -2530,7 +2544,7 @@ public:
     {
         RaveVector<float> vcolor(1,0.5,0.5,1);
         if( ocolor != object() )
-            vcolor = ExtractVector34(ocolor);
+            vcolor = ExtractVector34(ocolor,1.0f);
         return object(PyGraphHandle(_penv->drawbox(ExtractVector3(opos),ExtractVector3(oextents))));
     }
 
@@ -2560,7 +2574,7 @@ public:
         if( ocolors != object() ) {
             object shape = ocolors.attr("shape");
             if( len(shape) == 1 )
-                vcolor = ExtractVector34(ocolors);
+                vcolor = ExtractVector34(ocolors,1.0f);
             else {
                 vector<float> vcolors = ExtractArray<float>(ocolors.attr("flat"));
                 if( vcolors.size() != vpoints.size() )

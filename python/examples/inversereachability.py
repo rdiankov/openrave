@@ -56,7 +56,7 @@ class InverseReachabilityModel(OpenRAVEModel):
         OpenRAVEModel.save(self,(self.equivalenceclasses,self.rotweight))
 
     def getfilename(self):
-        return os.path.join(OpenRAVEModel.getfilename(self),'invreachability.' + self.manip.GetName() + '.pp')
+       return os.path.join(OpenRAVEModel.getfilename(self),'invreachability.' + self.manip.GetName() + '.pp')
 
     def generateFromOptions(self,options):
         self.generate(heightthresh=options.heightthresh,rotthresh=options.rotthresh)
@@ -110,9 +110,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             normalizedquat,zangles = self.normalizeZRotation(equivalenttrans[:,0:4])
             # make sure all quaternions are on the same hemisphere
             identityquat = tile(array((1.0,0,0,0)),(normalizedquat.shape[0],1))
-            dists1 = sum( (normalizedquat-identityquat)**2, 1)
-            dists2 = sum( (normalizedquat+identityquat)**2,1)
-            normalizedquat[flatnonzero(dists2<dists1),0:4] *= -1
+            normalizedquat[flatnonzero(sum((normalizedquat+identityquat)**2,1) < sum((normalizedquat-identityquat)**2, 1)),0:4] *= -1
             # get statistics and store the angle, xy offset, and remaining unprocessed data
             meanquat = sum(normalizedquat,axis=0)
             meanquat /= sqrt(sum(meanquat**2))
@@ -137,18 +135,26 @@ class InverseReachabilityModel(OpenRAVEModel):
             if logll[bestindex] < logllthresh:
                 print 'could not find base distribution: ',logll[bestindex]
                 return None
+
+            angdelta = math.acos(1-0.5*self.rmodel.quatdelta) # convert quat dist to angle distance
+            bandwidth = array((angdelta ,self.rmodel.xyzdelta,self.rmodel.xyzdelta))
+
             # transform the equivalence class to the global coord system and create a kdtree for faster retrieval
             equivalenceclass = self.equivalenceclasses[bestindex]
             points = equivalenceclass[2][:,0:3]+tile(r_[zangles,posetarget[4:6]],(equivalenceclass[2].shape[0],1))
-            bounds = array((numpy.min(points,0),numpy.max(points,0)))
+            bounds = array((numpy.min(points,0)-bandwidth,numpy.max(points,0)+bandwidth))
+            if bounds[0,0]+2*pi > bounds[1,0]:
+               # already covering entire circle, so limit to 2*pi
+               bounds[0,0] = -pi
+               bounds[1,0] = pi
+
+            bandwidth[0] *= self.rotweight
             points[:,0] *= self.rotweight
             kdtree = pyANN.KDTree(points)
-            angdelta = math.acos(1-0.5*self.rmodel.quatdelta) # convert quat dist to angle distance
-            bandwidth = array((angdelta*self.rotweight,self.rmodel.xyzdelta,self.rmodel.xyzdelta))
             searchradius=9.0*sum(bandwidth**2)
             searcheps=bandwidth[0]*0.2
             ibandwidth=-0.5/bandwidth**2
-            #normalizationconst = (1.0/sqrt(pi**3*sum(bandwidth**2)))
+            #normalizationconst = (1.0/sqrt(pi**3*sum(bandwidth**2))) # normalize so that integrated volume is 1... however, is this really necessary?
             weights=equivalenceclass[2][:,3]
             cumweights = cumsum(weights)
             cumweights = cumweights[1:]/cumweights[-1]
@@ -182,16 +188,16 @@ class InverseReachabilityModel(OpenRAVEModel):
             if maxprob is None:
                 maxprob = max(probsxy)
             normalizedprobs = numpy.minimum(1,probsxy[inds]/maxprob)
-            colors = c_[normalizedprobs,normalizedprobs,0*normalizedprobs]
+            colors = c_[normalizedprobs,zeros((len(inds),2)),normalizedprobs]
             points = c_[X.flatten()[inds],Y.flatten()[inds],tile(zoffset,(len(inds),1))]
         else:
             inds = flatnonzero(probs>thresh)
             if maxprob is None:
                 maxprob = max(probs)
             normalizedprobs = numpy.minimum(1,probs[inds]/maxprob)
-            colors = c_[0*normalizedprobs,normalizedprobs,normalizedprobs]
+            colors = c_[0*normalizedprobs,normalizedprobs,normalizedprobs,normalizedprobs]
             points = c_[poses[inds,4:6],A.flatten()[inds]+zoffset]
-        return self.env.plot3(points=array(points),colors=array(colors),pointsize=5)
+        return self.env.plot3(points=array(points),colors=array(colors),pointsize=10)
 
     @staticmethod
     def normalizeZRotation(qarray):

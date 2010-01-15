@@ -969,9 +969,9 @@ class Environment : public EnvironmentBase
         return GraphHandlePtr(_pCurrentViewer->plot3(ppoints, numPoints, stride, fPointSize, color, drawstyle), GRAPH_DELETER);
     }
 
-    virtual GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle = 0)
+    virtual GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle, bool bhasalpha)
     {
-        return GraphHandlePtr(_pCurrentViewer->plot3(ppoints, numPoints, stride, fPointSize, colors, drawstyle), GRAPH_DELETER);
+        return GraphHandlePtr(_pCurrentViewer->plot3(ppoints, numPoints, stride, fPointSize, colors, drawstyle, bhasalpha), GRAPH_DELETER);
     }
 
     virtual GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
@@ -1402,7 +1402,7 @@ protected:
         virtual RaveTransform<float> GetCameraTransform() {return RaveTransform<float>();}
 
         virtual void* plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle=0) { return NULL; }
-        virtual void* plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle=0) { return NULL; }
+        virtual void* plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle, bool bhasalpha) { return NULL; }
 
         virtual void* drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color) { return NULL; }
         virtual void* drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors) { return NULL; }

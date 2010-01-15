@@ -52,7 +52,7 @@ public:
     virtual RaveTransform<float> GetCameraTransform() = 0;
 
     virtual void* plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle = 0) = 0;
-    virtual void* plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle = 0) = 0;
+    virtual void* plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle = 0, bool bhasalpha=false) = 0;
 
     virtual void* drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color) = 0;
     virtual void* drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors) = 0;

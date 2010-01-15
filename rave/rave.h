@@ -815,10 +815,11 @@ public:
 
     /// plots 3D points. Arguments same as plot3 with one color, except has an individual color for every point
     /// \param colors An array of rgb colors of size numPoints where each channel is in [0,1].
-    ///               colors+3 points to the second color.
+    ///               colors+(bhasalpha?4:3) points to the second color.
     /// \param drawstyle if 0 will draw pixels. if 1, will draw 3D spherse
+    /// \param bhasalpha if true, then each color consists of 4 values with the last value being the alpha of the point (1 means opaque). If false, then colors is 3 values.
     /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
-    virtual GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle = 0) = 0;
+    virtual GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle = 0, bool bhasalpha = false) = 0;
     
     /// draws a series of connected lines
     /// \param color the rgb color of the point. The last component of the color is used for alpha blending

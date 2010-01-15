@@ -554,9 +554,9 @@ public:
     };
 
     DrawMessage(QtCoinViewerPtr pviewer, SoSeparator* pparent, const float* ppoints, int numPoints,
-                int stride, float fwidth, const float* colors, DrawType type)
+                int stride, float fwidth, const float* colors, DrawType type, bool bhasalpha)
         : EnvMessage(pviewer, NULL, false), _numPoints(numPoints),
-          _fwidth(fwidth), _pparent(pparent), _type(type)
+          _fwidth(fwidth), _pparent(pparent), _type(type), _bhasalpha(bhasalpha)
     {
         _vpoints.resize(3*numPoints);
         for(int i = 0; i < numPoints; ++i) {
@@ -567,9 +567,9 @@ public:
         }
         _stride = 3*sizeof(float);
 
-        _vcolors.resize(3*numPoints);
+        _vcolors.resize((_bhasalpha?4:3)*numPoints);
         if( colors != NULL )
-            memcpy(&_vcolors[0], colors, numPoints*3*sizeof(float));
+            memcpy(&_vcolors[0], colors, sizeof(float)*_vcolors.size());
 
         _bManyColors = true;
     }
@@ -595,14 +595,14 @@ public:
         switch(_type) {
         case DT_Point:
             if( _bManyColors )
-                ret = _pviewer->_plot3(_pparent, &_vpoints[0], _numPoints, _stride, _fwidth, &_vcolors[0]);
+                ret = _pviewer->_plot3(_pparent, &_vpoints[0], _numPoints, _stride, _fwidth, &_vcolors[0],_bhasalpha);
             else
                 ret = _pviewer->_plot3(_pparent, &_vpoints[0], _numPoints, _stride, _fwidth, _color);
 
             break;
         case DT_Sphere:
             if( _bManyColors )
-                ret = _pviewer->_drawspheres(_pparent, &_vpoints[0], _numPoints, _stride, _fwidth, &_vcolors[0]);
+                ret = _pviewer->_drawspheres(_pparent, &_vpoints[0], _numPoints, _stride, _fwidth, &_vcolors[0],_bhasalpha);
             else
                 ret = _pviewer->_drawspheres(_pparent, &_vpoints[0], _numPoints, _stride, _fwidth, _color);
 
@@ -632,9 +632,9 @@ private:
     const RaveVector<float> _color;
     vector<float> _vcolors;
     SoSeparator* _pparent;
-
     bool _bManyColors;
     DrawType _type;
+    bool _bhasalpha;
 };
 
 void* QtCoinViewer::plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle)
@@ -646,10 +646,10 @@ void* QtCoinViewer::plot3(const float* ppoints, int numPoints, int stride, float
     return pret;
 }
 
-void* QtCoinViewer::plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle)
+void* QtCoinViewer::plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle, bool bhasalpha)
 {
     void* pret = new SoSeparator();
-    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), (SoSeparator*)pret, ppoints, numPoints, stride, fPointSize, colors, drawstyle ? DrawMessage::DT_Sphere : DrawMessage::DT_Point));
+    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), (SoSeparator*)pret, ppoints, numPoints, stride, fPointSize, colors, drawstyle ? DrawMessage::DT_Sphere : DrawMessage::DT_Point, bhasalpha));
     pmsg->callerexecute();
 
     return pret;
@@ -1001,15 +1001,22 @@ RaveTransform<float> QtCoinViewer::GetCameraTransform()
 
 void* QtCoinViewer::_plot3(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color)
 {
-    if( pparent == NULL )
+    if( pparent == NULL || numPoints <= 0 )
         return NULL;
    
     SoMaterial* mtrl = new SoMaterial;
     mtrl->diffuseColor = SbColor(color.x, color.y, color.z);
     mtrl->ambientColor = SbColor(color.x, color.y, color.z);
+    mtrl->transparency = max(0.0f,1.0f-color.w);
     mtrl->setOverride(true);
     pparent->addChild(mtrl);
     
+    if( color.w < 1.0f ) {
+        SoTransparencyType* ptype = new SoTransparencyType();
+        ptype->value = SoGLRenderAction::SORTED_OBJECT_SORTED_TRIANGLE_BLEND;
+        pparent->addChild(ptype);
+    }
+
     SoCoordinate3* vprop = new SoCoordinate3();
     
     if( stride != sizeof(float)*3 ) {
@@ -1034,23 +1041,41 @@ void* QtCoinViewer::_plot3(SoSeparator* pparent, const float* ppoints, int numPo
     pparent->addChild(style);
     
     SoPointSet* pointset = new SoPointSet();
-    pointset->numPoints.setValue(-1);
-    
+    pointset->numPoints.setValue(-1);    
     pparent->addChild(pointset);
     
     _pFigureRoot->addChild(pparent);
     return pparent;
 }
 
-void* QtCoinViewer::_plot3(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors)
+void* QtCoinViewer::_plot3(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, bool bhasalpha)
 {
-    if( pparent == NULL )
+    if( pparent == NULL || numPoints <= 0 )
         return NULL;
 
     SoMaterial* mtrl = new SoMaterial;
-    mtrl->diffuseColor.setValues(0, numPoints, (float(*)[3])colors);
+    if( bhasalpha ) {
+        vector<float> colorsonly(numPoints*3),alphaonly(numPoints);
+        for(int i = 0; i < numPoints; ++i) {
+            colorsonly[3*i+0] = colors[4*i+0];
+            colorsonly[3*i+1] = colors[4*i+1];
+            colorsonly[3*i+2] = colors[4*i+2];
+            alphaonly[i] = 1-colors[4*i+3];
+        }
+        mtrl->diffuseColor.setValues(0, numPoints, (float(*)[3])&colorsonly[0]);
+        mtrl->transparency.setValues(0,numPoints,(float*)&alphaonly[0]);
+    }
+    else
+        mtrl->diffuseColor.setValues(0, numPoints, (float(*)[3])colors);
     mtrl->setOverride(true);
     pparent->addChild(mtrl);
+
+    if( bhasalpha ) {
+        SoTransparencyType* ptype = new SoTransparencyType();
+        // SORTED_OBJECT_SORTED_TRIANGLE_BLEND fails to render points correctly if each have a different transparency value
+        ptype->value = SoGLRenderAction::SORTED_OBJECT_BLEND;
+        pparent->addChild(ptype);
+    }
     
     SoMaterialBinding* pbinding = new SoMaterialBinding();
     pbinding->value = SoMaterialBinding::PER_VERTEX;
@@ -1106,9 +1131,16 @@ void* QtCoinViewer::_drawspheres(SoSeparator* pparent, const float* ppoints, int
         SoMaterial* mtrl = new SoMaterial;
         mtrl->diffuseColor = SbColor(color.x, color.y, color.z);
         mtrl->ambientColor = SbColor(color.x, color.y, color.z);
+        mtrl->transparency = max(0.0f,1-color.w);
         mtrl->setOverride(true);
         psep->addChild(mtrl);
         
+        if( color.w < 1.0f ) {
+            SoTransparencyType* ptype = new SoTransparencyType();
+            ptype->value = SoGLRenderAction::SORTED_OBJECT_SORTED_TRIANGLE_BLEND;
+            pparent->addChild(ptype);
+        }
+
         SoSphere* c = new SoSphere();
         c->radius = fPointSize;
         psep->addChild(c);
@@ -1120,11 +1152,12 @@ void* QtCoinViewer::_drawspheres(SoSeparator* pparent, const float* ppoints, int
     return pparent;
 }
 
-void* QtCoinViewer::_drawspheres(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors)
+void* QtCoinViewer::_drawspheres(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, bool bhasalpha)
 {
     if( pparent == NULL || ppoints == NULL || numPoints <= 0 )
         return pparent;
     
+    int colorstride = bhasalpha?4:3;
     for(int i = 0; i < numPoints; ++i) {
         SoSeparator* psep = new SoSeparator();
         SoTransform* ptrans = new SoTransform();
@@ -1136,10 +1169,18 @@ void* QtCoinViewer::_drawspheres(SoSeparator* pparent, const float* ppoints, int
         
         // set a diffuse color
         SoMaterial* mtrl = new SoMaterial;
-        mtrl->diffuseColor = SbColor(colors[3*i +0], colors[3*i +1], colors[3*i +2]);
-        mtrl->ambientColor = SbColor(colors[3*i +0], colors[3*i +1], colors[3*i +2]);
+        mtrl->diffuseColor = SbColor(colors[colorstride*i +0], colors[colorstride*i +1], colors[colorstride*i +2]);
+        mtrl->ambientColor = SbColor(colors[colorstride*i +0], colors[colorstride*i +1], colors[colorstride*i +2]);
+        if( bhasalpha )
+            mtrl->transparency = max(0.0f,1-colors[colorstride*i+3]);
         mtrl->setOverride(true);
         psep->addChild(mtrl);
+
+        if( bhasalpha && colors[colorstride*i+3] < 1 ) {
+            SoTransparencyType* ptype = new SoTransparencyType();
+            ptype->value = SoGLRenderAction::SORTED_OBJECT_SORTED_TRIANGLE_BLEND;
+            pparent->addChild(ptype);
+        }
         
         SoSphere* c = new SoSphere();
         c->radius = fPointSize;
@@ -1437,7 +1478,7 @@ void* QtCoinViewer::_drawtrimesh(SoSeparator* pparent, const float* ppoints, int
     SoMaterial* mtrl = new SoMaterial;
     mtrl->diffuseColor = SbColor(color.x, color.y, color.z);
     mtrl->ambientColor = SbColor(color.x, color.y, color.z);
-    mtrl->transparency = 1-color.w;
+    mtrl->transparency = max(0.0f,1-color.w);
     mtrl->setOverride(true);
     pparent->addChild(mtrl);
 
