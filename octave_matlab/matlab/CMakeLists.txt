@@ -76,6 +76,7 @@ if( USE_MATLAB )
     DEPENDS ${MATLAB_FILES_DIR}/orread.cpp ${MATLAB_FILES_DIR}/socketconnect.h
     )
   add_custom_target(orread_matlab ALL DEPENDS ${MATLAB_MEX_OUT}/${MATLAB_ORREAD_MEX})
+  add_dependencies(orread_matlab orcreate_matlab) # used to force mex to be called once at a time
   install(FILES ${MATLAB_MEX_OUT}/${MATLAB_ORREAD_MEX} DESTINATION ${OPENRAVE_MATLAB_INSTALL_DIR})
 
   set(MATLAB_ORWRITE_MEX "orwrite.${MEXEXT}")
@@ -86,6 +87,7 @@ if( USE_MATLAB )
     DEPENDS ${MATLAB_FILES_DIR}/orwrite.cpp ${MATLAB_FILES_DIR}/socketconnect.h
     )
   add_custom_target(orwrite_matlab ALL DEPENDS ${MATLAB_MEX_OUT}/${MATLAB_ORWRITE_MEX})
+  add_dependencies(orwrite_matlab orread_matlab) # used to force mex to be called once at a time
   install(FILES ${MATLAB_MEX_OUT}/${MATLAB_ORWRITE_MEX} DESTINATION ${OPENRAVE_MATLAB_INSTALL_DIR})
 else()
   message(STATUS "MATLAB installation not found")

@@ -21,6 +21,7 @@ if(OCTAVE)
     DEPENDS ${MATLAB_FILES_DIR}/orread.cpp
     )
   add_custom_target(orread_octave ALL DEPENDS ${OCTAVE_ORREAD_MEX})
+  add_dependencies(orread_octave orcreate_octave) # used to force mex to be called once at a time
   install(FILES ${OCTAVE_ORREAD_MEX} DESTINATION ${OPENRAVE_OCTAVE_INSTALL_DIR})
 
   set(OCTAVE_ORWRITE_MEX ${CMAKE_CURRENT_BINARY_DIR}/orwrite.mex)
@@ -31,6 +32,7 @@ if(OCTAVE)
     DEPENDS ${MATLAB_FILES_DIR}/orwrite.cpp
     )
   add_custom_target(orwrite_octave ALL DEPENDS ${OCTAVE_ORWRITE_MEX})
+  add_dependencies(orwrite_octave orread_octave) # used to force mex to be called once at a time
   install(FILES ${OCTAVE_ORWRITE_MEX} DESTINATION ${OPENRAVE_OCTAVE_INSTALL_DIR})
 else()
   message(STATUS "Octave installation not found")
