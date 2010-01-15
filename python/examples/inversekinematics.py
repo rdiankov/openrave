@@ -15,7 +15,7 @@ __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
 __license__ = 'Apache License, Version 2.0'
 
 from openravepy import *
-from openravepy.ikfast import IKFastSolver
+from ikfast import IKFastSolver
 from numpy import *
 import time,platform
 try:
@@ -111,7 +111,9 @@ class InverseKinematicsModel(OpenRAVEModel):
         if freejoints is not None:
             for jointname in freejoints:
                 solvejoints.remove(jointname)
-        elif len(solvejoints) > self.dofexpected:
+
+        if len(solvejoints) > self.dofexpected:
+            print 'choosing free joints'
             freejoints = []
             for i in range(len(solvejoints) - self.dofexpected):
                 if self.dofexpected == 6:
