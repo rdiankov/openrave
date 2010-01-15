@@ -108,7 +108,7 @@ class OpenRAVEModel(metaclass.AutoReloader):
                     if len(indices) > 0:
                         robot.SetActiveManipulator(indices[0])
                 else:
-                    robot.SetActiveManipulator([i for i,m in robot.robot.GetManipulators() if m.GetName()==options.manipname][0])
+                    robot.SetActiveManipulator([i for i,m in robot.GetManipulators() if m.GetName()==options.manipname][0])
             model = Model(robot=robot)
             if options.show:
                 if not model.load():
