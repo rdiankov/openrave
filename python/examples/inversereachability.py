@@ -59,7 +59,7 @@ class InverseReachabilityModel(OpenRAVEModel):
         return os.path.join(OpenRAVEModel.getfilename(self),'invreachability.' + self.manip.GetName() + '.pp')
 
     def generateFromOptions(self,options):
-        self.generate(xyzthresh=options.xyzthresh,rotthresh=options.rotthresh)
+        self.generate(heightthresh=options.heightthresh,rotthresh=options.rotthresh)
 
     def autogenerate(self,forcegenerate=True):
         # disable every body but the target and robot
@@ -236,9 +236,9 @@ class InverseReachabilityModel(OpenRAVEModel):
     @staticmethod
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser()
-        parser.add_option('--xyzthresh',action='store',type='float',dest='xyzdelta',default=0.02,
+        parser.add_option('--heightthresh',action='store',type='float',dest='heightthresh',default=0.05,
                           help='The max radius of the arm to perform the computation')
-        parser.add_option('--rotthresh',action='store',type='float',dest='rotthresh',default=pi/16.0,
+        parser.add_option('--rotthresh',action='store',type='float',dest='rotthresh',default=0.25,
                           help='The max radius of the arm to perform the computation')
         return parser
     @staticmethod
