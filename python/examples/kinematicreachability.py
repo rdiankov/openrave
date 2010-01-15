@@ -20,9 +20,9 @@ from numpy import *
 import time
 import heapq # for nth smallest element
 try:
-   import cPickle as pickle
+    import cPickle as pickle
 except:
-   import pickle
+    import pickle
 from optparse import OptionParser
 
 class ReachabilityModel(OpenRAVEModel):
@@ -59,10 +59,13 @@ class ReachabilityModel(OpenRAVEModel):
 
     def generate(self,maxradius=None,translationonly=False,xyzdelta=0.04,rolldelta=pi/3.0):
         starttime = time.time()
-        Tgrasp = dot(linalg.inv(self.manip.GetBase().GetTransform()),self.manip.GetEndEffectorTransform())
-        armlength = sqrt(sum(Tgrasp[0:3,3]**2))
+        # the axes' anchors are the best way to find th emax radius
+        eeanchor = self.robot.GetJoints()[self.manip.GetArmJoints()[-1]].GetAnchor()
+        eetrans = self.manip.GetEndEffectorTransform()[0:3,3]
+        baseanchor = self.robot.GetJoints()[self.manip.GetArmJoints()[0]].GetAnchor()
+        armlength = sqrt(sum((eetrans-baseanchor)**2))
         if maxradius is None:
-            maxradius = 1.5*armlength
+            maxradius = armlength+0.05
         print 'radius: %f'%maxradius
 
         allpoints,insideinds,shape,self.pointscale = self.UniformlySampleSpace(maxradius,delta=xyzdelta)
