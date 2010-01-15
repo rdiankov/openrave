@@ -108,11 +108,11 @@ class OpenRAVEModel(metaclass.AutoReloader):
                     if len(indices) > 0:
                         robot.SetActiveManipulator(indices[0])
                 else:
-                    robot.SetActiveManipulator([i for i,m in self.robot.GetManipulators() if m.GetName()==options.manipname][0])
+                    robot.SetActiveManipulator([i for i,m in robot.robot.GetManipulators() if m.GetName()==options.manipname][0])
             model = Model(robot=robot)
             if options.show:
                 if not model.load():
-                    print 'failed to find cached model %s'%self.getfilename()
+                    print 'failed to find cached model %s'%model.getfilename()
                     sys.exit(1)
                 model.show()
                 return
