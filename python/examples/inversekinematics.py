@@ -111,6 +111,8 @@ class InverseKinematicsModel(OpenRAVEModel):
         if freejoints is not None:
             for jointname in freejoints:
                 solvejoints.remove(jointname)
+        else:
+            freejoints = []
 
         if len(solvejoints) > self.dofexpected:
             print 'choosing free joints'
@@ -120,8 +122,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                     freejoints.append(solvejoints.pop(2))
                 else:
                     freejoints.append(solvejoints.pop(0))
-        else:
-            freejoints = []
+
         if not len(solvejoints) == self.dofexpected:
             raise ValueError('Need %d solve joints, got: %d'%(self.dofexpected, len(solvejoints)))
 
@@ -140,7 +141,11 @@ class InverseKinematicsModel(OpenRAVEModel):
 
         # compile the code and create the shared object
         compiler,optimization_options = self.getcompiler()
-        objectfiles = compiler.compile(sources=[sourcefilename],macros=[('IKFAST_CLIBRARY',1)],extra_postargs=optimization_options,output_dir=os.path.relpath('/',os.getcwd()))
+        try:
+           output_dir = os.path.relpath('/',os.getcwd())
+        except AttributeError: # python 2.5 does not have os.path.relpath
+           output_dir = self.myrelpath('/',os.getcwd())
+        objectfiles = compiler.compile(sources=[sourcefilename],macros=[('IKFAST_CLIBRARY',1)],extra_postargs=optimization_options,output_dir=output_dir)
         compiler.link_shared_object(objectfiles,output_filename=output_filename)
         if not self.load():
             return ValueError('failed to generate ik solver')
@@ -177,6 +182,23 @@ class InverseKinematicsModel(OpenRAVEModel):
             if compiler.compiler_type == 'unix':
                 optimization_options.append('-O3')
         return compiler,optimization_options
+    @staticmethod
+    def myrelpath(path, start=os.path.curdir):
+        """Return a relative version of a path"""
+        if not path:
+            raise ValueError("no path specified")
+
+        start_list = os.path.abspath(start).split(sep)
+        path_list = os.path.abspath(path).split(sep)
+
+        # Work out how much of the filepath is shared by start and path.
+        i = len(os.path.commonprefix([start_list, path_list]))
+
+        rel_list = [pardir] * (len(start_list)-i) + path_list[i:]
+        if not rel_list:
+            return curdir
+        return os.path.join(*rel_list)
+
     @staticmethod
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser()
