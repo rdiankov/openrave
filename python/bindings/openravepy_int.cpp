@@ -2453,7 +2453,7 @@ public:
             else {
                 vector<float> vcolors = ExtractArray<float>(ocolors.attr("flat"));
                 if( vcolors.size() != vpoints.size() )
-                    throw openrave_exception("colors needs to be Nx3 matrix");
+                    throw openrave_exception(boost::str(boost::format("colors needs to be %dx3 matrix, it is %dx3")%(vcolors.size()/3)%(vpoints.size()/3)));
                 return object(PyGraphHandle(_penv->plot3(&vpoints[0],vpoints.size()/3,sizeof(float)*3,pointsize,&vcolors[0],drawstyle)));
             }
         }
@@ -3527,7 +3527,10 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .add_property("ReturnTransformQuaternions",GetReturnTransformQuaternions,SetReturnTransformQuaternions);
     }
 
-    scope().attr("__version__") = boost::str(boost::format("%.2x.%2.2x.%2.x")%OPENRAVE_VERSION_MAJOR%OPENRAVE_VERSION_MINOR%OPENRAVE_VERSION_PATCH);
+    scope().attr("__version__") = boost::str(boost::format("%x.%x.%x")%OPENRAVE_VERSION_MAJOR%OPENRAVE_VERSION_MINOR%OPENRAVE_VERSION_PATCH);
+    scope().attr("__author__") = "Rosen Diankov";
+    scope().attr("__copyright__") = "Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)";
+    scope().attr("__license__") = "Lesser GPL";
 
     def("quatFromAxisAngle",quatFromAxisAngle1, "Converts an axis-angle rotation into a quaternion");
     def("quatFromAxisAngle",quatFromAxisAngle2, "Converts an axis-angle rotation into a quaternion");

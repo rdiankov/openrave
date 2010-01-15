@@ -55,7 +55,7 @@ def test_reachability():
     self = kinematicreachability.ReachabilityModel(robot=robot)
     self.autogenerate()
 
-def test_inversereachability():
+def test_inversereachabilitygen():
     import inversereachability
     env = Environment()
     robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
@@ -64,6 +64,23 @@ def test_inversereachability():
     heightthresh=0.05
     rotthresh=0.25
     self.generate(heightthresh=heightthresh2,rotthresh=rotthresh)
+
+def test_inversereachabilityrun():
+    import inversereachability, graspplanning
+    env = Environment()
+    env.SetViewer('qtcoin')
+    env.Reset()
+    env.Load('data/lab1.env.xml')
+    robot = env.GetRobots()[0]
+    self = inversereachability.InverseReachabilityModel(robot=robot)
+    self.load()
+    gp = graspplanning.GraspPlanning(robot=robot,randomize=False)
+    gm = gp.graspables[0][0]
+    dests = gp.graspables[0][1]
+    validgrasps = gm.computeValidGrasps(gm)
+    Tee = gm.getGlobalGraspTransform(validgrasps[0])
+    densityfn,samplerfn,bounds = self.getBaseDistribution(Tee,2000)
+    h = self.showBaseDistribution(densityfn,bounds,zoffset=1.0,thresh=1.0,maxprob=2000.0)
 
 def test_graspplanning():
     import graspplanning
@@ -89,7 +106,8 @@ def test_mobilemanipulation():
     dests=self.graspables[0][1]
     validgrasps = gm.computeValidGrasps(gm)
     Tee = gm.getGlobalGraspTransform(validgrasps[0])
-    basedistfn = self.irmodel.getBaseDistribution(Tee,200000)
+    densityfn,samplerfn,bounds = self.irmodel.getBaseDistribution(Tee,2000)
+    h = self.irmodel.showBaseDistribution(densityfn,bounds,zoffset=1.0,thresh=0.0)
     Trobot = robot.GetTransform()
     print basedistfn(Trobot)
     self.graspAndPlaceObject(gm=gm,dests=dests)

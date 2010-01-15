@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
-# 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -10,15 +8,19 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
-# limitations under the License. 
+# limitations under the License.
 from __future__ import with_statement # for python 2.5
+__author__ = 'Rosen Diankov'
+__copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
+__license__ = 'Apache License, Version 2.0'
 
-import time
+import time,bisect
 try:
    import cPickle as pickle
 except:
    import pickle
 from openravepy import *
+from openravepy import pyANN
 from openravepy.examples import kinematicreachability
 import numpy
 from numpy import *
@@ -96,7 +98,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             searchtrans = c_[basetrans[:,0:4],basetrans[:,6:7]/self.rotweight]
             kdtree = pyANN.KDTree(searchtrans)
             foundindices = zeros(len(searchtrans),bool)
-            querypoints = c_[self.__quatMultArrayT(searchtrans[0][0:4],quatrolls),tile(searchtrans[0][4:],(len(quatrolls),1))]
+            querypoints = c_[self.quatMultArrayT(searchtrans[0][0:4],quatrolls),tile(searchtrans[0][4:],(len(quatrolls),1))]
             for querypoint in querypoints:
                 k = min(len(searchtrans),1000)
                 neighs,dists,kball = kdtree.kFRSearch(querypoint,rotthresh**2,k,rotthresh*0.01)
@@ -119,12 +121,15 @@ class InverseReachabilityModel(OpenRAVEModel):
                                             c_[zangles,equivalenttrans[:,4:6],equivalenttrans[:,7:]]))
         self.preprocess()
 
-    def getBaseDistribution(self,Tee,logllthresh=1e6,zaxis=None):
+    def getBaseDistribution(self,Tee,logllthresh=2000.0,zaxis=None):
         """Return a function of the distribution of possible positions of the robot that can put their end effector at Tee"""
         if zaxis is not None:
             raise NotImplementedError('cannot specify a custom zaxis yet')
         with self.env:
-            posetarget = poseFromMatrix(dot(linalg.inv(Tee),self.robot.GetTransform()))
+            Tbaserobot = self.robot.GetTransform()
+            qbaserobot = quatFromRotationMatrix(Tbaserobot[0:3,0:3])
+            qbaserobotnorm = self.normalizeZRotation(reshape(qbaserobot,(1,4)))[0][0]
+            posetarget = poseFromMatrix(dot(linalg.inv(Tee),Tbaserobot))
             qnormalized,zangles = self.normalizeZRotation(reshape(posetarget[0:4],(1,4)))
             # find the closest cluster
             logll = self.quatDist(qnormalized,self.equivalencemeans[:,0:4],self.equivalenceweights[:,0:4]) + (posetarget[6]-self.equivalencemeans[:,4])*self.equivalenceweights[:,4] + self.equivalenceoffset
@@ -134,7 +139,7 @@ class InverseReachabilityModel(OpenRAVEModel):
                 return None
             # transform the equivalence class to the global coord system and create a kdtree for faster retrieval
             equivalenceclass = self.equivalenceclasses[bestindex]
-            points = equivalenceclass[2][:,0:3]-tile(r_[zangles,posetarget[4:6]],(equivalenceclass[2].shape[0],1))
+            points = equivalenceclass[2][:,0:3]+tile(r_[zangles,posetarget[4:6]],(equivalenceclass[2].shape[0],1))
             bounds = array((numpy.min(points,0),numpy.max(points,0)))
             points[:,0] *= self.rotweight
             kdtree = pyANN.KDTree(points)
@@ -145,19 +150,48 @@ class InverseReachabilityModel(OpenRAVEModel):
             ibandwidth=-0.5/bandwidth**2
             #normalizationconst = (1.0/sqrt(pi**3*sum(bandwidth**2)))
             weights=equivalenceclass[2][:,3]
+            cumweights = cumsum(weights)
+            cumweights = cumweights[1:]/cumweights[-1]
+            
+            def gaussiankerneldensity(poses):
+                """returns the density"""
+                qposes,zposeangles = self.normalizeZRotation(poses[:,0:4])
+                p = c_[zposeangles*self.rotweight,poses[:,4:6]]
+                neighs,dists,kball = kdtree.kFRSearchArray(p,searchradius,16,searcheps)
+                probs = zeros(p.shape[0])
+                for i in range(p.shape[0]):
+                    inds = neighs[i,neighs[i,:]>=0]
+                    if len(inds) > 0:
+                        probs[i] = dot(weights[inds],numpy.exp(dot((points[inds,:]-tile(p[i,:],(len(inds),1)))**2,ibandwidth)))
+                return probs
+            def gaussiankernelsampler(N=1):
+                """samples the distribution and returns a transform as a pose"""
+                samples = random.normal(array([points[bisect.bisect(cumweights,random.rand()),:]  for i in range(N)]),bandwidth)
+                return c_[self.quatArrayTMult(c_[cos(samples[:,0]),zeros((N,2)),sin(samples[:,0])],qbaserobotnorm),samples[:,1:3],tile(Tbaserobot[2,3],N)]
+            return gaussiankerneldensity,gaussiankernelsampler,bounds
 
-            def gaussiankernel(Trobot):
-                qrobot = quatFromRotationMatrix(Trobot[0:3,0:3])
-                qrobotnorm,zangle = self.normalizeZRotation(reshape(qrobot,(1,4)))
-                p = array((self.rotweight*zangle[0],Trobot[0,3],Trobot[1,3]))
-                neighs,dists,kball = kdtree.kFRSearch(p,searchradius,16,searcheps)
-                if len(neighs) == 0:
-                    return 0
-                return dot(weights[neighs],numpy.exp(dot((kdtree.points[neighs,:]-p)**2,ibandwidth)))
-            return gaussiankernel,bounds
-
-    def showBaseDistribution(self,basedistfn):
-        basedistfn()
+    def showBaseDistribution(self,densityfn,bounds,zoffset=0,thresh=1.0,maxprob=None,marginalizeangle=True):
+        discretization = [0.1,0.04,0.04]
+        A,X,Y = mgrid[bounds[0,0]:bounds[1,0]:discretization[0], bounds[0,1]:bounds[1,1]:discretization[1], bounds[0,2]:bounds[1,2]:discretization[2]]
+        N = prod(A.shape)
+        poses = c_[cos(A.flat),zeros((N,2)),sin(A.flat),X.flat,Y.flat,zeros((N,1))]
+        probs = densityfn(poses)
+        if marginalizeangle:
+            probsxy = mean(reshape(probs,(A.shape[0],A.shape[1]*A.shape[2])),axis=0)
+            inds = flatnonzero(probsxy>thresh)
+            if maxprob is None:
+                maxprob = max(probsxy)
+            normalizedprobs = numpy.minimum(1,probsxy[inds]/maxprob)
+            colors = c_[normalizedprobs,normalizedprobs,0*normalizedprobs]
+            points = c_[X.flatten()[inds],Y.flatten()[inds],tile(zoffset,(len(inds),1))]
+        else:
+            inds = flatnonzero(probs>thresh)
+            if maxprob is None:
+                maxprob = max(probs)
+            normalizedprobs = numpy.minimum(1,probs[inds]/maxprob)
+            colors = c_[0*normalizedprobs,normalizedprobs,normalizedprobs]
+            points = c_[poses[inds,4:6],A.flatten()[inds]+zoffset]
+        return self.env.plot3(points=array(points),colors=array(colors),pointsize=5)
 
     @staticmethod
     def normalizeZRotation(qarray):
@@ -166,9 +200,15 @@ class InverseReachabilityModel(OpenRAVEModel):
         sinangles = sin(zangles)
         cosangles = cos(zangles)
         return c_[cosangles*qarray[:,0]-sinangles*qarray[:,3], cosangles*qarray[:,1]-sinangles*qarray[:,2], cosangles*qarray[:,2]+sinangles*qarray[:,1], cosangles*qarray[:,3]+sinangles*qarray[:,0]],-zangles
-
     @staticmethod
-    def __quatMultArrayT(q,qarray):
+    def quatArrayTMult(qarray,q):
+        """ multiplies a Nx4 array of quaternions with a quaternion"""
+        return c_[(qarray[:,0]*q[0] - qarray[:,1]*q[1] - qarray[:,2]*q[2] - qarray[:,3]*q[3],
+                   qarray[:,0]*q[1] + qarray[:,1]*q[0] + qarray[:,2]*q[3] - qarray[:,3]*q[2],
+                   qarray[:,0]*q[2] + qarray[:,2]*q[0] + qarray[:,3]*q[1] - qarray[:,1]*q[3],
+                   qarray[:,0]*q[3] + qarray[:,3]*q[0] + qarray[:,1]*q[2] - qarray[:,2]*q[1])]
+    @staticmethod
+    def quatMultArrayT(q,qarray):
         """ multiplies a quaternion q with each quaternion in the Nx4 array qarray"""
         return c_[(q[0]*qarray[:,0] - q[1]*qarray[:,1] - q[2]*qarray[:,2] - q[3]*qarray[:,3],
                    q[0]*qarray[:,1] + q[1]*qarray[:,0] + q[2]*qarray[:,3] - q[3]*qarray[:,2],

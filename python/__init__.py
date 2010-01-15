@@ -3,6 +3,11 @@ import sys,pkgutil
 sys.path += pkgutil.extend_path(__path__, __name__)
 
 from openravepy_int import *
+from openravepy_int import __version__
+from openravepy_int import __author__
+from openravepy_int import __copyright__
+__license = 'core: Lesser GPL, examples: Apache License, Version 2.0'
+
 from openravepy_ext import *
 import metaclass
 try:
