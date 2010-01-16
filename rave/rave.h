@@ -30,6 +30,7 @@
 #include <stdarg.h>
 #include <cstring>
 #include <cstdlib>
+#include <stdint.h>
 
 #ifdef _MSC_VER
 
@@ -75,7 +76,7 @@
 #include <boost/format.hpp>
 #include <boost/array.hpp>
 #include <boost/multi_array.hpp>
-#include <boost/cstdint.hpp>
+//#include <boost/cstdint.hpp>
 
 #if defined(_MSC_VER) && (defined(RAVE_USEDLL) || defined(RAVE_CORE_USEDLL))
 #ifdef RAVE_LIBBUILD
