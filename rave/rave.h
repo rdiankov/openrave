@@ -30,7 +30,6 @@
 #include <stdarg.h>
 #include <cstring>
 #include <cstdlib>
-#include <stdint.h>
 
 #ifdef _MSC_VER
 
@@ -75,6 +74,8 @@
 #include <boost/static_assert.hpp>
 #include <boost/format.hpp>
 #include <boost/array.hpp>
+#include <boost/multi_array.hpp>
+#include <boost/cstdint.hpp>
 
 #if defined(_MSC_VER) && (defined(RAVE_USEDLL) || defined(RAVE_CORE_USEDLL))
 #ifdef RAVE_LIBBUILD
@@ -846,6 +847,13 @@ public:
     /// extents are half the width, height, and depth of the box
     /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual GraphHandlePtr drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents) = 0;
+
+    /// draws a textured plane
+    /// \param tplane describes the center of the plane. the zaxis of this coordinate is the normal of the plane
+    /// \param vextents the extents of the plane along the x and y directions (z is ignored)
+    /// \param vtexture a 3D array specifying height x width x color (the color dimension can be 1, 3, or 4 (for alpha blending))
+    /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
+    virtual GraphHandlePtr drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture) = 0;
 
     /// draws a triangle mesh, each vertices of each triangle should be counter-clockwise.
     /// \param ppoints - array of 3D points

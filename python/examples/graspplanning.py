@@ -38,9 +38,9 @@ class GraspPlanning(metaclass.AutoReloader):
             self.graspables = self.getGraspables(dests=dests)
             if len(self.graspables) == 0:
                 print 'attempting to auto-generate a grasp table'
-                gm = grasping.GraspingModel(robot=self.robot,target=self.envreal.GetKinBody('mug1'))
-                if not gm.load():
-                    gm.autogenerate()
+                gmodel = grasping.GraspingModel(robot=self.robot,target=self.envreal.GetKinBody('mug1'))
+                if not gmodel.load():
+                    gmodel.autogenerate()
                     self.graspables = self.getGraspables(dests=dests)
 
             if randomize:
@@ -82,10 +82,10 @@ class GraspPlanning(metaclass.AutoReloader):
         print 'searching for graspable objects...'
         for target in self.envreal.GetBodies():
             if not target.IsRobot():
-                gm = grasping.GraspingModel(robot=self.robot,target=target)
-                if gm.load():
+                gmodel = grasping.GraspingModel(robot=self.robot,target=target)
+                if gmodel.load():
                     print '%s is graspable'%target.GetName()
-                    graspables.append([gm,dests])
+                    graspables.append([gmodel,dests])
         return graspables
 
     def setRandomDestinations(self, table,randomize=False):
@@ -141,23 +141,23 @@ class GraspPlanning(metaclass.AutoReloader):
                 graspable[0].target.GetEnv().UpdatePublishedBodies()
                 time.sleep(delay)
             
-    def graspAndPlaceObject(self,gm,dests):
+    def graspAndPlaceObject(self,gmodel,dests):
         env = self.envreal#.CloneSelf(CloningOptions.Bodies)
         robot = self.robot
         manip = self.robot.GetActiveManipulator()
         istartgrasp = 0
         approachoffset = 0.02
-        target = gm.target
+        target = gmodel.target
         stepsize = 0.001
         Tlocalgrasp = eye(4)
         env.SetDebugLevel(DebugLevel.Debug)
-        while istartgrasp < len(gm.grasps):
-            goals,graspindex,searchtime,trajdata = self.taskmanip.GraspPlanning(graspindices=gm.graspindices,grasps=gm.grasps[istartgrasp:],
+        while istartgrasp < len(gmodel.grasps):
+            goals,graspindex,searchtime,trajdata = self.taskmanip.GraspPlanning(graspindices=gmodel.graspindices,grasps=gmodel.grasps[istartgrasp:],
                                                                                 target=target,approachoffset=approachoffset,destposes=dests,
                                                                                 seedgrasps = 3,seeddests=8,seedik=1,maxiter=1000,
                                                                                 randomgrasps=True,randomdests=True,switchpatterns=self.switchpatterns)
             istartgrasp = graspindex+1
-            Tlocalgrasp[0:3,0:4] = transpose(reshape(gm.grasps[graspindex][gm.graspindices ['igrasptrans']],(4,3)))
+            Tlocalgrasp[0:3,0:4] = transpose(reshape(gmodel.grasps[graspindex][gmodel.graspindices ['igrasptrans']],(4,3)))
             print 'initial grasp planning time: ', searchtime
             robot.WaitForController(0)
 
@@ -204,7 +204,7 @@ class GraspPlanning(metaclass.AutoReloader):
                 if res is None:
                     print 'forcing fingers'
                     with env:
-                        robot.SetJointValues(gm.grasps[graspindex][gm.graspindices['igrasppreshape']],manip.GetGripperJoints())
+                        robot.SetJointValues(gmodel.grasps[graspindex][gmodel.graspindices['igrasppreshape']],manip.GetGripperJoints())
             robot.WaitForController(0)
             with env:
                 robot.ReleaseAllGrabbed()

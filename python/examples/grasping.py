@@ -15,24 +15,24 @@ __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
 __license__ = 'Apache License, Version 2.0'
 
 import os,sys,itertools,traceback,time
-try:
-   import cPickle as pickle
-except:
-   import pickle
 from openravepy import *
 from openravepy.interfaces import Grasper, BaseManipulation
 from numpy import *
 from optparse import OptionParser
 
-def myproduct(*args, **kwds):
-    # product('ABCD', 'xy') --> Ax Ay Bx By Cx Cy Dx Dy
-    # product(range(2), repeat=3) --> 000 001 010 011 100 101 110 111
-    pools = map(tuple, args) * kwds.get('repeat', 1)
-    result = [[]]
-    for pool in pools:
-        result = [x+[y] for x in result for y in pool]
-    for prod in result:
-        yield tuple(prod)
+try:
+    from itertools import productasdf as iterproduct
+except:
+    # have to define it
+    def iterproduct(*args, **kwds):
+        # product('ABCD', 'xy') --> Ax Ay Bx By Cx Cy Dx Dy
+        # product(range(2), repeat=3) --> 000 001 010 011 100 101 110 111
+        pools = map(tuple, args) * kwds.get('repeat', 1)
+        result = [[]]
+        for pool in pools:
+            result = [x+[y] for x in result for y in pool]
+        for prod in result:
+            yield tuple(prod)
 
 class GraspingModel(OpenRAVEModel):
     """Holds all functions/data related to a grasp between a robot hand and a target"""
@@ -89,7 +89,7 @@ class GraspingModel(OpenRAVEModel):
             if updateenv:
                 self.env.UpdatePublishedBodies()
             counter = 0
-            for approachray,roll,preshape,standoff in myproduct(approachrays,rolls,preshapes,standoffs):
+            for approachray,roll,preshape,standoff in iterproduct(approachrays,rolls,preshapes,standoffs):
                 print 'grasp %d/%d'%(counter,totalgrasps)
                 counter += 1
                 grasp = zeros(totaldof)

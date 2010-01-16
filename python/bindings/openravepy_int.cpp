@@ -73,6 +73,8 @@
 #include <pyconfig.h>
 #include <numpy/arrayobject.h>
 
+#include "bindings.h"
+
 #define CHECK_POINTER(p) { \
         if( !(p) ) throw openrave_exception(boost::str(boost::format("[%s:%d]: invalid pointer")%__PRETTY_FUNCTION__%__LINE__)); \
 }
@@ -95,10 +97,7 @@ uint64_t GetMicroTime()
 #endif
 }
 
-struct null_deleter
-{
-    void operator()(void const *) const {}
-};
+struct null_deleter { void operator()(void const *) const {} };
 
 /// if set, will return all transforms are 1x7 vectors where first 4 compoonents are quaternion
 static bool s_bReturnTransformQuaternions = false;
@@ -2548,6 +2547,19 @@ public:
         return object(PyGraphHandle(_penv->drawbox(ExtractVector3(opos),ExtractVector3(oextents))));
     }
 
+    object drawplane(object otransform, object oextents, const boost::multi_array<float,2>& _vtexture)
+    {
+        boost::multi_array<float,3> vtexture(boost::extents[1][_vtexture.shape()[0]][_vtexture.shape()[1]]);
+        vtexture[0] = _vtexture;
+        boost::array<size_t,3> dims = {{_vtexture.shape()[0],_vtexture.shape()[1],1}};
+        vtexture.reshape(dims);
+        return object(PyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[0]),extract<float>(oextents[1]),0), vtexture)));
+    }
+    object drawplane(object otransform, object oextents, const boost::multi_array<float,3>& vtexture)
+    {
+        return object(PyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[0]),extract<float>(oextents[1]),0), vtexture)));
+    }
+
     object drawtrimesh(object opoints, object oindices=object(), object ocolors=object())
     {
         object shape = opoints.attr("shape");
@@ -2808,6 +2820,32 @@ object poseFromMatrix(object o)
     return toPyArray(Transform(t));
 }
 
+object poseFromMatrices(object otransforms)
+{
+    int N = len(otransforms);
+    if( N == 0 )
+        return static_cast<numeric::array>(handle<>());
+
+    npy_intp dims[] = {N,7};
+    PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
+    dReal* pvalues = (dReal*)PyArray_DATA(pyvalues);
+    TransformMatrix tm;
+    for(int j = 0; j < N; ++j) {
+        object o = otransforms[j];
+        for(int i = 0; i < 3; ++i) {
+            tm.m[4*i+0] = extract<dReal>(o[i][0]);
+            tm.m[4*i+1] = extract<dReal>(o[i][1]);
+            tm.m[4*i+2] = extract<dReal>(o[i][2]);
+            tm.trans[i] = extract<dReal>(o[i][3]);
+        }
+        Transform tpose(tm);
+        pvalues[0] = tpose.rot.x; pvalues[1] = tpose.rot.y; pvalues[2] = tpose.rot.z; pvalues[3] = tpose.rot.w;
+        pvalues[4] = tpose.trans.x; pvalues[5] = tpose.trans.y; pvalues[6] = tpose.trans.z;
+        pvalues += 7;
+    }
+    return static_cast<numeric::array>(handle<>(pyvalues));
+}
+
 object invertPoses(object o)
 {
     int N = len(o);
@@ -2851,85 +2889,6 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawtrimesh_overloads, drawtrimesh, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Load_overloads, Load, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Save_overloads, Save, 1, 2)
 
-// register const versions of the classes
-//template <class T> inline T* get_pointer( boost::shared_ptr<const T> 
-//const& p){
-//     return const_cast<T*>(p.get());
-//}
-//
-//template <class T> struct pintee< boost::shared_ptr<const T> >{
-//     typedef T type;
-//};
-//
-//boost::python::register_ptr_to_python< boost::shared_ptr<const my_class> >();
-
-struct int_from_int
-{
-    int_from_int()
-    {
-        converter::registry::push_back(&convertible, &construct, type_id<int>());
-    }
-
-    static void* convertible( PyObject* obj)
-    {
-        PyObject* newobj = PyNumber_Int(obj);
-        if (!PyString_Check(obj) && newobj) {
-            Py_DECREF(newobj);
-            return obj;
-        }
-        else {
-            if (newobj) {
-                Py_DECREF(newobj);
-            }
-            PyErr_Clear();
-            return 0;
-        }
-    }
-
-    static void construct(PyObject* _obj, converter::rvalue_from_python_stage1_data* data)
-    {
-        PyObject* newobj = PyNumber_Int(_obj);
-        int* storage = (int*)((converter::rvalue_from_python_storage<int>*)data)->storage.bytes;
-        *storage = extract<int>(newobj);
-        Py_DECREF(newobj);
-        data->convertible = storage;
-    }
-};
-
-template<typename T>
-struct T_from_number
-{
-    T_from_number()
-    {
-        converter::registry::push_back(&convertible, &construct, type_id<T>());
-    }
-
-    static void* convertible( PyObject* obj)
-    {
-        PyObject* newobj = PyNumber_Float(obj);
-        if (!PyString_Check(obj) && newobj) {
-            Py_DECREF(newobj);
-            return obj;
-        }
-        else {
-            if (newobj) {
-                Py_DECREF(newobj);
-            }
-            PyErr_Clear();
-            return 0;
-        }
-    }
-
-    static void construct(PyObject* _obj, converter::rvalue_from_python_stage1_data* data)
-    {
-        PyObject* newobj = PyNumber_Float(_obj);
-        T* storage = (T*)((converter::rvalue_from_python_storage<T>*)data)->storage.bytes;
-        *storage = extract<T>(newobj);
-        Py_DECREF(newobj);
-        data->convertible = storage;
-    }
-};
-
 std::string openravepyCompilerVersion()
 {
     stringstream ss;
@@ -2951,6 +2910,14 @@ BOOST_PYTHON_MODULE(openravepy_int)
     int_from_int();
     T_from_number<float>();
     T_from_number<double>();
+    numpy_multi_array_converter< boost::multi_array<float,1> >::register_to_and_from_python();
+    numpy_multi_array_converter< boost::multi_array<float,2> >::register_to_and_from_python();
+    numpy_multi_array_converter< boost::multi_array<float,3> >::register_to_and_from_python();
+    numpy_multi_array_converter< boost::multi_array<double,1> >::register_to_and_from_python();
+    numpy_multi_array_converter< boost::multi_array<double,2> >::register_to_and_from_python();
+    numpy_multi_array_converter< boost::multi_array<double,3> >::register_to_and_from_python();
+    numpy_multi_array_converter< boost::multi_array<int,1> >::register_to_and_from_python();
+    numpy_multi_array_converter< boost::multi_array<int,2> >::register_to_and_from_python();
 
     enum_<DebugLevel>("DebugLevel")
         .value("Fatal",Level_Fatal)
@@ -3432,6 +3399,9 @@ BOOST_PYTHON_MODULE(openravepy_int)
     void (PyEnvironmentBase::*LockPhysics1)(bool) = &PyEnvironmentBase::LockPhysics;
     void (PyEnvironmentBase::*LockPhysics2)(bool, float) = &PyEnvironmentBase::LockPhysics;
 
+    object (PyEnvironmentBase::*drawplane1)(object, object, const boost::multi_array<float,2>&) = &PyEnvironmentBase::drawplane;
+    object (PyEnvironmentBase::*drawplane2)(object, object, const boost::multi_array<float,3>&) = &PyEnvironmentBase::drawplane;
+
     {
         scope env = classenv
             .def("Reset",&PyEnvironmentBase::Reset)
@@ -3511,6 +3481,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("drawlinelist",&PyEnvironmentBase::drawlinelist,drawlinelist_overloads(args("points","linewidth","colors","drawstyle")))
             .def("drawarrow",&PyEnvironmentBase::drawarrow,drawarrow_overloads(args("p1","p2","linewidth","color")))
             .def("drawbox",&PyEnvironmentBase::drawbox,drawbox_overloads(args("pos","extents","color")))
+            .def("drawplane",drawplane1,args("transform","extents","texture"))
+            .def("drawplane",drawplane2,args("transform","extents","texture"))
             .def("drawtrimesh",&PyEnvironmentBase::drawtrimesh,drawtrimesh_overloads(args("points","indices","colors")))
             .def("SetCamera",&PyEnvironmentBase::SetCamera)
             .def("SetCameraLookAt",&PyEnvironmentBase::SetCameraLookAt)
@@ -3558,6 +3530,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
     def("matrixFromAxisAngle",matrixFromAxisAngle2, "Converts an axis-angle rotation to a 4x4 affine matrix");
     def("matrixFromPose",matrixFromPose, "Converts a 7 element quaterion+translation transform to a 4x4 matrix");
     def("poseFromMatrix",poseFromMatrix,"Converts a 4x4 matrix to a 7 element quaternion+translation representation");
+    def("poseFromMatrices",poseFromMatrices,"Converts an array/list of 4x4 matrices to a Nx7 array where each row is quaternion+translation representation");
     def("invertPoses",invertPoses,"Inverts a Nx7 array of poses where first 4 columns are the quaternion and last 3 are the translation components");
     def("matrixSerialization",matrixSerialization,"Serializes a transformation into a string representing a 3x4 matrix");
     def("poseSerialization",poseSerialization, "Serializes a transformation into a string representing a quaternion with translation");

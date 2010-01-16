@@ -15,10 +15,6 @@ __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
 __license__ = 'Apache License, Version 2.0'
 
 import time,bisect
-try:
-   import cPickle as pickle
-except:
-   import pickle
 from openravepy import *
 from openravepy import pyANN
 from openravepy.examples import kinematicreachability
@@ -28,6 +24,7 @@ from optparse import OptionParser
 #from IPython.Debugger import Tracer; debug_here = Tracer()
 
 class InverseReachabilityModel(OpenRAVEModel):
+    """Inverts the reachability and computes probability distributions of the robot's base given an end effector position"""
     def __init__(self,robot):
         OpenRAVEModel.__init__(self,robot=robot)
         self.rmodel = kinematicreachability.ReachabilityModel(robot=robot)
@@ -35,7 +32,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             self.rmodel.autogenerate()
         self.equivalenceclasses = None
         self.rotweight = 0.2 # in-plane rotation weight with respect to xy offset
-
+        
     def has(self):
         return self.equivalenceclasses is not None and len(self.equivalenceclasses) > 0
 
@@ -79,6 +76,9 @@ class InverseReachabilityModel(OpenRAVEModel):
                 b.Enable(True)
 
     def generate(self,heightthresh=0.05,rotthresh=0.25):
+        """First transform all end effectors to the identity and get the robot positions,
+        then cluster the robot position modulo in-plane rotation (z-axis) and position (xy),
+        then compute statistics for each cluster."""
         # find the density
         basetrans = c_[invertPoses(self.rmodel.reachabilitystats[:,0:7]),self.rmodel.reachabilitystats[:,7:]]
         if basetrans.shape[1] < 8:
@@ -119,66 +119,147 @@ class InverseReachabilityModel(OpenRAVEModel):
                                             c_[zangles,equivalenttrans[:,4:6],equivalenttrans[:,7:]]))
         self.preprocess()
 
-    def getBaseDistribution(self,Tee,logllthresh=2000.0,zaxis=None):
-        """Return a function of the distribution of possible positions of the robot that can put their end effector at Tee"""
+    def getEquivalenceClass(self,Tgrasp):
+        with self.env:
+            Tbaserobot = self.robot.GetTransform()
+        qbaserobot = quatFromRotationMatrix(Tbaserobot[0:3,0:3])
+        qbaserobotnorm = self.normalizeZRotation(reshape(qbaserobot,(1,4)))[0][0]
+        posetarget = poseFromMatrix(dot(linalg.inv(Tgrasp),Tbaserobot))
+        qnormalized,znormangle = self.normalizeZRotation(reshape(posetarget[0:4],(1,4)))
+        # find the closest cluster
+        logll = self.quatDist(qnormalized,self.equivalencemeans[:,0:4],self.equivalenceweights[:,0:4]) + (posetarget[6]-self.equivalencemeans[:,4])*self.equivalenceweights[:,4] + self.equivalenceoffset
+        bestindex = argmax(logll)
+        return self.equivalenceclasses[bestindex],logll[bestindex]
+
+    def computeBaseDistribution(self,Tgrasp,logllthresh=2000.0,zaxis=None):
+        """Return a function of the distribution of possible positions of the robot that can put their end effector at Tgrasp"""
         if zaxis is not None:
             raise NotImplementedError('cannot specify a custom zaxis yet')
         with self.env:
             Tbaserobot = self.robot.GetTransform()
-            qbaserobot = quatFromRotationMatrix(Tbaserobot[0:3,0:3])
-            qbaserobotnorm = self.normalizeZRotation(reshape(qbaserobot,(1,4)))[0][0]
-            posetarget = poseFromMatrix(dot(linalg.inv(Tee),Tbaserobot))
-            qnormalized,zangles = self.normalizeZRotation(reshape(posetarget[0:4],(1,4)))
+
+        rotweight = self.rotweight
+        qbaserobot = quatFromRotationMatrix(Tbaserobot[0:3,0:3])
+        qbaserobotnorm = self.normalizeZRotation(reshape(qbaserobot,(1,4)))[0][0]
+        angdelta = math.acos(1-0.5*self.rmodel.quatdelta) # convert quat dist to angle distance
+        bandwidth = array((rotweight*angdelta ,self.rmodel.xyzdelta,self.rmodel.xyzdelta))
+        ibandwidth=-0.5/bandwidth**2
+        # normalization for the weights so that integrated volume is 1. this is necessary when comparing across different distributions?
+        normalizationconst = (1.0/sqrt(pi**3*sum(bandwidth**2)))
+        searchradius=9.0*sum(bandwidth**2)
+        searcheps=bandwidth[0]*0.2
+        
+        posetarget = poseFromMatrix(dot(linalg.inv(Tgrasp),Tbaserobot))
+        qnormalized,znormangle = self.normalizeZRotation(reshape(posetarget[0:4],(1,4)))
+        # find the closest cluster
+        logll = self.quatDist(qnormalized,self.equivalencemeans[:,0:4],self.equivalenceweights[:,0:4]) + (posetarget[6]-self.equivalencemeans[:,4])*self.equivalenceweights[:,4] + self.equivalenceoffset
+        bestindex = argmax(logll)
+        if logll[bestindex] < logllthresh:
+            print 'could not find base distribution: ',logll[bestindex]
+            return None,None,None
+
+        # transform the equivalence class to the global coord system and create a kdtree for faster retrieval
+        equivalenceclass = self.equivalenceclasses[bestindex]
+        points = equivalenceclass[2][:,0:3]+tile(r_[znormangle,posetarget[4:6]],(equivalenceclass[2].shape[0],1))
+        bounds = array((numpy.min(points,0)-bandwidth,numpy.max(points,0)+bandwidth))
+        if bounds[0,0]+2*pi > bounds[1,0]:
+           # already covering entire circle, so limit to 2*pi
+           bounds[0,0] = -pi
+           bounds[1,0] = pi
+
+        points[:,0] *= rotweight
+        kdtree = pyANN.KDTree(points)
+        searchradius=9.0*sum(bandwidth**2)
+        searcheps=bandwidth[0]*0.2
+        weights=equivalenceclass[2][:,3]*normalizationconst
+        cumweights = cumsum(weights)
+        cumweights = cumweights[1:]/cumweights[-1]
+
+        def gaussiankerneldensity(poses):
+            """returns the density"""
+            qposes,zposeangles = self.normalizeZRotation(poses[:,0:4])
+            p = c_[zposeangles*rotweight,poses[:,4:6]]
+            neighs,dists,kball = kdtree.kFRSearchArray(p,searchradius,16,searcheps)
+            probs = zeros(p.shape[0])
+            for i in range(p.shape[0]):
+                inds = neighs[i,neighs[i,:]>=0]
+                if len(inds) > 0:
+                    probs[i] = dot(weights[inds],numpy.exp(dot((points[inds,:]-tile(p[i,:],(len(inds),1)))**2,ibandwidth)))
+            return probs
+        def gaussiankernelsampler(N=1):
+            """samples the distribution and returns a transform as a pose"""
+            samples = random.normal(array([points[bisect.bisect(cumweights,random.rand()),:]  for i in range(N)]),bandwidth)
+            return c_[self.quatArrayTMult(c_[cos(samples[:,0]),zeros((N,2)),sin(samples[:,0])],qbaserobotnorm),samples[:,1:3],tile(Tbaserobot[2,3],N)]
+        return gaussiankerneldensity,gaussiankernelsampler,bounds
+
+    def computeAggregateBaseDistribution(self,Tgrasps,logllthresh=2000.0,zaxis=None):
+        """Return a function of the distribution of possible positions of the robot that can put their end effector at Tgrasps"""
+        if zaxis is not None:
+            raise NotImplementedError('cannot specify a custom zaxis yet')
+        with self.env:
+            Tbaserobot = self.robot.GetTransform()
+
+        rotweight = self.rotweight
+        qbaserobot = quatFromRotationMatrix(Tbaserobot[0:3,0:3])
+        qbaserobotnorm = self.normalizeZRotation(reshape(qbaserobot,(1,4)))[0][0]
+        angdelta = math.acos(1-0.5*self.rmodel.quatdelta) # convert quat dist to angle distance
+        bandwidth = array((rotweight*angdelta ,self.rmodel.xyzdelta,self.rmodel.xyzdelta))
+        ibandwidth=-0.5/bandwidth**2
+        # normalization for the weights so that integrated volume is 1. this is necessary when comparing across different distributions?
+        normalizationconst = (1.0/sqrt(pi**3*sum(bandwidth**2)))
+        searchradius=9.0*sum(bandwidth**2)
+        searcheps=bandwidth[0]*0.2
+        
+        points = zeros((0,3))
+        weights = array(())
+        for Tgrasp in Tgrasps:
+            posetarget = poseFromMatrix(dot(linalg.inv(Tgrasp),Tbaserobot))
+            qnormalized,znormangle = self.normalizeZRotation(reshape(posetarget[0:4],(1,4)))
             # find the closest cluster
             logll = self.quatDist(qnormalized,self.equivalencemeans[:,0:4],self.equivalenceweights[:,0:4]) + (posetarget[6]-self.equivalencemeans[:,4])*self.equivalenceweights[:,4] + self.equivalenceoffset
             bestindex = argmax(logll)
-            if logll[bestindex] < logllthresh:
-                print 'could not find base distribution: ',logll[bestindex]
-                return None
-
-            angdelta = math.acos(1-0.5*self.rmodel.quatdelta) # convert quat dist to angle distance
-            bandwidth = array((angdelta ,self.rmodel.xyzdelta,self.rmodel.xyzdelta))
-
+            if logll[bestindex] <logllthresh:
+                continue            
             # transform the equivalence class to the global coord system and create a kdtree for faster retrieval
             equivalenceclass = self.equivalenceclasses[bestindex]
-            points = equivalenceclass[2][:,0:3]+tile(r_[zangles,posetarget[4:6]],(equivalenceclass[2].shape[0],1))
-            bounds = array((numpy.min(points,0)-bandwidth,numpy.max(points,0)+bandwidth))
-            if bounds[0,0]+2*pi > bounds[1,0]:
-               # already covering entire circle, so limit to 2*pi
-               bounds[0,0] = -pi
-               bounds[1,0] = pi
+            points = r_[points,equivalenceclass[2][:,0:3]+tile(r_[znormangle,posetarget[4:6]],(equivalenceclass[2].shape[0],1))]
+            weights = r_[weights,equivalenceclass[2][:,3]*normalizationconst]
 
-            bandwidth[0] *= self.rotweight
-            points[:,0] *= self.rotweight
-            kdtree = pyANN.KDTree(points)
-            searchradius=9.0*sum(bandwidth**2)
-            searcheps=bandwidth[0]*0.2
-            ibandwidth=-0.5/bandwidth**2
-            #normalizationconst = (1.0/sqrt(pi**3*sum(bandwidth**2))) # normalize so that integrated volume is 1... however, is this really necessary?
-            weights=equivalenceclass[2][:,3]
-            cumweights = cumsum(weights)
-            cumweights = cumweights[1:]/cumweights[-1]
-            
-            def gaussiankerneldensity(poses):
-                """returns the density"""
-                qposes,zposeangles = self.normalizeZRotation(poses[:,0:4])
-                p = c_[zposeangles*self.rotweight,poses[:,4:6]]
-                neighs,dists,kball = kdtree.kFRSearchArray(p,searchradius,16,searcheps)
-                probs = zeros(p.shape[0])
-                for i in range(p.shape[0]):
-                    inds = neighs[i,neighs[i,:]>=0]
-                    if len(inds) > 0:
-                        probs[i] = dot(weights[inds],numpy.exp(dot((points[inds,:]-tile(p[i,:],(len(inds),1)))**2,ibandwidth)))
-                return probs
-            def gaussiankernelsampler(N=1):
-                """samples the distribution and returns a transform as a pose"""
-                samples = random.normal(array([points[bisect.bisect(cumweights,random.rand()),:]  for i in range(N)]),bandwidth)
-                return c_[self.quatArrayTMult(c_[cos(samples[:,0]),zeros((N,2)),sin(samples[:,0])],qbaserobotnorm),samples[:,1:3],tile(Tbaserobot[2,3],N)]
-            return gaussiankerneldensity,gaussiankernelsampler,bounds
+        if len(points) == 0:
+            print 'could not find base distribution'
+            return None,None,None
+
+        bounds = array((numpy.min(points,0)-bandwidth,numpy.max(points,0)+bandwidth))
+        bounds[:,0] /= rotweight
+        if bounds[0,0]+2*pi > bounds[1,0]:
+            # already covering entire circle, so limit to 2*pi
+            bounds[0,0] = -pi
+            bounds[1,0] = pi
+        points[:,0] *= rotweight
+        kdtree = pyANN.KDTree(points)
+        cumweights = cumsum(weights)
+        cumweights = cumweights[1:]/cumweights[-1]
+        
+        def gaussiankerneldensity(poses):
+            """returns the density"""
+            qposes,zposeangles = self.normalizeZRotation(poses[:,0:4])
+            p = c_[zposeangles*rotweight,poses[:,4:6]]
+            neighs,dists,kball = kdtree.kFRSearchArray(p,searchradius,16,searcheps)
+            probs = zeros(p.shape[0])
+            for i in range(p.shape[0]):
+                inds = neighs[i,neighs[i,:]>=0]
+                if len(inds) > 0:
+                    probs[i] = dot(weights[inds],numpy.exp(dot((points[inds,:]-tile(p[i,:],(len(inds),1)))**2,ibandwidth)))
+            return probs
+        def gaussiankernelsampler(N=1):
+            """samples the distribution and returns a transform as a pose"""
+            samples = random.normal(array([points[bisect.bisect(cumweights,random.rand()),:]  for i in range(N)]),bandwidth)
+            return c_[self.quatArrayTMult(c_[cos(samples[:,0]),zeros((N,2)),sin(samples[:,0])],qbaserobotnorm),samples[:,1:3],tile(Tbaserobot[2,3],N)]
+        return gaussiankerneldensity,gaussiankernelsampler,bounds
 
     def showBaseDistribution(self,densityfn,bounds,zoffset=0,thresh=1.0,maxprob=None,marginalizeangle=True):
         discretization = [0.1,0.04,0.04]
-        A,X,Y = mgrid[bounds[0,0]:bounds[1,0]:discretization[0], bounds[0,1]:bounds[1,1]:discretization[1], bounds[0,2]:bounds[1,2]:discretization[2]]
+        A,Y,X = mgrid[bounds[0,0]:bounds[1,0]:discretization[0], bounds[0,2]:bounds[1,2]:discretization[2], bounds[0,1]:bounds[1,1]:discretization[1]]
         N = prod(A.shape)
         poses = c_[cos(A.flat),zeros((N,2)),sin(A.flat),X.flat,Y.flat,zeros((N,1))]
         probs = densityfn(poses)
@@ -187,9 +268,15 @@ class InverseReachabilityModel(OpenRAVEModel):
             inds = flatnonzero(probsxy>thresh)
             if maxprob is None:
                 maxprob = max(probsxy)
-            normalizedprobs = numpy.minimum(1,probsxy[inds]/maxprob)
-            colors = c_[normalizedprobs,zeros((len(inds),2)),normalizedprobs]
-            points = c_[X.flatten()[inds],Y.flatten()[inds],tile(zoffset,(len(inds),1))]
+            normalizedprobs = numpy.minimum(1,probsxy/maxprob)
+            Ic = zeros((X.shape[1],X.shape[2],4))
+            Ic[:,:,0] = reshape(normalizedprobs,Ic.shape[0:2])
+            Ic[:,:,3] = reshape(normalizedprobs*array(probsxy>thresh,'float'),Ic.shape[0:2])
+            Tplane = eye(4)
+            Tplane[0:2,3] = mean(bounds[:,1:3],axis=0)
+            Tplane[2,3] = zoffset
+            return self.env.drawplane(transform=Tplane,extents=(bounds[1,1:3]-bounds[0,1:3])/2,texture=Ic)
+
         else:
             inds = flatnonzero(probs>thresh)
             if maxprob is None:
@@ -197,7 +284,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             normalizedprobs = numpy.minimum(1,probs[inds]/maxprob)
             colors = c_[0*normalizedprobs,normalizedprobs,normalizedprobs,normalizedprobs]
             points = c_[poses[inds,4:6],A.flatten()[inds]+zoffset]
-        return self.env.plot3(points=array(points),colors=array(colors),pointsize=10)
+            return self.env.plot3(points=array(points),colors=array(colors),pointsize=10)
 
     @staticmethod
     def normalizeZRotation(qarray):
@@ -237,8 +324,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             q1 = (qtile-qarray)**2
             q2 = (qtile+qarray)**2
             indices = array(sum(q1,axis=1)<sum(q2,axis=1))
-            return sum(q1*weightssq,axis=1)*indices+sum(q2*weightssq,axis=1)*(1-indices)
-        
+            return sum(q1*weightssq,axis=1)*indices+sum(q2*weightssq,axis=1)*(1-indices)        
     @staticmethod
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser()

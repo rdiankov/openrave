@@ -25,7 +25,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/format.hpp>
 #include <boost/assert.hpp>
-//#include <boost/functional/hash.hpp>
+#include "bindings.h"
 
 #include <ANN/ANN.h>
 
@@ -204,73 +204,6 @@ object k_priority_search(ANNkd_tree& kdtree, object q, int k, double eps)
     return search(kdtree, q, k, eps, true);
 }
 
-struct int_from_int
-{
-    int_from_int()
-    {
-        converter::registry::push_back(&convertible, &construct, type_id<int>());
-    }
-
-    static void* convertible( PyObject* obj)
-    {
-        PyObject* newobj = PyNumber_Int(obj);
-        if (!PyString_Check(obj) && newobj) {
-            Py_DECREF(newobj);
-            return obj;
-        }
-        else {
-            if (newobj) {
-                Py_DECREF(newobj);
-            }
-            PyErr_Clear();
-            return 0;
-        }
-    }
-
-    static void construct(PyObject* _obj, converter::rvalue_from_python_stage1_data* data)
-    {
-        PyObject* newobj = PyNumber_Int(_obj);
-        int* storage = (int*)((converter::rvalue_from_python_storage<int>*)data)->storage.bytes;
-        *storage = extract<int>(newobj);
-        Py_DECREF(newobj);
-        data->convertible = storage;
-    }
-};
-
-template<typename T>
-struct T_from_number
-{
-    T_from_number()
-    {
-        converter::registry::push_back(&convertible, &construct, type_id<T>());
-    }
-
-    static void* convertible( PyObject* obj)
-    {
-        PyObject* newobj = PyNumber_Float(obj);
-        if (!PyString_Check(obj) && newobj) {
-            Py_DECREF(newobj);
-            return obj;
-        }
-        else {
-            if (newobj) {
-                Py_DECREF(newobj);
-            }
-            PyErr_Clear();
-            return 0;
-        }
-    }
-
-    static void construct(PyObject* _obj, converter::rvalue_from_python_stage1_data* data)
-    {
-        PyObject* newobj = PyNumber_Float(_obj);
-        T* storage = (T*)((converter::rvalue_from_python_storage<T>*)data)->storage.bytes;
-        *storage = extract<T>(newobj);
-        Py_DECREF(newobj);
-        data->convertible = storage;
-    }
-};
-
 BOOST_PYTHON_MODULE(pyANN)
 {
     import_array();
@@ -284,10 +217,10 @@ BOOST_PYTHON_MODULE(pyANN)
         .def("__init__", make_constructor(&init_from_list))
         .def("__del__", &destroy_points)
 
-        .def("kSearch", &ksearch)
-        .def("kPriSearch", &k_priority_search)
-        .def("kFRSearch", &k_fixed_radius_search)
-        .def("kFRSearchArray", &k_fixed_radius_search_array)
+        .def("kSearch", &ksearch,args("q","k","eps"))
+        .def("kPriSearch", &k_priority_search,args("q","k","eps"))
+        .def("kFRSearch", &k_fixed_radius_search,args("q","sqrad","k","eps"))
+        .def("kFRSearchArray", &k_fixed_radius_search_array,args("qarray","sqrad","k","eps"))
 
         .def("__len__",             &ANNkd_tree::nPoints)
         .def("dim",                 &ANNkd_tree::theDim)

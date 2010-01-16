@@ -16,6 +16,7 @@ __license__ = 'Apache License, Version 2.0'
 
 from openravepy import *
 from numpy import *
+import numpy
 
 def run():
     orenv = Environment()
@@ -43,6 +44,13 @@ def run():
     handles.append(orenv.plot3(points=array(((0.5,0,1.0),(-0.5,0,1.0))),
                                pointsize=45.0,
                                colors=array(((0,0,0,0.1),(0,0,0,0.8)))))
+    # draw a random texture with alpha channel
+    X,Y = meshgrid(arange(0,1,0.005),arange(0,1,0.01))
+    Ic = zeros((X.shape[0],X.shape[1],4))
+    Ic[:,:,1] = 0.5*sin(20*Y)+0.5
+    Ic[:,:,2] = 1
+    Ic[:,:,3] = 0.5*sin(20*Y)+0.5
+    handles.append(orenv.drawplane(transform=matrixFromAxisAngle(array((1,0,0)),pi/4),extents=[1.0,0.5],texture=Ic))
     raw_input('Enter any key to quit. ')
     handles = None
     orenv.Destroy()

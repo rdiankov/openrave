@@ -124,6 +124,7 @@ public:
 
     virtual void* drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color);
     virtual void* drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents);
+    virtual void* drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture);
     virtual void* drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color);
     virtual void closegraph(void* handle);
 
@@ -239,6 +240,7 @@ protected:
     virtual void* _drawarrow(SoSeparator* pparent, const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color);
 
     virtual void* _drawbox(SoSeparator* pparent, const RaveVector<float>& vpos, const RaveVector<float>& vextents);
+    virtual void* _drawplane(SoSeparator* pparent, const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture);
     virtual void* _drawtrimesh(SoSeparator* pparent, const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color);
 
     virtual void _closegraph(void* handle);
@@ -392,6 +394,7 @@ protected:
     friend class DrawMessage;
     friend class DrawArrowMessage;
     friend class DrawBoxMessage;
+    friend class DrawPlaneMessage;
     friend class DrawTriMeshMessage;
     friend class CloseGraphMessage;
     friend class DeselectMessage;

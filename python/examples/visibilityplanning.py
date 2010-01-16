@@ -16,9 +16,9 @@ __license__ = 'Apache License, Version 2.0'
 
 import sys, os, time, signal, threading
 try:
-   import cPickle as pickle
+    import cPickle as pickle
 except:
-   import pickle
+    import pickle
 import numpy # nice to be able to explicitly call some functions
 from numpy import *
 from optparse import OptionParser

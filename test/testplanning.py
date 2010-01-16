@@ -78,9 +78,12 @@ def test_inversereachabilityrun():
     gm = gp.graspables[0][0]
     dests = gp.graspables[0][1]
     validgrasps = gm.computeValidGrasps(gm)
-    Tee = gm.getGlobalGraspTransform(validgrasps[0])
-    densityfn,samplerfn,bounds = self.getBaseDistribution(Tee,2000)
+    Tgrasp = gm.getGlobalGraspTransform(validgrasps[0])
+    densityfn,samplerfn,bounds = self.computeBaseDistribution(Tgrasp,2000)
     h = self.showBaseDistribution(densityfn,bounds,zoffset=1.0,thresh=1.0)
+
+    densityfn2,samplerfn2,bounds2 = self.computeAggregateBaseDistribution([Tgrasp],2000)
+    h2 = self.showBaseDistribution(densityfn2,bounds2,zoffset=3.0,thresh=1.0)
 
 def test_graspplanning():
     import graspplanning
@@ -105,8 +108,8 @@ def test_mobilemanipulation():
     gm=self.graspables[0][0]
     dests=self.graspables[0][1]
     validgrasps = gm.computeValidGrasps(gm)
-    Tee = gm.getGlobalGraspTransform(validgrasps[0])
-    densityfn,samplerfn,bounds = self.irmodel.getBaseDistribution(Tee,2000)
+    Tgrasp = gm.getGlobalGraspTransform(validgrasps[0])
+    densityfn,samplerfn,bounds = self.irmodel.computeBaseDistribution(Tgrasp,2000)
     h = self.irmodel.showBaseDistribution(densityfn,bounds,zoffset=1.0,thresh=0.0)
     Trobot = robot.GetTransform()
     print basedistfn(Trobot)

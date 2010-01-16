@@ -18,9 +18,9 @@ from openravepy import *
 from numpy import *
 import time
 try:
-   import cPickle as pickle
+    import cPickle as pickle
 except:
-   import pickle
+    import pickle
 from optparse import OptionParser
 
 class TaskReachability(metaclass.AutoReloader):

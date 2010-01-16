@@ -18,15 +18,12 @@ from openravepy import *
 from ikfast import IKFastSolver
 from numpy import *
 import time,platform
-try:
-   import cPickle as pickle
-except:
-   import pickle
 import distutils
 from distutils import ccompiler
 from optparse import OptionParser
 
 class InverseKinematicsModel(OpenRAVEModel):
+    """Generates analytical inverse-kinematics solutions, compiles them into a shared object/DLL, and sets the robot's iksolver"""
     Type_6D=0
     Type_Rotation3D=1
     Type_Direction3D=2

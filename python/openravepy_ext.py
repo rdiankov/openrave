@@ -14,9 +14,9 @@ from __future__ import with_statement # for python 2.5
 import openravepy
 import os, optparse, numpy, metaclass
 try:
-   import cPickle as pickle
+    import cPickle as pickle
 except:
-   import pickle
+    import pickle
 
 class KinBodyStateSaver:
     def __init__(self,body):

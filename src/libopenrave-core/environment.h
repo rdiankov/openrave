@@ -968,47 +968,42 @@ class Environment : public EnvironmentBase
     {
         return GraphHandlePtr(_pCurrentViewer->plot3(ppoints, numPoints, stride, fPointSize, color, drawstyle), GRAPH_DELETER);
     }
-
     virtual GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle, bool bhasalpha)
     {
         return GraphHandlePtr(_pCurrentViewer->plot3(ppoints, numPoints, stride, fPointSize, colors, drawstyle, bhasalpha), GRAPH_DELETER);
     }
-
     virtual GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
     {
         return GraphHandlePtr(_pCurrentViewer->drawlinestrip(ppoints, numPoints, stride, fwidth,color), GRAPH_DELETER);
     }
-
     virtual GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
     {
         return GraphHandlePtr(_pCurrentViewer->drawlinestrip(ppoints, numPoints, stride, fwidth,colors),GRAPH_DELETER);
     }
-
     virtual GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
     {
         return GraphHandlePtr(_pCurrentViewer->drawlinelist(ppoints, numPoints, stride, fwidth,color), GRAPH_DELETER);
     }
-
     virtual GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
     {
         return GraphHandlePtr(_pCurrentViewer->drawlinelist(ppoints, numPoints, stride, fwidth,colors), GRAPH_DELETER);
     }
-
     virtual GraphHandlePtr drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color)
     {
         return GraphHandlePtr(_pCurrentViewer->drawarrow(p1,p2,fwidth,color),GRAPH_DELETER);
     }
-    
     virtual GraphHandlePtr drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents)
     {
         return GraphHandlePtr(_pCurrentViewer->drawbox(vpos, vextents), GRAPH_DELETER);
     }
-
+    virtual GraphHandlePtr drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture)
+    {
+        return GraphHandlePtr(_pCurrentViewer->drawplane(tplane, vextents, vtexture), GRAPH_DELETER);
+    }
     virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color)
     {
         return GraphHandlePtr(_pCurrentViewer->drawtrimesh(ppoints, stride, pIndices, numTriangles, color), GRAPH_DELETER);
     }
-
     virtual void _CloseGraphCallback(RaveViewerBaseWeakPtr wviewer, void* handle)
     {
         RaveViewerBasePtr viewer = wviewer.lock();
@@ -1413,6 +1408,7 @@ protected:
         virtual void* drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color) { return NULL; }
 
         virtual void* drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents) { return NULL; }
+        virtual void* drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture) { return NULL; }
 
         virtual void* drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color) { return NULL; }
 

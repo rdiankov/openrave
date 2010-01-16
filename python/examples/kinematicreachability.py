@@ -19,13 +19,11 @@ from openravepy.examples import inversekinematics
 from numpy import *
 import time
 import heapq # for nth smallest element
-try:
-    import cPickle as pickle
-except:
-    import pickle
 from optparse import OptionParser
 
 class ReachabilityModel(OpenRAVEModel):
+    """Computes the robot manipulator's reachability space (stores it in 6D) and
+    offers several functions to use it effectively in planning."""
     def __init__(self,robot):
         OpenRAVEModel.__init__(self,robot=robot)
         self.ikmodel = inversekinematics.InverseKinematicsModel(robot=robot)

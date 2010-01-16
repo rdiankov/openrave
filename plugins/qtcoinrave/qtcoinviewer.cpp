@@ -22,8 +22,12 @@
 #include <Inventor/nodes/SoCoordinate3.h>
 #include <Inventor/nodes/SoFaceSet.h>
 #include <Inventor/nodes/SoPointSet.h>
+#include <Inventor/nodes/SoLightModel.h>
 #include <Inventor/nodes/SoLineSet.h>
 #include <Inventor/nodes/SoMaterialBinding.h>
+#include <Inventor/nodes/SoTextureCombine.h>
+#include <Inventor/nodes/SoTextureCoordinate2.h>
+#include <Inventor/nodes/SoTextureScalePolicy.h>
 #include <Inventor/nodes/SoTransparencyType.h>
 #include <Inventor/events/SoLocation2Event.h>
 #include <Inventor/SoPickedPoint.h>
@@ -134,10 +138,19 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     _ivRoot->addDeselectionCallback(_DeselectHandler, this);
 
     _pFigureRoot = new SoSeparator();
-    SoComplexity* pcomplexity = new SoComplexity();
-    pcomplexity->value = 0.1f; // default =0.5, lower is faster
-    pcomplexity->type = SoComplexity::SCREEN_SPACE;
-    _pFigureRoot->addChild(pcomplexity);
+    {
+        SoComplexity* pcomplexity = new SoComplexity();
+        pcomplexity->value = 0.1f; // default =0.5, lower is faster
+        pcomplexity->type = SoComplexity::SCREEN_SPACE;
+        pcomplexity->textureQuality = 1.0; // good texture quality
+        _pFigureRoot->addChild(pcomplexity);
+        SoLightModel* plightmodel = new SoLightModel();
+        plightmodel->model = SoLightModel::BASE_COLOR; // disable lighting
+        _pFigureRoot->addChild(plightmodel);
+        SoTextureScalePolicy* ppolicy = new SoTextureScalePolicy();
+        ppolicy->policy = SoTextureScalePolicy::FRACTURE; // requires in order to support non-power of 2 textures
+        _pFigureRoot->addChild(ppolicy);
+    }
     _ivRoot->addChild(_pFigureRoot);
     
     _pviewer->setSceneGraph(_ivRoot);
@@ -728,7 +741,7 @@ public:
     
     virtual void viewerexecute() {
         void* ret = _pviewer->_drawbox(_pparent, _vpos, _vextents);
-        BOOST_ASSERT( _ppreturn == ret );
+        BOOST_ASSERT( _pparent == ret);
         EnvMessage::viewerexecute();
     }
     
@@ -741,6 +754,35 @@ void* QtCoinViewer::drawbox(const RaveVector<float>& vpos, const RaveVector<floa
 {
     void* pret = new SoSeparator();
     EnvMessagePtr pmsg(new DrawBoxMessage(shared_viewer(), (SoSeparator*)pret, vpos, vextents));
+    pmsg->callerexecute();
+
+    return pret;
+}
+
+class DrawPlaneMessage : public QtCoinViewer::EnvMessage
+{
+public:
+    DrawPlaneMessage(QtCoinViewerPtr pviewer, SoSeparator* pparent,
+                     const Transform& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture)
+        : EnvMessage(pviewer, NULL, false), _tplane(tplane), _vextents(vextents),_vtexture(vtexture), _pparent(pparent) {}
+    
+    virtual void viewerexecute() {
+        void* ret = _pviewer->_drawplane(_pparent, _tplane,_vextents,_vtexture);
+        BOOST_ASSERT( _pparent == ret);
+        EnvMessage::viewerexecute();
+    }
+    
+private:
+    RaveTransform<float> _tplane;
+    RaveVector<float> _vextents;
+    boost::multi_array<float,3> _vtexture;
+    SoSeparator* _pparent;
+};
+
+void* QtCoinViewer::drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture)
+{
+    void* pret = new SoSeparator();
+    EnvMessagePtr pmsg(new DrawPlaneMessage(shared_viewer(), (SoSeparator*)pret, tplane,vextents,vtexture));
     pmsg->callerexecute();
 
     return pret;
@@ -1006,7 +1048,7 @@ void* QtCoinViewer::_plot3(SoSeparator* pparent, const float* ppoints, int numPo
    
     SoMaterial* mtrl = new SoMaterial;
     mtrl->diffuseColor = SbColor(color.x, color.y, color.z);
-    mtrl->ambientColor = SbColor(color.x, color.y, color.z);
+    mtrl->ambientColor = SbColor(0,0,0);
     mtrl->transparency = max(0.0f,1.0f-color.w);
     mtrl->setOverride(true);
     pparent->addChild(mtrl);
@@ -1130,7 +1172,7 @@ void* QtCoinViewer::_drawspheres(SoSeparator* pparent, const float* ppoints, int
         // set a diffuse color
         SoMaterial* mtrl = new SoMaterial;
         mtrl->diffuseColor = SbColor(color.x, color.y, color.z);
-        mtrl->ambientColor = SbColor(color.x, color.y, color.z);
+        mtrl->ambientColor = SbColor(0,0,0);
         mtrl->transparency = max(0.0f,1-color.w);
         mtrl->setOverride(true);
         psep->addChild(mtrl);
@@ -1170,7 +1212,7 @@ void* QtCoinViewer::_drawspheres(SoSeparator* pparent, const float* ppoints, int
         // set a diffuse color
         SoMaterial* mtrl = new SoMaterial;
         mtrl->diffuseColor = SbColor(colors[colorstride*i +0], colors[colorstride*i +1], colors[colorstride*i +2]);
-        mtrl->ambientColor = SbColor(colors[colorstride*i +0], colors[colorstride*i +1], colors[colorstride*i +2]);
+        mtrl->ambientColor = SbColor(0,0,0);
         if( bhasalpha )
             mtrl->transparency = max(0.0f,1-colors[colorstride*i+3]);
         mtrl->setOverride(true);
@@ -1200,7 +1242,7 @@ void* QtCoinViewer::_drawlinestrip(SoSeparator* pparent, const float* ppoints, i
 
     SoMaterial* mtrl = new SoMaterial;
     mtrl->diffuseColor = SbColor(color.x, color.y, color.z);
-    mtrl->ambientColor = SbColor(color.x, color.y, color.z);
+    mtrl->ambientColor = SbColor(0,0,0);
     mtrl->setOverride(true);
     pparent->addChild(mtrl);
     
@@ -1301,7 +1343,7 @@ void* QtCoinViewer::_drawlinelist(SoSeparator* pparent, const float* ppoints, in
 
     SoMaterial* mtrl = new SoMaterial;
     mtrl->diffuseColor = SbColor(color.x, color.y, color.z);
-    mtrl->ambientColor = SbColor(color.x, color.y, color.z);
+    mtrl->ambientColor = SbColor(0,0,0);
     mtrl->setOverride(true);
     pparent->addChild(mtrl);
     
@@ -1421,7 +1463,7 @@ void* QtCoinViewer::_drawarrow(SoSeparator* pparent, const RaveVector<float>& p1
     // set a diffuse color
     SoMaterial* mtrl = new SoMaterial;
     mtrl->diffuseColor = SbColor(color.x, color.y, color.z);
-    mtrl->ambientColor = SbColor(color.x, color.y, color.z);
+    mtrl->ambientColor = SbColor(0,0,0);
     mtrl->setOverride(true);
     psep->addChild(mtrl);
 
@@ -1470,6 +1512,77 @@ void* QtCoinViewer::_drawbox(SoSeparator* pparent, const RaveVector<float>& vpos
     return pparent;
 }
 
+void* QtCoinViewer::_drawplane(SoSeparator* pparent, const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture)
+{
+    if( pparent == NULL )
+        return pparent;
+
+    RaveTransformMatrix<float> m(tplane);
+    Vector vright(m.m[0],m.m[4],m.m[8]),vup(m.m[1],m.m[5],m.m[9]),vdir(m.m[2],m.m[6],m.m[10]);
+    
+    SoTextureCombine* pcombine = new SoTextureCombine();
+    pcombine->rgbSource = SoTextureCombine::TEXTURE;
+    pcombine->rgbOperation = SoTextureCombine::REPLACE;
+
+    if( vtexture.shape()[2] == 4 ) {
+        SoTransparencyType* ptype = new SoTransparencyType();
+        ptype->value = SoGLRenderAction::SORTED_OBJECT_BLEND;
+        pparent->addChild(ptype);
+        pcombine->alphaSource = SoTextureCombine::TEXTURE;
+        pcombine->alphaOperation = SoTextureCombine::REPLACE;
+    }
+
+    pparent->addChild(pcombine);
+    
+    // the texture image
+    SoTexture2 *tex = new SoTexture2;
+    vector<unsigned char> vimagedata(vtexture.shape()[0]*vtexture.shape()[1]*vtexture.shape()[2]);
+    if( vimagedata.size() > 0 ) {
+        vector<unsigned char>::iterator itdst = vimagedata.begin();
+        FOREACHC(ith,vtexture) {
+            FOREACHC(itw,*ith) {
+                FOREACHC(itp,*itw) {
+                    *itdst++ = (unsigned char)(255.0f*CLAMP_ON_RANGE(*itp,0.0f,1.0f));
+                }
+            }
+        }
+        tex->image.setValue(SbVec2s(vtexture.shape()[1],vtexture.shape()[0]),vtexture.shape()[2],&vimagedata[0]);
+    }
+    tex->model = SoTexture2::REPLACE; // new features, but supports grayscale images
+    tex->wrapS = SoTexture2::CLAMP;
+    tex->wrapT = SoTexture2::CLAMP;
+    pparent->addChild(tex);
+
+    boost::array<RaveVector<float>, 4> vplanepoints = {{m.trans-vextents[0]*vright-vextents[1]*vup,
+                                                        m.trans-vextents[0]*vright+vextents[1]*vup,
+                                                        m.trans+vextents[0]*vright-vextents[1]*vup,
+                                                        m.trans+vextents[0]*vright+vextents[1]*vup}};
+    boost::array<float,8> texpoints = {{0,0,0,1,1,0,1,1}};
+    boost::array<int,6> indices = {{0,1,2,1,2,3}};
+    boost::array<float,18> vtripoints;
+    boost::array<float,12> vtexpoints; /// points of plane
+    for(int i = 0; i < 6; ++i) {
+        RaveVector<float> v = vplanepoints[indices[i]];
+        vtripoints[3*i+0] = v[0]; vtripoints[3*i+1] = v[1]; vtripoints[3*i+2] = v[2];
+        vtexpoints[2*i+0] = texpoints[2*indices[i]+0]; vtexpoints[2*i+1] = texpoints[2*indices[i]+1];
+    }
+    SoCoordinate3* vprop = new SoCoordinate3();
+    vprop->point.setValues(0,6,(float(*)[3])&vtripoints[0]);
+    pparent->addChild(vprop);
+    SoTextureCoordinate2* tprop = new SoTextureCoordinate2();
+    tprop->point.setValues(0,6,(float(*)[2])&vtexpoints[0]);
+    pparent->addChild(tprop);
+
+    SoFaceSet* faceset = new SoFaceSet();
+    faceset->numVertices.set1Value(0,3);
+    faceset->numVertices.set1Value(1,3);
+    //faceset->generateDefaultNormals(SoShape, SoNormalCache);
+    pparent->addChild(faceset);
+
+    _pFigureRoot->addChild(pparent);
+    return pparent;
+}
+
 void* QtCoinViewer::_drawtrimesh(SoSeparator* pparent, const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color)
 {
     if( pparent == NULL || ppoints == NULL || numTriangles <= 0 )
@@ -1477,7 +1590,7 @@ void* QtCoinViewer::_drawtrimesh(SoSeparator* pparent, const float* ppoints, int
 
     SoMaterial* mtrl = new SoMaterial;
     mtrl->diffuseColor = SbColor(color.x, color.y, color.z);
-    mtrl->ambientColor = SbColor(color.x, color.y, color.z);
+    mtrl->ambientColor = SbColor(0,0,0);
     mtrl->transparency = max(0.0f,1-color.w);
     mtrl->setOverride(true);
     pparent->addChild(mtrl);

@@ -51,24 +51,6 @@ public:
     virtual void SetCameraLookAt(const RaveVector<float>& lookat, const RaveVector<float>& campos, const RaveVector<float>& camup) = 0;
     virtual RaveTransform<float> GetCameraTransform() = 0;
 
-    virtual void* plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle = 0) = 0;
-    virtual void* plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle = 0, bool bhasalpha=false) = 0;
-
-    virtual void* drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color) = 0;
-    virtual void* drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors) = 0;
-
-    virtual void* drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color) = 0;
-    virtual void* drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors) = 0;
-
-    virtual void* drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color) = 0;
-
-    virtual void* drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents) = 0;
-    
-    virtual void* drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color) = 0;
-
-    virtual void closegraph(void* handle) = 0;
-    virtual void deselect() = 0;
-
     virtual void Reset() = 0;
     virtual void SetBkgndColor(const RaveVector<float>& color) = 0;
 
@@ -94,8 +76,36 @@ public:
     virtual void ViewerSetTitle(const std::string& ptitle) = 0;
     virtual bool LoadModel(const std::string& pfilename) = 0;
 
+protected:
+    virtual void* plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle = 0) = 0;
+    virtual void* plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle = 0, bool bhasalpha=false) = 0;
+
+    virtual void* drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color) = 0;
+    virtual void* drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors) = 0;
+
+    virtual void* drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color) = 0;
+    virtual void* drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors) = 0;
+
+    virtual void* drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color) = 0;
+
+    virtual void* drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents) = 0;
+    virtual void* drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture) = 0;
+    
+    virtual void* drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color) = 0;
+
+    virtual void closegraph(void* handle) = 0;
+    virtual void deselect() = 0;
+
 private:
     virtual const char* GetHash() const { return OPENRAVE_VIEWER_HASH; }
+
+#ifdef RAVE_PRIVATE
+#ifdef _MSC_VER
+    friend class Environment;
+#else
+    friend class ::Environment;
+#endif
+#endif
 };
 
 } // end namespace OpenRAVE
