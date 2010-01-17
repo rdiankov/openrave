@@ -25,6 +25,37 @@
 #include <boost/assert.hpp>
 #include <boost/cstdint.hpp>
 
+#ifdef _MSC_VER
+#include <boost/typeof/std/string.hpp>
+#include <boost/typeof/std/vector.hpp>
+#include <boost/typeof/std/list.hpp>
+#include <boost/typeof/std/map.hpp>
+#include <boost/typeof/std/set.hpp>
+#include <boost/typeof/std/string.hpp>
+
+#define FOREACH(it, v) for(BOOST_TYPEOF(v)::iterator it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACH_NOINC(it, v) for(BOOST_TYPEOF(v)::iterator it = (v).begin(); it != (v).end(); )
+
+#define FOREACHC(it, v) for(BOOST_TYPEOF(v)::const_iterator it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACHC_NOINC(it, v) for(BOOST_TYPEOF(v)::const_iterator it = (v).begin(); it != (v).end(); )
+#define RAVE_REGISTER_BOOST
+
+#else
+#include <string>
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <string>
+
+#define FOREACH(it, v) for(typeof((v).begin()) it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACH_NOINC(it, v) for(typeof((v).begin()) it = (v).begin(); it != (v).end(); )
+
+#define FOREACHC FOREACH
+#define FOREACHC_NOINC FOREACH_NOINC
+
+#endif
+
 #include <complex>
 #include <algorithm>
 
@@ -384,5 +415,122 @@ struct T_from_number
         data->convertible = storage;
     }
 };
+
+class PyVoidHandle
+{
+public:
+    PyVoidHandle() {}
+    PyVoidHandle(boost::shared_ptr<void> handle) : _handle(handle) {}
+    void close() { _handle.reset(); }
+    boost::shared_ptr<void> _handle;
+};
+
+template <typename T>
+inline std::vector<T> ExtractArray(const object& o)
+{
+    std::vector<T> v(len(o));
+    for(size_t i = 0; i < v.size(); ++i)
+        v[i] = extract<T>(o[i]);
+    return v;
+}
+
+template <typename T>
+inline std::set<T> ExtractSet(const object& o)
+{
+    std::set<T> v;
+    size_t nlen = len(o);
+    for(size_t i = 0; i < nlen; ++i)
+        v.insert(extract<T>(o[i]));
+    return v;
+}
+
+inline object toPyArrayN(const float* pvalues, int N)
+{
+    npy_intp dims[] = {N};
+    PyObject *pyvalues = PyArray_SimpleNew(1,dims, PyArray_FLOAT);
+    if( pvalues != NULL )
+        memcpy(PyArray_DATA(pyvalues),pvalues,N*sizeof(float));
+    return static_cast<numeric::array>(handle<>(pyvalues));
+}
+
+inline object toPyArrayN(const float* pvalues, std::vector<npy_intp>& dims)
+{
+    uint64_t totalsize = 1;
+    FOREACH(it,dims)
+        totalsize *= *it;
+    PyObject *pyvalues = PyArray_SimpleNew(dims.size(),&dims[0], PyArray_FLOAT);
+    if( pvalues != NULL )
+        memcpy(PyArray_DATA(pyvalues),pvalues,totalsize*sizeof(float));
+    return static_cast<numeric::array>(handle<>(pyvalues));
+}
+
+inline object toPyArrayN(const double* pvalues, int N)
+{
+    npy_intp dims[] = {N};
+    PyObject *pyvalues = PyArray_SimpleNew(1,dims, PyArray_DOUBLE);
+    if( pvalues != NULL )
+        memcpy(PyArray_DATA(pyvalues),pvalues,N*sizeof(double));
+    return static_cast<numeric::array>(handle<>(pyvalues));
+}
+
+inline object toPyArrayN(const double* pvalues, std::vector<npy_intp>& dims)
+{
+    uint64_t totalsize = 1;
+    FOREACH(it,dims)
+        totalsize *= *it;
+    PyObject *pyvalues = PyArray_SimpleNew(dims.size(),&dims[0], PyArray_DOUBLE);
+    if( pvalues != NULL )
+        memcpy(PyArray_DATA(pyvalues),pvalues,totalsize*sizeof(double));
+    return static_cast<numeric::array>(handle<>(pyvalues));
+}
+
+inline object toPyArrayN(const uint8_t* pvalues, std::vector<npy_intp>& dims)
+{
+    uint64_t totalsize = 1;
+    FOREACH(it,dims)
+        totalsize *= *it;
+    PyObject *pyvalues = PyArray_SimpleNew(dims.size(),&dims[0], PyArray_UINT8);
+    if( pvalues != NULL )
+        memcpy(PyArray_DATA(pyvalues),pvalues,totalsize*sizeof(uint8_t));
+    return static_cast<numeric::array>(handle<>(pyvalues));
+}
+
+inline object toPyArrayN(const int* pvalues, int N)
+{
+    npy_intp dims[] = {N};
+    PyObject *pyvalues = PyArray_SimpleNew(1,&dims[0], PyArray_INT32);
+    if( pvalues != NULL )
+        memcpy(PyArray_DATA(pyvalues),pvalues,N*sizeof(int));
+    return static_cast<numeric::array>(handle<>(pyvalues));
+}
+
+template <typename T>
+inline object toPyList(const std::vector<T>& v)
+{
+    boost::python::list lvalues;
+    FOREACHC(it,v)
+        lvalues.append(object(*it));
+    return lvalues;
+}
+
+template <typename T>
+inline object toPyArray(const std::vector<T>& v)
+{
+    if( v.size() == 0 )
+        return object();
+    return toPyArrayN(&v[0],v.size());
+}
+
+template <typename T>
+inline object toPyArray(const std::vector<T>& v, std::vector<npy_intp>& dims)
+{
+    if( v.size() == 0 )
+        return object();
+    uint64_t totalsize = 1;
+    FOREACH(it,dims)
+        totalsize *= *it;
+    BOOST_ASSERT(totalsize == v.size());
+    return toPyArrayN(&v[0],dims);
+}
 
 #endif
