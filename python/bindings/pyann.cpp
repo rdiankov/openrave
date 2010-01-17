@@ -179,12 +179,12 @@ object k_fixed_radius_search_array(ANNkd_tree& kdtree, object qarray, double sqR
     ANNdist* pdists = (ANNdist*)PyArray_DATA(pydists);
     ANNidx* pidx = (ANNidx*)PyArray_DATA(pyidx);
 
+    std::vector<ANNdist> dists(k);
+    std::vector<ANNidx> nn_idx(k);
     for(int i = 0; i < N; ++i) {
         object q = qarray[i];
         for (int c = 0; c < kdtree.theDim(); ++c)
             annq.pt[c] = extract<ANNcoord>(q[c]);
-        std::vector<ANNdist> dists(k);
-        std::vector<ANNidx> nn_idx(k);
         pkball[i] = kdtree.annkFRSearch(annq.pt, sqRad, k, &nn_idx[0], &dists[0], eps);
 
         std::copy(nn_idx.begin(),nn_idx.end(),pidx); pidx += k;

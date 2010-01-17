@@ -2,7 +2,7 @@ from openravepy import *
 import openravepy.examples
 from openravepy.interfaces import *
 from numpy import *
-import numpy
+import numpy,time
 
 def test_grasping():
     import grasping
@@ -97,6 +97,38 @@ def test_graspplanning():
     dests=self.graspables[0][1]
     self.graspAndPlaceObject(gm=gm,dests=dests)
 
+def test_graspreachability():
+    import mobilemanipulation,graspplanning
+    env = Environment()
+    env.SetViewer('qtcoin')
+    env.Reset()
+    env.Load('data/lab1.env.xml')
+    robot = env.GetRobots()[0]
+    planning = graspplanning.GraspPlanning(robot)
+    gmodel=planning.graspables[0][0]
+    dests=planning.graspables[0][1]
+    self = mobilemanipulation.GraspReachability(robot=robot,gmodel=gmodel)
+    starttime = time.time()
+    densityfn,samplerfn,bounds,validgrasps = self.computeGraspDistribution(logllthresh=2000.0)
+    print 'time to build distribution: %fs'%(time.time()-starttime)
+    h = self.irmodel.showBaseDistribution(densityfn,bounds,self.target.GetTransform()[2,3],thresh=1.0)
+    
+    starttime = time.time()
+    goals,numfailures = self.sampleGoals(lambda N: samplerfn(N,1.0),validgrasps,N=100)
+    print 'numgrasps: %d, time: %f, failures: %d'%(len(goals),time.time()-starttime,numfailures)
+
+    Trobot = self.robot.GetTransform()
+    def randomsampler(N):
+        angles = random.rand(N)*(bounds[1,0]-bounds[0,0])+bounds[0,0]
+        X = random.rand(N)*(bounds[1,1]-bounds[0,1])+bounds[0,1]
+        Y = random.rand(N)*(bounds[1,2]-bounds[0,2])+bounds[0,2]
+        return c_[cos(angles),zeros((N,2)),sin(angles),X,Y,tile(Trobot[2,3],N)],array(random.randint(0,len(validgrasps),N))
+    starttime = time.time()
+    goals,numfailures = self.sampleGoals(randomsampler,validgrasps,N=100)
+    print 'numgrasps: %d, time: %f, failures: %d'%(len(goals),time.time()-starttime,numfailures)
+
+    self.graspAndPlaceObject(gm=gm,dests=dests)
+
 def test_mobilemanipulation():
     import mobilemanipulation
     env = Environment()
@@ -105,15 +137,8 @@ def test_mobilemanipulation():
     env.Load('data/lab1.env.xml')
     robot = env.GetRobots()[0]
     self = mobilemanipulation.MobileManipulationPlanning(robot)
-    gm=self.graspables[0][0]
+    gmodel=self.graspables[0][0]
     dests=self.graspables[0][1]
-    validgrasps = gm.computeValidGrasps(gm)
-    Tgrasp = gm.getGlobalGraspTransform(validgrasps[0])
-    densityfn,samplerfn,bounds = self.irmodel.computeBaseDistribution(Tgrasp,2000)
-    h = self.irmodel.showBaseDistribution(densityfn,bounds,zoffset=1.0,thresh=0.0)
-    Trobot = robot.GetTransform()
-    print basedistfn(Trobot)
-    self.graspAndPlaceObject(gm=gm,dests=dests)
 
 def test_visibilityplanning():
     import visibilityplanning, time

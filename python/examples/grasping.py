@@ -205,13 +205,16 @@ class GraspingModel(OpenRAVEModel):
         Tlocalgrasp = eye(4)
         Tlocalgrasp[0:3,0:4] = transpose(reshape(grasp[self.graspindices ['igrasptrans']],(4,3)))
         return dot(self.target.GetTransform(),Tlocalgrasp)
+    def setPreshape(self,grasp):
+        """sets the preshape on the robot, assumes environment is locked"""
+        self.robot.SetJointValues(grasp[self.graspindices['igrasppreshape']],self.manip.GetGripperJoints())
 
     def computeValidGrasps(self,checkcollision=True,checkik=True,returnfirst=False):
         """Returns the set of grasps that satisfy certain conditions"""
         with self.robot:
             validgrasps = []
             for grasp in self.grasps:
-                self.robot.SetJointValues(grasp[self.graspindices['igrasppreshape']],self.manip.GetGripperJoints())
+                self.setPreshape(grasp)
                 Tglobalgrasp = self.getGlobalGraspTransform(grasp)
                 if checkik:
                     if self.manip.FindIKSolution(Tglobalgrasp,True) is None:

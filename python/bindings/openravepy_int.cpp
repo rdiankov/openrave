@@ -1256,11 +1256,19 @@ public:
             return links;
         }
 
-        bool CheckEndEffectorCollision(object otrans, PyCollisionReportPtr pReport)
+        bool CheckEndEffectorCollision(object otrans) const
+        {
+            return _pmanip->CheckEndEffectorCollision(ExtractTransform(otrans));
+        }
+        bool CheckEndEffectorCollision(object otrans, PyCollisionReportPtr pReport) const
         {
             return _pmanip->CheckEndEffectorCollision(ExtractTransform(otrans),!pReport ? CollisionReportPtr() : pReport->report);
         }
-        bool CheckIndependentCollision(PyCollisionReportPtr pReport)
+        bool CheckIndependentCollision() const
+        {
+            return _pmanip->CheckIndependentCollision();
+        }
+        bool CheckIndependentCollision(PyCollisionReportPtr pReport) const
         {
             return _pmanip->CheckIndependentCollision(!pReport ? CollisionReportPtr() : pReport->report);
         }
@@ -3219,6 +3227,11 @@ BOOST_PYTHON_MODULE(openravepy_int)
         object (PyRobotBase::PyManipulator::*pmanipiks)(object, bool) const = &PyRobotBase::PyManipulator::FindIKSolutions;
         object (PyRobotBase::PyManipulator::*pmanipiksf)(object, object, bool) const = &PyRobotBase::PyManipulator::FindIKSolutions;
 
+        bool (PyRobotBase::PyManipulator::*pCheckEndEffectorCollision1)(object) const = &PyRobotBase::PyManipulator::CheckEndEffectorCollision;
+        bool (PyRobotBase::PyManipulator::*pCheckEndEffectorCollision2)(object,PyCollisionReportPtr) const = &PyRobotBase::PyManipulator::CheckEndEffectorCollision;
+        bool (PyRobotBase::PyManipulator::*pCheckIndependentCollision1)() const = &PyRobotBase::PyManipulator::CheckIndependentCollision;
+        bool (PyRobotBase::PyManipulator::*pCheckIndependentCollision2)(PyCollisionReportPtr) const = &PyRobotBase::PyManipulator::CheckIndependentCollision;
+
         class_<PyRobotBase::PyManipulator, boost::shared_ptr<PyRobotBase::PyManipulator> >("Manipulator", no_init)
             .def("GetEndEffectorTransform", &PyRobotBase::PyManipulator::GetEndEffectorTransform)
             .def("GetName",&PyRobotBase::PyManipulator::GetName)
@@ -3245,8 +3258,10 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetChildDOFIndices",&PyRobotBase::PyManipulator::GetChildDOFIndices)
             .def("GetChildLinks",&PyRobotBase::PyManipulator::GetChildLinks)
             .def("GetIndependentLinks",&PyRobotBase::PyManipulator::GetIndependentLinks)
-            .def("CheckEndEffectorCollision",&PyRobotBase::PyManipulator::CheckEndEffectorCollision)
-            .def("CheckIndependentCollision",&PyRobotBase::PyManipulator::CheckIndependentCollision)
+            .def("CheckEndEffectorCollision",pCheckEndEffectorCollision1)
+            .def("CheckEndEffectorCollision",pCheckEndEffectorCollision2)
+            .def("CheckIndependentCollision",pCheckIndependentCollision1)
+            .def("CheckIndependentCollision",pCheckIndependentCollision2)
             ;
 
         class_<PyRobotBase::PyAttachedSensor, boost::shared_ptr<PyRobotBase::PyAttachedSensor> >("AttachedSensor", no_init)

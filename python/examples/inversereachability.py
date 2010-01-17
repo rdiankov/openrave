@@ -14,7 +14,7 @@ __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
-import time,bisect
+import time,bisect,itertools
 from openravepy import *
 from openravepy import pyANN
 from openravepy.examples import kinematicreachability
@@ -132,7 +132,7 @@ class InverseReachabilityModel(OpenRAVEModel):
         return self.equivalenceclasses[bestindex],logll[bestindex]
 
     def computeBaseDistribution(self,Tgrasp,logllthresh=2000.0,zaxis=None):
-        """Return a function of the distribution of possible positions of the robot that can put their end effector at Tgrasp"""
+        """Return a function of the distribution of possible positions of the robot such that Tgrasp is reachable. Also returns a sampler function"""
         if zaxis is not None:
             raise NotImplementedError('cannot specify a custom zaxis yet')
         with self.env:
@@ -193,12 +193,12 @@ class InverseReachabilityModel(OpenRAVEModel):
         return gaussiankerneldensity,gaussiankernelsampler,bounds
 
     def computeAggregateBaseDistribution(self,Tgrasps,logllthresh=2000.0,zaxis=None):
-        """Return a function of the distribution of possible positions of the robot that can put their end effector at Tgrasps"""
+        """Return a function of the distribution of possible positions of the robot such that any grasp from Tgrasps is reachable.
+        Also computes a sampler function that returns a random position of the robot along with the index into Tgrasps"""
         if zaxis is not None:
             raise NotImplementedError('cannot specify a custom zaxis yet')
         with self.env:
             Tbaserobot = self.robot.GetTransform()
-
         rotweight = self.rotweight
         qbaserobot = quatFromRotationMatrix(Tbaserobot[0:3,0:3])
         qbaserobotnorm = self.normalizeZRotation(reshape(qbaserobot,(1,4)))[0][0]
@@ -212,14 +212,18 @@ class InverseReachabilityModel(OpenRAVEModel):
         
         points = zeros((0,3))
         weights = array(())
-        for Tgrasp in Tgrasps:
+        graspindices = []
+        graspindexoffsets = []
+        for i,Tgrasp in enumerate(Tgrasps):
             posetarget = poseFromMatrix(dot(linalg.inv(Tgrasp),Tbaserobot))
             qnormalized,znormangle = self.normalizeZRotation(reshape(posetarget[0:4],(1,4)))
             # find the closest cluster
             logll = self.quatDist(qnormalized,self.equivalencemeans[:,0:4],self.equivalenceweights[:,0:4]) + (posetarget[6]-self.equivalencemeans[:,4])*self.equivalenceweights[:,4] + self.equivalenceoffset
             bestindex = argmax(logll)
             if logll[bestindex] <logllthresh:
-                continue            
+                continue
+            graspindices.append(i)
+            graspindexoffsets.append(len(points))
             # transform the equivalence class to the global coord system and create a kdtree for faster retrieval
             equivalenceclass = self.equivalenceclasses[bestindex]
             points = r_[points,equivalenceclass[2][:,0:3]+tile(r_[znormangle,posetarget[4:6]],(equivalenceclass[2].shape[0],1))]
@@ -228,10 +232,10 @@ class InverseReachabilityModel(OpenRAVEModel):
         if len(points) == 0:
             print 'could not find base distribution'
             return None,None,None
-
+        
         bounds = array((numpy.min(points,0)-bandwidth,numpy.max(points,0)+bandwidth))
         bounds[:,0] /= rotweight
-        if bounds[0,0]+2*pi > bounds[1,0]:
+        if bounds[1,0]-bounds[0,0] > 2*pi:
             # already covering entire circle, so limit to 2*pi
             bounds[0,0] = -pi
             bounds[1,0] = pi
@@ -251,10 +255,16 @@ class InverseReachabilityModel(OpenRAVEModel):
                 if len(inds) > 0:
                     probs[i] = dot(weights[inds],numpy.exp(dot((points[inds,:]-tile(p[i,:],(len(inds),1)))**2,ibandwidth)))
             return probs
-        def gaussiankernelsampler(N=1):
+        def gaussiankernelsampler(N=1,weight=1.0):
             """samples the distribution and returns a transform as a pose"""
-            samples = random.normal(array([points[bisect.bisect(cumweights,random.rand()),:]  for i in range(N)]),bandwidth)
-            return c_[self.quatArrayTMult(c_[cos(samples[:,0]),zeros((N,2)),sin(samples[:,0])],qbaserobotnorm),samples[:,1:3],tile(Tbaserobot[2,3],N)]
+            sampledgraspindices = zeros(N,int)
+            sampledpoints = zeros((N,3))
+            for i in range(N):
+                pointindex = bisect.bisect(cumweights,random.rand())
+                sampledgraspindices[i] = graspindices[bisect.bisect(graspindexoffsets,pointindex)-1]
+                sampledpoints[i,:] = points[pointindex,:]
+            samples = random.normal(sampledpoints,bandwidth*weight)
+            return c_[self.quatArrayTMult(c_[cos(samples[:,0]),zeros((N,2)),sin(samples[:,0])],qbaserobotnorm),samples[:,1:3],tile(Tbaserobot[2,3],N)],sampledgraspindices
         return gaussiankerneldensity,gaussiankernelsampler,bounds
 
     def showBaseDistribution(self,densityfn,bounds,zoffset=0,thresh=1.0,maxprob=None,marginalizeangle=True):
@@ -262,7 +272,11 @@ class InverseReachabilityModel(OpenRAVEModel):
         A,Y,X = mgrid[bounds[0,0]:bounds[1,0]:discretization[0], bounds[0,2]:bounds[1,2]:discretization[2], bounds[0,1]:bounds[1,1]:discretization[1]]
         N = prod(A.shape)
         poses = c_[cos(A.flat),zeros((N,2)),sin(A.flat),X.flat,Y.flat,zeros((N,1))]
-        probs = densityfn(poses)
+        # split it into chunks to avoid memory overflow
+        probs = zeros(len(poses))
+        for i in range(0,len(poses),500000):
+            print '%d/%d'%(i,len(poses))
+            probs[i:(i+500000)] = densityfn(poses[i:(i+500000),:]);
         if marginalizeangle:
             probsxy = mean(reshape(probs,(A.shape[0],A.shape[1]*A.shape[2])),axis=0)
             inds = flatnonzero(probsxy>thresh)
