@@ -1449,6 +1449,8 @@ namespace OpenRAVEXMLParser
                 }
                 else if( itatt->first == "makejoinedlinksadjacent")
                     _pchain->_bMakeJoinedLinksAdjacent = atoi(itatt->second.c_str())!=0;
+                else
+                    RAVELOG_WARN(str(boost::format("unknown kinbody attribute %s\n")%itatt->first));
             }
 
             // reisze _vTransforms to be the same size as the initial number of links

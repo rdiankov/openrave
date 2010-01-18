@@ -1538,18 +1538,22 @@ protected:
             if( _bEnableSimulation ) {
                 bNeedSleep = false;
                 EnvironmentMutex::scoped_lock lockenv(GetMutex());
+                int64_t deltasimtime = (int64_t)(_fDeltaSimTime*1000000.0f);
                 StepSimulation(_fDeltaSimTime);
                 uint64_t passedtime = GetMicroTime()-_nSimStartTime;
+                int64_t sleeptime = _nCurSimTime-passedtime;
                 if( _bRealTime ) {
-                    if( (int64_t)(_nCurSimTime-passedtime) > 1000 ) {
-                        uint64_t sleeptime = _nCurSimTime-passedtime;
+                    if( sleeptime > 2*deltasimtime && sleeptime > 2000 ) {
                         lockenv.unlock();
-                        Sleep( sleeptime/1000 );
+                        // sleep for less time since sleep isn't accurate at all and we have a 7ms buffer
+                        Sleep( max((int)deltasimtime/1000,1) );
+                        //RAVELOG_INFO("sleeping %d(%d), slept: %d\n",(int)(_nCurSimTime-passedtime),(int)((sleeptime-(deltasimtime/2))/1000));
                         nLastSleptTime = GetMicroTime();
                     }
-                    else if( (int64_t)(passedtime-_nCurSimTime) > 20000 ) {
+                    else if( sleeptime < -3*deltasimtime ) {
                         // simulation is getting late, so catch up
-                        _nSimStartTime += passedtime-_nCurSimTime;
+                        //RAVELOG_INFO("sim catching up: %d\n",-(int)sleeptime);
+                        _nSimStartTime += deltasimtime;
                     }
                 }
                 
