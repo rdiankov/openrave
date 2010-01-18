@@ -98,7 +98,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             searchtrans = c_[basetrans[:,0:4],basetrans[:,6:7]/self.rotweight]
             kdtree = pyANN.KDTree(searchtrans)
             foundindices = zeros(len(searchtrans),bool)
-            querypoints = c_[self.quatMultArrayT(searchtrans[0][0:4],quatrolls),tile(searchtrans[0][4:],(len(quatrolls),1))]
+            querypoints = c_[quatMultArrayT(searchtrans[0][0:4],quatrolls),tile(searchtrans[0][4:],(len(quatrolls),1))]
             for querypoint in querypoints:
                 k = min(len(searchtrans),1000)
                 neighs,dists,kball = kdtree.kFRSearch(querypoint,rotthresh**2,k,rotthresh*0.01)
@@ -107,7 +107,7 @@ class InverseReachabilityModel(OpenRAVEModel):
                 foundindices[neighs] = True
             equivalenttrans = basetrans[flatnonzero(foundindices),:]
             basetrans = basetrans[flatnonzero(foundindices==False),:]
-            normalizedquat,zangles = self.normalizeZRotation(equivalenttrans[:,0:4])
+            normalizedquat,zangles = normalizeZRotation(equivalenttrans[:,0:4])
             # make sure all quaternions are on the same hemisphere
             identityquat = tile(array((1.0,0,0,0)),(normalizedquat.shape[0],1))
             normalizedquat[flatnonzero(sum((normalizedquat+identityquat)**2,1) < sum((normalizedquat-identityquat)**2, 1)),0:4] *= -1
@@ -123,11 +123,11 @@ class InverseReachabilityModel(OpenRAVEModel):
         with self.env:
             Tbaserobot = self.robot.GetTransform()
         qbaserobot = quatFromRotationMatrix(Tbaserobot[0:3,0:3])
-        qbaserobotnorm = self.normalizeZRotation(reshape(qbaserobot,(1,4)))[0][0]
+        qbaserobotnorm = normalizeZRotation(reshape(qbaserobot,(1,4)))[0][0]
         posetarget = poseFromMatrix(dot(linalg.inv(Tgrasp),Tbaserobot))
-        qnormalized,znormangle = self.normalizeZRotation(reshape(posetarget[0:4],(1,4)))
+        qnormalized,znormangle = normalizeZRotation(reshape(posetarget[0:4],(1,4)))
         # find the closest cluster
-        logll = self.quatDist(qnormalized,self.equivalencemeans[:,0:4],self.equivalenceweights[:,0:4]) + (posetarget[6]-self.equivalencemeans[:,4])*self.equivalenceweights[:,4] + self.equivalenceoffset
+        logll = quatDist(qnormalized,self.equivalencemeans[:,0:4],self.equivalenceweights[:,0:4]) + (posetarget[6]-self.equivalencemeans[:,4])*self.equivalenceweights[:,4] + self.equivalenceoffset
         bestindex = argmax(logll)
         return self.equivalenceclasses[bestindex],logll[bestindex]
 
@@ -140,19 +140,21 @@ class InverseReachabilityModel(OpenRAVEModel):
 
         rotweight = self.rotweight
         qbaserobot = quatFromRotationMatrix(Tbaserobot[0:3,0:3])
-        qbaserobotnorm = self.normalizeZRotation(reshape(qbaserobot,(1,4)))[0][0]
+        qbaserobotnorm = normalizeZRotation(reshape(qbaserobot,(1,4)))[0][0]
         angdelta = math.acos(1-0.5*self.rmodel.quatdelta) # convert quat dist to angle distance
         bandwidth = array((rotweight*angdelta ,self.rmodel.xyzdelta,self.rmodel.xyzdelta))
         ibandwidth=-0.5/bandwidth**2
         # normalization for the weights so that integrated volume is 1. this is necessary when comparing across different distributions?
-        normalizationconst = (1.0/sqrt(pi**3*sum(bandwidth**2)))
+        #-3.76317595e-02,  -5.46504355e-02,   4.94290324e-01, 3.50907688e-04
+
+        normalizationconst = 0.40236300765291089 (1.0/sqrt(pi**3*sum(bandwidth**2)))
         searchradius=9.0*sum(bandwidth**2)
         searcheps=bandwidth[0]*0.2
         
         posetarget = poseFromMatrix(dot(linalg.inv(Tgrasp),Tbaserobot))
-        qnormalized,znormangle = self.normalizeZRotation(reshape(posetarget[0:4],(1,4)))
+        qnormalized,znormangle = normalizeZRotation(reshape(posetarget[0:4],(1,4)))
         # find the closest cluster
-        logll = self.quatDist(qnormalized,self.equivalencemeans[:,0:4],self.equivalenceweights[:,0:4]) + (posetarget[6]-self.equivalencemeans[:,4])*self.equivalenceweights[:,4] + self.equivalenceoffset
+        logll = quatDist(qnormalized,self.equivalencemeans[:,0:4],self.equivalenceweights[:,0:4]) + (posetarget[6]-self.equivalencemeans[:,4])*self.equivalenceweights[:,4] + self.equivalenceoffset
         bestindex = argmax(logll)
         if logll[bestindex] < logllthresh:
             print 'could not find base distribution: ',logll[bestindex]
@@ -177,7 +179,7 @@ class InverseReachabilityModel(OpenRAVEModel):
 
         def gaussiankerneldensity(poses):
             """returns the density"""
-            qposes,zposeangles = self.normalizeZRotation(poses[:,0:4])
+            qposes,zposeangles = normalizeZRotation(poses[:,0:4])
             p = c_[zposeangles*rotweight,poses[:,4:6]]
             neighs,dists,kball = kdtree.kFRSearchArray(p,searchradius,16,searcheps)
             probs = zeros(p.shape[0])
@@ -189,7 +191,7 @@ class InverseReachabilityModel(OpenRAVEModel):
         def gaussiankernelsampler(N=1):
             """samples the distribution and returns a transform as a pose"""
             samples = random.normal(array([points[bisect.bisect(cumweights,random.rand()),:]  for i in range(N)]),bandwidth)
-            return c_[self.quatArrayTMult(c_[cos(samples[:,0]),zeros((N,2)),sin(samples[:,0])],qbaserobotnorm),samples[:,1:3],tile(Tbaserobot[2,3],N)]
+            return c_[quatArrayTMult(c_[cos(samples[:,0]),zeros((N,2)),sin(samples[:,0])],qbaserobotnorm),samples[:,1:3],tile(Tbaserobot[2,3],N)]
         return gaussiankerneldensity,gaussiankernelsampler,bounds
 
     def computeAggregateBaseDistribution(self,Tgrasps,logllthresh=2000.0,zaxis=None):
@@ -201,7 +203,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             Tbaserobot = self.robot.GetTransform()
         rotweight = self.rotweight
         qbaserobot = quatFromRotationMatrix(Tbaserobot[0:3,0:3])
-        qbaserobotnorm = self.normalizeZRotation(reshape(qbaserobot,(1,4)))[0][0]
+        qbaserobotnorm = normalizeZRotation(reshape(qbaserobot,(1,4)))[0][0]
         angdelta = math.acos(1-0.5*self.rmodel.quatdelta) # convert quat dist to angle distance
         bandwidth = array((rotweight*angdelta ,self.rmodel.xyzdelta,self.rmodel.xyzdelta))
         ibandwidth=-0.5/bandwidth**2
@@ -216,7 +218,7 @@ class InverseReachabilityModel(OpenRAVEModel):
         graspindexoffsets = []
         for i,Tgrasp in enumerate(Tgrasps):
             posetarget = poseFromMatrix(dot(linalg.inv(Tgrasp),Tbaserobot))
-            qnormalized,znormangle = self.normalizeZRotation(reshape(posetarget[0:4],(1,4)))
+            qnormalized,znormangle = normalizeZRotation(reshape(posetarget[0:4],(1,4)))
             # find the closest cluster
             logll = self.quatDist(qnormalized,self.equivalencemeans[:,0:4],self.equivalenceweights[:,0:4]) + (posetarget[6]-self.equivalencemeans[:,4])*self.equivalenceweights[:,4] + self.equivalenceoffset
             bestindex = argmax(logll)
@@ -246,7 +248,7 @@ class InverseReachabilityModel(OpenRAVEModel):
         
         def gaussiankerneldensity(poses):
             """returns the density"""
-            qposes,zposeangles = self.normalizeZRotation(poses[:,0:4])
+            qposes,zposeangles = normalizeZRotation(poses[:,0:4])
             p = c_[zposeangles*rotweight,poses[:,4:6]]
             neighs,dists,kball = kdtree.kFRSearchArray(p,searchradius,16,searcheps)
             probs = zeros(p.shape[0])
@@ -264,7 +266,7 @@ class InverseReachabilityModel(OpenRAVEModel):
                 sampledgraspindices[i] = graspindices[bisect.bisect(graspindexoffsets,pointindex)-1]
                 sampledpoints[i,:] = points[pointindex,:]
             samples = random.normal(sampledpoints,bandwidth*weight)
-            return c_[self.quatArrayTMult(c_[cos(samples[:,0]),zeros((N,2)),sin(samples[:,0])],qbaserobotnorm),samples[:,1:3],tile(Tbaserobot[2,3],N)],sampledgraspindices
+            return c_[quatArrayTMult(c_[cos(samples[:,0]),zeros((N,2)),sin(samples[:,0])],qbaserobotnorm),samples[:,1:3],tile(Tbaserobot[2,3],N)],sampledgraspindices
         return gaussiankerneldensity,gaussiankernelsampler,bounds
 
     def showBaseDistribution(self,densityfn,bounds,zoffset=0,thresh=1.0,maxprob=None,marginalizeangle=True):
@@ -301,34 +303,6 @@ class InverseReachabilityModel(OpenRAVEModel):
             return self.env.plot3(points=array(points),colors=array(colors),pointsize=10)
 
     @staticmethod
-    def normalizeZRotation(qarray):
-        """for all quaternions, find the rotation about z that minimizes the distance between the identify (1,0,0,0), and transform the quaternions"""
-        zangles = arctan2(-qarray[:,3],qarray[:,0])
-        sinangles = sin(zangles)
-        cosangles = cos(zangles)
-        return c_[cosangles*qarray[:,0]-sinangles*qarray[:,3], cosangles*qarray[:,1]-sinangles*qarray[:,2], cosangles*qarray[:,2]+sinangles*qarray[:,1], cosangles*qarray[:,3]+sinangles*qarray[:,0]],-zangles
-    @staticmethod
-    def quatArrayTMult(qarray,q):
-        """ multiplies a Nx4 array of quaternions with a quaternion"""
-        return c_[(qarray[:,0]*q[0] - qarray[:,1]*q[1] - qarray[:,2]*q[2] - qarray[:,3]*q[3],
-                   qarray[:,0]*q[1] + qarray[:,1]*q[0] + qarray[:,2]*q[3] - qarray[:,3]*q[2],
-                   qarray[:,0]*q[2] + qarray[:,2]*q[0] + qarray[:,3]*q[1] - qarray[:,1]*q[3],
-                   qarray[:,0]*q[3] + qarray[:,3]*q[0] + qarray[:,1]*q[2] - qarray[:,2]*q[1])]
-    @staticmethod
-    def quatMultArrayT(q,qarray):
-        """ multiplies a quaternion q with each quaternion in the Nx4 array qarray"""
-        return c_[(q[0]*qarray[:,0] - q[1]*qarray[:,1] - q[2]*qarray[:,2] - q[3]*qarray[:,3],
-                   q[0]*qarray[:,1] + q[1]*qarray[:,0] + q[2]*qarray[:,3] - q[3]*qarray[:,2],
-                   q[0]*qarray[:,2] + q[2]*qarray[:,0] + q[3]*qarray[:,1] - q[1]*qarray[:,3],
-                   q[0]*qarray[:,3] + q[3]*qarray[:,0] + q[1]*qarray[:,2] - q[2]*qarray[:,1])]
-    @staticmethod
-    def quatMult(q1,q2):
-        return array((q1[0]*q2[0] - q1[1]*q2[1] - q1[2]*q2[2] - q1[3]*q2[3],
-                      q1[0]*q2[1] + q1[1]*q2[0] + q1[2]*q2[3] - q1[3]*q2[2],
-                      q1[0]*q2[2] + q1[2]*q2[0] + q1[3]*q2[1] - q1[1]*q2[3],
-                      q1[0]*q2[3] + q1[3]*q2[0] + q1[1]*q2[2] - q1[2]*q2[1]))
-
-    @staticmethod
     def quatDist(q,qarray,weightssq=None):
         """find the squared distance between q and all quaternions in the Nx4 qarray. Optional squared weights can be specified"""
         qtile = tile(q,(qarray.shape[0],1))
@@ -338,7 +312,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             q1 = (qtile-qarray)**2
             q2 = (qtile+qarray)**2
             indices = array(sum(q1,axis=1)<sum(q2,axis=1))
-            return sum(q1*weightssq,axis=1)*indices+sum(q2*weightssq,axis=1)*(1-indices)        
+            return sum(q1*weightssq,axis=1)*indices+sum(q2*weightssq,axis=1)*(1-indices)
     @staticmethod
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser()

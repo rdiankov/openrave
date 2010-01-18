@@ -28,21 +28,22 @@ def run():
     bodynames = ['data/lego2.kinbody.xml', 'data/lego4.kinbody.xml', 'data/mug1.kinbody.xml']
     numbodies = 0
     env.StopSimulation()
-    env.StartSimulation(0.01)
+    env.StartSimulation(timestep=0.01)
     starttime = time.time()
-    while True: # continually create random kinbodies
-        with env:
-            body = env.ReadKinBodyXMLFile(bodynames[random.randint(len(bodynames))])
-            body.SetName('body%d'%numbodies)
-            numbodies += 1
-            env.AddKinBody(body)
-            T = eye(4)
-            T[0:3,3] = array((-0.5,2,-0.5))+0.4*random.rand(3)
-            body.SetTransform(T)
+    while True:
+        if numbodies < 40:
+            with env:
+                body = env.ReadKinBodyXMLFile(bodynames[random.randint(len(bodynames))])
+                body.SetName('body%d'%numbodies)
+                numbodies += 1
+                env.AddKinBody(body)
+                T = eye(4)
+                T[0:3,3] = array((-0.5,2,-0.5))+0.4*random.rand(3)
+                body.SetTransform(T)
         time.sleep(0.4)
         simtime = env.GetSimulationTime()*1e-6
         realtime = time.time()-starttime
-        print 'sim time: %f, real time: %f, diff = %f'%(simtime,realtime,simtime-realtime)
+        print 'sim time: %fs, real time: %fs, diff = %fs'%(simtime,realtime,simtime-realtime)
 
 if __name__=='__main__':
     run()

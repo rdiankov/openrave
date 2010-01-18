@@ -14,6 +14,7 @@ __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
+import openravepy
 from openravepy import *
 from openravepy.examples import inversekinematics
 from numpy import *
@@ -53,9 +54,9 @@ class ReachabilityModel(OpenRAVEModel):
         return os.path.join(OpenRAVEModel.getfilename(self),'reachability.' + self.manip.GetName() + '.pp')
 
     def generateFromOptions(self,options):
-        self.generate(maxradius=options.maxradius,xyzdelta=options.xyzdelta,rolldelta=options.rolldelta)
+        self.generate(maxradius=options.maxradius,xyzdelta=options.xyzdelta,quatdelta=options.quatdelta)
 
-    def generate(self,maxradius=None,translationonly=False,xyzdelta=0.04,rolldelta=pi/3.0):
+    def generate(self,maxradius=None,translationonly=False,xyzdelta=0.04,quatdelta=0.25):
         starttime = time.time()
         # the axes' anchors are the best way to find th emax radius
         eeanchor = self.robot.GetJoints()[self.manip.GetArmJoints()[-1]].GetAnchor()
@@ -67,23 +68,19 @@ class ReachabilityModel(OpenRAVEModel):
         print 'radius: %f'%maxradius
 
         allpoints,insideinds,shape,self.pointscale = self.UniformlySampleSpace(maxradius,delta=xyzdelta)
-        # select the best sphere level matching rolldelta;
-        # spherelevel=0: (dist=0.2986), rolldelta ~= pi/3
-        # spherelevel=1: (dist=0.0779), rolldelta ~= pi*2/9
-        # spherelevel=2: (dist=0.0198), rolldelta ~= pi/11
-        # -0.63267/rolldelta**2 + 3.60478/rolldelta - 2.86538 ~= spherelevel
-        # 
-        spherelevel = max(0,int((-0.63267/rolldelta**2 + 3.60478/rolldelta - 2.86538)+0.4))
-        rotations = [eye(3)] if translationonly else self.GetUniformRotations(spherelevel=spherelevel,rolldelta=rolldelta)
+        # select the best sphere level matching quatdelta;
+        # level=0, quatdist = 0.5160220
+        # level=1: quatdist = 0.2523583
+        # level=2: quatdist = 0.120735
+        qarray = SpaceSampler().sampleSO3(level=max(0,int(0.5-log2(0.516))))
+        rotations = [eye(3)] if translationonly else rotationMatrixFromQArray(qarray)
         self.xyzdelta = xyzdelta
         self.quatdelta = 0
         if not translationonly:
             # for rotations, get the average distance to the nearest rotation
-            quats = array([quatFromRotationMatrix(r) for r in rotations])
             neighdists = []
-            for q in quats:
-                dists = minimum(sum((tile(q,(quats.shape[0],1))-quats)**2,axis=1), sum((tile(q,(quats.shape[0],1))+quats)**2,axis=1))
-                neighdists.append(heapq.nsmallest(2,dists)[1])
+            for q in qarray:
+                neighdists.append(heapq.nsmallest(2,quatArrayTDist(q,qarray))[1])
             self.quatdelta = mean(neighdists)
         
         T = eye(4)
@@ -151,62 +148,6 @@ class ReachabilityModel(OpenRAVEModel):
         insideinds = flatnonzero(sum(allpoints**2,1)<maxradius**2)
         return allpoints,insideinds,X.shape,array((1.0/delta,nsteps))
 
-    def GetUniformRotations(self,rolldelta,spherelevel=2):
-        """Generate a discreteized uniform sampling of rotations using geodesic spheres"""
-        vertices,triindices = self.GetGeodesicSphere(spherelevel=spherelevel)
-        rotations = []
-        for d in vertices:
-            up = array((0,1,0)) - d*d[1]
-            lup = sum(up**2)
-            if lup < 0.0001:
-                up = array((0,0,1)) - d*d[2]
-                lup = sum(up**2)
-            up = up / sqrt(lup)
-            right = cross(up,d)
-            Rbase = c_[right,up,d]
-            for roll in arange(0,2*pi,rolldelta):
-                Rz = array(((cos(roll),-sin(roll),0),(sin(roll),cos(roll),0),(0,0,1)))
-                rotations.append(dot(Rbase,Rz))
-        return rotations
-
-    @staticmethod
-    def GetGeodesicSphere(spherelevel=2):
-        GTS_M_ICOSAHEDRON_X = sqrt(sqrt(5)+1)/sqrt(2*sqrt(5))
-        GTS_M_ICOSAHEDRON_Y = sqrt(2)/sqrt(5+sqrt(5))
-        GTS_M_ICOSAHEDRON_Z = 0.0
-        vertices = [array((+GTS_M_ICOSAHEDRON_Z, +GTS_M_ICOSAHEDRON_X, -GTS_M_ICOSAHEDRON_Y)),
-                    array((+GTS_M_ICOSAHEDRON_X, +GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z)),
-                    array((+GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z, -GTS_M_ICOSAHEDRON_X)),
-                    array((+GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z, +GTS_M_ICOSAHEDRON_X)),
-                    array((+GTS_M_ICOSAHEDRON_X, -GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z)),
-                    array((+GTS_M_ICOSAHEDRON_Z, +GTS_M_ICOSAHEDRON_X, +GTS_M_ICOSAHEDRON_Y)),
-                    array((-GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z, +GTS_M_ICOSAHEDRON_X)),
-                    array((+GTS_M_ICOSAHEDRON_Z, -GTS_M_ICOSAHEDRON_X, -GTS_M_ICOSAHEDRON_Y)),
-                    array((-GTS_M_ICOSAHEDRON_X, +GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z)),
-                    array((-GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z, -GTS_M_ICOSAHEDRON_X)),
-                    array((-GTS_M_ICOSAHEDRON_X, -GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z)),
-                    array((+GTS_M_ICOSAHEDRON_Z, -GTS_M_ICOSAHEDRON_X, +GTS_M_ICOSAHEDRON_Y))]
-        triindices = [[0, 1, 2],[1, 3, 4],[3, 5, 6],[2, 4, 7],[6, 5, 8],[2, 7, 9],[5, 0, 8],[9, 7, 10],[1, 0, 5],[10, 7, 11],[3, 1, 5],[6, 10, 11],[3, 6, 11],[9, 10, 8],[4, 3, 11],[6, 8, 10],[7, 4, 11],[2, 1, 4],[8, 0, 9],[0, 2, 9]]
-        while spherelevel > 0:
-            spherelevel -= 1
-            newindices = []
-            mapnewinds = dict()
-            for tri in triindices:
-                # for ever tri, create 3 new vertices and 4 new triangles.
-                v = [vertices[i] for i in tri]
-                inds = []
-                for j in range(3):
-                    key = (tri[j],tri[mod(j+1,3)])
-                    if key in mapnewinds:
-                        inds.append(mapnewinds[key])
-                    else:
-                        mapnewinds[key] = mapnewinds[key[::-1]] = len(vertices)
-                        inds.append(len(vertices))
-                        vnew = v[j]+v[mod(j+1,3)]
-                        vertices.append(vnew/sqrt(sum(vnew**2)))
-                newindices += [[tri[0],inds[0],inds[2]],[inds[0],tri[1],inds[1]],[inds[2],inds[0],inds[1]],[inds[2],inds[1],tri[2]]]
-            triindices = newindices
-        return array(vertices),triindices
     @staticmethod
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser()
@@ -215,7 +156,7 @@ class ReachabilityModel(OpenRAVEModel):
                           help='The max radius of the arm to perform the computation')
         parser.add_option('--xyzdelta',action='store',type='float',dest='xyzdelta',default=0.04,
                           help='The max radius of the arm to perform the computation')
-        parser.add_option('--rolldelta',action='store',type='float',dest='rolldelta',default=pi/3.0,
+        parser.add_option('--quatdelta',action='store',type='float',dest='quatdelta',default=0.25,
                           help='The max radius of the arm to perform the computation')
         return parser
     @staticmethod

@@ -2609,6 +2609,15 @@ object rotationMatrixFromQuat(object oquat)
     return toPyArrayRotation(TransformMatrix(t));
 }
 
+object rotationMatrixFromQArray(object qarray)
+{
+    boost::python::list orots;
+    int N = len(qarray);
+    for(int i = 0; i < N; ++i)
+        orots.append(rotationMatrixFromQuat(qarray[i]));
+    return orots;
+}
+
 object matrixFromQuat(object oquat)
 {
     Transform t; t.rot = ExtractVector4(oquat);
@@ -2664,6 +2673,15 @@ object matrixFromAxisAngle2(object oaxis, object oangle)
 object matrixFromPose(object opose)
 {
     return toPyArray(TransformMatrix(ExtractTransformType<dReal>(opose)));
+}
+
+object matrixFromPoses(object oposes)
+{
+    boost::python::list omatrices;
+    int N = len(oposes);
+    for(int i = 0; i < N; ++i)
+        omatrices.append(matrixFromPose(oposes[i]));
+    return omatrices;
 }
 
 object poseFromMatrix(object o)
@@ -3390,12 +3408,14 @@ BOOST_PYTHON_MODULE(openravepy_int)
     def("quatFromRotationMatrix",quatFromRotationMatrix, args("rotation"), "Converts the rotation of a matrix into a quaternion");
     def("axisAngleFromRotationMatrix",axisAngleFromRotationMatrix, args("rotation"), "Converts the rotation of a matrix into axis-angle representation");
     def("rotationMatrixFromQuat",rotationMatrixFromQuat, args("quat"), "Converts a quaternion to a 3x3 matrix");
+    def("rotationMatrixFromQArray",rotationMatrixFromQArray,args("quatarray"),"Converts an array of quaternions to a list of 3x3 rotation matrices");
     def("matrixFromQuat",matrixFromQuat, args("quat"), "Converts a quaternion to a 4x4 affine matrix");
     def("rotationMatrixFromAxisAngle",rotationMatrixFromAxisAngle1, args("axis"), "Converts an axis-angle rotation to a 3x3 matrix");
     def("rotationMatrixFromAxisAngle",rotationMatrixFromAxisAngle2, args("axis","angle"), "Converts an axis-angle rotation to a 3x3 matrix");
     def("matrixFromAxisAngle",matrixFromAxisAngle1, args("axis"), "Converts an axis-angle rotation to a 4x4 affine matrix");
     def("matrixFromAxisAngle",matrixFromAxisAngle2, args("axis","angle"), "Converts an axis-angle rotation to a 4x4 affine matrix");
     def("matrixFromPose",matrixFromPose, args("pose"), "Converts a 7 element quaterion+translation transform to a 4x4 matrix");
+    def("matrixFromPoses",matrixFromPoses, args("poses"), "Converts a Nx7 element quaterion+translation array to a 4x4 matrices");
     def("poseFromMatrix",poseFromMatrix, args("transform"), "Converts a 4x4 matrix to a 7 element quaternion+translation representation");
     def("poseFromMatrices",poseFromMatrices, args("transforms"), "Converts an array/list of 4x4 matrices to a Nx7 array where each row is quaternion+translation representation");
     def("invertPoses",invertPoses,args("poses"), "Inverts a Nx7 array of poses where first 4 columns are the quaternion and last 3 are the translation components");

@@ -63,10 +63,10 @@ class GraspReachability(metaclass.AutoReloader):
                     if not self.manip.CheckIndependentCollision(CollisionReport()):
                         grasp = validgrasps[index]
                         self.gmodel.setPreshape(grasp)
-                        q = self.manip.FindIKSolution(self.gmodel.getGlobalGraspTransform(grasp),True)
+                        q = self.manip.FindIKSolution(self.gmodel.getGlobalGraspTransform(grasp),envcheck=True)
                         if q is not None:
                             goals.append((grasp,pose,q))
-                        else:
+                        elif not self.manip.FindIKSolution(self.gmodel.getGlobalGraspTransform(grasp),envcheck=False)
                             numfailures += 1
         return goals,numfailures
 
