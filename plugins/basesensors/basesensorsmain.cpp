@@ -17,7 +17,8 @@
 #include "baseflashlidar3d.h"
 #include "basecamera.h"
 
-static map<void*, list< boost::shared_ptr<void> > > s_mapRegisteredReaders;
+// need c linkage
+static list< boost::shared_ptr<void> > s_listRegisteredReaders;
 RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(PluginType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv)
 {
     if( strcmp(pluginhash,RaveGetInterfaceHash(type)) ) {
@@ -27,13 +28,11 @@ RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(PluginType type, const std::str
     if( !penv )
         return InterfaceBasePtr();
     
-    if( s_mapRegisteredReaders.find(penv.get()) == s_mapRegisteredReaders.end() ) {
-        list< boost::shared_ptr<void> > readers;
-        readers.push_back(penv->RegisterXMLReader(PT_Sensor,"baselaser2d",BaseLaser2DSensor::CreateXMLReader));
-        readers.push_back(penv->RegisterXMLReader(PT_Sensor,"basespinninglaser2d",BaseSpinningLaser2DSensor::CreateXMLReader));
-        readers.push_back(penv->RegisterXMLReader(PT_Sensor,"baseflashlidar3d",BaseFlashLidar3DSensor::CreateXMLReader));
-        readers.push_back(penv->RegisterXMLReader(PT_Sensor,"basecamera",BaseCameraSensor::CreateXMLReader));
-        s_mapRegisteredReaders[penv.get()] = readers;
+    if( s_listRegisteredReaders.size() == 0 ) {
+        s_listRegisteredReaders.push_back(penv->RegisterXMLReader(PT_Sensor,"baselaser2d",BaseLaser2DSensor::CreateXMLReader));
+        s_listRegisteredReaders.push_back(penv->RegisterXMLReader(PT_Sensor,"basespinninglaser2d",BaseSpinningLaser2DSensor::CreateXMLReader));
+        s_listRegisteredReaders.push_back(penv->RegisterXMLReader(PT_Sensor,"baseflashlidar3d",BaseFlashLidar3DSensor::CreateXMLReader));
+        s_listRegisteredReaders.push_back(penv->RegisterXMLReader(PT_Sensor,"basecamera",BaseCameraSensor::CreateXMLReader));
     }
 
     stringstream ss(name);
@@ -77,5 +76,5 @@ RAVE_PLUGIN_API bool GetPluginAttributes(PLUGININFO* pinfo, int size)
 
 RAVE_PLUGIN_API void DestroyPlugin()
 {
-    s_mapRegisteredReaders.clear();
+    s_listRegisteredReaders.clear();
 }
