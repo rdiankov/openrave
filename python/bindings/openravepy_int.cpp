@@ -1663,7 +1663,8 @@ public:
 class PyEnvironmentBase : public boost::enable_shared_from_this<PyEnvironmentBase>
 {
 #if BOOST_VERSION < 103500
-    boost::shared_ptr<EnvironmentMutex::scoped_lock> _envlock;
+    boost::mutex _envmutex;
+    std::list<boost::shared_ptr<EnvironmentMutex::scoped_lock> > _listenvlocks, _listfreelocks;
 #endif
 protected:
     EnvironmentBasePtr _penv;
@@ -1720,22 +1721,13 @@ public:
     PyEnvironmentBase()
     {
         _penv = CreateEnvironment(true);
-#if BOOST_VERSION < 103500
-        _envlock.reset(new EnvironmentMutex::scoped_lock(_penv->GetMutex(),false));
-#endif
     }
     PyEnvironmentBase(EnvironmentBasePtr penv) : _penv(penv) {
-#if BOOST_VERSION < 103500
-        _envlock.reset(new EnvironmentMutex::scoped_lock(_penv->GetMutex(),false));
-#endif
     }
 
     PyEnvironmentBase(const PyEnvironmentBase& pyenv)
     {
         _penv = pyenv._penv;
-#if BOOST_VERSION < 103500
-        _envlock.reset(new EnvironmentMutex::scoped_lock(_penv->GetMutex(),false));
-#endif
     }
 
     virtual ~PyEnvironmentBase()
@@ -2237,10 +2229,19 @@ public:
     void LockPhysics(bool bLock)
     {
 #if BOOST_VERSION < 103500
-        if( bLock )
-            _envlock->lock();
-        else
-            _envlock->unlock();
+        boost::mutex::scoped_lock envlock(_envmutex);
+        if( bLock ) {
+            if( _listfreelocks.size() > 0 ) {
+                _listfreelocks.back()->lock();
+                _listenvlocks.splice(_listenvlocks.end(),_listfreelocks,--_listfreelocks.end());
+            }
+            else
+                _listenvlocks.push_back(boost::shared_ptr<EnvironmentMutex::scoped_lock>(new EnvironmentMutex::scoped_lock(_penv->GetMutex())));
+        }
+        else {
+            _listenvlocks.back()->unlock();
+            _listfreelocks.splice(_listfreelocks.end(),_listenvlocks,--_listenvlocks.end());
+        }
 #else
         if( bLock )
             _penv->GetMutex().lock();
@@ -2250,17 +2251,8 @@ public:
     }
     void LockPhysics(bool bLock, float timeout)
     {
-#if BOOST_VERSION < 103500
-        if( bLock )
-            _envlock->lock();
-        else
-            _envlock->unlock();
-#else
-        if( bLock )
-            _penv->GetMutex().lock();
-        else
-            _penv->GetMutex().unlock();
-#endif
+        RAVELOG_WARN("Environment.LockPhysics timeout is ignored\n");
+        LockPhysics(bLock);
     }
 
     void __enter__()
