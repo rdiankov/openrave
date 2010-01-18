@@ -2230,7 +2230,7 @@ public:
     }
 
     void StepSimulation(dReal timeStep) { _penv->StepSimulation(timeStep); }
-    void StartSimulation(dReal fDeltaTime) { _penv->StartSimulation(fDeltaTime); }
+    void StartSimulation(dReal fDeltaTime, bool bRealTime=true) { _penv->StartSimulation(fDeltaTime,bRealTime); }
     void StopSimulation() { _penv->StopSimulation(); }
     uint64_t GetSimulationTime() { return _penv->GetSimulationTime(); }
 
@@ -2736,6 +2736,7 @@ string poseSerialization(object o)
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetController_overloads, SetController, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(StartSimulation_overloads, StartSimulation, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetViewer_overloads, SetViewer, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckCollisionRays_overloads, CheckCollisionRays, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(plot3_overloads, plot3, 2, 4)
@@ -3334,7 +3335,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetPhysicsEngine",&PyEnvironmentBase::GetPhysicsEngine)
             .def("RegisterCollisionCallback",&PyEnvironmentBase::RegisterCollisionCallback,args("callback"))
             .def("StepSimulation",&PyEnvironmentBase::StepSimulation,args("timestep"))
-            .def("StartSimulation",&PyEnvironmentBase::StartSimulation,args("timestep"))
+            .def("StartSimulation",&PyEnvironmentBase::StartSimulation,StartSimulation_overloads(args("timestep","realtime")))
             .def("StopSimulation",&PyEnvironmentBase::StopSimulation)
             .def("GetSimulationTime",&PyEnvironmentBase::GetSimulationTime)
             .def("LockPhysics",LockPhysics1,args("lock"))
