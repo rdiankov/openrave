@@ -1,7 +1,7 @@
 <Robot name="PA10">
   <KinBody file="pa10.kinbody.xml">
     <KinBody file="schunk_manip.kinbody.xml"/>
-    <Joint name="dummy" type="hinge" enable="False">
+    <Joint name="dummy" type="hinge" enable="false">
       <body>link7</body>
       <body>gripper_base</body>
       <axis>0 0 1</axis>

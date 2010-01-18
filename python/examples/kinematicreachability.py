@@ -56,7 +56,7 @@ class ReachabilityModel(OpenRAVEModel):
     def generateFromOptions(self,options):
         self.generate(maxradius=options.maxradius,xyzdelta=options.xyzdelta,quatdelta=options.quatdelta)
 
-    def generate(self,maxradius=None,translationonly=False,xyzdelta=0.04,quatdelta=0.25):
+    def generate(self,maxradius=None,translationonly=False,xyzdelta=0.04,quatdelta=0.5):
         starttime = time.time()
         # the axes' anchors are the best way to find th emax radius
         eeanchor = self.robot.GetJoints()[self.manip.GetArmJoints()[-1]].GetAnchor()
@@ -65,14 +65,13 @@ class ReachabilityModel(OpenRAVEModel):
         armlength = sqrt(sum((eetrans-baseanchor)**2))
         if maxradius is None:
             maxradius = armlength+0.05
-        print 'radius: %f'%maxradius
 
         allpoints,insideinds,shape,self.pointscale = self.UniformlySampleSpace(maxradius,delta=xyzdelta)
         # select the best sphere level matching quatdelta;
         # level=0, quatdist = 0.5160220
         # level=1: quatdist = 0.2523583
         # level=2: quatdist = 0.120735
-        qarray = SpaceSampler().sampleSO3(level=max(0,int(0.5-log2(0.516))))
+        qarray = SpaceSampler().sampleSO3(level=max(0,int(-0.5-log2(quatdelta))))
         rotations = [eye(3)] if translationonly else rotationMatrixFromQArray(qarray)
         self.xyzdelta = xyzdelta
         self.quatdelta = 0
@@ -83,6 +82,7 @@ class ReachabilityModel(OpenRAVEModel):
                 neighdists.append(heapq.nsmallest(2,quatArrayTDist(q,qarray))[1])
             self.quatdelta = mean(neighdists)
         
+        print 'radius: %f, xyzsamples: %d, quatdelta: %f, rot samples: %d'%(maxradius,len(insideinds),self.quatdelta,len(rotations))
         T = eye(4)
         reachabilitydensity3d = zeros(prod(shape))
         self.reachabilitystats = []
@@ -156,7 +156,7 @@ class ReachabilityModel(OpenRAVEModel):
                           help='The max radius of the arm to perform the computation')
         parser.add_option('--xyzdelta',action='store',type='float',dest='xyzdelta',default=0.04,
                           help='The max radius of the arm to perform the computation')
-        parser.add_option('--quatdelta',action='store',type='float',dest='quatdelta',default=0.25,
+        parser.add_option('--quatdelta',action='store',type='float',dest='quatdelta',default=0.5,
                           help='The max radius of the arm to perform the computation')
         return parser
     @staticmethod

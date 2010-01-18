@@ -982,7 +982,7 @@ namespace OpenRAVEXMLParser
                     }
                 }
                 else if( itatt->first == "enable" ) {
-                    bDisabled = stricmp(itatt->second.c_str(), "false") == 0;
+                    bDisabled = stricmp(itatt->second.c_str(), "false") == 0 || itatt->second=="0";
                 }
                 else if( itatt->first == "mimic" ) {
                     stringstream ss(itatt->second);
