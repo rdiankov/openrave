@@ -49,8 +49,53 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
     inline boost::shared_ptr<ODEPhysicsEngine> shared_physics() { return boost::static_pointer_cast<ODEPhysicsEngine>(shared_from_this()); }
     inline boost::shared_ptr<ODEPhysicsEngine const> shared_physics_const() const { return boost::static_pointer_cast<ODEPhysicsEngine const>(shared_from_this()); }
 
+    class PhysicsPropertiesXMLReader : public BaseXMLReader
+    {
+    public:
+    PhysicsPropertiesXMLReader(boost::shared_ptr<ODEPhysicsEngine> physics, const std::list<std::pair<std::string,std::string> >& atts) : _physics(physics) {
+        }
+
+        virtual void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts) {
+            BaseXMLReader::startElement(name,atts);
+        }
+
+        virtual bool endElement(const std::string& name)
+        {
+            BaseXMLReader::endElement(name);
+            if( name == "odeproperties" )
+                return true;
+            else if( name == "friction" )
+                // read all the float values into a vector
+                _ss >> _physics->_globalfriction;
+            else
+                RAVELOG_ERRORA("unknown field %s\n", name.c_str());
+
+            if( !_ss )
+                RAVELOG_WARNA(str(boost::format("error parsing %s\n")%name));
+
+            return false;
+        }
+
+        virtual void characters(const std::string& ch)
+        {
+            BaseXMLReader::characters(ch);
+            _ss.clear();
+            _ss.str(ch);
+        }
+
+    protected:
+        boost::shared_ptr<ODEPhysicsEngine> _physics;
+        stringstream _ss;
+    };
+
  public:
+    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const std::list<std::pair<std::string,std::string> >& atts)
+    {
+        return BaseXMLReaderPtr(new PhysicsPropertiesXMLReader(boost::dynamic_pointer_cast<ODEPhysicsEngine>(ptr),atts));
+    }
+
  ODEPhysicsEngine(OpenRAVE::EnvironmentBasePtr penv) : OpenRAVE::PhysicsEngineBase(penv), odespace(new ODESpace(penv, GetPhysicsInfo, true)) {
+        _globalfriction = 1.0f;
         memset(_jointset, 0, sizeof(_jointset));
         _jointset[dJointTypeBall] = DummySetParam;
         _jointset[dJointTypeHinge] = dJointSetHingeParam;
@@ -340,7 +385,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         dBodyID b1,b2;
         b1 = dGeomGetBody(o1);
         b2 = dGeomGetBody(o2);
-        if (b1 && b2 && dAreConnected (b1,b2)) {
+        if (!(_options & OpenRAVE::PEO_SelfCollisions) && b1 && b2 && dAreConnected (b1,b2)) {
             return;
         }
 
@@ -396,8 +441,8 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         // process collisions
         for (int i=0; i<n; i++) {
             contact[i].surface.mode = 0;
-            contact[i].surface.mu = (dReal)100;
-            contact[i].surface.mu2 = 100;
+            contact[i].surface.mu = (dReal)_globalfriction;
+            contact[i].surface.mu2 = _globalfriction;
             //        contact[i].surface.slip1 = 0.7;
             //        contact[i].surface.slip2 = 0.7;
             //        contact[i].surface.mode = dContactSoftERP | dContactSoftCFM | dContactApprox1 | dContactSlip1 | dContactSlip2;
@@ -443,6 +488,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
     boost::shared_ptr<ODESpace> odespace;
     Vector _gravity;
     int _options;
+    dReal _globalfriction;
     
     typedef void (*JointSetFn)(dJointID, int param, dReal val);
     typedef dReal (*JointGetFn)(dJointID);

@@ -175,7 +175,7 @@ public slots:
     void PhysicsEngineChanged(QAction*);
 
     void DynamicSelfCollision(bool on);
-    void DynamicGravity(bool on);
+    void DynamicGravity();
 
     void UpdateInterfaces();
     void InterfaceSendCommand(QAction*);
@@ -296,7 +296,7 @@ protected:
     QWidget       *_pQtWidget;
     SoQtExaminerViewer* _pviewer;
     QActionGroup* _pToggleDebug, *_pSelectedCollisionChecker, *_pSelectedPhysicsEngine, *_pActionSendCommand;
-    QAction* _pToggleSimulation;
+    QAction* _pToggleSimulation, *_pToggleSelfCollision;
     QMenu* _pMenuSendCommand;
 
     SoNode*       _selectedNode;
@@ -343,7 +343,6 @@ protected:
 
     // toggle switches
     bool _bModelsUpdated;
-    bool _bSelfCollision;
     bool         _bDisplayGrid;
     bool         _bDisplayIK;
     bool         _bDisplayFPS;

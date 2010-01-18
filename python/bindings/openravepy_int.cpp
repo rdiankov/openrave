@@ -2827,14 +2827,12 @@ BOOST_PYTHON_MODULE(openravepy_int)
         .value("DefaultAction",CA_DefaultAction)
         .value("Ignore",CA_Ignore)
         ;
-
     enum_<CloningOptions>("CloningOptions")
         .value("Bodies",Clone_Bodies)
         .value("Viewer",Clone_Viewer)
         .value("Simulation",Clone_Simulation)
         .value("RealControllers",Clone_RealControllers)
         ;
-
     enum_<PhysicsEngineOptions>("PhysicsEngineOptions")
         .value("SelfCollisions",PEO_SelfCollisions)
         ;

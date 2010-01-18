@@ -104,6 +104,8 @@ inline uint64_t GetMicroTime()
 }
 
 // OpenRAVE includes a dReal typedef which could cause conflict with ODEs, so don't include it
+using OpenRAVE::BaseXMLReader;
+using OpenRAVE::BaseXMLReaderPtr;
 using OpenRAVE::EnvironmentBase;
 using OpenRAVE::EnvironmentBasePtr;
 using OpenRAVE::KinBody;

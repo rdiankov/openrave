@@ -196,7 +196,6 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     _bManipTracking = false;
     _bAntialiasing = false;
     _viewGeometryMode = VG_RenderOnly;
-    _bSelfCollision = false;
 
     SetupMenus();
 
@@ -1834,14 +1833,12 @@ void QtCoinViewer::SetupMenus()
     {
         pact = new QAction(tr("Self Collision"), this);
         pact->setCheckable(true);
-        pact->setChecked(_bSelfCollision);
         connect(pact, SIGNAL(triggered(bool)), this, SLOT(DynamicSelfCollision(bool)));
         psubmenu->addAction(pact);
+        _pToggleSelfCollision = pact;
     }
     {
-        pact = new QAction(tr("Apply Gravity"), this);
-        pact->setCheckable(true);
-        pact->setChecked(false);
+        pact = new QAction(tr("Set Gravity to -Z"), this);
         connect(pact, SIGNAL(triggered(bool)), this, SLOT(DynamicGravity(bool)));
         psubmenu->addAction(pact);
     }
@@ -2575,6 +2572,11 @@ void QtCoinViewer::_UpdateToggleSimulation()
 {
     if( !!_pToggleSimulation )
         _pToggleSimulation->setChecked(GetEnv()->IsSimulationRunning());
+    if( !!_pToggleSelfCollision ) {
+        PhysicsEngineBasePtr p = GetEnv()->GetPhysicsEngine();
+        if( !!p )
+            _pToggleSelfCollision->setChecked(!!(p->GetPhysicsOptions()&PEO_SelfCollisions));
+    }
 }
 
 void QtCoinViewer::_RecordSetup(bool bOn, bool bRealtimeVideo)
@@ -2837,8 +2839,9 @@ void QtCoinViewer::PhysicsEngineChanged(QAction* pact)
 
 void QtCoinViewer::_UpdatePhysicsEngine()
 {
+    PhysicsEngineBasePtr p;
     if( !!_pSelectedPhysicsEngine ) {
-        PhysicsEngineBasePtr p = GetEnv()->GetPhysicsEngine();
+        p = GetEnv()->GetPhysicsEngine();
         if( !!p ) {
             for(int i = 0; i < _pSelectedPhysicsEngine->actions().size(); ++i) {
                 if( _pSelectedPhysicsEngine->actions().at(i)->data().toString().toStdString() == p->GetXMLId() ) {
@@ -2878,17 +2881,20 @@ void QtCoinViewer::InterfaceSendCommand(QAction* pact)
 
 void QtCoinViewer::DynamicSelfCollision(bool on)
 {
-    _bSelfCollision = on;
-    int opts = GetEnv()->GetPhysicsEngine()->GetPhysicsOptions();
-    if( _bSelfCollision )
-        opts |= PEO_SelfCollisions;
-    else opts &= ~PEO_SelfCollisions;
-    GetEnv()->GetPhysicsEngine()->SetPhysicsOptions(opts);
+    PhysicsEngineBasePtr p = GetEnv()->GetPhysicsEngine();
+    if( !!p ) {
+        int opts = p->GetPhysicsOptions();
+        if( on )
+            opts |= PEO_SelfCollisions;
+        else
+            opts &= ~PEO_SelfCollisions;
+        p->SetPhysicsOptions(opts);
+    }
 }
 
-void QtCoinViewer::DynamicGravity(bool on)
+void QtCoinViewer::DynamicGravity()
 {
-    GetEnv()->GetPhysicsEngine()->SetGravity(Vector(0, 0, on?-9.8f:0));
+    GetEnv()->GetPhysicsEngine()->SetGravity(Vector(0, 0, -9.8f));
 }
 
 void QtCoinViewer::About()
