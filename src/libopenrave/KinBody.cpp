@@ -682,6 +682,7 @@ KinBody::KinBodyStateSaver::~KinBodyStateSaver()
 KinBody::KinBody(PluginType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)
 {
     _bHierarchyComputed = false;
+    _bMakeJoinedLinksAdjacent = true;
     networkid = 0;
     
     _nUpdateStampId = 0;
@@ -1812,20 +1813,23 @@ void KinBody::ComputeJointHierarchy()
     _setAdjacentLinks.clear();
     _setNonAdjacentLinks.clear();  
 
-    FOREACH(itj, _vecjoints) {
-        if( !!(*itj)->bodies[0] && !!(*itj)->bodies[1] ) {
-            int ind0 = (*itj)->bodies[0]->GetIndex();
-            int ind1 = (*itj)->bodies[1]->GetIndex();
-            if( ind1 < ind0 ) _setAdjacentLinks.insert(ind1|(ind0<<16));
-            else _setAdjacentLinks.insert(ind0|(ind1<<16));
+    if( _bMakeJoinedLinksAdjacent ) {
+        FOREACH(itj, _vecjoints) {
+            if( !!(*itj)->bodies[0] && !!(*itj)->bodies[1] ) {
+                int ind0 = (*itj)->bodies[0]->GetIndex();
+                int ind1 = (*itj)->bodies[1]->GetIndex();
+                if( ind1 < ind0 ) _setAdjacentLinks.insert(ind1|(ind0<<16));
+                else _setAdjacentLinks.insert(ind0|(ind1<<16));
+            }
         }
-    }
-    FOREACH(itj, _vecPassiveJoints) {
-        if( !!(*itj)->bodies[0] && !!(*itj)->bodies[1] ) {
-            int ind0 = (*itj)->bodies[0]->GetIndex();
-            int ind1 = (*itj)->bodies[1]->GetIndex();
-            if( ind1 < ind0 ) _setAdjacentLinks.insert(ind1|(ind0<<16));
-            else _setAdjacentLinks.insert(ind0|(ind1<<16));
+
+        FOREACH(itj, _vecPassiveJoints) {
+            if( !!(*itj)->bodies[0] && !!(*itj)->bodies[1] ) {
+                int ind0 = (*itj)->bodies[0]->GetIndex();
+                int ind1 = (*itj)->bodies[1]->GetIndex();
+                if( ind1 < ind0 ) _setAdjacentLinks.insert(ind1|(ind0<<16));
+                else _setAdjacentLinks.insert(ind0|(ind1<<16));
+            }
         }
     }
 

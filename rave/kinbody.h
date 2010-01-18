@@ -656,6 +656,7 @@ protected:
     std::list<std::pair<int,boost::function<void()> > > _listRegisteredCallbacks; ///< callbacks to call when particular properties of the body change.
 
     bool _bHierarchyComputed; ///< true if the joint heirarchy and other cached information is computed
+    bool _bMakeJoinedLinksAdjacent;
 private:
     std::string __hashkinematics;
     mutable std::vector<dReal> _vTempJoints;

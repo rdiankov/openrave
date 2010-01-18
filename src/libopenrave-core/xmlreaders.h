@@ -1447,6 +1447,8 @@ namespace OpenRAVEXMLParser
                 else if( itatt->first == "name" ) {
                     _bodyname = itatt->second;
                 }
+                else if( itatt->first == "makejoinedlinksadjacent")
+                    _pchain->_bMakeJoinedLinksAdjacent = atoi(itatt->second)!=0;
             }
 
             // reisze _vTransforms to be the same size as the initial number of links
