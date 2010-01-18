@@ -17,6 +17,7 @@
 #include "odecollision.h"
 #include "odephysics.h"
 
+static map<void*, list< boost::shared_ptr<void> > > s_mapRegisteredReaders;
 RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(PluginType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv)
 {
     if( strcmp(pluginhash,RaveGetInterfaceHash(type)) ) {
@@ -30,6 +31,12 @@ RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(PluginType type, const std::str
     string interfacename;
     ss >> interfacename;
     std::transform(interfacename.begin(), interfacename.end(), interfacename.begin(), ::tolower);
+
+    if( s_mapRegisteredReaders.find(penv.get()) == s_mapRegisteredReaders.end() ) {
+        list< boost::shared_ptr<void> > readers;
+        readers.push_back(penv->RegisterXMLReader(OpenRAVE::PT_PhysicsEngine,"ode",ODEPhysicsEngine::CreateXMLReader));
+        s_mapRegisteredReaders[penv.get()] = readers;
+    }
 
     switch(type) {
     case OpenRAVE::PT_CollisionChecker:
@@ -63,4 +70,5 @@ RAVE_PLUGIN_API bool GetPluginAttributes(PLUGININFO* pinfo, int size)
 
 RAVE_PLUGIN_API void DestroyPlugin()
 {
+    s_mapRegisteredReaders.clear();
 }

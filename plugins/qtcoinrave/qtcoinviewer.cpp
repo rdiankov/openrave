@@ -1839,7 +1839,7 @@ void QtCoinViewer::SetupMenus()
     }
     {
         pact = new QAction(tr("Set Gravity to -Z"), this);
-        connect(pact, SIGNAL(triggered(bool)), this, SLOT(DynamicGravity(bool)));
+        connect(pact, SIGNAL(triggered(bool)), this, SLOT(DynamicGravity()));
         psubmenu->addAction(pact);
     }
 
