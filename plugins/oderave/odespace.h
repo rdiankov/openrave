@@ -192,6 +192,8 @@ public:
         RAVELOG_VERBOSEA("destroying ode collision environment\n");
         _ode.reset();
     }
+    
+    bool IsInitialized() { return !!_ode; }
 
     boost::shared_ptr<void> InitKinBody(KinBodyPtr pbody) {
         EnvironmentMutex::scoped_lock lock(pbody->GetEnv()->GetMutex());

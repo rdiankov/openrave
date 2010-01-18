@@ -67,6 +67,18 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
             else if( name == "friction" )
                 // read all the float values into a vector
                 _ss >> _physics->_globalfriction;
+            else if( name == "selfcollision" ) {
+                bool bSelfCollision = false;
+                _ss >> bSelfCollision;
+                if( !!_ss )
+                    _physics->SetPhysicsOptions(_physics->GetPhysicsOptions()|OpenRAVE::PEO_SelfCollisions);
+            }
+            else if( name == "gravity" ) {
+                Vector v;
+                _ss >> v.x >> v.y >> v.z;
+                if( !!_ss )
+                    _physics->SetGravity(v);
+            }
             else
                 RAVELOG_ERRORA("unknown field %s\n", name.c_str());
 
@@ -310,7 +322,8 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
     virtual void SetGravity(const Vector& gravity)
     {
         _gravity = gravity;
-        dWorldSetGravity(odespace->GetWorld(),_gravity.x, _gravity.y, _gravity.z);
+        if( odespace->IsInitialized() )
+            dWorldSetGravity(odespace->GetWorld(),_gravity.x, _gravity.y, _gravity.z);
     }
 
     virtual Vector GetGravity()

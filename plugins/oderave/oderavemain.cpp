@@ -33,7 +33,7 @@ RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(PluginType type, const std::str
     std::transform(interfacename.begin(), interfacename.end(), interfacename.begin(), ::tolower);
 
     if( s_listRegisteredReaders.size() == 0 ) {
-        s_listRegisteredReaders.push_back(penv->RegisterXMLReader(OpenRAVE::PT_PhysicsEngine,"ode",ODEPhysicsEngine::CreateXMLReader));
+        s_listRegisteredReaders.push_back(penv->RegisterXMLReader(OpenRAVE::PT_PhysicsEngine,"odeproperties",ODEPhysicsEngine::CreateXMLReader));
     }
 
     switch(type) {
