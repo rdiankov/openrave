@@ -1546,14 +1546,14 @@ protected:
                     if( sleeptime > 2*deltasimtime && sleeptime > 2000 ) {
                         lockenv.unlock();
                         // sleep for less time since sleep isn't accurate at all and we have a 7ms buffer
-                        Sleep( max((int)deltasimtime/1000,1) );
+                        Sleep( max((int)(deltasimtime + (sleeptime-2*deltasimtime)/2)/1000,1) );
                         //RAVELOG_INFO("sleeping %d(%d), slept: %d\n",(int)(_nCurSimTime-passedtime),(int)((sleeptime-(deltasimtime/2))/1000));
                         nLastSleptTime = GetMicroTime();
                     }
                     else if( sleeptime < -3*deltasimtime ) {
                         // simulation is getting late, so catch up
                         //RAVELOG_INFO("sim catching up: %d\n",-(int)sleeptime);
-                        _nSimStartTime += deltasimtime;
+                        _nSimStartTime += -sleeptime;//deltasimtime;
                     }
                 }
                 

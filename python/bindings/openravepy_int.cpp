@@ -147,12 +147,12 @@ inline Vector ExtractVector4Type(const object& o)
 
 inline Vector ExtractVector3(const object& oraw)
 {
-    return ExtractVector3Type<dReal>(oraw.attr("flat"));
+    return ExtractVector3Type<dReal>(oraw);//.attr("flat"));
 }
 
 inline Vector ExtractVector4(const object& oraw)
 {
-    return ExtractVector4Type<dReal>(oraw.attr("flat"));
+    return ExtractVector4Type<dReal>(oraw);//.attr("flat"));
 }
 
 template <typename T>

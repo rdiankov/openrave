@@ -269,6 +269,10 @@ class InverseReachabilityModel(OpenRAVEModel):
             return c_[quatArrayTMult(c_[cos(samples[:,0]),zeros((N,2)),sin(samples[:,0])],qbaserobotnorm),samples[:,1:3],tile(Tbaserobot[2,3],N)],sampledgraspindices
         return gaussiankerneldensity,gaussiankernelsampler,bounds
 
+    def testSampling(heights=None,**kwargs):
+        heights = arange(0.5,2,0.5)
+        densityfn,samplerfn,bounds = self.computeBaseDistribution(eye(4),**kwargs)
+        
     def showBaseDistribution(self,densityfn,bounds,zoffset=0,thresh=1.0,maxprob=None,marginalizeangle=True):
         discretization = [0.1,0.04,0.04]
         A,Y,X = mgrid[bounds[0,0]:bounds[1,0]:discretization[0], bounds[0,2]:bounds[1,2]:discretization[2], bounds[0,1]:bounds[1,1]:discretization[1]]
