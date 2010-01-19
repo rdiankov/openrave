@@ -62,8 +62,8 @@ def test_inversereachabilitygen():
     env.AddRobot(robot)
     self = inversereachability.InverseReachabilityModel(robot=robot)
     heightthresh=0.05
-    rotthresh=0.25
-    self.generate(heightthresh=heightthresh2,rotthresh=rotthresh)
+    quatthresh=0.2
+    self.generate(heightthresh=heightthresh2,quatthresh=quatthresh)
 
 def test_inversereachabilityrun():
     import inversereachability, graspplanning

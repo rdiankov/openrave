@@ -427,7 +427,7 @@ int main(int argc, char ** argv)
                 ss << itname->c_str() << endl;
         }
         printf("%s",ss.str().c_str());
-
+        penv->Destroy();
         return 0;
     }
 

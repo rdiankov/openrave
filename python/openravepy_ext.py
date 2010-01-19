@@ -106,7 +106,7 @@ def quatMult(q1,q2):
 
 def quatArrayTDist(q,qarray):
     """computes the natural distance (Haar measure) for quaternions, q is a 4-element array, qarray is Nx4"""
-    return numpy.arccos(numpy.abs(numpy.dot(qarray,q)))
+    return numpy.arccos(numpy.minimum(1.0,numpy.abs(numpy.dot(qarray,q))))
 
 class SpaceSampler(metaclass.AutoReloader):
     def __init__(self):

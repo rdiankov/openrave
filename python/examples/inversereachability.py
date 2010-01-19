@@ -21,10 +21,48 @@ from openravepy.examples import kinematicreachability
 import numpy
 from numpy import *
 from optparse import OptionParser
+try:
+    from scipy.optimize import leastsq
+except ImportError:
+    pass
 #from IPython.Debugger import Tracer; debug_here = Tracer()
 
 class InverseReachabilityModel(OpenRAVEModel):
     """Inverts the reachability and computes probability distributions of the robot's base given an end effector position"""
+
+    class QuaternionKDTree(metaclass.AutoReloader):
+        """Artificially add more weight to the X,Y,Z translation dimensions"""
+        def __init__(self, poses,transmult):
+            self.numposes = len(poses)
+            self.transmult = transmult
+            self.itransmult = 1/transmult
+            searchposes = array(poses)
+            searchposes[:,4:] *= self.transmult # take translation errors more seriously
+            allposes = r_[searchposes,searchposes]
+            allposes[self.numposes:,0:4] *= -1
+            self.nnposes = pyANN.KDTree(allposes)
+        def kSearch(self,poses,k,eps):
+            """returns distance squared"""
+            poses[:,4:] *= self.transmult
+            neighs,dists = self.nnposes.kSearch(poses,k,eps)
+            neighs[neighs>=self.numposes] -= self.numposes
+            poses[:,4:] *= self.itransmult
+            return neighs,dists
+        def kFRSearch(self,pose,radiussq,k,eps):
+            """returns distance squared"""
+            pose[4:] *= self.transmult
+            neighs,dists,kball = self.nnposes.kFRSearch(pose,radiussq,k,eps)
+            neighs[neighs>=self.numposes] -= self.numposes
+            pose[4:] *= self.itransmult
+            return neighs,dists,kball
+        def kFRSearchArray(self,poses,radiussq,k,eps):
+            """returns distance squared"""
+            poses[:,4:] *= self.transmult
+            neighs,dists,kball = self.nnposes.kFRSearchArray(poses,radiussq,k,eps)
+            neighs[neighs>=self.numposes] -= self.numposes
+            poses[:,4:] *= self.itransmult
+            return neighs,dists,kball
+
     def __init__(self,robot):
         OpenRAVEModel.__init__(self,robot=robot)
         self.rmodel = kinematicreachability.ReachabilityModel(robot=robot)
@@ -44,10 +82,19 @@ class InverseReachabilityModel(OpenRAVEModel):
         self.preprocess()
         return self.has()
 
+    @staticmethod
+    def normalizationconst(classstd):
+        """normalization const for the equation exp(dot(-0.5/bandwidth**2,r_[arccos(x[0])**2,x[1:]**2]))"""
+        gaussconst = -0.5*pi*(len(classstd)-1)-0.5*log(prod(classstd[1:]))
+        # normalization for the weights so that integrated volume is 1. this is necessary when comparing across different distributions?
+        #-3.76317595e-02,  -5.46504355e-02,   4.94290324e-01, 3.50907688e-04
+        quatconst = -log(polyval([-3.76317595e-02,  -5.46504355e-02,   4.94290324e-01, 3.50907688e-04],0.5/classstd[0]**2))
+        return quatconst+gaussconst
+
     def preprocess(self):
         self.equivalencemeans = array([e[0] for e in self.equivalenceclasses])
         self.equivalenceweights = array([-0.5/e[1]**2 for e in self.equivalenceclasses])
-        self.equivalenceoffset = array([-0.5*pi*len(e[1])-0.5*log(prod(e[1])) for e in self.equivalenceclasses])
+        self.equivalenceoffset = array([normalizationconst(e[1]) for e in self.equivalenceclasses])
 
     def save(self):
         OpenRAVEModel.save(self,(self.equivalenceclasses,self.rotweight))
@@ -56,7 +103,7 @@ class InverseReachabilityModel(OpenRAVEModel):
        return os.path.join(OpenRAVEModel.getfilename(self),'invreachability.' + self.manip.GetName() + '.pp')
 
     def generateFromOptions(self,options):
-        self.generate(heightthresh=options.heightthresh,rotthresh=options.rotthresh)
+        self.generate(heightthresh=options.heightthresh,quatthresh=options.quatthresh)
 
     def autogenerate(self,forcegenerate=True):
         # disable every body but the target and robot
@@ -65,7 +112,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             b.Enable(False)
         try:
             if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531' and self.manip.GetName() == 'arm':
-                self.generate(heightthresh=0.05,rotthresh=0.25)
+                self.generate(heightthresh=0.05,quatthresh=0.2)
             else:
                 if not forcegenerate:
                     raise ValueError('failed to find auto-generation parameters')
@@ -75,7 +122,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             for b in bodies:
                 b.Enable(True)
 
-    def generate(self,heightthresh=0.05,rotthresh=0.25):
+    def generate(self,heightthresh=0.05,quatthresh=0.2):
         """First transform all end effectors to the identity and get the robot positions,
         then cluster the robot position modulo in-plane rotation (z-axis) and position (xy),
         then compute statistics for each cluster."""
@@ -84,41 +131,49 @@ class InverseReachabilityModel(OpenRAVEModel):
         if basetrans.shape[1] < 8:
             basetrans = c_[basetrans,ones(basetrans.shape[0])]
         # find the density of the points
-        self.rotweight = heightthresh/rotthresh
-        searchtrans = c_[basetrans[:,0:4],basetrans[:,6:7]/self.rotweight]
-        kdtree = pyANN.KDTree(searchtrans)
-        transdensity = kdtree.kFRSearchArray(searchtrans,0.25*rotthresh**2,0,rotthresh*0.2)[2]
+        self.rotweight = heightthresh/quatthresh
+        searchtrans = c_[basetrans[:,0:4],basetrans[:,6:7]]
+        
+        # convert the quatthresh to a loose euclidean distance
+        quateucdist2 = (1-cos(quatthresh))**2+sin(quatthresh)**2
+        kdtree = self.QuaternionKDTree(searchtrans,1.0/self.rotweight)
+        transdensity = kdtree.kFRSearchArray(searchtrans,0.25*quateucdist2,0,quatthresh*0.2)[2]
         basetrans = basetrans[argsort(-transdensity),:]
         
         # find all equivalence classes
-        quatrolls = array([quatFromAxisAngle(array((0,0,1)),roll) for roll in arange(0,2*pi,pi/32)])
+        quatrolls = array([quatFromAxisAngle(array((0,0,1)),roll) for roll in arange(0,2*pi,quatthresh*0.5)])
         self.equivalenceclasses = []
         while len(basetrans) > 0:
             print len(basetrans)
-            searchtrans = c_[basetrans[:,0:4],basetrans[:,6:7]/self.rotweight]
-            kdtree = pyANN.KDTree(searchtrans)
+            searchtrans = c_[basetrans[:,0:4],basetrans[:,6:7]]
+            kdtree = self.QuaternionKDTree(searchtrans,1.0/self.rotweight)
+            querypoints = c_[quatArrayTMult(quatrolls, searchtrans[0][0:4]),tile(searchtrans[0][4:],(len(quatrolls),1))]
             foundindices = zeros(len(searchtrans),bool)
-            querypoints = c_[quatMultArrayT(searchtrans[0][0:4],quatrolls),tile(searchtrans[0][4:],(len(quatrolls),1))]
             for querypoint in querypoints:
                 k = min(len(searchtrans),1000)
-                neighs,dists,kball = kdtree.kFRSearch(querypoint,rotthresh**2,k,rotthresh*0.01)
+                neighs,dists,kball = kdtree.kFRSearchArray(reshape(querypoint,(1,5)),quateucdist2,k,quatthresh*0.01)
                 if k < kball:
-                    neighs,dists,kball = kdtree.kFRSearch(querypoint,rotthresh**2,kball,rotthresh*0.01)
+                    neighs,dists,kball = kdtree.kFRSearchArray(reshape(querypoint,(1,5)),quateucdist2,kball,quatthresh*0.01)
                 foundindices[neighs] = True
             equivalenttrans = basetrans[flatnonzero(foundindices),:]
-            basetrans = basetrans[flatnonzero(foundindices==False),:]
-            normalizedquat,zangles = normalizeZRotation(equivalenttrans[:,0:4])
-            # make sure all quaternions are on the same hemisphere
-            identityquat = tile(array((1.0,0,0,0)),(normalizedquat.shape[0],1))
-            normalizedquat[flatnonzero(sum((normalizedquat+identityquat)**2,1) < sum((normalizedquat-identityquat)**2, 1)),0:4] *= -1
-            # get statistics and store the angle, xy offset, and remaining unprocessed data
-            meanquat = sum(normalizedquat,axis=0)
-            meanquat /= sqrt(sum(meanquat**2))
-            self.equivalenceclasses.append((r_[meanquat,mean(equivalenttrans[:,6])],
-                                            r_[std(normalizedquat,axis=0),std(equivalenttrans[:,6])],
+            normalizedqarray,zangles = normalizeZRotation(equivalenttrans[:,0:4])
+            
+            # get the 'mean' of the normalized quaternions best describing the distribution
+            # for initialization, make sure all quaternions are on the same hemisphere
+            identityquat = tile(array((1.0,0,0,0)),(normalizedqarray.shape[0],1))
+            normalizedqarray[flatnonzero(sum((normalizedqarray+identityquat)**2,1) < sum((normalizedqarray-identityquat)**2, 1)),0:4] *= -1
+            q0 = sum(normalizedqarray,axis=0)
+            q0 /= sqrt(sum(q0**2))
+            qmean,success = leastsq(lambda q: quatArrayTDist(q/sqrt(sum(q**2)),normalizedqarray), q0,maxfev=10000)
+            qmean /= sqrt(sum(qmean**2))
+            qstd = sqrt(sum(quatArrayTDist(qmean,normalizedqarray)**2)/len(normalizedqarray))
+            # compute statistics, store the angle, xy offset, and remaining unprocessed data            
+            self.equivalenceclasses.append((r_[qmean,mean(equivalenttrans[:,6])],
+                                            r_[qstd,std(equivalenttrans[:,6])],
                                             c_[zangles,equivalenttrans[:,4:6],equivalenttrans[:,7:]]))
+            basetrans = basetrans[flatnonzero(foundindices==False),:]
         self.preprocess()
-
+        
     def getEquivalenceClass(self,Tgrasp):
         with self.env:
             Tbaserobot = self.robot.GetTransform()
@@ -220,7 +275,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             posetarget = poseFromMatrix(dot(linalg.inv(Tgrasp),Tbaserobot))
             qnormalized,znormangle = normalizeZRotation(reshape(posetarget[0:4],(1,4)))
             # find the closest cluster
-            logll = self.quatDist(qnormalized,self.equivalencemeans[:,0:4],self.equivalenceweights[:,0:4]) + (posetarget[6]-self.equivalencemeans[:,4])*self.equivalenceweights[:,4] + self.equivalenceoffset
+            logll = quatDist(qnormalized,self.equivalencemeans[:,0:4],self.equivalenceweights[:,0:4]) + (posetarget[6]-self.equivalencemeans[:,4])*self.equivalenceweights[:,4] + self.equivalenceoffset
             bestindex = argmax(logll)
             if logll[bestindex] <logllthresh:
                 continue
@@ -270,8 +325,22 @@ class InverseReachabilityModel(OpenRAVEModel):
         return gaussiankerneldensity,gaussiankernelsampler,bounds
 
     def testSampling(heights=None,**kwargs):
-        heights = arange(0.5,2,0.5)
-        densityfn,samplerfn,bounds = self.computeBaseDistribution(eye(4),**kwargs)
+        if heighs is None:
+            heights = arange(0.5,2,0.5)
+        with self.robot:
+            for height in heights:
+                T = eye(4)
+                T[2,3] = height
+                self.robot.SetTransform(T)
+                densityfn,samplerfn,bounds = self.computeBaseDistribution(eye(4),**kwargs)
+                poses = samplerfn(100)
+                failures = 0
+                for pose in poses:
+                    self.robot.SetTransform(pose,weight=1e-3)
+                    if not self.manip.FindIKSolution(eye(4)):
+                        print 'pose failed: ',pose
+                        failures += 1
+                print 'height %f, failures: %d'%(height,failures)
         
     def showBaseDistribution(self,densityfn,bounds,zoffset=0,thresh=1.0,maxprob=None,marginalizeangle=True):
         discretization = [0.1,0.04,0.04]
@@ -305,24 +374,12 @@ class InverseReachabilityModel(OpenRAVEModel):
             colors = c_[0*normalizedprobs,normalizedprobs,normalizedprobs,normalizedprobs]
             points = c_[poses[inds,4:6],A.flatten()[inds]+zoffset]
             return self.env.plot3(points=array(points),colors=array(colors),pointsize=10)
-
-    @staticmethod
-    def quatDist(q,qarray,weightssq=None):
-        """find the squared distance between q and all quaternions in the Nx4 qarray. Optional squared weights can be specified"""
-        qtile = tile(q,(qarray.shape[0],1))
-        if weightssq is None:
-            return minimum(sum( (qtile-qarray)**2, 1), sum( (qtile+qarray)**2,1))
-        else:
-            q1 = (qtile-qarray)**2
-            q2 = (qtile+qarray)**2
-            indices = array(sum(q1,axis=1)<sum(q2,axis=1))
-            return sum(q1*weightssq,axis=1)*indices+sum(q2*weightssq,axis=1)*(1-indices)
     @staticmethod
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser()
         parser.add_option('--heightthresh',action='store',type='float',dest='heightthresh',default=0.05,
                           help='The max radius of the arm to perform the computation')
-        parser.add_option('--rotthresh',action='store',type='float',dest='rotthresh',default=0.25,
+        parser.add_option('--quatthresh',action='store',type='float',dest='quatthresh',default=0.2,
                           help='The max radius of the arm to perform the computation')
         return parser
     @staticmethod
