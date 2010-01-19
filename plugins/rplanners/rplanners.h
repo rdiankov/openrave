@@ -184,30 +184,15 @@ class CollisionFunctions
 class SimpleDistMetric
 {
  public:
- SimpleDistMetric(RobotBasePtr robot) : _robot(robot)
-    {
-        float ftransweight = 2;
-        weights.resize(0);
-        vector<int>::const_iterator it;
-        FORIT(it, _robot->GetActiveJointIndices()) weights.push_back(_robot->GetJointWeight(*it));
-        if( _robot->GetAffineDOF() & RobotBase::DOF_X ) weights.push_back(ftransweight);
-        if( _robot->GetAffineDOF() & RobotBase::DOF_Y ) weights.push_back(ftransweight);
-        if( _robot->GetAffineDOF() & RobotBase::DOF_Z ) weights.push_back(ftransweight);
-        if( _robot->GetAffineDOF() & RobotBase::DOF_RotationAxis ) weights.push_back(ftransweight);
-        else if( _robot->GetAffineDOF() & RobotBase::DOF_RotationQuat ) {
-            weights.push_back(0.4f);
-            weights.push_back(0.4f);
-            weights.push_back(0.4f);
-            weights.push_back(0.4f);
-        }
+ SimpleDistMetric(RobotBasePtr robot) : _robot(robot) {
+        _robot->GetActiveDOFWeights(weights);
     }
 
     virtual dReal Eval(const std::vector<dReal>& c0, const std::vector<dReal>& c1)
     {
         dReal out = 0;
         for(int i=0; i < _robot->GetActiveDOF(); i++)
-            out += weights[i] * (c0[i]-c1[i])*(c0[i]-c1[i]);
-            
+            out += weights.at(i) * (c0.at(i)-c1.at(i))*(c0[i]-c1[i]);
         return RaveSqrt(out);
     }
 

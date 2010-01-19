@@ -108,6 +108,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
 
  ODEPhysicsEngine(OpenRAVE::EnvironmentBasePtr penv) : OpenRAVE::PhysicsEngineBase(penv), odespace(new ODESpace(penv, GetPhysicsInfo, true)) {
         _globalfriction = 1.0f;
+        _options = OpenRAVE::PEO_SelfCollisions;
         memset(_jointset, 0, sizeof(_jointset));
         _jointset[dJointTypeBall] = DummySetParam;
         _jointset[dJointTypeHinge] = dJointSetHingeParam;

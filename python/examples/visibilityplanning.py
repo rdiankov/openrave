@@ -25,6 +25,13 @@ from optparse import OptionParser
 from openravepy import *
 from openravepy.interfaces import BaseManipulation, TaskManipulation, VisualFeedback
 
+try:
+    from Tkinter import *
+    import tkFileDialog
+    import Image, ImageDraw, ImageTk
+except ImportError:
+    pass
+
 class CameraViewerGUI(threading.Thread):
     class Container:
         pass
@@ -128,23 +135,28 @@ class VisibilityGrasping(metaclass.AutoReloader):
         self.homevalues = self.robotreal.GetJointValues()
 
         # create a camera viewer for every camera sensor
-        self.viewers = []
-        if showsensors:
-            for attachedsensor in self.robotreal.GetSensors():
-                if attachedsensor.GetSensor() is not None:
-                    sensordata = attachedsensor.GetSensor().GetSensorData()
-                    if sensordata is not None and sensordata.type == Sensor.SensorType.Camera:
-                        attachedsensor.GetSensor().SendCommand('power 1')
-                        title = attachedsensor.GetName()
-                        if len(title) == 0:
-                            title = attachedsensor.GetSensor().GetName()
+        try:
+            Tk # check if Tk exists
+            self.viewers = []
+            if showsensors:
+                for attachedsensor in self.robotreal.GetSensors():
+                    if attachedsensor.GetSensor() is not None:
+                        sensordata = attachedsensor.GetSensor().GetSensorData()
+                        if sensordata is not None and sensordata.type == Sensor.SensorType.Camera:
+                            attachedsensor.GetSensor().SendCommand('power 1')
+                            title = attachedsensor.GetName()
                             if len(title) == 0:
-                                title = 'Camera Sensor'
-                        self.viewers.append(CameraViewerGUI(sensor=attachedsensor.GetSensor(),title=title))
-                        break # can only support one camera
-            print 'found %d camera sensors on robot %s'%(len(self.viewers),self.robotreal.GetName())
-            for viewer in self.viewers:
-                viewer.start()
+                                title = attachedsensor.GetSensor().GetName()
+                                if len(title) == 0:
+                                    title = 'Camera Sensor'
+                            self.viewers.append(CameraViewerGUI(sensor=attachedsensor.GetSensor(),title=title))
+                            break # can only support one camera
+                print 'found %d camera sensors on robot %s'%(len(self.viewers),self.robotreal.GetName())
+                for viewer in self.viewers:
+                    viewer.start()
+        except NameError,e:
+            print 'failed to create camera gui: ',e
+            self.viewers = []
 
         self.sensor = [s for s in self.robotreal.GetSensors() if s.GetName()==sensorname][0]
         # find a manipulator whose end effector is the camera
@@ -486,9 +498,6 @@ class PA10GraspExample(VisibilityGrasping):
             self.target.SetTransform(Torig)
 
 if __name__=='__main__':
-    from Tkinter import *
-    import tkFileDialog
-    import Image, ImageDraw, ImageTk
     parser = OptionParser(description='Visibility Planning Module.')
     parser.add_option('--examplenum',
                       action="store",type='int',dest='examplenum',default=0,

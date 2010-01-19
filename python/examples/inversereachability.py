@@ -83,18 +83,17 @@ class InverseReachabilityModel(OpenRAVEModel):
         return self.has()
 
     @staticmethod
-    def normalizationconst(classstd):
+    def classnormalizationconst(classstd):
         """normalization const for the equation exp(dot(-0.5/bandwidth**2,r_[arccos(x[0])**2,x[1:]**2]))"""
-        gaussconst = -0.5*pi*(len(classstd)-1)-0.5*log(prod(classstd[1:]))
+        gaussconst = -0.5*(len(classstd)-1)*log(pi)-0.5*log(prod(classstd[1:]))
         # normalization for the weights so that integrated volume is 1. this is necessary when comparing across different distributions?
-        #-3.76317595e-02,  -5.46504355e-02,   4.94290324e-01, 3.50907688e-04
-        quatconst = -log(polyval([-3.76317595e-02,  -5.46504355e-02,   4.94290324e-01, 3.50907688e-04],0.5/classstd[0]**2))
+        quatconst = log(1.0/classstd[0]**2+0.3334)
         return quatconst+gaussconst
 
     def preprocess(self):
         self.equivalencemeans = array([e[0] for e in self.equivalenceclasses])
         self.equivalenceweights = array([-0.5/e[1]**2 for e in self.equivalenceclasses])
-        self.equivalenceoffset = array([self.normalizationconst(e[1]) for e in self.equivalenceclasses])
+        self.equivalenceoffset = array([self.classnormalizationconst(e[1]) for e in self.equivalenceclasses])
 
     def save(self):
         OpenRAVEModel.save(self,(self.equivalenceclasses,self.rotweight))
@@ -122,23 +121,23 @@ class InverseReachabilityModel(OpenRAVEModel):
             for b in bodies:
                 b.Enable(True)
 
-    def generate(self,heightthresh=0.05,quatthresh=0.2):
+    def generate(self,heightthresh=0.05,quatthresh=0.2,Nminimum=10):
         """First transform all end effectors to the identity and get the robot positions,
         then cluster the robot position modulo in-plane rotation (z-axis) and position (xy),
         then compute statistics for each cluster."""
+        # convert the quatthresh to a loose euclidean distance
+        quateucdist2 = (1-cos(quatthresh))**2+sin(quatthresh)**2
+        self.rotweight = heightthresh/quatthresh
         # find the density
         basetrans = c_[invertPoses(self.rmodel.reachabilitystats[:,0:7]),self.rmodel.reachabilitystats[:,7:]]
         if basetrans.shape[1] < 8:
             basetrans = c_[basetrans,ones(basetrans.shape[0])]
         # find the density of the points
-        self.rotweight = heightthresh/quatthresh
         searchtrans = c_[basetrans[:,0:4],basetrans[:,6:7]]
-        
-        # convert the quatthresh to a loose euclidean distance
-        quateucdist2 = (1-cos(quatthresh))**2+sin(quatthresh)**2
         kdtree = self.QuaternionKDTree(searchtrans,1.0/self.rotweight)
         transdensity = kdtree.kFRSearchArray(searchtrans,0.25*quateucdist2,0,quatthresh*0.2)[2]
         basetrans = basetrans[argsort(-transdensity),:]
+        Nminimum = max(Nminimum,4)
         
         # find all equivalence classes
         quatrolls = array([quatFromAxisAngle(array((0,0,1)),roll) for roll in arange(0,2*pi,quatthresh*0.5)])
@@ -164,8 +163,11 @@ class InverseReachabilityModel(OpenRAVEModel):
             normalizedqarray[flatnonzero(sum((normalizedqarray+identityquat)**2,1) < sum((normalizedqarray-identityquat)**2, 1)),0:4] *= -1
             q0 = sum(normalizedqarray,axis=0)
             q0 /= sqrt(sum(q0**2))
-            qmean,success = leastsq(lambda q: quatArrayTDist(q/sqrt(sum(q**2)),normalizedqarray), q0,maxfev=10000)
-            qmean /= sqrt(sum(qmean**2))
+            if len(normalizedqarray) >= Nminimum:
+                qmean,success = leastsq(lambda q: quatArrayTDist(q/sqrt(sum(q**2)),normalizedqarray), q0,maxfev=10000)
+                qmean /= sqrt(sum(qmean**2))
+            else:
+                qmean = q0
             qstd = sqrt(sum(quatArrayTDist(qmean,normalizedqarray)**2)/len(normalizedqarray))
             # compute statistics, store the angle, xy offset, and remaining unprocessed data            
             self.equivalenceclasses.append((r_[qmean,mean(equivalenttrans[:,6])],
@@ -196,20 +198,16 @@ class InverseReachabilityModel(OpenRAVEModel):
         rotweight = self.rotweight
         qbaserobot = quatFromRotationMatrix(Tbaserobot[0:3,0:3])
         qbaserobotnorm = normalizeZRotation(reshape(qbaserobot,(1,4)))[0][0]
-        angdelta = math.acos(1-0.5*self.rmodel.quatdelta) # convert quat dist to angle distance
-        bandwidth = array((rotweight*angdelta ,self.rmodel.xyzdelta,self.rmodel.xyzdelta))
+        bandwidth = array((rotweight*self.rmodel.quatdelta ,self.rmodel.xyzdelta,self.rmodel.xyzdelta))
         ibandwidth=-0.5/bandwidth**2
-        # normalization for the weights so that integrated volume is 1. this is necessary when comparing across different distributions?
-        #-3.76317595e-02,  -5.46504355e-02,   4.94290324e-01, 3.50907688e-04
-
-        normalizationconst = 0.40236300765291089 (1.0/sqrt(pi**3*sum(bandwidth**2)))
+        normalizationconst = (1.0/sqrt(pi**3*prod(bandwidth)))
         searchradius=9.0*sum(bandwidth**2)
-        searcheps=bandwidth[0]*0.2
+        searcheps=bandwidth[0]*0.1
         
         posetarget = poseFromMatrix(dot(linalg.inv(Tgrasp),Tbaserobot))
         qnormalized,znormangle = normalizeZRotation(reshape(posetarget[0:4],(1,4)))
         # find the closest cluster
-        logll = quatDist(qnormalized,self.equivalencemeans[:,0:4],self.equivalenceweights[:,0:4]) + (posetarget[6]-self.equivalencemeans[:,4])*self.equivalenceweights[:,4] + self.equivalenceoffset
+        logll = quatArrayTDist(qnormalized[0],self.equivalencemeans[:,0:4])**2*self.equivalenceweights[:,0] + (posetarget[6]-self.equivalencemeans[:,4])**2*self.equivalenceweights[:,1] + self.equivalenceoffset
         bestindex = argmax(logll)
         if logll[bestindex] < logllthresh:
             print 'could not find base distribution: ',logll[bestindex]
@@ -259,13 +257,12 @@ class InverseReachabilityModel(OpenRAVEModel):
         rotweight = self.rotweight
         qbaserobot = quatFromRotationMatrix(Tbaserobot[0:3,0:3])
         qbaserobotnorm = normalizeZRotation(reshape(qbaserobot,(1,4)))[0][0]
-        angdelta = math.acos(1-0.5*self.rmodel.quatdelta) # convert quat dist to angle distance
-        bandwidth = array((rotweight*angdelta ,self.rmodel.xyzdelta,self.rmodel.xyzdelta))
+        bandwidth = array((rotweight*self.quatdelta ,self.rmodel.xyzdelta,self.rmodel.xyzdelta))
         ibandwidth=-0.5/bandwidth**2
         # normalization for the weights so that integrated volume is 1. this is necessary when comparing across different distributions?
         normalizationconst = (1.0/sqrt(pi**3*sum(bandwidth**2)))
         searchradius=9.0*sum(bandwidth**2)
-        searcheps=bandwidth[0]*0.2
+        searcheps=bandwidth[0]*0.1
         
         points = zeros((0,3))
         weights = array(())
@@ -275,7 +272,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             posetarget = poseFromMatrix(dot(linalg.inv(Tgrasp),Tbaserobot))
             qnormalized,znormangle = normalizeZRotation(reshape(posetarget[0:4],(1,4)))
             # find the closest cluster
-            logll = quatDist(qnormalized,self.equivalencemeans[:,0:4],self.equivalenceweights[:,0:4]) + (posetarget[6]-self.equivalencemeans[:,4])*self.equivalenceweights[:,4] + self.equivalenceoffset
+            logll = quatArrayTDist(qnormalized[0],self.equivalencemeans[:,0:4])**2*self.equivalenceweights[:,0] + (posetarget[6]-self.equivalencemeans[:,4])**2*self.equivalenceweights[:,1] + self.equivalenceoffset
             bestindex = argmax(logll)
             if logll[bestindex] <logllthresh:
                 continue

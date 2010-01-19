@@ -612,6 +612,11 @@ void KinBody::Joint::GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dRea
     }
 }
 
+dReal KinBody::Joint::GetWeight(int iaxis) const
+{
+    return _vweights.at(iaxis);
+}
+
 void KinBody::Joint::SetJointOffset(dReal newoffset)
 {
     offset = newoffset;
@@ -805,6 +810,11 @@ void KinBody::SetJointTorques(const std::vector<dReal>& torques, bool bAdd)
     }
 }
 
+int KinBody::GetDOF() const
+{
+    return _vecjoints.size() > 0 ? _vecjoints.back()->GetDOFIndex()+_vecjoints.back()->GetDOF() : 0;
+}
+
 void KinBody::GetJointValues(std::vector<dReal>& v) const
 {
     v.resize(0);
@@ -869,6 +879,16 @@ void KinBody::GetJointResolutions(std::vector<dReal>& v) const
         v.reserve(GetDOF());
     FOREACHC(it, _vecjoints)
         v.insert(v.end(),(*it)->GetDOF(),(*it)->GetResolution());
+}
+
+void KinBody::GetJointWeights(std::vector<dReal>& v) const
+{
+    v.resize(GetDOF());
+    std::vector<dReal>::iterator itv = v.begin();
+    FOREACHC(it, _vecjoints) {
+        for(int i = 0; i < (*it)->GetDOF(); ++i)
+            *itv++ = (*it)->GetWeight(i);
+    }
 }
 
 void KinBody::SimulationStep(dReal fElapsedTime)
@@ -1167,20 +1187,6 @@ dReal KinBody::ConfigDist(const std::vector<dReal>& q1, const std::vector<dReal>
         dist += _vecJointWeights[i] * (q2[i] - q1[i]) * (q2[i] - q1[i]);
     }
     return RaveSqrt(dist);
-}
-
-void KinBody::SetJointWeight(int nJointIndex, dReal weight)
-{
-    // it is this complicated because each joint can have more than one dof
-    BOOST_ASSERT( nJointIndex >= 0 && nJointIndex < (int)_vecjoints.size() );
-    int end = nJointIndex == (int)_vecjoints.size()-1 ? (int)_vecJointWeights.size() : _vecJointIndices[nJointIndex+1];
-    for(int i = _vecJointIndices[nJointIndex]; i < end; ++i )
-        _vecJointWeights[i] = weight;
-}
-
-dReal KinBody::GetJointWeight(int nJointIndex) const
-{
-    return _vecJointWeights.at(_vecJointIndices.at(nJointIndex));
 }
 
 void KinBody::SetBodyTransformations(const std::vector<Transform>& vbodies)
@@ -1676,6 +1682,7 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report) const
 
 void KinBody::ComputeJointHierarchy()
 {
+    BOOST_ASSERT(_vecJointIndices.size()==_vecjoints.size());
     _bHierarchyComputed = true;
     _vecJointHierarchy.resize(_vecjoints.size()*_veclinks.size());
 

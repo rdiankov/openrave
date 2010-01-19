@@ -954,7 +954,6 @@ namespace OpenRAVEXMLParser
             bDisabled = false;
             _pparent = pparent;
             _pjoint.reset(new KinBody::Joint(pparent));
-            fWeights[0] = fWeights[1] = fWeights[2] = 1;
             _pjoint->type = KinBody::Joint::JointHinge;
 
             FOREACHC(itatt,atts) {
@@ -1014,6 +1013,10 @@ namespace OpenRAVEXMLParser
                     _pjoint->_vupperlimit[i] = PI;
                 }
             }
+
+            _pjoint->_vweights.resize(_pjoint->GetDOF());
+            FOREACH(it,_pjoint->_vweights)
+                *it = 1;
         }
 
         bool IsDisabled() const { return bDisabled; }
@@ -1157,9 +1160,6 @@ namespace OpenRAVEXMLParser
                 _pjoint->tinvRight = _pjoint->tRight.inverse();
                 _pjoint->tinvLeft = _pjoint->tLeft.inverse();
 
-                for(int i = 0; i < _pjoint->GetDOF(); ++i)
-                    _pparent->_vecJointWeights.push_back(fWeights[i]);
-
                 // have to transform back
                 if( !!_pjoint->bodies[0] )
                     _pjoint->bodies[0]->SetTransform(tbody0);
@@ -1170,7 +1170,7 @@ namespace OpenRAVEXMLParser
             }
             else if( xmlname == "weight" ) {
                 for(int i = 0; i < numindices; ++i)
-                    _ss >> fWeights[i];
+                    _ss >> _pjoint->_vweights.at(i);
             }
             else if( xmlname == "body" ) {
                 // figure out which body
@@ -1284,7 +1284,6 @@ namespace OpenRAVEXMLParser
         boost::function<Transform(KinBody::LinkPtr)> _fnGetOffsetFrom;
 
     private:
-        float fWeights[3];
         KinBody::LinkPtr _offsetfrom; ///< all transforms are relative to this body
         KinBodyPtr _pparent;
         KinBody::JointPtr& _pjoint;
@@ -1297,7 +1296,7 @@ namespace OpenRAVEXMLParser
     typedef boost::shared_ptr<InterfaceXMLReader> InterfaceXMLReaderPtr;
     typedef boost::shared_ptr<InterfaceXMLReader const> InterfaceXMLReaderConstPtr;
 
-    static InterfaceXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, PluginType type, InterfaceBasePtr& pinterface, const string& xmltag, const std::list<std::pair<std::string,std::string> >& atts);
+    static InterfaceXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, PluginType type, InterfaceBasePtr& pinterface, const std::string& xmltag, const std::list<std::pair<std::string,std::string> >& atts);
 
     class InterfaceXMLReader : public StreamXMLReader
     {
@@ -1532,7 +1531,7 @@ namespace OpenRAVEXMLParser
             }
             else if( xmlname == "joint" ) {
                 _pjoint.reset();
-                _pchain->_vecJointIndices.push_back((int)_pchain->_vecJointWeights.size());
+                _pchain->_vecJointIndices.push_back(_pchain->GetDOF()); // be careful, GetDOF() is computed using _vecJointIndices
                 boost::shared_ptr<JointXMLReader> pjointreader(new  JointXMLReader(_pjoint,_pchain, atts));
                 pjointreader->_fnGetModelsDir = boost::bind(&KinBodyXMLReader::GetModelsDir,this,_1);
                 pjointreader->_fnGetOffsetFrom = boost::bind(&KinBodyXMLReader::GetOffsetFrom,this,_1);
@@ -1590,15 +1589,11 @@ namespace OpenRAVEXMLParser
                         if( !_pjoint )
                             throw openrave_exception("joint should be valid");
                         _pjoint->dofindex = (int)_pchain->_vecJointIndices.back();
-                
-                        BOOST_ASSERT( _pjoint->dofindex < _pchain->GetDOF());
                         boost::shared_ptr<JointXMLReader> pjointreader = boost::dynamic_pointer_cast<JointXMLReader>(_pcurreader);
                         if( pjointreader->IsMimic() )
                             listMimicJoints.push_back(make_pair(_pjoint,pjointreader->GetMimicJoint()));
 
                         if( pjointreader->IsDisabled() ) {
-                            for(int i = 0; i < _pjoint->GetDOF(); ++i)
-                                _pchain->_vecJointWeights.pop_back();
                             _pchain->_vecJointIndices.pop_back();
                             _pjoint->jointindex = (int)_pchain->_vecPassiveJoints.size();
                             _pjoint->dofindex = -1;
@@ -1608,6 +1603,7 @@ namespace OpenRAVEXMLParser
                             _pjoint->jointindex = (int)_pchain->_vecjoints.size();
                             _pchain->_vecjoints.push_back(_pjoint);
                         }
+                        BOOST_ASSERT( _pjoint->dofindex < _pchain->GetDOF());
                         _pjoint.reset();
                     }
                     else if( xmlname == "kinbody" ) {
@@ -2524,7 +2520,7 @@ namespace OpenRAVEXMLParser
         bool _bInEnvironment;
     };
 
-    static InterfaceXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, PluginType type, InterfaceBasePtr& pinterface, const string& xmltag, const std::list<std::pair<std::string,std::string> >& atts)
+    static InterfaceXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, PluginType type, InterfaceBasePtr& pinterface, const std::string& xmltag, const std::list<std::pair<std::string,std::string> >& atts)
     {
         switch(type) {
         case PT_Planner: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Planner>(penv,pinterface,xmltag,atts));

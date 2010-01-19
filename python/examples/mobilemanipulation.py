@@ -79,7 +79,34 @@ class MobileManipulationPlanning(graspplanning.GraspPlanning):
             self.irmodel = inversereachability.InverseReachabilityModel(robot=robot)
             if not self.irmodel.load():
                 self.irmodel.autogenerate()
+        
+    def graspAndPlaceObjectMobile(grmodel,dests,showdist=False):
+        logllthresh = 2000.0
+        Ngoals = 20
+        densityfn,samplerfn,bounds,validgrasps = grmodel.computeGraspDistribution(logllthresh=logllthresh)
+        if showdist:
+            h = self.irmodel.showBaseDistribution(densityfn,bounds,self.target.GetTransform()[2,3],thresh=1.0)
+        
+        starttime = time.time()
+        goals,numfailures = grmodel.sampleGoals(samplerfn,validgrasps,N=Ngoals)
+        print 'numgrasps: %d, time: %f, failures: %d'%(len(goals),time.time()-starttime,numfailures)
 
+    def performGraspPlanning(self):
+        print 'starting to pick and place random objects'
+        while True:
+            i = random.randint(len(self.graspables))
+            try:
+                print 'grasping object %s'%self.graspables[i][0].target.GetName()
+                if len(self.graspables[i]) == 2:
+                    self.graspables[i].append(GraspReachability(robot=self.robot,gmodel=self.graspables[i][0],irmodel=self.irmodel))
+
+                with self.envreal:
+                    self.robot.ReleaseAllGrabbed()
+                success = self.graspAndPlaceObjectMobile(grmodel=self.graspables[i][2],dests=self.graspables[i][1])
+                print 'success: ',success
+            except e:
+                print 'failed to grasp object %s'%self.graspables[i][0].target.GetName()
+                print e
 def run():
     env = Environment()
     try:

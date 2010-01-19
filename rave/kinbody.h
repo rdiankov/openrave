@@ -231,7 +231,6 @@ public:
         inline dReal GetMaxVel() const { return fMaxVel; }
         inline dReal GetMaxAccel() const { return fMaxAccel; }
         inline dReal GetMaxTorque() const { return fMaxTorque; }
-
         inline dReal GetOffset() const { return offset; }
 
         /// Get the degree of freedom index in the body's DOF array, does not index in KinBody::_vecjoints!
@@ -274,6 +273,9 @@ public:
         /// \return degrees of freedom of the joint
         virtual void GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit, bool bAppend=false) const;
 
+        /// \return the weight associated with a joint's axis for computing a distance in the robot configuration space.
+        virtual dReal GetWeight(int iaxis=0) const;
+
         virtual void SetJointOffset(dReal offset);
         virtual void SetJointLimits(const std::vector<dReal>& vLowerLimit, const std::vector<dReal>& vUpperLimit);
         virtual void SetResolution(dReal resolution);
@@ -292,20 +294,19 @@ public:
         /// right multiply transform given the base body
         virtual Transform GetInternalHierarchyRightTransform() const;
         //@}
-
     private:
-        boost::array<LinkPtr,2> bodies;
+        boost::array<LinkPtr,2> bodies; ///< attached bodies
         dReal fResolution;      ///< interpolation resolution
         dReal fMaxVel;          ///< the maximum velocity (rad/s) of the joint
         dReal fMaxAccel;        ///< the maximum acceleration (rad/s^2) of the joint
         dReal fMaxTorque;       ///< maximum torque (N.m, kg m^2/s^2) that can be applied to the joint
-
+        std::vector<dReal> _vweights;        ///< the weights of the joint for computing distance metrics.
         Transform tRight, tLeft;///< transforms used to get body[1]'s transformation with respect to body[0]'s
                                 ///< Tbody1 = Tbody0 * tLeft * JointRotation * tRight
         Transform tinvRight, tinvLeft; ///< the inverse transformations of tRight and tLeft
         boost::array<Vector,3> vAxes;        ///< axes in body[0]'s or environment coordinate system used to define joint movement
         Vector vanchor;         ///< anchor of the joint
-        dReal offset;           ///< needed because ode can only limit joints in the range of -pi to pi
+        dReal offset;           ///< needed for rotation joints since the range is limited to 2*pi. This allows the offset to be set so the joint can function in [-pi+offset,pi+offset]
                                 ///< converts the ode joint angle to the expected joint angle
         std::vector<dReal> _vlowerlimit, _vupperlimit; ///< joint limits
         int nMimicJointIndex;   ///< only valid for passive joints and if value is >= 0
@@ -316,7 +317,7 @@ public:
         KinBodyWeakPtr _parent;       ///< body that joint belong to
         JointType type;
 
-        std::string name; ///< optional joint name
+        std::string name; ///< joint name
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
@@ -429,7 +430,7 @@ public:
     //@{
 
     /// \return number of controllable degrees of freedom of the body
-    virtual int GetDOF() const { return (int)_vecJointWeights.size(); }
+    virtual int GetDOF() const;
 
     virtual void GetJointValues(std::vector<dReal>& v) const;
     virtual void GetJointVelocities(std::vector<dReal>& v) const;
@@ -438,13 +439,14 @@ public:
     virtual void GetJointMaxAccel(std::vector<dReal>& v) const;
     virtual void GetJointMaxTorque(std::vector<dReal>& v) const;
     virtual void GetJointResolutions(std::vector<dReal>& v) const;
+    virtual void GetJointWeights(std::vector<dReal>& v) const;
     //@}
 
     /// adds a torque to every joint
     /// \param bAdd if true, adds to previous torques, otherwise resets the torques on all bodies and starts from 0
     virtual void SetJointTorques(const std::vector<dReal>& torques, bool bAdd);
 
-    ///< gets the start index of the joint arrays returned by GetJointValues() of the joint
+    ///< \return a vector that stores the start dof indices of each joint joints, size() is equal to GetJoints().size()
     virtual const std::vector<int>& GetJointIndices() const { return _vecJointIndices; }
 
     const std::vector<JointPtr>& GetJoints() const { return _vecjoints; }
@@ -466,10 +468,6 @@ public:
     ///  Computes a state space metric
     virtual dReal ConfigDist(const std::vector<dReal>& q1) const;
     virtual dReal ConfigDist(const std::vector<dReal>& q1, const std::vector<dReal>& q2) const;
-
-    virtual void SetDOFWeight(int nJointIndex, dReal weight) { _vecJointWeights.at(nJointIndex) = weight; }
-    virtual void SetJointWeight(int nJointIndex, dReal weight);
-    virtual dReal GetJointWeight(int nJointIndex) const;
 
     /// Updates the bounding box and any other parameters that could have changed by a simulation step
     virtual void SimulationStep(dReal fElapsedTime);
@@ -628,7 +626,6 @@ protected:
     std::vector<JointPtr> _vecjoints;     ///< all the joints of the body, joints contain limits, torques, and velocities
     std::vector<LinkPtr> _veclinks;       ///< children, unlike render hierarchies, transformations
                                         ///< of the children are with respect to the global coordinate system
-
     std::vector<int> _vecJointIndices;  ///< cached start indices, indexed by joint indices
     std::vector<dReal> _vecJointWeights;///< for configuration distance, this is indexed by DOF
                                         ///< size is equivalent to total number of degrees of freedom in the joints 

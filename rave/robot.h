@@ -326,6 +326,7 @@ public:
     virtual void GetActiveDOFVelocities(std::vector<dReal>& velocities) const;
     virtual void GetActiveDOFLimits(std::vector<dReal>& lower, std::vector<dReal>& upper) const;
     virtual void GetActiveDOFResolutions(std::vector<dReal>& v) const;
+    virtual void GetActiveDOFWeights(std::vector<dReal>& v) const;
     virtual void GetActiveDOFMaxVel(std::vector<dReal>& v) const;
     virtual void GetActiveDOFMaxAccel(std::vector<dReal>& v) const;
 
@@ -460,10 +461,10 @@ protected:
     int _nActiveDOF;            ///< Active degrees of freedom; if 0, use robot dofs
     int _nAffineDOFs;           ///< dofs describe what affine transformations are allowed
 
-    Vector _vTranslationLowerLimits, _vTranslationUpperLimits, _vTranslationMaxVels, _vTranslationResolutions;
-    Vector _vRotationAxisLowerLimits, _vRotationAxisUpperLimits, _vRotationAxisMaxVels, _vRotationAxisResolutions;
-    Vector _vRotation3DLowerLimits, _vRotation3DUpperLimits, _vRotation3DMaxVels, _vRotation3DResolutions;
-    Vector _vRotationQuatLowerLimits, _vRotationQuatUpperLimits, _vRotationQuatMaxVels, _vRotationQuatResolutions;
+    Vector _vTranslationLowerLimits, _vTranslationUpperLimits, _vTranslationMaxVels, _vTranslationResolutions, _vTranslationWeights;
+    Vector _vRotationAxisLowerLimits, _vRotationAxisUpperLimits, _vRotationAxisMaxVels, _vRotationAxisResolutions, _vRotationAxisWeights;
+    Vector _vRotation3DLowerLimits, _vRotation3DUpperLimits, _vRotation3DMaxVels, _vRotation3DResolutions, _vRotation3DWeights;
+    Vector _vRotationQuatLowerLimits, _vRotationQuatUpperLimits, _vRotationQuatMaxVels, _vRotationQuatResolutions, _vRotationQuatWeights;
 private:
     std::string __hashrobotstructure;
     mutable std::vector<dReal> _vTempRobotJoints;

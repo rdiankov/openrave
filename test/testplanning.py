@@ -81,9 +81,10 @@ def test_inversereachabilityrun():
     Tgrasp = gm.getGlobalGraspTransform(validgrasps[0])
     densityfn,samplerfn,bounds = self.computeBaseDistribution(Tgrasp,2000)
     h = self.showBaseDistribution(densityfn,bounds,zoffset=1.0,thresh=1.0)
-
     densityfn2,samplerfn2,bounds2 = self.computeAggregateBaseDistribution([Tgrasp],2000)
     h2 = self.showBaseDistribution(densityfn2,bounds2,zoffset=3.0,thresh=1.0)
+
+    self.testSampling()
 
 def test_graspplanning():
     import graspplanning
@@ -117,6 +118,7 @@ def test_graspreachability():
     goals,numfailures = self.sampleGoals(lambda N: samplerfn(N,1.0),validgrasps,N=100)
     print 'numgrasps: %d, time: %f, failures: %d'%(len(goals),time.time()-starttime,numfailures)
 
+    # compute performance with random sampler (given bounds)
     Trobot = self.robot.GetTransform()
     def randomsampler(N):
         angles = random.rand(N)*(bounds[1,0]-bounds[0,0])+bounds[0,0]

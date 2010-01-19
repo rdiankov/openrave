@@ -469,21 +469,25 @@ RobotBase::RobotBase(EnvironmentBasePtr penv) : KinBody(PT_Robot, penv)
     _vTranslationUpperLimits = Vector(100,100,100);
     _vTranslationMaxVels = Vector(0.07f,0.07f,0.07f);
     _vTranslationResolutions = Vector(0.001f,0.001f,0.001f);
+    _vTranslationWeights = Vector(2.0f,2.0f,2.0f);
 
     _vRotationAxisLowerLimits = Vector(-4*PI,-4*PI,-4*PI);
     _vRotationAxisUpperLimits = Vector(4*PI,4*PI,4*PI);
     _vRotationAxisMaxVels = Vector(0.07f,0.07f,0.07f);
     _vRotationAxisResolutions = Vector(0.01f,0.01f,0.01f);
-    
+    _vRotationAxisWeights = Vector(2.0f,2.0f,2.0f);
+
     _vRotation3DLowerLimits = Vector(-10000,-10000,-10000);
     _vRotation3DUpperLimits = Vector(10000,10000,10000);
     _vRotation3DMaxVels = Vector(0.07f,0.07f,0.07f);
     _vRotation3DResolutions = Vector(0.01f,0.01f,0.01f);
+    _vRotation3DWeights = Vector(1.0f,1.0f,1.0f);
 
     _vRotationQuatLowerLimits = Vector(-1,-1,-1,-1);
     _vRotationQuatUpperLimits = Vector(1,1,1,1);
-    _vRotationQuatMaxVels = Vector(0.07f,0.07f,0.07f);
-    _vRotationQuatResolutions = Vector(0.01f,0.01f,0.01f);
+    _vRotationQuatMaxVels = Vector(0.07f,0.07f,0.07f,0.07f);
+    _vRotationQuatResolutions = Vector(0.01f,0.01f,0.01f,0.01f);
+    _vRotationQuatWeights = Vector(0.4f,0.4f,0.4f,0.4f);
 }
 
 RobotBase::~RobotBase()
@@ -995,6 +999,41 @@ void RobotBase::GetActiveDOFResolutions(std::vector<dReal>& resolution) const
         *pResolution++ = _vRotationQuatResolutions.y;
         *pResolution++ = _vRotationQuatResolutions.z;
         *pResolution++ = _vRotationQuatResolutions.w;
+    }
+}
+
+void RobotBase::GetActiveDOFWeights(std::vector<dReal>& weights) const
+{
+    if( _nActiveDOF == 0 ) {
+        GetJointWeights(weights);
+        return;
+    }
+    
+    weights.resize(GetActiveDOF());
+    if( weights.size() == 0 )
+        return;
+    dReal* pweight = &weights[0];
+
+    GetJointWeights(_vTempRobotJoints);
+    FOREACHC(it, _vActiveJointIndices)
+        *pweight++ = _vTempRobotJoints[*it];
+
+    // set some default limits 
+    if( _nAffineDOFs & DOF_X ) { *pweight++ = _vTranslationWeights.x;}
+    if( _nAffineDOFs & DOF_Y ) { *pweight++ = _vTranslationWeights.y;}
+    if( _nAffineDOFs & DOF_Z ) { *pweight++ = _vTranslationWeights.z;}
+
+    if( _nAffineDOFs & DOF_RotationAxis ) { *pweight++ = _vRotationAxisWeights.x; }
+    else if( _nAffineDOFs & DOF_Rotation3D ) {
+        *pweight++ = _vRotation3DWeights.x;
+        *pweight++ = _vRotation3DWeights.y;
+        *pweight++ = _vRotation3DWeights.z;
+    }
+    else if( _nAffineDOFs & DOF_RotationQuat ) {
+        *pweight++ = _vRotationQuatWeights.x;
+        *pweight++ = _vRotationQuatWeights.y;
+        *pweight++ = _vRotationQuatWeights.z;
+        *pweight++ = _vRotationQuatWeights.w;
     }
 }
 

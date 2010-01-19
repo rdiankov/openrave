@@ -101,14 +101,7 @@ public:
             }
     
             _vsample.resize(GetDOF());
-
-            _vRobotWeights.resize(GetDOF());
-            FOREACH(itw, _vRobotWeights)
-                *itw = 1;
-
-            int index = 0;
-            FOREACHC(it, _robot->GetActiveJointIndices())
-                _vRobotWeights[index++] = _robot->GetJointWeight(*it);
+            _robot->GetJointWeights(_vRobotWeights);
         }
 
         virtual void SetState(const vector<dReal>& pstate)
