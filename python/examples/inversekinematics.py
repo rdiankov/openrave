@@ -104,7 +104,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         elif self.type == self.Type_6D:
             solvefn=IKFastSolver.solveFullIK_6D
 
-        solvejoints = self.manip.GetArmJoints()
+        solvejoints = list(self.manip.GetArmJoints())
         if freejoints is not None:
             for jointname in freejoints:
                 solvejoints.remove(jointname)
