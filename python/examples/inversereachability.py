@@ -94,7 +94,7 @@ class InverseReachabilityModel(OpenRAVEModel):
     def preprocess(self):
         self.equivalencemeans = array([e[0] for e in self.equivalenceclasses])
         self.equivalenceweights = array([-0.5/e[1]**2 for e in self.equivalenceclasses])
-        self.equivalenceoffset = array([normalizationconst(e[1]) for e in self.equivalenceclasses])
+        self.equivalenceoffset = array([self.normalizationconst(e[1]) for e in self.equivalenceclasses])
 
     def save(self):
         OpenRAVEModel.save(self,(self.equivalenceclasses,self.rotweight))
