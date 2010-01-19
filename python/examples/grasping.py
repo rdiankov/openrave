@@ -184,7 +184,7 @@ class GraspingModel(OpenRAVEModel):
                     preshapes = array([self.robot.GetJointValues()])
                 self.generate(preshapes=preshapes, rolls = arange(0,2*pi,pi/2), standoffs = array([0,0.025]),
                               approachrays = self.computeBoxApproachRays(stepsize=0.02),
-                              updateenv=options.useviewer, addSphereNorms=False)
+                              updateenv=True, addSphereNorms=False)
             self.save()
         finally:
             for b in bodies:
