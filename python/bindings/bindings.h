@@ -24,6 +24,7 @@
 #include <boost/python.hpp>
 #include <boost/assert.hpp>
 #include <boost/cstdint.hpp>
+#include <stdint.h>
 
 #ifdef _MSC_VER
 #include <boost/typeof/std/string.hpp>
@@ -487,8 +488,8 @@ inline object toPyArrayN(const double* pvalues, std::vector<npy_intp>& dims)
 inline object toPyArrayN(const uint8_t* pvalues, std::vector<npy_intp>& dims)
 {
     uint64_t totalsize = 1;
-    FOREACH(it,dims)
-        totalsize *= *it;
+    for(size_t i = 0; i < dims.size(); ++i)
+        totalsize *= dims[i];
     PyObject *pyvalues = PyArray_SimpleNew(dims.size(),&dims[0], PyArray_UINT8);
     if( pvalues != NULL )
         memcpy(PyArray_DATA(pyvalues),pvalues,totalsize*sizeof(uint8_t));
