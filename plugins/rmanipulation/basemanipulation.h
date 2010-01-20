@@ -963,10 +963,8 @@ protected:
         string strtrajfilename;
         boost::shared_ptr<ostream> pOutputTrajStream;
 
-        vector<dReal> vclosingsign, vclosingsign_full; // sometimes the sign of closing the fingers can be positive
-        vclosingsign_full.insert(vclosingsign_full.end(), robot->GetDOF(), 1);
-        
         // initialize the moving direction as hte opposite of the closing direction defined in the manipulators
+		vector<dReal> vclosingsign_full(robot->GetDOF(), 0);
         FOREACHC(itmanip, robot->GetManipulators()) {
             BOOST_ASSERT((*itmanip)->GetClosingDirection().size()==(*itmanip)->GetGripperJoints().size());
             for(size_t i = 0; i < (*itmanip)->GetClosingDirection().size(); ++i) {
@@ -974,13 +972,11 @@ protected:
             }
         }
 
-        vclosingsign.resize(robot->GetActiveDOF());
         for(int i = 0; i < robot->GetActiveDOF(); ++i) {
             int index = robot->GetActiveJointIndex(i);
             if( index >= 0 )
                 movingdir[i] = -vclosingsign_full[index];
         }
-
 
         string cmd;
         while(!sinput.eof()) {
@@ -1016,7 +1012,6 @@ protected:
         }
 
         RobotBase::RobotStateSaver saver(robot);
-
         boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(robot->GetActiveDOF()));
 
         // have to add the first point
@@ -1039,6 +1034,12 @@ protected:
             return false;
         }
     
+		//stringstream ss; ss << "moving direction: ";
+		//FOREACH(it,movingdir)
+		//	ss << *it << " ";
+		//ss << endl;
+		//RAVELOG_DEBUG(ss.str());
+
         boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
         graspparams->SetRobotActiveJoints(robot);
         robot->GetActiveDOFValues(graspparams->vinitialconfig);  

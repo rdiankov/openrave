@@ -128,8 +128,7 @@ class GraspingModel(OpenRAVEModel):
             statesaver = None
 
     def show(self,delay=0.5):
-        statesaver = self.robot.CreateRobotStateSaver()
-        try:
+        with self.robot:
             for i,grasp in enumerate(self.grasps):
                 print 'grasp %d/%d'%(i,len(self.grasps))
                 contacts,finalconfig,mindist,volume = self.runGrasp(grasp,translate=True)
@@ -138,8 +137,6 @@ class GraspingModel(OpenRAVEModel):
                 self.robot.SetTransform(finalconfig[1])
                 self.env.UpdatePublishedBodies()
                 time.sleep(delay)
-        finally:
-            statesaver = None # force restoring
 
     def generateFromOptions(self,options):
         print 'attempting default grasp generation for %s:%s:%s'%(self.robot.GetName(),self.manip.GetName(),self.target.GetName())
@@ -148,10 +145,11 @@ class GraspingModel(OpenRAVEModel):
             preshapes = array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2)))
         else:
             manipprob = BaseManipulation(self.robot)
-            self.target.Enable(False)
-            manipprob.ReleaseFingers(True)
+            with self.target:
+                self.target.Enable(False)
+                self.robot.SetActiveDOFs(self.manip.GetGripperJoints())
+                manipprob.ReleaseFingers(execute=True)
             self.robot.WaitForController(0)
-            self.target.Enable(True)
             preshapes = array([self.robot.GetJointValues()[self.manip.GetGripperJoints()]])
         self.generate(preshapes=preshapes, rolls = arange(0,2*pi,pi/2), standoffs = array([0,0.025]),
                       approachrays = self.computeBoxApproachRays(stepsize=0.02),
