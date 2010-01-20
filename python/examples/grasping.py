@@ -178,7 +178,7 @@ class GraspingModel(OpenRAVEModel):
                 else:
                     manipprob = BaseManipulation(self.robot)
                     self.target.Enable(False)
-                    manipprob.ReleaseFingers(True)
+                    manipprob.ReleaseFingers(execute=True)
                     self.robot.WaitForController(0)
                     self.target.Enable(True)
                     preshapes = array([self.robot.GetJointValues()])
