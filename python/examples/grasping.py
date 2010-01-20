@@ -177,10 +177,11 @@ class GraspingModel(OpenRAVEModel):
                     preshapes = array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2)))
                 else:
                     manipprob = BaseManipulation(self.robot)
-                    self.target.Enable(False)
-                    manipprob.ReleaseFingers(execute=True)
+                    with self.target:
+                        self.target.Enable(False)
+                        self.robot.SetActiveDOFs(self.manip.GetGripperJoints())
+                        manipprob.ReleaseFingers(execute=True)
                     self.robot.WaitForController(0)
-                    self.target.Enable(True)
                     preshapes = array([self.robot.GetJointValues()[self.manip.GetGripperJoints()]])
                 self.generate(preshapes=preshapes, rolls = arange(0,2*pi,pi/2), standoffs = array([0,0.025]),
                               approachrays = self.computeBoxApproachRays(stepsize=0.02),
