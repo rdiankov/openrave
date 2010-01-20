@@ -152,7 +152,7 @@ class GraspingModel(OpenRAVEModel):
             manipprob.ReleaseFingers(True)
             self.robot.WaitForController(0)
             self.target.Enable(True)
-            preshapes = array([self.robot.GetJointValues()])
+            preshapes = array([self.robot.GetJointValues()[self.manip.GetGripperJoints()]])
         self.generate(preshapes=preshapes, rolls = arange(0,2*pi,pi/2), standoffs = array([0,0.025]),
                       approachrays = self.computeBoxApproachRays(stepsize=0.02),
                       updateenv=options.useviewer, addSphereNorms=False)
@@ -181,7 +181,7 @@ class GraspingModel(OpenRAVEModel):
                     manipprob.ReleaseFingers(execute=True)
                     self.robot.WaitForController(0)
                     self.target.Enable(True)
-                    preshapes = array([self.robot.GetJointValues()])
+                    preshapes = array([self.robot.GetJointValues()[self.manip.GetGripperJoints()]])
                 self.generate(preshapes=preshapes, rolls = arange(0,2*pi,pi/2), standoffs = array([0,0.025]),
                               approachrays = self.computeBoxApproachRays(stepsize=0.02),
                               updateenv=True, addSphereNorms=False)
