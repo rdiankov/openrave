@@ -1270,6 +1270,7 @@ class IKFastSolver(AutoReloader):
         for freevar in freejointvars+[None]:
             freevalues = [0,pi/2,pi,-pi/2] if freevar is not None else [None]
             for freevalue in freevalues:
+                print 'attempting ',freevar,' = ',freevalue
                 if freevar is not None and freevalue is not None:
                     var = self.Variable(freevar)
                     valuesubs = [(var.var,freevalue),(var.svar,sin(freevalue)),(var.cvar,cos(freevalue))] if freevalue is not None else []
@@ -1341,6 +1342,7 @@ class IKFastSolver(AutoReloader):
         for freevar in freejointvars+[None]:
             freevalues = [0,pi/2,pi,-pi/2] if freevar is not None else [None]
             for freevalue in freevalues:
+                print 'attempting ',freevar,' = ',freevalue
                 if freevar is not None and freevalue is not None:
                     var = self.Variable(freevar)
                     valuesubs = [(var.var,freevalue),(var.svar,sin(freevalue)),(var.cvar,cos(freevalue))] if freevalue is not None else []
@@ -1497,6 +1499,7 @@ class IKFastSolver(AutoReloader):
         for freevar in freejointvars+[None]:
             freevalues = [0,pi/2,pi,-pi/2] if freevar is not None else [None]
             for freevalue in freevalues:
+                print 'attempting ',freevar,' = ',freevalue
                 if freevar is not None and freevalue is not None:
                     var = self.Variable(freevar)
                     valuesubs = [(var.var,freevalue),(var.svar,sin(freevalue)),(var.cvar,cos(freevalue))] if freevalue is not None else []
