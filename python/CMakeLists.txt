@@ -26,7 +26,7 @@ if( _ikfast_success MATCHES 0 OR _ikfast_success MATCHES 1 )
     add_custom_target(sympy_files ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sympy/__init__.py)
     add_dependencies(classhashes_h sympy_files)
 
-    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sympy" DESTINATION ${OPENRAVEPY_INSTALL_DIR} PATTERN ".svn" EXCLUDE)
+    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sympy" DESTINATION ${OPENRAVE_PYTHON_INSTALL_DIR} PATTERN ".svn" EXCLUDE)
   else()
     message(WARNING "Could not install sympy needed by ikfast (cmake version ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION} needs to be >= 2.4.6)")
   endif()

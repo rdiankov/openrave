@@ -20,7 +20,12 @@ from __future__ import with_statement # for python 2.5
 import sys, copy, time
 from string import atoi,atof
 from optparse import OptionParser
-import metaclass
+try:
+    from openravepy.metaclass import AutoReloader
+except:
+    class AutoReloader:
+        pass
+
 from sympy import *
 
 def xcombinations(items,n):
@@ -71,7 +76,7 @@ class SolverSolution:
     def end(self, generator):
         return generator.endSolution(self)
 
-class SolverBranch(metaclass.AutoReloader):
+class SolverBranch(AutoReloader):
     jointname = None
     jointeval = None # only used for evaluation, do use these for real solutions
     # list of tuples, first gives expected value of joint, then the code that follows.
@@ -88,7 +93,7 @@ class SolverBranch(metaclass.AutoReloader):
     def end(self, generator):
         return generator.endBranch(self)
 
-class SolverBranchConds(metaclass.AutoReloader):
+class SolverBranchConds(AutoReloader):
     jointbranches = None
     def __init__(self, jointbranches):
         self.jointbranches = jointbranches
@@ -98,7 +103,7 @@ class SolverBranchConds(metaclass.AutoReloader):
     def end(self, generator):
         return generator.endBranchConds(self)
 
-class SolverCheckZeros(metaclass.AutoReloader):
+class SolverCheckZeros(AutoReloader):
     jointname = None
     jointcheckeqs = None # only used for evaluation
     zerobranch = None
@@ -116,7 +121,7 @@ class SolverCheckZeros(metaclass.AutoReloader):
     def end(self, generator):
         return generator.endCheckZeros(self)
 
-class SolverFreeParameter(metaclass.AutoReloader):
+class SolverFreeParameter(AutoReloader):
     jointname = None
     jointtree = None
     def __init__(self, jointname, jointtree):
@@ -128,7 +133,7 @@ class SolverFreeParameter(metaclass.AutoReloader):
     def end(self, generator):
         return generator.endFreeParameter(self)
 
-class SolverIKChain(metaclass.AutoReloader):
+class SolverIKChain(AutoReloader):
     solvejointvars = None
     freejointvars = None
     Tee = None
@@ -144,7 +149,7 @@ class SolverIKChain(metaclass.AutoReloader):
     def end(self, generator):
         return generator.endChain(self)
 
-class SolverRotation(metaclass.AutoReloader):
+class SolverRotation(AutoReloader):
     T = None
     jointtree = None
     def __init__(self, T, jointtree):
@@ -156,7 +161,7 @@ class SolverRotation(metaclass.AutoReloader):
     def end(self, generator):
         return generator.endRotation(self)
 
-class SolverStoreSolution(metaclass.AutoReloader):
+class SolverStoreSolution(AutoReloader):
     alljointvars = None
     def __init__(self, alljointvars):
         self.alljointvars = alljointvars
@@ -165,7 +170,7 @@ class SolverStoreSolution(metaclass.AutoReloader):
     def end(self, generator):
         return generator.endStoreSolution(self)
 
-class SolverSequence(metaclass.AutoReloader):
+class SolverSequence(AutoReloader):
     jointtrees = None
     def __init__(self, jointtrees):
         self.jointtrees = jointtrees
@@ -174,7 +179,7 @@ class SolverSequence(metaclass.AutoReloader):
     def end(self, generator):
         return generator.endSequence(self)
 
-class SolverSetJoint(metaclass.AutoReloader):
+class SolverSetJoint(AutoReloader):
     jointname = None
     jointvalue = None
     def __init__(self, jointname,jointvalue):
@@ -185,13 +190,13 @@ class SolverSetJoint(metaclass.AutoReloader):
     def end(self, generator):
         return generator.endSetJoint(self)
 
-class SolverBreak(metaclass.AutoReloader):
+class SolverBreak(AutoReloader):
     def generate(self,generator):
         return generator.generateBreak(self)
     def end(self,generator):
         return generator.endBreak(self)
 
-class CppGenerator(metaclass.AutoReloader):
+class CppGenerator(AutoReloader):
     """Generates C++ code from an AST"""
 
     dictequations = [] # dictionary of symbols already written
@@ -804,7 +809,7 @@ int main(int argc, char** argv)
         lcode[:0] = insertcode
         return ''.join(lcode)
 
-class IKFastSolver(metaclass.AutoReloader):
+class IKFastSolver(AutoReloader):
     """
     Parses the kinematics from an openrave fk file and generates C++ code for analytical inverse kinematics.
     author: Rosen Diankov
@@ -834,9 +839,18 @@ class IKFastSolver(metaclass.AutoReloader):
             self.cvar = Symbol("c%s"%var.name)
             self.tvar = Symbol("t%s"%var.name)
 
-    def __init__(self, robotfile=None,robotfiledata=None,kinbody=None):
+    def __init__(self, robotfile=None,robotfiledata=None,kinbody=None,accuracy=None,precision=None):
         self.joints = []
         self.freevarsubs = []
+        if accuracy is None:
+            self.accuracy=1e-7
+        else:
+            self.accuracy=accuracy
+        if precision is None:
+            self.precision=10
+        else:
+            self.precision=precision
+        self.precision=precision
         alljoints = []
         if kinbody is not None:
             # this actually requires openravepy to run, but it isn't a good idea to make ikfast dependent on openravepy
@@ -1053,8 +1067,12 @@ class IKFastSolver(metaclass.AutoReloader):
         return T
 
     # deep chopping of tiny numbers due to floating point precision errors
-    def chop(self,expr,precision=10,accuracy=1e-7):
+    def chop(self,expr,precision=None,accuracy=None):
         # go through all arguments and chop them
+        if precision is None:
+            precision = self.precision
+        if accuracy is None:
+            accuracy = self.accuracy
         if expr.is_Function:
             return expr.func( self.chop(expr.args[0], precision,accuracy) )
         elif expr.is_Mul:
@@ -1105,12 +1123,12 @@ class IKFastSolver(metaclass.AutoReloader):
         
         return complexity
 
-    def affineSimplify(self, T, precision=10,accuracy=1e-7):
+    def affineSimplify(self, T):
         # yes, it is necessary to call self.trigsimp so many times since it gives up too easily
-        values = map(lambda x: self.chop(trigsimp(trigsimp(self.chop(trigsimp(x),precision,accuracy=accuracy))),precision,accuracy=accuracy), T)
+        values = map(lambda x: self.chop(trigsimp(trigsimp(self.chop(trigsimp(x))))), T)
         # rotation should have bigger accuracy threshold
         for i in [0,1,2,4,5,6,8,9,10]:
-            values[i] = self.chop(values[i],precision,accuracy*10)
+            values[i] = self.chop(values[i],accuracy=self.accuracy*10.0)
         return Matrix(4,4,values)
 
     def fk(self, chain, joints):
@@ -1735,12 +1753,11 @@ class IKFastSolver(metaclass.AutoReloader):
             for var in vars:
                 othervars = [v.var for v in vars if not v == var]
                 if eq.has_any_symbols(var.var) and (len(othervars) == 0 or not eq.has_any_symbols(*othervars)):
-                    
                     symbolgen = cse_main.numbered_symbols('const')
                     eqnew, symbols = self.removeConstants(eq.subs(self.freevarsubs+[(sin(var.var),var.svar),(cos(var.var),var.cvar)]),[var.cvar,var.svar,var.var], symbolgen)
                     eqnew2,symbols2 = self.factorLinearTerms(eqnew,[var.svar,var.cvar,var.var],symbolgen)
                     symbols += [(s[0],s[1].subs(symbols)) for s in symbols2]
-
+                    
                     numcvar = self.countVariables(eqnew2,var.cvar)
                     numsvar = self.countVariables(eqnew2,var.svar)
                     if numcvar == 1 and numsvar == 1:
@@ -1755,7 +1772,7 @@ class IKFastSolver(metaclass.AutoReloader):
                             jointsolutions = [constsol+asinsol,constsol+pi.evalf()-asinsol]
                             solvedvars.append((var.var,SolverSolution(var.var.name,jointeval=jointsolutions), [self.codeComplexity(s) for s in jointsolutions]))
                             continue
-
+                    
                     if numsvar > 0:
                         try:
                             # substitute cos
@@ -1767,7 +1784,7 @@ class IKFastSolver(metaclass.AutoReloader):
                                 solvedvars.append((var.var,SolverSolution(var.var.name, jointevalsin=jointsolutions), [self.codeComplexity(s) for s in jointsolutions]))
                         except (ValueError, AttributeError):
                             pass
-
+                    
                     if numcvar > 0:
                         # substite sin
                         try:
@@ -1779,7 +1796,7 @@ class IKFastSolver(metaclass.AutoReloader):
                                 solvedvars.append((var.var,SolverSolution(var.var.name, jointevalcos=jointsolutions), [self.codeComplexity(s) for s in jointsolutions]))
                         except (ValueError, AttributeError):
                             pass
-
+                    
                     if numsvar == 0 and numcvar == 0:
                         eqnew = eq.subs(self.freevarsubs)
                         eqnew,symbols = self.factorLinearTerms(eqnew,[var.var])

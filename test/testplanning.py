@@ -160,3 +160,19 @@ def test_hash():
 def test_pyann():
     ktree = pyANN.KDTree(random.rand(10,7))
     neighs,dists = ktree.kSearch(random.rand(7),5,1e-3);
+
+def test_ikfast():
+    import openravepy
+    env = openravepy.Environment()
+    robot = env.ReadRobotXMLFile('schunkleft.robot.xml')
+    env.AddRobot(robot)
+    manip = robot.GetManipulators()[0]
+    solvejoints = list(manip.GetArmJoints())
+    solvejoints.pop(2)
+    solvefn=openravepy.ikfast.IKFastSolver.solveFullIK_6D
+    self = openravepy.ikfast.IKFastSolver(kinbody=robot)
+    baselink = manip.GetBase().GetIndex()
+    eelink = manip.GetEndEffector().GetIndex()
+    usedummyjoints = False
+    code = self.generateIkSolver(baselink=baselink,eelink=eelink,solvejoints=solvejoints,freeparams=freejoints,usedummyjoints=usedummyjoints,solvefn=solvefn)
+

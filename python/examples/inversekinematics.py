@@ -15,7 +15,7 @@ __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
 __license__ = 'Apache License, Version 2.0'
 
 from openravepy import *
-from ikfast import IKFastSolver
+from openravepy.ikfast import IKFastSolver
 from numpy import *
 import time,platform
 import distutils
@@ -88,9 +88,9 @@ class InverseKinematicsModel(OpenRAVEModel):
             type = self.Type_Direction3D
         if options.translation3donly:
             type = self.Type_Translation3D
-        return self.generate(freejoints=options.freejoints,usedummyjoints=options.usedummyjoints,type=type)
+        return self.generate(freejoints=options.freejoints,usedummyjoints=options.usedummyjoints,type=type,accuracy=options.accuracy,precision=options.precision)
     
-    def generate(self,freejoints=None,usedummyjoints=False,type=None):
+    def generate(self,freejoints=None,usedummyjoints=False,type=None,accuracy=None,precision=None):
         if type is not None:
             self.type = type
         output_filename = self.getfilename()
@@ -130,7 +130,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         if not os.path.isfile(sourcefilename):
             print 'generating inverse kinematics file %s'%sourcefilename
             mkdir_recursive(OpenRAVEModel.getfilename(self))
-            solver = IKFastSolver(kinbody=self.robot)
+            solver = IKFastSolver(kinbody=self.robot,accuracy=accuracy,precision=precision)
             code = solver.generateIkSolver(self.manip.GetBase().GetIndex(),self.manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejoints,usedummyjoints=usedummyjoints,solvefn=solvefn)
             if len(code) == 0:
                 raise ValueError('failed to generate ik solver for robot %s:%s'%(self.roobt.GetName(),self.manip.GetName()))
@@ -202,6 +202,10 @@ class InverseKinematicsModel(OpenRAVEModel):
         parser.description='Computes the closed-form inverse kinematics equations of a robot manipulator, generates a C++ file, and compiles this file into a shared object which can then be loaded by OpenRAVE'
         parser.add_option('--freejoint', action='append', type='int', dest='freejoints',default=[],
                           help='Optional joint index specifying a free parameter of the manipulator. If not specified, assumes all joints not solving for are free parameters. Can be specified multiple times for multiple free parameters.')
+        parser.add_option('--precision', action='store', type='int', dest='precision',default=10,
+                          help='The precision to compute the inverse kinematics in, default is 10 decimal digits.')
+        parser.add_option('--accuracy', action='store', type='float', dest='accuracy',default=1e-7,
+                          help='The small number that will be recognized as a zero used to eliminate floating point errors (default is 1e-7).')
         parser.add_option('--rotation3donly', action='store_true', dest='rotation3donly',default=False,
                           help='If true, need to specify only 3 solve joints and will solve for a target rotation')
         parser.add_option('--rotation2donly', action='store_true', dest='rotation2donly',default=False,
