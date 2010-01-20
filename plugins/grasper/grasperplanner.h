@@ -202,11 +202,13 @@ public:
 
             if( !bInitialized ) {
                 RAVELOG_WARNA("no objects in environment\n");
-                return false;
+                vTargetCenter = pmanip->GetEndEffectorTransform().trans;
+                //return false;
             }
-
-            vTargetCenter = 0.5f * (vmin+vmax);
-            fTargetRadius = 0.5f * RaveSqrt((vmax-vmin).lengthsqr3());
+            else {
+                vTargetCenter = 0.5f * (vmin+vmax);
+                fTargetRadius = 0.5f * RaveSqrt((vmax-vmin).lengthsqr3());
+            }
         }
         else {
             AABB ab = _parameters.targetbody->ComputeAABB();
