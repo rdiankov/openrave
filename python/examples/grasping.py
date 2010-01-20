@@ -47,7 +47,7 @@ class GraspingModel(OpenRAVEModel):
         return len(self.grasps) > 0 and len(self.graspindices) > 0 and self.grasper is not None
 
     def init(self,friction,avoidlinks,plannername=None):
-        self.grasper = Grasper(self.env,self.robot,friction,avoidlinks,plannername)
+        self.grasper = Grasper(self.robot,friction,avoidlinks,plannername)
         self.grasps = []
         self.graspindices = dict()
 
@@ -56,7 +56,7 @@ class GraspingModel(OpenRAVEModel):
         if params is None:
             return False;
         self.grasps,self.graspindices,friction,avoidlinks,plannername = params
-        self.grasper = Grasper(self.env,self.robot,friction,avoidlinks,plannername)
+        self.grasper = Grasper(self.robot,friction,avoidlinks,plannername)
         return self.has()
 
     def save(self):
@@ -147,7 +147,7 @@ class GraspingModel(OpenRAVEModel):
         if self.robot.GetName() == 'BarrettHand' or self.robot.GetName() == 'BarrettWAM':
             preshapes = array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2)))
         else:
-            manipprob = BaseManipulation(self.env,self.robot)
+            manipprob = BaseManipulation(self.robot)
             self.target.Enable(False)
             manipprop.ReleaseFingers(True)
             self.robot.WaitForController(0)
@@ -176,7 +176,7 @@ class GraspingModel(OpenRAVEModel):
                 if self.robot.GetName() == 'BarrettHand' or self.robot.GetName() == 'BarrettWAM':
                     preshapes = array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2)))
                 else:
-                    manipprob = BaseManipulation(self.env,self.robot)
+                    manipprob = BaseManipulation(self.robot)
                     self.target.Enable(False)
                     manipprop.ReleaseFingers(True)
                     self.robot.WaitForController(0)

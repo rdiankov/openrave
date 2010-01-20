@@ -580,11 +580,4 @@ private:
     
 };
 
-inline dReal TransformDistance2(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)
-{
-    dReal e1 = (t1.rot-t2.rot).lengthsqr4();
-    dReal e2 = (t1.rot+t2.rot).lengthsqr4();
-    return (t1.trans-t2.trans).lengthsqr3() + frotweight*min(e1,e2);
-}
-
 #endif

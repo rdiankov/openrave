@@ -122,12 +122,6 @@ typedef boost::shared_ptr<PyProblemInstance const> PyProblemInstanceConstPtr;
 typedef boost::shared_ptr<PyRaveViewerBase> PyRaveViewerBasePtr;
 typedef boost::shared_ptr<PyRaveViewerBase const> PyRaveViewerBaseConstPtr;
 
-void translate_openrave_exception(openrave_exception const& e)
-{
-    // Use the Python 'C' API to set up an exception object
-    PyErr_SetString(PyExc_RuntimeError, e.what());
-}
-
 inline RaveVector<float> ExtractFloat3(const object& o)
 {
     return RaveVector<float>(extract<float>(o[0]), extract<float>(o[1]), extract<float>(o[2]));
@@ -2776,7 +2770,6 @@ BOOST_PYTHON_MODULE(openravepy_int)
 {
     import_array();
     numeric::array::set_module_and_type("numpy", "ndarray");
-    register_exception_translator<openrave_exception>(&translate_openrave_exception);
     int_from_int();
     T_from_number<float>();
     T_from_number<double>();
@@ -2788,6 +2781,15 @@ BOOST_PYTHON_MODULE(openravepy_int)
     numpy_multi_array_converter< boost::multi_array<double,3> >::register_to_and_from_python();
     numpy_multi_array_converter< boost::multi_array<int,1> >::register_to_and_from_python();
     numpy_multi_array_converter< boost::multi_array<int,2> >::register_to_and_from_python();
+
+    typedef return_value_policy< copy_const_reference > return_copy_const_ref;
+    class_< openrave_exception >( "_openrave_exception_" )
+        .def( init<const std::string&>() )
+        .def( init<const openrave_exception&>() )
+        .def( "message", &openrave_exception::message, return_copy_const_ref() )
+        .def( "__str__", &openrave_exception::message, return_copy_const_ref() )
+        ;
+    exception_translator<openrave_exception>();
 
     enum_<DebugLevel>("DebugLevel")
         .value("Fatal",Level_Fatal)

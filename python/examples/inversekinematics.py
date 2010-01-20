@@ -15,6 +15,7 @@ __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
 __license__ = 'Apache License, Version 2.0'
 
 from openravepy import *
+from openravepy.interfaces import BaseManipulation
 from openravepy.ikfast import IKFastSolver
 from numpy import *
 import time,platform
@@ -88,7 +89,7 @@ class InverseKinematicsModel(OpenRAVEModel):
             type = self.Type_Direction3D
         if options.translation3donly:
             type = self.Type_Translation3D
-        return self.generate(freejoints=options.freejoints,usedummyjoints=options.usedummyjoints,type=type,accuracy=options.accuracy,precision=options.precision)
+        self.generate(freejoints=options.freejoints,usedummyjoints=options.usedummyjoints,type=type,accuracy=options.accuracy,precision=options.precision)
     
     def generate(self,freejoints=None,usedummyjoints=False,type=None,accuracy=None,precision=None):
         if type is not None:
@@ -214,6 +215,8 @@ class InverseKinematicsModel(OpenRAVEModel):
                           help='If true, need to specify only 3 solve joints and will solve for a target translation')
         parser.add_option('--usedummyjoints', action='store_true',dest='usedummyjoints',default=False,
                           help='Treat the unspecified joints in the kinematic chain as dummy and set them to 0. If not specified, treats all unspecified joints as free parameters.')
+        parser.add_option('--numiktests', action='store',type='int',dest='numiktests',default=None,
+                          help='Will test the ik solver against NUMIKTESTS random robot configurations and program will exit with 0 if success rate exceeds the test success rate, otherwise 1.')
         return parser
     @staticmethod
     def RunFromParser(Model=None,parser=None):
@@ -222,6 +225,18 @@ class InverseKinematicsModel(OpenRAVEModel):
         (options, args) = parser.parse_args()
         Model = lambda robot: InverseKinematicsModel(robot=robot)
         OpenRAVEModel.RunFromParser(Model=Model,parser=parser)
+
+        if options.numiktests is not None:
+            print 'testing the success rate of robot ',options.robot
+            env = Environment()
+            try:
+                robot = env.ReadRobotXMLFile(options.robot)
+                env.AddRobot(robot)
+                basemanip = BaseManipulation(robot)
+                successrate = basemanip.DebugIK(numiters=options.numiktests)
+                print 'success rate is: ',successrate
+            finally:
+                env.Destroy()
 
 if __name__ == "__main__":
      InverseKinematicsModel.RunFromParser()

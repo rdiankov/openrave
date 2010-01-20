@@ -281,3 +281,37 @@ class OpenRAVEModel(metaclass.AutoReloader):
         finally:
             if destroyenv:
                 env.Destroy()
+
+class openrave_exception(Exception):
+    """wrap up the C++ openrave_exception"""
+    def __init__( self, app_error ):
+        Exception.__init__( self )
+        self._pimpl = app_error
+    def __str__( self ):
+        return self._pimpl.message()
+    def __getattribute__(self, attr):
+        my_pimpl = super(openrave_exception, self).__getattribute__("_pimpl")
+        try:
+            return getattr(my_pimpl, attr)
+        except AttributeError:
+            return super(openrave_exception,self).__getattribute__(attr)
+
+class pyann_exception(Exception):
+    """wrap up the C++ pyann_exception"""
+    def __init__( self, app_error ):
+        Exception.__init__( self )
+        self._pimpl = app_error
+    def __str__( self ):
+        return self._pimpl.message()
+    def __getattribute__(self, attr):
+        my_pimpl = super(pyann_exception, self).__getattribute__("_pimpl")
+        try:
+            return getattr(my_pimpl, attr)
+        except AttributeError:
+            return super(pyann_exception,self).__getattribute__(attr)
+
+class planning_error(Exception):
+    def __init__(self,parameter):
+        self.parameter = parameter
+    def __str__(self):
+        return 'OpenRAVE PlanningError:',repr(self.parameter)

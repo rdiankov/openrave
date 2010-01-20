@@ -83,7 +83,7 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 # configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT                  = ../rave ../python/interfaces ../python/ikfast.py ../python/openravepy_ext.py
+INPUT                  = ../rave ../python/interfaces ../python/openravepy_ext.py
 INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.c \
                          *.cc \

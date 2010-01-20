@@ -38,6 +38,7 @@ struct pyann_exception : std::exception
     pyann_exception(const std::string& s) : std::exception() { _s = "pyANN: " + s; }
     virtual ~pyann_exception() throw() {}
     char const* what() const throw() { return _s.c_str(); }
+    const std::string& message() const { return _s; }
 private:
     std::string _s;
 };
@@ -48,12 +49,6 @@ inline void assertion_failed(char const * expr, char const * function, char cons
 {
     throw pyann_exception(str(boost::format("[%s:%d] -> %s, expr: %s")%file%line%function%expr));
 }
-}
-
-void translate_pyann_exception(pyann_exception const& e)
-{
-    // Use the Python 'C' API to set up an exception object
-    PyErr_SetString(PyExc_RuntimeError, e.what());
 }
 
 class ANNpointManaged
@@ -208,10 +203,18 @@ BOOST_PYTHON_MODULE(pyANN)
 {
     import_array();
     numeric::array::set_module_and_type("numpy", "ndarray");
-    register_exception_translator<pyann_exception>(&translate_pyann_exception);
     int_from_int();
     T_from_number<float>();
     T_from_number<double>();
+    
+    typedef return_value_policy< copy_const_reference > return_copy_const_ref;
+    class_< pyann_exception >( "_pyann_exception_" )
+        .def( init<const std::string&>() )
+        .def( init<const pyann_exception&>() )
+        .def( "message", &pyann_exception::message, return_copy_const_ref() )
+        .def( "__str__", &pyann_exception::message, return_copy_const_ref() )
+        ;
+    exception_translator<pyann_exception>();
 
     class_<ANNkd_tree, boost::shared_ptr<ANNkd_tree> >("KDTree")
         .def("__init__", make_constructor(&init_from_list))

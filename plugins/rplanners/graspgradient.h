@@ -161,9 +161,9 @@ public:
                 if( itgrasp->bProcessed ) {
                     // find the grasp distance
                     Transform t = _pmanip->GetEndEffectorTransform();
-                    dReal graspdist = TransformDistance2(t,itgrasp->tgrasp,0.2f);
-                    if( bestgraspdist > graspdist ) {
-                        bestgraspdist = graspdist;
+                    dReal graspdist2 = TransformDistance2(t,itgrasp->tgrasp,0.2f);
+                    if( bestgraspdist > graspdist2 ) {
+                        bestgraspdist = graspdist2;
                         listbestpath.swap(listpath);
                     }
                 }
@@ -292,9 +292,9 @@ private:
                             _robot->SetActiveDOFValues(*itq);
 
                             // check if grasp is closer than threshold
-                            dReal graspdist = TransformDistance2(_pmanip->GetEndEffectorTransform(),g.tgrasp,0.2f);
+                            dReal graspdist2 = TransformDistance2(_pmanip->GetEndEffectorTransform(),g.tgrasp,0.2f);
                             //RAVELOG_DEBUGA("graspdist: %f\n",RaveSqrt(graspdist));
-                            if( graspdist > _parameters._fVisibiltyGraspThresh*_parameters._fVisibiltyGraspThresh ) {
+                            if( graspdist2 > _parameters._fVisibiltyGraspThresh*_parameters._fVisibiltyGraspThresh ) {
                                 if( !_parameters._constraintfn(*itq, qnew, 0) )
                                     break;
                                 q = qnew;

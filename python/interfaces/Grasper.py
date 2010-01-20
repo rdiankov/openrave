@@ -15,7 +15,8 @@ from openravepy import *
 from numpy import *
 
 class Grasper:
-    def __init__(self,env,robot,friction=0.3,avoidlinks=None,plannername=None):
+    def __init__(self,robot,friction=0.3,avoidlinks=None,plannername=None):
+        env = robot.GetEnv()
         self.prob = env.CreateProblem('Grasper')
         self.robot = robot
         self.friction = friction

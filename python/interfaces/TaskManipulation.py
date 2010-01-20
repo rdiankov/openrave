@@ -15,7 +15,8 @@ from openravepy import *
 from numpy import *
 
 class TaskManipulation:
-    def __init__(self,env,robot,plannername=None):
+    def __init__(self,robot,plannername=None):
+        env = robot.GetEnv()
         self.prob = env.CreateProblem('TaskManipulation')
         self.robot = robot
         args = self.robot.GetName()
@@ -63,7 +64,7 @@ class TaskManipulation:
             cmd += 'outputtraj %d '%outputtraj
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise ValueError('GraspPlanning failed')
+            raise PlanningError('grasp planning failed')
         resvalues = res.split()
         numgoals = int(resvalues.pop(0))
         goals = []

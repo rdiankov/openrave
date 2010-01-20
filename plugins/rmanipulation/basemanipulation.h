@@ -1496,9 +1496,9 @@ protected:
             robot->SetActiveDOFValues(viksolution, true);
             twrist_out = pmanip->GetEndEffectorTransform();
         
-            if(CM::TransformDistance(twrist, twrist_out, frotweight, ftransweight) > 0.05f) {
+            if(CM::TransformDistance2(twrist, twrist_out, frotweight, ftransweight) > 0.05f*0.05f) {
                 s.str("");
-                s << "FindIKSolution: Incorrect IK, i = " << i <<" error: " << CM::TransformDistance(twrist, twrist_out, frotweight, ftransweight) << endl
+                s << "FindIKSolution: Incorrect IK, i = " << i <<" error: " << RaveSqrt(CM::TransformDistance2(twrist, twrist_out, frotweight, ftransweight)) << endl
                   << "Original Joint Val: ";
                 FOREACH(it, vjoints)
                     s << *it << " ";
@@ -1529,9 +1529,9 @@ protected:
             FOREACH(itsol, viksolutions) {
                 robot->SetActiveDOFValues(*itsol, true);
                 twrist_out = pmanip->GetEndEffectorTransform();
-                if(CM::TransformDistance(twrist, twrist_out, frotweight, ftransweight) > 0.05f) {
+                if(CM::TransformDistance2(twrist, twrist_out, frotweight, ftransweight) > 0.05f*0.05f) {
                     s.str("");
-                    s << "FindIKSolutions: Incorrect IK, i = " << i << " error: " << CM::TransformDistance(twrist, twrist_out, frotweight, ftransweight) << endl
+                    s << "FindIKSolutions: Incorrect IK, i = " << i << " error: " << RaveSqrt(CM::TransformDistance2(twrist, twrist_out, frotweight, ftransweight)) << endl
                       << "Original Joint Val: ";
                     FOREACH(it, vjoints)
                         s << *it << " ";
@@ -1573,9 +1573,9 @@ protected:
             robot->SetActiveDOFValues(viksolution, true);
             twrist_out = pmanip->GetEndEffectorTransform();
         
-            if(CM::TransformDistance(twrist, twrist_out, frotweight, ftransweight) > 0.05f) {
+            if(CM::TransformDistance2(twrist, twrist_out, frotweight, ftransweight) > 0.05f*0.05f) {
                 s.str("");
-                s << "FindIKSolution (freeparams): Incorrect IK, i = " << i << " error: " << CM::TransformDistance(twrist, twrist_out, frotweight, ftransweight) << endl
+                s << "FindIKSolution (freeparams): Incorrect IK, i = " << i << " error: " << RaveSqrt(CM::TransformDistance2(twrist, twrist_out, frotweight, ftransweight)) << endl
                   << "freeparams: ";
                 FOREACH(it, vfreeparams)
                     s << *it << " ";
@@ -1628,9 +1628,9 @@ protected:
             FOREACH(itsol, viksolutions) {
                 robot->SetActiveDOFValues(*itsol, true);
                 twrist_out = pmanip->GetEndEffectorTransform();
-                if(CM::TransformDistance(twrist, twrist_out, frotweight, ftransweight) > 0.05f) {
+                if(CM::TransformDistance2(twrist, twrist_out, frotweight, ftransweight) > 0.05f*0.05f) {
                     s.str("");
-                    s << "FindIKSolutions (freeparams): Incorrect IK, i = " << i <<" error: " << CM::TransformDistance(twrist, twrist_out, frotweight, ftransweight) << endl
+                    s << "FindIKSolutions (freeparams): Incorrect IK, i = " << i <<" error: " << RaveSqrt(CM::TransformDistance2(twrist, twrist_out, frotweight, ftransweight)) << endl
                       << "Original Joint Val: ";
                     FOREACH(it, vjoints)
                         s << *it << " ";

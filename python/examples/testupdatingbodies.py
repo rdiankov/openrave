@@ -25,7 +25,7 @@ def run():
     env.Load('data/lab1.env.xml')
     env.SetViewer('qtcoin')
     robot = env.GetRobots()[0]
-    manipprob = BaseManipulation(env=env,robot=robot)
+    manipprob = BaseManipulation(robot)
 
     Tcamera = array(((0.84028,  -0.14715,   0.52179,0.930986),
                      (0.52639,   0.45182,  -0.72026,-1.233453),

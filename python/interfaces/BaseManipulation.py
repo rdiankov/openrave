@@ -15,7 +15,8 @@ from openravepy import *
 from numpy import *
 
 class BaseManipulation:
-    def __init__(self,env,robot,plannername=None):
+    def __init__(self,robot,plannername=None):
+        env = robot.GetEnv()
         self.prob = env.CreateProblem('BaseManipulation')
         self.robot = robot
         args = self.robot.GetName()
@@ -107,3 +108,8 @@ class BaseManipulation:
         if outputtraj is not None:
             cmd += 'outputtraj %d '%outputtraj
         return self.prob.SendCommand(cmd)
+    def DebugIK(self,numiters,rotonly=False):
+        cmd = 'DebugIK numtests %d '%numiters
+        if rotonly:
+            cmd += 'rotonly '
+        return float(self.prob.SendCommand(cmd)) # success rate

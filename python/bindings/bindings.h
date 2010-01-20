@@ -63,27 +63,6 @@
 using namespace boost::python;
 
 namespace mydetail {
-template<class T>
-class numpy_type_map {
-public:
-  static const int typenum;
-};
-
-template<> const int numpy_type_map<float>::typenum = NPY_FLOAT;
-template<> const int numpy_type_map<std::complex<float> >::typenum = NPY_CFLOAT;
-template<> const int numpy_type_map<double>::typenum = NPY_DOUBLE;
-template<> const int numpy_type_map<std::complex<double> >::typenum = NPY_CDOUBLE;
-template<> const int numpy_type_map<long double>::typenum = NPY_LONGDOUBLE;
-template<> const int numpy_type_map<std::complex<long double> >::typenum = NPY_CLONGDOUBLE;
-template<> const int numpy_type_map<boost::int8_t>::typenum = NPY_INT8;
-template<> const int numpy_type_map<boost::uint8_t>::typenum = NPY_UINT8;
-template<> const int numpy_type_map<boost::int16_t>::typenum = NPY_INT16;
-template<> const int numpy_type_map<boost::uint16_t>::typenum = NPY_UINT16;
-template<> const int numpy_type_map<boost::int32_t>::typenum = NPY_INT32;
-template<> const int numpy_type_map<boost::uint32_t>::typenum = NPY_UINT32;
-template<> const int numpy_type_map<boost::int64_t>::typenum = NPY_INT64;
-template<> const int numpy_type_map<boost::uint64_t>::typenum = NPY_INT64;
-
 template< typename T >
 struct get_dtype
 {
@@ -100,116 +79,6 @@ DECLARE_DTYPE_FOR( long, "int64" )
 DECLARE_DTYPE_FOR( unsigned long, "uint64" )
 
 }
-
-// Copyright (c) 2008, Michael Droettboom All rights reserved.
-// 
-// numpy_boost class is Licensed under the BSD license.
-// 
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are
-// met:
-// 
-//     * Redistributions of source code must retain the above copyright
-//       notice, this list of conditions and the following disclaimer.
-// 
-//     * Redistributions in binary form must reproduce the above
-//       copyright notice, this list of conditions and the following
-//       disclaimer in the documentation and/or other materials provided
-//       with the distribution.
-// 
-//     * The names of its contributors may not be used to endorse or
-//       promote products derived from this software without specific
-//       prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-// LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//template<class T, int NDims>
-//class numpy_boost : public boost::multi_array_ref<T, NDims>
-//{
-//public:
-//    typedef numpy_boost<T, NDims> self_type;
-//    typedef boost::multi_array_ref<T, NDims> super;
-//    typedef typename super::size_type size_type;
-//    typedef T* TPtr;
-//
-//private:
-//    PyArrayObject* array;
-//
-//    void init_from_array(PyArrayObject* a) {
-//        array = a;
-//        super::base_ = (TPtr)PyArray_DATA(a);
-//
-//        // It would seem like we would want to choose C or Fortran
-//        // ordering here based on the flags in the Numpy array.  However,
-//        // those flags are purely informational, the actually information
-//        // about storage order is recorded in the strides.
-//        super::storage_ = boost::c_storage_order();
-//
-//        boost::detail::multi_array::copy_n(PyArray_DIMS(a), NDims, super::extent_list_.begin());
-//        for (size_t i = 0; i < NDims; ++i) {
-//            super::stride_list_[i] = PyArray_STRIDE(a, i) / sizeof(T);
-//        }
-//        std::fill_n(super::index_base_list_.begin(), NDims, 0);
-//        super::origin_offset_ = 0;
-//        super::directional_offset_ = 0;
-//        super::num_elements_ = std::accumulate(super::extent_list_.begin(), super::extent_list_.end(), size_type(1), std::multiplies<size_type>());
-//    }
-//
-//public:
-//    numpy_boost(PyObject* obj) :
-//        super(NULL, std::vector<boost::uint32_t>(NDims, 0)),
-//        array(NULL)
-//    {
-//        PyArrayObject* a;
-//
-//        a = (PyArrayObject*)PyArray_FromObject(obj, mydetail::numpy_type_map<T>::typenum, NDims, NDims);
-//        BOOST_ASSERT(a!=NULL);
-//        init_from_array(a);
-//    }
-//
-//    numpy_boost(const self_type &other) :
-//        super(NULL, std::vector<boost::uint32_t>(NDims, 0)),
-//        array(NULL)
-//    {
-//        Py_INCREF(other.array);
-//        init_from_array(other.array);
-//    }
-//
-//    template<class ExtentsList>
-//    explicit numpy_boost(const ExtentsList& extents) : super(NULL, std::vector<boost::uint32_t>(NDims, 0)), array(NULL)
-//    {
-//        npy_int shape[NDims];
-//        PyArrayObject* a;
-//        boost::detail::multi_array::copy_n(extents, NDims, shape);
-//        a = (PyArrayObject*)PyArray_SimpleNew(NDims, shape, mydetail::numpy_type_map<T>::typenum);
-//        BOOST_ASSERT(a!=NULL);
-//        init_from_array(a);
-//    }
-//
-//    virtual ~numpy_boost() {
-//        Py_DECREF(array);
-//    }
-//
-//    void operator=(const self_type &other) {
-//        Py_DECREF(array);
-//        Py_INCREF(other.array);
-//        init_from_array(other.array);
-//    }
-//
-//    PyObject* py_ptr() {
-//        Py_INCREF(array);
-//        return (PyObject*)array;
-//    }
-//};
 
 // namespace impl
 template< typename MultiArrayType >
@@ -533,5 +402,91 @@ inline object toPyArray(const std::vector<T>& v, std::vector<npy_intp>& dims)
     BOOST_ASSERT(totalsize == v.size());
     return toPyArrayN(&v[0],dims);
 }
+
+/// class for truly registering a C++ exception to a python exception
+/// add this definition to BOOST_PYTHON_MODULE:
+//
+//    typedef return_value_policy< copy_const_reference > return_copy_const_ref;
+//    class_< T >( "_custom_exception_" )
+//        .def( init<const std::string&>() )
+//        .def( init<const T&>() )
+//        .def( "message", &T::message, return_copy_const_ref() )
+//        .def( "__str__", &T::message, return_copy_const_ref() )
+//        ;
+// inside python do:
+//
+//class custom_exception(Exception):
+//    """wrap up the C++ custom_exception"""
+//    def __init__( self, app_error ):
+//        Exception.__init__( self )
+//        self._pimpl = app_error
+//    def __str__( self ):
+//        return self._pimpl.message()
+//    def __getattribute__(self, attr):
+//        my_pimpl = super(custom_exception, self).__getattribute__("_pimpl")
+//        try:
+//            return getattr(my_pimpl, attr)
+//        except AttributeError:
+//            return super(custom_exception,self).__getattribute__(attr)
+//
+// import custom_module
+// custom_module._custom_exception_.py_err_class = custom_exception
+template <typename T>
+struct exception_translator
+{
+    exception_translator(){
+
+        register_exception_translator<T>(&exception_translator::translate);
+
+        //Register custom r-value converter
+        //There are situations, where we have to pass the exception back to 
+        //C++ library. This will do the trick
+        converter::registry::push_back( &exception_translator::convertible
+                                            , &exception_translator::construct
+                                            , type_id<T>() );
+    }
+    
+    static void 
+    translate( const T& err ){
+        object pimpl_err( err );
+        object pyerr_class = pimpl_err.attr( "py_err_class" );
+        object pyerr = pyerr_class( pimpl_err );
+        PyErr_SetObject( pyerr_class.ptr(), incref( pyerr.ptr() ) );
+    }
+
+    //Sometimes, exceptions should be passed back to the library.
+    static void*
+    convertible(PyObject* py_obj){
+        if( 1 != PyObject_IsInstance( py_obj, PyExc_Exception ) ){
+            return 0;
+        }
+        
+        if( !PyObject_HasAttrString( py_obj, "_pimpl" ) ){
+            return 0;
+        }
+        
+        object pyerr( handle<>( borrowed( py_obj ) ) );        
+        object pimpl = getattr( pyerr, "_pimpl" );
+        extract<T> type_checker( pimpl );
+        if( !type_checker.check() ){
+            return 0;
+        }
+        return py_obj;
+    }
+
+    static void
+    construct( PyObject* py_obj, converter::rvalue_from_python_stage1_data* data){
+        typedef converter::rvalue_from_python_storage<T> storage_t;
+        
+        object pyerr( handle<>( borrowed( py_obj ) ) );        
+        object pimpl = getattr( pyerr, "_pimpl" );
+        
+        storage_t* the_storage = reinterpret_cast<storage_t*>( data );
+        void* memory_chunk = the_storage->storage.bytes;
+        T* cpp_err = NULL;
+        cpp_err = new (memory_chunk) T( extract<T>(pimpl) );
+        data->convertible = memory_chunk;
+    }
+};
 
 #endif

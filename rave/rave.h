@@ -124,6 +124,7 @@ struct openrave_exception : std::exception
     openrave_exception(const std::string& s, OpenRAVEErrorCode error=ORE_Failed) : std::exception() { _s = "OpenRAVE: " + s; _error = error; }
     virtual ~openrave_exception() throw() {}
     char const* what() const throw() { return _s.c_str(); }
+    const std::string& message() const { return _s; }
     OpenRAVEErrorCode GetCode() const { return _error; }
 private:
     std::string _s;
@@ -926,11 +927,12 @@ public:
     //@{
     typedef boost::function<BaseXMLReaderPtr(InterfaceBasePtr, const std::list<std::pair<std::string,std::string> >&)> CreateXMLReaderFn;
 
-    /// registers a custom xml reader for a particular interface. Once registered, anytime
-    /// CreateXMLReaderFn(pinterface,atts)
-    /// the tag specified in xmltag is seen in the interface, the the custom reader will be created.
+    /// registers a custom xml reader for a particular interface. Once registered, anytime an interface is created through XML and
+    /// the xmltag is seen, the function CreateXMLReaderFn will be called to get a reader for that tag
+    /// \param xmltag the tag specified in xmltag is seen in the interface, the the custom reader will be created.
+    /// \param fn CreateXMLReaderFn(pinterface,atts) - passed in the pointer to the interface where the tag was seen along with the list of attributes
     /// \return a pointer holding the registration, releasing the pointer will unregister the XML reader
-    virtual boost::shared_ptr<void> RegisterXMLReader(PluginType type, const std::string& xmltag, const CreateXMLReaderFn& ) = 0;
+    virtual boost::shared_ptr<void> RegisterXMLReader(PluginType type, const std::string& xmltag, const CreateXMLReaderFn& fn) = 0;
     
     /// Parses a file for XML data
     virtual bool ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename) = 0;

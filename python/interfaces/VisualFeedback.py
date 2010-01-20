@@ -19,8 +19,8 @@ from openravepy import *
 
 class VisualFeedback:
     def __init__(self,env,robot,sensorname=None,sensorindex=None):
-        env.LockPhysics(True)
-        try:
+        env = robot.GetEnv()
+        with env:
             self.prob = env.CreateProblem('VisualFeedback')
             self.robot = robot
             args = self.robot.GetName()
@@ -50,8 +50,7 @@ class VisualFeedback:
             if len(manips) > 0:
                 self.manip = manips[0][1]
                 self.robot.SetActiveManipulator(manips[0][0])
-        finally:
-            env.LockPhysics(False)
+
     def  __del__(self):
         self.prob.GetEnv().RemoveProblem(self.prob)
 

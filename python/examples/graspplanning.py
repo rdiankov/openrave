@@ -30,8 +30,8 @@ class GraspPlanning(metaclass.AutoReloader):
             self.ikmodel.autogenerate()
         self.switchpatterns = switchpatterns
         with self.envreal:
-            self.basemanip = BaseManipulation(self.envreal,robot)
-            self.taskmanip = TaskManipulation(self.envreal,robot)
+            self.basemanip = BaseManipulation(robot)
+            self.taskmanip = TaskManipulation(robot)
             self.updir = array((0,0,1))
 
             # find all the bodies to manipulate

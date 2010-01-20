@@ -28,7 +28,7 @@ class HanoiPuzzle:
         self.ikmodel = inversekinematics.InverseKinematicsModel(robot=robot)
         if not self.ikmodel.load():
             self.ikmodel.autogenerate()
-        self.basemanip = BaseManipulation(env,self.robot)
+        self.basemanip = BaseManipulation(self.robot)
         
         disknames = ['disk0','disk1','disk2']
         self.heights = array([0.021,0.062,0.103])+0.01
