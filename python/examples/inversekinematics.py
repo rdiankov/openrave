@@ -89,7 +89,7 @@ class InverseKinematicsModel(OpenRAVEModel):
             type = self.Type_Direction3D
         if options.translation3donly:
             type = self.Type_Translation3D
-        self.generate(freejoints=options.freejoints,usedummyjoints=options.usedummyjoints,type=type,accuracy=options.accuracy,precision=options.precision,force=self.force)
+        self.generate(freejoints=options.freejoints,usedummyjoints=options.usedummyjoints,type=type,accuracy=options.accuracy,precision=options.precision,force=options.force)
     
     def generate(self,freejoints=None,usedummyjoints=False,type=None,accuracy=None,precision=None,force=False):
         if type is not None:
