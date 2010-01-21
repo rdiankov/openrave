@@ -124,7 +124,7 @@ class CollisionFunctions
         }
 
         // first make sure the end is free
-        vector<dReal> vtempconfig(params.GetDOF());
+        vector<dReal> vlastconfig(params.GetDOF()), vtempconfig(params.GetDOF());
         if (bCheckEnd) {
             if( pvCheckedConfigurations != NULL )
                 pvCheckedConfigurations->push_back(pQ1);
@@ -151,6 +151,8 @@ class CollisionFunctions
         for (i = 0; i < params.GetDOF(); i++)
             jointIncrement[i] = (pQ1[i] - pQ0[i])/((float)numSteps);
 
+        if( !!params._constraintfn )
+            vlastconfig = pQ0;
         // check for collision along the straight-line path
         // NOTE: this does not check the end config, and may or may
         // not check the start based on the value of 'start'
@@ -159,9 +161,14 @@ class CollisionFunctions
             for (i = 0; i < params.GetDOF(); i++)
                 vtempconfig[i] = pQ0[i] + (jointIncrement[i] * f);
         
+            params._setstatefn(vtempconfig);
+            if( !!params._constraintfn ) {
+                if( !params._constraintfn(vlastconfig,vtempconfig,0) )
+                    return true;
+                vlastconfig = pQ0;
+            }
             if( pvCheckedConfigurations != NULL )
                 pvCheckedConfigurations->push_back(vtempconfig);
-            params._setstatefn(vtempconfig);
             if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || robot->CheckSelfCollision() )
                 return true;
         }
@@ -365,7 +372,6 @@ class SpatialTree : public SpatialTreeBase
         Node* pnode = _nodes.at(lastindex);
         bool bHasAdded = false;
         boost::shared_ptr<Planner> planner(_planner);
-
         // extend
         while(1) {
             dReal fdist = _distmetricfn(pnode->q, pTargetConfig);
@@ -380,6 +386,7 @@ class SpatialTree : public SpatialTreeBase
         
             // project to constraints
             if( !!planner->GetParameters()._constraintfn ) {
+                planner->GetParameters()._setstatefn(_vNewConfig);
                 if( !planner->GetParameters()._constraintfn(pnode->q, _vNewConfig, 0) ) {
                     if(bHasAdded)
                         return ET_Sucess;

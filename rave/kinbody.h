@@ -518,16 +518,19 @@ public:
     /// Calculates the partial differentials for all joints that in the path from the root node to _veclinks[index]
     /// (doesn't touch the rest of the values)
     /// \param linkindex of the link that the rotation is attached to
+    virtual void CalculateJacobian(int linkindex, const Vector& offset, boost::multi_array<dReal,2>& vjacobian) const;
     virtual void CalculateJacobian(int linkindex, const Vector& offset, std::vector<dReal>& pfJacobian) const;
 
     /// calculates the rotational jacobian as a quaternion with respect to an initial rotation
     /// \param linkindex of the link that the rotation is attached to
     /// \param pfJacobian 4xDOF matrix
+    virtual void CalculateRotationJacobian(int linkindex, const Vector& qInitialRot, boost::multi_array<dReal,2>& vjacobian) const;
     virtual void CalculateRotationJacobian(int linkindex, const Vector& qInitialRot, std::vector<dReal>& pfJacobian) const;
 
     /// calculates the angular velocity jacobian of a specified link about the axes of world coordinates
     /// \param index of the link that the rotation is attached to
     /// \param pfJacobian 3xDOF matrix
+    virtual void CalculateAngularVelocityJacobian(int linkindex, boost::multi_array<dReal,2>& vjacobian) const;
     virtual void CalculateAngularVelocityJacobian(int linkindex, std::vector<dReal>& pfJacobian) const;
 
     /// Check if body is self colliding. Links that are joined together are ignored.

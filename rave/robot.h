@@ -365,11 +365,15 @@ public:
     /// gets the jacobian with respect to a link, pfArray is a 3 x ActiveDOF matrix (rotations are not taken into account)
     /// Calculates the partial differentials for the active degrees of freedom that in the path from the root node to _veclinks[index]
     /// (doesn't touch the rest of the values)
+    virtual void CalculateActiveJacobian(int index, const Vector& offset, boost::multi_array<dReal,2>& vjacobian) const;
     virtual void CalculateActiveJacobian(int index, const Vector& offset, std::vector<dReal>& pfJacobian) const;
+
+    virtual void CalculateActiveRotationJacobian(int index, const Vector& qInitialRot, boost::multi_array<dReal,2>& vjacobian) const;
     virtual void CalculateActiveRotationJacobian(int index, const Vector& qInitialRot, std::vector<dReal>& pfJacobian) const;
     /// calculates the angular velocity jacobian of a specified link about the axes of world coordinates
     /// \param index of the link that the rotation is attached to
     /// \param pfJacobian 3x(num ACTIVE DOF) matrix
+    virtual void CalculateActiveAngularVelocityJacobian(int index, boost::multi_array<dReal,2>& vjacobian) const;
     virtual void CalculateActiveAngularVelocityJacobian(int index, std::vector<dReal>& pfJacobian) const;
 
     /// grab and release the body with the active manipulator. A grabbed body becomes part of the robot

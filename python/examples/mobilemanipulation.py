@@ -42,7 +42,7 @@ class GraspReachability(metaclass.AutoReloader):
                 self.irmodel.autogenerate()
 
     def computeGraspDistribution(self,logllthresh=2000.0):
-        validgrasps = self.gmodel.computeValidGrasps()
+        validgrasps,validindices = self.gmodel.computeValidGrasps()
         def graspiter():
             for grasp in validgrasps:
                 yield self.gmodel.getGlobalGraspTransform(grasp)

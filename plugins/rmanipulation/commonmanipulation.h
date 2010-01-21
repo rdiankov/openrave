@@ -3,6 +3,14 @@
 
 #include "plugindefs.h"
 
+// used for inverse jacobian computation
+#include <boost/numeric/ublas/vector.hpp>
+#include <boost/numeric/ublas/vector_proxy.hpp>
+#include <boost/numeric/ublas/matrix.hpp>
+#include <boost/numeric/ublas/triangular.hpp>
+#include <boost/numeric/ublas/lu.hpp>
+#include <boost/numeric/ublas/io.hpp>
+
 class CM
 {
  public:
@@ -218,6 +226,118 @@ class CM
     protected:
         vector<dReal> vhandvalues, vhanddelta, values, newvalues;
         RobotBasePtr _robot;
+    };
+
+    template <typename T>
+    class GripperJacobianConstrains {
+    public:
+    GripperJacobianConstrains(RobotBase::ManipulatorPtr pmanip, const Transform& tTargetWorldFrame, const boost::array<T,6>& vfreedoms, T errorthresh=1e-3) : _pmanip(pmanip), _vfreedoms(vfreedoms) {
+            _errorthresh2 = errorthresh*errorthresh;
+            _probot = _pmanip->GetRobot();
+            _tOriginalEE = _pmanip->GetEndEffectorTransform();
+            _tToTargetFrame = tTargetWorldFrame*_tOriginalEE.inverse();
+            _J.resize(6,_probot->GetActiveDOF());
+            _invJJt.resize(6,6);
+            _error.resize(6,1);
+            
+        }
+        virtual ~GripperJacobianConstrains() {}
+
+        bool RetractionConstraint(const std::vector<dReal>& vprev, std::vector<dReal>& vcur, int settings)
+        {
+            using namespace boost::numeric::ublas;
+            std::vector<dReal> vnew = vcur;
+            dReal fdistprev = _distmetricfn(vprev,vcur), fdistcur=0;
+            _lasterror=0;
+
+            for(_iter = 0; _iter < 10; ++_iter) {
+                Transform tEE = _pmanip->GetEndEffectorTransform();
+                Transform t = _tToTargetFrame * tEE;
+
+                T totalerror=0;
+                for(int i = 0; i < 3; ++i) {
+                    _error(i,0) = _vfreedoms[i]*2.0f*RaveAtan2(t.rot[i+1],t.rot[0]);
+                    _error(i+3,0) = _vfreedoms[i+3]*t.trans[i];
+                    totalerror += _error(i,0)*_error(i,0) + _error(3+i,0)*_error(3+i,0);
+                }
+                if( totalerror < _errorthresh2 ) {
+                    vcur = vnew;
+                    return true;
+                }
+                if( totalerror > _lasterror && fdistcur > fdistprev ) {
+                    // last adjustment was greater than total distance (jacobian was close to being singular)
+                    _iter = -1;
+                    return false;
+                }
+                _lasterror = totalerror;
+
+                // compute jacobian
+                _probot->CalculateActiveAngularVelocityJacobian(_pmanip->GetEndEffector()->GetIndex(),_vjacobian);
+                for(size_t i = 0; i < 3; ++i)
+                    std::copy(_vjacobian[i].begin(),_vjacobian[i].end(),_J.find2(0,i,0));
+                _probot->CalculateActiveJacobian(_pmanip->GetEndEffector()->GetIndex(),tEE.trans,_vjacobian);
+                for(size_t i = 0; i < 3; ++i)
+                    std::copy(_vjacobian[i].begin(),_vjacobian[i].end(),_J.find2(0,3+i,0));
+
+                // pseudo inverse of jacobian
+                const T lambda2 = 1e-8; // normalization constant
+                _Jt = trans(_J);
+                _invJJt = prod(_J,_Jt);
+                for(int i = 0; i < 6; ++i)
+                    _invJJt(i,i) += lambda2;
+                try {
+                    if( !InvertMatrix(_invJJt,_invJJt) ) {
+                        RAVELOG_VERBOSE("failed to invert matrix\n");
+                        _iter = -1;
+                        return false;
+                    }
+                }
+                catch(...) {
+                    _iter = -1;
+                    return false;
+                }
+                _invJ = prod(_Jt,_invJJt);
+                _qdelta = prod(_invJ,_error);
+                for(size_t i = 0; i < vnew.size(); ++i)
+                    vnew.at(i) -= _qdelta(i,0);
+
+                fdistcur = _distmetricfn(vcur,vnew);
+                _probot->SetActiveDOFValues(vnew); // for next iteration
+            }
+            
+            _iter = -1;
+            RAVELOG_WARN("constraint function exceeded iterations\n");
+            return false;
+        }
+
+        // Matrix inversion routine. Uses lu_factorize and lu_substitute in uBLAS to invert a matrix */
+        static bool InvertMatrix(const boost::numeric::ublas::matrix<T>& input, boost::numeric::ublas::matrix<T>& inverse) {
+            using namespace boost::numeric::ublas;
+            matrix<T> A(input); // create a working copy of the input
+            permutation_matrix<std::size_t> pm(A.size1()); // create a permutation matrix for the LU-factorization
+            int res = lu_factorize(A,pm); // perform LU-factorization
+            if( res != 0 )
+                return false;
+
+            inverse.assign(identity_matrix<T>(A.size1())); // create identity matrix of "inverse"
+            lu_substitute(A, pm, inverse); // backsubstitute to get the inverse
+            return true;
+        }
+
+        boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _distmetricfn;
+
+        // statistics about last run
+        int _iter;
+        double _lasterror;
+
+    protected:
+        RobotBasePtr _probot;
+        RobotBase::ManipulatorPtr _pmanip;
+        Transform _tToTargetFrame,_tOriginalEE;
+        boost::array<T,6> _vfreedoms;
+        T _errorthresh2;
+        boost::multi_array<dReal,2> _vjacobian;
+        boost::numeric::ublas::matrix<T> _J, _Jt, _invJJt, _invJ, _error, _qdelta;
     };
 
     static bool SetActiveTrajectory(RobotBasePtr robot, TrajectoryBasePtr pActiveTraj, bool bExecute, const string& strsavetraj, boost::shared_ptr<ostream> pout)

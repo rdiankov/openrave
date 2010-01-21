@@ -81,3 +81,18 @@ class TaskManipulation:
         if outputtraj is not None and outputtraj:
             trajdata = ' '.join(resvalues)
         return goals,graspindex,searchtime,trajdata
+    def EvaluateConstraints(self,freedoms,configs,targetframematrix=None,targetframepose=None,errorthresh=None):
+        cmd = 'EvaluateConstraints constraintfreedoms %s '%(' '.join(str(f) for f in freedoms))
+        if targetframematrix is not None:
+            cmd += 'constraintmatrix %s '%matrixSerialization(targetframematrix)
+        if targetframepose is not None:
+            cmd += 'pose %s '%poseSerialization(targetframepose)
+        if errorthresh is not None:
+            cmd += 'constrainterrorthresh %f '%errorthresh
+        for config in configs:
+            cmd += 'config %s '%(' '.join(str(f) for f in config))
+        res = self.prob.SendCommand(cmd)
+        resvalues = res.split()
+        iters = array([int(s) for s in resvalues[0:len(configs)]])
+        newconfigs = reshape(array([float(s) for s in resvalues[len(configs):]]),(len(configs),self.robot.GetActiveDOF()))
+        return iters,newconfigs

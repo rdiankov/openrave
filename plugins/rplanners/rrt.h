@@ -545,7 +545,9 @@ class ExplorationPlanner : public RrtPlanner<SimpleNode>
 
                 if( !_parameters._sampleneighfn(vSampleConfig,pnode->q,_parameters._fStepLength) )
                     return false;
+
                 if( !!_parameters._constraintfn ) {
+                    _parameters._setstatefn(vSampleConfig);
                     if( !_parameters._constraintfn(pnode->q, vSampleConfig, 0) )
                         continue;
                 }

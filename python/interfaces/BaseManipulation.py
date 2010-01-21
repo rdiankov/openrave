@@ -66,7 +66,7 @@ class BaseManipulation:
         if maxiter is not None:
             cmd += 'maxiter %d '%maxiter
         return self.prob.SendCommand(cmd)
-    def MoveToHandPosition(self,matrices,affinedofs=None,maxiter=None,maxtries=None,seedik=None,execute=None,outputtraj=None):
+    def MoveToHandPosition(self,matrices,affinedofs=None,maxiter=None,maxtries=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None):
         cmd = 'MoveToHandPosition matrices %d '%len(matrices)
         for m in matrices:
             cmd += matrixSerialization(m) + ' '
@@ -76,6 +76,12 @@ class BaseManipulation:
             cmd += 'maxtries %d '%maxtries
         if seedik is not None:
             cmd += 'seedik %d '%seedik
+        if constraintfreedoms is not None:
+            cmd += 'constraintfreedoms %s '%(' '.join(str(constraintfreedoms[i]) for i in range(6)))
+        if constraintmatrix is not None:
+            cmd += 'constraintmatrix %s '%matrixSerialization(constraintmatrix)
+        if constrainterrorthresh is not None:
+            cmd += 'constrainterrorthresh %s '%constrainterrorthresh
         if execute is not None:
             cmd += 'execute %d '%execute
         if outputtraj is not None:

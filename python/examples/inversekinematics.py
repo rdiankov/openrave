@@ -209,7 +209,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         parser.add_option('--accuracy', action='store', type='float', dest='accuracy',default=1e-7,
                           help='The small number that will be recognized as a zero used to eliminate floating point errors (default is 1e-7).')
         parser.add_option('--force', action='store_true', dest='force',default=False,
-                          help='If true, will always rebuild the ikfast c++ file, regardless of its existence.')
+                          help='If set, will always rebuild the ikfast c++ file, regardless of its existence.')
         parser.add_option('--rotation3donly', action='store_true', dest='rotation3donly',default=False,
                           help='If true, need to specify only 3 solve joints and will solve for a target rotation')
         parser.add_option('--rotation2donly', action='store_true', dest='rotation2donly',default=False,
@@ -235,6 +235,9 @@ class InverseKinematicsModel(OpenRAVEModel):
             try:
                 robot = env.ReadRobotXMLFile(options.robot)
                 env.AddRobot(robot)
+                ikmodel = InverseKinematicsModel(robot)
+                if not ikmodel.load():
+                    raise ValueError('failed to load ik')
                 basemanip = BaseManipulation(robot)
                 successrate = basemanip.DebugIK(numiters=options.numiktests)
                 print 'success rate is: ',successrate

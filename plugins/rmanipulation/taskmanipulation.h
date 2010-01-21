@@ -68,6 +68,9 @@ class TaskManipulation : public ProblemInstance
         RegisterCommand("graspplanning",boost::bind(&TaskManipulation::GraspPlanning,this,_1,_2),
                         "Grasp planning, pick a grasp from a grasp set and use it for manipulation.\n"
                         "Can optionally use bispace for mobile platforms");
+        RegisterCommand("evaluateconstraints",boost::bind(&TaskManipulation::EvaluateConstraints,this,_1,_2),
+                        "Instantiates a jacobian constraint function and runs it on several examples.\n"
+                        "The constraints work on the active degress of freedom of the manipulator starting from the current configuration");
     }
     virtual ~TaskManipulation()
     {
@@ -161,6 +164,85 @@ class TaskManipulation : public ProblemInstance
 
         RAVELOG_DEBUGA(str(boost::format("added %s system\n")%systemname));
         sout << 1; // signal success
+        return true;
+    }
+
+    class ActiveDistMetric
+    {
+    public:
+    ActiveDistMetric(RobotBasePtr robot) : _robot(robot) {
+            _robot->GetActiveDOFWeights(weights);
+        }
+        virtual dReal Eval(const std::vector<dReal>& c0, const std::vector<dReal>& c1)
+        {
+            dReal out = 0;
+            for(int i=0; i < _robot->GetActiveDOF(); i++)
+                out += weights.at(i) * (c0.at(i)-c1.at(i))*(c0[i]-c1[i]);    
+            return RaveSqrt(out);
+        }
+
+    protected:
+        RobotBasePtr _robot;
+        vector<dReal> weights;
+    };
+
+    bool EvaluateConstraints(ostream& sout, istream& sinput)
+    {
+        Transform tTargetWorldFrame;
+        boost::array<double,6> vfreedoms = {{1,1,1,1,1,1}};
+        string cmd;
+        list< vector<dReal> > listconfigs;
+        double errorthresh=1e-3;
+        while(!sinput.eof()) {
+            sinput >> cmd;
+            if( !sinput )
+                break;
+            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+
+            if( cmd == "constraintfreedoms" )
+                FOREACH(it,vfreedoms)
+                    sinput >> *it;
+            else if( cmd == "constraintmatrix" ) {
+                TransformMatrix m; sinput >> m; tTargetWorldFrame = m;
+            }
+            else if( cmd == "constraintpose" )
+                sinput >> tTargetWorldFrame;
+            else if( cmd == "config" ) {
+                vector<dReal> vconfig(_robot->GetActiveDOF());
+                FOREACH(it,vconfig)
+                    sinput >> *it;
+                listconfigs.push_back(vconfig);
+            }
+            else if( cmd == "constrainterrorthresh" )
+                sinput >> errorthresh;
+            else {
+                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
+
+            if( !sinput ) {
+                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                return false;
+            }
+        }
+
+        RobotBase::RobotStateSaver saver(_robot);
+
+        ActiveDistMetric distmetric(_robot);
+        vector<dReal> vprev;
+        _robot->GetActiveDOFValues(vprev);
+        CM::GripperJacobianConstrains<double> constraints(_robot->GetActiveManipulator(),tTargetWorldFrame,vfreedoms,errorthresh);
+        constraints._distmetricfn = boost::bind(&ActiveDistMetric::Eval,&distmetric,_1,_2);
+        FOREACH(itconfig,listconfigs) {
+            _robot->SetActiveDOFValues(*itconfig);
+            constraints.RetractionConstraint(vprev,*itconfig,0);
+            sout << constraints._iter << " ";
+        }
+        FOREACH(itconfig,listconfigs) {
+            FOREACH(it,*itconfig)
+                sout << *it << " ";
+        }
+        
         return true;
     }
 

@@ -57,12 +57,15 @@ public:
         /// sets up the planner parameters to use the active joints of the robot
         void SetRobotActiveJoints(RobotBasePtr robot);
 
-        /// optional, Cost function on the state pace:
+        /// Cost function on the state pace (optional)
+        ///
         /// cost = costfn(config)
         /// \param cost the cost of being in the current state
         boost::function<dReal(const std::vector<dReal>&)> _costfn;
 
-        /// optional, Goal heuristic function, goal is complete when returns 0:
+        /// Goal heuristic function
+        ///
+        /// goal is complete when returns 0 (optional)
         /// distance = goalfn(config)
         /// \param distance - distance to closest goal
         boost::function<dReal(const std::vector<dReal>&)> _goalfn;
@@ -70,27 +73,34 @@ public:
         /// optional, Distance metric between configuration spaces, two configurations are considered the same when this returns 0: distmetric(config1,config2)
         boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _distmetricfn;
 
-        /// optional, used to maintain certains a movement from a src robot configuration to robot configuration: constraintfn(srcconf,destconf,settings)
-        /// The function returns true if pConf is accepted. Note that the function can also modify
-        /// pDestConf (projecting onto a constraint manifold), therefore use the new pDestConf value after this call
-        /// success = _constraintfn(pSrcConf,pDestConf,settings)
-        /// \param pSrcConf is the configuration the robot is currently at
-        /// \param pDestConf is the configuration the robot should mvoe to
+        /// Filters the current robot configurations (optional)
+        ///
+        /// optional, used to maintain certains a movement from a src robot configuration to robot configuration:
+        /// success = _constraintfn(vprevconf,vnewconf,settings)
+        /// When called, vnewconf is guaranteed to be set on the robot. The function returns true if vnewconf is accepted.
+        /// Note that the function can also modify vnewconf (like projecting onto a constraint manifold),
+        /// therefore the planner will use the new vnewconf value after this call.
+        /// \param vprevconf is the configuration the robot is coming from
+        /// \param vnewconf is the configuration the robot is current at, which needs to be filtered
         /// \param settings options specified in ConstraingSettings 
         boost::function<bool(const std::vector<dReal>&, std::vector<dReal>&, int)> _constraintfn;
 
-        /// optional, fills a random configuration.
+        /// Samples a random configuration (mandatory)
+        ///
         /// The dimension of the returned sample is the dimension of the configuration space.
         /// success = samplefn(newsample)
         boost::function<bool(std::vector<dReal>&)> _samplefn;
 
-        /// optional, samples a valid goal configuration at random. If valid, the function should be called
+        /// Samples a valid goal configuration (optional)
+        ///
+        /// If valid, the function should be called
         /// at every iteration. Any type of goal sampling probabilities and conditions can be encoded inside the function.
         // The dimension of the returned sample is the dimension of the configuration space.
         // success = samplegoalfn(newsample)
         boost::function<bool(std::vector<dReal>&)> _samplegoalfn;
 
-        /// optional, returns a random configuration around pCurSample
+        /// Returns a random configuration around a neighborhood (optional)
+        /// 
         /// _sampleneighfn(newsample,pCurSample,fRadius)
         /// \param pCurSample - the neighborhood to sample around
         /// \param  fRadius - specifies the max distance of sampling. The higher the value, the farther the samples will go
@@ -98,9 +108,9 @@ public:
         /// \return if sample was successfully generated return true, otherwise false
         boost::function<bool(std::vector<dReal>&, const std::vector<dReal>&, dReal)> _sampleneighfn;
 
-        /// sets the state of the robot. Default is active robot joints
+        /// sets the state of the robot. Default is active robot joints (mandatory)
         boost::function<void(const std::vector<dReal>&)> _setstatefn;
-        /// gets the state of the robot. Default is active robot joints
+        /// gets the state of the robot. Default is active robot joints (mandatory)
         boost::function<void(std::vector<dReal>&)> _getstatefn;
 
         /// to specify multiple goal configurations, put them into the vector in series (note: not all planners support multiple goals)

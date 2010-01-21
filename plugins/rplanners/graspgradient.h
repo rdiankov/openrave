@@ -119,7 +119,7 @@ public:
         bool bSuccess = false;
 
         // prioritize the grasps and go through each one
-        _robot->SetActiveDOFValues(_parameters.vinitialconfig);
+        _parameters._setstatefn(_parameters.vinitialconfig);
         Transform tcurgrasp = _pmanip->GetEndEffectorTransform();
 
         Transform tobject = _parameters._ptarget->GetTransform();
@@ -194,7 +194,7 @@ private:
         vector<dReal> qbest, q(_robot->GetActiveDOF()),qgoaldir;
         listpath.clear();
         
-        _robot->SetActiveDOFValues(_parameters.vinitialconfig);
+        _parameters._setstatefn(_parameters.vinitialconfig);
 
         if( g.bChecked ) {
             if( g.fgoaldist < 0 )
@@ -289,12 +289,13 @@ private:
                         vector<dReal> qnew(_robot->GetActiveDOF());
                         int goodind = -1;
                         FOREACH(itq,vpath) {
-                            _robot->SetActiveDOFValues(*itq);
+                            _parameters._setstatefn(*itq);
 
                             // check if grasp is closer than threshold
                             dReal graspdist2 = TransformDistance2(_pmanip->GetEndEffectorTransform(),g.tgrasp,0.2f);
                             //RAVELOG_DEBUGA("graspdist: %f\n",RaveSqrt(graspdist));
                             if( graspdist2 > _parameters._fVisibiltyGraspThresh*_parameters._fVisibiltyGraspThresh ) {
+                                _parameters._setstatefn(qnew);
                                 if( !_parameters._constraintfn(*itq, qnew, 0) )
                                     break;
                                 q = qnew;

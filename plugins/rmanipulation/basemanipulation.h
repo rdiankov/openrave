@@ -553,7 +553,6 @@ protected:
     bool MoveToHandPosition(ostream& sout, istream& sinput)
     {
         RAVELOG_DEBUGA("Starting MoveToHandPosition...\n");
-
         RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();
 
         list<Transform> listgoals;
@@ -571,6 +570,11 @@ protected:
 
         PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
         params->_nMaxIterations = 4000;
+
+        // constraint stuff
+        boost::array<double,6> vconstraintfreedoms = {{0,0,0,0,0,0}};
+        Transform tConstraintTargetWorldFrame;
+        double constrainterrorthresh=0;
 
         string cmd;
         while(!sinput.eof()) {
@@ -631,6 +635,16 @@ protected:
                 sinput >> strtrajfilename;
             else if( cmd == "seedik" )
                 sinput >> nSeedIkSolutions;
+            else if( cmd == "constraintfreedoms" )
+                FOREACH(it,vconstraintfreedoms)
+                    sinput >> *it;
+            else if( cmd == "constraintmatrix" ) {
+                TransformMatrix m; sinput >> m; tConstraintTargetWorldFrame = m;
+            }
+            else if( cmd == "constraintpose" )
+                sinput >> tConstraintTargetWorldFrame;
+            else if( cmd == "constrainterrorthresh" )
+                sinput >> constrainterrorthresh;
             else {
                 RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -691,14 +705,11 @@ protected:
     
         robot->SetActiveDOFs(pmanip->GetArmJoints(), affinedofs);
         params->SetRobotActiveJoints(robot);
-        robot->GetActiveDOFValues(params->vinitialconfig);
-        
+        robot->GetActiveDOFValues(params->vinitialconfig);        
         robot->SetActiveDOFs(pmanip->GetArmJoints(), 0);
 
-        params->vgoalconfig.reserve(armgoals.size());
-
         vector<dReal> vgoals;
-
+        params->vgoalconfig.reserve(armgoals.size());
         for(int i = 0; i < (int)armgoals.size(); i += pmanip->GetArmJoints().size()) {
             vector<dReal> v(armgoals.begin()+i,armgoals.begin()+i+pmanip->GetArmJoints().size());
             robot->SetActiveDOFValues(v);
@@ -732,7 +743,13 @@ protected:
         }
         robot->GetActiveDOFValues(params->vinitialconfig);
 
-        // check if grasped 
+        if( constrainterrorthresh > 0 ) {
+            RAVELOG_DEBUG("setting jacobian constraint function in planner parameters\n");
+            boost::shared_ptr<CM::GripperJacobianConstrains<double> > pconstraints(new CM::GripperJacobianConstrains<double>(robot->GetActiveManipulator(),tConstraintTargetWorldFrame,vconstraintfreedoms,constrainterrorthresh));
+            pconstraints->_distmetricfn = params->_distmetricfn;
+            params->_constraintfn = boost::bind(&CM::GripperJacobianConstrains<double>::RetractionConstraint,pconstraints,_1,_2,_3);
+        }
+
         boost::shared_ptr<PlannerBase> rrtplanner = GetEnv()->CreatePlanner(_strRRTPlannerName);
         if( !rrtplanner ) {
             RAVELOG_ERRORA("failed to create BiRRTs\n");

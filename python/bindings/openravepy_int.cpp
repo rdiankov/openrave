@@ -688,34 +688,25 @@ public:
         _pbody->SetJointValues(vtorques,bAdd);
     }
 
-    object CalculateJacobian(int index, object offset)
+    boost::multi_array<dReal,2> CalculateJacobian(int index, object offset)
     {
-        if( _pbody->GetDOF() == 0 )
-            return object();
-        vector<dReal> vjacobian;
-        _pbody->CalculateJacobian(index,ExtractVector3(offset),vjacobian);
-        vector<npy_intp> dims(2); dims[0] = 3; dims[1] = _pbody->GetDOF();
-        return toPyArray(vjacobian,dims);
+        boost::multi_array<dReal,2> mjacobian;
+        _pbody->CalculateJacobian(index,ExtractVector3(offset),mjacobian);
+        return mjacobian;
     }
 
-    object CalculateRotationJacobian(int index, object q) const
+    boost::multi_array<dReal,2> CalculateRotationJacobian(int index, object q) const
     {
-        if( _pbody->GetDOF() == 0 )
-            return object();
-        vector<dReal> vjacobian;
-        _pbody->CalculateRotationJacobian(index,ExtractVector4(q),vjacobian);
-        vector<npy_intp> dims(2); dims[0] = 4; dims[1] = _pbody->GetDOF();
-        return toPyArray(vjacobian,dims);
+        boost::multi_array<dReal,2> mjacobian;
+        _pbody->CalculateRotationJacobian(index,ExtractVector4(q),mjacobian);
+        return mjacobian;
     }
 
-    object CalculateAngularVelocityJacobian(int index) const
+    boost::multi_array<dReal,2> CalculateAngularVelocityJacobian(int index) const
     {
-        if( _pbody->GetDOF() == 0 )
-            return object();
-        vector<dReal> vjacobian;
-        _pbody->CalculateAngularVelocityJacobian(index,vjacobian);
-        vector<npy_intp> dims(2); dims[0] = 3; dims[1] = _pbody->GetDOF();
-        return toPyArray(vjacobian,dims);
+        boost::multi_array<dReal,2> mjacobian;
+        _pbody->CalculateAngularVelocityJacobian(index,mjacobian);
+        return mjacobian;
     }
 
     bool CheckSelfCollision() { return _pbody->CheckSelfCollision(); }
@@ -1304,34 +1295,25 @@ public:
     int GetActiveJointIndex(int active_index) const { return _probot->GetActiveJointIndex(active_index); }
     object GetActiveJointIndices() { return toPyArray(_probot->GetActiveJointIndices()); }
 
-    object CalculateActiveJacobian(int index, object offset) const
+    boost::multi_array<dReal,2> CalculateActiveJacobian(int index, object offset) const
     {
-        if( _probot->GetActiveDOF() == 0 )
-            return object();
-        vector<dReal> vjacobian;
-        _probot->CalculateActiveJacobian(index,ExtractVector3(offset),vjacobian);
-        vector<npy_intp> dims(2); dims[0] = 3; dims[1] = _pbody->GetDOF();
-        return toPyArray(vjacobian,dims);
+        boost::multi_array<dReal,2> mjacobian;
+        _probot->CalculateActiveJacobian(index,ExtractVector3(offset),mjacobian);
+        return mjacobian;
     }
 
-    object CalculateActiveRotationJacobian(int index, object q) const
+    boost::multi_array<dReal,2> CalculateActiveRotationJacobian(int index, object q) const
     {
-        if( _probot->GetActiveDOF() == 0 )
-            return object();
-        vector<dReal> vjacobian;
-        _probot->CalculateActiveJacobian(index,ExtractVector4(q),vjacobian);
-        vector<npy_intp> dims(2); dims[0] = 4; dims[1] = _pbody->GetDOF();
-        return toPyArray(vjacobian,dims);
+        boost::multi_array<dReal,2> mjacobian;
+        _probot->CalculateActiveJacobian(index,ExtractVector4(q),mjacobian);
+        return mjacobian;
     }
 
-    object CalculateActiveAngularVelocityJacobian(int index) const
+    boost::multi_array<dReal,2> CalculateActiveAngularVelocityJacobian(int index) const
     {
-        if( _probot->GetActiveDOF() == 0 )
-            return object();
-        vector<dReal> vjacobian;
-        _probot->CalculateActiveAngularVelocityJacobian(index,vjacobian);
-        vector<npy_intp> dims(2); dims[0] = 3; dims[1] = _pbody->GetDOF();
-        return toPyArray(vjacobian,dims);
+        boost::multi_array<dReal,2> mjacobian;
+        _probot->CalculateActiveAngularVelocityJacobian(index,mjacobian);
+        return mjacobian;
     }
 
     bool Grab(PyKinBodyPtr pbody) { CHECK_POINTER(pbody); return _probot->Grab(pbody->GetBody()); }

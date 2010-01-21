@@ -1529,6 +1529,42 @@ KinBody::JointPtr KinBody::GetJoint(const std::string& jointname) const
     return JointPtr();
 }
 
+void KinBody::CalculateJacobian(int index, const Vector& trans, boost::multi_array<dReal,2>& vjacobian) const
+{
+    if( index < 0 || index >= (int)_veclinks.size() )
+        throw openrave_exception(str(boost::format("bad index %d")%index),ORE_InvalidArguments);
+
+    vjacobian.resize(boost::extents[3][GetDOF()]);
+    if( GetDOF() == 0 )
+        return;
+
+    //Vector trans = _veclinks[index]->GetTransform() * offset;
+    Vector v, anchor, axis;
+    FOREACHC(itjoint, _vecjoints) {
+        int jointindex = (*itjoint)->GetJointIndex();
+        char affect = DoesAffect(jointindex, index);
+        if( affect == 0 ) {
+            vjacobian[0][jointindex] = vjacobian[1][jointindex] = vjacobian[2][jointindex] = 0;
+        }
+        else {
+            switch((*itjoint)->GetType()) {
+            case Joint::JointHinge:
+                cross3(v, (*itjoint)->GetAxis(0), (*itjoint)->GetAnchor()-trans);
+                break;
+            case Joint::JointSlider:
+                v = -(*itjoint)->GetAxis(0);
+                break;
+            default:
+                RAVELOG_WARNA("CalculateJacobian joint %d not supported\n", (*itjoint)->GetType());
+                v = Vector(0,0,0);
+                break;
+            }
+
+            vjacobian[0][jointindex] = v.x; vjacobian[1][jointindex] = v.y; vjacobian[2][jointindex] = v.z;
+        }
+    }
+}
+
 void KinBody::CalculateJacobian(int index, const Vector& trans, vector<dReal>& vJacobian) const
 {
     if( index < 0 || index >= (int)_veclinks.size() )
@@ -1574,6 +1610,44 @@ void KinBody::CalculateJacobian(int index, const Vector& trans, vector<dReal>& v
     }
 }
 
+void KinBody::CalculateRotationJacobian(int index, const Vector& q, boost::multi_array<dReal,2>& vjacobian) const
+{
+    if( index < 0 || index >= (int)_veclinks.size() )
+        throw openrave_exception(str(boost::format("bad index %d")%index),ORE_InvalidArguments);
+
+    vjacobian.resize(boost::extents[4][GetDOF()]);
+    if( GetDOF() == 0 )
+        return;
+
+    Vector v, anchor, axis;
+    FOREACHC(itjoint, _vecjoints) {
+        int jointindex = (*itjoint)->GetJointIndex();
+        char affect = DoesAffect(jointindex, index);
+        if( affect == 0 ) {
+            vjacobian[0][jointindex] = vjacobian[1][jointindex] = vjacobian[2][jointindex] = vjacobian[3][jointindex] = 0;
+        }
+        else {
+            switch((*itjoint)->GetType()) {
+            case Joint::JointHinge:
+                v = -(*itjoint)->GetAxis(0);
+                break;
+            case Joint::JointSlider:
+                v = Vector(0,0,0);
+                break;
+            default:
+                RAVELOG_WARNA("CalculateRotationJacobian joint %d not supported\n", (*itjoint)->GetType());
+                v = Vector(0,0,0);
+                break;
+            }
+
+            vjacobian[0][jointindex] = -q.y*v.x - q.z*v.y - q.w*v.z;
+            vjacobian[1][jointindex] = q.x*v.x - q.z*v.z + q.w*v.y;
+            vjacobian[2][jointindex] = q.x*v.y + q.y*v.z - q.w*v.x;
+            vjacobian[3][jointindex] = q.x*v.z - q.y*v.y + q.z*v.x;
+        }
+    }
+}
+
 void KinBody::CalculateRotationJacobian(int index, const Vector& q, vector<dReal>& vJacobian) const
 {
     if( index < 0 || index >= (int)_veclinks.size() )
@@ -1599,7 +1673,7 @@ void KinBody::CalculateRotationJacobian(int index, const Vector& q, vector<dReal
 
         switch((*itjoint)->GetType()) {
         case Joint::JointHinge:
-            v = (*itjoint)->GetAxis(0);
+            v = -(*itjoint)->GetAxis(0);
             break;
         case Joint::JointSlider:
             v = Vector(0,0,0);
@@ -1617,6 +1691,41 @@ void KinBody::CalculateRotationJacobian(int index, const Vector& q, vector<dReal
 
         ++jointindex;
         pfJacobian += (*itjoint)->GetDOF();
+    }
+}
+
+void KinBody::CalculateAngularVelocityJacobian(int index, boost::multi_array<dReal,2>& vjacobian) const
+{
+    if( index < 0 || index >= (int)_veclinks.size() )
+        throw openrave_exception(str(boost::format("bad index %d")%index),ORE_InvalidArguments);
+
+    vjacobian.resize(boost::extents[3][GetDOF()]);
+    if( GetDOF() == 0 )
+        return;
+
+    Vector v, anchor, axis;
+    FOREACHC(itjoint, _vecjoints) {
+        int jointindex = (*itjoint)->GetJointIndex();
+        char affect = DoesAffect(jointindex, index);
+        if( affect == 0 ) {
+            vjacobian[0][jointindex] = vjacobian[1][jointindex] = vjacobian[2][jointindex] = 0;
+        }
+        else {
+            switch((*itjoint)->GetType()) {
+            case Joint::JointHinge:
+                v = -(*itjoint)->GetAxis(0);
+                break;
+            case Joint::JointSlider:
+                v = Vector(0,0,0);
+                break;
+            default:
+                RAVELOG_WARNA("CalculateAngularVelocityJacobian joint %d not supported\n", (*itjoint)->GetType());
+                v = Vector(0,0,0);
+                break;
+            }
+
+            vjacobian[0][jointindex] = v.x; vjacobian[1][jointindex] = v.y; vjacobian[2][jointindex] = v.z;
+        }
     }
 }
 
@@ -1645,7 +1754,7 @@ void KinBody::CalculateAngularVelocityJacobian(int index, std::vector<dReal>& vJ
 
         switch((*itjoint)->GetType()) {
         case Joint::JointHinge:
-            v = (*itjoint)->GetAxis(0);
+            v = -(*itjoint)->GetAxis(0);
             break;
         case Joint::JointSlider:
             v = Vector(0,0,0);

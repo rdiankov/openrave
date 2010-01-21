@@ -211,11 +211,13 @@ class GraspingModel(OpenRAVEModel):
         """sets the preshape on the robot, assumes environment is locked"""
         self.robot.SetJointValues(grasp[self.graspindices['igrasppreshape']],self.manip.GetGripperJoints())
 
-    def computeValidGrasps(self,checkcollision=True,checkik=True,returnfirst=False):
-        """Returns the set of grasps that satisfy certain conditions"""
+    def computeValidGrasps(self,startindex=0,checkcollision=True,checkik=True,returnnum=inf):
+        """Returns the set of grasps that satisfy certain conditions. If returnnum is set, will also return once that many number of grasps are found"""
         with self.robot:
             validgrasps = []
-            for grasp in self.grasps:
+            validindices = []
+            for i in range(startindex,len(self.grasps)):
+                grasp = self.grasps[i]
                 self.setPreshape(grasp)
                 Tglobalgrasp = self.getGlobalGraspTransform(grasp)
                 if checkik:
@@ -225,9 +227,10 @@ class GraspingModel(OpenRAVEModel):
                     if self.manip.CheckEndEffectorCollision(Tglobalgrasp):
                         continue
                 validgrasps.append(grasp)
-                if returnfirst:
-                    return validgrasps
-            return validgrasps
+                validindices.append(i)
+                if len(validgrasps) == returnnum:
+                    return validgrasps,validindices
+            return validgrasps,validindices
 
     def computeBoxApproachRays(self,stepsize=0.02):
         with self.target:

@@ -216,10 +216,8 @@ public:
                         break;
                     }
 
-                    // colision check
-                    _parameters._setstatefn(_vSampleConfig);
-
                     if( !!_parameters._constraintfn ) {
+                        _parameters._setstatefn(_vSampleConfig);
                         if( !_parameters._constraintfn(pcurrent->q, _vSampleConfig, 0) )
                             continue;
                     }
