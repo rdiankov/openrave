@@ -1594,7 +1594,7 @@ void KinBody::CalculateJacobian(int index, const Vector& trans, vector<dReal>& v
 {
     boost::multi_array<dReal,2> mjacobian;
     KinBody::CalculateJacobian(index,trans,mjacobian);
-    vjacobian.resize(mjacobian.size());
+    vjacobian.resize(3*GetDOF());
     vector<dReal>::iterator itdst = vjacobian.begin();
     FOREACH(it,mjacobian) {
         std::copy(it->begin(),it->end(),itdst);
@@ -1673,7 +1673,7 @@ void KinBody::CalculateRotationJacobian(int index, const Vector& q, vector<dReal
 {
     boost::multi_array<dReal,2> mjacobian;
     KinBody::CalculateRotationJacobian(index,q,mjacobian);
-    vjacobian.resize(mjacobian.size());
+    vjacobian.resize(4*GetDOF());
     vector<dReal>::iterator itdst = vjacobian.begin();
     FOREACH(it,mjacobian) {
         std::copy(it->begin(),it->end(),itdst);
@@ -1746,7 +1746,7 @@ void KinBody::CalculateAngularVelocityJacobian(int index, std::vector<dReal>& vj
 {
     boost::multi_array<dReal,2> mjacobian;
     KinBody::CalculateAngularVelocityJacobian(index,mjacobian);
-    vjacobian.resize(mjacobian.size());
+    vjacobian.resize(3*GetDOF());
     vector<dReal>::iterator itdst = vjacobian.begin();
     FOREACH(it,mjacobian) {
         std::copy(it->begin(),it->end(),itdst);
