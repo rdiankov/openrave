@@ -178,7 +178,8 @@ class InverseKinematicsModel(OpenRAVEModel):
         else:
             compiler.add_library('stdc++')
             if compiler.compiler_type == 'unix':
-                compile_flags.append('-O3 -fPIC')
+                compile_flags.append('-O3')
+                compile_flags.append('-fPIC')
         return compiler,compile_flags
     @staticmethod
     def myrelpath(path, start=os.path.curdir):
