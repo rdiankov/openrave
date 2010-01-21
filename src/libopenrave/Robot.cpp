@@ -1357,7 +1357,7 @@ void RobotBase::CalculateActiveJacobian(int index, const Vector& offset, vector<
     }
 
     boost::multi_array<dReal,2> mjacobian;
-    CalculateActiveJacobian(index,offset,mjacobian);
+    RobotBase::CalculateActiveJacobian(index,offset,mjacobian);
     vjacobian.resize(mjacobian.size());
     vector<dReal>::iterator itdst = vjacobian.begin();
     FOREACH(it,mjacobian) {
@@ -1436,7 +1436,7 @@ void RobotBase::CalculateActiveRotationJacobian(int index, const Vector& q, std:
     }
 
     boost::multi_array<dReal,2> mjacobian;
-    CalculateActiveRotationJacobian(index,q,mjacobian);
+    RobotBase::CalculateActiveRotationJacobian(index,q,mjacobian);
     vjacobian.resize(mjacobian.size());
     vector<dReal>::iterator itdst = vjacobian.begin();
     FOREACH(it,mjacobian) {
@@ -1525,7 +1525,7 @@ void RobotBase::CalculateActiveAngularVelocityJacobian(int index, std::vector<dR
     }
 
     boost::multi_array<dReal,2> mjacobian;
-    CalculateActiveAngularVelocityJacobian(index,mjacobian);
+    RobotBase::CalculateActiveAngularVelocityJacobian(index,mjacobian);
     vjacobian.resize(mjacobian.size());
     vector<dReal>::iterator itdst = vjacobian.begin();
     FOREACH(it,mjacobian) {

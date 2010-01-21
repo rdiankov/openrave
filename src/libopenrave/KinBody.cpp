@@ -1529,84 +1529,76 @@ KinBody::JointPtr KinBody::GetJoint(const std::string& jointname) const
     return JointPtr();
 }
 
-void KinBody::CalculateJacobian(int index, const Vector& trans, boost::multi_array<dReal,2>& vjacobian) const
+void KinBody::CalculateJacobian(int index, const Vector& trans, boost::multi_array<dReal,2>& mjacobian) const
 {
     if( index < 0 || index >= (int)_veclinks.size() )
         throw openrave_exception(str(boost::format("bad index %d")%index),ORE_InvalidArguments);
 
-    vjacobian.resize(boost::extents[3][GetDOF()]);
+    mjacobian.resize(boost::extents[3][GetDOF()]);
     if( GetDOF() == 0 )
         return;
 
     //Vector trans = _veclinks[index]->GetTransform() * offset;
-    Vector v, anchor, axis;
+    Vector v;
     FOREACHC(itjoint, _vecjoints) {
-        int jointindex = (*itjoint)->GetJointIndex();
-        char affect = DoesAffect(jointindex, index);
-        if( affect == 0 ) {
-            vjacobian[0][jointindex] = vjacobian[1][jointindex] = vjacobian[2][jointindex] = 0;
-        }
-        else {
-            switch((*itjoint)->GetType()) {
-            case Joint::JointHinge:
-                cross3(v, (*itjoint)->GetAxis(0), (*itjoint)->GetAnchor()-trans);
-                break;
-            case Joint::JointSlider:
-                v = -(*itjoint)->GetAxis(0);
-                break;
-            default:
-                RAVELOG_WARNA("CalculateJacobian joint %d not supported\n", (*itjoint)->GetType());
-                v = Vector(0,0,0);
-                break;
-            }
+        int dofindex = (*itjoint)->GetDOFIndex();
+        char affect = DoesAffect((*itjoint)->GetJointIndex(), index);
+        for(int dof = 0; dof < (*itjoint)->GetDOF(); ++dof) {
+            if( affect == 0 )
+                mjacobian[0][dofindex+dof] = mjacobian[1][dofindex+dof] = mjacobian[2][dofindex+dof] = 0;
+            else {
+                switch((*itjoint)->GetType()) {
+                case Joint::JointHinge:
+                    cross3(v, (*itjoint)->GetAxis(dof), (*itjoint)->GetAnchor()-trans);
+                    break;
+                case Joint::JointSlider:
+                    v = -(*itjoint)->GetAxis(dof);
+                    break;
+                default:
+                    RAVELOG_WARNA("CalculateJacobian joint %d not supported\n", (*itjoint)->GetType());
+                    v = Vector(0,0,0);
+                    break;
+                }
 
-            vjacobian[0][jointindex] = v.x; vjacobian[1][jointindex] = v.y; vjacobian[2][jointindex] = v.z;
+                mjacobian[0][dofindex+dof] = v.x; mjacobian[1][dofindex+dof] = v.y; mjacobian[2][dofindex+dof] = v.z;
+            }
+        }
+    }
+
+    // add in the contributions for each of the passive links
+    FOREACHC(itjoint, _vecPassiveJoints) {
+        if( (*itjoint)->GetMimicJointIndex() >= 0 && DoesAffect((*itjoint)->GetMimicJointIndex(), index) ) {
+            int dofindex = _vecjoints[(*itjoint)->GetMimicJointIndex()]->GetDOFIndex();
+            for(int dof = 0; dof < (*itjoint)->GetDOF(); ++dof) {
+                switch((*itjoint)->GetType()) {
+                case Joint::JointHinge:
+                    cross3(v, (*itjoint)->GetAxis(dof), (*itjoint)->GetAnchor()-trans);
+                    break;
+                case Joint::JointSlider:
+                    v = -(*itjoint)->GetAxis(dof);
+                    break;
+                default:
+                    RAVELOG_WARNA("CalculateJacobian joint %d not supported\n", (*itjoint)->GetType());
+                    v = Vector(0,0,0);
+                    break;
+                }
+
+                v *= (*itjoint)->GetMimicCoeffs()[0];
+                mjacobian[0][dofindex+dof] += v.x; mjacobian[1][dofindex+dof] += v.y; mjacobian[2][dofindex+dof] += v.z;
+            }
         }
     }
 }
 
-void KinBody::CalculateJacobian(int index, const Vector& trans, vector<dReal>& vJacobian) const
+void KinBody::CalculateJacobian(int index, const Vector& trans, vector<dReal>& vjacobian) const
 {
-    if( index < 0 || index >= (int)_veclinks.size() )
-        throw openrave_exception(str(boost::format("bad index %d")%index),ORE_InvalidArguments);
-
-    vJacobian.resize(GetDOF()*3);
-    if( GetDOF() == 0 )
-        return;
-    dReal* pfJacobian = &vJacobian[0];
-
-    //Vector trans = _veclinks[index]->GetTransform() * offset;
-    Vector v, anchor, axis;
-
-    int jointindex = 0;
-    FOREACHC(itjoint, _vecjoints) {
-        char affect = DoesAffect(jointindex, index);
-        if( affect == 0 ) {
-            pfJacobian[0] = pfJacobian[GetDOF()] = pfJacobian[2*GetDOF()] = 0;
-            ++jointindex;
-            ++pfJacobian;
-            continue;
-        }
-
-        switch((*itjoint)->GetType()) {
-        case Joint::JointHinge:
-            cross3(v, (*itjoint)->GetAxis(0), (*itjoint)->GetAnchor()-trans);
-            break;
-        case Joint::JointSlider:
-            v = -(*itjoint)->GetAxis(0);
-            break;
-        default:
-            RAVELOG_WARNA("CalculateJacobian joint %d not supported\n", (*itjoint)->GetType());
-            v = Vector(0,0,0);
-            break;
-        }
-
-        pfJacobian[0] = v.x;
-        pfJacobian[GetDOF()] = v.y;
-        pfJacobian[GetDOF()*2] = v.z;
-
-        ++jointindex;
-        pfJacobian += (*itjoint)->GetDOF();
+    boost::multi_array<dReal,2> mjacobian;
+    KinBody::CalculateJacobian(index,trans,mjacobian);
+    vjacobian.resize(mjacobian.size());
+    vector<dReal>::iterator itdst = vjacobian.begin();
+    FOREACH(it,mjacobian) {
+        std::copy(it->begin(),it->end(),itdst);
+        itdst += GetDOF();
     }
 }
 
@@ -1619,158 +1611,146 @@ void KinBody::CalculateRotationJacobian(int index, const Vector& q, boost::multi
     if( GetDOF() == 0 )
         return;
 
-    Vector v, anchor, axis;
+    Vector v;
     FOREACHC(itjoint, _vecjoints) {
-        int jointindex = (*itjoint)->GetJointIndex();
-        char affect = DoesAffect(jointindex, index);
-        if( affect == 0 ) {
-            vjacobian[0][jointindex] = vjacobian[1][jointindex] = vjacobian[2][jointindex] = vjacobian[3][jointindex] = 0;
-        }
-        else {
-            switch((*itjoint)->GetType()) {
-            case Joint::JointHinge:
-                v = -(*itjoint)->GetAxis(0);
-                break;
-            case Joint::JointSlider:
-                v = Vector(0,0,0);
-                break;
-            default:
-                RAVELOG_WARNA("CalculateRotationJacobian joint %d not supported\n", (*itjoint)->GetType());
-                v = Vector(0,0,0);
-                break;
+        int dofindex = (*itjoint)->GetDOFIndex();
+        char affect = DoesAffect((*itjoint)->GetJointIndex(), index);
+        for(int dof = 0; dof < (*itjoint)->GetDOF(); ++dof) {
+            if( affect == 0 ) {
+                vjacobian[0][dofindex+dof] = vjacobian[1][dofindex+dof] = vjacobian[2][dofindex+dof] = vjacobian[3][dofindex+dof] = 0;
             }
+            else {
+                switch((*itjoint)->GetType()) {
+                case Joint::JointHinge:
+                    v = -(*itjoint)->GetAxis(0);
+                    break;
+                case Joint::JointSlider:
+                    v = Vector(0,0,0);
+                    break;
+                default:
+                    RAVELOG_WARNA("CalculateRotationJacobian joint %d not supported\n", (*itjoint)->GetType());
+                    v = Vector(0,0,0);
+                    break;
+                }
 
-            vjacobian[0][jointindex] = -q.y*v.x - q.z*v.y - q.w*v.z;
-            vjacobian[1][jointindex] = q.x*v.x - q.z*v.z + q.w*v.y;
-            vjacobian[2][jointindex] = q.x*v.y + q.y*v.z - q.w*v.x;
-            vjacobian[3][jointindex] = q.x*v.z - q.y*v.y + q.z*v.x;
-        }
-    }
-}
-
-void KinBody::CalculateRotationJacobian(int index, const Vector& q, vector<dReal>& vJacobian) const
-{
-    if( index < 0 || index >= (int)_veclinks.size() )
-        throw openrave_exception(str(boost::format("bad index %d")%index),ORE_InvalidArguments);
-
-    vJacobian.resize(GetDOF()*4);
-    if( GetDOF() == 0 )
-        return;
-    dReal* pfJacobian = &vJacobian[0];
-
-    //Vector trans = _veclinks[index]->GetTransform() * offset;
-    Vector v, anchor, axis;
-
-    int jointindex = 0;
-    FOREACHC(itjoint, _vecjoints) {
-        char affect = DoesAffect(jointindex, index);
-        if( affect == 0 ) {
-            pfJacobian[0] = pfJacobian[GetDOF()] = pfJacobian[2*GetDOF()] = pfJacobian[3*GetDOF()] = 0;
-            ++jointindex;
-            ++pfJacobian;
-            continue;
-        }
-
-        switch((*itjoint)->GetType()) {
-        case Joint::JointHinge:
-            v = -(*itjoint)->GetAxis(0);
-            break;
-        case Joint::JointSlider:
-            v = Vector(0,0,0);
-            break;
-        default:
-            RAVELOG_WARNA("CalculateRotationJacobian joint %d not supported\n", (*itjoint)->GetType());
-            v = Vector(0,0,0);
-            break;
-        }
-
-        pfJacobian[0] =            -q.y*v.x - q.z*v.y - q.w*v.z;
-        pfJacobian[GetDOF()] =      q.x*v.x - q.z*v.z + q.w*v.y;
-        pfJacobian[GetDOF()*2] =    q.x*v.y + q.y*v.z - q.w*v.x;
-        pfJacobian[GetDOF()*3] =    q.x*v.z - q.y*v.y + q.z*v.x;
-
-        ++jointindex;
-        pfJacobian += (*itjoint)->GetDOF();
-    }
-}
-
-void KinBody::CalculateAngularVelocityJacobian(int index, boost::multi_array<dReal,2>& vjacobian) const
-{
-    if( index < 0 || index >= (int)_veclinks.size() )
-        throw openrave_exception(str(boost::format("bad index %d")%index),ORE_InvalidArguments);
-
-    vjacobian.resize(boost::extents[3][GetDOF()]);
-    if( GetDOF() == 0 )
-        return;
-
-    Vector v, anchor, axis;
-    FOREACHC(itjoint, _vecjoints) {
-        int jointindex = (*itjoint)->GetJointIndex();
-        char affect = DoesAffect(jointindex, index);
-        if( affect == 0 ) {
-            vjacobian[0][jointindex] = vjacobian[1][jointindex] = vjacobian[2][jointindex] = 0;
-        }
-        else {
-            switch((*itjoint)->GetType()) {
-            case Joint::JointHinge:
-                v = -(*itjoint)->GetAxis(0);
-                break;
-            case Joint::JointSlider:
-                v = Vector(0,0,0);
-                break;
-            default:
-                RAVELOG_WARNA("CalculateAngularVelocityJacobian joint %d not supported\n", (*itjoint)->GetType());
-                v = Vector(0,0,0);
-                break;
+                vjacobian[0][dofindex+dof] = -q.y*v.x - q.z*v.y - q.w*v.z;
+                vjacobian[1][dofindex+dof] = q.x*v.x - q.z*v.z + q.w*v.y;
+                vjacobian[2][dofindex+dof] = q.x*v.y + q.y*v.z - q.w*v.x;
+                vjacobian[3][dofindex+dof] = q.x*v.z - q.y*v.y + q.z*v.x;
             }
+        }
+    }
 
-            vjacobian[0][jointindex] = v.x; vjacobian[1][jointindex] = v.y; vjacobian[2][jointindex] = v.z;
+    // add in the contributions for each of the passive links
+    FOREACHC(itjoint, _vecPassiveJoints) {
+        if( (*itjoint)->GetMimicJointIndex() >= 0 && DoesAffect((*itjoint)->GetMimicJointIndex(), index) ) {
+            int dofindex = _vecjoints[(*itjoint)->GetMimicJointIndex()]->GetDOFIndex();
+            for(int dof = 0; dof < (*itjoint)->GetDOF(); ++dof) {
+                switch((*itjoint)->GetType()) {
+                case Joint::JointHinge:
+                    v = -(*itjoint)->GetAxis(0);
+                    break;
+                case Joint::JointSlider:
+                    v = Vector(0,0,0);
+                    break;
+                default:
+                    RAVELOG_WARNA("CalculateRotationJacobian joint %d not supported\n", (*itjoint)->GetType());
+                    v = Vector(0,0,0);
+                    break;
+                }
+
+                v *= (*itjoint)->GetMimicCoeffs()[0];
+                vjacobian[0][dofindex+dof] += -q.y*v.x - q.z*v.y - q.w*v.z;
+                vjacobian[1][dofindex+dof] += q.x*v.x - q.z*v.z + q.w*v.y;
+                vjacobian[2][dofindex+dof] += q.x*v.y + q.y*v.z - q.w*v.x;
+                vjacobian[3][dofindex+dof] += q.x*v.z - q.y*v.y + q.z*v.x;
+            }
         }
     }
 }
 
-void KinBody::CalculateAngularVelocityJacobian(int index, std::vector<dReal>& vJacobian) const
+void KinBody::CalculateRotationJacobian(int index, const Vector& q, vector<dReal>& vjacobian) const
+{
+    boost::multi_array<dReal,2> mjacobian;
+    KinBody::CalculateRotationJacobian(index,q,mjacobian);
+    vjacobian.resize(mjacobian.size());
+    vector<dReal>::iterator itdst = vjacobian.begin();
+    FOREACH(it,mjacobian) {
+        std::copy(it->begin(),it->end(),itdst);
+        itdst += GetDOF();
+    }
+}
+
+void KinBody::CalculateAngularVelocityJacobian(int index, boost::multi_array<dReal,2>& mjacobian) const
 {
     if( index < 0 || index >= (int)_veclinks.size() )
         throw openrave_exception(str(boost::format("bad index %d")%index),ORE_InvalidArguments);
 
-    vJacobian.resize(GetDOF()*3);
+    mjacobian.resize(boost::extents[3][GetDOF()]);
     if( GetDOF() == 0 )
         return;
-    dReal* pfJacobian = &vJacobian[0];
 
-    //Vector trans = _veclinks[index]->GetTransform() * offset;
     Vector v, anchor, axis;
-
-    int jointindex = 0;
     FOREACHC(itjoint, _vecjoints) {
-        char affect = DoesAffect(jointindex, index);
-        if( affect == 0 ) {
-            pfJacobian[0] = pfJacobian[GetDOF()] = pfJacobian[2*GetDOF()] = 0;
-            ++jointindex;
-            ++pfJacobian;
-            continue;
+        int dofindex = (*itjoint)->GetDOFIndex();
+        char affect = DoesAffect((*itjoint)->GetJointIndex(), index);
+        for(int dof = 0; dof < (*itjoint)->GetDOF(); ++dof) {
+            if( affect == 0 ) {
+                mjacobian[0][dofindex+dof] = mjacobian[1][dofindex+dof] = mjacobian[2][dofindex+dof] = 0;
+            }
+            else {
+                switch((*itjoint)->GetType()) {
+                case Joint::JointHinge:
+                    v = -(*itjoint)->GetAxis(0);
+                    break;
+                case Joint::JointSlider:
+                    v = Vector(0,0,0);
+                    break;
+                default:
+                    RAVELOG_WARNA("CalculateAngularVelocityJacobian joint %d not supported\n", (*itjoint)->GetType());
+                    v = Vector(0,0,0);
+                    break;
+                }
+
+                mjacobian[0][dofindex+dof] = v.x; mjacobian[1][dofindex+dof] = v.y; mjacobian[2][dofindex+dof] = v.z;
+            }
         }
+    }
 
-        switch((*itjoint)->GetType()) {
-        case Joint::JointHinge:
-            v = -(*itjoint)->GetAxis(0);
-            break;
-        case Joint::JointSlider:
-            v = Vector(0,0,0);
-            break;
-        default:
-            RAVELOG_WARNA("CalculateAngularVelocityJacobian joint %d not supported\n", (*itjoint)->GetType());
-            v = Vector(0,0,0);
-            break;
+    // add in the contributions for each of the passive links
+    FOREACHC(itjoint, _vecPassiveJoints) {
+        if( (*itjoint)->GetMimicJointIndex() >= 0 && DoesAffect((*itjoint)->GetMimicJointIndex(), index) ) {
+            int dofindex = _vecjoints[(*itjoint)->GetMimicJointIndex()]->GetDOFIndex();
+            for(int dof = 0; dof < (*itjoint)->GetDOF(); ++dof) {
+                switch((*itjoint)->GetType()) {
+                case Joint::JointHinge:
+                    v = -(*itjoint)->GetAxis(0);
+                    break;
+                case Joint::JointSlider:
+                    v = Vector(0,0,0);
+                    break;
+                default:
+                    RAVELOG_WARNA("CalculateAngularVelocityJacobian joint %d not supported\n", (*itjoint)->GetType());
+                    v = Vector(0,0,0);
+                    break;
+                }
+
+                v *= (*itjoint)->GetMimicCoeffs()[0];
+                mjacobian[0][dofindex+dof] += v.x; mjacobian[1][dofindex+dof] += v.y; mjacobian[2][dofindex+dof] += v.z;
+            }
         }
+    }
+}
 
-        pfJacobian[0] =            v.x;
-        pfJacobian[GetDOF()] =     v.y;
-        pfJacobian[GetDOF()*2] =   v.z;
-
-        ++jointindex;
-        pfJacobian += (*itjoint)->GetDOF();
+void KinBody::CalculateAngularVelocityJacobian(int index, std::vector<dReal>& vjacobian) const
+{
+    boost::multi_array<dReal,2> mjacobian;
+    KinBody::CalculateAngularVelocityJacobian(index,mjacobian);
+    vjacobian.resize(mjacobian.size());
+    vector<dReal>::iterator itdst = vjacobian.begin();
+    FOREACH(it,mjacobian) {
+        std::copy(it->begin(),it->end(),itdst);
+        itdst += GetDOF();
     }
 }
 
