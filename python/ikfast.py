@@ -845,11 +845,11 @@ class IKFastSolver(AutoReloader):
         if accuracy is None:
             self.accuracy=1e-7
         else:
-            accuracy=self.accuracy
+            self.accuracy=accuracy
         if precision is None:
             self.precision=10
         else:
-            precision=self.precision
+            self.precision=precision
         alljoints = []
         if kinbody is not None:
             # this actually requires openravepy to run, but it isn't a good idea to make ikfast dependent on openravepy

@@ -203,6 +203,7 @@ public:
             if( !bInitialized ) {
                 RAVELOG_WARNA("no objects in environment\n");
                 vTargetCenter = pmanip->GetEndEffectorTransform().trans;
+                fTargetRadius = 0;
                 //return false;
             }
             else {
