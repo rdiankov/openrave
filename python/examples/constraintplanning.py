@@ -45,20 +45,23 @@ class ConstraintPlanning(metaclass.AutoReloader):
         self.robot.WaitForController(0)
         self.robot.Grab(target)
         print 'moving mug without XY rotation'
-        constraintfreedoms = [1,1,0,0,0,0]
-        constraintmatrix = eye(4)
-        constrainterrorthresh = 0.02
         while True:
-            with self.robot:
-                vcur = self.robot.GetJointValues()
-                Tee = self.manip.GetEndEffectorTransform()
-                while True:
-                    T = array(Tee)
-                    T[0:3,3] += (random.rand(3)-0.5)
-                    if self.manip.FindIKSolution(T,True) is not None:
-                        break
-            res = self.basemanip.MoveToHandPosition(matrices=[T],maxiter=10000,maxtries=1,seedik=8,constraintfreedoms=constraintfreedoms,constraintmatrix=constraintmatrix,constrainterrorthresh=constrainterrorthresh)
-            self.robot.WaitForController(0)
+            xyconstraint = random.randint(2)
+            constraintfreedoms = [1,1,0,xyconstraint,xyconstraint,0]
+            print 'planning with freedoms: ',constraintfreedoms
+            constraintmatrix = eye(4)
+            constrainterrorthresh = 0.02
+            for iter in range(5):
+                with self.robot:
+                    vcur = self.robot.GetJointValues()
+                    Tee = self.manip.GetEndEffectorTransform()
+                    while True:
+                        T = array(Tee)
+                        T[0:3,3] += (random.rand(3)-0.5)*(1.0-array(constraintfreedoms[3:]))
+                        if self.manip.FindIKSolution(T,True) is not None:
+                            break
+                res = self.basemanip.MoveToHandPosition(matrices=[T],maxiter=10000,maxtries=1,seedik=8,constraintfreedoms=constraintfreedoms,constraintmatrix=constraintmatrix,constrainterrorthresh=constrainterrorthresh)
+                self.robot.WaitForController(0)
 
 def run():
     env = Environment()
