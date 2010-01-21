@@ -47,7 +47,7 @@ class Grasper:
             cmd += 'execute %d '%execute
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise ValueError('Grasp failed')
+            raise planning_error('Grasp failed')
         resvalues = res.split()
         mindist = None
         volume = None

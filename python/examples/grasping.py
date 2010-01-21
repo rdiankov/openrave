@@ -131,12 +131,15 @@ class GraspingModel(OpenRAVEModel):
         with self.robot:
             for i,grasp in enumerate(self.grasps):
                 print 'grasp %d/%d'%(i,len(self.grasps))
-                contacts,finalconfig,mindist,volume = self.runGrasp(grasp,translate=True)
-                contactgraph = self.drawContacts(contacts) if len(contacts) > 0 else None
-                self.robot.SetJointValues(finalconfig[0])
-                self.robot.SetTransform(finalconfig[1])
-                self.env.UpdatePublishedBodies()
-                time.sleep(delay)
+                try:
+                    contacts,finalconfig,mindist,volume = self.runGrasp(grasp,translate=True)
+                    contactgraph = self.drawContacts(contacts) if len(contacts) > 0 else None
+                    self.robot.SetJointValues(finalconfig[0])
+                    self.robot.SetTransform(finalconfig[1])
+                    self.env.UpdatePublishedBodies()
+                    time.sleep(delay)
+                except planning_error,e:
+                    print e
 
     def generateFromOptions(self,options):
         print 'attempting default grasp generation for %s:%s:%s'%(self.robot.GetName(),self.manip.GetName(),self.target.GetName())
