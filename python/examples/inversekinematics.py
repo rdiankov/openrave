@@ -89,9 +89,9 @@ class InverseKinematicsModel(OpenRAVEModel):
             type = self.Type_Direction3D
         if options.translation3donly:
             type = self.Type_Translation3D
-        self.generate(freejoints=options.freejoints,usedummyjoints=options.usedummyjoints,type=type,accuracy=options.accuracy,precision=options.precision)
+        self.generate(freejoints=options.freejoints,usedummyjoints=options.usedummyjoints,type=type,accuracy=options.accuracy,precision=options.precision,force=self.force)
     
-    def generate(self,freejoints=None,usedummyjoints=False,type=None,accuracy=None,precision=None):
+    def generate(self,freejoints=None,usedummyjoints=False,type=None,accuracy=None,precision=None,force=False):
         if type is not None:
             self.type = type
         output_filename = self.getfilename()
@@ -128,22 +128,22 @@ class InverseKinematicsModel(OpenRAVEModel):
         if len(freejoints)>0:
             sourcefilename += '_f'+'_'.join(str(ind) for ind in freejoints)
         sourcefilename += '.cpp'
-        if not os.path.isfile(sourcefilename):
+        if force or not os.path.isfile(sourcefilename):
             print 'generating inverse kinematics file %s'%sourcefilename
             mkdir_recursive(OpenRAVEModel.getfilename(self))
             solver = IKFastSolver(kinbody=self.robot,accuracy=accuracy,precision=precision)
             code = solver.generateIkSolver(self.manip.GetBase().GetIndex(),self.manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejoints,usedummyjoints=usedummyjoints,solvefn=solvefn)
             if len(code) == 0:
-                raise ValueError('failed to generate ik solver for robot %s:%s'%(self.roobt.GetName(),self.manip.GetName()))
+                raise ValueError('failed to generate ik solver for robot %s:%s'%(self.robot.GetName(),self.manip.GetName()))
             open(sourcefilename,'w').write(code)
 
         # compile the code and create the shared object
-        compiler,optimization_options = self.getcompiler()
+        compiler,compile_flags = self.getcompiler()
         try:
            output_dir = os.path.relpath('/',os.getcwd())
         except AttributeError: # python 2.5 does not have os.path.relpath
            output_dir = self.myrelpath('/',os.getcwd())
-        objectfiles = compiler.compile(sources=[sourcefilename],macros=[('IKFAST_CLIBRARY',1)],extra_postargs=optimization_options,output_dir=output_dir)
+        objectfiles = compiler.compile(sources=[sourcefilename],macros=[('IKFAST_CLIBRARY',1)],extra_postargs=compile_flags,output_dir=output_dir)
         compiler.link_shared_object(objectfiles,output_filename=output_filename)
         if not self.load():
             return ValueError('failed to generate ik solver')
@@ -158,9 +158,9 @@ class InverseKinematicsModel(OpenRAVEModel):
     @staticmethod
     def getcompiler():
         compiler = ccompiler.new_compiler()
-        optimization_options = []
+        compile_flags = []
         if compiler.compiler_type == 'msvc':
-            optimization_options.append('/Ox')
+            compile_flags.append('/Ox')
             try:
                 # make sure it is correct version!
                 cname,cver = openravepyCompilerVersion().split()
@@ -178,8 +178,8 @@ class InverseKinematicsModel(OpenRAVEModel):
         else:
             compiler.add_library('stdc++')
             if compiler.compiler_type == 'unix':
-                optimization_options.append('-O3')
-        return compiler,optimization_options
+                compile_flags.append('-O3 -fPIC')
+        return compiler,compile_flags
     @staticmethod
     def myrelpath(path, start=os.path.curdir):
         """Return a relative version of a path"""
@@ -207,6 +207,8 @@ class InverseKinematicsModel(OpenRAVEModel):
                           help='The precision to compute the inverse kinematics in, default is 10 decimal digits.')
         parser.add_option('--accuracy', action='store', type='float', dest='accuracy',default=1e-7,
                           help='The small number that will be recognized as a zero used to eliminate floating point errors (default is 1e-7).')
+        parser.add_option('--force', action='store_true', dest='force',default=False,
+                          help='If true, will always rebuild the ikfast c++ file, regardless of its existence.')
         parser.add_option('--rotation3donly', action='store_true', dest='rotation3donly',default=False,
                           help='If true, need to specify only 3 solve joints and will solve for a target rotation')
         parser.add_option('--rotation2donly', action='store_true', dest='rotation2donly',default=False,
