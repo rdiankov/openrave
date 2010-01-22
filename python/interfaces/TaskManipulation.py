@@ -62,7 +62,7 @@ class TaskManipulation:
         if execute is not None:
             cmd += 'execute %d '%execute
         if outputtraj is not None:
-            cmd += 'outputtraj %d '%outputtraj
+            cmd += 'outputtraj '
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise PlanningError('grasp planning failed')

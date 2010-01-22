@@ -42,7 +42,7 @@ class BaseManipulation:
         if execute is not None:
             cmd += 'execute %d '%execute
         if outputtraj is not None:
-            cmd += 'outputtraj %d '%outputtraj
+            cmd += 'outputtraj '
         if ignorefirstcollision is not None:
             cmd += 'ignorefirstcollision %d '%ignorefirstcollision
         return self.prob.SendCommand(cmd)
@@ -52,7 +52,7 @@ class BaseManipulation:
         if execute is not None:
             cmd += 'execute %d '%execute
         if outputtraj is not None:
-            cmd += 'outputtraj %d '%outputtraj
+            cmd += 'outputtraj '
         if maxiter is not None:
             cmd += 'maxiter %d '%maxiter
         return self.prob.SendCommand(cmd)
@@ -62,7 +62,7 @@ class BaseManipulation:
         if execute is not None:
             cmd += 'execute %d '%execute
         if outputtraj is not None:
-            cmd += 'outputtraj %d '%outputtraj
+            cmd += 'outputtraj '
         if maxiter is not None:
             cmd += 'maxiter %d '%maxiter
         return self.prob.SendCommand(cmd)
@@ -85,7 +85,7 @@ class BaseManipulation:
         if execute is not None:
             cmd += 'execute %d '%execute
         if outputtraj is not None:
-            cmd += 'outputtraj %d '%outputtraj
+            cmd += 'outputtraj '
         return self.prob.SendCommand(cmd)
     def MoveUnsyncJoints(self,jointvalues,jointinds,planner=None,execute=None,outputtraj=None):
         assert(len(jointinds)==len(jointvalues) and len(jointinds)>0)
@@ -95,13 +95,17 @@ class BaseManipulation:
         if execute is not None:
             cmd += 'execute %d '%execute
         if outputtraj is not None:
-            cmd += 'outputtraj %d '%outputtraj
+            cmd += 'outputtraj '
         return self.prob.SendCommand(cmd)
     def CloseFingers(self,offset=None,execute=None,outputtraj=None):
         cmd = 'CloseFingers '
         if offset is not None:
             assert(len(offset) == len(self.robot.GetActiveManipulator().GetGripperJoints()))
             cmd += ' '.join(str(f) for f in offset) + ' '
+        if execute is not None:
+            cmd += 'execute %d '%execute
+        if outputtraj is not None:
+            cmd += 'outputtraj '
         return self.prob.SendCommand(cmd)
     def ReleaseFingers(self,target=None,movingdir=None,execute=None,outputtraj=None):
         cmd = 'ReleaseFingers '
@@ -113,7 +117,7 @@ class BaseManipulation:
         if execute is not None:
             cmd += 'execute %d '%execute
         if outputtraj is not None:
-            cmd += 'outputtraj %d '%outputtraj
+            cmd += 'outputtraj '
         return self.prob.SendCommand(cmd)
     def DebugIK(self,numiters,rotonly=False):
         cmd = 'DebugIK numtests %d '%numiters
