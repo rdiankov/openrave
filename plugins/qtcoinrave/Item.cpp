@@ -94,10 +94,18 @@ KinBodyItem::KinBodyItem(QtCoinViewerPtr viewer, KinBodyPtr pchain, ViewGeometry
     _pchain = pchain;
     bGrabbed = false;
     _userdata = 0;
-
+    _bReload = false;
+    _bDrawStateChanged = false;
     networkid = pchain->GetNetworkId();
-    vector<KinBody::LinkPtr>::const_iterator it;
+}
 
+void KinBodyItem::Load()
+{
+    FOREACH(itlink,_veclinks)
+        _ivGeom->removeChild(itlink->psep);
+    _veclinks.resize(0);
+
+    vector<KinBody::LinkPtr>::const_iterator it;
     FORIT(it, _pchain->GetLinks()) {
         LINK lnk;
         lnk.psep = new SoSeparator();
@@ -109,8 +117,7 @@ KinBodyItem::KinBodyItem(QtCoinViewerPtr viewer, KinBodyPtr pchain, ViewGeometry
         lnk.ptrans->translation.setValue(tbody.trans.x, tbody.trans.y, tbody.trans.z);
                     
         lnk.psep->addChild(lnk.ptrans);
-        _ivGeom->addChild(lnk.psep);
-        
+        _ivGeom->addChild(lnk.psep);        
         _veclinks.push_back(lnk);
 
         FOREACHC(itgeom, (*it)->GetGeometries()) {
@@ -266,6 +273,9 @@ KinBodyItem::KinBodyItem(QtCoinViewerPtr viewer, KinBodyPtr pchain, ViewGeometry
             }
         }
     }
+
+    _bReload = false;
+    _bDrawStateChanged = false;
 }
 
 bool KinBodyItem::UpdateFromIv()
@@ -296,6 +306,12 @@ bool KinBodyItem::UpdateFromModel()
 {
     if( !_pchain )
         return false;
+    if( _bReload )
+        Load();
+    if( _bDrawStateChanged ) {
+        RAVELOG_INFO("draw state change not implemented yet\n");
+        _bDrawStateChanged = false;
+    }
 
     vector<Transform> vtrans;
     vector<dReal> vjointvalues;
@@ -391,11 +407,15 @@ KinBody::LinkPtr KinBodyItem::GetLinkFromIv(SoNode* plinknode) const
     return KinBody::LinkPtr();
 }
 
-RobotItem::RobotItem(QtCoinViewerPtr viewer, RobotBasePtr robot, ViewGeometry viewgeom) : KinBodyItem(viewer, robot, viewgeom)
+RobotItem::RobotItem(QtCoinViewerPtr viewer, RobotBasePtr robot, ViewGeometry viewgeom) : KinBodyItem(viewer, robot, viewgeom), _probot(robot)
+{}
+
+void RobotItem::Load()
 {
-    _vEndEffectors.resize(robot->GetManipulators().size());
+    KinBodyItem::Load();
+    _vEndEffectors.resize(_probot->GetManipulators().size());
     int index = 0;
-    FOREACHC(itmanip, robot->GetManipulators()) {
+    FOREACHC(itmanip, _probot->GetManipulators()) {
         if( !!(*itmanip)->GetEndEffector() ) {
             _vEndEffectors[index]._index = index;
             CreateAxis(_vEndEffectors[index],str(boost::format("EE%d")%index));
@@ -403,9 +423,9 @@ RobotItem::RobotItem(QtCoinViewerPtr viewer, RobotBasePtr robot, ViewGeometry vi
         ++index;
     }
 
-    _vAttachedSensors.resize(robot->GetSensors().size());
+    _vAttachedSensors.resize(_probot->GetSensors().size());
     index = 0;
-    FOREACHC(itsensor, robot->GetSensors()) {
+    FOREACHC(itsensor, _probot->GetSensors()) {
         if( !!(*itsensor)->GetAttachingLink() ) {
             _vAttachedSensors[index]._index = index;
             CreateAxis(_vAttachedSensors[index],str(boost::format("AS%d")%index));
@@ -515,13 +535,13 @@ void RobotItem::CreateAxis(RobotItem::EE& ee, const string& name)
 
 void RobotItem::SetGrab(bool bGrab, bool bUpdate)
 {
-    if( !GetRobot() )
+    if( !_probot )
         return;
 
     if( bGrab ) {
         // turn off any controller commands if a robot
-        if( !!GetRobot()->GetController() )
-            GetRobot()->GetController()->SetPath(TrajectoryBaseConstPtr());
+        if( !!_probot->GetController() )
+            _probot->GetController()->SetPath(TrajectoryBaseConstPtr());
     }
 
     FOREACH(itee, _vEndEffectors) {
@@ -554,8 +574,8 @@ bool RobotItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<
         RaveTransform<float> transInvRoot = GetRaveTransform(_ivXform).inverse();
         
         FOREACH(itee, _vEndEffectors) {
-            if( itee->_index >= 0 && itee->_index < (int)GetRobot()->GetManipulators().size()) {
-                RobotBase::ManipulatorConstPtr manip = GetRobot()->GetManipulators().at(itee->_index);
+            if( itee->_index >= 0 && itee->_index < (int)_probot->GetManipulators().size()) {
+                RobotBase::ManipulatorConstPtr manip = _probot->GetManipulators().at(itee->_index);
                 if( !!manip->GetEndEffector() ) {
                     RaveTransform<float> tgrasp = vtrans.at(manip->GetEndEffector()->GetIndex())*manip->GetGraspTransform();
                     SetSoTransform(itee->_ptrans, transInvRoot * tgrasp);
@@ -564,8 +584,8 @@ bool RobotItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<
         }
 
         FOREACH(itee, _vAttachedSensors) {
-            if( itee->_index >= 0 && itee->_index < (int)GetRobot()->GetSensors().size()) {
-                RobotBase::AttachedSensorConstPtr sensor = GetRobot()->GetSensors().at(itee->_index);
+            if( itee->_index >= 0 && itee->_index < (int)_probot->GetSensors().size()) {
+                RobotBase::AttachedSensorConstPtr sensor = _probot->GetSensors().at(itee->_index);
                 if( !!sensor->GetAttachingLink() ) {
                     RaveTransform<float> tgrasp = vtrans.at(sensor->GetAttachingLink()->GetIndex())*sensor->GetRelativeTransform();
                     SetSoTransform(itee->_ptrans, transInvRoot * tgrasp);

@@ -114,19 +114,23 @@ public:
 
     virtual void GetJointValues(vector<dReal>& vjoint) const;
     virtual void GetBodyTransformations(vector<Transform>& vtrans) const;
-
+    virtual void Load();
 protected:
+    virtual void GeometryChangedCallback() { _bReload = true; }
+    virtual void DrawChangedCallback() { _bDrawStateChanged = true; }
+
     KinBodyPtr _pchain;
     int networkid;        ///< _pchain->GetNetworkId()
     std::vector< LINK > _veclinks; ///< render items for each link, indexed same as links
-    bool bGrabbed;
+    bool bGrabbed, _bReload, _bDrawStateChanged;
     ViewGeometry _viewmode;
     int _userdata;
-
+    boost::shared_ptr<void> _geometrycallback;
     vector<dReal> _vjointvalues;
     vector<Transform> _vtrans;
     mutable boost::mutex _mutexjoints;
 };
+
 typedef boost::shared_ptr<KinBodyItem> KinBodyItemPtr;
 typedef boost::shared_ptr<KinBodyItem const> KinBodyItemConstPtr;
 
@@ -148,14 +152,14 @@ public:
 
     virtual bool UpdateFromIv();
     virtual bool UpdateFromModel(const vector<dReal>& vjointvalues, const vector<Transform>& vtrans);
-
-    RobotBasePtr GetRobot() { return boost::static_pointer_cast<RobotBase>(_pchain); }
     
+    virtual RobotBasePtr GetRobot() const { return _probot; }
     virtual void SetGrab(bool bGrab, bool bUpdate=true);
-
+    virtual void Load();
 private:
     void CreateAxis(EE& ee, const string& name);
     std::vector< EE > _vEndEffectors, _vAttachedSensors;
+    RobotBasePtr _probot;
 };
 typedef boost::shared_ptr<RobotItem> RobotItemPtr;
 typedef boost::shared_ptr<RobotItem const> RobotItemConstPtr;

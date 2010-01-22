@@ -168,14 +168,6 @@ def test_visibilityplanning():
     self.loadscene(scenefilename='scenes/r602real.env.xml')
     self.testsim()
 
-def test_hash():
-    env = Environment()
-    robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
-    env.AddRobot(robot)
-    s = robot.serialize(SerializationOptions.Kinematics)
-    hash = robot.GetKinematicsGeometryHash()
-    print hash
-
 def test_pyann():
     ktree = pyANN.KDTree(random.rand(10,7))
     neighs,dists = ktree.kSearch(random.rand(7),5,1e-3);
@@ -204,60 +196,6 @@ def test_gripper():
     manip = robot.GetActiveManipulator()
     robot.SetActiveDOFs(manip.GetGripperJoints())
     basemanip.ReleaseFingers(execute=True)
-    
-def RetractionConstraint(self,prev,cur,thresh=1e-4):
-    """jacobian gradient descent"""
-    new = array(cur)
-    robot.SetActiveDOFValues(prev)
-    distprev = sum((prev-cur)**2)
-    distcur = 0
-    lasterror = 0
-    for iter in range(10):
-        Jrotation = robot.CalculateActiveAngularVelocityJacobian(manip.GetEndEffector().GetIndex())
-        Jtranslation = robot.CalculateActiveJacobian(manip.GetEndEffector().GetIndex(),manip.GetEndEffectorTransform()[0:3,3])
-        J = r_[Jrotation,Jtranslation]
-        JJt = dot(J,transpose(J))+eye(6)*1e-8
-        invJ = dot(transpose(J),linalg.inv(JJt))
-        Terror = dot(dot(targetframematrix,linalg.inv(Tee)),manip.GetEndEffectorTransform())
-        poseerror = poseFromMatrix(Terror)
-        error = r_[Terror[0:3,3],[2.0*arctan2(poseerror[i],poseerror[0]) for i in range(1,4)]]
-        error *= array([1,0,0,1,1,1])
-        print 'error: ', sum(error**2)
-        if sum(error**2) < thresh**2:
-            return True
-        if sum(error**2) > lasterror and distcur > distprev:
-            return False;
-        qdelta = dot(invJ,error)
-        vnew -= qdelta
-        robot.SetActiveDOFValues(vnew)
-        distcur = sum((vnew-vcur)**2)
-        print manip.GetEndEffectorTransform()
-def test_jacobianconstraints():
-    env = Environment()
-    robot = env.ReadRobotXMLFile('robots/barrettwam.robot.xml')
-    env.AddRobot(robot)
-    manip = robot.GetActiveManipulator()
-    taskmanip = TaskManipulation(robot)
-    robot.SetActiveDOFs(manip.GetArmJoints())
-    vorg = robot.GetActiveDOFValues()
-    
-    freedoms = [1,1,1,1,1,1]
-    v = array(vorg)
-    v[1] += 0.2
-    configs = [v]
-    targetframematrix = eye(4)
-    env.SetDebugLevel(DebugLevel.Debug)
-
-    robot.SetActiveDOFValues(vorg)
-    Tee = manip.GetEndEffectorTransform()
-    print manip.GetEndEffectorTransform()
-    errorthresh = 1e-3
-    iters,newconfigs = taskmanip.EvaluateConstraints(freedoms=freedoms,targetframematrix=targetframematrix,configs=configs,errorthresh=errorthresh)
-    print 'iters: ',iters
-    robot.SetActiveDOFValues(configs[0])
-    print 'old: ', manip.GetEndEffectorTransform()
-    robot.SetActiveDOFValues(newconfigs[0])
-    print 'new: ', manip.GetEndEffectorTransform()
 
 def test_constraintplanning():
     import constraintplanning

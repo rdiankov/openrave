@@ -2352,6 +2352,7 @@ void QtCoinViewer::UpdateFromModel()
                     else
                         pitem = boost::shared_ptr<KinBodyItem>(new KinBodyItem(shared_viewer(), pbody, _viewGeometryMode),ITEM_DELETER);
                         
+                    pitem->Load();
                     pbody->SetGuiData(pitem);
                     _mapbodies[pbody] = pitem;
                 }

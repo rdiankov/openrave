@@ -110,6 +110,7 @@ using OpenRAVE::EnvironmentBase;
 using OpenRAVE::EnvironmentBasePtr;
 using OpenRAVE::KinBody;
 using OpenRAVE::KinBodyPtr;
+using OpenRAVE::KinBodyWeakPtr;
 using OpenRAVE::KinBodyConstPtr;
 using OpenRAVE::RaveTransform;
 using OpenRAVE::RaveTransformMatrix;
@@ -137,5 +138,9 @@ using OpenRAVE::RaveFabs;
 typedef int dTriIndex;
 #endif
 
+template <class T> boost::shared_ptr<T> sptr_from(boost::weak_ptr<T> const& wpt)
+{
+    return boost::shared_ptr<T>(wpt); // throws on wpt.expired()
+}
 
 #endif

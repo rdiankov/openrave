@@ -1,0 +1,11 @@
+if( UNIX )
+  add_definitions("-DLINUX")
+endif()
+add_library(convexdecomposition STATIC
+  NvConcavityVolume.cpp      NvFloatMath.cpp             NvRayCast.cpp           NvSplitMesh.cpp  NvThreadConfig.cpp  wavefront.cpp
+  NvConvexDecomposition.cpp  NvMeshIslandGeneration.cpp  NvRemoveTjunctions.cpp  NvStanHull.cpp
+  NvConcavityVolume.h      NvHashMap.h               NvRemoveTjunctions.h  NvStanHull.h      wavefront.h
+  NvConvexDecomposition.h  NvMeshIslandGeneration.h  NvSimpleTypes.h       NvThreadConfig.h
+  NvFloatMath.h            NvRayCast.h               NvSplitMesh.h         NvUserMemAlloc.h
+  NvFloatMath.inl )
+set_target_properties(convexdecomposition PROPERTIES COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS}")

@@ -594,7 +594,7 @@ namespace OpenRAVEXMLParser
                     type = "box";
                 }
 
-                _itgeomprop = _plink->_listGeomProperties.insert(_plink->_listGeomProperties.end(),KinBody::Link::GEOMPROPERTIES());
+                _itgeomprop = _plink->_listGeomProperties.insert(_plink->_listGeomProperties.end(),KinBody::Link::GEOMPROPERTIES(_plink));
                 if( stricmp(type.c_str(), "box") == 0 )
                     _itgeomprop->type = KinBody::Link::GEOMPROPERTIES::GeomBox;
                 else if( stricmp(type.c_str(), "sphere") == 0 )
@@ -608,7 +608,7 @@ namespace OpenRAVEXMLParser
                     RAVELOG_WARNA("type %s not supported\n", type.c_str());
                 }
 
-                _itgeomprop->bDraw = bDraw;
+                _itgeomprop->_bDraw = bDraw;
             }
             else if( xmlname == "translation" || xmlname == "rotationmat" || xmlname == "rotationaxis" || xmlname == "quat" || xmlname == "offsetfrom" ) {
             }

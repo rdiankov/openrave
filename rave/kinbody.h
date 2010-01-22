@@ -34,6 +34,8 @@ public:
         Prop_JointProperties=0x8, ///< max velocity, max acceleration, resolution, max torque
         Prop_Links=0x10, ///< all properties of all links
         Prop_Name=0x20, ///< name changed
+        Prop_LinkDraw=0x40, ///< toggle link geometries rendering
+        Prop_LinkGeometry=0x80, ///< the geometry of the link changed
     };
 
     /// rigid body defined by an arbitrary ODE body and a render object
@@ -80,7 +82,7 @@ public:
                 GeomTrimesh = 4,
             };
             
-            GEOMPROPERTIES();
+            GEOMPROPERTIES(boost::shared_ptr<Link> parent);
             virtual ~GEOMPROPERTIES() {}
 
             inline const Transform& GetTransform() const { return _t; }
@@ -88,7 +90,7 @@ public:
             inline const Vector& GetRenderScale() const { return vRenderScale; }
             inline const std::string& GetRenderFilename() const { return renderfile; }
             inline float GetTransparency() const { return ftransparency; }
-            inline bool IsDraw() const { return bDraw; }
+            inline bool IsDraw() const { return _bDraw; }
             
             inline dReal GetSphereRadius() const { return vGeomData.x; }
             inline dReal GetCylinderRadius() const { return vGeomData.x; }
@@ -101,12 +103,19 @@ public:
             
             virtual AABB ComputeAABB(const Transform& t) const;
             virtual void serialize(std::ostream& o, int options) const;
+
+            /// sets a new collision mesh and notifies every registered callback about it
+            virtual void SetCollisionMesh(const TRIMESH& mesh);
+            /// sets a drawing and notifies every registered callback about it
+            virtual void SetDraw(bool bDraw);
+
         private:
             /// triangulates the geometry object and initializes collisionmesh. GeomTrimesh types must already be triangulated
             /// \param fTesselation to control how fine the triangles need to be
             /// 1.0f is the default value that 
             bool InitCollisionMesh(float fTessellation=1);
 
+            boost::weak_ptr<Link> _parent;
             Transform _t;                ///< local transformation of the geom primitive with respect to the link's coordinate system
             Vector vGeomData; ///< for boxes, first 3 values are extents
                                          ///< for sphere it is radius
@@ -120,7 +129,7 @@ public:
             Vector vRenderScale; ///< render scale of the object (x,y,z)
             float ftransparency; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
 
-            bool bDraw;         ///< if true, object is drawn as part of the 3d model (default is true)
+            bool _bDraw;         ///< if true, object is drawn as part of the 3d model (default is true)
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
@@ -166,6 +175,7 @@ public:
         //typedef std::list<GEOMPROPERTIES>::iterator GeomPtr;
         //typedef std::list<GEOMPROPERTIES>::const_iterator GeomConstPtr;
         const std::list<GEOMPROPERTIES>& GetGeometries() const { return _listGeomProperties; }
+        virtual GEOMPROPERTIES& GetGeometry(int index);
 
         virtual void serialize(std::ostream& o, int options) const;
     private:

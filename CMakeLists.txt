@@ -412,6 +412,16 @@ else()
   set(ANN_FOUND 1)
 endif()
 
+message(STATUS "compiling local convexdecomposition library")
+add_subdirectory(3rdparty/convexdecomposition)
+set(CONVEXDECOMPOSITION_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/convexdecomposition")
+if( UNIX )
+  set(CONVEXDECOMPOSITION_CFLAGS "-DLINUX")
+else()
+  set(CONVEXDECOMPOSITION_CFLAGS "")
+endif()
+set(CONVEXDECOMPOSITION_FOUND 1)
+
 ## check python
 find_package(PythonInterp)
 if( NOT PYTHON_EXECUTABLE )

@@ -45,7 +45,7 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
       include_directories("${CMAKE_SOURCE_DIR}/src/libopenrave-core")
 
       ## openrave bindings
-      add_library(openravepy_int SHARED openravepy_int.cpp)
+      add_library(openravepy_int SHARED openravepy_int.cpp bindings.h)
       # stdc++ has to be included before opengl libraries due to some ATI bug (http://wiki.fifengine.de/Segfault_in_cxa_allocate_exception#Workaround)
       target_link_libraries(openravepy_int ${STDC_LIBRARY} libopenrave libopenrave-core ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY})
       add_dependencies(openravepy_int libopenrave libopenrave-core)
@@ -57,7 +57,7 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
 
       ## ann bindings
       if( ANN_FOUND )
-        add_library(pyANN SHARED pyann.cpp)
+        add_library(pyANN SHARED pyann.cpp bindings.h)
         include_directories(${ANN_INCLUDE_DIR})
         # stdc++ has to be included before opengl libraries due to some ATI bug (http://wiki.fifengine.de/  Segfault_in_cxa_allocate_exception#Workaround)
         target_link_libraries(pyANN ${STDC_LIBRARY} ann ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY})
@@ -72,6 +72,25 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
           endif()
         endif()
         install(TARGETS pyANN DESTINATION ${OPENRAVEPY_INSTALL_DIR})
+      endif()
+
+      ## convexdecomposition bindings
+      if( CONVEXDECOMPOSITION_FOUND )
+        add_library(convexdecompositionpy SHARED convexdecompositionpy.cpp bindings.h)
+        include_directories(${CONVEXDECOMPOSITION_INCLUDE_DIR})
+        # stdc++ has to be included before opengl libraries due to some ATI bug (http://wiki.fifengine.de/  Segfault_in_cxa_allocate_exception#Workaround)
+        target_link_libraries(convexdecompositionpy ${STDC_LIBRARY} convexdecomposition ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY})
+        set_target_properties(convexdecompositionpy PROPERTIES PREFIX "" COMPILE_FLAGS "${CONVEXDECOMPOSITION_CFLAGS}" )
+        add_dependencies(convexdecompositionpy convexdecomposition)
+        if( WIN32 )
+          set_target_properties(convexdecompositionpy PROPERTIES SUFFIX ".pyd")
+          if( MSVC )
+            # set "link library dependencies" for visual studio in order to include symbols for other statically linked libs
+            # this is such an unbelievable hack, that it's disgusting
+            set_target_properties(convexdecompositionpy PROPERTIES STATIC_LIBRARY_FLAGS "\" LinkLibraryDependencies=\"true")
+          endif()
+        endif()
+        install(TARGETS convexdecompositionpy DESTINATION ${OPENRAVEPY_INSTALL_DIR})
       endif()
     else()
       message(STATUS "failed to use boost python libraries, check if python-numpy is installed.")

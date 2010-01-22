@@ -420,7 +420,48 @@ public:
                     *pidata++ = *it;
                 indices = static_cast<numeric::array>(handle<>(pyindices));
             }
+
+            void GetTriMesh(KinBody::Link::TRIMESH& mesh) {
+                int numverts = len(vertices);
+                mesh.vertices.resize(numverts);
+                for(int i = 0; i < numverts; ++i) {
+                    object ov = vertices[i];
+                    mesh.vertices[i].x = extract<dReal>(ov[0]);
+                    mesh.vertices[i].y = extract<dReal>(ov[1]);
+                    mesh.vertices[i].z = extract<dReal>(ov[2]);
+                }
+
+                int numtris = len(indices);
+                mesh.indices.resize(3*numtris);
+                for(int i = 0; i < numtris; ++i) {
+                    object oi = indices[i];
+                    mesh.indices[3*i+0] = extract<int>(oi[0]);
+                    mesh.indices[3*i+1] = extract<int>(oi[1]);
+                    mesh.indices[3*i+2] = extract<int>(oi[2]);
+                }
+            }
+
             object vertices,indices;
+        };
+
+        class PyGeomProperties
+        {
+            KinBody::LinkPtr _plink;
+            int _geomindex;
+        public:
+            PyGeomProperties(KinBody::LinkPtr plink, int geomindex) : _plink(plink), _geomindex(geomindex) {}
+
+            virtual void SetCollisionMesh(boost::shared_ptr<PyTriMesh> pytrimesh)
+            {
+                KinBody::Link::TRIMESH mesh;
+                pytrimesh->GetTriMesh(mesh);
+                _plink->GetGeometry(_geomindex).SetCollisionMesh(mesh);
+            }
+
+            boost::shared_ptr<PyTriMesh> GetCollisionMesh() { return boost::shared_ptr<PyTriMesh>(new PyTriMesh(_plink->GetGeometry(_geomindex).GetCollisionMesh())); }
+            virtual void SetDraw(bool bDraw) { _plink->GetGeometry(_geomindex).SetDraw(bDraw); }
+            KinBody::Link::GEOMPROPERTIES::GeomType GetType() { return _plink->GetGeometry(_geomindex).GetType(); }
+            object GetTransform() { return ReturnTransform(_plink->GetGeometry(_geomindex).GetTransform()); }
         };
 
         PyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv) : _plink(plink), _pyenv(pyenv) {}
@@ -457,7 +498,17 @@ public:
         void SetTransform(object otrans) { _plink->SetTransform(ExtractTransform(otrans)); }
         void SetForce(object oforce, object opos, bool bAdd) { return _plink->SetForce(ExtractVector3(oforce),ExtractVector3(opos),bAdd); }
         void SetTorque(object otorque, bool bAdd) { return _plink->SetTorque(ExtractVector3(otorque),bAdd); }
+
+        object GetGeometries()
+        {
+            boost::python::list geoms;
+            size_t N = _plink->GetGeometries().size();
+            for(size_t i = 0; i < N; ++i)
+                geoms.append(boost::shared_ptr<PyGeomProperties>(new PyGeomProperties(_plink, i)));
+            return geoms;
+        }
     };
+
     typedef boost::shared_ptr<PyLink> PyLinkPtr;
     typedef boost::shared_ptr<PyLink const> PyLinkConstPtr;
 
@@ -2929,12 +2980,30 @@ BOOST_PYTHON_MODULE(openravepy_int)
                 .def("SetTransform",&PyKinBody::PyLink::SetTransform,args("transform"))
                 .def("SetForce",&PyKinBody::PyLink::SetForce,args("force","pos","add"))
                 .def("SetTorque",&PyKinBody::PyLink::SetTorque,args("torque","add"))
+                .def("GetGeometries",&PyKinBody::PyLink::GetGeometries)
                 ;
 
             class_<PyKinBody::PyLink::PyTriMesh, boost::shared_ptr<PyKinBody::PyLink::PyTriMesh> >("TriMesh",no_init)
                 .def_readwrite("vertices",&PyKinBody::PyLink::PyTriMesh::vertices)
                 .def_readwrite("indices",&PyKinBody::PyLink::PyTriMesh::indices)
                 ;
+
+            {
+                scope geomproperties = class_<PyKinBody::PyLink::PyGeomProperties, boost::shared_ptr<PyKinBody::PyLink::PyGeomProperties> >("GeomProperties",no_init)
+                    .def("SetCollisionMesh",&PyKinBody::PyLink::PyGeomProperties::SetCollisionMesh,args("trimesh"))
+                    .def("GetCollisionMesh",&PyKinBody::PyLink::PyGeomProperties::GetCollisionMesh)
+                    .def("SetDraw",&PyKinBody::PyLink::PyGeomProperties::SetDraw,args("draw"))
+                    .def("GetType",&PyKinBody::PyLink::PyGeomProperties::GetType)
+                    .def("GetTransform",&PyKinBody::PyLink::PyGeomProperties::GetTransform)
+                    ;
+                enum_<KinBody::Link::GEOMPROPERTIES::GeomType>("Type")
+                    .value("None",KinBody::Link::GEOMPROPERTIES::GeomNone)
+                    .value("Box",KinBody::Link::GEOMPROPERTIES::GeomBox)
+                    .value("Sphere",KinBody::Link::GEOMPROPERTIES::GeomSphere)
+                    .value("Cylinder",KinBody::Link::GEOMPROPERTIES::GeomCylinder)
+                    .value("Trimesh",KinBody::Link::GEOMPROPERTIES::GeomTrimesh)
+                    ;
+            }
         }
 
         {

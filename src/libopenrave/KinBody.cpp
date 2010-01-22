@@ -98,13 +98,13 @@ void KinBody::Link::TRIMESH::serialize(std::ostream& o, int options) const
         o << *it << " ";
 }
 
-KinBody::Link::GEOMPROPERTIES::GEOMPROPERTIES()
+KinBody::Link::GEOMPROPERTIES::GEOMPROPERTIES(KinBody::LinkPtr parent) : _parent(parent)
 {
     diffuseColor = Vector(1,1,1);
     type = GeomNone;
     ftransparency = 0;
     vRenderScale = Vector(1,1,1);
-    bDraw = true;
+    _bDraw = true;
 }
 
 AABB KinBody::Link::GEOMPROPERTIES::ComputeAABB(const Transform& t) const
@@ -370,6 +370,23 @@ void KinBody::Link::GEOMPROPERTIES::serialize(std::ostream& o, int options) cons
         SerializeRound3(o,vGeomData);
 }
 
+void KinBody::Link::GEOMPROPERTIES::SetCollisionMesh(const TRIMESH& mesh)
+{
+    LinkPtr parent(_parent);
+    collisionmesh = mesh;
+    parent->GetParent()->ParametersChanged(Prop_LinkGeometry);
+    // need to update the parent link's collision structure?!? (note that it will change the hash)
+}
+
+void KinBody::Link::GEOMPROPERTIES::SetDraw(bool bDraw)
+{
+    if( _bDraw != bDraw ) {
+        LinkPtr parent(_parent);
+        _bDraw = bDraw;
+        parent->GetParent()->ParametersChanged(Prop_LinkDraw);
+    }
+}
+
 KinBody::Link::Link(KinBodyPtr parent)
 {
     _parent = parent;
@@ -454,6 +471,13 @@ void KinBody::Link::SetForce(const Vector& force, const Vector& pos, bool bAdd)
 void KinBody::Link::SetTorque(const Vector& torque, bool bAdd)
 {
     GetParent()->GetEnv()->GetPhysicsEngine()->SetBodyTorque(shared_from_this(), torque, bAdd);
+}
+
+KinBody::Link::GEOMPROPERTIES& KinBody::Link::GetGeometry(int index)
+{
+    std::list<GEOMPROPERTIES>::iterator it = _listGeomProperties.begin();
+    advance(it,index);
+    return *it;
 }
 
 KinBody::Joint::Joint(KinBodyPtr parent)
@@ -763,11 +787,11 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool bDraw)
     plink->name = "base";
     Link::TRIMESH trimesh;
     FOREACHC(itab, vaabbs) {
-        plink->_listGeomProperties.push_back(Link::GEOMPROPERTIES());
+        plink->_listGeomProperties.push_back(Link::GEOMPROPERTIES(plink));
         Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
         geom.type = Link::GEOMPROPERTIES::GeomBox;
         geom._t.trans = itab->pos;
-        geom.bDraw = bDraw;
+        geom._bDraw = bDraw;
         geom.vGeomData = itab->extents;
         geom.InitCollisionMesh();
         trimesh = geom.GetCollisionMesh();

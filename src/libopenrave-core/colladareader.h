@@ -1526,7 +1526,7 @@ public:
         if( triRef == NULL )
             return false;
 
-        plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES());
+        plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES(plink));
         KinBody::Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
         KinBody::Link::TRIMESH& trimesh = geom.collisionmesh;
         geom.type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
@@ -1625,7 +1625,7 @@ public:
         //  Debug
         RAVELOG_WARNA("ExtractGeometry in TRIANGLE FANS and adds to OpenRAVE............\n");
 
-        plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES());
+        plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES(plink));
         KinBody::Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
         KinBody::Link::TRIMESH& trimesh = geom.collisionmesh;
         geom.type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
@@ -1718,7 +1718,7 @@ public:
         //  Debug
         RAVELOG_WARNA("ExtractGeometry in TRIANGLE STRIPS and adds to OpenRAVE............\n");
 
-        plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES());
+        plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES(plink));
         KinBody::Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
         KinBody::Link::TRIMESH& trimesh = geom.collisionmesh;
         geom.type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
@@ -1972,7 +1972,7 @@ public:
 
             if( vconvexhull.size()> 0 )
             {
-                plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES());
+                plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES(plink));
                 KinBody::Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
                 KinBody::Link::TRIMESH& trimesh = geom.collisionmesh;
                 geom.type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
