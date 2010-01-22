@@ -40,7 +40,7 @@ class ConvexDecompositionModel(OpenRAVEModel):
             return False
         with self.env:
             for link,linkgeom in izip(self.robot.GetLinks(),self.linkgeometry):
-                for ig,hulls in linkgeom:
+                for ig,hulls,stats in linkgeom:
                     link.GetGeometries()[ig].SetCollisionMesh(self.generateTrimeshFromHulls(hulls))
         return True
 
@@ -55,7 +55,7 @@ class ConvexDecompositionModel(OpenRAVEModel):
         self.generate(**args)
     def autogenerate(self,forcegenerate=True):
         if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531':
-            self.generate(maxradius=1.1)
+            self.generate()
         else:
             if not forcegenerate:
                 raise ValueError('failed to find auto-generation parameters')
@@ -76,9 +76,40 @@ class ConvexDecompositionModel(OpenRAVEModel):
                         trimesh = geom.GetCollisionMesh()
                         hulls = convexdecompositionpy.computeConvexDecomposition(trimesh.vertices,trimesh.indices,**self.convexparams)
                         if len(hulls) > 0:
-                            geoms.append((ig,hulls))
+                            geoms.append((ig,hulls,self.computeGeometryStatistics(hulls)))
                 self.linkgeometry.append(geoms)
         print 'all convex decomposition finished in %fs'%(time.time()-starttime)
+    @staticmethod
+    def computeGeometryStatistics(hulls,delta=0.005):
+        minpoint = numpy.min([numpy.min(vertices,axis=0) for vertices,indices in hulls],axis=0)
+        maxpoint = numpy.max([numpy.max(vertices,axis=0) for vertices,indices in hulls],axis=0)
+        hullplanes = ConvexDecompositionModel.computeHullPlanes(hulls)
+        X,Y,Z = mgrid[minpoint[0]:maxpoint[0]:delta,minpoint[1]:maxpoint[1]:delta,minpoint[2]:maxpoint[2]:delta]
+        allpoints = c_[X.flat,Y.flat,Z.flat]
+        insidepoints = zeros(len(allpoints),bool)
+        for i,point in enumerate(allpoints):
+            for planes in hullplanes:
+                if all(dot(planes[:,0:3],point)+planes[:,3] <= 0):
+                    insidepoints[i] = True
+                    break
+        allpoints = allpoints[insidepoints,:]
+        volume = len(allpoints)*delta**3
+        com = mean(allpoints,0)
+        inertia = cov(allpoints,rowvar=0,bias=1)*(len(allpoints)*delta**3)
+        return {'com':com,'inertia':inertia,'volume':volume,'points':allpoints}
+        
+    @staticmethod
+    def computeHullPlanes(hulls):
+        hullplanes = [] # planes point outward
+        for vertices,indices in hulls:
+            vm = mean(vertices,0)
+            v0 = vertices[indices[:,0],:]
+            v1 = vertices[indices[:,1],:]
+            v2 = vertices[indices[:,2],:]
+            normals = cross(v1-v0,v2-v0,1)
+            planes = c_[normals,-sum(normals*v0,1)]
+            hullplanes.append(planes * transpose(tile(-sign(dot(planes,r_[vm,1])),(4,1))))
+        return hullplanes
     def show(self):
         self.env.SetViewer('qtcoin')
         self.env.UpdatePublishedBodies()

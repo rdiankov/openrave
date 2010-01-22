@@ -222,8 +222,10 @@ def test_constraintplanning():
 def test_convex():
     import convexdecomposition
     env = Environment()
-    env.SetViewer('qtcoin')
+    #env.SetViewer('qtcoin')
     env.Load('data/lab1.env.xml')
     robot = env.GetRobots()[0]
     self = convexdecomposition.ConvexDecompositionModel(robot)
     self.load()
+    
+    hulls = self.linkgeometry[0][0][1]
