@@ -57,7 +57,7 @@ object computeConvexDecomposition(const boost::multi_array<float, 2>& vertices, 
     boost::shared_ptr<CONVEX_DECOMPOSITION::iConvexDecomposition> ic(CONVEX_DECOMPOSITION::createConvexDecomposition(),CONVEX_DECOMPOSITION::releaseConvexDecomposition);
 
     if( indices.size() > 0 ) {
-        FOREACH(it,indices)
+        FOREACHC(it,indices)
             ic->addTriangle(&vertices[(*it)[0]][0], &vertices[(*it)[1]][0], &vertices[(*it)[2]][0]);
     }
     else {
