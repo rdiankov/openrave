@@ -656,7 +656,6 @@ public:
         }
 
         bulletspace->Synchronize();
-        RAVELOG_INFO("non adj: %d, adj: %d\n",pbody->GetNonAdjacentLinks().size(),pbody->GetAdjacentLinks().size());
         LinkAdjacentFilterCallback linkadjacent(pbody, pbody->GetNonAdjacentLinks());
         bool bCollision = CheckCollisionP(&linkadjacent, report);
         // things get cached and very messy if not released

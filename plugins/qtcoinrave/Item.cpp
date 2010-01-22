@@ -97,6 +97,8 @@ KinBodyItem::KinBodyItem(QtCoinViewerPtr viewer, KinBodyPtr pchain, ViewGeometry
     _bReload = false;
     _bDrawStateChanged = false;
     networkid = pchain->GetNetworkId();
+    _geometrycallback = pchain->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&KinBodyItem::GeometryChangedCallback,this));
+    _drawcallback = pchain->RegisterChangeCallback(KinBody::Prop_LinkDraw, boost::bind(&KinBodyItem::DrawChangedCallback,this));
 }
 
 void KinBodyItem::Load()
@@ -302,12 +304,20 @@ bool KinBodyItem::UpdateFromIv()
     return true;
 }
 
+void KinBodyItem::GeometryChangedCallback()
+{
+    _bReload = true;
+}
+
+void KinBodyItem::DrawChangedCallback()
+{
+    _bDrawStateChanged = true;
+}
+
 bool KinBodyItem::UpdateFromModel()
 {
     if( !_pchain )
         return false;
-    if( _bReload )
-        Load();
     if( _bDrawStateChanged ) {
         RAVELOG_INFO("draw state change not implemented yet\n");
         _bDrawStateChanged = false;
@@ -321,6 +331,9 @@ bool KinBodyItem::UpdateFromModel()
         if( !lockenv )
             return false;
         
+        if( _bReload )
+            Load();
+
         // make sure the body is still present!
         if( _pchain->GetEnv()->GetBodyFromNetworkId(networkid) == _pchain ) {
             _pchain->GetBodyTransformations(_vtrans);
@@ -350,6 +363,12 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
     if( !_pchain ) {
         // don't update, physics is disabled anyway
         return false;
+    }
+
+    if( _bReload ) {
+        EnvironmentMutex::scoped_try_lock lockenv(_pchain->GetEnv()->GetMutex());
+        if( !!lockenv )
+            Load();
     }
 
     boost::mutex::scoped_lock lock(_mutexjoints);

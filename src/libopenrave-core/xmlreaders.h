@@ -711,10 +711,7 @@ namespace OpenRAVEXMLParser
                         _itgeomprop->InitCollisionMesh();
                     }
 
-                    // need to put on heap since stack can be too small
-                    boost::shared_ptr<KinBody::Link::TRIMESH> trimesh(new KinBody::Link::TRIMESH(_itgeomprop->GetCollisionMesh()));
-                    trimesh->ApplyTransform(_itgeomprop->_t);
-                    _plink->collision.Append(*trimesh);
+                    _plink->collision.Append(_itgeomprop->GetCollisionMesh(), _itgeomprop->_t);
                     _itgeomprop = _plink->_listGeomProperties.end();
                 }
                 else {

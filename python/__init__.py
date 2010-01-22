@@ -9,13 +9,13 @@ from openravepy_ext import *
 
 import metaclass
 try:
-    #import sympy
     import ikfast
 except ImportError, e:
     print 'openravepy: Failed to import ikfast: ',e
 import examples
 import interfaces
 import pyANN
+import convexdecompositionpy
 
 pyANN._pyann_exception_.py_err_class = pyann_exception
 _openrave_exception_.py_err_class = openrave_exception

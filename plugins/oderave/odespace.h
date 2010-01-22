@@ -104,11 +104,18 @@ public:
             nLastStamp = 0;
         }
 
-
-        virtual ~KinBodyInfo()
-        {
+        virtual ~KinBodyInfo() {
             EnvironmentMutex::scoped_lock lock(pbody->GetEnv()->GetMutex()); // protected ode calls
+            Reset();
+            dSpaceClean(space);
+            dJointGroupEmpty(jointgroup);
+            
+            dSpaceDestroy(space);
+            dJointGroupDestroy(jointgroup);
+        }
 
+        void Reset()
+        {
             FOREACH(itlink, vlinks) {
                 dGeomID curgeom = (*itlink)->geom;
                 while(curgeom) {
@@ -137,17 +144,15 @@ public:
                 FOREACH(itind, (*itlink)->listvertices)
                     delete *itind;
             }
+            vlinks.resize(0);
 
             FOREACH(itjoint, vjoints) {
                 if( *itjoint )
                     dJointDestroy(*itjoint);
             }
+            vjoints.resize(0);
 
-            dSpaceClean(space);
-            dJointGroupEmpty(jointgroup);
-    
-            dSpaceDestroy(space);
-            dJointGroupDestroy(jointgroup);
+            _geometrycallback.reset();
         }
 
         KinBodyPtr pbody; ///< body associated with this structure
@@ -203,6 +208,7 @@ public:
         // create all ode bodies and joints
         if( !pinfo )
             pinfo.reset(new KinBodyInfo(_ode));
+        pinfo->Reset();
         pinfo->pbody = pbody;
         pinfo->_odespace = weak_space();
         pinfo->vlinks.reserve(pbody->GetLinks().size());
@@ -467,7 +473,7 @@ private:
             _synccallback(pinfo);
     }
 
-    virtual void GeometryChangedCallback(KinBodyWeakPtr _pbody)
+    void GeometryChangedCallback(KinBodyWeakPtr _pbody)
     {
         EnvironmentMutex::scoped_lock lock(_penv->GetMutex());
         KinBodyPtr pbody(_pbody);

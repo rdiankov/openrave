@@ -374,8 +374,8 @@ void KinBody::Link::GEOMPROPERTIES::SetCollisionMesh(const TRIMESH& mesh)
 {
     LinkPtr parent(_parent);
     collisionmesh = mesh;
+    parent->UpdateCollisionMesh();
     parent->GetParent()->ParametersChanged(Prop_LinkGeometry);
-    // need to update the parent link's collision structure?!? (note that it will change the hash)
 }
 
 void KinBody::Link::GEOMPROPERTIES::SetDraw(bool bDraw)
@@ -478,6 +478,14 @@ KinBody::Link::GEOMPROPERTIES& KinBody::Link::GetGeometry(int index)
     std::list<GEOMPROPERTIES>::iterator it = _listGeomProperties.begin();
     advance(it,index);
     return *it;
+}
+
+void KinBody::Link::UpdateCollisionMesh()
+{
+    collision.vertices.resize(0);
+    collision.indices.resize(0);
+    FOREACH(itgeom,_listGeomProperties)
+        collision.Append(itgeom->GetCollisionMesh(),itgeom->GetTransform());
 }
 
 KinBody::Joint::Joint(KinBodyPtr parent)
@@ -2392,7 +2400,9 @@ bool KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 
 void KinBody::ParametersChanged(int parameters)
 {
-    FOREACH(itfns,_listRegisteredCallbacks) {
+    _nUpdateStampId++;
+    std::list<std::pair<int,boost::function<void()> > > listRegisteredCallbacks = _listRegisteredCallbacks; // copy since it can be changed
+    FOREACH(itfns,listRegisteredCallbacks) {
         if( itfns->first & parameters )
             itfns->second();
     }

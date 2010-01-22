@@ -179,7 +179,9 @@ public:
 
         virtual void serialize(std::ostream& o, int options) const;
     private:
-        
+        /// updates the collision mesh from the geometries. Note that this might change the robot/kinbody hash!!
+        void UpdateCollisionMesh();
+
         Transform _t;           ///< current transform of the link
         TransformMatrix _transMass; ///< the 3x3 inertia and center of mass of the link in the link's coordinate system
         dReal _mass;
@@ -664,7 +666,7 @@ protected:
     ManageDataPtr _pManageData;
 
     std::list<std::pair<int,boost::function<void()> > > _listRegisteredCallbacks; ///< callbacks to call when particular properties of the body change.
-
+    
     bool _bHierarchyComputed; ///< true if the joint heirarchy and other cached information is computed
     bool _bMakeJoinedLinksAdjacent;
 private:

@@ -27,9 +27,11 @@
 #define ENABLED_GROUP 1 // mask ENABLED_GROUP
 #define DISABLED_GROUP 256 // mask 0
 
-// manages a space of ODE objects
+// manages a space of bullet objects
 class BulletSpace : public boost::enable_shared_from_this<BulletSpace>
 {
+    inline boost::weak_ptr<BulletSpace> weak_space() { return shared_from_this(); }
+
 public:
     // information about the kinematics of the body
     struct KinBodyInfo
@@ -56,13 +58,19 @@ public:
         };
         
     KinBodyInfo(boost::shared_ptr<btCollisionWorld> world, bool bPhysics) : _world(world), _bPhysics(bPhysics) { nLastStamp = 0; }
-        virtual ~KinBodyInfo() {
+        virtual ~KinBodyInfo() { Reset(); }
+        
+        void Reset()
+        {
             FOREACH(itlink, vlinks) {
                 if( _bPhysics )
                     ((btDynamicsWorld*)_world.get())->removeRigidBody((btRigidBody*)(*itlink)->obj.get());
                 else
                     _world->removeCollisionObject((*itlink)->obj.get());
             }
+            vlinks.resize(0);
+            vjoints.resize(0);
+            _geometrycallback.reset();
         }
 
         KinBodyPtr pbody; ///< body associated with this structure
@@ -71,6 +79,9 @@ public:
         vector<boost::shared_ptr<LINK> > vlinks; ///< if body is disabled, then geom is static (it can't be connected to a joint!)
                                 ///< the pointer to this Link is the userdata
         vector< boost::shared_ptr<btTypedConstraint> > vjoints;
+        boost::shared_ptr<void> _geometrycallback;
+        boost::weak_ptr<BulletSpace> _bulletspace;
+
     private:
         boost::shared_ptr<btCollisionWorld> _world;
         bool _bPhysics;
@@ -103,10 +114,13 @@ public:
         _world.reset();
     }
 
-    boost::shared_ptr<void> InitKinBody(KinBodyPtr pbody) {
+    boost::shared_ptr<void> InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr()) {
         // create all ode bodies and joints
-        KinBodyInfoPtr pinfo(new KinBodyInfo(_world,_bPhysics));
+        if( !pinfo )
+            pinfo.reset(new KinBodyInfo(_world,_bPhysics));
+        pinfo->Reset();
         pinfo->pbody = pbody;
+        pinfo->_bulletspace = weak_space();
         pinfo->vlinks.reserve(pbody->GetLinks().size());
         pinfo->vjoints.reserve(pbody->GetJoints().size());
     
@@ -272,6 +286,8 @@ public:
             }
         }
 
+        pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&BulletSpace::GeometryChangedCallback,boost::bind(&sptr_from<BulletSpace>, weak_space()),KinBodyWeakPtr(pbody)));
+
         Synchronize(pinfo);
         return pinfo;
     }
@@ -341,6 +357,18 @@ private:
 
         if( !!_synccallback )
             _synccallback(pinfo);
+    }
+
+    virtual void GeometryChangedCallback(KinBodyWeakPtr _pbody)
+    {
+        EnvironmentMutex::scoped_lock lock(_penv->GetMutex());
+        KinBodyPtr pbody(_pbody);
+        KinBodyInfoPtr pinfo = boost::static_pointer_cast<KinBodyInfo>(GetInfo(pbody));
+        if( !pinfo )
+            return;        
+        BOOST_ASSERT(boost::shared_ptr<BulletSpace>(pinfo->_bulletspace) == shared_from_this());
+        BOOST_ASSERT(pinfo->pbody==pbody);
+        InitKinBody(pbody,pinfo);
     }
 
     EnvironmentBasePtr _penv;

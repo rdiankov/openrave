@@ -104,10 +104,35 @@ def test_hash():
     hash = robot.GetKinematicsGeometryHash()
     print hash
 
-def test_geometrychange():
-    """changed geometry and tests if changed are updated"""
+def test_convexdecomp():
     env = Environment()
     env.Load('data/lab1.env.xml')
     robot = env.GetRobots()[0]
+    link = robot.GetLinks()[0]
+    geom = link.GetGeometries()[0]
+    trimesh = geom.GetCollisionMesh()
+    hulls = convexdecompositionpy.computeConvexDecomposition(trimesh.vertices,trimesh.indices)
+
+def generate_box(pos,extents):
+    indices = reshape([0, 1, 2, 1, 2, 3, 4, 5, 6, 5, 6, 7, 0, 1, 4, 1, 4, 5, 2, 3, 6, 3, 6, 7, 0, 2, 4, 2, 4, 6, 1, 3, 5,3, 5, 7],(12,3))
+    vertices = array(((extents[0],extents[1],extents[2]),
+                      (extents[0],extents[1],-extents[2]),
+                      (extents[0],-extents[1],extents[2]),
+                      (extents[0],-extents[1],-extents[2]),
+                      (-extents[0],extents[1],extents[2]),
+                      (-extents[0],extents[1],-extents[2]),
+                      (-extents[0],-extents[1],extents[2]),
+                      (-extents[0],-extents[1],-extents[2])))
+    return vertices+tile(pos,(8,1)),indices
+
+def test_geometrychange():
+    """changed geometry and tests if changed are updated"""
+    env = Environment()
+    env.SetViewer('qtcoin')
+    env.Load('data/lab1.env.xml')
+    robot = env.GetRobots()[0]
     link = robot.GetLinks()[-1]
-    link
+    geom = link.GetGeometries()[0]    
+    geom.SetCollisionMesh(KinBody.Link.TriMesh(*generate_box([0,0,0.1],[1,1,0.1])))
+    env.Destroy()
+

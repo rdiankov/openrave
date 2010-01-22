@@ -206,6 +206,11 @@ bool ADD_FRAME_FROM_DIB_TO_AVI(void* pdata);
 bool STOP_AVI();
 //@}
 
+template <class T> boost::shared_ptr<T> sptr_from(boost::weak_ptr<T> const& wpt)
+{
+    return boost::shared_ptr<T>(wpt); // throws on wpt.expired()
+}
+
 class QtCoinViewer;
 typedef boost::shared_ptr<QtCoinViewer> QtCoinViewerPtr;
 typedef boost::shared_ptr<QtCoinViewer const> QtCoinViewerConstPtr;

@@ -401,6 +401,8 @@ public:
         class PyTriMesh
         {
         public:
+            PyTriMesh() {}
+            PyTriMesh(object vertices, object indices) : vertices(vertices), indices(indices) {}
             PyTriMesh(const KinBody::Link::TRIMESH& mesh) {
                 npy_intp dims[] = {mesh.vertices.size(),3};
                 PyObject *pyvertices = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
@@ -2983,7 +2985,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
                 .def("GetGeometries",&PyKinBody::PyLink::GetGeometries)
                 ;
 
-            class_<PyKinBody::PyLink::PyTriMesh, boost::shared_ptr<PyKinBody::PyLink::PyTriMesh> >("TriMesh",no_init)
+            class_<PyKinBody::PyLink::PyTriMesh, boost::shared_ptr<PyKinBody::PyLink::PyTriMesh> >("TriMesh")
+                .def(init<object,object>())
                 .def_readwrite("vertices",&PyKinBody::PyLink::PyTriMesh::vertices)
                 .def_readwrite("indices",&PyKinBody::PyLink::PyTriMesh::indices)
                 ;

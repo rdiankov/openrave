@@ -218,3 +218,12 @@ def test_constraintplanning():
     res = self.basemanip.MoveToHandPosition(matrices=[T],maxiter=10000,maxtries=1,seedik=8,constraintfreedoms=constraintfreedoms,constraintmatrix=constraintmatrix,constrainterrorthresh=constrainterrorthresh)
 
     #self.performGraspPlanning()
+
+def test_convex():
+    import convexdecomposition
+    env = Environment()
+    env.SetViewer('qtcoin')
+    env.Load('data/lab1.env.xml')
+    robot = env.GetRobots()[0]
+    self = convexdecomposition.ConvexDecompositionModel(robot)
+    self.load()

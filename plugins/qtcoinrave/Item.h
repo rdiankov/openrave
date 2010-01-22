@@ -86,6 +86,9 @@ class KinBodyItem : public Item
         KinBody::LinkWeakPtr plink;
     };
 
+    inline boost::shared_ptr<KinBodyItem> shared_kinbody() { return boost::static_pointer_cast<KinBodyItem>(shared_from_this()); }
+    inline boost::weak_ptr<KinBodyItem> weak_kinbody() { return shared_kinbody(); }
+
 public:
     KinBodyItem(QtCoinViewerPtr viewer, KinBodyPtr, ViewGeometry viewmode);
     virtual ~KinBodyItem() {}
@@ -116,8 +119,8 @@ public:
     virtual void GetBodyTransformations(vector<Transform>& vtrans) const;
     virtual void Load();
 protected:
-    virtual void GeometryChangedCallback() { _bReload = true; }
-    virtual void DrawChangedCallback() { _bDrawStateChanged = true; }
+    virtual void GeometryChangedCallback();
+    virtual void DrawChangedCallback();
 
     KinBodyPtr _pchain;
     int networkid;        ///< _pchain->GetNetworkId()
@@ -125,10 +128,11 @@ protected:
     bool bGrabbed, _bReload, _bDrawStateChanged;
     ViewGeometry _viewmode;
     int _userdata;
-    boost::shared_ptr<void> _geometrycallback;
+
     vector<dReal> _vjointvalues;
     vector<Transform> _vtrans;
     mutable boost::mutex _mutexjoints;
+    boost::shared_ptr<void> _geometrycallback, _drawcallback;
 };
 
 typedef boost::shared_ptr<KinBodyItem> KinBodyItemPtr;

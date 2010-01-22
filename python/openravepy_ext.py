@@ -234,12 +234,13 @@ class OpenRAVEModel(metaclass.AutoReloader):
         """Caches parameters for most commonly used robots/objects and starts the generation process for them"""
         raise NotImplementedError()
     @staticmethod
-    def CreateOptionParser():
+    def CreateOptionParser(useManipulator=True):
         parser = optparse.OptionParser(description='Computes an openrave model and caches into file.')
         parser.add_option('--robot',action='store',type='string',dest='robot',default='robots/barrettsegway.robot.xml',
                           help='OpenRAVE robot to load')
-        parser.add_option('--manipname',action='store',type='string',dest='manipname',default=None,
-                          help='The name of the manipulator to use')
+        if useManipulator:
+            parser.add_option('--manipname',action='store',type='string',dest='manipname',default=None,
+                              help='The name of the manipulator to use')
         parser.add_option('--show',action='store_true',dest='show',default=False,
                           help='If set, uses mayavi (v3+) to display the reachability')
         return parser
@@ -257,13 +258,14 @@ class OpenRAVEModel(metaclass.AutoReloader):
                 robot = env.ReadRobotXMLFile(options.robot)
                 env.AddRobot(robot)
                 robot.SetTransform(numpy.eye(4))
-                if options.manipname is None:
-                    # prioritize manipulators with ik solvers
-                    indices = [i for i,m in enumerate(robot.GetManipulators()) if m.HasIKSolver()]
-                    if len(indices) > 0:
-                        robot.SetActiveManipulator(indices[0])
-                else:
-                    robot.SetActiveManipulator([i for i,m in enumerate(robot.GetManipulators()) if m.GetName()==options.manipname][0])
+                if hasattr(options,'manipname'):
+                    if options.manipname is None:
+                        # prioritize manipulators with ik solvers
+                        indices = [i for i,m in enumerate(robot.GetManipulators()) if m.HasIKSolver()]
+                        if len(indices) > 0:
+                            robot.SetActiveManipulator(indices[0])
+                    else:
+                        robot.SetActiveManipulator([i for i,m in enumerate(robot.GetManipulators()) if m.GetName()==options.manipname][0])
             model = Model(robot=robot)
             if options.show:
                 if not model.load():
