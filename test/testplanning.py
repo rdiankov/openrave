@@ -229,3 +229,11 @@ def test_convex():
     self.load()
     
     hulls = self.linkgeometry[0][0][1]
+
+def test_linkstatistics():
+    import linkstatistics
+    from itertools import izip
+    env = openravepy.Environment()
+    robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
+    env.AddRobot(robot)
+    self = linkstatistics.LinkStatisticsModel(robot)

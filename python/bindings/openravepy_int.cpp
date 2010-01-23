@@ -464,6 +464,10 @@ public:
             virtual void SetDraw(bool bDraw) { _plink->GetGeometry(_geomindex).SetDraw(bDraw); }
             KinBody::Link::GEOMPROPERTIES::GeomType GetType() { return _plink->GetGeometry(_geomindex).GetType(); }
             object GetTransform() { return ReturnTransform(_plink->GetGeometry(_geomindex).GetTransform()); }
+            dReal GetSphereRadius() const { return _plink->GetGeometry(_geomindex).GetSphereRadius(); }
+            dReal GetCylinderRadius() const { return _plink->GetGeometry(_geomindex).GetCylinderRadius(); }
+            dReal GetCylinderHeight() const { return _plink->GetGeometry(_geomindex).GetCylinderHeight(); }
+            object GetBoxExtents() const { return toPyVector3(_plink->GetGeometry(_geomindex).GetBoxExtents()); }
         };
 
         PyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv) : _plink(plink), _pyenv(pyenv) {}
@@ -2998,6 +3002,10 @@ BOOST_PYTHON_MODULE(openravepy_int)
                     .def("SetDraw",&PyKinBody::PyLink::PyGeomProperties::SetDraw,args("draw"))
                     .def("GetType",&PyKinBody::PyLink::PyGeomProperties::GetType)
                     .def("GetTransform",&PyKinBody::PyLink::PyGeomProperties::GetTransform)
+                    .def("GetSphereRadius",&PyKinBody::PyLink::PyGeomProperties::GetSphereRadius)
+                    .def("GetCylinderRadius",&PyKinBody::PyLink::PyGeomProperties::GetCylinderRadius)
+                    .def("GetCylinderHeight",&PyKinBody::PyLink::PyGeomProperties::GetCylinderHeight)
+                    .def("GetBoxExtents",&PyKinBody::PyLink::PyGeomProperties::GetBoxExtents)
                     ;
                 enum_<KinBody::Link::GEOMPROPERTIES::GeomType>("Type")
                     .value("None",KinBody::Link::GEOMPROPERTIES::GeomNone)

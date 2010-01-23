@@ -39,8 +39,8 @@ class ConvexDecompositionModel(OpenRAVEModel):
         if not self.has():
             return False
         with self.env:
-            for link,linkgeom in izip(self.robot.GetLinks(),self.linkgeometry):
-                for ig,hulls in linkgeom:
+            for link,linkcd in izip(self.robot.GetLinks(),self.linkgeometry):
+                for ig,hulls in linkcd:
                     link.GetGeometries()[ig].SetCollisionMesh(self.generateTrimeshFromHulls(hulls))
         return True
 

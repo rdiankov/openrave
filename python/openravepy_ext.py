@@ -35,7 +35,7 @@ def mkdir_recursive(newdir):
         if tail:
             os.mkdir(newdir)
 
-def ComputeGeodesicSphere(spherelevel=2):
+def ComputeGeodesicSphereMesh(spherelevel=2):
     """Computes a geodesic sphere to a specified level. Returns the vertices and triangle indices"""
     GTS_M_ICOSAHEDRON_X = sqrt(sqrt(5)+1)/sqrt(2*sqrt(5))
     GTS_M_ICOSAHEDRON_Y = sqrt(2)/sqrt(5+sqrt(5))
@@ -73,6 +73,34 @@ def ComputeGeodesicSphere(spherelevel=2):
             newindices += [[tri[0],inds[0],inds[2]],[inds[0],tri[1],inds[1]],[inds[2],inds[0],inds[1]],[inds[2],inds[1],tri[2]]]
         triindices = newindices
     return numpy.array(vertices),triindices
+
+def ComputeBoxMesh(extents):
+    """Computes a box mesh"""
+    indices = reshape([0, 1, 2, 1, 2, 3, 4, 5, 6, 5, 6, 7, 0, 1, 4, 1, 4, 5, 2, 3, 6, 3, 6, 7, 0, 2, 4, 2, 4, 6, 1, 3, 5,3, 5, 7],(12,3))
+    vertices = array(((extents[0],extents[1],extents[2]),
+                      (extents[0],extents[1],-extents[2]),
+                      (extents[0],-extents[1],extents[2]),
+                      (extents[0],-extents[1],-extents[2]),
+                      (-extents[0],extents[1],extents[2]),
+                      (-extents[0],extents[1],-extents[2]),
+                      (-extents[0],-extents[1],extents[2]),
+                      (-extents[0],-extents[1],-extents[2])))
+    return vertices,indices
+
+def ComputeCylinderYMesh(radius,height,angledelta=0.1):
+    """Computes a mesh of a cylinder oriented towards y-axis"""
+    angles = arange(0,2*pi,angledelta)
+    cangles = cos(angles)
+    sangles = sin(angles)
+    N = len(angles)
+    vertices = c_[radius*tile(cangles,2),r_[tile(height*0.5,N),tile(-height*0.5,N)], radius*tile(sangles,2)]
+    indices = []
+    iprev = N-1
+    for i in range(N):
+        indices.append((iprev,i,iprev+N))
+        indices.append((i,i+N,iprev+N))
+        iprev = i
+    return vertices,array(indices)
 
 def normalizeZRotation(qarray):
     """for each quaternion, find the rotation about z that minimizes the distance between the identify (1,0,0,0).
