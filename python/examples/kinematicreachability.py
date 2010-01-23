@@ -89,7 +89,7 @@ class ReachabilityModel(OpenRAVEModel):
         with self.env:
             for i,ind in enumerate(insideinds):
                 numvalid = 0
-                T[0:3,3] = allpoints[ind]
+                T[0:3,3] = allpoints[ind]+baseanchor
                 for rotation in rotations:
                     T[0:3,0:3] = rotation
                     solutions = self.manip.FindIKSolutions(T,True)
