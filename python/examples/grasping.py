@@ -127,7 +127,7 @@ class GraspingModel(OpenRAVEModel):
             contactgraph = None
             statesaver = None
 
-    def show(self,delay=0.5):
+    def show(self,delay=0.5,options=None):
         with self.robot:
             for i,grasp in enumerate(self.grasps):
                 print 'grasp %d/%d'%(i,len(self.grasps))

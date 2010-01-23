@@ -103,10 +103,13 @@ class ReachabilityModel(OpenRAVEModel):
         self.reachabilitystats = array(self.reachabilitystats)
         print 'reachability finished in %fs'%(time.time()-starttime)
 
-    def show(self,showrobot=True,contours=[0.1,0.5,0.9,0.99],opacity=None,figureid=1, xrange=None):
+    def show(self,showrobot=True,contours=[0.01,0.1,0.5,0.9,0.99],opacity=None,figureid=1, xrange=None,options=None):
         mlab.figure(figureid,fgcolor=(0,0,0), bgcolor=(1,1,1),size=(1024,768))
         mlab.clf()
-        reachabilitydensity3d = minimum(self.reachabilitydensity3d,1.0)
+        if options is not None:
+            reachabilitydensity3d = minimum(self.reachabilitydensity3d*options.showscale,1.0)
+        else:
+            reachabilitydensity3d = minimum(self.reachabilitydensity3d,1.0)
         reachabilitydensity3d[0,0,0] = 1 # have at least one point be at the maximum
         if xrange is None:
             offset = array((0,0,0))
@@ -158,6 +161,8 @@ class ReachabilityModel(OpenRAVEModel):
                           help='The max radius of the arm to perform the computation')
         parser.add_option('--quatdelta',action='store',type='float',dest='quatdelta',default=0.5,
                           help='The max radius of the arm to perform the computation')
+        parser.add_option('--showscale',action='store',type='float',dest='showscale',default=1.0,
+                          help='Scales the reachability by this much in order to show colors better')
         return parser
     @staticmethod
     def RunFromParser(Model=None,parser=None):

@@ -119,7 +119,7 @@ class LinkStatisticsModel(OpenRAVEModel):
                 uniqueplanes[i+1:] &= dot(normalizedplanes[i+1:,:],normalizedplanes[i])<0.999
             hullplanes.append(planes[uniqueplanes])
         return hullplanes
-    def show(self):
+    def show(self,options=None):
         self.env.SetViewer('qtcoin')
         self.env.UpdatePublishedBodies()
         T = self.env.Triangulate(self.robot)

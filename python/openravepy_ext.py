@@ -109,7 +109,7 @@ def normalizeZRotation(qarray):
     zangles = numpy.arctan2(-qarray[:,3],qarray[:,0])
     sinangles = numpy.sin(zangles)
     cosangles = numpy.cos(zangles)
-    return numpy.c_[cosangles*qarray[:,0]-sinangles*qarray[:,3], cosangles*qarray[:,1]-sinangles*qarray[:,2], cosangles*qarray[:,2]+sinangles*qarray[:,1], cosangles*qarray[:,3]+sinangles*qarray[:,0]],-zangles
+    return numpy.c_[cosangles*qarray[:,0]-sinangles*qarray[:,3], cosangles*qarray[:,1]-sinangles*qarray[:,2], cosangles*qarray[:,2]+sinangles*qarray[:,1], cosangles*qarray[:,3]+sinangles*qarray[:,0]],-2.0*zangles
 
 def quatArrayTMult(qarray,q):
     """ multiplies a Nx4 array of quaternions with a quaternion"""
@@ -299,7 +299,7 @@ class OpenRAVEModel(metaclass.AutoReloader):
                 if not model.load():
                     print 'failed to find cached model %s'%model.getfilename()
                     sys.exit(1)
-                model.show()
+                model.show(options=options)
                 return
             try:
                 model.autogenerate(forcegenerate=False)

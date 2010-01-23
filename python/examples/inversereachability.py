@@ -92,8 +92,9 @@ class InverseReachabilityModel(OpenRAVEModel):
 
     def preprocess(self):
         self.equivalencemeans = array([e[0] for e in self.equivalenceclasses])
-        self.equivalenceweights = array([-0.5/e[1]**2 for e in self.equivalenceclasses])
-        self.equivalenceoffset = array([self.classnormalizationconst(e[1]) for e in self.equivalenceclasses])
+        samplingbandwidth = array([self.rmodel.quatdelta*0.1,self.rmodel.xyzdelta*0.1])
+        self.equivalenceweights = array([-0.5/(e[1]+samplingbandwidth)**2 for e in self.equivalenceclasses])
+        self.equivalenceoffset = array([self.classnormalizationconst(e[1]+samplingbandwidth) for e in self.equivalenceclasses])
 
     def save(self):
         OpenRAVEModel.save(self,(self.equivalenceclasses,self.rotweight))
@@ -188,7 +189,7 @@ class InverseReachabilityModel(OpenRAVEModel):
         bestindex = argmax(logll)
         return self.equivalenceclasses[bestindex],logll[bestindex]
 
-    def computeBaseDistribution(self,Tgrasp,logllthresh=2000.0,zaxis=None):
+    def computeBaseDistribution(self,Tgrasp,logllthresh=2.0,zaxis=None):
         """Return a function of the distribution of possible positions of the robot such that Tgrasp is reachable. Also returns a sampler function"""
         if zaxis is not None:
             raise NotImplementedError('cannot specify a custom zaxis yet')
@@ -196,6 +197,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             Tbaserobot = self.robot.GetTransform()
 
         rotweight = self.rotweight
+        irotweight = 1.0/rotweight
         qbaserobot = quatFromRotationMatrix(Tbaserobot[0:3,0:3])
         qbaserobotnorm = normalizeZRotation(reshape(qbaserobot,(1,4)))[0][0]
         bandwidth = array((rotweight*self.rmodel.quatdelta ,self.rmodel.xyzdelta,self.rmodel.xyzdelta))
@@ -217,7 +219,7 @@ class InverseReachabilityModel(OpenRAVEModel):
         equivalenceclass = self.equivalenceclasses[bestindex]
         points = equivalenceclass[2][:,0:3]+tile(r_[znormangle,posetarget[4:6]],(equivalenceclass[2].shape[0],1))
         bounds = array((numpy.min(points,0)-bandwidth,numpy.max(points,0)+bandwidth))
-        if bounds[0,0]+2*pi > bounds[1,0]:
+        if bounds[1,0]-bounds[0,0] > 2*pi:
            # already covering entire circle, so limit to 2*pi
            bounds[0,0] = -pi
            bounds[1,0] = pi
@@ -241,13 +243,14 @@ class InverseReachabilityModel(OpenRAVEModel):
                 if len(inds) > 0:
                     probs[i] = dot(weights[inds],numpy.exp(dot((points[inds,:]-tile(p[i,:],(len(inds),1)))**2,ibandwidth)))
             return probs
-        def gaussiankernelsampler(N=1):
+        def gaussiankernelsampler(N=1,weight=1.0):
             """samples the distribution and returns a transform as a pose"""
-            samples = random.normal(array([points[bisect.bisect(cumweights,random.rand()),:]  for i in range(N)]),bandwidth)
+            samples = random.normal(array([points[bisect.bisect(cumweights,random.rand()),:]  for i in range(N)]),bandwidth*weight)
+            samples[:,0] *= 0.5*irotweight
             return c_[quatArrayTMult(c_[cos(samples[:,0]),zeros((N,2)),sin(samples[:,0])],qbaserobotnorm),samples[:,1:3],tile(Tbaserobot[2,3],N)]
         return gaussiankerneldensity,gaussiankernelsampler,bounds
 
-    def computeAggregateBaseDistribution(self,Tgrasps,logllthresh=2000.0,zaxis=None):
+    def computeAggregateBaseDistribution(self,Tgrasps,logllthresh=2.0,zaxis=None):
         """Return a function of the distribution of possible positions of the robot such that any grasp from Tgrasps is reachable.
         Also computes a sampler function that returns a random position of the robot along with the index into Tgrasps"""
         if zaxis is not None:
@@ -318,32 +321,39 @@ class InverseReachabilityModel(OpenRAVEModel):
                 sampledgraspindices[i] = graspindices[bisect.bisect(graspindexoffsets,pointindex)-1]
                 sampledpoints[i,:] = points[pointindex,:]
             samples = random.normal(sampledpoints,bandwidth*weight)
+            samples[:,0] *= 0.5*irotweight
             return c_[quatArrayTMult(c_[cos(samples[:,0]),zeros((N,2)),sin(samples[:,0])],qbaserobotnorm),samples[:,1:3],tile(Tbaserobot[2,3],N)],sampledgraspindices
         return gaussiankerneldensity,gaussiankernelsampler,bounds
 
-    def testSampling(heights=None,**kwargs):
-        if heighs is None:
-            heights = arange(0.5,2,0.5)
+    def testSampling(self, heights=None,**kwargs):
+        if heights is None:
+            heights = arange(0,2,0.5)
         with self.robot:
             for height in heights:
                 T = eye(4)
                 T[2,3] = height
                 self.robot.SetTransform(T)
                 densityfn,samplerfn,bounds = self.computeBaseDistribution(eye(4),**kwargs)
-                poses = samplerfn(100)
+                if densityfn is None:
+                    continue
+                poses = samplerfn(100,weight=1e-3)
                 failures = 0
                 for pose in poses:
-                    self.robot.SetTransform(pose,weight=1e-3)
-                    if not self.manip.FindIKSolution(eye(4)):
+                    self.robot.SetTransform(pose)
+                    if not self.manip.FindIKSolution(eye(4),False):
                         print 'pose failed: ',pose
                         failures += 1
                 print 'height %f, failures: %d'%(height,failures)
+    def testClusters(self):
+        """tests that ever configuration in every cluster do have IK solutions"""
+        for equivalenceclass in self.equivalenceclasses:
+            pass
         
     def showBaseDistribution(self,densityfn,bounds,zoffset=0,thresh=1.0,maxprob=None,marginalizeangle=True):
         discretization = [0.1,0.04,0.04]
         A,Y,X = mgrid[bounds[0,0]:bounds[1,0]:discretization[0], bounds[0,2]:bounds[1,2]:discretization[2], bounds[0,1]:bounds[1,1]:discretization[1]]
         N = prod(A.shape)
-        poses = c_[cos(A.flat),zeros((N,2)),sin(A.flat),X.flat,Y.flat,zeros((N,1))]
+        poses = c_[cos(A.flat*0.5),zeros((N,2)),sin(A.flat*0.5),X.flat,Y.flat,zeros((N,1))]
         # split it into chunks to avoid memory overflow
         probs = zeros(len(poses))
         for i in range(0,len(poses),500000):

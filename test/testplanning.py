@@ -96,13 +96,20 @@ def test_inversereachabilityrun():
     gp = graspplanning.GraspPlanning(robot=robot,randomize=False)
     gm = gp.graspables[0][0]
     dests = gp.graspables[0][1]
-    validgrasps,validindices = gm.computeValidGrasps(gm)
+    validgrasps,validindices = gm.computeValidGrasps()
     Tgrasp = gm.getGlobalGraspTransform(validgrasps[0])
     densityfn,samplerfn,bounds = self.computeBaseDistribution(Tgrasp,2000)
     h = self.showBaseDistribution(densityfn,bounds,zoffset=1.0,thresh=1.0)
     densityfn2,samplerfn2,bounds2 = self.computeAggregateBaseDistribution([Tgrasp],2000)
     h2 = self.showBaseDistribution(densityfn2,bounds2,zoffset=3.0,thresh=1.0)
 
+def test_inversereachabilitytest():
+    import inversereachability
+    env = openravepy.Environment()
+    robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
+    env.AddRobot(robot)
+    self = inversereachability.InverseReachabilityModel(robot=robot)
+    self.load()
     self.testSampling()
 
 def test_graspplanning():
