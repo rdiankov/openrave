@@ -122,7 +122,8 @@ class ReachabilityModel(OpenRAVEModel):
             mlab.pipeline.iso_surface(src,contours=[c],opacity=min(1,0.7*c if opacity is None else opacity[i]))
         #mlab.pipeline.volume(mlab.pipeline.scalar_field(reachabilitydensity3d*100))
         if showrobot:
-            v = self.pointscale[0]*self.trimesh.vertices+self.pointscale[1]
+            baseanchor = self.robot.GetJoints()[self.manip.GetArmJoints()[0]].GetAnchor()
+            v = self.pointscale[0]*(self.trimesh.vertices-tile(baseanchor,(len(self.trimesh.vertices),1)))+self.pointscale[1]
             mlab.triangular_mesh(v[:,0]-offset[0],v[:,1]-offset[1],v[:,2]-offset[2],self.trimesh.indices,color=(0.5,0.5,0.5))
         mlab.show()
 
