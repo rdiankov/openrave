@@ -2,8 +2,8 @@ if( UNIX )
   add_definitions("-DLINUX")
 endif()
 
-check_include_file(hash_map HAVE_HASH_MAP_H)
-if( NOT HAVE_HASH_MAP_H )
+check_include_file(ext/hash_map HAVE_EXT_HASH_MAP_H)
+if( HAVE_EXT_HASH_MAP_H )
   add_definitions("-DUSE_EXT_HASH_MAP")
 endif()
 
