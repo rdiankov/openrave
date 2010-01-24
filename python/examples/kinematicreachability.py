@@ -58,50 +58,53 @@ class ReachabilityModel(OpenRAVEModel):
 
     def generate(self,maxradius=None,translationonly=False,xyzdelta=0.04,quatdelta=0.5):
         starttime = time.time()
-        # the axes' anchors are the best way to find th emax radius
-        eeanchor = self.robot.GetJoints()[self.manip.GetArmJoints()[-1]].GetAnchor()
-        eetrans = self.manip.GetEndEffectorTransform()[0:3,3]
-        baseanchor = self.robot.GetJoints()[self.manip.GetArmJoints()[0]].GetAnchor()
-        armlength = sqrt(sum((eetrans-baseanchor)**2))
-        if maxradius is None:
-            maxradius = armlength+0.05
+        with self.robot:
+            self.robot.SetTransform(eye(4))
+            
+            # the axes' anchors are the best way to find th emax radius
+            eeanchor = self.robot.GetJoints()[self.manip.GetArmJoints()[-1]].GetAnchor()
+            eetrans = self.manip.GetEndEffectorTransform()[0:3,3]
+            baseanchor = self.robot.GetJoints()[self.manip.GetArmJoints()[0]].GetAnchor()
+            armlength = sqrt(sum((eetrans-baseanchor)**2))
+            if maxradius is None:
+                maxradius = armlength+0.05
 
-        allpoints,insideinds,shape,self.pointscale = self.UniformlySampleSpace(maxradius,delta=xyzdelta)
-        # select the best sphere level matching quatdelta;
-        # level=0, quatdist = 0.5160220
-        # level=1: quatdist = 0.2523583
-        # level=2: quatdist = 0.120735
-        qarray = SpaceSampler().sampleSO3(level=max(0,int(-0.5-log2(quatdelta))))
-        rotations = [eye(3)] if translationonly else rotationMatrixFromQArray(qarray)
-        self.xyzdelta = xyzdelta
-        self.quatdelta = 0
-        if not translationonly:
-            # for rotations, get the average distance to the nearest rotation
-            neighdists = []
-            for q in qarray:
-                neighdists.append(heapq.nsmallest(2,quatArrayTDist(q,qarray))[1])
-            self.quatdelta = mean(neighdists)
-        
-        print 'radius: %f, xyzsamples: %d, quatdelta: %f, rot samples: %d'%(maxradius,len(insideinds),self.quatdelta,len(rotations))
-        T = eye(4)
-        reachabilitydensity3d = zeros(prod(shape))
-        self.reachabilitystats = []
-        with self.env:
-            for i,ind in enumerate(insideinds):
-                numvalid = 0
-                T[0:3,3] = allpoints[ind]+baseanchor
-                for rotation in rotations:
-                    T[0:3,0:3] = rotation
-                    solutions = self.manip.FindIKSolutions(T,True)
-                    if solutions is not None:
-                        self.reachabilitystats.append(r_[poseFromMatrix(T),len(solutions)])
-                        numvalid += len(solutions)
-                if mod(i,1000)==0:
-                    print '%d/%d'%(i,len(insideinds))
-                reachabilitydensity3d[ind] = numvalid/float(len(rotations))
-        self.reachabilitydensity3d = reshape(reachabilitydensity3d/50.0,shape)
-        self.reachabilitystats = array(self.reachabilitystats)
-        print 'reachability finished in %fs'%(time.time()-starttime)
+            allpoints,insideinds,shape,self.pointscale = self.UniformlySampleSpace(maxradius,delta=xyzdelta)
+            # select the best sphere level matching quatdelta;
+            # level=0, quatdist = 0.5160220
+            # level=1: quatdist = 0.2523583
+            # level=2: quatdist = 0.120735
+            qarray = SpaceSampler().sampleSO3(level=max(0,int(-0.5-log2(quatdelta))))
+            rotations = [eye(3)] if translationonly else rotationMatrixFromQArray(qarray)
+            self.xyzdelta = xyzdelta
+            self.quatdelta = 0
+            if not translationonly:
+                # for rotations, get the average distance to the nearest rotation
+                neighdists = []
+                for q in qarray:
+                    neighdists.append(heapq.nsmallest(2,quatArrayTDist(q,qarray))[1])
+                self.quatdelta = mean(neighdists)
+
+            print 'radius: %f, xyzsamples: %d, quatdelta: %f, rot samples: %d'%(maxradius,len(insideinds),self.quatdelta,len(rotations))
+            T = eye(4)
+            reachabilitydensity3d = zeros(prod(shape))
+            self.reachabilitystats = []
+            with self.env:
+                for i,ind in enumerate(insideinds):
+                    numvalid = 0
+                    T[0:3,3] = allpoints[ind]+baseanchor
+                    for rotation in rotations:
+                        T[0:3,0:3] = rotation
+                        solutions = self.manip.FindIKSolutions(T,True)
+                        if solutions is not None:
+                            self.reachabilitystats.append(r_[poseFromMatrix(T),len(solutions)])
+                            numvalid += len(solutions)
+                    if mod(i,1000)==0:
+                        print '%d/%d'%(i,len(insideinds))
+                    reachabilitydensity3d[ind] = numvalid/float(len(rotations))
+            self.reachabilitydensity3d = reshape(reachabilitydensity3d/50.0,shape)
+            self.reachabilitystats = array(self.reachabilitystats)
+            print 'reachability finished in %fs'%(time.time()-starttime)
 
     def show(self,showrobot=True,contours=[0.01,0.1,0.5,0.9,0.99],opacity=None,figureid=1, xrange=None,options=None):
         mlab.figure(figureid,fgcolor=(0,0,0), bgcolor=(1,1,1),size=(1024,768))
