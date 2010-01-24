@@ -30,7 +30,6 @@ class ReachabilityModel(OpenRAVEModel):
         self.ikmodel = inversekinematics.InverseKinematicsModel(robot=robot)
         if not self.ikmodel.load():
             self.ikmodel.autogenerate()
-        self.trimesh = self.env.Triangulate(self.robot)
         self.reachabilitystats = None
         self.reachabilitydensity3d = None
         self.pointscale = None
@@ -126,8 +125,11 @@ class ReachabilityModel(OpenRAVEModel):
         #mlab.pipeline.volume(mlab.pipeline.scalar_field(reachabilitydensity3d*100))
         if showrobot:
             baseanchor = self.robot.GetJoints()[self.manip.GetArmJoints()[0]].GetAnchor()
-            v = self.pointscale[0]*(self.trimesh.vertices-tile(baseanchor,(len(self.trimesh.vertices),1)))+self.pointscale[1]
-            mlab.triangular_mesh(v[:,0]-offset[0],v[:,1]-offset[1],v[:,2]-offset[2],self.trimesh.indices,color=(0.5,0.5,0.5))
+            with self.robot:
+                self.robot.SetTransform(eye(4))
+                trimesh = self.env.Triangulate(self.robot)
+            v = self.pointscale[0]*(trimesh.vertices-tile(baseanchor,(len(trimesh.vertices),1)))+self.pointscale[1]
+            mlab.triangular_mesh(v[:,0]-offset[0],v[:,1]-offset[1],v[:,2]-offset[2],trimesh.indices,color=(0.5,0.5,0.5))
         mlab.show()
 
     def autogenerate(self,forcegenerate=True):
