@@ -232,7 +232,7 @@ class GraspPlanning(metaclass.AutoReloader):
                     self.robot.ReleaseAllGrabbed()
                 success = self.graspAndPlaceObject(self.graspables[i][0],self.graspables[i][1])
                 print 'success: ',success
-            except e:
+            except planning_error, e:
                 print 'failed to grasp object %s'%self.graspables[i][0].target.GetName()
                 print e
             

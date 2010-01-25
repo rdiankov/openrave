@@ -344,4 +344,4 @@ class planning_error(Exception):
     def __init__(self,parameter):
         self.parameter = parameter
     def __str__(self):
-        return 'OpenRAVE PlanningError: '+repr(self.parameter)
+        return 'openrave planning_error: '+repr(self.parameter)
