@@ -20,6 +20,7 @@ from openravepy.interfaces import BaseManipulation, TaskManipulation
 from openravepy.examples import grasping,inversekinematics
 from numpy import *
 import numpy
+from optparse import OptionParser
 
 class GraspPlanning(metaclass.AutoReloader):
     def __init__(self,robot,randomize=False,dests=None,switchpatterns=None):
@@ -238,10 +239,16 @@ class GraspPlanning(metaclass.AutoReloader):
             
 
 def run():
+    parser = OptionParser(description='Autonomous grasp and manipulation planning example.')
+    parser.add_option('--scene',
+                      action="store",type='string',dest='scene',default='data/lab1.env.xml',
+                      help='Scene file to load')
+    (options, args) = parser.parse_args()
+
     env = Environment()
     try:
         env.SetViewer('qtcoin')
-        env.Load('data/lab1.env.xml')
+        env.Load(options.scene)
         robot = env.GetRobots()[0]
         env.UpdatePublishedBodies()
         time.sleep(0.1) # give time for environment to update
