@@ -110,8 +110,9 @@ class LinkStatisticsModel(OpenRAVEModel):
         anglerange = maxangle-minangle
         angledelta = self.samplingdelta/maxradius
         angles = r_[arange(0,anglerange,angledelta),anglerange]
+        numangles = len(angles)-1
         volumepoints_pow = [volumepoints]
-        maxbit = int(log2(len(angles)))
+        maxbit = int(log2(numangles))
         for i in range(maxbit+1):
             kdtree = pyANN.KDTree(volumepoints_pow[-1])
             R = rotationMatrixFromAxisAngle(axis,angles[2**i])
@@ -123,7 +124,7 @@ class LinkStatisticsModel(OpenRAVEModel):
         sweptvolume = None
         curangle = 0
         for i in range(maxbit+1):
-            if len(angles)&(1<<i):
+            if numangles&(1<<i):
                 R = rotationMatrixFromAxisAngle(axis,curangle)
                 newpoints = dot(volumepoints_pow[i+1],transpose(R))
                 if sweptvolume is None:
@@ -151,7 +152,7 @@ class LinkStatisticsModel(OpenRAVEModel):
         o = m.get_output()
         sweptpoints = array(o.points)
         sweptindices = reshape(array(o.polys.data,'int'),(len(o.polys.data)/4,4))[:,1:4] # first column is usually 3 (for 3 points per tri)
-        #h = self.env.plot3(points=sweptpoints,pointsize=2.0,colors=array((1.0,0,0)))
+        #h1 = self.env.plot3(points=sweptpoints,pointsize=2.0,colors=array((1.0,0,0)))
         #h2 = self.env.drawtrimesh (points=sweptpoints,indices=sweptindices,colors=array((0,0,1,0.5)))
         return sweptpoints,sweptindices
 

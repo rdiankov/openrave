@@ -59,7 +59,7 @@ def test_ikgeneration():
     import inversekinematics
     env = Environment()
     env.SetDebugLevel(DebugLevel.Debug)
-    robot = env.ReadRobotXMLFile('/home/rdiankov/downloads/motoman.robot.xml')#robots/barrettsegway.robot.xml')
+    robot = env.ReadRobotXMLFile('/home/rdiankov/downloads/motoman.robot.xml')#'robots/barrettsegway.robot.xml')
     env.AddRobot(robot)
     self = inversekinematics.InverseKinematicsModel(robot=robot)
     freejoints=None
@@ -93,6 +93,15 @@ def test_inversereachabilitygen():
     quatthresh=0.2
     self.generate(heightthresh=heightthresh2,quatthresh=quatthresh)
 
+def test_inversereachabilitytest():
+    import inversereachability
+    env = openravepy.Environment()
+    robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
+    env.AddRobot(robot)
+    self = inversereachability.InverseReachabilityModel(robot=robot)
+    self.load()
+    self.testSampling()
+
 def test_inversereachabilityrun():
     import inversereachability, graspplanning
     env = Environment()
@@ -111,15 +120,6 @@ def test_inversereachabilityrun():
     h = self.showBaseDistribution(densityfn,bounds,zoffset=1.0,thresh=1.0)
     densityfn2,samplerfn2,bounds2 = self.computeAggregateBaseDistribution([Tgrasp],2000)
     h2 = self.showBaseDistribution(densityfn2,bounds2,zoffset=3.0,thresh=1.0)
-
-def test_inversereachabilitytest():
-    import inversereachability
-    env = openravepy.Environment()
-    robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
-    env.AddRobot(robot)
-    self = inversereachability.InverseReachabilityModel(robot=robot)
-    self.load()
-    self.testSampling()
 
 def test_graspplanning():
     import graspplanning
@@ -258,7 +258,7 @@ def test_linkstatistics():
 
     self.robot.SetTransform(eye(4))
     links = self.robot.GetLinks()
-    ilink = 2
+    ilink = 14
     link = links[ilink]
     linkcd = self.cdmodel.linkgeometry[ilink]
     hulls = []
@@ -274,7 +274,7 @@ def test_linkstatistics():
             hulls.append(self.transformHull(geom.GetTransform(),ComputeCylinderYMesh(radius=geom.GetCylinderRadius(),height=geom.GetCylinderHeight())))
     linkstat = self.computeGeometryStatistics(hulls)
 
-    ijoint = 0
+    ijoint = 3
     joint = self.robot.GetJoints()[0]
     lower,upper = joint.GetLimits()
     volumepoints=linkstat['volumepoints']

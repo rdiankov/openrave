@@ -110,6 +110,15 @@ class ReachabilityModel(OpenRAVEModel):
     def show(self,showrobot=True,contours=[0.01,0.1,0.5,0.9,0.99],opacity=None,figureid=1, xrange=None,options=None):
         mlab.figure(figureid,fgcolor=(0,0,0), bgcolor=(1,1,1),size=(1024,768))
         mlab.clf()
+
+#         minpoint = numpy.min(self.reachabilitystats[:,4:7],0)
+#         maxpoint = numpy.max(self.reachabilitystats[:,4:7],0)
+#         N = ceil(maxpoint-minpoint)/self.xyzdelta
+#         X,Y,Z = mgrid[minpoint[0]:maxpoint[0]:self.xyzdelta,minpoint[1]:maxpoint[1]:self.xyzdelta,minpoint[2]:maxpoint[2]:self.xyzdelta]
+#         kdtree = pyANN.KDTree(self.reachabilitystats[:,4:7])
+#         neighs,dists,kball = kdtree.kFRSearchArray(c_[X.flat,Y.flat,Z.flat],1.5*self.xyzdelta**2,0,self.xyzdelta*0.01)
+#         reachabilitydensity3d = reshape(array(kball,'float'),X.shape)*0.01
+
         if options is not None:
             reachabilitydensity3d = minimum(self.reachabilitydensity3d*options.showscale,1.0)
         else:

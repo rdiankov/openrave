@@ -319,7 +319,7 @@ class OpenRAVEModel(metaclass.AutoReloader):
         raise NotImplementedError()
     def generateFromOptions(self,options):
         return self.generate()
-    def show(self):
+    def show(self,options=None):
         raise NotImplementedError()
     def autogenerate(self,forcegenerate):
         """Caches parameters for most commonly used robots/objects and starts the generation process for them"""

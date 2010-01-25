@@ -242,6 +242,7 @@ public:
             return false;
         string ikname, libraryname;
         sinput >> ikname;
+        std::transform(ikname.begin(), ikname.end(), ikname.begin(), ::tolower);
         if (!getline(sinput, libraryname) )
             return false;
         boost::trim(libraryname);
