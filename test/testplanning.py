@@ -258,7 +258,7 @@ def test_linkstatistics():
 
     self.robot.SetTransform(eye(4))
     links = self.robot.GetLinks()
-    ilink = 1
+    ilink = 2
     link = links[ilink]
     linkcd = self.cdmodel.linkgeometry[ilink]
     hulls = []

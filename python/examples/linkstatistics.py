@@ -158,9 +158,9 @@ class LinkStatisticsModel(OpenRAVEModel):
     def computeGeometryStatistics(self,hulls):
         minpoint = numpy.min([numpy.min(vertices,axis=0) for vertices,indices in hulls],axis=0)
         maxpoint = numpy.max([numpy.max(vertices,axis=0) for vertices,indices in hulls],axis=0)
-        hullplanes = LinkStatisticsModel.computeHullPlanes(hulls)
+        hullplanes = self.computeHullPlanes(hulls)
         X,Y,Z = mgrid[minpoint[0]:maxpoint[0]:self.samplingdelta,minpoint[1]:maxpoint[1]:self.samplingdelta,minpoint[2]:maxpoint[2]:self.samplingdelta]
-        volumepoints = SpaceSampler().sampleR3(self.samplingdelta,maxpoint-minpoint)
+        volumepoints = SpaceSampler().sampleR3(self.samplingdelta,boxdims=maxpoint-minpoint)
         volumepoints[:,0] += minpoint[0]
         volumepoints[:,1] += minpoint[1]
         volumepoints[:,2] += minpoint[2]

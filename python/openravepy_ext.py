@@ -256,7 +256,13 @@ class SpaceSampler(metaclass.AutoReloader):
         maxaxis = numpy.argmax(boxdims)
         meddimdist = numpy.sort(boxdims)[1]
         # convert average distance to number of samples.... do simple 3rd degree polynomial fitting...
-        N = int(numpy.polyval([5.60147111e-01,  -8.77459988e+01,   7.34286834e+03, -1.67779452e+05],meddimdist/averagedist))
+        x = meddimdist/averagedist
+        if x < 25.6:
+            N = int(numpy.polyval([ -3.50181522e-01,   2.70202333e+01,  -3.10449514e+02, 1.07887093e+03],x))
+        elif x < 36.8:
+            N = int(numpy.polyval([  4.39770585e-03,   1.10961031e+01,  -1.40066591e+02, 1.24563464e+03],x))
+        else:
+            N = int(numpy.polyval([5.60147111e-01,  -8.77459988e+01,   7.34286834e+03, -1.67779452e+05],x))
         pts = numpy.zeros((N,3))
         pts[:,0] = numpy.linspace(0.0,meddimdist,N)
         pts[:,1] = meddimdist*numpy.mod(0.5+0.5*numpy.sqrt(numpy.arange(0,5.0*N,5.0)),1.0)
