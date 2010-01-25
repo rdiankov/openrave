@@ -638,6 +638,14 @@ public:
         return joints;
     }
 
+    object GetPassiveJoints()
+    {
+        boost::python::list joints;
+        FOREACHC(itjoint, _pbody->GetPassiveJoints())
+            joints.append(PyJointPtr(new PyJoint(*itjoint, GetEnv())));
+        return joints;
+    }
+
     PyJointPtr GetJoint(const std::string& jointname) const
     {
         KinBody::JointPtr pjoint = _pbody->GetJoint(jointname);
@@ -2930,6 +2938,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetLinks",&PyKinBody::GetLinks)
             .def("GetLink",&PyKinBody::GetLink,args("name"))
             .def("GetJoints",&PyKinBody::GetJoints)
+            .def("GetPassiveJoints",&PyKinBody::GetPassiveJoints)
             .def("GetJoint",&PyKinBody::GetJoint,args("name"))
             .def("GetTransform",&PyKinBody::GetTransform)
             .def("GetBodyTransformations",&PyKinBody::GetBodyTransformations)

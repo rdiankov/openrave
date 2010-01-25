@@ -851,6 +851,7 @@ class IKFastSolver(AutoReloader):
         else:
             self.precision=precision
         alljoints = []
+        self.rigidlyconnectedlinks = []
         if kinbody is not None:
             # this actually requires openravepy to run, but it isn't a good idea to make ikfast dependent on openravepy
             with kinbody.GetEnv():
@@ -870,6 +871,10 @@ class IKFastSolver(AutoReloader):
                         # bodies[0] is the child
                         joint.linkcur,joint.linkbase = joint.linkbase,joint.linkcur
                     alljoints.append(joint)
+                for passivejoint in kinbody.GetPassiveJoints():
+                    lower,upper = passivejoint.GetLimits()
+                    if all(lower==upper):
+                        self.rigidlyconnectedlinks.append((passivejoint.GetFirstAttached().GetIndex(),passivejoint.GetSecondAttached().GetIndex()))
         else:
             if robotfiledata is not None:
                 tokens = robotfiledata.split()
@@ -917,12 +922,12 @@ class IKFastSolver(AutoReloader):
         # find a path of joints between baselink and eelink using BFS
         linkqueue = [[baselink,[]]]
         alljoints = []
+        rigidlyconnectedlinks = self.rigidlyconnectedlinks[:]
         while len(linkqueue)>0:
             link = linkqueue.pop(0)
             if link[0] == eelink:
                 alljoints = link[1]
                 break
-
             attachedjoints = []
             for jointgroup in self.joints:
                 attachedjoints += [joint for joint in jointgroup if joint.linkbase == link[0]]
@@ -932,7 +937,16 @@ class IKFastSolver(AutoReloader):
                     print "discovered circular in joints"
                     return False
                 linkqueue.append([joint.linkcur,path])
-         
+            # examine rigidly connected links
+            for i,connectedlinks in enumerate(rigidlyconnectedlinks):
+                if connectedlinks[0] == link[0]:
+                    linkqueue.append([connectedlinks[1],path])
+                    rigidlyconnectedlinks.pop(i)
+                    break
+                elif connectedlinks[0] == link[0]:
+                    linkqueue.append([connectedlinks[0],path])
+                    rigidlyconnectedlinks.pop(i)
+                    break
         return alljoints
 
     def rodrigues(self, axis, angle):

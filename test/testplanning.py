@@ -59,12 +59,21 @@ def test_ikgeneration():
     import inversekinematics
     env = Environment()
     env.SetDebugLevel(DebugLevel.Debug)
-    robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
+    robot = env.ReadRobotXMLFile('/home/rdiankov/downloads/motoman.robot.xml')#robots/barrettsegway.robot.xml')
     env.AddRobot(robot)
     self = inversekinematics.InverseKinematicsModel(robot=robot)
     freejoints=None
     usedummyjoints=False
+    accuracy = None
+    precision = None
     self.generate(freejoints=freejoints,usedummyjoints=usedummyjoints)
+
+    baselink=self.manip.GetBase().GetIndex()
+    eelink = self.manip.GetEndEffector().GetIndex()
+    solvejoints=solvejoints
+    freeparams=freejoints
+    usedummyjoints=usedummyjoints
+    solvefn=solvefn
 
 def test_reachability():
     import kinematicreachability
