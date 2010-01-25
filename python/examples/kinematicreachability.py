@@ -40,12 +40,14 @@ class ReachabilityModel(OpenRAVEModel):
         return len(self.reachabilitydensity3d) > 0
 
     def load(self):
-        params = OpenRAVEModel.load(self)
-        if params is None:
+        try:
+            params = OpenRAVEModel.load(self)
+            if params is None:
+                return False
+            self.reachabilitystats,self.reachabilitydensity3d,self.pointscale,self.xyzdelta,self.quatdelta = params
+            return self.has()
+        except e:
             return False
-        self.reachabilitystats,self.reachabilitydensity3d,self.pointscale,self.xyzdelta,self.quatdelta = params
-        return self.has()
-
     def save(self):
         OpenRAVEModel.save(self,(self.reachabilitystats,self.reachabilitydensity3d,self.pointscale,self.xyzdelta,self.quatdelta))
 

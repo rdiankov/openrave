@@ -75,13 +75,15 @@ class InverseReachabilityModel(OpenRAVEModel):
         return self.equivalenceclasses is not None and len(self.equivalenceclasses) > 0
 
     def load(self):
-        params = OpenRAVEModel.load(self)
-        if params is None:
+        try:
+            params = OpenRAVEModel.load(self)
+            if params is None:
+                return False
+            self.equivalenceclasses,self.rotweight = params
+            self.preprocess()
+            return self.has()
+        except e:
             return False
-        self.equivalenceclasses,self.rotweight = params
-        self.preprocess()
-        return self.has()
-
     @staticmethod
     def classnormalizationconst(classstd):
         """normalization const for the equation exp(dot(-0.5/bandwidth**2,r_[arccos(x[0])**2,x[1:]**2]))"""

@@ -32,17 +32,20 @@ class ConvexDecompositionModel(OpenRAVEModel):
         return self.linkgeometry is not None and len(self.linkgeometry)==len(self.robot.GetLinks())
 
     def load(self):
-        params = OpenRAVEModel.load(self)
-        if params is None:
+        try:
+            params = OpenRAVEModel.load(self)
+            if params is None:
+                return False
+            self.linkgeometry,self.convexparams = params
+            if not self.has():
+                return False
+            with self.env:
+                for link,linkcd in izip(self.robot.GetLinks(),self.linkgeometry):
+                    for ig,hulls in linkcd:
+                        link.GetGeometries()[ig].SetCollisionMesh(self.generateTrimeshFromHulls(hulls))
+            return True
+        except e:
             return False
-        self.linkgeometry,self.convexparams = params
-        if not self.has():
-            return False
-        with self.env:
-            for link,linkcd in izip(self.robot.GetLinks(),self.linkgeometry):
-                for ig,hulls in linkcd:
-                    link.GetGeometries()[ig].SetCollisionMesh(self.generateTrimeshFromHulls(hulls))
-        return True
 
     def save(self):
         OpenRAVEModel.save(self,(self.linkgeometry,self.convexparams))

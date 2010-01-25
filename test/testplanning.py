@@ -240,7 +240,71 @@ def test_convex():
 def test_linkstatistics():
     import linkstatistics
     from itertools import izip
+    from enthought.tvtk.api import tvtk
     env = openravepy.Environment()
     robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
     env.AddRobot(robot)
     self = linkstatistics.LinkStatisticsModel(robot)
+    #self.load()
+
+    self.robot.SetTransform(eye(4))
+    links = self.robot.GetLinks()
+    ilink = 1
+    link = links[ilink]
+    linkcd = self.cdmodel.linkgeometry[ilink]
+    hulls = []
+    for ig,geom in enumerate(link.GetGeometries()):
+        cdhulls = [cdhull for i,cdhull in linkcd if i==ig]
+        if len(cdhulls) > 0:
+            hulls += [self.transformHull(geom.GetTransform(),hull) for hull in cdhulls[0]]
+        elif geom.GetType() == KinBody.Link.GeomProperties.Type.Box:
+            hulls.append(self.transformHull(geom.GetTransform(),ComputeBoxMesh(geom.GetBoxExtents())))
+        elif geom.GetType() == KinBody.Link.GeomProperties.Type.Sphere:
+            hulls.append(self.transformHull(geom.GetTransform(),ComputeGeodesicSphereMesh(geom.GetSphereRadius(),level=1)))
+        elif geom.GetType() == KinBody.Link.GeomProperties.Type.Cylinder:
+            hulls.append(self.transformHull(geom.GetTransform(),ComputeCylinderYMesh(radius=geom.GetCylinderRadius(),height=geom.GetCylinderHeight())))
+    linkstat = self.computeGeometryStatistics(hulls)
+
+    ijoint = 0
+    joint = self.robot.GetJoints()[0]
+    lower,upper = joint.GetLimits()
+    volumepoints=linkstat['volumepoints']
+    axis=joint.GetAxis(0)
+    minangle=lower[0]
+    maxangle=upper[0]
+    sweptpoints,sweptindices = self.computeSweptVolume(volumepoints=volumepoints,axis=axis,minangle=minangle,maxangle=maxangle)
+
+def test_contours():
+    from enthought.tvtk.api import tvtk
+    from numpy import *
+    import pickle,numpy
+    from openravepy import *
+    env = Environment()
+    env.SetViewer('qtcoin')
+
+    N = 50
+    Nj = N*(0+1j)
+    x, y, z = numpy.mgrid[-10:10:Nj, -10:20:Nj, -10:40:Nj]
+    scalars = x*x + 2.0*y*y + z*z/2.0
+    spacing=array((0.005,0.005,0.005))
+    id = tvtk.ImageData(origin=array((numpy.min(x),numpy.min(y),numpy.min(z))),spacing=spacing,dimensions=scalars.shape)
+    id.point_data.scalars = scalars.ravel()
+
+    x,y,z,t,sweptdata = pickle.load(open('tris.pp','r'))
+    sweptdata = array(sweptdata,'float64')
+    #sweptdata = sweptdata[0:61,0:60,0:60]
+    id = tvtk.ImageData(origin=array((0,0,0)),spacing=array((0.005,0.005,0.005)),dimensions=sweptdata.shape[::-1])
+    id.point_data.scalars = 100.0*sweptdata.ravel()
+
+    m = tvtk.MarchingCubes()
+    m.set_input(id)
+    m.set_value(0,0.5)
+    m.update()
+    o = m.get_output()
+    newpoints = array(o.points)
+
+    h = env.plot3 (points=newpoints,pointsize=2.0,colors=array((1,0,0)))
+
+    indices = array(o.polys.data)
+    indices = array(reshape(indices,(len(indices)/4,4)),'int')
+    h2 = env.drawtrimesh (points=newpoints,indices=indices[:,1:4],colors=array((0,0,1,0.5)))

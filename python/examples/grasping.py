@@ -52,12 +52,15 @@ class GraspingModel(OpenRAVEModel):
         self.graspindices = dict()
 
     def load(self):
-        params = OpenRAVEModel.load(self)
-        if params is None:
-            return False;
-        self.grasps,self.graspindices,friction,avoidlinks,plannername = params
-        self.grasper = Grasper(self.robot,friction,avoidlinks,plannername)
-        return self.has()
+        try:
+            params = OpenRAVEModel.load(self)
+            if params is None:
+                return False;
+            self.grasps,self.graspindices,friction,avoidlinks,plannername = params
+            self.grasper = Grasper(self.robot,friction,avoidlinks,plannername)
+            return self.has()
+        except e:
+            return False
 
     def save(self):
         OpenRAVEModel.save(self,(self.grasps,self.graspindices,self.grasper.friction,self.grasper.avoidlinks,self.grasper.plannername))

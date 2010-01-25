@@ -218,6 +218,63 @@ class SpaceSampler(metaclass.AutoReloader):
             band[:,1] = pfi[i]
             qarray = numpy.r_[qarray,self.hopf2quat(band)]
         return qarray
+    @staticmethod
+    def sampleR3lattice(averagedist,boxdims):
+        """low-discrepancy lattice sampling in using the roots of x^3-3x+1.
+        The samples are evenly distributed with an average distance of averagedist inside the box with extents boxextents.
+        Algorithim from "Geometric Discrepancy: An Illustrated Guide" by Jiri Matousek"""
+        roots = numpy.array([2.8793852415718155,0.65270364466613917,-0.53208888623795614])
+        bases = c_[numpy.ones(3),roots,roots**2]
+        tbases = numpy.transpose(bases)
+        boxextents = 0.5*numpy.array(boxdims)
+        # determine the input bounds, which can be very large and inefficient...
+        bounds = numpy.array(((boxextents[0],boxextents[1],boxextents[2]),
+                              (boxextents[0],boxextents[1],-boxextents[2]),
+                              (boxextents[0],-boxextents[1],boxextents[2]),
+                              (boxextents[0],-boxextents[1],-boxextents[2]),
+                              (-boxextents[0],boxextents[1],boxextents[2]),
+                              (-boxextents[0],boxextents[1],-boxextents[2]),
+                              (-boxextents[0],-boxextents[1],boxextents[2]),
+                              (-boxextents[0],-boxextents[1],-boxextents[2])))
+        inputbounds = numpy.max(dot(bounds,linalg.inv(tbases)),0)
+        scale = averagedist/numpy.sqrt(3.0)
+        X,Y,Z = numpy.mgrid[-inputbounds[0]:inputbounds[0]:scale,-inputbounds[1]:inputbounds[1]:scale,-inputbounds[2]:inputbounds[2]:scale]
+        p = numpy.c_[X.flat,Y.flat,Z.flat]
+        pts = numpy.dot(p,tbases)
+        ptsabs = numpy.abs(pts)
+        newpts = pts[numpy.logical_and(ptsabs[:,0]<=boxextents[0],numpy.logical_and(ptsabs[:,1]<=boxextents[1] ,ptsabs[:,2]<=boxextents[2]))]
+        newpts[:,0] += boxextents[0]
+        newpts[:,1] += boxextents[1]
+        newpts[:,2] += boxextents[2]
+        return newpts
+    @staticmethod
+    def sampleR3(averagedist,boxdims):
+        """low-discrepancy sampling using primes.
+        The samples are evenly distributed with an average distance of averagedist inside the box with extents boxextents.
+        Algorithim from "Geometric Discrepancy: An Illustrated Guide" by Jiri Matousek"""
+        minaxis = numpy.argmin(boxdims)
+        maxaxis = numpy.argmax(boxdims)
+        meddimdist = numpy.sort(boxdims)[1]
+        # convert average distance to number of samples.... do simple 3rd degree polynomial fitting...
+        N = int(numpy.polyval([5.60147111e-01,  -8.77459988e+01,   7.34286834e+03, -1.67779452e+05],meddimdist/averagedist))
+        pts = numpy.zeros((N,3))
+        pts[:,0] = numpy.linspace(0.0,meddimdist,N)
+        pts[:,1] = meddimdist*numpy.mod(0.5+0.5*numpy.sqrt(numpy.arange(0,5.0*N,5.0)),1.0)
+        pts[:,2] = meddimdist*numpy.mod(0.5+numpy.sqrt(numpy.arange(0,13.0*N,13.0)),1.0)
+        if boxdims[minaxis] < meddimdist:
+            pts = pts[pts[:,minaxis]<=2.0*boxdims[minaxis],:]
+        if boxdims[maxaxis] > meddimdist:
+            # have to copy across the max dimension
+            numfullcopies = numpy.floor(boxdims[maxaxis]/meddimdist)
+            oldpts = pts
+            pts = numpy.array(oldpts)
+            for i in range(int(numfullcopies)-1):
+                oldpts[:,maxaxis] += meddimdist
+                pts = numpy.r_[pts,oldpts]
+            if boxdims[maxaxis]/meddimdist > numfullcopies:
+                oldpts[:,maxaxis] += meddimdist
+                pts = numpy.r_[pts,oldpts[oldpts[:,maxaxis]<=boxdims[maxaxis],:]]
+        return pts
 
 class KinBodyStateSaver:
     def __init__(self,body):
