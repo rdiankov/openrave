@@ -136,6 +136,10 @@ def quatArrayTDist(q,qarray):
     """computes the natural distance (Haar measure) for quaternions, q is a 4-element array, qarray is Nx4"""
     return numpy.arccos(numpy.minimum(1.0,numpy.abs(numpy.dot(qarray,q))))
 
+def transformPoints(T,points):
+    """Transforms a Nx3 array of points by an affine matrix"""
+    return numpy.dot(points,numpy.transpose(T[0:3,0:3]))+numpy.tile(T[0:3,3],(len(points),1))
+
 class SpaceSampler(metaclass.AutoReloader):
     def __init__(self):
          self.faceindices = self.facenumr = self.facenump = None

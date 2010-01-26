@@ -90,7 +90,7 @@ class LinkStatisticsModel(OpenRAVEModel):
                     else:
                         raise ValueError('unknown geometry type %s'%str(geom.GetType()))
                 self.linkstats.append(self.computeGeometryStatistics(hulls))
-
+                
             print 'Generating link/joint swept volumes...'
             for linkstat in self.linkstats:
                 linkstat['sweptvolumes'] = []            
@@ -101,9 +101,13 @@ class LinkStatisticsModel(OpenRAVEModel):
                     print 'do not support joints with > 1 DOF'
                 for ilink,linkstat in enumerate(self.linkstats):
                     if self.robot.DoesAffect(ijoint,ilink):
-                        sweptpoints,sweptindices = self.computeSweptVolume(volumepoints=linkstat['volumepoints'],axis=joint.GetAxis(0),minangle=lower[0],maxangle=upper[0])
-                        self.linkstats[ilink]['sweptvolumes'].append((ijoint,sweptpoints,sweptindices))
-
+                        Tlinkjoint = self.robot.GetLinks()[ilink].GetTransform()
+                        Tlinkjoint[0:3,3] -= joint.GetAnchor() # joint anchor should be at center
+                        volumepoints = transformPoints(Tlinkjoint,linkstat['volumepoints'])
+                        sweptpoints,sweptindices = self.computeSweptVolume(volumepoints=volumepoints,axis=-joint.GetAxis(0),minangle=lower[0],maxangle=upper[0])
+                        sweptpointslocal = transformPoints(linalg.inv(Tlinkjoint),sweptpoints)
+                        self.linkstats[ilink]['sweptvolumes'].append((ijoint,sweptpointslocal,sweptindices))
+                        
     def computeSweptVolume(self,volumepoints,axis,minangle,maxangle):
         """Compute the swept volume and mesh of volumepoints around rotated around an axis"""
         maxradius = sqrt(numpy.max(sum(cross(volumepoints,axis)**2,1)))
@@ -113,7 +117,7 @@ class LinkStatisticsModel(OpenRAVEModel):
         numangles = len(angles)-1
         volumepoints_pow = [volumepoints]
         maxbit = int(log2(numangles))
-        for i in range(maxbit+1):
+        for i in range(maxbit):
             kdtree = pyANN.KDTree(volumepoints_pow[-1])
             R = rotationMatrixFromAxisAngle(axis,angles[2**i])
             newpoints = dot(volumepoints_pow[-1],transpose(R))
@@ -126,35 +130,52 @@ class LinkStatisticsModel(OpenRAVEModel):
         for i in range(maxbit+1):
             if numangles&(1<<i):
                 R = rotationMatrixFromAxisAngle(axis,curangle)
-                newpoints = dot(volumepoints_pow[i+1],transpose(R))
+                newpoints = dot(volumepoints_pow[i],transpose(R))
                 if sweptvolume is None:
                     sweptvolume = newpoints
                 else:
                     kdtree = pyANN.KDTree(sweptvolume)
                     neighs,dists,kball = kdtree.kFRSearchArray(newpoints,self.samplingdelta**2,0,self.samplingdelta*0.01)
                     sweptvolume = r_[sweptvolume,newpoints[kball==0]]
-                curangle += angles[1<<i]
+                curangle += angles[2**i]
+        if sweptvolume is None:
+            sweptvolume = volumepoints_pow[0]
+        # transform points by minangle since everything was computed ignoring it
+        sweptvolume = dot(sweptvolume,transpose(rotationMatrixFromAxisAngle(axis,minangle)))
         # compute the isosurface
         minpoint = numpy.min(sweptvolume,0)-2.0*self.samplingdelta
         maxpoint = numpy.max(sweptvolume,0)+2.0*self.samplingdelta
         N = ceil(maxpoint-minpoint)/self.samplingdelta
         X,Y,Z = mgrid[minpoint[0]:maxpoint[0]:self.samplingdelta,minpoint[1]:maxpoint[1]:self.samplingdelta,minpoint[2]:maxpoint[2]:self.samplingdelta]
         kdtree = pyANN.KDTree(sweptvolume)
-        neighthresh = self.samplingdelta
+        neighthresh = 1.1*self.samplingdelta
         neighs,dists,kball = kdtree.kFRSearchArray(c_[X.flat,Y.flat,Z.flat],neighthresh**2,0,self.samplingdelta*0.01)
         sweptdata = reshape(array(kball>0,'float'),X.shape)
-        id = tvtk.ImageData(origin=minpoint,spacing=array((self.samplingdelta,self.samplingdelta,self.samplingdelta)),dimensions=sweptdata.shape[::-1])
+        id = tvtk.ImageData(origin=minpoint[::-1],spacing=array((self.samplingdelta,self.samplingdelta,self.samplingdelta)),dimensions=sweptdata.shape[::-1])
         id.point_data.scalars = sweptdata.ravel()
         m = tvtk.MarchingCubes()
         m.set_input(id)
-        m.set_value(0,0.5)
+        m.set_value(0,0.1)
         m.update()
         o = m.get_output()
         sweptpoints = array(o.points)
         sweptindices = reshape(array(o.polys.data,'int'),(len(o.polys.data)/4,4))[:,1:4] # first column is usually 3 (for 3 points per tri)
         #h1 = self.env.plot3(points=sweptpoints,pointsize=2.0,colors=array((1.0,0,0)))
         #h2 = self.env.drawtrimesh (points=sweptpoints,indices=sweptindices,colors=array((0,0,1,0.5)))
-        return sweptpoints,sweptindices
+        return sweptpoints[:,::-1],sweptindices
+
+    def showSweptVolumes(self):
+        volumecolors = array(((1,0,0,0.5),(0,1,0,0.5),(0,0,1,0.5),(0,1,1,0.5),(1,0,1,0.5),(1,1,0,0.5),(0.5,1,0,0.5),(0.5,0,1,0.5)))
+        for joint in self.robot.GetJoints():
+            print joint.GetJointIndex()
+            handles = [self.env.drawlinestrip(points=vstack((joint.GetAnchor()-2.0*joint.GetAxis(0),joint.GetAnchor()+2.0*joint.GetAxis(0))),linewidth=3.0,colors=array((0.1,0.1,0,1)))]
+            for i,linkstat in enumerate(self.linkstats):
+                sweptvolumes = [sweptvolume[1:] for sweptvolume in linkstat['sweptvolumes'] if sweptvolume[0] == joint.GetJointIndex()]
+                if len(sweptvolumes) > 0:
+                    sweptpointslocal,sweptindices = sweptvolumes[0]
+                    Tlink = self.robot.GetLinks()[i].GetTransform()
+                    handles.append(self.env.drawtrimesh(points=transformPoints(Tlink,sweptpointslocal),indices=sweptindices,colors=volumecolors[mod(i,len(volumecolors))]))
+            raw_input('press any key to go to next: ')
 
     def computeGeometryStatistics(self,hulls):
         minpoint = numpy.min([numpy.min(vertices,axis=0) for vertices,indices in hulls],axis=0)

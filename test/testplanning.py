@@ -14,7 +14,6 @@ from __future__ import with_statement # for python 2.5
 __copyright__ = 'Copyright (C) 2009-2010'
 __license__ = 'Apache License, Version 2.0'
 
-
 # random code that helps with debugging/testing the python interfaces and examples
 # this is not meant to be run by normal users
 from openravepy import *
@@ -59,7 +58,7 @@ def test_ikgeneration():
     import inversekinematics
     env = Environment()
     env.SetDebugLevel(DebugLevel.Debug)
-    robot = env.ReadRobotXMLFile('/home/rdiankov/downloads/motoman.robot.xml')#'robots/barrettsegway.robot.xml')
+    robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
     env.AddRobot(robot)
     self = inversekinematics.InverseKinematicsModel(robot=robot)
     freejoints=None
@@ -100,6 +99,7 @@ def test_inversereachabilitytest():
     env.AddRobot(robot)
     self = inversereachability.InverseReachabilityModel(robot=robot)
     self.load()
+    self.robot.SetTransform(eye(4))
     self.testSampling()
 
 def test_inversereachabilityrun():
@@ -254,7 +254,7 @@ def test_linkstatistics():
     robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
     env.AddRobot(robot)
     self = linkstatistics.LinkStatisticsModel(robot)
-    #self.load()
+    self.load()
 
     self.robot.SetTransform(eye(4))
     links = self.robot.GetLinks()
@@ -277,10 +277,13 @@ def test_linkstatistics():
     ijoint = 3
     joint = self.robot.GetJoints()[0]
     lower,upper = joint.GetLimits()
-    volumepoints=linkstat['volumepoints']
     axis=joint.GetAxis(0)
     minangle=lower[0]
     maxangle=upper[0]
+    Tlinkjoint = self.robot.GetLinkts()[ilink].GetTransform()
+    Tlinkjoint[0:3,3] -= joint.GetAnchor() # joint anchor should be at center
+    volumepoints = dot(linkstat['volumepoints'],transpose(Tlink[0:3,0:3]))
+    volumepoints += tile(Tlink[0:3,3],(len(volumepoints),1))                    
     sweptpoints,sweptindices = self.computeSweptVolume(volumepoints=volumepoints,axis=axis,minangle=minangle,maxangle=maxangle)
 
 def test_contours():

@@ -348,8 +348,21 @@ class InverseReachabilityModel(OpenRAVEModel):
                 print 'height %f, failures: %d'%(height,failures)
     def testClusters(self):
         """tests that ever configuration in every cluster do have IK solutions"""
-        for equivalenceclass in self.equivalenceclasses:
-            pass
+        with self.robot:
+            self.robot.SetTransform(eye(4))
+            for equivalenceclass in self.equivalenceclasses:
+                Tbase = matrixFromQuat(equivalenceclass[0][0:4])
+                Tbase[2,3] = equivalenceclass[0][4]
+                failed = 0
+                for sample in equivalenceclass[2]:
+                    Tnew = matrixFromAxisAngle([0,0,1],sample[0])
+                    Tnew[0:2,3] = sample[1:3]
+                    T = dot(Tnew,Tbase)
+                    self.robot.SetTransform(T)
+                    solution = self.manip.FindIKSolution(eye(4),False)
+                    if solution is None:
+                        failed += 1
+                print 'failed: ', failed
         
     def showBaseDistribution(self,densityfn,bounds,zoffset=0,thresh=1.0,maxprob=None,marginalizeangle=True):
         discretization = [0.1,0.04,0.04]

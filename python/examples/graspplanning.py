@@ -236,7 +236,6 @@ class GraspPlanning(metaclass.AutoReloader):
             except planning_error, e:
                 print 'failed to grasp object %s'%self.graspables[i][0].target.GetName()
                 print e
-            
 
 def run():
     parser = OptionParser(description='Autonomous grasp and manipulation planning example.')
