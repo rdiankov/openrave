@@ -46,9 +46,16 @@ class ConstraintPlanning(metaclass.AutoReloader):
         self.robot.Grab(target)
         print 'moving mug without XY rotation'
         while True:
-            xyconstraint = random.randint(2)
-            constraintfreedoms = [1,1,0,xyconstraint,xyconstraint,0]
+            xyzconstraints = random.permutation(3)[0:2]
+            constraintfreedoms = array([1,1,0,1,1,1])
+            constraintfreedoms[3+xyzconstraints] = 0
             print 'planning with freedoms: ',constraintfreedoms
+            Tplane = eye(4)
+            Tplane[0:3,0:2] = Tplane[0:3,xyzconstraints]
+            Tplane[0:3,2] = cross(Tplane[0:3,0],Tplane[0:3,1])
+            Tplane[0:3,3] = self.manip.GetEndEffectorTransform()[0:3,3]
+            hplane = self.envreal.drawplane(transform=Tplane,extents=[1.0,1.0],texture=reshape([1,1,0.5,0.5],(1,1,4)))
+
             constraintmatrix = eye(4)
             constrainterrorthresh = 0.02
             for iter in range(5):
