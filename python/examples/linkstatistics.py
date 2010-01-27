@@ -35,6 +35,7 @@ class LinkStatisticsModel(OpenRAVEModel):
         if not self.cdmodel.load():
             self.cdmodel.autogenerate()
         self.linkstats = None
+        self.jointvolumes = None
         self.samplingdelta = 0.005
 
     def has(self):
@@ -45,12 +46,12 @@ class LinkStatisticsModel(OpenRAVEModel):
             params = OpenRAVEModel.load(self)
             if params is None:
                 return False
-            self.linkstats,self.samplingdelta = params
+            self.linkstats,self.jointvolumes,self.samplingdelta = params
             return self.has()
         except e:
             return False
     def save(self):
-        OpenRAVEModel.save(self,(self.linkstats,self.samplingdelta))
+        OpenRAVEModel.save(self,(self.linkstats,self.jointvolumes,self.samplingdelta))
 
     def getfilename(self):
         return os.path.join(OpenRAVEModel.getfilename(self),'linkstatistics.pp')
@@ -60,14 +61,15 @@ class LinkStatisticsModel(OpenRAVEModel):
         self.generate(**args)
     def autogenerate(self,forcegenerate=True):
         if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531':
-            self.generate()
+            self.generate(samplingdelta=0.008)
         else:
             if not forcegenerate:
                 raise ValueError('failed to find auto-generation parameters')
             self.generate()
             raise ValueError('could not auto-generate reachability for %s:%s'%(self.robot.GetName()))
         self.save()
-    def generate(self,**kwargs):
+    def generate(self,samplingdelta=0.005,**kwargs):
+        self.samplingdelta=samplingdelta
         with self.robot:
             self.robot.SetTransform(eye(4))
             # compute the convex hulls for every link
@@ -92,21 +94,40 @@ class LinkStatisticsModel(OpenRAVEModel):
                 self.linkstats.append(self.computeGeometryStatistics(hulls))
                 
             print 'Generating link/joint swept volumes...'
+            self.jointvolumes = [None]*len(self.robot.GetJoints())
+            linkvolumepoints = []
             for linkstat in self.linkstats:
-                linkstat['sweptvolumes'] = []            
-            for ijoint,joint in enumerate(self.robot.GetJoints()):
-                print 'joint %d/%d'%(ijoint,len(self.robot.GetJoints()))
+                linkstat['sweptvolumes'] = []
+                linkvolumepoints.append(linkstat['volumepoints'])
+            # go through all the joints in reverse hierarchical order
+            for joint in self.robot.GetDependencyOrderedJoints()[::-1]:
+                print 'joint %d'%joint.GetJointIndex()
+                #if joint.GetJointIndex() == 5: break
                 lower,upper = joint.GetLimits()
                 if joint.GetDOF() > 1:
                     print 'do not support joints with > 1 DOF'
-                for ilink,linkstat in enumerate(self.linkstats):
-                    if self.robot.DoesAffect(ijoint,ilink):
-                        Tlinkjoint = self.robot.GetLinks()[ilink].GetTransform()
+                jointvolume = zeros((0,3))
+                # note that everything is offset with respect to the lower limit now
+                self.robot.SetJointValues(lower,range(joint.GetDOFIndex(),joint.GetDOFIndex()+joint.GetDOF()))
+                for ilink,link in enumerate(self.robot.GetLinks()):
+                    if self.robot.DoesAffect(joint.GetJointIndex(),ilink):
+                        Tlinkjoint = link.GetTransform()
                         Tlinkjoint[0:3,3] -= joint.GetAnchor() # joint anchor should be at center
-                        volumepoints = transformPoints(Tlinkjoint,linkstat['volumepoints'])
-                        sweptpoints,sweptindices = self.computeSweptVolume(volumepoints=volumepoints,axis=-joint.GetAxis(0),minangle=lower[0],maxangle=upper[0])
+                        volumepoints = transformPoints(Tlinkjoint,linkvolumepoints[ilink])
+                        sweptpoints,sweptindices = self.computeSweptVolume(volumepoints=volumepoints,axis=-joint.GetAxis(0),minangle=0,maxangle=upper[0]-lower[0])
                         sweptpointslocal = transformPoints(linalg.inv(Tlinkjoint),sweptpoints)
-                        self.linkstats[ilink]['sweptvolumes'].append((ijoint,sweptpointslocal,sweptindices))
+                        linkvolumepoints[ilink] = sweptpointslocal # update
+                        self.linkstats[ilink]['sweptvolumes'].append((joint.GetJointIndex(),sweptpointslocal,sweptindices))
+                        # add to the joint volume
+                        if len(jointvolume) > 2:
+                            kdtree = pyANN.KDTree(jointvolume)
+                            neighs,dists,kball = kdtree.kFRSearchArray(sweptpoints,self.samplingdelta**2,0,self.samplingdelta*0.01)
+                            jointvolume = r_[jointvolume,sweptpoints[kball==0]]
+                        else:
+                            jointvolume = r_[jointvolume,sweptpoints]
+                # rotate jointvolume so that -joint.GetAxis(0) matches with the z-axis
+                R = rotationMatrixFromQuat(quatRotateDirection(-joint.GetAxis(0),[0,0,1]))
+                self.jointvolumes[joint.GetJointIndex()] = dot(jointvolume,transpose(R))
                         
     def computeSweptVolume(self,volumepoints,axis,minangle,maxangle):
         """Compute the swept volume and mesh of volumepoints around rotated around an axis"""
@@ -164,17 +185,28 @@ class LinkStatisticsModel(OpenRAVEModel):
         #h2 = self.env.drawtrimesh (points=sweptpoints,indices=sweptindices,colors=array((0,0,1,0.5)))
         return sweptpoints[:,::-1],sweptindices
 
-    def showSweptVolumes(self):
+    def showSweptVolumes(self,ilink=None):
         volumecolors = array(((1,0,0,0.5),(0,1,0,0.5),(0,0,1,0.5),(0,1,1,0.5),(1,0,1,0.5),(1,1,0,0.5),(0.5,1,0,0.5),(0.5,0,1,0.5)))
         for joint in self.robot.GetJoints():
             print joint.GetJointIndex()
             handles = [self.env.drawlinestrip(points=vstack((joint.GetAnchor()-2.0*joint.GetAxis(0),joint.GetAnchor()+2.0*joint.GetAxis(0))),linewidth=3.0,colors=array((0.1,0.1,0,1)))]
-            for i,linkstat in enumerate(self.linkstats):
+            linkstats = enumerate(self.linkstats) if ilink is None else [(ilink,self.linkstats[ilink])]
+            for i,linkstat in linkstats:
                 sweptvolumes = [sweptvolume[1:] for sweptvolume in linkstat['sweptvolumes'] if sweptvolume[0] == joint.GetJointIndex()]
                 if len(sweptvolumes) > 0:
                     sweptpointslocal,sweptindices = sweptvolumes[0]
                     Tlink = self.robot.GetLinks()[i].GetTransform()
                     handles.append(self.env.drawtrimesh(points=transformPoints(Tlink,sweptpointslocal),indices=sweptindices,colors=volumecolors[mod(i,len(volumecolors))]))
+            raw_input('press any key to go to next: ')
+    def showJointSweptVolumes(self):
+        volumecolors = array(((1,0,0,0.5),(0,1,0,0.5),(0,0,1,0.5),(0,1,1,0.5),(1,0,1,0.5),(1,1,0,0.5),(0.5,1,0,0.5),(0.5,0,1,0.5)))
+        for joint in self.robot.GetJoints():
+            print joint.GetJointIndex()
+            R1 = rotationMatrixFromAxisAngle(-joint.GetAxis(0),joint.GetValues()[0]-joint.GetLimits()[0][0])
+            R2 = rotationMatrixFromQuat(quatRotateDirection([0,0,1],-joint.GetAxis(0)))
+            jointvolume = dot(self.jointvolumes[joint.GetJointIndex()],transpose(dot(R1,R2)))
+            jointvolume += tile(joint.GetAnchor(),(len(jointvolume),1))
+            handle = self.env.plot3(points=jointvolume,pointsize=2.0,colors=array((0,0,1,0.01)))
             raw_input('press any key to go to next: ')
 
     def computeGeometryStatistics(self,hulls):

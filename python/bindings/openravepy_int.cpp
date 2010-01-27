@@ -646,6 +646,14 @@ public:
         return joints;
     }
 
+    object GetDependencyOrderedJoints()
+    {
+        boost::python::list joints;
+        FOREACHC(itjoint, _pbody->GetDependencyOrderedJoints())
+            joints.append(PyJointPtr(new PyJoint(*itjoint, GetEnv())));
+        return joints;
+    }
+
     PyJointPtr GetJoint(const std::string& jointname) const
     {
         KinBody::JointPtr pjoint = _pbody->GetJoint(jointname);
@@ -2774,6 +2782,27 @@ object invertPoses(object o)
     return static_cast<numeric::array>(handle<>(pytrans));
 }
 
+object quatRotateDirection(object source, object target)
+{
+    Vector vsource = ExtractVector3(source), vtarget = ExtractVector3(target);
+    Vector rottodirection;
+    cross3(rottodirection, vsource,vtarget);
+    dReal fsin = RaveSqrt(rottodirection.lengthsqr3());
+    dReal fcos = dot3(vsource, vtarget);
+    Transform torient;
+    if( fsin > 1e-6f ) {
+        torient.rotfromaxisangle(rottodirection*(1/fsin), RaveAtan2(fsin, fcos));
+    }
+    else if( fcos < 0 ) {
+        // hand is flipped 180, rotate around x axis
+        rottodirection = Vector(1,0,0);
+        rottodirection -= vsource * dot3(vsource, rottodirection);
+        rottodirection.normalize3();
+        torient.rotfromaxisangle(rottodirection, RaveAtan2(fsin, fcos));
+    }
+    return toPyVector4(torient.rot);
+}
+
 string matrixSerialization(object o)
 {
     stringstream ss; ss << ExtractTransformMatrix(o);
@@ -2939,6 +2968,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetLink",&PyKinBody::GetLink,args("name"))
             .def("GetJoints",&PyKinBody::GetJoints)
             .def("GetPassiveJoints",&PyKinBody::GetPassiveJoints)
+            .def("GetDependencyOrderedJoints",&PyKinBody::GetDependencyOrderedJoints)
             .def("GetJoint",&PyKinBody::GetJoint,args("name"))
             .def("GetTransform",&PyKinBody::GetTransform)
             .def("GetBodyTransformations",&PyKinBody::GetBodyTransformations)
@@ -3482,6 +3512,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
     def("poseFromMatrix",poseFromMatrix, args("transform"), "Converts a 4x4 matrix to a 7 element quaternion+translation representation");
     def("poseFromMatrices",poseFromMatrices, args("transforms"), "Converts an array/list of 4x4 matrices to a Nx7 array where each row is quaternion+translation representation");
     def("invertPoses",invertPoses,args("poses"), "Inverts a Nx7 array of poses where first 4 columns are the quaternion and last 3 are the translation components");
+    def("quatRotateDirection",quatRotateDirection,args("sourcedir,targetdir"),"Returns the minimal quaternion rotation that rotates sourcedir into targetdir");
     def("matrixSerialization",matrixSerialization,args("matrix"),"Serializes a transformation into a string representing a 3x4 matrix");
     def("poseSerialization",poseSerialization, args("pose"), "Serializes a transformation into a string representing a quaternion with translation");
     def("openravepyCompilerVersion",openravepyCompilerVersion,"Returns the compiler version that openravepy_int was compiled with");

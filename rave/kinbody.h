@@ -461,8 +461,16 @@ public:
     ///< \return a vector that stores the start dof indices of each joint joints, size() is equal to GetJoints().size()
     virtual const std::vector<int>& GetJointIndices() const { return _vecJointIndices; }
 
+    /// returns the joints making up the degrees of freedom in the user-defined order
     const std::vector<JointPtr>& GetJoints() const { return _vecjoints; }
+    /// returns the passive joints, order does not matter
     const std::vector<JointPtr>& GetPassiveJoints() const { return _vecPassiveJoints; }
+
+    /// Returns the joints in hierarchical order starting at the base link such that the first joints affect the later ones.
+    /// In the case of closed loops, the joints are returned in the order they are defined in _vecjoints.
+    /// \param vjointindices a set of joint indices to be filled with the correct order
+    const std::vector<JointPtr>& GetDependencyOrderedJoints() { return _vDependencyOrderedJoints; }
+
     const std::vector<LinkPtr>& GetLinks() const { return _veclinks; }
 
 	/// return a pointer to the link with the given name
@@ -638,7 +646,8 @@ protected:
 
     std::string name; ///< name of body
 
-    std::vector<JointPtr> _vecjoints;     ///< all the joints of the body, joints contain limits, torques, and velocities
+    std::vector<JointPtr> _vecjoints;     ///< all the joints of the body, joints contain limits, torques, and velocities (the order of these joints dictate the order of the degrees of freedom)
+    std::vector<JointPtr> _vDependencyOrderedJoints; ///< all joints of the body ordered on how they affect the joint hierarchy
     std::vector<LinkPtr> _veclinks;       ///< children, unlike render hierarchies, transformations
                                         ///< of the children are with respect to the global coordinate system
     std::vector<int> _vecJointIndices;  ///< cached start indices, indexed by joint indices

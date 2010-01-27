@@ -746,6 +746,7 @@ void KinBody::Destroy()
 
     _veclinks.clear();
     _vecjoints.clear();
+    _vDependencyOrderedJoints.clear();
     _vecPassiveJoints.clear();
     _vecJointIndices.clear();
     _vecJointWeights.clear();
@@ -1828,11 +1829,11 @@ void KinBody::ComputeJointHierarchy()
             ljoints.push_back(JOINTPAIR(_vecPassiveJoints[i], -1));
 
         list<JOINTPAIR>::iterator itjoint;
+        _vDependencyOrderedJoints.resize(0);
 
         // iterate through all the joints and keep track of which joint affects which link
         while(ljoints.size() > 0) {
-
-            int cursize = ljoints.size();
+            size_t cursize = ljoints.size();
 
             itjoint = ljoints.begin();
             while(itjoint != ljoints.end()) {
@@ -1869,7 +1870,8 @@ void KinBody::ComputeJointHierarchy()
                             bodies[0]->userdata = 1;
                     }
 
-                    if( bDelete ) itjoint = ljoints.erase(itjoint);
+                    if( bDelete )
+                        itjoint = ljoints.erase(itjoint);
                     else ++itjoint;
                     continue;
                 }
@@ -1920,11 +1922,16 @@ void KinBody::ComputeJointHierarchy()
                     }
                 }
 
-                if( bDelete ) itjoint = ljoints.erase(itjoint);
+                if( bDelete ) {
+                    JointPtr pjoint = bIsPassive ? _vecjoints[itjoint->first->GetMimicJointIndex()] : itjoint->first;
+                    if( find(_vDependencyOrderedJoints.begin(),_vDependencyOrderedJoints.end(),pjoint) == _vDependencyOrderedJoints.end() )
+                        _vDependencyOrderedJoints.push_back(pjoint);
+                    itjoint = ljoints.erase(itjoint);
+                }
                 else ++itjoint;
             }
 
-            if( cursize == (int)ljoints.size() ) {
+            if( cursize == ljoints.size() ) {
                 RAVELOG_ERRORA(str(boost::format("Cannot compute joint hierarchy for number of joints %d! Part of robot might not be moveable\n")%_vecjoints.size()));
                 break;
             }

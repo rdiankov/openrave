@@ -307,7 +307,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             # transform the equivalence class to the global coord system and create a kdtree for faster retrieval
             equivalenceclass = self.equivalenceclasses[bestindex]
             # transform points by the grasp pose
-            newpoints = c_[equivalenceclass[2][:,0]+znormangle,dot(equivalenceclass[2][:,1:3],transpose(rotationMatrixFromAxisAngle([0,0,1],znormangle)[0:2,0:2])) + tile(posetarget[4:6], (len(points),1))]
+            newpoints = c_[equivalenceclass[2][:,0]+znormangle,dot(equivalenceclass[2][:,1:3],transpose(rotationMatrixFromAxisAngle([0,0,1],znormangle)[0:2,0:2])) + tile(posetarget[4:6], (len(equivalenceclass[2]),1))]
             points = r_[points,newpoints]
             weights = r_[weights,equivalenceclass[2][:,3]*normalizationconst]
 
