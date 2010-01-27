@@ -235,6 +235,23 @@ class GraspingModel(OpenRAVEModel):
                     return validgrasps,validindices
             return validgrasps,validindices
 
+    def validGraspIterator(self,startindex=0,checkcollision=True,checkik=True):
+        """Returns an iterator for valid grasps that satisfy certain conditions."""
+        validgrasps = []
+        validindices = []
+        for i in range(startindex,len(self.grasps)):
+            grasp = self.grasps[i]
+            with KinBodyStateSaver(self.robot):
+                self.setPreshape(grasp)
+                Tglobalgrasp = self.getGlobalGraspTransform(grasp)
+                if checkik:
+                    if self.manip.FindIKSolution(Tglobalgrasp,True) is None:
+                        continue
+                elif checkcollision:
+                    if self.manip.CheckEndEffectorCollision(Tglobalgrasp):
+                        continue
+            yield grasp,i
+
     def computeBoxApproachRays(self,stepsize=0.02):
         with self.target:
             self.target.SetTransform(eye(4))

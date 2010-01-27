@@ -61,7 +61,7 @@ class LinkStatisticsModel(OpenRAVEModel):
         self.generate(**args)
     def autogenerate(self,forcegenerate=True):
         if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531':
-            self.generate(samplingdelta=0.009)
+            self.generate(samplingdelta=0.01)
         else:
             if not forcegenerate:
                 raise ValueError('failed to find auto-generation parameters')
@@ -102,7 +102,7 @@ class LinkStatisticsModel(OpenRAVEModel):
             # go through all the joints in reverse hierarchical order
             for joint in self.robot.GetDependencyOrderedJoints()[::-1]:
                 print 'joint %d'%joint.GetJointIndex()
-                #if joint.GetJointIndex() == 5: break
+                if joint.GetJointIndex() == 5: break
                 lower,upper = joint.GetLimits()
                 if joint.GetDOF() > 1:
                     print 'do not support joints with > 1 DOF'
@@ -111,6 +111,7 @@ class LinkStatisticsModel(OpenRAVEModel):
                 self.robot.SetJointValues(lower,range(joint.GetDOFIndex(),joint.GetDOFIndex()+joint.GetDOF()))
                 for ilink,link in enumerate(self.robot.GetLinks()):
                     if self.robot.DoesAffect(joint.GetJointIndex(),ilink):
+                        print ilink
                         Tlinkjoint = link.GetTransform()
                         Tlinkjoint[0:3,3] -= joint.GetAnchor() # joint anchor should be at center
                         volumepoints = transformPoints(Tlinkjoint,linkvolumepoints[ilink])
@@ -123,6 +124,7 @@ class LinkStatisticsModel(OpenRAVEModel):
                             kdtree = pyANN.KDTree(jointvolume)
                             neighs,dists,kball = kdtree.kFRSearchArray(sweptpoints,self.samplingdelta**2,0,self.samplingdelta*0.01)
                             jointvolume = r_[jointvolume,sweptpoints[kball==0]]
+                            del kdtree
                         else:
                             jointvolume = r_[jointvolume,sweptpoints]
                 # rotate jointvolume so that -joint.GetAxis(0) matches with the z-axis
@@ -161,18 +163,17 @@ class LinkStatisticsModel(OpenRAVEModel):
                 curangle += angles[2**i]
         if sweptvolume is None:
             sweptvolume = volumepoints_pow[0]
+        del volumepoints_pow
         # transform points by minangle since everything was computed ignoring it
         sweptvolume = dot(sweptvolume,transpose(rotationMatrixFromAxisAngle(axis,minangle)))
         # compute the isosurface
         minpoint = numpy.min(sweptvolume,0)-2.0*self.samplingdelta
         maxpoint = numpy.max(sweptvolume,0)+2.0*self.samplingdelta
-        N = ceil(maxpoint-minpoint)/self.samplingdelta
-        X,Y,Z = mgrid[minpoint[0]:maxpoint[0]:self.samplingdelta,minpoint[1]:maxpoint[1]:self.samplingdelta,minpoint[2]:maxpoint[2]:self.samplingdelta]
-        kdtree = pyANN.KDTree(sweptvolume)
-        neighthresh = 1.1*self.samplingdelta
-        neighs,dists,kball = kdtree.kFRSearchArray(c_[X.flat,Y.flat,Z.flat],neighthresh**2,0,self.samplingdelta*0.01)
-        sweptdata = reshape(array(kball>0,'float'),X.shape)
-        id = tvtk.ImageData(origin=minpoint[::-1],spacing=array((self.samplingdelta,self.samplingdelta,self.samplingdelta)),dimensions=sweptdata.shape[::-1])
+        volumeshape = array(ceil((maxpoint-minpoint)/self.samplingdelta),'int')
+        indices = array((sweptvolume-tile(minpoint,(len(sweptvolume),1)))*(1.0/self.samplingdelta)+0.5,int)
+        sweptdata = zeros(prod(volumeshape))
+        sweptdata[indices[:,0]+volumeshape[0]*(indices[:,1]+volumeshape[1]*indices[:,2])] = 1
+        id = tvtk.ImageData(origin=minpoint,spacing=array((self.samplingdelta,self.samplingdelta,self.samplingdelta)),dimensions=volumeshape)
         id.point_data.scalars = sweptdata.ravel()
         m = tvtk.MarchingCubes()
         m.set_input(id)
@@ -183,7 +184,7 @@ class LinkStatisticsModel(OpenRAVEModel):
         sweptindices = reshape(array(o.polys.data,'int'),(len(o.polys.data)/4,4))[:,1:4] # first column is usually 3 (for 3 points per tri)
         #h1 = self.env.plot3(points=sweptpoints,pointsize=2.0,colors=array((1.0,0,0)))
         #h2 = self.env.drawtrimesh (points=sweptpoints,indices=sweptindices,colors=array((0,0,1,0.5)))
-        return sweptpoints[:,::-1],sweptindices
+        return sweptpoints,sweptindices
 
     def showSweptVolumes(self,ilink=None):
         volumecolors = array(((1,0,0,0.5),(0,1,0,0.5),(0,0,1,0.5),(0,1,1,0.5),(1,0,1,0.5),(1,1,0,0.5),(0.5,1,0,0.5),(0.5,0,1,0.5)))
@@ -202,9 +203,8 @@ class LinkStatisticsModel(OpenRAVEModel):
         volumecolors = array(((1,0,0,0.5),(0,1,0,0.5),(0,0,1,0.5),(0,1,1,0.5),(1,0,1,0.5),(1,1,0,0.5),(0.5,1,0,0.5),(0.5,0,1,0.5)))
         for joint in self.robot.GetJoints():
             print joint.GetJointIndex()
-            R1 = rotationMatrixFromAxisAngle(-joint.GetAxis(0),joint.GetValues()[0]-joint.GetLimits()[0][0])
-            R2 = rotationMatrixFromQuat(quatRotateDirection([0,0,1],-joint.GetAxis(0)))
-            jointvolume = dot(self.jointvolumes[joint.GetJointIndex()],transpose(dot(R1,R2)))
+            Rinv = rotationMatrixFromQuat(quatRotateDirection([0,0,1],-joint.GetAxis(0)))
+            jointvolume = dot(self.jointvolumes[joint.GetJointIndex()],transpose(Rinv))
             jointvolume += tile(joint.GetAnchor(),(len(jointvolume),1))
             handle = self.env.plot3(points=jointvolume,pointsize=2.0,colors=array((0,0,1,0.01)))
             raw_input('press any key to go to next: ')

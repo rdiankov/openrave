@@ -208,14 +208,15 @@ class InverseReachabilityModel(OpenRAVEModel):
             raise NotImplementedError('cannot specify a custom zaxis yet')
         with self.env:
             Tbase = self.manip.GetBase().GetTransform()
-
+            poserobot = poseFromMatrix(dot(self.robot.GetTransform(),linalg.inv(Tbase)))
+        
         rotweight = self.rotweight
         irotweight = 1.0/rotweight
         posebase = poseFromMatrix(Tbase)
         qbaserobotnorm,zbaseangle = normalizeZRotation(reshape(posebase[0:4],(1,4)))
         if quatArrayTDist([1.0,0,0,0],qbaserobotnorm) > 0.05:
             raise planning_error('out of plane rotations for base are not supported')
-
+        
         bandwidth = array((rotweight*self.quatdelta ,self.xyzdelta,self.xyzdelta))
         ibandwidth=-0.5/bandwidth**2
         normalizationconst = (1.0/sqrt(pi**3*prod(bandwidth)))
@@ -266,7 +267,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             """samples the distribution and returns a transform as a pose"""
             samples = random.normal(array([points[bisect.bisect(cumweights,random.rand()),:]  for i in range(N)]),bandwidth*weight)
             samples[:,0] *= 0.5*irotweight
-            return c_[cos(samples[:,0]),zeros((N,2)),sin(samples[:,0]),samples[:,1:3],tile(Tbase[2,3],N)]
+            return poseMultArrayT(poserobot,c_[cos(samples[:,0]),zeros((N,2)),sin(samples[:,0]),samples[:,1:3],tile(Tbase[2,3],N)])
         return gaussiankerneldensity,gaussiankernelsampler,bounds
 
     def computeAggregateBaseDistribution(self,Tgrasps,logllthresh=2.0,zaxis=None):
@@ -276,6 +277,8 @@ class InverseReachabilityModel(OpenRAVEModel):
             raise NotImplementedError('cannot specify a custom zaxis yet')
         with self.env:
             Tbase = self.manip.GetBase().GetTransform()
+            poserobot = poseFromMatrix(dot(self.robot.GetTransform(),linalg.inv(Tbase)))
+        
         rotweight = self.rotweight
         irotweight = 1.0/rotweight
         posebase = poseFromMatrix(Tbase)
@@ -294,7 +297,7 @@ class InverseReachabilityModel(OpenRAVEModel):
         weights = array(())
         graspindices = []
         graspindexoffsets = []
-        for i,Tgrasp in enumerate(Tgrasps):
+        for Tgrasp,graspindex in Tgrasps:
             posetarget = poseFromMatrix(dot(linalg.inv(Tbase),Tgrasp))
             qnormalized,znormangle = normalizeZRotation(reshape(posetarget[0:4],(1,4)))
             # find the closest cluster
@@ -302,7 +305,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             bestindex = argmax(logll)
             if logll[bestindex] <logllthresh:
                 continue
-            graspindices.append(i)
+            graspindices.append(graspindex)
             graspindexoffsets.append(len(points))
             # transform the equivalence class to the global coord system and create a kdtree for faster retrieval
             equivalenceclass = self.equivalenceclasses[bestindex]
@@ -350,8 +353,69 @@ class InverseReachabilityModel(OpenRAVEModel):
                 sampledpoints[i,:] = points[pointindex,:]
             samples = random.normal(sampledpoints,bandwidth*weight)
             samples[:,0] *= 0.5*irotweight
-            return c_[cos(samples[:,0]),zeros((N,2)),sin(samples[:,0]),samples[:,1:3],tile(Tbase[2,3],N)],sampledgraspindices
+            return poseMultArrayT(poserobot,c_[cos(samples[:,0]),zeros((N,2)),sin(samples[:,0]),samples[:,1:3],tile(Tbase[2,3],N)]),sampledgraspindices
         return gaussiankerneldensity,gaussiankernelsampler,bounds
+
+    def sampleBaseDistributionIterator(self,Tgrasps,logllthresh=2.0,weight=1.0,Nprematuresamples=1,zaxis=None):
+        """infinitely samples valid base placements from Tgrasps. Assumes environment is locked. If Nprematuresamples > 0, will sample from the clusters as soon as they are found"""
+        Tbase = self.manip.GetBase().GetTransform()
+        poserobot = poseFromMatrix(dot(self.robot.GetTransform(),linalg.inv(Tbase)))
+        rotweight = self.rotweight
+        irotweight = 1.0/rotweight
+        posebase = poseFromMatrix(Tbase)
+        qbaserobotnorm,zbaseangle = normalizeZRotation(reshape(posebase[0:4],(1,4)))
+        if quatArrayTDist([1.0,0,0,0],qbaserobotnorm) > 0.05:
+            raise planning_error('out of plane rotations for base are not supported')
+        
+        bandwidth = array((rotweight*self.quatdelta ,self.xyzdelta,self.xyzdelta))
+        ibandwidth=-0.5/bandwidth**2
+        normalizationconst = (1.0/sqrt(pi**3*prod(bandwidth)))
+        searchradius=9.0*sum(bandwidth**2)
+        searcheps=bandwidth[0]*0.1
+        
+        points = zeros((0,3))
+        weights = array(())
+        graspindices = []
+        graspindexoffsets = []        
+        for Tgrasp,graspindex in Tgrasps:
+            posetarget = poseFromMatrix(dot(linalg.inv(Tbase),Tgrasp))
+            qnormalized,znormangle = normalizeZRotation(reshape(posetarget[0:4],(1,4)))
+            # find the closest cluster
+            logll = quatArrayTDist(qnormalized[0],self.equivalencemeans[:,0:4])**2*self.equivalenceweights[:,0] + (posetarget[6]-self.equivalencemeans[:,4])**2*self.equivalenceweights[:,1] + self.equivalenceoffset
+            bestindex = argmax(logll)
+            if logll[bestindex] < logllthresh:
+                continue
+            # transform the equivalence class to the global coord system and create a kdtree for faster retrieval
+            equivalenceclass = self.equivalenceclasses[bestindex]
+            # transform points by the grasp pose
+            newpoints = c_[equivalenceclass[2][:,0]+znormangle+zbaseangle,dot(equivalenceclass[2][:,1:3],transpose(rotationMatrixFromAxisAngle([0,0,1],znormangle+zbaseangle)[0:2,0:2])) + tile(posetarget[4:6]+posebase[4:6], (len(equivalenceclass[2]),1))]
+            newweights = equivalenceclass[2][:,3]*normalizationconst
+            if Nprematuresamples > 0:
+                newpoints[:,0] *= rotweight
+                kdtree = pyANN.KDTree(newpoints)
+                cumweights = cumsum(newweights)
+                cumweights = cumweights[1:]/cumweights[-1]
+                for i in range(Nprematuresamples):
+                    sample = random.normal(newpoints[bisect.bisect(cumweights,random.rand()),:],bandwidth*weight)
+                    sample[0] *= 0.5*irotweight
+                    yield poseMult(poserobot,r_[cos(sample[0]),0,0,sin(sample[0]),sample[1:3],Tbase[2,3]]),graspindex
+            graspindices.append(graspindex)
+            graspindexoffsets.append(len(points))
+            points = r_[points,newpoints]
+            weights = r_[weights,newweights]
+
+        if len(points) == 0:
+            raise planning_error('could not find base distribution')
+        
+        kdtree = pyANN.KDTree(points)
+        cumweights = cumsum(weights)
+        cumweights = cumweights[1:]/cumweights[-1]
+        while True:
+            pointindex = bisect.bisect(cumweights,random.rand())
+            sampledgraspindex = graspindices[bisect.bisect(graspindexoffsets,pointindex)-1]
+            sample = random.normal(points[pointindex,:],bandwidth*weight)
+            sample[0] *= 0.5*irotweight
+            yield poseMult(poserobot,r_[cos(sample[0]),0,0,sin(sample[0]),sample[1:3],Tbase[2,3]]),sampledgraspindex
 
     def testSampling(self, heights=None,**kwargs):
         if heights is None:

@@ -125,13 +125,66 @@ def quatMultArrayT(q,qarray):
                      q[0]*qarray[:,2] + q[2]*qarray[:,0] + q[3]*qarray[:,1] - q[1]*qarray[:,3],
                      q[0]*qarray[:,3] + q[3]*qarray[:,0] + q[1]*qarray[:,2] - q[2]*qarray[:,1])]
 
+def quatArrayRotate(qarray,trans):
+    """rotates a point by an array of 4xN quaternions. Returns a 3xN vector"""
+    xx = qarray[1,:] * qarray[1,:]
+    xy = qarray[1,:] * qarray[2,:]
+    xz = qarray[1,:] * qarray[3,:]
+    xw = qarray[1,:] * qarray[0,:]
+    yy = qarray[2,:] * qarray[2,:]
+    yz = qarray[2,:] * qarray[3,:]
+    yw = qarray[2,:] * qarray[0,:]
+    zz = qarray[3,:] * qarray[3,:]
+    zw = qarray[3,:] * qarray[0,:]
+    return 2*numpy.vstack(((0.5-yy-zz)*trans[0]+(xy-zw)*trans[1]+(xz+yw)*trans[2],
+                           (xy+zw)*trans[0]+(0.5-xx-zz)*trans[1]+(yz-xw)*trans[2],
+                           (xz-yw)*trans[0]+(yz+xw)*trans[1]+(0.5-xx-yy)*trans[2]))
+
+def quatRotate(q,trans):
+    """rotates a point by a 4-elt quaternion. Returns a 3 elt vector"""
+    xx = q[1] * q[1]
+    xy = q[1] * q[2]
+    xz = q[1] * q[3]
+    xw = q[1] * q[0]
+    yy = q[2] * q[2]
+    yz = q[2] * q[3]
+    yw = q[2] * q[0]
+    zz = q[3] * q[3]
+    zw = q[3] * q[0]
+    return 2*numpy.array(((0.5-yy-zz)*trans[0]+(xy-zw)*trans[1]+(xz+yw)*trans[2],
+                          (xy+zw)*trans[0]+(0.5-xx-zz)*trans[1]+(yz-xw)*trans[2],
+                          (xz-yw)*trans[0]+(yz+xw)*trans[1]+(0.5-xx-yy)*trans[2]))
+
+def quatRotateArrayT(q,transarray):
+    """rotates a set of points in Nx3 transarray by a quaternion. Returns a Nx3 vector"""
+    xx = q[1] * q[1]
+    xy = q[1] * q[2]
+    xz = q[1] * q[3]
+    xw = q[1] * q[0]
+    yy = q[2] * q[2]
+    yz = q[2] * q[3]
+    yw = q[2] * q[0]
+    zz = q[3] * q[3]
+    zw = q[3] * q[0]
+    return 2*numpy.c_[((0.5-yy-zz)*transarray[:,0]+(xy-zw)*transarray[:,1]+(xz+yw)*transarray[:,2],
+                       (xy+zw)*transarray[:,0]+(0.5-xx-zz)*transarray[:,1]+(yz-xw)*transarray[:,2],
+                       (xz-yw)*transarray[:,0]+(yz+xw)*transarray[:,1]+(0.5-xx-yy)*transarray[:,2])]
+
 def quatMult(q1,q2):
     """ multiplies two 1-dimensional quaternions"""
-    return array((q1[0]*q2[0] - q1[1]*q2[1] - q1[2]*q2[2] - q1[3]*q2[3],
-                  q1[0]*q2[1] + q1[1]*q2[0] + q1[2]*q2[3] - q1[3]*q2[2],
-                  q1[0]*q2[2] + q1[2]*q2[0] + q1[3]*q2[1] - q1[1]*q2[3],
-                  q1[0]*q2[3] + q1[3]*q2[0] + q1[1]*q2[2] - q1[2]*q2[1]))
+    return numpy.array((q1[0]*q2[0] - q1[1]*q2[1] - q1[2]*q2[2] - q1[3]*q2[3],
+                        q1[0]*q2[1] + q1[1]*q2[0] + q1[2]*q2[3] - q1[3]*q2[2],
+                        q1[0]*q2[2] + q1[2]*q2[0] + q1[3]*q2[1] - q1[1]*q2[3],
+                        q1[0]*q2[3] + q1[3]*q2[0] + q1[1]*q2[2] - q1[2]*q2[1]))
 
+def poseMultArrayT(pose,posearray):
+    """multiplies a pose with an array of poses (each pose is a quaterion + translation)"""
+    return numpy.c_[quatMultArrayT(pose[0:4],posearray[:,0:4]),quatRotateArrayT(pose[0:4],posearray[:,4:7])+numpy.tile(pose[4:7],(len(posearray),1))]
+
+def poseMult(pose1,pose2):
+    """multiplies two poses"""
+    return numpy.r_[quatMult(pose1[0:4],pose2[0:4]),quatRotate(pose1[0:4],pose2[4:7])+pose1[4:7]]
+    
 def quatArrayTDist(q,qarray):
     """computes the natural distance (Haar measure) for quaternions, q is a 4-element array, qarray is Nx4"""
     return numpy.arccos(numpy.minimum(1.0,numpy.abs(numpy.dot(qarray,q))))

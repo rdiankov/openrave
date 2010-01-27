@@ -164,10 +164,16 @@ def test_graspreachability():
         Y = random.rand(N)*(bounds[1,2]-bounds[0,2])+bounds[0,2]
         return c_[cos(angles),zeros((N,2)),sin(angles),X,Y,tile(Trobot[2,3],N)],array(random.randint(0,len(validgrasps),N))
     starttime = time.time()
-    goals,numfailures = self.sampleGoals(randomsampler,validgrasps,N=100)
+    goals,numfailures = self.sampleGoals(randomsampler,validgrasps,N=1)
     print 'numgrasps: %d, time: %f, failures: %d'%(len(goals),time.time()-starttime,numfailures)
 
-    self.graspAndPlaceObject(gm=gm,dests=dests)
+    samplingtimes = []
+    for i in range(100):
+        starttime=time.time()
+        with self.env:
+            pose,values,grasp = self.sampleValidPlacementIterator(logllthresh=2.4,randomgrasps=True).next()
+        samplingtimes.append(time.time()-starttime)
+    print 'time to first good placement: ',mean(samplingtimes),std(samplingtimes)
 
 def test_mobilemanipulation():
     import mobilemanipulation
@@ -256,6 +262,7 @@ def test_linkstatistics():
     env = openravepy.Environment()
     robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
     env.AddRobot(robot)
+    self.robot.SetTransform(eye(4))
     self = linkstatistics.LinkStatisticsModel(robot)
     self.load()
 
