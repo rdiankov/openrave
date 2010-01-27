@@ -36,7 +36,7 @@ class LinkStatisticsModel(OpenRAVEModel):
             self.cdmodel.autogenerate()
         self.linkstats = None
         self.jointvolumes = None
-        self.samplingdelta = 0.005
+        self.samplingdelta = 0.008
 
     def has(self):
         return self.linkstats is not None and len(self.linkstats)==len(self.robot.GetLinks())
@@ -57,18 +57,18 @@ class LinkStatisticsModel(OpenRAVEModel):
         return os.path.join(OpenRAVEModel.getfilename(self),'linkstatistics.pp')
 
     def generateFromOptions(self,options):
-        args = {}
+        args = {'samplingdelta':options.samplingdelta}
         self.generate(**args)
     def autogenerate(self,forcegenerate=True):
         if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531':
-            self.generate(samplingdelta=0.008)
+            self.generate(samplingdelta=0.009)
         else:
             if not forcegenerate:
                 raise ValueError('failed to find auto-generation parameters')
             self.generate()
             raise ValueError('could not auto-generate reachability for %s:%s'%(self.robot.GetName()))
         self.save()
-    def generate(self,samplingdelta=0.005,**kwargs):
+    def generate(self,samplingdelta=0.008,**kwargs):
         self.samplingdelta=samplingdelta
         with self.robot:
             self.robot.SetTransform(eye(4))
@@ -264,8 +264,8 @@ class LinkStatisticsModel(OpenRAVEModel):
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser(useManipulator=False)
         parser.description='Computes statistics about the link geometry'
-#         parser.add_option('--skinWidth',action='store',type='float',dest='skinWidth',default=None,
-#                           help='Skin width on the convex hulls generated')
+        parser.add_option('--samplingdelta',action='store',type='float',dest='samplingdelta',default=0.008,
+                          help='Skin width on the convex hulls generated')
         return parser
     @staticmethod
     def RunFromParser(Model=None,parser=None):
