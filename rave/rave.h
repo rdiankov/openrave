@@ -606,7 +606,9 @@ public:
     /// do not call inside a SimulationStep call
     virtual void Reset()=0;
 
-    //@{ plugin info
+    /// @name Plugin functions
+    //@{
+
     /// get all the loaded plugins and the interfaces they support
     /// \param plugins A list of plugins. Each entry has the plugin name and the interfaces it supports
     virtual void GetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins)=0;
@@ -653,8 +655,10 @@ public:
     /// \param options A set of CloningOptions describing what is actually cloned.
     virtual EnvironmentBasePtr CloneSelf(int options) = 0;
 
-    /// Collision specific functions. Each function takes an optional pointer to a CollisionReport structure and returns true if collision occurs.
+    /// @name Collision specific functions.
+    /// Each function takes an optional pointer to a CollisionReport structure and returns true if collision occurs.
     //@{
+
     virtual bool SetCollisionChecker(CollisionCheckerBasePtr pchecker)=0;
     virtual CollisionCheckerBasePtr GetCollisionChecker() const =0;
 
@@ -697,7 +701,8 @@ public:
     virtual bool HasRegisteredCollisionCallbacks() const = 0;
     virtual void GetRegisteredCollisionCallbacks(std::list<CollisionCallbackFn>&) const = 0;
 
-    //@{ Physics/Simulation methods
+    /// @name Physics/Simulation
+    //@{
 
     /// set the physics engine, disabled by default
     /// \param the engine to set, if NULL, environment sets an dummy physics engine
@@ -722,7 +727,8 @@ public:
     virtual uint64_t GetSimulationTime() = 0;
     //@}
 
-    ///@{ file I/O
+    /// @name XML Parsing, File Loading
+    //@{ 
 
     /// Loads a scene, need to Lock if calling outside simulation thread
     virtual bool Load(const std::string& filename) = 0;
@@ -764,9 +770,27 @@ public:
     /// \param data string containing XML data
     /// \param atts the XML attributes/value pairs
     virtual InterfaceBasePtr ReadInterfaceXMLData(InterfaceBasePtr pinterface, PluginType type, const std::string& data, const std::list<std::pair<std::string,std::string> >& atts) = 0;
-    ///@}
 
-    /// Objects
+    typedef boost::function<BaseXMLReaderPtr(InterfaceBasePtr, const std::list<std::pair<std::string,std::string> >&)> CreateXMLReaderFn;
+
+    /// registers a custom xml reader for a particular interface. Once registered, anytime an interface is created through XML and
+    /// the xmltag is seen, the function CreateXMLReaderFn will be called to get a reader for that tag
+    /// \param xmltag the tag specified in xmltag is seen in the interface, the the custom reader will be created.
+    /// \param fn CreateXMLReaderFn(pinterface,atts) - passed in the pointer to the interface where the tag was seen along with the list of attributes
+    /// \return a pointer holding the registration, releasing the pointer will unregister the XML reader
+    virtual boost::shared_ptr<void> RegisterXMLReader(PluginType type, const std::string& xmltag, const CreateXMLReaderFn& fn) = 0;
+    
+    /// Parses a file for XML data
+    virtual bool ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename) = 0;
+
+    /// Parses a data file for XML data
+    /// \param pdata The data of the buffer
+    /// \param len the number of bytes valid in pdata
+    virtual bool ParseXMLData(BaseXMLReaderPtr preader, const std::string& data) = 0;
+    //@}
+
+    /// @name Object Setting/Querying
+    //@{
     virtual bool AddKinBody(KinBodyPtr pbody) = 0;
     virtual bool AddRobot(RobotBasePtr robot) = 0;
 
@@ -780,8 +804,41 @@ public:
     /// \return first Robot that matches with name
     virtual RobotBasePtr GetRobot(const std::string& name)=0;
 
+    /// fill an array with all bodies loaded in the environment (including roobts)
+    virtual void GetBodies(std::vector<KinBodyPtr>& bodies) const = 0;
+
+    /// fill an array with all robots loaded in the environment
+    virtual void GetRobots(std::vector<RobotBasePtr>& robots) const = 0;
+    
+    /// retrieve published bodies, note that the pbody pointer might become invalid
+    /// as soon as GetPublishedBodies returns
+    virtual void GetPublishedBodies(std::vector<KinBody::BodyState>& vbodies) = 0;
+
+    /// updates the published bodies that viewers and other programs listening in on the environment see.
+    /// For example, calling this function inside a planning loop allows the viewer to update the environment
+    /// reflecting the status of the planner.
+    /// Assumes that the physics are locked. 
+    virtual void UpdatePublishedBodies() = 0;
+
     /// Get the corresponding body from its unique network id
     virtual KinBodyPtr GetBodyFromNetworkId(int id) = 0;
+
+    enum TriangulateOptions
+    {
+        TO_Obstacles = 1,   ///< everything but robots
+        TO_Robots = 2,
+        TO_Everything = 3,  ///< all KinBodies
+        TO_Body = 4,        ///< only triangulate kinbody
+        TO_AllExceptBody = 5 ///< triangulate everything but kinbody
+    };
+    
+    /// triangulation of the body including its current transformation. trimesh will be appended the new data.
+    virtual bool Triangulate(KinBody::Link::TRIMESH& trimesh, KinBodyConstPtr pbody) = 0;
+
+    /// general triangulation of the whole scene. trimesh will be appended the new data.
+    /// \param opts - Controlls what to triangulate
+    virtual bool TriangulateScene(KinBody::Link::TRIMESH& trimesh, TriangulateOptions opts, const std::string& name) = 0;
+    //@}
 
     /// Load a new problem, need to Lock if calling outside simulation thread
     virtual int LoadProblem(ProblemInstancePtr prob, const std::string& cmdargs) = 0;
@@ -802,12 +859,11 @@ public:
     virtual bool AttachViewer(RaveViewerBasePtr pnewviewer) = 0;
     virtual RaveViewerBasePtr GetViewer() const = 0;
 
-    /// All plotting calls are thread safe
-    //@{ 3D drawing methods
+    /// @name 3D plotting methods. All plotting calls are thread safe
+    //@{
 
     typedef boost::shared_ptr<void> GraphHandlePtr;
 
-    /// plots 3D points.
     /// \param ppoints array of points
     /// \param numPoints number of points to plot
     /// \param stride stride in bytes to next point, ie: nextpoint = (float*)((char*)ppoints+stride)
@@ -820,24 +876,29 @@ public:
     /// plots 3D points. Arguments same as plot3 with one color, except has an individual color for every point
     /// \param colors An array of rgb colors of size numPoints where each channel is in [0,1].
     ///               colors+(bhasalpha?4:3) points to the second color.
+    /// \param stride stride in bytes to next point, ie: nextpoint = (float*)((char*)ppoints+stride)
     /// \param drawstyle if 0 will draw pixels. if 1, will draw 3D spherse
     /// \param bhasalpha if true, then each color consists of 4 values with the last value being the alpha of the point (1 means opaque). If false, then colors is 3 values.
     /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle = 0, bool bhasalpha = false) = 0;
     
     /// draws a series of connected lines
+    /// \param stride stride in bytes to next point, ie: nextpoint = (float*)((char*)ppoints+stride)
     /// \param color the rgb color of the point. The last component of the color is used for alpha blending
     /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color = RaveVector<float>(1,0.5,0.5,1)) = 0;
 
+    /// \param stride stride in bytes to next point, ie: nextpoint = (float*)((char*)ppoints+stride)
     /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors) = 0;
 
     /// draws a list of individual lines, each specified by a succeeding pair of points
+    /// \param stride stride in bytes to next point, ie: nextpoint = (float*)((char*)ppoints+stride)
     /// \param color the rgb color of the point. The last component of the color is used for alpha blending.
     /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color = RaveVector<float>(1,0.5,0.5,1)) = 0;
 
+    /// \param stride stride in bytes to next point, ie: nextpoint = (float*)((char*)ppoints+stride)
     /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors) = 0;
 
@@ -907,58 +968,6 @@ public:
     /// \param pKK 4 values such that the intrinsic matrix can be reconstructed [pKK[0] 0 pKK[2]; 0 pKK[1] pKK[3]; 0 0 1];
     virtual bool WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension) = 0;
     //@}
-
-    /// fill an array with all bodies loaded in the environment (including roobts)
-    virtual void GetBodies(std::vector<KinBodyPtr>& bodies) const = 0;
-
-    /// fill an array with all robots loaded in the environment
-    virtual void GetRobots(std::vector<RobotBasePtr>& robots) const = 0;
-    
-    /// retrieve published bodies, note that the pbody pointer might become invalid
-    /// as soon as GetPublishedBodies returns
-    virtual void GetPublishedBodies(std::vector<KinBody::BodyState>& vbodies) = 0;
-
-    /// updates the published bodies that viewers and other programs listening in on the environment see.
-    /// For example, calling this function inside a planning loop allows the viewer to update the environment
-    /// reflecting the status of the planner.
-    /// Assumes that the physics are locked. 
-    virtual void UpdatePublishedBodies() = 0;
-
-    /// XML processing functions.
-    //@{
-    typedef boost::function<BaseXMLReaderPtr(InterfaceBasePtr, const std::list<std::pair<std::string,std::string> >&)> CreateXMLReaderFn;
-
-    /// registers a custom xml reader for a particular interface. Once registered, anytime an interface is created through XML and
-    /// the xmltag is seen, the function CreateXMLReaderFn will be called to get a reader for that tag
-    /// \param xmltag the tag specified in xmltag is seen in the interface, the the custom reader will be created.
-    /// \param fn CreateXMLReaderFn(pinterface,atts) - passed in the pointer to the interface where the tag was seen along with the list of attributes
-    /// \return a pointer holding the registration, releasing the pointer will unregister the XML reader
-    virtual boost::shared_ptr<void> RegisterXMLReader(PluginType type, const std::string& xmltag, const CreateXMLReaderFn& fn) = 0;
-    
-    /// Parses a file for XML data
-    virtual bool ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename) = 0;
-
-    /// Parses a data file for XML data
-    /// \param pdata The data of the buffer
-    /// \param len the number of bytes valid in pdata
-    virtual bool ParseXMLData(BaseXMLReaderPtr preader, const std::string& data) = 0;
-    //@}
-
-    enum TriangulateOptions
-    {
-        TO_Obstacles = 1,   ///< everything but robots
-        TO_Robots = 2,
-        TO_Everything = 3,  ///< all KinBodies
-        TO_Body = 4,        ///< only triangulate kinbody
-        TO_AllExceptBody = 5 ///< triangulate everything but kinbody
-    };
-    
-    /// triangulation of the body including its current transformation. trimesh will be appended the new data.
-    virtual bool Triangulate(KinBody::Link::TRIMESH& trimesh, KinBodyConstPtr pbody) = 0;
-
-    /// general triangulation of the whole scene. trimesh will be appended the new data.
-    /// \param opts - Controlls what to triangulate
-    virtual bool TriangulateScene(KinBody::Link::TRIMESH& trimesh, TriangulateOptions opts, const std::string& name) = 0;
 
     /// returns the openrave home directory where settings, cache, and other files are stored.
     /// On Linux/Unix systems, this is usually $HOME/.openrave, on Windows this is $HOMEPATH/.openrave

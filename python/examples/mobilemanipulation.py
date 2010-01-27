@@ -66,7 +66,7 @@ class GraspReachability(metaclass.AutoReloader):
                         q = self.manip.FindIKSolution(self.gmodel.getGlobalGraspTransform(grasp),envcheck=True)
                         if q is not None:
                             goals.append((grasp,pose,q))
-                        elif not self.manip.FindIKSolution(self.gmodel.getGlobalGraspTransform(grasp),envcheck=False)
+                        elif self.manip.FindIKSolution(self.gmodel.getGlobalGraspTransform(grasp),envcheck=False) is None:
                             numfailures += 1
         return goals,numfailures
 

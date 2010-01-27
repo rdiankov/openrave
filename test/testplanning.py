@@ -94,13 +94,16 @@ def test_inversereachabilitygen():
 
 def test_inversereachabilitytest():
     import inversereachability
+    from scipy.optimize import leastsq
+    import bisect
     env = openravepy.Environment()
     robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
     env.AddRobot(robot)
     self = inversereachability.InverseReachabilityModel(robot=robot)
     self.load()
+    self.env.StopSimulation()
     self.robot.SetTransform(eye(4))
-    self.testSampling()
+    self.testSampling(heights=arange(-1,1,0.1),logllthresh=2.3)
 
 def test_inversereachabilityrun():
     import inversereachability, graspplanning
@@ -145,7 +148,7 @@ def test_graspreachability():
     dests=planning.graspables[0][1]
     self = mobilemanipulation.GraspReachability(robot=robot,gmodel=gmodel)
     starttime = time.time()
-    densityfn,samplerfn,bounds,validgrasps = self.computeGraspDistribution(logllthresh=2000.0)
+    densityfn,samplerfn,bounds,validgrasps = self.computeGraspDistribution(logllthresh=2.4)
     print 'time to build distribution: %fs'%(time.time()-starttime)
     h = self.irmodel.showBaseDistribution(densityfn,bounds,self.target.GetTransform()[2,3],thresh=1.0)
     

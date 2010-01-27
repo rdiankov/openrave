@@ -66,8 +66,7 @@ class InverseReachabilityModel(OpenRAVEModel):
     def __init__(self,robot):
         OpenRAVEModel.__init__(self,robot=robot)
         self.rmodel = kinematicreachability.ReachabilityModel(robot=robot)
-        if not self.rmodel.load():
-            self.rmodel.autogenerate()
+        self.rmodel.load()
         self.equivalenceclasses = None
         self.rotweight = 0.2 # in-plane rotation weight with respect to xy offset
         
@@ -79,7 +78,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             params = OpenRAVEModel.load(self)
             if params is None:
                 return False
-            self.equivalenceclasses,self.rotweight = params
+            self.equivalenceclasses,self.rotweight,self.xyzdelta,self.quatdelta = params
             self.preprocess()
             return self.has()
         except e:
@@ -94,12 +93,12 @@ class InverseReachabilityModel(OpenRAVEModel):
 
     def preprocess(self):
         self.equivalencemeans = array([e[0] for e in self.equivalenceclasses])
-        samplingbandwidth = array([self.rmodel.quatdelta*0.1,self.rmodel.xyzdelta*0.1])
+        samplingbandwidth = array([self.quatdelta*0.1,self.xyzdelta*0.1])
         self.equivalenceweights = array([-0.5/(e[1]+samplingbandwidth)**2 for e in self.equivalenceclasses])
         self.equivalenceoffset = array([self.classnormalizationconst(e[1]+samplingbandwidth) for e in self.equivalenceclasses])
 
     def save(self):
-        OpenRAVEModel.save(self,(self.equivalenceclasses,self.rotweight))
+        OpenRAVEModel.save(self,(self.equivalenceclasses,self.rotweight,self.xyzdelta,self.quatdelta))
 
     def getfilename(self):
        return os.path.join(OpenRAVEModel.getfilename(self),'invreachability.' + self.manip.GetName() + '.pp')
@@ -114,7 +113,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             b.Enable(False)
         try:
             if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531' and self.manip.GetName() == 'arm':
-                self.generate(heightthresh=0.05,quatthresh=0.2)
+                self.generate(heightthresh=0.05,quatthresh=0.15)
             else:
                 if not forcegenerate:
                     raise ValueError('failed to find auto-generation parameters')
@@ -124,13 +123,19 @@ class InverseReachabilityModel(OpenRAVEModel):
             for b in bodies:
                 b.Enable(True)
 
-    def generate(self,heightthresh=0.05,quatthresh=0.2,Nminimum=10):
+    def generate(self,heightthresh=0.05,quatthresh=0.15,Nminimum=10):
         """First transform all end effectors to the identity and get the robot positions,
         then cluster the robot position modulo in-plane rotation (z-axis) and position (xy),
         then compute statistics for each cluster."""
+        if not self.rmodel.load():
+            self.rmodel.autogenerate()
+        print "Generating Inverse Reachability",heightthresh,quatthresh
+
         # convert the quatthresh to a loose euclidean distance
-        quateucdist2 = (1-cos(quatthresh))**2+sin(quatthresh)**2
+        self.xyzdelta = self.rmodel.xyzdelta
+        self.quatdelta = self.rmodel.quatdelta
         self.rotweight = heightthresh/quatthresh
+        quateucdist2 = (1-cos(quatthresh))**2+sin(quatthresh)**2
         # find the density
         basetrans = c_[invertPoses(self.rmodel.reachabilitystats[:,0:7]),self.rmodel.reachabilitystats[:,7:]]
         if basetrans.shape[1] < 8:
@@ -146,7 +151,6 @@ class InverseReachabilityModel(OpenRAVEModel):
         quatrolls = array([quatFromAxisAngle(array((0,0,1)),roll) for roll in arange(0,2*pi,quatthresh*0.5)])
         self.equivalenceclasses = []
         while len(basetrans) > 0:
-            print len(basetrans)
             searchtrans = c_[basetrans[:,0:4],basetrans[:,6:7]]
             kdtree = self.QuaternionKDTree(searchtrans,1.0/self.rotweight)
             querypoints = c_[quatArrayTMult(quatrolls, searchtrans[0][0:4]),tile(searchtrans[0][4:],(len(quatrolls),1))]
@@ -172,11 +176,13 @@ class InverseReachabilityModel(OpenRAVEModel):
             else:
                 qmean = q0
             qstd = sqrt(sum(quatArrayTDist(qmean,normalizedqarray)**2)/len(normalizedqarray))
-            # compute statistics, store the angle, xy offset, and remaining unprocessed data            
-            self.equivalenceclasses.append((r_[qmean,mean(equivalenttrans[:,6])],
-                                            r_[qstd,std(equivalenttrans[:,6])],
-                                            c_[zangles,equivalenttrans[:,4:6],equivalenttrans[:,7:]]))
+            # compute statistics, store the angle, xy offset, and remaining unprocessed data
+            equivalenceclass = (r_[qmean,mean(equivalenttrans[:,6])],
+                                r_[qstd,std(equivalenttrans[:,6])],
+                                c_[zangles,equivalenttrans[:,4:6],equivalenttrans[:,7:]])
+            self.equivalenceclasses.append(equivalenceclass)
             basetrans = basetrans[flatnonzero(foundindices==False),:]
+            print 'new equivalence class outliers: %d/%d, left over trans: %d'%(self.testEquivalenceClass(equivalenceclass)*len(zangles),len(zangles),len(basetrans))
         self.preprocess()
         
     def getEquivalenceClass(self,Tgrasp):
@@ -202,7 +208,7 @@ class InverseReachabilityModel(OpenRAVEModel):
         irotweight = 1.0/rotweight
         qbaserobot = quatFromRotationMatrix(Tbaserobot[0:3,0:3])
         qbaserobotnorm = normalizeZRotation(reshape(qbaserobot,(1,4)))[0][0]
-        bandwidth = array((rotweight*self.rmodel.quatdelta ,self.rmodel.xyzdelta,self.rmodel.xyzdelta))
+        bandwidth = array((rotweight*self.quatdelta ,self.xyzdelta,self.xyzdelta))
         ibandwidth=-0.5/bandwidth**2
         normalizationconst = (1.0/sqrt(pi**3*prod(bandwidth)))
         searchradius=9.0*sum(bandwidth**2)
@@ -262,7 +268,7 @@ class InverseReachabilityModel(OpenRAVEModel):
         rotweight = self.rotweight
         qbaserobot = quatFromRotationMatrix(Tbaserobot[0:3,0:3])
         qbaserobotnorm = normalizeZRotation(reshape(qbaserobot,(1,4)))[0][0]
-        bandwidth = array((rotweight*self.quatdelta ,self.rmodel.xyzdelta,self.rmodel.xyzdelta))
+        bandwidth = array((rotweight*self.quatdelta ,self.xyzdelta,self.xyzdelta))
         ibandwidth=-0.5/bandwidth**2
         # normalization for the weights so that integrated volume is 1. this is necessary when comparing across different distributions?
         normalizationconst = (1.0/sqrt(pi**3*sum(bandwidth**2)))
@@ -293,7 +299,6 @@ class InverseReachabilityModel(OpenRAVEModel):
             return None,None,None
         
         bounds = array((numpy.min(points,0)-bandwidth,numpy.max(points,0)+bandwidth))
-        bounds[:,0] /= rotweight
         if bounds[1,0]-bounds[0,0] > 2*pi:
             # already covering entire circle, so limit to 2*pi
             bounds[0,0] = -pi
@@ -329,46 +334,44 @@ class InverseReachabilityModel(OpenRAVEModel):
 
     def testSampling(self, heights=None,**kwargs):
         if heights is None:
-            heights = arange(0,2,0.5)
+            heights = arange(0,0.5,-0.3,-0.7)
         with self.robot:
             for height in heights:
                 T = eye(4)
                 T[2,3] = height
                 self.robot.SetTransform(T)
                 densityfn,samplerfn,bounds = self.computeBaseDistribution(eye(4),**kwargs)
-                if densityfn is None:
-                    continue
-                poses = samplerfn(100,weight=1e-3)
-                failures = 0
-                for pose in poses:
-                    self.robot.SetTransform(pose)
-                    if not self.manip.FindIKSolution(eye(4),False):
-                        print 'pose failed: ',pose
-                        failures += 1
-                print 'height %f, failures: %d'%(height,failures)
-    def testClusters(self):
-        """tests that ever configuration in every cluster do have IK solutions"""
+                if densityfn is not None:
+                    poses = samplerfn(100,weight=1.0)
+                    failures = 0
+                    for pose in poses:
+                        self.robot.SetTransform(matrixFromPose(pose))
+                        if self.manip.FindIKSolution(eye(4),False) is None:
+                            #print 'pose failed: ',pose
+                            failures += 1
+                    print 'height %f, failures: %d'%(height,failures)
+
+    def testEquivalenceClass(self,equivalenceclass):
+        """tests that configurations in the cluster has IK solutions"""
         with self.robot:
-            self.robot.SetTransform(eye(4))
-            for equivalenceclass in self.equivalenceclasses:
-                Tbase = matrixFromQuat(equivalenceclass[0][0:4])
-                Tbase[2,3] = equivalenceclass[0][4]
-                failed = 0
-                for sample in equivalenceclass[2]:
-                    Tnew = matrixFromAxisAngle([0,0,1],sample[0])
-                    Tnew[0:2,3] = sample[1:3]
-                    T = dot(Tnew,Tbase)
-                    self.robot.SetTransform(T)
-                    solution = self.manip.FindIKSolution(eye(4),False)
-                    if solution is None:
-                        failed += 1
-                print 'failed: ', failed
+            Tbase = matrixFromQuat(equivalenceclass[0][0:4])
+            Tbase[2,3] = equivalenceclass[0][4]
+            failed = 0
+            for sample in equivalenceclass[2]:
+                Tnew = matrixFromAxisAngle([0,0,1],sample[0])
+                Tnew[0:2,3] = sample[1:3]
+                T = dot(Tnew,Tbase)
+                self.robot.SetTransform(T)
+                solution = self.manip.FindIKSolution(eye(4),False)
+                if solution is None:
+                    failed += 1
+            return float(failed)/len(equivalenceclass[2])
         
     def showBaseDistribution(self,densityfn,bounds,zoffset=0,thresh=1.0,maxprob=None,marginalizeangle=True):
         discretization = [0.1,0.04,0.04]
         A,Y,X = mgrid[bounds[0,0]:bounds[1,0]:discretization[0], bounds[0,2]:bounds[1,2]:discretization[2], bounds[0,1]:bounds[1,1]:discretization[1]]
         N = prod(A.shape)
-        poses = c_[cos(A.flat*0.5),zeros((N,2)),sin(A.flat*0.5),X.flat,Y.flat,zeros((N,1))]
+        poses = c_[cos(ravel(A)*0.5),zeros((N,2)),sin(ravel(A)*0.5),X.flat,Y.flat,zeros((N,1))]
         # split it into chunks to avoid memory overflow
         probs = zeros(len(poses))
         for i in range(0,len(poses),500000):
@@ -401,7 +404,7 @@ class InverseReachabilityModel(OpenRAVEModel):
         parser = OpenRAVEModel.CreateOptionParser()
         parser.add_option('--heightthresh',action='store',type='float',dest='heightthresh',default=0.05,
                           help='The max radius of the arm to perform the computation')
-        parser.add_option('--quatthresh',action='store',type='float',dest='quatthresh',default=0.2,
+        parser.add_option('--quatthresh',action='store',type='float',dest='quatthresh',default=0.15,
                           help='The max radius of the arm to perform the computation')
         return parser
     @staticmethod
