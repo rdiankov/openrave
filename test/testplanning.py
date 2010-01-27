@@ -89,8 +89,8 @@ def test_inversereachabilitygen():
     env.AddRobot(robot)
     self = inversereachability.InverseReachabilityModel(robot=robot)
     heightthresh=0.05
-    quatthresh=0.2
-    self.generate(heightthresh=heightthresh2,quatthresh=quatthresh)
+    quatthresh=0.15
+    self.generate(heightthresh=heightthresh,quatthresh=quatthresh)
 
 def test_inversereachabilitytest():
     import inversereachability
