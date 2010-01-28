@@ -71,24 +71,6 @@ class GraspReachability(metaclass.AutoReloader):
                             numfailures += 1
         return goals,numfailures
 
-    def randomBaseDistributionIterator(self,Tgrasps,Nprematuresamples=1,**kwargs):
-        """randomly sample base positions given the grasps"""
-        Trobot = self.robot.GetTransform()
-        grasps = []
-        for Tgrasp,graspindex in Tgrasps:
-            r = random.rand(3)
-            angle = 2*pi*r[0]
-            xy = Tgrasp[0:2,3] + 2.0*(r[1:]-0.5)
-            for i in range(Nprematuresamples):
-                yield r_[cos(angle),0,0,sin(angle),xy,Trobot[2,3]],graspindex
-            grasps.append((Tgrasp,graspindex))
-        while True:
-            Tgrasp,graspindex = grasps[random.randint(len(grasps))]
-            r = random.rand(3)
-            angle = 2*pi*r[0]
-            xy = Tgrasp[0:2,3] + 2.0*(r[1:]-0.5)
-            yield r_[cos(angle),0,0,sin(angle),xy,Trobot[2,3]],graspindex
-
     def sampleValidPlacementIterator(self,giveuptime=inf,randomgrasps=False,**kwargs):
         """continues to sample valid goal placements. Returns the robot base position, configuration, and the target grasp from gmodel. Environment should be locked, robot state is saved"""
         def graspiter():
@@ -98,7 +80,7 @@ class GraspReachability(metaclass.AutoReloader):
         starttime = time.time()
         statesaver = self.robot.CreateRobotStateSaver()
         try:
-            baseIterator = self.randomBaseDistributionIterator if randomgrasps else self.irmodel.sampleBaseDistributionIterator
+            baseIterator = self.irmodel.randomBaseDistributionIterator if randomgrasps else self.irmodel.sampleBaseDistributionIterator
             for pose,graspindex in baseIterator(Tgrasps=graspiter(),**kwargs):
                 self.robot.SetTransform(pose)
                 if not self.manip.CheckIndependentCollision(CollisionReport()):

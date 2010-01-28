@@ -7,7 +7,7 @@ import inversereachability
 import collision
 import hanoi
 import graspplanning
-#import mobilemanipulation
+import mobilemanipulation
 
 import taskreachability
 import testcamerasensor

@@ -102,7 +102,7 @@ class LinkStatisticsModel(OpenRAVEModel):
             # go through all the joints in reverse hierarchical order
             for joint in self.robot.GetDependencyOrderedJoints()[::-1]:
                 print 'joint %d'%joint.GetJointIndex()
-                if joint.GetJointIndex() == 5: break
+                #if joint.GetJointIndex() == 5: break
                 lower,upper = joint.GetLimits()
                 if joint.GetDOF() > 1:
                     print 'do not support joints with > 1 DOF'

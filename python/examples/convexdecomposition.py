@@ -66,6 +66,7 @@ class ConvexDecompositionModel(OpenRAVEModel):
             raise ValueError('could not auto-generate reachability for %s:%s'%(self.robot.GetName()))
         self.save()
     def generate(self,**kwargs):
+        print 'Generating Convex Decomposition'
         starttime = time.time()
         self.convexparams = kwargs
         self.linkgeometry = []

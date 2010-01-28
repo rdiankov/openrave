@@ -417,17 +417,37 @@ class InverseReachabilityModel(OpenRAVEModel):
             sample[0] *= 0.5*irotweight
             yield poseMult(poserobot,r_[cos(sample[0]),0,0,sin(sample[0]),sample[1:3],Tbase[2,3]]),sampledgraspindex
 
-    def testSampling(self, heights=None,**kwargs):
+    def randomBaseDistributionIterator(self,Tgrasps,Nprematuresamples=1,bounds=None,**kwargs):
+        """randomly sample base positions given the grasps. This is mostly used for comparison"""
+        if bounds is None:
+            bounds = array(((0,-1.0,-1.0),(2*pi,1.0,1.0)))
+        dbounds = bounds[1,:]-bounds[0,:]
+        Trobot = self.robot.GetTransform()
+        grasps = []
+        for Tgrasp,graspindex in Tgrasps:
+            for i in range(Nprematuresamples):
+                r = random.rand(3)
+                angle = bounds[0,0]+r[0]*dbounds[0]
+                yield r_[cos(angle),0,0,sin(angle),Tgrasp[0:2,3] + (bounds[0,1:3]+r[1:3]*dbounds[1:3]),Trobot[2,3]],graspindex
+            grasps.append((Tgrasp,graspindex))
+        while True:
+            Tgrasp,graspindex = grasps[random.randint(len(grasps))]
+            r = random.rand(3)
+            angle = bounds[0,0]+r[0]*dbounds[0]
+            yield r_[cos(angle),0,0,sin(angle),Tgrasp[0:2,3] + (bounds[0,1:3]+r[1:3]*dbounds[1:3]),Trobot[2,3]],graspindex
+
+    def testSampling(self, heights=None,N=100,weight=1.0,**kwargs):
         if heights is None:
             heights = arange(0,0.5,-0.3,-0.7)
         with self.robot:
+            allfailures = []
             for height in heights:
                 T = eye(4)
                 T[2,3] = height
                 self.robot.SetTransform(T)
                 densityfn,samplerfn,bounds = self.computeBaseDistribution(eye(4),**kwargs)
                 if densityfn is not None:
-                    poses = samplerfn(100,weight=1.0)
+                    poses = samplerfn(N,weight)
                     failures = 0
                     for pose in poses:
                         self.robot.SetTransform(matrixFromPose(pose))
@@ -435,6 +455,10 @@ class InverseReachabilityModel(OpenRAVEModel):
                             #print 'pose failed: ',pose
                             failures += 1
                     print 'height %f, failures: %d'%(height,failures)
+                    allfailures.append(failures)
+                else:
+                    allfailures.append(inf)
+        return allfailures
 
     def testEquivalenceClass(self,equivalenceclass):
         """tests that configurations in the cluster has IK solutions"""
