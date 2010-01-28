@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Robot name="schunk-lwa3">
+  <KinBody file="schunk-lwa3.kinbody.xml"/>
+  <Manipulator name="arm">
+    <base>base</base>
+    <effector>link7</effector>
+    <armjoints>j0 j1 j2 j3 j4 j5 j6</armjoints>
+  </Manipulator>
+</Robot>

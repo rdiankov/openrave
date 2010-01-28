@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<KinBody name="schunk-lwa3">
+  <Body name="base" type="dynamic">
+    <Translation>0.0  0.0  0.0</Translation>
+    <Geom type="cylinder">
+      <radius>0.1</radius>
+      <height>0.084</height>
+      <diffuseColor>0.05 0.05 0.5</diffuseColor>
+    </Geom>
+  </Body>
+  <Body name="link1" type="dynamic">
+    <offsetfrom>base</offsetfrom>
+    <Translation>0 0.300 0</Translation>
+    <RotationAxis>1 0 0 -90</RotationAxis>
+    <Geom type="trimesh">
+      <Data>models/schunk-lwa3/link1.wrl 0.001</Data>
+      <Render>models/schunk-lwa3/link1.wrl  0.001</Render>
+      <diffuseColor>0.05 1 .05</diffuseColor> 
+    </Geom>
+    
+  </Body>
+
+  <Joint name="j0" type="hinge">
+    <Body>base</Body>
+    <Body>link1</Body>
+    <offsetfrom>link1</offsetfrom>
+    <axis>0 0 -1</axis>
+    <lostop>-180</lostop>
+    <histop>180</histop>
+    <resolution>1</resolution>
+  </Joint>
+
+  <Body name="link2" type="dynamic">
+    <offsetfrom>link1</offsetfrom>
+    <Translation>0 0 0</Translation>
+    <RotationAxis>1 0 0 90</RotationAxis>
+    <Geom type="trimesh">
+      <Data>models/schunk-lwa3/link2.wrl 0.001</Data>
+      <Render>models/schunk-lwa3/link2.wrl  0.001</Render> 
+    </Geom>
+  </Body>
+
+  <Joint name="j1" type="hinge">
+    <Body>link1</Body>
+    <Body>link2</Body>
+    <offsetfrom>link2</offsetfrom>
+    <axis>0 0 -1</axis>
+    <lostop>-130</lostop>
+    <histop>130</histop>
+    <resolution>1</resolution>
+  </Joint>
+
+  <Body name="link3" type="dynamic">
+    <offsetfrom>link2</offsetfrom>
+    <Translation>0 0.328 0</Translation>
+    <RotationAxis>1 0 0 -90</RotationAxis>
+    <Geom type="trimesh">
+      <Data>models/schunk-lwa3/link3.wrl 0.001</Data>
+      <Render>models/schunk-lwa3/link3.wrl  0.001</Render> 
+    </Geom>
+  </Body>
+
+  <Joint name="j2" type="hinge">
+    <Body>link2</Body>
+    <Body>link3</Body>
+    <offsetfrom>link3</offsetfrom>
+    <axis>0 0 -1</axis>
+    <lostop>-160</lostop>
+    <histop>160</histop>
+    <resolution>1</resolution>
+  </Joint>
+
+  <Body name="link4" type="dynamic">
+    <offsetfrom>link3</offsetfrom>
+    <Translation>0 0 0</Translation>
+    <RotationAxis>1 0 0 90</RotationAxis>
+    <Geom type="trimesh">
+      <Data>models/schunk-lwa3/link4.wrl 0.001</Data>
+      <Render>models/schunk-lwa3/link4.wrl  0.001</Render> 
+    </Geom>
+  </Body>
+
+  <Joint name="j3" type="hinge">
+    <Body>link3</Body>
+    <Body>link4</Body>
+    <offsetfrom>link4</offsetfrom>
+    <axis>0 0 -1</axis>
+    <lostop>-130</lostop>
+    <histop>130</histop>
+    <resolution>1</resolution>
+  </Joint>
+
+  <Body name="link5" type="dynamic">
+    <offsetfrom>link4</offsetfrom>
+    <Translation>0 0.2765 0</Translation>
+    <RotationAxis>1 0 0 -90</RotationAxis>
+    <Geom type="trimesh">
+      <Data>models/schunk-lwa3/link5.wrl 0.001</Data>
+      <Render>models/schunk-lwa3/link5.wrl  0.001</Render> 
+    </Geom>
+  </Body>
+
+  <Joint name="j4" type="hinge">
+    <Body>link4</Body>
+    <Body>link5</Body>
+    <offsetfrom>link5</offsetfrom>
+    <axis>0 0 -1</axis>
+    <lostop>-160</lostop>
+    <histop>160</histop>
+    <resolution>1</resolution>
+  </Joint>
+
+  <Body name="link6" type="dynamic">
+    <offsetfrom>link5</offsetfrom>
+    <Translation>0 0 0</Translation>
+    <RotationAxis>1 0 0 90</RotationAxis>
+    <Geom type="trimesh">
+      <Data>models/schunk-lwa3/link6.wrl 0.001</Data>
+      <Render>models/schunk-lwa3/link6.wrl  0.001</Render> 
+    </Geom>
+  </Body>
+
+  <Joint name="j5" type="hinge">
+    <Body>link5</Body>
+    <Body>link6</Body>
+    <offsetfrom>link6</offsetfrom>
+    <axis>0 0 -1</axis>
+    <lostop>-130</lostop>
+    <histop>130</histop>
+    <resolution>1</resolution>
+  </Joint>
+
+  <Body name="link7" type="dynamic">
+    <offsetfrom>link6</offsetfrom>
+    <Translation>0 0.1825 0</Translation>
+    <RotationAxis>1 0 0 -90</RotationAxis>
+    <Geom type="trimesh">
+      <Data>models/schunk-lwa3/link7.wrl 0.001</Data>
+      <Render>models/schunk-lwa3/link7.wrl  0.001</Render> 
+    </Geom>
+
+  </Body>
+
+  <Joint name="j6" type="hinge">
+    <Body>link6</Body>
+    <Body>link7</Body>
+    <offsetfrom>link7</offsetfrom>
+    <axis>0 0 -1</axis>
+    <lostop>-160</lostop>
+    <histop>160</histop>
+    <resolution>1</resolution>
+  </Joint>
+</KinBody>
