@@ -86,6 +86,7 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     _pToggleSimulation = NULL;
     _bInIdleThread = false;
     _bAutoSetCamera = true;
+    _videocodec = -1;
 
     //vlayout = new QVBoxLayout(this);
     view1 = new QGroupBox(this);
@@ -1771,6 +1772,30 @@ void QtCoinViewer::SetupMenus()
     pcurmenu = menuBar()->addMenu(tr("&Options"));
     ADD_MENU("&Record Real-time Video", true, NULL, "Start recording an AVI in real clock time. Clicking this menu item again will pause the recording", RecordRealtimeVideo);
     ADD_MENU("R&ecord Sim-time Video", true, NULL, "Start recording an AVI in simulation time. Clicking this menu item again will pause the recording", RecordSimtimeVideo);
+
+    {
+        psubmenu = pcurmenu->addMenu(tr("Video &Codecs"));
+        QActionGroup* pVideoCodecs = new QActionGroup(this);
+        std::list<std::pair<int,string> > lcodecs = GET_CODECS();
+
+        pact = new QAction(tr("Default (mpeg4)"), this);
+        pact->setCheckable(true);
+        pact->setChecked(true);
+        pact->setData((int)-1);
+        psubmenu->addAction(pact);
+        pVideoCodecs->addAction(pact);
+
+        FOREACH(itcodec,lcodecs) {
+            pact = new QAction(tr(itcodec->second.c_str()), this);
+            pact->setCheckable(true);
+            pact->setChecked(false);
+            pact->setData(itcodec->first);
+            psubmenu->addAction(pact);
+            pVideoCodecs->addAction(pact);
+        }
+        connect(pVideoCodecs, SIGNAL(triggered(QAction*)), this, SLOT(VideoCodecChanged(QAction*)) );
+    }
+
     ADD_MENU("&Simulation", true, NULL, "Control environment simulation loop", ToggleSimulation);
     _pToggleSimulation = pact;
 
@@ -2535,6 +2560,11 @@ void QtCoinViewer::ViewDebugLevelChanged(QAction* pact)
     GetEnv()->SetDebugLevel((DebugLevel)pact->data().toInt());
 }
 
+void QtCoinViewer::VideoCodecChanged(QAction* pact)
+{
+    _videocodec = pact->data().toInt();
+}
+
 void QtCoinViewer::ViewToggleFPS(bool on)
 {
     _bDisplayFPS = on;
@@ -2592,12 +2622,12 @@ void QtCoinViewer::_RecordSetup(bool bOn, bool bRealtimeVideo)
     if( bOn ) {
         // start
         if( !_bAVIInit ) {
-            QString s = QFileDialog::getSaveFileName( this, "Choose video filename", NULL, "AVI Files (*.avi)");
+            QString s = QFileDialog::getSaveFileName( this, "Choose video filename", NULL, "Video Files (*.*)");
             if( s.length() == 0 )
                 return;
-            if( !s.endsWith(".avi", Qt::CaseInsensitive) ) s += ".avi";
+            //if( !s.endsWith(".avi", Qt::CaseInsensitive) ) s += ".avi";
             
-		    if( !START_AVI((char*)s.toAscii().data(), VIDEO_FRAMERATE, VIDEO_WIDTH, VIDEO_HEIGHT, 24) ) {
+		    if( !START_AVI((char*)s.toAscii().data(), VIDEO_FRAMERATE, VIDEO_WIDTH, VIDEO_HEIGHT, 24,_videocodec) ) {
                 RAVELOG_ERRORA("Failed to capture %s\n", s.toAscii().data());
                 return;
 		    }

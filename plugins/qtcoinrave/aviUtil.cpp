@@ -326,6 +326,7 @@ BOOL AVI_Exit()
     return TRUE;
 }
 
+std::list<std::pair<int,string> > GET_CODECS() { return std::list<std::pair<int,string> >(); }
 
 /* Here are the additional functions we need! */
 static PAVIFILE pfile = NULL; 
@@ -334,7 +335,7 @@ static PAVISTREAM psCompressed = NULL;
 static int count = 0;
 static int s_biSizeImage = 0;
 // Initialization... 
-bool START_AVI(const char* file_name, int _frameRate, int width, int height, int bits)
+bool START_AVI(const char* file_name, int _frameRate, int width, int height, int bits, int codecid=-1)
 {
     if(! AVI_Init())
 	{
@@ -464,7 +465,19 @@ bool STOP_AVI()
     return true;
 }
 
-bool START_AVI(const char* filename, int _frameRate, int width, int height, int bits)
+std::list<std::pair<int,string> > GET_CODECS() {
+    std::list<std::pair<int,string> > lcodecs;
+    av_register_all();
+	AVOutputFormat *fmt;
+	fmt = first_oformat;
+	while (fmt != NULL) {
+        lcodecs.push_back(make_pair((int)fmt->video_codec,fmt->long_name));
+		fmt = fmt->next;
+	}
+    return lcodecs;
+}
+
+bool START_AVI(const char* filename, int _frameRate, int width, int height, int bits, int codecid)
 {
     if( bits != 24 ) {
         RAVELOG_WARNA("START_AVI only supports 24bits\n");
@@ -479,7 +492,7 @@ bool START_AVI(const char* filename, int _frameRate, int width, int height, int 
 
 	if (output != NULL) STOP_AVI();
 
-    CodecID video_codec = CODEC_ID_MPEG4;
+    CodecID video_codec = codecid == -1 ? CODEC_ID_MPEG4 : (CodecID)codecid;
 	fmt = first_oformat;
 	while (fmt != NULL) {
 		if (fmt->video_codec == video_codec)
@@ -629,6 +642,7 @@ bool ADD_FRAME_FROM_DIB_TO_AVI(void* pdata)
 
 // no ffmpeg
 bool STOP_AVI() { return false; }
+std::list<std::pair<int,string> > GET_CODECS() { return std::list<std::pair<int,string> >(); }
 bool START_AVI(const char* filename, int _frameRate, int width, int height, int bits)
 {
     RAVELOG_WARNA("avi recording to file %s not enabled\n", filename);

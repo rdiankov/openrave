@@ -170,6 +170,7 @@ public slots:
 
     void RecordRealtimeVideo(bool on);
     void RecordSimtimeVideo(bool on);
+    void VideoCodecChanged(QAction*);
     void ToggleSimulation(bool on);
     void CollisionCheckerChanged(QAction*);
     void PhysicsEngineChanged(QAction*);
@@ -322,6 +323,7 @@ protected:
     SoSeparator* _pOffscreenVideo, *_pFigureRoot;
     uint64_t _nLastVideoFrame, _nVideoTimeOffset;
     bool _bCanRenderOffscreen;
+    int _videocodec;
 
     RaveTransform<float>     _initSelectionTrans;       ///< initial tarnsformation of selected item    
     RaveTransform<float> Tcam;
