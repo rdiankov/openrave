@@ -236,11 +236,15 @@ class GraspingModel(OpenRAVEModel):
                     return validgrasps,validindices
             return validgrasps,validindices
 
-    def validGraspIterator(self,startindex=0,checkcollision=True,checkik=True):
+    def validGraspIterator(self,startindex=0,checkcollision=True,checkik=True,randomgrasps=False):
         """Returns an iterator for valid grasps that satisfy certain conditions."""
         validgrasps = []
         validindices = []
-        for i in range(startindex,len(self.grasps)):
+        if randomgrasps:
+            order = range(startindex,len(self.grasps))
+        else:
+            order = startindex+random.permutation(startindex,len(self.grasps)-startindex)
+        for i in order:
             grasp = self.grasps[i]
             with KinBodyStateSaver(self.robot):
                 self.setPreshape(grasp)

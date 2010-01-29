@@ -3,6 +3,8 @@ import grasping
 import inversekinematics
 import kinematicreachability
 import inversereachability
+import convexdecomposition
+import linkstatistics
 
 import collision
 import hanoi

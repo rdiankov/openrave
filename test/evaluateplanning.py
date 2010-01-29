@@ -22,6 +22,7 @@ import numpy,time,os,pickle
 from itertools import izip
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
+from scipy import stats
 
 class OpenRAVEEvaluator(metaclass.AutoReloader):
     @staticmethod
@@ -45,61 +46,72 @@ class EvaluateInverseReachability(OpenRAVEEvaluator):
         self.env.Load(scenename)
         self.robot = self.env.GetRobots()[0]
         self.planning = graspplanning.GraspPlanning(self.robot,dests=[])
-
-    def testgraspables(self,Nsamples=1000,logllthresh=2.4,weight=1.0):
         sceneprefix = os.path.split(self.scenename)[1]
         if sceneprefix.find('.') >= 0:
             sceneprefix = sceneprefix[0:sceneprefix.find('.')]
+        self.dataprefix = os.path.join(self.env.GetHomeDirectory(),'robot.'+self.robot.GetRobotStructureHash(),'irstats.'+sceneprefix)
+
+    def testgraspables(self,Nsamples=1000,logllthresh=2.4,weight=1.0):
         for gmodel,dests in self.planning.graspables:
             gr = mobilemanipulation.GraspReachability(robot=self.robot,gmodel=gmodel)
             starttime = time.time()
-            densityfn,samplerfn,bounds,validgrasps = self.computeGraspDistribution(logllthresh=logllthresh)
+            densityfn,samplerfn,bounds,validgrasps = gr.computeGraspDistribution(logllthresh=logllthresh)
             print 'time to build distribution: %fs'%(time.time()-starttime)
             #h = gr.irmodel.showBaseDistribution(densityfn,bounds,self.target.GetTransform()[2,3],thresh=1.0)
             
-            avgsampling = zeros((2,0))
+            self.avgsampling = zeros((2,0))
             for i in range(10):
                 starttime = time.time()
-                goals,numfailures = self.sampleGoals(lambda N: samplerfn(N,weight=weight),validgrasps,N=Nsamples)
-                avgsampling = c_[avgsampling,array((time.time()-starttime,numfailures))]
+                goals,numfailures = gr.sampleGoals(lambda N: samplerfn(N,weight=weight),N=Nsamples)
+                self.avgsampling = c_[self.avgsampling,array((time.time()-starttime,numfailures))/Nsamples]
             
-            avgrandom = zeros((2,0))
-            randomiterfn = gr.randomBaseDistributionIterator(izip(validgrasps,range(len(validgrasps))),Nprematuresamples=0)
+            self.avgrandom = zeros((2,0))
+            Trobot = self.robot.GetTransform()
+            Tgrasps = [(gr.gmodel.getGlobalGraspTransform(grasp),i) for i,grasp in enumerate(validgrasps)]
+            bounds = array(((0,-1.0,-1.0),(2*pi,1.0,1.0)))
+            def randomsampler(N,weight=1.0):
+                indices = random.randint(0,len(Tgrasps),N)
+                angles = random.rand(N)*(bounds[1,0]-bounds[0,0])+bounds[0,0]
+                XY = [Tgrasps[i][0][0:2,3]+random.rand(2)*(bounds[1,1:3]-bounds[0,1:3])+bounds[0,1:3]  for i in indices]
+                return c_[cos(angles),zeros((N,2)),sin(angles),array(XY),tile(Trobot[2,3],N)],array([Tgrasps[i][1] for i in indices])
+
             for i in range(10):
                 starttime = time.time()
-                goals,numfailures = self.sampleGoals(lambda N: array([pose for pose,index in randomiterfn]),validgrasps,N=Nsamples)
-                avgrandom = c_[avgrandom,array((time.time()-starttime,numfailures))]
-            
+                goals,numfailures = gr.sampleGoals(randomsampler,N=Nsamples)
+                self.avgrandom = c_[self.avgrandom,array((time.time()-starttime,numfailures))/Nsamples]
+
             with self.env:
-                samplingtimes = [self.fntimer(gr.sampleValidPlacementIterator(weight=weight,logllthresh=logllthresh,randomgrasps=False).next)[0] for i in range(Nsamples)]
-                randomtimes = [self.fntimer(gr.sampleValidPlacementIterator(weight=weight,logllthresh=logllthresh,randomgrasps=True).next)[0] for i in range(Nsamples)]
+                self.samplingtimes = [self.fntimer(gr.sampleValidPlacementIterator(weight=weight,logllthresh=logllthresh,randomgrasps=True,randomplacement=False).next)[0] for i in range(Nsamples)]
+                # remove the last %1
+                self.samplingtimes = sort(self.samplingtimes)[0:floor(Nsamples*0.99)]
+                self.randomtimes = [self.fntimer(gr.sampleValidPlacementIterator(weight=weight,logllthresh=logllthresh,randomgrasps=True,randomplacement=True).next)[0] for i in range(Nsamples)]
+                self.randomtimes = sort(self.randomtimes)[0:floor(Nsamples*0.99)]
 
-            pickle.dump(((avgsampling,samplingtimes),(avgrandom,randomtimes)),open(sceneprefix+'.'+gmodel.target.GetName()
+            datafilename = self.dataprefix+'.'+gmodel.target.GetName()+'.pp'
+            pickle.dump((self.avgsampling,self.samplingtimes,self.avgrandom,self.randomtimes),open(datafilename,'w'))
+            
+        def plot(self,avg,firsttimes):
+            # plot the data
             fig = plt.figure()
+            fig.clf()
             ax = fig.add_subplot(111)
-
-            # the histogram of the data
-            n, bins, patches = ax.hist(x, 50, normed=1, facecolor='green', alpha=0.75)
-
-            # hist uses np.histogram under the hood to create 'n' and 'bins'.
-            # np.histogram returns the bin edges, so there will be 50 probability
-            # density values in n, 51 bin edges in bins and 50 patches.  To get
-            # everything lined up, we'll compute the bin centers
-            bincenters = 0.5*(bins[1:]+bins[:-1])
-            # add a 'best fit' line for the normal PDF
-            y = mlab.normpdf( bincenters, mu, sigma)
+            delta = 0.2
+            maxtime = 20.0
+            n, bins, patches = ax.hist(firsttimes, bins=maxtime/delta,range=[0,maxtime], normed=1, facecolor='green', alpha=0.75)
+            # add a 'best fit' line
+#             params = stats.genexpon.fit(firsttimes)
+#             bincenters = 0.5*(bins[1:]+bins[:-1])
+#             y = stats.genexpon.pdf( bincenters, *params)
+#             l = ax.plot(bincenters, y, 'r--', linewidth=1)
             l = ax.plot(bincenters, y, 'r--', linewidth=1)
-
-            ax.set_xlabel('Smarts')
+            ax.set_xlabel('Time to First Solution (Average: %f)')
             ax.set_ylabel('Probability')
             #ax.set_title(r'$\mathrm{Histogram\ of\ IQ:}\ \mu=100,\ \sigma=15$')
-            ax.set_xlim(40, 160)
-            ax.set_ylim(0, 0.03)
+            ax.set_xlim(0.0,maxtime)
+            ax.set_ylim(0,1/delta)
             ax.grid(True)
-
             plt.show()
-            
-            print 'time to first good placement: ',mean(samplingtimes),std(samplingtimes)
+            return fig
 
 class EvaluateDistanceMetric(OpenRAVEEvaluator):
     pass

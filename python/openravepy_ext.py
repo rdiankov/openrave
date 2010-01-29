@@ -359,7 +359,10 @@ class OpenRAVEModel(metaclass.AutoReloader):
     def __init__(self,robot):
         self.robot = robot
         self.env = self.robot.GetEnv()
-        self.manip = self.robot.GetActiveManipulator()
+        try:
+            self.manip = self.robot.GetActiveManipulator()
+        except:
+            pass
     def has(self):
         raise NotImplementedError()
     def getfilename(self):

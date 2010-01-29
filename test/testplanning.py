@@ -151,29 +151,6 @@ def test_graspreachability():
     densityfn,samplerfn,bounds,validgrasps = self.computeGraspDistribution(logllthresh=2.4)
     print 'time to build distribution: %fs'%(time.time()-starttime)
     h = self.irmodel.showBaseDistribution(densityfn,bounds,self.target.GetTransform()[2,3],thresh=1.0)
-    
-    starttime = time.time()
-    goals,numfailures = self.sampleGoals(lambda N: samplerfn(N,1.0),validgrasps,N=100)
-    print 'numgrasps: %d, time: %f, failures: %d'%(len(goals),time.time()-starttime,numfailures)
-
-    # compute performance with random sampler (given bounds)
-    Trobot = self.robot.GetTransform()
-    def randomsampler(N):
-        angles = random.rand(N)*(bounds[1,0]-bounds[0,0])+bounds[0,0]
-        X = random.rand(N)*(bounds[1,1]-bounds[0,1])+bounds[0,1]
-        Y = random.rand(N)*(bounds[1,2]-bounds[0,2])+bounds[0,2]
-        return c_[cos(angles),zeros((N,2)),sin(angles),X,Y,tile(Trobot[2,3],N)],array(random.randint(0,len(validgrasps),N))
-    starttime = time.time()
-    goals,numfailures = self.sampleGoals(randomsampler,validgrasps,N=1)
-    print 'numgrasps: %d, time: %f, failures: %d'%(len(goals),time.time()-starttime,numfailures)
-
-    samplingtimes = []
-    for i in range(100):
-        starttime=time.time()
-        with self.env:
-            pose,values,grasp = self.sampleValidPlacementIterator(logllthresh=2.4,randomgrasps=True).next()
-        samplingtimes.append(time.time()-starttime)
-    print 'time to first good placement: ',mean(samplingtimes),std(samplingtimes)
 
 def test_mobilemanipulation():
     import mobilemanipulation

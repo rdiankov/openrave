@@ -45,14 +45,14 @@ class GraspReachability(metaclass.AutoReloader):
         """computes distribution of all grasps"""
         validgrasps,validindices = self.gmodel.computeValidGrasps()
         def graspiter():
-            for grasp,graspindex in izip(validgrasps):
+            for grasp,graspindex in izip(validgrasps,validindices):
                 yield self.gmodel.getGlobalGraspTransform(grasp),graspindex
         densityfn,samplerfn,bounds = self.irmodel.computeAggregateBaseDistribution(graspiter(),**kwargs)
         return densityfn,samplerfn,bounds,validgrasps
 
-    def sampleGoals(self,samplerfn,validgrasps,N=1):
+    def sampleGoals(self,samplerfn,N=1):
         """samples a base placement and attemps to find an IK solution there.
-        samplerfn should return a robot position and an index into validgrasps"""
+        samplerfn should return a robot position and an index into gmodel.grasps"""
         goals = []
         numfailures = 0
         with self.robot:
@@ -62,7 +62,7 @@ class GraspReachability(metaclass.AutoReloader):
                     self.robot.SetTransform(pose)
                     # before recording failure, validate that base is not in collision
                     if not self.manip.CheckIndependentCollision(CollisionReport()):
-                        grasp = validgrasps[index]
+                        grasp = self.gmodel.grasps[index]
                         self.gmodel.setPreshape(grasp)
                         q = self.manip.FindIKSolution(self.gmodel.getGlobalGraspTransform(grasp),envcheck=True)
                         if q is not None:
@@ -71,16 +71,16 @@ class GraspReachability(metaclass.AutoReloader):
                             numfailures += 1
         return goals,numfailures
 
-    def sampleValidPlacementIterator(self,giveuptime=inf,randomgrasps=False,**kwargs):
+    def sampleValidPlacementIterator(self,giveuptime=inf,randomgrasps=False,randomplacement=False,**kwargs):
         """continues to sample valid goal placements. Returns the robot base position, configuration, and the target grasp from gmodel. Environment should be locked, robot state is saved"""
         def graspiter():
-            for grasp,graspindex in self.gmodel.validGraspIterator():
+            for grasp,graspindex in self.gmodel.validGraspIterator(randomgrasps):
                 yield self.gmodel.getGlobalGraspTransform(grasp),graspindex
 
         starttime = time.time()
         statesaver = self.robot.CreateRobotStateSaver()
         try:
-            baseIterator = self.irmodel.randomBaseDistributionIterator if randomgrasps else self.irmodel.sampleBaseDistributionIterator
+            baseIterator = self.irmodel.randomBaseDistributionIterator if randomplacement else self.irmodel.sampleBaseDistributionIterator
             for pose,graspindex in baseIterator(Tgrasps=graspiter(),**kwargs):
                 self.robot.SetTransform(pose)
                 if not self.manip.CheckIndependentCollision(CollisionReport()):
@@ -118,7 +118,7 @@ class MobileManipulationPlanning(graspplanning.GraspPlanning):
             h = self.irmodel.showBaseDistribution(densityfn,bounds,self.target.GetTransform()[2,3],thresh=1.0)
         
         starttime = time.time()
-        goals,numfailures = grmodel.sampleGoals(samplerfn,validgrasps,N=Ngoals)
+        goals,numfailures = grmodel.sampleGoals(samplerfn,N=Ngoals)
         print 'numgrasps: %d, time: %f, failures: %d'%(len(goals),time.time()-starttime,numfailures)
 
     def performGraspPlanning(self):
@@ -151,4 +151,5 @@ def run():
         env.Destroy()
 
 if __name__ == "__main__":
-    run()
+    #run()
+    print 'not implemented yet'
