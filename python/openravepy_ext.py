@@ -76,31 +76,31 @@ def ComputeGeodesicSphereMesh(spherelevel=2):
 
 def ComputeBoxMesh(extents):
     """Computes a box mesh"""
-    indices = reshape([0, 1, 2, 1, 2, 3, 4, 5, 6, 5, 6, 7, 0, 1, 4, 1, 4, 5, 2, 3, 6, 3, 6, 7, 0, 2, 4, 2, 4, 6, 1, 3, 5,3, 5, 7],(12,3))
-    vertices = array(((extents[0],extents[1],extents[2]),
-                      (extents[0],extents[1],-extents[2]),
-                      (extents[0],-extents[1],extents[2]),
-                      (extents[0],-extents[1],-extents[2]),
-                      (-extents[0],extents[1],extents[2]),
-                      (-extents[0],extents[1],-extents[2]),
-                      (-extents[0],-extents[1],extents[2]),
-                      (-extents[0],-extents[1],-extents[2])))
+    indices = numpy.reshape([0, 1, 2, 1, 2, 3, 4, 5, 6, 5, 6, 7, 0, 1, 4, 1, 4, 5, 2, 3, 6, 3, 6, 7, 0, 2, 4, 2, 4, 6, 1, 3, 5,3, 5, 7],(12,3))
+    vertices = numpy.array(((extents[0],extents[1],extents[2]),
+                            (extents[0],extents[1],-extents[2]),
+                            (extents[0],-extents[1],extents[2]),
+                            (extents[0],-extents[1],-extents[2]),
+                            (-extents[0],extents[1],extents[2]),
+                            (-extents[0],extents[1],-extents[2]),
+                            (-extents[0],-extents[1],extents[2]),
+                            (-extents[0],-extents[1],-extents[2])))
     return vertices,indices
 
 def ComputeCylinderYMesh(radius,height,angledelta=0.1):
     """Computes a mesh of a cylinder oriented towards y-axis"""
-    angles = arange(0,2*pi,angledelta)
-    cangles = cos(angles)
-    sangles = sin(angles)
+    angles = numpy.arange(0,2*numpy.pi,angledelta)
+    cangles = numpy.cos(angles)
+    sangles = numpy.sin(angles)
     N = len(angles)
-    vertices = c_[radius*tile(cangles,2),r_[tile(height*0.5,N),tile(-height*0.5,N)], radius*tile(sangles,2)]
+    vertices = numpy.c_[radius*numpy.tile(cangles,2),r_[numpy.tile(height*0.5,N),numpy.tile(-height*0.5,N)], radius*numpy.tile(sangles,2)]
     indices = []
     iprev = N-1
     for i in range(N):
         indices.append((iprev,i,iprev+N))
         indices.append((i,i+N,iprev+N))
         iprev = i
-    return vertices,array(indices)
+    return vertices,numpy.array(indices)
 
 def normalizeZRotation(qarray):
     """for each quaternion, find the rotation about z that minimizes the distance between the identify (1,0,0,0).
