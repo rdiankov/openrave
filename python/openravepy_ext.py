@@ -388,12 +388,12 @@ class OpenRAVEModel(metaclass.AutoReloader):
     def CreateOptionParser(useManipulator=True):
         parser = optparse.OptionParser(description='Computes an openrave model and caches into file.')
         parser.add_option('--robot',action='store',type='string',dest='robot',default='robots/barrettsegway.robot.xml',
-                          help='OpenRAVE robot to load')
+                          help='OpenRAVE robot to load (default=%default)')
         if useManipulator:
             parser.add_option('--manipname',action='store',type='string',dest='manipname',default=None,
                               help='The name of the manipulator to use')
         parser.add_option('--show',action='store_true',dest='show',default=False,
-                          help='If set, uses mayavi (v3+) to display the reachability')
+                          help='Graphically shows the built model')
         return parser
     @staticmethod
     def RunFromParser(Model,env=None,parser=None):

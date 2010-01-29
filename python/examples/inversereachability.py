@@ -512,9 +512,9 @@ class InverseReachabilityModel(OpenRAVEModel):
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser()
         parser.add_option('--heightthresh',action='store',type='float',dest='heightthresh',default=0.05,
-                          help='The max radius of the arm to perform the computation')
+                          help='The max radius of the arm to perform the computation (default=%default)')
         parser.add_option('--quatthresh',action='store',type='float',dest='quatthresh',default=0.15,
-                          help='The max radius of the arm to perform the computation')
+                          help='The max radius of the arm to perform the computation (default=%default)')
         return parser
     @staticmethod
     def RunFromParser(Model=None,parser=None):

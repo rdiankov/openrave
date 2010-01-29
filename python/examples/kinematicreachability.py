@@ -175,11 +175,11 @@ class ReachabilityModel(OpenRAVEModel):
         parser.add_option('--maxradius',action='store',type='float',dest='maxradius',default=None,
                           help='The max radius of the arm to perform the computation')
         parser.add_option('--xyzdelta',action='store',type='float',dest='xyzdelta',default=0.04,
-                          help='The max radius of the arm to perform the computation')
+                          help='The max radius of the arm to perform the computation (default=%default)')
         parser.add_option('--quatdelta',action='store',type='float',dest='quatdelta',default=0.5,
-                          help='The max radius of the arm to perform the computation')
+                          help='The max radius of the arm to perform the computation (default=%default)')
         parser.add_option('--showscale',action='store',type='float',dest='showscale',default=1.0,
-                          help='Scales the reachability by this much in order to show colors better')
+                          help='Scales the reachability by this much in order to show colors better (default=%default)')
         return parser
     @staticmethod
     def RunFromParser(Model=None,parser=None):

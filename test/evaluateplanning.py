@@ -89,29 +89,30 @@ class EvaluateInverseReachability(OpenRAVEEvaluator):
 
             datafilename = self.dataprefix+'.'+gmodel.target.GetName()+'.pp'
             pickle.dump((self.avgsampling,self.samplingtimes,self.avgrandom,self.randomtimes),open(datafilename,'w'))
-            
-        def plot(self,avg,firsttimes):
-            # plot the data
-            fig = plt.figure()
-            fig.clf()
-            ax = fig.add_subplot(111)
-            delta = 0.2
-            maxtime = 20.0
-            n, bins, patches = ax.hist(firsttimes, bins=maxtime/delta,range=[0,maxtime], normed=1, facecolor='green', alpha=0.75)
-            # add a 'best fit' line
+            fig = self.plot(self.avgsampling,self.samplingtimes)
+
+    def plot(self,avg,firsttimes):
+        # plot the data
+        fig = plt.figure()
+        fig.clf()
+        ax = fig.add_subplot(111)
+        delta = 0.2
+        maxtime = 20.0
+        n, bins, patches = ax.hist(firsttimes, bins=maxtime/delta,range=[0,maxtime], normed=1, facecolor='green', alpha=0.75)
+        # add a 'best fit' line
 #             params = stats.genexpon.fit(firsttimes)
 #             bincenters = 0.5*(bins[1:]+bins[:-1])
 #             y = stats.genexpon.pdf( bincenters, *params)
 #             l = ax.plot(bincenters, y, 'r--', linewidth=1)
-            l = ax.plot(bincenters, y, 'r--', linewidth=1)
-            ax.set_xlabel('Time to First Solution (Average: %f)')
-            ax.set_ylabel('Probability')
-            #ax.set_title(r'$\mathrm{Histogram\ of\ IQ:}\ \mu=100,\ \sigma=15$')
-            ax.set_xlim(0.0,maxtime)
-            ax.set_ylim(0,1/delta)
-            ax.grid(True)
-            plt.show()
-            return fig
+        l = ax.plot(bincenters, y, 'r--', linewidth=1)
+        ax.set_xlabel('Time to First Solution (Average: %f)')
+        ax.set_ylabel('Probability')
+        #ax.set_title(r'$\mathrm{Histogram\ of\ IQ:}\ \mu=100,\ \sigma=15$')
+        ax.set_xlim(0.0,maxtime)
+        ax.set_ylim(0,1/delta)
+        ax.grid(True)
+        plt.show()
+        return fig
 
 class EvaluateDistanceMetric(OpenRAVEEvaluator):
     pass

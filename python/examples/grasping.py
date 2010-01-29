@@ -308,7 +308,7 @@ class GraspingModel(OpenRAVEModel):
         parser = OpenRAVEModel.CreateOptionParser()
         parser.description='Grasp set generation example for any robot/body pair.'
         parser.add_option('--target',action="store",type='string',dest='target',default='data/mug1.kinbody.xml',
-                          help='The filename of the target body whose grasp set to be generated')
+                          help='The filename of the target body whose grasp set to be generated (default=%default)')
         parser.add_option('--noviewer', action='store_false', dest='useviewer',default=True,
                           help='If specified, will generate the tables without launching a viewer')
         return parser

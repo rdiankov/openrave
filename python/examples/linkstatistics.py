@@ -16,6 +16,7 @@ __license__ = 'Apache License, Version 2.0'
 
 from openravepy import *
 from openravepy import pyANN
+from openravepy import convexdecompositionpy
 from openravepy.examples import convexdecomposition
 from numpy import *
 import time
@@ -115,21 +116,27 @@ class LinkStatisticsModel(OpenRAVEModel):
                         Tlinkjoint = link.GetTransform()
                         Tlinkjoint[0:3,3] -= joint.GetAnchor() # joint anchor should be at center
                         volumepoints = transformPoints(Tlinkjoint,linkvolumepoints[ilink])
-                        sweptpoints,sweptindices = self.computeSweptVolume(volumepoints=volumepoints,axis=-joint.GetAxis(0),minangle=0,maxangle=upper[0]-lower[0])
+                        sweptpoints,sweptindices,sweptvolume = self.computeSweptVolume(volumepoints=volumepoints,axis=-joint.GetAxis(0),minangle=0,maxangle=upper[0]-lower[0])
                         sweptpointslocal = transformPoints(linalg.inv(Tlinkjoint),sweptpoints)
-                        linkvolumepoints[ilink] = sweptpointslocal # update
+                        linkvolumepoints[ilink] = transformPoints(linalg.inv(Tlinkjoint),sweptvolume) # update
                         self.linkstats[ilink]['sweptvolumes'].append((joint.GetJointIndex(),sweptpointslocal,sweptindices))
                         # add to the joint volume
                         if len(jointvolume) > 2:
                             kdtree = pyANN.KDTree(jointvolume)
-                            neighs,dists,kball = kdtree.kFRSearchArray(sweptpoints,self.samplingdelta**2,0,self.samplingdelta*0.01)
-                            jointvolume = r_[jointvolume,sweptpoints[kball==0]]
+                            neighs,dists,kball = kdtree.kFRSearchArray(sweptvolume,self.samplingdelta**2,0,self.samplingdelta*0.01)
                             del kdtree
+                            jointvolume = r_[jointvolume,sweptvolume[kball==0]]
                         else:
-                            jointvolume = r_[jointvolume,sweptpoints]
+                            jointvolume = r_[jointvolume,sweptvolume]
                 # rotate jointvolume so that -joint.GetAxis(0) matches with the z-axis
                 R = rotationMatrixFromQuat(quatRotateDirection(-joint.GetAxis(0),[0,0,1]))
-                self.jointvolumes[joint.GetJointIndex()] = dot(jointvolume,transpose(R))
+                # compute simple statistics and compress the joint volume
+                jointvolume = dot(jointvolume,transpose(R))
+                volumecom = mean(jointvolume,0)
+                volumeinertia = cov(jointvolume,rowvar=0,bias=1)*(len(jointvolume)*self.samplingdelta**3)
+                sweptpoints,sweptindices = self.computeIsosurface(jointvolume,self.samplingdelta)
+                del jointvolume # release memory
+                self.jointvolumes[joint.GetJointIndex()] = (sweptpoints,sweptindices,volumecom,volumeinertia)
                         
     def computeSweptVolume(self,volumepoints,axis,minangle,maxangle):
         """Compute the swept volume and mesh of volumepoints around rotated around an axis"""
@@ -166,14 +173,21 @@ class LinkStatisticsModel(OpenRAVEModel):
         del volumepoints_pow
         # transform points by minangle since everything was computed ignoring it
         sweptvolume = dot(sweptvolume,transpose(rotationMatrixFromAxisAngle(axis,minangle)))
+        sweptpoints,sweptindices = self.computeIsosurface(sweptvolume,self.samplingdelta)
+        #h1 = self.env.plot3(points=sweptpoints,pointsize=2.0,colors=array((1.0,0,0)))
+        #h2 = self.env.drawtrimesh (points=sweptpoints,indices=sweptindices,colors=array((0,0,1,0.5)))
+        return sweptpoints,sweptindices,sweptvolume
+
+    @staticmethod
+    def computeIsosurface(sweptvolume,samplingdelta):
         # compute the isosurface
-        minpoint = numpy.min(sweptvolume,0)-2.0*self.samplingdelta
-        maxpoint = numpy.max(sweptvolume,0)+2.0*self.samplingdelta
-        volumeshape = array(ceil((maxpoint-minpoint)/self.samplingdelta),'int')
-        indices = array((sweptvolume-tile(minpoint,(len(sweptvolume),1)))*(1.0/self.samplingdelta)+0.5,int)
+        minpoint = numpy.min(sweptvolume,0)-2.0*samplingdelta
+        maxpoint = numpy.max(sweptvolume,0)+2.0*samplingdelta
+        volumeshape = array(ceil((maxpoint-minpoint)/samplingdelta),'int')
+        indices = array((sweptvolume-tile(minpoint,(len(sweptvolume),1)))*(1.0/samplingdelta)+0.5,int)
         sweptdata = zeros(prod(volumeshape))
         sweptdata[indices[:,0]+volumeshape[0]*(indices[:,1]+volumeshape[1]*indices[:,2])] = 1
-        id = tvtk.ImageData(origin=minpoint,spacing=array((self.samplingdelta,self.samplingdelta,self.samplingdelta)),dimensions=volumeshape)
+        id = tvtk.ImageData(origin=minpoint,spacing=array((samplingdelta,samplingdelta,samplingdelta)),dimensions=volumeshape)
         id.point_data.scalars = sweptdata.ravel()
         m = tvtk.MarchingCubes()
         m.set_input(id)
@@ -182,8 +196,6 @@ class LinkStatisticsModel(OpenRAVEModel):
         o = m.get_output()
         sweptpoints = array(o.points)
         sweptindices = reshape(array(o.polys.data,'int'),(len(o.polys.data)/4,4))[:,1:4] # first column is usually 3 (for 3 points per tri)
-        #h1 = self.env.plot3(points=sweptpoints,pointsize=2.0,colors=array((1.0,0,0)))
-        #h2 = self.env.drawtrimesh (points=sweptpoints,indices=sweptindices,colors=array((0,0,1,0.5)))
         return sweptpoints,sweptindices
 
     def showSweptVolumes(self,ilink=None):
@@ -204,9 +216,10 @@ class LinkStatisticsModel(OpenRAVEModel):
         for joint in self.robot.GetJoints():
             print joint.GetJointIndex()
             Rinv = rotationMatrixFromQuat(quatRotateDirection([0,0,1],-joint.GetAxis(0)))
-            jointvolume = dot(self.jointvolumes[joint.GetJointIndex()],transpose(Rinv))
-            jointvolume += tile(joint.GetAnchor(),(len(jointvolume),1))
-            handle = self.env.plot3(points=jointvolume,pointsize=2.0,colors=array((0,0,1,0.01)))
+            sweptpoints,sweptindices,volumecom,volumeinertia = self.jointvolumes[joint.GetJointIndex()]
+            points = dot(sweptpoints,transpose(Rinv))
+            points += tile(joint.GetAnchor(),(len(points),1))
+            handle = self.env.drawtrimesh(points=points,indices=sweptindices,colors=array((0,0,1,0.5)))
             raw_input('press any key to go to next: ')
 
     def computeGeometryStatistics(self,hulls):
@@ -265,7 +278,7 @@ class LinkStatisticsModel(OpenRAVEModel):
         parser = OpenRAVEModel.CreateOptionParser(useManipulator=False)
         parser.description='Computes statistics about the link geometry'
         parser.add_option('--samplingdelta',action='store',type='float',dest='samplingdelta',default=0.008,
-                          help='Skin width on the convex hulls generated')
+                          help='Skin width on the convex hulls generated (default=%default)')
         return parser
     @staticmethod
     def RunFromParser(Model=None,parser=None):

@@ -103,22 +103,22 @@ class ConvexDecompositionModel(OpenRAVEModel):
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser(useManipulator=False)
         parser.description='Computes the set of convex hulls for each triangle mesh geometry.using convexdecomposition'
-        parser.add_option('--skinWidth',action='store',type='float',dest='skinWidth',default=None,
-                          help='Skin width on the convex hulls generated')
+        parser.add_option('--skinWidth',action='store',type='float',dest='skinWidth',default=0.0,
+                          help='Skin width on the convex hulls generated (default=%default)')
         parser.add_option('--decompositionDepth',action='store',type='int',dest='decompositionDepth',default=8,
-                          help='recursion depth for convex decomposition')
+                          help='recursion depth for convex decomposition (default=%default)')
         parser.add_option('--maxHullVertices',action='store',type='int',dest='maxHullVertices',default=64,
-                          help='maximum number of vertices in output convex hulls')
+                          help='maximum number of vertices in output convex hulls (default=%default)')
         parser.add_option('--concavityThresholdPercent',action='store',type='float',dest='concavityThresholdPercent',default=0.1,
-                          help='The percentage of concavity allowed without causing a split to occur.')
+                          help='The percentage of concavity allowed without causing a split to occur (default=%default).')
         parser.add_option('--mergeThresholdPercent',action='store',type='float',dest='mergeThresholdPercent',default=30.0,
-                          help='The percentage of volume difference allowed to merge two convex hulls.')
+                          help='The percentage of volume difference allowed to merge two convex hulls (default=%default).')
         parser.add_option('--volumeSplitThresholdPercent',action='store',type='float',dest='volumeSplitThresholdPercent',default=0.1,
-                          help='The percentage of the total volume of the object above which splits will still occur.')
+                          help='The percentage of the total volume of the object above which splits will still occur (default=%default).')
         parser.add_option('--useInitialIslandGeneration',action='store',type='int',dest='useInitialIslandGeneration',default=1,
-                          help='whether or not to perform initial island generation on the input mesh.')
+                          help='whether or not to perform initial island generation on the input mesh (default=%default).')
         parser.add_option('--useIslandGeneration',action='store',type='int',dest='useIslandGeneration',default=0,
-                          help='Whether or not to perform island generation at each split.  Currently disabled due to bug in RemoveTjunctions')
+                          help='Whether or not to perform island generation at each split.  Currently disabled due to bug in RemoveTjunctions (default=%default).')
         return parser
     @staticmethod
     def RunFromParser(Model=None,parser=None):
