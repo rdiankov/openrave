@@ -69,8 +69,6 @@ class EvaluateInverseReachability(OpenRAVEEvaluator):
             densityfn,samplerfn,bounds,validgrasps = gr.computeGraspDistribution(logllthresh=logllthresh)
             print 'time to build distribution: %fs'%(time.time()-starttime)
             #h = gr.irmodel.showBaseDistribution(densityfn,bounds,self.target.GetTransform()[2,3],thresh=1.0)
-
-            print '1'
             data = StatisticsData()
             data.Nsamples = Nsamples
             data.samplingavg = array(())
@@ -81,7 +79,6 @@ class EvaluateInverseReachability(OpenRAVEEvaluator):
                 data.samplingavg = r_[data.samplingavg,min(Nsamples,(time.time()-starttime)/(len(goals)+1e-8))]
                 data.samplingfailures = r_[data.samplingfailures,numfailures/float(len(goals)+numfailures)]
 
-            print '2'
             data.randomavg = array(())
             data.randomfailures = array(())
             Trobot = self.robot.GetTransform()
@@ -100,11 +97,9 @@ class EvaluateInverseReachability(OpenRAVEEvaluator):
                 data.randomfailures = r_[data.randomfailures,numfailures/float(len(goals)+numfailures)]
 
             with self.env:
-                print '3'
                 data.samplingtimes = [self.fntimer(gr.sampleValidPlacementIterator(weight=weight,logllthresh=logllthresh,randomgrasps=True,randomplacement=False).next)[0] for i in range(Nsamples)]
                 # remove the last %1
                 data.samplingtimes = sort(data.samplingtimes)[0:floor(Nsamples*0.99)]
-                print '4'
                 data.randomtimes = [self.fntimer(gr.sampleValidPlacementIterator(weight=weight,logllthresh=logllthresh,randomgrasps=True,randomplacement=True).next)[0] for i in range(Nsamples)]
                 data.randomtimes = sort(data.randomtimes)[0:floor(Nsamples*0.99)]
 
@@ -198,7 +193,7 @@ class EvaluateMobileManipulation(OpenRAVEEvaluator):
 def test():
     import evaluateplanning
     logllthresh = 2.4
-    Nsamples = 10
+    Nsamples = 1000
     weight = 0.5
     env = Environment()
     self = evaluateplanning.EvaluateInverseReachability(env,'data/wamtest1.env.xml')

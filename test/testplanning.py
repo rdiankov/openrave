@@ -129,7 +129,7 @@ def test_graspplanning():
     env = Environment()
     env.SetViewer('qtcoin')
     env.Reset()
-    env.Load('data/lab1.env.xml')
+    env.Load('data/wamtest1.env.xml')
     robot = env.GetRobots()[0]
     self = graspplanning.GraspPlanning(robot)
     gm=self.graspables[0][0]
