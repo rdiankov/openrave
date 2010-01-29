@@ -74,24 +74,24 @@ class LinkStatisticsModel(OpenRAVEModel):
             self.robot.SetTransform(eye(4))
             # compute the convex hulls for every link
             print 'Generating link volume points...'
-            self.linkstats = []
             links = self.robot.GetLinks()
+            self.linkstats = [None]*len(links)
             for ilink,link,linkcd in izip(range(len(links)),links,self.cdmodel.linkgeometry):
                 print 'link %d/%d'%(ilink,len(links))
                 hulls = []
                 for ig,geom in enumerate(link.GetGeometries()):
-                    cdhulls = [cdhull for ilink,cdhull in linkcd if ilink==ig]
+                    cdhulls = [cdhull for ig2,cdhull in linkcd if ig2==ig]
                     if len(cdhulls) > 0:
-                        hulls += [self.transformHull(geom.GetTransform(),hull) for hull in cdhulls[0]]
+                        hulls += [self.cdmodel.transformHull(geom.GetTransform(),hull) for hull in cdhulls[0]]
                     elif geom.GetType() == KinBody.Link.GeomProperties.Type.Box:
-                        hulls.append(self.transformHull(geom.GetTransform(),ComputeBoxMesh(geom.GetBoxExtents())))
+                        hulls.append(self.cdmodel.transformHull(geom.GetTransform(),ComputeBoxMesh(geom.GetBoxExtents())))
                     elif geom.GetType() == KinBody.Link.GeomProperties.Type.Sphere:
-                        hulls.append(self.transformHull(geom.GetTransform(),ComputeGeodesicSphereMesh(geom.GetSphereRadius(),level=1)))
+                        hulls.append(self.cdmodel.transformHull(geom.GetTransform(),ComputeGeodesicSphereMesh(geom.GetSphereRadius(),level=1)))
                     elif geom.GetType() == KinBody.Link.GeomProperties.Type.Cylinder:
-                        hulls.append(self.transformHull(geom.GetTransform(),ComputeCylinderYMesh(radius=geom.GetCylinderRadius(),height=geom.GetCylinderHeight())))
+                        hulls.append(self.cdmodel.transformHull(geom.GetTransform(),ComputeCylinderYMesh(radius=geom.GetCylinderRadius(),height=geom.GetCylinderHeight())))
                     else:
                         raise ValueError('unknown geometry type %s'%str(geom.GetType()))
-                self.linkstats.append(self.computeGeometryStatistics(hulls))
+                self.linkstats[ilink] = self.computeGeometryStatistics(hulls)
                 
             print 'Generating link/joint swept volumes...'
             self.jointvolumes = [None]*len(self.robot.GetJoints())
@@ -102,7 +102,7 @@ class LinkStatisticsModel(OpenRAVEModel):
             # go through all the joints in reverse hierarchical order
             for joint in self.robot.GetDependencyOrderedJoints()[::-1]:
                 print 'joint %d'%joint.GetJointIndex()
-                #if joint.GetJointIndex() == 5: break
+                if joint.GetJointIndex() == 5: break
                 lower,upper = joint.GetLimits()
                 if joint.GetDOF() > 1:
                     print 'do not support joints with > 1 DOF'
@@ -211,7 +211,6 @@ class LinkStatisticsModel(OpenRAVEModel):
                     handles.append(self.env.drawtrimesh(points=transformPoints(Tlink,sweptpointslocal),indices=sweptindices,colors=volumecolors[mod(i,len(volumecolors))]))
             raw_input('press any key to go to next: ')
     def showJointSweptVolumes(self):
-        volumecolors = array(((1,0,0,0.5),(0,1,0,0.5),(0,0,1,0.5),(0,1,1,0.5),(1,0,1,0.5),(1,1,0,0.5),(0.5,1,0,0.5),(0.5,0,1,0.5)))
         for joint in self.robot.GetJoints():
             print joint.GetJointIndex()
             Rinv = rotationMatrixFromQuat(quatRotateDirection([0,0,1],-joint.GetAxis(0)))
@@ -244,9 +243,6 @@ class LinkStatisticsModel(OpenRAVEModel):
         inertia = cov(volumepoints,rowvar=0,bias=1)*(len(volumepoints)*self.samplingdelta**3)
         return {'com':com,'inertia':inertia,'volume':volume,'volumepoints':volumepoints}
 
-    @staticmethod
-    def transformHull(T,hull):
-        return dot(hull[0],transpose(T[0:3,0:3]))+tile(T[0:3,3],(len(hull[0]),1)),hull[1]
     @staticmethod
     def computeHullPlanes(hulls):
         hullplanes = [] # planes point outward

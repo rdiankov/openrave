@@ -193,7 +193,7 @@ class EvaluateMobileManipulation(OpenRAVEEvaluator):
 def test():
     import evaluateplanning
     logllthresh = 2.4
-    Nsamples = 1000
+    Nsamples = 100
     weight = 0.5
     env = Environment()
     self = evaluateplanning.EvaluateInverseReachability(env,'data/wamtest1.env.xml')

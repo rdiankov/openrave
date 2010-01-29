@@ -239,7 +239,7 @@ def test_linkstatistics():
     env = openravepy.Environment()
     robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
     env.AddRobot(robot)
-    self.robot.SetTransform(eye(4))
+    robot.SetTransform(eye(4))
     self = linkstatistics.LinkStatisticsModel(robot)
     self.load()
 
