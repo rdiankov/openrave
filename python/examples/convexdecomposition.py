@@ -63,7 +63,6 @@ class ConvexDecompositionModel(OpenRAVEModel):
             if not forcegenerate:
                 raise ValueError('failed to find auto-generation parameters')
             self.generate()
-            raise ValueError('could not auto-generate reachability for %s:%s'%(self.robot.GetName()))
         self.save()
     def generate(self,**kwargs):
         print 'Generating Convex Decomposition'

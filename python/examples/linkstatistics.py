@@ -67,7 +67,6 @@ class LinkStatisticsModel(OpenRAVEModel):
             if not forcegenerate:
                 raise ValueError('failed to find auto-generation parameters')
             self.generate()
-            raise ValueError('could not auto-generate reachability for %s:%s'%(self.robot.GetName()))
         self.save()
     def generate(self,samplingdelta=0.008,**kwargs):
         self.samplingdelta=samplingdelta

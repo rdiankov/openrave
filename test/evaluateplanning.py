@@ -59,13 +59,13 @@ class EvaluateInverseReachability(OpenRAVEEvaluator):
             print 'time to build distribution: %fs'%(time.time()-starttime)
             #h = gr.irmodel.showBaseDistribution(densityfn,bounds,self.target.GetTransform()[2,3],thresh=1.0)
             
-            self.avgsampling = zeros((2,0))
+            self.samplingavg = zeros((2,0))
             for i in range(10):
                 starttime = time.time()
                 goals,numfailures = gr.sampleGoals(lambda N: samplerfn(N,weight=weight),N=Nsamples)
-                self.avgsampling = c_[self.avgsampling,array((time.time()-starttime,numfailures))/Nsamples]
+                self.samplingavg = c_[self.samplingavg,array((time.time()-starttime,numfailures))/Nsamples]
             
-            self.avgrandom = zeros((2,0))
+            self.randomavg = zeros((2,0))
             Trobot = self.robot.GetTransform()
             Tgrasps = [(gr.gmodel.getGlobalGraspTransform(grasp),i) for i,grasp in enumerate(validgrasps)]
             bounds = array(((0,-1.0,-1.0),(2*pi,1.0,1.0)))
@@ -78,7 +78,7 @@ class EvaluateInverseReachability(OpenRAVEEvaluator):
             for i in range(10):
                 starttime = time.time()
                 goals,numfailures = gr.sampleGoals(randomsampler,N=Nsamples)
-                self.avgrandom = c_[self.avgrandom,array((time.time()-starttime,numfailures))/Nsamples]
+                self.randomavg = c_[self.randomavg,array((time.time()-starttime,numfailures))/Nsamples]
 
             with self.env:
                 self.samplingtimes = [self.fntimer(gr.sampleValidPlacementIterator(weight=weight,logllthresh=logllthresh,randomgrasps=True,randomplacement=False).next)[0] for i in range(Nsamples)]
@@ -88,7 +88,11 @@ class EvaluateInverseReachability(OpenRAVEEvaluator):
                 self.randomtimes = sort(self.randomtimes)[0:floor(Nsamples*0.99)]
 
             datafilename = self.dataprefix+'.'+gmodel.target.GetName()+'.pp'
-            pickle.dump((self.avgsampling,self.samplingtimes,self.avgrandom,self.randomtimes),open(datafilename,'w'))
+            d = {'samplingavg':(mean(self.samplingavg),std(self.samplingavg)),
+                 'randomavg':(mean(self.randomavg),std(self.randomavg)),
+                 'samplingtimes':(mean(self.samplingtimes),std(self.samplingtimes)),
+                 'randomtimes':(mean(self.randomtimes),std(self.randomtimes))}
+            pickle.dump(d,open(datafilename,'w'))
             fig = self.plot(self.avgsampling,self.samplingtimes)
 
     def plot(self,avg,firsttimes):

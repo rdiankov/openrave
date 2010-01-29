@@ -155,7 +155,6 @@ class ReachabilityModel(OpenRAVEModel):
                 if not forcegenerate:
                     raise ValueError('failed to find auto-generation parameters')
                 self.generate()
-                raise ValueError('could not auto-generate reachability for %s:%s'%(self.robot.GetName(),self.manip.GetName()))
             self.save()
         finally:
             for b in bodies:
