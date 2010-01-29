@@ -50,13 +50,16 @@ class GraspReachability(metaclass.AutoReloader):
         densityfn,samplerfn,bounds = self.irmodel.computeAggregateBaseDistribution(graspiter(),**kwargs)
         return densityfn,samplerfn,bounds,validgrasps
 
-    def sampleGoals(self,samplerfn,N=1):
+    def sampleGoals(self,samplerfn,N=1,timeout=inf):
         """samples a base placement and attemps to find an IK solution there.
         samplerfn should return a robot position and an index into gmodel.grasps"""
         goals = []
         numfailures = 0
+        starttime = time.time()
         with self.robot:
             while len(goals) < N:
+                if time.time()-starttime > timeout:
+                    return goals,numfailures
                 poses,indices = samplerfn(N-len(goals))
                 for pose,index in izip(poses,indices):
                     self.robot.SetTransform(pose)

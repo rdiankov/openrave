@@ -427,13 +427,13 @@ class InverseReachabilityModel(OpenRAVEModel):
         for Tgrasp,graspindex in Tgrasps:
             for i in range(Nprematuresamples):
                 r = random.rand(3)
-                angle = bounds[0,0]+r[0]*dbounds[0]
+                angle = 0.5*(bounds[0,0]+r[0]*dbounds[0])
                 yield r_[cos(angle),0,0,sin(angle),Tgrasp[0:2,3] + (bounds[0,1:3]+r[1:3]*dbounds[1:3]),Trobot[2,3]],graspindex
             grasps.append((Tgrasp,graspindex))
         while True:
             Tgrasp,graspindex = grasps[random.randint(len(grasps))]
             r = random.rand(3)
-            angle = bounds[0,0]+r[0]*dbounds[0]
+            angle = 0.5*(bounds[0,0]+r[0]*dbounds[0])
             yield r_[cos(angle),0,0,sin(angle),Tgrasp[0:2,3] + (bounds[0,1:3]+r[1:3]*dbounds[1:3]),Trobot[2,3]],graspindex
 
     def testSampling(self, heights=None,N=100,weight=1.0,**kwargs):

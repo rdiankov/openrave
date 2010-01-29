@@ -77,27 +77,27 @@ class EvaluateInverseReachability(OpenRAVEEvaluator):
             data.samplingfailures = array(())
             for i in range(10):
                 starttime = time.time()
-                goals,numfailures = gr.sampleGoals(lambda N: samplerfn(N,weight=weight),N=Nsamples)
-                data.samplingavg = r_[data.samplingavg,(time.time()-starttime)/Nsamples]
-                data.samplingfailures = r_[data.samplingfailures,numfailures/float(Nsamples+numfailures)]
+                goals,numfailures = gr.sampleGoals(lambda N: samplerfn(N,weight=weight),N=Nsamples,timeout=Nsamples)
+                data.samplingavg = r_[data.samplingavg,min(Nsamples,(time.time()-starttime)/(len(goals)+1e-8))]
+                data.samplingfailures = r_[data.samplingfailures,numfailures/float(len(goals)+numfailures)]
 
             print '2'
             data.randomavg = array(())
             data.randomfailures = array(())
             Trobot = self.robot.GetTransform()
             Tgrasps = [(gr.gmodel.getGlobalGraspTransform(grasp),i) for i,grasp in enumerate(validgrasps)]
-            bounds = array(((0,-1.0,-1.0),(2*pi,1.0,1.0)))
+            bounds = array(((0,-1.2,-1.2),(2*pi,1.2,1.2)))
             def randomsampler(N,weight=1.0):
                 indices = random.randint(0,len(Tgrasps),N)
-                angles = random.rand(N)*(bounds[1,0]-bounds[0,0])+bounds[0,0]
+                angles = 0.5*random.rand(N)*(bounds[1,0]-bounds[0,0])+bounds[0,0]
                 XY = [Tgrasps[i][0][0:2,3]+random.rand(2)*(bounds[1,1:3]-bounds[0,1:3])+bounds[0,1:3]  for i in indices]
                 return c_[cos(angles),zeros((N,2)),sin(angles),array(XY),tile(Trobot[2,3],N)],array([Tgrasps[i][1] for i in indices])
 
             for i in range(10):
                 starttime = time.time()
-                goals,numfailures = gr.sampleGoals(randomsampler,N=Nsamples)
-                data.randomavg = r_[data.randomavg,(time.time()-starttime)/Nsamples]
-                data.randomfailures = r_[data.randomfailures,numfailures/float(Nsamples+numfailures)]
+                goals,numfailures = gr.sampleGoals(randomsampler,N=Nsamples,timeout=Nsamples)
+                data.randomavg = r_[data.randomavg,min(Nsamples,(time.time()-starttime)/(len(goals)+1e-8))]
+                data.randomfailures = r_[data.randomfailures,numfailures/float(len(goals)+numfailures)]
 
             with self.env:
                 print '3'
@@ -134,7 +134,7 @@ class EvaluateInverseReachability(OpenRAVEEvaluator):
         fig = EvaluateInverseReachability.drawcomparison(allavg,'Robot %s\nAverage Valid Configuration Sampling Time'%robot.GetName(),'seconds')
         fig.savefig(dataprefix+'average.pdf',format='pdf')
         plt.close(fig)
-        fig = EvaluateInverseReachability.drawcomparison(allfailures,'Robot %s\nBad Samples per Good Sample Generated'%robot.GetName(),'samples')
+        fig = EvaluateInverseReachability.drawcomparison(allfailures,'Robot %s\Sample Failure Probability'%robot.GetName(),'samples')
         fig.savefig(dataprefix+'failures.pdf',format='pdf')
         plt.close(fig)
         fig = EvaluateInverseReachability.drawcomparison(alltimes,'Robot %s\nTime to First Valid Configuration in New Scene'%robot.GetName(),'seconds')
