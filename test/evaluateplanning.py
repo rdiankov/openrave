@@ -24,13 +24,21 @@ import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 from scipy import stats
 
+class StatisticsData:
+    pass
+
 class OpenRAVEEvaluator(metaclass.AutoReloader):
     @staticmethod
     def fntimer(f, *args, **kwargs):
         starttime=time.time()
         res = f(*args,**kwargs)
         return time.time()-starttime,res
-
+    @staticmethod
+    def getdatafiles(dataprefix):
+        robotdir,prefix = os.path.split(dataprefix)
+        allnames = os.listdir(robotdir)
+        return [os.path.join(robotdir,name) for name in allnames if name.find(prefix) == 0]
+        
 class EvaluateGrasping(OpenRAVEEvaluator):
     pass
 class EvaluateInverseKinematics(OpenRAVEEvaluator):
@@ -49,8 +57,11 @@ class EvaluateInverseReachability(OpenRAVEEvaluator):
         sceneprefix = os.path.split(self.scenename)[1]
         if sceneprefix.find('.') >= 0:
             sceneprefix = sceneprefix[0:sceneprefix.find('.')]
-        self.dataprefix = os.path.join(self.env.GetHomeDirectory(),'robot.'+self.robot.GetRobotStructureHash(),'irstats.'+sceneprefix)
+        self.dataprefix = self.getdataprefix(self.robot)+sceneprefix
 
+    @staticmethod
+    def getdataprefix(robot):
+        return os.path.join(robot.GetEnv().GetHomeDirectory(),'robot.'+robot.GetRobotStructureHash(),'irstats.')
     def testgraspables(self,Nsamples=1000,logllthresh=2.4,weight=1.0):
         for gmodel,dests in self.planning.graspables:
             gr = mobilemanipulation.GraspReachability(robot=self.robot,gmodel=gmodel)
@@ -58,14 +69,21 @@ class EvaluateInverseReachability(OpenRAVEEvaluator):
             densityfn,samplerfn,bounds,validgrasps = gr.computeGraspDistribution(logllthresh=logllthresh)
             print 'time to build distribution: %fs'%(time.time()-starttime)
             #h = gr.irmodel.showBaseDistribution(densityfn,bounds,self.target.GetTransform()[2,3],thresh=1.0)
-            
-            self.samplingavg = zeros((2,0))
+
+            print '1'
+            data = StatisticsData()
+            data.Nsamples = Nsamples
+            data.samplingavg = array(())
+            data.samplingfailures = array(())
             for i in range(10):
                 starttime = time.time()
                 goals,numfailures = gr.sampleGoals(lambda N: samplerfn(N,weight=weight),N=Nsamples)
-                self.samplingavg = c_[self.samplingavg,array((time.time()-starttime,numfailures))/Nsamples]
-            
-            self.randomavg = zeros((2,0))
+                data.samplingavg = r_[data.samplingavg,(time.time()-starttime)/Nsamples]
+                data.samplingfailures = r_[data.samplingfailures,numfailures/float(Nsamples+numfailures)]
+
+            print '2'
+            data.randomavg = array(())
+            data.randomfailures = array(())
             Trobot = self.robot.GetTransform()
             Tgrasps = [(gr.gmodel.getGlobalGraspTransform(grasp),i) for i,grasp in enumerate(validgrasps)]
             bounds = array(((0,-1.0,-1.0),(2*pi,1.0,1.0)))
@@ -78,27 +96,79 @@ class EvaluateInverseReachability(OpenRAVEEvaluator):
             for i in range(10):
                 starttime = time.time()
                 goals,numfailures = gr.sampleGoals(randomsampler,N=Nsamples)
-                self.randomavg = c_[self.randomavg,array((time.time()-starttime,numfailures))/Nsamples]
+                data.randomavg = r_[data.randomavg,(time.time()-starttime)/Nsamples]
+                data.randomfailures = r_[data.randomfailures,numfailures/float(Nsamples+numfailures)]
 
             with self.env:
-                self.samplingtimes = [self.fntimer(gr.sampleValidPlacementIterator(weight=weight,logllthresh=logllthresh,randomgrasps=True,randomplacement=False).next)[0] for i in range(Nsamples)]
+                print '3'
+                data.samplingtimes = [self.fntimer(gr.sampleValidPlacementIterator(weight=weight,logllthresh=logllthresh,randomgrasps=True,randomplacement=False).next)[0] for i in range(Nsamples)]
                 # remove the last %1
-                self.samplingtimes = sort(self.samplingtimes)[0:floor(Nsamples*0.99)]
-                self.randomtimes = [self.fntimer(gr.sampleValidPlacementIterator(weight=weight,logllthresh=logllthresh,randomgrasps=True,randomplacement=True).next)[0] for i in range(Nsamples)]
-                self.randomtimes = sort(self.randomtimes)[0:floor(Nsamples*0.99)]
+                data.samplingtimes = sort(data.samplingtimes)[0:floor(Nsamples*0.99)]
+                print '4'
+                data.randomtimes = [self.fntimer(gr.sampleValidPlacementIterator(weight=weight,logllthresh=logllthresh,randomgrasps=True,randomplacement=True).next)[0] for i in range(Nsamples)]
+                data.randomtimes = sort(data.randomtimes)[0:floor(Nsamples*0.99)]
 
+            data.robotname = self.robot.GetName()
+            data.targetname = gmodel.target.GetName()
             datafilename = self.dataprefix+'.'+gmodel.target.GetName()+'.pp'
-            d = {'samplingavg':(mean(self.samplingavg),std(self.samplingavg)),
-                 'randomavg':(mean(self.randomavg),std(self.randomavg)),
-                 'samplingtimes':(mean(self.samplingtimes),std(self.samplingtimes)),
-                 'randomtimes':(mean(self.randomtimes),std(self.randomtimes))}
-            pickle.dump(d,open(datafilename,'w'))
-            fig = self.plot(self.avgsampling,self.samplingtimes)
+            pickle.dump(data,open(datafilename,'w'))
+        print 'finished inversereachability'
+            
+    @staticmethod
+    def gatherdata(robot):
+        dataprefix = EvaluateInverseReachability.getdataprefix(robot)
+        datafiles = EvaluateInverseReachability.getdatafiles(dataprefix)
+        allavg = []
+        allfailures = []
+        alltimes = []
+        for datafile in datafiles:
+            try:
+                data = pickle.load(open(datafile,'r'))
+            except:
+                continue
+            allavg.append((data.targetname,data.samplingavg,data.randomavg))
+            allfailures.append((data.targetname,data.samplingfailures,data.randomfailures))
+            alltimes.append((data.targetname,data.samplingtimes,data.randomtimes))
+        
+        # find all files starting with dataprefix and combine their data
+        fig = EvaluateInverseReachability.drawcomparison(allavg,'Robot %s\nAverage Valid Configuration Sampling Time'%robot.GetName(),'seconds')
+        fig.savefig(dataprefix+'average.pdf',format='pdf')
+        plt.close(fig)
+        fig = EvaluateInverseReachability.drawcomparison(allfailures,'Robot %s\nBad Samples per Good Sample Generated'%robot.GetName(),'samples')
+        fig.savefig(dataprefix+'failures.pdf',format='pdf')
+        plt.close(fig)
+        fig = EvaluateInverseReachability.drawcomparison(alltimes,'Robot %s\nTime to First Valid Configuration in New Scene'%robot.GetName(),'seconds')
+        fig.savefig(dataprefix+'times.pdf',format='pdf')
+        plt.close(fig)
 
-    def plot(self,avg,firsttimes):
-        # plot the data
+    @staticmethod
+    def drawcomparison(statdata,stattitle,statylabel):
         fig = plt.figure()
-        fig.clf()
+        ax = fig.add_subplot(111)
+        
+        ind = arange(len(statdata))  # the x locations for the groups
+        width = 0.35       # the width of the bars
+        rects1 = ax.bar(ind, [mean(d[1]) for d in statdata], width, color='r', yerr=[std(d[1]) for d in statdata])
+        rects2 = plt.bar(ind+width, [mean(d[2]) for d in statdata], width, color='y', yerr=[std(d[2]) for d in statdata])
+
+        ax.set_ylabel(statylabel)
+        ax.set_title(stattitle)
+        ax.set_xticks(ind+width)
+        ax.set_xticklabels([d[0] for d in statdata])
+        ax.legend( (rects1[0], rects2[0]), ('Inverse Reachability', 'Random'), loc='upper left' )
+        for rect in rects1:
+            height = rect.get_height()
+            ax.text(rect.get_x()+rect.get_width()/2., 1.05*height, '%.3f'%height, ha='center', va='bottom')
+        for rect in rects2:
+            height = rect.get_height()
+            ax.text(rect.get_x()+rect.get_width()/2., 1.05*height, '%.3f'%height, ha='center', va='bottom')
+        plt.show()
+        return fig
+
+    @staticmethod
+    def plot(avg,firsttimes):
+        """histogram plotting"""
+        fig = plt.figure()
         ax = fig.add_subplot(111)
         delta = 0.2
         maxtime = 20.0
@@ -127,12 +197,21 @@ class EvaluateMobileManipulation(OpenRAVEEvaluator):
 
 def test():
     import evaluateplanning
-    env = Environment()
-    self = evaluateplanning.EvaluateInverseReachability(env,'data/lab1.env.xml')
     logllthresh = 2.4
-    Nsamples = 1000
+    Nsamples = 10
     weight = 0.5
+    env = Environment()
+    self = evaluateplanning.EvaluateInverseReachability(env,'data/wamtest1.env.xml')
     self.testgraspables(Nsamples=Nsamples,logllthresh=logllthresh)
+    self = evaluateplanning.EvaluateInverseReachability(env,'data/wamtest2.env.xml')
+    self.testgraspables(Nsamples=Nsamples,logllthresh=logllthresh)
+
+def savedata():
+    import evaluateplanning
+    env = Environment()
+    robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
+    env.AddRobot(robot)
+    evaluateplanning.EvaluateInverseReachability.gatherdata(robot)
 
 if __name__ == "__main__":
     pass

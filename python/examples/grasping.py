@@ -243,7 +243,7 @@ class GraspingModel(OpenRAVEModel):
         if randomgrasps:
             order = range(startindex,len(self.grasps))
         else:
-            order = startindex+random.permutation(startindex,len(self.grasps)-startindex)
+            order = startindex+random.permutation(len(self.grasps)-startindex)
         for i in order:
             grasp = self.grasps[i]
             with KinBodyStateSaver(self.robot):

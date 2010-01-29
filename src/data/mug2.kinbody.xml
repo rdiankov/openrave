@@ -1,0 +1,8 @@
+<KinBody name="mug2">
+  <Body type="dynamic">
+    <Geom type="trimesh">
+      <Data>models/objects/plastic_mug2p.iv</Data>
+      <Render>models/objects/plastic_mug2p.iv</Render>
+    </Geom>      
+  </Body>
+</KinBody>

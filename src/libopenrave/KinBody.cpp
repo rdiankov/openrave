@@ -2017,8 +2017,11 @@ struct LINKTRANSINFO
 
 void KinBody::WriteForwardKinematics(std::ostream& f)
 {
+    if( _veclinks.size() == 0 )
+        return;
+
     // set the first body and all static bodies to computed
-    _veclinks[0]->userdata = 1;
+    _veclinks.at(0)->userdata = 1;
     int numleft = (int)_veclinks.size()-1;
 
     for(size_t i = 1; i < _veclinks.size(); ++i) {
