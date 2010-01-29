@@ -643,7 +643,7 @@ bool ADD_FRAME_FROM_DIB_TO_AVI(void* pdata)
 // no ffmpeg
 bool STOP_AVI() { return false; }
 std::list<std::pair<int,string> > GET_CODECS() { return std::list<std::pair<int,string> >(); }
-bool START_AVI(const char* filename, int _frameRate, int width, int height, int bits)
+bool START_AVI(const char* filename, int _frameRate, int width, int height, int bits,int)
 {
     RAVELOG_WARNA("avi recording to file %s not enabled\n", filename);
     return false;
