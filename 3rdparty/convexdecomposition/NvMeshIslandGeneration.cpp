@@ -142,13 +142,13 @@ public:
 
   void init(NxU32 i1,NxU32 i2,Triangle *parent)
   {
-    assert( i1 < 65536 );
-    assert( i2 < 65536 );
+      //assert( i1 < 65536 );
+      //assert( i2 < 65536 );
 
     mI1 = i1;
     mI2 = i2;
-    mHash        = (i2<<16)|i1;
-    mReverseHash = (i1<<16)|i2;
+    mHash        = ((NxU64)i2<<32)|(NxU64)i1;
+    mReverseHash = ((NxU64)i1<<32)|(NxU64)i2;
     mNext = 0;
     mPrevious = 0;
     mParent = parent;
@@ -156,8 +156,8 @@ public:
 
   NxU32  mI1;
   NxU32  mI2;
-  NxU32  mHash;
-  NxU32  mReverseHash;
+  NxU64  mHash;
+  NxU64  mReverseHash;
 
   Edge     *mNext;
   Edge     *mPrevious;
@@ -165,7 +165,7 @@ public:
   Triangle *mParent;
 };
 
-typedef CONVEX_DECOMPOSITION::HashMap< NxU32, Edge * > EdgeHashMap;
+typedef CONVEX_DECOMPOSITION::HashMap< NxU64, Edge * > EdgeHashMap;
 typedef CONVEX_DECOMPOSITION::Array< Triangle * > TriangleVector;
 
 class EdgeCheck

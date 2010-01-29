@@ -92,6 +92,13 @@ class ConvexDecompositionModel(OpenRAVEModel):
             allvertices = r_[allvertices,vertices]
         return KinBody.Link.TriMesh(allvertices,allindices)
 
+    def show(self,options=None):
+        self.env.SetViewer('qtcoin')
+        self.env.UpdatePublishedBodies()
+        T = self.env.Triangulate(self.robot)
+        print 'vertices: %d, triangles: %d'%(len(T.vertices),len(T.indices)/3)
+        raw_input('Go to View->Geometry->Render/Collision to see render and collision models: ')
+
     @staticmethod
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser(useManipulator=False)

@@ -588,7 +588,7 @@ namespace CONVEX_DECOMPOSITION
 			T*					mData;
 			NxU32				mCapacity;
 			NxU32				mSize;
-			ArrayMetaData(): mSize(0), mCapacity(0), mData(0) {}
+			ArrayMetaData(): mData(0), mCapacity(0), mSize(0) {}
 		};
 
 		template <typename T>
@@ -1143,7 +1143,7 @@ namespace CONVEX_DECOMPOSITION
 		// from http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
 		NxU32 const w = v - ((v >> 1) & 0x55555555);
 		NxU32 const x = (w & 0x33333333) + ((w >> 2) & 0x33333333);
-		return ((x + (x >> 4) & 0xF0F0F0F) * 0x1010101) >> 24;
+		return ((x + ((x >> 4) & 0xF0F0F0F)) * 0x1010101) >> 24;
 	}
 
 	/*!
@@ -1161,7 +1161,7 @@ namespace CONVEX_DECOMPOSITION
 
 	NX_INLINE bool isPowerOfTwo(NxU32 x)
 	{
-		return x!=0 && (x & x-1) == 0;
+		return (x!=0) && ((x & x-1) == 0);
 	}
 
 	// "Next Largest Power of 2
@@ -1451,13 +1451,13 @@ namespace CONVEX_DECOMPOSITION
 			typedef Entry EntryType;
 
 			HashBase(NxU32 initialTableSize = 64, float loadFactor = 0.75f):
-			mLoadFactor(loadFactor),
+            mEntries(),
+				mNext(),
+                mHash(),
+                mLoadFactor(loadFactor),
 				mFreeList(EOL),
 				mTimestamp(0),
-				mSize(0),
-				mEntries(),
-				mNext(),
-				mHash()
+				mSize(0)
 			{
 				if(initialTableSize)
 					reserveInternal(initialTableSize);
@@ -1697,7 +1697,7 @@ namespace CONVEX_DECOMPOSITION
 			class Iter
 			{
 			public:
-				NX_INLINE Iter(HashBase& b): mBase(b), mTimestamp(b.mTimestamp), mBucket(0), mEntry(b.EOL)
+				NX_INLINE Iter(HashBase& b): mBucket(0), mEntry(b.EOL), mTimestamp(b.mTimestamp), mBase(b)
 				{
 					if(mBase.mEntries.size()>0)
 					{
