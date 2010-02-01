@@ -62,7 +62,7 @@ class LinkStatisticsModel(OpenRAVEModel):
         self.generate(**args)
     def autogenerate(self,forcegenerate=True):
         if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531':
-            self.generate(samplingdelta=0.01)
+            self.generate(samplingdelta=0.009)
         else:
             if not forcegenerate:
                 raise ValueError('failed to find auto-generation parameters')
@@ -91,7 +91,7 @@ class LinkStatisticsModel(OpenRAVEModel):
                         hulls.append(self.cdmodel.transformHull(geom.GetTransform(),ComputeCylinderYMesh(radius=geom.GetCylinderRadius(),height=geom.GetCylinderHeight())))
                 self.linkstats[ilink] = self.computeGeometryStatistics(hulls)
                 
-            print 'Generating link/joint swept volumes...'
+            print 'Generating swept volumes...'
             self.jointvolumes = [None]*len(self.robot.GetJoints())
             self.jointvolumes_points = [None]*len(self.robot.GetJoints())
             for joint in self.robot.GetDependencyOrderedJoints()[::-1]: # go through all the joints in reverse hierarchical order
@@ -117,6 +117,7 @@ class LinkStatisticsModel(OpenRAVEModel):
                 for childjoint in self.robot.GetJoints():
                     if childjoint.GetJointIndex() != joint.GetJointIndex() and (childjoint.GetFirstAttached().GetIndex() in connectedlinkindices or childjoint.GetSecondAttached().GetIndex() in connectedlinkindices):
                         jointvolume = r_[jointvolume, self.transformJointPoints(childjoint,self.jointvolumes_points[childjoint.GetJointIndex()],translation=-joint.GetAnchor())]
+                        self.jointvolumes_points[childjoint.GetJointIndex()] = None # release since won't be needing it anymore
                 sweptpoints,sweptindices,sweptvolume = self.computeSweptVolume(volumepoints=jointvolume,axis=-joint.GetAxis(0),minangle=lower[0],maxangle=upper[0])
                 # rotate jointvolume so that -joint.GetAxis(0) matches with the z-axis
                 sweptvolume = dot(sweptvolume,transpose(rotationMatrixFromQuat(quatRotateDirection(-joint.GetAxis(0),[0,0,1]))))
@@ -124,8 +125,13 @@ class LinkStatisticsModel(OpenRAVEModel):
                 volumecom = mean(sweptvolume,0)
                 volumeinertia = cov(sweptvolume,rowvar=0,bias=1)*(len(sweptvolume)*self.samplingdelta**3)
                 sweptpoints,sweptindices = self.computeIsosurface(sweptvolume,self.samplingdelta*2.0,0.5)
+                # get the cross sections and a dV/dAngle measure
+                density = 0.2*self.samplingdelta
+                crossarea = c_[sqrt(sum(jointvolume[:,0:2]**2,1)),sweptvolume[:,2:]]
+                crossarea = crossarea[self.prunePointsKDTree(crossarea, density**2, 1,k=50),:]
+                volumedelta = sum(crossarea[:,0])*density**2
                 self.jointvolumes_points[joint.GetJointIndex()] = sweptvolume
-                self.jointvolumes[joint.GetJointIndex()] = (sweptpoints,sweptindices,volumecom,volumeinertia)
+                self.jointvolumes[joint.GetJointIndex()] = {'sweptpoints':sweptpoints,'sweptindices':sweptindices,'crossarea':crossarea,'volumedelta':volumedelta,'volumecom':volumecom,'volumeinertia':volumeinertia}
                         
     def computeSweptVolume(self,volumepoints,axis,minangle,maxangle):
         """Compute the swept volume and mesh of volumepoints around rotated around an axis"""
@@ -192,12 +198,15 @@ class LinkStatisticsModel(OpenRAVEModel):
         Rinv = rotationMatrixFromQuat(quatRotateDirection([0,0,1],-joint.GetAxis(0)))
         return dot(points,transpose(Rinv)) + tile(joint.GetAnchor()+translation,(len(points),1))
 
-    def showSweptVolumes(self):
+    def show(self,options=None):
+        self.env.SetViewer('qtcoin')
         for joint in self.robot.GetJoints():
             print joint.GetJointIndex()
             haxis = self.env.drawlinestrip(points=vstack((joint.GetAnchor()-2.0*joint.GetAxis(0),joint.GetAnchor()+2.0*joint.GetAxis(0))),linewidth=3.0,colors=array((0.1,0.1,0,1)))
-            sweptpoints,sweptindices,volumecom,volumeinertia = self.jointvolumes[joint.GetJointIndex()]
-            hvol = self.env.drawtrimesh(points=self.transformJointPoints(joint,sweptpoints),indices=sweptindices,colors=array((0,0,1,0.2)))
+            jv = self.jointvolumes[joint.GetJointIndex()]
+            hvol = self.env.drawtrimesh(points=self.transformJointPoints(joint,jv['sweptpoints']),indices=jv['sweptindices'],colors=array((0,0,1,0.2)))
+            crossarea = jv['crossarea']
+            harea = self.env.plot3(points=self.transformJointPoints(joint,c_[crossarea[:,0],zeros(len(crossarea)),crossarea[:,1]]),pointsize=5.0,colors=array((1,0,0,0.3)))
             raw_input('press any key to go to next: ')
 
     def computeGeometryStatistics(self,hulls):
@@ -241,12 +250,47 @@ class LinkStatisticsModel(OpenRAVEModel):
                 uniqueplanes[i+1:] &= dot(normalizedplanes[i+1:,:],normalizedplanes[i])<0.999
             hullplanes.append(planes[uniqueplanes])
         return hullplanes
-    def show(self,options=None):
-        self.env.SetViewer('qtcoin')
-        self.env.UpdatePublishedBodies()
-        T = self.env.Triangulate(self.robot)
-        print 'vertices: %d, triangles: %d'%(len(T.vertices),len(T.indices)/3)
-        raw_input('Go to View->Geometry->Render/Collision to see render and collision models: ')
+
+    @staticmethod
+    def prunePointsKDTree(points, thresh2, neighsize,k=20):
+        """Prunes the poses so that every pose has at most neighsize neighbors within sqrt(thresh2) distance. In order to successfully compute the nearest neighbors, each pose's quaternion is also negated.
+        Input:
+        thresh2 - squared threshold
+        """
+        N = points.shape[0]
+        k = min(k,N)
+        if N <= 1:
+            return range(N)
+        kdtree = pyANN.KDTree(points)
+        while True:
+            try:
+                allneighs,alldists,kball = kdtree.kFRSearchArray(points,thresh2,k,sqrt(thresh2)*0.01)
+                break
+            except pyann_exception:
+                print 'prunePointsKDTree: ann memory exceeded. Retrying with less neighbors'
+                k = (k+1)/2
+            except MemoryError:
+                print 'prunePointsKDTree: memory error. Retrying with less neighbors'
+                k = (k+1)/2
+        inds = []
+        for i in xrange(N):
+            n = neighsize
+            for j in xrange(k):
+                if allneighs[i,j] < i:
+                    if allneighs[i,j] >= 0:
+                        n -= 1
+                        if n > 0:
+                            continue
+                    break
+            if n > 0:
+                inds.append(i)
+        dorepeat = any(allneighs[:,-1]>=0)
+        del kdtree, allneighs, alldists
+        if dorepeat:
+            #print 'repeating pruning... %d/%d'%(len(inds),points.shape[0])
+            newinds = LinkStatisticsModel.prunePointsKDTree(points[inds,:], thresh2, neighsize,2*k)
+            inds = [inds[i] for i in newinds]
+        return inds
 
     @staticmethod
     def CreateOptionParser():

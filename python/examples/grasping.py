@@ -79,7 +79,17 @@ class GraspingModel(OpenRAVEModel):
                           self.env.drawlinelist(points=reshape(c_[gapproachrays[:,0:3],gapproachrays[:,0:3]+0.005*gapproachrays[:,3:6]],(2*N,3)),linewidth=4,colors=array((1,0,0,0)))]
         contactgraph = None
         statesaver = self.robot.CreateKinBodyStateSaver()
+        hiddengeoms = []
         try:
+            with self.env:
+                # stop rendering the non-gripper links
+                childlinkids = [link.GetIndex() for link in self.manip.GetChildLinks()]
+                for link in self.robot.GetLinks():
+                    if link.GetIndex() not in childlinkids:
+                        for geom in link.GetGeometries():
+                            hiddengeoms.append((geom,geom.IsDraw()))
+                            geom.SetDraw(False)
+
             totalgrasps = N*len(preshapes)*len(rolls)*len(standoffs)
             counter = 0
             self.grasps = []
@@ -126,6 +136,8 @@ class GraspingModel(OpenRAVEModel):
                     self.grasps.append(grasp)
             self.grasps = array(self.grasps)
         finally:
+            for geom,isdraw in hiddengeoms:
+                geom.SetDraw(dodraw)
             # force closing the handles (if an exception is thrown, python 2.6 does not close them without a finally)
             approachgraphs = None
             contactgraph = None

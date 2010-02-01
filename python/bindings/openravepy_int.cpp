@@ -461,7 +461,8 @@ public:
             }
 
             boost::shared_ptr<PyTriMesh> GetCollisionMesh() { return boost::shared_ptr<PyTriMesh>(new PyTriMesh(_plink->GetGeometry(_geomindex).GetCollisionMesh())); }
-            virtual void SetDraw(bool bDraw) { _plink->GetGeometry(_geomindex).SetDraw(bDraw); }
+            void SetDraw(bool bDraw) { _plink->GetGeometry(_geomindex).SetDraw(bDraw); }
+            bool IsDraw() { return _plink->GetGeometry(_geomindex).IsDraw(); }
             KinBody::Link::GEOMPROPERTIES::GeomType GetType() { return _plink->GetGeometry(_geomindex).GetType(); }
             object GetTransform() { return ReturnTransform(_plink->GetGeometry(_geomindex).GetTransform()); }
             dReal GetSphereRadius() const { return _plink->GetGeometry(_geomindex).GetSphereRadius(); }
@@ -3039,6 +3040,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
                     .def("SetCollisionMesh",&PyKinBody::PyLink::PyGeomProperties::SetCollisionMesh,args("trimesh"))
                     .def("GetCollisionMesh",&PyKinBody::PyLink::PyGeomProperties::GetCollisionMesh)
                     .def("SetDraw",&PyKinBody::PyLink::PyGeomProperties::SetDraw,args("draw"))
+                    .def("IsDraw",&PyKinBody::PyLink::PyGeomProperties::IsDraw)
                     .def("GetType",&PyKinBody::PyLink::PyGeomProperties::GetType)
                     .def("GetTransform",&PyKinBody::PyLink::PyGeomProperties::GetTransform)
                     .def("GetSphereRadius",&PyKinBody::PyLink::PyGeomProperties::GetSphereRadius)

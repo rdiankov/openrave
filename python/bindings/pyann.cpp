@@ -95,7 +95,11 @@ object search(ANNkd_tree& kdtree, object q, int k, double eps, bool priority = f
 
     npy_intp dims[] = {k};
     PyObject *pydists = PyArray_SimpleNew(1,dims, sizeof(ANNdist)==8?PyArray_DOUBLE:PyArray_FLOAT);
+    BOOST_ASSERT(!!pydists);
     PyObject *pyidx = PyArray_SimpleNew(1,dims, PyArray_INT);
+    if( !pyidx )
+        Py_DECREF(pydists);
+    BOOST_ASSERT(!!pyidx);
     ANNdist* pdists = (ANNdist*)PyArray_DATA(pydists);
     ANNidx* pidx = (ANNidx*)PyArray_DATA(pyidx);
 
@@ -129,7 +133,11 @@ object k_fixed_radius_search(ANNkd_tree& kdtree, object q, double sqRad, int k, 
 
     npy_intp dims[] = {min(k,kball)};
     PyObject *pydists = PyArray_SimpleNew(1,dims, sizeof(ANNdist)==8?PyArray_DOUBLE:PyArray_FLOAT);
+    BOOST_ASSERT(!!pydists);
     PyObject *pyidx = PyArray_SimpleNew(1,dims, PyArray_INT);
+    if( !pyidx )
+        Py_DECREF(pydists);
+    BOOST_ASSERT(!!pyidx);
     ANNdist* pdists = (ANNdist*)PyArray_DATA(pydists);
     ANNidx* pidx = (ANNidx*)PyArray_DATA(pyidx);
     int addindex=0;
@@ -156,6 +164,7 @@ object k_fixed_radius_search_array(ANNkd_tree& kdtree, object qarray, double sqR
     BOOST_ASSERT(len(qarray[0])==kdtree.theDim());
     npy_intp dimsball[] = {N};
     PyObject *pykball = PyArray_SimpleNew(1,dimsball, PyArray_INT);
+    BOOST_ASSERT(!!pykball);
     int* pkball = (int*)PyArray_DATA(pykball);
     
     if( k <= 0 ) {
@@ -170,7 +179,15 @@ object k_fixed_radius_search_array(ANNkd_tree& kdtree, object qarray, double sqR
 
     npy_intp dims[] = {N,k};
     PyObject *pydists = PyArray_SimpleNew(2,dims, sizeof(ANNdist)==8?PyArray_DOUBLE:PyArray_FLOAT);
+    if( !pydists )
+        Py_DECREF(pykball);
+    BOOST_ASSERT(!!pydists);
     PyObject *pyidx = PyArray_SimpleNew(2,dims, PyArray_INT);
+    if( !pyidx ) {
+        Py_DECREF(pykball);
+        Py_DECREF(pydists);
+    }
+    BOOST_ASSERT(!!pyidx);
     ANNdist* pdists = (ANNdist*)PyArray_DATA(pydists);
     ANNidx* pidx = (ANNidx*)PyArray_DATA(pyidx);
 

@@ -307,3 +307,7 @@ def test_contours():
     indices = array(o.polys.data)
     indices = array(reshape(indices,(len(indices)/4,4)),'int')
     h2 = env.drawtrimesh (points=newpoints,indices=indices[:,1:4],colors=array((0,0,1,0.5)))
+
+def test_jointweights():
+    jointdv = array([v['volumedelta'] for v in self.jointvolumes ])
+    linkdv = array([v['volume'] for v in self.linkstats])

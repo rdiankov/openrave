@@ -318,10 +318,6 @@ bool KinBodyItem::UpdateFromModel()
 {
     if( !_pchain )
         return false;
-    if( _bDrawStateChanged ) {
-        RAVELOG_INFO("draw state change not implemented yet\n");
-        _bDrawStateChanged = false;
-    }
 
     vector<Transform> vtrans;
     vector<dReal> vjointvalues;
@@ -330,8 +326,8 @@ bool KinBodyItem::UpdateFromModel()
         boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer->LockEnvironment();
         if( !lockenv )
             return false;
-        
-        if( _bReload )
+
+        if( _bReload || _bDrawStateChanged )
             Load();
 
         // make sure the body is still present!
@@ -365,7 +361,7 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
         return false;
     }
 
-    if( _bReload ) {
+    if( _bReload || _bDrawStateChanged ) {
         EnvironmentMutex::scoped_try_lock lockenv(_pchain->GetEnv()->GetMutex());
         if( !!lockenv )
             Load();
@@ -431,7 +427,14 @@ RobotItem::RobotItem(QtCoinViewerPtr viewer, RobotBasePtr robot, ViewGeometry vi
 
 void RobotItem::Load()
 {
+    FOREACH(it,_vEndEffectors)
+        _ivGeom->removeChild(it->_pswitch);
+    _vEndEffectors.resize(0);
+    FOREACH(it,_vAttachedSensors)
+        _ivGeom->removeChild(it->_pswitch);
+    _vAttachedSensors.resize(0);
     KinBodyItem::Load();
+
     _vEndEffectors.resize(_probot->GetManipulators().size());
     int index = 0;
     FOREACHC(itmanip, _probot->GetManipulators()) {
