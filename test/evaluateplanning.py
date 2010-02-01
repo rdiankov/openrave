@@ -37,7 +37,7 @@ class OpenRAVEEvaluator(metaclass.AutoReloader):
     def getdatafiles(dataprefix):
         robotdir,prefix = os.path.split(dataprefix)
         allnames = os.listdir(robotdir)
-        return [os.path.join(robotdir,name) for name in allnames if name.find(prefix) == 0]
+        return [os.path.join(robotdir,name) for name in allnames if name.startswith(prefix)]
         
 class EvaluateGrasping(OpenRAVEEvaluator):
     pass
@@ -110,7 +110,11 @@ class EvaluateInverseReachability(OpenRAVEEvaluator):
         print 'finished inversereachability'
             
     @staticmethod
-    def gatherdata(robot):
+    def gatherdata(robotname):
+        env = Environment()
+        robot = env.ReadRobotXMLFile(robotname)
+        env.AddRobot(robot)
+
         dataprefix = EvaluateInverseReachability.getdataprefix(robot)
         datafiles = EvaluateInverseReachability.getdatafiles(dataprefix)
         allavg = []
@@ -135,6 +139,9 @@ class EvaluateInverseReachability(OpenRAVEEvaluator):
         fig = EvaluateInverseReachability.drawcomparison(alltimes,'Robot %s\nTime to First Valid Configuration in New Scene'%robot.GetName(),'seconds')
         fig.savefig(dataprefix+'times.pdf',format='pdf')
         plt.close(fig)
+        
+        robot = None
+        env.Destroy()
 
     @staticmethod
     def drawcomparison(statdata,stattitle,statylabel):
@@ -149,6 +156,7 @@ class EvaluateInverseReachability(OpenRAVEEvaluator):
         ax.set_ylabel(statylabel)
         ax.set_title(stattitle)
         ax.set_xticks(ind+width)
+        ax.set_ylim(0,1.3*numpy.max([max(mean(d[1]),mean(d[2])) for d in statdata]))
         ax.set_xticklabels([d[0] for d in statdata])
         ax.legend( (rects1[0], rects2[0]), ('Inverse Reachability', 'Random'), loc='upper left' )
         for rect in rects1:
@@ -203,10 +211,7 @@ def test():
 
 def savedata():
     import evaluateplanning
-    env = Environment()
-    robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
-    env.AddRobot(robot)
-    evaluateplanning.EvaluateInverseReachability.gatherdata(robot)
+    evaluateplanning.EvaluateInverseReachability.gatherdata('robots/barrettsegway.robot.xml')
 
 if __name__ == "__main__":
     pass

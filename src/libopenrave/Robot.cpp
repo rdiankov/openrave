@@ -1773,6 +1773,9 @@ void RobotBase::ComputeJointHierarchy()
         serialize(ss,SO_Kinematics|SO_RobotManipulators|SO_RobotSensors);
         __hashrobotstructure = GetMD5HashString(ss.str());
     }
+
+    if( ComputeAABB().extents.lengthsqr3() > 900.0f )
+        RAVELOG_WARN("Robot %s span is greater than 30 meaning that it is most likely defined in a unit other than meters. It is highly encouraged to define all OpenRAVE robots in meters since many metrics, database models, and solvers have been specifically optimized for this unit\n");
 }
 
 bool RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)

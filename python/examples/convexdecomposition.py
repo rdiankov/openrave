@@ -98,7 +98,7 @@ class ConvexDecompositionModel(OpenRAVEModel):
         self.env.UpdatePublishedBodies()
         T = self.env.Triangulate(self.robot)
         print 'total vertices: %d, total triangles: %d'%(len(T.vertices),len(T.indices)/3)
-        volumecolors = array(((1,0,0,0.5),(0,1,0,0.5),(0,0,1,0.5),(0,1,1,0.5),(1,0,1,0.5),(1,1,0,0.5),(0.5,1,0,0.5),(0.5,0,1,0.5)))
+        volumecolors = array(((1,0,0,0.5),(0,1,0,0.5),(0,0,1,0.5),(0,1,1,0.5),(1,0,1,0.5),(1,1,0,0.5),(0.5,1,0,0.5),(0.5,0,1,0.5),(0,0.5,1,0.5),(1,0.5,0,0.5),(0,1,0.5,0.5),(1,0,0.5,0.5)))
         handles = []
         jointvalues = tile(inf,self.robot.GetDOF())
         while True:
@@ -108,6 +108,7 @@ class ConvexDecompositionModel(OpenRAVEModel):
                 continue
             jointvalues = newvalues
             handles = []
+            colorindex = 0
             for ilink,link in enumerate(self.robot.GetLinks()):
                 hulls = []
                 for ig,geom in enumerate(link.GetGeometries()):
@@ -120,7 +121,8 @@ class ConvexDecompositionModel(OpenRAVEModel):
                         hulls.append(self.transformHull(geom.GetTransform(),ComputeGeodesicSphereMesh(geom.GetSphereRadius(),level=1)))
                     elif geom.GetType() == KinBody.Link.GeomProperties.Type.Cylinder:
                         hulls.append(self.transformHull(geom.GetTransform(),ComputeCylinderYMesh(radius=geom.GetCylinderRadius(),height=geom.GetCylinderHeight())))
-                handles += [self.env.drawtrimesh(points=transformPoints(link.GetTransform(),hull[0]),indices=hull[1],colors=volumecolors[mod(i,len(volumecolors))]) for i,hull in enumerate(hulls)]
+                handles += [self.env.drawtrimesh(points=transformPoints(link.GetTransform(),hull[0]),indices=hull[1],colors=volumecolors[mod(colorindex+i,len(volumecolors))]) for i,hull in enumerate(hulls)]
+                colorindex+=len(hulls)
         raw_input('Press any key to exit: ')
 
     @staticmethod
