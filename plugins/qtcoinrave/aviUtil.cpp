@@ -19,6 +19,7 @@
 #define AVIIF_KEYFRAME  0x00000010L // this frame is a key frame.
 
 #include <string>
+#include <list>
 
 #include <windows.h>
 #include <memory.h>
@@ -417,6 +418,7 @@ bool STOP_AVI()
 #else
 
 #include "qtcoin.h"
+#include <list>
 
 #if defined(ENABLE_FFMPEG)
 
@@ -639,6 +641,8 @@ bool ADD_FRAME_FROM_DIB_TO_AVI(void* pdata)
 }
 
 #else
+
+#include <list>
 
 // no ffmpeg
 bool STOP_AVI() { return false; }
