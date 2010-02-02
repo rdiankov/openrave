@@ -35,10 +35,10 @@ def mkdir_recursive(newdir):
         if tail:
             os.mkdir(newdir)
 
-def ComputeGeodesicSphereMesh(spherelevel=2):
+def ComputeGeodesicSphereMesh(radius=1.0,spherelevel=2):
     """Computes a geodesic sphere to a specified level. Returns the vertices and triangle indices"""
-    GTS_M_ICOSAHEDRON_X = sqrt(sqrt(5)+1)/sqrt(2*sqrt(5))
-    GTS_M_ICOSAHEDRON_Y = sqrt(2)/sqrt(5+sqrt(5))
+    GTS_M_ICOSAHEDRON_X = numpy.sqrt(numpy.sqrt(5)+1)/numpy.sqrt(2*numpy.sqrt(5))
+    GTS_M_ICOSAHEDRON_Y = numpy.sqrt(2)/numpy.sqrt(5+numpy.sqrt(5))
     GTS_M_ICOSAHEDRON_Z = 0.0
     vertices = [numpy.array((+GTS_M_ICOSAHEDRON_Z, +GTS_M_ICOSAHEDRON_X, -GTS_M_ICOSAHEDRON_Y)),
                 numpy.array((+GTS_M_ICOSAHEDRON_X, +GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z)),
@@ -69,10 +69,10 @@ def ComputeGeodesicSphereMesh(spherelevel=2):
                     mapnewinds[key] = mapnewinds[key[::-1]] = len(vertices)
                     inds.append(len(vertices))
                     vnew = v[j]+v[numpy.mod(j+1,3)]
-                    vertices.append(vnew/sqrt(sum(vnew**2)))
+                    vertices.append(vnew/numpy.sqrt(sum(vnew**2)))
             newindices += [[tri[0],inds[0],inds[2]],[inds[0],tri[1],inds[1]],[inds[2],inds[0],inds[1]],[inds[2],inds[1],tri[2]]]
         triindices = newindices
-    return numpy.array(vertices),triindices
+    return radius*numpy.array(vertices),triindices
 
 def ComputeBoxMesh(extents):
     """Computes a box mesh"""
@@ -93,7 +93,7 @@ def ComputeCylinderYMesh(radius,height,angledelta=0.1):
     cangles = numpy.cos(angles)
     sangles = numpy.sin(angles)
     N = len(angles)
-    vertices = numpy.c_[radius*numpy.tile(cangles,2),r_[numpy.tile(height*0.5,N),numpy.tile(-height*0.5,N)], radius*numpy.tile(sangles,2)]
+    vertices = numpy.c_[radius*numpy.tile(cangles,2),numpy.r_[numpy.tile(height*0.5,N),numpy.tile(-height*0.5,N)], radius*numpy.tile(sangles,2)]
     indices = []
     iprev = N-1
     for i in range(N):
