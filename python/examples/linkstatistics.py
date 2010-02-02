@@ -127,7 +127,7 @@ class LinkStatisticsModel(OpenRAVEModel):
                 sweptpoints,sweptindices = self.computeIsosurface(sweptvolume,self.samplingdelta*2.0,0.5)
                 # get the cross sections and a dV/dAngle measure
                 density = 0.2*self.samplingdelta
-                crossarea = c_[sqrt(sum(jointvolume[:,0:2]**2,1)),sweptvolume[:,2:]]
+                crossarea = c_[sqrt(sum(jointvolume[:,0:2]**2,1)),jointvolume[:,2:]]
                 crossarea = crossarea[self.prunePointsKDTree(crossarea, density**2, 1,k=50),:]
                 volumedelta = sum(crossarea[:,0])*density**2
                 self.jointvolumes_points[joint.GetJointIndex()] = sweptvolume
