@@ -35,7 +35,7 @@ def mkdir_recursive(newdir):
         if tail:
             os.mkdir(newdir)
 
-def ComputeGeodesicSphereMesh(radius=1.0,spherelevel=2):
+def ComputeGeodesicSphereMesh(radius=1.0,level=2):
     """Computes a geodesic sphere to a specified level. Returns the vertices and triangle indices"""
     GTS_M_ICOSAHEDRON_X = numpy.sqrt(numpy.sqrt(5)+1)/numpy.sqrt(2*numpy.sqrt(5))
     GTS_M_ICOSAHEDRON_Y = numpy.sqrt(2)/numpy.sqrt(5+numpy.sqrt(5))
@@ -53,8 +53,8 @@ def ComputeGeodesicSphereMesh(radius=1.0,spherelevel=2):
                 numpy.array((-GTS_M_ICOSAHEDRON_X, -GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z)),
                 numpy.array((+GTS_M_ICOSAHEDRON_Z, -GTS_M_ICOSAHEDRON_X, +GTS_M_ICOSAHEDRON_Y))]
     triindices = [[0, 1, 2],[1, 3, 4],[3, 5, 6],[2, 4, 7],[6, 5, 8],[2, 7, 9],[5, 0, 8],[9, 7, 10],[1, 0, 5],[10, 7, 11],[3, 1, 5],[6, 10, 11],[3, 6, 11],[9, 10, 8],[4, 3, 11],[6, 8, 10],[7, 4, 11],[2, 1, 4],[8, 0, 9],[0, 2, 9]]
-    while spherelevel > 0:
-        spherelevel -= 1
+    while level > 0:
+        level -= 1
         newindices = []
         mapnewinds = dict()
         for tri in triindices:
