@@ -30,3 +30,9 @@ set_target_properties(orcollision PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}
 set_target_properties(orcollision PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 target_link_libraries(orcollision ${OPENRAVE_LIBRARY} ${OPENRAVE_CORE_LIBRARY})
 install(TARGETS orcollision DESTINATION . )
+
+add_executable(orloadviewer orloadviewer.cpp)
+set_target_properties(orloadviewer PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+set_target_properties(orloadviewer PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+target_link_libraries(orloadviewer ${OPENRAVE_LIBRARY} ${OPENRAVE_CORE_LIBRARY})
+install(TARGETS orloadviewer DESTINATION . )

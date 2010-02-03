@@ -47,16 +47,16 @@ while test $# -gt 0; do
       echo -I@CMAKE_INSTALL_PREFIX@/include @OPENRAVE_BOOST_INCLUDE_DIRS@
       ;;
     --libs)
-      echo -L@CMAKE_INSTALL_PREFIX@/lib -lopenrave @OPENRAVE_BOOST_LIB_DIRS@
+      echo -L@CMAKE_INSTALL_PREFIX@/lib -lopenrave @OPENRAVE_BOOST_LIB_DIRS@ -l@Boost_THREAD_LIBRARY@
       ;;
     --libs-only-l)
-      echo -lopenrave
+      echo -lopenrave -l@Boost_THREAD_LIBRARY@
       ;;
     --libs-only-L)
       echo -L@CMAKE_INSTALL_PREFIX@/lib @OPENRAVE_BOOST_LIB_DIRS@
       ;;
     --shared-libs)
-      echo -L@CMAKE_INSTALL_PREFIX@/lib -lopenrave.so @OPENRAVE_BOOST_LIB_DIRS@
+      echo -L@CMAKE_INSTALL_PREFIX@/lib -lopenrave.so @OPENRAVE_BOOST_LIB_DIRS@ -l@Boost_THREAD_LIBRARY@
       ;;
     --python-dir)
       echo @OPENRAVE_PYTHON_INSTALL_DIR@
