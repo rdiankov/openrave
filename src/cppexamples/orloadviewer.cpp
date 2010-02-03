@@ -16,6 +16,7 @@
 #include <sstream>
 
 #include <boost/thread/thread.hpp>
+#include <boost/bind.hpp>
 
 using namespace OpenRAVE;
 using namespace std;
