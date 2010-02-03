@@ -4,10 +4,9 @@
 	<effector>L5</effector>
 	<base>Base</base>
 	<joints>gj1</joints>
-	<closed>-25</closed>
-	<opened>20</opened>
+    <closingdirection>-1</closingdirection>
 	<Translation>0 0 0.165</Translation>
-    	<iksolver>Katanaikfast</iksolver>
+    <iksolver>Katanaikfast</iksolver>
 	<armjoints>j1 j2 j3 jdummy j4 j5</armjoints>
   </Manipulator>
 </Robot>

@@ -171,7 +171,7 @@
 	<maxvel>1</maxvel>
 	<resolution>1</resolution>
   </Joint>
-  <Joint name="gj2" type="hinge" enable="false" mimic="gj1">
+  <Joint name="gj2" type="hinge" enable="false" mimic="gj1 1 0">
 	<Body>Gripper_Base</Body>
 	<Body>Gripper_Left</Body>
 	<offsetfrom>Gripper_Left</offsetfrom>

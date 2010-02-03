@@ -3,6 +3,7 @@
   <Body name="base" type="dynamic">
     <Translation>0.0  0.0  0.0</Translation>
     <Geom type="cylinder">
+      <rotationaxis>1 0 0 90</rotationaxis>
       <radius>0.1</radius>
       <height>0.084</height>
       <diffuseColor>0.05 0.05 0.5</diffuseColor>
@@ -10,14 +11,12 @@
   </Body>
   <Body name="link1" type="dynamic">
     <offsetfrom>base</offsetfrom>
-    <Translation>0 0.300 0</Translation>
-    <RotationAxis>1 0 0 -90</RotationAxis>
+    <Translation>0 0 0.300</Translation>
     <Geom type="trimesh">
       <Data>models/schunk-lwa3/link1.wrl 0.001</Data>
       <Render>models/schunk-lwa3/link1.wrl  0.001</Render>
       <diffuseColor>0.05 1 .05</diffuseColor> 
     </Geom>
-    
   </Body>
 
   <Joint name="j0" type="hinge">
