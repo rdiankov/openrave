@@ -332,7 +332,7 @@ private:
                 RAVELOG_VERBOSEA("ik collision, no link\n");
 
             // if gripper is colliding, solutions will always fail, so completely stop solution process
-            if( bCheckEndEffector && param.GetType() == Parameterization::Type_Transform6D && pmanip->CheckEndEffectorCollision(param.GetTransform()*pmanip->GetGraspTransform()) ) {
+            if( bCheckEndEffector && param.GetType() == Parameterization::Type_Transform6D && pmanip->CheckEndEffectorCollision(pmanip->GetBase()->GetTransform()*param.GetTransform()*pmanip->GetGraspTransform()) ) {
                 return SR_Quit; // stop the search
             }
             
@@ -415,7 +415,7 @@ private:
 
         if( bCheckEnvCollision ) {
             if( bCheckEndEffector && param.GetType() == Parameterization::Type_Transform6D ) {
-                if( pmanip->CheckEndEffectorCollision(param.GetTransform()*pmanip->GetGraspTransform()) )
+                if( pmanip->CheckEndEffectorCollision(pmanip->GetBase()->GetTransform()*param.GetTransform()*pmanip->GetGraspTransform()) )
                     return SR_Quit; // stop the search
                 bCheckEndEffector = false;
             }
