@@ -387,6 +387,13 @@ void KinBody::Link::GEOMPROPERTIES::SetDraw(bool bDraw)
     }
 }
 
+void KinBody::Link::GEOMPROPERTIES::SetTransparency(float f)
+{
+    LinkPtr parent(_parent);
+    ftransparency = f;
+    parent->GetParent()->ParametersChanged(Prop_LinkDraw);
+}
+
 KinBody::Link::Link(KinBodyPtr parent)
 {
     _parent = parent;
@@ -499,6 +506,7 @@ KinBody::Joint::Joint(KinBodyPtr parent)
     fMaxTorque = 1e5f;
     offset = 0;
     dofindex = -1; // invalid index
+    _bIsCircular = false;
 }
 
 KinBody::Joint::~Joint()
@@ -668,6 +676,12 @@ void KinBody::Joint::SetResolution(dReal resolution)
     GetParent()->ParametersChanged(Prop_JointProperties);
 }
 
+void KinBody::Joint::SetWeights(const std::vector<dReal>& vweights)
+{
+    _vweights = vweights;
+    GetParent()->ParametersChanged(Prop_JointProperties);
+}
+
 void KinBody::Joint::AddTorque(const std::vector<dReal>& pTorques)
 {
     GetParent()->GetEnv()->GetPhysicsEngine()->AddJointTorque(shared_from_this(), pTorques);
@@ -749,7 +763,6 @@ void KinBody::Destroy()
     _vDependencyOrderedJoints.clear();
     _vecPassiveJoints.clear();
     _vecJointIndices.clear();
-    _vecJointWeights.clear();
     _vecJointHierarchy.clear();
 
     _setAdjacentLinks.clear();
@@ -926,6 +939,21 @@ void KinBody::GetJointWeights(std::vector<dReal>& v) const
 
 void KinBody::SimulationStep(dReal fElapsedTime)
 {
+}
+
+void KinBody::SubtractJointValues(std::vector<dReal>& q1, const std::vector<dReal>& q2) const
+{
+    FOREACHC(itjoint,_vecjoints) {
+        int dof = (*itjoint)->GetDOFIndex();
+        if( (*itjoint)->IsCircular() ) {
+            for(int i = 0; i < (*itjoint)->GetDOF(); ++i)
+                q1.at(dof+i) = ANGLE_DIFF(q1.at(dof+i), q2.at(dof+i));
+        }
+        else {
+            for(int i = 0; i < (*itjoint)->GetDOF(); ++i)
+                q1.at(dof+i) -= q2.at(dof+i);
+        }
+    }
 }
 
 // like apply transform except everything is relative to the first frame
@@ -1190,38 +1218,6 @@ Vector KinBody::GetCenterOfMass() const
     return center;
 }
 
-dReal KinBody::ConfigDist(const std::vector<dReal>& q1) const
-{
-    if( (int)q1.size() != GetDOF() )
-        throw openrave_exception(str(boost::format("configs %d now equal to body dof %d")%q1.size()%GetDOF()));
-
-    dReal dist = 0;
-    vector<JointPtr>::const_iterator it;
-    vector<dReal>::const_iterator itweight = _vecJointWeights.begin();
-
-    std::vector<dReal> vTempJoints;
-    GetJointValues(vTempJoints);
-
-    for(int i = 0; i < GetDOF(); ++i) {
-        dReal s = vTempJoints[i]-q1[i];
-        dist += s * s * *itweight++;
-    }
-
-    return RaveSqrt(dist);
-}
-
-dReal KinBody::ConfigDist(const std::vector<dReal>& q1, const std::vector<dReal>& q2) const
-{
-    if( (int)q1.size() != GetDOF() || (int)q2.size() != GetDOF() )
-        throw openrave_exception(str(boost::format("configs %d %d now equal to body dof %d")%q1.size()%q2.size()%GetDOF()));
-
-    dReal dist = 0.0;
-    for (size_t i = 0; i < _vecJointWeights.size(); i++) {
-        dist += _vecJointWeights[i] * (q2[i] - q1[i]) * (q2[i] - q1[i]);
-    }
-    return RaveSqrt(dist);
-}
-
 void KinBody::SetBodyTransformations(const std::vector<Transform>& vbodies)
 {
     if( vbodies.size() != _veclinks.size() )
@@ -1306,10 +1302,16 @@ void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, bool bCheck
                 }
             }
             else {
-                for(int i = 0; i < (*it)->GetDOF(); ++i) {
-                    if( p[i] < lowerlim[i] ) *ptempjoints++ = lowerlim[i];
-                    else if( p[i] > upperlim[i] ) *ptempjoints++ = upperlim[i];
-                    else *ptempjoints++ = p[i];
+                if( (*it)->IsCircular() ) {
+                    for(int i = 0; i < (*it)->GetDOF(); ++i)
+                        *ptempjoints++ = NORMALIZE_ANGLE(p[i],lowerlim[i],upperlim[i]);
+                }
+                else {
+                    for(int i = 0; i < (*it)->GetDOF(); ++i) {
+                        if( p[i] < lowerlim[i] ) *ptempjoints++ = lowerlim[i];
+                        else if( p[i] > upperlim[i] ) *ptempjoints++ = upperlim[i];
+                        else *ptempjoints++ = p[i];
+                    }
                 }
             }
         }
@@ -2361,6 +2363,10 @@ bool KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     KinBodyConstPtr r = boost::static_pointer_cast<KinBody const>(preference);
 
     name = r->name;
+    _bHierarchyComputed = r->_bHierarchyComputed;
+    _bMakeJoinedLinksAdjacent = r->_bMakeJoinedLinksAdjacent;
+    __hashkinematics = r->__hashkinematics;
+    _vTempJoints = r->_vTempJoints;
     
     _veclinks.resize(0); _veclinks.reserve(r->_veclinks.size());
     FOREACHC(itlink, r->_veclinks) {
@@ -2382,7 +2388,7 @@ bool KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         _vecjoints.push_back(pnewjoint);
     }
 
-    _vecPassiveJoints.reserve(r->_vecPassiveJoints.size());
+    _vecPassiveJoints.resize(0); _vecPassiveJoints.reserve(r->_vecPassiveJoints.size());
     FOREACHC(itjoint, r->_vecPassiveJoints) {
         JointPtr pnewjoint(new Joint(shared_kinbody()));
         *pnewjoint = **itjoint; // be careful of copying pointers!
@@ -2394,17 +2400,22 @@ bool KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         _vecPassiveJoints.push_back(pnewjoint);
     }
 
+    _vDependencyOrderedJoints.resize(0); _vDependencyOrderedJoints.resize(r->_vDependencyOrderedJoints.size());
+    FOREACHC(itjoint, r->_vDependencyOrderedJoints)
+        _vDependencyOrderedJoints.push_back(_vecjoints.at((*itjoint)->GetJointIndex()));
+
     _vecJointIndices = r->_vecJointIndices;
-    _vecJointWeights = r->_vecJointWeights;
     _vecJointHierarchy = r->_vecJointHierarchy;
     
     _setAdjacentLinks = r->_setAdjacentLinks;
     _setNonAdjacentLinks = r->_setNonAdjacentLinks;
     _vForcedAdjacentLinks = r->_vForcedAdjacentLinks;
 
-    _vTempJoints = r->_vTempJoints;
+    _listAttachedBodies.clear(); // will be set in the environment
+    _listRegisteredCallbacks.clear(); // reset the callbacks
 
-    _nUpdateStampId++;
+    _nUpdateStampId++; // update the stamp instead of copying
+    //networkid = r->networkid; // environment will handle copying network ids as necessary
     return true;
 }
 

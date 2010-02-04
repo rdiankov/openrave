@@ -13,12 +13,32 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+/*!
+ \mainpage OpenRAVE - Open Robotics and Animation Virtual Environment
+ A robotics environment for planning algorithms
+
+ \section intro Introduction
+
+ This software package contains an interactive simulation application
+ useful for visualizing, programming, and testing motion generation
+ and control algorithms for mobile robots, humanoids, or autonomous
+ animated characters.
+ 
+ OpenRAVE is cross platform package written in C++ and uses Coin3d, OpenGL, Qt
+ libraries for the graphics, GUI, and simulation. It is based on a plugin architecture.
+ This makes it very easy to keep the core functionality and a basic set of modules open
+ source while being able to extend functionality privately without interfering with the core
+ code or core executable. The simulator itself will provide the glue and a common format
+ for all plugins to talk to each other. Currently the plugins are arranged in 5 groups:
+ robots, planners, controllers, sensors, and problems.
+*/
+
 /*! --------------------------------------------------------------------
   \file   rave.h
   \brief  Defines the public headers that every plugin must include
     in order to use openrave properly.
  -------------------------------------------------------------------- */
-
 #ifndef RAVE_RAVE_H
 #define RAVE_RAVE_H
 
@@ -481,7 +501,7 @@ enum CloningOptions {
     Clone_Bodies = 1, ///< clone all the bodies/robots of the environment
     Clone_Viewer = 2, ///< clone the viewer type, although figures won't be copied, new viewer does try to match views
     Clone_Simulation = 4, ///< clone the physics engine and simulation state (ie, timesteps, gravity)
-    Clone_RealControllers = 8 ///< if specified, will clone the real controllers of all the robots, otherwise each robot gets ideal controller
+    Clone_RealControllers = 8, ///< if specified, will clone the real controllers of all the robots, otherwise each robot gets ideal controller
 };
 
 /// base class for readable interfaces

@@ -1091,7 +1091,6 @@ public:
                 }
 
                 // create the joints before creating the child links
-                dReal fJointWeight = 1;
                 vector<KinBody::JointPtr> vjoints(vdomaxes.getCount());
                 for (size_t ic = 0; ic < vdomaxes.getCount(); ++ic) {
                     KinBody::JointPtr pjoint(new KinBody::Joint(pkinbody));
@@ -1099,11 +1098,12 @@ public:
                     pjoint->bodies[1].reset();
                     pjoint->name = pdomjoint->getName();
                     pjoint->jointindex = (int) pkinbody->_vecjoints.size();
-                    pjoint->dofindex = (int) pkinbody->_vecJointWeights.size();
-                    pkinbody->_vecJointIndices.push_back(
-                            (int) pkinbody->_vecJointWeights.size());
+                    pjoint->dofindex = pkinbody->GetDOF();
+                    pjoint->_vweights.resize(0);
+                    for(int i = 0; i < pjoint->GetDOF(); ++i)
+                        pjoint->_vweights.push_back(1);
+                    pkinbody->_vecJointIndices.push_back(pjoint->dofindex);
                     pkinbody->_vecjoints.push_back(pjoint);
-                    pkinbody->_vecJointWeights.push_back(fJointWeight);
                     vjoints[ic] = pjoint;
                 }
 

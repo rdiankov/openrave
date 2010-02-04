@@ -462,6 +462,7 @@ public:
 
             boost::shared_ptr<PyTriMesh> GetCollisionMesh() { return boost::shared_ptr<PyTriMesh>(new PyTriMesh(_plink->GetGeometry(_geomindex).GetCollisionMesh())); }
             void SetDraw(bool bDraw) { _plink->GetGeometry(_geomindex).SetDraw(bDraw); }
+            void SetTransparency(float f) { _plink->GetGeometry(_geomindex).SetTransparency(f); }
             bool IsDraw() { return _plink->GetGeometry(_geomindex).IsDraw(); }
             KinBody::Link::GEOMPROPERTIES::GeomType GetType() { return _plink->GetGeometry(_geomindex).GetType(); }
             object GetTransform() { return ReturnTransform(_plink->GetGeometry(_geomindex).GetTransform()); }
@@ -583,6 +584,7 @@ public:
             _pjoint->SetJointLimits(vlower,vupper);
         }
         void SetResolution(dReal resolution) { _pjoint->SetResolution(resolution); }
+        void SetWeights(object o) { _pjoint->SetWeights(ExtractArray<dReal>(o)); }
 
         void AddTorque(object otorques) {
             vector<dReal> vtorques = ExtractArray<dReal>(otorques);
@@ -3040,6 +3042,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
                     .def("SetCollisionMesh",&PyKinBody::PyLink::PyGeomProperties::SetCollisionMesh,args("trimesh"))
                     .def("GetCollisionMesh",&PyKinBody::PyLink::PyGeomProperties::GetCollisionMesh)
                     .def("SetDraw",&PyKinBody::PyLink::PyGeomProperties::SetDraw,args("draw"))
+                    .def("SetTransparency",&PyKinBody::PyLink::PyGeomProperties::SetTransparency,args("transparency"))
                     .def("IsDraw",&PyKinBody::PyLink::PyGeomProperties::IsDraw)
                     .def("GetType",&PyKinBody::PyLink::PyGeomProperties::GetType)
                     .def("GetTransform",&PyKinBody::PyLink::PyGeomProperties::GetTransform)
@@ -3085,6 +3088,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
                 .def("SetJointOffset",&PyKinBody::PyJoint::SetJointOffset,args("offset"))
                 .def("SetJointLimits",&PyKinBody::PyJoint::SetJointLimits,args("lower","upper"))
                 .def("SetResolution",&PyKinBody::PyJoint::SetResolution,args("resolution"))
+                .def("SetWeights",&PyKinBody::PyJoint::SetWeights,args("weights"))
                 .def("AddTorque",&PyKinBody::PyJoint::AddTorque,args("torques"))
                 ;
             

@@ -104,6 +104,10 @@ def test_inversereachabilitytest():
     self.env.StopSimulation()
     self.robot.SetTransform(eye(4))
     self.testSampling(heights=arange(-1,1,0.1),logllthresh=2.3)
+    W = array([sum(e[2][:,-1]) for e in self.equivalenceclasses])
+    W /= max(W)
+    dirs = array([m[4]*linalg.inv(rotationMatrixFromQuat(m[0:4]))[:,2] for m in self.equivalencemeans])
+    h = self.env.plot3 (points=dirs,pointsize=5.0,colors=c_[1-W,1-W,1-W,W])
 
 def test_inversereachabilityrun():
     import inversereachability, graspplanning
@@ -123,6 +127,16 @@ def test_inversereachabilityrun():
     h = self.showBaseDistribution(densityfn,bounds,zoffset=1.0,thresh=1.0)
     densityfn2,samplerfn2,bounds2 = self.computeAggregateBaseDistribution([Tgrasp],2000)
     h2 = self.showBaseDistribution(densityfn2,bounds2,zoffset=3.0,thresh=1.0)
+
+def draw_inversereachability():
+    import inversereachability
+    env = openravepy.Environment()
+    robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
+    env.AddRobot(robot)
+    self = inversereachability.InverseReachabilityModel(robot=robot)
+    self.load()
+    self.env.SetViewer('qtcoin')
+    self.showEquivalenceClass(self.equivalenceclasses[0])
 
 def test_graspplanning():
     import graspplanning

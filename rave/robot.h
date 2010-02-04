@@ -330,6 +330,9 @@ public:
     virtual void GetActiveDOFMaxVel(std::vector<dReal>& v) const;
     virtual void GetActiveDOFMaxAccel(std::vector<dReal>& v) const;
 
+    /// computes the configuration difference q1-q2 and stores it in q1. Takes into account joint limits and circular joints
+    virtual void SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vector<dReal>& q2) const;
+
     /// Specifies the controlled degrees of freedom used to control the robot through torque
     /// In the general sense, it is not always the case that there's a one-to-one mapping
     /// between a robot's joints and the motors used to control the robot. A good example

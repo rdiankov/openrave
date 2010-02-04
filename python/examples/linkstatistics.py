@@ -57,6 +57,25 @@ class LinkStatisticsModel(OpenRAVEModel):
     def getfilename(self):
         return os.path.join(OpenRAVEModel.getfilename(self),'linkstatistics.pp')
 
+    def setRobotParameters(self,xyzdelta=0.005,weightexp=0.3333):
+        """sets the weights/resolutions for the robot.
+        xyzdelta is the maxdistance allowed to be swept.
+        weightexp is the exponent for the final weights to help reduce the max:min (default is 1/3 which results in 50:1)
+        Weights should be proportional so that equal distances displace the same volume on average.
+        """
+        with self.robot:
+            jresolutions = array([xyzdelta/numpy.max(jv['crossarea'][:,0]) for jv in self.jointvolumes])
+            jointdv = array([jv['volumedelta'] for jv in self.jointvolumes])
+            jointv = array([jv['volume'] for jv in self.jointvolumes])
+            linkvolumes = array([linkstat['volume'] for linkstat in self.linkstats])
+            accumvolumes = []
+            for i in range(len(self.jointvolumes)):
+                accumvolumes.append(sum(array([volume for ilink,volume in enumerate(linkvolumes) if self.robot.DoesAffect(i,ilink)])))
+            jweights = (jointdv*accumvolumes)**weightexp
+            for w,r,j in izip(jweights,jresolutions,self.robot.GetJoints()):
+                j.SetResolution(r)
+                j.SetWeights(tile(w,j.GetDOF()))
+
     def generateFromOptions(self,options):
         args = {'samplingdelta':options.samplingdelta}
         self.generate(**args)
@@ -123,7 +142,8 @@ class LinkStatisticsModel(OpenRAVEModel):
                 sweptvolume = dot(sweptvolume,transpose(rotationMatrixFromQuat(quatRotateDirection(-joint.GetAxis(0),[0,0,1]))))
                 # compute simple statistics and compress the joint volume
                 volumecom = mean(sweptvolume,0)
-                volumeinertia = cov(sweptvolume,rowvar=0,bias=1)*(len(sweptvolume)*self.samplingdelta**3)
+                volume = len(sweptvolume)*self.samplingdelta**3
+                volumeinertia = cov(sweptvolume,rowvar=0,bias=1)*volume
                 sweptpoints,sweptindices = self.computeIsosurface(sweptvolume,self.samplingdelta*2.0,0.5)
                 # get the cross sections and a dV/dAngle measure
                 density = 0.2*self.samplingdelta
@@ -131,7 +151,7 @@ class LinkStatisticsModel(OpenRAVEModel):
                 crossarea = crossarea[self.prunePointsKDTree(crossarea, density**2, 1,k=50),:]
                 volumedelta = sum(crossarea[:,0])*density**2
                 self.jointvolumes_points[joint.GetJointIndex()] = sweptvolume
-                self.jointvolumes[joint.GetJointIndex()] = {'sweptpoints':sweptpoints,'sweptindices':sweptindices,'crossarea':crossarea,'volumedelta':volumedelta,'volumecom':volumecom,'volumeinertia':volumeinertia}
+                self.jointvolumes[joint.GetJointIndex()] = {'sweptpoints':sweptpoints,'sweptindices':sweptindices,'crossarea':crossarea,'volumedelta':volumedelta,'volumecom':volumecom,'volumeinertia':volumeinertia,'volume':volume}
                         
     def computeSweptVolume(self,volumepoints,axis,minangle,maxangle):
         """Compute the swept volume and mesh of volumepoints around rotated around an axis"""

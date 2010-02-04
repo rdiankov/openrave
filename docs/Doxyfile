@@ -1,14 +1,10 @@
-# Doxyfile 1.5.2
-
 #---------------------------------------------------------------------------
 # Project related configuration options
 #---------------------------------------------------------------------------
 DOXYFILE_ENCODING      = UTF-8
 PROJECT_NAME           = OpenRAVE
 PROJECT_NUMBER         = 
-OUTPUT_DIRECTORY       = ./
 CREATE_SUBDIRS         = NO
-OUTPUT_LANGUAGE        = English
 BRIEF_MEMBER_DESC      = YES
 REPEAT_BRIEF           = YES
 ABBREVIATE_BRIEF       = "The $name class" \

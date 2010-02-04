@@ -14,25 +14,6 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-/*!
- \mainpage OpenRAVE - Open Robotics and Animation Virtual Environment
-                \b A testbed for planning algorithms
-
- \section intro Introduction
-
- This software package contains an interactive simulation application
- useful for visualizing, programming, and testing motion generation
- and control algorithms for mobile robots, humanoids, or autonomous
- animated characters.
- 
- OpenRAVE is cross platform package written in C++ and uses Coin3d, OpenGL, Qt
- libraries for the graphics, GUI, and simulation. It is based on a plugin architecture.
- This makes it very easy to keep the core functionality and a basic set of modules open
- source while being able to extend functionality privately without interfering with the core
- code or core executable. The simulator itself will provide the glue and a common format
- for all plugins to talk to each other. Currently the plugins are arranged in 5 groups:
- robots, planners, controllers, sensors, and problems.
-*/
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>

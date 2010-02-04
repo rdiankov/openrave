@@ -988,6 +988,8 @@ namespace OpenRAVEXMLParser
                     }
                     _bMimicJoint = true;
                 }
+                else if( itatt->first == "circular" )
+                    _pjoint->_bIsCircular = !(stricmp(itatt->second.c_str(), "false") == 0 || itatt->second=="0");
             }
 
             _pjoint->_vlowerlimit.resize(_pjoint->GetDOF());

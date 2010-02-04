@@ -17,7 +17,7 @@ __license__ = 'Apache License, Version 2.0'
 import time,bisect,itertools
 from openravepy import *
 from openravepy import pyANN
-from openravepy.examples import kinematicreachability
+from openravepy.examples import kinematicreachability, linkstatistics
 import numpy
 from numpy import *
 from optparse import OptionParser
@@ -508,6 +508,41 @@ class InverseReachabilityModel(OpenRAVEModel):
             colors = c_[0*normalizedprobs,normalizedprobs,normalizedprobs,normalizedprobs]
             points = c_[poses[inds,4:6],A.flatten()[inds]+zoffset]
             return self.env.plot3(points=array(points),colors=array(colors),pointsize=10)
+    def showEquivalenceClass(self,equivalenceclass,transparency = 0.8,neighthresh=0.1):
+        """Overlays several robots of the same equivalence class"""
+        inds = linkstatistics.LinkStatisticsModel.prunePointsKDTree(equivalenceclass[2][:,0:3],neighthresh,1)
+        robotlocs = []
+        with self.robot:
+            Tgrasp = matrixFromQuat(equivalenceclass[0][0:4])
+            Tgrasp[2,3] = equivalenceclass[0][4]
+            Tmanipframe = dot(self.robot.GetTransform(), linalg.inv(self.manip.GetBase().GetTransform()))
+            for sample in equivalenceclass[2][inds,:]:
+                Tmanip = matrixFromAxisAngle([0,0,1],sample[0])
+                Tmanip[0:2,3] = sample[1:3]
+                self.robot.SetTransform(dot(Tmanipframe,Tmanip))
+                solution = self.manip.FindIKSolution(Tgrasp,False)
+                if solution is not None:
+                    self.robot.SetJointValues(solution,self.manip.GetArmJoints())
+                    robotlocs.append((self.robot.GetTransform(),self.robot.GetJointValues()))
+
+        self.env.RemoveKinBody(self.robot)
+        newrobots = []
+        for T,values in robotlocs:
+            newrobot = self.env.ReadRobotXMLFile(self.robot.GetXMLFilename())
+            newrobot.SetName('robot%d'%random.randint(10000))
+            for link in newrobot.GetLinks():
+                for geom in link.GetGeometries():
+                    geom.SetTransparency(transparency)
+            self.env.AddRobot(newrobot)
+            with self.env:
+                newrobot.SetTransform(T)
+                newrobot.SetJointValues(values)
+            newrobots.append(newrobot)
+        raw_input('press any key to continue')
+        for newrobot in newrobots:
+            self.env.RemoveKinBody(newrobot)
+        self.env.AddRobot(self.robot)
+
     @staticmethod
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser()

@@ -1105,6 +1105,45 @@ void RobotBase::GetActiveDOFMaxAccel(std::vector<dReal>& maxaccel) const
     }
 }
 
+void RobotBase::SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vector<dReal>& q2) const
+{
+    if( _nActiveDOF == 0 ) {
+        SubtractJointValues(q1,q2);
+        return;
+    }
+
+    // go through all active joints
+    int index = 0;
+    FOREACHC(it,_vActiveJointIndices) {
+        JointConstPtr pjoint = _vecjoints.at(*it);
+        if( pjoint->IsCircular() ) {
+            for(int i = 0; i < pjoint->GetDOF(); ++i, index++)
+                q1.at(index) = ANGLE_DIFF(q1.at(index), q2.at(index));
+        }
+        else {
+            for(int i = 0; i < pjoint->GetDOF(); ++i, index++)
+                q1.at(index) -= q2.at(index);
+        }
+    }
+
+    if( _nAffineDOFs & DOF_X ) { q1.at(index) -= q2.at(index); index++; }
+    if( _nAffineDOFs & DOF_Y ) { q1.at(index) -= q2.at(index); index++; }
+    if( _nAffineDOFs & DOF_Z ) { q1.at(index) -= q2.at(index); index++; }
+
+    if( _nAffineDOFs & DOF_RotationAxis ) { q1.at(index) = ANGLE_DIFF(q1.at(index),q2.at(index)); index++;  }
+    else if( _nAffineDOFs & DOF_Rotation3D ) {
+        q1.at(index) -= q2.at(index); index++;
+        q1.at(index) -= q2.at(index); index++;
+        q1.at(index) -= q2.at(index); index++;
+    }
+    else if( _nAffineDOFs & DOF_RotationQuat ) {
+        q1.at(index) -= q2.at(index); index++;
+        q1.at(index) -= q2.at(index); index++;
+        q1.at(index) -= q2.at(index); index++;
+        q1.at(index) -= q2.at(index); index++;
+    }
+}
+
 void RobotBase::GetControlMaxTorques(std::vector<dReal>& maxtorques) const
 {
     if( _nActiveDOF == 0 ) {
@@ -1775,7 +1814,7 @@ void RobotBase::ComputeJointHierarchy()
     }
 
     if( ComputeAABB().extents.lengthsqr3() > 900.0f )
-        RAVELOG_WARN("Robot %s span is greater than 30 meaning that it is most likely defined in a unit other than meters. It is highly encouraged to define all OpenRAVE robots in meters since many metrics, database models, and solvers have been specifically optimized for this unit\n");
+        RAVELOG_WARN(str(boost::format("Robot %s span is greater than 30 meaning that it is most likely defined in a unit other than meters. It is highly encouraged to define all OpenRAVE robots in meters since many metrics, database models, and solvers have been specifically optimized for this unit\n")%GetName()));
 }
 
 bool RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
@@ -1786,6 +1825,8 @@ bool RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 
     RobotBaseConstPtr r = boost::static_pointer_cast<RobotBase const>(preference);
 
+    __hashrobotstructure = r->__hashrobotstructure;
+    
     _vecManipulators.clear();
     FOREACHC(itmanip, r->_vecManipulators)
         _vecManipulators.push_back(ManipulatorPtr(new Manipulator(shared_robot(),**itmanip)));

@@ -174,6 +174,34 @@ inline void SerializeRound(std::ostream& o, const RaveTransformMatrix<T>& t)
     SerializeRound(o,t.trans);
 }
 
+template <typename T>
+inline T NORMALIZE_ANGLE(T theta, T min, T max)
+{
+    if (theta < min) {
+        theta += T(2*PI);
+        while (theta < min)
+            theta += T(2*PI);
+    }
+    else if (theta > max) {
+        theta -= T(2*PI);
+        while (theta > max)
+            theta -= T(2*PI);
+    }
+    return theta;
+}
+
+template <typename T>
+inline T ANGLE_DIFF(T start, T end)
+{
+    return NORMALIZE_ANGLE(end-start, T(-PI), T(PI));
+}
+
+template <typename T>
+inline T ANGLE_INTERPOLATION(T start, T end, T fraction, T lowerLimit, T upperLimit)
+{
+    return NORMALIZE_ANGLE(start + fraction * ANGLE_DIFF(start, end), lowerLimit, upperLimit);
+}
+
 }
 
 // need the prototypes in order to keep them free of the OpenRAVE namespace

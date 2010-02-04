@@ -108,6 +108,7 @@ public:
             virtual void SetCollisionMesh(const TRIMESH& mesh);
             /// sets a drawing and notifies every registered callback about it
             virtual void SetDraw(bool bDraw);
+            virtual void SetTransparency(float f);
 
         private:
             /// triangulates the geometry object and initializes collisionmesh. GeomTrimesh types must already be triangulated
@@ -261,6 +262,7 @@ public:
         inline JointType GetType() const { return type; }
 
         virtual int GetDOF() const;
+        virtual bool IsCircular() const { return _bIsCircular; }
 
         /// Gets the joint values with the correct offsets applied
         /// \param bAppend if true will append to the end of the vector instead of erasing it
@@ -291,6 +293,7 @@ public:
         virtual void SetJointOffset(dReal offset);
         virtual void SetJointLimits(const std::vector<dReal>& vLowerLimit, const std::vector<dReal>& vUpperLimit);
         virtual void SetResolution(dReal resolution);
+        virtual void SetWeights(const std::vector<dReal>& vweights);
 
         virtual void serialize(std::ostream& o, int options) const;
 
@@ -307,17 +310,17 @@ public:
         virtual Transform GetInternalHierarchyRightTransform() const;
         //@}
     private:
-        boost::array<LinkPtr,2> bodies; ///< attached bodies
+        boost::array<Vector,3> vAxes;        ///< axes in body[0]'s or environment coordinate system used to define joint movement
+        Vector vanchor;         ///< anchor of the joint
+        Transform tRight, tLeft;///< transforms used to get body[1]'s transformation with respect to body[0]'s
+                                ///< Tbody1 = Tbody0 * tLeft * JointRotation * tRight
+        Transform tinvRight, tinvLeft; ///< the inverse transformations of tRight and tLeft
         dReal fResolution;      ///< interpolation resolution
         dReal fMaxVel;          ///< the maximum velocity (rad/s) of the joint
         dReal fMaxAccel;        ///< the maximum acceleration (rad/s^2) of the joint
         dReal fMaxTorque;       ///< maximum torque (N.m, kg m^2/s^2) that can be applied to the joint
+        boost::array<LinkPtr,2> bodies; ///< attached bodies
         std::vector<dReal> _vweights;        ///< the weights of the joint for computing distance metrics.
-        Transform tRight, tLeft;///< transforms used to get body[1]'s transformation with respect to body[0]'s
-                                ///< Tbody1 = Tbody0 * tLeft * JointRotation * tRight
-        Transform tinvRight, tinvLeft; ///< the inverse transformations of tRight and tLeft
-        boost::array<Vector,3> vAxes;        ///< axes in body[0]'s or environment coordinate system used to define joint movement
-        Vector vanchor;         ///< anchor of the joint
         dReal offset;           ///< needed for rotation joints since the range is limited to 2*pi. This allows the offset to be set so the joint can function in [-pi+offset,pi+offset]
                                 ///< converts the ode joint angle to the expected joint angle
         std::vector<dReal> _vlowerlimit, _vupperlimit; ///< joint limits
@@ -328,8 +331,8 @@ public:
         int jointindex;         ///< the joint index into KinBody::_vecjoints
         KinBodyWeakPtr _parent;       ///< body that joint belong to
         JointType type;
-
         std::string name; ///< joint name
+        bool _bIsCircular;    ///< circular joint where the lower and upper limits identifiy with each other.
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
@@ -452,11 +455,6 @@ public:
     virtual void GetJointMaxTorque(std::vector<dReal>& v) const;
     virtual void GetJointResolutions(std::vector<dReal>& v) const;
     virtual void GetJointWeights(std::vector<dReal>& v) const;
-    //@}
-
-    /// adds a torque to every joint
-    /// \param bAdd if true, adds to previous torques, otherwise resets the torques on all bodies and starts from 0
-    virtual void SetJointTorques(const std::vector<dReal>& torques, bool bAdd);
 
     ///< \return a vector that stores the start dof indices of each joint joints, size() is equal to GetJoints().size()
     virtual const std::vector<int>& GetJointIndices() const { return _vecJointIndices; }
@@ -471,11 +469,6 @@ public:
     /// \param vjointindices a set of joint indices to be filled with the correct order
     const std::vector<JointPtr>& GetDependencyOrderedJoints() { return _vDependencyOrderedJoints; }
 
-    const std::vector<LinkPtr>& GetLinks() const { return _veclinks; }
-
-	/// return a pointer to the link with the given name
-    virtual LinkPtr GetLink(const std::string& linkname) const;
-
     /// return a pointer to the joint with the given name, else -1
     /// gets a joint indexed from GetJoints(). Note that the mapping of joint structures is not the same as
     /// the values in GetJointValues since each joint can have more than one degree of freedom.
@@ -484,10 +477,20 @@ public:
 
     /// gets the joint that covers the degree of freedom index
     virtual JointPtr GetJointFromDOFIndex(int dofindex) const;
+    //@}
 
-    ///  Computes a state space metric
-    virtual dReal ConfigDist(const std::vector<dReal>& q1) const;
-    virtual dReal ConfigDist(const std::vector<dReal>& q1, const std::vector<dReal>& q2) const;
+    /// computes the configuration difference q1-q2 and stores it in q1. Takes into account joint limits and circular joints
+    virtual void SubtractJointValues(std::vector<dReal>& q1, const std::vector<dReal>& q2) const;
+
+    /// adds a torque to every joint
+    /// \param bAdd if true, adds to previous torques, otherwise resets the torques on all bodies and starts from 0
+    virtual void SetJointTorques(const std::vector<dReal>& torques, bool bAdd);
+
+    /// \return the links of the robot
+    const std::vector<LinkPtr>& GetLinks() const { return _veclinks; }
+
+	/// return a pointer to the link with the given name
+    virtual LinkPtr GetLink(const std::string& linkname) const;
 
     /// Updates the bounding box and any other parameters that could have changed by a simulation step
     virtual void SimulationStep(dReal fElapsedTime);
@@ -507,7 +510,8 @@ public:
     /// Returns the linear and angular velocities for each link
     virtual void GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const;
 
-    /// set the transform of the first link (the rest of the links are computed based on the joint values)
+    /// \~english set the transform of the first link (the rest of the links are computed based on the joint values)
+    /// \~japanese　最初リンクの絶対姿勢を設定（残りのリンクは運動学の構造を通して計算される）
     virtual void SetTransform(const Transform& trans);
 
     /// \return an axis-aligned bounding box of the entire object
@@ -651,9 +655,6 @@ protected:
     std::vector<LinkPtr> _veclinks;       ///< children, unlike render hierarchies, transformations
                                         ///< of the children are with respect to the global coordinate system
     std::vector<int> _vecJointIndices;  ///< cached start indices, indexed by joint indices
-    std::vector<dReal> _vecJointWeights;///< for configuration distance, this is indexed by DOF
-                                        ///< size is equivalent to total number of degrees of freedom in the joints 
-
     std::vector<char> _vecJointHierarchy;   ///< joint x link, entry is non-zero if the joint affects the link in the forward kinematics
                                             ///< if negative, the partial derivative of ds/dtheta should be negated
 
