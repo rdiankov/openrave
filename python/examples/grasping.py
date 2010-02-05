@@ -137,7 +137,7 @@ class GraspingModel(OpenRAVEModel):
             self.grasps = array(self.grasps)
         finally:
             for geom,isdraw in hiddengeoms:
-                geom.SetDraw(dodraw)
+                geom.SetDraw(isdraw)
             # force closing the handles (if an exception is thrown, python 2.6 does not close them without a finally)
             approachgraphs = None
             contactgraph = None
