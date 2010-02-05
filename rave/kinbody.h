@@ -512,7 +512,7 @@ public:
     /// Returns the linear and angular velocities for each link
     virtual void GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const;
 
-    /// \~japanese 最初リンクの絶対姿勢を設定、残りのリンクは運動学の構造を通して計算される
+    /// \~japanese 譛蛻昴Μ繝ｳ繧ｯ縺ｮ邨ｶ蟇ｾ蟋ｿ蜍｢繧定ｨｭ螳壹∵ｮ九ｊ縺ｮ繝ｪ繝ｳ繧ｯ縺ｯ驕句虚蟄ｦ縺ｮ讒矩繧帝壹＠縺ｦ險育ｮ励＆繧後ｋ
     /// \~english set the transform of the first link (the rest of the links are computed based on the joint values)
     virtual void SetTransform(const Transform& trans);
 
