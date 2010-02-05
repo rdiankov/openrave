@@ -327,7 +327,7 @@ BOOL AVI_Exit()
     return TRUE;
 }
 
-std::list<std::pair<int,string> > GET_CODECS() { return std::list<std::pair<int,string> >(); }
+std::list<std::pair<int,std::string> > GET_CODECS() { return std::list<std::pair<int,std::string> >(); }
 
 /* Here are the additional functions we need! */
 static PAVIFILE pfile = NULL; 
