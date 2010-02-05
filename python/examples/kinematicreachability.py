@@ -201,8 +201,11 @@ class ReachabilityModel(OpenRAVEModel):
             env.Destroy()
 
 if __name__=='__main__':
-    try:
-        from enthought.mayavi import mlab
-    except ImportError:
-        pass
+    parser = ReachabilityModel.CreateOptionParser()
+    (options, args) = parser.parse_args()
+    if options.show: # only load mayavi if showing
+        try:
+            from enthought.mayavi import mlab
+        except ImportError:
+            pass
     ReachabilityModel.RunFromParser()

@@ -306,6 +306,10 @@ public:
     virtual void SetAffineRotationAxisResolution(const Vector& resolution);
     virtual void SetAffineRotation3DResolution(const Vector& resolution);
     virtual void SetAffineRotationQuatResolution(const Vector& resolution);
+    virtual void SetAffineTranslationWeights(const Vector& weights);
+    virtual void SetAffineRotationAxisWeights(const Vector& weights);
+    virtual void SetAffineRotation3DWeights(const Vector& weights);
+    virtual void SetAffineRotationQuatWeights(const Vector& weights);
 
     virtual void GetAffineTranslationLimits(Vector& lower, Vector& upper) const;
     virtual void GetAffineRotationAxisLimits(Vector& lower, Vector& upper) const;
@@ -319,6 +323,10 @@ public:
     virtual Vector GetAffineRotationAxisResolution() const { return _vRotationAxisResolutions; }
     virtual Vector GetAffineRotation3DResolution() const { return _vRotation3DResolutions; }
     virtual Vector GetAffineRotationQuatResolution() const { return _vRotationQuatResolutions; }
+    virtual Vector GetAffineTranslationWeights() const { return _vTranslationWeights; }
+    virtual Vector GetAffineRotationAxisWeights() const { return _vRotationAxisWeights; }
+    virtual Vector GetAffineRotation3DWeights() const { return _vRotation3DWeights; }
+    virtual Vector GetAffineRotationQuatWeights() const { return _vRotationQuatWeights; }
 
     virtual void SetActiveDOFValues(const std::vector<dReal>& values, bool bCheckLimits=false);
     virtual void GetActiveDOFValues(std::vector<dReal>& v) const;
@@ -469,6 +477,7 @@ protected:
     int _nAffineDOFs;           ///< dofs describe what affine transformations are allowed
 
     Vector _vTranslationLowerLimits, _vTranslationUpperLimits, _vTranslationMaxVels, _vTranslationResolutions, _vTranslationWeights;
+    /// the xyz components are used if the rotation axis is solely about X,Y,or Z; otherwise the W component is used.
     Vector _vRotationAxisLowerLimits, _vRotationAxisUpperLimits, _vRotationAxisMaxVels, _vRotationAxisResolutions, _vRotationAxisWeights;
     Vector _vRotation3DLowerLimits, _vRotation3DUpperLimits, _vRotation3DMaxVels, _vRotation3DResolutions, _vRotation3DWeights;
     Vector _vRotationQuatLowerLimits, _vRotationQuatUpperLimits, _vRotationQuatMaxVels, _vRotationQuatResolutions, _vRotationQuatWeights;

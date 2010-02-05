@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- shows how to combine two schunk arms -->
-<Robot name="schunk-lwa3">
+<Robot name="schunk-lwa3-dual">
   <KinBody>
     <body name="chest">
       <geom type="box">

@@ -24,6 +24,7 @@ from optparse import OptionParser
 from itertools import izip
 
 try:
+    # for isosurface computation
     from enthought.tvtk.api import tvtk
 except ImportError:
     pass
@@ -37,6 +38,7 @@ class LinkStatisticsModel(OpenRAVEModel):
             self.cdmodel.autogenerate()
         self.linkstats = None
         self.jointvolumes = None
+        self.affinevolumes = None # affine volumes for x,y,z translation and rotation around x-,y-,z-axes
         self.samplingdelta = 0.01
 
     def has(self):
@@ -47,34 +49,54 @@ class LinkStatisticsModel(OpenRAVEModel):
             params = OpenRAVEModel.load(self)
             if params is None:
                 return False
-            self.linkstats,self.jointvolumes,self.samplingdelta = params
+            self.linkstats,self.jointvolumes,self.affinevolumes,self.samplingdelta = params
             return self.has()
         except e:
             return False
     def save(self):
-        OpenRAVEModel.save(self,(self.linkstats,self.jointvolumes,self.samplingdelta))
+        OpenRAVEModel.save(self,(self.linkstats,self.jointvolumes,self.affinevolumes,self.samplingdelta))
 
     def getfilename(self):
         return os.path.join(OpenRAVEModel.getfilename(self),'linkstatistics.pp')
 
-    def setRobotParameters(self,xyzdelta=0.005,weightexp=0.3333):
-        """sets the weights/resolutions for the robot.
-        xyzdelta is the maxdistance allowed to be swept.
+    def setRobotResolutions(self,xyzdelta=0.005):
+        """sets the robot resolution
+        xyzdelta is the maxdistance allowed to be swept."""
+        with self.env:
+            jresolutions = array([xyzdelta/numpy.max(jv['crossarea'][:,0]) for jv in self.jointvolumes])
+            for w,j in izip(jresolutions,self.robot.GetJoints()):
+                j.SetResolution(r)
+            self.robot.SetAffineTranslationResolution(tile(xyzdelta,3))
+            self.robot.SetAffineRotationAxisResolution(tile(xyzdelta/numpy.max(self.affinevolumes[3+2]['crossarea'][:,0]),4))
+
+    def setRobotWeights(self,weightexp=0.3333,type=0):
+        """sets the weights for the robot.
         weightexp is the exponent for the final weights to help reduce the max:min (default is 1/3 which results in 50:1)
         Weights should be proportional so that equal distances displace the same volume on average.
         """
-        with self.robot:
-            jresolutions = array([xyzdelta/numpy.max(jv['crossarea'][:,0]) for jv in self.jointvolumes])
-            jointdv = array([jv['volumedelta'] for jv in self.jointvolumes])
-            jointv = array([jv['volume'] for jv in self.jointvolumes])
-            linkvolumes = array([linkstat['volume'] for linkstat in self.linkstats])
-            accumvolumes = []
-            for i in range(len(self.jointvolumes)):
-                accumvolumes.append(sum(array([volume for ilink,volume in enumerate(linkvolumes) if self.robot.DoesAffect(i,ilink)])))
-            jweights = (jointdv*accumvolumes)**weightexp
-            for w,r,j in izip(jweights,jresolutions,self.robot.GetJoints()):
-                j.SetResolution(r)
-                j.SetWeights(tile(w,j.GetDOF()))
+        with self.env:
+            if type == 0:
+                linkvolumes = array([linkstat['volume'] for linkstat in self.linkstats])
+                def getweight(ijoint,volumeinfo):
+                    if ijoint < 0:
+                        accumvolume = sum(linkvolumes)
+                    else:
+                        accumvolume = sum(array([volume for ilink,volume in enumerate(linkvolumes) if self.robot.DoesAffect(ijoint,ilink)]))
+                    return (volumeinfo['volumedelta']*accumvolume)**weightexp
+
+                jweights = [getweight(ijoint,jv) for ijoint,jv in enumerate(self.jointvolumeS)]
+                for w,j in izip(jweights,self.robot.GetJoints()):
+                    j.SetWeights(tile(w,j.GetDOF()))
+                self.robot.SetAffineTranslationWeights([getweight(-1,self.affinevolumes[i]) for i in range(3)])
+                self.robot.SetAffineRotationAxisResolution(tile(getweight(-1,self.affinevolumes[3+2]),4)) # only z axis
+            elif type == 1:
+                # set everything to 1
+                for j in self.robot.GetJoints():
+                    j.SetWeights(ones(j.GetDOF()))
+                self.robot.SetAffineTranslationWeights(ones(3))
+                self.robot.SetAffineRotationAxisWeights(ones(4))
+            else:
+                raise ValueError('no such type')
 
     def generateFromOptions(self,options):
         args = {'samplingdelta':options.samplingdelta}
@@ -112,7 +134,8 @@ class LinkStatisticsModel(OpenRAVEModel):
                 
             print 'Generating swept volumes...'
             self.jointvolumes = [None]*len(self.robot.GetJoints())
-            self.jointvolumes_points = [None]*len(self.robot.GetJoints())
+            jointvolumes_points = [None]*len(self.robot.GetJoints())
+            density = 0.2*self.samplingdelta
             for joint in self.robot.GetDependencyOrderedJoints()[::-1]: # go through all the joints in reverse hierarchical order
                 print 'joint %d'%joint.GetJointIndex()
                 if joint.GetDOF() > 1:
@@ -135,29 +158,78 @@ class LinkStatisticsModel(OpenRAVEModel):
                 # gather the swept volumes of all child joints
                 for childjoint in self.robot.GetJoints():
                     if childjoint.GetJointIndex() != joint.GetJointIndex() and (childjoint.GetFirstAttached().GetIndex() in connectedlinkindices or childjoint.GetSecondAttached().GetIndex() in connectedlinkindices):
-                        jointvolume = r_[jointvolume, self.transformJointPoints(childjoint,self.jointvolumes_points[childjoint.GetJointIndex()],translation=-joint.GetAnchor())]
-                        self.jointvolumes_points[childjoint.GetJointIndex()] = None # release since won't be needing it anymore
-                sweptpoints,sweptindices,sweptvolume = self.computeSweptVolume(volumepoints=jointvolume,axis=-joint.GetAxis(0),minangle=lower[0],maxangle=upper[0])
+                        jointvolume = r_[jointvolume, self.transformJointPoints(childjoint,jointvolumes_points[childjoint.GetJointIndex()],translation=-joint.GetAnchor())]
+                        jointvolumes_points[childjoint.GetJointIndex()] = None # release since won't be needing it anymore
+                sweptpoints,sweptindices,sweptvolume = self.computeSweptVolume(volumepoints=jointvolume,axis=-joint.GetAxis(0),minangle=lower[0],maxangle=upper[0],samplingdelta=self.samplingdelta)
                 # rotate jointvolume so that -joint.GetAxis(0) matches with the z-axis
-                sweptvolume = dot(sweptvolume,transpose(rotationMatrixFromQuat(quatRotateDirection(-joint.GetAxis(0),[0,0,1]))))
+                R = rotationMatrixFromQuat(quatRotateDirection(-joint.GetAxis(0),[0,0,1]))
+                sweptvolume = dot(sweptvolume,transpose(R))
+                sweptpoints = dot(sweptpoints,transpose(R))
                 # compute simple statistics and compress the joint volume
                 volumecom = mean(sweptvolume,0)
                 volume = len(sweptvolume)*self.samplingdelta**3
                 volumeinertia = cov(sweptvolume,rowvar=0,bias=1)*volume
-                sweptpoints,sweptindices = self.computeIsosurface(sweptvolume,self.samplingdelta*2.0,0.5)
                 # get the cross sections and a dV/dAngle measure
-                density = 0.2*self.samplingdelta
                 crossarea = c_[sqrt(sum(jointvolume[:,0:2]**2,1)),jointvolume[:,2:]]
                 crossarea = crossarea[self.prunePointsKDTree(crossarea, density**2, 1,k=50),:]
                 volumedelta = sum(crossarea[:,0])*density**2
-                self.jointvolumes_points[joint.GetJointIndex()] = sweptvolume
                 self.jointvolumes[joint.GetJointIndex()] = {'sweptpoints':sweptpoints,'sweptindices':sweptindices,'crossarea':crossarea,'volumedelta':volumedelta,'volumecom':volumecom,'volumeinertia':volumeinertia,'volume':volume}
-                        
-    def computeSweptVolume(self,volumepoints,axis,minangle,maxangle):
+                jointvolumes_points[joint.GetJointIndex()] = sweptvolume
+                del sweptvolume
+
+            print 'Computing statistics for the entire robot volume...'
+            Trobot = self.robot.GetTransform()
+            robotvolume = None
+            for link,linkstat in izip(self.robot.GetLinks(),self.linkstats):
+                points = transformPoints(dot(linalg.inv(Trobot), link.GetTransform()),linkstat['volumepoints'])
+                if robotvolume is None:
+                    robotvolume = points
+                else:
+                    kdtree = pyANN.KDTree(robotvolume)
+                    neighs,dists,kball = kdtree.kFRSearchArray(points,self.samplingdelta**2,0,self.samplingdelta*0.01)
+                    robotvolume = r_[robotvolume, points[kball==0]]
+                    del kdtree
+            # since jointvolumes were removed as soon as they were used, only consider ones that are still initialized
+            for joint,jointvolume in izip(self.robot.GetJoints(),jointvolumes_points):
+                if jointvolume is not None:
+                    points = self.transformJointPoints(joint,jointvolume)
+                    kdtree = pyANN.KDTree(robotvolume)
+                    neighs,dists,kball = kdtree.kFRSearchArray(points,self.samplingdelta**2,0,self.samplingdelta*0.01)
+                    robotvolume = r_[robotvolume, points[kball==0]]
+                    del kdtree
+            del jointvolumes_points # not used anymore, so free memory
+            self.affinevolumes = [None]*6
+            # compute for rotation around axes
+            for i in [2]:
+                print 'rotation %s'%(('x','y','z')[i])
+                axis = array((0,0,0))
+                axis[i] = 1.0
+                # get the cross sections and a dV/dAngle measure
+                crossarea = c_[sqrt(sum(robotvolume[:,0:2]**2,1)),robotvolume[:,2:]]
+                crossarea = crossarea[self.prunePointsKDTree(crossarea, density**2, 1,k=50),:]
+                # compute simple statistics and compress the joint volume
+                volumedelta = sum(crossarea[:,0])*density**2
+                volumecom = r_[tile(mean(crossarea[:,0]),2),mean(crossarea[:,1])]
+                volume = sum(crossarea[:,0]**2*pi)*density**2
+                self.affinevolumes[3+i] = {'crossarea':crossarea,'volumedelta':volumedelta,'volumecom':volumecom,'volume':volume}
+            for i in range(3):
+                print 'translation %s'%(('x','y','z')[i])
+                indices = range(3)
+                indices.remove(i)
+                crossarea = robotvolume[:,indices]
+                crossarea = crossarea[self.prunePointsKDTree(crossarea, density**2, 1,k=50),:]
+                volumedelta = len(crossarea)*density**2
+                volumecom = mean(robotvolume,0)
+                volume = len(robotvolume)*self.samplingdelta**3
+                volumeinertia = cov(robotvolume,rowvar=0,bias=1)*volume
+                self.affinevolumes[i] = {'crossarea':crossarea,'volumedelta':volumedelta,'volumecom':volumecom,'volumeinertia':volumeinertia,'volume':volume}
+
+    @staticmethod
+    def computeSweptVolume(volumepoints,axis,minangle,maxangle,samplingdelta):
         """Compute the swept volume and mesh of volumepoints around rotated around an axis"""
         maxradius = sqrt(numpy.max(sum(cross(volumepoints,axis)**2,1)))
         anglerange = maxangle-minangle
-        angledelta = self.samplingdelta/maxradius
+        angledelta = samplingdelta/maxradius
         angles = r_[arange(0,anglerange,angledelta),anglerange]
         numangles = len(angles)-1
         volumepoints_pow = [volumepoints]
@@ -167,28 +239,30 @@ class LinkStatisticsModel(OpenRAVEModel):
             R = rotationMatrixFromAxisAngle(axis,angles[2**i])
             newpoints = dot(volumepoints_pow[-1],transpose(R))
             # only choose points that do not have neighbors
-            neighs,dists,kball = kdtree.kFRSearchArray(newpoints,self.samplingdelta**2,0,self.samplingdelta*0.01)
+            neighs,dists,kball = kdtree.kFRSearchArray(newpoints,samplingdelta**2,0,samplingdelta*0.01)
             volumepoints_pow.append(r_[volumepoints_pow[-1],newpoints[kball==0]])
         # compute all points inside the swept volume
         sweptvolume = None
-        curangle = 0
-        for i in range(maxbit+1):
-            if numangles&(1<<i):
-                R = rotationMatrixFromAxisAngle(axis,curangle)
-                newpoints = dot(volumepoints_pow[i],transpose(R))
-                if sweptvolume is None:
-                    sweptvolume = newpoints
-                else:
-                    kdtree = pyANN.KDTree(sweptvolume)
-                    neighs,dists,kball = kdtree.kFRSearchArray(newpoints,self.samplingdelta**2,0,self.samplingdelta*0.01)
-                    sweptvolume = r_[sweptvolume,newpoints[kball==0]]
-                curangle += angles[2**i]
-        if sweptvolume is None:
+        if numangles > 0:
+            curangle = 0
+            for i in range(maxbit+1):
+                if numangles&(1<<i):
+                    R = rotationMatrixFromAxisAngle(axis,curangle)
+                    newpoints = dot(volumepoints_pow[i],transpose(R))
+                    if sweptvolume is None:
+                        sweptvolume = newpoints
+                    else:
+                        kdtree = pyANN.KDTree(sweptvolume)
+                        neighs,dists,kball = kdtree.kFRSearchArray(newpoints,samplingdelta**2,0,samplingdelta*0.01)
+                        sweptvolume = r_[sweptvolume,newpoints[kball==0]]
+                    curangle += angles[2**i]
+                volumepoints_pow[i] = None # free precious memory
+        else:
             sweptvolume = volumepoints_pow[0]
         del volumepoints_pow
         # transform points by minangle since everything was computed ignoring it
         sweptvolume = dot(sweptvolume,transpose(rotationMatrixFromAxisAngle(axis,minangle)))
-        sweptpoints,sweptindices = self.computeIsosurface(sweptvolume,self.samplingdelta*2.0,0.5)
+        sweptpoints,sweptindices = LinkStatisticsModel.computeIsosurface(sweptvolume,samplingdelta*2.0,0.5)
         #h1 = self.env.plot3(points=sweptpoints,pointsize=2.0,colors=array((1.0,0,0)))
         #h2 = self.env.drawtrimesh (points=sweptpoints,indices=sweptindices,colors=array((0,0,1,0.5)))
         return sweptpoints,sweptindices,sweptvolume

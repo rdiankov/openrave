@@ -1278,10 +1278,14 @@ public:
     void SetAffineRotationAxisMaxVels(object vels) { _probot->SetAffineRotationAxisMaxVels(ExtractVector3(vels)); }
     void SetAffineRotation3DMaxVels(object vels) { _probot->SetAffineRotation3DMaxVels(ExtractVector3(vels)); }
     void SetAffineRotationQuatMaxVels(object vels) { _probot->SetAffineRotationQuatMaxVels(ExtractVector4(vels)); }
-    void SetAffineTranslationResolution(object resolution) { _probot->SetAffineTranslationResolution(ExtractVector3(resolution)); }
+    void SetAffineTranslationResolution(object resolution) { _probot->SetAffineTranslationResolution(ExtractVector4(resolution)); }
     void SetAffineRotationAxisResolution(object resolution) { _probot->SetAffineRotationAxisResolution(ExtractVector3(resolution)); }
     void SetAffineRotation3DResolution(object resolution) { _probot->SetAffineRotation3DResolution(ExtractVector3(resolution)); }
     void SetAffineRotationQuatResolution(object resolution) { _probot->SetAffineRotationQuatResolution(ExtractVector4(resolution)); }
+    void SetAffineTranslationWeights(object weights) { _probot->SetAffineTranslationWeights(ExtractVector3(weights)); }
+    void SetAffineRotationAxisWeights(object weights) { _probot->SetAffineRotationAxisWeights(ExtractVector4(weights)); }
+    void SetAffineRotation3DWeights(object weights) { _probot->SetAffineRotation3DWeights(ExtractVector3(weights)); }
+    void SetAffineRotationQuatWeights(object weights) { _probot->SetAffineRotationQuatWeights(ExtractVector4(weights)); }
 
     object GetAffineTranslationLimits() const
     {
@@ -1312,9 +1316,13 @@ public:
     object GetAffineRotation3DMaxVels() const { return toPyVector3(_probot->GetAffineRotation3DMaxVels()); }
     object GetAffineRotationQuatMaxVels() const { return toPyVector4(_probot->GetAffineRotationQuatMaxVels()); }
     object GetAffineTranslationResolution() const { return toPyVector3(_probot->GetAffineTranslationResolution()); }
-    object GetAffineRotationAxisResolution() const { return toPyVector3(_probot->GetAffineRotationAxisResolution()); }
+    object GetAffineRotationAxisResolution() const { return toPyVector4(_probot->GetAffineRotationAxisResolution()); }
     object GetAffineRotation3DResolution() const { return toPyVector3(_probot->GetAffineRotation3DResolution()); }
     object GetAffineRotationQuatResolution() const { return toPyVector4(_probot->GetAffineRotationQuatResolution()); }
+    object GetAffineTranslationWeights() const { return toPyVector3(_probot->GetAffineTranslationWeights()); }
+    object GetAffineRotationAxisWeights() const { return toPyVector4(_probot->GetAffineRotationAxisWeights()); }
+    object GetAffineRotation3DWeights() const { return toPyVector3(_probot->GetAffineRotation3DWeights()); }
+    object GetAffineRotationQuatWeights() const { return toPyVector4(_probot->GetAffineRotationQuatWeights()); }
 
     void SetActiveDOFValues(object values) const
     {
@@ -3156,6 +3164,10 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("SetAffineRotationAxisResolution",&PyRobotBase::SetAffineRotationAxisResolution,args("resolution"))
             .def("SetAffineRotation3DResolution",&PyRobotBase::SetAffineRotation3DResolution,args("resolution"))
             .def("SetAffineRotationQuatResolution",&PyRobotBase::SetAffineRotationQuatResolution,args("resolution"))
+            .def("SetAffineTranslationWeights",&PyRobotBase::SetAffineTranslationWeights,args("weights"))
+            .def("SetAffineRotationAxisWeights",&PyRobotBase::SetAffineRotationAxisWeights,args("weights"))
+            .def("SetAffineRotation3DWeights",&PyRobotBase::SetAffineRotation3DWeights,args("weights"))
+            .def("SetAffineRotationQuatWeights",&PyRobotBase::SetAffineRotationQuatWeights,args("weights"))
             .def("GetAffineTranslationLimits",&PyRobotBase::GetAffineTranslationLimits)
             .def("GetAffineRotationAxisLimits",&PyRobotBase::GetAffineRotationAxisLimits)
             .def("GetAffineRotation3DLimits",&PyRobotBase::GetAffineRotation3DLimits)
@@ -3168,6 +3180,10 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetAffineRotationAxisResolution",&PyRobotBase::GetAffineRotationAxisResolution)
             .def("GetAffineRotation3DResolution",&PyRobotBase::GetAffineRotation3DResolution)
             .def("GetAffineRotationQuatResolution",&PyRobotBase::GetAffineRotationQuatResolution)
+            .def("GetAffineTranslationWeights",&PyRobotBase::GetAffineTranslationWeights)
+            .def("GetAffineRotationAxisWeights",&PyRobotBase::GetAffineRotationAxisWeights)
+            .def("GetAffineRotation3DWeights",&PyRobotBase::GetAffineRotation3DWeights)
+            .def("GetAffineRotationQuatWeights",&PyRobotBase::GetAffineRotationQuatWeights)
             .def("SetActiveDOFValues",&PyRobotBase::SetActiveDOFValues,args("values"))
             .def("GetActiveDOFValues",&PyRobotBase::GetActiveDOFValues)
             .def("SetActiveDOFVelocities",&PyRobotBase::SetActiveDOFVelocities)

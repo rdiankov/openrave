@@ -3,13 +3,13 @@ set(MATLAB_FILES_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(MATLAB_FILES orBodyDestroy.m orEnvCheckCollision.m  orEnvLoadScene.m         orRobotControllerSet.m
 orBodyEnable.m          orEnvClose.m           orEnvPlot.m              orRobotGetActiveDOF.m
 orBodyGetAABB.m         orEnvCreateKinBody.m   orEnvRayCollision.m      orRobotGetAttachedSensors.m
-orBodyGetAABBs.m        orEnvCreatePlanner.m   orEnvSetOptions.m        orRobotGetDOFLimits.m
+orBodyGetAABBs.m        orEnvSetOptions.m        orRobotGetDOFLimits.m
 orBodyGetDOF.m          orEnvCreateProblem.m   orEnvTriangulate.m       orRobotGetDOFValues.m
 orBodyGetJointValues.m  orEnvCreateRobot.m     orEnvWait.m              orRobotGetManipulators.m
-orBodyGetLinks.m        orEnvDestroyProblem.m  orPlannerInit.m          orRobotSensorGetData.m
-orBodyGetTransform.m    orEnvGetBodies.m       orPlannerPlan.m          orRobotSensorSend.m
+orBodyGetLinks.m        orEnvDestroyProblem.m  orRobotSensorGetData.m
+orBodyGetTransform.m    orEnvGetBodies.m       orRobotSensorSend.m
 orBodySetJointValues.m  orEnvGetBody.m         orProblemSendCommand.m   orRobotSetActiveDOFs.m
-orBodySetTransform.m    orEnvGetRobots.m       orRender.m               orRobotSetDOFValues.m
+orBodySetTransform.m    orEnvGetRobots.m       orRobotSetDOFValues.m
 orCommunicator.m        orEnvLoadPlugin.m      orRobotControllerSend.m  orRobotStartActiveTrajectory.m
 orSetCommunication.m )
 

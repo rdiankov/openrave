@@ -269,7 +269,6 @@ class SimpleTextServer : public ProblemInstance
         mapNetworkFns["body_setjoints"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orBodySetJointValues,this,_1,_2,_3), OpenRaveWorkerFn(), false);
         mapNetworkFns["close"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvClose,this,_1,_2,_3), OpenRaveWorkerFn(),false);
         mapNetworkFns["createrobot"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvCreateRobot,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["createplanner"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvCreatePlanner,this,_1,_2,_3), OpenRaveWorkerFn(), true);
         mapNetworkFns["createbody"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvCreateKinBody,this,_1,_2,_3), OpenRaveWorkerFn(), true);
         mapNetworkFns["createproblem"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvCreateProblem,this,_1,_2,_3), boost::bind(&SimpleTextServer::worEnvCreateProblem,this,_1,_2), true);
         mapNetworkFns["env_dstrprob"] = RAVENETWORKFN(OpenRaveNetworkFn(), boost::bind(&SimpleTextServer::worEnvDestroyProblem,this,_1,_2), false);
@@ -280,8 +279,6 @@ class SimpleTextServer : public ProblemInstance
         mapNetworkFns["env_raycollision"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvRayCollision,this,_1,_2,_3), OpenRaveWorkerFn(), true);
         mapNetworkFns["env_triangulate"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvTriangulate,this,_1,_2,_3), OpenRaveWorkerFn(), true);
         mapNetworkFns["loadscene"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvLoadScene,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["planner_init"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orPlannerInit,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["planner_plan"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orPlannerPlan,this,_1,_2,_3), OpenRaveWorkerFn(), true);
         mapNetworkFns["plot"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvPlot,this,_1,_2,_3), OpenRaveWorkerFn(), true); 
         mapNetworkFns["problem_sendcmd"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orProblemSendCommand,this,_1,_2,_3), OpenRaveWorkerFn(), true);
         mapNetworkFns["robot_controllersend"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orRobotControllerSend,this,_1,_2,_3), OpenRaveWorkerFn(), true);
@@ -389,7 +386,6 @@ class SimpleTextServer : public ProblemInstance
             bDestroying = true;
             _mapFigureIds.clear();
             _mapProblems.clear();
-            _mapPlanners.clear();
         }
 
         if( bInitThread ) {
@@ -632,7 +628,6 @@ class SimpleTextServer : public ProblemInstance
     map<string, RAVENETWORKFN> mapNetworkFns;
 
     int _nIdIndex;
-    map<int, PlannerBasePtr> _mapPlanners;
     map<int, ProblemInstancePtr > _mapProblems;
     map<int, EnvironmentBase::GraphHandlePtr> _mapFigureIds;
     int _nNextFigureId;
@@ -661,15 +656,6 @@ protected:
         if( !pbody || !pbody->IsRobot() )
             return RobotBasePtr();
         return boost::static_pointer_cast<RobotBase>(pbody);
-    }
-
-    PlannerBasePtr orMacroGetPlanner(istream& is)
-    {
-        int index=0;
-        is >> index;
-        if( !is )
-            return PlannerBasePtr();
-        return _mapPlanners[index];
     }
 
     /// orRender - Render the new OpenRAVE scene
@@ -825,7 +811,6 @@ protected:
         if( !is || filename.size() == 0 ) {
             RAVELOG_DEBUGA("resetting scene\n");
             _mapProblems.clear();
-            _mapPlanners.clear();
             GetEnv()->Reset();
             return true;
         }
@@ -834,7 +819,6 @@ protected:
                 RAVELOG_VERBOSEA("resetting scene\n");
                 GetEnv()->Reset();
                 _mapProblems.clear();
-                _mapPlanners.clear();
                 RAVELOG_VERBOSEA("resetting destroying\n");
             }
 
@@ -870,21 +854,6 @@ protected:
         return true;
     }
 
-    /// planner = orEnvCreatePlanner(name) - create a planner
-    bool orEnvCreatePlanner(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
-    {
-        string plannertype;
-        is >> plannertype;
-        PlannerBasePtr planner = GetEnv()->CreatePlanner(plannertype);
-        if( !planner )
-            return false;
-
-        _mapPlanners[_nIdIndex] = planner;
-        os << _nIdIndex++;
-        return true;
-    }
-
-    /// planner = orEnvCreatePlanner(name) - create a planner
     bool orEnvCreateProblem(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
     {
         string problemname;
@@ -1960,41 +1929,6 @@ protected:
         FOREACH(itind, trimesh.indices)
             os << *itind << " ";
 
-        return true;
-    }
-
-    bool orPlannerInit(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
-    {
-        SyncWithWorkerThread();
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        PlannerBasePtr pplanner = orMacroGetPlanner(is);
-        if( !pplanner )
-            return false;
-
-        RobotBasePtr probot = orMacroGetRobot(is);
-        if( !probot )
-            return false;
-
-        PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
-        if( !pplanner->InitPlan(probot,params) )
-            return false;
-
-        return true;
-    }
-
-    bool orPlannerPlan(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
-    {
-        SyncWithWorkerThread();
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        PlannerBasePtr planner = orMacroGetPlanner(is);
-        if( !planner )
-            return false;
-        
-        TrajectoryBasePtr traj(GetEnv()->CreateTrajectory(planner->GetRobot()->GetDOF()));
-
-        if( !planner->PlanPath(traj) )
-            return false;
-        traj->Write(os, Trajectory::TO_OneLine|Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
         return true;
     }
 

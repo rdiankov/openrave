@@ -143,6 +143,7 @@ class GraspPlanning(metaclass.AutoReloader):
                 time.sleep(delay)
             
     def graspAndPlaceObject(self,gmodel,dests):
+        """grasps an object and places it in one of the destinations. If no destination is specified, will just grasp it"""
         env = self.envreal#.CloneSelf(CloningOptions.Bodies)
         robot = self.robot
         manip = self.robot.GetActiveManipulator()

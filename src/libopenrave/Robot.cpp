@@ -471,11 +471,11 @@ RobotBase::RobotBase(EnvironmentBasePtr penv) : KinBody(PT_Robot, penv)
     _vTranslationResolutions = Vector(0.001f,0.001f,0.001f);
     _vTranslationWeights = Vector(2.0f,2.0f,2.0f);
 
-    _vRotationAxisLowerLimits = Vector(-4*PI,-4*PI,-4*PI);
-    _vRotationAxisUpperLimits = Vector(4*PI,4*PI,4*PI);
-    _vRotationAxisMaxVels = Vector(0.07f,0.07f,0.07f);
-    _vRotationAxisResolutions = Vector(0.01f,0.01f,0.01f);
-    _vRotationAxisWeights = Vector(2.0f,2.0f,2.0f);
+    _vRotationAxisLowerLimits = Vector(-PI,-PI,-PI,-PI);
+    _vRotationAxisUpperLimits = Vector(PI,PI,PI,PI);
+    _vRotationAxisMaxVels = Vector(0.07f,0.07f,0.07f,0.07f);
+    _vRotationAxisResolutions = Vector(0.01f,0.01f,0.01f,0.01f);
+    _vRotationAxisWeights = Vector(2.0f,2.0f,2.0f,2.0f);
 
     _vRotation3DLowerLimits = Vector(-10000,-10000,-10000);
     _vRotation3DUpperLimits = Vector(10000,10000,10000);
@@ -638,6 +638,26 @@ void RobotBase::SetAffineRotation3DResolution(const Vector& resolution)
 void RobotBase::SetAffineRotationQuatResolution(const Vector& resolution)
 {
     _vRotationQuatResolutions = resolution;
+}
+
+void RobotBase::SetAffineTranslationWeights(const Vector& weights)
+{
+    _vTranslationWeights = weights;
+}
+
+void RobotBase::SetAffineRotationAxisWeights(const Vector& weights)
+{
+    _vRotationAxisWeights = weights;
+}
+
+void RobotBase::SetAffineRotation3DWeights(const Vector& weights)
+{
+    _vRotation3DWeights = weights;
+}
+
+void RobotBase::SetAffineRotationQuatWeights(const Vector& weights)
+{
+    _vRotationQuatWeights = weights;
 }
 
 void RobotBase::GetAffineTranslationLimits(Vector& lower, Vector& upper) const
