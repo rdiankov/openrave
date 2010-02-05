@@ -1,9 +1,9 @@
-<Robot file="barrettwam.robot.xml">
+<Robot>
   <KinBody>
     <!-- add a segway model to the base link -->
-    <Body name="wam0">
+    <Body name="segway">
+      <translation>0 0 0.742</translation>
       <Geom type="trimesh">
-        <Translation>0.15 0.14 0</Translation>
         <Data>models/segwayrmp/segwayrmp.iv 1.0</Data>
         <Render>models/segwayrmp/segwayrmp.iv  1.0</Render>
       </Geom>
@@ -11,5 +11,19 @@
         <total>40</total>
       </mass>
     </Body>
+  </KinBody>
+  <Robot file="barrettwam.robot.xml"></Robot>
+  <KinBody>
+    <body name="wam0">
+      <!-- shift wam0 to align correctly with segway base -->
+      <translation>0.22 0.14 0.346</translation>
+      <translation>-0.15 -0.14 0.742</translation>
+    </body>
+    <joint type="hinge" enable="false">
+      <body>segway</body>
+      <body>wam0</body>
+      <lostop>0</lostop>
+      <histop>0</histop>
+    </joint>
   </KinBody>
 </Robot>

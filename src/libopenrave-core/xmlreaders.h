@@ -559,7 +559,7 @@ namespace OpenRAVEXMLParser
             else if( _itgeomprop != _plink->_listGeomProperties.end() ) {
                 if( xmlname != "translation" && xmlname!="rotationmat" && xmlname!="rotationaxis" && xmlname!="quat" && xmlname!="diffusecolor" && xmlname != "ambientcolor" && xmlname != "transparency" && xmlname!="render" &&
                     xmlname != "extents" && xmlname != "radius" && xmlname != "height" &&
-                    !(_itgeomprop->GetType() == KinBody::Link::GEOMPROPERTIES::GeomTrimesh && xmlname=="data") ) {
+                    !(_itgeomprop->GetType() == KinBody::Link::GEOMPROPERTIES::GeomTrimesh && (xmlname=="data"||xmlname=="vertices")) ) {
                     _pcurreader.reset(new DummyXMLReader(xmlname,"geom"));
                 }
             }
@@ -775,6 +775,24 @@ namespace OpenRAVEXMLParser
                             }
                             else
                                 RAVELOG_WARNA("failed to find %s\n", orgrenderfile.c_str());
+                        }
+                        else if( xmlname == "vertices" ) {
+                            vector<dReal> values((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
+                            if( (values.size()%9) )
+                                RAVELOG_WARN(str(boost::format("number of points specified in the vertices field of %s body needs to be a multiple of 3, ignoring...\n")%_plink->GetName()));
+                            else {
+                                _itgeomprop->collisionmesh.vertices.resize(values.size()/3);
+                                _itgeomprop->collisionmesh.indices.resize(values.size()/3);
+                                vector<dReal>::iterator itvalue = values.begin();
+                                size_t i = 0;
+                                FOREACH(itv,_itgeomprop->collisionmesh.vertices) {
+                                    itv->x = *itvalue++;
+                                    itv->y = *itvalue++;
+                                    itv->z = *itvalue++;
+                                    _itgeomprop->collisionmesh.indices[i] = i;
+                                    ++i;
+                                }
+                            }
                         }
                         break;
                     default:
