@@ -4,22 +4,22 @@
 
     <Body name="palm" type="dynamic">
 
-      <Geom type="trimesh">
+      <Geom modifiable="false" type="trimesh">
         
         <data>models/shadow/palmsimple.iv</data>
         <Render>models/shadow/palm.iv 0.001</Render>
       </Geom>
-      <Geom type="trimesh">
+      <Geom modifiable="false" type="trimesh">
         
         <data>models/shadow/MKnuckle.iv 0.001</data>
         <Render>models/shadow/MKnuckle.iv 0.001</Render>
       </Geom>
-      <Geom type="trimesh">
+      <Geom modifiable="false" type="trimesh">
         
         <data>models/shadow/RKnuckle.iv 0.001</data>
         <Render>models/shadow/RKnuckle.iv 0.001</Render>
       </Geom>
-      <Geom type="trimesh">
+      <Geom modifiable="false" type="trimesh">
         
         <data>models/shadow/FKnuckle.iv 0.001</data>
         <Render>models/shadow/FKnuckle.iv 0.001</Render>
@@ -29,12 +29,12 @@
 <!-- little finger (0) -->
 
     <Body name="LMeta" type="dynamic">
-      <Geom type="trimesh">
+      <Geom modifiable="false" type="trimesh">
         
         <data>models/shadow/LMeta.iv 0.001</data>
         <Render>models/shadow/LMeta.iv 0.001</Render>
       </Geom>
-      <Geom type="trimesh">
+      <Geom modifiable="false" type="trimesh">
         
         <data>models/shadow/LKnuckle.iv 0.001</data>
         <Render>models/shadow/LKnuckle.iv 0.001</Render>
@@ -42,7 +42,7 @@
     </Body>
 
     <Body name="Finger0-R" type="dynamic">
-      <Geom type="trimesh">
+      <Geom modifiable="false" type="trimesh">
         
         <data>models/shadow/LRotor.iv 0.001</data>
         <Render>models/shadow/LRotor.iv 0.001</Render>
@@ -51,7 +51,7 @@
 
 
     <Body name="Finger0-0" type="dynamic">
-      <Geom type="trimesh">
+      <Geom modifiable="false" type="trimesh">
         
         <data>models/shadow/L3.iv 0.001</data>
         <Render>models/shadow/L3.iv 0.001</Render>
@@ -60,7 +60,7 @@
 
 
     <Body name="Finger0-1" type="dynamic">
-      <Geom type="trimesh">
+      <Geom modifiable="false" type="trimesh">
         
         <data>models/shadow/L2.iv 0.001</data>
         <Render>models/shadow/L2.iv 0.001</Render>
@@ -69,7 +69,7 @@
 
 
     <Body name="Finger0-2" type="dynamic">
-      <Geom type="trimesh">
+      <Geom modifiable="false" type="trimesh">
         
         <data>models/shadow/L1.iv 0.001</data>
         <Render>models/shadow/L1.iv 0.001</Render>
@@ -148,7 +148,7 @@
 <!-- ring finger (1) -->
 
     <Body name="Finger1-R" type="dynamic">
-      <Geom type="trimesh">
+      <Geom modifiable="false" type="trimesh">
         
         <data>models/shadow/RRotor.iv 0.001</data>
         <Render>models/shadow/RRotor.iv 0.001</Render>
@@ -156,7 +156,7 @@
     </Body>
 
     <Body name="Finger1-0" type="dynamic">
-      <Geom type="trimesh">
+      <Geom modifiable="false" type="trimesh">
         
         <data>models/shadow/R3.iv 0.001</data>
         <Render>models/shadow/R3.iv 0.001</Render>
@@ -165,7 +165,7 @@
 
 
     <Body name="Finger1-1" type="dynamic">
-      <Geom type="trimesh">
+      <Geom modifiable="false" type="trimesh">
         
         <data>models/shadow/R2.iv 0.001</data>
         <Render>models/shadow/R2.iv 0.001</Render>
@@ -174,7 +174,7 @@
 
 
     <Body name="Finger1-2" type="dynamic">
-      <Geom type="trimesh">
+      <Geom modifiable="false" type="trimesh">
         
         <data>models/shadow/R1.iv 0.001</data>
         <Render>models/shadow/R1.iv 0.001</Render>
@@ -239,7 +239,7 @@
 <!-- middle finger (2) -->
 
     <Body name="Finger2-R" type="dynamic">
-      <Geom type="trimesh">
+      <Geom modifiable="false" type="trimesh">
         
         <data>models/shadow/MRotor.iv 0.001</data>
         <Render>models/shadow/MRotor.iv 0.001</Render>
@@ -247,7 +247,7 @@
     </Body>
 
     <Body name="Finger2-0" type="dynamic">
-      <Geom type="trimesh">
+      <Geom modifiable="false" type="trimesh">
         
         <data>models/shadow/M3.iv 0.001</data>
         <Render>models/shadow/M3.iv 0.001</Render>
@@ -256,7 +256,7 @@
 
 
     <Body name="Finger2-1" type="dynamic">
-      <Geom type="trimesh">
+      <Geom modifiable="false" type="trimesh">
         
         <data>models/shadow/M2.iv 0.001</data>
         <Render>models/shadow/M2.iv 0.001</Render>
@@ -265,7 +265,7 @@
 
 
     <Body name="Finger2-2" type="dynamic">
-      <Geom type="trimesh">
+      <Geom modifiable="false" type="trimesh">
         
         <data>models/shadow/M1.iv 0.001</data>
         <Render>models/shadow/M1.iv 0.001</Render>
@@ -328,7 +328,7 @@
 
 <!-- index finger (3) -->
     <Body name="Finger3-R" type="dynamic">
-      <Geom type="trimesh">
+      <Geom modifiable="false" type="trimesh">
         
         <data>models/shadow/FRotor.iv 0.001</data>
         <Render>models/shadow/FRotor.iv 0.001</Render>
@@ -336,7 +336,7 @@
     </Body>
 
     <Body name="Finger3-0" type="dynamic">
-      <Geom type="trimesh">
+      <Geom modifiable="false" type="trimesh">
         
         <data>models/shadow/F3.iv 0.001</data>
         <Render>models/shadow/F3.iv 0.001</Render>
@@ -345,7 +345,7 @@
 
 
     <Body name="Finger3-1" type="dynamic">
-      <Geom type="trimesh">
+      <Geom modifiable="false" type="trimesh">
         
         <data>models/shadow/F2.iv 0.001</data>
         <Render>models/shadow/F2.iv 0.001</Render>
@@ -354,7 +354,7 @@
 
 
     <Body name="Finger3-2" type="dynamic">
-      <Geom type="trimesh">
+      <Geom modifiable="false" type="trimesh">
         
         <data>models/shadow/F1.iv 0.001</data>
         <Render>models/shadow/F1.iv 0.001</Render>
@@ -417,7 +417,7 @@
 <!-- thumb (4) -->
 
     <Body name="Finger4-dummy1" type="dynamic">
-      <Geom type="sphere">
+      <Geom modifiable="false" type="sphere">
         
         <Translation>0.0386 -0.0134 -0.0401</Translation>
         <radius>0.00013</radius>
@@ -426,7 +426,7 @@
     </Body>
 
     <Body name="Finger4-0" type="dynamic">
-      <Geom type="trimesh">
+      <Geom modifiable="false" type="trimesh">
         
         <data>models/shadow/TH3.iv 0.001</data>
         <Render>models/shadow/TH3.iv 0.001</Render>
@@ -434,7 +434,7 @@
     </Body>
 
     <Body name="Finger4-dummy2" type="dynamic">
-      <Geom type="sphere">
+      <Geom modifiable="false" type="sphere">
         
         <Translation>0.0667 -0.0134 -0.0685</Translation>
         <radius>0.00013</radius>
@@ -443,7 +443,7 @@
     </Body>
 
     <Body name="Finger4-1" type="dynamic">
-      <Geom type="trimesh">
+      <Geom modifiable="false" type="trimesh">
         
         <data>models/shadow/TH2.iv 0.001</data>
         <Render>models/shadow/TH2.iv 0.001</Render>
@@ -451,7 +451,7 @@
     </Body>
 
     <Body name="Finger4-2" type="dynamic">
-      <Geom type="trimesh">
+      <Geom modifiable="false" type="trimesh">
         
         <data>models/shadow/TH1.iv 0.001</data>
         <Render>models/shadow/TH1.iv 0.001</Render>

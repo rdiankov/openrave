@@ -189,7 +189,7 @@ def run():
     parser = OptionParser(description='Manipulation planning example solving the hanoi problem.')
     parser.add_option('--scene',
                       action="store",type='string',dest='scene',default='data/hanoi_complex.env.xml',
-                      help='Scene file to load')
+                      help='Scene file to load (default=%default)')
     (options, args) = parser.parse_args()
     
     env = Environment()

@@ -56,9 +56,11 @@ class BaseManipulation:
         if maxiter is not None:
             cmd += 'maxiter %d '%maxiter
         return self.prob.SendCommand(cmd)
-    def MoveActiveJoints(self,goal,maxiter=None,execute=None,outputtraj=None):
-        assert(len(goal) == len(self.robot.GetActiveDOF()) and len(goal) > 0)
+    def MoveActiveJoints(self,goal,steplength=None,maxiter=None,execute=None,outputtraj=None):
+        assert(len(goal) == self.robot.GetActiveDOF() and len(goal) > 0)
         cmd = 'MoveActiveJoints goal ' + ' '.join(str(f) for f in goal)
+        if steplength is not None:
+            cmd += 'steplength %f '%steplength
         if execute is not None:
             cmd += 'execute %d '%execute
         if outputtraj is not None:

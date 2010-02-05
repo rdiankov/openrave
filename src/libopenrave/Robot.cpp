@@ -821,7 +821,7 @@ void RobotBase::GetActiveDOFValues(std::vector<dReal>& values) const
         if( (t.rot.y > 0) != (vActvAffineRotationAxis.x>0) || (t.rot.z > 0) != (vActvAffineRotationAxis.y>0) || (t.rot.w > 0) != (vActvAffineRotationAxis.z>0) )
             fsin = -fsin;
 
-        *pValues++ = 2 * atan2(fsin, t.rot.x);
+        *pValues++ = 2 * RaveAtan2(fsin, t.rot.x);
     }
     else if( _nAffineDOFs & DOF_Rotation3D ) {
         dReal fsin = RaveSqrt(t.rot.y * t.rot.y + t.rot.z * t.rot.z + t.rot.w * t.rot.w);

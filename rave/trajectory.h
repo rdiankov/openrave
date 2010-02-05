@@ -135,10 +135,6 @@ public:
     /// add a point to the trajectory
     virtual void AddPoint(const TPOINT& p) { assert( _nDOF == (int)p.q.size()); _vecpoints.push_back(p); }
 
-    /// sets the trajectory from a raw array of points
-    /// \param pPathData every 
-    virtual bool SetFromRawPathData(const dReal* pPathData, int numFrames);
-
     /// Specify the trajectory timing and interpolation method for a given robot.
     /// The trajectory will use the robot's active degrees of freedom, so
     /// make sure that the trajectory's _nDOF == pRobot->GetActiveDOF().
@@ -223,6 +219,10 @@ private:
     // cache
     std::vector<dReal> _lowerJointLimit, _upperJointLimit, _maxJointVel, _maxJointAccel;
     Vector _maxAffineTranslationVel, _maxAffineRotationQuatVel;
+
+    /// computes the difference of two states necessary for correct interpolation when there are circular joints. Default is regular subtraction.
+    /// _diffstatefn(q1,q2) -> q1 -= q2
+    boost::function<void(std::vector<dReal>&,const std::vector<dReal>&)> _diffstatefn;
 
     InterpEnum   _interpMethod;
     int _nDOF;

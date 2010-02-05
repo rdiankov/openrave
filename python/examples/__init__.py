@@ -1,15 +1,16 @@
 # models
+import convexdecomposition
+import linkstatistics
 import grasping
 import inversekinematics
 import kinematicreachability
 import inversereachability
-import convexdecomposition
-import linkstatistics
 
 import collision
 import hanoi
 import graspplanning
 import mobilemanipulation
+import simplenavigation
 
 import taskreachability
 import testcamerasensor

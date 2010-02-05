@@ -1,6 +1,6 @@
 <KinBody name="BarrettHand">
   <Body name="wam7" type="dynamic">
-    <Geom type="trimesh">
+    <Geom type="trimesh" modifiable="false">
       <data>models/WAM/wam7.iv 1.0</data>
       <Render>models/WAM/wam7.iv 1.0</Render>
     </Geom>
@@ -19,7 +19,7 @@
            <diffusecolor>0 0 0.4</diffusecolor>
          </Geom> -->
 
-    <Geom type="trimesh">
+    <Geom type="trimesh" modifiable="false">
       <Translation>0.0  0.0  0.1515</Translation>
       <RotationMat>-1 0 0 0 -1 0 0 0 1</RotationMat>
       <data>models/barrett/link1.iv 0.001</data>
@@ -34,7 +34,7 @@
   <Body name="Finger0-0" type="dynamic">
     <offsetfrom>wam7</offsetfrom>
     <Translation>0 -0.025 0.1515</Translation>
-    <Geom type="trimesh">
+    <Geom type="trimesh" modifiable="false">
       <data>models/barrett/link1.iv 0.001</data>
       <Render>models/barrett/link1.iv 0.001</Render>
     </Geom>
@@ -43,7 +43,7 @@
     <offsetfrom>Finger0-0</offsetfrom>
     <Translation>0.05 0 0</Translation>
     <RotationMat>1 0 0 0 0 -1 0 1 0</RotationMat>
-    <Geom type="trimesh">
+    <Geom type="trimesh" modifiable="false">
       <Translation>0 0 0</Translation>
       <data>models/barrett/link2.iv 0.001</data>
       <Render>models/barrett/link2.iv 0.001</Render>
@@ -64,7 +64,7 @@
     <offsetfrom>Finger0-1</offsetfrom>
     <Translation>0.07 0 0</Translation>
     <RotationMat>1 0 0 0 1 0 0 0 1</RotationMat>
-    <Geom type="trimesh">
+    <Geom type="trimesh" modifiable="false">
       <Translation>0 0 0</Translation>
       <data>models/barrett/link3.iv 0.001</data>
       <Render>models/barrett/link3.iv 0.001</Render>
@@ -86,7 +86,7 @@
   <Body name="Finger1-0" type="dynamic">
     <offsetfrom>wam7</offsetfrom>
     <Translation>0 0.025 0.1515</Translation>
-    <Geom type="trimesh">
+    <Geom type="trimesh" modifiable="false">
       <data>models/barrett/link1.iv 0.001</data>
       <Render>models/barrett/link1.iv 0.001</Render>
     </Geom>
@@ -95,7 +95,7 @@
     <offsetfrom>Finger1-0</offsetfrom>
     <Translation>0.05 0 0</Translation>
     <RotationMat>1 0 0 0 0 -1 0 1 0</RotationMat>
-    <Geom type="trimesh">
+    <Geom type="trimesh" modifiable="false">
       <Translation>0 0 0</Translation>
       <data>models/barrett/link2.iv 0.001</data>
       <Render>models/barrett/link2.iv 0.001</Render>
@@ -116,7 +116,7 @@
     <offsetfrom>Finger1-1</offsetfrom>
     <Translation>0.07 0 0</Translation>
     <RotationMat>1 0 0 0 1 0 0 0 1</RotationMat>
-    <Geom type="trimesh">
+    <Geom type="trimesh" modifiable="false">
       <Translation>0 0 0</Translation>
       <data>models/barrett/link3.iv 0.001</data>
       <Render>models/barrett/link3.iv 0.001</Render>
@@ -140,7 +140,7 @@
     <offsetfrom>wam7</offsetfrom>
     <Translation>-0.05 0 0.1515</Translation>
     <RotationMat>-1 0 0 0 0 1 0 1 0</RotationMat>
-    <Geom type="trimesh">
+    <Geom type="trimesh" modifiable="false">
       <Translation>0 0 0</Translation>
       <data>models/barrett/link2.iv 0.001</data>
       <Render>models/barrett/link2.iv 0.001</Render>
@@ -161,7 +161,7 @@
     <offsetfrom>Finger2-1</offsetfrom>
     <Translation>0.07 0 0</Translation>
     <RotationMat>1 0 0 0 1 0 0 0 1</RotationMat>
-    <Geom type="trimesh">
+    <Geom type="trimesh" modifiable="false">
       <Translation>0 0 0</Translation>
       <data>models/barrett/link3.iv 0.001</data>
       <Render>models/barrett/link3.iv 0.001</Render>

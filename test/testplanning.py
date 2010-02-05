@@ -325,3 +325,16 @@ def test_contours():
 def test_jointweights():
     jointdv = array([v['volumedelta'] for v in self.jointvolumes ])
     linkdv = array([v['volume'] for v in self.linkstats])
+
+def test_simplenavigation():
+    import simplenavigation
+    env = Environment()
+    env.SetViewer('qtcoin')
+    env.Load('data/lab1.env.xml')
+    robot = env.GetRobots()[0]
+    self = simplenavigation.SimpleNavigationPlanning(robot)
+
+    self.robot.SetAffineTranslationMaxVels([0.5,0.5,0.5])
+    self.robot.SetAffineRotationAxisMaxVels(ones(4))
+    self.robot.SetActiveDOFs([],Robot.DOFAffine.X|Robot.DOFAffine.Y|Robot.DOFAffine.RotationAxis,[0,0,1])
+    self.basemanip.MoveActiveJoints(goal=[0.737,0.304,0])

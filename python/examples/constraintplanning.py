@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+y#!/usr/bin/env python
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,12 +14,12 @@ __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
-import time,traceback
 from openravepy import *
 from openravepy.interfaces import BaseManipulation, TaskManipulation
 from openravepy.examples import grasping,inversekinematics
 from numpy import *
-import numpy
+import numpy,time
+from optparse import OptionParser
 
 class ConstraintPlanning(metaclass.AutoReloader):
     def __init__(self,robot,randomize=False,dests=None,switchpatterns=None):
@@ -71,10 +71,16 @@ class ConstraintPlanning(metaclass.AutoReloader):
                 self.robot.WaitForController(0)
 
 def run():
+    parser = OptionParser(description='RRT motion planning with constraints on the robot end effector.')
+    parser.add_option('--scene',
+                      action="store",type='string',dest='scene',default='data/lab1.env.xml',
+                      help='Scene file to load (default=%default)')
+    (options, args) = parser.parse_args()
+
     env = Environment()
     try:
         env.SetViewer('qtcoin')
-        env.Load('data/lab1.env.xml')
+        env.Load(options.scene)
         robot = env.GetRobots()[0]
         env.UpdatePublishedBodies()
         time.sleep(0.1) # give time for environment to update

@@ -134,22 +134,22 @@ class CollisionFunctions
         }
 
         // compute  the discretization
+        vector<dReal> dQ = pQ1;
+        params._diffstatefn(dQ,pQ0);
         int i, numSteps = 1;
         vector<dReal>::const_iterator itres = params._vConfigResolution.begin();
         for (i = 0; i < params.GetDOF(); i++,itres++) {
             int steps;
             if( *itres != 0 )
-                steps = (int)(fabs(pQ1[i] - pQ0[i]) / *itres);
+                steps = (int)(fabs(dQ[i]) / *itres);
             else
-                steps = (int)(fabs(pQ1[i] - pQ0[i]) * 100);
+                steps = (int)(fabs(dQ[i]) * 100);
             if (steps > numSteps)
                 numSteps = steps;
         }
-
-        // compute joint increments
-        vector<dReal> jointIncrement(params.GetDOF());
-        for (i = 0; i < params.GetDOF(); i++)
-            jointIncrement[i] = (pQ1[i] - pQ0[i])/((float)numSteps);
+        dReal fisteps = dReal(1.0f)/numSteps;
+        FOREACH(it,dQ)
+            *it *= fisteps;
 
         if( !!params._constraintfn )
             vlastconfig = pQ0;
@@ -159,7 +159,7 @@ class CollisionFunctions
         for (int f = start; f < numSteps; f++) {
 
             for (i = 0; i < params.GetDOF(); i++)
-                vtempconfig[i] = pQ0[i] + (jointIncrement[i] * f);
+                vtempconfig[i] = pQ0[i] + (dQ[i] * f);
         
             params._setstatefn(vtempconfig);
             if( !!params._constraintfn ) {
@@ -167,8 +167,10 @@ class CollisionFunctions
                     return true;
                 vlastconfig = pQ0;
             }
-            if( pvCheckedConfigurations != NULL )
+            if( pvCheckedConfigurations != NULL ) {
+                params._getstatefn(vtempconfig); // query again in order to get normalizations/joint limits
                 pvCheckedConfigurations->push_back(vtempconfig);
+            }
             if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || robot->CheckSelfCollision() )
                 return true;
         }
@@ -186,26 +188,6 @@ class CollisionFunctions
         }
         return bCol;
     }
-};
-
-class SimpleDistMetric
-{
- public:
- SimpleDistMetric(RobotBasePtr robot) : _robot(robot) {
-        _robot->GetActiveDOFWeights(weights);
-    }
-
-    virtual dReal Eval(const std::vector<dReal>& c0, const std::vector<dReal>& c1)
-    {
-        dReal out = 0;
-        for(int i=0; i < _robot->GetActiveDOF(); i++)
-            out += weights.at(i) * (c0.at(i)-c1.at(i))*(c0[i]-c1[i]);
-        return RaveSqrt(out);
-    }
-
- protected:
-    RobotBasePtr _robot;
-    vector<dReal> weights;
 };
 
 class SimpleCostMetric
@@ -234,60 +216,6 @@ public:
  private:
     RobotBasePtr _robot;
     dReal _thresh;
-};
-
-class SimpleSampleFunction
-{
- public:
- SimpleSampleFunction(RobotBasePtr robot, const boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)>& distmetricfn) : _robot(robot), _distmetricfn(distmetricfn) {
-        _robot->GetActiveDOFLimits(lower, upper);
-        range.resize(lower.size());
-        for(int i = 0; i < (int)range.size(); ++i)
-            range[i] = upper[i] - lower[i];
-    }
-    virtual bool Sample(vector<dReal>& pNewSample) {
-        pNewSample.resize(lower.size());
-        for (size_t i = 0; i < lower.size(); i++)
-            pNewSample[i] = lower[i] + RaveRandomFloat()*range[i];
-        return true;
-    }
-
-    virtual bool SampleNeigh(vector<dReal>& pNewSample, const vector<dReal>& pCurSample, dReal fRadius)
-    {
-        BOOST_ASSERT(pCurSample.size()==lower.size());
-        pNewSample.resize(lower.size());
-        int dof = lower.size();
-        for (int i = 0; i < dof; i++)
-            pNewSample[i] = pCurSample[i] + 10.0f*fRadius*(RaveRandomFloat()-0.5f);
-
-        // normalize
-        dReal fRatio = fRatio*RaveRandomFloat();
-            
-        //assert(_robot->ConfigDist(&_vzero[0], &_vSampleConfig[0]) < B+1);
-        while(_distmetricfn(pNewSample,pCurSample) > fRatio ) {
-            for (int i = 0; i < dof; i++)
-                pNewSample[i] = 0.5f*pCurSample[i]+0.5f*pNewSample[i];
-        }
-            
-        while(_distmetricfn(pNewSample, pCurSample) < fRatio ) {
-            for (int i = 0; i < dof; i++)
-                pNewSample[i] = 1.2f*pNewSample[i]-0.2f*pCurSample[i];
-        }
-
-        for (int i = 0; i < dof; i++) {
-            if( pNewSample[i] < lower[i] )
-                pNewSample[i] = lower[i];
-            else if( pNewSample[i] > upper[i] )
-                pNewSample[i] = upper[i];
-        }
-
-        return true;
-    }
-
- protected:
-    RobotBasePtr _robot;
-    vector<dReal> lower, upper, range;
-    boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _distmetricfn;
 };
 
 struct SimpleNode
@@ -381,8 +309,10 @@ class SpatialTree : public SpatialTreeBase
                 return ET_Connected;
             }
         
+            _vNewConfig = pTargetConfig;
+            planner->GetParameters()._diffstatefn(_vNewConfig,pnode->q);
             for(int i = 0; i < _dof; ++i)
-                _vNewConfig[i] = pnode->q[i] + (pTargetConfig[i]-pnode->q[i])*fdist;
+                _vNewConfig[i] = pnode->q[i] + _vNewConfig[i]*fdist;
         
             // project to constraints
             if( !!planner->GetParameters()._constraintfn ) {

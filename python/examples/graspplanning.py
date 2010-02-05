@@ -14,12 +14,11 @@ __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
-import time,traceback
 from openravepy import *
 from openravepy.interfaces import BaseManipulation, TaskManipulation
-from openravepy.examples import grasping,inversekinematics
+from openravepy.examples import convexdecomposition,grasping,inversekinematics
 from numpy import *
-import numpy
+import numpy,time,traceback
 from optparse import OptionParser
 
 class GraspPlanning(metaclass.AutoReloader):
@@ -29,10 +28,14 @@ class GraspPlanning(metaclass.AutoReloader):
         self.ikmodel = inversekinematics.InverseKinematicsModel(robot=robot)
         if not self.ikmodel.load():
             self.ikmodel.autogenerate()
+        # could possibly affect generated grasp sets?
+        self.cdmodel = convexdecomposition.ConvexDecompositionModel(self.robot)
+        if not self.cdmodel.load():
+            self.cdmodel.autogenerate()
         self.switchpatterns = switchpatterns
         with self.envreal:
-            self.basemanip = BaseManipulation(robot)
-            self.taskmanip = TaskManipulation(robot)
+            self.basemanip = BaseManipulation(self.robot)
+            self.taskmanip = TaskManipulation(self.robot)
             self.updir = array((0,0,1))
 
             # find all the bodies to manipulate
@@ -242,7 +245,7 @@ def run():
     parser = OptionParser(description='Autonomous grasp and manipulation planning example.')
     parser.add_option('--scene',
                       action="store",type='string',dest='scene',default='data/lab1.env.xml',
-                      help='Scene file to load')
+                      help='Scene file to load (default=%default)')
     (options, args) = parser.parse_args()
 
     env = Environment()

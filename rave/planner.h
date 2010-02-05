@@ -112,6 +112,9 @@ public:
         boost::function<void(const std::vector<dReal>&)> _setstatefn;
         /// gets the state of the robot. Default is active robot joints (mandatory)
         boost::function<void(std::vector<dReal>&)> _getstatefn;
+        /// computes the difference of two states necessary for correct interpolation when there are circular joints. Default is regular subtraction.
+        /// _diffstatefn(q1,q2) -> q1 -= q2
+        boost::function<void(std::vector<dReal>&,const std::vector<dReal>&)> _diffstatefn;
 
         /// to specify multiple goal configurations, put them into the vector in series (note: not all planners support multiple goals)
         std::vector<dReal> vinitialconfig, vgoalconfig;

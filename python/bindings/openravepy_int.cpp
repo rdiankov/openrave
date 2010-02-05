@@ -464,6 +464,7 @@ public:
             void SetDraw(bool bDraw) { _plink->GetGeometry(_geomindex).SetDraw(bDraw); }
             void SetTransparency(float f) { _plink->GetGeometry(_geomindex).SetTransparency(f); }
             bool IsDraw() { return _plink->GetGeometry(_geomindex).IsDraw(); }
+            bool IsModifiable() { return _plink->GetGeometry(_geomindex).IsModifiable(); }
             KinBody::Link::GEOMPROPERTIES::GeomType GetType() { return _plink->GetGeometry(_geomindex).GetType(); }
             object GetTransform() { return ReturnTransform(_plink->GetGeometry(_geomindex).GetTransform()); }
             dReal GetSphereRadius() const { return _plink->GetGeometry(_geomindex).GetSphereRadius(); }
@@ -3052,6 +3053,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
                     .def("SetDraw",&PyKinBody::PyLink::PyGeomProperties::SetDraw,args("draw"))
                     .def("SetTransparency",&PyKinBody::PyLink::PyGeomProperties::SetTransparency,args("transparency"))
                     .def("IsDraw",&PyKinBody::PyLink::PyGeomProperties::IsDraw)
+                    .def("IsModifiable",&PyKinBody::PyLink::PyGeomProperties::IsModifiable)
                     .def("GetType",&PyKinBody::PyLink::PyGeomProperties::GetType)
                     .def("GetTransform",&PyKinBody::PyLink::PyGeomProperties::GetTransform)
                     .def("GetSphereRadius",&PyKinBody::PyLink::PyGeomProperties::GetSphereRadius)

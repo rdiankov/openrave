@@ -19,7 +19,7 @@
       <RotationAxis>1 0 0 90</RotationAxis>
     </Geom>
 
-    <Geom type="trimesh">
+    <Geom modifiable="false" type="trimesh">
       <Translation>0.000 0.000 0.060</Translation>
       <RotationAxis>1 0 0 90</RotationAxis>
       <data>models/schunk_0306087_pg_70_0_stroke.iv </data>

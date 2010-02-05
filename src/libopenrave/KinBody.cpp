@@ -105,6 +105,7 @@ KinBody::Link::GEOMPROPERTIES::GEOMPROPERTIES(KinBody::LinkPtr parent) : _parent
     ftransparency = 0;
     vRenderScale = Vector(1,1,1);
     _bDraw = true;
+    _bModifiable = true;
 }
 
 AABB KinBody::Link::GEOMPROPERTIES::ComputeAABB(const Transform& t) const
@@ -372,6 +373,8 @@ void KinBody::Link::GEOMPROPERTIES::serialize(std::ostream& o, int options) cons
 
 void KinBody::Link::GEOMPROPERTIES::SetCollisionMesh(const TRIMESH& mesh)
 {
+    if( !_bModifiable )
+        throw openrave_exception("geometry cannot be modified");
     LinkPtr parent(_parent);
     collisionmesh = mesh;
     parent->UpdateCollisionMesh();

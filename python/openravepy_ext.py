@@ -11,7 +11,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License. 
 from __future__ import with_statement # for python 2.5
-from openravepy_int import Environment
+import openravepy
 import os, optparse, numpy, metaclass
 try:
     import cPickle as pickle
@@ -402,7 +402,7 @@ class OpenRAVEModel(metaclass.AutoReloader):
         (options, args) = parser.parse_args()
         destroyenv = False
         if env is None:
-            env = Environment()
+            env = openravepy.Environment()
             destroyenv = True
         try:
             with env:

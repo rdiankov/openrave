@@ -491,6 +491,8 @@ protected:
                 sinput >> bExecute;
             else if( cmd == "writetraj" )
                 sinput >> strtrajfilename;
+            else if( cmd == "steplength" )
+                sinput >> params->_fStepLength;
             else {
                 RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;

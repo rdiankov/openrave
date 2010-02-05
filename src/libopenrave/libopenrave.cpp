@@ -159,9 +159,17 @@ void OneTagReader::characters(const std::string& ch)
         _preader->characters(ch);
 }
 
+void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2)
+{
+    BOOST_ASSERT(q1.size()==q2.size());
+    for(size_t i = 0; i < q1.size(); ++i)
+        q1[i] -= q2[i];
+}
+
 // PlannerParameters class
 PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _bComputeSmoothPath(true)
 {
+    _diffstatefn = subtractstates;
 }
 
 PlannerBase::PlannerParameters::PlannerParameters(const PlannerParameters& r) : XMLReadable("plannerparameters")
@@ -294,10 +302,12 @@ class SimpleDistMetric
     }
     virtual dReal Eval(const std::vector<dReal>& c0, const std::vector<dReal>& c1)
     {
-        dReal out = 0;
+        std::vector<dReal> c = c0;
+        _robot->SubtractActiveDOFValues(c,c1);
+        dReal dist = 0;
         for(int i=0; i < _robot->GetActiveDOF(); i++)
-            out += weights.at(i) * (c0.at(i)-c1.at(i))*(c0[i]-c1[i]);    
-        return RaveSqrt(out);
+            dist += weights.at(i)*c.at(i)*c.at(i);
+        return RaveSqrt(dist);
     }
 
  protected:
@@ -375,6 +385,7 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
     _sampleneighfn = boost::bind(&SimpleSampleFunction::SampleNeigh,defaultsamplefn,_1,_2,_3);
     _setstatefn = boost::bind(&RobotBase::SetActiveDOFValues,robot,_1,false);
     _getstatefn = boost::bind(&RobotBase::GetActiveDOFValues,robot,_1);
+    _diffstatefn = boost::bind(&RobotBase::SubtractActiveDOFValues,robot,_1,_2);
     robot->GetActiveDOFLimits(_vConfigLowerLimit,_vConfigUpperLimit);
     robot->GetActiveDOFResolutions(_vConfigResolution);
     robot->GetActiveDOFValues(vinitialconfig);

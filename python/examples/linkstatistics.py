@@ -23,12 +23,6 @@ import time
 from optparse import OptionParser
 from itertools import izip
 
-try:
-    # for isosurface computation
-    from enthought.tvtk.api import tvtk
-except ImportError:
-    pass
-
 class LinkStatisticsModel(OpenRAVEModel):
     """Computes the convex decomposition of all of the robot's links"""
     def __init__(self,robot):
@@ -269,16 +263,17 @@ class LinkStatisticsModel(OpenRAVEModel):
 
     @staticmethod
     def computeIsosurface(sweptvolume,samplingdelta,thresh=0.1):
-        # compute the isosurface
+        """computes the isosurface"""
+        api = __import__('enthought.tvtk.api',fromlist=['tvtk']) # for isosurface computation, don't put this at the top of the py file
         minpoint = numpy.min(sweptvolume,0)-2.0*samplingdelta
         maxpoint = numpy.max(sweptvolume,0)+2.0*samplingdelta
         volumeshape = array(ceil((maxpoint-minpoint)/samplingdelta),'int')
         indices = array((sweptvolume-tile(minpoint,(len(sweptvolume),1)))*(1.0/samplingdelta)+0.5,int)
         sweptdata = zeros(prod(volumeshape))
         sweptdata[indices[:,0]+volumeshape[0]*(indices[:,1]+volumeshape[1]*indices[:,2])] = 1
-        id = tvtk.ImageData(origin=minpoint,spacing=array((samplingdelta,samplingdelta,samplingdelta)),dimensions=volumeshape)
+        id = api.tvtk.ImageData(origin=minpoint,spacing=array((samplingdelta,samplingdelta,samplingdelta)),dimensions=volumeshape)
         id.point_data.scalars = sweptdata.ravel()
-        m = tvtk.MarchingCubes()
+        m = api.tvtk.MarchingCubes()
         m.set_input(id)
         m.set_value(0,thresh)
         m.update()
@@ -382,7 +377,7 @@ class LinkStatisticsModel(OpenRAVEModel):
         del kdtree, allneighs, alldists
         if dorepeat:
             #print 'repeating pruning... %d/%d'%(len(inds),points.shape[0])
-            newinds = LinkStatisticsModel.prunePointsKDTree(points[inds,:], thresh2, neighsize,2*k)
+            newinds = LinkStatisticsModel.prunePointsKDTree(points[inds,:], thresh2, neighsize,k)
             inds = [inds[i] for i in newinds]
         return inds
 

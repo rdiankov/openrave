@@ -91,6 +91,7 @@ public:
             inline const std::string& GetRenderFilename() const { return renderfile; }
             inline float GetTransparency() const { return ftransparency; }
             inline bool IsDraw() const { return _bDraw; }
+            inline bool IsModifiable() const { return _bModifiable; }
             
             inline dReal GetSphereRadius() const { return vGeomData.x; }
             inline dReal GetCylinderRadius() const { return vGeomData.x; }
@@ -131,6 +132,7 @@ public:
             float ftransparency; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
 
             bool _bDraw;         ///< if true, object is drawn as part of the 3d model (default is true)
+            bool _bModifiable; ///< if true, object geometry can be dynamically modified (default is true)
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER

@@ -578,7 +578,7 @@ namespace OpenRAVEXMLParser
             }
             else if( xmlname == "geom" ) {
                 string type;
-                bool bDraw = true;
+                bool bDraw = true, bModifiable = true;
                 FOREACHC(itatt,atts) {
                     if( itatt->first == "type") {
                         type = itatt->second;
@@ -587,6 +587,8 @@ namespace OpenRAVEXMLParser
                         // set draw to false only if atts[i]==false
                         bDraw = stricmp(itatt->second.c_str(), "false")!=0;
                     }
+                    else if( itatt->first == "modifiable" )
+                        bModifiable = !(stricmp(itatt->second.c_str(), "false") == 0 || itatt->second=="0");
                 }
 
                 if( type.size() == 0 ) {
@@ -609,6 +611,7 @@ namespace OpenRAVEXMLParser
                 }
 
                 _itgeomprop->_bDraw = bDraw;
+                _itgeomprop->_bModifiable = bModifiable;
             }
             else if( xmlname == "translation" || xmlname == "rotationmat" || xmlname == "rotationaxis" || xmlname == "quat" || xmlname == "offsetfrom" ) {
             }

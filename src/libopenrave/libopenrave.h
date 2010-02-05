@@ -202,6 +202,8 @@ inline T ANGLE_INTERPOLATION(T start, T end, T fraction, T lowerLimit, T upperLi
     return NORMALIZE_ANGLE(start + fraction * ANGLE_DIFF(start, end), lowerLimit, upperLimit);
 }
 
+void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2);
+
 }
 
 // need the prototypes in order to keep them free of the OpenRAVE namespace
