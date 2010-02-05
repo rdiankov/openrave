@@ -512,8 +512,8 @@ public:
     /// Returns the linear and angular velocities for each link
     virtual void GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const;
 
+    /// \~japanese Å‰ƒŠƒ“ƒN‚Ìâ‘Îp¨‚ğİ’èAc‚è‚ÌƒŠƒ“ƒN‚Í‰^“®Šw‚Ì\‘¢‚ğ’Ê‚µ‚ÄŒvZ‚³‚ê‚é
     /// \~english set the transform of the first link (the rest of the links are computed based on the joint values)
-    /// \~japaneseã€€æœ€åˆãƒªãƒ³ã‚¯ã®çµ¶å¯¾å§¿å‹¢ã‚’è¨­å®šï¼ˆæ®‹ã‚Šã®ãƒªãƒ³ã‚¯ã¯é‹å‹•å­¦ã®æ§‹é€ ã‚’é€šã—ã¦è¨ˆç®—ã•ã‚Œã‚‹ï¼‰
     virtual void SetTransform(const Transform& trans);
 
     /// \return an axis-aligned bounding box of the entire object
