@@ -2859,6 +2859,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
 {
     import_array();
     numeric::array::set_module_and_type("numpy", "ndarray");
+    init_python_bindings();
 
     typedef return_value_policy< copy_const_reference > return_copy_const_ref;
     class_< openrave_exception >( "_openrave_exception_" )
