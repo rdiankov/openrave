@@ -176,7 +176,87 @@ struct exception_translator
     }
 };
 
-void init_python_bindings(); /// should call in the beginning of all BOOST_PYTHON_MODULE
+// register const versions of the classes
+//template <class T> inline T* get_pointer( boost::shared_ptr<const T> 
+//const& p){
+//     return const_cast<T*>(p.get());
+//}
+//
+//template <class T> struct pintee< boost::shared_ptr<const T> >{
+//     typedef T type;
+//};
+//
+//boost::python::register_ptr_to_python< boost::shared_ptr<const my_class> >();
+
+struct int_from_int
+{
+    int_from_int()
+    {
+        converter::registry::push_back(&convertible, &construct, type_id<int>());
+    }
+
+    static void* convertible( PyObject* obj)
+    {
+        PyObject* newobj = PyNumber_Int(obj);
+        if (!PyString_Check(obj) && newobj) {
+            Py_DECREF(newobj);
+            return obj;
+        }
+        else {
+            if (newobj) {
+                Py_DECREF(newobj);
+            }
+            PyErr_Clear();
+            return 0;
+        }
+    }
+
+    static void construct(PyObject* _obj, converter::rvalue_from_python_stage1_data* data)
+    {
+        PyObject* newobj = PyNumber_Int(_obj);
+        int* storage = (int*)((converter::rvalue_from_python_storage<int>*)data)->storage.bytes;
+        *storage = extract<int>(newobj);
+        Py_DECREF(newobj);
+        data->convertible = storage;
+    }
+};
+
+template<typename T>
+struct T_from_number
+{
+    T_from_number()
+    {
+        converter::registry::push_back(&convertible, &construct, type_id<T>());
+    }
+
+    static void* convertible( PyObject* obj)
+    {
+        PyObject* newobj = PyNumber_Float(obj);
+        if (!PyString_Check(obj) && newobj) {
+            Py_DECREF(newobj);
+            return obj;
+        }
+        else {
+            if (newobj) {
+                Py_DECREF(newobj);
+            }
+            PyErr_Clear();
+            return 0;
+        }
+    }
+
+    static void construct(PyObject* _obj, converter::rvalue_from_python_stage1_data* data)
+    {
+        PyObject* newobj = PyNumber_Float(_obj);
+        T* storage = (T*)((converter::rvalue_from_python_storage<T>*)data)->storage.bytes;
+        *storage = extract<T>(newobj);
+        Py_DECREF(newobj);
+        data->convertible = storage;
+    }
+};
+
+/// should call in the beginning of all BOOST_PYTHON_MODULE
+void init_python_bindings();
 
 #ifdef OPENRAVE_BININGS_PYARRAY
 
