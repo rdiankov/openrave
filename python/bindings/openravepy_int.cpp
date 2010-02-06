@@ -1247,6 +1247,7 @@ public:
     }
 
     void SetActiveManipulator(int index) { _probot->SetActiveManipulator(index); }
+    void SetActiveManipulator(const std::string& manipname) { _probot->SetActiveManipulator(manipname); }
     boost::shared_ptr<PyManipulator> GetActiveManipulator() { return boost::shared_ptr<PyManipulator>(new PyManipulator(_probot->GetActiveManipulator(),_pyenv)); }
     int GetActiveManipulatorIndex() const { return _probot->GetActiveManipulatorIndex(); }
 
@@ -3130,9 +3131,13 @@ BOOST_PYTHON_MODULE(openravepy_int)
         bool (PyRobotBase::*pgrab3)(PyKinBodyPtr,PyKinBody::PyLinkPtr) = &PyRobotBase::Grab;
         bool (PyRobotBase::*pgrab4)(PyKinBodyPtr,PyKinBody::PyLinkPtr,object) = &PyRobotBase::Grab;
 
+        void (PyRobotBase::*setactivemanipulator1)(int) = &PyRobotBase::SetActiveManipulator;
+        void (PyRobotBase::*setactivemanipulator2)(const std::string&) = &PyRobotBase::SetActiveManipulator;
+
         scope robot = class_<PyRobotBase, boost::shared_ptr<PyRobotBase>, bases<PyKinBody, PyInterfaceBase> >("Robot", no_init)
             .def("GetManipulators",&PyRobotBase::GetManipulators)
-            .def("SetActiveManipulator",&PyRobotBase::SetActiveManipulator,args("manipindex"))
+            .def("SetActiveManipulator",setactivemanipulator1,args("manipindex"))
+            .def("SetActiveManipulator",setactivemanipulator2,args("manipname"))
             .def("GetActiveManipulator",&PyRobotBase::GetActiveManipulator)
             .def("GetActiveManipulatorIndex",&PyRobotBase::GetActiveManipulatorIndex)
             .def("GetSensors",&PyRobotBase::GetSensors)
@@ -3510,6 +3515,9 @@ BOOST_PYTHON_MODULE(openravepy_int)
     scope().attr("__author__") = "Rosen Diankov";
     scope().attr("__copyright__") = "Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)";
     scope().attr("__license__") = "Lesser GPL";
+
+    def("RaveSetDebugLevel",RaveSetDebugLevel,args("level"), "Sets the global openrave debug level");
+    def("RaveGetDebugLevel",RaveGetDebugLevel,"Gets the openrave debug level");
 
     def("quatFromAxisAngle",quatFromAxisAngle1, args("axis"), "Converts an axis-angle rotation into a quaternion");
     def("quatFromAxisAngle",quatFromAxisAngle2, args("axis","angle"), "Converts an axis-angle rotation into a quaternion");

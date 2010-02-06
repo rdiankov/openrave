@@ -241,6 +241,7 @@ public:
 
     /// manipulators, grasping (KinBodys), usually involves the active manipulator
     virtual void SetActiveManipulator(int index);
+    virtual void SetActiveManipulator(const std::string& manipname);
     virtual ManipulatorPtr GetActiveManipulator();
     virtual ManipulatorConstPtr GetActiveManipulator() const;
     virtual int GetActiveManipulatorIndex() const { return _nActiveManip; }

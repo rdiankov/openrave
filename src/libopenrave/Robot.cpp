@@ -1758,6 +1758,21 @@ void RobotBase::SetActiveManipulator(int index)
     _nActiveManip = index;
 }
 
+void RobotBase::SetActiveManipulator(const std::string& manipname)
+{
+    if( manipname.size() > 0 ) {
+        for(size_t i = 0; i < _vecManipulators.size(); ++i ) {
+            if( manipname == _vecManipulators[i]->GetName() ) {
+                _nActiveManip = i;
+                return;
+            }
+        }
+        throw openrave_exception(str(boost::format("failed to find manipulator with name: %s")%manipname));
+    }
+
+    _nActiveManip = -1;
+}
+
 RobotBase::ManipulatorPtr RobotBase::GetActiveManipulator()
 {
     if(_nActiveManip < 0 && _nActiveManip >= (int)_vecManipulators.size() )

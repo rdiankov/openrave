@@ -468,6 +468,10 @@ namespace OpenRAVEXMLParser
     class StreamXMLReader : public BaseXMLReader
     {
     public:
+        virtual void startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
+        {
+            _ss.str(""); // have to clear the string
+        }
 
         virtual void characters(const std::string& ch)
         {
@@ -475,7 +479,7 @@ namespace OpenRAVEXMLParser
                 _pcurreader->characters(ch);
             else {
                 _ss.clear();
-                _ss.str(ch);
+                _ss << ch;
             }
         }
     protected:
@@ -555,8 +559,11 @@ namespace OpenRAVEXMLParser
         {
             if( !!_pcurreader ) {
                 _pcurreader->startElement(xmlname, atts);
+                return;
             }
-            else if( _itgeomprop != _plink->_listGeomProperties.end() ) {
+
+            StreamXMLReader::startElement(xmlname,atts);
+            if( _itgeomprop != _plink->_listGeomProperties.end() ) {
                 if( xmlname != "translation" && xmlname!="rotationmat" && xmlname!="rotationaxis" && xmlname!="quat" && xmlname!="diffusecolor" && xmlname != "ambientcolor" && xmlname != "transparency" && xmlname!="render" &&
                     xmlname != "extents" && xmlname != "radius" && xmlname != "height" &&
                     !(_itgeomprop->GetType() == KinBody::Link::GEOMPROPERTIES::GeomTrimesh && (xmlname=="data"||xmlname=="vertices")) ) {
@@ -781,8 +788,9 @@ namespace OpenRAVEXMLParser
                         }
                         else if( xmlname == "vertices" ) {
                             vector<dReal> values((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
-                            if( (values.size()%9) )
-                                RAVELOG_WARN(str(boost::format("number of points specified in the vertices field of %s body needs to be a multiple of 3, ignoring...\n")%_plink->GetName()));
+                            if( (values.size()%9) ) {
+                                RAVELOG_WARN(str(boost::format("number of points specified in the vertices field of %s body needs to be a multiple of 3 (it is %d), ignoring...\n")%_plink->GetName()%values.size()));
+                            }
                             else {
                                 _itgeomprop->collisionmesh.vertices.resize(values.size()/3);
                                 _itgeomprop->collisionmesh.indices.resize(values.size()/3);
@@ -1047,8 +1055,11 @@ namespace OpenRAVEXMLParser
         {
             if( !!_pcurreader ) {
                 _pcurreader->startElement(xmlname, atts);
+                return;
             }
-            else if( xmlname == "body" || xmlname == "offsetfrom" || xmlname == "weight" || xmlname == "lostop" || xmlname == "histop" || xmlname == "maxvel" || xmlname == "maxaccel" || xmlname == "maxtorque" || xmlname == "maxforce" || xmlname == "resolution" || xmlname == "anchor" || xmlname == "axis" || xmlname == "axis1" || xmlname == "axis2" || xmlname=="axis3" || xmlname == "mode" ) {
+            
+            StreamXMLReader::startElement(xmlname,atts);
+            if( xmlname == "body" || xmlname == "offsetfrom" || xmlname == "weight" || xmlname == "lostop" || xmlname == "histop" || xmlname == "maxvel" || xmlname == "maxaccel" || xmlname == "maxtorque" || xmlname == "maxforce" || xmlname == "resolution" || xmlname == "anchor" || xmlname == "axis" || xmlname == "axis1" || xmlname == "axis2" || xmlname=="axis3" || xmlname == "mode" ) {
             }
             else {
                 // start a new field
@@ -1400,6 +1411,7 @@ namespace OpenRAVEXMLParser
                 _pcustomreader->startElement(xmlname, atts);
             }
             else {
+                StreamXMLReader::startElement(xmlname,atts);
                 // check for registers readers
                 READERSMAP::iterator it = GetRegisteredReaders()[_type].find(xmlname);
                 if( it != GetRegisteredReaders()[_type].end() ) {
@@ -1877,8 +1889,11 @@ namespace OpenRAVEXMLParser
         {
             if( !!_pcurreader ) {
                 _pcurreader->startElement(xmlname, atts);
+                return;
             }
-            else if( xmlname == "effector" || xmlname == "gripperjoints" || xmlname == "joints" || xmlname == "armjoints" || xmlname == "base"|| xmlname == "iksolver" || xmlname == "closingdir" || xmlname == "palmdirection" || xmlname == "closingdirection" || xmlname == "translation" || xmlname == "quat" || xmlname == "rotationaxis" || xmlname == "rotationmat") {
+
+            StreamXMLReader::startElement(xmlname,atts);
+            if( xmlname == "effector" || xmlname == "gripperjoints" || xmlname == "joints" || xmlname == "armjoints" || xmlname == "base"|| xmlname == "iksolver" || xmlname == "closingdir" || xmlname == "palmdirection" || xmlname == "closingdirection" || xmlname == "translation" || xmlname == "quat" || xmlname == "rotationaxis" || xmlname == "rotationmat") {
             }
             else {
                 _pcurreader.reset(new DummyXMLReader(xmlname, "Manipulator"));
@@ -2089,8 +2104,11 @@ namespace OpenRAVEXMLParser
         {
             if( !!_pcurreader ) {
                 _pcurreader->startElement(xmlname, atts);
+                return;
             }
-            else if( xmlname == "link" || xmlname == "translation" || xmlname == "quat" || xmlname == "rotationaxis" || xmlname == "rotationmat" ) {
+            
+            StreamXMLReader::startElement(xmlname,atts);
+            if( xmlname == "link" || xmlname == "translation" || xmlname == "quat" || xmlname == "rotationaxis" || xmlname == "rotationmat" ) {
             }
             else if( xmlname == "sensor" ) {
                 // create the sensor
@@ -2431,6 +2449,8 @@ namespace OpenRAVEXMLParser
                 _pcurreader->startElement(xmlname, atts);
                 return;
             }
+
+            StreamXMLReader::startElement(xmlname,atts);
 
             // check for any plugins
             FOREACHC(itname,RaveGetInterfaceNamesMap()) {
