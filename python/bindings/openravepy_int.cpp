@@ -42,6 +42,7 @@
 #include <pyconfig.h>
 #include <numpy/arrayobject.h>
 
+#define OPENRAVE_BININGS_PYARRAY
 #include "bindings.h"
 
 #define CHECK_POINTER(p) { \
@@ -2858,17 +2859,6 @@ BOOST_PYTHON_MODULE(openravepy_int)
 {
     import_array();
     numeric::array::set_module_and_type("numpy", "ndarray");
-    int_from_int();
-    T_from_number<float>();
-    T_from_number<double>();
-    numpy_multi_array_converter< boost::multi_array<float,1> >::register_to_and_from_python();
-    numpy_multi_array_converter< boost::multi_array<float,2> >::register_to_and_from_python();
-    numpy_multi_array_converter< boost::multi_array<float,3> >::register_to_and_from_python();
-    numpy_multi_array_converter< boost::multi_array<double,1> >::register_to_and_from_python();
-    numpy_multi_array_converter< boost::multi_array<double,2> >::register_to_and_from_python();
-    numpy_multi_array_converter< boost::multi_array<double,3> >::register_to_and_from_python();
-    numpy_multi_array_converter< boost::multi_array<int,1> >::register_to_and_from_python();
-    numpy_multi_array_converter< boost::multi_array<int,2> >::register_to_and_from_python();
 
     typedef return_value_policy< copy_const_reference > return_copy_const_ref;
     class_< openrave_exception >( "_openrave_exception_" )
@@ -2932,9 +2922,6 @@ BOOST_PYTHON_MODULE(openravepy_int)
 
     class_<PyEnvironmentBase, boost::shared_ptr<PyEnvironmentBase> > classenv("Environment");
     class_<PyGraphHandle, boost::shared_ptr<PyGraphHandle> >("GraphHandle");
-    class_<PyVoidHandle, boost::shared_ptr<PyVoidHandle> >("VoidHandle")
-        .def("close",&PyVoidHandle::close)
-        ;
     class_<PyRay, boost::shared_ptr<PyRay> >("Ray")
         .def(init<object,object>())
         .def("dir",&PyRay::dir)

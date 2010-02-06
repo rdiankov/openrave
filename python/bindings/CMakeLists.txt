@@ -45,7 +45,7 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
       include_directories("${CMAKE_SOURCE_DIR}/src/libopenrave-core")
 
       ## openrave bindings
-      add_library(openravepy_int SHARED openravepy_int.cpp bindings.h)
+      add_library(openravepy_int SHARED openravepy_int.cpp bindings.cpp bindings.h)
       # stdc++ has to be included before opengl libraries due to some ATI bug (http://wiki.fifengine.de/Segfault_in_cxa_allocate_exception#Workaround)
       target_link_libraries(openravepy_int ${STDC_LIBRARY} libopenrave libopenrave-core ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY})
       add_dependencies(openravepy_int libopenrave libopenrave-core)
@@ -57,7 +57,7 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
 
       ## ann bindings
       if( ANN_FOUND )
-        add_library(pyANN SHARED pyann.cpp bindings.h)
+        add_library(pyANN SHARED pyann.cpp bindings.cpp bindings.h)
         include_directories(${ANN_INCLUDE_DIR})
         # stdc++ has to be included before opengl libraries due to some ATI bug (http://wiki.fifengine.de/  Segfault_in_cxa_allocate_exception#Workaround)
         target_link_libraries(pyANN ${STDC_LIBRARY} ann ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY})
@@ -76,7 +76,7 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
 
       ## convexdecomposition bindings
       if( CONVEXDECOMPOSITION_FOUND )
-        add_library(convexdecompositionpy SHARED convexdecompositionpy.cpp bindings.h)
+        add_library(convexdecompositionpy SHARED convexdecompositionpy.cpp bindings.cpp bindings.h)
         include_directories(${CONVEXDECOMPOSITION_INCLUDE_DIR})
         # stdc++ has to be included before opengl libraries due to some ATI bug (http://wiki.fifengine.de/  Segfault_in_cxa_allocate_exception#Workaround)
         target_link_libraries(convexdecompositionpy ${STDC_LIBRARY} convexdecomposition ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY})

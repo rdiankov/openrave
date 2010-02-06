@@ -25,6 +25,8 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/format.hpp>
 #include <boost/assert.hpp>
+
+#define OPENRAVE_BININGS_PYARRAY
 #include "bindings.h"
 
 #include "NvConvexDecomposition.h"
@@ -94,9 +96,7 @@ BOOST_PYTHON_MODULE(convexdecompositionpy)
 {
     import_array();
     numeric::array::set_module_and_type("numpy", "ndarray");
-    int_from_int();
-    T_from_number<float>();
-    T_from_number<double>();
+    init_python_bindings();
 
     typedef return_value_policy< copy_const_reference > return_copy_const_ref;
     class_< cdpy_exception >( "_cdpy_exception_" )
