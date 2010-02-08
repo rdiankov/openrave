@@ -22,7 +22,6 @@
     <base>wam0</base>
     <effector>wam4</effector>
     <armjoints>Shoulder_Yaw Shoulder_Pitch Shoulder_Roll Elbow</armjoints>
-    <iksolver>WAM4</iksolver>
     <translation>0 0 0.22</translation>
     <joints>JF1 JF2 JF3 JF4</joints>
     <closingdirection>1 1 1 0</closingdirection>

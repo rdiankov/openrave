@@ -1541,7 +1541,7 @@ class IKFastSolver(AutoReloader):
         if len(solverbranches) == 0 or not solverbranches[-1][0] is None:
             print 'failed to solve for kinematics'
             return None
-        return SolverIKChain([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], Tfirstleft.inv() * Tee * Tfirstright.inv(), [SolverBranchConds(solverbranches)])
+        return SolverIKChainRotation3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], Tfirstleft.inv() * Tee * Tfirstright.inv(), [SolverBranchConds(solverbranches)])
 
     def solveFullIK_Translation3D(self,chain,Tee):
         Links, jointvars, isolvejointvars, ifreejointvars = self.forwardKinematicsChain(chain)
@@ -1647,7 +1647,7 @@ class IKFastSolver(AutoReloader):
         if len(solverbranches) == 0 or not solverbranches[-1][0] is None:
             print 'failed to solve for kinematics'
             return None
-        return SolverIKChain([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], Tfirstleft.inv() * Tee * Tfirstright.inv(), [SolverBranchConds(solverbranches)])
+        return SolverIKChainTranslation3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], Tfirstleft.inv() * Tee * Tfirstright.inv(), [SolverBranchConds(solverbranches)])
         
     def solveFullIK_6D(self, chain, Tee):
         Links, jointvars, isolvejointvars, ifreejointvars = self.forwardKinematicsChain(chain)
@@ -1833,7 +1833,7 @@ class IKFastSolver(AutoReloader):
         if len(solverbranches) == 0 or not solverbranches[-1][0] is None:
             print 'failed to solve for kinematics'
             return None
-        return SolverIKChain([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], Tfirstleft.inv() * Tee * Tfirstright.inv(), [SolverBranchConds(solverbranches)])
+        return SolverIKChainTransform6D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], Tfirstleft.inv() * Tee * Tfirstright.inv(), [SolverBranchConds(solverbranches)])
 
     def isExpressionUnique(self, exprs, expr):
         for exprtest in exprs:

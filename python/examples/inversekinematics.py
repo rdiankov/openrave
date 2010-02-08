@@ -146,14 +146,16 @@ class InverseKinematicsModel(OpenRAVEModel):
     def autogenerate(self,forcegenerate=True):
         if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531' and self.manip.GetName() == 'arm':
             self.generate(freejoints=[self.robot.GetJoint('Shoulder_Roll').GetJointIndex()],iktype=IkParameterization.Type.Transform6D)
+        elif self.robot.GetRobotStructureHash() == '77bdb417b36d4dffbb7dd8a6eefbd32d' and self.manip.GetName() == 'arm':
+            self.generate(freejoints=[self.robot.GetJoint('Shoulder_Roll').GetJointIndex()],iktype=IkParameterization.Type.Translation3D)
         else:
             if not forcegenerate:
                 raise ValueError('failed to find auto-generation parameters')
             self.generate()
     def testik(self,numiktests):
         with self.robot:
+            lower,upper = [v[self.manip.GetArmJoints()] for v in self.robot.GetJointLimits()]
             if self.iktype == IkParameterization.Type.Direction3D:
-                lower,upper = [v[self.manip.GetArmJoints()] for v in self.robot.GetJointLimits()]
                 success = 0.0
                 for i in range(numiktests):
                     self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
@@ -164,6 +166,19 @@ class InverseKinematicsModel(OpenRAVEModel):
                         self.robot.SetJointValues(sol,self.manip.GetArmJoints())
                         realdir = dot(self.manip.GetEndEffectorTransform()[0:3,0:3],self.manip.GetDirection())
                         if sum((targetdir-realdir)**2) < 1e-7:
+                            success += 1
+                return success/numiktests
+            if self.iktype == IkParameterization.Type.Translation3D:
+                success = 0.0
+                for i in range(numiktests):
+                    self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
+                    targetpos = self.manip.GetEndEffectorTransform()[0:3,3]
+                    self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
+                    sol = self.manip.FindIKSolution(IkParameterization(targetpos,self.iktype),False)
+                    if sol is not None:
+                        self.robot.SetJointValues(sol,self.manip.GetArmJoints())
+                        realpos = self.manip.GetEndEffectorTransform()[0:3,3]
+                        if sum((targetpos-realpos)**2) < 1e-7:
                             success += 1
                 return success/numiktests
             else:
