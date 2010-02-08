@@ -206,7 +206,8 @@ inline static dReal TransformDistanceFast(const Transform& t1, const Transform& 
 {
     dReal e1 = (t1.rot-t2.rot).lengthsqr4();
     dReal e2 = (t1.rot+t2.rot).lengthsqr4();
-    return RaveSqrt((t1.trans-t2.trans).lengthsqr3() + frotweight*std::min(e1,e2));
+    dReal e = e1 < e2 ? e1 : e2;
+    return RaveSqrt((t1.trans-t2.trans).lengthsqr3() + frotweight*e);
 }
 
 void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2);
