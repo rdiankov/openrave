@@ -35,9 +35,6 @@ namespace man1left {
 namespace man1right {
 #include "ik_man1right.h"
 }
-namespace hrp3right {
-#include "ik_hrp3right.h"
-}
 namespace katana {
 #include "ik_katana.h"
 }
@@ -51,7 +48,6 @@ BOOST_TYPEOF_REGISTER_TYPE(puma::IKSolution)
 BOOST_TYPEOF_REGISTER_TYPE(manusleft::IKSolution)
 BOOST_TYPEOF_REGISTER_TYPE(man1left::IKSolution)
 BOOST_TYPEOF_REGISTER_TYPE(man1right::IKSolution)
-BOOST_TYPEOF_REGISTER_TYPE(hrp3right::IKSolution)
 BOOST_TYPEOF_REGISTER_TYPE(katana::IKSolution)
 #endif
 
@@ -81,49 +77,43 @@ RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(PluginType type, const std::str
             vector<int> vfree(barrettwam::getNumFreeParameters());
             for(size_t i = 0; i < vfree.size(); ++i)
                 vfree[i] = barrettwam::getFreeParameters()[i];
-            return InterfaceBasePtr(new IkFastSolver<barrettwam::IKReal,IkSolverBase::Parameterization::Type_Transform6D,barrettwam::IKSolution>(barrettwam::ik,vfree,freeinc,barrettwam::getNumJoints(),penv));
+            return InterfaceBasePtr(new IkFastSolver<barrettwam::IKReal,barrettwam::IKSolution>(barrettwam::ik,vfree,freeinc,barrettwam::getNumJoints(),(IkParameterization::Type)barrettwam::getIKType(), penv));
         }
         else if( interfacename == "pa10ikfast" ) {
             vector<int> vfree(pa10::getNumFreeParameters());
             for(size_t i = 0; i < vfree.size(); ++i)
                 vfree[i] = pa10::getFreeParameters()[i];
-            return InterfaceBasePtr(new IkFastSolver<pa10::IKReal,IkSolverBase::Parameterization::Type_Transform6D,pa10::IKSolution>(pa10::ik,vfree,freeinc,pa10::getNumJoints(),penv));
+            return InterfaceBasePtr(new IkFastSolver<pa10::IKReal,pa10::IKSolution>(pa10::ik,vfree,freeinc,pa10::getNumJoints(),(IkParameterization::Type)pa10::getIKType(), penv));
         }
         else if( interfacename == "pumaikfast" ) {
             vector<int> vfree(puma::getNumFreeParameters());
             for(size_t i = 0; i < vfree.size(); ++i)
                 vfree[i] = puma::getFreeParameters()[i];
-            return InterfaceBasePtr(new IkFastSolver<puma::IKReal,IkSolverBase::Parameterization::Type_Transform6D,puma::IKSolution>(puma::ik,vfree,freeinc,puma::getNumJoints(),penv));
+            return InterfaceBasePtr(new IkFastSolver<puma::IKReal,puma::IKSolution>(puma::ik,vfree,freeinc,puma::getNumJoints(),(IkParameterization::Type)puma::getIKType(), penv));
         }
         else if( interfacename == "manusleftarmikfast" ) {
             vector<int> vfree(manusleft::getNumFreeParameters());
             for(size_t i = 0; i < vfree.size(); ++i)
                 vfree[i] = manusleft::getFreeParameters()[i];
-            return InterfaceBasePtr(new IkFastSolver<manusleft::IKReal,IkSolverBase::Parameterization::Type_Transform6D,manusleft::IKSolution>(manusleft::ik,vfree,freeinc,manusleft::getNumJoints(),penv));
+            return InterfaceBasePtr(new IkFastSolver<manusleft::IKReal,manusleft::IKSolution>(manusleft::ik,vfree,freeinc,manusleft::getNumJoints(),(IkParameterization::Type)manusleft::getIKType(), penv));
         }
         else if( interfacename == "man1leftikfast" ) {
             vector<int> vfree(man1left::getNumFreeParameters());
             for(size_t i = 0; i < vfree.size(); ++i)
                 vfree[i] = man1left::getFreeParameters()[i];
-            return InterfaceBasePtr(new IkFastSolver<man1left::IKReal,IkSolverBase::Parameterization::Type_Transform6D,man1left::IKSolution>(man1left::ik,vfree,freeinc,man1left::getNumJoints(),penv));
+            return InterfaceBasePtr(new IkFastSolver<man1left::IKReal,man1left::IKSolution>(man1left::ik,vfree,freeinc,man1left::getNumJoints(),(IkParameterization::Type)man1left::getIKType(), penv));
         }
         else if( interfacename == "man1rightikfast" ) {
             vector<int> vfree(man1right::getNumFreeParameters());
             for(size_t i = 0; i < vfree.size(); ++i)
                 vfree[i] = man1right::getFreeParameters()[i];
-            return InterfaceBasePtr(new IkFastSolver<man1right::IKReal,IkSolverBase::Parameterization::Type_Transform6D,man1right::IKSolution>(man1right::ik,vfree,freeinc,man1right::getNumJoints(),penv));
-        }
-        else if( interfacename == "hrp3rightikfast" ) {
-            vector<int> vfree(hrp3right::getNumFreeParameters());
-            for(size_t i = 0; i < vfree.size(); ++i)
-                vfree[i] = hrp3right::getFreeParameters()[i];
-            return InterfaceBasePtr(new IkFastSolver<hrp3right::IKReal,IkSolverBase::Parameterization::Type_Transform6D,hrp3right::IKSolution>(hrp3right::ik,vfree,freeinc,hrp3right::getNumJoints(),penv));
+            return InterfaceBasePtr(new IkFastSolver<man1right::IKReal,man1right::IKSolution>(man1right::ik,vfree,freeinc,man1right::getNumJoints(),(IkParameterization::Type)man1right::getIKType(), penv));
         }
         else if( interfacename == "katanaikfast" ) {
             vector<int> vfree(katana::getNumFreeParameters());
             for(size_t i = 0; i < vfree.size(); ++i)
                 vfree[i] = katana::getFreeParameters()[i];
-            return InterfaceBasePtr(new IkFastSolver<katana::IKReal,IkSolverBase::Parameterization::Type_Transform6D,katana::IKSolution>(katana::ik,vfree,freeinc,katana::getNumJoints(),penv));
+            return InterfaceBasePtr(new IkFastSolver<katana::IKReal,katana::IKSolution>(katana::ik,vfree,freeinc,katana::getNumJoints(),(IkParameterization::Type)katana::getIKType(), penv));
         }
 
         // look at all the ikfast problem solvers
@@ -162,7 +152,6 @@ RAVE_PLUGIN_API bool GetPluginAttributes(PLUGININFO* pinfo, int size)
     pinfo->interfacenames[PT_InverseKinematicsSolver].push_back("ManusLeftArmikfast");
     pinfo->interfacenames[PT_InverseKinematicsSolver].push_back("Man1Leftikfast");
     pinfo->interfacenames[PT_InverseKinematicsSolver].push_back("Man1Rightikfast");
-    pinfo->interfacenames[PT_InverseKinematicsSolver].push_back("HRP3Rightikfast");
     pinfo->interfacenames[PT_InverseKinematicsSolver].push_back("Katanaikfast");
     return true;
 }

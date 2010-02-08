@@ -202,6 +202,13 @@ inline T ANGLE_INTERPOLATION(T start, T end, T fraction, T lowerLimit, T upperLi
     return NORMALIZE_ANGLE(start + fraction * ANGLE_DIFF(start, end), lowerLimit, upperLimit);
 }
 
+inline static dReal TransformDistanceFast(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)
+{
+    dReal e1 = (t1.rot-t2.rot).lengthsqr4();
+    dReal e2 = (t1.rot+t2.rot).lengthsqr4();
+    return RaveSqrt((t1.trans-t2.trans).lengthsqr3() + frotweight*std::min(e1,e2));
+}
+
 void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2);
 
 }

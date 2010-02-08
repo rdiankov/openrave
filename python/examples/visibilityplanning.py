@@ -293,7 +293,8 @@ class VisibilityGrasping(metaclass.AutoReloader):
                 continue
             self.starttrajectory(trajdata)
             if not self.testvisibility(visualprob):
-                raise ValueError('visibility has not been achieved!')
+                print 'visibility has not been achieved!'
+                continue
             T = self.target.GetTransform()
             targetfilename = self.target.GetXMLFilename()
             if usevision:

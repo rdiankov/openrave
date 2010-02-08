@@ -533,7 +533,7 @@
     <Translation>0.06 -0.025 -0.015</Translation>
     <joints>JF0_3 JF0_4 JF1_2 JF1_3 JF2_2 JF2_3 JF3_2 JF3_3 JF4_4 JF4_5</joints>
     <closingdirection>1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0</closingdirection>
-    <palmdirection>0 -1 0</palmdirection>
+    <direction>0 -1 0</direction>
   </Manipulator>
 </Robot>
 

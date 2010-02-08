@@ -1049,6 +1049,47 @@ public:
     string GetName() { return _psensor->GetName(); }
 };
 
+class PyIkParameterization
+{
+public:
+    PyIkParameterization() {}
+    PyIkParameterization(object o, IkParameterization::Type type)
+    {
+        switch(type) {
+        case IkParameterization::Type_Transform6D: SetTransform(o); break;
+        case IkParameterization::Type_Rotation3D: SetRotation(o); break;
+        case IkParameterization::Type_Translation3D: SetTranslation(o); break;
+        case IkParameterization::Type_Direction3D: SetDirection(o); break;
+        case IkParameterization::Type_Ray4D: SetRay(extract<boost::shared_ptr<PyRay> >(o)); break;
+        default: throw openrave_exception(boost::str(boost::format("incorrect ik parameterization type %d")%type));
+        }
+    }
+
+    void SetTransform(object o) { _param.SetTransform(ExtractTransform(o)); }
+    void SetRotation(object o) { _param.SetRotation(ExtractVector4(o)); }
+    void SetTranslation(object o) { _param.SetTranslation(ExtractVector3(o)); }
+    void SetDirection(object o) { _param.SetDirection(ExtractVector3(o)); }
+    void SetRay(boost::shared_ptr<PyRay> ray) { _param.SetRay(ray->r); }
+
+    IkParameterization::Type GetType() { return _param.GetType(); }
+    object GetTransform() { return ReturnTransform(_param.GetTransform()); }
+    object GetRotation() { return toPyVector4(_param.GetRotation()); }
+    object GetTranslation() { return toPyVector3(_param.GetTranslation()); }
+    object GetDirection() { return toPyVector3(_param.GetDirection()); }
+    PyRay GetRay() { return PyRay(_param.GetRay()); }
+
+    IkParameterization _param;
+};
+
+class IkParameterization_pickle_suite : public pickle_suite
+{
+public:
+    static tuple getinitargs(const PyIkParameterization& r)
+    {
+        return boost::python::make_tuple(r._param.GetTransform(),r._param.GetType());
+    }
+};
+
 class PyIkSolverBase : public PyInterfaceBase
 {
 protected:
@@ -1092,6 +1133,7 @@ public:
         object GetArmJoints() { return toPyArray(_pmanip->GetArmJoints()); }
         object GetClosingDirection() { return toPyArray(_pmanip->GetClosingDirection()); }
         object GetPalmDirection() { return toPyVector3(_pmanip->GetPalmDirection()); }
+        object GetDirection() { return toPyVector3(_pmanip->GetDirection()); }
         bool IsGrabbing(PyKinBodyPtr pbody) { return _pmanip->IsGrabbing(pbody->GetBody()); }
 
         int GetNumFreeParameters() const { return _pmanip->GetNumFreeParameters(); }
@@ -1104,26 +1146,44 @@ public:
             return toPyArray(values);
         }
 
-        object FindIKSolution(object transform, bool bColCheck) const
+        object FindIKSolution(object oparam, bool bColCheck) const
         {
             vector<dReal> solution;
-            if( !_pmanip->FindIKSolution(ExtractTransform(transform),solution,bColCheck) )
+            extract<boost::shared_ptr<PyIkParameterization> > ikparam(oparam);
+            if( ikparam.check() ) {
+                if( !_pmanip->FindIKSolution(((boost::shared_ptr<PyIkParameterization>)ikparam)->_param,solution,bColCheck) )
+                    return object();
+            }
+            // assume transformation matrix
+            else if( !_pmanip->FindIKSolution(ExtractTransform(oparam),solution,bColCheck) )
                 return object();
             return toPyArrayN(&solution[0],solution.size());
         }
 
-        object FindIKSolution(object transform, object freeparams, bool bColCheck) const
+        object FindIKSolution(object oparam, object freeparams, bool bColCheck) const
         {
             vector<dReal> solution, vfreeparams = ExtractArray<dReal>(freeparams);
-            if( !_pmanip->FindIKSolution(ExtractTransform(transform),vfreeparams, solution,bColCheck) )
+            extract<boost::shared_ptr<PyIkParameterization> > ikparam(oparam);
+            if( ikparam.check() ) {
+                if( !_pmanip->FindIKSolution(((boost::shared_ptr<PyIkParameterization>)ikparam)->_param,vfreeparams,solution,bColCheck) )
+                    return object();
+            }
+            // assume transformation matrix
+            else if( !_pmanip->FindIKSolution(ExtractTransform(oparam),vfreeparams, solution,bColCheck) )
                 return object();
             return toPyArray(solution);
         }
 
-        object FindIKSolutions(object transform, bool bColCheck) const
+        object FindIKSolutions(object oparam, bool bColCheck) const
         {
             std::vector<std::vector<dReal> > vsolutions;
-            if( !_pmanip->FindIKSolutions(ExtractTransform(transform),vsolutions,bColCheck) )
+            extract<boost::shared_ptr<PyIkParameterization> > ikparam(oparam);
+            if( ikparam.check() ) {
+                if( !_pmanip->FindIKSolutions(((boost::shared_ptr<PyIkParameterization>)ikparam)->_param,vsolutions,bColCheck) )
+                    return object();
+            }
+            // assume transformation matrix
+            else if( !_pmanip->FindIKSolutions(ExtractTransform(oparam),vsolutions,bColCheck) )
                 return object();
             boost::python::list solutions;
             FOREACH(itsol,vsolutions)
@@ -1131,11 +1191,17 @@ public:
             return solutions;
         }
 
-        object FindIKSolutions(object transform, object freeparams, bool bColCheck) const
+        object FindIKSolutions(object oparam, object freeparams, bool bColCheck) const
         {
             std::vector<std::vector<dReal> > vsolutions;
             vector<dReal> vfreeparams = ExtractArray<dReal>(freeparams);
-            if( !_pmanip->FindIKSolutions(ExtractTransform(transform),vfreeparams, vsolutions,bColCheck) )
+            extract<boost::shared_ptr<PyIkParameterization> > ikparam(oparam);
+            if( ikparam.check() ) {
+                if( !_pmanip->FindIKSolutions(((boost::shared_ptr<PyIkParameterization>)ikparam)->_param,vfreeparams,vsolutions,bColCheck) )
+                    return object();
+            }
+            // assume transformation matrix
+            else if( !_pmanip->FindIKSolutions(ExtractTransform(oparam),vfreeparams, vsolutions,bColCheck) )
                 return object();
             boost::python::list solutions;
             FOREACH(itsol,vsolutions)
@@ -2116,12 +2182,12 @@ public:
         return bSuccess;
     }
 
-    bool CheckCollision(PyRay* pyray, PyKinBodyPtr pbody)
+    bool CheckCollision(boost::shared_ptr<PyRay> pyray, PyKinBodyPtr pbody)
     {
         return _penv->CheckCollision(pyray->r,KinBodyConstPtr(pbody->GetBody()));
     }
 
-    bool CheckCollision(PyRay* pyray, PyKinBodyPtr pbody, PyCollisionReportPtr pReport)
+    bool CheckCollision(boost::shared_ptr<PyRay> pyray, PyKinBodyPtr pbody, PyCollisionReportPtr pReport)
     {
         bool bSuccess = _penv->CheckCollision(pyray->r, KinBodyConstPtr(pbody->GetBody()), pReport->report);
         pReport->init(shared_from_this());
@@ -2173,12 +2239,12 @@ public:
         return boost::python::make_tuple(static_cast<numeric::array>(handle<>(pycollision)),static_cast<numeric::array>(handle<>(pypos)));
     }
 
-    bool CheckCollision(PyRay* pyray)
+    bool CheckCollision(boost::shared_ptr<PyRay> pyray)
     {
         return _penv->CheckCollision(pyray->r);
     }
     
-    bool CheckCollision(PyRay* pyray, PyCollisionReportPtr pReport)
+    bool CheckCollision(boost::shared_ptr<PyRay> pyray, PyCollisionReportPtr pReport)
     {
         bool bSuccess = _penv->CheckCollision(pyray->r, pReport->report);
         pReport->init(shared_from_this());
@@ -2610,6 +2676,8 @@ void PyRobotBase::__enter__()
     _listStateSavers.push_back(boost::shared_ptr<void>(new RobotBase::RobotStateSaver(_probot)));
 }
 
+namespace openravepy {
+
 object quatFromAxisAngle1(object oaxis)
 {
     Vector axis = ExtractVector3(oaxis);
@@ -2829,6 +2897,21 @@ string poseSerialization(object o)
     return ss.str();
 }
 
+std::string openravepyCompilerVersion()
+{
+    stringstream ss;
+#if defined(_MSC_VER)
+    ss << "msvc " << _MSC_VER;
+#elif defined(__GNUC__)
+    ss << "gcc " << __GNUC__ << "." << __GNUC_MINOR__ << "." << __GNUC_PATCHLEVEL__;
+#elif defined(__MINGW32_VERSION)
+    ss << "mingw " << __MINGW32_VERSION;
+#endif
+    return ss.str();
+}
+
+}
+
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetController_overloads, SetController, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(StartSimulation_overloads, StartSimulation, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetViewer_overloads, SetViewer, 1, 2)
@@ -2842,19 +2925,6 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawtrimesh_overloads, drawtrimesh, 1, 3)
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Load_overloads, Load, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Save_overloads, Save, 1, 2)
-
-std::string openravepyCompilerVersion()
-{
-    stringstream ss;
-#if defined(_MSC_VER)
-    ss << "msvc " << _MSC_VER;
-#elif defined(__GNUC__)
-    ss << "gcc " << __GNUC__ << "." << __GNUC_MINOR__ << "." << __GNUC_PATCHLEVEL__;
-#elif defined(__MINGW32_VERSION)
-    ss << "mingw " << __MINGW32_VERSION;
-#endif
-    return ss.str();
-}
 
 BOOST_PYTHON_MODULE(openravepy_int)
 {
@@ -3122,6 +3192,32 @@ BOOST_PYTHON_MODULE(openravepy_int)
         ;
 
     {
+        scope ikparameterization = class_<PyIkParameterization, boost::shared_ptr<PyIkParameterization> >("IkParameterization")
+            .def(init<object,IkParameterization::Type>())
+            .def("SetTransform",&PyIkParameterization::SetTransform,args("transform"))
+            .def("SetRotation",&PyIkParameterization::SetRotation,args("quat"))
+            .def("SetTranslation",&PyIkParameterization::SetRotation,args("pos"))
+            .def("SetDirection",&PyIkParameterization::SetRotation,args("dir"))
+            .def("SetRay",&PyIkParameterization::SetRotation,args("quat"))
+            .def("GetType",&PyIkParameterization::GetType)
+            .def("GetTransform",&PyIkParameterization::GetTransform)
+            .def("GetRotation",&PyIkParameterization::GetRotation)
+            .def("GetTranslation",&PyIkParameterization::GetTranslation)
+            .def("GetDirection",&PyIkParameterization::GetDirection)
+            .def("GetRay",&PyIkParameterization::GetRay)
+            .def_pickle(IkParameterization_pickle_suite())
+            ;
+
+        enum_<IkParameterization::Type>("Type")
+            .value("Transform6D",IkParameterization::Type_Transform6D)
+            .value("Rotation3D",IkParameterization::Type_Rotation3D)
+            .value("Translation3D",IkParameterization::Type_Translation3D)
+            .value("Direction3D",IkParameterization::Type_Direction3D)
+            .value("Ray4D",IkParameterization::Type_Ray4D)
+        ;
+    }
+
+    {
         void (PyRobotBase::*psetactivedofs1)(object) = &PyRobotBase::SetActiveDOFs;
         void (PyRobotBase::*psetactivedofs2)(object, int) = &PyRobotBase::SetActiveDOFs;
         void (PyRobotBase::*psetactivedofs3)(object, int, object) = &PyRobotBase::SetActiveDOFs;
@@ -3226,10 +3322,10 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("HasIKSolver",&PyRobotBase::PyManipulator::HasIKSolver)
             .def("GetNumFreeParameters",&PyRobotBase::PyManipulator::GetNumFreeParameters)
             .def("GetFreeParameters",&PyRobotBase::PyManipulator::GetFreeParameters)
-            .def("FindIKSolution",pmanipik,args("transform","envcheck"))
-            .def("FindIKSolution",pmanipikf,args("transform","freevalues","envcheck"))
-            .def("FindIKSolutions",pmanipiks,args("transform","envcheck"))
-            .def("FindIKSolutions",pmanipiksf,args("transform","freevalues","envcheck"))
+            .def("FindIKSolution",pmanipik,args("param","envcheck"))
+            .def("FindIKSolution",pmanipikf,args("param","freevalues","envcheck"))
+            .def("FindIKSolutions",pmanipiks,args("param","envcheck"))
+            .def("FindIKSolutions",pmanipiksf,args("param","freevalues","envcheck"))
             .def("GetBase",&PyRobotBase::PyManipulator::GetBase)
             .def("GetEndEffector",&PyRobotBase::PyManipulator::GetEndEffector)
             .def("GetGraspTransform",&PyRobotBase::PyManipulator::GetGraspTransform)
@@ -3237,6 +3333,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetArmJoints",&PyRobotBase::PyManipulator::GetArmJoints)
             .def("GetClosingDirection",&PyRobotBase::PyManipulator::GetClosingDirection)
             .def("GetPalmDirection",&PyRobotBase::PyManipulator::GetPalmDirection)
+            .def("GetDirection",&PyRobotBase::PyManipulator::GetDirection)
             .def("IsGrabbing",&PyRobotBase::PyManipulator::IsGrabbing,args("body"))
             .def("GetChildJoints",&PyRobotBase::PyManipulator::GetChildJoints)
             .def("GetChildDOFIndices",&PyRobotBase::PyManipulator::GetChildDOFIndices)
@@ -3390,10 +3487,10 @@ BOOST_PYTHON_MODULE(openravepy_int)
     bool (PyEnvironmentBase::*pcoller)(PyKinBody::PyLinkPtr, object,object,PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
     bool (PyEnvironmentBase::*pcolbe)(PyKinBodyPtr,object,object) = &PyEnvironmentBase::CheckCollision;
     bool (PyEnvironmentBase::*pcolber)(PyKinBodyPtr, object,object,PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcolyb)(PyRay*,PyKinBodyPtr) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcolybr)(PyRay*, PyKinBodyPtr, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcoly)(PyRay*) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcolyr)(PyRay*, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
+    bool (PyEnvironmentBase::*pcolyb)(boost::shared_ptr<PyRay>,PyKinBodyPtr) = &PyEnvironmentBase::CheckCollision;
+    bool (PyEnvironmentBase::*pcolybr)(boost::shared_ptr<PyRay>, PyKinBodyPtr, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
+    bool (PyEnvironmentBase::*pcoly)(boost::shared_ptr<PyRay>) = &PyEnvironmentBase::CheckCollision;
+    bool (PyEnvironmentBase::*pcolyr)(boost::shared_ptr<PyRay>, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
 
     void (PyEnvironmentBase::*LockPhysics1)(bool) = &PyEnvironmentBase::LockPhysics;
     void (PyEnvironmentBase::*LockPhysics2)(bool, float) = &PyEnvironmentBase::LockPhysics;
@@ -3519,24 +3616,24 @@ BOOST_PYTHON_MODULE(openravepy_int)
     def("RaveSetDebugLevel",RaveSetDebugLevel,args("level"), "Sets the global openrave debug level");
     def("RaveGetDebugLevel",RaveGetDebugLevel,"Gets the openrave debug level");
 
-    def("quatFromAxisAngle",quatFromAxisAngle1, args("axis"), "Converts an axis-angle rotation into a quaternion");
-    def("quatFromAxisAngle",quatFromAxisAngle2, args("axis","angle"), "Converts an axis-angle rotation into a quaternion");
-    def("quatFromRotationMatrix",quatFromRotationMatrix, args("rotation"), "Converts the rotation of a matrix into a quaternion");
-    def("axisAngleFromRotationMatrix",axisAngleFromRotationMatrix, args("rotation"), "Converts the rotation of a matrix into axis-angle representation");
-    def("rotationMatrixFromQuat",rotationMatrixFromQuat, args("quat"), "Converts a quaternion to a 3x3 matrix");
-    def("rotationMatrixFromQArray",rotationMatrixFromQArray,args("quatarray"),"Converts an array of quaternions to a list of 3x3 rotation matrices");
-    def("matrixFromQuat",matrixFromQuat, args("quat"), "Converts a quaternion to a 4x4 affine matrix");
-    def("rotationMatrixFromAxisAngle",rotationMatrixFromAxisAngle1, args("axis"), "Converts an axis-angle rotation to a 3x3 matrix");
-    def("rotationMatrixFromAxisAngle",rotationMatrixFromAxisAngle2, args("axis","angle"), "Converts an axis-angle rotation to a 3x3 matrix");
-    def("matrixFromAxisAngle",matrixFromAxisAngle1, args("axis"), "Converts an axis-angle rotation to a 4x4 affine matrix");
-    def("matrixFromAxisAngle",matrixFromAxisAngle2, args("axis","angle"), "Converts an axis-angle rotation to a 4x4 affine matrix");
-    def("matrixFromPose",matrixFromPose, args("pose"), "Converts a 7 element quaterion+translation transform to a 4x4 matrix");
-    def("matrixFromPoses",matrixFromPoses, args("poses"), "Converts a Nx7 element quaterion+translation array to a 4x4 matrices");
-    def("poseFromMatrix",poseFromMatrix, args("transform"), "Converts a 4x4 matrix to a 7 element quaternion+translation representation");
-    def("poseFromMatrices",poseFromMatrices, args("transforms"), "Converts an array/list of 4x4 matrices to a Nx7 array where each row is quaternion+translation representation");
-    def("invertPoses",invertPoses,args("poses"), "Inverts a Nx7 array of poses where first 4 columns are the quaternion and last 3 are the translation components");
-    def("quatRotateDirection",quatRotateDirection,args("sourcedir,targetdir"),"Returns the minimal quaternion rotation that rotates sourcedir into targetdir");
-    def("matrixSerialization",matrixSerialization,args("matrix"),"Serializes a transformation into a string representing a 3x4 matrix");
-    def("poseSerialization",poseSerialization, args("pose"), "Serializes a transformation into a string representing a quaternion with translation");
-    def("openravepyCompilerVersion",openravepyCompilerVersion,"Returns the compiler version that openravepy_int was compiled with");
+    def("quatFromAxisAngle",openravepy::quatFromAxisAngle1, args("axis"), "Converts an axis-angle rotation into a quaternion");
+    def("quatFromAxisAngle",openravepy::quatFromAxisAngle2, args("axis","angle"), "Converts an axis-angle rotation into a quaternion");
+    def("quatFromRotationMatrix",openravepy::quatFromRotationMatrix, args("rotation"), "Converts the rotation of a matrix into a quaternion");
+    def("axisAngleFromRotationMatrix",openravepy::axisAngleFromRotationMatrix, args("rotation"), "Converts the rotation of a matrix into axis-angle representation");
+    def("rotationMatrixFromQuat",openravepy::rotationMatrixFromQuat, args("quat"), "Converts a quaternion to a 3x3 matrix");
+    def("rotationMatrixFromQArray",openravepy::rotationMatrixFromQArray,args("quatarray"),"Converts an array of quaternions to a list of 3x3 rotation matrices");
+    def("matrixFromQuat",openravepy::matrixFromQuat, args("quat"), "Converts a quaternion to a 4x4 affine matrix");
+    def("rotationMatrixFromAxisAngle",openravepy::rotationMatrixFromAxisAngle1, args("axis"), "Converts an axis-angle rotation to a 3x3 matrix");
+    def("rotationMatrixFromAxisAngle",openravepy::rotationMatrixFromAxisAngle2, args("axis","angle"), "Converts an axis-angle rotation to a 3x3 matrix");
+    def("matrixFromAxisAngle",openravepy::matrixFromAxisAngle1, args("axis"), "Converts an axis-angle rotation to a 4x4 affine matrix");
+    def("matrixFromAxisAngle",openravepy::matrixFromAxisAngle2, args("axis","angle"), "Converts an axis-angle rotation to a 4x4 affine matrix");
+    def("matrixFromPose",openravepy::matrixFromPose, args("pose"), "Converts a 7 element quaterion+translation transform to a 4x4 matrix");
+    def("matrixFromPoses",openravepy::matrixFromPoses, args("poses"), "Converts a Nx7 element quaterion+translation array to a 4x4 matrices");
+    def("poseFromMatrix",openravepy::poseFromMatrix, args("transform"), "Converts a 4x4 matrix to a 7 element quaternion+translation representation");
+    def("poseFromMatrices",openravepy::poseFromMatrices, args("transforms"), "Converts an array/list of 4x4 matrices to a Nx7 array where each row is quaternion+translation representation");
+    def("invertPoses",openravepy::invertPoses,args("poses"), "Inverts a Nx7 array of poses where first 4 columns are the quaternion and last 3 are the translation components");
+    def("quatRotateDirection",openravepy::quatRotateDirection,args("sourcedir,targetdir"),"Returns the minimal quaternion rotation that rotates sourcedir into targetdir");
+    def("matrixSerialization",openravepy::matrixSerialization,args("matrix"),"Serializes a transformation into a string representing a 3x4 matrix");
+    def("poseSerialization",openravepy::poseSerialization, args("pose"), "Serializes a transformation into a string representing a quaternion with translation");
+    def("openravepyCompilerVersion",openravepy::openravepyCompilerVersion,"Returns the compiler version that openravepy_int was compiled with");
 }

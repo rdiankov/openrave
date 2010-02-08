@@ -11,6 +11,6 @@
     <Translation>0 0 0.22</Translation>
     <joints>JF1 JF2 JF3 JF4</joints>
     <closingdirection>1 1 1 0</closingdirection>
-    <palmdirection>0 0 1</palmdirection>
+    <direction>0 0 1</direction>
   </Manipulator>
 </Robot>

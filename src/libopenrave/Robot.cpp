@@ -22,7 +22,7 @@
 
 namespace OpenRAVE {
 
-RobotBase::Manipulator::Manipulator(RobotBasePtr probot) : _probot(probot), _vpalmdirection(0,0,1) {}
+RobotBase::Manipulator::Manipulator(RobotBasePtr probot) : _probot(probot), _vdirection(0,0,1) {}
 RobotBase::Manipulator::~Manipulator() {}
 
 RobotBase::Manipulator::Manipulator(const RobotBase::Manipulator& r)
@@ -84,12 +84,12 @@ bool RobotBase::Manipulator::GetFreeParameters(std::vector<dReal>& vFreeParamete
     return !_pIkSolver ? false : _pIkSolver->GetFreeParameters(vFreeParameters);
 }
 
-bool RobotBase::Manipulator::FindIKSolution(const Transform& goal, vector<dReal>& solution, bool bColCheck) const
+bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, vector<dReal>& solution, bool bColCheck) const
 {
     return FindIKSolution(goal, vector<dReal>(), solution, bColCheck);
 }
 
-bool RobotBase::Manipulator::FindIKSolution(const Transform& goal, const std::vector<dReal>& vFreeParameters, vector<dReal>& solution, bool bColCheck) const
+bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, vector<dReal>& solution, bool bColCheck) const
 {
     if( !_pIkSolver )
         throw openrave_exception(str(boost::format("manipulator %s:%s does not have an IK solver set")%RobotBasePtr(_probot)->GetName()%GetName()));
@@ -102,28 +102,86 @@ bool RobotBase::Manipulator::FindIKSolution(const Transform& goal, const std::ve
     for(size_t i = 0; i < _varmjoints.size(); ++i)
         solution[i] = temp[_varmjoints[i]];
 
-    Transform tgoal = goal*_tGrasp.inverse();
-    if( !!_pBase )
-        tgoal = _pBase->GetTransform().inverse() * tgoal;
+    IkParameterization localgoal;
+    if( goal.GetType() == IkParameterization::Type_Transform6D ) {
+        Transform tgoal = goal.GetTransform()*_tGrasp.inverse();
+        if( !!_pBase )
+            tgoal = _pBase->GetTransform().inverse() * tgoal;
+        localgoal.SetTransform(tgoal);
+    }
+    else if( goal.GetType() == IkParameterization::Type_Rotation3D ) {
+        Vector q = quatMultiply(goal.GetRotation(),quatInverse(_tGrasp.rot));
+        if( !!_pBase )
+            q = quatMultiply(quatInverse(_pBase->GetTransform().rot),q);
+        localgoal.SetRotation(q);
+    }
+    else if( goal.GetType() == IkParameterization::Type_Translation3D ) {
+        if( TransformDistanceFast(_tGrasp,Transform()) > 1e-4f )
+            throw openrave_exception("Grasp transform has to be the identity for translation-only IK");
+        if( !!_pBase )
+            localgoal.SetTranslation(_pBase->GetTransform().inverse().rotate(goal.GetTranslation()));
+        else
+            localgoal.SetTranslation(goal.GetTranslation());
+    }
+    else if( goal.GetType() == IkParameterization::Type_Direction3D ) {
+        if( min((_tGrasp.rot-Vector(1,0,0,0)).lengthsqr4(),(_tGrasp.rot+Vector(1,0,0,0)).lengthsqr4()) > 1e-8f )
+            throw openrave_exception("Grasp transform has to be the identity for direction-only IK");
+        if( !!_pBase )
+            localgoal.SetDirection(_pBase->GetTransform().inverse().rotate(goal.GetDirection()));
+        else
+            localgoal.SetDirection(goal.GetDirection());
+    }
+    else
+        throw openrave_exception(str(boost::format("does not support parameterization %d")%goal.GetType()));
 
     boost::shared_ptr< vector<dReal> > psolution(&solution, null_deleter());
-    return vFreeParameters.size() == 0 ? _pIkSolver->Solve(IkSolverBase::Parameterization(tgoal), solution, bColCheck, psolution) : _pIkSolver->Solve(IkSolverBase::Parameterization(tgoal), solution, vFreeParameters, bColCheck, psolution);
+    return vFreeParameters.size() == 0 ? _pIkSolver->Solve(localgoal, solution, bColCheck, psolution) : _pIkSolver->Solve(localgoal, solution, vFreeParameters, bColCheck, psolution);
 }
-    
-bool RobotBase::Manipulator::FindIKSolutions(const Transform& goal, std::vector<std::vector<dReal> >& solutions, bool bColCheck) const
+   
+bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, std::vector<std::vector<dReal> >& solutions, bool bColCheck) const
 {
     return FindIKSolutions(goal, vector<dReal>(), solutions, bColCheck);
 }
 
-bool RobotBase::Manipulator::FindIKSolutions(const Transform& goal, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, bool bColCheck) const
+bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, bool bColCheck) const
 {
     if( !_pIkSolver )
         throw openrave_exception(str(boost::format("manipulator %s:%s does not have an IK solver set")%RobotBasePtr(_probot)->GetName()%GetName()));
     BOOST_ASSERT(_pIkSolver->GetManipulator() == shared_from_this() );
-    Transform tgoal = goal*_tGrasp.inverse();
-    if( !!_pBase )
-        tgoal = _pBase->GetTransform().inverse() * tgoal;
-    return vFreeParameters.size() == 0 ? _pIkSolver->Solve(IkSolverBase::Parameterization(tgoal),bColCheck,solutions) : _pIkSolver->Solve(IkSolverBase::Parameterization(tgoal),vFreeParameters,bColCheck,solutions);
+
+    IkParameterization localgoal;
+    if( goal.GetType() == IkParameterization::Type_Transform6D ) {
+        Transform tgoal = goal.GetTransform()*_tGrasp.inverse();
+        if( !!_pBase )
+            tgoal = _pBase->GetTransform().inverse() * tgoal;
+        localgoal.SetTransform(tgoal);
+    }
+    else if( goal.GetType() == IkParameterization::Type_Rotation3D ) {
+        Vector q = quatMultiply(goal.GetRotation(),quatInverse(_tGrasp.rot));
+        if( !!_pBase )
+            q = quatMultiply(quatInverse(_pBase->GetTransform().rot),q);
+        localgoal.SetRotation(q);
+    }
+    else if( goal.GetType() == IkParameterization::Type_Translation3D ) {
+        if( TransformDistanceFast(_tGrasp,Transform()) > 1e-4f )
+            throw openrave_exception("Grasp transform has to be the identity for translation-only IK");
+        if( !!_pBase )
+            localgoal.SetTranslation(_pBase->GetTransform().inverse().rotate(goal.GetTranslation()));
+        else
+            localgoal.SetTranslation(goal.GetTranslation());
+    }
+    else if( goal.GetType() == IkParameterization::Type_Direction3D ) {
+        if( min((_tGrasp.rot-Vector(1,0,0,0)).lengthsqr4(),(_tGrasp.rot+Vector(1,0,0,0)).lengthsqr4()) > 1e-8f )
+            throw openrave_exception("Grasp transform has to be the identity for direction-only IK");
+        if( !!_pBase )
+            localgoal.SetDirection(_pBase->GetTransform().inverse().rotate(goal.GetDirection()));
+        else
+            localgoal.SetDirection(goal.GetDirection());
+    }
+    else
+        throw openrave_exception(str(boost::format("does not support parameterization %d")%goal.GetType()));
+
+    return vFreeParameters.size() == 0 ? _pIkSolver->Solve(localgoal,bColCheck,solutions) : _pIkSolver->Solve(localgoal,vFreeParameters,bColCheck,solutions);
 }
 
 void RobotBase::Manipulator::GetChildJoints(std::vector<JointPtr>& vjoints) const
@@ -384,7 +442,7 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
 {
     o << (!!_pBase ? -1 : _pBase->GetIndex()) << " " << (!!_pEndEffector ? -1 : _pEndEffector->GetIndex()) << " ";
     SerializeRound(o,_tGrasp);
-    SerializeRound3(o,_vpalmdirection);
+    SerializeRound3(o,_vdirection);
     o << _vgripperjoints.size() << " " << _varmjoints.size() << " " << _vClosingDirection.size() << " ";
     FOREACHC(it,_vgripperjoints)
         o << *it << " ";

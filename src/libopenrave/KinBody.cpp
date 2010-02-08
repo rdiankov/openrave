@@ -24,13 +24,6 @@
 
 namespace OpenRAVE {
 
-inline static dReal TransformDistance(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)
-{
-    dReal e1 = (t1.rot-t2.rot).lengthsqr4();
-    dReal e2 = (t1.rot+t2.rot).lengthsqr4();
-    return RaveSqrt((t1.trans-t2.trans).lengthsqr3() + frotweight*min(e1,e2));
-}
-
 void KinBody::Link::TRIMESH::ApplyTransform(const Transform& t)
 {
     FOREACH(it, vertices)
@@ -2215,8 +2208,8 @@ void KinBody::WriteForwardKinematics(std::ostream& f)
             continue;
 
         if( _vecjoints.at(it->jointindex)->GetMimicJointIndex() >= 0 ) {
-            BOOST_ASSERT( TransformDistance(_vecjoints.at(it->jointindex)->GetInternalHierarchyLeftTransform(),it->Tleft) < 1e-5f );
-            BOOST_ASSERT( TransformDistance(_vecjoints.at(it->jointindex)->GetInternalHierarchyRightTransform(),it->Tright) < 1e-5f );
+            BOOST_ASSERT( TransformDistanceFast(_vecjoints.at(it->jointindex)->GetInternalHierarchyLeftTransform(),it->Tleft) < 1e-5f );
+            BOOST_ASSERT( TransformDistanceFast(_vecjoints.at(it->jointindex)->GetInternalHierarchyRightTransform(),it->Tright) < 1e-5f );
         }
 
         f << it->type << " " << it->linkcur << " " << it->linkbase << " " << it->jointindex << " "

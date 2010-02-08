@@ -23,6 +23,42 @@
 
 namespace OpenRAVE {
 
+/// Parameterization of basic primitives for querying inverse-kinematics solutions.
+/// Defines parameterizations useful for autonomous manipulation scenarios like:
+/// 6D pose, 3D translation, 3D rotation, 3D look at direction, and ray look at direction.
+class IkParameterization
+{
+public:
+    enum Type {
+        Type_None=0,
+        Type_Transform6D=1,
+        Type_Rotation3D=2,
+        Type_Translation3D=3,
+        Type_Direction3D=4,
+        Type_Ray4D=5,
+    };
+
+ IkParameterization() : _type(Type_None) {}
+    IkParameterization(const Transform& t) { SetTransform(t); }
+    IkParameterization(const RAY& r) { SetRay(r); }
+
+    inline void SetTransform(const Transform& t) { _type = Type_Transform6D; _transform = t; }
+    inline void SetRotation(const Vector& quaternion) { _type = Type_Rotation3D; _transform.rot = quaternion; }
+    inline void SetTranslation(const Vector& trans) { _type = Type_Translation3D; _transform.trans = trans; }
+    inline void SetDirection(const Vector& dir) { _type = Type_Direction3D; _transform.rot = dir; }
+    inline void SetRay(const RAY& ray) { _type = Type_Ray4D; _transform.trans = ray.pos; _transform.rot = ray.dir; }
+
+    inline Type GetType() const { return _type; }
+    inline const Transform& GetTransform() const { return _transform; }
+    inline const Vector& GetRotation() const { return _transform.rot; }
+    inline const Vector& GetTranslation() const { return _transform.trans; }
+    inline const Vector& GetDirection() const { return _transform.rot; }
+    inline const RAY GetRay() const { return RAY(_transform.trans,_transform.rot); }
+protected:
+    Transform _transform;
+    Type _type;
+};
+
 /// General dynamic body that has manipulators, controllers, and sensors
 class RAVE_API RobotBase : public KinBody
 {
@@ -73,8 +109,9 @@ public:
         /// normal direction to move joints to 'close' the hand
         virtual const std::vector<dReal>& GetClosingDirection() const { return _vClosingDirection; }
 
-        /// direction of palm used for approaching inside the grasp coordinate system
-        virtual Vector GetPalmDirection() const { return _vpalmdirection; }
+        virtual Vector GetPalmDirection() const { return _vdirection; }
+        /// direction of palm/head/manipulator used for approaching inside the grasp coordinate system
+        virtual Vector GetDirection() const { return _vdirection; }
 
         /// \return Number of free parameters defining the null solution space.
         ///         Each parameter is always in the range of [0,1].
@@ -90,15 +127,15 @@ public:
         /// \param goal The transformation of the end-effector in the global coord system
         /// \param solution Will be of size _varmjoints.size() and contain the best solution
         /// \param bColCheck If true, will check collision with the environment. If false, will ignore environment. In every case, self-collisions with the robot are checked.
-        virtual bool FindIKSolution(const Transform& goal, std::vector<dReal>& solution, bool bColCheck) const;
-        virtual bool FindIKSolution(const Transform& goal, const std::vector<dReal>& vFreeParameters, std::vector<dReal>& solution, bool bColCheck) const;
+        virtual bool FindIKSolution(const IkParameterization& goal, std::vector<dReal>& solution, bool bColCheck) const;
+        virtual bool FindIKSolution(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, std::vector<dReal>& solution, bool bColCheck) const;
 
         /// will find all the IK solutions for the given end effector transform
         /// \param goal The transformation of the end-effector in the global coord system
         /// \param solutions An array of all solutions, each element in solutions is of size _varmjoints.size()
         /// \param bColCheck If true, will check collision with the environment. If false, will ignore environment. In every case, self-collisions with the robot are checked.
-        virtual bool FindIKSolutions(const Transform& goal, std::vector<std::vector<dReal> >& solutions, bool bColCheck) const;
-        virtual bool FindIKSolutions(const Transform& goal, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, bool bColCheck) const;
+        virtual bool FindIKSolutions(const IkParameterization& goal, std::vector<std::vector<dReal> >& solutions, bool bColCheck) const;
+        virtual bool FindIKSolutions(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, bool bColCheck) const;
 
         /// get all child joints of the manipulator starting at the pEndEffector link
         virtual void GetChildJoints(std::vector<JointPtr>& vjoints) const;
@@ -136,7 +173,7 @@ public:
         std::vector<int> _varmjoints;
         
         std::vector<dReal> _vClosingDirection;
-        Vector _vpalmdirection;
+        Vector _vdirection;
 
 		IkSolverBasePtr _pIkSolver;
         std::string _strIkSolver;         ///< string name of the iksolver

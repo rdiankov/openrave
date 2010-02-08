@@ -141,7 +141,7 @@
     <iksolver>MyTriDOFSolver</iksolver>
     <!-- joint values of the closed and opened positions-->
     <closingdirection>1 1</closingdirection>
-    <palmdirection>1 0 0</palmdirection>
+    <direction>1 0 0</direction>
     <!-- grasp goal with respect to the effector-->
     <Translation>0.125 0 0</Translation>
     <RotationAxis>1 0 0 90</RotationAxis>

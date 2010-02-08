@@ -204,6 +204,6 @@
     <effector>Palm</effector>
     <joints>JF0 JF1 JF2 JF3</joints>
     <closingdirection>1 1 1 0</closingdirection>
-    <palmdirection>0 0 1</palmdirection>
+    <direction>0 0 1</direction>
   </Manipulator>
 </Robot>

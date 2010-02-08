@@ -121,6 +121,7 @@ extern "C"
     int* getFreeParameters();
     int getNumJoints();
     int getIKRealSize();
+    int getIKType();
 }
 #endif
 
@@ -129,6 +130,7 @@ int* getFreeParameters() { return NULL; }
 int getNumJoints() { return 6; }
 
 int getIKRealSize() { return sizeof(IKReal); }
+int getIKType() { return 1; }
 
 /// solves the inverse kinematics equations.
 /// \param pfree is an array specifying the free joints of the chain.

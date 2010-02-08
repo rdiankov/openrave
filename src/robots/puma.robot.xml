@@ -71,7 +71,7 @@
     <joints>m1</joints>
     <!-- joint values of the closed and opened positions -->
     <closingdirection>1</closingdirection>
-    <palmdirection>0 1 0</palmdirection>
+    <direction>0 1 0</direction>
     <!-- grasp goal with respect to the effector -->
     <Translation>0 0.175 0</Translation>
     <IkSolver>PUMAikfast</IkSolver>

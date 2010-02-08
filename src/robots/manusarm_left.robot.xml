@@ -230,7 +230,7 @@
     <armjoints>lJ0 lJ1 lJ2 lJ3 lJ4 lJ5</armjoints>
     <joints>lJ-gripper</joints>
     <closingdirection>1</closingdirection>
-    <palmdirection>0 1 0</palmdirection>
+    <direction>0 1 0</direction>
     <iksolver>ManusLeftArmikfast</iksolver>
   </Manipulator>
   

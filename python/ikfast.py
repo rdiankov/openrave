@@ -26,6 +26,18 @@ except:
     class AutoReloader:
         pass
 
+# import the correct iktypes from openravepy (if present)
+try:
+    from openravepy import IkParameterization
+    IkType = IkParameterization.Type
+except:
+    class IkType:
+        Transform6D=1
+        Rotation3D=2
+        Translation3D=3
+        Direction3D=4
+        Ray4D=5
+
 from sympy import *
 
 def xcombinations(items,n):
@@ -61,7 +73,6 @@ class SolverSolution:
         self.jointevalsin = jointevalsin
         self.AddPi = AddPi
         assert(jointeval is not None or jointevalcos is not None or jointevalsin is not None)
-
     def subs(self,solsubs):
         if self.jointeval is not None:
             self.jointeval = [e.subs(solsubs) for e in self.jointeval]
@@ -70,7 +81,6 @@ class SolverSolution:
         if self.jointevalsin is not None:
             self.jointevalsin = [e.subs(solsubs) for e in self.jointevalsin]
         return self
-
     def generate(self, generator):
         return generator.generateSolution(self)
     def end(self, generator):
@@ -87,7 +97,6 @@ class SolverBranch(AutoReloader):
         self.jointeval = jointeval
         self.jointbranches = jointbranches
         assert(jointeval is not None)
-
     def generate(self, generator):
         return generator.generateBranch(self)
     def end(self, generator):
@@ -97,7 +106,6 @@ class SolverBranchConds(AutoReloader):
     jointbranches = None
     def __init__(self, jointbranches):
         self.jointbranches = jointbranches
-
     def generate(self, generator):
         return generator.generateBranchConds(self)
     def end(self, generator):
@@ -115,7 +123,6 @@ class SolverCheckZeros(AutoReloader):
         self.nonzerobranch = nonzerobranch
         self.thresh = thresh
         self.anycondition = anycondition
-
     def generate(self, generator):
         return generator.generateCheckZeros(self)
     def end(self, generator):
@@ -127,13 +134,12 @@ class SolverFreeParameter(AutoReloader):
     def __init__(self, jointname, jointtree):
         self.jointname = jointname
         self.jointtree = jointtree
-
     def generate(self, generator):
         return generator.generateFreeParameter(self)
     def end(self, generator):
         return generator.endFreeParameter(self)
 
-class SolverIKChain(AutoReloader):
+class SolverIKChainTransform6D(AutoReloader):
     solvejointvars = None
     freejointvars = None
     Tee = None
@@ -143,11 +149,55 @@ class SolverIKChain(AutoReloader):
         self.freejointvars = freejointvars
         self.Tee = Tee
         self.jointtree = jointtree
-
     def generate(self, generator):
         return generator.generateChain(self)
     def end(self, generator):
         return generator.endChain(self)
+
+class SolverIKChainRotation3D(AutoReloader):
+    solvejointvars = None
+    freejointvars = None
+    Tee = None
+    jointtree = None
+    def __init__(self, solvejointvars, freejointvars, Tee, jointtree):
+        self.solvejointvars = solvejointvars
+        self.freejointvars = freejointvars
+        self.Tee = Tee
+        self.jointtree = jointtree
+    def generate(self, generator):
+        return generator.generateIKChainRotation3D(self)
+    def end(self, generator):
+        return generator.endIKChainRotation3D(self)
+
+class SolverIKChainTranslation3D(AutoReloader):
+    solvejointvars = None
+    freejointvars = None
+    Tee = None
+    jointtree = None
+    def __init__(self, solvejointvars, freejointvars, Tee, jointtree):
+        self.solvejointvars = solvejointvars
+        self.freejointvars = freejointvars
+        self.Tee = Tee
+        self.jointtree = jointtree
+    def generate(self, generator):
+        return generator.generateIKChainTranslation3D(self)
+    def end(self, generator):
+        return generator.endIKChainTranslation3D(self)
+
+class SolverIKChainDirection3D(AutoReloader):
+    solvejointvars = None
+    freejointvars = None
+    Dee = None
+    jointtree = None
+    def __init__(self, solvejointvars, freejointvars, Dee, jointtree):
+        self.solvejointvars = solvejointvars
+        self.freejointvars = freejointvars
+        self.Dee = Dee
+        self.jointtree = jointtree
+    def generate(self, generator):
+        return generator.generateIKChainDirection3D(self)
+    def end(self, generator):
+        return generator.endIKChainDirection3D(self)
 
 class SolverRotation(AutoReloader):
     T = None
@@ -155,11 +205,21 @@ class SolverRotation(AutoReloader):
     def __init__(self, T, jointtree):
         self.T = T
         self.jointtree = jointtree
-
     def generate(self, generator):
         return generator.generateRotation(self)
     def end(self, generator):
         return generator.endRotation(self)
+
+class SolverDirection(AutoReloader):
+    D = None
+    jointtree = None
+    def __init__(self, D, jointtree):
+        self.D = D
+        self.jointtree = jointtree
+    def generate(self, generator):
+        return generator.generateDirection(self)
+    def end(self, generator):
+        return generator.endDirection(self)
 
 class SolverStoreSolution(AutoReloader):
     alljointvars = None
@@ -198,7 +258,6 @@ class SolverBreak(AutoReloader):
 
 class CppGenerator(AutoReloader):
     """Generates C++ code from an AST"""
-
     dictequations = [] # dictionary of symbols already written
     symbolgen = cse_main.numbered_symbols('x')
     strprinter = printing.StrPrinter()
@@ -206,7 +265,6 @@ class CppGenerator(AutoReloader):
     freevardependencies = None # list of variables depending on the free variables
 
     def generate(self, solvertree):
-
         code = """/// autogenerated analytical inverse kinematics code from ikfast program
 /// \\author Rosen Diankov
 ///
@@ -384,24 +442,24 @@ int main(int argc, char** argv)
         return code
 
     def generateChain(self, node):
-
         self.freevars = []
         self.freevardependencies = []
         self.dictequations = []
         self.symbolgen = cse_main.numbered_symbols('x')
-
+        
         code = "IKFAST_API int getNumFreeParameters() { return %d; }\n"%len(node.freejointvars)
         if len(node.freejointvars) == 0:
-            code += "IKFAST_API int* getFreeParameters() { return NULL; }\n";
+            code += "IKFAST_API int* getFreeParameters() { return NULL; }\n"
         else:
-            code += "IKFAST_API int* getFreeParameters() { static int freeparams[] = {";
+            code += "IKFAST_API int* getFreeParameters() { static int freeparams[] = {"
             for i,freejointvar in enumerate(node.freejointvars):
                 code += "%d"%(freejointvar[1])
                 if i < len(node.freejointvars)-1:
-                    code += ", ";
+                    code += ", "
             code += "}; return freeparams; }\n"
         code += "IKFAST_API int getNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
         code += "IKFAST_API int getIKRealSize() { return sizeof(IKReal); }\n\n"
+        code += 'IKFAST_API int getIKType() { return %d; }\n\n'%IkType.Transform6D
         code += "/// solves the inverse kinematics equations.\n"
         code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
         code += "IKFAST_API bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
@@ -438,6 +496,153 @@ int main(int argc, char** argv)
         return code
     def endChain(self, node):
         return ""
+
+    def generateIKChainRotation3D(self, node):
+        self.freevars = []
+        self.freevardependencies = []
+        self.dictequations = []
+        self.symbolgen = cse_main.numbered_symbols('x')
+        
+        code = "IKFAST_API int getNumFreeParameters() { return %d; }\n"%len(node.freejointvars)
+        if len(node.freejointvars) == 0:
+            code += "IKFAST_API int* getFreeParameters() { return NULL; }\n"
+        else:
+            code += "IKFAST_API int* getFreeParameters() { static int freeparams[] = {"
+            for i,freejointvar in enumerate(node.freejointvars):
+                code += "%d"%(freejointvar[1])
+                if i < len(node.freejointvars)-1:
+                    code += ", "
+            code += "}; return freeparams; }\n"
+        code += "IKFAST_API int getNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
+        code += "IKFAST_API int getIKRealSize() { return sizeof(IKReal); }\n\n"
+        code += 'IKFAST_API int getIKType() { return %d; }\n\n'%IkType.Rotation3D
+        code += "/// solves the inverse kinematics equations.\n"
+        code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
+        code += "IKFAST_API bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
+        code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
+        fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"
+        fcode += 'IKReal '
+        
+        for var in node.solvejointvars:
+            fcode += '%s, c%s, s%s,\n'%(var[0].name,var[0].name,var[0].name)
+        for i in range(len(node.freejointvars)):
+            name = node.freejointvars[i][0].name
+            fcode += '%s=pfree[%d], c%s=cos(pfree[%d]), s%s=sin(pfree[%d]),\n'%(name,i,name,i,name,i)
+        for i in range(3):
+            for j in range(3):
+                fcode += "_r%d%d, r%d%d = eerot[%d*3+%d]"%(i,j,i,j,i,j)
+                if i == 2 and j == 2:
+                    fcode += ';\n\n'
+                else:
+                    fcode += ',\n'
+        
+        rotsubs = [(Symbol("r%d%d"%(i,j)),Symbol("_r%d%d"%(i,j))) for i in range(3) for j in range(3)]
+        for i in range(3):
+            for j in range(3):
+                fcode += self.writeEquations(lambda k: "_r%d%d"%(i,j),node.Tee[4*i+j])
+        for i in range(3):
+            for j in range(3):
+                fcode += "r%d%d = _r%d%d; "%(i,j,i,j)
+        fcode += '\n'
+        fcode += self.generateTree(node.jointtree)
+        code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
+        return code
+    def endIKChainRotation3D(self, node):
+        return ""
+
+    def generateIKChainTranslation3D(self, node):
+        self.freevars = []
+        self.freevardependencies = []
+        self.dictequations = []
+        self.symbolgen = cse_main.numbered_symbols('x')
+        
+        code = "IKFAST_API int getNumFreeParameters() { return %d; }\n"%len(node.freejointvars)
+        if len(node.freejointvars) == 0:
+            code += "IKFAST_API int* getFreeParameters() { return NULL; }\n"
+        else:
+            code += "IKFAST_API int* getFreeParameters() { static int freeparams[] = {"
+            for i,freejointvar in enumerate(node.freejointvars):
+                code += "%d"%(freejointvar[1])
+                if i < len(node.freejointvars)-1:
+                    code += ", "
+            code += "}; return freeparams; }\n"
+        code += "IKFAST_API int getNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
+        code += "IKFAST_API int getIKRealSize() { return sizeof(IKReal); }\n\n"
+        code += 'IKFAST_API int getIKType() { return %d; }\n\n'%IkType.Translation3D
+        code += "/// solves the inverse kinematics equations.\n"
+        code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
+        code += "IKFAST_API bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
+        code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
+        fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"
+        fcode += 'IKReal '
+        
+        for var in node.solvejointvars:
+            fcode += '%s, c%s, s%s,\n'%(var[0].name,var[0].name,var[0].name)
+        for i in range(len(node.freejointvars)):
+            name = node.freejointvars[i][0].name
+            fcode += '%s=pfree[%d], c%s=cos(pfree[%d]), s%s=sin(pfree[%d]),\n'%(name,i,name,i,name,i)
+        fcode += "_px, _py, _pz, px = eetrans[0], py = eetrans[1], pz = eetrans[2];\n\n"
+        rotsubs = [(Symbol("px"),Symbol("_px")),(Symbol("py"),Symbol("_py")),(Symbol("pz"),Symbol("_pz"))]
+        psymbols = ["_px","_py","_pz"]
+        for i in range(3):
+            fcode += self.writeEquations(lambda k: psymbols[i],node.Tee[4*i+3])
+        fcode += "px = _px; py = _py; pz = _pz;\n"
+        fcode += self.generateTree(node.jointtree)
+        code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
+        return code
+    def endIKChainTranslation3D(self, node):
+        return ""
+
+    def generateIKChainDirection3D(self, node):
+        self.freevars = []
+        self.freevardependencies = []
+        self.dictequations = []
+        self.symbolgen = cse_main.numbered_symbols('x')
+        
+        code = "IKFAST_API int getNumFreeParameters() { return %d; }\n"%len(node.freejointvars)
+        if len(node.freejointvars) == 0:
+            code += "IKFAST_API int* getFreeParameters() { return NULL; }\n"
+        else:
+            code += "IKFAST_API int* getFreeParameters() { static int freeparams[] = {"
+            for i,freejointvar in enumerate(node.freejointvars):
+                code += "%d"%(freejointvar[1])
+                if i < len(node.freejointvars)-1:
+                    code += ", "
+            code += "}; return freeparams; }\n"
+        code += "IKFAST_API int getNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
+        code += "IKFAST_API int getIKRealSize() { return sizeof(IKReal); }\n\n"
+        code += 'IKFAST_API int getIKType() { return %d; }\n\n'%IkType.Direction3D
+        code += "/// solves the inverse kinematics equations.\n"
+        code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
+        code += "IKFAST_API bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
+        code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
+        fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"
+        fcode += 'IKReal '
+        
+        for var in node.solvejointvars:
+            fcode += '%s, c%s, s%s,\n'%(var[0].name,var[0].name,var[0].name)
+        for i in range(len(node.freejointvars)):
+            name = node.freejointvars[i][0].name
+            fcode += '%s=pfree[%d], c%s=cos(pfree[%d]), s%s=sin(pfree[%d]),\n'%(name,i,name,i,name,i)
+
+        for i in range(3):
+            fcode += "_r0%d, r0%d = eerot[%d]"%(i,i,i)
+            if i == 2:
+                fcode += ';\n\n'
+            else:
+                fcode += ',\n'
+        rotsubs = [(Symbol("r%d%d"%(0,i)),Symbol("_r%d%d"%(0,i))) for i in range(3)]
+
+        for i in range(3):
+            fcode += self.writeEquations(lambda k: "_r%d%d"%(0,i),node.Dee[i])
+        for i in range(3):
+            fcode += "r0%d = _r0%d; "%(i,i)
+
+        fcode += self.generateTree(node.jointtree)
+        code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
+        return code
+    def endIKChainDirection3D(self, node):
+        return ''
 
     def generateSolution(self, node):
         code = ''
@@ -600,7 +805,7 @@ int main(int argc, char** argv)
         origequations = copy.copy(self.dictequations)
         name = node.jointname
         code = 'IKReal %seval[%d];\n'%(name,len(node.jointcheckeqs))
-        code += self.writeEquations(lambda i: '%seval[%d]'%(name,i),node.jointcheckeqs);
+        code += self.writeEquations(lambda i: '%seval[%d]'%(name,i),node.jointcheckeqs)
         if len(node.jointcheckeqs) > 0:
             code += 'if( '
             for i in range(len(node.jointcheckeqs)):
@@ -653,6 +858,18 @@ int main(int argc, char** argv)
         code += self.generateTree(node.jointtree)
         return code
     def endRotation(self, node):
+        return ''
+    def generateDirection(self, node):
+        code = ''
+        listequations = []
+        names = []
+        for i in range(3):
+            listequations.append(node.D[i])
+            names.append(Symbol('_r%d%d'%(0,i)))
+        code += self.writeEquations(lambda i: names[i],listequations)
+        code += self.generateTree(node.jointtree)
+        return code
+    def endDirection(self, node):
         return ''
     def generateStoreSolution(self, node):
         code = 'vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();\n'
@@ -949,7 +1166,8 @@ class IKFastSolver(AutoReloader):
                     break
         return alljoints
 
-    def rodrigues(self, axis, angle):
+    @staticmethod
+    def rodrigues(axis, angle):
         skewsymmetric = Matrix(3, 3, [S.Zero,-axis[2],axis[1],axis[2],S.Zero,-axis[0],-axis[1],axis[0],S.Zero])
         return eye(3) + sin(angle) * skewsymmetric + (S.One-cos(angle))*skewsymmetric*skewsymmetric
 
@@ -1073,7 +1291,8 @@ class IKFastSolver(AutoReloader):
         # parse the solver tree
         return CppGenerator().generate(chaintree)
 
-    def affineInverse(self, affinematrix):
+    @staticmethod
+    def affineInverse(affinematrix):
         T = eye(4)
         T[0:3,0:3] = affinematrix[0:3,0:3].transpose()
         T[0:3,3] = -affinematrix[0:3,0:3].transpose() * affinematrix[0:3,3]
@@ -1161,16 +1380,37 @@ class IKFastSolver(AutoReloader):
                 Tlinks.append(Tlast)
         return Tlinks
 
-    def solveFullIK_Direction3D(self,chain,Tee):
+    @staticmethod
+    def rotateDirection(sourcedir,targetdir):
+        sourcedir /= sqrt(sourcedir.dot(sourcedir))
+        targetdir /= sqrt(targetdir.dot(targetdir))
+        rottodirection = sourcedir.cross(targetdir)
+        fsin = sqrt(rottodirection.dot(rottodirection))
+        fcos = sourcedir.dot(targetdir)
+        M = eye(4)
+        if fsin > 1e-6:
+            M[0:3,0:3] = IKFastSolver.rodrigues(rottodirection*(1/fsin),atan2(fsin,fcos))
+        elif fcos < 0: # hand is flipped 180, rotate around x axis
+            rottodirection = Matrix(3,1,[S.One,S.Zero,S.Zero])
+            rottodirection -= sourcedir * sourcedir.dot(rottodirection)
+            M[0:3,0:3] = IKFastSolver.rodrigues(rottodirection.normalized(), atan2(fsin, fcos))
+        return M
+
+    def solveFullIK_Direction3D(self,chain,Tee,basedir):
+        """basedir needs to be filled with a 3elemtn vector of the initial direction to control"""
         Links, jointvars, isolvejointvars, ifreejointvars = self.forwardKinematicsChain(chain)
         Tfirstleft = Links.pop(0)
-        Tfirstright = Links.pop()
+        #Tfirstright = Links.pop()
         LinksInv = [self.affineInverse(link) for link in Links]
         solvejointvars = [jointvars[i] for i in isolvejointvars]
         freejointvars = [jointvars[i] for i in ifreejointvars]
+        
+        if not len(solvejointvars) == 2:
+            raise ValueError('solve joints needs to be 2')
 
-        if not len(solvejointvars) == 3:
-            raise ValueError('solve joints needs to be 3')
+        # rotate all links so that basedir becomes the z-axis
+        Trightnormaliation = self.rotateDirection(sourcedir=Matrix(3,1,[Real(round(atof(x),4),30) for x in basedir]), targetdir = Matrix(3,1,[S.Zero,S.Zero,S.One]))
+        Links[-1] *= self.affineInverse(Trightnormaliation)
 
         # when solving equations, convert all free variables to constants
         self.freevarsubs = []
@@ -1178,8 +1418,9 @@ class IKFastSolver(AutoReloader):
             var = self.Variable(freevar)
             self.freevarsubs += [(cos(var.var), var.cvar), (sin(var.var), var.svar)]
         
-        #Tee = Tfirstleft.inv() * Tee_in * Tfirstright.inv()
-        # LinksAccumLeftInv[x] * Tee = LinksAccumRight[x]
+        Dee = Matrix(3,1,[x for x in Tee[0,0:3]])
+        # Dee = Tfirstleft.inv() * Dee_in
+        # LinksAccumLeftInv[x] * Dee = LinksAccumRight[x]
         # LinksAccumLeftInv[x] = InvLinks[x-1] * ... * InvLinks[0]
         # LinksAccumRight[x] = Links[x]*Links[x+1]...*Links[-1]
         LinksAccumLeftAll = [eye(4)]
@@ -1195,35 +1436,32 @@ class IKFastSolver(AutoReloader):
         LinksAccumLeftInvAll = map(lambda T: self.affineSimplify(T), LinksAccumLeftInvAll)
         LinksAccumRightAll = map(lambda T: self.affineSimplify(T), LinksAccumRightAll)
         
-        # create LinksAccumX indexed by joint indices
-        assert( len(LinksAccumLeftAll)%2 == 0 )
-        LinksAccumLeft = []
-        LinksAccumLeftInv = []
-        LinksAccumRight = []
-        for i in range(0,len(LinksAccumLeftAll),2)+[len(LinksAccumLeftAll)-1]:
-            LinksAccumLeft.append(LinksAccumLeftAll[i])
-            LinksAccumLeftInv.append(LinksAccumLeftInvAll[i])
-            LinksAccumRight.append(LinksAccumRightAll[i])
-        assert( len(LinksAccumLeft) == len(jointvars)+1 )
-        
-        # find a set of joints starting from the last that can solve for a full 3D rotation
-#         rotindex = len(jointvars)
-#         while rotindex>=0:
-#             # check if any entries are constant
-#             if all([not LinksAccumRight[rotindex][i,j].is_zero for i in range(3) for j in range(3)]):
-#                 break
-#             rotindex = rotindex-1
-        rotindex = 0
+        solverbranches = []
+        # depending on the free variable values, sometimes the rotation matrix can have zeros where it does not expect zeros. Therefore, test all boundaries of all free variables
+        for freevar in freejointvars+[None]:
+            freevalues = [0,pi/2,pi,-pi/2] if freevar is not None else [None]
+            for freevalue in freevalues:
+                print 'attempting ',freevar,' = ',freevalue
+                if freevar is not None and freevalue is not None:
+                    var = self.Variable(freevar)
+                    valuesubs = [(var.var,freevalue),(var.svar,sin(freevalue)),(var.cvar,cos(freevalue))] if freevalue is not None else []
+                    freevarcond = freevar-freevalue
+                else:
+                    valuesubs = []
+                    freevarcond = None
 
-        if rotindex < 0:
-            print 'Current joints cannot solve for a full 3D rotation'
+                storesolutiontree = [SolverStoreSolution (jointvars)]
+                solvedvarsubs = valuesubs+self.freevarsubs
+                rotsubs = [(Symbol('r%d%d'%(0,i)),Symbol('_r%d%d'%(0,i))) for i in range(3)]
+                rotvars = [var for var in jointvars if any([var==svar for svar in solvejointvars])]
+                D = Matrix(3,1, map(lambda x: x.subs(self.freevarsubs), LinksAccumRightAll[0][0:3,2]))
+                rottree = self.solveIKRotation(R=D,Ree = Dee.subs(rotsubs),rawvars = rotvars,endbranchtree=storesolutiontree,solvedvarsubs=solvedvarsubs)
+                solverbranches.append((freevarcond,[SolverDirection(LinksAccumLeftInvAll[0].subs(solvedvarsubs)[0:3,0:3]*Dee, rottree)]))
 
-        storesolutiontree = [SolverStoreSolution (jointvars)]
-        rotsubs = [(Symbol('r%d%d'%(i,j)),Symbol('_r%d%d'%(i,j))) for i in range(3) for j in range(3)]
-        R = Matrix(3,3, map(lambda x: x.subs(self.freevarsubs), LinksAccumRight[rotindex][0:3,0:3]))
-        rotvars = [var for var in jointvars[rotindex:] if any([var==svar for svar in solvejointvars])]
-        solvertree = self.solveIKRotation(R=R,Ree = Tee[0:3,0:3].subs(rotsubs),rawvars = rotvars,endbranchtree=storesolutiontree,solvedvarsubs=self.freevarsubs)
-        return SolverIKChain([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], Tfirstleft.inv() * Tee * Tfirstright.inv(), solvertree)
+        if len(solverbranches) == 0 or not solverbranches[-1][0] is None:
+            print 'failed to solve for kinematics'
+            return None
+        return SolverIKChainDirection3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], Tfirstleft.inv()[0:3,0:3] * Dee, [SolverBranchConds(solverbranches)])
 
     def solveFullIK_Rotation3D(self,chain,Tee):
         Links, jointvars, isolvejointvars, ifreejointvars = self.forwardKinematicsChain(chain)
@@ -2046,7 +2284,7 @@ class IKFastSolver(AutoReloader):
         
         for var in vars:
             othervars = [v.var for v in vars if not v == var]
-            inds = [i for i in range(9) if R[i].has_any_symbols(var.var) and (len(othervars) == 0 or not R[i].has_any_symbols(*othervars))]
+            inds = [i for i in range(R.shape[0]*R.shape[1]) if R[i].has_any_symbols(var.var) and (len(othervars) == 0 or not R[i].has_any_symbols(*othervars))]
             if len(inds) == 0:
                 continue
             
@@ -2090,7 +2328,7 @@ class IKFastSolver(AutoReloader):
             listsymbols = []
             newR = []
             symbolgen = cse_main.numbered_symbols('const')
-            for i in range(9):
+            for i in range(R.shape[0]*R.shape[1]):
                 enew, symbols = self.removeConstants(Rsolve[i],[var.cvar,var.svar,var.var], symbolgen)
                 enew2,symbols2 = self.factorLinearTerms(enew,[var.svar,var.cvar,var.var],symbolgen)
                 symbols += [(s[0],s[1].subs(symbols)) for s in symbols2]
@@ -2099,15 +2337,15 @@ class IKFastSolver(AutoReloader):
                 listsymbols += symbols
 
             havegoodsol = False
-            for i in range(9):
+            for i in range(R.shape[0]*R.shape[1]):
                 if not R[i].has_any_symbols(var.var):
                     continue
-                for i2 in [i]:#range(9):
+                for i2 in [i]:#range(R.shape[0]*R.shape[1]):
                     for isign in [1.0]:#[-1.0,1.0]:
-                        for j in range(i+1,9):
+                        for j in range(i+1,R.shape[0]*R.shape[1]):
                             if not R[j].has_any_symbols(var.var):
                                 continue
-                            for j2 in [j]:#range(i+1,9):
+                            for j2 in [j]:#range(i+1,R.shape[0]*R.shape[1]):
                                 for jsign in [1.0]:#[-1.0,1.0]:
                                     solution = solve([Eq(newR[i]+isign*newR[i2],Ree[i]+isign*Ree[i2]), Eq(newR[j]+jsign*newR[j2],Ree[j]+jsign*Ree[j2])],[var.svar,var.cvar])
                                     if solution is not None and solution.has_key(var.svar) and solution.has_key(var.cvar):

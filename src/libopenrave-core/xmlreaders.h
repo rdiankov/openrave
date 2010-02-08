@@ -1893,7 +1893,7 @@ namespace OpenRAVEXMLParser
             }
 
             StreamXMLReader::startElement(xmlname,atts);
-            if( xmlname == "effector" || xmlname == "gripperjoints" || xmlname == "joints" || xmlname == "armjoints" || xmlname == "base"|| xmlname == "iksolver" || xmlname == "closingdir" || xmlname == "palmdirection" || xmlname == "closingdirection" || xmlname == "translation" || xmlname == "quat" || xmlname == "rotationaxis" || xmlname == "rotationmat") {
+            if( xmlname == "effector" || xmlname == "gripperjoints" || xmlname == "joints" || xmlname == "armjoints" || xmlname == "base"|| xmlname == "iksolver" || xmlname == "closingdir" || xmlname == "palmdirection" || xmlname=="direction" || xmlname == "closingdirection" || xmlname == "translation" || xmlname == "quat" || xmlname == "rotationaxis" || xmlname == "rotationmat") {
             }
             else {
                 _pcurreader.reset(new DummyXMLReader(xmlname, "Manipulator"));
@@ -1954,15 +1954,17 @@ namespace OpenRAVEXMLParser
                         _pmanip->_varmjoints.push_back(index);
                 }
             }
-            else if( xmlname == "palmdirection" ) {
-                _ss >> _pmanip->_vpalmdirection.x >> _pmanip->_vpalmdirection.y >> _pmanip->_vpalmdirection.z;
-                dReal flen = _pmanip->_vpalmdirection.lengthsqr3();
+            else if( xmlname == "direction" || xmlname == "palmdirection" ) {
+                if( xmlname == "palmdirection" )
+                    RAVELOG_WARN("<palmdirection> tag in Manipulator changed to <direction>\n");
+                _ss >> _pmanip->_vdirection.x >> _pmanip->_vdirection.y >> _pmanip->_vdirection.z;
+                dReal flen = _pmanip->_vdirection.lengthsqr3();
                 if( flen == 0 ) {
                     RAVELOG_WARNA("palm direction is 0, setting to default value\n");
-                    _pmanip->_vpalmdirection = Vector(0,0,1);
+                    _pmanip->_vdirection = Vector(0,0,1);
                 }
                 else
-                    _pmanip->_vpalmdirection /= RaveSqrt(flen);
+                    _pmanip->_vdirection /= RaveSqrt(flen);
             }
             else if( xmlname == "iksolver" ) {
                 string iklibraryname = _ss.str();

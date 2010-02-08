@@ -906,6 +906,25 @@ inline RaveVector<T> AxisAngle2Quat(const RaveVector<T>& rotaxis, T angle)
 }
 
 template <class T>
+inline RaveVector<T> quatMultiply(const RaveVector<T>& q0, const RaveVector<T>& q1)
+{
+    RaveVector<T> q(q0.x*q1.x - q0.y*q1.y - q0.z*q1.z - q0.w*q1.w,
+                    q0.x*q1.y + q0.y*q1.x + q0.z*q1.w - q0.w*q1.z,
+                    q0.x*q1.z + q0.z*q1.x + q0.w*q1.y - q0.y*q1.w,
+                    q0.x*q1.w + q0.w*q1.x + q0.y*q1.z - q0.z*q1.y);
+    // normalize the quaternion
+    T fnorm = q.lengthsqr4();
+    MATH_ASSERT( fnorm > 0.98f && fnorm < 1.02f );
+    return q * (T(1)/RaveSqrt(fnorm));
+}
+
+template <class T>
+inline RaveVector<T> quatInverse(const RaveVector<T>& q)
+{
+    return RaveVector<T>(q.x,-q.y,-q.z,-q.w);
+}
+
+template <class T>
 inline RaveVector<T> dQSlerp(const RaveVector<T>& qa, const RaveVector<T>& _qb, T t)
 {
 	// quaternion to return

@@ -27,39 +27,6 @@ namespace OpenRAVE {
 class RAVE_API IkSolverBase : public InterfaceBase
 {
 public:
-    class Parameterization
-    {
-    public:
-        enum Type {
-            Type_None=0,
-            Type_Transform6D=1,
-            Type_Rotation3D=2,
-            Type_Translation3D=3,
-            Type_Direction2D=4,
-            Type_Ray4D=5,
-        };
-        
-        Parameterization() : _type(Type_None) {}
-        Parameterization(const Transform& t) { SetTransform(t); }
-        Parameterization(const RAY& r) { SetRay(r); }
-
-        inline void SetTransform(const Transform& t) { _type = Type_Transform6D; _transform = t; }
-        inline void SetRotation(const Vector& quaternion) { _type = Type_Rotation3D; _transform.rot = quaternion; }
-        inline void SetTranslation(const Vector& trans) { _type = Type_Translation3D; _transform.trans = trans; }
-        inline void SetDirection(const Vector& dir) { _type = Type_Direction2D; _transform.rot = dir; }
-        inline void SetRay(const RAY& ray) { _type = Type_Ray4D; _transform.trans = ray.pos; _transform.rot = ray.dir; }
-
-        inline Type GetType() const { return _type; }
-        inline const Transform& GetTransform() const { return _transform; }
-        inline const Vector& GetRotation() const { return _transform.rot; }
-        inline const Vector& GetTranslation() const { return _transform.trans; }
-        inline const Vector& GetDirection() const { return _transform.rot; }
-        inline const RAY GetRay() const { return RAY(_transform.trans,_transform.rot); }
-    protected:
-        Transform _transform;
-        Type _type;
-    };
-
     IkSolverBase(EnvironmentBasePtr penv) : InterfaceBase(PT_InverseKinematicsSolver, penv) {}
     virtual ~IkSolverBase() {}
 
@@ -89,7 +56,7 @@ public:
     /// \param bCheckEnvCollision If true, will only return solutions that are not colliding with the environment.
     /// \param qResult Holds the IK solution, must be of size RobotBase::Manipulator::_vecarmjoints
     /// \return true if solution is found
-    virtual bool Solve(const Parameterization& param, const std::vector<dReal>& q0, bool bCheckEnvCollision, boost::shared_ptr< std::vector<dReal> > result) = 0;
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, bool bCheckEnvCollision, boost::shared_ptr< std::vector<dReal> > result) = 0;
 
     /// Return all joint configurations for the given end effector transform. Robot is checked for self-collisions.
     /// \param param the pose the end effector has to achieve. Note that the end effector pose 
@@ -97,7 +64,7 @@ public:
     /// \param bCheckEnvCollision If true, will only return solutions that are not colliding with the environment.
     /// \param qSolutions All solutions within a reasonable discretization level of the free parameters.
     /// \return true if at least one solution is found
-    virtual bool Solve(const Parameterization& param, bool bCheckEnvCollision, std::vector< std::vector<dReal> >& qSolutions) = 0;
+    virtual bool Solve(const IkParameterization& param, bool bCheckEnvCollision, std::vector< std::vector<dReal> >& qSolutions) = 0;
 
     /// Return a joint configuration for the given end effector transform. Robot is checked for self-collisions.
     /// Can specify the free parameters in [0,1] range. If NULL, the regular equivalent Solve is called
@@ -109,7 +76,7 @@ public:
     /// \param bCheckEnvCollision If true, will only return solutions that are not colliding with the environment.
     /// \param qResult Holds the IK solution, must be of size RobotBase::Manipulator::_vecarmjoints
     /// \return true if solution is found
-    virtual bool Solve(const Parameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, bool bCheckEnvCollision, boost::shared_ptr< std::vector<dReal> > result) = 0;
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, bool bCheckEnvCollision, boost::shared_ptr< std::vector<dReal> > result) = 0;
 
     /// Return all joint configurations for the given end effector transform. Robot is checked for self-collisions.
     /// Can specify the free parameters in [0,1] range. If NULL, the regular equivalent Solve is called
@@ -119,7 +86,7 @@ public:
     /// \param bCheckEnvCollision If true, will only return solutions that are not colliding with the environment.
     /// \param qSolutions All solutions within a reasonable discretization level of the free parameters.
     /// \return true at least one solution is found
-    virtual bool Solve(const Parameterization& param, const std::vector<dReal>& vFreeParameters, bool bCheckEnvCollision, std::vector< std::vector<dReal> >& qSolutions) = 0;
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, bool bCheckEnvCollision, std::vector< std::vector<dReal> >& qSolutions) = 0;
 
 private:
     virtual const char* GetHash() const { return OPENRAVE_IKSOLVER_HASH; }

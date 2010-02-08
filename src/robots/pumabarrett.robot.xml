@@ -206,7 +206,7 @@
     <joints>JF1 JF2 JF3</joints>
     <!-- joint values of the closed and opened positions -->
     <closingdirection>1.0 1.0 1.0</closingdirection>
-    <palmdirection>0 0 1</palmdirection>
+    <direction>0 0 1</direction>
     <RotationAxis>1 0 0 -90</RotationAxis>
     <IkSolver>PUMAikfast</IkSolver>
   </Manipulator>

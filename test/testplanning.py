@@ -58,14 +58,18 @@ def test_ikgeneration():
     import inversekinematics
     env = Environment()
     env.SetDebugLevel(DebugLevel.Debug)
-    robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
+    #robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
+    robot = env.ReadRobotXMLFile('robots/hrp2jsk.robot.xml')
+    robot.SetActiveManipulator('head')
     env.AddRobot(robot)
-    self = inversekinematics.InverseKinematicsModel(robot=robot)
+    self = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Direction3D)
+
     freejoints=None
     usedummyjoints=False
     accuracy = None
     precision = None
-    self.generate(freejoints=freejoints,usedummyjoints=usedummyjoints)
+    iktype=inversekinematics.InverseKinematicsModel.Type_Direction3D
+    self.generate(freejoints=freejoints,usedummyjoints=usedummyjoints,iktype=iktype)
 
     baselink=self.manip.GetBase().GetIndex()
     eelink = self.manip.GetEndEffector().GetIndex()
