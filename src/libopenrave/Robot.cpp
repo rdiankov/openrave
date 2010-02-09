@@ -119,7 +119,7 @@ bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, cons
         if( TransformDistanceFast(_tGrasp,Transform()) > 1e-4f )
             throw openrave_exception("Grasp transform has to be the identity for translation-only IK");
         if( !!_pBase )
-            localgoal.SetTranslation(_pBase->GetTransform().inverse().rotate(goal.GetTranslation()));
+            localgoal.SetTranslation(_pBase->GetTransform().inverse()*goal.GetTranslation());
         else
             localgoal.SetTranslation(goal.GetTranslation());
     }
@@ -166,7 +166,7 @@ bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, con
         if( TransformDistanceFast(_tGrasp,Transform()) > 1e-4f )
             throw openrave_exception("Grasp transform has to be the identity for translation-only IK");
         if( !!_pBase )
-            localgoal.SetTranslation(_pBase->GetTransform().inverse().rotate(goal.GetTranslation()));
+            localgoal.SetTranslation(_pBase->GetTransform().inverse()*goal.GetTranslation());
         else
             localgoal.SetTranslation(goal.GetTranslation());
     }

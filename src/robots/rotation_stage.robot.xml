@@ -1,0 +1,80 @@
+<Robot name="RotationStage">
+  <KinBody>
+    <modelsdir>models/rotation_stage</modelsdir>
+
+    <!-- //Create the 1st Axis// -->
+    <Body name="Base" type="dynamic">
+      <Translation>0.0 0.0 0.0</Translation>
+      <Geom type="trimesh">
+	    <data>StagePart1.iv 0.1</data>
+	    <render>StagePart1.iv 0.1</render>
+      </Geom>
+    </Body>
+
+    <Body name="Axis1" type="dynamic">
+      <offsetfrom>Base</offsetfrom>
+      <Translation>0.0 0.0 0.041</Translation>
+      <Geom type="trimesh">
+        <data>StagePart2.iv 0.1</data>
+	    <render>StagePart2.iv 0.1</render>
+      </Geom>
+    </Body>
+    <Joint name="R1" type="hinge">
+      <Body>Base</Body>
+      <Body>Axis1</Body>
+      <offsetfrom>Base</offsetfrom>
+      <lostop>-179</lostop>
+      <histop>179</histop>
+      <axis>0 0 -1</axis>
+      <maxvel>3.0</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+    <!-- //Create the 2nd Axis// -->
+    <Body name="Axis2" type="dynamic">
+      <offsetfrom>Axis1</offsetfrom>
+      <Translation>0.0 0.0 0.186</Translation>
+      <Geom type="trimesh">
+	    <data>StagePart3.iv 0.1</data>
+	    <render>StagePart3.iv 0.1</render>
+      </Geom>
+    </Body>
+    <Joint name="R2" type="hinge">
+      <Body>Axis1</Body>
+      <Body>Axis2</Body>
+      <offsetfrom>Base</offsetfrom>
+      <anchor>0 0 0.227</anchor>
+      <lostop>-60</lostop>
+      <histop>+60</histop>
+      <axis>1 0 0</axis>
+      <maxvel>3</maxvel>
+      <resolution> 1</resolution>
+    </Joint>
+
+    <!-- //Create the 3rd Axis// -->
+    <Body name="Axis3" type="dynamic">
+      <offsetfrom>Axis2</offsetfrom>
+      <Translation>0.0 0.0 -0.0045</Translation>
+      <Geom type="cylinder">
+	    <radius>0.20</radius>
+	    <height>0.004</height>
+	    <Rotationaxis>1 0 0 90</Rotationaxis>
+      </Geom>
+    </Body>
+    <Joint name="R3" type="hinge">
+      <Body>Axis2</Body>
+      <Body>Axis3</Body>
+      <offsetfrom>Axis2</offsetfrom>
+      <lostop>-179</lostop>
+      <histop>+179</histop>
+      <axis>0 0 1</axis>
+      <maxvel>3</maxvel>
+      <resolution> 1</resolution>
+    </Joint>
+  </KinBody>
+  <Manipulator name="rotation">
+    <base>Base</base>
+    <effector>Axis3</effector>
+    <armjoints>R1 R2 R3</armjoints>
+  </Manipulator>
+</Robot>

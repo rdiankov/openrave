@@ -59,10 +59,10 @@ def test_ikgeneration():
     env = Environment()
     env.SetDebugLevel(DebugLevel.Debug)
     #robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')
-    robot = env.ReadRobotXMLFile('robots/hrp2jsk.robot.xml')
-    robot.SetActiveManipulator('head')
+    robot = env.ReadRobotXMLFile('robots/barrettwam4.robot.xml')
+    robot.SetActiveManipulator('arm')
     env.AddRobot(robot)
-    self = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Direction3D)
+    self = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Translation3D)
 
     freejoints=None
     usedummyjoints=False

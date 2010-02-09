@@ -34,10 +34,17 @@ class InverseKinematicsModel(OpenRAVEModel):
     def has(self):
         return self.iksolver is not None and self.manip.HasIKSolver()
     
-    def load(self):
+    def load(self,*args,**kwargs):
+        self.setrobot(*args,**kwargs)
+
+    def setrobot(self,freeinc=None):
         self.iksolver = None
+        if freeinc is not None:
+            iksuffix = ' %f'%freeinc
+        else:
+            iksuffix = ''
         if self.manip.HasIKSolver():
-            self.iksolver = self.env.CreateIkSolver(self.manip.GetIKSolverName()) if self.manip.HasIKSolver() else None
+            self.iksolver = self.env.CreateIkSolver(self.manip.GetIKSolverName()+iksuffix) if self.manip.HasIKSolver() else None
         if self.iksolver is None:
             with self.env:
                 ikfastproblem = [p for p in self.env.GetLoadedProblems() if p.GetXMLId() == 'IKFast'][0]
@@ -47,11 +54,11 @@ class InverseKinematicsModel(OpenRAVEModel):
                     return False
                 if int(self.iktype) != int(iktype):
                     raise ValueError('ik does not match types')
-                self.iksolver = self.env.CreateIkSolver(ikname)
-                if self.iksolver is not None:
-                    self.manip.SetIKSolver(self.iksolver)
-                    if not self.manip.InitIKSolver():
-                        return False
+                self.iksolver = self.env.CreateIkSolver(ikname+iksuffix)
+        if self.iksolver is not None:
+            self.manip.SetIKSolver(self.iksolver)
+            if not self.manip.InitIKSolver():
+                return False
         return self.has()
     
     def save(self):
@@ -146,19 +153,27 @@ class InverseKinematicsModel(OpenRAVEModel):
     def autogenerate(self,forcegenerate=True):
         if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531' and self.manip.GetName() == 'arm':
             self.generate(freejoints=[self.robot.GetJoint('Shoulder_Roll').GetJointIndex()],iktype=IkParameterization.Type.Transform6D)
-        elif self.robot.GetRobotStructureHash() == '77bdb417b36d4dffbb7dd8a6eefbd32d' and self.manip.GetName() == 'arm':
+        elif self.robot.GetRobotStructureHash() == '811c96bfa1b9444953763310418ca2a5' and self.manip.GetName() == 'arm':
             self.generate(freejoints=[self.robot.GetJoint('Shoulder_Roll').GetJointIndex()],iktype=IkParameterization.Type.Translation3D)
+        elif self.robot.GetRobotStructureHash() == 'bb644e60bcd217d8cea1272a26ecc651' and self.manip.GetName() == 'rotation':
+            self.generate(iktype=IkParameterization.Type.Rotation3D)
         else:
             if not forcegenerate:
                 raise ValueError('failed to find auto-generation parameters')
             self.generate()
     def testik(self,numiktests):
         with self.robot:
+            # set base to identity to avoid complications when reporting errors
+            self.robot.SetTransform(dot(linalg.inv(self.manip.GetBase().GetTransform()),self.robot.GetTransform()))
             lower,upper = [v[self.manip.GetArmJoints()] for v in self.robot.GetJointLimits()]
             if self.iktype == IkParameterization.Type.Direction3D:
                 success = 0.0
                 for i in range(numiktests):
-                    self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
+                    while True:
+                        self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
+                        if not self.robot.CheckSelfCollision():
+                            break
+                    orgvalues = self.robot.GetJointValues()[self.manip.GetArmJoints()]
                     targetdir = dot(self.manip.GetEndEffectorTransform()[0:3,0:3],self.manip.GetDirection())
                     self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
                     sol = self.manip.FindIKSolution(IkParameterization(targetdir,self.iktype),False)
@@ -167,19 +182,52 @@ class InverseKinematicsModel(OpenRAVEModel):
                         realdir = dot(self.manip.GetEndEffectorTransform()[0:3,0:3],self.manip.GetDirection())
                         if sum((targetdir-realdir)**2) < 1e-7:
                             success += 1
+                        else:
+                            print 'wrong solution to: ',targetpos, 'returned is: ',realpos
+                    else:
+                        print 'failed to find: ',targetpos,'solution is: ',orgvalues
                 return success/numiktests
-            if self.iktype == IkParameterization.Type.Translation3D:
+            elif self.iktype == IkParameterization.Type.Translation3D:
                 success = 0.0
                 for i in range(numiktests):
-                    self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
+                    while True:
+                        self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
+                        if not self.robot.CheckSelfCollision():
+                            break
+                    orgvalues = self.robot.GetJointValues()[self.manip.GetArmJoints()]
                     targetpos = self.manip.GetEndEffectorTransform()[0:3,3]
-                    self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
+                    #self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
                     sol = self.manip.FindIKSolution(IkParameterization(targetpos,self.iktype),False)
                     if sol is not None:
                         self.robot.SetJointValues(sol,self.manip.GetArmJoints())
                         realpos = self.manip.GetEndEffectorTransform()[0:3,3]
                         if sum((targetpos-realpos)**2) < 1e-7:
                             success += 1
+                        else:
+                            print 'wrong solution to: ',targetpos, 'returned is: ',realpos
+                    else:
+                        print 'failed to find: ',targetpos,'solution is: ',orgvalues
+                return success/numiktests
+            elif self.iktype == IkParameterization.Type.Rotation3D:
+                success = 0.0
+                for i in range(numiktests):
+                    while True:
+                        self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
+                        if not self.robot.CheckSelfCollision():
+                            break
+                    orgvalues = self.robot.GetJointValues()[self.manip.GetArmJoints()]
+                    targetquat = quatFromRotationMatrix(self.manip.GetEndEffectorTransform()[0:3,0:3])
+                    self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
+                    sol = self.manip.FindIKSolution(IkParameterization(targetquat,self.iktype),False)
+                    if sol is not None:
+                        self.robot.SetJointValues(sol,self.manip.GetArmJoints())
+                        realquat = quatFromRotationMatrix(self.manip.GetEndEffectorTransform()[0:3,0:3])
+                        if quatArrayTDist(targetquat,realquat) < 1e-3:
+                            success += 1
+                        else:
+                            print 'wrong solution to: ',targetquat, 'returned is: ',realquat
+                    else:
+                        print 'failed to find: ',targetquat,'solution is: ',orgvalues
                 return success/numiktests
             else:
                 basemanip = BaseManipulation(self.robot)
@@ -250,6 +298,8 @@ class InverseKinematicsModel(OpenRAVEModel):
                           help='If true, need to specify only 3 solve joints and will solve for a target translation')
         parser.add_option('--usedummyjoints', action='store_true',dest='usedummyjoints',default=False,
                           help='Treat the unspecified joints in the kinematic chain as dummy and set them to 0. If not specified, treats all unspecified joints as free parameters.')
+        parser.add_option('--freeinc', action='store', type='float', dest='freeinc',default=None,
+                          help='The discretization value of freejoints.')
         parser.add_option('--numiktests', action='store',type='int',dest='numiktests',default=None,
                           help='Will test the ik solver against NUMIKTESTS random robot configurations and program will exit with 0 if success rate exceeds the test success rate, otherwise 1.')
         return parser
@@ -275,7 +325,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                 if options.translation3donly:
                     iktype = IkParameterization.Type.Translation3D
                 ikmodel = InverseKinematicsModel(robot,iktype=iktype)
-                if not ikmodel.load():
+                if not ikmodel.setrobot(freeinc=options.freeinc):
                     raise ValueError('failed to load ik')
                 successrate = ikmodel.testik(numiktests=options.numiktests)
                 print 'success rate is: ',successrate
