@@ -88,7 +88,8 @@ class InverseKinematicsModel(OpenRAVEModel):
             solvefn=ikfast.IKFastSolver.solveFullIK_Rotation3D
         elif self.iktype == IkParameterization.Type.Direction3D:
             def solveFullIK_Direction3D(*args,**kwargs):
-                return ikfast.IKFastSolver.solveFullIK_Direction3D(*args,basedir=self.manip.GetPalmDirection(),**kwargs)
+                kwargs['basedir'] = self.manip.GetDirection()
+                return ikfast.IKFastSolver.solveFullIK_Direction3D(*args,**kwargs)
             solvefn=solveFullIK_Direction3D
         elif self.iktype == IkParameterization.Type.Translation3D:
             solvefn=ikfast.IKFastSolver.solveFullIK_Translation3D
