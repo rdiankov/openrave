@@ -26,7 +26,7 @@ class ConstraintPlanning(metaclass.AutoReloader):
         self.envreal = robot.GetEnv()
         self.robot = robot
         self.manip = self.robot.GetActiveManipulator()
-        self.ikmodel = inversekinematics.InverseKinematicsModel(robot=robot)
+        self.ikmodel = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
         if not self.ikmodel.load():
             self.ikmodel.autogenerate()
         self.gmodel = grasping.GraspingModel(robot=self.robot,target=self.envreal.GetKinBody('mug1'))

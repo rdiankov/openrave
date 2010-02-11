@@ -25,7 +25,7 @@ class HanoiPuzzle:
     def __init__(self,env,robot):
         self.env = env
         self.robot = robot
-        self.ikmodel = inversekinematics.InverseKinematicsModel(robot=robot)
+        self.ikmodel = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
         if not self.ikmodel.load():
             self.ikmodel.autogenerate()
         self.basemanip = BaseManipulation(self.robot)

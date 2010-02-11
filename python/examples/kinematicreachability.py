@@ -27,7 +27,7 @@ class ReachabilityModel(OpenRAVEModel):
     offers several functions to use it effectively in planning."""
     def __init__(self,robot):
         OpenRAVEModel.__init__(self,robot=robot)
-        self.ikmodel = inversekinematics.InverseKinematicsModel(robot=robot)
+        self.ikmodel = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
         if not self.ikmodel.load():
             self.ikmodel.autogenerate()
         self.reachabilitystats = None
