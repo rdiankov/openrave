@@ -24,7 +24,6 @@ build openrave must include (used in place of rave.h). Precompiled header.
 
 #define RAVE_PRIVATE
 
-/// functions that allow plugins to program for the RAVE simulator
 #include <cstdio>
 #include <cmath>
 #include <cstdlib>
@@ -68,12 +67,6 @@ build openrave must include (used in place of rave.h). Precompiled header.
 #include <sstream>
 
 #include <sys/timeb.h>    // ftime(), struct timeb
-
-#ifdef _MSC_VER
-#define PRIdS "Id"
-#else
-#define PRIdS "zd"
-#endif
 
 #ifndef _WIN32
 #include <sys/time.h>

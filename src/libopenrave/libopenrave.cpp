@@ -19,6 +19,11 @@
 #include "mt19937ar.h"
 #include "md5.h"
 
+#ifndef _WIN32
+#include <sys/stat.h>
+#include <sys/types.h>
+#endif
+
 namespace OpenRAVE {
 
 #ifdef _DEBUG
@@ -58,6 +63,29 @@ RAVE_API const std::string& RaveGetInterfaceName(PluginType type)
     if( it == RaveGetInterfaceNamesMap().end() )
         throw openrave_exception("Invalid type specified");
     return it->second;
+}
+
+std::string RaveGetHomeDirectory()
+{
+    string homedirectory;
+    char* phomedir = getenv("OPENRAVE_HOME");
+    if( phomedir == NULL )
+        phomedir = getenv("OPENRAVE_CACHEPATH");
+    if( phomedir == NULL ) {
+#ifndef _WIN32
+        homedirectory = string(getenv("HOME"))+string("/.openrave");
+#else
+        homedirectory = string(getenv("HOMEDRIVE"))+string(getenv("HOMEPATH"))+string("\\.openrave");
+#endif
+        }
+    else
+        homedirectory = phomedir;
+#ifndef _WIN32
+    mkdir(homedirectory.c_str(),S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH | S_IRWXU);
+#else
+    CreateDirectory(homedirectory.c_str(),NULL);
+#endif
+    return homedirectory;
 }
 
 void BaseXMLReader::startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)

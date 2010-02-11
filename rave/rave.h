@@ -1031,6 +1031,10 @@ inline const char* RaveGetInterfaceHash(PluginType type)
 RAVE_API const std::map<PluginType,std::string>& RaveGetInterfaceNamesMap();
 RAVE_API const std::string& RaveGetInterfaceName(PluginType type);
 
+/// returns the openrave home directory where settings, cache, and other files are stored.
+/// On Linux/Unix systems, this is usually $HOME/.openrave, on Windows this is $HOMEPATH/.openrave
+RAVE_API std::string RaveGetHomeDirectory();
+
 /// Random number generation
 //@{
 RAVE_API void RaveInitRandomGeneration(uint32_t seed);

@@ -1188,7 +1188,7 @@ protected:
             boost::shared_ptr<SensorBase::CameraGeomData> pgeom = boost::static_pointer_cast<SensorBase::CameraGeomData>(psensor->GetSensorGeometry());
 
             if( (int)pcameradata->vimagedata.size() != pgeom->width*pgeom->height*3 ) {
-                RAVELOG_ERRORA("image data wrong size %"PRIdS" != %"PRIdS"\n", pcameradata->vimagedata.size(), pgeom->width*pgeom->height*3);
+                RAVELOG_ERRORA(str(boost::format("image data wrong size %d != %d\n")%pcameradata->vimagedata.size()%(pgeom->width*pgeom->height*3)));
                 return false;
             }
 
@@ -1302,7 +1302,7 @@ protected:
         }
 
         if( numcolors > 1 && numcolors != numpoints) {
-            RAVELOG_WARNA("number of colors (%"PRIdS") != number of points (%d)\n", vcolors.size(), numpoints);
+            RAVELOG_WARNA(str(boost::format("number of colors (%d) != number of points (%d)\n")%vcolors.size()%numpoints));
             numcolors = 1;
         }
 

@@ -42,24 +42,7 @@ class Environment : public EnvironmentBase
     {
         // set to the classic locale so that number serialization/hashing works correctly
         std::locale::global(std::locale::classic());
-
-        char* phomedir = getenv("OPENRAVE_HOME");
-        if( phomedir == NULL )
-            phomedir = getenv("OPENRAVE_CACHEPATH");
-        if( phomedir == NULL ) {
-#ifndef _WIN32
-            _homedirectory = string(getenv("HOME"))+string("/.openrave");
-#else
-            _homedirectory = string(getenv("HOMEDRIVE"))+string(getenv("HOMEPATH"))+string("\\.openrave");
-#endif
-        }
-        else
-            _homedirectory = phomedir;
-#ifndef _WIN32
-        mkdir(_homedirectory.c_str(),S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH | S_IRWXU);
-#else
-        CreateDirectory(_homedirectory.c_str(),NULL);
-#endif
+        _homedirectory = RaveGetHomeDirectory();
         RAVELOG_DEBUGA("setting openrave cache directory to %s\n",_homedirectory.c_str());
 
         _nBodiesModifiedStamp = 0;
@@ -77,13 +60,13 @@ class Environment : public EnvironmentBase
         _pdatabase.reset(new RaveDatabase());
         if( bLoadAllPlugins ) {
             if( !ParseDirectories(getenv("OPENRAVE_PLUGINS"), _vplugindirs) || _vplugindirs.size() == 0 ) {
-                RAVELOG_INFOA("could not find OPENRAVE_PLUGINS variable, setting to %s\n", OPENRAVE_PLUGINS_INSTALL_DIR);
+                RAVELOG_DEBUGA("could not find OPENRAVE_PLUGINS variable, setting to %s\n", OPENRAVE_PLUGINS_INSTALL_DIR);
                 _vplugindirs.push_back(OPENRAVE_PLUGINS_INSTALL_DIR);
             }
         }
     
         if( !ParseDirectories(getenv("OPENRAVE_DATA"), _vdatadirs) || _vdatadirs.size() == 0 ) {
-            RAVELOG_INFOA("could not find OPENRAVE_DATA variable, setting to %s\n", OPENRAVE_DATA_INSTALL_DIR);
+            RAVELOG_DEBUGA("could not find OPENRAVE_DATA variable, setting to %s\n", OPENRAVE_DATA_INSTALL_DIR);
             _vdatadirs.push_back(OPENRAVE_DATA_INSTALL_DIR);
        }
     }

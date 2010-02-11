@@ -472,6 +472,8 @@ public:
             dReal GetCylinderRadius() const { return _plink->GetGeometry(_geomindex).GetCylinderRadius(); }
             dReal GetCylinderHeight() const { return _plink->GetGeometry(_geomindex).GetCylinderHeight(); }
             object GetBoxExtents() const { return toPyVector3(_plink->GetGeometry(_geomindex).GetBoxExtents()); }
+            object GetRenderScale() const { return toPyVector3(_plink->GetGeometry(_geomindex).GetRenderScale()); }
+            string GetRenderFilename() const { return _plink->GetGeometry(_geomindex).GetRenderFilename(); }
         };
 
         PyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv) : _plink(plink), _pyenv(pyenv) {}
@@ -3122,6 +3124,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
                     .def("GetCylinderRadius",&PyKinBody::PyLink::PyGeomProperties::GetCylinderRadius)
                     .def("GetCylinderHeight",&PyKinBody::PyLink::PyGeomProperties::GetCylinderHeight)
                     .def("GetBoxExtents",&PyKinBody::PyLink::PyGeomProperties::GetBoxExtents)
+                    .def("GetRenderScale",&PyKinBody::PyLink::PyGeomProperties::GetRenderScale)
+                    .def("GetRenderFilename",&PyKinBody::PyLink::PyGeomProperties::GetRenderFilename)
                     ;
                 enum_<KinBody::Link::GEOMPROPERTIES::GeomType>("Type")
                     .value("None",KinBody::Link::GEOMPROPERTIES::GeomNone)
@@ -3614,7 +3618,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
     scope().attr("__license__") = "Lesser GPL";
 
     def("RaveSetDebugLevel",RaveSetDebugLevel,args("level"), "Sets the global openrave debug level");
-    def("RaveGetDebugLevel",RaveGetDebugLevel,"Gets the openrave debug level");
+    def("RaveGetDebugLevel",RaveGetDebugLevel,"Returns the openrave debug level");
+    def("RaveGetHomeDirectory",RaveGetHomeDirectory,"Returns the openrave home directory");
 
     def("quatFromAxisAngle",openravepy::quatFromAxisAngle1, args("axis"), "Converts an axis-angle rotation into a quaternion");
     def("quatFromAxisAngle",openravepy::quatFromAxisAngle2, args("axis","angle"), "Converts an axis-angle rotation into a quaternion");
