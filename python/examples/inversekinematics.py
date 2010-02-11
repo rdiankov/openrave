@@ -152,7 +152,7 @@ class InverseKinematicsModel(OpenRAVEModel):
             return ValueError('failed to generate ik solver')
 
     def autogenerate(self,forcegenerate=True):
-        if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531' and self.manip.GetName() == 'arm':
+        if self.robot.GetRobotStructureHash() == '7b789782446d86b95c6fb16de7f204c7' and self.manip.GetName() == 'arm':
             self.generate(freejoints=[self.robot.GetJoint('Shoulder_Roll').GetJointIndex()],iktype=IkParameterization.Type.Transform6D)
         elif self.robot.GetRobotStructureHash() == '811c96bfa1b9444953763310418ca2a5' and self.manip.GetName() == 'arm':
             self.generate(freejoints=[self.robot.GetJoint('Shoulder_Roll').GetJointIndex()],iktype=IkParameterization.Type.Translation3D)

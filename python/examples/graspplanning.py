@@ -25,7 +25,7 @@ class GraspPlanning(metaclass.AutoReloader):
     def __init__(self,robot,randomize=False,dests=None,switchpatterns=None):
         self.envreal = robot.GetEnv()
         self.robot = robot
-        self.ikmodel = inversekinematics.InverseKinematicsModel(robot=robot)
+        self.ikmodel = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
         if not self.ikmodel.load():
             self.ikmodel.autogenerate()
         # could possibly affect generated grasp sets?
