@@ -115,6 +115,44 @@ object search(ANNkd_tree& kdtree, object q, int k, double eps, bool priority = f
     return boost::python::make_tuple(static_cast<numeric::array>(handle<>(pyidx)), static_cast<numeric::array>(handle<>(pydists)));
 }
 
+object search_array(ANNkd_tree& kdtree, object qarray, int k, double eps, bool priority = false)
+{
+    BOOST_ASSERT(k <= kdtree.nPoints());
+    int N = len(qarray);
+    if( N == 0 )
+        return boost::python::make_tuple(numeric::array(boost::python::list()).astype("i4"),numeric::array(boost::python::list()));
+
+    BOOST_ASSERT(len(qarray[0])==kdtree.theDim());
+    ANNpointManaged annq(kdtree.theDim());
+    npy_intp dims[] = {N,k};
+    PyObject *pydists = PyArray_SimpleNew(2,dims, sizeof(ANNdist)==8?PyArray_DOUBLE:PyArray_FLOAT);
+    BOOST_ASSERT(!!pydists);
+    PyObject *pyidx = PyArray_SimpleNew(2,dims, PyArray_INT);
+    if( !pyidx ) {
+        Py_DECREF(pydists);
+    }
+    BOOST_ASSERT(!!pyidx);
+    ANNdist* pdists = (ANNdist*)PyArray_DATA(pydists);
+    ANNidx* pidx = (ANNidx*)PyArray_DATA(pyidx);
+
+    std::vector<ANNdist> dists(k);
+    std::vector<ANNidx> nn_idx(k);
+    for(int i = 0; i < N; ++i) {
+        object q = qarray[i];
+        for (int c = 0; c < kdtree.theDim(); ++c)
+            annq.pt[c] = extract<ANNcoord>(q[c]);
+        if (priority)
+            kdtree.annkPriSearch(annq.pt, k, &nn_idx[0], &dists[0], eps);
+        else
+            kdtree.annkSearch(annq.pt, k, &nn_idx[0], &dists[0], eps);
+
+        std::copy(nn_idx.begin(),nn_idx.end(),pidx); pidx += k;
+        std::copy(dists.begin(),dists.end(),pdists); pdists += k;
+    }
+
+    return boost::python::make_tuple(static_cast<numeric::array>(handle<>(pyidx)), static_cast<numeric::array>(handle<>(pydists)));
+}
+
 object k_fixed_radius_search(ANNkd_tree& kdtree, object q, double sqRad, int k, double eps)
 {
     BOOST_ASSERT(k <= kdtree.nPoints() && kdtree.theDim() == len(q));
@@ -158,12 +196,12 @@ object k_fixed_radius_search(ANNkd_tree& kdtree, object q, double sqRad, int k, 
 object k_fixed_radius_search_array(ANNkd_tree& kdtree, object qarray, double sqRad, int k, double eps)
 {
     BOOST_ASSERT(k <= kdtree.nPoints());
-    ANNpointManaged annq(kdtree.theDim());
     int N = len(qarray);
     if( N == 0 )
         return boost::python::make_tuple(numeric::array(boost::python::list()).astype("i4"),numeric::array(boost::python::list()),numeric::array(boost::python::list()));
 
     BOOST_ASSERT(len(qarray[0])==kdtree.theDim());
+    ANNpointManaged annq(kdtree.theDim());
     npy_intp dimsball[] = {N};
     PyObject *pykball = PyArray_SimpleNew(1,dimsball, PyArray_INT);
     BOOST_ASSERT(!!pykball);
@@ -213,9 +251,19 @@ object ksearch(ANNkd_tree& kdtree, object q, int k, double eps)
     return search(kdtree, q, k, eps, false);
 }
 
+object ksearch_array(ANNkd_tree& kdtree, object q, int k, double eps)
+{
+    return search_array(kdtree, q, k, eps, false);
+}
+
 object k_priority_search(ANNkd_tree& kdtree, object q, int k, double eps)
 {
     return search(kdtree, q, k, eps, true);
+}
+
+object k_priority_search_array(ANNkd_tree& kdtree, object q, int k, double eps)
+{
+    return search_array(kdtree, q, k, eps, true);
 }
 
 BOOST_PYTHON_MODULE(pyANN)
@@ -240,7 +288,9 @@ BOOST_PYTHON_MODULE(pyANN)
         .def("__del__", &destroy_points)
 
         .def("kSearch", &ksearch,args("q","k","eps"))
+        .def("kSearchArray", &ksearch_array,args("q","k","eps"))
         .def("kPriSearch", &k_priority_search,args("q","k","eps"))
+        .def("kPriSearchArray", &k_priority_search_array,args("q","k","eps"))
         .def("kFRSearch", &k_fixed_radius_search,args("q","sqrad","k","eps"))
         .def("kFRSearchArray", &k_fixed_radius_search_array,args("qarray","sqrad","k","eps"))
 
@@ -249,4 +299,4 @@ BOOST_PYTHON_MODULE(pyANN)
     ;
 
     def("max_pts_visit",        &annMaxPtsVisit);
-};
+}

@@ -605,6 +605,18 @@ public:
 
     bool InitFromFile(const string& filename) { return _pbody->InitFromFile(filename,std::list<std::pair<std::string,std::string> >()); }
     bool InitFromData(const string& data) { return _pbody->InitFromData(data,std::list<std::pair<std::string,std::string> >()); }
+    bool InitFromBoxes(const boost::multi_array<dReal,2>& vboxes, bool bDraw)
+    {
+        if( vboxes.shape()[1] != 6 )
+            throw openrave_exception("boxes needs to be a Nx6 vector\n");
+        std::vector<AABB> vaabbs(vboxes.shape()[0]);
+        for(size_t i = 0; i < vaabbs.size(); ++i) {
+            vaabbs[i].pos = Vector(vboxes[i][0],vboxes[i][1],vboxes[i][2]);
+            vaabbs[i].extents = Vector(vboxes[i][3],vboxes[i][4],vboxes[i][5]);
+        }
+
+        return _pbody->InitFromBoxes(vaabbs,bDraw);
+    }
 
     void SetName(const string& name) { _pbody->SetName(name); }
     string GetName() const { return _pbody->GetName(); }
@@ -2203,7 +2215,7 @@ public:
         if( num == 0 )
             return boost::python::make_tuple(numeric::array(boost::python::list()).astype("i4"),numeric::array(boost::python::list()));
         if( extract<int>(shape[1]) != 6 )
-            throw openrave_exception("rays object needs to be a 6xN vector\n");
+            throw openrave_exception("rays object needs to be a Nx6 vector\n");
 
         COLLISIONREPORT report;
         CollisionReportPtr preport(&report,null_deleter());
@@ -3035,6 +3047,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
         scope kinbody = class_<PyKinBody, boost::shared_ptr<PyKinBody>, bases<PyInterfaceBase> >("KinBody", no_init)
             .def("InitFromFile",&PyKinBody::InitFromFile,args("filename"))
             .def("InitFromData",&PyKinBody::InitFromData,args("data"))
+            .def("InitFromBoxes",&PyKinBody::InitFromBoxes,args("boxes","draw"))
             .def("SetName", &PyKinBody::SetName,args("name"))
             .def("GetName",&PyKinBody::GetName)
             .def("GetDOF",&PyKinBody::GetDOF)

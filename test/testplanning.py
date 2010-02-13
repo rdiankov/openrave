@@ -342,3 +342,12 @@ def test_simplenavigation():
     self.robot.SetAffineRotationAxisMaxVels(ones(4))
     self.robot.SetActiveDOFs([],Robot.DOFAffine.X|Robot.DOFAffine.Y|Robot.DOFAffine.RotationAxis,[0,0,1])
     self.basemanip.MoveActiveJoints(goal=[0.737,0.304,0])
+
+def test_boxes():
+    env = Environment()
+    k = env.CreateKinBody()
+    boxes = array(((0,0.5,0,0.1,0.2,0.3),(0.5,0,0,0.2,0.2,0.2)))
+    k.InitFromBoxes(boxes,True)
+    k.SetName('temp')
+    env.AddKinBody(k)
+    env.SetViewer('qtcoin')

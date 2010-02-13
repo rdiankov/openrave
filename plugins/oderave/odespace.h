@@ -278,17 +278,19 @@ public:
                 link->geom = geomtrans;
             }
         
-            // set the mass
-            RaveTransformMatrix<dReal> I = (*itlink)->GetInertia();
-            dMass mass;
-            dMassSetZero(&mass);
-            mass.mass = (*itlink)->GetMass();
-            mass.I[0] = I.m[0]; mass.I[1] = I.m[1]; mass.I[2] = I.m[2];
-            mass.I[4] = I.m[4]; mass.I[5] = I.m[5]; mass.I[6] = I.m[6];
-            mass.I[8] = I.m[8]; mass.I[9] = I.m[9]; mass.I[10] = I.m[10];
-            // ignore center of mass for now (ode doesn't like it when it is non-zero)
-            //mass.c = I.trans;
-            dBodySetMass(link->body, &mass);
+            if( !(*itlink)->IsStatic() ) {
+                // set the mass
+                RaveTransformMatrix<dReal> I = (*itlink)->GetInertia();
+                dMass mass;
+                dMassSetZero(&mass);
+                mass.mass = (*itlink)->GetMass();
+                mass.I[0] = I.m[0]; mass.I[1] = I.m[1]; mass.I[2] = I.m[2];
+                mass.I[4] = I.m[4]; mass.I[5] = I.m[5]; mass.I[6] = I.m[6];
+                mass.I[8] = I.m[8]; mass.I[9] = I.m[9]; mass.I[10] = I.m[10];
+                // ignore center of mass for now (ode doesn't like it when it is non-zero)
+                //mass.c = I.trans;
+                dBodySetMass(link->body, &mass);
+            }
         
             link->plink = *itlink;
             // set the transformation

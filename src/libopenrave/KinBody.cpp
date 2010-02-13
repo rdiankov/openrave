@@ -803,6 +803,7 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool bDraw)
     LinkPtr plink(new Link(shared_kinbody()));
     plink->index = 0;
     plink->name = "base";
+    plink->bStatic = true;
     Link::TRIMESH trimesh;
     FOREACHC(itab, vaabbs) {
         plink->_listGeomProperties.push_back(Link::GEOMPROPERTIES(plink));
