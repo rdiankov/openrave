@@ -100,7 +100,11 @@ class InverseKinematicsModel(OpenRAVEModel):
         solvejoints = list(self.manip.GetArmJoints())
         if freejoints is not None:
             for jointname in freejoints:
-                solvejoints.remove(jointname)
+                if type(jointname) == int:
+                    solvejoints.remove(jointname)
+                else:
+                    # find the correct joint index
+                    solvejoints.remove([joint.GetJointIndex() for joint in self.robot.GetJoints() if joint.GetName()==jointname][0])
         else:
             freejoints = []
         
