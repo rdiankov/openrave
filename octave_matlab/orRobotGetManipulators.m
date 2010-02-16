@@ -70,10 +70,10 @@ for i = 1:nummanips
     [tok, rem] = strtok(rem, ' ');
     striklen = floor(str2num(tok));
     manipulators{i}.name = rem(2:(striklen+1));
+    rem = rem((striklen+2):end);
 
     [tok, rem] = strtok(rem, ' ');
     striklen = floor(str2num(tok));
     manipulators{i}.iksolvername = rem(2:(striklen+1));
-
     rem = rem((striklen+2):end);
 end
