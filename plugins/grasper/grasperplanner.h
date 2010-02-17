@@ -114,6 +114,10 @@ public:
                     // hand is flipped 180, rotate around x axis
                     rottodirection = Vector(1,0,0);
                     rottodirection -= pmanip->GetPalmDirection() * dot3(pmanip->GetPalmDirection(), rottodirection);
+                    if( rottodirection.lengthsqr3()<1e-8 ) {
+                        rottodirection = Vector(0,0,1);
+                        rottodirection -= pmanip->GetPalmDirection() * dot3(pmanip->GetPalmDirection(), rottodirection);
+                    }
                     rottodirection.normalize3();
                     torient.rotfromaxisangle(rottodirection, RaveAtan2(fsin, fcos));
                 }

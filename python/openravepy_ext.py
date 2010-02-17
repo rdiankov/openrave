@@ -420,8 +420,7 @@ class OpenRAVEModel(metaclass.AutoReloader):
             model = Model(robot=robot)
             if options.show:
                 if not model.load():
-                    print 'failed to find cached model %s'%model.getfilename()
-                    sys.exit(1)
+                    raise ValueError('failed to find cached model %s'%model.getfilename())
                 model.show(options=options)
                 return
             try:

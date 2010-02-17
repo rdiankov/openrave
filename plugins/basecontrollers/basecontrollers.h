@@ -57,8 +57,10 @@ class IdealController : public ControllerBase
 
         fTime = 0;
         _ptraj.reset();
-        _bIsDone = true;
-
+        // do not set done to true here! let it be picked up by the simulation thread.
+        // this will also let it have consistent mechanics as SetPath
+        // (there's a race condition we're avoiding where a user calls SetDesired and then state savers revert the robot)
+        _bIsDone = false;
         if( !_bPause ) {
             _probot->SetJointValues(values);
             _vecdesired = values;
@@ -113,6 +115,7 @@ class IdealController : public ControllerBase
 
         if( _vecdesired.size() > 0 ) {
             _probot->SetJointValues(_vecdesired,true);
+            _bIsDone = true;
         }
     
         return _bIsDone;
@@ -134,7 +137,7 @@ class IdealController : public ControllerBase
     }
     virtual bool IsDone()
     {
-        return !_ptraj || _bIsDone;
+        return _bIsDone;
     }
     virtual dReal GetTime() const
     {

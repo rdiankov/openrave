@@ -104,7 +104,7 @@ class GraspingModel(OpenRAVEModel):
                 self.env.UpdatePublishedBodies()
             counter = 0
             for approachray,roll,preshape,standoff in iterproduct(approachrays,rolls,preshapes,standoffs):
-                print 'grasp %d/%d'%(counter,totalgrasps)
+                print 'grasp %d/%d'%(counter,totalgrasps),'preshape:',preshape
                 counter += 1
                 grasp = zeros(totaldof)
                 grasp[self.graspindices.get('igrasppos')] = approachray[0:3]
@@ -112,14 +112,12 @@ class GraspingModel(OpenRAVEModel):
                 grasp[self.graspindices.get('igrasproll')] = roll
                 grasp[self.graspindices.get('igraspstandoff')] = standoff
                 grasp[self.graspindices.get('igrasppreshape')] = preshape
-
                 try:
                     contacts,finalconfig,mindist,volume = self.runGrasp(grasp,graspingnoise=graspingnoise,translate=True,forceclosure=True)
-                except ValueError, e:
+                except planning_error, e:
                     print 'Grasp Failed: '
                     traceback.print_exc(e)
                     continue
-
                 Tgrasp = eye(4)
                 with self.env:
                     self.robot.SetJointValues(finalconfig[0])
@@ -128,7 +126,6 @@ class GraspingModel(OpenRAVEModel):
                     if updateenv:
                         contactgraph = self.drawContacts(contacts) if len(contacts) > 0 else None
                         self.env.UpdatePublishedBodies()
-
                 grasp[self.graspindices.get('igrasptrans')] = reshape(transpose(Tgrasp[0:3,0:4]),12)
                 grasp[self.graspindices.get('forceclosure')] = mindist
                 if mindist > forceclosurethreshold:
@@ -144,6 +141,7 @@ class GraspingModel(OpenRAVEModel):
             statesaver = None
 
     def show(self,delay=0.5,options=None):
+        time.sleep(1.0) # let viewer update?
         with self.robot:
             for i,grasp in enumerate(self.grasps):
                 print 'grasp %d/%d'%(i,len(self.grasps))
