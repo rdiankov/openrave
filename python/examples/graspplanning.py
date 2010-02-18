@@ -22,9 +22,10 @@ import numpy,time,traceback
 from optparse import OptionParser
 
 class GraspPlanning(metaclass.AutoReloader):
-    def __init__(self,robot,randomize=False,dests=None,switchpatterns=None):
+    def __init__(self,robot,randomize=False,dests=None,nodestinations=False,switchpatterns=None):
         self.envreal = robot.GetEnv()
         self.robot = robot
+        self.nodestinations = nodestinations
         self.ikmodel = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
         if not self.ikmodel.load():
             self.ikmodel.autogenerate()
@@ -73,7 +74,7 @@ class GraspPlanning(metaclass.AutoReloader):
                         break
                 self.robot.SetTransform(Trobot)
 
-            if dests is None:
+            if dests is None and not self.nodestinations:
                 tablename = 'table'
                 table = self.envreal.GetKinBody(tablename)
                 if table is not None:
@@ -187,12 +188,13 @@ class GraspPlanning(metaclass.AutoReloader):
             res = self.basemanip.MoveHandStraight(direction=self.updir,stepsize=0.003,minsteps=1,maxsteps=60)
             robot.WaitForController(0)
 
-            print 'planning to destination'
-            res = self.basemanip.MoveToHandPosition(matrices=goals,maxiter=1000,maxtries=1,seedik=4)
-            if res is None:
-                print 'failed to reach a goal'
-                continue
-            robot.WaitForController(0)
+            if len(goals) > 0:
+                print 'planning to destination'
+                res = self.basemanip.MoveToHandPosition(matrices=goals,maxiter=1000,maxtries=1,seedik=4)
+                if res is None:
+                    print 'failed to reach a goal'
+                    continue
+                robot.WaitForController(0)
             
             print 'moving hand down'
             res = self.basemanip.MoveHandStraight(direction=-self.updir,stepsize=0.003,minsteps=1,maxsteps=100)
@@ -246,6 +248,8 @@ def run():
     parser.add_option('--scene',
                       action="store",type='string',dest='scene',default='data/lab1.env.xml',
                       help='Scene file to load (default=%default)')
+    parser.add_option('--nodestinations', action='store_true',dest='nodestinations',default=False,
+                      help='If set, will plan without destinations.')
     (options, args) = parser.parse_args()
 
     env = Environment()
@@ -255,7 +259,7 @@ def run():
         robot = env.GetRobots()[0]
         env.UpdatePublishedBodies()
         time.sleep(0.1) # give time for environment to update
-        self = GraspPlanning(robot,randomize=True)
+        self = GraspPlanning(robot,randomize=True,nodestinations=options.nodestinations)
         self.performGraspPlanning()
     finally:
         env.Destroy()
