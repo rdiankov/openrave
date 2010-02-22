@@ -77,7 +77,7 @@ public:
 
 
     /// optimize the computed path over a number of iterations
-    virtual void _OptimizePath(list<Node*>& path)
+    virtual void _OptimizePath(list<Node*>& path, int numiterations)
     {
         if( path.size() <= 2 )
             return;
@@ -86,7 +86,7 @@ public:
         vector< vector<dReal> > vconfigs;
 
         int nrejected = 0;
-        int i = NUM_OPT_ITERATIONS;
+        int i = numiterations;
         while(i > 0 && nrejected < (int)path.size()+4 ) {
 
             --i;
@@ -115,6 +115,85 @@ public:
                 path.insert(startNode, _treeForward._nodes.at(_treeForward.AddNode(-1,*itc)));
             // splice out in-between nodes in path
             path.erase(startNode, endNode);
+            nrejected = 0;
+
+            if( path.size() <= 2 )
+                return;
+        }
+    }
+
+    virtual void _OptimizePathSingle(list<Node*>& path, int numiterations)
+    {
+        if( path.size() <= 2 )
+            return;
+
+        typename list<Node*>::iterator startNode, prevNode, nextNode, endNode;
+        vector< vector<dReal> > vconfigs;
+        vector<dReal> qprev, qnext;
+        vector<dReal> vdists;
+
+        int nrejected = 0;
+        int i = numiterations;
+        while(i > 0 && nrejected < (int)path.size()+4 ) {
+            --i;
+            
+            // pick a random node on the path, and a random jump ahead
+            int endIndex = 2+(RaveRandomInt()%((int)path.size()-2));
+            int startIndex = RaveRandomInt()%(endIndex-1);
+            int dim = RaveRandomInt()%GetParameters().GetDOF();
+            
+            nrejected++;
+            startNode = path.begin(); advance(startNode, startIndex);
+            endNode = startNode;
+            advance(endNode, endIndex-startIndex);
+            
+            prevNode = startNode;
+            nextNode = prevNode; ++nextNode;
+            vdists.resize(0);
+            vdists.push_back(0);
+            for(int j = 1; j < endIndex-startIndex; ++j,++nextNode) {
+                vdists.push_back(vdists.back()+GetParameters()._distmetricfn((*prevNode)->q,(*nextNode)->q));
+                prevNode = nextNode;
+            }
+
+            if( vdists.back() <= 0 ) {
+                nrejected = 0;
+                ++startNode;
+                path.erase(startNode, endNode);
+                continue;
+            }
+
+            // normalize distances and start checking collision
+            dReal itotaldist = 1.0f/vdists.back();
+
+            // check if the nodes can be connected by a linear interpolation of dim
+            vconfigs.resize(0);
+            prevNode = startNode;
+            nextNode = prevNode; ++nextNode;
+            qprev = (*prevNode)->q;
+            bool bCanConnect = true;
+            for(int j = 1; j < endIndex-startIndex; ++j,++nextNode) {
+                qnext = (*nextNode)->q;
+                qnext[dim] = vdists[j]*itotaldist*((*endNode)->q[dim]-(*startNode)->q[dim])+(*startNode)->q[dim];
+                if (CollisionFunctions::CheckCollision(GetParameters(),_robot,qprev, qnext, OPEN_START, &vconfigs)) {
+                    bCanConnect = false;
+                    break;
+                }
+                qprev = qnext;
+                prevNode = nextNode;
+            }
+
+            if( !bCanConnect ) {
+                if( nrejected++ > (int)path.size()+8 )
+                    break;
+                continue;
+            }
+
+            ++startNode;
+            FOREACHC(itc, vconfigs)
+                path.insert(startNode, _treeForward._nodes.at(_treeForward.AddNode(-1,*itc)));
+            // splice out in-between nodes in path
+            path.erase(startNode, ++endNode);
             nrejected = 0;
 
             if( path.size() <= 2 )
@@ -313,7 +392,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
         if( pOutStream != NULL )
             *pOutStream << goalindex;
 
-        _OptimizePath(vecnodes);
+        _OptimizePath(vecnodes,NUM_OPT_ITERATIONS);
     
         Trajectory::TPOINT pt; pt.q.resize(_parameters.GetDOF());
     
@@ -489,7 +568,7 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
             pforward = _treeForward._nodes.at(pforward->parent);
         }
 
-        _OptimizePath(vecnodes);
+        _OptimizePath(vecnodes,NUM_OPT_ITERATIONS);
     
         BOOST_ASSERT( igoalindex >= 0 );
         if( pOutStream != NULL )

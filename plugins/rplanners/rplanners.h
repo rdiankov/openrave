@@ -126,11 +126,12 @@ class CollisionFunctions
         // first make sure the end is free
         vector<dReal> vlastconfig(params.GetDOF()), vtempconfig(params.GetDOF());
         if (bCheckEnd) {
-            if( pvCheckedConfigurations != NULL )
-                pvCheckedConfigurations->push_back(pQ1);
             params._setstatefn(pQ1);
-            if (robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || robot->CheckSelfCollision() )
+            if (robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || robot->CheckSelfCollision() ) {
+                if( pvCheckedConfigurations != NULL )
+                    pvCheckedConfigurations->push_back(pQ1);
                 return true;
+            }
         }
 
         // compute  the discretization
@@ -174,6 +175,9 @@ class CollisionFunctions
             if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || robot->CheckSelfCollision() )
                 return true;
         }
+
+        if( bCheckEnd && pvCheckedConfigurations != NULL )
+            pvCheckedConfigurations->push_back(pQ1);
 
         return false;
     }
