@@ -20,11 +20,6 @@
 class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
 {
     // ODE joint helper fns
-    static void DummySetParam(dJointID id, int param, dReal)
-    {
-        cerr << "failed to set param to dummy " << dJointGetType(id) << endl;
-    }
-
     static dReal DummyGetParam(dJointID id, int param)
     {
         return 0;
@@ -109,12 +104,6 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
  ODEPhysicsEngine(OpenRAVE::EnvironmentBasePtr penv) : OpenRAVE::PhysicsEngineBase(penv), odespace(new ODESpace(penv, GetPhysicsInfo, true)) {
         _globalfriction = 1.0f;
         _options = OpenRAVE::PEO_SelfCollisions;
-        memset(_jointset, 0, sizeof(_jointset));
-        _jointset[dJointTypeBall] = DummySetParam;
-        _jointset[dJointTypeHinge] = dJointSetHingeParam;
-        _jointset[dJointTypeSlider] = dJointSetSliderParam;
-        _jointset[dJointTypeUniversal] = dJointSetUniversalParam;
-        _jointset[dJointTypeHinge2] = dJointSetHinge2Param;
 
         memset(_jointadd, 0, sizeof(_jointadd));
         _jointadd[dJointTypeBall] = DummyAddForce;
@@ -261,7 +250,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         std::vector<OpenRAVE::dReal>::const_iterator itvel = pJointVelocity.begin();
         odespace->Synchronize(KinBodyConstPtr(pjoint->GetParent()));
         for(int i = 0; i < pjoint->GetDOF(); ++i)
-            _jointset[dJointGetType(joint)](joint, dParamVel + dParamGroup * i, *itvel++);
+            odespace->_jointset[dJointGetType(joint)](joint, dParamVel + dParamGroup * i, *itvel++);
         return true;
     }
 

@@ -20,6 +20,11 @@
 // manages a space of ODE objects
 class ODESpace : public boost::enable_shared_from_this<ODESpace>
 {
+    static void DummySetParam(dJointID id, int param, dReal)
+    {
+        cerr << "failed to set param to dummy " << dJointGetType(id) << endl;
+    }
+
 //    static void AllocateODEResources()
 //    {
 //#ifdef ODE_HAVE_ALLOCATE_DATA_THREAD
@@ -183,6 +188,13 @@ public:
             s_bIsODEInitialized = true;
             dInitODE();
         }
+
+        memset(_jointset, 0, sizeof(_jointset));
+        _jointset[dJointTypeBall] = DummySetParam;
+        _jointset[dJointTypeHinge] = dJointSetHingeParam;
+        _jointset[dJointTypeSlider] = dJointSetSliderParam;
+        _jointset[dJointTypeUniversal] = dJointSetUniversalParam;
+        _jointset[dJointTypeHinge2] = dJointSetHinge2Param;
     }
 
     virtual ~ODESpace() {}
@@ -212,7 +224,7 @@ public:
         pinfo->pbody = pbody;
         pinfo->_odespace = weak_space();
         pinfo->vlinks.reserve(pbody->GetLinks().size());
-        pinfo->vjoints.reserve(pbody->GetJoints().size());
+        pinfo->vjoints.reserve(pbody->GetJoints().size()+pbody->GetPassiveJoints().size());
         dGeomSetData((dGeomID)pinfo->space, &pinfo->pbody); // so that the kinbody can be retreived from the space
         
         pinfo->vlinks.reserve(pbody->GetLinks().size());
@@ -303,8 +315,11 @@ public:
         }
 
         if( _bCreateJoints ) {
-            pinfo->vjoints.reserve(pbody->GetJoints().size());
-            FOREACHC(itjoint, pbody->GetJoints()) {
+            vector<KinBody::JointPtr> vbodyjoints = pbody->GetJoints();
+            vbodyjoints.insert(vbodyjoints.end(),pbody->GetPassiveJoints().begin(),pbody->GetPassiveJoints().end());
+            pinfo->vjoints.reserve(vbodyjoints.size());
+            FOREACHC(itjoint, vbodyjoints) {
+                //bool bPassive = (*itjoint)->GetJointIndex()<0;
                 RaveVector<dReal> anchor = (*itjoint)->GetAnchor();
                 RaveVector<dReal> axis0 = (*itjoint)->GetAxis(0);
                 RaveVector<dReal> axis1 = (*itjoint)->GetAxis(1);
@@ -366,6 +381,23 @@ public:
                     break;
                 default:
                     break;
+                }
+
+                // set the joint limits
+                vector<dReal> vlower, vupper;
+                (*itjoint)->GetLimits(vlower,vupper);
+                for(int i = 0; i < (*itjoint)->GetDOF(); ++i) {
+//                    if( (*itjoint)->GetMimicJointIndex() < 0 && !bPassive )
+//                        // setting this makes every joint add like a motor, which is not desired
+//                        _jointset[dJointGetType(joint)](joint,dParamFMax+dParamGroup*i,(*itjoint)->GetMaxTorque());
+                    if( (*itjoint)->IsCircular() ) {
+                        _jointset[dJointGetType(joint)](joint,dParamLoStop+dParamGroup*i,-dInfinity);
+                        _jointset[dJointGetType(joint)](joint,dParamHiStop+dParamGroup*i,dInfinity);
+                    }
+                    else {
+                        _jointset[dJointGetType(joint)](joint,dParamLoStop+dParamGroup*i,vlower[i]);
+                        _jointset[dJointGetType(joint)](joint,dParamHiStop+dParamGroup*i,vupper[i]);
+                    }
                 }
             
                 pinfo->vjoints.push_back(joint);
@@ -448,8 +480,8 @@ public:
         KinBodyInfoPtr pinfo = boost::static_pointer_cast<KinBodyInfo>(GetInfo(pjoint->GetParent()));
         BOOST_ASSERT( pinfo->pbody == pjoint->GetParent() );
         BOOST_ASSERT( pjoint->GetParent()->GetJointFromDOFIndex(pjoint->GetDOFIndex()) == pjoint );
-        BOOST_ASSERT( pjoint->GetJointIndex() >= 0 && pjoint->GetJointIndex() < (int)pinfo->vjoints.size());
-        return pinfo->vjoints[pjoint->GetJointIndex()];
+        BOOST_ASSERT( pjoint->GetJointIndex() >= 0);
+        return pinfo->vjoints.at(pjoint->GetJointIndex());
     }
 
     dWorldID GetWorld() const { return _ode->world; }
@@ -457,6 +489,9 @@ public:
     dJointGroupID GetContactGroup() const { return _ode->contactgroup; }
 
     void SetSynchornizationCallback(const SynchornizeCallbackFn& synccallback) { _synccallback = synccallback; }
+
+    typedef void (*JointSetFn)(dJointID, int param, dReal val);
+    JointSetFn _jointset[12];
 
 private:
     void Synchronize(KinBodyInfoPtr pinfo)
