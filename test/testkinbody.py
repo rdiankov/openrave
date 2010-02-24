@@ -16,6 +16,7 @@ __license__ = 'Apache License, Version 2.0'
 
 from openravepy import *
 from numpy import *
+from itertools import izip
 
 def RetractionConstraint(self,prev,cur,thresh=1e-4):
     """jacobian gradient descent"""
@@ -136,3 +137,26 @@ def test_geometrychange():
     geom.SetCollisionMesh(KinBody.Link.TriMesh(*generate_box([0,0,0.1],[1,1,0.1])))
     env.Destroy()
 
+def test_fkconsistency():
+    # tests if fk is consistent
+    env = Environment()
+    robot = env.ReadRobotXMLFile('robots/schunk-lwa3-dual.robot.xml')
+    env.AddRobot(robot)
+    lower,upper = robot.GetJointLimits()
+    with robot:
+        T = eye(4)
+        T[0:3,0:3] = rotationMatrixFromAxisAngle(random.rand(3))
+        T[0:3,3] = random.rand(3)-0.5
+        robot.SetTransform(T)
+        while True:
+            values = lower*random.rand(len(lower))+(upper-lower)
+            robot.SetJointValues(values)
+            Tlinks1 = robot.GetBodyTransformations()[:]
+            for iter2 in range(100):
+                robot.SetJointValues(lower+random.rand(len(lower))*(upper-lower))
+            robot.SetJointValues(values)
+            Tlinks2 = robot.GetBodyTransformations()[:]
+            # Tlinks1 and Tlinks2 have to be similar
+            for T1,T2 in izip(Tlinks1,Tlinks2):
+                if not all(T1-T2==0):
+                    print 'error ',values

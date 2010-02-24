@@ -47,7 +47,7 @@ class ConstraintPlanning(metaclass.AutoReloader):
         print 'moving mug without XY rotation'
         while True:
             xyzconstraints = random.permutation(3)[0:2]
-            constraintfreedoms = array([1,1,0,1,1,1])
+            constraintfreedoms = array([1,1,0,1,1,1]) # rotation xyz, translation xyz
             constraintfreedoms[3+xyzconstraints] = 0
             print 'planning with freedoms: ',constraintfreedoms
             Tplane = eye(4)
