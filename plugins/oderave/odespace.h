@@ -384,7 +384,7 @@ public:
                 }
 
                 // set the joint limits
-                vector<dReal> vlower, vupper;
+                vector<OpenRAVE::dReal> vlower, vupper;
                 (*itjoint)->GetLimits(vlower,vupper);
                 for(int i = 0; i < (*itjoint)->GetDOF(); ++i) {
 //                    if( (*itjoint)->GetMimicJointIndex() < 0 && !bPassive )
