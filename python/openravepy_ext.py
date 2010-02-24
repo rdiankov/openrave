@@ -190,8 +190,9 @@ def quatArrayTDist(q,qarray):
     return numpy.arccos(numpy.minimum(1.0,numpy.abs(numpy.dot(qarray,q))))
 
 def transformPoints(T,points):
-    """Transforms a Nx3 array of points by an affine matrix"""
-    return numpy.dot(points,numpy.transpose(T[0:3,0:3]))+numpy.tile(T[0:3,3],(len(points),1))
+    """Transforms a Nxk array of points by an affine matrix"""
+    kminus = T.shape[1]-1
+    return numpy.dot(points,numpy.transpose(T[0:kminus,0:kminus]))+numpy.tile(T[0:kminus,kminus],(len(points),1))
 
 class SpaceSampler(metaclass.AutoReloader):
     def __init__(self):
