@@ -137,6 +137,23 @@ def test_geometrychange():
     geom.SetCollisionMesh(KinBody.Link.TriMesh(*generate_box([0,0,0.1],[1,1,0.1])))
     env.Destroy()
 
+def test_selfcollision():
+    env = Environment()
+    env.SetViewer('qtcoin')
+    env.Load('data/lab1.env.xml')
+    target1 = env.GetKinBody('mug1')
+    target2 = env.GetKinBody('mug2')
+    env.SetDebugLevel(DebugLevel.Verbose)
+    with env:
+        target2.SetTransform(target1.GetTransform())
+        env.CheckCollision(target1)
+        robot = env.GetRobots()[0]
+        robot.Grab(target1)
+        report = CollisionReport()
+        robot.CheckSelfCollision(report)
+        target1.CheckSelfCollision()
+        env.CheckCollision(target1,report)
+
 def test_fkconsistency():
     # tests if fk is consistent
     env = Environment()

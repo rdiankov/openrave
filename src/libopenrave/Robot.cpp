@@ -1711,6 +1711,8 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
     FOREACH(itlink, _veclinks) {
         if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) )
             g.vCollidingLinks.push_back(*itlink);
+        else
+            g.vNonCollidingLinks.push_back(*itlink);
     }
 
     _AttachBody(pbody);
@@ -1741,6 +1743,8 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::
             continue;
         if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) )
             g.vCollidingLinks.push_back(*itlink);
+        else
+            g.vNonCollidingLinks.push_back(*itlink);
     }
 
     _AttachBody(pbody);
@@ -1781,10 +1785,13 @@ void RobotBase::RegrabAll()
         if( !!pbody ) {
             // check collision with all links to see which are valid
             itbody->vCollidingLinks.resize(0);
+            itbody->vNonCollidingLinks.resize(0);
             _RemoveAttachedBody(pbody);
             FOREACH(itlink, _veclinks) {
                 if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) )
                     itbody->vCollidingLinks.push_back(*itlink);
+                else
+                    itbody->vNonCollidingLinks.push_back(*itlink);
             }
             _AttachBody(pbody);
         }
@@ -1852,24 +1859,58 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report) const
         return true;
 
     // check all grabbed bodies with 
-    std::vector<KinBodyConstPtr> dummy;
+    bool bCollision = false;
     FOREACHC(itbody, _vGrabbedBodies) {
         KinBodyPtr pbody(itbody->pbody);
         if( !pbody )
             continue;
-        if( GetEnv()->CheckCollision(KinBodyConstPtr(pbody),dummy,itbody->vCollidingLinks,report) ) {
-            if( !!report ) {
-                RAVELOG_VERBOSEA("Self collision: (%s:%s)x(%s:%s).\n",
-                                 !!report->plink1?report->plink1->GetParent()->GetName().c_str():"",
-                                 !!report->plink1?report->plink1->GetName().c_str():"",
-                                 !!report->plink2?report->plink2->GetParent()->GetName().c_str():"",
-                                 !!report->plink2?report->plink2->GetName().c_str():"");
+        FOREACHC(itrobotlink,itbody->vNonCollidingLinks) {
+            if( GetEnv()->CheckCollision(*itrobotlink,KinBodyConstPtr(pbody),report) ) {
+                bCollision = true;
+                break;
             }
-            return true;
+        }
+        if( bCollision )
+            break;
+
+        if( pbody->CheckSelfCollision(report) ) {
+            bCollision = true;
+            break;
+        }
+
+        // check attached bodies with each other, this is actually tricky since they are attached "with each other", so regular CheckCollision will not work.
+        // Instead, we will compare each of the body's links with every other
+        if( _vGrabbedBodies.size() > 1 ) {
+            FOREACHC(itbody2, _vGrabbedBodies) {
+                KinBodyPtr pbody2(itbody2->pbody);
+                if( pbody != pbody2 )
+                    continue;
+                FOREACHC(itlink, pbody->GetLinks()) {
+                    FOREACHC(itlink2, pbody2->GetLinks()) {
+                        if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(*itlink),KinBody::LinkConstPtr(*itlink2),report) ) {
+                            bCollision = true;
+                            break;
+                        }
+                    }
+                    if( bCollision )
+                        break;
+                }
+                if( bCollision )
+                    break;
+            }
+            if( bCollision )
+                break;
         }
     }
     
-    return false;
+    if( bCollision && !!report ) {
+        RAVELOG_VERBOSEA("Self collision: (%s:%s)x(%s:%s).\n",
+                         !!report->plink1?report->plink1->GetParent()->GetName().c_str():"",
+                         !!report->plink1?report->plink1->GetName().c_str():"",
+                         !!report->plink2?report->plink2->GetParent()->GetName().c_str():"",
+                         !!report->plink2?report->plink2->GetName().c_str():"");
+    }
+    return bCollision;
 }
 
 void RobotBase::SimulationStep(dReal fElapsedTime)
