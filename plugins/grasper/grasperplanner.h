@@ -85,7 +85,7 @@ public:
         }
 
         if( (int)_parameters.vinitialconfig.size() == _robot->GetActiveDOF() )
-            _robot->SetActiveDOFValues(_parameters.vinitialconfig);
+            _robot->SetActiveDOFValues(_parameters.vinitialconfig,true);
 
         Transform tbase = pbase->GetTransform(), trobot = _robot->GetTransform();
         Transform ttorobot = tbase.inverse() * trobot;
@@ -329,11 +329,7 @@ public:
 
         ptemp.trans = _robot->GetTransform();
 
-        bool coarse_pass = true; ///this parameter controls the coarseness of the step    
-        bool bMoved = false;
-
         //close the fingers one by one
-        dReal step_size = 0;
         for(int ifing = 0; ifing < _robot->GetActiveDOF(); ifing++) {
             int nJointIndex = _robot->GetActiveJointIndex(ifing);
             if( vclosingdir[ifing] == 0 || nJointIndex < 0 )
@@ -343,22 +339,21 @@ public:
             dReal fmult = 1;
             if(_robot->GetJoints().at(nJointIndex)->GetType() == KinBody::Joint::JointSlider )
                 fmult = _parameters.ftranslationstepmult;
-            step_size = _parameters.fcoarsestep*fmult;
+            dReal step_size = _parameters.fcoarsestep*fmult;
 
-            coarse_pass = true;
             bool collision = false;
-
-            int num_iters = (int)((vupperlim[ifing] - vlowerlim[ifing])/step_size);
-            bMoved = false;
+            bool coarse_pass = true; ///this parameter controls the coarseness of the step    
+            int num_iters = (int)((vupperlim[ifing] - vlowerlim[ifing])/step_size)+1;
+            bool bMoved = false;
             while(num_iters-- > 0) {
                 // set manip joints that haven't been covered so far
                 UpdateDependents(ifing,dofvals);
 
                 if( (vclosingdir[ifing] > 0 && dofvals[ifing] >  vupperlim[ifing]) || (vclosingdir[ifing] < 0 && dofvals[ifing] < vlowerlim[ifing]) ) {
                     break;
-
                 }
-                _robot->SetActiveDOFValues(dofvals);
+                _robot->SetActiveDOFValues(dofvals,true);
+                _robot->GetActiveDOFValues(dofvals);
             
                 for(int q = 0; q < (int)vlinks.size(); q++) {
                     int ct;
@@ -372,9 +367,9 @@ public:
                             if(bMoved) {
                                 dofvals[ifing] -= vclosingdir[ifing] * step_size;
                                 UpdateDependents(ifing,dofvals);
-                                _robot->SetActiveDOFValues(dofvals);
+                                _robot->SetActiveDOFValues(dofvals,true);
+                                num_iters = (int)(step_size/(_parameters.ffinestep*fmult))+1;
                                 step_size = _parameters.ffinestep*fmult;
-                                num_iters = (int)(_parameters.fcoarsestep/_parameters.ffinestep)+1;
                             }
                             else {
                                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
@@ -389,7 +384,6 @@ public:
                                     // don't want the robot to end up in self collision, so back up
                                     dofvals[ifing] -= vclosingdir[ifing] * step_size;
                                 }
-
                                 ncollided++;
                                 collision = true;
                                 break;
@@ -430,6 +424,9 @@ public:
             }
         }
     
+        // don't forget the final point!
+        for(int j = 0; j < _robot->GetActiveDOF(); j++)
+            ptemp.q[j] = dofvals[j];
         if(!_parameters.breturntrajectory)
             ptraj->AddPoint(ptemp);
 
