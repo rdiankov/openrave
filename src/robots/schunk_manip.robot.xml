@@ -5,5 +5,6 @@
     <effector>gripper_base</effector>
     <joints>jfinger_L</joints>
     <closingdirection>-1</closingdirection>
+    <direction>0 0 1</direction>
   </Manipulator>
 </Robot>

@@ -68,7 +68,7 @@ class GraspingModel(OpenRAVEModel):
     def getfilename(self):
         return os.path.join(OpenRAVEModel.getfilename(self),'graspset.' + self.manip.GetName() + '.' + self.target.GetKinematicsGeometryHash()+'.pp')
 
-    def generate(self,preshapes,standoffs,rolls,approachrays, graspingnoise=None,addSphereNorms=False,updateenv=True,forceclosurethreshold=1e-9):
+    def generate(self,preshapes,standoffs,rolls,approachrays, graspingnoise=None,updateenv=True,forceclosurethreshold=1e-9):
         """all grasp parameters have to be in the bodies's coordinate system (ie: approachrays)"""
         print 'Generating Grasp Set'
         N = approachrays.shape[0]
@@ -168,9 +168,9 @@ class GraspingModel(OpenRAVEModel):
                 manipprob.ReleaseFingers(execute=True)
             self.robot.WaitForController(0)
             preshapes = array([self.robot.GetJointValues()[self.manip.GetGripperJoints()]])
-        self.generate(preshapes=preshapes, rolls = arange(0,2*pi,pi/2), standoffs = array([0,0.025]),
-                      approachrays = self.computeBoxApproachRays(stepsize=0.02),
-                      updateenv=options.useviewer, addSphereNorms=False)
+        self.generate(preshapes=preshapes, rolls = arange(0,2*pi,pi/2), standoffs = array([0,0.025,0.05]),
+                      approachrays = self.computeBoxApproachRays(stepsize=0.02,addSphereNorms=options.spherenorms),
+                      updateenv=options.useviewer)
 
     def autogenerate(self,forcegenerate=True):
         # disable every body but the target and robot
@@ -199,8 +199,7 @@ class GraspingModel(OpenRAVEModel):
                     self.robot.WaitForController(0)
                     preshapes = array([self.robot.GetJointValues()[self.manip.GetGripperJoints()]])
                 self.generate(preshapes=preshapes, rolls = arange(0,2*pi,pi/2), standoffs = array([0,0.025]),
-                              approachrays = self.computeBoxApproachRays(stepsize=0.02),
-                              updateenv=True, addSphereNorms=False)
+                              approachrays = self.computeBoxApproachRays(stepsize=0.02),updateenv=True)
             self.save()
         finally:
             for b in bodies:
@@ -267,7 +266,7 @@ class GraspingModel(OpenRAVEModel):
                         continue
             yield grasp,i
 
-    def computeBoxApproachRays(self,stepsize=0.02):
+    def computeBoxApproachRays(self,stepsize=0.02,addSphereNorms=False):
         with self.target:
             self.target.SetTransform(eye(4))
             ab = self.target.ComputeAABB()
@@ -295,6 +294,11 @@ class GraspingModel(OpenRAVEModel):
                 newinfo = info[collision,:]
                 newinfo[sum(rays[collision,3:6]*newinfo[:,3:6],1)>0,3:6] *= -1
                 approachrays = r_[approachrays,newinfo]
+                if addSphereNorms:
+                    dirs = newinfo[:,0:3]-tile(p,(len(newinfo),1))
+                    L=sqrt(sum(dirs**2,1))
+                    I=flatnonzero(L>1e-8)
+                    approachrays = r_[approachrays,c_[newinfo[I,0:3],dirs[I,:]/transpose(tile(1.0/L[I],(3,1)))]]
             return approachrays
 
     def drawContacts(self,contacts,conelength=0.03,transparency=0.5):
@@ -321,6 +325,8 @@ class GraspingModel(OpenRAVEModel):
                           help='The filename of the target body whose grasp set to be generated (default=%default)')
         parser.add_option('--noviewer', action='store_false', dest='useviewer',default=True,
                           help='If specified, will generate the tables without launching a viewer')
+        parser.add_option('--spherenorms', action='store_true', dest='spherenorms',default=False,
+                          help='If specified, add sphere normals to the computation')
         return parser
     @staticmethod
     def RunFromParser(Model=None,parser=None):
