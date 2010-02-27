@@ -268,13 +268,12 @@ public:
                     }
                     break;
                 default:
+                    RAVELOG_WARNA("ode doesn't support geom type %d\n", itgeom->GetType());
                     break;
                 }
 
-                if( geom == NULL ) {
-                    RAVELOG_WARNA("ode doesn't support geom type %d\n", itgeom->GetType());
+                if( geom == NULL )
                     continue;
-                }
 
                 dGeomID geomtrans = dCreateGeomTransform(pinfo->space);
                 dGeomTransformSetCleanup(geomtrans, 1);
