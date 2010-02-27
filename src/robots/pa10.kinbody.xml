@@ -27,6 +27,7 @@
     <body>link0</body>
     <body>link1</body>
     <axis>0 0 -1</axis>
+    <anchor>0 0 0.315</anchor>
     <lostop>-177</lostop>
     <histop>177</histop>
     <maxvel>1</maxvel>
