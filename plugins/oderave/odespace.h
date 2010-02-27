@@ -248,24 +248,25 @@ public:
                 case KinBody::Link::GEOMPROPERTIES::GeomCylinder:
                     geom = dCreateCylinder(0,itgeom->GetCylinderRadius(),itgeom->GetCylinderHeight());
                     break;
-                case KinBody::Link::GEOMPROPERTIES::GeomTrimesh: {
-                    dTriIndex* pindices = new dTriIndex[itgeom->GetCollisionMesh().indices.size()];
-                    for(size_t i = 0; i < itgeom->GetCollisionMesh().indices.size(); ++i)
-                        pindices[i] = itgeom->GetCollisionMesh().indices[i];
+                case KinBody::Link::GEOMPROPERTIES::GeomTrimesh:
+                    if( itgeom->GetCollisionMesh().indices.size() > 0 ) {
+                        dTriIndex* pindices = new dTriIndex[itgeom->GetCollisionMesh().indices.size()];
+                        for(size_t i = 0; i < itgeom->GetCollisionMesh().indices.size(); ++i)
+                            pindices[i] = itgeom->GetCollisionMesh().indices[i];
+                        
+                        dReal* pvertices = new dReal[4*itgeom->GetCollisionMesh().vertices.size()];
+                        for(size_t i = 0; i < itgeom->GetCollisionMesh().vertices.size(); ++i) {
+                            Vector v = itgeom->GetCollisionMesh().vertices[i];
+                            pvertices[4*i+0] = v.x; pvertices[4*i+1] = v.y; pvertices[4*i+2] = v.z;
+                        }
                 
-                    dReal* pvertices = new dReal[4*itgeom->GetCollisionMesh().vertices.size()];
-                    for(size_t i = 0; i < itgeom->GetCollisionMesh().vertices.size(); ++i) {
-                        Vector v = itgeom->GetCollisionMesh().vertices[i];
-                        pvertices[4*i+0] = v.x; pvertices[4*i+1] = v.y; pvertices[4*i+2] = v.z;
+                        dTriMeshDataID id = dGeomTriMeshDataCreate();
+                        dGeomTriMeshDataBuildSimple(id, pvertices, itgeom->GetCollisionMesh().vertices.size(), pindices,
+                                                    itgeom->GetCollisionMesh().indices.size());
+                        geom = dCreateTriMesh(0, id, NULL, NULL, NULL);
+                        link->listtrimeshinds.push_back(pindices);
                     }
-                
-                    dTriMeshDataID id = dGeomTriMeshDataCreate();
-                    dGeomTriMeshDataBuildSimple(id, pvertices, itgeom->GetCollisionMesh().vertices.size(), pindices,
-                                                itgeom->GetCollisionMesh().indices.size());
-                    geom = dCreateTriMesh(0, id, NULL, NULL, NULL);
-                    link->listtrimeshinds.push_back(pindices);
                     break;
-                }
                 default:
                     break;
                 }
