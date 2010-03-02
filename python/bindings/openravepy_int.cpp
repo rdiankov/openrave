@@ -628,6 +628,13 @@ public:
         _pbody->GetJointValues(values);
         return toPyArray(values);
     }
+    object GetJointVelocities() const
+    {
+        vector<dReal> values;
+        _pbody->GetJointVelocities(values);
+        return toPyArray(values);
+    }
+
     object GetJointLimits() const
     {
         vector<dReal> vlower, vupper;
@@ -3052,6 +3059,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetName",&PyKinBody::GetName)
             .def("GetDOF",&PyKinBody::GetDOF)
             .def("GetJointValues",&PyKinBody::GetJointValues)
+            .def("GetJointVelocities",&PyKinBody::GetJointVelocities)
             .def("GetJointLimits",&PyKinBody::GetJointLimits)
             .def("GetLinks",&PyKinBody::GetLinks)
             .def("GetLink",&PyKinBody::GetLink,args("name"))
