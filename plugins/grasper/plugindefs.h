@@ -186,6 +186,13 @@ class GraspParameters : public PlannerBase::PlannerParameters
         O << "<ftranslationstepmult>" << ftranslationstepmult << "</ftranslationstepmult>" << endl;
         return !!O;
     }
+
+    void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+    {
+        PlannerBase::PlannerParameters::startElement(name,atts);
+        if( name == "vavoidlinkgeometry" )
+            vavoidlinkgeometry.resize(0);
+    }
  
     // called at the end of every XML tag, _ss contains the data 
     virtual bool endElement(const std::string& name)

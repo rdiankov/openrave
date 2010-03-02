@@ -84,7 +84,7 @@ class GraspPlanning(metaclass.AutoReloader):
 
     def getGraspables(self,dests=None):
         graspables = []
-        print 'searching for graspable objects...'
+        print 'searching for graspable objects (robot=%s)...'%(self.robot.GetRobotStructureHash())
         for target in self.envreal.GetBodies():
             if not target.IsRobot():
                 gmodel = grasping.GraspingModel(robot=self.robot,target=target)
@@ -164,7 +164,8 @@ class GraspPlanning(metaclass.AutoReloader):
                                                                                 randomgrasps=True,randomdests=True,switchpatterns=self.switchpatterns)
             istartgrasp = graspindex+1
             Tlocalgrasp[0:3,0:4] = transpose(reshape(gmodel.grasps[graspindex][gmodel.graspindices ['igrasptrans']],(4,3)))
-            print 'initial grasp planning time: ', searchtime
+
+            print 'grasp %d initial planning time: %f'%(graspindex,searchtime)
             robot.WaitForController(0)
 
             print 'moving hand'
@@ -172,6 +173,8 @@ class GraspPlanning(metaclass.AutoReloader):
             with env:
                 res = self.basemanip.MoveHandStraight(direction=dot(manip.GetEndEffectorTransform()[0:3,0:3],manip.GetPalmDirection()),
                                                       ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps-2,maxsteps=expectedsteps+1)
+            robot.WaitForController(0)
+
             if res is None:
                 # use a planner to move the rest of the way
                 with env:
@@ -250,6 +253,8 @@ def run():
                       help='Scene file to load (default=%default)')
     parser.add_option('--nodestinations', action='store_true',dest='nodestinations',default=False,
                       help='If set, will plan without destinations.')
+    parser.add_option('--norandomize', action='store_false',dest='randomize',default=True,
+                      help='If set, will not randomize the bodies and robot position in the scene.')
     (options, args) = parser.parse_args()
 
     env = Environment()
@@ -259,7 +264,7 @@ def run():
         robot = env.GetRobots()[0]
         env.UpdatePublishedBodies()
         time.sleep(0.1) # give time for environment to update
-        self = GraspPlanning(robot,randomize=True,nodestinations=options.nodestinations)
+        self = GraspPlanning(robot,randomize=options.randomize,nodestinations=options.nodestinations)
         self.performGraspPlanning()
     finally:
         env.Destroy()

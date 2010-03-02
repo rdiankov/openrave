@@ -319,7 +319,14 @@ class VisibilityGrasping(metaclass.AutoReloader):
                 v[self.manip.GetGripperJoints()] = self.graspsetdata[0][12:]
                 self.robot.GetController().SetDesired(v)
 
-                trajdata = visualprob.SendCommand('VisualFeedbackGrasping target ' + self.target.GetName() + ' sensorindex 0 convexdata ' + str(self.convexdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.convexdata.flat) + ' graspsetdata ' + str(self.graspsetdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.graspsetdata[:,0:12].flat) + ' maxiter 100 visgraspthresh 0.5 gradientsamples 5 ' + cmdstr)
+                #trajdata = visualprob.SendCommand('VisualFeedbackGrasping target ' + self.target.GetName() + ' sensorindex 0 convexdata ' + str(self.convexdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.convexdata.flat) + ' graspsetdata ' + str(self.graspsetdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.graspsetdata[:,0:12].flat) + ' maxiter 100 visgraspthresh 0.5 gradientsamples 5 ' + cmdstr)
+                movehandcmd = 'MoveToHandPosition matrices %d '%len(self.graspsetdata)
+                for g in self.graspsetdata:
+                    Ttemp = eye(4)
+                    Ttemp[0:3,0:4] = transpose(reshape(g[0:12],(4,3)))
+                    movehandcmd += matrixSerialization(dot(target.GetTransform(),Ttemp)) + ' '
+                movehandcmd += cmdstr
+                trajdata = manipprob.SendCommand(movehandcmd)
                 if trajdata is not None:
                     success = True
                     break

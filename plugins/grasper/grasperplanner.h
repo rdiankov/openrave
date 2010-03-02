@@ -272,8 +272,6 @@ public:
                     if( ct&CT_RegularCollision )
                         break;
                 }
-                if( ct&CT_AvoidLinkHit )
-                    return false;
                 if( ct&CT_RegularCollision )
                     break;
 
@@ -301,6 +299,16 @@ public:
                     if( pY != NULL )  *pY -= v.y;
                     if( pZ != NULL )  *pZ -= v.z;
                     _robot->SetActiveDOFValues(dofvals);
+                }
+            }
+
+            // check that anything that should be avoided is not hit
+            int ct = 0;
+            for(int q = 0; q < (int)vlinks.size(); q++) {
+                ct = CheckCollision(vlinks[q]);
+                if( ct&CT_AvoidLinkHit ) {
+                    RAVELOG_VERBOSEA(str(boost::format("hit link that needed to be avoided %s\n")%vlinks.at(q)->GetName()));
+                    return false;
                 }
             }
         }
@@ -358,8 +366,10 @@ public:
                 for(int q = 0; q < (int)vlinks.size(); q++) {
                     int ct;
                     if(_robot->DoesAffect(_robot->GetActiveJointIndex(ifing),vlinks[q]->GetIndex())  && (ct = CheckCollision(vlinks[q])) != CT_None ) {
-                        if( !coarse_pass && (ct & CT_AvoidLinkHit) )
+                        if( !coarse_pass && (ct & CT_AvoidLinkHit) ) {
+                            RAVELOG_VERBOSEA("hit link that needed to be avoided\n");
                             return false;
+                        }
                         if(coarse_pass) {
                             //coarse step collided, back up and shrink step
                             coarse_pass = false;
@@ -423,12 +433,25 @@ public:
                 bMoved = true;
             }
         }
-    
-        // don't forget the final point!
-        for(int j = 0; j < _robot->GetActiveDOF(); j++)
-            ptemp.q[j] = dofvals[j];
-        if(!_parameters.breturntrajectory)
-            ptraj->AddPoint(ptemp);
+
+        bool bAddLastPoint = true;
+        for(int q = 0; q < (int)vlinks.size(); q++) {
+            int ct = CheckCollision(vlinks[q]);
+            if( ct & CT_AvoidLinkHit )
+                return false;
+            if( ct & CT_SelfCollision ) {
+                bAddLastPoint = false;
+                break;
+            }
+        }
+
+        if( bAddLastPoint ) {
+            // don't forget the final point!
+            for(int j = 0; j < _robot->GetActiveDOF(); j++)
+                ptemp.q[j] = dofvals[j];
+            if(!_parameters.breturntrajectory)
+                ptraj->AddPoint(ptemp);
+        }
 
         return true;
     }

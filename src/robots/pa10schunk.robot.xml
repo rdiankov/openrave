@@ -1,5 +1,18 @@
 <Robot name="PA10">
   <KinBody file="pa10.kinbody.xml">
+    <kinbody>
+      <body name="staticbase" type="static">
+        <geom type="box">
+          <extents>0.001 0.001 0.001</extents>
+        </geom>
+      </body>
+      <joint type="hinge" enable="false">
+        <body>staticbase</body>
+        <body>link0</body>
+        <lostop>0</lostop>
+        <histop>0</histop>
+      </joint>
+    </kinbody>
     <KinBody file="schunk_manip.kinbody.xml"/>
     <Joint name="dummy" type="hinge" enable="false">
       <body>link7</body>

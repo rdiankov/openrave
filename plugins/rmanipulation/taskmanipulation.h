@@ -767,7 +767,8 @@ class TaskManipulation : public ProblemInstance
                 ptrajfinal->AddPoint(*itpoint);
             
             ptrajfinal->CalcTrajTiming(_robot, ptrajfinal->GetInterpMethod(), true, false);
-                
+
+            RAVELOG_DEBUG("grasp index %d\n",goalFound.index);
             sout << goalFound.listDests.size() << " ";
             FOREACH(itdest, goalFound.listDests)
                 sout << *itdest << " ";

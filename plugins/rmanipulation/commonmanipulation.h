@@ -87,8 +87,13 @@ class CM
         if( numsamples <= 0 )
             return 0;
         // quickly prune grasp is end effector is in collision
-        if( pmanip->CheckEndEffectorCollision(tgrasp) ) {
-            RAVELOG_VERBOSEA("sampleiksolutions: gripper in collision\n");
+        CollisionReportPtr report(new COLLISIONREPORT());
+        if( pmanip->CheckEndEffectorCollision(tgrasp,report) ) {
+            RAVELOG_VERBOSEA("sampleiksolutions gripper in collision: (%s:%s)x(%s:%s).\n",
+                             !!report->plink1?report->plink1->GetParent()->GetName().c_str():"",
+                             !!report->plink1?report->plink1->GetName().c_str():"",
+                             !!report->plink2?report->plink2->GetParent()->GetName().c_str():"",
+                             !!report->plink2?report->plink2->GetName().c_str():"");
             return 0;
         }
 
@@ -663,6 +668,13 @@ class GraspParameters : public PlannerBase::PlannerParameters
         return !!O;
     }
  
+    void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+    {
+        PlannerBase::PlannerParameters::startElement(name,atts);
+        if( name == "vavoidlinkgeometry" )
+            vavoidlinkgeometry.resize(0);
+    }
+
     // called at the end of every XML tag, _ss contains the data 
     virtual bool endElement(const std::string& name)
     {

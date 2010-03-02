@@ -71,6 +71,7 @@ class GraspingModel(OpenRAVEModel):
     def generate(self,preshapes,standoffs,rolls,approachrays, graspingnoise=None,updateenv=True,forceclosurethreshold=1e-9):
         """all grasp parameters have to be in the bodies's coordinate system (ie: approachrays)"""
         print 'Generating Grasp Set'
+        time.sleep(0.1) # sleep or otherwise viewer might not load well
         N = approachrays.shape[0]
         Ttarget = self.target.GetTransform()
         # transform each ray into the global coordinate system in order to plot it

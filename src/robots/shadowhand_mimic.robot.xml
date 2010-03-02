@@ -497,6 +497,12 @@
       <maxvel>2</maxvel>
       <resolution>1</resolution>
     </Joint>
+
+    <adjacent>palm Finger0-0</adjacent>
+    <adjacent>palm Finger1-0</adjacent>
+    <adjacent>palm Finger2-0</adjacent>
+    <adjacent>palm Finger3-0</adjacent>
+    <adjacent>palm Finger4-0</adjacent>
   </KinBody>
   <Manipulator name="hand">
     <base>palm</base>
