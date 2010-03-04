@@ -313,6 +313,7 @@ namespace OpenRAVEXMLParser
             GetXMLErrorCount()++;
             GetParseDirectory() = olddir;
             GetFullFilename() = oldfile;
+            RAVELOG_WARN(str(boost::format("could not find file %s\n")%filename));
             return false;
         }
 

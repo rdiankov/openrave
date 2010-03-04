@@ -533,6 +533,7 @@ public:
 
     VisualFeedbackProblem(EnvironmentBasePtr penv) : ProblemInstance(penv)
     {
+        __description = "Visibility Planning - Rosen Diankov";
         _fAssemblySpeed = 0;
         RegisterCommand("ProcessVisibilityExtents",boost::bind(&VisualFeedbackProblem::ProcessVisibilityExtents,this,_1,_2),
                         "Processes the visibility directions for containment of the object inside the gripper mask");

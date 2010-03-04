@@ -716,6 +716,7 @@ public:
 
 public:
  TaskCagingProblem(EnvironmentBasePtr penv) : ProblemInstance(penv) {
+        __description = "Task Caging Problem - Rosen Diankov";
         RegisterCommand("graspset",boost::bind(&TaskCagingProblem::GraspSet, this, _1, _2),
                         "Creates a grasp set given a robot end-effector floating in space.\n"
                         "Options: step exploreprob size target targetjoint contactconfigdelta cagedconfig");

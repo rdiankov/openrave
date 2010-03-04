@@ -21,6 +21,7 @@ class BaseManipulation : public ProblemInstance
 {
 public:
  BaseManipulation(EnvironmentBasePtr penv) : ProblemInstance(penv) {
+        __description = "Base Manipulation Problem - Rosen Diankov";
         RegisterCommand("SetActiveManip",boost::bind(&BaseManipulation::SetActiveManip,this,_1,_2),
                         "Set the active manipulator");
         RegisterCommand("Traj",boost::bind(&BaseManipulation::Traj,this,_1,_2),
