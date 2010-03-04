@@ -92,6 +92,7 @@ protected:
     virtual void* drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture) = 0;
     
     virtual void* drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color) = 0;
+    virtual void* drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors) = 0;
 
     virtual void closegraph(void* handle) = 0;
     virtual void deselect() = 0;

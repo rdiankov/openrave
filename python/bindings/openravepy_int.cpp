@@ -2595,16 +2595,14 @@ public:
         if( ocolors != object() ) {
             object shape = ocolors.attr("shape");
             if( len(shape) == 1 )
-                vcolor = ExtractVector34(ocolors,1.0f);
+                return object(PyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,ExtractVector34(ocolors,1.0f))));
             else {
-                vector<float> vcolors = ExtractArray<float>(ocolors.attr("flat"));
-                if( vcolors.size() != vpoints.size() )
-                    throw openrave_exception("colors needs to be Nx3 matrix (same size as points)");
-                vcolor = RaveVector<float>(vcolors[0],vcolors[1],vcolors[2],1);
+                BOOST_ASSERT(extract<size_t>(shape[0])==vpoints.size()/3);
+                return object(PyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,extract<boost::multi_array<float,2> >(ocolors))));
             }
         }
         
-        return object(PyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,vcolor)));
+        return object(PyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,RaveVector<float>(1,0.5,0.5,1))));
     }
 
     void SetCamera(object transform) { _penv->SetCamera(ExtractTransform(transform)); }

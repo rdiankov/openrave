@@ -126,6 +126,7 @@ public:
     virtual void* drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents);
     virtual void* drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture);
     virtual void* drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color);
+    virtual void* drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors);
     virtual void closegraph(void* handle);
 
     virtual void SetEnvironmentSync(bool bUpdate);
@@ -243,10 +244,14 @@ protected:
     virtual void* _drawbox(SoSeparator* pparent, const RaveVector<float>& vpos, const RaveVector<float>& vextents);
     virtual void* _drawplane(SoSeparator* pparent, const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture);
     virtual void* _drawtrimesh(SoSeparator* pparent, const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color);
+    virtual void* _drawtrimesh(SoSeparator* pparent, const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors);
 
     virtual void _closegraph(void* handle);
     virtual void _deselect();
 
+    virtual void _SetMaterial(SoSeparator*, const RaveVector<float>& color);
+    virtual void _SetMaterial(SoSeparator*, const boost::multi_array<float,2>& colors);
+    virtual void _SetTriangleMesh(SoSeparator* pparent, const float* ppoints, int stride, const int* pIndices, int numTriangles);
     virtual void _Reset();
     virtual void _SetBkgndColor(const RaveVector<float>& color);
 
@@ -397,6 +402,7 @@ protected:
     friend class DrawBoxMessage;
     friend class DrawPlaneMessage;
     friend class DrawTriMeshMessage;
+    friend class DrawTriMeshColorMessage;
     friend class CloseGraphMessage;
     friend class DeselectMessage;
     friend class ResetMessage;

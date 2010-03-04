@@ -811,34 +811,71 @@ public:
                 _vpoints[3*i+2] = p[2];
             }
         }
-
-        _bManyColors = false;
     }
     
     virtual void viewerexecute() {
-        void* ret;
-        //if( _bManyColors )
-        ret = _pviewer->_drawtrimesh(_pparent, &_vpoints[0], 3*sizeof(float), NULL, _vpoints.size()/9,_color);
-        //else
-        //ret = _pviewer->_drawtrimesh(_pparent, &_vpoints[0], _numPoints, _stride, _fwidth, _color, _drawstyle);
-        
+        void* ret = _pviewer->_drawtrimesh(_pparent, &_vpoints[0], 3*sizeof(float), NULL, _vpoints.size()/9,_color);
         BOOST_ASSERT( _pparent == ret);
         EnvMessage::viewerexecute();
     }
     
 private:
     vector<float> _vpoints;
-    const RaveVector<float> _color;
-    vector<float> _vcolors;
+    RaveVector<float> _color;
     SoSeparator* _pparent;
-
-    bool _bManyColors;
 };
+
+class DrawTriMeshColorMessage : public QtCoinViewer::EnvMessage
+{
+public:
+    DrawTriMeshColorMessage(QtCoinViewerPtr pviewer, SoSeparator* pparent, const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors)
+        : EnvMessage(pviewer, NULL, false), _colors(colors), _pparent(pparent)
+    {
+        _vpoints.resize(3*3*numTriangles);
+        if( pIndices == NULL ) {
+            for(int i = 0; i < 3*numTriangles; ++i) {
+                _vpoints[3*i+0] = ppoints[0];
+                _vpoints[3*i+1] = ppoints[1];
+                _vpoints[3*i+2] = ppoints[2];
+                ppoints = (float*)((char*)ppoints + stride);
+            }
+        }
+        else {
+            for(int i = 0; i < numTriangles*3; ++i) {
+                float* p = (float*)((char*)ppoints +  stride * pIndices[i]);
+                _vpoints[3*i+0] = p[0];
+                _vpoints[3*i+1] = p[1];
+                _vpoints[3*i+2] = p[2];
+            }
+        }
+    }
+    
+    virtual void viewerexecute() {
+        void* ret = _pviewer->_drawtrimesh(_pparent, &_vpoints[0], 3*sizeof(float), NULL, _vpoints.size()/9,_colors);
+        BOOST_ASSERT( _pparent == ret);
+        EnvMessage::viewerexecute();
+    }
+    
+private:
+    vector<float> _vpoints;
+    boost::multi_array<float,2> _colors;
+    SoSeparator* _pparent;
+};
+
 
 void* QtCoinViewer::drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color)
 {
     void* pret = new SoSeparator();
     EnvMessagePtr pmsg(new DrawTriMeshMessage(shared_viewer(), (SoSeparator*)pret, ppoints, stride, pIndices, numTriangles, color));
+    pmsg->callerexecute();
+
+    return pret;
+}
+
+void* QtCoinViewer::drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors)
+{
+    void* pret = new SoSeparator();
+    EnvMessagePtr pmsg(new DrawTriMeshColorMessage(shared_viewer(), (SoSeparator*)pret, ppoints, stride, pIndices, numTriangles, colors));
     pmsg->callerexecute();
 
     return pret;
@@ -1168,20 +1205,7 @@ void* QtCoinViewer::_drawspheres(SoSeparator* pparent, const float* ppoints, int
         
         psep->addChild(ptrans);
         pparent->addChild(psep);
-        
-        // set a diffuse color
-        SoMaterial* mtrl = new SoMaterial;
-        mtrl->diffuseColor = SbColor(color.x, color.y, color.z);
-        mtrl->ambientColor = SbColor(0,0,0);
-        mtrl->transparency = max(0.0f,1-color.w);
-        mtrl->setOverride(true);
-        psep->addChild(mtrl);
-        
-        if( color.w < 1.0f ) {
-            SoTransparencyType* ptype = new SoTransparencyType();
-            ptype->value = SoGLRenderAction::SORTED_OBJECT_SORTED_TRIANGLE_BLEND;
-            pparent->addChild(ptype);
-        }
+        _SetMaterial(psep,color);
 
         SoSphere* c = new SoSphere();
         c->radius = fPointSize;
@@ -1240,11 +1264,7 @@ void* QtCoinViewer::_drawlinestrip(SoSeparator* pparent, const float* ppoints, i
     if( pparent == NULL || numPoints < 2 || ppoints == NULL )
         return pparent;
 
-    SoMaterial* mtrl = new SoMaterial;
-    mtrl->diffuseColor = SbColor(color.x, color.y, color.z);
-    mtrl->ambientColor = SbColor(0,0,0);
-    mtrl->setOverride(true);
-    pparent->addChild(mtrl);
+    _SetMaterial(pparent,color);
     
     vector<float> mypoints((numPoints-1)*6);
     float* next;
@@ -1341,11 +1361,7 @@ void* QtCoinViewer::_drawlinelist(SoSeparator* pparent, const float* ppoints, in
     if( pparent == NULL || numPoints < 2 || ppoints == NULL )
         return pparent;
 
-    SoMaterial* mtrl = new SoMaterial;
-    mtrl->diffuseColor = SbColor(color.x, color.y, color.z);
-    mtrl->ambientColor = SbColor(0,0,0);
-    mtrl->setOverride(true);
-    pparent->addChild(mtrl);
+    _SetMaterial(pparent,color);
     
     vector<float> mypoints(numPoints*3);
     for(int i = 0; i < numPoints; ++i) {
@@ -1379,14 +1395,7 @@ void* QtCoinViewer::_drawlinelist(SoSeparator* pparent, const float* ppoints, in
     if( pparent == NULL || numPoints < 2 || ppoints == NULL )
         return pparent;
 
-    SoMaterial* mtrl = new SoMaterial;
-    mtrl->diffuseColor.setValues(0, numPoints, (float(*)[3])colors);
-    mtrl->setOverride(true);
-    pparent->addChild(mtrl);
-
-    SoMaterialBinding* pbinding = new SoMaterialBinding();
-    pbinding->value = SoMaterialBinding::PER_VERTEX;
-    pparent->addChild(pbinding);
+    _SetMaterial(pparent,colors);
 
     vector<float> mypoints(numPoints*3);
     for(int i = 0; i < numPoints; ++i) {
@@ -1461,11 +1470,7 @@ void* QtCoinViewer::_drawarrow(SoSeparator* pparent, const RaveVector<float>& p1
     pparent->addChild(psep);
 
     // set a diffuse color
-    SoMaterial* mtrl = new SoMaterial;
-    mtrl->diffuseColor = SbColor(color.x, color.y, color.z);
-    mtrl->ambientColor = SbColor(0,0,0);
-    mtrl->setOverride(true);
-    psep->addChild(mtrl);
+    _SetMaterial(pparent, color);
 
     SoCylinder* c = new SoCylinder();
     c->radius = fwidth;
@@ -1488,11 +1493,8 @@ void* QtCoinViewer::_drawarrow(SoSeparator* pparent, const RaveVector<float>& p1
     linetranslation = p2 - coneheight/2.0f*direction;
     ptrans->translation.setValue(linetranslation.x, linetranslation.y, linetranslation.z);
 
-
-
     psep = new SoSeparator();
 
-    psep->addChild(mtrl);
     psep->addChild(ptrans);
     psep->addChild(cn);
 
@@ -1583,11 +1585,8 @@ void* QtCoinViewer::_drawplane(SoSeparator* pparent, const RaveTransform<float>&
     return pparent;
 }
 
-void* QtCoinViewer::_drawtrimesh(SoSeparator* pparent, const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color)
+void QtCoinViewer::_SetMaterial(SoSeparator* pparent, const RaveVector<float>& color)
 {
-    if( pparent == NULL || ppoints == NULL || numTriangles <= 0 )
-        return pparent;
-
     SoMaterial* mtrl = new SoMaterial;
     mtrl->diffuseColor = SbColor(color.x, color.y, color.z);
     mtrl->ambientColor = SbColor(0,0,0);
@@ -1604,7 +1603,56 @@ void* QtCoinViewer::_drawtrimesh(SoSeparator* pparent, const float* ppoints, int
         ptype->value = SoGLRenderAction::SORTED_OBJECT_SORTED_TRIANGLE_BLEND;
         pparent->addChild(ptype);
     }
+}
 
+void QtCoinViewer::_SetMaterial(SoSeparator* pparent, const boost::multi_array<float,2>& colors)
+{
+    if( colors.size() == 0 )
+        return;
+    SoMaterial* mtrl = new SoMaterial;
+    mtrl->ambientColor = SbColor(0,0,0);
+    vector<float> vcolors(colors.shape()[0]*3);
+    switch(colors.shape()[1]) {
+    case 1:
+        for(size_t i = 0; i < colors.shape()[0]; ++i) {
+            vcolors[3*i+0] = colors[i][0];
+            vcolors[3*i+1] = colors[i][0];
+            vcolors[3*i+2] = colors[i][0];
+        }
+        break;
+    case 4:
+        for(size_t i = 0; i < colors.shape()[0]; ++i)
+            vcolors[i] = 1.0f-colors[i][3];
+        mtrl->transparency.setValues(0,colors.shape()[0],&vcolors[0]);
+    case 3:
+        for(size_t i = 0; i < colors.shape()[0]; ++i) {
+            vcolors[3*i+0] = colors[i][0];
+            vcolors[3*i+1] = colors[i][1];
+            vcolors[3*i+2] = colors[i][2];
+        }
+        break;
+    default:
+        RAVELOG_WARN(str(boost::format("unsupported color dimension %d\n")%colors.shape()[1]));
+        return;
+    }
+
+    mtrl->diffuseColor.setValues(0, colors.shape()[0], (float(*)[3])&vcolors[0]);
+    mtrl->setOverride(true);
+    pparent->addChild(mtrl);
+
+    SoMaterialBinding* pbinding = new SoMaterialBinding();
+    pbinding->value = SoMaterialBinding::PER_VERTEX;
+    pparent->addChild(pbinding);
+
+    if( colors.shape()[1] == 4 ) {
+        SoTransparencyType* ptype = new SoTransparencyType();
+        ptype->value = SoGLRenderAction::SORTED_OBJECT_SORTED_TRIANGLE_BLEND;
+        pparent->addChild(ptype);
+    }
+}
+
+void QtCoinViewer::_SetTriangleMesh(SoSeparator* pparent, const float* ppoints, int stride, const int* pIndices, int numTriangles)
+{
     SoCoordinate3* vprop = new SoCoordinate3();
     
     if( pIndices != NULL ) {
@@ -1639,7 +1687,24 @@ void* QtCoinViewer::_drawtrimesh(SoSeparator* pparent, const float* ppoints, int
     //faceset->generateDefaultNormals(SoShape, SoNormalCache);
 
     pparent->addChild(faceset);
+}
 
+void* QtCoinViewer::_drawtrimesh(SoSeparator* pparent, const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color)
+{
+    if( pparent == NULL || ppoints == NULL || numTriangles <= 0 )
+        return pparent;
+    _SetMaterial(pparent,color);
+    _SetTriangleMesh(pparent, ppoints,stride,pIndices,numTriangles);
+    _pFigureRoot->addChild(pparent);
+    return pparent;
+}
+
+void* QtCoinViewer::_drawtrimesh(SoSeparator* pparent, const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors)
+{
+    if( pparent == NULL || ppoints == NULL || numTriangles <= 0 )
+        return pparent;
+    _SetMaterial(pparent, colors);
+    _SetTriangleMesh(pparent, ppoints,stride,pIndices,numTriangles);
     _pFigureRoot->addChild(pparent);
     return pparent;
 }

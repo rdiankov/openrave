@@ -987,6 +987,10 @@ class Environment : public EnvironmentBase
     {
         return GraphHandlePtr(_pCurrentViewer->drawtrimesh(ppoints, stride, pIndices, numTriangles, color), GRAPH_DELETER);
     }
+    virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors)
+    {
+        return GraphHandlePtr(_pCurrentViewer->drawtrimesh(ppoints, stride, pIndices, numTriangles, colors), GRAPH_DELETER);
+    }
     virtual void _CloseGraphCallback(RaveViewerBaseWeakPtr wviewer, void* handle)
     {
         RaveViewerBasePtr viewer = wviewer.lock();
@@ -1394,6 +1398,7 @@ protected:
         virtual void* drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture) { return NULL; }
 
         virtual void* drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color) { return NULL; }
+        virtual void* drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors) { return NULL; }
 
         virtual void closegraph(void* handle) {}
         virtual void deselect() {}
