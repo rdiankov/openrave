@@ -52,7 +52,7 @@ public:
         _bVelocityMode = false;
     }
 
-    virtual bool SetDesired(const std::vector<dReal>& values) {
+    virtual bool SetDesired(const std::vector<OpenRAVE::dReal>& values) {
         Reset(0);
         return false;
     }
@@ -60,9 +60,9 @@ public:
         Reset(0);
         return false;
     }
-    virtual bool SimulationStep(dReal fTimeElapsed) { return false; }
+    virtual bool SimulationStep(OpenRAVE::dReal fTimeElapsed) { return false; }
     virtual bool IsDone() { return !_bVelocityMode; }
-    virtual dReal GetTime() const { return 0; }
+    virtual OpenRAVE::dReal GetTime() const { return 0; }
     virtual RobotBasePtr GetRobot() const { return _probot; }
 
     virtual ODESpace::KinBodyInfoPtr GetODESpace() {
@@ -78,7 +78,7 @@ public:
         std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
         if( cmd == "setvelocity" ) {
-            vector<dReal> velocities(_probot->GetDOF());
+            vector<OpenRAVE::dReal> velocities(_probot->GetDOF());
             for(size_t i = 0; i < velocities.size(); ++i) {
                 is >> velocities[i];
                 if( !is )
