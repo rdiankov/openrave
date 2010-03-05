@@ -16,6 +16,7 @@
 
 #include "odecollision.h"
 #include "odephysics.h"
+#include "odecontroller.h"
 
 static list< boost::shared_ptr<void> > s_listRegisteredReaders;
 RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(PluginType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv)
@@ -45,6 +46,10 @@ RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(PluginType type, const std::str
         if( interfacename == "ode" )
             return InterfaceBasePtr(new ODEPhysicsEngine(penv));
         break;
+    case OpenRAVE::PT_Controller:
+        if( interfacename == "odevelocity")
+            return InterfaceBasePtr(new ODEVelocityController(penv));
+        break;
     default:
         break;
     }
@@ -63,6 +68,7 @@ RAVE_PLUGIN_API bool GetPluginAttributes(PLUGININFO* pinfo, int size)
     // fill pinfo
     pinfo->interfacenames[OpenRAVE::PT_CollisionChecker].push_back("ode");
     pinfo->interfacenames[OpenRAVE::PT_PhysicsEngine].push_back("ode");
+    pinfo->interfacenames[OpenRAVE::PT_Controller].push_back("odevelocity");
     return true;
 }
 

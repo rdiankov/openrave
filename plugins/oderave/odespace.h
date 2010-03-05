@@ -317,7 +317,6 @@ public:
         if( _bCreateJoints ) {
             vector<KinBody::JointPtr> vbodyjoints = pbody->GetJoints();
             vbodyjoints.insert(vbodyjoints.end(),pbody->GetPassiveJoints().begin(),pbody->GetPassiveJoints().end());
-            pinfo->vjoints.reserve(vbodyjoints.size());
             FOREACHC(itjoint, vbodyjoints) {
                 //bool bPassive = (*itjoint)->GetJointIndex()<0;
                 RaveVector<dReal> anchor = (*itjoint)->GetAnchor();
