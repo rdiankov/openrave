@@ -26,7 +26,10 @@
     <axis>0 0 -1</axis>
     <lostop>-180</lostop>
     <histop>180</histop>
-    <resolution>1</resolution>
+    <resolution>0.5</resolution>
+    <maxvel>0.43808</maxvel>
+    <maxaccel>1.7541</maxaccel>
+    <maxtorque>216</maxtorque>
   </Joint>
 
   <Body name="link2" type="dynamic">
@@ -46,7 +49,10 @@
     <axis>0 0 -1</axis>
     <lostop>-130</lostop>
     <histop>130</histop>
-    <resolution>1</resolution>
+    <resolution>0.5</resolution>
+    <maxvel>0.58469</maxvel>
+    <maxaccel>2.3405</maxaccel>
+    <maxtorque>200.1</maxtorque>
   </Joint>
 
   <Body name="link3" type="dynamic">
@@ -67,6 +73,9 @@
     <lostop>-160</lostop>
     <histop>160</histop>
     <resolution>1</resolution>
+    <maxvel>0.41888</maxvel>
+    <maxaccel>1.6598</maxaccel>
+    <maxtorque>81.5</maxtorque>
   </Joint>
 
   <Body name="link4" type="dynamic">
@@ -87,6 +96,9 @@
     <lostop>-130</lostop>
     <histop>130</histop>
     <resolution>1</resolution>
+    <maxvel>0.55851</maxvel>
+    <maxaccel>2.2323</maxaccel>
+    <maxtorque>61.1</maxtorque>
   </Joint>
 
   <Body name="link5" type="dynamic">
@@ -107,6 +119,9 @@
     <lostop>-160</lostop>
     <histop>160</histop>
     <resolution>1</resolution>
+    <maxvel>0.47473</maxvel>
+    <maxaccel>1.8972</maxaccel>
+    <maxtorque>20.7</maxtorque>
   </Joint>
 
   <Body name="link6" type="dynamic">
@@ -127,6 +142,9 @@
     <lostop>-130</lostop>
     <histop>130</histop>
     <resolution>1</resolution>
+    <maxvel>0.87266</maxvel>
+    <maxaccel>3.4907</maxaccel>
+    <maxtorque>4.5</maxtorque>
   </Joint>
 
   <Body name="link7" type="dynamic">
@@ -148,5 +166,8 @@
     <lostop>-160</lostop>
     <histop>160</histop>
     <resolution>1</resolution>
+    <maxvel>0.87266</maxvel>
+    <maxaccel>3.4907</maxaccel>
+    <maxtorque>4.5</maxtorque>
   </Joint>
 </KinBody>
