@@ -46,7 +46,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
  CollisionCheckerPQP(EnvironmentBasePtr penv) : CollisionCheckerBase(penv)
     {
         _rel_err = 200.0; //temporary change
-        _abs_err = 0.2;   //temporary change
+        _abs_err = 0.001;   //temporary change
         _tolerance = 0.0;
     
         //enable or disable various features
