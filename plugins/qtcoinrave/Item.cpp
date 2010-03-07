@@ -296,7 +296,7 @@ bool KinBodyItem::UpdateFromIv()
         ++ittrans;
     }
     
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer->LockEnvironment();
+    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer->LockEnvironment(50000,false);
     if( !!lockenv )
         _pchain->SetBodyTransformations(vtrans);
     else
@@ -323,7 +323,7 @@ bool KinBodyItem::UpdateFromModel()
     vector<dReal> vjointvalues;
 
     {
-        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer->LockEnvironment();
+        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer->LockEnvironment(50000,false);
         if( !lockenv )
             return false;
 

@@ -2180,7 +2180,7 @@ void QtCoinViewer::_deselect()
     }
 }
 
-boost::shared_ptr<EnvironmentMutex::scoped_try_lock> QtCoinViewer::LockEnvironment(uint64_t timeout)
+boost::shared_ptr<EnvironmentMutex::scoped_try_lock> QtCoinViewer::LockEnvironment(uint64_t timeout,bool bUpdateEnvironment)
 {
     // try to acquire the lock
 #if BOOST_VERSION >= 103500
@@ -2193,7 +2193,8 @@ boost::shared_ptr<EnvironmentMutex::scoped_try_lock> QtCoinViewer::LockEnvironme
         lockenv->try_lock();
         if( !!*lockenv )
             break;
-        _UpdateEnvironment();
+        if( bUpdateEnvironment )
+            _UpdateEnvironment();
     }
 
     if( !*lockenv )

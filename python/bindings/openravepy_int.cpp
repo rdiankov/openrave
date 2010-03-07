@@ -884,9 +884,11 @@ public:
         {
             pos = toPyVector3(c.pos);
             norm = toPyVector3(c.norm);
+            depth = c.depth;
         }
 
         object pos, norm;
+        dReal depth;
     };
 
     void init(PyEnvironmentBasePtr pyenv)
@@ -3203,6 +3205,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
     class_<PyCollisionReport::PYCONTACT, boost::shared_ptr<PyCollisionReport::PYCONTACT> >("Contact")
         .def_readwrite("pos",&PyCollisionReport::PYCONTACT::pos)
         .def_readwrite("norm",&PyCollisionReport::PYCONTACT::norm)
+        .def_readwrite("depth",&PyCollisionReport::PYCONTACT::depth)
         ;
     class_<PyCollisionReport, boost::shared_ptr<PyCollisionReport> >("CollisionReport")
         .def_readwrite("options",&PyCollisionReport::options)

@@ -150,7 +150,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
     virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report)
     {
         if(!!report)
-            report->Reset();
+            report->Reset(_options);
         std::vector<KinBodyConstPtr> vexcluded;
         vexcluded.push_back(pbody1);
         return CheckCollision(pbody1,vexcluded,std::vector<KinBody::LinkConstPtr>(),report);
@@ -159,7 +159,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
     virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report)
     {
         if(!!report)
-            report->Reset();
+            report->Reset(_options);
 
         std::set<KinBodyPtr> s1, s2;
         pbody1->GetAttached(s1);
@@ -182,7 +182,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
     virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report)
     {
         if(!!report)
-            report->Reset();
+            report->Reset(_options);
     
         PQP_REAL R1[3][3], R2[3][3], T1[3], T2[3];
         GetPQPTransformFromTransform(plink1->GetTransform(),R1,T1);
@@ -193,7 +193,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         if(!!report )
-            report->Reset();
+            report->Reset(_options);
         if( pbody->IsAttached(plink->GetParent()) )
             return false;
         std::set<KinBodyPtr> setattached;
@@ -209,7 +209,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
     {
         if(!!report)
-            report->Reset();
+            report->Reset(_options);
     
         int tmpnumcols = 0;
         int tmpnumwithintol = 0;
@@ -281,7 +281,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
     virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
     {
         if(!!report )
-            report->Reset();
+            report->Reset(_options);
 
         std::set<KinBodyPtr> vattached;
         pbody->GetAttached(vattached);
@@ -296,19 +296,19 @@ class CollisionCheckerPQP : public CollisionCheckerBase
     virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr())
     {
         if(!!report )
-            report->Reset();
+            report->Reset(_options);
         throw openrave_exception("PQP collision checker does not support ray collision queries\n");
     }
     virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
     {
         if(!!report )
-            report->Reset();
+            report->Reset(_options);
         throw openrave_exception("PQP collision checker does not support ray collision queries\n");
     }
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report = CollisionReportPtr())
     {
         if(!!report )
-            report->Reset();
+            report->Reset(_options);
         throw openrave_exception("PQP collision checker does not support ray collision queries\n");
     }
     virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
@@ -317,7 +317,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
             return false;
 
         if(!!report )
-            report->Reset();
+            report->Reset(_options);
 
         // check collision, ignore adjacent bodies
         FOREACHC(itset, pbody->GetNonAdjacentLinks()) {
@@ -453,21 +453,11 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         return success;
     }
 
-    void PQPRealToVector(const Vector& in, const PQP_REAL R[3][3], const PQP_REAL T[3], Vector& out)
+    Vector PQPRealToVector(const Vector& in, const PQP_REAL R[3][3], const PQP_REAL T[3])
     {
-    
-        tmtemp.m[0] = (dReal)R[0][0]; tmtemp.m[1] = (dReal)R[0][1]; tmtemp.m[2] = (dReal)R[0][2];
-        tmtemp.m[4] = (dReal)R[1][0]; tmtemp.m[5] = (dReal)R[1][1]; tmtemp.m[6] = (dReal)R[1][2];
-        tmtemp.m[8] = (dReal)R[2][0]; tmtemp.m[9] = (dReal)R[2][1]; tmtemp.m[10] = (dReal)R[2][2];
-    
-        out.x = in.x;
-        out.y = in.y;
-        out.z = in.z;
-    
-        out = tmtemp*out;
-        out.x = out.x + (dReal)T[0];
-        out.y = out.y + (dReal)T[1];
-        out.z = out.z + (dReal)T[2];
+        return Vector(in.x*R[0][0]+in.y*R[0][1]+in.z*R[0][2]+T[0],
+                      in.x*R[1][0]+in.y*R[1][1]+in.z*R[1][2]+T[1],
+                      in.x*R[2][0]+in.y*R[2][1]+in.z*R[2][2]+T[2]);
     }
 
     bool DoPQP(KinBody::LinkConstPtr link1, PQP_REAL R1[3][3], PQP_REAL T1[3], KinBody::LinkConstPtr link2, PQP_REAL R2[3][3], PQP_REAL T2[3], CollisionReportPtr report)
@@ -504,13 +494,13 @@ class CollisionCheckerPQP : public CollisionCheckerBase
             
                 for(int i = 0; i < colres.NumPairs(); i++) {
                 
-                    PQPRealToVector(link1->GetCollisionData().vertices[link1->GetCollisionData().indices[colres.Id1(i)*3]],R1,T1,u1);
-                    PQPRealToVector(link1->GetCollisionData().vertices[link1->GetCollisionData().indices[colres.Id1(i)*3+1]],R1,T1,u2);
-                    PQPRealToVector(link1->GetCollisionData().vertices[link1->GetCollisionData().indices[colres.Id1(i)*3+2]],R1,T1,u3);
+                    u1 = PQPRealToVector(link1->GetCollisionData().vertices[link1->GetCollisionData().indices[colres.Id1(i)*3]],R1,T1);
+                    u2 = PQPRealToVector(link1->GetCollisionData().vertices[link1->GetCollisionData().indices[colres.Id1(i)*3+1]],R1,T1);
+                    u3 = PQPRealToVector(link1->GetCollisionData().vertices[link1->GetCollisionData().indices[colres.Id1(i)*3+2]],R1,T1);
                 
-                    PQPRealToVector(link2->GetCollisionData().vertices[link2->GetCollisionData().indices[colres.Id2(i)*3]],R2,T2,v1);
-                    PQPRealToVector(link2->GetCollisionData().vertices[link2->GetCollisionData().indices[colres.Id2(i)*3+1]],R2,T2,v2);
-                    PQPRealToVector(link2->GetCollisionData().vertices[link2->GetCollisionData().indices[colres.Id2(i)*3+2]],R2,T2,v3);
+                    v1=PQPRealToVector(link2->GetCollisionData().vertices[link2->GetCollisionData().indices[colres.Id2(i)*3]],R2,T2);
+                    v2=PQPRealToVector(link2->GetCollisionData().vertices[link2->GetCollisionData().indices[colres.Id2(i)*3+1]],R2,T2);
+                    v3=PQPRealToVector(link2->GetCollisionData().vertices[link2->GetCollisionData().indices[colres.Id2(i)*3+2]],R2,T2);
                 
                     if(TriTriCollision(u1,u2,u3,v1,v2,v3,contactpos,contactnorm)) {
                         report->contacts.push_back(COLLISIONREPORT::CONTACT(contactpos,contactnorm,0.));
@@ -524,7 +514,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
                     FOREACHC(itfn, listcallbacks) {
                         OpenRAVE::CollisionAction action = (*itfn)(report,false);
                         if( action != OpenRAVE::CA_DefaultAction ) {
-                            report->Reset();
+                            report->Reset(_options);
                             return false;
                         }
                     }
@@ -534,18 +524,30 @@ class CollisionCheckerPQP : public CollisionCheckerBase
     
         // distance
         if(_benabledis) {
-            if(!report) {
-                RAVELOG_WARNA("CollisionCheckerPQP::DoPQP - ERROR: YOU MUST PASS IN A COLLISIONREPORT STRUCT TO MEASURE DISTANCE!\n");
-                return false;
-            }
+            if(!report)
+                throw openrave_exception("CollisionCheckerPQP::DoPQP - ERROR: YOU MUST PASS IN A COLLISIONREPORT STRUCT TO MEASURE DISTANCE!\n");
 
             //don't do a tolerance check, some users wants distance all the time
             //PQP_Tolerance(&tolres,R1,T1,m1,R2,T2,m2,_preport->minDistance);
             //if(tolres.CloserThanTolerance()) {
 
             PQP_Distance(&disres,R1,T1,m1.get(),R2,T2,m2.get(),_rel_err,_abs_err);
-            if(report->minDistance > (dReal) disres.Distance())
+            if(report->minDistance > (dReal) disres.Distance()) {
                 report->minDistance = (dReal) disres.Distance();
+                report->contacts.resize(1);
+                Vector p1(disres.P1()[0],disres.P1()[1],disres.P1()[2]), p2(disres.P2()[0],disres.P2()[1],disres.P2()[2]);
+                p1 = PQPRealToVector(disres.P1(),R1,T1);
+                p2 = PQPRealToVector(disres.P2(),R2,T2);
+                dReal depth = RaveSqrt((p2-p1).lengthsqr3());
+                report->contacts.front().pos = p1;
+                report->contacts.front().depth = -depth;
+                if( depth > 0 )
+                    report->contacts.front().norm = (p2-p1)*(1/depth);
+                else
+                    report->contacts.front().norm = Vector(0,0,0);
+                report->plink1 = link1;
+                report->plink2 = link2;
+            }
         }
    
         // tolerance

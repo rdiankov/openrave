@@ -230,6 +230,8 @@ void IvObjectDragger::CheckCollision(bool flag)
         if( !!pbody ) {
             EnvironmentMutex::scoped_try_lock lock(_viewer->GetEnv()->GetMutex());
             if( !!lock ) {
+                int prevoptions = _viewer->GetEnv()->GetCollisionChecker()->GetCollisionOptions();
+                _viewer->GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Contacts);
                 boost::shared_ptr<COLLISIONREPORT> preport(new COLLISIONREPORT());
                 if( pbody->GetBody()->CheckSelfCollision(preport) ) {
                     RAVELOG_VERBOSEA("self collisionp  %s, links %s:%s\n", pbody->GetBody()->GetName().c_str(),
@@ -248,6 +250,7 @@ void IvObjectDragger::CheckCollision(bool flag)
                 }
                 else
                     _SetColor(CHECK_COLOR);
+                _viewer->GetEnv()->GetCollisionChecker()->SetCollisionOptions(prevoptions);
             }
         }
     }
@@ -428,10 +431,13 @@ void IvJointDragger::CheckCollision(bool flag)
         if( !!pbody ) {
             EnvironmentMutex::scoped_try_lock lock(_viewer->GetEnv()->GetMutex());
             if( !!lock ) {
+                int prevoptions = _viewer->GetEnv()->GetCollisionChecker()->GetCollisionOptions();
+                _viewer->GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Contacts);
                 if (_viewer->GetEnv()->CheckCollision(KinBodyConstPtr(pbody->GetBody())) || pbody->GetBody()->CheckSelfCollision())
                     _SetColor(COLLISION_COLOR);
                 else
                     _SetColor(CHECK_COLOR);
+                _viewer->GetEnv()->GetCollisionChecker()->SetCollisionOptions(prevoptions);
             }
         }
     }

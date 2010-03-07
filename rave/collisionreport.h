@@ -31,7 +31,7 @@ public:
 
         Vector pos;             ///< where the contact occured
         Vector norm;    ///< the normals of the faces
-        dReal depth;    ///< the penetration depth
+        dReal depth;    ///< the penetration depth, positive means the surfaces are penetrating, negative means the surfaces are not colliding (used for distance queries)
     };
 
     int options;        ///< the options that the COLLISIONREPORT was called with
