@@ -182,6 +182,9 @@ public:
         //  All bindings of the kinematics models presents in the scene
         vector<KINEMATICSBINDING> v_all_bindings;
 
+    //  Nodes that are part of kinematics models
+    vector<string>  processed_nodes;
+
         //  For each Kinematics Scene
         for (size_t iscene = 0; iscene < allscene->getInstance_kinematics_scene_array().getCount(); iscene++)
         {
@@ -231,6 +234,18 @@ public:
                             kbindmodel->getNode());
                     continue;
                 }
+        else
+        {
+          RAVELOG_WARNA("Kinematics model node name: %s\n",pnode->getName());
+        }
+
+        //  Get ID of node parent
+        string  parentnode  = daeSafeCast<domNode>(pnode->getParent())->getID();
+
+        //  Store ID's of nodes that are part of kinematics model
+        processed_nodes.push_back(parentnode);
+
+        RAVELOG_VERBOSEA("Parent node ID %s\n",parentnode.c_str());
 
                 //  Instance Kinematics Model
                 domInstance_kinematics_modelRef kimodel;
@@ -345,12 +360,16 @@ public:
                         domKinematics_axis_info_Array dkai_array =  articulated_system->getKinematics()->getTechnique_common()->getAxis_info_array();
 
                         string strAxis  =   string(getSidRef_value());
+
+            //  Debug
+            RAVELOG_VERBOSEA("SidRef value %s\n",strAxis.c_str());
+
                         pos =   strAxis.find_last_of("/");
                         pos =   strAxis.find_last_of("/",pos-1);
 
-                        RAVELOG_DEBUGA("Kmodel %s Axis/Joint: %s\n",kimodel->getUrl().fragment().c_str(),strAxis.substr(pos).c_str());
+            strAxis =   kimodel->getUrl().fragment() + strAxis.substr(pos).c_str();
 
-                        strAxis =   kimodel->getUrl().fragment() + strAxis.substr(pos).c_str();
+            RAVELOG_DEBUGA("Search axis string: %s\n",strAxis.c_str());
 
                         //  Gets axis info of the articulated system KINEMATICS
                         dkai = getAxisInfo<domKinematics_axis_info>(strAxis.c_str(),dkai_array);
@@ -439,8 +458,13 @@ public:
                     //  Debug
                     RAVELOG_WARNA("Number of Manipulators %d ¡¡¡\n",probot->GetManipulators().size());
 
-                    char*           linkName            =   NULL;
-                    linkName = getLinkName(pframe_origin->getLink());
+          int     pos;
+          string  linkName  = string(pframe_origin->getLink());
+
+          pos       = linkName.find_first_of("/");
+          linkName  = linkName.substr(pos + 1);
+
+          RAVELOG_VERBOSEA("Manipulator link name %s\n",linkName.c_str());
 
                     //  Sets frame_origin and frame_tip
                     manipulator->_pBase              = probot->GetLink(linkName);
@@ -454,7 +478,10 @@ public:
                         RAVELOG_WARNA("Error initializing Manipulator::pBase\n");
                     }
 
-                    linkName = getLinkName(pframe_tip->getLink());
+          linkName = string(pframe_tip->getLink());
+          pos       = linkName.find_first_of("/");
+          linkName  = linkName.substr(pos + 1);
+
                     manipulator->_pEndEffector   = probot->GetLink(linkName);
 
                     if (!!manipulator->_pEndEffector)
@@ -471,6 +498,8 @@ public:
                     {
                         manipulator->_vgripperjoints.push_back(probot->GetJointIndices()[i]);
                     }
+
+          RAVELOG_VERBOSEA("Indices initialized...\n");
 
                     //  Add the robot to the environment
                     _penv->AddRobot(probot);
@@ -493,6 +522,27 @@ public:
                 KinBodyPtr rigid_body;
                 domNodeRef pnode        =   visual_scene->getNode_array()[node];
 
+        bool    found   = false;
+        string  nodeId  = string(pnode->getID());
+
+        //  Search if the node is into processed nodes
+        for(size_t i=0;i < processed_nodes.size();i++)
+        {
+          //  If node belongs to processed nodes
+          if (nodeId == processed_nodes[i])
+          {
+            RAVELOG_VERBOSEA("Processed node name: %s\n",processed_nodes[i].c_str());
+            found = true;
+            break;
+          }
+        }
+
+        //  If the node is not part of a kinbody
+        if (!found)
+        {
+          //  Debug
+          RAVELOG_WARNA("Extract node: %s\n",pnode->getName());
+
                 if (!Extract(rigid_body, NULL, NULL, pnode, v_all_bindings))
                 {
                     RAVELOG_WARNA("failed to load kinbody WIHTOUT Joints\n");
@@ -503,6 +553,7 @@ public:
 
                 RAVELOG_VERBOSEA("Found node %s\n",visual_scene->getNode_array()[node]->getName());
             }
+      }
         }// End Visual Scene Process
 
         return true;
@@ -674,10 +725,14 @@ public:
     {
         for (size_t i = 0; i < dom_sensor->getContents().getCount(); i++)
         {
-            RAVELOG_INFOA("%s: %s\n",dom_sensor->getContents()[i]->getElementName(),dom_sensor->getContents()[i]->getCharData().c_str());
-            _pcurreader->characters(dom_sensor->getContents()[i]->getCharData());
+      std::list<std::pair<std::string,std::string> >  atts;
             string xmltag = dom_sensor->getContents()[i]->getElementName();
+      RAVELOG_INFOA("%s: %s Type ID %d\n",dom_sensor->getContents()[i]->getElementName(),
+          dom_sensor->getContents()[i]->getCharData().c_str(),
+          dom_sensor->getContents()[i]->typeID());
             std::transform(xmltag.begin(), xmltag.end(), xmltag.begin(), ::tolower);
+      _pcurreader->startElement(xmltag,atts);
+      _pcurreader->characters(dom_sensor->getContents()[i]->getCharData());
             _pcurreader->endElement(xmltag);
         }
 
@@ -916,6 +971,11 @@ public:
         {
             pkinbody->SetName(kmodel->getName());
 
+      if (pkinbody->GetName() == "")
+      {
+        pkinbody->SetName(string(pnode->getId()));
+      }
+
             //  Debug.
             RAVELOG_WARNA("KinBody Name: %s\n", pkinbody->GetName().c_str());
             RAVELOG_VERBOSEA("Kinbody node: %s\n",pnode->getId());
@@ -948,15 +1008,25 @@ public:
             //  Debug
             RAVELOG_VERBOSEA("Number of links in the kmodel %d\n",ktec->getLink_array().getCount());
 
+      //  Gets parent node.
+      domNodeRef  parent  = daeSafeCast<domNode>(pnode->getParent());
+
             //  Extract all links into the kinematics_model
             for (size_t ilink = 0; ilink < ktec->getLink_array().getCount(); ++ilink)
             {
                 domLinkRef plink = ktec->getLink_array()[ilink];
 
-                //  Debug
-                RAVELOG_VERBOSEA("Node Name out of ExtractLink: %s\n",pnode->getName());
+        domNodeRef  child = daeSafeCast<domNode>(parent->getChildren()[ilink]);
 
-                ExtractLink(pkinbody, plink, pnode, Transform(), vdomjoints, vbindings);
+                //  Debug
+        RAVELOG_VERBOSEA("Node Name out of ExtractLink: %s\n",child->getName());
+
+        ExtractLink(pkinbody, plink, child, Transform(), vdomjoints, vbindings);
+
+        //        //  Debug
+        //        RAVELOG_VERBOSEA("Node Name out of ExtractLink: %s\n",pnode->getName());
+        //
+        //        ExtractLink(pkinbody, plink, pnode, Transform(), vdomjoints, vbindings);
             }
 
             //  TODO : Extract FORMULAS of the kinematics_model
@@ -995,12 +1065,25 @@ public:
         plink->bStatic  = false;
         plink->index        = (int) pkinbody->_veclinks.size();
 
+    if (pkinbody->GetName() == "")
+    {
+      //  Sets name of kinbody
+      pkinbody->SetName(string(pdomnode->getName()));
+    }
+
         pkinbody->_veclinks.push_back(plink);
 
         RAVELOG_VERBOSEA("Node Id %s and Name %s\n", pdomnode->getId(), pdomnode->getName());
 
         //  Initially the link has the name of the node
+    if (pdomnode->getName() == NULL)
+    {
+      plink->name = pdomnode->getId();
+    }
+    else
+    {
         plink->name = pdomnode->getName();
+    }
 
         if (!pdomlink)
         {
@@ -1022,7 +1105,10 @@ public:
             ExtractGeometry(pdomnode,plink,vbindings);
 
             //  Set link name with the name of the COLLADA's Link
+      if (pdomlink->getName())
+      {
             plink->name = pdomlink->getName();
+      }
 
             //  Process all atached links
             for (size_t iatt = 0; iatt
@@ -1092,18 +1178,38 @@ public:
 
                 // create the joints before creating the child links
                 vector<KinBody::JointPtr> vjoints(vdomaxes.getCount());
+        RAVELOG_WARN("vdomaxes.getCount: %d\n",vdomaxes.getCount());
+
                 for (size_t ic = 0; ic < vdomaxes.getCount(); ++ic) {
                     KinBody::JointPtr pjoint(new KinBody::Joint(pkinbody));
                     pjoint->bodies[0] = plink;
                     pjoint->bodies[1].reset();
                     pjoint->name = pdomjoint->getName();
                     pjoint->jointindex = (int) pkinbody->_vecjoints.size();
+
+
+          //  Set type of the joint
+          domAxis_constraintRef pdomaxis = vdomaxes[ic];
+
+          if( strcmp(pdomaxis->getElementName(), "revolute") == 0 )
+          {
+            RAVELOG_WARNA("Revolute joint\n");
+            pjoint->type = KinBody::Joint::JointRevolute;
+          }
+          else if( strcmp(pdomaxis->getElementName(), "prismatic") == 0 )
+          {
+            RAVELOG_WARNA("Prismatic joint\n");
+            pjoint->type = KinBody::Joint::JointPrismatic;
+          }
+
+          RAVELOG_INFO("dofindex %d\n",pkinbody->GetDOF());
                     pjoint->dofindex = pkinbody->GetDOF();
                     pjoint->_vweights.resize(0);
                     for(int i = 0; i < pjoint->GetDOF(); ++i)
                         pjoint->_vweights.push_back(1);
                     pkinbody->_vecJointIndices.push_back(pjoint->dofindex);
                     pkinbody->_vecjoints.push_back(pjoint);
+          RAVELOG_WARN("Number of pkinbody->_vecjoints: %d\n",pkinbody->_vecjoints.size());
                     vjoints[ic] = pjoint;
                 }
 
@@ -1145,16 +1251,17 @@ public:
                     KinBody::JointPtr pjoint = vjoints[ic];
                     pjoint->bodies[1] = pchildlink;
 
-                    if( strcmp(pdomaxis->getElementName(), "revolute") == 0 )
-                    {
-                        RAVELOG_WARNA("Revolute joint\n");
-                        pjoint->type = KinBody::Joint::JointRevolute;
-                    }
-                    else if( strcmp(pdomaxis->getElementName(), "prismatic") == 0 )
-                    {
-                        RAVELOG_WARNA("Prismatic joint\n");
-                        pjoint->type = KinBody::Joint::JointPrismatic;
-                    }
+//          //  Set type of the joint
+//          if( strcmp(pdomaxis->getElementName(), "revolute") == 0 )
+//          {
+//            RAVELOG_WARNA("Revolute joint\n");
+//            pjoint->type = KinBody::Joint::JointRevolute;
+//          }
+//          else if( strcmp(pdomaxis->getElementName(), "prismatic") == 0 )
+//          {
+//            RAVELOG_WARNA("Prismatic joint\n");
+//            pjoint->type = KinBody::Joint::JointPrismatic;
+//          }
 
                     //  Axes and Anchor assignment.
                     pjoint->vAxes[0] = Vector(pdomaxis->getAxis()->getValue()[0], pdomaxis->getAxis()->getValue()[1], pdomaxis->getAxis()->getValue()[2]).normalize3();
@@ -1217,7 +1324,9 @@ public:
                         // If joint is locked set limits to 0. There is NO move
                         if (joint_locked)
                         {
-                            if( pjoint->type == KinBody::Joint::JointRevolute )
+              if( pjoint->type == KinBody::Joint::JointRevolute
+                  ||
+                  pjoint->type ==KinBody::Joint::JointPrismatic)
                             {
                                 pjoint->_vlowerlimit.push_back(0.0f);
                                 pjoint->_vupperlimit.push_back(0.0f);
@@ -1233,7 +1342,9 @@ public:
                                     pkinematicaxisinfo->getLimits()->getMin()->getFloat()->getValue(),
                                     pkinematicaxisinfo->getLimits()->getMax()->getFloat()->getValue());
 
-                            if( pjoint->type == KinBody::Joint::JointRevolute )
+              if( pjoint->type == KinBody::Joint::JointRevolute
+                  ||
+                  pjoint->type ==KinBody::Joint::JointPrismatic)
                             {
                                 pjoint->_vlowerlimit.push_back((dReal)(pkinematicaxisinfo->getLimits()->getMin()->getFloat()->getValue()));
                                 pjoint->_vupperlimit.push_back((dReal)(pkinematicaxisinfo->getLimits()->getMax()->getFloat()->getValue()));
