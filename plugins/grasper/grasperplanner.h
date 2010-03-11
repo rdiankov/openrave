@@ -262,7 +262,8 @@ public:
             // move back and try again with a finer step
             if( pX != NULL )  *pX -= v.x;
             if( pY != NULL )  *pY -= v.y;
-            if( pZ != NULL )  *pZ -= v.z;            
+            if( pZ != NULL )  *pZ -= v.z;
+            _robot->SetActiveDOFValues(dofvals); 
 
             v = vapproachdir * (_parameters.ffinestep*_parameters.ftranslationstepmult);
             while(1) {

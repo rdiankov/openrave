@@ -293,13 +293,14 @@ class GraspingModel(OpenRAVEModel):
                 collision, info = self.env.CheckCollisionRays(rays,self.target)
                 # make sure all normals are the correct sign: pointing outward from the object)
                 newinfo = info[collision,:]
-                newinfo[sum(rays[collision,3:6]*newinfo[:,3:6],1)>0,3:6] *= -1
-                approachrays = r_[approachrays,newinfo]
-                if addSphereNorms:
-                    dirs = newinfo[:,0:3]-tile(p,(len(newinfo),1))
-                    L=sqrt(sum(dirs**2,1))
-                    I=flatnonzero(L>1e-8)
-                    approachrays = r_[approachrays,c_[newinfo[I,0:3],dirs[I,:]/transpose(tile(1.0/L[I],(3,1)))]]
+                if len(newinfo) > 0:
+                    newinfo[sum(rays[collision,3:6]*newinfo[:,3:6],1)>0,3:6] *= -1
+                    approachrays = r_[approachrays,newinfo]
+                    if addSphereNorms:
+                        dirs = newinfo[:,0:3]-tile(p,(len(newinfo),1))
+                        L=sqrt(sum(dirs**2,1))
+                        I=flatnonzero(L>1e-8)
+                        approachrays = r_[approachrays,c_[newinfo[I,0:3],dirs[I,:]/transpose(tile(1.0/L[I],(3,1)))]]
             return approachrays
 
     def drawContacts(self,contacts,conelength=0.03,transparency=0.5):
