@@ -277,6 +277,7 @@ class SimpleTextServer : public ProblemInstance
         mapNetworkFns["env_getbody"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvGetBody,this,_1,_2,_3), OpenRaveWorkerFn(), true);
         mapNetworkFns["env_loadplugin"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvLoadPlugin,this,_1,_2,_3), OpenRaveWorkerFn(), true);
         mapNetworkFns["env_raycollision"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvRayCollision,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["env_stepsimulation"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvStepSimulation,this,_1,_2,_3), boost::bind(&SimpleTextServer::worEnvStepSimulation,this,_1,_2), false);
         mapNetworkFns["env_triangulate"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvTriangulate,this,_1,_2,_3), OpenRaveWorkerFn(), true);
         mapNetworkFns["loadscene"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvLoadScene,this,_1,_2,_3), OpenRaveWorkerFn(), true);
         mapNetworkFns["plot"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvPlot,this,_1,_2,_3), OpenRaveWorkerFn(), true); 
@@ -295,7 +296,6 @@ class SimpleTextServer : public ProblemInstance
         mapNetworkFns["robot_traj"] = RAVENETWORKFN(OpenRaveNetworkFn(), boost::bind(&SimpleTextServer::worRobotStartActiveTrajectory,this,_1,_2), false);
         mapNetworkFns["render"] = RAVENETWORKFN(OpenRaveNetworkFn(), boost::bind(&SimpleTextServer::worRender,this,_1,_2), false);
         mapNetworkFns["setoptions"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvSetOptions,this,_1,_2,_3), boost::bind(&SimpleTextServer::worSetOptions,this,_1,_2), false);
-        mapNetworkFns["step"] = RAVENETWORKFN(OpenRaveNetworkFn(), boost::bind(&SimpleTextServer::worStep,this,_1,_2), false);
         mapNetworkFns["test"] = RAVENETWORKFN(OpenRaveNetworkFn(), OpenRaveWorkerFn(), false);
         mapNetworkFns["wait"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvWait,this,_1,_2,_3), OpenRaveWorkerFn(), true);
 
@@ -682,12 +682,6 @@ protected:
                 break;
         }
 
-        return true;
-    }
-
-    /// orMove - move the scene by one timestep
-    bool worStep(boost::shared_ptr<istream> is, boost::shared_ptr<void> pdata)
-    {
         return true;
     }
 
@@ -1899,6 +1893,30 @@ protected:
         GetEnv()->GetCollisionChecker()->SetCollisionOptions(oldoptions);
         FOREACH(it, info)
             os << *it << " ";
+        return true;
+    }
+
+    bool orEnvStepSimulation(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
+    {
+        dReal timestep=0;
+        bool bSync=true;
+        is >> timestep >> bSync;
+        if( bSync ) {
+            SyncWithWorkerThread();
+            EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+            GetEnv()->StepSimulation(timestep);
+        }
+        return true;
+    }
+
+    bool worEnvStepSimulation(boost::shared_ptr<istream> is, boost::shared_ptr<void> pdata)
+    {
+        dReal timestep=0;
+        bool bSync=true;
+        *is >> timestep >> bSync;
+        if( !bSync ) {
+            GetEnv()->StepSimulation(timestep);
+        }
         return true;
     }
 

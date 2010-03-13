@@ -1,6 +1,6 @@
 set(MATLAB_FILES_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 # install all the script files
-set(MATLAB_FILES orBodyDestroy.m orEnvCheckCollision.m  orEnvLoadScene.m         orRobotControllerSet.m
+set(MATLAB_FILES orBodyDestroy.m orEnvCheckCollision.m  orEnvLoadScene.m         orEnvStepSimulation.m orRobotControllerSet.m
 orBodyEnable.m          orEnvClose.m           orEnvPlot.m              orRobotGetActiveDOF.m
 orBodyGetAABB.m         orEnvCreateKinBody.m   orEnvRayCollision.m      orRobotGetAttachedSensors.m
 orBodyGetAABBs.m        orEnvSetOptions.m        orRobotGetDOFLimits.m
