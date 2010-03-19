@@ -519,8 +519,8 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
             pbody2 = KinBodyConstPtr(*o2data);
 
         if( !!pcb->pvbodyexcluded ) {
-            if( std::find(pcb->pvbodyexcluded->begin(),pcb->pvbodyexcluded->end(),pbody1) != pcb->pvbodyexcluded->end() || 
-                std::find(pcb->pvbodyexcluded->begin(),pcb->pvbodyexcluded->end(),pbody2) != pcb->pvbodyexcluded->end() )
+            if( (!!pbody1 && std::find(pcb->pvbodyexcluded->begin(),pcb->pvbodyexcluded->end(),pbody1) != pcb->pvbodyexcluded->end()) || 
+                (!!pbody2 && std::find(pcb->pvbodyexcluded->begin(),pcb->pvbodyexcluded->end(),pbody2) != pcb->pvbodyexcluded->end()) )
                 return;
         }
 
