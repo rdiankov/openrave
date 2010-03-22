@@ -31,25 +31,27 @@ class ReachabilityModel(OpenRAVEModel):
         if not self.ikmodel.load():
             self.ikmodel.autogenerate()
         self.reachabilitystats = None
+        self.reachability3d = None
         self.reachabilitydensity3d = None
         self.pointscale = None
         self.xyzdelta = None
         self.quatdelta = None
 
     def has(self):
-        return len(self.reachabilitydensity3d) > 0
-
+        return len(self.reachabilitydensity3d) > 0 and len(self.reachability3d) > 0
+    def getversion(self):
+        return 1
     def load(self):
         try:
             params = OpenRAVEModel.load(self)
             if params is None:
                 return False
-            self.reachabilitystats,self.reachabilitydensity3d,self.pointscale,self.xyzdelta,self.quatdelta = params
+            self.reachabilitystats,self.reachabilitydensity3d,self.reachability3d,self.pointscale,self.xyzdelta,self.quatdelta = params
             return self.has()
         except e:
             return False
     def save(self):
-        OpenRAVEModel.save(self,(self.reachabilitystats,self.reachabilitydensity3d,self.pointscale,self.xyzdelta,self.quatdelta))
+        OpenRAVEModel.save(self,(self.reachabilitystats,self.reachabilitydensity3d,self.reachability3d, self.pointscale,self.xyzdelta,self.quatdelta))
 
     def getfilename(self):
         return os.path.join(OpenRAVEModel.getfilename(self),'reachability.' + self.manip.GetName() + '.pp')
@@ -92,14 +94,16 @@ class ReachabilityModel(OpenRAVEModel):
                 for q in qarray:
                     neighdists.append(heapq.nsmallest(2,quatArrayTDist(q,qarray))[1])
                 self.quatdelta = mean(neighdists)
-
             print 'radius: %f, xyzsamples: %d, quatdelta: %f, rot samples: %d'%(maxradius,len(insideinds),self.quatdelta,len(rotations))
+            
             T = eye(4)
             reachabilitydensity3d = zeros(prod(shape))
+            reachability3d = zeros(prod(shape))
             self.reachabilitystats = []
             with self.env:
                 for i,ind in enumerate(insideinds):
                     numvalid = 0
+                    numrotvalid = 0
                     T[0:3,3] = allpoints[ind]+baseanchor
                     for rotation in rotations:
                         T[0:3,0:3] = rotation
@@ -107,10 +111,13 @@ class ReachabilityModel(OpenRAVEModel):
                         if solutions is not None:
                             self.reachabilitystats.append(r_[poseFromMatrix(T),len(solutions)])
                             numvalid += len(solutions)
+                            numrotvalid += 1
                     if mod(i,1000)==0:
                         print '%d/%d'%(i,len(insideinds))
                     reachabilitydensity3d[ind] = numvalid/float(len(rotations))
-            self.reachabilitydensity3d = reshape(reachabilitydensity3d/50.0,shape)
+                    reachability3d[ind] = numrotvalid/float(len(rotations))
+            self.reachability3d = reshape(reachability3d,shape)
+            self.reachabilitydensity3d = reshape(reachabilitydensity3d,shape)
             self.reachabilitystats = array(self.reachabilitystats)
             print 'reachability finished in %fs'%(time.time()-starttime)
 
@@ -127,20 +134,20 @@ class ReachabilityModel(OpenRAVEModel):
 #         reachabilitydensity3d = reshape(array(kball,'float'),X.shape)*0.01
 
         if options is not None:
-            reachabilitydensity3d = minimum(self.reachabilitydensity3d*options.showscale,1.0)
+            reachability3d = minimum(self.reachability3d*options.showscale,1.0)
         else:
-            reachabilitydensity3d = minimum(self.reachabilitydensity3d,1.0)
-        reachabilitydensity3d[0,0,0] = 1 # have at least one point be at the maximum
+            reachability3d = minimum(self.reachability3d,1.0)
+        reachability3d[0,0,0] = 1 # have at least one point be at the maximum
         if xrange is None:
             offset = array((0,0,0))
-            src = mlab.pipeline.scalar_field(reachabilitydensity3d)
+            src = mlab.pipeline.scalar_field(reachability3d)
         else:
             offset = array((xrange[0]-1,0,0))
-            src = mlab.pipeline.scalar_field(r_[zeros((1,)+reachabilitydensity3d.shape[1:]),reachabilitydensity3d[xrange,:,:],zeros((1,)+reachabilitydensity3d.shape[1:])])
+            src = mlab.pipeline.scalar_field(r_[zeros((1,)+reachability3d.shape[1:]),reachability3d[xrange,:,:],zeros((1,)+reachability3d.shape[1:])])
             
         for i,c in enumerate(contours):
             mlab.pipeline.iso_surface(src,contours=[c],opacity=min(1,0.7*c if opacity is None else opacity[i]))
-        #mlab.pipeline.volume(mlab.pipeline.scalar_field(reachabilitydensity3d*100))
+        #mlab.pipeline.volume(mlab.pipeline.scalar_field(reachability3d*100))
         if showrobot:
             baseanchor = armjoints = self.getOrderedArmJoints()[0].GetAnchor()
             with self.robot:

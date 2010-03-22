@@ -371,11 +371,21 @@ class OpenRAVEModel(metaclass.AutoReloader):
     def load(self):
         if not os.path.isfile(self.getfilename()):
             return None
-        return pickle.load(open(self.getfilename(), 'r'))
+        try:
+            modelversion,params = pickle.load(open(self.getfilename(), 'r'))
+            if modelversion == self.getversion():
+                return params
+            else:
+                print 'version is wrong ',modelversion,'!=',self.getversion()
+        except:
+            pass
+        return None
+    def getversion(self):
+        return 0
     def save(self,params):
         print 'saving model to %s'%self.getfilename()
         mkdir_recursive(os.path.join(self.env.GetHomeDirectory(),'robot.'+self.robot.GetRobotStructureHash()))
-        pickle.dump(params, open(self.getfilename(), 'w'))
+        pickle.dump((self.getversion(),params), open(self.getfilename(), 'w'))
     def generate(self):
         raise NotImplementedError()
     def generateFromOptions(self,options):
