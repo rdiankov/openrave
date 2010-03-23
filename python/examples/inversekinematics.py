@@ -18,7 +18,7 @@ from openravepy import *
 from openravepy.interfaces import BaseManipulation
 from openravepy import ikfast
 from numpy import *
-import time,platform
+import time,platform,shutil
 import distutils
 from distutils import ccompiler
 from optparse import OptionParser
@@ -65,9 +65,11 @@ class InverseKinematicsModel(OpenRAVEModel):
         pass # already saved as a lib
     
     def getfilename(self):
-        basename = 'ikfast.' + self.manip.GetName() + '.' + str(self.iktype)
+        basename = 'ikfast.' + self.manip.GetName() + '.' + str(self.iktype) + '.' + platform.machine()
         return ccompiler.new_compiler().shared_object_filename(basename=basename,output_dir=OpenRAVEModel.getfilename(self))
-    
+    def getsourcefilename(self):
+        return os.path.join(OpenRAVEModel.getfilename(self),'ikfast.' + self.manip.GetName() + '.' + str(self.iktype))
+
     def generateFromOptions(self,options):
         iktype = IkParameterization.Type.Transform6D
         if options.rotation3donly:
@@ -83,7 +85,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         if iktype is not None:
             self.iktype = iktype
         output_filename = self.getfilename()
-        sourcefilename = os.path.splitext(output_filename)[0]
+        sourcefilename = self.getsourcefilename()
         if self.iktype == IkParameterization.Type.Rotation3D:
             solvefn=ikfast.IKFastSolver.solveFullIK_Rotation3D
         elif self.iktype == IkParameterization.Type.Direction3D:
@@ -107,7 +109,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                     solvejoints.remove([joint.GetJointIndex() for joint in self.robot.GetJoints() if joint.GetName()==jointname][0])
         else:
             freejoints = []
-        
+        print 'Generating inverse kinematics ',self.iktype,solvejoints
         if self.iktype == IkParameterization.Type.Rotation3D:
             self.dofexpected = 3
         elif self.iktype == IkParameterization.Type.Direction3D:
@@ -120,7 +122,6 @@ class InverseKinematicsModel(OpenRAVEModel):
             raise ValueError('bad type')
 
         if len(solvejoints) > self.dofexpected:
-            print 'choosing free joints'
             freejoints = []
             for i in range(len(solvejoints) - self.dofexpected):
                 if self.dofexpected == 6:
@@ -150,10 +151,19 @@ class InverseKinematicsModel(OpenRAVEModel):
            output_dir = os.path.relpath('/',os.getcwd())
         except AttributeError: # python 2.5 does not have os.path.relpath
            output_dir = self.myrelpath('/',os.getcwd())
-        objectfiles = compiler.compile(sources=[sourcefilename],macros=[('IKFAST_CLIBRARY',1)],extra_postargs=compile_flags,output_dir=output_dir)
-        compiler.link_shared_object(objectfiles,output_filename=output_filename)
-        if not self.load():
-            return ValueError('failed to generate ik solver')
+
+        platformsourcefilename = os.path.splitext(output_filename)[0]+'.cpp' # needed in order to prevent interference with machines with different architectures 
+        shutil.copyfile(sourcefilename, platformsourcefilename)
+        try:
+            objectfiles = compiler.compile(sources=[platformsourcefilename],macros=[('IKFAST_CLIBRARY',1)],extra_postargs=compile_flags,output_dir=output_dir)
+            compiler.link_shared_object(objectfiles,output_filename=output_filename)
+            if not self.load():
+                return ValueError('failed to generate ik solver')
+        finally:
+            # cleanup intermediate files
+            os.remove(platformsourcefilename)
+            for objectfile in objectfiles:
+                os.remove(objectfile)
 
     def autogenerate(self,forcegenerate=True):
         if self.robot.GetRobotStructureHash() == '7b789782446d86b95c6fb16de7f204c7' and self.manip.GetName() == 'arm':
