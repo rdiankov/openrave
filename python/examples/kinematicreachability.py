@@ -16,7 +16,7 @@ __license__ = 'Apache License, Version 2.0'
 
 import openravepy
 from openravepy import *
-from openravepy.examples import inversekinematics
+from openravepy.examples import convexdecomposition,inversekinematics
 from numpy import *
 import time
 import heapq # for nth smallest element
@@ -30,6 +30,9 @@ class ReachabilityModel(OpenRAVEModel):
         self.ikmodel = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
         if not self.ikmodel.load():
             self.ikmodel.autogenerate()
+        self.cdmodel = convexdecomposition.ConvexDecompositionModel(self.robot)
+        if not self.cdmodel.load():
+            self.cdmodel.autogenerate()
         self.reachabilitystats = None
         self.reachability3d = None
         self.reachabilitydensity3d = None
@@ -40,7 +43,7 @@ class ReachabilityModel(OpenRAVEModel):
     def has(self):
         return len(self.reachabilitydensity3d) > 0 and len(self.reachability3d) > 0
     def getversion(self):
-        return 1
+        return 2
     def load(self):
         try:
             params = OpenRAVEModel.load(self)

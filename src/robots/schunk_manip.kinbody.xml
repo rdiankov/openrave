@@ -2,24 +2,24 @@
   <Body name="gripper_base" type="dynamic">
     <offsetfrom>link7</offsetfrom>
     <RotationAxis>0 0 1 135</RotationAxis>
-    <Geom type="box">
+    <Geom type="box" modifiable="false">
       <Extents>0.040 0.040 0.0025</Extents>
       <Translation>0.000 0.000 0.0575</Translation>
     </Geom>
-    <Geom type="cylinder">
+    <Geom type="cylinder" modifiable="false">
       <Radius>0.0125</Radius>
       <height>0.050</height>
       <Translation>0.000 0.000 0.030</Translation>
       <RotationAxis>1 0 0 90</RotationAxis>
     </Geom>
-    <Geom type="cylinder">
+    <Geom type="cylinder" modifiable="false">
       <Radius>0.030</Radius>
       <height>0.005</height>
       <Translation>0.000 0.000 0.0025</Translation>
       <RotationAxis>1 0 0 90</RotationAxis>
     </Geom>
 
-    <Geom modifiable="false" type="trimesh">
+    <Geom type="trimesh" modifiable="false">
       <Translation>0.000 0.000 0.060</Translation>
       <RotationAxis>1 0 0 90</RotationAxis>
       <data>models/schunk_0306087_pg_70_0_stroke.iv </data>

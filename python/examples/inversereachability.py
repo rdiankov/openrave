@@ -72,7 +72,8 @@ class InverseReachabilityModel(OpenRAVEModel):
         
     def has(self):
         return self.equivalenceclasses is not None and len(self.equivalenceclasses) > 0
-
+    def getversion(self):
+        return 1
     def load(self):
         try:
             params = OpenRAVEModel.load(self)

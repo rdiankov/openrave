@@ -17,6 +17,7 @@ __license__ = 'Apache License, Version 2.0'
 import os,sys,itertools,traceback,time
 from openravepy import *
 from openravepy.interfaces import Grasper, BaseManipulation
+from openravepy.examples import convexdecomposition
 from numpy import *
 from optparse import OptionParser
 
@@ -38,14 +39,17 @@ class GraspingModel(OpenRAVEModel):
     """Holds all functions/data related to a grasp between a robot hand and a target"""
     def __init__(self,robot,target):
         OpenRAVEModel.__init__(self,robot=robot)
+        self.cdmodel = convexdecomposition.ConvexDecompositionModel(self.robot)
+        if not self.cdmodel.load():
+            self.cdmodel.autogenerate()
         self.target = target
         self.grasps = []
         self.graspindices = dict()
         self.grasper = None
-
     def has(self):
         return len(self.grasps) > 0 and len(self.graspindices) > 0 and self.grasper is not None
-
+    def getversion(self):
+        return 1
     def init(self,friction,avoidlinks,plannername=None):
         self.grasper = Grasper(self.robot,friction,avoidlinks,plannername)
         self.grasps = []
