@@ -521,6 +521,17 @@ int KinBody::Joint::GetDOF() const
     }
 }
 
+bool KinBody::Joint::IsStatic() const
+{
+    if( IsCircular() || GetMimicJointIndex() >= 0 )
+        return false;
+    for(size_t i = 0; i < _vlowerlimit.size(); ++i) {
+        if( _vlowerlimit[i] < _vupperlimit[i] )
+            return false;
+    }
+    return true;
+}
+
 void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
 {
     Transform tjoint;
@@ -1538,6 +1549,18 @@ KinBody::LinkPtr KinBody::GetLink(const std::string& linkname) const
     }
     RAVELOG_VERBOSEA("Link::GetLink - Error Unknown Link %s\n",linkname.c_str());
     return LinkPtr();
+}
+
+void KinBody::GetRigidlyAttachedLinks(KinBody::LinkConstPtr plink, std::vector<KinBody::LinkPtr>& vattachedlinks) const
+{
+    FOREACHC(itpassive, GetPassiveJoints()) {
+        if( (*itpassive)->IsStatic() ) {
+            if( (*itpassive)->GetFirstAttached() == plink && !!(*itpassive)->GetSecondAttached() )
+                vattachedlinks.push_back((*itpassive)->GetSecondAttached());
+            if( (*itpassive)->GetSecondAttached() == plink && !!(*itpassive)->GetFirstAttached() )
+                vattachedlinks.push_back((*itpassive)->GetFirstAttached());
+        }
+    }
 }
 
 //! return a pointer to the joint with the given name, else -1

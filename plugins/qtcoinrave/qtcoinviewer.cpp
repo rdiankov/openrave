@@ -680,7 +680,7 @@ void* QtCoinViewer::drawlinestrip(const float* ppoints, int numPoints, int strid
 void* QtCoinViewer::drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
 {
     void* pret = new SoSeparator();
-    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), (SoSeparator*)pret, ppoints, numPoints, stride, fwidth, colors, DrawMessage::DT_LineStrip));
+    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), (SoSeparator*)pret, ppoints, numPoints, stride, fwidth, colors, DrawMessage::DT_LineStrip,false));
     pmsg->callerexecute();
 
     return pret;
@@ -698,7 +698,7 @@ void* QtCoinViewer::drawlinelist(const float* ppoints, int numPoints, int stride
 void* QtCoinViewer::drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
 {
     void* pret = new SoSeparator();
-    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), (SoSeparator*)pret, ppoints, numPoints, stride, fwidth, colors, DrawMessage::DT_LineList));
+    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), (SoSeparator*)pret, ppoints, numPoints, stride, fwidth, colors, DrawMessage::DT_LineList,false));
     pmsg->callerexecute();
 
     return pret;

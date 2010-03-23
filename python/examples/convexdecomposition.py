@@ -76,7 +76,7 @@ class ConvexDecompositionModel(OpenRAVEModel):
                 print 'link %d/%d'%(il,len(links))
                 geoms = []
                 for ig,geom in enumerate(link.GetGeometries()):
-                    if geom.GetType() == KinBody.Link.GeomProperties.Type.Trimesh and geom.IsModifiable():
+                    if geom.GetType() == KinBody.Link.GeomProperties.Type.Trimesh:
                         trimesh = geom.GetCollisionMesh()
                         hulls = convexdecompositionpy.computeConvexDecomposition(trimesh.vertices,trimesh.indices,**self.convexparams)
                         if len(hulls) > 0:

@@ -228,8 +228,7 @@ class SpaceSampler(metaclass.AutoReloader):
         Nside = 2**level
         Nside2 = Nside**2
         N = 12*Nside**2
-        self.computeFaceIndices(Nside**2)
-        
+        self.computeFaceIndices(Nside**2)        
         # compute sphere z coordinate
         jr = self.facenumr*Nside-numpy.tile(self.faceindices[0][0:Nside2],12)-1
         nr = numpy.tile(Nside,N)
@@ -261,10 +260,17 @@ class SpaceSampler(metaclass.AutoReloader):
         s0 = numpy.sin(half0)
         s2 = numpy.sin(half2)
         return numpy.c_[c0*c2,c0*s2,s0*numpy.cos(hopfarray[:,1]+half2),s0*numpy.sin(hopfarray[:,1]+half2)]
-    def sampleSO3(self,level=0):
-        """Uniformly Sample 3D Rotations. Algorithm From
+    def sampleSO3(self,level=0,quatdelta=None):
+        """Uniformly Sample 3D Rotations.
+        If quatdelta is specified, will compute the best level aiming for that average quaternion distance.
+        Algorithm From
         A. Yershova, S. Jain, S. LaValle, J. Mitchell "Generating Uniform Incremental Grids on SO(3) Using the Hopf Fibration", International Journal of Robotics Research, Nov 13, 2009.
         """
+        if quatdelta is not None:
+            # level=0, quatdist = 0.5160220
+            # level=1: quatdist = 0.2523583
+            # level=2: quatdist = 0.120735
+            level=max(0,int(-0.5-log2(quatdelta)))
         s1samples,step = numpy.linspace(0.0,2*numpy.pi,6*(2**level),endpoint=False,retstep=True)
         s1samples += step*0.5
         theta,pfi = self.sampleS2(level)

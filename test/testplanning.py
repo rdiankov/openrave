@@ -343,11 +343,12 @@ def test_simplenavigation():
     self.robot.SetActiveDOFs([],Robot.DOFAffine.X|Robot.DOFAffine.Y|Robot.DOFAffine.RotationAxis,[0,0,1])
     self.basemanip.MoveActiveJoints(goal=[0.737,0.304,0])
 
-def test_boxes():
-    env = Environment()
-    k = env.CreateKinBody()
-    boxes = array(((0,0.5,0,0.1,0.2,0.3),(0.5,0,0,0.2,0.2,0.2)))
-    k.InitFromBoxes(boxes,True)
-    k.SetName('temp')
-    env.AddKinBody(k)
-    env.SetViewer('qtcoin')
+def test_hrp2():
+    python convexdecomposition.py --robot=robots/hrp2jsk.robot.xml --volumeSplitThresholdPercent=10
+    python kinematicreachability.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm --xyzdelta=0.02
+    python kinematicreachability.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --xyzdelta=0.02
+    python kinematicreachability.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm_chest --xyzdelta=0.02
+    python inversereachability.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm --heightthresh=0.02 --quatthresh=0.1
+    python inversereachability.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --heightthresh=0.02 --quatthresh=0.1
+    python inversereachability.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm_chest --heightthresh=0.02 --quatthresh=0.1
+    python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm --target=scenes/cereal_frootloops.kinbody.xml

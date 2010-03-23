@@ -258,6 +258,7 @@ void RobotBase::Manipulator::GetChildLinks(std::vector<LinkPtr>& vlinks) const
     // get all child links of the manipualtor
     vlinks.resize(0);
     vlinks.push_back(_pEndEffector);
+    probot->GetRigidlyAttachedLinks(_pEndEffector,vlinks);
     int iattlink = _pEndEffector->GetIndex();
     FOREACHC(itlink, probot->GetLinks()) {
         int ilink = (*itlink)->GetIndex();

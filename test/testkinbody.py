@@ -82,7 +82,7 @@ def test_jacobian():
     # get a link name
     link = robot.GetLink('Finger2-2')
     fingertip_local = dot(linalg.inv(link.GetTransform()),r_[fingertip_global,1])[0:3]
-    J = robot.CalculateJacobian(link.GetIndex(),fingertip)
+    J = robot.CalculateJacobian(link.GetIndex(),fingertip_global)
     
     # move each joint a little
     curvalues = robot.GetJointValues()
@@ -177,3 +177,12 @@ def test_fkconsistency():
             for T1,T2 in izip(Tlinks1,Tlinks2):
                 if not all(T1-T2==0):
                     print 'error ',values
+
+def test_boxes():
+    env = Environment()
+    k = env.CreateKinBody()
+    boxes = array(((0,0.5,0,0.1,0.2,0.3),(0.5,0,0,0.2,0.2,0.2)))
+    k.InitFromBoxes(boxes,True)
+    k.SetName('temp')
+    env.AddKinBody(k)
+    env.SetViewer('qtcoin')

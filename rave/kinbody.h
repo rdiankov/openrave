@@ -264,7 +264,12 @@ public:
         inline JointType GetType() const { return type; }
 
         virtual int GetDOF() const;
+
+        /// return true if joint has no limits
         virtual bool IsCircular() const { return _bIsCircular; }
+
+        /// return true if joint can be treated as a static binding (ie all limits are 0)
+        virtual bool IsStatic() const;
 
         /// Gets the joint values with the correct offsets applied
         /// \param bAppend if true will append to the end of the vector instead of erasing it
@@ -465,6 +470,10 @@ public:
     const std::vector<JointPtr>& GetJoints() const { return _vecjoints; }
     /// returns the passive joints, order does not matter
     const std::vector<JointPtr>& GetPassiveJoints() const { return _vecPassiveJoints; }
+
+    /// Gets all the rigidly attached links to plink.
+    /// \param vattachedlinks the array to insert the links in (not cleared)
+    virtual void GetRigidlyAttachedLinks(LinkConstPtr plink, std::vector<LinkPtr>& vattachedlinks) const;
 
     /// Returns the joints in hierarchical order starting at the base link such that the first joints affect the later ones.
     /// In the case of closed loops, the joints are returned in the order they are defined in _vecjoints.

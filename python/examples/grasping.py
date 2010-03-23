@@ -331,6 +331,12 @@ class GraspingModel(OpenRAVEModel):
                           help='The filename of the target body whose grasp set to be generated (default=%default)')
         parser.add_option('--noviewer', action='store_false', dest='useviewer',default=True,
                           help='If specified, will generate the tables without launching a viewer')
+#         parser.add_option('--boxstepsize', action='store', type='float',dest='boxstepsize',default=0.02,
+#                           help='Density of box surface sampling (default=%default)')
+#         parser.add_option('--normalanglerange', action='store', type='float',dest='normalanglerange',default=0.0,
+#                           help='The range of angles around the surface normal to approach from (default=%default)')
+#         parser.add_option('--directiondelta', action='store', type='float',dest='directiondelta',default=0.4,
+#                           help='The average distance of approach directions for each surface point in radians (default=%default)')
         parser.add_option('--spherenorms', action='store_true', dest='spherenorms',default=False,
                           help='If specified, add sphere normals to the computation')
         return parser
