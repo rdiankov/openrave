@@ -14,6 +14,7 @@ robotid = robots{1}.id;
 
 % to turn on the rendering, send a command to the sensor
 for i = 1:length(render)
+    orRobotSensorSend(robotid, render(i), 'power','1');
     orRobotSensorSend(robotid, render(i), 'show','1');
 end
 
