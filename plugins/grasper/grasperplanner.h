@@ -454,7 +454,7 @@ public:
                 ptraj->AddPoint(ptemp);
         }
 
-        return true;
+        return ptraj->GetPoints().size()>0; // only return true if there is at least one valid pose!
     }
 
     virtual int CheckCollision(KinBody::LinkConstPtr plink)

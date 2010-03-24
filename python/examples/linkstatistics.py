@@ -33,11 +33,10 @@ class LinkStatisticsModel(OpenRAVEModel):
         self.linkstats = None
         self.jointvolumes = None
         self.affinevolumes = None # affine volumes for x,y,z translation and rotation around x-,y-,z-axes
-        self.samplingdelta = 0.01
+        self.samplingdelta = None
 
     def has(self):
         return self.linkstats is not None and len(self.linkstats)==len(self.robot.GetLinks())
-
     def load(self):
         try:
             params = OpenRAVEModel.load(self)
@@ -92,19 +91,18 @@ class LinkStatisticsModel(OpenRAVEModel):
             else:
                 raise ValueError('no such type')
 
-    def generateFromOptions(self,options):
-        args = {'samplingdelta':options.samplingdelta}
-        self.generate(**args)
-    def autogenerate(self,forcegenerate=True):
-        if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531':
-            self.generate(samplingdelta=0.009)
-        else:
-            if not forcegenerate:
-                raise ValueError('failed to find auto-generation parameters')
-            self.generate()
+    def autogenerate(self,options=None):
+        samplingdelta=None
+        if options is not None:
+            if options.samplingdelta is not None:
+                samplingdelta=options.samplingdelta
+        if self.robot.GetRobotStructureHash() == '7b789782446d86b95c6fb16de7f204c7':
+            if samplingdelta is None:
+                samplingdelta=0.009
+        self.generate(samplingdelta=samplingdelta)
         self.save()
-    def generate(self,samplingdelta=0.01,**kwargs):
-        self.samplingdelta=samplingdelta
+    def generate(self,samplingdelta=None,**kwargs):
+        self.samplingdelta=samplingdelta if samplingdelta is not None else 0.01
         with self.robot:
             self.robot.SetTransform(eye(4))
             # compute the convex hulls for every link
@@ -385,8 +383,8 @@ class LinkStatisticsModel(OpenRAVEModel):
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser(useManipulator=False)
         parser.description='Computes statistics about the link geometry'
-        parser.add_option('--samplingdelta',action='store',type='float',dest='samplingdelta',default=0.01,
-                          help='Skin width on the convex hulls generated (default=%default)')
+        parser.add_option('--samplingdelta',action='store',type='float',dest='samplingdelta',default=None,
+                          help='Skin width on the convex hulls generated (default=0.01)')
         return parser
     @staticmethod
     def RunFromParser(Model=None,parser=None):

@@ -59,13 +59,42 @@ class ReachabilityModel(OpenRAVEModel):
     def getfilename(self):
         return os.path.join(OpenRAVEModel.getfilename(self),'reachability.' + self.manip.GetName() + '.pp')
 
-    def generateFromOptions(self,options):
-        self.generate(maxradius=options.maxradius,xyzdelta=options.xyzdelta,quatdelta=options.quatdelta)
+    def autogenerate(self,options=None):
+        # disable every body but the target and robot
+        bodies = [b for b in self.env.GetBodies() if b.GetNetworkId() != self.robot.GetNetworkId()]
+        for b in bodies:
+            b.Enable(False)
+        try:
+            maxradius=None
+            translationonly=False
+            xyzdelta=None
+            quatdelta=None
+            usefreespace=True
+            if options is not None:
+                if options.maxradius is not None:
+                    maxradius = options.maxradius
+                if options.xyzdelta is not None:
+                    xyzdelta=options.xyzdelta
+                if options.quatdelta is not None:
+                    quatdelta=options.quatdelta
+                usefreespace=options.usefreespace
+            if self.robot.GetRobotStructureHash() == '7b789782446d86b95c6fb16de7f204c7' and self.manip.GetName() == 'arm':
+                if maxradius is None:
+                    maxradius = 1.1
+            self.generate(maxradius=maxradius,translationonly=translationonly,xyzdelta=xyzdelta,quatdelta=quatdelta,usefreespace=usefreespace)
+            self.save()
+        finally:
+            for b in bodies:
+                b.Enable(True)
 
     def getOrderedArmJoints(self):
         return [j for j in self.robot.GetDependencyOrderedJoints() if j.GetJointIndex() in self.manip.GetArmJoints()]
 
-    def generate(self,maxradius=None,translationonly=False,xyzdelta=0.04,quatdelta=0.5):
+    def generate(self,maxradius=None,translationonly=False,xyzdelta=None,quatdelta=None,usefreespace=True):
+        if xyzdelta is None:
+            xyzdelta=0.04
+        if quatdelta is None:
+            quatdelta=0.5
         starttime = time.time()
         with self.robot:
             self.robot.SetTransform(eye(4))
@@ -97,7 +126,7 @@ class ReachabilityModel(OpenRAVEModel):
                 for q in qarray:
                     neighdists.append(heapq.nsmallest(2,quatArrayTDist(q,qarray))[1])
                 self.quatdelta = mean(neighdists)
-            print 'radius: %f, xyzsamples: %d, quatdelta: %f, rot samples: %d'%(maxradius,len(insideinds),self.quatdelta,len(rotations))
+            print 'radius: %f, xyzsamples: %d, quatdelta: %f, rot samples: %d, freespace: %d'%(maxradius,len(insideinds),self.quatdelta,len(rotations),usefreespace)
             
             T = eye(4)
             reachabilitydensity3d = zeros(prod(shape))
@@ -110,11 +139,18 @@ class ReachabilityModel(OpenRAVEModel):
                     T[0:3,3] = allpoints[ind]+baseanchor
                     for rotation in rotations:
                         T[0:3,0:3] = rotation
-                        solutions = self.manip.FindIKSolutions(T,False) # do not want to include the environment
-                        if solutions is not None:
-                            self.reachabilitystats.append(r_[poseFromMatrix(T),len(solutions)])
-                            numvalid += len(solutions)
-                            numrotvalid += 1
+                        if usefreespace:
+                            solutions = self.manip.FindIKSolutions(T,False) # do not want to include the environment
+                            if solutions is not None:
+                                self.reachabilitystats.append(r_[poseFromMatrix(T),len(solutions)])
+                                numvalid += len(solutions)
+                                numrotvalid += 1
+                        else:
+                            solution = self.manip.FindIKSolution(T,False)
+                            if solution is not None:
+                                self.reachabilitystats.append(r_[poseFromMatrix(T),1])
+                                numvalid += 1
+                                numrotvalid += 1
                     if mod(i,1000)==0:
                         print '%d/%d'%(i,len(insideinds))
                     reachabilitydensity3d[ind] = numvalid/float(len(rotations))
@@ -152,23 +188,6 @@ class ReachabilityModel(OpenRAVEModel):
             mlab.triangular_mesh(v[:,0]-offset[0],v[:,1]-offset[1],v[:,2]-offset[2],trimesh.indices,color=(0.5,0.5,0.5))
         mlab.show()
 
-    def autogenerate(self,forcegenerate=True):
-        # disable every body but the target and robot
-        bodies = [b for b in self.env.GetBodies() if b.GetNetworkId() != self.robot.GetNetworkId()]
-        for b in bodies:
-            b.Enable(False)
-        try:
-            if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531' and self.manip.GetName() == 'arm':
-                self.generate(maxradius=1.1)
-            else:
-                if not forcegenerate:
-                    raise ValueError('failed to find auto-generation parameters')
-                self.generate()
-            self.save()
-        finally:
-            for b in bodies:
-                b.Enable(True)
-
     def UniformlySampleSpace(self,maxradius,delta):
         nsteps = floor(maxradius/delta)
         X,Y,Z = mgrid[-nsteps:nsteps,-nsteps:nsteps,-nsteps:nsteps]
@@ -182,10 +201,12 @@ class ReachabilityModel(OpenRAVEModel):
         parser.description='Computes the reachability region of a robot manipulator and python pickles it into a file.'
         parser.add_option('--maxradius',action='store',type='float',dest='maxradius',default=None,
                           help='The max radius of the arm to perform the computation')
-        parser.add_option('--xyzdelta',action='store',type='float',dest='xyzdelta',default=0.04,
-                          help='The max radius of the arm to perform the computation (default=%default)')
-        parser.add_option('--quatdelta',action='store',type='float',dest='quatdelta',default=0.5,
-                          help='The max radius of the arm to perform the computation (default=%default)')
+        parser.add_option('--xyzdelta',action='store',type='float',dest='xyzdelta',default=None,
+                          help='The max radius of the arm to perform the computation (default=0.04)')
+        parser.add_option('--quatdelta',action='store',type='float',dest='quatdelta',default=None,
+                          help='The max radius of the arm to perform the computation (default=0.5)')
+        parser.add_option('--ignorefreespace',action='store_false',dest='usefreespace',default=True,
+                          help='If set, will only check if at least one IK solutions exists for every transform rather that computing a density')
         parser.add_option('--showscale',action='store',type='float',dest='showscale',default=1.0,
                           help='Scales the reachability by this much in order to show colors better (default=%default)')
         return parser

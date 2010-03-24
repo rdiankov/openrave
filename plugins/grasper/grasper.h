@@ -276,8 +276,9 @@ class GrasperProblem : public ProblemInstance
         else {
             // calculate the contact normals
             GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Contacts);
-            vector<KinBody::Link*>::const_iterator itlink;
-            FOREACHC(itlink, _robot->GetLinks()) {
+            std::vector<KinBody::LinkPtr> vlinks;
+            _robot->GetActiveManipulator()->GetChildLinks(vlinks);
+            FOREACHC(itlink, vlinks) {
                 if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(*itlink), KinBodyConstPtr(params->targetbody), _report) ) {
                     RAVELOG_VERBOSEA(str(boost::format("contact %s:%s with %s:%s\n")%_report->plink1->GetParent()->GetName()%_report->plink1->GetName()%_report->plink2->GetParent()->GetName()%_report->plink2->GetName()));
                     FOREACH(itcontact,_report->contacts) {

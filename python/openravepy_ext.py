@@ -223,8 +223,17 @@ class SpaceSampler(metaclass.AutoReloader):
         if self.facenumr is None or len(self.facenumr) != N*12:
             self.facenumr = numpy.reshape(numpy.transpose(numpy.tile([2,2,2,2,3,3,3,3,4,4,4,4],(N,1))),N*12)
             self.facenump = numpy.reshape(numpy.transpose(numpy.tile([1,3,5,7,0,2,4,6,1,3,5,7],(N,1))),N*12)
-    def sampleS2(self,level=0):
+    def sampleS2(self,level=0,angledelta=None):
         """uses healpix algorithm with ordering from Yershova et. al. 2009 journal paper"""
+        if angledelta is not None:
+            # select the best sphere level matching angledelta;
+            # level,delta: 
+            # [0, 1.0156751592381095]
+            # [1, 0.5198842203445676]
+            # [2, 0.25874144949351713]
+            # [3, 0.13104214473149575]
+            # [4, 0.085649339187184162]
+            level=max(0,int(0.5-numpy.log2(angledelta)))
         Nside = 2**level
         Nside2 = Nside**2
         N = 12*Nside**2
@@ -270,7 +279,7 @@ class SpaceSampler(metaclass.AutoReloader):
             # level=0, quatdist = 0.5160220
             # level=1: quatdist = 0.2523583
             # level=2: quatdist = 0.120735
-            level=max(0,int(-0.5-log2(quatdelta)))
+            level=max(0,int(-0.5-numpy.log2(quatdelta)))
         s1samples,step = numpy.linspace(0.0,2*numpy.pi,6*(2**level),endpoint=False,retstep=True)
         s1samples += step*0.5
         theta,pfi = self.sampleS2(level)
@@ -394,11 +403,9 @@ class OpenRAVEModel(metaclass.AutoReloader):
         pickle.dump((self.getversion(),params), open(self.getfilename(), 'w'))
     def generate(self):
         raise NotImplementedError()
-    def generateFromOptions(self,options):
-        return self.generate()
     def show(self,options=None):
         raise NotImplementedError()
-    def autogenerate(self,forcegenerate):
+    def autogenerate(self,options=None):
         """Caches parameters for most commonly used robots/objects and starts the generation process for them"""
         raise NotImplementedError()
     @staticmethod
@@ -440,13 +447,8 @@ class OpenRAVEModel(metaclass.AutoReloader):
                     raise ValueError('failed to find cached model %s'%model.getfilename())
                 model.show(options=options)
                 return
-            try:
-                model.autogenerate(forcegenerate=False)
-            except ValueError, e:
-                print e
-                print 'attempting preset values'
-                model.generateFromOptions(options)
-                model.save()
+            model.autogenerate(options=options)
+            model.save()
         finally:
             if destroyenv:
                 env.Destroy()

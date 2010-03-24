@@ -104,30 +104,41 @@ class InverseReachabilityModel(OpenRAVEModel):
     def getfilename(self):
        return os.path.join(OpenRAVEModel.getfilename(self),'invreachability.' + self.manip.GetName() + '.pp')
 
-    def generateFromOptions(self,options):
-        self.generate(heightthresh=options.heightthresh,quatthresh=options.quatthresh)
-
-    def autogenerate(self,forcegenerate=True):
+    def autogenerate(self,options=None):
         # disable every body but the target and robot
         bodies = [b for b in self.env.GetBodies() if b.GetNetworkId() != self.robot.GetNetworkId()]
         for b in bodies:
             b.Enable(False)
         try:
-            if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531' and self.manip.GetName() == 'arm':
-                self.generate(heightthresh=0.05,quatthresh=0.15)
-            else:
-                if not forcegenerate:
-                    raise ValueError('failed to find auto-generation parameters')
-                self.generate()
+            heightthresh=None
+            quatthresh=None
+            Nminimum=None
+            if options is not None:
+                if options.heightthresh is not None:
+                    heightthresh=options.heightthresh
+                if options.quatthresh is not None:
+                    quatthresh=options.quatthresh
+            if self.robot.GetRobotStructureHash() == '7b789782446d86b95c6fb16de7f204c7' and self.manip.GetName() == 'arm':
+                if heightthresh is None:
+                    heightthresh=0.05
+                if quatthresh is None:
+                    quatthresh=0.15
+            self.generate(heightthresh=heightthresh,quatthresh=quatthresh,Nminimum=Nminimum)
             self.save()
         finally:
             for b in bodies:
                 b.Enable(True)
 
-    def generate(self,heightthresh=0.05,quatthresh=0.15,Nminimum=10):
+    def generate(self,heightthresh=None,quatthresh=None,Nminimum=None):
         """First transform all end effectors to the identity and get the robot positions,
         then cluster the robot position modulo in-plane rotation (z-axis) and position (xy),
         then compute statistics for each cluster."""
+        if heightthresh is None:
+            heightthresh=0.05
+        if quatthresh is None:
+            quatthresh=0.15
+        if Nminimum is None:
+            Nminimum=10
         if not self.rmodel.load():
             self.rmodel.autogenerate()
         print "Generating Inverse Reachability",heightthresh,quatthresh
@@ -547,10 +558,10 @@ class InverseReachabilityModel(OpenRAVEModel):
     @staticmethod
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser()
-        parser.add_option('--heightthresh',action='store',type='float',dest='heightthresh',default=0.05,
-                          help='The max radius of the arm to perform the computation (default=%default)')
-        parser.add_option('--quatthresh',action='store',type='float',dest='quatthresh',default=0.15,
-                          help='The max radius of the arm to perform the computation (default=%default)')
+        parser.add_option('--heightthresh',action='store',type='float',dest='heightthresh',default=None,
+                          help='The max radius of the arm to perform the computation (default=0.05)')
+        parser.add_option('--quatthresh',action='store',type='float',dest='quatthresh',default=None,
+                          help='The max radius of the arm to perform the computation (default=0.15)')
         return parser
     @staticmethod
     def RunFromParser(Model=None,parser=None):

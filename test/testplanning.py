@@ -343,6 +343,17 @@ def test_simplenavigation():
     self.robot.SetActiveDOFs([],Robot.DOFAffine.X|Robot.DOFAffine.Y|Robot.DOFAffine.RotationAxis,[0,0,1])
     self.basemanip.MoveActiveJoints(goal=[0.737,0.304,0])
 
+def test_sampling():
+    import heapq
+    self = SpaceSampler()
+    stats = []
+    for level in range(5):
+        theta,pfi = self.sampleS2(level)
+        dirs = c_[cos(theta),sin(theta)*cos(pfi),sin(theta)*sin(pfi)]
+        dists = [heapq.nsmallest(2,arccos(dot(dirs,dir)))[1] for dir in dirs]
+        stats.append([level,mean(dists)])l
+
+    
 def test_hrp2():
     python convexdecomposition.py --robot=robots/hrp2jsk.robot.xml --volumeSplitThresholdPercent=10
     python kinematicreachability.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm --xyzdelta=0.02
@@ -351,4 +362,5 @@ def test_hrp2():
     python inversereachability.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm --heightthresh=0.02 --quatthresh=0.1
     python inversereachability.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --heightthresh=0.02 --quatthresh=0.1
     python inversereachability.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm_chest --heightthresh=0.02 --quatthresh=0.1
-    python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm --target=scenes/cereal_frootloops.kinbody.xml
+    python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.02 --normalanglerange=1 --avoidlink=RWristCam
+    python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.02 --normalanglerange=1

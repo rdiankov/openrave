@@ -30,7 +30,8 @@ class ConvexDecompositionModel(OpenRAVEModel):
 
     def has(self):
         return self.linkgeometry is not None and len(self.linkgeometry)==len(self.robot.GetLinks())
-
+    def getversion(self):
+        return 1
     def load(self):
         try:
             params = OpenRAVEModel.load(self)
@@ -53,16 +54,10 @@ class ConvexDecompositionModel(OpenRAVEModel):
 
     def getfilename(self):
         return os.path.join(OpenRAVEModel.getfilename(self),'convexdecomposition.pp')
-
-    def generateFromOptions(self,options):
-        args = {'skinWidth':options.skinWidth, 'decompositionDepth':options.decompositionDepth, 'maxHullVertices':options.maxHullVertices, 'concavityThresholdPercent':options.concavityThresholdPercent, 'mergeThresholdPercent':options.mergeThresholdPercent, 'volumeSplitThresholdPercent':options.volumeSplitThresholdPercent, 'useInitialIslandGeneration':options.useInitialIslandGeneration, 'useIslandGeneration':options.useIslandGeneration}
-        self.generate(**args)
-    def autogenerate(self,forcegenerate=True):
-        if False and self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531':
-            self.generate()
+    def autogenerate(self,options=None):
+        if options is not None:
+            self.generate(skinWidth=options.skinWidth, decompositionDepth=options.decompositionDepth, maxHullVertices=options.maxHullVertices,concavityThresholdPercent=options.concavityThresholdPercent, mergeThresholdPercent=options.mergeThresholdPercent, volumeSplitThresholdPercent=options.volumeSplitThresholdPercent, useInitialIslandGeneration=options.useInitialIslandGeneration, useIslandGeneration=options.useIslandGeneration)
         else:
-            if not forcegenerate:
-                raise ValueError('failed to find auto-generation parameters')
             self.generate()
         self.save()
     def generate(self,**kwargs):

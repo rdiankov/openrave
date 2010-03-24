@@ -49,7 +49,7 @@ class GraspingModel(OpenRAVEModel):
     def has(self):
         return len(self.grasps) > 0 and len(self.graspindices) > 0 and self.grasper is not None
     def getversion(self):
-        return 1
+        return 2
     def init(self,friction,avoidlinks,plannername=None):
         self.grasper = Grasper(self.robot,friction,avoidlinks,plannername)
         self.grasps = []
@@ -60,41 +60,44 @@ class GraspingModel(OpenRAVEModel):
             params = OpenRAVEModel.load(self)
             if params is None:
                 return False;
-            self.grasps,self.graspindices,friction,avoidlinks,plannername = params
-            self.grasper = Grasper(self.robot,friction,avoidlinks,plannername)
+            self.grasps,self.graspindices,friction,linknames,plannername = params
+            self.grasper = Grasper(self.robot,friction,avoidlinks = [self.robot.GetLink(name) for name in linknames],plannername=plannername)
             return self.has()
         except e:
             return False
 
     def save(self):
-        OpenRAVEModel.save(self,(self.grasps,self.graspindices,self.grasper.friction,self.grasper.avoidlinks,self.grasper.plannername))
+        OpenRAVEModel.save(self,(self.grasps,self.graspindices,self.grasper.friction,[link.GetName() for link in self.grasper.avoidlinks],self.grasper.plannername))
 
     def getfilename(self):
         return os.path.join(OpenRAVEModel.getfilename(self),'graspset.' + self.manip.GetName() + '.' + self.target.GetKinematicsGeometryHash()+'.pp')
 
+    def _hidelinks(self):
+        hiddengeoms = []
+        with self.env:
+            # stop rendering the non-gripper links
+            childlinkids = [link.GetIndex() for link in self.manip.GetChildLinks()]
+            for link in self.robot.GetLinks():
+                if link.GetIndex() not in childlinkids:
+                    for geom in link.GetGeometries():
+                        hiddengeoms.append((geom,geom.IsDraw()))
+                        geom.SetDraw(False)
+        return hiddengeoms
+
     def generate(self,preshapes,standoffs,rolls,approachrays, graspingnoise=None,updateenv=True,forceclosurethreshold=1e-9):
         """all grasp parameters have to be in the bodies's coordinate system (ie: approachrays)"""
-        print 'Generating Grasp Set'
+        print 'Generating Grasp Set for %s:%s:%s'%(self.robot.GetName(),self.manip.GetName(),self.target.GetName())
         time.sleep(0.1) # sleep or otherwise viewer might not load well
         N = approachrays.shape[0]
         Ttarget = self.target.GetTransform()
         # transform each ray into the global coordinate system in order to plot it
         gapproachrays = c_[dot(approachrays[:,0:3],transpose(Ttarget[0:3,0:3]))+tile(Ttarget[0:3,3],(N,1)),dot(approachrays[:,3:6],transpose(Ttarget[0:3,0:3]))]
         approachgraphs = [self.env.plot3(points=gapproachrays[:,0:3],pointsize=5,colors=array((1,0,0))),
-                          self.env.drawlinelist(points=reshape(c_[gapproachrays[:,0:3],gapproachrays[:,0:3]+0.005*gapproachrays[:,3:6]],(2*N,3)),linewidth=4,colors=array((1,0,0,0)))]
+                          self.env.drawlinelist(points=reshape(c_[gapproachrays[:,0:3],gapproachrays[:,0:3]+0.005*gapproachrays[:,3:6]],(2*N,3)),linewidth=4,colors=array((1,0,0,1)))]
         contactgraph = None
         statesaver = self.robot.CreateKinBodyStateSaver()
-        hiddengeoms = []
         try:
-            with self.env:
-                # stop rendering the non-gripper links
-                childlinkids = [link.GetIndex() for link in self.manip.GetChildLinks()]
-                for link in self.robot.GetLinks():
-                    if link.GetIndex() not in childlinkids:
-                        for geom in link.GetGeometries():
-                            hiddengeoms.append((geom,geom.IsDraw()))
-                            geom.SetDraw(False)
-
+            hiddengeoms = self._hidelinks()
             totalgrasps = N*len(preshapes)*len(rolls)*len(standoffs)
             counter = 0
             self.grasps = []
@@ -146,65 +149,84 @@ class GraspingModel(OpenRAVEModel):
             statesaver = None
 
     def show(self,delay=0.5,options=None):
-        time.sleep(1.0) # let viewer update?
-        with self.robot:
-            for i,grasp in enumerate(self.grasps):
-                print 'grasp %d/%d'%(i,len(self.grasps))
+        with RobotStateSaver(self.robot):
+            hiddengeoms = self._hidelinks()
+            time.sleep(1.0) # let viewer update?
+            if options is not None and options.graspindex is not None:
+                print 'showing grasp %d'%options.graspindex
+                grasps = [self.grasps[options.graspindex]]
+                delay=10000000
+            else:
+                grasps = self.grasps
+            for i,grasp in enumerate(grasps):
+                print 'grasp %d/%d'%(i,len(grasps))
                 try:
                     contacts,finalconfig,mindist,volume = self.runGrasp(grasp,translate=True)
                     contactgraph = self.drawContacts(contacts) if len(contacts) > 0 else None
+                    self.robot.GetController().Reset(0)
                     self.robot.SetJointValues(finalconfig[0])
                     self.robot.SetTransform(finalconfig[1])
                     self.env.UpdatePublishedBodies()
                     time.sleep(delay)
                 except planning_error,e:
                     print e
-
-    def generateFromOptions(self,options):
-        print 'attempting default grasp generation for %s:%s:%s'%(self.robot.GetName(),self.manip.GetName(),self.target.GetName())
-        self.init(friction=0.4,avoidlinks=[])
-        if self.robot.GetName() == 'BarrettHand' or self.robot.GetName() == 'BarrettWAM':
-            preshapes = array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2)))
-        else:
-            manipprob = BaseManipulation(self.robot)
-            with self.target:
-                self.target.Enable(False)
-                self.robot.SetActiveDOFs(self.manip.GetGripperJoints())
-                manipprob.ReleaseFingers(execute=True)
-            self.robot.WaitForController(0)
-            preshapes = array([self.robot.GetJointValues()[self.manip.GetGripperJoints()]])
-        self.generate(preshapes=preshapes, rolls = arange(0,2*pi,pi/2), standoffs = array([0,0.025,0.05]),
-                      approachrays = self.computeBoxApproachRays(stepsize=0.02,addSphereNorms=options.spherenorms),
-                      updateenv=options.useviewer)
-
-    def autogenerate(self,forcegenerate=True):
+    def autogenerate(self,options=None):
         # disable every body but the target and robot
         bodies = [b for b in self.env.GetBodies() if b.GetNetworkId() != self.robot.GetNetworkId() and b.GetNetworkId() != self.target.GetNetworkId()]
         for b in bodies:
             b.Enable(False)
         try:
-            if self.robot.GetRobotStructureHash() == '409764e862c254605cafb9de013eb531' and self.manip.GetName() == 'arm' and self.target.GetKinematicsGeometryHash() == 'bbf03c6db8efc712a765f955a27b0d0f':
-                self.init(friction=0.4,avoidlinks=[])
-                self.generate(preshapes=array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2))),
-                                      rolls = arange(0,2*pi,pi/2), standoffs = array([0,0.025]),
-                                      approachrays = self.computeBoxApproachRays(stepsize=0.02))
-            else:
-                if not forcegenerate:
-                    raise ValueError('failed to find auto-generation parameters')
-                print 'attempting default grasp generation for %s:%s:%s'%(self.robot.GetName(),self.manip.GetName(),self.target.GetName())
-                self.init(friction=0.4,avoidlinks=[])
-                if self.robot.GetName() == 'BarrettHand' or self.robot.GetName() == 'BarrettWAM':
-                    preshapes = array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2)))
-                else:
-                    manipprob = BaseManipulation(self.robot)
-                    with self.target:
-                        self.target.Enable(False)
-                        self.robot.SetActiveDOFs(self.manip.GetGripperJoints())
-                        manipprob.ReleaseFingers(execute=True)
-                    self.robot.WaitForController(0)
-                    preshapes = array([self.robot.GetJointValues()[self.manip.GetGripperJoints()]])
-                self.generate(preshapes=preshapes, rolls = arange(0,2*pi,pi/2), standoffs = array([0,0.025]),
-                              approachrays = self.computeBoxApproachRays(stepsize=0.02),updateenv=True)
+            friction = None
+            preshapes = None
+            approachrays = None
+            standoffs = None
+            rolls = None
+            avoidlinks = None
+            updateenv=False
+            if options is not None:
+                if len(options.preshapes) > 0:
+                    preshapes = zeros((0,len(self.manip.GetGripperJoints())))
+                    for preshape in options.preshapes:
+                        preshapes = r_[preshapes,array([float(s) for s in preshape.split()])]
+                if options.boxdelta is not None:
+                    approachrays = self.computeBoxApproachRays(delta=options.boxdelta,normalanglerange=options.normalanglerange,directiondelta=options.directiondelta)
+                elif options.spheredelta is not None:
+                    approachrays = self.computeBoxApproachRays(delta=options.spheredelta,normalanglerange=options.normalanglerange,directiondelta=options.directiondelta)
+                if len(options.standoffs)>0:
+                    standoffs = array(options.standoffs)
+                if len(options.rolls)>0:
+                    rolls = array(options.rolls)
+                if options.friction is not None:
+                    friction = options.friction
+                if options.avoidlinks is not None:
+                    avoidlinks = [self.robot.GetLink(avoidlink) for avoidlink in options.avoidlinks]
+                    
+                updateenv = options.useviewer
+            # check for specific robots
+            if self.robot.GetRobotStructureHash() == '7b789782446d86b95c6fb16de7f204c7' and self.manip.GetName() == 'arm' and self.target.GetKinematicsGeometryHash() == 'bbf03c6db8efc712a765f955a27b0d0f':
+                if preshapes is None:
+                    preshapes=array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2)))
+
+            if preshapes is None:
+                manipprob = BaseManipulation(self.robot)
+                with self.target:
+                    self.target.Enable(False)
+                    self.robot.SetActiveDOFs(self.manip.GetGripperJoints())
+                    manipprob.ReleaseFingers(execute=True)
+                self.robot.WaitForController(0)
+                preshapes = array([self.robot.GetJointValues()[self.manip.GetGripperJoints()]])
+            if approachrays is None:
+                approachrays = self.computeBoxApproachRays(delta=0.02)
+            if rolls is None:
+                rolls = arange(0,2*pi,pi/2)
+            if standoffs is None:
+                standoffs = array([0,0.025])
+            if friction is None:
+                friction = 0.4
+            if avoidlinks is None:
+                avoidlinks = []
+            self.init(friction=friction,avoidlinks=avoidlinks)
+            self.generate(preshapes=preshapes,rolls=rolls,standoffs=standoffs,approachrays=approachrays,updateenv=updateenv)
             self.save()
         finally:
             for b in bodies:
@@ -271,7 +293,7 @@ class GraspingModel(OpenRAVEModel):
                         continue
             yield grasp,i
 
-    def computeBoxApproachRays(self,stepsize=0.02,addSphereNorms=False):
+    def computeBoxApproachRays(self,delta=0.02,normalanglerange=0,directiondelta=0.4):
         with self.target:
             self.target.SetTransform(eye(4))
             ab = self.target.ComputeAABB()
@@ -284,13 +306,12 @@ class GraspingModel(OpenRAVEModel):
                            (e[0],0,0,-1,0,0,0,e[1],0,0,0,e[2]),
                            (-e[0],0,0,1,0,0,0,e[1],0,0,0,e[2])))
             maxlen = 2*sqrt(sum(e**2))
-
             approachrays = zeros((0,6))
             for side in sides:
                 ex = sqrt(sum(side[6:9]**2))
                 ey = sqrt(sum(side[9:12]**2))
-                XX,YY = meshgrid(r_[arange(-ex,-0.25*stepsize,stepsize),0,arange(stepsize,ex,stepsize)],
-                                 r_[arange(-ey,-0.25*stepsize,stepsize),0,arange(stepsize,ey,stepsize)])
+                XX,YY = meshgrid(r_[arange(-ex,-0.25*delta,delta),0,arange(delta,ex,delta)],
+                                 r_[arange(-ey,-0.25*delta,delta),0,arange(delta,ey,delta)])
                 localpos = outer(XX.flatten(),side[6:9]/ex)+outer(YY.flatten(),side[9:12]/ey)
                 N = localpos.shape[0]
                 rays = c_[tile(p+side[0:3],(N,1))+localpos,maxlen*tile(side[3:6],(N,1))]
@@ -300,12 +321,25 @@ class GraspingModel(OpenRAVEModel):
                 if len(newinfo) > 0:
                     newinfo[sum(rays[collision,3:6]*newinfo[:,3:6],1)>0,3:6] *= -1
                     approachrays = r_[approachrays,newinfo]
-                    if addSphereNorms:
-                        dirs = newinfo[:,0:3]-tile(p,(len(newinfo),1))
-                        L=sqrt(sum(dirs**2,1))
-                        I=flatnonzero(L>1e-8)
-                        approachrays = r_[approachrays,c_[newinfo[I,0:3],dirs[I,:]/transpose(tile(1.0/L[I],(3,1)))]]
+            if normalanglerange > 0:
+                theta,pfi = SpaceSampler().sampleS2(angledelta=directiondelta)
+                dirs = c_[cos(theta),sin(theta)*cos(pfi),sin(theta)*sin(pfi)]
+                dirs = array([dir for dir in dirs if arccos(dir[2])<=normalanglerange]) # find all dirs within normalanglerange
+                if len(dirs) == 0:
+                    dirs = array([[0,0,1]])
+                newapproachrays = zeros((0,6))
+                for approachray in approachrays:
+                    R = rotationMatrixFromQuat(quatRotateDirection(array((0,0,1)),approachray[3:6]))
+                    newapproachrays = r_[newapproachrays,c_[tile(approachray[0:3],(len(dirs),1)),dot(dirs,transpose(R))]]
+                approachrays = newapproachrays
             return approachrays
+    def computeSphereApproachRays(self,delta=0.1,normalanglerange=0,directiondelta=0.4):
+        with self.target:
+            self.target.SetTransform(eye(4))
+            dirs = newinfo[:,0:3]-tile(p,(len(newinfo),1))
+            L=sqrt(sum(dirs**2,1))
+            I=flatnonzero(L>1e-8)
+            approachrays = r_[approachrays,c_[newinfo[I,0:3],dirs[I,:]/transpose(tile(1.0/L[I],(3,1)))]]
 
     def drawContacts(self,contacts,conelength=0.03,transparency=0.5):
         angs = linspace(0,2*pi,10)
@@ -313,13 +347,7 @@ class GraspingModel(OpenRAVEModel):
         triinds = array(c_[zeros(len(angs)),range(2,1+len(angs))+[1],range(1,1+len(angs))].flatten(),int)
         allpoints = zeros((0,3))
         for c in contacts:
-            rotaxis = cross(array((0,0,1)),c[3:6])
-            sinang = sqrt(sum(rotaxis**2))
-            if sinang > 1e-4:
-                R = rotationMatrixFromAxisAngle(rotaxis/sinang,math.atan2(sinang,c[5]))
-            else:
-                R = eye(3)
-                R[1,1] = R[2,2] = sign(c[5])
+            R = rotationMatrixFromQuat(quatRotateDirection(array((0,0,1)),c[3:6]))
             points = dot(conepoints,transpose(R)) + tile(c[0:3],(conepoints.shape[0],1))
             allpoints = r_[allpoints,points[triinds,:]]
         return self.env.drawtrimesh(points=allpoints,indices=None,colors=array((1,0.4,0.4,transparency)))
@@ -331,20 +359,32 @@ class GraspingModel(OpenRAVEModel):
                           help='The filename of the target body whose grasp set to be generated (default=%default)')
         parser.add_option('--noviewer', action='store_false', dest='useviewer',default=True,
                           help='If specified, will generate the tables without launching a viewer')
-#         parser.add_option('--boxstepsize', action='store', type='float',dest='boxstepsize',default=0.02,
-#                           help='Density of box surface sampling (default=%default)')
-#         parser.add_option('--normalanglerange', action='store', type='float',dest='normalanglerange',default=0.0,
-#                           help='The range of angles around the surface normal to approach from (default=%default)')
-#         parser.add_option('--directiondelta', action='store', type='float',dest='directiondelta',default=0.4,
-#                           help='The average distance of approach directions for each surface point in radians (default=%default)')
-        parser.add_option('--spherenorms', action='store_true', dest='spherenorms',default=False,
-                          help='If specified, add sphere normals to the computation')
+        parser.add_option('--boxdelta', action='store', type='float',dest='boxdelta',default=None,
+                          help='Step size of of box surface sampling')
+        parser.add_option('--spheredelta', action='store', type='float',dest='spheredelta',default=None,
+                          help='Delta angle between directions on the sphere')
+        parser.add_option('--normalanglerange', action='store', type='float',dest='normalanglerange',default=0.0,
+                          help='The range of angles around the surface normal to approach from (default=%default)')
+        parser.add_option('--directiondelta', action='store', type='float',dest='directiondelta',default=0.4,
+                          help='The average distance of approach directions for each surface point in radians (default=%default)')
+        parser.add_option('--standoff', action='append', type='float',dest='standoffs',default=[],
+                          help='Add a standoff distance')
+        parser.add_option('--roll', action='append', type='float',dest='rolls',default=[],
+                          help='Add a roll angle')
+        parser.add_option('--preshape', action='append', type='string',dest='preshapes',default=[],
+                          help='Add a preshape for the manipulator gripper joints')
+        parser.add_option('--avoidlink', action='append', type='string',dest='avoidlinks',default=[],
+                          help='Add a link name to avoid at all costs (like sensor links)')
+        parser.add_option('--friction', action='store', type='float',dest='friction',default=None,
+                          help='Friction between robot and target object (default=0.4)')
+        parser.add_option('--graspindex', action='store', type='int',dest='graspindex',default=None,
+                          help='If set, then will only show this grasp index')
         return parser
     @staticmethod
     def RunFromParser(Model=None,parser=None):
+        (options, args) = GraspingModel.CreateOptionParser().parse_args()
         if parser is None:
             parser = GraspingModel.CreateOptionParser()
-        (options, args) = parser.parse_args()
         env = Environment()
         try:
             target = None

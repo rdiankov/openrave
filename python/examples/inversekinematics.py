@@ -25,11 +25,10 @@ from optparse import OptionParser
 
 class InverseKinematicsModel(OpenRAVEModel):
     """Generates analytical inverse-kinematics solutions, compiles them into a shared object/DLL, and sets the robot's iksolver. Only generates the models for the robot's active manipulator. To generate IK models for each manipulator in the robot, mulitple InverseKinematicsModel classes have to be created."""
-    def __init__(self,robot,iktype=None,forceikbuild=False):
+    def __init__(self,robot,iktype=None):
         OpenRAVEModel.__init__(self,robot=robot)
         self.iktype = iktype
         self.iksolver = None
-        self.forceikbuild = forceikbuild
     
     def has(self):
         return self.iksolver is not None and self.manip.HasIKSolver()
@@ -69,19 +68,43 @@ class InverseKinematicsModel(OpenRAVEModel):
         return ccompiler.new_compiler().shared_object_filename(basename=basename,output_dir=OpenRAVEModel.getfilename(self))
     def getsourcefilename(self):
         return os.path.join(OpenRAVEModel.getfilename(self),'ikfast.' + self.manip.GetName() + '.' + str(self.iktype))
+    def autogenerate(self,options=None):
+        freejoints = None
+        iktype = None
+        usedummyjoints = None
+        accuracy = None
+        precision = None
+        forceikbuild = False
+        if options is not None:
+            if options.rotation3donly:
+                iktype = IkParameterization.Type.Rotation3D
+            if options.direction3donly:
+                iktype = IkParameterization.Type.Direction3D
+            if options.translation3donly:
+                iktype = IkParameterization.Type.Translation3D
+            forceikbuild=options.force
+            precision=options.precision
+            accuracy=options.accuracy
+            usedummyjoints=options.usedummyjoints
+            if len(options.freejoints)>0:
+                freejoints=options.freejoints
+        if self.robot.GetRobotStructureHash() == '7b789782446d86b95c6fb16de7f204c7' and self.manip.GetName() == 'arm':
+            if freejoints is None:
+                freejoints = ['Shoulder_Roll']
+        elif self.robot.GetRobotStructureHash() == '811c96bfa1b9444953763310418ca2a5' and self.manip.GetName() == 'arm':
+            if freejoints is None:
+                freejoints = ['Shoulder_Roll']
+            if iktype is None:
+                iktype=IkParameterization.Type.Translation3D
+        elif self.robot.GetRobotStructureHash() == 'bb644e60bcd217d8cea1272a26ecc651' and self.manip.GetName() == 'rotation':
+            if iktype is None:
+                iktype=IkParameterization.Type.Rotation3D
+        if iktype is None:
+            iktype = IkParameterization.Type.Transform6D
+        self.generate(iktype=iktype,freejoints=freejoints,usedummyjoints=usedummyjoints,accuracy=accuracy,precision=precision,forceikbuild=forceikbuild)
+        self.save()
 
-    def generateFromOptions(self,options):
-        iktype = IkParameterization.Type.Transform6D
-        if options.rotation3donly:
-            iktype = IkParameterization.Type.Rotation3D
-        if options.direction3donly:
-            iktype = IkParameterization.Type.Direction3D
-        if options.translation3donly:
-            iktype = IkParameterization.Type.Translation3D
-        self.forceikbuild=options.force
-        self.generate(freejoints=options.freejoints,usedummyjoints=options.usedummyjoints,iktype=iktype,accuracy=options.accuracy,precision=options.precision)
-    
-    def generate(self,iktype=None,freejoints=None,usedummyjoints=False,accuracy=None,precision=None):
+    def generate(self,iktype=None,freejoints=None,usedummyjoints=False,accuracy=None,precision=None,forceikbuild=False):
         if iktype is not None:
             self.iktype = iktype
         output_filename = self.getfilename()
@@ -136,7 +159,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         if len(freejoints)>0:
             sourcefilename += '_f'+'_'.join(str(ind) for ind in freejoints)
         sourcefilename += '.cpp'
-        if self.forceikbuild or not os.path.isfile(sourcefilename):
+        if forceikbuild or not os.path.isfile(sourcefilename):
             print 'generating inverse kinematics file %s'%sourcefilename
             mkdir_recursive(OpenRAVEModel.getfilename(self))
             solver = ikfast.IKFastSolver(kinbody=self.robot,accuracy=accuracy,precision=precision)
@@ -165,17 +188,6 @@ class InverseKinematicsModel(OpenRAVEModel):
             for objectfile in objectfiles:
                 os.remove(objectfile)
 
-    def autogenerate(self,forcegenerate=True):
-        if self.robot.GetRobotStructureHash() == '7b789782446d86b95c6fb16de7f204c7' and self.manip.GetName() == 'arm':
-            self.generate(freejoints=[self.robot.GetJoint('Shoulder_Roll').GetJointIndex()],iktype=IkParameterization.Type.Transform6D)
-        elif self.robot.GetRobotStructureHash() == '811c96bfa1b9444953763310418ca2a5' and self.manip.GetName() == 'arm':
-            self.generate(freejoints=[self.robot.GetJoint('Shoulder_Roll').GetJointIndex()],iktype=IkParameterization.Type.Translation3D)
-        elif self.robot.GetRobotStructureHash() == 'bb644e60bcd217d8cea1272a26ecc651' and self.manip.GetName() == 'rotation':
-            self.generate(iktype=IkParameterization.Type.Rotation3D)
-        else:
-            if not forcegenerate:
-                raise ValueError('failed to find auto-generation parameters')
-            self.generate()
     def testik(self,numiktests):
         with self.robot:
             # set base to identity to avoid complications when reporting errors
@@ -300,11 +312,11 @@ class InverseKinematicsModel(OpenRAVEModel):
         parser.add_option('--freejoint', action='append', type='int', dest='freejoints',default=[],
                           help='Optional joint index specifying a free parameter of the manipulator. If not specified, assumes all joints not solving for are free parameters. Can be specified multiple times for multiple free parameters.')
         parser.add_option('--precision', action='store', type='int', dest='precision',default=10,
-                          help='The precision to compute the inverse kinematics in, default is 10 decimal digits.')
+                          help='The precision to compute the inverse kinematics in, (default=%default).')
         parser.add_option('--accuracy', action='store', type='float', dest='accuracy',default=1e-7,
-                          help='The small number that will be recognized as a zero used to eliminate floating point errors (default is 1e-7).')
+                          help='The small number that will be recognized as a zero used to eliminate floating point errors (default=%default).')
         parser.add_option('--force', action='store_true', dest='force',default=False,
-                          help='If set, will always rebuild the ikfast c++ file, regardless of its existence.')
+                          help='If set, will always rebuild the ikfast c++ file, regardless of its existence (default=%default).')
         parser.add_option('--rotation3donly', action='store_true', dest='rotation3donly',default=False,
                           help='If true, need to specify only 3 solve joints and will solve for a target rotation')
         parser.add_option('--direction3donly', action='store_true', dest='direction3donly',default=False,
@@ -323,7 +335,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         if parser is None:
             parser = InverseKinematicsModel.CreateOptionParser()
         (options, args) = parser.parse_args()
-        Model = lambda robot: InverseKinematicsModel(robot=robot,forceikbuild=options.force)
+        Model = lambda robot: InverseKinematicsModel(robot=robot)
         OpenRAVEModel.RunFromParser(Model=Model,parser=parser)
 
         if options.numiktests is not None:

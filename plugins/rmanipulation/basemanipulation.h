@@ -349,6 +349,10 @@ protected:
         }
     
         if( i > 0 ) {
+            if( bPrevInCollision ) {
+                RAVELOG_DEBUGA("hand failed to move out of collision\n");
+                return false;
+            }
             RAVELOG_DEBUGA("hand moved %f\n", (float)i*stepsize);
             CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream);
             sout << "1";
