@@ -448,9 +448,9 @@ class OpenRAVEModel(metaclass.AutoReloader):
                 model.show(options=options)
                 return
             model.autogenerate(options=options)
-            model.save()
         finally:
             if destroyenv:
+                print 'destroying environment'
                 env.Destroy()
 
 class openrave_exception(Exception):

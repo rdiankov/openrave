@@ -81,7 +81,7 @@ public:
         }
         else {
             vlinks = _robot->GetLinks();
-            pbase = vlinks.front();
+            pbase = vlinks.at(0);
         }
 
         if( (int)_parameters.vinitialconfig.size() == _robot->GetActiveDOF() )

@@ -539,12 +539,12 @@ class CollisionCheckerPQP : public CollisionCheckerBase
                 p1 = PQPRealToVector(disres.P1(),R1,T1);
                 p2 = PQPRealToVector(disres.P2(),R2,T2);
                 dReal depth = RaveSqrt((p2-p1).lengthsqr3());
-                report->contacts.front().pos = p1;
-                report->contacts.front().depth = -depth;
+                report->contacts.at(0).pos = p1;
+                report->contacts.at(0).depth = -depth;
                 if( depth > 0 )
-                    report->contacts.front().norm = (p2-p1)*(1/depth);
+                    report->contacts.at(0).norm = (p2-p1)*(1/depth);
                 else
-                    report->contacts.front().norm = Vector(0,0,0);
+                    report->contacts.at(0).norm = Vector(0,0,0);
                 report->plink1 = link1;
                 report->plink2 = link2;
             }

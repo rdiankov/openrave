@@ -2391,6 +2391,7 @@ public:
                 _listenvlocks.push_back(boost::shared_ptr<EnvironmentMutex::scoped_lock>(new EnvironmentMutex::scoped_lock(_penv->GetMutex())));
         }
         else {
+            BOOST_ASSERT(_listenvlocks.size()>0);
             _listenvlocks.back()->unlock();
             _listfreelocks.splice(_listfreelocks.end(),_listenvlocks,--_listenvlocks.end());
         }
@@ -2684,6 +2685,7 @@ void PyKinBody::__enter__()
 
 void PyKinBody::__exit__(object type, object value, object traceback)
 {
+    BOOST_ASSERT(_listStateSavers.size()>0);
     _listStateSavers.pop_back();
     if( _listStateSavers.size() == 0 )
         _pyenv->LockPhysics(false);

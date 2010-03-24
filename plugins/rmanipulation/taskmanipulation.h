@@ -541,6 +541,7 @@ class TaskManipulation : public ProblemInstance
                     continue; // failed
                 }
 
+                BOOST_ASSERT(phandtraj->GetPoints().size()>0);
                 Transform t = phandtraj->GetPoints().back().trans;
 
                 // move back a little if robot/target in collision
@@ -687,6 +688,7 @@ class TaskManipulation : public ProblemInstance
 
                 // add a grasp with the full preshape
                 Trajectory::TPOINT tpopenhand;
+                BOOST_ASSERT(ptrajToPreshapeFull->GetPoints().size()>0);
                 _robot->SetJointValues(ptrajToPreshapeFull->GetPoints().back().q);
                 _robot->SetActiveDOFs(pmanip->GetGripperJoints());
                 if( iGraspPreshape >= 0 )

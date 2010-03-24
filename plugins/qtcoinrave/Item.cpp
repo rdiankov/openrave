@@ -375,7 +375,7 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
         // something's wrong, so just return
         return false;
 
-    Transform tglob = _vtrans.front();//_pchain->GetCenterOfMass();
+    Transform tglob = _vtrans.at(0);//_pchain->GetCenterOfMass();
     SbMatrix m; m.makeIdentity();
     _ivXform->setMatrix(m);
     _ivXform->translation.setValue(tglob.trans.x, tglob.trans.y, tglob.trans.z);

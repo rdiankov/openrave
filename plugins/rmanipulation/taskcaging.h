@@ -213,7 +213,7 @@ public:
 
             f = 0;
             for(size_t i = 0; i < vtargvalues.size(); ++i)
-                f += (vtargvalues[i]-vtargettraj.front()[i])*(vtargvalues[i]-vtargettraj.front()[i]);
+                f += (vtargvalues[i]-vtargettraj.at(0)[i])*(vtargvalues[i]-vtargettraj.at(0)[i]);
             pfeatures[2] = RaveSqrt(f);
         }
 
@@ -235,7 +235,7 @@ public:
             vector<dReal>::const_iterator ittarget = pConfiguration.begin()+_robot->GetActiveDOF();
             dReal f = 0;
             for(size_t i = 0; i < _vtargetjoints.size(); ++i) {
-                dReal diff = *ittarget++-vtargettraj.front()[_vtargetjoints[i]];
+                dReal diff = *ittarget++-vtargettraj.at(0)[_vtargetjoints[i]];
                 f += diff*diff;
             }
             
@@ -486,7 +486,7 @@ public:
                 FOREACHC(itsol, solutions)
                     g.iksolutions.push_back(ConstrainedTaskData::IKSOL(*itsol, EvalWithFeatures(*itsol)));
                 g.iksolutions.sort(IkSolutionCompare());
-                //RAVELOG_WARNA("%f %f\n", g.iksolutions.front().second, g.iksolutions.back().second);
+                //RAVELOG_WARNA("%f %f\n", g.iksolutions.at(0).second, g.iksolutions.back().second);
             }
             else {
                 // fill the list
@@ -1312,6 +1312,7 @@ private:
                 return false;
             }
         
+            BOOST_ASSERT(taskdata->vtargettraj.size()>0);
             taskdata->ptarget->SetJointValues(taskdata->vtargettraj.back());
             Transform Ttarget = taskdata->ptargetlink->GetTransform();
     
@@ -1396,7 +1397,7 @@ private:
 
         // write first and last points
         vector<dReal> values;
-        _robot->SetActiveDOFValues(ptraj->GetPoints().front().q);
+        _robot->SetActiveDOFValues(ptraj->GetPoints().at(0).q);
         _robot->GetJointValues(values);
         FOREACH(it, values)
             sout << *it << " ";
@@ -1514,7 +1515,7 @@ private:
         if( vtargettraj.size() == 0 )
             return false;
 
-        for(int i = 0; i < (int)vtargettraj.front().size(); ++i)
+        for(int i = 0; i < (int)vtargettraj.at(0).size(); ++i)
             taskdata->_vtargetjoints.push_back(i);
 
         RobotBase::RobotStateSaver saver(_robot);
@@ -1559,7 +1560,7 @@ private:
             if( bNoIK )
                 continue;
 
-            FOREACH(itsol, vsolutions.front()) {
+            FOREACH(itsol, vsolutions.at(0)) {
                 if( FindAllSimple(*itsol, 1, vtrajectory, fConfigThresh2, vsolutions, taskdata) ) {
                     vtrajectory.push_back(*itsol);
                     bSuccess = true;
@@ -1584,6 +1585,7 @@ private:
         // write the last point
         vector<dReal> values;
 
+        BOOST_ASSERT(vtrajectory.size()>0);
         _robot->SetActiveDOFValues(vtrajectory.front());
         _robot->GetJointValues(values);
         FOREACH(it, values)

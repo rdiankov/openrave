@@ -65,7 +65,7 @@ AABB KinBody::Link::TRIMESH::ComputeAABB() const
 {
     AABB ab;
     Vector vmin, vmax;
-    vmin = vmax = vertices.front();
+    vmin = vmax = vertices.at(0);
     FOREACHC(itv, vertices) {
         Vector v = *itv;
         if( vmin.x > v.x ) vmin.x = v.x;
@@ -127,7 +127,7 @@ AABB KinBody::Link::GEOMPROPERTIES::ComputeAABB(const Transform& t) const
     case GeomTrimesh:
         // just use collisionmesh
         if( collisionmesh.vertices.size() > 0) {
-            Vector vmin, vmax; vmin = vmax = tglobal*collisionmesh.vertices.front();
+            Vector vmin, vmax; vmin = vmax = tglobal*collisionmesh.vertices.at(0);
             FOREACHC(itv, collisionmesh.vertices) {
                 Vector v = tglobal * *itv;
                 if( vmin.x > v.x ) vmin.x = v.x;
@@ -1242,6 +1242,8 @@ void KinBody::SetBodyTransformations(const std::vector<Transform>& vbodies)
 
 void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, const Transform& transBase, bool bCheckLimits)
 {
+    if( _veclinks.size() == 0 )
+        return;
     Transform tbase = _veclinks.front()->GetTransform().inverse() * transBase;
     _veclinks.front()->SetTransform(transBase);
 

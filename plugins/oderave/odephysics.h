@@ -190,7 +190,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
     virtual bool GetBodyVelocity(KinBodyConstPtr pbody, Vector& linearvel, Vector& angularvel)
     {
         odespace->Synchronize(pbody);
-        dBodyID body = odespace->GetLinkBody(pbody->GetLinks().front());
+        dBodyID body = odespace->GetLinkBody(pbody->GetLinks().at(0));
         if( body ) {
             const dReal* p = dBodyGetLinearVel(body);
             linearvel = Vector(p[0], p[1], p[2]);

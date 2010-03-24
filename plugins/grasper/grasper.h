@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2010 Carnegie Mellon University (rdiankov@cs.cmu.edu)
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -251,6 +251,7 @@ class GrasperProblem : public ProblemInstance
             pfulltraj->Write(strsavetraj, 0);
 
         bodysaver.reset(); // restore target
+        BOOST_ASSERT(ptraj->GetPoints().size()>0);
         _robot->SetTransform(ptraj->GetPoints().back().trans);
         _robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
 
@@ -301,6 +302,7 @@ class GrasperProblem : public ProblemInstance
         }
 
         if( bOutputFinal ) {
+            BOOST_ASSERT(pfulltraj->GetPoints().size()>0);
             sout << pfulltraj->GetPoints().back().trans << " ";
             FOREACHC(it,pfulltraj->GetPoints().back().q)
                 sout << *it << " ";
@@ -442,8 +444,8 @@ class GrasperProblem : public ProblemInstance
             r.dir *= 1000;
 
             if( GetEnv()->CheckCollision(r, KinBodyConstPtr(pbody), _report) ) {
-                vpoints[i].norm = _report->contacts.front().norm;
-                vpoints[i].pos = _report->contacts.front().pos + 0.001f * vpoints[i].norm; // extrude a little
+                vpoints[i].norm = _report->contacts.at(0).norm;
+                vpoints[i].pos = _report->contacts.at(0).pos + 0.001f * vpoints[i].norm; // extrude a little
                 vpoints[i].depth = 0;
                 i++;
             }
@@ -472,8 +474,8 @@ class GrasperProblem : public ProblemInstance
             r.pos = com - 10.0f*r.dir;
             COLLISIONREPORT::CONTACT p;
             if( GetEnv()->CheckCollision(r, KinBodyConstPtr(pbody), _report) ) {
-                p.norm = -_report->contacts.front().norm;//-r.dir//_report->contacts.front().norm1;
-                p.pos = _report->contacts.front().pos + 0.001f * p.norm; // extrude a little
+                p.norm = -_report->contacts.at(0).norm;//-r.dir//_report->contacts.at(0).norm1;
+                p.pos = _report->contacts.at(0).pos + 0.001f * p.norm; // extrude a little
                 p.depth = 0;
                 vpoints.push_back(p);
             }
@@ -626,8 +628,8 @@ class GrasperProblem : public ProblemInstance
                     }
                 
                     if( GetEnv()->CheckCollision(r, KinBodyConstPtr(pbody), _report) ) {
-                        p.norm = -_report->contacts.front().norm;//-r.dir//_report->contacts.front().norm1;
-                        p.pos = _report->contacts.front().pos;// + 0.001f * p.norm; // extrude a little
+                        p.norm = -_report->contacts.at(0).norm;//-r.dir//_report->contacts.at(0).norm1;
+                        p.pos = _report->contacts.at(0).pos;// + 0.001f * p.norm; // extrude a little
                         p.depth = 0;
                         vpoints.push_back(p);
                     }
@@ -718,7 +720,7 @@ class GrasperProblem : public ProblemInstance
 
                     Vector deltaxyz;
                     //check if this link is the base link, if so there will be no Jacobian
-                    if( *itlink == _robot->GetLinks().front() || (!!_robot->GetActiveManipulator() && *itlink == _robot->GetActiveManipulator()->GetBase()) )  {
+                    if( *itlink == _robot->GetLinks().at(0) || (!!_robot->GetActiveManipulator() && *itlink == _robot->GetActiveManipulator()->GetBase()) )  {
                         deltaxyz = direction;
                     }
                     else {

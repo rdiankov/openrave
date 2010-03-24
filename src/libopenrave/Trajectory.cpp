@@ -152,16 +152,17 @@ bool TrajectoryBase::SampleTrajectory(dReal time, TPOINT &sample) const
             return false;
         }
 
-        sample = _vecpoints.front();
+        sample = _vecpoints.at(0);
         return true;
     }
 
     if (time <= 0.0) {
-        sample = _vecpoints.front();
+        sample = _vecpoints.at(0);
         return true;
     }
     else if (time >= GetTotalDuration()) {
         //if (time > GetTotalDuration()) RAVELOG(L"TrajectoryBase::WARNING- sample time > duration: %f\n", time);
+        BOOST_ASSERT(_vecpoints.size()>0);
         sample = _vecpoints.back();
         return true;
     }

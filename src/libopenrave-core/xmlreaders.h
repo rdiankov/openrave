@@ -1110,9 +1110,9 @@ namespace OpenRAVEXMLParser
                 if( !_pjoint->bodies[0] || !_pjoint->bodies[1] ) {
                     RAVELOG_WARNA(str(boost::format("one or more attached bodies are invalid for joint %s\n")%_pjoint->GetName()));
                     if( !_pjoint->bodies[1] )
-                        _pjoint->bodies[1] = _pparent->GetLinks().front();
+                        _pjoint->bodies[1] = _pparent->GetLinks().at(0);
                     if( !_pjoint->bodies[0] )
-                        _pjoint->bodies[0] = _pparent->GetLinks().front();
+                        _pjoint->bodies[0] = _pparent->GetLinks().at(0);
                 }
 
                 // make sure first body is always closer to the root, unless the second body is static
@@ -1621,6 +1621,7 @@ namespace OpenRAVEXMLParser
                     else if( xmlname == "joint" ) {
                         if( !_pjoint )
                             throw openrave_exception("joint should be valid");
+                        BOOST_ASSERT(_pchain->_vecJointIndices.size()>0);
                         _pjoint->dofindex = (int)_pchain->_vecJointIndices.back();
                         boost::shared_ptr<JointXMLReader> pjointreader = boost::dynamic_pointer_cast<JointXMLReader>(_pcurreader);
                         if( pjointreader->IsMimic() )
@@ -2148,7 +2149,7 @@ namespace OpenRAVEXMLParser
                                 _psensor->pattachedlink.reset();
                             }
                             else
-                                _psensor->pattachedlink = _probot->GetLinks().front();
+                                _psensor->pattachedlink = _probot->GetLinks().at(0);
                         }
                     }
                 }
