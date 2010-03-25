@@ -30,9 +30,6 @@ class ReachabilityModel(OpenRAVEModel):
         self.ikmodel = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
         if not self.ikmodel.load():
             self.ikmodel.autogenerate()
-        self.cdmodel = convexdecomposition.ConvexDecompositionModel(self.robot)
-        if not self.cdmodel.load():
-            self.cdmodel.autogenerate()
         self.reachabilitystats = None
         self.reachability3d = None
         self.reachabilitydensity3d = None
@@ -43,7 +40,7 @@ class ReachabilityModel(OpenRAVEModel):
     def has(self):
         return len(self.reachabilitydensity3d) > 0 and len(self.reachability3d) > 0
     def getversion(self):
-        return 2
+        return 3
     def load(self):
         try:
             params = OpenRAVEModel.load(self)
@@ -112,11 +109,7 @@ class ReachabilityModel(OpenRAVEModel):
                 maxradius = armlength+xyzdelta
 
             allpoints,insideinds,shape,self.pointscale = self.UniformlySampleSpace(maxradius,delta=xyzdelta)
-            # select the best sphere level matching quatdelta;
-            # level=0, quatdist = 0.5160220
-            # level=1: quatdist = 0.2523583
-            # level=2: quatdist = 0.120735
-            qarray = SpaceSampler().sampleSO3(level=max(0,int(-0.5-log2(quatdelta))))
+            qarray = SpaceSampler().sampleSO3(quatdelta=quatdelta)
             rotations = [eye(3)] if translationonly else rotationMatrixFromQArray(qarray)
             self.xyzdelta = xyzdelta
             self.quatdelta = 0

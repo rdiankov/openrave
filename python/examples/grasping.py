@@ -39,9 +39,6 @@ class GraspingModel(OpenRAVEModel):
     """Holds all functions/data related to a grasp between a robot hand and a target"""
     def __init__(self,robot,target):
         OpenRAVEModel.__init__(self,robot=robot)
-        self.cdmodel = convexdecomposition.ConvexDecompositionModel(self.robot)
-        if not self.cdmodel.load():
-            self.cdmodel.autogenerate()
         self.target = target
         self.grasps = []
         self.graspindices = dict()
@@ -49,7 +46,7 @@ class GraspingModel(OpenRAVEModel):
     def has(self):
         return len(self.grasps) > 0 and len(self.graspindices) > 0 and self.grasper is not None
     def getversion(self):
-        return 2
+        return 3
     def init(self,friction,avoidlinks,plannername=None):
         self.grasper = Grasper(self.robot,friction,avoidlinks,plannername)
         self.grasps = []
@@ -200,7 +197,6 @@ class GraspingModel(OpenRAVEModel):
                     friction = options.friction
                 if options.avoidlinks is not None:
                     avoidlinks = [self.robot.GetLink(avoidlink) for avoidlink in options.avoidlinks]
-                    
                 updateenv = options.useviewer
             # check for specific robots
             if self.robot.GetRobotStructureHash() == '7b789782446d86b95c6fb16de7f204c7' and self.manip.GetName() == 'arm' and self.target.GetKinematicsGeometryHash() == 'bbf03c6db8efc712a765f955a27b0d0f':

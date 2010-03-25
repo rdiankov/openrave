@@ -30,9 +30,9 @@ class GraspPlanning(metaclass.AutoReloader):
         if not self.ikmodel.load():
             self.ikmodel.autogenerate()
         # could possibly affect generated grasp sets?
-        self.cdmodel = convexdecomposition.ConvexDecompositionModel(self.robot)
-        if not self.cdmodel.load():
-            self.cdmodel.autogenerate()
+#         self.cdmodel = convexdecomposition.ConvexDecompositionModel(self.robot)
+#         if not self.cdmodel.load():
+#             self.cdmodel.autogenerate()
         self.switchpatterns = switchpatterns
         with self.envreal:
             self.basemanip = BaseManipulation(self.robot)

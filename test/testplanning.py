@@ -355,7 +355,8 @@ def test_sampling():
 
     
 def test_hrp2():
-    python convexdecomposition.py --robot=robots/hrp2jsk.robot.xml --volumeSplitThresholdPercent=10
+    python convexdecomposition.py --robot=robots/hrp2jsk.robot.xml --volumeSplitThresholdPercent=5 --mergeThresholdPercent=10 --padding=0.005
+    rosrun openrave_database kinematicreachability_ros.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --launchservice='8*localhost' --xyzdelta=0.04
     python kinematicreachability.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm --xyzdelta=0.02
     python kinematicreachability.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --xyzdelta=0.02
     python kinematicreachability.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm_chest --xyzdelta=0.02

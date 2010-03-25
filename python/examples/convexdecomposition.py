@@ -56,12 +56,14 @@ class ConvexDecompositionModel(OpenRAVEModel):
         return os.path.join(OpenRAVEModel.getfilename(self),'convexdecomposition.pp')
     def autogenerate(self,options=None):
         if options is not None:
-            self.generate(skinWidth=options.skinWidth, decompositionDepth=options.decompositionDepth, maxHullVertices=options.maxHullVertices,concavityThresholdPercent=options.concavityThresholdPercent, mergeThresholdPercent=options.mergeThresholdPercent, volumeSplitThresholdPercent=options.volumeSplitThresholdPercent, useInitialIslandGeneration=options.useInitialIslandGeneration, useIslandGeneration=options.useIslandGeneration)
+            self.generate(padding=options.padding,skinWidth=options.skinWidth, decompositionDepth=options.decompositionDepth, maxHullVertices=options.maxHullVertices,concavityThresholdPercent=options.concavityThresholdPercent, mergeThresholdPercent=options.mergeThresholdPercent, volumeSplitThresholdPercent=options.volumeSplitThresholdPercent, useInitialIslandGeneration=options.useInitialIslandGeneration, useIslandGeneration=options.useIslandGeneration)
         else:
             self.generate()
         self.save()
-    def generate(self,**kwargs):
+    def generate(self,padding=None,**kwargs):
         self.convexparams = kwargs
+        if padding is None:
+            padding = 0.0
         print 'Generating Convex Decomposition: ',self.convexparams
         starttime = time.time()
         self.linkgeometry = []
@@ -73,11 +75,54 @@ class ConvexDecompositionModel(OpenRAVEModel):
                 for ig,geom in enumerate(link.GetGeometries()):
                     if geom.GetType() == KinBody.Link.GeomProperties.Type.Trimesh:
                         trimesh = geom.GetCollisionMesh()
+                        #hulls = convexdecompositionpy.computeConvexDecomposition(*self.padMesh(trimesh.vertices,trimesh.indices,padding),**self.convexparams)
                         hulls = convexdecompositionpy.computeConvexDecomposition(trimesh.vertices,trimesh.indices,**self.convexparams)
                         if len(hulls) > 0:
+                            # add in the padding
+                            if padding != 0:
+                                hulls = [self.padMesh(hull[0],hull[1],padding) for hull in hulls]
                             geoms.append((ig,hulls))
                 self.linkgeometry.append(geoms)
         print 'all convex decomposition finished in %fs'%(time.time()-starttime)
+    @staticmethod
+    def padMesh(vertices,indices,padding):
+        M = mean(vertices,0)
+        facenormals = array([cross(vertices[i1]-vertices[i0],vertices[i2]-vertices[i0]) for i0,i1,i2 in indices])
+        facenormals *= transpose(tile(1.0/sqrt(sum(facenormals**2,1)),(3,1)))
+        # make sure normals are facing outward
+        newvertices = zeros((0,3))
+        newindices = zeros((0,3))
+        originaledges = []
+        for i in range(len(facenormals)):
+            if dot(vertices[indices[i,0]]-M,facenormals[i]) < 0:
+                facenormals[i] *= -1
+            offset = len(newvertices)
+            newvertices = r_[newvertices,vertices[indices[i,:]]+tile(facenormals[i]*padding,(3,1))]
+            newindices = r_[newindices,[[offset,offset+1,offset+2]]]
+            for j0,j1 in [[0,1],[0,2],[1,2]]:
+                if indices[i,j0] < indices[i,j1]:
+                    originaledges.append([indices[i,j0],indices[i,j1],offset+j0,offset+j1])
+                else:
+                    originaledges.append([indices[i,j1],indices[i,j0],offset+j1,offset+j0])
+        # find the connecting edges across the new faces
+        originaledges = array(originaledges)
+        offset = len(newvertices)
+        for i,edge in enumerate(originaledges):
+            inds = flatnonzero(logical_and(edge[0]==originaledges[i+1:,0],edge[1]==originaledges[i+1:,1]))
+            if len(inds) > 0:
+                # add 2 triangles for the edge, and 2 for each vertex
+                cedge = originaledges[i+1+inds[0]]
+                newindices = r_[newindices,[[edge[2],edge[3],cedge[3]],[edge[2],cedge[3],cedge[2]],[edge[2],cedge[2],offset+edge[0]],[edge[3],cedge[3],offset+edge[1]]]]
+        # for every vertex, add a point representing the mean of surrounding extruded vertices
+        for i in range(len(vertices)):
+            vertexindices = flatnonzero(indices==i)
+            newvertices = r_[newvertices,[mean(newvertices[vertexindices],0)]]
+        # make sure all faces are facing outward
+        for inds in newindices:
+            if dot(cross(newvertices[inds[1]]-newvertices[inds[0]],newvertices[inds[2]]-newvertices[inds[0]]),newvertices[inds[0]]-M) < 0:
+                inds[1],inds[2] = inds[2],inds[1]
+        return newvertices,newindices
+
     @staticmethod
     def generateTrimeshFromHulls(hulls):
         allvertices = zeros((0,3),float)
@@ -126,7 +171,9 @@ class ConvexDecompositionModel(OpenRAVEModel):
         parser = OpenRAVEModel.CreateOptionParser(useManipulator=False)
         parser.description='Computes the set of convex hulls for each triangle mesh geometry.using convexdecomposition'
         parser.add_option('--skinWidth',action='store',type='float',dest='skinWidth',default=0.0,
-                          help='Skin width on the convex hulls generated (default=%default)')
+                          help='Skin width on the convex hulls generated, convex decomposition side (default=%default)')
+        parser.add_option('--padding',action='store',type='float',dest='padding',default=0.005,
+                          help='The distance to move the hull planes along their respective normals (default=%default)')
         parser.add_option('--decompositionDepth',action='store',type='int',dest='decompositionDepth',default=8,
                           help='recursion depth for convex decomposition (default=%default)')
         parser.add_option('--maxHullVertices',action='store',type='int',dest='maxHullVertices',default=64,
