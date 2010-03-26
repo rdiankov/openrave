@@ -40,7 +40,7 @@ class ReachabilityModel(OpenRAVEModel):
     def has(self):
         return len(self.reachabilitydensity3d) > 0 and len(self.reachability3d) > 0
     def getversion(self):
-        return 3
+        return 4
     def load(self):
         try:
             params = OpenRAVEModel.load(self)
@@ -95,11 +95,13 @@ class ReachabilityModel(OpenRAVEModel):
         starttime = time.time()
         with self.robot:
             self.robot.SetTransform(eye(4))
+            Tbase = self.manip.GetBase().GetTransform()
+            Tbaseinv = linalg.inv(Tbase)
             
             # the axes' anchors are the best way to find the max radius
             # the best estimate of arm length is to sum up the distances of the anchors of all the points in between the chain
             armjoints = self.getOrderedArmJoints()
-            baseanchor = armjoints[0].GetAnchor()
+            baseanchor = transformPoints(Tbaseinv,[armjoints[0].GetAnchor()])
             eetrans = self.manip.GetEndEffectorTransform()[0:3,3]
             armlength = 0
             for j in armjoints[::-1]:
@@ -133,13 +135,13 @@ class ReachabilityModel(OpenRAVEModel):
                     for rotation in rotations:
                         T[0:3,0:3] = rotation
                         if usefreespace:
-                            solutions = self.manip.FindIKSolutions(T,False) # do not want to include the environment
+                            solutions = self.manip.FindIKSolutions(dot(Tbase,T),False) # do not want to include the environment
                             if solutions is not None:
                                 self.reachabilitystats.append(r_[poseFromMatrix(T),len(solutions)])
                                 numvalid += len(solutions)
                                 numrotvalid += 1
                         else:
-                            solution = self.manip.FindIKSolution(T,False)
+                            solution = self.manip.FindIKSolution(dot(Tbase,T),False)
                             if solution is not None:
                                 self.reachabilitystats.append(r_[poseFromMatrix(T),1])
                                 numvalid += 1
@@ -173,9 +175,11 @@ class ReachabilityModel(OpenRAVEModel):
             mlab.pipeline.iso_surface(src,contours=[c],opacity=min(1,0.7*c if opacity is None else opacity[i]))
         #mlab.pipeline.volume(mlab.pipeline.scalar_field(reachability3d*100))
         if showrobot:
-            baseanchor = armjoints = self.getOrderedArmJoints()[0].GetAnchor()
             with self.robot:
-                self.robot.SetTransform(eye(4))
+                Tbase = self.manip.GetBase().GetTransform()
+                Tbaseinv = linalg.inv(Tbase)
+                self.robot.SetTransform(dot(Tbaseinv,self.robot.GetTransform()))
+                baseanchor = self.getOrderedArmJoints()[0].GetAnchor()
                 trimesh = self.env.Triangulate(self.robot)
             v = self.pointscale[0]*(trimesh.vertices-tile(baseanchor,(len(trimesh.vertices),1)))+self.pointscale[1]
             mlab.triangular_mesh(v[:,0]-offset[0],v[:,1]-offset[1],v[:,2]-offset[2],trimesh.indices,color=(0.5,0.5,0.5))

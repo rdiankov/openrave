@@ -152,6 +152,9 @@ class InverseReachabilityModel(OpenRAVEModel):
         basetrans = array(self.rmodel.reachabilitystats)
         if basetrans.shape[1] < 8:
             basetrans = c_[basetrans,ones(basetrans.shape[0])]
+        with self.robot:
+            Tbase = poseFromMatrix(self.manip.GetBase().GetTransform())
+            basetrans[:,0:7] = poseMultArrayT(Tbase,basetrans[:,0:7])
         # find the density of the points
         searchtrans = c_[basetrans[:,0:4],basetrans[:,6:7]]
         kdtree = self.QuaternionKDTree(searchtrans,1.0/self.rotweight)
@@ -183,7 +186,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             q0 = sum(normalizedqarray,axis=0)
             q0 /= sqrt(sum(q0**2))
             if len(normalizedqarray) >= Nminimum:
-                qmean,success = leastsq(lambda q: quatArrayTDist(q/sqrt(sum(q**2)),normalizedqarray), q0,maxfev=10000)
+                qmean,success = leastsq(lambda q: quatArrayTDist(q/sqrt(sum(q**2)),normalizedqarray), normalizedqarray[0],maxfev=10000)
                 qmean /= sqrt(sum(qmean**2))
             else:
                 qmean = q0
@@ -477,7 +480,7 @@ class InverseReachabilityModel(OpenRAVEModel):
         with self.robot:
             Tgrasp = matrixFromQuat(equivalenceclass[0][0:4])
             Tgrasp[2,3] = equivalenceclass[0][4]
-            Tmanipframe = dot(self.robot.GetTransform(), linalg.inv(self.manip.GetBase().GetTransform()))
+            Tmanipframe = self.robot.GetTransform()
             failed = 0
             for sample in equivalenceclass[2]:
                 Tmanip = matrixFromAxisAngle([0,0,1],sample[0])
@@ -487,7 +490,16 @@ class InverseReachabilityModel(OpenRAVEModel):
                 if solution is None:
                     failed += 1
             return float(failed)/len(equivalenceclass[2])
-        
+    def getCloseIK(self,Tgrasp):
+        with self.env:
+            Torggrasp = array(Tgrasp)
+            while True:
+                solution = self.manip.FindIKSolution(Tgrasp,False)
+                if solution is not None:
+                    break
+                Tgrasp[0:3,3] = Torggrasp[0:3,3] + (random.rand(3)-0.5)*0.01
+                Tgrasp[0:3,0:3] = dot(Torggrasp[0:3,0:3],rotationMatrixFromAxisAngle(random.rand(3)*0.05))
+            return solution
     def showBaseDistribution(self,densityfn,bounds,zoffset=0,thresh=1.0,maxprob=None,marginalizeangle=True):
         discretization = [0.1,0.04,0.04]
         A,Y,X = mgrid[bounds[0,0]:bounds[1,0]:discretization[0], bounds[0,2]:bounds[1,2]:discretization[2], bounds[0,1]:bounds[1,1]:discretization[1]]

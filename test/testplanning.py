@@ -351,8 +351,7 @@ def test_sampling():
         theta,pfi = self.sampleS2(level)
         dirs = c_[cos(theta),sin(theta)*cos(pfi),sin(theta)*sin(pfi)]
         dists = [heapq.nsmallest(2,arccos(dot(dirs,dir)))[1] for dir in dirs]
-        stats.append([level,mean(dists)])l
-
+        stats.append([level,mean(dists)])
     
 def test_hrp2():
     python convexdecomposition.py --robot=robots/hrp2jsk.robot.xml --volumeSplitThresholdPercent=5 --mergeThresholdPercent=10 --padding=0.005
@@ -365,3 +364,17 @@ def test_hrp2():
     python inversereachability.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm_chest --heightthresh=0.02 --quatthresh=0.1
     python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.02 --normalanglerange=1 --avoidlink=RWristCam
     python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.02 --normalanglerange=1
+
+    import inversereachability
+    env = Environment()
+    robot = env.ReadRobotXMLFile('robots/hrp2jsk.robot.xml')
+    env.AddRobot(robot)
+    robot.SetActiveManipulator('leftarm')
+    self = inversereachability.InverseReachabilityModel(robot=robot)
+    heightthresh=0.02
+    quatthresh=0.1
+    self.generate(heightthresh=heightthresh,quatthresh=quatthresh)
+
+    hand = env.ReadRobotXMLFile('robots/hrp2rhandjsk.robot.xml')
+    env.AddRobot(hand)
+    hand.SetTransform(Tgrasp)
