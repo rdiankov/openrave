@@ -1335,8 +1335,19 @@ public:
         return manips;
     }
 
+    object GetManipulators(const string& manipname)
+    {
+        boost::python::list manips;
+        FOREACH(it, _probot->GetManipulators()) {
+            if( (*it)->GetName() == manipname )
+                manips.append(boost::shared_ptr<PyManipulator>(new PyManipulator(*it,_pyenv)));
+        }
+        return manips;
+    }
+
     void SetActiveManipulator(int index) { _probot->SetActiveManipulator(index); }
     void SetActiveManipulator(const std::string& manipname) { _probot->SetActiveManipulator(manipname); }
+    void SetActiveManipulator(boost::shared_ptr<PyManipulator> pmanip) { _probot->SetActiveManipulator(pmanip->GetName()); }
     boost::shared_ptr<PyManipulator> GetActiveManipulator() { return boost::shared_ptr<PyManipulator>(new PyManipulator(_probot->GetActiveManipulator(),_pyenv)); }
     int GetActiveManipulatorIndex() const { return _probot->GetActiveManipulatorIndex(); }
 
@@ -3257,11 +3268,17 @@ BOOST_PYTHON_MODULE(openravepy_int)
 
         void (PyRobotBase::*setactivemanipulator1)(int) = &PyRobotBase::SetActiveManipulator;
         void (PyRobotBase::*setactivemanipulator2)(const std::string&) = &PyRobotBase::SetActiveManipulator;
+        void (PyRobotBase::*setactivemanipulator3)(boost::shared_ptr<PyRobotBase::PyManipulator>) = &PyRobotBase::SetActiveManipulator;
+
+        object (PyRobotBase::*GetManipulators1)() = &PyRobotBase::GetManipulators;
+        object (PyRobotBase::*GetManipulators2)(const string&) = &PyRobotBase::GetManipulators;
 
         scope robot = class_<PyRobotBase, boost::shared_ptr<PyRobotBase>, bases<PyKinBody, PyInterfaceBase> >("Robot", no_init)
-            .def("GetManipulators",&PyRobotBase::GetManipulators)
+            .def("GetManipulators",GetManipulators1)
+            .def("GetManipulators",GetManipulators2,args("manipname"))
             .def("SetActiveManipulator",setactivemanipulator1,args("manipindex"))
             .def("SetActiveManipulator",setactivemanipulator2,args("manipname"))
+            .def("SetActiveManipulator",setactivemanipulator3,args("manip"))
             .def("GetActiveManipulator",&PyRobotBase::GetActiveManipulator)
             .def("GetActiveManipulatorIndex",&PyRobotBase::GetActiveManipulatorIndex)
             .def("GetSensors",&PyRobotBase::GetSensors)

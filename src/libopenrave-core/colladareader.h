@@ -1378,9 +1378,9 @@ public:
               {
                 //  Debug
                 RAVELOG_WARNA("There are NO LIMITS in the joint ...\n");
-
                 if( pjoint->type == KinBody::Joint::JointRevolute )
                 {
+                  pjoint->_bIsCircular = true;
                   pjoint->_vlowerlimit.push_back(-PI);
                   pjoint->_vupperlimit.push_back(PI);
                 }
