@@ -12,8 +12,8 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#ifndef DUAL_COMMON_MANIPULATION_H
-#define DUAL_COMMON_MANIPULATION_H
+#ifndef COMMON_MANIPULATION_H
+#define COMMON_MANIPULATION_H
 
 #include "plugindefs.h"
 
@@ -134,22 +134,11 @@ class CM
     template <typename T>
     class DualArmManipulation {
     public:
-    DualArmManipulation(RobotBasePtr probot) : _probot(probot) {
-            int activeManipIndex=_probot->GetActiveManipulatorIndex();
-            if (activeManipIndex==0){
-                _pmanipA = _probot->GetManipulators()[0];//Active Manipulator
-                _pmanipI=_probot->GetManipulators()[1]; //Inactive Manipulator
-            }
-            else{
-                _pmanipI = _probot->GetManipulators()[0];
-                _pmanipA =_probot->GetManipulators()[1];
-            }
-        
+    DualArmManipulation(RobotBasePtr probot, RobotBase::ManipulatorPtr pmanipA, RobotBase::ManipulatorPtr pmanipI) : _probot(probot), _pmanipA(pmanipA), _pmanipI(pmanipI) {
             _tOriginalEEI = _pmanipI->GetEndEffectorTransform();
             _tOriginalEEA = _pmanipA->GetEndEffectorTransform();
-            _diff = _tOriginalEEA.inverse()*_tOriginalEEI;//this is lTRANSr
-            // RAVELOG_INFO("TransDifference= %lf , %lf , %lf \n",_diff.trans[0],_diff.trans[1],_diff.trans[2] );
-            //RAVELOG_INFO("RotDifference= %lf %lf %lf %lf \n", _diff.rot[0],_diff.rot[1],_diff.rot[2],_diff.rot[3]) ;                      
+            _diff = _tOriginalEEA.inverse()*_tOriginalEEI;
+                           
         }
         virtual ~DualArmManipulation() {}
 
@@ -159,6 +148,7 @@ class CM
             bool pstatus=true;
             double errorRot=0.1;
             double errorTrans=.010;
+            vector<int> JointIndicesI;
         
             std::vector<dReal> vold, vsolution;
             _probot->GetJointValues(vold);  //gets the current robot config
@@ -166,12 +156,16 @@ class CM
         
             Transform tInew= tA*_diff;  //this is (wTRANSl)*(lTRANSr)
             bool a= _pmanipI->FindIKSolution(tInew,vsolution, false);
+
             if(a){
-                for (int i=0;i<7;i++) //this check is important to make sure the IK solution does not fly too far away since there are multiple Ik solutions possible
-                    if(fabs(vsolution[i]-vprev[i])<errorRot*2)
-                        vcur[i]=vsolution[i];
+                vector<int> JointIndicesI = _pmanipI->GetArmJoints();
+
+                for (size_t i=0;i<JointIndicesI.size();i++) {//this check is important to make sure the IK solution does not fly too far away since there are multiple Ik solutions possible
+                    if(fabs(vsolution.at(i)-vprev[JointIndicesI.at(i)])<errorRot*2)
+                        vcur[JointIndicesI.at(i)]=vsolution[i];
                     else 
                         return false;
+                }
                 pstatus=true;
             }
             else 
@@ -184,20 +178,15 @@ class CM
             tA = _pmanipA->GetEndEffectorTransform();
             Transform tnew = tA.inverse()*tI;
        
-        
-        
-
             for(int i = 0; i < 4; ++i) {
-                if (!(fabs(tnew.rot[i]-_diff.rot[i])<errorRot)) {
+                if (!(RaveFabs(tnew.rot[i]-_diff.rot[i])<errorRot)) {
                     pstatus=false;          
-                    //RAVELOG_INFO("RejectedRotDifference= %lf %lf %lf %lf \n", tnew.rot[0],tnew.rot[1],tnew.rot[2],tnew.rot[3]) ;          
                     return false;
                 }
             }
             for(int i = 0; i < 3; ++i) {
                 if (!(fabs(tnew.trans[i]-_diff.trans[i])<errorTrans)) {
                     pstatus=false;
-                        //RAVELOG_INFO("RejectedTransDifference= %lf , %lf , %lf \n",tnew.trans[0],tnew.trans[1],tnew.trans[2] );
                     return false;
                 }
             }
@@ -209,8 +198,8 @@ class CM
 
     protected:
         RobotBasePtr _probot;
-        RobotBase::ManipulatorPtr _pmanipI;
         RobotBase::ManipulatorPtr _pmanipA;
+        RobotBase::ManipulatorPtr _pmanipI;
         Transform _tOriginalEEI,_tOriginalEEA, _diff;
         double _diffX,_diffY,_diffZ;
 

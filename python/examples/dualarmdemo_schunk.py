@@ -11,7 +11,7 @@
 # limitations under the License.
 #
 #Created: 5 January 2010 
-#Modified: 4 March 2010
+#Modified: 20 March 2010
 from __future__ import with_statement # for python 2.5
 __author__ = 'Achint Aggarwal'
 __copyright__ = 'Copyright (C) 2010 Achint Aggarwal'
@@ -32,11 +32,6 @@ class Schunkplanner:
       #args += ' planner birrt' 
       self.env.LoadProblem(self.probsmanip,args)
 
-      #self.probsmanip2 = self.env.CreateProblem('dualmanipulation')
-      #args = self.robot.GetName()
-      #args += ' planner basicrrt' 
-      #self.env.LoadProblem(self.probsmanip2,args)
-
       self.leftArm=self.robot.GetManipulators()[0]
       self.rightArm=self.robot.GetManipulators()[1]
       for imanip in [0,1]:
@@ -55,7 +50,7 @@ class Schunkplanner:
       return 'goal %s'%(' '.join(str(f) for f in T))
 
    def MoveArmsToJointPosition(self, T):
-      """This moved the two arms to the given joint position T"""
+      """Moves the two arms to the given joint position T"""
       success = self.probsmanip.SendCommand('movealljoints '+self.Serialize(T))
       return False if success is None or len(success) == 0 else True
    def MoveObjectToPosition(self, T):
@@ -114,12 +109,12 @@ class Schunkplanner:
    def graspObject(self):
       ThandR=self.robot.GetManipulators()[0].GetEndEffectorTransform()
       ThandL=self.robot.GetManipulators()[1].GetEndEffectorTransform()
-      self.probsmanip.SendCommand('movebothhandsstraight directionl %lf ' %(ThandR[0,3]-ThandL[0,3]) +'%lf '%(ThandR[1,3]-ThandL[1,3]) +'%lf'%(ThandR[2,3]-ThandL[2,3]) +' directionr %lf ' %(ThandL[0,3]-ThandR[0,3]) +'%lf '%(ThandL[1,3]-ThandR[1,3]) +'%lf'%(ThandL[2,3]-ThandR[2,3]))
+      self.probsmanip.SendCommand('movebothhandsstraight direction1 %lf ' %(ThandR[0,3]-ThandL[0,3]) +'%lf '%(ThandR[1,3]-ThandL[1,3]) +'%lf'%(ThandR[2,3]-ThandL[2,3]) +' direction0 %lf ' %(ThandL[0,3]-ThandR[0,3]) +'%lf '%(ThandL[1,3]-ThandR[1,3]) +'%lf'%(ThandL[2,3]-ThandR[2,3]))
 
    def releaseObject(self):
       ThandR=self.robot.GetManipulators()[0].GetEndEffectorTransform()
       ThandL=self.robot.GetManipulators()[1].GetEndEffectorTransform()
-      self.probsmanip.SendCommand('movebothhandsstraight directionl %lf ' %(ThandL[0,3]-ThandR[0,3]) +'%lf '%(ThandL[1,3]-ThandR[1,3]) +'%lf'%(ThandL[2,3]-ThandR[2,3]) +' directionr %lf ' %(ThandR[0,3]-ThandL[0,3]) +'%lf '%(ThandR[1,3]-ThandL[1,3]) +'%lf'%(ThandR[2,3]-ThandL[2,3]) +' maxsteps 100')
+      self.probsmanip.SendCommand('movebothhandsstraight direction1 %lf ' %(ThandL[0,3]-ThandR[0,3]) +'%lf '%(ThandL[1,3]-ThandR[1,3]) +'%lf'%(ThandL[2,3]-ThandR[2,3]) +' direction0 %lf ' %(ThandR[0,3]-ThandL[0,3]) +'%lf '%(ThandR[1,3]-ThandL[1,3]) +'%lf'%(ThandR[2,3]-ThandL[2,3]) +' maxsteps 100')
 
    def graspAndMoveObject(self,T,name):
       mode='approach'

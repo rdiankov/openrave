@@ -186,6 +186,16 @@ class DualManipulation : public ProblemInstance
 
         // constraint stuff
         double constrainterrorthresh=0;
+        RobotBase::ManipulatorPtr pmanipI, pmanipA;
+        int activeManipIndex=robot->GetActiveManipulatorIndex();
+        if (activeManipIndex==0){
+            pmanipA=robot->GetManipulators().at(0);//Active Manipulator
+            pmanipI=robot->GetManipulators().at(1); //Inactive Manipulator
+        }
+        else{
+            pmanipI =robot->GetManipulators().at(0);
+            pmanipA =robot->GetManipulators().at(1);
+        }
 
         string cmd;
         while(!sinput.eof()) {
@@ -209,6 +219,26 @@ class DualManipulation : public ProblemInstance
                 sinput >> strtrajfilename;
             else if( cmd == "constrainterrorthresh" )
                 sinput >> constrainterrorthresh;
+            else if( cmd == "manipA" ) {
+                string name;
+                sinput >> name;
+                FOREACH(it, robot->GetManipulators()) {
+                    if( (*it)->GetName() == name ) {
+                        pmanipA = *it;
+                        break;
+                    }
+                }
+            }
+            else if( cmd == "manipI" ) {
+                string name;
+                sinput >> name;
+                FOREACH(it, robot->GetManipulators()) {
+                    if( (*it)->GetName() == name ) {
+                        pmanipI = *it;
+                        break;
+                    }
+                }
+            }
             else {
                 RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -241,13 +271,15 @@ class DualManipulation : public ProblemInstance
             return false;
         }
 
+        //set to initial config again before initializing the constraint fn
+        robot->SetActiveDOFValues(params->vinitialconfig);
+
         if( constrainterrorthresh > 0 ) {
             RAVELOG_DEBUG("setting DualArmConstrained function in planner parameters\n");
-            boost::shared_ptr<CM::DualArmManipulation<double> > dplanner(new CM::DualArmManipulation<double>(robot));
+            boost::shared_ptr<CM::DualArmManipulation<double> > dplanner(new CM::DualArmManipulation<double>(robot,pmanipA,pmanipI));
             dplanner->_distmetricfn = params->_distmetricfn;
             params->_constraintfn = boost::bind(&CM::DualArmManipulation<double>::DualArmConstrained,dplanner,_1,_2,_3);//this juts means that the function is called upon pconstraints object and the function takes 3 arguments specified as _1,_2 and _3
             params->_nMaxIterations = 1000;
-        
         }
 
         boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(robot->GetActiveDOF()));
@@ -287,28 +319,25 @@ class DualManipulation : public ProblemInstance
     
         RAVELOG_DEBUGA("finished planning\n");
         CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream);
-
-
         return true;
     }
 
     bool MoveBothHandsStraight(ostream& sout, istream& sinput)
     {
         float stepsize = 0.003f;
-        Vector directionL = Vector(0,1,0);
-        Vector directionR = Vector(0,1,0);
+        Vector direction0 = Vector(0,1,0);
+        Vector direction1 = Vector(0,1,0);
         string strtrajfilename;
         bool bExecute = true;
-        bool reachedR = false;
-        bool reachedL = false;
+        bool reached0 = false;
+        bool reached1 = false;
 
         int minsteps = 0;
         int maxsteps = 10000;
 
-        RobotBase::ManipulatorConstPtr pmanipR = robot->GetManipulators()[0];
-        RobotBase::ManipulatorConstPtr pmanipL = robot->GetManipulators()[1];
-    
-    
+        RobotBase::ManipulatorConstPtr pmanip0 = robot->GetManipulators().at(0);
+        RobotBase::ManipulatorConstPtr pmanip1 = robot->GetManipulators().at(1);
+
         bool bIgnoreFirstCollision = true;
         boost::shared_ptr<ostream> pOutputTrajStream;
         string cmd;
@@ -330,12 +359,32 @@ class DualManipulation : public ProblemInstance
                 sinput >> bExecute;
             else if( cmd == "writetraj")
                 sinput >> strtrajfilename;
-            else if( cmd == "directionl")
-                sinput >> directionL.x >> directionL.y >> directionL.z;
-            else if( cmd == "directionr")
-                sinput >> directionR.x >> directionR.y >> directionR.z;
+            else if( cmd == "direction0")
+                sinput >> direction0.x >> direction0.y >> direction0.z;
+            else if( cmd == "direction1")
+                sinput >> direction1.x >> direction1.y >> direction1.z;
             else if( cmd == "ignorefirstcollision")
                 sinput >> bIgnoreFirstCollision;
+            else if( cmd == "manip0" ) {
+                string name;
+                sinput >> name;
+                FOREACH(it, robot->GetManipulators()) {
+                    if( (*it)->GetName() == name ) {
+                        pmanip0 = *it;
+                        break;
+                    }
+                }
+            }
+            else if( cmd == "manip1" ) {
+                string name;
+                sinput >> name;
+                FOREACH(it, robot->GetManipulators()) {
+                    if( (*it)->GetName() == name ) {
+                        pmanip1 = *it;
+                        break;
+                    }
+                }
+            }
             else {
                 RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -347,7 +396,7 @@ class DualManipulation : public ProblemInstance
             }
         }
     
-        RAVELOG_DEBUGA("Starting MoveBothHandsStraight dirL=(%f,%f,%f)...dirR=(%f,%f,%f)...\n",(float)directionL.x, (float)directionL.y, (float)directionL.z, (float)directionR.x, (float)directionR.y, (float)directionR.z);
+        RAVELOG_DEBUGA("Starting MoveBothHandsStraight dir0=(%f,%f,%f)...dir1=(%f,%f,%f)...\n",(float)direction0.x, (float)direction0.y, (float)direction0.z, (float)direction1.x, (float)direction1.y, (float)direction1.z);
         robot->RegrabAll();
 
         RobotBase::RobotStateSaver saver(robot);
@@ -357,7 +406,7 @@ class DualManipulation : public ProblemInstance
 
         boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(robot->GetActiveDOF()));
         Trajectory::TPOINT point;
-        vector<dReal> vPrevValues,vRightJoints,vLeftJoints;
+        vector<dReal> vPrevValues,v0Joints,v1Joints;
         bool bPrevInCollision = GetEnv()->CheckCollision(KinBodyConstPtr(robot))||robot->CheckSelfCollision();
         robot->GetActiveDOFValues(vPrevValues);
 
@@ -366,37 +415,38 @@ class DualManipulation : public ProblemInstance
             return false;
         }
 
-        Transform handTrR = robot->GetManipulators()[0]->GetEndEffectorTransform();
-        Transform handTrL = robot->GetManipulators()[1]->GetEndEffectorTransform();
+        Transform handTr0 = pmanip0->GetEndEffectorTransform();
+        Transform handTr1 = pmanip1->GetEndEffectorTransform();
 
         point.q = vPrevValues;
         ptraj->AddPoint(point);
 
         int i;
         for (i = 0; i < maxsteps;  i++) {
-
-            if (!reachedR){
-                handTrR.trans += stepsize*directionR;
-                if( !pmanipR->FindIKSolution(handTrR,vRightJoints,false)) {
-                    RAVELOG_DEBUGA("Right Arm Lifting: broke due to ik\n");
-                    reachedR=true;
+            if (!reached0){
+                handTr0.trans += stepsize*direction0;
+                if( !pmanip0->FindIKSolution(handTr0,v0Joints,false)) {
+                    RAVELOG_DEBUGA("Arm 0 Lifting: broke due to ik\n");
+                    reached0=true;
                 }
-                else 
-                    for(int a=pmanipR->GetArmJoints()[0], b = 0; a < (pmanipR->GetArmJoints()[0]+pmanipR->GetArmJoints().size()) && b<pmanipR->GetArmJoints().size(); a++,b++)
-                        point.q[a]=vRightJoints[b];
-                
+                else {
+                    int index = 0;
+                    FOREACHC(it, pmanip0->GetArmJoints())
+                        point.q.at(*it) = v0Joints.at(index++);
+                }
             }
     
-            if (!reachedL){
-                handTrL.trans += stepsize*directionL;
-                if( !pmanipL->FindIKSolution(handTrL,vLeftJoints,false)) {
-                    RAVELOG_DEBUGA("Left Arm Lifting: broke due to ik\n");
-                    reachedL=true;
+            if (!reached1){
+                handTr1.trans += stepsize*direction1;
+                if( !pmanip1->FindIKSolution(handTr1,v1Joints,false)) {
+                    RAVELOG_DEBUGA("Arm 1 Lifting: broke due to ik\n");
+                    reached1=true;
                 }
-                else 
-                    for(int a=pmanipL->GetArmJoints()[0], b=0; a < (pmanipL->GetArmJoints()[0]+pmanipL->GetArmJoints().size()) && b<pmanipL->GetArmJoints().size(); a++,b++)
-                        point.q[a]=vLeftJoints[b];
-                
+                else  {
+                    int index = 0;
+                    FOREACHC(it, pmanip1->GetArmJoints())
+                        point.q.at(*it) = v1Joints.at(index++);
+                }
             }
         
             size_t j = 0;
@@ -427,6 +477,10 @@ class DualManipulation : public ProblemInstance
         }
     
         if( i > 0 ) {
+            if( bPrevInCollision ) {
+                RAVELOG_DEBUGA("hand failed to move out of collision\n");
+                return false;
+            }
             RAVELOG_DEBUGA("hand moved %f\n", (float)i*stepsize);
             CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream);
             sout << "1";
