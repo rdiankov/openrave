@@ -88,6 +88,19 @@ std::string RaveGetHomeDirectory()
     return homedirectory;
 }
 
+std::string COLLISIONREPORT::__str__() const
+{
+    stringstream s;
+    s << "(";
+    if( !!plink1 )
+        s << plink1->GetParent()->GetName() << ":" << plink1->GetName();
+    s << ")x(";
+    if( !!plink2 )
+        s << plink2->GetParent()->GetName() << ":" << plink2->GetName();
+    s << ") contacts="<<contacts.size();
+    return s.str();
+}
+
 void BaseXMLReader::startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
 {
     if( __bRecordXMLData ) {

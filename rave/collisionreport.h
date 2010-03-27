@@ -47,7 +47,7 @@ public:
 
     std::vector<CONTACT> contacts; ///< the convention is that the normal will be "out" of plink1's surface. Filled if CO_UseContacts option is set.
 
-    void Reset(int coloptions = 0) {
+    virtual void Reset(int coloptions = 0) {
         options = coloptions;
         minDistance = 1e20f;
         numCols = 0;
@@ -55,6 +55,7 @@ public:
         contacts.resize(0);
         vLinkColliding.resize(0);
     }
+    virtual std::string __str__() const;
 };
 
 } // end namespace OpenRAVE

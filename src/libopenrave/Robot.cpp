@@ -1893,13 +1893,8 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report) const
         }
     }
     
-    if( bCollision && !!report ) {
-        RAVELOG_VERBOSEA("Self collision: (%s:%s)x(%s:%s).\n",
-                         !!report->plink1?report->plink1->GetParent()->GetName().c_str():"",
-                         !!report->plink1?report->plink1->GetName().c_str():"",
-                         !!report->plink2?report->plink2->GetParent()->GetName().c_str():"",
-                         !!report->plink2?report->plink2->GetName().c_str():"");
-    }
+    if( bCollision && !!report )
+        RAVELOG_VERBOSEA(str(boost::format("Self collision: %s\n")%report->__str__()));
     return bCollision;
 }
 

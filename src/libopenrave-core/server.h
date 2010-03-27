@@ -1829,11 +1829,7 @@ protected:
         vector<KinBody::LinkConstPtr> empty;
         if( GetEnv()->CheckCollision(KinBodyConstPtr(pbody), vignore, empty,preport)) {
             os << "1 ";
-            RAVELOG_VERBOSEA("collision %s:%s with %s:%s\n",
-                             preport->plink1?preport->plink1->GetParent()->GetName().c_str():"(NULL)",
-                             preport->plink1?preport->plink1->GetName().c_str():"(NULL)",
-                             preport->plink2?preport->plink2->GetParent()->GetName().c_str():"(NULL)",
-                             preport->plink2?preport->plink2->GetName().c_str():"(NULL)");
+            RAVELOG_VERBOSEA(str(boost::format("collision %s\n")%preport->__str__()));
         }
         else
             os << "0 ";

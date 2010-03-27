@@ -155,7 +155,7 @@ class ReachabilityModel(OpenRAVEModel):
             self.reachabilitystats = array(self.reachabilitystats)
             print 'reachability finished in %fs'%(time.time()-starttime)
 
-    def show(self,showrobot=True,contours=[0.01,0.1,0.2,0.5,0.9,0.99],opacity=None,figureid=1, xrange=None,options=None):
+    def show(self,showrobot=True,contours=[0.01,0.1,0.2,0.5,0.8,0.9,0.99],opacity=None,figureid=1, xrange=None,options=None):
         mlab.figure(figureid,fgcolor=(0,0,0), bgcolor=(1,1,1),size=(1024,768))
         mlab.clf()
         print 'max reachability: ',numpy.max(self.reachability3d)

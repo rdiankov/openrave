@@ -384,8 +384,8 @@ public:
                             }
                             else {
                                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                                    RAVELOG_VERBOSEA(str(boost::format("Collision of link %s using joint %d\n")%_robot->GetLinks().at(q)->GetName()%_robot->GetActiveJointIndex(ifing)));
-                                    stringstream ss; ss << "Joint Vals: ";
+                                    RAVELOG_VERBOSEA(str(boost::format("Collision (%d) of link %s using joint %d [%s]\n")%ct%vlinks.at(q)->GetName()%_robot->GetActiveJointIndex(ifing)%_report->__str__()));
+                                    stringstream ss; ss << "Transform: " << vlinks.at(q)->GetTransform() << ", Joint Vals: ";
                                     for(int vi = 0; vi < _robot->GetActiveDOF();vi++)
                                         ss << dofvals[vi] << " ";
                                     ss << endl;
@@ -402,8 +402,8 @@ public:
                         }
                         else {
                             if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                                RAVELOG_VERBOSEA(str(boost::format("Collision of link %s using joint %d\n")%_robot->GetLinks().at(q)->GetName()%_robot->GetActiveJointIndex(ifing)));
-                                stringstream ss; ss << "Joint Vals: ";
+                                RAVELOG_VERBOSEA(str(boost::format("Collision (%d) of link %s using joint %d [%s]")%ct%vlinks.at(q)->GetName()%_robot->GetActiveJointIndex(ifing)%_report->__str__()));
+                                stringstream ss; ss << "Transform: " << vlinks.at(q)->GetTransform() << "Joint Vals: ";
                                 for(int vi = 0; vi < _robot->GetActiveDOF();vi++)
                                     ss << dofvals[vi] << " ";
                                 ss << endl;

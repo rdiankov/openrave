@@ -46,7 +46,7 @@ class GraspingModel(OpenRAVEModel):
     def has(self):
         return len(self.grasps) > 0 and len(self.graspindices) > 0 and self.grasper is not None
     def getversion(self):
-        return 3
+        return 4
     def init(self,friction,avoidlinks,plannername=None):
         self.grasper = Grasper(self.robot,friction,avoidlinks,plannername)
         self.grasps = []
@@ -108,7 +108,7 @@ class GraspingModel(OpenRAVEModel):
                 counter = 0
                 self.grasps = []
                 # only the indices used by the TaskManipulation plugin should start with an 'i'
-                graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':preshapes.shape[1],'igrasptrans':12,'forceclosure':1}
+                graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':preshapes.shape[1],'igrasptrans':12,'forceclosure':1,'grasptrans_nocol':12}
                 self.graspindices = dict()
                 totaldof = 0
                 for name,dof in graspdof.iteritems():
@@ -132,15 +132,25 @@ class GraspingModel(OpenRAVEModel):
                         print 'Grasp Failed: '
                         traceback.print_exc(e)
                         continue
-                    Tgrasp = eye(4)
+                    Tlocalgrasp = eye(4)
                     with self.env:
-                        self.robot.SetJointValues(finalconfig[0])
                         self.robot.SetTransform(finalconfig[1])
-                        Tgrasp = dot(linalg.inv(self.target.GetTransform()),self.manip.GetEndEffectorTransform())
+                        Tgrasp = self.manip.GetEndEffectorTransform()
+                        Tlocalgrasp = dot(linalg.inv(self.target.GetTransform()),Tgrasp)
+
+                        # find a non-colliding transform
+                        self.setPreshape(grasp)
+                        dir = self.getGlobalApproachDir(grasp)
+                        Tgrasp_nocol = array(Tgrasp)
+                        while self.manip.CheckEndEffectorCollision(Tgrasp_nocol):
+                            Tgrasp_nocol[0:3,3] -= dir*0.001 # 1mm good enough?
+                        Tlocalgrasp_nocol = dot(linalg.inv(self.target.GetTransform()),Tgrasp_nocol)
+                        self.robot.SetJointValues(finalconfig[0])
                         if updateenv:
                             contactgraph = self.drawContacts(contacts) if len(contacts) > 0 else None
                             self.env.UpdatePublishedBodies()
-                    grasp[self.graspindices.get('igrasptrans')] = reshape(transpose(Tgrasp[0:3,0:4]),12)
+                    grasp[self.graspindices.get('igrasptrans')] = reshape(transpose(Tlocalgrasp[0:3,0:4]),12)
+                    grasp[self.graspindices.get('grasptrans_nocol')] = reshape(transpose(Tlocalgrasp_nocol[0:3,0:4]),12)
                     grasp[self.graspindices.get('forceclosure')] = mindist
                     if mindist > forceclosurethreshold:
                         print 'found good grasp'
@@ -174,12 +184,12 @@ class GraspingModel(OpenRAVEModel):
                         time.sleep(delay)
                     except planning_error,e:
                         print e
-    def showgrasp(self,grasp):
+    def showgrasp(self,grasp,collisionfree=False):
         with RobotStateSaver(self.robot):
             with self.GripperVisibility(self.manip):
                 with self.env:
                     self.setPreshape(grasp)
-                    Tgrasp = self.getGlobalGraspTransform(grasp)
+                    Tgrasp = self.getGlobalGraspTransform(grasp,collisionfree=collisionfree)
                     Tdelta = dot(Tgrasp,linalg.inv(self.manip.GetEndEffectorTransform()))
                     for link in self.manip.GetChildLinks():
                         link.SetTransform(dot(Tdelta,link.GetTransform()))
@@ -251,22 +261,36 @@ class GraspingModel(OpenRAVEModel):
             self.robot.SetJointValues(grasp[self.graspindices.get('igrasppreshape')],self.manip.GetGripperJoints())
             self.robot.SetActiveDOFs(self.manip.GetGripperJoints(),Robot.DOFAffine.X+Robot.DOFAffine.Y+Robot.DOFAffine.Z if translate else 0)
             return self.grasper.Grasp(direction=grasp[self.graspindices.get('igraspdir')],
-                                     roll=grasp[self.graspindices.get('igrasproll')],
-                                     position=grasp[self.graspindices.get('igrasppos')],
-                                     standoff=grasp[self.graspindices.get('igraspstandoff')],
-                                     target=self.target,graspingnoise = graspingnoise,
-                                     forceclosure=forceclosure, execute=False, outputfinal=True)
+                                      roll=grasp[self.graspindices.get('igrasproll')],
+                                      position=grasp[self.graspindices.get('igrasppos')],
+                                      standoff=grasp[self.graspindices.get('igraspstandoff')],
+                                      target=self.target,graspingnoise = graspingnoise,
+                                      forceclosure=forceclosure, execute=False, outputfinal=True)
+    def runGraspFromTrans(self,grasp):
+        """squeeze the fingers to test whether the completed grasp only collides with the target, throws an exception if it fails. Otherwise returns the Grasp parameters. Uses the grasp transformation directly."""
+        with self.robot:
+            self.robot.SetJointValues(grasp[self.graspindices.get('igrasppreshape')],self.manip.GetGripperJoints())
+            self.robot.SetTransform(dot(linalg.inv(self.robot.GetTransform()),self.getGlobalGraspTransform(grasp)))
+            self.robot.SetActiveDOFs(self.manip.GetGripperJoints())
+            return self.grasper.Grasp(transformrobot=False,target=self.target,onlycontacttarget=True, forceclosure=False, execute=False, outputfinal=True)
 
-    def getGlobalGraspTransform(self,grasp):
+    def getGlobalGraspTransform(self,grasp,collisionfree=False):
+        """returns the final grasp transform before fingers start closing. If collisionfree is set to True, then will return a grasp that is guaranteed to be not in collision with the target object when at its preshape. This is achieved by by moving the hand back along igraspdir."""
         Tlocalgrasp = eye(4)
-        Tlocalgrasp[0:3,0:4] = transpose(reshape(grasp[self.graspindices ['igrasptrans']],(4,3)))
+        Tlocalgrasp[0:3,0:4] = transpose(reshape(grasp[self.graspindices ['grasptrans_nocol' if collisionfree else 'igrasptrans']],(4,3)))
         return dot(self.target.GetTransform(),Tlocalgrasp)
+    def getGlobalApproachDir(self,grasp):
+        """returns the global approach direction"""
+        return dot(self.target.GetTransform()[0:3,0:3],grasp[self.graspindices.get('igraspdir')])
     def setPreshape(self,grasp):
         """sets the preshape on the robot, assumes environment is locked"""
         self.robot.SetJointValues(grasp[self.graspindices['igrasppreshape']],self.manip.GetGripperJoints())
 
-    def computeValidGrasps(self,startindex=0,checkcollision=True,checkik=True,returnnum=inf):
-        """Returns the set of grasps that satisfy certain conditions. If returnnum is set, will also return once that many number of grasps are found"""
+    def computeValidGrasps(self,startindex=0,checkcollision=True,checkik=True,checkgrasper=True,backupdist=0.0,returnnum=inf):
+        """Returns the set of grasps that satisfy certain conditions. If returnnum is set, will also return once that many number of grasps are found.
+        If backupdist > 0, then will move the hand along negative approach dir and check for validity.
+        If checkgrasper is True, will execute the grasp and check if gripper only contacts target
+        """
         with self.robot:
             validgrasps = []
             validindices = []
@@ -274,12 +298,26 @@ class GraspingModel(OpenRAVEModel):
             for i in range(startindex,len(self.grasps)):
                 grasp = self.grasps[i]
                 self.setPreshape(grasp)
-                Tglobalgrasp = self.getGlobalGraspTransform(grasp)
+                Tglobalgrasp = self.getGlobalGraspTransform(grasp,collisionfree=True)
                 if checkik:
-                    if self.manip.FindIKSolution(Tglobalgrasp,True) is None:
+                    if self.manip.FindIKSolution(Tglobalgrasp,checkcollision) is None:
                         continue
                 elif checkcollision:
                     if self.manip.CheckEndEffectorCollision(Tglobalgrasp):
+                        continue
+                if backupdist > 0:
+                    Tnewgrasp = array(Tglobalgrasp)
+                    Tnewgrasp[0:3,3] -= backupdist * self.getGlobalApproachDir(grasp)
+                    if checkik:
+                        if self.manip.FindIKSolution(Tnewgrasp,checkcollision) is None:
+                            continue
+                    elif checkcollision:
+                        if self.manip.CheckEndEffectorCollision(Tnewgrasp):
+                            continue
+                if checkcollision and checkgrasper:
+                    try:
+                        self.runGraspFromTrans(grasp)
+                    except planning_error:
                         continue
                 validgrasps.append(grasp)
                 validindices.append(i)
@@ -287,8 +325,10 @@ class GraspingModel(OpenRAVEModel):
                     return validgrasps,validindices
             return validgrasps,validindices
 
-    def validGraspIterator(self,startindex=0,checkcollision=True,checkik=True,randomgrasps=False):
-        """Returns an iterator for valid grasps that satisfy certain conditions."""
+    def validGraspIterator(self,startindex=0,checkcollision=True,checkik=True,checkgrasper=True,backupdist=0.0,randomgrasps=False):
+        """Returns an iterator for valid grasps that satisfy certain conditions.
+        If backupdist > 0, then will move the hand along negative approach dir and check for validity.
+        """
         validgrasps = []
         validindices = []
         if randomgrasps:
@@ -299,12 +339,26 @@ class GraspingModel(OpenRAVEModel):
             grasp = self.grasps[i]
             with KinBodyStateSaver(self.robot):
                 self.setPreshape(grasp)
-                Tglobalgrasp = self.getGlobalGraspTransform(grasp)
+                Tglobalgrasp = self.getGlobalGraspTransform(grasp,collisionfree=True)
                 if checkik:
-                    if self.manip.FindIKSolution(Tglobalgrasp,True) is None:
+                    if self.manip.FindIKSolution(Tglobalgrasp,checkcollision) is None:
                         continue
                 elif checkcollision:
                     if self.manip.CheckEndEffectorCollision(Tglobalgrasp):
+                        continue
+                if backupdist > 0:
+                    Tnewgrasp = array(Tglobalgrasp)
+                    Tnewgrasp[0:3,3] -= backupdist * self.getGlobalApproachDir(grasp)
+                    if checkik:
+                        if self.manip.FindIKSolution(Tnewgrasp,checkcollision) is None:
+                            continue
+                    elif checkcollision:
+                        if self.manip.CheckEndEffectorCollision(Tnewgrasp):
+                            continue
+                if checkcollision and checkgrasper:
+                    try:
+                        self.runGraspFromTrans(grasp)
+                    except planning_error:
                         continue
             yield grasp,i
 

@@ -396,5 +396,6 @@ def test_hrp2():
     configsampler = gr.sampleValidPlacementIterator(weight=weight,logllthresh=logllthresh,randomgrasps=True,randomplacement=False)
     pose,values,grasp = configsampler.next()
 
-    validgrasps,validindices = gr.gmodel.computeValidGrasps(checkik=False)
-    gr.gmodel.showgrasp(validgrasps[0])
+    validgrasps,validindices = gr.gmodel.computeValidGrasps(checkik=False,backupdist=0.01)
+    gr.gmodel.showgrasp(validgrasps[0],collisionfree=True)
+

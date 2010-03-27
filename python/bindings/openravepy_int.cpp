@@ -913,18 +913,7 @@ public:
 
     string __str__()
     {
-        stringstream ss;
-        if( !!report->plink1 )
-            ss << "(" << report->plink1->GetParent()->GetName() << ":" << report->plink1->GetName() << ")";
-        else
-            ss << "(None)";
-        ss << " x ";
-        if( !!report->plink2 )
-            ss << "(" << report->plink2->GetParent()->GetName() << ":" << report->plink2->GetName() << ")";
-        else
-            ss << "(None)";
-        ss << " contacts " << report->contacts.size();
-        return ss.str();
+        return report->__str__();
     }
 
     int options;
