@@ -911,6 +911,22 @@ public:
         contacts = newcontacts;
     }
 
+    string __str__()
+    {
+        stringstream ss;
+        if( !!report->plink1 )
+            ss << "(" << report->plink1->GetParent()->GetName() << ":" << report->plink1->GetName() << ")";
+        else
+            ss << "(None)";
+        ss << " x ";
+        if( !!report->plink2 )
+            ss << "(" << report->plink2->GetParent()->GetName() << ":" << report->plink2->GetName() << ")";
+        else
+            ss << "(None)";
+        ss << " contacts " << report->contacts.size();
+        return ss.str();
+    }
+
     int options;
     boost::shared_ptr<PyKinBody::PyLink> plink1, plink2;
     int numCols;
@@ -3216,18 +3232,19 @@ BOOST_PYTHON_MODULE(openravepy_int)
     }
 
     class_<PyCollisionReport::PYCONTACT, boost::shared_ptr<PyCollisionReport::PYCONTACT> >("Contact")
-        .def_readwrite("pos",&PyCollisionReport::PYCONTACT::pos)
-        .def_readwrite("norm",&PyCollisionReport::PYCONTACT::norm)
-        .def_readwrite("depth",&PyCollisionReport::PYCONTACT::depth)
+        .def_readonly("pos",&PyCollisionReport::PYCONTACT::pos)
+        .def_readonly("norm",&PyCollisionReport::PYCONTACT::norm)
+        .def_readonly("depth",&PyCollisionReport::PYCONTACT::depth)
         ;
     class_<PyCollisionReport, boost::shared_ptr<PyCollisionReport> >("CollisionReport")
-        .def_readwrite("options",&PyCollisionReport::options)
-        .def_readwrite("plink1",&PyCollisionReport::plink1)
-        .def_readwrite("plink2",&PyCollisionReport::plink2)
-        .def_readwrite("numCols",&PyCollisionReport::numCols)
-        .def_readwrite("minDistance",&PyCollisionReport::minDistance)
-        .def_readwrite("numWithinTol",&PyCollisionReport::numWithinTol)
-        .def_readwrite("contacts",&PyCollisionReport::contacts)
+        .def_readonly("options",&PyCollisionReport::options)
+        .def_readonly("plink1",&PyCollisionReport::plink1)
+        .def_readonly("plink2",&PyCollisionReport::plink2)
+        .def_readonly("numCols",&PyCollisionReport::numCols)
+        .def_readonly("minDistance",&PyCollisionReport::minDistance)
+        .def_readonly("numWithinTol",&PyCollisionReport::numWithinTol)
+        .def_readonly("contacts",&PyCollisionReport::contacts)
+        .def("__str__",&PyCollisionReport::__str__)
         ;
 
     {

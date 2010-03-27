@@ -43,7 +43,7 @@ class GraspReachability(metaclass.AutoReloader):
 
     def computeGraspDistribution(self,**kwargs):
         """computes distribution of all grasps"""
-        validgrasps,validindices = self.gmodel.computeValidGrasps()
+        validgrasps,validindices = self.gmodel.computeValidGrasps(checkik=False)
         def graspiter():
             for grasp,graspindex in izip(validgrasps,validindices):
                 yield self.gmodel.getGlobalGraspTransform(grasp),graspindex
@@ -77,7 +77,7 @@ class GraspReachability(metaclass.AutoReloader):
     def sampleValidPlacementIterator(self,giveuptime=inf,randomgrasps=False,randomplacement=False,**kwargs):
         """continues to sample valid goal placements. Returns the robot base position, configuration, and the target grasp from gmodel. Environment should be locked, robot state is saved"""
         def graspiter():
-            for grasp,graspindex in self.gmodel.validGraspIterator(randomgrasps):
+            for grasp,graspindex in self.gmodel.validGraspIterator(randomgrasps=randomgrasps):
                 yield self.gmodel.getGlobalGraspTransform(grasp),graspindex
 
         starttime = time.time()
@@ -102,6 +102,11 @@ class GraspReachability(metaclass.AutoReloader):
                             raise planning_error('timed out')
         finally:
             statesaver.close()
+    def showBaseDistribution(self,thresh=1.0,**kwargs):
+        starttime = time.time()
+        densityfn,samplerfn,bounds,validgrasps = self.computeGraspDistribution(**kwargs)
+        print 'time to build distribution: %fs'%(time.time()-starttime)
+        return gr.irmodel.showBaseDistribution(densityfn,bounds,self.target.GetTransform()[2,3],thresh=thresh)
 
 class MobileManipulationPlanning(graspplanning.GraspPlanning):
     def __init__(self,robot,randomize=False,irmodel=None,**kwargs):

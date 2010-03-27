@@ -132,7 +132,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                     solvejoints.remove([joint.GetJointIndex() for joint in self.robot.GetJoints() if joint.GetName()==jointname][0])
         else:
             freejoints = []
-        print 'Generating inverse kinematics ',self.iktype,solvejoints
+        print 'Generating inverse kinematics for manip',self.manip.GetName(),':',self.iktype,solvejoints,'(this might take ~10 min)'
         if self.iktype == IkParameterization.Type.Rotation3D:
             self.dofexpected = 3
         elif self.iktype == IkParameterization.Type.Direction3D:

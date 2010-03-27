@@ -355,7 +355,7 @@ def test_sampling():
     
 def test_hrp2():
     python convexdecomposition.py --robot=robots/hrp2jsk.robot.xml --volumeSplitThresholdPercent=5 --mergeThresholdPercent=10 --padding=0.005
-    rosrun openrave_database kinematicreachability_ros.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --launchservice='8*localhost' --xyzdelta=0.04
+    rosrun openrave_database kinematicreachability_ros.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --xyzdelta=0.04 --launchservice='8*localhost' 
     python kinematicreachability.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm --xyzdelta=0.02
     python kinematicreachability.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --xyzdelta=0.02
     python kinematicreachability.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm_chest --xyzdelta=0.02
@@ -378,3 +378,23 @@ def test_hrp2():
     hand = env.ReadRobotXMLFile('robots/hrp2rhandjsk.robot.xml')
     env.AddRobot(hand)
     hand.SetTransform(Tgrasp)
+
+    import mobilemanipulation,graspplanning
+    env = Environment()
+    env.SetViewer('qtcoin')
+    env.Load('scenes/r602cerealmanip.env.xml')
+    robot = env.GetRobots()[0]
+    robot.SetActiveManipulator('leftarm')
+    manip = robot.GetActiveManipulator()
+    planning = graspplanning.GraspPlanning(robot,nodestinations=True)
+    gmodel=planning.graspables[0][0]
+    target = gmodel.target
+    gr = mobilemanipulation.GraspReachability(robot=robot,gmodel=gmodel)
+    #h = gr.showBaseDistribution(thresh=1.0)
+    weight = 1.0
+    logllthresh = 2.4
+    configsampler = gr.sampleValidPlacementIterator(weight=weight,logllthresh=logllthresh,randomgrasps=True,randomplacement=False)
+    pose,values,grasp = configsampler.next()
+
+    validgrasps,validindices = gr.gmodel.computeValidGrasps(checkik=False)
+    gr.gmodel.showgrasp(validgrasps[0])

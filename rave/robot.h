@@ -477,7 +477,14 @@ public:
     virtual void SimulationStep(dReal fElapsedTime);
 
     /// Check if body is self colliding. Links that are joined together are ignored.
+    /// \param optional collision report
     virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr()) const;
+
+    /// checks collision of a robot link with the surrounding environment. Attached/Grabbed bodies to this link are also checked for collision.
+    /// \param ilinkindex the index of the link to check
+    /// \param The transform of the link to check
+    /// \param optional collision report
+    virtual bool CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report = CollisionReportPtr());
     
     /// does not clone the grabbed bodies since it requires pointers from other bodies (that might not be initialized yet)
     virtual bool Clone(InterfaceBaseConstPtr preference, int cloningoptions);

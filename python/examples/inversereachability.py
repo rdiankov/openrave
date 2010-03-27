@@ -517,7 +517,7 @@ class InverseReachabilityModel(OpenRAVEModel):
                 maxprob = max(probsxy)
             normalizedprobs = numpy.minimum(1,probsxy/maxprob)
             Ic = zeros((X.shape[1],X.shape[2],4))
-            Ic[:,:,0] = reshape(normalizedprobs,Ic.shape[0:2])
+            Ic[:,:,2] = reshape(normalizedprobs,Ic.shape[0:2])
             Ic[:,:,3] = reshape(normalizedprobs*array(probsxy>thresh,'float'),Ic.shape[0:2])
             Tplane = eye(4)
             Tplane[0:2,3] = mean(bounds[:,1:3],axis=0)
