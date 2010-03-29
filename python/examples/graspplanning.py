@@ -205,12 +205,18 @@ class GraspPlanning(metaclass.AutoReloader):
 
             with env:
                 robot.SetActiveDOFs(manip.GetGripperJoints())
-                res = self.basemanip.ReleaseFingers(target=target)
+                try:
+                    self.basemanip.ReleaseFingers(target=target)
+                except planning_error:
+                    res = None
             if res is None:
                 print 'problems releasing, releasing target first'
                 with env:
                     robot.ReleaseAllGrabbed()
-                    res = self.basemanip.ReleaseFingers(target=target)
+                    try:
+                        res = self.basemanip.ReleaseFingers(target=target)
+                    except planning_error:
+                        res = None
                 if res is None:
                     print 'forcing fingers'
                     with env:
@@ -225,9 +231,11 @@ class GraspPlanning(metaclass.AutoReloader):
                                                           stepsize=stepsize,minsteps=1,maxsteps=10)
                 robot.WaitForController(0)
                 if env.CheckCollision(robot):
-                    res = self.basemanip.ReleaseFingers(target=target)
+                    try:
+                        self.basemanip.ReleaseFingers(target=target)
+                    except planning_error:
+                        res = None
                     #raise ValueError('robot still in collision?')
-
             return graspindex # return successful grasp index
         # exhausted all grasps
         return -1

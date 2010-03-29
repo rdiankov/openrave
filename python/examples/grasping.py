@@ -270,7 +270,7 @@ class GraspingModel(OpenRAVEModel):
         """squeeze the fingers to test whether the completed grasp only collides with the target, throws an exception if it fails. Otherwise returns the Grasp parameters. Uses the grasp transformation directly."""
         with self.robot:
             self.robot.SetJointValues(grasp[self.graspindices.get('igrasppreshape')],self.manip.GetGripperJoints())
-            self.robot.SetTransform(dot(linalg.inv(self.robot.GetTransform()),self.getGlobalGraspTransform(grasp)))
+            self.robot.SetTransform(dot(self.getGlobalGraspTransform(grasp),dot(linalg.inv(self.manip.GetEndEffectorTransform()),self.robot.GetTransform())))
             self.robot.SetActiveDOFs(self.manip.GetGripperJoints())
             return self.grasper.Grasp(transformrobot=False,target=self.target,onlycontacttarget=True, forceclosure=False, execute=False, outputfinal=True)
 
@@ -332,9 +332,9 @@ class GraspingModel(OpenRAVEModel):
         validgrasps = []
         validindices = []
         if randomgrasps:
-            order = range(startindex,len(self.grasps))
-        else:
             order = startindex+random.permutation(len(self.grasps)-startindex)
+        else:
+            order = range(startindex,len(self.grasps))
         for i in order:
             grasp = self.grasps[i]
             with KinBodyStateSaver(self.robot):
@@ -363,45 +363,56 @@ class GraspingModel(OpenRAVEModel):
             yield grasp,i
 
     def computeBoxApproachRays(self,delta=0.02,normalanglerange=0,directiondelta=0.4):
-        with self.target:
-            self.target.SetTransform(eye(4))
-            ab = self.target.ComputeAABB()
-            p = ab.pos()
-            e = ab.extents()
-            sides = array(((0,0,e[2],0,0,-1,e[0],0,0,0,e[1],0),
-                           (0,0,-e[2],0,0,1,e[0],0,0,0,e[1],0),
-                           (0,e[1],0,0,-1,0,e[0],0,0,0,0,e[2]),
-                           (0,-e[1],0,0,1,0,e[0],0,0,0,0,e[2]),
-                           (e[0],0,0,-1,0,0,0,e[1],0,0,0,e[2]),
-                           (-e[0],0,0,1,0,0,0,e[1],0,0,0,e[2])))
-            maxlen = 2*sqrt(sum(e**2))
-            approachrays = zeros((0,6))
-            for side in sides:
-                ex = sqrt(sum(side[6:9]**2))
-                ey = sqrt(sum(side[9:12]**2))
-                XX,YY = meshgrid(r_[arange(-ex,-0.25*delta,delta),0,arange(delta,ex,delta)],
-                                 r_[arange(-ey,-0.25*delta,delta),0,arange(delta,ey,delta)])
-                localpos = outer(XX.flatten(),side[6:9]/ex)+outer(YY.flatten(),side[9:12]/ey)
-                N = localpos.shape[0]
-                rays = c_[tile(p+side[0:3],(N,1))+localpos,maxlen*tile(side[3:6],(N,1))]
-                collision, info = self.env.CheckCollisionRays(rays,self.target)
-                # make sure all normals are the correct sign: pointing outward from the object)
-                newinfo = info[collision,:]
-                if len(newinfo) > 0:
-                    newinfo[sum(rays[collision,3:6]*newinfo[:,3:6],1)>0,3:6] *= -1
-                    approachrays = r_[approachrays,newinfo]
-            if normalanglerange > 0:
-                theta,pfi = SpaceSampler().sampleS2(angledelta=directiondelta)
-                dirs = c_[cos(theta),sin(theta)*cos(pfi),sin(theta)*sin(pfi)]
-                dirs = array([dir for dir in dirs if arccos(dir[2])<=normalanglerange]) # find all dirs within normalanglerange
-                if len(dirs) == 0:
-                    dirs = array([[0,0,1]])
-                newapproachrays = zeros((0,6))
-                for approachray in approachrays:
-                    R = rotationMatrixFromQuat(quatRotateDirection(array((0,0,1)),approachray[3:6]))
-                    newapproachrays = r_[newapproachrays,c_[tile(approachray[0:3],(len(dirs),1)),dot(dirs,transpose(R))]]
-                approachrays = newapproachrays
-            return approachrays
+        # ode gives the most accurate rays
+        cc = self.env.CreateCollisionChecker('ode')
+        if cc is not None:
+            ccold = self.env.GetCollisionChecker()
+            self.env.SetCollisionChecker(cc)
+            cc = ccold
+        try:
+            with self.target:
+                self.target.SetTransform(eye(4))
+                ab = self.target.ComputeAABB()
+                p = ab.pos()
+                e = ab.extents()+0.01 # increase since origin of ray should be outside of object
+                sides = array(((0,0,e[2],0,0,-1,e[0],0,0,0,e[1],0),
+                               (0,0,-e[2],0,0,1,e[0],0,0,0,e[1],0),
+                               (0,e[1],0,0,-1,0,e[0],0,0,0,0,e[2]),
+                               (0,-e[1],0,0,1,0,e[0],0,0,0,0,e[2]),
+                               (e[0],0,0,-1,0,0,0,e[1],0,0,0,e[2]),
+                               (-e[0],0,0,1,0,0,0,e[1],0,0,0,e[2])))
+                maxlen = 2*sqrt(sum(e**2))+0.03
+                approachrays = zeros((0,6))
+                for side in sides:
+                    ex = sqrt(sum(side[6:9]**2))
+                    ey = sqrt(sum(side[9:12]**2))
+                    XX,YY = meshgrid(r_[arange(-ex,-0.25*delta,delta),0,arange(delta,ex,delta)],
+                                     r_[arange(-ey,-0.25*delta,delta),0,arange(delta,ey,delta)])
+                    localpos = outer(XX.flatten(),side[6:9]/ex)+outer(YY.flatten(),side[9:12]/ey)
+                    N = localpos.shape[0]
+                    rays = c_[tile(p+side[0:3],(N,1))+localpos,maxlen*tile(side[3:6],(N,1))]
+                    collision, info = self.env.CheckCollisionRays(rays,self.target)
+                    # make sure all normals are the correct sign: pointing outward from the object)
+                    newinfo = info[collision,:]
+                    if len(newinfo) > 0:
+                        newinfo[sum(rays[collision,3:6]*newinfo[:,3:6],1)>0,3:6] *= -1
+                        approachrays = r_[approachrays,newinfo]
+                if normalanglerange > 0:
+                    theta,pfi = SpaceSampler().sampleS2(angledelta=directiondelta)
+                    dirs = c_[cos(theta),sin(theta)*cos(pfi),sin(theta)*sin(pfi)]
+                    dirs = array([dir for dir in dirs if arccos(dir[2])<=normalanglerange]) # find all dirs within normalanglerange
+                    if len(dirs) == 0:
+                        dirs = array([[0,0,1]])
+                    newapproachrays = zeros((0,6))
+                    for approachray in approachrays:
+                        R = rotationMatrixFromQuat(quatRotateDirection(array((0,0,1)),approachray[3:6]))
+                        newapproachrays = r_[newapproachrays,c_[tile(approachray[0:3],(len(dirs),1)),dot(dirs,transpose(R))]]
+                    approachrays = newapproachrays
+                return approachrays
+        finally:
+            # restore the collision checker
+            if cc is not None:
+                self.env.SetCollisionChecker(cc)
     def computeSphereApproachRays(self,delta=0.1,normalanglerange=0,directiondelta=0.4):
         with self.target:
             self.target.SetTransform(eye(4))

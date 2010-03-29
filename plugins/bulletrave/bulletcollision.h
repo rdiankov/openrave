@@ -178,34 +178,51 @@ private:
         BulletCollisionChecker* _pchecker;
     };
 
-    struct	AllRayResultCallback : public btCollisionWorld::ClosestRayResultCallback
+    struct	AllRayResultCallback : public btCollisionWorld::RayResultCallback//btCollisionWorld::ClosestRayResultCallback
 	{
         AllRayResultCallback(const btVector3&	rayFromWorld,const btVector3&	rayToWorld, KinBodyConstPtr pbodyonly)
-             : btCollisionWorld::ClosestRayResultCallback(rayFromWorld, rayToWorld), _pbodyonly(pbodyonly) {}
+            : RayResultCallback(), m_rayFromWorld(rayFromWorld), m_rayToWorld(rayToWorld), _pbodyonly(pbodyonly) {}
+        //: btCollisionWorld::ClosestRayResultCallback(rayFromWorld, rayToWorld), _pbodyonly(pbodyonly) {}
 
         virtual bool needsCollision (btBroadphaseProxy *proxy0) const {
-            KinBody::LinkPtr plink = *(KinBody::LinkPtr*)((btCollisionObject*)proxy0->m_clientObject)->getUserPointer();
+            KinBody::LinkPtr plink = *(KinBody::LinkPtr*)static_cast<btCollisionObject*>(proxy0->m_clientObject)->getUserPointer();
             if( !!_pbodyonly && _pbodyonly != plink->GetParent() )
                 return false;
+            //RAVELOG_INFO("clink: %s=%s: %d\n",plink->GetParent()->GetName().c_str(),_pbodyonly->GetName().c_str(),plink->IsEnabled());
             return plink->IsEnabled();
         }
 
-        KinBodyConstPtr _pbodyonly;
-	};
+		btVector3	m_rayFromWorld;//used to calculate hitPointWorld from hitFraction
+		btVector3	m_rayToWorld;
 
-    struct	AllRayResultCallbackLink : public btCollisionWorld::ClosestRayResultCallback
-	{
-        AllRayResultCallbackLink(const btVector3& rayFromWorld, const btVector3& rayToWorld, KinBody::LinkConstPtr plink)
-             : btCollisionWorld::ClosestRayResultCallback(rayFromWorld, rayToWorld), _plink(plink) {}
+		btVector3	m_hitNormalWorld;
+		btVector3	m_hitPointWorld;
 
-        virtual bool needsCollision (btBroadphaseProxy *proxy0) const {
-            KinBody::LinkPtr pcollink = *(KinBody::LinkPtr*)((btCollisionObject*)proxy0->m_clientObject)->getUserPointer();
-            if( pcollink != _plink )
+        virtual btScalar addSingleResult(btCollisionWorld::LocalRayResult& rayResult,bool normalInWorldSpace) {
+            //caller already does the filter on the m_closestHitFraction
+            BOOST_ASSERT(rayResult.m_hitFraction <= m_closestHitFraction);
+            KinBody::LinkPtr plink = *(KinBody::LinkPtr*)static_cast<btCollisionObject*>(rayResult.m_collisionObject)->getUserPointer();            
+            if( !plink->IsEnabled() || (!!_pbodyonly && _pbodyonly != plink->GetParent()) )
                 return false;
-            return pcollink->IsEnabled();
+            //RAVELOG_INFO("clink: %s=%s: %d\n",plink->GetParent()->GetName().c_str(),_pbodyonly->GetName().c_str(),plink->IsEnabled());
+            
+            m_closestHitFraction = rayResult.m_hitFraction;
+            m_collisionObject = rayResult.m_collisionObject;
+
+            //RAVELOG_INFO("ray link: %s:%s\n",plink->GetParent()->GetName().c_str(),plink->GetName().c_str());
+            if (normalInWorldSpace)
+            {
+                m_hitNormalWorld = rayResult.m_hitNormalLocal;
+            } else
+            {
+                ///need to transform normal into worldspace
+                m_hitNormalWorld = m_collisionObject->getWorldTransform().getBasis()*rayResult.m_hitNormalLocal;
+            }
+            m_hitPointWorld.setInterpolate3(m_rayFromWorld,m_rayToWorld,rayResult.m_hitFraction);
+            return rayResult.m_hitFraction;
         }
 
-        KinBody::LinkConstPtr _plink;
+        KinBodyConstPtr _pbodyonly;
 	};
 
     bool CheckCollisionP(btOverlapFilterCallback* poverlapfilt, CollisionReportPtr report)
@@ -507,8 +524,15 @@ public:
 
         btVector3 from = BulletSpace::GetBtVector(ray.pos);
         btVector3 to = BulletSpace::GetBtVector(ray.pos+ray.dir);
-        AllRayResultCallbackLink rayCallback(from,to,plink);
-        _world->rayTest(from,to, rayCallback);
+		btTransform rayFromTrans, rayToTrans;
+        rayFromTrans.setIdentity();
+		rayFromTrans.setOrigin(from);
+		rayToTrans.setIdentity();
+		rayToTrans.setOrigin(to);
+        btCollisionWorld::ClosestRayResultCallback rayCallback(from,to);
+        BulletSpace::KinBodyInfoPtr pinfo = boost::static_pointer_cast<BulletSpace::KinBodyInfo>(GetCollisionInfo(plink->GetParent()));
+        boost::shared_ptr<BulletSpace::KinBodyInfo::LINK> plinkinfo = pinfo->vlinks.at(plink->GetIndex());
+        _world->rayTestSingle(rayFromTrans,rayToTrans,plinkinfo->obj.get(),plinkinfo->shape.get(),plinkinfo->obj->getWorldTransform(),rayCallback);
 
         bool bCollision = rayCallback.hasHit();
         if( bCollision ) {
@@ -555,14 +579,27 @@ public:
 
         bulletspace->Synchronize();
         _world->updateAabbs();
-    
+
         if( fabsf(sqrtf(ray.dir.lengthsqr3())-1) < 1e-4 )
             RAVELOG_DEBUGA("CheckCollision: ray direction length is 1.0, note that only collisions within a distance of 1.0 will be checked\n");
 
         btVector3 from = BulletSpace::GetBtVector(ray.pos);
         btVector3 to = BulletSpace::GetBtVector(ray.pos+ray.dir);
+		btTransform rayFromTrans, rayToTrans;
+        rayFromTrans.setIdentity();
+		rayFromTrans.setOrigin(from);
+		rayToTrans.setIdentity();
+		rayToTrans.setOrigin(to);
+
         AllRayResultCallback rayCallback(from,to,pbody);
-        _world->rayTest(from,to, rayCallback);
+        BulletSpace::KinBodyInfoPtr pinfo = boost::static_pointer_cast<BulletSpace::KinBodyInfo>(GetCollisionInfo(pbody));
+        BOOST_ASSERT(pinfo->pbody == pbody );
+        FOREACH(itlink,pinfo->vlinks) {
+            if( (*itlink)->plink->IsEnabled() ) {
+                _world->rayTestSingle(rayFromTrans,rayToTrans,(*itlink)->obj.get(),(*itlink)->shape.get(),(*itlink)->obj->getWorldTransform(),rayCallback);
+            }
+        }
+        //_world->rayTest(from,to, rayCallback);
 
         bool bCollision = rayCallback.hasHit();
         if( bCollision ) {
@@ -608,7 +645,21 @@ public:
 
         if( fabsf(sqrtf(ray.dir.lengthsqr3())-1) < 1e-4 )
             RAVELOG_DEBUGA("CheckCollision: ray direction length is 1.0, note that only collisions within a distance of 1.0 will be checked\n");
-    
+
+        // unfortunately, the bullet ray checker cannot handle enabled bodies properly, so have to move all of them away
+        list<boost::shared_ptr<KinBody::KinBodyStateSaver> > listsavers;
+        vector<KinBodyPtr> vbodies;
+        GetEnv()->GetBodies(vbodies);
+        Vector vnormdir = ray.dir*(1/RaveSqrt(ray.dir.lengthsqr3()));
+        FOREACH(it,vbodies) {
+            if( !(*it)->IsEnabled() ) {
+                listsavers.push_back(boost::shared_ptr<KinBody::KinBodyStateSaver>(new KinBody::KinBodyStateSaver(*it)));
+                AABB ab = (*it)->ComputeAABB();
+                Transform t; t.trans = ray.pos-vnormdir*4*RaveSqrt(ab.extents.lengthsqr3());
+                (*it)->SetTransform(t);
+            }
+        }
+
         btVector3 from = BulletSpace::GetBtVector(ray.pos);
         btVector3 to = BulletSpace::GetBtVector(ray.pos+ray.dir);
         AllRayResultCallback rayCallback(from,to,KinBodyConstPtr());

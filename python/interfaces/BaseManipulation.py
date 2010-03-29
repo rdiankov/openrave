@@ -99,17 +99,33 @@ class BaseManipulation:
         if outputtraj is not None:
             cmd += 'outputtraj '
         return self.prob.SendCommand(cmd)
-    def CloseFingers(self,offset=None,execute=None,outputtraj=None):
+    def CloseFingers(self,offset=None,execute=None,outputtraj=None,outputfinal=None):
         cmd = 'CloseFingers '
+        dof=len(self.robot.GetActiveManipulator().GetGripperJoints())
         if offset is not None:
-            assert(len(offset) == len(self.robot.GetActiveManipulator().GetGripperJoints()))
+            assert(len(offset) == dof)
             cmd += ' '.join(str(f) for f in offset) + ' '
         if execute is not None:
             cmd += 'execute %d '%execute
         if outputtraj is not None:
             cmd += 'outputtraj '
-        return self.prob.SendCommand(cmd)
-    def ReleaseFingers(self,target=None,movingdir=None,execute=None,outputtraj=None):
+        if outputfinal:
+            cmd += 'outputfinal'
+        res = self.prob.SendCommand(cmd)
+        if res is None:
+            raise planning_error()
+        resvalues = res.split()
+        if outputfinal:
+            final = array([float(resvalues[i]) for i in range(dof)])
+            resvalues=resvalues[dof:]
+        else:
+            final=None
+        if outputtraj:
+            traj = ' '.join(resvalues)
+        else:
+            traj = None
+        return final,traj
+    def ReleaseFingers(self,target=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None):
         cmd = 'ReleaseFingers '
         if target is not None:
             cmd += 'target %s '%target.GetName()
@@ -120,7 +136,22 @@ class BaseManipulation:
             cmd += 'execute %d '%execute
         if outputtraj is not None:
             cmd += 'outputtraj '
-        return self.prob.SendCommand(cmd)
+        if outputfinal:
+            cmd += 'outputfinal'
+        res = self.prob.SendCommand(cmd)
+        if res is None:
+            raise planning_error()
+        resvalues = res.split()
+        if outputfinal:
+            final = array([float(resvalues[i]) for i in range(dof)])
+            resvalues=resvalues[dof:]
+        else:
+            final=None
+        if outputtraj:
+            traj = ' '.join(resvalues)
+        else:
+            traj = None
+        return final,traj
     def DebugIK(self,numiters,rotonly=False):
         cmd = 'DebugIK numtests %d '%numiters
         if rotonly:

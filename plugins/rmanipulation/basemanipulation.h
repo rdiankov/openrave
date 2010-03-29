@@ -143,14 +143,10 @@ protected:
 
         if( index >= 0 && index < (int)robot->GetManipulators().size() ) {
             robot->SetActiveManipulator(index);
-            sout << "1";
-        }
-        else {
-            RAVELOG_ERRORA("invaild manip %d\n", index);
-            sout << "0";
+            return true;
         }
 
-        return true;
+        return false;
     }
 
     bool Traj(ostream& sout, istream& sinput)
@@ -355,7 +351,6 @@ protected:
             }
             RAVELOG_DEBUGA("hand moved %f\n", (float)i*stepsize);
             CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream);
-            sout << "1";
             return i >= minsteps;
         }
 
@@ -866,7 +861,7 @@ protected:
     {
         RAVELOG_DEBUGA("Starting CloseFingers...\n");
 
-        bool bExecute = true;
+        bool bExecute = true, bOutputFinal=false;
         string strtrajfilename;
         boost::shared_ptr<ostream> pOutputTrajStream;
 
@@ -887,6 +882,8 @@ protected:
                 sinput >> strtrajfilename;
             else if( cmd == "outputtraj" )
                 pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+            else if( cmd == "outputfinal" )
+                bOutputFinal = true;
             else if( cmd == "offset" ) {
                 voffset.resize(pmanip->GetGripperJoints().size());
                 FOREACH(it, voffset)
@@ -910,8 +907,6 @@ protected:
 
         robot->SetActiveDOFs(activejoints);
 
-        boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(robot->GetActiveDOF()));
-
         // have to add the first point
         Trajectory::TPOINT ptfirst;
         robot->GetActiveDOFValues(ptfirst.q);
@@ -929,6 +924,9 @@ protected:
         graspparams->breturntrajectory = false;
         graspparams->bonlycontacttarget = false;
 
+        boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(robot->GetActiveDOF()));
+        ptraj->AddPoint(ptfirst);
+
         if( !graspplanner->InitPlan(robot, graspparams) ) {
             RAVELOG_ERRORA("InitPlan failed\n");
             return false;
@@ -939,40 +937,43 @@ protected:
             return false;
         }   
 
-        if( ptraj->GetPoints().size() > 0 ) {
-            vector<dReal> vclosingsign, vclosingsign_full; // sometimes the sign of closing the fingers can be positive
-            vclosingsign_full.insert(vclosingsign_full.end(), robot->GetDOF(), 1);
-        
-            // extract the sign from each manipulator
-            FOREACHC(itmanip, robot->GetManipulators()) {
-                BOOST_ASSERT((*itmanip)->GetClosingDirection().size()==(*itmanip)->GetGripperJoints().size());
-                for(size_t i = 0; i < (*itmanip)->GetClosingDirection().size(); ++i) {
-                    vclosingsign_full[(*itmanip)->GetGripperJoints()[i]] = (*itmanip)->GetClosingDirection()[i];
-                }
-            }
+        if( ptraj->GetPoints().size() == 0 )
+            return false;
 
-            vclosingsign.resize(robot->GetActiveDOF());
-            for(int i = 0; i < robot->GetActiveDOF(); ++i) {
-                int index = robot->GetActiveJointIndex(i);
-                if( index >= 0 )
-                    vclosingsign[i] = vclosingsign_full[index];
-            }
-
-            Trajectory::TPOINT p = ptraj->GetPoints().back();
-            if(p.q.size() == voffset.size() ) {
-                for(size_t i = 0; i < voffset.size(); ++i)
-                    p.q[i] += voffset[i]*vclosingsign[i];
-                robot->SetActiveDOFValues(p.q,true);
-                robot->GetActiveDOFValues(p.q);
-            }
-
-            ptraj->Clear();
-            ptraj->AddPoint(ptfirst);
-            ptraj->AddPoint(p);
-            CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream);
+        if( bOutputFinal ) {
+            FOREACH(itq,ptraj->GetPoints().back().q)
+                sout << *itq << " ";
         }
 
-        sout << "1";
+        vector<dReal> vclosingsign, vclosingsign_full; // sometimes the sign of closing the fingers can be positive
+        vclosingsign_full.insert(vclosingsign_full.end(), robot->GetDOF(), 1);
+
+        // extract the sign from each manipulator
+        FOREACHC(itmanip, robot->GetManipulators()) {
+            BOOST_ASSERT((*itmanip)->GetClosingDirection().size()==(*itmanip)->GetGripperJoints().size());
+            for(size_t i = 0; i < (*itmanip)->GetClosingDirection().size(); ++i) {
+                vclosingsign_full[(*itmanip)->GetGripperJoints()[i]] = (*itmanip)->GetClosingDirection()[i];
+            }
+        }
+
+        vclosingsign.resize(robot->GetActiveDOF());
+        for(int i = 0; i < robot->GetActiveDOF(); ++i) {
+            int index = robot->GetActiveJointIndex(i);
+            if( index >= 0 )
+                vclosingsign[i] = vclosingsign_full[index];
+        }
+
+        Trajectory::TPOINT p = ptraj->GetPoints().back();
+        if(p.q.size() == voffset.size() ) {
+            for(size_t i = 0; i < voffset.size(); ++i)
+                p.q[i] += voffset[i]*vclosingsign[i];
+            robot->SetActiveDOFValues(p.q,true);
+            robot->GetActiveDOFValues(p.q);
+        }
+
+        ptraj->AddPoint(p);
+        CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream);
+
         return true;
     }
 
@@ -983,7 +984,7 @@ protected:
         KinBodyPtr ptarget;
         vector<dReal> movingdir(robot->GetActiveDOF());
 
-        bool bExecute = true;
+        bool bExecute = true, bOutputFinal = false;
         string strtrajfilename;
         boost::shared_ptr<ostream> pOutputTrajStream;
 
@@ -1013,6 +1014,8 @@ protected:
                 sinput >> bExecute;
             else if( cmd == "outputtraj" )
                 pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+            else if( cmd == "outputfinal" )
+                bOutputFinal = true;
             else if( cmd == "writetraj" )
                 sinput >> strtrajfilename;
             else if( cmd == "target" ) {
@@ -1040,17 +1043,15 @@ protected:
 
         // have to add the first point
         Trajectory::TPOINT ptfirst;
+        robot->GetActiveDOFValues(ptfirst.q);
+        ptraj->AddPoint(ptfirst);
         if( GetEnv()->CheckCollision(KinBodyConstPtr(robot)) ) {
-            robot->GetActiveDOFValues(ptfirst.q);
-            ptraj->AddPoint(ptfirst);
-
             if( !CM::JitterActiveDOF(robot) ) {
                 RAVELOG_WARNA("robot initially in collision\n");
                 return false;
             }
+            robot->GetActiveDOFValues(ptfirst.q);
         }
-
-        robot->GetActiveDOFValues(ptfirst.q);
  
         boost::shared_ptr<PlannerBase> graspplanner = GetEnv()->CreatePlanner("Grasper");
         if( !graspplanner ) {
@@ -1083,6 +1084,11 @@ protected:
             return false;
         }   
 
+        if( bOutputFinal ) {
+            FOREACH(itq,ptraj->GetPoints().back().q)
+                sout << *itq << " ";
+        }
+
         // check final trajectory for colliding points
         if( ptraj->GetPoints().size() > 0 ) {
             RobotBase::RobotStateSaver saver2(robot);
@@ -1098,7 +1104,6 @@ protected:
             robot->Release(ptarget);
 
         CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream);
-        sout << "1";
         return true;
     }
 

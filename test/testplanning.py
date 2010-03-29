@@ -362,8 +362,9 @@ def test_hrp2():
     python inversereachability.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm --heightthresh=0.02 --quatthresh=0.1
     python inversereachability.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --heightthresh=0.02 --quatthresh=0.1
     python inversereachability.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm_chest --heightthresh=0.02 --quatthresh=0.1
-    python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.02 --normalanglerange=1 --avoidlink=RWristCam
-    python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.02 --normalanglerange=1
+    python inversereachability.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm_chest --heightthresh=0.02 --quatthresh=0.1
+    python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.02 --normalanglerange=1 --avoidlink=RWristCam --collision=bullet
+    python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.02 --normalanglerange=1 --collision=bullet
 
     import inversereachability
     env = Environment()
@@ -390,12 +391,35 @@ def test_hrp2():
     gmodel=planning.graspables[0][0]
     target = gmodel.target
     gr = mobilemanipulation.GraspReachability(robot=robot,gmodel=gmodel)
-    #h = gr.showBaseDistribution(thresh=1.0)
-    weight = 1.0
-    logllthresh = 2.4
-    configsampler = gr.sampleValidPlacementIterator(weight=weight,logllthresh=logllthresh,randomgrasps=True,randomplacement=False)
-    pose,values,grasp = configsampler.next()
+    weight = 1.5
+    logllthresh = 2.0
+    basemanip = interfaces.BaseManipulation(robot)
+    #h = gr.showBaseDistribution(thresh=1.0,logllthresh=logllthresh)
+    gr.testSampling(weight=weight,logllthresh=logllthresh,randomgrasps=False,randomplacement=False,updateenv=False)
+    configsampler = gr.sampleValidPlacementIterator(weight=weight,logllthresh=logllthresh,randomgrasps=False,randomplacement=False,updateenv=False)
+    while True:
+        robot.GetController().Reset(0)
+        with env:
+            pose,values,grasp = configsampler.next()
+            print 'found'
+            robot.SetTransform(pose)
+            gr.gmodel.setPreshape(grasp)
+            robot.SetJointValues(values[manip.GetArmJoints()],manip.GetArmJoints())
+        basemanip.CloseFingers()
+        robot.WaitForController(0)
 
     validgrasps,validindices = gr.gmodel.computeValidGrasps(checkik=False,backupdist=0.01)
     gr.gmodel.showgrasp(validgrasps[0],collisionfree=True)
 
+    densityfn,samplerfn,bounds,validgrasps = gr.computeGraspDistribution(logllthresh=logllthresh)
+    goals,numfailures=gr.sampleGoals(lambda goals: samplerfn(goals,weight=1.0),updateenv=True)
+    grasp,pose,q = goals[0]
+    robot.SetTransform(pose)
+    robot.SetJointValues(q,manip.GetArmJoints())
+    basemanip.CloseFingers()
+
+    grasp = gr.gmodel.grasps[283]
+    Tgrasp = gr.gmodel.getGlobalGraspTransform(grasp,collisionfree=True)
+    equivalenceclass,logll = gr.irmodel.getEquivalenceClass(Tgrasp)
+    densityfn,samplerfn,bounds = gr.irmodel.computeBaseDistribution(Tgrasp,logllthresh=logllthresh)
+    h = gr.irmodel.showBaseDistribution(densityfn,bounds,zoffset=gr.target.GetTransform()[2,3],thresh=1.0)

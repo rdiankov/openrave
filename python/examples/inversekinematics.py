@@ -351,6 +351,8 @@ class InverseKinematicsModel(OpenRAVEModel):
                     iktype = IkParameterization.Type.Direction3D
                 if options.translation3donly:
                     iktype = IkParameterization.Type.Translation3D
+                if options.manipname is not None:
+                    robot.SetActiveManipulator(options.manipname)
                 ikmodel = InverseKinematicsModel(robot,iktype=iktype)
                 if not ikmodel.setrobot(freeinc=options.freeinc):
                     raise ValueError('failed to load ik')

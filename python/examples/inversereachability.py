@@ -142,7 +142,8 @@ class InverseReachabilityModel(OpenRAVEModel):
         if not self.rmodel.load():
             self.rmodel.autogenerate()
         print "Generating Inverse Reachability",heightthresh,quatthresh
-
+        with self.robot:
+            Tbase = self.manip.GetBase().GetTransform()
         # convert the quatthresh to a loose euclidean distance
         self.xyzdelta = self.rmodel.xyzdelta
         self.quatdelta = self.rmodel.quatdelta
@@ -150,11 +151,7 @@ class InverseReachabilityModel(OpenRAVEModel):
         quateucdist2 = (1-cos(quatthresh))**2+sin(quatthresh)**2
         # find the density
         basetrans = array(self.rmodel.reachabilitystats)
-        if basetrans.shape[1] < 8:
-            basetrans = c_[basetrans,ones(basetrans.shape[0])]
-        with self.robot:
-            Tbase = poseFromMatrix(self.manip.GetBase().GetTransform())
-            basetrans[:,0:7] = poseMultArrayT(Tbase,basetrans[:,0:7])
+        basetrans[:,0:7] = poseMultArrayT(poseFromMatrix(Tbase),basetrans[:,0:7])
         # find the density of the points
         searchtrans = c_[basetrans[:,0:4],basetrans[:,6:7]]
         kdtree = self.QuaternionKDTree(searchtrans,1.0/self.rotweight)
@@ -213,7 +210,7 @@ class InverseReachabilityModel(OpenRAVEModel):
         posetarget = poseFromMatrix(dot(linalg.inv(Tbase),Tgrasp))
         qnormalized,znormangle = normalizeZRotation(reshape(posetarget[0:4],(1,4)))
         # find the closest cluster
-        logll = quatDist(qnormalized,self.equivalencemeans[:,0:4],self.equivalenceweights[:,0:4]) + (posetarget[6]-self.equivalencemeans[:,4])*self.equivalenceweights[:,4] + self.equivalenceoffset
+        logll = quatArrayTDist(qnormalized[0],self.equivalencemeans[:,0:4])**2*self.equivalenceweights[:,0] + (posetarget[6]-self.equivalencemeans[:,4])**2*self.equivalenceweights[:,1] + self.equivalenceoffset
         bestindex = argmax(logll)
         return self.equivalenceclasses[bestindex],logll[bestindex]
 
@@ -244,15 +241,17 @@ class InverseReachabilityModel(OpenRAVEModel):
         logll = quatArrayTDist(qnormalized[0],self.equivalencemeans[:,0:4])**2*self.equivalenceweights[:,0] + (posetarget[6]-self.equivalencemeans[:,4])**2*self.equivalenceweights[:,1] + self.equivalenceoffset
         bestindex = argmax(logll)
         if logll[bestindex] < logllthresh:
-            print 'could not find base distribution: ',logll[bestindex]
+            print 'inversereachability: could not find base distribution: ',logll[bestindex]
             return None,None,None
 
         # transform the equivalence class to the global coord system and create a kdtree for faster retrieval
         equivalenceclass = self.equivalenceclasses[bestindex]
-        points = equivalenceclass[2][:,0:3]
+        points = array(equivalenceclass[2][:,0:3])
         # transform points by the base and grasp pose
-        points[:,0] += zbaseangle+znormangle
-        points[:,1:3] = dot(points[:,1:3],transpose(rotationMatrixFromAxisAngle([0,0,1],zbaseangle+znormangle)[0:2,0:2])) + tile(posetarget[4:6]+posebase[4:6], (len(points),1))
+        Tbaserot = c_[rotationMatrixFromAxisAngle([0,0,1],zbaseangle)[0:2,0:2],posebase[4:6]]
+        Ttargetrot = c_[rotationMatrixFromAxisAngle([0,0,1],znormangle)[0:2,0:2],posetarget[4:6]]
+        Trot = dot(Tbaserot, r_[Ttargetrot,[[0,0,1]]])
+        points = c_[equivalenceclass[2][:,0]+znormangle+zbaseangle,dot(equivalenceclass[2][:,1:3],transpose(Trot[0:2,0:2]))+ tile(Trot[0:2,2], (len(equivalenceclass[2]),1))]
         bounds = array((numpy.min(points,0)-bandwidth,numpy.max(points,0)+bandwidth))
         if bounds[1,0]-bounds[0,0] > 2*pi:
            # already covering entire circle, so limit to 2*pi
@@ -330,7 +329,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             weights = r_[weights,equivalenceclass[2][:,3]*normalizationconst]
 
         if len(points) == 0:
-            print 'could not find base distribution'
+            print 'inversereachability: could not find base distribution, logllthresh too high?'
             return None,None,None
         
         # transform points by the base pose
@@ -391,7 +390,8 @@ class InverseReachabilityModel(OpenRAVEModel):
         points = zeros((0,3))
         weights = array(())
         graspindices = []
-        graspindexoffsets = []        
+        graspindexoffsets = []
+        Tbaserot = c_[rotationMatrixFromAxisAngle([0,0,1],zbaseangle)[0:2,0:2],posebase[4:6]]
         for Tgrasp,graspindex in Tgrasps:
             posetarget = poseFromMatrix(dot(linalg.inv(Tbase),Tgrasp))
             qnormalized,znormangle = normalizeZRotation(reshape(posetarget[0:4],(1,4)))
@@ -403,7 +403,9 @@ class InverseReachabilityModel(OpenRAVEModel):
             # transform the equivalence class to the global coord system and create a kdtree for faster retrieval
             equivalenceclass = self.equivalenceclasses[bestindex]
             # transform points by the grasp pose
-            newpoints = c_[equivalenceclass[2][:,0]+znormangle+zbaseangle,dot(equivalenceclass[2][:,1:3],transpose(rotationMatrixFromAxisAngle([0,0,1],znormangle+zbaseangle)[0:2,0:2])) + tile(posetarget[4:6]+posebase[4:6], (len(equivalenceclass[2]),1))]
+            Ttargetrot = c_[rotationMatrixFromAxisAngle([0,0,1],znormangle)[0:2,0:2],posetarget[4:6]]
+            Trot = dot(Tbaserot, r_[Ttargetrot,[[0,0,1]]])
+            newpoints = c_[equivalenceclass[2][:,0]+znormangle+zbaseangle,dot(equivalenceclass[2][:,1:3],transpose(Trot[0:2,0:2]))+ tile(Trot[0:2,2], (len(equivalenceclass[2]),1))]
             newweights = equivalenceclass[2][:,3]*normalizationconst
             if Nprematuresamples > 0:
                 newpoints[:,0] *= rotweight
@@ -480,12 +482,11 @@ class InverseReachabilityModel(OpenRAVEModel):
         with self.robot:
             Tgrasp = matrixFromQuat(equivalenceclass[0][0:4])
             Tgrasp[2,3] = equivalenceclass[0][4]
-            Tmanipframe = self.robot.GetTransform()
             failed = 0
             for sample in equivalenceclass[2]:
                 Tmanip = matrixFromAxisAngle([0,0,1],sample[0])
                 Tmanip[0:2,3] = sample[1:3]
-                self.robot.SetTransform(dot(Tmanipframe,Tmanip))
+                self.robot.SetTransform(Tmanip)
                 solution = self.manip.FindIKSolution(Tgrasp,False)
                 if solution is None:
                     failed += 1

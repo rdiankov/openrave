@@ -24,7 +24,7 @@ if( _ikfast_success MATCHES 0 OR _ikfast_success MATCHES 1 )
       ARGS "${CMAKE_CURRENT_SOURCE_DIR}" ${CMAKE_COMMAND} -E tar xzf "${CMAKE_CURRENT_SOURCE_DIR}/sympy_0.6.3.tgz"
       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sympy_0.6.3.tgz)
     add_custom_target(sympy_files ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sympy/__init__.py)
-    add_dependencies(classhashes_h sympy_files)
+    add_dependencies(openravepy_int sympy_files)
 
     install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sympy" DESTINATION ${OPENRAVE_PYTHON_INSTALL_DIR} PATTERN ".svn" EXCLUDE)
   else()

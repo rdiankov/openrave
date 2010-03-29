@@ -416,8 +416,14 @@ class OpenRAVEModel(metaclass.AutoReloader):
         if useManipulator:
             parser.add_option('--manipname',action='store',type='string',dest='manipname',default=None,
                               help='The name of the manipulator to use')
+        parser.add_option('--collision', action="store",type='string',dest='collision',default=None,
+                          help='Default collision checker to use')
+        parser.add_option('--physics', action="store",type='string',dest='physics',default=None,
+                          help='Default physics engine to use')
         parser.add_option('--show',action='store_true',dest='show',default=False,
                           help='Graphically shows the built model')
+        parser.add_option('--debug','-d', action="store",type='string',dest='debug',default=None,
+                          help='Debug level')
         return parser
     @staticmethod
     def RunFromParser(Model,env=None,parser=None):
@@ -430,6 +436,19 @@ class OpenRAVEModel(metaclass.AutoReloader):
             destroyenv = True
         try:
             with env:
+                if options.collision is not None:
+                    collision = env.CreateCollisionChecker(options.collision)
+                    if collision is not None:
+                        env.SetCollisionChecker(collision)
+                if options.physics is not None:
+                    physics = env.CreatePhysicsEngine(options.physics)
+                    if physics is not None:
+                        env.SetPhysicsEngine(physics)
+                if options.debug is not None:
+                    for debuglevel in [openravepy.DebugLevel.Fatal,openravepy.DebugLevel.Error,openravepy.DebugLevel.Warn,openravepy.DebugLevel.Info,openravepy.DebugLevel.Debug,openravepy.DebugLevel.Verbose]:
+                        if (not options.debug.isdigit() and options.debug.lower() == debuglevel.name.lower()) or (options.debug.isdigit() and int(options.debug) == int(debuglevel)):
+                            openravepy.RaveSetDebugLevel(debuglevel)
+                            break
                 robot = env.ReadRobotXMLFile(options.robot)
                 env.AddRobot(robot)
                 robot.SetTransform(numpy.eye(4))
@@ -482,7 +501,7 @@ class pyann_exception(Exception):
             return super(pyann_exception,self).__getattribute__(attr)
 
 class planning_error(Exception):
-    def __init__(self,parameter):
+    def __init__(self,parameter=''):
         self.parameter = parameter
     def __str__(self):
         return 'openrave planning_error: '+repr(self.parameter)

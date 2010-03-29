@@ -92,9 +92,7 @@ public:
     typedef boost::function<boost::shared_ptr<void>(KinBodyConstPtr)> GetInfoFn;
     typedef boost::function<void(KinBodyInfoPtr)> SynchornizeCallbackFn;
 
- BulletSpace(EnvironmentBasePtr penv, const GetInfoFn& infofn, bool bPhysics) : _penv(penv), GetInfo(infofn), _bPhysics(bPhysics)
-{
-}
+ BulletSpace(EnvironmentBasePtr penv, const GetInfoFn& infofn, bool bPhysics) : _penv(penv), GetInfo(infofn), _bPhysics(bPhysics) {}
     virtual ~BulletSpace() {}
     
     bool InitEnvironment(boost::shared_ptr<btCollisionWorld>& world)
@@ -113,7 +111,7 @@ public:
         RAVELOG_VERBOSEA("destroying bullet collision environment\n");
         _world.reset();
     }
-
+    
     boost::shared_ptr<void> InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr()) {
         // create all ode bodies and joints
         if( !pinfo )
@@ -125,13 +123,13 @@ public:
         pinfo->vjoints.reserve(pbody->GetJoints().size());
     
         pinfo->vlinks.reserve(pbody->GetLinks().size());
-
+        float fmargin=0.0004f;
         FOREACHC(itlink, pbody->GetLinks()) {
             boost::shared_ptr<KinBodyInfo::LINK> link(new KinBodyInfo::LINK());
 
             btCompoundShape* pshapeparent = new btCompoundShape();
             link->shape.reset(pshapeparent);
-            pshapeparent->setMargin(0.0004f); // need to set margin very small (we're not simulating anyway)
+            pshapeparent->setMargin(fmargin); // need to set margin very small (we're not simulating anyway)
         
             // add all the correct geometry objects
             FOREACHC(itgeom, (*itlink)->GetGeometries()) {
@@ -159,7 +157,7 @@ public:
 
                         //child.reset(new btBvhTriangleMeshShape(ptrimesh, true, true)); // doesn't do tri-tri collisions!
                         btGImpactMeshShape* pgimpact = new btGImpactMeshShape(ptrimesh);
-                        pgimpact->setMargin(0.0004f); // need to set margin very small (we're not simulating anyway)
+                        pgimpact->setMargin(fmargin); // need to set margin very small (we're not simulating anyway)
                         pgimpact->updateBound();
                         child.reset(pgimpact);
                         link->listmeshes.push_back(boost::shared_ptr<btStridingMeshInterface>(ptrimesh));
@@ -176,7 +174,7 @@ public:
                 }
 
                 link->listchildren.push_back(child);
-                child->setMargin(0.0004f); // need to set margin very small (we're not simulating anyway)
+                child->setMargin(fmargin); // need to set margin very small (we're not simulating anyway)
                 pshapeparent->addChildShape(GetBtTransform(itgeom->GetTransform()), child.get());
             }
 

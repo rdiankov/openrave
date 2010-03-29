@@ -887,6 +887,13 @@ public:
             depth = c.depth;
         }
 
+        string __str__()
+        {
+            Vector vpos = ExtractVector3(pos), vnorm = ExtractVector3(norm);
+            stringstream ss;
+            ss << "pos=["<<vpos.x<<", "<<vpos.y<<", "<<vpos.z<<"], norm=["<<vnorm.x<<", "<<vnorm.y<<", "<<vnorm.z<<"]";
+            return ss.str();
+        }
         object pos, norm;
         dReal depth;
     };
@@ -2259,7 +2266,11 @@ public:
             r.dir.x = ray[3];
             r.dir.y = ray[4];
             r.dir.z = ray[5];
-            bool bCollision = _penv->CheckCollision(r, KinBodyConstPtr(pbody->GetBody()), preport);
+            bool bCollision;
+            if( !pbody )
+                bCollision = _penv->CheckCollision(r, preport);
+            else
+                bCollision = _penv->CheckCollision(r, KinBodyConstPtr(pbody->GetBody()), preport);
             pcollision[i] = false;
             ppos[0] = 0; ppos[1] = 0; ppos[2] = 0; ppos[3] = 0; ppos[4] = 0; ppos[5] = 0;
             if( bCollision && report.contacts.size() > 0 ) {
@@ -3224,6 +3235,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
         .def_readonly("pos",&PyCollisionReport::PYCONTACT::pos)
         .def_readonly("norm",&PyCollisionReport::PYCONTACT::norm)
         .def_readonly("depth",&PyCollisionReport::PYCONTACT::depth)
+        .def("__str__",&PyCollisionReport::PYCONTACT::__str__)
         ;
     class_<PyCollisionReport, boost::shared_ptr<PyCollisionReport> >("CollisionReport")
         .def_readonly("options",&PyCollisionReport::options)

@@ -40,9 +40,8 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
 
     if options.debug is not None:
-        debuglevels = [DebugLevel.Fatal,DebugLevel.Error,DebugLevel.Warn,DebugLevel.Info,DebugLevel.Debug,DebugLevel.Verbose]
-        for debugname,debuglevel in DebugLevel.names.iteritems():
-            if (not options.debug.isdigit() and options.debug.lower() == debugname.lower()) or (options.debug.isdigit() and int(options.debug) == int(debuglevel)):
+        for debuglevel in [DebugLevel.Fatal,DebugLevel.Error,DebugLevel.Warn,DebugLevel.Info,DebugLevel.Debug,DebugLevel.Verbose]:
+            if (not options.debug.isdigit() and options.debug.lower() == debuglevel.name.lower()) or (options.debug.isdigit() and int(options.debug) == int(debuglevel)):
                 RaveSetDebugLevel(debuglevel)
                 break
     else: # test if special functions are requested whose output shouldn't be cluttered with debug statements

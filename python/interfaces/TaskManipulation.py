@@ -65,7 +65,7 @@ class TaskManipulation:
             cmd += 'outputtraj '
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error('grasp planning failed')
+            raise planning_error()
         resvalues = res.split()
         numgoals = int(resvalues.pop(0))
         goals = []

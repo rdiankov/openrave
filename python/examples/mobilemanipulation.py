@@ -41,16 +41,16 @@ class GraspReachability(metaclass.AutoReloader):
             if not self.irmodel.load():
                 self.irmodel.autogenerate()
 
-    def computeGraspDistribution(self,**kwargs):
+    def computeGraspDistribution(self,randomgrasps=False,**kwargs):
         """computes distribution of all grasps"""
-        validgrasps,validindices = self.gmodel.computeValidGrasps(checkik=False)
+        validgrasps,validindices = self.gmodel.computeValidGrasps(checkik=False,backupdist=0.01)
         def graspiter():
             for grasp,graspindex in izip(validgrasps,validindices):
-                yield self.gmodel.getGlobalGraspTransform(grasp),graspindex
+                yield self.gmodel.getGlobalGraspTransform(grasp,collisionfree=True),graspindex
         densityfn,samplerfn,bounds = self.irmodel.computeAggregateBaseDistribution(graspiter(),**kwargs)
         return densityfn,samplerfn,bounds,validgrasps
 
-    def sampleGoals(self,samplerfn,N=1,timeout=inf):
+    def sampleGoals(self,samplerfn,N=1,updateenv=False,timeout=inf):
         """samples a base placement and attemps to find an IK solution there.
         samplerfn should return a robot position and an index into gmodel.grasps"""
         goals = []
@@ -63,38 +63,41 @@ class GraspReachability(metaclass.AutoReloader):
                 poses,indices = samplerfn(N-len(goals))
                 for pose,index in izip(poses,indices):
                     self.robot.SetTransform(pose)
+                    if updateenv:
+                        self.env.UpdatePublishedBodies()
                     # before recording failure, validate that base is not in collision
                     if not self.manip.CheckIndependentCollision(CollisionReport()):
                         grasp = self.gmodel.grasps[index]
                         self.gmodel.setPreshape(grasp)
-                        q = self.manip.FindIKSolution(self.gmodel.getGlobalGraspTransform(grasp),envcheck=True)
+                        q = self.manip.FindIKSolution(self.gmodel.getGlobalGraspTransform(grasp,collisionfree=True),envcheck=True)
                         if q is not None:
                             goals.append((grasp,pose,q))
-                        elif self.manip.FindIKSolution(self.gmodel.getGlobalGraspTransform(grasp),envcheck=False) is None:
+                        elif self.manip.FindIKSolution(self.gmodel.getGlobalGraspTransform(grasp,collisionfree=True),envcheck=False) is None:
                             numfailures += 1
         return goals,numfailures
 
-    def sampleValidPlacementIterator(self,giveuptime=inf,randomgrasps=False,randomplacement=False,**kwargs):
+    def sampleValidPlacementIterator(self,giveuptime=inf,randomgrasps=False,updateenv=False,randomplacement=False,**kwargs):
         """continues to sample valid goal placements. Returns the robot base position, configuration, and the target grasp from gmodel. Environment should be locked, robot state is saved"""
         def graspiter():
-            for grasp,graspindex in self.gmodel.validGraspIterator(randomgrasps=randomgrasps):
-                yield self.gmodel.getGlobalGraspTransform(grasp),graspindex
-
+            for grasp,graspindex in self.gmodel.validGraspIterator(checkik=False,randomgrasps=randomgrasps,backupdist=0.01):
+                yield self.gmodel.getGlobalGraspTransform(grasp,collisionfree=True),graspindex
         starttime = time.time()
         statesaver = self.robot.CreateRobotStateSaver()
         try:
             baseIterator = self.irmodel.randomBaseDistributionIterator if randomplacement else self.irmodel.sampleBaseDistributionIterator
             for pose,graspindex in baseIterator(Tgrasps=graspiter(),**kwargs):
                 self.robot.SetTransform(pose)
+                if updateenv:
+                    self.env.UpdatePublishedBodies()
                 if not self.manip.CheckIndependentCollision(CollisionReport()):
                     grasp = self.gmodel.grasps[graspindex]
                     self.gmodel.setPreshape(grasp)
-                    q = self.manip.FindIKSolution(self.gmodel.getGlobalGraspTransform(grasp),envcheck=True)
+                    q = self.manip.FindIKSolution(self.gmodel.getGlobalGraspTransform(grasp,collisionfree=True),envcheck=True)
                     if q is not None:
                         values = self.robot.GetJointValues()
                         values[self.manip.GetArmJoints()] = q
                         statesaver.close()
-                        yield pose,values,grasp
+                        yield pose,values,grasp,graspindex
                         statesaver = self.robot.CreateRobotStateSaver()
                         starttime = time.time()
                     else:
@@ -106,7 +109,24 @@ class GraspReachability(metaclass.AutoReloader):
         starttime = time.time()
         densityfn,samplerfn,bounds,validgrasps = self.computeGraspDistribution(**kwargs)
         print 'time to build distribution: %fs'%(time.time()-starttime)
-        return gr.irmodel.showBaseDistribution(densityfn,bounds,self.target.GetTransform()[2,3],thresh=thresh)
+        return self.irmodel.showBaseDistribution(densityfn,bounds,self.target.GetTransform()[2,3],thresh=thresh)
+    def testSampling(self,**kwargs):
+        configsampler = gr.sampleValidPlacementIterator(**kwargs)
+        basemanip = BaseManipulation(self.robot)
+        while True:
+            try:
+                with env:
+                    pose,values,grasp,graspindex = configsampler.next()
+                    print 'found grasp',graspindex
+                    robot.SetTransform(pose)
+                    gr.gmodel.setPreshape(grasp)
+                    robot.SetJointValues(values[manip.GetArmJoints()],manip.GetArmJoints())
+                    final,traj = basemanip.CloseFingers(execute=False,outputfinal=True)
+                    robot.SetJoitnValues(final,manip.GetGripperJoints())
+            except planning_error, e:
+                traceback.print_exc(e)
+                continue
+                
 
 class MobileManipulationPlanning(graspplanning.GraspPlanning):
     def __init__(self,robot,randomize=False,irmodel=None,**kwargs):
