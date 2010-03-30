@@ -111,18 +111,23 @@ class GraspReachability(metaclass.AutoReloader):
         print 'time to build distribution: %fs'%(time.time()-starttime)
         return self.irmodel.showBaseDistribution(densityfn,bounds,self.target.GetTransform()[2,3],thresh=thresh)
     def testSampling(self,**kwargs):
-        configsampler = gr.sampleValidPlacementIterator(**kwargs)
+        configsampler = self.sampleValidPlacementIterator(**kwargs)
         basemanip = BaseManipulation(self.robot)
         while True:
             try:
-                with env:
+                with self.env:
                     pose,values,grasp,graspindex = configsampler.next()
                     print 'found grasp',graspindex
-                    robot.SetTransform(pose)
-                    gr.gmodel.setPreshape(grasp)
-                    robot.SetJointValues(values[manip.GetArmJoints()],manip.GetArmJoints())
-                    final,traj = basemanip.CloseFingers(execute=False,outputfinal=True)
-                    robot.SetJoitnValues(final,manip.GetGripperJoints())
+                    self.robot.SetTransform(pose)
+                    self.gmodel.setPreshape(grasp)
+                    self.robot.SetJointValues(values[self.manip.GetArmJoints()],self.manip.GetArmJoints())
+                    self.env.UpdatePublishedBodies()
+                basemanip.CloseFingers(execute=True)
+                self.robot.WaitForController(0)
+                self.env.UpdatePublishedBodies()
+#                     final,traj = basemanip.CloseFingers(execute=False,outputfinal=True)
+#                     self.robot.SetJointValues(final,self.manip.GetGripperJoints())
+#                     self.env.UpdatePublishedBodies()
             except planning_error, e:
                 traceback.print_exc(e)
                 continue

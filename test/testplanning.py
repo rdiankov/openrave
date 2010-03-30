@@ -363,8 +363,8 @@ def test_hrp2():
     python inversereachability.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --heightthresh=0.02 --quatthresh=0.1
     python inversereachability.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm_chest --heightthresh=0.02 --quatthresh=0.1
     python inversereachability.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm_chest --heightthresh=0.02 --quatthresh=0.1
-    python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.02 --normalanglerange=1 --avoidlink=RWristCam --collision=bullet
-    python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.02 --normalanglerange=1 --collision=bullet
+    python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.02 --normalanglerange=1 --avoidlink=RWristCam
+    python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.02 --normalanglerange=1
 
     import inversereachability
     env = Environment()
@@ -391,8 +391,8 @@ def test_hrp2():
     gmodel=planning.graspables[0][0]
     target = gmodel.target
     gr = mobilemanipulation.GraspReachability(robot=robot,gmodel=gmodel)
-    weight = 1.5
-    logllthresh = 2.0
+    weight = 1.0
+    logllthresh = 0.5
     basemanip = interfaces.BaseManipulation(robot)
     #h = gr.showBaseDistribution(thresh=1.0,logllthresh=logllthresh)
     gr.testSampling(weight=weight,logllthresh=logllthresh,randomgrasps=False,randomplacement=False,updateenv=False)
@@ -400,8 +400,8 @@ def test_hrp2():
     while True:
         robot.GetController().Reset(0)
         with env:
-            pose,values,grasp = configsampler.next()
-            print 'found'
+            pose,values,grasp,graspindex = configsampler.next()
+            print 'found',graspindex
             robot.SetTransform(pose)
             gr.gmodel.setPreshape(grasp)
             robot.SetJointValues(values[manip.GetArmJoints()],manip.GetArmJoints())
@@ -423,3 +423,11 @@ def test_hrp2():
     equivalenceclass,logll = gr.irmodel.getEquivalenceClass(Tgrasp)
     densityfn,samplerfn,bounds = gr.irmodel.computeBaseDistribution(Tgrasp,logllthresh=logllthresh)
     h = gr.irmodel.showBaseDistribution(densityfn,bounds,zoffset=gr.target.GetTransform()[2,3],thresh=1.0)
+
+    env = Environment()
+    robot = env.ReadRobotXMLFile('robots/hrp2jsk.robot.xml')
+    env.AddRobot(robot)
+    manip = robot.SetActiveManipulator('rightarm')
+    robot.SetJointValues([1.57,-1.57],manip.GetArmJoints()[-2:])
+    report = CollisionReport()
+    print robot.CheckSelfCollision(report)

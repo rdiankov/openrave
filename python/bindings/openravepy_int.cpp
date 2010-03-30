@@ -1296,6 +1296,10 @@ public:
             return _pmanip->CheckIndependentCollision(!pReport ? CollisionReportPtr() : pReport->report);
         }
     };
+    typedef boost::shared_ptr<PyManipulator> PyManipulatorPtr;
+    PyManipulatorPtr GetManipulator(RobotBase::ManipulatorPtr pmanip) {
+        return !pmanip ? PyManipulatorPtr() : PyManipulatorPtr(new PyManipulator(pmanip,_pyenv));
+    }
 
     class PyAttachedSensor
     {
@@ -1343,7 +1347,7 @@ public:
     {
         boost::python::list manips;
         FOREACH(it, _probot->GetManipulators())
-            manips.append(boost::shared_ptr<PyManipulator>(new PyManipulator(*it,_pyenv)));
+            manips.append(GetManipulator(*it));
         return manips;
     }
 
@@ -1352,15 +1356,15 @@ public:
         boost::python::list manips;
         FOREACH(it, _probot->GetManipulators()) {
             if( (*it)->GetName() == manipname )
-                manips.append(boost::shared_ptr<PyManipulator>(new PyManipulator(*it,_pyenv)));
+                manips.append(GetManipulator(*it));
         }
         return manips;
     }
 
-    void SetActiveManipulator(int index) { _probot->SetActiveManipulator(index); }
-    void SetActiveManipulator(const std::string& manipname) { _probot->SetActiveManipulator(manipname); }
-    void SetActiveManipulator(boost::shared_ptr<PyManipulator> pmanip) { _probot->SetActiveManipulator(pmanip->GetName()); }
-    boost::shared_ptr<PyManipulator> GetActiveManipulator() { return boost::shared_ptr<PyManipulator>(new PyManipulator(_probot->GetActiveManipulator(),_pyenv)); }
+    PyManipulatorPtr SetActiveManipulator(int index) { _probot->SetActiveManipulator(index); return GetActiveManipulator(); }
+    PyManipulatorPtr SetActiveManipulator(const std::string& manipname) { _probot->SetActiveManipulator(manipname); return GetActiveManipulator(); }
+    PyManipulatorPtr SetActiveManipulator(PyManipulatorPtr pmanip) { _probot->SetActiveManipulator(pmanip->GetName()); return GetActiveManipulator(); }
+    PyManipulatorPtr GetActiveManipulator() { return GetManipulator(_probot->GetActiveManipulator()); }
     int GetActiveManipulatorIndex() const { return _probot->GetActiveManipulatorIndex(); }
 
     object GetSensors()
@@ -2306,7 +2310,7 @@ public:
 
     PyRobotBasePtr ReadRobotXMLFile(const string& filename)
     {
-        RobotBasePtr probot = _penv->ReadRobotXMLFile(RobotBasePtr(), filename, std::list<std::pair<std::string,std::string> >());
+        RobotBasePtr probot = _penv->ReadRobotXMLFile(filename);
         if( !probot )
             return PyRobotBasePtr();
         return PyRobotBasePtr(new PyRobotBase(probot,shared_from_this()));
@@ -2321,7 +2325,7 @@ public:
 
     PyKinBodyPtr ReadKinBodyXMLFile(const string& filename)
     {
-        KinBodyPtr pbody = _penv->ReadKinBodyXMLFile(KinBodyPtr(), filename, std::list<std::pair<std::string,std::string> >());
+        KinBodyPtr pbody = _penv->ReadKinBodyXMLFile(filename);
         if( !pbody )
             return PyKinBodyPtr();
         return PyKinBodyPtr(new PyKinBody(pbody,shared_from_this()));
@@ -2333,6 +2337,28 @@ public:
         if( !pbody )
             return PyKinBodyPtr();
         return PyKinBodyPtr(new PyKinBody(pbody,shared_from_this()));
+    }
+
+    PyInterfaceBasePtr ReadInterfaceXMLFile(const std::string& filename)
+    {
+        InterfaceBasePtr pbody = _penv->ReadInterfaceXMLFile(filename);
+        if( !pbody )
+            return PyInterfaceBasePtr();
+        switch(pbody->GetInterfaceType()) {
+        case PT_Planner: return PyPlannerBasePtr(new PyPlannerBase(boost::static_pointer_cast<PlannerBase>(pbody),shared_from_this()));
+        case PT_Robot: return PyRobotBasePtr(new PyRobotBase(boost::static_pointer_cast<RobotBase>(pbody),shared_from_this()));
+        case PT_SensorSystem: return PySensorSystemBasePtr(new PySensorSystemBase(boost::static_pointer_cast<SensorSystemBase>(pbody),shared_from_this()));
+        case PT_Controller: return PyControllerBasePtr(new PyControllerBase(boost::static_pointer_cast<ControllerBase>(pbody),shared_from_this()));
+        case PT_ProblemInstance: return PyProblemInstancePtr(new PyProblemInstance(boost::static_pointer_cast<ProblemInstance>(pbody),shared_from_this()));
+        case PT_InverseKinematicsSolver: return PyIkSolverBasePtr(new PyIkSolverBase(boost::static_pointer_cast<IkSolverBase>(pbody),shared_from_this()));
+        case PT_KinBody: return PyKinBodyPtr(new PyKinBody(boost::static_pointer_cast<KinBody>(pbody),shared_from_this()));
+        case PT_PhysicsEngine: return PyPhysicsEngineBasePtr(new PyPhysicsEngineBase(boost::static_pointer_cast<PhysicsEngineBase>(pbody),shared_from_this()));
+        case PT_Sensor: return PySensorBasePtr(new PySensorBase(boost::static_pointer_cast<SensorBase>(pbody),shared_from_this()));
+        case PT_CollisionChecker: return PyCollisionCheckerBasePtr(new PyCollisionCheckerBase(boost::static_pointer_cast<CollisionCheckerBase>(pbody),shared_from_this()));
+        case PT_Trajectory: return PyTrajectoryBasePtr(new PyTrajectoryBase(boost::static_pointer_cast<TrajectoryBase>(pbody),shared_from_this()));
+        case PT_Viewer: return PyRaveViewerBasePtr(new PyRaveViewerBase(boost::static_pointer_cast<RaveViewerBase>(pbody),shared_from_this()));
+        }
+        return PyInterfaceBasePtr();
     }
 
     bool AddKinBody(PyKinBodyPtr pbody) { CHECK_POINTER(pbody); return _penv->AddKinBody(pbody->GetBody()); }
@@ -3284,9 +3310,9 @@ BOOST_PYTHON_MODULE(openravepy_int)
         bool (PyRobotBase::*pgrab3)(PyKinBodyPtr,PyKinBody::PyLinkPtr) = &PyRobotBase::Grab;
         bool (PyRobotBase::*pgrab4)(PyKinBodyPtr,PyKinBody::PyLinkPtr,object) = &PyRobotBase::Grab;
 
-        void (PyRobotBase::*setactivemanipulator1)(int) = &PyRobotBase::SetActiveManipulator;
-        void (PyRobotBase::*setactivemanipulator2)(const std::string&) = &PyRobotBase::SetActiveManipulator;
-        void (PyRobotBase::*setactivemanipulator3)(boost::shared_ptr<PyRobotBase::PyManipulator>) = &PyRobotBase::SetActiveManipulator;
+        PyRobotBase::PyManipulatorPtr (PyRobotBase::*setactivemanipulator1)(int) = &PyRobotBase::SetActiveManipulator;
+        PyRobotBase::PyManipulatorPtr (PyRobotBase::*setactivemanipulator2)(const std::string&) = &PyRobotBase::SetActiveManipulator;
+        PyRobotBase::PyManipulatorPtr (PyRobotBase::*setactivemanipulator3)(PyRobotBase::PyManipulatorPtr) = &PyRobotBase::SetActiveManipulator;
 
         object (PyRobotBase::*GetManipulators1)() = &PyRobotBase::GetManipulators;
         object (PyRobotBase::*GetManipulators2)(const string&) = &PyRobotBase::GetManipulators;
@@ -3611,6 +3637,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("ReadRobotXMLData",&PyEnvironmentBase::ReadRobotXMLData,args("data"))
             .def("ReadKinBodyXMLFile",&PyEnvironmentBase::ReadKinBodyXMLFile,args("filename"))
             .def("ReadKinBodyXMLData",&PyEnvironmentBase::ReadKinBodyXMLData,args("data"))
+            .def("ReadInterfaceXMLFile",&PyEnvironmentBase::ReadInterfaceXMLFile,args("filename"))
             .def("AddKinBody",&PyEnvironmentBase::AddKinBody,args("body"))
             .def("AddRobot",&PyEnvironmentBase::AddRobot,args("robot"))
             .def("RemoveKinBody",&PyEnvironmentBase::RemoveKinBody,args("body"))

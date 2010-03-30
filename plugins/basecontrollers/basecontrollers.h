@@ -54,16 +54,15 @@ class IdealController : public ControllerBase
     {
         if( (int)values.size() != _probot->GetDOF() )
             throw openrave_exception(str(boost::format("wrong dimensions %d!=%d")%values.size()%_probot->GetDOF()),ORE_InvalidArguments);
-
         fTime = 0;
         _ptraj.reset();
         // do not set done to true here! let it be picked up by the simulation thread.
         // this will also let it have consistent mechanics as SetPath
         // (there's a race condition we're avoiding where a user calls SetDesired and then state savers revert the robot)
-        _bIsDone = false;
         if( !_bPause ) {
             _probot->SetJointValues(values);
             _vecdesired = values;
+            _bIsDone = false; // set after _vecdesired has changed
         }
         return true;
     }
@@ -79,7 +78,7 @@ class IdealController : public ControllerBase
 
         _ptraj = ptraj;
         fTime = 0;
-        _bIsDone = false;
+        _bIsDone = !!_ptraj;
         _vecdesired.resize(0);
 
         if( !!_ptraj && !!flog ) {

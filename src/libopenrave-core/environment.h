@@ -774,6 +774,27 @@ class Environment : public EnvironmentBase
 
     virtual const std::string& GetHomeDirectory() const { return _homedirectory; }
 
+    virtual RobotBasePtr ReadRobotXMLFile(const std::string& filename)
+    {
+        try {
+            if( _IsColladaFile(filename) ) {
+                RobotBasePtr robot;
+                if( !RaveParseColladaFile(shared_from_this(), robot, filename) )
+                    return RobotBasePtr();
+                return robot;
+            }
+            else {
+                InterfaceBasePtr pinterface = ReadInterfaceXMLFile(filename);
+                BOOST_ASSERT(pinterface->GetInterfaceType() == PT_Robot );
+                return boost::static_pointer_cast<RobotBase>(pinterface);
+            }
+        }
+        catch(const openrave_exception& ex) {
+            RAVELOG_ERROR(str(boost::format("ReadRobotXMLFile exception: %s\n")%ex.what()));
+        }
+        return RobotBasePtr();
+    }
+
     virtual RobotBasePtr ReadRobotXMLFile(RobotBasePtr robot, const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
@@ -824,6 +845,27 @@ class Environment : public EnvironmentBase
         return robot;
     }
 
+    virtual KinBodyPtr ReadKinBodyXMLFile(const std::string& filename)
+    {
+        try {
+            if( _IsColladaFile(filename) ) {
+                KinBodyPtr body;
+                if( !RaveParseColladaFile(shared_from_this(), body, filename) )
+                    return KinBodyPtr();
+                return body;
+            }
+            else {
+                InterfaceBasePtr pinterface = ReadInterfaceXMLFile(filename);
+                BOOST_ASSERT(pinterface->GetInterfaceType() == PT_KinBody );
+                return boost::static_pointer_cast<KinBody>(pinterface);
+            }
+        }
+        catch(const openrave_exception& ex) {
+            RAVELOG_ERROR(str(boost::format("ReadRobotXMLFile exception: %s\n")%ex.what()));
+        }
+        return KinBodyPtr();
+    }
+
     virtual KinBodyPtr ReadKinBodyXMLFile(KinBodyPtr body, const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
@@ -872,6 +914,23 @@ class Environment : public EnvironmentBase
             return KinBodyPtr();
         body->__strxmlfilename = preader->_filename;
         return body;
+    }
+
+    virtual InterfaceBasePtr ReadInterfaceXMLFile(const std::string& filename)
+    {
+        try {
+            EnvironmentMutex::scoped_lock lockenv(GetMutex());
+            OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+            boost::shared_ptr<OpenRAVEXMLParser::GlobalInterfaceXMLReader> preader(new OpenRAVEXMLParser::GlobalInterfaceXMLReader(shared_from_this()));
+            bool bSuccess = RaveParseXMLFile(preader, filename);
+            if( !bSuccess || !preader->GetInterface())
+                return RobotBasePtr();
+            return preader->GetInterface();
+        }
+        catch(const openrave_exception& ex) {
+            RAVELOG_ERROR(str(boost::format("ReadInterfaceXMLFile exception: %s\n")%ex.what()));
+        }
+        return InterfaceBasePtr();
     }
 
     virtual InterfaceBasePtr ReadInterfaceXMLFile(InterfaceBasePtr pinterface, PluginType type, const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts)

@@ -212,7 +212,7 @@ class GraspingModel(OpenRAVEModel):
                 if len(options.preshapes) > 0:
                     preshapes = zeros((0,len(self.manip.GetGripperJoints())))
                     for preshape in options.preshapes:
-                        preshapes = r_[preshapes,array([float(s) for s in preshape.split()])]
+                        preshapes = r_[preshapes,[array([float(s) for s in preshape.split()])]]
                 if options.boxdelta is not None:
                     approachrays = self.computeBoxApproachRays(delta=options.boxdelta,normalanglerange=options.normalanglerange,directiondelta=options.directiondelta)
                 elif options.spheredelta is not None:

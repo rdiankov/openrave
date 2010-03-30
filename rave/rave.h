@@ -761,6 +761,7 @@ public:
     /// \param filename the name of the file to open
     /// \param atts the XML attributes/value pairs
     virtual RobotBasePtr ReadRobotXMLFile(RobotBasePtr robot, const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts) = 0;
+    virtual RobotBasePtr ReadRobotXMLFile(const std::string& filename) = 0;
 
     /// Initialize a robot from an XML formatted string
     /// The robot should not be added the environment when calling this function.
@@ -773,6 +774,7 @@ public:
     /// \param body If a null pointer is passed, a new body will be created, otherwise an existing robot will be filled
     /// \param atts the XML attributes/value pairs
     virtual KinBodyPtr ReadKinBodyXMLFile(KinBodyPtr body, const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts) = 0;
+    virtual KinBodyPtr ReadKinBodyXMLFile(const std::string& filename) = 0;
 
     /// Initializes a kinematic body from an XML formatted string.
     // The body should not be added to the environment when calling this function.
@@ -785,6 +787,7 @@ public:
     /// \param filename the name of the file to open
     /// \param atts the XML attributes/value pairs
     virtual InterfaceBasePtr ReadInterfaceXMLFile(InterfaceBasePtr pinterface, PluginType type, const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts) = 0;
+    virtual InterfaceBasePtr ReadInterfaceXMLFile(const std::string& filename) = 0;
 
     /// Initializes an interface from an XML formatted string.
     /// \param pinterface If a null pointer is passed, a new interface will be created, otherwise an existing interface will be filled

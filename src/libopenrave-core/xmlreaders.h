@@ -2603,6 +2603,51 @@ namespace OpenRAVEXMLParser
 
         throw openrave_exception(str(boost::format("could not create interface of type %d")%type),ORE_InvalidArguments);
     }
+
+    class GlobalInterfaceXMLReader : public StreamXMLReader
+    {
+    public:
+    GlobalInterfaceXMLReader(EnvironmentBasePtr penv) : _penv(penv) {}
+        virtual void startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
+        {
+            if( !!_pcurreader ) {
+                _pcurreader->startElement(xmlname, atts);
+                return;
+            }
+
+            StreamXMLReader::startElement(xmlname,atts);
+
+            // check for any plugins
+            FOREACHC(itname,RaveGetInterfaceNamesMap()) {
+                if( xmlname == itname->second ) {
+                    if( !!_pinterface )
+                        throw openrave_exception("interface should not be initialized");
+                    _pcurreader = CreateInterfaceReader(_penv,itname->first,_pinterface,"",atts);
+                    if( !_pinterface )
+                        throw openrave_exception(str(boost::format("failed to create interface %s")%itname->second));
+                    return;
+                }
+            }
+
+            throw openrave_exception(str(boost::format("invalid interface tag %s")%xmlname));
+        }
+
+        virtual bool endElement(const std::string& xmlname)
+        {
+            if( !!_pcurreader ) {
+                if( _pcurreader->endElement(xmlname) ) {
+                    _pcurreader.reset();
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        InterfaceBasePtr GetInterface() { return _pinterface; }
+    protected:
+        EnvironmentBasePtr _penv;
+        InterfaceBasePtr _pinterface; // current processed interface
+    };
 };
 
 #endif
