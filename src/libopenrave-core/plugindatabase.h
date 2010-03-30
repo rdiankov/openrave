@@ -153,7 +153,10 @@ public:
                     }
                 }
                 catch(const openrave_exception& ex) {
-                    RAVELOG_ERRORA("plugin %s: %s\n",(*itplugin)->ppluginname.c_str(),ex.what());
+                    RAVELOG_ERROR(str(boost::format("Create Interface: openrave exception , plugin %s: %s\n")%(*itplugin)->ppluginname%ex.what()));
+                }
+                catch(...) {
+                    RAVELOG_ERROR(str(boost::format("Create Interface: unknown exception, plugin %s\n")%(*itplugin)->ppluginname));
                 }
             }
         }

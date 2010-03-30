@@ -495,6 +495,9 @@ KinBody::Joint::Joint(KinBodyPtr parent)
 {
     _parent = parent;
     vMimicCoeffs.resize(2); vMimicCoeffs[0] = 1; vMimicCoeffs[1] = 0;
+    // fill vAxes with valid values
+    FOREACH(it,vAxes)
+        *it = Vector(0,0,1);
     nMimicJointIndex = -1;
     fResolution = dReal(0.02);
     fMaxVel = 1e5f;
