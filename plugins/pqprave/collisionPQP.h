@@ -430,7 +430,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
             }
         }
 
-        return report->numCols>0;
+        return false;
     }
 
     // does not check attached
