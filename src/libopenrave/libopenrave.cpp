@@ -88,6 +88,16 @@ std::string RaveGetHomeDirectory()
     return homedirectory;
 }
 
+void COLLISIONREPORT::Reset(int coloptions)
+{
+    options = coloptions;
+    minDistance = 1e20f;
+    numCols = 0;
+    numWithinTol = 0;
+    contacts.resize(0);
+    vLinkColliding.resize(0);
+}
+
 std::string COLLISIONREPORT::__str__() const
 {
     stringstream s;
