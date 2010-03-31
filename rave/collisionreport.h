@@ -19,12 +19,12 @@
 namespace OpenRAVE {
 
 /// OpenRAVE collision report
-class COLLISIONREPORT
+class RAVE_API COLLISIONREPORT
 {
 public:
     COLLISIONREPORT() { Reset(); }
 
-    struct CONTACT
+    struct RAVE_API CONTACT
     {
         CONTACT() : depth(0) {}
         CONTACT(const Vector& p, const Vector& n, dReal d) : pos(p), norm(n) {depth = d;}
@@ -47,14 +47,7 @@ public:
 
     std::vector<CONTACT> contacts; ///< the convention is that the normal will be "out" of plink1's surface. Filled if CO_UseContacts option is set.
 
-    virtual void Reset(int coloptions = 0) {
-        options = coloptions;
-        minDistance = 1e20f;
-        numCols = 0;
-        numWithinTol = 0;
-        contacts.resize(0);
-        vLinkColliding.resize(0);
-    }
+    virtual void Reset(int coloptions = 0);
     virtual std::string __str__() const;
 };
 
