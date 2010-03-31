@@ -78,7 +78,7 @@ class IdealController : public ControllerBase
 
         _ptraj = ptraj;
         fTime = 0;
-        _bIsDone = !!_ptraj;
+        _bIsDone = !_ptraj;
         _vecdesired.resize(0);
 
         if( !!_ptraj && !!flog ) {
