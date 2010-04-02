@@ -237,19 +237,6 @@ class SolverDirection(AutoReloader):
     def end(self, generator):
         return generator.endDirection(self)
 
-class SolverRay(AutoReloader):
-    P = None
-    D = None
-    jointtree = None
-    def __init__(self, P, D, jointtree):
-        self.P = P
-        self.D = D
-        self.jointtree = jointtree
-    def generate(self, generator):
-        return generator.generateRay(self)
-    def end(self, generator):
-        return generator.endRay(self)
-
 class SolverStoreSolution(AutoReloader):
     alljointvars = None
     def __init__(self, alljointvars):
@@ -952,23 +939,6 @@ int main(int argc, char** argv)
         return code
     def endDirection(self, node):
         return ''
-    def generateRay(self, node):
-        code = ''
-        listequations = []
-        names = []
-        for i in range(3):
-            listequations.append(node.D[i])
-            names.append(Symbol('_r%d%d'%(0,i)))
-        for i in range(3):
-            listequations.append(node.P[i])
-        names.append(Symbol('_px'))
-        names.append(Symbol('_py'))
-        names.append(Symbol('_pz'))
-        code += self.writeEquations(lambda i: names[i],listequations)
-        code += self.generateTree(node.jointtree)
-        return code
-    def endRay(self, node):
-        return ''
     def generateStoreSolution(self, node):
         code = 'vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();\n'
         code += 'solution.basesol.resize(%d);\n'%len(node.alljointvars)
@@ -1498,7 +1468,6 @@ class IKFastSolver(AutoReloader):
         """basedir needs to be filled with a 3elemtn vector of the initial direction to control"""
         Links, jointvars, isolvejointvars, ifreejointvars = self.forwardKinematicsChain(chain)
         Tfirstleft = Links.pop(0)
-        LinksInv = [self.affineInverse(link) for link in Links]
         solvejointvars = [jointvars[i] for i in isolvejointvars]
         freejointvars = [jointvars[i] for i in ifreejointvars]
         
@@ -1508,6 +1477,7 @@ class IKFastSolver(AutoReloader):
         # rotate all links so that basedir becomes the z-axis
         Trightnormaliation = self.rotateDirection(sourcedir=Matrix(3,1,[Real(round(float(x),4),30) for x in basedir]), targetdir = Matrix(3,1,[S.Zero,S.Zero,S.One]))
         Links[-1] *= self.affineInverse(Trightnormaliation)
+        LinksInv = [self.affineInverse(link) for link in Links]
 
         # when solving equations, convert all free variables to constants
         self.freevarsubs = []
@@ -1723,7 +1693,6 @@ class IKFastSolver(AutoReloader):
         Links, jointvars, isolvejointvars, ifreejointvars = self.forwardKinematicsChain(chain)
         Tfirstleft = Links.pop(0)
         TfirstleftInv = Tfirstleft.inv()
-        LinksInv = [self.affineInverse(link) for link in Links]
         solvejointvars = [jointvars[i] for i in isolvejointvars]
         freejointvars = [jointvars[i] for i in ifreejointvars]
         
@@ -1731,8 +1700,9 @@ class IKFastSolver(AutoReloader):
             raise ValueError('solve joints needs to be 4')
 
         # rotate all links so that basedir becomes the z-axis
-        Trightnormaliation = self.rotateDirection(sourcedir=Matrix(3,1,[Real(round(float(x),4),30) for x in basedir]), targetdir = Matrix(3,1,[S.Zero,S.Zero,S.One]))
-        Links[-1] *= self.affineInverse(Trightnormaliation)
+        #Trightnormaliation = self.rotateDirection(sourcedir=Matrix(3,1,[Real(round(float(x),4),30) for x in basedir]), targetdir = Matrix(3,1,[S.Zero,S.Zero,S.One]))
+        #Links[-1] *= self.affineInverse(Trightnormaliation)
+        LinksInv = [self.affineInverse(link) for link in Links]
 
         # when solving equations, convert all free variables to constants
         self.freevarsubs = []
@@ -1758,6 +1728,17 @@ class IKFastSolver(AutoReloader):
         LinksAccumLeftAll = map(lambda T: self.affineSimplify(T), LinksAccumLeftAll)
         LinksAccumLeftInvAll = map(lambda T: self.affineSimplify(T), LinksAccumLeftInvAll)
         LinksAccumRightAll = map(lambda T: self.affineSimplify(T), LinksAccumRightAll)
+
+        # create LinksAccumX indexed by joint indices
+        assert( len(LinksAccumLeftAll)%2 == 1 )
+        LinksAccumLeft = []
+        LinksAccumLeftInv = []
+        LinksAccumRight = []
+        for i in range(0,len(LinksAccumLeftAll),2):
+            LinksAccumLeft.append(LinksAccumLeftAll[i])
+            LinksAccumLeftInv.append(LinksAccumLeftInvAll[i])
+            LinksAccumRight.append(LinksAccumRightAll[i])
+        assert( len(LinksAccumLeft) == len(jointvars)+1 )
         
         solverbranches = []
         # depending on the free variable values, sometimes the rotation matrix can have zeros where it does not expect zeros. Therefore, test all boundaries of all free variables
@@ -1773,8 +1754,8 @@ class IKFastSolver(AutoReloader):
                     valuesubs = []
                     freevarcond = None
 
-                Positions = [Matrix(3,1,map(lambda x: self.customtrigsimp(x), LinksAccumRightAll[i][0:3,3].subs(valuesubs))) for i in range(len(LinksAccumRightAll))]
-                Positionsee = [Matrix(3,1,map(lambda x: self.customtrigsimp(x), (LinksAccumLeftInvAll[i][0:3,0:3]*Pee+LinksAccumLeftInvAll[i][0:3,3]).subs(valuesubs))) for i in range(len(LinksAccumLeftInvAll))]                
+                Positions = [Matrix(3,1,map(lambda x: self.customtrigsimp(x), LinksAccumRightAll[i][0:3,3].subs(valuesubs))) for i in range(5)]
+                Positionsee = [Matrix(3,1,map(lambda x: self.customtrigsimp(x), (LinksAccumLeftInvAll[i][0:3,0:3]*Pee+LinksAccumLeftInvAll[i][0:3,3]).subs(valuesubs))) for i in range(5)]
                 # try to shift all the constants of each Position expression to one side
                 for i in range(len(Positions)):
                     for j in range(3):
@@ -1802,9 +1783,8 @@ class IKFastSolver(AutoReloader):
                 solsubs = self.freevarsubs[:]
                 rottree = []
                 endbranchtree = [SolverSequence([rottree])]
-                curtransvars = solvejointvars[0:2]
-                transtree = self.solveIKTranslationAll(Positions,Positionsee,curtransvars,
-                                                       otherunsolvedvars = [],
+                transtree = self.solveIKTranslationAll(Positions,Positionsee,transvars = solvejointvars[0:2],
+                                                       otherunsolvedvars = solvejointvars[2:4],
                                                        othersolvedvars = freejointvars,
                                                        endbranchtree=endbranchtree,
                                                        solsubs = solsubs)
@@ -1815,10 +1795,12 @@ class IKFastSolver(AutoReloader):
                     solvedvarsubs += [(cos(tvar),self.Variable(tvar).cvar),(sin(tvar),self.Variable(tvar).svar)]
                 rotsubs = [(Symbol('r%d%d'%(0,i)),Symbol('_r%d%d'%(0,i))) for i in range(3)]
                 rotvars = [var for var in jointvars if any([var==svar for svar in solvejointvars[2:4]])]
-                D = Matrix(3,1, map(lambda x: x.subs(self.freevarsubs), LinksAccumRightAll[0][0:3,2]))
-                rottree += self.solveIKRotation(R=D,Ree = Dee.subs(rotsubs),rawvars = rotvars,endbranchtree=storesolutiontree,solvedvarsubs=solvedvarsubs)
-                Tlinksub = LinksAccumLeftInvAll[0].subs(solvedvarsubs)
-                solverbranches.append((freevarcond,[SolverRay(Tlinksub[0:3,0:3]*Pee+Tlinksub[0:3,3],Tlinksub[0:3,0:3]*Dee, rottree)]))
+                #D = Matrix(3,1, map(lambda x: x.subs(solvedvarsubs), LinksAccumRight[2][0:3,2]))
+                D = Matrix(3,1, map(lambda x: x.subs(solvedvarsubs), LinksAccumRight[2][0:3,0:3]*Matrix(3,1,basedir.tolist())))
+                dirtree = self.solveIKRotation(R=D,Ree = Dee.subs(rotsubs),rawvars = rotvars,endbranchtree=storesolutiontree,solvedvarsubs=solvedvarsubs)
+                Tlinksub = LinksAccumLeftInv[2].subs(solvedvarsubs)
+                rottree += [SolverDirection(Tlinksub[0:3,0:3]*Dee, dirtree)]
+                solverbranches.append((freevarcond,transtree))
 
         if len(solverbranches) == 0 or not solverbranches[-1][0] is None:
             print 'failed to solve for ray4d kinematics'

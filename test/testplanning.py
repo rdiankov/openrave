@@ -434,7 +434,7 @@ def test_hrp2():
     print robot.CheckSelfCollision(report)
 
 def test_drill():
-    python inversekinematics.py --robot=/home/leus/drilling/drill_fk.robot.xml --ray4donly
+    python inversekinematics.py --robot=/home/leus/drilling/drill_fk.robot.xml --ray4donly --accuracy=1e-5
     from openravepy import *
     import numpy,time
     from openravepy.examples import inversekinematics
@@ -443,7 +443,7 @@ def test_drill():
     from sympy import *
     env = Environment()
     env.Reset()
-    robot = env.ReadRobotXMLFile('/home/leus/drilling/drill_fk.robot.xml')
+    robot = env.ReadRobotXMLFile('/home/rdiankov/drill_fk.robot.xml')
     env.AddRobot(robot)
     manip = robot.GetActiveManipulator()
     ikmodel = inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
@@ -459,7 +459,7 @@ def test_drill():
     solvejoints = list(manip.GetArmJoints())
     freejoints = []
     sourcefilename = 'temp.cpp'
-    self = ikfast.IKFastSolver(kinbody=robot,accuracy=None,precision=None)
+    self = ikfast.IKFastSolver(kinbody=robot,accuracy=1e-5,precision=None)
     #code = self.generateIkSolver(manip.GetBase().GetIndex(),manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejoints,usedummyjoints=False,solvefn=solvefn)
     baselink=manip.GetBase().GetIndex()
     eelink=manip.GetEndEffector().GetIndex()

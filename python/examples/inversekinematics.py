@@ -279,6 +279,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                     orgvalues = self.robot.GetJointValues()[self.manip.GetArmJoints()]
                     targetdir = dot(self.manip.GetEndEffectorTransform()[0:3,0:3],self.manip.GetDirection())
                     targetpos = self.manip.GetEndEffectorTransform()[0:3,3]
+                    #print targetdir[0],targetdir[1],targetdir[2],targetpos[0],0,0,0,targetpos[1],0,0,0,targetpos[2]
                     targetprojpos = targetpos - targetdir*dot(targetdir,targetpos)
                     self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
                     sol = self.manip.FindIKSolution(IkParameterization(Ray(targetpos,targetdir),self.iktype),False)
@@ -287,10 +288,11 @@ class InverseKinematicsModel(OpenRAVEModel):
                         realdir = dot(self.manip.GetEndEffectorTransform()[0:3,0:3],self.manip.GetDirection())
                         realpos = self.manip.GetEndEffectorTransform()[0:3,3]
                         realprojpos = realpos - realdir*dot(realdir,realpos)
-                        if sum((targetdir-realdir)**2) < 1e-7 and sum((targetprojpos-realprojpos)**2) < 1e-6:
+                        if sum((targetdir-realdir)**2) < 2e-5 and sum((targetprojpos-realprojpos)**2) < 1e-6:
                             success += 1
                         else:
                             print 'wrong solution to: ',targetpos,targetdir, 'returned is: ',realpos,realdir,'wrong sol is:',sol
+                            print sum((targetdir-realdir)**2), sum((targetprojpos-realprojpos)**2)
                     else:
                         print 'failed to find: ',targetpos,targetdir,'solution is: ',orgvalues
                 return success/numiktests
