@@ -241,7 +241,7 @@ class GraspingModel(OpenRAVEModel):
                     grasp[self.graspindices.get('grasptrans_nocol')] = reshape(transpose(Tlocalgrasp_nocol[0:3,0:4]),12)
                     grasp[self.graspindices.get('forceclosure')] = mindist
                     if mindist > forceclosurethreshold:
-                        print 'found good grasp',len(self.grasps),'config: ',finalconfig[0][self.manip.GetGripperJoints()]
+                        print 'found good grasp',len(self.grasps),'config: ',array(finalconfig[0])[self.manip.GetGripperJoints()]
                         self.grasps.append(grasp)
                 self.grasps = array(self.grasps)
         finally:
