@@ -475,7 +475,6 @@ public:
     {
         int ct = 0;
         if( GetEnv()->CheckCollision(plink,_report) ) {
-            RAVELOG_INFO(str(boost::format("col: %s\n")%_report->__str__()));
             ct |= CT_RegularCollision;
             FOREACH(itavoid,_vAvoidLinkGeometry) {
                 if( *itavoid == _report->plink1 || *itavoid == _report->plink2 ) {
