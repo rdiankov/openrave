@@ -390,6 +390,108 @@ void KinBody::Link::GEOMPROPERTIES::SetTransparency(float f)
     parent->GetParent()->ParametersChanged(Prop_LinkDraw);
 }
 
+/*
+ * Ray-box intersection using IEEE numerical properties to ensure that the
+ * test is both robust and efficient, as described in:
+ *
+ *      Amy Williams, Steve Barrus, R. Keith Morley, and Peter Shirley
+ *      "An Efficient and Robust Ray-Box Intersection Algorithm"
+ *      Journal of graphics tools, 10(1):49-54, 2005
+ *
+ */
+//static bool RayAABBIntersect(const Ray &r, float t0, float t1) const
+//{
+//    dReal tmin, tmax, tymin, tymax, tzmin, tzmax;
+//    tmin = (parameters[r.sign[0]].x() - r.origin.x()) * r.inv_direction.x();
+//    tmax = (parameters[1-r.sign[0]].x() - r.origin.x()) * r.inv_direction.x();
+//    tymin = (parameters[r.sign[1]].y() - r.origin.y()) * r.inv_direction.y();
+//    tymax = (parameters[1-r.sign[1]].y() - r.origin.y()) * r.inv_direction.y();
+//    if ( (tmin > tymax) || (tymin > tmax) ) 
+//        return false;
+//    if (tymin > tmin)
+//        tmin = tymin;
+//    if (tymax < tmax)
+//        tmax = tymax;
+//    tzmin = (parameters[r.sign[2]].z() - r.origin.z()) * r.inv_direction.z();
+//    tzmax = (parameters[1-r.sign[2]].z() - r.origin.z()) * r.inv_direction.z();
+//    if ( (tmin > tzmax) || (tzmin > tmax) ) 
+//        return false;
+//    if (tzmin > tmin)
+//        tmin = tzmin;
+//    if (tzmax < tmax)
+//        tmax = tzmax;
+//    return ( (tmin < t1) && (tmax > t0) );
+//}
+
+bool KinBody::Link::GEOMPROPERTIES::ValidateContactNormal(const Vector& _position, Vector& _normal) const
+{
+    Transform tinv = _t.inverse();
+    Vector position = tinv*_position;
+    Vector normal = tinv.rotate(_normal);
+    switch(GetType()) {
+    case KinBody::Link::GEOMPROPERTIES::GeomBox: {
+        // transform position in +x+y+z octant
+        Vector tposition=position, tnormal=normal;
+        if( tposition.x < 0) {
+            tposition.x = -tposition.x;
+            tnormal.x = -tnormal.x;
+        }
+        if( tposition.y < 0) {
+            tposition.y = -tposition.y;
+            tnormal.y = -tnormal.y;
+        }
+        if( tposition.z < 0) {
+            tposition.z = -tposition.z;
+            tnormal.z = -tnormal.z;
+        }
+        // find the normal to the surface depending on the region the position is in
+        dReal xaxis = -vGeomData.z*tposition.y+vGeomData.y*tposition.z;
+        dReal yaxis = -vGeomData.x*tposition.z+vGeomData.z*tposition.x;
+        dReal zaxis = -vGeomData.y*tposition.x+vGeomData.x*tposition.y;
+        const dReal feps=0.00005f;
+        dReal penetration=0;
+        if( zaxis < feps && yaxis > -feps ) { // x-plane
+            if( RaveFabs(tnormal.x) > RaveFabs(penetration) )
+                penetration = tnormal.x;
+        }
+        if( zaxis > -feps && xaxis < feps ) { // y-plane
+            if( RaveFabs(tnormal.y) > RaveFabs(penetration) )
+                penetration = tnormal.y;
+        }
+        if( yaxis < feps && xaxis > -feps ) { // z-plane
+            if( RaveFabs(tnormal.z) > RaveFabs(penetration) )
+                penetration = tnormal.z;
+        }
+        if( penetration < -feps ) {
+            _normal = -_normal;
+            return true;
+        }
+        break;
+    }
+    case KinBody::Link::GEOMPROPERTIES::GeomCylinder: { // z-axis
+        bool bInsideCircle = (position.x+position.x + position.y+position.y)<vGeomData.x*vGeomData.x;
+        bool bInsideHeight = RaveFabs(position.z)<vGeomData.y;
+        if( bInsideCircle && !bInsideHeight && normal.z*position.x<0 ) {
+            _normal = -_normal;
+            return true;
+        }
+        if( !bInsideCircle && bInsideHeight && normal.x*position.x+normal.y*position.y < 0)
+            _normal = -_normal;
+            return true;
+        }
+        break;
+    case KinBody::Link::GEOMPROPERTIES::GeomSphere:
+        if( dot3(normal,position) < 0 ) {
+            _normal = -_normal;
+            return true;
+        }
+        break;
+    default:
+        break;
+    }
+    return false;
+}
+
 KinBody::Link::Link(KinBodyPtr parent)
 {
     _parent = parent;
@@ -481,6 +583,14 @@ KinBody::Link::GEOMPROPERTIES& KinBody::Link::GetGeometry(int index)
     std::list<GEOMPROPERTIES>::iterator it = _listGeomProperties.begin();
     advance(it,index);
     return *it;
+}
+
+bool KinBody::Link::ValidateContactNormal(const Vector& position, Vector& normal) const
+{
+    if( _listGeomProperties.size() == 1) {
+        return _listGeomProperties.front().ValidateContactNormal(position,normal);
+    }
+    return false;
 }
 
 void KinBody::Link::UpdateCollisionMesh()

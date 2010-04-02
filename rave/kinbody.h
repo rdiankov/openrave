@@ -111,6 +111,12 @@ public:
             virtual void SetDraw(bool bDraw);
             virtual void SetTransparency(float f);
 
+            /// validates the contact normal on the surface of the geometry and makes sure the normal faces "outside" of the shape.
+            /// \param position the position of the contact point specified in the link's coordinate system
+            /// \param normal the unit normal of the contact point specified in the link's coordinate system
+            /// \return true if the normal is changed to face outside of the shape
+            virtual bool ValidateContactNormal(const Vector& position, Vector& normal) const;
+
         private:
             /// triangulates the geometry object and initializes collisionmesh. GeomTrimesh types must already be triangulated
             /// \param fTesselation to control how fine the triangles need to be
@@ -179,6 +185,12 @@ public:
         //typedef std::list<GEOMPROPERTIES>::const_iterator GeomConstPtr;
         const std::list<GEOMPROPERTIES>& GetGeometries() const { return _listGeomProperties; }
         virtual GEOMPROPERTIES& GetGeometry(int index);
+        
+        /// validates the contact normal on link and makes sure the normal faces "outside" of the geometry shape it lies on. An exception can be thrown if position is not on a geometry surface
+        /// \param position the position of the contact point specified in the link's coordinate system, assumes it is on a particular geometry
+        /// \param normal the unit normal of the contact point specified in the link's coordinate system
+        /// \return true if the normal is changed to face outside of the shape
+        virtual bool ValidateContactNormal(const Vector& position, Vector& normal) const;
 
         virtual void serialize(std::ostream& o, int options) const;
     private:

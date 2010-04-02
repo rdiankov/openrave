@@ -58,8 +58,9 @@ public:
 
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBase::RobotStateSaver saver(_robot);
-
         RobotBase::ManipulatorPtr pmanip = _robot->GetActiveManipulator();
+
+        _robot->SetTransform(Transform()); // this is necessary to reset any 'randomness' introduced from the current state
 
         // do not clear the trajectory because the user might want to append the grasp point to it
         if( ptraj->GetDOF() != _robot->GetActiveDOF() )
@@ -90,11 +91,28 @@ public:
         Transform tbase = pbase->GetTransform(), trobot = _robot->GetTransform();
         Transform ttorobot = tbase.inverse() * trobot;
         Vector vapproachdir;
+        Transform tTarget, tTargetOffset;
+        if( !!_parameters.targetbody ) {
+            tTarget = _parameters.targetbody->GetTransform();
+            if( _parameters.fgraspingnoise > 0 ) {
+                dReal frotratio = RaveRandomFloat(); // ratio due to rotation
+                Vector vrandtrans = _parameters.fgraspingnoise*(1-frotratio)*Vector(2.0f*RaveRandomFloat()-1.0f, 2.0f*RaveRandomFloat()-1.0f, 2.0f*RaveRandomFloat()-1.0f);
+                Vector vrandaxis;
+                while(1) {
+                    vrandaxis = Vector(2.0f*RaveRandomFloat()-1.0f, 2.0f*RaveRandomFloat()-1.0f, 2.0f*RaveRandomFloat()-1.0f);
+                    if( vrandaxis.lengthsqr3() > 0 && vrandaxis.lengthsqr3() <= 1 )
+                        break;
+                }
+                
+                // find furthest point from origin of body and rotate around center
+                AABB ab = _parameters.targetbody->ComputeAABB();
+                dReal fmaxradius = RaveSqrt(ab.extents.lengthsqr3());
+                tTargetOffset.rotfromaxisangle(vrandaxis.normalize3(),RaveRandomFloat()*_parameters.fgraspingnoise*frotratio*fmaxradius);
+                tTargetOffset.trans = tTargetOffset.rotate(-ab.pos)+ab.pos+vrandtrans;
+            }
+        }
 
-        if( !_parameters.targetbody )
-            vapproachdir = _parameters.vtargetdirection;
-        else
-            vapproachdir = _parameters.targetbody->GetTransform().rotate(_parameters.vtargetdirection);
+        vapproachdir = (tTargetOffset*tTarget).rotate(_parameters.vtargetdirection);
 
         if( _parameters.btransformrobot ) {
             if( !!pmanip ) {
@@ -123,7 +141,6 @@ public:
                 }
 
                 tbase = torient * tbase;
-
                 // make sure origin of pbase is on target position
                 tbase.trans = _parameters.vtargetposition;
 
@@ -135,9 +152,7 @@ public:
                 tbase.trans = _parameters.vtargetposition;
             }
 
-            if( !!_parameters.targetbody )
-                tbase = _parameters.targetbody->GetTransform() * tbase;
-
+            tbase = tTargetOffset * tTarget * tbase;
             trobot = tbase*ttorobot;
             _robot->SetTransform(trobot);
 
@@ -402,7 +417,7 @@ public:
                         }
                         else {
                             if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                                RAVELOG_VERBOSEA(str(boost::format("Collision (%d) of link %s using joint %d [%s]")%ct%vlinks.at(q)->GetName()%_robot->GetActiveJointIndex(ifing)%_report->__str__()));
+                                RAVELOG_VERBOSEA(str(boost::format("Collision (%d) of link %s using joint %d [%s]\n")%ct%vlinks.at(q)->GetName()%_robot->GetActiveJointIndex(ifing)%_report->__str__()));
                                 stringstream ss; ss << "Transform: " << vlinks.at(q)->GetTransform() << "Joint Vals: ";
                                 for(int vi = 0; vi < _robot->GetActiveDOF();vi++)
                                     ss << dofvals[vi] << " ";

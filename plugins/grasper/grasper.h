@@ -94,22 +94,18 @@ class GrasperProblem : public ProblemInstance
     virtual bool Grasp(std::ostream& sout, std::istream& sinput)
     {
         string strsavetraj;
-        bool bHasDirection = false;
-        bool bNoise = false;
         bool bGetLinkCollisions = false;
         bool bExecute = true;
         bool bComputeStableContacts = false;
         bool bComputeForceClosure = false;
         bool bOutputFinal = false;
-        dReal rotnoise=0;
-        dReal transnoise=0;    
         dReal friction = 0;
 
         boost::shared_ptr<GraspParameters> params(new GraspParameters(GetEnv()));
         params->btransformrobot = true;
         params->bonlycontacttarget = true;
         params->btightgrasp = false;
-
+        params->vtargetdirection = Vector(0,0,1);
         boost::shared_ptr<CollisionCheckerMngr> pcheckermngr;
 
         string cmd;
@@ -122,7 +118,8 @@ class GrasperProblem : public ProblemInstance
             if( cmd == "body" || cmd == "target" ) {
                 string name; sinput >> name;
                 params->targetbody = GetEnv()->GetKinBody(name);
-                if( !params->targetbody )                    RAVELOG_WARN(str(boost::format("failed to find target %s\n")%name));
+                if( !params->targetbody )
+                    RAVELOG_WARN(str(boost::format("failed to find target %s\n")%name));
             }
             else if( cmd == "bodyid" ) {
                 int id = 0; sinput >> id;
@@ -130,7 +127,6 @@ class GrasperProblem : public ProblemInstance
             }
             else if( cmd == "direction" ) {
                 sinput >> params->vtargetdirection.x >> params->vtargetdirection.y >> params->vtargetdirection.z;
-                bHasDirection = true;
                 params->vtargetdirection.normalize3();
             }
             else if( cmd == "avoidlink" ) {
@@ -152,10 +148,8 @@ class GrasperProblem : public ProblemInstance
                 sinput >> strsavetraj;
             else if( cmd == "outputfinal" )
                 sinput >> bOutputFinal;
-            else if( cmd == "noise" ) {
-                sinput >> rotnoise >> transnoise;
-                bNoise = true;
-            }
+            else if( cmd == "graspingnoise" )
+                sinput >> params->fgraspingnoise;
             else if( cmd == "roll" )
                 sinput >> params->ftargetroll;
             else if( cmd == "centeroffset" || cmd == "position" )
@@ -174,6 +168,8 @@ class GrasperProblem : public ProblemInstance
                 string name; sinput >> name;
                 pcheckermngr.reset(new CollisionCheckerMngr(GetEnv(), name));
             }
+            else if( cmd == "translationstepmult" )
+                sinput >> params->ftranslationstepmult;
             else {
                 RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -191,45 +187,6 @@ class GrasperProblem : public ProblemInstance
 
         RobotBase::RobotStateSaver saver(_robot);
         _robot->Enable(true);
-
-        std::vector<KinBodyPtr> vecbodies;
-
-        bool bremove_obstacles = false;
-        if(bremove_obstacles) {
-            GetEnv()->GetBodies(vecbodies);
-            for(size_t i = 0; i < vecbodies.size(); i++)
-                if( vecbodies[i] != params->targetbody && vecbodies[i] != _robot)
-                    GetEnv()->RemoveKinBody(vecbodies[i]);
-            
-            params->targetbody->SetTransform(Transform());
-        }
-
-        if( !bHasDirection )
-            params->vtargetdirection = Vector(0,0,1);
-
-        if(bNoise) {
-            Transform Trand;
-            Trand.trans.x = transnoise*(2.0f*RaveRandomFloat()-1.0f);
-            Trand.trans.y = transnoise*(2.0f*RaveRandomFloat()-1.0f);
-            Trand.trans.z = transnoise*(2.0f*RaveRandomFloat()-1.0f);
-            if(rotnoise > 0) {
-                Vector rand;
-                //get random axis
-                while(1) {
-                    rand.x = 2.0f*RaveRandomFloat()-1.0f;
-                    rand.y = 2.0f*RaveRandomFloat()-1.0f;
-                    rand.z = 2.0f*RaveRandomFloat()-1.0f;
-                    if( rand.lengthsqr3() > 0 )
-                        break;
-                }
-                
-                Trand.rotfromaxisangle(rand.normalize3(),RaveRandomFloat()*rotnoise);
-            }
-            else
-                RAVELOG_WARNA("Rot Noise below threshold, no rotation noise added\n");
-            
-            params->targetbody->SetTransform(Trand*params->targetbody->GetTransform());
-        }
 
         params->SetRobotActiveJoints(_robot);
         _robot->GetActiveDOFValues(params->vinitialconfig);
@@ -255,23 +212,9 @@ class GrasperProblem : public ProblemInstance
         _robot->SetTransform(ptraj->GetPoints().back().trans);
         _robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
 
-        if( bNoise ) {
-            //make sure the robot isn't colliding with anything except params->targetbody
-            std::vector<KinBodyConstPtr> vbodyexcluded;
-            std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-            vbodyexcluded.push_back(params->targetbody);
-            
-            if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot),vbodyexcluded,vlinkexcluded,_report) || _robot->CheckSelfCollision() ) {
-                if( !!_report->plink1 && !!_report->plink2 )
-                    RAVELOG_WARNA(str(boost::format("collision %s:%s with %s:%s\n")%_report->plink1->GetParent()->GetName()%_report->plink1->GetName()%_report->plink2->GetParent()->GetName()%_report->plink2->GetName()));
-                return false;
-            }
-        }
-
-        Vector vworlddirection = !params->targetbody ? params->vtargetdirection : params->targetbody->GetTransform().rotate(params->vtargetdirection);
-
         vector< pair<COLLISIONREPORT::CONTACT,int> > contacts;
         if( bComputeStableContacts ) {
+            Vector vworlddirection = !params->targetbody ? params->vtargetdirection : params->targetbody->GetTransform().rotate(params->vtargetdirection);
             _GetStableContacts(contacts, vworlddirection, friction);
         }
         else {
@@ -281,10 +224,12 @@ class GrasperProblem : public ProblemInstance
             _robot->GetActiveManipulator()->GetChildLinks(vlinks);
             FOREACHC(itlink, vlinks) {
                 if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(*itlink), KinBodyConstPtr(params->targetbody), _report) ) {
-                    RAVELOG_VERBOSEA(str(boost::format("contact %s:%s with %s:%s\n")%_report->plink1->GetParent()->GetName()%_report->plink1->GetName()%_report->plink2->GetParent()->GetName()%_report->plink2->GetName()));
+                    RAVELOG_VERBOSEA(str(boost::format("contact %s\n")%_report->__str__()));
                     FOREACH(itcontact,_report->contacts) {
-                        if( _report->plink1 != *itlink )
+                        if( _report->plink1 != *itlink ) {
                             itcontact->norm = -itcontact->norm;
+                            itcontact->depth = -itcontact->depth;
+                        }
                         contacts.push_back(make_pair(*itcontact,(*itlink)->GetIndex()));
                     }
                 }
@@ -294,7 +239,8 @@ class GrasperProblem : public ProblemInstance
 
         RAVELOG_VERBOSEA(str(boost::format("number of contacts: %d\n")%contacts.size()));
         FOREACH(itcontact,contacts) {
-            Vector pos = itcontact->first.pos, norm = itcontact->first.norm;
+            Vector norm = itcontact->first.norm;
+            Vector pos = itcontact->first.pos;//-norm*itcontact->first.depth; //?
             sout << pos.x <<" " << pos.y <<" " << pos.z <<" " << norm.x <<" " << norm.y <<" " << norm.z <<" ";
             if(bGetLinkCollisions)
                 sout << itcontact->second << " ";

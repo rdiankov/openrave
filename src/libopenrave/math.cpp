@@ -423,6 +423,26 @@ int insideTriangle(const Vector* v, const Vector* v0, const Vector* v1, const Ve
 	return (0);
 }
 
+bool RayAABBTest(const RAY& r, const AABB& ab)
+{
+    Vector vd, vpos = r.pos - ab.pos;		// temporary
+	if( RaveFabs(vpos.x) > ab.extents.x && r.dir.x* vpos.x > 0.0f)
+        return false;
+	if( RaveFabs(vpos.y) > ab.extents.y && r.dir.y * vpos.y > 0.0f)
+        return false;
+	if( RaveFabs(vpos.z) > ab.extents.z && r.dir.z * vpos.z > 0.0f)
+        return false;
+
+	cross3(vd, r.dir, vpos);
+	if( RaveFabs(vd.x) > ab.extents.y * RaveFabs(r.dir.z) + ab.extents.z * RaveFabs(r.dir.y) )
+        return false;
+	if( RaveFabs(vd.y) > ab.extents.x * RaveFabs(r.dir.z) + ab.extents.z * RaveFabs(r.dir.x) )
+        return false;
+	if( RaveFabs(vd.z) > ab.extents.x * RaveFabs(r.dir.y) + ab.extents.y * RaveFabs(r.dir.x) )
+        return false;
+	return true;
+}
+
 bool RayOBBTest(const RAY& r, const OBB& o)
 {
     Vector vpos, vdir, vd;

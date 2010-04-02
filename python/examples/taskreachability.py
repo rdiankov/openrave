@@ -181,8 +181,6 @@ if __name__=='__main__':
     parser.add_option('--grasptablefile',
                       action="store",type='string',dest='grasptablefile',default='barrettgrasptables.txt',
                       help='Simple file specifying all possible ways to grasp the target (every line is 3x4 matrix and preshape)')
-#     parser.add_option('--obstacles', action='append', type='string', dest='obstacles',default=[],
-#                       help='The names of the obstacles to create and move around the environment')
     parser.add_option('--workobjectspace', action='store', type='string', dest='workobjectspace',default=None,
                       help='Object in which the workspace is centered in')
     parser.add_option('--workspace', action='store', type='string', dest='workspace',default=None,

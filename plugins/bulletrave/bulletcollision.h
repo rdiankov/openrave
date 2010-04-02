@@ -200,26 +200,26 @@ private:
 
         virtual btScalar addSingleResult(btCollisionWorld::LocalRayResult& rayResult,bool normalInWorldSpace) {
             //caller already does the filter on the m_closestHitFraction
-            BOOST_ASSERT(rayResult.m_hitFraction <= m_closestHitFraction);
-            KinBody::LinkPtr plink = *(KinBody::LinkPtr*)static_cast<btCollisionObject*>(rayResult.m_collisionObject)->getUserPointer();            
-            if( !plink->IsEnabled() || (!!_pbodyonly && _pbodyonly != plink->GetParent()) )
-                return false;
-            //RAVELOG_INFO("clink: %s=%s: %d\n",plink->GetParent()->GetName().c_str(),_pbodyonly->GetName().c_str(),plink->IsEnabled());
+            if(rayResult.m_hitFraction <= m_closestHitFraction) {
+                KinBody::LinkPtr plink = *(KinBody::LinkPtr*)static_cast<btCollisionObject*>(rayResult.m_collisionObject)->getUserPointer();            
+                if( !plink->IsEnabled() || (!!_pbodyonly && _pbodyonly != plink->GetParent()) )
+                    return m_closestHitFraction;
+                //RAVELOG_INFO("clink: %s=%s: %d\n",plink->GetParent()->GetName().c_str(),_pbodyonly->GetName().c_str(),plink->IsEnabled());
             
-            m_closestHitFraction = rayResult.m_hitFraction;
-            m_collisionObject = rayResult.m_collisionObject;
+                m_closestHitFraction = rayResult.m_hitFraction;
+                m_collisionObject = rayResult.m_collisionObject;
 
-            //RAVELOG_INFO("ray link: %s:%s\n",plink->GetParent()->GetName().c_str(),plink->GetName().c_str());
-            if (normalInWorldSpace)
-            {
-                m_hitNormalWorld = rayResult.m_hitNormalLocal;
-            } else
-            {
-                ///need to transform normal into worldspace
-                m_hitNormalWorld = m_collisionObject->getWorldTransform().getBasis()*rayResult.m_hitNormalLocal;
+                //RAVELOG_INFO("ray link: %s:%s\n",plink->GetParent()->GetName().c_str(),plink->GetName().c_str());
+                if (normalInWorldSpace) {
+                    m_hitNormalWorld = rayResult.m_hitNormalLocal;
+                }
+                else {
+                    ///need to transform normal into worldspace
+                    m_hitNormalWorld = m_collisionObject->getWorldTransform().getBasis()*rayResult.m_hitNormalLocal;
+                }
+                m_hitPointWorld.setInterpolate3(m_rayFromWorld,m_rayToWorld,rayResult.m_hitFraction);
             }
-            m_hitPointWorld.setInterpolate3(m_rayFromWorld,m_rayToWorld,rayResult.m_hitFraction);
-            return rayResult.m_hitFraction;
+            return m_closestHitFraction;
         }
 
         KinBodyConstPtr _pbodyonly;
@@ -271,9 +271,13 @@ private:
                     report->contacts.reserve(numContacts);
                     for (int j=0;j<numContacts;j++) {
                         btManifoldPoint& pt = contactManifold->getContactPoint(j);
-                        btVector3 p = pt.getPositionWorldOnB();
-                        btVector3 n = pt.m_normalWorldOnB;
-                        report->contacts.push_back(COLLISIONREPORT::CONTACT(Vector(p[0],p[1],p[2]), Vector(n[0],n[1],n[2]), pt.m_distance1));
+                        btVector3 btp = pt.getPositionWorldOnB();
+                        btVector3 btn = pt.m_normalWorldOnB;
+                        Vector p(btp[0],btp[1],btp[2]), n(btn[0],btn[1],btn[2]);
+                        dReal distance = pt.m_distance1;
+                        if( !!plink1 && plink1->ValidateContactNormal(p,n) )
+                            distance = -distance;
+                        report->contacts.push_back(COLLISIONREPORT::CONTACT(p, n, distance));
                     }
                 }
             }

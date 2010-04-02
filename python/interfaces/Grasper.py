@@ -31,7 +31,7 @@ class Grasper:
     def  __del__(self):
         self.prob.GetEnv().RemoveProblem(self.prob)
 
-    def Grasp(self,direction=None,roll=None,position=None,standoff=None,target=None,stablecontacts=False,forceclosure=False,transformrobot=True,onlycontacttarget=True,tightgrasp=False,graspingnoise=None,execute=None,outputfinal=False):
+    def Grasp(self,direction=None,roll=None,position=None,standoff=None,target=None,stablecontacts=False,forceclosure=False,transformrobot=True,onlycontacttarget=True,tightgrasp=False,graspingnoise=None,execute=None,translationstepmult=None,outputfinal=False):
         cmd = 'Grasp '
         if direction is not None:
             cmd += 'direction %f %f %f '%(direction[0],direction[1],direction[2])
@@ -46,7 +46,9 @@ class Grasper:
             for link in self.avoidlinks:
                 cmd += 'avoidlink %s '%link.GetName()
         if graspingnoise is not None:
-            cmd += '%f %f '%(graspingnoise[0],graspingnoise[1])
+            cmd += 'graspingnoise %f '%graspingnoise
+        if translationstepmult is not None:
+            cmd += 'translationstepmult %f '%translationstepmult
         if execute is not None:
             cmd += 'execute %d '%execute
         res = self.prob.SendCommand(cmd)

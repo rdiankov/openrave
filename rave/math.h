@@ -650,6 +650,7 @@ RAVE_API void QuadraticSolver(dReal* pfQuadratic, dReal* pfRoots);
 RAVE_API int insideQuadrilateral(const Vector* p0,const Vector* p1, const Vector* p2,const Vector* p3);
 RAVE_API int insideTriangle(const Vector* p0, const Vector* p1, const Vector* p2);
 
+RAVE_API bool RayAABBTest(const RAY& r, const AABB& ab);
 RAVE_API bool RayOBBTest(const RAY& r, const OBB& obb);
 RAVE_API dReal DistVertexOBBSq(const Vector& v, const OBB& o);
 

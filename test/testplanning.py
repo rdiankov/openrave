@@ -359,12 +359,13 @@ def test_hrp2():
     python kinematicreachability.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm --xyzdelta=0.02
     python kinematicreachability.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --xyzdelta=0.02
     python kinematicreachability.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm_chest --xyzdelta=0.02
-    python inversereachability.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm --heightthresh=0.02 --quatthresh=0.1
-    python inversereachability.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --heightthresh=0.02 --quatthresh=0.1
-    python inversereachability.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm_chest --heightthresh=0.02 --quatthresh=0.1
-    python inversereachability.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm_chest --heightthresh=0.02 --quatthresh=0.1
-    python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.02 --normalanglerange=1 --avoidlink=RWristCam
-    python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.02 --normalanglerange=1
+    python inversereachability.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm --heightthresh=0.02 --quatthresh=0.2
+    python inversereachability.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --heightthresh=0.02 --quatthresh=0.2
+    python inversereachability.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm_chest --heightthresh=0.02 --quatthresh=0.2
+    python inversereachability.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm_chest --heightthresh=0.02 --quatthresh=0.2
+    python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.01 --normalanglerange=1 --avoidlink=RWristCam
+    python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.01 --normalanglerange=1 --graspingnoise=0.005 --noviewer
+    rosrun openrave_database grasping_ros.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.01 --normalanglerange=1 --graspingnoise=0.005 --launchservice='8*localhost'
 
     import inversereachability
     env = Environment()

@@ -86,7 +86,7 @@ class InverseKinematicsModel(OpenRAVEModel):
             precision=options.precision
             accuracy=options.accuracy
             usedummyjoints=options.usedummyjoints
-            if len(options.freejoints)>0:
+            if options.freejoints is not None:
                 freejoints=options.freejoints
         if self.robot.GetRobotStructureHash() == '7b789782446d86b95c6fb16de7f204c7' and self.manip.GetName() == 'arm':
             if freejoints is None:
@@ -309,7 +309,7 @@ class InverseKinematicsModel(OpenRAVEModel):
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser()
         parser.description='Computes the closed-form inverse kinematics equations of a robot manipulator, generates a C++ file, and compiles this file into a shared object which can then be loaded by OpenRAVE'
-        parser.add_option('--freejoint', action='append', type='int', dest='freejoints',default=[],
+        parser.add_option('--freejoint', action='append', type='int', dest='freejoints',default=None,
                           help='Optional joint index specifying a free parameter of the manipulator. If not specified, assumes all joints not solving for are free parameters. Can be specified multiple times for multiple free parameters.')
         parser.add_option('--precision', action='store', type='int', dest='precision',default=10,
                           help='The precision to compute the inverse kinematics in, (default=%default).')

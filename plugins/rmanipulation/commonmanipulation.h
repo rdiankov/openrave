@@ -622,7 +622,7 @@ class ExplorationParameters : public PlannerBase::PlannerParameters
 class GraspParameters : public PlannerBase::PlannerParameters
 {
  public:
- GraspParameters(EnvironmentBasePtr penv) : fstandoff(0), ftargetroll(0), vtargetdirection(0,0,1), btransformrobot(false), breturntrajectory(false), bonlycontacttarget(true), btightgrasp(false), bavoidcontact(false), fcoarsestep(0.1f), ffinestep(0.001f), ftranslationstepmult(0.1f), _penv(penv) {}
+ GraspParameters(EnvironmentBasePtr penv) : fstandoff(0), ftargetroll(0), vtargetdirection(0,0,1), btransformrobot(false), breturntrajectory(false), bonlycontacttarget(true), btightgrasp(false), bavoidcontact(false), fcoarsestep(0.1f), ffinestep(0.001f), ftranslationstepmult(0.1f), fgraspingnoise(0), _penv(penv) {}
 
     dReal fstandoff; ///< start closing fingers when at this distance
     KinBodyPtr targetbody; ///< the target that will be grasped, all parameters will be in this coordinate system. if not present, then below transformations are in absolute coordinate system.
@@ -639,7 +639,8 @@ class GraspParameters : public PlannerBase::PlannerParameters
     dReal fcoarsestep;  ///< step for coarse planning (in radians)
     dReal ffinestep; ///< step for fine planning (in radians), THIS STEP MUST BE VERY SMALL OR THE COLLISION CHECKER GIVES WILDLY BOGUS RESULTS
     dReal ftranslationstepmult; ///< multiplication factor for translational movements of the hand or joints
-        
+
+    dReal fgraspingnoise; ///< random undeterministic noise to add to the target object, represents the max possible displacement of any point on the object (noise added after global direction and start have been determined)
  protected:
     EnvironmentBasePtr _penv; ///< environment target belongs to
 
@@ -665,16 +666,17 @@ class GraspParameters : public PlannerBase::PlannerParameters
         O << "<fcoarsestep>" << fcoarsestep << "</fcoarsestep>" << endl;
         O << "<ffinestep>" << ffinestep << "</ffinestep>" << endl;
         O << "<ftranslationstepmult>" << ftranslationstepmult << "</ftranslationstepmult>" << endl;
+        O << "<fgraspingnoise>" << fgraspingnoise << "</fgraspingnoise>" << endl;
         return !!O;
     }
- 
+
     void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
     {
         PlannerBase::PlannerParameters::startElement(name,atts);
         if( name == "vavoidlinkgeometry" )
             vavoidlinkgeometry.resize(0);
     }
-
+ 
     // called at the end of every XML tag, _ss contains the data 
     virtual bool endElement(const std::string& name)
     {
@@ -710,6 +712,8 @@ class GraspParameters : public PlannerBase::PlannerParameters
             _ss >> fcoarsestep;
         else if( name == "ffinestep" )
             _ss >> ffinestep;
+        else if( name == "fgraspingnoise" )
+            _ss >> fgraspingnoise;
         else if( name == "ftranslationstepmult" )
             _ss >> ftranslationstepmult;
         else // give a chance for the default parameters to get processed

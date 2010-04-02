@@ -235,10 +235,15 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                             for(int i = 0; i < N; ++i) {
                                 //assert(contact[i].geom.depth >= 0);
                                 Vector vnorm(contact[i].geom.normal);
-                                if( checkgeom1 != contact[i].geom.g1 )
+                                dReal distance = contact[i].geom.depth;
+                                if( checkgeom1 != contact[i].geom.g1 ) {
                                     vnorm = -vnorm;
+                                    distance = -distance;
+                                }
                                 BOOST_ASSERT( checkgeom1 == contact[i].geom.g1 || checkgeom1 == contact[i].geom.g2 );
-                                report->contacts.push_back(COLLISIONREPORT::CONTACT(contact[i].geom.pos, vnorm, contact[i].geom.depth));
+                                if( !!report->plink2 && report->plink2->ValidateContactNormal(contact[i].geom.pos,vnorm))
+                                    distance = -distance;
+                                report->contacts.push_back(COLLISIONREPORT::CONTACT(contact[i].geom.pos, vnorm, distance));
                             }
                         }
 
@@ -390,14 +395,17 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                     // always return contacts since it isn't that much computation (openravepy expects this!)
                     //if( report->options & OpenRAVE::CO_Contacts) {
                     Vector vnorm(contact[index].geom.normal);
-                    if( contact[index].geom.g1 != geomray )
+                    dReal distance = contact[index].geom.depth;
+                    if( contact[index].geom.g1 != geomray ) {
                         vnorm = -vnorm;
-                    if( report->contacts.size() == 0 ) {
-                        report->contacts.push_back(COLLISIONREPORT::CONTACT(contact[index].geom.pos, vnorm, contact[index].geom.depth));
+                        distance = -distance;
                     }
+                    if( !!report->plink1 && report->plink1->ValidateContactNormal(contact[index].geom.pos,vnorm) )
+                        distance = -distance;
+                    if( report->contacts.size() == 0 )
+                        report->contacts.push_back(COLLISIONREPORT::CONTACT(contact[index].geom.pos, vnorm, distance));
                     else
-                        report->contacts.front() = COLLISIONREPORT::CONTACT(contact[index].geom.pos, vnorm, contact[index].geom.depth);
-                    //}
+                        report->contacts.front() = COLLISIONREPORT::CONTACT(contact[index].geom.pos, vnorm, distance);
 
                     if( listcallbacks.size() == 0 )
                         GetEnv()->GetRegisteredCollisionCallbacks(listcallbacks);
@@ -579,8 +587,17 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                 if( pcb->_report->options & OpenRAVE::CO_Contacts ) {
                     pcb->_report->contacts.reserve(N);
                     dGeomID checkgeom1 = dGeomGetClass(o1) == dGeomTransformClass ? dGeomTransformGetGeom(o1) : o1;
-                    for(int i = 0; i < N; ++i)
-                        pcb->_report->contacts.push_back(COLLISIONREPORT::CONTACT(contact[i].geom.pos, checkgeom1 != contact[i].geom.g1 ? -Vector(contact[i].geom.normal) : Vector(contact[i].geom.normal), contact[i].geom.depth));
+                    for(int i = 0; i < N; ++i) {
+                        dReal distance = contact[i].geom.depth;
+                        Vector vnorm(contact[i].geom.normal);
+                        if( checkgeom1 != contact[i].geom.g1 ) {
+                            vnorm = -vnorm;
+                            distance = -distance;
+                        }
+                        if( !!pcb->_report->plink2 && pcb->_report->plink2->ValidateContactNormal(contact[i].geom.pos,vnorm) )
+                            distance = -distance;
+                        pcb->_report->contacts.push_back(COLLISIONREPORT::CONTACT(contact[i].geom.pos, vnorm, distance));
+                    }
                 }
 
                 FOREACHC(itfn, pcb->GetCallbacks()) {
@@ -645,8 +662,17 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                 if( pcb->_report->options & OpenRAVE::CO_Contacts ) {
                     pcb->_report->contacts.reserve(N);
                     dGeomID checkgeom1 = dGeomGetClass(o1) == dGeomTransformClass ? dGeomTransformGetGeom(o1) : o1;
-                    for(int i = 0; i < N; ++i)
-                        pcb->_report->contacts.push_back(COLLISIONREPORT::CONTACT(contact[i].geom.pos, checkgeom1 != contact[i].geom.g1 ? -Vector(contact[i].geom.normal) : Vector(contact[i].geom.normal), contact[i].geom.depth));
+                    for(int i = 0; i < N; ++i) {
+                        dReal distance = contact[i].geom.depth;
+                        Vector vnorm(contact[i].geom.normal);
+                        if( checkgeom1 != contact[i].geom.g1 ) {
+                            vnorm = -vnorm;
+                            distance = -distance;
+                        }
+                        if( !!pcb->_report->plink2 && pcb->_report->plink2->ValidateContactNormal(contact[i].geom.pos,vnorm) )
+                            distance = -distance;
+                        pcb->_report->contacts.push_back(COLLISIONREPORT::CONTACT(contact[i].geom.pos,vnorm,distance));
+                    }
                 }
             }
 
@@ -741,9 +767,14 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                         for(int i = 0; i < N; ++i) {
                             BOOST_ASSERT( checkgeom1 == contact[i].geom.g1 || checkgeom1 == contact[i].geom.g2 );
                             Vector vnorm(contact[i].geom.normal);
-                            if( checkgeom1 != contact[i].geom.g1 )
+                            dReal distance = contact[i].geom.depth;
+                            if( checkgeom1 != contact[i].geom.g1 ) {
                                 vnorm = -vnorm;
-                            pcb->_report->contacts.push_back(COLLISIONREPORT::CONTACT(contact[i].geom.pos,vnorm,contact[i].geom.depth));
+                                distance = -distance;
+                            }
+                            if( !!pcb->_report->plink2 && pcb->_report->plink2->ValidateContactNormal(contact[i].geom.pos,vnorm) )
+                                distance = -distance;
+                            pcb->_report->contacts.push_back(COLLISIONREPORT::CONTACT(contact[i].geom.pos,vnorm,distance));
                         }
                     }
                 }
@@ -823,13 +854,18 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                 // always return contacts since it isn't that much computation (openravepy expects this!)
                 //if( pcb->_report->options & OpenRAVE::CO_Contacts) {
                 Vector vnorm(contact[index].geom.normal);
-                if( contact[index].geom.g1 != geomray )
+                dReal distance = contact[index].geom.depth;
+                if( contact[index].geom.g1 != geomray ) {
                     vnorm = -vnorm;
+                    distance = -distance;
+                }
+                if( !!pcb->_report->plink1 && pcb->_report->plink1->ValidateContactNormal(contact[index].geom.pos,vnorm) )
+                    distance = -distance;
                 if( pcb->_report->contacts.size() == 0 ) {
-                    pcb->_report->contacts.push_back(COLLISIONREPORT::CONTACT(contact[index].geom.pos, vnorm, contact[index].geom.depth));
+                    pcb->_report->contacts.push_back(COLLISIONREPORT::CONTACT(contact[index].geom.pos, vnorm, distance));
                 }
                 else
-                    pcb->_report->contacts.front() = COLLISIONREPORT::CONTACT(contact[index].geom.pos, vnorm, contact[index].geom.depth);
+                    pcb->_report->contacts.front() = COLLISIONREPORT::CONTACT(contact[index].geom.pos, vnorm, distance);
                 //}
 
                 FOREACHC(itfn, pcb->GetCallbacks()) {

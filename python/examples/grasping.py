@@ -37,37 +37,6 @@ except:
 
 class GraspingModel(OpenRAVEModel):
     """Holds all functions/data related to a grasp between a robot hand and a target"""
-    def __init__(self,robot,target):
-        OpenRAVEModel.__init__(self,robot=robot)
-        self.target = target
-        self.grasps = []
-        self.graspindices = dict()
-        self.grasper = None
-    def has(self):
-        return len(self.grasps) > 0 and len(self.graspindices) > 0 and self.grasper is not None
-    def getversion(self):
-        return 4
-    def init(self,friction,avoidlinks,plannername=None):
-        self.grasper = Grasper(self.robot,friction,avoidlinks,plannername)
-        self.grasps = []
-        self.graspindices = dict()
-
-    def load(self):
-        try:
-            params = OpenRAVEModel.load(self)
-            if params is None:
-                return False;
-            self.grasps,self.graspindices,friction,linknames,plannername = params
-            self.grasper = Grasper(self.robot,friction,avoidlinks = [self.robot.GetLink(name) for name in linknames],plannername=plannername)
-            return self.has()
-        except e:
-            return False
-
-    def save(self):
-        OpenRAVEModel.save(self,(self.grasps,self.graspindices,self.grasper.friction,[link.GetName() for link in self.grasper.avoidlinks],self.grasper.plannername))
-
-    def getfilename(self):
-        return os.path.join(OpenRAVEModel.getfilename(self),'graspset.' + self.manip.GetName() + '.' + self.target.GetKinematicsGeometryHash()+'.pp')
 
     class GripperVisibility:
         """When 'entered' will hide all the non-gripper links in order to facilitate visiblity of the gripper"""
@@ -90,44 +59,164 @@ class GraspingModel(OpenRAVEModel):
                 for geom,isdraw in self.hiddengeoms:
                     geom.SetDraw(isdraw)
 
+    def __init__(self,robot,target):
+        OpenRAVEModel.__init__(self,robot=robot)
+        self.target = target
+        self.grasps = []
+        self.graspindices = dict()
+        self.grasper = None
+        self.preprocess()
+        # only the indices used by the TaskManipulation plugin should start with an 'i'
+        graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':len(self.manip.GetGripperJoints()),'igrasptrans':12,'forceclosure':1,'grasptrans_nocol':12}
+        self.graspindices = dict()
+        self.totaldof = 0
+        for name,dof in graspdof.iteritems():
+            self.graspindices[name] = range(self.totaldof,self.totaldof+dof)
+            self.totaldof += dof
+    def has(self):
+        return len(self.grasps) > 0 and len(self.graspindices) > 0 and self.grasper is not None
+    def getversion(self):
+        return 4
+    def init(self,friction,avoidlinks,plannername=None):
+        self.grasper = Grasper(self.robot,friction,avoidlinks,plannername)
+        self.grasps = []
+    def load(self):
+        try:
+            params = OpenRAVEModel.load(self)
+            if params is None:
+                return False;
+            self.grasps,self.graspindices,friction,linknames,plannername = params
+            self.grasper = Grasper(self.robot,friction,avoidlinks = [self.robot.GetLink(name) for name in linknames],plannername=plannername)
+            return self.has()
+        except e:
+            return False
+    def save(self):
+        OpenRAVEModel.save(self,(self.grasps,self.graspindices,self.grasper.friction,[link.GetName() for link in self.grasper.avoidlinks],self.grasper.plannername))
+    def getfilename(self):
+        return os.path.join(OpenRAVEModel.getfilename(self),'graspset.' + self.manip.GetName() + '.' + self.target.GetKinematicsGeometryHash()+'.pp')    
+    def preprocess(self):
+        with self.env:
+            self.jointmaxlengths = zeros(len(self.robot.GetJoints()))
+            for i,joint in enumerate(self.robot.GetJoints()):
+                childlink = None
+                if joint.GetFirstAttached() and self.robot.DoesAffect(joint.GetJointIndex(),joint.GetFirstAttached().GetIndex()):
+                    childlink = joint.GetFirstAttached()
+                elif joint.GetSecondAttached() and self.robot.DoesAffect(joint.GetJointIndex(),joint.GetSecondAttached().GetIndex()):
+                    childlink = joint.GetSecondAttached()
+                if childlink is not None:
+                    # find how much an axis displaces the link
+                    if joint.GetType() == KinBody.Joint.Type.Slider or joint.GetType() == KinBody.Joint.Type.Prismatic:
+                        self.jointmaxlengths[i] = 1.0
+                    else: # revolute
+                        T = childlink.GetTransform()
+                        T[0:3,3] -= joint.GetAnchor()
+                        vertices = transformPoints(T,childlink.GetCollisionData().vertices)
+                        # find all child joints and add their anchor to vertices
+                        for childjoint in self.robot.GetJoints():
+                            if childjoint.GetJointIndex() != joint.GetJointIndex():
+                                if (childjoint.GetFirstAttached() and childjoint.GetFirstAttached().GetIndex() == childlink.GetIndex()) or (childjoint.GetSecondAttached() and childjoint.GetSecondAttached().GetIndex() == childlink.GetIndex()):
+                                    vertices = r_[vertices,[childjoint.GetAnchor()-joint.GetAnchor()]]
+                        self.jointmaxlengths[i] = sqrt(numpy.max(sum(vertices**2,1)-dot(vertices,joint.GetAxis(0))**2))
+    def autogenerate(self,options=None):
+        # disable every body but the target and robot
+        bodies = [b for b in self.env.GetBodies() if b.GetNetworkId() != self.robot.GetNetworkId() and b.GetNetworkId() != self.target.GetNetworkId()]
+        for b in bodies:
+            b.Enable(False)
+        try:
+            friction = None
+            preshapes = None
+            approachrays = None
+            standoffs = None
+            rolls = None
+            avoidlinks = None
+            graspingnoise = None
+            updateenv=False
+            if options is not None:
+                if options.preshapes is not None:
+                    preshapes = zeros((0,len(self.manip.GetGripperJoints())))
+                    for preshape in options.preshapes:
+                        preshapes = r_[preshapes,[array([float(s) for s in preshape.split()])]]
+                if options.boxdelta is not None:
+                    approachrays = self.computeBoxApproachRays(delta=options.boxdelta,normalanglerange=options.normalanglerange,directiondelta=options.directiondelta)
+                elif options.spheredelta is not None:
+                    approachrays = self.computeBoxApproachRays(delta=options.spheredelta,normalanglerange=options.normalanglerange,directiondelta=options.directiondelta)
+                if options.standoffs is not None:
+                    standoffs = array(options.standoffs)
+                if options.rolls is not None:
+                    rolls = array(options.rolls)
+                if options.friction is not None:
+                    friction = options.friction
+                if options.avoidlinks is not None:
+                    avoidlinks = [self.robot.GetLink(avoidlink) for avoidlink in options.avoidlinks]
+                if options.graspingnoise is not None:
+                    graspingnoise = options.graspingnoise
+                updateenv = options.useviewer
+            # check for specific robots
+            if self.robot.GetRobotStructureHash() == '7b789782446d86b95c6fb16de7f204c7' and self.manip.GetName() == 'arm' and self.target.GetKinematicsGeometryHash() == 'bbf03c6db8efc712a765f955a27b0d0f': # barrett hand
+                if preshapes is None:
+                    preshapes=array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2)))
+
+            if preshapes is None:
+                manipprob = BaseManipulation(self.robot)
+                with self.target:
+                    self.target.Enable(False)
+                    self.robot.SetActiveDOFs(self.manip.GetGripperJoints())
+                    final,traj = manipprob.ReleaseFingers(execute=False,outputfinal=True)
+                    self.robot.SetActiveDOFValues(final)
+                preshapes = array([self.robot.GetJointValues()[self.manip.GetGripperJoints()]])
+            if approachrays is None:
+                approachrays = self.computeBoxApproachRays(delta=0.02)
+            if rolls is None:
+                rolls = arange(0,2*pi,pi/2)
+            if standoffs is None:
+                standoffs = array([0,0.025])
+            if friction is None:
+                friction = 0.4
+            if avoidlinks is None:
+                avoidlinks = []
+            if graspingnoise is None:
+                graspingnoise = 0.0
+            self.init(friction=friction,avoidlinks=avoidlinks)
+            self.generate(preshapes=preshapes,rolls=rolls,graspingnoise=graspingnoise,standoffs=standoffs,approachrays=approachrays,updateenv=updateenv)
+            self.save()
+        finally:
+            for b in bodies:
+                b.Enable(True)
     def generate(self,preshapes,standoffs,rolls,approachrays, graspingnoise=None,updateenv=True,forceclosurethreshold=1e-9):
         """all grasp parameters have to be in the bodies's coordinate system (ie: approachrays)"""
         print 'Generating Grasp Set for %s:%s:%s'%(self.robot.GetName(),self.manip.GetName(),self.target.GetName())
         time.sleep(0.1) # sleep or otherwise viewer might not load well
         N = approachrays.shape[0]
-        Ttarget = self.target.GetTransform()
+        with self.env:
+            Ttarget = self.target.GetTransform()
+
         # transform each ray into the global coordinate system in order to plot it
         gapproachrays = c_[dot(approachrays[:,0:3],transpose(Ttarget[0:3,0:3]))+tile(Ttarget[0:3,3],(N,1)),dot(approachrays[:,3:6],transpose(Ttarget[0:3,0:3]))]
         approachgraphs = [self.env.plot3(points=gapproachrays[:,0:3],pointsize=5,colors=array((1,0,0))),
                           self.env.drawlinelist(points=reshape(c_[gapproachrays[:,0:3],gapproachrays[:,0:3]+0.005*gapproachrays[:,3:6]],(2*N,3)),linewidth=4,colors=array((1,0,0,1)))]
         contactgraph = None
-        statesaver = self.robot.CreateKinBodyStateSaver()
+        totalgrasps = N*len(preshapes)*len(rolls)*len(standoffs)
+        counter = 0
+        self.grasps = []
+        statesaver = self.robot.CreateRobotStateSaver()
         try:
             with self.GripperVisibility(self.manip):
-                totalgrasps = N*len(preshapes)*len(rolls)*len(standoffs)
-                counter = 0
-                self.grasps = []
-                # only the indices used by the TaskManipulation plugin should start with an 'i'
-                graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':preshapes.shape[1],'igrasptrans':12,'forceclosure':1,'grasptrans_nocol':12}
-                self.graspindices = dict()
-                totaldof = 0
-                for name,dof in graspdof.iteritems():
-                    self.graspindices[name] = range(totaldof,totaldof+dof)
-                    totaldof += dof
                 if updateenv:
                     self.env.UpdatePublishedBodies()
-                counter = 0
                 for approachray,roll,preshape,standoff in iterproduct(approachrays,rolls,preshapes,standoffs):
+#                     if counter < 1000:
+#                         counter += 1
+#                         continue
                     print 'grasp %d/%d'%(counter,totalgrasps),'preshape:',preshape
                     counter += 1
-                    grasp = zeros(totaldof)
+                    grasp = zeros(self.totaldof)
                     grasp[self.graspindices.get('igrasppos')] = approachray[0:3]
                     grasp[self.graspindices.get('igraspdir')] = -approachray[3:6]
                     grasp[self.graspindices.get('igrasproll')] = roll
                     grasp[self.graspindices.get('igraspstandoff')] = standoff
                     grasp[self.graspindices.get('igrasppreshape')] = preshape
                     try:
-                        contacts,finalconfig,mindist,volume = self.runGrasp(grasp,graspingnoise=graspingnoise,translate=True,forceclosure=True)
+                        contacts,finalconfig,mindist,volume = self.testGrasp(grasp=grasp,graspingnoise=graspingnoise,translate=True,forceclosure=True,forceclosurethreshold=forceclosurethreshold)
                     except planning_error, e:
                         print 'Grasp Failed: '
                         traceback.print_exc(e)
@@ -137,7 +226,6 @@ class GraspingModel(OpenRAVEModel):
                         self.robot.SetTransform(finalconfig[1])
                         Tgrasp = self.manip.GetEndEffectorTransform()
                         Tlocalgrasp = dot(linalg.inv(self.target.GetTransform()),Tgrasp)
-
                         # find a non-colliding transform
                         self.setPreshape(grasp)
                         dir = self.getGlobalApproachDir(grasp)
@@ -153,7 +241,7 @@ class GraspingModel(OpenRAVEModel):
                     grasp[self.graspindices.get('grasptrans_nocol')] = reshape(transpose(Tlocalgrasp_nocol[0:3,0:4]),12)
                     grasp[self.graspindices.get('forceclosure')] = mindist
                     if mindist > forceclosurethreshold:
-                        print 'found good grasp'
+                        print 'found good grasp',len(self.grasps),'config: ',finalconfig[0][self.manip.GetGripperJoints()]
                         self.grasps.append(grasp)
                 self.grasps = array(self.grasps)
         finally:
@@ -166,24 +254,32 @@ class GraspingModel(OpenRAVEModel):
         with RobotStateSaver(self.robot):
             with self.GripperVisibility(self.manip):
                 time.sleep(1.0) # let viewer update?
-                if options is not None and options.graspindex is not None:
-                    print 'showing grasp %d'%options.graspindex
-                    grasps = [self.grasps[options.graspindex]]
-                    delay=10000000
-                else:
-                    grasps = self.grasps
+                graspingnoise=None
+                if options is not None:
+                    if options.graspindex is not None:
+                        print 'showing grasp %d'%options.graspindex
+                        grasps = [self.grasps[options.graspindex]]
+                        delay=10000000
+                    else:
+                        grasps = self.grasps
+                    graspingnoise=options.graspingnoise
                 for i,grasp in enumerate(grasps):
                     print 'grasp %d/%d'%(i,len(grasps))
                     try:
-                        contacts,finalconfig,mindist,volume = self.runGrasp(grasp,translate=True)
-                        contactgraph = self.drawContacts(contacts) if len(contacts) > 0 else None
-                        self.robot.GetController().Reset(0)
-                        self.robot.SetJointValues(finalconfig[0])
-                        self.robot.SetTransform(finalconfig[1])
-                        self.env.UpdatePublishedBodies()
+                        with self.env:
+                            #self.env.SetDebugLevel(DebugLevel.Verbose)
+                            #contacts,finalconfig,mindist,volume = self.testGrasp(grasp=grasp,translate=True,forceclosure=True,graspingnoise=graspingnoise)
+                            contacts,finalconfig,mindist,volume = self.runGrasp(grasp=grasp,translate=True,forceclosure=True)
+                            if mindist == 0:
+                                print 'grasp is not in force closure!'
+                            contactgraph = self.drawContacts(contacts) if len(contacts) > 0 else None
+                            self.robot.GetController().Reset(0)
+                            self.robot.SetJointValues(finalconfig[0])
+                            self.robot.SetTransform(finalconfig[1])
+                            self.env.UpdatePublishedBodies()
                         time.sleep(delay)
                     except planning_error,e:
-                        print e
+                        print 'bad grasp!',e
     def showgrasp(self,grasp,collisionfree=False):
         with RobotStateSaver(self.robot):
             with self.GripperVisibility(self.manip):
@@ -195,69 +291,39 @@ class GraspingModel(OpenRAVEModel):
                         link.SetTransform(dot(Tdelta,link.GetTransform()))
                     self.env.UpdatePublishedBodies()
                 raw_input('press any key to continue: ')
-    def autogenerate(self,options=None):
-        # disable every body but the target and robot
-        bodies = [b for b in self.env.GetBodies() if b.GetNetworkId() != self.robot.GetNetworkId() and b.GetNetworkId() != self.target.GetNetworkId()]
-        for b in bodies:
-            b.Enable(False)
-        try:
-            friction = None
-            preshapes = None
-            approachrays = None
-            standoffs = None
-            rolls = None
-            avoidlinks = None
-            updateenv=False
-            if options is not None:
-                if len(options.preshapes) > 0:
-                    preshapes = zeros((0,len(self.manip.GetGripperJoints())))
-                    for preshape in options.preshapes:
-                        preshapes = r_[preshapes,[array([float(s) for s in preshape.split()])]]
-                if options.boxdelta is not None:
-                    approachrays = self.computeBoxApproachRays(delta=options.boxdelta,normalanglerange=options.normalanglerange,directiondelta=options.directiondelta)
-                elif options.spheredelta is not None:
-                    approachrays = self.computeBoxApproachRays(delta=options.spheredelta,normalanglerange=options.normalanglerange,directiondelta=options.directiondelta)
-                if len(options.standoffs)>0:
-                    standoffs = array(options.standoffs)
-                if len(options.rolls)>0:
-                    rolls = array(options.rolls)
-                if options.friction is not None:
-                    friction = options.friction
-                if options.avoidlinks is not None:
-                    avoidlinks = [self.robot.GetLink(avoidlink) for avoidlink in options.avoidlinks]
-                updateenv = options.useviewer
-            # check for specific robots
-            if self.robot.GetRobotStructureHash() == '7b789782446d86b95c6fb16de7f204c7' and self.manip.GetName() == 'arm' and self.target.GetKinematicsGeometryHash() == 'bbf03c6db8efc712a765f955a27b0d0f':
-                if preshapes is None:
-                    preshapes=array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2)))
 
-            if preshapes is None:
-                manipprob = BaseManipulation(self.robot)
-                with self.target:
-                    self.target.Enable(False)
-                    self.robot.SetActiveDOFs(self.manip.GetGripperJoints())
-                    manipprob.ReleaseFingers(execute=True)
-                self.robot.WaitForController(0)
-                preshapes = array([self.robot.GetJointValues()[self.manip.GetGripperJoints()]])
-            if approachrays is None:
-                approachrays = self.computeBoxApproachRays(delta=0.02)
-            if rolls is None:
-                rolls = arange(0,2*pi,pi/2)
-            if standoffs is None:
-                standoffs = array([0,0.025])
-            if friction is None:
-                friction = 0.4
-            if avoidlinks is None:
-                avoidlinks = []
-            self.init(friction=friction,avoidlinks=avoidlinks)
-            self.generate(preshapes=preshapes,rolls=rolls,standoffs=standoffs,approachrays=approachrays,updateenv=updateenv)
-            self.save()
-        finally:
-            for b in bodies:
-                b.Enable(True)
-
+    def testGrasp(self,graspingnoise=None,Ngraspingtries = 20,forceclosurethreshold=1e-9,**kwargs):
+        contacts,finalconfig,mindist,volume = self.runGrasp(graspingnoise=0,**kwargs)
+        if mindist > forceclosurethreshold and graspingnoise > 0:
+            print 'testing with noise',graspingnoise
+#             with self.env:
+#                 self.robot.SetTransform(finalconfig[1])
+#                 self.robot.SetJointValues(finalconfig[0])
+#                 self.env.UpdatePublishedBodies()
+#             time.sleep(5)
+            # try several times and make sure that grasp succeeds all the time
+            allfinaltrans = [finalconfig[1]]
+            allfinaljoints = [finalconfig[0]]
+            for iter in range(Ngraspingtries):
+                contacts2,finalconfig2,mindist2,volume2 = self.runGrasp(graspingnoise=graspingnoise,**kwargs)
+                # don't check mindist since slight variations can really affect force closure
+                allfinaltrans.append(finalconfig2[1])
+                allfinaljoints.append(finalconfig2[0])
+            if mindist > 0:
+                # deinty grasps will usually change the configuration greatly, so detect such changes
+                # get the std deviation of all transformations and joints and make sure it is small
+                translationstd = mean(std([T[0:3,3] for T in allfinaltrans],0))
+                jointvaluesstd = self.jointmaxlengths*std(array(allfinaljoints),0)
+                # compute the max distance of each link
+                maxjointvaluestd = max([sum([jointvaluesstd[i] for i in range(self.robot.GetDOF()) if self.robot.DoesAffect(i,link.GetIndex())]) for link in self.robot.GetLinks()])
+                print 'grasp:',translationstd,maxjointvaluestd
+                if translationstd+maxjointvaluestd > 0.7*graspingnoise:
+                    print 'deinty grasp:',translationstd,maxjointvaluestd
+                    mindist = 0
+        return contacts,finalconfig,mindist,volume
     def runGrasp(self,grasp,graspingnoise=None,translate=True,forceclosure=False):
         with self.robot: # lock the environment and save the robot state
+            self.robot.SetTransform(eye(4)) # have to reset transform in order to remove randomness
             self.robot.SetJointValues(grasp[self.graspindices.get('igrasppreshape')],self.manip.GetGripperJoints())
             self.robot.SetActiveDOFs(self.manip.GetGripperJoints(),Robot.DOFAffine.X+Robot.DOFAffine.Y+Robot.DOFAffine.Z if translate else 0)
             return self.grasper.Grasp(direction=grasp[self.graspindices.get('igraspdir')],
@@ -447,24 +513,26 @@ class GraspingModel(OpenRAVEModel):
                           help='The range of angles around the surface normal to approach from (default=%default)')
         parser.add_option('--directiondelta', action='store', type='float',dest='directiondelta',default=0.4,
                           help='The average distance of approach directions for each surface point in radians (default=%default)')
-        parser.add_option('--standoff', action='append', type='float',dest='standoffs',default=[],
+        parser.add_option('--standoff', action='append', type='float',dest='standoffs',default=None,
                           help='Add a standoff distance')
-        parser.add_option('--roll', action='append', type='float',dest='rolls',default=[],
+        parser.add_option('--roll', action='append', type='float',dest='rolls',default=None,
                           help='Add a roll angle')
-        parser.add_option('--preshape', action='append', type='string',dest='preshapes',default=[],
+        parser.add_option('--preshape', action='append', type='string',dest='preshapes',default=None,
                           help='Add a preshape for the manipulator gripper joints')
-        parser.add_option('--avoidlink', action='append', type='string',dest='avoidlinks',default=[],
+        parser.add_option('--avoidlink', action='append', type='string',dest='avoidlinks',default=None,
                           help='Add a link name to avoid at all costs (like sensor links)')
         parser.add_option('--friction', action='store', type='float',dest='friction',default=None,
                           help='Friction between robot and target object (default=0.4)')
+        parser.add_option('--graspingnoise', action='store', type='float',dest='graspingnoise',default=None,
+                          help='Random undeterministic noise to add to the target object, represents the max possible displacement of any point on the object. Noise is added after global direction and start have been determined (default=0)')
         parser.add_option('--graspindex', action='store', type='int',dest='graspindex',default=None,
                           help='If set, then will only show this grasp index')
         return parser
     @staticmethod
     def RunFromParser(Model=None,parser=None):
-        (options, args) = GraspingModel.CreateOptionParser().parse_args()
         if parser is None:
             parser = GraspingModel.CreateOptionParser()
+        (options, args) = parser.parse_args()
         env = Environment()
         try:
             target = None

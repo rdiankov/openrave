@@ -143,8 +143,8 @@ class BaseManipulation:
             raise planning_error()
         resvalues = res.split()
         if outputfinal:
-            final = array([float(resvalues[i]) for i in range(dof)])
-            resvalues=resvalues[dof:]
+            final = array([float(resvalues[i]) for i in range(self.robot.GetActiveDOF())])
+            resvalues=resvalues[len(final):]
         else:
             final=None
         if outputtraj:
