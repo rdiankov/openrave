@@ -60,8 +60,6 @@ public:
         RobotBase::RobotStateSaver saver(_robot);
         RobotBase::ManipulatorPtr pmanip = _robot->GetActiveManipulator();
 
-        _robot->SetTransform(Transform()); // this is necessary to reset any 'randomness' introduced from the current state
-
         // do not clear the trajectory because the user might want to append the grasp point to it
         if( ptraj->GetDOF() != _robot->GetActiveDOF() )
             ptraj->Reset(_robot->GetActiveDOF());
@@ -115,6 +113,8 @@ public:
         vapproachdir = (tTargetOffset*tTarget).rotate(_parameters.vtargetdirection);
 
         if( _parameters.btransformrobot ) {
+            _robot->SetTransform(Transform()); // this is necessary to reset any 'randomness' introduced from the current state
+
             if( !!pmanip ) {
                 tbase.rotfromaxisangle(pmanip->GetPalmDirection(),_parameters.ftargetroll);
 
@@ -438,7 +438,6 @@ public:
 
                 for(int j = 0; j < _robot->GetActiveDOF(); j++)
                     ptemp.q[j] = dofvals[j];
-
                 if(_parameters.breturntrajectory)
                     ptraj->AddPoint(ptemp); 
 
@@ -476,6 +475,7 @@ public:
     {
         int ct = 0;
         if( GetEnv()->CheckCollision(plink,_report) ) {
+            RAVELOG_INFO(str(boost::format("col: %s\n")%_report->__str__()));
             ct |= CT_RegularCollision;
             FOREACH(itavoid,_vAvoidLinkGeometry) {
                 if( *itavoid == _report->plink1 || *itavoid == _report->plink2 ) {
