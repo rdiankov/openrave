@@ -250,7 +250,7 @@ class GraspingModel(OpenRAVEModel):
             contactgraph = None
             statesaver = None
 
-    def show(self,delay=0.5,options=None):
+    def show(self,delay=0.1,options=None):
         with RobotStateSaver(self.robot):
             with self.GripperVisibility(self.manip):
                 time.sleep(1.0) # let viewer update?

@@ -18,7 +18,6 @@
 from __future__ import with_statement # for python 2.5
 
 import sys, copy, time
-from string import atoi,atof
 from optparse import OptionParser
 try:
     from openravepy.metaclass import AutoReloader
@@ -199,6 +198,23 @@ class SolverIKChainDirection3D(AutoReloader):
     def end(self, generator):
         return generator.endIKChainDirection3D(self)
 
+class SolverIKChainRay4D(AutoReloader):
+    solvejointvars = None
+    freejointvars = None
+    Pee = None
+    Dee = None
+    jointtree = None
+    def __init__(self, solvejointvars, freejointvars, Pee, Dee, jointtree):
+        self.solvejointvars = solvejointvars
+        self.freejointvars = freejointvars
+        self.Pee = Pee
+        self.Dee = Dee
+        self.jointtree = jointtree
+    def generate(self, generator):
+        return generator.generateIKChainRay4D(self)
+    def end(self, generator):
+        return generator.endIKChainRay4D(self)
+
 class SolverRotation(AutoReloader):
     T = None
     jointtree = None
@@ -220,6 +236,19 @@ class SolverDirection(AutoReloader):
         return generator.generateDirection(self)
     def end(self, generator):
         return generator.endDirection(self)
+
+class SolverRay(AutoReloader):
+    P = None
+    D = None
+    jointtree = None
+    def __init__(self, P, D, jointtree):
+        self.P = P
+        self.D = D
+        self.jointtree = jointtree
+    def generate(self, generator):
+        return generator.generateRay(self)
+    def end(self, generator):
+        return generator.endRay(self)
 
 class SolverStoreSolution(AutoReloader):
     alljointvars = None
@@ -644,6 +673,58 @@ int main(int argc, char** argv)
     def endIKChainDirection3D(self, node):
         return ''
 
+    def generateIKChainRay4D(self, node):
+        self.freevars = []
+        self.freevardependencies = []
+        self.dictequations = []
+        self.symbolgen = cse_main.numbered_symbols('x')
+        
+        code = "IKFAST_API int getNumFreeParameters() { return %d; }\n"%len(node.freejointvars)
+        if len(node.freejointvars) == 0:
+            code += "IKFAST_API int* getFreeParameters() { return NULL; }\n"
+        else:
+            code += "IKFAST_API int* getFreeParameters() { static int freeparams[] = {"
+            for i,freejointvar in enumerate(node.freejointvars):
+                code += "%d"%(freejointvar[1])
+                if i < len(node.freejointvars)-1:
+                    code += ", "
+            code += "}; return freeparams; }\n"
+        code += "IKFAST_API int getNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
+        code += "IKFAST_API int getIKRealSize() { return sizeof(IKReal); }\n\n"
+        code += 'IKFAST_API int getIKType() { return %d; }\n\n'%IkType.Ray4D
+        code += "/// solves the inverse kinematics equations.\n"
+        code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
+        code += "IKFAST_API bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
+        code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
+        fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"
+        fcode += 'IKReal '
+        
+        for var in node.solvejointvars:
+            fcode += '%s, c%s, s%s,\n'%(var[0].name,var[0].name,var[0].name)
+        for i in range(len(node.freejointvars)):
+            name = node.freejointvars[i][0].name
+            fcode += '%s=pfree[%d], c%s=cos(pfree[%d]), s%s=sin(pfree[%d]),\n'%(name,i,name,i,name,i)
+        for i in range(3):
+            fcode += "_r0%d, r0%d = eerot[%d],\n"%(i,i,i)
+        fcode += "_px, _py, _pz, px = eetrans[0], py = eetrans[1], pz = eetrans[2];\n\n"
+
+        rotsubs = [(Symbol("r%d%d"%(0,i)),Symbol("_r%d%d"%(0,i))) for i in range(3)]
+        rotsubs += [(Symbol("px"),Symbol("_px")),(Symbol("py"),Symbol("_py")),(Symbol("pz"),Symbol("_pz"))]
+
+        psymbols = ["_px","_py","_pz"]
+        for i in range(3):
+            fcode += self.writeEquations(lambda k: "_r%d%d"%(0,i),node.Dee[i])
+            fcode += self.writeEquations(lambda k: psymbols[i],node.Pee[i])
+        for i in range(3):
+            fcode += "r0%d = _r0%d; "%(i,i)
+        fcode += "px = _px; py = _py; pz = _pz;\n"
+
+        fcode += self.generateTree(node.jointtree)
+        code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
+        return code
+    def endIKChainRay4D(self, node):
+        return ''
+
     def generateSolution(self, node):
         code = ''
         numsolutions = 0
@@ -871,6 +952,23 @@ int main(int argc, char** argv)
         return code
     def endDirection(self, node):
         return ''
+    def generateRay(self, node):
+        code = ''
+        listequations = []
+        names = []
+        for i in range(3):
+            listequations.append(node.D[i])
+            names.append(Symbol('_r%d%d'%(0,i)))
+        for i in range(3):
+            listequations.append(node.P[i])
+        names.append(Symbol('_px'))
+        names.append(Symbol('_py'))
+        names.append(Symbol('_pz'))
+        code += self.writeEquations(lambda i: names[i],listequations)
+        code += self.generateTree(node.jointtree)
+        return code
+    def endRay(self, node):
+        return ''
     def generateStoreSolution(self, node):
         code = 'vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();\n'
         code += 'solution.basesol.resize(%d);\n'%len(node.alljointvars)
@@ -1076,12 +1174,12 @@ class IKFastSolver(AutoReloader):
                     joint = IKFastSolver.Joint()
                     joint.type = bodyjoint.GetType().name.lower()
                     joint.jointindex = bodyjoint.GetJointIndex()
-                    joint.jcoeff = [round(atof(x),5) for x in bodyjoint.GetMimicCoeffs()]
+                    joint.jcoeff = [round(float(x),5) for x in bodyjoint.GetMimicCoeffs()]
                     joint.isfreejoint = False
                     joint.isdummy = False
-                    joint.Tright = self.normalizeRotation(Matrix(4,4,[Real(round(atof(x),5),30) for x in bodyjoint.GetInternalHierarchyRightTransform().flat]))
-                    joint.Tleft = self.normalizeRotation(Matrix(4,4,[Real(round(atof(x),5),30) for x in bodyjoint.GetInternalHierarchyLeftTransform().flat]))
-                    joint.axis = Matrix(3,1,[Real(round(atof(x),4),30) for x in bodyjoint.GetInternalHierarchyAxis(0)])
+                    joint.Tright = self.normalizeRotation(Matrix(4,4,[Real(round(float(x),5),30) for x in bodyjoint.GetInternalHierarchyRightTransform().flat]))
+                    joint.Tleft = self.normalizeRotation(Matrix(4,4,[Real(round(float(x),5),30) for x in bodyjoint.GetInternalHierarchyLeftTransform().flat]))
+                    joint.axis = Matrix(3,1,[Real(round(float(x),4),30) for x in bodyjoint.GetInternalHierarchyAxis(0)])
                     joint.linkcur = bodyjoint.GetSecondAttached().GetIndex()
                     joint.linkbase = bodyjoint.GetFirstAttached().GetIndex()
                     if kinbody.DoesAffect(bodyjoint.GetJointIndex(),bodyjoint.GetFirstAttached().GetIndex()):
@@ -1100,21 +1198,21 @@ class IKFastSolver(AutoReloader):
                 tokens = f.read().split()
             else:
                 raise ValueError('no valid way to initialize ikfast solver')
-            numdof = atoi(tokens[0])
+            numdof = int(tokens[0])
             offset = 1
             for i in range(numdof):
                 joint = IKFastSolver.Joint()
                 joint.type = tokens[offset+0]
-                joint.linkcur = atoi(tokens[offset+1])
-                joint.linkbase = atoi(tokens[offset+2])
-                joint.jointindex = atoi(tokens[offset+3])
-                joint.axis = Matrix(3,1,[Real(round(atof(x),4),30) for x in tokens[offset+4:offset+7]])
+                joint.linkcur = int(tokens[offset+1])
+                joint.linkbase = int(tokens[offset+2])
+                joint.jointindex = int(tokens[offset+3])
+                joint.axis = Matrix(3,1,[Real(round(float(x),4),30) for x in tokens[offset+4:offset+7]])
                 joint.axis /= sqrt(joint.axis.dot(joint.axis))
-                joint.jcoeff = [round(atof(x),5) for x in tokens[offset+7:offset+9]]
+                joint.jcoeff = [round(float(x),5) for x in tokens[offset+7:offset+9]]
                 joint.Tleft = eye(4)
-                joint.Tleft[0:3,0:4] = self.normalizeRotation(Matrix(3,4,[Real(round(atof(x),5),30) for x in tokens[offset+9:offset+21]]))
+                joint.Tleft[0:3,0:4] = self.normalizeRotation(Matrix(3,4,[Real(round(float(x),5),30) for x in tokens[offset+9:offset+21]]))
                 joint.Tright = eye(4)
-                joint.Tright[0:3,0:4] = self.normalizeRotation(Matrix(3,4,[Real(round(atof(x),5),30) for x in tokens[offset+21:offset+33]]))
+                joint.Tright[0:3,0:4] = self.normalizeRotation(Matrix(3,4,[Real(round(float(x),5),30) for x in tokens[offset+21:offset+33]]))
                 joint.isfreejoint = False
                 joint.isdummy = False
                 alljoints.append(joint)
@@ -1408,7 +1506,7 @@ class IKFastSolver(AutoReloader):
             raise ValueError('solve joints needs to be 2')
 
         # rotate all links so that basedir becomes the z-axis
-        Trightnormaliation = self.rotateDirection(sourcedir=Matrix(3,1,[Real(round(atof(x),4),30) for x in basedir]), targetdir = Matrix(3,1,[S.Zero,S.Zero,S.One]))
+        Trightnormaliation = self.rotateDirection(sourcedir=Matrix(3,1,[Real(round(float(x),4),30) for x in basedir]), targetdir = Matrix(3,1,[S.Zero,S.Zero,S.One]))
         Links[-1] *= self.affineInverse(Trightnormaliation)
 
         # when solving equations, convert all free variables to constants
@@ -1616,9 +1714,116 @@ class IKFastSolver(AutoReloader):
                 solverbranches.append((freevarcond,transtree))
 
         if len(solverbranches) == 0 or not solverbranches[-1][0] is None:
-            print 'failed to solve for kinematics'
+            print 'failed to solve for direction3d kinematics'
             return None
         return SolverIKChainTranslation3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], TfirstleftInv[0:3,0:3] * Pee + TfirstleftInv[0:3,3] , [SolverBranchConds(solverbranches)])
+
+    def solveFullIK_Ray4D(self,chain,Tee,basedir,basepos):
+        """basedir,basepos needs to be filled with a direction and position of the ray to control"""
+        Links, jointvars, isolvejointvars, ifreejointvars = self.forwardKinematicsChain(chain)
+        Tfirstleft = Links.pop(0)
+        TfirstleftInv = Tfirstleft.inv()
+        LinksInv = [self.affineInverse(link) for link in Links]
+        solvejointvars = [jointvars[i] for i in isolvejointvars]
+        freejointvars = [jointvars[i] for i in ifreejointvars]
+        
+        if not len(solvejointvars) == 4:
+            raise ValueError('solve joints needs to be 4')
+
+        # rotate all links so that basedir becomes the z-axis
+        Trightnormaliation = self.rotateDirection(sourcedir=Matrix(3,1,[Real(round(float(x),4),30) for x in basedir]), targetdir = Matrix(3,1,[S.Zero,S.Zero,S.One]))
+        Links[-1] *= self.affineInverse(Trightnormaliation)
+
+        # when solving equations, convert all free variables to constants
+        self.freevarsubs = []
+        for freevar in freejointvars:
+            var = self.Variable(freevar)
+            self.freevarsubs += [(cos(var.var), var.cvar), (sin(var.var), var.svar)]
+        
+        Dee = Matrix(3,1,[x for x in Tee[0,0:3]])
+        Pee = Matrix(3,1,[x for x in Tee[0:3,3]])
+        # Dee = Tfirstleft.inv() * Dee_in
+        # LinksAccumLeftInv[x] * Dee = LinksAccumRight[x]
+        # LinksAccumLeftInv[x] = InvLinks[x-1] * ... * InvLinks[0]
+        # LinksAccumRight[x] = Links[x]*Links[x+1]...*Links[-1]
+        LinksAccumLeftAll = [eye(4)]
+        LinksAccumLeftInvAll = [eye(4)]
+        LinksAccumRightAll = [eye(4)]
+        for i in range(len(Links)):
+            LinksAccumLeftAll.append(LinksAccumLeftAll[-1]*Links[i])
+            LinksAccumLeftInvAll.append(LinksInv[i]*LinksAccumLeftInvAll[-1])
+            LinksAccumRightAll.append(Links[len(Links)-i-1]*LinksAccumRightAll[-1])
+        LinksAccumRightAll.reverse()
+        
+        LinksAccumLeftAll = map(lambda T: self.affineSimplify(T), LinksAccumLeftAll)
+        LinksAccumLeftInvAll = map(lambda T: self.affineSimplify(T), LinksAccumLeftInvAll)
+        LinksAccumRightAll = map(lambda T: self.affineSimplify(T), LinksAccumRightAll)
+        
+        solverbranches = []
+        # depending on the free variable values, sometimes the rotation matrix can have zeros where it does not expect zeros. Therefore, test all boundaries of all free variables
+        for freevar in freejointvars+[None]:
+            freevalues = [0,pi/2,pi,-pi/2] if freevar is not None else [None]
+            for freevalue in freevalues:
+                print 'attempting ',freevar,' = ',freevalue
+                if freevar is not None and freevalue is not None:
+                    var = self.Variable(freevar)
+                    valuesubs = [(var.var,freevalue),(var.svar,sin(freevalue)),(var.cvar,cos(freevalue))] if freevalue is not None else []
+                    freevarcond = freevar-freevalue
+                else:
+                    valuesubs = []
+                    freevarcond = None
+
+                Positions = [Matrix(3,1,map(lambda x: self.customtrigsimp(x), LinksAccumRightAll[i][0:3,3].subs(valuesubs))) for i in range(len(LinksAccumRightAll))]
+                Positionsee = [Matrix(3,1,map(lambda x: self.customtrigsimp(x), (LinksAccumLeftInvAll[i][0:3,0:3]*Pee+LinksAccumLeftInvAll[i][0:3,3]).subs(valuesubs))) for i in range(len(LinksAccumLeftInvAll))]                
+                # try to shift all the constants of each Position expression to one side
+                for i in range(len(Positions)):
+                    for j in range(3):
+                        p = Positions[i][j]
+                        pee = Positionsee[i][j]
+                        pconstterm = None
+                        peeconstterm = None
+                        if p.is_Add:
+                            pconstterm = [term for term in p.args if term.is_number]
+                        elif p.is_number:
+                            pconstterm = [p]
+                        else:
+                            continue
+                        if pee.is_Add:
+                            peeconstterm = [term for term in pee.args if term.is_number]
+                        elif pee.is_number:
+                            peeconstterm = [pee]
+                        else:
+                            continue
+                        if len(pconstterm) > 0 and len(peeconstterm) > 0:
+                            # shift it to the one that has the least terms
+                            for term in peeconstterm if len(p.args) < len(pee.args) else pconstterm:
+                                Positions[i][j] -= term
+                                Positionsee[i][j] -= term
+                solsubs = self.freevarsubs[:]
+                rottree = []
+                endbranchtree = [SolverSequence([rottree])]
+                curtransvars = solvejointvars[0:2]
+                transtree = self.solveIKTranslationAll(Positions,Positionsee,curtransvars,
+                                                       otherunsolvedvars = [],
+                                                       othersolvedvars = freejointvars,
+                                                       endbranchtree=endbranchtree,
+                                                       solsubs = solsubs)
+
+                storesolutiontree = [SolverStoreSolution (jointvars)]
+                solvedvarsubs = valuesubs+self.freevarsubs
+                for tvar in solvejointvars[0:2]:
+                    solvedvarsubs += [(cos(tvar),self.Variable(tvar).cvar),(sin(tvar),self.Variable(tvar).svar)]
+                rotsubs = [(Symbol('r%d%d'%(0,i)),Symbol('_r%d%d'%(0,i))) for i in range(3)]
+                rotvars = [var for var in jointvars if any([var==svar for svar in solvejointvars[2:4]])]
+                D = Matrix(3,1, map(lambda x: x.subs(self.freevarsubs), LinksAccumRightAll[0][0:3,2]))
+                rottree += self.solveIKRotation(R=D,Ree = Dee.subs(rotsubs),rawvars = rotvars,endbranchtree=storesolutiontree,solvedvarsubs=solvedvarsubs)
+                Tlinksub = LinksAccumLeftInvAll[0].subs(solvedvarsubs)
+                solverbranches.append((freevarcond,[SolverRay(Tlinksub[0:3,0:3]*Pee+Tlinksub[0:3,3],Tlinksub[0:3,0:3]*Dee, rottree)]))
+
+        if len(solverbranches) == 0 or not solverbranches[-1][0] is None:
+            print 'failed to solve for ray4d kinematics'
+            return None
+        return SolverIKChainRay4D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], TfirstleftInv[0:3,0:3] * Pee + TfirstleftInv[0:3,3], TfirstleftInv[0:3,0:3] * Dee, [SolverBranchConds(solverbranches)])
         
     def solveFullIK_6D(self, chain, Tee):
         Links, jointvars, isolvejointvars, ifreejointvars = self.forwardKinematicsChain(chain)
@@ -2164,7 +2369,7 @@ class IKFastSolver(AutoReloader):
                         for sraw in checkforzero:
                             s = sraw.subs(solvedvarsubs)
                             if self.isExpressionUnique(ignorezerochecks+[b[0] for b in jointbranches],s):
-                                Rsubs = Matrix(3,3,map(lambda x: x.subs(s,0), R))
+                                Rsubs = Matrix(R.shape[0],R.shape[1],map(lambda x: x.subs(s,0), R))
                                 if not all([r==0 for r in R-Rsubs]):
                                     addignore = []
                                     if s.is_Function:
@@ -2831,7 +3036,7 @@ ikfast.py --fkfile=fk_WAM7.txt --baselink=0 --eelink=7 --savefile=ik.cpp 1 2 3 4
         print('Error: Not all arguments specified')
         sys.exit(1)
 
-    solvejoints = [atoi(joint) for joint in args]
+    solvejoints = [int(joint) for joint in args]
     solvefn=IKFastSolver.solveFullIK_6D
     numexpected = 6
     if options.rotation3donly:

@@ -269,6 +269,23 @@ private:
             if( !_pfnik(NULL, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions) )
                 return SR_Continue;
         }
+        else if( param.GetType() == IkParameterization::Type_Ray4D ) {
+            Vector pos = param.GetRay().pos;
+            Vector dir = param.GetRay().dir;
+            IKReal eetrans[3] = {pos.x,pos.y,pos.z};
+            IKReal eerot[9] = {dir.x, dir.y, dir.z,0,0,0,0,0,0};
+            if( !_pfnik(eetrans, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions) )
+                return SR_Continue;
+            FOREACH(itsol,vsolutions) {
+                FOREACH(it,itsol->basesol) {
+                    it->freeind=-1;
+                }
+            }
+//            IKReal s[4];
+//            IKReal free[10];
+//            vsolutions[0].GetSolution(s,free);
+//            RAVELOG_INFO("sol %d: %f %f %f %f\n",(int)vsolutions[0].GetFree().size(),s[0],s[1],s[2],s[3]);
+        }
         else
             throw openrave_exception(str(boost::format("don't support ik parameterization %d")%param.GetType()));
 

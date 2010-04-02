@@ -52,7 +52,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                 if iktype is None:
                     return False
                 if int(self.iktype) != int(iktype):
-                    raise ValueError('ik does not match types')
+                    raise ValueError('ik does not match types %s!=%s'%(self.iktype,iktype))
                 self.iksolver = self.env.CreateIkSolver(ikname+iksuffix)
         if self.iksolver is not None:
             self.manip.SetIKSolver(self.iksolver)
@@ -82,6 +82,8 @@ class InverseKinematicsModel(OpenRAVEModel):
                 iktype = IkParameterization.Type.Direction3D
             if options.translation3donly:
                 iktype = IkParameterization.Type.Translation3D
+            if options.ray4donly:
+                iktype = IkParameterization.Type.Ray4D
             forceikbuild=options.force
             precision=options.precision
             accuracy=options.accuracy
@@ -112,10 +114,19 @@ class InverseKinematicsModel(OpenRAVEModel):
         if self.iktype == IkParameterization.Type.Rotation3D:
             solvefn=ikfast.IKFastSolver.solveFullIK_Rotation3D
         elif self.iktype == IkParameterization.Type.Direction3D:
+            basedir=self.manip.GetDirection()
             def solveFullIK_Direction3D(*args,**kwargs):
-                kwargs['basedir'] = self.manip.GetDirection()
+                kwargs['basedir'] = basedir
                 return ikfast.IKFastSolver.solveFullIK_Direction3D(*args,**kwargs)
             solvefn=solveFullIK_Direction3D
+        elif self.iktype == IkParameterization.Type.Ray4D:
+            basedir=self.manip.GetDirection()
+            basepos=self.manip.GetGraspTransform()[0:3,3]
+            def solveFullIK_Ray4D(*args,**kwargs):
+                kwargs['basedir'] = basedir
+                kwargs['basepos'] = basepos
+                return ikfast.IKFastSolver.solveFullIK_Ray4D(*args,**kwargs)
+            solvefn=solveFullIK_Ray4D
         elif self.iktype == IkParameterization.Type.Translation3D:
             solvefn=ikfast.IKFastSolver.solveFullIK_Translation3D
         elif self.iktype == IkParameterization.Type.Transform6D:
@@ -141,6 +152,8 @@ class InverseKinematicsModel(OpenRAVEModel):
             self.dofexpected = 3
         elif self.iktype == IkParameterization.Type.Transform6D:
             self.dofexpected = 6
+        elif self.iktype == IkParameterization.Type.Ray4D:
+            self.dofexpected = 4
         else:
             raise ValueError('bad type')
 
@@ -256,6 +269,31 @@ class InverseKinematicsModel(OpenRAVEModel):
                     else:
                         print 'failed to find: ',targetquat,'solution is: ',orgvalues
                 return success/numiktests
+            elif self.iktype == IkParameterization.Type.Ray4D:
+                success = 0.0
+                for i in range(numiktests):
+                    while True:
+                        self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
+                        if not self.robot.CheckSelfCollision():
+                            break
+                    orgvalues = self.robot.GetJointValues()[self.manip.GetArmJoints()]
+                    targetdir = dot(self.manip.GetEndEffectorTransform()[0:3,0:3],self.manip.GetDirection())
+                    targetpos = self.manip.GetEndEffectorTransform()[0:3,3]
+                    targetprojpos = targetpos - targetdir*dot(targetdir,targetpos)
+                    self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
+                    sol = self.manip.FindIKSolution(IkParameterization(Ray(targetpos,targetdir),self.iktype),False)
+                    if sol is not None:
+                        self.robot.SetJointValues(sol,self.manip.GetArmJoints())
+                        realdir = dot(self.manip.GetEndEffectorTransform()[0:3,0:3],self.manip.GetDirection())
+                        realpos = self.manip.GetEndEffectorTransform()[0:3,3]
+                        realprojpos = realpos - realdir*dot(realdir,realpos)
+                        if sum((targetdir-realdir)**2) < 1e-7 and sum((targetprojpos-realprojpos)**2) < 1e-6:
+                            success += 1
+                        else:
+                            print 'wrong solution to: ',targetpos,targetdir, 'returned is: ',realpos,realdir,'wrong sol is:',sol
+                    else:
+                        print 'failed to find: ',targetpos,targetdir,'solution is: ',orgvalues
+                return success/numiktests
             else:
                 basemanip = BaseManipulation(self.robot)
                 successrate = basemanip.DebugIK(numiters=numiktests)
@@ -323,6 +361,8 @@ class InverseKinematicsModel(OpenRAVEModel):
                           help='If true, need to specify only 2 solve joints and will solve for a target direction')
         parser.add_option('--translation3donly', action='store_true', dest='translation3donly',default=False,
                           help='If true, need to specify only 3 solve joints and will solve for a target translation')
+        parser.add_option('--ray4donly', action='store_true', dest='ray4donly',default=False,
+                          help='If true, need to specify only 4 solve joints and will solve for a target ray')
         parser.add_option('--usedummyjoints', action='store_true',dest='usedummyjoints',default=False,
                           help='Treat the unspecified joints in the kinematic chain as dummy and set them to 0. If not specified, treats all unspecified joints as free parameters.')
         parser.add_option('--freeinc', action='store', type='float', dest='freeinc',default=None,
@@ -351,6 +391,8 @@ class InverseKinematicsModel(OpenRAVEModel):
                     iktype = IkParameterization.Type.Direction3D
                 if options.translation3donly:
                     iktype = IkParameterization.Type.Translation3D
+                if options.ray4donly:
+                    iktype = IkParameterization.Type.Ray4D
                 if options.manipname is not None:
                     robot.SetActiveManipulator(options.manipname)
                 ikmodel = InverseKinematicsModel(robot,iktype=iktype)

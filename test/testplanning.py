@@ -365,7 +365,7 @@ def test_hrp2():
     python inversereachability.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm_chest --heightthresh=0.02 --quatthresh=0.2
     python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.01 --normalanglerange=1 --avoidlink=RWristCam
     python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.01 --normalanglerange=1 --graspingnoise=0.005 --noviewer
-    rosrun openrave_database grasping_ros.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.01 --normalanglerange=1 --graspingnoise=0.005 --launchservice='8*localhost'
+    rosrun openrave_database grasping_ros.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm_chest --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.01 --normalanglerange=1 --graspingnoise=0.005 --launchservice='8*localhost'
 
     import inversereachability
     env = Environment()
@@ -381,12 +381,23 @@ def test_hrp2():
     env.AddRobot(hand)
     hand.SetTransform(Tgrasp)
 
+    # test head movement
+    import inversekinematics
+    env = Environment()
+    robot = env.ReadRobotXMLFile('robots/hrp2jsk08.robot.xml')
+    env.AddRobot(robot)
+    robot.SetActiveManipulator('head')
+    manip = robot.GetActiveManipulator()
+    ikmodel = inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Direction3D)
+    if not ikmodel.load():
+        ikmodel.generate()
+    
     import mobilemanipulation,graspplanning
     env = Environment()
     env.SetViewer('qtcoin')
-    env.Load('scenes/r602cerealmanip.env.xml')
+    env.Load('scenes/r602kitchen1.env.xml')
     robot = env.GetRobots()[0]
-    robot.SetActiveManipulator('leftarm')
+    robot.SetActiveManipulator('leftarm_chest')
     manip = robot.GetActiveManipulator()
     planning = graspplanning.GraspPlanning(robot,nodestinations=True)
     gmodel=planning.graspables[0][0]
@@ -396,18 +407,7 @@ def test_hrp2():
     logllthresh = 0.5
     basemanip = interfaces.BaseManipulation(robot)
     #h = gr.showBaseDistribution(thresh=1.0,logllthresh=logllthresh)
-    gr.testSampling(weight=weight,logllthresh=logllthresh,randomgrasps=False,randomplacement=False,updateenv=False)
-    configsampler = gr.sampleValidPlacementIterator(weight=weight,logllthresh=logllthresh,randomgrasps=False,randomplacement=False,updateenv=False)
-    while True:
-        robot.GetController().Reset(0)
-        with env:
-            pose,values,grasp,graspindex = configsampler.next()
-            print 'found',graspindex
-            robot.SetTransform(pose)
-            gr.gmodel.setPreshape(grasp)
-            robot.SetJointValues(values[manip.GetArmJoints()],manip.GetArmJoints())
-        basemanip.CloseFingers()
-        robot.WaitForController(0)
+    gr.testSampling(weight=weight,logllthresh=logllthresh,randomgrasps=True,randomplacement=False,updateenv=False)
 
     validgrasps,validindices = gr.gmodel.computeValidGrasps(checkik=False,backupdist=0.01)
     gr.gmodel.showgrasp(validgrasps[0],collisionfree=True)
@@ -432,3 +432,49 @@ def test_hrp2():
     robot.SetJointValues([1.57,-1.57],manip.GetArmJoints()[-2:])
     report = CollisionReport()
     print robot.CheckSelfCollision(report)
+
+def test_drill():
+    python inversekinematics.py --robot=/home/leus/drilling/drill_fk.robot.xml --ray4donly
+    from openravepy import *
+    import numpy,time
+    from openravepy.examples import inversekinematics
+    import ikfast
+    from ikfast import SolverStoreSolution, SolverSequence
+    from sympy import *
+    env = Environment()
+    env.Reset()
+    robot = env.ReadRobotXMLFile('/home/leus/drilling/drill_fk.robot.xml')
+    env.AddRobot(robot)
+    manip = robot.GetActiveManipulator()
+    ikmodel = inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
+    #self.generate()
+    basedir = manip.GetDirection()
+    basepos = manip.GetGraspTransform()[0:3,3]
+    def solveFullIK_Ray4D(*args,**kwargs):
+        kwargs['basedir'] = basedir
+        kwargs['basepos'] = basepos
+        return ikfast.IKFastSolver.solveFullIK_Direction3D(*args,**kwargs)
+
+    solvefn=solveFullIK_Ray4D
+    solvejoints = list(manip.GetArmJoints())
+    freejoints = []
+    sourcefilename = 'temp.cpp'
+    self = ikfast.IKFastSolver(kinbody=robot,accuracy=None,precision=None)
+    #code = self.generateIkSolver(manip.GetBase().GetIndex(),manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejoints,usedummyjoints=False,solvefn=solvefn)
+    baselink=manip.GetBase().GetIndex()
+    eelink=manip.GetEndEffector().GetIndex()
+    alljoints = self.getJointsInChain(baselink, eelink)
+    usedummyjoints=False
+    chain = []
+    for joint in alljoints:
+        issolvejoint = any([i == joint.jointindex for i in solvejoints])
+        joint.isdummy = usedummyjoints and not issolvejoint and not any([i == joint.jointindex for i in freeparams])
+        joint.isfreejoint = not issolvejoint and not joint.isdummy
+        chain.append(joint)
+    Tee = eye(4)
+    for i in range(0,3):
+        for j in range(0,3):
+            Tee[i,j] = Symbol("r%d%d"%(i,j))
+    Tee[0,3] = Symbol("px")
+    Tee[1,3] = Symbol("py")
+    Tee[2,3] = Symbol("pz")

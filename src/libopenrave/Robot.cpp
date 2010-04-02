@@ -131,6 +131,17 @@ bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, cons
         else
             localgoal.SetDirection(goal.GetDirection());
     }
+    else if( goal.GetType() == IkParameterization::Type_Ray4D ) {
+        if( min((_tGrasp.rot-Vector(1,0,0,0)).lengthsqr4(),(_tGrasp.rot+Vector(1,0,0,0)).lengthsqr4()) > 1e-8f )
+            throw openrave_exception("Grasp transform has to be the identity for ray-only IK");
+        if( !!_pBase ) {
+            Transform tbaseinv = _pBase->GetTransform().inverse();
+            localgoal.SetRay(RAY(tbaseinv*goal.GetRay().pos,tbaseinv.rotate(goal.GetRay().dir)));
+        }
+        else {
+            localgoal.SetRay(goal.GetRay());
+        }
+    }
     else
         throw openrave_exception(str(boost::format("does not support parameterization %d")%goal.GetType()));
 
@@ -177,6 +188,17 @@ bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, con
             localgoal.SetDirection(_pBase->GetTransform().inverse().rotate(goal.GetDirection()));
         else
             localgoal.SetDirection(goal.GetDirection());
+    }
+    else if( goal.GetType() == IkParameterization::Type_Ray4D ) {
+        if( min((_tGrasp.rot-Vector(1,0,0,0)).lengthsqr4(),(_tGrasp.rot+Vector(1,0,0,0)).lengthsqr4()) > 1e-8f )
+            throw openrave_exception("Grasp transform has to be the identity for ray-only IK");
+        if( !!_pBase ) {
+            Transform tbaseinv = _pBase->GetTransform().inverse();
+            localgoal.SetRay(RAY(tbaseinv*goal.GetRay().pos,tbaseinv.rotate(goal.GetRay().dir)));
+        }
+        else {
+            localgoal.SetRay(goal.GetRay());
+        }
     }
     else
         throw openrave_exception(str(boost::format("does not support parameterization %d")%goal.GetType()));
