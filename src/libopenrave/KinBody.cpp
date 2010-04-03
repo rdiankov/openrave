@@ -119,9 +119,9 @@ AABB KinBody::Link::GEOMPROPERTIES::ComputeAABB(const Transform& t) const
         ab.pos = tglobal.trans;
         break;
     case GeomCylinder:
-        ab.extents.x = (dReal)0.5*tglobal.m[2]*vGeomData.y + RaveSqrt(1-tglobal.m[2]*tglobal.m[2])*vGeomData.x;
-        ab.extents.y = (dReal)0.5*tglobal.m[6]*vGeomData.y + RaveSqrt(1-tglobal.m[6]*tglobal.m[6])*vGeomData.x;
-        ab.extents.z = (dReal)0.5*tglobal.m[10]*vGeomData.y + RaveSqrt(1-tglobal.m[10]*tglobal.m[10])*vGeomData.x;
+        ab.extents.x = (dReal)0.5*RaveFabs(tglobal.m[2])*vGeomData.y + RaveSqrt(1-tglobal.m[2]*tglobal.m[2])*vGeomData.x;
+        ab.extents.y = (dReal)0.5*RaveFabs(tglobal.m[6])*vGeomData.y + RaveSqrt(1-tglobal.m[6]*tglobal.m[6])*vGeomData.x;
+        ab.extents.z = (dReal)0.5*RaveFabs(tglobal.m[10])*vGeomData.y + RaveSqrt(1-tglobal.m[10]*tglobal.m[10])*vGeomData.x;
         ab.pos = tglobal.trans;//+(dReal)0.5*vGeomData.y*Vector(tglobal.m[2],tglobal.m[6],tglobal.m[10]);
         break;
     case GeomTrimesh:
@@ -428,6 +428,7 @@ bool KinBody::Link::GEOMPROPERTIES::ValidateContactNormal(const Vector& _positio
     Transform tinv = _t.inverse();
     Vector position = tinv*_position;
     Vector normal = tinv.rotate(_normal);
+    const dReal feps=0.00005f;
     switch(GetType()) {
     case KinBody::Link::GEOMPROPERTIES::GeomBox: {
         // transform position in +x+y+z octant
@@ -448,7 +449,6 @@ bool KinBody::Link::GEOMPROPERTIES::ValidateContactNormal(const Vector& _positio
         dReal xaxis = -vGeomData.z*tposition.y+vGeomData.y*tposition.z;
         dReal yaxis = -vGeomData.x*tposition.z+vGeomData.z*tposition.x;
         dReal zaxis = -vGeomData.y*tposition.x+vGeomData.x*tposition.y;
-        const dReal feps=0.00005f;
         dReal penetration=0;
         if( zaxis < feps && yaxis > -feps ) { // x-plane
             if( RaveFabs(tnormal.x) > RaveFabs(penetration) )
@@ -469,17 +469,18 @@ bool KinBody::Link::GEOMPROPERTIES::ValidateContactNormal(const Vector& _positio
         break;
     }
     case KinBody::Link::GEOMPROPERTIES::GeomCylinder: { // z-axis
-        bool bInsideCircle = (position.x+position.x + position.y+position.y)<vGeomData.x*vGeomData.x;
-        bool bInsideHeight = RaveFabs(position.z)<vGeomData.y;
-        if( bInsideCircle && !bInsideHeight && normal.z*position.x<0 ) {
+        dReal fInsideCircle = position.x*position.x+position.y*position.y-vGeomData.x*vGeomData.x;
+        dReal fInsideHeight = 2.0f*RaveFabs(position.z)-vGeomData.y;
+        if( fInsideCircle < -feps && fInsideHeight > -feps && normal.z*position.z<0 ) {
             _normal = -_normal;
             return true;
         }
-        if( !bInsideCircle && bInsideHeight && normal.x*position.x+normal.y*position.y < 0)
+        if( fInsideCircle > -feps && fInsideHeight < -feps && normal.x*position.x+normal.y*position.y < 0 ) {
             _normal = -_normal;
             return true;
         }
         break;
+    }
     case KinBody::Link::GEOMPROPERTIES::GeomSphere:
         if( dot3(normal,position) < 0 ) {
             _normal = -_normal;
