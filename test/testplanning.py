@@ -366,6 +366,7 @@ def test_hrp2():
     python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.01 --normalanglerange=1 --avoidlink=RWristCam
     python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.01 --normalanglerange=1 --graspingnoise=0.005 --noviewer
     rosrun openrave_database grasping_ros.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm_chest --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.01 --normalanglerange=1 --graspingnoise=0.005 --launchservice='8*localhost'
+    rosrun openrave_database grasping_ros.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm_chest2 --target=scenes/jskcup0.kinbody.xml --standoff=0 --boxdelta=0.01 --normalanglerange=1 --graspingnoise=0.005 --launchservice='8*localhost'
 
     import inversereachability
     env = Environment()
@@ -392,13 +393,25 @@ def test_hrp2():
     if not ikmodel.load():
         ikmodel.generate()
     
-    import mobilemanipulation,graspplanning
+    import inversereachability.mobilemanipulation,graspplanning
     env = Environment()
     env.SetViewer('qtcoin')
     env.Load('scenes/r602kitchen1.env.xml')
     robot = env.GetRobots()[0]
-    robot.SetActiveManipulator('leftarm_chest')
-    manip = robot.GetActiveManipulator()
+
+    # define all the manipulators to use
+    manips = [robot.GetManipulators('leftarm_chest'), robot.GetManipulators('leftarm_chest2'), robot.GetManipulators('rightarm_chest'), robot.GetManipulators('rightarm_chest2')]
+    grmodels = []
+    for manip in manips:
+        robot.SetActiveManipulator(manip)
+        irmodels = [inversereachability.InverseReachabilityModelState(robot=robot),inversereachability.InverseReachabilityModelState(robot=robot)]
+        for irmodel in irmodels:
+            irmodel.load()
+        grmodels.append([mobilemanipulation.GraspReachability(robot=robot,gmodel=gmodel,irmodel=irmodel) for irmodel in irmodels])
+        
+    manip = manips[1]
+    robot.SetActiveManipulator(manip)
+
     planning = graspplanning.GraspPlanning(robot,nodestinations=True)
     gmodel=planning.graspables[0][0]
     target = gmodel.target

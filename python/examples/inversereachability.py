@@ -584,5 +584,10 @@ class InverseReachabilityModel(OpenRAVEModel):
         Model = lambda robot: InverseReachabilityModel(robot=robot)
         OpenRAVEModel.RunFromParser(Model=Model,parser=parser)
 
+class InverseReachabilityModelState(InverseReachabilityModel):
+    """inverse reachability model that tracks the state of the robot"""
+    def __init__(self,robot):
+        InverseReachabilityModel.__init__(self,robot=robot)    
+
 if __name__ == "__main__":
     InverseReachabilityModel.RunFromParser()
