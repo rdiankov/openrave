@@ -51,7 +51,7 @@ if(ODE_CONFIG_EXECUTABLE)
   endif(_odeconfig_double )
 else(ODE_CONFIG_EXECUTABLE)
   # ode include files in local directory
-  if( NOT MSVC70 AND NOT MSVC71 AND NOT MSVC80 AND NOT MSVC81 )
+  if( MSVC AND NOT MSVC70 AND NOT MSVC71 AND NOT MSVC80 AND NOT MSVC81 )
   	# must be MSVC90 or later?
   	set(ODE_LIBRARY_FOUND 1)
     set( ODE_CXXFLAGS "-DdDOUBLE")
