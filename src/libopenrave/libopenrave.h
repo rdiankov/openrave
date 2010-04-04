@@ -47,6 +47,7 @@ build openrave must include (used in place of rave.h). Precompiled header.
 #include <map>
 #include <set>
 #include <string>
+#include <algorithm>
 
 #define FOREACH(it, v) for(typeof((v).begin()) it = (v).begin(); it != (v).end(); (it)++)
 #define FOREACH_NOINC(it, v) for(typeof((v).begin()) it = (v).begin(); it != (v).end(); )
@@ -212,6 +213,12 @@ inline static dReal TransformDistanceFast(const Transform& t1, const Transform& 
 
 void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2);
 
+inline bool IsValidCharInName(char c) { return isalnum(c) || c == '_' || c == '-'; }
+ inline bool IsValidName(const std::string& s) {
+    if( s.size() == 0 )
+        return false;
+    return std::count_if(s.begin(), s.end(), IsValidCharInName) == (int)s.size();
+}
 }
 
 // need the prototypes in order to keep them free of the OpenRAVE namespace

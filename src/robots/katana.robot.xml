@@ -7,6 +7,5 @@
     <closingdirection>-1</closingdirection>
 	<Translation>0 0 0.165</Translation>
     <iksolver>Katanaikfast</iksolver>
-	<armjoints>j1 j2 j3 jdummy j4 j5</armjoints>
   </Manipulator>
 </Robot>

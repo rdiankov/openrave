@@ -410,7 +410,7 @@ class Environment : public EnvironmentBase
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_INTERFACE(pbody);
-        if( !_IsValidBodyName(pbody->GetName()) )
+        if( !IsValidName(pbody->GetName()) )
             throw openrave_exception(str(boost::format("body name: \"%s\" is not valid")%pbody->GetName()));
         _CheckUniqueName(KinBodyConstPtr(pbody));
         {
@@ -427,7 +427,7 @@ class Environment : public EnvironmentBase
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_INTERFACE(robot);
-        if( !_IsValidBodyName(robot->GetName()) )
+        if( !IsValidName(robot->GetName()) )
             throw openrave_exception(str(boost::format("body name: \"%s\" is not valid")%robot->GetName()));
         _CheckUniqueName(KinBodyConstPtr(robot));
         {
@@ -1632,13 +1632,13 @@ protected:
             return false;
         return filename[len-4] == '.' && filename[len-3] == 'd' && filename[len-2] == 'a' && filename[len-1] == 'e';
     }
-
-    static bool _IsValidBodyName(const string& s) {
+    static bool IsValidCharInName(char c) {
+        return isalnum(c) || c == '_' || c == '-';
+    }
+    static bool IsValidName(const string& s) {
         if( s.size() == 0 )
             return false;
-        if( s.find(' ') != string::npos || s.find('\r') != string::npos || s.find('\n') != string::npos )
-            return false;
-        return true;
+        return count_if(s.begin(), s.end(), IsValidCharInName) == (int)s.size();
     }
 
     boost::shared_ptr<RaveDatabase> _pdatabase;

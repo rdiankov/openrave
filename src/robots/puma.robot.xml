@@ -67,7 +67,6 @@
   <Manipulator name="arm">
     <effector>Puma6</effector>
 	<base>Base</base>
-    <armjoints>J0 J1 J2 J3 J4 J5</armjoints>
     <joints>m1</joints>
     <!-- joint values of the closed and opened positions -->
     <closingdirection>1</closingdirection>

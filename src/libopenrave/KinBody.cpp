@@ -1667,8 +1667,11 @@ KinBody::LinkPtr KinBody::GetLink(const std::string& linkname) const
     return LinkPtr();
 }
 
-void KinBody::GetRigidlyAttachedLinks(KinBody::LinkConstPtr plink, std::vector<KinBody::LinkPtr>& vattachedlinks) const
+void KinBody::GetRigidlyAttachedLinks(int linkindex, std::vector<KinBody::LinkPtr>& vattachedlinks) const
 {
+    LinkConstPtr plink;
+    if( linkindex >= 0 )
+        plink = _veclinks.at(linkindex);
     FOREACHC(itpassive, GetPassiveJoints()) {
         if( (*itpassive)->IsStatic() ) {
             if( (*itpassive)->GetFirstAttached() == plink && !!(*itpassive)->GetSecondAttached() )
@@ -1677,6 +1680,57 @@ void KinBody::GetRigidlyAttachedLinks(KinBody::LinkConstPtr plink, std::vector<K
                 vattachedlinks.push_back((*itpassive)->GetFirstAttached());
         }
     }
+}
+
+bool KinBody::GetChain(int linkbaseindex, int linkendindex, std::vector<JointPtr>& vjoints) const
+{
+    vjoints.resize(0);
+    int dof = GetDOF();
+    vector<int> vjointparents(dof,dof);
+    list<pair<LinkConstPtr, int > > listlinks;
+    vector<LinkPtr> vattachedlinks;
+    listlinks.push_back(make_pair(_veclinks.at(linkbaseindex),-1));
+    GetRigidlyAttachedLinks(linkbaseindex,vattachedlinks);
+    FOREACHC(itlink,vattachedlinks)
+        listlinks.push_back(make_pair(LinkConstPtr(*itlink),-1));
+    while(listlinks.size()>0) {
+        LinkConstPtr plink = listlinks.front().first;
+        int parentjoint = listlinks.front().second;
+        if( plink->GetIndex() == linkendindex ) {
+            vjoints.resize(0);
+            list<int> listpath;
+            while(parentjoint >= 0) {
+                listpath.push_front(parentjoint);
+                parentjoint = vjointparents.at(parentjoint);
+            }
+            vjoints.resize(0); vjoints.reserve(listpath.size());
+            FOREACH(it,listpath)
+                vjoints.push_back(_vecjoints.at(*it));
+            return true;
+        }
+
+        listlinks.pop_front();
+        FOREACHC(itjoint, _vecjoints) {
+            int jointindex = (*itjoint)->GetJointIndex();
+            if( vjointparents.at(jointindex) == dof ) {
+                LinkConstPtr pother;
+                if( (*itjoint)->GetFirstAttached() == plink && !!(*itjoint)->GetSecondAttached() )
+                    pother = (*itjoint)->GetSecondAttached();
+                if( (*itjoint)->GetSecondAttached() == plink && !!(*itjoint)->GetFirstAttached() )
+                    pother = (*itjoint)->GetFirstAttached();
+                if( !!pother ) {
+                    vjointparents[jointindex] = parentjoint;
+                    listlinks.push_back(make_pair(pother,jointindex));
+                    vattachedlinks.resize(0);
+                    GetRigidlyAttachedLinks(pother->GetIndex(),vattachedlinks);
+                    FOREACHC(itlink,vattachedlinks)
+                        listlinks.push_back(make_pair(LinkConstPtr(*itlink),jointindex));
+                }
+            }
+        }
+    }
+
+    return false;
 }
 
 //! return a pointer to the joint with the given name, else -1
@@ -2460,10 +2514,8 @@ int KinBody::GetNetworkId() const
 
 char KinBody::DoesAffect(int jointindex, int linkindex ) const
 {
-    if( !_bHierarchyComputed ) {
-        RAVELOG_WARNA("DoesAffect: joint hierarchy needs to be computed\n");
-        return 0;
-    }
+    if( !_bHierarchyComputed )
+        throw openrave_exception("DoesAffect: joint hierarchy needs to be computed");
     BOOST_ASSERT(jointindex >= 0 && jointindex < (int)_vecjoints.size());
     return _vecJointHierarchy.at(jointindex*_veclinks.size()+linkindex);
 }

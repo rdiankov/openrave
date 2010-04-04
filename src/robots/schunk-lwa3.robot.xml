@@ -4,6 +4,5 @@
   <Manipulator name="arm">
     <base>base</base>
     <effector>link7</effector>
-    <armjoints>j0 j1 j2 j3 j4 j5 j6</armjoints>
   </Manipulator>
 </Robot>

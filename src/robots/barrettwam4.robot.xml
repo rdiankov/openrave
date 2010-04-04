@@ -21,7 +21,6 @@
   <Manipulator name="arm">
     <base>wam0</base>
     <effector>wam4</effector>
-    <armjoints>Shoulder_Yaw Shoulder_Pitch Shoulder_Roll Elbow</armjoints>
     <joints>JF1 JF2 JF3 JF4</joints>
     <closingdirection>1 1 1 0</closingdirection>
     <direction>0 0 1</direction>

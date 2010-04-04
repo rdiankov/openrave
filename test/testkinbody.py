@@ -178,6 +178,17 @@ def test_fkconsistency():
                 if not all(T1-T2==0):
                     print 'error ',values
 
+def test_kinematics():
+    env = Environment()
+    robot = env.ReadRobotXMLFile('robots/schunk-lwa3-dual.robot.xml')
+    env.AddRobot(robot)
+    manips = robot.GetManipulators()
+    for manip in manips:
+        joints = robot.GetChain(manip.GetBase().GetIndex(),manip.GetEndEffector().GetIndex())
+        print [joint.GetJointIndex() for joint in joints]
+        joints = robot.GetChain(manip.GetEndEffector().GetIndex(),manip.GetBase().GetIndex())
+        print [joint.GetJointIndex() for joint in joints]
+        
 def test_boxes():
     env = Environment()
     k = env.CreateKinBody()

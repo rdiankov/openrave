@@ -680,6 +680,26 @@ public:
         return joints;
     }
 
+    object GetRigidlyAttachedLinks(int linkindex) const
+    {
+        std::vector<KinBody::LinkPtr> vattachedlinks;
+        _pbody->GetRigidlyAttachedLinks(linkindex,vattachedlinks);
+        boost::python::list links;
+        FOREACHC(itlink, vattachedlinks)
+            links.append(PyLinkPtr(new PyLink(*itlink, GetEnv())));
+        return links;
+    }
+
+    object GetChain(int linkbaseindex, int linkendindex) const
+    {
+        std::vector<KinBody::JointPtr> vjoints;
+        _pbody->GetChain(linkbaseindex,linkendindex,vjoints);
+        boost::python::list joints;
+        FOREACHC(itjoint, vjoints)
+            joints.append(PyJointPtr(new PyJoint(*itjoint, GetEnv())));
+        return joints;
+    }
+
     PyJointPtr GetJoint(const std::string& jointname) const
     {
         KinBody::JointPtr pjoint = _pbody->GetJoint(jointname);
@@ -3121,6 +3141,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetJoints",&PyKinBody::GetJoints)
             .def("GetPassiveJoints",&PyKinBody::GetPassiveJoints)
             .def("GetDependencyOrderedJoints",&PyKinBody::GetDependencyOrderedJoints)
+            .def("GetRigidlyAttachedLinks",&PyKinBody::GetRigidlyAttachedLinks)
+            .def("GetChain",&PyKinBody::GetChain)
             .def("GetJoint",&PyKinBody::GetJoint,args("name"))
             .def("GetTransform",&PyKinBody::GetTransform)
             .def("GetBodyTransformations",&PyKinBody::GetBodyTransformations)

@@ -586,8 +586,28 @@ class InverseReachabilityModel(OpenRAVEModel):
 
 class InverseReachabilityModelState(InverseReachabilityModel):
     """inverse reachability model that tracks the state of the robot"""
-    def __init__(self,robot):
-        InverseReachabilityModel.__init__(self,robot=robot)    
-
+    def __init__(self,robot,index=0):
+        InverseReachabilityModel.__init__(self,robot=robot)
+        self.index=index
+        with self.robot:
+            self.jointvalues = self.robot.GetJointValues()[self.getdofindices(self.manip)]
+    @staticmethod
+    def getdofindices(manip):
+        joints = manip.GetRobot().GetChain(0,manip.GetBase().GetIndex())
+        return hstack([arange(joint.GetDOFIndex(),joint.GetDOFIndex()+joint.GetDOF()) for joint in joints])
+    def getfilename(self):
+        return os.path.join(OpenRAVEModel.getfilename(self),'invreachability.' + self.manip.GetName() + '.' + str(self.index) + '.pp')
+    def save(self):
+        OpenRAVEModel.save(self,(self.equivalenceclasses,self.rotweight,self.xyzdelta,self.quatdelta,self.jointvalues))
+    def load(self):
+        try:
+            params = OpenRAVEModel.load(self)
+            if params is None:
+                return False
+            self.equivalenceclasses,self.rotweight,self.xyzdelta,self.quatdeltaself.self.jointvalues = params
+            self.preprocess()
+            return self.has()
+        except e:
+            return False
 if __name__ == "__main__":
     InverseReachabilityModel.RunFromParser()

@@ -36,11 +36,9 @@
   <Manipulator name="leftarm">
     <base>l_base</base>
     <effector>l_link7</effector>
-    <armjoints>l_j0 l_j1 l_j2 l_j3 l_j4 l_j5 l_j6</armjoints>
   </Manipulator>
   <Manipulator name="rightarm">
     <base>r_base</base>
     <effector>r_link7</effector>
-    <armjoints>r_j0 r_j1 r_j2 r_j3 r_j4 r_j5 r_j6</armjoints>
   </Manipulator>
 </Robot>

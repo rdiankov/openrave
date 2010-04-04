@@ -335,7 +335,8 @@ public:
                                 ///< Tbody1 = Tbody0 * tLeft * JointRotation * tRight
         Transform tinvRight, tinvLeft; ///< the inverse transformations of tRight and tLeft
         dReal fResolution;      ///< interpolation resolution
-        dReal fMaxVel;          ///< the maximum velocity (rad/s) of the joint
+        dReal fMaxVel;          ///< the maximum velocity (rad/s) to move the joint when planning
+        dReal fHardMaxVel;      ///< the hard maximum velocity, robot cannot exceed this velocity. used for verification checking
         dReal fMaxAccel;        ///< the maximum acceleration (rad/s^2) of the joint
         dReal fMaxTorque;       ///< maximum torque (N.m, kg m^2/s^2) that can be applied to the joint
         boost::array<LinkPtr,2> bodies; ///< attached bodies
@@ -484,13 +485,22 @@ public:
     const std::vector<JointPtr>& GetPassiveJoints() const { return _vecPassiveJoints; }
 
     /// Gets all the rigidly attached links to plink.
+    /// \param linkindex the index to check for attached links. If < 0, then will return all links attached to the environment
     /// \param vattachedlinks the array to insert the links in (not cleared)
-    virtual void GetRigidlyAttachedLinks(LinkConstPtr plink, std::vector<LinkPtr>& vattachedlinks) const;
+    virtual void GetRigidlyAttachedLinks(int linkindex, std::vector<LinkPtr>& vattachedlinks) const;
 
     /// Returns the joints in hierarchical order starting at the base link such that the first joints affect the later ones.
     /// In the case of closed loops, the joints are returned in the order they are defined in _vecjoints.
     /// \param vjointindices a set of joint indices to be filled with the correct order
-    const std::vector<JointPtr>& GetDependencyOrderedJoints() { return _vDependencyOrderedJoints; }
+    const std::vector<JointPtr>& GetDependencyOrderedJoints() const { return _vDependencyOrderedJoints; }
+
+    /// returns the minimal chain of joints that are between two links in the order of linkbaseindex to linkendindex.
+    /// Passive joints are only used to detect rigidly attached links, otherwise they are ignored in the computation of the chain.
+    /// \param linkbase the base link to start the search
+    /// \param linkend the link to end the search
+    /// \param vjoints the joints to fill that describe the chain
+    /// \return true if the two links are connected (vjoints will be filled), false if the links are separate
+    bool GetChain(int linkbaseindex, int linkendindex, std::vector<JointPtr>& vjoints) const;
 
     /// return a pointer to the joint with the given name, else -1
     /// gets a joint indexed from GetJoints(). Note that the mapping of joint structures is not the same as
@@ -595,8 +605,9 @@ public:
     /// \return an environment unique id
     virtual int GetNetworkId() const;
     
-    /// returns how the joint effects the link. If zero, link is unaffected.
-    /// If negative, the partial derivative of the Jacobian should be negated.
+    /// returns how the joint effects the link. If zero, link is unaffected. If negative, the partial derivative of the Jacobian should be negated.
+    /// \param jointindex index of the joint
+    /// \param linkindex index of the link
     virtual char DoesAffect(int jointindex, int linkindex) const;
 
     /// writes a string for the forward kinematics of the robot (only hinge joints are handled)

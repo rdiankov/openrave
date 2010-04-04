@@ -393,7 +393,7 @@ def test_hrp2():
     if not ikmodel.load():
         ikmodel.generate()
     
-    import inversereachability.mobilemanipulation,graspplanning
+    import inversereachability,mobilemanipulation,graspplanning
     env = Environment()
     env.SetViewer('qtcoin')
     env.Load('scenes/r602kitchen1.env.xml')
@@ -402,13 +402,17 @@ def test_hrp2():
     # define all the manipulators to use
     manips = [robot.GetManipulators('leftarm_chest'), robot.GetManipulators('leftarm_chest2'), robot.GetManipulators('rightarm_chest'), robot.GetManipulators('rightarm_chest2')]
     grmodels = []
+    with robot:
     for manip in manips:
         robot.SetActiveManipulator(manip)
-        irmodels = [inversereachability.InverseReachabilityModelState(robot=robot),inversereachability.InverseReachabilityModelState(robot=robot)]
-        for irmodel in irmodels:
-            irmodel.load()
-        grmodels.append([mobilemanipulation.GraspReachability(robot=robot,gmodel=gmodel,irmodel=irmodel) for irmodel in irmodels])
-        
+        irmodels = []
+        dofindices = inversereachability.InverseReachabilityModelState.getdofindices(manip)
+        values = [[0],[25.0/180*pi]]
+        for index,value in enumerate(values):
+            robot.SetJointValues(value,dofindices)
+            irmodels.append(inversereachability.InverseReachabilityModelState(robot=robot,index=index))
+    
+    grmodels.append([mobilemanipulation.GraspReachability(robot=robot,gmodel=gmodel,irmodel=irmodel) for irmodel in irmodels])    
     manip = manips[1]
     robot.SetActiveManipulator(manip)
 

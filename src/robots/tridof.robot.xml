@@ -134,7 +134,6 @@
     <effector>Arm2</effector>   <!-- last link where end effector is attached-->
     <base>Base</base>           <!-- base link-->
     <joints>j1 j2</joints>      <!-- the gripper joints used for contact-->
-    <armjoints>Arm0 Arm1 Arm2</armjoints> <!-- the joints composing of the arm-->
     <!-- the id of the inverse kinematics solver, it is not necessary to-->
     <!-- specify an ik solver for every robot. But if there is one,-->
     <!-- use iksolver field to identity it.-->

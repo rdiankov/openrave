@@ -1060,7 +1060,7 @@ namespace OpenRAVEXMLParser
             }
             
             StreamXMLReader::startElement(xmlname,atts);
-            if( xmlname == "body" || xmlname == "offsetfrom" || xmlname == "weight" || xmlname == "lostop" || xmlname == "histop" || xmlname == "maxvel" || xmlname == "maxaccel" || xmlname == "maxtorque" || xmlname == "maxforce" || xmlname == "resolution" || xmlname == "anchor" || xmlname == "axis" || xmlname == "axis1" || xmlname == "axis2" || xmlname=="axis3" || xmlname == "mode" ) {
+            if( xmlname == "body" || xmlname == "offsetfrom" || xmlname == "weight" || xmlname == "lostop" || xmlname == "histop" || xmlname == "maxvel" || xmlname == "hardmaxvel" || xmlname == "maxaccel" || xmlname == "maxtorque" || xmlname == "maxforce" || xmlname == "resolution" || xmlname == "anchor" || xmlname == "axis" || xmlname == "axis1" || xmlname == "axis2" || xmlname=="axis3" || xmlname == "mode" ) {
             }
             else {
                 // start a new field
@@ -1240,6 +1240,8 @@ namespace OpenRAVEXMLParser
             }
             else if( xmlname == "maxvel" )
                 _ss >> _pjoint->fMaxVel;
+            else if( xmlname == "hardmaxvel" )
+                _ss >> _pjoint->fHardMaxVel;
             else if( xmlname == "maxaccel" )
                 _ss >> _pjoint->fMaxAccel;
             else if( xmlname == "maxtorque" )
@@ -1910,9 +1912,13 @@ namespace OpenRAVEXMLParser
                 }
             }
             else if( xmlname == "manipulator" ) {
-                if( _pmanip->_vgripperjoints.size() != _pmanip->_vClosingDirection.size() ) {
-                    RAVELOG_WARNA(str(boost::format("Manipulator has closing direction grasps wrong %d!=%d\n")%_pmanip->_vgripperjoints.size()%_pmanip->_vClosingDirection.size()));
-                    _pmanip->_vClosingDirection.resize(_pmanip->_vgripperjoints.size());
+                if( _pmanip->_vClosingDirection.size() == 0 ) {
+                    RAVELOG_DEBUG(str(boost::format("setting manipulator %s closing direction to zeros\n")%_pmanip->GetName()));
+                    _pmanip->_vClosingDirection.resize(_pmanip->_vgripperjoints.size(),0);
+                }
+                else if( _pmanip->_vgripperjoints.size() != _pmanip->_vClosingDirection.size() ) {
+                    RAVELOG_WARN(str(boost::format("Manipulator %s has closing direction grasps wrong %d!=%d\n")%_pmanip->GetName()%_pmanip->_vgripperjoints.size()%_pmanip->_vClosingDirection.size()));
+                    _pmanip->_vClosingDirection.resize(_pmanip->_vgripperjoints.size(),0);
                 }
                 return true;
             }
@@ -1946,15 +1952,7 @@ namespace OpenRAVEXMLParser
                 }
             }
             else if( xmlname == "armjoints" ) {
-                vector<string> jointnames((istream_iterator<string>(_ss)), istream_iterator<string>());
-                _pmanip->_varmjoints.resize(0);
-                FOREACH(itname,jointnames) {
-                    int index = _probot->GetJointIndex(*itname);
-                    if( index < 0 )
-                        RAVELOG_WARNA(str(boost::format("failed to find arm joint name %s\n")%*itname));
-                    else
-                        _pmanip->_varmjoints.push_back(index);
-                }
+                RAVELOG_WARN("<armjoints> for <manipulator> tag is not used anymore\n");
             }
             else if( xmlname == "direction" || xmlname == "palmdirection" ) {
                 if( xmlname == "palmdirection" )

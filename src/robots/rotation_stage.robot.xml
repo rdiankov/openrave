@@ -75,6 +75,5 @@
   <Manipulator name="rotation">
     <base>Base</base>
     <effector>Axis3</effector>
-    <armjoints>R1 R2 R3</armjoints>
   </Manipulator>
 </Robot>

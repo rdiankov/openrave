@@ -280,7 +280,7 @@ void RobotBase::Manipulator::GetChildLinks(std::vector<LinkPtr>& vlinks) const
     // get all child links of the manipualtor
     vlinks.resize(0);
     vlinks.push_back(_pEndEffector);
-    probot->GetRigidlyAttachedLinks(_pEndEffector,vlinks);
+    probot->GetRigidlyAttachedLinks(_pEndEffector->GetIndex(),vlinks);
     int iattlink = _pEndEffector->GetIndex();
     FOREACHC(itlink, probot->GetLinks()) {
         int ilink = (*itlink)->GetIndex();
@@ -351,7 +351,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
     if( probot->CheckLinkCollision(iattlink,tdelta*_pEndEffector->GetTransform(),report) )
         return true;
     vector<LinkPtr> vattachedlinks;
-    probot->GetRigidlyAttachedLinks(_pEndEffector,vattachedlinks);
+    probot->GetRigidlyAttachedLinks(_pEndEffector->GetIndex(),vattachedlinks);
     FOREACHC(itlink,vattachedlinks) {
         if( probot->CheckLinkCollision((*itlink)->GetIndex(),tdelta*(*itlink)->GetTransform(),report) )
             return true;
@@ -1963,15 +1963,49 @@ void RobotBase::SimulationStep(dReal fElapsedTime)
 void RobotBase::ComputeJointHierarchy()
 {
     KinBody::ComputeJointHierarchy();
+    int manipindex=0;
     FOREACH(itmanip,_vecManipulators) {
-        if( (*itmanip)->GetName().size() == 0 )
-            RAVELOG_WARN(str(boost::format("robot %s has a manipulator with no name!\n")%GetName()));
+        if( (*itmanip)->GetName().size() == 0 ) {
+            stringstream ss;
+            ss << "manip" << manipindex;
+            RAVELOG_WARN(str(boost::format("robot %s has a manipulator with no name, setting to %s\n")%GetName()%ss.str()));
+            (*itmanip)->_name = ss.str();
+        }
+        else if( !IsValidName((*itmanip)->GetName()) )
+            throw openrave_exception(str(boost::format("manipulator name \"%s\" is not valid")%(*itmanip)->GetName()));
+        if( !!(*itmanip)->GetBase() && !!(*itmanip)->GetEndEffector() ) {
+            vector<JointPtr> vjoints;
+            if( GetChain((*itmanip)->GetBase()->GetIndex(),(*itmanip)->GetEndEffector()->GetIndex(), vjoints) ) {
+                (*itmanip)->_varmjoints.resize(0);
+                FOREACH(it,vjoints) {
+                    for(int i = 0; i < (*it)->GetDOF(); ++i) {
+                        (*itmanip)->_varmjoints.push_back((*it)->GetDOFIndex()+i);
+                    }
+                }
+            }
+            else {
+                RAVELOG_WARN(str(boost::format("manipulator %s failed to find chain between %s and %s links\n")%(*itmanip)->GetName()%(*itmanip)->GetBase()->GetName()%(*itmanip)->GetEndEffector()->GetName()));
+            }
+        }
+        else
+            RAVELOG_WARN(str(boost::format("manipulator %s has undefined base and end effector links\n")%(*itmanip)->GetName()));
         (*itmanip)->InitIKSolver();
         vector<ManipulatorPtr>::iterator itmanip2 = itmanip; ++itmanip2;
         for(;itmanip2 != _vecManipulators.end(); ++itmanip2) {
             if( (*itmanip)->GetName() == (*itmanip2)->GetName() )
                 RAVELOG_WARN(str(boost::format("robot %s has two manipulators with the same name: %s!\n")%GetName()%(*itmanip)->GetName()));
         }
+    }
+
+    FOREACH(itsensor,_vecSensors) {
+        if( (*itsensor)->GetName().size() == 0 ) {
+            stringstream ss;
+            ss << "sensor" << manipindex;
+            RAVELOG_WARN(str(boost::format("robot %s has a sensor with no name, setting to %s\n")%GetName()%ss.str()));
+            (*itsensor)->_name = ss.str();
+        }
+        else if( !IsValidName((*itsensor)->GetName()) )
+            throw openrave_exception(str(boost::format("sensor name \"%s\" is not valid")%(*itsensor)->GetName()));
     }
 
     {
