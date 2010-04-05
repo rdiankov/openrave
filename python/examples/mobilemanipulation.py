@@ -76,10 +76,11 @@ class GraspReachability(metaclass.AutoReloader):
             while len(goals) < N:
                 if time.time()-starttime > timeout:
                     return goals,numfailures
-                poses,graspindices = samplerfn(N-len(goals))
+                poses,graspindices,jointstate = samplerfn(N-len(goals))
                 for pose,graspindex in izip(poses,graspindices):
                     gmodel = graspindex[0]
                     self.robot.SetTransform(pose)
+                    self.robot.SetJointValues(*jointstate)
                     if updateenv:
                         self.env.UpdatePublishedBodies()
                     # before recording failure, validate that base is not in collision
@@ -88,7 +89,9 @@ class GraspReachability(metaclass.AutoReloader):
                         gmodel.setPreshape(grasp)
                         q = gmodel.manip.FindIKSolution(gmodel.getGlobalGraspTransform(grasp,collisionfree=True),envcheck=True)
                         if q is not None:
-                            goals.append((grasp,pose,q))
+                            values = self.robot.GetJointValues()
+                            values[gmodel.manip.GetArmJoints()] = q
+                            goals.append((grasp,pose,values))
                         elif gmodel.manip.FindIKSolution(gmodel.getGlobalGraspTransform(grasp,collisionfree=True),envcheck=False) is None:
                             numfailures += 1
         return goals,numfailures
@@ -108,11 +111,12 @@ class GraspReachability(metaclass.AutoReloader):
                 iterindex = random.randint(len(baseIterators))
                 baseIterator,irmodel,gmodel = baseIterators[iterindex]
                 try:                    
-                    pose,graspindex = baseIterator.next()
+                    pose,graspindex,jointstate = baseIterator.next()
                 except planning_error:
                     baseIterators.pop(iterindex)
                     continue
                 self.robot.SetTransform(pose)
+                self.robot.SetJointValues(*jointstate)
                 if updateenv:
                     self.env.UpdatePublishedBodies()
                 if not irmodel.manip.CheckIndependentCollision(CollisionReport()):
@@ -139,18 +143,22 @@ class GraspReachability(metaclass.AutoReloader):
         return inversereachability.InverseReachabilityModel.showBaseDistribution(self.env,densityfn,bounds,zoffset=zoffset,thresh=thresh)
     def testSampling(self,**kwargs):
         """random sample goals on the current environment"""
-        configsampler = self.sampleValidPlacementIterator(**kwargs)
-        basemanip = BaseManipulation(self.robot)
+        with self.env:
+            configsampler = self.sampleValidPlacementIterator(**kwargs)
+            basemanip = BaseManipulation(self.robot)
+            jointvalues = self.robot.GetJointValues()
         with RobotStateSaver(self.robot):
             while True:
                 try:
                     with self.env:
+                        self.robot.SetJointValues(jointvalues) # reset to original
                         pose,values,grasp,graspindex = configsampler.next()
                         gmodel = graspindex[0]
                         print 'found grasp',gmodel.target.GetName(),graspindex[1]
+                        self.robot.SetActiveManipulator(gmodel.manip)
                         self.robot.SetTransform(pose)
                         gmodel.setPreshape(grasp)
-                        self.robot.SetJointValues(values[gmodel.manip.GetArmJoints()],gmodel.manip.GetArmJoints())
+                        self.robot.SetJointValues(values)
                         final,traj = basemanip.CloseFingers(execute=False,outputfinal=True)
                         self.robot.SetJointValues(final,gmodel.manip.GetGripperJoints())
                         self.env.UpdatePublishedBodies()
@@ -158,21 +166,65 @@ class GraspReachability(metaclass.AutoReloader):
                     traceback.print_exc(e)
                     continue
 
-class MobileManipulationPlanning(graspplanning.GraspPlanning):
-    def __init__(self,robot,grmodel,randomize=False,**kwargs):
-        graspplanning.GraspPlanning.__init__(self, robot=robot,randomize=randomize,**kwargs)
+class MobileManipulationPlanning(metaclass.AutoReloader):
+    def __init__(self,robot,grmodel,switchpatterns=None):
+        self.envreal = robot.GetEnv()
+        self.env=self.envreal
+        self.robot = robot
         self.grmodel = grmodel
-    def graspAndPlaceObjectMobile(grmodel,dests,showdist=False):
-        logllthresh = 2000.0
-        Ngoals = 20
-        densityfn,samplerfn,bounds,validgrasps = grmodel.computeGraspDistribution(logllthresh=logllthresh)
-        if showdist:
-            h = self.grmodel.showBaseDistribution(densityfn,bounds,self.target.GetTransform()[2,3],thresh=1.0)
-        
-        starttime = time.time()
-        goals,numfailures = grmodel.sampleGoals(samplerfn,N=Ngoals)
-        print 'numgrasps: %d, time: %f, failures: %d'%(len(goals),time.time()-starttime,numfailures)
+        self.switchpatterns = switchpatterns
+        with self.envreal:
+            self.basemanip = BaseManipulation(self.robot)
+            self.taskmanip = TaskManipulation(self.robot)
+            self.updir = array((0,0,1))
 
+    def graspAndPlaceObjectMobile(self,showdist=False):
+        weight = 1.5
+        logllthresh = 0.5
+        configsampler = self.grmodel.sampleValidPlacementIterator(weight=weight,logllthresh=logllthresh,randomgrasps=True,randomplacement=False,updateenv=False)
+        with self.env:
+            pose,values,grasp,graspindex = configsampler.next()
+        gmodel = graspindex[0]
+        print 'found grasp',gmodel.target.GetName(),graspindex[1]
+        self.robot.SetActiveManipulator(gmodel.manip)
+        self.robot.SetTransform(pose)
+        self.robot.SetJointValues(values)
+        gmodel.setPreshape(grasp)
+        final,traj = self.basemanip.CloseFingers(execute=False,outputfinal=True)
+        self.robot.SetJointValues(final,gmodel.manip.GetGripperJoints())
+        
+    def moveBase(self,goalpose):
+        with self.robot:
+            self.robot.SetTransform(goalpose)
+            if self.env.CheckCollision(self.robot):
+                raise planning_error('goal position in self collision')
+        with self.env: # find the boundaries of the environment
+            envmin = []
+            envmax = []
+            for b in self.env.GetBodies():
+                ab = b.ComputeAABB()
+                envmin.append(ab.pos()-ab.extents())
+                envmax.append(ab.pos()+ab.extents())
+            abrobot = self.robot.ComputeAABB()
+            envmin = numpy.min(array(envmin),0)+abrobot.extents()
+            envmax = numpy.max(array(envmax),0)-abrobot.extents()
+            bounds = array(((envmin[0],envmin[1],-pi),(envmax[0],envmax[1],pi)))
+            self.robot.SetAffineTranslationLimits(envmin,envmax)
+            self.robot.SetAffineTranslationMaxVels([0.5,0.5,0.5])
+            self.robot.SetAffineRotationAxisMaxVels(ones(4))
+            self.robot.SetActiveDOFs([],Robot.DOFAffine.X|Robot.DOFAffine.Y|Robot.DOFAffine.RotationAxis,[0,0,1])
+
+            goal2d = [goalpose[4],goalpose[5],numpy.arctan2(goalpose[3],goalpose[:,0])]
+            print 'planning to: ',goal2d
+            center = r_[goal2d[0:2],0.2]
+            xaxis = 0.5*array((cos(goal2d[2]),sin(goal2d[2]),0))
+            yaxis = 0.25*array((-sin(goal2d[2]),cos(goal2d[2]),0))
+            self.hgoal = self.env.drawlinelist(transpose(c_[center-xaxis,center+xaxis,center-yaxis,center+yaxis]),linewidth=5.0,colors=array((0,1,0)))
+            if self.basemanip.MoveActiveJoints(goal=goal2d,maxiter=3000,steplength=0.1) is None:
+                raise planning_error('failed to plan goal position')
+        print 'waiting for controller'
+        self.robot.WaitForController(0)
+            
     def performGraspPlanning(self):
         print 'starting to pick and place random objects'
         while True:

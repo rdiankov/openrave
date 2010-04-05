@@ -354,15 +354,17 @@ def test_sampling():
         stats.append([level,mean(dists)])
     
 def test_hrp2():
-    python convexdecomposition.py --robot=robots/hrp2jsk.robot.xml --volumeSplitThresholdPercent=5 --mergeThresholdPercent=10 --padding=0.005
-    rosrun openrave_database kinematicreachability_ros.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --xyzdelta=0.04 --launchservice='8*localhost' 
-    python kinematicreachability.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm --xyzdelta=0.02
-    python kinematicreachability.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --xyzdelta=0.02
-    python kinematicreachability.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm_chest --xyzdelta=0.02
-    python inversereachability.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm --heightthresh=0.02 --quatthresh=0.2
-    python inversereachability.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --heightthresh=0.02 --quatthresh=0.2
-    python inversereachability.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm_chest --heightthresh=0.02 --quatthresh=0.2
-    python inversereachability.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm_chest --heightthresh=0.02 --quatthresh=0.2
+    python convexdecomposition.py --volumeSplitThresholdPercent=5 --mergeThresholdPercent=10 --padding=0.005
+    rosrun openrave_database kinematicreachability_ros.py --manipname=leftarm --xyzdelta=0.04 --launchservice='8*localhost' 
+    python kinematicreachability.py --manipname=rightarm --xyzdelta=0.02
+    python kinematicreachability.py --manipname=leftarm --xyzdelta=0.02
+    python kinematicreachability.py --manipname=rightarm_chest --xyzdelta=0.02
+    python inversereachability.py --manipname=rightarm --heightthresh=0.02 --quatthresh=0.2
+    python inversereachability.py --manipname=leftarm --heightthresh=0.02 --quatthresh=0.2
+    python inversereachability.py --manipname=rightarm_chest --heightthresh=0.02 --quatthresh=0.2
+    python inversereachability.py --manipname=leftarm_chest --heightthresh=0.02 --quatthresh=0.2
+    python inversereachability.py --manipname=leftarm_chest --heightthresh=0.02 --quatthresh=0.2 --id=0 --jointvalues='0'
+    python inversereachability.py --manipname=leftarm_chest --heightthresh=0.02 --quatthresh=0.2 --id=43 --jointvalues='0.43'
     python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.01 --normalanglerange=1 --avoidlink=RWristCam
     python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.01 --normalanglerange=1 --graspingnoise=0.005 --noviewer
     rosrun openrave_database grasping_ros.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm_chest --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.01 --normalanglerange=1 --graspingnoise=0.005 --launchservice='8*localhost'
@@ -392,28 +394,12 @@ def test_hrp2():
     ikmodel = inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Direction3D)
     if not ikmodel.load():
         ikmodel.generate()
-
-    import inversereachability
-    env = Environment()
-    robot = env.ReadRobotXMLFile('robots/hrp2jsk08.robot.xml')
-    env.AddRobot(robot)
-    manips = [robot.GetManipulators('leftarm_chest')[0], robot.GetManipulators('leftarm_chest2')[0], robot.GetManipulators('rightarm_chest')[0], robot.GetManipulators('rightarm_chest2')[0]]
-    irmodels = []
-    with robot:
-        for manip in manips:
-            robot.SetActiveManipulator(manip)
-            dofindices = inversereachability.InverseReachabilityModelState.getdofindices(manip)
-            values = [[0],[25.0/180*pi]]
-            for index,value in enumerate(values):
-                robot.SetJointValues(value,dofindices)
-                irmodels.append(inversereachability.InverseReachabilityModelState(robot=robot,index=index))
-    self=irmodels[0]
-    self.generate(heightthresh=0.02,quatthresh=0.2)
     
     import inversereachability,mobilemanipulation,graspplanning
     env = Environment()
-    #env.SetViewer('qtcoin')
-    env.Load('scenes/r602kitchen1.env.xml')
+    env.SetViewer('qtcoin')
+    env.Reset()
+    env.Load('scenes/r602kitchen2.env.xml')
     robot = env.GetRobots()[0]
     # define all the manipulators to use
     manips = [robot.GetManipulators('leftarm_chest')[0], robot.GetManipulators('leftarm_chest2')[0], robot.GetManipulators('rightarm_chest')[0], robot.GetManipulators('rightarm_chest2')[0]]
@@ -421,16 +407,14 @@ def test_hrp2():
     with robot:
         for manip in manips:
             robot.SetActiveManipulator(manip)
-            dofindices = inversereachability.InverseReachabilityModelState.getdofindices(manip)
-            values = [[0],[25.0/180*pi]]
-            for index,value in enumerate(values):
+            dofindices = inversereachability.InverseReachabilityModel.getdofindices(manip)
+            for id,value in [('0',[0]),('43',[0.43]),('n43',[-0.43])]:
                 robot.SetJointValues(value,dofindices)
-                irmodels.append(inversereachability.InverseReachabilityModelState(robot=robot,index=index))
-    for irmodel in irmodels:
-        if not irmodel.load():
-            irmodel.generate(heightthresh=0.02,quatthresh=0.2)
-            irmodel.save()
-
+                irmodel = inversereachability.InverseReachabilityModel(robot=robot,id=id)
+                if irmodel.load():
+                    irmodels.append(irmodel)
+                else:
+                    print 'failed to load irmodel',manip.GetName(),id
     irgmodels = []
     for manip in manips:
         robot.SetActiveManipulator(manip)
@@ -439,22 +423,20 @@ def test_hrp2():
             for irmodel in irmodels:
                 if irmodel.manip == gmodel.manip:
                     irgmodels.append([irmodel,gmodel])
-    gr = mobilemanipulation.GraspReachability(robot=robot,irgmodels=irgmodels)
+    grmodel = mobilemanipulation.GraspReachability(robot=robot,irgmodels=irgmodels)
+    self = mobilemanipulation.MobileManipulationPlanning(robot,grmodel=grmodel)
 
-    weight = 1.0
-    logllthresh = 0.5
-    basemanip = interfaces.BaseManipulation(robot)
     #h = gr.showBaseDistribution(thresh=1.0,logllthresh=logllthresh)
-    gr.testSampling(weight=weight,logllthresh=logllthresh,randomgrasps=True,randomplacement=False,updateenv=False)
-
+    #grmodel.testSampling(weight=weight,logllthresh=logllthresh,randomgrasps=True,randomplacement=False,updateenv=False)
+    
     validgrasps,validindices = gr.gmodel.computeValidGrasps(checkik=False,backupdist=0.01)
-    gr.gmodel.showgrasp(validgrasps[0],collisionfree=True)
+    grmodel.gmodel.showgrasp(validgrasps[0],collisionfree=True)
 
     densityfn,samplerfn,bounds,validgrasps = gr.computeGraspDistribution(logllthresh=logllthresh)
     goals,numfailures=gr.sampleGoals(lambda goals: samplerfn(goals,weight=1.0),updateenv=True)
     grasp,pose,q = goals[0]
     robot.SetTransform(pose)
-    robot.SetJointValues(q,manip.GetArmJoints())
+    robot.SetJointValues(q)
     basemanip.CloseFingers()
 
     grasp = gr.gmodel.grasps[283]
@@ -462,14 +444,6 @@ def test_hrp2():
     equivalenceclass,logll = gr.irmodel.getEquivalenceClass(Tgrasp)
     densityfn,samplerfn,bounds = gr.irmodel.computeBaseDistribution(Tgrasp,logllthresh=logllthresh)
     h = gr.irmodel.showBaseDistribution(densityfn,bounds,zoffset=gr.target.GetTransform()[2,3],thresh=1.0)
-
-    env = Environment()
-    robot = env.ReadRobotXMLFile('robots/hrp2jsk.robot.xml')
-    env.AddRobot(robot)
-    manip = robot.SetActiveManipulator('rightarm')
-    robot.SetJointValues([1.57,-1.57],manip.GetArmJoints()[-2:])
-    report = CollisionReport()
-    print robot.CheckSelfCollision(report)
 
 def test_drill():
     python inversekinematics.py --robot=/home/leus/drilling/drill_fk.robot.xml --ray4donly --accuracy=1e-5

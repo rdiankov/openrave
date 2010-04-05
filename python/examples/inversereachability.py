@@ -63,22 +63,25 @@ class InverseReachabilityModel(OpenRAVEModel):
             poses[:,4:] *= self.itransmult
             return neighs,dists,kball
 
-    def __init__(self,robot):
+    def __init__(self,robot,id=None):
         OpenRAVEModel.__init__(self,robot=robot)
         self.rmodel = kinematicreachability.ReachabilityModel(robot=robot)
         self.equivalenceclasses = None
         self.rotweight = 0.2 # in-plane rotation weight with respect to xy offset
+        self.id=id
+        with self.robot:
+            self.jointvalues = self.robot.GetJointValues()[self.getdofindices(self.manip)]
         
     def has(self):
         return self.equivalenceclasses is not None and len(self.equivalenceclasses) > 0
     def getversion(self):
-        return 1
+        return 3
     def load(self):
         try:
             params = OpenRAVEModel.load(self)
             if params is None:
                 return False
-            self.equivalenceclasses,self.rotweight,self.xyzdelta,self.quatdelta = params
+            self.equivalenceclasses,self.rotweight,self.xyzdelta,self.quatdelta,self.jointvalues = params
             self.preprocess()
             return self.has()
         except e:
@@ -90,7 +93,7 @@ class InverseReachabilityModel(OpenRAVEModel):
         # normalization for the weights so that integrated volume is 1. this is necessary when comparing across different distributions?
         quatconst = log(1.0/classstd[0]**2+0.3334)
         return quatconst+gaussconst
-
+    
     def preprocess(self):
         self.equivalencemeans = array([e[0] for e in self.equivalenceclasses])
         samplingbandwidth = array([self.quatdelta*0.1,self.xyzdelta*0.1])
@@ -98,11 +101,31 @@ class InverseReachabilityModel(OpenRAVEModel):
         self.equivalenceoffset = array([self.classnormalizationconst(e[1]+samplingbandwidth) for e in self.equivalenceclasses])
 
     def save(self):
-        OpenRAVEModel.save(self,(self.equivalenceclasses,self.rotweight,self.xyzdelta,self.quatdelta))
+        OpenRAVEModel.save(self,(self.equivalenceclasses,self.rotweight,self.xyzdelta,self.quatdelta,self.jointvalues))
 
     def getfilename(self):
-       return os.path.join(OpenRAVEModel.getfilename(self),'invreachability.' + self.manip.GetName() + '.pp')
-
+        if self.id is None:
+            basename='invreachability.' + self.manip.GetName() + '.pp'
+        else:
+            basename='invreachability.' + self.manip.GetName() + '.' + str(self.id) + '.pp'
+        return os.path.join(OpenRAVEModel.getfilename(self),basename)
+    @staticmethod
+    def getdofindices(manip):
+        joints = manip.GetRobot().GetChain(0,manip.GetBase().GetIndex())
+        return hstack([arange(joint.GetDOFIndex(),joint.GetDOFIndex()+joint.GetDOF()) for joint in joints]) if len(joints) > 0 else array([],int)
+    @staticmethod
+    def getManipulatorLinks(manip):
+        links = manip.GetChildLinks()
+        joints = manip.GetRobot().GetJoints()
+        for jindex in r_[manip.GetArmJoints(),InverseReachabilityModel.getdofindices(manip)]:
+            joint = joints[jindex]
+            if joint.GetFirstAttached() and not joint.GetFirstAttached() in links:
+                links.append(joint.GetFirstAttached())
+            if joint.GetSecondAttached() and not joint.GetSecondAttached() in links:
+                links.append(joint.GetSecondAttached())
+        return links
+    def necessaryjointstate(self):
+        return self.jointvalues,self.getdofindices(self.manip)
     def autogenerate(self,options=None):
         heightthresh=None
         quatthresh=None
@@ -112,6 +135,11 @@ class InverseReachabilityModel(OpenRAVEModel):
                 heightthresh=options.heightthresh
             if options.quatthresh is not None:
                 quatthresh=options.quatthresh
+            if options.id is not None:
+                self.id=options.id
+            if options.jointvalues is not None:
+                self.jointvalues = array([float(s) for s in options.jointvalues.split()])
+                assert(len(self.jointvalues)==len(self.getdofindices(self.manip)))
         if self.robot.GetRobotStructureHash() == '7b789782446d86b95c6fb16de7f204c7' and self.manip.GetName() == 'arm':
             if heightthresh is None:
                 heightthresh=0.05
@@ -119,7 +147,6 @@ class InverseReachabilityModel(OpenRAVEModel):
                 quatthresh=0.15
         self.generate(heightthresh=heightthresh,quatthresh=quatthresh,Nminimum=Nminimum)
         self.save()
-
     def generate(self,heightthresh=None,quatthresh=None,Nminimum=None):
         """First transform all end effectors to the identity and get the robot positions,
         then cluster the robot position modulo in-plane rotation (z-axis) and position (xy),
@@ -128,7 +155,11 @@ class InverseReachabilityModel(OpenRAVEModel):
         bodies = [b for b in self.env.GetBodies() if b != self.robot]
         for b in bodies:
             b.Enable(False)
+        statesaver = self.robot.CreateRobotStateSaver()
+        maniplinks = self.getManipulatorLinks(self.manip)
         try:
+            for link in self.robot.GetLinks():
+                link.Enable(link in maniplinks)
             if heightthresh is None:
                 heightthresh=0.05
             if quatthresh is None:
@@ -138,9 +169,9 @@ class InverseReachabilityModel(OpenRAVEModel):
             if not self.rmodel.load():
                 self.rmodel.autogenerate()
             print "Generating Inverse Reachability",heightthresh,quatthresh
-            with self.robot:
-                # get base of link manipulator with respect to base link
-                Tbase = dot(linalg.inv(self.robot.GetTransform()),self.manip.GetBase().GetTransform())
+            self.robot.SetJointValues(*self.necessaryjointstate())
+            # get base of link manipulator with respect to base link
+            Tbase = dot(linalg.inv(self.robot.GetTransform()),self.manip.GetBase().GetTransform())
             # convert the quatthresh to a loose euclidean distance
             self.xyzdelta = self.rmodel.xyzdelta
             self.quatdelta = self.rmodel.quatdelta
@@ -194,6 +225,7 @@ class InverseReachabilityModel(OpenRAVEModel):
                 basetrans = basetrans[flatnonzero(foundindices==False),:]
                 print 'new equivalence class outliers: %d/%d, left over trans: %d'%(self.testEquivalenceClass(equivalenceclass)*len(zangles),len(zangles),len(basetrans))
         finally:
+            statesaver.close()
             for b in bodies:
                 b.Enable(True)
         self.preprocess()
@@ -279,7 +311,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             """samples the distribution and returns a transform as a pose"""
             samples = random.normal(array([points[bisect.bisect(cumweights,random.rand()),:]  for i in range(N)]),bandwidth*weight)
             samples[:,0] *= 0.5*irotweight
-            return poseMultArrayT(poserobot,c_[cos(samples[:,0]),zeros((N,2)),sin(samples[:,0]),samples[:,1:3],tile(Tbase[2,3],N)])
+            return poseMultArrayT(poserobot,c_[cos(samples[:,0]),zeros((N,2)),sin(samples[:,0]),samples[:,1:3],tile(Tbase[2,3],N)]),self.necessaryjointstate()
         return gaussiankerneldensity,gaussiankernelsampler,bounds
 
     def computeAggregateBaseDistribution(self,Tgrasps,logllthresh=2.0,zaxis=None):
@@ -365,7 +397,7 @@ class InverseReachabilityModel(OpenRAVEModel):
                 sampledpoints[i,:] = points[pointindex,:]
             samples = random.normal(sampledpoints,bandwidth*weight)
             samples[:,0] *= 0.5*irotweight
-            return poseMultArrayT(poserobot,c_[cos(samples[:,0]),zeros((N,2)),sin(samples[:,0]),samples[:,1:3],tile(Tbase[2,3],N)]),sampledgraspindices
+            return poseMultArrayT(poserobot,c_[cos(samples[:,0]),zeros((N,2)),sin(samples[:,0]),samples[:,1:3],tile(Tbase[2,3],N)]),sampledgraspindices,self.necessaryjointstate()
         return gaussiankerneldensity,gaussiankernelsampler,bounds
 
     def sampleBaseDistributionIterator(self,Tgrasps,logllthresh=2.0,weight=1.0,Nprematuresamples=1,zaxis=None):
@@ -413,7 +445,7 @@ class InverseReachabilityModel(OpenRAVEModel):
                 for i in range(Nprematuresamples):
                     sample = random.normal(newpoints[bisect.bisect(cumweights,random.rand()),:],bandwidth*weight)
                     sample[0] *= 0.5*irotweight
-                    yield poseMult(poserobot,r_[cos(sample[0]),0,0,sin(sample[0]),sample[1:3],Tbase[2,3]]),graspindex
+                    yield poseMult(poserobot,r_[cos(sample[0]),0,0,sin(sample[0]),sample[1:3],Tbase[2,3]]),graspindex,self.necessaryjointstate()
             graspindices.append(graspindex)
             graspindexoffsets.append(len(points))
             points = r_[points,newpoints]
@@ -430,7 +462,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             sampledgraspindex = graspindices[bisect.bisect(graspindexoffsets,pointindex)-1]
             sample = random.normal(points[pointindex,:],bandwidth*weight)
             sample[0] *= 0.5*irotweight
-            yield poseMult(poserobot,r_[cos(sample[0]),0,0,sin(sample[0]),sample[1:3],Tbase[2,3]]),sampledgraspindex
+            yield poseMult(poserobot,r_[cos(sample[0]),0,0,sin(sample[0]),sample[1:3],Tbase[2,3]]),sampledgraspindex,self.necessaryjointstate()
 
     def randomBaseDistributionIterator(self,Tgrasps,Nprematuresamples=1,bounds=None,**kwargs):
         """randomly sample base positions given the grasps. This is mostly used for comparison"""
@@ -443,13 +475,13 @@ class InverseReachabilityModel(OpenRAVEModel):
             for i in range(Nprematuresamples):
                 r = random.rand(3)
                 angle = 0.5*(bounds[0,0]+r[0]*dbounds[0])
-                yield r_[cos(angle),0,0,sin(angle),Tgrasp[0:2,3] + (bounds[0,1:3]+r[1:3]*dbounds[1:3]),Trobot[2,3]],graspindex
+                yield r_[cos(angle),0,0,sin(angle),Tgrasp[0:2,3] + (bounds[0,1:3]+r[1:3]*dbounds[1:3]),Trobot[2,3]],graspindex,self.necessaryjointstate()
             grasps.append((Tgrasp,graspindex))
         while True:
             Tgrasp,graspindex = grasps[random.randint(len(grasps))]
             r = random.rand(3)
             angle = 0.5*(bounds[0,0]+r[0]*dbounds[0])
-            yield r_[cos(angle),0,0,sin(angle),Tgrasp[0:2,3] + (bounds[0,1:3]+r[1:3]*dbounds[1:3]),Trobot[2,3]],graspindex
+            yield r_[cos(angle),0,0,sin(angle),Tgrasp[0:2,3] + (bounds[0,1:3]+r[1:3]*dbounds[1:3]),Trobot[2,3]],graspindex,self.necessaryjointstate()
 
     def testSampling(self, heights=None,N=100,weight=1.0,**kwargs):
         if heights is None:
@@ -462,10 +494,11 @@ class InverseReachabilityModel(OpenRAVEModel):
                 self.robot.SetTransform(T)
                 densityfn,samplerfn,bounds = self.computeBaseDistribution(eye(4),**kwargs)
                 if densityfn is not None:
-                    poses = samplerfn(N,weight)
+                    poses,jointstate = samplerfn(N,weight)
                     failures = 0
                     for pose in poses:
                         self.robot.SetTransform(matrixFromPose(pose))
+                        self.robot.SetJointValues(*jointstate)
                         if self.manip.FindIKSolution(eye(4),False) is None:
                             #print 'pose failed: ',pose
                             failures += 1
@@ -478,6 +511,7 @@ class InverseReachabilityModel(OpenRAVEModel):
     def testEquivalenceClass(self,equivalenceclass):
         """tests that configurations in the cluster has IK solutions"""
         with self.robot:
+            self.robot.SetJointValues(*self.necessaryjointstate())
             Tgrasp = matrixFromQuat(equivalenceclass[0][0:4])
             Tgrasp[2,3] = equivalenceclass[0][4]
             failed = 0
@@ -544,11 +578,11 @@ class InverseReachabilityModel(OpenRAVEModel):
                 Tmanip = matrixFromAxisAngle([0,0,1],sample[0])
                 Tmanip[0:2,3] = sample[1:3]
                 self.robot.SetTransform(dot(Tmanipframe,Tmanip))
+                self.robot.SetJointValues(*self.necessaryjointstate())
                 solution = self.manip.FindIKSolution(Tgrasp,False)
                 if solution is not None:
                     self.robot.SetJointValues(solution,self.manip.GetArmJoints())
                     robotlocs.append((self.robot.GetTransform(),self.robot.GetJointValues()))
-
         self.env.RemoveKinBody(self.robot)
         newrobots = []
         for T,values in robotlocs:
@@ -574,6 +608,10 @@ class InverseReachabilityModel(OpenRAVEModel):
                           help='The max radius of the arm to perform the computation (default=0.05)')
         parser.add_option('--quatthresh',action='store',type='float',dest='quatthresh',default=None,
                           help='The max radius of the arm to perform the computation (default=0.15)')
+        parser.add_option('--id',action='store',type='string',dest='id',default=None,
+                          help='Special id differentiating inversereachability models')
+        parser.add_option('--jointvalues',action='store',type='string',dest='jointvalues',default=None,
+                          help='String of joint values that connect the robot base link to the manipulator base link')
         return parser
     @staticmethod
     def RunFromParser(Model=None,parser=None):
@@ -582,36 +620,6 @@ class InverseReachabilityModel(OpenRAVEModel):
         (options, args) = parser.parse_args()
         Model = lambda robot: InverseReachabilityModel(robot=robot)
         OpenRAVEModel.RunFromParser(Model=Model,parser=parser)
-
-class InverseReachabilityModelState(InverseReachabilityModel):
-    """inverse reachability model that tracks the state of the robot"""
-    def __init__(self,robot,index=0):
-        InverseReachabilityModel.__init__(self,robot=robot)
-        self.index=index
-        with self.robot:
-            self.jointvalues = self.robot.GetJointValues()[self.getdofindices(self.manip)]
-    @staticmethod
-    def getdofindices(manip):
-        joints = manip.GetRobot().GetChain(0,manip.GetBase().GetIndex())
-        return hstack([arange(joint.GetDOFIndex(),joint.GetDOFIndex()+joint.GetDOF()) for joint in joints])
-    def getfilename(self):
-        return os.path.join(OpenRAVEModel.getfilename(self),'invreachability.' + self.manip.GetName() + '.' + str(self.index) + '.pp')
-    def save(self):
-        OpenRAVEModel.save(self,(self.equivalenceclasses,self.rotweight,self.xyzdelta,self.quatdelta,self.jointvalues))
-    def load(self):
-        try:
-            params = OpenRAVEModel.load(self)
-            if params is None:
-                return False
-            self.equivalenceclasses,self.rotweight,self.xyzdelta,self.quatdeltaself.self.jointvalues = params
-            self.preprocess()
-            return self.has()
-        except e:
-            return False
-    def generate(self,**kwargs):
-        with self.robot:
-            self.robot.SetJointValues(self.jointvalues,self.getdofindices(self.manip))
-            InverseReachabilityModel.generate(self,**kwargs)
             
 if __name__ == "__main__":
     InverseReachabilityModel.RunFromParser()

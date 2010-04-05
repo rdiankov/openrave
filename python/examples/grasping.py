@@ -152,7 +152,7 @@ class GraspingModel(OpenRAVEModel):
                     graspingnoise = options.graspingnoise
                 updateenv = options.useviewer
             # check for specific robots
-            if self.robot.GetRobotStructureHash() == '7b789782446d86b95c6fb16de7f204c7' and self.manip.GetName() == 'arm' and self.target.GetKinematicsGeometryHash() == 'bbf03c6db8efc712a765f955a27b0d0f': # barrett hand
+            if self.robot.GetRobotStructureHash() == '2b5c20ef6f6e802a05de7abf53e37a28' and self.manip.GetName() == 'arm' and self.target.GetKinematicsGeometryHash() == 'bbf03c6db8efc712a765f955a27b0d0f': # barrett hand
                 if preshapes is None:
                     preshapes=array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2)))
 
@@ -160,7 +160,6 @@ class GraspingModel(OpenRAVEModel):
                 manipprob = BaseManipulation(self.robot)
                 with self.target:
                     self.target.Enable(False)
-                    self.robot.SetActiveDOFs(self.manip.GetGripperJoints())
                     final,traj = manipprob.ReleaseFingers(execute=False,outputfinal=True)
                     self.robot.SetActiveDOFValues(final)
                 preshapes = array([self.robot.GetJointValues()[self.manip.GetGripperJoints()]])
@@ -323,6 +322,7 @@ class GraspingModel(OpenRAVEModel):
         return contacts,finalconfig,mindist,volume
     def runGrasp(self,grasp,graspingnoise=None,translate=True,forceclosure=False):
         with self.robot: # lock the environment and save the robot state
+            self.robot.SetActiveManipulator(self.manip)
             self.robot.SetTransform(eye(4)) # have to reset transform in order to remove randomness
             self.robot.SetJointValues(grasp[self.graspindices.get('igrasppreshape')],self.manip.GetGripperJoints())
             self.robot.SetActiveDOFs(self.manip.GetGripperJoints(),Robot.DOFAffine.X+Robot.DOFAffine.Y+Robot.DOFAffine.Z if translate else 0)
@@ -335,6 +335,7 @@ class GraspingModel(OpenRAVEModel):
     def runGraspFromTrans(self,grasp):
         """squeeze the fingers to test whether the completed grasp only collides with the target, throws an exception if it fails. Otherwise returns the Grasp parameters. Uses the grasp transformation directly."""
         with self.robot:
+            self.robot.SetActiveManipulator(self.manip)
             self.robot.SetJointValues(grasp[self.graspindices.get('igrasppreshape')],self.manip.GetGripperJoints())
             self.robot.SetTransform(dot(self.getGlobalGraspTransform(grasp),dot(linalg.inv(self.manip.GetEndEffectorTransform()),self.robot.GetTransform())))
             self.robot.SetActiveDOFs(self.manip.GetGripperJoints())

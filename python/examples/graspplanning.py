@@ -203,12 +203,10 @@ class GraspPlanning(metaclass.AutoReloader):
             res = self.basemanip.MoveHandStraight(direction=-self.updir,stepsize=0.003,minsteps=1,maxsteps=100)
             robot.WaitForController(0)
 
-            with env:
-                robot.SetActiveDOFs(manip.GetGripperJoints())
-                try:
-                    self.basemanip.ReleaseFingers(target=target)
-                except planning_error:
-                    res = None
+            try:
+                self.basemanip.ReleaseFingers(target=target)
+            except planning_error:
+                res = None
             if res is None:
                 print 'problems releasing, releasing target first'
                 with env:

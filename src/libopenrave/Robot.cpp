@@ -518,11 +518,13 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot) : KinBodyStateS
     vactivedofs = _probot->GetActiveJointIndices();
     affinedofs = _probot->GetAffineDOF();
     rotationaxis = _probot->GetAffineRotationAxis();
+    nActiveManip = _probot->_nActiveManip;
 }
 
 RobotBase::RobotStateSaver::~RobotStateSaver()
 {
     _probot->SetActiveDOFs(vactivedofs, affinedofs, rotationaxis);
+    _probot->_nActiveManip = nActiveManip;
 }
 
 RobotBase::RobotBase(EnvironmentBasePtr penv) : KinBody(PT_Robot, penv)

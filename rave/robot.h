@@ -261,6 +261,7 @@ public:
         std::vector<int> vactivedofs;
         int affinedofs;
         Vector rotationaxis;
+        int nActiveManip;
         RobotBasePtr _probot;
     };
 

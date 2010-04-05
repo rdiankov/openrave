@@ -78,7 +78,23 @@ class ReachabilityModel(OpenRAVEModel):
 
     def getOrderedArmJoints(self):
         return [j for j in self.robot.GetDependencyOrderedJoints() if j.GetJointIndex() in self.manip.GetArmJoints()]
-
+    @staticmethod
+    def getManipulatorLinks(manip):
+        links = manip.GetChildLinks()
+        # add the links connecting to the base link.... although this reduces the freespace of the arm, it is better to have than not (ie waist on humanoid)
+        tobasejoints = manip.GetRobot().GetChain(0,manip.GetBase().GetIndex())
+        if len(tobasejoints) > 0:
+            tobasedofs = hstack([arange(joint.GetDOFIndex(),joint.GetDOFIndex()+joint.GetDOF()) for joint in tobasejoints])
+        else:
+            tobasedofs = []
+        joints = manip.GetRobot().GetJoints()
+        for jindex in r_[manip.GetArmJoints(),tobasedofs]:
+            joint = joints[jindex]
+            if joint.GetFirstAttached() and not joint.GetFirstAttached() in links:
+                links.append(joint.GetFirstAttached())
+            if joint.GetSecondAttached() and not joint.GetSecondAttached() in links:
+                links.append(joint.GetSecondAttached())
+        return links
     def generate(self,maxradius=None,translationonly=False,xyzdelta=None,quatdelta=None,usefreespace=True):
         # disable every body but the target and robot
         bodies = [b for b in self.env.GetBodies() if b != self.robot]
@@ -94,7 +110,9 @@ class ReachabilityModel(OpenRAVEModel):
                 self.robot.SetTransform(eye(4))
                 Tbase = self.manip.GetBase().GetTransform()
                 Tbaseinv = linalg.inv(Tbase)
-
+                maniplinks = self.getManipulatorLinks(self.manip)
+                for link in self.robot.GetLinks():
+                    link.Enable(link in maniplinks)
                 # the axes' anchors are the best way to find the max radius
                 # the best estimate of arm length is to sum up the distances of the anchors of all the points in between the chain
                 armjoints = self.getOrderedArmJoints()

@@ -255,7 +255,6 @@ while(curgrasp < size(grasps,1))
 
     % reenable hand joints
     %orRobotControllerSend(robotid, 'ignoreproxy');
-    orRobotSetActiveDOFs(robotid, handjoints);
     trajdata = orProblemSendCommand(['ReleaseFingers execute 0 outputtraj target ' curobj.name], probs.manip);
 
     %% cannot wait forever since hand might get stuck
