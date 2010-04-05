@@ -341,7 +341,7 @@ public:
                 FOREACHC(itmanip, _robot->GetManipulators()) {
                     vector<dReal>::const_iterator itclosing = (*itmanip)->GetClosingDirection().begin();
                     FOREACHC(itgripper,(*itmanip)->GetGripperJoints()) {
-                        if( *itgripper == _robot->GetActiveJointIndices().at(i) ) {
+                        if( *itclosing != 0 && *itgripper == _robot->GetActiveJointIndices().at(i) ) {
                             vclosingdir.at(i) = *itclosing;
                             break;
                         }

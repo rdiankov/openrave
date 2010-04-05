@@ -952,7 +952,8 @@ protected:
         FOREACHC(itmanip, robot->GetManipulators()) {
             BOOST_ASSERT((*itmanip)->GetClosingDirection().size()==(*itmanip)->GetGripperJoints().size());
             for(size_t i = 0; i < (*itmanip)->GetClosingDirection().size(); ++i) {
-                vclosingsign_full[(*itmanip)->GetGripperJoints()[i]] = (*itmanip)->GetClosingDirection()[i];
+                if( (*itmanip)->GetClosingDirection()[i] != 0 )
+                    vclosingsign_full[(*itmanip)->GetGripperJoints()[i]] = (*itmanip)->GetClosingDirection()[i];
             }
         }
 
@@ -993,7 +994,8 @@ protected:
         FOREACHC(itmanip, robot->GetManipulators()) {
             BOOST_ASSERT((*itmanip)->GetClosingDirection().size()==(*itmanip)->GetGripperJoints().size());
             for(size_t i = 0; i < (*itmanip)->GetClosingDirection().size(); ++i) {
-                vclosingsign_full[(*itmanip)->GetGripperJoints()[i]] = (*itmanip)->GetClosingDirection()[i];
+                if( (*itmanip)->GetClosingDirection()[i] != 0 )
+                    vclosingsign_full[(*itmanip)->GetGripperJoints()[i]] = (*itmanip)->GetClosingDirection()[i];
             }
         }
 
