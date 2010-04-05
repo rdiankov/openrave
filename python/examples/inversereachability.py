@@ -116,13 +116,19 @@ class InverseReachabilityModel(OpenRAVEModel):
     @staticmethod
     def getManipulatorLinks(manip):
         links = manip.GetChildLinks()
-        joints = manip.GetRobot().GetJoints()
+        robot=manip.GetRobot()
+        joints = robot.GetJoints()
         for jindex in r_[manip.GetArmJoints(),InverseReachabilityModel.getdofindices(manip)]:
             joint = joints[jindex]
             if joint.GetFirstAttached() and not joint.GetFirstAttached() in links:
                 links.append(joint.GetFirstAttached())
             if joint.GetSecondAttached() and not joint.GetSecondAttached() in links:
                 links.append(joint.GetSecondAttached())
+        # don't forget the rigidly attached links
+        for link in links[:]:
+            for newlink in robot.GetRigidlyAttachedLinks(link.GetIndex()):
+                if not newlink in links:
+                    links.append(newlink)
         return links
     def necessaryjointstate(self):
         return self.jointvalues,self.getdofindices(self.manip)

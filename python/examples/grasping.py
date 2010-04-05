@@ -352,7 +352,8 @@ class GraspingModel(OpenRAVEModel):
     def setPreshape(self,grasp):
         """sets the preshape on the robot, assumes environment is locked"""
         self.robot.SetJointValues(grasp[self.graspindices['igrasppreshape']],self.manip.GetGripperJoints())
-
+    def getPreshape(self,grasp):
+        return grasp[self.graspindices['igrasppreshape']]
     def computeValidGrasps(self,startindex=0,checkcollision=True,checkik=True,checkgrasper=True,backupdist=0.0,returnnum=inf):
         """Returns the set of grasps that satisfy certain conditions. If returnnum is set, will also return once that many number of grasps are found.
         If backupdist > 0, then will move the hand along negative approach dir and check for validity.

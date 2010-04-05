@@ -87,13 +87,19 @@ class ReachabilityModel(OpenRAVEModel):
             tobasedofs = hstack([arange(joint.GetDOFIndex(),joint.GetDOFIndex()+joint.GetDOF()) for joint in tobasejoints])
         else:
             tobasedofs = []
-        joints = manip.GetRobot().GetJoints()
+        robot = manip.GetRobot()
+        joints = robot.GetJoints()
         for jindex in r_[manip.GetArmJoints(),tobasedofs]:
             joint = joints[jindex]
             if joint.GetFirstAttached() and not joint.GetFirstAttached() in links:
                 links.append(joint.GetFirstAttached())
             if joint.GetSecondAttached() and not joint.GetSecondAttached() in links:
                 links.append(joint.GetSecondAttached())
+        # don't forget the rigidly attached links
+        for link in links[:]:
+            for newlink in robot.GetRigidlyAttachedLinks(link.GetIndex()):
+                if not newlink in links:
+                    links.append(newlink)
         return links
     def generate(self,maxradius=None,translationonly=False,xyzdelta=None,quatdelta=None,usefreespace=True):
         # disable every body but the target and robot

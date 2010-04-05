@@ -37,9 +37,16 @@ class ConstraintPlanning(metaclass.AutoReloader):
     def graspAndMove(self):
         target = self.gmodel.target
         print 'grasping %s'%target.GetName()
-        validgrasps,validindices = self.gmodel.computeValidGrasps(returnnum=4)
-        matrices = [self.gmodel.getGlobalGraspTransform(grasp) for grasp in validgrasps]
-        res = self.basemanip.MoveToHandPosition(matrices=matrices,maxiter=1000,maxtries=1,seedik=4)
+        # only use one grasp since preshape can change
+        validgrasps,validindices = self.gmodel.computeValidGrasps(returnnum=10)
+        validgrasp=validgrasps[random.randint(len(validgrasps))]
+        with self.robot:
+            self.gmodel.setPreshape(validgrasp)
+            jointvalues = self.robot.GetJointValues()
+        self.robot.GetController().SetDesired(jointvalues)
+        self.robot.WaitForController(0)
+        matrices = [self.gmodel.getGlobalGraspTransform(validgrasp,collisionfree=True)]
+        res = self.basemanip.MoveToHandPosition(matrices=matrices,maxiter=1000,maxtries=1,seedik=10)
         self.robot.WaitForController(0)
         self.basemanip.CloseFingers()
         self.robot.WaitForController(0)
