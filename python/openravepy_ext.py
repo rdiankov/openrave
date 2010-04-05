@@ -411,7 +411,7 @@ class OpenRAVEModel(metaclass.AutoReloader):
     @staticmethod
     def CreateOptionParser(useManipulator=True):
         parser = optparse.OptionParser(description='Computes an openrave model and caches into file.')
-        parser.add_option('--robot',action='store',type='string',dest='robot',default='robots/barrettsegway.robot.xml',
+        parser.add_option('--robot',action='store',type='string',dest='robot',default=os.getenv('OPENRAVE_ROBOT',default='robots/barrettsegway.robot.xml'),
                           help='OpenRAVE robot to load (default=%default)')
         if useManipulator:
             parser.add_option('--manipname',action='store',type='string',dest='manipname',default=None,

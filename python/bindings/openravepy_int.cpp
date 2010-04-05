@@ -385,6 +385,7 @@ public:
     }
 
     virtual bool __eq__(PyInterfaceBasePtr p) { return _pbase == p->GetInterfaceBase(); }
+    virtual bool __ne__(PyInterfaceBasePtr p) { return _pbase != p->GetInterfaceBase(); }
     virtual InterfaceBasePtr GetInterfaceBase() { return _pbase; }
 };
 
@@ -477,6 +478,7 @@ public:
             string GetRenderFilename() const { return _plink->GetGeometry(_geomindex).GetRenderFilename(); }
 
             bool __eq__(boost::shared_ptr<PyGeomProperties> p) { return _plink == p->_plink && _geomindex == p->_geomindex; }
+            bool __ne__(boost::shared_ptr<PyGeomProperties> p) { return _plink != p->_plink || _geomindex != p->_geomindex; }
         };
 
         PyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv) : _plink(plink), _pyenv(pyenv) {}
@@ -524,6 +526,7 @@ public:
         }
 
         bool __eq__(boost::shared_ptr<PyLink> p) { return _plink == p->_plink; }
+        bool __ne__(boost::shared_ptr<PyLink> p) { return _plink != p->_plink; }
     };
 
     typedef boost::shared_ptr<PyLink> PyLinkPtr;
@@ -600,6 +603,7 @@ public:
             return _pjoint->AddTorque(vtorques);
         }
         bool __eq__(boost::shared_ptr<PyJoint> p) { return _pjoint==p->_pjoint; }
+        bool __ne__(boost::shared_ptr<PyJoint> p) { return _pjoint!=p->_pjoint; }
     };
     typedef boost::shared_ptr<PyJoint> PyJointPtr;
     typedef boost::shared_ptr<PyJoint const> PyJointConstPtr;
@@ -1322,6 +1326,7 @@ public:
             return _pmanip->CheckIndependentCollision(!pReport ? CollisionReportPtr() : pReport->report);
         }
         bool __eq__(boost::shared_ptr<PyManipulator> p) { return _pmanip==p->_pmanip; }
+        bool __ne__(boost::shared_ptr<PyManipulator> p) { return _pmanip!=p->_pmanip; }
     };
     typedef boost::shared_ptr<PyManipulator> PyManipulatorPtr;
     PyManipulatorPtr GetManipulator(RobotBase::ManipulatorPtr pmanip) {
@@ -1345,6 +1350,7 @@ public:
 
         void SetRelativeTransform(object transform) { _pattached->SetRelativeTransform(ExtractTransform(transform)); }
         bool __eq__(boost::shared_ptr<PyAttachedSensor> p) { return _pattached==p->_pattached; }
+        bool __ne__(boost::shared_ptr<PyAttachedSensor> p) { return _pattached!=p->_pattached; }
     };
 
     class PyGrabbed
@@ -2754,6 +2760,8 @@ public:
     DebugLevel GetDebugLevel() const { return _penv->GetDebugLevel(); }
 
     string GetHomeDirectory() { return _penv->GetHomeDirectory(); }
+    bool __eq__(PyEnvironmentBasePtr p) { return _penv==p->_penv; }
+    bool __ne__(PyEnvironmentBasePtr p) { return _penv!=p->_penv; }
 };
 
 void PyKinBody::__enter__()
@@ -3124,6 +3132,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
         .def("GetUserData",&PyInterfaceBase::GetUserData)
         .def("SendCommand",&PyInterfaceBase::SendCommand,args("cmd"))
         .def("__eq__",&PyInterfaceBase::__eq__)
+        .def("__ne__",&PyInterfaceBase::__ne__)
         ;
 
     class_<PyPluginInfo, boost::shared_ptr<PyPluginInfo> >("PluginInfo",no_init)
@@ -3210,6 +3219,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
                 .def("SetTorque",&PyKinBody::PyLink::SetTorque,args("torque","add"))
                 .def("GetGeometries",&PyKinBody::PyLink::GetGeometries)
                 .def("__eq__",&PyKinBody::PyLink::__eq__)
+                .def("__ne__",&PyKinBody::PyLink::__ne__)
                 ;
 
             class_<PyKinBody::PyLink::PyTriMesh, boost::shared_ptr<PyKinBody::PyLink::PyTriMesh> >("TriMesh")
@@ -3235,6 +3245,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
                     .def("GetRenderScale",&PyKinBody::PyLink::PyGeomProperties::GetRenderScale)
                     .def("GetRenderFilename",&PyKinBody::PyLink::PyGeomProperties::GetRenderFilename)
                     .def("__eq__",&PyKinBody::PyLink::PyGeomProperties::__eq__)
+                    .def("__ne__",&PyKinBody::PyLink::PyGeomProperties::__ne__)
                     ;
                 enum_<KinBody::Link::GEOMPROPERTIES::GeomType>("Type")
                     .value("None",KinBody::Link::GEOMPROPERTIES::GeomNone)
@@ -3276,6 +3287,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
                 .def("SetWeights",&PyKinBody::PyJoint::SetWeights,args("weights"))
                 .def("AddTorque",&PyKinBody::PyJoint::AddTorque,args("torques"))
                 .def("__eq__",&PyKinBody::PyJoint::__eq__)
+                .def("__ne__",&PyKinBody::PyJoint::__ne__)
                 ;
             
             enum_<KinBody::Joint::JointType>("Type")
@@ -3467,6 +3479,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("CheckIndependentCollision",pCheckIndependentCollision1)
             .def("CheckIndependentCollision",pCheckIndependentCollision2,args("report"))
             .def("__eq__",&PyRobotBase::PyManipulator::__eq__)
+            .def("__ne__",&PyRobotBase::PyManipulator::__ne__)
             ;
 
         class_<PyRobotBase::PyAttachedSensor, boost::shared_ptr<PyRobotBase::PyAttachedSensor> >("AttachedSensor", no_init)
@@ -3478,6 +3491,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetName",&PyRobotBase::PyAttachedSensor::GetName)
             .def("SetRelativeTransform",&PyRobotBase::PyAttachedSensor::SetRelativeTransform,args("transform"))
             .def("__eq__",&PyRobotBase::PyAttachedSensor::__eq__)
+            .def("__ne__",&PyRobotBase::PyAttachedSensor::__ne__)
             ;
 
         class_<PyRobotBase::PyGrabbed, boost::shared_ptr<PyRobotBase::PyGrabbed> >("Grabbed",no_init)
@@ -3718,6 +3732,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("SetDebugLevel",&PyEnvironmentBase::SetDebugLevel,args("level"))
             .def("GetDebugLevel",&PyEnvironmentBase::GetDebugLevel)
             .def("GetHomeDirectory",&PyEnvironmentBase::GetHomeDirectory)
+            .def("__eq__",&PyEnvironmentBase::__eq__)
+            .def("__ne__",&PyEnvironmentBase::__ne__)
             ;
 
         enum_<EnvironmentBase::TriangulateOptions>("TriangulateOptions")

@@ -66,7 +66,6 @@ class InverseReachabilityModel(OpenRAVEModel):
     def __init__(self,robot):
         OpenRAVEModel.__init__(self,robot=robot)
         self.rmodel = kinematicreachability.ReachabilityModel(robot=robot)
-        self.rmodel.load()
         self.equivalenceclasses = None
         self.rotweight = 0.2 # in-plane rotation weight with respect to xy offset
         
@@ -105,99 +104,98 @@ class InverseReachabilityModel(OpenRAVEModel):
        return os.path.join(OpenRAVEModel.getfilename(self),'invreachability.' + self.manip.GetName() + '.pp')
 
     def autogenerate(self,options=None):
-        # disable every body but the target and robot
-        bodies = [b for b in self.env.GetBodies() if b.GetNetworkId() != self.robot.GetNetworkId()]
-        for b in bodies:
-            b.Enable(False)
-        try:
-            heightthresh=None
-            quatthresh=None
-            Nminimum=None
-            if options is not None:
-                if options.heightthresh is not None:
-                    heightthresh=options.heightthresh
-                if options.quatthresh is not None:
-                    quatthresh=options.quatthresh
-            if self.robot.GetRobotStructureHash() == '7b789782446d86b95c6fb16de7f204c7' and self.manip.GetName() == 'arm':
-                if heightthresh is None:
-                    heightthresh=0.05
-                if quatthresh is None:
-                    quatthresh=0.15
-            self.generate(heightthresh=heightthresh,quatthresh=quatthresh,Nminimum=Nminimum)
-            self.save()
-        finally:
-            for b in bodies:
-                b.Enable(True)
+        heightthresh=None
+        quatthresh=None
+        Nminimum=None
+        if options is not None:
+            if options.heightthresh is not None:
+                heightthresh=options.heightthresh
+            if options.quatthresh is not None:
+                quatthresh=options.quatthresh
+        if self.robot.GetRobotStructureHash() == '7b789782446d86b95c6fb16de7f204c7' and self.manip.GetName() == 'arm':
+            if heightthresh is None:
+                heightthresh=0.05
+            if quatthresh is None:
+                quatthresh=0.15
+        self.generate(heightthresh=heightthresh,quatthresh=quatthresh,Nminimum=Nminimum)
+        self.save()
 
     def generate(self,heightthresh=None,quatthresh=None,Nminimum=None):
         """First transform all end effectors to the identity and get the robot positions,
         then cluster the robot position modulo in-plane rotation (z-axis) and position (xy),
         then compute statistics for each cluster."""
-        if heightthresh is None:
-            heightthresh=0.05
-        if quatthresh is None:
-            quatthresh=0.15
-        if Nminimum is None:
-            Nminimum=10
-        if not self.rmodel.load():
-            self.rmodel.autogenerate()
-        print "Generating Inverse Reachability",heightthresh,quatthresh
-        with self.robot:
-            Tbase = self.manip.GetBase().GetTransform()
-        # convert the quatthresh to a loose euclidean distance
-        self.xyzdelta = self.rmodel.xyzdelta
-        self.quatdelta = self.rmodel.quatdelta
-        self.rotweight = heightthresh/quatthresh
-        quateucdist2 = (1-cos(quatthresh))**2+sin(quatthresh)**2
-        # find the density
-        basetrans = array(self.rmodel.reachabilitystats)
-        basetrans[:,0:7] = poseMultArrayT(poseFromMatrix(Tbase),basetrans[:,0:7])
-        # find the density of the points
-        searchtrans = c_[basetrans[:,0:4],basetrans[:,6:7]]
-        kdtree = self.QuaternionKDTree(searchtrans,1.0/self.rotweight)
-        transdensity = kdtree.kFRSearchArray(searchtrans,0.25*quateucdist2,0,quatthresh*0.2)[2]
-        basetrans = basetrans[argsort(-transdensity),:]
-        Nminimum = max(Nminimum,4)
-        
-        # find all equivalence classes
-        quatrolls = array([quatFromAxisAngle(array((0,0,1)),roll) for roll in arange(0,2*pi,quatthresh*0.5)])
-        self.equivalenceclasses = []
-        while len(basetrans) > 0:
+        # disable every body but the target and robot
+        bodies = [b for b in self.env.GetBodies() if b != self.robot]
+        for b in bodies:
+            b.Enable(False)
+        try:
+            if heightthresh is None:
+                heightthresh=0.05
+            if quatthresh is None:
+                quatthresh=0.15
+            if Nminimum is None:
+                Nminimum=10
+            if not self.rmodel.load():
+                self.rmodel.autogenerate()
+            print "Generating Inverse Reachability",heightthresh,quatthresh
+            with self.robot:
+                # get base of link manipulator with respect to base link
+                Tbase = dot(linalg.inv(self.robot.GetTransform()),self.manip.GetBase().GetTransform())
+            # convert the quatthresh to a loose euclidean distance
+            self.xyzdelta = self.rmodel.xyzdelta
+            self.quatdelta = self.rmodel.quatdelta
+            self.rotweight = heightthresh/quatthresh
+            quateucdist2 = (1-cos(quatthresh))**2+sin(quatthresh)**2
+            # find the density
+            basetrans = array(self.rmodel.reachabilitystats)
+            basetrans[:,0:7] = poseMultArrayT(poseFromMatrix(Tbase),basetrans[:,0:7])
+            # find the density of the points
             searchtrans = c_[basetrans[:,0:4],basetrans[:,6:7]]
             kdtree = self.QuaternionKDTree(searchtrans,1.0/self.rotweight)
-            querypoints = c_[quatArrayTMult(quatrolls, searchtrans[0][0:4]),tile(searchtrans[0][4:],(len(quatrolls),1))]
-            foundindices = zeros(len(searchtrans),bool)
-            for querypoint in querypoints:
-                k = min(len(searchtrans),1000)
-                neighs,dists,kball = kdtree.kFRSearchArray(reshape(querypoint,(1,5)),quateucdist2,k,quatthresh*0.01)
-                if k < kball:
-                    neighs,dists,kball = kdtree.kFRSearchArray(reshape(querypoint,(1,5)),quateucdist2,kball,quatthresh*0.01)
-                foundindices[neighs] = True
-            equivalenttrans = basetrans[flatnonzero(foundindices),:]
-            normalizedqarray,zangles = normalizeZRotation(equivalenttrans[:,0:4])
-            
-            # get the 'mean' of the normalized quaternions best describing the distribution
-            # for initialization, make sure all quaternions are on the same hemisphere
-            identityquat = tile(array((1.0,0,0,0)),(normalizedqarray.shape[0],1))
-            normalizedqarray[flatnonzero(sum((normalizedqarray+identityquat)**2,1) < sum((normalizedqarray-identityquat)**2, 1)),0:4] *= -1
-            q0 = sum(normalizedqarray,axis=0)
-            q0 /= sqrt(sum(q0**2))
-            if len(normalizedqarray) >= Nminimum:
-                qmean,success = leastsq(lambda q: quatArrayTDist(q/sqrt(sum(q**2)),normalizedqarray), normalizedqarray[0],maxfev=10000)
-                qmean /= sqrt(sum(qmean**2))
-            else:
-                qmean = q0
-            qstd = sqrt(sum(quatArrayTDist(qmean,normalizedqarray)**2)/len(normalizedqarray))
-            # compute statistics, store the angle, xy offset, and remaining unprocessed data
-            czangles = cos(zangles)
-            szangles = sin(zangles)
-            equivalenttransinv = -c_[czangles*equivalenttrans[:,4]+szangles*equivalenttrans[:,5],-szangles*equivalenttrans[:,4]+czangles*equivalenttrans[:,5]]
-            equivalenceclass = (r_[qmean,mean(equivalenttrans[:,6])],
-                                r_[qstd,std(equivalenttrans[:,6])],
-                                c_[-zangles,equivalenttransinv,equivalenttrans[:,7:]])
-            self.equivalenceclasses.append(equivalenceclass)
-            basetrans = basetrans[flatnonzero(foundindices==False),:]
-            print 'new equivalence class outliers: %d/%d, left over trans: %d'%(self.testEquivalenceClass(equivalenceclass)*len(zangles),len(zangles),len(basetrans))
+            transdensity = kdtree.kFRSearchArray(searchtrans,0.25*quateucdist2,0,quatthresh*0.2)[2]
+            basetrans = basetrans[argsort(-transdensity),:]
+            Nminimum = max(Nminimum,4)
+            # find all equivalence classes
+            quatrolls = array([quatFromAxisAngle(array((0,0,1)),roll) for roll in arange(0,2*pi,quatthresh*0.5)])
+            self.equivalenceclasses = []
+            while len(basetrans) > 0:
+                searchtrans = c_[basetrans[:,0:4],basetrans[:,6:7]]
+                kdtree = self.QuaternionKDTree(searchtrans,1.0/self.rotweight)
+                querypoints = c_[quatArrayTMult(quatrolls, searchtrans[0][0:4]),tile(searchtrans[0][4:],(len(quatrolls),1))]
+                foundindices = zeros(len(searchtrans),bool)
+                for querypoint in querypoints:
+                    k = min(len(searchtrans),1000)
+                    neighs,dists,kball = kdtree.kFRSearchArray(reshape(querypoint,(1,5)),quateucdist2,k,quatthresh*0.01)
+                    if k < kball:
+                        neighs,dists,kball = kdtree.kFRSearchArray(reshape(querypoint,(1,5)),quateucdist2,kball,quatthresh*0.01)
+                    foundindices[neighs] = True
+                equivalenttrans = basetrans[flatnonzero(foundindices),:]
+                normalizedqarray,zangles = normalizeZRotation(equivalenttrans[:,0:4])
+                # get the 'mean' of the normalized quaternions best describing the distribution
+                # for initialization, make sure all quaternions are on the same hemisphere
+                identityquat = tile(array((1.0,0,0,0)),(normalizedqarray.shape[0],1))
+                normalizedqarray[flatnonzero(sum((normalizedqarray+identityquat)**2,1) < sum((normalizedqarray-identityquat)**2, 1)),0:4] *= -1
+                q0 = sum(normalizedqarray,axis=0)
+                q0 /= sqrt(sum(q0**2))
+                if len(normalizedqarray) >= Nminimum:
+                    qmean,success = leastsq(lambda q: quatArrayTDist(q/sqrt(sum(q**2)),normalizedqarray), normalizedqarray[0],maxfev=10000)
+                    qmean /= sqrt(sum(qmean**2))
+                else:
+                    qmean = q0
+                qstd = sqrt(sum(quatArrayTDist(qmean,normalizedqarray)**2)/len(normalizedqarray))
+                # compute statistics, store the angle, xy offset, and remaining unprocessed data
+                czangles = cos(zangles)
+                szangles = sin(zangles)
+                equivalenttransinv = -c_[czangles*equivalenttrans[:,4]+szangles*equivalenttrans[:,5],-szangles*equivalenttrans[:,4]+czangles*equivalenttrans[:,5]]
+                equivalenceclass = (r_[qmean,mean(equivalenttrans[:,6])],
+                                    r_[qstd,std(equivalenttrans[:,6])],
+                                    c_[-zangles,equivalenttransinv,equivalenttrans[:,7:]])
+                self.equivalenceclasses.append(equivalenceclass)
+                basetrans = basetrans[flatnonzero(foundindices==False),:]
+                print 'new equivalence class outliers: %d/%d, left over trans: %d'%(self.testEquivalenceClass(equivalenceclass)*len(zangles),len(zangles),len(basetrans))
+        finally:
+            for b in bodies:
+                b.Enable(True)
         self.preprocess()
         
     def getEquivalenceClass(self,Tgrasp):
@@ -501,7 +499,8 @@ class InverseReachabilityModel(OpenRAVEModel):
                 Tgrasp[0:3,3] = Torggrasp[0:3,3] + (random.rand(3)-0.5)*0.01
                 Tgrasp[0:3,0:3] = dot(Torggrasp[0:3,0:3],rotationMatrixFromAxisAngle(random.rand(3)*0.05))
             return solution
-    def showBaseDistribution(self,densityfn,bounds,zoffset=0,thresh=1.0,maxprob=None,marginalizeangle=True):
+    @staticmethod
+    def showBaseDistribution(env,densityfn,bounds,zoffset=0,thresh=1.0,maxprob=None,marginalizeangle=True):
         discretization = [0.1,0.04,0.04]
         A,Y,X = mgrid[bounds[0,0]:bounds[1,0]:discretization[0], bounds[0,2]:bounds[1,2]:discretization[2], bounds[0,1]:bounds[1,1]:discretization[1]]
         N = prod(A.shape)
@@ -523,7 +522,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             Tplane = eye(4)
             Tplane[0:2,3] = mean(bounds[:,1:3],axis=0)
             Tplane[2,3] = zoffset
-            return self.env.drawplane(transform=Tplane,extents=(bounds[1,1:3]-bounds[0,1:3])/2,texture=Ic)
+            return env.drawplane(transform=Tplane,extents=(bounds[1,1:3]-bounds[0,1:3])/2,texture=Ic)
 
         else:
             inds = flatnonzero(probs>thresh)
@@ -609,5 +608,10 @@ class InverseReachabilityModelState(InverseReachabilityModel):
             return self.has()
         except e:
             return False
+    def generate(self,**kwargs):
+        with self.robot:
+            self.robot.SetJointValues(self.jointvalues,self.getdofindices(self.manip))
+            InverseReachabilityModel.generate(self,**kwargs)
+            
 if __name__ == "__main__":
     InverseReachabilityModel.RunFromParser()
