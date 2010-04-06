@@ -106,7 +106,7 @@ class BaseManipulation:
             assert(len(offset) == dof)
             cmd += ' '.join(str(f) for f in offset) + ' '
         if movingdir is not None:
-            assert(len(movingdir) == self.robot.GetActiveDOF())
+            assert(len(movingdir) == dof)
             cmd += 'movingdir %s '%(' '.join(str(f) for f in movingdir))
         if execute is not None:
             cmd += 'execute %d '%execute
@@ -130,10 +130,11 @@ class BaseManipulation:
         return final,traj
     def ReleaseFingers(self,target=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None):
         cmd = 'ReleaseFingers '
+        dof=len(self.robot.GetActiveManipulator().GetGripperJoints())
         if target is not None:
             cmd += 'target %s '%target.GetName()
         if movingdir is not None:
-            assert(len(movingdir) == self.robot.GetActiveDOF())
+            assert(len(movingdir) == dof)
             cmd += 'movingdir %s '%(' '.join(str(f) for f in movingdir))
         if execute is not None:
             cmd += 'execute %d '%execute
@@ -146,7 +147,7 @@ class BaseManipulation:
             raise planning_error()
         resvalues = res.split()
         if outputfinal:
-            final = array([float(resvalues[i]) for i in range(self.robot.GetActiveDOF())])
+            final = array([float(resvalues[i]) for i in range(dof)])
             resvalues=resvalues[len(final):]
         else:
             final=None

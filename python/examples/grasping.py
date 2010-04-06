@@ -65,6 +65,7 @@ class GraspingModel(OpenRAVEModel):
         self.grasps = []
         self.graspindices = dict()
         self.grasper = None
+        self.basemanip = BaseManipulation(self.robot)
         self.preprocess()
         # only the indices used by the TaskManipulation plugin should start with an 'i'
         graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':len(self.manip.GetGripperJoints()),'igrasptrans':12,'forceclosure':1,'grasptrans_nocol':12}
@@ -157,12 +158,10 @@ class GraspingModel(OpenRAVEModel):
                     preshapes=array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2)))
 
             if preshapes is None:
-                manipprob = BaseManipulation(self.robot)
                 with self.target:
                     self.target.Enable(False)
-                    final,traj = manipprob.ReleaseFingers(execute=False,outputfinal=True)
-                    self.robot.SetActiveDOFValues(final)
-                preshapes = array([self.robot.GetJointValues()[self.manip.GetGripperJoints()]])
+                    final,traj = self.basemanip.ReleaseFingers(execute=False,outputfinal=True)
+                preshapes = array([final])
             if approachrays is None:
                 approachrays = self.computeBoxApproachRays(delta=0.02)
             if rolls is None:
@@ -352,8 +351,16 @@ class GraspingModel(OpenRAVEModel):
     def setPreshape(self,grasp):
         """sets the preshape on the robot, assumes environment is locked"""
         self.robot.SetJointValues(grasp[self.graspindices['igrasppreshape']],self.manip.GetGripperJoints())
-    def getPreshape(self,grasp):
-        return grasp[self.graspindices['igrasppreshape']]
+    def moveToPreshape(self,grasp):
+        """uses a planner to safely move the hand to the preshape and returns the trajectory"""
+        self.robot.SetActiveDOFs(self.manip.GetArmJoints())
+        self.basemanip.MoveUnsyncJoints(jointvalues=grasp[self.graspindices['igrasppreshape']],jointinds=self.manip.GetGripperJoints())
+        while not self.robot.GetController().IsDone(): # busy wait
+            time.sleep(0.01)
+        self.robot.SetActiveDOFs(self.manip.GetGripperJoints())
+        self.basemanip.MoveActiveJoints(goal=grasp[self.graspindices['igrasppreshape']])
+        while not self.robot.GetController().IsDone(): # busy wait
+            time.sleep(0.01)
     def computeValidGrasps(self,startindex=0,checkcollision=True,checkik=True,checkgrasper=True,backupdist=0.0,returnnum=inf):
         """Returns the set of grasps that satisfy certain conditions. If returnnum is set, will also return once that many number of grasps are found.
         If backupdist > 0, then will move the hand along negative approach dir and check for validity.
