@@ -638,7 +638,10 @@ public:
     virtual void GetLoadedInterfaces(PLUGININFO& info) = 0;
 
     /// load a plugin and its interfaces
-    virtual bool LoadPlugin(const std::string& pname) = 0;
+    /// \param name the filename of the plugin to load
+    virtual bool LoadPlugin(const std::string& name) = 0;
+    /// Reloads all currently loaded plugins. The interfaces currently created remain will continue using the old plugins, so this function is safe in that plugins currently loaded remain loaded until the last interface that uses them is released.
+    virtual void ReloadPlugins() = 0;
 
     /// returns true if interface can be loaded from a plugin, otherwise false
     virtual bool HasInterface(PluginType type, const std::string& interfacename) = 0;

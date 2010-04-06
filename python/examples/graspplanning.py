@@ -20,6 +20,7 @@ from openravepy.examples import convexdecomposition,grasping,inversekinematics
 from numpy import *
 import numpy,time,traceback
 from optparse import OptionParser
+from itertools import izip
 
 class GraspPlanning(metaclass.AutoReloader):
     def __init__(self,robot,randomize=False,dests=None,nodestinations=False,switchpatterns=None):
@@ -78,7 +79,17 @@ class GraspPlanning(metaclass.AutoReloader):
                 tablename = 'table'
                 table = self.envreal.GetKinBody(tablename)
                 if table is not None:
-                    self.setRandomDestinations(table)
+                    alltargets = [graspable[0].target for graspable in self.graspables]
+                    for target in alltargets:
+                        target.Enable(False)
+                    try:
+                        needdests_graspables = [graspable for graspable in self.graspables if graspable[1] is None]
+                        alldests = self.setRandomDestinations([graspable[0].target for graspable in needdests_graspables],table)
+                        for graspable,dests in izip(needdests_graspables,alldests):
+                            graspable[1] = dests
+                    finally:
+                        for target in alltargets:
+                            target.Enable(True)
                 else:
                     print 'could not find %s'%tablename
 
@@ -92,18 +103,18 @@ class GraspPlanning(metaclass.AutoReloader):
                     print '%s is graspable'%target.GetName()
                     graspables.append([gmodel,dests])
         return graspables
-
-    def setRandomDestinations(self, table,randomize=False):
-        with self.envreal:
+    @staticmethod
+    def setRandomDestinations(targets, table,transdelta=0.1,Trolls=None,randomize=False):
+        with table.GetEnv():
             print 'searching for destinations on %s...'%table.GetName()
             Ttable = table.GetTransform()
             table.SetTransform(eye(4))
             ab = table.ComputeAABB()
             table.SetTransform(Ttable)
             p = ab.pos()
-            e = numpy.minimum(ab.extents(),array((0.2,0.2,1)))
-            Nx = floor(2*e[0]/0.1)
-            Ny = floor(2*e[1]/0.1)
+            e = ab.extents()#numpy.minimum(ab.extents(),array((0.2,0.2,1)))
+            Nx = floor(2*e[0]/transdelta)
+            Ny = floor(2*e[1]/transdelta)
             X = []
             Y = []
             if randomize:
@@ -114,29 +125,31 @@ class GraspPlanning(metaclass.AutoReloader):
                 for x in arange(Nx):
                     X = r_[X, tile((x+1)/(Nx+1),Ny)]
                     Y = r_[Y, arange(0.5,Ny,1.0)/(Ny+1)]
-            translations = c_[p[0]-e[0]*2*e[0]*X,p[1]-e[1]+2*e[1]*Y,tile(p[2]+e[2],len(X))]
-            Trolls = [matrixFromAxisAngle(array((0,0,1)),roll) for roll in arange(0,2*pi,pi/2)] + [matrixFromAxisAngle(array((1,0,0)),roll) for roll in [pi/2,pi,1.5*pi]]
-
-            for graspable in self.graspables:
-                graspable[0].target.Enable(False)
-            for graspable in self.graspables:
-                if graspable[1] is not None:
-                    continue
-                body = graspable[0].target
-                Torg = body.GetTransform()
-                Torg[0:3,3] = 0 # remove translation
-                with KinBodyStateSaver(body):
-                    body.Enable(True)
-                    dests = []
-                    for translation in translations:
-                        for Troll in Trolls:
-                            Troll[0:3,3] = translation
-                            body.SetTransform(dot(Ttable, dot(Troll, Torg)))
-                            if not self.envreal.CheckCollision(body):
-                                dests.append(body.GetTransform())
-                    graspable[1] = dests
-            for graspable in self.graspables:
-                graspable[0].target.Enable(True)
+            translations = c_[p[0]-e[0]*2*e[0]*X,p[1]-e[1]+2*e[1]*Y,tile(p[2]+e[2]+0.01,len(X))]
+            if Trolls is None:
+                Trolls = [matrixFromAxisAngle(array((0,0,1)),roll) for roll in arange(0,2*pi,pi/2)] + [matrixFromAxisAngle(array((1,0,0)),roll) for roll in [pi/2,pi,1.5*pi]]
+            for target in targets:
+                target.Enable(False)
+            try:
+                alldests = []
+                for target in targets:
+                    Torg = target.GetTransform()
+                    Torg[0:3,3] = 0 # remove translation
+                    with KinBodyStateSaver(target):
+                        target.Enable(True)
+                        dests = []
+                        for translation in translations:
+                            for Troll in Trolls:
+                                Troll = array(Troll)
+                                Troll[0:3,3] = translation
+                                target.SetTransform(dot(Ttable, dot(Troll, Torg)))
+                                if not table.GetEnv().CheckCollision(target):
+                                    dests.append(target.GetTransform())
+                        alldests.append(dests)
+                return alldests
+            finally:
+                for target in targets:
+                    target.Enable(True)
 
     def viewDestinations(self,graspable,delay=0.5):
         with graspable[0].target:
@@ -170,16 +183,14 @@ class GraspPlanning(metaclass.AutoReloader):
 
             print 'moving hand'
             expectedsteps = floor(approachoffset/stepsize)
-            with env:
+            try:
                 res = self.basemanip.MoveHandStraight(direction=dot(manip.GetEndEffectorTransform()[0:3,0:3],manip.GetPalmDirection()),
                                                       ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps-2,maxsteps=expectedsteps+1)
-            robot.WaitForController(0)
-
-            if res is None:
+            except:
                 # use a planner to move the rest of the way
-                with env:
-                    res = self.basemanip.MoveToHandPosition(matrices=[dot(target.GetTransform(),Tlocalgrasp)],maxiter=1000,maxtries=1,seedik=4)
-                if res is None:
+                try:
+                    self.basemanip.MoveToHandPosition(matrices=[dot(target.GetTransform(),Tlocalgrasp)],maxiter=1000,maxtries=1,seedik=4)
+                except:
                     print 'failed to reach grasp'
                     continue
             robot.WaitForController(0)
@@ -188,7 +199,10 @@ class GraspPlanning(metaclass.AutoReloader):
             robot.WaitForController(0)
             
             robot.Grab(target)
-            res = self.basemanip.MoveHandStraight(direction=self.updir,stepsize=0.003,minsteps=1,maxsteps=60)
+            try:
+                self.basemanip.MoveHandStraight(jacobian=0.02,direction=self.updir,stepsize=0.003,minsteps=1,maxsteps=60)
+            except:
+                print 'failed to move hand up'
             robot.WaitForController(0)
 
             if len(goals) > 0:
@@ -200,11 +214,14 @@ class GraspPlanning(metaclass.AutoReloader):
                 robot.WaitForController(0)
             
             print 'moving hand down'
-            res = self.basemanip.MoveHandStraight(direction=-self.updir,stepsize=0.003,minsteps=1,maxsteps=100)
+            try:
+                res = self.basemanip.MoveHandStraight(jacobian=0.02,direction=-self.updir,stepsize=0.003,minsteps=1,maxsteps=100)
+            except:
+                print 'failed to move hand down'
             robot.WaitForController(0)
 
             try:
-                self.basemanip.ReleaseFingers(target=target)
+                res = self.basemanip.ReleaseFingers(target=target)
             except planning_error:
                 res = None
             if res is None:
@@ -224,10 +241,12 @@ class GraspPlanning(metaclass.AutoReloader):
                 robot.ReleaseAllGrabbed()
             if env.CheckCollision(robot):
                 print 'robot in collision, moving back a little'
-                with env:
+                try:
                     res = self.basemanip.MoveHandStraight(direction=-dot(manip.GetEndEffectorTransform()[0:3,0:3],manip.GetPalmDirection()),
-                                                          stepsize=stepsize,minsteps=1,maxsteps=10)
-                robot.WaitForController(0)
+                                                          jacobian=0.02,stepsize=stepsize,minsteps=1,maxsteps=10)
+                    robot.WaitForController(0)
+                except:
+                    pass
                 if env.CheckCollision(robot):
                     try:
                         self.basemanip.ReleaseFingers(target=target)

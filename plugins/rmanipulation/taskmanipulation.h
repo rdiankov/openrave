@@ -530,6 +530,7 @@ class TaskManipulation : public ProblemInstance
                 graspparams->breturntrajectory = false;
                 graspparams->bonlycontacttarget = true;
                 graspparams->btightgrasp = false;
+                graspparams->bavoidcontact = true;
 
                 if( !_pGrasperPlanner->InitPlan(_robot,graspparams) ) {
                     RAVELOG_DEBUGA("grasp planner failed: %d\n", igrasp);

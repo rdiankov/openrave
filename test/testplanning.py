@@ -147,10 +147,10 @@ def test_graspplanning():
     env = Environment()
     env.SetViewer('qtcoin')
     env.Reset()
-    env.Load('data/wamtest1.env.xml')
+    env.Load('data/lab1.env.xml')#wamtest1.env.xml')
     robot = env.GetRobots()[0]
     self = graspplanning.GraspPlanning(robot)
-    gm=self.graspables[0][0]
+    gmodel=self.graspables[0][0]
     dests=self.graspables[0][1]
     self.graspAndPlaceObject(gm=gm,dests=dests)
 
@@ -401,6 +401,7 @@ def test_hrp2():
     env.Reset()
     env.Load('scenes/r602kitchen2.env.xml')
     robot = env.GetRobots()[0]
+    origjointvalues = robot.GetJointValues()
     # define all the manipulators to use
     manips = [robot.GetManipulators('leftarm_chest')[0], robot.GetManipulators('leftarm_chest2')[0], robot.GetManipulators('rightarm_chest')[0], robot.GetManipulators('rightarm_chest2')[0]]
     irmodels = []
@@ -416,6 +417,7 @@ def test_hrp2():
                 else:
                     print 'failed to load irmodel',manip.GetName(),id
     irgmodels = []
+    targets = []
     for manip in manips:
         robot.SetActiveManipulator(manip)
         planning = graspplanning.GraspPlanning(robot,nodestinations=True)
@@ -423,11 +425,21 @@ def test_hrp2():
             for irmodel in irmodels:
                 if irmodel.manip == gmodel.manip:
                     irgmodels.append([irmodel,gmodel])
+                    if not gmodel.target in targets:
+                        targets.append(gmodel.target)
     grmodel = mobilemanipulation.GraspReachability(robot=robot,irgmodels=irgmodels)
     self = mobilemanipulation.MobileManipulationPlanning(robot,grmodel=grmodel)
 
+    gmodel = self.graspObjectMobileSearch()
+    table = env.GetKinBody('table')
+    if table is not None:
+        graspables = None
+        Trolls = [matrixFromAxisAngle(array((0,0,1)),roll) for roll in arange(0,2*pi,pi/4)]
+        alldests = graspplanning.GraspPlanning.setRandomDestinations(targets,table,Trolls=Trolls,randomize=False)
+        self.graspAndPlaceObjectMobileSearch(targetdests=zip(targets,alldests))
+    
     #h = gr.showBaseDistribution(thresh=1.0,logllthresh=logllthresh)
-    #grmodel.testSampling(weight=weight,logllthresh=logllthresh,randomgrasps=True,randomplacement=False,updateenv=False)
+    #grmodel.testSampling(weight=1.5,logllthresh=0.5,randomgrasps=True,randomplacement=False,updateenv=False)
     
     validgrasps,validindices = gr.gmodel.computeValidGrasps(checkik=False,backupdist=0.01)
     grmodel.gmodel.showgrasp(validgrasps[0],collisionfree=True)
@@ -445,6 +457,19 @@ def test_hrp2():
     densityfn,samplerfn,bounds = gr.irmodel.computeBaseDistribution(Tgrasp,logllthresh=logllthresh)
     h = gr.irmodel.showBaseDistribution(densityfn,bounds,zoffset=gr.target.GetTransform()[2,3],thresh=1.0)
 
+    env = Environment()
+    robot = env.ReadRobotXMLFile('robots/hrp2jsk08.robot.xml')
+    env.AddRobot(robot)
+    body = env.ReadKinBodyXMLFile('scenes/cereal_frootloops.kinbody.xml')
+    env.AddKinBody(body)
+    T = eye(4)
+    T[0:3,3] = [0.466,-0.157,0.544]
+    body.SetTransform(T)
+    robot.SetActiveManipulator('rightarm_chest')
+    robot.Grab(body)
+    robot.SetJointValues([-1.4,1.35239005,1.036349],[5,7,8])
+    robot.CheckSelfCollision()
+    
 def test_drill():
     python inversekinematics.py --robot=/home/leus/drilling/drill_fk.robot.xml --ray4donly --accuracy=1e-5
     from openravepy import *

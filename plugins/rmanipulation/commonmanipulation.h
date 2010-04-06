@@ -14,6 +14,27 @@
 class CM
 {
  public:
+    class SimpleDistMetric
+    {
+    public:
+    SimpleDistMetric(RobotBasePtr robot) : _robot(robot) {
+            _robot->GetActiveDOFWeights(weights);
+        }
+        virtual dReal Eval(const std::vector<dReal>& c0, const std::vector<dReal>& c1)
+        {
+            std::vector<dReal> c = c0;
+            _robot->SubtractActiveDOFValues(c,c1);
+            dReal dist = 0;
+            for(int i=0; i < _robot->GetActiveDOF(); i++)
+                dist += weights.at(i)*c.at(i)*c.at(i);
+            return RaveSqrt(dist);
+        }
+
+    protected:
+        RobotBasePtr _robot;
+        vector<dReal> weights;
+    };
+
     static bool JitterActiveDOF(RobotBasePtr robot,int nMaxIterations=5000)
     {
         RAVELOG_VERBOSEA("starting jitter active dof...\n");
@@ -240,7 +261,8 @@ class CM
             _errorthresh2 = errorthresh*errorthresh;
             _probot = _pmanip->GetRobot();
             _tOriginalEE = _pmanip->GetEndEffectorTransform();
-            _tToTargetFrame = tTargetWorldFrame*_tOriginalEE.inverse();
+            _tTargetFrameLeft = tTargetWorldFrame*_tOriginalEE.inverse();
+            _tTargetFrameRight = tTargetWorldFrame.inverse();
             _J.resize(6,_probot->GetActiveDOF());
             _invJJt.resize(6,6);
             _error.resize(6,1);
@@ -257,7 +279,7 @@ class CM
 
             for(_iter = 0; _iter < 10; ++_iter) {
                 Transform tEE = _pmanip->GetEndEffectorTransform();
-                Transform t = _tToTargetFrame * tEE;
+                Transform t = _tTargetFrameLeft * tEE * _tTargetFrameRight;
 
                 T totalerror=0;
                 for(int i = 0; i < 3; ++i) {
@@ -338,7 +360,7 @@ class CM
     protected:
         RobotBasePtr _probot;
         RobotBase::ManipulatorPtr _pmanip;
-        Transform _tToTargetFrame,_tOriginalEE;
+        Transform _tTargetFrameLeft, _tTargetFrameRight,_tOriginalEE;
         boost::array<T,6> _vfreedoms;
         T _errorthresh2;
         boost::multi_array<dReal,2> _vjacobian;

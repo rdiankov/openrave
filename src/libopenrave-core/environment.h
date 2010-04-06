@@ -266,7 +266,7 @@ class Environment : public EnvironmentBase
     }
 
     virtual bool LoadPlugin(const std::string& pname) { return _pdatabase->AddPlugin(pname); }
-
+    virtual void ReloadPlugins() { _pdatabase->ReloadPlugins(); }
     virtual bool HasInterface(PluginType type, const string& interfacename) { return _pdatabase->HasInterface(type,interfacename); }
 
     virtual InterfaceBasePtr CreateInterface(PluginType type,const std::string& pinterfacename)

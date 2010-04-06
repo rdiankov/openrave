@@ -586,6 +586,12 @@ public:
             _pjoint->GetLimits(lower,upper);
             return boost::python::make_tuple(toPyArray(lower),toPyArray(upper));
         }
+        object GetWeights() const {
+            vector<dReal> weights(_pjoint->GetDOF());
+            for(size_t i = 0; i < weights.size(); ++i)
+                weights[i] = _pjoint->GetWeight(i);
+            return toPyArray(weights);
+        }
 
         void SetJointOffset(dReal offset) { _pjoint->SetJointOffset(offset); }
         void SetJointLimits(object olower, object oupper) {
@@ -650,6 +656,18 @@ public:
         vector<dReal> vlower, vupper;
         _pbody->GetJointLimits(vlower,vupper);
         return boost::python::make_tuple(toPyArray(vlower),toPyArray(vupper));
+    }
+    object GetJointMaxVel() const
+    {
+        vector<dReal> values;
+        _pbody->GetJointMaxVel(values);
+        return toPyArray(values);
+    }
+    object GetJointWeights() const
+    {
+        vector<dReal> values;
+        _pbody->GetJointWeights(values);
+        return toPyArray(values);
     }
     
     object GetLinks()
@@ -1980,6 +1998,7 @@ public:
     }
 
     bool LoadPlugin(const string& name) { return _penv->LoadPlugin(name.c_str()); }
+    void ReloadPlugins() { return _penv->ReloadPlugins(); }
 
     PyInterfaceBasePtr CreateInterface(PluginType type, const string& name)
     {
@@ -2978,23 +2997,7 @@ object invertPoses(object o)
 
 object quatRotateDirection(object source, object target)
 {
-    Vector vsource = ExtractVector3(source), vtarget = ExtractVector3(target);
-    Vector rottodirection;
-    cross3(rottodirection, vsource,vtarget);
-    dReal fsin = RaveSqrt(rottodirection.lengthsqr3());
-    dReal fcos = dot3(vsource, vtarget);
-    Transform torient;
-    if( fsin > 1e-6f ) {
-        torient.rotfromaxisangle(rottodirection*(1/fsin), RaveAtan2(fsin, fcos));
-    }
-    else if( fcos < 0 ) {
-        // hand is flipped 180, rotate around x axis
-        rottodirection = Vector(1,0,0);
-        rottodirection -= vsource * dot3(vsource, rottodirection);
-        rottodirection.normalize3();
-        torient.rotfromaxisangle(rottodirection, RaveAtan2(fsin, fcos));
-    }
-    return toPyVector4(torient.rot);
+    return toPyVector4(quatRotateDirection(ExtractVector3(source), ExtractVector3(target)));
 }
 
 string matrixSerialization(object o)
@@ -3154,6 +3157,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetJointValues",&PyKinBody::GetJointValues)
             .def("GetJointVelocities",&PyKinBody::GetJointVelocities)
             .def("GetJointLimits",&PyKinBody::GetJointLimits)
+            .def("GetJointMaxVel",&PyKinBody::GetJointMaxVel)
+            .def("GetJointWeights",&PyKinBody::GetJointWeights)
             .def("GetLinks",&PyKinBody::GetLinks)
             .def("GetLink",&PyKinBody::GetLink,args("name"))
             .def("GetJoints",&PyKinBody::GetJoints)
@@ -3281,6 +3286,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
                 .def("GetInternalHierarchyLeftTransform",&PyKinBody::PyJoint::GetInternalHierarchyLeftTransform)
                 .def("GetInternalHierarchyRightTransform",&PyKinBody::PyJoint::GetInternalHierarchyRightTransform)
                 .def("GetLimits", &PyKinBody::PyJoint::GetLimits)
+                .def("GetWeights", &PyKinBody::PyJoint::GetWeights)
                 .def("SetJointOffset",&PyKinBody::PyJoint::SetJointOffset,args("offset"))
                 .def("SetJointLimits",&PyKinBody::PyJoint::SetJointLimits,args("lower","upper"))
                 .def("SetResolution",&PyKinBody::PyJoint::SetResolution,args("resolution"))
@@ -3644,6 +3650,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetPluginInfo",&PyEnvironmentBase::GetPluginInfo)
             .def("GetLoadedInterfaces",&PyEnvironmentBase::GetLoadedInterfaces)
             .def("LoadPlugin",&PyEnvironmentBase::LoadPlugin,args("filename"))
+            .def("ReloadPlugins",&PyEnvironmentBase::ReloadPlugins)
             .def("CreateInterface", &PyEnvironmentBase::CreateInterface,args("type","name"))
             .def("CreateRobot", &PyEnvironmentBase::CreateRobot,args("name"))
             .def("CreatePlanner", &PyEnvironmentBase::CreatePlanner,args("name"))

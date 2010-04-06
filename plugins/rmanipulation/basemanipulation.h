@@ -254,6 +254,7 @@ protected:
 
         RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();
     
+        dReal fjacobianerror=0;
         bool bIgnoreFirstCollision = true;
         boost::shared_ptr<ostream> pOutputTrajStream;
         string cmd;
@@ -279,6 +280,8 @@ protected:
                 sinput >> direction.x >> direction.y >> direction.z;
             else if( cmd == "ignorefirstcollision")
                 sinput >> bIgnoreFirstCollision;
+            else if( cmd == "jacobian")
+                sinput >> fjacobianerror;
             else {
                 RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -314,12 +317,65 @@ protected:
         point.q = vPrevValues;
         ptraj->AddPoint(point);
 
-        int i;
+        // variables only for jacobians
+        boost::multi_array<dReal,2> vjacobian;
+        boost::shared_ptr<CM::GripperJacobianConstrains<double> > pconstraints;
+        boost::numeric::ublas::matrix<double> J, Jt, invJJt, invJ, Jerror, qdelta;
+        int i, eeindex=-1;
         for (i = 0; i < maxsteps;  i++) {
-            handTr.trans += stepsize*direction;
-            if( !pmanip->FindIKSolution(handTr,point.q,false)) {
-                RAVELOG_DEBUGA("Arm Lifting: broke due to ik\n");
-                break;
+            if( fjacobianerror > 0 ) {
+                // use jacobian
+                if( !pconstraints ) {
+                    boost::array<double,6> vconstraintfreedoms = {{1,1,0,1,1,0}}; // only rotate and translate across z
+                    Transform tframe; tframe.rot = quatRotateDirection(direction,Vector(0,0,1));
+                    pconstraints.reset(new CM::GripperJacobianConstrains<double>(robot->GetActiveManipulator(),tframe,vconstraintfreedoms,fjacobianerror));
+                    pconstraints->_distmetricfn = boost::bind(&CM::SimpleDistMetric::Eval,boost::shared_ptr<CM::SimpleDistMetric>(new CM::SimpleDistMetric(robot)),_1,_2);
+                    eeindex = robot->GetActiveManipulator()->GetEndEffector()->GetIndex();
+                    J.resize(3,robot->GetActiveDOF());
+                    invJJt.resize(3,3);
+                    Jerror.resize(3,1);
+                    Jerror(0,0) = direction.x*stepsize; Jerror(1,0) = direction.y*stepsize; Jerror(2,0) = direction.z*stepsize;
+                }
+
+                robot->CalculateActiveJacobian(eeindex,robot->GetActiveManipulator()->GetEndEffectorTransform().trans,vjacobian);
+                const double lambda2 = 1e-8; // normalization constant
+                for(size_t j = 0; j < 3; ++j)
+                    std::copy(vjacobian[j].begin(),vjacobian[j].end(),J.find2(0,j,0));
+                Jt = trans(J);
+                invJJt = prod(J,Jt);
+                for(int j = 0; j < 3; ++j)
+                    invJJt(j,j) += lambda2;
+//                stringstream ss;
+//                for(int j = 0; j < 3; ++j)
+//                    ss << invJJt(j,0) << " " << invJJt(j,1) << " " << invJJt(j,2) << endl;
+//                RAVELOG_INFO(ss.str());
+                try {
+                    if( !pconstraints->InvertMatrix(invJJt,invJJt) ) {
+                        RAVELOG_WARN("failed to invert matrix\n");
+                        break;
+                    }
+                }
+                catch(...) {
+                    RAVELOG_WARN("failed to invert matrix!!\n");
+                    break;
+                }
+//                ss.str("");
+//                for(int j = 0; j < 3; ++j)
+//                    ss << invJJt(j,0) << " " << invJJt(j,1) << " " << invJJt(j,2) << endl;
+//                RAVELOG_INFO(ss.str());
+                invJ = prod(Jt,invJJt);
+                qdelta = prod(invJ,Jerror);
+                for(size_t j = 0; j < point.q.size(); ++j)
+                    point.q[j] = vPrevValues[j] + qdelta(j,0);
+                if( !pconstraints->RetractionConstraint(vPrevValues,point.q,0) )
+                    break;
+            }
+            else {
+                handTr.trans += stepsize*direction;
+                if( !pmanip->FindIKSolution(handTr,point.q,false)) {
+                    RAVELOG_DEBUGA("Arm Lifting: broke due to ik\n");
+                    break;
+                }
             }
         
             size_t j = 0;
@@ -329,7 +385,7 @@ protected:
             }
 
             if( j < point.q.size()) {
-                RAVELOG_DEBUGA("Arm Lifting: broke due to discontinuity\n");
+                RAVELOG_DEBUGA(str(boost::format("Arm Lifting: broke due to discontinuity (%d:%f)\n")%j%(point.q[j] - vPrevValues[j])));
                 break;
             }
         

@@ -98,6 +98,7 @@ class GraspReachability(metaclass.AutoReloader):
     def sampleValidPlacementIterator(self,giveuptime=inf,randomgrasps=False,updateenv=False,randomplacement=False,**kwargs):
         """continues to sample valid goal placements. Returns the robot base position, configuration, and the target grasp from gmodel. Environment should be locked, robot state is saved"""
         starttime = time.time()
+        origjointvalues = self.robot.GetJointValues()
         statesaver = self.robot.CreateRobotStateSaver()
         try:
             baseIterators = []
@@ -116,10 +117,12 @@ class GraspReachability(metaclass.AutoReloader):
                     baseIterators.pop(iterindex)
                     continue
                 self.robot.SetTransform(pose)
-                self.robot.SetJointValues(*jointstate)
-                if updateenv:
-                    self.env.UpdatePublishedBodies()
-                if not irmodel.manip.CheckIndependentCollision(CollisionReport()):
+                self.robot.SetJointValues(origjointvalues)
+                if not self.env.CheckCollision(self.robot,CollisionReport()):
+                    self.robot.SetJointValues(*jointstate)
+                    if updateenv:
+                        self.env.UpdatePublishedBodies()
+                    #irmodel.manip.CheckIndependentCollision(CollisionReport()):
                     gmodel = graspindex[0]
                     grasp = gmodel.grasps[graspindex[1]]
                     gmodel.setPreshape(grasp)
@@ -178,24 +181,131 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
             self.taskmanip = TaskManipulation(self.robot)
             self.updir = array((0,0,1))
 
-    def graspAndPlaceObjectMobile(self,showdist=False):
+    def waitrobot(self):
+        """busy wait for robot completion"""
+        while not self.robot.GetController().IsDone():
+            time.sleep(0.01)
+
+    def graspObject(self,gmodel):
+        print 'graspplanning grasp and place object script'
+        self.robot.SetActiveManipulator(gmodel.manip)
+        gp = graspplanning.GraspPlanning(self.robot,randomize=False,nodestinations=True,switchpatterns=self.switchpatterns)
+        return gp.graspAndPlaceObject(gmodel,None)
+
+    def graspAndPlaceObjectMobileSearch(self,targetdests):
+        assert(len(targetdests)>0)
         weight = 1.5
         logllthresh = 0.5
+        origjointvalues = self.robot.GetJointValues()
         configsampler = self.grmodel.sampleValidPlacementIterator(weight=weight,logllthresh=logllthresh,randomgrasps=True,randomplacement=False,updateenv=False)
         with self.env:
-            pose,values,grasp,graspindex = configsampler.next()
+            starttime=time.time()
+            while True:
+                pose,values,grasp,graspindex = configsampler.next()
+                gmodel = graspindex[0]
+                dests = [dests for target,dests in targetdests if target == gmodel.target]
+                if len(dests) == 0:
+                    continue
+                print 'found grasp in %fs'%(time.time()-starttime),gmodel.target.GetName(),graspindex[1]
+                # check all destinations
+                self.robot.SetActiveManipulator(gmodel.manip)
+                Tgrasp = gmodel.getGlobalGraspTransform(grasp,collisionfree=True)
+                Trelative = dot(linalg.inv(gmodel.target.GetTransform()),Tgrasp)
+                Ttarget = None
+                try:
+                    gmodel.target.Enable(False)
+                    with KinBodyStateSaver(self.robot):
+                        gmodel.setPreshape(grasp)
+                        for T in dests[0]:
+                            Tnewgrasp = dot(T,Trelative)
+                            if gmodel.manip.FindIKSolution(Tnewgrasp,True) is not None:
+                                Ttarget = T
+                                break
+                    if Ttarget is not None:
+                        break
+                finally:
+                    gmodel.target.Enable(True)
+        self.graspObjectMobile(pose,values,grasp,graspindex)
+        # if everything finished correctly, put object in destination        
+        self.basemanip.MoveToHandPosition([Tnewgrasp])
+    
+    def graspObjectMobileSearch(self):
+        weight = 1.5
+        logllthresh = 0.5
+        origjointvalues = self.robot.GetJointValues()
+        configsampler = self.grmodel.sampleValidPlacementIterator(weight=weight,logllthresh=logllthresh,randomgrasps=True,randomplacement=False,updateenv=False)
+        with self.env:
+            starttime=time.time()
+            sample = configsampler.next()
+            print 'found in %fs'%(time.time()-starttime)
+        return self.graspObjectMobile(*sample)
+    def graspObjectMobile(self,pose,values,grasp,graspindex):
+        approachoffset = 0.02
+        stepsize = 0.001
         gmodel = graspindex[0]
-        print 'found grasp',gmodel.target.GetName(),graspindex[1]
+        print 'found grasp',gmodel.manip.GetName(),gmodel.target.GetName(),graspindex[1]
         self.robot.SetActiveManipulator(gmodel.manip)
-        self.robot.SetTransform(pose)
-        self.robot.SetJointValues(values)
-        gmodel.setPreshape(grasp)
-        final,traj = self.basemanip.CloseFingers(execute=False,outputfinal=True)
-        self.robot.SetJointValues(final,gmodel.manip.GetGripperJoints())
-        
-    def moveBase(self,goalpose):
+        self.moveBase(pose)
+        with self.env:
+            dofindices = inversereachability.InverseReachabilityModel.getdofindices(gmodel.manip)
+            if len(dofindices) > 0:
+                self.robot.SetActiveDOFs(dofindices)
+                self.basemanip.MoveActiveJoints(goal=values[dofindices])
+        self.waitrobot()
+        gmodel.moveToPreshape(grasp)
+        self.robot.SetActiveManipulator(gmodel.manip)
+        with self.env:
+            armjoints=gmodel.manip.GetArmJoints()
+            finalarmsolution = values[armjoints]
+            # although values holds the final configuration, robot should approach from a distance of approachoffset
+            Tgrasp = gmodel.getGlobalGraspTransform(grasp)
+            Tfirstgrasp = array(Tgrasp)
+            Tfirstgrasp[0:3,3] -= approachoffset*gmodel.getGlobalApproachDir(grasp)
+            solutions = gmodel.manip.FindIKSolutions(Tfirstgrasp,True)
+            if len(solutions) == 0:
+                return self.graspObject(gmodel)
+            # find the closest solution
+            weights = self.robot.GetJointWeights()[armjoints]
+            dists = [numpy.max(abs(finalarmsolution-s)*weights) for s in solutions]
+            index = argmin(dists)            
+            if sqrt(dists[index]) > 5.0*approachoffset:
+                print 'closest solution is too far',sqrt(dists[index])
+                return self.graspObject(gmodel)
+            self.robot.SetActiveDOFs(armjoints)
+            self.basemanip.MoveActiveJoints(goal=solutions[index])
+        self.waitrobot()
+
+        try:
+            print 'moving hand'
+            expectedsteps = floor(approachoffset/stepsize)
+            self.basemanip.MoveHandStraight(direction=gmodel.getGlobalApproachDir(grasp),ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps-2,maxsteps=expectedsteps+1)
+        except:
+            print 'failed to move straight, using planning to move rest of the way'
+            try:
+                self.basemanip.MoveActiveJoints(goal=finalarmsolution)
+            except:
+                return self.graspObject(gmodel)
+        self.waitrobot()
+
+        self.basemanip.CloseFingers()
+        self.waitrobot()
+        self.robot.Grab(gmodel.target)
+        try:
+            self.basemanip.MoveHandStraight(direction=self.updir,jacobian=0.02,stepsize=0.002,minsteps=1,maxsteps=100)
+        except:
+            print 'failed to move up'
+        self.waitrobot()
+
+        # move to original position
+        try:
+            self.basemanip.MoveActiveJoints(goal=origjointvalues[armjoints])
+        except:
+            print 'failed to move cup closer to robot'
+        return gmodel
+    
+    def moveBase(self,pose):
         with self.robot:
-            self.robot.SetTransform(goalpose)
+            self.robot.SetTransform(pose)
             if self.env.CheckCollision(self.robot):
                 raise planning_error('goal position in self collision')
         with self.env: # find the boundaries of the environment
@@ -213,14 +323,14 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
             self.robot.SetAffineTranslationMaxVels([0.5,0.5,0.5])
             self.robot.SetAffineRotationAxisMaxVels(ones(4))
             self.robot.SetActiveDOFs([],Robot.DOFAffine.X|Robot.DOFAffine.Y|Robot.DOFAffine.RotationAxis,[0,0,1])
-
-            goal2d = [goalpose[4],goalpose[5],numpy.arctan2(goalpose[3],goalpose[:,0])]
+            
+            goal2d = [pose[4],pose[5],2.0*numpy.arctan2(pose[3],pose[0])]
             print 'planning to: ',goal2d
             center = r_[goal2d[0:2],0.2]
             xaxis = 0.5*array((cos(goal2d[2]),sin(goal2d[2]),0))
             yaxis = 0.25*array((-sin(goal2d[2]),cos(goal2d[2]),0))
             self.hgoal = self.env.drawlinelist(transpose(c_[center-xaxis,center+xaxis,center-yaxis,center+yaxis]),linewidth=5.0,colors=array((0,1,0)))
-            if self.basemanip.MoveActiveJoints(goal=goal2d,maxiter=3000,steplength=0.1) is None:
+            if self.basemanip.MoveActiveJoints(goal=goal2d,maxiter=3000,steplength=0.05) is None:
                 raise planning_error('failed to plan goal position')
         print 'waiting for controller'
         self.robot.WaitForController(0)

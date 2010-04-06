@@ -966,6 +966,32 @@ inline RaveVector<T> dQSlerp(const RaveVector<T>& qa, const RaveVector<T>& _qb, 
 	return qm;
 }
 
+/// return the minimal quaternion that orients vsource to vtarget
+template<typename T>
+RaveVector<T> quatRotateDirection(const RaveVector<T>& vsource, const RaveVector<T>& vtarget)
+{
+    RaveVector<T> rottodirection;
+    cross3(rottodirection, vsource,vtarget);
+    T fsin = RaveSqrt(rottodirection.lengthsqr3());
+    T fcos = dot3(vsource, vtarget);
+    RaveTransform<T> torient;
+    if( fsin > 1e-6f ) {
+        torient.rotfromaxisangle(rottodirection*(1/fsin), RaveAtan2(fsin, fcos));
+    }
+    else if( fcos < 0 ) {
+        // hand is flipped 180, rotate around x axis
+        rottodirection = Vector(1,0,0);
+        rottodirection -= vsource * dot3(vsource, rottodirection);
+        if( rottodirection.lengthsqr3()<1e-8 ) {
+            rottodirection = Vector(0,0,1);
+            rottodirection -= vsource * dot3(vsource, rottodirection);
+        }
+        rottodirection.normalize3();
+        torient.rotfromaxisangle(rottodirection, RaveAtan2(fsin, fcos));
+    }
+    return torient.rot;
+}
+
 /// calculates the determinant of a 3x3 matrix whose row stride stride elements
 template <class T> inline T matrixdet3(const T* pf, int stride)
 {

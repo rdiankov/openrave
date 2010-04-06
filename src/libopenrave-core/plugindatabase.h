@@ -228,6 +228,16 @@ public:
         return true;
     }
 
+    void ReloadPlugins()
+    {
+        EnvironmentMutex::scoped_lock lock(_mutex);
+        FOREACH(itplugin,_listplugins) {
+            PluginPtr newplugin = _LoadPlugin((*itplugin)->ppluginname);
+            if( !!newplugin )
+                *itplugin = newplugin;
+        }
+    }
+
     bool AddPlugin(const std::string& libraryname)
     {
         EnvironmentMutex::scoped_lock lock(_mutex);

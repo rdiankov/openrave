@@ -119,27 +119,7 @@ public:
                 tbase.rotfromaxisangle(pmanip->GetPalmDirection(),_parameters.ftargetroll);
 
                 // set the robot so that its palm is facing the approach direction find the closest rotation
-                Vector rottodirection;
-                cross3(rottodirection, pmanip->GetPalmDirection(), _parameters.vtargetdirection);
-                dReal fsin = RaveSqrt(rottodirection.lengthsqr3());
-                dReal fcos = dot3(pmanip->GetPalmDirection(), _parameters.vtargetdirection);
-
-                Transform torient;
-                if( fsin > 1e-6f ) {
-                    torient.rotfromaxisangle(rottodirection*(1/fsin), RaveAtan2(fsin, fcos));
-                }
-                else if( fcos < 0 ) {
-                    // hand is flipped 180, rotate around x axis
-                    rottodirection = Vector(1,0,0);
-                    rottodirection -= pmanip->GetPalmDirection() * dot3(pmanip->GetPalmDirection(), rottodirection);
-                    if( rottodirection.lengthsqr3()<1e-8 ) {
-                        rottodirection = Vector(0,0,1);
-                        rottodirection -= pmanip->GetPalmDirection() * dot3(pmanip->GetPalmDirection(), rottodirection);
-                    }
-                    rottodirection.normalize3();
-                    torient.rotfromaxisangle(rottodirection, RaveAtan2(fsin, fcos));
-                }
-
+                Transform torient; torient.rot = quatRotateDirection(pmanip->GetPalmDirection(), _parameters.vtargetdirection);
                 tbase = torient * tbase;
                 // make sure origin of pbase is on target position
                 tbase.trans = _parameters.vtargetposition;

@@ -31,7 +31,7 @@ class BaseManipulation:
         return self.prob.SendCommand('traj sep ; %s;'%filename)
     def TrajFromData(self,data):
         return self.prob.SendCommand('traj stream ' + data)
-    def MoveHandStraight(self,direction,minsteps=None,maxsteps=None,stepsize=None,ignorefirstcollision=None,execute=None,outputtraj=None):
+    def MoveHandStraight(self,direction,minsteps=None,maxsteps=None,stepsize=None,ignorefirstcollision=None,jacobian=None,execute=None,outputtraj=None):
         cmd = 'MoveHandStraight direction %f %f %f '%(direction[0],direction[1],direction[2])
         if minsteps is not None:
             cmd += 'minsteps %d '%minsteps
@@ -41,11 +41,16 @@ class BaseManipulation:
             cmd += 'stepsize %f '%stepsize
         if execute is not None:
             cmd += 'execute %d '%execute
+        if jacobian is not None:
+            cmd += 'jacobian %f '%jacobian
         if outputtraj is not None:
             cmd += 'outputtraj '
         if ignorefirstcollision is not None:
             cmd += 'ignorefirstcollision %d '%ignorefirstcollision
-        return self.prob.SendCommand(cmd)
+        res = self.prob.SendCommand(cmd)
+        if res is None:
+            raise planning_error()
+        return res
     def MoveManipulator(self,goal,maxiter=None,execute=None,outputtraj=None):
         assert(len(goal) == len(self.robot.GetActiveManipulator().GetArmJoints()) and len(goal) > 0)
         cmd = 'MoveManipulator goal ' + ' '.join(str(f) for f in goal)
@@ -67,7 +72,10 @@ class BaseManipulation:
             cmd += 'outputtraj '
         if maxiter is not None:
             cmd += 'maxiter %d '%maxiter
-        return self.prob.SendCommand(cmd)
+        res = self.prob.SendCommand(cmd)
+        if res is None:
+            raise planning_error()
+        return res
     def MoveToHandPosition(self,matrices,affinedofs=None,maxiter=None,maxtries=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None):
         cmd = 'MoveToHandPosition matrices %d '%len(matrices)
         for m in matrices:
@@ -98,7 +106,10 @@ class BaseManipulation:
             cmd += 'execute %d '%execute
         if outputtraj is not None:
             cmd += 'outputtraj '
-        return self.prob.SendCommand(cmd)
+        res = self.prob.SendCommand(cmd)
+        if res is None:
+            raise planning_error()
+        return res
     def CloseFingers(self,offset=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None):
         cmd = 'CloseFingers '
         dof=len(self.robot.GetActiveManipulator().GetGripperJoints())
