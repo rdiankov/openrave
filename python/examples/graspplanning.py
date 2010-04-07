@@ -84,9 +84,10 @@ class GraspPlanning(metaclass.AutoReloader):
                         target.Enable(False)
                     try:
                         needdests_graspables = [graspable for graspable in self.graspables if graspable[1] is None]
+                        curdests = [graspable[0].target.GetTransform() for graspable in needdests_graspables]
                         alldests = self.setRandomDestinations([graspable[0].target for graspable in needdests_graspables],table)
                         for graspable,dests in izip(needdests_graspables,alldests):
-                            graspable[1] = dests
+                            graspable[1] = dests+curdests
                     finally:
                         for target in alltargets:
                             target.Enable(True)

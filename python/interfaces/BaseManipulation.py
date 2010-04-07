@@ -31,7 +31,7 @@ class BaseManipulation:
         return self.prob.SendCommand('traj sep ; %s;'%filename)
     def TrajFromData(self,data):
         return self.prob.SendCommand('traj stream ' + data)
-    def MoveHandStraight(self,direction,minsteps=None,maxsteps=None,stepsize=None,ignorefirstcollision=None,jacobian=None,execute=None,outputtraj=None):
+    def MoveHandStraight(self,direction,minsteps=None,maxsteps=None,stepsize=None,ignorefirstcollision=None,jacobian=None,searchall=None,execute=None,outputtraj=None):
         cmd = 'MoveHandStraight direction %f %f %f '%(direction[0],direction[1],direction[2])
         if minsteps is not None:
             cmd += 'minsteps %d '%minsteps
@@ -43,6 +43,8 @@ class BaseManipulation:
             cmd += 'execute %d '%execute
         if jacobian is not None:
             cmd += 'jacobian %f '%jacobian
+        if searchall is not None:
+            cmd += 'searchall %d '%searchall
         if outputtraj is not None:
             cmd += 'outputtraj '
         if ignorefirstcollision is not None:

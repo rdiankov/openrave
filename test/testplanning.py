@@ -368,7 +368,7 @@ def test_hrp2():
     python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.01 --normalanglerange=1 --avoidlink=RWristCam
     python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.01 --normalanglerange=1 --graspingnoise=0.005 --noviewer
     rosrun openrave_database grasping_ros.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm_chest --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.01 --normalanglerange=1 --graspingnoise=0.005 --launchservice='8*localhost'
-    rosrun openrave_database grasping_ros.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm_chest2 --target=scenes/jskcup0.kinbody.xml --standoff=0 --boxdelta=0.01 --normalanglerange=1 --graspingnoise=0.005 --launchservice='8*localhost'
+    rosrun openrave_database grasping_ros.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm_chest2 --target=scenes/jskcup0.kinbody.xml --standoff=0 --boxdelta=0.01 --normalanglerange=1 --graspingnoise=0.01 --launchservice='8*localhost'
 
     import inversereachability
     env = Environment()
@@ -422,21 +422,23 @@ def test_hrp2():
         robot.SetActiveManipulator(manip)
         planning = graspplanning.GraspPlanning(robot,nodestinations=True)
         for gmodel,dests in planning.graspables:
-            for irmodel in irmodels:
-                if irmodel.manip == gmodel.manip:
-                    irgmodels.append([irmodel,gmodel])
-                    if not gmodel.target in targets:
-                        targets.append(gmodel.target)
+            if gmodel.target.GetName() == 'cup0':
+                for irmodel in irmodels:
+                    if irmodel.manip == gmodel.manip:
+                        irgmodels.append([irmodel,gmodel])
+                        if not gmodel.target in targets:
+                            targets.append(gmodel.target)
     grmodel = mobilemanipulation.GraspReachability(robot=robot,irgmodels=irgmodels)
     self = mobilemanipulation.MobileManipulationPlanning(robot,grmodel=grmodel)
-
     gmodel = self.graspObjectMobileSearch()
+
     table = env.GetKinBody('table')
     if table is not None:
         graspables = None
         Trolls = [matrixFromAxisAngle(array((0,0,1)),roll) for roll in arange(0,2*pi,pi/4)]
-        alldests = graspplanning.GraspPlanning.setRandomDestinations(targets,table,Trolls=Trolls,randomize=False)
-        self.graspAndPlaceObjectMobileSearch(targetdests=zip(targets,alldests))
+        alldests = graspplanning.GraspPlanning.setRandomDestinations(targets,table,transdelta=0.05,Trolls=Trolls,randomize=False)
+        targetdests=zip(targets,alldests)
+        self.graspAndPlaceObjectMobileSearch(targetdests=targetdests)
     
     #h = gr.showBaseDistribution(thresh=1.0,logllthresh=logllthresh)
     #grmodel.testSampling(weight=1.5,logllthresh=0.5,randomgrasps=True,randomplacement=False,updateenv=False)

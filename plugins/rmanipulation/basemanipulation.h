@@ -255,7 +255,7 @@ protected:
         RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();
     
         dReal fjacobianerror=0;
-        bool bIgnoreFirstCollision = true;
+        bool bIgnoreFirstCollision = true, bSearchAll = false;
         boost::shared_ptr<ostream> pOutputTrajStream;
         string cmd;
         while(!sinput.eof()) {
@@ -282,6 +282,8 @@ protected:
                 sinput >> bIgnoreFirstCollision;
             else if( cmd == "jacobian")
                 sinput >> fjacobianerror;
+            else if( cmd == "searchall" )
+                sinput >> bSearchAll;
             else {
                 RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -314,8 +316,10 @@ protected:
 
         Transform handTr = robot->GetActiveManipulator()->GetEndEffectorTransform();
 
+        boost::shared_ptr<CM::SimpleDistMetric> distmetricfn(new CM::SimpleDistMetric(robot));
         point.q = vPrevValues;
         ptraj->AddPoint(point);
+        vector<vector<dReal> > vsolutions;
 
         // variables only for jacobians
         boost::multi_array<dReal,2> vjacobian;
@@ -329,7 +333,7 @@ protected:
                     boost::array<double,6> vconstraintfreedoms = {{1,1,0,1,1,0}}; // only rotate and translate across z
                     Transform tframe; tframe.rot = quatRotateDirection(direction,Vector(0,0,1));
                     pconstraints.reset(new CM::GripperJacobianConstrains<double>(robot->GetActiveManipulator(),tframe,vconstraintfreedoms,fjacobianerror));
-                    pconstraints->_distmetricfn = boost::bind(&CM::SimpleDistMetric::Eval,boost::shared_ptr<CM::SimpleDistMetric>(new CM::SimpleDistMetric(robot)),_1,_2);
+                    pconstraints->_distmetricfn = boost::bind(&CM::SimpleDistMetric::Eval,distmetricfn,_1,_2);
                     eeindex = robot->GetActiveManipulator()->GetEndEffector()->GetIndex();
                     J.resize(3,robot->GetActiveDOF());
                     invJJt.resize(3,3);
@@ -345,10 +349,6 @@ protected:
                 invJJt = prod(J,Jt);
                 for(int j = 0; j < 3; ++j)
                     invJJt(j,j) += lambda2;
-//                stringstream ss;
-//                for(int j = 0; j < 3; ++j)
-//                    ss << invJJt(j,0) << " " << invJJt(j,1) << " " << invJJt(j,2) << endl;
-//                RAVELOG_INFO(ss.str());
                 try {
                     if( !pconstraints->InvertMatrix(invJJt,invJJt) ) {
                         RAVELOG_WARN("failed to invert matrix\n");
@@ -359,22 +359,42 @@ protected:
                     RAVELOG_WARN("failed to invert matrix!!\n");
                     break;
                 }
-//                ss.str("");
-//                for(int j = 0; j < 3; ++j)
-//                    ss << invJJt(j,0) << " " << invJJt(j,1) << " " << invJJt(j,2) << endl;
-//                RAVELOG_INFO(ss.str());
                 invJ = prod(Jt,invJJt);
                 qdelta = prod(invJ,Jerror);
                 for(size_t j = 0; j < point.q.size(); ++j)
                     point.q[j] = vPrevValues[j] + qdelta(j,0);
                 if( !pconstraints->RetractionConstraint(vPrevValues,point.q,0) )
                     break;
+                robot->SetActiveDOFValues(point.q);
+                bool bInCollision = robot->CheckSelfCollision();
+                robot->SetActiveDOFValues(vPrevValues);
+                if( bInCollision )
+                    break;
             }
             else {
                 handTr.trans += stepsize*direction;
-                if( !pmanip->FindIKSolution(handTr,point.q,false)) {
-                    RAVELOG_DEBUGA("Arm Lifting: broke due to ik\n");
-                    break;
+                bool bCheckCollision = !bPrevInCollision && i >= minsteps;
+                if( bSearchAll ) {
+                    if( !pmanip->FindIKSolutions(handTr,vsolutions,bCheckCollision)) {
+                        RAVELOG_DEBUGA("Arm Lifting: broke due to ik\n");
+                        break;
+                    }
+                    int minindex=0;
+                    dReal fbestdist = distmetricfn->Eval(vPrevValues,vsolutions.at(0));
+                    for(size_t j = 1; j < vsolutions.size(); ++j) {
+                        dReal fdist = distmetricfn->Eval(vPrevValues,vsolutions[j]);
+                        if( fbestdist > fdist ) {
+                            fbestdist = fdist;
+                            minindex = j;
+                        }
+                    }
+                    point.q = vsolutions[minindex];
+                }
+                else {
+                    if( !pmanip->FindIKSolution(handTr,point.q,bCheckCollision)) {
+                        RAVELOG_DEBUGA("Arm Lifting: broke due to ik\n");
+                        break;
+                    }
                 }
             }
         

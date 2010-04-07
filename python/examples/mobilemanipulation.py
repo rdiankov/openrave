@@ -194,7 +194,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
 
     def graspAndPlaceObjectMobileSearch(self,targetdests):
         assert(len(targetdests)>0)
-        weight = 1.5
+        weight = 2.0
         logllthresh = 0.5
         origjointvalues = self.robot.GetJointValues()
         configsampler = self.grmodel.sampleValidPlacementIterator(weight=weight,logllthresh=logllthresh,randomgrasps=True,randomplacement=False,updateenv=False)
@@ -215,6 +215,8 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                 try:
                     gmodel.target.Enable(False)
                     with KinBodyStateSaver(self.robot):
+                        self.robot.SetTransform(pose)
+                        self.robot.SetJointValues(values)
                         gmodel.setPreshape(grasp)
                         for T in dests[0]:
                             Tnewgrasp = dot(T,Trelative)
@@ -227,8 +229,17 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                     gmodel.target.Enable(True)
         self.graspObjectMobile(pose,values,grasp,graspindex)
         # if everything finished correctly, put object in destination        
-        self.basemanip.MoveToHandPosition([Tnewgrasp])
-    
+        self.basemanip.MoveToHandPosition([Tnewgrasp],seedik=10,maxiter=5000)
+        self.waitrobot()
+        self.basemanip.ReleaseFingers(target=gmodel.target)
+        self.waitrobot()
+        with self.env:
+            self.robot.SetActiveDOFs(gmodel.manip.GetArmJoints())
+            try:
+                self.basemanip.MoveActiveJoints(goal=origjointvalues[gmodel.manip.GetArmJoints()],maxiter=3000)
+            except:
+                print 'failed to move arm closer'
+        self.waitrobot()
     def graspObjectMobileSearch(self):
         weight = 1.5
         logllthresh = 0.5
@@ -238,7 +249,13 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
             starttime=time.time()
             sample = configsampler.next()
             print 'found in %fs'%(time.time()-starttime)
-        return self.graspObjectMobile(*sample)
+        gmodel = self.graspObjectMobile(*sample)
+#         # move to original position
+        try:
+            self.basemanip.MoveActiveJoints(goal=origjointvalues[armjoints])
+        except:
+            print 'failed to move cup closer to robot'
+        return gmodel
     def graspObjectMobile(self,pose,values,grasp,graspindex):
         approachoffset = 0.02
         stepsize = 0.001
@@ -254,6 +271,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         self.waitrobot()
         gmodel.moveToPreshape(grasp)
         self.robot.SetActiveManipulator(gmodel.manip)
+        usejacobian = False
         with self.env:
             armjoints=gmodel.manip.GetArmJoints()
             finalarmsolution = values[armjoints]
@@ -262,25 +280,30 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
             Tfirstgrasp = array(Tgrasp)
             Tfirstgrasp[0:3,3] -= approachoffset*gmodel.getGlobalApproachDir(grasp)
             solutions = gmodel.manip.FindIKSolutions(Tfirstgrasp,True)
-            if len(solutions) == 0:
+            if solutions is None or len(solutions) == 0:
                 return self.graspObject(gmodel)
             # find the closest solution
             weights = self.robot.GetJointWeights()[armjoints]
-            dists = [numpy.max(abs(finalarmsolution-s)*weights) for s in solutions]
+            dists = [numpy.max(abs(finalarmsolution-s)) for s in solutions]
             index = argmin(dists)            
-            if sqrt(dists[index]) > 5.0*approachoffset:
-                print 'closest solution is too far',sqrt(dists[index])
-                return self.graspObject(gmodel)
-            self.robot.SetActiveDOFs(armjoints)
-            self.basemanip.MoveActiveJoints(goal=solutions[index])
+            if dists[index] < 15.0*approachoffset:
+                usejacobian = True
+                self.robot.SetActiveDOFs(armjoints)
+                self.basemanip.MoveActiveJoints(goal=solutions[index],maxiter=5000)
+            else:
+                print 'closest solution is too far',dists[index]
         self.waitrobot()
 
-        try:
-            print 'moving hand'
-            expectedsteps = floor(approachoffset/stepsize)
-            self.basemanip.MoveHandStraight(direction=gmodel.getGlobalApproachDir(grasp),ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps-2,maxsteps=expectedsteps+1)
-        except:
-            print 'failed to move straight, using planning to move rest of the way'
+        if usejacobian:
+            try:
+                print 'moving hand'
+                expectedsteps = floor(approachoffset/stepsize)
+                self.basemanip.MoveHandStraight(direction=gmodel.getGlobalApproachDir(grasp),ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps-2,maxsteps=expectedsteps+1,searchall=True)
+            except:
+                print 'failed to move straight, using planning to move rest of the way'
+                usejacobian = False
+
+        if not usejacobian:
             try:
                 self.basemanip.MoveActiveJoints(goal=finalarmsolution)
             except:
@@ -295,12 +318,6 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         except:
             print 'failed to move up'
         self.waitrobot()
-
-        # move to original position
-        try:
-            self.basemanip.MoveActiveJoints(goal=origjointvalues[armjoints])
-        except:
-            print 'failed to move cup closer to robot'
         return gmodel
     
     def moveBase(self,pose):
@@ -330,7 +347,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
             xaxis = 0.5*array((cos(goal2d[2]),sin(goal2d[2]),0))
             yaxis = 0.25*array((-sin(goal2d[2]),cos(goal2d[2]),0))
             self.hgoal = self.env.drawlinelist(transpose(c_[center-xaxis,center+xaxis,center-yaxis,center+yaxis]),linewidth=5.0,colors=array((0,1,0)))
-            if self.basemanip.MoveActiveJoints(goal=goal2d,maxiter=3000,steplength=0.05) is None:
+            if self.basemanip.MoveActiveJoints(goal=goal2d,maxiter=3000,steplength=0.1) is None:
                 raise planning_error('failed to plan goal position')
         print 'waiting for controller'
         self.robot.WaitForController(0)
