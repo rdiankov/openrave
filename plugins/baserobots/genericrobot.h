@@ -38,51 +38,26 @@ class GenericRobot : public RobotBase
         return true;
     }
 
-    virtual void SetMotion(TrajectoryBaseConstPtr ptraj)
+    virtual bool SetMotion(TrajectoryBaseConstPtr ptraj)
     {
-        _trajcur = ptraj;
-        if( _trajcur->GetPoints().size() == 0 ) {
-            RAVELOG_WARNA("trajectory has no points\n");
-            return;
-        }
-
-        if( _trajcur->GetDOF() != GetDOF() )
-            RAVELOG_WARNA("trajectory of wrong dimension (traj dof=%d), needs to be %d dof\n", _trajcur->GetDOF(), GetDOF());
-        BOOST_ASSERT( _trajcur->GetDOF() == GetDOF() );
+        BOOST_ASSERT(ptraj->GetPoints().size() > 0 || !"trajectory has no points\n");
+        BOOST_ASSERT(ptraj->GetDOF() == GetDOF() || !"trajectory of wrong dimension");
         _trajcur = ptraj;
         _state = ST_PATH_FOLLOW;
-
-        if( !!_pController )
-            _pController->SetPath(_trajcur);
-        else
-            RAVELOG_WARNA("controller is not set\n");
+        return _pController->SetPath(_trajcur);
     }
  
-    virtual void SetActiveMotion(TrajectoryBaseConstPtr ptraj)
+    virtual bool SetActiveMotion(TrajectoryBaseConstPtr ptraj)
     {
-        if( ptraj->GetPoints().size() == 0 ) {
-            RAVELOG_WARNA("trajectory has no points\n");
-            return;
-        }
-
-        if( ptraj->GetDOF() != GetActiveDOF() ) {
-            RAVELOG_WARNA("trajectory of wrong dimension (traj dof=%d), needs to be %d dof\n", ptraj->GetDOF(), GetActiveDOF());
-            return;
-        }
-        BOOST_ASSERT( ptraj->GetDOF() == GetActiveDOF() );
-
+        BOOST_ASSERT(ptraj->GetPoints().size() > 0 || !"trajectory has no points\n");
+        BOOST_ASSERT(ptraj->GetDOF() == GetActiveDOF() || !"trajectory of wrong dimension");
         TrajectoryBasePtr pfulltraj = GetEnv()->CreateTrajectory(ptraj->GetDOF());
         GetFullTrajectoryFromActive(pfulltraj, ptraj);
         _trajcur = pfulltraj;
 
         _state = ST_PATH_FOLLOW;
-
-        if( !!_pController )
-            _pController->SetPath(_trajcur);
-        else
-            RAVELOG_WARNA("controller is not set\n");
+        return _pController->SetPath(_trajcur);
     }
-
 
     RobotState GetState() { return _state; }
 

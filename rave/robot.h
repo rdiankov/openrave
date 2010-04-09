@@ -275,7 +275,7 @@ public:
 
     /// returns true if reached goal
     virtual std::vector<ManipulatorPtr>& GetManipulators() { return _vecManipulators; }
-    virtual void SetMotion(TrajectoryBaseConstPtr ptraj) {}
+    virtual bool SetMotion(TrajectoryBaseConstPtr ptraj) { return false; }
 
     /// manipulators, grasping (KinBodys), usually involves the active manipulator
     virtual void SetActiveManipulator(int index);
@@ -406,10 +406,10 @@ public:
     }
     virtual const std::vector<int>& GetActiveJointIndices();
 
-    virtual void SetActiveMotion(TrajectoryBaseConstPtr ptraj) {}
+    virtual bool SetActiveMotion(TrajectoryBaseConstPtr ptraj) { return false; }
 
     /// the speed at which the robot should go at
-    virtual void SetActiveMotion(TrajectoryBaseConstPtr ptraj, dReal fSpeed) { SetActiveMotion(ptraj); }
+    virtual bool SetActiveMotion(TrajectoryBaseConstPtr ptraj, dReal fSpeed) { return SetActiveMotion(ptraj); }
     //@}
 
     /// gets the jacobian with respect to a link, pfArray is a 3 x ActiveDOF matrix (rotations are not taken into account)
