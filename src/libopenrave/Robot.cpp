@@ -1879,10 +1879,15 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report) const
         if( !pbody )
             continue;
         FOREACHC(itrobotlink,itbody->vNonCollidingLinks) {
-            if( GetEnv()->CheckCollision(*itrobotlink,KinBodyConstPtr(pbody),report) ) {
-                bCollision = true;
-                break;
+            // have to use link/link collision since link/body checks attached bodies
+            FOREACHC(itbodylink,pbody->GetLinks()) {
+                if( GetEnv()->CheckCollision(*itrobotlink,KinBody::LinkConstPtr(*itbodylink),report) ) {
+                    bCollision = true;
+                    break;
+                }
             }
+            if( bCollision )
+                break;
         }
         if( bCollision )
             break;

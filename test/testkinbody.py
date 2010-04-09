@@ -188,7 +188,22 @@ def test_kinematics():
         print [joint.GetJointIndex() for joint in joints]
         joints = robot.GetChain(manip.GetEndEffector().GetIndex(),manip.GetBase().GetIndex())
         print [joint.GetJointIndex() for joint in joints]
-        
+
+def test_dualarm_grabbing():
+    env = Environment()
+    robot = env.ReadRobotXMLFile('robots/schunk-lwa3-dual.robot.xml')
+    env.AddRobot(robot)
+    manips = robot.GetManipulators()
+    body = env.ReadKinBodyXMLFile('data/box3.kinbody.xml')
+    env.AddKinBody(body)
+    T = eye(4)
+    T[1,3] = -1.18
+    T[2,3] = 0.712
+    body.SetTransform(T)
+    robot.SetActiveManipulator(manips[0])
+    robot.Grab(body)
+    robot.SetJointValues(array([  0.00000000e+00,  -1.43329144e+00,  -3.99190831e-15, -1.86732388e+00,   5.77239752e-01,  -3.37631690e-07, 6.67713991e-08,   0.00000000e+00,  -1.70089030e+00, -6.42544150e-01,  -1.25030589e+00,  -3.33493233e-08, -5.58212676e-08,   1.60115015e-08]))
+    assert robot.CheckSelfCollision()
 def test_boxes():
     env = Environment()
     k = env.CreateKinBody()
