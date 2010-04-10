@@ -1428,7 +1428,12 @@ public:
     }
     
     PyControllerBasePtr GetController() const { return !_probot->GetController() ? PyControllerBasePtr() : PyControllerBasePtr(new PyControllerBase(_probot->GetController(),_pyenv)); }
-    bool SetController(PyControllerBasePtr pController, const string& args=string("")) { CHECK_POINTER(pController); return _probot->SetController(pController->GetController(),args.c_str()); }
+    bool SetController(PyControllerBasePtr pController, const string& args=string("")) {
+        if( !pController )
+            return _probot->SetController(ControllerBasePtr(),"");
+        else
+            return _probot->SetController(pController->GetController(),args.c_str());
+    }
     
     void SetActiveDOFs(object jointindices) { _probot->SetActiveDOFs(ExtractArray<int>(jointindices)); }
     void SetActiveDOFs(object jointindices, int nAffineDOsBitmask) { _probot->SetActiveDOFs(ExtractArray<int>(jointindices), nAffineDOsBitmask); }

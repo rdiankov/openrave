@@ -14,6 +14,7 @@ __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
+import time
 from openravepy import *
 from openravepy.interfaces import BaseManipulation
 from openravepy.examples import inversekinematics
@@ -25,54 +26,55 @@ class HanoiPuzzle:
     def __init__(self,env,robot):
         self.env = env
         self.robot = robot
+        # load the IK solver
         self.ikmodel = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
         if not self.ikmodel.load():
-            self.ikmodel.autogenerate()
-        self.basemanip = BaseManipulation(self.robot)
-        
-        disknames = ['disk0','disk1','disk2']
-        self.heights = array([0.021,0.062,0.103])+0.01
-        
-        disks = []
-        diskradius = []
-        for name in disknames:
-            disk = env.GetKinBody(name)
-            ab = disk.ComputeAABB()
-            disk.radius = ab.extents()[1]-0.02
-            disks.append(disk)
-        
-        self.srcpeg = env.GetKinBody('srcpeg')
-        self.destpeg = env.GetKinBody('destpeg')
-        self.peg = env.GetKinBody('peg')
-        self.srcpeg.disks = disks
-        self.destpeg.disks = []
-        self.peg.disks = []
+            self.ikmodel.autogenerate() # autogenerate if one doesn't exist
+        with self.env: # lock the environment
+            self.basemanip = BaseManipulation(self.robot)
+            disknames = ['disk0','disk1','disk2']
+            self.heights = array([0.021,0.062,0.103])+0.01
+            disks = []
+            diskradius = []
+            for name in disknames:
+                disk = env.GetKinBody(name)
+                ab = disk.ComputeAABB()
+                disk.radius = ab.extents()[1]-0.02
+                disks.append(disk)
+            self.srcpeg = env.GetKinBody('srcpeg')
+            self.destpeg = env.GetKinBody('destpeg')
+            self.peg = env.GetKinBody('peg')
+            self.srcpeg.disks = disks
+            self.destpeg.disks = []
+            self.peg.disks = []
 
-    def WaitForController(self):
-        self.robot.GetEnv().LockPhysics(False)
-        try:
-            while not self.robot.GetController().IsDone():
-                self.robot.WaitForController(1)
-        finally:
-            self.robot.GetEnv().LockPhysics(True)
+    def waitrobot(self):
+        """busy wait for robot completion"""
+        while not self.robot.GetController().IsDone():
+            time.sleep(0.01)
 
     def MoveToPosition(self, values,indices):
-        self.WaitForController()
-        allvalues = self.robot.GetJointValues()
-        allvalues[indices] = values
-        self.robot.GetController().SetDesired(allvalues)
-        self.WaitForController()
+        """uses a planner to safely move the hand to the preshape and returns the trajectory"""
+        # move the robot out of the way so it can complete a preshape
+        with self.robot:
+            self.robot.SetActiveDOFs(indices)
+            self.basemanip.MoveUnsyncJoints(jointvalues=values,jointinds=indices)
+        self.waitrobot()
+        # move the hand to the preshape
+        with self.robot:
+            self.robot.SetActiveDOFs(indices)
+            self.basemanip.MoveActiveJoints(goal=values)
+        self.waitrobot()
 
     def putblock(self, disk, srcpeg, destpeg, height):
-        srcpegbox = srcpeg.ComputeAABB()
-        destpegbox = destpeg.ComputeAABB()
-        
-        # get all the transformations
-        Thand = self.robot.GetActiveManipulator().GetEndEffector().GetTransform()
-        Tdisk = disk.GetTransform()
-        Tsrcpeg = srcpeg.GetTransform()
-        Tpeg = destpeg.GetTransform()
-
+        with self.env:
+            srcpegbox = srcpeg.ComputeAABB()
+            destpegbox = destpeg.ComputeAABB()
+            # get all the transformations
+            Thand = self.robot.GetActiveManipulator().GetEndEffector().GetTransform()
+            Tdisk = disk.GetTransform()
+            Tsrcpeg = srcpeg.GetTransform()
+            Tpeg = destpeg.GetTransform()
         src_upvec = Tsrcpeg[0:3,1:2]
         dest_upvec = Tpeg[0:3,1:2]
         
@@ -88,42 +90,39 @@ class HanoiPuzzle:
             R = dot(Tpeg[0:3,0:3], array(((cos(ang),0,sin(ang)),(0,1,0),(-sin(ang),0,cos(ang)))))
             T = dot(r_[c_[R,p], [[0,0,0,1]]], Tdiff)
 
-            # check the IK of the destination
-            if self.robot.GetActiveManipulator().FindIKSolution(T,True) is None:
-                continue
-
-            # add two intermediate positions, one right above the source peg
-            # and one right above the destination peg
-            Tnewhand = dot(Thand, Tgrasp)
-            Tnewhand[0:3,3:4] = Tnewhand[0:3,3:4] + src_upvec*(max(srcpegbox.extents())*2.5-0.02)
-
-            # check the IK of the destination
-            if self.robot.GetActiveManipulator().FindIKSolution(Tnewhand,True) is None:
-                print('Tnewhand invalid')
-                continue
-
-            Tnewhand2 = array(T)
-            Tnewhand2[0:3,3:4] = Tnewhand2[0:3,3:4] + dest_upvec*(max(destpegbox.extents())*2.5-height)
-            # check the IK of the destination
-            if self.robot.GetActiveManipulator().FindIKSolution(Tnewhand2,True) is None:
-                print('Tnewhand2 invalid')
-                continue
+            with self.env:
+                # check the IK of the destination
+                if self.robot.GetActiveManipulator().FindIKSolution(T,True) is None:
+                    continue
+                # add two intermediate positions, one right above the source peg
+                # and one right above the destination peg
+                Tnewhand = dot(Thand, Tgrasp)
+                Tnewhand[0:3,3:4] = Tnewhand[0:3,3:4] + src_upvec*(max(srcpegbox.extents())*2.5-0.02)
+                # check the IK of the destination
+                if self.robot.GetActiveManipulator().FindIKSolution(Tnewhand,True) is None:
+                    print('Tnewhand invalid')
+                    continue
+                Tnewhand2 = array(T)
+                Tnewhand2[0:3,3:4] = Tnewhand2[0:3,3:4] + dest_upvec*(max(destpegbox.extents())*2.5-height)
+                # check the IK of the destination
+                if self.robot.GetActiveManipulator().FindIKSolution(Tnewhand2,True) is None:
+                    print('Tnewhand2 invalid')
+                    continue
 
             if self.basemanip.MoveToHandPosition(matrices=[Tnewhand]) is None:
                 print('failed to move to position above source peg')
                 continue
-            self.WaitForController() # wait for robot to complete all trajectories
+            self.waitrobot() # wait for robot to complete all trajectories
 
             if self.basemanip.MoveToHandPosition(matrices=[Tnewhand2]) is None:
                 print('failed to move to position above dest peg')
                 continue
-            self.WaitForController() # wait for robot to complete all trajectories
+            self.waitrobot() # wait for robot to complete all trajectories
 
             if self.basemanip.MoveToHandPosition(matrices=[T]) is None:
                 print('failed to move to dest peg')
                 continue
-            self.WaitForController() # wait for robot to complete all trajectories
-
+            self.waitrobot() # wait for robot to complete all trajectories
             return True
 
         print('failed to put block')
@@ -150,24 +149,20 @@ class HanoiPuzzle:
                 for Tgrasp in Tgrasps: # for each of the grasps
                     if self.basemanip.MoveToHandPosition(matrices=[Tgrasp]) is not None: # move the hand to that location
                         # succeeded so grab the disk
-                        self.WaitForController()
                         self.basemanip.CloseFingers()
-                        self.WaitForController()
-                        self.robot.Grab(disk)
+                        self.waitrobot()
+                        with self.env:
+                            self.robot.Grab(disk)
 
                         # try to pub the disk in the destination peg
-                        if self.putblock(disk, srcpeg, destpeg, height):
-                            # succeeded so release the disk
-                            self.WaitForController() # wait for robot to complete all trajectories
+                        success = self.putblock(disk, srcpeg, destpeg, height)
+                        self.waitrobot() # wait for robot to complete all trajectories
+                        with self.env:
                             self.robot.ReleaseAllGrabbed()
-                            openhandfn()
-                            return True
-
-                        # open hand and try a different grasp
-                        self.WaitForController() # wait for robot to complete all trajectories
-                        self.robot.ReleaseAllGrabbed()
                         openhandfn()
-        return True
+                        if success:
+                            return True
+        return False
 
     def hanoisolve(self, n, pegfrom, pegto, pegby):
         if n == 1:
@@ -175,8 +170,7 @@ class HanoiPuzzle:
             disk = pegfrom.disks[-1]
             print('hanoimove %s from %s to %s'%(disk.GetName(), pegfrom.GetName(), pegto.GetName()))
             if not self.hanoimove(disk, pegfrom, pegto, self.heights[len(pegto.disks)]):
-                print('failed to solve hanoi')
-                raise
+                raise ValueError('failed to solve hanoi')
             # add the disk onto the correct peg list
             pegto.disks.append(disk)
             pegfrom.disks.pop()
@@ -193,12 +187,13 @@ def run():
     (options, args) = parser.parse_args()
     
     env = Environment()
-    env.SetViewer('qtcoin')
-    env.Load(options.scene)
-    hanoi = HanoiPuzzle(env,env.GetRobots()[0])
-    with env: # lock the environment
+    try:
+        env.SetViewer('qtcoin')
+        env.Load(options.scene)
+        hanoi = HanoiPuzzle(env,env.GetRobots()[0])
         hanoi.hanoisolve(3,hanoi.srcpeg,hanoi.destpeg,hanoi.peg)
-    env.Destroy() # done with the environment
+    finally:
+        env.Destroy() # done with the environment
 
 if __name__ == "__main__":
     run()

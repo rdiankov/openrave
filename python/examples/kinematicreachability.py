@@ -16,6 +16,7 @@ __license__ = 'Apache License, Version 2.0'
 
 import openravepy
 from openravepy import *
+from openravepy import pyANN
 from openravepy.examples import convexdecomposition,inversekinematics
 from numpy import *
 import time
@@ -25,6 +26,40 @@ from optparse import OptionParser
 class ReachabilityModel(OpenRAVEModel):
     """Computes the robot manipulator's reachability space (stores it in 6D) and
     offers several functions to use it effectively in planning."""
+
+    class QuaternionKDTree(metaclass.AutoReloader):
+        """Artificially add more weight to the X,Y,Z translation dimensions"""
+        def __init__(self, poses,transmult):
+            self.numposes = len(poses)
+            self.transmult = transmult
+            self.itransmult = 1/transmult
+            searchposes = array(poses)
+            searchposes[:,4:] *= self.transmult # take translation errors more seriously
+            allposes = r_[searchposes,searchposes]
+            allposes[self.numposes:,0:4] *= -1
+            self.nnposes = pyANN.KDTree(allposes)
+        def kSearch(self,poses,k,eps):
+            """returns distance squared"""
+            poses[:,4:] *= self.transmult
+            neighs,dists = self.nnposes.kSearch(poses,k,eps)
+            neighs[neighs>=self.numposes] -= self.numposes
+            poses[:,4:] *= self.itransmult
+            return neighs,dists
+        def kFRSearch(self,pose,radiussq,k,eps):
+            """returns distance squared"""
+            pose[4:] *= self.transmult
+            neighs,dists,kball = self.nnposes.kFRSearch(pose,radiussq,k,eps)
+            neighs[neighs>=self.numposes] -= self.numposes
+            pose[4:] *= self.itransmult
+            return neighs,dists,kball
+        def kFRSearchArray(self,poses,radiussq,k,eps):
+            """returns distance squared"""
+            poses[:,4:] *= self.transmult
+            neighs,dists,kball = self.nnposes.kFRSearchArray(poses,radiussq,k,eps)
+            neighs[neighs>=self.numposes] -= self.numposes
+            poses[:,4:] *= self.itransmult
+            return neighs,dists,kball
+
     def __init__(self,robot):
         OpenRAVEModel.__init__(self,robot=robot)
         self.ikmodel = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
@@ -36,6 +71,8 @@ class ReachabilityModel(OpenRAVEModel):
         self.pointscale = None
         self.xyzdelta = None
         self.quatdelta = None
+        self.kdtree6d = None
+        self.kdtree3d = None
 
     def has(self):
         return len(self.reachabilitydensity3d) > 0 and len(self.reachability3d) > 0
@@ -62,6 +99,7 @@ class ReachabilityModel(OpenRAVEModel):
         xyzdelta=None
         quatdelta=None
         usefreespace=True
+        useconvex=False
         if options is not None:
             if options.maxradius is not None:
                 maxradius = options.maxradius
@@ -70,10 +108,11 @@ class ReachabilityModel(OpenRAVEModel):
             if options.quatdelta is not None:
                 quatdelta=options.quatdelta
             usefreespace=options.usefreespace
+            useconvex=options.useconvex
         if self.robot.GetRobotStructureHash() == '7b789782446d86b95c6fb16de7f204c7' and self.manip.GetName() == 'arm':
             if maxradius is None:
                 maxradius = 1.1
-        self.generate(maxradius=maxradius,translationonly=translationonly,xyzdelta=xyzdelta,quatdelta=quatdelta,usefreespace=usefreespace)
+        self.generate(maxradius=maxradius,translationonly=translationonly,xyzdelta=xyzdelta,quatdelta=quatdelta,usefreespace=usefreespace,useconvex=useconvex)
         self.save()
 
     def getOrderedArmJoints(self):
@@ -101,11 +140,12 @@ class ReachabilityModel(OpenRAVEModel):
                 if not newlink in links:
                     links.append(newlink)
         return links
-    def generate(self,maxradius=None,translationonly=False,xyzdelta=None,quatdelta=None,usefreespace=True):
+    def generate(self,maxradius=None,translationonly=False,xyzdelta=None,quatdelta=None,usefreespace=True,useconvex=False):
         # disable every body but the target and robot
-        bodies = [b for b in self.env.GetBodies() if b != self.robot]
+        self.kdtree3d = self.kdtree6d = None
+        bodies = [(b,b.IsEnabled()) for b in self.env.GetBodies() if b != self.robot]
         for b in bodies:
-            b.Enable(False)
+            b[0].Enable(False)
         try:
             if xyzdelta is None:
                 xyzdelta=0.04
@@ -114,6 +154,10 @@ class ReachabilityModel(OpenRAVEModel):
             starttime = time.time()
             with self.robot:
                 self.robot.SetTransform(eye(4))
+                if useconvex:
+                    self.cdmodel = convexdecomposition.ConvexDecompositionModel(self.robot)
+                    if not self.cdmodel.load():
+                        self.cdmodel.autogenerate()
                 Tbase = self.manip.GetBase().GetTransform()
                 Tbaseinv = linalg.inv(Tbase)
                 maniplinks = self.getManipulatorLinks(self.manip)
@@ -176,8 +220,8 @@ class ReachabilityModel(OpenRAVEModel):
                 self.reachabilitystats = array(self.reachabilitystats)
                 print 'reachability finished in %fs'%(time.time()-starttime)
         finally:
-            for b in bodies:
-                b.Enable(True)
+            for b,enable in bodies:
+                b.Enable(enable)
 
     def show(self,showrobot=True,contours=[0.01,0.1,0.2,0.5,0.8,0.9,0.99],opacity=None,figureid=1, xrange=None,options=None):
         mlab.figure(figureid,fgcolor=(0,0,0), bgcolor=(1,1,1),size=(1024,768))
@@ -216,6 +260,15 @@ class ReachabilityModel(OpenRAVEModel):
         insideinds = flatnonzero(sum(allpoints**2,1)<maxradius**2)
         return allpoints,insideinds,X.shape,array((1.0/delta,nsteps))
 
+    def ComputeNN(self,translationonly=False):
+        if translationonly:
+            if self.kdtree3d is None:
+                self.kdtree3d = pyANN.KDTree(self.reachabilitystats[:,4:7])
+            return self.kdtree3d
+        else:
+            if self.kdtree6d is None:
+                self.kdtree6d = self.QuaternionKDTree(self.reachabilitystats,5.0)
+            return self.kdtree6d
     @staticmethod
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser()
@@ -228,6 +281,8 @@ class ReachabilityModel(OpenRAVEModel):
                           help='The max radius of the arm to perform the computation (default=0.5)')
         parser.add_option('--ignorefreespace',action='store_false',dest='usefreespace',default=True,
                           help='If set, will only check if at least one IK solutions exists for every transform rather that computing a density')
+        parser.add_option('--useconvex',action='store_true',dest='useconvex',default=False,
+                          help='If set, will use the convex decomposition of the robot for kinematic reachability (this might cause self-collisions undesired places)')
         parser.add_option('--showscale',action='store',type='float',dest='showscale',default=1.0,
                           help='Scales the reachability by this much in order to show colors better (default=%default)')
         return parser

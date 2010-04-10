@@ -192,15 +192,15 @@ inline T NORMALIZE_ANGLE(T theta, T min, T max)
 }
 
 template <typename T>
-inline T ANGLE_DIFF(T start, T end)
+inline T ANGLE_DIFF(T f0, T f1)
 {
-    return NORMALIZE_ANGLE(end-start, T(-PI), T(PI));
+    return NORMALIZE_ANGLE(f0-f1, T(-PI), T(PI));
 }
 
 template <typename T>
 inline T ANGLE_INTERPOLATION(T start, T end, T fraction, T lowerLimit, T upperLimit)
 {
-    return NORMALIZE_ANGLE(start + fraction * ANGLE_DIFF(start, end), lowerLimit, upperLimit);
+    return NORMALIZE_ANGLE(start + fraction * ANGLE_DIFF(end,start), lowerLimit, upperLimit);
 }
 
 inline static dReal TransformDistanceFast(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)

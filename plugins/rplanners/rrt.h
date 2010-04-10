@@ -81,6 +81,7 @@ public:
     {
         if( path.size() <= 2 )
             return;
+        RAVELOG_DEBUG("optimizing path - path shortcut\n");
 
         typename list<Node*>::iterator startNode, endNode;
         vector< vector<dReal> > vconfigs;
@@ -126,6 +127,7 @@ public:
     {
         if( path.size() <= 2 )
             return;
+        RAVELOG_DEBUG("optimizing path - path shortcut single dimension\n");
 
         typename list<Node*>::iterator startNode, prevNode, nextNode, endNode;
         vector< vector<dReal> > vconfigs;
@@ -274,9 +276,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
             else {
                 RAVELOG_WARNA("goal in collision %s\n", _robot->CheckSelfCollision()?"(self)":NULL);
                 if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot), _report) ) {
-                    RAVELOG_WARNA("birrt: robot initially in collision %s:%s!\n",
-                                  _report->plink1!=NULL?_report->plink1->GetName().c_str():"(NULL)",
-                                  _report->plink2!=NULL?_report->plink2->GetName().c_str():"(NULL)");
+                    RAVELOG_WARN(str(boost::format("birrt: robot initially in collision %s!\n")%_report->__str__()));
                 }
             }
         }
@@ -468,9 +468,7 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
             else {
                 RAVELOG_WARNA("goal in collision %s\n", _robot->CheckSelfCollision()?"(self)":NULL);
                 if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot), _report) ) {
-                    RAVELOG_WARNA("birrt: robot initially in collision %s:%s!\n",
-                                  _report->plink1!=NULL?_report->plink1->GetName().c_str():"(NULL)",
-                                  _report->plink2!=NULL?_report->plink2->GetName().c_str():"(NULL)");
+                    RAVELOG_WARN(str(boost::format("birrt: robot initially in collision %s!\n")%_report->__str__()));
                 }
             }
         

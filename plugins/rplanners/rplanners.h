@@ -127,7 +127,7 @@ class CollisionFunctions
         vector<dReal> vlastconfig(params.GetDOF()), vtempconfig(params.GetDOF());
         if (bCheckEnd) {
             params._setstatefn(pQ1);
-            if (robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || robot->CheckSelfCollision() ) {
+            if (robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || (params._bCheckSelfCollisions&&robot->CheckSelfCollision()) ) {
                 if( pvCheckedConfigurations != NULL )
                     pvCheckedConfigurations->push_back(pQ1);
                 return true;
@@ -172,7 +172,7 @@ class CollisionFunctions
                 params._getstatefn(vtempconfig); // query again in order to get normalizations/joint limits
                 pvCheckedConfigurations->push_back(vtempconfig);
             }
-            if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || robot->CheckSelfCollision() )
+            if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || (params._bCheckSelfCollisions&&robot->CheckSelfCollision()) )
                 return true;
         }
 
@@ -186,7 +186,7 @@ class CollisionFunctions
     static bool CheckCollision(const PlannerBase::PlannerParameters& params, RobotBasePtr robot, const vector<dReal>& pConfig, CollisionReportPtr report=CollisionReportPtr())
     {
         params._setstatefn(pConfig);
-        bool bCol = robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot), report) || robot->CheckSelfCollision(report);
+        bool bCol = robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot), report) || (params._bCheckSelfCollisions&&robot->CheckSelfCollision(report));
         if( bCol && !!report ) {
             RAVELOG_WARNA(str(boost::format("fcollision %s:%s with %s:%s\n")%report->plink1->GetParent()->GetName()%report->plink1->GetName()%report->plink2->GetParent()->GetName()%report->plink2->GetName()));
         }
@@ -306,7 +306,7 @@ class SpatialTree : public SpatialTreeBase
         boost::shared_ptr<Planner> planner(_planner);
         // extend
         while(1) {
-            dReal fdist = _distmetricfn(pnode->q, pTargetConfig);
+            dReal fdist = _distmetricfn(pTargetConfig,pnode->q);
 
             if( fdist > _fStepLength ) fdist = _fStepLength / fdist;
             else {

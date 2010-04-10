@@ -134,8 +134,12 @@ public:
         int _nMaxIterations;
 
         /// if true will smooth the path before returning (takes time, but higher quality paths).
-        // If false, will return the raw trajectory (used to measure algorithm time).
+        /// If false, will return the raw trajectory (used to measure algorithm time).
         bool _bComputeSmoothPath;
+
+        /// if true, will validate every configuration with a self-collision check. If false, will assume that the configuration
+        /// space does not change the self-collision result (ie, planning only with affine DOF)
+        bool _bCheckSelfCollisions;
 
         virtual int GetDOF() const { return (int)_vConfigLowerLimit.size(); }
 

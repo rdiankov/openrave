@@ -29,40 +29,6 @@ except ImportError:
 
 class InverseReachabilityModel(OpenRAVEModel):
     """Inverts the reachability and computes probability distributions of the robot's base given an end effector position"""
-
-    class QuaternionKDTree(metaclass.AutoReloader):
-        """Artificially add more weight to the X,Y,Z translation dimensions"""
-        def __init__(self, poses,transmult):
-            self.numposes = len(poses)
-            self.transmult = transmult
-            self.itransmult = 1/transmult
-            searchposes = array(poses)
-            searchposes[:,4:] *= self.transmult # take translation errors more seriously
-            allposes = r_[searchposes,searchposes]
-            allposes[self.numposes:,0:4] *= -1
-            self.nnposes = pyANN.KDTree(allposes)
-        def kSearch(self,poses,k,eps):
-            """returns distance squared"""
-            poses[:,4:] *= self.transmult
-            neighs,dists = self.nnposes.kSearch(poses,k,eps)
-            neighs[neighs>=self.numposes] -= self.numposes
-            poses[:,4:] *= self.itransmult
-            return neighs,dists
-        def kFRSearch(self,pose,radiussq,k,eps):
-            """returns distance squared"""
-            pose[4:] *= self.transmult
-            neighs,dists,kball = self.nnposes.kFRSearch(pose,radiussq,k,eps)
-            neighs[neighs>=self.numposes] -= self.numposes
-            pose[4:] *= self.itransmult
-            return neighs,dists,kball
-        def kFRSearchArray(self,poses,radiussq,k,eps):
-            """returns distance squared"""
-            poses[:,4:] *= self.transmult
-            neighs,dists,kball = self.nnposes.kFRSearchArray(poses,radiussq,k,eps)
-            neighs[neighs>=self.numposes] -= self.numposes
-            poses[:,4:] *= self.itransmult
-            return neighs,dists,kball
-
     def __init__(self,robot,id=None):
         OpenRAVEModel.__init__(self,robot=robot)
         self.rmodel = kinematicreachability.ReachabilityModel(robot=robot)
@@ -158,9 +124,9 @@ class InverseReachabilityModel(OpenRAVEModel):
         then cluster the robot position modulo in-plane rotation (z-axis) and position (xy),
         then compute statistics for each cluster."""
         # disable every body but the target and robot
-        bodies = [b for b in self.env.GetBodies() if b != self.robot]
+        bodies = [(b,b.IsEnabled()) for b in self.env.GetBodies() if b != self.robot]
         for b in bodies:
-            b.Enable(False)
+            b[0].Enable(False)
         statesaver = self.robot.CreateRobotStateSaver()
         maniplinks = self.getManipulatorLinks(self.manip)
         try:
@@ -188,7 +154,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             basetrans[:,0:7] = poseMultArrayT(poseFromMatrix(Tbase),basetrans[:,0:7])
             # find the density of the points
             searchtrans = c_[basetrans[:,0:4],basetrans[:,6:7]]
-            kdtree = self.QuaternionKDTree(searchtrans,1.0/self.rotweight)
+            kdtree = kinematicreachability.ReachabilityModel.QuaternionKDTree(searchtrans,1.0/self.rotweight)
             transdensity = kdtree.kFRSearchArray(searchtrans,0.25*quateucdist2,0,quatthresh*0.2)[2]
             basetrans = basetrans[argsort(-transdensity),:]
             Nminimum = max(Nminimum,4)
@@ -197,7 +163,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             self.equivalenceclasses = []
             while len(basetrans) > 0:
                 searchtrans = c_[basetrans[:,0:4],basetrans[:,6:7]]
-                kdtree = self.QuaternionKDTree(searchtrans,1.0/self.rotweight)
+                kdtree = kinematicreachability.ReachabilityModel.QuaternionKDTree(searchtrans,1.0/self.rotweight)
                 querypoints = c_[quatArrayTMult(quatrolls, searchtrans[0][0:4]),tile(searchtrans[0][4:],(len(quatrolls),1))]
                 foundindices = zeros(len(searchtrans),bool)
                 for querypoint in querypoints:
@@ -232,8 +198,8 @@ class InverseReachabilityModel(OpenRAVEModel):
                 print 'new equivalence class outliers: %d/%d, left over trans: %d'%(self.testEquivalenceClass(equivalenceclass)*len(zangles),len(zangles),len(basetrans))
         finally:
             statesaver.close()
-            for b in bodies:
-                b.Enable(True)
+            for b,enable in bodies:
+                b.Enable(enable)
         self.preprocess()
         
     def getEquivalenceClass(self,Tgrasp):

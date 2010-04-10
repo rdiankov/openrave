@@ -15,15 +15,12 @@ __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
 __license__ = 'Apache License, Version 2.0'
 
 import sys, os, time, signal, threading
-try:
-    import cPickle as pickle
-except:
-    import pickle
 import numpy # nice to be able to explicitly call some functions
 from numpy import *
 from optparse import OptionParser
 from openravepy import *
-from openravepy.interfaces import BaseManipulation, TaskManipulation, VisualFeedback
+from openravepy.interfaces import BaseManipulation, TaskManipulation
+from openravepy.examples import grasping, visibilitymodel
 
 try:
     from Tkinter import *
@@ -87,108 +84,68 @@ class VisibilityGrasping(metaclass.AutoReloader):
         self.trajectorylog = []
         self.graspoffset = 0
 
-    def reloadcontroller(self):
-        with self.orenvreal:
-            self.robotreal.GetController().Reset(0)
-
-    def setjointvalue(self,value,index):
-        v = self.robotreal.GetJointValues()
-        v[index] = value
-        self.robotreal.GetController().SetDesired(v)
-
-    def preprocessdata(self, maskfile, convexfile, robotfile, graspsetfile, targetfile, graspingppfile, visibilityfile, robotjointinds = [], robotjoints = []):
-        jointstring = ' --robotjointinds="' + ' '.join(str(f) for f in robotjointinds) + '" --robotjoints="' + ' '.join(str(f) for f in robotjoints) + '"'
-        ret = os.system('python visibilityprocessing.py --func=mask --rayoffset=0.025 --robotfile=' + robotfile + ' --graspsetfile=' + graspsetfile +  ' --savefile=' + maskfile + jointstring)
-        if ret != 0:
-            raise ValueError('failed to compute mask')
-        ret = os.system("""octave --eval "GetLargestFreeConvexPolygon(load('%s'),'%s');" """%(maskfile,convexfile))
-        if ret != 0:
-            raise ValueError('failed to compute convex hull')
-        ret = os.system('python visibilityprocessing.py --func=visibility --robotfile=' + robotfile + ' --kinbodyfile=' + targetfile + ' --graspsetfile=' + graspsetfile + ' --savepp=' + graspingppfile + ' --convexfile=' + convexfile + ' --visibilityfile=' + visibilityfile + ' --savefile=visibilitytrans.mat ' + jointstring)
-        if ret != 0:
-            raise ValueError('failed to process visibility information')
-
-    def loadscene(self,scenefilename,robotname,sensorname,graspingppfile,handfilename=None,showsensors=True):
+    def loadscene(self,scenefilename,sensorname,robotname=None,showsensors=True):
         self.target = None
         self.robot = None
         self.robotreal = None
         self.orenvreal.Reset()
-        time.sleep(2)
-
         if not self.orenvreal.Load(scenefilename):
             raise ValueError('failed to open %s openrave file'%scenefilename)
-        if len(self.orenvreal.GetRobots()) == 0:
-            raise ValueError('no robots found in scene %s'%scenefilename)
-
         if robotname is None:
             self.robotreal = self.orenvreal.GetRobots()[0]
         else:
             self.robotreal = [r for r in self.orenvreal.GetRobots() if r.GetName()==robotname][0]
-                    
-        self.taskprob = self.orenvreal.CreateProblem('TaskManipulation')
-        self.manipprob = self.orenvreal.CreateProblem('BaseManipulation')
-        self.visualprob = self.orenvreal.CreateProblem('VisualFeedback')
-        self.orenvreal.LoadProblem(self.taskprob,self.robotreal.GetName())
-        self.orenvreal.LoadProblem(self.manipprob,self.robotreal.GetName())
-        self.orenvreal.LoadProblem(self.visualprob,self.robotreal.GetName())
-        
-        self.homevalues = self.robotreal.GetJointValues()
 
-        # create a camera viewer for every camera sensor
-        try:
-            Tk # check if Tk exists
-            self.viewers = []
-            if showsensors:
-                for attachedsensor in self.robotreal.GetSensors():
-                    if attachedsensor.GetSensor() is not None:
-                        sensordata = attachedsensor.GetSensor().GetSensorData()
-                        if sensordata is not None and sensordata.type == Sensor.SensorType.Camera:
-                            attachedsensor.GetSensor().SendCommand('power 1')
-                            title = attachedsensor.GetName()
-                            if len(title) == 0:
-                                title = attachedsensor.GetSensor().GetName()
+        with self.orenvreal:
+            self.taskmanip = TaskManipulation(self.robotreal)
+            self.basemanip = BaseManipulation(self.robotreal)
+            self.homevalues = self.robotreal.GetJointValues()
+            # create a camera viewer for every camera sensor
+            try:
+                Tk # check if Tk exists
+                self.viewers = []
+                if showsensors:
+                    for attachedsensor in self.robotreal.GetSensors():
+                        if attachedsensor.GetSensor() is not None:
+                            sensordata = attachedsensor.GetSensor().GetSensorData()
+                            if sensordata is not None and sensordata.type == Sensor.SensorType.Camera:
+                                attachedsensor.GetSensor().SendCommand('power 1')
+                                title = attachedsensor.GetName()
                                 if len(title) == 0:
-                                    title = 'Camera Sensor'
-                            self.viewers.append(CameraViewerGUI(sensor=attachedsensor.GetSensor(),title=title))
-                            break # can only support one camera
-                print 'found %d camera sensors on robot %s'%(len(self.viewers),self.robotreal.GetName())
-                for viewer in self.viewers:
-                    viewer.start()
-        except NameError,e:
-            print 'failed to create camera gui: ',e
-            self.viewers = []
+                                    title = attachedsensor.GetSensor().GetName()
+                                    if len(title) == 0:
+                                        title = 'Camera Sensor'
+                                self.viewers.append(CameraViewerGUI(sensor=attachedsensor.GetSensor(),title=title))
+                                break # can only support one camera
+                    print 'found %d camera sensors on robot %s'%(len(self.viewers),self.robotreal.GetName())
+                    for viewer in self.viewers:
+                        viewer.start()
+            except NameError,e:
+                print 'failed to create camera gui: ',e
+                self.viewers = []
 
-        self.sensor = [s for s in self.robotreal.GetSensors() if s.GetName()==sensorname][0]
-        # find a manipulator whose end effector is the camera
-        self.manipindex,self.manip = [(i,m) for i,m in enumerate(self.robotreal.GetManipulators()) if m.GetEndEffector().GetIndex() == self.sensor.GetAttachingLink().GetIndex()][0]
-        self.robotreal.SetActiveManipulator(self.manipindex)
+            self.sensor = [s for s in self.robotreal.GetSensors() if s.GetName()==sensorname][0]
+            # find a manipulator whose end effector is the camera
+            self.manip = [m for m in self.robotreal.GetManipulators() if m.GetEndEffector() == self.sensor.GetAttachingLink()][0]
+            self.robotreal.SetActiveManipulator(self.manip)
+    def computevisibilitymodel(self,target):
+        vmodel = visibilitymodel.VisibilityModel(robot=self.robot,target=target,sensorname=self.sensor.GetName())
+        if not vmodel.load():                
+            vmodel.autogenerate()
+        return vmodel
 
-        self.handfilename = handfilename
-        if self.handfilename is not None:
-            self.hand = self.orenvreal.ReadRobotXMLFile(self.handfilename)
-            self.orenvreal.AddRobot(self.hand)
-            T = eye(4)
-            T[2,3] = 100
-            self.hand.SetTransform(T)
-        else:
-            self.hand = None
-
-        if graspingppfile is not None:
-            self.convexdata,self.visibilitydata,self.graspsetdata = pickle.load(open(graspingppfile,'r'))
-            if self.hand is not None:
-                self.hand.SetJointValues(self.graspsetdata[0][12:])
-
-    def waitrobot(self):
-        while not self.robotreal.GetController().IsDone():
+    def waitrobot(self,robot=None):
+        if robot is None:
+            robot = self.robotreal
+        while not robot.GetController().IsDone():
             time.sleep(0.01)
 
     def robotgohome(self,homevalues=None):
         if homevalues is None:
             homevalues = self.homevalues
         print 'moving arm'
-        trajdata = self.manipprob.SendCommand('MoveManipulator execute 0 outputtraj armvals ' + ' '.join(str(homevalues[i]) for i in self.manip.GetArmJoints()))
-        if len(trajdata) == 0:
-            raise ValueError('failed to start trajectory')
+        self.robotreal.SetActiveManipulator(self.manip)
+        trajdata = self.basemanip.MoveManipulator(goal=homevalues[self.manip.GetArmJoints()],execute=False,outputtraj=True)
         self.starttrajectory(trajdata)
         
         print 'moving hand'
@@ -196,48 +153,40 @@ class VisibilityGrasping(metaclass.AutoReloader):
         values[self.manip.GetGripperJoints()] = homevalues[self.manip.GetGripperJoints()]
         self.robotreal.GetController().SetDesired(values)
         self.waitrobot()
-        if self.robot is not None:
+        if not self.robot is None:
             self.robot.GetController().SetDesired(self.robotreal.GetJointValues())
     
     def movegripper(self,grippervalues,robot=None):
         if robot is None:
             robot = self.robotreal
         gripperjoints = self.manip.GetGripperJoints()
-        if len(gripperjoints) != len(grippervalues):
-            raise ValueError('dof not equal')
-        robot.SetActiveDOFs(self.manip.GetArmJoints())
-        trajdata = self.manipprob.SendCommand('MoveUnsyncJoints outputtraj handjoints ' + str(len(gripperjoints)) + ' ' + ' '.join(str(f) for f in grippervalues) + ' ' + ' '.join(str(ind) for ind in gripperjoints))
-        self.trajectorylog.append(trajdata)
+        assert len(gripperjoints) == len(grippervalues)
+
+        with robot:
+            robot.SetActiveDOFs(self.manip.GetArmJoints())
+            trajdata = self.basemanip.MoveUnsyncJoints(jointvalues=grippervalues,jointinds=gripperjoints,outputtraj=True)
+            self.trajectorylog.append(trajdata)
         self.waitrobot()
+        # move the hand to the preshape
+        with self.robot:
+            self.robot.SetActiveDOFs(indices)
+            self.basemanip.MoveActiveJoints(goal=values)
+        self.waitrobot()
+
         values = array(robot.GetJointValues(),'float')
         values[gripperjoints] = self.graspsetdata[0][12:]
         robot.GetController().SetDesired(values)
-        self.waitrobot()
+        self.waitrobot(robot)
         # set the real values for simulation
         v = array(self.robotreal.GetJointValues(),'float')
         v[gripperjoints] = grippervalues
-        if self.robot is not None:
-            self.robot.GetController().SetDesired(v)
-
-    def testhand(self,T=None,pose=None,target=None):
-        if pose is not None:
-            T = matrixFromPose(pose)
-        if target is not None:
-            T = dot(target.GetTransform(),T)
-        self.hand.SetTransform(dot(T,linalg.inv(self.manip.GetGraspTransform())))
-
-    def getGraspTransform(self,i=0):
-        T = eye(4)
-        T[0:3,0:4] = transpose(reshape(self.graspsetdata[i][0:12],(4,3)))
-        return T
-
-    def groundrobot(self):
-        with self.orenvreal:
-            #self.robot.GetController().Reset(0)
-            ab = self.robotreal.ComputeAABB()
+        self.robot.GetController().SetDesired(v)
+    def syncrobot(self,robot):
+        with self.robotreal:
+            values = self.robotreal.GetJointValues()
             T = self.robotreal.GetTransform()
-            T[2,3] += 0.001-(ab.pos()[2]-ab.extents()[2])
-            self.robotreal.SetTransform(T)
+        robot.SetTransform(T)
+        robot.GetController().SetDesired(values)
 
     def gettarget(self,orenv):
         with orenv:
@@ -250,7 +199,7 @@ class VisibilityGrasping(metaclass.AutoReloader):
     def starttrajectory(self,trajdata):
         if trajdata is not None and len(trajdata) > 0:
             self.trajectorylog.append(trajdata)
-            self.manipprob.SendCommand('traj stream ' + trajdata)
+            self.basemanip.TrajFromData(trajdata)
             self.waitrobot()
             if self.robot is not None:
                 self.robot.GetController().SetDesired(self.robotreal.GetJointValues())
@@ -261,7 +210,6 @@ class VisibilityGrasping(metaclass.AutoReloader):
         self.robotgohome()
         self.robotreal.GetController().SetDesired(self.homevalues)
         self.waitrobot()
-        self.groundrobot()
         
         while True:
             self.robotreal.ReleaseAllGrabbed()
@@ -276,23 +224,25 @@ class VisibilityGrasping(metaclass.AutoReloader):
                 time.sleep(0.5)
                 continue
 
-            taskprob = self.orenv.CreateProblem('TaskManipulation')
-            manipprob = self.orenv.CreateProblem('BaseManipulation')
-            visualprob = self.orenv.CreateProblem('VisualFeedback')
-            self.orenv.LoadProblem(taskprob,self.robot.GetName())
-            self.orenv.LoadProblem(manipprob,self.robot.GetName())
-            self.orenv.LoadProblem(visualprob,self.robot.GetName())
-            cmdstr = ' execute 0 outputtraj '
-            
+            self.robot.SetActiveManipulator(self.manip.GetName())
+            self.robotreal.SetActiveManipulator(self.manip.GetName())
+            taskmanip = TaskManipulation(self.robot)
+            basemanip = BaseManipulation(self.robot)
             self.target = self.gettarget(self.orenv)
-            self.movegripper(self.graspsetdata[0][12:])
+            vmodel = self.computevisibilitymodel(self.target)
+            grasp = vmodel.gmodel.grasps[0]
+            trajdata = vmodel.gmodel.moveToPreshape(grasp,execute=False,outputtraj=True)
+            for data in trajdata:
+                self.starttrajectory(data)
 
-            trajdata = visualprob.SendCommand('MoveToObserveTarget target ' + self.target.GetName() + ' sampleprob 0.001 sensorindex 0 maxiter 4000 convexdata ' + str(self.convexdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.convexdata.flat) + ' visibilitydata ' + str(self.visibilitydata.shape[0]) + ' ' + ' '.join(str(f) for f in self.visibilitydata.flat) + cmdstr)
-            if trajdata is None:
+            try:
+                trajdata = vmodel.visualprob.MoveToObserveTarget(target=self.target,sampleprob=0.001,maxiter=4000,execute=False,outputtraj=True)
+                self.starttrajectory(trajdata)
+            except planning_error:
                 print 'failed to find visual feedback grasp'
                 continue
-            self.starttrajectory(trajdata)
-            if not self.testvisibility(visualprob):
+
+            if not vmodel.visualprob.ComputeVisibility(self.target):
                 print 'visibility has not been achieved!'
                 continue
             T = self.target.GetTransform()
@@ -312,79 +262,58 @@ class VisibilityGrasping(metaclass.AutoReloader):
                 time.sleep(0.1)
 
             # start visual servoing step
-            success = False
-            for iter in range(4):
-                # set the real values for simulation
-                v = array(self.robotreal.GetJointValues(),'float')
-                v[self.manip.GetGripperJoints()] = self.graspsetdata[0][12:]
-                self.robot.GetController().SetDesired(v)
-
-                #trajdata = visualprob.SendCommand('VisualFeedbackGrasping target ' + self.target.GetName() + ' sensorindex 0 convexdata ' + str(self.convexdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.convexdata.flat) + ' graspsetdata ' + str(self.graspsetdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.graspsetdata[:,0:12].flat) + ' maxiter 100 visgraspthresh 0.5 gradientsamples 5 ' + cmdstr)
-                movehandcmd = 'MoveToHandPosition matrices %d '%len(self.graspsetdata)
-                for g in self.graspsetdata:
-                    Ttemp = eye(4)
-                    Ttemp[0:3,0:4] = transpose(reshape(g[0:12],(4,3)))
-                    movehandcmd += matrixSerialization(dot(target.GetTransform(),Ttemp)) + ' '
-                movehandcmd += cmdstr
-                trajdata = manipprob.SendCommand(movehandcmd)
-                if trajdata is not None:
-                    success = True
-                    break
-                print 'trying visual feedback grasp again'
-            if not success:
+            trajdata = None
+            with self.robot:
+                validgrasps,validindices = vmodel.gmodel.computeValidGrasps()
+                for iter in range(4):
+                    # set the real values for simulation
+                    vmodel.gmodel.setPreshape(grasp)
+                    #trajdata = visualprob.SendCommand('VisualFeedbackGrasping target ' + self.target.GetName() + ' sensorindex 0 convexdata ' + str(self.convexdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.convexdata.flat) + ' graspsetdata ' + str(self.graspsetdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.graspsetdata[:,0:12].flat) + ' maxiter 100 visgraspthresh 0.5 gradientsamples 5 ' + cmdstr)
+                    try:
+                        trajdata = basemanip.MoveToHandPosition(matrices=[vmodel.gmodel.getGlobalGraspTransform(g,collisionfree=True) for g in validgrasps],execute=False,outputtraj=True)
+                        break
+                    except planning_error:
+                        print 'trying visual feedback grasp again'
+            if trajdata is None:
                 continue
             self.starttrajectory(trajdata)
 
-            trajdata = manipprob.SendCommand('closefingers offset %f '%self.graspoffset + cmdstr)
-            if trajdata is None:
+            try:
+                final,trajdata = basemanip.CloseFingers(offset=self.graspoffset*ones(len(self.manip.GetGripperJoints())),execute=False,outputtraj=True)
+                self.starttrajectory(trajdata)
+            except planning_error:
                 raise ValueError('failed to find visual feedback grasp')
-            self.starttrajectory(trajdata)
             
             self.robot.Grab(self.target)
             self.robotreal.Grab(self.orenvreal.GetKinBody(self.target.GetName()))
             Trelative = dot(linalg.inv(self.target.GetTransform()),self.manip.GetEndEffectorTransform())
             Tnewgoals = [dot(Tgoal,Trelative) for Tgoal in self.Tgoals]
-
-            print 'moving up'
-            trajdata = manipprob.SendCommand('movehandstraight direction 0 0 1 stepsize 0.001 maxsteps 100' + cmdstr)
-            if trajdata is None:
-                print 'failed to find trajectory'
-            self.starttrajectory(trajdata)
-            print 'moving to destination'
-            trajdata = manipprob.SendCommand('movetohandposition maxiter 1000 maxtries 1 seedik 4 matrices ' + str(len(Tnewgoals)) + ' ' + ' '.join(matrixSerialization(T) for T in Tnewgoals) + cmdstr)
-            if trajdata is None:
-                print 'failed to find trajectory'
-                self.robot.SetActiveDOFs(self.manip.GetGripperJoints())
-                trajdata = manipprob.SendCommand('releasefingers target ' + self.target.GetName() + cmdstr)
-                if trajdata is not None:
+            if len(Tnewgoals) > 0:
+                try:
+                    print 'moving up'
+                    trajdata = basemanip.MoveHandStraight(direction=[0,0,1],stepsize=0.001,maxsteps=100,execute=False,outputtraj=True)
                     self.starttrajectory(trajdata)
-                else:
-                    print 'failed to release'
+                except planning_error:
+                    print 'failed to find trajectory'
+
+                success = True
+                try:
+                    print 'moving to destination'
+                    trajdata = basemanip.MoveToHandPosition(matrices=Tnewgoals, maxiter=1000,maxtries=1, seedik= 4,execute=False,outputtraj=True)
+                    self.starttrajectory(trajdata)
+                except planning_error:
+                    print 'failed to find trajectory'
+                    success = False
+
+            try:
+                final,trajdata = basemanip.ReleaseFingers(target=self.target,execute=False,outputtraj=True)
+                self.starttrajectory(trajdata)
+            except planning_error:
+                print 'failed to release'
+                success = False
+
+            if not success:
                 continue
-            self.starttrajectory(trajdata)
-
-            self.robot.SetActiveDOFs(self.manip.GetGripperJoints())
-            trajdata = manipprob.SendCommand('releasefingers target ' + self.target.GetName() + cmdstr)
-            if trajdata is None:
-                print 'failed to find trajectory'
-                continue
-            self.starttrajectory(trajdata)
-
-    def testvisibility(self,visualprob=None):
-        if visualprob is None:
-            visualprob = self.visualprob
-        with visualprob.GetEnv():
-            res = visualprob.SendCommand('ComputeVisibility target ' + self.target.GetName() + ' sensorindex 0 convexdata ' + str(self.convexdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.convexdata.flat))
-            return int(res)!=0
-        return False
-
-    def testvisibilitydata(self,visualprob=None):
-        if visualprob is None:
-            visualprob = self.visualprob
-        with visualprob.GetEnv():
-            res = visualprob.SendCommand('ProcessVisibilityExtents target ' + self.target.GetName() + ' sensorindex 0 convexdata ' + str(self.convexdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.convexdata.flat) + ' visibilitydata ' + str(self.visibilitydata.shape[0]) + ' ' + ' '.join(str(f) for f in self.visibilitydata.flat))
-            if self.visibilitydata.size != len(res.split()):
-                raise ValueError('bad visibility data')
 
     def quitviewers(self):
         for viewer in self.viewers:
@@ -393,30 +322,12 @@ class VisibilityGrasping(metaclass.AutoReloader):
         self.quitviewers()
         self.orenv.Destroy()
 
-class HRP2GraspExample(VisibilityGrasping):
-    """Specific class to setup an hrp2 scene for visibility grasping"""
-
-    def preprocessdata(self):
-        VisibilityGrasping.preprocessdata(self, maskfile = 'hrp2gripper_mask.mat', convexfile = 'hrp2gripper_convex.mat', robotfile = 'robots/hrp2jskreal.robot.xml', graspsetfile = 'simple_grasp_hrp2_cereal2.mat', targetfile = 'data/box_frootloops.kinbody.xml', graspingppfile = 'hrp2_frootloops_visibility.pp', visibilityfile = 'cereal_visibility.mat', robotjointinds = [21], robotjoints = [-1.7])
-
-    def loadscene(self):
-        VisibilityGrasping.loadscene(scenefilename='scenes/r602cerealmanip.env.xml',robotname='HRP2JSK',sensorname='wristcam',graspingppfile='hrp2_frootloops_visibility.pp', handfilename='robots/hrp2rhandjsk.robot.xml')
-        
-        self.homevalues = array([ -2.86345789e-03,   4.97418863e-04,  -4.52529013e-01, 8.72043371e-01,  -4.17762041e-01,   8.16814136e-04, 0.00000000e+00,   3.43606574e-03,  -4.97418863e-04, -4.52249706e-01,   8.72011900e-01,  -4.17901635e-01, 7.53982284e-04,   0.00000000e+00,   8.47067393e-04, 2.84897187e-03,   1.59534463e-03,   2.57708761e-03, 7.69527555e-02,  -1.91759229e-01,   2.73909390e-01, -2.02681810e-01,  -2.30580971e-01,   9.90253594e-03, -2.71063328e-01,   1.55539140e-01,   2.52415299e-01, -3.49661469e-01,  -4.49272335e-01,   3.51060212e-01, 7.22945556e-02,  -1.47477672e-01,  -2.63864666e-01, 2.64033407e-01])
-
-        self.Tgoals = [array([[  5.96046377e-08,  -1.00000000e+00,   1.42291853e-07, 8.61060917e-01],
-                              [  1.00000000e+00,   5.96046448e-08,   2.74064149e-08, -6.78065157e+00],
-                              [ -2.74064291e-08,   1.42291853e-07,   1.00000000e+00, 8.79451871e-01],
-                              [  0.00000000e+00,   0.00000000e+00,   0.00000000e+00, 1.00000000e+00]])]
-        self.graspoffset = 0.3
-
 class PA10GraspExample(VisibilityGrasping):
     """Specific class to setup an PA10 scene for visibility grasping"""
-    def preprocessdata(self):
-        VisibilityGrasping.preprocessdata(self, maskfile = 'pa10gripper_mask.mat', convexfile = 'pa10gripper_convex.mat', robotfile = 'robots/pa10schunk.robot.xml', graspsetfile = 'simple_cereal_grasps_pa10.mat', targetfile = 'data/box_frootloops.kinbody.xml', graspingppfile = 'pa10_frootloops_visibility.pp', visibilityfile = 'cereal_visibility.mat', robotjointinds = [], robotjoints = [])
         
-    def loadscene(self,randomize=True):
-        VisibilityGrasping.loadscene(self,scenefilename='data/pa10grasp.env.xml',robotname='PA10',sensorname='wristcam',graspingppfile='pa10_frootloops_visibility.pp', handfilename='robots/schunk_manip.robot.xml')
+    def loadscene(self,randomize=True,**kwargs):
+        VisibilityGrasping.loadscene(self,**kwargs)
+        self.Tgoals = []
 
         if not randomize:
             return
@@ -427,7 +338,7 @@ class PA10GraspExample(VisibilityGrasping):
             Tnew = array(Trobot)
             Tnew[0:2,3] += array([-0.1,-0.5])+random.rand(2)*array([0.3,1])
             self.robotreal.SetTransform(Tnew)
-            if not self.orenvreal.CheckCollision(self.robotreal):
+            if not self.robotreal.GetEnv().CheckCollision(self.robotreal):
                 break
 
         createprob = 0.15
@@ -491,27 +402,25 @@ class PA10GraspExample(VisibilityGrasping):
                             break
 
             # find all destinations not in collision
-            self.Tgoals = []
-            Torig = self.target.GetTransform()
-            for t in trans:
-                for roll in arange(0,pi,pi/4):
-                    T = eye(4)
-                    T[0:3,0:3] = rotationMatrixFromAxisAngle(array([0,0,1]),roll)
-                    T[0:2,3] = t[0:2]
-                    T = dot(Ttable,T)
-                    T[2,3] = Torig[2,3] # preserve Z
-                    self.target.SetTransform(T)
-                    if not self.orenvreal.CheckCollision(self.target):
-                        self.Tgoals.append(T)
-            self.target.SetTransform(Torig)
+            with self.target:
+                Torig = self.target.GetTransform()
+                for t in trans:
+                    for roll in arange(0,pi,pi/4):
+                        T = eye(4)
+                        T[0:3,0:3] = rotationMatrixFromAxisAngle(array([0,0,1]),roll)
+                        T[0:2,3] = t[0:2]
+                        T = dot(Ttable,T)
+                        T[2,3] = Torig[2,3] # preserve Z
+                        self.target.SetTransform(T)
+                        if not self.target.GetEnv().CheckCollision(self.target):
+                            self.Tgoals.append(T)
 
 if __name__=='__main__':
     parser = OptionParser(description='Visibility Planning Module.')
-    parser.add_option('--examplenum',
-                      action="store",type='int',dest='examplenum',default=0,
-                      help='The example number to load: 0 - PA10')
+    parser.add_option('--scene',
+                      action="store",type='string',dest='scene',default='data/pa10grasp.env.xml',
+                      help='openrave scene to load')
     (options, args) = parser.parse_args()
-
     scene = PA10GraspExample()
-    scene.loadscene()
+    scene.loadscene(scenefilename=options.scene,sensorname='wristcam')
     scene.start()

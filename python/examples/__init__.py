@@ -5,6 +5,7 @@ import grasping
 import inversekinematics
 import kinematicreachability
 import inversereachability
+import visibilitymodel
 
 import collision
 import hanoi

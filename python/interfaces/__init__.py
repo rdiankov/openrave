@@ -1,4 +1,4 @@
 from BaseManipulation import BaseManipulation
-from VisualFeedback import VisualFeedback
-from TaskManipulation import TaskManipulation
 from Grasper import Grasper
+from TaskManipulation import TaskManipulation
+from VisualFeedback import VisualFeedback

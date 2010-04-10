@@ -27,8 +27,6 @@ class BaseManipulation:
             raise ValueError('problem failed to initialize')
     def  __del__(self):
         self.prob.GetEnv().RemoveProblem(self.prob)
-    def TrajFromFile(self,filename):
-        return self.prob.SendCommand('traj sep ; %s;'%filename)
     def TrajFromData(self,data):
         return self.prob.SendCommand('traj stream ' + data)
     def MoveHandStraight(self,direction,minsteps=None,maxsteps=None,stepsize=None,ignorefirstcollision=None,jacobian=None,searchall=None,execute=None,outputtraj=None):
@@ -55,17 +53,20 @@ class BaseManipulation:
         return res
     def MoveManipulator(self,goal,maxiter=None,execute=None,outputtraj=None):
         assert(len(goal) == len(self.robot.GetActiveManipulator().GetArmJoints()) and len(goal) > 0)
-        cmd = 'MoveManipulator goal ' + ' '.join(str(f) for f in goal)
+        cmd = 'MoveManipulator goal ' + ' '.join(str(f) for f in goal) + ' '
         if execute is not None:
             cmd += 'execute %d '%execute
         if outputtraj is not None:
             cmd += 'outputtraj '
         if maxiter is not None:
             cmd += 'maxiter %d '%maxiter
-        return self.prob.SendCommand(cmd)
+        res = self.prob.SendCommand(cmd)
+        if res is None:
+            raise planning_error()
+        return res
     def MoveActiveJoints(self,goal,steplength=None,maxiter=None,execute=None,outputtraj=None):
         assert(len(goal) == self.robot.GetActiveDOF() and len(goal) > 0)
-        cmd = 'MoveActiveJoints goal ' + ' '.join(str(f) for f in goal)
+        cmd = 'MoveActiveJoints goal ' + ' '.join(str(f) for f in goal)+' '
         if steplength is not None:
             cmd += 'steplength %f '%steplength
         if execute is not None:
@@ -98,7 +99,10 @@ class BaseManipulation:
             cmd += 'execute %d '%execute
         if outputtraj is not None:
             cmd += 'outputtraj '
-        return self.prob.SendCommand(cmd)
+        res = self.prob.SendCommand(cmd)
+        if res is None:
+            raise planning_error()
+        return res
     def MoveUnsyncJoints(self,jointvalues,jointinds,planner=None,execute=None,outputtraj=None):
         assert(len(jointinds)==len(jointvalues) and len(jointinds)>0)
         cmd = 'MoveUnsyncJoints handjoints %d %s %s '%(len(jointinds),' '.join(str(f) for f in jointvalues), ' '.join(str(f) for f in jointinds))
@@ -117,7 +121,7 @@ class BaseManipulation:
         dof=len(self.robot.GetActiveManipulator().GetGripperJoints())
         if offset is not None:
             assert(len(offset) == dof)
-            cmd += ' '.join(str(f) for f in offset) + ' '
+            cmd += 'offset ' + ' '.join(str(f) for f in offset) + ' '
         if movingdir is not None:
             assert(len(movingdir) == dof)
             cmd += 'movingdir %s '%(' '.join(str(f) for f in movingdir))

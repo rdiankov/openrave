@@ -187,34 +187,15 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
 class VisualFeedbackProblem : public ProblemInstance
 {
 public:
-    struct ASSEMBLYOBJECT
-    {
-        string filename;
-        dReal _fAppearProb;
-    };
+    inline boost::shared_ptr<VisualFeedbackProblem> shared_problem() { return boost::static_pointer_cast<VisualFeedbackProblem>(shared_from_this()); }
+    inline boost::shared_ptr<VisualFeedbackProblem const> shared_problem_const() const { return boost::static_pointer_cast<VisualFeedbackProblem const>(shared_from_this()); }
+    friend class VisibilityConstraintFunction;
 
     class VisibilityConstraintFunction
     {
     public:
-        VisibilityConstraintFunction(RobotBasePtr robot, KinBodyPtr ptarget, const vector<dReal>& vconvexdata, int sensorindex=0) : _robot(robot), _ptarget(ptarget), _sensorindex(sensorindex) {
+    VisibilityConstraintFunction(boost::shared_ptr<VisualFeedbackProblem> vf, KinBodyPtr ptarget) : _vf(vf), _ptarget(ptarget) {
             _report.reset(new COLLISIONREPORT());
-            _psensor = _robot->GetSensors().at(_sensorindex);
-            if( _psensor->GetSensor()->GetSensorGeometry()->GetType() != SensorBase::ST_Camera)
-                throw openrave_exception("sensor is not a camera");
-
-            // check if there is a manipulator with the same end effector as camera
-            FOREACHC(itmanip,_robot->GetManipulators()) {
-                if( (*itmanip)->GetEndEffector() == _psensor->GetAttachingLink() ) {
-                    _pmanip = *itmanip;
-                    break;
-                }
-            }
-
-            if( !_pmanip )
-                throw openrave_exception("failed to find manipulator with end effector similar to sensor link.");
-
-            _tcameratogripper = _psensor->GetTransform().inverse()*_pmanip->GetEndEffectorTransform();
-            boost::shared_ptr<SensorBase::CameraGeomData> pgeom = boost::static_pointer_cast<SensorBase::CameraGeomData>(_psensor->GetSensor()->GetSensorGeometry());
 
             _vTargetOBBs.reserve(_ptarget->GetLinks().size());
             FOREACHC(itlink, _ptarget->GetLinks())
@@ -234,12 +215,269 @@ public:
                 _ptargetbox->Enable(false);
                 _ptargetbox->SetTransform(_ptarget->GetTransform());
             }
+        }
+        virtual ~VisibilityConstraintFunction() {
+            _ptargetbox->GetEnv()->RemoveKinBody(_ptargetbox);
+        }
+        
+        virtual bool Constraint(const vector<dReal>& pSrcConf, vector<dReal>& pDestConf, int settings)
+        {
+            TransformMatrix tcamera = _vf->_psensor->GetSensor()->GetTransform();
+            if( !InConvexHull(tcamera) )
+                return false;
+            // no need to check gripper collision
 
-            if( vconvexdata.size() > 2 ) {
+            bool bOcclusion = IsOccluded(tcamera);
+            if( bOcclusion )
+                return false;
+            
+            pDestConf = pSrcConf;
+            return true;
+        }
+
+        bool SampleWithCamera(const TransformMatrix& tcamera, vector<dReal>& pNewSample)
+        {
+            if( !InConvexHull(tcamera) )
+                return false;
+
+            // object is inside, find an ik solution
+            Transform tgoalee = tcamera*_vf->_tcameratogripper;
+            if( !_vf->_pmanip->FindIKSolution(tgoalee,_vsolution,true) ) {
+                RAVELOG_VERBOSEA("no valid ik\n");
+                return false;
+            }
+
+            // convert the solution into active dofs
+            _vf->_robot->GetActiveDOFValues(pNewSample);
+            FOREACHC(itarm,_vf->_pmanip->GetArmJoints()) {
+                vector<int>::const_iterator itactive = find(_vf->_robot->GetActiveJointIndices().begin(),_vf->_robot->GetActiveJointIndices().end(),*itarm);
+                if( itactive != _vf->_robot->GetActiveJointIndices().end() )
+                    pNewSample.at((int)(itactive-_vf->_robot->GetActiveJointIndices().begin())) = _vsolution.at((int)(itarm-_vf->_pmanip->GetArmJoints().begin()));
+            }
+            _vf->_robot->SetActiveDOFValues(pNewSample);
+            
+            return !IsOccluded(tcamera);
+        }
+
+        bool InConvexHull(const TransformMatrix& tcamera)
+        {
+            Vector vitrans(-tcamera.m[0]*tcamera.trans.x - tcamera.m[4]*tcamera.trans.y - tcamera.m[8]*tcamera.trans.z,
+                           -tcamera.m[1]*tcamera.trans.x - tcamera.m[5]*tcamera.trans.y - tcamera.m[9]*tcamera.trans.z,
+                           -tcamera.m[2]*tcamera.trans.x - tcamera.m[6]*tcamera.trans.y - tcamera.m[10]*tcamera.trans.z);
+            _vconvexplanes3d.resize(_vf->_vconvexplanes.size());
+            for(size_t i = 0; i < _vf->_vconvexplanes.size(); ++i) {
+                _vconvexplanes3d[i] = tcamera.rotate(_vf->_vconvexplanes[i]);
+                _vconvexplanes3d[i].w = dot3(vitrans,_vf->_vconvexplanes[i]);
+            }
+
+            FOREACH(itobb,_vTargetOBBs) {
+                if( !IsOBBinConvexHull(*itobb,_vconvexplanes3d) ) {
+                    RAVELOG_VERBOSEA("box not in camera vision hull\n");
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+
+        /// check if any part of the environment or robot is in front of the camera blocking the object
+        /// sample object's surface and shoot rays
+        bool IsOccluded(const TransformMatrix& tcamera)
+        {
+            TransformMatrix tcamerainv = tcamera.inverse();
+            _ptargetbox->Enable(true);
+            _ptarget->Enable(false);
+            _ptargetbox->SetTransform(_ptarget->GetTransform());
+            bool bOcclusion = false;
+            FOREACH(itobb,_vTargetOBBs) {
+                OBB cameraobb = TransformOBB(*itobb,tcamerainv);
+                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::TestRay, this, _1, boost::ref(tcamera))) ) {
+                    bOcclusion = true;
+                    RAVELOG_VERBOSEA("box is occluded\n");
+                    break;
+                }
+            }
+            _ptargetbox->Enable(false);
+            _ptarget->Enable(true);
+            return bOcclusion;
+        }
+
+        bool TestRay(const Vector& v, const TransformMatrix& tcamera)
+        {
+            RAY r;
+            r.dir = tcamera.rotate(2.0f*v);
+            r.pos = tcamera.trans + 0.05f*r.dir; // move the rays a little forward
+            if( !_vf->_robot->GetEnv()->CheckCollision(r,_report) ) {
+                RAVELOG_DEBUGA("no collision!?\n");
+                return true; // not supposed to happen, but it is OK
+            }
+
+//            RaveVector<float> vpoints[2];
+//            vpoints[0] = r.pos;
+//            BOOST_ASSERT(_report.contacts.size() == 1 );
+//            vpoints[1] = _report.contacts[0].pos;
+//            _vf->_robot->GetEnv()->drawlinestrip(vpoints[0],2,16,1.0f,Vector(0,0,1));
+            if( !(!!_report->plink1 && _report->plink1->GetParent() == _ptargetbox) )
+                RAVELOG_DEBUGA(str(boost::format("bad collision: %s\n")%_report->__str__()));
+            return !!_report->plink1 && _report->plink1->GetParent() == _ptargetbox;
+        }
+
+    private:
+        boost::shared_ptr<VisualFeedbackProblem> _vf;
+        KinBodyPtr _ptarget;
+        KinBodyPtr _ptargetbox; ///< box to represent the target for simulating ray collisions
+
+        vector<OBB> _vTargetOBBs; // object links local AABBs
+        vector<dReal> _vsolution;
+        CollisionReportPtr _report;
+        AABB _abTarget; // target aabb
+        vector<Vector> _vconvexplanes3d;
+    };
+
+    class GoalSampleFunction
+    {
+    public:
+    GoalSampleFunction(boost::shared_ptr<VisualFeedbackProblem> vf, KinBodyPtr ptarget, const vector<Transform>& visibilitytransforms) : _vconstraint(vf,ptarget), _fSampleGoalProb(1.0f), _vf(vf), _visibilitytransforms(visibilitytransforms)
+        {
+            RAVELOG_DEBUGA(str(boost::format("have %d detection extents hypotheses\n")%_visibilitytransforms.size()));
+            _ttarget = ptarget->GetTransform();
+            _sphereperms.PermuteStart(_visibilitytransforms.size());
+        }
+        virtual ~GoalSampleFunction() {}
+
+        virtual bool Sample(vector<dReal>& pNewSample)
+        {
+            if( RaveRandomFloat() > _fSampleGoalProb )
+                return false;
+            RobotBase::RobotStateSaver state(_vf->_robot);
+            _sphereperms._fn = boost::bind(&GoalSampleFunction::SampleWithParameters,this,_1,boost::ref(pNewSample));
+            if( _sphereperms.PermuteContinue() >= 0 )
+                return true;
+
+            // start from the beginning, if nothing, throw
+            _sphereperms.PermuteStart(_visibilitytransforms.size());
+            if( _sphereperms.PermuteContinue() >= 0 )
+                return true;
+
+            return false;
+        }
+
+        bool SampleWithParameters(int isample, vector<dReal>& pNewSample)
+        {
+            TransformMatrix tcamera = _ttarget*_visibilitytransforms.at(isample);
+            return _vconstraint.SampleWithCamera(tcamera,pNewSample);
+        }
+
+        VisibilityConstraintFunction _vconstraint;
+        dReal _fSampleGoalProb;
+    private:
+        boost::shared_ptr<VisualFeedbackProblem> _vf;
+        const vector<Transform>& _visibilitytransforms;
+
+        Transform _ttarget; ///< transform of target
+        Vector _vTargetLocalCenter;
+        RandomPermuationExecutor _sphereperms;
+        vector<Transform> _vcameras; ///< camera transformations in local coord systems
+    };
+
+    VisualFeedbackProblem(EnvironmentBasePtr penv) : ProblemInstance(penv)
+    {
+        __description = "Planning with Visibility Constraints - Rosen Diankov";
+        _nManipIndex = -1;
+        _fSampleRayDensity = 0.001;
+        RegisterCommand("SetCamera",boost::bind(&VisualFeedbackProblem::SetCamera,this,_1,_2),
+                        "Sets the camera index from the robot and its convex hull");
+        RegisterCommand("ProcessVisibilityExtents",boost::bind(&VisualFeedbackProblem::ProcessVisibilityExtents,this,_1,_2),
+                        "Converts 3D extents to full 6D camera transforms and prunes bad transforms");
+        RegisterCommand("SetCameraTransforms",boost::bind(&VisualFeedbackProblem::SetCameraTransforms,this,_1,_2),
+                        "Processes the visibility directions for containment of the object inside the gripper mask");
+        RegisterCommand("ComputeVisibility",boost::bind(&VisualFeedbackProblem::ComputeVisibility,this,_1,_2),
+                        "Computes the visibility of the current robot configuration");
+        RegisterCommand("SampleVisibilityGoal",boost::bind(&VisualFeedbackProblem::SampleVisibilityGoal,this,_1,_2),
+                        "Samples a goal with the current manipulator maintaining camera visibility constraints");
+        RegisterCommand("MoveToObserveTarget",boost::bind(&VisualFeedbackProblem::MoveToObserveTarget,this,_1,_2),
+                        "Approaches a target object while choosing a goal such that the robot's camera sensor sees the object ");
+        RegisterCommand("VisualFeedbackGrasping",boost::bind(&VisualFeedbackProblem::VisualFeedbackGrasping,this,_1,_2),
+                        "Stochastic greedy grasp planner considering visibility");
+    }
+
+    virtual ~VisualFeedbackProblem() {}
+
+    void Destroy()
+    {
+        ProblemInstance::Destroy();
+    }
+
+    int main(const string& cmd)
+    {
+        stringstream ss(cmd);
+        string robotname;
+        ss >> robotname;
+        _robot = GetEnv()->GetRobot(robotname);
+        return 0;
+    }
+
+    virtual bool SendCommand(std::ostream& sout, std::istream& sinput)
+    {
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        return ProblemInstance::SendCommand(sout,sinput);
+    }
+
+    bool SetCamera(ostream& sout, istream& sinput)
+    {
+        _pmanip.reset();
+        _psensor.reset();
+        _vconvexplanes.resize(0);
+        _pcamerageom.reset();
+        RobotBase::AttachedSensorPtr psensor;
+        RobotBase::ManipulatorPtr pmanip;
+        vector<Vector> vconvexplanes;
+
+        string cmd;
+        while(!sinput.eof()) {
+            sinput >> cmd;
+            if( !sinput )
+                break;
+            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+
+            if( cmd == "sensorindex" ) {
+                int sensorindex=-1;
+                sinput >> sensorindex;
+                psensor = _robot->GetSensors().at(sensorindex);
+            }
+            else if( cmd == "sensorname" ) {
+                string sensorname;
+                sinput >> sensorname;
+                FOREACH(itsensor,_robot->GetSensors()) {
+                    if( (*itsensor)->GetName() == sensorname ) {
+                        psensor = *itsensor;
+                        break;
+                    }
+                }
+            }
+            else if( cmd == "manipname" ) {
+                string manipname;
+                sinput >> manipname;
+                _nManipIndex = 0;
+                FOREACH(itmanip,_robot->GetManipulators()) {
+                    if( (*itmanip)->GetName() == manipname ) {
+                        pmanip = *itmanip;
+                        break;
+                    }
+                    _nManipIndex++;
+                }
+            }
+            else if( cmd == "convexdata" ) {
+                int numpoints=0;
+                sinput >> numpoints;
+                vector<dReal> vconvexdata(2*numpoints);
+                FOREACH(it, vconvexdata)
+                    sinput >> *it;
+                BOOST_ASSERT(vconvexdata.size() > 2 );
                 vector<Vector> vpoints;
                 Vector vprev,vprev2,v,vdir,vnorm,vcenter;
                 for(size_t i = 0; i < vconvexdata.size(); i += 2 ){ 
-                    vpoints.push_back(Vector((vconvexdata[i]-pgeom->KK.cx)/pgeom->KK.fx,(vconvexdata[i+1]-pgeom->KK.cy)/pgeom->KK.fy,0,0));
+                    vpoints.push_back(Vector((vconvexdata[i]-_pcamerageom->KK.cx)/_pcamerageom->KK.fx,(vconvexdata[i+1]-_pcamerageom->KK.cy)/_pcamerageom->KK.fy,0,0));
                     vcenter += vpoints.back();
                 }
 
@@ -278,317 +516,105 @@ public:
                 else
                     RAVELOG_WARNA(str(boost::format("convex data does not have enough points %d\n")%vconvexdata.size()));
             }
-            
-            if( _vconvexplanes.size() == 0 ) {
-                // pick the camera boundaries
-                _vconvexplanes.push_back(Vector(1,0,pgeom->KK.cx/pgeom->KK.fx,0).normalize3()); // -x
-                _vconvexplanes.push_back(Vector(-1,0,-(pgeom->width-pgeom->KK.cx)/pgeom->KK.fx,0).normalize3()); // +x
-                _vconvexplanes.push_back(Vector(1,0,pgeom->KK.cy/pgeom->KK.fy,0).normalize3()); // -y
-                _vconvexplanes.push_back(Vector(-1,0,-(pgeom->height-pgeom->KK.cy)/pgeom->KK.fy,0).normalize3()); // +y
-                _vcenterconvex = Vector(0,0,1);
-            }
-
-            _ttarget = _ptarget->GetTransform();
-            _fSampleRayDensity = 20.0f/pgeom->KK.fx;
-        }
-        virtual ~VisibilityConstraintFunction() {
-            _ptargetbox->GetEnv()->RemoveKinBody(_ptargetbox);
-        }
-        
-        virtual bool Constraint(const vector<dReal>& pSrcConf, vector<dReal>& pDestConf, int settings)
-        {
-            TransformMatrix tcamera = _psensor->GetSensor()->GetTransform();
-            if( !InConvexHull(tcamera) )
-                return false;
-            // no need to check gripper collision
-
-            bool bOcclusion = IsOccluded(tcamera);
-            if( bOcclusion )
-                return false;
-            
-            pDestConf = pSrcConf;
-            return true;
-        }
-
-        bool SampleWithCamera(const TransformMatrix& tcamera, vector<dReal>& pNewSample)
-        {
-            if( !InConvexHull(tcamera) )
-                return false;
-
-            // object is inside, find an ik solution
-            Transform tgoalee = tcamera*_tcameratogripper;
-            if( !_pmanip->FindIKSolution(tgoalee,_vsolution,true) ) {
-                RAVELOG_VERBOSEA("no valid ik\n");
-                return false;
-            }
-
-            // convert the solution into active dofs
-            _robot->GetActiveDOFValues(pNewSample);
-            FOREACHC(itarm,_pmanip->GetArmJoints()) {
-                vector<int>::const_iterator itactive = find(_robot->GetActiveJointIndices().begin(),_robot->GetActiveJointIndices().end(),*itarm);
-                if( itactive != _robot->GetActiveJointIndices().end() )
-                    pNewSample.at((int)(itactive-_robot->GetActiveJointIndices().begin())) = _vsolution.at((int)(itarm-_pmanip->GetArmJoints().begin()));
-            }
-            _robot->SetActiveDOFValues(pNewSample);
-            
-            return !IsOccluded(tcamera);
-        }
-
-        bool InConvexHull(const TransformMatrix& tcamera)
-        {
-            Vector vitrans(-tcamera.m[0]*tcamera.trans.x - tcamera.m[4]*tcamera.trans.y - tcamera.m[8]*tcamera.trans.z,
-                           -tcamera.m[1]*tcamera.trans.x - tcamera.m[5]*tcamera.trans.y - tcamera.m[9]*tcamera.trans.z,
-                           -tcamera.m[2]*tcamera.trans.x - tcamera.m[6]*tcamera.trans.y - tcamera.m[10]*tcamera.trans.z);
-            _vconvexplanes3d.resize(_vconvexplanes.size());
-            for(size_t i = 0; i < _vconvexplanes.size(); ++i) {
-                _vconvexplanes3d[i] = tcamera.rotate(_vconvexplanes[i]);
-                _vconvexplanes3d[i].w = dot3(vitrans,_vconvexplanes[i]);
-            }
-
-            FOREACH(itobb,_vTargetOBBs) {
-                if( !IsOBBinConvexHull(*itobb,_vconvexplanes3d) ) {
-                    RAVELOG_VERBOSEA("box not in camera vision hull\n");
-                    return false;
-                }
-            }
-            
-            return true;
-        }
-
-        /// check if any part of the environment or robot is in front of the camera blocking the object
-        /// sample object's surface and shoot rays
-        bool IsOccluded(const TransformMatrix& tcamera)
-        {
-            TransformMatrix tcamerainv = tcamera.inverse();
-            _ptargetbox->Enable(true);
-            _ptarget->Enable(false);
-            _ptargetbox->SetTransform(_ptarget->GetTransform());
-            bool bOcclusion = false;
-            FOREACH(itobb,_vTargetOBBs) {
-                OBB cameraobb = TransformOBB(*itobb,tcamerainv);
-                if( !SampleProjectedOBBWithTest(cameraobb, _fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::TestRay, this, _1, boost::ref(tcamera))) ) {
-                    bOcclusion = true;
-                    RAVELOG_VERBOSEA("box is occluded\n");
-                    break;
-                }
-            }
-            _ptargetbox->Enable(false);
-            _ptarget->Enable(true);
-            return bOcclusion;
-        }
-
-        bool TestRay(const Vector& v, const TransformMatrix& tcamera)
-        {
-            RAY r;
-            r.dir = tcamera.rotate(2.0f*v);
-            r.pos = tcamera.trans + 0.05f*r.dir; // move the rays a little forward
-            if( !_robot->GetEnv()->CheckCollision(r,_report) ) {
-                RAVELOG_DEBUGA("no collision!?\n");
-                return true; // not supposed to happen, but it is OK
-            }
-
-//            RaveVector<float> vpoints[2];
-//            vpoints[0] = r.pos;
-//            BOOST_ASSERT(_report.contacts.size() == 1 );
-//            vpoints[1] = _report.contacts[0].pos;
-//            _robot->GetEnv()->drawlinestrip(vpoints[0],2,16,1.0f,Vector(0,0,1));
-            if( !(!!_report->plink1 && _report->plink1->GetParent() == _ptargetbox) )
-                RAVELOG_DEBUGA(str(boost::format("bad collision: %s:%s\n")%_report->plink1->GetParent()->GetName()%_report->plink1->GetName()));
-            return !!_report->plink1 && _report->plink1->GetParent() == _ptargetbox;
-        }
-
-        inline RobotBasePtr GetRobot() const { return _robot; }
-        inline Vector GetConvexCenter() const { return _vcenterconvex; }
-        inline RobotBase::ManipulatorPtr GetManipulator() const { return _pmanip; }
-        inline KinBodyPtr GetTarget() const { return _ptarget; }
-
-    private:
-        RobotBasePtr _robot;
-        KinBodyPtr _ptarget;
-        KinBodyPtr _ptargetbox; ///< box to represent the target for simulating ray collisions
-        Transform _ttarget; ///< transform of target
-        Transform _tcameratogripper; ///< transforms a camera coord system to the gripper coordsystem
-        RobotBase::AttachedSensorPtr _psensor;
-        RobotBase::ManipulatorPtr _pmanip;
-        int _sensorindex;
-        vector<OBB> _vTargetOBBs; // object links local AABBs
-        vector<dReal> _vsolution;
-        CollisionReportPtr _report;
-        AABB _abTarget; // target aabb
-        dReal _fSampleRayDensity;
-        
-        vector<Vector> _vconvexplanes, _vconvexplanes3d; // the planes defining the bounding visibility region (posive is inside)
-        Vector _vcenterconvex; // center point on the z=1 plane of the convex region
-    };
-
-    class GoalSampleFunction
-    {
-    public:
-    GoalSampleFunction(RobotBasePtr robot, KinBodyPtr ptarget, const vector<dReal>& vconvexdata, const vector<Transform>& visibilitytransforms, const vector<Vector>& visibilityextents, int sensorindex=0) : _vconstraint(robot,ptarget,vconvexdata,sensorindex), _fSampleGoalProb(1.0f)
-        {
-            {
-                KinBody::KinBodyStateSaver saver(_vconstraint.GetTarget());
-                _ttarget = _vconstraint.GetTarget()->GetTransform();
-                _vconstraint.GetTarget()->SetTransform(Transform());
-                _vTargetLocalCenter = _vconstraint.GetTarget()->ComputeAABB().pos;
-            }
-
-            int nNumRolls = 8;
-            dReal deltaroll = PI*2.0f/(dReal)nNumRolls;
-
-            if( visibilitytransforms.size() > 0 )
-                _vcameras = visibilitytransforms;
-            else if( visibilityextents.size() > 0 ) {
-                _vcameras.reserve(visibilityextents.size()*nNumRolls);
-                FOREACHC(itv,visibilityextents) {
-                    dReal fdist = RaveSqrt(itv->lengthsqr3());
-                    Vector v = *itv * (1.0f/fdist);
-                    
-                    dReal froll = 0;
-                    for(int iroll = 0; iroll < nNumRolls; ++iroll, froll += deltaroll)
-                        _vcameras.push_back(ComputeCameraMatrix(v,fdist,froll,Vector()));
-                }
-            }
             else {
-                KinBody::Link::TRIMESH spheremesh;
-                CM::GenerateSphereTriangulation(spheremesh,3);
-                int nNumDists = 5;
-                dReal fmindist = 0.2f, fdeltadist = 0.06f;
-                _vcameras.resize(spheremesh.vertices.size()*nNumDists*nNumRolls);
-                vector<Transform>::iterator itcamera = _vcameras.begin();
-                
-                for(size_t j = 0; j < spheremesh.vertices.size(); ++j) {
-                    Vector v = spheremesh.vertices[j];
-                    for(int i = 0; i < nNumDists; ++i) {
-                        dReal froll = 0;
-                        for(int iroll = 0; iroll < nNumRolls; ++iroll, froll += deltaroll) {
-                            *itcamera++ = ComputeCameraMatrix(spheremesh.vertices[j],fmindist + fdeltadist*i,froll,Vector());
-                        }
-                    }
-                }
+                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
             }
-            
-            RAVELOG_DEBUGA(str(boost::format("have %d detection extents hypotheses\n")%_vcameras.size()));
-            _sphereperms.PermuteStart(_vcameras.size());
-        }
-        virtual ~GoalSampleFunction() {}
 
-        virtual bool Sample(vector<dReal>& pNewSample)
-        {
-            if( RaveRandomFloat() > _fSampleGoalProb )
+            if( !sinput ) {
+                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
-            RobotBase::RobotStateSaver state(_vconstraint.GetRobot());
-            _sphereperms._fn = boost::bind(&GoalSampleFunction::SampleWithParameters,this,_1,boost::ref(pNewSample));
-            if( _sphereperms.PermuteContinue() >= 0 )
-                return true;
+            }
+        }
 
-            // start from the beginning, if nothing, throw
-            _sphereperms.PermuteStart(_vcameras.size());
-            if( _sphereperms.PermuteContinue() >= 0 )
-                return true;
+        if( !psensor )
+            return false;
 
+        if( !psensor->GetSensor() ) {
+            RAVELOG_WARN(str(boost::format("attached sensor %s does not have sensor interface\n")%psensor->GetName()));
             return false;
         }
 
-        bool SampleWithParameters(int isample, vector<dReal>& pNewSample)
-        {
-            TransformMatrix tcamera = _ttarget*_vcameras[isample];
-            return _vconstraint.SampleWithCamera(tcamera,pNewSample);
+        if( psensor->GetSensor()->GetSensorGeometry()->GetType() != SensorBase::ST_Camera) {
+            RAVELOG_WARN(str(boost::format("attached sensor %s is not a camera")%psensor->GetName()));
+            return false;
         }
 
-        inline RobotBase::ManipulatorPtr GetManipulator() const { return _vconstraint.GetManipulator(); }
-        const vector<Transform>& GetCameraTransforms() const { return _vcameras; }
-
-        VisibilityConstraintFunction _vconstraint;
-
-        TransformMatrix ComputeCameraMatrix(const Vector& vdir,dReal fdist,dReal froll,Vector xyoffset)
-        {
-            Vector vright, vup = Vector(0,1,0) - vdir * vdir.y;
-            dReal uplen = vup.lengthsqr3();
-            if( uplen < 0.001 ) {
-                vup = Vector(0,0,1) - vdir * vdir.z;
-                uplen = vup.lengthsqr3();
+        // check if there is a manipulator with the same end effector as camera
+        std::vector<KinBody::LinkPtr> vattachedlinks;
+        _robot->GetRigidlyAttachedLinks(psensor->GetAttachingLink()->GetIndex(), vattachedlinks);
+        if( !!pmanip ) {
+            if( pmanip->GetEndEffector() != psensor->GetAttachingLink() && find(vattachedlinks.begin(),vattachedlinks.end(),pmanip->GetEndEffector()) == vattachedlinks.end() ) {
+                RAVELOG_WARN(str(boost::format("specified manipulator %s end effector not attached to specified sensor %s\n")%pmanip->GetName()%psensor->GetName()));
+                return false;
             }
-            
-            vup *= (dReal)1.0/RaveSqrt(uplen);
-            cross3(vright,vup,vdir);
-            TransformMatrix tcamera;
-            tcamera.m[2] = vdir.x; tcamera.m[6] = vdir.y; tcamera.m[10] = vdir.z;
+        }
+        else {
+            _nManipIndex = 0;
+            FOREACHC(itmanip,_robot->GetManipulators()) {
+                if( (*itmanip)->GetEndEffector() == psensor->GetAttachingLink() || find(vattachedlinks.begin(),vattachedlinks.end(),(*itmanip)->GetEndEffector()) != vattachedlinks.end() ) {
+                    pmanip = *itmanip;
+                    break;
+                }
+                _nManipIndex++;
+            }
 
-            dReal fcosroll = RaveCos(froll), fsinroll = RaveSin(froll);
-            tcamera.m[0] = vright.x*fcosroll+vup.x*fsinroll; tcamera.m[1] = -vright.x*fsinroll+vup.x*fcosroll;
-            tcamera.m[4] = vright.y*fcosroll+vup.y*fsinroll; tcamera.m[5] = -vright.y*fsinroll+vup.y*fcosroll;
-            tcamera.m[8] = vright.z*fcosroll+vup.z*fsinroll; tcamera.m[9] = -vright.z*fsinroll+vup.z*fcosroll;
-            tcamera.trans = _vTargetLocalCenter - fdist * tcamera.rotate(_vconstraint.GetConvexCenter());
-            return tcamera;
+            if( !pmanip ) {
+                RAVELOG_WARN(str(boost::format("failed to find manipulator with end effector rigidly attached to sensor %s.\n")%psensor->GetName()));
+                return false;
+            }
         }
 
-        dReal _fSampleGoalProb;
-    private:
-        Transform _ttarget;
-        Vector _vTargetLocalCenter;
-        RandomPermuationExecutor _sphereperms;
-        vector<Transform> _vcameras; ///< camera transformations in local coord systems
-    };
+        _tcameratogripper = psensor->GetTransform().inverse()*pmanip->GetEndEffectorTransform();
+        _pcamerageom = boost::static_pointer_cast<SensorBase::CameraGeomData>(psensor->GetSensor()->GetSensorGeometry());
+        _fSampleRayDensity = 20.0f/_pcamerageom->KK.fx;
 
-    VisualFeedbackProblem(EnvironmentBasePtr penv) : ProblemInstance(penv)
-    {
-        __description = "Visibility Planning - Rosen Diankov";
-        _fAssemblySpeed = 0;
-        RegisterCommand("ProcessVisibilityExtents",boost::bind(&VisualFeedbackProblem::ProcessVisibilityExtents,this,_1,_2),
-                        "Processes the visibility directions for containment of the object inside the gripper mask");
-        RegisterCommand("ComputeVisibility",boost::bind(&VisualFeedbackProblem::ComputeVisibility,this,_1,_2),
-                        "Computes the visibility of the current robot configuration");
-        RegisterCommand("SampleVisibilityGoal",boost::bind(&VisualFeedbackProblem::SampleVisibilityGoal,this,_1,_2),
-                        "Samples a goal maintaining camera visibility constraints");
-        RegisterCommand("MoveToObserveTarget",boost::bind(&VisualFeedbackProblem::MoveToObserveTarget,this,_1,_2),
-                        "Approaches a target object while choosing a goal such that the robot's camera sensor sees the object ");
-        RegisterCommand("VisualFeedbackGrasping",boost::bind(&VisualFeedbackProblem::VisualFeedbackGrasping,this,_1,_2),
-                        "Stochastic greedy grasp planner considering visibility");
-        RegisterCommand("AssemblyLine",boost::bind(&VisualFeedbackProblem::AssemblyLine,this,_1,_2),"");
+        if( _vconvexplanes.size() == 0 ) {
+            // pick the camera boundaries
+            _vconvexplanes.push_back(Vector(1,0,_pcamerageom->KK.cx/_pcamerageom->KK.fx,0).normalize3()); // -x
+            _vconvexplanes.push_back(Vector(-1,0,-(_pcamerageom->width-_pcamerageom->KK.cx)/_pcamerageom->KK.fx,0).normalize3()); // +x
+            _vconvexplanes.push_back(Vector(1,0,_pcamerageom->KK.cy/_pcamerageom->KK.fy,0).normalize3()); // -y
+            _vconvexplanes.push_back(Vector(-1,0,-(_pcamerageom->height-_pcamerageom->KK.cy)/_pcamerageom->KK.fy,0).normalize3()); // +y
+            _vcenterconvex = Vector(0,0,1);
+        }
+
+        _pmanip = pmanip;
+        _psensor = psensor;
+        _vconvexplanes = vconvexplanes;
+        sout << _pmanip->GetName();
+        return true;
     }
 
-    virtual ~VisualFeedbackProblem() {
-        FOREACH(it, _listAssemblyObjects)
-            GetEnv()->RemoveKinBody(*it);
-        _listAssemblyObjects.clear();
-    }
-
-    void Destroy()
+    TransformMatrix ComputeCameraMatrix(const Vector& vdir,dReal fdist,dReal froll)
     {
-        ProblemInstance::Destroy();
-    }
+        Vector vright, vup = Vector(0,1,0) - vdir * vdir.y;
+        dReal uplen = vup.lengthsqr3();
+        if( uplen < 0.001 ) {
+            vup = Vector(0,0,1) - vdir * vdir.z;
+            uplen = vup.lengthsqr3();
+        }
+            
+        vup *= (dReal)1.0/RaveSqrt(uplen);
+        cross3(vright,vup,vdir);
+        TransformMatrix tcamera;
+        tcamera.m[2] = vdir.x; tcamera.m[6] = vdir.y; tcamera.m[10] = vdir.z;
 
-    virtual void Reset()
-    {
-        ProblemInstance::Reset();
-        _listAssemblyTypes.clear();
-        _listAssemblyObjects.clear();
-    }
-
-    int main(const string& cmd)
-    {
-        stringstream ss(cmd);
-        ss >> _strRobotName;
-        return 0;
-    }
-
-    virtual bool SendCommand(std::ostream& sout, std::istream& sinput)
-    {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        _robot = GetEnv()->GetRobot(_strRobotName);
-        return ProblemInstance::SendCommand(sout,sinput);
+        dReal fcosroll = RaveCos(froll), fsinroll = RaveSin(froll);
+        tcamera.m[0] = vright.x*fcosroll+vup.x*fsinroll; tcamera.m[1] = -vright.x*fsinroll+vup.x*fcosroll;
+        tcamera.m[4] = vright.y*fcosroll+vup.y*fsinroll; tcamera.m[5] = -vright.y*fsinroll+vup.y*fcosroll;
+        tcamera.m[8] = vright.z*fcosroll+vup.z*fsinroll; tcamera.m[9] = -vright.z*fsinroll+vup.z*fcosroll;
+        tcamera.trans = - fdist * tcamera.rotate(_vcenterconvex);
+        return tcamera;
     }
 
     bool ProcessVisibilityExtents(ostream& sout, istream& sinput)
     {
         string cmd;
-
-        int sensorindex=0;
         KinBodyPtr ptarget;
-        vector<Transform> visibilitytransforms;
-        vector<Vector> visibilityextents;
-        vector<dReal> vconvexdata;
+        Vector vTargetLocalCenter;
+        bool bSetTargetCenter = false;
+        int numrolls=8;
+        vector<Transform> vtransforms;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput )
@@ -599,52 +625,69 @@ public:
                 string name; sinput >> name;
                 ptarget = GetEnv()->GetKinBody(name);
             }
-            else if( cmd == "sensorindex" )
-                sinput >> sensorindex;
-            else if( cmd == "convexfile" ) {
-                string convexfilename;
-                sinput >> convexfilename;
-                ifstream f(convexfilename.c_str());
-                if( !f )
-                    throw openrave_exception("failed to open convex filename");
-                vconvexdata = vector<dReal>((istream_iterator<dReal>(f)), istream_iterator<dReal>());
+            else if( cmd == "localtargetcenter" ) {
+                sinput >> vTargetLocalCenter.x >> vTargetLocalCenter.y >> vTargetLocalCenter.z;
+                bSetTargetCenter = true;
             }
-            else if( cmd == "convexdata" ) {
-                int numpoints=0;
-                sinput >> numpoints;
-                vconvexdata.resize(2*numpoints);
-                FOREACH(it, vconvexdata)
-                    sinput >> *it;
-            }
-            else if( cmd == "visibilityfile" ) {
-                string visibilityfile;
-                sinput >> visibilityfile;
-                fstream f(visibilityfile.c_str());
-                if( !f )
-                    throw openrave_exception("failed to open visiblity file");
-                visibilitytransforms = vector<Transform>((istream_iterator<Transform>(f)), istream_iterator<Transform>());
-            }
-            else if( cmd == "visibilitydata" ) {
+            else if( cmd == "transforms" ) {
                 int numtrans=0;
                 sinput >> numtrans;
-                visibilitytransforms.resize(numtrans);
-                FOREACH(it,visibilitytransforms)
+                vtransforms.resize(numtrans);
+                FOREACH(it,vtransforms)
                     sinput >> *it;
             }
-            else if( cmd == "extentsfile" || cmd == "visibilitytrans" ) {
-                string filename;
-                sinput >> filename;
-                fstream f(filename.c_str());
-                if( !f )
-                    throw openrave_exception("failed to open extents file");
-                visibilityextents = vector<Vector>((istream_iterator<Vector>(f)), istream_iterator<Vector>());
-            }
-            else if( cmd == "extentsdata" ) {
+            else if( cmd == "numrolls" )
+                sinput >> numrolls;
+            else if( cmd == "extents" ) {
+                if( !bSetTargetCenter && !!ptarget ) {
+                    KinBody::KinBodyStateSaver saver(ptarget);
+                    ptarget->SetTransform(Transform());
+                    vTargetLocalCenter = ptarget->ComputeAABB().pos;
+                }
                 int numtrans=0;
                 sinput >> numtrans;
-                visibilityextents.resize(numtrans);
-                FOREACH(it,visibilityextents)
-                    sinput >> it->x >> it->y >> it->z;
+                dReal deltaroll = PI*2.0f/(dReal)numrolls;
+                vtransforms.resize(0); vtransforms.reserve(numtrans*numrolls);
+                for(int i = 0; i < numtrans; ++i) {
+                    Vector v;
+                    sinput >> v.x >> v.y >> v.z;
+                    dReal fdist = RaveSqrt(v.lengthsqr3());
+                    v *= 1/fdist;
+                    dReal froll = 0;
+                    for(int iroll = 0; iroll < numrolls; ++iroll, froll += deltaroll) {
+                        Transform t = ComputeCameraMatrix(v,fdist,froll); t.trans += vTargetLocalCenter;
+                        vtransforms.push_back(t);
+                    }
+                }
+            }
+            else if( cmd == "sphere" ) {
+                if( !bSetTargetCenter && !!ptarget ) {
+                    KinBody::KinBodyStateSaver saver(ptarget);
+                    ptarget->SetTransform(Transform());
+                    vTargetLocalCenter = ptarget->ComputeAABB().pos;
+                }
+
+                KinBody::Link::TRIMESH spheremesh;
+                CM::GenerateSphereTriangulation(spheremesh,3);
+                int spherelevel = 3, numdists = 0;
+                sinput >> spherelevel >> numdists;
+                vector<dReal> vdists(numdists);
+                FOREACH(it,vdists)
+                    sinput >> *it;
+                dReal deltaroll = PI*2.0f/(dReal)numrolls;
+                vtransforms.resize(spheremesh.vertices.size()*numdists*numrolls);
+                vector<Transform>::iterator itcamera = vtransforms.begin();
+                for(size_t j = 0; j < spheremesh.vertices.size(); ++j) {
+                    Vector v = spheremesh.vertices[j];
+                    for(int i = 0; i < numdists; ++i) {
+                        dReal froll = 0;
+                        for(int iroll = 0; iroll < numrolls; ++iroll, froll += deltaroll) {
+                            *itcamera = ComputeCameraMatrix(spheremesh.vertices[j],vdists[i],froll);
+                            itcamera->trans += vTargetLocalCenter;
+                            ++itcamera;
+                        }
+                    }
+                }
             }
             else {
                 RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
@@ -662,25 +705,24 @@ public:
 
         KinBody::KinBodyStateSaver saver(ptarget);
         ptarget->SetTransform(Transform());
-
-        boost::shared_ptr<GoalSampleFunction> pgoalfn(new GoalSampleFunction(_robot,ptarget,vconvexdata, visibilitytransforms, visibilityextents, sensorindex));
+        boost::shared_ptr<GoalSampleFunction> pgoalfn(new GoalSampleFunction(shared_problem(), ptarget,vtransforms));
 
         // get all the camera positions and test them
-        FOREACHC(itcamera, pgoalfn->GetCameraTransforms()) {
-            if( pgoalfn->_vconstraint.InConvexHull(*itcamera) )
-                sout << *itcamera << " ";
+        FOREACHC(itcamera, vtransforms) {
+            if( pgoalfn->_vconstraint.InConvexHull(*itcamera) ) {
+                if( !_pmanip->CheckEndEffectorCollision(*itcamera*_tcameratogripper) )
+                    sout << *itcamera << " ";
+            }
         }
 
         return true;
     }
 
-    bool ComputeVisibility(ostream& sout, istream& sinput)
+    bool SetCameraTransforms(ostream& sout, istream& sinput)
     {
         string cmd;
-
-        int sensorindex=0;
         KinBodyPtr ptarget;
-        vector<dReal> vconvexdata;
+        _visibilitytransforms.resize(0);
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput )
@@ -691,21 +733,11 @@ public:
                 string name; sinput >> name;
                 ptarget = GetEnv()->GetKinBody(name);
             }
-            else if( cmd == "sensorindex" )
-                sinput >> sensorindex;
-            else if( cmd == "convexfile" ) {
-                string convexfilename;
-                sinput >> convexfilename;
-                ifstream f(convexfilename.c_str());
-                if( !f )
-                    throw openrave_exception("failed to open convex filename");
-                vconvexdata = vector<dReal>((istream_iterator<dReal>(f)), istream_iterator<dReal>());
-            }
-            else if( cmd == "convexdata" ) {
-                int numpoints=0;
-                sinput >> numpoints;
-                vconvexdata.resize(2*numpoints);
-                FOREACH(it, vconvexdata)
+            else if( cmd == "transforms" ) {
+                int numtrans=0;
+                sinput >> numtrans;
+                _visibilitytransforms.resize(numtrans);
+                FOREACH(it,_visibilitytransforms)
                     sinput >> *it;
             }
             else {
@@ -719,8 +751,55 @@ public:
             }
         }
 
-        boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(_robot,ptarget,vconvexdata, sensorindex));
+        bool bSuccess = true;
+        if( !!ptarget ) {
+            KinBody::KinBodyStateSaver saver(ptarget);
+            ptarget->SetTransform(Transform());
+            boost::shared_ptr<GoalSampleFunction> pgoalfn(new GoalSampleFunction(shared_problem(), ptarget,_visibilitytransforms));
 
+            // get all the camera positions and test them
+            int i = 0;
+            FOREACHC(itcamera, _visibilitytransforms) {
+                if( !pgoalfn->_vconstraint.InConvexHull(*itcamera) ) {
+                    RAVELOG_WARN("camera transform %d fails constraints\n",i);
+                    bSuccess = false;
+                }
+            }
+        }
+        
+        return bSuccess;
+    }
+
+    bool ComputeVisibility(ostream& sout, istream& sinput)
+    {
+        string cmd;
+        KinBodyPtr ptarget;
+        while(!sinput.eof()) {
+            sinput >> cmd;
+            if( !sinput )
+                break;
+            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+
+            if( cmd == "target" ) {
+                string name; sinput >> name;
+                ptarget = GetEnv()->GetKinBody(name);
+            }
+            else {
+                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
+
+            if( !sinput ) {
+                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                return false;
+            }
+        }
+
+        RobotBase::RobotStateSaver saver(_robot);
+        _robot->SetActiveManipulator(_nManipIndex); BOOST_ASSERT(_robot->GetActiveManipulator()==_pmanip);
+        _robot->SetActiveDOFs(_pmanip->GetArmJoints());
+
+        boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem(),ptarget));
         vector<dReal> v;
         _robot->GetActiveDOFValues(v);
         sout << pconstraintfn->Constraint(v,v,0);
@@ -731,12 +810,7 @@ public:
     {
         string cmd;
 
-        int sensorindex=0;
         KinBodyPtr ptarget;
-        vector<Transform> visibilitytransforms;
-        vector<Vector> visibilityextents;
-        string visibilityfilename;
-        vector<dReal> vconvexdata;
         int numsamples=1;
         while(!sinput.eof()) {
             sinput >> cmd;
@@ -748,54 +822,7 @@ public:
                 string name; sinput >> name;
                 ptarget = GetEnv()->GetKinBody(name);
             }
-            else if( cmd == "sensorindex" )
-                sinput >> sensorindex;
-            else if( cmd == "convexfile" ) {
-                string convexfilename;
-                sinput >> convexfilename;
-                ifstream f(convexfilename.c_str());
-                if( !f )
-                    throw openrave_exception("failed to open convex filename");
-                vconvexdata = vector<dReal>((istream_iterator<dReal>(f)), istream_iterator<dReal>());
-            }
-            else if( cmd == "convexdata" ) {
-                int numpoints=0;
-                sinput >> numpoints;
-                vconvexdata.resize(2*numpoints);
-                FOREACH(it, vconvexdata)
-                    sinput >> *it;
-            }
-            else if( cmd == "visibilityfile" ) {
-                string visibilityfile;
-                sinput >> visibilityfile;
-                fstream f(visibilityfile.c_str());
-                if( !f )
-                    throw openrave_exception("failed to open visiblity file");
-                visibilitytransforms = vector<Transform>((istream_iterator<Transform>(f)), istream_iterator<Transform>());
-            }
-            else if( cmd == "visibilitydata" ) {
-                int numtrans=0;
-                sinput >> numtrans;
-                visibilitytransforms.resize(numtrans);
-                FOREACH(it,visibilitytransforms)
-                    sinput >> *it;
-            }
-            else if( cmd == "extentsfile" || cmd == "visibilitytrans" ) {
-                string filename;
-                sinput >> filename;
-                fstream f(filename.c_str());
-                if( !f )
-                    throw openrave_exception("failed to open extents file");
-                visibilityextents = vector<Vector>((istream_iterator<Vector>(f)), istream_iterator<Vector>());
-            }
-            else if( cmd == "extentsdata" ) {
-                int numtrans=0;
-                sinput >> numtrans;
-                visibilityextents.resize(numtrans);
-                FOREACH(it,visibilityextents)
-                    sinput >> it->x >> it->y >> it->z;
-            }
-            else if( cmd == "samples" )
+            else if( cmd == "numsamples" )
                 sinput >> numsamples;
             else {
                 RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
@@ -808,22 +835,30 @@ public:
             }
         }
 
-        boost::shared_ptr<GoalSampleFunction> pgoalsampler(new GoalSampleFunction(_robot,ptarget,vconvexdata,visibilitytransforms, visibilityextents,sensorindex));
+        RobotBase::RobotStateSaver saver(_robot);
+        _robot->SetActiveManipulator(_nManipIndex); BOOST_ASSERT(_robot->GetActiveManipulator()==_pmanip);
+        _robot->SetActiveDOFs(_pmanip->GetArmJoints());
+
+        boost::shared_ptr<GoalSampleFunction> pgoalsampler(new GoalSampleFunction(shared_problem(),ptarget,_visibilitytransforms));
      
         uint64_t starttime = GetMicroTime();
         vector<dReal> vsample;
         vector<dReal> vsamples(_robot->GetActiveDOF()*numsamples);
+        int numsampled = 0;
         for(int i = 0; i < numsamples; ++i) {
-            pgoalsampler->Sample(vsample);
-            std::copy(vsample.begin(), vsample.end(),vsamples.begin()+i*_robot->GetActiveDOF());
+            if( pgoalsampler->Sample(vsample) ) {
+                std::copy(vsample.begin(), vsample.end(),vsamples.begin()+i*_robot->GetActiveDOF());
+                numsampled++;
+            }
         }
 
+        if( numsampled == 0 )
+            return false;
         float felapsed = (GetMicroTime()-starttime)*1e-6f;
-
-        RAVELOG_INFOA("total time for %d samples is %fs, %f avg\n", numsamples,felapsed,felapsed/numsamples);
-        FOREACH(it,vsamples)
-            sout << *it << " ";
-        sout << felapsed;
+        RAVELOG_INFO("total time for %d samples is %fs, %f avg\n", numsamples,felapsed,felapsed/numsamples);
+        sout << numsampled << " ";
+        for(int i = 0; i < numsampled*_robot->GetActiveDOF(); ++i)
+            sout << vsamples[i] << " ";
         return true;
     }
 
@@ -835,13 +870,10 @@ public:
 
         PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
         params->_nMaxIterations = 4000;
-        int affinedofs=0, sensorindex=0;
+        int affinedofs=0;
         KinBodyPtr ptarget;
         string cmd, plannername="BiRRT";
-        vector<dReal> vconvexdata;
         dReal fSampleGoalProb = 0.001f;
-        vector<Transform> visibilitytransforms;
-        vector<Vector> visibilityextents;
 
         while(!sinput.eof()) {
             sinput >> cmd;
@@ -865,57 +897,10 @@ public:
                 string name; sinput >> name;
                 ptarget = GetEnv()->GetKinBody(name);
             }
-            else if( cmd == "sensorindex" )
-                sinput >> sensorindex;
             else if( cmd == "planner" )
                 sinput >> plannername;
             else if( cmd == "sampleprob" )
                 sinput >> fSampleGoalProb;
-            else if( cmd == "convexfile" ) {
-                string convexfilename;
-                sinput >> convexfilename;
-                ifstream f(convexfilename.c_str());
-                if( !f )
-                    throw openrave_exception("failed to open convex filename");
-                vconvexdata = vector<dReal>((istream_iterator<dReal>(f)), istream_iterator<dReal>());
-            }
-            else if( cmd == "convexdata" ) {
-                int numpoints=0;
-                sinput >> numpoints;
-                vconvexdata.resize(2*numpoints);
-                FOREACH(it, vconvexdata)
-                    sinput >> *it;
-            }
-            else if( cmd == "visibilityfile" ) {
-                string visibilityfile;
-                sinput >> visibilityfile;
-                fstream f(visibilityfile.c_str());
-                if( !f )
-                    throw openrave_exception("failed to open visiblity file");
-                visibilitytransforms = vector<Transform>((istream_iterator<Transform>(f)), istream_iterator<Transform>());
-            }
-            else if( cmd == "visibilitydata" ) {
-                int numtrans=0;
-                sinput >> numtrans;
-                visibilitytransforms.resize(numtrans);
-                FOREACH(it,visibilitytransforms)
-                    sinput >> *it;
-            }
-            else if( cmd == "extentsfile" || cmd == "visibilitytrans" ) {
-                string filename;
-                sinput >> filename;
-                fstream f(filename.c_str());
-                if( !f )
-                    throw openrave_exception("failed to open extents file");
-                visibilityextents = vector<Vector>((istream_iterator<Vector>(f)), istream_iterator<Vector>());
-            }
-            else if( cmd == "extentsdata" ) {
-                int numtrans=0;
-                sinput >> numtrans;
-                visibilityextents.resize(numtrans);
-                FOREACH(it,visibilityextents)
-                    sinput >> it->x >> it->y >> it->z;
-            }
             else {
                 RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -932,11 +917,14 @@ public:
             return false;
         }
 
-        boost::shared_ptr<GoalSampleFunction> pgoalsampler(new GoalSampleFunction(_robot,ptarget,vconvexdata,visibilitytransforms, visibilityextents,sensorindex));
+        RobotBase::RobotStateSaver saver(_robot);
+        _robot->SetActiveManipulator(_nManipIndex); BOOST_ASSERT(_robot->GetActiveManipulator()==_pmanip);
+        _robot->SetActiveDOFs(_pmanip->GetArmJoints(), affinedofs);
+
+        boost::shared_ptr<GoalSampleFunction> pgoalsampler(new GoalSampleFunction(shared_problem(),ptarget,_visibilitytransforms));
         pgoalsampler->_fSampleGoalProb = fSampleGoalProb;
         _robot->RegrabAll();
-        
-        _robot->SetActiveDOFs(pgoalsampler->GetManipulator()->GetArmJoints(), affinedofs);
+
         params->SetRobotActiveJoints(_robot);
         _robot->GetActiveDOFValues(params->vinitialconfig);
 
@@ -954,7 +942,7 @@ public:
         }
         _robot->GetActiveDOFValues(params->vinitialconfig);
 
-        boost::shared_ptr<PlannerBase> planner = GetEnv()->CreatePlanner(plannername.c_str());
+        PlannerBasePtr planner = GetEnv()->CreatePlanner(plannername);
         if( !planner ) {
             RAVELOG_ERRORA("failed to create BiRRTs\n");
             return false;
@@ -982,7 +970,6 @@ public:
             return false;
 
         CM::SetActiveTrajectory(_robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream);
-        sout << felapsed;
         return true;
     }
 
@@ -994,13 +981,10 @@ public:
 
         boost::shared_ptr<GraspSetParameters> params(new GraspSetParameters(GetEnv()));
         params->_nMaxIterations = 4000;
-        int sensorindex=0;
         KinBodyPtr ptarget;
         string cmd, plannername="GraspGradient";
-        vector<dReal> vconvexdata;
         params->_fVisibiltyGraspThresh = 0.05f;
-        dReal fMaxVelMult = 1;
-
+        bool bUseVisibility = false;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput )
@@ -1017,48 +1001,17 @@ public:
                 sinput >> bExecute;
             else if( cmd == "writetraj" )
                 sinput >> strtrajfilename;
-            else if( cmd == "maxvelmult" )
-                sinput >> fMaxVelMult;
             else if( cmd == "target" ) {
                 string name; sinput >> name;
                 ptarget = GetEnv()->GetKinBody(name);
             }
-            else if( cmd == "sensorindex" )
-                sinput >> sensorindex;
+            else if( cmd == "usevisibility" )
+                sinput >> bUseVisibility;
             else if( cmd == "planner" )
                 sinput >> plannername;
-            else if( cmd == "convexfile" ) {
-                string convexfilename;
-                sinput >> convexfilename;
-                ifstream f(convexfilename.c_str());
-                if( !f )
-                    throw openrave_exception("failed to open convex filename");
-                vconvexdata = vector<dReal>((istream_iterator<dReal>(f)), istream_iterator<dReal>());
-            }
-            else if( cmd == "convexdata" ) {
-                int numpoints=0;
-                sinput >> numpoints;
-                vconvexdata.resize(2*numpoints);
-                FOREACH(it, vconvexdata)
-                    sinput >> *it;
-            }
             else if( cmd == "graspdistthresh" )
                 sinput >> params->_fGraspDistThresh;
             else if( cmd == "graspset" ) {
-                params->_vgrasps.clear(); params->_vgrasps.reserve(200);
-                string filename = getfilename_withseparator(sinput,';');
-                ifstream fgrasp(filename.c_str());
-                while(!fgrasp.eof()) {
-                    TransformMatrix t;
-                    fgrasp >> t;
-                    if( !fgrasp ) {
-                        break;
-                    }
-                    params->_vgrasps.push_back(t);
-                }
-                RAVELOG_DEBUGA(str(boost::format("grasp set size = %d\n")%params->_vgrasps.size()));
-            }
-            else if( cmd == "graspsetdata" ) {
                 int numgrasps=0;
                 sinput >> numgrasps;
                 params->_vgrasps.resize(numgrasps);
@@ -1069,7 +1022,7 @@ public:
                 }
                 RAVELOG_DEBUGA(str(boost::format("grasp set size = %d\n")%params->_vgrasps.size()));
             }
-            else if( cmd == "gradientsamples" )
+            else if( cmd == "numgradientsamples" )
                 sinput >> params->_nGradientSamples;
             else {
                 RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
@@ -1087,12 +1040,14 @@ public:
             return false;
         }
 
-        _robot->SetActiveDOFs(_robot->GetActiveManipulator()->GetArmJoints());
+        RobotBase::RobotStateSaver saver(_robot);
+        _robot->SetActiveManipulator(_nManipIndex); BOOST_ASSERT(_robot->GetActiveManipulator()==_pmanip);
+        _robot->SetActiveDOFs(_pmanip->GetArmJoints());
         params->SetRobotActiveJoints(_robot);
 
-        if( vconvexdata.size() > 0 ) {
-            RAVELOG_DEBUGA("using visibility constraints\n");
-            boost::shared_ptr<VisibilityConstraintFunction> pconstraint(new VisibilityConstraintFunction(_robot,ptarget,vconvexdata,sensorindex));
+        if( bUseVisibility ) {
+            RAVELOG_DEBUG("using visibility constraints\n");
+            boost::shared_ptr<VisibilityConstraintFunction> pconstraint(new VisibilityConstraintFunction(shared_problem(),ptarget));
             params->_constraintfn = boost::bind(&VisibilityConstraintFunction::Constraint,pconstraint,_1,_2,_3);
         }
 
@@ -1125,133 +1080,27 @@ public:
             return false;
 
         CM::SetActiveTrajectory(_robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream);
-        sout << felapsed;
-        return true;
-    }
-
-    bool AssemblyLine(ostream& sout, istream& sinput)
-    {
-        string cmd;
-        while(!sinput.eof()) {
-            sinput >> cmd;
-            if( !sinput )
-                break;
-            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-        
-            if( cmd == "startpos" )
-                sinput >> _abAssemblyStart.pos.x >> _abAssemblyStart.pos.y >> _abAssemblyStart.pos.z;
-            else if( cmd == "startextents" )
-                sinput >> _abAssemblyStart.extents.x >> _abAssemblyStart.extents.y >> _abAssemblyStart.extents.z;
-            else if( cmd == "direction" )
-                sinput >> _vAssemblyDirection.x >> _vAssemblyDirection.y >> _vAssemblyDirection.z;
-            else if( cmd == "distance" )
-                sinput >> _fAssemblyDistance;
-            else if( cmd == "outputprob" )
-                sinput >> _fOutputProbability;
-            else if( cmd == "assobject" ) {
-                ASSEMBLYOBJECT o;
-                sinput >> o.filename >> o._fAppearProb;
-                _listAssemblyTypes.push_back(o);
-            }
-            else if( cmd == "speed" )
-                sinput >> _fAssemblySpeed;
-            else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
-                break;
-            }
-
-            if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
-                return false;
-            }
-        }
-
         return true;
     }
 
     bool SimulationStep(dReal fElapsedTime)
     {
-        if( _fAssemblySpeed > 0 ) {
-
-            if( _listAssemblyTypes.size() > 0 ) {
-                if( RaveRandomFloat() < _fOutputProbability*fElapsedTime ) {
-                    // attempt to place a collision free object
-                    dReal totalprob = 0;
-                    FOREACH(it,_listAssemblyTypes)
-                        totalprob += it->_fAppearProb;
-
-                    boost::shared_ptr<KinBody> pbody;
-                    for(int iter = 0; iter < 10; ++iter) {
-                        dReal objprob = totalprob*RaveRandomFloat();
-                        ASSEMBLYOBJECT ao = _listAssemblyTypes.front();
-                        FOREACH(ita, _listAssemblyTypes) {
-                            if( objprob < ita->_fAppearProb ) {
-                                ao = *ita;
-                                break;
-                            }
-                            objprob -= ita->_fAppearProb;
-                        }
-
-                        pbody = GetEnv()->ReadKinBodyXMLFile(KinBodyPtr(), ao.filename,std::list<std::pair<std::string,std::string> >());
-                        if( !!pbody )
-                            break;
-                    }
-                
-                    if( !pbody ) {
-                        RAVELOG_WARNA("failed to create body in assembly line\n");
-                        return false;
-                    }
-
-                    GetEnv()->AddKinBody(pbody);
-                    bool bSuccess = false;
-
-                    for(int iter = 0; iter < 100; ++iter) {
-                        Transform t;
-                        for(int j = 0; j < 3; ++j) {
-                            t.trans[j] = _abAssemblyStart.pos[j] + (2.0f * RaveRandomFloat() - 1.0f)*_abAssemblyStart.extents[j];
-                        }
-                        pbody->SetTransform(t);
-                        if( 1||!GetEnv()->CheckCollision(KinBodyConstPtr(pbody)) ) {
-                            bSuccess = true;
-                            break;
-                        }
-                    }
-
-                    if( bSuccess ) {
-                        _listAssemblyObjects.push_back(pbody);
-                        RAVELOG_DEBUGA("object created\n");
-                    }
-                    else
-                        GetEnv()->RemoveKinBody(pbody);
-                }
-            }
-
-            // move the objects
-            list<boost::shared_ptr<KinBody> >::iterator ito = _listAssemblyObjects.begin();
-            while(ito != _listAssemblyObjects.end()) {
-                Transform t = (*ito)->GetTransform();
-                t.trans += _vAssemblyDirection * _fAssemblySpeed * fElapsedTime;
-                (*ito)->SetTransform(t);
-                if( dot3(_vAssemblyDirection,t.trans - _abAssemblyStart.pos) > _fAssemblyDistance ) {
-                    GetEnv()->RemoveKinBody(*ito);
-                    ito = _listAssemblyObjects.erase(ito);
-                }
-                else
-                    ++ito;
-            }
-        }
         return false;
     }
     
 protected:
     RobotBasePtr _robot;
-    string _strRobotName;
-    AABB _abAssemblyStart;
-    Vector _vAssemblyDirection;
-    dReal _fAssemblyDistance, _fOutputProbability, _fAssemblySpeed;
-    list<ASSEMBLYOBJECT> _listAssemblyTypes;
-    list<KinBodyPtr> _listAssemblyObjects;
-    
+    RobotBase::AttachedSensorPtr _psensor;
+    RobotBase::ManipulatorPtr _pmanip;
+    int _nManipIndex;
+    boost::shared_ptr<SensorBase::CameraGeomData> _pcamerageom;
+    Transform _tcameratogripper; ///< transforms a camera coord system to the gripper coordsystem
+    vector<Transform> _visibilitytransforms;
+    dReal _fSampleRayDensity;
+
+    vector<Vector> _vconvexplanes; ///< the planes defining the bounding visibility region (posive is inside)
+    Vector _vcenterconvex; ///< center point on the z=1 plane of the convex region
+
 };
 
 #endif

@@ -183,10 +183,9 @@ def test_mobilemanipulation():
 
 def test_visibilityplanning():
     import visibilityplanning, time
-    self = visibilityplanning.HRP2GraspingScene()
-    time.sleep(5)
-    self.loadscene(scenefilename='scenes/r602real.env.xml')
-    self.testsim()
+    self = visibilityplanning.PA10GraspExample()
+    self.loadscene(scenefilename='data/pa10grasp.env.xml',randomize=False,sensorname='wristcam',showsensors=False)
+    self.start()
 
 def test_pyann():
     ktree = pyANN.KDTree(random.rand(10,7))
@@ -366,8 +365,8 @@ def test_hrp2():
     python inversereachability.py --manipname=leftarm_chest --heightthresh=0.02 --quatthresh=0.2 --id=0 --jointvalues='0'
     python inversereachability.py --manipname=leftarm_chest --heightthresh=0.02 --quatthresh=0.2 --id=43 --jointvalues='0.43'
     python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=rightarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.01 --normalanglerange=1 --avoidlink=RWristCam
-    python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.01 --normalanglerange=1 --graspingnoise=0.005 --noviewer
-    rosrun openrave_database grasping_ros.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm_chest --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.01 --normalanglerange=1 --graspingnoise=0.005 --launchservice='8*localhost'
+    python grasping.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.01 --normalanglerange=1 --graspingnoise=0.01 --noviewer
+    rosrun openrave_database grasping_ros.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm_chest --target=scenes/cereal_frootloops.kinbody.xml --standoff=0 --boxdelta=0.01 --normalanglerange=1 --graspingnoise=0.01 --launchservice='8*localhost'
     rosrun openrave_database grasping_ros.py --robot=robots/hrp2jsk.robot.xml --manipname=leftarm_chest2 --target=scenes/jskcup0.kinbody.xml --standoff=0 --boxdelta=0.01 --normalanglerange=1 --graspingnoise=0.01 --launchservice='8*localhost'
 
     import inversereachability
@@ -395,15 +394,15 @@ def test_hrp2():
     if not ikmodel.load():
         ikmodel.generate()
     
-    import inversereachability,mobilemanipulation,graspplanning
+    import inversereachability,mobilemanipulation,graspplanning,visibilitymodel
     env = Environment()
     env.SetViewer('qtcoin')
     env.Reset()
-    env.Load('scenes/r602kitchen2.env.xml')
+    env.Load('scenes/r602kitchen1.env.xml')
     robot = env.GetRobots()[0]
     origjointvalues = robot.GetJointValues()
     # define all the manipulators to use
-    manips = [robot.GetManipulators('leftarm_chest')[0], robot.GetManipulators('leftarm_chest2')[0], robot.GetManipulators('rightarm_chest')[0], robot.GetManipulators('rightarm_chest2')[0]]
+    manips = [robot.GetManipulators('rightarm_chest')[0], robot.GetManipulators('rightarm_chest2')[0]]#,robot.GetManipulators('leftarm_chest')[0], robot.GetManipulators('leftarm_chest2')[0]]
     irmodels = []
     with robot:
         for manip in manips:
@@ -422,7 +421,7 @@ def test_hrp2():
         robot.SetActiveManipulator(manip)
         planning = graspplanning.GraspPlanning(robot,nodestinations=True)
         for gmodel,dests in planning.graspables:
-            if gmodel.target.GetName() == 'cup0':
+            if True:#gmodel.target.GetName() == 'cereal0' or gmodel.target.GetName() == 'cereal1':
                 for irmodel in irmodels:
                     if irmodel.manip == gmodel.manip:
                         irgmodels.append([irmodel,gmodel])
@@ -430,7 +429,9 @@ def test_hrp2():
                             targets.append(gmodel.target)
     grmodel = mobilemanipulation.GraspReachability(robot=robot,irgmodels=irgmodels)
     self = mobilemanipulation.MobileManipulationPlanning(robot,grmodel=grmodel)
-    gmodel = self.graspObjectMobileSearch()
+
+    usevisibilitycamera = 'wristcam'
+    gmodel = self.graspObjectMobileSearch(usevisibilitycamera=usevisibilitycamera)
 
     table = env.GetKinBody('table')
     if table is not None:
@@ -439,6 +440,7 @@ def test_hrp2():
         alldests = graspplanning.GraspPlanning.setRandomDestinations(targets,table,transdelta=0.05,Trolls=Trolls,randomize=False)
         targetdests=zip(targets,alldests)
         self.graspAndPlaceObjectMobileSearch(targetdests=targetdests)
+
     
     #h = gr.showBaseDistribution(thresh=1.0,logllthresh=logllthresh)
     #grmodel.testSampling(weight=1.5,logllthresh=0.5,randomgrasps=True,randomplacement=False,updateenv=False)
@@ -472,8 +474,8 @@ def test_hrp2():
     robot.SetJointValues([-1.4,1.35239005,1.036349],[5,7,8])
     robot.CheckSelfCollision()
     
-def test_drill():
-    python inversekinematics.py --robot=/home/leus/drilling/drill_fk.robot.xml --ray4donly --accuracy=1e-5
+def test_drillray():
+    python inversekinematics.py --robot=drill_fk.robot.xml --ray4donly --accuracy=1e-5
     from openravepy import *
     import numpy,time
     from openravepy.examples import inversekinematics
@@ -517,3 +519,99 @@ def test_drill():
     Tee[0,3] = Symbol("px")
     Tee[1,3] = Symbol("py")
     Tee[2,3] = Symbol("pz")
+
+def test_visibility():
+    import visibilitymodel
+    env = Environment()    
+    env.Reset()
+    robot = env.ReadRobotXMLFile('robots/hrp2jsk08real.robot.xml')
+    env.AddRobot(robot)
+    robot.SetActiveManipulator('rightarm_chest')
+    target = env.ReadKinBodyXMLFile('scenes/cereal_frootloops.kinbody.xml')
+    env.AddKinBody(target)
+
+    robot.SetActiveManipulator('rightarm_chest')
+    self = visibilitymodel.VisibilityModel(robot=robot,target=target,sensorname='wristcam')
+    if not self.load():
+        self.autogenerate()
+
+    env.SetViewer('qtcoin')
+    self.showtransforms()
+
+    import kinematicreachability, grasping, visibilitymodel
+    pose = array([-0.88932403,  0.        ,  0.        , -0.45727755,  8.26839721, 3.14201928,  0.66500002])
+    grasp = array([  1.65648009e-06,  -2.83057716e-06,   1.00000000e+00,
+         9.23879445e-01,   3.82683724e-01,  -4.47596904e-07,
+        -3.82683724e-01,   9.23879445e-01,   3.24873599e-06,
+        -4.32802886e-02,   8.53489910e-04,   7.89998472e-02,
+         0.00000000e+00,   4.71238898e+00,   9.23879477e-01,
+         3.82683432e-01,  -5.50675114e-08,   1.65648009e-06,
+        -2.83057716e-06,   1.00000000e+00,   9.23879445e-01,
+         3.82683724e-01,  -4.47596904e-07,  -3.82683724e-01,
+         9.23879445e-01,   3.24873599e-06,  -4.23564091e-02,
+         1.23617332e-03,   7.89998472e-02,   6.41213000e-03,
+        -2.11999994e-02,   9.99999978e-03,   7.90000036e-02,
+         2.35619450e+00])
+    robot.SetTransform(pose)
+    robot.SetActiveManipulator('rightarm_chest')
+#     rmodel = kinematicreachability.ReachabilityModel(robot=robot)
+#     rmodel.load()
+    gmodel = grasping.GraspingModel(robot,target=env.GetKinBody('cereal0'))
+    gmodel.moveToPreshape(grasp)
+    gmodel.robot.GetController().Reset(0)
+    vmodel = visibilitymodel.VisibilityModel(robot=robot,target=gmodel.target,sensorname='wristcam')
+    vmodel.load()
+    self = vmodel
+    self.SetCameraTransforms(self.pruneTransformations(thresh=0.04))
+
+    validjoints=self.computeValidTransform()
+    self.robot.SetJointValues(validjoints[0][0],self.manip.GetArmJoints())
+    s=vmodel.visualprob.SampleVisibilityGoal(target=gmodel.target)
+
+    pts = array([dot(self.target.GetTransform(),matrixFromPose(pose))[0:3,3] for pose in self.visibilitytransforms])
+    h=self.env.plot3(pts,5,colors=array([0.5,0.5,1,0.03]))
+
+def test_navigation():
+    import inversereachability,mobilemanipulation,graspplanning,visibilitymodel
+    env = Environment()
+    env.SetViewer('qtcoin')
+    env.Reset()
+    env.Load('scenes/r602kitchen1.env.xml')
+    robot = env.GetRobots()[0]
+    robot.GetController().Reset(0)
+    Tstart = array([[ 1.        ,  0.        ,  0.        ,  6.26000023-7.37],
+           [ 0.        ,  1.        ,  0.        ,  2.66899991-3.2],
+           [ 0.        ,  0.        ,  1.        ,  0.66500002],
+           [ 0.        ,  0.        ,  0.        ,  1.        ]])
+    robot.SetTransform(Tstart)
+    robot.SetJointValues(array([ 0.        ,  0.        ,  0.84761411,  0.        ,  0.        ,
+           -2.20907021,  0.        ,  0.        ,  0.        ,  0.97831494,
+            0.        ,  0.        , -2.23727012,  0.        ,  0.        ,
+            0.        ,  0.        ,  0.        , -0.17453291,  0.17453295], dtype=float32))
+    self = mobilemanipulation.MobileManipulationPlanning(robot)
+    
+    goal2d = array([0.29134295742674898, -0.26705494655604034, -3.1834347453894472])
+    #goal2d = array([6.2547940332687197-7.37, 2.2240884123771689-3.2, -6.0887479146975627])
+    envmin = []
+    envmax = []
+    for b in self.env.GetBodies():
+        ab = b.ComputeAABB()
+        envmin.append(ab.pos()-ab.extents())
+        envmax.append(ab.pos()+ab.extents())
+    abrobot = self.robot.ComputeAABB()
+    envmin = numpy.min(array(envmin),0)+abrobot.extents()
+    envmax = numpy.max(array(envmax),0)-abrobot.extents()
+    bounds = array(((envmin[0],envmin[1],-pi),(envmax[0],envmax[1],pi)))
+    self.robot.SetAffineTranslationLimits(envmin,envmax)
+    self.robot.SetAffineTranslationMaxVels([0.5,0.5,0.5])
+    self.robot.SetAffineRotationAxisMaxVels(ones(4))
+    self.robot.SetActiveDOFs([],Robot.DOFAffine.X|Robot.DOFAffine.Y|Robot.DOFAffine.RotationAxis,[0,0,1])
+    
+    center = r_[goal2d[0:2],0.2]
+    xaxis = 0.5*array((cos(goal2d[2]),sin(goal2d[2]),0))
+    yaxis = 0.25*array((-sin(goal2d[2]),cos(goal2d[2]),0))
+    #self.hgoal = self.env.drawlinelist(transpose(c_[center-xaxis,center+xaxis,center-yaxis,center+yaxis]),linewidth=5.0,colors=array((0,1,0)))
+    env.SetDebugLevel(DebugLevel.Debug)
+    starttime = time.time()
+    self.basemanip.MoveActiveJoints(goal=goal2d,maxiter=3000,steplength=0.05)
+    print time.time()-starttime

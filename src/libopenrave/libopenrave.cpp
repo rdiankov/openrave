@@ -218,7 +218,7 @@ void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2)
 }
 
 // PlannerParameters class
-PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _bComputeSmoothPath(true)
+PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _bComputeSmoothPath(true), _bCheckSelfCollisions(true)
 {
     _diffstatefn = subtractstates;
 }
@@ -240,7 +240,8 @@ PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const 
     _samplegoalfn = r._samplegoalfn;
     _setstatefn = r._setstatefn;
     _getstatefn = r._getstatefn;
-    
+    _diffstatefn = r._diffstatefn;
+
     _tWorkspaceGoal.reset();
     vinitialconfig.resize(0);
     vgoalconfig.resize(0);
@@ -289,6 +290,7 @@ bool PlannerBase::PlannerParameters::serialize(std::ostream& O) const
     O << "<_nmaxiterations>" << _nMaxIterations << "</_nmaxiterations>" << endl;
     O << "<_fsteplength>" << _fStepLength << "</_fsteplength>" << endl;
     O << "<_bcomputesmoothpath>" << _bComputeSmoothPath << "</_bcomputesmoothpath>" << endl;
+    O << "<_bcheckselfcollisions>" << _bCheckSelfCollisions << "</_bcheckselfcollisions>" << endl;
     
     return !!O;
 }
@@ -325,6 +327,8 @@ bool PlannerBase::PlannerParameters::endElement(const std::string& name)
         _ss >> _fStepLength;
     else if( name == "_bcomputesmoothpath")
         _ss >> _bComputeSmoothPath;
+    else if( name == "_bcheckselfcollisions" )
+        _ss >> _bCheckSelfCollisions;
     else
         _pcurreader.reset(new DummyXMLReader(name,GetXMLId()));
 
@@ -437,6 +441,7 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
     _setstatefn = boost::bind(&RobotBase::SetActiveDOFValues,robot,_1,false);
     _getstatefn = boost::bind(&RobotBase::GetActiveDOFValues,robot,_1);
     _diffstatefn = boost::bind(&RobotBase::SubtractActiveDOFValues,robot,_1,_2);
+    _bCheckSelfCollisions = robot->GetActiveDOF() == robot->GetAffineDOF();
     robot->GetActiveDOFLimits(_vConfigLowerLimit,_vConfigUpperLimit);
     robot->GetActiveDOFResolutions(_vConfigResolution);
     robot->GetActiveDOFValues(vinitialconfig);
@@ -841,11 +846,11 @@ void SimpleSensorSystem::AddRegisteredBodies(const std::vector<KinBodyPtr>& vbod
 KinBody::ManageDataPtr SimpleSensorSystem::AddKinBody(KinBodyPtr pbody, XMLReadableConstPtr _pdata)
 {
     BOOST_ASSERT(pbody->GetEnv()==GetEnv());
-    boost::shared_ptr<XMLData const> pdata = boost::dynamic_pointer_cast<XMLData const>(_pdata);
+    boost::shared_ptr<XMLData const> pdata = boost::static_pointer_cast<XMLData const>(_pdata);
     if( !pdata ) {
         pdata = boost::dynamic_pointer_cast<XMLData const>(pbody->GetReadableInterface(_xmlid));
         if( !pdata ) {
-            RAVELOG_ERRORA(str(boost::format("failed to find mocap data for body %s\n")%pbody->GetName()));
+            RAVELOG_VERBOSE(str(boost::format("failed to find manage data for body %s\n")%pbody->GetName()));
             return KinBody::ManageDataPtr();
         }
     }

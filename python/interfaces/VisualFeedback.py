@@ -19,226 +19,129 @@ from optparse import OptionParser
 from openravepy import *
 
 class VisualFeedback:
-    def __init__(self,env,robot,sensorname=None,sensorindex=None):
+    def __init__(self,robot):
         env = robot.GetEnv()
-        with env:
-            self.prob = env.CreateProblem('VisualFeedback')
-            self.robot = robot
-            args = self.robot.GetName()
-            if plannername is not None:
-                args += ' planner ' + plannername
-            if env.LoadProblem(self.prob,args) != 0:
-                raise ValueError('problem failed to initialize')
-
-            if sensorindex is not None:
-                self.attached = self.robot.GetSensors()[sensorindex]
-            elif sensorname is not None:
-                self.attached = [s for s in self.robot.GetSensors() if s.GetName() == sensorname][0]
-            else:
-                self.attached = None
-
-            sensor = self.attached.GetSensor()
-            if sensor is not None:
-                #sensor.SendCommand('power 0')
-                sensordata = self.attached.GetSensor().GetSensorData()
-                self.KK = sensordata.KK
-                self.height = sensordata.imagedata.shape[0]
-                self.width = sensordata.imagedata.shape[1]
-                
-            # find a manipulator whose end effector is the camera
-            manips = [(i,m) for i,m in enumerate(self.robot.GetManipulators()) if m.GetEndEffector().GetIndex() == self.attached.GetAttachingLink().GetIndex()]
-            self.manip = None
-            if len(manips) > 0:
-                self.manip = manips[0][1]
-                self.robot.SetActiveManipulator(manips[0][0])
-
+        self.prob = env.CreateProblem('VisualFeedback')
+        self.robot = robot
+        args = self.robot.GetName()
+        if env.LoadProblem(self.prob,args) != 0:
+            raise ValueError('problem failed to initialize')
     def  __del__(self):
         self.prob.GetEnv().RemoveProblem(self.prob)
-
-    def ProcessVisibilityExtents(self,target,convexfile=None,convexdata=None,visibilityfile=None,visibilitydata=None,extentsfile=None,extentsdata=None):
-        cmd = 'ProcessVisibilityExtents target %s '%target.GetName()
-        if convexfile is not None:
-            cmd += 'convexfile %s '%convexfile
+    def SetCamera(self,sensorindex=None,sensorname=None,manipname=None,convexdata=None):
+        cmd = 'SetCamera '
+        if sensorindex is not None:
+            cmd += 'sensorindex %d '%sensorindex
+        if sensorname is not None:
+            cmd += 'sensorname %s '%sensorname
+        if manipname is not None:
+            cmd += 'manipname %s '%manipname
         if convexdata is not None:
-            cmd += 'convexdata %s '%convexdata
-        if visibilityfile is not None:
-            cmd += 'visibilityfile %s '%visibilityfile
-        if visibilitydata is not None:
-            cmd += 'visibilitydata %s '%visibilitydata
-        if extentsfile is not None:
-            cmd += 'extentsfile %s '%extentsfile
-        if extentsdata is not None:
-            cmd += 'extentsdata %s '%extentsdata
+            cmd += 'convexdata %d '%len(convexdata)
+            for f in reshape(convexdata,len(convexdata)*2):
+                cmd += str(f) + ' '
         res = self.prob.SendCommand(cmd)
-        return array([int(isvisible) for isvisible in res])
-
-    def GetCameraRobotMask(self,rayoffset=0):
-        self.prob.GetEnv().LockPhysics(True)
-        try:
-            inds = array(range(self.width*self.height))
-            imagepoints = array((mod(inds,self.width),floor(inds/self.width)))
-            camerapoints = dot(linalg.inv(self.KK), r_[imagepoints,ones((1,imagepoints.shape[1]))])
-            Tcamera = self.attached.GetSensor().GetTransform()
-            raydirs = dot(Tcamera[0:3,0:3], camerapoints / tile(sqrt(sum(camerapoints**2,0)),(3,1)))
-            rays = r_[tile(Tcamera[0:3,3:4],(1,raydirs.shape[1]))+rayoffset*raydirs,100.0*raydirs]
-            hitindices,hitpositions = self.prob.GetEnv().CheckCollisionRays(rays,self.robot,False)
-            # gather all the rays that hit and form an image
-            return reshape(array(hitindices,'float'),(height,width))
-        finally:
-            self.prob.GetEnv().LockPhysics(False)
-
-    def RunProcessVisibilityExtents(orenv,robotfile,kinbodyfile,convexfilename,visibilityfilename,sensorindex=0,robotjoints=None,robotjointinds=None,gripperjoints=None):
-        self.prob.GetEnv().LockPhysics(True)
-        orobj = orenv.ReadKinBodyXMLFile(kinbodyfile)
-        orenv.AddKinBody(orobj)
-
-        if robotjoints is not None:
-            if robotjointinds is not None:
-                orrobot.SetJointValues(robotjoints,robotjointinds)
-            else:
-                orrobot.SetJointValues(robotjoints)
-
-        # find a manipulator whose end effector is the camera
-        attached = orrobot.GetSensors()[sensorindex]
-        manip = [m for m in orrobot.GetManipulators() if m.GetEndEffector().GetIndex() == attached.GetAttachingLink().GetIndex()]
-        if len(manip) > 0 and gripperjoints is not None:
-            assert len(manip[0].GetGripperJoints()) == len(gripperjoints)
-            orrobot.SetJointValues(gripperjoints,manip[0].GetGripperJoints())
-
-        # move the robot away from the object
-        T = eye(4)
-        T[0,3] = 4
-        orrobot.SetTransform(T)
-        visualprob = orenv.CreateProblem('VisualFeedback')
-        orenv.LoadProblem(visualprob,orrobot.GetName())
-        response = visualprob.SendCommand('ProcessVisibilityExtents target %s sensorindex %d convexfile %s extentsfile %s'%(orobj.GetName(),sensorindex,convexfilename,visibilityfilename))
-        orenv.LockPhysics(False)
-        if response is None:
-            raise ValueError('ProcessVisibilityExtents failed')
-
-        transforms = [float(s) for s in response.split()]
-        if not mod(len(transforms),7) == 0:
-            raise ValueError('corrupted transforms')
-
-        del visualprob
-        del manip
-        del attached
-        del orrobot
-        del orobj
-        return reshape(transforms,(len(transforms)/7,7))
-
-if __name__=='__main__':
-    import scipy
-    parser = OptionParser(description='Helper functions for processing the gripper mask and visiblity extents')
-    parser.add_option('--func',
-                      action="store",type='string',dest='func',default='mask',
-                      help='Function to perform, can be {mask,visibility}')   
-    parser.add_option('--robotfile',
-                      action="store",type='string',dest='robotfile',
-                      help='OpenRAVE robot file to generate mask')
-    parser.add_option('--kinbodyfile',
-                      action="store",type='string',dest='kinbodyfile',
-                      help='OpenRAVE kinbody target filename')
-    parser.add_option('--gripperjoints',
-                      action="store",type='string',dest='gripperjoints',default=None,
-                      help='OpenRAVE robot file to generate mask')
-    parser.add_option('--graspsetfile',
-                      action="store",type='string',dest='graspsetfile',default=None,
-                      help='OpenRAVE grasp set file to get gripper joints from')
-    parser.add_option('--robotjoints',
-                      action="store",type='string',dest='robotjoints',default=None,
-                      help='Robot joints to preset robot with (used with --robotjointinds)')
-    parser.add_option('--robotjointinds',
-                      action="store",type='string',dest='robotjointinds',default=None,
-                      help='Robot joint indices to use in conjunction with robotjoints')
-    parser.add_option('--sensorindex',
-                      action="store",type='int',dest='sensorindex',default=0,
-                      help='Sensor index to use (default is 0)')
-    parser.add_option('--savefile',
-                      action="store",type='string',dest='savefile',default='mask.mat',
-                      help='Filename to save matlab data into (default is mask.mat)')
-    parser.add_option('--savepp',
-                      action="store",type='string',dest='savepp',default=None,
-                      help='Save all data into a pp file')
-    parser.add_option('--convexfile',
-                      action="store",type='string',dest='convexfile',
-                      help='Filename specifying convex polygon of gripper mask')
-    parser.add_option('--visibilityfile',
-                      action="store",type='string',dest='visibilityfile',
-                      help='Filename specifying visibility extents of target kinbody')
-    parser.add_option('--rayoffset',
-                      action="store",type='float',dest='rayoffset',default=0.03,
-                      help='The offset to move the ray origin (prevents meaningless collisions), default is 0.03')
-    (options, args) = parser.parse_args()
-
-    if not options.robotfile:
-        print 'failed to specify robot file'
-        sys.exit(1)
-
-    robotjoints = [float(s) for s in options.robotjoints.split()] if options.robotjoints else None
-    robotjointinds = [int(s) for s in options.robotjointinds.split()] if options.robotjointinds else None
-    if options.graspsetfile is not None:
-        graspdata = numpy.loadtxt(options.graspsetfile)
-        gripperjoints = graspdata[0][12:]
-    if options.gripperjoints is not None:
-        gripperjoints = [float(s) for s in options.gripperjoints.split()] if options.gripperjoints else None
-
-    orenv = Environment()
-    if options.func == 'mask':
-        Imask = GetCameraRobotMask(orenv,options.robotfile,sensorindex=options.sensorindex,gripperjoints=gripperjoints,robotjoints=robotjoints,robotjointinds=robotjointinds,rayoffset=options.rayoffset)
-        # save as a ascii matfile
-        numpy.savetxt(options.savefile,Imask,'%d')
-        print 'mask saved to ' + options.savefile
-        try:
-            scipy.misc.pilutil.imshow(array(Imask*255,'uint8'))
-        except:
-            pass
-    elif options.func == 'visibility':
-        if not options.convexfile:
-            print 'need convexfile'
-            sys.exit(1)
-        if not options.visibilityfile:
-            print 'need visibilityfile'
-            sys.exit(1)
-        if not options.kinbodyfile:
-            print 'need kinbodyfile'
-            sys.exit(1)
-        
-        visibilitydata = ProcessVisibilityExtents(orenv,options.robotfile,kinbodyfile=options.kinbodyfile,convexfilename=options.convexfile,visibilityfilename=options.visibilityfile,sensorindex=options.sensorindex,gripperjoints=gripperjoints,robotjoints=robotjoints,robotjointinds=robotjointinds)
-        if options.savefile is not None:
-            f = open(options.savefile,'w')
-            for t in visibilitydata:
-                f.write(' '.join(str(val) for val in t)+'\n')
-            f.close()
-            print '%d transforms saved to %s'%(visibilitydata.shape[0],options.savefile)
-    if options.savepp is not None:
-        orenv.Reset()
-        target = orenv.ReadKinBodyXMLFile(options.kinbodyfile)
-        orenv.AddKinBody(target)
-        target.SetTransform(eye(4))
-
-        orrobot = orenv.ReadRobotXMLFile(options.robotfile)
-        orenv.AddRobot(orrobot)
-        if options.robotjoints is not None:
-            if options.robotjointinds is not None:
-                orrobot.SetJointValues(options.robotjoints,options.robotjointinds)
-            else:
-                orrobot.SetJointValues(options.robotjoints)
-
-        attached = orrobot.GetSensors()[options.sensorindex]
-        # find a manipulator whose end effector is the camera
-        manip = [m for m in orrobot.GetManipulators() if m.GetEndEffector().GetIndex() == attached.GetAttachingLink().GetIndex()][0]
-
-        # transform into end effect gripper
-        for g in graspdata:
-            Tgrasp = r_[transpose(reshape(g[0:12],(4,3))),[[0,0,0,1]]]
-            orrobot.SetJointValues(g[12:],manip.GetGripperJoints())
-            T = Tgrasp
-            while manip.CheckEndEffectorCollision(T,None):
-                T = array(Tgrasp)
-                T[0:3,3] += 0.004*(random.rand(3)-0.5)
-            g[0:12] = reshape(transpose(T[0:3,:]),(12,))
-        
-        pickle.dump((numpy.loadtxt(options.convexfile),visibilitydata,graspdata),open(options.savepp,'w'))
-
-    orenv.Destroy()
+        if res is None:
+            raise planning_error()
+        return res
+    def ProcessVisibilityExtents(self,target,localtargetcenter=None,numrolls=None,transforms=None,extents=None,sphere=None):
+        cmd = 'ProcessVisibilityExtents target %s '%target.GetName()
+        if target is not None:
+            cmd += 'target %s '%target.GetName()
+        if localtargetcenter is not None:
+            cmd += 'localtargetcenter %f %f %f '%(localtargetcenter[0],localtargetcenter[1],localtargetcenter[2])
+        if numrolls is not None:
+            cmd += 'numrolls %d '%numrolls
+        if transforms is not None:
+            cmd += 'transforms %d '%len(transforms)
+            for f in reshape(transforms,len(transforms)*7):
+                cmd += str(f) + ' '
+        if extents is not None:
+            cmd += 'extents %d '%len(extents)
+            for f in reshape(extents,len(extents)*3):
+                cmd += str(f) + ' '
+        if sphere is not None:
+            cmd += 'sphere %d %d '%(sphere[0],sphere[1])
+        res = self.prob.SendCommand(cmd)
+        if res is None:
+            raise planning_error()
+        visibilitytransforms = array([float(s) for s in res.split()],float)
+        return reshape(visibilitytransforms,(len(visibilitytransforms)/7,7))
+    def SetCameraTransforms(self,transforms,target=None):
+        cmd = 'SetCameraTransforms '
+        if target is not None:
+            cmd += 'target %s '%target.GetName()
+        if transforms is not None:
+            cmd += 'transforms %d '%len(transforms)
+            for f in reshape(transforms,len(transforms)*7):
+                cmd += str(f) + ' '
+        res = self.prob.SendCommand(cmd)
+        if res is None:
+            raise planning_error()
+        return res
+    def ComputeVisibility(self,target):
+        cmd = 'ComputeVisibility '
+        if target is not None:
+            cmd += 'target %s '%target.GetName()
+        res = self.prob.SendCommand(cmd)
+        if res is None:
+            raise planning_error()
+        return int(res)
+    def SampleVisibilityGoal(self,target,numsamples=None):
+        cmd = 'SampleVisibilityGoal '
+        if target is not None:
+            cmd += 'target %s '%target.GetName()
+        if numsamples is not None:
+            cmd += 'numsamples %d '%numsamples
+        res = self.prob.SendCommand(cmd)
+        if res is None:
+            raise planning_error()
+        samples = [float(s) for s in res.split()]
+        returnedsamples = int(samples[0])
+        return reshape(array(samples[1:],float),(returnedsamples,(len(samples)-1)/returnedsamples))
+    def MoveToObserveTarget(self,target,affinedofs=None,smoothpath=None,planner=None,sampleprob=None,maxiter=None,execute=None,outputtraj=None):
+        cmd = 'MoveToObserveTarget target %s '%target.GetName()
+        if affinedofs is not None:
+            cmd += 'affinedofs %d '%affinedofs
+        if smoothpath is not None:
+            cmd += 'smoothpath %d '%smoothpath
+        if planner is not None:
+            cmd += 'planner %s '%planner
+        if sampleprob is not None:
+            cmd += 'sampleprob %f '%sampleprob
+        if execute is not None:
+            cmd += 'execute %d '%execute
+        if outputtraj is not None:
+            cmd += 'outputtraj '
+        if maxiter is not None:
+            cmd += 'maxiter %d '%maxiter
+        res = self.prob.SendCommand(cmd)
+        if res is None:
+            raise planning_error()
+        return res
+    def VisualFeedbackGrasping(self,target,graspset,usevisibility=None,planner=None,graspdistthresh=None,visgraspthresh=None,numgradientsamples=None,maxiter=None,execute=None,outputtraj=None):
+        cmd = 'VisualFeedbackGrasping target %s '%target.GetName()
+        if graspset is not None:
+            cmd += 'graspset %d '%len(graspset)
+            for f in reshape(graspset,size(graspset)):
+                cmd += str(f) + ' '
+        if usevisibility is not None:
+            cmd += 'usevisibility %d '%usevisibility
+        if planner is not None:
+            cmd += 'planner %s '%planner
+        if graspdistthresh is not None:
+            cmd += 'graspdistthresh %f '%graspdistthresh
+        if visgraspthresh is not None:
+            cmd += 'visgraspthresh %f '%visgraspthresh
+        if numgradientsamples is not None:
+            cmd += 'numgradientsamples %d '%numgradientsamples
+        if execute is not None:
+            cmd += 'execute %d '%execute
+        if outputtraj is not None:
+            cmd += 'outputtraj '
+        if maxiter is not None:
+            cmd += 'maxiter %d '%maxiter
+        res = self.prob.SendCommand(cmd)
+        if res is None:
+            raise planning_error()
+        return res
