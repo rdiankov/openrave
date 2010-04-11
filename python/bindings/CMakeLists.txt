@@ -19,7 +19,7 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
     add_definitions(${Boost_CFLAGS})
     set(CMAKE_REQUIRED_INCLUDES ${PYTHON_INCLUDE_PATH} ${Boost_INCLUDE_DIR} )
     set(CMAKE_REQUIRED_LIBRARIES ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY})
-    set(CMAKE_REQUIRED_FLAGS ${Boost_CFLAGS})
+    set(CMAKE_REQUIRED_FLAGS ${Boost_CFLAGS} "-DCMAKE_BUILD_TYPE:STRING=Release")
 
     # check if all header files can be included
     check_cxx_source_runs("
