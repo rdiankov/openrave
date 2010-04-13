@@ -22,6 +22,11 @@ from numpy import *
 import numpy
 from itertools import izip
 
+try:
+    import scipy # used for showing images
+except ImportError:
+    pass
+
 class GraspReachability(metaclass.AutoReloader):
     def __init__(self,robot,target=None,irgmodels=None):
         self.robot = robot
@@ -144,7 +149,7 @@ class GraspReachability(metaclass.AutoReloader):
         densityfn,samplerfn,bounds = self.computeGraspDistribution(**kwargs)
         print 'time to build distribution: %fs'%(time.time()-starttime)
         return inversereachability.InverseReachabilityModel.showBaseDistribution(self.env,densityfn,bounds,zoffset=zoffset,thresh=thresh)
-    def testSampling(self,**kwargs):
+    def testSampling(self,delay=0,**kwargs):
         """random sample goals on the current environment"""
         with self.env:
             configsampler = self.sampleValidPlacementIterator(**kwargs)
@@ -165,6 +170,8 @@ class GraspReachability(metaclass.AutoReloader):
                         final,traj = basemanip.CloseFingers(execute=False,outputfinal=True)
                         self.robot.SetJointValues(final,gmodel.manip.GetGripperJoints())
                         self.env.UpdatePublishedBodies()
+                    if delay > 0:
+                        time.sleep(delay)
                 except planning_error, e:
                     traceback.print_exc(e)
                     continue
@@ -205,6 +212,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                 ikmodel.autogenerate()
             ikmodels.append(ikmodel)
         goaljointvalues = None
+        alltrajdata = None
         with self.robot:
             origjointvalues=self.robot.GetJointValues()
             self.robot.SetJointValues(neutraljointvalues)
@@ -222,7 +230,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
             if alltrajdata is None:
                 self.robot.SetJointValues(origjointvalues)
                 Tmanips = [manip.GetEndEffectorTransform() for manip in manips]
-                for iter in range(100):
+                for iter in range(200):
                     self.robot.SetJointValues(origjointvalues)
                     if bounds is None:
                         r = random.rand(3)*0.4-0.2
@@ -346,7 +354,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
 
         if usevisibilitycamera:
             print 'attempting visibility planning with ',usevisibilitycamera
-            vmodel = visibilitymodel.VisibilityModel(robot=self.robot,target=gmodel.target,sensorname=usevisibilitycamera)
+            vmodel = visibilitymodel.VisibilityModel(robot=self.robot,target=gmodel.target,sensorname=usevisibilitycamera['sensorname'])
             if vmodel.load():
                 print 'using visibility model'
                 #pts = array([dot(vmodel.target.GetTransform(),matrixFromPose(pose))[0:3,3] for pose in vmodel.visibilitytransforms])
@@ -357,10 +365,15 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                     vmodel.visualprob.MoveToObserveTarget(target=vmodel.target,sampleprob=0.001,maxiter=4000)
                     #s=vmodel.visualprob.SampleVisibilityGoal(gmodel.target)
                     self.waitrobot()
-                    time.sleep(4)
-                    Tnewtarget = gmodel.target.GetTransform()
-                    self.basemanip.MoveToHandPosition([gmodel.getGlobalGraspTransform(grasp)],seedik=10,maxiter=5000)
-                    self.waitrobot()
+                    print repr(self.robot.GetJointValues())
+                    print repr(self.robot.GetTransform())
+                    if usevisibilitycamera['storeimage']:
+                        usevisibilitycamera['image']= vmodel.getCameraImage()
+                    if usevisibilitycamera['noise']:
+                        with self.env:
+                            Tnewtarget = gmodel.target.GetTransform()
+                    #self.basemanip.MoveToHandPosition([gmodel.getGlobalGraspTransform(grasp,collisionfree=True)],seedik=10,maxiter=5000,maxtries=2)
+                    #self.waitrobot()
                 except planning_error, e:
                     print 'failed to plan with visibility'
                     traceback.print_exc(e)

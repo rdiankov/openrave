@@ -1685,8 +1685,8 @@ void KinBody::GetRigidlyAttachedLinks(int linkindex, std::vector<KinBody::LinkPt
 bool KinBody::GetChain(int linkbaseindex, int linkendindex, std::vector<JointPtr>& vjoints) const
 {
     vjoints.resize(0);
-    int dof = GetDOF();
-    vector<int> vjointparents(dof,dof);
+    int numjoints = (int)_vecjoints.size();
+    vector<int> vjointparents(numjoints+_vecPassiveJoints.size(),numjoints);
     list<pair<LinkConstPtr, int > > listlinks;
     vector<LinkPtr> vattachedlinks;
     listlinks.push_back(make_pair(_veclinks.at(linkbaseindex),-1));
@@ -1712,7 +1712,8 @@ bool KinBody::GetChain(int linkbaseindex, int linkendindex, std::vector<JointPtr
         listlinks.pop_front();
         FOREACHC(itjoint, _vecjoints) {
             int jointindex = (*itjoint)->GetJointIndex();
-            if( vjointparents.at(jointindex) == dof ) {
+            // use the source mimic joint
+            if( vjointparents.at(jointindex) == numjoints ) {
                 LinkConstPtr pother;
                 if( (*itjoint)->GetFirstAttached() == plink && !!(*itjoint)->GetSecondAttached() )
                     pother = (*itjoint)->GetSecondAttached();
@@ -1720,11 +1721,33 @@ bool KinBody::GetChain(int linkbaseindex, int linkendindex, std::vector<JointPtr
                     pother = (*itjoint)->GetFirstAttached();
                 if( !!pother ) {
                     vjointparents[jointindex] = parentjoint;
-                    listlinks.push_back(make_pair(pother,jointindex));
+                    int addjointindex = (*itjoint)->GetMimicJointIndex() >= 0 ? (*itjoint)->GetMimicJointIndex() : jointindex;
+                    listlinks.push_back(make_pair(pother,addjointindex));
                     vattachedlinks.resize(0);
                     GetRigidlyAttachedLinks(pother->GetIndex(),vattachedlinks);
                     FOREACHC(itlink,vattachedlinks)
-                        listlinks.push_back(make_pair(LinkConstPtr(*itlink),jointindex));
+                        listlinks.push_back(make_pair(LinkConstPtr(*itlink),addjointindex));
+                }
+            }
+        }
+        // also check passive mimic joints!
+        FOREACHC(itjoint, _vecPassiveJoints) {
+            if( (*itjoint)->GetMimicJointIndex() >= 0 ) {
+                int jointindex = (*itjoint)->GetJointIndex();
+                if( vjointparents.at(numjoints+jointindex) == numjoints ) {
+                    LinkConstPtr pother;
+                    if( (*itjoint)->GetFirstAttached() == plink && !!(*itjoint)->GetSecondAttached() )
+                        pother = (*itjoint)->GetSecondAttached();
+                    if( (*itjoint)->GetSecondAttached() == plink && !!(*itjoint)->GetFirstAttached() )
+                        pother = (*itjoint)->GetFirstAttached();
+                    if( !!pother ) {
+                        vjointparents[numjoints+jointindex] = parentjoint;
+                        listlinks.push_back(make_pair(pother,(*itjoint)->GetMimicJointIndex()));
+                        vattachedlinks.resize(0);
+                        GetRigidlyAttachedLinks(pother->GetIndex(),vattachedlinks);
+                        FOREACHC(itlink,vattachedlinks)
+                            listlinks.push_back(make_pair(LinkConstPtr(*itlink),(*itjoint)->GetMimicJointIndex()));
+                    }
                 }
             }
         }
@@ -2175,10 +2198,6 @@ void KinBody::ComputeJointHierarchy()
         }
     }
 
-    // save the forward kinematics
-    string filename = GetEnv()->GetHomeDirectory() + string("/fk_") + GetName();
-    ofstream f(filename.c_str());
-    WriteForwardKinematics(f);
     SetJointValues(prevvalues, true);
 
     {

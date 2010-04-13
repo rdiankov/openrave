@@ -189,6 +189,14 @@ def test_kinematics():
         joints = robot.GetChain(manip.GetEndEffector().GetIndex(),manip.GetBase().GetIndex())
         print [joint.GetJointIndex() for joint in joints]
 
+def test_kinematics2():
+    env = Environment()
+    robot = env.ReadRobotXMLFile('robots/barretthand.robot.xml')
+    env.AddRobot(robot)
+    for link in robot.GetLinks():
+        joints = robot.GetChain(0,link.GetIndex())
+        print [j.GetName() for j in joints]
+    
 def test_dualarm_grabbing():
     env = Environment()
     robot = env.ReadRobotXMLFile('robots/schunk-lwa3-dual.robot.xml')

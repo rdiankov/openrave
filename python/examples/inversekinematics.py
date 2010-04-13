@@ -134,15 +134,16 @@ class InverseKinematicsModel(OpenRAVEModel):
         else:
             raise ValueError('bad type')
         solvejoints = list(self.manip.GetArmJoints())
+        freejointinds = []
         if freejoints is not None:
             for jointname in freejoints:
                 if type(jointname) == int:
+                    freejointinds.append(jointname)
                     solvejoints.remove(jointname)
                 else:
                     # find the correct joint index
-                    solvejoints.remove([joint.GetJointIndex() for joint in self.robot.GetJoints() if joint.GetName()==jointname][0])
-        else:
-            freejoints = []
+                    freejointinds.append([joint.GetJointIndex() for joint in self.robot.GetJoints() if joint.GetName()==jointname][0])
+                    solvejoints.remove(freejointinds[-1])
         print 'Generating inverse kinematics for manip',self.manip.GetName(),':',self.iktype,solvejoints,'(this might take ~10 min)'
         if self.iktype == IkParameterization.Type.Rotation3D:
             self.dofexpected = 3
@@ -158,25 +159,24 @@ class InverseKinematicsModel(OpenRAVEModel):
             raise ValueError('bad type')
 
         if len(solvejoints) > self.dofexpected:
-            freejoints = []
             for i in range(len(solvejoints) - self.dofexpected):
                 if self.dofexpected == 6:
-                    freejoints.append(solvejoints.pop(2))
+                    freejointinds.append(solvejoints.pop(2))
                 else:
-                    freejoints.append(solvejoints.pop(0))
+                    freejointinds.append(solvejoints.pop(0))
         
         if not len(solvejoints) == self.dofexpected:
             raise ValueError('Need %d solve joints, got: %d'%(self.dofexpected, len(solvejoints)))
         
         sourcefilename += '_' + '_'.join(str(ind) for ind in solvejoints)
-        if len(freejoints)>0:
-            sourcefilename += '_f'+'_'.join(str(ind) for ind in freejoints)
+        if len(freejointinds)>0:
+            sourcefilename += '_f'+'_'.join(str(ind) for ind in freejointinds)
         sourcefilename += '.cpp'
         if forceikbuild or not os.path.isfile(sourcefilename):
             print 'generating inverse kinematics file %s'%sourcefilename
             mkdir_recursive(OpenRAVEModel.getfilename(self))
             solver = ikfast.IKFastSolver(kinbody=self.robot,accuracy=accuracy,precision=precision)
-            code = solver.generateIkSolver(self.manip.GetBase().GetIndex(),self.manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejoints,usedummyjoints=usedummyjoints,solvefn=solvefn)
+            code = solver.generateIkSolver(self.manip.GetBase().GetIndex(),self.manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejointinds,usedummyjoints=usedummyjoints,solvefn=solvefn)
             if len(code) == 0:
                 raise ValueError('failed to generate ik solver for robot %s:%s'%(self.robot.GetName(),self.manip.GetName()))
             open(sourcefilename,'w').write(code)
@@ -349,8 +349,8 @@ class InverseKinematicsModel(OpenRAVEModel):
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser()
         parser.description='Computes the closed-form inverse kinematics equations of a robot manipulator, generates a C++ file, and compiles this file into a shared object which can then be loaded by OpenRAVE'
-        parser.add_option('--freejoint', action='append', type='int', dest='freejoints',default=None,
-                          help='Optional joint index specifying a free parameter of the manipulator. If not specified, assumes all joints not solving for are free parameters. Can be specified multiple times for multiple free parameters.')
+        parser.add_option('--freejoint', action='append', type='string', dest='freejoints',default=None,
+                          help='Optional joint name specifying a free parameter of the manipulator. If nothing specified, assumes all joints not solving for are free parameters. Can be specified multiple times for multiple free parameters.')
         parser.add_option('--precision', action='store', type='int', dest='precision',default=10,
                           help='The precision to compute the inverse kinematics in, (default=%default).')
         parser.add_option('--accuracy', action='store', type='float', dest='accuracy',default=1e-7,

@@ -32,6 +32,8 @@ RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(PluginType type, const std::str
     case PT_Controller:
         if( interfacename == "idealcontroller")
             return InterfaceBasePtr(new IdealController(penv));
+        else if( interfacename == "redirectcontroller" )
+            return InterfaceBasePtr(new RedirectController(penv));
         break;
     default:
         break;
@@ -50,6 +52,7 @@ RAVE_PLUGIN_API bool GetPluginAttributes(PLUGININFO* pinfo, int size)
 
     // fill pinfo
     pinfo->interfacenames[PT_Controller].push_back("IdealController");
+    pinfo->interfacenames[PT_Controller].push_back("RedirectController");
     return true;
 }
 

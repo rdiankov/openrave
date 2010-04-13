@@ -20,6 +20,7 @@ class IdealController : public ControllerBase
 {
  public:
     IdealController(EnvironmentBasePtr penv) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true) {
+        __description = "Simple controller that forces exact robot positions";
         fTime = 0;
         _fSpeed = 1;
     }
@@ -157,6 +158,98 @@ private:
     int cmdid;
     bool _bPause;
     bool _bIsDone;
+};
+
+class RedirectController : public ControllerBase
+{
+ public:
+ RedirectController(EnvironmentBasePtr penv) : ControllerBase(penv) {
+        __description = "Redirects all input and output to another controller (this avoides cloning the other controller while still allowing it to be used from cloned environments)";
+    }
+    virtual ~RedirectController() {}
+    
+    virtual bool Init(RobotBasePtr robot, const std::string& args)
+    {
+        _probot = GetEnv()->GetRobot(robot->GetName());
+        _pcontroller = robot->GetController();
+        BOOST_ASSERT(InterfaceBasePtr(_pcontroller) != shared_from_this());
+        return !!_pcontroller;
+    }
+
+    virtual void Reset(int options)
+    {
+        _pcontroller->Reset(options);
+        _sync();
+    }
+
+    virtual bool SetDesired(const std::vector<dReal>& values)
+    {
+        if( !_pcontroller->SetDesired(values) )
+            return false;
+        _sync();
+        return true;
+    }
+    virtual bool SetPath(TrajectoryBaseConstPtr ptraj)
+    {
+        if( !_pcontroller->SetPath(ptraj) )
+            return false;
+        _sync();
+        return true;
+    }
+
+    virtual bool SimulationStep(dReal fTimeElapsed) {
+        bool bret = _pcontroller->SimulationStep(fTimeElapsed);
+        _sync();
+        return bret;
+    }
+    virtual bool IsDone() { return _pcontroller->IsDone(); }
+
+    virtual dReal GetTime() const { return _pcontroller->GetTime(); }
+    virtual void GetVelocity(std::vector<dReal>& vel) const { return _pcontroller->GetVelocity(vel); }
+    virtual void GetTorque(std::vector<dReal>& torque) const { return _pcontroller->GetTorque(torque); }
+    
+    virtual RobotBasePtr GetRobot() const { return _probot; }
+    virtual ActuatorState GetActuatorState(int index) const {return _pcontroller->GetActuatorState(index); }
+
+    virtual bool Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    {
+        boost::shared_ptr<RedirectController const> r = boost::dynamic_pointer_cast<RedirectController const>(preference);
+        if( !r )
+            return false;
+        if( !ControllerBase::Clone(preference,cloningoptions) )
+            return false;
+        _probot = GetEnv()->GetRobot(r->_probot->GetName());
+        _pcontroller = r->_pcontroller; // hmm......... this requires some thought
+    }
+
+    virtual bool SendCommand(std::ostream& os, std::istream& is)
+    {
+        string cmd;
+        streampos pos = is.tellg();
+        is >> cmd;
+        if( !is )
+            throw openrave_exception("invalid argument",ORE_InvalidArguments);
+
+        std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+        if( cmd == "sync" ) {
+            _sync();
+            return true;
+        }
+
+        is.seekg(pos);
+        return _pcontroller->SendCommand(os,is);
+    }
+    
+private:
+    virtual void _sync()
+    {
+        vector<dReal> values;
+        _pcontroller->GetRobot()->GetJointValues(values);
+        _probot->SetJointValues(values);
+    }
+
+    RobotBasePtr _probot;           ///< controlled body
+    ControllerBasePtr _pcontroller;
 };
 
 #endif

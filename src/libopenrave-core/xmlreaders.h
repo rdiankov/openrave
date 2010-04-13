@@ -35,6 +35,10 @@
 #include <iostream>
 #include <sstream>
 
+#ifdef HAVE_BOOST_FILESYSTEM
+#include <boost/filesystem/operations.hpp>
+#endif
+
 BOOST_STATIC_ASSERT(sizeof(xmlChar) == 1);
 
 #ifdef _WIN32
@@ -317,7 +321,11 @@ namespace OpenRAVEXMLParser
             return false;
         }
 
+#ifdef HAVE_BOOST_FILESYSTEM
+        preader->_filename = boost::filesystem::system_complete(boost::filesystem::path(GetFullFilename(), boost::filesystem::native)).string();
+#else
         preader->_filename = GetFullFilename();
+#endif
 
         int ret = raveXmlSAXUserParseFile(GetSAXHandler(), preader, GetFullFilename().c_str());
         if( ret != 0 ) {

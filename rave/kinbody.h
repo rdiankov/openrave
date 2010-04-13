@@ -495,7 +495,8 @@ public:
     const std::vector<JointPtr>& GetDependencyOrderedJoints() const { return _vDependencyOrderedJoints; }
 
     /// returns the minimal chain of joints that are between two links in the order of linkbaseindex to linkendindex.
-    /// Passive joints are only used to detect rigidly attached links, otherwise they are ignored in the computation of the chain.
+    /// Passive joints are used to detect rigidly attached links and mimic joints, otherwise they are ignored in the computation of the chain.
+    /// If a mimic joint is found along the path, the joint returned is the source joint!
     /// \param linkbase the base link to start the search
     /// \param linkend the link to end the search
     /// \param vjoints the joints to fill that describe the chain
