@@ -37,7 +37,9 @@ class InverseReachabilityModel(OpenRAVEModel):
         self.id=id
         with self.robot:
             self.jointvalues = self.robot.GetJointValues()[self.getdofindices(self.manip)]
-        
+    def clone(self,envother):
+        clone = OpenRAVEModel.clone(self,envother)
+        return clone        
     def has(self):
         return self.equivalenceclasses is not None and len(self.equivalenceclasses) > 0
     def getversion(self):

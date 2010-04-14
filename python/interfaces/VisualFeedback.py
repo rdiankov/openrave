@@ -17,17 +17,25 @@ import numpy # nice to be able to explicitly call some functions
 from numpy import *
 from optparse import OptionParser
 from openravepy import *
+from copy import copy as shallowcopy
 
 class VisualFeedback:
     def __init__(self,robot):
         env = robot.GetEnv()
         self.prob = env.CreateProblem('VisualFeedback')
         self.robot = robot
-        args = self.robot.GetName()
-        if env.LoadProblem(self.prob,args) != 0:
+        self.args = self.robot.GetName()
+        if env.LoadProblem(self.prob,self.args) != 0:
             raise ValueError('problem failed to initialize')
     def  __del__(self):
         self.prob.GetEnv().RemoveProblem(self.prob)
+    def clone(self,envother):
+        clone = shallowcopy(self)
+        clone.prob = envother.CreateProblem('VisualFeedback')
+        clone.robot = envother.GetRobot(self.robot.GetName())
+        if envother.LoadProblem(clone.prob,clone.args) != 0:
+            raise ValueError('problem failed to initialize')
+        return clone
     def SetCamera(self,sensorindex=None,sensorname=None,manipname=None,convexdata=None):
         cmd = 'SetCamera '
         if sensorindex is not None:

@@ -29,15 +29,19 @@ class InverseKinematicsModel(OpenRAVEModel):
         OpenRAVEModel.__init__(self,robot=robot)
         self.iktype = iktype
         self.iksolver = None
-    
+        self.freeinc = None
+    def clone(self,envother):
+        clone = OpenRAVEModel.clone(self,envother)
+        clone.setrobot(self.freeinc)
+        return clone    
     def has(self):
         return self.iksolver is not None and self.manip.HasIKSolver()
-    
     def load(self,*args,**kwargs):
         return self.setrobot(*args,**kwargs)
 
     def setrobot(self,freeinc=None):
         self.iksolver = None
+        self.freeinc=freeinc
         if freeinc is not None:
             iksuffix = ' %f'%freeinc
         else:

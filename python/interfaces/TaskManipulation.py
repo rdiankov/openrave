@@ -14,20 +14,27 @@ __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
 __license__ = 'Apache License, Version 2.0'
 from openravepy import *
 from numpy import *
+from copy import copy as shallowcopy
 
 class TaskManipulation:
     def __init__(self,robot,plannername=None):
         env = robot.GetEnv()
         self.prob = env.CreateProblem('TaskManipulation')
         self.robot = robot
-        args = self.robot.GetName()
+        self.args = self.robot.GetName()
         if plannername is not None:
-            args += ' planner ' + plannername
-        if env.LoadProblem(self.prob,args) != 0:
+            self.args += ' planner ' + plannername
+        if env.LoadProblem(self.prob,self.args) != 0:
             raise ValueError('problem failed to initialize')
     def  __del__(self):
         self.prob.GetEnv().RemoveProblem(self.prob)
-
+    def clone(self,envother):
+        clone = shallowcopy(self)
+        clone.prob = envother.CreateProblem('TaskManipulation')
+        clone.robot = envother.GetRobot(self.robot.GetName())
+        if envother.LoadProblem(clone.prob,clone.args) != 0:
+            raise ValueError('problem failed to initialize')
+        return clone
     def GraspPlanning(self,graspindices,grasps,target,approachoffset=0,destposes=None,seedgrasps=None,seeddests=None,seedik=None,switchpatterns=None,maxiter=None,randomgrasps=None,randomdests=None, execute=None,outputtraj=None):
         cmd = 'graspplanning target %s approachoffset %f grasps %d %d '%(target.GetName(),approachoffset, grasps.shape[0],grasps.shape[1])
         for f in grasps.flat:

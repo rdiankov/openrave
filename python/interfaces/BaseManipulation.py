@@ -14,19 +14,26 @@ __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
 __license__ = 'Apache License, Version 2.0'
 from openravepy import *
 from numpy import *
-
+from copy import copy as shallowcopy
 class BaseManipulation:
     def __init__(self,robot,plannername=None):
         env = robot.GetEnv()
         self.prob = env.CreateProblem('BaseManipulation')
         self.robot = robot
-        args = self.robot.GetName()
+        self.args = self.robot.GetName()
         if plannername is not None:
-            args += ' planner ' + plannername
-        if env.LoadProblem(self.prob,args) != 0:
+            self.args += ' planner ' + plannername
+        if env.LoadProblem(self.prob,self.args) != 0:
             raise ValueError('problem failed to initialize')
     def  __del__(self):
         self.prob.GetEnv().RemoveProblem(self.prob)
+    def clone(self,envother):
+        clone = shallowcopy(self)
+        clone.prob = envother.CreateProblem('BaseManipulation')
+        clone.robot = envother.GetRobot(self.robot.GetName())
+        if envother.LoadProblem(clone.prob,clone.args) != 0:
+            raise ValueError('problem failed to initialize')
+        return clone
     def TrajFromData(self,data):
         return self.prob.SendCommand('traj stream ' + data)
     def MoveHandStraight(self,direction,minsteps=None,maxsteps=None,stepsize=None,ignorefirstcollision=None,jacobian=None,searchall=None,execute=None,outputtraj=None):

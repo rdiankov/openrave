@@ -12,7 +12,8 @@
 # limitations under the License. 
 from __future__ import with_statement # for python 2.5
 import openravepy
-import os, optparse, numpy, metaclass
+import metaclass
+import os, optparse, numpy, copy
 try:
     import cPickle as pickle
 except:
@@ -378,7 +379,13 @@ class OpenRAVEModel(metaclass.AutoReloader):
         try:
             self.manip = self.robot.GetActiveManipulator()
         except:
-            pass
+            self.manip = None
+    def clone(self,envother):
+        clone = copy.copy(self)
+        clone.env = envother
+        clone.robot = clone.env.GetRobot(self.robot.GetName())
+        clone.manip = clone.robot.GetManipulators(self.manip.GetName())[0] if not self.manip is None else None
+        return clone
     def has(self):
         raise NotImplementedError()
     def getfilename(self):

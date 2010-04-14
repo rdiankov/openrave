@@ -74,6 +74,11 @@ class GraspingModel(OpenRAVEModel):
         for name,dof in graspdof.iteritems():
             self.graspindices[name] = range(self.totaldof,self.totaldof+dof)
             self.totaldof += dof
+    def clone(self,envother):
+        clone = OpenRAVEModel.clone(self,envother)
+        clone.basemanip = self.basemanip.clone(envother)
+        clone.grasper = self.grasper.clone(envother)
+        return clone
     def has(self):
         return len(self.grasps) > 0 and len(self.graspindices) > 0 and self.grasper is not None
     def getversion(self):
@@ -360,9 +365,8 @@ class GraspingModel(OpenRAVEModel):
         with self.robot:
             self.robot.SetActiveDOFs(self.manip.GetArmJoints())
             trajdata.append(self.basemanip.MoveUnsyncJoints(jointvalues=grasp[self.graspindices['igrasppreshape']],jointinds=self.manip.GetGripperJoints(),execute=execute,outputtraj=outputtraj))
-        if execute:
-            while not self.robot.GetController().IsDone(): # busy wait
-                time.sleep(0.01)
+        while execute and not self.robot.GetController().IsDone(): # busy wait
+            time.sleep(0.01)
         
         with self.robot:
             if not execute and outputtraj:

@@ -15,6 +15,7 @@ __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
 __license__ = 'Apache License, Version 2.0'
 
 import time,traceback
+from copy import copy as shallowcopy
 from openravepy import *
 from openravepy.interfaces import BaseManipulation, TaskManipulation, VisualFeedback
 from openravepy.examples import inversekinematics,inversereachability,graspplanning,grasping,visibilitymodel
@@ -44,7 +45,12 @@ class GraspReachability(metaclass.AutoReloader):
             for irmodel,gmodel in irgmodels:
                 assert irmodel.robot == self.robot and irmodel.robot == gmodel.robot and irmodel.manip == gmodel.manip
             self.irgmodels = irgmodels
-
+    def clone(self,envother):
+        clone = shallowcopy(self)
+        clone.env = envother
+        clone.robot = clone.env.GetRobot(self.robot.GetName())
+        clone.irgmodels = [[irmodel.clone(envother),gmodel.clone(envother)] for irmodel,gmodel in self.irgmodels]
+        return clone
     def computeGraspDistribution(self,randomgrasps=False,**kwargs):
         """computes distribution of all grasps"""
         densityfns = []
@@ -178,16 +184,23 @@ class GraspReachability(metaclass.AutoReloader):
 
 class MobileManipulationPlanning(metaclass.AutoReloader):
     def __init__(self,robot,grmodel=None,switchpatterns=None):
-        self.envreal = robot.GetEnv()
-        self.env=self.envreal
+        self.env=robot.GetEnv()
+        self.envreal = None
         self.robot = robot
         self.grmodel = grmodel
         self.switchpatterns = switchpatterns
-        with self.envreal:
-            self.basemanip = BaseManipulation(self.robot)
-            self.taskmanip = TaskManipulation(self.robot)
-            self.updir = array((0,0,1))
-
+        self.basemanip = BaseManipulation(self.robot)
+        self.taskmanip = TaskManipulation(self.robot)
+        self.updir = array((0,0,1))
+    def clone(self,envother):
+        clone = shallowcopy(self)
+        clone.env = envother
+        clone.envreal = self.env
+        clone.robot = clone.env.GetRobot(self.robot.GetName())
+        clone.grmodel = self.grmodel.clone(envother)
+        clone.basemanip = self.basemanip.clone(envother)
+        clone.taskmanip = self.taskmanip.clone(envother)
+        return clone
     def waitrobot(self):
         """busy wait for robot completion"""
         while not self.robot.GetController().IsDone():
@@ -265,6 +278,19 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         for trajdata in alltrajdata:
             self.basemanip.TrajFromData(trajdata)
             self.waitrobot()
+
+    def sync(self,target=None):
+        """sync with the real environment and find the target"""
+        if self.envreal is None:
+            return
+        self.env = self.envreal.CloneSelf(CloningOptions.Bodies)
+#         clone = shallowcopy(self)
+#         clone.env = envother
+#         clone.envreal = self.env
+#         clone.robot = clone.env.GetRobot(self.robot.GetName())
+#         clone.grmodel = self.grmodel.clone(envother)
+#         clone.basemanip = self.basemanip.clone(envother)
+#         clone.taskmanip = self.taskmanip.clone(envother)
 
     def graspAndPlaceObjectMobileSearch(self,targetdests):
         assert(len(targetdests)>0)

@@ -14,6 +14,7 @@ __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
 __license__ = 'Apache License, Version 2.0'
 from openravepy import *
 from numpy import *
+from copy import copy as shallowcopy
 
 class Grasper:
     def __init__(self,robot,friction=0.3,avoidlinks=None,plannername=None):
@@ -23,14 +24,21 @@ class Grasper:
         self.friction = friction
         self.avoidlinks = avoidlinks
         self.plannername=plannername
-        args = self.robot.GetName()
+        self.args = self.robot.GetName()
         if plannername is not None:
-            args += ' plannername %s '%plannername
-        if env.LoadProblem(self.prob,args) != 0:
+            self.args += ' plannername %s '%plannername
+        if env.LoadProblem(self.prob,self.args) != 0:
             raise ValueError('problem failed to initialize')
     def  __del__(self):
         self.prob.GetEnv().RemoveProblem(self.prob)
-
+    def clone(self,envother):
+        clone = shallowcopy(self)
+        clone.prob = envother.CreateProblem('Grasper')
+        clone.robot = envother.GetRobot(self.robot.GetName())
+        clone.avoidlinks = [clone.robot.GetLink(link.GetName()) for link in self.avoidlinks]
+        if envother.LoadProblem(clone.prob,clone.args) != 0:
+            raise ValueError('problem failed to initialize')
+        return clone
     def Grasp(self,direction=None,roll=None,position=None,standoff=None,target=None,stablecontacts=False,forceclosure=False,transformrobot=True,onlycontacttarget=True,tightgrasp=False,graspingnoise=None,execute=None,translationstepmult=None,outputfinal=False):
         cmd = 'Grasp '
         if direction is not None:

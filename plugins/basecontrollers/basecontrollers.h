@@ -163,43 +163,48 @@ private:
 class RedirectController : public ControllerBase
 {
  public:
- RedirectController(EnvironmentBasePtr penv) : ControllerBase(penv) {
+ RedirectController(EnvironmentBasePtr penv) : ControllerBase(penv), _bAutoSync(true) {
         __description = "Redirects all input and output to another controller (this avoides cloning the other controller while still allowing it to be used from cloned environments)";
     }
     virtual ~RedirectController() {}
     
     virtual bool Init(RobotBasePtr robot, const std::string& args)
     {
+        _pcontroller.reset();
         _probot = GetEnv()->GetRobot(robot->GetName());
-        _pcontroller = robot->GetController();
-        BOOST_ASSERT(InterfaceBasePtr(_pcontroller) != shared_from_this());
-        return !!_pcontroller;
+        if( _probot != robot )
+            _pcontroller = robot->GetController();
+        if( _bAutoSync )
+            _sync();
+        return true;
     }
 
-    virtual void Reset(int options)
-    {
-        _pcontroller->Reset(options);
-        _sync();
-    }
+    // don't touch the referenced controller, since could be just destroying clones
+    virtual void Reset(int options) {}
 
     virtual bool SetDesired(const std::vector<dReal>& values)
     {
         if( !_pcontroller->SetDesired(values) )
             return false;
-        _sync();
+        if(_bAutoSync)
+            _sync();
         return true;
     }
     virtual bool SetPath(TrajectoryBaseConstPtr ptraj)
     {
         if( !_pcontroller->SetPath(ptraj) )
             return false;
-        _sync();
+        if(_bAutoSync)
+            _sync();
         return true;
     }
 
     virtual bool SimulationStep(dReal fTimeElapsed) {
+        if( !_pcontroller )
+            return false;
         bool bret = _pcontroller->SimulationStep(fTimeElapsed);
-        _sync();
+        if(_bAutoSync)
+            _sync();
         return bret;
     }
     virtual bool IsDone() { return _pcontroller->IsDone(); }
@@ -220,6 +225,7 @@ class RedirectController : public ControllerBase
             return false;
         _probot = GetEnv()->GetRobot(r->_probot->GetName());
         _pcontroller = r->_pcontroller; // hmm......... this requires some thought
+        return true;
     }
 
     virtual bool SendCommand(std::ostream& os, std::istream& is)
@@ -235,6 +241,14 @@ class RedirectController : public ControllerBase
             _sync();
             return true;
         }
+        else if( cmd == "autosync" ) {
+            is >> _bAutoSync;
+            if( !is )
+                return false;
+            if( _bAutoSync )
+                _sync();
+            return true;
+        }
 
         is.seekg(pos);
         return _pcontroller->SendCommand(os,is);
@@ -243,11 +257,12 @@ class RedirectController : public ControllerBase
 private:
     virtual void _sync()
     {
-        vector<dReal> values;
-        _pcontroller->GetRobot()->GetJointValues(values);
-        _probot->SetJointValues(values);
+        vector<Transform> vtrans;
+        _pcontroller->GetRobot()->GetBodyTransformations(vtrans);
+        _probot->SetBodyTransformations(vtrans);
     }
 
+    bool _bAutoSync;
     RobotBasePtr _probot;           ///< controlled body
     ControllerBasePtr _pcontroller;
 };

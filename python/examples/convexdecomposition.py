@@ -27,7 +27,10 @@ class ConvexDecompositionModel(OpenRAVEModel):
         OpenRAVEModel.__init__(self,robot=robot)
         self.linkgeometry = None
         self.convexparams = None
-
+    def clone(self,envother):
+        clone = OpenRAVEModel.clone(self,envother)
+        #TODO need to set convex decomposition?
+        return clone
     def has(self):
         return self.linkgeometry is not None and len(self.linkgeometry)==len(self.robot.GetLinks())
     def getversion(self):

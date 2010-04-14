@@ -73,7 +73,9 @@ class ReachabilityModel(OpenRAVEModel):
         self.quatdelta = None
         self.kdtree6d = None
         self.kdtree3d = None
-
+    def clone(self,envother):
+        clone = OpenRAVEModel.clone(self,envother)
+        return clone
     def has(self):
         return len(self.reachabilitydensity3d) > 0 and len(self.reachability3d) > 0
     def getversion(self):

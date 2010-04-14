@@ -32,7 +32,14 @@ class VisibilityModel(OpenRAVEModel):
         self.visibilitytransforms = None
         self.rmodel = self.gmodel = self.ikmodel = None
         self.preprocess()
-
+    def clone(self,envother):
+        clone = OpenRAVEModel.clone(self,envother)
+        clone.rmodel = self.rmodel.clone(envother) if not self.rmodel is None else None
+        clone.gmodel = self.gmodel.clone(envother) if not self.gmodel is None else None
+        clone.ikmodel = self.ikmodel.clone(envother) if not self.ikmodel is None else None
+        clone.visualprob = self.visualprob.clone(envother)
+        clone.preprocess()
+        return clone
     def has(self):
         return len(self.visibilitytransforms) > 0
     def getversion(self):
