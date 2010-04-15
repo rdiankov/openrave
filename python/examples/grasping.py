@@ -401,6 +401,7 @@ class GraspingModel(OpenRAVEModel):
         with self.robot:
             validgrasps = []
             validindices = []
+            self.robot.SetActiveManipulator(self.manip)
             report = CollisionReport()
             for i in range(startindex,len(self.grasps)):
                 grasp = self.grasps[i]

@@ -88,7 +88,6 @@ class HanoiPuzzle:
             p = Tpeg[0:3,3:4] + height * Tpeg[0:3,1:2]
             R = dot(Tpeg[0:3,0:3], array(((cos(ang),0,sin(ang)),(0,1,0),(-sin(ang),0,cos(ang)))))
             T = dot(r_[c_[R,p], [[0,0,0,1]]], Tdiff)
-
             with self.env:
                 # check the IK of the destination
                 if self.robot.GetActiveManipulator().FindIKSolution(T,True) is None:
@@ -107,7 +106,6 @@ class HanoiPuzzle:
                 if self.robot.GetActiveManipulator().FindIKSolution(Tnewhand2,True) is None:
                     print('Tnewhand2 invalid')
                     continue
-
             try:
                 self.basemanip.MoveToHandPosition(matrices=[Tnewhand])
                 print 'move to position above source peg'
@@ -123,8 +121,7 @@ class HanoiPuzzle:
                 return True
             except planning_error, e:
                 print e
-        print('failed to put block')
-        return False
+        raise planning_error('failed to put block')
 
     def GetGrasp(self, Tdisk, radius, angles):
         """ returns the transform of the grasp given its orientation and the location/size of the disk"""
@@ -145,8 +142,11 @@ class HanoiPuzzle:
             for ang1 in arange(-0.8,0,0.2):
                 Tgrasps = self.GetGrasp(Tdisk, disk.radius, [ang1,ang2]) # get the grasp transform given the two angles
                 for Tgrasp in Tgrasps: # for each of the grasps
-                    if self.basemanip.MoveToHandPosition(matrices=[Tgrasp]) is not None: # move the hand to that location
+                    try:
+                        self.basemanip.MoveToHandPosition(matrices=[Tgrasp])
+                        print 'moving hand to location'
                         self.waitrobot()
+
                         # succeeded so grab the disk
                         self.basemanip.CloseFingers()
                         self.waitrobot()
@@ -154,13 +154,17 @@ class HanoiPuzzle:
                             self.robot.Grab(disk)
 
                         # try to pub the disk in the destination peg
-                        success = self.putblock(disk, srcpeg, destpeg, height)
+                        self.putblock(disk, srcpeg, destpeg, height)
                         self.waitrobot() # wait for robot to complete all trajectories
                         with self.env:
                             self.robot.ReleaseAllGrabbed()
                         openhandfn()
-                        if success:
-                            return True
+                        return True
+                    except planning_error,e:
+                        print e
+                        with self.env:
+                            self.robot.ReleaseAllGrabbed()
+                        openhandfn()
         return False
 
     def hanoisolve(self, n, pegfrom, pegto, pegby):

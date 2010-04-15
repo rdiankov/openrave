@@ -276,6 +276,7 @@ class TaskManipulation : public ProblemInstance
         int iGraspTransform = -1; // if >= 0, use the grasp transform to check for collisions
 
         string cmd;
+        CollisionReportPtr report(new COLLISIONREPORT);
     
         while(!sinput.eof()) {
             sinput >> cmd;
@@ -502,8 +503,8 @@ class TaskManipulation : public ProblemInstance
                 else
                     tGoalEndEffector = ptarget->GetTransform() * Transform(tm);
 
-                if( pmanip->CheckEndEffectorCollision(tGoalEndEffector) ) {
-                    RAVELOG_DEBUGA("grasp %d: in collision\n", igrasp);
+                if( pmanip->CheckEndEffectorCollision(tGoalEndEffector,report) ) {
+                    RAVELOG_DEBUGA(str(boost::format("grasp %d: in collision (%s)\n")%igrasp%report->__str__()));
                     continue;
                 }
             }
@@ -533,12 +534,12 @@ class TaskManipulation : public ProblemInstance
                 graspparams->bavoidcontact = true;
 
                 if( !_pGrasperPlanner->InitPlan(_robot,graspparams) ) {
-                    RAVELOG_DEBUGA("grasp planner failed: %d\n", igrasp);
+                    RAVELOG_DEBUGA("grasper planner failed: %d\n", igrasp);
                     continue; // failed
                 }
 
                 if( !_pGrasperPlanner->PlanPath(phandtraj) ) {
-                    RAVELOG_DEBUGA("grasp planner failed: %d\n", igrasp);
+                    RAVELOG_DEBUGA("grasper planner failed: %d\n", igrasp);
                     continue; // failed
                 }
 
