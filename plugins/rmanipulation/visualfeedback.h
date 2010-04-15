@@ -354,10 +354,10 @@ public:
             if( _sphereperms.PermuteContinue() >= 0 )
                 return true;
 
-            // start from the beginning, if nothing, throw
-            _sphereperms.PermuteStart(_visibilitytransforms.size());
-            if( _sphereperms.PermuteContinue() >= 0 )
-                return true;
+//            // start from the beginning, if nothing, throw
+//            _sphereperms.PermuteStart(_visibilitytransforms.size());
+//            if( _sphereperms.PermuteContinue() >= 0 )
+//                return true;
 
             return false;
         }

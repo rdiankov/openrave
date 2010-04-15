@@ -1223,7 +1223,7 @@ public:
 
         object GetFreeParameters() const {
             if( _pmanip->GetNumFreeParameters() == 0 )
-                return object();
+                return numeric::array(boost::python::list());
             vector<dReal> values;
             _pmanip->GetFreeParameters(values);
             return toPyArray(values);
@@ -1509,7 +1509,7 @@ public:
     object GetActiveDOFValues() const
     {
         if( _probot->GetActiveDOF() == 0 )
-            return object();
+            return numeric::array(boost::python::list());
         vector<dReal> values;
         _probot->GetActiveDOFValues(values);
         return toPyArray(values);
@@ -1522,7 +1522,7 @@ public:
     object GetActiveDOFVelocities() const
     {
         if( _probot->GetActiveDOF() == 0 )
-            return object();
+            return numeric::array(boost::python::list());
         vector<dReal> values;
         _probot->GetActiveDOFVelocities(values);
         return toPyArray(values);
@@ -1531,7 +1531,7 @@ public:
     object GetActiveDOFLimits() const
     {
         if( _probot->GetActiveDOF() == 0 )
-            return object();
+            return numeric::array(boost::python::list());
         vector<dReal> lower, upper;
         _probot->GetActiveDOFLimits(lower,upper);
         return boost::python::make_tuple(toPyArray(lower),toPyArray(upper));
@@ -1727,7 +1727,7 @@ public:
     object SetPhysicsOptions(const string& s) {
         stringstream sinput(s), sout;
         if( !_pPhysicsEngine->SetPhysicsOptions(sout,sinput) )
-            return object();
+            throw openrave_exception("failed to set physics options");
         return object(sout.str());
     }
     bool InitEnvironment() { return _pPhysicsEngine->InitEnvironment(); }
@@ -1760,21 +1760,19 @@ public:
         CHECK_POINTER(pbody);
         Vector linearvel, angularvel;
         vector<dReal> vjointvel;
-        if( !_pPhysicsEngine->GetBodyVelocity(pbody->GetBody(),linearvel,angularvel,vjointvel) ) {
-            return boost::python::make_tuple(object(),object(),object());
-        }
-
+        if( !_pPhysicsEngine->GetBodyVelocity(pbody->GetBody(),linearvel,angularvel,vjointvel) )
+            throw openrave_exception("Failed to get body velocity");
         return boost::python::make_tuple(toPyVector3(linearvel),toPyVector3(angularvel),toPyArray(vjointvel));
     }
 
     object GetBodyVelocityLinks(PyKinBodyPtr pbody, Vector* pLinearVelocities, Vector* pAngularVelocities)
     {
         CHECK_POINTER(pbody);
-        if( pbody->GetBody()->GetDOF() == 0 )
-            return boost::python::make_tuple(object(),object());
-        vector<Vector> linearvel(pbody->GetBody()->GetDOF()),angularvel(pbody->GetBody()->GetDOF());
+        if( pbody->GetBody()->GetLinks().size() == 0 )
+            return boost::python::make_tuple(numeric::array(boost::python::list()),numeric::array(boost::python::list()));
+        vector<Vector> linearvel(pbody->GetBody()->GetLinks().size()),angularvel(pbody->GetBody()->GetLinks().size());
         if( !_pPhysicsEngine->GetBodyVelocity(pbody->GetBody(),linearvel,angularvel) )
-            return boost::python::make_tuple(object(),object());
+            throw openrave_exception("physics engine failed");
 
         npy_intp dims[] = {pbody->GetBody()->GetDOF(),3};
         PyObject *pylinear = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
@@ -1799,7 +1797,7 @@ public:
         CHECK_POINTER(pjoint);
         vector<dReal> vel;
         if( !_pPhysicsEngine->GetJointVelocity(pjoint->GetJoint(),vel) )
-            return object();
+            throw openrave_exception("physics engine failed");
         return toPyArray(vel);
     }
 
@@ -2734,7 +2732,7 @@ public:
         SensorBase::CameraIntrinsics KK(vKK[0],vKK[1],vKK[2],vKK[3]);
         vector<uint8_t> memory;
         if( !_penv->GetCameraImage(memory, width,height,RaveTransform<float>(ExtractTransform(extrinsic)), KK) )
-            return object();
+            throw openrave_exception("failed to get camera image");
         std::vector<npy_intp> dims(3); dims[0] = height; dims[1] = width; dims[2] = 3;
         return toPyArray(memory,dims);
     }

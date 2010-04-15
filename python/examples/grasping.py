@@ -78,6 +78,7 @@ class GraspingModel(OpenRAVEModel):
         clone = OpenRAVEModel.clone(self,envother)
         clone.basemanip = self.basemanip.clone(envother)
         clone.grasper = self.grasper.clone(envother)
+        clone.target = clone.env.GetKinBody(self.target.GetName())
         return clone
     def has(self):
         return len(self.grasps) > 0 and len(self.graspindices) > 0 and self.grasper is not None

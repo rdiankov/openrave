@@ -257,9 +257,11 @@ class RedirectController : public ControllerBase
 private:
     virtual void _sync()
     {
-        vector<Transform> vtrans;
-        _pcontroller->GetRobot()->GetBodyTransformations(vtrans);
-        _probot->SetBodyTransformations(vtrans);
+        if( !!_pcontroller ) {
+            vector<Transform> vtrans;
+            _pcontroller->GetRobot()->GetBodyTransformations(vtrans);
+            _probot->SetBodyTransformations(vtrans);
+        }
     }
 
     bool _bAutoSync;

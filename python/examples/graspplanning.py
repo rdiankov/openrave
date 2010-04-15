@@ -105,7 +105,7 @@ class GraspPlanning(metaclass.AutoReloader):
                     graspables.append([gmodel,dests])
         return graspables
     @staticmethod
-    def setRandomDestinations(targets, table,transdelta=0.1,Trolls=None,randomize=False):
+    def setRandomDestinations(targets, table,transdelta=0.1,Trolls=None,randomize=False,preserverotation=True):
         with table.GetEnv():
             print 'searching for destinations on %s...'%table.GetName()
             Ttable = table.GetTransform()
@@ -134,8 +134,9 @@ class GraspPlanning(metaclass.AutoReloader):
             try:
                 alldests = []
                 for target in targets:
-                    Torg = target.GetTransform()
-                    Torg[0:3,3] = 0 # remove translation
+                    Torg = eye(4)
+                    if preserverotation:
+                        Torg[0:3,0:3] = target.GetTransform()[0:3,0:3]
                     with KinBodyStateSaver(target):
                         target.Enable(True)
                         dests = []
@@ -164,7 +165,7 @@ class GraspPlanning(metaclass.AutoReloader):
         """grasps an object and places it in one of the destinations. If no destination is specified, will just grasp it"""
         env = self.envreal#.CloneSelf(CloningOptions.Bodies)
         robot = self.robot
-        manip = self.robot.GetActiveManipulator()
+        robot.SetActiveManipulator(gmodel.manip)
         istartgrasp = 0
         approachoffset = 0.02
         target = gmodel.target

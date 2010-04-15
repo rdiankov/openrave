@@ -52,7 +52,6 @@ class HanoiPuzzle:
         """busy wait for robot completion"""
         while not self.robot.GetController().IsDone():
             time.sleep(0.01)
-
     def MoveToPosition(self, values,indices):
         """uses a planner to safely move the hand to the preshape and returns the trajectory"""
         # move the robot out of the way so it can complete a preshape
@@ -109,22 +108,21 @@ class HanoiPuzzle:
                     print('Tnewhand2 invalid')
                     continue
 
-            if self.basemanip.MoveToHandPosition(matrices=[Tnewhand]) is None:
-                print('failed to move to position above source peg')
-                continue
-            self.waitrobot() # wait for robot to complete all trajectories
+            try:
+                self.basemanip.MoveToHandPosition(matrices=[Tnewhand])
+                print 'move to position above source peg'
+                self.waitrobot() # wait for robot to complete all trajectories
 
-            if self.basemanip.MoveToHandPosition(matrices=[Tnewhand2]) is None:
-                print('failed to move to position above dest peg')
-                continue
-            self.waitrobot() # wait for robot to complete all trajectories
+                self.basemanip.MoveToHandPosition(matrices=[Tnewhand2])
+                print 'move to position above dest peg'
+                self.waitrobot() # wait for robot to complete all trajectories
 
-            if self.basemanip.MoveToHandPosition(matrices=[T]) is None:
-                print('failed to move to dest peg')
-                continue
-            self.waitrobot() # wait for robot to complete all trajectories
-            return True
-
+                self.basemanip.MoveToHandPosition(matrices=[T])
+                print 'move to dest peg'
+                self.waitrobot() # wait for robot to complete all trajectories
+                return True
+            except planning_error, e:
+                print e
         print('failed to put block')
         return False
 
@@ -148,6 +146,7 @@ class HanoiPuzzle:
                 Tgrasps = self.GetGrasp(Tdisk, disk.radius, [ang1,ang2]) # get the grasp transform given the two angles
                 for Tgrasp in Tgrasps: # for each of the grasps
                     if self.basemanip.MoveToHandPosition(matrices=[Tgrasp]) is not None: # move the hand to that location
+                        self.waitrobot()
                         # succeeded so grab the disk
                         self.basemanip.CloseFingers()
                         self.waitrobot()
