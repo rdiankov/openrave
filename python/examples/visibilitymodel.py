@@ -174,11 +174,11 @@ class VisibilityModel(OpenRAVEModel):
 #             # gather all the rays that hit and form an image
 #             return reshape(array(hitindices,'float'),(height,width))
 
-    def getCameraImage(self):
+    def getCameraImage(self,delay=1.0):
         sensor=self.attachedsensor.GetSensor()
         sensor.SendCommand('power 1')
         try:
-            time.sleep(1)
+            time.sleep(delay)
             return sensor.GetSensorData().imagedata
         finally:
             sensor.SendCommand('power 0')

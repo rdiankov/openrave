@@ -22,11 +22,10 @@ from openravepy.examples import inversekinematics,inversereachability,graspplann
 from numpy import *
 import numpy
 from itertools import izip
-
-try:
-    import scipy # used for showing images
-except ImportError:
-    pass
+# try:
+#     import scipy # used for showing images
+# except ImportError:
+#     pass
 
 class GraspReachability(metaclass.AutoReloader):
     def __init__(self,robot,target=None,irmodels=None,irgmodels=None):
@@ -266,15 +265,17 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                     print 'moving hand'
                     expectedsteps = floor(approachoffset/stepsize)
                     self.basemanip.MoveHandStraight(direction=gmodel.getGlobalApproachDir(grasp),ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps-2,maxsteps=expectedsteps+1,searchall=True)
-                except:
-                    print 'failed to move straight, using planning to move rest of the way'
+                except planning_error,e:
+                    print 'failed to move straight: ',e,' Using planning to move rest of the way.'
                     usejacobian = False
 
             if not usejacobian:
                 try:
+                    print 'moving active joints'
                     self.basemanip.MoveActiveJoints(goal=finalarmsolution)
-                except:
-                    return self.graspObject(gmodel.target)
+                except planning_error,e:
+                    print e
+                    continue
             self.waitrobot()
             self.closefingers(target=gmodel.target)
             try:
@@ -353,19 +354,32 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
             self.basemanip.TrajFromData(trajdata)
             self.waitrobot()
 
-    def searchrealenv(self,target=None):
+    def searchrealenv(self,target=None,updateenv=False,waitfortarget=True):
         """sync with the real environment and find the target"""
         if self.envreal is None:
             return target,self.env
-        return target,self.env
-        #self.env = self.envreal.CloneSelf(CloningOptions.Bodies)
-#         clone = shallowcopy(self)
-#         clone.env = envother
-#         clone.envreal = self.env
-#         clone.robot = clone.env.GetRobot(self.robot.GetName())
-#         clone.grmodel = self.grmodel.clone(envother)
-#         clone.basemanip = self.basemanip.clone(envother)
-#         clone.taskmanip = self.taskmanip.clone(envother)
+        if updateenv:
+            print 'updating entire environment not supported yet'
+        
+        while True:
+            with self.envreal:
+                # find target of the same name/type
+                b = self.envreal.GetKinBody(target.GetName())
+                if b:
+                    target.SetBodyTransformations(b.GetBodyTransformations())
+                    return target,self.env
+                bodies = [b for b in self.envreal.GetBodies() if b.GetXMLFilename()==target.GetXMLFilename()]
+                if len(bodies) > 0:
+                    # find the closest
+                    dists = [sum((b.GetTransform()[0:3,3]-target.GetTransform()[0:3,3])**2) for b in bodies]
+                    index = argmin(dists)
+                    print 'distance to original: ',dists[index]
+                    target.SetBodyTransformations(bodies[index].GetBodyTransformations())
+                    return target, self.env
+            if not waitfortarget:
+                break
+            time.sleep(1)
+        raise planning_error('failed to recognize target')
 
     def graspAndPlaceObjectMobileSearch(self,targetdests):
         assert(len(targetdests)>0)
@@ -608,7 +622,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         self.waitrobot()
             
     def viewTarget(self,usevisibilitycamera,target):
-        print 'attempting visibility planning with ',usevisibilitycamera
+        print 'attempting visibility planning with ',usevisibilitycamera['sensorname']
         vmodel = visibilitymodel.VisibilityModel(robot=self.robot,target=target,sensorname=usevisibilitycamera['sensorname'])
         if not vmodel.load():
             raise planning_error('failed to load visibility model')
@@ -620,8 +634,9 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
             vmodel.visualprob.MoveToObserveTarget(target=vmodel.target,sampleprob=0.001,maxiter=4000)
             #s=vmodel.visualprob.SampleVisibilityGoal(target)
             self.waitrobot()
-            if usevisibilitycamera['dosync']:
-                raw_input('press any key to capture new environment')
+            if usevisibilitycamera.get('dosync',False):
+                if usevisibilitycamera.get('ask',False):
+                    raw_input('press any key to capture new environment')
                 time.sleep(1)
                 with self.env:
                     newtarget,newenv = self.searchrealenv(target)
@@ -632,7 +647,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                 break
         if newtarget is None:
             raise planning_error('cannot find target')
-        if usevisibilitycamera['storeimage']:
+        if usevisibilitycamera.get('storeimage',False):
             usevisibilitycamera['image']= vmodel.getCameraImage()
         print repr(self.robot.GetJointValues())
         print repr(self.robot.GetTransform())
