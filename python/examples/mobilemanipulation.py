@@ -312,7 +312,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                         self.robot.SetActiveDOFs(manip.GetArmJoints())
                         alltrajdata.append(self.basemanip.MoveActiveJoints(goal=goaljointvalues[manip.GetArmJoints()],execute=False,outputtraj=True))
                         self.robot.SetJointValues(goaljointvalues[manip.GetArmJoints()],manip.GetArmJoints())
-                except:
+                except planning_error:
                     alltrajdata = None
             if alltrajdata is None:
                 self.robot.SetJointValues(origjointvalues)
@@ -349,7 +349,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                     except planning_error:
                         alltrajdata = None
                 if alltrajdata is None:
-                    raise planning_error()
+                    raise planning_error('failed to find collision free position')
         for trajdata in alltrajdata:
             self.basemanip.TrajFromData(trajdata)
             self.waitrobot()
@@ -459,13 +459,13 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         if target is not None:
             with self.env:
                 self.robot.Grab(target)
-#             if self.envreal is not None: # try to grab with the real environment (only for visualization purposes!)
-#                 with self.envreal:
-#                     robotreal = self.envreal.GetRobot(self.robot.GetName())
-#                     targetreal = self.envreal.GetKinBodyHash(self.target.GetName())
-#                     if not robotreal is None and not targetreal is None:
-#                         robotreal.SetActiveManipulator(self.robot.GetActiveManipulator().GetName())
-#                         robotreal.Grab(targetreal)
+            if self.envreal is not None: # try to grab with the real environment
+                with self.envreal:
+                    robotreal = self.envreal.GetRobot(self.robot.GetName())
+                    targetreal = self.envreal.GetKinBody(target.GetName())
+                    if not robotreal is None and not targetreal is None:
+                        robotreal.SetActiveManipulator(self.robot.GetActiveManipulator().GetName())
+                        robotreal.Grab(targetreal)
     def releasefingers(self,manip=None):
         """open fingers and release body"""
         with self.env:
@@ -475,11 +475,11 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
             grabbed = [g.grabbedbody for g in self.robot.GetGrabbed() if self.robot.GetActiveManipulator().IsGrabbing(g.grabbedbody)]
             self.basemanip.ReleaseFingers(target=grabbed[0] if len(grabbed)>0 else None)
         self.waitrobot()
-#         if self.envreal is not None:
-#             with self.envreal:
-#                 robotreal = self.envreal.GetRobot(self.robot.GetName())
-#                 if robotreal is not None:
-#                     robotreal.ReleaseAllGrabbed()
+        if self.envreal is not None:
+            with self.envreal:
+                robotreal = self.envreal.GetRobot(self.robot.GetName())
+                if robotreal is not None:
+                    robotreal.ReleaseAllGrabbed()
 
     def graspObjectMobile(self,pose,values,grasp,graspindex,usevisibilitycamera=None):
         approachoffset = 0.02

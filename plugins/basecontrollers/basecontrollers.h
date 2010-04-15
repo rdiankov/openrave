@@ -207,7 +207,7 @@ class RedirectController : public ControllerBase
             _sync();
         return bret;
     }
-    virtual bool IsDone() { return _pcontroller->IsDone(); }
+    virtual bool IsDone() { return _bAutoSync ? _bSyncDone&&_pcontroller->IsDone() : _pcontroller->IsDone(); }
 
     virtual dReal GetTime() const { return _pcontroller->GetTime(); }
     virtual void GetVelocity(std::vector<dReal>& vel) const { return _pcontroller->GetVelocity(vel); }
@@ -261,10 +261,11 @@ private:
             vector<Transform> vtrans;
             _pcontroller->GetRobot()->GetBodyTransformations(vtrans);
             _probot->SetBodyTransformations(vtrans);
+            _bSyncDone = _pcontroller->IsDone();
         }
     }
 
-    bool _bAutoSync;
+    bool _bAutoSync, _bSyncDone;
     RobotBasePtr _probot;           ///< controlled body
     ControllerBasePtr _pcontroller;
 };
