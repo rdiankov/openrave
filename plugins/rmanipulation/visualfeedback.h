@@ -89,7 +89,8 @@ inline bool IsOBBinConvexHull(const OBB& o, const vector<Vector>& vplanes)
 
 /// samples rays from the projected OBB and returns true if the test function returns true
 /// for all the rays. Otherwise, returns false
-bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::function<bool(const Vector&)>& testfn)
+/// allowableoutliers - specifies the % of allowable outliying rays
+bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::function<bool(const Vector&)>& testfn,dReal allowableocclusion=0)
 {
     dReal fscalefactor = 0.95f; // have to make box smaller or else rays might miss
     Vector vpoints[8] = {obb.pos + fscalefactor*(obb.right*obb.extents.x + obb.up*obb.extents.y + obb.dir*obb.extents.z),
@@ -130,6 +131,20 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
         faceindices[2][0] = 0; faceindices[2][1] = 2; faceindices[2][2] = 4; faceindices[2][3] = 6;
     }
 
+    int nallowableoutliers=0;
+    if( allowableocclusion > 0 ) {
+        // have to compute the area of all the faces!
+        dReal farea=0;
+        for(int i = 0; i < 3; ++i) {
+            Vector v0 = vpoints[faceindices[i][0]];
+            Vector v1 = vpoints[faceindices[i][1]]-v0;
+            Vector v2 = vpoints[faceindices[i][2]]-v0;
+            Vector v;v.Cross(v1,v2);
+            farea += v.lengthsqr3();
+        }
+        nallowableoutliers = (int)(allowableocclusion*farea*0.5/(delta*delta));
+    }
+
     for(int i = 0; i < 3; ++i) {
         Vector v0 = vpoints[faceindices[i][0]];
         Vector v1 = vpoints[faceindices[i][1]]-v0;
@@ -151,8 +166,10 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
             int numsteps = (int)(ftotalen/delta);
             Vector vdelta = (vcur2-vcur1)*(1.0f/numsteps), vcur = vcur1;
             for(int k = 0; k <= numsteps; ++k, vcur += vdelta) {
-                if( !testfn(vcur) )
-                    return false;
+                if( !testfn(vcur) ) {
+                    if( nallowableoutliers-- <= 0 )
+                        return false;
+                }
             }
         }
         
@@ -175,8 +192,10 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
             int numsteps = (int)(ftotalen/delta);
             Vector vdelta = (vcur2-vcur1)*(1.0f/numsteps), vcur = vcur1;
             for(int k = 0; k <= numsteps; ++k, vcur += vdelta) {
-                if( !testfn(vcur) )
-                    return false;
+                if( !testfn(vcur) ) {
+                    if( nallowableoutliers-- <= 0 )
+                        return false;
+                }
             }
         }
     }
@@ -201,6 +220,8 @@ public:
             FOREACHC(itlink, _ptarget->GetLinks())
                 _vTargetOBBs.push_back(OBBFromAABB((*itlink)->GetCollisionData().ComputeAABB(),(*itlink)->GetTransform()));
             _abTarget = _ptarget->ComputeAABB();
+            _fAllowableOcclusion = 0.1;
+            _fRayMinDist = 0.05f;
 
             // create the dummy box
             {
@@ -291,7 +312,7 @@ public:
             bool bOcclusion = false;
             FOREACH(itobb,_vTargetOBBs) {
                 OBB cameraobb = TransformOBB(*itobb,tcamerainv);
-                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::TestRay, this, _1, boost::ref(tcamera))) ) {
+                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::TestRay, this, _1, boost::ref(tcamera)),_fAllowableOcclusion) ) {
                     bOcclusion = true;
                     RAVELOG_VERBOSEA("box is occluded\n");
                     break;
@@ -332,6 +353,7 @@ public:
         CollisionReportPtr _report;
         AABB _abTarget; // target aabb
         vector<Vector> _vconvexplanes3d;
+        dReal _fRayMinDist, _fAllowableOcclusion;
     };
 
     class GoalSampleFunction
@@ -384,6 +406,7 @@ public:
     {
         __description = "Planning with Visibility Constraints - Rosen Diankov";
         _nManipIndex = -1;
+        _fMaxVelMult=1;
         _fSampleRayDensity = 0.001;
         RegisterCommand("SetCamera",boost::bind(&VisualFeedbackProblem::SetCamera,this,_1,_2),
                         "Sets the camera index from the robot and its convex hull");
@@ -408,11 +431,24 @@ public:
         ProblemInstance::Destroy();
     }
 
-    int main(const string& cmd)
+    int main(const string& args)
     {
-        stringstream ss(cmd);
+        stringstream ss(args);
         string robotname;
+        _fMaxVelMult=1;
         ss >> robotname;
+        string cmd;
+        while(!ss.eof()) {
+            ss >> cmd;
+            if( !ss )
+                break;
+            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+            if( cmd == "maxvelmult" )
+                ss >> _fMaxVelMult;
+
+            if( ss.fail() || !ss )
+                break;
+        }
         _robot = GetEnv()->GetRobot(robotname);
         return 0;
     }
@@ -969,7 +1005,7 @@ public:
         if( !bSuccess )
             return false;
 
-        CM::SetActiveTrajectory(_robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream);
+        CM::SetActiveTrajectory(_robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         return true;
     }
 
@@ -1079,7 +1115,7 @@ public:
         if( !bSuccess )
             return false;
 
-        CM::SetActiveTrajectory(_robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream);
+        CM::SetActiveTrajectory(_robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         return true;
     }
 
@@ -1090,6 +1126,7 @@ public:
     
 protected:
     RobotBasePtr _robot;
+    dReal _fMaxVelMult;
     RobotBase::AttachedSensorPtr _psensor;
     RobotBase::ManipulatorPtr _pmanip;
     int _nManipIndex;

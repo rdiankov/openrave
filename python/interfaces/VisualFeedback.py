@@ -20,11 +20,13 @@ from openravepy import *
 from copy import copy as shallowcopy
 
 class VisualFeedback:
-    def __init__(self,robot):
+    def __init__(self,robot,maxvelmult=None):
         env = robot.GetEnv()
         self.prob = env.CreateProblem('VisualFeedback')
         self.robot = robot
         self.args = self.robot.GetName()
+        if maxvelmult is not None:
+            self.args += ' maxvelmult %f '%maxvelmult
         if env.LoadProblem(self.prob,self.args) != 0:
             raise ValueError('problem failed to initialize')
     def  __del__(self):

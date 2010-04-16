@@ -57,6 +57,7 @@ public:
         RegisterCommand("SmoothTrajectory",boost::bind(&BaseManipulation::SmoothTrajectory,this,_1,_2),
                         "Smooths a trajectory of points and returns the new trajectory such that\n"
                         "it is guaranteed to contain no co-linear points in configuration space\n");
+        _fMaxVelMult=1;
     }
 
     virtual ~BaseManipulation() {}
@@ -77,6 +78,7 @@ public:
         stringstream ss(args);
         ss >> _strRobotName;
 
+        _fMaxVelMult=1;
         string cmd;
         while(!ss.eof()) {
             ss >> cmd;
@@ -85,6 +87,8 @@ public:
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
             if( cmd == "planner" )
                 ss >> _strRRTPlannerName;
+            else if( cmd == "maxvelmult" )
+                ss >> _fMaxVelMult;
 
             if( ss.fail() || !ss )
                 break;
@@ -428,7 +432,7 @@ protected:
                 return false;
             }
             RAVELOG_DEBUGA("hand moved %f\n", (float)i*stepsize);
-            CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream);
+            CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
             return i >= minsteps;
         }
 
@@ -535,7 +539,7 @@ protected:
         if( !bSuccess )
             return false;
     
-        CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream);
+        CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         sout << "1";
         return true;
     }
@@ -625,7 +629,7 @@ protected:
         }
 
         RAVELOG_DEBUGA("finished planning\n");
-        CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream);
+        CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
 
         return true;
     }
@@ -859,7 +863,7 @@ protected:
         if( !bSuccess )
             return false;
 
-        CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream);
+        CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         sout << "1";
         return true;
     }
@@ -925,7 +929,7 @@ protected:
 
         BOOST_ASSERT(ptraj->GetPoints().size() > 0);
 
-        bool bExecuted = CM::SetActiveTrajectory(robot, ptraj, bExecute, strsavetraj, pOutputTrajStream);
+        bool bExecuted = CM::SetActiveTrajectory(robot, ptraj, bExecute, strsavetraj, pOutputTrajStream,_fMaxVelMult);
         sout << (int)bExecuted << " ";
 
         sout << (timeGetTime()-starttime)/1000.0f << " ";
@@ -1031,7 +1035,7 @@ protected:
             ptraj->AddPoint(p);
         }
 
-        CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream);
+        CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         return true;
     }
 
@@ -1146,7 +1150,7 @@ protected:
         if( !!ptarget )
             robot->Release(ptarget);
 
-        CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream);
+        CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
 
         return true;
     }
@@ -1270,7 +1274,7 @@ protected:
             }
         }
 
-        CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream);
+        CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         return true;
     }
 
@@ -1515,7 +1519,7 @@ protected:
         }
 
         if( bExecute ) {
-            pnewtraj->CalcTrajTiming(robot,pnewtraj->GetInterpMethod(),true,false);
+            pnewtraj->CalcTrajTiming(robot,pnewtraj->GetInterpMethod(),true,false,_fMaxVelMult);
             robot->SetMotion(pnewtraj);
         }
 
@@ -1859,6 +1863,7 @@ protected:
     RobotBasePtr robot;
     string _strRRTPlannerName;
     string _strRobotName; ///< name of the active robot
+    dReal _fMaxVelMult;
 };
 
 #endif

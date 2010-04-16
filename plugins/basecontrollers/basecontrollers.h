@@ -33,11 +33,11 @@ class IdealController : public ControllerBase
             flog.close();
 
         if( !!_probot ) {
-            string filename = GetEnv()->GetHomeDirectory() + string("/traj_") + _probot->GetName();
+            string filename = GetEnv()->GetHomeDirectory() + string("/") + _probot->GetName() + string(".traj");
             flog.open(filename.c_str());
             if( !flog )
-                RAVELOG_WARNA("failed to open %s\n", filename.c_str());
-            flog << "IdealController " << filename << endl << endl;
+                RAVELOG_WARN(str(boost::format("failed to open %s\n")%filename));
+            flog << GetXMLId() << " " << _probot->GetName() << endl << endl;
         }
         _bPause = false;
         return true;

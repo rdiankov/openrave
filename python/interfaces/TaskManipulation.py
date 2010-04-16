@@ -17,13 +17,15 @@ from numpy import *
 from copy import copy as shallowcopy
 
 class TaskManipulation:
-    def __init__(self,robot,plannername=None):
+    def __init__(self,robot,plannername=None,maxvelmult=None):
         env = robot.GetEnv()
         self.prob = env.CreateProblem('TaskManipulation')
         self.robot = robot
         self.args = self.robot.GetName()
         if plannername is not None:
             self.args += ' planner ' + plannername
+        if maxvelmult is not None:
+            self.args += ' maxvelmult %f '%maxvelmult
         if env.LoadProblem(self.prob,self.args) != 0:
             raise ValueError('problem failed to initialize')
     def  __del__(self):

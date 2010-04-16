@@ -367,12 +367,12 @@ class CM
         boost::numeric::ublas::matrix<T> _J, _Jt, _invJJt, _invJ, _error, _qdelta;
     };
 
-    static bool SetActiveTrajectory(RobotBasePtr robot, TrajectoryBasePtr pActiveTraj, bool bExecute, const string& strsavetraj, boost::shared_ptr<ostream> pout)
+    static bool SetActiveTrajectory(RobotBasePtr robot, TrajectoryBasePtr pActiveTraj, bool bExecute, const string& strsavetraj, boost::shared_ptr<ostream> pout,dReal fMaxVelMult=1)
     {
         if( pActiveTraj->GetPoints().size() == 0 )
             return false;
 
-        pActiveTraj->CalcTrajTiming(robot, pActiveTraj->GetInterpMethod(), true, true);
+        pActiveTraj->CalcTrajTiming(robot, pActiveTraj->GetInterpMethod(), true, true,fMaxVelMult);
 
         bool bExecuted = false;
         if( bExecute ) {

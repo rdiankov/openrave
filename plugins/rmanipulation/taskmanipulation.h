@@ -72,6 +72,7 @@ class TaskManipulation : public ProblemInstance
         RegisterCommand("evaluateconstraints",boost::bind(&TaskManipulation::EvaluateConstraints,this,_1,_2),
                         "Instantiates a jacobian constraint function and runs it on several examples.\n"
                         "The constraints work on the active degress of freedom of the manipulator starting from the current configuration");
+        _fMaxVelMult=1;
     }
     virtual ~TaskManipulation()
     {
@@ -102,6 +103,7 @@ class TaskManipulation : public ProblemInstance
     {
         string name;
         stringstream ss(args);
+        _fMaxVelMult=1;
 
         ss >> _strRobotName;
     
@@ -115,6 +117,8 @@ class TaskManipulation : public ProblemInstance
 
             if( cmd == "planner" )
                 ss >> plannername;
+            else if( cmd == "maxvelmult" )
+                ss >> _fMaxVelMult;
 
             if( ss.fail() || !ss )
                 break;
@@ -698,7 +702,7 @@ class TaskManipulation : public ProblemInstance
                 _robot->GetJointValues(tpopenhand.q);
                 tpopenhand.trans = _robot->GetTransform();
                 ptrajToPreshapeFull->AddPoint(tpopenhand);
-                ptrajToPreshapeFull->CalcTrajTiming(_robot, ptrajToPreshape->GetInterpMethod(), true, false);
+                ptrajToPreshapeFull->CalcTrajTiming(_robot, ptrajToPreshape->GetInterpMethod(), true, false,_fMaxVelMult);
 
                 mapPreshapeTrajectories[vgoalpreshape] = ptrajToPreshapeFull;
             }
@@ -771,7 +775,7 @@ class TaskManipulation : public ProblemInstance
             FOREACHC(itpoint, ptraj->GetPoints())
                 ptrajfinal->AddPoint(*itpoint);
             
-            ptrajfinal->CalcTrajTiming(_robot, ptrajfinal->GetInterpMethod(), true, false);
+            ptrajfinal->CalcTrajTiming(_robot, ptrajfinal->GetInterpMethod(), true, false,_fMaxVelMult);
 
             RAVELOG_DEBUG("grasp index %d\n",goalFound.index);
             sout << goalFound.listDests.size() << " ";
@@ -1040,7 +1044,7 @@ protected:
             }
         
             if( _pRRTPlanner->PlanPath(ptraj, boost::shared_ptr<ostream>(&ss,null_deleter())) ) {
-                ptraj->CalcTrajTiming(_robot, ptraj->GetInterpMethod(), true, true);
+                ptraj->CalcTrajTiming(_robot, ptraj->GetInterpMethod(), true, true,_fMaxVelMult);
                 ss >> nGoalIndex; // extract the goal index
                 BOOST_ASSERT( nGoalIndex >= 0 && nGoalIndex < (int)params->vgoalconfig.size()/(int)activejoints.size() );
                 bSuccess = true;
@@ -1139,6 +1143,7 @@ protected:
 
     string _strRobotName; ///< name of the active robot
     RobotBasePtr _robot;
+    dReal _fMaxVelMult;
     list<SensorSystemBasePtr > listsystems;
     PlannerBasePtr _pRRTPlanner, _pGrasperPlanner;
 };

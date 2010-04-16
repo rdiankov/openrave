@@ -49,7 +49,12 @@ class GraspReachability(metaclass.AutoReloader):
         clone = shallowcopy(self)
         clone.env = envother
         clone.robot = clone.env.GetRobot(self.robot.GetName())
-        clone.irgmodels = [[irmodel.clone(envother),gmodel.clone(envother)] for irmodel,gmodel in self.irgmodels]
+        clone.irgmodels = []
+        for irmodel,gmodel in self.irgmodels:
+            try:
+                clone.irgmodels.append([irmodel.clone(envother),gmodel.clone(envother)])
+            except openrave_exception,e:
+                print e
         return clone
     def computeGraspDistribution(self,randomgrasps=False,**kwargs):
         """computes distribution of all grasps"""
@@ -185,14 +190,14 @@ class GraspReachability(metaclass.AutoReloader):
                     continue
 
 class MobileManipulationPlanning(metaclass.AutoReloader):
-    def __init__(self,robot,grmodel=None,switchpatterns=None):
+    def __init__(self,robot,grmodel=None,switchpatterns=None,maxvelmult=None):
         self.env=robot.GetEnv()
         self.envreal = None
         self.robot = robot
         self.grmodel = grmodel
         self.switchpatterns = switchpatterns
-        self.basemanip = BaseManipulation(self.robot)
-        self.taskmanip = TaskManipulation(self.robot)
+        self.basemanip = BaseManipulation(self.robot,maxvelmult=maxvelmult)
+        self.taskmanip = TaskManipulation(self.robot,maxvelmult=maxvelmult)
         self.updir = array((0,0,1))
     def clone(self,envother):
         clone = shallowcopy(self)
@@ -222,14 +227,23 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                             graspables.append(gmodel)
         return graspables
     def graspObject(self,allgmodels,usevisibilitycamera=None):
-        target = allgmodels[0].target
-        gmodels = [gmodel for gmodel in allgmodels if gmodel.target==target]
-        print 'graspplanning grasp and place object',target.GetName()
         if usevisibilitycamera:
             # filter gmodel to be the same as the camera
-            newtarget,viewmanip = self.viewTarget(usevisibilitycamera,target)
-            gmodels = [gmodel for gmodel in gmodels if gmodel.manip.GetEndEffector()==viewmanip.GetEndEffector()]
-
+            gmodels = None
+            target = None
+            for testgmodel in allgmodels:
+                try:
+                    target,viewmanip = self.viewTarget(usevisibilitycamera,testgmodel.target)
+                    gmodels = [gmodel for gmodel in allgmodels if gmodel.target==testgmodel.target and gmodel.manip.GetEndEffector()==viewmanip.GetEndEffector()]
+                    break
+                except planning_error:
+                    pass
+        else:
+            target = allgmodels[0].target
+            gmodels = [gmodel for gmodel in allgmodels if gmodel.target==target]
+        if target is None:
+            raise planning_error('no graspable target')
+        print 'graspplanning grasp and place object',target.GetName()
         for gmodel in gmodels:
             try:
                 self.robot.SetActiveManipulator(gmodel.manip)
@@ -622,7 +636,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         self.waitrobot()
             
     def viewTarget(self,usevisibilitycamera,target):
-        print 'attempting visibility planning with ',usevisibilitycamera['sensorname']
+        print 'attempting visibility to ',target.GetName(),' planning with ',usevisibilitycamera['sensorname']
         vmodel = visibilitymodel.VisibilityModel(robot=self.robot,target=target,sensorname=usevisibilitycamera['sensorname'])
         if not vmodel.load():
             raise planning_error('failed to load visibility model')
