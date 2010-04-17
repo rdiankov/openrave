@@ -59,13 +59,13 @@ class GraspingModel(OpenRAVEModel):
                 for geom,isdraw in self.hiddengeoms:
                     geom.SetDraw(isdraw)
 
-    def __init__(self,robot,target):
+    def __init__(self,robot,target,maxvelmult=None):
         OpenRAVEModel.__init__(self,robot=robot)
         self.target = target
         self.grasps = []
         self.graspindices = dict()
         self.grasper = None
-        self.basemanip = BaseManipulation(self.robot)
+        self.basemanip = BaseManipulation(self.robot,maxvelmult=maxvelmult)
         self.preprocess()
         # only the indices used by the TaskManipulation plugin should start with an 'i'
         graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':len(self.manip.GetGripperJoints()),'igrasptrans':12,'forceclosure':1,'grasptrans_nocol':12}

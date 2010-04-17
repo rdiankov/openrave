@@ -52,7 +52,7 @@ class BaseManipulation:
             cmd += 'jacobian %f '%jacobian
         if searchall is not None:
             cmd += 'searchall %d '%searchall
-        if outputtraj is not None:
+        if outputtraj is not None and outputtraj:
             cmd += 'outputtraj '
         if ignorefirstcollision is not None:
             cmd += 'ignorefirstcollision %d '%ignorefirstcollision
@@ -65,7 +65,7 @@ class BaseManipulation:
         cmd = 'MoveManipulator goal ' + ' '.join(str(f) for f in goal) + ' '
         if execute is not None:
             cmd += 'execute %d '%execute
-        if outputtraj is not None:
+        if outputtraj is not None and outputtraj:
             cmd += 'outputtraj '
         if maxiter is not None:
             cmd += 'maxiter %d '%maxiter
@@ -80,7 +80,7 @@ class BaseManipulation:
             cmd += 'steplength %f '%steplength
         if execute is not None:
             cmd += 'execute %d '%execute
-        if outputtraj is not None:
+        if outputtraj is not None and outputtraj:
             cmd += 'outputtraj '
         if maxiter is not None:
             cmd += 'maxiter %d '%maxiter
@@ -106,7 +106,7 @@ class BaseManipulation:
             cmd += 'constrainterrorthresh %s '%constrainterrorthresh
         if execute is not None:
             cmd += 'execute %d '%execute
-        if outputtraj is not None:
+        if outputtraj is not None and outputtraj:
             cmd += 'outputtraj '
         res = self.prob.SendCommand(cmd)
         if res is None:
@@ -119,7 +119,7 @@ class BaseManipulation:
             cmd += 'planner %s '%planner
         if execute is not None:
             cmd += 'execute %d '%execute
-        if outputtraj is not None:
+        if outputtraj is not None and outputtraj:
             cmd += 'outputtraj '
         res = self.prob.SendCommand(cmd)
         if res is None:
@@ -136,7 +136,7 @@ class BaseManipulation:
             cmd += 'movingdir %s '%(' '.join(str(f) for f in movingdir))
         if execute is not None:
             cmd += 'execute %d '%execute
-        if outputtraj is not None:
+        if outputtraj is not None and outputtraj:
             cmd += 'outputtraj '
         if outputfinal:
             cmd += 'outputfinal'
@@ -149,7 +149,7 @@ class BaseManipulation:
             resvalues=resvalues[dof:]
         else:
             final=None
-        if outputtraj:
+        if outputtraj is not None and outputtraj:
             traj = ' '.join(resvalues)
         else:
             traj = None
@@ -164,7 +164,7 @@ class BaseManipulation:
             cmd += 'movingdir %s '%(' '.join(str(f) for f in movingdir))
         if execute is not None:
             cmd += 'execute %d '%execute
-        if outputtraj is not None:
+        if outputtraj is not None and outputtraj:
             cmd += 'outputtraj '
         if outputfinal:
             cmd += 'outputfinal'
@@ -177,7 +177,7 @@ class BaseManipulation:
             resvalues=resvalues[len(final):]
         else:
             final=None
-        if outputtraj:
+        if outputtraj is not None and outputtraj:
             traj = ' '.join(resvalues)
         else:
             traj = None
@@ -189,7 +189,7 @@ class BaseManipulation:
             cmd += 'movingdir %s '%(' '.join(str(f) for f in movingdir))
         if execute is not None:
             cmd += 'execute %d '%execute
-        if outputtraj is not None:
+        if outputtraj is not None and outputtraj:
             cmd += 'outputtraj '
         if outputfinal:
             cmd += 'outputfinal'
@@ -202,7 +202,7 @@ class BaseManipulation:
             resvalues=resvalues[len(final):]
         else:
             final=None
-        if outputtraj:
+        if outputtraj is not None and outputtraj:
             traj = ' '.join(resvalues)
         else:
             traj = None

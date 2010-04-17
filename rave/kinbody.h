@@ -484,9 +484,9 @@ public:
     /// returns the passive joints, order does not matter
     const std::vector<JointPtr>& GetPassiveJoints() const { return _vecPassiveJoints; }
 
-    /// Gets all the rigidly attached links to plink.
+    /// Gets all the rigidly attached links to plink, also adds the link to the list.
     /// \param linkindex the index to check for attached links. If < 0, then will return all links attached to the environment
-    /// \param vattachedlinks the array to insert the links in (not cleared)
+    /// \param vattachedlinks the array to insert all links attached to linkindex with the link itself.
     virtual void GetRigidlyAttachedLinks(int linkindex, std::vector<LinkPtr>& vattachedlinks) const;
 
     /// Returns the joints in hierarchical order starting at the base link such that the first joints affect the later ones.

@@ -70,7 +70,7 @@ class TaskManipulation:
             cmd += 'randomdests %d '%randomdests
         if execute is not None:
             cmd += 'execute %d '%execute
-        if outputtraj is not None:
+        if outputtraj is not None and outputtraj:
             cmd += 'outputtraj '
         res = self.prob.SendCommand(cmd)
         if res is None:

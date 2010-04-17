@@ -210,6 +210,21 @@ class CollisionMapRobot : public RobotBase
                 if( i != itmap->joints.size() )
                     continue;
                 if( !itmap->vfreespace(indices) ) {
+                    // get all colliding links and check to make sure that at least two are enabled
+                    vector<LinkConstPtr> vLinkColliding;
+                    FOREACHC(itjoint,itmap->joints) {
+                        if( !!(*itjoint)->GetFirstAttached() && find(vLinkColliding.begin(),vLinkColliding.end(),(*itjoint)->GetFirstAttached())== vLinkColliding.end() )
+                            vLinkColliding.push_back(KinBody::LinkConstPtr((*itjoint)->GetFirstAttached()));
+                        if( !!(*itjoint)->GetSecondAttached() && find(vLinkColliding.begin(),vLinkColliding.end(),(*itjoint)->GetSecondAttached())== vLinkColliding.end() )
+                            vLinkColliding.push_back(KinBody::LinkConstPtr((*itjoint)->GetSecondAttached()));
+                    }
+                    int numenabled = 0;
+                    FOREACHC(itlink,vLinkColliding) {
+                        if( (*itlink)->IsEnabled() )
+                            numenabled++;
+                    }
+                    if( numenabled < 2 )
+                        continue;
                     if( !!report ) {
                         report->numCols = 1;
                         report->vLinkColliding.resize(0);

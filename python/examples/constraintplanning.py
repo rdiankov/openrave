@@ -46,7 +46,7 @@ class ConstraintPlanning(metaclass.AutoReloader):
         self.robot.GetController().SetDesired(jointvalues)
         self.robot.WaitForController(0)
         matrices = [self.gmodel.getGlobalGraspTransform(validgrasp,collisionfree=True)]
-        res = self.basemanip.MoveToHandPosition(matrices=matrices,maxiter=1000,maxtries=1,seedik=10)
+        self.basemanip.MoveToHandPosition(matrices=matrices,maxiter=1000,maxtries=1,seedik=10)
         self.robot.WaitForController(0)
         self.basemanip.CloseFingers()
         self.robot.WaitForController(0)
@@ -74,7 +74,10 @@ class ConstraintPlanning(metaclass.AutoReloader):
                         T[0:3,3] += (random.rand(3)-0.5)*(1.0-array(constraintfreedoms[3:]))
                         if self.manip.FindIKSolution(T,True) is not None:
                             break
-                res = self.basemanip.MoveToHandPosition(matrices=[T],maxiter=10000,maxtries=1,seedik=8,constraintfreedoms=constraintfreedoms,constraintmatrix=constraintmatrix,constrainterrorthresh=constrainterrorthresh)
+                try:
+                    self.basemanip.MoveToHandPosition(matrices=[T],maxiter=10000,maxtries=1,seedik=8,constraintfreedoms=constraintfreedoms,constraintmatrix=constraintmatrix,constrainterrorthresh=constrainterrorthresh)
+                except planning_error,e:
+                    print e
                 self.robot.WaitForController(0)
 
 def run():

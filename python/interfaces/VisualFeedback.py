@@ -121,7 +121,7 @@ class VisualFeedback:
             cmd += 'sampleprob %f '%sampleprob
         if execute is not None:
             cmd += 'execute %d '%execute
-        if outputtraj is not None:
+        if outputtraj is not None and outputtraj:
             cmd += 'outputtraj '
         if maxiter is not None:
             cmd += 'maxiter %d '%maxiter
@@ -147,7 +147,7 @@ class VisualFeedback:
             cmd += 'numgradientsamples %d '%numgradientsamples
         if execute is not None:
             cmd += 'execute %d '%execute
-        if outputtraj is not None:
+        if outputtraj is not None and outputtraj:
             cmd += 'outputtraj '
         if maxiter is not None:
             cmd += 'maxiter %d '%maxiter

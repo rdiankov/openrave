@@ -431,8 +431,9 @@ protected:
                 RAVELOG_DEBUGA("hand failed to move out of collision\n");
                 return false;
             }
-            RAVELOG_DEBUGA("hand moved %f\n", (float)i*stepsize);
-            CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
+            RAVELOG_DEBUGA("hand can move %f\n", (float)i*stepsize);
+            if( i >= minsteps ) // only move if exceeded minsteps (otherwise user of this function would not have specified min steps)
+                CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
             return i >= minsteps;
         }
 

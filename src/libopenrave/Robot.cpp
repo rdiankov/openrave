@@ -279,7 +279,6 @@ void RobotBase::Manipulator::GetChildLinks(std::vector<LinkPtr>& vlinks) const
     RobotBasePtr probot(_probot);
     // get all child links of the manipualtor
     vlinks.resize(0);
-    vlinks.push_back(_pEndEffector);
     probot->GetRigidlyAttachedLinks(_pEndEffector->GetIndex(),vlinks);
     int iattlink = _pEndEffector->GetIndex();
     FOREACHC(itlink, probot->GetLinks()) {
@@ -348,8 +347,6 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
 
     // get all child links of the manipualtor
     int iattlink = _pEndEffector->GetIndex();
-    if( probot->CheckLinkCollision(iattlink,tdelta*_pEndEffector->GetTransform(),report) )
-        return true;
     vector<LinkPtr> vattachedlinks;
     probot->GetRigidlyAttachedLinks(_pEndEffector->GetIndex(),vattachedlinks);
     FOREACHC(itlink,vattachedlinks) {

@@ -495,28 +495,6 @@ class TaskManipulation : public ProblemInstance
             _robot->SetActiveDOFs(pmanip->GetGripperJoints(), RobotBase::DOF_NoTransform);
             _robot->SetActiveDOFValues(vgoalpreshape,true);
         
-            if( iGraspTransform >= 0 ) {
-                // use the grasp transform
-                dReal* pm = pgrasp+iGraspTransform;
-                TransformMatrix tm;
-                tm.m[0] = pm[0]; tm.m[1] = pm[3]; tm.m[2] = pm[6]; tm.trans.x = pm[9];
-                tm.m[4] = pm[1]; tm.m[5] = pm[4]; tm.m[6] = pm[7]; tm.trans.y = pm[10];
-                tm.m[8] = pm[2]; tm.m[9] = pm[5]; tm.m[10] = pm[8]; tm.trans.z = pm[11];
-                if( !ptarget )
-                    tGoalEndEffector = tm;
-                else
-                    tGoalEndEffector = ptarget->GetTransform() * Transform(tm);
-
-                if( pmanip->CheckEndEffectorCollision(tGoalEndEffector,report) ) {
-                    RAVELOG_DEBUGA(str(boost::format("grasp %d: in collision (%s)\n")%igrasp%report->__str__()));
-                    continue;
-                }
-            }
-            else if( !_pGrasperPlanner ) {
-                RAVELOG_ERRORA("grasper problem not valid\n");
-                return false;
-            }
-
             if( !!_pGrasperPlanner ) {
                 // set the preshape
                 _robot->SetActiveDOFs(pmanip->GetGripperJoints(), RobotBase::DOF_X|RobotBase::DOF_Y|RobotBase::DOF_Z);
@@ -536,6 +514,7 @@ class TaskManipulation : public ProblemInstance
                 graspparams->bonlycontacttarget = true;
                 graspparams->btightgrasp = false;
                 graspparams->bavoidcontact = true;
+                graspparams->ffinestep = 0.2; // aren't computing contact points, so don't need such precision
 
                 if( !_pGrasperPlanner->InitPlan(_robot,graspparams) ) {
                     RAVELOG_DEBUGA("grasper planner failed: %d\n", igrasp);
@@ -570,8 +549,29 @@ class TaskManipulation : public ProblemInstance
                 vFinalGripperValues.resize(pmanip->GetGripperJoints().size());
                 std::copy(phandtraj->GetPoints().back().q.begin(),phandtraj->GetPoints().back().q.begin()+vFinalGripperValues.size(),vFinalGripperValues.begin());
             }
-            else
+            else if( iGraspTransform >= 0 ) {
+                // use the grasp transform
+                dReal* pm = pgrasp+iGraspTransform;
+                TransformMatrix tm;
+                tm.m[0] = pm[0]; tm.m[1] = pm[3]; tm.m[2] = pm[6]; tm.trans.x = pm[9];
+                tm.m[4] = pm[1]; tm.m[5] = pm[4]; tm.m[6] = pm[7]; tm.trans.y = pm[10];
+                tm.m[8] = pm[2]; tm.m[9] = pm[5]; tm.m[10] = pm[8]; tm.trans.z = pm[11];
+                if( !ptarget )
+                    tGoalEndEffector = tm;
+                else
+                    tGoalEndEffector = ptarget->GetTransform() * Transform(tm);
+
+                if( pmanip->CheckEndEffectorCollision(tGoalEndEffector,report) ) {
+                    RAVELOG_DEBUGA(str(boost::format("grasp %d: in collision (%s)\n")%igrasp%report->__str__()));
+                    continue;
+                }
+
                 vFinalGripperValues.resize(0);
+            }
+            else {
+                RAVELOG_ERRORA("grasper problem not valid\n");
+                return false;
+            }
 
             // set the initial hand joints
             _robot->SetActiveDOFs(pmanip->GetGripperJoints());

@@ -384,6 +384,8 @@ public:
         return object(sout.str());
     }
 
+    virtual string __repr__() { return boost::str(boost::format("<env.CreateInterface(PluginType.%s,'%s')>")%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId()); }
+    virtual string __str__() { return boost::str(boost::format("<%s:%s>")%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId()); }
     virtual bool __eq__(PyInterfaceBasePtr p) { return _pbase == p->GetInterfaceBase(); }
     virtual bool __ne__(PyInterfaceBasePtr p) { return _pbase != p->GetInterfaceBase(); }
     virtual InterfaceBasePtr GetInterfaceBase() { return _pbase; }
@@ -525,6 +527,8 @@ public:
             return geoms;
         }
 
+        string __repr__() { return boost::str(boost::format("<env.GetKinBody('%s').GetLink('%s')>")%_plink->GetParent()->GetName()%_plink->GetName()); }
+        string __str__() { return boost::str(boost::format("<link:%s (%d), parent=%s>")%_plink->GetName()%_plink->GetIndex()%_plink->GetParent()->GetName()); }
         bool __eq__(boost::shared_ptr<PyLink> p) { return _plink == p->_plink; }
         bool __ne__(boost::shared_ptr<PyLink> p) { return _plink != p->_plink; }
     };
@@ -608,6 +612,9 @@ public:
             vector<dReal> vtorques = ExtractArray<dReal>(otorques);
             return _pjoint->AddTorque(vtorques);
         }
+        
+        string __repr__() { return boost::str(boost::format("<env.GetKinBody('%s').GetJoint('%s')>")%_pjoint->GetParent()->GetName()%_pjoint->GetName()); }
+        string __str__() { return boost::str(boost::format("<joint:%s (%d), dof=%d, parent=%s>")%_pjoint->GetName()%_pjoint->GetJointIndex()%_pjoint->GetDOFIndex()%_pjoint->GetParent()->GetName()); }
         bool __eq__(boost::shared_ptr<PyJoint> p) { return _pjoint==p->_pjoint; }
         bool __ne__(boost::shared_ptr<PyJoint> p) { return _pjoint!=p->_pjoint; }
     };
@@ -914,6 +921,8 @@ public:
     string GetKinematicsGeometryHash() const { return _pbody->GetKinematicsGeometryHash(); }
     PyVoidHandle CreateKinBodyStateSaver() { return PyVoidHandle(boost::shared_ptr<void>(new KinBody::KinBodyStateSaver(_pbody))); }
 
+    virtual string __repr__() { return boost::str(boost::format("<env.GetKinBody('%s')>")%_pbody->GetName()); }
+    virtual string __str__() { return boost::str(boost::format("<%s:%s - %s (%s)>")%RaveGetInterfaceName(_pbody->GetInterfaceType())%_pbody->GetXMLId()%_pbody->GetName()%_pbody->GetKinematicsGeometryHash()); }
     virtual void __enter__();
     virtual void __exit__(object type, object value, object traceback);
 };
@@ -1343,11 +1352,13 @@ public:
         {
             return _pmanip->CheckIndependentCollision(!pReport ? CollisionReportPtr() : pReport->report);
         }
+        string __repr__() { return boost::str(boost::format("<env.GetRobot('%s').GetManipulator('%s')>")%_pmanip->GetRobot()->GetName()%_pmanip->GetName()); }
+        string __str__() { return boost::str(boost::format("<manipulator:%s, parent=%s>")%_pmanip->GetName()%_pmanip->GetRobot()->GetName()); }
         bool __eq__(boost::shared_ptr<PyManipulator> p) { return _pmanip==p->_pmanip; }
         bool __ne__(boost::shared_ptr<PyManipulator> p) { return _pmanip!=p->_pmanip; }
     };
     typedef boost::shared_ptr<PyManipulator> PyManipulatorPtr;
-    PyManipulatorPtr GetManipulator(RobotBase::ManipulatorPtr pmanip) {
+    PyManipulatorPtr _GetManipulator(RobotBase::ManipulatorPtr pmanip) {
         return !pmanip ? PyManipulatorPtr() : PyManipulatorPtr(new PyManipulator(pmanip,_pyenv));
     }
 
@@ -1367,6 +1378,8 @@ public:
         string GetName() const { return _pattached->GetName(); }
 
         void SetRelativeTransform(object transform) { _pattached->SetRelativeTransform(ExtractTransform(transform)); }
+        string __repr__() { return boost::str(boost::format("<env.GetRobot('%s').GetSensor('%s')>")%_pattached->GetRobot()->GetName()%_pattached->GetName()); }
+        string __str__() { return boost::str(boost::format("<attachedsensor:%s, parent=%s>")%_pattached->GetName()%_pattached->GetRobot()->GetName()); }
         bool __eq__(boost::shared_ptr<PyAttachedSensor> p) { return _pattached==p->_pattached; }
         bool __ne__(boost::shared_ptr<PyAttachedSensor> p) { return _pattached!=p->_pattached; }
     };
@@ -1399,7 +1412,7 @@ public:
     {
         boost::python::list manips;
         FOREACH(it, _probot->GetManipulators())
-            manips.append(GetManipulator(*it));
+            manips.append(_GetManipulator(*it));
         return manips;
     }
 
@@ -1408,15 +1421,23 @@ public:
         boost::python::list manips;
         FOREACH(it, _probot->GetManipulators()) {
             if( (*it)->GetName() == manipname )
-                manips.append(GetManipulator(*it));
+                manips.append(_GetManipulator(*it));
         }
         return manips;
+    }
+    PyManipulatorPtr GetManipulator(const string& manipname)
+    {
+        FOREACH(it, _probot->GetManipulators()) {
+            if( (*it)->GetName() == manipname )
+                return _GetManipulator(*it);
+        }
+        return PyManipulatorPtr();
     }
 
     PyManipulatorPtr SetActiveManipulator(int index) { _probot->SetActiveManipulator(index); return GetActiveManipulator(); }
     PyManipulatorPtr SetActiveManipulator(const std::string& manipname) { _probot->SetActiveManipulator(manipname); return GetActiveManipulator(); }
     PyManipulatorPtr SetActiveManipulator(PyManipulatorPtr pmanip) { _probot->SetActiveManipulator(pmanip->GetName()); return GetActiveManipulator(); }
-    PyManipulatorPtr GetActiveManipulator() { return GetManipulator(_probot->GetActiveManipulator()); }
+    PyManipulatorPtr GetActiveManipulator() { return _GetManipulator(_probot->GetActiveManipulator()); }
     int GetActiveManipulatorIndex() const { return _probot->GetActiveManipulatorIndex(); }
 
     object GetSensors()
@@ -1425,6 +1446,14 @@ public:
         FOREACH(itsensor, _probot->GetSensors())
             sensors.append(boost::shared_ptr<PyAttachedSensor>(new PyAttachedSensor(*itsensor,_pyenv)));
         return sensors;
+    }
+    boost::shared_ptr<PyAttachedSensor> GetSensor(const string& sensorname)
+    {
+        FOREACH(itsensor, _probot->GetSensors()) {
+            if( (*itsensor)->GetName() == sensorname )
+                return boost::shared_ptr<PyAttachedSensor>(new PyAttachedSensor(*itsensor,_pyenv));
+        }
+        return boost::shared_ptr<PyAttachedSensor>();
     }
     
     PyControllerBasePtr GetController() const { return !_probot->GetController() ? PyControllerBasePtr() : PyControllerBasePtr(new PyControllerBase(_probot->GetController(),_pyenv)); }
@@ -1654,6 +1683,8 @@ public:
     string GetRobotStructureHash() const { return _probot->GetRobotStructureHash(); }
     PyVoidHandle CreateRobotStateSaver() { return PyVoidHandle(boost::shared_ptr<void>(new RobotBase::RobotStateSaver(_probot))); }
 
+    virtual string __repr__() { return boost::str(boost::format("<env.GetRobot('%s')>")%_probot->GetName()); }
+    virtual string __str__() { return boost::str(boost::format("<%s:%s - %s (%s)>")%RaveGetInterfaceName(_probot->GetInterfaceType())%_probot->GetXMLId()%_probot->GetName()%_probot->GetRobotStructureHash()); }
     virtual void __enter__();
 };
 
@@ -3137,6 +3168,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
         .def("SetUserData",&PyInterfaceBase::SetUserData,args("data"))
         .def("GetUserData",&PyInterfaceBase::GetUserData)
         .def("SendCommand",&PyInterfaceBase::SendCommand,args("cmd"))
+        .def("__repr__", &PyInterfaceBase::__repr__)
+        .def("__str__", &PyInterfaceBase::__str__)
         .def("__eq__",&PyInterfaceBase::__eq__)
         .def("__ne__",&PyInterfaceBase::__ne__)
         ;
@@ -3226,6 +3259,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
                 .def("SetForce",&PyKinBody::PyLink::SetForce,args("force","pos","add"))
                 .def("SetTorque",&PyKinBody::PyLink::SetTorque,args("torque","add"))
                 .def("GetGeometries",&PyKinBody::PyLink::GetGeometries)
+                .def("__repr__", &PyKinBody::PyLink::__repr__)
+                .def("__str__", &PyKinBody::PyLink::__str__)
                 .def("__eq__",&PyKinBody::PyLink::__eq__)
                 .def("__ne__",&PyKinBody::PyLink::__ne__)
                 ;
@@ -3295,6 +3330,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
                 .def("SetResolution",&PyKinBody::PyJoint::SetResolution,args("resolution"))
                 .def("SetWeights",&PyKinBody::PyJoint::SetWeights,args("weights"))
                 .def("AddTorque",&PyKinBody::PyJoint::AddTorque,args("torques"))
+                .def("__repr__", &PyKinBody::PyJoint::__repr__)
+                .def("__str__", &PyKinBody::PyJoint::__str__)
                 .def("__eq__",&PyKinBody::PyJoint::__eq__)
                 .def("__ne__",&PyKinBody::PyJoint::__ne__)
                 ;
@@ -3375,12 +3412,14 @@ BOOST_PYTHON_MODULE(openravepy_int)
         scope robot = class_<PyRobotBase, boost::shared_ptr<PyRobotBase>, bases<PyKinBody, PyInterfaceBase> >("Robot", no_init)
             .def("GetManipulators",GetManipulators1)
             .def("GetManipulators",GetManipulators2,args("manipname"))
+            .def("GetManipulator",&PyRobotBase::GetManipulator,args("manipname"))
             .def("SetActiveManipulator",setactivemanipulator1,args("manipindex"))
             .def("SetActiveManipulator",setactivemanipulator2,args("manipname"))
             .def("SetActiveManipulator",setactivemanipulator3,args("manip"))
             .def("GetActiveManipulator",&PyRobotBase::GetActiveManipulator)
             .def("GetActiveManipulatorIndex",&PyRobotBase::GetActiveManipulatorIndex)
             .def("GetSensors",&PyRobotBase::GetSensors)
+            .def("GetSensor",&PyRobotBase::GetSensor,args("sensorname"))
             .def("GetController",&PyRobotBase::GetController)
             .def("SetController",&PyRobotBase::SetController,SetController_overloads(args("controller","args")))
             .def("SetActiveDOFs",psetactivedofs1,args("jointindices"))
@@ -3444,6 +3483,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("WaitForController",&PyRobotBase::WaitForController,args("timeout"))
             .def("GetRobotStructureHash",&PyRobotBase::GetRobotStructureHash)
             .def("CreateRobotStateSaver",&PyRobotBase::CreateRobotStateSaver)
+            .def("__repr__", &PyRobotBase::__repr__)
+            .def("__str__", &PyRobotBase::__str__)
             ;
         
         object (PyRobotBase::PyManipulator::*pmanipik)(object, bool) const = &PyRobotBase::PyManipulator::FindIKSolution;
@@ -3487,6 +3528,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("CheckEndEffectorCollision",pCheckEndEffectorCollision2,args("transform","report"))
             .def("CheckIndependentCollision",pCheckIndependentCollision1)
             .def("CheckIndependentCollision",pCheckIndependentCollision2,args("report"))
+            .def("__repr__",&PyRobotBase::PyManipulator::__repr__)
+            .def("__str__",&PyRobotBase::PyManipulator::__str__)
             .def("__eq__",&PyRobotBase::PyManipulator::__eq__)
             .def("__ne__",&PyRobotBase::PyManipulator::__ne__)
             ;
@@ -3499,6 +3542,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetRobot",&PyRobotBase::PyAttachedSensor::GetRobot)
             .def("GetName",&PyRobotBase::PyAttachedSensor::GetName)
             .def("SetRelativeTransform",&PyRobotBase::PyAttachedSensor::SetRelativeTransform,args("transform"))
+            .def("__str__",&PyRobotBase::PyAttachedSensor::__str__)
+            .def("__repr__",&PyRobotBase::PyAttachedSensor::__repr__)
             .def("__eq__",&PyRobotBase::PyAttachedSensor::__eq__)
             .def("__ne__",&PyRobotBase::PyAttachedSensor::__ne__)
             ;

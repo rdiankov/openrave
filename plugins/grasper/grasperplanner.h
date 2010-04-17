@@ -363,7 +363,7 @@ public:
                     int ct;
                     if(_robot->DoesAffect(_robot->GetActiveJointIndex(ifing),vlinks[q]->GetIndex())  && (ct = CheckCollision(vlinks[q])) != CT_None ) {
                         if( !coarse_pass && (ct & CT_AvoidLinkHit) ) {
-                            RAVELOG_VERBOSEA("hit link that needed to be avoided\n");
+                            RAVELOG_VERBOSEA(str(boost::format("hit link that needed to be avoided: %s\n")%_report->__str__()));
                             return false;
                         }
                         if(coarse_pass) {

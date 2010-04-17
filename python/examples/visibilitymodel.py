@@ -21,10 +21,10 @@ from openravepy.examples import grasping, inversekinematics, kinematicreachabili
 from openravepy.interfaces import VisualFeedback
 
 class VisibilityModel(OpenRAVEModel):
-    def __init__(self,robot,target,sensorname=None):
+    def __init__(self,robot,target,sensorname=None,maxvelmult=None):
         OpenRAVEModel.__init__(self,robot=robot)
         self.target = target
-        self.visualprob = VisualFeedback(robot)
+        self.visualprob = VisualFeedback(robot,maxvelmult=maxvelmult)
         self.convexhull = None
         self.sensorname = sensorname
         self.manip = robot.GetActiveManipulator()

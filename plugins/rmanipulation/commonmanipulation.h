@@ -177,8 +177,8 @@ class CM
                 
                 _robot->SetActiveDOFValues(vhandvalues);
                 
-                // don't check self collisions!!!!
-                if( _robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot)))
+                // don't check self collisions for multiple DOF since don't know how dof will actually get to the final config!!!!
+                if( vhandvalues.size() == 1 && _robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot)))
                     return 1000;
             }
 
