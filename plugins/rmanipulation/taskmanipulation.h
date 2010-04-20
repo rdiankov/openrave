@@ -796,7 +796,7 @@ class TaskManipulation : public ProblemInstance
         void Switch(bool bSwitchToFat)
         {
             if( _bFat != bSwitchToFat ) {
-                FOREACH(itlink,_pbody->GetLinks()) {
+                FOREACHC(itlink,_pbody->GetLinks()) {
                     KinBody::LinkPtr pswitchlink = _pbodyfat->GetLink((*itlink)->GetName());
                     list<KinBody::Link::GEOMPROPERTIES> listgeoms;
                     (*itlink)->SwapGeometries(listgeoms);
@@ -888,9 +888,10 @@ class TaskManipulation : public ProblemInstance
     {
         if( bSwitchToFat && bUpdateBodies ) {
             // update model list
-            string strcmd;
+            string strcmd,strname;
+#ifdef HAVE_BOOST_REGEX
             boost::regex re;
-            string strname;
+#endif
 
             vector<KinBodyPtr>::const_iterator itbody;
             list<SwitchModelContainerPtr>::iterator itmodel;
@@ -918,7 +919,7 @@ class TaskManipulation : public ProblemInstance
                     bMatches = boost::regex_match((*itbody)->GetName().c_str(), re);
 #else
                     RAVELOG_DEBUG(str(boost::format("boost regex not enabled, cannot parse %s\n")%itpattern->first));
-                    bMatches == (*itbody)->GetName() == itpattern->first;
+                    bMatches = (*itbody)->GetName() == itpattern->first;
 #endif
                     if( bMatches ) {
                         _listSwitchModels.push_back(SwitchModelContainerPtr(new SwitchModelContainer(*itbody,itpattern->second)));
