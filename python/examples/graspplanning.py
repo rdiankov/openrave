@@ -38,6 +38,8 @@ class GraspPlanning(metaclass.AutoReloader):
         with self.envreal:
             self.basemanip = BaseManipulation(self.robot)
             self.taskmanip = TaskManipulation(self.robot)
+            if switchpatterns is not None:
+                self.taskmanip.SwitchModels(switchpatterns=switchpatterns)
             self.updir = array((0,0,1))
 
             # find all the bodies to manipulate
@@ -176,7 +178,7 @@ class GraspPlanning(metaclass.AutoReloader):
             goals,graspindex,searchtime,trajdata = self.taskmanip.GraspPlanning(graspindices=gmodel.graspindices,grasps=gmodel.grasps[istartgrasp:],
                                                                                 target=target,approachoffset=approachoffset,destposes=dests,
                                                                                 seedgrasps = 3,seeddests=8,seedik=1,maxiter=1000,
-                                                                                randomgrasps=True,randomdests=True,switchpatterns=self.switchpatterns)
+                                                                                randomgrasps=True,randomdests=True)
             istartgrasp = graspindex+1
             Tlocalgrasp[0:3,0:4] = transpose(reshape(gmodel.grasps[graspindex][gmodel.graspindices ['igrasptrans']],(4,3)))
 

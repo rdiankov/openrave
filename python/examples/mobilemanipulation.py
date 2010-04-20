@@ -320,11 +320,9 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                         print 'failed to move straight: ',e,' Using planning to move rest of the way.'
                         usejacobian = False
             if not usejacobian:
-                try:
-                    with TaskManipulation.SwitchState(self.taskmanip):
-                        self.basemanip.MoveActiveJoints(goal=finalarmsolution)
-                except:
-                    return self.graspObject([gmodel])
+                with TaskManipulation.SwitchState(self.taskmanip):
+                    self.robot.SetActiveDOFs(armjoints)
+                    self.basemanip.MoveActiveJoints(goal=finalarmsolution)
             self.waitrobot()            
             self.closefingers(target=gmodel.target)
             try:
@@ -627,8 +625,13 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                 try:
                     with self.envreal:
                         robotreal = self.envreal.GetRobot(self.robot.GetName())
-                        targetreal = self.envreal.GetKinBody(target.GetName())
-                        if not robotreal is None and not targetreal is None:
+                        if not robotreal is None:
+#                             targetreal = self.envreal.GetKinBody(target.GetName())
+#                             if targetreal is None:
+                            # if nothing grabbed, create a dummy body
+                            targetreal = self.envreal.ReadKinBodyXMLFile(target.GetXMLFilename())
+                            self.envreal.AddKinBody(targetreal)
+                            targetreal.SetBodyTransformations(target.GetBodyTransformations())
                             robotreal.SetActiveManipulator(self.robot.GetActiveManipulator().GetName())
                             robotreal.Grab(targetreal)
                 except openrave_exception,e:
