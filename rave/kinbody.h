@@ -117,7 +117,7 @@ public:
             /// \return true if the normal is changed to face outside of the shape
             virtual bool ValidateContactNormal(const Vector& position, Vector& normal) const;
 
-        private:
+        protected:
             /// triangulates the geometry object and initializes collisionmesh. GeomTrimesh types must already be triangulated
             /// \param fTesselation to control how fine the triangles need to be
             /// 1.0f is the default value that 
@@ -152,6 +152,7 @@ public:
 #endif
 #endif
             friend class KinBody;
+            friend class KinBody::Link;
         };
 
         inline KinBodyPtr GetParent() const { return KinBodyPtr(_parent); }
@@ -185,6 +186,8 @@ public:
         //typedef std::list<GEOMPROPERTIES>::const_iterator GeomConstPtr;
         const std::list<GEOMPROPERTIES>& GetGeometries() const { return _listGeomProperties; }
         virtual GEOMPROPERTIES& GetGeometry(int index);
+        /// swaps the current geometries with the new geometries. This gives a user control for dynamically changing the object geometry. Note that the kinbody/robot hash could change.
+        void SwapGeometries(std::list<GEOMPROPERTIES>& listNewGeometries);
         
         /// validates the contact normal on link and makes sure the normal faces "outside" of the geometry shape it lies on. An exception can be thrown if position is not on a geometry surface
         /// \param position the position of the contact point specified in the link's coordinate system, assumes it is on a particular geometry

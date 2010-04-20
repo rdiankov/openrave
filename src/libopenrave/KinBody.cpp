@@ -586,6 +586,20 @@ KinBody::Link::GEOMPROPERTIES& KinBody::Link::GetGeometry(int index)
     return *it;
 }
 
+void KinBody::Link::SwapGeometries(std::list<KinBody::Link::GEOMPROPERTIES>& listNewGeometries)
+{
+    LinkWeakPtr pnewlink;
+    if( listNewGeometries.size() > 0 )
+        pnewlink=listNewGeometries.front()._parent;
+    _listGeomProperties.swap(listNewGeometries);
+    FOREACH(itgeom,_listGeomProperties)
+        itgeom->_parent = LinkWeakPtr(shared_from_this());
+    FOREACH(itgeom,listNewGeometries)
+        itgeom->_parent=pnewlink;
+    UpdateCollisionMesh();
+    GetParent()->ParametersChanged(Prop_LinkGeometry);
+}
+
 bool KinBody::Link::ValidateContactNormal(const Vector& position, Vector& normal) const
 {
     if( _listGeomProperties.size() == 1) {

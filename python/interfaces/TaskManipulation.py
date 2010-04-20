@@ -60,8 +60,8 @@ class TaskManipulation:
         if seedik is not None:
             cmd += 'seedik %d '%seedik
         if switchpatterns is not None:
-            for pattern in switchpatterns:
-                cmd += 'switch %s %s '%(pattern[0],pattern[1])
+            for pattern,filename in switchpatterns:
+                cmd += 'switch %s %s '%(pattern,filename)
         if maxiter is not None:
             cmd += 'maxiter %d '%maxiter
         if randomgrasps is not None:
@@ -105,3 +105,18 @@ class TaskManipulation:
         iters = array([int(s) for s in resvalues[0:len(configs)]])
         newconfigs = reshape(array([float(s) for s in resvalues[len(configs):]]),(len(configs),self.robot.GetActiveDOF()))
         return iters,newconfigs
+    def SwitchModels(self,switchpatterns=None,unregister=None,switch=None,clearpatterns=None,clearmodels=None):
+        cmd = 'switchmodels '
+        if switchpatterns is not None:
+            for pattern,filename in switchpatterns:
+                cmd += 'register %s %s '%(pattern,filename)
+        if unregister is not None:
+            for pattern in unregister:
+                cmd += 'unregister %s '%pattern
+        if switch is not None:
+            cmd += 'switch %d '%(switch)
+        if clearpatterns is not None and clearpatterns:
+            cmd += 'clearpatterns '
+        if clearmodels is not None and clearmodels:
+            cmd += 'clearmodels '
+        return self.prob.SendCommand(cmd)

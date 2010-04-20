@@ -615,3 +615,13 @@ def test_navigation():
     starttime = time.time()
     self.basemanip.MoveActiveJoints(goal=goal2d,maxiter=3000,steplength=0.05)
     print time.time()-starttime
+
+def test_fatmodels():
+    env=Environment()
+    env.SetViewer('qtcoin')
+    env.Load('scenes/r602kitchen3.env.xml')
+    robot=env.GetRobots()[0]
+    taskmanip=TaskManipulation(robot)
+    env.SetDebugLevel(DebugLevel.Verbose)
+    taskmanip.SwitchModels(switchpatterns=[('frootloops(+d)$','scenes/cereal_frootloops_fat.kinbody.xml')])
+    taskmanip.SwitchModels(switch=True)

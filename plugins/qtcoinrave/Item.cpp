@@ -440,7 +440,7 @@ void RobotItem::Load()
     FOREACHC(itmanip, _probot->GetManipulators()) {
         if( !!(*itmanip)->GetEndEffector() ) {
             _vEndEffectors[index]._index = index;
-            CreateAxis(_vEndEffectors[index],str(boost::format("EE%d")%index));
+            CreateAxis(_vEndEffectors[index],(*itmanip)->GetName());
         }
         ++index;
     }
@@ -450,7 +450,7 @@ void RobotItem::Load()
     FOREACHC(itsensor, _probot->GetSensors()) {
         if( !!(*itsensor)->GetAttachingLink() ) {
             _vAttachedSensors[index]._index = index;
-            CreateAxis(_vAttachedSensors[index],str(boost::format("AS%d")%index));
+            CreateAxis(_vAttachedSensors[index],(*itsensor)->GetName());
         }
         ++index;
     }

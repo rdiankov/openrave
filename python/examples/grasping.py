@@ -22,7 +22,7 @@ from numpy import *
 from optparse import OptionParser
 
 try:
-    from itertools import productasdf as iterproduct
+    from itertools import product as iterproduct
 except:
     # have to define it
     def iterproduct(*args, **kwds):
@@ -208,46 +208,44 @@ class GraspingModel(OpenRAVEModel):
             with self.GripperVisibility(self.manip):
                 if updateenv:
                     self.env.UpdatePublishedBodies()
-                for approachray,roll,preshape,standoff in iterproduct(approachrays,rolls,preshapes,standoffs):
-#                     if counter < 1000:
-#                         counter += 1
-#                         continue
-                    print 'grasp %d/%d'%(counter,totalgrasps),'preshape:',preshape
-                    counter += 1
-                    grasp = zeros(self.totaldof)
-                    grasp[self.graspindices.get('igrasppos')] = approachray[0:3]
-                    grasp[self.graspindices.get('igraspdir')] = -approachray[3:6]
-                    grasp[self.graspindices.get('igrasproll')] = roll
-                    grasp[self.graspindices.get('igraspstandoff')] = standoff
-                    grasp[self.graspindices.get('igrasppreshape')] = preshape
-                    try:
-                        contacts,finalconfig,mindist,volume = self.testGrasp(grasp=grasp,graspingnoise=graspingnoise,translate=True,forceclosure=True,forceclosurethreshold=forceclosurethreshold)
-                    except planning_error, e:
-                        print 'Grasp Failed: '
-                        traceback.print_exc(e)
-                        continue
-                    Tlocalgrasp = eye(4)
-                    with self.env:
-                        self.robot.SetTransform(finalconfig[1])
-                        Tgrasp = self.manip.GetEndEffectorTransform()
-                        Tlocalgrasp = dot(linalg.inv(self.target.GetTransform()),Tgrasp)
-                        # find a non-colliding transform
-                        self.setPreshape(grasp)
-                        dir = self.getGlobalApproachDir(grasp)
-                        Tgrasp_nocol = array(Tgrasp)
-                        while self.manip.CheckEndEffectorCollision(Tgrasp_nocol):
-                            Tgrasp_nocol[0:3,3] -= dir*0.001 # 1mm good enough?
-                        Tlocalgrasp_nocol = dot(linalg.inv(self.target.GetTransform()),Tgrasp_nocol)
-                        self.robot.SetJointValues(finalconfig[0])
-                        if updateenv:
-                            contactgraph = self.drawContacts(contacts) if len(contacts) > 0 else None
-                            self.env.UpdatePublishedBodies()
-                    grasp[self.graspindices.get('igrasptrans')] = reshape(transpose(Tlocalgrasp[0:3,0:4]),12)
-                    grasp[self.graspindices.get('grasptrans_nocol')] = reshape(transpose(Tlocalgrasp_nocol[0:3,0:4]),12)
-                    grasp[self.graspindices.get('forceclosure')] = mindist
-                    if mindist > forceclosurethreshold:
-                        print 'found good grasp',len(self.grasps),'config: ',array(finalconfig[0])[self.manip.GetGripperJoints()]
-                        self.grasps.append(grasp)
+                for approachray in approachrays:
+                    for roll,preshape,standoff in iterproduct(rolls,preshapes,standoffs):
+                        print 'grasp %d/%d'%(counter,totalgrasps),'preshape:',preshape
+                        counter += 1
+                        grasp = zeros(self.totaldof)
+                        grasp[self.graspindices.get('igrasppos')] = approachray[0:3]
+                        grasp[self.graspindices.get('igraspdir')] = -approachray[3:6]
+                        grasp[self.graspindices.get('igrasproll')] = roll
+                        grasp[self.graspindices.get('igraspstandoff')] = standoff
+                        grasp[self.graspindices.get('igrasppreshape')] = preshape
+                        try:
+                            contacts,finalconfig,mindist,volume = self.testGrasp(grasp=grasp,graspingnoise=graspingnoise,translate=True,forceclosure=True,forceclosurethreshold=forceclosurethreshold)
+                        except planning_error, e:
+                            print 'Grasp Failed: '
+                            traceback.print_exc(e)
+                            continue
+                        Tlocalgrasp = eye(4)
+                        with self.env:
+                            self.robot.SetTransform(finalconfig[1])
+                            Tgrasp = self.manip.GetEndEffectorTransform()
+                            Tlocalgrasp = dot(linalg.inv(self.target.GetTransform()),Tgrasp)
+                            # find a non-colliding transform
+                            self.setPreshape(grasp)
+                            dir = self.getGlobalApproachDir(grasp)
+                            Tgrasp_nocol = array(Tgrasp)
+                            while self.manip.CheckEndEffectorCollision(Tgrasp_nocol):
+                                Tgrasp_nocol[0:3,3] -= dir*0.001 # 1mm good enough?
+                            Tlocalgrasp_nocol = dot(linalg.inv(self.target.GetTransform()),Tgrasp_nocol)
+                            self.robot.SetJointValues(finalconfig[0])
+                            if updateenv:
+                                contactgraph = self.drawContacts(contacts) if len(contacts) > 0 else None
+                                self.env.UpdatePublishedBodies()
+                        grasp[self.graspindices.get('igrasptrans')] = reshape(transpose(Tlocalgrasp[0:3,0:4]),12)
+                        grasp[self.graspindices.get('grasptrans_nocol')] = reshape(transpose(Tlocalgrasp_nocol[0:3,0:4]),12)
+                        grasp[self.graspindices.get('forceclosure')] = mindist
+                        if mindist > forceclosurethreshold:
+                            print 'found good grasp',len(self.grasps),'config: ',array(finalconfig[0])[self.manip.GetGripperJoints()]
+                            self.grasps.append(grasp)
                 self.grasps = array(self.grasps)
         finally:
             for b,enable in bodies:

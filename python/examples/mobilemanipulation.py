@@ -28,18 +28,20 @@ from itertools import izip
 #     pass
 
 class GraspReachability(metaclass.AutoReloader):
-    def __init__(self,robot,target=None,irmodels=None,irgmodels=None):
+    def __init__(self,robot,target=None,irmodels=None,irgmodels=None,maxvelmult=None):
         self.robot = robot
         self.env = robot.GetEnv()
         self.irmodels=irmodels
+        self.maxvelmult=maxvelmult
         if irgmodels is None:
-            gmodel = grasping.GraspingModel(robot=robot,target=target)
-            if not gmodel.load():
-                gmodel.autogenerate()
-            irmodel = inversereachability.InverseReachabilityModel(robot=robot)
-            if not irmodel.load():
-                irmodel.autogenerate()
-            self.irgmodels = [[irmodel,gmodel]]
+            if target is not None:
+                gmodel = grasping.GraspingModel(robot=robot,target=target,maxvelmult=maxvelmult)
+                if not gmodel.load():
+                    gmodel.autogenerate()
+                irmodel = inversereachability.InverseReachabilityModel(robot=robot)
+                if not irmodel.load():
+                    irmodel.autogenerate()
+                self.irgmodels = [[irmodel,gmodel]]
         else:
             # check for consistency
             for irmodel,gmodel in irgmodels:
@@ -166,7 +168,7 @@ class GraspReachability(metaclass.AutoReloader):
         """random sample goals on the current environment"""
         with self.env:
             configsampler = self.sampleValidPlacementIterator(**kwargs)
-            basemanip = BaseManipulation(self.robot)
+            basemanip = BaseManipulation(self.robot,maxvelmult=self.maxvelmult)
             jointvalues = self.robot.GetJointValues()
         with RobotStateSaver(self.robot):
             while True:
@@ -188,31 +190,6 @@ class GraspReachability(metaclass.AutoReloader):
                 except planning_error, e:
                     traceback.print_exc(e)
                     continue
-
-class MobileManipulationPlanning(metaclass.AutoReloader):
-    def __init__(self,robot,grmodel=None,switchpatterns=None,maxvelmult=None):
-        self.env=robot.GetEnv()
-        self.envreal = None
-        self.robot = robot
-        self.grmodel = grmodel
-        self.switchpatterns = switchpatterns
-        self.maxvelmult=maxvelmult
-        self.basemanip = BaseManipulation(self.robot,maxvelmult=maxvelmult)
-        self.taskmanip = TaskManipulation(self.robot,maxvelmult=maxvelmult)
-        self.updir = array((0,0,1))
-    def clone(self,envother):
-        clone = shallowcopy(self)
-        clone.env = envother
-        clone.envreal = self.env
-        clone.robot = clone.env.GetRobot(self.robot.GetName())
-        clone.grmodel = self.grmodel.clone(envother)
-        clone.basemanip = self.basemanip.clone(envother)
-        clone.taskmanip = self.taskmanip.clone(envother)
-        return clone
-    def waitrobot(self):
-        """busy wait for robot completion"""
-        while not self.robot.GetController().IsDone():
-            time.sleep(0.01)
     def getGraspables(self,manip=None,loadik=True):
         print 'searching for graspable objects (robot=%s)...'%(self.robot.GetRobotStructureHash())
         graspables = []
@@ -230,6 +207,130 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                                 ikmodel.autogenerate()
                             graspables.append(gmodel)
         return graspables
+    def setGraspReachability():
+        targets = []
+        self.irgmodels = []
+        with self.env:
+            for gmodel in self.getGraspables():
+                for irmodel in self.irmodels:
+                    if irmodel.manip == gmodel.manip:
+                        self.irgmodels.append([irmodel,gmodel])
+                        if not gmodel.target in targets:
+                            targets.append(gmodel.target)
+        return targets
+
+class MobileManipulationPlanning(metaclass.AutoReloader):
+    def __init__(self,robot,grmodel=None,switchpatterns=None,maxvelmult=None):
+        self.env=robot.GetEnv()
+        self.envreal = None
+        self.robot = robot
+        self.grmodel = grmodel
+        self.maxvelmult=maxvelmult
+        self.basemanip = BaseManipulation(self.robot,maxvelmult=maxvelmult)
+        self.taskmanip = TaskManipulation(self.robot,maxvelmult=maxvelmult)
+        if self.switchpatterns is not None:
+            self.taskmanip.SwitchModels(switchpatterns=self.switchpatterns)
+        self.updir = array((0,0,1))
+    def clone(self,envother):
+        clone = shallowcopy(self)
+        clone.env = envother
+        clone.envreal = self.env
+        clone.robot = clone.env.GetRobot(self.robot.GetName())
+        clone.grmodel = self.grmodel.clone(envother) if self.grmodel is not None else None
+        clone.basemanip = self.basemanip.clone(envother)
+        clone.taskmanip = self.taskmanip.clone(envother)
+        return clone
+    def waitrobot(self):
+        """busy wait for robot completion"""
+        while not self.robot.GetController().IsDone():
+            time.sleep(0.01)
+    def graspObjectWithModels(self,allgmodels,usevisibilitycamera=None,neutraljointvalues=None):
+        viewmanip = None
+        if usevisibilitycamera:
+            # filter gmodel to be the same as the camera
+            gmodels = None
+            target = None
+            for testgmodel in allgmodels:
+                try:
+                    target,viewmanip = self.viewTarget(usevisibilitycamera,testgmodel.target)
+                    gmodels = [gmodel for gmodel in allgmodels if gmodel.target==target]
+                    order = argsort([gmodel.manip.GetEndEffector()!=viewmanip.GetEndEffector() for gmodel in gmodels])
+                    gmodels = [gmodels[i] for i in order]
+                    break
+                except (RuntimeError,planning_error):
+                    print 'failed to view ',testgmodel.target.GetName()
+        else:
+            gmodels = allgmodels
+
+        approachoffset = 0.02
+        stepsize = 0.001
+        graspiterators = [(gmodel,gmodel.validGraspIterator(checkik=True,randomgrasps=True,backupdist=approachoffset)) for gmodel in allgmodels]
+        while(len(graspiterators)>0):
+            index=random.randint(len(graspiterators))
+            try:
+                with self.env:
+                    grasp,graspindex=graspiterators[index][1].next()
+            except StopIteration:
+                graspiterators.pop(index)
+                continue
+            gmodel = graspiterators[index][0]
+            if viewmanip is not None and neutraljointvalues is not None and gmodel.manip.GetEndEffector()!=viewmanip.GetEndEffector():
+                try:
+                    self.moveToNeutral(neutraljointvalues=neutraljointvalues,bounds=array(((-0.1,-0.1,-0.1),(0.1,0.1,0.1))))
+                    neutraljointvalues=None
+                except planning_error,e:
+                    print 'failed to move to neutral values:',e
+            gmodel.moveToPreshape(grasp)
+            with self.env:
+                self.robot.SetActiveManipulator(gmodel.manip)
+                Tgrasp=gmodel.getGlobalGraspTransform(grasp,collisionfree=True)
+                finalarmsolution = gmodel.manip.FindIKSolution(Tgrasp,True)
+                if finalarmsolution is None:
+                    print 'final grasp has no valid IK'
+                    continue
+                armjoints=gmodel.manip.GetArmJoints()
+                Tfirstgrasp = array(Tgrasp)
+                Tfirstgrasp[0:3,3] -= approachoffset*gmodel.getGlobalApproachDir(grasp)
+                solutions = gmodel.manip.FindIKSolutions(Tfirstgrasp,True)
+                if solutions is None or len(solutions) == 0:
+                    continue
+                # find the closest solution
+                weights = self.robot.GetJointWeights()[armjoints]
+                dists = [numpy.max(abs(finalarmsolution-s)) for s in solutions]
+                index = argmin(dists)
+                usejacobian = False
+                if dists[index] < 15.0*approachoffset:
+                    usejacobian = True
+                    self.robot.SetActiveDOFs(armjoints)
+                    self.basemanip.MoveActiveJoints(goal=solutions[index],maxiter=5000)
+                else:
+                    print 'closest solution is too far',dists[index]
+            self.waitrobot()
+            if usejacobian:
+                try:
+                    print 'moving hand'
+                    expectedsteps = floor(approachoffset/stepsize)
+                    self.basemanip.MoveHandStraight(direction=gmodel.getGlobalApproachDir(grasp),ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps-2,maxsteps=expectedsteps+1,searchall=False)
+                except planning_error,e:
+                    try:
+                        self.basemanip.MoveHandStraight(direction=gmodel.getGlobalApproachDir(grasp),ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps-2,maxsteps=expectedsteps+1,searchall=True)
+                    except planning_error,e:
+                        print 'failed to move straight: ',e,' Using planning to move rest of the way.'
+                        usejacobian = False
+            if not usejacobian:
+                try:
+                    self.basemanip.MoveActiveJoints(goal=finalarmsolution)
+                except:
+                    return self.graspObject([gmodel])
+            self.waitrobot()
+            self.closefingers(target=gmodel.target)
+            try:
+                self.basemanip.MoveHandStraight(direction=self.updir,jacobian=0.02,stepsize=0.002,minsteps=1,maxsteps=100)
+            except:
+                print 'failed to move up'
+            self.waitrobot()
+            return gmodel
+        raise planning_error('failed to grasp')
     def graspObject(self,allgmodels,usevisibilitycamera=None,neutraljointvalues=None):
         viewmanip = None
         if usevisibilitycamera:
@@ -240,8 +341,9 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                 try:
                     target,viewmanip = self.viewTarget(usevisibilitycamera,testgmodel.target)
                     gmodels = [gmodel for gmodel in allgmodels if gmodel.target==target]
-                    order = argsort([gmodel for gmodel in gmodels if gmodel.manip.GetEndEffector()!=viewmanip.GetEndEffector()])
+                    order = argsort([gmodel.manip.GetEndEffector()!=viewmanip.GetEndEffector() for gmodel in gmodels])
                     gmodels = [gmodels[i] for i in order]
+                    break
                 except (RuntimeError,planning_error):
                     print 'failed to view ',testgmodel.target.GetName()
         else:
@@ -251,7 +353,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
             try:
                 if viewmanip is not None and neutraljointvalues is not None and gmodel.manip.GetEndEffector()!=viewmanip.GetEndEffector():
                     try:
-                        self.moveToNeutral(neutraljointvalues,bounds=array(((-0.1,-0.1,-0.1),(0.1,0.1,0.1))))
+                        self.moveToNeutral(neutraljointvalues=neutraljointvalues,bounds=array(((-0.1,-0.1,-0.1),(0.1,0.1,0.1))))
                         neutraljointvalues=None
                     except planning_error,e:
                         print 'failed to move to neutral values:',e
@@ -260,8 +362,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                 stepsize = 0.001
                 goals,graspindex,searchtime,trajdata = self.taskmanip.GraspPlanning(graspindices=gmodel.graspindices,grasps=gmodel.grasps,
                                                                                     target=gmodel.target,approachoffset=approachoffset,destposes=None,
-                                                                                    seedgrasps = 3,seedik=3,maxiter=2000,
-                                                                                    randomgrasps=False,switchpatterns=self.switchpatterns)
+                                                                                    seedgrasps = 3,seedik=3,maxiter=2000,randomgrasps=False)
             except planning_error,e:
                 print 'failed to grasp with %s'%(gmodel.manip),e
                 continue
@@ -272,6 +373,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
             grasp=gmodel.grasps[graspindex]
             with self.env:
                 # although values holds the final configuration, robot should approach from a distance of approachoffset
+                self.robot.SetActiveManipulator(gmodel.manip)
                 Tgrasp = gmodel.getGlobalGraspTransform(grasp,collisionfree=True)
                 finalarmsolution = gmodel.manip.FindIKSolution(Tgrasp,True)
                 if finalarmsolution is None:
@@ -288,12 +390,14 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                 try:
                     print 'moving hand'
                     expectedsteps = floor(approachoffset/stepsize)
-                    self.basemanip.MoveHandStraight(direction=gmodel.getGlobalApproachDir(grasp),ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps-2,maxsteps=expectedsteps+1,searchall=True)
-                    self.waitrobot()
+                    self.basemanip.MoveHandStraight(direction=gmodel.getGlobalApproachDir(grasp),ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps-2,maxsteps=expectedsteps+1,searchall=False)
                 except planning_error,e:
-                    print 'failed to move straight: ',e,' Using planning to move rest of the way.'
-                    usejacobian = False
-
+                    try:
+                        self.basemanip.MoveHandStraight(direction=gmodel.getGlobalApproachDir(grasp),ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps-2,maxsteps=expectedsteps+1,searchall=True)
+                    except planning_error,e:
+                        print 'failed to move straight: ',e,' Using planning to move rest of the way.'
+                        usejacobian = False
+            self.waitrobot()
             if not usejacobian:
                 try:
                     print 'moving active joints'
@@ -312,7 +416,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         raise planning_error('failed to grasp target')
 
     def moveToNeutral(self,neutraljointvalues,bounds=None,manipnames=None,ikcollisionbody=None):
-        """moves the robot to a neutral position defined by several manipulators and neutraljointvalues"""
+        """moves the robot to a neutral position defined by several manipulators and neutraljointvalues. Can also specify a special collision body to constraint choosing the goals."""
         if manipnames is None:
             manipnames = ['leftarm','rightarm']
         manips = [self.robot.GetManipulator(name) for name in manipnames]
@@ -379,10 +483,11 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                         else:
                             if ikcollisionbody is not None:
                                 # have to check self collision
-                                self.robot.SetJointValues(s,manip.GetArmJoints())
-                                if self.robot.CheckSelfCollision():
-                                    success = False
-                                    break
+                                with self.robot:
+                                    self.robot.SetJointValues(s,manip.GetArmJoints())
+                                    if self.robot.CheckSelfCollision():
+                                        success = False
+                                        break
                             startjointvalues.append(self.robot.GetJointValues())
                             self.robot.SetJointValues(s,manip.GetArmJoints())
                     if not success:
@@ -528,7 +633,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
             if manip:
                 self.robot.SetActiveManipulator(manip)
             # find the grabbing body
-            grabbed = [g.grabbedbody for g in self.robot.GetGrabbed() if self.robot.GetActiveManipulator().IsGrabbing(g.grabbedbody)]
+            grabbed = [grabbedbody for grabbedbody in self.robot.GetGrabbed() if self.robot.GetActiveManipulator().IsGrabbing(grabbedbody)]
             self.basemanip.ReleaseFingers(target=grabbed[0] if len(grabbed)>0 else None)
         self.waitrobot()
         if self.envreal is not None:
@@ -694,7 +799,9 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
             self.waitrobot()
             if usevisibilitycamera.get('dosync',False):
                 if usevisibilitycamera.get('ask',False):
-                    raw_input('press any key to capture new environment')
+                    cmd=raw_input('press n key to capture new environment: ')
+                    if cmd == 'n':
+                        continue
                 time.sleep(1)
                 with self.env:
                     newtarget,newenv = self.searchrealenv(target)
