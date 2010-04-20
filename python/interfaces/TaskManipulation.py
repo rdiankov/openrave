@@ -37,7 +37,7 @@ class TaskManipulation:
         if envother.LoadProblem(clone.prob,clone.args) != 0:
             raise ValueError('problem failed to initialize')
         return clone
-    def GraspPlanning(self,graspindices,grasps,target,approachoffset=0,destposes=None,seedgrasps=None,seeddests=None,seedik=None,switchpatterns=None,maxiter=None,randomgrasps=None,randomdests=None, execute=None,outputtraj=None):
+    def GraspPlanning(self,graspindices,grasps,target,approachoffset=0,destposes=None,seedgrasps=None,seeddests=None,seedik=None,maxiter=None,randomgrasps=None,randomdests=None, execute=None,outputtraj=None):
         cmd = 'graspplanning target %s approachoffset %f grasps %d %d '%(target.GetName(),approachoffset, grasps.shape[0],grasps.shape[1])
         for f in grasps.flat:
             cmd += str(f) + ' '
@@ -59,9 +59,6 @@ class TaskManipulation:
             cmd += 'seeddests %d '%seeddests
         if seedik is not None:
             cmd += 'seedik %d '%seedik
-        if switchpatterns is not None:
-            for pattern,filename in switchpatterns:
-                cmd += 'switch %s %s '%(pattern,filename)
         if maxiter is not None:
             cmd += 'maxiter %d '%maxiter
         if randomgrasps is not None:
@@ -105,7 +102,7 @@ class TaskManipulation:
         iters = array([int(s) for s in resvalues[0:len(configs)]])
         newconfigs = reshape(array([float(s) for s in resvalues[len(configs):]]),(len(configs),self.robot.GetActiveDOF()))
         return iters,newconfigs
-    def SwitchModels(self,switchpatterns=None,unregister=None,switch=None,clearpatterns=None,clearmodels=None):
+    def SwitchModels(self,switchpatterns=None,unregister=None,switchtofat=None,clearpatterns=None,clearmodels=None,update=None):
         cmd = 'switchmodels '
         if switchpatterns is not None:
             for pattern,filename in switchpatterns:
@@ -113,10 +110,20 @@ class TaskManipulation:
         if unregister is not None:
             for pattern in unregister:
                 cmd += 'unregister %s '%pattern
-        if switch is not None:
-            cmd += 'switch %d '%(switch)
+        if switchtofat is not None:
+            cmd += 'switchtofat %d '%(switchtofat)
         if clearpatterns is not None and clearpatterns:
             cmd += 'clearpatterns '
         if clearmodels is not None and clearmodels:
             cmd += 'clearmodels '
+        if update is not None:
+            cmd += 'update %d '%update
         return self.prob.SendCommand(cmd)
+    class SwitchState:
+        def __init__(self,taskmanip,update=True):
+            self.taskmanip = taskmanip
+            self.update=update
+        def __enter__(self):
+            self.taskmanip.SwitchModels(switchtofat=True,update=self.update)
+        def __exit__(self, type, value, traceback):
+            self.taskmanip.SwitchModels(switchtofat=False)

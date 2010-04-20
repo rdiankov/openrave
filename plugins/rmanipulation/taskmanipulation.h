@@ -253,7 +253,6 @@ class TaskManipulation : public ProblemInstance
         KinBodyPtr ptarget;
         int nNumGrasps=0, nGraspDim=0;
         dReal fApproachOffset=0.0f; // offset before approaching to the target
-        vector<pair<string, string> > vSwitchPatterns;
         string targetname;
         vector<Transform> vObjDestinations;
         string strpreshapetraj; // save the preshape trajectory
@@ -339,11 +338,6 @@ class TaskManipulation : public ProblemInstance
                 sinput >> nMaxSeedDests;
             else if( cmd == "seedik" )
                 sinput >> nMaxSeedIkSolutions;
-            else if( cmd == "switch" ) {
-                string pattern, fatfilename;
-                sinput >> pattern >> fatfilename;
-                vSwitchPatterns.push_back(pair<string, string>(pattern, fatfilename));
-            }
             else if( cmd == "savepreshapetraj" ) {
                 sinput >> strpreshapetraj;
             }
@@ -838,6 +832,7 @@ class TaskManipulation : public ProblemInstance
     {
         int doswitch=-1;
         string cmd;
+        bool bUpdateBodies=true;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput )
@@ -862,7 +857,9 @@ class TaskManipulation : public ProblemInstance
                         ++it;
                 }
             }
-            else if( cmd == "switch" )
+            else if( cmd == "update" )
+                sinput >> bUpdateBodies;
+            else if( cmd == "switchtofat" )
                 sinput >> doswitch;
             else if( cmd == "clearpatterns" )
                 _listSwitchModelPatterns.clear();
@@ -880,7 +877,7 @@ class TaskManipulation : public ProblemInstance
         }
 
         if( doswitch >= 0 )
-            _UpdateSwitchModels(doswitch>0);
+            _UpdateSwitchModels(doswitch>0,bUpdateBodies);
         return true;
     }
 

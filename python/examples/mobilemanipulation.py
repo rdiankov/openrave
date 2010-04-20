@@ -33,6 +33,7 @@ class GraspReachability(metaclass.AutoReloader):
         self.env = robot.GetEnv()
         self.irmodels=irmodels
         self.maxvelmult=maxvelmult
+        self.irgmodels = []
         if irgmodels is None:
             if target is not None:
                 gmodel = grasping.GraspingModel(robot=robot,target=target,maxvelmult=maxvelmult)
@@ -228,8 +229,8 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         self.maxvelmult=maxvelmult
         self.basemanip = BaseManipulation(self.robot,maxvelmult=maxvelmult)
         self.taskmanip = TaskManipulation(self.robot,maxvelmult=maxvelmult)
-        if self.switchpatterns is not None:
-            self.taskmanip.SwitchModels(switchpatterns=self.switchpatterns)
+        if switchpatterns is not None:
+            self.taskmanip.SwitchModels(switchpatterns=switchpatterns)
         self.updir = array((0,0,1))
     def clone(self,envother):
         clone = shallowcopy(self)
@@ -302,7 +303,8 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                 if dists[index] < 15.0*approachoffset:
                     usejacobian = True
                     self.robot.SetActiveDOFs(armjoints)
-                    self.basemanip.MoveActiveJoints(goal=solutions[index],maxiter=5000)
+                    with TaskManipulation.SwitchState(self.taskmanip):
+                        self.basemanip.MoveActiveJoints(goal=solutions[index],maxiter=5000)
                 else:
                     print 'closest solution is too far',dists[index]
             self.waitrobot()
@@ -319,10 +321,11 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                         usejacobian = False
             if not usejacobian:
                 try:
-                    self.basemanip.MoveActiveJoints(goal=finalarmsolution)
+                    with TaskManipulation.SwitchState(self.taskmanip):
+                        self.basemanip.MoveActiveJoints(goal=finalarmsolution)
                 except:
                     return self.graspObject([gmodel])
-            self.waitrobot()
+            self.waitrobot()            
             self.closefingers(target=gmodel.target)
             try:
                 self.basemanip.MoveHandStraight(direction=self.updir,jacobian=0.02,stepsize=0.002,minsteps=1,maxsteps=100)
@@ -400,8 +403,9 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
             self.waitrobot()
             if not usejacobian:
                 try:
-                    print 'moving active joints'
-                    self.basemanip.MoveActiveJoints(goal=finalarmsolution)
+                    with TaskManipulation.SwitchState(self.taskmanip):
+                        print 'moving active joints'
+                        self.basemanip.MoveActiveJoints(goal=finalarmsolution)
                 except planning_error,e:
                     print e
                     continue
@@ -509,13 +513,14 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
             self.basemanip.TrajFromData(trajdata)
             self.waitrobot()
 
-    def searchrealenv(self,target=None,updateenv=False,waitfortarget=True):
+    def searchrealenv(self,target=None,updateenv=False,waitfortarget=0):
         """sync with the real environment and find the target"""
         if self.envreal is None:
             return target,self.env
         if updateenv:
             print 'updating entire environment not supported yet'
         
+        starttime = time.time()
         while True:
             with self.envreal:
                 # find target of the same name/type
@@ -534,9 +539,9 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                     print 'distance to original: ',dists[index]
                     target.SetBodyTransformations(bodies[index].GetBodyTransformations())
                     return target, self.env
-            if not waitfortarget:
+            if time.time()-starttime > waitfortarget:
                 break
-            time.sleep(1)
+            time.sleep(0.05)
         raise planning_error('failed to recognize target')
 
     def graspAndPlaceObjectMobileSearch(self,targetdests):
@@ -615,8 +620,9 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
             self.basemanip.CloseFingers()
         self.waitrobot()
         if target is not None:
-            with self.env:
-                self.robot.Grab(target)
+            with TaskManipulation.SwitchState(self.taskmanip): # grab the fat object!
+                with self.env:
+                    self.robot.Grab(target)
             if self.envreal is not None: # try to grab with the real environment
                 try:
                     with self.envreal:
@@ -683,8 +689,9 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
             index = argmin(dists)
             if dists[index] < 15.0*approachoffset:
                 usejacobian = True
-                self.robot.SetActiveDOFs(armjoints)
-                self.basemanip.MoveActiveJoints(goal=solutions[index],maxiter=5000)
+                with TaskManipulation.SwitchState(self.taskmanip):
+                    self.robot.SetActiveDOFs(armjoints)
+                    self.basemanip.MoveActiveJoints(goal=solutions[index],maxiter=5000)
             else:
                 print 'closest solution is too far',dists[index]
         self.waitrobot()
@@ -700,7 +707,8 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
 
         if not usejacobian:
             try:
-                self.basemanip.MoveActiveJoints(goal=finalarmsolution)
+                with TaskManipulation.SwitchState(self.taskmanip):
+                    self.basemanip.MoveActiveJoints(goal=finalarmsolution)
             except:
                 return self.graspObject([gmodel])
         self.waitrobot()
@@ -753,6 +761,34 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
             print 'failed to move hand down'
             traceback.print_exc(e)
         self.releasefingers()
+
+    def placeObject(self,target,dests):
+        assert(len(dests)>0)
+        with self.robot:
+            Trelative = dot(linalg.inv(target.GetTransform()),self.robot.GetActiveManipulator().GetEndEffectorTransform())
+            I=random.permutation(range(len(dests)))
+            num = len(I)/100
+            success = False
+            for i in range(num):
+                try:
+                    self.basemanip.MoveToHandPosition(matrices=[dot(dests[ind],Trelative) for ind in I[i::num]],maxiter=4000,seedik=4)
+                    success = True
+                    break
+                except planning_error:
+                    pass
+            if not success:
+                raise planning_error('failed to place object in one of dests')
+        self.waitrobot()
+        # move hand down
+        try: 
+            self.basemanip.MoveHandStraight(direction=-self.updir,jacobian=0.02,stepsize=0.002,minsteps=0,maxsteps=100)
+            self.waitrobot()
+            self.basemanip.MoveHandStraight(direction=-self.updir,jacobian=0.02,ignorefirstcollision=True,stepsize=0.002,minsteps=0,maxsteps=5)
+            self.waitrobot()
+        except planning_error,e:
+            print 'failed to move hand down'
+            traceback.print_exc(e)
+        self.releasefingers()
     
     def moveBase(self,pose):
         with self.robot:
@@ -793,7 +829,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         #h=vmodel.env.plot3(pts,10,colors=array([1,0.7,0,0.05]))
         reachabletransforms = vmodel.pruneTransformations(thresh=0.04,numminneighs=40)
         vmodel.SetCameraTransforms(reachabletransforms)
-        for iter in range(5):
+        for iter in range(20):
             vmodel.visualprob.MoveToObserveTarget(target=vmodel.target,sampleprob=0.001,maxiter=4000)
             #s=vmodel.visualprob.SampleVisibilityGoal(target)
             self.waitrobot()
@@ -802,9 +838,8 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                     cmd=raw_input('press n key to capture new environment: ')
                     if cmd == 'n':
                         continue
-                time.sleep(1)
                 with self.env:
-                    newtarget,newenv = self.searchrealenv(target)
+                    newtarget,newenv = self.searchrealenv(target,waitfortarget=3.0)
                     if newtarget is not None:
                         break
             else:

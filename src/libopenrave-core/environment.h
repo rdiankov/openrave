@@ -1244,6 +1244,10 @@ protected:
                     FOREACH(itlink, itgrab->vCollidingLinks)
                         vnew.push_back((*itrobot)->_veclinks.at((*itlink)->GetIndex()));
                     itgrab->vCollidingLinks = vnew;
+                    vnew.resize(0);
+                    FOREACH(itlink, itgrab->vNonCollidingLinks)
+                        vnew.push_back((*itrobot)->_veclinks.at((*itlink)->GetIndex()));
+                    itgrab->vNonCollidingLinks = vnew;
                 }
             }
 
