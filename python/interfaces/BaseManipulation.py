@@ -58,7 +58,7 @@ class BaseManipulation:
             cmd += 'ignorefirstcollision %d '%ignorefirstcollision
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error()
+            raise planning_error('MoveHandStraight')
         return res
     def MoveManipulator(self,goal,maxiter=None,execute=None,outputtraj=None):
         assert(len(goal) == len(self.robot.GetActiveManipulator().GetArmJoints()) and len(goal) > 0)
@@ -71,7 +71,7 @@ class BaseManipulation:
             cmd += 'maxiter %d '%maxiter
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error()
+            raise planning_error('MoveManipulator')
         return res
     def MoveActiveJoints(self,goal,steplength=None,maxiter=None,maxtries=None,execute=None,outputtraj=None):
         assert(len(goal) == self.robot.GetActiveDOF() and len(goal) > 0)
@@ -88,7 +88,7 @@ class BaseManipulation:
             cmd += 'maxtries %d '%maxtries
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error()
+            raise planning_error('MoveActiveJoints')
         return res
     def MoveToHandPosition(self,matrices,affinedofs=None,maxiter=None,maxtries=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None):
         cmd = 'MoveToHandPosition matrices %d '%len(matrices)
@@ -112,7 +112,7 @@ class BaseManipulation:
             cmd += 'outputtraj '
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error()
+            raise planning_error('MoveToHandPosition')
         return res
     def MoveUnsyncJoints(self,jointvalues,jointinds,planner=None,execute=None,outputtraj=None):
         assert(len(jointinds)==len(jointvalues) and len(jointinds)>0)
@@ -125,7 +125,7 @@ class BaseManipulation:
             cmd += 'outputtraj '
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error()
+            raise planning_error('MoveUnsyncJoints')
         return res
     def CloseFingers(self,offset=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None):
         cmd = 'CloseFingers '
@@ -144,7 +144,7 @@ class BaseManipulation:
             cmd += 'outputfinal'
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error()
+            raise planning_error('CloseFingers')
         resvalues = res.split()
         if outputfinal:
             final = array([float(resvalues[i]) for i in range(dof)])
@@ -172,7 +172,7 @@ class BaseManipulation:
             cmd += 'outputfinal'
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error()
+            raise planning_error('ReleaseFingers')
         resvalues = res.split()
         if outputfinal:
             final = array([float(resvalues[i]) for i in range(dof)])
@@ -197,7 +197,7 @@ class BaseManipulation:
             cmd += 'outputfinal'
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error()
+            raise planning_error('ReleaseActive')
         resvalues = res.split()
         if outputfinal:
             final = array([float(resvalues[i]) for i in range(self.robot.GetActiveDOF())])
@@ -223,7 +223,7 @@ class BaseManipulation:
             cmd += 'outputfinal'
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error()
+            raise planning_error('JitterActive')
         resvalues = res.split()
         if outputfinal:
             final = array([float(resvalues[i]) for i in range(self.robot.GetActiveDOF())])
