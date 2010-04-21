@@ -73,7 +73,7 @@ class BaseManipulation:
         if res is None:
             raise planning_error()
         return res
-    def MoveActiveJoints(self,goal,steplength=None,maxiter=None,execute=None,outputtraj=None):
+    def MoveActiveJoints(self,goal,steplength=None,maxiter=None,maxtries=None,execute=None,outputtraj=None):
         assert(len(goal) == self.robot.GetActiveDOF() and len(goal) > 0)
         cmd = 'MoveActiveJoints goal ' + ' '.join(str(f) for f in goal)+' '
         if steplength is not None:
@@ -84,6 +84,8 @@ class BaseManipulation:
             cmd += 'outputtraj '
         if maxiter is not None:
             cmd += 'maxiter %d '%maxiter
+        if maxtries is not None:
+            cmd += 'maxtries %d '%maxtries
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise planning_error()
@@ -187,6 +189,32 @@ class BaseManipulation:
         if movingdir is not None:
             assert(len(movingdir) == self.robot.GetActiveDOF())
             cmd += 'movingdir %s '%(' '.join(str(f) for f in movingdir))
+        if execute is not None:
+            cmd += 'execute %d '%execute
+        if outputtraj is not None and outputtraj:
+            cmd += 'outputtraj '
+        if outputfinal:
+            cmd += 'outputfinal'
+        res = self.prob.SendCommand(cmd)
+        if res is None:
+            raise planning_error()
+        resvalues = res.split()
+        if outputfinal:
+            final = array([float(resvalues[i]) for i in range(self.robot.GetActiveDOF())])
+            resvalues=resvalues[len(final):]
+        else:
+            final=None
+        if outputtraj is not None and outputtraj:
+            traj = ' '.join(resvalues)
+        else:
+            traj = None
+        return final,traj
+    def JitterActive(self,maxiter=None,jitter=None,execute=None,outputtraj=None,outputfinal=None):
+        cmd = 'JitterActive '
+        if maxiter is not None:
+            cmd += 'maxiter %d '%maxiter
+        if jitter is not None:
+            cmd += 'jitter %f '%jitter
         if execute is not None:
             cmd += 'execute %d '%execute
         if outputtraj is not None and outputtraj:

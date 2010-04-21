@@ -142,17 +142,22 @@ class VisibilityModel(OpenRAVEModel):
                         return validjoints
                     print 'found',len(validjoints)
 
-    def pruneTransformations(self,thresh=0.04,numminneighs=10,translationonly=True):
+    def pruneTransformations(self,thresh=0.04,numminneighs=10,maxdist=None,translationonly=True):
         if self.rmodel is None:
             self.rmodel = kinematicreachability.ReachabilityModel(robot=self.robot)
             if not self.rmodel.load():
                 self.rmodel.autogenerate()
         kdtree=self.rmodel.ComputeNN(translationonly)
-        newtrans = poseMultArrayT(poseFromMatrix(dot(linalg.inv(self.manip.GetBase().GetTransform()),self.target.GetTransform())),self.visibilitytransforms)
+        if maxdist is not None:
+            visibilitytransforms = self.visibilitytransforms[invertPoses(self.visibilitytransforms)[:,6]<maxdist]
+        else:
+            visibilitytransforms = self.visibilitytransforms
+        newtrans = poseMultArrayT(poseFromMatrix(dot(linalg.inv(self.manip.GetBase().GetTransform()),self.target.GetTransform())),visibilitytransforms)
         if translationonly:
             transdensity = kdtree.kFRSearchArray(newtrans[:,4:7],thresh**2,0,thresh*0.01)[2]
             I=flatnonzero(transdensity>numminneighs)
-            return self.visibilitytransforms[I[argsort(-transdensity[I])]]
+            return visibilitytransforms[I[argsort(-transdensity[I])]]
+        raise ValueError('not supported')
 #         Imask = GetCameraRobotMask(orenv,options.robotfile,sensorindex=options.sensorindex,gripperjoints=gripperjoints,robotjoints=robotjoints,robotjointinds=robotjointinds,rayoffset=options.rayoffset)
 #         # save as a ascii matfile
 #         numpy.savetxt(options.savefile,Imask,'%d')

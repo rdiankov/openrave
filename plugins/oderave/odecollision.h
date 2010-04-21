@@ -179,7 +179,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
     {
         COLLISIONCALLBACK cb(shared_checker(),report,KinBodyPtr(),plink);
         if( !plink->IsEnabled() ) {
-            RAVELOG_DEBUG("calling collision on disabled link %s\n", plink->GetName().c_str());
+            RAVELOG_VERBOSE("calling collision on disabled link %s\n", plink->GetName().c_str());
             return false;
         }
 
@@ -194,11 +194,11 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
             report->Reset(_options);
 
         if( !plink1->IsEnabled() ) {
-            RAVELOG_DEBUG(str(boost::format("calling collision on disabled link1 %s\n")%plink1->GetName()));
+            RAVELOG_VERBOSE(str(boost::format("calling collision on disabled link1 %s\n")%plink1->GetName()));
             return false;
         }
         if( !plink2->IsEnabled() ) {
-            RAVELOG_DEBUG(str(boost::format("calling collision on disabled link2 %s\n")%plink2->GetName()));
+            RAVELOG_VERBOSE(str(boost::format("calling collision on disabled link2 %s\n")%plink2->GetName()));
             return false;
         }
 
@@ -278,7 +278,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         }
 
         if( !plink->IsEnabled() ) {
-            RAVELOG_DEBUG("calling collision on disabled link %s\n", plink->GetName().c_str());
+            RAVELOG_VERBOSE("calling collision on disabled link %s\n", plink->GetName().c_str());
             return false;
         }
 
@@ -337,7 +337,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
             report->Reset(_options);
     
         if( !plink->IsEnabled() ) {
-            RAVELOG_DEBUG("calling collision on disabled link %s\n", plink->GetName().c_str());
+            RAVELOG_VERBOSE("calling collision on disabled link %s\n", plink->GetName().c_str());
             return false;
         }
 

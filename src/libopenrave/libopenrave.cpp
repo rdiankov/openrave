@@ -864,7 +864,7 @@ KinBody::ManageDataPtr SimpleSensorSystem::AddKinBody(KinBodyPtr pbody, XMLReada
     boost::shared_ptr<BodyData> b = CreateBodyData(pbody, pdata);
     b->lastupdated = GetMicroTime();
     _mapbodies[pbody->GetNetworkId()] = b;
-    RAVELOG_DEBUGA(str(boost::format("system adding body %s, total: %d\n")%pbody->GetName()%_mapbodies.size()));
+    RAVELOG_DEBUGA(str(boost::format("system adding body %s (%s), total: %d\n")%pbody->GetName()%pbody->GetXMLFilename()%_mapbodies.size()));
     return b;
 }
 

@@ -227,13 +227,11 @@ class CollisionMapRobot : public RobotBase
                         continue;
                     if( !!report ) {
                         report->numCols = 1;
-                        report->vLinkColliding.resize(0);
-                        FOREACHC(itjoint,itmap->joints) {
-                            if( !!(*itjoint)->GetFirstAttached() && find(report->vLinkColliding.begin(),report->vLinkColliding.end(),(*itjoint)->GetFirstAttached())== report->vLinkColliding.end() )
-                                report->vLinkColliding.push_back(KinBody::LinkConstPtr((*itjoint)->GetFirstAttached()));
-                            if( !!(*itjoint)->GetSecondAttached() && find(report->vLinkColliding.begin(),report->vLinkColliding.end(),(*itjoint)->GetSecondAttached())== report->vLinkColliding.end() )
-                                report->vLinkColliding.push_back(KinBody::LinkConstPtr((*itjoint)->GetSecondAttached()));
-                        }
+                        report->vLinkColliding = vLinkColliding;
+                        if( vLinkColliding.size() > 0 )
+                            report->plink1 = vLinkColliding.at(0);
+                        if( vLinkColliding.size() > 1 )
+                            report->plink2 = vLinkColliding.at(1);
                     }
                     RAVELOG_VERBOSEA(str(boost::format("Self collision: joints %s:%s\n")%itmap->jointnames[0]%itmap->jointnames[1]));
                     return true;

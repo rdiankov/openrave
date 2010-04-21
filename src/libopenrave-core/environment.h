@@ -924,7 +924,8 @@ class Environment : public EnvironmentBase
             boost::shared_ptr<OpenRAVEXMLParser::GlobalInterfaceXMLReader> preader(new OpenRAVEXMLParser::GlobalInterfaceXMLReader(shared_from_this()));
             bool bSuccess = RaveParseXMLFile(preader, filename);
             if( !bSuccess || !preader->GetInterface())
-                return RobotBasePtr();
+                return InterfaceBasePtr();
+            preader->GetInterface()->__strxmlfilename = preader->_filename;
             return preader->GetInterface();
         }
         catch(const openrave_exception& ex) {

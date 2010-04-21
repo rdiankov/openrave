@@ -303,8 +303,9 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                 if dists[index] < 15.0*approachoffset:
                     usejacobian = True
                     self.robot.SetActiveDOFs(armjoints)
+                    print 'moving to initial ',solutions[index]
                     with TaskManipulation.SwitchState(self.taskmanip):
-                        self.basemanip.MoveActiveJoints(goal=solutions[index],maxiter=5000)
+                        self.basemanip.MoveActiveJoints(goal=solutions[index],maxiter=5000,maxtries=2)
                 else:
                     print 'closest solution is too far',dists[index]
             self.waitrobot()
@@ -320,13 +321,14 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                         print 'failed to move straight: ',e,' Using planning to move rest of the way.'
                         usejacobian = False
             if not usejacobian:
+                print 'moving to final ',solutions[index]
                 with TaskManipulation.SwitchState(self.taskmanip):
                     self.robot.SetActiveDOFs(armjoints)
-                    self.basemanip.MoveActiveJoints(goal=finalarmsolution)
+                    self.basemanip.MoveActiveJoints(goal=finalarmsolution,maxiter=5000,maxtries=2)
             self.waitrobot()            
             self.closefingers(target=gmodel.target)
             try:
-                self.basemanip.MoveHandStraight(direction=self.updir,jacobian=0.02,stepsize=0.002,minsteps=1,maxsteps=100)
+                self.basemanip.MoveHandStraight(direction=self.updir,stepsize=0.002,minsteps=1,maxsteps=100)
             except:
                 print 'failed to move up'
             self.waitrobot()
@@ -534,9 +536,10 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                     # find the closest
                     dists = [sum((b.GetTransform()[0:3,3]-target.GetTransform()[0:3,3])**2) for b in bodies]
                     index = argmin(dists)
-                    print 'distance to original: ',dists[index]
-                    target.SetBodyTransformations(bodies[index].GetBodyTransformations())
-                    return target, self.env
+                    if dists[index] < 1:
+                        print 'distance to original: ',dists[index]
+                        target.SetBodyTransformations(bodies[index].GetBodyTransformations())
+                        return target, self.env
             if time.time()-starttime > waitfortarget:
                 break
             time.sleep(0.05)
@@ -625,15 +628,17 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                 try:
                     with self.envreal:
                         robotreal = self.envreal.GetRobot(self.robot.GetName())
-                        if not robotreal is None:
-#                             targetreal = self.envreal.GetKinBody(target.GetName())
-#                             if targetreal is None:
-                            # if nothing grabbed, create a dummy body
+                        if robotreal is not None:
+                            # always create a dummy body
                             targetreal = self.envreal.ReadKinBodyXMLFile(target.GetXMLFilename())
-                            self.envreal.AddKinBody(targetreal)
-                            targetreal.SetBodyTransformations(target.GetBodyTransformations())
-                            robotreal.SetActiveManipulator(self.robot.GetActiveManipulator().GetName())
-                            robotreal.Grab(targetreal)
+                            if target is not None:
+                                targetreal.SetName(target.GetName()+'_real%d'%random.randint(100000))
+                                self.envreal.AddKinBody(targetreal)
+                                targetreal.SetBodyTransformations(target.GetBodyTransformations())
+                                robotreal.SetActiveManipulator(self.robot.GetActiveManipulator().GetName())
+                                robotreal.Grab(targetreal)
+                            else:
+                                print 'failed to create real target with filename ',target.GetXMLFilename()
                 except openrave_exception,e:
                     print 'closefingers:',e
     def releasefingers(self,manip=None):
@@ -830,7 +835,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
             raise planning_error('failed to load visibility model')
         #pts = array([dot(vmodel.target.GetTransform(),matrixFromPose(pose))[0:3,3] for pose in vmodel.visibilitytransforms])
         #h=vmodel.env.plot3(pts,10,colors=array([1,0.7,0,0.05]))
-        reachabletransforms = vmodel.pruneTransformations(thresh=0.04,numminneighs=40)
+        reachabletransforms = vmodel.pruneTransformations(thresh=0.04,numminneighs=40,maxdist=0.25)
         vmodel.SetCameraTransforms(reachabletransforms)
         for iter in range(20):
             vmodel.visualprob.MoveToObserveTarget(target=vmodel.target,sampleprob=0.001,maxiter=4000)

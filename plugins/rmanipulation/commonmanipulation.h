@@ -35,49 +35,43 @@ class CM
         vector<dReal> weights;
     };
 
-    static bool JitterActiveDOF(RobotBasePtr robot,int nMaxIterations=5000)
+    /// \return 0 if jitter failed and robot is in collision, -1 if robot originally not in collision, 1 if jitter succeeded
+    static int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations=5000,dReal fRand=0.03f)
     {
         RAVELOG_VERBOSEA("starting jitter active dof...\n");
         vector<dReal> curdof, newdof, lower, upper;
         robot->GetActiveDOFValues(curdof);
         robot->GetActiveDOFLimits(lower, upper);
         newdof = curdof;
-
-        dReal fRand = 0.03f;
         int iter = 0;
+        COLLISIONREPORT report;
+        CollisionReportPtr preport(&report,null_deleter());
+        bool bCollision = false;
 
-        if(robot->CheckSelfCollision())
-            RAVELOG_WARNA("JitterActiveDOFs: initial config in self collision!\n");
+        if(robot->CheckSelfCollision(preport)) {
+            bCollision = true;
+            RAVELOG_DEBUG(str(boost::format("JitterActiveDOFs: initial config in self collision: %s!\n")%report.__str__()));
+        }
+        if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot),preport) ) {
+            bCollision = true;
+            RAVELOG_DEBUG(str(boost::format("JitterActiveDOFs: initial config in collision: %s!\n")%report.__str__()));
+        }
 
-        while(robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || robot->CheckSelfCollision() ) {
-            if( iter > nMaxIterations ) {
+        if( !bCollision )
+            return -1;
+
+        do {
+            if( iter++ > nMaxIterations ) {
                 RAVELOG_WARNA("Failed to find noncolliding position for robot\n");
-
                 robot->SetActiveDOFValues(curdof);
-
-                // display collision report
-                COLLISIONREPORT report;
-                if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot), CollisionReportPtr(&report,null_deleter())) ) {
-                    if( !!report.plink1 && !!report.plink2 ) {
-                        RAVELOG_WARNA(str(boost::format("Jitter collision %s:%s with %s:%s\n")%report.plink1->GetParent()->GetName()%report.plink1->GetName()%report.plink2->GetParent()->GetName()%report.plink2->GetName()));
-                    }
-                }
-            
-                return false;        
+                return 0;
             }
-
             for(int j = 0; j < robot->GetActiveDOF(); j++)
                 newdof[j] = CLAMP_ON_RANGE(curdof[j] + fRand * (RaveRandomFloat()-0.5f), lower[j], upper[j]);
-
-            /// dangerous
-            //        if( (iter%1000) == 499 )
-            //            fRand *= 2;
-
             robot->SetActiveDOFValues(newdof);
-            ++iter;
-        }
+        } while(robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || robot->CheckSelfCollision() );
     
-        return true;
+        return 1;
     }
 
     static bool JitterTransform(KinBodyPtr pbody, float fJitter, int nMaxIterations=1000)

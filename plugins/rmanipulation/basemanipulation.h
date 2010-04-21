@@ -50,6 +50,8 @@ public:
                         "Also releases the given object.");
         RegisterCommand("ReleaseActive",boost::bind(&BaseManipulation::ReleaseActive,this,_1,_2),
                         "Moves the active DOF using the grasp planner.");
+        RegisterCommand("JitterActive",boost::bind(&BaseManipulation::JitterActive,this,_1,_2),
+                        "Jitters the active DOF for a collision-free position.");
         RegisterCommand("IKTest",boost::bind(&BaseManipulation::IKtest,this,_1,_2),
                         "Tests for an IK solution if active manipulation has an IK solver attached");
         RegisterCommand("DebugIK",boost::bind(&BaseManipulation::DebugIK,this,_1,_2),
@@ -371,6 +373,11 @@ protected:
                     break;
                 robot->SetActiveDOFValues(point.q);
                 bool bInCollision = robot->CheckSelfCollision();
+                Transform tdelta = handTr.inverse()*robot->GetActiveManipulator()->GetEndEffectorTransform();
+                if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                    stringstream ss; ss << "transform: " << tdelta << endl;
+                    RAVELOG_VERBOSE(ss.str());
+                }
                 robot->SetActiveDOFValues(vPrevValues);
                 if( bInCollision )
                     break;
@@ -500,7 +507,7 @@ protected:
 
         // make sure the initial and goal configs are not in collision
         robot->SetActiveDOFValues(goals, true);
-        if( !CM::JitterActiveDOF(robot) ) {
+        if( CM::JitterActiveDOF(robot) == 0 ) {
             RAVELOG_WARNA("jitter failed\n");
             return false;
         }
@@ -508,7 +515,7 @@ protected:
         robot->SetActiveDOFValues(values);
     
         // jitter again for initial collision
-        if( !CM::JitterActiveDOF(robot) ) {
+        if( CM::JitterActiveDOF(robot) == 0 ) {
             RAVELOG_WARNA("jitter failed\n");
             return false;
         }
@@ -549,6 +556,7 @@ protected:
     {
         string strtrajfilename;
         bool bExecute = true;
+        int nMaxTries = 1; // max tries for the planner
         boost::shared_ptr<ostream> pOutputTrajStream;
     
         PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
@@ -576,6 +584,8 @@ protected:
                 sinput >> strtrajfilename;
             else if( cmd == "steplength" )
                 sinput >> params->_fStepLength;
+            else if( cmd == "maxtries" )
+                sinput >> nMaxTries;
             else {
                 RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -592,7 +602,7 @@ protected:
     
         RobotBase::RobotStateSaver saver(robot);
 
-        if( !CM::JitterActiveDOF(robot) ) {
+        if( CM::JitterActiveDOF(robot) == 0 ) {
             RAVELOG_WARNA("failed\n");
             return false;
         }
@@ -603,7 +613,7 @@ protected:
         robot->SetActiveDOFValues(params->vgoalconfig);
     
         // jitter again for goal
-        if( !CM::JitterActiveDOF(robot) ) {
+        if( CM::JitterActiveDOF(robot) == 0 ) {
             RAVELOG_WARNA("failed\n");
             return false;
         }
@@ -618,20 +628,26 @@ protected:
         boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(robot->GetActiveDOF()));
     
         RAVELOG_DEBUGA("starting planning\n");
-    
-        if( !rrtplanner->InitPlan(robot, params) ) {
-            RAVELOG_ERRORA("InitPlan failed\n");
-            return false;
-        }
-    
-        if( !rrtplanner->PlanPath(ptraj) ) {
-            RAVELOG_WARNA("PlanPath failed\n");
-            return false;
+        bool bSuccess = false;
+        for(int itry = 0; itry < nMaxTries; ++itry) {
+            if( !rrtplanner->InitPlan(robot, params) ) {
+                RAVELOG_ERRORA("InitPlan failed\n");
+                return false;
+            }
+            
+            if( !rrtplanner->PlanPath(ptraj) ) {
+                RAVELOG_WARNA("PlanPath failed\n");
+            }
+            else {
+                bSuccess = true;
+                RAVELOG_DEBUGA("finished planning\n");
+                break;
+            }
         }
 
-        RAVELOG_DEBUGA("finished planning\n");
+        if( !bSuccess )
+            return false;
         CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
-
         return true;
     }
 
@@ -822,7 +838,7 @@ protected:
         ptraj->AddPoint(pt);
     
         // jitter again for initial collision
-        if( !CM::JitterActiveDOF(robot) ) {
+        if( CM::JitterActiveDOF(robot) == 0 ) {
             RAVELOG_WARNA("jitter failed for initial\n");
             return false;
         }
@@ -919,7 +935,7 @@ protected:
 
         uint32_t starttime = timeGetTime();
 
-        if( !CM::JitterActiveDOF(robot) ) {
+        if( CM::JitterActiveDOF(robot) == 0 ) {
             RAVELOG_WARNA("failed to jitter robot out of collision\n");
         }
 
@@ -1096,7 +1112,7 @@ protected:
         robot->GetActiveDOFValues(ptfirst.q);
         ptraj->AddPoint(ptfirst);
         if( GetEnv()->CheckCollision(KinBodyConstPtr(robot)) ) {
-            if( !CM::JitterActiveDOF(robot) ) {
+            if( CM::JitterActiveDOF(robot) == 0 ) {
                 RAVELOG_WARNA("robot initially in collision\n");
                 return false;
             }
@@ -1138,13 +1154,11 @@ protected:
             // check final trajectory for colliding points
             RobotBase::RobotStateSaver saver2(robot);
             robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
-            if( GetEnv()->CheckCollision(KinBodyConstPtr(robot)) ) {
+            if( CM::JitterActiveDOF(robot) > 0 ) {
                 RAVELOG_WARNA("robot final configuration is in collision\n");
-                if( CM::JitterActiveDOF(robot) ) {
-                    Trajectory::TPOINT pt = ptraj->GetPoints().back();
-                    robot->GetActiveDOFValues(pt.q);
-                    ptraj->AddPoint(pt);
-                }
+                Trajectory::TPOINT pt = ptraj->GetPoints().back();
+                robot->GetActiveDOFValues(pt.q);
+                ptraj->AddPoint(pt);
             }
         }
 
@@ -1220,12 +1234,14 @@ protected:
         Trajectory::TPOINT ptfirst;
         robot->GetActiveDOFValues(ptfirst.q);
         ptraj->AddPoint(ptfirst);
-        if( GetEnv()->CheckCollision(KinBodyConstPtr(robot)) ) {
-            if( !CM::JitterActiveDOF(robot) ) {
-                RAVELOG_WARNA("robot initially in collision\n");
-                return false;
-            }
+        switch( CM::JitterActiveDOF(robot) ) {
+        case 0:
+            RAVELOG_WARNA("robot initially in collision\n");
+            return false;
+        case 1:
             robot->GetActiveDOFValues(ptfirst.q);
+        default:
+            break;
         }
  
         boost::shared_ptr<PlannerBase> graspplanner = GetEnv()->CreatePlanner("Grasper");
@@ -1265,17 +1281,77 @@ protected:
             // check final trajectory for colliding points
             RobotBase::RobotStateSaver saver2(robot);
             robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
-            if( GetEnv()->CheckCollision(KinBodyConstPtr(robot)) ) {
+            if( CM::JitterActiveDOF(robot) > 0 ) {
                 RAVELOG_WARNA("robot final configuration is in collision\n");
-                if( CM::JitterActiveDOF(robot) ) {
-                    Trajectory::TPOINT pt = ptraj->GetPoints().back();
-                    robot->GetActiveDOFValues(pt.q);
-                    ptraj->AddPoint(pt);
-                }
+                Trajectory::TPOINT pt = ptraj->GetPoints().back();
+                robot->GetActiveDOFValues(pt.q);
+                ptraj->AddPoint(pt);
             }
         }
 
         CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
+        return true;
+    }
+
+    bool JitterActive(ostream& sout, istream& sinput)
+    {
+        RAVELOG_DEBUG("Starting ReleaseFingers...\n");
+        bool bExecute = true, bOutputFinal=false;
+        boost::shared_ptr<ostream> pOutputTrajStream;
+        string cmd;
+        int nMaxIterations=5000;
+        dReal fJitter=0.03f;
+        while(!sinput.eof()) {
+            sinput >> cmd;
+            if( !sinput )
+                break;
+            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+
+            if( cmd == "execute" )
+                sinput >> bExecute;
+            else if( cmd == "maxiter" )
+                sinput >> nMaxIterations;
+            else if( cmd == "jitter" )
+                sinput >> fJitter;
+            else if( cmd == "outputtraj" )
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+            else if( cmd == "outputfinal" )
+                bOutputFinal = true;
+            else {
+                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
+
+            if( !sinput ) {
+                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                return false;
+            }
+        }
+
+        RobotBase::RobotStateSaver saver(robot);
+        boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(robot->GetActiveDOF()));
+
+        // have to add the first point
+        Trajectory::TPOINT ptfirst;
+        robot->GetActiveDOFValues(ptfirst.q);
+        ptraj->AddPoint(ptfirst);
+        switch( CM::JitterActiveDOF(robot,nMaxIterations,fJitter) ) {
+        case 0:
+            RAVELOG_WARNA("could not jitter out of collision\n");
+            return false;
+        case 1:
+            robot->GetActiveDOFValues(ptfirst.q);
+            ptraj->AddPoint(ptfirst);
+        default:
+            break;
+        }
+
+        if( bOutputFinal ) {
+            FOREACH(itq,ptfirst.q)
+                sout << *itq << " ";
+        }
+
+        CM::SetActiveTrajectory(robot, ptraj, bExecute, "", pOutputTrajStream,_fMaxVelMult);
         return true;
     }
 
