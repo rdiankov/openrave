@@ -275,6 +275,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                 return success/numiktests
             elif self.iktype == IkParameterization.Type.Ray4D:
                 success = 0.0
+                self.robot.Enable(False)
                 for i in range(numiktests):
                     while True:
                         self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
@@ -295,7 +296,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                         if sum((targetdir-realdir)**2) < 2e-5 and sum((targetprojpos-realprojpos)**2) < 1e-6:
                             success += 1
                         else:
-                            print 'wrong solution to: ',targetpos,targetdir, 'returned is: ',realpos,realdir,'wrong sol is:',sol
+                            print 'wrong solution to: ',targetpos,targetdir, 'returned is: ',realpos,realdir,'wrong sol is:',sol,', org values are:',orgvalues
                             print sum((targetdir-realdir)**2), sum((targetprojpos-realprojpos)**2)
                     else:
                         print 'failed to find: ',targetpos,targetdir,'solution is: ',orgvalues

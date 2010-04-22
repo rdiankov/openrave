@@ -280,6 +280,7 @@ private:
                 FOREACH(it,itsol->basesol) {
                     it->freeind=-1;
                 }
+                itsol->vfree.resize(0);
             }
 //            IKReal s[4];
 //            IKReal free[10];
@@ -292,7 +293,7 @@ private:
         vector<IKReal> vsolfree;
 
         RobotBase::ManipulatorPtr pmanip(_pmanip);
-        dReal bestdist = 1000;
+        dReal bestdist = 1e30;
         std::vector<dReal> vravesol(pmanip->GetArmJoints().size());
         std::vector<dReal> vbest;
         std::vector<IKReal> sol(pmanip->GetArmJoints().size());

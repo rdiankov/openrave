@@ -65,12 +65,14 @@ class SolverSolution:
     jointevalcos = None
     jointevalsin = None
     AddPi = False
-    def __init__(self, jointname, jointeval=None,jointevalcos=None,jointevalsin=None,AddPi=False):
+    IsHinge = True
+    def __init__(self, jointname, jointeval=None,jointevalcos=None,jointevalsin=None,AddPi=False,IsHinge=True):
         self.jointname = jointname
         self.jointeval = jointeval
         self.jointevalcos = jointevalcos
         self.jointevalsin = jointevalsin
         self.AddPi = AddPi
+        self.IsHinge=IsHinge
         assert(jointeval is not None or jointevalcos is not None or jointevalsin is not None)
     def subs(self,solsubs):
         if self.jointeval is not None:
@@ -772,7 +774,8 @@ int main(int argc, char** argv)
                 numsolutions *= 2
             
             for i in range(numsolutions):
-                eqcode += 'if( %sarray[%d] > IKPI )\n    %sarray[%d]-=IK2PI;\nelse if( %sarray[%d] < -IKPI )\n    %sarray[%d]+=IK2PI;\n'%(name,i,name,i,name,i,name,i)
+                if node.IsHinge:
+                    eqcode += 'if( %sarray[%d] > IKPI )\n    %sarray[%d]-=IK2PI;\nelse if( %sarray[%d] < -IKPI )\n    %sarray[%d]+=IK2PI;\n'%(name,i,name,i,name,i,name,i)
                 eqcode += '%svalid[%d] = true;\n'%(name,i)
         elif node.jointevalcos is not None:
             numsolutions = 2*len(node.jointevalcos)
@@ -1260,6 +1263,10 @@ class IKFastSolver(AutoReloader):
 #             tmp[i,i] = Real(1,30)
 #         return tmp
 
+    def IsHinge(self,jointname):
+        assert jointname[0]=='j'
+        jointindex=self.jointindexmap[int(jointname[1:])]
+        return self.joints[jointindex][0].type=='hinge' or self.joints[jointindex][0].type=='revolute'
     # The first and last matrices returned are always numerical
     def forwardKinematicsChain(self, chain):
         Links = []
@@ -1268,14 +1275,14 @@ class IKFastSolver(AutoReloader):
         isolvejointvars = []
         ifreejointvars = []
         jointinds = []
-        jointindexmap = dict()
+        self.jointindexmap = dict()
         for i,joint in enumerate(chain):
             if not joint.isdummy:
-                if not joint.jointindex in jointindexmap:
-                    jointindexmap[joint.jointindex] = len(jointvars)
+                if not joint.jointindex in self.jointindexmap:
+                    self.jointindexmap[joint.jointindex] = len(jointvars)
                     var = Symbol("j%d"%len(jointvars))
                 else:
-                    var = Symbol("j%d"%jointindexmap[joint.jointindex])
+                    var = Symbol("j%d"%self.jointindexmap[joint.jointindex])
                 Tjoint = eye(4)
                 if joint.type == 'hinge' or joint.type == 'revolute':
                     Tjoint[0:3,0:3] = self.rodrigues(joint.axis,joint.jcoeff[0]*var+joint.jcoeff[1])
@@ -2193,7 +2200,7 @@ class IKFastSolver(AutoReloader):
                             asinsol = asin(-m[c]/sqrt(m[a]*m[a]+m[b]*m[b])).subs(symbols)
                             constsol = -atan2(m[a],m[b]).subs(symbols).evalf()
                             jointsolutions = [constsol+asinsol,constsol+pi.evalf()-asinsol]
-                            solvedvars.append((var.var,SolverSolution(var.var.name,jointeval=jointsolutions), [self.codeComplexity(s) for s in jointsolutions]))
+                            solvedvars.append((var.var,SolverSolution(var.var.name,jointeval=jointsolutions,IsHinge=self.IsHinge(var.var.name)), [self.codeComplexity(s) for s in jointsolutions]))
                             continue
                     
                     if numsvar > 0:
@@ -2204,7 +2211,7 @@ class IKFastSolver(AutoReloader):
                                 eqnew,symbols = self.factorLinearTerms(eqnew,[var.svar])
                                 solutions = self.customtsolve(eqnew,var.svar)
                                 jointsolutions = [s.subs(symbols+[(var.svar,sin(var.var))]) for s in solutions]
-                                solvedvars.append((var.var,SolverSolution(var.var.name, jointevalsin=jointsolutions), [self.codeComplexity(s) for s in jointsolutions]))
+                                solvedvars.append((var.var,SolverSolution(var.var.name, jointevalsin=jointsolutions,IsHinge=self.IsHinge(var.var.name)), [self.codeComplexity(s) for s in jointsolutions]))
                         except (ValueError, AttributeError):
                             pass
                     
@@ -2216,7 +2223,7 @@ class IKFastSolver(AutoReloader):
                                 eqnew,symbols = self.factorLinearTerms(eqnew,[var.cvar])
                                 solutions = self.customtsolve(eqnew,var.cvar)
                                 jointsolutions = [s.subs(symbols+[(var.cvar,cos(var.var))]) for s in solutions]
-                                solvedvars.append((var.var,SolverSolution(var.var.name, jointevalcos=jointsolutions), [self.codeComplexity(s) for s in jointsolutions]))
+                                solvedvars.append((var.var,SolverSolution(var.var.name, jointevalcos=jointsolutions,IsHinge=self.IsHinge(var.var.name)), [self.codeComplexity(s) for s in jointsolutions]))
                         except (ValueError, AttributeError):
                             pass
                     
@@ -2225,7 +2232,7 @@ class IKFastSolver(AutoReloader):
                         eqnew,symbols = self.factorLinearTerms(eqnew,[var.var])
                         solutions = self.customtsolve(eqnew,var.var)
                         jointsolutions = [s.subs(symbols) for s in solutions]
-                        solvedvars.append((var.var,SolverSolution(var.var.name, jointeval=jointsolutions), [self.codeComplexity(s) for s in jointsolutions]))
+                        solvedvars.append((var.var,SolverSolution(var.var.name, jointeval=jointsolutions,IsHinge=self.IsHinge(var.var.name)), [self.codeComplexity(s) for s in jointsolutions]))
         return solvedvars
 
     # solve for just the translation component
@@ -2282,7 +2289,7 @@ class IKFastSolver(AutoReloader):
                         break
                 if solution is not None:
                     jointsolution = [self.customtrigsimp(atan2(solution[var.svar],solution[var.cvar]).subs(listsymbols), deep=True).subs(freevarinvsubs)]
-                    solvedvars.append((var.var,SolverSolution(var.var.name,jointsolution), [self.codeComplexity(s) for s in jointsolution]))
+                    solvedvars.append((var.var,SolverSolution(var.var.name,jointsolution,IsHinge=self.IsHinge(var.var.name)), [self.codeComplexity(s) for s in jointsolution]))
                     continue
             
             # solve one equation
@@ -2304,7 +2311,7 @@ class IKFastSolver(AutoReloader):
                     asinsol = trigsimp(asin(-m[c]/sqrt(m[a]*m[a]+m[b]*m[b])).subs(symbols),deep=True)
                     constsol = -atan2(m[a],m[b]).subs(symbols).evalf()
                     jointsolutions = [constsol+asinsol,constsol+pi.evalf()-asinsol]
-                    solvedvars.append((var.var,SolverSolution(var.var.name,jointeval=jointsolutions), [self.codeComplexity(s) for s in jointsolutions]))
+                    solvedvars.append((var.var,SolverSolution(var.var.name,jointeval=jointsolutions,IsHinge=self.IsHinge(var.var.name)), [self.codeComplexity(s) for s in jointsolutions]))
                     continue
             
             if numcvar > 0:
@@ -2313,7 +2320,7 @@ class IKFastSolver(AutoReloader):
                     if self.countVariables(eqnew2,var.svar) <= 1: # anything more than 1 implies quartic equation
                         solutions = self.customtsolve(eqnew2.subs(var.svar,sqrt(1-var.cvar**2)),var.cvar)
                         jointsolutions = [s.subs(symbols+[(var.cvar,cos(var.var))]) for s in solutions]
-                        solvedvars.append((var.var,SolverSolution(var.var.name, jointevalcos=jointsolutions), [self.codeComplexity(s) for s in jointsolutions]))
+                        solvedvars.append((var.var,SolverSolution(var.var.name, jointevalcos=jointsolutions,IsHinge=self.IsHinge(var.var.name)), [self.codeComplexity(s) for s in jointsolutions]))
                 except (ValueError):
                     pass
 
@@ -2323,14 +2330,14 @@ class IKFastSolver(AutoReloader):
                     if self.countVariables(eqnew2,var.svar) <= 1: # anything more than 1 implies quartic equation
                         solutions = self.customtsolve(eqnew2.subs(var.cvar,sqrt(1-var.svar**2)),var.svar)
                         jointsolutions = [trigsimp(s.subs(symbols+[(var.svar,sin(var.var))])) for s in solutions]
-                        solvedvars.append((var.var,SolverSolution(var.var.name, jointevalsin=jointsolutions), [self.codeComplexity(s) for s in jointsolutions]))
+                        solvedvars.append((var.var,SolverSolution(var.var.name, jointevalsin=jointsolutions,IsHinge=self.IsHinge(var.var.name)), [self.codeComplexity(s) for s in jointsolutions]))
                 except (ValueError):
                     pass
 
             if numcvar == 0 and numsvar == 0:
                 solutions = self.customtsolve(eqnew2,var.var)
                 jointsolutions = [self.customtrigsimp(s.subs(symbols)) for s in solutions]
-                solvedvars.append((var.var,SolverSolution(var.var.name, jointeval=jointsolutions), [self.codeComplexity(s) for s in jointsolutions]))
+                solvedvars.append((var.var,SolverSolution(var.var.name, jointeval=jointsolutions,IsHinge=self.IsHinge(var.var.name)), [self.codeComplexity(s) for s in jointsolutions]))
         return solvedvars
 
     # solve for just the rotation component

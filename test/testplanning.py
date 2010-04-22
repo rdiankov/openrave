@@ -475,7 +475,7 @@ def test_hrp2():
     robot.CheckSelfCollision()
     
 def test_drillray():
-    python inversekinematics.py --robot=drill_fk.robot.xml --ray4donly --accuracy=1e-5
+    python inversekinematics.py --robot=/home/rdiankov/downloads/drilling/newdrill.robot.xml --ray4donly --accuracy=1e-5
     from openravepy import *
     import numpy,time
     from openravepy.examples import inversekinematics
@@ -484,7 +484,7 @@ def test_drillray():
     from sympy import *
     env = Environment()
     env.Reset()
-    robot = env.ReadRobotXMLFile('/home/rdiankov/drill_fk.robot.xml')
+    robot = env.ReadRobotXMLFile('/home/rdiankov/downloads/drilling/newdrill.robot.xml')
     env.AddRobot(robot)
     manip = robot.GetActiveManipulator()
     ikmodel = inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
