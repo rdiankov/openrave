@@ -771,14 +771,15 @@ namespace OpenRAVEXMLParser
                                 else {
                                     // SoDB::readAll memory leaks!
                                     SoSeparator* psep = SoDB::readAll(&mySceneInput);
-                                    CreateTriMeshData(psep, _itgeomprop->collisionmesh);
-                                    psep->unref();
-
-                                    //_trimeshGeom
-                                    FOREACH(it, _itgeomprop->collisionmesh.vertices)
-                                        *it *= vScale;
-
-                                    bSuccess = true;
+                                    if( !!psep ) {
+                                        CreateTriMeshData(psep, _itgeomprop->collisionmesh);
+                                        psep->unref();
+                                        
+                                        //_trimeshGeom
+                                        FOREACH(it, _itgeomprop->collisionmesh.vertices)
+                                            *it *= vScale;
+                                        bSuccess = true;
+                                    }
                                 }
                         
                                 mySceneInput.closeFile();

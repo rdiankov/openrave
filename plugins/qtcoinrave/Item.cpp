@@ -138,27 +138,28 @@ void KinBodyItem::Load()
                 SoInput mySceneInput;
                 if( itgeom->GetRenderFilename().size() > 0 && mySceneInput.openFile(itgeom->GetRenderFilename().c_str())) {
                     psep = SoDB::readAll(&mySceneInput);
+                    if( !!psep ) {
+                        SoScale* s = new SoScale();
+                        s->scaleFactor.setValue(itgeom->GetRenderScale().x, itgeom->GetRenderScale().y, itgeom->GetRenderScale().z);
+                        psep->insertChild(s, 0);
 
-                    SoScale* s = new SoScale();
-                    s->scaleFactor.setValue(itgeom->GetRenderScale().x, itgeom->GetRenderScale().y, itgeom->GetRenderScale().z);
-                    psep->insertChild(s, 0);
-
-                    if( itgeom->GetTransparency() > 0 ) {
-                        // set a diffuse color
-                        SoSearchAction search;
-                        search.setType(SoMaterial::getClassTypeId());
-                        search.setInterest(SoSearchAction::ALL);
-                        psep->ref();
-                        search.apply(psep);
-                        for(int i = 0; i < search.getPaths().getLength(); ++i) {
-                            SoPath* path = search.getPaths()[i];
-                            SoMaterial* pmtrl = (SoMaterial*)path->getTail();
-                            pmtrl->transparency = itgeom->GetTransparency();
+                        if( itgeom->GetTransparency() > 0 ) {
+                            // set a diffuse color
+                            SoSearchAction search;
+                            search.setType(SoMaterial::getClassTypeId());
+                            search.setInterest(SoSearchAction::ALL);
+                            psep->ref();
+                            search.apply(psep);
+                            for(int i = 0; i < search.getPaths().getLength(); ++i) {
+                                SoPath* path = search.getPaths()[i];
+                                SoMaterial* pmtrl = (SoMaterial*)path->getTail();
+                                pmtrl->transparency = itgeom->GetTransparency();
+                            }
                         }
-                    }
 
-                    mySceneInput.closeFile();
-                    bSucceeded = true;
+                        mySceneInput.closeFile();
+                        bSucceeded = true;
+                    }
                 }
             }
 
