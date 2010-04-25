@@ -95,9 +95,14 @@ namespace CONVEX_DECOMPOSITION
 
 NxU32 tc_timeGetTime(void)
 {
-   #if defined(__linux__)
+   #ifndef _MSC_VER
       struct timespec ts;
+
+#ifdef __APPLE__
+      clock_gettime(CLOCK_MONOTONIC, &ts);
+#else
       clock_gettime(CLOCK_REALTIME, &ts);
+#endif
       return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
    #else
       return timeGetTime();
@@ -106,7 +111,7 @@ NxU32 tc_timeGetTime(void)
 
 void   tc_sleep(NxU32 ms)
 {
-   #if defined(__linux__)
+#ifndef _MSC_VER
       usleep(ms * 1000);
    #else
       Sleep(ms);
@@ -115,7 +120,7 @@ void   tc_sleep(NxU32 ms)
 
 void tc_spinloop()
 {
-   #ifdef __linux__
+#ifndef _MSC_VER
       asm ( "pause" );
    #else
       __asm { pause };
@@ -124,7 +129,7 @@ void tc_spinloop()
 
 void tc_interlockedExchange(void *dest, const int64_t exchange)
 {
-   #ifdef __linux__
+#ifndef _MSC_VER
 	  // not working
 	  assert(false);
 	  //__sync_lock_test_and_set((int64_t*)dest, exchange);
@@ -148,7 +153,7 @@ void tc_interlockedExchange(void *dest, const int64_t exchange)
 
 NxI32 tc_interlockedCompareExchange(void *dest, NxI32 exchange, NxI32 compare)
 {
-   #ifdef __linux__
+#ifndef _MSC_VER
 	  // not working
 	  assert(false);
 	  return 0;
@@ -175,7 +180,7 @@ NxI32 tc_interlockedCompareExchange(void *dest, NxI32 exchange, NxI32 compare)
 
 NxI32 tc_interlockedCompareExchange(void *dest, const NxI32 exchange1, const NxI32 exchange2, const NxI32 compare1, const NxI32 compare2)
 {
-   #ifdef __linux__
+#ifndef _MSC_VER
 	  // not working
       assert(false);
 	  return 0;
@@ -211,7 +216,11 @@ public:
     #elif defined(__APPLE__) || defined(__linux__)
   	pthread_mutexattr_t mutexAttr;  // Mutex Attribute
   	VERIFY( pthread_mutexattr_init(&mutexAttr) == 0 );
+#ifdef __linux__
   	VERIFY( pthread_mutexattr_settype(&mutexAttr, PTHREAD_MUTEX_RECURSIVE_NP) == 0 );
+#else
+  	VERIFY( pthread_mutexattr_settype(&mutexAttr, PTHREAD_MUTEX_RECURSIVE) == 0 );
+#endif
   	VERIFY( pthread_mutex_init(&m_Mutex, &mutexAttr) == 0 );
   	VERIFY( pthread_mutexattr_destroy(&mutexAttr) == 0 );
     #endif
@@ -356,7 +365,11 @@ public:
 	#elif defined(__APPLE__) || defined(__linux__)
 	  pthread_mutexattr_t mutexAttr;  // Mutex Attribute
 	  VERIFY( pthread_mutexattr_init(&mutexAttr) == 0 );
-	  VERIFY( pthread_mutexattr_settype(&mutexAttr, PTHREAD_MUTEX_RECURSIVE_NP) == 0 );
+#ifdef __linux__
+  	VERIFY( pthread_mutexattr_settype(&mutexAttr, PTHREAD_MUTEX_RECURSIVE_NP) == 0 );
+#else
+  	VERIFY( pthread_mutexattr_settype(&mutexAttr, PTHREAD_MUTEX_RECURSIVE) == 0 );
+#endif
 	  VERIFY( pthread_mutex_init(&mEventMutex, &mutexAttr) == 0 );
 	  VERIFY( pthread_mutexattr_destroy(&mutexAttr) == 0 );
 	  VERIFY( pthread_cond_init(&mEvent, NULL) == 0 );
@@ -416,7 +429,11 @@ public:
 	  else
 	  {
 	      struct timespec ts;
-	      clock_gettime(CLOCK_REALTIME, &ts);
+#ifdef __APPLE__
+      clock_gettime(CLOCK_MONOTONIC, &ts);
+#else
+      clock_gettime(CLOCK_REALTIME, &ts);
+#endif
 	      ts.tv_nsec += ms * 1000000;
 	      ts.tv_sec += ts.tv_nsec / 1000000000;
 	      ts.tv_nsec %= 1000000000;
