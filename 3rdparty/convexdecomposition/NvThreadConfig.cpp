@@ -74,13 +74,15 @@ NvThreadConfig.cpp : A simple wrapper class to define threading and mutex locks.
 #if defined(__linux__)
 	//#include <sys/time.h>
 	#include <time.h>
-	#include <unistd.h>
 	#include <errno.h>
 	#define __stdcall
 #endif
 
 #if defined(__APPLE__) || defined(__linux__)
 	#include <pthread.h>
+    #include <sys/timeb.h>    // ftime(), struct timeb
+    #include <sys/time.h>
+	#include <unistd.h>
 #endif
 
 
@@ -93,20 +95,47 @@ NvThreadConfig.cpp : A simple wrapper class to define threading and mutex locks.
 namespace CONVEX_DECOMPOSITION
 {
 
+inline static void getWallTime(uint32_t& sec, uint32_t& nsec)
+{
+
+}
+
+inline static uint64_t GetNanoTime()
+{
+    uint32_t sec,nsec;
+    getWallTime(sec,nsec);
+    return (uint64_t)sec*1000000000 + (uint64_t)nsec;
+}
+
+inline static uint64_t GetMicroTime()
+{
+    uint32_t sec,nsec;
+    getWallTime(sec,nsec);
+    return (uint64_t)sec*1000000 + (uint64_t)nsec/1000;
+}
+
+inline static uint32_t GetMilliTime()
+{
+    uint32_t sec,nsec;
+    getWallTime(sec,nsec);
+    return (uint64_t)sec*1000 + (uint64_t)nsec/1000000;
+}
+
 NxU32 tc_timeGetTime(void)
 {
    #ifndef _MSC_VER
-      struct timespec ts;
-
-#ifdef __APPLE__
-      clock_gettime(CLOCK_MONOTONIC, &ts);
+#ifdef __linux__
+  struct timespec ts;
+  clock_gettime(CLOCK_REALTIME, &ts);
+  return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 #else
-      clock_gettime(CLOCK_REALTIME, &ts);
+  struct timeval timeofday;
+  gettimeofday(&timeofday,NULL);
+  return 1000*timeofday.tv_sec+timeofday.tv_usec/1000;
 #endif
-      return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
-   #else
-      return timeGetTime();
-   #endif
+#else
+  return timeGetTime();
+#endif
 }
 
 void   tc_sleep(NxU32 ms)
@@ -428,17 +457,23 @@ public:
 	  }
 	  else
 	  {
-	      struct timespec ts;
-#ifdef __APPLE__
-      clock_gettime(CLOCK_MONOTONIC, &ts);
+          struct timespec ts;
+#ifdef __linux__
+          clock_gettime(CLOCK_REALTIME, &ts);
 #else
-      clock_gettime(CLOCK_REALTIME, &ts);
+          struct timeval timeofday;
+          gettimeofday(&timeofday,NULL);
+          ts.tv_nsec = timeofday.tv_usec*1000;
+          ts.tv_sec = timeofday.tv_sec;
 #endif
 	      ts.tv_nsec += ms * 1000000;
 	      ts.tv_sec += ts.tv_nsec / 1000000000;
 	      ts.tv_nsec %= 1000000000;
 		  NxI32 result = pthread_cond_timedwait(&mEvent, &mEventMutex, &ts);
-		  assert(result == 0 || result == ETIMEDOUT);
+		  assert(result == 0);
+#ifdef __linux__
+          assert(result == ETIMEDOUT);
+#endif
 	  }
 	  VERIFY( pthread_mutex_unlock(&mEventMutex) == 0 );
 	#endif
