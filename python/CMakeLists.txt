@@ -18,7 +18,6 @@ else()
   message(STATUS "failed to execute ${IKFAST_EXECUTABLE}, return: ${_ikfast_success}")
 endif()
 
-add_subdirectory(sympy)
 add_subdirectory(bindings)
 
 # install all python files

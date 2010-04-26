@@ -195,24 +195,25 @@ class CollisionMapRobot : public RobotBase
             boost::array<int,2> indices={{0,0}};
             FOREACHC(itmap,cmdata->listmaps) {
                 size_t i=0;
-                FOREACHC(itjoint,itmap->joints) {
+                XMLData::COLLISIONPAIR& curmap = *itmap; // for debugging
+                FOREACHC(itjoint,curmap.joints) {
                     if( !*itjoint )
                         break;
                     (*itjoint)->GetValues(values);
-                    if( itmap->fmin[i] < itmap->fmax[i] ) {
-                        int index = (int)((values.at(0)-itmap->fmin[i])*itmap->fidelta[i]);
-                        if( index < 0 || index >= (int)itmap->vfreespace.shape()[i] )
+                    if( curmap.fmin[i] < curmap.fmax[i] ) {
+                        int index = (int)((values.at(0)-curmap.fmin[i])*curmap.fidelta[i]);
+                        if( index < 0 || index >= (int)curmap.vfreespace.shape()[i] )
                             break;
                         indices.at(i) = index;
                     }
                     ++i;
                 }
-                if( i != itmap->joints.size() )
+                if( i != curmap.joints.size() )
                     continue;
-                if( !itmap->vfreespace(indices) ) {
+                if( !curmap.vfreespace(indices) ) {
                     // get all colliding links and check to make sure that at least two are enabled
                     vector<LinkConstPtr> vLinkColliding;
-                    FOREACHC(itjoint,itmap->joints) {
+                    FOREACHC(itjoint,curmap.joints) {
                         if( !!(*itjoint)->GetFirstAttached() && find(vLinkColliding.begin(),vLinkColliding.end(),(*itjoint)->GetFirstAttached())== vLinkColliding.end() )
                             vLinkColliding.push_back(KinBody::LinkConstPtr((*itjoint)->GetFirstAttached()));
                         if( !!(*itjoint)->GetSecondAttached() && find(vLinkColliding.begin(),vLinkColliding.end(),(*itjoint)->GetSecondAttached())== vLinkColliding.end() )
@@ -233,7 +234,7 @@ class CollisionMapRobot : public RobotBase
                         if( vLinkColliding.size() > 1 )
                             report->plink2 = vLinkColliding.at(1);
                     }
-                    RAVELOG_VERBOSEA(str(boost::format("Self collision: joints %s:%s\n")%itmap->jointnames[0]%itmap->jointnames[1]));
+                    RAVELOG_VERBOSEA(str(boost::format("Self collision: joints %s(%d):%s(%d)\n")%curmap.jointnames[0]%indices[0]%curmap.jointnames[1]%indices[1]));
                     return true;
                 }
             }

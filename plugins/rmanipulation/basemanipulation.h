@@ -894,7 +894,7 @@ protected:
         vector<dReal> vhandgoal;
         bool bExecute = true;
         boost::shared_ptr<ostream> pOutputTrajStream;
-    
+        int nMaxTries=1;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput )
@@ -922,6 +922,8 @@ protected:
             }
             else if( cmd == "execute" )
                 sinput >> bExecute;
+            else if( cmd == "maxtries" )
+                sinput >> nMaxTries;
             else {
                 RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -941,7 +943,14 @@ protected:
 
         boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(robot->GetActiveDOF()));
     
-        if( !CM::MoveUnsync::_MoveUnsyncJoints(GetEnv(), robot, ptraj, vhandjoints, vhandgoal, strplanner) )
+        bool bSuccess = false;
+        for(int itry = 0; itry < nMaxTries; ++itry) {
+            if( CM::MoveUnsync::_MoveUnsyncJoints(GetEnv(), robot, ptraj, vhandjoints, vhandgoal, strplanner) ) {
+                bSuccess = true;
+                break;
+            }
+        }
+        if( !bSuccess )
             return false;
 
         BOOST_ASSERT(ptraj->GetPoints().size() > 0);
@@ -1111,12 +1120,14 @@ protected:
         Trajectory::TPOINT ptfirst;
         robot->GetActiveDOFValues(ptfirst.q);
         ptraj->AddPoint(ptfirst);
-        if( GetEnv()->CheckCollision(KinBodyConstPtr(robot)) ) {
-            if( CM::JitterActiveDOF(robot) == 0 ) {
-                RAVELOG_WARNA("robot initially in collision\n");
-                return false;
-            }
+        switch(CM::JitterActiveDOF(robot) ) {
+        case 0:
+            RAVELOG_WARNA("robot initially in collision\n");
+            return false;
+        case 1:
             robot->GetActiveDOFValues(ptfirst.q);
+        default:
+            break;
         }
  
         boost::shared_ptr<PlannerBase> graspplanner = GetEnv()->CreatePlanner("Grasper");

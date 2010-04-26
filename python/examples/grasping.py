@@ -273,8 +273,8 @@ class GraspingModel(OpenRAVEModel):
                     try:
                         with self.env:
                             #self.env.SetDebugLevel(DebugLevel.Verbose)
-                            #contacts,finalconfig,mindist,volume = self.testGrasp(grasp=grasp,translate=True,forceclosure=True,graspingnoise=graspingnoise)
-                            contacts,finalconfig,mindist,volume = self.runGrasp(grasp=grasp,translate=True,forceclosure=True)
+                            contacts,finalconfig,mindist,volume = self.testGrasp(grasp=grasp,translate=True,forceclosure=True,graspingnoise=graspingnoise)
+                            #contacts,finalconfig,mindist,volume = self.runGrasp(grasp=grasp,translate=True,forceclosure=True)
                             if mindist == 0:
                                 print 'grasp is not in force closure!'
                             contactgraph = self.drawContacts(contacts) if len(contacts) > 0 else None
@@ -297,21 +297,21 @@ class GraspingModel(OpenRAVEModel):
                     self.env.UpdatePublishedBodies()
                 raw_input('press any key to continue: ')
 
-    def testGrasp(self,graspingnoise=None,Ngraspingtries = 20,forceclosurethreshold=1e-9,**kwargs):
+    def testGrasp(self,graspingnoise=None,Ngraspingtries = 100,forceclosurethreshold=1e-9,**kwargs):
         contacts,finalconfig,mindist,volume = self.runGrasp(graspingnoise=0,**kwargs)
         if mindist > forceclosurethreshold and graspingnoise > 0:
             print 'testing with noise',graspingnoise
-#             with self.env:
-#                 self.robot.SetTransform(finalconfig[1])
-#                 self.robot.SetJointValues(finalconfig[0])
-#                 self.env.UpdatePublishedBodies()
-#             time.sleep(5)
             # try several times and make sure that grasp succeeds all the time
             allfinaltrans = [finalconfig[1]]
             allfinaljoints = [finalconfig[0]]
             for iter in range(Ngraspingtries):
                 contacts2,finalconfig2,mindist2,volume2 = self.runGrasp(graspingnoise=graspingnoise,**kwargs)
                 # don't check mindist since slight variations can really affect force closure
+#                 with self.robot:
+#                     self.robot.SetTransform(finalconfig2[1])
+#                     self.robot.SetJointValues(finalconfig2[0])
+#                     self.env.UpdatePublishedBodies()
+#                     time.sleep(1)
                 allfinaltrans.append(finalconfig2[1])
                 allfinaljoints.append(finalconfig2[0])
             if mindist > 0:
@@ -322,7 +322,7 @@ class GraspingModel(OpenRAVEModel):
                 # compute the max distance of each link
                 maxjointvaluestd = max([sum([jointvaluesstd[i] for i in range(self.robot.GetDOF()) if self.robot.DoesAffect(i,link.GetIndex())]) for link in self.robot.GetLinks()])
                 print 'grasp:',translationstd,maxjointvaluestd
-                if translationstd+maxjointvaluestd > 0.7*graspingnoise:
+                if translationstd+maxjointvaluestd > 0.5*graspingnoise:
                     print 'deinty grasp:',translationstd,maxjointvaluestd
                     mindist = 0
         return contacts,finalconfig,mindist,volume

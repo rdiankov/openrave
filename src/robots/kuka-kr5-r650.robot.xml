@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Robot name="kuka-kr5-r650">
+  <KinBody file="kuka-kr5-r650.kinbody.xml"/>
+  <Manipulator name="arm">
+    <base>base</base>
+    <effector>link6</effector>
+    <translation>0.028 0 0</translation>
+  </Manipulator>
+</Robot>

@@ -263,7 +263,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         else:
             gmodels = allgmodels
 
-        approachoffset = 0.02
+        approachoffset = 0.03
         stepsize = 0.001
         graspiterators = [(gmodel,gmodel.validGraspIterator(checkik=True,randomgrasps=True,backupdist=approachoffset)) for gmodel in allgmodels]
         while(len(graspiterators)>0):
@@ -281,6 +281,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                     neutraljointvalues=None
                 except planning_error,e:
                     print 'failed to move to neutral values:',e
+            print 'selected %s grasp %d '%(grasp.manip,graspindex)
             gmodel.moveToPreshape(grasp)
             with self.env:
                 self.robot.SetActiveManipulator(gmodel.manip)
@@ -325,13 +326,20 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                 with TaskManipulation.SwitchState(self.taskmanip):
                     self.robot.SetActiveDOFs(armjoints)
                     self.basemanip.MoveActiveJoints(goal=finalarmsolution,maxiter=5000,maxtries=2)
-            self.waitrobot()            
-            self.closefingers(target=gmodel.target)
+            self.waitrobot()
+            success = False
+            try:
+                self.closefingers(target=gmodel.target)
+                success = True
+            except planning_error,e:
+                print e
             try:
                 self.basemanip.MoveHandStraight(direction=self.updir,stepsize=0.002,minsteps=1,maxsteps=100)
             except:
                 print 'failed to move up'
             self.waitrobot()
+            if not success:
+                continue
             return gmodel
         raise planning_error('failed to grasp')
     def graspObject(self,allgmodels,usevisibilitycamera=None,neutraljointvalues=None):
@@ -361,7 +369,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                     except planning_error,e:
                         print 'failed to move to neutral values:',e
                 self.robot.SetActiveManipulator(gmodel.manip)
-                approachoffset = 0.02
+                approachoffset = 0.03
                 stepsize = 0.001
                 goals,graspindex,searchtime,trajdata = self.taskmanip.GraspPlanning(graspindices=gmodel.graspindices,grasps=gmodel.grasps,
                                                                                     target=gmodel.target,approachoffset=approachoffset,destposes=None,
@@ -620,6 +628,8 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                 self.robot.SetActiveManipulator(manip)
             self.basemanip.CloseFingers()
         self.waitrobot()
+        with self.env:
+            expectedvalues = self.robot.GetJointValues()[self.robot.GetActiveManipulator().GetGripperJoints()]
         if target is not None:
             with TaskManipulation.SwitchState(self.taskmanip): # grab the fat object!
                 with self.env:
@@ -632,7 +642,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                             # always create a dummy body
                             targetreal = self.envreal.ReadKinBodyXMLFile(target.GetXMLFilename())
                             if target is not None:
-                                targetreal.SetName(target.GetName()+'_real%d'%random.randint(100000))
+                                targetreal.SetName(target.GetName()+str(100+random.randint(10000)))
                                 self.envreal.AddKinBody(targetreal)
                                 targetreal.SetBodyTransformations(target.GetBodyTransformations())
                                 robotreal.SetActiveManipulator(self.robot.GetActiveManipulator().GetName())
@@ -641,6 +651,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                                 print 'failed to create real target with filename ',target.GetXMLFilename()
                 except openrave_exception,e:
                     print 'closefingers:',e
+        return expectedvalues
     def releasefingers(self,manip=None):
         """open fingers and release body"""
         with self.env:
@@ -655,11 +666,14 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                 with self.envreal:
                     robotreal = self.envreal.GetRobot(self.robot.GetName())
                     if robotreal is not None:
+                        targets = robotreal.GetGrabbed()
                         robotreal.ReleaseAllGrabbed()
+                        for target in targets:
+                            self.envreal.RemoveKinBody(target)
             except openrave_exception,e:
-                print 'closefingers:',e
+                print 'releasefingers:',e
     def graspObjectMobile(self,pose,values,grasp,graspindex,usevisibilitycamera=None):
-        approachoffset = 0.02
+        approachoffset = 0.03
         stepsize = 0.001
         gmodel = graspindex[0]
         print 'found grasp',gmodel.manip.GetName(),gmodel.target.GetName(),graspindex[1]
@@ -789,6 +803,8 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         self.waitrobot()
         # move hand down
         try: 
+            print self.robot.GetActiveManipulator()
+            print self.robot.GetJointValues()
             self.basemanip.MoveHandStraight(direction=-self.updir,jacobian=0.02,stepsize=0.002,minsteps=0,maxsteps=100)
             self.waitrobot()
             self.basemanip.MoveHandStraight(direction=-self.updir,jacobian=0.02,ignorefirstcollision=True,stepsize=0.002,minsteps=0,maxsteps=5)
@@ -847,7 +863,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                     if cmd == 'n':
                         continue
                 with self.env:
-                    newtarget,newenv = self.searchrealenv(target,waitfortarget=3.0)
+                    newtarget,newenv = self.searchrealenv(target,waitfortarget=4.0)
                     if newtarget is not None:
                         break
             else:

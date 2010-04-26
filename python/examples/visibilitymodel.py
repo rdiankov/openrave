@@ -206,8 +206,13 @@ class VisibilityModel(OpenRAVEModel):
         (options, args) = parser.parse_args()
         env = Environment()
         try:
+            target = None
+            with env:
+                target = env.ReadKinBodyXMLFile(options.target)
+                target.SetTransform(eye(4))
+                env.AddKinBody(target)
             if Model is None:
-                Model = lambda robot: VisibilityModel(robot=robot)
+                Model = lambda robot: VisibilityModel(robot=robot,target=target,sensorname=options.sensorname)
             OpenRAVEModel.RunFromParser(env=env,Model=Model,parser=parser)
         finally:
             env.Destroy()
