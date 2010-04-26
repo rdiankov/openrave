@@ -961,6 +961,40 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool bDraw)
     return true;
 }
 
+bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool bDraw)
+{
+    bool bAddedToEnv = GetEnv()->RemoveKinBody(shared_kinbody());
+    if( bAddedToEnv )
+        throw openrave_exception(str(boost::format("KinBody::Init for %s, cannot Init a body while it is added to the environment\n")%GetName()));
+
+    Destroy();
+    LinkPtr plink(new Link(shared_kinbody()));
+    plink->index = 0;
+    plink->name = "base";
+    plink->bStatic = true;
+    Link::TRIMESH trimesh;
+    FOREACHC(itobb, vobbs) {
+        plink->_listGeomProperties.push_back(Link::GEOMPROPERTIES(plink));
+        Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
+        geom.type = Link::GEOMPROPERTIES::GeomBox;
+        TransformMatrix tm;
+        tm.trans = itobb->pos;
+        tm.m[0] = itobb->right.x; tm.m[1] = itobb->up.x; tm.m[2] = itobb->dir.x;
+        tm.m[4] = itobb->right.y; tm.m[5] = itobb->up.y; tm.m[6] = itobb->dir.y;
+        tm.m[8] = itobb->right.z; tm.m[9] = itobb->up.z; tm.m[10] = itobb->dir.z;
+        geom._t = tm;
+        geom._bDraw = bDraw;
+        geom.vGeomData = itobb->extents;
+        geom.InitCollisionMesh();
+        trimesh = geom.GetCollisionMesh();
+        trimesh.ApplyTransform(geom._t);
+        plink->collision.Append(trimesh);
+    }
+    
+    _veclinks.push_back(plink);
+    return true;
+}
+
 void KinBody::SetName(const std::string& newname)
 {
     BOOST_ASSERT(newname.size() > 0);

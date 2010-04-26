@@ -459,6 +459,11 @@ public:
     /// \param bDraw if true, the boxes will be rendered in the scene
     virtual bool InitFromBoxes(const std::vector<AABB>& vaabbs, bool bDraw);
 
+    /// Create a kinbody with one link composed of an array of oriented bounding boxes
+    /// \param vobbx the array of oriented bounding boxes that will comprise of the body
+    /// \param bDraw if true, the boxes will be rendered in the scene
+    virtual bool InitFromBoxes(const std::vector<OBB>& vobbs, bool bDraw);
+
     //! Get the name of the robot
     virtual const std::string& GetName() const           { return name; }
     virtual void SetName(const std::string& newname);
