@@ -296,7 +296,6 @@ class GraspingModel(OpenRAVEModel):
                         link.SetTransform(dot(Tdelta,link.GetTransform()))
                     self.env.UpdatePublishedBodies()
                 raw_input('press any key to continue: ')
-
     def testGrasp(self,graspingnoise=None,Ngraspingtries = 100,forceclosurethreshold=1e-9,**kwargs):
         contacts,finalconfig,mindist,volume = self.runGrasp(graspingnoise=0,**kwargs)
         if mindist > forceclosurethreshold and graspingnoise > 0:
@@ -322,7 +321,7 @@ class GraspingModel(OpenRAVEModel):
                 # compute the max distance of each link
                 maxjointvaluestd = max([sum([jointvaluesstd[i] for i in range(self.robot.GetDOF()) if self.robot.DoesAffect(i,link.GetIndex())]) for link in self.robot.GetLinks()])
                 print 'grasp:',translationstd,maxjointvaluestd
-                if translationstd+maxjointvaluestd > 0.5*graspingnoise:
+                if translationstd+maxjointvaluestd > 0.7*graspingnoise:
                     print 'deinty grasp:',translationstd,maxjointvaluestd
                     mindist = 0
         return contacts,finalconfig,mindist,volume
