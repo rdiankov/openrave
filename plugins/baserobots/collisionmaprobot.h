@@ -195,7 +195,7 @@ class CollisionMapRobot : public RobotBase
             boost::array<int,2> indices={{0,0}};
             FOREACHC(itmap,cmdata->listmaps) {
                 size_t i=0;
-                XMLData::COLLISIONPAIR& curmap = *itmap; // for debugging
+                const XMLData::COLLISIONPAIR& curmap = *itmap; // for debugging
                 FOREACHC(itjoint,curmap.joints) {
                     if( !*itjoint )
                         break;
