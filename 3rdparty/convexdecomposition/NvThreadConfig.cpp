@@ -95,32 +95,6 @@ NvThreadConfig.cpp : A simple wrapper class to define threading and mutex locks.
 namespace CONVEX_DECOMPOSITION
 {
 
-inline static void getWallTime(uint32_t& sec, uint32_t& nsec)
-{
-
-}
-
-inline static uint64_t GetNanoTime()
-{
-    uint32_t sec,nsec;
-    getWallTime(sec,nsec);
-    return (uint64_t)sec*1000000000 + (uint64_t)nsec;
-}
-
-inline static uint64_t GetMicroTime()
-{
-    uint32_t sec,nsec;
-    getWallTime(sec,nsec);
-    return (uint64_t)sec*1000000 + (uint64_t)nsec/1000;
-}
-
-inline static uint32_t GetMilliTime()
-{
-    uint32_t sec,nsec;
-    getWallTime(sec,nsec);
-    return (uint64_t)sec*1000 + (uint64_t)nsec/1000000;
-}
-
 NxU32 tc_timeGetTime(void)
 {
    #ifndef _MSC_VER
