@@ -1357,14 +1357,15 @@ namespace OpenRAVEXMLParser
                             listnewatts.push_back(*itatt2);
                     }
 
-                    BaseXMLReaderPtr preader = CreateInterfaceReader(_penv,_type,_pinterface, xmltag, listnewatts);
-                    bool bSuccess = RaveParseXMLFile(preader, itatt->second);
-                    if( !bSuccess ) {
+                    //BaseXMLReaderPtr preader = CreateInterfaceReader(_penv,_type,_pinterface, xmltag, listnewatts);
+                    //bool bSuccess = RaveParseXMLFile(preader, itatt->second);
+                    pinterface = _penv->ReadInterfaceXMLFile(pinterface,_type,itatt->second,listnewatts);
+                    if( !pinterface ) {
                         RAVELOG_DEBUGA(str(boost::format("Failed to load kinbody filename %s\n")%itatt->second));
                         GetXMLErrorCount()++;
                         break;
                     }
-                    _filename = preader->_filename;
+                    _filename = pinterface->GetXMLFilename();
                 }
             }
 

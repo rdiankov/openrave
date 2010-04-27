@@ -937,16 +937,32 @@ class Environment : public EnvironmentBase
     virtual InterfaceBasePtr ReadInterfaceXMLFile(InterfaceBasePtr pinterface, PluginType type, const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-
-//        if( _IsColladaFile(filename) ) {
-//            if( !RaveParseColladaFile(shared_from_this(), pinterface, type, filename) )
-//                return KinBodyPtr();
-//        }
-        OpenRAVEXMLParser::InterfaceXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), type, pinterface, RaveGetInterfaceName(type), atts);
-        bool bSuccess = ParseXMLFile(preader, filename);
-        if( !bSuccess )
-            return InterfaceBasePtr();
-        pinterface->__strxmlfilename = preader->_filename;
+        if( (type == PT_KinBody || type == PT_Robot) && _IsColladaFile(filename) ) {
+            if( type == PT_KinBody ) {
+                BOOST_ASSERT(!pinterface|| (pinterface->GetInterfaceType()==PT_KinBody||pinterface->GetInterfaceType()==PT_Robot));
+                KinBodyPtr pbody = boost::static_pointer_cast<KinBody>(pinterface);
+                if( !RaveParseColladaFile(shared_from_this(), pbody, filename) )
+                    return InterfaceBasePtr();
+                pinterface = pbody;
+            }
+            else if( type == PT_Robot ) {
+                BOOST_ASSERT(!pinterface||pinterface->GetInterfaceType()==PT_Robot);
+                RobotBasePtr probot = boost::static_pointer_cast<RobotBase>(pinterface);
+                if( !RaveParseColladaFile(shared_from_this(), probot, filename) )
+                    return InterfaceBasePtr();
+                pinterface = probot;
+            }
+            else
+                return InterfaceBasePtr();
+            pinterface->__strxmlfilename = filename;
+        }
+        else {
+            OpenRAVEXMLParser::InterfaceXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), type, pinterface, RaveGetInterfaceName(type), atts);
+            bool bSuccess = ParseXMLFile(preader, filename);
+            if( !bSuccess )
+                return InterfaceBasePtr();
+            pinterface->__strxmlfilename = preader->_filename;
+        }
         return pinterface;
     }
 
