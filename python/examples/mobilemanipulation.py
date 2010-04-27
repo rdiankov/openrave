@@ -263,9 +263,11 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         else:
             gmodels = allgmodels
 
+        if gmodels is None:
+            raise planning_error('graspObjectWithModels')
         approachoffset = 0.03
         stepsize = 0.001
-        graspiterators = [(gmodel,gmodel.validGraspIterator(checkik=True,randomgrasps=True,backupdist=approachoffset)) for gmodel in allgmodels]
+        graspiterators = [(gmodel,gmodel.validGraspIterator(checkik=True,randomgrasps=False,backupdist=approachoffset)) for gmodel in gmodels]
         while(len(graspiterators)>0):
             index=random.randint(len(graspiterators))
             try:
@@ -281,7 +283,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                     neutraljointvalues=None
                 except planning_error,e:
                     print 'failed to move to neutral values:',e
-            print 'selected %s grasp %d '%(grasp.manip,graspindex)
+            print 'selected %s grasp %d '%(gmodel.manip,graspindex)
             gmodel.moveToPreshape(grasp)
             with self.env:
                 self.robot.SetActiveManipulator(gmodel.manip)
@@ -558,7 +560,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         weight = 2.0
         logllthresh = 0.5
         origjointvalues = self.robot.GetJointValues()
-        configsampler = self.grmodel.sampleValidPlacementIterator(weight=weight,logllthresh=logllthresh,randomgrasps=True,randomplacement=False,updateenv=False)
+        configsampler = self.grmodel.sampleValidPlacementIterator(weight=weight,logllthresh=logllthresh,randomgrasps=False,randomplacement=False,updateenv=False)
         with self.env:
             starttime=time.time()
             while True:
@@ -606,7 +608,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         weight = 2.0
         logllthresh = 0.5
         origjointvalues = self.robot.GetJointValues()
-        configsampler = self.grmodel.sampleValidPlacementIterator(weight=weight,logllthresh=logllthresh,randomgrasps=True,randomplacement=False,updateenv=False)
+        configsampler = self.grmodel.sampleValidPlacementIterator(weight=weight,logllthresh=logllthresh,randomgrasps=False,randomplacement=False,updateenv=False)
         with self.env:
             starttime=time.time()
             pose,values,grasp,graspindex = configsampler.next()
@@ -851,7 +853,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
             raise planning_error('failed to load visibility model')
         #pts = array([dot(vmodel.target.GetTransform(),matrixFromPose(pose))[0:3,3] for pose in vmodel.visibilitytransforms])
         #h=vmodel.env.plot3(pts,10,colors=array([1,0.7,0,0.05]))
-        reachabletransforms = vmodel.pruneTransformations(thresh=0.04,numminneighs=40,maxdist=0.25)
+        reachabletransforms = vmodel.pruneTransformations(thresh=0.04,numminneighs=40,maxdist=usevisibilitycamera.get('maxdist',0.25))
         vmodel.SetCameraTransforms(reachabletransforms)
         for iter in range(20):
             vmodel.visualprob.MoveToObserveTarget(target=vmodel.target,sampleprob=0.001,maxiter=4000)

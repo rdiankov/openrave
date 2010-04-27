@@ -663,6 +663,7 @@ bool KinBody::Joint::IsStatic() const
 void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
 {
     Transform tjoint;
+    dReal f;
     if ( !!bodies[1] && !bodies[1]->IsStatic() ) 
         tjoint = tinvLeft * bodies[0]->GetTransform().inverse() * bodies[1]->GetTransform() * tinvRight;
     else
@@ -673,7 +674,13 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
 
     switch(type) {
     case JointHinge:
-        pValues.push_back(offset-2.0f*RaveAtan2(tjoint.rot.y*vAxes[0].x+tjoint.rot.z*vAxes[0].y+tjoint.rot.w*vAxes[0].z, tjoint.rot.x));
+        f = 2.0f*RaveAtan2(tjoint.rot.y*vAxes[0].x+tjoint.rot.z*vAxes[0].y+tjoint.rot.w*vAxes[0].z, tjoint.rot.x);
+        // expect values to be within -PI to PI range
+        if( f < -PI )
+            f += 2*PI;
+        else if( f > PI )
+            f -= 2*PI;
+        pValues.push_back(offset-f);
         break;
     case JointHinge2:
         {
@@ -685,11 +692,21 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
             vec1 = (vAxes[1] - vAxes[0].dot(vAxes[1])*vAxes[0]).normalize();
             vec2 = (axis2cur - vAxes[0].dot(axis2cur)*vAxes[0]).normalize();
             vec3 = vAxes[0]; vec3.Cross(vec1);
-            pValues.push_back(-RaveAtan2(vec3.dot(vec2), vec1.dot(vec2)));
+            f = 2.0*RaveAtan2(vec3.dot(vec2), vec1.dot(vec2));
+            if( f < -PI )
+                f += 2*PI;
+            else if( f > PI )
+                f -= 2*PI;
+            pValues.push_back(offset-f);
             vec1 = (vAxes[0] - axis2cur.dot(vAxes[0])*axis2cur).normalize();
             vec2 = (axis1cur - axis2cur.dot(axis1cur)*axis2cur).normalize();
             vec3 = axis2cur; vec3.Cross(vec1);
-            pValues.push_back(-RaveAtan2(vec3.dot(vec2), vec1.dot(vec2)));
+            f = 2.0*RaveAtan2(vec3.dot(vec2), vec1.dot(vec2));
+            if( f < -PI )
+                f += 2*PI;
+            else if( f > PI )
+                f -= 2*PI;
+            pValues.push_back(-f);
         }
         break;
     case JointSlider:
@@ -1406,13 +1423,13 @@ void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, const Trans
 {
     if( _veclinks.size() == 0 )
         return;
-    Transform tbase = _veclinks.front()->GetTransform().inverse() * transBase;
+    Transform tbase = transBase*_veclinks.front()->GetTransform().inverse();
     _veclinks.front()->SetTransform(transBase);
 
     for(size_t i = 1; i < _veclinks.size(); ++i) {
         if( _veclinks[i]->IsStatic() ) {
             // if static and trans is valid, then apply the relative transformation to the link
-            _veclinks[i]->SetTransform(_veclinks[i]->GetTransform()*tbase);
+            _veclinks[i]->SetTransform(tbase*_veclinks[i]->GetTransform());
         }
         else
             _veclinks[i]->userdata = 0;
@@ -1423,7 +1440,7 @@ void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, const Trans
     // some links might not be connected to any joints. In this case, transform them by tbase
     for(size_t i = 1; i < _veclinks.size(); ++i) {
         if( _veclinks[i]->userdata == 0 ) {
-            _veclinks[i]->SetTransform(_veclinks[i]->GetTransform()*tbase);
+            _veclinks[i]->SetTransform(tbase*_veclinks[i]->GetTransform());
         }
     }
 }
