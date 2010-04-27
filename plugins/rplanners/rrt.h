@@ -275,7 +275,7 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
             }
             else {
                 RAVELOG_WARNA("goal in collision %s\n", _robot->CheckSelfCollision()?"(self)":NULL);
-                if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot), _report) ) {
+                if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot), _report) || _robot->CheckSelfCollision(_report) ) {
                     RAVELOG_WARN(str(boost::format("birrt: robot initially in collision %s!\n")%_report->__str__()));
                 }
             }
@@ -467,7 +467,7 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
             }
             else {
                 RAVELOG_WARNA("goal in collision %s\n", _robot->CheckSelfCollision()?"(self)":NULL);
-                if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot), _report) ) {
+                if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot), _report) || _robot->CheckSelfCollision(_report)) {
                     RAVELOG_WARN(str(boost::format("birrt: robot initially in collision %s!\n")%_report->__str__()));
                 }
             }

@@ -7,7 +7,7 @@ orBodyGetAABBs.m        orEnvSetOptions.m        orRobotGetDOFLimits.m
 orBodyGetDOF.m          orEnvCreateProblem.m   orEnvTriangulate.m       orRobotGetDOFValues.m
 orBodyGetJointValues.m  orEnvCreateRobot.m     orEnvWait.m              orRobotGetManipulators.m
 orBodyGetLinks.m        orEnvDestroyProblem.m  orRobotSensorGetData.m
-orBodyGetTransform.m    orEnvGetBodies.m       orRobotSensorSend.m
+orBodyGetTransform.m    orEnvGetBodies.m       orRobotSensorSend.m orBodySetJointTorques.m
 orBodySetJointValues.m  orEnvGetBody.m         orProblemSendCommand.m   orRobotSetActiveDOFs.m
 orBodySetTransform.m    orEnvGetRobots.m       orRobotSetDOFValues.m
 orCommunicator.m        orEnvLoadPlugin.m      orRobotControllerSend.m  orRobotStartActiveTrajectory.m

@@ -267,6 +267,7 @@ class SimpleTextServer : public ProblemInstance
         mapNetworkFns["body_getdof"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orBodyGetDOF,this,_1,_2,_3),OpenRaveWorkerFn(), true);
         mapNetworkFns["body_settransform"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orKinBodySetTransform,this,_1,_2,_3),OpenRaveWorkerFn(), false);
         mapNetworkFns["body_setjoints"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orBodySetJointValues,this,_1,_2,_3), OpenRaveWorkerFn(), false);
+        mapNetworkFns["body_setjointtorques"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orBodySetJointTorques,this,_1,_2,_3), OpenRaveWorkerFn(), false);
         mapNetworkFns["close"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvClose,this,_1,_2,_3), OpenRaveWorkerFn(),false);
         mapNetworkFns["createrobot"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvCreateRobot,this,_1,_2,_3), OpenRaveWorkerFn(), true);
         mapNetworkFns["createbody"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvCreateKinBody,this,_1,_2,_3), OpenRaveWorkerFn(), true);
@@ -1665,6 +1666,33 @@ protected:
             }
         }
 
+        return true;
+    }
+
+    /// orBodySetJointTorques(body, values, indices)
+    bool orBodySetJointTorques(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
+    {
+        SyncWithWorkerThread();
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        KinBodyPtr pbody = orMacroGetBody(is);
+        if( !pbody )
+            return false;
+
+        int dof = 0;
+        bool bAdd=false;
+        is >> bAdd >> dof;
+        if( !is || dof <= 0 )
+            return false;
+        if( dof != pbody->GetDOF() )
+            return false;
+
+        vector<dReal> vvalues(dof);
+        for(int i = 0; i < dof; ++i)
+            is >> vvalues[i];
+        if( !is )
+            return false;
+
+        pbody->SetJointTorques(vvalues, bAdd);
         return true;
     }
 

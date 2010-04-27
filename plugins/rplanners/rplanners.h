@@ -187,9 +187,8 @@ class CollisionFunctions
     {
         params._setstatefn(pConfig);
         bool bCol = robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot), report) || (params._bCheckSelfCollisions&&robot->CheckSelfCollision(report));
-        if( bCol && !!report ) {
-            RAVELOG_WARNA(str(boost::format("fcollision %s:%s with %s:%s\n")%report->plink1->GetParent()->GetName()%report->plink1->GetName()%report->plink2->GetParent()->GetName()%report->plink2->GetName()));
-        }
+        if( bCol && !!report )
+            RAVELOG_WARNA(str(boost::format("fcollision %s\n")%report->__str__()));
         return bCol;
     }
 };
