@@ -838,8 +838,8 @@ public:
             return;
 
         vector<dReal> vtorques = ExtractArray<dReal>(otorques);
-        BOOST_ASSERT((int)vtorques.size() != GetDOF() );
-        _pbody->SetJointValues(vtorques,bAdd);
+        BOOST_ASSERT((int)vtorques.size() == GetDOF() );
+        _pbody->SetJointTorques(vtorques,bAdd);
     }
 
     boost::multi_array<dReal,2> CalculateJacobian(int index, object offset)
