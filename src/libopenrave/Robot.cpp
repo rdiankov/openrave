@@ -424,7 +424,7 @@ bool RobotBase::Manipulator::IsGrabbing(KinBodyConstPtr pbody) const
 {
     RobotBasePtr probot(_probot);
     KinBody::LinkPtr plink = probot->IsGrabbing(pbody);
-    if( !plink ) {
+    if( !!plink ) {
         if( plink == _pEndEffector || plink == _pBase )
             return true;
         int iattlink = _pEndEffector->GetIndex();
