@@ -114,7 +114,7 @@ class BaseManipulation:
         if res is None:
             raise planning_error('MoveToHandPosition')
         return res
-    def MoveUnsyncJoints(self,jointvalues,jointinds,maxtries=None,planner=None,execute=None,outputtraj=None):
+    def MoveUnsyncJoints(self,jointvalues,jointinds,maxtries=None,planner=None,maxdivision=None,execute=None,outputtraj=None):
         assert(len(jointinds)==len(jointvalues) and len(jointinds)>0)
         cmd = 'MoveUnsyncJoints handjoints %d %s %s '%(len(jointinds),' '.join(str(f) for f in jointvalues), ' '.join(str(f) for f in jointinds))
         if planner is not None:
@@ -125,6 +125,8 @@ class BaseManipulation:
             cmd += 'outputtraj '
         if maxtries is not None:
             cmd += 'maxtries %d '%maxtries
+        if maxdivision is not None:
+            cmd += 'maxdivision %d '%maxdivision
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise planning_error('MoveUnsyncJoints')

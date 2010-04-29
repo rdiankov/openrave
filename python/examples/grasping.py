@@ -247,6 +247,7 @@ class GraspingModel(OpenRAVEModel):
                             print 'found good grasp',len(self.grasps),'config: ',array(finalconfig[0])[self.manip.GetGripperJoints()]
                             self.grasps.append(grasp)
                 self.grasps = array(self.grasps)
+                self.orderGrasps()
         finally:
             for b,enable in bodies:
                 b.Enable(enable)
@@ -266,6 +267,8 @@ class GraspingModel(OpenRAVEModel):
                         grasps = [self.grasps[options.graspindex]]
                         delay=10000000
                     else:
+                        #self.orderGrasps()
+                        #self.save()
                         grasps = self.grasps
                     graspingnoise=options.graspingnoise
                 for i,grasp in enumerate(grasps):
@@ -466,6 +469,18 @@ class GraspingModel(OpenRAVEModel):
                     except planning_error:
                         continue
             yield grasp,i
+    def orderGrasps(self):
+        """order the grasps from best to worst"""
+        with self.target:
+            contactdists = []
+            self.target.SetTransform(eye(4))
+            ab=self.target.ComputeAABB()
+            for grasp in self.grasps:
+                contacts,finalconfig,mindist,volume = self.runGrasp(grasp=grasp,translate=True,forceclosure=False)
+                # find closest contact to center of object
+                contactdists.append(numpy.min(sum((contacts[:,0:3]-tile(ab.pos(),(len(contacts),1)))**2,1)))
+            order = argsort(array(contactdists))
+            self.grasps = self.grasps[order]
 
     def computeBoxApproachRays(self,delta=0.02,normalanglerange=0,directiondelta=0.4):
         # ode gives the most accurate rays

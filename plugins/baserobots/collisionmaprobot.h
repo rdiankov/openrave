@@ -28,7 +28,7 @@ class CollisionMapRobot : public RobotBase
             boost::multi_array<uint8_t,N> vfreespace; // 1 for free space, 0 for collision
             boost::array<dReal,N> fmin, fmax, fidelta;
             boost::array<string,N> jointnames;
-            boost::array<KinBody::JointPtr,N> joints;
+            boost::array<int,N> jointindices;
         };
         typedef COLLISIONMAP<2> COLLISIONPAIR;
     XMLData() : XMLReadable("collisionmap") {}
@@ -174,10 +174,14 @@ class CollisionMapRobot : public RobotBase
             // process the collisionmap structures
             FOREACH(itmap,cmdata->listmaps) {
                 for(size_t i = 0; i < itmap->jointnames.size(); ++i) {
-                    itmap->joints.at(i) = GetJoint(itmap->jointnames[i]);
+                    JointPtr pjoint = GetJoint(itmap->jointnames[i]);
                     itmap->fidelta.at(i) = (dReal)itmap->vfreespace.shape()[i]/(itmap->fmax.at(i)-itmap->fmin.at(i));
-                    if( !itmap->joints[i] )
+                    if( !pjoint ) {
+                        itmap->jointindices.at(i) = -1;
                         RAVELOG_WARN(str(boost::format("failed to find joint %s specified in collisionmap\n")%itmap->jointnames[i]));
+                    }
+                    else
+                        itmap->jointindices.at(i) = pjoint->GetJointIndex();
                 }
             }
         }
@@ -196,10 +200,10 @@ class CollisionMapRobot : public RobotBase
             FOREACHC(itmap,cmdata->listmaps) {
                 size_t i=0;
                 const XMLData::COLLISIONPAIR& curmap = *itmap; // for debugging
-                FOREACHC(itjoint,curmap.joints) {
-                    if( !*itjoint )
+                FOREACHC(itjindex,curmap.jointindices) {
+                    if( *itjindex < 0 )
                         break;
-                    (*itjoint)->GetValues(values);
+                    GetJoints().at(*itjindex)->GetValues(values);
                     if( curmap.fmin[i] < curmap.fmax[i] ) {
                         int index = (int)((values.at(0)-curmap.fmin[i])*curmap.fidelta[i]);
                         if( index < 0 || index >= (int)curmap.vfreespace.shape()[i] )
@@ -208,16 +212,17 @@ class CollisionMapRobot : public RobotBase
                     }
                     ++i;
                 }
-                if( i != curmap.joints.size() )
+                if( i != curmap.jointindices.size() )
                     continue;
                 if( !curmap.vfreespace(indices) ) {
                     // get all colliding links and check to make sure that at least two are enabled
                     vector<LinkConstPtr> vLinkColliding;
-                    FOREACHC(itjoint,curmap.joints) {
-                        if( !!(*itjoint)->GetFirstAttached() && find(vLinkColliding.begin(),vLinkColliding.end(),(*itjoint)->GetFirstAttached())== vLinkColliding.end() )
-                            vLinkColliding.push_back(KinBody::LinkConstPtr((*itjoint)->GetFirstAttached()));
-                        if( !!(*itjoint)->GetSecondAttached() && find(vLinkColliding.begin(),vLinkColliding.end(),(*itjoint)->GetSecondAttached())== vLinkColliding.end() )
-                            vLinkColliding.push_back(KinBody::LinkConstPtr((*itjoint)->GetSecondAttached()));
+                    FOREACHC(itjindex,curmap.jointindices) {
+                        JointPtr pjoint = GetJoints().at(*itjindex);
+                        if( !!pjoint->GetFirstAttached() && find(vLinkColliding.begin(),vLinkColliding.end(),pjoint->GetFirstAttached())== vLinkColliding.end() )
+                            vLinkColliding.push_back(KinBody::LinkConstPtr(pjoint->GetFirstAttached()));
+                        if( !!pjoint->GetSecondAttached() && find(vLinkColliding.begin(),vLinkColliding.end(),pjoint->GetSecondAttached())== vLinkColliding.end() )
+                            vLinkColliding.push_back(KinBody::LinkConstPtr(pjoint->GetSecondAttached()));
                     }
                     int numenabled = 0;
                     FOREACHC(itlink,vLinkColliding) {

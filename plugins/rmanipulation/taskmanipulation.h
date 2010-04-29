@@ -790,6 +790,7 @@ class TaskManipulation : public ProblemInstance
         void Switch(bool bSwitchToFat)
         {
             if( _bFat != bSwitchToFat ) {
+                RAVELOG_DEBUG(str(boost::format("switching %s to fat: %d\n")%_pbody->GetName()%(int)bSwitchToFat));
                 FOREACHC(itlink,_pbody->GetLinks()) {
                     KinBody::LinkPtr pswitchlink = _pbodyfat->GetLink((*itlink)->GetName());
                     list<KinBody::Link::GEOMPROPERTIES> listgeoms;

@@ -147,6 +147,9 @@ class CM
     class MoveUnsync
     {
     public:
+    MoveUnsync() : _maxdivision(10) {}
+        virtual ~MoveUnsync() {}
+
         virtual void SetRobot(RobotBasePtr robot) { _robot = robot; thresh = 0; }
         virtual float GetGoalThresh() { return thresh; }
         
@@ -159,7 +162,7 @@ class CM
             _robot->SetActiveDOFs(vhandjoints);
             _robot->GetActiveDOFValues(vhandvalues);
             
-            int numiter = 10;
+            int numiter = _maxdivision;
             vhanddelta.resize(vhandjoints.size());
             for(size_t i = 0; i < vhandjoints.size(); ++i)
                 vhanddelta[i] = (vhandgoal[i]-vhandvalues[i])/(dReal)numiter;
@@ -171,8 +174,10 @@ class CM
                 
                 _robot->SetActiveDOFValues(vhandvalues);
                 
+                if( _robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot)))
+                    return 1000;
                 // don't check self collisions for multiple DOF since don't know how dof will actually get to the final config!!!!
-                if( vhandvalues.size() == 1 && _robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot)))
+                if( vhandvalues.size() == 1 && _robot->CheckSelfCollision())
                     return 1000;
             }
 
@@ -203,7 +208,7 @@ class CM
         vector<int> vhandjoints;
         float thresh;
 
-        static bool _MoveUnsyncJoints(EnvironmentBasePtr penv, RobotBasePtr robot, TrajectoryBasePtr ptraj, const vector<int>& vhandjoints, const vector<dReal>& vhandgoal, const std::string& pplannername="BasicRRT")
+        static bool _MoveUnsyncJoints(EnvironmentBasePtr penv, RobotBasePtr robot, TrajectoryBasePtr ptraj, const vector<int>& vhandjoints, const vector<dReal>& vhandgoal, const std::string& pplannername="BasicRRT",int maxdivision=10)
         {
             if( vhandjoints.size() == 0 || vhandjoints.size() != vhandgoal.size() || !ptraj )
                 return false;
@@ -212,6 +217,7 @@ class CM
             pgoalfn->thresh = 0;
             pgoalfn->vhandjoints = vhandjoints;
             pgoalfn->vhandgoal = vhandgoal;
+            pgoalfn->_maxdivision=maxdivision;
             pgoalfn->SetRobot(robot);
             
             PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
@@ -246,6 +252,7 @@ class CM
     protected:
         vector<dReal> vhandvalues, vhanddelta, values, newvalues;
         RobotBasePtr _robot;
+        int _maxdivision;
     };
 
     template <typename T>

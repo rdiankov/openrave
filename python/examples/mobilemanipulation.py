@@ -670,8 +670,8 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                     if robotreal is not None:
                         targets = robotreal.GetGrabbed()
                         robotreal.ReleaseAllGrabbed()
-                        for target in targets:
-                            self.envreal.RemoveKinBody(target)
+#                         for target in targets:
+#                             self.envreal.RemoveKinBody(target)
             except openrave_exception,e:
                 print 'releasefingers:',e
     def graspObjectMobile(self,pose,values,grasp,graspindex,usevisibilitycamera=None):
@@ -865,6 +865,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                     if cmd == 'n':
                         continue
                 with self.env:
+                    time.sleep(2)
                     newtarget,newenv = self.searchrealenv(target,waitfortarget=4.0)
                     if newtarget is not None:
                         break

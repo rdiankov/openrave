@@ -895,6 +895,7 @@ protected:
         bool bExecute = true;
         boost::shared_ptr<ostream> pOutputTrajStream;
         int nMaxTries=1;
+        int maxdivision=10;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput )
@@ -917,13 +918,14 @@ protected:
                 FOREACH(it, vhandjoints)
                     sinput >> *it;
             }
-            else if( cmd == "planner" ) {
+            else if( cmd == "planner" )
                 sinput >> strplanner;
-            }
             else if( cmd == "execute" )
                 sinput >> bExecute;
             else if( cmd == "maxtries" )
                 sinput >> nMaxTries;
+            else if( cmd == "maxdivision" )
+                sinput >> maxdivision;
             else {
                 RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -945,7 +947,7 @@ protected:
     
         bool bSuccess = false;
         for(int itry = 0; itry < nMaxTries; ++itry) {
-            if( CM::MoveUnsync::_MoveUnsyncJoints(GetEnv(), robot, ptraj, vhandjoints, vhandgoal, strplanner) ) {
+            if( CM::MoveUnsync::_MoveUnsyncJoints(GetEnv(), robot, ptraj, vhandjoints, vhandgoal, strplanner,maxdivision) ) {
                 bSuccess = true;
                 break;
             }
