@@ -123,7 +123,7 @@ class GrasperProblem : public ProblemInstance
             }
             else if( cmd == "bodyid" ) {
                 int id = 0; sinput >> id;
-                params->targetbody = GetEnv()->GetBodyFromNetworkId(id);
+                params->targetbody = GetEnv()->GetBodyFromEnvironmentId(id);
             }
             else if( cmd == "direction" ) {
                 sinput >> params->vtargetdirection.x >> params->vtargetdirection.y >> params->vtargetdirection.z;

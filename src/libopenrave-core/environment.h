@@ -18,8 +18,6 @@
 
 #include <locale>
 
-#define KINBODY_DELETER boost::bind(&Environment::_KinBodyDestroyCallback,boost::static_pointer_cast<Environment>(shared_from_this()),_1)
-#define KINBODY_DELETER_SHARED boost::bind(&Environment::_KinBodyDestroyCallbackShared,boost::static_pointer_cast<Environment>(shared_from_this()),_1)
 #define GRAPH_DELETER boost::bind(&Environment::_CloseGraphCallback,boost::static_pointer_cast<Environment>(shared_from_this()),RaveViewerBaseWeakPtr(_pCurrentViewer),_1)
 
 #define CHECK_INTERFACE(pinterface) { \
@@ -46,7 +44,7 @@ class Environment : public EnvironmentBase
         RAVELOG_DEBUGA("setting openrave cache directory to %s\n",_homedirectory.c_str());
 
         _nBodiesModifiedStamp = 0;
-        _nNetworkIndex = 1;
+        _nEnvironmentIndex = 1;
 
         _fDeltaSimTime = 0.01f;
         _nCurSimTime = 0;
@@ -209,14 +207,22 @@ class Environment : public EnvironmentBase
 
         {
             boost::mutex::scoped_lock lock(_mutexBodies);
-            FOREACH(itbody,_vecbodies)
+            boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
+
+            FOREACH(itbody,_vecbodies) {
+                (*itbody)->_environmentid=0;
                 (*itbody)->Destroy();
+            }
             _vecbodies.clear();
-            FOREACH(itrobot,_vecrobots)
+            FOREACH(itrobot,_vecrobots) {
+                (*itrobot)->_environmentid=0;
                 (*itrobot)->Destroy();
+            }
             _vecrobots.clear();
             _vPublishedBodies.clear();
             _nBodiesModifiedStamp++;
+            
+            _mapBodies.clear();
         }
 
         list<ProblemInstancePtr> listProblems;
@@ -230,9 +236,9 @@ class Environment : public EnvironmentBase
         listProblems.clear();
 
 //        {
-//            boost::mutex::scoped_lock locknetworkid(_mutexNetworkIds);
+//            boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
 //            _mapBodies.clear();
-//            _nNetworkIndex = 1;
+//            _nEnvironmentIndex = 1;
 //        }
         _listOwnedObjects.clear();
 
@@ -282,35 +288,27 @@ class Environment : public EnvironmentBase
     virtual RobotBasePtr CreateRobot(const std::string& pname)
     {
         RobotBasePtr probot;
-        if( pname.size() > 0 ) {
+        if( pname.size() > 0 )
             probot = _pdatabase->CreateRobot(shared_from_this(), pname);
-            probot = RobotBasePtr(probot.get(),smart_pointer_deleter<RobotBasePtr>(probot,KINBODY_DELETER_SHARED));
-        }
         else {
-            probot = RobotBasePtr(new RobotBase(shared_from_this()),KINBODY_DELETER);
+            probot.reset(new RobotBase(shared_from_this()));
             vector<Transform> vTransforms;
             probot->GetBodyTransformations(vTransforms);
             KinBodyPtr pbody = boost::static_pointer_cast<KinBody>(probot);
             pbody->GetBodyTransformations(vTransforms);
         }
-
-        if( !!probot )
-            SetUniqueNetworkId(probot, &probot->networkid);
         return probot;
     }
 
     virtual KinBodyPtr CreateKinBody(const std::string& pname)
     {
         KinBodyPtr pbody;
-        if( pname.size() > 0 ) {
+        if( pname.size() > 0 )
             pbody = _pdatabase->CreateKinBody(shared_from_this(), pname);
-            pbody = KinBodyPtr(pbody.get(),smart_pointer_deleter<KinBodyPtr>(pbody,KINBODY_DELETER_SHARED));
-        }
         else {
-            pbody.reset(new KinBody(PT_KinBody,shared_from_this()),KINBODY_DELETER);
+            pbody.reset(new KinBody(PT_KinBody,shared_from_this()));
             pbody->__strxmlid = "KinBody";
         }
-        SetUniqueNetworkId(pbody, &pbody->networkid);
         return pbody;
     }
 
@@ -416,6 +414,7 @@ class Environment : public EnvironmentBase
         {
             boost::mutex::scoped_lock lock(_mutexBodies);
             _vecbodies.push_back(pbody);
+            SetEnvironmentId(pbody);
             _nBodiesModifiedStamp++;
         }
         _pCurrentChecker->InitKinBody(pbody);
@@ -434,6 +433,7 @@ class Environment : public EnvironmentBase
             boost::mutex::scoped_lock lock(_mutexBodies);
             _vecbodies.push_back(robot);
             _vecrobots.push_back(robot);
+            SetEnvironmentId(robot);
             _nBodiesModifiedStamp++;
         }
         _pCurrentChecker->InitKinBody(robot);
@@ -468,6 +468,7 @@ class Environment : public EnvironmentBase
 
             (*it)->SetPhysicsData(boost::shared_ptr<void>());
             (*it)->SetCollisionData(boost::shared_ptr<void>());
+            RemoveEnvironmentId(pbody);
             _vecbodies.erase(it);
             _nBodiesModifiedStamp++;
 
@@ -1086,8 +1087,14 @@ class Environment : public EnvironmentBase
 
     virtual KinBodyPtr GetBodyFromNetworkId(int id)
     {
+        RAVELOG_INFO("GetBodyFromNetworkId is deprecated, use GetBodyFromEnvironmentId instead\n");
+        return GetBodyFromEnvironmentId(id);
+    }
+
+    virtual KinBodyPtr GetBodyFromEnvironmentId(int id)
+    {
         boost::mutex::scoped_lock lock(_mutexBodies);
-        boost::mutex::scoped_lock locknetwork(_mutexNetworkIds);
+        boost::mutex::scoped_lock locknetwork(_mutexEnvironmentIds);
         map<int, KinBodyWeakPtr>::iterator it = _mapBodies.find(id);
         if( it != _mapBodies.end() )
             return KinBodyPtr(it->second);
@@ -1138,7 +1145,7 @@ class Environment : public EnvironmentBase
             (*itbody)->GetJointValues(itstate->jointvalues);
             itstate->strname =(*itbody)->GetName();
             itstate->pguidata = (*itbody)->GetGuiData();
-            itstate->networkid = (*itbody)->GetNetworkId();
+            itstate->environmentid = (*itbody)->GetEnvironmentId();
             ++itstate;
         }
     }
@@ -1160,7 +1167,7 @@ protected:
         _fDeltaSimTime = r->_fDeltaSimTime;
         _nCurSimTime = 0;
         _nSimStartTime = GetMicroTime();
-        _nNetworkIndex = r->_nNetworkIndex;
+        _nEnvironmentIndex = r->_nEnvironmentIndex;
         _bRealTime = r->_bRealTime;
 
         _bDestroying = false;
@@ -1172,7 +1179,7 @@ protected:
         // a little tricky due to a deadlocking situation
         std::map<int, KinBodyWeakPtr> mapBodies;
         {
-            boost::mutex::scoped_lock locknetworkid(_mutexNetworkIds);
+            boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
             mapBodies = _mapBodies;
             _mapBodies.clear();
         }
@@ -1184,7 +1191,7 @@ protected:
         _vdatadirs = r->_vdatadirs;
 
         EnvironmentMutex::scoped_lock lock(GetMutex());
-        boost::mutex::scoped_lock locknetworkid(_mutexNetworkIds);
+        boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
 
         // clone collision and physics
         if( !!r->GetCollisionChecker() ) {
@@ -1195,7 +1202,6 @@ protected:
             boost::mutex::scoped_lock lock(r->_mutexBodies);
             FOREACHC(itrobot, r->_vecrobots) {
                 RobotBasePtr pnewrobot = _pdatabase->CreateRobot(shared_from_this(), (*itrobot)->GetXMLId());
-                pnewrobot = RobotBasePtr(pnewrobot.get(),smart_pointer_deleter<RobotBasePtr>(pnewrobot,KINBODY_DELETER_SHARED));
                 if( !pnewrobot ) {
                     RAVELOG_ERRORA("failed to create robot %s\n", (*itrobot)->GetXMLId().c_str());
                     continue;
@@ -1206,33 +1212,33 @@ protected:
                     continue;
                 }
 
-                pnewrobot->networkid = (*itrobot)->GetNetworkId();
+                pnewrobot->_environmentid = (*itrobot)->GetEnvironmentId();
 
                 // note that pointers will not be correct
                 pnewrobot->_vGrabbedBodies = (*itrobot)->_vGrabbedBodies;
                 pnewrobot->_listAttachedBodies = (*itrobot)->_listAttachedBodies;
 
-                BOOST_ASSERT( _mapBodies.find(pnewrobot->GetNetworkId()) == _mapBodies.end() );
-                _mapBodies[pnewrobot->GetNetworkId()] = pnewrobot;
+                BOOST_ASSERT( _mapBodies.find(pnewrobot->GetEnvironmentId()) == _mapBodies.end() );
+                _mapBodies[pnewrobot->GetEnvironmentId()] = pnewrobot;
                 _vecbodies.push_back(pnewrobot);
                 _vecrobots.push_back(pnewrobot);
             }
             FOREACHC(itbody, r->_vecbodies) {
-                if( _mapBodies.find((*itbody)->GetNetworkId()) != _mapBodies.end() )
+                if( _mapBodies.find((*itbody)->GetEnvironmentId()) != _mapBodies.end() )
                     continue;
-                KinBodyPtr pnewbody(new KinBody(PT_KinBody,shared_from_this()),KINBODY_DELETER);
+                KinBodyPtr pnewbody(new KinBody(PT_KinBody,shared_from_this()));
                 if( !pnewbody->Clone(*itbody,options) ) {
                     RAVELOG_ERRORA("failed to clone body %s\n", (*itbody)->GetName().c_str());
                     continue;
                 }
 
-                pnewbody->networkid = (*itbody)->GetNetworkId();
+                pnewbody->_environmentid = (*itbody)->GetEnvironmentId();
                 
                 // note that pointers will not be correct
                 pnewbody->_listAttachedBodies = (*itbody)->_listAttachedBodies;
 
                 // note that pointers will not be correct
-                _mapBodies[pnewbody->GetNetworkId()] = pnewbody;
+                _mapBodies[pnewbody->GetEnvironmentId()] = pnewbody;
                 _vecbodies.push_back(pnewbody);
             }
 
@@ -1242,8 +1248,8 @@ protected:
                 FOREACH(itatt, (*itbody)->_listAttachedBodies) {
                     KinBodyPtr patt = itatt->lock();
                     if( !!patt ) {
-                        BOOST_ASSERT( _mapBodies.find(patt->GetNetworkId()) != _mapBodies.end() );
-                        listnew.push_back(_mapBodies[patt->GetNetworkId()]);
+                        BOOST_ASSERT( _mapBodies.find(patt->GetEnvironmentId()) != _mapBodies.end() );
+                        listnew.push_back(_mapBodies[patt->GetEnvironmentId()]);
                     }
                 }
                 (*itbody)->_listAttachedBodies = listnew;
@@ -1253,8 +1259,8 @@ protected:
             FOREACH(itrobot, _vecrobots) {
                 FOREACH(itgrab, (*itrobot)->_vGrabbedBodies) {
                     KinBodyPtr pbody(itgrab->pbody);
-                    BOOST_ASSERT( !!pbody && _mapBodies.find(pbody->GetNetworkId()) != _mapBodies.end());
-                    itgrab->pbody = _mapBodies[pbody->GetNetworkId()];
+                    BOOST_ASSERT( !!pbody && _mapBodies.find(pbody->GetEnvironmentId()) != _mapBodies.end());
+                    itgrab->pbody = _mapBodies[pbody->GetEnvironmentId()];
                     itgrab->plinkrobot = (*itrobot)->GetLinks().at(KinBody::LinkPtr(itgrab->plinkrobot)->GetIndex());
 
                     vector<KinBody::LinkConstPtr> vnew;
@@ -1506,33 +1512,20 @@ protected:
         bool _bQuitMainLoop;
     };
 
-    virtual void SetUniqueNetworkId(KinBodyPtr pbody, int* pOutNetworkId)
+    virtual void SetEnvironmentId(KinBodyPtr pbody)
     {
-        boost::mutex::scoped_lock locknetworkid(_mutexNetworkIds);
-        int id = _nNetworkIndex++;
-        if( pOutNetworkId )
-            *pOutNetworkId = id;
+        boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
+        int id = _nEnvironmentIndex++;
         BOOST_ASSERT( _mapBodies.find(id) == _mapBodies.end() );
+        pbody->_environmentid=id;
         _mapBodies[id] = pbody;
     }
 
-    virtual void RemoveUniqueNetworkId(int id)
+    virtual void RemoveEnvironmentId(KinBodyPtr pbody)
     {
-        boost::mutex::scoped_lock locknetworkid(_mutexNetworkIds);
-        _mapBodies.erase(id);
-    }
-
-    void _KinBodyDestroyCallback(KinBody* pbody)
-    {
-        if( pbody != NULL ) {
-            RemoveUniqueNetworkId(pbody->GetNetworkId());
-            delete pbody;
-        }
-    }
-    void _KinBodyDestroyCallbackShared(void const* pbody)
-    {
-        if( pbody != NULL )
-            RemoveUniqueNetworkId(static_cast<KinBody const*>(pbody)->GetNetworkId());
+        boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
+        _mapBodies.erase(pbody->_environmentid);
+        pbody->_environmentid = 0;
     }
 
     void AddIKSolvers()
@@ -1679,14 +1672,14 @@ protected:
     PhysicsEngineBasePtr _pPhysicsEngine;
     RaveViewerBasePtr _pCurrentViewer;
     
-    int _nNetworkIndex;               ///< next network index
+    int _nEnvironmentIndex;               ///< next network index
     std::map<int, KinBodyWeakPtr> _mapBodies; ///< a map of all the bodies in the environment. Controlled through the KinBody constructor and destructors
     
     boost::shared_ptr<boost::thread> _threadSimulation;                  ///< main loop for environment simulation
 
     mutable EnvironmentMutex _mutexEnvironment;      ///< protects internal data from multithreading issues
 
-    mutable boost::mutex _mutexNetworkIds;  ///< protects _vecbodies/_vecrobots from multithreading issues
+    mutable boost::mutex _mutexEnvironmentIds;  ///< protects _vecbodies/_vecrobots from multithreading issues
     mutable boost::mutex _mutexBodies;  ///< protects _mapBodies from multithreading issues
     mutable boost::mutex _mutexProblems; ///< lock when managing problems
 

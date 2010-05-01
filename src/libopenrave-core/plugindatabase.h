@@ -36,6 +36,8 @@
 
 #endif
 
+#define INTERFACE_DELETER boost::bind(&RaveDatabase::_InterfaceDestroyCallbackShared,shared_from_this(),_1)
+
 /// database of planners, obstacles, sensors, and problem from plugins
 class RaveDatabase : public boost::enable_shared_from_this<RaveDatabase>
 {
@@ -140,6 +142,7 @@ public:
             if( (*itplugin)->pfnCreate != NULL ) {
                 try {
                     InterfaceBasePtr pointer = (*itplugin)->pfnCreate(type, name, hash, penv);
+                    pointer = InterfaceBasePtr(pointer.get(), smart_pointer_deleter<InterfaceBasePtr>(pointer,INTERFACE_DELETER));
                     if( !!pointer ) {
                         if( strcmp(pointer->GetHash(), hash) ) {
                             RAVELOG_FATALA("plugin interface name %s, %s has invalid hash, might be compiled with stale openrave files\n", name.c_str(), RaveGetInterfaceNamesMap().find(type)->second.c_str());
@@ -401,6 +404,20 @@ protected:
     {
         EnvironmentMutex::scoped_lock lock(_mutex);
         _listDestroyLibraryQueue.push_back(lib);
+    }
+
+    void _InterfaceDestroyCallback(InterfaceBase* pbody)
+    {
+        if( pbody != NULL ) {
+            // post-processing?
+            delete pbody;
+        }
+    }
+    void _InterfaceDestroyCallbackShared(void const* pinterface)
+    {
+        if( pinterface != NULL ) {
+            // post-processing for deleting interfaces
+        }
     }
 
     list<PluginPtr> _listplugins;

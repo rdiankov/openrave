@@ -456,7 +456,7 @@ public:
         FOREACHC(it, _vgrasps)
             O << *it << " ";
         O << "</grasps>" << endl;
-        O << "<target>" << (!!_ptarget?_ptarget->GetNetworkId():0) << "</target>" << endl;
+        O << "<target>" << (!!_ptarget?_ptarget->GetEnvironmentId():0) << "</target>" << endl;
         O << "<numgradsamples>" << _nGradientSamples << "</numgradsamples>" << endl;
         O << "<visgraspthresh>" << _fVisibiltyGraspThresh << "</visgraspthresh>" << endl;
         O << "<graspdistthresh>" << _fGraspDistThresh << "</graspdistthresh>" << endl;
@@ -475,7 +475,7 @@ public:
         else if( name == "target" ) {
             int id = 0;
             _ss >> id;
-            _ptarget = _penv->GetBodyFromNetworkId(id);
+            _ptarget = _penv->GetBodyFromEnvironmentId(id);
         }
         else if( name == "numgradsamples" )
             _ss >> _nGradientSamples;

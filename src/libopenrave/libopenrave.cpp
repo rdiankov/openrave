@@ -865,6 +865,7 @@ KinBody::ManageDataPtr SimpleSensorSystem::AddKinBody(KinBodyPtr pbody, XMLReada
     b->lastupdated = GetMicroTime();
     _mapbodies[pbody->GetNetworkId()] = b;
     RAVELOG_DEBUGA(str(boost::format("system adding body %s (%s), total: %d\n")%pbody->GetName()%pbody->GetXMLFilename()%_mapbodies.size()));
+    SetManageData(pbody,b);
     return b;
 }
 
@@ -958,10 +959,15 @@ void SimpleSensorSystem::_UpdateBodies(list<SimpleSensorSystem::SNAPSHOT>& listb
 
     BODIES::iterator itbody = _mapbodies.begin();
     while(itbody != _mapbodies.end()) {
-        if( curtime-itbody->second->lastupdated > _expirationtime ) {
-            KinBody::LinkPtr plink = itbody->second->GetOffsetLink();
+        KinBody::LinkPtr plink = itbody->second->GetOffsetLink();
+        if( !!plink && plink->GetParent()->GetEnvironmentId()==0 ) {
+            _mapbodies.erase(itbody++);
+            continue;
+        }
+        else if( curtime-itbody->second->lastupdated > _expirationtime ) {
 
-            if( !itbody->second->IsLocked() ) {                
+
+            if( !itbody->second->IsLocked() ) {
                 if( !!plink ) {
                     //RAVELOG_VERBOSEA(str(boost::format("object %s expired %fs\n")%plink->GetParent()->GetName()*((curtime-itbody->second->lastupdated)*1e-6f)));
                     GetEnv()->RemoveKinBody(plink->GetParent());

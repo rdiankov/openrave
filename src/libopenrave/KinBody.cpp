@@ -886,7 +886,7 @@ KinBody::KinBody(PluginType type, EnvironmentBasePtr penv) : InterfaceBase(type,
 {
     _bHierarchyComputed = false;
     _bMakeJoinedLinksAdjacent = true;
-    networkid = 0;
+    _environmentid = 0;
     
     _nUpdateStampId = 0;
 }
@@ -951,8 +951,7 @@ bool KinBody::InitFromData(const std::string& data, const std::list<std::pair<st
 
 bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool bDraw)
 {
-    bool bAddedToEnv = GetEnv()->RemoveKinBody(shared_kinbody());
-    if( bAddedToEnv )
+    if( GetEnvironmentId() )
         throw openrave_exception(str(boost::format("KinBody::Init for %s, cannot Init a body while it is added to the environment\n")%GetName()));
 
     Destroy();
@@ -969,6 +968,8 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool bDraw)
         geom._bDraw = bDraw;
         geom.vGeomData = itab->extents;
         geom.InitCollisionMesh();
+        geom.diffuseColor=Vector(1,0.5f,0.5f,1);
+        geom.ambientColor=Vector(0.1,0.0f,0.0f,0);
         trimesh = geom.GetCollisionMesh();
         trimesh.ApplyTransform(geom._t);
         plink->collision.Append(trimesh);
@@ -980,8 +981,7 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool bDraw)
 
 bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool bDraw)
 {
-    bool bAddedToEnv = GetEnv()->RemoveKinBody(shared_kinbody());
-    if( bAddedToEnv )
+    if( GetEnvironmentId() )
         throw openrave_exception(str(boost::format("KinBody::Init for %s, cannot Init a body while it is added to the environment\n")%GetName()));
 
     Destroy();
@@ -1003,6 +1003,8 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool bDraw)
         geom._bDraw = bDraw;
         geom.vGeomData = itobb->extents;
         geom.InitCollisionMesh();
+        geom.diffuseColor=Vector(1,0.5f,0.5f,1);
+        geom.ambientColor=Vector(0.1,0.0f,0.0f,0);
         trimesh = geom.GetCollisionMesh();
         trimesh.ApplyTransform(geom._t);
         plink->collision.Append(trimesh);
@@ -2617,10 +2619,9 @@ bool KinBody::IsEnabled() const
     return false;
 }
 
-int KinBody::GetNetworkId() const
+int KinBody::GetEnvironmentId() const
 {
-    BOOST_ASSERT( networkid != 0 );
-    return networkid;
+    return _environmentid;
 }
 
 char KinBody::DoesAffect(int jointindex, int linkindex ) const
@@ -2709,7 +2710,6 @@ bool KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _listRegisteredCallbacks.clear(); // reset the callbacks
 
     _nUpdateStampId++; // update the stamp instead of copying
-    //networkid = r->networkid; // environment will handle copying network ids as necessary
     return true;
 }
 

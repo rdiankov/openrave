@@ -2408,7 +2408,7 @@ void QtCoinViewer::UpdateFromModel()
 
         if( !pitem ) {
             // make sure pbody is actually present
-            if( GetEnv()->GetBodyFromNetworkId(itbody->networkid) == pbody ) {
+            if( GetEnv()->GetBodyFromEnvironmentId(itbody->environmentid) == pbody ) {
             
                 // check to make sure the real GUI data is also NULL
                 if( !pbody->GetGuiData() ) {

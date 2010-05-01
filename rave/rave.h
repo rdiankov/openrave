@@ -848,6 +848,7 @@ public:
     virtual void UpdatePublishedBodies() = 0;
 
     /// Get the corresponding body from its unique network id
+    virtual KinBodyPtr GetBodyFromEnvironmentId(int id) = 0;
     virtual KinBodyPtr GetBodyFromNetworkId(int id) = 0;
 
     enum TriangulateOptions

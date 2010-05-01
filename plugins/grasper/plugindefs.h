@@ -169,7 +169,7 @@ class GraspParameters : public PlannerBase::PlannerParameters
         if( !PlannerParameters::serialize(O) )
             return false;
         O << "<fstandoff>" << fstandoff << "</fstandoff>" << endl;
-        O << "<targetbody>" << (int)(!targetbody ? 0 : targetbody->GetNetworkId()) << "</targetbody>" << endl;
+        O << "<targetbody>" << (int)(!targetbody ? 0 : targetbody->GetEnvironmentId()) << "</targetbody>" << endl;
         O << "<ftargetroll>" << ftargetroll << "</ftargetroll>" << endl;
         O << "<vtargetdirection>" << vtargetdirection << "</vtargetdirection>" << endl;
         O << "<vtargetposition>" << vtargetposition << "</vtargetposition>" << endl;
@@ -207,7 +207,7 @@ class GraspParameters : public PlannerBase::PlannerParameters
         else if( name == "targetbody") {
             int id = 0;
             _ss >> id;
-            targetbody = _penv->GetBodyFromNetworkId(id);
+            targetbody = _penv->GetBodyFromEnvironmentId(id);
         }
         else if( name == "ftargetroll")
             _ss >> ftargetroll;

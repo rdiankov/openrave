@@ -389,7 +389,7 @@ public:
         std::vector<dReal> jointvalues;
         boost::shared_ptr<void> pguidata, puserdata;
         std::string strname; ///< name of the body
-        int networkid; ///< unique network id
+        int environmentid; ///< unique network id
     };
     typedef boost::shared_ptr<BodyState> BodyStatePtr;
     typedef boost::shared_ptr<BodyState const> BodyStateConstPtr;
@@ -610,9 +610,11 @@ public:
 
     /// \return true if this body is derived from RobotBase
     virtual bool IsRobot() const { return false; }
+    
+    /// \return an environment unique id. if object is not added to the environment, this will return 0. So checking if GetEnvironmentId() is 0 is a good way to check if object is present in the environment.
+    virtual int GetEnvironmentId() const;
 
-    /// \return an environment unique id
-    virtual int GetNetworkId() const;
+    virtual int GetNetworkId() const { return GetEnvironmentId(); }
     
     /// returns how the joint effects the link. If zero, link is unaffected. If negative, the partial derivative of the Jacobian should be negated.
     /// \param jointindex index of the joint
@@ -710,7 +712,7 @@ protected:
 
     std::list<KinBodyWeakPtr> _listAttachedBodies; ///< list of bodies that are directly attached to this body (can have duplicates)
 
-    int networkid;                          ///< unique id of the body used in the network interface
+    int _environmentid;                          ///< unique id of the body solely used by the environment. This id will not be copied when cloning.
     int _nUpdateStampId;                         ///< unique id for every unique transformation change of any link,
                                             ////< monotically increases as body is updated.
     boost::shared_ptr<void> _pGuiData;                        ///< GUI data to let the viewer store specific graphic handles for the object
