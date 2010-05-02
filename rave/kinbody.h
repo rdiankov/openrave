@@ -395,7 +395,7 @@ public:
     typedef boost::shared_ptr<BodyState const> BodyStateConstPtr;
 
     /// Access point of the sensor system that manages the body.
-    class RAVE_API ManageData
+    class RAVE_API ManageData : public boost::enable_shared_from_this<ManageData>
     {
     public:
     ManageData(SensorSystemBasePtr psensorsystem) : _psensorsystem(psensorsystem) {}

@@ -223,7 +223,7 @@ class CM
             PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
             params->SetRobotActiveJoints(robot);
             params->_goalfn = boost::bind(&MoveUnsync::Eval,pgoalfn,_1);
-            params->_nMaxIterations = 20000;
+            params->_nMaxIterations = 5000;
             robot->GetActiveDOFValues(params->vinitialconfig);
             params->_fStepLength = 0.04f;
 

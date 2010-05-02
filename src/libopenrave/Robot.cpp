@@ -1824,7 +1824,7 @@ void RobotBase::GetGrabbed(std::vector<KinBodyPtr>& vbodies) const
     vbodies.resize(0);
     FOREACHC(itbody, _vGrabbedBodies) {
         KinBodyPtr pbody = itbody->pbody.lock();
-        if( !!pbody )
+        if( !!pbody && pbody->GetEnvironmentId() )
             vbodies.push_back(pbody);
     }
 }

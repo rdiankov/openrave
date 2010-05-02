@@ -52,6 +52,12 @@ class GraspReachability(metaclass.AutoReloader):
         clone = shallowcopy(self)
         clone.env = envother
         clone.robot = clone.env.GetRobot(self.robot.GetName())
+        clone.irmodels = []
+        for irmodel in self.irmodels:
+            try:
+                clone.irmodels.append(irmodel.clone(envother))
+            except openrave_exception,e:
+                print e
         clone.irgmodels = []
         for irmodel,gmodel in self.irgmodels:
             try:
@@ -208,11 +214,14 @@ class GraspReachability(metaclass.AutoReloader):
                                 ikmodel.autogenerate()
                             graspables.append(gmodel)
         return graspables
-    def setGraspReachability():
+    def setGraspReachability(self,possiblemanips=None):
         targets = []
         self.irgmodels = []
         with self.env:
             for gmodel in self.getGraspables():
+                if possiblemanips is not None:
+                    if not any([possiblemanip==gmodel.manip for possiblemanip in possiblemanips]):
+                        continue
                 for irmodel in self.irmodels:
                     if irmodel.manip == gmodel.manip:
                         self.irgmodels.append([irmodel,gmodel])
@@ -229,6 +238,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         self.maxvelmult=maxvelmult
         self.basemanip = BaseManipulation(self.robot,maxvelmult=maxvelmult)
         self.taskmanip = TaskManipulation(self.robot,maxvelmult=maxvelmult)
+        self.switchpatterns=switchpatterns
         if switchpatterns is not None:
             self.taskmanip.SwitchModels(switchpatterns=switchpatterns)
         self.updir = array((0,0,1))
@@ -240,11 +250,14 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         clone.grmodel = self.grmodel.clone(envother) if self.grmodel is not None else None
         clone.basemanip = self.basemanip.clone(envother)
         clone.taskmanip = self.taskmanip.clone(envother)
+        if clone.switchpatterns is not None:
+            clone.taskmanip.SwitchModels(switchpatterns=clone.switchpatterns)
         return clone
     def waitrobot(self):
         """busy wait for robot completion"""
         while not self.robot.GetController().IsDone():
             time.sleep(0.01)
+        time.sleep(0.1)
     def graspObjectWithModels(self,allgmodels,usevisibilitycamera=None,neutraljointvalues=None):
         viewmanip = None
         if usevisibilitycamera:
@@ -285,6 +298,8 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                     print 'failed to move to neutral values:',e
             print 'selected %s grasp %d '%(gmodel.manip,graspindex)
             gmodel.moveToPreshape(grasp)
+            time.sleep(1)
+            self.waitrobot()
             with self.env:
                 self.robot.SetActiveManipulator(gmodel.manip)
                 Tgrasp=gmodel.getGlobalGraspTransform(grasp,collisionfree=True)
@@ -318,11 +333,11 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                     expectedsteps = floor(approachoffset/stepsize)
                     self.basemanip.MoveHandStraight(direction=gmodel.getGlobalApproachDir(grasp),ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps-2,maxsteps=expectedsteps+1,searchall=False)
                 except planning_error,e:
-                    try:
-                        self.basemanip.MoveHandStraight(direction=gmodel.getGlobalApproachDir(grasp),ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps-2,maxsteps=expectedsteps+1,searchall=True)
-                    except planning_error,e:
-                        print 'failed to move straight: ',e,' Using planning to move rest of the way.'
-                        usejacobian = False
+#                     try:
+#                         self.basemanip.MoveHandStraight(direction=gmodel.getGlobalApproachDir(grasp),ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps-2,maxsteps=expectedsteps+1,searchall=True)
+#                     except planning_error,e:
+                    print 'failed to move straight: ',e,' Using planning to move rest of the way.'
+                    usejacobian = False
             if not usejacobian:
                 print 'moving to final ',solutions[index]
                 with TaskManipulation.SwitchState(self.taskmanip):
@@ -690,6 +705,8 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                 self.basemanip.MoveActiveJoints(goal=values[dofindices])
         self.waitrobot()
         gmodel.moveToPreshape(grasp)
+        time.sleep(1)
+        self.waitrobot()
         self.robot.SetActiveManipulator(gmodel.manip)
 
         if usevisibilitycamera:
@@ -715,7 +732,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                 usejacobian = True
                 with TaskManipulation.SwitchState(self.taskmanip):
                     self.robot.SetActiveDOFs(armjoints)
-                    self.basemanip.MoveActiveJoints(goal=solutions[index],maxiter=5000)
+                    self.basemanip.MoveActiveJoints(goal=solutions[index],maxiter=5000,maxtries=2)
             else:
                 print 'closest solution is too far',dists[index]
         self.waitrobot()
@@ -724,24 +741,29 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
             try:
                 print 'moving hand'
                 expectedsteps = floor(approachoffset/stepsize)
-                self.basemanip.MoveHandStraight(direction=gmodel.getGlobalApproachDir(grasp),ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps-2,maxsteps=expectedsteps+1,searchall=True)
+                self.basemanip.MoveHandStraight(direction=gmodel.getGlobalApproachDir(grasp),ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps-2,maxsteps=expectedsteps+1,searchall=False)
             except:
                 print 'failed to move straight, using planning to move rest of the way'
                 usejacobian = False
 
         if not usejacobian:
-            try:
-                with TaskManipulation.SwitchState(self.taskmanip):
-                    self.basemanip.MoveActiveJoints(goal=finalarmsolution)
-            except:
-                return self.graspObject([gmodel])
+            with TaskManipulation.SwitchState(self.taskmanip):
+                self.robot.SetActiveDOFs(armjoints)
+                self.basemanip.MoveActiveJoints(goal=finalarmsolution,maxiter=5000,maxtries=2)
         self.waitrobot()
-        self.closefingers(target=gmodel.target)
+        success = False
         try:
-            self.basemanip.MoveHandStraight(direction=self.updir,jacobian=0.02,stepsize=0.002,minsteps=1,maxsteps=100)
+            self.closefingers(target=gmodel.target)
+            success = True
+        except planning_error,e:
+            print e
+        try:
+            self.basemanip.MoveHandStraight(direction=self.updir,stepsize=0.002,minsteps=1,maxsteps=100)
         except:
             print 'failed to move up'
         self.waitrobot()
+        if not success:
+            raise planning_error('failed to close fingers')
         return gmodel
 
     def placeObjectMobileSearch(self,gmodel,dests,goalbounds,numtries=10,nummaxdests=10):
@@ -865,7 +887,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                     if cmd == 'n':
                         continue
                 with self.env:
-                    time.sleep(2)
+                    time.sleep(usevisibilitycamera.get('syncdelay',1.0))
                     newtarget,newenv = self.searchrealenv(target,waitfortarget=4.0)
                     if newtarget is not None:
                         break

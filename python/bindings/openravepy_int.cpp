@@ -621,6 +621,40 @@ public:
     typedef boost::shared_ptr<PyJoint> PyJointPtr;
     typedef boost::shared_ptr<PyJoint const> PyJointConstPtr;
 
+    class PyManageData
+    {
+        KinBody::ManageDataPtr _pdata;
+        PyEnvironmentBasePtr _pyenv;
+    public:
+        PyManageData(KinBody::ManageDataPtr pdata, PyEnvironmentBasePtr pyenv) : _pdata(pdata), _pyenv(pyenv) {}
+        virtual ~PyManageData() {}
+
+        KinBody::ManageDataPtr GetManageData() { return _pdata; }
+        
+        PySensorSystemBasePtr GetSystem();
+        PyVoidHandleConst GetData() const { return PyVoidHandleConst(_pdata->GetData()); }
+        PyLinkPtr GetOffsetLink() const {
+            KinBody::LinkPtr plink = _pdata->GetOffsetLink();
+            return !plink ? PyLinkPtr() : PyLinkPtr(new PyLink(plink,_pyenv));
+        }
+        bool IsPresent() { return _pdata->IsPresent(); }
+        bool IsEnabled() { return _pdata->IsEnabled(); }
+        bool IsLocked() { return _pdata->IsLocked(); }
+        bool Lock(bool bDoLock) { return _pdata->Lock(bDoLock); }
+
+        string __repr__() { return boost::str(boost::format("<env.GetKinBody('%s').GetManageData()>")%_pdata->GetOffsetLink()->GetParent()->GetName()); }
+        string __str__() {
+            KinBody::LinkPtr plink = _pdata->GetOffsetLink();
+            SensorSystemBasePtr psystem = _pdata->GetSystem();
+            string systemname = !psystem ? "(NONE)" : psystem->GetXMLId();
+            return boost::str(boost::format("<managedata:%s, parent=%s:%s>")%systemname%plink->GetParent()->GetName()%plink->GetName());
+        }
+        bool __eq__(boost::shared_ptr<PyManageData> p) { return _pdata==p->_pdata; }
+        bool __ne__(boost::shared_ptr<PyManageData> p) { return _pdata!=p->_pdata; }
+    };
+    typedef boost::shared_ptr<PyManageData> PyManageDataPtr;
+    typedef boost::shared_ptr<PyManageData const> PyManageDataConstPtr;
+
     PyKinBody(KinBodyPtr pbody, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pbody,pyenv), _pbody(pbody) {}
     PyKinBody(const PyKinBody& r) : PyInterfaceBase(r._pbody,r._pyenv) { _pbody = r._pbody; }
     virtual ~PyKinBody() {}
@@ -910,6 +944,10 @@ public:
     
     PyVoidHandle GetPhysicsData() const { return PyVoidHandle(_pbody->GetPhysicsData()); }
     PyVoidHandle GetCollisionData() const { return PyVoidHandle(_pbody->GetCollisionData()); }
+    PyManageDataPtr GetManageData() const {
+        KinBody::ManageDataPtr pdata = _pbody->GetManageData();
+        return !pdata ? PyManageDataPtr() : PyManageDataPtr(new PyManageData(pdata,_pyenv));
+    }
     int GetUpdateStamp() const { return _pbody->GetUpdateStamp(); }
 
     string serialize(int options) const {
@@ -1712,6 +1750,12 @@ public:
     PySensorSystemBase(SensorSystemBasePtr psensorsystem, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(psensorsystem, pyenv), _psensorsystem(psensorsystem) {}
     virtual ~PySensorSystemBase() {}
 };
+
+PySensorSystemBasePtr PyKinBody::PyManageData::GetSystem()
+{
+    SensorSystemBasePtr psystem = _pdata->GetSystem();
+    return !psystem ? PySensorSystemBasePtr() : PySensorSystemBasePtr(new PySensorSystemBase(psystem,_pyenv));
+}
 
 class PyTrajectoryBase : public PyInterfaceBase
 {
@@ -3233,6 +3277,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetAdjacentLinks",&PyKinBody::GetAdjacentLinks)
             .def("GetPhysicsData",&PyKinBody::GetPhysicsData)
             .def("GetCollisionData",&PyKinBody::GetCollisionData)
+            .def("GetManageData",&PyKinBody::GetManageData)
             .def("GetUpdateStamp",&PyKinBody::GetUpdateStamp)
             .def("serialize",&PyKinBody::serialize,args("options"))
             .def("GetKinematicsGeometryHash",&PyKinBody::GetKinematicsGeometryHash)
@@ -3345,6 +3390,22 @@ BOOST_PYTHON_MODULE(openravepy_int)
                 .value("Universal",KinBody::Joint::JointUniversal)
                 .value("Hinge2",KinBody::Joint::JointHinge2)
                 .value("Spherical",KinBody::Joint::JointSpherical)
+                ;
+        }
+
+        {
+            scope managedata = class_<PyKinBody::PyManageData, boost::shared_ptr<PyKinBody::PyManageData> >("ManageData",no_init)
+                .def("GetSystem", &PyKinBody::PyManageData::GetSystem)
+                .def("GetData", &PyKinBody::PyManageData::GetData)
+                .def("GetOffsetLink", &PyKinBody::PyManageData::GetOffsetLink)
+                .def("IsPresent", &PyKinBody::PyManageData::IsPresent)
+                .def("IsEnabled", &PyKinBody::PyManageData::IsEnabled)
+                .def("IsLocked", &PyKinBody::PyManageData::IsLocked)
+                .def("Lock", &PyKinBody::PyManageData::Lock,args("dolock"))
+                .def("__repr__", &PyKinBody::PyJoint::__repr__)
+                .def("__str__", &PyKinBody::PyJoint::__str__)
+                .def("__eq__",&PyKinBody::PyJoint::__eq__)
+                .def("__ne__",&PyKinBody::PyJoint::__ne__)
                 ;
         }
     }

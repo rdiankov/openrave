@@ -71,6 +71,15 @@ public:
     boost::shared_ptr<void> _handle;
 };
 
+class PyVoidHandleConst
+{
+public:
+    PyVoidHandleConst() {}
+    PyVoidHandleConst(boost::shared_ptr<void const> handle) : _handle(handle) {}
+    void close() { _handle.reset(); }
+    boost::shared_ptr<void const> _handle;
+};
+
 template <typename T>
 inline std::vector<T> ExtractArray(const object& o)
 {

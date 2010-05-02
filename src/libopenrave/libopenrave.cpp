@@ -864,7 +864,7 @@ KinBody::ManageDataPtr SimpleSensorSystem::AddKinBody(KinBodyPtr pbody, XMLReada
     boost::shared_ptr<BodyData> b = CreateBodyData(pbody, pdata);
     b->lastupdated = GetMicroTime();
     _mapbodies[pbody->GetNetworkId()] = b;
-    RAVELOG_DEBUGA(str(boost::format("system adding body %s (%s), total: %d\n")%pbody->GetName()%pbody->GetXMLFilename()%_mapbodies.size()));
+    RAVELOG_VERBOSE(str(boost::format("system adding body %s (%s), total: %d\n")%pbody->GetName()%pbody->GetXMLFilename()%_mapbodies.size()));
     SetManageData(pbody,b);
     return b;
 }
@@ -873,7 +873,7 @@ bool SimpleSensorSystem::RemoveKinBody(KinBodyPtr pbody)
 {
     boost::mutex::scoped_lock lock(_mutex);
     bool bSuccess = _mapbodies.erase(pbody->GetNetworkId())>0;
-    RAVELOG_DEBUGA(str(boost::format("system removing body %s %s\n")%pbody->GetName()%(bSuccess?"succeeded":"failed")));
+    RAVELOG_VERBOSE(str(boost::format("system removing body %s %s\n")%pbody->GetName()%(bSuccess?"succeeded":"failed")));
     return bSuccess;
 }
 
