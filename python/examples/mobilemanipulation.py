@@ -298,7 +298,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                     print 'failed to move to neutral values:',e
             print 'selected %s grasp %d '%(gmodel.manip,graspindex)
             gmodel.moveToPreshape(grasp)
-            time.sleep(1)
+            time.sleep(1.5)
             self.waitrobot()
             with self.env:
                 self.robot.SetActiveManipulator(gmodel.manip)
@@ -322,8 +322,11 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                     usejacobian = True
                     self.robot.SetActiveDOFs(armjoints)
                     print 'moving to initial ',solutions[index]
-                    with TaskManipulation.SwitchState(self.taskmanip):
-                        self.basemanip.MoveActiveJoints(goal=solutions[index],maxiter=5000,maxtries=2)
+                    try:
+                        with TaskManipulation.SwitchState(self.taskmanip):
+                            self.basemanip.MoveActiveJoints(goal=solutions[index],maxiter=6000,maxtries=2)
+                    except planning_error,e:
+                        usejacobian=False
                 else:
                     print 'closest solution is too far',dists[index]
             self.waitrobot()
@@ -331,7 +334,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                 try:
                     print 'moving hand'
                     expectedsteps = floor(approachoffset/stepsize)
-                    self.basemanip.MoveHandStraight(direction=gmodel.getGlobalApproachDir(grasp),ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps-2,maxsteps=expectedsteps+1,searchall=False)
+                    self.basemanip.MoveHandStraight(direction=gmodel.getGlobalApproachDir(grasp),ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps-2,maxsteps=expectedsteps+3,searchall=False)
                 except planning_error,e:
 #                     try:
 #                         self.basemanip.MoveHandStraight(direction=gmodel.getGlobalApproachDir(grasp),ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps-2,maxsteps=expectedsteps+1,searchall=True)
@@ -340,7 +343,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                     usejacobian = False
             if not usejacobian:
                 print 'moving to final ',solutions[index]
-                with TaskManipulation.SwitchState(self.taskmanip):
+                with self.env:
                     self.robot.SetActiveDOFs(armjoints)
                     self.basemanip.MoveActiveJoints(goal=finalarmsolution,maxiter=5000,maxtries=2)
             self.waitrobot()
@@ -689,6 +692,13 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
 #                             self.envreal.RemoveKinBody(target)
             except openrave_exception,e:
                 print 'releasefingers:',e
+
+    def moveWithFreeArms(self,jointvalues,jointinds,maxtries=3):
+        with self.env:
+            self.robot.SetActiveDOFs(jointinds)
+            self.basemanip.MoveActiveJoints(goal=jointvalues,maxtries=maxtries,maxiter=5000)
+        self.waitrobot()
+
     def graspObjectMobile(self,pose,values,grasp,graspindex,usevisibilitycamera=None):
         approachoffset = 0.03
         stepsize = 0.001
@@ -700,17 +710,17 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
             armjoints=gmodel.manip.GetArmJoints()
             #finalarmsolution = values[armjoints]
             dofindices = inversereachability.InverseReachabilityModel.getdofindices(gmodel.manip)
-            if len(dofindices) > 0:
-                self.robot.SetActiveDOFs(dofindices)
-                self.basemanip.MoveActiveJoints(goal=values[dofindices])
-        self.waitrobot()
-        gmodel.moveToPreshape(grasp)
-        time.sleep(1)
-        self.waitrobot()
+        if len(dofindices) > 0:
+            print 'moving for reachability: ',values[dofindices],dofindices
+            self.moveWithFreeArms(values[dofindices],dofindices,maxtries=2)
         self.robot.SetActiveManipulator(gmodel.manip)
 
         if usevisibilitycamera:
             newtarget,viewmanip = self.viewTarget(usevisibilitycamera,gmodel.target)
+
+        gmodel.moveToPreshape(grasp)
+        time.sleep(1.5)
+        self.waitrobot()
 
         usejacobian = False
         with self.env:
@@ -734,7 +744,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                     self.robot.SetActiveDOFs(armjoints)
                     self.basemanip.MoveActiveJoints(goal=solutions[index],maxiter=5000,maxtries=2)
             else:
-                print 'closest solution is too far',dists[index]
+                print 'closest solution is too far',dists[index],15.0*approachoffset
         self.waitrobot()
 
         if usejacobian:
@@ -747,7 +757,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                 usejacobian = False
 
         if not usejacobian:
-            with TaskManipulation.SwitchState(self.taskmanip):
+            with self.env:
                 self.robot.SetActiveDOFs(armjoints)
                 self.basemanip.MoveActiveJoints(goal=finalarmsolution,maxiter=5000,maxtries=2)
         self.waitrobot()
@@ -813,7 +823,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         with self.robot:
             Trelative = dot(linalg.inv(target.GetTransform()),self.robot.GetActiveManipulator().GetEndEffectorTransform())
             I=random.permutation(range(len(dests)))
-            num = len(I)/100
+            num = len(I)/50
             success = False
             for i in range(num):
                 try:
@@ -878,7 +888,14 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         reachabletransforms = vmodel.pruneTransformations(thresh=0.04,numminneighs=40,maxdist=usevisibilitycamera.get('maxdist',0.25))
         vmodel.SetCameraTransforms(reachabletransforms)
         for iter in range(20):
-            vmodel.visualprob.MoveToObserveTarget(target=vmodel.target,sampleprob=0.001,maxiter=4000)
+            try:
+                vmodel.visualprob.MoveToObserveTarget(target=vmodel.target,sampleprob=0.001,maxiter=4000)
+            except RuntimeError,e:
+                print e
+                raise planning_error('cannot find target')
+            except planning_error,e:
+                print e
+                continue
             #s=vmodel.visualprob.SampleVisibilityGoal(target)
             self.waitrobot()
             if usevisibilitycamera.get('dosync',False):
@@ -888,9 +905,13 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                         continue
                 with self.env:
                     time.sleep(usevisibilitycamera.get('syncdelay',1.0))
-                    newtarget,newenv = self.searchrealenv(target,waitfortarget=4.0)
-                    if newtarget is not None:
-                        break
+                    try:
+                        newtarget,newenv = self.searchrealenv(target,waitfortarget=4.0)
+                        if newtarget is not None:
+                            break
+                    except planning_error, e:
+                        print e
+                        continue
             else:
                 newtarget = target
                 break
