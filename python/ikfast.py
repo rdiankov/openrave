@@ -1276,13 +1276,15 @@ class IKFastSolver(AutoReloader):
         ifreejointvars = []
         jointinds = []
         self.jointindexmap = dict()
+        jointindexmap_inv = dict()
         for i,joint in enumerate(chain):
             if not joint.isdummy:
                 if not joint.jointindex in self.jointindexmap:
-                    self.jointindexmap[joint.jointindex] = len(jointvars)
+                    self.jointindexmap[len(jointvars)] = joint.jointindex
+                    jointindexmap_inv[joint.jointindex] = len(jointvars)
                     var = Symbol("j%d"%len(jointvars))
                 else:
-                    var = Symbol("j%d"%self.jointindexmap[joint.jointindex])
+                    var = Symbol("j%d"%jointindexmap_inv[joint.jointindex])
                 Tjoint = eye(4)
                 if joint.type == 'hinge' or joint.type == 'revolute':
                     Tjoint[0:3,0:3] = self.rodrigues(joint.axis,joint.jcoeff[0]*var+joint.jcoeff[1])
