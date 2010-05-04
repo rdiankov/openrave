@@ -299,7 +299,7 @@ class GraspingModel(OpenRAVEModel):
                         link.SetTransform(dot(Tdelta,link.GetTransform()))
                     self.env.UpdatePublishedBodies()
                 raw_input('press any key to continue: ')
-    def testGrasp(self,graspingnoise=None,Ngraspingtries = 100,forceclosurethreshold=1e-9,**kwargs):
+    def testGrasp(self,graspingnoise=None,Ngraspingtries = 20,forceclosurethreshold=1e-9,**kwargs):
         contacts,finalconfig,mindist,volume = self.runGrasp(graspingnoise=0,**kwargs)
         if mindist > forceclosurethreshold and graspingnoise > 0:
             print 'testing with noise',graspingnoise
