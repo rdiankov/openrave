@@ -10,8 +10,8 @@ orBodyGetLinks.m        orEnvDestroyProblem.m  orRobotSensorGetData.m
 orBodyGetTransform.m    orEnvGetBodies.m       orRobotSensorSend.m orBodySetJointTorques.m
 orBodySetJointValues.m  orEnvGetBody.m         orProblemSendCommand.m   orRobotSetActiveDOFs.m
 orBodySetTransform.m    orEnvGetRobots.m       orRobotSetDOFValues.m
-orCommunicator.m        orEnvLoadPlugin.m      orRobotControllerSend.m  orRobotStartActiveTrajectory.m
-orSetCommunication.m )
+orCommunicator.m        orEnvLoadPlugin.m      orRobotCheckSelfCollision.m 
+orRobotControllerSend.m  orRobotStartActiveTrajectory.m orSetCommunication.m )
 
 add_subdirectory(matlab)
 add_subdirectory(octave)

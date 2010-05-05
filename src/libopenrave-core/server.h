@@ -283,6 +283,7 @@ class SimpleTextServer : public ProblemInstance
         mapNetworkFns["loadscene"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvLoadScene,this,_1,_2,_3), OpenRaveWorkerFn(), true);
         mapNetworkFns["plot"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvPlot,this,_1,_2,_3), OpenRaveWorkerFn(), true); 
         mapNetworkFns["problem_sendcmd"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orProblemSendCommand,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["robot_checkselfcollision"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orRobotCheckSelfCollision,this,_1,_2,_3), OpenRaveWorkerFn(), true);
         mapNetworkFns["robot_controllersend"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orRobotControllerSend,this,_1,_2,_3), OpenRaveWorkerFn(), true);
         mapNetworkFns["robot_controllerset"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orRobotControllerSet,this,_1,_2,_3), OpenRaveWorkerFn(), true);
         mapNetworkFns["robot_getactivedof"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orRobotGetActiveDOF,this,_1,_2,_3), OpenRaveWorkerFn(), true);
@@ -643,7 +644,7 @@ protected:
         is >> index;
         if( !is )
             return KinBodyPtr();
-        return GetEnv()->GetBodyFromNetworkId(index);
+        return GetEnv()->GetBodyFromEnvironmentId(index);
     }
 
     RobotBasePtr orMacroGetRobot(istream& is)
@@ -653,7 +654,7 @@ protected:
         if( !is )
             return RobotBasePtr();
 
-        KinBodyPtr pbody = GetEnv()->GetBodyFromNetworkId(index);
+        KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentId(index);
         if( !pbody || !pbody->IsRobot() )
             return RobotBasePtr();
         return boost::static_pointer_cast<RobotBase>(pbody);
@@ -845,7 +846,7 @@ protected:
             return false;
         }
 
-        os << robot->GetNetworkId();
+        os << robot->GetEnvironmentId();
         return true;
     }
 
@@ -932,7 +933,7 @@ protected:
         if( !GetEnv()->AddKinBody(body) )
             return false;
 
-        os << body->GetNetworkId();
+        os << body->GetEnvironmentId();
         return true;
     }
 
@@ -952,7 +953,7 @@ protected:
         if( !pbody )
             os << "0";
         else
-            os << pbody->GetNetworkId();
+            os << pbody->GetEnvironmentId();
         return true;
     }
 
@@ -966,7 +967,7 @@ protected:
 
         os << vrobots.size() << " ";
         FOREACHC(it, vrobots)
-            os << (*it)->GetNetworkId() << " " << (*it)->GetName() << " " << (*it)->GetXMLId() << " " << (*it)->GetXMLFilename() << "\n ";
+            os << (*it)->GetEnvironmentId() << " " << (*it)->GetName() << " " << (*it)->GetXMLId() << " " << (*it)->GetXMLFilename() << "\n ";
 
         return true;
     }
@@ -980,7 +981,7 @@ protected:
         GetEnv()->GetBodies(vbodies);
         os << vbodies.size() << " ";
         FOREACHC(it, vbodies) {
-            os << (*it)->GetNetworkId() << " " << (*it)->GetName() << " " << (*it)->GetXMLId() << " " << (*it)->GetXMLFilename() << "\n ";
+            os << (*it)->GetEnvironmentId() << " " << (*it)->GetName() << " " << (*it)->GetXMLId() << " " << (*it)->GetXMLFilename() << "\n ";
         }
 
         return true;
@@ -1388,6 +1389,19 @@ protected:
         }
 
         probot->SetActiveDOFs(vindices, affinedofs, axis);
+        return true;
+    }
+
+    bool orRobotCheckSelfCollision(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
+    {
+        SyncWithWorkerThread();
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        RobotBasePtr probot = orMacroGetRobot(is);
+        if( !probot )
+            return false;
+
+        boost::shared_ptr<COLLISIONREPORT> preport(new COLLISIONREPORT());
+        os << probot->CheckSelfCollision(preport);
         return true;
     }
 
@@ -1841,34 +1855,50 @@ protected:
         if( !pbody )
             return false;
 
-        vector<int> bodyids = vector<int>((istream_iterator<int>(is)), istream_iterator<int>());
-        vector<KinBodyConstPtr> vignore; vignore.reserve(bodyids.size());
-        FOREACH(itid,bodyids) {
-            if( *itid ) {
-                KinBodyPtr pignore = GetEnv()->GetBodyFromNetworkId(*itid);
+        int nexcluded = 0;
+        is >> nexcluded;
+        vector<KinBodyConstPtr> vignore; vignore.reserve(nexcluded);
+        for(int i = 0; i < nexcluded; ++i) {
+            int bodyid = 0;
+            is >> bodyid;
+            if( !is )
+                return false;
+            if( bodyid ) {
+                KinBodyPtr pignore = GetEnv()->GetBodyFromEnvironmentId(bodyid);
                 if( !pignore )
-                    RAVELOG_WARNA("failed to find body %d",*itid);
+                    RAVELOG_WARNA("failed to find body %d",bodyid);
                 else
                     vignore.push_back(pignore);
             }
         }
+        bool bgetcontacts=false;
+        is >> bgetcontacts;
 
         boost::shared_ptr<COLLISIONREPORT> preport(new COLLISIONREPORT());
         vector<KinBody::LinkConstPtr> empty;
+        int oldoptions = GetEnv()->GetCollisionChecker()->GetCollisionOptions();
+        GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Contacts);
         if( GetEnv()->CheckCollision(KinBodyConstPtr(pbody), vignore, empty,preport)) {
             os << "1 ";
-            RAVELOG_VERBOSEA(str(boost::format("collision %s\n")%preport->__str__()));
+            //RAVELOG_VERBOSEA(str(boost::format("collision %s\n")%preport->__str__()));
         }
         else
             os << "0 ";
-
+        GetEnv()->GetCollisionChecker()->SetCollisionOptions(oldoptions);
         int bodyindex = 0;
         if( !!preport->plink1 && preport->plink1->GetParent() != pbody )
-            bodyindex = preport->plink1->GetParent()->GetNetworkId();
+            bodyindex = preport->plink1->GetParent()->GetEnvironmentId();
         if( !!preport->plink2 && preport->plink2->GetParent() != pbody )
-            bodyindex = preport->plink2->GetParent()->GetNetworkId();
+            bodyindex = preport->plink2->GetParent()->GetEnvironmentId();
 
-        os << bodyindex;
+        os << bodyindex << " ";
+
+        if( bgetcontacts ) {
+            FOREACH(itc,preport->contacts) {
+                os << itc->pos.x << " " << itc->pos.y << " " << itc->pos.z << " " << itc->norm.x << " " << itc->norm.y << " " << itc->norm.z << " " << itc->depth << " ";
+            }
+        }
+
         return true;
     }
 
@@ -1959,7 +1989,7 @@ protected:
 
         KinBody::Link::TRIMESH trimesh;
         FOREACH(itbody, vbodies) {
-            if( (find(vobjids.begin(),vobjids.end(),(*itbody)->GetNetworkId()) == vobjids.end()) ^ !inclusive )
+            if( (find(vobjids.begin(),vobjids.end(),(*itbody)->GetEnvironmentId()) == vobjids.end()) ^ !inclusive )
                 continue;
             GetEnv()->Triangulate(trimesh, *itbody);
         }
