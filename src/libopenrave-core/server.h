@@ -1396,7 +1396,7 @@ protected:
     {
         SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        RobotBasePtr probot = orMacroGetRobot(is);
+        KinBodyPtr probot = orMacroGetBody(is);
         if( !probot )
             return false;
 
