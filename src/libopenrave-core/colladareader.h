@@ -170,8 +170,8 @@ public:
   /// Extract environment from a COLLADA Scene
   /// This is the main proccess in the parser
   bool Extract(EnvironmentBasePtr penv) {
-    bool                                        isRobot;        //  Distinguish between a Kinematic Model that is a Robot or not
-    daeString                               robotName = NULL;   //  Articulated System ID. Describes the Robot
+    bool                    isRobot;        //  Distinguish between a Kinematic Model that is a Robot or not
+    daeString               robotName = NULL;   //  Articulated System ID. Describes the Robot
     domKinematics_frameRef  pframe_origin = NULL;   //  Manipulator Base
     domKinematics_frameRef  pframe_tip      = NULL; //  Manipulator Effector
 
@@ -773,8 +773,8 @@ public:
     //  Debug
     RAVELOG_VERBOSEA("Executing Extract(RobotBasePtr&) !!!!!!!!!!!!!!!!!!\n");
 
-    bool                                        isRobot;        //  Distinguish between a Kinematic Model that is a Robot or not
-    daeString                               robotName = NULL;   //  Articulated System ID. Describes the Robot
+    bool                    isRobot;        //  Distinguish between a Kinematic Model that is a Robot or not
+    daeString               robotName = NULL;   //  Articulated System ID. Describes the Robot
     domKinematics_frameRef  pframe_origin = NULL;   //  Manipulator Base
     domKinematics_frameRef  pframe_tip      = NULL; //  Manipulator Effector
 
@@ -782,22 +782,34 @@ public:
     BOOST_ASSERT(allscene != NULL);
     vector<domKinematics_newparam*> vnewparams;
 
+    //  All bindings of the kinematics models presents in the scene
+    vector<KINEMATICSBINDING> v_all_bindings;
+
+    //  Nodes that are part of kinematics models
+    vector<string>  processed_nodes;
+
     //  For each Kinematics Scene
-    for (size_t iscene = 0; iscene < allscene->getInstance_kinematics_scene_array().getCount(); iscene++) {
+    for (size_t iscene = 0; iscene < allscene->getInstance_kinematics_scene_array().getCount(); iscene++)
+    {
       //  Gets the Scene
       domInstance_kinematics_sceneRef kiscene =
         allscene->getInstance_kinematics_scene_array()[iscene];
+
       domKinematics_sceneRef kscene = daeSafeCast<domKinematics_scene> (
           kiscene->getUrl().getElement().cast());
 
       // If there is not Kinematic Scene
-      if (!kscene) {
+      if (!kscene)
+      {
         continue;
       }
 
       //  For each Bind of Kinematics Model
       for (size_t imodel = 0; imodel
       < kiscene->getBind_kinematics_model_array().getCount(); imodel++) {
+
+        //  Kinimatics model may NOT be a Robot
+        domArticulated_systemRef articulated_system =   NULL;
 
         //  Initially kinematics model is NOT a Robot
         isRobot = false;
@@ -825,6 +837,18 @@ public:
               kbindmodel->getNode());
           continue;
         }
+        else
+        {
+          RAVELOG_WARNA("Kinematics model node name: %s\n",pnode->getName());
+        }
+
+        //  Get ID of node parent
+        string  parentnode  = daeSafeCast<domNode>(pnode->getParent())->getID();
+
+        //  Store ID's of nodes that are part of kinematics model
+        processed_nodes.push_back(parentnode);
+
+        RAVELOG_VERBOSEA("Parent node ID %s\n",parentnode.c_str());
 
         //  Instance Kinematics Model
         domInstance_kinematics_modelRef kimodel;
@@ -834,16 +858,35 @@ public:
           RAVELOG_WARNA(
               "bind_kinematics_model does not reference valid kinematics\n");
         }
+        else
+        {
+          //  TODO : Debug
+          RAVELOG_DEBUGA("Instance Kinematics model %s\n",kimodel->getSid());
+        }
 
-        //  Debug
+
         if (getElement()->typeID() == domArticulated_system::ID())
         {
-          domArticulated_systemRef das = daeSafeCast<domArticulated_system>(getElement().cast());
+          articulated_system = daeSafeCast<domArticulated_system>(getElement().cast());
+
+          //  Debug
+          RAVELOG_DEBUGA("Got articulated_system!!!\n");
+
           isRobot     = true;
-          robotName   = das->getId();
-          pframe_origin   = das->getKinematics()->getTechnique_common()->getFrame_origin();
-          pframe_tip      = das->getKinematics()->getTechnique_common()->getFrame_tip();
-          RAVELOG_WARNA("Kinematics Model is an Articulated System (Robot)\n");
+          robotName   = articulated_system->getId();
+
+          //  Check if there is a technique_common section
+          if (!articulated_system->getKinematics()->getTechnique_common())
+          {
+            RAVELOG_VERBOSEA("Skip technique_common in articulated_system/kinematics\n");
+          }
+          else
+          {
+            RAVELOG_VERBOSEA("Kinematics Model is an Articulated System (Robot)\n");
+
+            pframe_origin   = articulated_system->getKinematics()->getTechnique_common()->getFrame_origin();
+            pframe_tip      = articulated_system->getKinematics()->getTechnique_common()->getFrame_tip();
+          }
         }
 
         // Kinematics Model
@@ -855,31 +898,51 @@ public:
           return false;
         }
 
-        // Get the joint indices
+        // TODO : Get the joint binds
         vector<KINEMATICSBINDING> vbindings;
-        for (size_t ijoint = 0; ijoint
-        < kiscene->getBind_joint_axis_array().getCount(); ++ijoint) {
+        for (size_t ijoint = 0; ijoint < kiscene->getBind_joint_axis_array().getCount(); ++ijoint) {
 
-          domKinematics_axis_infoRef  dkai    = NULL;
-          domMotion_axis_infoRef          dmai    = NULL;
+          int pos;
 
           domBind_joint_axisRef bindjoint =   kiscene->getBind_joint_axis_array()[ijoint];
+
+          string  strNode     =   string(kbindmodel->getParam()->getValue());
+          string  strTarget   =   string(bindjoint->getAxis()->getParam()->getValue());
+
+          pos =   strTarget.find(strNode);
+
+          //  Debug
+          RAVELOG_DEBUGA("Kinematics Node %s Target %s Pos %d\n",strNode.c_str(),strTarget.c_str(),pos);
+
+          if (pos == -1)
+          {
+            RAVELOG_VERBOSEA("This Axis NOT belongs to the Kinematics Model\n");
+            continue;
+          }
+
+          domKinematics_axis_infoRef  dkai    = NULL;
+          domMotion_axis_infoRef      dmai    = NULL;
 
           daeElementRef pjtarget =    daeSidRef(bindjoint->getTarget(), bindjoint).resolve().elt;
 
           if (pjtarget == NULL) {
-            RAVELOG_WARNA("target node %s not found\n", bindjoint->getTarget());
+            RAVELOG_ERRORA("Target Node %s NOT found!!!\n", bindjoint->getTarget());
             continue;
           }
+
+          RAVELOG_WARNA("Target Node %s FOUND!!!\n", bindjoint->getTarget());
 
           //  Retrieve the joint
           domAxis_constraintRef pjointaxis = getSidRef<domAxis_constraint> (
               bindjoint->getAxis(),
               kscene);
+
           if (pjointaxis == NULL) {
-            RAVELOG_WARNA("joint axis %s not found\n",getRef());
+            RAVELOG_ERRORA("Joint Axis %s NOT found\n",getRef());
             continue;
           }
+
+          RAVELOG_WARNA("Joint Axis %s FOUND!!!\n",getRef());
 
           domInstance_kinematics_model_Array instance_kinematics_array;
 
@@ -895,36 +958,59 @@ public:
           {
             RAVELOG_WARNA("Articulated System Element \n");
             //  Gets articulated system KINEMATICS
-            domArticulated_systemRef das = daeSafeCast<domArticulated_system>(getElement().cast());
-            instance_kinematics_array = das->getKinematics()->getInstance_kinematics_model_array();
+            //domArticulated_systemRef das = daeSafeCast<domArticulated_system>(getElement().cast());
+            instance_kinematics_array = articulated_system->getKinematics()->getInstance_kinematics_model_array();
 
             // Search and fill Joint properties
-            domKinematics_axis_info_Array dkai_array =  das->getKinematics()->getTechnique_common()->getAxis_info_array();
+            domKinematics_axis_info_Array dkai_array =  articulated_system->getKinematics()->getTechnique_common()->getAxis_info_array();
+
+            string strAxis  =   string(getSidRef_value());
+
+            //  Debug
+            RAVELOG_VERBOSEA("SidRef value %s\n",strAxis.c_str());
+
+            pos =   strAxis.find_last_of("/");
+            pos =   strAxis.find_last_of("/",pos-1);
+
+            strAxis =   kimodel->getUrl().fragment() + strAxis.substr(pos).c_str();
+
+            RAVELOG_DEBUGA("Search axis string: %s\n",strAxis.c_str());
 
             //  Gets axis info of the articulated system KINEMATICS
-            dkai = getAxisInfo<domKinematics_axis_info>(getRef(),dkai_array);
+            dkai = getAxisInfo<domKinematics_axis_info>(strAxis.c_str(),dkai_array);
 
-            domMotion_axis_info_Array dmai_array = _motion_element->getTechnique_common()->getAxis_info_array();
-            char axis_tag[256];
-            RAVELOG_WARNA("Build axis TAG for search the axis info...\n");
-            if (das->getID() == NULL)
+            //  Check if there is a 'technique_common' section
+            if (!!_motion_element->getTechnique_common())
             {
-              RAVELOG_WARNA("ARTICULATED SYSTEM KINEMATICS Id is NULL ...\n");
+              domMotion_axis_info_Array dmai_array = _motion_element->getTechnique_common()->getAxis_info_array();
+
+              RAVELOG_VERBOSEA("Check out articulated system ID\n");
+
+              if (articulated_system->getID() == NULL)
+              {
+                RAVELOG_WARNA("ARTICULATED SYSTEM KINEMATICS Id is NULL ...\n");
+              }
+
+              RAVELOG_VERBOSEA("SidRef: %s\n",getSidRef_value());
+
+
+              //                          //  Build the TAG for search axis info in the articulated system MOTION section. Dot format!!!
+              //                          char axis_tag[256];
+              //                          strcpy(axis_tag,articulated_system->getID());
+              //                          strcat(axis_tag,"/");
+              //                          strcat(axis_tag,dkai->getSid());
+
+              strAxis =   string(articulated_system->getID()) + string("/") + string(dkai->getSid());
+
+              //  Debug
+              RAVELOG_WARNA("str: %s\n",strAxis.c_str());
+
+              //  Gets axis info of the articulated system MOTION
+              dmai    =   getAxisInfo<domMotion_axis_info>(strAxis.c_str(),dmai_array);
+
+              //  Debug
+              RAVELOG_WARNA("End of the search for AXIS INFO ...\n");
             }
-
-            //  Build the TAG for search axis info in the articulated system MOTION section
-            strcpy(axis_tag,das->getID());
-            strcat(axis_tag,"/");
-            strcat(axis_tag,dkai->getSid());
-
-            //  Debug
-            RAVELOG_WARNA("str: %s\n",axis_tag);
-
-            //  Gets axis info of the articulated system MOTION
-            dmai    =   getAxisInfo<domMotion_axis_info>(axis_tag,dmai_array);
-
-            //  Debug
-            RAVELOG_WARNA("End of the search for AXIS INFO ...\n");
           }
 
           domFloat fdefjointvalue = resolveFloat(bindjoint->getValue(),
@@ -933,20 +1019,102 @@ public:
           //  Stores joint info
           vbindings.push_back(KINEMATICSBINDING(pjtarget, pjointaxis,
               fdefjointvalue, dkai, dmai));
+
+          //  Store joint info used for the visual scene
+          v_all_bindings.push_back(KINEMATICSBINDING(pjtarget, pjointaxis,
+              fdefjointvalue, dkai, dmai));
         }
 
         //  Obtain Kinmodel from COLLADA
         domPhysics_modelRef pmodel = NULL;
-        KinBodyPtr pbody = probot;
+        KinBodyPtr pbody;
         if (!Extract(pbody, kmodel, pmodel, pnode, vbindings)) {
           RAVELOG_WARNA("failed to load kinbody from kin instance %s\n",
               kimodel->getID());
           continue;
         }
 
-        return true;
-      }
-    }
+        //  The kinbody is NOT a Robot
+        if (!isRobot)
+        {
+          //  Adds a Kinbody to the Environment
+          RAVELOG_VERBOSEA("Kinbody %s added to the environment\n",pbody->GetName().c_str());
+          _penv->AddKinBody(pbody);
+        }
+        else
+        {
+          //  Create Robot
+          probot  = _penv->CreateRobot("");
+
+          //  Copy the kinbody information into the Robot structure
+          probot->KinBody::Clone(pbody,0);
+
+          //  Extract instances of sensors
+          ExtractSensors<domArticulated_system>(articulated_system,probot);
+
+          //  Debug
+          RAVELOG_INFO("Number of sensors of the Robot: %d\n",(int)probot->GetSensors().size());
+
+          //  Setup Manipulator of the Robot
+          RobotBase::ManipulatorPtr manipulator(new RobotBase::Manipulator(probot));
+          probot->GetManipulators().push_back(manipulator);
+
+          //  Debug
+          RAVELOG_WARNA("Number of Manipulators %d ¡¡¡\n",probot->GetManipulators().size());
+
+          int     pos;
+          string  linkName  = string(pframe_origin->getLink());
+
+          pos       = linkName.find_first_of("/");
+          linkName  = linkName.substr(pos + 1);
+
+          RAVELOG_VERBOSEA("Manipulator link name %s\n",linkName.c_str());
+
+          //  Sets frame_origin and frame_tip
+          manipulator->_pBase              = probot->GetLink(linkName);
+
+          if (!!manipulator->_pBase)
+          {
+            RAVELOG_WARNA("Manipulator::pBase ... %s\n",manipulator->_pBase->GetName().c_str());
+          }
+          else
+          {
+            RAVELOG_WARNA("Error initializing Manipulator::pBase\n");
+          }
+
+          linkName = string(pframe_tip->getLink());
+          pos       = linkName.find_first_of("/");
+          linkName  = linkName.substr(pos + 1);
+
+          manipulator->_pEndEffector   = probot->GetLink(linkName);
+
+          if (!!manipulator->_pEndEffector)
+          {
+            RAVELOG_WARNA("Manipulator::pEndEffector ... %s\n",manipulator->_pEndEffector->GetName().c_str());
+          }
+          else
+          {
+            RAVELOG_WARNA("Error initializing Manipulator::pEndEffector\n");
+          }
+
+          //  Initialize indices that then manipulator controls
+          for (size_t i   =   0;  i < probot->GetJointIndices().size();   i++)
+          {
+            manipulator->_vgripperjoints.push_back(probot->GetJointIndices()[i]);
+          }
+
+          RAVELOG_VERBOSEA("Indices initialized...\n");
+
+          //  Add the robot to the environment
+          _penv->AddRobot(probot);
+
+          RAVELOG_WARNA("Robot %s created ...\n",robotName);
+        }
+
+      }// End Kinematics model Process
+
+    }// End Instance Kinematics scene Process
+
     return true;
   }
 
