@@ -1,0 +1,17 @@
+<robot>
+ <robot file="robots/kuka-kr5-r650.robot.xml"></robot>
+ <robot prefix="hand_" file="schunkSDHhand.dae"></robot>
+ <kinbody>
+   <body name="hand_root">
+     <offsetfrom>link6</offsetfrom>
+     <translation>0.03 0 0</translation>
+     <rotationaxis>0 1 0 90</rotationaxis>
+   </body>
+   <joint type="hinge" enable="false">
+     <body>link6</body>
+     <body>hand_root</body>
+     <lostop>0</lostop>
+     <histop>0</histop>
+   </joint>
+ </kinbody>
+</robot>

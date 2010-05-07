@@ -770,6 +770,11 @@ public:
 
   bool Extract(RobotBasePtr& probot) {
 
+    if (!probot) {
+      probot = _penv->CreateRobot();
+    }
+    BOOST_ASSERT(probot->IsRobot());
+
     //  Debug
     RAVELOG_VERBOSEA("Executing Extract(RobotBasePtr&) !!!!!!!!!!!!!!!!!!\n");
 
@@ -1027,40 +1032,31 @@ public:
 
         //  Obtain Kinmodel from COLLADA
         domPhysics_modelRef pmodel = NULL;
-        KinBodyPtr pbody;
+        KinBodyPtr pbody(probot);
         if (!Extract(pbody, kmodel, pmodel, pnode, vbindings)) {
           RAVELOG_WARNA("failed to load kinbody from kin instance %s\n",
               kimodel->getID());
           continue;
         }
-
-        //  The kinbody is NOT a Robot
-        if (!isRobot)
-        {
-          //  Adds a Kinbody to the Environment
-          RAVELOG_VERBOSEA("Kinbody %s added to the environment\n",pbody->GetName().c_str());
-          _penv->AddKinBody(pbody);
+        if( pbody != probot ) {
+            BOOST_ASSERT(pbody->IsRobot());
+            probot = boost::static_pointer_cast<RobotBase>(pbody);
         }
-        else
+
+        if (isRobot)
         {
-          //  Create Robot
-          probot  = _penv->CreateRobot("");
-
-          //  Copy the kinbody information into the Robot structure
-          probot->KinBody::Clone(pbody,0);
-
           //  Extract instances of sensors
           ExtractSensors<domArticulated_system>(articulated_system,probot);
 
           //  Debug
-          RAVELOG_INFO("Number of sensors of the Robot: %d\n",(int)probot->GetSensors().size());
+          RAVELOG_INFO(str(boost::format("Number of sensors of the Robot: %d\n")%probot->GetSensors().size()));
 
           //  Setup Manipulator of the Robot
           RobotBase::ManipulatorPtr manipulator(new RobotBase::Manipulator(probot));
           probot->GetManipulators().push_back(manipulator);
 
           //  Debug
-          RAVELOG_WARNA("Number of Manipulators %d ¡¡¡\n",probot->GetManipulators().size());
+          RAVELOG_WARNA(str(boost::format("Number of Manipulators %d\n")%probot->GetManipulators().size()));
 
           int     pos;
           string  linkName  = string(pframe_origin->getLink());
@@ -1068,14 +1064,14 @@ public:
           pos       = linkName.find_first_of("/");
           linkName  = linkName.substr(pos + 1);
 
-          RAVELOG_VERBOSEA("Manipulator link name %s\n",linkName.c_str());
+          RAVELOG_VERBOSEA(str(boost::format("Manipulator link name %s\n")%linkName));
 
           //  Sets frame_origin and frame_tip
           manipulator->_pBase              = probot->GetLink(linkName);
 
           if (!!manipulator->_pBase)
           {
-            RAVELOG_WARNA("Manipulator::pBase ... %s\n",manipulator->_pBase->GetName().c_str());
+              RAVELOG_WARNA(str(boost::format("Manipulator::pBase ... %s\n")%manipulator->_pBase->GetName()));
           }
           else
           {
@@ -1090,7 +1086,7 @@ public:
 
           if (!!manipulator->_pEndEffector)
           {
-            RAVELOG_WARNA("Manipulator::pEndEffector ... %s\n",manipulator->_pEndEffector->GetName().c_str());
+              RAVELOG_WARNA(str(boost::format("Manipulator::pEndEffector ... %s\n")%manipulator->_pEndEffector->GetName()));
           }
           else
           {
@@ -1104,13 +1100,12 @@ public:
           }
 
           RAVELOG_VERBOSEA("Indices initialized...\n");
-
-          //  Add the robot to the environment
-          _penv->AddRobot(probot);
-
-          RAVELOG_WARNA("Robot %s created ...\n",robotName);
         }
 
+        //  Add the robot to the environment
+        _penv->AddRobot(probot);
+        
+        RAVELOG_WARNA("Robot %s created ...\n",robotName);
       }// End Kinematics model Process
 
     }// End Instance Kinematics scene Process
@@ -1119,6 +1114,7 @@ public:
   }
 
   bool Extract(KinBodyPtr& ppbody) {
+    RAVELOG_ERROR("extract(kinbodyptr) dummy function\n");
     return true;
   }
 
