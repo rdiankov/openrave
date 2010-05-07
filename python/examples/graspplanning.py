@@ -220,10 +220,9 @@ class GraspPlanning(metaclass.AutoReloader):
                 print 'planning to destination'
                 try:
                     self.basemanip.MoveToHandPosition(matrices=goals,maxiter=1000,maxtries=1,seedik=4)
+                    self.waitrobot(robot)
                 except planning_error,e:
                     print 'failed to reach a goal',e
-                    continue
-                self.waitrobot(robot)
             print 'moving hand down'
             try:
                 res = self.basemanip.MoveHandStraight(jacobian=0.02,direction=-self.updir,stepsize=0.003,minsteps=1,maxsteps=100)
