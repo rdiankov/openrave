@@ -40,7 +40,7 @@ protected:
         std::string help; ///< help string explaining command arguments
     };
 
-    typedef std::map<std::string, COMMAND, CaseInsentiveCompare> CMDMAP;
+    typedef std::map<std::string, COMMAND, CaseInsensitiveCompare> CMDMAP;
     CMDMAP __mapCommands; ///< all registered commands
 
 public:

@@ -153,7 +153,7 @@ private:
     OpenRAVEErrorCode _error;
 };
 
-class CaseInsentiveCompare
+class CaseInsensitiveCompare
 {
  public:
     bool operator()(const std::string & s1, const std::string& s2) const

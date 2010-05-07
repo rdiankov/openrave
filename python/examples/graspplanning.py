@@ -162,6 +162,13 @@ class GraspPlanning(metaclass.AutoReloader):
                 graspable[0].target.SetTransform(T)
                 graspable[0].target.GetEnv().UpdatePublishedBodies()
                 time.sleep(delay)
+
+    def waitrobot(self,robot=None):
+        """busy wait for robot completion"""
+        if robot is None:
+            robot = self.robot
+        while not robot.GetController().IsDone():
+            time.sleep(0.01)
             
     def graspAndPlaceObject(self,gmodel,dests):
         """grasps an object and places it in one of the destinations. If no destination is specified, will just grasp it"""
@@ -183,46 +190,46 @@ class GraspPlanning(metaclass.AutoReloader):
             Tlocalgrasp[0:3,0:4] = transpose(reshape(gmodel.grasps[graspindex][gmodel.graspindices ['igrasptrans']],(4,3)))
 
             print 'grasp %d initial planning time: %f'%(graspindex,searchtime)
-            robot.WaitForController(0)
+            self.waitrobot(robot)
 
             print 'moving hand'
             expectedsteps = floor(approachoffset/stepsize)
             try:
-                res = self.basemanip.MoveHandStraight(direction=dot(manip.GetEndEffectorTransform()[0:3,0:3],manip.GetPalmDirection()),
+                res = self.basemanip.MoveHandStraight(direction=dot(gmodel.manip.GetEndEffectorTransform()[0:3,0:3],gmodel.manip.GetPalmDirection()),
                                                       ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps-2,maxsteps=expectedsteps+1)
-            except:
+            except planning_error:
                 # use a planner to move the rest of the way
                 try:
                     self.basemanip.MoveToHandPosition(matrices=[dot(target.GetTransform(),Tlocalgrasp)],maxiter=1000,maxtries=1,seedik=4)
-                except:
-                    print 'failed to reach grasp'
+                except planning_error,e:
+                    print 'failed to reach grasp',e
                     continue
-            robot.WaitForController(0)
+            self.waitrobot(robot)
 
             self.basemanip.CloseFingers()
-            robot.WaitForController(0)
+            self.waitrobot(robot)
             
             robot.Grab(target)
             try:
                 self.basemanip.MoveHandStraight(jacobian=0.02,direction=self.updir,stepsize=0.003,minsteps=1,maxsteps=60)
             except:
                 print 'failed to move hand up'
-            robot.WaitForController(0)
+            self.waitrobot(robot)
 
             if len(goals) > 0:
                 print 'planning to destination'
-                res = self.basemanip.MoveToHandPosition(matrices=goals,maxiter=1000,maxtries=1,seedik=4)
-                if res is None:
-                    print 'failed to reach a goal'
+                try:
+                    self.basemanip.MoveToHandPosition(matrices=goals,maxiter=1000,maxtries=1,seedik=4)
+                except planning_error,e:
+                    print 'failed to reach a goal',e
                     continue
-                robot.WaitForController(0)
-            
+                self.waitrobot(robot)
             print 'moving hand down'
             try:
                 res = self.basemanip.MoveHandStraight(jacobian=0.02,direction=-self.updir,stepsize=0.003,minsteps=1,maxsteps=100)
             except:
                 print 'failed to move hand down'
-            robot.WaitForController(0)
+            self.waitrobot(robot)
 
             try:
                 res = self.basemanip.ReleaseFingers(target=target)
@@ -240,16 +247,16 @@ class GraspPlanning(metaclass.AutoReloader):
                     print 'forcing fingers'
                     with env:
                         robot.SetJointValues(gmodel.grasps[graspindex][gmodel.graspindices['igrasppreshape']],manip.GetGripperJoints())
-            robot.WaitForController(0)
+            self.waitrobot(robot)
             with env:
                 robot.ReleaseAllGrabbed()
             if env.CheckCollision(robot):
                 print 'robot in collision, moving back a little'
                 try:
-                    res = self.basemanip.MoveHandStraight(direction=-dot(manip.GetEndEffectorTransform()[0:3,0:3],manip.GetPalmDirection()),
-                                                          jacobian=0.02,stepsize=stepsize,minsteps=1,maxsteps=10)
-                    robot.WaitForController(0)
-                except:
+                    self.basemanip.MoveHandStraight(direction=-dot(manip.GetEndEffectorTransform()[0:3,0:3],manip.GetPalmDirection()),
+                                                    jacobian=0.02,stepsize=stepsize,minsteps=1,maxsteps=10)
+                    self.waitrobot(robot)
+                except planning_error,e:
                     pass
                 if env.CheckCollision(robot):
                     try:

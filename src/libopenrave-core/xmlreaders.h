@@ -79,7 +79,7 @@ namespace OpenRAVEXMLParser
         return errorcount;
     }
 
-    typedef map<string, EnvironmentBase::CreateXMLReaderFn, CaseInsentiveCompare> READERSMAP;
+    typedef map<string, EnvironmentBase::CreateXMLReaderFn, CaseInsensitiveCompare> READERSMAP;
     static map<PluginType, READERSMAP >& GetRegisteredReaders()
     {
         static map<PluginType, READERSMAP > mapreaders;

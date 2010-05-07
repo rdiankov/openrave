@@ -22,7 +22,7 @@ namespace OpenRAVE {
 class RAVE_API InterfaceBase : public boost::enable_shared_from_this<InterfaceBase>
 {
 public:
-    typedef std::map<std::string, XMLReadablePtr, CaseInsentiveCompare> READERSMAP;
+    typedef std::map<std::string, XMLReadablePtr, CaseInsensitiveCompare> READERSMAP;
 
     InterfaceBase(PluginType type, EnvironmentBasePtr penv) : __type(type), __penv(penv) {}
 	virtual ~InterfaceBase() {}
