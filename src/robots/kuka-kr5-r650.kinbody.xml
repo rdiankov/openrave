@@ -141,4 +141,6 @@
     <maxaccel>3.4907</maxaccel>
     <maxtorque>4.5</maxtorque>
   </Joint>
+
+  <adjacent>link4 link6</adjacent>
 </KinBody>
