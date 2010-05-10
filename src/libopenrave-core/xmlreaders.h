@@ -2305,13 +2305,9 @@ namespace OpenRAVEXMLParser
                         RAVELOG_WARNA(str(boost::format("jointvalues for body %s wrong number (%d!=%d)\n")%_probot->GetName()%_vjointvalues.size()%_probot->GetJoints().size()));
                 }
 
-                if( !_probot->GetController() ) {
-                    // create a default controller
-                    ControllerBasePtr pcontrol = _probot->GetEnv()->CreateController("IdealController");
-                    if( !pcontrol )
-                        pcontrol = _probot->GetEnv()->CreateController("ControllerPD");
-                    _probot->SetController(pcontrol,"");
-                }
+                // set a default controller
+                if( !_probot->GetController() )
+                    _probot->SetController(_probot->GetEnv()->CreateController("IdealController"),"");
 
                 // forces robot to reupdate its internal objects
                 _probot->SetTransform(_probot->GetTransform());
