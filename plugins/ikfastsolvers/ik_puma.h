@@ -369,7 +369,7 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                         if( IKabs(evalcond) < 0.00001 ) {
                         {
                         IKReal evalcond;
-                            evalcond=IKsin(j4);
+                        evalcond=1;//IKsin(j4);
                             if( IKabs(evalcond) < 0.00001 ) {
                             {
                             IKReal j5array[1], cj5array[1], sj5array[1];
@@ -410,7 +410,7 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                             {
                             IKReal j5array[1], cj5array[1], sj5array[1];
                             bool j5valid[1]={false};
-                            IKReal x31=((IKabs(sj4) != 0)?((IKReal)1/(sj4)):(IKReal)1.0e30);
+                            IKReal x31=1.0;//((IKabs(sj4) != 0)?((IKReal)1/(sj4)):(IKReal)1.0e30);
                             j5array[0]=IKatan2(((-1.00000000000000)*(_r12)*(x31)), ((-1.00000000000000)*(_r10)*(x31)));
                             sj5array[0]=IKsin(j5array[0]);
                             cj5array[0]=IKcos(j5array[0]);
