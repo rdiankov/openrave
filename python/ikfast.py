@@ -64,14 +64,14 @@ class SolverSolution:
     jointeval = None
     jointevalcos = None
     jointevalsin = None
-    AddPi = False
+    AddPiIfNegativeEq = False
     IsHinge = True
-    def __init__(self, jointname, jointeval=None,jointevalcos=None,jointevalsin=None,AddPi=False,IsHinge=True):
+    def __init__(self, jointname, jointeval=None,jointevalcos=None,jointevalsin=None,AddPiIfNegativeEq=None,IsHinge=True):
         self.jointname = jointname
         self.jointeval = jointeval
         self.jointevalcos = jointevalcos
         self.jointevalsin = jointevalsin
-        self.AddPi = AddPi
+        self.AddPiIfNegativeEq = AddPiIfNegativeEq
         self.IsHinge=IsHinge
         assert(jointeval is not None or jointevalcos is not None or jointevalsin is not None)
     def subs(self,solsubs):
@@ -766,7 +766,7 @@ int main(int argc, char** argv)
                 names.append('c%sarray[%d]'%(name,i))
             eqcode += self.writeEquations(lambda i: names[i], equations)
 
-            if node.AddPi:
+            if node.AddPiIfNegativeEq:
                 for i in range(numsolutions):
                     eqcode += '%sarray[%d] = %sarray[%d] > 0 ? %sarray[%d]-IKPI : %sarray[%d]+IKPI;\n'%(name,numsolutions+i,name,i,name,i,name,i)
                     eqcode += 's%sarray[%d] = -s%sarray[%d];\n'%(name,numsolutions+i,name,i)
@@ -2410,7 +2410,7 @@ class IKFastSolver(AutoReloader):
             if len(nexttree) == 0:
                 for var,solutions in solvedvars2.iteritems():
                     if solutions[1]:
-                        nexttree.append(SolverSolution(var.name, jointeval=solutions[0], AddPi=True))
+                        nexttree.append(SolverSolution(var.name, jointeval=solutions[0]))#, AddPiIfNegativeEq=solutions[21]))
                         nextvars = filter(lambda x: not x.var == var, nextvars)
                         break
 
@@ -2532,25 +2532,24 @@ class IKFastSolver(AutoReloader):
                                         simplified = self.customtrigsimp(numerator/divisor,deep=True)
                                         if len(othervars) == 0 or not simplified.has_any_symbols(*othervars):
                                             varsolution = self.customtrigsimp(atan2(numerator, divisor), deep=True)
-                                            if len(othervars) > 0 and varsolution.has_any_symbols(*othervars):
-                                                # have to use the simplified solution
-                                                solvedvars[var.var] = [[atan2(*fraction(simplified))],True,divisor]
+                                            if not havegoodsol and len(othervars) > 0 and varsolution.has_any_symbols(*othervars):
+                                                # have to use the simplified solution, but this might remove negative terms ie:
+                                                # atan2(-_r01/sj5, -_r21/sj5)
+                                                # therefore set all the unknown variables to 1 (ie something positive so that atan2 doesn't flip)
+                                                othervarsubs = [(v,S.One) for v in othervars]
+                                                #solvedvars[var.var] = [[atan2(*fraction(simplified))],True,divisor]
+                                                if var.var in solvedvars:
+                                                    # have to check code complexity
+                                                    if self.codeComplexity(varsolution) > self.codeComplexity(solvedvars[var.var][0][0]):
+                                                        continue
+                                                solvedvars[var.var] = [[varsolution.subs(othervarsubs)],True,divisor]
                                             else:
+                                                if var.var in solvedvars:
+                                                    # have to check code complexity
+                                                    if self.codeComplexity(varsolution) > self.codeComplexity(solvedvars[var.var][0][0]):
+                                                        continue
                                                 solvedvars[var.var] = [[varsolution],False,divisor]
                                                 havegoodsol = True
-
-                                    if havegoodsol:
-                                        break
-                                if havegoodsol:
-                                    break
-                            if havegoodsol:
-                                break
-                        if havegoodsol:
-                            break
-                    if havegoodsol:
-                        break
-                if havegoodsol:
-                    break
         
         return solvedvars
 

@@ -43,7 +43,7 @@ const float TIMER_SENSOR_INTERVAL = (1.0f/60.0f);
 
 #define VIDEO_WIDTH 640
 #define VIDEO_HEIGHT 480
-#define VIDEO_FRAMERATE 30 //60
+#define VIDEO_FRAMERATE (30000.0/1001.0) // 29.97 //60
 
 int QtCoinViewer::s_InitRefCount = 0;
 
@@ -2872,7 +2872,7 @@ bool QtCoinViewer::_RecordVideo()
     uint64_t curtime = _bRealtimeVideo ? GetMicroTime() : GetEnv()->GetSimulationTime();
     _nVideoTimeOffset += (curtime-_nLastVideoFrame);
     
-    while(_nVideoTimeOffset >= (1000000/VIDEO_FRAMERATE) ) {
+    while(_nVideoTimeOffset >= (1000000.0/VIDEO_FRAMERATE) ) {
         if( !ADD_FRAME_FROM_DIB_TO_AVI(_ivOffscreen.getBuffer()) ) {
             RAVELOG_WARNA("Failed adding frames, stopping avi recording\n");
             _bSaveVideo = false;
@@ -2881,7 +2881,7 @@ bool QtCoinViewer::_RecordVideo()
             return true;
         }
         
-        _nVideoTimeOffset -= (1000000/VIDEO_FRAMERATE);
+        _nVideoTimeOffset -= (1000000.0/VIDEO_FRAMERATE);
     }
     
     _nLastVideoFrame = curtime;

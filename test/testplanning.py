@@ -78,6 +78,25 @@ def test_ikgeneration():
     usedummyjoints=usedummyjoints
     solvefn=solvefn
 
+def test_ik():
+    import inversekinematics
+    env = Environment()
+    env.SetDebugLevel(DebugLevel.Debug)
+    robot = env.ReadRobotXMLFile('/home/rdiankov/downloads/SDA10-OpenRave/robots/SDA10-dual.robot.xml')
+    env.AddRobot(robot)
+    manip=robot.SetActiveManipulator('rightarm')
+    self = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
+    self.load()
+    #T=manip.GetEndEffectorTransform()
+    Tlocal=matrixFromPose(array([ 0.124762, -0.377634, -0.917424, -0.0126727, -0.0104459, 0.63172, -0.395333]))
+    T = dot(manip.GetBase().GetTransform(),Tlocal)
+    robot.SetJointValues(zeros(robot.GetDOF()))
+    [j.SetJointLimits([-pi],[pi]) for j in robot.GetJoints()]
+    values=manip.FindIKSolution(T,False)
+    print ' '.join(str(f) for f in Tlocal[0:3,0:4].flatten())
+    robot.SetJointValues (values,manip.GetArmJoints())
+    print manip.GetEndEffectorTransform()
+
 def test_reachability():
     import kinematicreachability
     env = Environment()
@@ -501,6 +520,47 @@ def test_drillray():
     freejoints = []
     sourcefilename = 'temp.cpp'
     self = ikfast.IKFastSolver(kinbody=robot,accuracy=1e-5,precision=None)
+    #code = self.generateIkSolver(manip.GetBase().GetIndex(),manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejoints,usedummyjoints=False,solvefn=solvefn)
+    baselink=manip.GetBase().GetIndex()
+    eelink=manip.GetEndEffector().GetIndex()
+    alljoints = self.getJointsInChain(baselink, eelink)
+    usedummyjoints=False
+    chain = []
+    for joint in alljoints:
+        issolvejoint = any([i == joint.jointindex for i in solvejoints])
+        joint.isdummy = usedummyjoints and not issolvejoint and not any([i == joint.jointindex for i in freeparams])
+        joint.isfreejoint = not issolvejoint and not joint.isdummy
+        chain.append(joint)
+    Tee = eye(4)
+    for i in range(0,3):
+        for j in range(0,3):
+            Tee[i,j] = Symbol("r%d%d"%(i,j))
+    Tee[0,3] = Symbol("px")
+    Tee[1,3] = Symbol("py")
+    Tee[2,3] = Symbol("pz")
+
+def test_sda10ik():
+    python inversekinematics.py --robot=/home/rdiankov/downloads/SDA10-OpenRave/robots/SDA10-dual.robot.xml
+    from openravepy import *
+    import numpy,time
+    from openravepy.examples import inversekinematics
+    import ikfast
+    from ikfast import SolverStoreSolution, SolverSequence
+    from sympy import *
+    env = Environment()
+    env.Reset()
+    robot = env.ReadRobotXMLFile('/home/rdiankov/downloads/SDA10-OpenRave/robots/SDA10-dual.robot.xml')
+    env.AddRobot(robot)
+    manip = robot.SetActiveManipulator('rightarm')
+    ikmodel = inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
+
+    solvefn=ikfast.IKFastSolver.solveFullIK_6D
+    solvejoints = list(manip.GetArmJoints())
+    solvejoints.remove(10)
+    freejoints = []
+    freeparams=[10]
+    sourcefilename = 'temp.cpp'
+    self = ikfast.IKFastSolver(kinbody=robot,accuracy=None,precision=None)
     #code = self.generateIkSolver(manip.GetBase().GetIndex(),manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejoints,usedummyjoints=False,solvefn=solvefn)
     baselink=manip.GetBase().GetIndex()
     eelink=manip.GetEndEffector().GetIndex()

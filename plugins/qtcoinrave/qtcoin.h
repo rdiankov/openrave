@@ -201,7 +201,7 @@ struct null_deleter
 };
 
 //@{ video recording
-bool START_AVI(const char* file_name, int _frameRate, int width, int height, int bits, int codecid=-1);
+bool START_AVI(const char* file_name, double _frameRate, int width, int height, int bits, int codecid=-1);
 bool ADD_FRAME_FROM_DIB_TO_AVI(void* pdata);
 bool STOP_AVI();
 std::list<std::pair<int,string> > GET_CODECS();

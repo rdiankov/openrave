@@ -336,7 +336,7 @@ static PAVISTREAM psCompressed = NULL;
 static int count = 0;
 static int s_biSizeImage = 0;
 // Initialization... 
-bool START_AVI(const char* file_name, int _frameRate, int width, int height, int bits, int codecid=-1)
+bool START_AVI(const char* file_name, double _frameRate, int width, int height, int bits, int codecid=-1)
 {
     if(! AVI_Init())
 	{
@@ -348,7 +348,7 @@ bool START_AVI(const char* file_name, int _frameRate, int width, int height, int
 		return false;
 	}
 
-    if(! AVI_CreateStream(pfile, &ps, _frameRate, width*height/bits, width, height, "none")) {
+    if(! AVI_CreateStream(pfile, &ps, (int)_frameRate, width*height/bits, width, height, "none")) {
         return false;
     } 
 
@@ -479,7 +479,7 @@ std::list<std::pair<int,string> > GET_CODECS() {
     return lcodecs;
 }
 
-bool START_AVI(const char* filename, int _frameRate, int width, int height, int bits, int codecid)
+bool START_AVI(const char* filename, double _frameRate, int width, int height, int bits, int codecid)
 {
     if( bits != 24 ) {
         RAVELOG_WARNA("START_AVI only supports 24bits\n");
@@ -527,7 +527,10 @@ bool START_AVI(const char* filename, int _frameRate, int width, int height, int 
 	codec_ctx->bit_rate = 4000000;
 	codec_ctx->width = width;
 	codec_ctx->height = height;
-	codec_ctx->time_base= (AVRational){1,_frameRate};
+    if( fabs(_frameRate-29.97)<0.01 )
+        codec_ctx->time_base= (AVRational){1001,30000};
+    else
+        codec_ctx->time_base= (AVRational){1,(int)_frameRate};
     codec_ctx->gop_size = 10;
     codec_ctx->max_b_frames = 1;
     codec_ctx->pix_fmt = PIX_FMT_YUV420P;
@@ -543,7 +546,7 @@ bool START_AVI(const char* filename, int _frameRate, int width, int height, int 
         return false;
 	}
 
-    RAVELOG_DEBUGA("opening %s, w:%d h:%dx fps:%d, codec: %s\n", output->filename, width, height, _frameRate, codec->name);
+    RAVELOG_DEBUGA("opening %s, w:%d h:%dx fps:%f, codec: %s\n", output->filename, width, height, (float)_frameRate, codec->name);
 
 	if (avcodec_open(codec_ctx, codec) < 0) {
 		RAVELOG_WARNA("START_AVI: Unable to open codec\n");
@@ -647,7 +650,7 @@ bool ADD_FRAME_FROM_DIB_TO_AVI(void* pdata)
 // no ffmpeg
 bool STOP_AVI() { return false; }
 std::list<std::pair<int,string> > GET_CODECS() { return std::list<std::pair<int,string> >(); }
-bool START_AVI(const char* filename, int _frameRate, int width, int height, int bits,int)
+bool START_AVI(const char* filename, double _frameRate, int width, int height, int bits,int)
 {
     RAVELOG_WARNA("avi recording to file %s not enabled\n", filename);
     return false;
