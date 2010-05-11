@@ -38,7 +38,8 @@ class InverseKinematicsModel(OpenRAVEModel):
         return self.iksolver is not None and self.manip.HasIKSolver()
     def load(self,*args,**kwargs):
         return self.setrobot(*args,**kwargs)
-
+    def getversion(self):
+        return 1
     def setrobot(self,freeinc=None):
         self.iksolver = None
         self.freeinc=freeinc
