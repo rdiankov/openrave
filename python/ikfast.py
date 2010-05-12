@@ -2436,7 +2436,7 @@ class IKFastSolver(AutoReloader):
                 else:
                     print 'unknown function when checking for 0s',checkeq
                     valuestotest = [(0,[checkeq.subs(checkvar,0)])]
-
+                
                 newrawvars = [var.var for var in vars if not var.var == checkvar]
                 subtrees = []
                 for checkvalue in valuestotest:
@@ -2532,17 +2532,18 @@ class IKFastSolver(AutoReloader):
                                         simplified = self.customtrigsimp(numerator/divisor,deep=True)
                                         if len(othervars) == 0 or not simplified.has_any_symbols(*othervars):
                                             varsolution = self.customtrigsimp(atan2(numerator, divisor), deep=True)
-                                            if not havegoodsol and len(othervars) > 0 and varsolution.has_any_symbols(*othervars):
-                                                # have to use the simplified solution, but this might remove negative terms ie:
-                                                # atan2(-_r01/sj5, -_r21/sj5)
-                                                # therefore set all the unknown variables to 1 (ie something positive so that atan2 doesn't flip)
-                                                othervarsubs = [(v,S.One) for v in othervars]
-                                                #solvedvars[var.var] = [[atan2(*fraction(simplified))],True,divisor]
-                                                if var.var in solvedvars:
-                                                    # have to check code complexity
-                                                    if self.codeComplexity(varsolution) > self.codeComplexity(solvedvars[var.var][0][0]):
-                                                        continue
-                                                solvedvars[var.var] = [[varsolution.subs(othervarsubs)],True,divisor]
+                                            if len(othervars) > 0 and varsolution.has_any_symbols(*othervars):
+                                                if not havegoodsol: 
+                                                    # have to use the simplified solution, but this might remove negative terms ie:
+                                                    # atan2(-_r01/sj5, -_r21/sj5)
+                                                    # therefore set all the unknown variables to 1 (ie something positive so that atan2 doesn't flip)
+                                                    othervarsubs = [(v,S.One) for v in othervars]
+                                                    #solvedvars[var.var] = [[atan2(*fraction(simplified))],True,divisor]
+                                                    if var.var in solvedvars:
+                                                        # have to check code complexity
+                                                        if self.codeComplexity(varsolution) > self.codeComplexity(solvedvars[var.var][0][0]):
+                                                            continue
+                                                    solvedvars[var.var] = [[varsolution.subs(othervarsubs)],True,divisor]
                                             else:
                                                 if var.var in solvedvars:
                                                     # have to check code complexity

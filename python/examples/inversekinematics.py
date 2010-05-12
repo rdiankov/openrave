@@ -39,7 +39,7 @@ class InverseKinematicsModel(OpenRAVEModel):
     def load(self,*args,**kwargs):
         return self.setrobot(*args,**kwargs)
     def getversion(self):
-        return 1
+        return 0
     def setrobot(self,freeinc=None):
         self.iksolver = None
         self.freeinc=freeinc
@@ -69,10 +69,10 @@ class InverseKinematicsModel(OpenRAVEModel):
         pass # already saved as a lib
     
     def getfilename(self):
-        basename = 'ikfast.' + self.manip.GetName() + '.' + str(self.iktype) + '.' + platform.machine()
+        basename = 'ikfast' + str(self.getversion()) + '.' + self.manip.GetName() + '.' + str(self.iktype) + '.' + platform.machine()
         return ccompiler.new_compiler().shared_object_filename(basename=basename,output_dir=OpenRAVEModel.getfilename(self))
     def getsourcefilename(self):
-        return os.path.join(OpenRAVEModel.getfilename(self),'ikfast.' + self.manip.GetName() + '.' + str(self.iktype))
+        return os.path.join(OpenRAVEModel.getfilename(self),'ikfast' + str(self.getversion()) + '.' + self.manip.GetName() + '.' + str(self.iktype))
     def autogenerate(self,options=None):
         freejoints = None
         iktype = None

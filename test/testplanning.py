@@ -549,16 +549,16 @@ def test_sda10ik():
     from sympy import *
     env = Environment()
     env.Reset()
-    robot = env.ReadRobotXMLFile('/home/rdiankov/downloads/SDA10-OpenRave/robots/SDA10-dual.robot.xml')
+    robot = env.ReadRobotXMLFile('robots/puma.robot.xml')#/home/rdiankov/downloads/SDA10-OpenRave/robots/SDA10-dual.robot.xml')
     env.AddRobot(robot)
-    manip = robot.SetActiveManipulator('rightarm')
+    manip = robot.SetActiveManipulator('arm')
     ikmodel = inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
 
     solvefn=ikfast.IKFastSolver.solveFullIK_6D
     solvejoints = list(manip.GetArmJoints())
-    solvejoints.remove(10)
+    #solvejoints.remove(10)
     freejoints = []
-    freeparams=[10]
+    freeparams=[]
     sourcefilename = 'temp.cpp'
     self = ikfast.IKFastSolver(kinbody=robot,accuracy=None,precision=None)
     #code = self.generateIkSolver(manip.GetBase().GetIndex(),manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejoints,usedummyjoints=False,solvefn=solvefn)

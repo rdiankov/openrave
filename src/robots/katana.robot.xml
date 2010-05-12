@@ -6,6 +6,6 @@
 	<joints>gj1</joints>
     <closingdirection>-1</closingdirection>
 	<Translation>0 0 0.165</Translation>
-    <iksolver>Katanaikfast</iksolver>
+    <iksolver>Katanaikfast 0.01</iksolver>
   </Manipulator>
 </Robot>
