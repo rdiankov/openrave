@@ -1,0 +1,28 @@
+<robot>
+  <robot file="/home/rdiankov/pr2.dae">
+  </robot>
+  <manipulator name="leftarm">
+    <base>torso_lift_link</base>
+    <effector>l_gripper_palm_link</effector>
+    <joints>l_gripper_l_finger_joint</joints>
+    <closingdirection>1</closingdirection>
+    <translation>0.18 0 0</translation>
+    <direction>1 0 0</direction>
+  </manipulator>
+  <manipulator name="leftarm_torso">
+    <base>base_link</base>
+    <effector>l_gripper_palm_link</effector>
+    <joints>l_gripper_l_finger_joint</joints>
+    <closingdirection>1</closingdirection>
+    <translation>0.18 0 0</translation>
+    <direction>1 0 0</direction>
+  </manipulator>
+  <manipulator name="rightarm">
+    <base>torso_lift_link</base>
+    <effector>r_gripper_palm_link</effector>
+    <joints>r_gripper_l_finger_joint</joints>
+    <closingdirection>1</closingdirection>
+    <translation>0.18 0 0</translation>
+    <direction>1 0 0</direction>
+  </manipulator>
+</robot>

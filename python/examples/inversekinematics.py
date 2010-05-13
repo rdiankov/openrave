@@ -39,7 +39,7 @@ class InverseKinematicsModel(OpenRAVEModel):
     def load(self,*args,**kwargs):
         return self.setrobot(*args,**kwargs)
     def getversion(self):
-        return 0
+        return 1
     def setrobot(self,freeinc=None):
         self.iksolver = None
         self.freeinc=freeinc
@@ -47,15 +47,16 @@ class InverseKinematicsModel(OpenRAVEModel):
             iksuffix = ' %f'%freeinc
         else:
             iksuffix = ''
-        if self.manip.HasIKSolver():
-            self.iksolver = self.env.CreateIkSolver(self.manip.GetIKSolverName()+iksuffix) if self.manip.HasIKSolver() else None
+#         if self.manip.HasIKSolver():
+#             self.iksolver = self.env.CreateIkSolver(self.manip.GetIKSolverName()+iksuffix) if self.manip.HasIKSolver() else None
         if self.iksolver is None:
             with self.env:
                 ikfastproblem = [p for p in self.env.GetLoadedProblems() if p.GetXMLId() == 'IKFast'][0]
                 ikname = 'ikfast.%s.%s'%(self.robot.GetRobotStructureHash(),self.manip.GetName())
                 iktype = ikfastproblem.SendCommand('AddIkLibrary %s %s'%(ikname,self.getfilename()))
                 if iktype is None:
-                    return False
+                    self.iksolver = self.env.CreateIkSolver(self.manip.GetIKSolverName()+iksuffix) if self.manip.HasIKSolver() else None
+                    return self.has()
                 if int(self.iktype) != int(iktype):
                     raise ValueError('ik does not match types %s!=%s'%(self.iktype,iktype))
                 self.iksolver = self.env.CreateIkSolver(ikname+iksuffix)

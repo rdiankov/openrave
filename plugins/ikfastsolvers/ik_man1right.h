@@ -310,20 +310,30 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 }
                             else {
                                 {
-                                IKReal j4array[1], cj4array[1], sj4array[1];
-                                bool j4valid[1]={false};
+                                IKReal j4array[2], cj4array[2], sj4array[2];
+                                bool j4valid[2]={false};
                                 j4array[0]=IKatan2(_r02, _r22);
                                 sj4array[0]=IKsin(j4array[0]);
                                 cj4array[0]=IKcos(j4array[0]);
+                                j4array[1] = j4array[0] > 0 ? j4array[0]-IKPI : j4array[0]+IKPI;
+                                sj4array[1] = -sj4array[0];
+                                cj4array[1] = -cj4array[0];
                                 if( j4array[0] > IKPI )
                                     j4array[0]-=IK2PI;
                                 else if( j4array[0] < -IKPI )
                                     j4array[0]+=IK2PI;
                                 j4valid[0] = true;
-                                { int ij4 = 0;
+                                if( j4array[1] > IKPI )
+                                    j4array[1]-=IK2PI;
+                                else if( j4array[1] < -IKPI )
+                                    j4array[1]+=IK2PI;
+                                j4valid[1] = true;
+                                if( j4valid[0] && j4valid[1] && IKabs(cj4array[0]-cj4array[1]) < 0.0001 && IKabs(sj4array[0]-sj4array[1]) < 0.0001 )
+                                    j4valid[1]=false;
+                                for(int ij4 = 0; ij4 < 2; ++ij4) {
                                 if( !j4valid[ij4] )
                                     continue;
-                                j4 = j4array[0]; cj4 = cj4array[0]; sj4 = sj4array[0];
+                                j4 = j4array[ij4]; cj4 = cj4array[ij4]; sj4 = sj4array[ij4];
                                 
                                 {
                                 IKReal evalcond;
@@ -584,20 +594,30 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 }
                             else {
                                 {
-                                IKReal j4array[1], cj4array[1], sj4array[1];
-                                bool j4valid[1]={false};
+                                IKReal j4array[2], cj4array[2], sj4array[2];
+                                bool j4valid[2]={false};
                                 j4array[0]=IKatan2(_r02, _r22);
                                 sj4array[0]=IKsin(j4array[0]);
                                 cj4array[0]=IKcos(j4array[0]);
+                                j4array[1] = j4array[0] > 0 ? j4array[0]-IKPI : j4array[0]+IKPI;
+                                sj4array[1] = -sj4array[0];
+                                cj4array[1] = -cj4array[0];
                                 if( j4array[0] > IKPI )
                                     j4array[0]-=IK2PI;
                                 else if( j4array[0] < -IKPI )
                                     j4array[0]+=IK2PI;
                                 j4valid[0] = true;
-                                { int ij4 = 0;
+                                if( j4array[1] > IKPI )
+                                    j4array[1]-=IK2PI;
+                                else if( j4array[1] < -IKPI )
+                                    j4array[1]+=IK2PI;
+                                j4valid[1] = true;
+                                if( j4valid[0] && j4valid[1] && IKabs(cj4array[0]-cj4array[1]) < 0.0001 && IKabs(sj4array[0]-sj4array[1]) < 0.0001 )
+                                    j4valid[1]=false;
+                                for(int ij4 = 0; ij4 < 2; ++ij4) {
                                 if( !j4valid[ij4] )
                                     continue;
-                                j4 = j4array[0]; cj4 = cj4array[0]; sj4 = sj4array[0];
+                                j4 = j4array[ij4]; cj4 = cj4array[ij4]; sj4 = sj4array[ij4];
                                 
                                 {
                                 IKReal evalcond;
@@ -869,20 +889,30 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                         }
                     else {
                         {
-                        IKReal j4array[1], cj4array[1], sj4array[1];
-                        bool j4valid[1]={false};
+                        IKReal j4array[2], cj4array[2], sj4array[2];
+                        bool j4valid[2]={false};
                         j4array[0]=IKatan2(_r02, _r22);
                         sj4array[0]=IKsin(j4array[0]);
                         cj4array[0]=IKcos(j4array[0]);
+                        j4array[1] = j4array[0] > 0 ? j4array[0]-IKPI : j4array[0]+IKPI;
+                        sj4array[1] = -sj4array[0];
+                        cj4array[1] = -cj4array[0];
                         if( j4array[0] > IKPI )
                             j4array[0]-=IK2PI;
                         else if( j4array[0] < -IKPI )
                             j4array[0]+=IK2PI;
                         j4valid[0] = true;
-                        { int ij4 = 0;
+                        if( j4array[1] > IKPI )
+                            j4array[1]-=IK2PI;
+                        else if( j4array[1] < -IKPI )
+                            j4array[1]+=IK2PI;
+                        j4valid[1] = true;
+                        if( j4valid[0] && j4valid[1] && IKabs(cj4array[0]-cj4array[1]) < 0.0001 && IKabs(sj4array[0]-sj4array[1]) < 0.0001 )
+                            j4valid[1]=false;
+                        for(int ij4 = 0; ij4 < 2; ++ij4) {
                         if( !j4valid[ij4] )
                             continue;
-                        j4 = j4array[0]; cj4 = cj4array[0]; sj4 = sj4array[0];
+                        j4 = j4array[ij4]; cj4 = cj4array[ij4]; sj4 = sj4array[ij4];
                         
                         {
                         IKReal evalcond;
@@ -1153,20 +1183,30 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                     }
                 else {
                     {
-                    IKReal j4array[1], cj4array[1], sj4array[1];
-                    bool j4valid[1]={false};
+                    IKReal j4array[2], cj4array[2], sj4array[2];
+                    bool j4valid[2]={false};
                     j4array[0]=IKatan2(_r02, _r22);
                     sj4array[0]=IKsin(j4array[0]);
                     cj4array[0]=IKcos(j4array[0]);
+                    j4array[1] = j4array[0] > 0 ? j4array[0]-IKPI : j4array[0]+IKPI;
+                    sj4array[1] = -sj4array[0];
+                    cj4array[1] = -cj4array[0];
                     if( j4array[0] > IKPI )
                         j4array[0]-=IK2PI;
                     else if( j4array[0] < -IKPI )
                         j4array[0]+=IK2PI;
                     j4valid[0] = true;
-                    { int ij4 = 0;
+                    if( j4array[1] > IKPI )
+                        j4array[1]-=IK2PI;
+                    else if( j4array[1] < -IKPI )
+                        j4array[1]+=IK2PI;
+                    j4valid[1] = true;
+                    if( j4valid[0] && j4valid[1] && IKabs(cj4array[0]-cj4array[1]) < 0.0001 && IKabs(sj4array[0]-sj4array[1]) < 0.0001 )
+                        j4valid[1]=false;
+                    for(int ij4 = 0; ij4 < 2; ++ij4) {
                     if( !j4valid[ij4] )
                         continue;
-                    j4 = j4array[0]; cj4 = cj4array[0]; sj4 = sj4array[0];
+                    j4 = j4array[ij4]; cj4 = cj4array[ij4]; sj4 = sj4array[ij4];
                     
                     {
                     IKReal evalcond;
@@ -1470,20 +1510,30 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
             }
         else {
             {
-            IKReal j4array[1], cj4array[1], sj4array[1];
-            bool j4valid[1]={false};
+            IKReal j4array[2], cj4array[2], sj4array[2];
+            bool j4valid[2]={false};
             j4array[0]=IKatan2(_r02, _r22);
             sj4array[0]=IKsin(j4array[0]);
             cj4array[0]=IKcos(j4array[0]);
+            j4array[1] = j4array[0] > 0 ? j4array[0]-IKPI : j4array[0]+IKPI;
+            sj4array[1] = -sj4array[0];
+            cj4array[1] = -cj4array[0];
             if( j4array[0] > IKPI )
                 j4array[0]-=IK2PI;
             else if( j4array[0] < -IKPI )
                 j4array[0]+=IK2PI;
             j4valid[0] = true;
-            { int ij4 = 0;
+            if( j4array[1] > IKPI )
+                j4array[1]-=IK2PI;
+            else if( j4array[1] < -IKPI )
+                j4array[1]+=IK2PI;
+            j4valid[1] = true;
+            if( j4valid[0] && j4valid[1] && IKabs(cj4array[0]-cj4array[1]) < 0.0001 && IKabs(sj4array[0]-sj4array[1]) < 0.0001 )
+                j4valid[1]=false;
+            for(int ij4 = 0; ij4 < 2; ++ij4) {
             if( !j4valid[ij4] )
                 continue;
-            j4 = j4array[0]; cj4 = cj4array[0]; sj4 = sj4array[0];
+            j4 = j4array[ij4]; cj4 = cj4array[ij4]; sj4 = sj4array[ij4];
             
             {
             IKReal evalcond;
@@ -1774,20 +1824,30 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 }
                             else {
                                 {
-                                IKReal j4array[1], cj4array[1], sj4array[1];
-                                bool j4valid[1]={false};
+                                IKReal j4array[2], cj4array[2], sj4array[2];
+                                bool j4valid[2]={false};
                                 j4array[0]=IKatan2(_r02, _r22);
                                 sj4array[0]=IKsin(j4array[0]);
                                 cj4array[0]=IKcos(j4array[0]);
+                                j4array[1] = j4array[0] > 0 ? j4array[0]-IKPI : j4array[0]+IKPI;
+                                sj4array[1] = -sj4array[0];
+                                cj4array[1] = -cj4array[0];
                                 if( j4array[0] > IKPI )
                                     j4array[0]-=IK2PI;
                                 else if( j4array[0] < -IKPI )
                                     j4array[0]+=IK2PI;
                                 j4valid[0] = true;
-                                { int ij4 = 0;
+                                if( j4array[1] > IKPI )
+                                    j4array[1]-=IK2PI;
+                                else if( j4array[1] < -IKPI )
+                                    j4array[1]+=IK2PI;
+                                j4valid[1] = true;
+                                if( j4valid[0] && j4valid[1] && IKabs(cj4array[0]-cj4array[1]) < 0.0001 && IKabs(sj4array[0]-sj4array[1]) < 0.0001 )
+                                    j4valid[1]=false;
+                                for(int ij4 = 0; ij4 < 2; ++ij4) {
                                 if( !j4valid[ij4] )
                                     continue;
-                                j4 = j4array[0]; cj4 = cj4array[0]; sj4 = sj4array[0];
+                                j4 = j4array[ij4]; cj4 = cj4array[ij4]; sj4 = sj4array[ij4];
                                 
                                 {
                                 IKReal j5array[1], cj5array[1], sj5array[1];
@@ -1944,20 +2004,30 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 }
                             else {
                                 {
-                                IKReal j4array[1], cj4array[1], sj4array[1];
-                                bool j4valid[1]={false};
+                                IKReal j4array[2], cj4array[2], sj4array[2];
+                                bool j4valid[2]={false};
                                 j4array[0]=IKatan2(_r02, _r22);
                                 sj4array[0]=IKsin(j4array[0]);
                                 cj4array[0]=IKcos(j4array[0]);
+                                j4array[1] = j4array[0] > 0 ? j4array[0]-IKPI : j4array[0]+IKPI;
+                                sj4array[1] = -sj4array[0];
+                                cj4array[1] = -cj4array[0];
                                 if( j4array[0] > IKPI )
                                     j4array[0]-=IK2PI;
                                 else if( j4array[0] < -IKPI )
                                     j4array[0]+=IK2PI;
                                 j4valid[0] = true;
-                                { int ij4 = 0;
+                                if( j4array[1] > IKPI )
+                                    j4array[1]-=IK2PI;
+                                else if( j4array[1] < -IKPI )
+                                    j4array[1]+=IK2PI;
+                                j4valid[1] = true;
+                                if( j4valid[0] && j4valid[1] && IKabs(cj4array[0]-cj4array[1]) < 0.0001 && IKabs(sj4array[0]-sj4array[1]) < 0.0001 )
+                                    j4valid[1]=false;
+                                for(int ij4 = 0; ij4 < 2; ++ij4) {
                                 if( !j4valid[ij4] )
                                     continue;
-                                j4 = j4array[0]; cj4 = cj4array[0]; sj4 = sj4array[0];
+                                j4 = j4array[ij4]; cj4 = cj4array[ij4]; sj4 = sj4array[ij4];
                                 
                                 {
                                 IKReal j5array[1], cj5array[1], sj5array[1];
@@ -2128,20 +2198,30 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                         }
                     else {
                         {
-                        IKReal j4array[1], cj4array[1], sj4array[1];
-                        bool j4valid[1]={false};
+                        IKReal j4array[2], cj4array[2], sj4array[2];
+                        bool j4valid[2]={false};
                         j4array[0]=IKatan2(_r02, _r22);
                         sj4array[0]=IKsin(j4array[0]);
                         cj4array[0]=IKcos(j4array[0]);
+                        j4array[1] = j4array[0] > 0 ? j4array[0]-IKPI : j4array[0]+IKPI;
+                        sj4array[1] = -sj4array[0];
+                        cj4array[1] = -cj4array[0];
                         if( j4array[0] > IKPI )
                             j4array[0]-=IK2PI;
                         else if( j4array[0] < -IKPI )
                             j4array[0]+=IK2PI;
                         j4valid[0] = true;
-                        { int ij4 = 0;
+                        if( j4array[1] > IKPI )
+                            j4array[1]-=IK2PI;
+                        else if( j4array[1] < -IKPI )
+                            j4array[1]+=IK2PI;
+                        j4valid[1] = true;
+                        if( j4valid[0] && j4valid[1] && IKabs(cj4array[0]-cj4array[1]) < 0.0001 && IKabs(sj4array[0]-sj4array[1]) < 0.0001 )
+                            j4valid[1]=false;
+                        for(int ij4 = 0; ij4 < 2; ++ij4) {
                         if( !j4valid[ij4] )
                             continue;
-                        j4 = j4array[0]; cj4 = cj4array[0]; sj4 = sj4array[0];
+                        j4 = j4array[ij4]; cj4 = cj4array[ij4]; sj4 = sj4array[ij4];
                         
                         {
                         IKReal j5array[1], cj5array[1], sj5array[1];
@@ -2311,20 +2391,30 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                     }
                 else {
                     {
-                    IKReal j4array[1], cj4array[1], sj4array[1];
-                    bool j4valid[1]={false};
+                    IKReal j4array[2], cj4array[2], sj4array[2];
+                    bool j4valid[2]={false};
                     j4array[0]=IKatan2(_r02, _r22);
                     sj4array[0]=IKsin(j4array[0]);
                     cj4array[0]=IKcos(j4array[0]);
+                    j4array[1] = j4array[0] > 0 ? j4array[0]-IKPI : j4array[0]+IKPI;
+                    sj4array[1] = -sj4array[0];
+                    cj4array[1] = -cj4array[0];
                     if( j4array[0] > IKPI )
                         j4array[0]-=IK2PI;
                     else if( j4array[0] < -IKPI )
                         j4array[0]+=IK2PI;
                     j4valid[0] = true;
-                    { int ij4 = 0;
+                    if( j4array[1] > IKPI )
+                        j4array[1]-=IK2PI;
+                    else if( j4array[1] < -IKPI )
+                        j4array[1]+=IK2PI;
+                    j4valid[1] = true;
+                    if( j4valid[0] && j4valid[1] && IKabs(cj4array[0]-cj4array[1]) < 0.0001 && IKabs(sj4array[0]-sj4array[1]) < 0.0001 )
+                        j4valid[1]=false;
+                    for(int ij4 = 0; ij4 < 2; ++ij4) {
                     if( !j4valid[ij4] )
                         continue;
-                    j4 = j4array[0]; cj4 = cj4array[0]; sj4 = sj4array[0];
+                    j4 = j4array[ij4]; cj4 = cj4array[ij4]; sj4 = sj4array[ij4];
                     
                     {
                     IKReal j5array[1], cj5array[1], sj5array[1];
@@ -2527,20 +2617,30 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
             }
         else {
             {
-            IKReal j4array[1], cj4array[1], sj4array[1];
-            bool j4valid[1]={false};
+            IKReal j4array[2], cj4array[2], sj4array[2];
+            bool j4valid[2]={false};
             j4array[0]=IKatan2(_r02, _r22);
             sj4array[0]=IKsin(j4array[0]);
             cj4array[0]=IKcos(j4array[0]);
+            j4array[1] = j4array[0] > 0 ? j4array[0]-IKPI : j4array[0]+IKPI;
+            sj4array[1] = -sj4array[0];
+            cj4array[1] = -cj4array[0];
             if( j4array[0] > IKPI )
                 j4array[0]-=IK2PI;
             else if( j4array[0] < -IKPI )
                 j4array[0]+=IK2PI;
             j4valid[0] = true;
-            { int ij4 = 0;
+            if( j4array[1] > IKPI )
+                j4array[1]-=IK2PI;
+            else if( j4array[1] < -IKPI )
+                j4array[1]+=IK2PI;
+            j4valid[1] = true;
+            if( j4valid[0] && j4valid[1] && IKabs(cj4array[0]-cj4array[1]) < 0.0001 && IKabs(sj4array[0]-sj4array[1]) < 0.0001 )
+                j4valid[1]=false;
+            for(int ij4 = 0; ij4 < 2; ++ij4) {
             if( !j4valid[ij4] )
                 continue;
-            j4 = j4array[0]; cj4 = cj4array[0]; sj4 = sj4array[0];
+            j4 = j4array[ij4]; cj4 = cj4array[ij4]; sj4 = sj4array[ij4];
             
             {
             IKReal j5array[1], cj5array[1], sj5array[1];
@@ -2728,20 +2828,30 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 }
                             else {
                                 {
-                                IKReal j4array[1], cj4array[1], sj4array[1];
-                                bool j4valid[1]={false};
+                                IKReal j4array[2], cj4array[2], sj4array[2];
+                                bool j4valid[2]={false};
                                 j4array[0]=IKatan2(_r02, _r22);
                                 sj4array[0]=IKsin(j4array[0]);
                                 cj4array[0]=IKcos(j4array[0]);
+                                j4array[1] = j4array[0] > 0 ? j4array[0]-IKPI : j4array[0]+IKPI;
+                                sj4array[1] = -sj4array[0];
+                                cj4array[1] = -cj4array[0];
                                 if( j4array[0] > IKPI )
                                     j4array[0]-=IK2PI;
                                 else if( j4array[0] < -IKPI )
                                     j4array[0]+=IK2PI;
                                 j4valid[0] = true;
-                                { int ij4 = 0;
+                                if( j4array[1] > IKPI )
+                                    j4array[1]-=IK2PI;
+                                else if( j4array[1] < -IKPI )
+                                    j4array[1]+=IK2PI;
+                                j4valid[1] = true;
+                                if( j4valid[0] && j4valid[1] && IKabs(cj4array[0]-cj4array[1]) < 0.0001 && IKabs(sj4array[0]-sj4array[1]) < 0.0001 )
+                                    j4valid[1]=false;
+                                for(int ij4 = 0; ij4 < 2; ++ij4) {
                                 if( !j4valid[ij4] )
                                     continue;
-                                j4 = j4array[0]; cj4 = cj4array[0]; sj4 = sj4array[0];
+                                j4 = j4array[ij4]; cj4 = cj4array[ij4]; sj4 = sj4array[ij4];
                                 
                                 {
                                 IKReal evalcond;
@@ -2999,20 +3109,30 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                 }
                             else {
                                 {
-                                IKReal j4array[1], cj4array[1], sj4array[1];
-                                bool j4valid[1]={false};
+                                IKReal j4array[2], cj4array[2], sj4array[2];
+                                bool j4valid[2]={false};
                                 j4array[0]=IKatan2(_r02, _r22);
                                 sj4array[0]=IKsin(j4array[0]);
                                 cj4array[0]=IKcos(j4array[0]);
+                                j4array[1] = j4array[0] > 0 ? j4array[0]-IKPI : j4array[0]+IKPI;
+                                sj4array[1] = -sj4array[0];
+                                cj4array[1] = -cj4array[0];
                                 if( j4array[0] > IKPI )
                                     j4array[0]-=IK2PI;
                                 else if( j4array[0] < -IKPI )
                                     j4array[0]+=IK2PI;
                                 j4valid[0] = true;
-                                { int ij4 = 0;
+                                if( j4array[1] > IKPI )
+                                    j4array[1]-=IK2PI;
+                                else if( j4array[1] < -IKPI )
+                                    j4array[1]+=IK2PI;
+                                j4valid[1] = true;
+                                if( j4valid[0] && j4valid[1] && IKabs(cj4array[0]-cj4array[1]) < 0.0001 && IKabs(sj4array[0]-sj4array[1]) < 0.0001 )
+                                    j4valid[1]=false;
+                                for(int ij4 = 0; ij4 < 2; ++ij4) {
                                 if( !j4valid[ij4] )
                                     continue;
-                                j4 = j4array[0]; cj4 = cj4array[0]; sj4 = sj4array[0];
+                                j4 = j4array[ij4]; cj4 = cj4array[ij4]; sj4 = sj4array[ij4];
                                 
                                 {
                                 IKReal evalcond;
@@ -3300,20 +3420,30 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                         }
                     else {
                         {
-                        IKReal j4array[1], cj4array[1], sj4array[1];
-                        bool j4valid[1]={false};
+                        IKReal j4array[2], cj4array[2], sj4array[2];
+                        bool j4valid[2]={false};
                         j4array[0]=IKatan2(_r02, _r22);
                         sj4array[0]=IKsin(j4array[0]);
                         cj4array[0]=IKcos(j4array[0]);
+                        j4array[1] = j4array[0] > 0 ? j4array[0]-IKPI : j4array[0]+IKPI;
+                        sj4array[1] = -sj4array[0];
+                        cj4array[1] = -cj4array[0];
                         if( j4array[0] > IKPI )
                             j4array[0]-=IK2PI;
                         else if( j4array[0] < -IKPI )
                             j4array[0]+=IK2PI;
                         j4valid[0] = true;
-                        { int ij4 = 0;
+                        if( j4array[1] > IKPI )
+                            j4array[1]-=IK2PI;
+                        else if( j4array[1] < -IKPI )
+                            j4array[1]+=IK2PI;
+                        j4valid[1] = true;
+                        if( j4valid[0] && j4valid[1] && IKabs(cj4array[0]-cj4array[1]) < 0.0001 && IKabs(sj4array[0]-sj4array[1]) < 0.0001 )
+                            j4valid[1]=false;
+                        for(int ij4 = 0; ij4 < 2; ++ij4) {
                         if( !j4valid[ij4] )
                             continue;
-                        j4 = j4array[0]; cj4 = cj4array[0]; sj4 = sj4array[0];
+                        j4 = j4array[ij4]; cj4 = cj4array[ij4]; sj4 = sj4array[ij4];
                         
                         {
                         IKReal evalcond;
@@ -3600,20 +3730,30 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                     }
                 else {
                     {
-                    IKReal j4array[1], cj4array[1], sj4array[1];
-                    bool j4valid[1]={false};
+                    IKReal j4array[2], cj4array[2], sj4array[2];
+                    bool j4valid[2]={false};
                     j4array[0]=IKatan2(_r02, _r22);
                     sj4array[0]=IKsin(j4array[0]);
                     cj4array[0]=IKcos(j4array[0]);
+                    j4array[1] = j4array[0] > 0 ? j4array[0]-IKPI : j4array[0]+IKPI;
+                    sj4array[1] = -sj4array[0];
+                    cj4array[1] = -cj4array[0];
                     if( j4array[0] > IKPI )
                         j4array[0]-=IK2PI;
                     else if( j4array[0] < -IKPI )
                         j4array[0]+=IK2PI;
                     j4valid[0] = true;
-                    { int ij4 = 0;
+                    if( j4array[1] > IKPI )
+                        j4array[1]-=IK2PI;
+                    else if( j4array[1] < -IKPI )
+                        j4array[1]+=IK2PI;
+                    j4valid[1] = true;
+                    if( j4valid[0] && j4valid[1] && IKabs(cj4array[0]-cj4array[1]) < 0.0001 && IKabs(sj4array[0]-sj4array[1]) < 0.0001 )
+                        j4valid[1]=false;
+                    for(int ij4 = 0; ij4 < 2; ++ij4) {
                     if( !j4valid[ij4] )
                         continue;
-                    j4 = j4array[0]; cj4 = cj4array[0]; sj4 = sj4array[0];
+                    j4 = j4array[ij4]; cj4 = cj4array[ij4]; sj4 = sj4array[ij4];
                     
                     {
                     IKReal evalcond;

@@ -2395,7 +2395,7 @@ class IKFastSolver(AutoReloader):
             if len(nexttree) == 0:
                 for var,solutions in solvedvars2.iteritems():
                     if solutions[1]:
-                        nexttree.append(SolverSolution(var.name, jointeval=solutions[0]))#, AddPiIfNegativeEq=solutions[21]))
+                        nexttree.append(SolverSolution(var.name, jointeval=solutions[0], AddPiIfNegativeEq=solutions[2]))
                         nextvars = filter(lambda x: not x.var == var, nextvars)
                         break
 
