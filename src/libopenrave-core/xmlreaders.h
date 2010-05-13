@@ -1641,7 +1641,7 @@ namespace OpenRAVEXMLParser
 
                         if( pjointreader->IsDisabled() ) {
                             _pchain->_vecJointIndices.pop_back();
-                            _pjoint->jointindex = (int)_pchain->_vecPassiveJoints.size();
+                            _pjoint->jointindex = -1;
                             _pjoint->dofindex = -1;
                             _pchain->_vecPassiveJoints.push_back(_pjoint);
                         }

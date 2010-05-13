@@ -29,7 +29,7 @@ if __name__ == "__main__":
                       help='Default collision checker to use')
     parser.add_option('--physics', action="store",type='string',dest='physics',default=None,
                       help='Default physics engine to use')
-    parser.add_option('--viewer', action="store",type='string',dest='viewer',default=None,
+    parser.add_option('--viewer', action="store",type='string',dest='viewer',default='qtcoin',
                       help='Default viewer to use.')
     parser.add_option('--debug','-d', action="store",type='string',dest='debug',default=None,
                       help='Debug level')
@@ -37,6 +37,8 @@ if __name__ == "__main__":
                       help='if specified will query the robot structure hash and return')
     parser.add_option('--bodyhash', action="store",type='string',dest='bodyhash',default=None,
                       help='if specified will query the kinbody hash and return')
+    parser.add_option('--ipython', '-i',action="store_true",dest='ipython',default=False,
+                      help='if true will drop into the ipython interpreter rather than spin')
     (options, args) = parser.parse_args()
 
     if options.debug is not None:
@@ -77,7 +79,16 @@ if __name__ == "__main__":
         for arg in args:
             if arg.endswith('.xml') or arg.endswith('.dae'):
                 env.Load(arg)
-        env.SetViewer('qtcoin')
+        if options.viewer:
+            env.SetViewer(options.viewer)
+        if options.ipython:
+            with env:
+                robots=env.GetRobots()
+                robot=None if len(robots) == 0 else robots[0]
+            from IPython.Shell import IPShellEmbed
+            ipshell = IPShellEmbed(argv='',banner = 'OpenRAVE Dropping into IPython',exit_msg = 'Leaving Interpreter and closing program.')
+            ipshell(local_ns=locals())
+            sys.exit(0)
         while True:
             time.sleep(0.01)
     finally:

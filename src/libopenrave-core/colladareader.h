@@ -1222,14 +1222,35 @@ public:
       const domNodeRef pdomnode, Transform tParentLink, const vector<
       domJointRef>& vdomjoints, const vector<KINEMATICSBINDING>& vbindings) {
 
+    //  Initially the link has the name of the node
+    string linkname;
+    if (pdomnode->getName() == NULL)
+    {
+      linkname = pdomnode->getId();
+    }
+    else
+    {
+      linkname = pdomnode->getName();
+    }
 
-    KinBody::LinkPtr plink(new KinBody::Link(pkinbody));
+    //  Set link name with the name of the COLLADA's Link
+    if (!!pdomlink && pdomlink->getName())
+    {
+      linkname = pdomlink->getName();
+    }
 
-    //  Initialize Link Mass
-    plink->_mass    =   1.0;
+    KinBody::LinkPtr plink = pkinbody->GetLink(linkname);
+    if( !plink ) {
+        plink.reset(new KinBody::Link(pkinbody));
+        plink->name = linkname;
 
-    plink->bStatic  = false;
-    plink->index    = (int) pkinbody->_veclinks.size();
+        //  Initialize Link Mass
+        plink->_mass    =   1.0;
+
+        plink->bStatic  = false;
+        plink->index    = (int) pkinbody->_veclinks.size();
+        pkinbody->_veclinks.push_back(plink);
+    }
 
     if (pkinbody->GetName() == "")
     {
@@ -1237,19 +1258,7 @@ public:
       pkinbody->SetName(string(pdomnode->getName()));
     }
 
-    pkinbody->_veclinks.push_back(plink);
-
     RAVELOG_VERBOSEA("Node Id %s and Name %s\n", pdomnode->getId(), pdomnode->getName());
-
-    //  Initially the link has the name of the node
-    if (pdomnode->getName() == NULL)
-    {
-      plink->name = pdomnode->getId();
-    }
-    else
-    {
-      plink->name = pdomnode->getName();
-    }
 
     if (!pdomlink)
     {
@@ -1272,12 +1281,6 @@ public:
 
       // Get the geometry
       ExtractGeometry(pdomnode,plink,vbindings);
-
-      //  Set link name with the name of the COLLADA's Link
-      if (pdomlink->getName())
-      {
-        plink->name = pdomlink->getName();
-      }
 
       //  Debug
       RAVELOG_DEBUGA("After ExtractGeometry Attachment link elements: %d\n",pdomlink->getAttachment_full_array().getCount());
@@ -1447,7 +1450,7 @@ public:
 
           if (!pmotionaxisinfo)
           {
-            RAVELOG_ERRORA("Not Exists Motion axis info\n");
+            RAVELOG_ERRORA(str(boost::format("Not Exists Motion axis info, joint %s\n")%pjoint->GetName()));
           }
 
           //  Sets the Speed and the Acceleration of the joint

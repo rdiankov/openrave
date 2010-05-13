@@ -386,8 +386,8 @@ public:
 
     virtual string __repr__() { return boost::str(boost::format("<env.CreateInterface(PluginType.%s,'%s')>")%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId()); }
     virtual string __str__() { return boost::str(boost::format("<%s:%s>")%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId()); }
-    virtual bool __eq__(PyInterfaceBasePtr p) { return _pbase == p->GetInterfaceBase(); }
-    virtual bool __ne__(PyInterfaceBasePtr p) { return _pbase != p->GetInterfaceBase(); }
+    virtual bool __eq__(PyInterfaceBasePtr p) { return !!p && _pbase == p->GetInterfaceBase(); }
+    virtual bool __ne__(PyInterfaceBasePtr p) { return !p || _pbase != p->GetInterfaceBase(); }
     virtual InterfaceBasePtr GetInterfaceBase() { return _pbase; }
 };
 
@@ -479,8 +479,8 @@ public:
             object GetRenderScale() const { return toPyVector3(_plink->GetGeometry(_geomindex).GetRenderScale()); }
             string GetRenderFilename() const { return _plink->GetGeometry(_geomindex).GetRenderFilename(); }
 
-            bool __eq__(boost::shared_ptr<PyGeomProperties> p) { return _plink == p->_plink && _geomindex == p->_geomindex; }
-            bool __ne__(boost::shared_ptr<PyGeomProperties> p) { return _plink != p->_plink || _geomindex != p->_geomindex; }
+            bool __eq__(boost::shared_ptr<PyGeomProperties> p) { return !!p && _plink == p->_plink && _geomindex == p->_geomindex; }
+            bool __ne__(boost::shared_ptr<PyGeomProperties> p) { return !p || _plink != p->_plink || _geomindex != p->_geomindex; }
         };
 
         PyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv) : _plink(plink), _pyenv(pyenv) {}
@@ -495,6 +495,11 @@ public:
         void Enable(bool bEnable) { _plink->Enable(bEnable); }
 
         PyKinBodyPtr GetParent() const { return PyKinBodyPtr(new PyKinBody(_plink->GetParent(),_pyenv)); }
+        boost::shared_ptr<PyLink> GetParentLink() const
+        {
+            KinBody::LinkPtr parentlink = _plink->GetParentLink();
+            return !parentlink ? boost::shared_ptr<PyLink>() : boost::shared_ptr<PyLink>(new PyLink(parentlink,_pyenv));
+        }
         
         boost::shared_ptr<PyTriMesh> GetCollisionData() { return boost::shared_ptr<PyTriMesh>(new PyTriMesh(_plink->GetCollisionData())); }
         boost::shared_ptr<PyAABB> ComputeAABB() const { return boost::shared_ptr<PyAABB>(new PyAABB(_plink->ComputeAABB())); }
@@ -529,8 +534,8 @@ public:
 
         string __repr__() { return boost::str(boost::format("<env.GetKinBody('%s').GetLink('%s')>")%_plink->GetParent()->GetName()%_plink->GetName()); }
         string __str__() { return boost::str(boost::format("<link:%s (%d), parent=%s>")%_plink->GetName()%_plink->GetIndex()%_plink->GetParent()->GetName()); }
-        bool __eq__(boost::shared_ptr<PyLink> p) { return _plink == p->_plink; }
-        bool __ne__(boost::shared_ptr<PyLink> p) { return _plink != p->_plink; }
+        bool __eq__(boost::shared_ptr<PyLink> p) { return !!p && _plink == p->_plink; }
+        bool __ne__(boost::shared_ptr<PyLink> p) { return !p || _plink != p->_plink; }
     };
 
     typedef boost::shared_ptr<PyLink> PyLinkPtr;
@@ -563,6 +568,8 @@ public:
         PyLinkPtr GetSecondAttached() const { return !_pjoint->GetSecondAttached() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pjoint->GetSecondAttached(), _pyenv)); }
 
         KinBody::Joint::JointType GetType() const { return _pjoint->GetType(); }
+        bool IsCircular() const { return _pjoint->IsCircular(); }
+        bool IsStatic() const { return _pjoint->IsStatic(); }
 
         int GetDOF() const { return _pjoint->GetDOF(); }
         object GetValues() const
@@ -615,8 +622,8 @@ public:
         
         string __repr__() { return boost::str(boost::format("<env.GetKinBody('%s').GetJoint('%s')>")%_pjoint->GetParent()->GetName()%_pjoint->GetName()); }
         string __str__() { return boost::str(boost::format("<joint:%s (%d), dof=%d, parent=%s>")%_pjoint->GetName()%_pjoint->GetJointIndex()%_pjoint->GetDOFIndex()%_pjoint->GetParent()->GetName()); }
-        bool __eq__(boost::shared_ptr<PyJoint> p) { return _pjoint==p->_pjoint; }
-        bool __ne__(boost::shared_ptr<PyJoint> p) { return _pjoint!=p->_pjoint; }
+        bool __eq__(boost::shared_ptr<PyJoint> p) { return !!p && _pjoint==p->_pjoint; }
+        bool __ne__(boost::shared_ptr<PyJoint> p) { return !p || _pjoint!=p->_pjoint; }
     };
     typedef boost::shared_ptr<PyJoint> PyJointPtr;
     typedef boost::shared_ptr<PyJoint const> PyJointConstPtr;
@@ -649,8 +656,8 @@ public:
             string systemname = !psystem ? "(NONE)" : psystem->GetXMLId();
             return boost::str(boost::format("<managedata:%s, parent=%s:%s>")%systemname%plink->GetParent()->GetName()%plink->GetName());
         }
-        bool __eq__(boost::shared_ptr<PyManageData> p) { return _pdata==p->_pdata; }
-        bool __ne__(boost::shared_ptr<PyManageData> p) { return _pdata!=p->_pdata; }
+        bool __eq__(boost::shared_ptr<PyManageData> p) { return !!p && _pdata==p->_pdata; }
+        bool __ne__(boost::shared_ptr<PyManageData> p) { return !p || _pdata!=p->_pdata; }
     };
     typedef boost::shared_ptr<PyManageData> PyManageDataPtr;
     typedef boost::shared_ptr<PyManageData const> PyManageDataConstPtr;
@@ -1392,8 +1399,8 @@ public:
         }
         string __repr__() { return boost::str(boost::format("<env.GetRobot('%s').GetManipulator('%s')>")%_pmanip->GetRobot()->GetName()%_pmanip->GetName()); }
         string __str__() { return boost::str(boost::format("<manipulator:%s, parent=%s>")%_pmanip->GetName()%_pmanip->GetRobot()->GetName()); }
-        bool __eq__(boost::shared_ptr<PyManipulator> p) { return _pmanip==p->_pmanip; }
-        bool __ne__(boost::shared_ptr<PyManipulator> p) { return _pmanip!=p->_pmanip; }
+        bool __eq__(boost::shared_ptr<PyManipulator> p) { return !!p && _pmanip==p->_pmanip; }
+        bool __ne__(boost::shared_ptr<PyManipulator> p) { return !p || _pmanip!=p->_pmanip; }
     };
     typedef boost::shared_ptr<PyManipulator> PyManipulatorPtr;
     PyManipulatorPtr _GetManipulator(RobotBase::ManipulatorPtr pmanip) {
@@ -1418,8 +1425,8 @@ public:
         void SetRelativeTransform(object transform) { _pattached->SetRelativeTransform(ExtractTransform(transform)); }
         string __repr__() { return boost::str(boost::format("<env.GetRobot('%s').GetSensor('%s')>")%_pattached->GetRobot()->GetName()%_pattached->GetName()); }
         string __str__() { return boost::str(boost::format("<attachedsensor:%s, parent=%s>")%_pattached->GetName()%_pattached->GetRobot()->GetName()); }
-        bool __eq__(boost::shared_ptr<PyAttachedSensor> p) { return _pattached==p->_pattached; }
-        bool __ne__(boost::shared_ptr<PyAttachedSensor> p) { return _pattached!=p->_pattached; }
+        bool __eq__(boost::shared_ptr<PyAttachedSensor> p) { return !!p && _pattached==p->_pattached; }
+        bool __ne__(boost::shared_ptr<PyAttachedSensor> p) { return !p || _pattached!=p->_pattached; }
     };
 
     class PyGrabbed
@@ -2857,8 +2864,8 @@ public:
     DebugLevel GetDebugLevel() const { return _penv->GetDebugLevel(); }
 
     string GetHomeDirectory() { return _penv->GetHomeDirectory(); }
-    bool __eq__(PyEnvironmentBasePtr p) { return _penv==p->_penv; }
-    bool __ne__(PyEnvironmentBasePtr p) { return _penv!=p->_penv; }
+    bool __eq__(PyEnvironmentBasePtr p) { return !!p && _penv==p->_penv; }
+    bool __ne__(PyEnvironmentBasePtr p) { return !p || _penv!=p->_penv; }
 };
 
 void PyKinBody::__enter__()
@@ -3294,6 +3301,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
                 .def("IsStatic",&PyKinBody::PyLink::IsStatic)
                 .def("Enable",&PyKinBody::PyLink::Enable,args("enable"))
                 .def("GetParent",&PyKinBody::PyLink::GetParent)
+                .def("GetParentLink",&PyKinBody::PyLink::GetParentLink)
                 .def("GetCollisionData",&PyKinBody::PyLink::GetCollisionData)
                 .def("ComputeAABB",&PyKinBody::PyLink::ComputeAABB)
                 .def("GetTransform",&PyKinBody::PyLink::GetTransform)
@@ -3358,6 +3366,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
                 .def("GetParent", &PyKinBody::PyJoint::GetParent)
                 .def("GetFirstAttached", &PyKinBody::PyJoint::GetFirstAttached)
                 .def("GetSecondAttached", &PyKinBody::PyJoint::GetSecondAttached)
+                .def("IsStatic",&PyKinBody::PyJoint::IsStatic)
+                .def("IsCircular",&PyKinBody::PyJoint::IsCircular)
                 .def("GetType", &PyKinBody::PyJoint::GetType)
                 .def("GetDOF", &PyKinBody::PyJoint::GetDOF)
                 .def("GetValues", &PyKinBody::PyJoint::GetValues)

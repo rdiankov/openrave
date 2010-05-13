@@ -1150,30 +1150,25 @@ class IKFastSolver(AutoReloader):
         else:
             self.precision=precision
         alljoints = []
-        self.rigidlyconnectedlinks = []
         if kinbody is not None:
             # this actually requires openravepy to run, but it isn't a good idea to make ikfast dependent on openravepy
             with kinbody.GetEnv():
-                for bodyjoint in kinbody.GetJoints():
+                for bodyjoint in kinbody.GetJoints()+kinbody.GetPassiveJoints():
                     joint = IKFastSolver.Joint()
                     joint.type = bodyjoint.GetType().name.lower()
                     joint.jointindex = bodyjoint.GetJointIndex()
                     joint.jcoeff = [round(float(x),5) for x in bodyjoint.GetMimicCoeffs()]
                     joint.isfreejoint = False
-                    joint.isdummy = False
+                    joint.isdummy = bodyjoint.IsStatic()
                     joint.Tright = self.normalizeRotation(Matrix(4,4,[Real(round(float(x),5),30) for x in bodyjoint.GetInternalHierarchyRightTransform().flat]))
                     joint.Tleft = self.normalizeRotation(Matrix(4,4,[Real(round(float(x),5),30) for x in bodyjoint.GetInternalHierarchyLeftTransform().flat]))
                     joint.axis = Matrix(3,1,[Real(round(float(x),4),30) for x in bodyjoint.GetInternalHierarchyAxis(0)])
                     joint.linkcur = bodyjoint.GetSecondAttached().GetIndex()
                     joint.linkbase = bodyjoint.GetFirstAttached().GetIndex()
-                    if kinbody.DoesAffect(bodyjoint.GetJointIndex(),bodyjoint.GetFirstAttached().GetIndex()):
+                    if bodyjoint.GetSecondAttached() and (bodyjoint.GetSecondAttached() == bodyjoint.GetFirstAttached().GetParentLink()):
                         # bodies[0] is the child
                         joint.linkcur,joint.linkbase = joint.linkbase,joint.linkcur
                     alljoints.append(joint)
-                for passivejoint in kinbody.GetPassiveJoints():
-                    lower,upper = passivejoint.GetLimits()
-                    if all(lower==upper):
-                        self.rigidlyconnectedlinks.append((passivejoint.GetFirstAttached().GetIndex(),passivejoint.GetSecondAttached().GetIndex()))
         else:
             if robotfiledata is not None:
                 tokens = robotfiledata.split()
@@ -1221,7 +1216,6 @@ class IKFastSolver(AutoReloader):
         # find a path of joints between baselink and eelink using BFS
         linkqueue = [[baselink,[]]]
         alljoints = []
-        rigidlyconnectedlinks = self.rigidlyconnectedlinks[:]
         while len(linkqueue)>0:
             link = linkqueue.pop(0)
             if link[0] == eelink:
@@ -1236,16 +1230,6 @@ class IKFastSolver(AutoReloader):
                     print "discovered circular in joints"
                     return False
                 linkqueue.append([joint.linkcur,path])
-            # examine rigidly connected links
-            for i,connectedlinks in enumerate(rigidlyconnectedlinks):
-                if connectedlinks[0] == link[0]:
-                    linkqueue.append([connectedlinks[1],path])
-                    rigidlyconnectedlinks.pop(i)
-                    break
-                elif connectedlinks[0] == link[0]:
-                    linkqueue.append([connectedlinks[0],path])
-                    rigidlyconnectedlinks.pop(i)
-                    break
         return alljoints
 
     @staticmethod
@@ -1356,7 +1340,8 @@ class IKFastSolver(AutoReloader):
         chain = []
         for joint in alljoints:
             issolvejoint = any([i == joint.jointindex for i in solvejoints])
-            joint.isdummy = usedummyjoints and not issolvejoint and not any([i == joint.jointindex for i in freeparams])
+            if usedummyjoints and not issolvejoint and not any([i == joint.jointindex for i in freeparams]):
+                joint.isdummy = True
             joint.isfreejoint = not issolvejoint and not joint.isdummy
             chain.append(joint)
         
@@ -3030,8 +3015,8 @@ ikfast.py --fkfile=fk_WAM7.txt --baselink=0 --eelink=7 --savefile=ik.cpp 1 2 3 4
                       help='If true, need to specify only 2 solve joints and will solve for a target direction')
     parser.add_option('--translation3donly', action='store_true', dest='translation3donly',default=False,
                       help='If true, need to specify only 3 solve joints and will solve for a target translation')
-    parser.add_option('--usedummyjoints', action='store_true',dest='usedummyjoints',default=False,
-                      help='Treat the unspecified joints in the kinematic chain as dummy and set them to 0. If not specified, treats all unspecified joints as free parameters.')
+    parser.add_option('--usedummyjoints', action='store_true',dest='usedummyjoints',default=True,
+                      help='Treat the unspecified joints in the kinematic chain as dummy and set them to 0. If not specified, treats all unspecified joints as free parameters (default=%default).')
 
     (options, args) = parser.parse_args()
     if options.fkfile is None or options.baselink is None or options.eelink is None:

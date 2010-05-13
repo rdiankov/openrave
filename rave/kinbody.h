@@ -165,6 +165,9 @@ public:
 
         virtual Transform GetTransform() const;
 
+        /// \return the parent link in the kinematics hierarchy (ie the link closest to the root that is immediately connected to this link by a joint). If the link has no parents, returns an empty link. Mimic joints do not affect the parent link.
+        inline boost::shared_ptr<Link> GetParentLink() const { return _parentlink.lock(); }
+
         /// Get the center of mass offset in the link's local coordinate frame
         virtual Vector GetCOMOffset() const {return _transMass.trans; }
         virtual const TransformMatrix& GetInertia() const { return _transMass; }
@@ -209,6 +212,7 @@ public:
         std::string name;     ///< optional link name
         int index;          ///< index into parent KinBody::_veclinks
         KinBodyWeakPtr _parent; ///< body that link belong to
+        boost::weak_ptr<Link> _parentlink; ///< parent link in body kinematics
         
         std::list<GEOMPROPERTIES> _listGeomProperties; ///< a list of all the extra geometry properties
         

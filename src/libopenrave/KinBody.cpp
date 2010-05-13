@@ -629,6 +629,7 @@ KinBody::Joint::Joint(KinBodyPtr parent)
     fMaxAccel = 1e5f;
     fMaxTorque = 1e5f;
     offset = 0;
+    jointindex=-1;
     dofindex = -1; // invalid index
     _bIsCircular = false;
 }
@@ -760,7 +761,7 @@ Vector KinBody::Joint::GetInternalHierarchyAxis(int iaxis) const
 
 Transform KinBody::Joint::GetInternalHierarchyLeftTransform() const
 {
-    if( KinBodyPtr(_parent)->DoesAffect(GetJointIndex(),bodies[0]->GetIndex()) ) {
+    if( !!bodies[1] && bodies[1] == bodies[0]->GetParentLink() ) {
         // bodies[0] is a child
         Transform tjoint;
         if( GetType() == Joint::JointHinge )
@@ -780,7 +781,7 @@ Transform KinBody::Joint::GetInternalHierarchyLeftTransform() const
 
 Transform KinBody::Joint::GetInternalHierarchyRightTransform() const
 {
-    return KinBodyPtr(_parent)->DoesAffect(GetJointIndex(),bodies[0]->GetIndex()) ? tinvLeft : tRight;
+    return ( !!bodies[1] && bodies[1] == bodies[0]->GetParentLink() ) ? tinvLeft : tRight;
 }
 
 void KinBody::Joint::GetVelocities(std::vector<dReal>& pVelocities, bool bAppend) const
@@ -1356,9 +1357,7 @@ KinBody::JointPtr KinBody::GetJointFromDOFIndex(int dofindex) const
             break;
         ++jointindex;
     }
-    if( jointindex < (int)_vecjoints.size() )
-        return _vecjoints[jointindex];
-    return JointPtr();
+    return _vecjoints.at(jointindex);
 }
 
 AABB KinBody::ComputeAABB() const
@@ -2113,8 +2112,14 @@ void KinBody::ComputeJointHierarchy()
     _vecJointHierarchy.resize(_vecjoints.size()*_veclinks.size());
 
     int jindex=0;
-    FOREACH(itjoint,_vecjoints)
+    FOREACH(itjoint,_vecjoints) {
         BOOST_ASSERT(jindex++==(*itjoint)->GetJointIndex());
+    }
+    int lindex=0;
+    FOREACH(itlink,_veclinks) {
+        BOOST_ASSERT( lindex++ == (*itlink)->GetIndex() );
+        (*itlink)->_parentlink.reset();
+    }
 
     if( _vecJointHierarchy.size() > 0 ) {
         memset(&_vecJointHierarchy[0], 0, _vecJointHierarchy.size() * sizeof(_vecJointHierarchy[0]));
@@ -2150,6 +2155,7 @@ void KinBody::ComputeJointHierarchy()
                     if( !!bodies[0] ) {
                         if( !!bodies[1] ) {
                             if( bodies[0]->userdata ) {
+                                bodies[1]->_parentlink = bodies[0];
                                 bodies[1]->userdata = 1;
                                 int srcindex = bodies[0]->GetIndex();
                                 int dstindex = bodies[1]->GetIndex();
@@ -2159,6 +2165,7 @@ void KinBody::ComputeJointHierarchy()
                                 }
                             }
                             else if( bodies[1]->userdata ) {
+                                bodies[0]->_parentlink = bodies[1];
                                 bodies[0]->userdata = 1;
                                 int srcindex = bodies[1]->GetIndex();
                                 int dstindex = bodies[0]->GetIndex();
@@ -2200,6 +2207,7 @@ void KinBody::ComputeJointHierarchy()
                                 }
                             }
 
+                            bodies[1]->_parentlink = bodies[0];
                             bodies[1]->userdata = 1;
                             pvalues[dstindex] = 1;
                         }
@@ -2221,6 +2229,7 @@ void KinBody::ComputeJointHierarchy()
                         }
                     }
                     else {
+                        bodies[0]->_parentlink = bodies[1];
                         bodies[0]->userdata = 1;
                         pvalues[bodies[0]->GetIndex()] = 1;
                     }
