@@ -450,58 +450,58 @@ public:
           //  Extract instances of sensors
           ExtractSensors<domArticulated_system>(articulated_system,probot);
 
-          //  Debug
-          RAVELOG_INFO("Number of sensors of the Robot: %d\n",(int)probot->GetSensors().size());
-
-          //  Setup Manipulator of the Robot
-          RobotBase::ManipulatorPtr manipulator(new RobotBase::Manipulator(probot));
-          probot->GetManipulators().push_back(manipulator);
-
-          //  Debug
-          RAVELOG_WARNA("Number of Manipulators %d ¡¡¡\n",probot->GetManipulators().size());
-
-          int     pos;
-          string  linkName  = string(pframe_origin->getLink());
-
-          pos       = linkName.find_first_of("/");
-          linkName  = linkName.substr(pos + 1);
-
-          RAVELOG_VERBOSEA("Manipulator link name %s\n",linkName.c_str());
-
-          //  Sets frame_origin and frame_tip
-          manipulator->_pBase              = probot->GetLink(linkName);
-
-          if (!!manipulator->_pBase)
-          {
-            RAVELOG_WARNA("Manipulator::pBase ... %s\n",manipulator->_pBase->GetName().c_str());
-          }
-          else
-          {
-            RAVELOG_WARNA("Error initializing Manipulator::pBase\n");
-          }
-
-          linkName = string(pframe_tip->getLink());
-          pos       = linkName.find_first_of("/");
-          linkName  = linkName.substr(pos + 1);
-
-          manipulator->_pEndEffector   = probot->GetLink(linkName);
-
-          if (!!manipulator->_pEndEffector)
-          {
-            RAVELOG_WARNA("Manipulator::pEndEffector ... %s\n",manipulator->_pEndEffector->GetName().c_str());
-          }
-          else
-          {
-            RAVELOG_WARNA("Error initializing Manipulator::pEndEffector\n");
-          }
-
-          //  Initialize indices that then manipulator controls
-          for (size_t i   =   0;  i < probot->GetJointIndices().size();   i++)
-          {
-            manipulator->_vgripperjoints.push_back(probot->GetJointIndices()[i]);
-          }
-
-          RAVELOG_VERBOSEA("Indices initialized...\n");
+//          //  Debug
+//          RAVELOG_INFO("Number of sensors of the Robot: %d\n",(int)probot->GetSensors().size());
+//
+//          //  Setup Manipulator of the Robot
+//          RobotBase::ManipulatorPtr manipulator(new RobotBase::Manipulator(probot));
+//          probot->GetManipulators().push_back(manipulator);
+//
+//          //  Debug
+//          RAVELOG_WARNA("Number of Manipulators %d ¡¡¡\n",probot->GetManipulators().size());
+//
+//          int     pos;
+//          string  linkName  = string(pframe_origin->getLink());
+//
+//          pos       = linkName.find_first_of("/");
+//          linkName  = linkName.substr(pos + 1);
+//
+//          RAVELOG_VERBOSEA("Manipulator link name %s\n",linkName.c_str());
+//
+//          //  Sets frame_origin and frame_tip
+//          manipulator->_pBase              = probot->GetLink(linkName);
+//
+//          if (!!manipulator->_pBase)
+//          {
+//            RAVELOG_WARNA("Manipulator::pBase ... %s\n",manipulator->_pBase->GetName().c_str());
+//          }
+//          else
+//          {
+//            RAVELOG_WARNA("Error initializing Manipulator::pBase\n");
+//          }
+//
+//          linkName = string(pframe_tip->getLink());
+//          pos       = linkName.find_first_of("/");
+//          linkName  = linkName.substr(pos + 1);
+//
+//          manipulator->_pEndEffector   = probot->GetLink(linkName);
+//
+//          if (!!manipulator->_pEndEffector)
+//          {
+//            RAVELOG_WARNA("Manipulator::pEndEffector ... %s\n",manipulator->_pEndEffector->GetName().c_str());
+//          }
+//          else
+//          {
+//            RAVELOG_WARNA("Error initializing Manipulator::pEndEffector\n");
+//          }
+//
+//          //  Initialize indices that then manipulator controls
+//          for (size_t i   =   0;  i < probot->GetJointIndices().size();   i++)
+//          {
+//            manipulator->_vgripperjoints.push_back(probot->GetJointIndices()[i]);
+//          }
+//
+//          RAVELOG_VERBOSEA("Indices initialized...\n");
 
           //  Add the robot to the environment
           _penv->AddRobot(probot);
@@ -575,8 +575,6 @@ public:
     {
       domExtraRef extra = parent->getExtra_array()[i];
 
-      RAVELOG_WARNA("Extra type: %s\n",extra->getType());
-
       for (size_t j = 0; j < extra->getTechnique_array().getCount(); j++)
       {
         domTechniqueRef technique = extra->getTechnique_array()[j];
@@ -585,12 +583,7 @@ public:
         {
           RAVELOG_WARNA("Technique Profile: %s\n",technique->getProfile());
 
-          if (strcmp(extra->getType(),"sensors") == 0)
-          {
-            //  Debug
-            RAVELOG_WARNA("Extract Intance sensors\n");
-            ExtractInstance_sensor(technique->getInstance_sensor_array(),probot);
-          }
+          ExtractInstance_sensor(technique->getInstance_sensor_array(),probot);
         }
       }
     }
@@ -602,139 +595,205 @@ public:
   /// Extract instances of sensors located in articulated_systems extra node
   bool ExtractInstance_sensor(domInstance_sensor_Array instances, RobotBasePtr probot)
   {
-    RAVELOG_INFOA("Number of sensor instances %d\n",instances.getCount());
+    std::string instance_id;
+    std::string instance_url;
+    std::string instance_link;
+    std::string definition_id;
+    std::string definition_type;
+    daeElementRef dom_SensorActuatorManipulator;
 
-    for (size_t i = 0; i < instances.getCount(); i++)
+    for (size_t i_instance = 0; i_instance < instances.getCount(); i_instance++)
     {
-      domInstance_sensorRef instance_sensor;
-      domSensorRef                    dom_sensor;
-
-      instance_sensor =   instances[i];
-      dom_sensor          =   getElementFromUrl<domSensor>(instance_sensor->getUrl());
-
-      //  Debug
-      RAVELOG_WARNA("Sensor type %s\n",dom_sensor->getType());
-
-      RobotBase::AttachedSensorPtr att_sensor(new RobotBase::AttachedSensor(probot));
-      probot->GetSensors().push_back(att_sensor);
-
-
-      //  Create sensor of the TYPE required
-      att_sensor->psensor = probot->GetEnv()->CreateSensor(dom_sensor->getType());
-
-      RAVELOG_WARNA("Sensor of type: %s created\n",dom_sensor->getType());
-
-      //  Sets attached sensor name from instance sensor Id
-      att_sensor->_name   =   instance_sensor->getId();
-
-      //  Sets sensor name from dom sensor Id
-      att_sensor->psensor->SetName(dom_sensor->getId());
-
-      RAVELOG_WARNA("Name of sensor attached to the Robot: %s\n",
-          att_sensor->GetSensor()->GetName().c_str());
-
-      //  Create XML reader for this sensor TYPE
-      OpenRAVEXMLParser::READERSMAP::iterator it = OpenRAVEXMLParser::GetRegisteredReaders()[PT_Sensor].find(att_sensor->psensor->GetXMLId());
-      if( it != OpenRAVEXMLParser::GetRegisteredReaders()[PT_Sensor].end() )
-        _pcurreader = it->second(att_sensor->psensor, std::list<std::pair<std::string,std::string> >());
-      else
-        _pcurreader.reset();
-
-      RAVELOG_VERBOSEA("XML Reader Initialized\n");
-
-      //  Fill params from the COLLADA's file
-      setSensorParams(dom_sensor,att_sensor);
-
-      //  Close the sensor reader
-      _pcurreader.reset();
-
-      //  Initialize sensor
-      if( !att_sensor->psensor->Init("") )
+      daeElementRef instance_SensorActuatorManipulator = instances[i_instance];
+      RAVELOG_DEBUG("Instance name: %s\n",instance_SensorActuatorManipulator->getElementName());
+      if ((strcmp(instance_SensorActuatorManipulator->getElementName(),"instance_actuator") == 0)
+          ||
+          (strcmp(instance_SensorActuatorManipulator->getElementName(),"instance_sensor") == 0)
+          ||
+          (strcmp(instance_SensorActuatorManipulator->getElementName(),"instance_manipulator") == 0))
       {
-        RAVELOG_INFOA("failed to initialize sensor %s\n", att_sensor->GetName().c_str());
-        att_sensor->psensor.reset();
-      }
-      else
-      {
-        att_sensor->pdata = att_sensor->psensor->CreateSensorData();
+        //  Get instance attributes
+        daeTArray<daeElement::attr> instance_attributes = instance_SensorActuatorManipulator->getAttributes();
+        for (size_t i_ins_attr = 0; i_ins_attr < instance_attributes.getCount(); i_ins_attr++)
+        {
+          RAVELOG_DEBUG("Instance attribute %d %s: %s\n",i_ins_attr,instance_attributes[i_ins_attr].name.c_str(),instance_attributes[i_ins_attr].value.c_str());
 
-        if( att_sensor->pattachedlink.expired() ) {
-          RAVELOG_DEBUGA("attached link is NULL, setting to base of robot\n");
-          if( probot->GetLinks().size() == 0 )
+          if (instance_attributes[i_ins_attr].name == "id")
           {
-            RAVELOG_WARNA("robot has no links!\n");
+            instance_id = instance_attributes[i_ins_attr].value;
           }
-          else
-          {
-            size_t  pos;
-            string  link_name   =   string(instance_sensor->getLink());
-            pos =   link_name.find_last_of("/");
-            link_name   =   link_name.substr(pos + 1);
 
-            //  TODO : Get link in which the sensor will be attached
-            for (size_t i = 0; i < probot->GetLinks().size(); i++)
-            {
-              string robot_link   = probot->GetLinks()[i]->GetName();
-              RAVELOG_DEBUGA("link_name: %s robot_link: %s\n",link_name.c_str(),robot_link.c_str());
-              if (link_name == robot_link)
-              {
-                att_sensor->pattachedlink = probot->GetLinks()[i];
-                break;
-              }
-            }
-            //att_sensor->pattachedlink = probot->GetLinks().front();
+          if (instance_attributes[i_ins_attr].name == "url")
+          {
+            instance_url =  instance_attributes[i_ins_attr].value;
+          }
+
+          if (instance_attributes[i_ins_attr].name == "link")
+          {
+            instance_link = instance_attributes[i_ins_attr].value;
           }
         }
+
+        RAVELOG_DEBUG("Get SensorActuatorManipulator info from url\n");
+
+        daeURI  url = daeURI(*(instance_SensorActuatorManipulator.cast()),instance_url);
+        dom_SensorActuatorManipulator = getElementFromUrl(url);
+
+        //  Get definition attributes
+        daeTArray<daeElement::attr> definition_attributes = dom_SensorActuatorManipulator->getAttributes();
+        for (size_t i_def_attr = 0; i_def_attr < definition_attributes.getCount(); i_def_attr++)
+        {
+          if (definition_attributes[i_def_attr].name == "type")
+          {
+            definition_type  = definition_attributes[i_def_attr].value;
+          }
+
+          if (definition_attributes[i_def_attr].name == "id")
+          {
+            definition_id = definition_attributes[i_def_attr].value;
+          }
+
+          RAVELOG_DEBUG("SensorActuator attribute %d %s: %s\n", i_def_attr,
+                                                                definition_attributes[i_def_attr].name.c_str(),
+                                                                definition_attributes[i_def_attr].value.c_str());
+        }
+
+//        //  Create Actuator
+//        if (strcmp(instance_SensorActuatorManipulator->getElementName(),"instance_actuator") == 0)
+//        {
+//          addActuator(probot,definition_id,definition_type,instance_id,dom_SensorActuatorManipulator);
+//        }
+        //  Create Sensor
+        if (strcmp(instance_SensorActuatorManipulator->getElementName(),"instance_sensor") == 0)
+        {
+          addSensor(probot,definition_id,
+                    definition_type,
+                    instance_id,
+                    instance_link,
+                    dom_SensorActuatorManipulator,
+                    instance_SensorActuatorManipulator);
+        }
+//        //  Create Manipulator
+//        else
+//        {
+//          addManipulator(probot,instance_id,dom_SensorActuatorManipulator);
+//        }
+
       }
-
-      //  Set sensor relative translation
-      if (!!instance_sensor->getTranslate())
-      {
-        RAVELOG_INFOA("Translate %f, %f, %f\n",instance_sensor->getTranslate()->getValue()[0],
-            instance_sensor->getTranslate()->getValue()[1],
-            instance_sensor->getTranslate()->getValue()[2]);
-
-        att_sensor->trelative.trans =   Vector( instance_sensor->getTranslate()->getValue()[0],
-            instance_sensor->getTranslate()->getValue()[1],
-            instance_sensor->getTranslate()->getValue()[2]);
-      }
-
-      //  Set sensor relative rotation
-      if (!!instance_sensor->getRotate())
-      {
-        RAVELOG_INFOA("Rotate %f, %f, %f, %f\n",instance_sensor->getRotate()->getValue()[0],
-            instance_sensor->getRotate()->getValue()[1],
-            instance_sensor->getRotate()->getValue()[2],
-            instance_sensor->getRotate()->getValue()[3]);
-
-        Transform tnew;
-        tnew.rotfromaxisangle(Vector(   instance_sensor->getRotate()->getValue()[0],
-            instance_sensor->getRotate()->getValue()[1],
-            instance_sensor->getRotate()->getValue()[2] ),
-            (float)(instance_sensor->getRotate()->getValue()[3])*PI/180.0f);
-        att_sensor->trelative.rot = (tnew* att_sensor->trelative).rot;
-      }
-
     }
 
     return true;
   }
 
-  /// Fills sensor params from COLLADAS's file
-  /// dom_sensor  COLLADA sensor info
-  /// sensor          OpenRAVE sensor attached to a robot
-  bool setSensorParams(domSensorRef dom_sensor,RobotBase::AttachedSensorPtr att_sensor)
+  //  Create Sensor and initilize it
+  bool addSensor( RobotBasePtr  probot,
+                  std::string   definition_id,
+                  std::string   definition_type,
+                  std::string   instance_id,
+                  std::string   instance_link,
+                  daeElementRef dom_SensorActuatorManipulator,
+                  daeElementRef instance_SensorActuatorManipulator)
   {
-    for (size_t i = 0; i < dom_sensor->getContents().getCount(); i++)
+    RobotBase::AttachedSensorPtr att_Sensor;
+    //RobotBase::AttachedSensorPtr att_SensorActuator(new RobotBase::AttachedSensor(probot));
+    att_Sensor = boost::shared_ptr<RobotBase::AttachedSensor>(new RobotBase::AttachedSensor(probot));
+
+    probot->GetSensors().push_back(att_Sensor);
+
+    //  Create Sensor of the TYPE required
+    att_Sensor->psensor = probot->GetEnv()->CreateSensor(definition_type.c_str());
+
+    att_Sensor->psensor->SetName(definition_id.c_str());
+
+    //  Sets attached actuator name from instance actuator Id
+    att_Sensor->_name   =   instance_id.c_str();
+
+    //  Sets sensor name from dom sensor Id
+    RAVELOG_WARN("Sensor name: %s\n",att_Sensor->GetName().c_str());
+
+    //  Create XML reader for this Sensor TYPE
+    OpenRAVEXMLParser::READERSMAP::iterator it = OpenRAVEXMLParser::GetRegisteredReaders()[PT_Sensor].find(att_Sensor->psensor->GetXMLId());
+    if( it != OpenRAVEXMLParser::GetRegisteredReaders()[PT_Sensor].end() )
+    {
+      _pcurreader = it->second(att_Sensor->psensor, std::list<std::pair<std::string,std::string> >());
+    }
+    else
+    {
+      _pcurreader.reset();
+    }
+
+    RAVELOG_VERBOSE("XML (Sensor) Reader Initialized\n");
+
+    //  Fill params from the COLLADA's file
+    setSensorActuatorParams(dom_SensorActuatorManipulator);
+
+    //  Close the actuator reader
+    _pcurreader.reset();
+
+    if( !att_Sensor->psensor->Init("") )
+    {
+      RAVELOG_INFOA("failed to initialize sensor %s\n", att_Sensor->GetName().c_str());
+      att_Sensor->psensor.reset();
+    }
+    else
+    {
+      att_Sensor->pdata = att_Sensor->psensor->CreateSensorData();
+
+      if( att_Sensor->pattachedlink.expired() ) {
+        RAVELOG_DEBUGA("attached link is NULL, setting to base of robot\n");
+        if( probot->GetLinks().size() == 0 )
+        {
+          RAVELOG_WARNA("robot has no links!\n");
+        }
+        else
+        {
+          size_t  pos;
+          string  link_name;
+
+          link_name  =   instance_link;
+          pos        =   link_name.find_last_of("/");
+          link_name  =   link_name.substr(pos + 1);
+
+          //  TODO : Get link in which the sensor will be attached
+          for (size_t i_link = 0; i_link < probot->GetLinks().size(); i_link++)
+          {
+            string robot_link   = probot->GetLinks()[i_link]->GetName();
+            RAVELOG_DEBUGA("link_name: %s robot_link: %s\n",link_name.c_str(),robot_link.c_str());
+            if (link_name == robot_link)
+            {
+              att_Sensor->pattachedlink = probot->GetLinks()[i_link];
+              break;
+            }
+          }
+
+          //att_sensor->pattachedlink = probot->GetLinks().front();
+        }
+      }
+
+      //Relative Transform to sensors
+      att_Sensor->trelative = getFullTransform(instance_SensorActuatorManipulator);
+    }
+
+    return true;
+  }
+
+  /// Fills Sensor and Actuator params from COLLADAS's file
+  /// dom_SensorActuator  COLLADA sensor/actuator info
+  bool setSensorActuatorParams(daeElementRef dom_SensorActuator)
+  {
+    daeTArray<daeElementRef> childrens = dom_SensorActuator->getChildren();
+
+    //  For each feature of the Actuator send this INFO to Actuator's plugin
+    for (size_t i = 0; i < childrens.getCount(); i++)
     {
       std::list<std::pair<std::string,std::string> >  atts;
-      string xmltag = dom_sensor->getContents()[i]->getElementName();
-      RAVELOG_INFOA("%s: %s Type ID %d\n",dom_sensor->getContents()[i]->getElementName(),
-          dom_sensor->getContents()[i]->getCharData().c_str(),
-          dom_sensor->getContents()[i]->typeID());
+      string xmltag = childrens[i]->getElementName();
+      RAVELOG_DEBUG("(SensorActuator) %s: %s Type ID %d\n",childrens[i]->getElementName(),
+          childrens[i]->getCharData().c_str(),
+          childrens[i]->typeID());
       std::transform(xmltag.begin(), xmltag.end(), xmltag.begin(), ::tolower);
       _pcurreader->startElement(xmltag,atts);
-      _pcurreader->characters(dom_sensor->getContents()[i]->getCharData());
+      _pcurreader->characters(childrens[i]->getCharData());
       _pcurreader->endElement(xmltag);
     }
 
@@ -1244,11 +1303,11 @@ public:
         plink.reset(new KinBody::Link(pkinbody));
         plink->name = linkname;
 
-        //  Initialize Link Mass
-        plink->_mass    =   1.0;
+    //  Initialize Link Mass
+    plink->_mass    =   1.0;
 
-        plink->bStatic  = false;
-        plink->index    = (int) pkinbody->_veclinks.size();
+    plink->bStatic  = false;
+    plink->index    = (int) pkinbody->_veclinks.size();
         pkinbody->_veclinks.push_back(plink);
     }
 
@@ -2290,6 +2349,13 @@ public:
     return daeSafeCast<T>(element.cast());
   }
 
+  daeElementRef getElementFromUrl(daeURI &uri)
+  {
+    daeStandardURIResolver* daeURIRes = new daeStandardURIResolver(*(_collada.get()));
+    daeElementRef   element =   daeURIRes->resolveElement(uri);
+    return element;
+  }
+
   template <typename T, typename U>
   daeSmartRef<T> getSidRef(domCommon_sidref_or_paramRef paddr, const U& element)
   {
@@ -2678,6 +2744,17 @@ public:
     for(size_t i = 0; i < pelt->getContents().getCount(); ++i)
     {
       t = t * getTransform(pelt->getContents()[i]);
+    }
+    return t;
+  }
+
+  TransformMatrix getFullTransform(daeElementRef pelt)
+  {
+    TransformMatrix t;
+
+    for(size_t i = 0; i < pelt->getChildren().getCount(); ++i)
+    {
+      t = t * getTransform(pelt->getChildren()[i]);
     }
     return t;
   }
