@@ -1501,7 +1501,7 @@ public:
           //          }
 
           //  Axes and Anchor assignment.
-          pjoint->vAxes[0] = Vector(pdomaxis->getAxis()->getValue()[0], pdomaxis->getAxis()->getValue()[1], pdomaxis->getAxis()->getValue()[2]).normalize3();
+          pjoint->vAxes[0] = Vector(-pdomaxis->getAxis()->getValue()[0], -pdomaxis->getAxis()->getValue()[1], -pdomaxis->getAxis()->getValue()[2]).normalize3();
           pjoint->vanchor = Vector(0,0,0);
 
           int numbad = 0;

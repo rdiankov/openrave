@@ -583,9 +583,9 @@ public:
                 vaxes[ia]->setSid((string("axis")+toString(ia)).c_str());
                 domAxisRef paxis = daeSafeCast<domAxis>(vaxes[ia]->createAndPlace(COLLADA_ELEMENT_AXIS));
                 paxis->getValue().setCount(3);
-                paxis->getValue()[0] = (*itjoint)->vAxes[ia].x;
-                paxis->getValue()[1] = (*itjoint)->vAxes[ia].y;
-                paxis->getValue()[2] = (*itjoint)->vAxes[ia].z;
+                paxis->getValue()[0] = -(*itjoint)->vAxes[ia].x;
+                paxis->getValue()[1] = -(*itjoint)->vAxes[ia].y;
+                paxis->getValue()[2] = -(*itjoint)->vAxes[ia].z;
                 domJoint_limitsRef plimits = daeSafeCast<domJoint_limits>(vaxes[ia]->createAndPlace(COLLADA_TYPE_LIMITS));
                 daeSafeCast<domMinmax>(plimits->createAndPlace(COLLADA_ELEMENT_MIN))->getValue() = lmin[ia];
                 daeSafeCast<domMinmax>(plimits->createAndPlace(COLLADA_ELEMENT_MAX))->getValue() = lmax[ia];
