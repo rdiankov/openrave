@@ -2222,6 +2222,7 @@ void KinBody::ComputeJointHierarchy()
                                     _vecJointHierarchy[j*_veclinks.size()+dstindex] = _vecJointHierarchy[j*_veclinks.size()+srcindex];
                                 }
 
+                                bodies[0]->_parentlink = bodies[1];
                                 bodies[0]->userdata = 1;
                                 pvalues[dstindex] = -1;
                             }
@@ -2229,7 +2230,6 @@ void KinBody::ComputeJointHierarchy()
                         }
                     }
                     else {
-                        bodies[0]->_parentlink = bodies[1];
                         bodies[0]->userdata = 1;
                         pvalues[bodies[0]->GetIndex()] = 1;
                     }
