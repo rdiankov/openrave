@@ -22,15 +22,15 @@
 using namespace OpenRAVE;
 using namespace std;
 
-#include "dae.h"
-#include "dae/daeErrorHandler.h"
-#include "dom/domCOLLADA.h"
-#include "dae/domAny.h"
-#include "dom/domConstants.h"
-#include "dom/domTriangles.h"
-#include "dae/daeDocument.h"
-#include "dom/domTypes.h"
-#include "dom/domElements.h"
+#include <dae.h>
+#include <dae/daeErrorHandler.h>
+#include <dom/domCOLLADA.h>
+#include <dae/domAny.h>
+#include <dom/domConstants.h>
+#include <dom/domTriangles.h>
+#include <dae/daeDocument.h>
+#include <dom/domTypes.h>
+#include <dom/domElements.h>
 
 class ColladaWriter : public daeErrorHandler
 {
@@ -54,7 +54,7 @@ public:
 
     /// Constructor
     /// penv    OpenRAVE environment to write
-    ColladaWriter(const EnvironmentBasePtr penv) : _dom(NULL), _penv(penv)
+    ColladaWriter(EnvironmentBaseConstPtr penv) : _dom(NULL), _penv(penv)
     {
         RAVELOG_INFOA("ColladaWriter(const EnvironmentBasePtr penv)\n");
 
@@ -127,8 +127,8 @@ public:
         _extraLib->setId("libraries");
         domTechniqueRef tech    =   daeSafeCast<domTechnique>(_extraLib->createAndPlace(COLLADA_ELEMENT_TECHNIQUE));
         tech->setProfile("OpenRAVE");
-        _sensorsLib =   daeSafeCast<domLibrary_sensors>(tech->createAndPlace(COLLADA_ELEMENT_LIBRARY_SENSORS));
-        _sensorsLib->setId("libsensors");
+//        _sensorsLib =   daeSafeCast<domLibrary_sensors>(tech->createAndPlace(COLLADA_ELEMENT_LIBRARY_SENSORS));
+//        _sensorsLib->setId("libsensors");
     }
 
     /// Destructor
@@ -411,35 +411,35 @@ public:
             }
 
             //  TODO : Instances of Sensors. Sensors attached to the robot
-            if (probot->GetSensors().size() > 0)
-            {
-                domExtraRef extra   =   daeSafeCast<domExtra>(askinematics->createAndPlace(COLLADA_ELEMENT_EXTRA));
-                extra->setType("sensors");
-                domTechniqueRef tech    =   daeSafeCast<domTechnique>(extra->createAndPlace(COLLADA_ELEMENT_TECHNIQUE));
-                tech->setProfile("OpenRAVE");
-
-                    for (size_t i = 0; i < probot->GetSensors().size();i++)
-                    {
-                        string  strsensor   =   string("sensor")+toString(i)+string("_")+probot->GetName();
-                        string  strurl      =   string("#") + strsensor;
-                        RobotBase::AttachedSensorPtr  asensor = probot->GetSensors().at(i);
-
-                        //  Instance of sensor into 'articulated_system'
-                        domInstance_sensorRef   isensor =   daeSafeCast<domInstance_sensor>(tech->createAndPlace(COLLADA_ELEMENT_INSTANCE_SENSOR));
-                        isensor->setId(asensor->GetName().c_str());
-                        isensor->setLink(asensor->GetAttachingLink()->GetName().c_str());
-                        isensor->setUrl(strurl.c_str());
-
-                        //  Sensor definition into 'library_sensors'
-                        domSensorRef    sensor  =   daeSafeCast<domSensor>(_sensorsLib->createAndPlace(COLLADA_ELEMENT_SENSOR));
-                        sensor->setType(asensor->GetSensor()->GetXMLId().c_str());
-                        sensor->setId(strsensor.c_str());
-                        sensor->setName(strsensor.c_str());
-
-                        //  Debug
-                        RAVELOG_VERBOSEA("Plugin Name: %s\n",asensor->GetSensor()->GetXMLId().c_str());
-                    }
-            }
+//            if (probot->GetSensors().size() > 0)
+//            {
+//                domExtraRef extra   =   daeSafeCast<domExtra>(askinematics->createAndPlace(COLLADA_ELEMENT_EXTRA));
+//                extra->setType("sensors");
+//                domTechniqueRef tech    =   daeSafeCast<domTechnique>(extra->createAndPlace(COLLADA_ELEMENT_TECHNIQUE));
+//                tech->setProfile("OpenRAVE");
+//
+//                    for (size_t i = 0; i < probot->GetSensors().size();i++)
+//                    {
+//                        string  strsensor   =   string("sensor")+toString(i)+string("_")+probot->GetName();
+//                        string  strurl      =   string("#") + strsensor;
+//                        RobotBase::AttachedSensorPtr  asensor = probot->GetSensors().at(i);
+//
+//                        //  Instance of sensor into 'articulated_system'
+//                        domInstance_sensorRef   isensor =   daeSafeCast<domInstance_sensor>(tech->createAndPlace(COLLADA_ELEMENT_INSTANCE_SENSOR));
+//                        isensor->setId(asensor->GetName().c_str());
+//                        isensor->setLink(asensor->GetAttachingLink()->GetName().c_str());
+//                        isensor->setUrl(strurl.c_str());
+//
+//                        //  Sensor definition into 'library_sensors'
+//                        domSensorRef    sensor  =   daeSafeCast<domSensor>(_sensorsLib->createAndPlace(COLLADA_ELEMENT_SENSOR));
+//                        sensor->setType(asensor->GetSensor()->GetXMLId().c_str());
+//                        sensor->setId(strsensor.c_str());
+//                        sensor->setName(strsensor.c_str());
+//
+//                        //  Debug
+//                        RAVELOG_VERBOSEA("Plugin Name: %s\n",asensor->GetSensor()->GetXMLId().c_str());
+//                    }
+//            }
         }
         else
         {
@@ -1278,8 +1278,8 @@ private:
     domLibrary_materialsRef                     _materialsLib;
     domLibrary_effectsRef                       _effectsLib;
     domLibrary_geometriesRef                    _geometriesLib;
-    domLibrary_sensorsRef                           _sensorsLib;//  Specifics to OpenRAVE Library sensors.
-    const EnvironmentBasePtr _penv;
+    //domLibrary_sensorsRef                           _sensorsLib;//  Specifics to OpenRAVE Library sensors.
+    EnvironmentBaseConstPtr _penv;
 };
 
 #endif

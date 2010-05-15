@@ -1,5 +1,5 @@
 if( ZLIB_FOUND AND Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
-message(STATUS "Compiling with COLLADA support!")
+message(STATUS "Compiling with COLLADA support from sources!")
 
 include_directories(${MINIZIP_INCLUDE_DIR})
 include_directories(BEFORE ${libpcrecpp_INCLUDE_DIRS})

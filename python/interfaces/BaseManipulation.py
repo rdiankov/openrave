@@ -90,14 +90,20 @@ class BaseManipulation:
         if res is None:
             raise planning_error('MoveActiveJoints')
         return res
-    def MoveToHandPosition(self,matrices,affinedofs=None,maxiter=None,maxtries=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None):
-        cmd = 'MoveToHandPosition matrices %d '%len(matrices)
-        for m in matrices:
-            cmd += matrixSerialization(m) + ' '
+    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None):
+        cmd = 'MoveToHandPosition '
+        if matrices is not None:
+            cmd += 'matrices %d '%len(matrices)
+            for m in matrices:
+                cmd += matrixSerialization(m) + ' '
         if maxiter is not None:
             cmd += 'maxiter %d '%maxiter
         if maxtries is not None:
             cmd += 'maxtries %d '%maxtries
+        if translation is not None:
+            cmd += 'translation %f %f %f '%(translation[0],translation[1],translation[2])
+        if rotation is not None:
+            cmd += 'rotation %f %f %f %f '%(rotation[0],rotation[1],rotation[2],rotation[3])
         if seedik is not None:
             cmd += 'seedik %d '%seedik
         if constraintfreedoms is not None:

@@ -107,14 +107,14 @@ class InverseKinematicsModel(OpenRAVEModel):
         elif self.robot.GetRobotStructureHash() == 'bb644e60bcd217d8cea1272a26ecc651' and self.manip.GetName() == 'rotation':
             if iktype is None:
                 iktype=IkParameterization.Type.Rotation3D
-        if iktype is None:
-            iktype = IkParameterization.Type.Transform6D
         self.generate(iktype=iktype,freejoints=freejoints,usedummyjoints=usedummyjoints,accuracy=accuracy,precision=precision,forceikbuild=forceikbuild)
         self.save()
 
     def generate(self,iktype=None,freejoints=None,usedummyjoints=False,accuracy=None,precision=None,forceikbuild=False):
         if iktype is not None:
             self.iktype = iktype
+        if self.iktype is None:
+            iktype = IkParameterization.Type.Transform6D
         output_filename = self.getfilename()
         sourcefilename = self.getsourcefilename()
         if self.iktype == IkParameterization.Type.Rotation3D:

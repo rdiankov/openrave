@@ -2,11 +2,10 @@ if( MSVC )
   set (coreLIBS imm32 winmm ws2_32)
 endif()
 
-if( ZLIB_FOUND AND Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
+if( COLLADA_FOUND )
   set(LIB_COMPILE_FLAGS "${LIB_COMPILE_FLAGS} -DOPENRAVE_COLLADA_SUPPORT")
-  include_directories(${COLLADA_INCLUDE_DIRS})
-  set(USING_COLLADA 1)
-  set (coreLIBS ${coreLIBS} collada15reader)
+  include_directories(${COLLADA_INCLUDE_DIR})
+  set (coreLIBS ${coreLIBS} ${COLLADA_LIBRARY})
 endif()
 
 if( Boost_FILESYSTEM_FOUND )
@@ -19,8 +18,8 @@ set (openrave_core_SOURCES openrave-core.cpp ivcon.cpp colladareader.h  environm
 add_library(libopenrave-core SHARED ${openrave_core_SOURCES})
 add_dependencies(libopenrave-core libopenrave)
 
-if( USING_COLLADA )
-  add_dependencies(libopenrave-core collada15reader)
+if( COLLADA_FOUND )
+  add_dependencies(libopenrave-core ${COLLADA_LIBRARY})
 endif()
 
 set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave-core
@@ -48,8 +47,8 @@ else()
   set(LIBOPENRAVE_CORE_NAME openrave-core)
 endif()
 
-if( USING_COLLADA )
-  add_dependencies(libopenrave-core_static collada15reader)
+if( COLLADA_FOUND )
+  add_dependencies(libopenrave-core_static ${COLLADA_LIBRARY})
 endif()
 
 set_target_properties(libopenrave-core_static PROPERTIES OUTPUT_NAME ${LIBOPENRAVE_CORE_NAME}

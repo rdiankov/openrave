@@ -96,20 +96,22 @@ class CM
 
     /// Samples numsamples of solutions and each solution to vsolutions
     /// \return number of ik solutions sampled
-    static int SampleIkSolutions(RobotBasePtr robot, const Transform& tgrasp, int numsamples, vector<dReal>& vsolutions)
+    static int SampleIkSolutions(RobotBasePtr robot, const IkParameterization& ikp, int numsamples, vector<dReal>& vsolutions)
     {
         RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();
         if( numsamples <= 0 )
             return 0;
         // quickly prune grasp is end effector is in collision
-        CollisionReportPtr report(new COLLISIONREPORT());
-        if( pmanip->CheckEndEffectorCollision(tgrasp,report) ) {
-            RAVELOG_VERBOSEA("sampleiksolutions gripper in collision: (%s:%s)x(%s:%s).\n",
-                             !!report->plink1?report->plink1->GetParent()->GetName().c_str():"",
-                             !!report->plink1?report->plink1->GetName().c_str():"",
-                             !!report->plink2?report->plink2->GetParent()->GetName().c_str():"",
-                             !!report->plink2?report->plink2->GetName().c_str():"");
-            return 0;
+        if( ikp.GetType() == IkParameterization::Type_Transform6D ) {
+            CollisionReportPtr report(new COLLISIONREPORT());
+            if( pmanip->CheckEndEffectorCollision(ikp.GetTransform(),report) ) {
+                RAVELOG_VERBOSEA("sampleiksolutions gripper in collision: (%s:%s)x(%s:%s).\n",
+                                 !!report->plink1?report->plink1->GetParent()->GetName().c_str():"",
+                                 !!report->plink1?report->plink1->GetName().c_str():"",
+                                 !!report->plink2?report->plink2->GetParent()->GetName().c_str():"",
+                                 !!report->plink2?report->plink2->GetName().c_str():"");
+                return 0;
+            }
         }
 
         int _numsamples = numsamples;
@@ -120,7 +122,7 @@ class CM
             for(int i = 0; i < (int)vfree.size(); ++i)
                 vfree[i] = RaveRandomFloat();
             
-            if( pmanip->FindIKSolutions(tgrasp, vfree, viksolutions, true) ) {
+            if( pmanip->FindIKSolutions(ikp, vfree, viksolutions, true) ) {
                 FOREACH(itsol, viksolutions) {
                     vsolutions.insert(vsolutions.end(), itsol->begin(), itsol->end());
                     if( --_numsamples <= 0 )
@@ -129,7 +131,7 @@ class CM
             }
         }
         
-        bool bSuccess = pmanip->FindIKSolutions(tgrasp, viksolutions, true);
+        bool bSuccess = pmanip->FindIKSolutions(ikp, viksolutions, true);
         if( !bSuccess || viksolutions.size() == 0 )
             return false;
 

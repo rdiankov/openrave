@@ -656,9 +656,7 @@ protected:
         RAVELOG_DEBUGA("Starting MoveToHandPosition...\n");
         RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();
 
-        list<Transform> listgoals;
-        bool bIncludeHandTm = false;
-        TransformMatrix handTm = pmanip->GetEndEffectorTransform();
+        list<IkParameterization> listgoals;
     
         string strtrajfilename;
         bool bExecute = true;
@@ -684,24 +682,24 @@ protected:
                 break;
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
         
-            if( cmd == "trans" ) {
-                RAVELOG_WARN("MoveToHandPosition: trans parameter has been deprecated, switch to matrix/matrices/poses");
-                bIncludeHandTm = true;
-                sinput >> handTm.trans.x >> handTm.trans.y >> handTm.trans.z;
+            if( cmd == "translation" ) {
+                Vector trans;
+                sinput >> trans.x >> trans.y >> trans.z;
+                listgoals.push_back(IkParameterization());
+                listgoals.back().SetTranslation(trans);
             }
-            else if( cmd == "rot" ) {
-                RAVELOG_WARN("MoveToHandPosition: rot parameter has been deprecated, switch to matrix/matrices/poses");
-                bIncludeHandTm = true;
-                sinput >> handTm.m[0] >> handTm.m[4] >> handTm.m[8]
-                       >> handTm.m[1] >> handTm.m[5] >> handTm.m[9]
-                       >> handTm.m[2] >> handTm.m[6] >> handTm.m[10];
+            else if( cmd == "rotation" ) {
+                Vector q;
+                sinput >> q.x >> q.y >> q.z >> q.w;
+                listgoals.push_back(IkParameterization());
+                listgoals.back().SetRotation(q);
             }
             else if( cmd == "outputtraj" )
                 pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
             else if( cmd == "matrix" ) {
                 TransformMatrix m;
                 sinput >> m;
-                listgoals.push_back(m);
+                listgoals.push_back(IkParameterization(Transform(m)));
             }
             else if( cmd == "matrices" ) {
                 TransformMatrix m;
@@ -709,19 +707,21 @@ protected:
                 sinput >> num;
                 while(num-->0) {
                     sinput >> m;
-                    listgoals.push_back(m);
+                    listgoals.push_back(IkParameterization(Transform(m)));
                 }
             }
             else if( cmd == "pose" ) {
-                listgoals.push_back(Transform());
-                sinput >> listgoals.back();
+                Transform t;
+                sinput >> t;
+                listgoals.push_back(IkParameterization(t));
             }
             else if( cmd == "poses" ) {
                 int num = 0;
                 sinput >> num;
                 while(num-->0) {
-                    listgoals.push_back(Transform());
-                    sinput >> listgoals.back();
+                    Transform t;
+                    sinput >> t;
+                    listgoals.push_back(IkParameterization(t));
                 }
             }
             else if( cmd == "affinedofs" )
@@ -757,9 +757,6 @@ protected:
             }
         }
     
-        if( bIncludeHandTm )
-            listgoals.push_back(handTm);
-
         robot->RegrabAll();
         RobotBase::RobotStateSaver saver(robot);
 
