@@ -76,6 +76,10 @@ if __name__ == "__main__":
                 for interfacename,pluginname in names:
                     print '  %s - %s'%(interfacename,pluginname)
             sys.exit(0)
+        if options.collision:
+            cc = env.CreateCollisionChecker(options.collision)
+            if cc is not None:
+                env.SetCollisionChecker(cc)
         for arg in args:
             if arg.endswith('.xml') or arg.endswith('.dae'):
                 env.Load(arg)
