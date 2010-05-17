@@ -1673,7 +1673,7 @@ public:
           RAVELOG_DEBUG("Node %s offset is %f\n", pdomnode->getName(), (float)pjoint->offset);
           RAVELOG_DEBUG("OffsetFrom Translation trans.x:%f, trans.y:%f, trans.z:%f\n",toffsetfrom.trans.x,toffsetfrom.trans.y,toffsetfrom.trans.z);
           RAVELOG_DEBUG("OffsetFrom Rotation rot.x:%f, rot.y:%f, rot.z:%f, rot.w:%f\n",toffsetfrom.rot.x,toffsetfrom.rot.y,toffsetfrom.rot.z,toffsetfrom.rot.w);
-          RAVELOG_DEBUG("vAnchor x:%f, y:%f, z:%f\n",pjoint->vanchor.x,pjoint->vanchor.y,pjoint->vanchor.z);
+          RAVELOG_DEBUG("vAnchor (%s) x:%f, y:%f, z:%f\n",pjoint->GetName().c_str(),pjoint->vanchor.x,pjoint->vanchor.y,pjoint->vanchor.z);
           RAVELOG_DEBUG("vAxes x:%f, y:%f, z:%f\n",pjoint->vAxes[0].x,pjoint->vAxes[0].y,pjoint->vAxes[0].z);
 
           //  Rotate axis from the parent offset
@@ -1685,10 +1685,10 @@ public:
           if( pjoint->type == KinBody::Joint::JointRevolute )
           {
             pjoint->tLeft.rotfromaxisangle(pjoint->vAxes[0], -pjoint->offset);
-            pjoint->tLeft.trans   = pjoint->vanchor;
-            pjoint->tRight.trans  = -pjoint->vanchor;
-            pjoint->tRight = pjoint->tRight * trel;
           }
+          pjoint->tLeft.trans   = pjoint->vanchor;
+          pjoint->tRight.trans  = -pjoint->vanchor;
+          pjoint->tRight = pjoint->tRight * trel;
 
           pjoint->tinvLeft = pjoint->tLeft.inverse();
           pjoint->tinvRight = pjoint->tRight.inverse();
