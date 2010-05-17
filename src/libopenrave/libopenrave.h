@@ -213,7 +213,7 @@ inline static dReal TransformDistanceFast(const Transform& t1, const Transform& 
 
 void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2);
 
-inline bool IsValidCharInName(char c) { return isalnum(c) || c == '_' || c == '-'; }
+inline bool IsValidCharInName(char c) { return isalnum(c) || c == '_' || c == '-' || c == '.'; }
  inline bool IsValidName(const std::string& s) {
     if( s.size() == 0 )
         return false;

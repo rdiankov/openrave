@@ -1647,7 +1647,7 @@ protected:
         return filename[len-4] == '.' && filename[len-3] == 'd' && filename[len-2] == 'a' && filename[len-1] == 'e';
     }
     static bool IsValidCharInName(char c) {
-        return isalnum(c) || c == '_' || c == '-';
+        return isalnum(c) || c == '_' || c == '-' || c == '.';
     }
     static bool IsValidName(const string& s) {
         if( s.size() == 0 )
