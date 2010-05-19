@@ -8,8 +8,8 @@ if( COLLADA_FOUND )
   set (coreLIBS ${coreLIBS} ${COLLADA_LIBRARY})
 endif()
 
-if( Boost_FILESYSTEM_FOUND )
-  set(coreLIBS ${coreLIBS} ${Boost_FILESYSTEM_LIBRARY})
+if( Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
+  set(coreLIBS ${coreLIBS} ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY})
   add_definitions(-DHAVE_BOOST_FILESYSTEM)
 endif()
 
