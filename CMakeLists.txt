@@ -358,7 +358,7 @@ if( NOT ZLIB_FOUND )
 endif()
 
 # check for local collada compilation
-if( ${ZLIB_FOUND} )#AND ${Boost_FILESYSTEM_FOUND} AND ${Boost_SYSTEM_FOUND} )
+if( NOT COLLADA_FOUND AND ZLIB_FOUND AND Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
   add_subdirectory(3rdparty/minizip)
   set(MINIZIP_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/minizip ${ZLIB_INCLUDE_DIR})
 
