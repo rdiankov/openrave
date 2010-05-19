@@ -297,21 +297,6 @@ else()
   endif()
 endif()
 
-#libXml2
-find_package(LibXml2)
-
-if( LIBXML2_FOUND )
-  include_directories(${LIBXML2_INCLUDE_DIR})
-  add_definitions(${LIBXML2_DEFINITIONS})
-  message(STATUS "libxml2 found")
-else()
-  if( MSVC )
-    set(LIBXML2_LIBRARIES optimized libxml2 debug libxml2d)
-  else()
-    message(FATAL_ERROR "Could not find libxml2")
-  endif()
-endif()
-
 if(DOUBLE_PRECISION)
   set(OPENRAVE_PRECISION 1)
   message(STATUS "Using double precision")
@@ -342,10 +327,29 @@ else()
   set(IS_X86_64 0)
 endif()
 
+# calls find_package ZLIB and libxml2, which might overwrite any previously set local values, so call in the beginning
+find_package(COLLADA)
+
+#libXml2
+find_package(LibXml2)
+
+if( LIBXML2_FOUND )
+  include_directories(${LIBXML2_INCLUDE_DIR})
+  add_definitions(${LIBXML2_DEFINITIONS})
+  message(STATUS "libxml2 found")
+else()
+  if( MSVC )
+    set(LIBXML2_LIBRARIES optimized libxml2 debug libxml2d)
+  else()
+    message(FATAL_ERROR "Could not find libxml2")
+  endif()
+endif()
+
 link_directories(${OPENRAVE_LINK_DIRS})
 
 find_package(ZLIB)
 if( NOT ZLIB_FOUND )
+  message(STATUS "compiling zlib from souces")
   # compile from sources
   add_subdirectory(3rdparty/zlib)
   set(ZLIB_FOUND 1)
@@ -353,9 +357,8 @@ if( NOT ZLIB_FOUND )
   set(ZLIB_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/zlib)
 endif()
 
-# check for collada
-find_package(COLLADA)
-if( NOT COLLADA_FOUND AND ZLIB_FOUND AND Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
+# check for local collada compilation
+if( ${ZLIB_FOUND} )#AND ${Boost_FILESYSTEM_FOUND} AND ${Boost_SYSTEM_FOUND} )
   add_subdirectory(3rdparty/minizip)
   set(MINIZIP_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/minizip ${ZLIB_INCLUDE_DIR})
 
