@@ -114,7 +114,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         if iktype is not None:
             self.iktype = iktype
         if self.iktype is None:
-            iktype = IkParameterization.Type.Transform6D
+            self.iktype = iktype = IkParameterization.Type.Transform6D
         output_filename = self.getfilename()
         sourcefilename = self.getsourcefilename()
         if self.iktype == IkParameterization.Type.Rotation3D:
