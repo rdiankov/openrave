@@ -627,32 +627,22 @@ public:
 
             domFormula_techniqueRef pftec = daeSafeCast<domFormula_technique>(pf->createAndPlace(COLLADA_ELEMENT_TECHNIQUE_COMMON));
             // create a const0*joint+const1 formula
-            // <math:math>
-            //   <math:apply>
-            //     <math:minus/>
-            //     <math:apply>
-            //       <math:times>
-            //       <math:ci>const0</math:ci>
-            //       <math:csymbol encoding="COLLADA">joint</math:csymbol>
-            //     </math:apply>
-            //     <math:ci>-const1</math:ci>
-            //   </math:apply>
-            // </math:math>
-            daeElementRef pmath_math = pftec->createAndPlace("math:math");
-            daeElementRef pmath_apply = pmath_math->createAndPlace("math:apply");
+            // <apply> <plus/> <apply> <times/> <cn>a</cn> x </apply> <cn>b</cn> </apply>
+            daeElementRef pmath_math = pftec->createAndPlace("math");
+            daeElementRef pmath_apply = pmath_math->createAndPlace("apply");
             {
-                daeElementRef pmath_minus = pmath_apply->createAndPlace("math:minus");
-                daeElementRef pmath_apply = pmath_minus->createAndPlace("math:apply");
+                daeElementRef pmath_plus = pmath_apply->createAndPlace("plus");
+                daeElementRef pmath_apply1 = pmath_apply->createAndPlace("apply");
                 {
-                    daeElementRef pmath_times = pmath_apply->createAndPlace("math:times");
-                    daeElementRef pmath_const0 = pmath_apply->createAndPlace("math:ci");
+                    daeElementRef pmath_times = pmath_apply1->createAndPlace("times");
+                    daeElementRef pmath_const0 = pmath_apply1->createAndPlace("cn");
                     pmath_const0->setCharData(toString((*itjoint)->GetMimicCoeffs()[0]));
-                    daeElementRef pmath_symb = pmath_apply->createAndPlace("math:csymbol");
+                    daeElementRef pmath_symb = pmath_apply1->createAndPlace("csymbol");
                     pmath_symb->setAttribute("encoding","COLLADA");
                     pmath_symb->setCharData(strModelId+string("/joint")+toString((*itjoint)->GetMimicJointIndex()));
                 }
-                daeElementRef pmath_const1 = pmath_minus->createAndPlace("math:ci");
-                pmath_const1->setCharData(toString(-(*itjoint)->GetMimicCoeffs()[1]));
+                daeElementRef pmath_const1 = pmath_apply->createAndPlace("cn");
+                pmath_const1->setCharData(toString((*itjoint)->GetMimicCoeffs()[1]));
             }
         }
 

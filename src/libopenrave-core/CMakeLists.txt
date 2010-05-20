@@ -13,6 +13,9 @@ if( Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
   add_definitions(-DHAVE_BOOST_FILESYSTEM)
 endif()
 
+# necessary for function parser library
+check_library_exists(gmp __gmpz_init "" GMP_FOUND_LIB)
+
 set (openrave_core_SOURCES openrave-core.cpp ivcon.cpp colladareader.h  environment.h  openrave-core.h ravep.h   xmlreaders.h colladawriter.h  ivcon.h  plugindatabase.h  server.h)
 
 add_library(libopenrave-core SHARED ${openrave_core_SOURCES})

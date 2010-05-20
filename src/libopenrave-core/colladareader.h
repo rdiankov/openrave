@@ -1258,12 +1258,92 @@ public:
       for (size_t iform = 0; iform < ktec->getFormula_array().getCount(); ++iform)
       {
         domFormulaRef pf = ktec->getFormula_array()[iform];
+        if (!pf->getTarget()) {
+            RAVELOG_WARNA("formula target not valid\n");
+            continue;
+        }
 
-        for (size_t ichild = 0; ichild
-        < pf->getTechnique_common()->getChildren().getCount(); ++ichild)
-        {
-          daeElementRef pelt = pf->getTechnique_common()->getChildren()[ichild];
-          RAVELOG_WARNA("collada formulas not supported\n");
+        // find the target joint
+        xsToken target = pf->getTarget()->getParam()->getValue();
+        KinBody::JointPtr pjoint = _getJointFromRef(target,pf,pkinbody);
+        if (!pjoint) {
+            continue;
+        }
+        
+        if (!!pf->getTechnique_common()) {
+          daeElementRef peltmath;
+          for (size_t ichild = 0; ichild < pf->getTechnique_common()->getChildren().getCount(); ++ichild)
+          {
+            daeElementRef pelt = pf->getTechnique_common()->getChildren()[ichild];
+            if (pelt->getElementName() == string("math") || pelt->getElementName() == string("math:math"))
+                peltmath = pelt;
+            else
+                RAVELOG_WARNA(str(boost::format("unsupported formula element: %s\n")%pelt->getElementName()));
+          }
+          if (!!peltmath) {
+            // full math xml spec not supported, only looking for ax+b pattern:
+            // <apply> <plus/> <apply> <times/> <ci>a</ci> x </apply> <ci>b</ci> </apply>
+            dReal a = 1, b = 0;
+            daeElementRef psymboljoint;
+            try {
+                BOOST_ASSERT(peltmath->getChildren().getCount()>0);
+                daeElementRef papplyelt = peltmath->getChildren()[0];
+                BOOST_ASSERT(_checkMathML(papplyelt,"apply"));
+                BOOST_ASSERT(papplyelt->getChildren().getCount()>0);
+                if( _checkMathML(papplyelt->getChildren()[0],"plus") ) {
+                    BOOST_ASSERT(papplyelt->getChildren().getCount()==3);
+                    daeElementRef pa = papplyelt->getChildren()[1];
+                    daeElementRef pb = papplyelt->getChildren()[2];
+                    if( !_checkMathML(papplyelt->getChildren()[1],"apply") ) {
+                        swap(pa,pb);
+                    }
+                    if( !_checkMathML(pa,"csymbol") ) {
+                        BOOST_ASSERT(_checkMathML(pa,"apply"));
+                        BOOST_ASSERT(_checkMathML(pa->getChildren()[0],"times"));
+                        if( _checkMathML(pa->getChildren()[1],"csymbol") ) {
+                            psymboljoint = pa->getChildren()[1];
+                            BOOST_ASSERT(_checkMathML(pa->getChildren()[2],"cn"));
+                            stringstream ss(pa->getChildren()[2]->getCharData());
+                            ss >> a;
+                        }
+                        else {
+                            psymboljoint = pa->getChildren()[2];
+                            BOOST_ASSERT(_checkMathML(pa->getChildren()[1],"cn"));
+                            stringstream ss(pa->getChildren()[1]->getCharData());
+                            ss >> a;
+                        }
+                    }
+                    else {
+                        psymboljoint = pa;
+                    }
+                    BOOST_ASSERT(_checkMathML(pb,"cn"));
+                    {
+                        stringstream ss(pb->getCharData());
+                        ss >> b;
+                    }
+                }
+                else if( _checkMathML(papplyelt->getChildren()[0],"minus") ) {
+                    BOOST_ASSERT(_checkMathML(papplyelt->getChildren()[1],"csymbol"));
+                    a = -1;
+                    psymboljoint = papplyelt->getChildren()[1];
+                }
+
+                BOOST_ASSERT(psymboljoint->hasAttribute("encoding"));
+                BOOST_ASSERT(psymboljoint->getAttribute("encoding")==string("COLLADA"));
+                KinBody::JointPtr pbasejoint = _getJointFromRef(psymboljoint->getCharData().c_str(),pf,pkinbody);
+                if( !!pbasejoint ) {
+                    // set the mimic properties
+                    pjoint->nMimicJointIndex = pbasejoint->GetJointIndex();
+                    pjoint->vMimicCoeffs.resize(2);
+                    pjoint->vMimicCoeffs[0] = a;
+                    pjoint->vMimicCoeffs[1] = b;
+                    RAVELOG_DEBUG(str(boost::format("assigning joint %s to mimic %s(%d) %f %f\n")%pjoint->GetName()%pbasejoint->GetName()%pjoint->nMimicJointIndex%a%b));
+                }
+            }
+            catch(const openrave_exception& ex) {
+                RAVELOG_WARN(str(boost::format("exception occured when parsing formula for target joint %s: %s\n")%pjoint->GetName()%ex.what()));
+            }
+          }
         }
       }
     }
@@ -2793,6 +2873,34 @@ public:
   }
 
 private:
+
+  bool _checkMathML(daeElementRef pelt,const string& type)
+  {
+      return pelt->getElementName()==type || pelt->getElementName()==(string("math:")+type);
+  }
+
+  KinBody::JointPtr _getJointFromRef(xsToken targetref, daeElementRef peltref, KinBodyPtr pkinbody)
+  {
+      daeElement* peltjoint = daeSidRef(targetref, peltref).resolve().elt;
+      domJointRef pdomjoint = daeSafeCast<domJoint> (peltjoint);
+
+      if (!pdomjoint) {
+          domInstance_jointRef pdomijoint = daeSafeCast<domInstance_joint> (peltjoint);
+          if (!!pdomijoint)
+              pdomjoint = daeSafeCast<domJoint> (pdomijoint->getUrl().getElement().cast());
+      }
+
+      if (!pdomjoint || pdomjoint->typeID() != domJoint::ID()) {
+          RAVELOG_WARNA(str(boost::format("could not find collada joint %s!\n")%targetref));
+          return KinBody::JointPtr();
+      }
+
+      KinBody::JointPtr pjoint = pkinbody->GetJoint(pdomjoint->getName());
+      if (!pjoint) {
+          RAVELOG_WARNA(str(boost::format("could not find openrave joint %s!\n")%pdomjoint->getName()));
+      }
+      return pjoint;
+  }
 
   bool computeConvexHull(const vector<Vector>& verts, KinBody::Link::TRIMESH& trimesh)
   {

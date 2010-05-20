@@ -234,18 +234,12 @@ void IvObjectDragger::CheckCollision(bool flag)
                 _viewer->GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Contacts);
                 boost::shared_ptr<COLLISIONREPORT> preport(new COLLISIONREPORT());
                 if( pbody->GetBody()->CheckSelfCollision(preport) ) {
-                    RAVELOG_VERBOSEA("self collisionp  %s, links %s:%s\n", pbody->GetBody()->GetName().c_str(),
-                                     !!preport->plink1 ? preport->plink1->GetName().c_str() : "(NULL)",
-                                     !!preport->plink2 ? preport->plink2->GetName().c_str() : "(NULL)");
+                    RAVELOG_VERBOSEA(str(boost::format("self-collision %s\n")%preport->__str__()));
                     _SetColor(COLLISION_COLOR);
                 }
                 else if( _viewer->GetEnv()->CheckCollision(KinBodyConstPtr(pbody->GetBody()), preport)) {
                     // if there is a collision, revert to the original transform
-                    RAVELOG_VERBOSEA("collision %s:%s with %s:%s\n",
-                                     !!preport->plink1?preport->plink1->GetParent()->GetName().c_str():"(NULL",
-                                     !!preport->plink1?preport->plink1->GetName().c_str():"(NULL)",
-                                     !!preport->plink2?preport->plink2->GetParent()->GetName().c_str():"(NULL)",
-                                     !!preport->plink2?preport->plink2->GetName().c_str():"(NULL)");
+                    RAVELOG_VERBOSEA(str(boost::format("collision %s\n")%preport->__str__()));
                     _SetColor(COLLISION_COLOR);
                 }
                 else
@@ -468,21 +462,21 @@ void IvJointDragger::UpdateSkeleton()
             pjoint->GetLimits(vlower, vupper);
 
             if( pjoint->GetType() == KinBody::Joint::JointSlider )
-                fang = fang*(vupper[0]-vlower[0])+vlower[0];
+                fang = fang*(vupper.at(0)-vlower.at(0))+vlower.at(0);
 
             // update the joint's transform
             vector<dReal> vjoints;
             pbody->GetBody()->GetJointValues(vjoints);
-            dReal* pvalues = &vjoints[pjoint->GetDOFIndex()];
+            int d = pjoint->GetDOFIndex();
             if( pjoint->GetType() == KinBody::Joint::JointSpherical ) {
                 SbVec3f axis; float angle;
                 _trackball->rotation.getValue(axis,angle);
-                pvalues[0] = axis[0]*angle;
-                pvalues[1] = axis[1]*angle;
-                pvalues[2] = axis[2]*angle;
+                vjoints.at(d+0) = axis[0]*angle;
+                vjoints.at(d+1) = axis[1]*angle;
+                vjoints.at(d+2) = axis[2]*angle;
             }
             else
-                pvalues[0] = fang+_jointoffset;
+                vjoints.at(d+0) = fang+_jointoffset;
 
             if( !!probotitem && !!probotitem->GetRobot()->GetController() ) {
                 probotitem->GetRobot()->GetController()->SetDesired(vjoints);
