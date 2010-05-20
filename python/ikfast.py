@@ -1511,7 +1511,7 @@ class IKFastSolver(AutoReloader):
         solverbranches = []
         # depending on the free variable values, sometimes the rotation matrix can have zeros where it does not expect zeros. Therefore, test all boundaries of all free variables
         for freevar in freejointvars+[None]:
-            freevalues = [0,pi/2,pi,-pi/2] if freevar is not None else [None]
+            freevalues = [0,pi/2,pi,-pi/2] if freevar is not None and self.IsHinge(freevar.name) else [None]
             for freevalue in freevalues:
                 print 'attempting ',freevar,' = ',freevalue
                 if freevar is not None and freevalue is not None:
@@ -1573,7 +1573,7 @@ class IKFastSolver(AutoReloader):
         solverbranches = []
         # depending on the free variable values, sometimes the rotation matrix can have zeros where it does not expect zeros. Therefore, test all boundaries of all free variables
         for freevar in freejointvars+[None]:
-            freevalues = [0,pi/2,pi,-pi/2] if freevar is not None else [None]
+            freevalues = [0,pi/2,pi,-pi/2] if freevar is not None and self.IsHinge(freevar.name) else [None]
             for freevalue in freevalues:
                 print 'attempting ',freevar,' = ',freevalue
                 if freevar is not None and freevalue is not None:
@@ -1635,7 +1635,7 @@ class IKFastSolver(AutoReloader):
         solverbranches = []
         # depending on the free variable values, sometimes the rotation matrix can have zeros where it does not expect zeros. Therefore, test all boundaries of all free variables
         for freevar in freejointvars+[None]:
-            freevalues = [0,pi/2,pi,-pi/2] if freevar is not None else [None]
+            freevalues = [0,pi/2,pi,-pi/2] if freevar is not None and self.IsHinge(freevar.name) else [None]
             for freevalue in freevalues:
                 print 'attempting ',freevar,' = ',freevalue
                 if freevar is not None and freevalue is not None:
@@ -1748,7 +1748,7 @@ class IKFastSolver(AutoReloader):
         solverbranches = []
         # depending on the free variable values, sometimes the rotation matrix can have zeros where it does not expect zeros. Therefore, test all boundaries of all free variables
         for freevar in freejointvars+[None]:
-            freevalues = [0,pi/2,pi,-pi/2] if freevar is not None else [None]
+            freevalues = [0,pi/2,pi,-pi/2] if freevar is not None and self.IsHinge(freevar.name) else [None]
             for freevalue in freevalues:
                 print 'attempting ',freevar,' = ',freevalue
                 if freevar is not None and freevalue is not None:
@@ -1911,7 +1911,7 @@ class IKFastSolver(AutoReloader):
         solverbranches = []
         # depending on the free variable values, sometimes the rotation matrix can have zeros where it does not expect zeros. Therefore, test all boundaries of all free variables
         for freevar in freejointvars+[None]:
-            freevalues = [0,pi/2,pi,-pi/2] if freevar is not None else [None]
+            freevalues = [0,pi/2,pi,-pi/2] if freevar is not None and self.IsHinge(freevar.name) else [None]
             for freevalue in freevalues:
                 print 'attempting ',freevar,' = ',freevalue
                 if freevar is not None and freevalue is not None:
@@ -1960,7 +1960,7 @@ class IKFastSolver(AutoReloader):
                     endbranchtree = [SolverSequence([rottree])]
                 
                 curtransvars = transvars[:]
-                transtree = self.solveIKTranslationAll(Positions,Positionsee,curtransvars,
+                transtree = self.solveIKTranslationAll(Positions,Positionsee,transvars=curtransvars,
                                                        otherunsolvedvars = [] if solveRotationFirst else rotvars,
                                                        othersolvedvars = rotvars+freejointvars if solveRotationFirst else freejointvars,
                                                        endbranchtree=endbranchtree,
@@ -2012,53 +2012,58 @@ class IKFastSolver(AutoReloader):
         while len(transvars)>0:
             unsolvedvariables = transvars + otherunsolvedvars
             solvedvars = self.solveIKTranslation(Positions,Positionsee,rawvars = transvars)
+            # merge solvedvars and solvedvars2 (have to compute both since sometimes solvedvars can give really bogus solutions (see pr2-beta-static.robot)
+            solvedvars += self.solveIKTranslationLength(Positions, Positionsee, rawvars = transvars)
             if len(solvedvars) == 0:
-                solvedvars = self.solveIKTranslationLength(Positions, Positionsee, rawvars = transvars)
-                if len(solvedvars) == 0:
-                    raise ValueError('Could not solve variable from length of translation')
+                raise ValueError('Could not solve variable from length of translation')
 
             # for all solutions, check if there is a divide by zero
             checkforzeros = []
             scores = []
             for solvedvar in solvedvars:
-                score = 1000*len(solvedvar[2])+reduce(lambda x,y:x+y,solvedvar[2])
+                # multiby by 400 in order to prioritize equations with less solutions
+                score = 400*len(solvedvar[2])+reduce(lambda x,y:x+y,solvedvar[2])
                 checkforzero = []
-                if solvedvar[1].jointeval is not None:
-                    subexprs,reduced_exprs = customcse(solvedvar[1].jointeval)
-                elif solvedvar[1].jointevalsin is not None:
-                    subexprs,reduced_exprs = customcse(solvedvar[1].jointevalsin)
-                elif solvedvar[1].jointevalcos is not None:
-                    subexprs,reduced_exprs = customcse(solvedvar[1].jointevalcos)
-                else:
-                    continue
-                
-                def checkpow(expr):
-                    score = 0
-                    if expr.is_Pow and expr.exp.is_real and expr.exp < 0:
-                        exprbase = self.subsExpressions(expr.base,subexprs)
-                        # check if exprbase contains any variables that have already been solved
-                        containsjointvar = exprbase.has_any_symbols(*allsolvedvars)
-                        cancheckexpr = not exprbase.has_any_symbols(*unsolvedvariables)
-                        score += 10000
-                        if not cancheckexpr:
-                            score += 100000
-                        else:
-                            checkforzero.append(exprbase)
-                    return score
-                
-                for sexpr in [subexpr[1] for subexpr in subexprs]+reduced_exprs:
-                    if sexpr.is_Add:
-                        for arg in sexpr.args:
-                            if arg.is_Mul:
-                                for arg2 in arg.args:
-                                    score += checkpow(arg2)
-                            else:
-                                score += checkpow(arg)
-                    elif sexpr.is_Mul:
-                        for arg in sexpr.args:
-                            score += checkpow(arg)
+                try:
+                    if solvedvar[1].jointeval is not None:
+                        subexprs,reduced_exprs = customcse(solvedvar[1].jointeval)
+                    elif solvedvar[1].jointevalsin is not None:
+                        subexprs,reduced_exprs = customcse(solvedvar[1].jointevalsin)
+                    elif solvedvar[1].jointevalcos is not None:
+                        subexprs,reduced_exprs = customcse(solvedvar[1].jointevalcos)
                     else:
-                        score += checkpow(sexpr)
+                        continue
+
+                    def checkpow(expr):
+                        score = 0
+                        if expr.is_Pow and expr.exp.is_real and expr.exp < 0:
+                            exprbase = self.subsExpressions(expr.base,subexprs)
+                            # check if exprbase contains any variables that have already been solved
+                            containsjointvar = exprbase.has_any_symbols(*allsolvedvars)
+                            cancheckexpr = not exprbase.has_any_symbols(*unsolvedvariables)
+                            score += 10000
+                            if not cancheckexpr:
+                                score += 100000
+                            else:
+                                checkforzero.append(exprbase)
+                        return score
+
+                    for sexpr in [subexpr[1] for subexpr in subexprs]+reduced_exprs:
+                        if sexpr.is_Add:
+                            for arg in sexpr.args:
+                                if arg.is_Mul:
+                                    for arg2 in arg.args:
+                                        score += checkpow(arg2)
+                                else:
+                                    score += checkpow(arg)
+                        elif sexpr.is_Mul:
+                            for arg in sexpr.args:
+                                score += checkpow(arg)
+                        else:
+                            score += checkpow(sexpr)
+                except AssertionError, e:
+                    print e
+                    score=1e10
                 scores.append(score)
                 checkforzeros.append(checkforzero)
 

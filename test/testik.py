@@ -121,7 +121,7 @@ def test_drillray():
     Tee[2,3] = Symbol("pz")
 
 def test_6dik():
-    python inversekinematics.py --robot=/home/rdiankov/downloads/SDA10-OpenRave/robots/SDA10-dual.robot.xml
+    #python inversekinematics.py --robot=/home/rdiankov/downloads/SDA10-OpenRave/robots/SDA10-dual.robot.xml
     from openravepy import *
     import numpy,time
     from openravepy.examples import inversekinematics
@@ -130,16 +130,16 @@ def test_6dik():
     from sympy import *
     env = Environment()
     env.Reset()
-    robot = env.ReadRobotXMLFile('examples/test.robot.xml')#robots/pr2static.robot.xml')#/home/rdiankov/downloads/SDA10-OpenRave/robots/SDA10-dual.robot.xml')
+    robot = env.ReadRobotXMLFile('robots/pr2-beta-static.robot.xml')
     env.AddRobot(robot)
-    manip = robot.SetActiveManipulator('arm')
+    manip = robot.SetActiveManipulator('leftarm_torso')
     ikmodel = inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
 
     solvefn=ikfast.IKFastSolver.solveFullIK_6D
     solvejoints = list(manip.GetArmJoints())
-    #solvejoints.remove(35)
-    #freejoints = [35]
-    #freeparams=[35]
+    solvejoints.remove(14)
+    solvejoints.remove(35)
+    freeparams=[14,35]
     sourcefilename = 'temp.cpp'
     self = ikfast.IKFastSolver(kinbody=robot,accuracy=None,precision=None)
     #code = self.generateIkSolver(manip.GetBase().GetIndex(),manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejoints,usedummyjoints=False,solvefn=solvefn)

@@ -556,3 +556,15 @@ def test_fatmodels():
     env.SetDebugLevel(DebugLevel.Verbose)
     taskmanip.SwitchModels(switchpatterns=[('frootloops(+d)$','scenes/cereal_frootloops_fat.kinbody.xml')])
     taskmanip.SwitchModels(switch=True)
+
+def test_pr2():
+    robot=env.ReadRobotXMLFile('robots/pr2-beta-static.robot.xml')
+    manipnames = ['leftarm','rightarm','leftarm_torso','rightarm_torso']
+    for manipname in manipnames:
+        manip=robot.SetActiveManipulator(manipname)
+        ikmodel=inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
+        if not ikmodel.load():
+            ikmodel.generate(freejoints=ikmodel.manip.GetArmJoints()[0:(len(manip.GetArmJoints())-6)])
+        rmodel = kinematicreachability.ReachabilityModel(robot)
+        if not rmodel.load():
+            rmodel.generate(xyzdelta=0.03,quatdelta=0.2)

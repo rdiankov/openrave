@@ -25,4 +25,12 @@
     <translation>0.18 0 0</translation>
     <direction>1 0 0</direction>
   </manipulator>
+  <manipulator name="rightarm_torso">
+    <base>base_link</base>
+    <effector>r_gripper_palm_link</effector>
+    <joints>r_gripper_l_finger_joint</joints>
+    <closingdirection>1</closingdirection>
+    <translation>0.18 0 0</translation>
+    <direction>1 0 0</direction>
+  </manipulator>
 </robot>
