@@ -245,42 +245,42 @@ namespace OpenRAVEXMLParser
         return ret;
     }
 
-    static bool RaveParseXMLFile(BaseXMLReaderPtr preader, const string& filename)
+    static boost::shared_ptr<pair<string,string> > RaveFindXMLFile(const string& filename)
     {
         if( filename.size() == 0 )
-            return false;
+            return boost::shared_ptr<pair<string,string> >();
 
         boost::shared_ptr<EnvironmentMutex> m = GetXMLMutex();
         EnvironmentMutex::scoped_lock lock(*m);
 
         // init the dir (for some reason msvc confuses the linking of the string class with soqt, so do it the old fashioned way)
-        string olddir = GetParseDirectory();
-        string oldfile = GetFullFilename();
         string appended;
         size_t sepindex = filename.find_last_of('/');
         if( sepindex == string::npos )
             sepindex = filename.find_last_of('\\');
 
+        string parsedirectory = GetParseDirectory(), fullfilename = GetFullFilename();
+
         // check for absolute paths
         if( filename[0] == '/' || filename[0] == '~' ) {
-            GetParseDirectory() = "";
-            GetFullFilename() = filename;
+            parsedirectory = "";
+            fullfilename = filename;
         }
         else {
-            GetFullFilename().resize(GetParseDirectory().size()+filename.size());
-            GetFullFilename() = GetParseDirectory();
-            GetFullFilename() += filename;
+            fullfilename.resize(parsedirectory.size()+filename.size());
+            fullfilename = parsedirectory;
+            fullfilename += filename;
         }
 
         if( sepindex != string::npos) {
             appended = filename.substr(0,sepindex+1);
-            GetParseDirectory() += appended;
+            parsedirectory += appended;
         }
 
         // test if exists
         bool bFileFound = false;
         do {
-            if( !!ifstream(GetFullFilename().c_str()) ) {
+            if( !!ifstream(fullfilename.c_str()) ) {
                 bFileFound = true;
                 break;
             }
@@ -289,20 +289,20 @@ namespace OpenRAVEXMLParser
             FOREACHC(itdir, GetDataDirs()) {
                 string newparse;
                 newparse = *itdir; newparse.push_back(s_filesep);
-                newparse += GetParseDirectory();
-                GetFullFilename() = newparse; GetFullFilename() += filename;
+                newparse += parsedirectory;
+                fullfilename = newparse; fullfilename += filename;
                 
-                if( !!ifstream(GetFullFilename().c_str()) ) {
-                    GetParseDirectory() = newparse; GetParseDirectory() += appended;
+                if( !!ifstream(fullfilename.c_str()) ) {
+                    parsedirectory = newparse; parsedirectory += appended;
                     bFileFound = true;
                     break;
                 }
             
                 newparse = *itdir; newparse.push_back(s_filesep);
-                GetFullFilename() = newparse; GetFullFilename() += filename;
+                fullfilename = newparse; fullfilename += filename;
                 
-                if( !!ifstream(GetFullFilename().c_str()) ) {
-                    GetParseDirectory() = newparse; GetParseDirectory() += appended;
+                if( !!ifstream(fullfilename.c_str()) ) {
+                    parsedirectory = newparse; parsedirectory += appended;
                     bFileFound = true;
                     break;
                 }
@@ -315,21 +315,41 @@ namespace OpenRAVEXMLParser
     
         if( !bFileFound ) {
             GetXMLErrorCount()++;
-            GetParseDirectory() = olddir;
-            GetFullFilename() = oldfile;
             RAVELOG_WARN(str(boost::format("could not find file %s\n")%filename));
-            return false;
+            return boost::shared_ptr<pair<string,string> >();
         }
 
 #ifdef HAVE_BOOST_FILESYSTEM
-        preader->_filename = boost::filesystem::system_complete(boost::filesystem::path(GetFullFilename(), boost::filesystem::native)).string();
-#else
-        preader->_filename = GetFullFilename();
+        fullfilename = boost::filesystem::system_complete(boost::filesystem::path(fullfilename, boost::filesystem::native)).string();
 #endif
+        return boost::shared_ptr<pair<string,string> >(new pair<string,string>(parsedirectory,fullfilename));
+    }
 
-        int ret = raveXmlSAXUserParseFile(GetSAXHandler(), preader, GetFullFilename().c_str());
-        if( ret != 0 ) {
-            RAVELOG_WARNA(str(boost::format("xmlSAXUserParseFile: error parsing %s (error %d)\n")%GetFullFilename()%ret));
+    static bool RaveParseXMLFile(BaseXMLReaderPtr preader, const string& filename)
+    {
+        boost::shared_ptr<pair<string,string> > filedata = RaveFindXMLFile(filename);
+        if( !filedata )
+            return false;
+
+        boost::shared_ptr<EnvironmentMutex> m = GetXMLMutex();
+        EnvironmentMutex::scoped_lock lock(*m);
+
+        string olddir = GetParseDirectory();
+        string oldfile = GetFullFilename();
+        GetParseDirectory() = filedata->first;
+        GetFullFilename() = filedata->second;
+        preader->_filename = filedata->second;
+
+        int ret=-1;
+        try {
+            ret = raveXmlSAXUserParseFile(GetSAXHandler(), preader, GetFullFilename().c_str());
+            if( ret != 0 ) {
+                RAVELOG_WARN(str(boost::format("xmlSAXUserParseFile: error parsing %s (error %d)\n")%GetFullFilename()%ret));
+            }
+        }
+        catch (...) {
+            RAVELOG_ERROR(str(boost::format("xmlSAXUserParseFile: error parsing %s\n")%GetFullFilename()));
+            ret = -1;
         }
 
         // restore
@@ -1359,7 +1379,25 @@ namespace OpenRAVEXMLParser
 
                     //BaseXMLReaderPtr preader = CreateInterfaceReader(_penv,_type,_pinterface, xmltag, listnewatts);
                     //bool bSuccess = RaveParseXMLFile(preader, itatt->second);
-                    pinterface = _penv->ReadInterfaceXMLFile(pinterface,_type,itatt->second,listnewatts);
+                    boost::shared_ptr<pair<string,string> > filedata = RaveFindXMLFile(itatt->second);
+                    if( !filedata ) {
+                        continue;
+                    }
+
+                    string olddir = GetParseDirectory();
+                    string oldfile = GetFullFilename();
+                    try {
+                        GetParseDirectory() = filedata->first;
+                        GetFullFilename() = filedata->second;
+                        pinterface = _penv->ReadInterfaceXMLFile(pinterface,_type,filedata->second,listnewatts);
+                    }
+                    catch(...) {
+                        RAVELOG_ERROR(str(boost::format("failed to process %s\n")%itatt->second));
+                        pinterface.reset();
+                    }
+                    GetParseDirectory() = olddir;
+                    GetFullFilename() = oldfile;
+                    
                     if( !pinterface ) {
                         RAVELOG_DEBUGA(str(boost::format("Failed to load kinbody filename %s\n")%itatt->second));
                         GetXMLErrorCount()++;

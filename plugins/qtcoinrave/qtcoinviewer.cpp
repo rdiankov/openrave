@@ -2076,14 +2076,7 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
             // search the joint nodes
             FOREACHC(itjoint, pKinBody->GetBody()->GetJoints()) {
                 if( ((*itjoint)->GetFirstAttached()==pSelectedLink || (*itjoint)->GetSecondAttached()==pSelectedLink) ) {
-                    vector<dReal> lower,upper;
-                    (*itjoint)->GetLimits(lower,upper);
-                    size_t i;
-                    for(i = 0; i < lower.size(); ++i) {
-                        if( RaveFabs(lower[i]-upper[i]) > 1e-6 )
-                            break;
-                    }
-                    if( i != lower.size() ) {
+                    if( !(*itjoint)->IsStatic() ) {
                         // joint has a range, so consider it for selection
                         if( pKinBody->GetBody()->DoesAffect((*itjoint)->GetJointIndex(), pSelectedLink->GetIndex()) )
                             pjoint = *itjoint;
@@ -2096,8 +2089,7 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
                             pother = (*itjoint)->GetFirstAttached();
                         if( !!pother ) {
                             FOREACHC(itjoint2, pKinBody->GetBody()->GetJoints()) {
-                                if( pKinBody->GetBody()->DoesAffect((*itjoint2)->GetJointIndex(), pother->GetIndex()) && 
-                                    ((*itjoint2)->GetFirstAttached()==pother || (*itjoint2)->GetSecondAttached()==pother) ) {
+                                if( !(*itjoint2)->IsStatic() && pKinBody->GetBody()->DoesAffect((*itjoint2)->GetJointIndex(), pother->GetIndex()) && ((*itjoint2)->GetFirstAttached()==pother || (*itjoint2)->GetSecondAttached()==pother) ) {
                                     pjoint = *itjoint2;
                                     break;
                                 }
@@ -2114,7 +2106,7 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
                 FOREACHC(itjoint, pKinBody->GetBody()->GetPassiveJoints()) {
                     if( (*itjoint)->GetMimicJointIndex() >= 0 ) {
                         KinBody::JointPtr ptempjoint = pKinBody->GetBody()->GetJoints()[(*itjoint)->GetMimicJointIndex()];
-                        if( pKinBody->GetBody()->DoesAffect(ptempjoint->GetJointIndex(), pSelectedLink->GetIndex()) && 
+                        if( !ptempjoint->IsStatic() && pKinBody->GetBody()->DoesAffect(ptempjoint->GetJointIndex(), pSelectedLink->GetIndex()) && 
                             ((*itjoint)->GetFirstAttached()==pSelectedLink || (*itjoint)->GetSecondAttached()==pSelectedLink) ) {
                             pjoint = ptempjoint;
                         }
@@ -2127,7 +2119,7 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
                             pother = (*itjoint)->GetFirstAttached();
                         if( !!pother ) {
                             FOREACHC(itjoint2, pKinBody->GetBody()->GetJoints()) {
-                                if( pKinBody->GetBody()->DoesAffect((*itjoint2)->GetJointIndex(), pother->GetIndex()) && 
+                                if( !(*itjoint2)->IsStatic() && pKinBody->GetBody()->DoesAffect((*itjoint2)->GetJointIndex(), pother->GetIndex()) && 
                                     ((*itjoint2)->GetFirstAttached()==pother || (*itjoint2)->GetSecondAttached()==pother) ) {
                                     pjoint = *itjoint2;
                                     break;

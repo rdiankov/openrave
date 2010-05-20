@@ -1,5 +1,5 @@
 <robot>
-  <robot file="/home/rdiankov/pr2.dae">
+  <robot file="pr2-beta-static.dae">
   </robot>
   <manipulator name="leftarm">
     <base>torso_lift_link</base>
