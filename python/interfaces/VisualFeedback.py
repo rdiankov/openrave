@@ -71,7 +71,9 @@ class VisualFeedback:
             for f in reshape(extents,len(extents)*3):
                 cmd += str(f) + ' '
         if sphere is not None:
-            cmd += 'sphere %d %d '%(sphere[0],sphere[1])
+            cmd += 'sphere %d %d '%(sphere[0],len(sphere)-1)
+            for s in sphere[1:]:
+                cmd += '%f '%s
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise planning_error()

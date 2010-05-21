@@ -96,7 +96,7 @@ class VisibilityModel(OpenRAVEModel):
                     if os.path.isfile(extentsfile):
                         self.visibilitytransforms = self.visualprob.ProcessVisibilityExtents(target=self.target, extents=loadtxt(extentsfile,float))
                     else:
-                        self.visibilitytransforms = self.visualprob.ProcessVisibilityExtents(target=self.target, sphere=[3,5,0.1,0.15,0.2,0.25,0.3])
+                        self.visibilitytransforms = self.visualprob.ProcessVisibilityExtents(target=self.target, sphere=[3,0.1,0.15,0.2,0.25,0.3])
                 self.visualprob.SetCameraTransforms(transforms=self.visibilitytransforms)
         finally:
             for b,enable in bodies:
