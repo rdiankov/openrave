@@ -1424,16 +1424,14 @@ void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, const Trans
 {
     if( _veclinks.size() == 0 )
         return;
-    Transform tbase = transBase*_veclinks.front()->GetTransform().inverse();
+    Transform tbase = transBase*_veclinks.at(0)->GetTransform().inverse();
     _veclinks.front()->SetTransform(transBase);
 
+    // apply the relative transformation to all links!! (needed for passive joints)
     for(size_t i = 1; i < _veclinks.size(); ++i) {
-        if( _veclinks[i]->IsStatic() ) {
-            // if static and trans is valid, then apply the relative transformation to the link
-            _veclinks[i]->SetTransform(tbase*_veclinks[i]->GetTransform());
-        }
-        else
-            _veclinks[i]->userdata = 0;
+        LinkPtr plink = _veclinks[i];
+        plink->SetTransform(tbase*plink->GetTransform());
+        plink->userdata = (int)plink->IsStatic();
     }
 
     SetJointValues(vJointValues,bCheckLimits);
@@ -1510,7 +1508,7 @@ void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, bool bCheck
     }
 
     // set the first body and all static bodies to computed
-    _veclinks[0]->userdata = 1;
+    _veclinks.at(0)->userdata = 1;
     int numleft = (int)_veclinks.size()-1;
 
     for(size_t i = 1; i < _veclinks.size(); ++i) {
@@ -1531,7 +1529,7 @@ void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, bool bCheck
     vector< vector<dReal> > vPassiveJointValues(_vecPassiveJoints.size());
     for(size_t i = 0; i < vPassiveJointValues.size(); ++i)
         _vecPassiveJoints[i]->GetValues(vPassiveJointValues[i]);
-
+    
     while(numleft > 0) {
         int org = numleft;
 
