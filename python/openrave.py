@@ -20,7 +20,7 @@ from optparse import OptionParser
 import sys,time
 
 if __name__ == "__main__":
-    parser = OptionParser(description='Queries body/robot/interface hashes')
+    parser = OptionParser(description='OpenRAVE %s'%openravepy.__version__)
     parser.add_option('--listplugins', action="store_true",dest='listplugins',default=False,
                       help='List all plugins and the interfaces they provide.')
     parser.add_option('--loadplugin', action="append",type='string',dest='loadplugins',default=[],
@@ -39,8 +39,13 @@ if __name__ == "__main__":
                       help='if specified will query the kinbody hash and return')
     parser.add_option('--ipython', '-i',action="store_true",dest='ipython',default=False,
                       help='if true will drop into the ipython interpreter rather than spin')
+    parser.add_option('--version',action='store_true',dest='version',default=False,
+                      help='Return the openrave version MAJOR.MINOR.PATCH')
     (options, args) = parser.parse_args()
 
+    if options.version:
+        print openravepy.__version__
+        sys.exit(0)
     if options.debug is not None:
         for debuglevel in [DebugLevel.Fatal,DebugLevel.Error,DebugLevel.Warn,DebugLevel.Info,DebugLevel.Debug,DebugLevel.Verbose]:
             if (not options.debug.isdigit() and options.debug.lower() == debuglevel.name.lower()) or (options.debug.isdigit() and int(options.debug) == int(debuglevel)):
@@ -80,6 +85,10 @@ if __name__ == "__main__":
             cc = env.CreateCollisionChecker(options.collision)
             if cc is not None:
                 env.SetCollisionChecker(cc)
+        if options.physics:
+            ph = env.CreatePhysicsEngine(options.physics)
+            if ph is not None:
+                env.SetPhysicsEngine(ph)
         for arg in args:
             if arg.endswith('.xml') or arg.endswith('.dae'):
                 env.Load(arg)
