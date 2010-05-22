@@ -43,14 +43,13 @@ public:
 
         virtual XMLReadablePtr GetReadable() { return _piddata; }
 
-        virtual void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts) {
-            BaseXMLReader::startElement(name,atts);
+        virtual ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts) {
+            _ss.str("");
+            return (name == "pgains" || name=="igains") ? PE_Support : PE_Pass;
         }
 
         virtual bool endElement(const std::string& name)
         {
-            BaseXMLReader::endElement(name);
-
             if( name == "piddata" )
                 return true;
             else if( name == "pgains" )
@@ -67,9 +66,8 @@ public:
 
         virtual void characters(const std::string& ch)
         {
-            BaseXMLReader::characters(ch);
             _ss.clear();
-            _ss.str(ch);
+            _ss << ch;
         }
 
     protected:

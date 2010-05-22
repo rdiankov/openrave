@@ -17,6 +17,7 @@
 #include "randomized-astar.h"
 #include "rrt.h"
 #include "graspgradient.h"
+#include "pathoptimizers.h"
 
 RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(PluginType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv)
 {
@@ -48,6 +49,8 @@ RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(PluginType type, const std::str
             return InterfaceBasePtr(new ExplorationPlanner(penv));
         else if( interfacename == "graspgradient" )
             return InterfaceBasePtr(new GraspGradientPlanner(penv));
+        else if( interfacename == "shortcut_linear" )
+            return InterfaceBasePtr(new ShortcutLinearPlanner(penv));
         break;
     default:
         break;
@@ -70,6 +73,7 @@ RAVE_PLUGIN_API bool GetPluginAttributes(PLUGININFO* pinfo, int size)
     pinfo->interfacenames[OpenRAVE::PT_Planner].push_back("BasicRRT");
     pinfo->interfacenames[OpenRAVE::PT_Planner].push_back("ExplorationRRT");
     pinfo->interfacenames[OpenRAVE::PT_Planner].push_back("GraspGradient");
+    pinfo->interfacenames[OpenRAVE::PT_Planner].push_back("shortcut_linear");
     return true;
 }
 

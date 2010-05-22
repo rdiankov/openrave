@@ -118,7 +118,7 @@
 #endif
 
 namespace OpenRAVE {
-
+    
 #include <rave/defines.h>
 #include <rave/classhashes.h>
 
@@ -155,7 +155,7 @@ private:
 
 class CaseInsensitiveCompare
 {
- public:
+public:
     bool operator()(const std::string & s1, const std::string& s2) const
     {
         std::string::const_iterator it1=s1.begin();
@@ -520,11 +520,18 @@ typedef boost::shared_ptr<XMLReadable> XMLReadablePtr;
 typedef boost::shared_ptr<XMLReadable const> XMLReadableConstPtr;
 
 /// base class for all xml readers. XMLReaders are used to process data from
-/// xml files. Custom readers can be registered through EnvironmentBase
+/// xml files. Custom readers can be registered through EnvironmentBase.
+/// By default it can record all data that is encountered inside the xml reader
 class RAVE_API BaseXMLReader : public boost::enable_shared_from_this<BaseXMLReader>
 {
 public:
-    BaseXMLReader() : __bRecordXMLData(true) {}
+    enum ProcessElement
+    {
+        PE_Pass=0, ///< current tag was not supported, so pass onto another class
+        PE_Support=1, ///< current tag will be processed by this class
+        PE_Ignore=2, ///< current tag and all its children should be ignored
+    };
+    BaseXMLReader() {}
     virtual ~BaseXMLReader() {}
 
     /// a readable interface that stores the information processsed for the current tag
@@ -534,57 +541,39 @@ public:
     /// Gets called in the beginning of each "<type>" expression. In this case, name is "type"
     /// \param name of the tag, will be always lower case
     /// \param atts string of attributes where the first std::string is the attribute name and second is the value
-    virtual void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts);
+    /// \return true if tag is accepted and this class will process it, otherwise false
+    virtual ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts) = 0;
 
     /// Gets called at the end of each "</type>" expression. In this case, name is "type"
     /// \param name of the tag, will be always lower case
-    /// \return true if XMLReader has finished parsing, otherwise false
-    virtual bool endElement(const std::string& name);
+    /// \return true if XMLReader has finished parsing (one condition is that name==_fieldname) , otherwise false
+    virtual bool endElement(const std::string& name) = 0;
 
     /// gets called for all data in between tags.
     /// \param ch a string to the data
-    virtual void characters(const std::string& ch);
-    
-    /// returns the XML formatted data that this reader has parsed so far
-    virtual std::string GetXMLData() const { return __sxml.str(); }
+    virtual void characters(const std::string& ch) = 0;
 
-    std::string _filename; /// XML filename
-
-protected:
-    bool __bRecordXMLData;
-    std::stringstream __sxml; ///< used to store the xml data
+    /// XML filename/resource used for this class (can be empty)
+    std::string _filename;
 };
+
 typedef boost::shared_ptr<BaseXMLReader> BaseXMLReaderPtr;
 typedef boost::shared_ptr<BaseXMLReader const> BaseXMLReaderConstPtr;
 
+/// reads until the tag ends
 class RAVE_API DummyXMLReader : public BaseXMLReader
 {
 public:
-    DummyXMLReader(const std::string& pfieldname, const std::string& pparentname);
-    
-    virtual void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts);
-    
-    /// if returns true, XMLReader has finished parsing
-    virtual bool endElement(const std::string& name);
-    
-private:
-    std::string _fieldname, _parentname; /// XML filename
-    boost::shared_ptr<BaseXMLReader> _pcurreader;
-};
-
-class RAVE_API OneTagReader : public BaseXMLReader
-{
-public:
-    OneTagReader(const std::string& tag, BaseXMLReaderPtr preader);
-
-    virtual void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts);
+    DummyXMLReader(const std::string& pfieldname, const std::string& pparentname, boost::shared_ptr<std::ostream> osrecord = boost::shared_ptr<std::ostream>());
+    virtual ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts);
     virtual bool endElement(const std::string& name);
     virtual void characters(const std::string& ch);
-
+    const std::string& GetFieldName() const { return _fieldname; }
 private:
-    boost::shared_ptr<BaseXMLReader> _preader;
-    std::string _tag;
-    int _numtags;
+    std::string _parentname; /// XML filename
+    std::string _fieldname;
+    boost::shared_ptr<std::ostream> _osrecord; ///< used to store the xml data
+    boost::shared_ptr<BaseXMLReader> _pcurreader;
 };
 
 } // end namespace OpenRAVE

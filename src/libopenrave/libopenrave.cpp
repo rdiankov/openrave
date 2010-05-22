@@ -111,103 +111,60 @@ std::string COLLISIONREPORT::__str__() const
     return s.str();
 }
 
-void BaseXMLReader::startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
-{
-    if( __bRecordXMLData ) {
-        __sxml << "<" << name << " ";
-        FOREACHC(itatt, atts)
-            __sxml << itatt->first << "=\"" << itatt->second << "\" ";
-        __sxml << ">" << endl;
-    }
-}
-
-bool BaseXMLReader::endElement(const std::string& name)
-{
-    if( __bRecordXMLData )
-        __sxml << "</" << name << ">" << endl;
-    return false;
-}
-
-void BaseXMLReader::characters(const std::string& ch)
-{
-    if( __bRecordXMLData )
-        __sxml << ch;
-}
-
 // Dummy Reader
-DummyXMLReader::DummyXMLReader(const std::string& pfieldname, const std::string& pparentname)
+DummyXMLReader::DummyXMLReader(const std::string& fieldname, const std::string& pparentname, boost::shared_ptr<std::ostream> osrecord) : _fieldname(fieldname), _osrecord(osrecord)
 {
-    _fieldname = pfieldname;
     _parentname = pparentname;
     _parentname += ":";
     _parentname += _fieldname;
-    RAVELOG_DEBUGA("unknown xml field: %s\n", _parentname.c_str());
 }
 
-void DummyXMLReader::startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+BaseXMLReader::ProcessElement DummyXMLReader::startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
 {
-    BaseXMLReader::startElement(name,atts);
     if( !!_pcurreader ) {
-        _pcurreader->startElement(name, atts);
+        if( _pcurreader->startElement(name, atts) == PE_Support )
+            return PE_Support;
+        return PE_Ignore;
     }
-    else {
-        // create a new parser
-        _pcurreader.reset(new DummyXMLReader(name, _parentname));
+
+    if( !!_osrecord ) {
+        *_osrecord << "<" << name << " ";
+        FOREACHC(itatt, atts)
+            *_osrecord << itatt->first << "=\"" << itatt->second << "\" ";
+        *_osrecord << ">" << endl;
     }
+    
+    // create a new parser
+    _pcurreader.reset(new DummyXMLReader(name, _parentname,_osrecord));
+    return PE_Support;
 }
     
 bool DummyXMLReader::endElement(const std::string& name)
 {
-    BaseXMLReader::endElement(name);
-
     if( !!_pcurreader ) {
-        if( _pcurreader->endElement(name) )
+        if( _pcurreader->endElement(name) ) {
             _pcurreader.reset();
+            if( !!_osrecord )
+                *_osrecord << "</" << name << ">" << endl;
+        }
+        return false;
     }
-    else if( name == _fieldname )
+
+    if( name == _fieldname )
         return true;
+    RAVELOG_ERRORA(str(boost::format("invalid xml tag %s\n")%name));
+    return false;
+}
+
+void DummyXMLReader::characters(const std::string& ch)
+{
+    if( !_pcurreader ) {
+        if( !!_osrecord )
+            *_osrecord << ch;
+    }
     else {
-        RAVELOG_ERRORA(str(boost::format("invalid xml tag %s\n")%name));
-        return true;
+        _pcurreader->characters(ch);
     }
-
-    return false;
-}
-
-// OneTag Reader
-OneTagReader::OneTagReader(const std::string& tag, BaseXMLReaderPtr preader) : _preader(preader), _tag(tag), _numtags(0)
-{
-}
-
-void OneTagReader::startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
-{
-    BaseXMLReader::startElement(name,atts);
-    if( name == _tag )
-        ++_numtags;
-    else if( !!_preader )
-        _preader->startElement(name, atts);
-}
-
-bool OneTagReader::endElement(const std::string& name)
-{
-    BaseXMLReader::endElement(name);
-
-    if( name == _tag ) {
-        --_numtags;
-        if( _numtags <= 0 )
-            return true;
-    }
-    else if( !!_preader )
-        return _preader->endElement(name);
-
-    return false;
-}
-
-void OneTagReader::characters(const std::string& ch)
-{
-    BaseXMLReader::characters(ch);
-    if( !!_preader )
-        _preader->characters(ch);
 }
 
 void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2)
@@ -218,14 +175,20 @@ void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2)
 }
 
 // PlannerParameters class
-PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _bComputeSmoothPath(true), _bCheckSelfCollisions(true)
+PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _sPathOptimizationPlanner("shortcut_linear"), _bCheckSelfCollisions(true)
 {
     _diffstatefn = subtractstates;
-}
-
-PlannerBase::PlannerParameters::PlannerParameters(const PlannerParameters& r) : XMLReadable("plannerparameters")
-{
-    *this = r;
+    _vXMLParameters.reserve(10);
+    _vXMLParameters.push_back("_vinitialconfig");
+    _vXMLParameters.push_back("_vgoalconfig");
+    _vXMLParameters.push_back("_vconfiglowerlimit");
+    _vXMLParameters.push_back("_vconfigupperlimit");
+    _vXMLParameters.push_back("_vconfigresolution");
+    _vXMLParameters.push_back("_tworkspacegoal");
+    _vXMLParameters.push_back("_nmaxiterations");
+    _vXMLParameters.push_back("_fsteplength");
+    _vXMLParameters.push_back("_pathoptimization");
+    _vXMLParameters.push_back("_bcheckselfcollisions");
 }
 
 PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const PlannerBase::PlannerParameters& r)
@@ -248,7 +211,14 @@ PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const 
     _vConfigLowerLimit.resize(0);
     _vConfigUpperLimit.resize(0);
     _vConfigResolution.resize(0);
-
+    _sPathOptimizationPlanner = "shortcut_linear";
+    _sPathOptimizationParameters.resize(0);
+    _sExtraParameters.resize(0);
+    _nMaxIterations = 0;
+    _bCheckSelfCollisions = true;
+    _fStepLength = 0.04f;
+    _plannerparametersdepth = 0;
+    
     // transfer data
     std::stringstream ss;
     ss << r;
@@ -263,14 +233,14 @@ void PlannerBase::PlannerParameters::copy(boost::shared_ptr<PlannerParameters co
 
 bool PlannerBase::PlannerParameters::serialize(std::ostream& O) const
 {
-    O << "<vinitialconfig>";
+    O << "<_vinitialconfig>";
     FOREACHC(it, vinitialconfig)
         O << *it << " ";
-    O << "</vinitialconfig>" << endl;
-    O << "<vgoalconfig>";
+    O << "</_vinitialconfig>" << endl;
+    O << "<_vgoalconfig>";
     FOREACHC(it, vgoalconfig)
         O << *it << " ";
-    O << "</vgoalconfig>" << endl;
+    O << "</_vgoalconfig>" << endl;
     O << "<_vconfiglowerlimit>";
     FOREACHC(it, _vConfigLowerLimit)
         O << *it << " ";
@@ -289,56 +259,117 @@ bool PlannerBase::PlannerParameters::serialize(std::ostream& O) const
     
     O << "<_nmaxiterations>" << _nMaxIterations << "</_nmaxiterations>" << endl;
     O << "<_fsteplength>" << _fStepLength << "</_fsteplength>" << endl;
-    O << "<_bcomputesmoothpath>" << _bComputeSmoothPath << "</_bcomputesmoothpath>" << endl;
+    O << "<_pathoptimization planner=\"" << _sPathOptimizationPlanner << "\">" << _sPathOptimizationParameters << "</_pathoptimization>" << endl;
     O << "<_bcheckselfcollisions>" << _bCheckSelfCollisions << "</_bcheckselfcollisions>" << endl;
-    
+    O << _sExtraParameters << endl;
     return !!O;
 }
 
-void PlannerBase::PlannerParameters::startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+BaseXMLReader::ProcessElement PlannerBase::PlannerParameters::startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
 {
-    if( !!_pcurreader )
-        _pcurreader->startElement(name, atts);
+    _ss.str(""); // have to clear the string
+    if( !!__pcurreader ) {
+        if( __pcurreader->startElement(name, atts) == PE_Support )
+            return PE_Support;
+        return PE_Ignore;
+    }
+
+    if( __processingtag.size() > 0 )
+        return PE_Ignore;
+
+    if( name=="plannerparameters" ) {
+        _plannerparametersdepth++;
+        return PE_Support;
+    }
+
+    if( name == "_pathoptimization" ) {
+        _sslocal.reset(new std::stringstream());
+        _sPathOptimizationPlanner="";
+        _sPathOptimizationParameters="";
+        FOREACHC(itatt,atts) {
+            if( itatt->first == "planner" )
+                _sPathOptimizationPlanner = itatt->second;
+        }
+        __pcurreader.reset(new DummyXMLReader(name,GetXMLId(),_sslocal));
+        return PE_Support;
+    }
+
+    if( find(_vXMLParameters.begin(),_vXMLParameters.end(),name) == _vXMLParameters.end() ) {
+        _sslocal.reset(new std::stringstream());
+        *_sslocal << "<" << name << " ";
+        FOREACHC(itatt, atts)
+            *_sslocal << itatt->first << "=\"" << itatt->second << "\" ";
+        *_sslocal << ">" << endl;
+        __pcurreader.reset(new DummyXMLReader(name,GetXMLId(),_sslocal));
+        return PE_Support;
+    }
+
+    if( name=="_vinitialconfig"||name=="_vgoalconfig"||name=="_vconfiglowerlimit"||name=="_vconfigupperlimit"||name=="_vconfigresolution"||name=="_tworkspacegoal"||name=="_nmaxiterations"||name=="_fsteplength"||name=="_pathoptimization"||name=="_bcheckselfcollisions" ) {
+        __processingtag = name;
+        return PE_Support;
+    }
+    return PE_Pass;
 }
         
 bool PlannerBase::PlannerParameters::endElement(const std::string& name)
 {
-    if( !!_pcurreader ) {
-        if( _pcurreader->endElement(name) )
-            _pcurreader.reset();
+    if( !!__pcurreader ) {
+        if( __pcurreader->endElement(name) ) {
+            boost::shared_ptr<DummyXMLReader> pdummy = boost::dynamic_pointer_cast<DummyXMLReader>(__pcurreader);
+            if( !!pdummy ) {
+                if( pdummy->GetFieldName() == "_pathoptimization" ) {
+                    _sPathOptimizationParameters = _sslocal->str();
+                    _sslocal.reset();
+                }
+                else {
+                    *_sslocal << "</" << name << ">" << endl;
+                    _sExtraParameters += _sslocal->str();
+                    _sslocal.reset();
+                }
+            }
+            __pcurreader.reset();
+        }
     }
-    else if( name == "vinitialconfig")
-        vinitialconfig = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
-    else if( name == "vgoalconfig")
-        vgoalconfig = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
-    else if( name == "_vconfiglowerlimit")
-        _vConfigLowerLimit = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
-    else if( name == "_vconfigupperlimit")
-        _vConfigUpperLimit = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
-    else if( name == "_vconfigresolution")
-        _vConfigResolution = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
-    else if( name == "_tworkspacegoal") {
-        _tWorkspaceGoal.reset(new Transform());
-        _ss >> *_tWorkspaceGoal.get();
+    else if( name == "plannerparameters" )
+        return --_plannerparametersdepth < 0;
+    else if( __processingtag.size() > 0 ) {
+        if( name == "_vinitialconfig")
+            vinitialconfig = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
+        else if( name == "_vgoalconfig")
+            vgoalconfig = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
+        else if( name == "_vconfiglowerlimit")
+            _vConfigLowerLimit = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
+        else if( name == "_vconfigupperlimit")
+            _vConfigUpperLimit = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
+        else if( name == "_vconfigresolution")
+            _vConfigResolution = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
+        else if( name == "_tworkspacegoal") {
+            _tWorkspaceGoal.reset(new Transform());
+            _ss >> *_tWorkspaceGoal.get();
+        }
+        else if( name == "_nmaxiterations")
+            _ss >> _nMaxIterations;
+        else if( name == "_fsteplength")
+            _ss >> _fStepLength;
+        else if( name == "_bcheckselfcollisions" )
+            _ss >> _bCheckSelfCollisions;
+        if( name !=__processingtag )
+            RAVELOG_WARN(str(boost::format("invalid tag %s!=%s\n")%name%__processingtag));
+        __processingtag = "";
+        return false;
     }
-    else if( name == "_nmaxiterations")
-        _ss >> _nMaxIterations;
-    else if( name == "_fsteplength")
-        _ss >> _fStepLength;
-    else if( name == "_bcomputesmoothpath")
-        _ss >> _bComputeSmoothPath;
-    else if( name == "_bcheckselfcollisions" )
-        _ss >> _bCheckSelfCollisions;
-    else
-        _pcurreader.reset(new DummyXMLReader(name,GetXMLId()));
 
     return false;
 }
 
 void PlannerBase::PlannerParameters::characters(const std::string& ch)
 {
-    _ss.clear();
-    _ss.str(ch);
+    if( !!__pcurreader )
+        __pcurreader->characters(ch);
+    else {
+        _ss.clear();
+        _ss << ch;
+    }
 }
 
 std::ostream& operator<<(std::ostream& O, const PlannerBase::PlannerParameters& v)
@@ -448,6 +479,32 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
     BOOST_ASSERT((int)_vConfigResolution.size()==robot->GetActiveDOF());
 }
 
+bool PlannerBase::InitPlan(RobotBasePtr pbase, std::istream& isParameters)
+{
+    RAVELOG_WARN(str(boost::format("using default planner parameters structure to de-serialize parameters data inside %s, information might be lost!! Please define a InitPlan(robot,stream) function!\n")%GetXMLId()));
+    boost::shared_ptr<PlannerParameters> localparams(new PlannerParameters());
+    isParameters >> *localparams;
+    return InitPlan(pbase,localparams);
+}
+
+bool PlannerBase::_OptimizePath(RobotBasePtr probot, TrajectoryBasePtr ptraj)
+{
+    if( GetParameters()->_sPathOptimizationPlanner.size() == 0 )
+        return true;
+    PlannerBasePtr planner = GetEnv()->CreatePlanner(GetParameters()->_sPathOptimizationPlanner);
+    if( !planner )
+        return false;
+    PlannerParametersPtr params(new PlannerParameters());
+    params->copy(GetParameters());
+    params->_sExtraParameters += GetParameters()->_sPathOptimizationParameters;
+    params->_sPathOptimizationPlanner = "";
+    params->_sPathOptimizationParameters = "";
+    params->_nMaxIterations = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters
+    if( !planner->InitPlan(probot, params) )
+        return false;
+    return planner->PlanPath(ptraj);
+}
+
 #ifdef _WIN32
 const char *strcasestr(const char *s, const char *find)
 {
@@ -487,16 +544,14 @@ void RaveXMLErrorFunc(void *ctx, const char *msg, ...)
 
     va_start(args, msg);
     RAVELOG_ERRORA("XML Parse error: ");
-    wchar_t wfmt[200];
-    swprintf(wfmt,200,L"%s",msg);
-    vwprintf(wfmt,args);
+    vprintf(msg,args);
     va_end(args);
 }
 
 struct XMLREADERDATA
 {
-    XMLREADERDATA(BaseXMLReader* preader, xmlParserCtxtPtr ctxt) : _preader(preader), _ctxt(ctxt) {}
-    BaseXMLReader* _preader;
+    XMLREADERDATA(BaseXMLReaderPtr preader, xmlParserCtxtPtr ctxt) : _preader(preader), _ctxt(ctxt) {}
+    BaseXMLReaderPtr _preader, _pdummy;
     xmlParserCtxtPtr _ctxt;
 };
 
@@ -510,25 +565,46 @@ void DefaultStartElementSAXFunc(void *ctx, const xmlChar *name, const xmlChar **
         }
     }
 
+    XMLREADERDATA* pdata = (XMLREADERDATA*)ctx;
     string s = (const char*)name;
     std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-    ((XMLREADERDATA*)ctx)->_preader->startElement(s, listatts);
+    if( !!pdata->_pdummy ) {
+        RAVELOG_VERBOSE(str(boost::format("unknown field %s\n")%s));
+        pdata->_pdummy->startElement(s,listatts);
+    }
+    else {
+        if( ((XMLREADERDATA*)ctx)->_preader->startElement(s, listatts) != BaseXMLReader::PE_Support ) {
+            // not handling, so create a temporary class to handle it
+            pdata->_pdummy.reset(new DummyXMLReader(s,"(libxml)"));
+        }
+    }
 }
 
 void DefaultEndElementSAXFunc(void *ctx, const xmlChar *name)
 {
-    XMLREADERDATA* data = (XMLREADERDATA*)ctx;
+    XMLREADERDATA* pdata = (XMLREADERDATA*)ctx;
     string s = (const char*)name;
     std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-    if( data->_preader->endElement(s) ) {
-        //RAVEPRINT(L"%s size read %d\n", name, data->_ctxt->input->consumed);
-        xmlStopParser(data->_ctxt);
+    if( !!pdata->_pdummy ) {
+        if( pdata->_pdummy->endElement(s) ) {
+            pdata->_pdummy.reset();
+        }
+    }
+    else {
+        if( pdata->_preader->endElement(s) ) {
+            //RAVEPRINT(L"%s size read %d\n", name, data->_ctxt->input->consumed);
+            xmlStopParser(pdata->_ctxt);
+        }
     }
 }
 
 void DefaultCharactersSAXFunc(void *ctx, const xmlChar *ch, int len)
 {
-    ((XMLREADERDATA*)ctx)->_preader->characters(string((const char*)ch, len));
+    XMLREADERDATA* pdata = (XMLREADERDATA*)ctx;
+    if( !!pdata->_pdummy )
+        pdata->_pdummy->characters(string((const char*)ch, len));
+    else
+        pdata->_preader->characters(string((const char*)ch, len));
 }
 
 static bool xmlDetectSAX2(xmlParserCtxtPtr ctxt)
@@ -554,7 +630,7 @@ static bool xmlDetectSAX2(xmlParserCtxtPtr ctxt)
     return true;
 }
 
-bool ParseXMLData(BaseXMLReader* preader, const char* buffer, int size)
+bool ParseXMLData(BaseXMLReaderPtr preader, const char* buffer, int size)
 {
     static xmlSAXHandler s_DefaultSAXHandler = {0};
 
@@ -611,20 +687,19 @@ std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameters& pp)
     if( !!I) {
         stringbuf buf;
         stringstream::streampos pos = I.tellg();
-        I.get(buf, 0); // get all the data
+        I.get(buf, 0); // get all the data, yes this is inefficient, not sure if there anyway to search in streams
 
         const char* p = strcasestr(buf.str().c_str(), "</PlannerParameters>");
-
+        int ppsize=-1;
         if( p != NULL ) {
             I.clear();
-            I.seekg((size_t)pos+((p-buf.str().c_str())+20));
+            ppsize=(p-buf.str().c_str())+20;
+            I.seekg((size_t)pos+ppsize);
         }
         else
             throw openrave_exception(str(boost::format("error, failed to find </PlannerParameters> in %s")%buf.str()),ORE_InvalidArguments);
-
-        OneTagReader tagreader("plannerparameters", boost::shared_ptr<BaseXMLReader>(&pp,null_deleter()));
-        pp._pcurreader.reset();
-        LocalXML::ParseXMLData(&tagreader, buf.str().c_str(), -1);
+        pp._plannerparametersdepth = 0;
+        LocalXML::ParseXMLData(PlannerBase::PlannerParametersPtr(&pp,null_deleter()), buf.str().c_str(), ppsize);
     }
 
     return I;
@@ -734,20 +809,17 @@ SimpleSensorSystem::SimpleXMLReader::SimpleXMLReader(boost::shared_ptr<XMLData> 
 {
 }
 
-void SimpleSensorSystem::SimpleXMLReader::startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+BaseXMLReader::ProcessElement SimpleSensorSystem::SimpleXMLReader::startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
 {
-    if( !!_pcurreader )
-        _pcurreader->startElement(name,atts);
-    else if( name != _pdata->GetXMLId() && name != "offsetlink" && name != "id" && name != "sid" && name != "translation" && name != "rotationmat" && name != "rotationaxis" && name != "quat" && name != "pretranslation" && name != "prerotation" && name != "prerotationaxis" && name != "prequat" ) {
-        _pcurreader.reset(new DummyXMLReader(name, _pdata->GetXMLId()));
+    ss.str("");
+    if( name != _pdata->GetXMLId() && name != "offsetlink" && name != "id" && name != "sid" && name != "translation" && name != "rotationmat" && name != "rotationaxis" && name != "quat" && name != "pretranslation" && name != "prerotation" && name != "prerotationaxis" && name != "prequat" ) {
+        return PE_Pass;
     }
+    return PE_Support;
 }
 
 bool SimpleSensorSystem::SimpleXMLReader::endElement(const std::string& name)
 {
-    if( name == _pdata->GetXMLId() )
-        return true;
-
     if( name == "offsetlink" )
         ss >> _pdata->strOffsetLink;
     else if( name == "id" )
@@ -782,23 +854,18 @@ bool SimpleSensorSystem::SimpleXMLReader::endElement(const std::string& name)
     }
     else if( name == "prequat")
         ss >> _pdata->transPreOffset.rot;
-    else
-        RAVELOG_WARNA(str(boost::format("bad tag: %s")%name));
-
+    else if( name == tolowerstring(_pdata->GetXMLId()) )
+        return true;
+        
     if( !ss )
         RAVELOG_WARNA(str(boost::format("error parsing %s\n")%name));
-
     return false;
 }
 
 void SimpleSensorSystem::SimpleXMLReader::characters(const std::string& ch)
 {
-    if( !!_pcurreader )
-        _pcurreader->characters(ch);
-    else {
-        ss.clear();
-        ss.str(ch);
-    }
+    ss.clear();
+    ss << ch;
 }
 
 BaseXMLReaderPtr SimpleSensorSystem::CreateXMLReaderId(const string& xmlid, InterfaceBasePtr ptr, const std::list<std::pair<std::string,std::string> >& atts)

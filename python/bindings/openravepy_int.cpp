@@ -1744,8 +1744,50 @@ class PyPlannerBase : public PyInterfaceBase
 protected:
     PlannerBasePtr _pplanner;
 public:
+    class PyPlannerParameters
+    {
+        PlannerBase::PlannerParametersPtr _paramswrite;
+        PlannerBase::PlannerParametersConstPtr _paramsread;
+      public:
+        PyPlannerParameters(PlannerBase::PlannerParametersPtr params) : _paramswrite(params), _paramsread(params) {}
+        PyPlannerParameters(PlannerBase::PlannerParametersConstPtr params) : _paramsread(params) {}
+        virtual ~PyPlannerParameters() {}
+
+        PlannerBase::PlannerParametersConstPtr GetParameters() const { return _paramsread; }
+        
+        string __repr__() { return boost::str(boost::format("<PlannerParameters(dof=%d)>")%_paramsread->GetDOF()); }
+        string __str__() {
+            stringstream ss;
+            ss << *_paramsread << endl;
+            return ss.str();
+        }
+        bool __eq__(boost::shared_ptr<PyPlannerParameters> p) { return !!p && _paramsread == p->_paramsread; }
+        bool __ne__(boost::shared_ptr<PyPlannerParameters> p) { return !p || _paramsread != p->_paramsread; }
+    };
+        
     PyPlannerBase(PlannerBasePtr pplanner, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pplanner, pyenv), _pplanner(pplanner) {}
     virtual ~PyPlannerBase() {}
+
+    bool InitPlan(PyRobotBasePtr pbase, boost::shared_ptr<PyPlannerParameters> pparams)
+    {
+        return _pplanner->InitPlan(pbase->GetRobot(),pparams->GetParameters());
+    }
+    
+    bool InitPlan(PyRobotBasePtr pbase, const string& params)
+    {
+        stringstream ss(params);
+        return _pplanner->InitPlan(pbase->GetRobot(),ss);
+    }
+    
+    bool PlanPath(PyTrajectoryBasePtr ptraj, object output);
+    
+    boost::shared_ptr<PyPlannerParameters> GetParameters() const
+    {
+        PlannerBase::PlannerParametersConstPtr params = _pplanner->GetParameters();
+        if( !params )
+            return boost::shared_ptr<PyPlannerParameters>();
+        return boost::shared_ptr<PyPlannerParameters>(new PyPlannerParameters(params));
+    }
 };
 
 class PySensorSystemBase : public PyInterfaceBase
@@ -1774,6 +1816,11 @@ public:
 
     TrajectoryBasePtr GetTrajectory() { return _ptrajectory; }
 };
+
+bool PyPlannerBase::PlanPath(PyTrajectoryBasePtr ptraj, object output)
+{
+    return _pplanner->PlanPath(ptraj->GetTrajectory());
+}
 
 bool PyControllerBase::SetPath(PyTrajectoryBasePtr ptraj)
 {
@@ -3637,7 +3684,23 @@ BOOST_PYTHON_MODULE(openravepy_int)
             ;
     }
 
-    class_<PyPlannerBase, boost::shared_ptr<PyPlannerBase>, bases<PyInterfaceBase> >("Planner", no_init);
+    {
+        bool (PyPlannerBase::*InitPlan1)(PyRobotBasePtr, boost::shared_ptr<PyPlannerBase::PyPlannerParameters>) = &PyPlannerBase::InitPlan;
+        bool (PyPlannerBase::*InitPlan2)(PyRobotBasePtr, const string&) = &PyPlannerBase::InitPlan;
+        scope planner = class_<PyPlannerBase, boost::shared_ptr<PyPlannerBase>, bases<PyInterfaceBase> >("Planner", no_init)
+                .def("InitPlan",InitPlan1,args("robot","params"))
+                .def("InitPlan",InitPlan2,args("robot","xmlparams"))
+                .def("PlanPath",&PyPlannerBase::PlanPath,args("traj","output"))
+                .def("GetParameters",&PyPlannerBase::GetParameters)
+                ;
+        
+        class_<PyPlannerBase::PyPlannerParameters, boost::shared_ptr<PyPlannerBase::PyPlannerParameters> >("PlannerParameters",no_init)
+                .def("__str__",&PyPlannerBase::PyPlannerParameters::__str__)
+                .def("__repr__",&PyPlannerBase::PyPlannerParameters::__repr__)
+                .def("__eq__",&PyPlannerBase::PyPlannerParameters::__eq__)
+                .def("__ne__",&PyPlannerBase::PyPlannerParameters::__ne__)
+                ;
+    }
     class_<PySensorSystemBase, boost::shared_ptr<PySensorSystemBase>, bases<PyInterfaceBase> >("SensorSystem", no_init);
     class_<PyTrajectoryBase, boost::shared_ptr<PyTrajectoryBase>, bases<PyInterfaceBase> >("Trajectory", no_init);
     class_<PyControllerBase, boost::shared_ptr<PyControllerBase>, bases<PyInterfaceBase> >("Controller", no_init)

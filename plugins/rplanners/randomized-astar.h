@@ -99,7 +99,7 @@ public:
         CLOSED
     };
 
- RandomizedAStarPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
+RandomizedAStarPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
     {
         __description = "Constrained Grasp Planning Randomized A*";
         _report.reset(new COLLISIONREPORT());
@@ -109,6 +109,8 @@ public:
     
     virtual ~RandomizedAStarPlanner() {}
 
+    virtual PlannerParametersConstPtr GetParameters() const { return _parameters; }
+    
     void Destroy()
     {
         _spatialtree.Destroy();
@@ -122,31 +124,31 @@ public:
         _vdeadnodes.reserve(1<<16);
     }
 
-    virtual RobotBasePtr GetRobot() { return _robot; }
-
     // Planning Methods
     ///< manipulator state is also set
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        _parameters.reset();
         Destroy();
         _robot = pbase;
-        _parameters.copy(pparams);
+        boost::shared_ptr<RAStarParameters> parameters(new RAStarParameters());
+        parameters->copy(pparams);
 
         RobotBase::RobotStateSaver savestate(_robot);
 
-        if( !_parameters._goalfn )
-            _parameters._goalfn = boost::bind(&SimpleGoalMetric::Eval,boost::shared_ptr<SimpleGoalMetric>(new SimpleGoalMetric(_robot)),_1);
-        if( !_parameters._costfn )
-            _parameters._costfn = boost::bind(&SimpleCostMetric::Eval,boost::shared_ptr<SimpleCostMetric>(new SimpleCostMetric(_robot)),_1);
+        if( !parameters->_goalfn )
+            parameters->_goalfn = boost::bind(&SimpleGoalMetric::Eval,boost::shared_ptr<SimpleGoalMetric>(new SimpleGoalMetric(_robot)),_1);
+        if( !parameters->_costfn )
+            parameters->_costfn = boost::bind(&SimpleCostMetric::Eval,boost::shared_ptr<SimpleCostMetric>(new SimpleCostMetric(_robot)),_1);
 
         _vSampleConfig.resize(GetDOF());
         _jointIncrement.resize(GetDOF());
         _vzero.resize(GetDOF(),0);
-        _spatialtree._pDistMetric = _parameters._distmetricfn;
+        _spatialtree._pDistMetric = parameters->_distmetricfn;
 
         _jointResolutionInv.resize(0);
-        FOREACH(itj, _parameters._vConfigResolution) {
+        FOREACH(itj, parameters->_vConfigResolution) {
             if( *itj != 0 )
                 _jointResolutionInv.push_back(1 / *itj);
             else {
@@ -155,20 +157,23 @@ public:
             }
         }
 
+        _parameters=parameters;
         nIndex = 0;
         return true;
     }
 
     virtual bool PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream)
     {
+        if( !_parameters )
+            return false;
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         Destroy();
 
         RobotBase::RobotStateSaver saver(_robot);
         Node* pcurrent=NULL, *pbest = NULL;
 
-        _parameters._setstatefn(_parameters.vinitialconfig);
-        pcurrent = CreateNode(0, NULL, _parameters.vinitialconfig);
+        _parameters->_setstatefn(_parameters->vinitialconfig);
+        pcurrent = CreateNode(0, NULL, _parameters->vinitialconfig);
 
         if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot), _report) ) {
             RAVELOG_WARNA("RA*: robot initially in collision %s:%s!\n",
@@ -176,13 +181,13 @@ public:
                           _report->plink2!=NULL?_report->plink2->GetName().c_str():"(NULL)");
             return false;
         }
-        else if( _parameters._bCheckSelfCollisions && _robot->CheckSelfCollision() ) {
+        else if( _parameters->_bCheckSelfCollisions && _robot->CheckSelfCollision() ) {
             RAVELOG_WARNA("RA*: robot self-collision!\n");
             return false;
         }
     
         vector<dReal> tempconfig(GetDOF());
-        int nMaxIter = _parameters._nMaxIterations > 0 ? _parameters._nMaxIterations : 8000;
+        int nMaxIter = _parameters->_nMaxIterations > 0 ? _parameters->_nMaxIterations : 8000;
 
         while(1) {
 
@@ -196,7 +201,7 @@ public:
             // delete from current lists
             _sortedtree.blocks.pop_back();
             _vdeadnodes.push_back(pcurrent);
-            BOOST_ASSERT( pcurrent->numchildren < _parameters.nMaxChildren );
+            BOOST_ASSERT( pcurrent->numchildren < _parameters->nMaxChildren );
 
             if( pcurrent->ftotal - pcurrent->fcost < 1e-4f ) {
                 pbest = pcurrent;
@@ -206,46 +211,46 @@ public:
             list<Node*> children;
             int i;
         
-            for(i = 0; i < _parameters.nMaxChildren && pcurrent->numchildren < _parameters.nMaxChildren; ++i) {
+            for(i = 0; i < _parameters->nMaxChildren && pcurrent->numchildren < _parameters->nMaxChildren; ++i) {
 
                 // keep on sampling until a valid config
                 int sample;
-                for(sample = 0; sample < _parameters.nMaxSampleTries; ++sample) {
-                    if( !_parameters._sampleneighfn(_vSampleConfig, pcurrent->q, _parameters.fRadius) ) {
+                for(sample = 0; sample < _parameters->nMaxSampleTries; ++sample) {
+                    if( !_parameters->_sampleneighfn(_vSampleConfig, pcurrent->q, _parameters->fRadius) ) {
                         sample = 1000;
                         break;
                     }
 
-                    if( !!_parameters._constraintfn ) {
-                        _parameters._setstatefn(_vSampleConfig);
-                        if( !_parameters._constraintfn(pcurrent->q, _vSampleConfig, 0) )
+                    if( !!_parameters->_constraintfn ) {
+                        _parameters->_setstatefn(_vSampleConfig);
+                        if( !_parameters->_constraintfn(pcurrent->q, _vSampleConfig, 0) )
                             continue;
                     }
 
                     if (_CheckCollision(pcurrent->q, _vSampleConfig, OPEN))
                         continue;
                 
-                    _parameters._setstatefn(_vSampleConfig);
-                    if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || (_parameters._bCheckSelfCollisions&&_robot->CheckSelfCollision()) )
+                    _parameters->_setstatefn(_vSampleConfig);
+                    if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || (_parameters->_bCheckSelfCollisions&&_robot->CheckSelfCollision()) )
                         continue;
 
                     break;
                 
                 }
-                if( sample >= _parameters.nMaxSampleTries )
+                if( sample >= _parameters->nMaxSampleTries )
                     continue;
                         
                 //while (getchar() != '\n') usleep(1000);
 
                 Node* nearestnode = _spatialtree.GetNN(_vSampleConfig);
-                if( _spatialtree._fBestDist > _parameters.fDistThresh ) {
-                    dReal fdist = _parameters._distmetricfn(pcurrent->q, _vSampleConfig);
-                    CreateNode(nearestnode->fcost + fdist * _parameters._costfn(_vSampleConfig), nearestnode, _vSampleConfig, true);
+                if( _spatialtree._fBestDist > _parameters->fDistThresh ) {
+                    dReal fdist = _parameters->_distmetricfn(pcurrent->q, _vSampleConfig);
+                    CreateNode(nearestnode->fcost + fdist * _parameters->_costfn(_vSampleConfig), nearestnode, _vSampleConfig, true);
                     pcurrent->numchildren++;
 
                     if( (_spatialtree._nodes.size() % 50) == 0 ) {
                         //DumpNodes();
-                        RAVELOG_VERBOSEA(str(boost::format("trees at %d(%d) : to goal at %f,%f\n")%_sortedtree.blocks.size()%_spatialtree._nodes.size()%((pcurrent->ftotal-pcurrent->fcost)/_parameters.fGoalCoeff)%pcurrent->fcost));
+                        RAVELOG_VERBOSEA(str(boost::format("trees at %d(%d) : to goal at %f,%f\n")%_sortedtree.blocks.size()%_spatialtree._nodes.size()%((pcurrent->ftotal-pcurrent->fcost)/_parameters->fGoalCoeff)%pcurrent->fcost));
                     }
                 }
             }
@@ -260,12 +265,12 @@ public:
 
         RAVELOG_DEBUGA("Path found, final node: %f, %f\n", pbest->fcost, pbest->ftotal-pbest->fcost);
 
-        _parameters._setstatefn(pbest->q);
-        if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || (_parameters._bCheckSelfCollisions&&_robot->CheckSelfCollision()) )
+        _parameters->_setstatefn(pbest->q);
+        if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || (_parameters->_bCheckSelfCollisions&&_robot->CheckSelfCollision()) )
             RAVELOG_WARNA("RA* collision\n");
     
         stringstream ss;
-        ss << endl << "Path found, final node: cost: " << pbest->fcost << ", goal: " << (pbest->ftotal-pbest->fcost)/_parameters.fGoalCoeff << endl;
+        ss << endl << "Path found, final node: cost: " << pbest->fcost << ", goal: " << (pbest->ftotal-pbest->fcost)/_parameters->fGoalCoeff << endl;
         for(int i = 0; i < GetDOF(); ++i)
             ss << pbest->q[i] << " ";
         ss << "\n-------\n";
@@ -278,10 +283,10 @@ public:
             pcurrent = pcurrent->parent;
         }
 
-        _OptimizePath(vecnodes);
+        _SimpleOptimizePath(vecnodes);
 
         Trajectory::TPOINT p;
-        p.q = _parameters.vinitialconfig;
+        p.q = _parameters->vinitialconfig;
         ptraj->AddPoint(p);
 
         list<Node*>::reverse_iterator itcur, itprev;
@@ -293,6 +298,7 @@ public:
             ++itcur;
         }
 
+        _OptimizePath(_robot,ptraj);
         return true;
     }
 
@@ -311,7 +317,7 @@ private:
 
         p->q = pfConfig;
         p->fcost = fcost;
-        p->ftotal = _parameters.fGoalCoeff*_parameters._goalfn(pfConfig) + fcost;
+        p->ftotal = _parameters->fGoalCoeff*_parameters->_goalfn(pfConfig) + fcost;
 
         if( add ) {
             _spatialtree.AddNode(p);
@@ -368,26 +374,26 @@ private:
         }
 
         // first make sure the end is free
-        vector<dReal> vtempconfig(_parameters.GetDOF());
+        vector<dReal> vtempconfig(_parameters->GetDOF());
         if (bCheckEnd) {
             if( pvCheckedConfigurations != NULL )
                 pvCheckedConfigurations->push_back(pQ1);
-            _parameters._setstatefn(pQ1);
-            if (GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || (_parameters._bCheckSelfCollisions&&_robot->CheckSelfCollision()) )
+            _parameters->_setstatefn(pQ1);
+            if (GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || (_parameters->_bCheckSelfCollisions&&_robot->CheckSelfCollision()) )
                 return true;
         }
 
         // compute  the discretization
         int i, numSteps = 1;
         dReal* pfresolution = &_jointResolutionInv[0];
-        for (i = 0; i < _parameters.GetDOF(); i++) {
+        for (i = 0; i < _parameters->GetDOF(); i++) {
             int steps = (int)(fabs(pQ1[i] - pQ0[i]) * pfresolution[i]);
             if (steps > numSteps)
                 numSteps = steps;
         }
 
         // compute joint increments
-        for (i = 0; i < _parameters.GetDOF(); i++)
+        for (i = 0; i < _parameters->GetDOF(); i++)
             _jointIncrement[i] = (pQ1[i] - pQ0[i])/((float)numSteps);
 
         // check for collision along the straight-line path
@@ -395,27 +401,27 @@ private:
         // not check the start based on the value of 'start'
         for (int f = start; f < numSteps; f++) {
 
-            for (i = 0; i < _parameters.GetDOF(); i++)
+            for (i = 0; i < _parameters->GetDOF(); i++)
                 vtempconfig[i] = pQ0[i] + (_jointIncrement[i] * f);
         
             if( pvCheckedConfigurations != NULL )
                 pvCheckedConfigurations->push_back(vtempconfig);
-            _parameters._setstatefn(vtempconfig);
-            if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || (_parameters._bCheckSelfCollisions&&_robot->CheckSelfCollision()) )
+            _parameters->_setstatefn(vtempconfig);
+            if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || (_parameters->_bCheckSelfCollisions&&_robot->CheckSelfCollision()) )
                 return true;
         }
 
         return false;
     }
 
-    void _OptimizePath(list<Node*>& path)
+    void _SimpleOptimizePath(list<Node*>& path)
     {
         if( path.size() <= 2 )
             return;
 
         list<Node*>::iterator startNode, endNode;
     
-        for(int i = 2 * (int)path.size(); i > 0; --i) {
+        for(int i =10; i > 0; --i) {
             // pick a random node on the path, and a random jump ahead
             int startIndex = RaveRandomInt()%((int)path.size() - 2);
             int endIndex   = startIndex + ((RaveRandomInt()%5) + 2);
@@ -475,7 +481,7 @@ private:
                     }
                 }
 
-                fprintf(f, "%f %d\n", ((*it)->ftotal-(*it)->fcost)/_parameters.fGoalCoeff, index+1);
+                fprintf(f, "%f %d\n", ((*it)->ftotal-(*it)->fcost)/_parameters->fGoalCoeff, index+1);
             }
         }
 
@@ -485,9 +491,9 @@ private:
         fclose(f);
     }
 
-    inline int GetDOF() const { return _parameters.GetDOF(); }
+    inline int GetDOF() const { return _parameters->GetDOF(); }
     
-    RAStarParameters _parameters;
+    boost::shared_ptr<RAStarParameters> _parameters;
     SpatialTree _spatialtree;
     BinarySearchTree<Node*, dReal> _sortedtree;   // sorted by decreasing value
     CollisionReportPtr _report;

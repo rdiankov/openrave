@@ -27,18 +27,19 @@ class GrasperPlanner:  public PlannerBase
     };
 
 public:
- GrasperPlanner(EnvironmentBasePtr penv) : PlannerBase(penv), _report(new COLLISIONREPORT()), _parameters(penv) {}
+ GrasperPlanner(EnvironmentBasePtr penv) : PlannerBase(penv), _report(new COLLISIONREPORT()) {}
     bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _robot = pbase;
-        _parameters.copy(pparams);
+        _parameters.reset(new GraspParameters(GetEnv()));
+        _parameters->copy(pparams);
 
-        if( _parameters.btightgrasp )
+        if( _parameters->btightgrasp )
             RAVELOG_WARNA("tight grasping not supported yet\n");
 
         _vAvoidLinkGeometry.resize(0);
-        FOREACH(itavoid,_parameters.vavoidlinkgeometry) {
+        FOREACH(itavoid,_parameters->vavoidlinkgeometry) {
             KinBody::LinkPtr plink = _robot->GetLink(*itavoid);
             if( !plink ) {
                 RAVELOG_WARNA(str(boost::format("failed to find avoiding link\n")%*itavoid));
@@ -47,13 +48,12 @@ public:
             _vAvoidLinkGeometry.push_back(plink);
         }
 
-        _bInit = true;
         return true;
     }
 
     bool PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream = boost::shared_ptr<std::ostream>())
     {
-        if(!_bInit)
+        if(!_parameters)
             return false;
 
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -83,18 +83,18 @@ public:
             pbase = vlinks.at(0);
         }
 
-        if( (int)_parameters.vinitialconfig.size() == _robot->GetActiveDOF() )
-            _robot->SetActiveDOFValues(_parameters.vinitialconfig,true);
+        if( (int)_parameters->vinitialconfig.size() == _robot->GetActiveDOF() )
+            _robot->SetActiveDOFValues(_parameters->vinitialconfig,true);
 
         Transform tbase = pbase->GetTransform(), trobot = _robot->GetTransform();
         Transform ttorobot = tbase.inverse() * trobot;
         Vector vapproachdir;
         Transform tTarget, tTargetOffset;
-        if( !!_parameters.targetbody ) {
-            tTarget = _parameters.targetbody->GetTransform();
-            if( _parameters.fgraspingnoise > 0 ) {
+        if( !!_parameters->targetbody ) {
+            tTarget = _parameters->targetbody->GetTransform();
+            if( _parameters->fgraspingnoise > 0 ) {
                 dReal frotratio = RaveRandomFloat(); // ratio due to rotation
-                Vector vrandtrans = _parameters.fgraspingnoise*(1-frotratio)*Vector(2.0f*RaveRandomFloat()-1.0f, 2.0f*RaveRandomFloat()-1.0f, 2.0f*RaveRandomFloat()-1.0f);
+                Vector vrandtrans = _parameters->fgraspingnoise*(1-frotratio)*Vector(2.0f*RaveRandomFloat()-1.0f, 2.0f*RaveRandomFloat()-1.0f, 2.0f*RaveRandomFloat()-1.0f);
                 Vector vrandaxis;
                 while(1) {
                     vrandaxis = Vector(2.0f*RaveRandomFloat()-1.0f, 2.0f*RaveRandomFloat()-1.0f, 2.0f*RaveRandomFloat()-1.0f);
@@ -103,33 +103,33 @@ public:
                 }
                 
                 // find furthest point from origin of body and rotate around center
-                AABB ab = _parameters.targetbody->ComputeAABB();
+                AABB ab = _parameters->targetbody->ComputeAABB();
                 dReal fmaxradius = RaveSqrt(ab.extents.lengthsqr3());
-                tTargetOffset.rotfromaxisangle(vrandaxis.normalize3(),RaveRandomFloat()*_parameters.fgraspingnoise*frotratio*fmaxradius);
+                tTargetOffset.rotfromaxisangle(vrandaxis.normalize3(),RaveRandomFloat()*_parameters->fgraspingnoise*frotratio*fmaxradius);
                 tTargetOffset.trans = tTargetOffset.rotate(-ab.pos)+ab.pos+vrandtrans;
             }
         }
 
-        vapproachdir = (tTargetOffset*tTarget).rotate(_parameters.vtargetdirection);
+        vapproachdir = (tTargetOffset*tTarget).rotate(_parameters->vtargetdirection);
 
-        if( _parameters.btransformrobot ) {
+        if( _parameters->btransformrobot ) {
             _robot->SetTransform(Transform()); // this is necessary to reset any 'randomness' introduced from the current state
 
             if( !!pmanip ) {
-                tbase.rotfromaxisangle(pmanip->GetPalmDirection(),_parameters.ftargetroll);
+                tbase.rotfromaxisangle(pmanip->GetPalmDirection(),_parameters->ftargetroll);
 
                 // set the robot so that its palm is facing the approach direction find the closest rotation
-                Transform torient; torient.rot = quatRotateDirection(pmanip->GetPalmDirection(), _parameters.vtargetdirection);
+                Transform torient; torient.rot = quatRotateDirection(pmanip->GetPalmDirection(), _parameters->vtargetdirection);
                 tbase = torient * tbase;
                 // make sure origin of pbase is on target position
-                tbase.trans = _parameters.vtargetposition;
+                tbase.trans = _parameters->vtargetposition;
 
                 // transform into base
                 tbase = tbase * pmanip->GetEndEffectorTransform().inverse() * pbase->GetTransform();
             }
             else {
                 RAVELOG_DEBUGA("no active manipulator for robot, cannot get palm direction\n");
-                tbase.trans = _parameters.vtargetposition;
+                tbase.trans = _parameters->vtargetposition;
             }
 
             tbase = tTargetOffset * tTarget * tbase;
@@ -138,7 +138,7 @@ public:
 
             dReal step_size = 0.05f;
             //backup the robot until it is no longer colliding with the object
-            if( !_parameters.targetbody ) {
+            if( !_parameters->targetbody ) {
                 while(1) {
                     if(!GetEnv()->CheckCollision(KinBodyConstPtr(_robot)))
                         break;
@@ -148,7 +148,7 @@ public:
             }
             else {
                 while(1) {
-                    if(!GetEnv()->CheckCollision(KinBodyConstPtr(_robot),KinBodyConstPtr(_parameters.targetbody)))
+                    if(!GetEnv()->CheckCollision(KinBodyConstPtr(_robot),KinBodyConstPtr(_parameters->targetbody)))
                         break;
                     trobot.trans -= vapproachdir * step_size;
                     _robot->SetTransform(trobot);
@@ -174,7 +174,7 @@ public:
 
         Vector vTargetCenter;
         dReal fTargetRadius;
-        if( !_parameters.targetbody ) {
+        if( !_parameters->targetbody ) {
             vector<KinBodyPtr> vbodies;
             GetEnv()->GetBodies(vbodies);
             Vector vmin, vmax;
@@ -211,7 +211,7 @@ public:
             }
         }
         else {
-            AABB ab = _parameters.targetbody->ComputeAABB();
+            AABB ab = _parameters->targetbody->ComputeAABB();
             vTargetCenter = ab.pos;
             fTargetRadius = RaveSqrt(ab.extents.lengthsqr3());
         }
@@ -225,7 +225,7 @@ public:
             if( _robot->GetAffineDOF() & RobotBase::DOF_Z )
                 pZ = &dofvals.at(_robot->GetAffineDOFIndex(RobotBase::DOF_Z));
     
-            Vector v = vapproachdir * (_parameters.fcoarsestep*_parameters.ftranslationstepmult);
+            Vector v = vapproachdir * (_parameters->fcoarsestep*_parameters->ftranslationstepmult);
             while(1) {
                 int ct = 0;
                 for(int q = 0; q < (int)vlinks.size(); q++) {
@@ -236,7 +236,7 @@ public:
                 if( ct&CT_RegularCollision )
                     break;
 
-                if(_parameters.breturntrajectory) {
+                if(_parameters->breturntrajectory) {
                     ptemp.trans = _robot->GetTransform();
                     ptraj->AddPoint(ptemp); 
                 }
@@ -260,7 +260,7 @@ public:
             if( pZ != NULL )  *pZ -= v.z;
             _robot->SetActiveDOFValues(dofvals); 
 
-            v = vapproachdir * (_parameters.ffinestep*_parameters.ftranslationstepmult);
+            v = vapproachdir * (_parameters->ffinestep*_parameters->ftranslationstepmult);
             while(1) {
                 int ct = 0;
                 for(int q = 0; q < (int)vlinks.size(); q++) {
@@ -276,20 +276,20 @@ public:
                 if( pZ != NULL )  *pZ += v.z;
                 _robot->SetActiveDOFValues(dofvals);
 
-                if(_parameters.breturntrajectory) {
+                if(_parameters->breturntrajectory) {
                     ptemp.trans = _robot->GetTransform();
                     ptraj->AddPoint(ptemp); 
                 }
             }
 
-            if( _parameters.fstandoff > 0 ) {
-                v = -vapproachdir*_parameters.fstandoff;
+            if( _parameters->fstandoff > 0 ) {
+                v = -vapproachdir*_parameters->fstandoff;
                 if( pX != NULL )  *pX += v.x;
                 if( pY != NULL )  *pY += v.y;
                 if( pZ != NULL )  *pZ += v.z;
                 _robot->SetActiveDOFValues(dofvals);
-                if( (!_parameters.targetbody && GetEnv()->CheckCollision(KinBodyConstPtr(_robot))) || 
-                    (!!_parameters.targetbody && GetEnv()->CheckCollision(KinBodyConstPtr(_robot),KinBodyConstPtr(_parameters.targetbody))) ) {
+                if( (!_parameters->targetbody && GetEnv()->CheckCollision(KinBodyConstPtr(_robot))) || 
+                    (!!_parameters->targetbody && GetEnv()->CheckCollision(KinBodyConstPtr(_robot),KinBodyConstPtr(_parameters->targetbody))) ) {
                     // in collision, so move back
                     if( pX != NULL )  *pX -= v.x;
                     if( pY != NULL )  *pY -= v.y;
@@ -312,8 +312,8 @@ public:
         std::vector<dReal> vlowerlim, vupperlim;
         _robot->GetActiveDOFLimits(vlowerlim,vupperlim);
         vector<dReal> vclosingdir(_robot->GetActiveDOF(),0);
-        if( (int)_parameters.vgoalconfig.size() == _robot->GetActiveDOF() ) {
-            vclosingdir = _parameters.vgoalconfig;
+        if( (int)_parameters->vgoalconfig.size() == _robot->GetActiveDOF() ) {
+            vclosingdir = _parameters->vgoalconfig;
         }
         else {
             // get closing direction from manipulators
@@ -342,8 +342,8 @@ public:
 
             dReal fmult = 1;
             if(_robot->GetJoints().at(nJointIndex)->GetType() == KinBody::Joint::JointSlider )
-                fmult = _parameters.ftranslationstepmult;
-            dReal step_size = _parameters.fcoarsestep*fmult;
+                fmult = _parameters->ftranslationstepmult;
+            dReal step_size = _parameters->fcoarsestep*fmult;
 
             bool collision = false;
             bool coarse_pass = true; ///this parameter controls the coarseness of the step    
@@ -374,8 +374,8 @@ public:
                                 dofvals[ifing] -= vclosingdir[ifing] * step_size;
                                 UpdateDependents(ifing,dofvals);
                                 _robot->SetActiveDOFValues(dofvals,true);
-                                num_iters = (int)(step_size/(_parameters.ffinestep*fmult))+1;
-                                step_size = _parameters.ffinestep*fmult;
+                                num_iters = (int)(step_size/(_parameters->ffinestep*fmult))+1;
+                                step_size = _parameters->ffinestep*fmult;
                             }
                             else {
                                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
@@ -405,7 +405,7 @@ public:
                                 RAVELOG_VERBOSEA(ss.str());
                             }
                      
-                            if( (ct & CT_SelfCollision) || _parameters.bavoidcontact ) {
+                            if( (ct & CT_SelfCollision) || _parameters->bavoidcontact ) {
                                 // don't want the robot to end up in self collision, so back up
                                 dofvals[ifing] -= vclosingdir[ifing] * step_size;
                             }
@@ -418,7 +418,7 @@ public:
 
                 for(int j = 0; j < _robot->GetActiveDOF(); j++)
                     ptemp.q[j] = dofvals[j];
-                if(_parameters.breturntrajectory)
+                if(_parameters->breturntrajectory)
                     ptraj->AddPoint(ptemp); 
 
                 if(collision)
@@ -442,9 +442,11 @@ public:
 
         if( bAddLastPoint ) {
             // don't forget the final point!
+            _robot->SetActiveDOFValues(dofvals,true);
+            _robot->GetActiveDOFValues(dofvals);
             for(int j = 0; j < _robot->GetActiveDOF(); j++)
                 ptemp.q[j] = dofvals[j];
-            if(!_parameters.breturntrajectory)
+            if(!_parameters->breturntrajectory)
                 ptraj->AddPoint(ptemp);
         }
 
@@ -463,10 +465,10 @@ public:
                 }
             }
 
-            if( _parameters.bonlycontacttarget ) {
+            if( _parameters->bonlycontacttarget ) {
                 // check if hit anything besides the target
-                if( (!!_report->plink1 && _report->plink1->GetParent() != plink->GetParent() && _report->plink1->GetParent() != _parameters.targetbody) ||
-                    (!!_report->plink2 && _report->plink2->GetParent() != plink->GetParent() && _report->plink2->GetParent() != _parameters.targetbody) ) {
+                if( (!!_report->plink1 && _report->plink1->GetParent() != plink->GetParent() && _report->plink1->GetParent() != _parameters->targetbody) ||
+                    (!!_report->plink2 && _report->plink2->GetParent() != plink->GetParent() && _report->plink2->GetParent() != _parameters->targetbody) ) {
                     ct |= CT_AvoidLinkHit;
                 }
             }
@@ -498,12 +500,13 @@ public:
 
     }
 
+    virtual PlannerParametersConstPtr GetParameters() const { return _parameters; }
+    
 protected:
     CollisionReportPtr _report;
-    GraspParameters _parameters;
+    boost::shared_ptr<GraspParameters> _parameters;
     RobotBasePtr _robot;
     vector<KinBody::LinkPtr> _vAvoidLinkGeometry;
-    bool _bInit;
 };
 
 #endif

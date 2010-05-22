@@ -94,8 +94,8 @@ namespace OpenRAVEXMLParser
 
     struct XMLREADERDATA
     {
-    XMLREADERDATA(BaseXMLReaderPtr preader, xmlParserCtxtPtr ctxt) : _preader(preader), _ctxt(ctxt) {}
-        BaseXMLReaderPtr _preader;
+        XMLREADERDATA(BaseXMLReaderPtr preader, xmlParserCtxtPtr ctxt) : _preader(preader), _ctxt(ctxt) {}
+        BaseXMLReaderPtr _preader, _pdummy;
         xmlParserCtxtPtr _ctxt;
     };
 
@@ -109,24 +109,46 @@ namespace OpenRAVEXMLParser
             }
         }
 
+        XMLREADERDATA* pdata = (XMLREADERDATA*)ctx;
         string s = (const char*)name;
         std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-        ((XMLREADERDATA*)ctx)->_preader->startElement(s,listatts);
+        if( !!pdata->_pdummy ) {
+            RAVELOG_VERBOSE(str(boost::format("unknown field %s\n")%s));
+            pdata->_pdummy->startElement(s,listatts);
+        }
+        else {
+            if( ((XMLREADERDATA*)ctx)->_preader->startElement(s, listatts) != BaseXMLReader::PE_Support ) {
+                // not handling, so create a temporary class to handle it
+                pdata->_pdummy.reset(new DummyXMLReader(s,"(libxml)"));
+            }
+        }
     }
 
     static void DefaultEndElementSAXFunc(void *ctx, const xmlChar *name)
     {
-        XMLREADERDATA* data = (XMLREADERDATA*)ctx;
+        XMLREADERDATA* pdata = (XMLREADERDATA*)ctx;
         string s = (const char*)name;
         std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-        if( data->_preader->endElement(s) ) {
-            xmlStopParser(data->_ctxt);
+        if( !!pdata->_pdummy ) {
+            if( pdata->_pdummy->endElement(s) ) {
+                pdata->_pdummy.reset();
+            }
+        }
+        else {
+            if( pdata->_preader->endElement(s) ) {
+                //RAVEPRINT(L"%s size read %d\n", name, data->_ctxt->input->consumed);
+                xmlStopParser(pdata->_ctxt);
+            }
         }
     }
 
     static void DefaultCharactersSAXFunc(void *ctx, const xmlChar *ch, int len)
     {
-        ((XMLREADERDATA*)ctx)->_preader->characters(string((const char*)ch,len));
+        XMLREADERDATA* pdata = (XMLREADERDATA*)ctx;
+        if( !!pdata->_pdummy )
+            pdata->_pdummy->characters(string((const char*)ch, len));
+        else
+            pdata->_preader->characters(string((const char*)ch, len));
     }
 
     static void RaveXMLErrorFunc(void *ctx, const char *msg, ...)
@@ -497,11 +519,26 @@ namespace OpenRAVEXMLParser
     class StreamXMLReader : public BaseXMLReader
     {
     public:
-        virtual void startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
+        virtual ProcessElement startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
         {
             _ss.str(""); // have to clear the string
+            if( !!_pcurreader ) {
+                if( _pcurreader->startElement(xmlname,atts) == PE_Support )
+                    return PE_Support;
+                return PE_Ignore;
+            }
+            return PE_Pass;
         }
 
+        virtual bool endElement(const std::string& xmlname)
+        {
+            if( !!_pcurreader ) {
+                if( _pcurreader->endElement(xmlname) )
+                    _pcurreader.reset();
+            }
+            return false;
+        }
+        
         virtual void characters(const std::string& ch)
         {
             if( !!_pcurreader )
@@ -530,12 +567,11 @@ namespace OpenRAVEXMLParser
             MT_Custom, // manually specify center of mass and inertia matrix
         };
         
-    LinkXMLReader(KinBody::LinkPtr& plink, KinBodyPtr pparent, const std::list<std::pair<std::string,std::string> >& atts) : _plink(plink) {
+  LinkXMLReader(KinBody::LinkPtr& plink, KinBodyPtr pparent, const std::list<std::pair<std::string,std::string> >& atts) : _plink(plink) {
             _pparent = pparent;
             _masstype = MT_None;
             _fMassDensity = 1;
             _vMassExtents = Vector(1,1,1);
-            _bProcessingMass = false;
             _fTotalMass = 1;
             _massCustom = MASS::GetSphericalMass(1,Vector(0,0,0),1);
 
@@ -584,35 +620,34 @@ namespace OpenRAVEXMLParser
         }
         virtual ~LinkXMLReader() {}
 
-        virtual void startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
+        virtual ProcessElement startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
         {
-            if( !!_pcurreader ) {
-                _pcurreader->startElement(xmlname, atts);
-                return;
+            switch( StreamXMLReader::startElement(xmlname,atts) ) {
+                case PE_Pass: break;
+                case PE_Support: return PE_Support;
+                case PE_Ignore: return PE_Ignore;
             }
 
-            StreamXMLReader::startElement(xmlname,atts);
-            if( _itgeomprop != _plink->_listGeomProperties.end() ) {
-                if( xmlname != "translation" && xmlname!="rotationmat" && xmlname!="rotationaxis" && xmlname!="quat" && xmlname!="diffusecolor" && xmlname != "ambientcolor" && xmlname != "transparency" && xmlname!="render" &&
-                    xmlname != "extents" && xmlname != "radius" && xmlname != "height" &&
-                    !(_itgeomprop->GetType() == KinBody::Link::GEOMPROPERTIES::GeomTrimesh && (xmlname=="data"||xmlname=="vertices")) ) {
-                    _pcurreader.reset(new DummyXMLReader(xmlname,"geom"));
+            if( _processingtag.size() > 0 ) {
+                if( _processingtag == "geom" ) {
+                    return (xmlname == "translation" || xmlname=="rotationmat" || xmlname=="rotationaxis" || xmlname=="quat" || xmlname=="diffusecolor" || xmlname == "ambientcolor" || xmlname == "transparency" || xmlname=="render" || xmlname == "extents" || xmlname == "radius" || xmlname == "height" || (_itgeomprop->GetType() == KinBody::Link::GEOMPROPERTIES::GeomTrimesh && (xmlname=="data"||xmlname=="vertices"))) ? PE_Support : PE_Ignore;
                 }
-            }
-            else if( _bProcessingMass ) {
-                if( xmlname != "density" && xmlname != "total" && xmlname != "radius" && 
-                    !(_masstype == MT_Box && xmlname == "extents") &&
-                    !(_masstype == MT_Custom && xmlname == "com") &&
-                    !(_masstype == MT_Custom && xmlname == "inertia") ) {
-                    _pcurreader.reset(new DummyXMLReader(xmlname,"mass"));
+                else if( _processingtag == "mass" ) {
+                    return (xmlname == "density" || xmlname == "total" || xmlname == "radius" || !(_masstype == MT_Box && xmlname == "extents") || (_masstype == MT_Custom && xmlname == "com") || (_masstype == MT_Custom && xmlname == "inertia")) ? PE_Support : PE_Ignore;
                 }
+                return PE_Ignore;
             }
-            else if( xmlname == "body" ) {
+
+            if( xmlname == "body" ) {
                 tOrigTrans = _plink->GetTransform();
                 _plink->SetTransform(Transform());
+                _processingtag = "";
                 _pcurreader.reset(new LinkXMLReader(_plink, _pparent, atts));
+                return PE_Support;
             }
-            else if( xmlname == "geom" ) {
+
+            _processingtag = xmlname;
+            if( xmlname == "geom" ) {
                 string type;
                 bool bDraw = true, bModifiable = true;
                 FOREACHC(itatt,atts) {
@@ -648,8 +683,10 @@ namespace OpenRAVEXMLParser
 
                 _itgeomprop->_bDraw = bDraw;
                 _itgeomprop->_bModifiable = bModifiable;
+                return PE_Support;
             }
             else if( xmlname == "translation" || xmlname == "rotationmat" || xmlname == "rotationaxis" || xmlname == "quat" || xmlname == "offsetfrom" ) {
+                return PE_Support;
             }
             else if( xmlname == "mass" ) {
                 // find the type of mass and create
@@ -671,13 +708,11 @@ namespace OpenRAVEXMLParser
                         break;
                     }
                 }
+                return PE_Support;
+            }
 
-                _bProcessingMass = true;
-            }
-            else {
-                // start a new field
-                _pcurreader.reset(new DummyXMLReader(xmlname,"body"));
-            }
+            _processingtag = "";
+            return PE_Pass;
         }
 
         virtual bool endElement(const std::string& xmlname)
@@ -695,8 +730,9 @@ namespace OpenRAVEXMLParser
 
                     _pcurreader.reset();
                 }
+                return false;
             }
-            else if( _itgeomprop != _plink->_listGeomProperties.end() ) {
+            else if( _processingtag == "geom" ) {
                 if( xmlname == "translation" ) {
                     Vector v;
                     _ss >>v .x >> v.y >> v.z;
@@ -737,7 +773,7 @@ namespace OpenRAVEXMLParser
                 else if( xmlname == "transparency" ) {
                     _ss >> _itgeomprop->ftransparency;
                 }
-                else if( xmlname == "geom" ) {
+                else if( xmlname == _processingtag ) {
                     if( _itgeomprop->type == KinBody::Link::GEOMPROPERTIES::GeomCylinder ) { // axis has to point on y
                         // rotate on x axis by pi/2
                         Transform trot;
@@ -752,6 +788,7 @@ namespace OpenRAVEXMLParser
 
                     _plink->collision.Append(_itgeomprop->GetCollisionMesh(), _itgeomprop->_t);
                     _itgeomprop = _plink->_listGeomProperties.end();
+                    _processingtag = "";
                 }
                 else {
                     // could be type specific features
@@ -840,8 +877,46 @@ namespace OpenRAVEXMLParser
                         _pcurreader.reset(new DummyXMLReader(xmlname,"geom"));
                     }
                 }
+                return false;
             }
-            else if( xmlname == "body" ) {
+            if( _processingtag == "mass" ) {
+                if( xmlname == "density" ) {
+                    if( _masstype == MT_BoxMass )
+                        _masstype = MT_Box;
+                    else if( _masstype == MT_SphereMass)
+                        _masstype = MT_Sphere;
+                    _ss >> _fMassDensity;
+                }
+                else if( xmlname == "total" ) {
+                    if( _masstype == MT_Box )
+                        _masstype = MT_BoxMass;
+                    else if( _masstype == MT_Sphere)
+                        _masstype = MT_SphereMass;
+                    _ss >> _fTotalMass;
+                    _massCustom.fTotalMass = _fTotalMass;
+                }
+                else if( xmlname == "radius" ) {
+                    _ss >> _vMassExtents.x;
+                }
+                else if( _masstype == MT_Box && xmlname == "extents" ) {
+                    _ss >> _vMassExtents.x >> _vMassExtents.y >> _vMassExtents.z;
+                }
+                else if( xmlname == _processingtag ) {
+                    _processingtag = "";
+                }
+                else if( _masstype == MT_Custom ) {
+                    if( xmlname == "com" ) {
+                        _ss >> _plink->_transMass.trans.x >> _plink->_transMass.trans.y >> _plink->_transMass.trans.z;
+                        _massCustom.t.trans = _plink->_transMass.trans;
+                    }
+                    else if( xmlname == "inertia" ) {
+                        _ss >> _massCustom.t.m[0] >> _massCustom.t.m[1] >> _massCustom.t.m[2] >> _massCustom.t.m[4] >> _massCustom.t.m[5] >> _massCustom.t.m[6] >> _massCustom.t.m[8] >> _massCustom.t.m[9] >> _massCustom.t.m[10];
+                    }
+                }
+                return false;
+            }
+
+            if( xmlname == "body" ) {
                 if( _plink->GetGeometries().size() == 0 )
                     RAVELOG_WARNA(str(boost::format("link %s has no geometry attached!\n")%_plink->GetName()));
 
@@ -899,44 +974,8 @@ namespace OpenRAVEXMLParser
 
                 return true;
             }
-            else if( _bProcessingMass ) {
-                if( xmlname == "density" ) {
-                    if( _masstype == MT_BoxMass )
-                        _masstype = MT_Box;
-                    else if( _masstype == MT_SphereMass)
-                        _masstype = MT_Sphere;
-                    _ss >> _fMassDensity;
-                }
-                else if( xmlname == "total" ) {
-                    if( _masstype == MT_Box )
-                        _masstype = MT_BoxMass;
-                    else if( _masstype == MT_Sphere)
-                        _masstype = MT_SphereMass;
-                    _ss >> _fTotalMass;
-                    _massCustom.fTotalMass = _fTotalMass;
-                }
-                else if( xmlname == "radius" ) {
-                    _ss >> _vMassExtents.x;
-                }
-                else if( _masstype == MT_Box && xmlname == "extents" ) {
-                    _ss >> _vMassExtents.x >> _vMassExtents.y >> _vMassExtents.z;
-                }
-                else if( _masstype == MT_Custom ) {
-                    if( xmlname == "com" ) {
-                        _ss >> _plink->_transMass.trans.x >> _plink->_transMass.trans.y >> _plink->_transMass.trans.z;
-                        _massCustom.t.trans = _plink->_transMass.trans;
-                    }
-                    else if( xmlname == "inertia" ) {
-                        _ss >> _massCustom.t.m[0] >> _massCustom.t.m[1] >> _massCustom.t.m[2] >> _massCustom.t.m[4] >> _massCustom.t.m[5] >> _massCustom.t.m[6] >> _massCustom.t.m[8] >> _massCustom.t.m[9] >> _massCustom.t.m[10];
-                    }
-                }
-        
-                if( xmlname == "mass" ) {
-                    BOOST_ASSERT( _bProcessingMass );
-                    _bProcessingMass = false;
-                }
-            }
-            else if( xmlname == "translation" ) {
+
+            if( xmlname == "translation" ) {
                 Vector v;
                 _ss >> v.x >> v.y >> v.z;
                 _plink->_t.trans += v;
@@ -969,7 +1008,10 @@ namespace OpenRAVEXMLParser
                     GetXMLErrorCount()++;
                 }
             }
-
+            
+            if( xmlname !=_processingtag )
+                RAVELOG_WARN(str(boost::format("invalid tag %s!=%s\n")%xmlname%_processingtag));
+            _processingtag = "";
             return false;
         }
 
@@ -995,7 +1037,7 @@ namespace OpenRAVEXMLParser
         Transform tOrigTrans;
         // Mass
         MassType _masstype;           ///< if true, mass is craeted so that it mimics the geometry
-        bool _bProcessingMass;
+        string _processingtag; /// if not empty, currently processing
         MASS _massCustom;
         float _fMassDensity, _fTotalMass;
         Vector _vMassExtents;           ///< used only if mass is a box
@@ -1081,20 +1123,15 @@ namespace OpenRAVEXMLParser
         bool IsMimic() const { return _bMimicJoint; }
         const string& GetMimicJoint() const { return _strmimicjoint; }
 
-        virtual void startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
+        virtual ProcessElement startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
         {
-            if( !!_pcurreader ) {
-                _pcurreader->startElement(xmlname, atts);
-                return;
+            switch( StreamXMLReader::startElement(xmlname,atts) ) {
+                case PE_Pass: break;
+                case PE_Support: return PE_Support;
+                case PE_Ignore: return PE_Ignore;
             }
             
-            StreamXMLReader::startElement(xmlname,atts);
-            if( xmlname == "body" || xmlname == "offsetfrom" || xmlname == "weight" || xmlname == "lostop" || xmlname == "histop" || xmlname == "maxvel" || xmlname == "hardmaxvel" || xmlname == "maxaccel" || xmlname == "maxtorque" || xmlname == "maxforce" || xmlname == "resolution" || xmlname == "anchor" || xmlname == "axis" || xmlname == "axis1" || xmlname == "axis2" || xmlname=="axis3" || xmlname == "mode" ) {
-            }
-            else {
-                // start a new field
-                _pcurreader.reset(new DummyXMLReader(xmlname,"joint"));
-            }
+            return (xmlname == "body" || xmlname == "offsetfrom" || xmlname == "weight" || xmlname == "lostop" || xmlname == "histop" || xmlname == "maxvel" || xmlname == "hardmaxvel" || xmlname == "maxaccel" || xmlname == "maxtorque" || xmlname == "maxforce" || xmlname == "resolution" || xmlname == "anchor" || xmlname == "axis" || xmlname == "axis1" || xmlname == "axis2" || xmlname=="axis3" || xmlname == "mode") ? PE_Support : PE_Pass;
         }
 
         virtual bool endElement(const std::string& xmlname)
@@ -1453,28 +1490,42 @@ namespace OpenRAVEXMLParser
 
         void SetXMLFilename(const string& filename) { if( !!_pinterface && _pinterface->__strxmlfilename.size() == 0 ) _pinterface->__strxmlfilename = filename; }
 
-        virtual void startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
+        virtual ProcessElement startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
         {
             if( !_pinterface )
-                return;
+                return PE_Ignore;
 
             if( !!_pcustomreader ) {
-                _pcustomreader->startElement(xmlname, atts);
+                if( _pcustomreader->startElement(xmlname, atts) == PE_Support )
+                    return PE_Support;
+                return PE_Ignore;
             }
-            else {
-                StreamXMLReader::startElement(xmlname,atts);
-                // check for registers readers
-                READERSMAP::iterator it = GetRegisteredReaders()[_type].find(xmlname);
-                if( it != GetRegisteredReaders()[_type].end() ) {
-                    _readername = xmlname;
-                    _pcustomreader = it->second(_pinterface, atts);
-                }
+            
+            switch( StreamXMLReader::startElement(xmlname,atts) ) {
+                case PE_Pass: break;
+                case PE_Support: return PE_Support;
+                case PE_Ignore: return PE_Ignore;
             }
+
+            // check for registers readers
+            READERSMAP::iterator it = GetRegisteredReaders()[_type].find(xmlname);
+            if( it != GetRegisteredReaders()[_type].end() ) {
+                _readername = xmlname;
+                _pcustomreader = it->second(_pinterface, atts);
+                if( !!_pcustomreader )
+                    return PE_Support;
+            }
+            
+            return PE_Pass;
         }
 
         virtual bool endElement(const std::string& xmlname)
         {
-            if( !!_pcustomreader ) {
+            if( !!_pcurreader ) {
+                if( _pcurreader->endElement(xmlname) )
+                    _pcurreader.reset();
+            }
+            else if( !!_pcustomreader ) {
                 if( _pcustomreader->endElement(xmlname) ) {
                     if( _readername.size() > 0 )
                         _pinterface->__mapReadableInterfaces[_readername] = _pcustomreader->GetReadable();
@@ -1499,7 +1550,7 @@ namespace OpenRAVEXMLParser
 
         InterfaceBasePtr GetInterface() { return _pinterface; }
 
-    protected:
+    protected:        
         EnvironmentBasePtr _penv;
         PluginType _type;
         InterfaceBasePtr& _pinterface;
@@ -1517,7 +1568,6 @@ namespace OpenRAVEXMLParser
             _masstype = LinkXMLReader::MT_None;
             _fMassValue = 1;
             _vMassExtents = Vector(1,1,1);
-            _bProcessingMass = false;
             _bOverwriteDiffuse = false;
             _bOverwriteAmbient = false;
             _bOverwriteTransparency = false;
@@ -1586,23 +1636,30 @@ namespace OpenRAVEXMLParser
             return ""; // bad filename
         }
     
-        virtual void startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
+        virtual ProcessElement startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
         {
-            if( !!_pcurreader ) {
-                _pcurreader->startElement(xmlname, atts);
-                return;
+            if( _processingtag.size() > 0 ) {
+                switch( StreamXMLReader::startElement(xmlname,atts) ) {
+                    case PE_Pass: break;
+                    case PE_Support: return PE_Support;
+                    case PE_Ignore: return PE_Ignore;
+                }
+            
+                if( _processingtag == "mass" ) {
+                    return (xmlname == "density" || xmlname == "total" || xmlname == "radius" || (_masstype == LinkXMLReader::MT_Box && xmlname == "extents") || (_masstype == LinkXMLReader::MT_Custom && (xmlname == "com"||xmlname == "inertia"))) ? PE_Support : PE_Ignore;
+                }
+                return PE_Ignore;
             }
 
-            if( _bProcessingMass ) {
-                return;
+            switch( InterfaceXMLReader::startElement(xmlname,atts) ) {
+                case PE_Pass: break;
+                case PE_Support: return PE_Support;
+                case PE_Ignore: return PE_Ignore;
             }
-    
-            InterfaceXMLReader::startElement(xmlname,atts);
-            if( !!_pcustomreader )
-                return;
 
             if( xmlname == "kinbody" ) {
                 _pcurreader = CreateInterfaceReader(_penv,PT_KinBody,_pinterface, xmlname, atts);
+                return PE_Support;
             }
             else if( xmlname == "body" ) {
                 _plink.reset();
@@ -1611,6 +1668,7 @@ namespace OpenRAVEXMLParser
                 plinkreader->_fnGetModelsDir = boost::bind(&KinBodyXMLReader::GetModelsDir,this,_1);
                 plinkreader->_fnGetOffsetFrom = boost::bind(&KinBodyXMLReader::GetOffsetFrom,this,_1);
                 _pcurreader = plinkreader;
+                return PE_Support;
             }
             else if( xmlname == "joint" ) {
                 _pjoint.reset();
@@ -1619,10 +1677,10 @@ namespace OpenRAVEXMLParser
                 pjointreader->_fnGetModelsDir = boost::bind(&KinBodyXMLReader::GetModelsDir,this,_1);
                 pjointreader->_fnGetOffsetFrom = boost::bind(&KinBodyXMLReader::GetOffsetFrom,this,_1);
                 _pcurreader = pjointreader;
+                return PE_Support;
             }
-            else if( xmlname == "translation" || xmlname == "rotationmat" || xmlname == "rotationaxis" || xmlname == "quat" || xmlname == "jointvalues" ) {
-            }
-            else if( xmlname == "mass" ) {
+
+            if( xmlname == "mass" ) {
                 // find the type of mass and create
                 _masstype = LinkXMLReader::MT_Sphere;
                 FOREACHC(itatt, atts) {
@@ -1641,14 +1699,17 @@ namespace OpenRAVEXMLParser
                     }
                 }
 
-                _bProcessingMass = true;
+                _processingtag = xmlname;
+                return PE_Support;
             }
-            else if( xmlname == "adjacent" || xmlname == "modelsdir" || xmlname == "diffusecolor" || xmlname == "transparency" || xmlname == "ambientcolor" ) {
+
+            if (xmlname == "translation" || xmlname == "rotationmat" || xmlname == "rotationaxis" || xmlname == "quat" || xmlname == "jointvalues" || xmlname == "adjacent" || xmlname == "modelsdir" || xmlname == "diffusecolor" || xmlname == "transparency" || xmlname == "ambientcolor" ) {
+                _processingtag = xmlname;
+                return PE_Support;
             }
-            else {
-                _pcurreader.reset(new DummyXMLReader(xmlname, "kinbody"));
-            }
+            return PE_Pass;
         }
+        
         virtual bool endElement(const std::string& xmlname)
         {
             if( !!_pcurreader ) {
@@ -1701,8 +1762,11 @@ namespace OpenRAVEXMLParser
                     _pcurreader.reset();
                 }
             }
-            else if( _bProcessingMass ) {
-                if( xmlname == "density" ) {
+            else if( _processingtag == "mass" ) {
+                if( xmlname == "mass" ) {
+                    _processingtag = "";
+                }
+                else if( xmlname == "density" ) {
                     if( _masstype == LinkXMLReader::MT_BoxMass )
                         _masstype = LinkXMLReader::MT_Box;
                     else if( _masstype == LinkXMLReader::MT_SphereMass)
@@ -1722,10 +1786,60 @@ namespace OpenRAVEXMLParser
                 else if( _masstype == LinkXMLReader::MT_Box && xmlname == "extents" ) {
                     _ss >> _vMassExtents.x >> _vMassExtents.y >> _vMassExtents.z;
                 }
-                else if( xmlname == "mass" ) {
-                    BOOST_ASSERT( _bProcessingMass );
-                    _bProcessingMass = false;
+            }
+            else if( _processingtag.size() > 0 ) {
+                if( xmlname == "translation" ) {
+                    Vector v;
+                    _ss >> v.x >> v.y >> v.z;
+                    _trans.trans += v;
                 }
+                else if( xmlname == "rotationaxis" ) {
+                    Vector vaxis; dReal fangle=0;
+                    _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
+                    Transform tnew; tnew.rotfromaxisangle(vaxis.normalize3(), fangle * PI / 180.0f);
+                    _trans.rot = (tnew*_trans).rot;
+                }
+                else if( xmlname == "quat" ) {
+                    Transform tnew;
+                    _ss >> tnew.rot.x >> tnew.rot.y >> tnew.rot.z >> tnew.rot.w;
+                    tnew.rot.normalize4();
+                    _trans.rot = (tnew*_trans).rot;
+                }
+                else if( xmlname == "rotationmat" ) {
+                    TransformMatrix tnew;
+                    _ss >> tnew.m[0] >> tnew.m[1] >> tnew.m[2] >> tnew.m[4] >> tnew.m[5] >> tnew.m[6] >> tnew.m[8] >> tnew.m[9] >> tnew.m[10];
+                    _trans.rot = (Transform(tnew)*_trans).rot;
+                }
+                else if( xmlname == "adjacent" ) {
+                    pair<string, string> entry;
+                    _ss >> entry.first >> entry.second;
+                    _pchain->_vForcedAdjacentLinks.push_back(entry);
+                }
+                else if( xmlname == "modelsdir" ) {
+                    _ss >> _strModelsDir;
+                    _strModelsDir += "/";
+                }
+                else if( xmlname == "diffuseColor" ) {
+                    // check attributes for format (default is vrml)
+                    _ss >> _diffusecol.x >> _diffusecol.y >> _diffusecol.z;
+                    _bOverwriteDiffuse = true;
+                }
+                else if( xmlname == "ambientColor" ) {
+                    // check attributes for format (default is vrml)
+                    _ss >> _ambientcol.x >> _ambientcol.y >> _ambientcol.z;
+                    _bOverwriteAmbient = true;
+                }
+                else if( xmlname == "transparency" ) {
+                    _ss >> _transparency;
+                    _bOverwriteTransparency = true;
+                }
+                else if( xmlname == "jointvalues" ) {
+                    _vjointvalues = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
+                }
+
+                if( xmlname !=_processingtag )
+                    RAVELOG_WARN(str(boost::format("invalid tag %s!=%s\n")%xmlname%_processingtag));
+                _processingtag = "";
             }
             else if( InterfaceXMLReader::endElement(xmlname) ) {
                 // go through all mimic joints and assign the correct indices
@@ -1787,54 +1901,6 @@ namespace OpenRAVEXMLParser
                 RAVELOG_VERBOSEA("%s: COM = (%f,%f,%f)\n", _pchain->GetName().c_str(), com.x, com.y, com.z);
                 return true;
             }
-            else if( xmlname == "translation" ) {
-                Vector v;
-                _ss >> v.x >> v.y >> v.z;
-                _trans.trans += v;
-            }
-            else if( xmlname == "rotationaxis" ) {
-                Vector vaxis; dReal fangle=0;
-                _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
-                Transform tnew; tnew.rotfromaxisangle(vaxis.normalize3(), fangle * PI / 180.0f);
-                _trans.rot = (tnew*_trans).rot;
-            }
-            else if( xmlname == "quat" ) {
-                Transform tnew;
-                _ss >> tnew.rot.x >> tnew.rot.y >> tnew.rot.z >> tnew.rot.w;
-                tnew.rot.normalize4();
-                _trans.rot = (tnew*_trans).rot;
-            }
-            else if( xmlname == "rotationmat" ) {
-                TransformMatrix tnew;
-                _ss >> tnew.m[0] >> tnew.m[1] >> tnew.m[2] >> tnew.m[4] >> tnew.m[5] >> tnew.m[6] >> tnew.m[8] >> tnew.m[9] >> tnew.m[10];
-                _trans.rot = (Transform(tnew)*_trans).rot;
-            }
-            else if( xmlname == "adjacent" ) {
-                pair<string, string> entry;
-                _ss >> entry.first >> entry.second;
-                _pchain->_vForcedAdjacentLinks.push_back(entry);
-            }
-            else if( xmlname == "modelsdir" ) {
-                _ss >> _strModelsDir;
-                _strModelsDir += "/";
-            }
-            else if( xmlname == "diffuseColor" ) {
-                // check attributes for format (default is vrml)
-                _ss >> _diffusecol.x >> _diffusecol.y >> _diffusecol.z;
-                _bOverwriteDiffuse = true;
-            }
-            else if( xmlname == "ambientColor" ) {
-                // check attributes for format (default is vrml)
-                _ss >> _ambientcol.x >> _ambientcol.y >> _ambientcol.z;
-                _bOverwriteAmbient = true;
-            }
-            else if( xmlname == "transparency" ) {
-                _ss >> _transparency;
-                _bOverwriteTransparency = true;
-            }
-            else if( xmlname == "jointvalues" ) {
-                _vjointvalues = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
-            }
 
             return false;
         }
@@ -1860,7 +1926,7 @@ namespace OpenRAVEXMLParser
         float _transparency;
         vector<dReal> _vjointvalues;
 
-        bool _bProcessingMass;
+        string _processingtag; /// if not empty, currently processing
         bool _bOverwriteDiffuse, _bOverwriteAmbient, _bOverwriteTransparency;
 
         list<pair<KinBody::JointPtr,string> > listMimicJoints; ///< mimic joints needed to be resolved
@@ -1880,26 +1946,9 @@ namespace OpenRAVEXMLParser
         }
         virtual ~ControllerXMLReader() {}
 
-        virtual void startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
-        {
-            if( !!_pcurreader ) {
-                _pcurreader->startElement(xmlname, atts);
-                return;
-            }
-
-            InterfaceXMLReader::startElement(xmlname,atts);
-            if( !!_pcustomreader )
-                return;
-
-            _pcurreader.reset(new DummyXMLReader(xmlname, RaveGetInterfaceName(PT_Controller)));
-        }
         virtual bool endElement(const std::string& xmlname)
         {
-            if( !!_pcurreader ) {
-                if( _pcurreader->endElement(xmlname) )
-                    _pcurreader.reset();
-            }
-            else if( InterfaceXMLReader::endElement(xmlname) ) {
+            if( InterfaceXMLReader::endElement(xmlname) ) {
                 if( !_probot ) {
                     if( _robotname.size() > 0 ) {
                         KinBodyPtr pbody = _penv->GetKinBody(_robotname.c_str());
@@ -1907,7 +1956,7 @@ namespace OpenRAVEXMLParser
                             _probot = boost::static_pointer_cast<RobotBase>(pbody);
                     }
                 }
-
+                
                 if( !!_probot )
                     _probot->SetController(boost::static_pointer_cast<ControllerBase>(_pinterface),_args);
                 else
@@ -1937,29 +1986,30 @@ namespace OpenRAVEXMLParser
             _probot = _pmanip->GetRobot();
         }
 
-        virtual void startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
+        virtual ProcessElement startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
         {
-            if( !!_pcurreader ) {
-                _pcurreader->startElement(xmlname, atts);
-                return;
+            switch( StreamXMLReader::startElement(xmlname,atts) ) {
+                case PE_Pass: break;
+                case PE_Support: return PE_Support;
+                case PE_Ignore: return PE_Ignore;
             }
 
-            StreamXMLReader::startElement(xmlname,atts);
-            if( xmlname == "effector" || xmlname == "gripperjoints" || xmlname == "joints" || xmlname == "armjoints" || xmlname == "base"|| xmlname == "iksolver" || xmlname == "closingdir" || xmlname == "palmdirection" || xmlname=="direction" || xmlname == "closingdirection" || xmlname == "translation" || xmlname == "quat" || xmlname == "rotationaxis" || xmlname == "rotationmat") {
+            if( _processingtag.size() > 0 )
+                return PE_Ignore;
+
+            if (xmlname == "effector" || xmlname == "gripperjoints" || xmlname == "joints" || xmlname == "armjoints" || xmlname == "base"|| xmlname == "iksolver" || xmlname == "closingdir" || xmlname == "palmdirection" || xmlname=="direction" || xmlname == "closingdirection" || xmlname == "translation" || xmlname == "quat" || xmlname == "rotationaxis" || xmlname == "rotationmat") {
+                _processingtag = xmlname;
+                return PE_Support;
             }
-            else {
-                _pcurreader.reset(new DummyXMLReader(xmlname, "Manipulator"));
-            }
+            return PE_Pass;
         }
 
         virtual bool endElement(const std::string& xmlname)
         {
-            if( !!_pcurreader ) {
-                if( _pcurreader->endElement(xmlname) ) {
-                    _pcurreader.reset();
-                }
-            }
-            else if( xmlname == "manipulator" ) {
+            if( StreamXMLReader::endElement(xmlname) )
+                return true;
+
+            if( xmlname == "manipulator" ) {
                 if( _pmanip->_vClosingDirection.size() == 0 ) {
                     RAVELOG_DEBUG(str(boost::format("setting manipulator %s closing direction to zeros\n")%_pmanip->GetName()));
                     _pmanip->_vClosingDirection.resize(_pmanip->_vgripperjoints.size(),0);
@@ -2110,13 +2160,17 @@ namespace OpenRAVEXMLParser
                 _ss >> tnew.m[0] >> tnew.m[1] >> tnew.m[2] >> tnew.m[4] >> tnew.m[5] >> tnew.m[6] >> tnew.m[8] >> tnew.m[9] >> tnew.m[10];
                 _pmanip->_tGrasp.rot = (Transform(tnew)*_pmanip->_tGrasp).rot;
             }
-            
+
+            if( xmlname !=_processingtag )
+                RAVELOG_WARN(str(boost::format("invalid tag %s!=%s\n")%xmlname%_processingtag));
+            _processingtag = "";
             return false;
         }
     
     protected:
         RobotBasePtr _probot;
         RobotBase::ManipulatorPtr& _pmanip;
+        string _processingtag;
     };
 
     /// sensors specifically attached to a robot
@@ -2150,24 +2204,29 @@ namespace OpenRAVEXMLParser
             _probot = _psensor->GetRobot();
         }
         
-        virtual void startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
+        virtual ProcessElement startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
         {
-            if( !!_pcurreader ) {
-                _pcurreader->startElement(xmlname, atts);
-                return;
+            switch( StreamXMLReader::startElement(xmlname,atts) ) {
+                case PE_Pass: break;
+                case PE_Support: return PE_Support;
+                case PE_Ignore: return PE_Ignore;
             }
-            
-            StreamXMLReader::startElement(xmlname,atts);
-            if( xmlname == "link" || xmlname == "translation" || xmlname == "quat" || xmlname == "rotationaxis" || xmlname == "rotationmat" ) {
-            }
-            else if( xmlname == "sensor" ) {
+
+            if( _processingtag.size() > 0 )
+                return PE_Ignore;
+
+            if( xmlname == "sensor" ) {
                 // create the sensor
                 _psensorinterface.reset();
                 _pcurreader = CreateInterfaceReader(_probot->GetEnv(),PT_Sensor,_psensorinterface, xmlname, atts);
+                return PE_Support;
             }
-            else {
-                _pcurreader.reset(new DummyXMLReader(xmlname, "AttachedSensor"));
+            
+            if (xmlname == "link" || xmlname == "translation" || xmlname == "quat" || xmlname == "rotationaxis" || xmlname == "rotationmat" ) {
+                _processingtag = xmlname;
+                return PE_Support;
             }
+            return PE_Pass;
         }
         virtual bool endElement(const std::string& xmlname)
         {
@@ -2176,6 +2235,7 @@ namespace OpenRAVEXMLParser
                     _pcurreader.reset();
                     _psensor->psensor = boost::static_pointer_cast<SensorBase>(_psensorinterface);
                 }
+                return false;
             }
             else if( xmlname == "attachedsensor" ) {
                 if( !_psensor->psensor ) {
@@ -2234,7 +2294,10 @@ namespace OpenRAVEXMLParser
                 _ss >> tnew.m[0] >> tnew.m[1] >> tnew.m[2] >> tnew.m[4] >> tnew.m[5] >> tnew.m[6] >> tnew.m[8] >> tnew.m[9] >> tnew.m[10];
                 _psensor->trelative.rot = (Transform(tnew)*_psensor->trelative).rot;
             }
-    
+
+            if( xmlname !=_processingtag )
+                RAVELOG_WARN(str(boost::format("invalid tag %s!=%s\n")%xmlname%_processingtag));
+            _processingtag = "";
             return false;
         }
         
@@ -2242,6 +2305,7 @@ namespace OpenRAVEXMLParser
         RobotBasePtr _probot;
         RobotBase::AttachedSensorPtr& _psensor;
         InterfaceBasePtr _psensorinterface;
+        string _processingtag;
         string args; ///< arguments to pass to sensor when initializing
     };
 
@@ -2258,16 +2322,22 @@ namespace OpenRAVEXMLParser
             }
         }
 
-        virtual void startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
+        virtual ProcessElement startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
         {
-            if( !!_pcurreader ) {
-                _pcurreader->startElement(xmlname, atts);
-                return;
+            if( _processingtag.size() > 0 ) {
+                switch( StreamXMLReader::startElement(xmlname,atts) ) {
+                    case PE_Pass: break;
+                    case PE_Support: return PE_Support;
+                    case PE_Ignore: return PE_Ignore;
+                }
+                return PE_Ignore;
             }
-
-            InterfaceXMLReader::startElement(xmlname,atts);
-            if( !!_pcustomreader )
-                return;
+            
+            switch( InterfaceXMLReader::startElement(xmlname,atts) ) {
+                case PE_Pass: break;
+                case PE_Support: return PE_Support;
+                case PE_Ignore: return PE_Ignore;
+            }
 
             if( xmlname == "robot" ) {
                 _pcurreader = CreateInterfaceReader(_penv, PT_Robot, _pinterface, xmlname, atts);
@@ -2288,10 +2358,11 @@ namespace OpenRAVEXMLParser
                 _pcurreader.reset(new ControllerXMLReader(_probot->GetEnv(),_pcontroller,atts,_probot));
             }
             else if( xmlname == "translation" || xmlname == "rotationmat" || xmlname == "rotationaxis" || xmlname == "quat" || xmlname == "jointvalues") {
+                _processingtag = xmlname;
             }
-            else {
-                _pcurreader.reset(new DummyXMLReader(xmlname, "Robot"));
-            }
+            else
+                return PE_Pass;
+            return PE_Support;
         }
         virtual bool endElement(const std::string& xmlname)
         {
@@ -2299,6 +2370,7 @@ namespace OpenRAVEXMLParser
                 if( _pcurreader->endElement(xmlname) )
                     _pcurreader.reset();
                 _probot = boost::static_pointer_cast<RobotBase>(_pinterface); // might be updated by readers
+                return false;
             }
             else if( InterfaceXMLReader::endElement(xmlname) ) {
                 if( _robotname.size() > 0 )
@@ -2383,6 +2455,9 @@ namespace OpenRAVEXMLParser
                 _vjointvalues = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
             }
 
+            if( xmlname !=_processingtag )
+                RAVELOG_WARN(str(boost::format("invalid tag %s!=%s\n")%xmlname%_processingtag));
+            _processingtag = "";
             return false;
         }
 
@@ -2391,6 +2466,7 @@ namespace OpenRAVEXMLParser
         InterfaceBasePtr _pcontroller; ///< controller to set the robot at
         string _robotname;
         string _prefix;
+        string _processingtag;
 
         vector<dReal> _vjointvalues;
         RobotBase::AttachedSensorPtr _psensor;
@@ -2408,32 +2484,6 @@ namespace OpenRAVEXMLParser
     DummyInterfaceXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pinterface, const string& xmltag, const std::list<std::pair<std::string,std::string> >& atts) : InterfaceXMLReader(penv,pinterface,type,xmltag,atts) {
         }
         virtual ~DummyInterfaceXMLReader() {}
-
-        virtual void startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
-        {
-            if( !!_pcurreader ) {
-                _pcurreader->startElement(xmlname, atts);
-                return;
-            }
-
-            InterfaceXMLReader::startElement(xmlname,atts);
-            if( !!_pcustomreader )
-                return;
-            _pcurreader.reset(new DummyXMLReader(xmlname, RaveGetInterfaceName(_type)));
-        }
-
-        virtual bool endElement(const std::string& xmlname)
-        {
-            if( !!_pcurreader ) {
-                if( _pcurreader->endElement(xmlname) )
-                    _pcurreader.reset();
-            }
-            else {
-                if( InterfaceXMLReader::endElement(xmlname) )
-                    return true;
-            }
-            return false;
-        }
     };
 
     class ProblemXMLReader : public InterfaceXMLReader
@@ -2446,26 +2496,9 @@ namespace OpenRAVEXMLParser
             }
         }
 
-        virtual void startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
-        {
-            if( !!_pcurreader ) {
-                _pcurreader->startElement(xmlname, atts);
-                return;
-            }
-
-            InterfaceXMLReader::startElement(xmlname,atts);
-            if( !!_pcustomreader )
-                return;
-
-            _pcurreader.reset(new DummyXMLReader(xmlname, RaveGetInterfaceName(PT_ProblemInstance)));
-        }
         virtual bool endElement(const std::string& xmlname)
         {
-            if( !!_pcurreader ) {
-                if( _pcurreader->endElement(xmlname) )
-                    _pcurreader.reset();
-            }
-            else if( InterfaceXMLReader::endElement(xmlname) ) {
+            if( InterfaceXMLReader::endElement(xmlname) ) {
                 _penv->LoadProblem(boost::static_pointer_cast<ProblemInstance>(_pinterface),_args);
                 return true;
             }
@@ -2489,14 +2522,16 @@ namespace OpenRAVEXMLParser
             bTransSpecified = false;
         }
 
-        virtual void startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
+        virtual ProcessElement startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
         {
-            if( !!_pcurreader ) {
-                _pcurreader->startElement(xmlname, atts);
-                return;
+            switch( StreamXMLReader::startElement(xmlname,atts) ) {
+                case PE_Pass: break;
+                case PE_Support: return PE_Support;
+                case PE_Ignore: return PE_Ignore;
             }
 
-            StreamXMLReader::startElement(xmlname,atts);
+            if( _processingtag.size() > 0 )
+                return PE_Ignore;
 
             // check for any plugins
             FOREACHC(itname,RaveGetInterfaceNamesMap()) {
@@ -2508,18 +2543,20 @@ namespace OpenRAVEXMLParser
                         RAVELOG_WARNA("failed to create interface %s in <environment>\n", itname->second.c_str());
                         _pcurreader.reset(new DummyXMLReader(xmlname,"environment"));
                     }
-                    return;
+                    return PE_Support;
                 }
             }
 
             if( xmlname == "environment" ) {
                 _bInEnvironment = true;
+                return PE_Support;
             }
-            else if( xmlname == "bkgndcolor" || xmlname == "camrotaxis" || xmlname == "camrotationaxis" || xmlname == "camrotmat" || xmlname == "camtrans" || xmlname == "bkgndcolor" || xmlname == "plugin" ) {
+
+            if (xmlname == "bkgndcolor" || xmlname == "camrotaxis" || xmlname == "camrotationaxis" || xmlname == "camrotmat" || xmlname == "camtrans" || xmlname == "bkgndcolor" || xmlname == "plugin") {
+                _processingtag = xmlname;
+                return PE_Support;
             }
-            else {
-                _pcurreader.reset(new DummyXMLReader(xmlname, "environment"));
-            }
+            return PE_Pass;
         }
 
         virtual bool endElement(const std::string& xmlname)
@@ -2559,8 +2596,18 @@ namespace OpenRAVEXMLParser
                     }
                     _pcurreader.reset();
                 }
+                return false;
             }
-            else if( xmlname == "bkgndcolor" ) {
+            if( xmlname == "environment" ) {
+                // only move the camera if trans is specified
+                if( bTransSpecified )
+                    _penv->SetCamera(tCamera.trans, tCamera.rot);
+        
+                _penv->GetViewer()->SetBkgndColor(vBkgndColor);
+                return true;
+            }
+            
+            if( xmlname == "bkgndcolor" ) {
                 _ss >> vBkgndColor.x >> vBkgndColor.y >> vBkgndColor.z;
             }
             else if( xmlname == "camrotaxis" || xmlname == "camrotationaxis" ) {
@@ -2584,15 +2631,10 @@ namespace OpenRAVEXMLParser
                 _ss >> pluginname;
                 _penv->LoadPlugin(pluginname);
             }
-            else if( xmlname == "environment" ) {
-                // only move the camera if trans is specified
-                if( bTransSpecified )
-                    _penv->SetCamera(tCamera.trans, tCamera.rot);
-        
-                _penv->GetViewer()->SetBkgndColor(vBkgndColor);
-                return true;
-            }
 
+            if( xmlname !=_processingtag )
+                RAVELOG_WARN(str(boost::format("invalid tag %s!=%s\n")%xmlname%_processingtag));
+            _processingtag = "";
             return false;
         }
 
@@ -2601,7 +2643,7 @@ namespace OpenRAVEXMLParser
         InterfaceBasePtr _pinterface; // current processed interface
         Vector vBkgndColor;
         Transform tCamera; ///< default camera transformationn
-
+        string _processingtag;
         bool bTransSpecified;
         bool _bInEnvironment;
     };
@@ -2650,15 +2692,14 @@ namespace OpenRAVEXMLParser
     {
     public:
     GlobalInterfaceXMLReader(EnvironmentBasePtr penv) : _penv(penv) {}
-        virtual void startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
+        virtual ProcessElement startElement(const std::string& xmlname, const std::list<std::pair<std::string,std::string> >& atts)
         {
-            if( !!_pcurreader ) {
-                _pcurreader->startElement(xmlname, atts);
-                return;
+            switch( StreamXMLReader::startElement(xmlname,atts) ) {
+                case PE_Pass: break;
+                case PE_Support: return PE_Support;
+                case PE_Ignore: return PE_Ignore;
             }
-
-            StreamXMLReader::startElement(xmlname,atts);
-
+                        
             // check for any plugins
             FOREACHC(itname,RaveGetInterfaceNamesMap()) {
                 if( xmlname == itname->second ) {
@@ -2667,7 +2708,7 @@ namespace OpenRAVEXMLParser
                     _pcurreader = CreateInterfaceReader(_penv,itname->first,_pinterface,"",atts);
                     if( !_pinterface )
                         throw openrave_exception(str(boost::format("failed to create interface %s")%itname->second));
-                    return;
+                    return PE_Support;
                 }
             }
 
@@ -2679,7 +2720,8 @@ namespace OpenRAVEXMLParser
             if( !!_pcurreader ) {
                 if( _pcurreader->endElement(xmlname) ) {
                     _pcurreader.reset();
-                    return true;
+                    // end if current reader is an interface
+                    return !!boost::dynamic_pointer_cast<InterfaceXMLReader>(_pcurreader);
                 }
             }
             return false;

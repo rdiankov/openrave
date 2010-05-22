@@ -24,19 +24,23 @@ protected:
     public:
     BaseLaser2DXMLReader(boost::shared_ptr<BaseLaser2DSensor> psensor) : _psensor(psensor) {}
         
-        virtual void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+        virtual ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
         {
-            BaseXMLReader::startElement(name,atts);
-            if( !!_pcurreader )
-                _pcurreader->startElement(name,atts);
-            else if( name != "sensor" && name != "minangle" && name != "maxangle" && name != "maxrange" && name != "scantime" && name != "color" && name != "resolution" ) {
-                _pcurreader.reset(new DummyXMLReader(name, "sensor"));
+            if( !!_pcurreader ) {
+                if( _pcurreader->startElement(name,atts) == PE_Support )
+                    return PE_Support;
+                return PE_Ignore;
             }
+
+            if( name != "sensor" && name != "minangle" && name != "maxangle" && name != "maxrange" && name != "scantime" && name != "color" && name != "resolution" ) {
+                return PE_Pass;
+            }
+            ss.str("");
+            return PE_Support;
         }
 
         virtual bool endElement(const std::string& name)
         {    
-            BaseXMLReader::endElement(name);
             if( !!_pcurreader ) {
                 if( _pcurreader->endElement(name) )
                     _pcurreader.reset();
@@ -82,12 +86,11 @@ protected:
 
         virtual void characters(const std::string& ch)
         {
-            BaseXMLReader::characters(ch);
             if( !!_pcurreader )
                 _pcurreader->characters(ch);
             else {
                 ss.clear();
-                ss.str(ch);
+                ss << ch;
             }
         }
 
@@ -341,39 +344,45 @@ protected:
     class BaseSpinningLaser2DXMLReader : public BaseLaser2DXMLReader
     {
     public:
-    BaseSpinningLaser2DXMLReader(boost::shared_ptr<BaseSpinningLaser2DSensor> psensor) : BaseLaser2DXMLReader(psensor) {}
+  BaseSpinningLaser2DXMLReader(boost::shared_ptr<BaseSpinningLaser2DSensor> psensor) : BaseLaser2DXMLReader(psensor), _bProcessing(false) {}
 
-        virtual void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+        virtual ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
         {
-            if( !!_pcurreader ) {
-                BaseXMLReader::startElement(name,atts);
-                _pcurreader->startElement(name,atts);
+            if( _bProcessing )
+                return PE_Ignore;
+            switch( BaseLaser2DXMLReader::startElement(name,atts) ) {
+                case PE_Pass: break;
+                case PE_Support: return PE_Support;
+                case PE_Ignore: return PE_Ignore;
             }
-            else if( name != "spinaxis" && name != "spinpos" && name != "spinspeed" )
-                BaseLaser2DXMLReader::startElement(name,atts);
-            else
-                BaseXMLReader::startElement(name,atts);
+
+            _bProcessing = name == "spinaxis" || name == "spinpos" || name == "spinspeed";
+            return _bProcessing ? PE_Support : PE_Pass;
         }
 
         virtual bool endElement(const string& name)
         {
-            boost::shared_ptr<BaseSpinningLaser2DSensor> psensor = boost::dynamic_pointer_cast<BaseSpinningLaser2DSensor>(_psensor);
+            if( _bProcessing ) {
+                boost::shared_ptr<BaseSpinningLaser2DSensor> psensor = boost::dynamic_pointer_cast<BaseSpinningLaser2DSensor>(_psensor);
             
-            if( name == "spinaxis" )
-                ss >> psensor->_vGeomSpinAxis.x >> psensor->_vGeomSpinAxis.y >> psensor->_vGeomSpinAxis.z;
-            else if( name == "spinpos" )
-                ss >> psensor->_vGeomSpinPos.x >> psensor->_vGeomSpinPos.y >> psensor->_vGeomSpinPos.z;
-            else if( name == "spinspeed" )
-                ss >> psensor->_fGeomSpinSpeed;
-            else
-                return BaseLaser2DXMLReader::endElement(name);
-            
-            if( !ss )
-                RAVELOG_WARNA(str(boost::format("error parsing %s\n")%name));
-            
-            BaseXMLReader::endElement(name);
-            return false;
+                if( name == "spinaxis" )
+                    ss >> psensor->_vGeomSpinAxis.x >> psensor->_vGeomSpinAxis.y >> psensor->_vGeomSpinAxis.z;
+                else if( name == "spinpos" )
+                    ss >> psensor->_vGeomSpinPos.x >> psensor->_vGeomSpinPos.y >> psensor->_vGeomSpinPos.z;
+                else if( name == "spinspeed" )
+                    ss >> psensor->_fGeomSpinSpeed;
+                else
+                    RAVELOG_WARN("invalid tag\n");
+                if( !ss )
+                    RAVELOG_WARNA(str(boost::format("error parsing %s\n")%name));
+                _bProcessing = false;
+                return false;
+            }
+            return BaseLaser2DXMLReader::endElement(name);
         }
+
+  private:
+        bool _bProcessing;
     };
         
     class SpinningLaserGeomData : public LaserGeomData

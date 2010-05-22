@@ -38,7 +38,7 @@ public:
         Type_Ray4D=5,
     };
 
- IkParameterization() : _type(Type_None) {}
+    IkParameterization() : _type(Type_None) {}
     IkParameterization(const Transform& t) { SetTransform(t); }
     IkParameterization(const RAY& r) { SetRay(r); }
 

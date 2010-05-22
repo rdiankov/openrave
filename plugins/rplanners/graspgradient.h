@@ -30,7 +30,7 @@ public:
         bool bProcessed; ///< set to true if grasp has already been used in gradient descend
     };
 
- GraspGradientPlanner(EnvironmentBasePtr penv) : PlannerBase(penv), _parameters(penv), _bInit(false) {
+GraspGradientPlanner(EnvironmentBasePtr penv) : PlannerBase(penv) {
         __description = "Grasp Planning with Stochastic Gradient Descent";
         _report.reset(new COLLISIONREPORT());
     }
@@ -39,35 +39,37 @@ public:
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        _parameters.copy(pparams);
+        _parameters.reset();
+        boost::shared_ptr<GraspSetParameters> parameters(new GraspSetParameters(GetEnv()));
+        parameters->copy(pparams);
         _robot = pbase;
         RobotBase::RobotStateSaver savestate(_robot);
 
-        if( (int)_parameters.vinitialconfig.size() != _parameters.GetDOF() ) {
-            RAVELOG_ERRORA(str(boost::format("initial config wrong dim: %d\n")%_parameters.vinitialconfig.size()));
+        if( (int)parameters->vinitialconfig.size() != parameters->GetDOF() ) {
+            RAVELOG_ERRORA(str(boost::format("initial config wrong dim: %d\n")%parameters->vinitialconfig.size()));
             return false;
         }
 
-        if(CollisionFunctions::CheckCollision(_parameters,_robot,_parameters.vinitialconfig, _report)) {
+        if(CollisionFunctions::CheckCollision(parameters,_robot,parameters->vinitialconfig, _report)) {
             RAVELOG_DEBUGA("BirrtPlanner::InitPlan - Error: Initial configuration in collision\n");
             return false;
         }
 
-        if( _parameters._vgrasps.size() == 0 ) {
+        if( parameters->_vgrasps.size() == 0 ) {
             RAVELOG_ERRORA("no goal sampler specified\n");
             return false;
         }
-        if( !_parameters._ptarget ) {
+        if( !parameters->_ptarget ) {
             RAVELOG_ERRORA("no target specified\n");
             return false;
         }
 
-        if( (int)_parameters.vinitialconfig.size() != _robot->GetActiveDOF() ) {
-            RAVELOG_ERRORA(str(boost::format("initial config wrong dim: %d\n")%_parameters.vinitialconfig.size()));
+        if( (int)parameters->vinitialconfig.size() != _robot->GetActiveDOF() ) {
+            RAVELOG_ERRORA(str(boost::format("initial config wrong dim: %d\n")%parameters->vinitialconfig.size()));
             return false;
         }
 
-        _randomConfig.resize(_parameters.GetDOF());
+        _randomConfig.resize(parameters->GetDOF());
 
         _pmanip = _robot->GetActiveManipulator();
         if( (int)_pmanip->GetArmJoints().size() != _robot->GetActiveDOF()) {
@@ -83,28 +85,27 @@ public:
         }
             
         // set up the initial state
-        if( !!_parameters._constraintfn ) {
+        if( !!parameters->_constraintfn ) {
             // filter
-            _parameters._setstatefn(_parameters.vinitialconfig);
-            if( !_parameters._constraintfn(_parameters.vinitialconfig, _parameters.vinitialconfig,0) ) {
+            parameters->_setstatefn(parameters->vinitialconfig);
+            if( !parameters->_constraintfn(parameters->vinitialconfig, parameters->vinitialconfig,0) ) {
                 // failed
                 RAVELOG_WARNA("initial state rejected by constraint fn\n");
                 //return false;
             }
         }
 
-        if( _parameters._nMaxIterations <= 0 )
-            _parameters._nMaxIterations = 10000;
+        if( parameters->_nMaxIterations <= 0 )
+            parameters->_nMaxIterations = 10000;
 
-        _bInit = true;
+        _parameters = parameters;
         return true;
     }
-
 
     /// \param pOutStream returns which goal was chosen
     virtual bool PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream)
     {
-        if(!_bInit) {
+        if(!_parameters) {
             RAVELOG_ERRORA("GraspGradientPlanner::PlanPath - Error, planner not initialized\n");
             return false;
         }
@@ -119,16 +120,16 @@ public:
         bool bSuccess = false;
 
         // prioritize the grasps and go through each one
-        _parameters._setstatefn(_parameters.vinitialconfig);
+        _parameters->_setstatefn(_parameters->vinitialconfig);
         Transform tcurgrasp = _pmanip->GetEndEffectorTransform();
 
-        Transform tobject = _parameters._ptarget->GetTransform();
-        vector<GRASP> vgrasps; vgrasps.reserve(_parameters._vgrasps.size());
-        for(size_t i = 0; i < _parameters._vgrasps.size(); ++i) {
-            Transform tgrasp = tobject * _parameters._vgrasps[i];
+        Transform tobject = _parameters->_ptarget->GetTransform();
+        vector<GRASP> vgrasps; vgrasps.reserve(_parameters->_vgrasps.size());
+        for(size_t i = 0; i < _parameters->_vgrasps.size(); ++i) {
+            Transform tgrasp = tobject * _parameters->_vgrasps[i];
             dReal fgraspdist = min((tgrasp.rot-tcurgrasp.rot).lengthsqr4(),(tgrasp.rot+tcurgrasp.rot).lengthsqr4());
             //+0.0f*(tgrasp.trans-tcurgrasp.trans).lengthsqr3();
-            if( fgraspdist < _parameters._fGraspDistThresh ) {
+            if( fgraspdist < _parameters->_fGraspDistThresh ) {
                 vgrasps.push_back(GRASP());
                 vgrasps.back().tgrasp = tgrasp;
                 vgrasps.back().fgraspdist = fgraspdist;
@@ -185,16 +186,15 @@ public:
         return bSuccess;
     }
 
-    virtual RobotBasePtr GetRobot() { return _robot; }
-
+    virtual PlannerParametersConstPtr GetParameters() const { return _parameters; }
+    
 private:
-
     bool StochasticGradientDescent(GraspGradientPlanner::GRASP& g, dReal fGoalThresh, list<vector<dReal> >& listpath)
     {
         vector<dReal> qbest, q(_robot->GetActiveDOF()),qgoaldir;
         listpath.clear();
         
-        _parameters._setstatefn(_parameters.vinitialconfig);
+        _parameters->_setstatefn(_parameters->vinitialconfig);
 
         if( g.bChecked ) {
             if( g.fgoaldist < 0 )
@@ -209,8 +209,8 @@ private:
                                !!_report->plink1?_report->plink1->GetName().c_str():"",
                                !!_report->plink2?_report->plink2->GetParent()->GetName().c_str():"",
                                !!_report->plink2?_report->plink2->GetName().c_str():"");
-                if( !(!!_report->plink1 && _report->plink1->GetParent() == _parameters._ptarget) &&
-                    !(!!_report->plink2 && _report->plink2->GetParent() == _parameters._ptarget) )
+                if( !(!!_report->plink1 && _report->plink1->GetParent() == _parameters->_ptarget) &&
+                    !(!!_report->plink2 && _report->plink2->GetParent() == _parameters->_ptarget) )
                     return false;
             }
 
@@ -231,7 +231,7 @@ private:
                 dReal bestdist=1e30f;
                 g.qgoal.resize(0);
                 FOREACH(itq,_viksolutions) {
-                    dReal dist = _parameters._distmetricfn(_parameters.vinitialconfig,*itq);
+                    dReal dist = _parameters->_distmetricfn(_parameters->vinitialconfig,*itq);
                     if( bestdist > dist  ) {
                         bestdist = dist;
                         g.qgoal = *itq;
@@ -241,7 +241,7 @@ private:
                 BOOST_ASSERT(g.qgoal.size()>0);
             }
 
-            g.fgoaldist = _parameters._distmetricfn(g.qgoal,_parameters.vinitialconfig);
+            g.fgoaldist = _parameters->_distmetricfn(g.qgoal,_parameters->vinitialconfig);
         }
 
         if( g.fgoaldist > fGoalThresh )
@@ -254,9 +254,9 @@ private:
         qbest.resize(0);
         dReal bestdist=0;
 
-        listpath.push_back(_parameters.vinitialconfig);
+        listpath.push_back(_parameters->vinitialconfig);
         dReal fGoalStep = 0.25f*g.qgoal.size();
-        dReal fdistmult = _parameters._distmetricfn(_parameters.vinitialconfig,g.qgoal);
+        dReal fdistmult = _parameters->_distmetricfn(_parameters->vinitialconfig,g.qgoal);
         if( fdistmult > fGoalStep )
             fdistmult = fGoalStep/fdistmult;
         else
@@ -264,14 +264,14 @@ private:
 
         qgoaldir.resize(g.qgoal.size());
         for(size_t i = 0; i < g.qgoal.size(); ++i)
-            qgoaldir[i] = (g.qgoal[i] - _parameters.vinitialconfig[i])*fdistmult;
+            qgoaldir[i] = (g.qgoal[i] - _parameters->vinitialconfig[i])*fdistmult;
     
 
-        for(int iter = 0; iter < _parameters._nMaxIterations; ++iter) {
+        for(int iter = 0; iter < _parameters->_nMaxIterations; ++iter) {
             dReal fRadius = 0.2f;
-            for(int giter = 0; giter < _parameters._nGradientSamples; ++giter, fRadius*=0.96f) {
+            for(int giter = 0; giter < _parameters->_nGradientSamples; ++giter, fRadius*=0.96f) {
                 if( giter == 0 ) {
-                    dReal fcurdist = _parameters._distmetricfn(listpath.back(),g.qgoal);
+                    dReal fcurdist = _parameters->_distmetricfn(listpath.back(),g.qgoal);
                     if( fcurdist < fGoalStep )
                         q = g.qgoal;
                     else {
@@ -280,23 +280,23 @@ private:
                     }
                 }
                 else
-                    _parameters._sampleneighfn(q,listpath.back(),fRadius);
+                    _parameters->_sampleneighfn(q,listpath.back(),fRadius);
 
                 vpath.resize(0);
                 if( !CollisionFunctions::CheckCollision(_parameters,_robot,listpath.back(),q,OPEN_START,&vpath) ) {
                     BOOST_ASSERT(vpath.size()>0);
-                    if( !!_parameters._constraintfn ) {
+                    if( !!_parameters->_constraintfn ) {
                         vector<dReal> qnew(_robot->GetActiveDOF());
                         int goodind = -1;
                         FOREACH(itq,vpath) {
-                            _parameters._setstatefn(*itq);
+                            _parameters->_setstatefn(*itq);
 
                             // check if grasp is closer than threshold
                             dReal graspdist2 = TransformDistance2(_pmanip->GetEndEffectorTransform(),g.tgrasp,0.2f);
                             //RAVELOG_DEBUGA("graspdist: %f\n",RaveSqrt(graspdist));
-                            if( graspdist2 > _parameters._fVisibiltyGraspThresh*_parameters._fVisibiltyGraspThresh ) {
-                                _parameters._setstatefn(qnew);
-                                if( !_parameters._constraintfn(*itq, qnew, 0) )
+                            if( graspdist2 > _parameters->_fVisibiltyGraspThresh*_parameters->_fVisibiltyGraspThresh ) {
+                                _parameters->_setstatefn(qnew);
+                                if( !_parameters->_constraintfn(*itq, qnew, 0) )
                                     break;
                                 q = qnew;
                             }
@@ -313,7 +313,7 @@ private:
                         q = vpath.back();
 
                     // if new sample is closer than the best, accept it
-                    dReal dist = _parameters._distmetricfn(q,g.qgoal);
+                    dReal dist = _parameters->_distmetricfn(q,g.qgoal);
                     if( qbest.size() == 0 || dist < bestdist ) {
                         RAVELOG_DEBUGA("dist: %f\n",dist);
                         qbest = q;
@@ -337,14 +337,12 @@ private:
     }
 
     RobotBase::ManipulatorPtr _pmanip;
-    GraspSetParameters _parameters;
+    boost::shared_ptr<GraspSetParameters> _parameters;
     RobotBasePtr         _robot;
     CollisionReportPtr _report;
 
     std::vector<dReal>         _randomConfig;
     std::vector<std::vector<dReal> > _viksolutions;
-
-    bool _bInit;
 };
 
 #endif

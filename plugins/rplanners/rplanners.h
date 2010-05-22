@@ -101,7 +101,7 @@ public:
 class CollisionFunctions
 {
  public:
-    static bool CheckCollision(const PlannerBase::PlannerParameters& params, RobotBasePtr robot, const vector<dReal>& pQ0, const vector<dReal>& pQ1, IntervalType interval, vector< vector<dReal> >* pvCheckedConfigurations = NULL)
+    static bool CheckCollision(PlannerBase::PlannerParametersConstPtr params, RobotBasePtr robot, const vector<dReal>& pQ0, const vector<dReal>& pQ1, IntervalType interval, vector< vector<dReal> >* pvCheckedConfigurations = NULL)
     {
         // set the bounds based on the interval type
         int start=0;
@@ -124,10 +124,10 @@ class CollisionFunctions
         }
 
         // first make sure the end is free
-        vector<dReal> vlastconfig(params.GetDOF()), vtempconfig(params.GetDOF());
+        vector<dReal> vlastconfig(params->GetDOF()), vtempconfig(params->GetDOF());
         if (bCheckEnd) {
-            params._setstatefn(pQ1);
-            if (robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || (params._bCheckSelfCollisions&&robot->CheckSelfCollision()) ) {
+            params->_setstatefn(pQ1);
+            if (robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || (params->_bCheckSelfCollisions&&robot->CheckSelfCollision()) ) {
                 if( pvCheckedConfigurations != NULL )
                     pvCheckedConfigurations->push_back(pQ1);
                 return true;
@@ -136,10 +136,10 @@ class CollisionFunctions
 
         // compute  the discretization
         vector<dReal> dQ = pQ1;
-        params._diffstatefn(dQ,pQ0);
+        params->_diffstatefn(dQ,pQ0);
         int i, numSteps = 1;
-        vector<dReal>::const_iterator itres = params._vConfigResolution.begin();
-        for (i = 0; i < params.GetDOF(); i++,itres++) {
+        vector<dReal>::const_iterator itres = params->_vConfigResolution.begin();
+        for (i = 0; i < params->GetDOF(); i++,itres++) {
             int steps;
             if( *itres != 0 )
                 steps = (int)(fabs(dQ[i]) / *itres);
@@ -152,27 +152,27 @@ class CollisionFunctions
         FOREACH(it,dQ)
             *it *= fisteps;
 
-        if( !!params._constraintfn )
+        if( !!params->_constraintfn )
             vlastconfig = pQ0;
         // check for collision along the straight-line path
         // NOTE: this does not check the end config, and may or may
         // not check the start based on the value of 'start'
         for (int f = start; f < numSteps; f++) {
 
-            for (i = 0; i < params.GetDOF(); i++)
+            for (i = 0; i < params->GetDOF(); i++)
                 vtempconfig[i] = pQ0[i] + (dQ[i] * f);
         
-            params._setstatefn(vtempconfig);
-            if( !!params._constraintfn ) {
-                if( !params._constraintfn(vlastconfig,vtempconfig,0) )
+            params->_setstatefn(vtempconfig);
+            if( !!params->_constraintfn ) {
+                if( !params->_constraintfn(vlastconfig,vtempconfig,0) )
                     return true;
                 vlastconfig = pQ0;
             }
             if( pvCheckedConfigurations != NULL ) {
-                params._getstatefn(vtempconfig); // query again in order to get normalizations/joint limits
+                params->_getstatefn(vtempconfig); // query again in order to get normalizations/joint limits
                 pvCheckedConfigurations->push_back(vtempconfig);
             }
-            if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || (params._bCheckSelfCollisions&&robot->CheckSelfCollision()) )
+            if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) || (params->_bCheckSelfCollisions&&robot->CheckSelfCollision()) )
                 return true;
         }
 
@@ -183,10 +183,10 @@ class CollisionFunctions
     }
 
     /// check collision between body and environment
-    static bool CheckCollision(const PlannerBase::PlannerParameters& params, RobotBasePtr robot, const vector<dReal>& pConfig, CollisionReportPtr report=CollisionReportPtr())
+    static bool CheckCollision(PlannerBase::PlannerParametersConstPtr params, RobotBasePtr robot, const vector<dReal>& pConfig, CollisionReportPtr report=CollisionReportPtr())
     {
-        params._setstatefn(pConfig);
-        bool bCol = robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot), report) || (params._bCheckSelfCollisions&&robot->CheckSelfCollision(report));
+        params->_setstatefn(pConfig);
+        bool bCol = robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot), report) || (params->_bCheckSelfCollisions&&robot->CheckSelfCollision(report));
         if( bCol && !!report )
             RAVELOG_WARNA(str(boost::format("fcollision %s\n")%report->__str__()));
         return bCol;
@@ -303,6 +303,7 @@ class SpatialTree : public SpatialTreeBase
         Node* pnode = _nodes.at(lastindex);
         bool bHasAdded = false;
         boost::shared_ptr<Planner> planner(_planner);
+        PlannerBase::PlannerParametersConstPtr params = planner->GetParameters();
         // extend
         while(1) {
             dReal fdist = _distmetricfn(pTargetConfig,pnode->q);
@@ -313,21 +314,21 @@ class SpatialTree : public SpatialTreeBase
             }
         
             _vNewConfig = pTargetConfig;
-            planner->GetParameters()._diffstatefn(_vNewConfig,pnode->q);
+            params->_diffstatefn(_vNewConfig,pnode->q);
             for(int i = 0; i < _dof; ++i)
                 _vNewConfig[i] = pnode->q[i] + _vNewConfig[i]*fdist;
         
             // project to constraints
-            if( !!planner->GetParameters()._constraintfn ) {
-                planner->GetParameters()._setstatefn(_vNewConfig);
-                if( !planner->GetParameters()._constraintfn(pnode->q, _vNewConfig, 0) ) {
+            if( !!params->_constraintfn ) {
+                params->_setstatefn(_vNewConfig);
+                if( !params->_constraintfn(pnode->q, _vNewConfig, 0) ) {
                     if(bHasAdded)
                         return ET_Sucess;
                     return ET_Failed;
                 }
             }
 
-            if( CollisionFunctions::CheckCollision(planner->GetParameters(),planner->GetRobot(),pnode->q, _vNewConfig, OPEN_START) ) {
+            if( CollisionFunctions::CheckCollision(params,planner->GetRobot(),pnode->q, _vNewConfig, OPEN_START) ) {
                 if(bHasAdded)
                     return ET_Sucess;
                 return ET_Failed;
@@ -361,12 +362,16 @@ class SpatialTree : public SpatialTreeBase
 class ExplorationParameters : public PlannerBase::PlannerParameters
 {
  public:
- ExplorationParameters() : _fExploreProb(0), _nExpectedDataSize(100) {}
+ExplorationParameters() : _fExploreProb(0), _nExpectedDataSize(100), _bProcessingExploration(false) {
+        _vXMLParameters.push_back("exploreprob");
+        _vXMLParameters.push_back("expectedsize");
+    }
         
     dReal _fExploreProb;
     int _nExpectedDataSize;
         
  protected:
+    bool _bProcessingExploration;
     // save the extra data to XML
     virtual bool serialize(std::ostream& O) const
     {
@@ -376,25 +381,51 @@ class ExplorationParameters : public PlannerBase::PlannerParameters
         O << "<expectedsize>" << _nExpectedDataSize << "</expectedsize>" << endl;
         return !!O;
     }
- 
+
+    ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+    {
+        if( _bProcessingExploration )
+            return PE_Ignore;
+        switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
+            case PE_Pass: break;
+            case PE_Support: return PE_Support;
+            case PE_Ignore: return PE_Ignore;
+        }
+        
+        _bProcessingExploration = name=="exploreprob"||name=="expectedsize";
+        return _bProcessingExploration ? PE_Support : PE_Pass;
+    }
+        
     // called at the end of every XML tag, _ss contains the data 
     virtual bool endElement(const std::string& name)
     {
         // _ss is an internal stringstream that holds the data of the tag
-        if( name == "exploreprob")
-            _ss >> _fExploreProb;
-        else if( name == "expectedsize" )
-            _ss >> _nExpectedDataSize;
-        else // give a chance for the default parameters to get processed
-            return PlannerParameters::endElement(name);
-        return false;
+        if( _bProcessingExploration ) {
+            if( name == "exploreprob")
+                _ss >> _fExploreProb;
+            else if( name == "expectedsize" )
+                _ss >> _nExpectedDataSize;
+            else
+                RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
+            _bProcessingExploration = false;
+            return false;
+        }
+        
+        // give a chance for the default parameters to get processed
+        return PlannerParameters::endElement(name);
     }
 };
 
 class RAStarParameters : public PlannerBase::PlannerParameters
 {
  public:
- RAStarParameters() : fRadius(0.1f), fDistThresh(0.03f), fGoalCoeff(1), nMaxChildren(5), nMaxSampleTries(10) {}
+RAStarParameters() : fRadius(0.1f), fDistThresh(0.03f), fGoalCoeff(1), nMaxChildren(5), nMaxSampleTries(10), _bProcessingRA(false) {
+        _vXMLParameters.push_back("radius");
+        _vXMLParameters.push_back("distthresh");
+        _vXMLParameters.push_back("goalcoeff");
+        _vXMLParameters.push_back("maxchildren");
+        _vXMLParameters.push_back("maxsampletries");
+    }
         
     dReal fRadius;      ///< _pDistMetric thresh is the radius that children must be within parents
     dReal fDistThresh;  ///< gamma * _pDistMetric->thresh is the sampling radius
@@ -402,6 +433,7 @@ class RAStarParameters : public PlannerBase::PlannerParameters
     int nMaxChildren;   ///< limit on number of children
     int nMaxSampleTries; ///< max sample tries before giving up on creating a child
  protected:
+    bool _bProcessingRA;
     virtual bool serialize(std::ostream& O) const
     {
         if( !PlannerParameters::serialize(O) )
@@ -415,29 +447,52 @@ class RAStarParameters : public PlannerBase::PlannerParameters
     
         return !!O;
     }
-        
+
+    ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+    {
+        if( _bProcessingRA )
+            return PE_Ignore;
+        switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
+            case PE_Pass: break;
+            case PE_Support: return PE_Support;
+            case PE_Ignore: return PE_Ignore;
+        }
+        _bProcessingRA = name=="radius"||name=="distthresh"||name=="goalcoeff"||name=="maxchildren"||name=="maxsampletries";
+        return _bProcessingRA ? PE_Support : PE_Pass;
+    }
     virtual bool endElement(const string& name)
     {
-        if( name == "radius")
-            _ss >> fRadius;
-        else if( name == "distthresh")
-            _ss >> fDistThresh;
-        else if( name == "goalcoeff")
-            _ss >> fGoalCoeff;
-        else if( name == "maxchildren")
-            _ss >> nMaxChildren;
-        else if( name == "maxsampletries")
-            _ss >> nMaxSampleTries;
-        else
-            return PlannerParameters::endElement(name);
-        return false;
+        if( _bProcessingRA ) {
+            if( name == "radius")
+                _ss >> fRadius;
+            else if( name == "distthresh")
+                _ss >> fDistThresh;
+            else if( name == "goalcoeff")
+                _ss >> fGoalCoeff;
+            else if( name == "maxchildren")
+                _ss >> nMaxChildren;
+            else if( name == "maxsampletries")
+                _ss >> nMaxSampleTries;
+            else
+                RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
+            _bProcessingRA = false;
+            return false;
+        }
+        // give a chance for the default parameters to get processed
+        return PlannerParameters::endElement(name);
     }
 };
 
 class GraspSetParameters : public PlannerBase::PlannerParameters
 {
 public:
- GraspSetParameters(EnvironmentBasePtr penv) : _nGradientSamples(5), _fVisibiltyGraspThresh(0), _fGraspDistThresh(1.4f), _penv(penv) {}
+GraspSetParameters(EnvironmentBasePtr penv) : _nGradientSamples(5), _fVisibiltyGraspThresh(0), _fGraspDistThresh(1.4f), _penv(penv),_bProcessingGS(false) {
+        _vXMLParameters.push_back("grasps");
+        _vXMLParameters.push_back("target");
+        _vXMLParameters.push_back("numgradsamples");
+        _vXMLParameters.push_back("visgraspthresh");
+        _vXMLParameters.push_back("graspdistthresh");
+    }
     
     vector<Transform> _vgrasps; ///< grasps with respect to the target object
     KinBodyPtr _ptarget;
@@ -447,7 +502,7 @@ public:
 
  protected:
     EnvironmentBasePtr _penv;
-
+    bool _bProcessingGS;
     virtual bool serialize(std::ostream& O) const
     {
         if( !PlannerParameters::serialize(O) )
@@ -462,32 +517,102 @@ public:
         O << "<graspdistthresh>" << _fGraspDistThresh << "</graspdistthresh>" << endl;
         return !!O;
     }
+
+    ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+    {
+        if( _bProcessingGS )
+            return PE_Ignore;
+        switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
+            case PE_Pass: break;
+            case PE_Support: return PE_Support;
+            case PE_Ignore: return PE_Ignore;
+        }
         
+        _bProcessingGS = name=="grasps"||name=="target"||name=="numgradsamples"||name=="visgraspthresh"||name=="graspdistthresh";
+        return _bProcessingGS ? PE_Support : PE_Pass;
+    }
+    
     virtual bool endElement(const string& name)
     {
-        if( name == "grasps" ) {
-            int ngrasps=0;
-            _ss >> ngrasps;
-            _vgrasps.resize(ngrasps);
-            FOREACH(it, _vgrasps)
-                _ss >> *it;
+        if( _bProcessingGS ) {
+            if( name == "grasps" ) {
+                int ngrasps=0;
+                _ss >> ngrasps;
+                _vgrasps.resize(ngrasps);
+                FOREACH(it, _vgrasps)
+                        _ss >> *it;
+            }
+            else if( name == "target" ) {
+                int id = 0;
+                _ss >> id;
+                _ptarget = _penv->GetBodyFromEnvironmentId(id);
+            }
+            else if( name == "numgradsamples" )
+                _ss >> _nGradientSamples;
+            else if( name == "visgraspthresh" )
+                _ss >> _fVisibiltyGraspThresh;
+            else if( name == "graspdistthresh")
+                _ss >> _fGraspDistThresh;
+            else
+                RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
+            _bProcessingGS = false;
+            return false;
         }
-        else if( name == "target" ) {
-            int id = 0;
-            _ss >> id;
-            _ptarget = _penv->GetBodyFromEnvironmentId(id);
-        }
-        else if( name == "numgradsamples" )
-            _ss >> _nGradientSamples;
-        else if( name == "visgraspthresh" )
-            _ss >> _fVisibiltyGraspThresh;
-        else if( name == "graspdistthresh")
-            _ss >> _fGraspDistThresh;
-        else
-            return PlannerParameters::endElement(name);
-        return false;
+
+        // give a chance for the default parameters to get processed
+        return PlannerParameters::endElement(name);
     }
 };
+
+class BasicRRTParameters : public PlannerBase::PlannerParameters
+{
+public:
+BasicRRTParameters() : _fGoalBiasProb(0.05f), _bProcessing(false) {
+        _vXMLParameters.push_back("goalbias");
+    }
+    
+    dReal _fGoalBiasProb; 
+
+ protected:
+    bool _bProcessing;
+    virtual bool serialize(std::ostream& O) const
+    {
+        if( !PlannerParameters::serialize(O) )
+            return false;
+        O << "<goalbias>" << _fGoalBiasProb << "</goalbias>" << endl;
+        return !!O;
+    }
+
+    ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+    {
+        if( _bProcessing )
+            return PE_Ignore;
+        switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
+            case PE_Pass: break;
+            case PE_Support: return PE_Support;
+            case PE_Ignore: return PE_Ignore;
+        }
+        
+        _bProcessing = name=="goalbias";
+        return _bProcessing ? PE_Support : PE_Pass;
+    }
+    
+    virtual bool endElement(const string& name)
+    {
+        if( _bProcessing ) {
+            if( name == "goalbias")
+                _ss >> _fGoalBiasProb;
+            else
+                RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
+            _bProcessing = false;
+            return false;
+        }
+
+        // give a chance for the default parameters to get processed
+        return PlannerParameters::endElement(name);
+    }
+};
+
 
 inline dReal TransformDistance2(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)
 {

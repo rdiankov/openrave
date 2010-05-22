@@ -140,8 +140,25 @@ class CollisionCheckerMngr
 
 class GraspParameters : public PlannerBase::PlannerParameters
 {
- public:
- GraspParameters(EnvironmentBasePtr penv) : fstandoff(0), ftargetroll(0), vtargetdirection(0,0,1), btransformrobot(false), breturntrajectory(false), bonlycontacttarget(true), btightgrasp(false), bavoidcontact(false), fcoarsestep(0.1f), ffinestep(0.001f), ftranslationstepmult(0.1f), fgraspingnoise(0), _penv(penv) {}
+public:
+GraspParameters(EnvironmentBasePtr penv) : PlannerBase::PlannerParameters(), fstandoff(0), ftargetroll(0), vtargetdirection(0,0,1), btransformrobot(false), breturntrajectory(false), bonlycontacttarget(true), btightgrasp(false), bavoidcontact(false), fcoarsestep(0.1f), ffinestep(0.001f), ftranslationstepmult(0.1f), fgraspingnoise(0), _penv(penv) {
+        _vXMLParameters.push_back("fstandoff");
+        _vXMLParameters.push_back("targetbody");
+        _vXMLParameters.push_back("ftargetroll");
+        _vXMLParameters.push_back("vtargetdirection");
+        _vXMLParameters.push_back("vtargetposition");
+        _vXMLParameters.push_back("btransformrobot");
+        _vXMLParameters.push_back("breturntrajectory");
+        _vXMLParameters.push_back("bonlycontacttarget");
+        _vXMLParameters.push_back("btightgrasp");
+        _vXMLParameters.push_back("bavoidcontact");
+        _vXMLParameters.push_back("vavoidlinkgeometry");
+        _vXMLParameters.push_back("fcoarsestep");
+        _vXMLParameters.push_back("ffinestep");
+        _vXMLParameters.push_back("ftranslationstepmult");
+        _vXMLParameters.push_back("fgraspingnoise");
+        _bProcessingGrasp = false;
+    }
 
     dReal fstandoff; ///< start closing fingers when at this distance
     KinBodyPtr targetbody; ///< the target that will be grasped, all parameters will be in this coordinate system. if not present, then below transformations are in absolute coordinate system.
@@ -162,7 +179,7 @@ class GraspParameters : public PlannerBase::PlannerParameters
     dReal fgraspingnoise; ///< random undeterministic noise to add to the target object, represents the max possible displacement of any point on the object (noise added after global direction and start have been determined)
  protected:
     EnvironmentBasePtr _penv; ///< environment target belongs to
-
+    bool _bProcessingGrasp;
     // save the extra data to XML
     virtual bool serialize(std::ostream& O) const
     {
@@ -189,55 +206,72 @@ class GraspParameters : public PlannerBase::PlannerParameters
         return !!O;
     }
 
-    void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+    ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
     {
-        PlannerBase::PlannerParameters::startElement(name,atts);
-        if( name == "vavoidlinkgeometry" )
+        if( _bProcessingGrasp )
+            return PE_Ignore;
+        switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
+            case PE_Pass: break;
+            case PE_Support: return PE_Support;
+            case PE_Ignore: return PE_Ignore;
+        }
+        if( name == "vavoidlinkgeometry" ) {
             vavoidlinkgeometry.resize(0);
+            return PE_Support;
+        }
+        
+        _bProcessingGrasp = name=="fstandoff"||name=="targetbody"||name=="ftargetroll"||name=="vtargetdirection"||name=="vtargetposition"||name=="btransformrobot"||name=="breturntrajectory"||name=="bonlycontacttarget"||name=="btightgrasp"||name=="bavoidcontact"||name=="vavoidlinkgeometry"||name=="fcoarsestep"||name=="ffinestep"||name=="ftranslationstepmult"||name=="fgraspingnoise";
+        return _bProcessingGrasp ? PE_Support : PE_Pass;
     }
  
     // called at the end of every XML tag, _ss contains the data 
     virtual bool endElement(const std::string& name)
     {
         // _ss is an internal stringstream that holds the data of the tag
-        if( name == "vavoidlinkgeometry" )
-            vavoidlinkgeometry = vector<string>((istream_iterator<string>(_ss)), istream_iterator<string>());
-        else if( name == "fstandoff")
-            _ss >> fstandoff;
-        else if( name == "targetbody") {
-            int id = 0;
-            _ss >> id;
-            targetbody = _penv->GetBodyFromEnvironmentId(id);
+        if( _bProcessingGrasp ) {
+            if( name == "vavoidlinkgeometry" )
+                vavoidlinkgeometry = vector<string>((istream_iterator<string>(_ss)), istream_iterator<string>());
+            else if( name == "fstandoff")
+                _ss >> fstandoff;
+            else if( name == "targetbody") {
+                int id = 0;
+                _ss >> id;
+                targetbody = _penv->GetBodyFromEnvironmentId(id);
+            }
+            else if( name == "ftargetroll")
+                _ss >> ftargetroll;
+            else if( name == "vtargetdirection") {
+                _ss >> vtargetdirection;
+                vtargetdirection.normalize3();
+            }
+            else if( name == "vtargetposition")
+                _ss >> vtargetposition;
+            else if( name == "btransformrobot")
+                _ss >> btransformrobot;
+            else if( name == "breturntrajectory")
+                _ss >> breturntrajectory;
+            else if( name == "bonlycontacttarget")
+                _ss >> bonlycontacttarget;
+            else if( name == "btightgrasp" )
+                _ss >> btightgrasp;
+            else if( name == "bavoidcontact" )
+                _ss >> bavoidcontact;
+            else if( name == "fcoarsestep" )
+                _ss >> fcoarsestep;
+            else if( name == "ffinestep" )
+                _ss >> ffinestep;
+            else if( name == "fgraspingnoise" )
+                _ss >> fgraspingnoise;
+            else if( name == "ftranslationstepmult" )
+                _ss >> ftranslationstepmult;
+            else
+                RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
+            _bProcessingGrasp = false;
+            return false;
         }
-        else if( name == "ftargetroll")
-            _ss >> ftargetroll;
-        else if( name == "vtargetdirection") {
-            _ss >> vtargetdirection;
-            vtargetdirection.normalize3();
-        }
-        else if( name == "vtargetposition")
-            _ss >> vtargetposition;
-        else if( name == "btransformrobot")
-            _ss >> btransformrobot;
-        else if( name == "breturntrajectory")
-            _ss >> breturntrajectory;
-        else if( name == "bonlycontacttarget")
-            _ss >> bonlycontacttarget;
-        else if( name == "btightgrasp" )
-            _ss >> btightgrasp;
-        else if( name == "bavoidcontact" )
-            _ss >> bavoidcontact;
-        else if( name == "fcoarsestep" )
-            _ss >> fcoarsestep;
-        else if( name == "ffinestep" )
-            _ss >> ffinestep;
-        else if( name == "fgraspingnoise" )
-            _ss >> fgraspingnoise;
-        else if( name == "ftranslationstepmult" )
-            _ss >> ftranslationstepmult;
-        else // give a chance for the default parameters to get processed
-            return PlannerParameters::endElement(name);
-        return false;
+
+        // give a chance for the default parameters to get processed
+        return PlannerParameters::endElement(name);
     }
 };
 

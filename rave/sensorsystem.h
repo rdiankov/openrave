@@ -122,13 +122,12 @@ public:
     public:
         SimpleXMLReader(boost::shared_ptr<XMLData>);
         virtual XMLReadablePtr GetReadable() { return _pdata; }
-        virtual void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts);
+        virtual ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts);
         virtual bool endElement(const std::string& name);
         virtual void characters(const std::string& ch);
 
     protected:
         boost::shared_ptr<XMLData> _pdata;
-        BaseXMLReaderPtr _pcurreader;
         std::stringstream ss;
     };
 

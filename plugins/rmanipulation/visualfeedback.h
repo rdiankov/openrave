@@ -928,7 +928,7 @@ public:
             else if( cmd == "writetraj" )
                 sinput >> strtrajfilename;
             else if( cmd == "smoothpath" )
-                sinput >> params->_bComputeSmoothPath;
+                sinput >> params->_sPathOptimizationPlanner;
             else if( cmd == "target" ) {
                 string name; sinput >> name;
                 ptarget = GetEnv()->GetKinBody(name);

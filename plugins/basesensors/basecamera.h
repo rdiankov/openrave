@@ -23,19 +23,23 @@ class BaseCameraSensor : public SensorBase
     public:
     BaseCameraXMLReader(boost::shared_ptr<BaseCameraSensor> psensor) : _psensor(psensor) {}
         
-        virtual void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+        virtual ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
         {
-            BaseXMLReader::startElement(name,atts);
-            if( !!_pcurreader )
-                _pcurreader->startElement(name,atts);
-            else if( name != "sensor" && name != "kk" && name != "width" && name != "height" && name != "framerate" && name != "power" && name != "color" ) {
-                _pcurreader.reset(new DummyXMLReader(name, "sensor"));
+            if( !!_pcurreader ) {
+                if( _pcurreader->startElement(name,atts) == PE_Support )
+                    return PE_Support;
+                return PE_Ignore;
             }
+            
+            if( name != "sensor" && name != "kk" && name != "width" && name != "height" && name != "framerate" && name != "power" && name != "color" ) {
+                return PE_Pass;
+            }
+            ss.str("");
+            return PE_Support;
         }
 
         virtual bool endElement(const std::string& name)
         {
-            BaseXMLReader::endElement(name);
             if( !!_pcurreader ) {
                 if( _pcurreader->endElement(name) )
                     _pcurreader.reset();
@@ -70,12 +74,11 @@ class BaseCameraSensor : public SensorBase
         
         virtual void characters(const std::string& ch)
         {
-            BaseXMLReader::characters(ch);
             if( !!_pcurreader )
                 _pcurreader->characters(ch);
             else {
                 ss.clear();
-                ss.str(ch);
+                ss << ch;
             }
         }
 

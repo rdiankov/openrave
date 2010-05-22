@@ -50,13 +50,13 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
     PhysicsPropertiesXMLReader(boost::shared_ptr<ODEPhysicsEngine> physics, const std::list<std::pair<std::string,std::string> >& atts) : _physics(physics) {
         }
 
-        virtual void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts) {
-            BaseXMLReader::startElement(name,atts);
+        virtual ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts) {
+            _ss.str("");
+            return (name=="friction"||name=="selfcollision"||name=="gravity") ? PE_Support : PE_Pass;
         }
 
         virtual bool endElement(const std::string& name)
         {
-            BaseXMLReader::endElement(name);
             if( name == "odeproperties" )
                 return true;
             else if( name == "friction" )
@@ -85,9 +85,8 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
 
         virtual void characters(const std::string& ch)
         {
-            BaseXMLReader::characters(ch);
             _ss.clear();
-            _ss.str(ch);
+            _ss << ch;
         }
 
     protected:

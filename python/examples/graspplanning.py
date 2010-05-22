@@ -41,7 +41,7 @@ class GraspPlanning(metaclass.AutoReloader):
             if switchpatterns is not None:
                 self.taskmanip.SwitchModels(switchpatterns=switchpatterns)
             self.updir = array((0,0,1))
-
+            
             # find all the bodies to manipulate
             self.graspables = self.getGraspables(dests=dests)
             if len(self.graspables) == 0:

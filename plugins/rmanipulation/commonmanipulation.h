@@ -568,10 +568,73 @@ class CM
     }
 };
 
+class ExplorationParameters : public PlannerBase::PlannerParameters
+{
+ public:
+ExplorationParameters() : _fExploreProb(0), _nExpectedDataSize(100), _bProcessingExploration(false) {
+        _vXMLParameters.push_back("exploreprob");
+        _vXMLParameters.push_back("expectedsize");
+    }
+        
+    dReal _fExploreProb;
+    int _nExpectedDataSize;
+        
+ protected:
+    bool _bProcessingExploration;
+    // save the extra data to XML
+    virtual bool serialize(std::ostream& O) const
+    {
+        if( !PlannerParameters::serialize(O) )
+            return false;
+        O << "<exploreprob>" << _fExploreProb << "</exploreprob>" << endl;
+        O << "<expectedsize>" << _nExpectedDataSize << "</expectedsize>" << endl;
+        return !!O;
+    }
+
+    ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+    {
+        if( _bProcessingExploration )
+            return PE_Ignore;
+        switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
+            case PE_Pass: break;
+            case PE_Support: return PE_Support;
+            case PE_Ignore: return PE_Ignore;
+        }
+        
+        _bProcessingExploration = name=="exploreprob"||name=="expectedsize";
+        return _bProcessingExploration ? PE_Support : PE_Pass;
+    }
+        
+    // called at the end of every XML tag, _ss contains the data 
+    virtual bool endElement(const std::string& name)
+    {
+        // _ss is an internal stringstream that holds the data of the tag
+        if( _bProcessingExploration ) {
+            if( name == "exploreprob")
+                _ss >> _fExploreProb;
+            else if( name == "expectedsize" )
+                _ss >> _nExpectedDataSize;
+            else
+                RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
+            _bProcessingExploration = false;
+            return false;
+        }
+        
+        // give a chance for the default parameters to get processed
+        return PlannerParameters::endElement(name);
+    }
+};
+
 class RAStarParameters : public PlannerBase::PlannerParameters
 {
  public:
- RAStarParameters() : fRadius(0.1f), fDistThresh(0.03f), fGoalCoeff(1), nMaxChildren(5), nMaxSampleTries(10) {}
+RAStarParameters() : fRadius(0.1f), fDistThresh(0.03f), fGoalCoeff(1), nMaxChildren(5), nMaxSampleTries(10), _bProcessingRA(false) {
+        _vXMLParameters.push_back("radius");
+        _vXMLParameters.push_back("distthresh");
+        _vXMLParameters.push_back("goalcoeff");
+        _vXMLParameters.push_back("maxchildren");
+        _vXMLParameters.push_back("maxsampletries");
+    }
         
     dReal fRadius;      ///< _pDistMetric thresh is the radius that children must be within parents
     dReal fDistThresh;  ///< gamma * _pDistMetric->thresh is the sampling radius
@@ -579,6 +642,7 @@ class RAStarParameters : public PlannerBase::PlannerParameters
     int nMaxChildren;   ///< limit on number of children
     int nMaxSampleTries; ///< max sample tries before giving up on creating a child
  protected:
+    bool _bProcessingRA;
     virtual bool serialize(std::ostream& O) const
     {
         if( !PlannerParameters::serialize(O) )
@@ -592,62 +656,144 @@ class RAStarParameters : public PlannerBase::PlannerParameters
     
         return !!O;
     }
-        
+
+    ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+    {
+        if( _bProcessingRA )
+            return PE_Ignore;
+        switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
+            case PE_Pass: break;
+            case PE_Support: return PE_Support;
+            case PE_Ignore: return PE_Ignore;
+        }
+        _bProcessingRA = name=="radius"||name=="distthresh"||name=="goalcoeff"||name=="maxchildren"||name=="maxsampletries";
+        return _bProcessingRA ? PE_Support : PE_Pass;
+    }
     virtual bool endElement(const string& name)
     {
-        if( name == "radius")
-            _ss >> fRadius;
-        else if( name == "distthresh")
-            _ss >> fDistThresh;
-        else if( name == "goalcoeff")
-            _ss >> fGoalCoeff;
-        else if( name == "maxchildren")
-            _ss >> nMaxChildren;
-        else if( name == "maxsampletries")
-            _ss >> nMaxSampleTries;
-        else
-            return PlannerParameters::endElement(name);
-        return false;
+        if( _bProcessingRA ) {
+            if( name == "radius")
+                _ss >> fRadius;
+            else if( name == "distthresh")
+                _ss >> fDistThresh;
+            else if( name == "goalcoeff")
+                _ss >> fGoalCoeff;
+            else if( name == "maxchildren")
+                _ss >> nMaxChildren;
+            else if( name == "maxsampletries")
+                _ss >> nMaxSampleTries;
+            else
+                RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
+            _bProcessingRA = false;
+            return false;
+        }
+        // give a chance for the default parameters to get processed
+        return PlannerParameters::endElement(name);
     }
 };
 
-class ExplorationParameters : public PlannerBase::PlannerParameters
+class GraspSetParameters : public PlannerBase::PlannerParameters
 {
- public:
- ExplorationParameters() : _fExploreProb(0), _nExpectedDataSize(100) {}
-        
-    dReal _fExploreProb;
-    int _nExpectedDataSize;
-        
+public:
+GraspSetParameters(EnvironmentBasePtr penv) : _nGradientSamples(5), _fVisibiltyGraspThresh(0), _fGraspDistThresh(1.4f), _penv(penv),_bProcessingGS(false) {
+        _vXMLParameters.push_back("grasps");
+        _vXMLParameters.push_back("target");
+        _vXMLParameters.push_back("numgradsamples");
+        _vXMLParameters.push_back("visgraspthresh");
+        _vXMLParameters.push_back("graspdistthresh");
+    }
+    
+    vector<Transform> _vgrasps; ///< grasps with respect to the target object
+    KinBodyPtr _ptarget;
+    int _nGradientSamples;
+    dReal _fVisibiltyGraspThresh; ///< if current grasp is less than this threshold, then visibilty is not checked
+    dReal _fGraspDistThresh; ///< target grasps beyond this distance are ignored
+
  protected:
-    // save the extra data to XML
+    EnvironmentBasePtr _penv;
+    bool _bProcessingGS;
     virtual bool serialize(std::ostream& O) const
     {
         if( !PlannerParameters::serialize(O) )
             return false;
-        O << "<exploreprob>" << _fExploreProb << "</exploreprob>" << endl;
-        O << "<expectedsize>" << _nExpectedDataSize << "</expectedsize>" << endl;
+        O << "<grasps>" << _vgrasps.size() << " ";
+        FOREACHC(it, _vgrasps)
+            O << *it << " ";
+        O << "</grasps>" << endl;
+        O << "<target>" << (!!_ptarget?_ptarget->GetEnvironmentId():0) << "</target>" << endl;
+        O << "<numgradsamples>" << _nGradientSamples << "</numgradsamples>" << endl;
+        O << "<visgraspthresh>" << _fVisibiltyGraspThresh << "</visgraspthresh>" << endl;
+        O << "<graspdistthresh>" << _fGraspDistThresh << "</graspdistthresh>" << endl;
         return !!O;
     }
- 
-    // called at the end of every XML tag, _ss contains the data 
-    virtual bool endElement(const std::string& name)
+
+    ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
     {
-        // _ss is an internal stringstream that holds the data of the tag
-        if( name == "exploreprob")
-            _ss >> _fExploreProb;
-        else if( name == "expectedsize" )
-            _ss >> _nExpectedDataSize;
-        else // give a chance for the default parameters to get processed
-            return PlannerParameters::endElement(name);
-        return false;
+        if( _bProcessingGS )
+            return PE_Ignore;
+        switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
+            case PE_Pass: break;
+            case PE_Support: return PE_Support;
+            case PE_Ignore: return PE_Ignore;
+        }
+        
+        _bProcessingGS = name=="grasps"||name=="target"||name=="numgradsamples"||name=="visgraspthresh"||name=="graspdistthresh";
+        return _bProcessingGS ? PE_Support : PE_Pass;
+    }
+    
+    virtual bool endElement(const string& name)
+    {
+        if( _bProcessingGS ) {
+            if( name == "grasps" ) {
+                int ngrasps=0;
+                _ss >> ngrasps;
+                _vgrasps.resize(ngrasps);
+                FOREACH(it, _vgrasps)
+                        _ss >> *it;
+            }
+            else if( name == "target" ) {
+                int id = 0;
+                _ss >> id;
+                _ptarget = _penv->GetBodyFromEnvironmentId(id);
+            }
+            else if( name == "numgradsamples" )
+                _ss >> _nGradientSamples;
+            else if( name == "visgraspthresh" )
+                _ss >> _fVisibiltyGraspThresh;
+            else if( name == "graspdistthresh")
+                _ss >> _fGraspDistThresh;
+            else
+                RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
+            _bProcessingGS = false;
+            return false;
+        }
+
+        // give a chance for the default parameters to get processed
+        return PlannerParameters::endElement(name);
     }
 };
 
 class GraspParameters : public PlannerBase::PlannerParameters
 {
- public:
- GraspParameters(EnvironmentBasePtr penv) : fstandoff(0), ftargetroll(0), vtargetdirection(0,0,1), btransformrobot(false), breturntrajectory(false), bonlycontacttarget(true), btightgrasp(false), bavoidcontact(false), fcoarsestep(0.1f), ffinestep(0.001f), ftranslationstepmult(0.1f), fgraspingnoise(0), _penv(penv) {}
+public:
+GraspParameters(EnvironmentBasePtr penv) : PlannerBase::PlannerParameters(), fstandoff(0), ftargetroll(0), vtargetdirection(0,0,1), btransformrobot(false), breturntrajectory(false), bonlycontacttarget(true), btightgrasp(false), bavoidcontact(false), fcoarsestep(0.1f), ffinestep(0.001f), ftranslationstepmult(0.1f), fgraspingnoise(0), _penv(penv) {
+        _vXMLParameters.push_back("fstandoff");
+        _vXMLParameters.push_back("targetbody");
+        _vXMLParameters.push_back("ftargetroll");
+        _vXMLParameters.push_back("vtargetdirection");
+        _vXMLParameters.push_back("vtargetposition");
+        _vXMLParameters.push_back("btransformrobot");
+        _vXMLParameters.push_back("breturntrajectory");
+        _vXMLParameters.push_back("bonlycontacttarget");
+        _vXMLParameters.push_back("btightgrasp");
+        _vXMLParameters.push_back("bavoidcontact");
+        _vXMLParameters.push_back("vavoidlinkgeometry");
+        _vXMLParameters.push_back("fcoarsestep");
+        _vXMLParameters.push_back("ffinestep");
+        _vXMLParameters.push_back("ftranslationstepmult");
+        _vXMLParameters.push_back("fgraspingnoise");
+        _bProcessingGrasp = false;
+    }
 
     dReal fstandoff; ///< start closing fingers when at this distance
     KinBodyPtr targetbody; ///< the target that will be grasped, all parameters will be in this coordinate system. if not present, then below transformations are in absolute coordinate system.
@@ -668,7 +814,7 @@ class GraspParameters : public PlannerBase::PlannerParameters
     dReal fgraspingnoise; ///< random undeterministic noise to add to the target object, represents the max possible displacement of any point on the object (noise added after global direction and start have been determined)
  protected:
     EnvironmentBasePtr _penv; ///< environment target belongs to
-
+    bool _bProcessingGrasp;
     // save the extra data to XML
     virtual bool serialize(std::ostream& O) const
     {
@@ -695,110 +841,72 @@ class GraspParameters : public PlannerBase::PlannerParameters
         return !!O;
     }
 
-    void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
+    ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts)
     {
-        PlannerBase::PlannerParameters::startElement(name,atts);
-        if( name == "vavoidlinkgeometry" )
+        if( _bProcessingGrasp )
+            return PE_Ignore;
+        switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
+            case PE_Pass: break;
+            case PE_Support: return PE_Support;
+            case PE_Ignore: return PE_Ignore;
+        }
+        if( name == "vavoidlinkgeometry" ) {
             vavoidlinkgeometry.resize(0);
+            return PE_Support;
+        }
+        
+        _bProcessingGrasp = name=="fstandoff"||name=="targetbody"||name=="ftargetroll"||name=="vtargetdirection"||name=="vtargetposition"||name=="btransformrobot"||name=="breturntrajectory"||name=="bonlycontacttarget"||name=="btightgrasp"||name=="bavoidcontact"||name=="vavoidlinkgeometry"||name=="fcoarsestep"||name=="ffinestep"||name=="ftranslationstepmult"||name=="fgraspingnoise";
+        return _bProcessingGrasp ? PE_Support : PE_Pass;
     }
  
     // called at the end of every XML tag, _ss contains the data 
     virtual bool endElement(const std::string& name)
     {
         // _ss is an internal stringstream that holds the data of the tag
-        if( name == "vavoidlinkgeometry" )
-            vavoidlinkgeometry = vector<string>((istream_iterator<string>(_ss)), istream_iterator<string>());
-        else if( name == "fstandoff")
-            _ss >> fstandoff;
-        else if( name == "targetbody") {
-            int id = 0;
-            _ss >> id;
-            targetbody = _penv->GetBodyFromEnvironmentId(id);
-        }
-        else if( name == "ftargetroll")
-            _ss >> ftargetroll;
-        else if( name == "vtargetdirection") {
-            _ss >> vtargetdirection;
-            vtargetdirection.normalize3();
-        }
-        else if( name == "vtargetposition")
-            _ss >> vtargetposition;
-        else if( name == "btransformrobot")
-            _ss >> btransformrobot;
-        else if( name == "breturntrajectory")
-            _ss >> breturntrajectory;
-        else if( name == "bonlycontacttarget")
-            _ss >> bonlycontacttarget;
-        else if( name == "btightgrasp" )
-            _ss >> btightgrasp;
-        else if( name == "bavoidcontact" )
-            _ss >> bavoidcontact;
-        else if( name == "fcoarsestep" )
-            _ss >> fcoarsestep;
-        else if( name == "ffinestep" )
-            _ss >> ffinestep;
-        else if( name == "fgraspingnoise" )
-            _ss >> fgraspingnoise;
-        else if( name == "ftranslationstepmult" )
-            _ss >> ftranslationstepmult;
-        else // give a chance for the default parameters to get processed
-            return PlannerParameters::endElement(name);
-        return false;
-    }
-};
-
-class GraspSetParameters : public PlannerBase::PlannerParameters
-{
-public:
- GraspSetParameters(EnvironmentBasePtr penv) : _nGradientSamples(5), _fVisibiltyGraspThresh(0), _fGraspDistThresh(1.4f), _penv(penv) {}
-    
-    vector<Transform> _vgrasps; ///< grasps with respect to the target object
-    KinBodyPtr _ptarget;
-    int _nGradientSamples;
-    dReal _fVisibiltyGraspThresh; ///< if current grasp is less than this threshold, then visibilty is not checked
-    dReal _fGraspDistThresh; ///< target grasps beyond this distance are ignored
-
- protected:
-    EnvironmentBasePtr _penv;
-
-    virtual bool serialize(std::ostream& O) const
-    {
-        if( !PlannerParameters::serialize(O) )
+        if( _bProcessingGrasp ) {
+            if( name == "vavoidlinkgeometry" )
+                vavoidlinkgeometry = vector<string>((istream_iterator<string>(_ss)), istream_iterator<string>());
+            else if( name == "fstandoff")
+                _ss >> fstandoff;
+            else if( name == "targetbody") {
+                int id = 0;
+                _ss >> id;
+                targetbody = _penv->GetBodyFromEnvironmentId(id);
+            }
+            else if( name == "ftargetroll")
+                _ss >> ftargetroll;
+            else if( name == "vtargetdirection") {
+                _ss >> vtargetdirection;
+                vtargetdirection.normalize3();
+            }
+            else if( name == "vtargetposition")
+                _ss >> vtargetposition;
+            else if( name == "btransformrobot")
+                _ss >> btransformrobot;
+            else if( name == "breturntrajectory")
+                _ss >> breturntrajectory;
+            else if( name == "bonlycontacttarget")
+                _ss >> bonlycontacttarget;
+            else if( name == "btightgrasp" )
+                _ss >> btightgrasp;
+            else if( name == "bavoidcontact" )
+                _ss >> bavoidcontact;
+            else if( name == "fcoarsestep" )
+                _ss >> fcoarsestep;
+            else if( name == "ffinestep" )
+                _ss >> ffinestep;
+            else if( name == "fgraspingnoise" )
+                _ss >> fgraspingnoise;
+            else if( name == "ftranslationstepmult" )
+                _ss >> ftranslationstepmult;
+            else
+                RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
+            _bProcessingGrasp = false;
             return false;
-        O << "<grasps>" << _vgrasps.size() << " ";
-        FOREACHC(it, _vgrasps)
-            O << *it << " ";
-        O << "</grasps>" << endl;
-        O << "<target>" << (!!_ptarget?_ptarget->GetEnvironmentId():0) << "</target>" << endl;
-        O << "<numgradsamples>" << _nGradientSamples << "</numgradsamples>" << endl;
-        O << "<visgraspthresh>" << _fVisibiltyGraspThresh << "</visgraspthresh>" << endl;
-        O << "<graspdistthresh>" << _fGraspDistThresh << "</graspdistthresh>" << endl;
-        return !!O;
-    }
-        
-    virtual bool endElement(const string& name)
-    {
-        if( name == "grasps" ) {
-            int ngrasps=0;
-            _ss >> ngrasps;
-            _vgrasps.resize(ngrasps);
-            FOREACH(it, _vgrasps)
-                _ss >> *it;
         }
-        else if( name == "target" ) {
-            int id = 0;
-            _ss >> id;
-            _ptarget = _penv->GetBodyFromEnvironmentId(id);
-        }
-        else if( name == "numgradsamples" )
-            _ss >> _nGradientSamples;
-        else if( name == "visgraspthresh" )
-            _ss >> _fVisibiltyGraspThresh;
-        else if( name == "graspdistthresh")
-            _ss >> _fGraspDistThresh;
-        else
-            return PlannerParameters::endElement(name);
-        return false;
+
+        // give a chance for the default parameters to get processed
+        return PlannerParameters::endElement(name);
     }
 };
 

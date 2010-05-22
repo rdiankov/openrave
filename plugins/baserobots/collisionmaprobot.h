@@ -46,10 +46,8 @@ class CollisionMapRobot : public RobotBase
 
         virtual XMLReadablePtr GetReadable() { return _cmdata; }
         
-        virtual void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts) {
-            BaseXMLReader::startElement(name,atts);
+        virtual ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts) {
             _ss.str(""); // have to clear the string
-
             if( name == "pair" ) {
                 _cmdata->listmaps.push_back(XMLData::COLLISIONPAIR());
                 XMLData::COLLISIONPAIR& pair = _cmdata->listmaps.back();
@@ -74,16 +72,15 @@ class CollisionMapRobot : public RobotBase
                     }
                 }
                 RAVELOG_VERBOSE(str(boost::format("creating self-collision pair: %s %s\n")%pair.jointnames[0]%pair.jointnames[1]));
+                return PE_Support;
             }
+
+            return PE_Pass;
         }
 
         virtual bool endElement(const std::string& name)
         {
-            BaseXMLReader::endElement(name);
-
-            if( name == "collisionmap" )
-                return true;
-            else if( name == "pair" ) {
+            if( name == "pair" ) {
                 BOOST_ASSERT(_cmdata->listmaps.size()>0);
                 XMLData::COLLISIONPAIR& pair = _cmdata->listmaps.back();
                 for(size_t i = 0; i < pair.vfreespace.shape()[0]; i++) {
@@ -97,15 +94,15 @@ class CollisionMapRobot : public RobotBase
                 if( !_ss )
                     RAVELOG_WARNA("failed to read collision pair values\n");
             }
+            else if( name == "collisionmap" )
+                return true;
             else
                 RAVELOG_ERRORA("unknown field %s\n", name.c_str());
-
             return false;
         }
 
         virtual void characters(const std::string& ch)
         {
-            BaseXMLReader::characters(ch);
             _ss.clear();
             _ss << ch;
         }

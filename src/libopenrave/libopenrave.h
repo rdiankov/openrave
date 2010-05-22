@@ -127,6 +127,15 @@ template <class T> boost::shared_ptr<T> sptr_from(boost::weak_ptr<T> const& wpt)
     return boost::shared_ptr<T>(wpt); // throws on wpt.expired()
 }
 
+
+// returns a lower case version of the string 
+inline std::string tolowerstring(const std::string & s)
+{
+    std::string d = s;
+    std::transform(d.begin(), d.end(), d.begin(), ::tolower);
+    return d;
+}
+
 std::string GetMD5HashString(const std::string& s);
 std::string GetMD5HashString(const std::vector<uint8_t>& v);
 

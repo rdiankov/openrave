@@ -44,7 +44,6 @@ public:
     {
     public:
         PlannerParameters();
-        PlannerParameters(const PlannerParameters& r);
         virtual ~PlannerParameters() {}
 
         /// tries to copy data from one set of parameters to another in the safest manner.
@@ -127,36 +126,50 @@ public:
         /// the discretization resolution of each dimension of the configuration space
         std::vector<dReal> _vConfigResolution;
         
-        /// a minimum distance between neighbors when searching
+        /// a minimum distance between neighbors when searching. If 0 or less, planner chooses best step length
         dReal _fStepLength;
 
-        /// maximum number of iterations before the planner gives up.
+        /// maximum number of iterations before the planner gives up. If 0 or less, planner chooses best iterations.
         int _nMaxIterations;
 
-        /// if true will smooth the path before returning (takes time, but higher quality paths).
-        /// If false, will return the raw trajectory (used to measure algorithm time).
-        bool _bComputeSmoothPath;
+        /// specifies the planner that will perform the post-processing path smoothing before returning.
+        /// If empty, will not path smooth the returned trajectories (used to measure algorithm time)
+        std::string _sPathOptimizationPlanner;
+        /// The serialized planner parameters to pass to the path optimizer. For example:
+        /// std::stringstream(_sPathOptimizationParameters) >> _parameters;
+        std::string _sPathOptimizationParameters;
 
+        /// extra parameters data that does not fit within this planner parameters structure, but is still important not to lose all the information.
+        std::string _sExtraParameters;
+        
         /// if true, will validate every configuration with a self-collision check. If false, will assume that the configuration
         /// space does not change the self-collision result (ie, planning only with affine DOF)
+        /// default is true
         bool _bCheckSelfCollisions;
 
         virtual int GetDOF() const { return (int)_vConfigLowerLimit.size(); }
 
     protected:
-        /// output the planner parameters in a string (usually in XML format)
+        /// output the planner parameters in a string (in XML format)
         /// don't use PlannerParameters as a tag!
         virtual bool serialize(std::ostream& O) const;
                                
         //@{ XML parsing functions, parses the default parameters
-        virtual void startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts);
+        virtual ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts);
         virtual bool endElement(const std::string& name);
         virtual void characters(const std::string& ch);
         std::stringstream _ss; ///< holds the data read by characters
+        boost::shared_ptr<std::stringstream> _sslocal;
+        /// all the top-level XML parameter tags (lower case) that are handled by this parameter structure, should be registered in the constructor
+        std::vector<std::string> _vXMLParameters;
         //@}
 
     private:
-        BaseXMLReaderPtr _pcurreader; ///< temporary reader
+        /// disallow copy constructors since it gets complicated with virtualization
+        PlannerParameters(const PlannerParameters& r) : XMLReadable("") { BOOST_ASSERT(0); }
+        BaseXMLReaderPtr __pcurreader; ///< temporary reader
+        std::string __processingtag;
+        int _plannerparametersdepth;
 
         /// outputs the data and surrounds it with <PlannerParameters> tags
         friend std::ostream& operator<<(std::ostream& O, const PlannerParameters& v);
@@ -169,20 +182,35 @@ public:
     PlannerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Planner, penv) {}
     virtual ~PlannerBase() {}
 
+    /// Setup scene, robot, and properties of the plan, and reset all internal structures
+    /// \param probot The robot will be planning for.
+    /// \param pparams The parameters of the planner, any class derived from PlannerParameters can be passed. The planner should copy these parameters for future instead of storing the pointer.
+    virtual bool InitPlan(RobotBasePtr probot, PlannerParametersConstPtr pparams) = 0;
+
     /// Setup scene, robot, and properties of the plan, and reset all structures with pparams
     /// \param pbase The robot will be planning for.
-    /// \param pparams The parameters of the planner, any class derived from PlannerParameters can be passed
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams) = 0;
+    /// \param isParameters The serialized form of the parameters. By default, this exists to allow third parties to
+    /// pass information to planners without excplicitly knowning the format/internal structures used
+    virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters);
 
     /// Executes the main planner trying to solve for the goal condition. Fill ptraj with the trajectory
     /// of the planned path that the robot needs to execute
-    /// \param ptraj The trajectory the robot has to follow in order to successfully complete the plan
+    /// \param ptraj The output trajectory the robot has to follow in order to successfully complete the plan. If this planner is a path optimizer, the trajectory can be used as an input for generating a smoother path. The trajectory is for the configuration degrees of freedom defined by the planner parameters.
     /// \param pOutStream If specified, planner will output any other special data
     /// \return true if planner is successful
     virtual bool PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream = boost::shared_ptr<std::ostream>()) = 0;
 
-    virtual RobotBasePtr GetRobot() = 0;
+    /// the internal parameters of the planner
+    virtual PlannerParametersConstPtr GetParameters() const = 0;
 
+protected:
+    /// Calls a planner to optimizes the trajectory path. The PlannerParameters structure passed into the optimization planner is
+    /// constructed with the same freespace constraints as this planner.
+    /// This function should always be called in PlanPath to post-process the trajectory.
+    /// \param probot the robot this trajectory is meant for, also uses the robot for checking collisions.
+    /// \param ptraj Initial trajectory to be smoothed is inputted. If optimization path succeeds, final trajectory output is set in this variable. The trajectory is for the configuration degrees of freedom defined by the planner parameters.
+    virtual bool _OptimizePath(RobotBasePtr probot, TrajectoryBasePtr ptraj);
+    
 private:
     virtual const char* GetHash() const { return OPENRAVE_PLANNER_HASH; }
 };
