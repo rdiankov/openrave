@@ -172,9 +172,9 @@ public:
         int _plannerparametersdepth;
 
         /// outputs the data and surrounds it with <PlannerParameters> tags
-        friend std::ostream& operator<<(std::ostream& O, const PlannerParameters& v);
+        friend RAVE_API std::ostream& operator<<(std::ostream& O, const PlannerParameters& v);
         /// expects <PlannerParameters> to be the first token. Parses stream until </PlannerParameters> reached
-        friend std::istream& operator>>(std::istream& I, PlannerParameters& v);
+        friend RAVE_API std::istream& operator>>(std::istream& I, PlannerParameters& v);
     };
     typedef boost::shared_ptr<PlannerParameters> PlannerParametersPtr;
     typedef boost::shared_ptr<PlannerParameters const> PlannerParametersConstPtr;
@@ -215,8 +215,8 @@ private:
     virtual const char* GetHash() const { return OPENRAVE_PLANNER_HASH; }
 };
 
-std::ostream& operator<<(std::ostream& O, const PlannerBase::PlannerParameters& v);
-std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameters& v);
+RAVE_API std::ostream& operator<<(std::ostream& O, const PlannerBase::PlannerParameters& v);
+RAVE_API std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameters& v);
 
 } // end namespace OpenRAVE
 

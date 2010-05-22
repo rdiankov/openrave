@@ -372,7 +372,7 @@ void PlannerBase::PlannerParameters::characters(const std::string& ch)
     }
 }
 
-std::ostream& operator<<(std::ostream& O, const PlannerBase::PlannerParameters& v)
+RAVE_API std::ostream& operator<<(std::ostream& O, const PlannerBase::PlannerParameters& v)
 {
     O << "<" << v.GetXMLId() << ">" << endl;
     v.serialize(O);
@@ -648,7 +648,7 @@ bool ParseXMLData(BaseXMLReaderPtr preader, const char* buffer, int size)
     xmlSAXHandlerPtr sax = &s_DefaultSAXHandler;
     int ret = 0;
     xmlParserCtxtPtr ctxt;
-    
+
     ctxt = xmlCreateMemoryParserCtxt(buffer, size);
     if (ctxt == NULL) return false;
     if (ctxt->sax != (xmlSAXHandlerPtr) &xmlDefaultSAXHandler)
@@ -682,7 +682,7 @@ bool ParseXMLData(BaseXMLReaderPtr preader, const char* buffer, int size)
 
 }
 
-std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameters& pp)
+RAVE_API std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameters& pp)
 {
     if( !!I) {
         stringbuf buf;
