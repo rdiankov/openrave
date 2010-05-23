@@ -1911,7 +1911,12 @@ class IKFastSolver(AutoReloader):
         solverbranches = []
         # depending on the free variable values, sometimes the rotation matrix can have zeros where it does not expect zeros. Therefore, test all boundaries of all free variables
         for freevar in freejointvars+[None]:
-            freevalues = [0,pi/2,pi,-pi/2] if freevar is not None and self.IsHinge(freevar.name) else [None]
+            if freevar is not None:
+                if not self.IsHinge(freevar.name):
+                    continue
+                freevalues = [0,pi/2,pi,-pi/2]
+            else:
+                freevalues = [None]
             for freevalue in freevalues:
                 print 'attempting ',freevar,' = ',freevalue
                 if freevar is not None and freevalue is not None:
@@ -1960,7 +1965,7 @@ class IKFastSolver(AutoReloader):
                     endbranchtree = [SolverSequence([rottree])]
                 
                 curtransvars = transvars[:]
-                transtree = self.solveIKTranslationAll(Positions,Positionsee,transvars=curtransvars,
+                transtree = self.solveIKTranslationAll(Positions,Positionsee,curtransvars=curtransvars,
                                                        otherunsolvedvars = [] if solveRotationFirst else rotvars,
                                                        othersolvedvars = rotvars+freejointvars if solveRotationFirst else freejointvars,
                                                        endbranchtree=endbranchtree,
@@ -2005,15 +2010,15 @@ class IKFastSolver(AutoReloader):
                 return False
         return True
 
-    def solveIKTranslationAll(self,Positions,Positionsee,transvars,otherunsolvedvars,othersolvedvars,endbranchtree=None,solsubs=[]):
+    def solveIKTranslationAll(self,Positions,Positionsee,curtransvars,otherunsolvedvars,othersolvedvars,endbranchtree=None,solsubs=[]):
         allsolvedvars = othersolvedvars[:]
         transtree = []
         solsubs = solsubs[:]
-        while len(transvars)>0:
-            unsolvedvariables = transvars + otherunsolvedvars
-            solvedvars = self.solveIKTranslation(Positions,Positionsee,rawvars = transvars)
+        while len(curtransvars)>0:
+            unsolvedvariables = curtransvars + otherunsolvedvars
+            solvedvars = self.solveIKTranslation(Positions,Positionsee,rawvars = curtransvars)
             # merge solvedvars and solvedvars2 (have to compute both since sometimes solvedvars can give really bogus solutions (see pr2-beta-static.robot)
-            solvedvars += self.solveIKTranslationLength(Positions, Positionsee, rawvars = transvars)
+            solvedvars += self.solveIKTranslationLength(Positions, Positionsee, rawvars = curtransvars)
             if len(solvedvars) == 0:
                 raise ValueError('Could not solve variable from length of translation')
 
@@ -2096,7 +2101,7 @@ class IKFastSolver(AutoReloader):
                                     for i in range(len(NewPositionsee)):
                                         NewPositionsee[i] = NewPositionsee[i].subs(svar,s)
                                     try:
-                                        newbranch = self.solveIKTranslationAll(NewPositions,NewPositionsee,transvars[:],otherunsolvedvars[:],allsolvedvars,endbranchtree,solsubs)
+                                        newbranch = self.solveIKTranslationAll(NewPositions,NewPositionsee,curtransvars[:],otherunsolvedvars[:],allsolvedvars,endbranchtree,solsubs)
                                     except ValueError:
                                         newbranch = []
                                     if len(newbranch) > 0:
@@ -2105,13 +2110,13 @@ class IKFastSolver(AutoReloader):
                                         covered = False
                                 else:
                                     covered = False
-                        if not covered and len(transvars) > 1:
+                        if not covered and len(curtransvars) > 1:
                             # test several values for all variables
                             valuebranches = []
-                            for targetvar in transvars:
+                            for targetvar in curtransvars:
                             # force the value of the variable. The variable should in fact be *free*, but things get complicated with checking conditions, therefore, pick a couple of values and manually set them
                                 for value in [0]:
-                                    newtransvars = transvars[:]
+                                    newtransvars = curtransvars[:]
                                     newtransvars.remove(targetvar)
                                     NewPositions2 = copy.copy(Positions)
                                     for i in range(len(NewPositions2)):
@@ -2136,11 +2141,11 @@ class IKFastSolver(AutoReloader):
                                 zerobranches.append((checkzero,valuebranches))
 
             allsolvedvars.append(var)
-            transvars.remove(var)
+            curtransvars.remove(var)
             solsubs += [(cos(var),self.Variable(var).cvar),(sin(var),self.Variable(var).svar)]
 
-            if len(transvars) > 0 and len(checkforzeros[bestindex]) > 0:
-                childbranch = self.solveIKTranslationAll(Positions,Positionsee,transvars,otherunsolvedvars,allsolvedvars,endbranchtree,solsubs)
+            if len(curtransvars) > 0 and len(checkforzeros[bestindex]) > 0:
+                childbranch = self.solveIKTranslationAll(Positions,Positionsee,curtransvars,otherunsolvedvars,allsolvedvars,endbranchtree,solsubs)
                 if len(zerobranches) > 0:
                     zerobranch = [SolverBranchConds(zerobranches+[(None,[solvedvars[bestindex][1].subs(solsubs)]+childbranch)])]
                 else:
@@ -2151,13 +2156,13 @@ class IKFastSolver(AutoReloader):
                 return transtree
             else:
                 if len(zerobranches) > 0:
-                    childbranch = self.solveIKTranslationAll(Positions,Positionsee,transvars,otherunsolvedvars,allsolvedvars,endbranchtree,solsubs)
+                    childbranch = self.solveIKTranslationAll(Positions,Positionsee,curtransvars,otherunsolvedvars,allsolvedvars,endbranchtree,solsubs)
                     transtree.append(SolverBranchConds(zerobranches+[(None,[solvedvars[bestindex][1].subs(solsubs)]+childbranch)]))
                     return transtree
                 else:
                     transtree.append(solvedvars[bestindex][1].subs(solsubs))
 
-        if len(transvars) == 0 and endbranchtree is not None:
+        if len(curtransvars) == 0 and endbranchtree is not None:
             transtree += endbranchtree
         return transtree
 
@@ -2280,7 +2285,13 @@ class IKFastSolver(AutoReloader):
                         solution = s
                         break
                 if solution is not None:
-                    jointsolution = [self.customtrigsimp(atan2(solution[var.svar],solution[var.cvar]).subs(listsymbols), deep=True).subs(freevarinvsubs)]
+                    expandedsol = atan2(solution[var.svar],solution[var.cvar]).subs(listsymbols)
+                    # sometimes the returned simplest solution makes really gross approximations
+                    simpsol = self.customtrigsimp(expandedsol, deep=True)
+                    if self.codeComplexity(expandedsol) < self.codeComplexity(simpsol):
+                        jointsolution = [expandedsol.subs(freevarinvsubs)]
+                    else:
+                        jointsolution = [simpsol.subs(freevarinvsubs)]
                     solvedvars.append((var.var,SolverSolution(var.var.name,jointsolution,IsHinge=self.IsHinge(var.var.name)), [self.codeComplexity(s) for s in jointsolution]))
                     continue
             

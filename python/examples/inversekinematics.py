@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
+# 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -39,7 +41,7 @@ class InverseKinematicsModel(OpenRAVEModel):
     def load(self,*args,**kwargs):
         return self.setrobot(*args,**kwargs)
     def getversion(self):
-        return 1
+        return 2
     def setrobot(self,freeinc=None):
         self.iksolver = None
         self.freeinc=freeinc

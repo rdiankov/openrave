@@ -50,21 +50,22 @@ def test_ik():
     import inversekinematics
     env = Environment()
     env.SetDebugLevel(DebugLevel.Debug)
-    robot = env.ReadRobotXMLFile('robots/pr2static.robot.xml')
+    robot = env.ReadRobotXMLFile('robots/pr2-beta-static.robot.xml')
     env.AddRobot(robot)
-    manip=robot.SetActiveManipulator('leftarm')
+    manip=robot.SetActiveManipulator('leftarm_torso')
     self = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
     self.load()
-    robot.SetJointValues([-0.111091, 0.499415, -0.78948, -1.56645, 1.84586, -0.990017, 1.25811],manip.GetArmJoints())
+    robot.SetJointValues([0.17, 1, 1, 0, 0, 0, 0, 0],manip.GetArmJoints())
     T=manip.GetEndEffectorTransform()
     print robot.CheckSelfCollision()
     #[j.SetJointLimits([-pi],[pi]) for j in robot.GetJoints()]
+    robot.SetJointValues(zeros(robot.GetDOF()))
     values=manip.FindIKSolution(T,False)
     Tlocal = dot(dot(linalg.inv(manip.GetBase().GetTransform()),T),linalg.inv(manip.GetGraspTransform()))
     print ' '.join(str(f) for f in Tlocal[0:3,0:4].flatten())
     robot.SetJointValues (values,manip.GetArmJoints())
     print manip.GetEndEffectorTransform()
-
+    
 def debug_ik():
     env = Environment()
     env.Reset()
