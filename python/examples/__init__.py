@@ -13,7 +13,6 @@ import graspplanning
 import mobilemanipulation
 import simplenavigation
 
-import taskreachability
 import testcamerasensor
 import testplotting
 import testupdatingbodies
