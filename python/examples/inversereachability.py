@@ -120,7 +120,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             if heightthresh is None:
                 heightthresh=0.05
             if quatthresh is None:
-                quatthresh=0.15
+                quatthresh=0.15            
         self.generate(heightthresh=heightthresh,quatthresh=quatthresh,Nminimum=Nminimum)
         self.save()
     def generate(self,heightthresh=None,quatthresh=None,Nminimum=None):

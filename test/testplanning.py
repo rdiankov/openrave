@@ -570,10 +570,10 @@ def test_pr2():
         manip=robot.SetActiveManipulator(manipname)
         ikmodel=inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
         if not ikmodel.load():
-            ikmodel.generate(freejoints=ikmodel.manip.GetArmJoints()[0:(len(manip.GetArmJoints())-6)])
+            ikmodel.autogenerate()
         rmodel = kinematicreachability.ReachabilityModel(robot)
         if not rmodel.load():
-            rmodel.generate(xyzdelta=0.03,quatdelta=0.2)
+            rmodel.autogenerate()
 
     # grasping
     # python grasping.py --robot=robots/pr2-beta-sim.robot.xml --target=data/box_frootloops.kinbody.xml --boxdelta=0.01 --standoff=0 --standoff=0.02 --standoff=0.05 --normalanglerange=1 --roll=0 --roll=1.5707963 --roll=3.141592 --roll=4.7123889 --graspingnoise=0.01
