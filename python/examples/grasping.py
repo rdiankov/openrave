@@ -125,7 +125,7 @@ class GraspingModel(OpenRAVEModel):
                             if childjoint.GetJointIndex() != joint.GetJointIndex():
                                 if (childjoint.GetFirstAttached() and childjoint.GetFirstAttached().GetIndex() == childlink.GetIndex()) or (childjoint.GetSecondAttached() and childjoint.GetSecondAttached().GetIndex() == childlink.GetIndex()):
                                     vertices = r_[vertices,[childjoint.GetAnchor()-joint.GetAnchor()]]
-                        self.jointmaxlengths[i] = sqrt(numpy.max(sum(vertices**2,1)-dot(vertices,joint.GetAxis(0))**2))
+                        self.jointmaxlengths[i] = sqrt(numpy.max(sum(vertices**2,1)-dot(vertices,joint.GetAxis(0))**2)) if len(vertices) > 0 else 0
     def autogenerate(self,options=None):
         # disable every body but the target and robot
         friction = None

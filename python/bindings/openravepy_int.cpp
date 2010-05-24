@@ -448,6 +448,8 @@ public:
                 }
             }
 
+            string __str__() { return boost::str(boost::format("<trimesh: verts %d, tris=%d>")%len(vertices)%len(indices)); }
+            
             object vertices,indices;
         };
 
@@ -3369,6 +3371,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
                 .def(init<object,object>())
                 .def_readwrite("vertices",&PyKinBody::PyLink::PyTriMesh::vertices)
                 .def_readwrite("indices",&PyKinBody::PyLink::PyTriMesh::indices)
+                .def("__str__",&PyKinBody::PyLink::PyTriMesh::__str__)
                 ;
 
             {

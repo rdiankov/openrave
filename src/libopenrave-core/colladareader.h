@@ -515,6 +515,7 @@ public:
 
     //  TODO : Add Rigid objects without joints
     //  Visual Scene process
+    // Iis this really necessary? aren't instance visual scene + instance kinematics scene pointing to the same thing?
     if (allscene->getInstance_visual_scene() != NULL)
     {
       domVisual_sceneRef visual_scene = daeSafeCast<domVisual_scene>(allscene->getInstance_visual_scene()->getUrl().getElement().cast());
@@ -1160,9 +1161,6 @@ public:
 
           RAVELOG_VERBOSEA("Indices initialized...\n");
         }
-
-        //  Add the robot to the environment
-        _penv->AddRobot(probot);
         
         RAVELOG_WARNA("Robot %s created ...\n",robotName);
       }// End Kinematics model Process
@@ -1500,10 +1498,6 @@ public:
           pjoint->name = pdomjoint->getName();
           pjoint->jointindex = (int) pkinbody->_vecjoints.size();
 
-//          std::vector<dReal> weights;
-//          pkinbody->GetJointWeights(weights);
-//          RAVELOG_INFO("pkinbody->_vecJointWeights.size(): %d\n",weights.size());
-
           //  Set type of the joint
           domAxis_constraintRef pdomaxis = vdomaxes[ic];
 
@@ -1521,9 +1515,11 @@ public:
           RAVELOG_INFO("dofindex %d\n",pkinbody->GetDOF());
           pjoint->dofindex = pkinbody->GetDOF();
           RAVELOG_INFO("pjoint->dofindex %d\n",pjoint->dofindex);
-//          pjoint->_vweights.resize(0);
-//          for(int i = 0; i < pjoint->GetDOF(); ++i)
-//            pjoint->_vweights.push_back(1);
+
+          pjoint->_vweights.resize(pjoint->GetDOF());
+          FOREACH(it,pjoint->_vweights) {
+              *it = 1;
+          }
           pkinbody->_vecJointIndices.push_back(pjoint->dofindex);
           pkinbody->_vecjoints.push_back(pjoint);
           RAVELOG_WARN("Number of pkinbody->_vecjoints: %d\n",pkinbody->_vecjoints.size());

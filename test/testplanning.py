@@ -558,7 +558,13 @@ def test_fatmodels():
     taskmanip.SwitchModels(switch=True)
 
 def test_pr2():
-    robot=env.ReadRobotXMLFile('robots/pr2-beta-static.robot.xml')
+    from openravepy.examples import inversekinematics, grasping
+    env=Environment()
+    robot=env.ReadRobotXMLFile('robots/pr2-beta-sim.robot.xml')
+    env.AddRobot(robot)
+    # kinematics
+    # python inversekinematics.py --robot=robots/pr2-beta-sim.robot.xml --manipname=rightarm --freejoint=r_shoulder_pan_joint --numiktests=10
+    # python inversekinematics.py --robot=robots/pr2-beta-sim.robot.xml --manipname=rightarm_torso --freejoint=r_shoulder_pan_joint --freejoint=torso_lift_joint --numiktests=10
     manipnames = ['leftarm','rightarm','leftarm_torso','rightarm_torso']
     for manipname in manipnames:
         manip=robot.SetActiveManipulator(manipname)
@@ -568,3 +574,18 @@ def test_pr2():
         rmodel = kinematicreachability.ReachabilityModel(robot)
         if not rmodel.load():
             rmodel.generate(xyzdelta=0.03,quatdelta=0.2)
+
+    # grasping
+    # python grasping.py --robot=robots/pr2-beta-sim.robot.xml --target=data/box_frootloops.kinbody.xml --boxdelta=0.01 --standoff=0 --standoff=0.02 --standoff=0.05 --normalanglerange=1 --roll=0 --roll=1.5707963 --roll=3.141592 --roll=4.7123889 --graspingnoise=0.01
+    with env:
+        target=env.ReadKinBodyXMLFile('data/box_frootloops.kinbody.xml')
+        env.AddKinBody(target)
+    for manipname in ['leftarm','rightarm']:
+        robot.SetActiveManipulator(manipname)
+        gmodel = grasping.GraspingModel(robot,target)
+        if not gmodel.load():
+            with gmodel.target:
+                gmodel.target.Enable(False)
+                final,traj = gmodel.basemanip.ReleaseFingers(execute=False,outputfinal=True)
+            gmodel.generate(preshapes = array([final]),rolls=arange(0,2*pi,pi/2),graspingnoise=0.01,standoffs=[0,0.02,0.05],approachrays=gmodel.computeBoxApproachRays(0.01,normalanglerange=1,directiondelta=0.1))
+    # create symbolic links

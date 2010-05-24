@@ -1,11 +1,12 @@
+<!-- base kinematics of pr2 robot with all frames defined -->
 <robot>
-  <robot file="pr2-beta-static.dae">
+  <robot name="pr2" file="pr2-beta-static.dae">
   </robot>
   <manipulator name="leftarm">
     <base>torso_lift_link</base>
     <effector>l_gripper_palm_link</effector>
     <joints>l_gripper_l_finger_joint</joints>
-    <closingdirection>1</closingdirection>
+    <closingdirection>-1</closingdirection>
     <translation>0.18 0 0</translation>
     <direction>1 0 0</direction>
   </manipulator>
@@ -13,7 +14,7 @@
     <base>base_link</base>
     <effector>l_gripper_palm_link</effector>
     <joints>l_gripper_l_finger_joint</joints>
-    <closingdirection>1</closingdirection>
+    <closingdirection>-1</closingdirection>
     <translation>0.18 0 0</translation>
     <direction>1 0 0</direction>
   </manipulator>
@@ -21,7 +22,7 @@
     <base>torso_lift_link</base>
     <effector>r_gripper_palm_link</effector>
     <joints>r_gripper_l_finger_joint</joints>
-    <closingdirection>1</closingdirection>
+    <closingdirection>-1</closingdirection>
     <translation>0.18 0 0</translation>
     <direction>1 0 0</direction>
   </manipulator>
@@ -29,8 +30,20 @@
     <base>base_link</base>
     <effector>r_gripper_palm_link</effector>
     <joints>r_gripper_l_finger_joint</joints>
-    <closingdirection>1</closingdirection>
+    <closingdirection>-1</closingdirection>
     <translation>0.18 0 0</translation>
     <direction>1 0 0</direction>
   </manipulator>
+  <attachedsensor name="l_forearm_cam_optical_frame">
+    <link>l_forearm_cam_optical_frame</link>
+  </attachedsensor>
+  <attachedsensor name="r_forearm_cam_optical_frame">
+    <link>r_forearm_cam_optical_frame</link>
+  </attachedsensor>
+  <attachedsensor name="narrow_stereo_optical_frame">
+    <link>narrow_stereo_optical_frame</link>
+  </attachedsensor>
+  <attachedsensor name="wide_stereo_optical_frame">
+    <link>wide_stereo_optical_frame</link>
+  </attachedsensor>
 </robot>
