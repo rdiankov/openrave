@@ -163,7 +163,7 @@ class IKFastProblem : public ProblemInstance
             return true;
         }
 
-        IkSolverBasePtr CreateSolver(EnvironmentBasePtr penv, dReal ffreedelta=0.04f)
+        IkSolverBasePtr CreateSolver(EnvironmentBasePtr penv, dReal ffreedelta)
         {
             if( getIKRealSize() == 4 )
                 return IkSolverBasePtr(new IkFastSolver<float,IKSolutionFloat >((IkFastSolver<float,IKSolutionFloat >::IkFn)ikfn,vfree,ffreedelta,getNumJoints(),(IkParameterization::Type)getIKType(),penv));

@@ -68,6 +68,11 @@ class IkFastSolver : public IkSolverBase
             return false;
         }
 
+        _vfreetypes.resize(0);
+        FOREACH(itfree, _vfreeparams) {
+            _vfreetypes.push_back(probot->GetJoints().at(pmanip->GetArmJoints().at(*itfree))->GetType());
+        }
+
         // get the joint limits
         RobotBase::RobotStateSaver saver(probot);
         probot->SetActiveDOFs(pmanip->GetArmJoints());
@@ -193,7 +198,9 @@ private:
         dReal startphi = q0.size() == _qlower.size() ? q0.at(vfreeparams.at(freeindex)) : 0;
         dReal upperphi = _qupper.at(vfreeparams.at(freeindex)), lowerphi = _qlower.at(vfreeparams.at(freeindex)), deltaphi = 0;
         int iter = 0;
-
+        // if joint is a slider, make increments 5 times less (this makes it possible to have free joints that are both revolume and prismatic)
+        // (actually this should be fixed so that there is a different increment per free joint). can use max radius
+        dReal fFreeInc = _vfreetypes.at(vfreeparams.at(freeindex)) == KinBody::Joint::JointPrismatic ? 0.2f*_fFreeInc : _fFreeInc;
         while(1) {
 
             dReal curphi = startphi;
@@ -213,12 +220,12 @@ private:
 
                     if( startphi+deltaphi > upperphi )
                         break; // reached limit
-                    deltaphi += _fFreeInc; // increment
+                    deltaphi += fFreeInc; // increment
                     ++iter;
                     continue;
                 }
 
-                deltaphi += _fFreeInc; // increment
+                deltaphi += fFreeInc; // increment
             }
 
             iter++;
@@ -501,6 +508,7 @@ private:
 
     RobotBase::ManipulatorWeakPtr _pmanip;
     std::vector<int> _vfreeparams;
+    std::vector<KinBody::Joint::JointType> _vfreetypes;
     std::vector<dReal> _vfreeparamscales;
     boost::shared_ptr<void> _cblimits;
     IkFn _pfnik;
