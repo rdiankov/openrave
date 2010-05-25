@@ -994,10 +994,9 @@ boost::shared_ptr<SimpleSensorSystem::BodyData> SimpleSensorSystem::CreateBodyDa
 
 void SimpleSensorSystem::_UpdateBodies(list<SimpleSensorSystem::SNAPSHOT>& listbodies)
 {
-    // assume mutex is already locked
+    EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex()); // always lock environment to preserve mutex order
     uint64_t curtime = GetMicroTime();
     if( listbodies.size() > 0 ) {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
 
         FOREACH(it, listbodies) {
             BOOST_ASSERT( it->first->IsEnabled() );
@@ -1024,6 +1023,7 @@ void SimpleSensorSystem::_UpdateBodies(list<SimpleSensorSystem::SNAPSHOT>& listb
         }
     }
 
+    boost::mutex::scoped_lock lock(_mutex);
     BODIES::iterator itbody = _mapbodies.begin();
     while(itbody != _mapbodies.end()) {
         KinBody::LinkPtr plink = itbody->second->GetOffsetLink();
@@ -1058,7 +1058,6 @@ void SimpleSensorSystem::_UpdateBodiesThread()
 
     while(!_bShutdown) {
         {
-            boost::mutex::scoped_lock lock(_mutex);
             _UpdateBodies(listbodies);
         }
         Sleep(10); // 10ms
