@@ -200,7 +200,7 @@ private:
         int iter = 0;
         // if joint is a slider, make increments 5 times less (this makes it possible to have free joints that are both revolume and prismatic)
         // (actually this should be fixed so that there is a different increment per free joint). can use max radius
-        dReal fFreeInc = _vfreetypes.at(vfreeparams.at(freeindex)) == KinBody::Joint::JointPrismatic ? 0.2f*_fFreeInc : _fFreeInc;
+        dReal fFreeInc = _vfreetypes.at(freeindex) == KinBody::Joint::JointPrismatic ? 0.2f*_fFreeInc : _fFreeInc;
         while(1) {
 
             dReal curphi = startphi;
