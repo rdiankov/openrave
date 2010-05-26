@@ -1762,6 +1762,9 @@ public:
           {
             pjoint->tLeft.rotfromaxisangle(pjoint->vAxes[0], -pjoint->offset);
           }
+
+          pjoint->fMaxVel = pjoint->GetType() == KinBody::Joint::JointPrismatic ? 0.013 : 0.5f;
+          
           pjoint->tLeft.trans   = pjoint->vanchor;
           pjoint->tRight.trans  = -pjoint->vanchor;
           pjoint->tRight = pjoint->tRight * trel;

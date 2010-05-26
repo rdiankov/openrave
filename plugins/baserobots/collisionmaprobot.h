@@ -128,7 +128,7 @@ class CollisionMapRobot : public RobotBase
         _pController = p;
         if( !!_pController ) {
             if( !_pController->Init(shared_robot(),args) ) {
-                RAVELOG_WARNA(str(boost::format("Failed to init controller %s\n")%GetName()));
+                RAVELOG_WARNA(str(boost::format("GenericRobot %s: Failed to init controller %s\n")%GetName()%p->GetXMLId()));
                 _pController.reset();
                 return false;
             }

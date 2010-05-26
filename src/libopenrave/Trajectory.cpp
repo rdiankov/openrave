@@ -495,18 +495,16 @@ bool TrajectoryBase::_SetLinear(bool bAutoCalcTiming, bool bActiveDOFs)
 /// cubic spline interpolation
 bool TrajectoryBase::_SetCubic(bool bAutoCalcTiming, bool bActiveDOFs)
 {
-    RAVELOG_VERBOSEA("Setting cubic trajectory...\n");
-    if (bAutoCalcTiming) {
-        _vecpoints[0].time = 0.0;
-        FOREACH(itp, _vecpoints) {
-            itp->qdot.resize(_nDOF);
-            itp->linearvel = Vector();
-            itp->angularvel = Vector();
-            memset(&itp->qdot[0], 0, _nDOF*sizeof(dReal));
-            //memset(&itp->qaccel[0], 0, _nDOF*sizeof(dReal));
-        }
+    _vecsegments.resize(_vecpoints.size());
+    // if needed, preallocate all velocities, accelerations, and coefficients.
+    FOREACH(itp, _vecpoints) {
+        itp->qdot.resize(_nDOF);
+        itp->linearvel = Vector();
+        itp->angularvel = Vector();
+        memset(&itp->qdot[0], 0, _nDOF*sizeof(dReal));
+        //memset(&itp->qaccel[0], 0, _nDOF*sizeof(dReal));
     }
-                
+
     dReal timeInterval;
     for (size_t i = 1; i < _vecpoints.size(); i++) {
         if (bAutoCalcTiming) {
@@ -523,9 +521,21 @@ bool TrajectoryBase::_SetCubic(bool bAutoCalcTiming, bool bActiveDOFs)
             if( timeInterval < 1e-4f )
                 timeInterval = 1e-4f;
         }
+    }
 
+    // set up default linear interpolation segments
+    vector<dReal> vd;
+    for (size_t i = 1; i < _vecpoints.size(); i++) {
         _vecsegments[i-1].SetDimensions(3, _nDOF);
-        _vecsegments[i-1]._fduration = timeInterval;
+        _vecsegments[i-1]._fduration = _vecpoints[i].time - _vecpoints[i-1].time;
+
+        // set all cubic coefficients
+//        vd = _vecpoints[i].q;
+//        _diffstatefn(vd,_vecpoints[i-1].q);
+//        for (int d = 0; d < _nDOF; d++) {
+//            _vecsegments[i-1].Get(0, d) = _vecpoints[i-1].q[d];
+//            _vecsegments[i-1].Get(1, d) = vd[d] / _vecsegments[i-1]._fduration;
+//        }
     }
 
     // recalculate via point velocities and accelerations
@@ -963,16 +973,14 @@ inline bool TrajectoryBase::_SampleCubic(const TPOINT& p0, const TPOINT& p1,
     dReal t = time - p0.time;
     dReal t_2 = t*t;
     dReal t_3 = t * t_2;
-
+    sample.q.resize(_nDOF);
+    sample.qdot.resize(_nDOF);
+    
     // perform the interpolation
     for (int d = 0; d < _nDOF; d++)
     {
-        sample.q[d]      = seg.Get(0, d) + t * seg.Get(1, d)
-        + t_2 * seg.Get(2, d) + t_3 * seg.Get(3, d);
-
-        sample.qdot[d]   = seg.Get(1, d) + ((dReal)2.0 * t * seg.Get(2, d))
-            + ((dReal)3.0 * t_2 * seg.Get(3, d));
-
+        sample.q[d]      = seg.Get(0, d) + t * seg.Get(1, d) + t_2 * seg.Get(2, d) + t_3 * seg.Get(3, d);
+        sample.qdot[d]   = seg.Get(1, d) + ((dReal)2.0 * t * seg.Get(2, d)) + ((dReal)3.0 * t_2 * seg.Get(3, d));
 //        sample.qaccel[d] = 2.0 * seg.Get(2, d) + (6.0 * t * seg.Get(3, d));
     }
     sample.time = time;

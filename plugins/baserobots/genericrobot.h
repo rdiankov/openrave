@@ -27,7 +27,7 @@ class GenericRobot : public RobotBase
         _pController = p;
         if( !!_pController ) {
             if( !_pController->Init(shared_robot(),args) ) {
-                RAVELOG_WARNA("GenericRobot %s: Failed to init controller\n", GetName().c_str());
+                RAVELOG_WARNA(str(boost::format("GenericRobot %s: Failed to init controller %s\n")%GetName()%p->GetXMLId()));
                 _pController.reset();
                 return false;
             }
