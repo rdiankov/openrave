@@ -37,8 +37,8 @@
     <link>wide_stereo_optical_frame</link>
     <sensor type="BaseCamera" args="">
       <KK>320 320 320.5 240.5</KK>
-      <width>1600</width>
-      <height>1200</height>
+      <width>640</width>
+      <height>480</height>
       <framerate>5</framerate>
       <color>1 0.5 0</color>
       <power>0</power>

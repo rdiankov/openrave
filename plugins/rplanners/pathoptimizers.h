@@ -68,7 +68,7 @@ ShortcutLinearPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
 
         int nrejected = 0;
         int i = parameters->_nMaxIterations;
-        while(i > 0 && nrejected < (int)path.size()+4 ) {
+        while(i > 0 && nrejected < (int)path.size()+4 && path.size() > 2 ) {
 
             --i;
 
