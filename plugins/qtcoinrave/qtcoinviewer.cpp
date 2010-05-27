@@ -394,7 +394,7 @@ public:
     }
 
 private:
-    const string& _title;
+    string _title;
 };
 
 void QtCoinViewer::ViewerSetTitle(const string& ptitle)
