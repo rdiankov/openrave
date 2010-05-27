@@ -86,7 +86,7 @@ class VisibilityGrasping(metaclass.AutoReloader):
         self.trajectorylog = []
         self.graspoffset = 0
 
-    def loadscene(self,scenefilename,sensorname,robotname=None,showsensors=True):
+    def loadscene(self,scenefilename,sensorname,robotname=None,showsensors=True,usecameraview=True):
         self.target = None
         self.robot = None
         self.robotreal = None
@@ -104,24 +104,25 @@ class VisibilityGrasping(metaclass.AutoReloader):
             self.homevalues = self.robotreal.GetJointValues()
             # create a camera viewer for every camera sensor
             try:
-                Tk # check if Tk exists
                 self.viewers = []
-                if showsensors:
-                    for attachedsensor in self.robotreal.GetSensors():
-                        if attachedsensor.GetSensor() is not None:
-                            sensordata = attachedsensor.GetSensor().GetSensorData()
-                            if sensordata is not None and sensordata.type == Sensor.SensorType.Camera:
-                                attachedsensor.GetSensor().SendCommand('power 1')
-                                title = attachedsensor.GetName()
-                                if len(title) == 0:
-                                    title = attachedsensor.GetSensor().GetName()
+                if usecameraview:
+                    Tk # check if Tk exists
+                    if showsensors:
+                        for attachedsensor in self.robotreal.GetSensors():
+                            if attachedsensor.GetSensor() is not None:
+                                sensordata = attachedsensor.GetSensor().GetSensorData()
+                                if sensordata is not None and sensordata.type == Sensor.SensorType.Camera:
+                                    attachedsensor.GetSensor().SendCommand('power 1')
+                                    title = attachedsensor.GetName()
                                     if len(title) == 0:
-                                        title = 'Camera Sensor'
-                                self.viewers.append(CameraViewerGUI(sensor=attachedsensor.GetSensor(),title=title))
-                                break # can only support one camera
-                    print 'found %d camera sensors on robot %s'%(len(self.viewers),self.robotreal.GetName())
-                    for viewer in self.viewers:
-                        viewer.start()
+                                        title = attachedsensor.GetSensor().GetName()
+                                        if len(title) == 0:
+                                            title = 'Camera Sensor'
+                                    self.viewers.append(CameraViewerGUI(sensor=attachedsensor.GetSensor(),title=title))
+                                    break # can only support one camera
+                        print 'found %d camera sensors on robot %s'%(len(self.viewers),self.robotreal.GetName())
+                        for viewer in self.viewers:
+                            viewer.start()
             except NameError,e:
                 print 'failed to create camera gui: ',e
                 self.viewers = []
@@ -419,10 +420,11 @@ class PA10GraspExample(VisibilityGrasping):
 
 if __name__=='__main__':
     parser = OptionParser(description='Visibility Planning Module.')
-    parser.add_option('--scene',
-                      action="store",type='string',dest='scene',default='data/pa10grasp.env.xml',
+    parser.add_option('--scene',action="store",type='string',dest='scene',default='data/pa10grasp.env.xml',
                       help='openrave scene to load')
+    parser.add_option('--nocameraview',action="store_false",dest='usecameraview',default=True,
+                      help='If set, will not open any camera views')
     (options, args) = parser.parse_args()
     scene = PA10GraspExample()
-    scene.loadscene(scenefilename=options.scene,sensorname='wristcam')
+    scene.loadscene(scenefilename=options.scene,sensorname='wristcam',usecameraview=options.usecameraview)
     scene.start()
