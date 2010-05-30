@@ -149,7 +149,9 @@ class VisibilityModel(OpenRAVEModel):
         if self.rmodel is None:
             self.rmodel = kinematicreachability.ReachabilityModel(robot=self.robot)
             if not self.rmodel.load():
-                self.rmodel.autogenerate()
+                # do not autogenerate since that would force this model to depend on the reachability
+                self.rmodel = None
+                return array(visibilitytransforms)
         kdtree=self.rmodel.ComputeNN(translationonly)
         if maxdist is not None:
             visibilitytransforms = self.visibilitytransforms[invertPoses(self.visibilitytransforms)[:,6]<maxdist]

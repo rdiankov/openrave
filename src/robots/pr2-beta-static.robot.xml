@@ -34,6 +34,16 @@
     <translation>0.18 0 0</translation>
     <direction>1 0 0</direction>
   </manipulator>
+  <manipulator name="leftarm_camera">
+    <base>torso_lift_link</base>
+    <effector>l_forearm_cam_optical_frame</effector>
+    <direction>0 0 1</direction>
+  </manipulator>
+  <manipulator name="rightarm_camera">
+    <base>torso_lift_link</base>
+    <effector>r_forearm_cam_optical_frame</effector>
+    <direction>0 0 1</direction>
+  </manipulator>
   <attachedsensor name="l_forearm_cam_optical_frame">
     <link>l_forearm_cam_optical_frame</link>
   </attachedsensor>

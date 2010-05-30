@@ -109,9 +109,13 @@ class InverseKinematicsModel(OpenRAVEModel):
         elif self.robot.GetRobotStructureHash() == 'bb644e60bcd217d8cea1272a26ecc651' and self.manip.GetName() == 'rotation':
             if iktype is None:
                 iktype=IkParameterization.Type.Rotation3D
-        elif self.robot.GetRobotStructureHash() == '83ccd47d27f1f17dd751d1097a272741' or self.robot.GetRobotStructureHash() == 'a40759444dd7a1cc984c950fcf743857': # pr2
+        elif self.robot.GetRobotStructureHash() == '365cca1ce772e05e40f212b004530d0e' or self.robot.GetRobotStructureHash() == '08d2e03ca4c40f922340d435122cf178': # pr2
             if iktype is None:
-                iktype=IkParameterization.Type.Transform6D
+                if self.manip.GetName().find('camera') >= 0:
+                    # cameras are attached, so use a ray parameterization
+                    iktype=IkParameterization.Type.Ray4D
+                else:
+                    iktype=IkParameterization.Type.Transform6D
             if freejoints is None:
                 # take the first joints
                 jointinds=self.manip.GetArmJoints()[0:(len(self.manip.GetArmJoints())-6)]
@@ -129,13 +133,13 @@ class InverseKinematicsModel(OpenRAVEModel):
         if self.iktype == IkParameterization.Type.Rotation3D:
             solvefn=ikfast.IKFastSolver.solveFullIK_Rotation3D
         elif self.iktype == IkParameterization.Type.Direction3D:
-            basedir=self.manip.GetDirection()
+            basedir=dot(self.manip.GetGraspTransform()[0:3,0:3],self.manip.GetDirection())
             def solveFullIK_Direction3D(*args,**kwargs):
                 kwargs['basedir'] = basedir
                 return ikfast.IKFastSolver.solveFullIK_Direction3D(*args,**kwargs)
             solvefn=solveFullIK_Direction3D
         elif self.iktype == IkParameterization.Type.Ray4D:
-            basedir=self.manip.GetDirection()
+            basedir=dot(self.manip.GetGraspTransform()[0:3,0:3],self.manip.GetDirection())
             basepos=self.manip.GetGraspTransform()[0:3,3]
             def solveFullIK_Ray4D(*args,**kwargs):
                 kwargs['basedir'] = basedir

@@ -1785,10 +1785,11 @@ class IKFastSolver(AutoReloader):
                             for term in peeconstterm if len(p.args) < len(pee.args) else pconstterm:
                                 Positions[i][j] -= term
                                 Positionsee[i][j] -= term
+
                 solsubs = self.freevarsubs[:]
                 rottree = []
                 endbranchtree = [SolverSequence([rottree])]
-                transtree = self.solveIKTranslationAll(Positions,Positionsee,transvars = solvejointvars[0:2],
+                transtree = self.solveIKTranslationAll(Positions,Positionsee,curtransvars = solvejointvars[0:2],
                                                        otherunsolvedvars = solvejointvars[2:4],
                                                        othersolvedvars = freejointvars,
                                                        endbranchtree=endbranchtree,
@@ -2198,6 +2199,7 @@ class IKFastSolver(AutoReloader):
                             constsol = -atan2(m[a],m[b]).subs(symbols).evalf()
                             jointsolutions = [constsol+asinsol,constsol+pi.evalf()-asinsol]
                             solvedvars.append((var.var,SolverSolution(var.var.name,jointeval=jointsolutions,IsHinge=self.IsHinge(var.var.name)), [self.codeComplexity(s) for s in jointsolutions]))
+                            print solvedvars
                             continue
                     
                     if numsvar > 0:
@@ -2207,6 +2209,7 @@ class IKFastSolver(AutoReloader):
                                 eqnew = eq.subs(self.freevarsubs+[(cos(var.var),sqrt(Real(1,30)-var.svar**2)),(sin(var.var),var.svar)])
                                 eqnew,symbols = self.factorLinearTerms(eqnew,[var.svar])
                                 solutions = self.customtsolve(eqnew,var.svar)
+                                #print eqnew
                                 jointsolutions = [s.subs(symbols+[(var.svar,sin(var.var))]) for s in solutions]
                                 solvedvars.append((var.var,SolverSolution(var.var.name, jointevalsin=jointsolutions,IsHinge=self.IsHinge(var.var.name)), [self.codeComplexity(s) for s in jointsolutions]))
                         except (ValueError, AttributeError):
@@ -2856,7 +2859,8 @@ class IKFastSolver(AutoReloader):
             return expr
         return expr
 
-    def customtsolve(self,eq, sym):
+    @staticmethod
+    def customtsolve(eq, sym):
         """
         Solves a transcendental equation with respect to the given
         symbol. Various equations containing mixed linear terms, powers,
@@ -2932,7 +2936,7 @@ class IKFastSolver(AutoReloader):
             rhs = pow(rhs,1/lhs.exp)
             lhs = lhs.base
 
-            sol = self.customtsolve(lhs-rhs, sym)
+            sol = IKFastSolver.customtsolve(lhs-rhs, sym)
             return sol
         elif lhs.is_Add:
             # just a simple case - we do variable substitution for first function,
@@ -2967,7 +2971,7 @@ class IKFastSolver(AutoReloader):
                     any(term.is_Function for term in lhs_.args)):
                 cv_sols = solve(lhs_ - rhs, t)
                 if IsPow:
-                    cv_inv = self.customtsolve( t - f1, sym )[0]
+                    cv_inv = IKFastSolver.customtsolve( t - f1, sym )[0]
                 else:
                     cv_inv = solve( t - f1, sym )[0]
                 

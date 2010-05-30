@@ -116,7 +116,7 @@ class ReachabilityModel(OpenRAVEModel):
         if self.robot.GetRobotStructureHash() == '7b789782446d86b95c6fb16de7f204c7' and self.manip.GetName() == 'arm':
             if maxradius is None:
                 maxradius = 1.1
-        elif self.robot.GetRobotStructureHash() == '83ccd47d27f1f17dd751d1097a272741' or self.robot.GetRobotStructureHash() == 'a40759444dd7a1cc984c950fcf743857': # pr2
+        elif self.robot.GetRobotStructureHash() == '365cca1ce772e05e40f212b004530d0e' or self.robot.GetRobotStructureHash() == '08d2e03ca4c40f922340d435122cf178': # pr2
             if xyzdelta is None:
                 xyzdelta = 0.03
             if quatdelta is None:
