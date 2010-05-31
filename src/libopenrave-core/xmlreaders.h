@@ -284,7 +284,11 @@ namespace OpenRAVEXMLParser
         string parsedirectory = GetParseDirectory(), fullfilename = GetFullFilename();
 
         // check for absolute paths
+#ifdef _WIN32
+        if( filename.size() > 2 && filename[1] == ':' ) {
+#else
         if( filename[0] == '/' || filename[0] == '~' ) {
+#endif
             parsedirectory = "";
             fullfilename = filename;
         }
@@ -306,23 +310,23 @@ namespace OpenRAVEXMLParser
                 bFileFound = true;
                 break;
             }
-        
+
             // try the set openrave directories
             FOREACHC(itdir, GetDataDirs()) {
                 string newparse;
                 newparse = *itdir; newparse.push_back(s_filesep);
                 newparse += parsedirectory;
                 fullfilename = newparse; fullfilename += filename;
-                
+
                 if( !!ifstream(fullfilename.c_str()) ) {
                     parsedirectory = newparse; parsedirectory += appended;
                     bFileFound = true;
                     break;
                 }
-            
+
                 newparse = *itdir; newparse.push_back(s_filesep);
                 fullfilename = newparse; fullfilename += filename;
-                
+
                 if( !!ifstream(fullfilename.c_str()) ) {
                     parsedirectory = newparse; parsedirectory += appended;
                     bFileFound = true;
@@ -334,7 +338,7 @@ namespace OpenRAVEXMLParser
                 break;
 
         } while(0);
-    
+
         if( !bFileFound ) {
             GetXMLErrorCount()++;
             RAVELOG_WARN(str(boost::format("could not find file %s\n")%filename));
