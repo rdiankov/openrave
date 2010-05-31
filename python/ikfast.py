@@ -2199,7 +2199,6 @@ class IKFastSolver(AutoReloader):
                             constsol = -atan2(m[a],m[b]).subs(symbols).evalf()
                             jointsolutions = [constsol+asinsol,constsol+pi.evalf()-asinsol]
                             solvedvars.append((var.var,SolverSolution(var.var.name,jointeval=jointsolutions,IsHinge=self.IsHinge(var.var.name)), [self.codeComplexity(s) for s in jointsolutions]))
-                            print solvedvars
                             continue
                     
                     if numsvar > 0:

@@ -5,7 +5,7 @@ all:
 	@if [ $(prefix) ]; then \
 		cd build && cmake -DCMAKE_INSTALL_PREFIX=$(prefix) -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) ..; \
 	else \
-		cd build && cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) ..; \
+		cd build && cmake -DCMAKE_VERBOSE_MAKEFILE=OFF -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) ..; \
 	fi
 	cd build && $(MAKE) $(PARALLEL_JOBS)
 

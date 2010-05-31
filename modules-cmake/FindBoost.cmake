@@ -402,11 +402,8 @@ ELSE (_boost_IN_CACHE)
 
   SET (_boost_MULTITHREADED "-mt")
 
-	message(STATUS "-----------------------<< SET MT EXTENSION >> ---------------------------")
-	
   IF( NOT Boost_USE_MULTITHREADED )
     SET (_boost_MULTITHREADED "")
-    message(STATUS "-----------------------<< NOT BOOST MULTITHREADED >> ---------------------------")
   ENDIF( NOT Boost_USE_MULTITHREADED )
 
   SET( _boost_STATIC_TAG "")
