@@ -1190,12 +1190,7 @@ namespace COLLADA_TYPE
 		FLOAT1X4 = 580,
 		FX_PROFILE = 581,
 		COLLADA = 582,
-		SCENE = 583,
-		//	Debug. Library sensors
-		LIBRARY_SENSORS		=	584,
-		SENSOR						=	585,
-		INSTANCE_SENSOR		=	586;
-		//
+		SCENE = 583;
 }
 
 // Returns the total number of schema types/dom* classes

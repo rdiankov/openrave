@@ -336,6 +336,8 @@ public:
 
           if (pjointaxis == NULL) {
             RAVELOG_ERRORA("Joint Axis %s NOT found\n",getRef());
+            RAVELOG_ERRORA("Bind Joint Axis %s\n",bindjoint->getAxis()->getID());
+
             continue;
           }
 
@@ -584,7 +586,7 @@ public:
         {
           RAVELOG_WARNA("Technique Profile: %s\n",technique->getProfile());
 
-          //ExtractInstance_sensor(technique->getInstance_sensor_array(),probot);
+          ExtractInstance_sensor(technique->getContents(),probot);
         }
       }
     }
@@ -594,97 +596,97 @@ public:
 
   /// Extract instance sensor info
   /// Extract instances of sensors located in articulated_systems extra node
-//  bool ExtractInstance_sensor(domInstance_sensor_Array instances, RobotBasePtr probot)
-//  {
-//    std::string instance_id;
-//    std::string instance_url;
-//    std::string instance_link;
-//    std::string definition_id;
-//    std::string definition_type;
-//    daeElementRef dom_SensorActuatorManipulator;
-//
-//    for (size_t i_instance = 0; i_instance < instances.getCount(); i_instance++)
-//    {
-//      daeElementRef instance_SensorActuatorManipulator = instances[i_instance];
-//      RAVELOG_DEBUG("Instance name: %s\n",instance_SensorActuatorManipulator->getElementName());
-//      if ((strcmp(instance_SensorActuatorManipulator->getElementName(),"instance_actuator") == 0)
-//          ||
-//          (strcmp(instance_SensorActuatorManipulator->getElementName(),"instance_sensor") == 0)
-//          ||
-//          (strcmp(instance_SensorActuatorManipulator->getElementName(),"instance_manipulator") == 0))
-//      {
-//        //  Get instance attributes
-//        daeTArray<daeElement::attr> instance_attributes = instance_SensorActuatorManipulator->getAttributes();
-//        for (size_t i_ins_attr = 0; i_ins_attr < instance_attributes.getCount(); i_ins_attr++)
+  bool ExtractInstance_sensor(daeElementRefArray instances, RobotBasePtr probot)
+  {
+    std::string instance_id;
+    std::string instance_url;
+    std::string instance_link;
+    std::string definition_id;
+    std::string definition_type;
+    daeElementRef dom_SensorActuatorManipulator;
+
+    for (size_t i_instance = 0; i_instance < instances.getCount(); i_instance++)
+    {
+      daeElementRef instance_SensorActuatorManipulator = instances[i_instance];
+      RAVELOG_DEBUG("Instance name: %s\n",instance_SensorActuatorManipulator->getElementName());
+      if ((strcmp(instance_SensorActuatorManipulator->getElementName(),"instance_actuator") == 0)
+          ||
+          (strcmp(instance_SensorActuatorManipulator->getElementName(),"instance_sensor") == 0)
+          ||
+          (strcmp(instance_SensorActuatorManipulator->getElementName(),"instance_manipulator") == 0))
+      {
+        //  Get instance attributes
+        daeTArray<daeElement::attr> instance_attributes = instance_SensorActuatorManipulator->getAttributes();
+        for (size_t i_ins_attr = 0; i_ins_attr < instance_attributes.getCount(); i_ins_attr++)
+        {
+          RAVELOG_DEBUG("Instance attribute %d %s: %s\n",i_ins_attr,instance_attributes[i_ins_attr].name.c_str(),instance_attributes[i_ins_attr].value.c_str());
+
+          if (instance_attributes[i_ins_attr].name == "id")
+          {
+            instance_id = instance_attributes[i_ins_attr].value;
+          }
+
+          if (instance_attributes[i_ins_attr].name == "url")
+          {
+            instance_url =  instance_attributes[i_ins_attr].value;
+          }
+
+          if (instance_attributes[i_ins_attr].name == "link")
+          {
+            instance_link = instance_attributes[i_ins_attr].value;
+          }
+        }
+
+        RAVELOG_DEBUG("Get SensorActuatorManipulator info from url\n");
+
+        daeURI  url = daeURI(*(instance_SensorActuatorManipulator.cast()),instance_url);
+        dom_SensorActuatorManipulator = getElementFromUrl(url);
+
+        //  Get definition attributes
+        daeTArray<daeElement::attr> definition_attributes = dom_SensorActuatorManipulator->getAttributes();
+        for (size_t i_def_attr = 0; i_def_attr < definition_attributes.getCount(); i_def_attr++)
+        {
+          if (definition_attributes[i_def_attr].name == "type")
+          {
+            definition_type  = definition_attributes[i_def_attr].value;
+          }
+
+          if (definition_attributes[i_def_attr].name == "id")
+          {
+            definition_id = definition_attributes[i_def_attr].value;
+          }
+
+          RAVELOG_DEBUG("SensorActuator attribute %d %s: %s\n", i_def_attr,
+                                                                definition_attributes[i_def_attr].name.c_str(),
+                                                                definition_attributes[i_def_attr].value.c_str());
+        }
+
+//        //  Create Actuator
+//        if (strcmp(instance_SensorActuatorManipulator->getElementName(),"instance_actuator") == 0)
 //        {
-//          RAVELOG_DEBUG("Instance attribute %d %s: %s\n",i_ins_attr,instance_attributes[i_ins_attr].name.c_str(),instance_attributes[i_ins_attr].value.c_str());
-//
-//          if (instance_attributes[i_ins_attr].name == "id")
-//          {
-//            instance_id = instance_attributes[i_ins_attr].value;
-//          }
-//
-//          if (instance_attributes[i_ins_attr].name == "url")
-//          {
-//            instance_url =  instance_attributes[i_ins_attr].value;
-//          }
-//
-//          if (instance_attributes[i_ins_attr].name == "link")
-//          {
-//            instance_link = instance_attributes[i_ins_attr].value;
-//          }
+//          addActuator(probot,definition_id,definition_type,instance_id,dom_SensorActuatorManipulator);
 //        }
-//
-//        RAVELOG_DEBUG("Get SensorActuatorManipulator info from url\n");
-//
-//        daeURI  url = daeURI(*(instance_SensorActuatorManipulator.cast()),instance_url);
-//        dom_SensorActuatorManipulator = getElementFromUrl(url);
-//
-//        //  Get definition attributes
-//        daeTArray<daeElement::attr> definition_attributes = dom_SensorActuatorManipulator->getAttributes();
-//        for (size_t i_def_attr = 0; i_def_attr < definition_attributes.getCount(); i_def_attr++)
+        //  Create Sensor
+        if (strcmp(instance_SensorActuatorManipulator->getElementName(),"instance_sensor") == 0)
+        {
+          addSensor(probot,definition_id,
+                    definition_type,
+                    instance_id,
+                    instance_link,
+                    dom_SensorActuatorManipulator,
+                    instance_SensorActuatorManipulator);
+        }
+//        //  Create Manipulator
+//        else
 //        {
-//          if (definition_attributes[i_def_attr].name == "type")
-//          {
-//            definition_type  = definition_attributes[i_def_attr].value;
-//          }
-//
-//          if (definition_attributes[i_def_attr].name == "id")
-//          {
-//            definition_id = definition_attributes[i_def_attr].value;
-//          }
-//
-//          RAVELOG_DEBUG("SensorActuator attribute %d %s: %s\n", i_def_attr,
-//                                                                definition_attributes[i_def_attr].name.c_str(),
-//                                                                definition_attributes[i_def_attr].value.c_str());
+//          addManipulator(probot,instance_id,dom_SensorActuatorManipulator);
 //        }
-//
-////        //  Create Actuator
-////        if (strcmp(instance_SensorActuatorManipulator->getElementName(),"instance_actuator") == 0)
-////        {
-////          addActuator(probot,definition_id,definition_type,instance_id,dom_SensorActuatorManipulator);
-////        }
-//        //  Create Sensor
-//        if (strcmp(instance_SensorActuatorManipulator->getElementName(),"instance_sensor") == 0)
-//        {
-//          addSensor(probot,definition_id,
-//                    definition_type,
-//                    instance_id,
-//                    instance_link,
-//                    dom_SensorActuatorManipulator,
-//                    instance_SensorActuatorManipulator);
-//        }
-////        //  Create Manipulator
-////        else
-////        {
-////          addManipulator(probot,instance_id,dom_SensorActuatorManipulator);
-////        }
-//
-//      }
-//    }
-//
-//    return true;
-//  }
+
+      }
+    }
+
+    return true;
+  }
 
   //  Create Sensor and initilize it
   bool addSensor( RobotBasePtr  probot,
@@ -1577,7 +1579,7 @@ public:
           //          }
 
           //  Axes and Anchor assignment.
-          pjoint->vAxes[0] = Vector(-pdomaxis->getAxis()->getValue()[0], -pdomaxis->getAxis()->getValue()[1], -pdomaxis->getAxis()->getValue()[2]).normalize3();
+          pjoint->vAxes[0] = Vector(pdomaxis->getAxis()->getValue()[0], pdomaxis->getAxis()->getValue()[1], pdomaxis->getAxis()->getValue()[2]).normalize3();
           pjoint->vanchor = Vector(0,0,0);
 
           int numbad = 0;
@@ -2649,18 +2651,34 @@ public:
     //  Store sidref value
     _sidref = sidref;
 
-    // SID path to kinematics
-    daeSmartRef<T> ptarget = daeSafeCast<T>(daeSidRef(sidref, pref).resolve().elt);
-
-    if( ptarget == NULL )
+    //  Debug
+    if (!pref)
     {
-      RAVELOG_WARNA("failed to resolve %s from %s\n", sidref, ref);
+      RAVELOG_ERROR("pref not FOUND\n");
+    }
+    else
+    {
+      RAVELOG_VERBOSE("pref WAS FOUND!!\n");
+    }
+
+    // SID path to kinematics
+    daeSIDResolver resolver(pref,sidref);
+    daeSmartRef<T> ptarget = daeSafeCast<T>(resolver.getElement());
+    //daeSmartRef<T> ptarget = daeSafeCast<T>(daeSidRef(sidref, pref).resolve().elt);
+
+    if( !ptarget )
+    {
+      RAVELOG_ERROR("failed to resolve %s from %s\n", sidref, ref);
       return NULL;
+    }
+    else
+    {
+      RAVELOG_VERBOSE("Resolved %s from %s\n", sidref, ref);
     }
 
     if( ptarget->typeID() != T::ID() )
     {
-      RAVELOG_WARNA("unexpected resolved type (%s) \n", ptarget->getTypeName());
+      RAVELOG_ERROR("unexpected resolved type (%s) \n", ptarget->getTypeName());
       return NULL;
     }
 

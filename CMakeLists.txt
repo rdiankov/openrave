@@ -357,6 +357,22 @@ if( NOT ZLIB_FOUND )
   set(ZLIB_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/zlib)
 endif()
 
+# check for pcre
+pkg_check_modules(libpcrecpp libpcrecpp)
+if( NOT libpcrecpp_FOUND )
+  message(STATUS "System pcre not found, using local from sources")
+  # include the local pcre
+  add_subdirectory(3rdparty/pcre)
+  set(libpcrecpp_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/pcre)
+  set(libpcrecpp_LIBRARY_DIRS)
+  set(libpcrecpp_LIBRARIES pcre_local)
+  set(libpcrecpp_CFLAGS_OTHERS "-DHAVE_CONFIG_H -DPCRE_STATIC")
+  set(libpcrecpp_LDFLAGS_OTHERS)
+endif()
+
+# check for collada
+find_package(COLLADA)
+
 # check for local collada compilation
 if( COLLADA_FOUND )
   set(COLLADA_INCLUDE_DIR ${COLLADA_INCLUDE_DIR} ${COLLADA_INCLUDE_DIR}/1.5)
@@ -371,18 +387,6 @@ endif()
 if( NOT COLLADA_FOUND AND ZLIB_FOUND AND Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
   add_subdirectory(3rdparty/minizip)
   set(MINIZIP_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/minizip ${ZLIB_INCLUDE_DIR})
-
-  pkg_check_modules(libpcrecpp libpcrecpp)
-  if( NOT libpcrecpp_FOUND )
-    message(STATUS "System pcre not found, using local from sources")
-    # include the local pcre
-    add_subdirectory(3rdparty/pcre)
-    set(libpcrecpp_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/pcre)
-    set(libpcrecpp_LIBRARY_DIRS)
-    set(libpcrecpp_LIBRARIES pcre_local)
-    set(libpcrecpp_CFLAGS_OTHERS "-DHAVE_CONFIG_H -DPCRE_STATIC")
-    set(libpcrecpp_LDFLAGS_OTHERS)
-  endif()
 
   add_subdirectory(3rdparty/collada)
   set(COLLADA_FOUND 1)

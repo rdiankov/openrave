@@ -28,29 +28,7 @@ domTechnique::registerElement(DAE& dae)
 	meta->registerClass(domTechnique::create);
 
 	daeMetaCMPolicy *cm = NULL;
-
-	//	Debug. Library sensors
-	daeMetaElementAttribute *mea = NULL;
-	//
-
 	cm = new daeMetaSequence( meta, cm, 0, 1, 1 );
-
-	//	Debug. Library sensors
-	mea = new daeMetaElementArrayAttribute( meta, cm, 0, 1, -1 );
-	mea->setName( "library_sensors" );
-	mea->setOffset( daeOffsetOf(domTechnique,elemLibrary_sensors_array) );
-	mea->setElementType( domLibrary_sensors::registerElement(dae) );
-	cm->appendChild( mea );
-	//
-
-	//	Debug. Library sensors
-	mea = new daeMetaElementArrayAttribute( meta, cm, 0, 1, -1 );
-	mea->setName( "instance_sensor" );
-	mea->setOffset( daeOffsetOf(domTechnique,elemInstance_sensor_array) );
-	mea->setElementType( domInstance_sensor::registerElement(dae) );
-	cm->appendChild( mea );
-	//
-
 	cm = new daeMetaAny( meta, cm, 0, 0, -1 );
 
 	cm->setMaxOrdinal( 0 );

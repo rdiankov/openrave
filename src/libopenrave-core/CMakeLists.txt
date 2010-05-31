@@ -22,6 +22,7 @@ add_library(libopenrave-core SHARED ${openrave_core_SOURCES})
 add_dependencies(libopenrave-core libopenrave)
 
 if( COLLADA_FOUND )
+	message(STATUS "----------------Add_dependencies: ${COLLADA_LIBRARY} !!!")
   add_dependencies(libopenrave-core ${COLLADA_LIBRARY})
 endif()
 

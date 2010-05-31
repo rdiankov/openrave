@@ -5,9 +5,6 @@
 #include <dom/domTypes.h>
 #include <dom/domElements.h>
 
-//	Modified to support OpenRAVE sensors
-#include <dom/domLibrary_sensors.h>
-#include <dom/domInstance_sensor.h>
 
 class DAE;
 
@@ -44,12 +41,6 @@ protected:  // Element
 	 */
 	daeUIntArray       _contentsOrder;
 
-	//	Debug. Library sensors and instance_sensor
-	domLibrary_sensors_Array	elemLibrary_sensors_array;
-	domInstance_sensor_Array	elemInstance_sensor_array;
-	//
-
-
 public:	//Accessors and Mutators
 	/**
 	 * Gets the profile attribute.
@@ -73,13 +64,6 @@ public:	//Accessors and Mutators
 	 */
 	const daeElementRefArray &getContents() const { return _contents; }
 
-	//	Debug. Library sensors
-	const domLibrary_sensors_Array &getLibrary_sensors_array() const { return elemLibrary_sensors_array; }
-	//
-
-	//	Debug. Instance sensors
-	const domInstance_sensor_Array &getInstance_sensor_array() const { return elemInstance_sensor_array; }
-	//
 protected:
 	/**
 	 * Constructor
