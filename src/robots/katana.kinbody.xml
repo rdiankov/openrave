@@ -76,6 +76,12 @@
 	  <Data>Gripper_Right.wrl 0.001</Data>
 	  <Render>Gripper_Right.wrl 0.001</Render>
 	</Geom>
+    <geom type="box">
+      <extents>0.002 0.015 0.01</extents>
+      <translation>0.037 0.075 0</translation>
+      <rotationaxis>0 0 1 -25</rotationaxis>
+      <diffusecolor>0 0 1</diffusecolor>
+    </geom>
   </Body>
   <Body name="Gripper_Left" type="dynamic">
 	<offsetfrom>Gripper_Base</offsetfrom>
@@ -84,6 +90,12 @@
 	  <Data>Gripper_Left.wrl 0.001</Data>
 	  <Render>Gripper_Left.wrl 0.001</Render>
 	</Geom>
+    <geom type="box">
+      <extents>0.002 0.015 0.01</extents>
+      <translation>-0.037 0.075 0</translation>
+      <rotationaxis>0 0 1 25</rotationaxis>
+      <diffusecolor>0 0 1</diffusecolor>
+    </geom>
   </Body>
   
   <!-- Katana Body Joints -->
