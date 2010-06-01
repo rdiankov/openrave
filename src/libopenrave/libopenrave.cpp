@@ -689,17 +689,18 @@ RAVE_API std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameter
         stringstream::streampos pos = I.tellg();
         I.get(buf, 0); // get all the data, yes this is inefficient, not sure if there anyway to search in streams
 
-        const char* p = strcasestr(buf.str().c_str(), "</PlannerParameters>");
+        string pbuf = buf.str();
+        const char* p = strcasestr(pbuf.c_str(), "</PlannerParameters>");
         int ppsize=-1;
         if( p != NULL ) {
             I.clear();
-            ppsize=(p-buf.str().c_str())+20;
+            ppsize=(p-pbuf.c_str())+20;
             I.seekg((size_t)pos+ppsize);
         }
         else
             throw openrave_exception(str(boost::format("error, failed to find </PlannerParameters> in %s")%buf.str()),ORE_InvalidArguments);
         pp._plannerparametersdepth = 0;
-        LocalXML::ParseXMLData(PlannerBase::PlannerParametersPtr(&pp,null_deleter()), buf.str().c_str(), ppsize);
+        LocalXML::ParseXMLData(PlannerBase::PlannerParametersPtr(&pp,null_deleter()), pbuf.c_str(), ppsize);
     }
 
     return I;
