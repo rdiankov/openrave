@@ -373,6 +373,15 @@ if( NOT COLLADA_FOUND AND ZLIB_FOUND AND Boost_FILESYSTEM_FOUND AND Boost_SYSTEM
   set(MINIZIP_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/minizip ${ZLIB_INCLUDE_DIR})
 
   pkg_check_modules(libpcrecpp libpcrecpp)
+  if( libpcrecpp_FOUND )
+    set(CMAKE_REQUIRED_INCLUDES ${libpcrecpp_INCLUDE_DIRS})
+    check_include_file_cxx(pcrecpp.h HAVE_PCRECPP_H)
+    set(CMAKE_REQUIRED_INCLUDES)
+    if( NOT HAVE_PCRECPP_H )
+      set(libpcrecpp_FOUND 0)
+    endif()
+  endif()
+
   if( NOT libpcrecpp_FOUND )
     message(STATUS "System pcre not found, using local from sources")
     # include the local pcre
