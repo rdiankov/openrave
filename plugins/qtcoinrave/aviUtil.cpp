@@ -16,6 +16,7 @@
 
 #ifndef ENABLE_VIDEORECORDING
 
+#include "qtcoin.h"
 #include <list>
 
 // no recording
