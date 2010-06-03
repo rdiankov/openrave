@@ -16,6 +16,8 @@
 
 #ifndef ENABLE_VIDEORECORDING
 
+#include <list>
+
 // no recording
 bool STOP_AVI() { return false; }
 std::list<std::pair<int,string> > GET_CODECS() { return std::list<std::pair<int,string> >(); }
