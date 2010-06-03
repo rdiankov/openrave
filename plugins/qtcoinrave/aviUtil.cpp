@@ -14,6 +14,24 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#ifndef ENABLE_VIDEORECORDING
+
+// no recording
+bool STOP_AVI() { return false; }
+std::list<std::pair<int,string> > GET_CODECS() { return std::list<std::pair<int,string> >(); }
+bool START_AVI(const char* filename, double _frameRate, int width, int height, int bits,int)
+{
+    RAVELOG_WARNA("avi recording to file %s not enabled\n", filename);
+    return false;
+}
+bool ADD_FRAME_FROM_DIB_TO_AVI(void* pdata)
+{
+    return false;
+}
+
+#else // ENABLE_VIDEORECORDING
+
+
 #ifdef _WIN32
 
 #define AVIIF_KEYFRAME  0x00000010L // this frame is a key frame.
@@ -663,3 +681,5 @@ bool ADD_FRAME_FROM_DIB_TO_AVI(void* pdata)
 #endif
 
 #endif
+
+#endif // ENABLE_VIDEORECORDING
