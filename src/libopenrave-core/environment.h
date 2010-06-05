@@ -18,6 +18,10 @@
 
 #include <locale>
 
+#ifdef HAVE_BOOST_FILESYSTEM
+#include <boost/filesystem/operations.hpp>
+#endif
+
 #define GRAPH_DELETER boost::bind(&Environment::_CloseGraphCallback,boost::static_pointer_cast<Environment>(shared_from_this()),RaveViewerBaseWeakPtr(_pCurrentViewer),_1)
 
 #define CHECK_INTERFACE(pinterface) { \
@@ -57,15 +61,53 @@ class Environment : public EnvironmentBase
     
         _pdatabase.reset(new RaveDatabase());
         if( bLoadAllPlugins ) {
-            if( !ParseDirectories(getenv("OPENRAVE_PLUGINS"), _vplugindirs) || _vplugindirs.size() == 0 ) {
-                RAVELOG_DEBUGA("could not find OPENRAVE_PLUGINS variable, setting to %s\n", OPENRAVE_PLUGINS_INSTALL_DIR);
+            ParseDirectories(getenv("OPENRAVE_PLUGINS"), _vplugindirs);
+            bool bExists=false;
+#ifdef HAVE_BOOST_FILESYSTEM
+            boost::filesystem::path pluginsfilename = boost::filesystem::system_complete(boost::filesystem::path(OPENRAVE_PLUGINS_INSTALL_DIR, boost::filesystem::native));
+            FOREACH(itname, _vplugindirs) {
+                if( pluginsfilename == boost::filesystem::system_complete(boost::filesystem::path(*itname, boost::filesystem::native)) ) {
+                    bExists = true;
+                    break;
+                }
+            }
+#else
+            string pluginsfilename=OPENRAVE_PLUGINS_INSTALL_DIR;
+            FOREACH(itname, _vplugindirs) {
+                if( pluginsfilename == OPENRAVE_PLUGINS_INSTALL_DIR ) {
+                    bExists = true;
+                    break;
+                }
+            }
+#endif
+            if( !bExists ) {
                 _vplugindirs.push_back(OPENRAVE_PLUGINS_INSTALL_DIR);
             }
         }
-    
-        if( !ParseDirectories(getenv("OPENRAVE_DATA"), _vdatadirs) || _vdatadirs.size() == 0 ) {
-            RAVELOG_DEBUGA("could not find OPENRAVE_DATA variable, setting to %s\n", OPENRAVE_DATA_INSTALL_DIR);
-            _vdatadirs.push_back(OPENRAVE_DATA_INSTALL_DIR);
+
+        {
+            ParseDirectories(getenv("OPENRAVE_DATA"), _vdatadirs);
+            bool bExists=false;
+#ifdef HAVE_BOOST_FILESYSTEM
+            boost::filesystem::path datafilename = boost::filesystem::system_complete(boost::filesystem::path(OPENRAVE_DATA_INSTALL_DIR, boost::filesystem::native));
+            FOREACH(itname, _vplugindirs) {
+                if( datafilename == boost::filesystem::system_complete(boost::filesystem::path(*itname, boost::filesystem::native)) ) {
+                    bExists = true;
+                    break;
+                }
+            }
+#else
+            string datafilename=OPENRAVE_DATA_INSTALL_DIR;
+            FOREACH(itname, _vplugindirs) {
+                if( datafilename == OPENRAVE_DATA_INSTALL_DIR ) {
+                    bExists = true;
+                    break;
+                }
+            }
+#endif
+            if( !bExists ) {
+                _vdatadirs.push_back(OPENRAVE_DATA_INSTALL_DIR);
+            }
        }
     }
 
