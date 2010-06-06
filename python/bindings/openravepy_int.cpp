@@ -1399,6 +1399,8 @@ public:
         {
             return _pmanip->CheckIndependentCollision(!pReport ? CollisionReportPtr() : pReport->report);
         }
+
+        string GetStructureHash() const { return _pmanip->GetStructureHash(); }
         string __repr__() { return boost::str(boost::format("<env.GetRobot('%s').GetManipulator('%s')>")%_pmanip->GetRobot()->GetName()%_pmanip->GetName()); }
         string __str__() { return boost::str(boost::format("<manipulator:%s, parent=%s>")%_pmanip->GetName()%_pmanip->GetRobot()->GetName()); }
         bool __eq__(boost::shared_ptr<PyManipulator> p) { return !!p && _pmanip==p->_pmanip; }
@@ -1425,6 +1427,7 @@ public:
         string GetName() const { return _pattached->GetName(); }
 
         void SetRelativeTransform(object transform) { _pattached->SetRelativeTransform(ExtractTransform(transform)); }
+        string GetStructureHash() const { return _pattached->GetStructureHash(); }
         string __repr__() { return boost::str(boost::format("<env.GetRobot('%s').GetSensor('%s')>")%_pattached->GetRobot()->GetName()%_pattached->GetName()); }
         string __str__() { return boost::str(boost::format("<attachedsensor:%s, parent=%s>")%_pattached->GetName()%_pattached->GetRobot()->GetName()); }
         bool __eq__(boost::shared_ptr<PyAttachedSensor> p) { return !!p && _pattached==p->_pattached; }
@@ -2086,6 +2089,10 @@ public:
     PyEnvironmentBase()
     {
         _penv = CreateEnvironment(true);
+    }
+    PyEnvironmentBase(bool bLoadPlugins)
+    {
+        _penv = CreateEnvironment(bLoadPlugins);
     }
     PyEnvironmentBase(EnvironmentBasePtr penv) : _penv(penv) {
     }
@@ -3649,6 +3656,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("CheckEndEffectorCollision",pCheckEndEffectorCollision2,args("transform","report"))
             .def("CheckIndependentCollision",pCheckIndependentCollision1)
             .def("CheckIndependentCollision",pCheckIndependentCollision2,args("report"))
+            .def("GetStructureHash",&PyRobotBase::PyManipulator::GetStructureHash)
             .def("__repr__",&PyRobotBase::PyManipulator::__repr__)
             .def("__str__",&PyRobotBase::PyManipulator::__str__)
             .def("__eq__",&PyRobotBase::PyManipulator::__eq__)
@@ -3663,6 +3671,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetRobot",&PyRobotBase::PyAttachedSensor::GetRobot)
             .def("GetName",&PyRobotBase::PyAttachedSensor::GetName)
             .def("SetRelativeTransform",&PyRobotBase::PyAttachedSensor::SetRelativeTransform,args("transform"))
+            .def("GetStructureHash",&PyRobotBase::PyAttachedSensor::GetStructureHash)
             .def("__str__",&PyRobotBase::PyAttachedSensor::__str__)
             .def("__repr__",&PyRobotBase::PyAttachedSensor::__repr__)
             .def("__eq__",&PyRobotBase::PyAttachedSensor::__eq__)
@@ -3830,6 +3839,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
 
     {
         scope env = classenv
+            .def(init<>())
+            .def(init<bool>())
             .def("Reset",&PyEnvironmentBase::Reset)
             .def("Destroy",&PyEnvironmentBase::Destroy)
             .def("GetPluginInfo",&PyEnvironmentBase::GetPluginInfo)

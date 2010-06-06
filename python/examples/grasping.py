@@ -102,7 +102,7 @@ class GraspingModel(OpenRAVEModel):
     def save(self):
         OpenRAVEModel.save(self,(self.grasps,self.graspindices,self.grasper.friction,[link.GetName() for link in self.grasper.avoidlinks],self.grasper.plannername))
     def getfilename(self):
-        return os.path.join(OpenRAVEModel.getfilename(self),'graspset.' + self.manip.GetName() + '.' + self.target.GetKinematicsGeometryHash()+'.pp')
+        return os.path.join(OpenRAVEModel.getfilename(self),'graspset.' + self.manip.GetStructureHash() + '.' + self.target.GetKinematicsGeometryHash()+'.pp')
     def preprocess(self):
         with self.env:
             self.jointmaxlengths = zeros(len(self.robot.GetJoints()))

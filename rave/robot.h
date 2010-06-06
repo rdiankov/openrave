@@ -164,20 +164,19 @@ public:
 
         virtual void serialize(std::ostream& o, int options) const;
         
+        /// \return hash of the manipulator definition
+        virtual std::string GetStructureHash() const;
     private:
         RobotBaseWeakPtr _probot;
-        LinkPtr _pBase;
-		LinkPtr _pEndEffector;
+        LinkPtr _pBase, _pEndEffector;
         Transform _tGrasp;
-        std::vector<int> _vgripperjoints;
-        std::vector<int> _varmjoints;
-        
+        std::vector<int> _vgripperjoints, _varmjoints;
         std::vector<dReal> _vClosingDirection;
         Vector _vdirection;
-
-		IkSolverBasePtr _pIkSolver;
+        IkSolverBasePtr _pIkSolver;
+        std::string _name; ///< name of the manipulator
         std::string _strIkSolver;         ///< string name of the iksolver
-        std::string _name;
+        std::string __hashstructure;
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
@@ -217,6 +216,8 @@ public:
 
         virtual void serialize(std::ostream& o, int options) const;
 
+        /// \return hash of the sensor definition
+        virtual std::string GetStructureHash() const;
     private:
         RobotBaseWeakPtr _probot;
         SensorBasePtr psensor;
@@ -224,7 +225,7 @@ public:
         Transform trelative; ///< relative transform of the sensor with respect to the attached link
         SensorBase::SensorDataPtr pdata; ///< pointer to a preallocated data struct using psensor->CreateSensorData()
         std::string _name; ///< name of the attached sensor
-
+        std::string __hashstructure;
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
         friend class ColladaReader;

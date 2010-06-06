@@ -461,6 +461,11 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
         SerializeRound(o,*it);
 }
 
+std::string RobotBase::Manipulator::GetStructureHash() const
+{
+    return __hashstructure;
+}
+
 RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot) : _probot(probot)
 {
 }
@@ -508,6 +513,11 @@ void RobotBase::AttachedSensor::serialize(std::ostream& o, int options) const
     o << (pattachedlink.expired() ? -1 : LinkPtr(pattachedlink)->GetIndex()) << " ";
     SerializeRound(o,trelative);
     o << (!pdata ? -1 : pdata->GetType()) << " ";
+}
+
+std::string RobotBase::AttachedSensor::GetStructureHash() const
+{
+    return __hashstructure;
 }
 
 RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot) : KinBodyStateSaver(probot), _probot(probot)
@@ -2015,8 +2025,19 @@ void RobotBase::ComputeJointHierarchy()
     {
         ostringstream ss;
         ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
-        serialize(ss,SO_Kinematics|SO_RobotManipulators|SO_RobotSensors);
+        serialize(ss,SO_Kinematics|SO_Geometry|SO_RobotManipulators|SO_RobotSensors);
         __hashrobotstructure = GetMD5HashString(ss.str());
+
+        FOREACH(itmanip,_vecManipulators) {
+            ss.str("");
+            (*itmanip)->serialize(ss,0);
+            (*itmanip)->__hashstructure = GetMD5HashString(ss.str());
+        }
+        FOREACH(itsensor,_vecSensors) {
+            ss.str("");
+            (*itsensor)->serialize(ss,0);
+            (*itsensor)->__hashstructure = GetMD5HashString(ss.str());
+        }
     }
 
     if( ComputeAABB().extents.lengthsqr3() > 900.0f )

@@ -138,6 +138,7 @@ enum SerializationOptions
     SO_NamesAndFiles = 0x08, ///< resource files and names
     SO_RobotManipulators = 0x10, ///< serialize robot manipulators
     SO_RobotSensors = 0x20, ///< serialize robot sensors
+    SO_Geometry = 0x40, ///< geometry information (for collision detection)
 };
 
 struct openrave_exception : std::exception

@@ -547,7 +547,7 @@ AABB KinBody::Link::ComputeAABB() const
 void KinBody::Link::serialize(std::ostream& o, int options) const
 {
     o << index << " ";
-    if( options & SO_Kinematics ) {
+    if( options & SO_Geometry ) {
         o << _listGeomProperties.size() << " ";
         FOREACHC(it,_listGeomProperties)
             it->serialize(o,options);
@@ -2304,7 +2304,7 @@ void KinBody::ComputeJointHierarchy()
     {
         ostringstream ss;
         ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
-        serialize(ss,SO_Kinematics);
+        serialize(ss,SO_Kinematics|SO_Geometry);
         __hashkinematics = GetMD5HashString(ss.str());
     }
 }
@@ -2732,16 +2732,17 @@ void KinBody::ParametersChanged(int parameters)
 
 void KinBody::serialize(std::ostream& o, int options) const
 {
-    if( options & SO_Kinematics ) {
-        o << _veclinks.size() << " ";
-        FOREACHC(it,_veclinks)
-            (*it)->serialize(o,options);
-        o << _vecjoints.size() << " ";
-        FOREACHC(it,_vecjoints)
-            (*it)->serialize(o,options);
-        o << _vecPassiveJoints.size() << " ";
-        FOREACHC(it,_vecPassiveJoints)
-            (*it)->serialize(o,options);
+    o << _veclinks.size() << " ";
+    FOREACHC(it,_veclinks) {
+        (*it)->serialize(o,options);
+    }
+    o << _vecjoints.size() << " ";
+    FOREACHC(it,_vecjoints) {
+        (*it)->serialize(o,options);
+    }
+    o << _vecPassiveJoints.size() << " ";
+    FOREACHC(it,_vecPassiveJoints) {
+        (*it)->serialize(o,options);
     }
 }
 

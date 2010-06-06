@@ -95,7 +95,7 @@ class ReachabilityModel(OpenRAVEModel):
         OpenRAVEModel.save(self,(self.reachabilitystats,self.reachabilitydensity3d,self.reachability3d, self.pointscale,self.xyzdelta,self.quatdelta))
 
     def getfilename(self):
-        return os.path.join(OpenRAVEModel.getfilename(self),'reachability.' + self.manip.GetName() + '.pp')
+        return os.path.join(OpenRAVEModel.getfilename(self),'reachability.' + self.manip.GetStructureHash() + '.pp')
 
     def autogenerate(self,options=None):
         maxradius=None
@@ -113,10 +113,10 @@ class ReachabilityModel(OpenRAVEModel):
                 quatdelta=options.quatdelta
             usefreespace=options.usefreespace
             useconvex=options.useconvex
-        if self.robot.GetRobotStructureHash() == '7b789782446d86b95c6fb16de7f204c7' and self.manip.GetName() == 'arm':
+        if self.robot.GetKinematicsGeometryHash() == '0d258d45aacb7ea4f6f88c4602d4b077' or self.robot.GetKinematicsGeometryHash() == '2c7f45a52ae3cbd4c0663d8abbd5f020': # wam
             if maxradius is None:
                 maxradius = 1.1
-        elif self.robot.GetRobotStructureHash() == '365cca1ce772e05e40f212b004530d0e' or self.robot.GetRobotStructureHash() == '08d2e03ca4c40f922340d435122cf178': # pr2
+        elif self.robot.GetRobotStructureHash() == 'bec5e13f7bc7f7fcc3e07e8a82522bee': # pr2
             if xyzdelta is None:
                 xyzdelta = 0.03
             if quatdelta is None:

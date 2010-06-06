@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -33,10 +35,6 @@ if __name__ == "__main__":
                       help='Default viewer to use.')
     parser.add_option('--debug','-d', action="store",type='string',dest='debug',default=None,
                       help='Debug level')
-    parser.add_option('--robothash', action="store",type='string',dest='robothash',default=None,
-                      help='if specified will query the robot structure hash and return')
-    parser.add_option('--bodyhash', action="store",type='string',dest='bodyhash',default=None,
-                      help='if specified will query the kinbody hash and return')
     parser.add_option('--ipython', '-i',action="store_true",dest='ipython',default=False,
                       help='if true will drop into the ipython interpreter rather than spin')
     parser.add_option('--version',action='store_true',dest='version',default=False,
@@ -51,21 +49,8 @@ if __name__ == "__main__":
             if (not options.debug.isdigit() and options.debug.lower() == debuglevel.name.lower()) or (options.debug.isdigit() and int(options.debug) == int(debuglevel)):
                 RaveSetDebugLevel(debuglevel)
                 break
-    else: # test if special functions are requested whose output shouldn't be cluttered with debug statements
-        if options.robothash is not None or options.bodyhash is not None or options.listplugins:
-            RaveSetDebugLevel(DebugLevel.Fatal)
     env = Environment()
     try:
-        if options.robothash is not None:
-            env.Reset()
-            env.Load(options.robothash)
-            print env.GetRobots()[0].GetRobotStructureHash()
-            sys.exit(0)
-        if options.bodyhash is not None:
-            env.Reset()
-            env.Load(options.bodyhash)
-            print env.GetBodies()[0].GetKinematicsGeometryHash()
-            sys.exit(0)
         if options.listplugins:
             plugins = env.GetPluginInfo()
             interfacenames = dict()

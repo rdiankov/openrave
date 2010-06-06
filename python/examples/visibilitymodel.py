@@ -48,7 +48,7 @@ class VisibilityModel(OpenRAVEModel):
     def getversion(self):
         return 1
     def getfilename(self):
-        return os.path.join(OpenRAVEModel.getfilename(self),'visibility.' + self.manip.GetName() + '.' + self.attachedsensor.GetName() + '.' + self.target.GetKinematicsGeometryHash()+'.pp')
+        return os.path.join(OpenRAVEModel.getfilename(self),'visibility.' + self.manip.GetStructureHash() + '.' + self.attachedsensor.GetStructureHash() + '.' + self.target.GetKinematicsGeometryHash()+'.pp')
     def load(self):
         try:
             params = OpenRAVEModel.load(self)

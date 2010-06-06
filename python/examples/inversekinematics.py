@@ -72,10 +72,10 @@ class InverseKinematicsModel(OpenRAVEModel):
         pass # already saved as a lib
     
     def getfilename(self):
-        basename = 'ikfast' + str(self.getversion()) + '.' + self.manip.GetName() + '.' + str(self.iktype) + '.' + platform.machine()
+        basename = 'ikfast' + str(self.getversion()) + '.' + self.manip.GetStructureHash() + '.' + str(self.iktype) + '.' + platform.machine()
         return ccompiler.new_compiler().shared_object_filename(basename=basename,output_dir=OpenRAVEModel.getfilename(self))
     def getsourcefilename(self):
-        return os.path.join(OpenRAVEModel.getfilename(self),'ikfast' + str(self.getversion()) + '.' + self.manip.GetName() + '.' + str(self.iktype))
+        return os.path.join(OpenRAVEModel.getfilename(self),'ikfast' + str(self.getversion()) + '.' + self.manip.GetStructureHash() + '.' + str(self.iktype))
     def autogenerate(self,options=None):
         freejoints = None
         iktype = None
@@ -98,18 +98,18 @@ class InverseKinematicsModel(OpenRAVEModel):
             usedummyjoints=options.usedummyjoints
             if options.freejoints is not None:
                 freejoints=options.freejoints
-        if self.robot.GetRobotStructureHash() == '7b789782446d86b95c6fb16de7f204c7' and self.manip.GetName() == 'arm':
+        if self.robot.GetKinematicsGeometryHash() == '0d258d45aacb7ea4f6f88c4602d4b077' or self.robot.GetKinematicsGeometryHash() == '2c7f45a52ae3cbd4c0663d8abbd5f020': # wam 7dof
             if freejoints is None:
                 freejoints = ['Shoulder_Roll']
-        elif self.robot.GetRobotStructureHash() == '811c96bfa1b9444953763310418ca2a5' and self.manip.GetName() == 'arm':
+        elif self.robot.GetKinematicsGeometryHash() == '2950e0e6064bda0a68145750363b6f79': # wam 4dof
             if freejoints is None:
                 freejoints = ['Shoulder_Roll']
             if iktype is None:
                 iktype=IkParameterization.Type.Translation3D
-        elif self.robot.GetRobotStructureHash() == 'bb644e60bcd217d8cea1272a26ecc651' and self.manip.GetName() == 'rotation':
+        elif self.robot.GetRobotStructureHash() == '7d30ec51a4b393b08f7febca4b9abd34': # stage
             if iktype is None:
                 iktype=IkParameterization.Type.Rotation3D
-        elif self.robot.GetRobotStructureHash() == '365cca1ce772e05e40f212b004530d0e' or self.robot.GetRobotStructureHash() == '08d2e03ca4c40f922340d435122cf178': # pr2
+        elif self.robot.GetRobotStructureHash() == 'bec5e13f7bc7f7fcc3e07e8a82522bee': # pr2
             if iktype is None:
                 if self.manip.GetName().find('camera') >= 0:
                     # cameras are attached, so use a ray parameterization
