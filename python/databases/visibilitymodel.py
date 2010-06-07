@@ -20,29 +20,55 @@ import time
 from numpy import *
 
 from openravepy import *
-from openravepy.databases import grasping, inversekinematics, kinematicreachability
-from openravepy.interfaces import VisualFeedback
+from openravepy.databases import inversekinematics, kinematicreachability
+from openravepy.interfaces import BaseManipulation, VisualFeedback
 
 class VisibilityModel(OpenRAVEModel):
+    class GripperVisibility:
+        """When 'entered' will hide all the non-gripper links in order to facilitate visiblity of the gripper"""
+        def __init__(self,manip):
+            self.manip = manip
+            self.robot = self.manip.GetRobot()
+            self.hiddengeoms = []
+        def __enter__(self):
+            self.hiddengeoms = []
+            with self.robot.GetEnv():
+                # stop rendering the non-gripper links
+                childlinkids = [link.GetIndex() for link in self.manip.GetChildLinks()]
+                for link in self.robot.GetLinks():
+                    if link.GetIndex() not in childlinkids:
+                        for geom in link.GetGeometries():
+                            self.hiddengeoms.append((geom,geom.IsDraw()))
+                            geom.SetDraw(False)
+        def __exit__(self,type,value,traceback):
+            with self.robot.GetEnv():
+                for geom,isdraw in self.hiddengeoms:
+                    geom.SetDraw(isdraw)
+
     def __init__(self,robot,target,sensorname=None,maxvelmult=None):
         OpenRAVEModel.__init__(self,robot=robot)
         self.target = target
         self.visualprob = VisualFeedback(robot,maxvelmult=maxvelmult)
+        self.basemanip = BaseManipulation(robot,maxvelmult=maxvelmult)
         self.convexhull = None
         self.sensorname = sensorname
         self.manip = robot.GetActiveManipulator()
         self.manipname = None if self.manip is None else self.manip.GetName()
         self.visibilitytransforms = None
-        self.rmodel = self.gmodel = self.ikmodel = None
+        self.rmodel = self.ikmodel = None
+        self.preshapes = None
         self.preprocess()
     def clone(self,envother):
         clone = OpenRAVEModel.clone(self,envother)
         clone.rmodel = self.rmodel.clone(envother) if not self.rmodel is None else None
-        clone.gmodel = self.gmodel.clone(envother) if not self.gmodel is None else None
+        clone.preshapes = array(self.preshapes) if not self.preshapes is None else None
         clone.ikmodel = self.ikmodel.clone(envother) if not self.ikmodel is None else None
         clone.visualprob = self.visualprob.clone(envother)
+        clone.basemanip = self.basemanip.clone(envother)
         clone.preprocess()
         return clone
+    def getversion(self):
+        return 1
     def has(self):
         return len(self.visibilitytransforms) > 0
     def getversion(self):
@@ -54,13 +80,13 @@ class VisibilityModel(OpenRAVEModel):
             params = OpenRAVEModel.load(self)
             if params is None:
                 return False
-            self.visibilitytransforms,self.convexhull,self.KK,self.dims = params
+            self.visibilitytransforms,self.convexhull,self.KK,self.dims,self.preshapes = params
             self.preprocess()
             return self.has()
         except e:
             return False
     def save(self):
-        OpenRAVEModel.save(self,(self.visibilitytransforms,self.convexhull,self.KK,self.dims))
+        OpenRAVEModel.save(self,(self.visibilitytransforms,self.convexhull,self.KK,self.dims,self.preshapes))
 
     def preprocess(self):
         with self.env:
@@ -68,18 +94,29 @@ class VisibilityModel(OpenRAVEModel):
             assert(self.manipname is None or self.manipname==manipname)
             self.manip = self.robot.SetActiveManipulator(manipname)
             self.attachedsensor = [s for s in self.robot.GetSensors() if s.GetName() == self.sensorname][0]
-            self.gmodel = grasping.GraspingModel(robot=self.robot,target=self.target)
-            if not self.gmodel.load():
-                self.gmodel.autogenerate()
             self.ikmodel = inversekinematics.InverseKinematicsModel(robot=self.robot,iktype=IkParameterization.Type.Transform6D)
             if not self.ikmodel.load():
                 self.ikmodel.autogenerate()
             self.visualprob.SetCameraTransforms(transforms=self.visibilitytransforms)
     
-    def autogenerate(self,options=None):
-        self.generate()
+    def autogenerate(self,options=None,gmodel=None):
+        preshapes = None
+        if options is not None:
+            if options.preshapes is not None:
+                preshapes = zeros((0,len(self.manip.GetGripperJoints())))
+                for preshape in options.preshapes:
+                    preshapes = r_[preshapes,[array([float(s) for s in preshape.split()])]]
+        if not gmodel is None:
+            preshapes = array([gmodel.grasps[0][gmodel.graspindices['igrasppreshape']]])
+        if preshapes is None:
+            with self.target:
+                self.target.Enable(False)
+                final,traj = self.basemanip.ReleaseFingers(execute=False,outputfinal=True)
+            preshapes = array([final])
+        self.generate(preshapes=preshapes)
         self.save()
-    def generate(self):
+    def generate(self,preshapes):
+        self.preshapes=preshapes
         self.preprocess()
         self.sensorname = self.attachedsensor.GetName()
         self.manipname = self.manip.GetName()
@@ -94,7 +131,8 @@ class VisibilityModel(OpenRAVEModel):
                     self.KK = sensordata.KK
                     self.dims = sensordata.imagedata.shape
                 with RobotStateSaver(self.robot):
-                    self.gmodel.setPreshape(self.gmodel.grasps[0]) # find better way of handling multiple grasps
+                    # find better way of handling multiple grasps
+                    self.robot.SetJointValues(self.preshapes[0],self.manip.GetGripperJoints())
                     extentsfile = os.path.join(self.env.GetHomeDirectory(),'kinbody.'+self.target.GetKinematicsGeometryHash(),'visibility.txt')
                     if os.path.isfile(extentsfile):
                         self.visibilitytransforms = self.visualprob.ProcessVisibilityExtents(target=self.target, extents=loadtxt(extentsfile,float))
@@ -111,17 +149,35 @@ class VisibilityModel(OpenRAVEModel):
         pts = array([dot(self.target.GetTransform(),matrixFromPose(pose))[0:3,3] for pose in self.visibilitytransforms])
         h=self.env.plot3(pts,5,colors=array([0.5,0.5,1,0.2]))
         with RobotStateSaver(self.robot):
-            with grasping.GraspingModel.GripperVisibility(self.manip):
+            with self.GripperVisibility(self.manip):
                 for pose in self.visibilitytransforms:
                     with self.env:
+                        self.robot.SetJointValues(self.preshapes[0],self.manip.GetGripperJoints())
                         Trelative = dot(linalg.inv(self.attachedsensor.GetTransform()),self.manip.GetEndEffectorTransform())
                         Tcamera = dot(self.target.GetTransform(),matrixFromPose(pose))
                         Tgrasp = dot(Tcamera,Trelative)
                         Tdelta = dot(Tgrasp,linalg.inv(self.manip.GetEndEffectorTransform()))
                         for link in self.manip.GetChildLinks():
                             link.SetTransform(dot(Tdelta,link.GetTransform()))
+                        visibility = self.visualprob.ComputeVisibility(self.target)
                         self.env.UpdatePublishedBodies()
-                    raw_input('press any key to continue: ')
+                    raw_input('visibility %d, press any key to continue: '%visibility)
+    def show(self,options=None):
+        self.env.SetViewer('qtcoin')
+        return self.showtransforms()
+    def moveToPreshape(self):
+        """uses a planner to safely move the hand to the preshape and returns the trajectory"""
+        preshape=self.preshapes[0]
+        with self.robot:
+            self.robot.SetActiveDOFs(self.manip.GetArmJoints())
+            self.basemanip.MoveUnsyncJoints(jointvalues=preshape,jointinds=self.manip.GetGripperJoints())
+        while not self.robot.GetController().IsDone(): # busy wait
+            time.sleep(0.01)        
+        with self.robot:
+            self.robot.SetActiveDOFs(self.manip.GetGripperJoints())
+            self.basemanip.MoveActiveJoints(goal=preshape)
+        while not self.robot.GetController().IsDone(): # busy wait
+            time.sleep(0.01)
 
     def computeValidTransform(self,returnall=False,checkcollision=True,computevisibility=True,randomize=False):
         with self.robot:
@@ -201,6 +257,8 @@ class VisibilityModel(OpenRAVEModel):
                           help='OpenRAVE kinbody target filename')
         parser.add_option('--sensorname',action="store",type='string',dest='sensorname',default=None,
                           help='Name of the sensor to build visibilty model for (has to be camera). If none, takes first possible sensor.')
+        parser.add_option('--preshape', action='append', type='string',dest='preshapes',default=None,
+                          help='Add a preshape for the manipulator gripper joints')
         parser.add_option('--rayoffset',action="store",type='float',dest='rayoffset',default=0.03,
                           help='The offset to move the ray origin (prevents meaningless collisions), default is 0.03')
         return parser

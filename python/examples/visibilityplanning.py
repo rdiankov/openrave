@@ -133,7 +133,7 @@ class VisibilityGrasping(metaclass.AutoReloader):
             self.robotreal.SetActiveManipulator(self.manip)
     def computevisibilitymodel(self,target):
         vmodel = visibilitymodel.VisibilityModel(robot=self.robot,target=target,sensorname=self.sensor.GetName())
-        if not vmodel.load():                
+        if not vmodel.load():
             vmodel.autogenerate()
         return vmodel
 
@@ -233,11 +233,9 @@ class VisibilityGrasping(metaclass.AutoReloader):
             basemanip = BaseManipulation(self.robot)
             self.target = self.gettarget(self.orenv)
             vmodel = self.computevisibilitymodel(self.target)
-            grasp = vmodel.gmodel.grasps[0]
-            trajdata = vmodel.gmodel.moveToPreshape(grasp,execute=False,outputtraj=True)
-            for data in trajdata:
-                self.starttrajectory(data)
-
+            vmodelreal = vmodel.clone(self.orenvreal)
+            vmodelreal.moveToPreshape()
+            self.robot.GetController().SetDesired(self.robotreal.GetJointValues()) # update the robot
             try:
                 trajdata = vmodel.visualprob.MoveToObserveTarget(target=self.target,sampleprob=0.001,maxiter=4000,execute=False,outputtraj=True)
                 self.starttrajectory(trajdata)
@@ -265,15 +263,18 @@ class VisibilityGrasping(metaclass.AutoReloader):
                 time.sleep(0.1)
 
             # start visual servoing step
+            gmodel = grasping.GraspingModel(robot=self.robot,target=self.target)
+            if not gmodel.load():
+                gmodel.autogenerate()
             trajdata = None
             with self.robot:
-                validgrasps,validindices = vmodel.gmodel.computeValidGrasps()
+                validgrasps,validindices = gmodel.computeValidGrasps()
                 for iter in range(4):
                     # set the real values for simulation
-                    vmodel.gmodel.setPreshape(grasp)
+                    gmodel.setPreshape(validgrasps[0])
                     #trajdata = visualprob.SendCommand('VisualFeedbackGrasping target ' + self.target.GetName() + ' sensorindex 0 convexdata ' + str(self.convexdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.convexdata.flat) + ' graspsetdata ' + str(self.graspsetdata.shape[0]) + ' ' + ' '.join(str(f) for f in self.graspsetdata[:,0:12].flat) + ' maxiter 100 visgraspthresh 0.5 gradientsamples 5 ' + cmdstr)
                     try:
-                        trajdata = basemanip.MoveToHandPosition(matrices=[vmodel.gmodel.getGlobalGraspTransform(g,collisionfree=True) for g in validgrasps],execute=False,outputtraj=True)
+                        trajdata = basemanip.MoveToHandPosition(matrices=[gmodel.getGlobalGraspTransform(g,collisionfree=True) for g in validgrasps],execute=False,outputtraj=True)
                         break
                     except planning_error:
                         print 'trying visual feedback grasp again'

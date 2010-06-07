@@ -58,10 +58,10 @@ class InverseKinematicsModel(OpenRAVEModel):
                 iktype = ikfastproblem.SendCommand('AddIkLibrary %s %s'%(ikname,self.getfilename()))
                 if iktype is None:
                     self.iksolver = self.env.CreateIkSolver(self.manip.GetIKSolverName()+iksuffix) if self.manip.HasIKSolver() else None
-                    return self.has()
-                if int(self.iktype) != int(iktype):
-                    raise ValueError('ik does not match types %s!=%s'%(self.iktype,iktype))
-                self.iksolver = self.env.CreateIkSolver(ikname+iksuffix)
+                else:
+                    if int(self.iktype) != int(iktype):
+                        raise ValueError('ik does not match types %s!=%s'%(self.iktype,iktype))
+                    self.iksolver = self.env.CreateIkSolver(ikname+iksuffix)
         if self.iksolver is not None:
             self.manip.SetIKSolver(self.iksolver)
             if not self.manip.InitIKSolver():
