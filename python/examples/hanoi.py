@@ -19,7 +19,7 @@ __license__ = 'Apache License, Version 2.0'
 import time
 from openravepy import *
 from openravepy.interfaces import BaseManipulation
-from openravepy.examples import inversekinematics
+from openravepy.databases import inversekinematics
 from numpy import *
 from optparse import OptionParser
 

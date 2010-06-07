@@ -1,18 +1,16 @@
-# models
-import convexdecomposition
-import linkstatistics
-import grasping
-import inversekinematics
-import kinematicreachability
-import inversereachability
-import visibilitymodel
+from openravepy.databases import convexdecomposition
+from openravepy.databases import linkstatistics
+from openravepy.databases import grasping
+from openravepy.databases import inversekinematics
+from openravepy.databases import kinematicreachability
+from openravepy.databases import inversereachability
+from openravepy.databases import visibilitymodel
 
 import collision
 import hanoi
 import graspplanning
 import mobilemanipulation
 import simplenavigation
-
 import testcamerasensor
 import testplotting
 import testupdatingbodies

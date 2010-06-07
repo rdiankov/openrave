@@ -20,7 +20,7 @@ import time
 from numpy import *
 
 from openravepy import *
-from openravepy.examples import grasping, inversekinematics, kinematicreachability
+from openravepy.databases import grasping, inversekinematics, kinematicreachability
 from openravepy.interfaces import VisualFeedback
 
 class VisibilityModel(OpenRAVEModel):

@@ -20,7 +20,8 @@ import time,traceback
 from copy import copy as shallowcopy
 from openravepy import *
 from openravepy.interfaces import BaseManipulation, TaskManipulation, VisualFeedback
-from openravepy.examples import inversekinematics,inversereachability,graspplanning,grasping,visibilitymodel
+from openravepy.databases import inversekinematics,inversereachability,grasping,visibilitymodel
+from openravepy.examples import graspplanning
 from numpy import *
 import numpy
 from itertools import izip

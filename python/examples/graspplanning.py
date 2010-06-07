@@ -18,7 +18,7 @@ __license__ = 'Apache License, Version 2.0'
 
 from openravepy import *
 from openravepy.interfaces import BaseManipulation, TaskManipulation
-from openravepy.examples import convexdecomposition,grasping,inversekinematics
+from openravepy.databases import convexdecomposition,grasping,inversekinematics
 from numpy import *
 import numpy,time,traceback
 from optparse import OptionParser

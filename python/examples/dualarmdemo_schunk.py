@@ -36,7 +36,7 @@ class Schunkplanner:
       self.rightArm=self.robot.GetManipulators()[1]
       for imanip in [0,1]:
          self.robot.SetActiveManipulator(imanip)
-         ikmodel = openravepy.examples.inversekinematics.InverseKinematicsModel(self.robot,iktype=IkParameterization.Type.Transform6D)
+         ikmodel = openravepy.databases.inversekinematics.InverseKinematicsModel(self.robot,iktype=IkParameterization.Type.Transform6D)
          if not ikmodel.load():
             ikmodel.autogenerate()
             ikmodel.load()

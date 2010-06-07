@@ -18,7 +18,7 @@ __license__ = 'Apache License, Version 2.0'
 
 from openravepy import *
 from openravepy.interfaces import BaseManipulation
-from openravepy.examples import convexdecomposition
+from openravepy.databases import convexdecomposition
 from numpy import *
 import numpy,time
 from optparse import OptionParser

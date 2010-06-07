@@ -19,7 +19,7 @@ __license__ = 'Apache License, Version 2.0'
 import time,bisect,itertools
 from openravepy import *
 from openravepy import pyANN
-from openravepy.examples import kinematicreachability, linkstatistics
+from openravepy.databases import kinematicreachability, linkstatistics
 import numpy
 from numpy import *
 from optparse import OptionParser

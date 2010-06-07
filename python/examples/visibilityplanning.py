@@ -22,7 +22,7 @@ from numpy import *
 from optparse import OptionParser
 from openravepy import *
 from openravepy.interfaces import BaseManipulation, TaskManipulation
-from openravepy.examples import grasping, visibilitymodel
+from openravepy.databases import grasping, visibilitymodel
 
 try:
     from Tkinter import *

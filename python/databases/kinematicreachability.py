@@ -19,7 +19,7 @@ __license__ = 'Apache License, Version 2.0'
 import openravepy
 from openravepy import *
 from openravepy import pyANN
-from openravepy.examples import convexdecomposition,inversekinematics
+from openravepy.databases import convexdecomposition,inversekinematics
 from numpy import *
 import time
 import heapq # for nth smallest element
