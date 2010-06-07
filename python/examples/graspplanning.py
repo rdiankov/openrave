@@ -176,7 +176,9 @@ class GraspPlanning(metaclass.AutoReloader):
         """grasps an object and places it in one of the destinations. If no destination is specified, will just grasp it"""
         env = self.envreal#.CloneSelf(CloningOptions.Bodies)
         robot = self.robot
-        robot.SetActiveManipulator(gmodel.manip)
+        with env:
+            robot.SetActiveManipulator(gmodel.manip)
+            robot.SetActiveDOFs(gmodel.manip.GetArmJoints())
         istartgrasp = 0
         approachoffset = 0.02
         target = gmodel.target
