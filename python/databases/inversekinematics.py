@@ -299,6 +299,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                     orgvalues = self.robot.GetJointValues()[self.manip.GetArmJoints()]
                     targetdir = dot(self.manip.GetEndEffectorTransform()[0:3,0:3],self.manip.GetDirection())
                     targetpos = self.manip.GetEndEffectorTransform()[0:3,3]
+                    targetpos += (random.rand()-0.5)*sqrt(sum(targetpos**2))*targetdir
                     #print targetdir[0],targetdir[1],targetdir[2],targetpos[0],0,0,0,targetpos[1],0,0,0,targetpos[2]
                     targetprojpos = targetpos - targetdir*dot(targetdir,targetpos)
                     self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values

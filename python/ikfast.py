@@ -706,7 +706,7 @@ int main(int argc, char** argv)
             fcode += '%s=pfree[%d], c%s=cos(pfree[%d]), s%s=sin(pfree[%d]),\n'%(name,i,name,i,name,i)
         for i in range(3):
             fcode += "_r0%d, r0%d = eerot[%d],\n"%(i,i,i)
-        fcode += "_px, _py, _pz, px = eetrans[0], py = eetrans[1], pz = eetrans[2];\n\n"
+        fcode += "_px, _py, _pz, px = eetrans[0], py = eetrans[1], pz = eetrans[2];\n"
 
         rotsubs = [(Symbol("r%d%d"%(0,i)),Symbol("_r%d%d"%(0,i))) for i in range(3)]
         rotsubs += [(Symbol("px"),Symbol("_px")),(Symbol("py"),Symbol("_py")),(Symbol("pz"),Symbol("_pz"))]
@@ -717,7 +717,8 @@ int main(int argc, char** argv)
             fcode += self.writeEquations(lambda k: psymbols[i],node.Pee[i])
         for i in range(3):
             fcode += "r0%d = _r0%d; "%(i,i)
-        fcode += "px = _px; py = _py; pz = _pz;\n"
+        fcode += "\nIKReal _pdotd = _px*_r00+_py*_r01+_pz*_r02;\n"
+        fcode += "px = _px-_pdotd * _r00; py = _py- _pdotd * _r01; pz = _pz - _pdotd * _r02;\n\n"
 
         fcode += self.generateTree(node.jointtree)
         code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
@@ -1759,10 +1760,18 @@ class IKFastSolver(AutoReloader):
                     valuesubs = []
                     freevarcond = None
 
+                Ds = [Matrix(3,1, map(lambda x: self.chop(x,accuracy=self.accuracy*10.0), LinksAccumRight[i][0:3,0:3]*Matrix(3,1,basedir.tolist()))) for i in range(5)]
+                Dsee = [Matrix(3,1, map(lambda x: self.chop(x,accuracy=self.accuracy*10.0), LinksAccumLeftInvAll[i][0:3,0:3]*Matrix(3,1,basedir.tolist()))) for i in range(5)]
+
                 Positions = [Matrix(3,1,map(lambda x: self.customtrigsimp(x), LinksAccumRightAll[i][0:3,3].subs(valuesubs))) for i in range(5)]
                 Positionsee = [Matrix(3,1,map(lambda x: self.customtrigsimp(x), (LinksAccumLeftInvAll[i][0:3,0:3]*Pee+LinksAccumLeftInvAll[i][0:3,3]).subs(valuesubs))) for i in range(5)]
+
                 # try to shift all the constants of each Position expression to one side
                 for i in range(len(Positions)):
+                    Positions[i] -= Ds[i]*(Ds[i][0]*Positions[i][0]+Ds[i][1]*Positions[i][1]+Ds[i][2]*Positions[i][2])
+                    Positions[i] = Matrix(3,1,map(lambda x: self.customtrigsimp(x),Positions[i]))
+                    Positionsee[i] -= Dsee[i]*(Dsee[i][0]*Positionsee[i][0]+Dsee[i][1]*Positionsee[i][1]+Dsee[i][2]*Positionsee[i][2])
+                    Positionsee[i] = Matrix(3,1,map(lambda x: self.customtrigsimp(x),Positionsee[i]))
                     for j in range(3):
                         p = Positions[i][j]
                         pee = Positionsee[i][j]
@@ -1801,9 +1810,8 @@ class IKFastSolver(AutoReloader):
                     solvedvarsubs += [(cos(tvar),self.Variable(tvar).cvar),(sin(tvar),self.Variable(tvar).svar)]
                 rotsubs = [(Symbol('r%d%d'%(0,i)),Symbol('_r%d%d'%(0,i))) for i in range(3)]
                 rotvars = [var for var in jointvars if any([var==svar for svar in solvejointvars[2:4]])]
-                #D = Matrix(3,1, map(lambda x: x.subs(solvedvarsubs), LinksAccumRight[2][0:3,2]))
-                D = Matrix(3,1, map(lambda x: x.subs(solvedvarsubs), LinksAccumRight[2][0:3,0:3]*Matrix(3,1,basedir.tolist())))
-                dirtree = self.solveIKRotation(R=D,Ree = Dee.subs(rotsubs),rawvars = rotvars,endbranchtree=storesolutiontree,solvedvarsubs=solvedvarsubs)
+                Dsub = Matrix(3,1, map(lambda x: x.subs(solvedvarsubs), LinksAccumRight[2][0:3,0:3]*Matrix(3,1,basedir.tolist())))
+                dirtree = self.solveIKRotation(R=Dsub,Ree = Dee.subs(rotsubs),rawvars = rotvars,endbranchtree=storesolutiontree,solvedvarsubs=solvedvarsubs)
                 Tlinksub = LinksAccumLeftInv[2].subs(solvedvarsubs)
                 rottree += [SolverDirection(Tlinksub[0:3,0:3]*Dee, dirtree)]
                 solverbranches.append((freevarcond,transtree))

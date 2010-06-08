@@ -85,7 +85,7 @@ def test_drillray():
     from sympy import *
     env = Environment()
     env.Reset()
-    robot = env.ReadRobotXMLFile('/home/rdiankov/downloads/drilling/newdrill.robot.xml')
+    robot = env.ReadRobotXMLFile('/home/rdiankov/newdrill.robot.xml')
     env.AddRobot(robot)
     manip = robot.GetActiveManipulator()
     ikmodel = inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
@@ -95,7 +95,7 @@ def test_drillray():
     def solveFullIK_Ray4D(*args,**kwargs):
         kwargs['basedir'] = basedir
         kwargs['basepos'] = basepos
-        return ikfast.IKFastSolver.solveFullIK_Direction3D(*args,**kwargs)
+        return ikfast.IKFastSolver.solveFullIK_Ray4D(*args,**kwargs)
 
     solvefn=solveFullIK_Ray4D
     solvejoints = list(manip.GetArmJoints())
