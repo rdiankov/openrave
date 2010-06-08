@@ -30,6 +30,15 @@ using namespace std;
 #include <dom/domTriangles.h>
 #include <dae/daeStandardURIResolver.h>
 
+//  Stefan change
+struct NodeMatcher: public daeElement::matchElement {
+  public:
+    NodeMatcher(){};
+    virtual bool operator()(daeElement* elt) const
+    {return (domNode::ID()==elt->typeID());};
+};
+//  ---
+
 class ColladaReader: public daeErrorHandler {
   struct KINEMATICSBINDING {
 
@@ -1233,20 +1242,34 @@ public:
       //  Debug
       RAVELOG_VERBOSEA("Number of links in the kmodel %d\n",ktec->getLink_array().getCount());
 
-      //  Gets parent node.
-      domNodeRef  parent  = daeSafeCast<domNode>(pnode->getParent());
+//      //  Gets parent node.
+//      domNodeRef  parent  = daeSafeCast<domNode>(pnode->getParent());
+
+      // Stefan: This is not a safe cast - predecessor might be a transformation
+      domNodeRef  parent  = daeSafeCast<domNode>(pnode->getAncestor(NodeMatcher()));
+      // ---
 
       //  Extract all links into the kinematics_model
       for (size_t ilink = 0; ilink < ktec->getLink_array().getCount(); ++ilink)
       {
         domLinkRef plink = ktec->getLink_array()[ilink];
 
-        domNodeRef  child = daeSafeCast<domNode>(parent->getChildren()[ilink]);
+//        domNodeRef  child = daeSafeCast<domNode>(parent->getChildren()[ilink])
+
+        //  Stefan change
+        domNodeRef  child = daeSafeCast<domNode>(parent->getChildrenByType<domNode>()[ilink]);
+        // ---
+
 
         //  Debug
         RAVELOG_VERBOSEA("Node Name out of ExtractLink: %s\n",child->getName());
 
-        ExtractLink(pkinbody, plink, child, Transform(), vdomjoints, vbindings);
+//        ExtractLink(pkinbody, plink, child, Transform(), vdomjoints, vbindings);
+
+        //  Stefan change
+        ExtractLink(pkinbody, plink, child, getNodeParentTransform(child), vdomjoints, vbindings);
+        // ---
+
 
         //        //  Debug
         //        RAVELOG_VERBOSEA("Node Name out of ExtractLink: %s\n",pnode->getName());
