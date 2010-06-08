@@ -589,3 +589,15 @@ def test_pr2():
                 final,traj = gmodel.basemanip.ReleaseFingers(execute=False,outputfinal=True)
             gmodel.generate(preshapes = array([final]),rolls=arange(0,2*pi,pi/2),graspingnoise=0.01,standoffs=[0,0.02,0.05],approachrays=gmodel.computeBoxApproachRays(0.01,normalanglerange=1,directiondelta=0.1))
     # create symbolic links
+
+def test_calibviews():
+    import calibrationviews
+    env=Environment()
+    env.SetViewer('qtcoin')
+    env.Load('scenes/pa10lab.env.xml')
+    robot=env.GetRobots()[0]
+    self = calibrationviews.CalibrationViews(robot,sensorname='wristcam')
+    anglerange=pi/3
+    maxdist=0.5
+    num=inf
+    poses,configs = self.createvisibility(maxdist=maxdist,anglerange=anglerange)

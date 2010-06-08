@@ -35,38 +35,39 @@ class CalibrationViews(metaclass.AutoReloader):
             pose = poseFromMatrix(target.GetTransform())
             target.SetTransform(pose)
         self.vmodel = visibilitymodel.VisibilityModel(robot=robot,target=target,sensorname=sensorname)
-    def createvisibility(self,anglerange=pi/3,maxdist=1.0,angledelta=0.5,num=inf):
+    def createvisibility(self,anglerange=pi/3,maxdist=1.0,angledensity=2,num=inf):
         """
         sample the transformations of the camera. the camera x and y axes should always be aligned with the 
         xy axes of the calibration pattern.
         """
         with self.env:
-            values=robot.GetJointValues()
+            values=self.robot.GetJointValues()
             self.vmodel.preshapes=array([values[self.vmodel.manip.GetGripperJoints()]])
             self.vmodel.preprocess()
-            dirs = SpaceSampler().sampleS2(angledelta=angledelta)
-            dirs = dirs[dirs[:,2]>=cos(anglerange)]
+            dirs,indices = ComputeGeodesicSphereMesh(level=angledensity)
             targetright = self.vmodel.target.GetTransform()[0:3,0]
+            targetdir = self.vmodel.target.GetTransform()[0:3,2]
+            dirs = dirs[dot(dirs,targetdir)>=cos(anglerange)]
             with self.vmodel.target:
                 Ttarget = self.vmodel.target.GetTransform()
                 self.vmodel.target.SetTransform(eye(4))
                 ab=self.vmodel.target.ComputeAABB()
-            centers = transformPoints(Ttarget,array(((0,0,0),(0.5,0.5,0),(-0.5,0.5),(0.5,-0.5,0),(-0.5,-0.5,0))))
+            centers = transformPoints(Ttarget,dot(array(((0,0,0),(0.5,0.5,0),(-0.5,0.5,0),(0.5,-0.5,0),(-0.5,-0.5,0))),diag(ab.extents())))
             Rs = []
             for dir in dirs:
                 right=targetright-dir*dot(targetright,dir)
                 right/=sqrt(sum(right**2))
                 Rs.append(c_[right,cross(dir,right),dir])
-            dists = arange(0.0,maxdist,0.05)
+            dists = arange(0.05,maxdist,0.05)
             poses = []
             configs = []
             for R in Rs:
-                q=quatFromRotationMatrix(R)
+                quat=quatFromRotationMatrix(R)
                 for dist in dists:
                     for center in centers:
-                        pose = r_[q,center-dist*R[0:3,2]]
+                        pose = r_[quat,center-dist*R[0:3,2]]
                         try:
-                            q=ComputeVisibleConfiguration(target=self.target,pose=pose)
+                            q=self.vmodel.visualprob.ComputeVisibleConfiguration(target=self.vmodel.target,pose=pose)
                             poses.append(pose)
                             configs.append(q)
                             if len(poses) > num:
@@ -74,22 +75,56 @@ class CalibrationViews(metaclass.AutoReloader):
                         except planning_error:
                             pass
             return array(poses), array(configs)
-    def moveToObservations(self,waitcond=None,posedist=**kwargs):
+    def moveToObservations(self,waitcond=None,posedist=0.2,**kwargs):
+        """moves robot to all visible configurations"""
         poses,configs = self.createvisibility(**kwargs)
         # order the poses with respect to distance
         targetcenter = self.vmodel.target.ComputeAABB().pos()
         poseorder=argsort(-sum((poses[:,4:7]-tile(targetcenter,(len(poses),1)))**2))
+        observations=[]
         while len(poseorder) > 0:
-            pass
+            config=configs[poseorder[0]]
+            data=self.moveToConfiguration(config,waitcond=waitcond)
+            observations.append(robot.GetJointValues()[self.vmodel.manip.GetArmJoints()],data)
+            # prune the observations
+            allposes = poses[poseorder]
+            quatdist = quatArrayTDist(allposes[0,0:4],allposes[:0.4])
+            transdist= sqrt(sum((allposes[:,4:7]-tile(allposes[0,4:7],(len(allposes),1)))**2,0))
+            poseorder = poseorder[0.3*quatdist+transdist > posedist]
+        return observations
     def moveToConfiguration(self,config,waitcond=None):
+        """moves the robot to a configuration"""
+        raw_input('moving configuration...')
         with self.env:
             self.robot.SetActiveDOFs(self.vmodel.manip.GetArmJoints())
             self.basemanip.MoveActiveJoints(config)
         while not robot.GetController().IsDone():
             time.sleep(0.01)
         if waitcond:
-            waitcond()
-        
+            return waitcond()
+    def viewVisibleConfigurations(self):
+        poses,configs = self.createvisibility(**kwargs)
+        graphs = [self.env.drawlinelist(array([pose[4:7],pose[4:7]+0.05*rotationMatrixFromQuat(pose[0:4])[0:3,2]]),1) for pose in poses]
+        with self.robot:
+            for i,config in enumerate(configs):
+                self.robot.SetJointValues(config,self.vmodel.manip.GetArmJoints())
+                self.env.UpdatePublishedBodies()
+                raw_input('%d: press any key'%i)
+                
+    @staticmethod
+    def gatherCalibrationData(self,env,sensorname,waitcond):
+        """function to gather calibration data, relies on an outside waitcond function to return information about the calibration pattern"""
+        data=waitcond()
+        T=data['T']
+        type = data.get('type',None)
+        if type:
+            target = self.env.ReadKinBodyXMLFile(type)
+            if target:
+                target.SetTransform(T)
+                self.env.AddKinBody(target)
+        self = CalibrationViews(robot=env.GetRobots()[0],sensorname=sensorname,target=target)
+        return self.moveToObservations(waitcond=waitcond)
+
 def run():
     parser = OptionParser(description='Views a calibration pattern from multiple locations.')
     parser.add_option('--scene',
