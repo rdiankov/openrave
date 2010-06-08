@@ -99,6 +99,16 @@ class VisualFeedback:
         if res is None:
             raise planning_error()
         return int(res)
+    def ComputeVisibleConfiguration(self,target,pose):
+        cmd = 'ComputeVisibleConfiguration '
+        cmd += 'target %s '%target.GetName()
+        cmd += 'pose '
+        for i in range(7):
+            cmd += str(pose[i]) + ' '
+        res = self.prob.SendCommand(cmd)
+        if res is None:
+            raise planning_error()
+        return array([float(s) for s in res.split()])
     def SampleVisibilityGoal(self,target,numsamples=None):
         cmd = 'SampleVisibilityGoal '
         if target is not None:

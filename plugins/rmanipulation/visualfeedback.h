@@ -416,6 +416,8 @@ public:
                         "Processes the visibility directions for containment of the object inside the gripper mask");
         RegisterCommand("ComputeVisibility",boost::bind(&VisualFeedbackProblem::ComputeVisibility,this,_1,_2),
                         "Computes the visibility of the current robot configuration");
+        RegisterCommand("ComputeVisibleConfiguration",boost::bind(&VisualFeedbackProblem::ComputeVisibleConfiguration,this,_1,_2),
+                        "Gives a camera transformation, computes the visibility of the object and returns the robot configuration that takes the camera to its specified position, otherwise returns false");
         RegisterCommand("SampleVisibilityGoal",boost::bind(&VisualFeedbackProblem::SampleVisibilityGoal,this,_1,_2),
                         "Samples a goal with the current manipulator maintaining camera visibility constraints");
         RegisterCommand("MoveToObserveTarget",boost::bind(&VisualFeedbackProblem::MoveToObserveTarget,this,_1,_2),
@@ -842,6 +844,50 @@ public:
         return true;
     }
 
+    bool ComputeVisibleConfiguration(ostream& sout, istream& sinput)
+    {
+        string cmd;
+        KinBodyPtr ptarget;
+        Transform tcamera;
+        while(!sinput.eof()) {
+            sinput >> cmd;
+            if( !sinput )
+                break;
+            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+
+            if( cmd == "target" ) {
+                string name; sinput >> name;
+                ptarget = GetEnv()->GetKinBody(name);
+            }
+            else if( cmd == "pose" ) {
+                sinput >> tcamera;
+            }
+            else {
+                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
+
+            if( !sinput ) {
+                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                return false;
+            }
+        }
+        
+        vector<dReal> vsample;
+        RobotBase::RobotStateSaver saver(_robot);
+        _robot->SetActiveManipulator(_nManipIndex); BOOST_ASSERT(_robot->GetActiveManipulator()==_pmanip);
+        _robot->SetActiveDOFs(_pmanip->GetArmJoints());
+        boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem(),ptarget));
+        if( _pmanip->CheckEndEffectorCollision(tcamera*_tcameratogripper) )
+            return false;
+        if( !pconstraintfn->SampleWithCamera(tcamera,vsample) )
+            return false;
+        FOREACH(it,vsample) {
+            sout << *it << " ";
+        }
+        return true;
+    }
+    
     bool SampleVisibilityGoal(ostream& sout, istream& sinput)
     {
         string cmd;

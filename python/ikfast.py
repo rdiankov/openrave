@@ -1760,18 +1760,20 @@ class IKFastSolver(AutoReloader):
                     valuesubs = []
                     freevarcond = None
 
-                Ds = [Matrix(3,1, map(lambda x: self.chop(x,accuracy=self.accuracy*10.0), LinksAccumRight[i][0:3,0:3]*Matrix(3,1,basedir.tolist()))) for i in range(5)]
-                Dsee = [Matrix(3,1, map(lambda x: self.chop(x,accuracy=self.accuracy*10.0), LinksAccumLeftInvAll[i][0:3,0:3]*Matrix(3,1,basedir.tolist()))) for i in range(5)]
+                Ds = [Matrix(3,1, map(lambda x: self.chop(x,accuracy=self.accuracy*10.0), LinksAccumRightAll[i][0:3,0:3]*Matrix(3,1,basedir.tolist()))) for i in range(5)]
+                Dsee = [Matrix(3,1, map(lambda x: self.chop(x,accuracy=self.accuracy*10.0), LinksAccumLeftInvAll[i][0:3,0:3]*Dee)) for i in range(5)]
 
                 Positions = [Matrix(3,1,map(lambda x: self.customtrigsimp(x), LinksAccumRightAll[i][0:3,3].subs(valuesubs))) for i in range(5)]
-                Positionsee = [Matrix(3,1,map(lambda x: self.customtrigsimp(x), (LinksAccumLeftInvAll[i][0:3,0:3]*Pee+LinksAccumLeftInvAll[i][0:3,3]).subs(valuesubs))) for i in range(5)]
-
+                Positionsee = [Matrix(3,1,map(lambda x: self.customtrigsimp(x), (LinksAccumLeftInvAll[i][0:3,0:3]*Pee+LinksAccumLeftInvAll[i][0:3,3]).subs(valuesubs))) for i in range(5)]                
+                for i in range(len(Positions)):
+                    #Positions[i] -= Dsee[i]*(Dsee[i][0]*Positions[i][0]+Dsee[i][1]*Positions[i][1]+Dsee[i][2]*Positions[i][2])
+                    Positions[i] = Positions[i].cross(Dsee[i])
+                    Positions[i] = Matrix(3,1,map(lambda x: self.customtrigsimp(self.customtrigsimp(x)),Positions[i]))
+                    #Positionsee[i] -= Dsee[i]*(Dsee[i][0]*Positionsee[i][0]+Dsee[i][1]*Positionsee[i][1]+Dsee[i][2]*Positionsee[i][2])
+                    Positionsee[i] = Positionsee[i].cross(Dsee[i])
+                    Positionsee[i] = Matrix(3,1,map(lambda x: self.customtrigsimp(self.customtrigsimp(x)),Positionsee[i]))
                 # try to shift all the constants of each Position expression to one side
                 for i in range(len(Positions)):
-                    Positions[i] -= Ds[i]*(Ds[i][0]*Positions[i][0]+Ds[i][1]*Positions[i][1]+Ds[i][2]*Positions[i][2])
-                    Positions[i] = Matrix(3,1,map(lambda x: self.customtrigsimp(x),Positions[i]))
-                    Positionsee[i] -= Dsee[i]*(Dsee[i][0]*Positionsee[i][0]+Dsee[i][1]*Positionsee[i][1]+Dsee[i][2]*Positionsee[i][2])
-                    Positionsee[i] = Matrix(3,1,map(lambda x: self.customtrigsimp(x),Positionsee[i]))
                     for j in range(3):
                         p = Positions[i][j]
                         pee = Positionsee[i][j]
@@ -1802,7 +1804,7 @@ class IKFastSolver(AutoReloader):
                                                        otherunsolvedvars = solvejointvars[2:4],
                                                        othersolvedvars = freejointvars,
                                                        endbranchtree=endbranchtree,
-                                                       solsubs = solsubs)
+                                                       solsubs = solsubs,uselength=False)
 
                 storesolutiontree = [SolverStoreSolution (jointvars)]
                 solvedvarsubs = valuesubs+self.freevarsubs
@@ -2019,15 +2021,16 @@ class IKFastSolver(AutoReloader):
                 return False
         return True
 
-    def solveIKTranslationAll(self,Positions,Positionsee,curtransvars,otherunsolvedvars,othersolvedvars,endbranchtree=None,solsubs=[]):
+    def solveIKTranslationAll(self,Positions,Positionsee,curtransvars,otherunsolvedvars,othersolvedvars,endbranchtree=None,solsubs=[],uselength=True):
         allsolvedvars = othersolvedvars[:]
         transtree = []
         solsubs = solsubs[:]
         while len(curtransvars)>0:
             unsolvedvariables = curtransvars + otherunsolvedvars
-            solvedvars = self.solveIKTranslation(Positions,Positionsee,rawvars = curtransvars)
+            solvedvars = self.solveIKTranslation(Positions,Positionsee,rawvars = curtransvars,otherunsolvedvars=otherunsolvedvars)
             # merge solvedvars and solvedvars2 (have to compute both since sometimes solvedvars can give really bogus solutions (see pr2-beta-static.robot)
-            solvedvars += self.solveIKTranslationLength(Positions, Positionsee, rawvars = curtransvars)
+            if uselength:
+                solvedvars += self.solveIKTranslationLength(Positions, Positionsee, rawvars = curtransvars,otherunsolvedvars=otherunsolvedvars)
             if len(solvedvars) == 0:
                 raise ValueError('Could not solve variable from length of translation')
 
@@ -2176,7 +2179,7 @@ class IKFastSolver(AutoReloader):
         return transtree
 
     # solve for just the translation component
-    def solveIKTranslationLength(self, Positions, Positionsee, rawvars):
+    def solveIKTranslationLength(self, Positions, Positionsee, rawvars,otherunsolvedvars=None):
         vars = map(lambda rawvar: self.Variable(rawvar), rawvars)
         
         # try to get an equation from the lengths
@@ -2186,6 +2189,8 @@ class IKFastSolver(AutoReloader):
         solvedvars = []
         
         for eq in LengthEq:
+            if otherunsolvedvars and len(otherunsolvedvars) > 0 and eq.has_any_symbols(*otherunsolvedvars):
+                continue
             for var in vars:
                 othervars = [v.var for v in vars if not v == var]
                 if eq.has_any_symbols(var.var) and (len(othervars) == 0 or not eq.has_any_symbols(*othervars)):
@@ -2243,7 +2248,7 @@ class IKFastSolver(AutoReloader):
         return solvedvars
 
     # solve for just the translation component
-    def solveIKTranslation(self, Positions, Positionsee, rawvars):
+    def solveIKTranslation(self, Positions, Positionsee, rawvars,otherunsolvedvars=None):
         freevarinvsubs = [(f[1],f[0]) for f in self.freevarsubs]
         vars = map(lambda rawvar: self.Variable(rawvar), rawvars)
         solvedvars = []
@@ -2255,6 +2260,8 @@ class IKFastSolver(AutoReloader):
             for p in P:
                 for j in range(3):
                     if p[j].has_any_symbols(var.var) and (len(othervars)==0 or not p[j].has_any_symbols(*othervars)):
+                        if otherunsolvedvars and len(otherunsolvedvars) > 0 and p[j].has_any_symbols(*otherunsolvedvars):
+                            continue
                         if self.isExpressionUnique(eqns,p[j]) and self.isExpressionUnique(eqns,-p[j]):
                             eqns.append(p[j])
 
@@ -2267,6 +2274,9 @@ class IKFastSolver(AutoReloader):
                 symbolgen = cse_main.numbered_symbols('const')
                 for e in eqns:
                     enew, symbols = self.removeConstants(e.subs(self.freevarsubs+[(sin(var.var),var.svar),(cos(var.var),var.cvar)]),[var.cvar,var.svar,var.var], symbolgen)
+                    # ignore any equations with degree 3 or more
+                    if Poly(enew,var.svar).degree >= 3 or Poly(enew,var.cvar).degree >= 3:
+                        continue
                     enew2,symbols2 = self.factorLinearTerms(enew,[var.svar,var.cvar,var.var],symbolgen)
                     symbols += [(s[0],s[1].subs(symbols)) for s in symbols2]
                     rank = self.codeComplexity(enew2)+reduce(lambda x,y: x+self.codeComplexity(y[1]),symbols,0)
@@ -2309,6 +2319,9 @@ class IKFastSolver(AutoReloader):
             eq = eqns[0]
             symbolgen = cse_main.numbered_symbols('const')
             eqnew, symbols = self.removeConstants(eq.subs(self.freevarsubs+[(sin(var.var),var.svar),(cos(var.var),var.cvar)]), [var.cvar,var.svar,var.var], symbolgen)
+            # ignore any equations with degree 3 or more
+            if Poly(eqnew,var.svar).degree >= 3 or Poly(eqnew,var.cvar).degree >= 3:
+                continue
             eqnew2,symbols2 = self.factorLinearTerms(eqnew,[var.cvar,var.svar,var.var], symbolgen)
             symbols += [(s[0],s[1].subs(symbols)) for s in symbols2]
 
@@ -2330,7 +2343,7 @@ class IKFastSolver(AutoReloader):
             if numcvar > 0:
                 try:
                     # substitute cos
-                    if self.countVariables(eqnew2,var.svar) <= 1: # anything more than 1 implies quartic equation
+                    if self.countVariables(eqnew2,var.svar) <= 1 or (self.countVariables(eqnew2,var.cvar) <= 2 and self.countVariables(eqnew2,var.svar) == 0): # anything more than 1 implies quartic equation
                         solutions = self.customtsolve(eqnew2.subs(var.svar,sqrt(1-var.cvar**2)),var.cvar)
                         jointsolutions = [s.subs(symbols+[(var.cvar,cos(var.var))]) for s in solutions]
                         solvedvars.append((var.var,SolverSolution(var.var.name, jointevalcos=jointsolutions,IsHinge=self.IsHinge(var.var.name)), [self.codeComplexity(s) for s in jointsolutions]))
@@ -2340,7 +2353,7 @@ class IKFastSolver(AutoReloader):
             if numsvar > 0:
                 # substitute sin
                 try:
-                    if self.countVariables(eqnew2,var.svar) <= 1: # anything more than 1 implies quartic equation
+                    if self.countVariables(eqnew2,var.svar) <= 1 or (self.countVariables(eqnew2,var.svar) <= 2 and self.countVariables(eqnew2,var.cvar) == 0): # anything more than 1 implies quartic equation
                         solutions = self.customtsolve(eqnew2.subs(var.cvar,sqrt(1-var.svar**2)),var.svar)
                         jointsolutions = [trigsimp(s.subs(symbols+[(var.svar,sin(var.var))])) for s in solutions]
                         solvedvars.append((var.var,SolverSolution(var.var.name, jointevalsin=jointsolutions,IsHinge=self.IsHinge(var.var.name)), [self.codeComplexity(s) for s in jointsolutions]))
