@@ -597,9 +597,4 @@ def test_calibviews():
     env.Load('data/pa10calib.env.xml')
     robot=env.GetRobots()[0]
     self = calibrationviews.CalibrationViews(robot,sensorname='wristcam')
-    anglerange=pi/3
-    maxdist=0.5
-    num=inf
-    poses,configs = self.createvisibility(maxdist=maxdist,anglerange=anglerange)
-
     self.moveToObservations()

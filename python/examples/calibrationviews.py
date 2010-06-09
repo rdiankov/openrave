@@ -89,7 +89,9 @@ class CalibrationViews(metaclass.AutoReloader):
                 config=configs[poseorder[0]]
                 data=self.moveToConfiguration(config,waitcond=waitcond)
                 if data is not None:
-                    observations.append(robot.GetJointValues()[self.vmodel.manip.GetArmJoints()],data)
+                    data['jointvalues'] = robot.GetJointValues()[self.vmodel.manip.GetArmJoints()]
+                    data['Tlink'] = self.vmodel.attachedsensor.GetAttachingLink().GetTransform()
+                    observations.append(data)
                     if len(observations) >= maxobservations:
                         break
                 # prune the observations
@@ -119,7 +121,7 @@ class CalibrationViews(metaclass.AutoReloader):
                 raw_input('%d: press any key'%i)
                 
     @staticmethod
-    def gatherCalibrationData(self,env,sensorname,waitcond,**kwargs):
+    def gatherCalibrationData(env,sensorname,waitcond,**kwargs):
         """function to gather calibration data, relies on an outside waitcond function to return information about the calibration pattern"""
         data=waitcond()
         T=data['T']
@@ -127,10 +129,11 @@ class CalibrationViews(metaclass.AutoReloader):
         if type:
             target = self.env.ReadKinBodyXMLFile(type)
             if target:
-                target.SetTransform(T)
                 self.env.AddKinBody(target)
         self = CalibrationViews(robot=env.GetRobots()[0],sensorname=sensorname,target=target)
-        return self.moveToObservations(waitcond=waitcond,**kwargs)
+        if target:
+            target.SetTransform(dot(self.vmodel.attachedsensor.GetTransform(),T))
+        return self.moveToObservations(waitcond=waitcond,**kwargs), self.vmodel.target
 
 def run():
     parser = OptionParser(description='Views a calibration pattern from multiple locations.')
@@ -151,6 +154,7 @@ def run():
         time.sleep(0.1) # give time for environment to update
         self = CalibrationViews(robot,sensorname=options.sensorname,randomize=options.randomize)
         self.moveToObservations()
+        raw_input('press any key to exit... ')
     finally:
         env.Destroy()
 
