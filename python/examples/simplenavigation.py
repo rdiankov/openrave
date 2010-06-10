@@ -67,7 +67,6 @@ class SimpleNavigationPlanning(metaclass.AutoReloader):
                 continue
             print 'waiting for controller'
             self.robot.WaitForController(0)
-            break
 
 def run():
     parser = OptionParser(description='Simple navigation planning using RRTs.')
