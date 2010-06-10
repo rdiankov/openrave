@@ -35,7 +35,7 @@ class CalibrationViews(metaclass.AutoReloader):
             pose = poseFromMatrix(target.GetTransform())
             target.SetTransform(pose)
         self.vmodel = visibilitymodel.VisibilityModel(robot=robot,target=target,sensorname=sensorname)
-    def createvisibility(self,anglerange=pi/3,maxdist=1.0,angledensity=1,num=inf):
+    def createvisibility(self,anglerange=pi/3,dists=arange(0.05,0.5,0.15),angledensity=1,num=inf):
         """
         sample the transformations of the camera. the camera x and y axes should always be aligned with the 
         xy axes of the calibration pattern.
@@ -58,7 +58,6 @@ class CalibrationViews(metaclass.AutoReloader):
                 right=targetright-dir*dot(targetright,dir)
                 right/=sqrt(sum(right**2))
                 Rs.append(c_[right,cross(dir,right),dir])
-            dists = arange(0.05,maxdist,0.05)
             poses = []
             configs = []
             for R in Rs:
@@ -75,7 +74,7 @@ class CalibrationViews(metaclass.AutoReloader):
                         except planning_error:
                             pass
             return array(poses), array(configs)
-    def moveToObservations(self,waitcond=None,maxobservations=inf,posedist=0.2,**kwargs):
+    def moveToObservations(self,waitcond=None,maxobservations=inf,posedist=0.05,**kwargs):
         """moves robot to all visible configurations"""
         poses,configs = self.createvisibility(**kwargs)
 
