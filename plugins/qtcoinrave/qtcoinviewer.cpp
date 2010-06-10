@@ -165,12 +165,6 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     _ivRoot->addChild(_eventKeyboardCB);
     _eventKeyboardCB->addEventCallback(SoKeyboardEvent::getClassTypeId(), _KeyHandler, this);
 
-    _timerSensor = new SoTimerSensor(GlobAdvanceFrame, this);
-    _timerSensor->setInterval(SbTime(TIMER_SENSOR_INTERVAL));
-
-    _timerVideo = new SoTimerSensor(GlobVideoFrame, this);
-    _timerVideo->setInterval(SbTime(1/(float)VIDEO_FRAMERATE));
-
     _altDown[0] = _altDown[1]  = false;
     _ctrlDown[0] = _ctrlDown[1] = false;
     _bAVIInit = false;
@@ -201,7 +195,14 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     SetupMenus();
 
     InitOffscreenRenderer();
+    
+    _timerSensor = new SoTimerSensor(GlobAdvanceFrame, this);
+    _timerSensor->setInterval(SbTime(TIMER_SENSOR_INTERVAL));
 
+    _timerVideo = new SoTimerSensor(GlobVideoFrame, this);
+    _timerVideo->setInterval(SbTime(1/(float)VIDEO_FRAMERATE));
+
+    
     if (!_timerVideo->isScheduled())
         _timerVideo->schedule(); 
 }
