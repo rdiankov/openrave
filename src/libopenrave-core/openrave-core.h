@@ -36,10 +36,6 @@ namespace OpenRAVE
 /// Creates an OpenRAVE environment.
 /// \param bLoadAllPlugins, if true will load all the openrave plugins automatically that can be found in the OPENRAVE_PLUGINS environment path
 RAVE_CORE_API EnvironmentBasePtr CreateEnvironment(bool bLoadAllPlugins=true);
-RAVE_CORE_API ProblemInstancePtr CreateSimpleTextServer(EnvironmentBasePtr penv);
-
-/// count of errors since last GetXMLErrorCount() call
-RAVE_CORE_API int GetXMLErrorCount();
 
 } // end namespace OpenRAVE
 

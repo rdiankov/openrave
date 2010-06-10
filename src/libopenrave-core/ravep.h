@@ -71,12 +71,9 @@ build openrave must include (used in place of rave.h). Precompiled header.
 #ifndef _WIN32
 #include <sys/time.h>
 #define Sleep(milli) usleep(1000*milli)
-#else
-#define WIN32_LEAN_AND_MEAN
-#include <winsock2.h>
 #endif
 
-#if _WIN32
+#ifdef _WIN32
 
 inline static uint32_t GetMilliTime()
 {
@@ -267,7 +264,6 @@ bool RaveWriteColladaFile(EnvironmentBasePtr penv, const std::string& filename);
 bool RaveWriteColladaFile(KinBodyPtr pbody, const std::string& filename);
 bool RaveWriteColladaFile(RobotBasePtr probot, const std::string& filename);
 
-#include "server.h"
 #include "ivcon.h"
 #include "xmlreaders.h"
 #include "plugindatabase.h"

@@ -16,11 +16,6 @@
 #include "ravep.h"
 
 namespace OpenRAVE {
-    int GetXMLErrorCount()
-    {
-        return OpenRAVEXMLParser::GetXMLErrorCount();
-    }
-
     EnvironmentBasePtr CreateEnvironment(bool bLoadAllPlugins) {
         srand(GetMilliTime());
         RaveInitRandomGeneration(GetMilliTime());
@@ -29,7 +24,6 @@ namespace OpenRAVE {
         p->Init();
         return p;
     }
-    ProblemInstancePtr CreateSimpleTextServer(EnvironmentBasePtr penv) { return ProblemInstancePtr(new SimpleTextServer(penv)); }
 }
 
 #include <streambuf>

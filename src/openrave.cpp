@@ -85,7 +85,7 @@ int main(int argc, char ** argv)
     
     DebugLevel debuglevel = Level_Info;    
     list<string> listLoadPlugins;
-    string collisionchecker, physicsengine;
+    string collisionchecker, physicsengine, servername="textserver";
     bool bListPlugins = false;
     // parse command line arguments
     int i = 1;
@@ -96,9 +96,10 @@ int main(int argc, char ** argv)
                          "--hidegui           Run with a hidden GUI, this allows 3D rendering and images to be captured\n"
                          "--listplugins       List all plugins and the interfaces they provide\n"
                          "-loadplugin [path] load a plugin at the following path\n"
-                         "-server [port]     start up the server on a specific port (default is 4765)\n"
+                         "-serverport [port] start up the server on a specific port (default is 4765)\n"
                          "-collision [name]  Default collision checker to use\n"
                          "-viewer [name]     Default viewer to use\n"
+                         "-server [name]     Default server to use\n"
                          "-physics [name]    Default physics engine to use\n"
                          "-d [debug-level]   start up OpenRAVE with the specified debug level (higher numbers print more).\n"
                          "                   Default level is 2 for release builds, and 4 for debug builds.\n"
@@ -137,6 +138,10 @@ int main(int argc, char ** argv)
             physicsengine = argv[i+1];
             i += 2;
         }
+        else if( stricmp(argv[i],"-server") == 0 ) {
+            servername = argv[i+1];
+            i += 2;
+        }
         else if( stricmp(argv[i], "-problem") == 0 ) {
             s_listProblems.push_back(pair<string, string>(argv[i+1], ""));
             i += 2;
@@ -170,7 +175,7 @@ int main(int argc, char ** argv)
             s_bSetWindowPosition = true;
             i += 3;
         }
-        else if( stricmp(argv[i], "-server") == 0 ) {
+        else if( stricmp(argv[i], "-serverport") == 0 ) {
             nServPort = atoi(argv[i+1]);
             i += 2;
         }
@@ -412,19 +417,8 @@ int main(int argc, char ** argv)
         return 0;
     }
 
-    if( nServPort > 0 ) {
-#ifdef _WIN32
-        WORD      wVersionRequested;
-        WSADATA   wsaData;
-
-        wVersionRequested = MAKEWORD(1,1);
-        if (WSAStartup(wVersionRequested, &wsaData) != 0) {
-            RAVELOG_ERROR("Failed to start win socket\n");
-            return -1;
-        }
-#endif
-
-        s_server = CreateSimpleTextServer(penv);
+    if( servername.size() > 0 && nServPort > 0 ) {
+        s_server = penv->CreateProblem(servername);
         if( !!s_server ) {
             stringstream ss;
             ss << nServPort;

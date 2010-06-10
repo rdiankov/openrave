@@ -18,7 +18,7 @@
 function success = MoveToHandPosition(T)
 global probs
 
-s = orProblemSendCommand(['movetohandposition trans ' sprintf('%f ',T(10:12)) ' rot ' sprintf('%f ',T(1:9))], probs.manip);
+s = orProblemSendCommand(['movetohandposition matrix ' sprintf('%f ',T(1:12))], probs.manip);
 success = 0;
 if( ~isempty(s) )
     success = str2num(s) > 0;

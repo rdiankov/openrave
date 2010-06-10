@@ -301,7 +301,7 @@ class SimpleTextServer : public ProblemInstance
         mapNetworkFns["test"] = RAVENETWORKFN(OpenRaveNetworkFn(), OpenRaveWorkerFn(), false);
         mapNetworkFns["wait"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvWait,this,_1,_2,_3), OpenRaveWorkerFn(), true);
 
-        string logfilename = GetEnv()->GetHomeDirectory() + string("/serverlog.txt");
+        string logfilename = GetEnv()->GetHomeDirectory() + string("/textserver.log");
         flog.open(logfilename.c_str());
         if( !!flog )
             RAVELOG_DEBUGA("logging network to %s.txt\n",logfilename.c_str());
@@ -313,13 +313,23 @@ class SimpleTextServer : public ProblemInstance
 
     virtual int main(const std::string& cmd)
     {
-        int port = 4765;
+        _nPort = 4765;
         stringstream ss(cmd);
-        ss >> port;
+        ss >> _nPort;
 
         Destroy();
+  
+#ifdef _WIN32
+        WORD      wVersionRequested;
+        WSADATA   wsaData;
 
-        _nPort = port;
+        wVersionRequested = MAKEWORD(1,1);
+        if (WSAStartup(wVersionRequested, &wsaData) != 0) {
+            RAVELOG_ERROR("Failed to start win socket\n");
+            return -1;
+        }
+#endif
+
         memset(&server_address, 0, sizeof(server_address));
         server_sockfd = socket(AF_INET, SOCK_STREAM, 0);
         server_address.sin_family = AF_INET;
@@ -371,6 +381,7 @@ class SimpleTextServer : public ProblemInstance
 #endif
 #endif
 
+        RAVELOG_INFO("text server listening on port %d\n",_nPort);
         _servthread.reset(new boost::thread(boost::bind(&SimpleTextServer::_listen_threadcb,this)));
         _workerthread.reset(new boost::thread(boost::bind(&SimpleTextServer::_worker_threadcb,this)));
         bInitThread = true;

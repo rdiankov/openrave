@@ -30,9 +30,13 @@ if __name__ == "__main__":
     parser.add_option('--collision', action="store",type='string',dest='collision',default=None,
                       help='Default collision checker to use')
     parser.add_option('--physics', action="store",type='string',dest='physics',default=None,
-                      help='Default physics engine to use')
+                      help='physics engine to use (default=%default)')
     parser.add_option('--viewer', action="store",type='string',dest='viewer',default='qtcoin',
-                      help='Default viewer to use.')
+                      help='viewer to use (default=%default)' )
+    parser.add_option('--server', action="store",type='string',dest='server',default=None,
+                      help='server to use (default=%default).')
+    parser.add_option('--serverport', action="store",type='int',dest='serverport',default=4765,
+                      help='port to load server on (default=%default).')
     parser.add_option('--debug','-d', action="store",type='string',dest='debug',default=None,
                       help='Debug level')
     parser.add_option('--ipython', '-i',action="store_true",dest='ipython',default=False,
@@ -74,6 +78,10 @@ if __name__ == "__main__":
             ph = env.CreatePhysicsEngine(options.physics)
             if ph is not None:
                 env.SetPhysicsEngine(ph)
+        if options.server:
+            sr = env.CreateProblem(options.server)
+            if sr is not None:
+                env.LoadProblem(sr,'%d'%options.serverport)
         for arg in args:
             if arg.endswith('.xml') or arg.endswith('.dae'):
                 env.Load(arg)
