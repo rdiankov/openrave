@@ -83,10 +83,13 @@ class CalibrationViews(metaclass.AutoReloader):
         try:
             # order the poses with respect to distance
             targetcenter = self.vmodel.target.ComputeAABB().pos()
-            poseorder=argsort(-sum((poses[:,4:7]-tile(targetcenter,(len(poses),1)))**2,1))
+            poseorder=arange(len(poses))
             observations=[]
             while len(poseorder) > 0:
-                config=configs[poseorder[0]]
+                with self.robot:
+                    curconfig=self.robot.GetJointValues()[self.vmodel.manip.GetArmJoints()]
+                    index=argmin(sum((configs[poseorder]-tile(curconfig,(len(poseorder),1)))**2,1))
+                config=configs[poseorder[index]]
                 data=self.moveToConfiguration(config,waitcond=waitcond)
                 if data is not None:
                     data['jointvalues'] = self.robot.GetJointValues()[self.vmodel.manip.GetArmJoints()]
@@ -96,8 +99,8 @@ class CalibrationViews(metaclass.AutoReloader):
                         break
                 # prune the observations
                 allposes = poses[poseorder]
-                quatdist = quatArrayTDist(allposes[0,0:4],allposes[:,0:4])
-                transdist= sqrt(sum((allposes[:,4:7]-tile(allposes[0,4:7],(len(allposes),1)))**2,1))
+                quatdist = quatArrayTDist(allposes[index,0:4],allposes[:,0:4])
+                transdist= sqrt(sum((allposes[:,4:7]-tile(allposes[index,4:7],(len(allposes),1)))**2,1))
                 poseorder = poseorder[0.3*quatdist+transdist > posedist]
             return observations
         finally:

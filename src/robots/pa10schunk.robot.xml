@@ -41,7 +41,6 @@
     <base>link0</base>
     <effector>gripper_base</effector>
     <joints>jfinger_L</joints>
-    <iksolver>PA10ikfast 0.1</iksolver>
     <closingdirection>-1</closingdirection>
     <direction>0 0 1</direction>
   </Manipulator>
