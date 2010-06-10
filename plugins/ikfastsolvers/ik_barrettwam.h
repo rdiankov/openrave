@@ -12,6 +12,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
+/// generated 2010-06-09 23:21:59.161778
 /// To compile with gcc use: gcc -lstdc++ 
 /// To compile without any main function use: gcc -lstdc++ -DIKFAST_NO_MAIN
 #include <math.h>

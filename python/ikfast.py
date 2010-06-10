@@ -17,7 +17,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import with_statement # for python 2.5
 
-import sys, copy, time
+import sys, copy, time, datetime
 from optparse import OptionParser
 try:
     from openravepy.metaclass import AutoReloader
@@ -297,6 +297,7 @@ class CppGenerator(AutoReloader):
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
+/// generated %s
 /// To compile with gcc use: gcc -lstdc++ 
 /// To compile without any main function use: gcc -lstdc++ -DIKFAST_NO_MAIN
 #include <math.h>
@@ -419,7 +420,7 @@ inline double IKatan2(double fy, double fx) {
     return atan2(fy,fx);
 }
 
-"""
+"""%str(datetime.datetime.now())
         code += solvertree.generate(self)
         code += solvertree.end(self)
 
@@ -2051,33 +2052,37 @@ class IKFastSolver(AutoReloader):
                     else:
                         continue
 
-                    def checkpow(expr):
+                    def checkpow(expr,sexprs):
                         score = 0
-                        if expr.is_Pow and expr.exp.is_real and expr.exp < 0:
-                            exprbase = self.subsExpressions(expr.base,subexprs)
-                            # check if exprbase contains any variables that have already been solved
-                            containsjointvar = exprbase.has_any_symbols(*allsolvedvars)
-                            cancheckexpr = not exprbase.has_any_symbols(*unsolvedvariables)
-                            score += 10000
-                            if not cancheckexpr:
-                                score += 100000
-                            else:
-                                checkforzero.append(exprbase)
+                        if expr.is_Pow:
+                            sexprs.append(expr.base)
+                            if expr.exp.is_real and expr.exp < 0:
+                                exprbase = self.subsExpressions(expr.base,subexprs)
+                                # check if exprbase contains any variables that have already been solved
+                                containsjointvar = exprbase.has_any_symbols(*allsolvedvars)
+                                cancheckexpr = not exprbase.has_any_symbols(*unsolvedvariables)
+                                score += 10000
+                                if not cancheckexpr:
+                                    score += 100000
+                                else:
+                                    checkforzero.append(exprbase)
                         return score
 
-                    for sexpr in [subexpr[1] for subexpr in subexprs]+reduced_exprs:
+                    sexprs = [subexpr[1] for subexpr in subexprs]+reduced_exprs
+                    while len(sexprs) > 0:
+                        sexpr = sexprs.pop(0)
                         if sexpr.is_Add:
                             for arg in sexpr.args:
                                 if arg.is_Mul:
                                     for arg2 in arg.args:
-                                        score += checkpow(arg2)
+                                        score += checkpow(arg2,sexprs)
                                 else:
-                                    score += checkpow(arg)
+                                    score += checkpow(arg,sexprs)
                         elif sexpr.is_Mul:
                             for arg in sexpr.args:
-                                score += checkpow(arg)
+                                score += checkpow(arg,sexprs)
                         else:
-                            score += checkpow(sexpr)
+                            score += checkpow(sexpr,sexprs)
                 except AssertionError, e:
                     print e
                     score=1e10
@@ -2217,7 +2222,8 @@ class IKFastSolver(AutoReloader):
                     if numsvar > 0:
                         try:
                             # substitute cos
-                            if self.countVariables(eq.subs(cos(var.var),var.cvar),var.cvar) <= 1: # anything more than 1 implies quartic equation
+                            totalcvar = self.countVariables(eq.subs(cos(var.var),var.cvar),var.cvar)
+                            if totalcvar <= 1 and totalcvar+numsvar <= 2: # anything more than 1 implies quartic equation
                                 eqnew = eq.subs(self.freevarsubs+[(cos(var.var),sqrt(Real(1,30)-var.svar**2)),(sin(var.var),var.svar)])
                                 eqnew,symbols = self.factorLinearTerms(eqnew,[var.svar])
                                 solutions = self.customtsolve(eqnew,var.svar)
@@ -2230,7 +2236,8 @@ class IKFastSolver(AutoReloader):
                     if numcvar > 0:
                         # substite sin
                         try:
-                            if self.countVariables(eq.subs(sin(var.var),var.svar),var.svar) <= 1: # anything more than 1 implies quartic equation
+                            totalsvar=self.countVariables(eq.subs(sin(var.var),var.svar),var.svar)
+                            if totalsvar <= 1 and totalsvar+numcvar <= 2: # anything more than 1 implies quartic equation
                                 eqnew = eq.subs(self.freevarsubs+[(sin(var.var),sqrt(Real(1,30)-var.cvar**2)),(cos(var.var),var.cvar)])
                                 eqnew,symbols = self.factorLinearTerms(eqnew,[var.cvar])
                                 solutions = self.customtsolve(eqnew,var.cvar)
@@ -2604,7 +2611,8 @@ class IKFastSolver(AutoReloader):
     ## SymPy helper routines
 
     # factors linear terms together
-    def factorLinearTerms(self,expr,vars,symbolgen = None):
+    @staticmethod
+    def factorLinearTerms(expr,vars,symbolgen = None):
         if not expr.is_Add:
             return expr,[]
         
@@ -2659,7 +2667,8 @@ class IKFastSolver(AutoReloader):
             symbols.append((c,cexpr))
         return newexpr,symbols
 
-    def removeConstants(self,expr,vars,symbolgen = None):
+    @staticmethod
+    def removeConstants(expr,vars,symbolgen = None):
         """Separates all terms that do have var in them"""
         if symbolgen is None:
             symbolgen = cse_main.numbered_symbols('const')
@@ -2669,7 +2678,7 @@ class IKFastSolver(AutoReloader):
             symbols = []
             for term in expr.args:
                 if term.has_any_symbols(*vars):
-                    expr2, symbols2 = self.removeConstants(term,vars,symbolgen)
+                    expr2, symbols2 = IKFastSolver.removeConstants(term,vars,symbolgen)
                     newexpr += expr2
                     symbols += symbols2
                 else:
@@ -2686,7 +2695,7 @@ class IKFastSolver(AutoReloader):
             symbols = []
             for term in expr.args:
                 if term.has_any_symbols(*vars):
-                    expr2, symbols2 = self.removeConstants(term,vars,symbolgen)
+                    expr2, symbols2 = IKFastSolver.removeConstants(term,vars,symbolgen)
                     newexpr *= expr2
                     symbols += symbols2
                 else:
@@ -3023,8 +3032,8 @@ class IKFastSolver(AutoReloader):
                     for sol in cv_sols:
                         neweq = (pow(sym,1/cv_inv.exp)-cv_inv.base.subs(t, sol)).expand()
                         symbolgen = cse_main.numbered_symbols('tsolveconst')
-                        neweq2,symbols = self.factorLinearTerms(neweq,[sym],symbolgen)
-                        neweq3,symbols2 = self.removeConstants(neweq2,[sym],symbolgen)
+                        neweq2,symbols = IKFastSolver.factorLinearTerms(neweq,[sym],symbolgen)
+                        neweq3,symbols2 = IKFastSolver.removeConstants(neweq2,[sym],symbolgen)
                         symbols += [(s[0],s[1].subs(symbols)) for s in symbols2]
                         newsols = solve(neweq3,sym)
                         sols = sols + [simplify(sol.subs(symbols)) for sol in newsols]
