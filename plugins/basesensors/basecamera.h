@@ -164,7 +164,7 @@ class BaseCameraSensor : public SensorBase
         }
 
         if( _pgeom->width > 0 && _pgeom->height > 0 && _bPower) {
-            fTimeToImage -= fTimeToImage;
+            fTimeToImage -= fTimeElapsed;
             if( fTimeToImage <= 0 ) {
                 fTimeToImage = 1 / (float)framerate;
                 GetEnv()->UpdatePublishedBodies();
