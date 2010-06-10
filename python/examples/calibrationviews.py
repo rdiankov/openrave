@@ -89,7 +89,7 @@ class CalibrationViews(metaclass.AutoReloader):
                 config=configs[poseorder[0]]
                 data=self.moveToConfiguration(config,waitcond=waitcond)
                 if data is not None:
-                    data['jointvalues'] = robot.GetJointValues()[self.vmodel.manip.GetArmJoints()]
+                    data['jointvalues'] = self.robot.GetJointValues()[self.vmodel.manip.GetArmJoints()]
                     data['Tlink'] = self.vmodel.attachedsensor.GetAttachingLink().GetTransform()
                     observations.append(data)
                     if len(observations) >= maxobservations:
@@ -111,26 +111,30 @@ class CalibrationViews(metaclass.AutoReloader):
             time.sleep(0.01)
         if waitcond:
             return waitcond()
-    def viewVisibleConfigurations(self):
+    def viewVisibleConfigurations(self,**kwargs):
         poses,configs = self.createvisibility(**kwargs)
-        graphs = [self.env.drawlinelist(array([pose[4:7],pose[4:7]+0.05*rotationMatrixFromQuat(pose[0:4])[0:3,2]]),1) for pose in poses]
-        with self.robot:
-            for i,config in enumerate(configs):
-                self.robot.SetJointValues(config,self.vmodel.manip.GetArmJoints())
-                self.env.UpdatePublishedBodies()
-                raw_input('%d: press any key'%i)
-                
+        graphs = [self.env.drawlinelist(array([pose[4:7],pose[4:7]+0.03*rotationMatrixFromQuat(pose[0:4])[0:3,2]]),1) for pose in poses]
+        try:
+            with self.robot:
+                for i,config in enumerate(configs):
+                    self.robot.SetJointValues(config,self.vmodel.manip.GetArmJoints())
+                    self.env.UpdatePublishedBodies()
+                    raw_input('%d: press any key'%i)
+        finally:
+            graphs = None
     @staticmethod
-    def gatherCalibrationData(env,sensorname,waitcond,**kwargs):
+    def gatherCalibrationData(robot,sensorname,waitcond,**kwargs):
         """function to gather calibration data, relies on an outside waitcond function to return information about the calibration pattern"""
+        env=robot.GetEnv()
         data=waitcond()
         T=data['T']
         type = data.get('type',None)
         if type:
-            target = self.env.ReadKinBodyXMLFile(type)
+            target = env.ReadKinBodyXMLFile(type)
             if target:
-                self.env.AddKinBody(target)
-        self = CalibrationViews(robot=env.GetRobots()[0],sensorname=sensorname,target=target)
+                env.AddKinBody(target,True)
+                env.UpdatePublishedBodies()
+        self = CalibrationViews(robot=robot,sensorname=sensorname,target=target)
         if target:
             target.SetTransform(dot(self.vmodel.attachedsensor.GetTransform(),T))
         return self.moveToObservations(waitcond=waitcond,**kwargs), self.vmodel.target

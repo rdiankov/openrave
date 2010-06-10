@@ -1731,11 +1731,17 @@ protected:
             }
             else {
                 for(int j = 0; j < (int)vjoints.size(); j++) {
-                    if( RaveRandomFloat() > 0.05f ) {
+                    if( RaveRandomFloat() > 0.2f ) {
                         vjoints[j] = vlowerlimit[j] + (vupperlimit[j]-vlowerlimit[j])*RaveRandomFloat();
                     }
-                    else
-                        vjoints[j] = 0;
+                    else {
+                        switch(RaveRandomInt()%3) {
+                            case 0: vjoints[j] = -PI*0.5; break;
+                            case 2: vjoints[j] = PI*0.5; break;
+                            default:
+                                vjoints[j] = 0;
+                        }
+                    }
                 }
             }
 

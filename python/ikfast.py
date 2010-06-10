@@ -64,7 +64,7 @@ class SolverSolution:
     jointeval = None
     jointevalcos = None
     jointevalsin = None
-    AddPiIfNegativeEq = False
+    AddPiIfNegativeEq = None
     IsHinge = True
     def __init__(self, jointname, jointeval=None,jointevalcos=None,jointevalsin=None,AddPiIfNegativeEq=None,IsHinge=True):
         self.jointname = jointname
@@ -2426,17 +2426,40 @@ class IKFastSolver(AutoReloader):
                 return roottree
 
             nextvars = vars[:]
-            nexttree = []
+            nextsol = None
             for var,solutions in solvedvars2.iteritems():
                 if not solutions[1]:
-                    nexttree.append(SolverSolution(var.name, jointeval=solutions[0]))
-                    nextvars = filter(lambda x: not x.var == var, nextvars)
-            if len(nexttree) == 0:
+                    nextsol = (var,solutions[0],None)
+                    break
+            if not nextsol:
                 for var,solutions in solvedvars2.iteritems():
                     if solutions[1]:
-                        nexttree.append(SolverSolution(var.name, jointeval=solutions[0], AddPiIfNegativeEq=solutions[2]))
-                        nextvars = filter(lambda x: not x.var == var, nextvars)
+                        nextsol = (var, solutions[0], solutions[2])
                         break
+
+            # for each solution in nexttree, check for divides by 0
+            nexttree = [SolverSolution(nextsol[0].name, jointeval=nextsol[1],AddPiIfNegativeEq=nextsol[2])]
+            nextvars = filter(lambda x: not x.var == nextsol[0], nextvars)
+            jointbranches = []
+            for solution in nextsol[1]:
+                checkforzero = self.checkDivideByZero(self.customtrigsimp(solution.subs(subrealinv+invsolvedvarsubs),deep=True))
+                if len(checkforzero) > 0:
+                    for sraw in checkforzero:
+                        s = sraw.subs(solvedvarsubs)
+                        if self.isExpressionUnique(ignorezerochecks+[b[0] for b in jointbranches],s):
+                            Rsubs = Matrix(R.shape[0],R.shape[1],map(lambda x: x.subs(s,0), R))
+                            if not all([r==0 for r in R-Rsubs]):
+                                addignore = []
+                                if s.is_Function:
+                                    if s.func == cos:
+                                        addignore.append(sin(*s.args))
+                                    elif s.func == sin:
+                                        addignore.append(cos(*s.args))
+                                jointbranches.append((s,self.solveIKRotation(Rsubs,Ree,[v.var for v in vars],endbranchtree,solvedvarsubs,ignorezerochecks+addignore)))
+            if len(jointbranches) > 0:
+                curtree.append(SolverBranchConds(jointbranches+[(None,nexttree)]))
+                curtree = nexttree
+                nexttree = []
 
             # if checkzerovars1 are 0 or pi/2, substitute with new R2 and resolve
             if len(checkzerovars) > 0:

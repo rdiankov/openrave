@@ -808,8 +808,14 @@ public:
 
     /// @name Object Setting/Querying
     //@{
-    virtual bool AddKinBody(KinBodyPtr pbody) = 0;
-    virtual bool AddRobot(RobotBasePtr robot) = 0;
+    /// add a body to the environment
+    /// \param pbody the pointer to an initialized body
+    /// \param bAnonymous if true and there exists a body with the same name, will make body's name unique
+    virtual bool AddKinBody(KinBodyPtr pbody, bool bAnonymous=false) = 0;
+    /// add a body to the environment
+    /// \param pbody the pointer to an initialized body
+    /// \param bAnonymous if true and there exists a body with the same name, will make body's name unique
+    virtual bool AddRobot(RobotBasePtr robot, bool bAnonymous=false) = 0;
 
     /// Removes  KinBody from the environment. If bDestroy is true, also
     /// deallocates the KinBody memory (physics also needs to be locked!). 

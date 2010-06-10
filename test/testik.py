@@ -131,20 +131,20 @@ def test_6dik():
     from sympy import *
     env = Environment()
     env.Reset()
-    robot = env.ReadRobotXMLFile('robots/pr2-beta-static.robot.xml')
+    robot = env.ReadRobotXMLFile('robots/pa10manip.robot.xml')#pr2-beta-static.robot.xml')
     env.AddRobot(robot)
-    manip = robot.SetActiveManipulator('leftarm_camera')
-    ikmodel = inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Ray4D)
+    manip = robot.SetActiveManipulator('arm')
+    ikmodel = inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
 
     solvefn=ikfast.IKFastSolver.solveFullIK_6D
     solvejoints = list(manip.GetArmJoints())
     #solvejoints.remove(14)
-    solvejoints.remove(35)
-    freeparams=[35]
+    solvejoints.remove(2)
+    freeparams=[2]
     sourcefilename = 'temp.cpp'
     self = ikfast.IKFastSolver(kinbody=robot,accuracy=None,precision=None)
     #code = self.generateIkSolver(manip.GetBase().GetIndex(),manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejoints,usedummyjoints=False,solvefn=solvefn)
-    basedir=dot(manip.GetGraspTransform()[0:3,0:3],manip.GetDirection())
+    basedir=numpy.dot(manip.GetGraspTransform()[0:3,0:3],manip.GetDirection())
     basepos=manip.GetGraspTransform()[0:3,3]
     baselink=manip.GetBase().GetIndex()
     eelink=manip.GetEndEffector().GetIndex()

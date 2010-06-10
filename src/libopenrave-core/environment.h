@@ -446,13 +446,23 @@ class Environment : public EnvironmentBase
         return RaveWriteColladaFile(shared_from_this(),filename);
     }
 
-    virtual bool AddKinBody(KinBodyPtr pbody)
+    virtual bool AddKinBody(KinBodyPtr pbody, bool bAnonymous)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_INTERFACE(pbody);
-        if( !IsValidName(pbody->GetName()) )
+        if( !IsValidName(pbody->GetName()) ) {
             throw openrave_exception(str(boost::format("body name: \"%s\" is not valid")%pbody->GetName()));
-        _CheckUniqueName(KinBodyConstPtr(pbody));
+        }
+        if( !_CheckUniqueName(KinBodyConstPtr(pbody),!bAnonymous) ) {
+            // continue to add random numbers until a unique name is found
+            string newname;
+            for(int i = 0;;++i) {
+                newname = str(boost::format("%s%d")%pbody->GetName()%i);
+                if( IsValidName(newname) )
+                    break;
+            }
+            pbody->SetName(newname);
+        }
         {
             boost::mutex::scoped_lock lock(_mutexBodies);
             _vecbodies.push_back(pbody);
@@ -464,13 +474,24 @@ class Environment : public EnvironmentBase
         pbody->ComputeJointHierarchy();
         return true;
     }
-    virtual bool AddRobot(RobotBasePtr robot)
+    virtual bool AddRobot(RobotBasePtr robot, bool bAnonymous)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_INTERFACE(robot);
-        if( !IsValidName(robot->GetName()) )
+        if( !IsValidName(robot->GetName()) ) {
             throw openrave_exception(str(boost::format("body name: \"%s\" is not valid")%robot->GetName()));
-        _CheckUniqueName(KinBodyConstPtr(robot));
+        }
+
+        if( !_CheckUniqueName(KinBodyConstPtr(robot),!bAnonymous) ) {
+            // continue to add random numbers until a unique name is found
+            string newname;
+            for(int i = 0;;++i) {
+                newname = str(boost::format("%s%d")%robot->GetName()%i);
+                if( IsValidName(newname) )
+                    break;
+            }
+            robot->SetName(newname);
+        }
         {
             boost::mutex::scoped_lock lock(_mutexBodies);
             _vecbodies.push_back(robot);
@@ -1345,12 +1366,17 @@ protected:
         _threadSimulation.reset(new boost::thread(boost::bind(&Environment::_SimulationThread,this)));
     }
 
-    virtual void _CheckUniqueName(KinBodyConstPtr pbody) const
+    virtual bool _CheckUniqueName(KinBodyConstPtr pbody, bool bDoThrow=false) const
     {
         FOREACHC(itbody,_vecbodies) {
-            if( *itbody != pbody && (*itbody)->GetName() == pbody->GetName() )
-                throw openrave_exception(str(boost::format("body %s does not have unique name")%pbody->GetName()));
+            if( *itbody != pbody && (*itbody)->GetName() == pbody->GetName() ) {
+                if( bDoThrow ) {
+                    throw openrave_exception(str(boost::format("body %s does not have unique name")%pbody->GetName()));
+                }
+                return false;
+            }
         }
+        return true;
     }
 
     class DummyPhysicsEngine : public PhysicsEngineBase

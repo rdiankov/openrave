@@ -232,7 +232,7 @@ public:
                 _ptargetbox = _ptarget->GetEnv()->CreateKinBody();
                 _ptargetbox->InitFromBoxes(vboxes,false);
                 _ptargetbox->SetName("__visualfeedbacktest__");
-                _ptargetbox->GetEnv()->AddKinBody(_ptargetbox);
+                _ptargetbox->GetEnv()->AddKinBody(_ptargetbox,true);
                 _ptargetbox->Enable(false);
                 _ptargetbox->SetTransform(_ptarget->GetTransform());
             }

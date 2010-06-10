@@ -2556,7 +2556,9 @@ public:
     }
 
     bool AddKinBody(PyKinBodyPtr pbody) { CHECK_POINTER(pbody); return _penv->AddKinBody(pbody->GetBody()); }
+    bool AddKinBody(PyKinBodyPtr pbody, bool bAnonymous) { CHECK_POINTER(pbody); return _penv->AddKinBody(pbody->GetBody(),bAnonymous); }
     bool AddRobot(PyRobotBasePtr robot) { CHECK_POINTER(robot); return _penv->AddRobot(robot->GetRobot()); }
+    bool AddRobot(PyRobotBasePtr robot, bool bAnonymous) { CHECK_POINTER(robot); return _penv->AddRobot(robot->GetRobot(),bAnonymous); }
     bool RemoveKinBody(PyKinBodyPtr pbody) { CHECK_POINTER(pbody); return _penv->RemoveKinBody(pbody->GetBody()); }
     
     PyKinBodyPtr GetKinBody(const string& name)
@@ -3837,6 +3839,10 @@ BOOST_PYTHON_MODULE(openravepy_int)
     object (PyEnvironmentBase::*drawplane1)(object, object, const boost::multi_array<float,2>&) = &PyEnvironmentBase::drawplane;
     object (PyEnvironmentBase::*drawplane2)(object, object, const boost::multi_array<float,3>&) = &PyEnvironmentBase::drawplane;
 
+    bool (PyEnvironmentBase::*addkinbody1)(PyKinBodyPtr) = &PyEnvironmentBase::AddKinBody;
+    bool (PyEnvironmentBase::*addkinbody2)(PyKinBodyPtr,bool) = &PyEnvironmentBase::AddKinBody;
+    bool (PyEnvironmentBase::*addrobot1)(PyRobotBasePtr) = &PyEnvironmentBase::AddRobot;
+    bool (PyEnvironmentBase::*addrobot2)(PyRobotBasePtr,bool) = &PyEnvironmentBase::AddRobot;
     {
         scope env = classenv
             .def(init<>())
@@ -3891,8 +3897,10 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("ReadKinBodyXMLFile",&PyEnvironmentBase::ReadKinBodyXMLFile,args("filename"))
             .def("ReadKinBodyXMLData",&PyEnvironmentBase::ReadKinBodyXMLData,args("data"))
             .def("ReadInterfaceXMLFile",&PyEnvironmentBase::ReadInterfaceXMLFile,args("filename"))
-            .def("AddKinBody",&PyEnvironmentBase::AddKinBody,args("body"))
-            .def("AddRobot",&PyEnvironmentBase::AddRobot,args("robot"))
+            .def("AddKinBody",addkinbody1,args("body"))
+            .def("AddKinBody",addkinbody2,args("body","anonymous"))
+            .def("AddRobot",addrobot1,args("robot"))
+            .def("AddRobot",addrobot2,args("robot","anonymous"))
             .def("RemoveKinBody",&PyEnvironmentBase::RemoveKinBody,args("body"))
             .def("GetKinBody",&PyEnvironmentBase::GetKinBody,args("name"))
             .def("GetRobot",&PyEnvironmentBase::GetRobot,args("name"))
