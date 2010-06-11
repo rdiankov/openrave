@@ -125,13 +125,13 @@ class CalibrationViews(metaclass.AutoReloader):
         finally:
             graphs = None
     @staticmethod
-    def gatherCalibrationData(robot,sensorname,waitcond,**kwargs):
+    def gatherCalibrationData(robot,sensorname,waitcond,target=None,**kwargs):
         """function to gather calibration data, relies on an outside waitcond function to return information about the calibration pattern"""
         env=robot.GetEnv()
         data=waitcond()
         T=data['T']
         type = data.get('type',None)
-        if type:
+        if target is None and type:
             target = env.ReadKinBodyXMLFile(type)
             if target:
                 env.AddKinBody(target,True)

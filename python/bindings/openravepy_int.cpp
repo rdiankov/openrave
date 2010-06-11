@@ -2564,15 +2564,19 @@ public:
     PyKinBodyPtr GetKinBody(const string& name)
     {
         KinBodyPtr pbody = _penv->GetKinBody(name);
-        if( !pbody )
-            throw openrave_exception(boost::str(boost::format("failed to get body %s")%name));
+        if( !pbody ) {
+            return PyKinBodyPtr();
+            //throw openrave_exception(boost::str(boost::format("failed to get body %s")%name));
+        }
         return PyKinBodyPtr(new PyKinBody(pbody,shared_from_this()));
     }
     PyRobotBasePtr GetRobot(const string& name)
     {
         RobotBasePtr probot = _penv->GetRobot(name);
-        if( !probot )
-            throw openrave_exception(boost::str(boost::format("failed to get robot %s")%name));
+        if( !probot ) {
+            return PyRobotBasePtr();
+            //throw openrave_exception(boost::str(boost::format("failed to get robot %s")%name));
+        }
         return PyRobotBasePtr(new PyRobotBase(probot,shared_from_this()));
     }
 
