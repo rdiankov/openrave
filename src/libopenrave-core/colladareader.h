@@ -2760,15 +2760,19 @@ public:
     domRotateRef protate = daeSafeCast<domRotate>(pelt);
     if( !!protate )
     {
-      t.rotfromaxisangle(Vector(protate->getValue()[0],protate->getValue()[1],protate->getValue()[2]), (dReal)(protate->getValue()[3]*(PI/180.0)));
+        if( !protate->getSid() ) { // if sid is valid, then controlled by joint?
+          t.rotfromaxisangle(Vector(protate->getValue()[0],protate->getValue()[1],protate->getValue()[2]), (dReal)(protate->getValue()[3]*(PI/180.0)));
+      }
       return t;
     }
 
     domTranslateRef ptrans = daeSafeCast<domTranslate>(pelt);
     if( !!ptrans )
     {
-      t.trans = Vector(ptrans->getValue()[0], ptrans->getValue()[1], ptrans->getValue()[2]);
-      t.trans *= GetUnitScale(pelt);
+      if( !ptrans->getSid() ) { // if sid is valid, then controlled by joint?
+          t.trans = Vector(ptrans->getValue()[0], ptrans->getValue()[1], ptrans->getValue()[2]);
+          t.trans *= GetUnitScale(pelt);
+      }
       return t;
     }
 

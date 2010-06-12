@@ -220,3 +220,12 @@ def test_boxes():
     k.SetName('temp')
     env.AddKinBody(k)
     env.SetViewer('qtcoin')
+
+def test_save():
+    env=Environment()
+    env.SetViewer('qtcoin')
+    robot=env.ReadRobotXMLFile('robots/barretthand.robot.xml')
+    env.AddRobot(robot)
+    env.Save('test.dae')
+    env.Reset()
+    env.Load('test.dae')
