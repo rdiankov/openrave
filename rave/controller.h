@@ -35,6 +35,9 @@ public:
 
     ControllerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Controller, penv) {}
     virtual ~ControllerBase() {}
+
+    /// return the static interface type this class points to (used for safe casting)
+    static inline PluginType GetInterfaceTypeStatic() { return PT_Controller; }
     
     /// Initializes the controller
     /// \param robot the robot that uses the controller

@@ -28,7 +28,7 @@ class RAVE_API SensorBase : public InterfaceBase
 public:
     enum SensorType
     {
-		ST_Invalid=0,
+        ST_Invalid=0,
         ST_Laser=1,
         ST_Camera=2,
         ST_JointEncoder=3,
@@ -50,7 +50,9 @@ public:
         virtual SensorType GetType() = 0;
 
         /// Serialize the sensor data to stream in XML format
-        virtual bool serialize(std::ostream& O) const { return true; }
+        virtual bool serialize(std::ostream& O) const;
+
+        uint64_t __stamp; ///< time stamp of the sensor data in microseconds (floating-point precision is bad here). This can be either simulation or real time depending on the sensor.
     };
     typedef boost::shared_ptr<SensorData> SensorDataPtr;
     typedef boost::shared_ptr<SensorData const> SensorDataConstPtr;
@@ -77,8 +79,6 @@ public:
         Transform t;     ///< the coordinate system all the measurements were taken in
         std::vector<uint8_t> vimagedata; ///< rgb image data, if camera only outputs in grayscale, fill each channel with the same value
         
-        int id; ///< A unique, increasing, ID for the image
-
         virtual bool serialize(std::ostream& O) const;
     };
     /// Class for storing joint angles and EE position
@@ -147,6 +147,9 @@ public:
     SensorBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Sensor, penv) {}
     virtual ~SensorBase() {}
 
+    /// return the static interface type this class points to (used for safe casting)
+    static inline PluginType GetInterfaceTypeStatic() { return PT_Sensor; }
+    
     /// Initializes the sensor
     /// \param args extra arguments that the sensor takes, can be NULL
     /// \return true on successful initialization

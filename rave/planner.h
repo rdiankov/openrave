@@ -182,6 +182,9 @@ public:
     PlannerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Planner, penv) {}
     virtual ~PlannerBase() {}
 
+    /// return the static interface type this class points to (used for safe casting)
+    static inline PluginType GetInterfaceTypeStatic() { return PT_Planner; }
+    
     /// Setup scene, robot, and properties of the plan, and reset all internal structures
     /// \param probot The robot will be planning for.
     /// \param pparams The parameters of the planner, any class derived from PlannerParameters can be passed. The planner should copy these parameters for future instead of storing the pointer.

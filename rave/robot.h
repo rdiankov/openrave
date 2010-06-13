@@ -268,6 +268,9 @@ public:
 
     virtual ~RobotBase();
 
+    /// return the static interface type this class points to (used for safe casting)
+    static inline PluginType GetInterfaceTypeStatic() { return PT_Robot; }
+    
     virtual void Destroy();
 
     /// Build the robot from a file

@@ -120,6 +120,9 @@ public:
     TrajectoryBase(EnvironmentBasePtr penv, int nDOF);
     virtual ~TrajectoryBase() {}
 
+    /// return the static interface type this class points to (used for safe casting)
+    static inline PluginType GetInterfaceTypeStatic() { return PT_Trajectory; }
+    
     /// clears all points and resets the dof of the trajectory
     virtual void Reset(int nDOF);
 

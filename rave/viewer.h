@@ -33,6 +33,9 @@ public:
     RaveViewerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Viewer, penv) {}
     virtual ~RaveViewerBase() {}
 
+    /// return the static interface type this class points to (used for safe casting)
+    static inline PluginType GetInterfaceTypeStatic() { return PT_Viewer; }
+    
     /// reset the camera depending on its mode
     virtual void UpdateCameraTransform() = 0;
 

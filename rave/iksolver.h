@@ -30,6 +30,9 @@ public:
     IkSolverBase(EnvironmentBasePtr penv) : InterfaceBase(PT_InverseKinematicsSolver, penv) {}
     virtual ~IkSolverBase() {}
 
+    /// return the static interface type this class points to (used for safe casting)
+    static inline PluginType GetInterfaceTypeStatic() { return PT_InverseKinematicsSolver; }
+    
     /// sets the IkSolverBase attached to a specific robot and sets IkSolverBase specific options
     /// For example, some ik solvers might have different ways of computing optimal solutions.
     /// \param probot The robot whose active manipulator will be used to solve the inverse kinematics for.

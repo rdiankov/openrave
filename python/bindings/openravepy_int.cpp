@@ -1102,10 +1102,12 @@ public:
         PySensorData(SensorBase::SensorDataPtr pdata)
         {
             type = pdata->GetType();
+            stamp = pdata->__stamp;
         }
         virtual ~PySensorData() {}
         
         SensorBase::SensorType type;
+        uint64_t stamp;
     };
 
     class PyLaserSensorData : public PySensorData
@@ -1117,12 +1119,10 @@ public:
             positions = toPyArray3(pdata->positions);
             ranges = toPyArray3(pdata->ranges);
             intensity = toPyArrayN(pdata->intensity.size()>0?&pdata->intensity[0]:NULL,pdata->intensity.size());
-            id = pdata->id;
         }
         virtual ~PyLaserSensorData() {}
 
         object transform, positions, ranges, intensity;
-        int id;
     };
 
     class PyCameraSensorData : public PySensorData
@@ -1146,13 +1146,11 @@ public:
                 arr.resize(3,3);
                 KK = arr;
             }
-            id = pdata->id;
         }
         virtual ~PyCameraSensorData() {}
 
         object transform, imagedata;
         object KK;
-        int id;
     };
 
     PySensorBase(SensorBasePtr psensor, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(psensor, pyenv), _psensor(psensor)
@@ -3771,19 +3769,18 @@ BOOST_PYTHON_MODULE(openravepy_int)
 
         class_<PySensorBase::PySensorData, boost::shared_ptr<PySensorBase::PySensorData> >("SensorData",no_init)
             .def_readonly("type",&PySensorBase::PySensorData::type)
+            .def_readonly("stamp",&PySensorBase::PySensorData::stamp)
             ;
         class_<PySensorBase::PyLaserSensorData, boost::shared_ptr<PySensorBase::PyLaserSensorData>, bases<PySensorBase::PySensorData> >("LaserSensorData",no_init)
             .def_readonly("transform",&PySensorBase::PyLaserSensorData::transform)
             .def_readonly("positions",&PySensorBase::PyLaserSensorData::positions)
             .def_readonly("ranges",&PySensorBase::PyLaserSensorData::ranges)
             .def_readonly("intensity",&PySensorBase::PyLaserSensorData::intensity)
-            .def_readonly("id",&PySensorBase::PyLaserSensorData::id)
             ;
         class_<PySensorBase::PyCameraSensorData, boost::shared_ptr<PySensorBase::PyCameraSensorData>, bases<PySensorBase::PySensorData> >("CameraSensorData",no_init)
             .def_readonly("transform",&PySensorBase::PyCameraSensorData::transform)
             .def_readonly("imagedata",&PySensorBase::PyCameraSensorData::imagedata)
             .def_readonly("KK",&PySensorBase::PyCameraSensorData::KK)
-            .def_readonly("id",&PySensorBase::PyCameraSensorData::id)
             ;
 
         enum_<SensorBase::SensorType>("SensorType")

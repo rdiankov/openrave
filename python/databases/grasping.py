@@ -480,7 +480,10 @@ class GraspingModel(OpenRAVEModel):
             for grasp in self.grasps:
                 contacts,finalconfig,mindist,volume = self.runGrasp(grasp=grasp,translate=True,forceclosure=False)
                 # find closest contact to center of object
-                contactdists.append(numpy.min(sum((contacts[:,0:3]-tile(ab.pos(),(len(contacts),1)))**2,1)))
+                if len(contactdists) > 0: # sometimes we get no contacts?!
+                    contactdists.append(numpy.min(sum((contacts[:,0:3]-tile(ab.pos(),(len(contacts),1)))**2,1)))
+                else:
+                    contactdists.append(inf)
             order = argsort(array(contactdists))
             self.grasps = self.grasps[order]
 

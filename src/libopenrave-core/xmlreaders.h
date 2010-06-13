@@ -1519,6 +1519,10 @@ namespace OpenRAVEXMLParser
                 if( !!_pcustomreader )
                     return PE_Support;
             }
+
+            if (xmlname == "sendcommand" ) {
+                return PE_Support;
+            }
             
             return PE_Pass;
         }
@@ -1537,6 +1541,17 @@ namespace OpenRAVEXMLParser
 
                     if( xmlname == _xmltag )
                         return true;
+                }
+            }
+            else if( xmlname == "sendcommand" ) {
+                if( !!_pinterface ) {
+                    stringstream sout;
+                    if( !_pinterface->SendCommand(sout,_ss) ) {
+                        RAVELOG_WARN("interface command failed\n");
+                    }
+                }
+                else {
+                    RAVELOG_INFO(str(boost::format("failed to send command: %s\n")%xmlname));
                 }
             }
             else if( xmlname == _xmltag )
@@ -1568,7 +1583,7 @@ namespace OpenRAVEXMLParser
     {
     public:
     KinBodyXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pchain, PluginType type, const std::list<std::pair<std::string,std::string> >& atts, int rootoffset, int rootjoffset) : InterfaceXMLReader(penv,pchain,type,"kinbody",atts), rootoffset(rootoffset), rootjoffset(rootjoffset) {
-            _pchain = boost::static_pointer_cast<KinBody>(_pinterface);
+            _pchain = RaveInterfaceCast<KinBody>(_pinterface);
             _masstype = LinkXMLReader::MT_None;
             _fMassValue = 1;
             _vMassExtents = Vector(1,1,1);
@@ -1757,7 +1772,7 @@ namespace OpenRAVEXMLParser
                     }
                     else if( xmlname == "kinbody" ) {
                         // most likely new transforms were added, so update
-                        _pchain = boost::static_pointer_cast<KinBody>(_pinterface);
+                        _pchain = RaveInterfaceCast<KinBody>(_pinterface);
                         _pchain->GetBodyTransformations(_vTransforms);
                     }
                     else
@@ -1957,12 +1972,12 @@ namespace OpenRAVEXMLParser
                     if( _robotname.size() > 0 ) {
                         KinBodyPtr pbody = _penv->GetKinBody(_robotname.c_str());
                         if( pbody->IsRobot() )
-                            _probot = boost::static_pointer_cast<RobotBase>(pbody);
+                            _probot = RaveInterfaceCast<RobotBase>(pbody);
                     }
                 }
                 
                 if( !!_probot )
-                    _probot->SetController(boost::static_pointer_cast<ControllerBase>(_pinterface),_args);
+                    _probot->SetController(RaveInterfaceCast<ControllerBase>(_pinterface),_args);
                 else
                     RAVELOG_WARNA("controller is unused\n");
                 return true;
@@ -2237,7 +2252,7 @@ namespace OpenRAVEXMLParser
             if( !!_pcurreader ) {
                 if( _pcurreader->endElement(xmlname) ) {
                     _pcurreader.reset();
-                    _psensor->psensor = boost::static_pointer_cast<SensorBase>(_psensorinterface);
+                    _psensor->psensor = RaveInterfaceCast<SensorBase>(_psensorinterface);
                 }
                 return false;
             }
@@ -2317,7 +2332,7 @@ namespace OpenRAVEXMLParser
     {
     public:
     RobotXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& probot, const std::list<std::pair<std::string,std::string> >& atts, int rootoffset, int rootjoffset, int rootsoffset, int rootmoffset) : InterfaceXMLReader(penv,probot,PT_Robot,"robot",atts), rootoffset(rootoffset), rootjoffset(rootjoffset), rootsoffset(rootsoffset), rootmoffset(rootmoffset) {
-            _probot = boost::static_pointer_cast<RobotBase>(_pinterface);
+            _probot = RaveInterfaceCast<RobotBase>(_pinterface);
             FOREACHC(itatt, atts) {
                 if( itatt->first == "name" )
                     _robotname = itatt->second;
@@ -2373,7 +2388,7 @@ namespace OpenRAVEXMLParser
             if( !!_pcurreader ) {
                 if( _pcurreader->endElement(xmlname) )
                     _pcurreader.reset();
-                _probot = boost::static_pointer_cast<RobotBase>(_pinterface); // might be updated by readers
+                _probot = RaveInterfaceCast<RobotBase>(_pinterface); // might be updated by readers
                 return false;
             }
             else if( InterfaceXMLReader::endElement(xmlname) ) {
@@ -2498,15 +2513,16 @@ namespace OpenRAVEXMLParser
                 if( itatt->first == "args" )
                     _args = itatt->second;
             }
-        }
 
-        virtual bool endElement(const std::string& xmlname)
-        {
-            if( InterfaceXMLReader::endElement(xmlname) ) {
-                _penv->LoadProblem(boost::static_pointer_cast<ProblemInstance>(_pinterface),_args);
-                return true;
+            if( !!_pinterface ) {
+                ProblemInstancePtr problem = RaveInterfaceCast<ProblemInstance>(_pinterface);
+                if( !!problem ) {
+                    int ret = _penv->LoadProblem(problem,_args);
+                    if( ret ) {
+                        RAVELOG_WARN(str(boost::format("problem %s returned %d\n")%problem->GetXMLId()%ret));
+                    }
+                }
             }
-            return false;
         }
 
         string _args;
@@ -2575,22 +2591,22 @@ namespace OpenRAVEXMLParser
 
                     if( !!boost::dynamic_pointer_cast<RobotXMLReader>(_pcurreader) ) {
                         BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_Robot);
-                        _penv->AddRobot(boost::static_pointer_cast<RobotBase>(_pinterface));
+                        _penv->AddRobot(RaveInterfaceCast<RobotBase>(_pinterface));
                         _pinterface.reset();
                     }
                     else if( !!boost::dynamic_pointer_cast<KinBodyXMLReader>(_pcurreader) ) {
                         BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_KinBody);
-                        _penv->AddKinBody(boost::static_pointer_cast<KinBody>(_pinterface));
+                        _penv->AddKinBody(RaveInterfaceCast<KinBody>(_pinterface));
                         _pinterface.reset();
                     }
                     else if( !!boost::dynamic_pointer_cast< DummyInterfaceXMLReader<PT_PhysicsEngine> >(_pcurreader) ) {
                         BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_PhysicsEngine);
-                        _penv->SetPhysicsEngine(boost::static_pointer_cast<PhysicsEngineBase>(_pinterface));
+                        _penv->SetPhysicsEngine(RaveInterfaceCast<PhysicsEngineBase>(_pinterface));
                         _pinterface.reset();
                     }
                     else if( !!boost::dynamic_pointer_cast< DummyInterfaceXMLReader<PT_CollisionChecker> >(_pcurreader) ) {
                         BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_CollisionChecker);
-                        _penv->SetCollisionChecker(boost::static_pointer_cast<CollisionCheckerBase>(_pinterface));
+                        _penv->SetCollisionChecker(RaveInterfaceCast<CollisionCheckerBase>(_pinterface));
                         _pinterface.reset();
                     }
                     else if( !!_pinterface ) {
@@ -2657,7 +2673,7 @@ namespace OpenRAVEXMLParser
         switch(type) {
         case PT_Planner: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Planner>(penv,pinterface,xmltag,atts));
         case PT_Robot: {
-            RobotBasePtr probot = boost::static_pointer_cast<RobotBase>(pinterface);
+            RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pinterface);
             int rootoffset = 0, rootjoffset = 0, rootsoffset = 0, rootmoffset = 0;
             if( !!probot ) {
                 rootoffset = (int)probot->GetLinks().size();
@@ -2672,7 +2688,7 @@ namespace OpenRAVEXMLParser
         case PT_ProblemInstance: return InterfaceXMLReaderPtr(new ProblemXMLReader(penv,pinterface,atts));
         case PT_InverseKinematicsSolver: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_InverseKinematicsSolver>(penv,pinterface,xmltag,atts));
         case PT_KinBody: {
-            KinBodyPtr pbody = boost::static_pointer_cast<KinBody>(pinterface);
+            KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
             int rootoffset = 0, rootjoffset = 0;
             if( !!pbody ) {
                 vector<Transform> vTransforms;

@@ -28,6 +28,9 @@ public:
     SensorSystemBase(EnvironmentBasePtr penv) : InterfaceBase(PT_SensorSystem, penv) {}
     virtual ~SensorSystemBase() {}
 
+    /// return the static interface type this class points to (used for safe casting)
+    static inline PluginType GetInterfaceTypeStatic() { return PT_SensorSystem; }
+    
     /// resets the system and stops managing all objects. Any objects that are not locked, are deleted
     virtual void Reset() = 0;
 

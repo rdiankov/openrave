@@ -1031,6 +1031,40 @@ inline const char* RaveGetInterfaceHash(PluginType type)
     }
 }
 
+/// safely casts from the base interface class to an openrave interface using static_pointer_cast.
+/// The reason why dynamic_pointer_cast cannot be used is because interfaces might be created by different plugins, and the runtime type information will be different.
+template <typename T>
+inline boost::shared_ptr<T> RaveInterfaceCast(InterfaceBasePtr pinterface)
+{
+    if( !!pinterface ) {
+        if( pinterface->GetInterfaceType() == T::GetInterfaceTypeStatic() ) {
+            return boost::static_pointer_cast<T>(pinterface);
+        }
+        // encode special cases
+        if( pinterface->GetInterfaceType() == PT_Robot && T::GetInterfaceTypeStatic() == PT_KinBody ) {
+            return boost::static_pointer_cast<T>(pinterface);
+        }
+    }
+    return boost::shared_ptr<T>();
+}
+
+/// safely casts from the base interface class to an openrave interface using static_pointer_cast.
+/// The reason why dynamic_pointer_cast cannot be used is because interfaces might be created by different plugins, and the runtime type information will be different.
+template <typename T>
+inline boost::shared_ptr<T const> RaveInterfaceConstCast(InterfaceBaseConstPtr pinterface)
+{
+    if( !!pinterface ) {
+        if( pinterface->GetInterfaceType() == T::GetInterfaceTypeStatic() ) {
+            return boost::static_pointer_cast<T const>(pinterface);
+        }
+        // encode special cases
+        if( pinterface->GetInterfaceType() == PT_Robot && T::GetInterfaceTypeStatic() == PT_KinBody ) {
+            return boost::static_pointer_cast<T const>(pinterface);
+        }
+    }
+    return boost::shared_ptr<T>();
+}
+
 /// returns the a lower case string of the interface type
 RAVE_API const std::map<PluginType,std::string>& RaveGetInterfaceNamesMap();
 RAVE_API const std::string& RaveGetInterfaceName(PluginType type);

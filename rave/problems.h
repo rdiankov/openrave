@@ -47,6 +47,9 @@ public:
     ProblemInstance(EnvironmentBasePtr penv);
     virtual ~ProblemInstance() {}
 
+    /// return the static interface type this class points to (used for safe casting)
+    static inline PluginType GetInterfaceTypeStatic() { return PT_ProblemInstance; }
+    
     /// gets called every time a problem instance is loaded to initialize the problem.
     /// Robots might not necessarily be set before this function call
     /// returns 0 on success

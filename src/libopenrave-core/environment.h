@@ -334,10 +334,7 @@ class Environment : public EnvironmentBase
             probot = _pdatabase->CreateRobot(shared_from_this(), pname);
         else {
             probot.reset(new RobotBase(shared_from_this()));
-            vector<Transform> vTransforms;
-            probot->GetBodyTransformations(vTransforms);
-            KinBodyPtr pbody = boost::static_pointer_cast<KinBody>(probot);
-            pbody->GetBodyTransformations(vTransforms);
+            probot->__strxmlid = "RobotBase";
         }
         return probot;
     }
@@ -524,7 +521,7 @@ class Environment : public EnvironmentBase
             }
 
             if( (*it)->IsRobot() ) {
-                vector<RobotBasePtr>::iterator itrobot = std::find(_vecrobots.begin(), _vecrobots.end(), boost::static_pointer_cast<RobotBase>(pbody));
+                vector<RobotBasePtr>::iterator itrobot = std::find(_vecrobots.begin(), _vecrobots.end(), RaveInterfaceCast<RobotBase>(pbody));
                 if( itrobot != _vecrobots.end() )
                     _vecrobots.erase(itrobot);
             }
@@ -796,7 +793,7 @@ class Environment : public EnvironmentBase
         
             RobotBasePtr robot;
             if( (*itbody)->IsRobot() )
-                robot = boost::static_pointer_cast<RobotBase>(*itbody);
+                robot = RaveInterfaceCast<RobotBase>(*itbody);
         
             switch(opts) {
             case TO_Obstacles:
@@ -850,7 +847,7 @@ class Environment : public EnvironmentBase
             else {
                 InterfaceBasePtr pinterface = ReadInterfaceXMLFile(filename);
                 BOOST_ASSERT(pinterface->GetInterfaceType() == PT_Robot );
-                return boost::static_pointer_cast<RobotBase>(pinterface);
+                return RaveInterfaceCast<RobotBase>(pinterface);
             }
         }
         catch(const openrave_exception& ex) {
@@ -878,7 +875,7 @@ class Environment : public EnvironmentBase
             InterfaceBasePtr pinterface = robot;
             OpenRAVEXMLParser::InterfaceXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_Robot, pinterface, "robot", atts);
             bool bSuccess = ParseXMLFile(preader, filename);
-            robot = boost::static_pointer_cast<RobotBase>(pinterface);
+            robot = RaveInterfaceCast<RobotBase>(pinterface);
             if( !bSuccess || !robot )
                 return RobotBasePtr();
             robot->__strxmlfilename = preader->_filename;
@@ -902,7 +899,7 @@ class Environment : public EnvironmentBase
         InterfaceBasePtr pinterface = robot;
         OpenRAVEXMLParser::InterfaceXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_Robot, pinterface, "robot", atts);
         bool bSuccess = ParseXMLData(preader, data);
-        robot = boost::static_pointer_cast<RobotBase>(pinterface);
+        robot = RaveInterfaceCast<RobotBase>(pinterface);
         if( !bSuccess || !robot )
             return RobotBasePtr();
         robot->__strxmlfilename = preader->_filename;
@@ -921,7 +918,7 @@ class Environment : public EnvironmentBase
             else {
                 InterfaceBasePtr pinterface = ReadInterfaceXMLFile(filename);
                 BOOST_ASSERT(pinterface->GetInterfaceType() == PT_KinBody );
-                return boost::static_pointer_cast<KinBody>(pinterface);
+                return RaveInterfaceCast<KinBody>(pinterface);
             }
         }
         catch(const openrave_exception& ex) {
@@ -949,7 +946,7 @@ class Environment : public EnvironmentBase
             InterfaceBasePtr pinterface = body;
             OpenRAVEXMLParser::InterfaceXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_KinBody, pinterface, "kinbody", atts);
             bool bSuccess = ParseXMLFile(preader, filename);
-            body = boost::static_pointer_cast<RobotBase>(pinterface);
+            body = RaveInterfaceCast<RobotBase>(pinterface);
             if( !bSuccess || !body )
                 return KinBodyPtr();
             body->__strxmlfilename = preader->_filename;
@@ -973,7 +970,7 @@ class Environment : public EnvironmentBase
         InterfaceBasePtr pinterface = body;
         OpenRAVEXMLParser::InterfaceXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_KinBody, pinterface, "kinbody", atts);
         bool bSuccess = ParseXMLData(preader, data);
-        body = boost::static_pointer_cast<RobotBase>(pinterface);
+        body = RaveInterfaceCast<RobotBase>(pinterface);
         if( !bSuccess || !body )
             return KinBodyPtr();
         body->__strxmlfilename = preader->_filename;
@@ -1004,14 +1001,14 @@ class Environment : public EnvironmentBase
         if( (type == PT_KinBody || type == PT_Robot) && _IsColladaFile(filename) ) {
             if( type == PT_KinBody ) {
                 BOOST_ASSERT(!pinterface|| (pinterface->GetInterfaceType()==PT_KinBody||pinterface->GetInterfaceType()==PT_Robot));
-                KinBodyPtr pbody = boost::static_pointer_cast<KinBody>(pinterface);
+                KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
                 if( !RaveParseColladaFile(shared_from_this(), pbody, filename) )
                     return InterfaceBasePtr();
                 pinterface = pbody;
             }
             else if( type == PT_Robot ) {
                 BOOST_ASSERT(!pinterface||pinterface->GetInterfaceType()==PT_Robot);
-                RobotBasePtr probot = boost::static_pointer_cast<RobotBase>(pinterface);
+                RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pinterface);
                 if( !RaveParseColladaFile(shared_from_this(), probot, filename) )
                     return InterfaceBasePtr();
                 pinterface = probot;

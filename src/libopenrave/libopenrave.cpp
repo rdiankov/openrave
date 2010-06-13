@@ -793,6 +793,12 @@ bool ProblemInstance::GetCommandHelp(std::ostream& o, std::istream& sinput) cons
     return true;
 }
 
+bool SensorBase::SensorData::serialize(std::ostream& O) const
+{
+    RAVELOG_WARNA("SensorData XML serialization not implemented\n");
+    return true;
+}
+
 bool SensorBase::LaserSensorData::serialize(std::ostream& O) const
 {
     RAVELOG_WARNA("LaserSensorData XML serialization not implemented\n");
@@ -990,7 +996,7 @@ boost::shared_ptr<SimpleSensorSystem::BodyData> SimpleSensorSystem::CreateBodyDa
 {
     boost::shared_ptr<XMLData> pnewdata(new XMLData(_xmlid));
     pnewdata->copy(pdata);
-    return boost::shared_ptr<BodyData>(new BodyData(boost::static_pointer_cast<SimpleSensorSystem>(shared_from_this()),pbody, pnewdata));
+    return boost::shared_ptr<BodyData>(new BodyData(RaveInterfaceCast<SimpleSensorSystem>(shared_from_this()),pbody, pnewdata));
 }
 
 void SimpleSensorSystem::_UpdateBodies(list<SimpleSensorSystem::SNAPSHOT>& listbodies)

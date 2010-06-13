@@ -2050,8 +2050,7 @@ bool RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     if( !KinBody::Clone(preference,cloningoptions) )
         return false;
 
-    RobotBaseConstPtr r = boost::static_pointer_cast<RobotBase const>(preference);
-
+    RobotBaseConstPtr r = RaveInterfaceConstCast<RobotBase>(preference);
     __hashrobotstructure = r->__hashrobotstructure;
     
     _vecManipulators.clear();

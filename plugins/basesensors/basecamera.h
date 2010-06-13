@@ -119,7 +119,6 @@ class BaseCameraSensor : public SensorBase
         _pdata->vimagedata.resize(3*_pgeom->width*_pgeom->height);
         vimagedata.resize(3*_pgeom->width*_pgeom->height);
         fTimeToImage = 0;
-        _globid = 0;
         _bUpdateCameraPlot = true;
     }
     
@@ -176,7 +175,7 @@ class BaseCameraSensor : public SensorBase
                 boost::mutex::scoped_lock lock(_mutexdata);
                 pdata->t = _trans;
                 pdata->vimagedata = vimagedata;
-                pdata->id = ++_globid;
+                pdata->__stamp = GetEnv()->GetSimulationTime();
             }
         }
         
@@ -238,7 +237,6 @@ class BaseCameraSensor : public SensorBase
         *_pgeom = *r->_pgeom;
         _vColor = r->_vColor;
         _trans = r->_trans;
-        _globid = r->_globid;
         fTimeToImage = r->fTimeToImage;
         framerate = r->framerate;
         _bShowCameraImage = r->_bShowCameraImage;
@@ -261,7 +259,6 @@ class BaseCameraSensor : public SensorBase
     int framerate;
     EnvironmentBase::GraphHandlePtr _iconhandle;
     vector<RaveVector<float> > viconpoints;
-    int _globid;
 
     mutable boost::mutex _mutexdata;
 

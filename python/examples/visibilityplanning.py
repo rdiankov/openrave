@@ -38,12 +38,12 @@ class CameraViewerGUI(threading.Thread):
         threading.Thread.__init__(self)
         self.sensor = sensor
         self.title = title
-        self.lastid = -1
+        self.laststamp = None
         self.imagelck = threading.Lock()
 
     def updateimage(self):
         data = self.sensor.GetSensorData()
-        if data is not None and not self.lastid == data.id:
+        if data is not None and not self.laststamp == data.stamp:
             width = data.imagedata.shape[1]
             height = data.imagedata.shape[0]
             self.imagelck.acquire()
@@ -62,7 +62,7 @@ class CameraViewerGUI(threading.Thread):
 
             self.container.canvas.create_image(self.container.width/2, self.container.height/2, image=photo)
             self.container.obr = photo
-            self.lastid = data.id
+            self.laststamp = data.stamp
         self.main.after(100,self.updateimage)
 
     def saveimage(self,filename):

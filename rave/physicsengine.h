@@ -31,6 +31,9 @@ public:
     PhysicsEngineBase(EnvironmentBasePtr penv) : InterfaceBase(PT_PhysicsEngine, penv) {}
     virtual ~PhysicsEngineBase() {}
 
+    /// return the static interface type this class points to (used for safe casting)
+    static inline PluginType GetInterfaceTypeStatic() { return PT_PhysicsEngine; }
+    
     /// Set basic physics engine using the PhysicsEngineOptions enum
     virtual bool SetPhysicsOptions(int physicsoptions) = 0;
     virtual int GetPhysicsOptions() const = 0;

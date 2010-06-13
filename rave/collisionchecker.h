@@ -41,6 +41,9 @@ public:
     CollisionCheckerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_CollisionChecker, penv) {}
     virtual ~CollisionCheckerBase() {}
 
+    /// return the static interface type this class points to (used for safe casting)
+    static inline PluginType GetInterfaceTypeStatic() { return PT_CollisionChecker; }
+    
     /// Set basic collision options using the CollisionOptions enum
     virtual bool SetCollisionOptions(int collisionoptions) = 0;
     virtual int GetCollisionOptions() const = 0;

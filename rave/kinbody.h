@@ -451,6 +451,9 @@ public:
 
     virtual ~KinBody();
 
+    /// return the static interface type this class points to (used for safe casting)
+    static inline PluginType GetInterfaceTypeStatic() { return PT_KinBody; }
+    
     virtual void Destroy();
 
     /// Build the robot from an XML filename

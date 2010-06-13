@@ -2662,7 +2662,7 @@ bool KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     if( !InterfaceBase::Clone(preference,cloningoptions) )
         return false;
 
-    KinBodyConstPtr r = boost::static_pointer_cast<KinBody const>(preference);
+    KinBodyConstPtr r = RaveInterfaceConstCast<KinBody>(preference);
 
     name = r->name;
     _bHierarchyComputed = r->_bHierarchyComputed;

@@ -155,8 +155,6 @@ public:
             *it = Vector(0,0,0);
         FOREACH(it, _pdata->intensity)
             *it = 0;
-
-        _globid = 0;
     }
 
     virtual bool SimulationStep(dReal fTimeElapsed)
@@ -174,7 +172,7 @@ public:
                 // Lock the data mutex and fill with the range data (get all in one timestep)
                 boost::mutex::scoped_lock lock(_mutexdata);
                 _pdata->t = GetTransform();
-                _pdata->id = ++_globid;
+                _pdata->__stamp = GetEnv()->GetSimulationTime();
         
                 t = GetTransform();
                 r.pos = t.trans;
@@ -341,7 +339,6 @@ protected:
     EnvironmentBase::GraphHandlePtr _iconhandle;
     vector<RaveVector<float> > viconpoints;
     vector<int> viconindices;
-    int _globid;
     dReal fTimeToScan, fScanTime;
 
     boost::mutex _mutexdata;

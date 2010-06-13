@@ -91,7 +91,7 @@ public:
 
     RobotBasePtr CreateRobot(EnvironmentBasePtr penv, const std::string& pname)
     {
-        RobotBasePtr probot = boost::static_pointer_cast<RobotBase>(Create(penv, PT_Robot, pname));
+        RobotBasePtr probot = RaveInterfaceCast<RobotBase>(Create(penv, PT_Robot, pname));
         if( !!probot ) {
             if( strcmp(probot->GetKinBodyHash(), OPENRAVE_KINBODY_HASH) ) {
                 RAVELOG_FATALA("plugin interface Robot, name %s has invalid hash, might be compiled with stale openrave files\n", pname.c_str());
@@ -103,16 +103,16 @@ public:
         return probot;
     }
 
-    KinBodyPtr CreateKinBody(EnvironmentBasePtr penv, const std::string& pname) { return boost::static_pointer_cast<KinBody>(Create(penv, PT_KinBody, pname)); }
-    PlannerBasePtr CreatePlanner(EnvironmentBasePtr penv, const std::string& pname) { return boost::static_pointer_cast<PlannerBase>(Create(penv, PT_Planner, pname)); }
-    SensorSystemBasePtr CreateSensorSystem(EnvironmentBasePtr penv, const std::string& pname) { return boost::static_pointer_cast<SensorSystemBase>(Create(penv, PT_SensorSystem, pname)); }
-    ControllerBasePtr CreateController(EnvironmentBasePtr penv, const std::string& pname) { return boost::static_pointer_cast<ControllerBase>(Create(penv, PT_Controller, pname)); }
-    ProblemInstancePtr CreateProblem(EnvironmentBasePtr penv, const std::string& pname) { return boost::static_pointer_cast<ProblemInstance>(Create(penv, PT_ProblemInstance, pname)); }
-    IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr penv, const std::string& pname) { return boost::static_pointer_cast<IkSolverBase>(Create(penv, PT_InverseKinematicsSolver, pname)); }
-    PhysicsEngineBasePtr CreatePhysicsEngine(EnvironmentBasePtr penv, const std::string& pname) { return boost::static_pointer_cast<PhysicsEngineBase>(Create(penv, PT_PhysicsEngine, pname)); }
-    SensorBasePtr CreateSensor(EnvironmentBasePtr penv, const std::string& pname) { return boost::static_pointer_cast<SensorBase>(Create(penv, PT_Sensor, pname)); }
-    CollisionCheckerBasePtr CreateCollisionChecker(EnvironmentBasePtr penv, const std::string& pname) { return boost::static_pointer_cast<CollisionCheckerBase>(Create(penv, PT_CollisionChecker, pname)); }
-    RaveViewerBasePtr CreateViewer(EnvironmentBasePtr penv, const std::string& pname) { return boost::static_pointer_cast<RaveViewerBase>(Create(penv, PT_Viewer, pname)); }
+    KinBodyPtr CreateKinBody(EnvironmentBasePtr penv, const std::string& pname) { return RaveInterfaceCast<KinBody>(Create(penv, PT_KinBody, pname)); }
+    PlannerBasePtr CreatePlanner(EnvironmentBasePtr penv, const std::string& pname) { return RaveInterfaceCast<PlannerBase>(Create(penv, PT_Planner, pname)); }
+    SensorSystemBasePtr CreateSensorSystem(EnvironmentBasePtr penv, const std::string& pname) { return RaveInterfaceCast<SensorSystemBase>(Create(penv, PT_SensorSystem, pname)); }
+    ControllerBasePtr CreateController(EnvironmentBasePtr penv, const std::string& pname) { return RaveInterfaceCast<ControllerBase>(Create(penv, PT_Controller, pname)); }
+    ProblemInstancePtr CreateProblem(EnvironmentBasePtr penv, const std::string& pname) { return RaveInterfaceCast<ProblemInstance>(Create(penv, PT_ProblemInstance, pname)); }
+    IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr penv, const std::string& pname) { return RaveInterfaceCast<IkSolverBase>(Create(penv, PT_InverseKinematicsSolver, pname)); }
+    PhysicsEngineBasePtr CreatePhysicsEngine(EnvironmentBasePtr penv, const std::string& pname) { return RaveInterfaceCast<PhysicsEngineBase>(Create(penv, PT_PhysicsEngine, pname)); }
+    SensorBasePtr CreateSensor(EnvironmentBasePtr penv, const std::string& pname) { return RaveInterfaceCast<SensorBase>(Create(penv, PT_Sensor, pname)); }
+    CollisionCheckerBasePtr CreateCollisionChecker(EnvironmentBasePtr penv, const std::string& pname) { return RaveInterfaceCast<CollisionCheckerBase>(Create(penv, PT_CollisionChecker, pname)); }
+    RaveViewerBasePtr CreateViewer(EnvironmentBasePtr penv, const std::string& pname) { return RaveInterfaceCast<RaveViewerBase>(Create(penv, PT_Viewer, pname)); }
 
     /// Destroy all plugins and directories
     virtual void Destroy()
