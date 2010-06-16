@@ -18,6 +18,7 @@
 from __future__ import with_statement # for python 2.5
 
 import sys, copy, time, datetime
+import __builtin__
 from optparse import OptionParser
 try:
     from openravepy.metaclass import AutoReloader
@@ -73,7 +74,6 @@ class SolverSolution:
         self.jointevalsin = jointevalsin
         self.AddPiIfNegativeEq = AddPiIfNegativeEq
         self.IsHinge=IsHinge
-        assert(jointeval is not None or jointevalcos is not None or jointevalsin is not None)
     def subs(self,solsubs):
         if self.jointeval is not None:
             self.jointeval = [e.subs(solsubs) for e in self.jointeval]
@@ -2033,7 +2033,9 @@ class IKFastSolver(AutoReloader):
             if uselength:
                 solvedvars += self.solveIKTranslationLength(Positions, Positionsee, rawvars = curtransvars,otherunsolvedvars=otherunsolvedvars)
             if len(solvedvars) == 0:
-                raise ValueError('Could not solve variable from length of translation')
+                solvedvars = self.solveIKTranslationPair(Positions,Positionsee,rawvars=curtransvars,otherunsolvedvars=otherunsolvedvars)
+                if not solvedvars:
+                    raise ValueError('Could not solve variable from length of translation')
 
             # for all solutions, check if there is a divide by zero
             checkforzeros = []
@@ -2373,6 +2375,102 @@ class IKFastSolver(AutoReloader):
                 solvedvars.append((var.var,SolverSolution(var.var.name, jointeval=jointsolutions,IsHinge=self.IsHinge(var.var.name)), [self.codeComplexity(s) for s in jointsolutions]))
         return solvedvars
 
+    def solveIKTranslationPair(self, Positions, Positionsee, rawvars,otherunsolvedvars=None):
+        if len(rawvars) < 2:
+            return None
+        freevarinvsubs = [(f[1],f[0]) for f in self.freevarsubs]
+        vars = map(lambda rawvar: self.Variable(rawvar), rawvars)
+        for var0,var1 in xcombinations(vars,2):
+            varsubs=[(cos(var0.var),var0.cvar),(sin(var0.var),var0.svar),(cos(var1.var),var1.cvar),(sin(var1.var),var1.svar)]
+            unknownvars=[v[1] for v in varsubs]
+            varsubsinv = [(f[1],f[0]) for f in varsubs]
+            P = map(lambda i: (Positions[i] - Positionsee[i]).subs(varsubs), range(len(Positions)))
+            othervars = [v.var for v in vars if v!=var0 and v!=var1]
+
+            eqns = []
+            for p in P:
+                for j in range(3):
+                    if (len(othervars)==0 or not p[j].has_any_symbols(*othervars)):
+                        if otherunsolvedvars and len(otherunsolvedvars) > 0 and p[j].has_any_symbols(*otherunsolvedvars):
+                            continue
+                        if self.isExpressionUnique(eqns,p[j]) and self.isExpressionUnique(eqns,-p[j]):
+                            eqns.append(p[j])
+            if len(eqns) == 0:
+                continue
+
+            # group equations with single variables
+            symbolgen = cse_main.numbered_symbols('const')
+            neweqns = []
+            allsymbols = freevarinvsubs[:]
+            for eq in eqns:
+                eqnew, symbols = self.removeConstants(eq, unknownvars, symbolgen)
+                eqnew2,symbols2 = self.factorLinearTerms(eqnew,unknownvars, symbolgen)
+                allsymbols += symbols + [(s[0],s[1].subs(symbols)) for s in symbols2]
+                neweqns.append([self.codeComplexity(eq),Poly(eqnew2,*unknownvars)])
+            neweqns.sort(lambda x, y: x[0]-y[0])
+            groups=[]
+            for i,unknownvar in enumerate(unknownvars):
+                listeqs = []
+                for rank,eq in neweqns:
+                    # if variable ever appears, it should be alone
+                    if all([m[i] == 0 or __builtin__.sum(m) == m[i] for m in eq.iter_monoms()]):
+                        # make sure there's only one monom that includes other variables
+                        othervars = [__builtin__.sum(m) - m[i] > 0 for m in eq.iter_monoms()]
+                        if __builtin__.sum(othervars) <= 1:
+                            listeqs.append(eq)
+                groups.append(listeqs)
+            # find a group that has two or more equations:
+            goodgroup = [(i,g) for i,g in enumerate(groups) if len(g) >= 2]
+            if len(goodgroup) == 0:
+                continue
+            varindex=goodgroup[0][0]
+            unknownvar=unknownvars[goodgroup[0][0]]
+            eqs = goodgroup[0][1][0:2]
+            simpleterms = []
+            complexterms = []
+            for i in range(2):
+                terms=[(c,m) for c,m in eqs[i].iter_terms() if __builtin__.sum(m) - m[i] > 0]
+                simpleterms.append(eqs[i].sub_term(*terms[0]).as_basic()/terms[0][0]) # divide by the coeff
+                complexterms.append(Poly(0,*unknownvars).add_term(S.One,terms[0][1]).as_basic())
+            # here is the magic transformation:
+            finaleq = self.customtrigsimp(((complexterms[0]**2+complexterms[1]**2) - simpleterms[0]**2 - simpleterms[1]**2).subs(varsubsinv)).subs(varsubs)
+            complementvarindex = varindex-(varindex%2)+((varindex+1)%2)
+            complementvar = unknownvars[complementvarindex]
+            finaleq = expand(simplify(simplify(finaleq.subs(complementvar**2,1-unknownvar**2)).subs(allsymbols)))
+            # now that everything is with respect to one variable, simplify and solve the equation
+            eqnew, symbols = self.removeConstants(finaleq, unknownvars, symbolgen)
+            eqnew2,symbols2 = self.factorLinearTerms(eqnew,unknownvars, symbolgen)
+            allsymbols += symbols + [(s[0],s[1].subs(symbols)) for s in symbols2]
+            solutions=solve(eqnew2,unknownvar)
+            if solutions and len(solutions) > 0:
+                var = var0.var if varindex < 2 else var1.var
+                solversolution=SolverSolution(var.name, IsHinge=self.IsHinge(var.name))
+                if (varindex%2)==0:
+                    solversolution.jointevalcos=[s.subs(allsymbols) for s in solutions]
+                else:
+                    solversolution.jointevalsin=[s.subs(allsymbols) for s in solutions]
+                return [(var, solversolution, [self.codeComplexity(s) for s in solutions])]
+        return None
+
+    @staticmethod
+    def solveConicEquations(self,s0,s1,x,y):
+        p0=Poly(s0,x,y)
+        p1=Poly(s1,x,y)
+        p2=simplify(p1-p0/p0.coeff(2,2)*p1.coeff(2,2))
+        psubs = []
+        np0 = Poly(0,x,y)
+        np1 = Poly(0,x,y)
+        for coeff,monom in p0.iter_terms():
+            s=Symbol('p0c%d%d'%monom)
+            psubs.append((s,coeff))
+            np0 += s*x**monom[0]*y**monom[1]
+        for coeff,monom in p2.iter_terms():
+            s=Symbol('p1c%d%d'%monom)
+            psubs.append((s,coeff))
+            np1 += s*x**monom[0]*y**monom[1]
+        ysolution = solve(p2,y)
+        p=p0.subs(y,ysolution[0])
+        # get the coefficients
     # solve for just the rotation component
     def solveIKRotation(self, R, Ree, rawvars,endbranchtree=None,solvedvarsubs=[],ignorezerochecks=[]):
         vars = map(lambda rawvar: self.Variable(rawvar), rawvars)
@@ -2725,6 +2823,88 @@ class IKFastSolver(AutoReloader):
         elif expr.is_Pow and expr.exp.is_real and expr.exp < 0:
             checkforzero.append(expr.base)
         return checkforzero
+
+#     @staticmethod
+#     def sub_in(expression, pattern, replacement, match=True):
+#         """ Searches through the expression looking for the pattern and will
+#         replace the pattern with replacement if it finds it. Use wilds to write
+#         your pattern and replacement. Ex:
+#           x,y = symbols('xy'); j = Wild('j'); k = Wild('k')
+#           sub_in(exp(x*y), exp(j*k), cos(j-k))
+#         """
+#         # Might take out match optionality because will always need it.
+#         if match:
+#             check = lambda expression, pattern: expression.match(pattern)
+#         else:
+#             check = lambda expression, pattern: isinstance(expression,pattern)
+#         new = IKFastSolver._walk_it(expression, pattern, replacement, check)
+#         if new != None: return new
+#         else: return None
+# 
+#     @staticmethod
+#     def _walk_it(expression, pattern, replacement, check):
+#         """ Helper method for sub_in """
+#         # Grab the operation of the expression
+#         op = expression.__class__
+# 
+#         """ If the length of the expression and pattern are the same, then
+#         just scan through to make sure everything in the pattern is present in the
+#         expression. If so, then replace the wilds in the replacement with the
+#         variables they correspond to in the expression"""
+#         if len(expression.args) == len(pattern.args):
+#             expr_terms = [sub for sub in expression.args]
+#             pat_terms = [sub for sub in pattern.args]
+#             new = [expression]; v = []
+#             allThere = True
+#             for i in range(len(expr_terms)):
+#                 if check(expr_terms[i],pat_terms[i]) == None: allThere = False; break
+#             if allThere == True:
+#                 ch = list(check(expression,pattern).iteritems())
+#                 for i in ch: v.append(i)
+#                 new.insert(new.index(expression),replacement.subs(v))
+#                 new.remove(expression)
+#                 return Mul(*new)
+# 
+#     #    """ If the expression is just a function (generally just like exp(blah blah))
+#     #    then check if the whole expression matches the pattern. If so, replace the
+#     #    wilds in the replacement with the variables they correspond to in the
+#     #    expression"""
+#         if isinstance(type(expression),FunctionClass):
+#             new = [expression]; v = []
+#             if check(expression,pattern) != None:
+#                 ch = list(check(expression,pattern).iteritems())
+#                 for i in ch: v.append(i)
+#                 new.insert(new.index(expression),replacement.subs(v))
+#                 new.remove(expression)
+#                 return Mul(*new)
+#             elif expression.args:
+#                 new = [subexpression for subexpression in expression.args]; v = []
+#                 for sub in new:
+#                     if check(sub,pattern) != None:
+#                         ch = list(check(sub,pattern).iteritems())
+#                         for i in ch: v.append(i)
+#                         new.insert(new.index(sub),replacement.subs(v))
+#                         new.remove(sub)
+#                     else:
+#                         new.insert(new.index(sub),IKFastSolver._walk_it(sub, pattern, replacement, check))
+#                         new.remove(sub)
+#                 return op(*new)
+#             #return Mul(*new)
+# 
+#         #""" Else if the expression has multiple arguments, scan through each. """
+#         elif expression.args:
+#             new = [subexpression for subexpression in expression.args]; v = []
+#             for sub in new:
+#                 if check(sub,pattern) != None:
+#                     ch = list(check(sub,pattern).iteritems())
+#                     for i in ch: v.append(i)
+#                     new.insert(new.index(sub),replacement.subs(v))
+#                     new.remove(sub)
+#                 else:
+#                     new.insert(new.index(sub),IKFastSolver._walk_it(sub, pattern, replacement, check))
+#                     new.remove(sub)
+#             return op(*new)
+#         else: return expression
                 
     def customtrigsimp(self,expr, deep=False):
         """

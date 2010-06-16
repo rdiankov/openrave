@@ -35,7 +35,7 @@ class CalibrationViews(metaclass.AutoReloader):
             pose = poseFromMatrix(target.GetTransform())
             target.SetTransform(pose)
         self.vmodel = visibilitymodel.VisibilityModel(robot=robot,target=target,sensorname=sensorname)
-    def createvisibility(self,anglerange=pi/3,dists=arange(0.05,0.5,0.15),angledensity=1,num=inf):
+    def createvisibility(self,anglerange=pi/3,dists=arange(0.05,1.0,0.15),angledensity=1,num=inf):
         """
         sample the transformations of the camera. the camera x and y axes should always be aligned with the 
         xy axes of the calibration pattern.

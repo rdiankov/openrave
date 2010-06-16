@@ -85,7 +85,7 @@ def test_drillray():
     from sympy import *
     env = Environment()
     env.Reset()
-    robot = env.ReadRobotXMLFile('/home/rdiankov/newdrill.robot.xml')
+    robot = env.ReadRobotXMLFile('rayrobot.robot.xml')
     env.AddRobot(robot)
     manip = robot.GetActiveManipulator()
     ikmodel = inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
