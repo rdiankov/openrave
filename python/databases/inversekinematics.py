@@ -318,7 +318,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                             success += 1
                         else:
                             print 'wrong solution to: ',targetpos,targetdir, 'returned is: ',realpos,realdir,'wrong sol is:',sol,', org values are:',orgvalues
-                            print sum((targetdir-realdir)**2), sum((targetprojpos-realprojpos)**2)
+                            print 'errors direction: ', sum((targetdir-realdir)**2), ' on position: ',sum((targetprojpos-realprojpos)**2)
                     else:
                         print 'failed to find: ',targetpos,targetdir,'solution is: ',orgvalues
                 return success/numiktests

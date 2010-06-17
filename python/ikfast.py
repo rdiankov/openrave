@@ -525,7 +525,7 @@ int main(int argc, char** argv)
                 fcode += '__dummy__;\n'
                 for var,expr in subexprs:
                     fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
-            for i in range(12):
+            for i in range(len(outputnames)):
                 fcode += self.writeEquations(lambda k: outputnames[i],reduced_exprs[i])
             code += self.indentCode(fcode,4)
             code += '}\n\n'
@@ -585,6 +585,27 @@ int main(int argc, char** argv)
         code += "IKFAST_API int getNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
         code += "IKFAST_API int getIKRealSize() { return sizeof(IKReal); }\n\n"
         code += 'IKFAST_API int getIKType() { return %d; }\n\n'%IkType.Rotation3D
+        if node.Rfk:
+            code += "/// solves the inverse kinematics equations.\n"
+            code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
+            code += "IKFAST_API void fk(const IKReal* j, IKReal* eetrans, IKReal* eerot) {\n"
+            allvars = node.solvejointvars + node.freejointvars
+            subexprs,reduced_exprs=customcse (node.Rfk[0:3,0:3].subs([(v[0],Symbol('j[%d]'%v[1])) for v in allvars]))
+            outputnames = ['eerot[0]','eerot[1]','eerot[2]','eerot[3]','eerot[4]','eerot[5]','eerot[6]','eerot[7]','eerot[8]']
+            fcode = ''
+            if len(subexprs) > 0:
+                fcode = 'IKReal '
+                vars = []
+                for var,expr in subexprs:
+                    fcode += str(var) + ', '
+                    vars.append(var)
+                fcode += '__dummy__;\n'
+                for var,expr in subexprs:
+                    fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
+            for i in range(len(outputnames)):
+                fcode += self.writeEquations(lambda k: outputnames[i],reduced_exprs[i])
+            code += self.indentCode(fcode,4)
+            code += '}\n\n'
         code += "/// solves the inverse kinematics equations.\n"
         code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
         code += "IKFAST_API bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
@@ -638,6 +659,31 @@ int main(int argc, char** argv)
         code += "IKFAST_API int getNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
         code += "IKFAST_API int getIKRealSize() { return sizeof(IKReal); }\n\n"
         code += 'IKFAST_API int getIKType() { return %d; }\n\n'%IkType.Translation3D
+        if node.Pfk:
+            code += "/// solves the inverse kinematics equations.\n"
+            code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
+            code += "IKFAST_API void fk(const IKReal* j, IKReal* eetrans, IKReal* eerot) {\n"
+            allvars = node.solvejointvars + node.freejointvars
+            allsubs = [(v[0],Symbol('j[%d]'%v[1])) for v in allvars]
+            eqs = []
+            for eq in node.Pfk:
+                eqs.append(eq.subs(allsubs))
+            subexprs,reduced_exprs=customcse (eqs)
+            outputnames = ['eetrans[0]','eetrans[1]','eetrans[2]']
+            fcode = ''
+            if len(subexprs) > 0:
+                fcode = 'IKReal '
+                vars = []
+                for var,expr in subexprs:
+                    fcode += str(var) + ', '
+                    vars.append(var)
+                fcode += '__dummy__;\n'
+                for var,expr in subexprs:
+                    fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
+            for i in range(len(outputnames)):
+                fcode += self.writeEquations(lambda k: outputnames[i],reduced_exprs[i])
+            code += self.indentCode(fcode,4)
+            code += '}\n\n'
         code += "/// solves the inverse kinematics equations.\n"
         code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
         code += "IKFAST_API bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
@@ -681,6 +727,31 @@ int main(int argc, char** argv)
         code += "IKFAST_API int getNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
         code += "IKFAST_API int getIKRealSize() { return sizeof(IKReal); }\n\n"
         code += 'IKFAST_API int getIKType() { return %d; }\n\n'%IkType.Direction3D
+        if node.Dfk:
+            code += "/// solves the inverse kinematics equations.\n"
+            code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
+            code += "IKFAST_API void fk(const IKReal* j, IKReal* eetrans, IKReal* eerot) {\n"
+            allvars = node.solvejointvars + node.freejointvars
+            allsubs = [(v[0],Symbol('j[%d]'%v[1])) for v in allvars]
+            eqs = []
+            for eq in node.Dfk:
+                eqs.append(eq.subs(allsubs))
+            subexprs,reduced_exprs=customcse (eqs)
+            outputnames = ['eerot[0]','eerot[1]','eerot[2]']
+            fcode = ''
+            if len(subexprs) > 0:
+                fcode = 'IKReal '
+                vars = []
+                for var,expr in subexprs:
+                    fcode += str(var) + ', '
+                    vars.append(var)
+                fcode += '__dummy__;\n'
+                for var,expr in subexprs:
+                    fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
+            for i in range(len(outputnames)):
+                fcode += self.writeEquations(lambda k: outputnames[i],reduced_exprs[i])
+            code += self.indentCode(fcode,4)
+            code += '}\n\n'
         code += "/// solves the inverse kinematics equations.\n"
         code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
         code += "IKFAST_API bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
@@ -732,6 +803,33 @@ int main(int argc, char** argv)
         code += "IKFAST_API int getNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
         code += "IKFAST_API int getIKRealSize() { return sizeof(IKReal); }\n\n"
         code += 'IKFAST_API int getIKType() { return %d; }\n\n'%IkType.Ray4D
+        if node.Dfk and node.Pfk:
+            code += "/// solves the inverse kinematics equations.\n"
+            code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
+            code += "IKFAST_API void fk(const IKReal* j, IKReal* eetrans, IKReal* eerot) {\n"
+            allvars = node.solvejointvars + node.freejointvars
+            allsubs = [(v[0],Symbol('j[%d]'%v[1])) for v in allvars]
+            eqs = []
+            for eq in node.Pfk:
+                eqs.append(eq.subs(allsubs))
+            for eq in node.Dfk:
+                eqs.append(eq.subs(allsubs))
+            subexprs,reduced_exprs=customcse (eqs)
+            outputnames = ['eetrans[0]','eetrans[1]','eetrans[2]','eerot[0]','eerot[1]','eerot[2]']
+            fcode = ''
+            if len(subexprs) > 0:
+                fcode = 'IKReal '
+                vars = []
+                for var,expr in subexprs:
+                    fcode += str(var) + ', '
+                    vars.append(var)
+                fcode += '__dummy__;\n'
+                for var,expr in subexprs:
+                    fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
+            for i in range(len(outputnames)):
+                fcode += self.writeEquations(lambda k: outputnames[i],reduced_exprs[i])
+            code += self.indentCode(fcode,4)
+            code += '}\n\n'
         code += "/// solves the inverse kinematics equations.\n"
         code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
         code += "IKFAST_API bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"

@@ -313,7 +313,7 @@ public:
             RAVELOG_WARN(str(boost::format("failed to init library %s\n")%libraryname));
             return false;
         }
-        
+
         if( lib->getIKRealSize() == 4 ) {
             return _PerfTiming<IKSolutionFloat>(sout,lib,num);
         }
@@ -331,6 +331,8 @@ public:
         BOOST_ASSERT(lib->getIKRealSize()==sizeof(typename T::IKReal));
         typename IkFastSolver<typename T::IKReal,T>::IkFn ikfn = (typename IkFastSolver<typename T::IKReal,T>::IkFn)lib->ikfn;
         typename IkFastSolver<typename T::IKReal,T>::FkFn fkfn = (typename IkFastSolver<typename T::IKReal,T>::FkFn)lib->fkfn;
+        if( !ikfn || !fkfn )
+            return false;
         vector<uint64_t> vtimes(num);
         vector<T> vsolutions; vsolutions.reserve(32);
         vector<typename T::IKReal> vjoints(lib->getNumJoints()), vfree(lib->getNumFreeParameters());
@@ -347,7 +349,7 @@ public:
 
             uint64_t numtoaverage=10;
             uint64_t starttime = GetNanoTime();
-            for(int j = 0; j < numtoaverage; ++j) {
+            for(uint64_t j = 0; j < numtoaverage; ++j) {
                 ikfn(eetrans,eerot,vfree.size() > 0 ? &vfree[0] : NULL,vsolutions);
             }
             vtimes[i] = (GetNanoTime()-starttime)/numtoaverage;
