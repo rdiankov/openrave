@@ -41,7 +41,7 @@ class InverseKinematicsModel(OpenRAVEModel):
     def load(self,*args,**kwargs):
         return self.setrobot(*args,**kwargs)
     def getversion(self):
-        return 5
+        return 6
     def setrobot(self,freeinc=None):
         self.iksolver = None
         self.freeinc=freeinc
@@ -109,7 +109,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         elif self.robot.GetKinematicsGeometryHash() == '7d30ec51a4b393b08f7febca4b9abd34': # stage
             if iktype is None:
                 iktype=IkParameterization.Type.Rotation3D
-        elif self.robot.GetKinematicsGeometryHash() == 'bec5e13f7bc7f7fcc3e07e8a82522bee': # pr2
+        elif self.robot.GetKinematicsGeometryHash() == 'c4bc563aaac76119946c4aa6d98364f8': # pr2
             if iktype is None:
                 if self.manip.GetName().find('camera') >= 0:
                     # cameras are attached, so use a ray parameterization
@@ -220,6 +220,11 @@ class InverseKinematicsModel(OpenRAVEModel):
             for objectfile in objectfiles:
                 os.remove(objectfile)
 
+    def perftiming(self,num):
+        with self.env:
+            ikfastproblem = [p for p in self.env.GetLoadedProblems() if p.GetXMLId() == 'IKFast'][0]
+            results = ikfastproblem.SendCommand('PerfTiming num %d %s'%(num,self.getfilename()))
+            return [double(s)*1e-6 for s in results.split()]
     def testik(self,numiktests):
         with self.robot:
             # set base to identity to avoid complications when reporting errors
@@ -392,6 +397,8 @@ class InverseKinematicsModel(OpenRAVEModel):
                           help='The discretization value of freejoints.')
         parser.add_option('--numiktests', action='store',type='int',dest='numiktests',default=None,
                           help='Will test the ik solver against NUMIKTESTS random robot configurations and program will exit with 0 if success rate exceeds the test success rate, otherwise 1.')
+        parser.add_option('--perftiming', action='store',type='int',dest='perftiming',default=None,
+                          help='Will time the internal ikfast solver.')
         return parser
     @staticmethod
     def RunFromParser(Model=None,parser=None):
@@ -401,7 +408,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         Model = lambda robot: InverseKinematicsModel(robot=robot)
         OpenRAVEModel.RunFromParser(Model=Model,parser=parser)
 
-        if options.numiktests is not None:
+        if options.numiktests or options.perftiming:
             print 'testing the success rate of robot ',options.robot
             env = Environment()
             try:
@@ -421,8 +428,12 @@ class InverseKinematicsModel(OpenRAVEModel):
                 ikmodel = InverseKinematicsModel(robot,iktype=iktype)
                 if not ikmodel.setrobot(freeinc=options.freeinc):
                     raise ValueError('failed to load ik')
-                successrate = ikmodel.testik(numiktests=options.numiktests)
-                print 'success rate is: ',successrate
+                if options.numiktests:
+                    successrate = ikmodel.testik(numiktests=options.numiktests)
+                    print 'success rate is: ',successrate
+                elif options.perftiming:
+                    results = array(ikmodel.perftiming(num=options.perftiming))
+                    print 'mean: %fs, median: %fs, min: %fs, max: %fs'%(mean(results),median(results),min(results),max(results))
             finally:
                 env.Destroy()
 

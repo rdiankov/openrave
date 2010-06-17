@@ -30,6 +30,7 @@ class IkFastSolver : public IkSolverBase
 
  public:
     typedef bool (*IkFn)(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<Solution>& vsolutions);
+    typedef bool (*FkFn)(const IKReal* j, IKReal* eetrans, IKReal* eerot);
     
  IkFastSolver(IkFn pfnik, const std::vector<int>& vfreeparams, dReal fFreeInc, int nTotalJoints, IkParameterization::Type iktype, EnvironmentBasePtr penv) : IkSolverBase(penv), _vfreeparams(vfreeparams), _pfnik(pfnik), _fFreeInc(fFreeInc), _nTotalJoints(nTotalJoints), _iktype(iktype) {}
     virtual ~IkFastSolver() {}

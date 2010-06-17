@@ -50,11 +50,12 @@ def test_ik():
     import inversekinematics
     env = Environment()
     env.SetDebugLevel(DebugLevel.Debug)
-    robot = env.ReadRobotXMLFile('robots/pr2-beta-static.robot.xml')
+    robot = env.ReadRobotXMLFile('robots/puma.robot.xml')#pr2-beta-static.robot.xml')
     env.AddRobot(robot)
-    manip=robot.SetActiveManipulator('leftarm_torso')
+    #manip=robot.SetActiveManipulator('leftarm_torso')
     self = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
     self.load()
+    self.perftiming(10)
     robot.SetJointValues([0.17, 1, 1, 0, 0, 0, 0, 0],manip.GetArmJoints())
     T=manip.GetEndEffectorTransform()
     print robot.CheckSelfCollision()
@@ -85,7 +86,7 @@ def test_drillray():
     from sympy import *
     env = Environment()
     env.Reset()
-    robot = env.ReadRobotXMLFile('rayrobot.robot.xml')
+    robot = env.ReadRobotXMLFile('ray2.robot.xml')
     env.AddRobot(robot)
     manip = robot.GetActiveManipulator()
     ikmodel = inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
@@ -131,15 +132,15 @@ def test_6dik():
     from sympy import *
     env = Environment()
     env.Reset()
-    robot = env.ReadRobotXMLFile('robots/man1.robot.xml')#pr2-beta-static.robot.xml')
+    robot = env.ReadRobotXMLFile('robots/pr2-beta-static.robot.xml')
     env.AddRobot(robot)
-    manip = robot.SetActiveManipulator('leftarm')
+    manip = robot.SetActiveManipulator('rightarm')
     ikmodel = inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
 
     solvefn=ikfast.IKFastSolver.solveFullIK_6D
     solvejoints = list(manip.GetArmJoints())
-    solvejoints.remove(12)
-    freeparams=[12]
+    solvejoints.remove(56)
+    freeparams=[56]
     sourcefilename = 'temp.cpp'
     self = ikfast.IKFastSolver(kinbody=robot,accuracy=None,precision=None)
     #code = self.generateIkSolver(manip.GetBase().GetIndex(),manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejoints,usedummyjoints=False,solvefn=solvefn)

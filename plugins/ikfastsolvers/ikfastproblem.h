@@ -32,6 +32,7 @@
 class IKSolutionFloat
 {
  public:
+    typedef float IKReal;
     /// Gets a solution given its free parameters
     /// \param pfree The free parameters required, range is in [-pi,pi]
     void GetSolution(float* psolution, const float* pfree) const {
@@ -67,6 +68,7 @@ class IKSolutionFloat
 class IKSolutionDouble
 {
  public:
+    typedef double IKReal;
     /// Gets a solution given its free parameters
     /// \param pfree The free parameters required, range is in [-pi,pi]
     void GetSolution(double* psolution, const double* pfree) const {
@@ -113,7 +115,11 @@ class IKFastProblem : public ProblemInstance
     {
     public:
         IKLibrary() : plib(NULL) {}
-        ~IKLibrary() { if( plib != NULL ) SysCloseLibrary(plib); }
+        ~IKLibrary() {
+            if( plib != NULL ) {
+                SysCloseLibrary(plib);
+            }
+        }
 
         bool Init(const string& ikname, const string& libraryname)
         {
@@ -156,6 +162,7 @@ class IKFastProblem : public ProblemInstance
                 RAVELOG_WARNA("failed to find ik in %s\n", _libraryname.c_str());
                 return false;
             }
+            fkfn = SysLoadSym(plib, "fk");
 
             vfree.resize(getNumFreeParameters());
             for(size_t i = 0; i < vfree.size(); ++i)
@@ -175,6 +182,13 @@ class IKFastProblem : public ProblemInstance
         const string& GetIKName() { return _ikname; }
         const string& GetLibraryName() { return _libraryname; }
         int GetIKType() { return getIKType(); }
+
+        getNumFreeParametersFn getNumFreeParameters;
+        getFreeParametersFn getFreeParameters;
+        getNumJointsFn getNumJoints;
+        getIKRealSizeFn getIKRealSize;
+        getIKTypeFn getIKType;
+        void* ikfn, *fkfn;
 
     private:
         void* SysLoadLibrary(const char* lib)
@@ -212,12 +226,6 @@ class IKFastProblem : public ProblemInstance
         }
     
         void* plib;
-        getNumFreeParametersFn getNumFreeParameters;
-        getFreeParametersFn getFreeParameters;
-        getNumJointsFn getNumJoints;
-        getIKRealSizeFn getIKRealSize;
-        getIKTypeFn getIKType;
-        void* ikfn;
         string _ikname, _libraryname;
         vector<int> vfree;
     };
@@ -232,6 +240,10 @@ public:
                         "Dynamically adds an ik solver to openrave (based on ikfast code generation).\n"
                         "Usage:\n    AddIkLibrary iksolvername iklibrarypath\n"
                         "return the type of inverse kinematics solver (IkParamterization::Type)");
+        RegisterCommand("PerfTiming",boost::bind(&IKFastProblem::PerfTiming,this,_1,_2),
+                        "Times the ik call of a given library.\n"
+                        "Usage:\n    PerfTiming [options] iklibrarypath\n"
+                        "return the set of time measurements made");
     }
 
     virtual ~IKFastProblem() {}
@@ -270,6 +282,81 @@ public:
         return true;
     }
 
+    bool PerfTiming(ostream& sout, istream& sinput)
+    {
+        string cmd, libraryname;
+        int num=100;
+        while(!sinput.eof()) {
+            istream::streampos pos = sinput.tellg();
+            sinput >> cmd;
+            if( !sinput )
+                break;
+            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+
+            if( cmd == "num" ) {
+                sinput >> num;
+            }
+            else {
+                sinput.clear(); // have to clear eof bit
+                sinput.seekg(pos);
+                getline(sinput, libraryname);
+                break;
+            }
+        }
+
+        boost::trim(libraryname);
+        if( libraryname.size() == 0 ) {
+            return false;
+        }
+        boost::shared_ptr<IKLibrary> lib(new IKLibrary());
+        if( !lib->Init("", libraryname) ) {
+            RAVELOG_WARN(str(boost::format("failed to init library %s\n")%libraryname));
+            return false;
+        }
+        
+        if( lib->getIKRealSize() == 4 ) {
+            return _PerfTiming<IKSolutionFloat>(sout,lib,num);
+        }
+        else if( lib->getIKRealSize() == 8 ) {
+            return _PerfTiming<IKSolutionDouble>(sout,lib,num);
+        }
+        else {
+            throw openrave_exception("bad real size");
+        }
+        return true;
+    }
+
+    template<typename T> bool _PerfTiming(ostream& sout, boost::shared_ptr<IKLibrary> lib, int num)
+    {
+        BOOST_ASSERT(lib->getIKRealSize()==sizeof(typename T::IKReal));
+        typename IkFastSolver<typename T::IKReal,T>::IkFn ikfn = (typename IkFastSolver<typename T::IKReal,T>::IkFn)lib->ikfn;
+        typename IkFastSolver<typename T::IKReal,T>::FkFn fkfn = (typename IkFastSolver<typename T::IKReal,T>::FkFn)lib->fkfn;
+        vector<uint64_t> vtimes(num);
+        vector<T> vsolutions; vsolutions.reserve(32);
+        vector<typename T::IKReal> vjoints(lib->getNumJoints()), vfree(lib->getNumFreeParameters());
+        typename T::IKReal eerot[9],eetrans[3];
+        for(size_t i = 0; i < vtimes.size(); ++i) {
+            for(size_t j = 0; j < vjoints.size(); ++j) {
+                vjoints[j] = RaveRandomDouble()*2*PI;
+            }
+            for(size_t j = 0; j < vfree.size(); ++j) {
+                vfree[j] = vjoints[lib->getFreeParameters()[j]];
+            }
+            fkfn(&vjoints[0],eetrans,eerot);
+            vsolutions.resize(0);
+
+            uint64_t numtoaverage=10;
+            uint64_t starttime = GetNanoTime();
+            for(int j = 0; j < numtoaverage; ++j) {
+                ikfn(eetrans,eerot,vfree.size() > 0 ? &vfree[0] : NULL,vsolutions);
+            }
+            vtimes[i] = (GetNanoTime()-starttime)/numtoaverage;
+        }
+        FOREACH(it,vtimes) {
+            sout << ((*it)/1000) << " ";
+        }
+        return true;
+    }
     IkSolverBasePtr CreateIkSolver(const string& name, dReal freeinc, EnvironmentBasePtr penv)
     {
         /// start from the newer libraries

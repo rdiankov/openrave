@@ -116,7 +116,7 @@ class ReachabilityModel(OpenRAVEModel):
         if self.robot.GetKinematicsGeometryHash() == '0d258d45aacb7ea4f6f88c4602d4b077' or self.robot.GetKinematicsGeometryHash() == '2c7f45a52ae3cbd4c0663d8abbd5f020': # wam
             if maxradius is None:
                 maxradius = 1.1
-        elif self.robot.GetKinematicsGeometryHash() == 'bec5e13f7bc7f7fcc3e07e8a82522bee': # pr2
+        elif self.robot.GetKinematicsGeometryHash() == 'c4bc563aaac76119946c4aa6d98364f8': # pr2
             if xyzdelta is None:
                 xyzdelta = 0.03
             if quatdelta is None:
