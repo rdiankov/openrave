@@ -436,7 +436,6 @@ public:
                 return false;
             if( ct & CT_SelfCollision ) {
                 bAddLastPoint = false;
-                break;
             }
         }
 
