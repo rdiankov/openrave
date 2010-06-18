@@ -577,7 +577,7 @@ public:
     }
 
     // process all mimic joints
-    FOREACH(itjoint, vjoints)
+    FOREACHC(itjoint, vjoints)
     {
         KinBody::JointConstPtr pjoint = itjoint->second;
       if( pjoint->GetMimicJointIndex() < 0 )
@@ -642,7 +642,7 @@ public:
     daeSafeCast<domKinematics_param>(articulated_bind->createAndPlace(COLLADA_ELEMENT_PARAM))->setRef(param_base.c_str());
 
     //  Joint parameters
-    FOREACH(itjoint, vjoints)
+    FOREACHC(itjoint, vjoints)
     {
       KinBody::JointConstPtr pjoint = itjoint->second;
       string jointname = str(boost::format("joint%d")%itjoint->first);
