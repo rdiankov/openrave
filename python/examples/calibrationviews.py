@@ -22,7 +22,7 @@ from numpy import *
 from optparse import OptionParser
 from openravepy import *
 from openravepy.interfaces import BaseManipulation
-from openravepy.databases import visibilitymodel
+from openravepy.databases import inversekinematics,visibilitymodel
 
 class CalibrationViews(metaclass.AutoReloader):
     def __init__(self,robot,sensorname,target=None,maxvelmult=None,randomize=False):
@@ -91,16 +91,19 @@ class CalibrationViews(metaclass.AutoReloader):
                 config=configs[poseorder[index]]
                 data=self.moveToConfiguration(config,waitcond=waitcond)
                 if data is not None:
-                    data['jointvalues'] = self.robot.GetJointValues()[self.vmodel.manip.GetArmJoints()]
-                    data['Tlink'] = self.vmodel.attachedsensor.GetAttachingLink().GetTransform()
+                    with self.robot:
+                        data['jointvalues'] = self.robot.GetJointValues()[self.vmodel.manip.GetArmJoints()]
+                        data['Tlink'] = self.vmodel.attachedsensor.GetAttachingLink().GetTransform()
                     observations.append(data)
                     if len(observations) >= maxobservations:
                         break
-                # prune the observations
-                allposes = poses[poseorder]
-                quatdist = quatArrayTDist(allposes[index,0:4],allposes[:,0:4])
-                transdist= sqrt(sum((allposes[:,4:7]-tile(allposes[index,4:7],(len(allposes),1)))**2,1))
-                poseorder = poseorder[0.3*quatdist+transdist > posedist]
+                    # prune the nearby observations
+                    allposes = poses[poseorder]
+                    quatdist = quatArrayTDist(allposes[index,0:4],allposes[:,0:4])
+                    transdist= sqrt(sum((allposes[:,4:7]-tile(allposes[index,4:7],(len(allposes),1)))**2,1))
+                    poseorder = poseorder[0.3*quatdist+transdist > posedist]
+                else:
+                    poseorder.pop(index) # just prune this one since the real pattern might be a little offset
             return observations
         finally:
             graphs = None
@@ -124,6 +127,48 @@ class CalibrationViews(metaclass.AutoReloader):
                     raw_input('%d: press any key'%i)
         finally:
             graphs = None
+
+    @staticmethod
+    def gatherNeighborImages(robot,sensorname,waitcond,maxangle = 0.5,maxdist = 0.15,averagedist=0.03,**kwargs):
+        """Given that the pattern is visible in the camera, move the robot around the local neighborhood. This does not rely on the visibiliy information of the pattern and does not create a pattern"""
+        env=robot.GetEnv()
+        with env:
+            # sample a cone around -z
+            localpositions = SpaceSampler().sampleR3(averagedist=averagedist,boxdims=[2*maxdist,2*maxdist,maxdist])
+            localpositions -= maxdist
+            angles = arctan2(sqrt(localpositions[:,0]**2+localpositions[:,1]**2),-localpositions[:,2])
+            localpositions = localpositions[angles<maxangle]
+            attachedsensor = robot.GetSensor(sensorname)
+            Tsensor = attachedsensor.GetTransform()
+            manip = [manip for manip in robot.GetManipulators() if manip.GetEndEffector()==attachedsensor.GetAttachingLink()][0]
+            robot.SetActiveManipulator(manip)
+            ikmodel = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
+            if not ikmodel.load():
+                ikmodel.autogenerate()
+            positions = transformPoints(Tsensor, localpositions)
+            Tcameratogripper = dot(linalg.inv(Tsensor),manip.GetEndEffectorTransform())
+            configs = [robot.GetJointValues()[manip.GetArmJoints()]]
+            for position in positions:
+                Tsensor[0:3,3] = position
+                config=manip.FindIKSolution(dot(Tsensor,Tcameratogripper),True)
+                if config is not None:
+                    configs.append(config)
+        observations = []
+        basemanip = BaseManipulation(robot)
+        for config in configs:
+            with env:
+                robot.SetActiveDOFs(manip.GetArmJoints())
+                basemanip.MoveActiveJoints(config)
+            while not robot.GetController().IsDone():
+                time.sleep(0.01)
+            o = waitcond()
+            if o is not None:
+                with env:
+                    o['jointvalues'] = robot.GetJointValues()[manip.GetArmJoints()]
+                    o['Tlink'] = attachedsensor.GetAttachingLink().GetTransform()
+                observations.append(o)
+        return observations
+
     @staticmethod
     def gatherCalibrationData(robot,sensorname,waitcond,target=None,**kwargs):
         """function to gather calibration data, relies on an outside waitcond function to return information about the calibration pattern"""

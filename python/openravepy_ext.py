@@ -324,7 +324,7 @@ class SpaceSampler(metaclass.AutoReloader):
     @staticmethod
     def sampleR3(averagedist,boxdims):
         """low-discrepancy sampling using primes.
-        The samples are evenly distributed with an average distance of averagedist inside the box with extents boxextents.
+        The samples are evenly distributed with an average distance of averagedist inside the box with dimensions boxdims.
         Algorithim from "Geometric Discrepancy: An Illustrated Guide" by Jiri Matousek"""
         minaxis = numpy.argmin(boxdims)
         maxaxis = numpy.argmax(boxdims)
@@ -342,7 +342,7 @@ class SpaceSampler(metaclass.AutoReloader):
         pts[:,1] = meddimdist*numpy.mod(0.5+0.5*numpy.sqrt(numpy.arange(0,5.0*N,5.0)),1.0)
         pts[:,2] = meddimdist*numpy.mod(0.5+numpy.sqrt(numpy.arange(0,13.0*N,13.0)),1.0)
         if boxdims[minaxis] < meddimdist:
-            pts = pts[pts[:,minaxis]<=2.0*boxdims[minaxis],:]
+            pts = pts[pts[:,minaxis]<=boxdims[minaxis],:]
         if boxdims[maxaxis] > meddimdist:
             # have to copy across the max dimension
             numfullcopies = numpy.floor(boxdims[maxaxis]/meddimdist)
