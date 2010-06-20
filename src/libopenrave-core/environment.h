@@ -946,7 +946,7 @@ class Environment : public EnvironmentBase
             InterfaceBasePtr pinterface = body;
             OpenRAVEXMLParser::InterfaceXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_KinBody, pinterface, "kinbody", atts);
             bool bSuccess = ParseXMLFile(preader, filename);
-            body = RaveInterfaceCast<RobotBase>(pinterface);
+            body = RaveInterfaceCast<KinBody>(pinterface);
             if( !bSuccess || !body )
                 return KinBodyPtr();
             body->__strxmlfilename = preader->_filename;
@@ -970,7 +970,7 @@ class Environment : public EnvironmentBase
         InterfaceBasePtr pinterface = body;
         OpenRAVEXMLParser::InterfaceXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_KinBody, pinterface, "kinbody", atts);
         bool bSuccess = ParseXMLData(preader, data);
-        body = RaveInterfaceCast<RobotBase>(pinterface);
+        body = RaveInterfaceCast<KinBody>(pinterface);
         if( !bSuccess || !body )
             return KinBodyPtr();
         body->__strxmlfilename = preader->_filename;

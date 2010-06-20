@@ -930,19 +930,22 @@ protected:
     {
         string bodyname, xmlfile;
         is >> bodyname >> xmlfile;
-        if( !is )
+        if( !is ) {
             return false;
+        }
 
         SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        KinBodyPtr body = GetEnv()->CreateKinBody();
+        KinBodyPtr body = GetEnv()->ReadKinBodyXMLFile(KinBodyPtr(),xmlfile,list<pair<string,string> >());
 
-        if( !body->InitFromFile(xmlfile, list<pair<string,string> >()) )
+        if( !body ) {
             return false;
+        }
         body->SetName(bodyname);
 
-        if( !GetEnv()->AddKinBody(body) )
+        if( !GetEnv()->AddKinBody(body) ) {
             return false;
+        }
 
         os << body->GetEnvironmentId();
         return true;
