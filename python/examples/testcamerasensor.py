@@ -40,7 +40,7 @@ class CameraViewerGUI(threading.Thread):
 
     def updateimage(self):
         data = self.sensor.GetSensorData()
-        if data is not None and not self.lastid == data.id:
+        if data is not None and not self.lastid == data.stamp:
             width = data.imagedata.shape[1]
             height = data.imagedata.shape[0]
             self.imagelck.acquire()
@@ -59,7 +59,7 @@ class CameraViewerGUI(threading.Thread):
 
             self.container.canvas.create_image(self.container.width/2, self.container.height/2, image=photo)
             self.container.obr = photo
-            self.lastid = data.id
+            self.lastid = data.stamp
         self.main.after(100,self.updateimage)
 
     def saveimage(self,filename):

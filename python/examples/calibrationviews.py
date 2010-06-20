@@ -103,7 +103,7 @@ class CalibrationViews(metaclass.AutoReloader):
                     transdist= sqrt(sum((allposes[:,4:7]-tile(allposes[index,4:7],(len(allposes),1)))**2,1))
                     poseorder = poseorder[0.3*quatdist+transdist > posedist]
                 else:
-                    poseorder.pop(index) # just prune this one since the real pattern might be a little offset
+                    poseorder = delete(poseorder,index) # just prune this one since the real pattern might be a little offset
             return observations
         finally:
             graphs = None

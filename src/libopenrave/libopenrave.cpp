@@ -61,7 +61,7 @@ RAVE_API const std::string& RaveGetInterfaceName(PluginType type)
 {
     std::map<PluginType,std::string>::const_iterator it = RaveGetInterfaceNamesMap().find(type);
     if( it == RaveGetInterfaceNamesMap().end() )
-        throw openrave_exception("Invalid type specified");
+        throw openrave_exception(str(boost::format("Invalid type %d specified")%type));
     return it->second;
 }
 

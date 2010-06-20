@@ -140,11 +140,14 @@ class Environment : public EnvironmentBase
         }
 
         if( !localchecker ) { // take any collision checker
-            PLUGININFO info;
             std::list<RaveDatabase::PluginPtr> listplugins; _pdatabase->GetPlugins(listplugins);
             FOREACHC(itplugin, listplugins) {
-                std::map<PluginType, std::vector<std::string> >::const_iterator itnames = (*itplugin)->GetInfo().interfacenames.find(PT_CollisionChecker);
-                if( itnames != (*itplugin)->GetInfo().interfacenames.end() ) {
+                PLUGININFO info;
+                if( !(*itplugin)->GetInfo(info) ) {
+                    continue;
+                }
+                std::map<PluginType, std::vector<std::string> >::const_iterator itnames =info.interfacenames.find(PT_CollisionChecker);
+                if( itnames != info.interfacenames.end() ) {
                     FOREACHC(itname, itnames->second) {
                         localchecker = _pdatabase->CreateCollisionChecker(shared_from_this(), *itname);
                         if( !!localchecker )
@@ -298,8 +301,12 @@ class Environment : public EnvironmentBase
         plugins.clear();
         list<RaveDatabase::PluginPtr> listdbplugins;
         _pdatabase->GetPlugins(listdbplugins);
-        FOREACHC(itplugin, listdbplugins)
-            plugins.push_back(pair<string,PLUGININFO>((*itplugin)->GetName(),(*itplugin)->GetInfo()));
+        FOREACHC(itplugin, listdbplugins) {
+            PLUGININFO info;
+            if( (*itplugin)->GetInfo(info) ) {
+                plugins.push_back(pair<string,PLUGININFO>((*itplugin)->GetName(),info));
+            }
+        }
     }
 
     virtual void GetLoadedInterfaces(PLUGININFO& info)
@@ -308,8 +315,9 @@ class Environment : public EnvironmentBase
         list<RaveDatabase::PluginPtr> listdbplugins;
         _pdatabase->GetPlugins(listdbplugins);
         FOREACHC(itplugin, listdbplugins) {
-            FOREACHC(it,(*itplugin)->GetInfo().interfacenames)
-                info.interfacenames[it->first].insert(info.interfacenames[it->first].end(),it->second.begin(),it->second.end());
+            if( !(*itplugin)->GetInfo(info) ) {
+                RAVELOG_WARN(str(boost::format("failed to get plugin info: %s\n")%(*itplugin)->GetName()));
+            }
         }
     }
 

@@ -70,11 +70,13 @@ public:
         }
 
         const string& GetName() const { return ppluginname; }
-        const PLUGININFO& GetInfo() const { return info; }
+        bool GetInfo(PLUGININFO& info) {
+            return !!pfnGetPluginAttributes && pfnGetPluginAttributes(&info, sizeof(info));
+        }
+        
     protected:
         boost::weak_ptr<RaveDatabase> _pdatabase;
         string ppluginname;
-        PLUGININFO info;
 
         void* plibrary; // loaded library (NULL if not loaded)
         CreateInterfaceFn pfnCreate;
@@ -136,6 +138,14 @@ public:
         if( name.size() == 0 )
             return InterfaceBasePtr();
 
+        size_t nInterfaceNameLength = name.find_first_of(' ');
+        if( nInterfaceNameLength == string::npos )
+            nInterfaceNameLength = name.size();
+        if( nInterfaceNameLength == 0 ) {
+            RAVELOG_WARN(str(boost::format("interface name \"%s\" needs to start with a valid character\n")%name));
+            return InterfaceBasePtr();
+        }
+                
         EnvironmentMutex::scoped_lock lock(_mutex);
         const char* hash = RaveGetInterfaceHash(type);
         for(list<PluginPtr>::iterator itplugin = _listplugins.begin(); itplugin != _listplugins.end(); ++itplugin) {
@@ -274,12 +284,19 @@ public:
     {
         EnvironmentMutex::scoped_lock lock(_mutex);
         size_t ind = interfacename.find_first_of(' ');
-        if( ind == string::npos )
+        if( ind == string::npos ) {
             ind = interfacename.size();
+        }
         FOREACHC(itplugin, _listplugins) {
-            FOREACHC(itname, (*itplugin)->info.interfacenames[type]) {
-                if( ind >= itname->size() && strnicmp(itname->c_str(),interfacename.c_str(),ind) == 0 )
-                    return true;
+            PLUGININFO info;
+            if( (*itplugin)->GetInfo(info) ) {
+                FOREACHC(itname, info.interfacenames[type]) {
+                    if( ind >= itname->size() && strnicmp(itname->c_str(),interfacename.c_str(),ind) == 0 )
+                        return true;
+                }
+            }
+            else {
+                RAVELOG_WARNA(str(boost::format("%s: GetPluginAttributes failed\n")%(*itplugin)->ppluginname));
             }
         }
         return false;
@@ -335,9 +352,9 @@ protected:
 #else
         p->pfnGetPluginAttributes = (GetPluginAttributesFn)SysLoadSym(p->plibrary, "_Z19GetPluginAttributesPN8OpenRAVE10PLUGININFOEi");
 #endif
-        if( p->pfnGetPluginAttributes == NULL ) {
+        if( !p->pfnGetPluginAttributes ) {
             p->pfnGetPluginAttributes = (GetPluginAttributesFn)SysLoadSym(p->plibrary, "GetPluginAttributes");
-            if( p->pfnGetPluginAttributes == NULL ) {
+            if( !p->pfnGetPluginAttributes ) {
                 RAVELOG_ERRORA(str(boost::format("%s: can't load GetPluginAttributes function\n")%p->ppluginname));
                 return PluginPtr();
             }
@@ -360,9 +377,6 @@ protected:
         dladdr((void*)p->pfnCreate, &info);
         RAVELOG_DEBUGA("loading plugin: %s\n", info.dli_fname);
 #endif
-        
-        if( !p->pfnGetPluginAttributes(&p->info, sizeof(p->info)) )
-            RAVELOG_WARNA("%s: GetPluginAttributes failed\n", p->ppluginname.c_str());
 
         return p;
     }
