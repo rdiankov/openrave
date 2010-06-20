@@ -744,8 +744,10 @@ public:
     /// @name XML Parsing, File Loading
     //@{ 
 
-    /// Loads a scene, need to Lock if calling outside simulation thread
+    /// Loads a scene from an XML file, environment is locked automatically making this method thread-safe
     virtual bool Load(const std::string& filename) = 0;
+    /// Loads a scene from XML-formatted data, environment is locked automatically making this method thread-safe
+    virtual bool LoadXMLData(const std::string& data) = 0;
     /// Saves a scene depending on the filename extension. Default is in COLLADA format
     virtual bool Save(const std::string& filename) = 0;
 

@@ -437,6 +437,17 @@ class Environment : public EnvironmentBase
     
         return bSuccess;
     }
+
+    virtual bool LoadXMLData(const std::string& data)
+    {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        if( !ParseXMLData(boost::shared_ptr<OpenRAVEXMLParser::EnvironmentXMLReader>(new OpenRAVEXMLParser::EnvironmentXMLReader(shared_from_this(),std::list<std::pair<std::string,std::string> >())),data) ) {
+            RAVELOG_WARNA("load failed environment data\n");
+            return false;
+        }
+        return true;
+    }
+    
     virtual bool Save(const std::string& filename)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
