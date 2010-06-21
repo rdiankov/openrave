@@ -28,9 +28,9 @@ struct get_dtype
 DECLARE_DTYPE_FOR( double, "float64" )
 DECLARE_DTYPE_FOR( float, "float32" )
 DECLARE_DTYPE_FOR( int, "int32" )
-DECLARE_DTYPE_FOR( unsigned, "uint32" )
-DECLARE_DTYPE_FOR( long, "int64" )
-DECLARE_DTYPE_FOR( unsigned long, "uint64" )
+DECLARE_DTYPE_FOR( uint32_t, "uint32" )
+DECLARE_DTYPE_FOR( int64_t, "int64" )
+DECLARE_DTYPE_FOR( uint64_t, "uint64" )
 
 }
 

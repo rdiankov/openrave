@@ -3002,6 +3002,20 @@ object axisAngleFromRotationMatrix(object R)
     return toPyVector3(Vector(0,0,0));
 }
 
+object axisAngleFromQuat(object oquat)
+{
+    Vector q = ExtractVector4(oquat);
+    dReal sinangle = RaveSqrt(q.y*q.y+q.z*q.z+q.w*q.w);
+    if( sinangle < 1e-7 ) {
+        // sin(angle/2)=0  implies that rotation is identity
+        return toPyVector3(Vector(0,0,0));
+    }
+
+    dReal angle = 2.0*RaveAtan2(sinangle,q.x);
+    dReal fmult = angle/sinangle;
+    return toPyVector3(Vector(q.y*fmult,q.z*fmult,q.w*fmult));
+}
+
 object rotationMatrixFromQuat(object oquat)
 {
     Transform t; t.rot = ExtractVector4(oquat);
@@ -3975,6 +3989,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
     def("quatFromAxisAngle",openravepy::quatFromAxisAngle2, args("axis","angle"), "Converts an axis-angle rotation into a quaternion");
     def("quatFromRotationMatrix",openravepy::quatFromRotationMatrix, args("rotation"), "Converts the rotation of a matrix into a quaternion");
     def("axisAngleFromRotationMatrix",openravepy::axisAngleFromRotationMatrix, args("rotation"), "Converts the rotation of a matrix into axis-angle representation");
+    def("axisAngleFromQuat",openravepy::axisAngleFromQuat, args("quat"), "Converts a quaternion into the axis-angle representation");
     def("rotationMatrixFromQuat",openravepy::rotationMatrixFromQuat, args("quat"), "Converts a quaternion to a 3x3 matrix");
     def("rotationMatrixFromQArray",openravepy::rotationMatrixFromQArray,args("quatarray"),"Converts an array of quaternions to a list of 3x3 rotation matrices");
     def("matrixFromQuat",openravepy::matrixFromQuat, args("quat"), "Converts a quaternion to a 4x4 affine matrix");
