@@ -93,11 +93,11 @@ class CalibrationViews(metaclass.AutoReloader):
             for position in positions:
                 Tsensor[0:3,3] = position
                 for Trotation in Trotations:
-                    T=dot(dot(Tsensor,Tcameratogripper),Trotation)
+                    T=dot(dot(Tsensor,Trotation),Tcameratogripper)
                     config=manip.FindIKSolution(T,True)
                     if config is not None:
                         configs.append(config)
-                        poses.append(poseFromMatrix(T))
+                        poses.append(poseFromMatrix(dot(Tsensor,Trotation)))
         return array(poses), array(configs)
 
     def computeAndMoveToObservations(self,waitcond=None,maxobservations=inf,posedist=0.05,usevisibility=True,**kwargs):
