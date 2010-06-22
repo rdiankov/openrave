@@ -31,13 +31,13 @@ class CalibrationViews(metaclass.AutoReloader):
         self.basemanip = BaseManipulation(self.robot,maxvelmult=maxvelmult)
         if target is None:
             target = self.env.GetKinBody('calibration')
-        if randomize:
+        if randomize and target is not None:
             pose = poseFromMatrix(target.GetTransform())
             target.SetTransform(pose)
         self.vmodel = visibilitymodel.VisibilityModel(robot=robot,target=target,sensorname=sensorname)
-    def createvisibility(self,anglerange=pi/3,dists=arange(0.05,1.0,0.15),angledensity=1,num=inf):
-        """
-        sample the transformations of the camera. the camera x and y axes should always be aligned with the 
+
+    def computevisibilityposes(self,anglerange=pi/3,dists=arange(0.05,1.0,0.15),angledensity=1,num=inf):
+        """sample the transformations of the camera. the camera x and y axes should always be aligned with the 
         xy axes of the calibration pattern.
         """
         with self.env:
@@ -74,39 +74,71 @@ class CalibrationViews(metaclass.AutoReloader):
                         except planning_error:
                             pass
             return array(poses), array(configs)
-    def moveToObservations(self,waitcond=None,maxobservations=inf,posedist=0.05,**kwargs):
-        """moves robot to all visible configurations"""
-        poses,configs = self.createvisibility(**kwargs)
 
+    def computelocalposes(self,maxangle = 0.5,maxdist = 0.15,averagedist=0.03,angledelta=0.2,**kwargs):
+        with self.env:
+            # sample a cone around -z
+            localpositions = SpaceSampler().sampleR3(averagedist=averagedist,boxdims=[2*maxdist,2*maxdist,maxdist])
+            localpositions -= maxdist
+            angles = arctan2(sqrt(localpositions[:,0]**2+localpositions[:,1]**2),-localpositions[:,2])
+            localpositions = localpositions[angles<maxangle]
+            Tsensor = self.vmodel.attachedsensor.GetTransform()
+            manip = self.vmodel.manip
+            self.robot.SetActiveManipulator(manip)
+            positions = transformPoints(Tsensor, localpositions)
+            Tcameratogripper = dot(linalg.inv(Tsensor),manip.GetEndEffectorTransform())
+            configs = [self.robot.GetJointValues()[manip.GetArmJoints()]]
+            poses = [poseFromMatrix(manip.GetEndEffectorTransform())]
+            Trotations = [eye(4),matrixFromAxisAngle([angledelta,0,0]),matrixFromAxisAngle([-angledelta,0,0]),matrixFromAxisAngle([0,angledelta,0]),matrixFromAxisAngle([0,-angledelta,0])]
+            for position in positions:
+                Tsensor[0:3,3] = position
+                for Trotation in Trotations:
+                    T=dot(dot(Tsensor,Tcameratogripper),Trotation)
+                    config=manip.FindIKSolution(T,True)
+                    if config is not None:
+                        configs.append(config)
+                        poses.append(poseFromMatrix(T))
+        return array(poses), array(configs)
+
+    def computeAndMoveToObservations(self,waitcond=None,maxobservations=inf,posedist=0.05,usevisibility=True,**kwargs):
+        """Computes several configuration for the robot to move. If usevisibility is True, will use the visibility model of the pattern to gather data.
+        Otherwise, given that the pattern is currently detected in the camera, move the robot around the local neighborhood. This does not rely on the visibiliy information of the pattern and does not create a pattern
+        """
+        if usevisibility:
+            poses,configs = self.computevisibilityposes(**kwargs)
+        else:
+            poses,configs = self.computelocalposes(**kwargs)                
         graphs = [self.env.drawlinelist(array([pose[4:7],pose[4:7]+0.05*rotationMatrixFromQuat(pose[0:4])[0:3,2]]),1) for pose in poses]
         try:
-            # order the poses with respect to distance
-            targetcenter = self.vmodel.target.ComputeAABB().pos()
-            poseorder=arange(len(poses))
-            observations=[]
-            while len(poseorder) > 0:
-                with self.robot:
-                    curconfig=self.robot.GetJointValues()[self.vmodel.manip.GetArmJoints()]
-                    index=argmin(sum((configs[poseorder]-tile(curconfig,(len(poseorder),1)))**2,1))
-                config=configs[poseorder[index]]
-                data=self.moveToConfiguration(config,waitcond=waitcond)
-                if data is not None:
-                    with self.robot:
-                        data['jointvalues'] = self.robot.GetJointValues()[self.vmodel.manip.GetArmJoints()]
-                        data['Tlink'] = self.vmodel.attachedsensor.GetAttachingLink().GetTransform()
-                    observations.append(data)
-                    if len(observations) >= maxobservations:
-                        break
-                    # prune the nearby observations
-                    allposes = poses[poseorder]
-                    quatdist = quatArrayTDist(allposes[index,0:4],allposes[:,0:4])
-                    transdist= sqrt(sum((allposes[:,4:7]-tile(allposes[index,4:7],(len(allposes),1)))**2,1))
-                    poseorder = poseorder[0.3*quatdist+transdist > posedist]
-                else:
-                    poseorder = delete(poseorder,index) # just prune this one since the real pattern might be a little offset
-            return observations
+            return self.moveToObservations(poses,configs,waitcond=waitcond,maxobservations=maxobservations,posedist=posedist)
         finally:
             graphs = None
+    def moveToObservations(self,poses,configs,waitcond=None,maxobservations=inf,posedist=0.05):
+        # order the poses with respect to distance
+        poseorder=arange(len(poses))
+        observations=[]
+        while len(poseorder) > 0:
+            with self.robot:
+                curconfig=self.robot.GetJointValues()[self.vmodel.manip.GetArmJoints()]
+                index=argmin(sum((configs[poseorder]-tile(curconfig,(len(poseorder),1)))**2,1))
+            config=configs[poseorder[index]]
+            data=self.moveToConfiguration(config,waitcond=waitcond)
+            if data is not None:
+                with self.robot:
+                    data['jointvalues'] = self.robot.GetJointValues()[self.vmodel.manip.GetArmJoints()]
+                    data['Tlink'] = self.vmodel.attachedsensor.GetAttachingLink().GetTransform()
+                observations.append(data)
+                if len(observations) >= maxobservations:
+                    break
+                # prune the nearby observations
+                allposes = poses[poseorder]
+                quatdist = quatArrayTDist(allposes[index,0:4],allposes[:,0:4])
+                transdist= sqrt(sum((allposes[:,4:7]-tile(allposes[index,4:7],(len(allposes),1)))**2,1))
+                poseorder = poseorder[0.3*quatdist+transdist > posedist]
+            else:
+                poseorder = delete(poseorder,index) # just prune this one since the real pattern might be a little offset
+        return observations
+
     def moveToConfiguration(self,config,waitcond=None):
         """moves the robot to a configuration"""
         with self.env:
@@ -129,62 +161,22 @@ class CalibrationViews(metaclass.AutoReloader):
             graphs = None
 
     @staticmethod
-    def gatherNeighborImages(robot,sensorname,waitcond,maxangle = 0.5,maxdist = 0.15,averagedist=0.03,**kwargs):
-        """Given that the pattern is visible in the camera, move the robot around the local neighborhood. This does not rely on the visibiliy information of the pattern and does not create a pattern"""
-        env=robot.GetEnv()
-        with env:
-            # sample a cone around -z
-            localpositions = SpaceSampler().sampleR3(averagedist=averagedist,boxdims=[2*maxdist,2*maxdist,maxdist])
-            localpositions -= maxdist
-            angles = arctan2(sqrt(localpositions[:,0]**2+localpositions[:,1]**2),-localpositions[:,2])
-            localpositions = localpositions[angles<maxangle]
-            attachedsensor = robot.GetSensor(sensorname)
-            Tsensor = attachedsensor.GetTransform()
-            manip = [manip for manip in robot.GetManipulators() if manip.GetEndEffector()==attachedsensor.GetAttachingLink()][0]
-            robot.SetActiveManipulator(manip)
-            ikmodel = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
-            if not ikmodel.load():
-                ikmodel.autogenerate()
-            positions = transformPoints(Tsensor, localpositions)
-            Tcameratogripper = dot(linalg.inv(Tsensor),manip.GetEndEffectorTransform())
-            configs = [robot.GetJointValues()[manip.GetArmJoints()]]
-            for position in positions:
-                Tsensor[0:3,3] = position
-                config=manip.FindIKSolution(dot(Tsensor,Tcameratogripper),True)
-                if config is not None:
-                    configs.append(config)
-        observations = []
-        basemanip = BaseManipulation(robot)
-        for config in configs:
-            with env:
-                robot.SetActiveDOFs(manip.GetArmJoints())
-                basemanip.MoveActiveJoints(config)
-            while not robot.GetController().IsDone():
-                time.sleep(0.01)
-            o = waitcond()
-            if o is not None:
-                with env:
-                    o['jointvalues'] = robot.GetJointValues()[manip.GetArmJoints()]
-                    o['Tlink'] = attachedsensor.GetAttachingLink().GetTransform()
-                observations.append(o)
-        return observations
-
-    @staticmethod
     def gatherCalibrationData(robot,sensorname,waitcond,target=None,**kwargs):
         """function to gather calibration data, relies on an outside waitcond function to return information about the calibration pattern"""
         env=robot.GetEnv()
         data=waitcond()
-        T=data['T']
-        type = data.get('type',None)
-        if target is None and type:
-            target = env.ReadKinBodyXMLFile(type)
-            if target:
-                env.AddKinBody(target,True)
-                env.UpdatePublishedBodies()
+        if data is not None and 'T' in data:
+            T=data['T']
+            type = data.get('type',None)
+            if target is None and type:
+                target = env.ReadKinBodyXMLFile(type)
+                if target:
+                    env.AddKinBody(target,True)
+                    env.UpdatePublishedBodies()
         self = CalibrationViews(robot=robot,sensorname=sensorname,target=target)
         if target:
             target.SetTransform(dot(self.vmodel.attachedsensor.GetTransform(),T))
-        return self.moveToObservations(waitcond=waitcond,**kwargs), self.vmodel.target
+        return self.computeAndMoveToObservations(waitcond=waitcond,**kwargs), self.vmodel.target
 
 def run():
     parser = OptionParser(description='Views a calibration pattern from multiple locations.')
@@ -194,6 +186,10 @@ def run():
                       help='Name of the sensor whose views to generate (default=%default)')
     parser.add_option('--norandomize', action='store_false',dest='randomize',default=True,
                       help='If set, will not randomize the bodies and robot position in the scene.')
+    parser.add_option('--novisibility', action='store_false',dest='usevisibility',default=True,
+                      help='If set, will not perform any visibility searching.')
+    parser.add_option('--posedist',action="store",type='float',dest='posedist',default=0.05,
+                      help='An average distance between gathered poses. The smaller the value, the more poses robot will gather close to each other')
     (options, args) = parser.parse_args()
 
     env = Environment()
@@ -204,7 +200,7 @@ def run():
         env.UpdatePublishedBodies()
         time.sleep(0.1) # give time for environment to update
         self = CalibrationViews(robot,sensorname=options.sensorname,randomize=options.randomize)
-        self.moveToObservations()
+        self.computeAndMoveToObservations(usevisibility=options.usevisibility,posedist=options.posedist)
         raw_input('press any key to exit... ')
     finally:
         env.Destroy()
