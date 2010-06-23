@@ -5,7 +5,7 @@ exec_prefix=@CMAKE_INSTALL_PREFIX@
 exec_prefix_set=no
 
 usage="\
-Usage: openrave-config [--prefix[=DIR]] [--exec-prefix[=DIR]] [--version] [--cflags] [--libs] [--libs-only-l] [--libs-only-L] [--cflags-only-I] [--shared-libs] [--python-dir] [--octave-dir] [--matlab-dir] [--usage | --help]"
+Usage: openrave-config [--prefix[=DIR]] [--exec-prefix[=DIR]] [--version] [--cflags] [--libs] [--libs-core] [--libs-only-l] [--libs-only-L] [--cflags-only-I] [--shared-libs] [--python-dir] [--octave-dir] [--matlab-dir] [--usage | --help]"
 
 if test $# -eq 0; then
       exit 1
@@ -47,16 +47,19 @@ while test $# -gt 0; do
       echo -I@CMAKE_INSTALL_PREFIX@/include @OPENRAVE_BOOST_INCLUDE_DIRS@
       ;;
     --libs)
-      echo -L@CMAKE_INSTALL_PREFIX@/lib -lopenrave @OPENRAVE_BOOST_LIB_DIRS@ -l@Boost_THREAD_LIBRARY@
+      echo -L@CMAKE_INSTALL_PREFIX@/lib -lopenrave @OPENRAVE_BOOST_LIB_DIRS@ @Boost_THREAD_LIBRARY@
+      ;;
+    --libs-core)
+      echo -L@CMAKE_INSTALL_PREFIX@/lib -lopenrave -lopenrave-core @OPENRAVE_BOOST_LIB_DIRS@ @Boost_THREAD_LIBRARY@
       ;;
     --libs-only-l)
-      echo -lopenrave -l@Boost_THREAD_LIBRARY@
+      echo -lopenrave @Boost_THREAD_LIBRARY@
       ;;
     --libs-only-L)
       echo -L@CMAKE_INSTALL_PREFIX@/lib @OPENRAVE_BOOST_LIB_DIRS@
       ;;
     --shared-libs)
-      echo -L@CMAKE_INSTALL_PREFIX@/lib -lopenrave.so @OPENRAVE_BOOST_LIB_DIRS@ -l@Boost_THREAD_LIBRARY@
+      echo -L@CMAKE_INSTALL_PREFIX@/lib -lopenrave.so @OPENRAVE_BOOST_LIB_DIRS@ @Boost_THREAD_LIBRARY@
       ;;
     --python-dir)
       echo @OPENRAVE_PYTHON_INSTALL_DIR@
