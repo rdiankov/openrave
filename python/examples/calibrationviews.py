@@ -134,7 +134,7 @@ class CalibrationViews(metaclass.AutoReloader):
                 allposes = poses[poseorder]
                 quatdist = quatArrayTDist(allposes[index,0:4],allposes[:,0:4])
                 transdist= sqrt(sum((allposes[:,4:7]-tile(allposes[index,4:7],(len(allposes),1)))**2,1))
-                poseorder = poseorder[0.3*quatdist+transdist > posedist]
+                poseorder = poseorder[0.2*quatdist+transdist > posedist]
             else:
                 poseorder = delete(poseorder,index) # just prune this one since the real pattern might be a little offset
         return observations
@@ -168,10 +168,11 @@ class CalibrationViews(metaclass.AutoReloader):
         if data is not None and 'T' in data:
             T=data['T']
             type = data.get('type',None)
-            if target is None and type:
-                target = env.ReadKinBodyXMLFile(type)
-                if target is None: # try to read as data
+            if target is None and type is not None:
+                if type[0] == '<': # test for XML
                     target = env.ReadKinBodyXMLData(type)
+                else:
+                    target = env.ReadKinBodyXMLFile(type)
                 if target is not None:
                     env.AddKinBody(target,True)
                     env.UpdatePublishedBodies()

@@ -461,14 +461,14 @@ bool QtCoinViewer::GetCameraImage(std::vector<uint8_t>& memory, int width, int h
     void* ret = NULL;
     if (_timerSensor->isScheduled() && _bUpdateEnvironment) {
         if( !ForceUpdatePublishedBodies() ) {
-            RAVELOG_WARNA("failed to GetCameraImage: force update failed\n");
+            RAVELOG_WARN("failed to GetCameraImage: force update failed\n");
             return false;
         }
         EnvMessagePtr pmsg(new GetCameraImageMessage(shared_viewer(), &ret, memory, width, height, t, KK));
         pmsg->callerexecute();
     }
     else
-        RAVELOG_WARNA("failed to GetCameraImage: viewer is not updating\n");
+        RAVELOG_VERBOSE("failed to GetCameraImage: viewer is not updating\n");
     
     return *(bool*)&ret;
 }
