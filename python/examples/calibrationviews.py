@@ -170,7 +170,9 @@ class CalibrationViews(metaclass.AutoReloader):
             type = data.get('type',None)
             if target is None and type:
                 target = env.ReadKinBodyXMLFile(type)
-                if target:
+                if target is None: # try to read as data
+                    target = env.ReadKinBodyXMLData(type)
+                if target is not None:
                     env.AddKinBody(target,True)
                     env.UpdatePublishedBodies()
         self = CalibrationViews(robot=robot,sensorname=sensorname,target=target)
