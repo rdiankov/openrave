@@ -385,11 +385,11 @@ if( NOT COLLADA_FOUND AND ZLIB_FOUND AND Boost_FILESYSTEM_FOUND AND Boost_SYSTEM
   if( NOT libpcrecpp_FOUND )
     message(STATUS "System pcre not found, using local from sources")
     # include the local pcre
-    add_subdirectory(3rdparty/pcre)
-    set(libpcrecpp_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/pcre)
+    add_subdirectory(3rdparty/pcre-8.02)
+    set(libpcrecpp_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/pcre-8.02)
     set(libpcrecpp_LIBRARY_DIRS)
-    set(libpcrecpp_LIBRARIES pcre_local)
-    set(libpcrecpp_CFLAGS_OTHERS "-DHAVE_CONFIG_H -DPCRE_STATIC")
+    set(libpcrecpp_LIBRARIES pcrecpp_local)
+    set(libpcrecpp_CFLAGS_OTHERS)
     set(libpcrecpp_LDFLAGS_OTHERS)
   endif()
 

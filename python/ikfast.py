@@ -2170,7 +2170,7 @@ class IKFastSolver(AutoReloader):
             if uselength:
                 solvedvars += self.solveIKTranslationLength(Positions, Positionsee, rawvars = curtransvars,otherunsolvedvars=otherunsolvedvars)
             if len(solvedvars) == 0:
-                solvedvars = self.solveIKTranslationPair(Positions,Positionsee,rawvars=curtransvars,otherunsolvedvars=otherunsolvedvars)
+                solvedvars = self.solveIKTranslationPair(Positions,Positionsee,rawvars=curtransvars,otherunsolvedvars=otherunsolvedvars,uselength=uselength)
                 if not solvedvars:
                     raise ValueError('Could not solve variable from length of translation')
 
@@ -2514,26 +2514,34 @@ class IKFastSolver(AutoReloader):
                 solvedvars.append((var.var,SolverSolution(var.var.name, jointeval=jointsolutions,IsHinge=self.IsHinge(var.var.name)), [self.codeComplexity(s) for s in jointsolutions]))
         return solvedvars
 
-    def solveIKTranslationPair(self, Positions, Positionsee, rawvars,otherunsolvedvars=None):
+    def solveIKTranslationPair(self, Positions, Positionsee, rawvars,otherunsolvedvars=None,uselength=True):
         if len(rawvars) < 2:
             return None
         freevarinvsubs = [(f[1],f[0]) for f in self.freevarsubs]
         vars = map(lambda rawvar: self.Variable(rawvar), rawvars)
+
+        AllEquations = []
+        for i in range(len(Positions)):
+            x = Positions[i] - Positionsee[i]
+            for j in range(3):
+                AllEquations.append(Positions[i][j] - Positionsee[i][j])
+            if uselength:
+                AllEquations.append(self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp((Positions[i][0]**2+Positions[i][1]**2+Positions[i][2]**2).expand())).expand())) -
+                                    self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp((Positionsee[i][0]**2+Positionsee[i][1]**2+Positionsee[i][2]**2).expand())).expand())))
+
         for var0,var1 in xcombinations(vars,2):
             varsubs=[(cos(var0.var),var0.cvar),(sin(var0.var),var0.svar),(cos(var1.var),var1.cvar),(sin(var1.var),var1.svar)]
             unknownvars=[v[1] for v in varsubs]
             varsubsinv = [(f[1],f[0]) for f in varsubs]
-            P = map(lambda i: (Positions[i] - Positionsee[i]).subs(varsubs), range(len(Positions)))
             othervars = [v.var for v in vars if v!=var0 and v!=var1]
-
             eqns = []
-            for p in P:
-                for j in range(3):
-                    if (len(othervars)==0 or not p[j].has_any_symbols(*othervars)):
-                        if otherunsolvedvars and len(otherunsolvedvars) > 0 and p[j].has_any_symbols(*otherunsolvedvars):
-                            continue
-                        if self.isExpressionUnique(eqns,p[j]) and self.isExpressionUnique(eqns,-p[j]):
-                            eqns.append(p[j])
+            for p in AllEquations:
+                if (len(othervars)==0 or not p.has_any_symbols(*othervars)):
+                    if otherunsolvedvars and len(otherunsolvedvars) > 0 and p.has_any_symbols(*otherunsolvedvars):
+                        continue
+                    eq = p.subs(self.freevarsubs+varsubs)
+                    if self.isExpressionUnique(eqns,eq) and self.isExpressionUnique(eqns,-eq):
+                        eqns.append(eq)
             if len(eqns) == 0:
                 continue
 
@@ -2583,16 +2591,39 @@ class IKFastSolver(AutoReloader):
                             listeqs.append(eq)
                 groups.append(listeqs)
             # find a group that has two or more equations:
+            useconic=False
             goodgroup = [(i,g) for i,g in enumerate(groups) if len(g) >= 2]
             if len(goodgroup) == 0:
-                continue
+                # might have a set of equations that can be solved with conics
+                # look for equations where the variable and its complement are alone
+                groups=[]
+                for i in [0,2]:
+                    unknownvar = unknownvars[i]
+                    complementvar = unknownvars[i+1]
+                    listeqs = []
+                    for rank,eq in neweqns:
+                        # if variable ever appears, it should be alone
+                        if all([(m[i] == 0 and m[i+1]==0) or __builtin__.sum(m) == m[i]+m[i+1] for m in eq.iter_monoms()]):
+                            # make sure there's only one monom that includes other variables
+                            othervars = [__builtin__.sum(m) - m[i]-m[i+1] > 0 for m in eq.iter_monoms()]
+                            if __builtin__.sum(othervars) <= 1:
+                                listeqs.append(eq)
+                    groups.append(listeqs)
+                    groups.append([]) # necessary to get indices correct
+                goodgroup = [(i,g) for i,g in enumerate(groups) if len(g) >= 2]
+                if len(goodgroup) == 0:
+                    continue
+                useconic=True
             varindex=goodgroup[0][0]
             unknownvar=unknownvars[goodgroup[0][0]]
             eqs = goodgroup[0][1][0:2]
             simpleterms = []
             complexterms = []
             for i in range(2):
-                terms=[(c,m) for c,m in eqs[i].iter_terms() if __builtin__.sum(m) - m[i] > 0]
+                if useconic:
+                    terms=[(c,m) for c,m in eqs[i].iter_terms() if __builtin__.sum(m) - m[varindex] - m[varindex+1] > 0]
+                else:
+                    terms=[(c,m) for c,m in eqs[i].iter_terms() if __builtin__.sum(m) - m[varindex] > 0]
                 simpleterms.append(eqs[i].sub_term(*terms[0]).as_basic()/terms[0][0]) # divide by the coeff
                 complexterms.append(Poly(0,*unknownvars).add_term(S.One,terms[0][1]).as_basic())
             # here is the magic transformation:
@@ -2600,7 +2631,21 @@ class IKFastSolver(AutoReloader):
             complementvarindex = varindex-(varindex%2)+((varindex+1)%2)
             complementvar = unknownvars[complementvarindex]
             finaleq = expand(simplify(simplify(finaleq.subs(complementvar**2,1-unknownvar**2)).subs(allsymbols)))
-
+            if useconic:
+                # equation of the form a*cos^2 + b*cos*sin + c*cos + d*sin + e = 0
+                # we also have cos*cos + sin*sin -1 = 0
+                conicpoly = Poly(finaleq,unknownvar,complementvar)
+                # the general method to solve an intersection of two conics C1 and C2 is to first
+                # note that any solution to their intersection is also a solution of
+                # x^T C x = 0, where C = t1*C1 + t2*C2
+                # for t1, t2 in Reals. Without loss of generality, we set t2 = 1, and find t1 when
+                # C becomes degenerate, ie det(C) = 0. This produces a cubic equation in t1,
+                # which gives 4 solutions. Gathering all the equations produced by the degenerate
+                # conic should give rise to two equations of lines. Intersect these lines with the simpler of the
+                # two conics, the unit circle: c^2+s^2-1 = 0
+                print finalpoly
+                print 'have conic section equation, but cannot solve yet!'
+                continue
             newunknownvars = unknownvars[:]
             newunknownvars.remove(unknownvar)
             if finaleq.has_any_symbols(*newunknownvars):
@@ -2623,26 +2668,17 @@ class IKFastSolver(AutoReloader):
         return None
 
     @staticmethod
-    def solveConicEquations(self,s0,s1,x,y):
-        p0=Poly(s0,x,y)
-        p1=Poly(s1,x,y)
-        p2=simplify(p1-p0/p0.coeff(2,2)*p1.coeff(2,2))
-        psubs = []
-        np0 = Poly(0,x,y)
-        np1 = Poly(0,x,y)
-        for coeff,monom in p0.iter_terms():
-            s=Symbol('p0c%d%d'%monom)
-            psubs.append((s,coeff))
-            np0 += s*x**monom[0]*y**monom[1]
-        for coeff,monom in p2.iter_terms():
-            s=Symbol('p1c%d%d'%monom)
-            psubs.append((s,coeff))
-            np1 += s*x**monom[0]*y**monom[1]
-        ysolution = solve(p2,y)
-        p=p0.subs(y,ysolution[0])
-        # get the coefficients
-    # solve for just the rotation component
+    def solveConicEquationWithCircle(self,conicpoly):
+        x,y = conicpoly.symbols
+        # x^2+y^2-1 = 0
+        C0 = Matrix(3,3,[conicpoly.coeff(2,0),0.5*conicpoly.coeff(1,1),0.5*conicpoly.coeff(1,0),0.5*conicpoly.coeff(1,1),conicpoly.coeff(0,2),0.5*conicpoly.coeff(0,1),0.5*conicpoly.coeff(1,0),0.5*conicpoly.coeff(0,1),conicpoly.coeff(0,0)])
+        # call a function to solve this conic equation
+        #C1 = eye(3); C1[2,2] = -1
+        #t=Symbol('t')
+        #tpoly=(C0+t*C1).det() # usually this freezes because equation is too big
+        
     def solveIKRotation(self, R, Ree, rawvars,endbranchtree=None,solvedvarsubs=[],ignorezerochecks=[]):
+        """Solve for the rotation component"""
         vars = map(lambda rawvar: self.Variable(rawvar), rawvars)
         subreal = [(cos(var.var),var.cvar) for var in vars]+[(sin(var.var),var.svar) for var in vars]
         subrealinv = [(var.cvar,cos(var.var)) for var in vars]+[(var.svar,sin(var.var)) for var in vars]

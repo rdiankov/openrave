@@ -1,6 +1,0 @@
-include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR})
-add_definitions(-DHAVE_CONFIG_H -DPCRE_STATIC)
-file(GLOB pcre_files ${CMAKE_CURRENT_SOURCE_DIR}/*.c)
-file(GLOB pcre_files_cc ${CMAKE_CURRENT_SOURCE_DIR}/*.cc)
-add_library(pcre_local STATIC ${pcre_files} ${pcre_files_cc})
-set_target_properties(pcre_local PROPERTIES COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS}")
