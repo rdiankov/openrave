@@ -45,12 +45,15 @@ try:
 except ImportError:
     pass
 
-def xcombinations(items,n):
-    if n == 0: yield[]
-    else:
-        for  i in xrange(len(items)):
-            for cc in xcombinations(items[i+1:],n-1):
-                yield [items[i]]+cc
+try:
+    from itertools import izip, combinations
+except ImportError:
+    def combinations(items,n):
+        if n == 0: yield[]
+        else:
+            for  i in xrange(len(items)):
+                for cc in combinations(items[i+1:],n-1):
+                    yield [items[i]]+cc
 
 def customcse(exprs,symbols=None):
     replacements,reduced_exprs = cse(exprs,symbols=symbols)
@@ -957,7 +960,7 @@ int main(int argc, char** argv)
 
         code += 'bool %svalid[%d]={false};\n'%(name,numsolutions)
         code += eqcode
-        for i,j in xcombinations(range(numsolutions),2):
+        for i,j in combinations(range(numsolutions),2):
             code += 'if( %svalid[%d] && %svalid[%d] && IKabs(c%sarray[%d]-c%sarray[%d]) < 0.0001 && IKabs(s%sarray[%d]-s%sarray[%d]) < 0.0001 )\n    %svalid[%d]=false;\n'%(name,i,name,j,name,i,name,j,name,i,name,j,name,j)
         if numsolutions > 1:
             code += 'for(int i%s = 0; i%s < %d; ++i%s) {\n'%(name,name,numsolutions,name)
@@ -2434,7 +2437,7 @@ class IKFastSolver(AutoReloader):
                 # since we're solving for two variables, we only want to use two equations, so
                 # start trying all the equations starting from the least complicated ones to the most until a solution is found
                 eqcombinations = []
-                for eqs in xcombinations(neweqns,2):
+                for eqs in combinations(neweqns,2):
                     eqcombinations.append((eqs[0][0]+eqs[1][0],[Eq(e[1],0) for e in eqs]))
                 eqcombinations.sort(lambda x, y: x[0]-y[0])
                 
@@ -2529,7 +2532,7 @@ class IKFastSolver(AutoReloader):
                 AllEquations.append(self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp((Positions[i][0]**2+Positions[i][1]**2+Positions[i][2]**2).expand())).expand())) -
                                     self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp((Positionsee[i][0]**2+Positionsee[i][1]**2+Positionsee[i][2]**2).expand())).expand())))
 
-        for var0,var1 in xcombinations(vars,2):
+        for var0,var1 in combinations(vars,2):
             varsubs=[(cos(var0.var),var0.cvar),(sin(var0.var),var0.svar),(cos(var1.var),var1.cvar),(sin(var1.var),var1.svar)]
             unknownvars=[v[1] for v in varsubs]
             varsubsinv = [(f[1],f[0]) for f in varsubs]
@@ -2563,7 +2566,7 @@ class IKFastSolver(AutoReloader):
             reduceeqns = [Poly(eq.as_basic().subs(pairwisesubs),*pairwisevars) for rank,eq in neweqns]
             singleeqs = None
             # try to solve for all pairwise variables
-            for eqs in xcombinations(reduceeqns,4):
+            for eqs in combinations(reduceeqns,4):
                 solution=solve(eqs,pairwisevars)
                 if solution:
                     if all([not s.has_any_symbols(*pairwisevars) for s in solution.itervalues()]):

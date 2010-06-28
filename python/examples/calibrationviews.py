@@ -25,7 +25,12 @@ from openravepy.interfaces import BaseManipulation
 from openravepy.databases import inversekinematics,visibilitymodel
 
 class CalibrationViews(metaclass.AutoReloader):
-    def __init__(self,robot,sensorname,target=None,maxvelmult=None,randomize=False):
+    def __init__(self,robot,sensorname,sensorrobot=None,target=None,maxvelmult=None,randomize=False):
+        """Starts a calibration sequencer using a robot and a sensor.
+
+        The minimum needed to be specified is the robot and a sensorname. Supports sensors that do not belong to the current robot. Can use the visibility information of the target.
+        @param sensorrobot: If specified, used to determine what robot the sensor lies on.
+        """
         self.env = robot.GetEnv()
         self.robot = robot
         self.basemanip = BaseManipulation(self.robot,maxvelmult=maxvelmult)
@@ -34,11 +39,14 @@ class CalibrationViews(metaclass.AutoReloader):
         if randomize and target is not None:
             pose = poseFromMatrix(target.GetTransform())
             target.SetTransform(pose)
-        self.vmodel = visibilitymodel.VisibilityModel(robot=robot,target=target,sensorname=sensorname)
+        self.vmodel = visibilitymodel.VisibilityModel(robot=robot,sensorrobot=sensorrobot,target=target,sensorname=sensorname)
 
-    def computevisibilityposes(self,anglerange=pi/3,dists=arange(0.05,1.0,0.15),angledensity=1,num=inf):
-        """sample the transformations of the camera. the camera x and y axes should always be aligned with the 
+    def computevisibilityposes(self,anglerange=pi,dists=arange(0.05,1.0,0.15),angledensity=1,num=inf,cameraonmanip=True):
+        """Computes robot poses using visibility information from the target.
+
+        Sample the transformations of the camera. the camera x and y axes should always be aligned with the 
         xy axes of the calibration pattern.
+        @param cameraonmanip: if True assumes the camera is attached onto the link sensor. Otherwise the camera is attached to a different link (or different robot).
         """
         with self.env:
             values=self.robot.GetJointValues()
@@ -75,13 +83,16 @@ class CalibrationViews(metaclass.AutoReloader):
                             pass
             return array(poses), array(configs)
 
-    def computelocalposes(self,maxangle = 0.5,maxdist = 0.15,averagedist=0.03,angledelta=0.2,**kwargs):
+    def computelocalposes(self,maxconeangle = 0.5,maxconedist = 0.15,averagedist=0.03,angledelta=0.2,cameraonmanip=True,**kwargs):
+        """Computes robot poses using a cone pointing to the negative z-axis of the camera
+
+        @param cameraonmanip: if True assumes the camera is attached onto the link sensor. Otherwise the camera is attached to a different link (or different robot).
+        """
         with self.env:
-            # sample a cone around -z
-            localpositions = SpaceSampler().sampleR3(averagedist=averagedist,boxdims=[2*maxdist,2*maxdist,maxdist])
-            localpositions -= maxdist
+            localpositions = SpaceSampler().sampleR3(averagedist=averagedist,boxdims=[2*maxconedist,2*maxconedist,maxconedist])
+            localpositions -= maxconedist
             angles = arctan2(sqrt(localpositions[:,0]**2+localpositions[:,1]**2),-localpositions[:,2])
-            localpositions = localpositions[angles<maxangle]
+            localpositions = localpositions[angles<maxconeangle]
             Tsensor = self.vmodel.attachedsensor.GetTransform()
             manip = self.vmodel.manip
             self.robot.SetActiveManipulator(manip)
@@ -113,6 +124,7 @@ class CalibrationViews(metaclass.AutoReloader):
             return self.moveToObservations(poses,configs,waitcond=waitcond,maxobservations=maxobservations,posedist=posedist)
         finally:
             graphs = None
+
     def moveToObservations(self,poses,configs,waitcond=None,maxobservations=inf,posedist=0.05):
         # order the poses with respect to distance
         poseorder=arange(len(poses))

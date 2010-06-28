@@ -38,8 +38,10 @@ class VisualFeedback:
         if envother.LoadProblem(clone.prob,clone.args) != 0:
             raise ValueError('problem failed to initialize')
         return clone
-    def SetCamera(self,sensorindex=None,sensorname=None,manipname=None,convexdata=None):
+    def SetCamera(self,sensorindex=None,sensorname=None,manipname=None,convexdata=None,sensorrobot=None):
         cmd = 'SetCamera '
+        if sensorrobot is not None:
+            cmd += 'sensorrobot %s '%sensorrobot.GetName()
         if sensorindex is not None:
             cmd += 'sensorindex %d '%sensorindex
         if sensorname is not None:

@@ -25,7 +25,10 @@ from openravepy.interfaces import BaseManipulation, VisualFeedback
 
 class VisibilityModel(OpenRAVEModel):
     class GripperVisibility:
-        """When 'entered' will hide all the non-gripper links in order to facilitate visiblity of the gripper"""
+        """Used to hide links not beloning to gripper.
+
+        When 'entered' will hide all the non-gripper links in order to facilitate visiblity of the gripper
+        """
         def __init__(self,manip):
             self.manip = manip
             self.robot = self.manip.GetRobot()
@@ -45,11 +48,18 @@ class VisibilityModel(OpenRAVEModel):
                 for geom,isdraw in self.hiddengeoms:
                     geom.SetDraw(isdraw)
 
-    def __init__(self,robot,target,sensorname=None,maxvelmult=None):
+    def __init__(self,robot,target,sensorrobot=None,sensorname=None,maxvelmult=None):
+        """Starts a visibility model using a robot, a sensor, and a target
+
+        The minimum needed to be specified is the robot and a sensorname. Supports sensors that do
+        not belong to the current robot in the case that a robot is holding the target with its
+        manipulator. Providing the target allows visibility information to be computed.
+        """
         OpenRAVEModel.__init__(self,robot=robot)
+        self.sensorrobot = sensorrobot if sensorrobot is not None else robot
         self.target = target
-        self.visualprob = VisualFeedback(robot,maxvelmult=maxvelmult)
-        self.basemanip = BaseManipulation(robot,maxvelmult=maxvelmult)
+        self.visualprob = VisualFeedback(self.robot,maxvelmult=maxvelmult)
+        self.basemanip = BaseManipulation(self.robot,maxvelmult=maxvelmult)
         self.convexhull = None
         self.sensorname = sensorname
         self.manip = robot.GetActiveManipulator()
@@ -90,10 +100,10 @@ class VisibilityModel(OpenRAVEModel):
 
     def preprocess(self):
         with self.env:
-            manipname = self.visualprob.SetCamera(sensorname=self.sensorname,manipname=self.manipname)
+            manipname = self.visualprob.SetCamera(sensorname=self.sensorname,sensorrobot=self.sensorrobot,manipname=self.manipname)
             assert(self.manipname is None or self.manipname==manipname)
             self.manip = self.robot.SetActiveManipulator(manipname)
-            self.attachedsensor = [s for s in self.robot.GetSensors() if s.GetName() == self.sensorname][0]
+            self.attachedsensor = [s for s in self.sensorrobot.GetSensors() if s.GetName() == self.sensorname][0]
             self.ikmodel = inversekinematics.InverseKinematicsModel(robot=self.robot,iktype=IkParameterization.Type.Transform6D)
             if not self.ikmodel.load():
                 self.ikmodel.autogenerate()

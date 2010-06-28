@@ -407,6 +407,7 @@ public:
         __description = "Planning with Visibility Constraints - Rosen Diankov";
         _nManipIndex = -1;
         _fMaxVelMult=1;
+        _bCameraOnManip = false;
         _fSampleRayDensity = 0.001;
         RegisterCommand("SetCamera",boost::bind(&VisualFeedbackProblem::SetCamera,this,_1,_2),
                         "Sets the camera index from the robot and its convex hull");
@@ -463,6 +464,7 @@ public:
 
     bool SetCamera(ostream& sout, istream& sinput)
     {
+        _bCameraOnManip = false;
         _pmanip.reset();
         _psensor.reset();
         _vconvexplanes.resize(0);
@@ -470,6 +472,7 @@ public:
         RobotBase::AttachedSensorPtr psensor;
         RobotBase::ManipulatorPtr pmanip;
         vector<Vector> vconvexplanes;
+        RobotBasePtr psensorrobot = _robot;
 
         string cmd;
         while(!sinput.eof()) {
@@ -478,15 +481,20 @@ public:
                 break;
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
-            if( cmd == "sensorindex" ) {
+            if( cmd == "sensorrobot" ) {
+                string name;
+                sinput >> name;
+                psensorrobot = GetEnv()->GetRobot(name);
+            }
+            else if( cmd == "sensorindex" ) {
                 int sensorindex=-1;
                 sinput >> sensorindex;
-                psensor = _robot->GetSensors().at(sensorindex);
+                psensor = psensorrobot->GetSensors().at(sensorindex);
             }
             else if( cmd == "sensorname" ) {
                 string sensorname;
                 sinput >> sensorname;
-                FOREACH(itsensor,_robot->GetSensors()) {
+                FOREACH(itsensor,psensorrobot->GetSensors()) {
                     if( (*itsensor)->GetName() == sensorname ) {
                         psensor = *itsensor;
                         break;
@@ -579,31 +587,43 @@ public:
         }
 
         // check if there is a manipulator with the same end effector as camera
-        std::vector<KinBody::LinkPtr> vattachedlinks;
-        _robot->GetRigidlyAttachedLinks(psensor->GetAttachingLink()->GetIndex(), vattachedlinks);
-        if( !!pmanip ) {
-            if( pmanip->GetEndEffector() != psensor->GetAttachingLink() && find(vattachedlinks.begin(),vattachedlinks.end(),pmanip->GetEndEffector()) == vattachedlinks.end() ) {
-                RAVELOG_WARN(str(boost::format("specified manipulator %s end effector not attached to specified sensor %s\n")%pmanip->GetName()%psensor->GetName()));
-                return false;
+        if( psensorrobot == _robot ) {
+            std::vector<KinBody::LinkPtr> vattachedlinks;
+            _robot->GetRigidlyAttachedLinks(psensor->GetAttachingLink()->GetIndex(), vattachedlinks);
+            if( !!pmanip ) {
+                if( pmanip->GetEndEffector() != psensor->GetAttachingLink() && find(vattachedlinks.begin(),vattachedlinks.end(),pmanip->GetEndEffector()) == vattachedlinks.end() ) {
+                    RAVELOG_INFO(str(boost::format("specified manipulator %s end effector not attached to specified sensor %s\n")%pmanip->GetName()%psensor->GetName()));
+                }
+                else {
+                    _bCameraOnManip = true;
+                }
             }
+            else {
+                _nManipIndex = 0;
+                FOREACHC(itmanip,_robot->GetManipulators()) {
+                    if( (*itmanip)->GetEndEffector() == psensor->GetAttachingLink() || find(vattachedlinks.begin(),vattachedlinks.end(),(*itmanip)->GetEndEffector()) != vattachedlinks.end() ) {
+                        pmanip = *itmanip;
+                        _bCameraOnManip = true;
+                        break;
+                    }
+                    _nManipIndex++;
+                }
+
+                if( !pmanip ) {
+                    RAVELOG_WARN(str(boost::format("failed to find manipulator with end effector rigidly attached to sensor %s.\n")%psensor->GetName()));
+                    pmanip = _robot->GetActiveManipulator();
+                }
+            }
+
+            _tcameratogripper = psensor->GetTransform().inverse()*pmanip->GetEndEffectorTransform();
         }
         else {
-            _nManipIndex = 0;
-            FOREACHC(itmanip,_robot->GetManipulators()) {
-                if( (*itmanip)->GetEndEffector() == psensor->GetAttachingLink() || find(vattachedlinks.begin(),vattachedlinks.end(),(*itmanip)->GetEndEffector()) != vattachedlinks.end() ) {
-                    pmanip = *itmanip;
-                    break;
-                }
-                _nManipIndex++;
-            }
-
             if( !pmanip ) {
-                RAVELOG_WARN(str(boost::format("failed to find manipulator with end effector rigidly attached to sensor %s.\n")%psensor->GetName()));
-                return false;
+                pmanip = _robot->GetActiveManipulator();
             }
+            _tcameratogripper = Transform();
         }
 
-        _tcameratogripper = psensor->GetTransform().inverse()*pmanip->GetEndEffectorTransform();
         _pcamerageom = boost::static_pointer_cast<SensorBase::CameraGeomData>(psensor->GetSensor()->GetSensorGeometry());
         _fSampleRayDensity = 20.0f/_pcamerageom->KK.fx;
 
@@ -1176,6 +1196,7 @@ protected:
     RobotBase::AttachedSensorPtr _psensor;
     RobotBase::ManipulatorPtr _pmanip;
     int _nManipIndex;
+    bool _bCameraOnManip; ///< true if camera is attached to manipulator
     boost::shared_ptr<SensorBase::CameraGeomData> _pcamerageom;
     Transform _tcameratogripper; ///< transforms a camera coord system to the gripper coordsystem
     vector<Transform> _visibilitytransforms;
