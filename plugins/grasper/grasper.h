@@ -69,18 +69,34 @@ class GrasperProblem : public ProblemInstance
 
     virtual int main(const std::string& args)
     {
-        _planner = GetEnv()->CreatePlanner("Grasper");
-        if( !_planner ) {
-            RAVELOG_WARNA("Failed to create planner\n");
-            return -1;
-        }
-
         string strRobotName;
         stringstream ss(args);
         ss >> strRobotName;
 
         _report.reset(new COLLISIONREPORT());
         _robot = GetEnv()->GetRobot(strRobotName);
+
+        string plannername = "Grasper";
+        string cmd;
+        while(!ss.eof()) {
+            ss >> cmd;
+            if( !ss )
+                break;
+            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+
+            if( cmd == "planner" ) {
+                ss >> plannername;
+            }
+
+            if( ss.fail() || !ss )
+                break;
+        }
+
+        _planner = GetEnv()->CreatePlanner(plannername);
+        if( !_planner ) {
+            RAVELOG_WARNA("Failed to create planner\n");
+            return -1;
+        }
 
         return 0;
     }

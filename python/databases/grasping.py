@@ -18,7 +18,7 @@ __license__ = 'Apache License, Version 2.0'
 
 import os,sys,itertools,traceback,time
 from openravepy import *
-from openravepy.interfaces import Grasper, BaseManipulation
+from openravepy.interfaces import Grasper, BaseManipulation, TaskManipulation
 from openravepy.databases import convexdecomposition
 from numpy import *
 from optparse import OptionParser
@@ -87,7 +87,7 @@ class GraspingModel(OpenRAVEModel):
     def getversion(self):
         return 4
     def init(self,friction,avoidlinks,plannername=None):
-        self.grasper = Grasper(self.robot,friction,avoidlinks,plannername)
+        self.grasper = Grasper(self.robot,friction=friction,avoidlinks=avoidlinks,plannername=plannername)
         self.grasps = []
     def load(self):
         try:
@@ -135,6 +135,7 @@ class GraspingModel(OpenRAVEModel):
         rolls = None
         avoidlinks = None
         graspingnoise = None
+        plannername = None
         updateenv=False
         if options is not None:
             if options.preshapes is not None:
@@ -155,6 +156,8 @@ class GraspingModel(OpenRAVEModel):
                 avoidlinks = [self.robot.GetLink(avoidlink) for avoidlink in options.avoidlinks]
             if options.graspingnoise is not None:
                 graspingnoise = options.graspingnoise
+            if options.plannername is not None:
+                plannername = options.plannername
             updateenv = options.useviewer
         # check for specific robots
         if self.robot.GetRobotStructureHash() == '2b5c20ef6f6e802a05de7abf53e37a28' and self.manip.GetName() == 'arm' and self.target.GetKinematicsGeometryHash() == 'bbf03c6db8efc712a765f955a27b0d0f': # barrett hand
@@ -168,7 +171,9 @@ class GraspingModel(OpenRAVEModel):
         if preshapes is None:
             with self.target:
                 self.target.Enable(False)
-                final,traj = self.basemanip.ReleaseFingers(execute=False,outputfinal=True)
+                # do not fill with plannername
+                taskmanip = TaskManipulation(self.robot)
+                final,traj = taskmanip.ReleaseFingers(execute=False,outputfinal=True)
             preshapes = array([final])
         if approachrays is None:
             approachrays = self.computeBoxApproachRays(delta=0.02)
@@ -182,12 +187,15 @@ class GraspingModel(OpenRAVEModel):
             avoidlinks = []
         if graspingnoise is None:
             graspingnoise = 0.0
-        self.init(friction=friction,avoidlinks=avoidlinks)
+        self.init(friction=friction,avoidlinks=avoidlinks,plannername=plannername)
         self.generate(preshapes=preshapes,rolls=rolls,graspingnoise=graspingnoise,standoffs=standoffs,approachrays=approachrays,updateenv=updateenv)
         self.save()
 
-    def generate(self,preshapes,standoffs,rolls,approachrays, graspingnoise=None,updateenv=True,forceclosurethreshold=1e-9):
-        """all grasp parameters have to be in the bodies's coordinate system (ie: approachrays)"""
+    def generate(self,preshapes,standoffs,rolls,approachrays, graspingnoise=None,updateenv=True,forceclosure=True,forceclosurethreshold=1e-9,checkgraspfn=None):
+        """Generates a grasp set by searching space and evaluating contact points.
+
+        All grasp parameters have to be in the bodies's coordinate system (ie: approachrays).
+        @param checkgraspfn: If set, then will be used to validate the grasp. If its evaluation returns false, then grasp will not be added to set. Called by checkgraspfn(contacts,finalconfig,info)"""
         print 'Generating Grasp Set for %s:%s:%s'%(self.robot.GetName(),self.manip.GetName(),self.target.GetName())
         time.sleep(0.1) # sleep or otherwise viewer might not load well
         N = approachrays.shape[0]
@@ -221,7 +229,7 @@ class GraspingModel(OpenRAVEModel):
                         grasp[self.graspindices.get('igraspstandoff')] = standoff
                         grasp[self.graspindices.get('igrasppreshape')] = preshape
                         try:
-                            contacts,finalconfig,mindist,volume = self.testGrasp(grasp=grasp,graspingnoise=graspingnoise,translate=True,forceclosure=True,forceclosurethreshold=forceclosurethreshold)
+                            contacts,finalconfig,mindist,volume = self.testGrasp(grasp=grasp,graspingnoise=graspingnoise,translate=True,forceclosure=forceclosure,forceclosurethreshold=forceclosurethreshold)
                         except planning_error, e:
                             print 'Grasp Failed: '
                             traceback.print_exc(e)
@@ -244,11 +252,13 @@ class GraspingModel(OpenRAVEModel):
                                 self.env.UpdatePublishedBodies()
                         grasp[self.graspindices.get('igrasptrans')] = reshape(transpose(Tlocalgrasp[0:3,0:4]),12)
                         grasp[self.graspindices.get('grasptrans_nocol')] = reshape(transpose(Tlocalgrasp_nocol[0:3,0:4]),12)
-                        grasp[self.graspindices.get('forceclosure')] = mindist
-                        if mindist > forceclosurethreshold:
-                            print 'found good grasp',len(self.grasps),'config: ',array(finalconfig[0])[self.manip.GetGripperJoints()]
-                            self.grasps.append(grasp)
+                        grasp[self.graspindices.get('forceclosure')] = mindist if mindist is not None else 0
+                        if not forceclosure or mindist >= forceclosurethreshold:
+                            if checkgraspfn is None or checkgraspfn(contacts,finalconfig,{'mindist':mindist,'volume':volume}):
+                                print 'found good grasp',len(self.grasps),'config: ',array(finalconfig[0])[self.manip.GetGripperJoints()]
+                                self.grasps.append(grasp)
                 self.grasps = array(self.grasps)
+                print 'ordering grasps'
                 self.orderGrasps()
         finally:
             for b,enable in bodies:
@@ -273,6 +283,8 @@ class GraspingModel(OpenRAVEModel):
                         #self.save()
                         grasps = self.grasps
                     graspingnoise=options.graspingnoise
+                else:
+                    grasps = self.grasps
                 for i,grasp in enumerate(grasps):
                     print 'grasp %d/%d'%(i,len(grasps))
                     try:
@@ -303,7 +315,7 @@ class GraspingModel(OpenRAVEModel):
                 raw_input('press any key to continue: ')
     def testGrasp(self,graspingnoise=None,Ngraspingtries = 20,forceclosurethreshold=1e-9,**kwargs):
         contacts,finalconfig,mindist,volume = self.runGrasp(graspingnoise=0,**kwargs)
-        if mindist > forceclosurethreshold and graspingnoise > 0:
+        if mindist >= forceclosurethreshold and graspingnoise > 0:
             print 'testing with noise',graspingnoise
             # try several times and make sure that grasp succeeds all the time
             allfinaltrans = [finalconfig[1]]
@@ -439,8 +451,6 @@ class GraspingModel(OpenRAVEModel):
         """Returns an iterator for valid grasps that satisfy certain conditions.
         If backupdist > 0, then will move the hand along negative approach dir and check for validity.
         """
-        validgrasps = []
-        validindices = []
         if randomgrasps:
             order = startindex+random.permutation(len(self.grasps)-startindex)
         else:
@@ -480,12 +490,54 @@ class GraspingModel(OpenRAVEModel):
             for grasp in self.grasps:
                 contacts,finalconfig,mindist,volume = self.runGrasp(grasp=grasp,translate=True,forceclosure=False)
                 # find closest contact to center of object
-                if len(contactdists) > 0: # sometimes we get no contacts?!
+                if len(contacts) > 0: # sometimes we get no contacts?!
                     contactdists.append(numpy.min(sum((contacts[:,0:3]-tile(ab.pos(),(len(contacts),1)))**2,1)))
                 else:
                     contactdists.append(inf)
             order = argsort(array(contactdists))
             self.grasps = self.grasps[order]
+
+    def computePlaneApproachRays(self,center,sidex,sidey,delta=0.02,normalanglerange=0,directiondelta=0.4):
+        # ode gives the most accurate rays
+        cc = self.env.CreateCollisionChecker('ode')
+        if cc is not None:
+            ccold = self.env.GetCollisionChecker()
+            self.env.SetCollisionChecker(cc)
+            cc = ccold
+        try:
+            with self.env:
+                ex = sqrt(sum(sidex**2))
+                ey = sqrt(sum(sidey**2))
+                normal=cross(sidex,sidey)
+                normal /= sqrt(sum(normal**2))
+                XX,YY = meshgrid(r_[arange(-ex,-0.25*delta,delta),0,arange(delta,ex,delta)],
+                                 r_[arange(-ey,-0.25*delta,delta),0,arange(delta,ey,delta)])
+                localpos = outer(XX.flatten(),sidex/ex)+outer(YY.flatten(),sidey/ey)
+                N = localpos.shape[0]
+                rays = c_[tile(center,(N,1))+localpos,100.0*tile(normal,(N,1))]
+                collision, info = self.env.CheckCollisionRays(rays,self.target)
+                # make sure all normals are the correct sign: pointing outward from the object)
+                newinfo = info[collision,:]
+                approachrays = zeros((0,6))
+                if len(newinfo) > 0:
+                    newinfo[sum(rays[collision,3:6]*newinfo[:,3:6],1)>0,3:6] *= -1
+                    approachrays = r_[approachrays,newinfo]
+                if normalanglerange > 0:
+                    theta,pfi = SpaceSampler().sampleS2(angledelta=directiondelta)
+                    dirs = c_[cos(theta),sin(theta)*cos(pfi),sin(theta)*sin(pfi)]
+                    dirs = array([dir for dir in dirs if arccos(dir[2])<=normalanglerange]) # find all dirs within normalanglerange
+                    if len(dirs) == 0:
+                        dirs = array([[0,0,1]])
+                    newapproachrays = zeros((0,6))
+                    for approachray in approachrays:
+                        R = rotationMatrixFromQuat(quatRotateDirection(array((0,0,1)),approachray[3:6]))
+                        newapproachrays = r_[newapproachrays,c_[tile(approachray[0:3],(len(dirs),1)),dot(dirs,transpose(R))]]
+                    approachrays=newapproachrays
+            return approachrays
+        finally:
+            # restore the collision checker
+            if cc is not None:
+                self.env.SetCollisionChecker(cc)
 
     def computeBoxApproachRays(self,delta=0.02,normalanglerange=0,directiondelta=0.4):
         # ode gives the most accurate rays
@@ -560,6 +612,8 @@ class GraspingModel(OpenRAVEModel):
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser()
         parser.description='Grasp set generation example for any robot/body pair.'
+        parser.add_option('--plannername',action="store",type='string',dest='plannername',default=None,
+                          help='The grasper planner to use for this model (default=%default)')
         parser.add_option('--target',action="store",type='string',dest='target',default='data/mug1.kinbody.xml',
                           help='The filename of the target body whose grasp set to be generated (default=%default)')
         parser.add_option('--noviewer', action='store_false', dest='useviewer',default=True,

@@ -35,6 +35,7 @@ class ConstraintPlanning(metaclass.AutoReloader):
         if not self.gmodel.load():
             self.gmodel.autogenerate()
         self.basemanip = BaseManipulation(self.robot)
+        self.taskmanip = TaskManipulation(self.robot,graspername=self.gmodel.grasper.plannername)
 
     def graspAndMove(self):
         target = self.gmodel.target
@@ -50,7 +51,7 @@ class ConstraintPlanning(metaclass.AutoReloader):
         matrices = [self.gmodel.getGlobalGraspTransform(validgrasp,collisionfree=True)]
         self.basemanip.MoveToHandPosition(matrices=matrices,maxiter=1000,maxtries=1,seedik=10)
         self.robot.WaitForController(0)
-        self.basemanip.CloseFingers()
+        self.taskmanip.CloseFingers()
         self.robot.WaitForController(0)
         self.robot.Grab(target)
         print 'moving mug without XY rotation'

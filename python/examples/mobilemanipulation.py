@@ -179,6 +179,7 @@ class GraspReachability(metaclass.AutoReloader):
         with self.env:
             configsampler = self.sampleValidPlacementIterator(**kwargs)
             basemanip = BaseManipulation(self.robot,maxvelmult=self.maxvelmult)
+            taskmanip = TaskManipulation(self.robot,maxvelmult=self.maxvelmult)
             jointvalues = self.robot.GetJointValues()
         with RobotStateSaver(self.robot):
             while True:
@@ -192,7 +193,7 @@ class GraspReachability(metaclass.AutoReloader):
                         self.robot.SetTransform(pose)
                         gmodel.setPreshape(grasp)
                         self.robot.SetJointValues(values)
-                        final,traj = basemanip.CloseFingers(execute=False,outputfinal=True)
+                        final,traj = taskmanip.CloseFingers(execute=False,outputfinal=True)
                         self.robot.SetJointValues(final,gmodel.manip.GetGripperJoints())
                         self.env.UpdatePublishedBodies()
                     if delay > 0:
@@ -649,7 +650,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         with self.env:
             if manip:
                 self.robot.SetActiveManipulator(manip)
-            self.basemanip.CloseFingers()
+            self.taskmanip.CloseFingers()
         self.waitrobot()
         with self.env:
             expectedvalues = self.robot.GetJointValues()[self.robot.GetActiveManipulator().GetGripperJoints()]

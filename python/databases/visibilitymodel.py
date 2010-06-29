@@ -21,7 +21,7 @@ from numpy import *
 
 from openravepy import *
 from openravepy.databases import inversekinematics, kinematicreachability
-from openravepy.interfaces import BaseManipulation, VisualFeedback
+from openravepy.interfaces import BaseManipulation, TaskManipulation, VisualFeedback
 
 class VisibilityModel(OpenRAVEModel):
     class GripperVisibility:
@@ -121,7 +121,8 @@ class VisibilityModel(OpenRAVEModel):
         if preshapes is None:
             with self.target:
                 self.target.Enable(False)
-                final,traj = self.basemanip.ReleaseFingers(execute=False,outputfinal=True)
+                taskmanip = TaskManipulation(self.robot)
+                final,traj = taskmanip.ReleaseFingers(execute=False,outputfinal=True)
             preshapes = array([final])
         self.generate(preshapes=preshapes)
         self.save()

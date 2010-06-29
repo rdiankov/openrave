@@ -25,8 +25,8 @@ class Grasper:
         self.avoidlinks = avoidlinks
         self.plannername=plannername
         self.args = self.robot.GetName()
-        if plannername is not None:
-            self.args += ' plannername %s '%plannername
+        if plannername is not None and len(plannername)>0:
+            self.args += ' planner %s '%plannername
         if env.LoadProblem(self.prob,self.args) != 0:
             raise ValueError('problem failed to initialize')
     def  __del__(self):

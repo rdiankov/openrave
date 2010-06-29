@@ -39,9 +39,7 @@ class GraspPlanning(metaclass.AutoReloader):
         self.switchpatterns = switchpatterns
         with self.envreal:
             self.basemanip = BaseManipulation(self.robot)
-            self.taskmanip = TaskManipulation(self.robot)
-            if switchpatterns is not None:
-                self.taskmanip.SwitchModels(switchpatterns=switchpatterns)
+            self.taskmanip = None
             self.updir = array((0,0,1))
             
             # find all the bodies to manipulate
@@ -177,6 +175,9 @@ class GraspPlanning(metaclass.AutoReloader):
         env = self.envreal#.CloneSelf(CloningOptions.Bodies)
         robot = self.robot
         with env:
+            self.taskmanip = TaskManipulation(self.robot,graspername=gmodel.grasper.plannername)
+            if self.switchpatterns is not None:
+                self.taskmanip.SwitchModels(switchpatterns=self.switchpatterns)
             robot.SetActiveManipulator(gmodel.manip)
             robot.SetActiveDOFs(gmodel.manip.GetArmJoints())
         istartgrasp = 0
@@ -210,7 +211,7 @@ class GraspPlanning(metaclass.AutoReloader):
                     continue
             self.waitrobot(robot)
 
-            self.basemanip.CloseFingers()
+            self.taskmanip.CloseFingers()
             self.waitrobot(robot)
             
             robot.Grab(target)
@@ -235,7 +236,7 @@ class GraspPlanning(metaclass.AutoReloader):
             self.waitrobot(robot)
 
             try:
-                res = self.basemanip.ReleaseFingers(target=target)
+                res = self.taskmanip.ReleaseFingers(target=target)
             except planning_error:
                 res = None
             if res is None:
@@ -243,7 +244,7 @@ class GraspPlanning(metaclass.AutoReloader):
                 with env:
                     robot.ReleaseAllGrabbed()
                     try:
-                        res = self.basemanip.ReleaseFingers(target=target)
+                        res = self.taskmanip.ReleaseFingers(target=target)
                     except planning_error:
                         res = None
                 if res is None:
@@ -263,7 +264,7 @@ class GraspPlanning(metaclass.AutoReloader):
                     pass
                 if env.CheckCollision(robot):
                     try:
-                        self.basemanip.ReleaseFingers(target=target)
+                        self.taskmanip.ReleaseFingers(target=target)
                     except planning_error:
                         res = None
                     #raise ValueError('robot still in collision?')

@@ -18,13 +18,12 @@ __license__ = 'Apache License, Version 2.0'
 
 import time
 from openravepy import *
-from openravepy.interfaces import BaseManipulation
+from openravepy.interfaces import BaseManipulation, TaskManipulation
 from openravepy.databases import inversekinematics
 from numpy import *
 from optparse import OptionParser
 
 class HanoiPuzzle:
-    basemanip = None
     def __init__(self,env,robot):
         self.env = env
         self.robot = robot
@@ -34,6 +33,7 @@ class HanoiPuzzle:
             self.ikmodel.autogenerate() # autogenerate if one doesn't exist
         with self.env: # lock the environment
             self.basemanip = BaseManipulation(self.robot)
+            self.taskmanip = TaskManipulation(self.robot)
             disknames = ['disk0','disk1','disk2']
             self.heights = array([0.021,0.062,0.103])+0.01
             disks = []
@@ -150,7 +150,7 @@ class HanoiPuzzle:
                         self.waitrobot()
 
                         # succeeded so grab the disk
-                        self.basemanip.CloseFingers()
+                        self.taskmanip.CloseFingers()
                         self.waitrobot()
                         with self.env:
                             self.robot.Grab(disk)

@@ -17,15 +17,17 @@ from numpy import *
 from copy import copy as shallowcopy
 
 class TaskManipulation:
-    def __init__(self,robot,plannername=None,maxvelmult=None):
+    def __init__(self,robot,plannername=None,maxvelmult=None,graspername=None):
         env = robot.GetEnv()
         self.prob = env.CreateProblem('TaskManipulation')
         self.robot = robot
         self.args = self.robot.GetName()
-        if plannername is not None:
+        if plannername is not None and len(plannername) > 0:
             self.args += ' planner ' + plannername
         if maxvelmult is not None:
             self.args += ' maxvelmult %f '%maxvelmult
+        if graspername is not None and len(graspername)>0:
+            self.args += ' graspername %s '%graspername
         if env.LoadProblem(self.prob,self.args) != 0:
             raise ValueError('problem failed to initialize')
     def  __del__(self):
@@ -102,6 +104,88 @@ class TaskManipulation:
         iters = array([int(s) for s in resvalues[0:len(configs)]])
         newconfigs = reshape(array([float(s) for s in resvalues[len(configs):]]),(len(configs),self.robot.GetActiveDOF()))
         return iters,newconfigs
+    def CloseFingers(self,offset=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None):
+        cmd = 'CloseFingers '
+        dof=len(self.robot.GetActiveManipulator().GetGripperJoints())
+        if offset is not None:
+            assert(len(offset) == dof)
+            cmd += 'offset ' + ' '.join(str(f) for f in offset) + ' '
+        if movingdir is not None:
+            assert(len(movingdir) == dof)
+            cmd += 'movingdir %s '%(' '.join(str(f) for f in movingdir))
+        if execute is not None:
+            cmd += 'execute %d '%execute
+        if outputtraj is not None and outputtraj:
+            cmd += 'outputtraj '
+        if outputfinal:
+            cmd += 'outputfinal'
+        res = self.prob.SendCommand(cmd)
+        if res is None:
+            raise planning_error('CloseFingers')
+        resvalues = res.split()
+        if outputfinal:
+            final = array([float(resvalues[i]) for i in range(dof)])
+            resvalues=resvalues[dof:]
+        else:
+            final=None
+        if outputtraj is not None and outputtraj:
+            traj = ' '.join(resvalues)
+        else:
+            traj = None
+        return final,traj
+    def ReleaseFingers(self,target=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None):
+        cmd = 'ReleaseFingers '
+        dof=len(self.robot.GetActiveManipulator().GetGripperJoints())
+        if target is not None:
+            cmd += 'target %s '%target.GetName()
+        if movingdir is not None:
+            assert(len(movingdir) == dof)
+            cmd += 'movingdir %s '%(' '.join(str(f) for f in movingdir))
+        if execute is not None:
+            cmd += 'execute %d '%execute
+        if outputtraj is not None and outputtraj:
+            cmd += 'outputtraj '
+        if outputfinal:
+            cmd += 'outputfinal'
+        res = self.prob.SendCommand(cmd)
+        if res is None:
+            raise planning_error('ReleaseFingers')
+        resvalues = res.split()
+        if outputfinal:
+            final = array([float(resvalues[i]) for i in range(dof)])
+            resvalues=resvalues[len(final):]
+        else:
+            final=None
+        if outputtraj is not None and outputtraj:
+            traj = ' '.join(resvalues)
+        else:
+            traj = None
+        return final,traj
+    def ReleaseActive(self,movingdir=None,execute=None,outputtraj=None,outputfinal=None):
+        cmd = 'ReleaseActive '
+        if movingdir is not None:
+            assert(len(movingdir) == self.robot.GetActiveDOF())
+            cmd += 'movingdir %s '%(' '.join(str(f) for f in movingdir))
+        if execute is not None:
+            cmd += 'execute %d '%execute
+        if outputtraj is not None and outputtraj:
+            cmd += 'outputtraj '
+        if outputfinal:
+            cmd += 'outputfinal'
+        res = self.prob.SendCommand(cmd)
+        if res is None:
+            raise planning_error('ReleaseActive')
+        resvalues = res.split()
+        if outputfinal:
+            final = array([float(resvalues[i]) for i in range(self.robot.GetActiveDOF())])
+            resvalues=resvalues[len(final):]
+        else:
+            final=None
+        if outputtraj is not None and outputtraj:
+            traj = ' '.join(resvalues)
+        else:
+            traj = None
+        return final,traj
     def SwitchModels(self,switchpatterns=None,unregister=None,switchtofat=None,clearpatterns=None,clearmodels=None,update=None):
         cmd = 'switchmodels '
         if switchpatterns is not None:

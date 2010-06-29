@@ -99,7 +99,6 @@ class VisibilityGrasping(metaclass.AutoReloader):
             self.robotreal = [r for r in self.orenvreal.GetRobots() if r.GetName()==robotname][0]
 
         with self.orenvreal:
-            self.taskmanip = TaskManipulation(self.robotreal)
             self.basemanip = BaseManipulation(self.robotreal)
             self.homevalues = self.robotreal.GetJointValues()
             # create a camera viewer for every camera sensor
@@ -229,12 +228,11 @@ class VisibilityGrasping(metaclass.AutoReloader):
 
             self.robot.SetActiveManipulator(self.manip.GetName())
             self.robotreal.SetActiveManipulator(self.manip.GetName())
-            taskmanip = TaskManipulation(self.robot)
-            basemanip = BaseManipulation(self.robot)
             self.target = self.gettarget(self.orenv)
             vmodel = self.computevisibilitymodel(self.target)
             vmodelreal = vmodel.clone(self.orenvreal)
             vmodelreal.moveToPreshape()
+            basemanip = BaseManipulation(self.robot)
             self.robot.GetController().SetDesired(self.robotreal.GetJointValues()) # update the robot
             try:
                 trajdata = vmodel.visualprob.MoveToObserveTarget(target=self.target,sampleprob=0.001,maxiter=4000,execute=False,outputtraj=True)
@@ -266,6 +264,7 @@ class VisibilityGrasping(metaclass.AutoReloader):
             gmodel = grasping.GraspingModel(robot=self.robot,target=self.target)
             if not gmodel.load():
                 gmodel.autogenerate()
+            taskmanip = TaskManipulation(self.robot,graspername=gmodel.grasper.plannername)
             trajdata = None
             with self.robot:
                 validgrasps,validindices = gmodel.computeValidGrasps()
@@ -283,7 +282,7 @@ class VisibilityGrasping(metaclass.AutoReloader):
             self.starttrajectory(trajdata)
 
             try:
-                final,trajdata = basemanip.CloseFingers(offset=self.graspoffset*ones(len(self.manip.GetGripperJoints())),execute=False,outputtraj=True)
+                final,trajdata = taskmanip.CloseFingers(offset=self.graspoffset*ones(len(self.manip.GetGripperJoints())),execute=False,outputtraj=True)
                 self.starttrajectory(trajdata)
             except planning_error:
                 raise ValueError('failed to find visual feedback grasp')
@@ -310,7 +309,7 @@ class VisibilityGrasping(metaclass.AutoReloader):
                     success = False
 
             try:
-                final,trajdata = basemanip.ReleaseFingers(target=self.target,execute=False,outputtraj=True)
+                final,trajdata = taskmanip.ReleaseFingers(target=self.target,execute=False,outputtraj=True)
                 self.starttrajectory(trajdata)
             except planning_error:
                 print 'failed to release'

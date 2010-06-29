@@ -59,6 +59,13 @@ class TaskManipulation : public ProblemInstance
         RegisterCommand("graspplanning",boost::bind(&TaskManipulation::GraspPlanning,this,_1,_2),
                         "Grasp planning, pick a grasp from a grasp set and use it for manipulation.\n"
                         "Can optionally use bispace for mobile platforms");
+        RegisterCommand("CloseFingers",boost::bind(&TaskManipulation::CloseFingers,this,_1,_2),
+                        "Closes the active manipulator fingers using the grasp planner.");
+        RegisterCommand("ReleaseFingers",boost::bind(&TaskManipulation::ReleaseFingers,this,_1,_2),
+                        "Releases the active manipulator fingers using the grasp planner.\n"
+                        "Also releases the given object.");
+        RegisterCommand("ReleaseActive",boost::bind(&TaskManipulation::ReleaseActive,this,_1,_2),
+                        "Moves the active DOF using the grasp planner.");
         RegisterCommand("evaluateconstraints",boost::bind(&TaskManipulation::EvaluateConstraints,this,_1,_2),
                         "Instantiates a jacobian constraint function and runs it on several examples.\n"
                         "The constraints work on the active degress of freedom of the manipulator starting from the current configuration");
@@ -98,7 +105,7 @@ class TaskManipulation : public ProblemInstance
 
         ss >> _strRobotName;
     
-        string plannername;
+        string plannername, graspername = "Grasper";
         string cmd;
         while(!ss.eof()) {
             ss >> cmd;
@@ -106,10 +113,15 @@ class TaskManipulation : public ProblemInstance
                 break;
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
-            if( cmd == "planner" )
+            if( cmd == "planner" ) {
                 ss >> plannername;
-            else if( cmd == "maxvelmult" )
+            }
+            else if( cmd == "maxvelmult" ) {
                 ss >> _fMaxVelMult;
+            }
+            else if( cmd == "graspername" ) {
+                ss >> graspername;
+            }
 
             if( ss.fail() || !ss )
                 break;
@@ -128,9 +140,9 @@ class TaskManipulation : public ProblemInstance
         }
         RAVELOG_DEBUGA(str(boost::format("using %s planner\n")%plannername));
 
-        _pGrasperPlanner = GetEnv()->CreatePlanner("Grasper");
+        _pGrasperPlanner = GetEnv()->CreatePlanner(graspername);
         if( !_pGrasperPlanner )
-            RAVELOG_WARNA("Failed to create a grasper planner\n");
+            RAVELOG_WARNA(str(boost::format("Failed to create a grasper planner %s\n")%graspername));
             
         return 0;
     }
@@ -879,6 +891,345 @@ class TaskManipulation : public ProblemInstance
 
         if( doswitch >= 0 )
             _UpdateSwitchModels(doswitch>0,bUpdateBodies);
+        return true;
+    }
+
+    bool CloseFingers(ostream& sout, istream& sinput)
+    {
+        RAVELOG_DEBUGA("Starting CloseFingers...\n");
+        bool bExecute = true, bOutputFinal=false;
+        string strtrajfilename;
+        boost::shared_ptr<ostream> pOutputTrajStream;
+        Vector direction;
+        RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
+        boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
+        graspparams->vgoalconfig = pmanip->GetClosingDirection();
+
+        vector<dReal> voffset;
+        string cmd;
+        while(!sinput.eof()) {
+            sinput >> cmd;
+            if( !sinput )
+                break;
+            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+
+            if( cmd == "execute" )
+                sinput >> bExecute;
+            else if( cmd == "writetraj" )
+                sinput >> strtrajfilename;
+            else if( cmd == "outputtraj" )
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+            else if( cmd == "outputfinal" )
+                bOutputFinal = true;
+            else if( cmd == "offset" ) {
+                voffset.resize(pmanip->GetGripperJoints().size());
+                FOREACH(it, voffset)
+                    sinput >> *it;
+            }
+            else if( cmd == "movingdir" ) {
+                FOREACH(it,graspparams->vgoalconfig)
+                    sinput >> *it;
+            }
+            else {
+                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
+
+            if( !sinput ) {
+                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                return false;
+            }
+        }
+
+        RobotBase::RobotStateSaver saver(_robot);
+        _robot->SetActiveDOFs(pmanip->GetGripperJoints());
+
+        // have to add the first point
+        Trajectory::TPOINT ptfirst;
+        _robot->GetActiveDOFValues(ptfirst.q);
+ 
+        boost::shared_ptr<PlannerBase> graspplanner = GetEnv()->CreatePlanner("Grasper");
+        if( !graspplanner ) {
+            RAVELOG_ERRORA("grasping planner failure!\n");
+            return false;
+        }
+    
+        graspparams->SetRobotActiveJoints(_robot);
+        _robot->GetActiveDOFValues(graspparams->vinitialconfig);
+        graspparams->btransformrobot = false;
+        graspparams->breturntrajectory = false;
+        graspparams->bonlycontacttarget = false;
+
+        boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(_robot->GetActiveDOF()));
+        ptraj->AddPoint(ptfirst);
+
+        if( !graspplanner->InitPlan(_robot, graspparams) ) {
+            RAVELOG_ERRORA("InitPlan failed\n");
+            return false;
+        }
+    
+        if( !graspplanner->PlanPath(ptraj) ) {
+            RAVELOG_WARNA("PlanPath failed\n");
+            return false;
+        }   
+
+        if( ptraj->GetPoints().size() == 0 )
+            return false;
+
+        if( bOutputFinal ) {
+            FOREACH(itq,ptraj->GetPoints().back().q)
+                sout << *itq << " ";
+        }
+
+        Trajectory::TPOINT p = ptraj->GetPoints().back();
+        if(p.q.size() == voffset.size() ) {
+            for(size_t i = 0; i < voffset.size(); ++i)
+                p.q[i] += voffset[i]*pmanip->GetClosingDirection().at(i);
+            _robot->SetActiveDOFValues(p.q,true);
+            _robot->GetActiveDOFValues(p.q);
+            ptraj->AddPoint(p);
+        }
+
+        CM::SetActiveTrajectory(_robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
+        return true;
+    }
+
+    bool ReleaseFingers(ostream& sout, istream& sinput)
+    {
+        RAVELOG_DEBUG("Starting ReleaseFingers...\n");
+        bool bExecute = true, bOutputFinal=false;
+        string strtrajfilename;
+        boost::shared_ptr<ostream> pOutputTrajStream;
+        Vector direction;
+        KinBodyPtr ptarget;
+        RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
+        boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
+        graspparams->vgoalconfig = pmanip->GetClosingDirection();
+        FOREACH(it,graspparams->vgoalconfig)
+            *it = -*it;
+
+        string cmd;
+        while(!sinput.eof()) {
+            sinput >> cmd;
+            if( !sinput )
+                break;
+            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+
+            if( cmd == "execute" )
+                sinput >> bExecute;
+            else if( cmd == "writetraj" )
+                sinput >> strtrajfilename;
+            else if( cmd == "target" ) {
+                string name; sinput >> name;
+                ptarget = GetEnv()->GetKinBody(name);
+            }
+            else if( cmd == "outputtraj" )
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+            else if( cmd == "outputfinal" )
+                bOutputFinal = true;
+            else if( cmd == "movingdir" ) {
+                FOREACH(it,graspparams->vgoalconfig)
+                    sinput >> *it;
+            }
+            else {
+                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
+
+            if( !sinput ) {
+                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                return false;
+            }
+        }
+
+        RobotBase::RobotStateSaver saver(_robot);
+        _robot->SetActiveDOFs(pmanip->GetGripperJoints());
+        boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(_robot->GetActiveDOF()));
+        // have to add the first point
+        Trajectory::TPOINT ptfirst;
+        _robot->GetActiveDOFValues(ptfirst.q);
+        ptraj->AddPoint(ptfirst);
+        switch(CM::JitterActiveDOF(_robot) ) {
+        case 0:
+            RAVELOG_WARNA("robot initially in collision\n");
+            return false;
+        case 1:
+            _robot->GetActiveDOFValues(ptfirst.q);
+        default:
+            break;
+        }
+ 
+        boost::shared_ptr<PlannerBase> graspplanner = GetEnv()->CreatePlanner("Grasper");
+        if( !graspplanner ) {
+            RAVELOG_ERRORA("grasping planner failure!\n");
+            return false;
+        }
+    
+        graspparams->SetRobotActiveJoints(_robot);
+        _robot->GetActiveDOFValues(graspparams->vinitialconfig);
+        graspparams->btransformrobot = false;
+        graspparams->breturntrajectory = false;
+        graspparams->bonlycontacttarget = false;
+        graspparams->bavoidcontact = true;
+
+        if( !graspplanner->InitPlan(_robot, graspparams) ) {
+            RAVELOG_ERRORA("InitPlan failed\n");
+            return false;
+        }
+    
+        if( !graspplanner->PlanPath(ptraj) ) {
+            RAVELOG_WARNA("PlanPath failed\n");
+            return false;
+        }   
+
+        if( ptraj->GetPoints().size() == 0 )
+            return false;
+
+        if( bOutputFinal ) {
+            FOREACH(itq,ptraj->GetPoints().back().q)
+                sout << *itq << " ";
+        }
+
+        {
+            // check final trajectory for colliding points
+            RobotBase::RobotStateSaver saver2(_robot);
+            _robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
+            if( CM::JitterActiveDOF(_robot) > 0 ) {
+                RAVELOG_WARNA("robot final configuration is in collision\n");
+                Trajectory::TPOINT pt = ptraj->GetPoints().back();
+                _robot->GetActiveDOFValues(pt.q);
+                ptraj->AddPoint(pt);
+            }
+        }
+
+        if( !!ptarget )
+            _robot->Release(ptarget);
+
+        CM::SetActiveTrajectory(_robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
+
+        return true;
+    }
+
+    bool ReleaseActive(ostream& sout, istream& sinput)
+    {
+        RAVELOG_DEBUGA("Releasing active...\n");
+
+        bool bExecute = true, bOutputFinal = false;
+        string strtrajfilename;
+        boost::shared_ptr<ostream> pOutputTrajStream;
+        boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
+        graspparams->vgoalconfig.resize(_robot->GetActiveDOF());
+
+        // initialize the moving direction as the opposite of the closing direction defined in the manipulators
+		vector<dReal> vclosingsign_full(_robot->GetDOF(), 0);
+        FOREACHC(itmanip, _robot->GetManipulators()) {
+            BOOST_ASSERT((*itmanip)->GetClosingDirection().size()==(*itmanip)->GetGripperJoints().size());
+            for(size_t i = 0; i < (*itmanip)->GetClosingDirection().size(); ++i) {
+                if( (*itmanip)->GetClosingDirection()[i] != 0 )
+                    vclosingsign_full[(*itmanip)->GetGripperJoints()[i]] = (*itmanip)->GetClosingDirection()[i];
+            }
+        }
+
+        for(int i = 0; i < _robot->GetActiveDOF(); ++i) {
+            int index = _robot->GetActiveJointIndex(i);
+            if( index >= 0 )
+                graspparams->vgoalconfig[i] = -vclosingsign_full[index];
+        }
+
+        string cmd;
+        while(!sinput.eof()) {
+            sinput >> cmd;
+            if( !sinput )
+                break;
+            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+
+            if( cmd == "execute" )
+                sinput >> bExecute;
+            else if( cmd == "outputtraj" )
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+            else if( cmd == "outputfinal" )
+                bOutputFinal = true;
+            else if( cmd == "writetraj" )
+                sinput >> strtrajfilename;
+            else if( cmd == "movingdir" ) {
+                // moving direction, has to be of size activedof
+                FOREACH(it, graspparams->vgoalconfig)
+                    sinput >> *it;
+            }
+            else {
+                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
+
+            if( !sinput ) {
+                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                return false;
+            }
+        }
+
+        RobotBase::RobotStateSaver saver(_robot);
+        boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(_robot->GetActiveDOF()));
+
+        // have to add the first point
+        Trajectory::TPOINT ptfirst;
+        _robot->GetActiveDOFValues(ptfirst.q);
+        ptraj->AddPoint(ptfirst);
+        switch( CM::JitterActiveDOF(_robot) ) {
+        case 0:
+            RAVELOG_WARNA("robot initially in collision\n");
+            return false;
+        case 1:
+            _robot->GetActiveDOFValues(ptfirst.q);
+        default:
+            break;
+        }
+ 
+        boost::shared_ptr<PlannerBase> graspplanner = GetEnv()->CreatePlanner("Grasper");
+        if( !graspplanner ) {
+            RAVELOG_ERRORA("grasping planner failure!\n");
+            return false;
+        }
+        
+        _robot->SetActiveManipulator(-1); // reset the manipulator
+        graspparams->SetRobotActiveJoints(_robot);
+        _robot->GetActiveDOFValues(graspparams->vinitialconfig);  
+        graspparams->btransformrobot = false;
+        graspparams->breturntrajectory = false;
+        graspparams->bonlycontacttarget = false;
+        graspparams->bavoidcontact = true;
+
+        if( !graspplanner->InitPlan(_robot, graspparams) ) {
+            RAVELOG_ERRORA("InitPlan failed\n");
+            return false;
+        }
+    
+        if( !graspplanner->PlanPath(ptraj) ) {
+            RAVELOG_WARNA("PlanPath failed\n");
+            return false;
+        }
+
+        if( ptraj->GetPoints().size() == 0 )
+            return false;
+
+
+        if( bOutputFinal ) {
+            FOREACH(itq,ptraj->GetPoints().back().q)
+                sout << *itq << " ";
+        }
+
+        {
+            // check final trajectory for colliding points
+            RobotBase::RobotStateSaver saver2(_robot);
+            _robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
+            if( CM::JitterActiveDOF(_robot) > 0 ) {
+                RAVELOG_WARNA("robot final configuration is in collision\n");
+                Trajectory::TPOINT pt = ptraj->GetPoints().back();
+                _robot->GetActiveDOFValues(pt.q);
+                ptraj->AddPoint(pt);
+            }
+        }
+
+        CM::SetActiveTrajectory(_robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         return true;
     }
 

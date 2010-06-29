@@ -44,12 +44,11 @@ public:
                         "and hand isn't guaranteed.\n"
                         "Options: handjoints savetraj planner");
         RegisterCommand("CloseFingers",boost::bind(&BaseManipulation::CloseFingers,this,_1,_2),
-                        "Closes the active manipulator fingers using the grasp planner.");
+                        "see TaskManipulation problem");
         RegisterCommand("ReleaseFingers",boost::bind(&BaseManipulation::ReleaseFingers,this,_1,_2),
-                        "Releases the active manipulator fingers using the grasp planner.\n"
-                        "Also releases the given object.");
+                        "see TaskManipulation problem.");
         RegisterCommand("ReleaseActive",boost::bind(&BaseManipulation::ReleaseActive,this,_1,_2),
-                        "Moves the active DOF using the grasp planner.");
+                        "see TaskManipulation problem.");
         RegisterCommand("JitterActive",boost::bind(&BaseManipulation::JitterActive,this,_1,_2),
                         "Jitters the active DOF for a collision-free position.");
         RegisterCommand("IKTest",boost::bind(&BaseManipulation::IKtest,this,_1,_2),
@@ -966,7 +965,7 @@ protected:
 
     bool CloseFingers(ostream& sout, istream& sinput)
     {
-        RAVELOG_DEBUGA("Starting CloseFingers...\n");
+        RAVELOG_WARN("CloseFingers moved to TaskManipulation...\n");
         bool bExecute = true, bOutputFinal=false;
         string strtrajfilename;
         boost::shared_ptr<ostream> pOutputTrajStream;
@@ -1066,7 +1065,7 @@ protected:
 
     bool ReleaseFingers(ostream& sout, istream& sinput)
     {
-        RAVELOG_DEBUG("Starting ReleaseFingers...\n");
+        RAVELOG_WARN("ReleaseFingers moved to TaskManipulation problem...\n");
         bool bExecute = true, bOutputFinal=false;
         string strtrajfilename;
         boost::shared_ptr<ostream> pOutputTrajStream;
@@ -1182,7 +1181,7 @@ protected:
 
     bool ReleaseActive(ostream& sout, istream& sinput)
     {
-        RAVELOG_DEBUGA("Releasing active...\n");
+        RAVELOG_WARN("ReleaseActive moved to TaskManipulation ...\n");
 
         bool bExecute = true, bOutputFinal = false;
         string strtrajfilename;
