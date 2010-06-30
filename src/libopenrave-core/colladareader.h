@@ -1243,10 +1243,10 @@ public:
       RAVELOG_VERBOSEA("Number of links in the kmodel %d\n",ktec->getLink_array().getCount());
 
 //      //  Gets parent node.
-//      domNodeRef  parent  = daeSafeCast<domNode>(pnode->getParent());
+      domNodeRef  parent  = daeSafeCast<domNode>(pnode->getParent());
 
       // Stefan: This is not a safe cast - predecessor might be a transformation
-      domNodeRef  parent  = daeSafeCast<domNode>(pnode->getAncestor(NodeMatcher()));
+//      domNodeRef  parent  = daeSafeCast<domNode>(pnode->getAncestor(NodeMatcher()));
       // ---
 
       //  Extract all links into the kinematics_model
@@ -1254,20 +1254,20 @@ public:
       {
         domLinkRef plink = ktec->getLink_array()[ilink];
 
-//        domNodeRef  child = daeSafeCast<domNode>(parent->getChildren()[ilink])
+        domNodeRef  child = daeSafeCast<domNode>(parent->getChildren()[ilink]);
 
         //  Stefan change
-        domNodeRef  child = daeSafeCast<domNode>(parent->getChildrenByType<domNode>()[ilink]);
+//        domNodeRef  child = daeSafeCast<domNode>(parent->getChildrenByType<domNode>()[ilink]);
         // ---
 
 
         //  Debug
         RAVELOG_VERBOSEA("Node Name out of ExtractLink: %s\n",child->getName());
 
-//        ExtractLink(pkinbody, plink, child, Transform(), vdomjoints, vbindings);
+        ExtractLink(pkinbody, plink, child, Transform(), vdomjoints, vbindings);
 
         //  Stefan change
-        ExtractLink(pkinbody, plink, child, getNodeParentTransform(child), vdomjoints, vbindings);
+//        ExtractLink(pkinbody, plink, child, getNodeParentTransform(child), vdomjoints, vbindings);
         // ---
 
 
@@ -2760,19 +2760,19 @@ public:
     domRotateRef protate = daeSafeCast<domRotate>(pelt);
     if( !!protate )
     {
-        if( !protate->getSid() ) { // if sid is valid, then controlled by joint?
+//        if( !protate->getSid() ) { // if sid is valid, then controlled by joint?
           t.rotfromaxisangle(Vector(protate->getValue()[0],protate->getValue()[1],protate->getValue()[2]), (dReal)(protate->getValue()[3]*(PI/180.0)));
-      }
+//      }
       return t;
     }
 
     domTranslateRef ptrans = daeSafeCast<domTranslate>(pelt);
     if( !!ptrans )
     {
-      if( !ptrans->getSid() ) { // if sid is valid, then controlled by joint?
+//      if( !ptrans->getSid() ) { // if sid is valid, then controlled by joint?
           t.trans = Vector(ptrans->getValue()[0], ptrans->getValue()[1], ptrans->getValue()[2]);
           t.trans *= GetUnitScale(pelt);
-      }
+//      }
       return t;
     }
 
