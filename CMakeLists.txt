@@ -389,7 +389,7 @@ if( NOT COLLADA_FOUND AND ZLIB_FOUND AND Boost_FILESYSTEM_FOUND AND Boost_SYSTEM
     set(libpcrecpp_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/pcre-8.02)
     set(libpcrecpp_LIBRARY_DIRS)
     set(libpcrecpp_LIBRARIES pcrecpp_local)
-    set(libpcrecpp_CFLAGS_OTHERS)
+    set(libpcrecpp_CFLAGS_OTHERS "-DPCRE_STATIC")
     set(libpcrecpp_LDFLAGS_OTHERS)
   endif()
 
