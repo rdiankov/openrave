@@ -63,13 +63,6 @@ protected:
 class RAVE_API RobotBase : public KinBody
 {
 public:
-    /// A set of properties for the kinbody. These properties are used to describe a set of variables used in KinBody.
-    enum RobotProperty {
-        Prop_Manipulators = 0x00010000, ///< all properties of all manipulators
-        Prop_Sensors = 0x00020000, ///< all properties of all sensors
-        Prop_SensorPlacement = 0x00040000, ///< relative sensor placement of sensors
-    };
-
     /// handles manipulators of the robot (usually 1 dim)
     class RAVE_API Manipulator : public boost::enable_shared_from_this<Manipulator>
     {
@@ -251,12 +244,11 @@ public:
         Transform troot; // root transform (of first link) relative to end effector
     };
 
-    /// Helper class to save the entire robot state and its grabbed bodies
-    /// Also saves and restores the current active degrees of freedom
+    /// Helper class derived from KinBodyStateSaver to additionaly save robot information.
     class RAVE_API RobotStateSaver : public KinBodyStateSaver
     {
     public:
-        RobotStateSaver(RobotBasePtr probot);
+        RobotStateSaver(RobotBasePtr probot, int options = Save_LinkTransformation|Save_LinkEnable|Save_ActiveDOF|Save_ActiveManipulator);
         virtual ~RobotStateSaver();
     protected:
         std::vector<int> vactivedofs;

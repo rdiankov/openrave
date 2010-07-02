@@ -520,18 +520,27 @@ std::string RobotBase::AttachedSensor::GetStructureHash() const
     return __hashstructure;
 }
 
-RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot) : KinBodyStateSaver(probot), _probot(probot)
+    RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : KinBodyStateSaver(probot, options), _probot(probot)
 {
-    vactivedofs = _probot->GetActiveJointIndices();
-    affinedofs = _probot->GetAffineDOF();
-    rotationaxis = _probot->GetAffineRotationAxis();
-    nActiveManip = _probot->_nActiveManip;
+    if( _options & Save_ActiveDOF ) {
+        vactivedofs = _probot->GetActiveJointIndices();
+        affinedofs = _probot->GetAffineDOF();
+        rotationaxis = _probot->GetAffineRotationAxis();
+    }
+    if( _options & Save_ActiveManipulator ) {
+        nActiveManip = _probot->_nActiveManip;
+    }
 }
 
 RobotBase::RobotStateSaver::~RobotStateSaver()
 {
-    _probot->SetActiveDOFs(vactivedofs, affinedofs, rotationaxis);
-    _probot->_nActiveManip = nActiveManip;
+    if( _options & Save_ActiveDOF ) {
+        _probot->SetActiveDOFs(vactivedofs, affinedofs, rotationaxis);
+    }
+    if( _options & Save_ActiveManipulator ) {
+        _probot->_nActiveManip = nActiveManip;
+    }
+    BOOST_ASSERT(!(_options&Save_GrabbedBodies));
 }
 
 RobotBase::RobotBase(EnvironmentBasePtr penv) : KinBody(PT_Robot, penv)

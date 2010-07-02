@@ -235,13 +235,13 @@ class VisibilityGrasping(metaclass.AutoReloader):
             basemanip = BaseManipulation(self.robot)
             self.robot.GetController().SetDesired(self.robotreal.GetJointValues()) # update the robot
             try:
-                trajdata = vmodel.visualprob.MoveToObserveTarget(target=self.target,sampleprob=0.001,maxiter=4000,execute=False,outputtraj=True)
+                trajdata = vmodel.visualprob.MoveToObserveTarget(sampleprob=0.001,maxiter=4000,execute=False,outputtraj=True)
                 self.starttrajectory(trajdata)
             except planning_error:
                 print 'failed to find visual feedback grasp'
                 continue
 
-            if not vmodel.visualprob.ComputeVisibility(self.target):
+            if not vmodel.visualprob.ComputeVisibility():
                 print 'visibility has not been achieved!'
                 continue
             T = self.target.GetTransform()

@@ -357,18 +357,26 @@ class SpaceSampler(metaclass.AutoReloader):
         return pts
 
 class KinBodyStateSaver:
-    def __init__(self,body):
+    def __init__(self,body,options=None):
         self.body = body
+        self.options=options
     def __enter__(self):
-        self.handle = self.body.CreateKinBodyStateSaver()
+        if self.options is None:
+            self.handle = self.body.CreateKinBodyStateSaver()
+        else:
+            self.handle = self.body.CreateKinBodyStateSaver(self.options)
     def __exit__(self, type, value, traceback):
         self.handle.close()
 
 class RobotStateSaver:
-    def __init__(self,robot):
+    def __init__(self,robot,options=None):
         self.robot = robot
+        self.options = options
     def __enter__(self):
-        self.handle = self.robot.CreateRobotStateSaver()
+        if self.options is None:
+            self.handle = self.robot.CreateRobotStateSaver()
+        else:
+            self.handle = self.robot.CreateRobotStateSaver(self.options)
     def __exit__(self, type, value, traceback):
         self.handle.close()
 

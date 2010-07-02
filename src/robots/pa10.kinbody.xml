@@ -30,7 +30,8 @@
     <anchor>0 0 0.315</anchor>
     <lostop>-177</lostop>
     <histop>177</histop>
-    <maxvel>1</maxvel>
+    <maxvel>0.4</maxvel>
+    <hardmaxvel>1</hardmaxvel>
   </Joint>
   <Body name="link2">
     <offsetfrom>link0</offsetfrom>
@@ -52,7 +53,8 @@
     <anchor>0 0 0.315</anchor>
     <lostop>-91</lostop>
     <histop>91</histop>
-    <maxvel>1</maxvel>
+    <maxvel>0.4</maxvel>
+    <hardmaxvel>1</hardmaxvel>
   </Joint>
   <Body name="link3">
     <offsetfrom>link0</offsetfrom>
@@ -74,7 +76,8 @@
     <anchor>0 0 0.315</anchor>
     <lostop>-174</lostop>
     <histop>174</histop>
-    <maxvel>2</maxvel>
+    <maxvel>0.5</maxvel>
+    <hardmaxvel>1.5</hardmaxvel>
   </Joint>
   <Body name="link4">
     <offsetfrom>link0</offsetfrom>
@@ -96,7 +99,8 @@
     <anchor>0 0 0.765</anchor>
     <lostop>-137</lostop>
     <histop>137</histop>
-    <maxvel>2</maxvel>
+    <maxvel>0.5</maxvel>
+    <hardmaxvel>2</hardmaxvel>
   </Joint>
   <Body name="link5">
     <offsetfrom>link0</offsetfrom>
@@ -118,7 +122,8 @@
     <anchor>0 0 0.765</anchor>
     <lostop>-255</lostop>
     <histop>255</histop>
-    <maxvel>6.2832</maxvel>
+    <maxvel>1</maxvel>
+    <hardmaxvel>6.28</hardmaxvel>
   </Joint>
   <Body name="link6">
     <offsetfrom>link0</offsetfrom>
@@ -140,7 +145,8 @@
     <anchor>0 0 1.265</anchor>
     <lostop>-165</lostop>
     <histop>165</histop>
-    <maxvel>6.2832</maxvel>
+    <maxvel>1</maxvel>
+    <hardmaxvel>6.28</hardmaxvel>
   </Joint>
   <Body name="link7">
     <offsetfrom>link0</offsetfrom>
@@ -164,6 +170,7 @@
     <axis>0 0 -1</axis>
     <anchor>0 0 1.265</anchor>
     <!-- no joint limits -->
-    <maxvel>6.2832</maxvel>
+    <maxvel>1</maxvel>
+    <hardmaxvel>6.28</hardmaxvel>
   </Joint>
 </KinBody>

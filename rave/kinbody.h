@@ -36,6 +36,10 @@ public:
         Prop_Name=0x20, ///< name changed
         Prop_LinkDraw=0x40, ///< toggle link geometries rendering
         Prop_LinkGeometry=0x80, ///< the geometry of the link changed
+        // robot only
+        Prop_Manipulators = 0x00010000, ///< [robot only] all properties of all manipulators
+        Prop_Sensors = 0x00020000, ///< [robot only] all properties of all sensors
+        Prop_SensorPlacement = 0x00040000, ///< [robot only] relative sensor placement of sensors
     };
 
     /// rigid body defined by an arbitrary ODE body and a render object
@@ -437,13 +441,25 @@ public:
     typedef boost::shared_ptr<ManageData> ManageDataPtr;
     typedef boost::shared_ptr<ManageData const> ManageDataConstPtr;
 
+    enum SaveParameters
+    {
+        Save_LinkTransformation=0x00000001, ///< save link transformations
+        Save_LinkEnable=0x00000002, ///< save link enable states
+        // robot only
+        Save_ActiveDOF=0x00010000, ///< [robot only], saves and restores the current active degrees of freedom
+        Save_ActiveManipulator=0x00020000, ///< [robot only], saves the active manipulator
+        Save_GrabbedBodies=0x00040000, ///< [robot only], saves the grabbed state of the bodies. This does not affect the configuraiton of those bodies.
+    };
+
     /// Helper class to save the entire kinbody state
+    /// Options can be passed to the constructor in order to choose which parameters to save (see SaveParameters)
     class RAVE_API KinBodyStateSaver
     {
     public:
-        KinBodyStateSaver(KinBodyPtr pbody);
+        KinBodyStateSaver(KinBodyPtr pbody, int options = Save_LinkTransformation|Save_LinkEnable);
         virtual ~KinBodyStateSaver();
     protected:
+        int _options; ///< saved options
         std::vector<Transform> _vLinkTransforms;
         std::vector<uint8_t> _vEnabledLinks;
         KinBodyPtr _pbody;

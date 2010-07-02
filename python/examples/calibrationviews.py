@@ -28,7 +28,8 @@ class CalibrationViews(metaclass.AutoReloader):
     def __init__(self,robot,sensorname,sensorrobot=None,target=None,maxvelmult=None,randomize=False):
         """Starts a calibration sequencer using a robot and a sensor.
 
-        The minimum needed to be specified is the robot and a sensorname. Supports sensors that do not belong to the current robot. Can use the visibility information of the target.
+        The minimum needed to be specified is the robot and a sensorname. Supports camera sensors that do not belong to the current robot, in this case the IK is done assuming the target is grabbed by the active manipulator of the robot
+        Can use the visibility information of the target.
         @param sensorrobot: If specified, used to determine what robot the sensor lies on.
         """
         self.env = robot.GetEnv()
@@ -40,20 +41,29 @@ class CalibrationViews(metaclass.AutoReloader):
             pose = poseFromMatrix(target.GetTransform())
             target.SetTransform(pose)
         self.vmodel = visibilitymodel.VisibilityModel(robot=robot,sensorrobot=sensorrobot,target=target,sensorname=sensorname)
+        self.Tpatternrobot = None
+        if self.vmodel.robot != self.vmodel.sensorrobot and target is not None:
+            print 'Assuming target %s is attached to the end effector of manipulator %s'%(target.GetName(),manip)
+            self.Tpatternrobot = dot(linalg.inv(manip.GetEndEffectorTransform()),target.GetTransform())
 
-    def computevisibilityposes(self,anglerange=pi,dists=arange(0.05,1.0,0.15),angledensity=1,num=inf,cameraonmanip=True):
+    def computevisibilityposes(self,anglerange=pi,dists=arange(0.05,1.0,0.15),angledensity=1,num=inf):
         """Computes robot poses using visibility information from the target.
 
         Sample the transformations of the camera. the camera x and y axes should always be aligned with the 
         xy axes of the calibration pattern.
         @param cameraonmanip: if True assumes the camera is attached onto the link sensor. Otherwise the camera is attached to a different link (or different robot).
         """
-        with self.env:
+        with self.vmodel.target:
+            #self.vmodel.target.SetTransform(dot(self.vmodel.manip.GetEndEffectorTransform(),self.Tpatternrobot))
+            #if not self.robot.IsGrabbing(self.vmodel.target):   
+            #self.robot.Grab(self.vmodel.target,self
             values=self.robot.GetJointValues()
             self.vmodel.preshapes=array([values[self.vmodel.manip.GetGripperJoints()]])
             self.vmodel.preprocess()
+            # actually use the visibility instead of approximating as a cone
             dirs,indices = ComputeGeodesicSphereMesh(level=angledensity)
             targetright = self.vmodel.target.GetTransform()[0:3,0]
+            targetup = self.vmodel.target.GetTransform()[0:3,1]
             targetdir = self.vmodel.target.GetTransform()[0:3,2]
             dirs = dirs[dot(dirs,targetdir)>=cos(anglerange)]
             with self.vmodel.target:
@@ -64,8 +74,14 @@ class CalibrationViews(metaclass.AutoReloader):
             Rs = []
             for dir in dirs:
                 right=targetright-dir*dot(targetright,dir)
-                right/=sqrt(sum(right**2))
-                Rs.append(c_[right,cross(dir,right),dir])
+                rightlen = sqrt(sum(right**2))
+                if rightlen < 1e-5:
+                    up=targetup-dir*dot(targetup,dir)
+                    up /= sqrt(sum(up**2))
+                    Rs.append(c_[cross(dir,up),up,dir])
+                else:
+                    right/=rightlen
+                    Rs.append(c_[right,cross(dir,right),dir])
             poses = []
             configs = []
             for R in Rs:
@@ -74,7 +90,7 @@ class CalibrationViews(metaclass.AutoReloader):
                     for center in centers:
                         pose = r_[quat,center-dist*R[0:3,2]]
                         try:
-                            q=self.vmodel.visualprob.ComputeVisibleConfiguration(target=self.vmodel.target,pose=pose)
+                            q=self.vmodel.visualprob.ComputeVisibleConfiguration(pose=pose)
                             poses.append(pose)
                             configs.append(q)
                             if len(poses) > num:
@@ -83,7 +99,7 @@ class CalibrationViews(metaclass.AutoReloader):
                             pass
             return array(poses), array(configs)
 
-    def computelocalposes(self,maxconeangle = 0.5,maxconedist = 0.15,averagedist=0.03,angledelta=0.2,cameraonmanip=True,**kwargs):
+    def computelocalposes(self,maxconeangle = 0.5,maxconedist = 0.15,averagedist=0.03,angledelta=0.2,**kwargs):
         """Computes robot poses using a cone pointing to the negative z-axis of the camera
 
         @param cameraonmanip: if True assumes the camera is attached onto the link sensor. Otherwise the camera is attached to a different link (or different robot).

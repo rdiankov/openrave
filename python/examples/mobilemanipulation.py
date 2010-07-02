@@ -893,7 +893,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         vmodel.SetCameraTransforms(reachabletransforms)
         for iter in range(20):
             try:
-                vmodel.visualprob.MoveToObserveTarget(target=vmodel.target,sampleprob=0.001,maxiter=4000)
+                vmodel.visualprob.MoveToObserveTarget(sampleprob=0.001,maxiter=4000)
             except RuntimeError,e:
                 print e
                 raise planning_error('cannot find target')

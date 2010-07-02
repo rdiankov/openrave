@@ -38,8 +38,10 @@ class VisualFeedback:
         if envother.LoadProblem(clone.prob,clone.args) != 0:
             raise ValueError('problem failed to initialize')
         return clone
-    def SetCamera(self,sensorindex=None,sensorname=None,manipname=None,convexdata=None,sensorrobot=None):
-        cmd = 'SetCamera '
+    def SetCameraAndTarget(self,sensorindex=None,sensorname=None,manipname=None,convexdata=None,sensorrobot=None,target=None):
+        cmd = 'SetCameraAndTarget '
+        if target is not None:
+            cmd += 'target %s '%target.GetName()
         if sensorrobot is not None:
             cmd += 'sensorrobot %s '%sensorrobot.GetName()
         if sensorindex is not None:
@@ -56,10 +58,8 @@ class VisualFeedback:
         if res is None:
             raise planning_error()
         return res
-    def ProcessVisibilityExtents(self,target,localtargetcenter=None,numrolls=None,transforms=None,extents=None,sphere=None):
-        cmd = 'ProcessVisibilityExtents target %s '%target.GetName()
-        if target is not None:
-            cmd += 'target %s '%target.GetName()
+    def ProcessVisibilityExtents(self,localtargetcenter=None,numrolls=None,transforms=None,extents=None,sphere=None):
+        cmd = 'ProcessVisibilityExtents '
         if localtargetcenter is not None:
             cmd += 'localtargetcenter %f %f %f '%(localtargetcenter[0],localtargetcenter[1],localtargetcenter[2])
         if numrolls is not None:
@@ -81,29 +81,22 @@ class VisualFeedback:
             raise planning_error()
         visibilitytransforms = array([float(s) for s in res.split()],float)
         return reshape(visibilitytransforms,(len(visibilitytransforms)/7,7))
-    def SetCameraTransforms(self,transforms,target=None):
-        cmd = 'SetCameraTransforms '
-        if target is not None:
-            cmd += 'target %s '%target.GetName()
-        if transforms is not None:
-            cmd += 'transforms %d '%len(transforms)
-            for f in reshape(transforms,len(transforms)*7):
-                cmd += str(f) + ' '
+    def SetCameraTransforms(self,transforms):
+        cmd = 'SetCameraTransforms transforms %d '%len(transforms)
+        for f in reshape(transforms,len(transforms)*7):
+            cmd += str(f) + ' '
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise planning_error()
         return res
-    def ComputeVisibility(self,target):
+    def ComputeVisibility(self):
         cmd = 'ComputeVisibility '
-        if target is not None:
-            cmd += 'target %s '%target.GetName()
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise planning_error()
         return int(res)
-    def ComputeVisibleConfiguration(self,target,pose):
+    def ComputeVisibleConfiguration(self,pose):
         cmd = 'ComputeVisibleConfiguration '
-        cmd += 'target %s '%target.GetName()
         cmd += 'pose '
         for i in range(7):
             cmd += str(pose[i]) + ' '
@@ -111,10 +104,8 @@ class VisualFeedback:
         if res is None:
             raise planning_error()
         return array([float(s) for s in res.split()])
-    def SampleVisibilityGoal(self,target,numsamples=None):
+    def SampleVisibilityGoal(self,numsamples=None):
         cmd = 'SampleVisibilityGoal '
-        if target is not None:
-            cmd += 'target %s '%target.GetName()
         if numsamples is not None:
             cmd += 'numsamples %d '%numsamples
         res = self.prob.SendCommand(cmd)
@@ -123,8 +114,8 @@ class VisualFeedback:
         samples = [float(s) for s in res.split()]
         returnedsamples = int(samples[0])
         return reshape(array(samples[1:],float),(returnedsamples,(len(samples)-1)/returnedsamples))
-    def MoveToObserveTarget(self,target,affinedofs=None,smoothpath=None,planner=None,sampleprob=None,maxiter=None,execute=None,outputtraj=None):
-        cmd = 'MoveToObserveTarget target %s '%target.GetName()
+    def MoveToObserveTarget(self,affinedofs=None,smoothpath=None,planner=None,sampleprob=None,maxiter=None,execute=None,outputtraj=None):
+        cmd = 'MoveToObserveTarget '
         if affinedofs is not None:
             cmd += 'affinedofs %d '%affinedofs
         if smoothpath is not None:
@@ -143,8 +134,8 @@ class VisualFeedback:
         if res is None:
             raise planning_error()
         return res
-    def VisualFeedbackGrasping(self,target,graspset,usevisibility=None,planner=None,graspdistthresh=None,visgraspthresh=None,numgradientsamples=None,maxiter=None,execute=None,outputtraj=None):
-        cmd = 'VisualFeedbackGrasping target %s '%target.GetName()
+    def VisualFeedbackGrasping(self,graspset,usevisibility=None,planner=None,graspdistthresh=None,visgraspthresh=None,numgradientsamples=None,maxiter=None,execute=None,outputtraj=None):
+        cmd = 'VisualFeedbackGrasping '
         if graspset is not None:
             cmd += 'graspset %d '%len(graspset)
             for f in reshape(graspset,size(graspset)):

@@ -100,14 +100,15 @@ class VisibilityModel(OpenRAVEModel):
 
     def preprocess(self):
         with self.env:
-            manipname = self.visualprob.SetCamera(sensorname=self.sensorname,sensorrobot=self.sensorrobot,manipname=self.manipname)
+            manipname = self.visualprob.SetCameraAndTarget(sensorname=self.sensorname,sensorrobot=self.sensorrobot,manipname=self.manipname,target=self.target)
             assert(self.manipname is None or self.manipname==manipname)
             self.manip = self.robot.SetActiveManipulator(manipname)
             self.attachedsensor = [s for s in self.sensorrobot.GetSensors() if s.GetName() == self.sensorname][0]
             self.ikmodel = inversekinematics.InverseKinematicsModel(robot=self.robot,iktype=IkParameterization.Type.Transform6D)
             if not self.ikmodel.load():
                 self.ikmodel.autogenerate()
-            self.visualprob.SetCameraTransforms(transforms=self.visibilitytransforms)
+            if self.visibilitytransforms is not None:
+                self.visualprob.SetCameraTransforms(transforms=self.visibilitytransforms)
     
     def autogenerate(self,options=None,gmodel=None):
         preshapes = None
@@ -146,9 +147,9 @@ class VisibilityModel(OpenRAVEModel):
                     self.robot.SetJointValues(self.preshapes[0],self.manip.GetGripperJoints())
                     extentsfile = os.path.join(self.env.GetHomeDirectory(),'kinbody.'+self.target.GetKinematicsGeometryHash(),'visibility.txt')
                     if os.path.isfile(extentsfile):
-                        self.visibilitytransforms = self.visualprob.ProcessVisibilityExtents(target=self.target, extents=loadtxt(extentsfile,float))
+                        self.visibilitytransforms = self.visualprob.ProcessVisibilityExtents(extents=loadtxt(extentsfile,float))
                     else:
-                        self.visibilitytransforms = self.visualprob.ProcessVisibilityExtents(target=self.target, sphere=[3,0.1,0.15,0.2,0.25,0.3])
+                        self.visibilitytransforms = self.visualprob.ProcessVisibilityExtents(sphere=[3,0.1,0.15,0.2,0.25,0.3])
                 self.visualprob.SetCameraTransforms(transforms=self.visibilitytransforms)
         finally:
             for b,enable in bodies:
@@ -170,7 +171,7 @@ class VisibilityModel(OpenRAVEModel):
                         Tdelta = dot(Tgrasp,linalg.inv(self.manip.GetEndEffectorTransform()))
                         for link in self.manip.GetChildLinks():
                             link.SetTransform(dot(Tdelta,link.GetTransform()))
-                        visibility = self.visualprob.ComputeVisibility(self.target)
+                        visibility = self.visualprob.ComputeVisibility()
                         self.env.UpdatePublishedBodies()
                     raw_input('visibility %d, press any key to continue: '%visibility)
     def show(self,options=None):
@@ -205,7 +206,7 @@ class VisibilityModel(OpenRAVEModel):
                 s = self.manip.FindIKSolution(Tgrasp,checkcollision)
                 if s is not None:
                     self.robot.SetJointValues(s,self.manip.GetArmJoints())
-                    if computevisibility and not self.visualprob.ComputeVisibility(self.target):
+                    if computevisibility and not self.visualprob.ComputeVisibility():
                         continue
                     validjoints.append((s,i))
                     if not returnall:

@@ -967,6 +967,7 @@ public:
 
     string GetKinematicsGeometryHash() const { return _pbody->GetKinematicsGeometryHash(); }
     PyVoidHandle CreateKinBodyStateSaver() { return PyVoidHandle(boost::shared_ptr<void>(new KinBody::KinBodyStateSaver(_pbody))); }
+    PyVoidHandle CreateKinBodyStateSaver(int options) { return PyVoidHandle(boost::shared_ptr<void>(new KinBody::KinBodyStateSaver(_pbody, options))); }
 
     virtual string __repr__() { return boost::str(boost::format("<env.GetKinBody('%s')>")%_pbody->GetName()); }
     virtual string __str__() { return boost::str(boost::format("<%s:%s - %s (%s)>")%RaveGetInterfaceName(_pbody->GetInterfaceType())%_pbody->GetXMLId()%_pbody->GetName()%_pbody->GetKinematicsGeometryHash()); }
@@ -1730,6 +1731,7 @@ public:
 
     string GetRobotStructureHash() const { return _probot->GetRobotStructureHash(); }
     PyVoidHandle CreateRobotStateSaver() { return PyVoidHandle(boost::shared_ptr<void>(new RobotBase::RobotStateSaver(_probot))); }
+    PyVoidHandle CreateRobotStateSaver(int options) { return PyVoidHandle(boost::shared_ptr<void>(new RobotBase::RobotStateSaver(_probot,options))); }
 
     virtual string __repr__() { return boost::str(boost::format("<env.GetRobot('%s')>")%_probot->GetName()); }
     virtual string __str__() { return boost::str(boost::format("<%s:%s - %s (%s)>")%RaveGetInterfaceName(_probot->GetInterfaceType())%_probot->GetXMLId()%_probot->GetName()%_probot->GetRobotStructureHash()); }
@@ -3308,6 +3310,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
         bool (PyKinBody::*pkinbodyselfr)(PyCollisionReportPtr) = &PyKinBody::CheckSelfCollision;
         void (PyKinBody::*psetjointvalues1)(object) = &PyKinBody::SetJointValues;
         void (PyKinBody::*psetjointvalues2)(object,object) = &PyKinBody::SetJointValues;
+        PyVoidHandle (PyKinBody::*statesaver1)() = &PyKinBody::CreateKinBodyStateSaver;
+        PyVoidHandle (PyKinBody::*statesaver2)(int) = &PyKinBody::CreateKinBodyStateSaver;
         scope kinbody = class_<PyKinBody, boost::shared_ptr<PyKinBody>, bases<PyInterfaceBase> >("KinBody", no_init)
             .def("InitFromFile",&PyKinBody::InitFromFile,args("filename"))
             .def("InitFromData",&PyKinBody::InitFromData,args("data"))
@@ -3362,12 +3366,21 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetUpdateStamp",&PyKinBody::GetUpdateStamp)
             .def("serialize",&PyKinBody::serialize,args("options"))
             .def("GetKinematicsGeometryHash",&PyKinBody::GetKinematicsGeometryHash)
-            .def("CreateKinBodyStateSaver",&PyKinBody::CreateKinBodyStateSaver)
+            .def("CreateKinBodyStateSaver",statesaver1)
+            .def("CreateKinBodyStateSaver",statesaver2)
             .def("__enter__",&PyKinBody::__enter__)
             .def("__exit__",&PyKinBody::__exit__)
             ;
 
-        {        
+        enum_<KinBody::SaveParameters>("SaveParameters")
+            .value("LinkTransformation",KinBody::Save_LinkTransformation)
+            .value("LinkEnable",KinBody::Save_LinkEnable)
+            .value("ActiveDOF",KinBody::Save_ActiveDOF)
+            .value("ActiveManipulator",KinBody::Save_ActiveManipulator)
+            .value("GrabbedBodies",KinBody::Save_GrabbedBodies)
+            ;
+
+        {
             scope link = class_<PyKinBody::PyLink, boost::shared_ptr<PyKinBody::PyLink> >("Link", no_init)
                 .def("GetName",&PyKinBody::PyLink::GetName)
                 .def("GetIndex",&PyKinBody::PyLink::GetIndex)
@@ -3554,7 +3567,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
 
         object (PyRobotBase::*GetManipulators1)() = &PyRobotBase::GetManipulators;
         object (PyRobotBase::*GetManipulators2)(const string&) = &PyRobotBase::GetManipulators;
-
+        PyVoidHandle (PyRobotBase::*statesaver1)() = &PyRobotBase::CreateRobotStateSaver;
+        PyVoidHandle (PyRobotBase::*statesaver2)(int) = &PyRobotBase::CreateRobotStateSaver;
         scope robot = class_<PyRobotBase, boost::shared_ptr<PyRobotBase>, bases<PyKinBody, PyInterfaceBase> >("Robot", no_init)
             .def("GetManipulators",GetManipulators1)
             .def("GetManipulators",GetManipulators2,args("manipname"))
@@ -3628,7 +3642,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetGrabbed",&PyRobotBase::GetGrabbed)
             .def("WaitForController",&PyRobotBase::WaitForController,args("timeout"))
             .def("GetRobotStructureHash",&PyRobotBase::GetRobotStructureHash)
-            .def("CreateRobotStateSaver",&PyRobotBase::CreateRobotStateSaver)
+            .def("CreateRobotStateSaver",statesaver1)
+            .def("CreateRobotStateSaver",statesaver2)
             .def("__repr__", &PyRobotBase::__repr__)
             .def("__str__", &PyRobotBase::__str__)
             ;

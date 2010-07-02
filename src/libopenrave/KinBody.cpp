@@ -866,20 +866,28 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
     }
 }
 
-KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody) : _pbody(pbody)
+KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _options(options), _pbody(pbody)
 {
-    _pbody->GetBodyTransformations(_vLinkTransforms);
-    _vEnabledLinks.resize(_vLinkTransforms.size());
-    for(size_t i = 0; i < _vEnabledLinks.size(); ++i)
-        _vEnabledLinks[i] = _pbody->GetLinks().at(i)->IsEnabled();
+    if( _options & Save_LinkTransformation ) {
+        _pbody->GetBodyTransformations(_vLinkTransforms);
+    }
+    if( _options & Save_LinkEnable ) {
+        _vEnabledLinks.resize(_vLinkTransforms.size());
+        for(size_t i = 0; i < _vEnabledLinks.size(); ++i)
+            _vEnabledLinks[i] = _pbody->GetLinks().at(i)->IsEnabled();
+    }
 }
 
 KinBody::KinBodyStateSaver::~KinBodyStateSaver()
 {
-    _pbody->SetBodyTransformations(_vLinkTransforms);
-    for(size_t i = 0; i < _vEnabledLinks.size(); ++i) {
-        if( _pbody->GetLinks().at(i)->IsEnabled() != !!_vEnabledLinks[i] )
-            _pbody->GetLinks().at(i)->Enable(!!_vEnabledLinks[i]);
+    if( _options & Save_LinkTransformation ) {
+        _pbody->SetBodyTransformations(_vLinkTransforms);
+    }
+    if( _options & Save_LinkEnable ) {
+        for(size_t i = 0; i < _vEnabledLinks.size(); ++i) {
+            if( _pbody->GetLinks().at(i)->IsEnabled() != !!_vEnabledLinks[i] )
+                _pbody->GetLinks().at(i)->Enable(!!_vEnabledLinks[i]);
+        }
     }
 }
 

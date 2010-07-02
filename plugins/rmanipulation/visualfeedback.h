@@ -213,28 +213,28 @@ public:
     class VisibilityConstraintFunction
     {
     public:
-    VisibilityConstraintFunction(boost::shared_ptr<VisualFeedbackProblem> vf, KinBodyPtr ptarget) : _vf(vf), _ptarget(ptarget) {
+    VisibilityConstraintFunction(boost::shared_ptr<VisualFeedbackProblem> vf) : _vf(vf) {
             _report.reset(new COLLISIONREPORT());
 
-            _vTargetOBBs.reserve(_ptarget->GetLinks().size());
-            FOREACHC(itlink, _ptarget->GetLinks())
+            _vTargetOBBs.reserve(_vf->_target->GetLinks().size());
+            FOREACHC(itlink, _vf->_target->GetLinks())
                 _vTargetOBBs.push_back(OBBFromAABB((*itlink)->GetCollisionData().ComputeAABB(),(*itlink)->GetTransform()));
-            _abTarget = _ptarget->ComputeAABB();
+            _abTarget = _vf->_target->ComputeAABB();
             _fAllowableOcclusion = 0.1;
             _fRayMinDist = 0.05f;
 
             // create the dummy box
             {
-                KinBody::KinBodyStateSaver saver(_ptarget);
-                _ptarget->SetTransform(Transform());
-                vector<AABB> vboxes; vboxes.push_back(_ptarget->ComputeAABB());
+                KinBody::KinBodyStateSaver saver(_vf->_target);
+                _vf->_target->SetTransform(Transform());
+                vector<AABB> vboxes; vboxes.push_back(_vf->_target->ComputeAABB());
 
-                _ptargetbox = _ptarget->GetEnv()->CreateKinBody();
+                _ptargetbox = _vf->_target->GetEnv()->CreateKinBody();
                 _ptargetbox->InitFromBoxes(vboxes,false);
                 _ptargetbox->SetName("__visualfeedbacktest__");
                 _ptargetbox->GetEnv()->AddKinBody(_ptargetbox,true);
                 _ptargetbox->Enable(false);
-                _ptargetbox->SetTransform(_ptarget->GetTransform());
+                _ptargetbox->SetTransform(_vf->_target->GetTransform());
             }
         }
         virtual ~VisibilityConstraintFunction() {
@@ -262,7 +262,7 @@ public:
                 return false;
 
             // object is inside, find an ik solution
-            Transform tgoalee = tcamera*_vf->_tcameratogripper;
+            Transform tgoalee = tcamera*_vf->_ttogripper;
             if( !_vf->_pmanip->FindIKSolution(tgoalee,_vsolution,true) ) {
                 RAVELOG_VERBOSEA("no valid ik\n");
                 return false;
@@ -307,8 +307,8 @@ public:
         {
             TransformMatrix tcamerainv = tcamera.inverse();
             _ptargetbox->Enable(true);
-            _ptarget->Enable(false);
-            _ptargetbox->SetTransform(_ptarget->GetTransform());
+            _vf->_target->Enable(false);
+            _ptargetbox->SetTransform(_vf->_target->GetTransform());
             bool bOcclusion = false;
             FOREACH(itobb,_vTargetOBBs) {
                 OBB cameraobb = TransformOBB(*itobb,tcamerainv);
@@ -319,7 +319,7 @@ public:
                 }
             }
             _ptargetbox->Enable(false);
-            _ptarget->Enable(true);
+            _vf->_target->Enable(true);
             return bOcclusion;
         }
 
@@ -345,7 +345,6 @@ public:
 
     private:
         boost::shared_ptr<VisualFeedbackProblem> _vf;
-        KinBodyPtr _ptarget;
         KinBodyPtr _ptargetbox; ///< box to represent the target for simulating ray collisions
 
         vector<OBB> _vTargetOBBs; // object links local AABBs
@@ -359,10 +358,10 @@ public:
     class GoalSampleFunction
     {
     public:
-    GoalSampleFunction(boost::shared_ptr<VisualFeedbackProblem> vf, KinBodyPtr ptarget, const vector<Transform>& visibilitytransforms) : _vconstraint(vf,ptarget), _fSampleGoalProb(1.0f), _vf(vf), _visibilitytransforms(visibilitytransforms)
+    GoalSampleFunction(boost::shared_ptr<VisualFeedbackProblem> vf, const vector<Transform>& visibilitytransforms) : _vconstraint(vf), _fSampleGoalProb(1.0f), _vf(vf), _visibilitytransforms(visibilitytransforms)
         {
             RAVELOG_DEBUGA(str(boost::format("have %d detection extents hypotheses\n")%_visibilitytransforms.size()));
-            _ttarget = ptarget->GetTransform();
+            _ttarget = _vf->_target->GetTransform();
             _sphereperms.PermuteStart(_visibilitytransforms.size());
         }
         virtual ~GoalSampleFunction() {}
@@ -409,7 +408,7 @@ public:
         _fMaxVelMult=1;
         _bCameraOnManip = false;
         _fSampleRayDensity = 0.001;
-        RegisterCommand("SetCamera",boost::bind(&VisualFeedbackProblem::SetCamera,this,_1,_2),
+        RegisterCommand("SetCameraAndTarget",boost::bind(&VisualFeedbackProblem::SetCameraAndTarget,this,_1,_2),
                         "Sets the camera index from the robot and its convex hull");
         RegisterCommand("ProcessVisibilityExtents",boost::bind(&VisualFeedbackProblem::ProcessVisibilityExtents,this,_1,_2),
                         "Converts 3D extents to full 6D camera transforms and prunes bad transforms");
@@ -462,17 +461,18 @@ public:
         return ProblemInstance::SendCommand(sout,sinput);
     }
 
-    bool SetCamera(ostream& sout, istream& sinput)
+    bool SetCameraAndTarget(ostream& sout, istream& sinput)
     {
         _bCameraOnManip = false;
         _pmanip.reset();
         _psensor.reset();
         _vconvexplanes.resize(0);
         _pcamerageom.reset();
+        _target.reset();
         RobotBase::AttachedSensorPtr psensor;
         RobotBase::ManipulatorPtr pmanip;
         vector<Vector> vconvexplanes;
-        RobotBasePtr psensorrobot = _robot;
+        _sensorrobot = _robot;
 
         string cmd;
         while(!sinput.eof()) {
@@ -484,22 +484,27 @@ public:
             if( cmd == "sensorrobot" ) {
                 string name;
                 sinput >> name;
-                psensorrobot = GetEnv()->GetRobot(name);
+                _sensorrobot = GetEnv()->GetRobot(name);
             }
             else if( cmd == "sensorindex" ) {
                 int sensorindex=-1;
                 sinput >> sensorindex;
-                psensor = psensorrobot->GetSensors().at(sensorindex);
+                psensor = _sensorrobot->GetSensors().at(sensorindex);
             }
             else if( cmd == "sensorname" ) {
                 string sensorname;
                 sinput >> sensorname;
-                FOREACH(itsensor,psensorrobot->GetSensors()) {
+                FOREACH(itsensor,_sensorrobot->GetSensors()) {
                     if( (*itsensor)->GetName() == sensorname ) {
                         psensor = *itsensor;
                         break;
                     }
                 }
+            }
+            else if( cmd == "target" ) {
+                string name;
+                sinput >> name;
+                _target = GetEnv()->GetKinBody(name);
             }
             else if( cmd == "manipname" ) {
                 string manipname;
@@ -587,7 +592,7 @@ public:
         }
 
         // check if there is a manipulator with the same end effector as camera
-        if( psensorrobot == _robot ) {
+        if( _sensorrobot == _robot ) {
             std::vector<KinBody::LinkPtr> vattachedlinks;
             _robot->GetRigidlyAttachedLinks(psensor->GetAttachingLink()->GetIndex(), vattachedlinks);
             if( !!pmanip ) {
@@ -615,13 +620,16 @@ public:
                 }
             }
 
-            _tcameratogripper = psensor->GetTransform().inverse()*pmanip->GetEndEffectorTransform();
+            _ttogripper = psensor->GetTransform().inverse()*pmanip->GetEndEffectorTransform();
         }
         else {
             if( !pmanip ) {
                 pmanip = _robot->GetActiveManipulator();
             }
-            _tcameratogripper = Transform();
+
+            if( !!_target ) {
+                _ttogripper = _target->GetTransform().inverse() * pmanip->GetEndEffectorTransform();
+            }
         }
 
         _pcamerageom = boost::static_pointer_cast<SensorBase::CameraGeomData>(psensor->GetSensor()->GetSensorGeometry());
@@ -668,7 +676,6 @@ public:
     bool ProcessVisibilityExtents(ostream& sout, istream& sinput)
     {
         string cmd;
-        KinBodyPtr ptarget;
         Vector vTargetLocalCenter;
         bool bSetTargetCenter = false;
         int numrolls=8;
@@ -679,11 +686,7 @@ public:
                 break;
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
-            if( cmd == "target" ) {
-                string name; sinput >> name;
-                ptarget = GetEnv()->GetKinBody(name);
-            }
-            else if( cmd == "localtargetcenter" ) {
+            if( cmd == "localtargetcenter" ) {
                 sinput >> vTargetLocalCenter.x >> vTargetLocalCenter.y >> vTargetLocalCenter.z;
                 bSetTargetCenter = true;
             }
@@ -697,10 +700,10 @@ public:
             else if( cmd == "numrolls" )
                 sinput >> numrolls;
             else if( cmd == "extents" ) {
-                if( !bSetTargetCenter && !!ptarget ) {
-                    KinBody::KinBodyStateSaver saver(ptarget);
-                    ptarget->SetTransform(Transform());
-                    vTargetLocalCenter = ptarget->ComputeAABB().pos;
+                if( !bSetTargetCenter && !!_target ) {
+                    KinBody::KinBodyStateSaver saver(_target);
+                    _target->SetTransform(Transform());
+                    vTargetLocalCenter = _target->ComputeAABB().pos;
                 }
                 int numtrans=0;
                 sinput >> numtrans;
@@ -719,10 +722,10 @@ public:
                 }
             }
             else if( cmd == "sphere" ) {
-                if( !bSetTargetCenter && !!ptarget ) {
-                    KinBody::KinBodyStateSaver saver(ptarget);
-                    ptarget->SetTransform(Transform());
-                    vTargetLocalCenter = ptarget->ComputeAABB().pos;
+                if( !bSetTargetCenter && !!_target ) {
+                    KinBody::KinBodyStateSaver saver(_target);
+                    _target->SetTransform(Transform());
+                    vTargetLocalCenter = _target->ComputeAABB().pos;
                 }
 
                 KinBody::Link::TRIMESH spheremesh;
@@ -758,17 +761,14 @@ public:
             }
         }
 
-        if( !ptarget )
-            return false;
-
-        KinBody::KinBodyStateSaver saver(ptarget);
-        ptarget->SetTransform(Transform());
-        boost::shared_ptr<GoalSampleFunction> pgoalfn(new GoalSampleFunction(shared_problem(), ptarget,vtransforms));
+        KinBody::KinBodyStateSaver saver(_target);
+        _target->SetTransform(Transform());
+        boost::shared_ptr<GoalSampleFunction> pgoalfn(new GoalSampleFunction(shared_problem(), vtransforms));
 
         // get all the camera positions and test them
         FOREACHC(itcamera, vtransforms) {
             if( pgoalfn->_vconstraint.InConvexHull(*itcamera) ) {
-                if( !_pmanip->CheckEndEffectorCollision(*itcamera*_tcameratogripper) )
+                if( !_pmanip->CheckEndEffectorCollision(*itcamera*_ttogripper) )
                     sout << *itcamera << " ";
             }
         }
@@ -779,7 +779,6 @@ public:
     bool SetCameraTransforms(ostream& sout, istream& sinput)
     {
         string cmd;
-        KinBodyPtr ptarget;
         _visibilitytransforms.resize(0);
         while(!sinput.eof()) {
             sinput >> cmd;
@@ -787,11 +786,7 @@ public:
                 break;
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
-            if( cmd == "target" ) {
-                string name; sinput >> name;
-                ptarget = GetEnv()->GetKinBody(name);
-            }
-            else if( cmd == "transforms" ) {
+            if( cmd == "transforms" ) {
                 int numtrans=0;
                 sinput >> numtrans;
                 _visibilitytransforms.resize(numtrans);
@@ -810,18 +805,16 @@ public:
         }
 
         bool bSuccess = true;
-        if( !!ptarget ) {
-            KinBody::KinBodyStateSaver saver(ptarget);
-            ptarget->SetTransform(Transform());
-            boost::shared_ptr<GoalSampleFunction> pgoalfn(new GoalSampleFunction(shared_problem(), ptarget,_visibilitytransforms));
+        KinBody::KinBodyStateSaver saver(_target);
+        _target->SetTransform(Transform());
+        boost::shared_ptr<GoalSampleFunction> pgoalfn(new GoalSampleFunction(shared_problem(), _visibilitytransforms));
 
-            // get all the camera positions and test them
-            int i = 0;
-            FOREACHC(itcamera, _visibilitytransforms) {
-                if( !pgoalfn->_vconstraint.InConvexHull(*itcamera) ) {
-                    RAVELOG_WARN("camera transform %d fails constraints\n",i);
-                    bSuccess = false;
-                }
+        // get all the camera positions and test them
+        int i = 0;
+        FOREACHC(itcamera, _visibilitytransforms) {
+            if( !pgoalfn->_vconstraint.InConvexHull(*itcamera) ) {
+                RAVELOG_WARN("camera transform %d fails constraints\n",i);
+                bSuccess = false;
             }
         }
         
@@ -830,34 +823,11 @@ public:
 
     bool ComputeVisibility(ostream& sout, istream& sinput)
     {
-        string cmd;
-        KinBodyPtr ptarget;
-        while(!sinput.eof()) {
-            sinput >> cmd;
-            if( !sinput )
-                break;
-            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-
-            if( cmd == "target" ) {
-                string name; sinput >> name;
-                ptarget = GetEnv()->GetKinBody(name);
-            }
-            else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
-                break;
-            }
-
-            if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
-                return false;
-            }
-        }
-
         RobotBase::RobotStateSaver saver(_robot);
         _robot->SetActiveManipulator(_nManipIndex); BOOST_ASSERT(_robot->GetActiveManipulator()==_pmanip);
         _robot->SetActiveDOFs(_pmanip->GetArmJoints());
 
-        boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem(),ptarget));
+        boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
         vector<dReal> v;
         _robot->GetActiveDOFValues(v);
         sout << pconstraintfn->Constraint(v,v,0);
@@ -867,7 +837,6 @@ public:
     bool ComputeVisibleConfiguration(ostream& sout, istream& sinput)
     {
         string cmd;
-        KinBodyPtr ptarget;
         Transform tcamera;
         while(!sinput.eof()) {
             sinput >> cmd;
@@ -875,11 +844,7 @@ public:
                 break;
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
-            if( cmd == "target" ) {
-                string name; sinput >> name;
-                ptarget = GetEnv()->GetKinBody(name);
-            }
-            else if( cmd == "pose" ) {
+            if( cmd == "pose" ) {
                 sinput >> tcamera;
             }
             else {
@@ -897,8 +862,8 @@ public:
         RobotBase::RobotStateSaver saver(_robot);
         _robot->SetActiveManipulator(_nManipIndex); BOOST_ASSERT(_robot->GetActiveManipulator()==_pmanip);
         _robot->SetActiveDOFs(_pmanip->GetArmJoints());
-        boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem(),ptarget));
-        if( _pmanip->CheckEndEffectorCollision(tcamera*_tcameratogripper) )
+        boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
+        if( _pmanip->CheckEndEffectorCollision(tcamera*_ttogripper) )
             return false;
         if( !pconstraintfn->SampleWithCamera(tcamera,vsample) )
             return false;
@@ -912,7 +877,6 @@ public:
     {
         string cmd;
 
-        KinBodyPtr ptarget;
         int numsamples=1;
         while(!sinput.eof()) {
             sinput >> cmd;
@@ -920,11 +884,7 @@ public:
                 break;
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
         
-            if( cmd == "target" ) {
-                string name; sinput >> name;
-                ptarget = GetEnv()->GetKinBody(name);
-            }
-            else if( cmd == "numsamples" )
+            if( cmd == "numsamples" )
                 sinput >> numsamples;
             else {
                 RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
@@ -941,7 +901,7 @@ public:
         _robot->SetActiveManipulator(_nManipIndex); BOOST_ASSERT(_robot->GetActiveManipulator()==_pmanip);
         _robot->SetActiveDOFs(_pmanip->GetArmJoints());
 
-        boost::shared_ptr<GoalSampleFunction> pgoalsampler(new GoalSampleFunction(shared_problem(),ptarget,_visibilitytransforms));
+        boost::shared_ptr<GoalSampleFunction> pgoalsampler(new GoalSampleFunction(shared_problem(),_visibilitytransforms));
      
         uint64_t starttime = GetMicroTime();
         vector<dReal> vsample;
@@ -973,7 +933,6 @@ public:
         PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
         params->_nMaxIterations = 4000;
         int affinedofs=0;
-        KinBodyPtr ptarget;
         string cmd, plannername="BiRRT";
         dReal fSampleGoalProb = 0.001f;
 
@@ -995,10 +954,6 @@ public:
                 sinput >> strtrajfilename;
             else if( cmd == "smoothpath" )
                 sinput >> params->_sPathOptimizationPlanner;
-            else if( cmd == "target" ) {
-                string name; sinput >> name;
-                ptarget = GetEnv()->GetKinBody(name);
-            }
             else if( cmd == "planner" )
                 sinput >> plannername;
             else if( cmd == "sampleprob" )
@@ -1014,16 +969,11 @@ public:
             }
         }
 
-        if( !ptarget ) {
-            RAVELOG_ERRORA("no target specified\n");
-            return false;
-        }
-
         RobotBase::RobotStateSaver saver(_robot);
         _robot->SetActiveManipulator(_nManipIndex); BOOST_ASSERT(_robot->GetActiveManipulator()==_pmanip);
         _robot->SetActiveDOFs(_pmanip->GetArmJoints(), affinedofs);
 
-        boost::shared_ptr<GoalSampleFunction> pgoalsampler(new GoalSampleFunction(shared_problem(),ptarget,_visibilitytransforms));
+        boost::shared_ptr<GoalSampleFunction> pgoalsampler(new GoalSampleFunction(shared_problem(),_visibilitytransforms));
         pgoalsampler->_fSampleGoalProb = fSampleGoalProb;
         _robot->RegrabAll();
 
@@ -1083,7 +1033,6 @@ public:
 
         boost::shared_ptr<GraspSetParameters> params(new GraspSetParameters(GetEnv()));
         params->_nMaxIterations = 4000;
-        KinBodyPtr ptarget;
         string cmd, plannername="GraspGradient";
         params->_fVisibiltyGraspThresh = 0.05f;
         bool bUseVisibility = false;
@@ -1103,10 +1052,6 @@ public:
                 sinput >> bExecute;
             else if( cmd == "writetraj" )
                 sinput >> strtrajfilename;
-            else if( cmd == "target" ) {
-                string name; sinput >> name;
-                ptarget = GetEnv()->GetKinBody(name);
-            }
             else if( cmd == "usevisibility" )
                 sinput >> bUseVisibility;
             else if( cmd == "planner" )
@@ -1137,11 +1082,6 @@ public:
             }
         }
 
-        if( !ptarget ) {
-            RAVELOG_ERRORA("no target specified\n");
-            return false;
-        }
-
         RobotBase::RobotStateSaver saver(_robot);
         _robot->SetActiveManipulator(_nManipIndex); BOOST_ASSERT(_robot->GetActiveManipulator()==_pmanip);
         _robot->SetActiveDOFs(_pmanip->GetArmJoints());
@@ -1149,11 +1089,11 @@ public:
 
         if( bUseVisibility ) {
             RAVELOG_DEBUG("using visibility constraints\n");
-            boost::shared_ptr<VisibilityConstraintFunction> pconstraint(new VisibilityConstraintFunction(shared_problem(),ptarget));
+            boost::shared_ptr<VisibilityConstraintFunction> pconstraint(new VisibilityConstraintFunction(shared_problem()));
             params->_constraintfn = boost::bind(&VisibilityConstraintFunction::Constraint,pconstraint,_1,_2,_3);
         }
 
-        params->_ptarget = ptarget;
+        params->_ptarget = _target;
         _robot->GetActiveDOFValues(params->vinitialconfig);
 
         TrajectoryBasePtr ptraj = GetEnv()->CreateTrajectory(_robot->GetActiveDOF());
@@ -1191,14 +1131,15 @@ public:
     }
     
 protected:
-    RobotBasePtr _robot;
+    RobotBasePtr _robot, _sensorrobot;
+    KinBodyPtr _target;
     dReal _fMaxVelMult;
     RobotBase::AttachedSensorPtr _psensor;
     RobotBase::ManipulatorPtr _pmanip;
     int _nManipIndex;
     bool _bCameraOnManip; ///< true if camera is attached to manipulator
     boost::shared_ptr<SensorBase::CameraGeomData> _pcamerageom;
-    Transform _tcameratogripper; ///< transforms a camera coord system to the gripper coordsystem
+    Transform _ttogripper; ///< transforms a coord system to the gripper coordsystem
     vector<Transform> _visibilitytransforms;
     dReal _fSampleRayDensity;
 
