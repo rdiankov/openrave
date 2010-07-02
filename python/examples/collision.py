@@ -67,8 +67,8 @@ if __name__ == "__main__":
 
         robot2 = env.ReadRobotXMLFile('robots/pa10.robot.xml')
         env.AddRobot(robot2)
-        body1 = env.ReadRobotXMLFile('data/mug1.kinbody.xml')
-        env.AddRobot(body1)
+        body1 = env.ReadKinBodyXMLFile('data/mug1.kinbody.xml')
+        env.AddKinBody(body1)
 
         env.CheckCollision(robot1,robot2)
         env.CheckCollision(robot1,body1)
