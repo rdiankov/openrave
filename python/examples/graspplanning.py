@@ -170,7 +170,7 @@ class GraspPlanning(metaclass.AutoReloader):
         while not robot.GetController().IsDone():
             time.sleep(0.01)
             
-    def graspAndPlaceObject(self,gmodel,dests):
+    def graspAndPlaceObject(self,gmodel,dests,waitforkey=False,**kwargs):
         """grasps an object and places it in one of the destinations. If no destination is specified, will just grasp it"""
         env = self.envreal#.CloneSelf(CloningOptions.Bodies)
         robot = self.robot
@@ -215,6 +215,8 @@ class GraspPlanning(metaclass.AutoReloader):
             self.waitrobot(robot)
             
             robot.Grab(target)
+            if waitforkey:
+                raw_input('press any key to continue grasp')
             try:
                 self.basemanip.MoveHandStraight(jacobian=0.02,direction=self.updir,stepsize=0.003,minsteps=1,maxsteps=60)
             except:
@@ -272,18 +274,20 @@ class GraspPlanning(metaclass.AutoReloader):
         # exhausted all grasps
         return -1
 
-    def performGraspPlanning(self):
+    def performGraspPlanning(self,withreplacement=True,**kwargs):
         print 'starting to pick and place random objects'
-        while True:
-            i = random.randint(len(self.graspables))
+        graspables = self.graspables
+        while len(graspables) > 0:
+            i = random.randint(len(graspables))
             try:
-                print 'grasping object %s'%self.graspables[i][0].target.GetName()
+                print 'grasping object %s'%graspables[i][0].target.GetName()
                 with self.envreal:
                     self.robot.ReleaseAllGrabbed()
-                success = self.graspAndPlaceObject(self.graspables[i][0],self.graspables[i][1])
+                success = self.graspAndPlaceObject(graspables[i][0],graspables[i][1],**kwargs)
                 print 'success: ',success
+                graspables.pop(i)
             except planning_error, e:
-                print 'failed to grasp object %s'%self.graspables[i][0].target.GetName()
+                print 'failed to grasp object %s'%graspables[i][0].target.GetName()
                 print e
 
 def run():
