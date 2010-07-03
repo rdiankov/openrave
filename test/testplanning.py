@@ -594,7 +594,9 @@ def test_calibviews():
     import calibrationviews
     env=Environment()
     env.SetViewer('qtcoin')
-    env.Load('data/pa10calib.env.xml')
+    env.Load('data/pa10calib_envcamera.env.xml')
     robot=env.GetRobots()[0]
-    self = calibrationviews.CalibrationViews(robot,sensorname='wristcam')
-    self.moveToObservations()
+    self = calibrationviews.CalibrationViews(robot,sensorname='camera',sensorrobot=env.GetRobot('ceilingcamera'))
+    self.computeAndMoveToObservations()
+
+    

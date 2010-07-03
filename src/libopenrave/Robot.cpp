@@ -530,6 +530,9 @@ std::string RobotBase::AttachedSensor::GetStructureHash() const
     if( _options & Save_ActiveManipulator ) {
         nActiveManip = _probot->_nActiveManip;
     }
+    if( _options & Save_GrabbedBodies ) {
+        _vGrabbedBodies = _probot->_vGrabbedBodies;
+    }
 }
 
 RobotBase::RobotStateSaver::~RobotStateSaver()
@@ -540,7 +543,18 @@ RobotBase::RobotStateSaver::~RobotStateSaver()
     if( _options & Save_ActiveManipulator ) {
         _probot->_nActiveManip = nActiveManip;
     }
-    BOOST_ASSERT(!(_options&Save_GrabbedBodies));
+    if( _options & Save_GrabbedBodies ) {
+        // have to release all grabbed first
+        _probot->ReleaseAllGrabbed();
+        BOOST_ASSERT(_probot->_vGrabbedBodies.size()==0);
+        FOREACH(itgrabbed, _vGrabbedBodies) {
+            KinBodyPtr pbody = itgrabbed->pbody.lock();
+            if( !!pbody ) {
+                _probot->_AttachBody(pbody);
+                _probot->_vGrabbedBodies.push_back(*itgrabbed);
+            }
+        }
+    }
 }
 
 RobotBase::RobotBase(EnvironmentBasePtr penv) : KinBody(PT_Robot, penv)

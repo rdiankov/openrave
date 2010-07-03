@@ -43,8 +43,8 @@ class CalibrationViews(metaclass.AutoReloader):
         self.vmodel = visibilitymodel.VisibilityModel(robot=robot,sensorrobot=sensorrobot,target=target,sensorname=sensorname)
         self.Tpatternrobot = None
         if self.vmodel.robot != self.vmodel.sensorrobot and target is not None:
-            print 'Assuming target %s is attached to the end effector of manipulator %s'%(target.GetName(),manip)
-            self.Tpatternrobot = dot(linalg.inv(manip.GetEndEffectorTransform()),target.GetTransform())
+            print 'Assuming target %s is attached to the end effector of %s'%(target.GetName(),self.vmodel.manip)
+            self.Tpatternrobot = dot(linalg.inv(self.vmodel.manip.GetEndEffectorTransform()),target.GetTransform())
 
     def computevisibilityposes(self,anglerange=pi,dists=arange(0.05,1.0,0.15),angledensity=1,num=inf):
         """Computes robot poses using visibility information from the target.
@@ -54,50 +54,52 @@ class CalibrationViews(metaclass.AutoReloader):
         @param cameraonmanip: if True assumes the camera is attached onto the link sensor. Otherwise the camera is attached to a different link (or different robot).
         """
         with self.vmodel.target:
-            #self.vmodel.target.SetTransform(dot(self.vmodel.manip.GetEndEffectorTransform(),self.Tpatternrobot))
-            #if not self.robot.IsGrabbing(self.vmodel.target):   
-            #self.robot.Grab(self.vmodel.target,self
-            values=self.robot.GetJointValues()
-            self.vmodel.preshapes=array([values[self.vmodel.manip.GetGripperJoints()]])
-            self.vmodel.preprocess()
-            # actually use the visibility instead of approximating as a cone
-            dirs,indices = ComputeGeodesicSphereMesh(level=angledensity)
-            targetright = self.vmodel.target.GetTransform()[0:3,0]
-            targetup = self.vmodel.target.GetTransform()[0:3,1]
-            targetdir = self.vmodel.target.GetTransform()[0:3,2]
-            dirs = dirs[dot(dirs,targetdir)>=cos(anglerange)]
-            with self.vmodel.target:
-                Ttarget = self.vmodel.target.GetTransform()
-                self.vmodel.target.SetTransform(eye(4))
-                ab=self.vmodel.target.ComputeAABB()
-            centers = transformPoints(Ttarget,dot(array(((0,0,0),(0.5,0.5,0),(-0.5,0.5,0),(0.5,-0.5,0),(-0.5,-0.5,0))),diag(ab.extents())))
-            Rs = []
-            for dir in dirs:
-                right=targetright-dir*dot(targetright,dir)
-                rightlen = sqrt(sum(right**2))
-                if rightlen < 1e-5:
-                    up=targetup-dir*dot(targetup,dir)
-                    up /= sqrt(sum(up**2))
-                    Rs.append(c_[cross(dir,up),up,dir])
-                else:
-                    right/=rightlen
-                    Rs.append(c_[right,cross(dir,right),dir])
-            poses = []
-            configs = []
-            for R in Rs:
-                quat=quatFromRotationMatrix(R)
-                for dist in dists:
-                    for center in centers:
-                        pose = r_[quat,center-dist*R[0:3,2]]
-                        try:
-                            q=self.vmodel.visualprob.ComputeVisibleConfiguration(pose=pose)
-                            poses.append(pose)
-                            configs.append(q)
-                            if len(poses) > num:
-                                return array(poses), array(configs)
-                        except planning_error:
-                            pass
-            return array(poses), array(configs)
+            if self.Tpatternrobot is not None:
+                self.vmodel.target.SetTransform(dot(self.vmodel.manip.GetEndEffectorTransform(),self.Tpatternrobot))
+            with RobotStateSaver(self.robot,KinBody.SaveParameters.GrabbedBodies):
+                if self.Tpatternrobot is not None:
+                    self.robot.Grab(self.vmodel.target,self.vmodel.manip.GetEndEffector())
+                values=self.robot.GetJointValues()
+                self.vmodel.preshapes=array([values[self.vmodel.manip.GetGripperJoints()]])
+                self.vmodel.preprocess()
+                # actually use the visibility instead of approximating as a cone
+                dirs,indices = ComputeGeodesicSphereMesh(level=angledensity)
+                targetright = self.vmodel.target.GetTransform()[0:3,0]
+                targetup = self.vmodel.target.GetTransform()[0:3,1]
+                targetdir = self.vmodel.target.GetTransform()[0:3,2]
+                dirs = dirs[dot(dirs,targetdir)>=cos(anglerange)]
+                with self.vmodel.target:
+                    Ttarget = self.vmodel.target.GetTransform()
+                    self.vmodel.target.SetTransform(eye(4))
+                    ab=self.vmodel.target.ComputeAABB()
+                centers = transformPoints(Ttarget,dot(array(((0,0,0),(0.5,0.5,0),(-0.5,0.5,0),(0.5,-0.5,0),(-0.5,-0.5,0))),diag(ab.extents())))
+                Rs = []
+                for dir in dirs:
+                    right=targetright-dir*dot(targetright,dir)
+                    rightlen = sqrt(sum(right**2))
+                    if rightlen < 1e-5:
+                        up=targetup-dir*dot(targetup,dir)
+                        up /= sqrt(sum(up**2))
+                        Rs.append(c_[cross(dir,up),up,dir])
+                    else:
+                        right/=rightlen
+                        Rs.append(c_[right,cross(dir,right),dir])
+                poses = []
+                configs = []
+                for R in Rs:
+                    quat=quatFromRotationMatrix(R)
+                    for dist in dists:
+                        for center in centers:
+                            pose = r_[quat,center-dist*R[0:3,2]]
+                            try:
+                                q=self.vmodel.visualprob.ComputeVisibleConfiguration(pose=pose)
+                                poses.append(pose)
+                                configs.append(q)
+                                if len(poses) > num:
+                                    return array(poses), array(configs)
+                            except planning_error:
+                                pass
+                return array(poses), array(configs)
 
     def computelocalposes(self,maxconeangle = 0.5,maxconedist = 0.15,averagedist=0.03,angledelta=0.2,**kwargs):
         """Computes robot poses using a cone pointing to the negative z-axis of the camera
@@ -215,6 +217,8 @@ def run():
                       help='Scene file to load (default=%default)')
     parser.add_option('--sensorname',action="store",type='string',dest='sensorname',default='wristcam',
                       help='Name of the sensor whose views to generate (default=%default)')
+    parser.add_option('--sensorrobot',action="store",type='string',dest='sensorrobot',default=None,
+                      help='Name of the robot the sensor is attached to (default=%default)')
     parser.add_option('--norandomize', action='store_false',dest='randomize',default=True,
                       help='If set, will not randomize the bodies and robot position in the scene.')
     parser.add_option('--novisibility', action='store_false',dest='usevisibility',default=True,
@@ -228,9 +232,10 @@ def run():
         env.SetViewer('qtcoin')
         env.Load(options.scene)
         robot = env.GetRobots()[0]
+        sensorrobot = None if options.sensorrobot is None else env.GetRobot(options.sensorrobot)
         env.UpdatePublishedBodies()
         time.sleep(0.1) # give time for environment to update
-        self = CalibrationViews(robot,sensorname=options.sensorname,randomize=options.randomize)
+        self = CalibrationViews(robot,sensorname=options.sensorname,sensorrobot=sensorrobot,randomize=options.randomize)
         self.computeAndMoveToObservations(usevisibility=options.usevisibility,posedist=options.posedist)
         raw_input('press any key to exit... ')
     finally:
@@ -238,3 +243,4 @@ def run():
 
 if __name__ == "__main__":
     run()
+

@@ -256,13 +256,19 @@ public:
             return true;
         }
 
-        bool SampleWithCamera(const TransformMatrix& tcamera, vector<dReal>& pNewSample)
+        /// samples the ik
+        /// If camera is attached to robot, assume target is not movable and takes camera position.
+        /// If camera is not attached to robot, assume target is movable and takes in target position.
+        bool SampleWithCamera(const TransformMatrix& t, vector<dReal>& pNewSample)
         {
+            Transform tcamera = t;
+            if( _vf->_robot != _vf->_sensorrobot )
+                tcamera = _vf->_psensor->GetTransform();
             if( !InConvexHull(tcamera) )
                 return false;
 
             // object is inside, find an ik solution
-            Transform tgoalee = tcamera*_vf->_ttogripper;
+            Transform tgoalee = t*_vf->_ttogripper;
             if( !_vf->_pmanip->FindIKSolution(tgoalee,_vsolution,true) ) {
                 RAVELOG_VERBOSEA("no valid ik\n");
                 return false;
@@ -837,7 +843,7 @@ public:
     bool ComputeVisibleConfiguration(ostream& sout, istream& sinput)
     {
         string cmd;
-        Transform tcamera;
+        Transform t;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput )
@@ -845,7 +851,7 @@ public:
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "pose" ) {
-                sinput >> tcamera;
+                sinput >> t;
             }
             else {
                 RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
@@ -863,9 +869,9 @@ public:
         _robot->SetActiveManipulator(_nManipIndex); BOOST_ASSERT(_robot->GetActiveManipulator()==_pmanip);
         _robot->SetActiveDOFs(_pmanip->GetArmJoints());
         boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
-        if( _pmanip->CheckEndEffectorCollision(tcamera*_ttogripper) )
+        if( _pmanip->CheckEndEffectorCollision(t*_ttogripper) )
             return false;
-        if( !pconstraintfn->SampleWithCamera(tcamera,vsample) )
+        if( !pconstraintfn->SampleWithCamera(t,vsample) )
             return false;
         FOREACH(it,vsample) {
             sout << *it << " ";

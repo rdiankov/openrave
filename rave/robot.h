@@ -236,7 +236,7 @@ public:
     typedef boost::shared_ptr<AttachedSensor const> AttachedSensorConstPtr;
 
     /// describes the currently grabbed bodies
-    struct GRABBED
+    struct RAVE_API GRABBED
     {
         KinBodyWeakPtr pbody; ///< the grabbed body
         LinkPtr plinkrobot; ///< robot link that is grabbing the body
@@ -251,11 +251,12 @@ public:
         RobotStateSaver(RobotBasePtr probot, int options = Save_LinkTransformation|Save_LinkEnable|Save_ActiveDOF|Save_ActiveManipulator);
         virtual ~RobotStateSaver();
     protected:
+        RobotBasePtr _probot;
         std::vector<int> vactivedofs;
         int affinedofs;
         Vector rotationaxis;
         int nActiveManip;
-        RobotBasePtr _probot;
+        std::vector<GRABBED> _vGrabbedBodies;
     };
 
     virtual ~RobotBase();
