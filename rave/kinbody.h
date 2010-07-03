@@ -495,17 +495,28 @@ public:
     /// Methods for accessing basic information about joints
     //@{
 
-    /// \return number of controllable degrees of freedom of the body
+    /// \return number of controllable degrees of freedom of the body. Only uses _vecjoints and last joint for computation, so can work before ComputeJointHierarchy is called.
     virtual int GetDOF() const;
 
-    virtual void GetJointValues(std::vector<dReal>& v) const;
-    virtual void GetJointVelocities(std::vector<dReal>& v) const;
-    virtual void GetJointLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const;
-    virtual void GetJointMaxVel(std::vector<dReal>& v) const;
-    virtual void GetJointMaxAccel(std::vector<dReal>& v) const;
-    virtual void GetJointMaxTorque(std::vector<dReal>& v) const;
-    virtual void GetJointResolutions(std::vector<dReal>& v) const;
-    virtual void GetJointWeights(std::vector<dReal>& v) const;
+    /// Returns all the joint values as organized by the DOF indices.
+    virtual void GetDOFValues(std::vector<dReal>& v) const;
+    virtual void GetDOFVelocities(std::vector<dReal>& v) const;
+    virtual void GetDOFLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const;
+    virtual void GetDOFMaxVel(std::vector<dReal>& v) const;
+    virtual void GetDOFMaxAccel(std::vector<dReal>& v) const;
+    virtual void GetDOFMaxTorque(std::vector<dReal>& v) const;
+    virtual void GetDOFResolutions(std::vector<dReal>& v) const;
+    virtual void GetDOFWeights(std::vector<dReal>& v) const;
+    
+    /// \deprecated Returns all the joint values in the order of GetJoints() (use GetDOFValues instead)
+    virtual void GetJointValues(std::vector<dReal>& v) const RAVE_DEPRECATED;
+    virtual void GetJointVelocities(std::vector<dReal>& v) const RAVE_DEPRECATED;
+    virtual void GetJointLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const RAVE_DEPRECATED;
+    virtual void GetJointMaxVel(std::vector<dReal>& v) const RAVE_DEPRECATED;
+    virtual void GetJointMaxAccel(std::vector<dReal>& v) const RAVE_DEPRECATED;
+    virtual void GetJointMaxTorque(std::vector<dReal>& v) const RAVE_DEPRECATED;
+    virtual void GetJointResolutions(std::vector<dReal>& v) const RAVE_DEPRECATED;
+    virtual void GetJointWeights(std::vector<dReal>& v) const RAVE_DEPRECATED;
 
     ///< \return a vector that stores the start dof indices of each joint joints, size() is equal to GetJoints().size()
     virtual const std::vector<int>& GetJointIndices() const { return _vecJointIndices; }
@@ -720,6 +731,7 @@ protected:
 
     std::vector<JointPtr> _vecjoints;     ///< all the joints of the body, joints contain limits, torques, and velocities (the order of these joints dictate the order of the degrees of freedom)
     std::vector<JointPtr> _vDependencyOrderedJoints; ///< all joints of the body ordered on how they affect the joint hierarchy
+    std::vector<JointPtr> _vDOFOrderedJoints; ///< all joints of the body ordered on how they are arranged within the degrees of freedom
     std::vector<LinkPtr> _veclinks;       ///< children, unlike render hierarchies, transformations
                                         ///< of the children are with respect to the global coordinate system
     std::vector<int> _vecJointIndices;  ///< cached start indices, indexed by joint indices

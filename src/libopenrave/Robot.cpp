@@ -96,7 +96,7 @@ bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, cons
     BOOST_ASSERT(_pIkSolver->GetManipulator() == shared_from_this() );
 
     vector<dReal> temp;
-    GetRobot()->GetJointValues(temp);
+    GetRobot()->GetDOFValues(temp);
 
     solution.resize(_varmjoints.size());
     for(size_t i = 0; i < _varmjoints.size(); ++i)
@@ -878,7 +878,7 @@ void RobotBase::SetActiveDOFValues(const std::vector<dReal>& values, bool bCheck
     }
 
     if( _vActiveJointIndices.size() > 0 ) {
-        GetJointValues(_vTempRobotJoints);
+        GetDOFValues(_vTempRobotJoints);
 
         for(size_t i = 0; i < _vActiveJointIndices.size(); ++i)
             _vTempRobotJoints[_vActiveJointIndices[i]] = values[i];
@@ -893,7 +893,7 @@ void RobotBase::SetActiveDOFValues(const std::vector<dReal>& values, bool bCheck
 void RobotBase::GetActiveDOFValues(std::vector<dReal>& values) const
 {
     if( _nActiveDOF == 0 ) {
-        GetJointValues(values);
+        GetDOFValues(values);
         return;
     }
 
@@ -902,7 +902,7 @@ void RobotBase::GetActiveDOFValues(std::vector<dReal>& values) const
         return;
     dReal* pValues = &values[0];
     if( _vActiveJointIndices.size() != 0 ) {
-        GetJointValues(_vTempRobotJoints);
+        GetDOFValues(_vTempRobotJoints);
 
         FOREACHC(it, _vActiveJointIndices)
             *pValues++ = _vTempRobotJoints[*it];
@@ -981,7 +981,7 @@ void RobotBase::SetActiveDOFVelocities(const std::vector<dReal>& velocities)
     }
 
     if( _vActiveJointIndices.size() > 0 ) {
-        GetJointVelocities(_vTempRobotJoints);
+        GetDOFVelocities(_vTempRobotJoints);
         std::vector<dReal>::const_iterator itvel = velocities.begin();
         FOREACHC(it, _vActiveJointIndices)
             _vTempRobotJoints[*it] = *itvel++;
@@ -992,7 +992,7 @@ void RobotBase::SetActiveDOFVelocities(const std::vector<dReal>& velocities)
 void RobotBase::GetActiveDOFVelocities(std::vector<dReal>& velocities) const
 {
     if( _nActiveDOF == 0 ) {
-        GetJointVelocities(velocities);
+        GetDOFVelocities(velocities);
         return;
     }
 
@@ -1001,7 +1001,7 @@ void RobotBase::GetActiveDOFVelocities(std::vector<dReal>& velocities) const
         return;
     dReal* pVelocities = &velocities[0];
     if( _vActiveJointIndices.size() != 0 ) {
-        GetJointVelocities(_vTempRobotJoints);
+        GetDOFVelocities(_vTempRobotJoints);
 
         FOREACHC(it, _vActiveJointIndices)
             *pVelocities++ = _vTempRobotJoints[*it];
@@ -1043,11 +1043,11 @@ void RobotBase::GetActiveDOFLimits(std::vector<dReal>& lower, std::vector<dReal>
 
     if( _nAffineDOFs == 0 ) {
         if( _nActiveDOF == 0 ) {
-            GetJointLimits(lower,upper);
+            GetDOFLimits(lower,upper);
             return;
         }
         else {
-            GetJointLimits(alllower,allupper);
+            GetDOFLimits(alllower,allupper);
             FOREACHC(it, _vActiveJointIndices) {
                 *pLowerLimit++ = alllower[*it];
                 *pUpperLimit++ = allupper[*it];
@@ -1056,7 +1056,7 @@ void RobotBase::GetActiveDOFLimits(std::vector<dReal>& lower, std::vector<dReal>
     }
     else {
         if( _vActiveJointIndices.size() > 0 ) {
-            GetJointLimits(alllower,allupper);
+            GetDOFLimits(alllower,allupper);
             FOREACHC(it, _vActiveJointIndices) {
                 *pLowerLimit++ = alllower[*it];
                 *pUpperLimit++ = allupper[*it];
@@ -1092,7 +1092,7 @@ void RobotBase::GetActiveDOFLimits(std::vector<dReal>& lower, std::vector<dReal>
 void RobotBase::GetActiveDOFResolutions(std::vector<dReal>& resolution) const
 {
     if( _nActiveDOF == 0 ) {
-        GetJointResolutions(resolution);
+        GetDOFResolutions(resolution);
         return;
     }
     
@@ -1101,7 +1101,7 @@ void RobotBase::GetActiveDOFResolutions(std::vector<dReal>& resolution) const
         return;
     dReal* pResolution = &resolution[0];
 
-    GetJointResolutions(_vTempRobotJoints);
+    GetDOFResolutions(_vTempRobotJoints);
     FOREACHC(it, _vActiveJointIndices)
         *pResolution++ = _vTempRobotJoints[*it];
 
@@ -1127,7 +1127,7 @@ void RobotBase::GetActiveDOFResolutions(std::vector<dReal>& resolution) const
 void RobotBase::GetActiveDOFWeights(std::vector<dReal>& weights) const
 {
     if( _nActiveDOF == 0 ) {
-        GetJointWeights(weights);
+        GetDOFWeights(weights);
         return;
     }
     
@@ -1136,7 +1136,7 @@ void RobotBase::GetActiveDOFWeights(std::vector<dReal>& weights) const
         return;
     dReal* pweight = &weights[0];
 
-    GetJointWeights(_vTempRobotJoints);
+    GetDOFWeights(_vTempRobotJoints);
     FOREACHC(it, _vActiveJointIndices)
         *pweight++ = _vTempRobotJoints[*it];
 
@@ -1162,7 +1162,7 @@ void RobotBase::GetActiveDOFWeights(std::vector<dReal>& weights) const
 void RobotBase::GetActiveDOFMaxVel(std::vector<dReal>& maxvel) const
 {
     if( _nActiveDOF == 0 ) {
-        GetJointMaxVel(maxvel);
+        GetDOFMaxVel(maxvel);
         return;
     }
 
@@ -1171,7 +1171,7 @@ void RobotBase::GetActiveDOFMaxVel(std::vector<dReal>& maxvel) const
         return;
     dReal* pMaxVel = &maxvel[0];
 
-    GetJointMaxVel(_vTempRobotJoints);
+    GetDOFMaxVel(_vTempRobotJoints);
     FOREACHC(it, _vActiveJointIndices)
         *pMaxVel++ = _vTempRobotJoints[*it];
 
@@ -1196,7 +1196,7 @@ void RobotBase::GetActiveDOFMaxVel(std::vector<dReal>& maxvel) const
 void RobotBase::GetActiveDOFMaxAccel(std::vector<dReal>& maxaccel) const
 {
     if( _nActiveDOF == 0 ) {
-        GetJointMaxAccel(maxaccel);
+        GetDOFMaxAccel(maxaccel);
         return;
     }
 
@@ -1205,7 +1205,7 @@ void RobotBase::GetActiveDOFMaxAccel(std::vector<dReal>& maxaccel) const
         return;
     dReal* pMaxAccel = &maxaccel[0];
 
-    GetJointMaxAccel(_vTempRobotJoints);
+    GetDOFMaxAccel(_vTempRobotJoints);
     FOREACHC(it, _vActiveJointIndices)
         *pMaxAccel++ = _vTempRobotJoints[*it];
 
@@ -1269,7 +1269,7 @@ void RobotBase::SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vecto
 void RobotBase::GetControlMaxTorques(std::vector<dReal>& maxtorques) const
 {
     if( _nActiveDOF == 0 ) {
-        GetJointMaxTorque(maxtorques);
+        GetDOFMaxTorque(maxtorques);
         return;
     }
 
@@ -1279,7 +1279,7 @@ void RobotBase::GetControlMaxTorques(std::vector<dReal>& maxtorques) const
     dReal* pMaxTorques = &maxtorques[0];
 
     if( _vActiveJointIndices.size() != 0 ) {
-        GetJointMaxTorque(_vTempRobotJoints);
+        GetDOFMaxTorque(_vTempRobotJoints);
 
         FOREACHC(it, _vActiveJointIndices)
             *pMaxTorques++ = _vTempRobotJoints[*it];
@@ -1343,7 +1343,7 @@ void RobotBase::GetFullTrajectoryFromActive(TrajectoryBasePtr pFullTraj, Traject
     else {
         Trajectory::TPOINT p;
         p.trans = GetTransform();
-        GetJointValues(p.q);
+        GetDOFValues(p.q);
         p.qdot.resize(GetDOF());
         memset(&p.qdot[0], 0, sizeof(p.qdot[0]) * GetDOF());
 

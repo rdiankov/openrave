@@ -45,7 +45,7 @@ class ConstraintPlanning(metaclass.AutoReloader):
         validgrasp=validgrasps[random.randint(len(validgrasps))]
         with self.robot:
             self.gmodel.setPreshape(validgrasp)
-            jointvalues = self.robot.GetJointValues()
+            jointvalues = self.robot.GetDOFValues()
         self.robot.GetController().SetDesired(jointvalues)
         self.robot.WaitForController(0)
         matrices = [self.gmodel.getGlobalGraspTransform(validgrasp,collisionfree=True)]
@@ -70,7 +70,7 @@ class ConstraintPlanning(metaclass.AutoReloader):
             constrainterrorthresh = 0.02
             for iter in range(5):
                 with self.robot:
-                    vcur = self.robot.GetJointValues()
+                    vcur = self.robot.GetDOFValues()
                     Tee = self.manip.GetEndEffectorTransform()
                     while True:
                         T = array(Tee)

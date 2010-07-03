@@ -100,7 +100,7 @@ class VisibilityGrasping(metaclass.AutoReloader):
 
         with self.orenvreal:
             self.basemanip = BaseManipulation(self.robotreal)
-            self.homevalues = self.robotreal.GetJointValues()
+            self.homevalues = self.robotreal.GetDOFValues()
             # create a camera viewer for every camera sensor
             try:
                 self.viewers = []
@@ -151,12 +151,12 @@ class VisibilityGrasping(metaclass.AutoReloader):
         self.starttrajectory(trajdata)
         
         print 'moving hand'
-        values = array(self.robotreal.GetJointValues(),'float')
+        values = self.robotreal.GetDOFValues()
         values[self.manip.GetGripperJoints()] = homevalues[self.manip.GetGripperJoints()]
         self.robotreal.GetController().SetDesired(values)
         self.waitrobot()
         if not self.robot is None:
-            self.robot.GetController().SetDesired(self.robotreal.GetJointValues())
+            self.robot.GetController().SetDesired(self.robotreal.GetDOFValues())
     
     def movegripper(self,grippervalues,robot=None):
         if robot is None:
@@ -175,17 +175,17 @@ class VisibilityGrasping(metaclass.AutoReloader):
             self.basemanip.MoveActiveJoints(goal=values)
         self.waitrobot()
 
-        values = array(robot.GetJointValues(),'float')
+        values = robot.GetDOFValues()
         values[gripperjoints] = self.graspsetdata[0][12:]
         robot.GetController().SetDesired(values)
         self.waitrobot(robot)
         # set the real values for simulation
-        v = array(self.robotreal.GetJointValues(),'float')
+        v = self.robotreal.GetDOFValues()
         v[gripperjoints] = grippervalues
         self.robot.GetController().SetDesired(v)
     def syncrobot(self,robot):
         with self.robotreal:
-            values = self.robotreal.GetJointValues()
+            values = self.robotreal.GetDOFValues()
             T = self.robotreal.GetTransform()
         robot.SetTransform(T)
         robot.GetController().SetDesired(values)
@@ -204,7 +204,7 @@ class VisibilityGrasping(metaclass.AutoReloader):
             self.basemanip.TrajFromData(trajdata)
             self.waitrobot()
             if self.robot is not None:
-                self.robot.GetController().SetDesired(self.robotreal.GetJointValues())
+                self.robot.GetController().SetDesired(self.robotreal.GetDOFValues())
             time.sleep(0.2) # give some time for GUI to update
 
     def start(self,dopause=False,usevision=False):
@@ -233,7 +233,7 @@ class VisibilityGrasping(metaclass.AutoReloader):
             vmodelreal = vmodel.clone(self.orenvreal)
             vmodelreal.moveToPreshape()
             basemanip = BaseManipulation(self.robot)
-            self.robot.GetController().SetDesired(self.robotreal.GetJointValues()) # update the robot
+            self.robot.GetController().SetDesired(self.robotreal.GetDOFValues()) # update the robot
             try:
                 trajdata = vmodel.visualprob.MoveToObserveTarget(sampleprob=0.001,maxiter=4000,execute=False,outputtraj=True)
                 self.starttrajectory(trajdata)

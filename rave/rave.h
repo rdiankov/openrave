@@ -117,6 +117,12 @@
 #define RAVE_PLUGIN_API extern "C"
 #endif
 
+#if defined(__GNUC__)
+#define RAVE_DEPRECATED __attribute__((deprecated))
+#else
+#define RAVE_DEPRECATED
+#endif
+
 namespace OpenRAVE {
     
 #include <rave/defines.h>
@@ -847,7 +853,7 @@ public:
 
     /// Get the corresponding body from its unique network id
     virtual KinBodyPtr GetBodyFromEnvironmentId(int id) = 0;
-    virtual KinBodyPtr GetBodyFromNetworkId(int id) = 0;
+    virtual KinBodyPtr GetBodyFromNetworkId(int id) RAVE_DEPRECATED = 0;
 
     enum TriangulateOptions
     {

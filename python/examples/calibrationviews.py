@@ -41,12 +41,13 @@ class CalibrationViews(metaclass.AutoReloader):
             pose = poseFromMatrix(target.GetTransform())
             target.SetTransform(pose)
         self.vmodel = visibilitymodel.VisibilityModel(robot=robot,sensorrobot=sensorrobot,target=target,sensorname=sensorname)
+        self.vmodel.load()
         self.Tpatternrobot = None
         if self.vmodel.robot != self.vmodel.sensorrobot and target is not None:
             print 'Assuming target %s is attached to the end effector of %s'%(target.GetName(),self.vmodel.manip)
             self.Tpatternrobot = dot(linalg.inv(self.vmodel.manip.GetEndEffectorTransform()),target.GetTransform())
 
-    def computevisibilityposes(self,anglerange=pi,dists=arange(0.05,1.0,0.15),angledensity=1,num=inf):
+    def computevisibilityposes(self,dists=arange(0.05,1.0,0.15),orientationdensity=1,num=inf):
         """Computes robot poses using visibility information from the target.
 
         Sample the transformations of the camera. the camera x and y axes should always be aligned with the 
@@ -54,51 +55,43 @@ class CalibrationViews(metaclass.AutoReloader):
         @param cameraonmanip: if True assumes the camera is attached onto the link sensor. Otherwise the camera is attached to a different link (or different robot).
         """
         with self.vmodel.target:
+            if not self.vmodel.has():
+                # nothing is loaded
+                self.vmodel.visibilitytransforms = self.vmodel.visualprob.ProcessVisibilityExtents(numrolls=1,sphere=[orientationdensity]+dists.tolist())
+                self.vmodel.preshapes=array([self.robot.GetDOFValues(self.vmodel.manip.GetGripperJoints())])
+                self.vmodel.preprocess()
             if self.Tpatternrobot is not None:
                 self.vmodel.target.SetTransform(dot(self.vmodel.manip.GetEndEffectorTransform(),self.Tpatternrobot))
             with RobotStateSaver(self.robot,KinBody.SaveParameters.GrabbedBodies):
-                if self.Tpatternrobot is not None:
-                    self.robot.Grab(self.vmodel.target,self.vmodel.manip.GetEndEffector())
-                values=self.robot.GetJointValues()
-                self.vmodel.preshapes=array([values[self.vmodel.manip.GetGripperJoints()]])
-                self.vmodel.preprocess()
                 # actually use the visibility instead of approximating as a cone
-                dirs,indices = ComputeGeodesicSphereMesh(level=angledensity)
-                targetright = self.vmodel.target.GetTransform()[0:3,0]
-                targetup = self.vmodel.target.GetTransform()[0:3,1]
-                targetdir = self.vmodel.target.GetTransform()[0:3,2]
-                dirs = dirs[dot(dirs,targetdir)>=cos(anglerange)]
-                with self.vmodel.target:
-                    Ttarget = self.vmodel.target.GetTransform()
+                #dirs = dirs[dot(dirs,targetdir)>=cos(anglerange)]
+                with KinBodyStateSaver(self.vmodel.target,KinBody.SaveParameters.LinkTransformation):
                     self.vmodel.target.SetTransform(eye(4))
                     ab=self.vmodel.target.ComputeAABB()
-                centers = transformPoints(Ttarget,dot(array(((0,0,0),(0.5,0.5,0),(-0.5,0.5,0),(0.5,-0.5,0),(-0.5,-0.5,0))),diag(ab.extents())))
-                Rs = []
-                for dir in dirs:
-                    right=targetright-dir*dot(targetright,dir)
-                    rightlen = sqrt(sum(right**2))
-                    if rightlen < 1e-5:
-                        up=targetup-dir*dot(targetup,dir)
-                        up /= sqrt(sum(up**2))
-                        Rs.append(c_[cross(dir,up),up,dir])
-                    else:
-                        right/=rightlen
-                        Rs.append(c_[right,cross(dir,right),dir])
+                centers = dot(array(((0,0,0),(0.5,0.5,0),(-0.5,0.5,0),(0.5,-0.5,0),(-0.5,-0.5,0))),diag(ab.extents()))
+                if self.Tpatternrobot is not None:
+                    self.robot.Grab(self.vmodel.target,self.vmodel.manip.GetEndEffector())
+                    Tbase = self.vmodel.attachedsensor.GetTransform()
+                    visibilitytransforms = inversePoses(self.vmodel.visibilitytransforms)
+                else:
+                    Tbase = self.vmodel.target.GetTransform()
+                    visibilitytransforms = self.vmodel.visibilitytransforms
+                posebase = poseFromMatrix(Tbase)
                 poses = []
                 configs = []
-                for R in Rs:
-                    quat=quatFromRotationMatrix(R)
-                    for dist in dists:
-                        for center in centers:
-                            pose = r_[quat,center-dist*R[0:3,2]]
-                            try:
-                                q=self.vmodel.visualprob.ComputeVisibleConfiguration(pose=pose)
-                                poses.append(pose)
-                                configs.append(q)
-                                if len(poses) > num:
-                                    return array(poses), array(configs)
-                            except planning_error:
-                                pass
+                for relativepose in visibilitytransforms:
+                    pose = poseMult(posebase,relativepose)
+                    for center in centers:
+                        posenew = array(pose)
+                        posenew[4:7] += quatRotate(posenew[0:4],center)
+                        try:
+                            q=self.vmodel.visualprob.ComputeVisibleConfiguration(pose=pose)
+                            poses.append(pose)
+                            configs.append(q)
+                            if len(poses) > num:
+                                return array(poses), array(configs)
+                        except planning_error:
+                            pass
                 return array(poses), array(configs)
 
     def computelocalposes(self,maxconeangle = 0.5,maxconedist = 0.15,averagedist=0.03,angledelta=0.2,**kwargs):
@@ -116,7 +109,7 @@ class CalibrationViews(metaclass.AutoReloader):
             self.robot.SetActiveManipulator(manip)
             positions = transformPoints(Tsensor, localpositions)
             Tcameratogripper = dot(linalg.inv(Tsensor),manip.GetEndEffectorTransform())
-            configs = [self.robot.GetJointValues()[manip.GetArmJoints()]]
+            configs = [self.robot.GetDOFValues(manip.GetArmJoints())]
             poses = [poseFromMatrix(manip.GetEndEffectorTransform())]
             Trotations = [eye(4),matrixFromAxisAngle([angledelta,0,0]),matrixFromAxisAngle([-angledelta,0,0]),matrixFromAxisAngle([0,angledelta,0]),matrixFromAxisAngle([0,-angledelta,0])]
             for position in positions:
@@ -149,13 +142,13 @@ class CalibrationViews(metaclass.AutoReloader):
         observations=[]
         while len(poseorder) > 0:
             with self.robot:
-                curconfig=self.robot.GetJointValues()[self.vmodel.manip.GetArmJoints()]
+                curconfig=self.robot.GetDOFValues(self.vmodel.manip.GetArmJoints())
                 index=argmin(sum((configs[poseorder]-tile(curconfig,(len(poseorder),1)))**2,1))
             config=configs[poseorder[index]]
             data=self.moveToConfiguration(config,waitcond=waitcond)
             if data is not None:
                 with self.robot:
-                    data['jointvalues'] = self.robot.GetJointValues()[self.vmodel.manip.GetArmJoints()]
+                    data['jointvalues'] = self.robot.GetDOFValues(self.vmodel.manip.GetArmJoints())
                     data['Tlink'] = self.vmodel.attachedsensor.GetAttachingLink().GetTransform()
                 observations.append(data)
                 if len(observations) >= maxobservations:

@@ -1417,7 +1417,7 @@ protected:
 
         Transform handTr(handTm);
     
-        robot->GetJointValues(values);
+        robot->GetDOFValues(values);
 
         for(size_t i = 0; i < varmjointvals.size(); i++)
             values[pmanip->GetArmJoints()[i]] = varmjointvals[i];

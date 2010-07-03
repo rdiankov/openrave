@@ -148,7 +148,7 @@ class ConvexDecompositionModel(OpenRAVEModel):
         handles = []
         jointvalues = tile(inf,self.robot.GetDOF())
         while True:
-            newvalues = self.robot.GetJointValues()
+            newvalues = self.robot.GetDOFValues()
             if all(abs(jointvalues-newvalues)<0.01):
                 time.sleep(0.5)
                 continue

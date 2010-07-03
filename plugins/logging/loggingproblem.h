@@ -147,7 +147,7 @@ class LoggingProblem : public ProblemInstance
             fout << setw(tabwidth*2) << " " << "<jointvalues>";
 
             vector<dReal> values;
-            pbody->GetJointValues(values);
+            pbody->GetDOFValues(values);
             FOREACH(it, values)
                 fout << *it << " ";
             fout << "</jointvalues>" << endl;
@@ -204,7 +204,7 @@ class LoggingProblem : public ProblemInstance
             //                t = (*itbody)->GetTransform();
             //                fwrite(&t, sizeof(t), 1, pfLog);
             //                
-            //                (*itbody)->GetJointValues(vjoints);
+            //                (*itbody)->GetDOFValues(vjoints);
             //                
             //                len = vjoints.size();
             //                fwrite(&len, 4, 1, pfLog);

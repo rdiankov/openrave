@@ -1489,12 +1489,12 @@ protected:
         vector<int> ids = vector<int>((istream_iterator<int>(is)), istream_iterator<int>());
 
         if( ids.size() == 0 ) {
-            pbody->GetJointValues(values);
+            pbody->GetDOFValues(values);
             FOREACH(it,values)
                 os << *it << " ";
         }
         else {
-            pbody->GetJointValues(values);
+            pbody->GetDOFValues(values);
             values.reserve(ids.size());
             FOREACH(it,ids) {
                 if( *it < 0 || *it >= pbody->GetDOF() ) {
@@ -1526,7 +1526,7 @@ protected:
                 os << *it << " ";
         }
         else {
-            probot->GetJointValues(values);
+            probot->GetDOFValues(values);
             values.reserve(ids.size());
             FOREACH(it,ids) {
                 if( *it < 0 || *it >= probot->GetDOF() ) {
@@ -1666,7 +1666,7 @@ protected:
 
         if( bUseIndices ) {
             vector<dReal> v;
-            pbody->GetJointValues(v);
+            pbody->GetDOFValues(v);
             vector<dReal>::iterator itvalue = vvalues.begin();
             FOREACH(it,vindices) {
                 if( *it < 0 || *it >= pbody->GetDOF() ) {
@@ -1689,7 +1689,7 @@ protected:
             RobotBasePtr probot = boost::static_pointer_cast<RobotBase>(pbody);
             if( !!probot->GetController() ) {
                 // reget the values since they'll go through the joint limits
-                probot->GetJointValues(vvalues);
+                probot->GetDOFValues(vvalues);
                 probot->GetController()->SetDesired(vvalues);
             }
         }
@@ -1763,7 +1763,7 @@ protected:
 
         if( bUseIndices ) {
             vector<dReal> v;
-            probot->GetJointValues(v);
+            probot->GetDOFValues(v);
             vector<dReal>::iterator itvalue = vvalues.begin();
             FOREACH(it,vindices) {
                 if( *it < 0 || *it >= probot->GetDOF() ) {
@@ -1783,7 +1783,7 @@ protected:
 
         if( !!probot->GetController() ) {
             // reget the values since they'll go through the joint limits
-            probot->GetJointValues(vvalues);
+            probot->GetDOFValues(vvalues);
             probot->GetController()->SetDesired(vvalues);
         }
     
@@ -1844,7 +1844,7 @@ protected:
         }
         else {
             Trajectory::TPOINT tp;
-            probot->GetJointValues(tp.q);
+            probot->GetDOFValues(tp.q);
             FOREACH(it, vpoints) {
                 tp.time = it->time;
                 tp.trans = it->trans;

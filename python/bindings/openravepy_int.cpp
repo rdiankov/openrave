@@ -688,12 +688,62 @@ public:
     string GetName() const { return _pbody->GetName(); }
     int GetDOF() const { return _pbody->GetDOF(); }
 
+    object GetDOFValues() const
+    {
+        vector<dReal> values;
+        _pbody->GetDOFValues(values);
+        return toPyArray(values);
+    }
+    object GetDOFValues(object oindices) const
+    {
+        if( oindices == object() )
+            return numeric::array(boost::python::list());
+        vector<int> vindices = ExtractArray<int>(oindices);
+        if( vindices.size() == 0 )
+            return numeric::array(boost::python::list());
+        vector<dReal> values, v;
+        values.reserve(vindices.size());
+        FOREACHC(it, vindices) {
+            KinBody::JointPtr pjoint = _pbody->GetJointFromDOFIndex(*it);
+            pjoint->GetValues(v,false);
+            values.push_back(v[*it-pjoint->GetDOFIndex()]);
+        }
+        return toPyArray(values);
+    }
+
+    object GetDOFVelocities() const
+    {
+        vector<dReal> values;
+        _pbody->GetDOFVelocities(values);
+        return toPyArray(values);
+    }
+
+    object GetDOFLimits() const
+    {
+        vector<dReal> vlower, vupper;
+        _pbody->GetDOFLimits(vlower,vupper);
+        return boost::python::make_tuple(toPyArray(vlower),toPyArray(vupper));
+    }
+    object GetDOFMaxVel() const
+    {
+        vector<dReal> values;
+        _pbody->GetDOFMaxVel(values);
+        return toPyArray(values);
+    }
+    object GetDOFWeights() const
+    {
+        vector<dReal> values;
+        _pbody->GetDOFWeights(values);
+        return toPyArray(values);
+    }
+
     object GetJointValues() const
     {
         vector<dReal> values;
         _pbody->GetJointValues(values);
         return toPyArray(values);
     }
+
     object GetJointVelocities() const
     {
         vector<dReal> values;
@@ -2580,9 +2630,9 @@ public:
         return PyRobotBasePtr(new PyRobotBase(probot,shared_from_this()));
     }
 
-    PyKinBodyPtr GetBodyFromNetworkId(int id)
+    PyKinBodyPtr GetBodyFromEnvironmentId(int id)
     {
-        KinBodyPtr pbody = _penv->GetBodyFromNetworkId(id);
+        KinBodyPtr pbody = _penv->GetBodyFromEnvironmentId(id);
         if( !pbody )
             throw openrave_exception(boost::str(boost::format("failed to get body id %d")%id));
         return PyKinBodyPtr(new PyKinBody(pbody,shared_from_this()));
@@ -3161,6 +3211,16 @@ object quatRotateDirection(object source, object target)
     return toPyVector4(quatRotateDirection(ExtractVector3(source), ExtractVector3(target)));
 }
 
+object quatMult(object oquat1, object oquat2)
+{
+    return toPyVector4(quatMultiply(ExtractVector4(oquat1),ExtractVector4(oquat2)));
+}
+
+object poseMult(object opose1, object opose2)
+{
+    return toPyArray(ExtractTransformType<dReal>(opose1)*ExtractTransformType<dReal>(opose2));
+}
+
 string matrixSerialization(object o)
 {
     stringstream ss; ss << ExtractTransformMatrix(o);
@@ -3312,6 +3372,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
         void (PyKinBody::*psetjointvalues2)(object,object) = &PyKinBody::SetJointValues;
         PyVoidHandle (PyKinBody::*statesaver1)() = &PyKinBody::CreateKinBodyStateSaver;
         PyVoidHandle (PyKinBody::*statesaver2)(int) = &PyKinBody::CreateKinBodyStateSaver;
+        object (PyKinBody::*getdofvalues1)() const = &PyKinBody::GetDOFValues;
+        object (PyKinBody::*getdofvalues2)(object) const = &PyKinBody::GetDOFValues;
         scope kinbody = class_<PyKinBody, boost::shared_ptr<PyKinBody>, bases<PyInterfaceBase> >("KinBody", no_init)
             .def("InitFromFile",&PyKinBody::InitFromFile,args("filename"))
             .def("InitFromData",&PyKinBody::InitFromData,args("data"))
@@ -3319,6 +3381,12 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("SetName", &PyKinBody::SetName,args("name"))
             .def("GetName",&PyKinBody::GetName)
             .def("GetDOF",&PyKinBody::GetDOF)
+            .def("GetDOFValues",getdofvalues1)
+            .def("GetDOFValues",getdofvalues2)
+            .def("GetDOFVelocities",&PyKinBody::GetDOFVelocities)
+            .def("GetDOFLimits",&PyKinBody::GetDOFLimits)
+            .def("GetDOFMaxVel",&PyKinBody::GetDOFMaxVel)
+            .def("GetDOFWeights",&PyKinBody::GetDOFWeights)
             .def("GetJointValues",&PyKinBody::GetJointValues)
             .def("GetJointVelocities",&PyKinBody::GetJointVelocities)
             .def("GetJointLimits",&PyKinBody::GetJointLimits)
@@ -3934,7 +4002,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("RemoveKinBody",&PyEnvironmentBase::RemoveKinBody,args("body"))
             .def("GetKinBody",&PyEnvironmentBase::GetKinBody,args("name"))
             .def("GetRobot",&PyEnvironmentBase::GetRobot,args("name"))
-            .def("GetBodyFromNetworkId",&PyEnvironmentBase::GetBodyFromNetworkId )
+            .def("GetBodyFromEnvironmentId",&PyEnvironmentBase::GetBodyFromEnvironmentId )
             .def("CreateKinBody",&PyEnvironmentBase::CreateKinBody)
             .def("CreateTrajectory",&PyEnvironmentBase::CreateTrajectory,args("dof"))
             .def("LoadProblem",&PyEnvironmentBase::LoadProblem,args("problem","args"))
@@ -4018,6 +4086,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
     def("poseFromMatrices",openravepy::poseFromMatrices, args("transforms"), "Converts an array/list of 4x4 matrices to a Nx7 array where each row is quaternion+translation representation");
     def("invertPoses",openravepy::invertPoses,args("poses"), "Inverts a Nx7 array of poses where first 4 columns are the quaternion and last 3 are the translation components");
     def("quatRotateDirection",openravepy::quatRotateDirection,args("sourcedir,targetdir"),"Returns the minimal quaternion rotation that rotates sourcedir into targetdir");
+    def("quatMult",openravepy::quatMult,args("quat1","quat2"),"Multiplies two 1-dimensional quaternions.");
+    def("poseMult",openravepy::poseMult,args("pose1","pose2"),"multiplies two poses");
     def("matrixSerialization",openravepy::matrixSerialization,args("matrix"),"Serializes a transformation into a string representing a 3x4 matrix");
     def("poseSerialization",openravepy::poseSerialization, args("pose"), "Serializes a transformation into a string representing a quaternion with translation");
     def("openravepyCompilerVersion",openravepy::openravepyCompilerVersion,"Returns the compiler version that openravepy_int was compiled with");

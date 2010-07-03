@@ -151,7 +151,7 @@ class CM
             vector<int> JointIndicesI;
         
             std::vector<dReal> vold, vsolution;
-            _probot->GetJointValues(vold);  //gets the current robot config
+            _probot->GetDOFValues(vold);  //gets the current robot config
             Transform tA = _pmanipA->GetEndEffectorTransform();
         
             Transform tInew= tA*_diff;  //this is (wTRANSl)*(lTRANSr)

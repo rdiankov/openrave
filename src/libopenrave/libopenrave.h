@@ -228,6 +228,13 @@ inline bool IsValidCharInName(char c) { return isalnum(c) || c == '_' || c == '-
         return false;
     return std::count_if(s.begin(), s.end(), IsValidCharInName) == (int)s.size();
 }
+
+template<class T> struct index_cmp {
+index_cmp(const T arr) : arr(arr) {}
+    bool operator()(const size_t a, const size_t b) const
+    { return arr[a] < arr[b]; }
+    const T arr;
+};
 }
 
 // need the prototypes in order to keep them free of the OpenRAVE namespace

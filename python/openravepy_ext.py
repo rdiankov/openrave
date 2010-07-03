@@ -171,20 +171,9 @@ def quatRotateArrayT(q,transarray):
                        (xy+zw)*transarray[:,0]+(0.5-xx-zz)*transarray[:,1]+(yz-xw)*transarray[:,2],
                        (xz-yw)*transarray[:,0]+(yz+xw)*transarray[:,1]+(0.5-xx-yy)*transarray[:,2])]
 
-def quatMult(q1,q2):
-    """ multiplies two 1-dimensional quaternions"""
-    return numpy.array((q1[0]*q2[0] - q1[1]*q2[1] - q1[2]*q2[2] - q1[3]*q2[3],
-                        q1[0]*q2[1] + q1[1]*q2[0] + q1[2]*q2[3] - q1[3]*q2[2],
-                        q1[0]*q2[2] + q1[2]*q2[0] + q1[3]*q2[1] - q1[1]*q2[3],
-                        q1[0]*q2[3] + q1[3]*q2[0] + q1[1]*q2[2] - q1[2]*q2[1]))
-
 def poseMultArrayT(pose,posearray):
     """multiplies a pose with an array of poses (each pose is a quaterion + translation)"""
     return numpy.c_[quatMultArrayT(pose[0:4],posearray[:,0:4]),quatRotateArrayT(pose[0:4],posearray[:,4:7])+numpy.tile(pose[4:7],(len(posearray),1))]
-
-def poseMult(pose1,pose2):
-    """multiplies two poses"""
-    return numpy.r_[quatMult(pose1[0:4],pose2[0:4]),quatRotate(pose1[0:4],pose2[4:7])+pose1[4:7]]
     
 def quatArrayTDist(q,qarray):
     """computes the natural distance (Haar measure) for quaternions, q is a 4-element array, qarray is Nx4"""

@@ -38,7 +38,7 @@ class InverseReachabilityModel(OpenRAVEModel):
         self.rotweight = 0.2 # in-plane rotation weight with respect to xy offset
         self.id=id
         with self.robot:
-            self.jointvalues = self.robot.GetJointValues()[self.getdofindices(self.manip)]
+            self.jointvalues = self.robot.GetDOFValues(self.getdofindices(self.manip))
     def clone(self,envother):
         clone = OpenRAVEModel.clone(self,envother)
         return clone        
@@ -558,7 +558,7 @@ class InverseReachabilityModel(OpenRAVEModel):
                 solution = self.manip.FindIKSolution(Tgrasp,False)
                 if solution is not None:
                     self.robot.SetJointValues(solution,self.manip.GetArmJoints())
-                    robotlocs.append((self.robot.GetTransform(),self.robot.GetJointValues()))
+                    robotlocs.append((self.robot.GetTransform(),self.robot.GetDOFValues()))
         self.env.RemoveKinBody(self.robot)
         newrobots = []
         for T,values in robotlocs:

@@ -93,9 +93,9 @@ bool TrajectoryBase::CalcTrajTiming(RobotBaseConstPtr pRobot, InterpEnum interpo
             _diffstatefn = boost::bind(&RobotBase::SubtractActiveDOFValues,pRobot,_1,_2);
         }
         else {
-            pRobot->GetJointMaxVel(_maxJointVel);
-            pRobot->GetJointMaxAccel(_maxJointAccel);
-            pRobot->GetJointLimits(_lowerJointLimit, _upperJointLimit);
+            pRobot->GetDOFMaxVel(_maxJointVel);
+            pRobot->GetDOFMaxAccel(_maxJointAccel);
+            pRobot->GetDOFLimits(_lowerJointLimit, _upperJointLimit);
             _maxAffineTranslationVel = pRobot->GetAffineTranslationMaxVels();
             _maxAffineRotationQuatVel = pRobot->GetAffineRotationQuatMaxVels();
             _diffstatefn = boost::bind(&RobotBase::SubtractJointValues,pRobot,_1,_2);

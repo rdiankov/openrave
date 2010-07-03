@@ -90,18 +90,18 @@ public:
 
             if( !!ptarget ) {
                 vector<dReal> vl, vu;
-                ptarget->GetJointLimits(vl, vu);
+                ptarget->GetDOFLimits(vl, vu);
                 for(size_t i = 0; i < _vtargetjoints.size(); ++i) {
                     _lower.push_back(vl[_vtargetjoints[i]]);
                     _upper.push_back(vu[_vtargetjoints[i]]);
                     _resolution.push_back(0.02f); //?
                 }
 
-                ptarget->GetJointValues(vtargvalues);
+                ptarget->GetDOFValues(vtargvalues);
             }
     
             _vsample.resize(GetDOF());
-            _robot->GetJointWeights(_vRobotWeights);
+            _robot->GetDOFWeights(_vRobotWeights);
         }
 
         virtual void SetState(const vector<dReal>& pstate)
@@ -219,7 +219,7 @@ public:
 
         virtual FEATURES EvalWithFeatures(const vector<dReal>& pConfiguration)
         {
-            ptarget->GetJointValues(vtargvalues);
+            ptarget->GetDOFValues(vtargvalues);
             _robot->SetActiveDOFValues(pConfiguration);
     
             FEATURES f;
@@ -864,11 +864,11 @@ private:
 
         Transform tlinkorig, tlinknew;
         vector<dReal> vtargetvalues, vorigvalues;
-        ptarget->GetJointValues(vorigvalues);
+        ptarget->GetDOFValues(vorigvalues);
         tlinkorig = graspfn->plink->GetTransform();
 
         vector<dReal> upper, lower;
-        ptarget->GetJointLimits(lower, upper);
+        ptarget->GetDOFLimits(lower, upper);
         graspfn->vtargetvalues = lower;
         for(size_t i = 0; i < lower.size(); ++i)
             graspfn->vtargetvalues[i] = 0.5f*(lower[i]+upper[i]);
@@ -1163,7 +1163,7 @@ private:
             params->_vConfigResolution = taskdata->GetResolution();
  
             vector<dReal> vtargetinit;
-            taskdata->ptarget->GetJointValues(vtargetinit);
+            taskdata->ptarget->GetDOFValues(vtargetinit);
 
             taskdata->ptarget->SetJointValues(taskdata->vtargettraj.back());
             Transform tlink  = taskdata->ptargetlink->GetTransform();
@@ -1367,7 +1367,7 @@ private:
             boost::shared_ptr<Trajectory> pbodytraj(GetEnv()->CreateTrajectory(taskdata->ptarget->GetDOF()));
         
             vector<Trajectory::TPOINT>::const_iterator itrobottraj = ptraj->GetPoints().begin();
-            taskdata->ptarget->GetJointValues(tp.q);
+            taskdata->ptarget->GetDOFValues(tp.q);
             Transform ttarget = taskdata->ptarget->GetTransform();
 
             if( bReverseTrajectory ) {
@@ -1398,11 +1398,11 @@ private:
         // write first and last points
         vector<dReal> values;
         _robot->SetActiveDOFValues(ptraj->GetPoints().at(0).q);
-        _robot->GetJointValues(values);
+        _robot->GetDOFValues(values);
         FOREACH(it, values)
             sout << *it << " ";
         _robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
-        _robot->GetJointValues(values);
+        _robot->GetDOFValues(values);
         FOREACH(it, values)
             sout << *it << " ";
     
@@ -1587,11 +1587,11 @@ private:
 
         BOOST_ASSERT(vtrajectory.size()>0);
         _robot->SetActiveDOFValues(vtrajectory.front());
-        _robot->GetJointValues(values);
+        _robot->GetDOFValues(values);
         FOREACH(it, values)
             sout << *it << " ";
         _robot->SetActiveDOFValues(vtrajectory.back());
-        _robot->GetJointValues(values);
+        _robot->GetDOFValues(values);
         FOREACH(it, values)
             sout << *it << " ";
 
@@ -1612,7 +1612,7 @@ private:
             boost::shared_ptr<Trajectory> pbodytraj(GetEnv()->CreateTrajectory(taskdata->ptarget->GetDOF()));
             vector<Trajectory::TPOINT>::const_iterator itrobottraj = ptraj->GetPoints().begin();
         
-            taskdata->ptarget->GetJointValues(tp.q);
+            taskdata->ptarget->GetDOFValues(tp.q);
             Transform ttarget = taskdata->ptarget->GetTransform();
 
             FOREACH(itv, vtargettraj) {

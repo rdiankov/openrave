@@ -735,9 +735,9 @@ public:
                 }
 
                 KinBody::Link::TRIMESH spheremesh;
-                CM::GenerateSphereTriangulation(spheremesh,3);
                 int spherelevel = 3, numdists = 0;
                 sinput >> spherelevel >> numdists;
+                CM::GenerateSphereTriangulation(spheremesh,spherelevel);
                 vector<dReal> vdists(numdists);
                 FOREACH(it,vdists)
                     sinput >> *it;

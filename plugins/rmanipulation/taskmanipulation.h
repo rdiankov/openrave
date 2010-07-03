@@ -380,7 +380,7 @@ class TaskManipulation : public ProblemInstance
         vector<dReal> vCurHandValues, vCurRobotValues, vOrgRobotValues;
         _robot->SetActiveDOFs(pmanip->GetGripperJoints());
         _robot->GetActiveDOFValues(vCurHandValues);
-        _robot->GetJointValues(vOrgRobotValues);
+        _robot->GetDOFValues(vOrgRobotValues);
 
         SwitchModelState switchstate(shared_problem());
         _UpdateSwitchModels(true,true);
@@ -395,7 +395,7 @@ class TaskManipulation : public ProblemInstance
             bInitialRobotChanged = true;
         }
         
-        _robot->GetJointValues(vCurRobotValues);
+        _robot->GetDOFValues(vCurRobotValues);
 
         string strResponse;
         Transform transTarg = ptarget->GetTransform();
@@ -408,7 +408,7 @@ class TaskManipulation : public ProblemInstance
             // fill with a trajectory with one point
             TrajectoryBasePtr pstarttraj = GetEnv()->CreateTrajectory(_robot->GetDOF());
             Trajectory::TPOINT tpstarthand;
-            _robot->GetJointValues(tpstarthand.q);
+            _robot->GetDOFValues(tpstarthand.q);
             tpstarthand.trans = _robot->GetTransform();
             pstarttraj->AddPoint(tpstarthand);
             mapPreshapeTrajectories[vCurHandValues] = pstarttraj;
@@ -693,7 +693,7 @@ class TaskManipulation : public ProblemInstance
                 _robot->SetActiveDOFs(pmanip->GetGripperJoints());
                 if( iGraspPreshape >= 0 )
                     _robot->SetActiveDOFValues(vector<dReal>(pgrasp+iGraspPreshape,pgrasp+iGraspPreshape+_robot->GetActiveDOF()),true);
-                _robot->GetJointValues(tpopenhand.q);
+                _robot->GetDOFValues(tpopenhand.q);
                 tpopenhand.trans = _robot->GetTransform();
                 ptrajToPreshapeFull->AddPoint(tpopenhand);
                 ptrajToPreshapeFull->CalcTrajTiming(_robot, ptrajToPreshape->GetInterpMethod(), true, false,_fMaxVelMult);

@@ -184,7 +184,7 @@ class IkFastSolver : public IkSolverBase
         RobotBasePtr probot = pmanip->GetRobot();
         std::vector<dReal> values;
         std::vector<dReal>::const_iterator itscale = _vfreeparamscales.begin();
-        probot->GetJointValues(values);
+        probot->GetDOFValues(values);
         pFreeParameters.resize(_vfreeparams.size());
         for(size_t i = 0; i < _vfreeparams.size(); ++i)
             pFreeParameters[i] = (values[pmanip->GetArmJoints()[_vfreeparams[i]]]-_qlower[_vfreeparams[i]]) * *itscale++;

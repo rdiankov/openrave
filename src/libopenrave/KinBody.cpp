@@ -922,6 +922,7 @@ void KinBody::Destroy()
     _veclinks.clear();
     _vecjoints.clear();
     _vDependencyOrderedJoints.clear();
+    _vDOFOrderedJoints.clear();
     _vecPassiveJoints.clear();
     _vecJointIndices.clear();
     _vecJointHierarchy.clear();
@@ -1059,13 +1060,98 @@ int KinBody::GetDOF() const
     return _vecjoints.size() > 0 ? _vecjoints.back()->GetDOFIndex()+_vecjoints.back()->GetDOF() : 0;
 }
 
+void KinBody::GetDOFValues(std::vector<dReal>& v) const
+{
+    v.resize(0);
+    if( (int)v.capacity() < GetDOF() )
+        v.reserve(GetDOF());
+    FOREACHC(it, _vDOFOrderedJoints) {
+        (*it)->GetValues(v,true);
+    }
+}
+
+void KinBody::GetDOFVelocities(std::vector<dReal>& v) const
+{
+    v.resize(0);
+    if( (int)v.capacity() < GetDOF() )
+        v.reserve(GetDOF());
+    FOREACHC(it, _vDOFOrderedJoints) {
+        (*it)->GetVelocities(v,true);
+    }
+}
+
+void KinBody::GetDOFLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const
+{
+    vLowerLimit.resize(0);
+    if( (int)vLowerLimit.capacity() < GetDOF() )
+        vLowerLimit.reserve(GetDOF());
+    vUpperLimit.resize(0);
+    if( (int)vUpperLimit.capacity() < GetDOF() )
+        vUpperLimit.reserve(GetDOF());
+    FOREACHC(it,_vDOFOrderedJoints) {
+        (*it)->GetLimits(vLowerLimit,vUpperLimit,true);
+    }
+}
+
+void KinBody::GetDOFMaxVel(std::vector<dReal>& v) const
+{
+    v.resize(0);
+    if( (int)v.capacity() < GetDOF() )
+        v.reserve(GetDOF());
+    FOREACHC(it, _vDOFOrderedJoints) {
+        v.insert(v.end(),(*it)->GetDOF(),(*it)->GetMaxVel());
+    }
+}
+
+void KinBody::GetDOFMaxAccel(std::vector<dReal>& v) const
+{
+    v.resize(0);
+    if( (int)v.capacity() < GetDOF() )
+        v.reserve(GetDOF());
+    FOREACHC(it, _vDOFOrderedJoints) {
+        v.insert(v.end(),(*it)->GetDOF(),(*it)->GetMaxAccel());
+    }
+}
+
+void KinBody::GetDOFMaxTorque(std::vector<dReal>& v) const
+{
+    v.resize(0);
+    if( (int)v.capacity() < GetDOF() )
+        v.reserve(GetDOF());
+    FOREACHC(it, _vDOFOrderedJoints) {
+        v.insert(v.end(),(*it)->GetDOF(),(*it)->GetMaxTorque());
+    }
+}
+
+void KinBody::GetDOFResolutions(std::vector<dReal>& v) const
+{
+    v.resize(0);
+    if( (int)v.capacity() < GetDOF() )
+        v.reserve(GetDOF());
+    FOREACHC(it, _vDOFOrderedJoints) {
+        v.insert(v.end(),(*it)->GetDOF(),(*it)->GetResolution());
+    }
+}
+
+void KinBody::GetDOFWeights(std::vector<dReal>& v) const
+{
+    v.resize(GetDOF());
+    std::vector<dReal>::iterator itv = v.begin();
+    FOREACHC(it, _vDOFOrderedJoints) {
+        for(int i = 0; i < (*it)->GetDOF(); ++i) {
+            *itv++ = (*it)->GetWeight(i);
+        }
+    }
+}
+
 void KinBody::GetJointValues(std::vector<dReal>& v) const
 {
     v.resize(0);
     if( (int)v.capacity() < GetDOF() )
         v.reserve(GetDOF());
-    FOREACHC(it, _vecjoints)
+    FOREACHC(it, _vecjoints) {
         (*it)->GetValues(v,true);
+    }
 }
 
 void KinBody::GetJointVelocities(std::vector<dReal>& v) const
@@ -1073,8 +1159,9 @@ void KinBody::GetJointVelocities(std::vector<dReal>& v) const
     v.resize(0);
     if( (int)v.capacity() < GetDOF() )
         v.reserve(GetDOF());
-    FOREACHC(it, _vecjoints)
+    FOREACHC(it, _vecjoints) {
         (*it)->GetVelocities(v,true);
+    }
 }
 
 void KinBody::GetJointLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const
@@ -1085,8 +1172,9 @@ void KinBody::GetJointLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>
     vUpperLimit.resize(0);
     if( (int)vUpperLimit.capacity() < GetDOF() )
         vUpperLimit.reserve(GetDOF());
-    FOREACHC(it,_vecjoints)
+    FOREACHC(it,_vecjoints) {
         (*it)->GetLimits(vLowerLimit,vUpperLimit,true);
+    }
 }
 
 void KinBody::GetJointMaxVel(std::vector<dReal>& v) const
@@ -1094,8 +1182,9 @@ void KinBody::GetJointMaxVel(std::vector<dReal>& v) const
     v.resize(0);
     if( (int)v.capacity() < GetDOF() )
         v.reserve(GetDOF());
-    FOREACHC(it, _vecjoints)
+    FOREACHC(it, _vecjoints) {
         v.insert(v.end(),(*it)->GetDOF(),(*it)->GetMaxVel());
+    }
 }
 
 void KinBody::GetJointMaxAccel(std::vector<dReal>& v) const
@@ -1103,8 +1192,9 @@ void KinBody::GetJointMaxAccel(std::vector<dReal>& v) const
     v.resize(0);
     if( (int)v.capacity() < GetDOF() )
         v.reserve(GetDOF());
-    FOREACHC(it, _vecjoints)
+    FOREACHC(it, _vecjoints) {
         v.insert(v.end(),(*it)->GetDOF(),(*it)->GetMaxAccel());
+    }
 }
 
 void KinBody::GetJointMaxTorque(std::vector<dReal>& v) const
@@ -1112,8 +1202,9 @@ void KinBody::GetJointMaxTorque(std::vector<dReal>& v) const
     v.resize(0);
     if( (int)v.capacity() < GetDOF() )
         v.reserve(GetDOF());
-    FOREACHC(it, _vecjoints)
+    FOREACHC(it, _vecjoints) {
         v.insert(v.end(),(*it)->GetDOF(),(*it)->GetMaxTorque());
+    }
 }
 
 void KinBody::GetJointResolutions(std::vector<dReal>& v) const
@@ -1121,8 +1212,9 @@ void KinBody::GetJointResolutions(std::vector<dReal>& v) const
     v.resize(0);
     if( (int)v.capacity() < GetDOF() )
         v.reserve(GetDOF());
-    FOREACHC(it, _vecjoints)
+    FOREACHC(it, _vecjoints) {
         v.insert(v.end(),(*it)->GetDOF(),(*it)->GetResolution());
+    }
 }
 
 void KinBody::GetJointWeights(std::vector<dReal>& v) const
@@ -2116,6 +2208,7 @@ void KinBody::ComputeJointHierarchy()
     BOOST_ASSERT(_vecJointIndices.size()==_vecjoints.size());
     _bHierarchyComputed = true;
     _vecJointHierarchy.resize(_vecjoints.size()*_veclinks.size());
+    _vecJointIndices.resize(0);
 
     int jindex=0;
     FOREACH(itjoint,_vecjoints) {
@@ -2128,8 +2221,20 @@ void KinBody::ComputeJointHierarchy()
     }
 
     if( _vecJointHierarchy.size() > 0 ) {
-        memset(&_vecJointHierarchy[0], 0, _vecJointHierarchy.size() * sizeof(_vecJointHierarchy[0]));
-    
+        vector<size_t> vorder(_vecjoints.size());
+        _vecJointIndices.resize(_vecjoints.size());
+        for(size_t i = 0; i < _vecjoints.size(); ++i) {
+            _vecJointIndices[i] = _vecjoints[i]->dofindex;
+            vorder[i] = i;
+        }
+        sort(vorder.begin(), vorder.end(), index_cmp<vector<int>&>(_vecJointIndices));
+        _vDOFOrderedJoints.resize(0);
+        FOREACH(it,vorder) {
+            _vDOFOrderedJoints.push_back(_vecjoints.at(*it));
+        }
+        FOREACH(it,_vecJointHierarchy) {
+            *it = 0;
+        }
         for(size_t i = 0; i < _veclinks.size(); ++i) {
             _veclinks[i]->userdata = _veclinks[i]->IsStatic();
         }
@@ -2261,7 +2366,7 @@ void KinBody::ComputeJointHierarchy()
     }
 
     // create the adjacency list
-    vector<dReal> prevvalues; GetJointValues(prevvalues);
+    vector<dReal> prevvalues; GetDOFValues(prevvalues);
     vector<dReal> vzero(GetDOF());
     SetJointValues(vzero);
     _setAdjacentLinks.clear();
@@ -2714,6 +2819,7 @@ bool KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     FOREACHC(itjoint, r->_vDependencyOrderedJoints)
         _vDependencyOrderedJoints.push_back(_vecjoints.at((*itjoint)->GetJointIndex()));
 
+    _vDOFOrderedJoints = r->_vDOFOrderedJoints;
     _vecJointIndices = r->_vecJointIndices;
     _vecJointHierarchy = r->_vecJointHierarchy;
     

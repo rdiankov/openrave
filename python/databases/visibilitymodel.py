@@ -80,7 +80,7 @@ class VisibilityModel(OpenRAVEModel):
     def getversion(self):
         return 1
     def has(self):
-        return len(self.visibilitytransforms) > 0
+        return self.visibilitytransforms is not None and len(self.visibilitytransforms) > 0
     def getversion(self):
         return 1
     def getfilename(self):
