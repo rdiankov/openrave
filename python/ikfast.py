@@ -1913,6 +1913,10 @@ class IKFastSolver(AutoReloader):
                     #Positionsee[i] -= Dsee[i]*(Dsee[i][0]*Positionsee[i][0]+Dsee[i][1]*Positionsee[i][1]+Dsee[i][2]*Positionsee[i][2])
                     Positionsee[i] = Positionsee[i].cross(Dsee[i])
                     Positionsee[i] = Matrix(3,1,map(lambda x: self.customtrigsimp(self.customtrigsimp(x)),Positionsee[i]))
+                for i in range(len(Ds)):
+                    Positions.append(Ds[i])
+                    Positionsee.append(Dsee[i])
+
                 # try to shift all the constants of each Position expression to one side
                 for i in range(len(Positions)):
                     for j in range(3):
@@ -1962,7 +1966,7 @@ class IKFastSolver(AutoReloader):
         if len(solverbranches) == 0 or not solverbranches[-1][0] is None:
             print 'failed to solve for ray4d kinematics'
             return None
-        return SolverIKChainRay4D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], TfirstleftInv[0:3,0:3] * Pee + TfirstleftInv[0:3,3], TfirstleftInv[0:3,0:3] * Dee, [SolverBranchConds(solverbranches)],Dfk=Tfirstleft[0:3,0:3]*LinksAccumRightAll[i][0:3,0:3]*Matrix(3,1,basedir.tolist()),Pfk=Tfirstleft*LinksAccumRightAll[0][0:4,3])
+        return SolverIKChainRay4D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], TfirstleftInv[0:3,0:3] * Pee + TfirstleftInv[0:3,3], TfirstleftInv[0:3,0:3] * Dee, [SolverBranchConds(solverbranches)],Dfk=Tfirstleft[0:3,0:3]*LinksAccumRightAll[0][0:3,0:3]*Matrix(3,1,basedir.tolist()),Pfk=Tfirstleft*(LinksAccumRightAll[0]*Matrix(4,1,basepos.tolist()+[1.0])))
         
     def solveFullIK_6D(self, chain, Tee):
         Links, jointvars, isolvejointvars, ifreejointvars = self.forwardKinematicsChain(chain)
@@ -2527,10 +2531,15 @@ class IKFastSolver(AutoReloader):
         for i in range(len(Positions)):
             x = Positions[i] - Positionsee[i]
             for j in range(3):
-                AllEquations.append(Positions[i][j] - Positionsee[i][j])
+                e = Positions[i][j] - Positionsee[i][j]
+                if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
+                    AllEquations.append(e)
             if uselength:
-                AllEquations.append(self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp((Positions[i][0]**2+Positions[i][1]**2+Positions[i][2]**2).expand())).expand())) -
-                                    self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp((Positionsee[i][0]**2+Positionsee[i][1]**2+Positionsee[i][2]**2).expand())).expand())))
+                e = self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp((Positions[i][0]**2+Positions[i][1]**2+Positions[i][2]**2).expand())).expand())) - self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp((Positionsee[i][0]**2+Positionsee[i][1]**2+Positionsee[i][2]**2).expand())).expand()))
+                if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
+                    AllEquations.append(e)
+
+        AllEquations.sort(lambda x, y: self.codeComplexity(x)-self.codeComplexity(y))
 
         for var0,var1 in combinations(vars,2):
             varsubs=[(cos(var0.var),var0.cvar),(sin(var0.var),var0.svar),(cos(var1.var),var1.cvar),(sin(var1.var),var1.svar)]
@@ -2670,6 +2679,32 @@ class IKFastSolver(AutoReloader):
                 return [(var, solversolution, [self.codeComplexity(s) for s in solutions])]
         return None
 
+    def solveSinCosEquation(self,eq,var):
+        symbolgen = cse_main.numbered_symbols('ctemp')
+        svar = Symbol('s%s'%var.name)
+        cvar = Symbol('c%s'%var.name)
+        eqnew, symbols = self.removeConstants(eq.subs([(sin(var),svar),(cos(var),cvar)]), [svar,cvar], symbolgen)
+        # ignore any equations with degree 3 or more
+        if Poly(eqnew,svar).degree >= 3 or Poly(eqnew,cvar).degree >= 3:
+            return None
+        eqnew2,symbols2 = self.factorLinearTerms(eqnew,[cvar,svar], symbolgen)
+        symbols += [(s[0],s[1].subs(symbols)) for s in symbols2]
+
+        numcvar = self.countVariables(eqnew2,cvar)
+        numsvar = self.countVariables(eqnew2,svar)
+        if numcvar == 1 and numsvar == 1:
+            a = Wild('a',exclude=[svar,cvar])
+            b = Wild('b',exclude=[svar,cvar])
+            c = Wild('c',exclude=[svar,cvar])
+            m = eqnew2.match(a*cvar+b*svar+c)
+            if m is not None:
+                symbols += [(svar,sin(var)),(cvar,cos(var))]
+                asinsol = trigsimp(asin(-m[c]/sqrt(m[a]*m[a]+m[b]*m[b])).subs(symbols),deep=True)
+                constsol = -atan2(m[a],m[b]).subs(symbols).evalf()
+                jointsolutions = [constsol+asinsol,constsol+pi.evalf()-asinsol]
+                return (var,SolverSolution(var.name,jointeval=jointsolutions,IsHinge=self.IsHinge(var.name)), [self.codeComplexity(s) for s in jointsolutions])
+        return None
+
     @staticmethod
     def solveConicEquationWithCircle(self,conicpoly):
         x,y = conicpoly.symbols
@@ -2679,6 +2714,40 @@ class IKFastSolver(AutoReloader):
         #C1 = eye(3); C1[2,2] = -1
         #t=Symbol('t')
         #tpoly=(C0+t*C1).det() # usually this freezes because equation is too big
+        
+    def solveIKTranslationTriple(self, Positions, Positionsee, rawvars,otherunsolvedvars=None,uselength=True):
+        varsubs=[(cos(var0.var),var0.cvar),(sin(var0.var),var0.svar),(cos(var1.var),var1.cvar),(sin(var1.var),var1.svar)]
+
+        # group equations with single variables
+        symbolgen = cse_main.numbered_symbols('const')
+        neweqns = []
+        allsymbols = freevarinvsubs[:]
+        for eq in eqns:
+            eqnew, symbols = self.removeConstants(eq, unknownvars, symbolgen)
+            eqnew2,symbols2 = self.factorLinearTerms(eqnew,unknownvars, symbolgen)
+            allsymbols += symbols + [(s[0],s[1].subs(symbols)) for s in symbols2]
+            neweqns.append([self.codeComplexity(eq),Poly(eqnew2,*unknownvars)])
+        neweqns.sort(lambda x, y: x[0]-y[0])
+
+        svar = var0.svar
+        cvar = var0.cvar
+        osvar = var1.svar
+        ocvar = var1.cvar
+        PE = [Poly(e,svar,cvar) for c,e in neweqns]
+        for p0,p1 in combinations(PE,2):
+            pcvar=Poly((p0.coeff(1,0)*p1.as_basic()-p0.as_basic()*p1.coeff(1,0)).subs(allsymbols),p0.symbols[1])
+            psvar=Poly((p0.coeff(0,1)*p1.as_basic()-p0.as_basic()*p1.coeff(0,1)).subs(allsymbols),p0.symbols[1])
+            print simplify(pcvar.coeff(0).subs(var0.svar**2,1-var0.cvar**2))
+            print simplify(pcvar.coeff(1).subs(var0.svar**2,1-var0.cvar**2))
+        csol = simplify(((-PE[0].coeff(1,0)-PE[0].coeff(0,0))/PE[0].coeff(0,1)).subs(allsymbols))
+        ssol = simplify(((-PE[0].coeff(0,1)-PE[0].coeff(0,0))/PE[0].coeff(1,0)).subs(allsymbols))
+        pp=simplify((PE[2].as_basic()*PE[1].coeff(1,1)-PE[1].as_basic()*PE[2].coeff(1,1)).subs(allsymbols))
+        ppssol=Poly(pp.subs(cvar,csol)*fraction(csol)[1],svar)
+        ppcsol=Poly(pp.subs(svar,ssol)*fraction(ssol)[1],cvar)
+        #c=-ppcsol.coeff(0)/ppssol.coeff(1)
+        #s=(-ppssol.coeff(2)*(c**2)-ppssol.coeff(1))/ppssol.coeff(0)
+        final=c**2+s**2-1
+        po=Poly(ppcsol.as_basic()**2+ppssol.as_basic()**2,osvar,ocvar)
         
     def solveIKRotation(self, R, Ree, rawvars,endbranchtree=None,solvedvarsubs=[],ignorezerochecks=[]):
         """Solve for the rotation component"""

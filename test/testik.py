@@ -86,9 +86,9 @@ def test_drillray():
     from sympy import *
     env = Environment()
     env.Reset()
-    robot = env.ReadRobotXMLFile('/home/rdiankov/downloads/drilling/newdrill.robot.xml')
+    robot = env.ReadRobotXMLFile('drill.robot.xml')
     env.AddRobot(robot)
-    manip = robot.GetActiveManipulator()
+    manip = robot.SetActiveManipulator('vision')
     ikmodel = inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
     #self.generate()
     basedir = manip.GetDirection()
@@ -122,6 +122,29 @@ def test_drillray():
     Tee[1,3] = Symbol("py")
     Tee[2,3] = Symbol("pz")
 
+def drillray_visionsol():
+    solutions=[]
+    solutions.append(ikfast.SolverSolution(Symbol('j3'),jointevalsin=[-Symbol('r00')],IsHinge=True))
+    j0eq = simplify(eqns[5]*cos(Symbol('j3'))*2-Symbol('r02')*eqns[3]-Symbol('r01')*eqns[4])
+    solutions.append(self.solveSinCosEquation(j0eq.subs(varsubsinv),Symbol('j0'))[1])
+    solvedvars = self.solveIKTranslation(Positions,Positionsee,rawvars = [Symbol('j1'),Symbol('j2')],otherunsolvedvars=[])
+    solutions.append(solvedvars[0][1])
+    solvedvars = self.solveIKTranslation(Positions,Positionsee,rawvars = [Symbol('j1')],otherunsolvedvars=[])
+    solutions.append(solvedvars[0][1])
+    solutions.append(ikfast.SolverStoreSolution (jointvars))
+
+    chaintree=ikfast.SolverIKChainRay4D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], TfirstleftInv[0:3,0:3] * Pee + TfirstleftInv[0:3,3], TfirstleftInv[0:3,0:3] * Dee, solutions,Dfk=Tfirstleft[0:3,0:3]*LinksAccumRightAll[0][0:3,0:3]*Matrix(3,1,basedir.tolist()),Pfk=Tfirstleft*(LinksAccumRightAll[0]*Matrix(4,1,basepos.tolist()+[1.0])))
+    code = ikfast.CppGenerator().generate(chaintree)
+
+    ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype=IkParameterization.Type.Ray4D)
+    freejointinds = []
+    output_filename = ikmodel.getfilename()
+    sourcefilename = ikmodel.getsourcefilename()
+    sourcefilename += '_' + '_'.join(str(ind) for ind in solvejoints)
+    if len(freejointinds)>0:
+        sourcefilename += '_f'+'_'.join(str(ind) for ind in freejointinds)
+    sourcefilename += '.cpp'
+    open(sourcefilename,'w').write(code)
 def test_6dik():
     #python inversekinematics.py --robot=/home/rdiankov/downloads/SDA10-OpenRave/robots/SDA10-dual.robot.xml
     from openravepy import *
