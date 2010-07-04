@@ -706,7 +706,7 @@ public:
         FOREACHC(it, vindices) {
             KinBody::JointPtr pjoint = _pbody->GetJointFromDOFIndex(*it);
             pjoint->GetValues(v,false);
-            values.push_back(v[*it-pjoint->GetDOFIndex()]);
+            values.push_back(v.at(*it-pjoint->GetDOFIndex()));
         }
         return toPyArray(values);
     }

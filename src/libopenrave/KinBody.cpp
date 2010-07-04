@@ -1066,6 +1066,13 @@ void KinBody::GetDOFValues(std::vector<dReal>& v) const
     if( (int)v.capacity() < GetDOF() )
         v.reserve(GetDOF());
     FOREACHC(it, _vDOFOrderedJoints) {
+        int toadd = (*it)->GetDOFIndex()-(int)v.size();
+        if( toadd > 0 ) {
+            v.insert(v.end(),toadd,0);
+        }
+        else if( toadd < 0 ) {
+            BOOST_ASSERT(0);
+        }
         (*it)->GetValues(v,true);
     }
 }

@@ -91,11 +91,11 @@ def test_drillray():
     manip = robot.SetActiveManipulator('vision')
     ikmodel = inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
     #self.generate()
-    basedir = manip.GetDirection()
-    basepos = manip.GetGraspTransform()[0:3,3]
+    rawbasedir = manip.GetDirection()
+    rawbasepos = manip.GetGraspTransform()[0:3,3]
     def solveFullIK_Ray4D(*args,**kwargs):
-        kwargs['basedir'] = basedir
-        kwargs['basepos'] = basepos
+        kwargs['rawbasedir'] = rawbasedir
+        kwargs['rawbasepos'] = rawbasepos
         return ikfast.IKFastSolver.solveFullIK_Ray4D(*args,**kwargs)
 
     solvefn=solveFullIK_Ray4D
@@ -167,8 +167,8 @@ def test_6dik():
     sourcefilename = 'temp.cpp'
     self = ikfast.IKFastSolver(kinbody=robot,accuracy=None,precision=None)
     #code = self.generateIkSolver(manip.GetBase().GetIndex(),manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejoints,usedummyjoints=False,solvefn=solvefn)
-    basedir=numpy.dot(manip.GetGraspTransform()[0:3,0:3],manip.GetDirection())
-    basepos=manip.GetGraspTransform()[0:3,3]
+    rawbasedir=numpy.dot(manip.GetGraspTransform()[0:3,0:3],manip.GetDirection())
+    rawbasepos=manip.GetGraspTransform()[0:3,3]
     baselink=manip.GetBase().GetIndex()
     eelink=manip.GetEndEffector().GetIndex()
     alljoints = self.getJointsInChain(baselink, eelink)

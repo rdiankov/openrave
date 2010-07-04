@@ -41,7 +41,7 @@ class InverseKinematicsModel(OpenRAVEModel):
     def load(self,*args,**kwargs):
         return self.setrobot(*args,**kwargs)
     def getversion(self):
-        return 6
+        return 7
     def setrobot(self,freeinc=None):
         self.iksolver = None
         self.freeinc=freeinc
@@ -83,6 +83,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         accuracy = None
         precision = None
         forceikbuild = False
+        outputlang = None
         if options is not None:
             if options.rotation3donly:
                 iktype = IkParameterization.Type.Rotation3D
@@ -98,6 +99,7 @@ class InverseKinematicsModel(OpenRAVEModel):
             usedummyjoints=options.usedummyjoints
             if options.freejoints is not None:
                 freejoints=options.freejoints
+            outputlang=options.outputlang
         if self.robot.GetKinematicsGeometryHash() == '0d258d45aacb7ea4f6f88c4602d4b077' or self.robot.GetKinematicsGeometryHash() == '2c7f45a52ae3cbd4c0663d8abbd5f020': # wam 7dof
             if freejoints is None:
                 freejoints = ['Shoulder_Roll']
@@ -109,7 +111,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         elif self.robot.GetKinematicsGeometryHash() == '7d30ec51a4b393b08f7febca4b9abd34': # stage
             if iktype is None:
                 iktype=IkParameterization.Type.Rotation3D
-        elif self.robot.GetKinematicsGeometryHash() == 'c4bc563aaac76119946c4aa6d98364f8': # pr2
+        elif self.robot.GetKinematicsGeometryHash() == 'bec5e13f7bc7f7fcc3e07e8a82522bee': # pr2
             if iktype is None:
                 if self.manip.GetName().find('camera') >= 0:
                     # cameras are attached, so use a ray parameterization
@@ -120,10 +122,10 @@ class InverseKinematicsModel(OpenRAVEModel):
                 # take the first joints
                 jointinds=self.manip.GetArmJoints()[0:(len(self.manip.GetArmJoints())-6)]
                 freejoints=[self.robot.GetJoints()[ind].GetName() for ind in jointinds]
-        self.generate(iktype=iktype,freejoints=freejoints,usedummyjoints=usedummyjoints,accuracy=accuracy,precision=precision,forceikbuild=forceikbuild)
+        self.generate(iktype=iktype,freejoints=freejoints,usedummyjoints=usedummyjoints,accuracy=accuracy,precision=precision,forceikbuild=forceikbuild,outputlang=outputlang)
         self.save()
 
-    def generate(self,iktype=None,freejoints=None,usedummyjoints=False,accuracy=None,precision=None,forceikbuild=False):
+    def generate(self,iktype=None,freejoints=None,usedummyjoints=False,accuracy=None,precision=None,forceikbuild=False,outputlang=None):
         if iktype is not None:
             self.iktype = iktype
         if self.iktype is None:
@@ -139,11 +141,11 @@ class InverseKinematicsModel(OpenRAVEModel):
                 return ikfast.IKFastSolver.solveFullIK_Direction3D(*args,**kwargs)
             solvefn=solveFullIK_Direction3D
         elif self.iktype == IkParameterization.Type.Ray4D:
-            basedir=dot(self.manip.GetGraspTransform()[0:3,0:3],self.manip.GetDirection())
-            basepos=self.manip.GetGraspTransform()[0:3,3]
+            rawbasedir=dot(self.manip.GetGraspTransform()[0:3,0:3],self.manip.GetDirection())
+            rawbasepos=self.manip.GetGraspTransform()[0:3,3]
             def solveFullIK_Ray4D(*args,**kwargs):
-                kwargs['basedir'] = basedir
-                kwargs['basepos'] = basepos
+                kwargs['rawbasedir'] = rawbasedir
+                kwargs['rawbasepos'] = rawbasepos
                 return ikfast.IKFastSolver.solveFullIK_Ray4D(*args,**kwargs)
             solvefn=solveFullIK_Ray4D
         elif self.iktype == IkParameterization.Type.Translation3D:
@@ -190,12 +192,14 @@ class InverseKinematicsModel(OpenRAVEModel):
         sourcefilename += '_' + '_'.join(str(ind) for ind in solvejoints)
         if len(freejointinds)>0:
             sourcefilename += '_f'+'_'.join(str(ind) for ind in freejointinds)
-        sourcefilename += '.cpp'
+        if outputlang is None:
+            outputlang = 'cpp'
+        sourcefilename += '.' + outputlang
         if forceikbuild or not os.path.isfile(sourcefilename):
             print 'generating inverse kinematics file %s'%sourcefilename
             mkdir_recursive(OpenRAVEModel.getfilename(self))
             solver = ikfast.IKFastSolver(kinbody=self.robot,accuracy=accuracy,precision=precision)
-            code = solver.generateIkSolver(self.manip.GetBase().GetIndex(),self.manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejointinds,usedummyjoints=usedummyjoints,solvefn=solvefn)
+            code = solver.generateIkSolver(self.manip.GetBase().GetIndex(),self.manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejointinds,usedummyjoints=usedummyjoints,solvefn=solvefn,lang=outputlang)
             if len(code) == 0:
                 raise ValueError('failed to generate ik solver for robot %s:%s'%(self.robot.GetName(),self.manip.GetName()))
             open(sourcefilename,'w').write(code)
@@ -399,6 +403,8 @@ class InverseKinematicsModel(OpenRAVEModel):
                           help='Will test the ik solver against NUMIKTESTS random robot configurations and program will exit with 0 if success rate exceeds the test success rate, otherwise 1.')
         parser.add_option('--perftiming', action='store',type='int',dest='perftiming',default=None,
                           help='Will time the internal ikfast solver.')
+        parser.add_option('--outputlang', action='store',type='string',dest='outputlang',default=None,
+                          help='If specified, will output the generated code in that language (ie --outputlang=cpp).')
         return parser
     @staticmethod
     def RunFromParser(Model=None,parser=None):
