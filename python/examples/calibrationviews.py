@@ -47,7 +47,7 @@ class CalibrationViews(metaclass.AutoReloader):
             print 'Assuming target %s is attached to the end effector of %s'%(target.GetName(),self.vmodel.manip)
             self.Tpatternrobot = dot(linalg.inv(self.vmodel.manip.GetEndEffectorTransform()),target.GetTransform())
 
-    def computevisibilityposes(self,dists=arange(0.05,1.0,0.15),orientationdensity=3,num=inf):
+    def computevisibilityposes(self,dists=arange(0.05,1.0,0.15),orientationdensity=1,num=inf):
         """Computes robot poses using visibility information from the target.
 
         Sample the transformations of the camera. the camera x and y axes should always be aligned with the 
@@ -144,8 +144,9 @@ class CalibrationViews(metaclass.AutoReloader):
         poseorder=arange(len(poses))
         observations=[]
         with RobotStateSaver(self.robot,KinBody.SaveParameters.GrabbedBodies):
-            with self.env:
-                self.robot.Grab(self.vmodel.target,self.vmodel.manip.GetEndEffector())
+            if self.Tpatternrobot is not None:
+                with self.env:
+                    self.robot.Grab(self.vmodel.target,self.vmodel.manip.GetEndEffector())
             while len(poseorder) > 0:
                 with self.robot:
                     curconfig=self.robot.GetDOFValues(self.vmodel.manip.GetArmJoints())
