@@ -14,7 +14,7 @@
 #Modified: 20 March 2010
 from __future__ import with_statement # for python 2.5
 __author__ = 'Achint Aggarwal'
-__copyright__ = 'Copyright (C) 2010 Achint Aggarwal'
+__copyright__ = '2010 Achint Aggarwal'
 __license__ = 'Apache License, Version 2.0'
 
 from openravepy import *
@@ -71,12 +71,12 @@ class Schunkplanner:
       TLeftGrasp= dot(Tbody,array([[0, 0, -1, 0],[-1, 0, 0,-(halfwidth+.1)],[0, 1, 0, 0],[0, 0, 0, 1]])) #to determine the grasp for the eef given the transform of the object
       
       with self.env:
-          jointsRight=self.rightArm.FindIKSolution(TRightGrasp,True)
-          jointsLeft=self.leftArm.FindIKSolution(TLeftGrasp,True)
-          if jointsRight is None: 
-             print('Tgrasp invalid for Right Arm')
-          if jointsLeft is None:
-             print('Tgrasp invalid for Left Arm')
+         jointsRight=self.rightArm.FindIKSolution(TRightGrasp,True)
+         jointsLeft=self.leftArm.FindIKSolution(TLeftGrasp,True)
+         if jointsRight is None: 
+            print('Tgrasp invalid for Right Arm')
+            if jointsLeft is None:
+               print('Tgrasp invalid for Left Arm')
       
       T=array([jointsLeft[0],jointsLeft[1],jointsLeft[2],jointsLeft[3],jointsLeft[4],jointsLeft[5],jointsLeft[6],jointsRight[0],jointsRight[1],jointsRight[2],jointsRight[3],jointsRight[4],jointsRight[5],jointsRight[6]])
       
@@ -96,12 +96,12 @@ class Schunkplanner:
       TRightGrasp= dot(Tbody,array([[0, 0, -1, 0],[1, 0, 0, (halfwidth+.04)],[0, -1, 0, 0 ],[0, 0, 0, 1]])) #.04 is just half the thickness of the EEF
       TLeftGrasp= dot(Tbody,array([[0, 0, -1, 0],[-1, 0, 0, -(halfwidth+.04)],[0, 1, 0, 0],[0, 0, 0, 1]])) #to determine the grasp for the eef given the transform of the object
       with self.env:
-          jointsRight=self.rightArm.FindIKSolution(TRightGrasp,False)
-          jointsLeft=self.leftArm.FindIKSolution(TLeftGrasp,False)
-          if jointsRight is None: 
-             print('Tgrasp invalid for Right Arm')
-          if jointsLeft is None:
-             print('Tgrasp invalid for Left Arm')
+         jointsRight=self.rightArm.FindIKSolution(TRightGrasp,False)
+         jointsLeft=self.leftArm.FindIKSolution(TLeftGrasp,False)
+         if jointsRight is None: 
+            print('Tgrasp invalid for Right Arm')
+            if jointsLeft is None:
+               print('Tgrasp invalid for Left Arm')
 
       T=array([jointsLeft[0],jointsLeft[1],jointsLeft[2],jointsLeft[3],jointsLeft[4],jointsLeft[5],jointsLeft[6],jointsRight[0],jointsRight[1],jointsRight[2],jointsRight[3],jointsRight[4],jointsRight[5],jointsRight[6]])
       self.MoveObjectToPosition(T) 
@@ -156,34 +156,36 @@ class Schunkplanner:
 
       print ('Body %s successfully manipulated'%(name))
 
-def run():
-   parser = OptionParser(description="Schunk Manipulation planning example\nFor a dual arm robot with Schunk LWA3 arms, plan trajectories for grasping an object and manipulating it on a shelf.")
-   parser.add_option('--scene',
-                     action="store",type='string',dest='scene',default='data/dualarmmanipulation.env.xml',
-                     help='Scene file to load')   
-   (options, args) = parser.parse_args()
+def run(args=None):
+    """Executes the dualarmdemo_schunk demo
+    @type args: arguments for script to parse, if not specified will use sys.argv
+    """
+    parser = OptionParser(description="Schunk Manipulation planning example\nFor a dual arm robot with Schunk LWA3 arms, plan trajectories for grasping an object and manipulating it on a shelf.")
+    parser.add_option('--scene',
+                      action="store",type='string',dest='scene',default='data/dualarmmanipulation.env.xml',
+                      help='Scene file to load')   
+    (options, args) = parser.parse_args(args=args)
 
-   env = Environment()
-   env.SetCollisionChecker(env.CreateCollisionChecker('ode'))
-   env.SetViewer('qtcoin')
-   env.Load(options.scene)
-   schunk = Schunkplanner(env)
-   time.sleep(1)
-   
-   try:
-      T=array([0,0,0,0,0,0,0,0,0,0,0,0,0,0])#Set initial position		
-      schunk.robot.SetActiveDOFValues(T)
-      time.sleep(1)
-      name='Object1'
-      schunk.robot.SetActiveManipulator(1)#Set left arm as the active manipulator	
-      schunk.graspAndMoveObject(T,name)
-      schunk.WaitForController()
-      
-      print "Path Planning complete...."
-   finally:
-      time.sleep(5)
-      del schunk
-      env.Destroy() # done with the environment
+    env = Environment()
+    env.SetCollisionChecker(env.CreateCollisionChecker('ode'))
+    env.SetViewer('qtcoin')
+    env.Load(options.scene)
+    schunk = Schunkplanner(env)
+    time.sleep(1)
+    
+    try:
+        T=array([0,0,0,0,0,0,0,0,0,0,0,0,0,0])#Set initial position		
+        schunk.robot.SetActiveDOFValues(T)
+        time.sleep(1)
+        name='Object1'
+        schunk.robot.SetActiveManipulator(1)#Set left arm as the active manipulator	
+        schunk.graspAndMoveObject(T,name)
+        schunk.WaitForController()
+        print "Path Planning complete...."
+    finally:
+        time.sleep(5)
+        del schunk
+        env.Destroy() # done with the environment
 
 if __name__ == "__main__":
    run()

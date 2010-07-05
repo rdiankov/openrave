@@ -13,7 +13,7 @@
 # limitations under the License.
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
+__copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
 from openravepy import *
@@ -118,7 +118,10 @@ class OpenRAVEScene:
         self.quitviewers()
         self.orenv.Destroy()
 
-def run():
+def run(args=None):
+    """Executes the testcamerasensor example
+    @type args: arguments for script to parse, if not specified will use sys.argv
+    """
     parser = OptionParser(description='Displays all images of all camera sensors attached to a robot.')
     parser.add_option('--scene',
                       action="store",type='string',dest='scene',default='data/testwamcamera.env.xml',
@@ -126,7 +129,7 @@ def run():
     parser.add_option('--robotname',
                       action="store",type='string',dest='robotname',default=None,
                       help='Specific robot sensors to display (otherwise first robot found will be displayed)')
-    (options, args) = parser.parse_args()
+    (options, args) = parser.parse_args(args=args)
     scene = OpenRAVEScene(options.scene,options.robotname)
     while(True):
         cmd = raw_input('Enter command (q-quit,c-capture image): ')

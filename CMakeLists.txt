@@ -516,6 +516,15 @@ configure_file(
   IMMEDIATE @ONLY)
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/openrave-config DESTINATION bin)
 
+configure_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/openrave.pc.cmake.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/openrave.pc" @ONLY IMMEDIATE)
+
+if(UNIX)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/openrave.pc DESTINATION lib/pkgconfig)
+endif()
+
+
 if( WIN32 )
   # copy the dlls
   file(GLOB dll_files ${CMAKE_SOURCE_DIR}/bin/*.dll)

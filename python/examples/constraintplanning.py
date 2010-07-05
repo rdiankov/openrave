@@ -13,7 +13,7 @@
 # limitations under the License.
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
+__copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
 from openravepy import *
@@ -83,12 +83,15 @@ class ConstraintPlanning(metaclass.AutoReloader):
                     print e
                 self.robot.WaitForController(0)
 
-def run():
+def run(args=None):
+    """Executes the constraintplanning example
+    @type args: arguments for script to parse, if not specified will use sys.argv
+    """
     parser = OptionParser(description='RRT motion planning with constraints on the robot end effector.')
     parser.add_option('--scene',
                       action="store",type='string',dest='scene',default='data/lab1.env.xml',
                       help='Scene file to load (default=%default)')
-    (options, args) = parser.parse_args()
+    (options, args) = parser.parse_args(args=args)
 
     env = Environment()
     try:

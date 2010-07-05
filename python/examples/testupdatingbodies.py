@@ -13,7 +13,7 @@
 # limitations under the License.
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
+__copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
 import time
@@ -21,7 +21,10 @@ from openravepy import *
 from openravepy.interfaces import BaseManipulation
 from numpy import *
 
-def run():
+def run(args=None):
+    """Executes the testupdatingbodies example
+    @type args: arguments for script to parse, if not specified will use sys.argv
+    """
     print 'Example shows how to manually update the environment published bodies for the viewer while the environment is locked'
     env = Environment()
     env.Load('data/lab1.env.xml')

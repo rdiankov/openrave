@@ -13,7 +13,7 @@
 # limitations under the License.
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
+__copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
 import sys, os, time, signal, threading
@@ -25,7 +25,7 @@ from openravepy.interfaces import BaseManipulation
 from openravepy.databases import inversekinematics,visibilitymodel
 
 class CalibrationViews(metaclass.AutoReloader):
-    def __init__(self,robot,sensorname,sensorrobot=None,target=None,maxvelmult=None,randomize=False):
+    def __init__(self,robot,sensorname=None,sensorrobot=None,target=None,maxvelmult=None,randomize=False):
         """Starts a calibration sequencer using a robot and a sensor.
 
         The minimum needed to be specified is the robot and a sensorname. Supports camera sensors that do not belong to the current robot, in this case the IK is done assuming the target is grabbed by the active manipulator of the robot
@@ -44,8 +44,8 @@ class CalibrationViews(metaclass.AutoReloader):
         self.vmodel.load()
         self.Tpatternrobot = None
         if self.vmodel.robot != self.vmodel.sensorrobot and target is not None:
-            print 'Assuming target %s is attached to the end effector of %s'%(target.GetName(),self.vmodel.manip)
-            self.Tpatternrobot = dot(linalg.inv(self.vmodel.manip.GetEndEffectorTransform()),target.GetTransform())
+            print 'Assuming target \'%s\' is attached to %s'%(target.GetName(),self.vmodel.manip)
+            self.Tpatternrobot = dot(linalg.inv(self.vmodel.target.GetTransform()),self.vmodel.manip.GetEndEffectorTransform())
 
     def computevisibilityposes(self,dists=arange(0.05,1.0,0.15),orientationdensity=1,num=inf):
         """Computes robot poses using visibility information from the target.
@@ -61,7 +61,7 @@ class CalibrationViews(metaclass.AutoReloader):
                 self.vmodel.preshapes=array([self.robot.GetDOFValues(self.vmodel.manip.GetGripperJoints())])
                 self.vmodel.preprocess()
             if self.Tpatternrobot is not None:
-                self.vmodel.target.SetTransform(dot(self.vmodel.manip.GetEndEffectorTransform(),self.Tpatternrobot))
+                self.vmodel.target.SetTransform(dot(self.vmodel.manip.GetEndEffectorTransform(),linalg.inv(self.Tpatternrobot)))
             with RobotStateSaver(self.robot,KinBody.SaveParameters.GrabbedBodies):
                 with KinBodyStateSaver(self.vmodel.target,KinBody.SaveParameters.LinkTransformation):
                     self.vmodel.target.SetTransform(eye(4))
@@ -139,6 +139,34 @@ class CalibrationViews(metaclass.AutoReloader):
             graphs = None
 
     def moveToObservations(self,poses,configs,waitcond=None,maxobservations=inf,posedist=0.05):
+        """Converts a (latitude, longitude) pair to an address.
+    
+        Interesting bits:
+
+        >>> gmaps = GoogleMaps()
+        >>> reverse = gmaps.reverse_geocode(38.887563, -77.019929)
+        >>> address = reverse['Placemark'][0]['address']
+        >>> print address
+        200 6th St SW, Washington, DC 20024, USA
+        >>> accuracy = reverse['Placemark'][0]['AddressDetails']['Accuracy']
+        >>> print accuracy
+        8
+
+        :param lat: latitude
+        :type lat: float
+        :param lng: longitude
+        :type lng: float
+        :return: `Reverse geocoder return value`_ dictionary giving closest
+            address(es) to `(lat, lng)`
+        :rtype: dict
+        :raises GoogleMapsError: If the coordinates could not be reverse geocoded.
+
+        Keyword arguments and return value are identical to those of
+
+        .. _`Reverse geocoder return value`:
+            http://code.google.com/apis/maps/documentation/geocoding/index.html#ReverseGeocoding
+
+        """
         # order the poses with respect to distance
         assert len(poses) == len(configs)
         poseorder=arange(len(poses))
@@ -214,7 +242,10 @@ class CalibrationViews(metaclass.AutoReloader):
             target.SetTransform(dot(self.vmodel.attachedsensor.GetTransform(),T))
         return self.computeAndMoveToObservations(waitcond=waitcond,**kwargs), self.vmodel.target
 
-def run():
+def run(args=None):
+    """Executes the calibrationviews example
+    @type args: arguments for script to parse, if not specified will use sys.argv
+    """
     parser = OptionParser(description='Views a calibration pattern from multiple locations.')
     parser.add_option('--scene',action="store",type='string',dest='scene',default='data/pa10calib.env.xml',
                       help='Scene file to load (default=%default)')
@@ -228,7 +259,7 @@ def run():
                       help='If set, will not perform any visibility searching.')
     parser.add_option('--posedist',action="store",type='float',dest='posedist',default=0.05,
                       help='An average distance between gathered poses. The smaller the value, the more poses robot will gather close to each other')
-    (options, args) = parser.parse_args()
+    (options, args) = parser.parse_args(args=args)
 
     env = Environment()
     try:

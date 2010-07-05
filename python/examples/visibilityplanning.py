@@ -13,7 +13,7 @@
 # limitations under the License.
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
+__copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
 import sys, os, time, signal, threading
@@ -110,7 +110,7 @@ class VisibilityGrasping(metaclass.AutoReloader):
                         for attachedsensor in self.robotreal.GetSensors():
                             if attachedsensor.GetSensor() is not None:
                                 sensordata = attachedsensor.GetSensor().GetSensorData()
-                                if sensordata is not None and sensordata.type == Sensor.SensorType.Camera:
+                                if sensordata is not None and sensordata.type == Sensor.Type.Camera:
                                     attachedsensor.GetSensor().SendCommand('power 1')
                                     title = attachedsensor.GetName()
                                     if len(title) == 0:
@@ -418,13 +418,19 @@ class PA10GraspExample(VisibilityGrasping):
                         if not self.target.GetEnv().CheckCollision(self.target):
                             self.Tgoals.append(T)
 
-if __name__=='__main__':
+def run(args=None):
+    """Executes the visibilityplanning example
+    @type args: arguments for script to parse, if not specified will use sys.argv
+    """
     parser = OptionParser(description='Visibility Planning Module.')
     parser.add_option('--scene',action="store",type='string',dest='scene',default='data/pa10grasp.env.xml',
                       help='openrave scene to load')
     parser.add_option('--nocameraview',action="store_false",dest='usecameraview',default=True,
                       help='If set, will not open any camera views')
-    (options, args) = parser.parse_args()
+    (options, args) = parser.parse_args(args=args)
     scene = PA10GraspExample()
     scene.loadscene(scenefilename=options.scene,sensorname='wristcam',usecameraview=options.usecameraview)
     scene.start()
+
+if __name__=='__main__':
+    run()

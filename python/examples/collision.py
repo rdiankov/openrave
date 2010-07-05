@@ -13,7 +13,7 @@
 # limitations under the License.
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
+__copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
 from openravepy import *
@@ -37,11 +37,14 @@ def collisioncallback(report,fromphysics):
     print 'from physics: ',fromphysics
     return CollisionAction.DefaultAction
 
-if __name__ == "__main__":
+def run(args=None):
+    """Executes the collision example
+    @type args: arguments for script to parse, if not specified will use sys.argv
+    """
     parser = OptionParser(description='Example shows how to query collision detection information using openravepy')
     parser.add_option('--collision', action="store",type='string',dest='collision',default=None,
                       help='collision checker')
-    (options, args) = parser.parse_args()
+    (options, args) = parser.parse_args(args=args)
 
     env = Environment()
     try:
@@ -111,3 +114,6 @@ if __name__ == "__main__":
             time.sleep(0.1)
     finally:
         env.Destroy() # done with the environment
+
+if __name__ == "__main__":
+    run()

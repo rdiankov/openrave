@@ -13,7 +13,7 @@
 # limitations under the License.
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
+__copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
 import time
@@ -184,12 +184,15 @@ class HanoiPuzzle:
             self.hanoisolve(1, pegfrom, pegto, pegby)
             self.hanoisolve(n-1, pegby, pegto, pegfrom)
 
-def run():
+def run(args=None):
+    """Executes the hanoi example
+    @type args: arguments for script to parse, if not specified will use sys.argv
+    """
     parser = OptionParser(description='Manipulation planning example solving the hanoi problem.')
     parser.add_option('--scene',
                       action="store",type='string',dest='scene',default='data/hanoi_complex.env.xml',
                       help='Scene file to load (default=%default)')
-    (options, args) = parser.parse_args()
+    (options, args) = parser.parse_args(args=args)
     
     env = Environment()
     try:

@@ -13,7 +13,7 @@
 # limitations under the License.
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
+__copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
 from openravepy import *
@@ -27,7 +27,10 @@ def itemselectioncb(link,pos,org,env):
     ghandle = env.plot3(points=pos,pointsize=25.0,colors=array((1,0,0)))
     return 0
 
-def run():
+def run(args=None):
+    """Executes the testviewercallback example
+    @type args: arguments for script to parse, if not specified will use sys.argv
+    """
     parser = OptionParser(description='Shows how to attach a callback to a viewer to perform functions.')
     parser.add_option('--scene',
                       action="store",type='string',dest='scene',default='data/lab1.env.xml',
@@ -35,7 +38,7 @@ def run():
     parser.add_option('--viewer',
                       action="store",type='string',dest='viewer',default='qtcoin',
                       help='Viewer to load')
-    (options, args) = parser.parse_args()
+    (options, args) = parser.parse_args(args=args)
 
     env = Environment()
     env.Load(options.scene)

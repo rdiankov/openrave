@@ -10,6 +10,8 @@ from openravepy.databases import visibilitymodel
 # all 'runnable' examples
 import calibrationviews
 import collision
+import constraintplanning
+import dualarmdemo_schunk
 import hanoi
 import graspplanning
 import mobilemanipulation
