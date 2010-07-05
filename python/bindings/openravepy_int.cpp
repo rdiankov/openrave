@@ -1475,6 +1475,15 @@ public:
         PyRobotBasePtr GetRobot() const { return _pattached->GetRobot() ? PyRobotBasePtr() : PyRobotBasePtr(new PyRobotBase(_pattached->GetRobot(), _pyenv)); }
         string GetName() const { return _pattached->GetName(); }
 
+        boost::shared_ptr<PySensorBase::PySensorData> GetData()
+        {
+            SensorBase::SensorDataPtr pdata = _pattached->GetData();
+            if( !pdata ) {
+                return boost::shared_ptr<PySensorBase::PySensorData>();
+            }
+            return boost::shared_ptr<PySensorBase::PySensorData>(new PySensorBase::PySensorData(pdata));
+        }
+
         void SetRelativeTransform(object transform) { _pattached->SetRelativeTransform(ExtractTransform(transform)); }
         string GetStructureHash() const { return _pattached->GetStructureHash(); }
         string __repr__() { return boost::str(boost::format("<env.GetRobot('%s').GetSensor('%s')>")%_pattached->GetRobot()->GetName()%_pattached->GetName()); }
@@ -3771,6 +3780,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetTransform",&PyRobotBase::PyAttachedSensor::GetTransform)
             .def("GetRobot",&PyRobotBase::PyAttachedSensor::GetRobot)
             .def("GetName",&PyRobotBase::PyAttachedSensor::GetName)
+            .def("GetData",&PyRobotBase::PyAttachedSensor::GetData)
             .def("SetRelativeTransform",&PyRobotBase::PyAttachedSensor::SetRelativeTransform,args("transform"))
             .def("GetStructureHash",&PyRobotBase::PyAttachedSensor::GetStructureHash)
             .def("__str__",&PyRobotBase::PyAttachedSensor::__str__)
@@ -3880,7 +3890,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def_readonly("KK",&PySensorBase::PyCameraSensorData::KK)
             ;
 
-        enum_<SensorBase::SensorType>("SensorType")
+        enum_<SensorBase::SensorType>("Type")
             .value("Invalid",SensorBase::ST_Invalid)
             .value("Laser",SensorBase::ST_Laser)
             .value("Camera",SensorBase::ST_Camera)

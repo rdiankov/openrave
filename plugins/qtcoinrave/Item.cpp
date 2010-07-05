@@ -334,7 +334,7 @@ bool KinBodyItem::UpdateFromModel()
         // make sure the body is still present!
         if( _pchain->GetEnv()->GetBodyFromEnvironmentId(networkid) == _pchain ) {
             _pchain->GetBodyTransformations(_vtrans);
-            _pchain->GetJointValues(vjointvalues);
+            _pchain->GetDOFValues(vjointvalues);
         }
         else
             _pchain.reset();
@@ -343,7 +343,7 @@ bool KinBodyItem::UpdateFromModel()
     return UpdateFromModel(vjointvalues,vtrans);
 }
 
-void KinBodyItem::GetJointValues(vector<dReal>& vjoints) const
+void KinBodyItem::GetDOFValues(vector<dReal>& vjoints) const
 {
     boost::mutex::scoped_lock lock(_mutexjoints);
     vjoints = _vjointvalues;

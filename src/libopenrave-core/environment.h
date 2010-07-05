@@ -1221,7 +1221,7 @@ class Environment : public EnvironmentBase
         FOREACH(itbody, _vecbodies) {
             itstate->pbody = *itbody;
             (*itbody)->GetBodyTransformations(itstate->vectrans);
-            (*itbody)->GetJointValues(itstate->jointvalues);
+            (*itbody)->GetDOFValues(itstate->jointvalues);
             itstate->strname =(*itbody)->GetName();
             itstate->pguidata = (*itbody)->GetGuiData();
             itstate->environmentid = (*itbody)->GetEnvironmentId();

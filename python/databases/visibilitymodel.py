@@ -62,6 +62,10 @@ class VisibilityModel(OpenRAVEModel):
         self.basemanip = BaseManipulation(self.robot,maxvelmult=maxvelmult)
         self.convexhull = None
         self.sensorname = sensorname
+        if self.sensorname is None:
+            possiblesensors = [s.GetName() for s in self.sensorrobot.GetSensors() if s.GetSensor() is not None and s.GetData() is not None and s.GetData().type == Sensor.Type.Camera]
+            if len(possiblesensors) > 0:
+                self.sensorname = possiblesensors[0]
         self.manip = robot.GetActiveManipulator()
         self.manipname = None if self.manip is None else self.manip.GetName()
         self.visibilitytransforms = None

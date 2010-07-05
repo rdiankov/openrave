@@ -82,7 +82,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         usedummyjoints = None
         accuracy = None
         precision = None
-        forceikbuild = False
+        forceikbuild = True
         outputlang = None
         if options is not None:
             if options.rotation3donly:
@@ -104,10 +104,10 @@ class InverseKinematicsModel(OpenRAVEModel):
             if freejoints is None:
                 freejoints = ['Shoulder_Roll']
         elif self.robot.GetKinematicsGeometryHash() == '2950e0e6064bda0a68145750363b6f79': # wam 4dof
-            if freejoints is None:
-                freejoints = ['Shoulder_Roll']
             if iktype is None:
                 iktype=IkParameterization.Type.Translation3D
+            if iktype == IkParameterization.Type.Translation3D and freejoints is None:
+                freejoints = ['Shoulder_Roll']
         elif self.robot.GetKinematicsGeometryHash() == '7d30ec51a4b393b08f7febca4b9abd34': # stage
             if iktype is None:
                 iktype=IkParameterization.Type.Rotation3D
@@ -125,7 +125,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         self.generate(iktype=iktype,freejoints=freejoints,usedummyjoints=usedummyjoints,accuracy=accuracy,precision=precision,forceikbuild=forceikbuild,outputlang=outputlang)
         self.save()
 
-    def generate(self,iktype=None,freejoints=None,usedummyjoints=False,accuracy=None,precision=None,forceikbuild=False,outputlang=None):
+    def generate(self,iktype=None,freejoints=None,usedummyjoints=False,accuracy=None,precision=None,forceikbuild=True,outputlang=None):
         if iktype is not None:
             self.iktype = iktype
         if self.iktype is None:
@@ -293,7 +293,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                         if quatArrayTDist(targetquat,realquat) < 1e-3:
                             success += 1
                         else:
-                            print 'wrong solution to: ',targetquat, 'returned is: ',realquat
+                            print 'wrong solution to: ',targetquat, 'returned is: ',realquat, 'original solution is ',orgvalues,'returned solution is',sol,'error is: ',quatArrayTDist(targetquat,realquat)
                     else:
                         print 'failed to find: ',targetquat,'solution is: ',orgvalues
                 return success/numiktests
@@ -385,8 +385,8 @@ class InverseKinematicsModel(OpenRAVEModel):
                           help='The precision to compute the inverse kinematics in, (default=%default).')
         parser.add_option('--accuracy', action='store', type='float', dest='accuracy',default=1e-7,
                           help='The small number that will be recognized as a zero used to eliminate floating point errors (default=%default).')
-        parser.add_option('--force', action='store_true', dest='force',default=False,
-                          help='If set, will always rebuild the ikfast c++ file, regardless of its existence (default=%default).')
+        parser.add_option('--usecached', action='store_false', dest='force',default=True,
+                          help='If set, will always try to use the cached ik c++ file, instead of generating a new one.')
         parser.add_option('--rotation3donly', action='store_true', dest='rotation3donly',default=False,
                           help='If true, need to specify only 3 solve joints and will solve for a target rotation')
         parser.add_option('--direction3donly', action='store_true', dest='direction3donly',default=False,
@@ -402,7 +402,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         parser.add_option('--numiktests', action='store',type='int',dest='numiktests',default=None,
                           help='Will test the ik solver against NUMIKTESTS random robot configurations and program will exit with 0 if success rate exceeds the test success rate, otherwise 1.')
         parser.add_option('--perftiming', action='store',type='int',dest='perftiming',default=None,
-                          help='Will time the internal ikfast solver.')
+                          help='Number of IK calls for measuring the internal ikfast solver.')
         parser.add_option('--outputlang', action='store',type='string',dest='outputlang',default=None,
                           help='If specified, will output the generated code in that language (ie --outputlang=cpp).')
         return parser

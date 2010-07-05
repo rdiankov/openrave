@@ -466,7 +466,7 @@ void IvJointDragger::UpdateSkeleton()
 
             // update the joint's transform
             vector<dReal> vjoints;
-            pbody->GetBody()->GetJointValues(vjoints);
+            pbody->GetBody()->GetDOFValues(vjoints);
             int d = pjoint->GetDOFIndex();
             if( pjoint->GetType() == KinBody::Joint::JointSpherical ) {
                 SbVec3f axis; float angle;
@@ -506,7 +506,7 @@ void IvJointDragger::UpdateDragger()
         return;
     
     vector<dReal> vjoints;
-    pbody->GetJointValues(vjoints);
+    pbody->GetDOFValues(vjoints);
 
     if( _jointtype == KinBody::Joint::JointSpherical ) {
         Vector vaxis(vjoints[_dofindex+0],vjoints[_dofindex+1],vjoints[_dofindex+2]);
@@ -532,7 +532,7 @@ void IvJointDragger::GetMessage(ostream& sout)
         return;
 
     vector<dReal> vjoints;
-    pbody->GetJointValues(vjoints);
+    pbody->GetDOFValues(vjoints);
     
     sout << "Selected " << _selectedItem->GetName() << " (id=" << pbody->GetNetworkId() << ")" << endl
          << std::fixed << std::setprecision(3)

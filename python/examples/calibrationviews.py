@@ -47,7 +47,7 @@ class CalibrationViews(metaclass.AutoReloader):
             print 'Assuming target %s is attached to the end effector of %s'%(target.GetName(),self.vmodel.manip)
             self.Tpatternrobot = dot(linalg.inv(self.vmodel.manip.GetEndEffectorTransform()),target.GetTransform())
 
-    def computevisibilityposes(self,dists=arange(0.05,1.0,0.15),orientationdensity=1,num=inf):
+    def computevisibilityposes(self,dists=arange(0.05,1.0,0.15),orientationdensity=3,num=inf):
         """Computes robot poses using visibility information from the target.
 
         Sample the transformations of the camera. the camera x and y axes should always be aligned with the 
@@ -63,8 +63,6 @@ class CalibrationViews(metaclass.AutoReloader):
             if self.Tpatternrobot is not None:
                 self.vmodel.target.SetTransform(dot(self.vmodel.manip.GetEndEffectorTransform(),self.Tpatternrobot))
             with RobotStateSaver(self.robot,KinBody.SaveParameters.GrabbedBodies):
-                # actually use the visibility instead of approximating as a cone
-                #dirs = dirs[dot(dirs,targetdir)>=cos(anglerange)]
                 with KinBodyStateSaver(self.vmodel.target,KinBody.SaveParameters.LinkTransformation):
                     self.vmodel.target.SetTransform(eye(4))
                     ab=self.vmodel.target.ComputeAABB()
@@ -72,7 +70,7 @@ class CalibrationViews(metaclass.AutoReloader):
                 if self.Tpatternrobot is not None:
                     self.robot.Grab(self.vmodel.target,self.vmodel.manip.GetEndEffector())
                     Tbase = self.vmodel.attachedsensor.GetTransform()
-                    visibilitytransforms = inversePoses(self.vmodel.visibilitytransforms)
+                    visibilitytransforms = invertPoses(self.vmodel.visibilitytransforms)
                 else:
                     Tbase = self.vmodel.target.GetTransform()
                     visibilitytransforms = self.vmodel.visibilitytransforms
@@ -80,10 +78,14 @@ class CalibrationViews(metaclass.AutoReloader):
                 poses = []
                 configs = []
                 for relativepose in visibilitytransforms:
-                    pose = poseMult(posebase,relativepose)
                     for center in centers:
-                        posenew = array(pose)
-                        posenew[4:7] += quatRotate(posenew[0:4],center)
+                        if self.Tpatternrobot is not None:
+                            pose = array(posebase)
+                            pose[4:7] += quatRotate(pose[0:4],center)
+                            pose = poseMult(pose,relativepose)
+                        else:
+                            pose = poseMult(posebase,relativepose)
+                            pose[4:7] += quatRotate(pose[0:4],center)
                         try:
                             q=self.vmodel.visualprob.ComputeVisibleConfiguration(pose=pose)
                             poses.append(pose)
@@ -138,28 +140,35 @@ class CalibrationViews(metaclass.AutoReloader):
 
     def moveToObservations(self,poses,configs,waitcond=None,maxobservations=inf,posedist=0.05):
         # order the poses with respect to distance
+        assert len(poses) == len(configs)
         poseorder=arange(len(poses))
         observations=[]
-        while len(poseorder) > 0:
-            with self.robot:
-                curconfig=self.robot.GetDOFValues(self.vmodel.manip.GetArmJoints())
-                index=argmin(sum((configs[poseorder]-tile(curconfig,(len(poseorder),1)))**2,1))
-            config=configs[poseorder[index]]
-            data=self.moveToConfiguration(config,waitcond=waitcond)
-            if data is not None:
+        with RobotStateSaver(self.robot,KinBody.SaveParameters.GrabbedBodies):
+            with self.env:
+                self.robot.Grab(self.vmodel.target,self.vmodel.manip.GetEndEffector())
+            while len(poseorder) > 0:
                 with self.robot:
-                    data['jointvalues'] = self.robot.GetDOFValues(self.vmodel.manip.GetArmJoints())
-                    data['Tlink'] = self.vmodel.attachedsensor.GetAttachingLink().GetTransform()
-                observations.append(data)
-                if len(observations) >= maxobservations:
-                    break
-                # prune the nearby observations
-                allposes = poses[poseorder]
-                quatdist = quatArrayTDist(allposes[index,0:4],allposes[:,0:4])
-                transdist= sqrt(sum((allposes[:,4:7]-tile(allposes[index,4:7],(len(allposes),1)))**2,1))
-                poseorder = poseorder[0.2*quatdist+transdist > posedist]
-            else:
-                poseorder = delete(poseorder,index) # just prune this one since the real pattern might be a little offset
+                    curconfig=self.robot.GetDOFValues(self.vmodel.manip.GetArmJoints())
+                index=argmin(sum((configs[poseorder]-tile(curconfig,(len(poseorder),1)))**2,1))
+                config=configs[poseorder[index]]
+                try:
+                    data=self.moveToConfiguration(config,waitcond=waitcond)
+                    if data is not None:
+                        with self.robot:
+                            data['jointvalues'] = self.robot.GetDOFValues(self.vmodel.manip.GetArmJoints())
+                            data['Tlink'] = self.vmodel.attachedsensor.GetAttachingLink().GetTransform()
+                        observations.append(data)
+                        if len(observations) >= maxobservations:
+                            break
+                        # prune the nearby observations
+                        allposes = poses[poseorder]
+                        quatdist = quatArrayTDist(allposes[index,0:4],allposes[:,0:4])
+                        transdist= sqrt(sum((allposes[:,4:7]-tile(allposes[index,4:7],(len(allposes),1)))**2,1))
+                        poseorder = poseorder[0.2*quatdist+transdist > posedist]
+                    else:
+                        poseorder = delete(poseorder,index) # just prune this one since the real pattern might be a little offset
+                except planning_error:
+                    pass
         return observations
 
     def moveToConfiguration(self,config,waitcond=None):
@@ -208,8 +217,8 @@ def run():
     parser = OptionParser(description='Views a calibration pattern from multiple locations.')
     parser.add_option('--scene',action="store",type='string',dest='scene',default='data/pa10calib.env.xml',
                       help='Scene file to load (default=%default)')
-    parser.add_option('--sensorname',action="store",type='string',dest='sensorname',default='wristcam',
-                      help='Name of the sensor whose views to generate (default=%default)')
+    parser.add_option('--sensorname',action="store",type='string',dest='sensorname',default=None,
+                      help='Name of the sensor whose views to generate (default is first sensor on robot)')
     parser.add_option('--sensorrobot',action="store",type='string',dest='sensorrobot',default=None,
                       help='Name of the robot the sensor is attached to (default=%default)')
     parser.add_option('--norandomize', action='store_false',dest='randomize',default=True,

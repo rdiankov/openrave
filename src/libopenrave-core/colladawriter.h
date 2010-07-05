@@ -233,7 +233,7 @@ public:
 
     KinBody::KinBodyStateSaver saver(pbody);
     vector<dReal> vjointvalues, vzero(pbody->GetDOF());
-    pbody->GetJointValues(vjointvalues);
+    pbody->GetDOFValues(vjointvalues);
 
     if( vzero.size() > 0 )
     {

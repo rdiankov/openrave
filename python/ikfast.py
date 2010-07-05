@@ -1605,6 +1605,38 @@ class IKFastSolver(AutoReloader):
         # take the least complex solution and go on
         if len(solutions) > 0:
             return self.addSolution(solutions,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree)
+
+        # try to solve one variable for the others and substitute
+        for curvar in curvars:
+            vv = self.Variable(curvar)
+            varsubs = [(sin(curvar),vv.svar),(cos(curvar),vv.cvar)]
+            othervars = [var for var in curvars if var != curvar]
+            raweqns = []
+            for e in AllEquations:
+                p = Poly(e.subs(varsubs),vv.cvar,vv.svar)
+                if p.degree == 1 and not p.coeff(1,0).has_any_symbols(*othervars) and not p.coeff(0,1).has_any_symbols(*othervars):
+                    eq = e.subs(self.freevarsubs+solsubs)
+                    if self.isExpressionUnique(raweqns,eq) and self.isExpressionUnique(raweqns,-eq):
+                        raweqns.append(eq)
+            if len(raweqns) > 1:
+                try:
+                    eqns = [eq.subs(varsubs) for eq in raweqns]
+                    s = solve(eqns,vv.cvar,vv.svar)
+                    if s is not None and s.has_key(vv.svar) and s.has_key(vv.cvar):
+                        commonmult = fraction(s[vv.cvar])[1]
+                        commonmult *= fraction(s[vv.svar]*commonmult)[1]
+                        tempsubs = [(sin(curvar),simplify(s[vv.svar]*commonmult)),(cos(curvar),simplify(s[vv.cvar]*commonmult))]
+                        NewEquations = [self.customtrigsimp(eq.subs(tempsubs)) for eq in AllEquations]
+                        newvars = curvars[:]
+                        newvars.remove(curvar)
+                        solutiontree = self.solveAllEquations(NewEquations,newvars,othersolvedvars,solsubs,endbranchtree)
+                        newsolsubs = solsubs[:]
+                        for var in newvars:
+                            newsolsubs += [(cos(var),self.Variable(var).cvar),(sin(var),self.Variable(var).svar)]
+                        return solutiontree + self.solveAllEquations(AllEquations,[curvar],othersolvedvars+newvars,newsolsubs,endbranchtree)
+                except self.CannotSolveError:
+                    pass
+        
         raise self.CannotSolveError('failed to find a variable to solve')
 
     def addSolution(self,solutions,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree):
