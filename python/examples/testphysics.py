@@ -22,7 +22,8 @@ import time
 
 def run(args=None):
     """Executes the testphysics example
-    @type args: arguments for script to parse, if not specified will use sys.argv
+
+    :type args: arguments for script to parse, if not specified will use sys.argv
     """
     env = Environment()
     env.Load('data/hanoi.env.xml')

@@ -85,7 +85,8 @@ class ConstraintPlanning(metaclass.AutoReloader):
 
 def run(args=None):
     """Executes the constraintplanning example
-    @type args: arguments for script to parse, if not specified will use sys.argv
+    
+    :type args: arguments for script to parse, if not specified will use sys.argv
     """
     parser = OptionParser(description='RRT motion planning with constraints on the robot end effector.')
     parser.add_option('--scene',

@@ -157,8 +157,9 @@ class Schunkplanner:
       print ('Body %s successfully manipulated'%(name))
 
 def run(args=None):
-    """Executes the dualarmdemo_schunk demo
-    @type args: arguments for script to parse, if not specified will use sys.argv
+    """Executes the dualarmdemo_schunk example
+
+    :type args: arguments for script to parse, if not specified will use sys.argv
     """
     parser = OptionParser(description="Schunk Manipulation planning example\nFor a dual arm robot with Schunk LWA3 arms, plan trajectories for grasping an object and manipulating it on a shelf.")
     parser.add_option('--scene',

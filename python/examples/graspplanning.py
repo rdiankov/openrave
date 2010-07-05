@@ -13,7 +13,7 @@
 # limitations under the License.
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
+__copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
 from openravepy import *
@@ -290,7 +290,11 @@ class GraspPlanning(metaclass.AutoReloader):
                 print 'failed to grasp object %s'%graspables[i][0].target.GetName()
                 print e
 
-def run():
+def run(args=None):
+    """Executes the graspplanning example
+
+    :type args: arguments for script to parse, if not specified will use sys.argv
+    """
     parser = OptionParser(description='Autonomous grasp and manipulation planning example.')
     parser.add_option('--scene',
                       action="store",type='string',dest='scene',default='data/lab1.env.xml',
@@ -299,7 +303,7 @@ def run():
                       help='If set, will plan without destinations.')
     parser.add_option('--norandomize', action='store_false',dest='randomize',default=True,
                       help='If set, will not randomize the bodies and robot position in the scene.')
-    (options, args) = parser.parse_args()
+    (options, args) = parser.parse_args(args=args)
 
     env = Environment()
     try:

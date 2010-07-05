@@ -186,7 +186,8 @@ class HanoiPuzzle:
 
 def run(args=None):
     """Executes the hanoi example
-    @type args: arguments for script to parse, if not specified will use sys.argv
+
+    :type args: arguments for script to parse, if not specified will use sys.argv
     """
     parser = OptionParser(description='Manipulation planning example solving the hanoi problem.')
     parser.add_option('--scene',

@@ -39,7 +39,8 @@ def collisioncallback(report,fromphysics):
 
 def run(args=None):
     """Executes the collision example
-    @type args: arguments for script to parse, if not specified will use sys.argv
+    
+    :type args: arguments for script to parse, if not specified will use sys.argv
     """
     parser = OptionParser(description='Example shows how to query collision detection information using openravepy')
     parser.add_option('--collision', action="store",type='string',dest='collision',default=None,

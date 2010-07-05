@@ -120,7 +120,8 @@ class OpenRAVEScene:
 
 def run(args=None):
     """Executes the testcamerasensor example
-    @type args: arguments for script to parse, if not specified will use sys.argv
+
+    :type args: arguments for script to parse, if not specified will use sys.argv
     """
     parser = OptionParser(description='Displays all images of all camera sensors attached to a robot.')
     parser.add_option('--scene',

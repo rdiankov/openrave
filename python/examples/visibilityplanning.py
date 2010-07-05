@@ -420,7 +420,8 @@ class PA10GraspExample(VisibilityGrasping):
 
 def run(args=None):
     """Executes the visibilityplanning example
-    @type args: arguments for script to parse, if not specified will use sys.argv
+
+    :type args: arguments for script to parse, if not specified will use sys.argv
     """
     parser = OptionParser(description='Visibility Planning Module.')
     parser.add_option('--scene',action="store",type='string',dest='scene',default='data/pa10grasp.env.xml',

@@ -70,7 +70,8 @@ class SimpleNavigationPlanning(metaclass.AutoReloader):
 
 def run(args=None):
     """Executes the simplenavigation example
-    @type args: arguments for script to parse, if not specified will use sys.argv
+
+    :type args: arguments for script to parse, if not specified will use sys.argv
     """
     parser = OptionParser(description='Simple navigation planning using RRTs.')
     parser.add_option('--scene',

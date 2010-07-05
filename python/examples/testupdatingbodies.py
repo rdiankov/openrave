@@ -23,7 +23,8 @@ from numpy import *
 
 def run(args=None):
     """Executes the testupdatingbodies example
-    @type args: arguments for script to parse, if not specified will use sys.argv
+
+    :type args: arguments for script to parse, if not specified will use sys.argv
     """
     print 'Example shows how to manually update the environment published bodies for the viewer while the environment is locked'
     env = Environment()

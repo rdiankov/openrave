@@ -139,33 +139,7 @@ class CalibrationViews(metaclass.AutoReloader):
             graphs = None
 
     def moveToObservations(self,poses,configs,waitcond=None,maxobservations=inf,posedist=0.05):
-        """Converts a (latitude, longitude) pair to an address.
-    
-        Interesting bits:
-
-        >>> gmaps = GoogleMaps()
-        >>> reverse = gmaps.reverse_geocode(38.887563, -77.019929)
-        >>> address = reverse['Placemark'][0]['address']
-        >>> print address
-        200 6th St SW, Washington, DC 20024, USA
-        >>> accuracy = reverse['Placemark'][0]['AddressDetails']['Accuracy']
-        >>> print accuracy
-        8
-
-        :param lat: latitude
-        :type lat: float
-        :param lng: longitude
-        :type lng: float
-        :return: `Reverse geocoder return value`_ dictionary giving closest
-            address(es) to `(lat, lng)`
-        :rtype: dict
-        :raises GoogleMapsError: If the coordinates could not be reverse geocoded.
-
-        Keyword arguments and return value are identical to those of
-
-        .. _`Reverse geocoder return value`:
-            http://code.google.com/apis/maps/documentation/geocoding/index.html#ReverseGeocoding
-
+        """
         """
         # order the poses with respect to distance
         assert len(poses) == len(configs)
@@ -244,7 +218,8 @@ class CalibrationViews(metaclass.AutoReloader):
 
 def run(args=None):
     """Executes the calibrationviews example
-    @type args: arguments for script to parse, if not specified will use sys.argv
+
+    :type args: arguments for script to parse, if not specified will use sys.argv
     """
     parser = OptionParser(description='Views a calibration pattern from multiple locations.')
     parser.add_option('--scene',action="store",type='string',dest='scene',default='data/pa10calib.env.xml',

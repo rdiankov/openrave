@@ -22,7 +22,8 @@ import numpy
 
 def run(args=None):
     """Executes the testplotting example
-    @type args: arguments for script to parse, if not specified will use sys.argv
+
+    :type args: arguments for script to parse, if not specified will use sys.argv
     """
     orenv = Environment()
     orenv.SetViewer('qtcoin')

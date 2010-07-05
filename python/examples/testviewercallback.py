@@ -29,7 +29,8 @@ def itemselectioncb(link,pos,org,env):
 
 def run(args=None):
     """Executes the testviewercallback example
-    @type args: arguments for script to parse, if not specified will use sys.argv
+
+    :type args: arguments for script to parse, if not specified will use sys.argv
     """
     parser = OptionParser(description='Shows how to attach a callback to a viewer to perform functions.')
     parser.add_option('--scene',
