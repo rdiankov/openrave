@@ -175,13 +175,20 @@ Given that environment xml files can now contain tags for any interface, it is p
 .. _OpenRAVE: http://openrave.programmingvision.com
 
 """
+try:
+    __build_doc__ = __openravepy_build_doc__
+    if __build_doc__:
+        print 'openravepy imported in documentation mode'
+except NameError:
+    __build_doc__ = None
 
 from openravepy_int import *
 from openravepy_int import _openrave_exception_
 from openravepy_int import __version__
 from openravepy_int import __author__
 from openravepy_int import __copyright__
-__license = 'core: Lesser GPL, examples: Apache License, Version 2.0'
+__license__ = 'core: Lesser GPL, examples: Apache License, Version 2.0'
+__docformat__ = 'restructuredtext'
 
 from openravepy_ext import *
 

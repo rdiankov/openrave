@@ -28,6 +28,6 @@ doxygen Doxyfile.japanese
 # cd ../..
 #cp japanese/latex/refman.pdf japanese/openrave_japanese.pdf
 
-tar czf ordocs.tgz english/html english/openravepy-html japanese/html english/openrave.pdf
+tar czf ordocs.tgz english/html english/openravepy-html images/*.jpg japanese/html english/openrave.pdf
 scp ordocs.tgz diankov@programmingvision.com:~/openrave/ordocs/
 ssh diankov@programmingvision.com "cd ~/openrave/ordocs; rm -rf english japanese; tar xzf ordocs.tgz; rm -rf ordocs.tgz"

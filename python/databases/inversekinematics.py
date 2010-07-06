@@ -16,11 +16,17 @@ __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
-from openravepy import *
+from openravepy import __build_doc__
+if not __build_doc__:
+    from openravepy import *
+    from numpy import *
+else:
+    from openravepy import OpenRAVEModel
+    from numpy import array
+
 from openravepy.interfaces import BaseManipulation
 from openravepy import ikfast
-from numpy import *
-import time,platform,shutil
+import time,platform,shutil,os
 import distutils
 from distutils import ccompiler
 from optparse import OptionParser

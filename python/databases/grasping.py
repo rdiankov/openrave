@@ -97,10 +97,16 @@ __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
 __license__ = 'Apache License, Version 2.0'
 
 import os,sys,itertools,traceback,time
-from openravepy import *
+from openravepy import __build_doc__
+if not __build_doc__:
+    from openravepy import *
+    from numpy import *
+else:
+    from openravepy import OpenRAVEModel
+    from numpy import inf, array
+
 from openravepy.interfaces import Grasper, BaseManipulation, TaskManipulation
 from openravepy.databases import convexdecomposition
-from numpy import *
 from optparse import OptionParser
 
 try:

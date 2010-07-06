@@ -370,6 +370,8 @@ class RobotStateSaver:
         self.handle.close()
 
 class OpenRAVEModel(metaclass.AutoReloader):
+    """The base class defining the structure of the openrave database generators.
+    """
     def __init__(self,robot):
         self.robot = robot
         self.env = self.robot.GetEnv()

@@ -35,6 +35,8 @@ class build_doc(Command):
         from docutils.core import publish_cmdline
         from docutils.nodes import raw
         from docutils.parsers import rst
+        import __builtin__
+        __builtin__.__openravepy_build_doc__ = True # notify openravepy that will be building docs so it can re-arrange its imports
 
         docutils_conf = os.path.abspath('docutils.ini')
         epydoc_conf = os.path.abspath('epydoc.config')
