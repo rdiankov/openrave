@@ -25,7 +25,7 @@ else:
     from numpy import array
 
 from openravepy import convexdecompositionpy
-import time
+import time, os
 from optparse import OptionParser
 from itertools import izip
 
