@@ -4071,7 +4071,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
 
     scope().attr("__version__") = boost::str(boost::format("%x.%x.%x")%OPENRAVE_VERSION_MAJOR%OPENRAVE_VERSION_MINOR%OPENRAVE_VERSION_PATCH);
     scope().attr("__author__") = "Rosen Diankov";
-    scope().attr("__copyright__") = "Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)";
+    scope().attr("__copyright__") = "2009-2010 Rosen Diankov (rosen.diankov@gmail.com)";
     scope().attr("__license__") = "Lesser GPL";
 
     def("RaveSetDebugLevel",RaveSetDebugLevel,args("level"), "Sets the global openrave debug level");

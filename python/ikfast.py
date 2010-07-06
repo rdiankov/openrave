@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # Software License Agreement (Lesser GPL)
 #
 # Copyright (C) 2009-2010 Rosen Diankov
@@ -297,22 +298,7 @@ class SolverBreak(AutoReloader):
         return generator.endBreak(self)
 
 class IKFastSolver(AutoReloader):
-    """
-    Parses the kinematics from an openrave fk file and generates C++ code for analytical inverse kinematics.
-    author: Rosen Diankov
-
-    Generated C++ code structure:
-
-    typedef double IKReal;
-    class IKSolution
-    {
-    public:
-        void GetSolution(IKReal* psolution, const IKReal* pfree) const;
-    };
-
-    bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<SOLUTION>& vsolutions);
-    bool fk(const IKReal* joints, IKReal* eetrans, IKReal* eerot);
-    
+    """Solves the analytical inverse kinematics equations.    
     """
 
     class CannotSolveError(Exception):
@@ -2815,7 +2801,6 @@ class IKFastSolver(AutoReloader):
         return s5
 
 if __name__ == '__main__':
-
     parser = OptionParser(usage='usage: %prog [options] [solve joint indices]',
                           description="""
 Software License Agreement (Lesser GPL v3)

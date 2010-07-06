@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +16,7 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
+__docformat__ = "restructuredtext en"
 
 import sys, os, time, signal, threading
 import numpy # nice to be able to explicitly call some functions
@@ -28,9 +30,10 @@ class CalibrationViews(metaclass.AutoReloader):
     def __init__(self,robot,sensorname=None,sensorrobot=None,target=None,maxvelmult=None,randomize=False):
         """Starts a calibration sequencer using a robot and a sensor.
 
-        The minimum needed to be specified is the robot and a sensorname. Supports camera sensors that do not belong to the current robot, in this case the IK is done assuming the target is grabbed by the active manipulator of the robot
+        The *minimum needed* to be **specified** is the `robot` and a ``sensorname``. Supports camera sensors that do not belong to the current robot, in this case the IK is done assuming the target is grabbed by the active manipulator of the robot
         Can use the visibility information of the target.
-        @param sensorrobot: If specified, used to determine what robot the sensor lies on.
+
+        :param sensorrobot: If specified, used to determine what robot the sensor lies on.
         """
         self.env = robot.GetEnv()
         self.robot = robot
@@ -52,7 +55,6 @@ class CalibrationViews(metaclass.AutoReloader):
 
         Sample the transformations of the camera. the camera x and y axes should always be aligned with the 
         xy axes of the calibration pattern.
-        @param cameraonmanip: if True assumes the camera is attached onto the link sensor. Otherwise the camera is attached to a different link (or different robot).
         """
         with self.vmodel.target:
             if not self.vmodel.has():
@@ -99,7 +101,6 @@ class CalibrationViews(metaclass.AutoReloader):
     def computelocalposes(self,maxconeangle = 0.5,maxconedist = 0.15,averagedist=0.03,angledelta=0.2,**kwargs):
         """Computes robot poses using a cone pointing to the negative z-axis of the camera
 
-        @param cameraonmanip: if True assumes the camera is attached onto the link sensor. Otherwise the camera is attached to a different link (or different robot).
         """
         with self.env:
             localpositions = SpaceSampler().sampleR3(averagedist=averagedist,boxdims=[2*maxconedist,2*maxconedist,maxconedist])

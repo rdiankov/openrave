@@ -12,9 +12,9 @@ pdflatex refman.tex
 pdflatex refman.tex
 cd ..
 cp latex/refman.pdf openrave.pdf
-
-epydoc --output=openravepy-html --config=../epydoc.config --css=../epydoc.css
 cd ..
+
+python build_doc.py build_doc --outdir="english/openravepy-html"
 
 echo "OUTPUT_LANGUAGE = Japanese
 OUTPUT_DIRECTORY = ./japanese/" | cat Doxyfile - > Doxyfile.japanese
