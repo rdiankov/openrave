@@ -216,17 +216,18 @@ public:
     VisibilityConstraintFunction(boost::shared_ptr<VisualFeedbackProblem> vf) : _vf(vf) {
             _report.reset(new COLLISIONREPORT());
 
-            _vTargetOBBs.reserve(_vf->_target->GetLinks().size());
-            FOREACHC(itlink, _vf->_target->GetLinks())
-                _vTargetOBBs.push_back(OBBFromAABB((*itlink)->GetCollisionData().ComputeAABB(),(*itlink)->GetTransform()));
-            _abTarget = _vf->_target->ComputeAABB();
             _fAllowableOcclusion = 0.1;
             _fRayMinDist = 0.05f;
 
             // create the dummy box
             {
-                KinBody::KinBodyStateSaver saver(_vf->_target);
+                KinBody::KinBodyStateSaver saver(_vf->_target,KinBody::Save_LinkTransformation);
                 _vf->_target->SetTransform(Transform());
+
+                _vTargetOBBs.reserve(_vf->_target->GetLinks().size());
+                FOREACHC(itlink, _vf->_target->GetLinks())
+                    _vTargetOBBs.push_back(OBBFromAABB((*itlink)->GetCollisionData().ComputeAABB(),(*itlink)->GetTransform()));
+                _abTarget = _vf->_target->ComputeAABB();
                 vector<AABB> vboxes; vboxes.push_back(_vf->_target->ComputeAABB());
 
                 _ptargetbox = _vf->_target->GetEnv()->CreateKinBody();
@@ -243,11 +244,11 @@ public:
         
         virtual bool Constraint(const vector<dReal>& pSrcConf, vector<dReal>& pDestConf, int settings)
         {
-            TransformMatrix tcamera = _vf->_psensor->GetSensor()->GetTransform();
+            Transform ttarget = _vf->_target->GetTransform();
+            TransformMatrix tcamera = ttarget.inverse()*_vf->_psensor->GetSensor()->GetTransform();
             if( !InConvexHull(tcamera) )
                 return false;
             // no need to check gripper collision
-
             bool bOcclusion = IsOccluded(tcamera);
             if( bOcclusion )
                 return false;
@@ -261,9 +262,15 @@ public:
         /// If camera is not attached to robot, assume target is movable and takes in target position.
         bool SampleWithCamera(const TransformMatrix& t, vector<dReal>& pNewSample)
         {
-            Transform tcamera = t;
-            if( _vf->_robot != _vf->_sensorrobot )
-                tcamera = _vf->_psensor->GetTransform();
+            Transform tcamera, ttarget;
+            if( _vf->_robot != _vf->_sensorrobot ) {
+                ttarget = t;
+                tcamera = ttarget.inverse()*_vf->_psensor->GetTransform();
+            }
+            else {
+                ttarget = _vf->_target->GetTransform();
+                tcamera = ttarget.inverse()*t;
+            }
             if( !InConvexHull(tcamera) )
                 return false;
 
@@ -286,6 +293,7 @@ public:
             return !IsOccluded(tcamera);
         }
 
+        /// \param tcamera in target coordinate system
         bool InConvexHull(const TransformMatrix& tcamera)
         {
             Vector vitrans(-tcamera.m[0]*tcamera.trans.x - tcamera.m[4]*tcamera.trans.y - tcamera.m[8]*tcamera.trans.z,
@@ -309,16 +317,19 @@ public:
 
         /// check if any part of the environment or robot is in front of the camera blocking the object
         /// sample object's surface and shoot rays
+        /// \param tcameras in target coordinate system
         bool IsOccluded(const TransformMatrix& tcamera)
         {
             TransformMatrix tcamerainv = tcamera.inverse();
             _ptargetbox->Enable(true);
             _vf->_target->Enable(false);
-            _ptargetbox->SetTransform(_vf->_target->GetTransform());
+            Transform ttarget = _vf->_target->GetTransform();
+            _ptargetbox->SetTransform(ttarget);
+            Transform tworldcamera = ttarget*tcamera;
             bool bOcclusion = false;
             FOREACH(itobb,_vTargetOBBs) {
                 OBB cameraobb = TransformOBB(*itobb,tcamerainv);
-                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::TestRay, this, _1, boost::ref(tcamera)),_fAllowableOcclusion) ) {
+                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::TestRay, this, _1, boost::ref(tworldcamera)),_fAllowableOcclusion) ) {
                     bOcclusion = true;
                     RAVELOG_VERBOSEA("box is occluded\n");
                     break;

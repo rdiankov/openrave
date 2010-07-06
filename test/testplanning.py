@@ -594,10 +594,19 @@ def test_calibviews():
     import calibrationviews
     env=Environment()
     env.SetViewer('qtcoin')
-    env.Load('data/pa10calib_envcamera.env.xml')
+    env.Load('scenes/pa10lab.env.xml')#data/pa10calib_envcamera.env.xml')
     robot=env.GetRobots()[0]
     self = calibrationviews.CalibrationViews(robot,sensorrobot=env.GetRobot('ceilingcamera'))
-    self.computeAndMoveToObservations()
     dists=arange(0.05,2.0,0.15)
     orientationdensity=1
+    self.computeAndMoveToObservations()
     
+    for i,relativepose in enumerate(visibilitytransforms):
+        pose = array(posebase)
+        pose = poseMult(pose,relativepose)
+        q = self.vmodel.manip.FindIKSolution(dot(matrixFromPose(pose),self.Tpatternrobot),True)
+        if q is not None:
+            print i
+            #self.robot.SetJointValues(q,self.vmodel.manip.GetArmJoints())
+            self.vmodel.visualprob.ComputeVisibleConfiguration(pose=pose)
+            raw_input('asdf')
