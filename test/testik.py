@@ -86,7 +86,7 @@ def test_drillray():
     from sympy import *
     env = Environment()
     env.Reset()
-    robot = env.ReadRobotXMLFile('robots/barrettwam4.robot.xml')#drill.robot.xml')
+    robot = env.ReadRobotXMLFile('drill.robot.xml')
     env.AddRobot(robot)
     manip = robot.GetActiveManipulator()#SetActiveManipulator('vision')
     ikmodel = inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
@@ -121,6 +121,9 @@ def test_drillray():
     Tee[0,3] = Symbol("px")
     Tee[1,3] = Symbol("py")
     Tee[2,3] = Symbol("pz")
+
+    chaintree = solvefn(self,chain,Tee)
+    ikfast_generator_vb.CodeGeneratorVB6().generate(chaintree)
 
 def drillray_visionsol():
     solutions=[]

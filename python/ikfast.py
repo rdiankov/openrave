@@ -48,6 +48,7 @@ CodeGenerators = {}
 try:
     import ikfast_generator_vb
     CodeGenerators['vb'] = ikfast_generator_vb.CodeGenerator
+    CodeGenerators['vb6'] = ikfast_generator_vb.CodeGeneratorVB6
 except ImportError:
     pass
 try:
@@ -768,7 +769,7 @@ class IKFastSolver(AutoReloader):
 
                 storesolutiontree = [SolverStoreSolution (jointvars)]
                 solvedvarsubs = valuesubs+self.freevarsubs
-                rotsubs = [(Symbol('r%d%d'%(0,i)),Symbol('_r%d%d'%(0,i))) for i in range(3)]
+                rotsubs = [(Symbol('r%d%d'%(0,i)),Symbol('new_r%d%d'%(0,i))) for i in range(3)]
                 rotvars = [var for var in jointvars if any([var==svar for svar in solvejointvars])]
                 D = Matrix(3,1, map(lambda x: x.subs(self.freevarsubs), LinksAccumRightAll[0][0:3,2]))
                 rottree = self.solveIKRotation(R=D,Ree = Dee.subs(rotsubs),rawvars = rotvars,endbranchtree=storesolutiontree,solvedvarsubs=solvedvarsubs)
@@ -830,7 +831,7 @@ class IKFastSolver(AutoReloader):
 
                 storesolutiontree = [SolverStoreSolution (jointvars)]
                 solvedvarsubs = valuesubs+self.freevarsubs
-                rotsubs = [(Symbol('r%d%d'%(i,j)),Symbol('_r%d%d'%(i,j))) for i in range(3) for j in range(3)]
+                rotsubs = [(Symbol('r%d%d'%(i,j)),Symbol('new_r%d%d'%(i,j))) for i in range(3) for j in range(3)]
                 rotvars = [var for var in jointvars if any([var==svar for svar in solvejointvars])]
                 R = Matrix(3,3, map(lambda x: x.subs(solvedvarsubs), LinksAccumRightAll[0][0:3,0:3]))
                 rottree = self.solveIKRotation(R=R,Ree = Ree.subs(rotsubs),rawvars = rotvars,endbranchtree=storesolutiontree,solvedvarsubs=solvedvarsubs)
@@ -1082,7 +1083,7 @@ class IKFastSolver(AutoReloader):
                 solvedvarsubs = valuesubs+self.freevarsubs
                 for tvar in solvejointvars[0:2]:
                     solvedvarsubs += [(cos(tvar),self.Variable(tvar).cvar),(sin(tvar),self.Variable(tvar).svar)]
-                rotsubs = [(Symbol('r%d%d'%(0,i)),Symbol('_r%d%d'%(0,i))) for i in range(3)]
+                rotsubs = [(Symbol('r%d%d'%(0,i)),Symbol('new_r%d%d'%(0,i))) for i in range(3)]
                 rotvars = [var for var in jointvars if any([var==svar for svar in solvejointvars[2:4]])]
                 Dsub = Matrix(3,1, map(lambda x: x.subs(solvedvarsubs), LinksAccumRight[2][0:3,0:3]*basedir))
                 dirtree = self.solveIKRotation(R=Dsub,Ree = Dee.subs(rotsubs),rawvars = rotvars,endbranchtree=storesolutiontree,solvedvarsubs=solvedvarsubs)
@@ -1268,7 +1269,7 @@ class IKFastSolver(AutoReloader):
                     for tvar in transvars:
                         solvedvarsubs += [(cos(tvar),self.Variable(tvar).cvar),(sin(tvar),self.Variable(tvar).svar)]
                 
-                rotsubs = [(Symbol('r%d%d'%(i,j)),Symbol('_r%d%d'%(i,j))) for i in range(3) for j in range(3)]
+                rotsubs = [(Symbol('r%d%d'%(i,j)),Symbol('new_r%d%d'%(i,j))) for i in range(3) for j in range(3)]
                 R = Matrix(3,3, map(lambda x: x.subs(solvedvarsubs), LinksAccumRight[rotindex][0:3,0:3]))
                 rottree += self.solveIKRotation(R=R,Ree = Tee[0:3,0:3].subs(rotsubs),rawvars = rotvars,endbranchtree=storesolutiontree,solvedvarsubs=solvedvarsubs)
                 

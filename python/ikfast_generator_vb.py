@@ -69,6 +69,37 @@ class CodeGenerator(AutoReloader):
     freevars = None # list of free variables in the solution
     freevardependencies = None # list of variables depending on the free variables
     ikreal = 'Double'
+    vb6 = False
+    globalid = 0
+    forloops = []
+
+    def _startforloop(self,counter,start,end):
+        if self.vb6:
+            self.globalid += 1
+            self.forloops.append((counter,'looplabel%d'%self.globalid))
+            return 'Dim %s As Integer\n%s = %s\nDo While %s < %s\n%s:\n'%(counter,counter,start,counter,end,self.forloops[-1][1])
+        else:
+            self.forloops.append(counter)
+            return 'For %s = %s To %s Then\n'%(counter,start,end-1)
+    def _endforloop(self):
+        if self.vb6:
+            counter = self.forloops.pop()[0]
+            return '%s = %s+1\nLoop\n'%(counter,counter)
+        else:
+            counter = self.forloops.pop()
+            return 'Next\n'%(counter)
+    def _continueforloop(self):
+        if self.vb6:
+            return '%s = %s+1\nGoto %s\n'%(self.forloops[-1][0],self.forloops[-1][0],self.forloops[-1][1])
+        else:
+            return 'Continue For\n'
+
+    def _absname(self):
+        return 'Abs' if self.vb6 else 'Math.Abs'
+    def _sinname(self):
+        return 'Sin' if self.vb6 else 'Math.Sin'
+    def _cosname(self):
+        return 'Cos' if self.vb6 else 'Math.Cos'
 
     def generate(self, solvertree):
         print 'generating VisualBasic code...'
@@ -87,6 +118,97 @@ class CodeGenerator(AutoReloader):
 ' limitations under the License.
 '
 ' generated %s
+"""%(str(datetime.datetime.now()))
+        if self.vb6:
+            code += """
+Const IK2PI As Double =  6.28318530717959
+Const IKPI As Double = 3.14159265358979
+Const IKPI_2 As Double =  1.57079632679490
+
+Public Class IKBaseSolution
+    Public fmul, foffset As %s
+    Public freeind As Integer
+End Class
+
+Public Class IKSolution
+    Public basesol() As IKBaseSolution
+    Public vfree() As Integer  
+End Class
+"""%(self.ikreal)
+            code += """
+Public Function IKasin(ByVal f As %s) As %s
+    If f <= -1 Then
+        IKasin = -IKPI_2
+    ElseIf f >= 1 Then
+        IKasin = IKPI_2
+    Else
+        IKasin = Atn(f / Sqr(1 - f * f))
+    End If
+End Function
+
+Public Function IKacos(f As %s) As %s
+    If f <= -1 Then
+        IKacos = IKPI
+    ElseIf f >= 1 Then
+        IKacos = 0
+    Else
+        IKacos = IKPI_2 - Atn(f / Sqr(1 - f * f))
+    End If
+End Function
+
+Public Function IKatan2(y As %s, x As %s) As %s
+    If Not IsNumeric(y) Then
+        IKatan2 = IKPI_2
+    ElseIf  Not IsNumeric(x) Then
+        IKatan2 = 0
+    Else
+        If y > 0 Then
+            If x >= y Then
+                IKatan2 = Atn(y / x)
+            ElseIf x <= -y Then
+                IKatan2 = Atn(y / x) + Pi
+            Else
+                IKatan2 = Pi / 2 - Atn(x / y)
+            End If
+        Else
+            If x >= -y Then
+                IKatan2 = Atn(y / x)
+            ElseIf x <= y Then
+                IKatan2 = Atn(y / x) - Pi
+            Else
+                IKatan2 = -Atn(x / y) - Pi / 2
+            End If
+        End If
+    End If
+End Function
+
+Public Function IKsqrt(f As %s) As %s
+    If f <= 0.0 Then
+        IKsqrt = 0
+    Else
+        IKsqrt = Sqr(f)
+    End If
+End Function
+
+Public Function IKdiv(f As %s) As %s
+    If Abs(f) <= 0.0 Then
+        IKdiv = 1.0e30
+    Else
+        IKdiv = 1.0/f
+    End If
+End Function
+
+' assumes exp < 0
+Public Function IKnegpow(f As %s, exp As %s) As %s
+    If Abs(f) <= 0.0 Then
+        IKnegpow = 1.0e30
+    Else
+        IKnegpow = f^exp
+    End If
+End Function
+"""%(self.ikreal,self.ikreal,self.ikreal,self.ikreal,self.ikreal,self.ikreal,self.ikreal,self.ikreal,self.ikreal,self.ikreal,self.ikreal,self.ikreal,self.ikreal,self.ikreal)
+        else: # vb.net
+            code += """
 Imports System
 
 Const IK2PI As Double =  6.28318530717959
@@ -102,15 +224,15 @@ Public Class IKSolution
     Public basesol() As IKBaseSolution
     Public vfree() As Integer  
 End Class
-"""%(str(datetime.datetime.now()),self.ikreal)
-        code += """
+"""%(self.ikreal)
+            code += """
 Public Function IKasin(ByVal f As %s) As %s
     If f <= -1 Then
         IKasin = -IKPI_2
     ElseIf f >= 1 Then
         IKasin = IKPI_2
     Else
-        IKasin = Math.Asin(f) 'Atn(f / Sqr(1 - f * f))
+        IKasin = Math.Asin(f)
     End If
 End Function
 
@@ -120,7 +242,7 @@ Public Function IKacos(f As %s) As %s
     ElseIf f >= 1 Then
         IKacos = 0
     Else
-        IKacos = Math.Acos(f) 'IKPI_2 - Atn(f / Sqr(1 - f * f))
+        IKacos = Math.Acos(f)
     End If
 End Function
 
@@ -131,23 +253,6 @@ Public Function IKatan2(y As %s, x As %s) As %s
         IKatan2 = 0
     Else
         IKatan2 = Math.Atan2(y,x)
-'        If y > 0 Then
-'            If x >= y Then
-'                IKatan2 = Atn(y / x)
-'            ElseIf x <= -y Then
-'                IKatan2 = Atn(y / x) + Pi
-'            Else
-'                IKatan2 = Pi / 2 - Atn(x / y)
-'            End If
-'        Else
-'            If x >= -y Then
-'                IKatan2 = Atn(y / x)
-'            ElseIf x <= y Then
-'                IKatan2 = Atn(y / x) - Pi
-'            Else
-'                IKatan2 = -Atn(x / y) - Pi / 2
-'            End If
-'        End If
     End If
 End Function
 
@@ -155,7 +260,7 @@ Public Function IKsqrt(f As %s) As %s
     If f <= 0.0 Then
         IKsqrt = 0
     Else
-        IKsqrt = Math.Sqrt(f)'Sqr(f)
+        IKsqrt = Math.Sqrt(f)
     End If
 End Function
 
@@ -172,7 +277,7 @@ Public Function IKnegpow(f As %s, exp As %s) As %s
     If Math.Abs(f) <= 0.0 Then
         IKnegpow = 1.0e30
     Else
-        IKnegpow = Math.Pow(f,exp)'f^exp
+        IKnegpow = Math.Pow(f,exp)
     End If
 End Function
 """%(self.ikreal,self.ikreal,self.ikreal,self.ikreal,self.ikreal,self.ikreal,self.ikreal,self.ikreal,self.ikreal,self.ikreal,self.ikreal,self.ikreal,self.ikreal,self.ikreal)
@@ -242,7 +347,7 @@ End Class
         code += "/// solves the inverse kinematics equations.\n"
         code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
         code += "IKFAST_API bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
-        code += "For dummyiter = 0 To 0 Then\n"
+        code += self._startforloop('dummyiter',0,1)
         fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"
         fcode += 'IKReal '
         
@@ -254,21 +359,21 @@ End Class
 
         for i in range(3):
             for j in range(3):
-                fcode += "_r%d%d, r%d%d = eerot[%d*3+%d],\n"%(i,j,i,j,i,j)
-        fcode += "_px, _py, _pz, px = eetrans[0], py = eetrans[1], pz = eetrans[2];\n\n"
+                fcode += "new_r%d%d, r%d%d = eerot[%d*3+%d],\n"%(i,j,i,j,i,j)
+        fcode += "new_px, new_py, new_pz, px = eetrans[0], py = eetrans[1], pz = eetrans[2];\n\n"
         
-        rotsubs = [(Symbol("r%d%d"%(i,j)),Symbol("_r%d%d"%(i,j))) for i in range(3) for j in range(3)]
-        rotsubs += [(Symbol("px"),Symbol("_px")),(Symbol("py"),Symbol("_py")),(Symbol("pz"),Symbol("_pz"))]
+        rotsubs = [(Symbol("r%d%d"%(i,j)),Symbol("new_r%d%d"%(i,j))) for i in range(3) for j in range(3)]
+        rotsubs += [(Symbol("px"),Symbol("new_px")),(Symbol("py"),Symbol("new_py")),(Symbol("pz"),Symbol("new_pz"))]
 
-        psymbols = ["_px","_py","_pz"]
+        psymbols = ["new_px","new_py","new_pz"]
         for i in range(3):
             for j in range(3):
-                fcode += self.writeEquations(lambda k: "_r%d%d"%(i,j),node.Tee[4*i+j])
+                fcode += self.writeEquations(lambda k: "new_r%d%d"%(i,j),node.Tee[4*i+j])
             fcode += self.writeEquations(lambda k: psymbols[i],node.Tee[4*i+3])
         for i in range(3):
             for j in range(3):
-                fcode += "r%d%d = _r%d%d; "%(i,j,i,j)
-        fcode += "px = _px; py = _py; pz = _pz;\n"
+                fcode += "r%d%d = new_r%d%d; "%(i,j,i,j)
+        fcode += "px = new_px; py = new_py; pz = new_pz;\n"
 
         fcode += self.generateTree(node.jointtree)
         code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
@@ -340,19 +445,19 @@ End Class
             fcode += '%s=pfree[%d], c%s=cos(pfree[%d]), s%s=sin(pfree[%d]),\n'%(name,i,name,i,name,i)
         for i in range(3):
             for j in range(3):
-                fcode += "_r%d%d, r%d%d = eerot[%d*3+%d]"%(i,j,i,j,i,j)
+                fcode += "new_r%d%d, r%d%d = eerot[%d*3+%d]"%(i,j,i,j,i,j)
                 if i == 2 and j == 2:
                     fcode += ';\n\n'
                 else:
                     fcode += ',\n'
         
-        rotsubs = [(Symbol("r%d%d"%(i,j)),Symbol("_r%d%d"%(i,j))) for i in range(3) for j in range(3)]
+        rotsubs = [(Symbol("r%d%d"%(i,j)),Symbol("new_r%d%d"%(i,j))) for i in range(3) for j in range(3)]
         for i in range(3):
             for j in range(3):
-                fcode += self.writeEquations(lambda k: "_r%d%d"%(i,j),node.Ree[i,j])
+                fcode += self.writeEquations(lambda k: "new_r%d%d"%(i,j),node.Ree[i,j])
         for i in range(3):
             for j in range(3):
-                fcode += "r%d%d = _r%d%d; "%(i,j,i,j)
+                fcode += "r%d%d = new_r%d%d; "%(i,j,i,j)
         fcode += '\n'
         fcode += self.generateTree(node.jointtree)
         code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
@@ -420,12 +525,12 @@ End Class
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
             fcode += '%s=pfree[%d], c%s=cos(pfree[%d]), s%s=sin(pfree[%d]),\n'%(name,i,name,i,name,i)
-        fcode += "_px, _py, _pz, px = eetrans[0], py = eetrans[1], pz = eetrans[2];\n\n"
-        rotsubs = [(Symbol("px"),Symbol("_px")),(Symbol("py"),Symbol("_py")),(Symbol("pz"),Symbol("_pz"))]
-        psymbols = ["_px","_py","_pz"]
+        fcode += "new_px, new_py, new_pz, px = eetrans[0], py = eetrans[1], pz = eetrans[2];\n\n"
+        rotsubs = [(Symbol("px"),Symbol("new_px")),(Symbol("py"),Symbol("new_py")),(Symbol("pz"),Symbol("new_pz"))]
+        psymbols = ["new_px","new_py","new_pz"]
         for i in range(3):
             fcode += self.writeEquations(lambda k: psymbols[i],node.Pee[i])
-        fcode += "px = _px; py = _py; pz = _pz;\n"
+        fcode += "px = new_px; py = new_py; pz = new_pz;\n"
         fcode += self.generateTree(node.jointtree)
         code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
         return code
@@ -494,17 +599,17 @@ End Class
             fcode += '%s=pfree[%d], c%s=cos(pfree[%d]), s%s=sin(pfree[%d]),\n'%(name,i,name,i,name,i)
 
         for i in range(3):
-            fcode += "_r0%d, r0%d = eerot[%d]"%(i,i,i)
+            fcode += "new_r0%d, r0%d = eerot[%d]"%(i,i,i)
             if i == 2:
                 fcode += ';\n\n'
             else:
                 fcode += ',\n'
-        rotsubs = [(Symbol("r%d%d"%(0,i)),Symbol("_r%d%d"%(0,i))) for i in range(3)]
+        rotsubs = [(Symbol("r%d%d"%(0,i)),Symbol("new_r%d%d"%(0,i))) for i in range(3)]
 
         for i in range(3):
-            fcode += self.writeEquations(lambda k: "_r%d%d"%(0,i),node.Dee[i])
+            fcode += self.writeEquations(lambda k: "new_r%d%d"%(0,i),node.Dee[i])
         for i in range(3):
-            fcode += "r0%d = _r0%d; "%(i,i)
+            fcode += "r0%d = new_r0%d; "%(i,i)
 
         fcode += self.generateTree(node.jointtree)
         code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
@@ -569,7 +674,7 @@ End Class
         code += "' pfree is an array specifying the free joints of the chain.\n"
         code += "Public Function ik(inray As Ray, pfree As %s, ByRef vsolutions() As IKSolution) As Boolean\n"%(self.ikreal)
         fcode = "Dim solution As IKSolution\nErase vsolutions\n"
-        fcode += "For dummyiter = 0 To 0\n"
+        fcode += self._startforloop('dummyiter',0,1)
         fcode += 'Dim '        
         for var in node.solvejointvars:
             fcode += '%s, c%s, s%s,'%(var[0].name,var[0].name,var[0].name)
@@ -577,25 +682,25 @@ End Class
             name = node.freejointvars[i][0].name
             fcode += '%s, c%s, s%s,'%(name,name,name)
         for i in range(3):
-            fcode += "_r0%d, r0%d,"%(i,i)
-        fcode += "_px, _py, _pz, px, py, pz As %s\n"%(self.ikreal)
+            fcode += "new_r0%d, r0%d,"%(i,i)
+        fcode += "new_px, new_py, new_pz, px, py, pz As %s\n"%(self.ikreal)
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
-            fcode += '%s=pfree(%d)\nc%s=Math.Cos(pfree(%d))\ns%s=Math.Sin(pfree(%d))\n'%(name,i,name,i,name,i)
+            fcode += '%s=pfree(%d)\nc%s=%s(pfree(%d))\ns%s=%s(pfree(%d))\n'%(name,i,name,self._cosname(),i,name,self._sinname(),i)
         fcode += "r00 = inray.i\nr01 = inray.j\nr02 = inray.k\n"
         fcode += "px = inray.x\npy = inray.y\npz= inray.z\n"
-        rotsubs = [(Symbol("r%d%d"%(0,i)),Symbol("_r%d%d"%(0,i))) for i in range(3)]
-        rotsubs += [(Symbol("px"),Symbol("_px")),(Symbol("py"),Symbol("_py")),(Symbol("pz"),Symbol("_pz"))]
-        psymbols = ["_px","_py","_pz"]
+        rotsubs = [(Symbol("r%d%d"%(0,i)),Symbol("new_r%d%d"%(0,i))) for i in range(3)]
+        rotsubs += [(Symbol("px"),Symbol("new_px")),(Symbol("py"),Symbol("new_py")),(Symbol("pz"),Symbol("new_pz"))]
+        psymbols = ["new_px","new_py","new_pz"]
         for i in range(3):
-            fcode += self.writeEquations(lambda k: "_r%d%d"%(0,i),node.Dee[i])
+            fcode += self.writeEquations(lambda k: "new_r%d%d"%(0,i),node.Dee[i])
             fcode += self.writeEquations(lambda k: psymbols[i],node.Pee[i])
         for i in range(3):
-            fcode += "r0%d = _r0%d\n"%(i,i)
-        fcode += "\nDim _pdotd As %s = _px*_r00+_py*_r01+_pz*_r02\n"%(self.ikreal)
-        fcode += "px = _px-_pdotd * _r00\npy = _py- _pdotd * _r01\npz = _pz - _pdotd * _r02\n\n"
+            fcode += "r0%d = new_r0%d\n"%(i,i)
+        fcode += "\nDim new_pdotd As %s\nnew_pdotd = new_px*new_r00+new_py*new_r01+new_pz*new_r02\n"%(self.ikreal)
+        fcode += "px = new_px-new_pdotd * new_r00\npy = new_py- new_pdotd * new_r01\npz = new_pz - new_pdotd * new_r02\n\n"
         fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + "Next\nik = UBound(vsolutions)>0\nEnd Function\n"
+        code += self.indentCode(fcode,4) + self._endforloop()+ "ik = UBound(vsolutions)>0\nEnd Function\n"
         return code
     def endIKChainRay4D(self, node):
         return ''
@@ -660,12 +765,15 @@ End Class
                 eqcode += 'If c%sarray(%d) >= -1.0001 And c%sarray(%d) <= 1.0001 Then\n'%(name,2*i,name,2*i)
                 eqcode += '    %svalid(%d) = %svalid(%d) = True\n'%(name,2*i,name,2*i+1)
                 eqcode += '    %sarray(%d) = IKacos(c%sarray(%d))\n'%(name,2*i,name,2*i)
-                eqcode += '    s%sarray(%d) = Math.Sin(%sarray(%d))\n'%(name,2*i,name,2*i)
+                eqcode += '    s%sarray(%d) = %s(%sarray(%d))\n'%(name,2*i,self._sinname(),name,2*i)
                 # second solution
                 eqcode += '    c%sarray(%d) = c%sarray(%d)\n'%(name,2*i+1,name,2*i)
                 eqcode += '    %sarray(%d) = -%sarray(%d)\n'%(name,2*i+1,name,2*i)
                 eqcode += '    s%sarray(%d) = -s%sarray(%d)\n'%(name,2*i+1,name,2*i)
-                eqcode += 'ElseIf Double.IsNaN(c%sarray(%d)) Then\n'%(name,2*i)
+                if self.vb6:
+                    eqcode += 'ElseIf Not IsNumeric(c%sarray(%d)) Then\n'%(name,2*i)
+                else:
+                    eqcode += 'ElseIf Double.IsNaN(c%sarray(%d)) Then\n'%(name,2*i)
                 eqcode += '    \' probably any value will work\n'
                 eqcode += '    %svalid(%d) = True\n'%(name,2*i)
                 eqcode += '    c%sarray(%d) = 1\n    s%sarray(%d) = 0\n    %sarray(%d) = 0\n'%(name,2*i,name,2*i,name,2*i)
@@ -677,24 +785,29 @@ End Class
                 eqcode += 'If s%sarray(%d) >= -1.0001 And s%sarray(%d) <= 1.0001 Then\n'%(name,2*i,name,2*i)
                 eqcode += '    %svalid(%d) = %svalid(%d) = True\n'%(name,2*i,name,2*i+1)
                 eqcode += '    %sarray(%d) = IKasin(s%sarray(%d))\n'%(name,2*i,name,2*i)
-                eqcode += '    c%sarray(%d) = Math.Cos(%sarray(%d))\n'%(name,2*i,name,2*i)
+                eqcode += '    c%sarray(%d) = %s(%sarray(%d))\n'%(name,2*i,self._cosname(),name,2*i)
                 # second solution
                 eqcode += '    s%sarray(%d) = s%sarray(%d)\n'%(name,2*i+1,name,2*i)
-                eqcode += '    If %sarray(%d) > 0 Then\n        %sarray(%d)=(IKPI-%sarray(%d))\nElse\n        %sarray(%d)=(-IKPI-%sarray(%d))\n    End If\n'%(name,2*i,name,2*i+1,name,2*i,name,2*i+1,name,2*i)
+                eqcode += '    If %sarray(%d) > 0 Then\n        %sarray(%d)=(IKPI-%sarray(%d))\n    Else\n        %sarray(%d)=(-IKPI-%sarray(%d))\n    End If\n'%(name,2*i,name,2*i+1,name,2*i,name,2*i+1,name,2*i)
                 eqcode += '    c%sarray(%d) = -c%sarray(%d)\n'%(name,2*i+1,name,2*i)
-                eqcode += 'ElseIf Double.IsNaN(s%sarray(%d)) Then\n'%(name,2*i)
+                if self.vb6:
+                    eqcode += 'ElseIf Not IsNumeric(s%sarray(%d)) Then\n'%(name,2*i)
+                else:
+                    eqcode += 'ElseIf Double.IsNaN(s%sarray(%d)) Then\n'%(name,2*i)
                 eqcode += '    \' probably any value will work\n'
                 eqcode += '    %svalid(%d) = True\n'%(name,2*i)
                 eqcode += '    c%sarray(%d) = 1\n    s%sarray(%d) = 0\n    %sarray(%d) = 0\n'%(name,2*i,name,2*i,name,2*i)
                 eqcode += 'End If\n'
 
         code += 'If 1 Then\nDim %sarray(0 To %d), c%sarray(0 To %d), s%sarray(0 To %d) As %s\n'%(name,numsolutions-1,name,numsolutions-1,name,numsolutions-1,self.ikreal)
-        code += 'Dim %svalid() As Boolean = {%s}\n'%(name,','.join('False' for i in range(numsolutions)))
+        code += 'Dim %svalid(0 To %d) As Boolean\n'%(name,numsolutions-1)
+        for i in range(numsolutions):
+            code += '%svalid(%d) = False\n'%(name,i)
         code += eqcode
         for i,j in combinations(range(numsolutions),2):
-            code += 'If %svalid(%d) And %svalid(%d) And Math.Abs(c%sarray(%d)-c%sarray(%d)) < 0.0001 And Math.Abs(s%sarray(%d)-s%sarray(%d)) < 0.0001 Then\n    %svalid(%d)=False\nEnd If\n'%(name,i,name,j,name,i,name,j,name,i,name,j,name,j)
-        code += 'For i%s = 0 To %d\n'%(name,numsolutions-1)
-        code += 'If Not %svalid(i%s) Then\n    Continue For\nEnd If\n'%(name,name)
+            code += 'If %svalid(%d) And %svalid(%d) And %s(c%sarray(%d)-c%sarray(%d)) < 0.0001 And %s(s%sarray(%d)-s%sarray(%d)) < 0.0001 Then\n    %svalid(%d)=False\nEnd If\n'%(name,i,name,j,self._absname(),name,i,name,j,self._absname(),name,i,name,j,name,j)
+        code += self._startforloop('i%s'%name,0,numsolutions)
+        code += 'If Not %svalid(i%s) Then\n%s\nEnd If\n'%(name,name,self.indentCode(self._continueforloop(),4))
         code += '%s = %sarray(i%s)\nc%s = c%sarray(i%s)\ns%s = s%sarray(i%s)\n'%(name,name,name,name,name,name,name,name,name)
         return code
 
@@ -702,7 +815,7 @@ End Class
         if node.HasFreeVar:
             self.freevardependencies.pop()
             return ''
-        return 'Next i%s\nEnd If\n'%(node.jointname)
+        return self._endforloop()+'End If\n'
 
     def generateBranch(self, node):
         origequations = copy.copy(self.dictequations)
@@ -739,7 +852,7 @@ End Class
                 branchcode = 'If 1 Then\n'
             else:
                 branchcode = self.writeEquations(lambda x: 'evalcond',branch[0])
-                branchcode += 'If Math.Abs(evalcond) < 0.00001 Then\n'
+                branchcode += 'If %s(evalcond) < 0.00001 Then\n'%('Abs' if self.vb6 else 'Math.Abs')
             self.dictequations = copy.copy(origequations)
             for n in branch[1]:
                 branchcode += n.generate(self)
@@ -765,7 +878,7 @@ End Class
                         code += ' Or '
                     else:
                         code += ' And '
-                code += 'Math.Abs(%seval(%d)) < %f '%(name,i,node.thresh)
+                code += '%s(%seval(%d)) < %f '%('Abs' if self.vb6 else 'Math.Abs',name,i,node.thresh)
             code += ' Then\n'
             self.dictequations = copy.copy(origequations)
             code += self.indentCode(self.generateTree(node.zerobranch),4)
@@ -783,7 +896,7 @@ End Class
         #print 'free variable ',node.jointname,': ',self.freevars
         self.freevars.append(node.jointname)
         self.freevardependencies.append((node.jointname,node.jointname))
-        code = 'Dim %smul As %s = 1\n%s=0\n'%(node.jointname,self.ikreal,node.jointname)
+        code = 'Dim %smul As %s\n%smul = 1\n%s=0\n'%(node.jointname,self.ikreal,node.jointname,node.jointname)
         return code+self.generateTree(node.jointtree)
     def endFreeParameter(self, node):
         self.freevars.pop()
@@ -795,7 +908,7 @@ End Class
     def endSetJoint(self, node):
         return 'End If\n'
     def generateBreak(self,node):
-        return 'Continue For\n'
+        return self._continueforloop()
     def endBreak(self,node):
         return ''
     def generateRotation(self, node):
@@ -805,7 +918,7 @@ End Class
         for i in range(3):
             for j in range(3):
                 listequations.append(node.T[i,j])
-                names.append(Symbol('_r%d%d'%(i,j)))
+                names.append(Symbol('new_r%d%d'%(i,j)))
         code += self.writeEquations(lambda i: names[i],listequations)
         code += self.generateTree(node.jointtree)
         return code
@@ -817,7 +930,7 @@ End Class
         names = []
         for i in range(3):
             listequations.append(node.D[i])
-            names.append(Symbol('_r%d%d'%(0,i)))
+            names.append(Symbol('new_r%d%d'%(0,i)))
         code += self.writeEquations(lambda i: names[i],listequations)
         code += self.generateTree(node.jointtree)
         return code
@@ -838,7 +951,7 @@ End Class
         for i,varname in enumerate(self.freevars):
             ind = [j for j in range(len(node.alljointvars)) if varname==node.alljointvars[j].name]
             code += 'solution.vfree(%d) = %d\n'%(i,ind[0])
-        code += 'ReDim Preserve vsolutions(0 To UBound(vsolutions)+1)\nvsolutions(UBound(vsolutions)) = solution\n'
+        code += 'ReDim Preserve vsolutions(0 To UBound(vsolutions)+1) As IkSolution\nvsolutions(UBound(vsolutions)) = solution\n'
         return code
     def endStoreSolution(self, node):
         return ''
@@ -863,11 +976,11 @@ End Class
             eqns = filter(lambda x: rep[1]-x[1]==0, self.dictequations)
             if len(eqns) > 0:
                 self.dictequations.append((rep[0],eqns[0][0]))
-                code += 'Dim %s As %s = %s\n'%(rep[0],self.ikreal,eqns[0][0])
+                code += 'Dim %s As %s\n%s = %s\n'%(rep[0],self.ikreal,rep[0],eqns[0][0])
             else:
                 self.dictequations.append(rep)
                 code2,sepcode2 = self.writeExprCode(rep[1])
-                code += sepcode2+'Dim %s As %s = %s\n'%(rep[0],self.ikreal,code2)
+                code += sepcode2+'Dim %s As %s\n%s = %s\n'%(rep[0],self.ikreal,rep[0],code2)
 
         for i,rexpr in enumerate(reduced_exprs):
             code2,sepcode2 = self.writeExprCode(rexpr)
@@ -880,19 +993,19 @@ End Class
         sepcode = ''
         if expr.is_Function:
             if expr.func == abs:
-                code += 'Math.Abs('
+                code += 'Abs(' if self.vb6 else 'Math.Abs('
                 code2,sepcode = self.writeExprCode(expr.args[0])
                 code += code2
             elif expr.func == acos:
                 code += 'IKacos('
                 code2,sepcode = self.writeExprCode(expr.args[0])
                 code += code2
-                sepcode += 'If (%s) < -1.0001 Or (%s) > 1.0001 Then\n    Continue For\nEnd If\n'%(code2,code2)
+                sepcode += 'If (%s) < -1.0001 Or (%s) > 1.0001 Then\n%s\nEnd If\n'%(code2,code2,self.indentCode(self._continueforloop(),4))
             elif expr.func == asin:
                 code += 'IKasin('
                 code2,sepcode = self.writeExprCode(expr.args[0])
                 code += code2
-                sepcode += 'If (%s) < -1.0001 Or (%s) > 1.0001 Then\n    Continue For\nEnd If\n'%(code2,code2)
+                sepcode += 'If (%s) < -1.0001 Or (%s) > 1.0001 Then\n%s\nEnd If\n'%(code2,code2,self.indentCode(self._continueforloop(),4))
             elif expr.func == atan2:
                 code += 'IKatan2('
                 # check for divides by 0 in arguments, this could give two possible solutions?!?
@@ -907,7 +1020,7 @@ End Class
 #                     # probably already have initialized
 #                     code += '(s%s'%expr.args[0].name
 #                 else:
-                code += 'Math.Sin('
+                code += '%s('%(self._sinname())
                 code2,sepcode = self.writeExprCode(expr.args[0])
                 code += code2
             elif expr.func == cos:
@@ -915,7 +1028,7 @@ End Class
 #                     # probably already have initialized
 #                     code += '(c%s'%expr.args[0].name
 #                 else:
-                code += 'Math.Cos('
+                code += '%s('%(self._cosname())
                 code2,sepcode = self.writeExprCode(expr.args[0])
                 code += code2
             else:
@@ -945,7 +1058,7 @@ End Class
                         code += '*('+exprbase+')'
                     return code,sepcode
                 elif expr.exp-0.5 == 0:
-                    sepcode += 'If (%s) < -0.00001 Then\n    Continue For\nEnd If'%exprbase
+                    sepcode += 'If (%s) < -0.00001 Then\n%s\nEnd If'%(exprbase,self.indentCode(self._continueforloop(),4))
                     return 'IKsqrt('+exprbase+')',sepcode
                 elif expr.exp < 0:
                     # check if exprbase is 0
@@ -976,3 +1089,7 @@ End Class
             lcode[loc+1:0] = insertcode
         lcode[:0] = insertcode
         return ''.join(lcode)
+
+class CodeGeneratorVB6(CodeGenerator):
+    def __init__(self):
+        self.vb6 = True

@@ -329,21 +329,21 @@ int main(int argc, char** argv)
 
         for i in range(3):
             for j in range(3):
-                fcode += "_r%d%d, r%d%d = eerot[%d*3+%d],\n"%(i,j,i,j,i,j)
-        fcode += "_px, _py, _pz, px = eetrans[0], py = eetrans[1], pz = eetrans[2];\n\n"
+                fcode += "new_r%d%d, r%d%d = eerot[%d*3+%d],\n"%(i,j,i,j,i,j)
+        fcode += "new_px, new_py, new_pz, px = eetrans[0], py = eetrans[1], pz = eetrans[2];\n\n"
         
-        rotsubs = [(Symbol("r%d%d"%(i,j)),Symbol("_r%d%d"%(i,j))) for i in range(3) for j in range(3)]
-        rotsubs += [(Symbol("px"),Symbol("_px")),(Symbol("py"),Symbol("_py")),(Symbol("pz"),Symbol("_pz"))]
+        rotsubs = [(Symbol("r%d%d"%(i,j)),Symbol("new_r%d%d"%(i,j))) for i in range(3) for j in range(3)]
+        rotsubs += [(Symbol("px"),Symbol("new_px")),(Symbol("py"),Symbol("new_py")),(Symbol("pz"),Symbol("new_pz"))]
 
-        psymbols = ["_px","_py","_pz"]
+        psymbols = ["new_px","new_py","new_pz"]
         for i in range(3):
             for j in range(3):
-                fcode += self.writeEquations(lambda k: "_r%d%d"%(i,j),node.Tee[4*i+j])
+                fcode += self.writeEquations(lambda k: "new_r%d%d"%(i,j),node.Tee[4*i+j])
             fcode += self.writeEquations(lambda k: psymbols[i],node.Tee[4*i+3])
         for i in range(3):
             for j in range(3):
-                fcode += "r%d%d = _r%d%d; "%(i,j,i,j)
-        fcode += "px = _px; py = _py; pz = _pz;\n"
+                fcode += "r%d%d = new_r%d%d; "%(i,j,i,j)
+        fcode += "px = new_px; py = new_py; pz = new_pz;\n"
 
         fcode += self.generateTree(node.jointtree)
         code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
@@ -405,19 +405,19 @@ int main(int argc, char** argv)
             fcode += '%s=pfree[%d], c%s=cos(pfree[%d]), s%s=sin(pfree[%d]),\n'%(name,i,name,i,name,i)
         for i in range(3):
             for j in range(3):
-                fcode += "_r%d%d, r%d%d = eerot[%d*3+%d]"%(i,j,i,j,i,j)
+                fcode += "new_r%d%d, r%d%d = eerot[%d*3+%d]"%(i,j,i,j,i,j)
                 if i == 2 and j == 2:
                     fcode += ';\n\n'
                 else:
                     fcode += ',\n'
         
-        rotsubs = [(Symbol("r%d%d"%(i,j)),Symbol("_r%d%d"%(i,j))) for i in range(3) for j in range(3)]
+        rotsubs = [(Symbol("r%d%d"%(i,j)),Symbol("new_r%d%d"%(i,j))) for i in range(3) for j in range(3)]
         for i in range(3):
             for j in range(3):
-                fcode += self.writeEquations(lambda k: "_r%d%d"%(i,j),node.Ree[i,j])
+                fcode += self.writeEquations(lambda k: "new_r%d%d"%(i,j),node.Ree[i,j])
         for i in range(3):
             for j in range(3):
-                fcode += "r%d%d = _r%d%d; "%(i,j,i,j)
+                fcode += "r%d%d = new_r%d%d; "%(i,j,i,j)
         fcode += '\n'
         fcode += self.generateTree(node.jointtree)
         code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
@@ -481,12 +481,12 @@ int main(int argc, char** argv)
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
             fcode += '%s=pfree[%d], c%s=cos(pfree[%d]), s%s=sin(pfree[%d]),\n'%(name,i,name,i,name,i)
-        fcode += "_px, _py, _pz, px = eetrans[0], py = eetrans[1], pz = eetrans[2];\n\n"
-        rotsubs = [(Symbol("px"),Symbol("_px")),(Symbol("py"),Symbol("_py")),(Symbol("pz"),Symbol("_pz"))]
-        psymbols = ["_px","_py","_pz"]
+        fcode += "new_px, new_py, new_pz, px = eetrans[0], py = eetrans[1], pz = eetrans[2];\n\n"
+        rotsubs = [(Symbol("px"),Symbol("new_px")),(Symbol("py"),Symbol("new_py")),(Symbol("pz"),Symbol("new_pz"))]
+        psymbols = ["new_px","new_py","new_pz"]
         for i in range(3):
             fcode += self.writeEquations(lambda k: psymbols[i],node.Pee[i])
-        fcode += "px = _px; py = _py; pz = _pz;\n"
+        fcode += "px = new_px; py = new_py; pz = new_pz;\n"
         fcode += self.generateTree(node.jointtree)
         code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
         return code
@@ -551,17 +551,17 @@ int main(int argc, char** argv)
             fcode += '%s=pfree[%d], c%s=cos(pfree[%d]), s%s=sin(pfree[%d]),\n'%(name,i,name,i,name,i)
 
         for i in range(3):
-            fcode += "_r0%d, r0%d = eerot[%d]"%(i,i,i)
+            fcode += "new_r0%d, r0%d = eerot[%d]"%(i,i,i)
             if i == 2:
                 fcode += ';\n\n'
             else:
                 fcode += ',\n'
-        rotsubs = [(Symbol("r%d%d"%(0,i)),Symbol("_r%d%d"%(0,i))) for i in range(3)]
+        rotsubs = [(Symbol("r%d%d"%(0,i)),Symbol("new_r%d%d"%(0,i))) for i in range(3)]
 
         for i in range(3):
-            fcode += self.writeEquations(lambda k: "_r%d%d"%(0,i),node.Dee[i])
+            fcode += self.writeEquations(lambda k: "new_r%d%d"%(0,i),node.Dee[i])
         for i in range(3):
-            fcode += "r0%d = _r0%d; "%(i,i)
+            fcode += "r0%d = new_r0%d; "%(i,i)
 
         fcode += self.generateTree(node.jointtree)
         code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
@@ -628,20 +628,20 @@ int main(int argc, char** argv)
             name = node.freejointvars[i][0].name
             fcode += '%s=pfree[%d], c%s=cos(pfree[%d]), s%s=sin(pfree[%d]),\n'%(name,i,name,i,name,i)
         for i in range(3):
-            fcode += "_r0%d, r0%d = eerot[%d],\n"%(i,i,i)
-        fcode += "_px, _py, _pz, px = eetrans[0], py = eetrans[1], pz = eetrans[2];\n"
+            fcode += "new_r0%d, r0%d = eerot[%d],\n"%(i,i,i)
+        fcode += "new_px, new_py, new_pz, px = eetrans[0], py = eetrans[1], pz = eetrans[2];\n"
 
-        rotsubs = [(Symbol("r%d%d"%(0,i)),Symbol("_r%d%d"%(0,i))) for i in range(3)]
-        rotsubs += [(Symbol("px"),Symbol("_px")),(Symbol("py"),Symbol("_py")),(Symbol("pz"),Symbol("_pz"))]
+        rotsubs = [(Symbol("r%d%d"%(0,i)),Symbol("new_r%d%d"%(0,i))) for i in range(3)]
+        rotsubs += [(Symbol("px"),Symbol("new_px")),(Symbol("py"),Symbol("new_py")),(Symbol("pz"),Symbol("new_pz"))]
 
-        psymbols = ["_px","_py","_pz"]
+        psymbols = ["new_px","new_py","new_pz"]
         for i in range(3):
-            fcode += self.writeEquations(lambda k: "_r%d%d"%(0,i),node.Dee[i])
+            fcode += self.writeEquations(lambda k: "new_r%d%d"%(0,i),node.Dee[i])
             fcode += self.writeEquations(lambda k: psymbols[i],node.Pee[i])
         for i in range(3):
-            fcode += "r0%d = _r0%d; "%(i,i)
-        fcode += "\nIKReal _pdotd = _px*_r00+_py*_r01+_pz*_r02;\n"
-        fcode += "px = _px-_pdotd * _r00; py = _py- _pdotd * _r01; pz = _pz - _pdotd * _r02;\n\n"
+            fcode += "r0%d = new_r0%d; "%(i,i)
+        fcode += "\nIKReal new_pdotd = new_px*new_r00+new_py*new_r01+new_pz*new_r02;\n"
+        fcode += "px = new_px-new_pdotd * new_r00; py = new_py- new_pdotd * new_r01; pz = new_pz - new_pdotd * new_r02;\n\n"
 
         fcode += self.generateTree(node.jointtree)
         code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
@@ -852,7 +852,7 @@ int main(int argc, char** argv)
         for i in range(3):
             for j in range(3):
                 listequations.append(node.T[i,j])
-                names.append(Symbol('_r%d%d'%(i,j)))
+                names.append(Symbol('new_r%d%d'%(i,j)))
         code += self.writeEquations(lambda i: names[i],listequations)
         code += self.generateTree(node.jointtree)
         return code
@@ -864,7 +864,7 @@ int main(int argc, char** argv)
         names = []
         for i in range(3):
             listequations.append(node.D[i])
-            names.append(Symbol('_r%d%d'%(0,i)))
+            names.append(Symbol('new_r%d%d'%(0,i)))
         code += self.writeEquations(lambda i: names[i],listequations)
         code += self.generateTree(node.jointtree)
         return code

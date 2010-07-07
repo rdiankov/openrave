@@ -75,12 +75,14 @@ Logging
 
 Here is an example on how to save the current scene using the '''logging''' plugin:
 
-from openravepy import *
-env = Environment() # create openrave environment
-env.Load('data/lab1.env.xml') # load a simple scene
-logger = env.CreateProblem('logging')
-logger.SendCommand('savescene filename myscene.env.xml')
-env.Destroy() # explicitly destroy the environment once done with it
+.. code-block:: python
+
+  from openravepy import *
+  env = Environment() # create openrave environment
+  env.Load('data/lab1.env.xml') # load a simple scene
+  logger = env.CreateProblem('logging')
+  logger.SendCommand('savescene filename myscene.env.xml')
+  env.Destroy() # explicitly destroy the environment once done with it
 
 Usage
 -----
