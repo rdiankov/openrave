@@ -988,7 +988,10 @@ End Class
         return ''
     def generateStoreSolution(self, node):
         code = 'solution = New IKSolution\n'
-        code += 'ReDim solution.basesol(0 To %d)\n'%len(node.alljointvars)
+        if self.vb6:
+            code += 'ReDim solution.basesol(0 To %d) As IKBaseSolution\n'%len(node.alljointvars)
+        else:
+            code += 'ReDim solution.basesol(0 To %d)\n'%len(node.alljointvars)
         for i,var in enumerate(node.alljointvars):
             code += 'solution.basesol(%d).foffset = %s\n'%(i,var)            
             vardeps = [vardep for vardep in self.freevardependencies if vardep[1]==var.name]
@@ -997,11 +1000,14 @@ End Class
                 ifreevar = [j for j in range(len(self.freevars)) if freevarname==self.freevars[j]]
                 code += 'solution.basesol(%d).fmul = %smul\n'%(i,var.name)
                 code += 'solution.basesol(%d).freeind = %d\n'%(i,ifreevar[0])
-        code += 'ReDim solution.vfree(0 To %d)\n'%len(self.freevars)
+        if self.vb6:
+            code += 'ReDim solution.vfree(0 To %d) As Integer\n'%len(self.freevars)
+        else:
+            code += 'ReDim solution.vfree(0 To %d)\n'%len(self.freevars)
         for i,varname in enumerate(self.freevars):
             ind = [j for j in range(len(node.alljointvars)) if varname==node.alljointvars[j].name]
             code += 'solution.vfree(%d) = %d\n'%(i,ind[0])
-        code += 'ReDim Preserve vsolutions(0 To UBound(vsolutions)+1) As IkSolution\nvsolutions(UBound(vsolutions)) = solution\n'
+        code += 'ReDim Preserve vsolutions(0 To UBound(vsolutions)+1) As IKSolution\nvsolutions(UBound(vsolutions)) = solution\n'
         return code
     def endStoreSolution(self, node):
         return ''
