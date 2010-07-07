@@ -77,20 +77,20 @@ class CodeGenerator(AutoReloader):
         if self.vb6:
             self.globalid += 1
             self.forloops.append((counter,'looplabel%d'%self.globalid))
-            return 'Dim %s As Integer\n%s = %s\nDo While %s < %s\n%s:\n'%(counter,counter,start,counter,end,self.forloops[-1][1])
+            return 'Dim %s As Integer\n%s = %s\nDo While %s < %s\n'%(counter,counter,start,counter,end)
         else:
             self.forloops.append(counter)
             return 'For %s = %s To %s Then\n'%(counter,start,end-1)
     def _endforloop(self):
         if self.vb6:
-            counter = self.forloops.pop()[0]
-            return '%s = %s+1\nLoop\n'%(counter,counter)
+            counter,label = self.forloops.pop()
+            return '%s:\n%s = %s+1\nLoop\n'%(label,counter,counter)
         else:
             counter = self.forloops.pop()
             return 'Next\n'%(counter)
     def _continueforloop(self):
         if self.vb6:
-            return '%s = %s+1\nGoto %s\n'%(self.forloops[-1][0],self.forloops[-1][0],self.forloops[-1][1])
+            return 'GoTo %s\n'%(self.forloops[-1][1])
         else:
             return 'Continue For\n'
 
@@ -121,20 +121,45 @@ class CodeGenerator(AutoReloader):
 """%(str(datetime.datetime.now()))
         if self.vb6:
             code += """
-Const IK2PI As Double =  6.28318530717959
-Const IKPI As Double = 3.14159265358979
-Const IKPI_2 As Double =  1.57079632679490
+'' put in IKBaseSolution.cls file
+'VERSION 1.0 CLASS
+'BEGIN
+'  MultiUse = -1  'True
+'  Persistable = 0  'NotPersistable
+'  DataBindingBehavior = 0  'vbNone
+'  DataSourceBehavior  = 0  'vbNone
+'  MTSTransactionMode  = 0  'NotAnMTSObject
+'END
+'Attribute VB_Name = "IKBaseSolution"
+'Attribute VB_GlobalNameSpace = False
+'Attribute VB_Creatable = True
+'Attribute VB_PredeclaredId = False
+'Attribute VB_Exposed = False
+'Public fmul, foffset As %s
+'Public freeind As Integer
 
-Public Class IKBaseSolution
-    Public fmul, foffset As %s
-    Public freeind As Integer
-End Class
+'' put in IKSolution.cls file
+'VERSION 1.0 CLASS
+'BEGIN
+'  MultiUse = -1  'True
+'  Persistable = 0  'NotPersistable
+'  DataBindingBehavior = 0  'vbNone
+'  DataSourceBehavior  = 0  'vbNone
+'  MTSTransactionMode  = 0  'NotAnMTSObject
+'END
+'Attribute VB_Name = "IKSolution"
+'Attribute VB_GlobalNameSpace = False
+'Attribute VB_Creatable = True
+'Attribute VB_PredeclaredId = False
+'Attribute VB_Exposed = False
+'Public basesol() As IKBaseSolution
+'Public vfree() As Integer
 
-Public Class IKSolution
-    Public basesol() As IKBaseSolution
-    Public vfree() As Integer  
-End Class
-"""%(self.ikreal)
+Const IK2PI As %s =  6.28318530717959
+Const IKPI As %s = 3.14159265358979
+Const IKPI_2 As %s =  1.57079632679490
+
+"""%(self.ikreal,self.ikreal,self.ikreal,self.ikreal)
             code += """
 Public Function IKasin(ByVal f As %s) As %s
     If f <= -1 Then
@@ -211,9 +236,9 @@ End Function
             code += """
 Imports System
 
-Const IK2PI As Double =  6.28318530717959
-Const IKPI As Double = 3.14159265358979
-Const IKPI_2 As Double =  1.57079632679490
+Const IK2PI As %s =  6.28318530717959
+Const IKPI As %s = 3.14159265358979
+Const IKPI_2 As %s =  1.57079632679490
 
 Public Class IKBaseSolution
     Public fmul, foffset As %s
@@ -224,7 +249,7 @@ Public Class IKSolution
     Public basesol() As IKBaseSolution
     Public vfree() As Integer  
 End Class
-"""%(self.ikreal)
+"""%(self.ikreal,self.ikreal,self.ikreal,self.ikreal)
             code += """
 Public Function IKasin(ByVal f As %s) As %s
     If f <= -1 Then
@@ -637,7 +662,32 @@ End Class
         #code += "Public Function getIKRealSize() As Integer\n    return sizeof(IKReal); }\n\n"
         code += 'Public Function getIKType() As Integer\n    getIKType = %d\nEnd Function\n'%IkType.Ray4D
         
-        code += """
+        if self.vb6:
+            code += """
+'' put in Ray.cls file
+'VERSION 1.0 CLASS
+'BEGIN
+'  MultiUse = -1  'True
+'  Persistable = 0  'NotPersistable
+'  DataBindingBehavior = 0  'vbNone
+'  DataSourceBehavior  = 0  'vbNone
+'  MTSTransactionMode  = 0  'NotAnMTSObject
+'END
+'Attribute VB_Name = "Ray"
+'Attribute VB_GlobalNameSpace = False
+'Attribute VB_Creatable = True
+'Attribute VB_PredeclaredId = False
+'Attribute VB_Exposed = False
+'Public x As Double
+'Public y As Double
+'Public z As Double
+'Public i As Double
+'Public j As Double
+'Public k As Double
+
+"""
+        else:
+            code += """
 Public Class Ray
     Public x As %s
     Public y As %s
