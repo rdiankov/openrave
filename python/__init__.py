@@ -161,17 +161,18 @@ The openrave.py script is an attempt to make the command line parameters for ope
 
 - Can start a database generation process::
 
-   openrave.py --database="inversekinematics --robot=robots/pa10.robot.xml"
+    openrave.py --database="inversekinematics --robot=robots/pa10.robot.xml"
 
 - Can execute an example::
 
-   openrave.py --example="graspplanning"
+    openrave.py --example="graspplanning"
 
 - Can query all executable databases::
 
-  openrave.py --database=
+    openrave.py --database=
 
   **Output**::
+
     bad database generator, current list of executable generators are:
      convexdecomposition
      grasping
