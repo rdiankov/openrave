@@ -201,16 +201,23 @@ class ConvexDecompositionModel(OpenRAVEModel):
                           help='Whether or not to perform island generation at each split.  Currently disabled due to bug in RemoveTjunctions (default=%default).')
         return parser
     @staticmethod
-    def RunFromParser(Model=None,parser=None):
+    def RunFromParser(Model=None,parser=None,**kwargs):
+        """Executes the ConvexDecompositionModel database generation
+        """
         if parser is None:
             parser = ConvexDecompositionModel.CreateOptionParser()
         env = Environment()
         try:
             if Model is None:
                 Model = lambda robot: ConvexDecompositionModel(robot=robot)
-            OpenRAVEModel.RunFromParser(env=env,Model=Model,parser=parser)
+            OpenRAVEModel.RunFromParser(env=env,Model=Model,parser=parser,**kwargs)
         finally:
             env.Destroy()
 
+def run(*args,**kwargs):
+    """Executes the convexdecomposition database generation
+    """
+    ConvexDecompositionModel.RunFromParser(*args,**kwargs)
+
 if __name__=='__main__':
-    ConvexDecompositionModel.RunFromParser()
+    run()

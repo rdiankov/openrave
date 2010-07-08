@@ -394,16 +394,21 @@ class LinkStatisticsModel(OpenRAVEModel):
                           help='Skin width on the convex hulls generated (default=0.01)')
         return parser
     @staticmethod
-    def RunFromParser(Model=None,parser=None):
+    def RunFromParser(Model=None,parser=None,**kwargs):
         if parser is None:
             parser = LinkStatisticsModel.CreateOptionParser()
         env = Environment()
         try:
             if Model is None:
                 Model = lambda robot: LinkStatisticsModel(robot=robot)
-            OpenRAVEModel.RunFromParser(env=env,Model=Model,parser=parser)
+            OpenRAVEModel.RunFromParser(env=env,Model=Model,parser=parser,**kwargs)
         finally:
             env.Destroy()
 
+def run(*args,**kwargs):
+    """Executes the linkstatistics database generation
+    """
+    LinkStatisticsModel.RunFromParser(*args,**kwargs)
+
 if __name__=='__main__':
-    LinkStatisticsModel.RunFromParser()
+    run()

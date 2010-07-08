@@ -72,12 +72,14 @@ class CodeGenerator(AutoReloader):
     vb6 = False
     globalid = 0
     forloops = []
+    dimvariables = []
+    rayclassname = 'Ray'
 
     def _startforloop(self,counter,start,end):
         if self.vb6:
             self.globalid += 1
             self.forloops.append((counter,'looplabel%d'%self.globalid))
-            return 'Dim %s As Integer\n%s = %s\nDo While %s < %s\n'%(counter,counter,start,counter,end)
+            return '%s = %s\nDo While %s < %s\n'%(counter,start,counter,end)
         else:
             self.forloops.append(counter)
             return 'For %s = %s To %s Then\n'%(counter,start,end-1)
@@ -171,7 +173,7 @@ Public Function IKasin(ByVal f As %s) As %s
     End If
 End Function
 
-Public Function IKacos(f As %s) As %s
+Public Function IKacos(ByVal f As %s) As %s
     If f <= -1 Then
         IKacos = IKPI
     ElseIf f >= 1 Then
@@ -181,7 +183,7 @@ Public Function IKacos(f As %s) As %s
     End If
 End Function
 
-Public Function IKatan2(y As %s, x As %s) As %s
+Public Function IKatan2(ByVal y As %s, ByVal x As %s) As %s
     If Not IsNumeric(y) Then
         IKatan2 = IKPI_2
     ElseIf  Not IsNumeric(x) Then
@@ -207,7 +209,7 @@ Public Function IKatan2(y As %s, x As %s) As %s
     End If
 End Function
 
-Public Function IKsqrt(f As %s) As %s
+Public Function IKsqrt(ByVal f As %s) As %s
     If f <= 0.0 Then
         IKsqrt = 0
     Else
@@ -215,7 +217,7 @@ Public Function IKsqrt(f As %s) As %s
     End If
 End Function
 
-Public Function IKdiv(f As %s) As %s
+Public Function IKdiv(ByVal f As %s) As %s
     If Abs(f) <= 0.0 Then
         IKdiv = 1.0e30
     Else
@@ -224,7 +226,7 @@ Public Function IKdiv(f As %s) As %s
 End Function
 
 ' assumes exp < 0
-Public Function IKnegpow(f As %s, exp As %s) As %s
+Public Function IKnegpow(ByVal f As %s, ByVal exp As %s) As %s
     If Abs(f) <= 0.0 Then
         IKnegpow = 1.0e30
     Else
@@ -664,7 +666,7 @@ End Class
         
         if self.vb6:
             code += """
-'' put in Ray.cls file
+'' put in %s.cls file
 'VERSION 1.0 CLASS
 'BEGIN
 '  MultiUse = -1  'True
@@ -673,7 +675,7 @@ End Class
 '  DataSourceBehavior  = 0  'vbNone
 '  MTSTransactionMode  = 0  'NotAnMTSObject
 'END
-'Attribute VB_Name = "Ray"
+'Attribute VB_Name = "%s"
 'Attribute VB_GlobalNameSpace = False
 'Attribute VB_Creatable = True
 'Attribute VB_PredeclaredId = False
@@ -685,10 +687,10 @@ End Class
 'Public j As Double
 'Public k As Double
 
-"""
+"""%(self.rayclassname,self.rayclassname)
         else:
             code += """
-Public Class Ray
+Public Class %s
     Public x As %s
     Public y As %s
     Public z As %s
@@ -696,11 +698,11 @@ Public Class Ray
     Public j As %s
     Public k As %s
 End Class
-"""%(self.ikreal,self.ikreal,self.ikreal,self.ikreal,self.ikreal,self.ikreal)
+"""%(self.rayclassname,self.ikreal,self.ikreal,self.ikreal,self.ikreal,self.ikreal,self.ikreal)
         if node.Dfk and node.Pfk:
             code += "' solves the forward kinematics equations.\n"
             code += "' pfree is an array specifying the free joints of the chain.\n"
-            code += "Public Function fk(j() As %s) As Ray\n    Dim output As New Ray\n"%(self.ikreal)
+            code += "Public Function fk(j() As %s) As %s\n    Dim output As New %s\n"%(self.ikreal,self.rayclassname,self.rayclassname)
             allvars = node.solvejointvars + node.freejointvars
             allsubs = [(v[0],Symbol('j(%d)'%v[1])) for v in allvars]
             eqs = []
@@ -719,11 +721,16 @@ End Class
             for i in range(len(outputnames)):
                 fcode += self.writeEquations(lambda k: outputnames[i],reduced_exprs[i])
             code += self.indentCode(fcode,4)
-            code += 'fk = output\nEnd Function\n'
+            code += 'Set fk = output\nEnd Function\n'
         code += "' solves the inverse kinematics equations.\n"
         code += "' pfree is an array specifying the free joints of the chain.\n"
-        code += "Public Function ik(inray As Ray, pfree As %s, ByRef vsolutions() As IKSolution) As Boolean\n"%(self.ikreal)
-        fcode = "Dim solution As IKSolution\nErase vsolutions\n"
+        code += "Public Function ik(inray As %s, pfree As %s, ByRef vsolutions() As IKSolution) As Boolean\n"%(self.rayclassname,self.ikreal)
+        fcode = "Dim solution As IKSolution\n"
+        if self.vb6:
+            fcode += "Dim basesol as VARIABLE\n"
+        fcode += "Dim numsolutions As Integer\nnumsolutions = 0\n"
+        fcode += 'Dim dummyiter As Integer\n'
+        fcode += 'Dim evalcond As %s\n'%(self.ikreal)
         fcode += self._startforloop('dummyiter',0,1)
         fcode += 'Dim '        
         for var in node.solvejointvars:
@@ -749,8 +756,19 @@ End Class
             fcode += "r0%d = new_r0%d\n"%(i,i)
         fcode += "\nDim new_pdotd As %s\nnew_pdotd = new_px*new_r00+new_py*new_r01+new_pz*new_r02\n"%(self.ikreal)
         fcode += "px = new_px-new_pdotd * new_r00\npy = new_py- new_pdotd * new_r01\npz = new_pz - new_pdotd * new_r02\n\n"
-        fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + self._endforloop()+ "ik = UBound(vsolutions)>0\nEnd Function\n"
+        for var in node.solvejointvars:
+            name = var[0].name
+            fcode += 'Dim %sarray(), c%sarray(), s%sarray(), %seval() As %s\n'%(name,name,name,name,self.ikreal)
+            fcode += 'Dim i%s As Integer\n'%(name)
+            fcode += 'Dim %smul As %s\n'%(name,self.ikreal)
+            fcode += 'Dim %svalid() As %s\n'%(name,self.ikreal)
+        self.dimvariables = []
+        treecode = self.generateTree(node.jointtree)
+        dimvariables = dict(map(lambda i: (i,1),self.dimvariables)).keys()
+        if len(dimvariables) > 0:
+            fcode += 'Dim %s As %s\n'%(','.join(name for name in dimvariables),self.ikreal)
+        fcode += treecode
+        code += self.indentCode(fcode,4) + self._endforloop()+ "Set ik = numsolutions>0\nEnd Function\n"
         return code
     def endIKChainRay4D(self, node):
         return ''
@@ -778,7 +796,6 @@ End Class
                         if m is not None:
                             self.freevardependencies.append((freevar,name))
                             assert(len(node.jointeval)==1)
-                            code += 'Dim %smul As %s\n'%(name,self.ikreal)
                             code += self.writeEquations(lambda i: '%smul'%name, m[a])
                             code += self.writeEquations(lambda i: name, m[b])
                             node.HasFreeVar = True
@@ -813,7 +830,7 @@ End Class
             eqcode += self.writeEquations(lambda i: 'c%sarray(%d)'%(name,2*i),node.jointevalcos)
             for i in range(len(node.jointevalcos)):
                 eqcode += 'If c%sarray(%d) >= -1.0001 And c%sarray(%d) <= 1.0001 Then\n'%(name,2*i,name,2*i)
-                eqcode += '    %svalid(%d) = %svalid(%d) = True\n'%(name,2*i,name,2*i+1)
+                eqcode += '    %svalid(%d) = True\n    %svalid(%d) = True\n'%(name,2*i,name,2*i+1)
                 eqcode += '    %sarray(%d) = IKacos(c%sarray(%d))\n'%(name,2*i,name,2*i)
                 eqcode += '    s%sarray(%d) = %s(%sarray(%d))\n'%(name,2*i,self._sinname(),name,2*i)
                 # second solution
@@ -833,7 +850,7 @@ End Class
             eqcode += self.writeEquations(lambda i: 's%sarray(%d)'%(name,2*i),node.jointevalsin)
             for i in range(len(node.jointevalsin)):
                 eqcode += 'If s%sarray(%d) >= -1.0001 And s%sarray(%d) <= 1.0001 Then\n'%(name,2*i,name,2*i)
-                eqcode += '    %svalid(%d) = %svalid(%d) = True\n'%(name,2*i,name,2*i+1)
+                eqcode += '    %svalid(%d) = True\n    %svalid(%d) = True\n'%(name,2*i,name,2*i+1)
                 eqcode += '    %sarray(%d) = IKasin(s%sarray(%d))\n'%(name,2*i,name,2*i)
                 eqcode += '    c%sarray(%d) = %s(%sarray(%d))\n'%(name,2*i,self._cosname(),name,2*i)
                 # second solution
@@ -849,8 +866,8 @@ End Class
                 eqcode += '    c%sarray(%d) = 1\n    s%sarray(%d) = 0\n    %sarray(%d) = 0\n'%(name,2*i,name,2*i,name,2*i)
                 eqcode += 'End If\n'
 
-        code += 'If 1 Then\nDim %sarray(0 To %d), c%sarray(0 To %d), s%sarray(0 To %d) As %s\n'%(name,numsolutions-1,name,numsolutions-1,name,numsolutions-1,self.ikreal)
-        code += 'Dim %svalid(0 To %d) As Boolean\n'%(name,numsolutions-1)
+        code += 'If 1 Then\nReDim %sarray(0 To %d)\nReDim c%sarray(0 To %d)\nReDim s%sarray(0 To %d)\n'%(name,numsolutions-1,name,numsolutions-1,name,numsolutions-1)
+        code += 'ReDim %svalid(0 To %d)\n'%(name,numsolutions-1)
         for i in range(numsolutions):
             code += '%svalid(%d) = False\n'%(name,i)
         code += eqcode
@@ -870,7 +887,7 @@ End Class
     def generateBranch(self, node):
         origequations = copy.copy(self.dictequations)
         name = node.jointname
-        code = 'If 1 Then\nDim %seval As %s\n'%(name,self.ikreal)
+        code = 'If 1 Then\n'
         code += self.writeEquations(lambda x: '%seval'%name,[node.jointeval])
         numif = 1
         for branch in node.jointbranches:
@@ -895,8 +912,6 @@ End Class
     def generateBranchConds(self, node):
         origequations = copy.copy(self.dictequations)
         code = 'If 1 Then\n'
-        if any([branch[0] for branch in node.jointbranches]):
-            code += 'Dim evalcond As %s\n'%(self.ikreal)
         for branch in node.jointbranches:
             if branch[0] is None:
                 branchcode = 'If 1 Then\n'
@@ -917,7 +932,7 @@ End Class
     def generateCheckZeros(self, node):
         origequations = copy.copy(self.dictequations)
         name = node.jointname
-        code = 'Dim %seval(0 To %d) As %s\n'%(name,len(node.jointcheckeqs)-1,self.ikreal)
+        code = 'ReDim %seval(0 To %d)\n'%(name,len(node.jointcheckeqs)-1)
         code += self.writeEquations(lambda i: '%seval(%d)'%(name,i),node.jointcheckeqs)
         hasif=False
         if len(node.jointcheckeqs) > 0:
@@ -946,7 +961,7 @@ End Class
         #print 'free variable ',node.jointname,': ',self.freevars
         self.freevars.append(node.jointname)
         self.freevardependencies.append((node.jointname,node.jointname))
-        code = 'Dim %smul As %s\n%smul = 1\n%s=0\n'%(node.jointname,self.ikreal,node.jointname,node.jointname)
+        code = '%smul = 1\n%s=0\n'%(node.jointname,node.jointname)
         return code+self.generateTree(node.jointtree)
     def endFreeParameter(self, node):
         self.freevars.pop()
@@ -986,12 +1001,17 @@ End Class
         return code
     def endDirection(self, node):
         return ''
-    def generateStoreSolution(self, node):
+    def startSolution(self,numjointvars,numfreevars):
         code = 'solution = New IKSolution\n'
         if self.vb6:
-            code += 'ReDim solution.basesol(0 To %d) As IKBaseSolution\n'%len(node.alljointvars)
+            code += 'ReDim solution.basesol(0 To %d) As IKBaseSolution\n'%numjointvars
+            code += 'ReDim solution.vfree(0 To %d) As Integer\n'%numfreevars
         else:
-            code += 'ReDim solution.basesol(0 To %d)\n'%len(node.alljointvars)
+            code += 'ReDim solution.basesol(0 To %d)\n'%numjointvars
+            code += 'ReDim solution.vfree(0 To %d)\n'%numfreevars
+        return code
+    def generateStoreSolution(self, node):
+        code = self.startSolution(len(node.alljointvars), len(self.freevars))
         for i,var in enumerate(node.alljointvars):
             code += 'solution.basesol(%d).foffset = %s\n'%(i,var)            
             vardeps = [vardep for vardep in self.freevardependencies if vardep[1]==var.name]
@@ -1000,14 +1020,10 @@ End Class
                 ifreevar = [j for j in range(len(self.freevars)) if freevarname==self.freevars[j]]
                 code += 'solution.basesol(%d).fmul = %smul\n'%(i,var.name)
                 code += 'solution.basesol(%d).freeind = %d\n'%(i,ifreevar[0])
-        if self.vb6:
-            code += 'ReDim solution.vfree(0 To %d) As Integer\n'%len(self.freevars)
-        else:
-            code += 'ReDim solution.vfree(0 To %d)\n'%len(self.freevars)
         for i,varname in enumerate(self.freevars):
             ind = [j for j in range(len(node.alljointvars)) if varname==node.alljointvars[j].name]
             code += 'solution.vfree(%d) = %d\n'%(i,ind[0])
-        code += 'ReDim Preserve vsolutions(0 To UBound(vsolutions)+1) As IKSolution\nvsolutions(UBound(vsolutions)) = solution\n'
+        code += 'If numsolutions > 0 Then\n    ReDim Preserve vsolutions(0 To numsolutions) As IKSolution\nElse\n    ReDim vsolutions(0 To 0) As IKSolution\nEnd If\nSet vsolutions(numsolutions) = solution\nnumsolutions = numsolutions + 1\n'
         return code
     def endStoreSolution(self, node):
         return ''
@@ -1032,11 +1048,13 @@ End Class
             eqns = filter(lambda x: rep[1]-x[1]==0, self.dictequations)
             if len(eqns) > 0:
                 self.dictequations.append((rep[0],eqns[0][0]))
-                code += 'Dim %s As %s\n%s = %s\n'%(rep[0],self.ikreal,rep[0],eqns[0][0])
+                self.dimvariables.append(str(rep[0]))
+                code += '%s = %s\n'%(rep[0],eqns[0][0])
             else:
                 self.dictequations.append(rep)
                 code2,sepcode2 = self.writeExprCode(rep[1])
-                code += sepcode2+'Dim %s As %s\n%s = %s\n'%(rep[0],self.ikreal,rep[0],code2)
+                self.dimvariables.append(str(rep[0]))
+                code += sepcode2+'%s = %s\n'%(rep[0],code2)
 
         for i,rexpr in enumerate(reduced_exprs):
             code2,sepcode2 = self.writeExprCode(rexpr)
@@ -1149,3 +1167,26 @@ End Class
 class CodeGeneratorVB6(CodeGenerator):
     def __init__(self):
         self.vb6 = True
+
+class CodeGeneratorVB6Special(CodeGenerator):
+    def __init__(self):
+        self.vb6 = True
+        self.rayclassname = 'Vector'
+    def startSolution(self,numjointvars,numfreevars):
+        return 'Set solution = New IKSolution\nsolution.rdimsol(%d)\nsolution.rdimfree(%d)\n'%(numjointvars,numfreevars)
+    def generateStoreSolution(self, node):
+        code = self.startSolution(len(node.alljointvars), len(self.freevars))
+        for i,var in enumerate(node.alljointvars):
+            code += 'basesol.foffset = %s\n'%(var)            
+            vardeps = [vardep for vardep in self.freevardependencies if vardep[1]==var.name]
+            if len(vardeps) > 0:
+                freevarname = vardeps[0][0]
+                ifreevar = [j for j in range(len(self.freevars)) if freevarname==self.freevars[j]]
+                code += 'basesol.fmul = %smul\n'%(var.name)
+                code += 'basesol.freeind = %d\n'%(ifreevar[0])
+            code += "solution.basesol(%d) = basesol\n"%(i)
+        for i,varname in enumerate(self.freevars):
+            ind = [j for j in range(len(node.alljointvars)) if varname==node.alljointvars[j].name]
+            code += 'solution.vfree(%d) = %d\n'%(i,ind[0])
+        code += 'If numsolutions > 0 Then\n    ReDim Preserve vsolutions(0 To numsolutions) As IKSolution\nElse\n    ReDim vsolutions(0 To 0) As IKSolution\nEnd If\nSet vsolutions(numsolutions) = solution\nnumsolutions = numsolutions + 1\n'
+        return code

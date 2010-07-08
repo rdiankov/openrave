@@ -13,7 +13,7 @@
 from __future__ import with_statement # for python 2.5
 import openravepy
 import metaclass
-import os, optparse, numpy, copy
+import sys, os, optparse, numpy, copy
 try:
     import cPickle as pickle
 except:
@@ -430,15 +430,24 @@ class OpenRAVEModel(metaclass.AutoReloader):
                           help='Graphically shows the built model')
         parser.add_option('--debug','-d', action="store",type='string',dest='debug',default=None,
                           help='Debug level')
+        parser.add_option('--getfilename',action="store_true",dest='getfilename',default=False,
+                          help='If set, will return the final database filename where all data is stored')
+        parser.add_option('--gethas',action="store_true",dest='gethas',default=False,
+                          help='If set, will exit with 0 if datafile is generated and up to date, otherwise will return a 1. This will require loading the model and checking versions, so might be a little slow.')
         return parser
     @staticmethod
-    def RunFromParser(Model,env=None,parser=None):
+    def RunFromParser(Model,env=None,parser=None,args=None,**kwargs):
         if parser is None:
             parser = OpenRAVEModel.CreateOptionParser()
-        (options, args) = parser.parse_args()
+        (options, args) = parser.parse_args(args=args)
         destroyenv = False
+        loadplugins=True
+        if options.getfilename:
+            # don't want unnecessary messages cluttering the console...
+            openravepy.RaveSetDebugLevel(openravepy.DebugLevel.Fatal)
+            loadplugins = False
         if env is None:
-            env = openravepy.Environment()
+            env = openravepy.Environment(loadplugins)
             destroyenv = True
         try:
             with env:
@@ -450,7 +459,7 @@ class OpenRAVEModel(metaclass.AutoReloader):
                     physics = env.CreatePhysicsEngine(options.physics)
                     if physics is not None:
                         env.SetPhysicsEngine(physics)
-                if options.debug is not None:
+                if options.debug is not None and not options.getfilename:
                     for debuglevel in [openravepy.DebugLevel.Fatal,openravepy.DebugLevel.Error,openravepy.DebugLevel.Warn,openravepy.DebugLevel.Info,openravepy.DebugLevel.Debug,openravepy.DebugLevel.Verbose]:
                         if (not options.debug.isdigit() and options.debug.lower() == debuglevel.name.lower()) or (options.debug.isdigit() and int(options.debug) == int(debuglevel)):
                             openravepy.RaveSetDebugLevel(debuglevel)
@@ -467,6 +476,14 @@ class OpenRAVEModel(metaclass.AutoReloader):
                     else:
                         robot.SetActiveManipulator([i for i,m in enumerate(robot.GetManipulators()) if m.GetName()==options.manipname][0])
             model = Model(robot=robot)
+            if options.getfilename:
+                print model.getfilename()
+                sys.exit(0)
+            if options.gethas:
+                if model.load():
+                    sys.exit(0)
+                else:
+                    sys.exit(1)
             if options.show:
                 if not model.load():
                     raise ValueError('failed to find cached model %s'%model.getfilename())
@@ -475,7 +492,6 @@ class OpenRAVEModel(metaclass.AutoReloader):
             model.autogenerate(options=options)
         finally:
             if destroyenv:
-                print 'destroying environment'
                 env.Destroy()
 
 class openrave_exception(Exception):

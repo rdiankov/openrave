@@ -428,7 +428,7 @@ def run(args=None):
                       help='openrave scene to load')
     parser.add_option('--nocameraview',action="store_false",dest='usecameraview',default=True,
                       help='If set, will not open any camera views')
-    (options, args) = parser.parse_args(args=args)
+    (options, leftargs) = parser.parse_args(args=args)
     scene = PA10GraspExample()
     scene.loadscene(scenefilename=options.scene,sensorname='wristcam',usecameraview=options.usecameraview)
     scene.start()

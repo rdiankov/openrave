@@ -597,12 +597,17 @@ class InverseReachabilityModel(OpenRAVEModel):
                           help='String of joint values that connect the robot base link to the manipulator base link')
         return parser
     @staticmethod
-    def RunFromParser(Model=None,parser=None):
+    def RunFromParser(Model=None,parser=None,args=None,**kwargs):
         if parser is None:
            parser = InverseReachabilityModel.CreateOptionParser()
-        (options, args) = parser.parse_args()
+        (options, leftargs) = parser.parse_args(args=args)
         Model = lambda robot: InverseReachabilityModel(robot=robot)
-        OpenRAVEModel.RunFromParser(Model=Model,parser=parser)
+        OpenRAVEModel.RunFromParser(Model=Model,parser=parser,args=args,**kwargs)
+
+def run(*args,**kwargs):
+    """Executes the inversereachability database generation
+    """
+    InverseReachabilityModel.RunFromParser(*args,**kwargs)
             
 if __name__ == "__main__":
-    InverseReachabilityModel.RunFromParser()
+    run()

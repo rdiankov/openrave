@@ -285,10 +285,10 @@ class VisibilityModel(OpenRAVEModel):
                           help='The offset to move the ray origin (prevents meaningless collisions), default is 0.03')
         return parser
     @staticmethod
-    def RunFromParser(Model=None,parser=None):
+    def RunFromParser(Model=None,parser=None,args=None,**kwargs):
         if parser is None:
             parser = VisibilityModel.CreateOptionParser()
-        (options, args) = parser.parse_args()
+        (options, leftargs) = parser.parse_args(args=args)
         env = Environment()
         try:
             target = None
@@ -298,9 +298,14 @@ class VisibilityModel(OpenRAVEModel):
                 env.AddKinBody(target)
             if Model is None:
                 Model = lambda robot: VisibilityModel(robot=robot,target=target,sensorname=options.sensorname)
-            OpenRAVEModel.RunFromParser(env=env,Model=Model,parser=parser)
+            OpenRAVEModel.RunFromParser(env=env,Model=Model,parser=parser,args=args,**kwargs)
         finally:
             env.Destroy()
 
+def run(*args,**kwargs):
+    """Executes the visibilitymodel database generation
+    """
+    VisibilityModel.RunFromParser(*args,**kwargs)
+
 if __name__=='__main__':
-    VisibilityModel.RunFromParser()
+    run()

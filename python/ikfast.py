@@ -49,6 +49,7 @@ try:
     import ikfast_generator_vb
     CodeGenerators['vb'] = ikfast_generator_vb.CodeGenerator
     CodeGenerators['vb6'] = ikfast_generator_vb.CodeGeneratorVB6
+    CodeGenerators['vb6special'] = ikfast_generator_vb.CodeGeneratorVB6Special
 except ImportError:
     pass
 try:

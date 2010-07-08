@@ -237,7 +237,7 @@ def run(args=None):
                       help='If set, will not perform any visibility searching.')
     parser.add_option('--posedist',action="store",type='float',dest='posedist',default=0.05,
                       help='An average distance between gathered poses. The smaller the value, the more poses robot will gather close to each other')
-    (options, args) = parser.parse_args(args=args)
+    (options, leftargs) = parser.parse_args(args=args)
 
     env = Environment()
     try:

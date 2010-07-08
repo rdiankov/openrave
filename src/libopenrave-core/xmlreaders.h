@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -1872,6 +1872,9 @@ namespace OpenRAVEXMLParser
                 
                 if( _bodyname.size() > 0 )
                     _pchain->SetName(_bodyname);
+                if( _filename.size() > 0 ) {
+                    SetXMLFilename(_filename);
+                }
 
                 // add prefix
                 if( _prefix.size() > 0 ) {
@@ -2394,6 +2397,9 @@ namespace OpenRAVEXMLParser
             else if( InterfaceXMLReader::endElement(xmlname) ) {
                 if( _robotname.size() > 0 )
                     _probot->SetName(_robotname);
+                if( _filename.size() > 0 ) {
+                    SetXMLFilename(_filename);
+                }
 
                 // add prefix
                 if( _prefix.size() > 0 ) {

@@ -45,7 +45,7 @@ def run(args=None):
     parser = OptionParser(description='Example shows how to query collision detection information using openravepy')
     parser.add_option('--collision', action="store",type='string',dest='collision',default=None,
                       help='collision checker')
-    (options, args) = parser.parse_args(args=args)
+    (options, leftargs) = parser.parse_args(args=args)
 
     env = Environment()
     try:

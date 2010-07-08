@@ -159,6 +159,28 @@ The openrave.py script is an attempt to make the command line parameters for ope
     [<env.GetKinBody('BarrettWAM').GetJoint('Shoulder_Yaw')>,
      <env.GetKinBody('BarrettWAM').GetJoint('Shoulder_Pitch')>, ...]
 
+- Can start a database generation process::
+
+   openrave.py --database="inversekinematics --robot=robots/pa10.robot.xml"
+
+- Can execute an example::
+
+   openrave.py --example="graspplanning"
+
+- Can query all executable databases::
+
+  openrave.py --database=
+
+  **Output**::
+    bad database generator, current list of executable generators are:
+     convexdecomposition
+     grasping
+     inversekinematics
+     inversereachability
+     kinematicreachability
+     linkstatistics
+     visibilitymodel
+
 - Can set custom collision, physics, and viewer::
 
     openrave.py --collision=pqp --viewer=qtcoin --physics=ode data/lab1.env.xml

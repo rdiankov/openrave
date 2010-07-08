@@ -39,6 +39,10 @@ if __name__ == "__main__":
                       help='port to load server on (default=%default).')
     parser.add_option('--debug','-d', action="store",type='string',dest='debug',default=None,
                       help='Debug level')
+    parser.add_option('--database', action="store",type='string',dest='database',default=None,
+                      help='If set, will call a database generator from the openravepy.databases module. The database string contains both the database name and the arguments that will be passed to it; any arguments specified in %prog will be ignored.')
+    parser.add_option('--example', action="store",type='string',dest='example',default=None,
+                      help='Will call an example from the openravepy.examples module. The example string contains both the example name and the arguments that will be passed to it; any arguments specified in %prog will be ignored.')
     parser.add_option('--ipython', '-i',action="store_true",dest='ipython',default=False,
                       help='if true will drop into the ipython interpreter rather than spin')
     parser.add_option('--version',action='store_true',dest='version',default=False,
@@ -47,6 +51,30 @@ if __name__ == "__main__":
 
     if options.version:
         print openravepy.__version__
+        sys.exit(0)
+    if options.database is not None:
+        args=options.database.split()
+        try:
+            database=getattr(databases,args[0])
+        except (AttributeError,IndexError):
+            print 'bad database generator, current list of executable generators are:'
+            for name in dir(databases):
+                if not name.startswith('__'):
+                    print ' ' + name
+            sys.exit(1)
+        database.run(args=args)
+        sys.exit(0)
+    if options.example is not None:
+        args=options.example.split()
+        try:
+            example = getattr(examples,args[0])
+        except (AttributeError,IndexError):
+            print 'bad example, current list of executable examples are:'
+            for name in dir(examples):
+                if not name.startswith('__'):
+                    print ' ' + name
+            sys.exit(1)
+        example.run(args=args)
         sys.exit(0)
     if options.debug is not None:
         for debuglevel in [DebugLevel.Fatal,DebugLevel.Error,DebugLevel.Warn,DebugLevel.Info,DebugLevel.Debug,DebugLevel.Verbose]:

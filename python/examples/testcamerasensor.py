@@ -130,7 +130,7 @@ def run(args=None):
     parser.add_option('--robotname',
                       action="store",type='string',dest='robotname',default=None,
                       help='Specific robot sensors to display (otherwise first robot found will be displayed)')
-    (options, args) = parser.parse_args(args=args)
+    (options, leftargs) = parser.parse_args(args=args)
     scene = OpenRAVEScene(options.scene,options.robotname)
     while(True):
         cmd = raw_input('Enter command (q-quit,c-capture image): ')

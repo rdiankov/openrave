@@ -19,7 +19,8 @@ class InstanceTracker(object):
     __metaclass__ = MetaInstanceTracker
     def __new__(*args, **kwargs):
         cls = args[0]
-        self = super(InstanceTracker, cls).__new__(*args, **kwargs)
+        # deprecation due to python 2.6 cannot specifying arguments
+        self = super(InstanceTracker, cls).__new__(cls)#*args, **kwargs)
         cls.__instance_refs__.append(weakref.ref(self))
         return self
 

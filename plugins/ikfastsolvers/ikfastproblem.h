@@ -4,27 +4,24 @@
 #include "plugindefs.h"
 #include <boost/algorithm/string.hpp>
 
+#ifdef Boost_IOSTREAMS_FOUND
+#include <boost/iostreams/device/file_descriptor.hpp>
+#include <boost/iostreams/stream.hpp>
+#endif
+
 #include <errno.h>
+#include <stdio.h>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#define PLUGIN_EXT ".dll"
 #else
 #include <dlfcn.h>
 #include <sys/types.h>
 #include <dirent.h>
-
-#ifdef __APPLE_CC__
-#define PLUGIN_EXT ".dylib"
-#else
-#define PLUGIN_EXT ".so"
-#endif
-
 #endif
 
 #define DECLFNPTR(name, paramlist) (*name) paramlist
-
 #define IK2PI  6.28318530717959
 #define IKPI  3.14159265358979
 #define IKPI_2  1.57079632679490
@@ -237,9 +234,15 @@ public:
     IKFastProblem(EnvironmentBasePtr penv) : ProblemInstance(penv)
     {
         RegisterCommand("AddIkLibrary",boost::bind(&IKFastProblem::AddIkLibrary,this,_1,_2),
-                        "Dynamically adds an ik solver to openrave (based on ikfast code generation).\n"
+                        "Dynamically adds an ik solver to openrave by loading a shared object (based on ikfast code generation).\n"
                         "Usage:\n    AddIkLibrary iksolvername iklibrarypath\n"
                         "return the type of inverse kinematics solver (IkParamterization::Type)");
+#ifdef Boost_IOSTREAMS_FOUND
+        RegisterCommand("LoadIKFastSolver",boost::bind(&IKFastProblem::LoadIKFastSolver,this,_1,_2),
+                        "Dynamically calls the inversekinematics.py script to generate an ik solver for a robot, or to load an existing one\n"
+                        "Usage:\n    LoadIKFastSolver robotname iktype_id [free increment]\n"
+                        "return nothing, but does call the SetIKSolver for the robot");
+#endif
         RegisterCommand("PerfTiming",boost::bind(&IKFastProblem::PerfTiming,this,_1,_2),
                         "Times the ik call of a given library.\n"
                         "Usage:\n    PerfTiming [options] iklibrarypath\n"
@@ -251,19 +254,19 @@ public:
     int main(const string& cmd)
     {
         GetProblems().push_back(shared_problem());
-
         return 0;
     }
 
     virtual void Destroy()
     {
-        GetProblems().erase(find(GetProblems().begin(),GetProblems().end(),shared_problem()));   
+        GetProblems().erase(find(GetProblems().begin(),GetProblems().end(),shared_problem()));
     }
 
     bool AddIkLibrary(ostream& sout, istream& sinput)
     {
-        if( sinput.eof() )
+        if( sinput.eof() ) {
             return false;
+        }
         string ikname, libraryname;
         sinput >> ikname;
         std::transform(ikname.begin(), ikname.end(), ikname.begin(), ::tolower);
@@ -282,6 +285,76 @@ public:
         return true;
     }
 
+#ifdef Boost_IOSTREAMS_FOUND
+    bool LoadIKFastSolver(ostream& sout, istream& sinput)
+    {
+        EnvironmentMutex::scoped_lock envlock(GetEnv()->GetMutex());
+        string robotname, striktype;
+        int niktype;
+        sinput >> robotname;
+        sinput >> niktype;
+        if( !sinput ) {
+            return false;
+        }
+        RobotBasePtr probot = GetEnv()->GetRobot(robotname);
+        if( !probot || !probot->GetActiveManipulator() ) {
+            return false;
+        }
+        switch (static_cast<IkParameterization::Type>(niktype)) {
+            case IkParameterization::Type_Transform6D: striktype="Transform6D"; break;
+            case IkParameterization::Type_Rotation3D: striktype="Rotation3D"; break;
+            case IkParameterization::Type_Translation3D: striktype="Translation3D"; break;
+            case IkParameterization::Type_Direction3D: striktype="Direction3D"; break;
+            case IkParameterization::Type_Ray4D: striktype="Ray4D"; break;
+            default:
+                return false;
+        }
+
+        {
+            string cmdhas = str(boost::format("openrave.py --database=\"inversekinematics --gethas --robot=%s --manipname=%s --iktype=%s\"")%probot->GetXMLFilename()%probot->GetActiveManipulator()->GetName()%striktype);
+            FILE* pipe = popen(cmdhas.c_str(), "r");
+            int has = pclose(pipe);
+            if( has ) {
+                string cmdgen = str(boost::format("openrave.py --database=\"inversekinematics --robot=%s --manipname=%s --iktype=%s\"")%probot->GetXMLFilename()%probot->GetActiveManipulator()->GetName()%striktype);
+                FILE* pipe = popen(cmdgen.c_str(), "r");
+                int generateexit = pclose(pipe);
+                RAVELOG_INFO("generate exit: %d\n",generateexit);
+            }
+        }
+        
+        string cmdfilename = str(boost::format("openrave.py --database=\"inversekinematics --getfilename --robot=%s --manipname=%s --iktype=%s\"")%probot->GetXMLFilename()%probot->GetActiveManipulator()->GetName()%striktype);
+        RAVELOG_INFO("executing shell command:\n%s\n",cmdfilename.c_str());
+        string ikfilename;
+        FILE* pipe = popen(cmdfilename.c_str(), "r");
+        {
+            boost::iostreams::stream_buffer<boost::iostreams::file_descriptor_source> fpstream(fileno(pipe));
+            std::istream in(&fpstream);
+            std::getline(in, ikfilename);
+            if( !in ) {
+                pclose(pipe);
+                return false;
+            }
+        }
+        pclose(pipe);
+
+        string ikfastname = str(boost::format("ikfast.%s.%s")%probot->GetRobotStructureHash()%probot->GetActiveManipulator()->GetName());
+        boost::shared_ptr<IKLibrary> lib(new IKLibrary());
+        if( !lib->Init(ikfastname, ikfilename) ) {
+            return false;
+        }
+        if( lib->GetIKType() != niktype ) {
+            return false;
+        }
+        IkSolverBasePtr iksolver = lib->CreateSolver(GetEnv(), 0.1);
+        if( !iksolver ) {
+            return false;
+        }
+        _vlibraries.push_back(lib);
+        probot->GetActiveManipulator()->SetIKSolver(iksolver);
+        return probot->GetActiveManipulator()->InitIKSolver();
+    }
+#endif
+    
     bool PerfTiming(ostream& sout, istream& sinput)
     {
         string cmd, libraryname;
@@ -359,6 +432,13 @@ public:
         }
         return true;
     }
+    
+    static vector< boost::shared_ptr<IKFastProblem> >& GetProblems()
+    {
+        static vector< boost::shared_ptr<IKFastProblem> > s_vStaticProblems;
+        return s_vStaticProblems;
+    }
+
     IkSolverBasePtr CreateIkSolver(const string& name, dReal freeinc, EnvironmentBasePtr penv)
     {
         /// start from the newer libraries
@@ -367,12 +447,6 @@ public:
                 return (*itlib)->CreateSolver(penv,freeinc);
         }
         return IkSolverBasePtr();
-    }
-    
-    static vector< boost::shared_ptr<IKFastProblem> >& GetProblems()
-    {
-        static vector< boost::shared_ptr<IKFastProblem> > s_vStaticProblems;
-        return s_vStaticProblems;
     }
 
 private:

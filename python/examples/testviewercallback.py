@@ -39,7 +39,7 @@ def run(args=None):
     parser.add_option('--viewer',
                       action="store",type='string',dest='viewer',default='qtcoin',
                       help='Viewer to load')
-    (options, args) = parser.parse_args(args=args)
+    (options, leftargs) = parser.parse_args(args=args)
 
     env = Environment()
     env.Load(options.scene)

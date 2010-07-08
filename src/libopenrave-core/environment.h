@@ -897,7 +897,7 @@ class Environment : public EnvironmentBase
             robot = RaveInterfaceCast<RobotBase>(pinterface);
             if( !bSuccess || !robot )
                 return RobotBasePtr();
-            robot->__strxmlfilename = preader->_filename;
+            robot->__strxmlfilename = filename;
         }
     
         return robot;
@@ -968,7 +968,7 @@ class Environment : public EnvironmentBase
             body = RaveInterfaceCast<KinBody>(pinterface);
             if( !bSuccess || !body )
                 return KinBodyPtr();
-            body->__strxmlfilename = preader->_filename;
+            body->__strxmlfilename = filename;
         }
 
         return body;
@@ -1005,7 +1005,7 @@ class Environment : public EnvironmentBase
             bool bSuccess = RaveParseXMLFile(preader, filename);
             if( !bSuccess || !preader->GetInterface())
                 return InterfaceBasePtr();
-            preader->GetInterface()->__strxmlfilename = preader->_filename;
+            preader->GetInterface()->__strxmlfilename = filename;
             return preader->GetInterface();
         }
         catch(const openrave_exception& ex) {
@@ -1041,7 +1041,7 @@ class Environment : public EnvironmentBase
             bool bSuccess = ParseXMLFile(preader, filename);
             if( !bSuccess )
                 return InterfaceBasePtr();
-            pinterface->__strxmlfilename = preader->_filename;
+            pinterface->__strxmlfilename = filename;
         }
         return pinterface;
     }
@@ -1621,7 +1621,7 @@ protected:
             boost::mutex::scoped_lock lock(_mutexProblems);
             
             FOREACHC(itprob, _listProblems) {
-                if( strcmp((*itprob)->GetXMLId().c_str(),"ikfast") == 0 ) {
+                if( stricmp((*itprob)->GetXMLId().c_str(),"ikfast") == 0 ) {
                     pIKFastLoader = *itprob;
                     break;
                 }

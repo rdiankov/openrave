@@ -77,8 +77,8 @@ public:
 
         virtual const std::string& GetName() const { return _name; }
         virtual RobotBasePtr GetRobot() const { return RobotBasePtr(_probot); }
-
-		virtual void SetIKSolver(IkSolverBasePtr iksolver);
+        
+        virtual void SetIKSolver(IkSolverBasePtr iksolver);
         virtual bool InitIKSolver();
         virtual const std::string& GetIKSolverName() const;
         virtual bool HasIKSolver() const;

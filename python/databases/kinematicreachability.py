@@ -301,17 +301,22 @@ class ReachabilityModel(OpenRAVEModel):
                           help='Scales the reachability by this much in order to show colors better (default=%default)')
         return parser
     @staticmethod
-    def RunFromParser(Model=None,parser=None):
+    def RunFromParser(Model=None,parser=None,args=None,**kwargs):
         if parser is None:
             parser = ReachabilityModel.CreateOptionParser()
-        (options, args) = parser.parse_args()
+        (options, leftargs) = parser.parse_args(args=args)
         env = Environment()
         try:
             if Model is None:
                 Model = lambda robot: ReachabilityModel(robot=robot)
-            OpenRAVEModel.RunFromParser(env=env,Model=Model,parser=parser)
+            OpenRAVEModel.RunFromParser(env=env,Model=Model,parser=parser,args=args,**kwargs)
         finally:
             env.Destroy()
+
+def run(*args,**kwargs):
+    """Executes the kinematicreachability database generation
+    """
+    ReachabilityModel.RunFromParser(*args,**kwargs)
 
 if __name__=='__main__':
     parser = ReachabilityModel.CreateOptionParser()
@@ -321,4 +326,4 @@ if __name__=='__main__':
             from enthought.mayavi import mlab
         except ImportError:
             pass
-    ReachabilityModel.RunFromParser()
+    run()

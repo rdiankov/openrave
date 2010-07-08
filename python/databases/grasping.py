@@ -21,12 +21,11 @@ Running the Example
 
 **python**::
 
-  cd `openrave-config --python-dir`/openravepy/databases
-  python grasping.py
+  python openrave.py --database="grasping"
 
 **program options/description**::
 
-  python grasping.py --help
+  python openrave.py --database="grasping --help"
 
 **octave/matlab (first start openrave)**::
 
@@ -728,10 +727,10 @@ class GraspingModel(OpenRAVEModel):
                           help='If set, then will only show this grasp index')
         return parser
     @staticmethod
-    def RunFromParser(Model=None,parser=None):
+    def RunFromParser(Model=None,parser=None,args=None,**kwargs):
         if parser is None:
             parser = GraspingModel.CreateOptionParser()
-        (options, args) = parser.parse_args()
+        (options, leftargs) = parser.parse_args(args=args)
         env = Environment()
         try:
             target = None
@@ -744,9 +743,14 @@ class GraspingModel(OpenRAVEModel):
             if options.useviewer:
                 env.SetViewer('qtcoin')
                 env.UpdatePublishedBodies()
-            OpenRAVEModel.RunFromParser(env=env,Model=Model,parser=parser)
+            OpenRAVEModel.RunFromParser(env=env,Model=Model,parser=parser,args=args,**kwargs)
         finally:
             env.Destroy()
 
+def run(*args,**kwargs):
+    """Executes the grasping database generation
+    """
+    GraspingModel.RunFromParser(*args,**kwargs)
+
 if __name__ == "__main__":
-    GraspingModel.RunFromParser()
+    run()

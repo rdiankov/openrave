@@ -411,30 +411,34 @@ class InverseKinematicsModel(OpenRAVEModel):
                           help='Number of IK calls for measuring the internal ikfast solver.')
         parser.add_option('--outputlang', action='store',type='string',dest='outputlang',default=None,
                           help='If specified, will output the generated code in that language (ie --outputlang=cpp).')
+        parser.add_option('--iktype', action='store',type='string',dest='iktype',default=None,
+                          help='The ik type to build the solver for (replaces rotation3donly, direction3donly, translation3donly, and ray4donly parameters)')
         return parser
     @staticmethod
-    def RunFromParser(Model=None,parser=None):
+    def RunFromParser(Model=None,parser=None,args=None,**kwargs):
         if parser is None:
             parser = InverseKinematicsModel.CreateOptionParser()
-        (options, args) = parser.parse_args()
-        Model = lambda robot: InverseKinematicsModel(robot=robot)
-        OpenRAVEModel.RunFromParser(Model=Model,parser=parser)
-
+        (options, leftargs) = parser.parse_args(args=args)
+        if options.iktype is not None:
+            iktype = IkParameterization.Type.names[options.iktype]
+        else:
+            iktype = IkParameterization.Type.Transform6D
+            if options.rotation3donly:
+                iktype = IkParameterization.Type.Rotation3D
+            if options.direction3donly:
+                iktype = IkParameterization.Type.Direction3D
+            if options.translation3donly:
+                iktype = IkParameterization.Type.Translation3D
+            if options.ray4donly:
+                iktype = IkParameterization.Type.Ray4D
+        Model = lambda robot: InverseKinematicsModel(robot=robot,iktype=iktype)
+        OpenRAVEModel.RunFromParser(Model=Model,parser=parser,args=args,**kwargs)
         if options.numiktests or options.perftiming:
             print 'testing the success rate of robot ',options.robot
             env = Environment()
             try:
                 robot = env.ReadRobotXMLFile(options.robot)
                 env.AddRobot(robot)
-                iktype = IkParameterization.Type.Transform6D
-                if options.rotation3donly:
-                    iktype = IkParameterization.Type.Rotation3D
-                if options.direction3donly:
-                    iktype = IkParameterization.Type.Direction3D
-                if options.translation3donly:
-                    iktype = IkParameterization.Type.Translation3D
-                if options.ray4donly:
-                    iktype = IkParameterization.Type.Ray4D
                 if options.manipname is not None:
                     robot.SetActiveManipulator(options.manipname)
                 ikmodel = InverseKinematicsModel(robot,iktype=iktype)
@@ -449,5 +453,10 @@ class InverseKinematicsModel(OpenRAVEModel):
             finally:
                 env.Destroy()
 
+def run(*args,**kwargs):
+    """Executes the inversekinematics database generation
+    """
+    InverseKinematicsModel.RunFromParser(*args,**kwargs)
+
 if __name__ == "__main__":
-     InverseKinematicsModel.RunFromParser()
+    run()

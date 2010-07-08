@@ -303,7 +303,7 @@ def run(args=None):
                       help='If set, will plan without destinations.')
     parser.add_option('--norandomize', action='store_false',dest='randomize',default=True,
                       help='If set, will not randomize the bodies and robot position in the scene.')
-    (options, args) = parser.parse_args(args=args)
+    (options, leftargs) = parser.parse_args(args=args)
 
     env = Environment()
     try:

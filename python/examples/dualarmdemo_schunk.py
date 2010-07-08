@@ -165,7 +165,7 @@ def run(args=None):
     parser.add_option('--scene',
                       action="store",type='string',dest='scene',default='data/dualarmmanipulation.env.xml',
                       help='Scene file to load')   
-    (options, args) = parser.parse_args(args=args)
+    (options, leftargs) = parser.parse_args(args=args)
 
     env = Environment()
     env.SetCollisionChecker(env.CreateCollisionChecker('ode'))
