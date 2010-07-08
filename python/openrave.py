@@ -47,10 +47,24 @@ if __name__ == "__main__":
                       help='if true will drop into the ipython interpreter rather than spin')
     parser.add_option('--version',action='store_true',dest='version',default=False,
                       help='Return the openrave version MAJOR.MINOR.PATCH')
+    parser.add_option('--listexamples',action='store_true',dest='listexamples',default=False,
+                      help='Lists the available core examples')
+    parser.add_option('--listdatabases',action='store_true',dest='listdatabases',default=False,
+                      help='Lists the available core database generators')
     (options, args) = parser.parse_args()
 
     if options.version:
         print openravepy.__version__
+        sys.exit(0)
+    if options.listdatabases:
+        for name in dir(databases):
+            if not name.startswith('__'):
+                print name
+        sys.exit(0)
+    if options.listexamples:
+        for name in dir(examples):
+            if not name.startswith('__'):
+                print name
         sys.exit(0)
     if options.database is not None:
         args=options.database.split()
