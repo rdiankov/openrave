@@ -449,7 +449,7 @@ bool RobotBase::Manipulator::IsGrabbing(KinBodyConstPtr pbody) const
 
 void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
 {
-    o << (!!_pBase ? -1 : _pBase->GetIndex()) << " " << (!!_pEndEffector ? -1 : _pEndEffector->GetIndex()) << " ";
+    o << (!_pBase ? -1 : _pBase->GetIndex()) << " " << (!_pEndEffector ? -1 : _pEndEffector->GetIndex()) << " ";
     SerializeRound(o,_tGrasp);
     SerializeRound3(o,_vdirection);
     o << _vgripperjoints.size() << " " << _varmjoints.size() << " " << _vClosingDirection.size() << " ";
