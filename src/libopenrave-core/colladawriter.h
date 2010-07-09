@@ -372,18 +372,18 @@ public:
       }
 
       //  TODO : Instances of Sensors. Sensors attached to the robot
-//            if (probot->GetSensors().size() > 0)
+//            if (probot->GetAttachedSensors().size() > 0)
 //            {
 //                domExtraRef extra   =   daeSafeCast<domExtra>(askinematics->createAndPlace(COLLADA_ELEMENT_EXTRA));
 //                extra->setType("sensors");
 //                domTechniqueRef tech    =   daeSafeCast<domTechnique>(extra->createAndPlace(COLLADA_ELEMENT_TECHNIQUE));
 //                tech->setProfile("OpenRAVE");
 //
-//                    for (size_t i = 0; i < probot->GetSensors().size();i++)
+//                    for (size_t i = 0; i < probot->GetAttachedSensors().size();i++)
 //                    {
 //                        string  strsensor   =   string("sensor")+toString(i)+string("_")+probot->GetName();
 //                        string  strurl      =   string("#") + strsensor;
-//                        RobotBase::AttachedSensorPtr  asensor = probot->GetSensors().at(i);
+//                        RobotBase::AttachedSensorPtr  asensor = probot->GetAttachedSensors().at(i);
 //
 //                        //  Instance of sensor into 'articulated_system'
 //                        domInstance_sensorRef   isensor =   daeSafeCast<domInstance_sensor>(tech->createAndPlace(COLLADA_ELEMENT_INSTANCE_SENSOR));

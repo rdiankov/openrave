@@ -1550,14 +1550,26 @@ public:
 
     object GetSensors()
     {
+        RAVELOG_WARN("GetSensors is deprecated, please use GetAttachedSensors\n");
+        return GetAttachedSensors();
+    }
+
+    object GetAttachedSensors()
+    {
         boost::python::list sensors;
-        FOREACH(itsensor, _probot->GetSensors())
+        FOREACH(itsensor, _probot->GetAttachedSensors())
             sensors.append(boost::shared_ptr<PyAttachedSensor>(new PyAttachedSensor(*itsensor,_pyenv)));
         return sensors;
     }
     boost::shared_ptr<PyAttachedSensor> GetSensor(const string& sensorname)
     {
-        FOREACH(itsensor, _probot->GetSensors()) {
+        RAVELOG_WARN("GetSensor is deprecated, please use GetAttachedSensor\n");
+        return GetAttachedSensor(sensorname);
+    }
+
+    boost::shared_ptr<PyAttachedSensor> GetAttachedSensor(const string& sensorname)
+    {
+        FOREACH(itsensor, _probot->GetAttachedSensors()) {
             if( (*itsensor)->GetName() == sensorname )
                 return boost::shared_ptr<PyAttachedSensor>(new PyAttachedSensor(*itsensor,_pyenv));
         }
@@ -3655,6 +3667,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("SetActiveManipulator",setactivemanipulator3,args("manip"))
             .def("GetActiveManipulator",&PyRobotBase::GetActiveManipulator)
             .def("GetActiveManipulatorIndex",&PyRobotBase::GetActiveManipulatorIndex)
+            .def("GetAttachedSensors",&PyRobotBase::GetAttachedSensors)
+            .def("GetAttachedSensor",&PyRobotBase::GetAttachedSensor,args("sensorname"))
             .def("GetSensors",&PyRobotBase::GetSensors)
             .def("GetSensor",&PyRobotBase::GetSensor,args("sensorname"))
             .def("GetController",&PyRobotBase::GetController)

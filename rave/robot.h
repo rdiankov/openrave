@@ -281,7 +281,8 @@ public:
     virtual ManipulatorConstPtr GetActiveManipulator() const;
     virtual int GetActiveManipulatorIndex() const { return _nActiveManip; }
 
-    virtual std::vector<AttachedSensorPtr>& GetSensors() { return _vecSensors; }    
+    virtual std::vector<AttachedSensorPtr>& GetSensors() RAVE_DEPRECATED { RAVELOG_WARN("RobotBase::GetSensors() is deprecated\n"); return _vecSensors; }
+    virtual std::vector<AttachedSensorPtr>& GetAttachedSensors() { return _vecSensors; }
     virtual ControllerBasePtr GetController() const { return ControllerBasePtr(); }
     
     /// set a controller for a robot and destroy the old

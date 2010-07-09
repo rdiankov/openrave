@@ -107,7 +107,7 @@ class VisibilityGrasping(metaclass.AutoReloader):
                 if usecameraview:
                     Tk # check if Tk exists
                     if showsensors:
-                        for attachedsensor in self.robotreal.GetSensors():
+                        for attachedsensor in self.robotreal.GetAttachedSensors():
                             if attachedsensor.GetSensor() is not None:
                                 sensordata = attachedsensor.GetSensor().GetSensorData()
                                 if sensordata is not None and sensordata.type == Sensor.Type.Camera:
@@ -126,7 +126,7 @@ class VisibilityGrasping(metaclass.AutoReloader):
                 print 'failed to create camera gui: ',e
                 self.viewers = []
 
-            self.sensor = [s for s in self.robotreal.GetSensors() if s.GetName()==sensorname][0]
+            self.sensor = [s for s in self.robotreal.GetAttachedSensors() if s.GetName()==sensorname][0]
             # find a manipulator whose end effector is the camera
             self.manip = [m for m in self.robotreal.GetManipulators() if m.GetEndEffector() == self.sensor.GetAttachingLink()][0]
             self.robotreal.SetActiveManipulator(self.manip)
@@ -217,7 +217,7 @@ class VisibilityGrasping(metaclass.AutoReloader):
             self.robotreal.ReleaseAllGrabbed()
             self.orenv = self.orenvreal.CloneSelf(CloningOptions.Bodies)
             self.robot = self.orenv.GetRobot(self.robotreal.GetName())
-            for sensor in self.robot.GetSensors():
+            for sensor in self.robot.GetAttachedSensors():
                 if sensor.GetSensor() is not None:
                     sensor.GetSensor().SendCommand('power 0')
             

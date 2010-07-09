@@ -69,7 +69,7 @@ class VisibilityModel(OpenRAVEModel):
         self.convexhull = None
         self.sensorname = sensorname
         if self.sensorname is None:
-            possiblesensors = [s.GetName() for s in self.sensorrobot.GetSensors() if s.GetSensor() is not None and s.GetData() is not None and s.GetData().type == Sensor.Type.Camera]
+            possiblesensors = [s.GetName() for s in self.sensorrobot.GetAttachedSensors() if s.GetSensor() is not None and s.GetData() is not None and s.GetData().type == Sensor.Type.Camera]
             if len(possiblesensors) > 0:
                 self.sensorname = possiblesensors[0]
         self.manip = robot.GetActiveManipulator()
@@ -113,7 +113,7 @@ class VisibilityModel(OpenRAVEModel):
             manipname = self.visualprob.SetCameraAndTarget(sensorname=self.sensorname,sensorrobot=self.sensorrobot,manipname=self.manipname,target=self.target)
             assert(self.manipname is None or self.manipname==manipname)
             self.manip = self.robot.SetActiveManipulator(manipname)
-            self.attachedsensor = [s for s in self.sensorrobot.GetSensors() if s.GetName() == self.sensorname][0]
+            self.attachedsensor = [s for s in self.sensorrobot.GetAttachedSensors() if s.GetName() == self.sensorname][0]
             self.ikmodel = inversekinematics.InverseKinematicsModel(robot=self.robot,iktype=IkParameterization.Type.Transform6D)
             if not self.ikmodel.load():
                 self.ikmodel.autogenerate()
@@ -137,7 +137,7 @@ class VisibilityModel(OpenRAVEModel):
             preshapes = array([final])
         self.generate(preshapes=preshapes)
         self.save()
-    def generate(self,preshapes):
+    def generate(self,preshapes,sphere=None,conedirangle=None):
         self.preshapes=preshapes
         self.preprocess()
         self.sensorname = self.attachedsensor.GetName()
@@ -145,6 +145,8 @@ class VisibilityModel(OpenRAVEModel):
         bodies = [(b,b.IsEnabled()) for b in self.env.GetBodies() if b != self.robot and b != self.target]
         for b in bodies:
             b[0].Enable(False)
+        if sphere is None:
+            sphere = [3,0.1,0.15,0.2,0.25,0.3]
         try:
             with self.env:
                 sensor = self.attachedsensor.GetSensor()
@@ -154,12 +156,13 @@ class VisibilityModel(OpenRAVEModel):
                     self.dims = sensordata.imagedata.shape
                 with RobotStateSaver(self.robot):
                     # find better way of handling multiple grasps
-                    self.robot.SetJointValues(self.preshapes[0],self.manip.GetGripperJoints())
+                    if len(self.preshapes) > 0:
+                            self.robot.SetJointValues(self.preshapes[0],self.manip.GetGripperJoints())
                     extentsfile = os.path.join(self.env.GetHomeDirectory(),'kinbody.'+self.target.GetKinematicsGeometryHash(),'visibility.txt')
                     if os.path.isfile(extentsfile):
                         self.visibilitytransforms = self.visualprob.ProcessVisibilityExtents(extents=loadtxt(extentsfile,float))
                     else:
-                        self.visibilitytransforms = self.visualprob.ProcessVisibilityExtents(sphere=[3,0.1,0.15,0.2,0.25,0.3])
+                        self.visibilitytransforms = self.visualprob.ProcessVisibilityExtents(sphere=sphere,conedirangle=conedirangle)
                 self.visualprob.SetCameraTransforms(transforms=self.visibilitytransforms)
         finally:
             for b,enable in bodies:
@@ -174,7 +177,8 @@ class VisibilityModel(OpenRAVEModel):
             with self.GripperVisibility(self.manip):
                 for pose in self.visibilitytransforms:
                     with self.env:
-                        self.robot.SetJointValues(self.preshapes[0],self.manip.GetGripperJoints())
+                        if len(self.preshapes) > 0:
+                            self.robot.SetJointValues(self.preshapes[0],self.manip.GetGripperJoints())
                         Trelative = dot(linalg.inv(self.attachedsensor.GetTransform()),self.manip.GetEndEffectorTransform())
                         Tcamera = dot(self.target.GetTransform(),matrixFromPose(pose))
                         Tgrasp = dot(Tcamera,Trelative)
@@ -189,17 +193,18 @@ class VisibilityModel(OpenRAVEModel):
         return self.showtransforms()
     def moveToPreshape(self):
         """uses a planner to safely move the hand to the preshape and returns the trajectory"""
-        preshape=self.preshapes[0]
-        with self.robot:
-            self.robot.SetActiveDOFs(self.manip.GetArmJoints())
-            self.basemanip.MoveUnsyncJoints(jointvalues=preshape,jointinds=self.manip.GetGripperJoints())
-        while not self.robot.GetController().IsDone(): # busy wait
-            time.sleep(0.01)        
-        with self.robot:
-            self.robot.SetActiveDOFs(self.manip.GetGripperJoints())
-            self.basemanip.MoveActiveJoints(goal=preshape)
-        while not self.robot.GetController().IsDone(): # busy wait
-            time.sleep(0.01)
+        if len(self.preshape) > 0:
+            preshape=self.preshapes[0]
+            with self.robot:
+                self.robot.SetActiveDOFs(self.manip.GetArmJoints())
+                self.basemanip.MoveUnsyncJoints(jointvalues=preshape,jointinds=self.manip.GetGripperJoints())
+            while not self.robot.GetController().IsDone(): # busy wait
+                time.sleep(0.01)        
+            with self.robot:
+                self.robot.SetActiveDOFs(self.manip.GetGripperJoints())
+                self.basemanip.MoveActiveJoints(goal=preshape)
+            while not self.robot.GetController().IsDone(): # busy wait
+                time.sleep(0.01)
 
     def computeValidTransform(self,returnall=False,checkcollision=True,computevisibility=True,randomize=False):
         with self.robot:
@@ -222,6 +227,7 @@ class VisibilityModel(OpenRAVEModel):
                     if not returnall:
                         return validjoints
                     print 'found',len(validjoints)
+            return validjoints
 
     def pruneTransformations(self,thresh=0.04,numminneighs=10,maxdist=None,translationonly=True):
         if self.rmodel is None:

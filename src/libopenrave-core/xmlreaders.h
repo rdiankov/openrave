@@ -2209,7 +2209,7 @@ namespace OpenRAVEXMLParser
             
             if( !_psensor ) {
                 // check for current sensors
-                FOREACH(itsensor,probot->GetSensors()) {
+                FOREACH(itsensor,probot->GetAttachedSensors()) {
                     if( name.size() > 0 && (*itsensor)->GetName() == name ) {
                         _psensor = *itsensor;
                         break;
@@ -2413,8 +2413,8 @@ namespace OpenRAVEXMLParser
                         (*itjoint)->name = _prefix +(*itjoint)->name;
                         ++itjoint;
                     }
-                    vector<RobotBase::AttachedSensorPtr>::iterator itsensor = _probot->GetSensors().begin()+rootsoffset;
-                    while(itsensor != _probot->GetSensors().end()) {
+                    vector<RobotBase::AttachedSensorPtr>::iterator itsensor = _probot->GetAttachedSensors().begin()+rootsoffset;
+                    while(itsensor != _probot->GetAttachedSensors().end()) {
                         (*itsensor)->_name = _prefix + (*itsensor)->_name;
                         ++itsensor;
                     }
@@ -2684,7 +2684,7 @@ namespace OpenRAVEXMLParser
             if( !!probot ) {
                 rootoffset = (int)probot->GetLinks().size();
                 rootjoffset = (int)probot->GetJoints().size();
-                rootsoffset = (int)probot->GetSensors().size();
+                rootsoffset = (int)probot->GetAttachedSensors().size();
                 rootmoffset = (int)probot->GetManipulators().size();
             }
             return InterfaceXMLReaderPtr(new RobotXMLReader(penv,pinterface,atts,rootoffset,rootjoffset,rootsoffset,rootmoffset));

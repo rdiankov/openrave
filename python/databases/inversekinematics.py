@@ -59,7 +59,7 @@ class InverseKinematicsModel(OpenRAVEModel):
 #             self.iksolver = self.env.CreateIkSolver(self.manip.GetIKSolverName()+iksuffix) if self.manip.HasIKSolver() else None
         if self.iksolver is None:
             with self.env:
-                ikfastproblem = [p for p in self.env.GetLoadedProblems() if p.GetXMLId() == 'IKFast'][0]
+                ikfastproblem = [p for p in self.env.GetLoadedProblems() if p.GetXMLId().lower() == 'ikfast'][0]
                 ikname = 'ikfast.%s.%s'%(self.robot.GetRobotStructureHash(),self.manip.GetName())
                 iktype = ikfastproblem.SendCommand('AddIkLibrary %s %s'%(ikname,self.getfilename()))
                 if iktype is None:

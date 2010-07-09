@@ -1125,9 +1125,9 @@ protected:
         if( !is )
             return false;
         
-        if( sensorindex < 0 || sensorindex >= (int)probot->GetSensors().size() )
+        if( sensorindex < 0 || sensorindex >= (int)probot->GetAttachedSensors().size() )
             return false;
-        return probot->GetSensors()[sensorindex]->GetSensor()->SendCommand(os,is);
+        return probot->GetAttachedSensors().at(sensorindex)->GetSensor()->SendCommand(os,is);
     };
 
     bool orRobotSensorData(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
@@ -1142,19 +1142,19 @@ protected:
         is >> sensorindex >> options;
         if( !is )
             return false;
-        if( sensorindex < 0 || sensorindex >= (int)probot->GetSensors().size() )
+        if( sensorindex < 0 || sensorindex >= (int)probot->GetAttachedSensors().size() )
             return false;
 
-        SensorBasePtr psensor = probot->GetSensors()[sensorindex]->GetSensor();
+        SensorBasePtr psensor = probot->GetAttachedSensors().at(sensorindex)->GetSensor();
         boost::shared_ptr<SensorBase::SensorData> psensordata = psensor->CreateSensorData();
 
         if( !psensordata ) {
-            RAVELOG_ERRORA("Robot %s, failed to create sensor %s data\n", probot->GetName().c_str(), probot->GetSensors()[sensorindex]->GetName().c_str());
+            RAVELOG_ERRORA("Robot %s, failed to create sensor %s data\n", probot->GetName().c_str(), probot->GetAttachedSensors().at(sensorindex)->GetName().c_str());
             return false;
         }
 
         if( !psensor->GetSensorData(psensordata) ) {
-            RAVELOG_ERRORA("Robot %s, failed to get sensor %s data\n", probot->GetName().c_str(), probot->GetSensors()[sensorindex]->GetName().c_str());
+            RAVELOG_ERRORA("Robot %s, failed to get sensor %s data\n", probot->GetName().c_str(), probot->GetAttachedSensors().at(sensorindex)->GetName().c_str());
             return false;
         }
 
@@ -1605,8 +1605,8 @@ protected:
         if( !probot )
             return false;
 
-        os << probot->GetSensors().size() << " ";
-        FOREACHC(itsensor, probot->GetSensors()) {
+        os << probot->GetAttachedSensors().size() << " ";
+        FOREACHC(itsensor, probot->GetAttachedSensors()) {
             os << (*itsensor)->GetName().size() << " " << (*itsensor)->GetName() << " ";
         
             if( !(*itsensor)->GetAttachingLink() )

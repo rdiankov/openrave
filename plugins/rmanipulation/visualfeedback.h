@@ -411,6 +411,7 @@ public:
     private:
         boost::shared_ptr<VisualFeedbackProblem> _vf;
         const vector<Transform>& _visibilitytransforms;
+        
 
         Transform _ttarget; ///< transform of target
         Vector _vTargetLocalCenter;
@@ -506,12 +507,12 @@ public:
             else if( cmd == "sensorindex" ) {
                 int sensorindex=-1;
                 sinput >> sensorindex;
-                psensor = _sensorrobot->GetSensors().at(sensorindex);
+                psensor = _sensorrobot->GetAttachedSensors().at(sensorindex);
             }
             else if( cmd == "sensorname" ) {
                 string sensorname;
                 sinput >> sensorname;
-                FOREACH(itsensor,_sensorrobot->GetSensors()) {
+                FOREACH(itsensor,_sensorrobot->GetAttachedSensors()) {
                     if( (*itsensor)->GetName() == sensorname ) {
                         psensor = *itsensor;
                         break;
@@ -766,6 +767,24 @@ public:
                         }
                     }
                 }
+            }
+            else if( cmd == "conedirangle" ) {
+                Vector vconedir; dReal fangle;
+                sinput >> vconedir.x >> vconedir.y >> vconedir.z;
+                fangle = RaveSqrt(vconedir.lengthsqr3());
+                if( fangle == 0 ) {
+                    return false;
+                }
+                vconedir /= fangle;
+                dReal fcosangle = RaveCos(fangle);
+                vector<Transform> vnewtransforms; vnewtransforms.reserve((int)(vtransforms.size()*(fangle*fangle/(4.0*PI*PI))));
+                FOREACH(itt,vtransforms) {
+                    Vector v = itt->trans-vTargetLocalCenter;
+                    if( dot3(vconedir,v) >= fcosangle*RaveSqrt(v.lengthsqr3()) ) {
+                        vnewtransforms.push_back(*itt);
+                    }
+                }
+                vtransforms = vnewtransforms;
             }
             else {
                 RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));

@@ -446,9 +446,9 @@ void RobotItem::Load()
         ++index;
     }
 
-    _vAttachedSensors.resize(_probot->GetSensors().size());
+    _vAttachedSensors.resize(_probot->GetAttachedSensors().size());
     index = 0;
-    FOREACHC(itsensor, _probot->GetSensors()) {
+    FOREACHC(itsensor, _probot->GetAttachedSensors()) {
         if( !!(*itsensor)->GetAttachingLink() ) {
             _vAttachedSensors[index]._index = index;
             CreateAxis(_vAttachedSensors[index],(*itsensor)->GetName());
@@ -607,8 +607,8 @@ bool RobotItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<
         }
 
         FOREACH(itee, _vAttachedSensors) {
-            if( itee->_index >= 0 && itee->_index < (int)_probot->GetSensors().size()) {
-                RobotBase::AttachedSensorConstPtr sensor = _probot->GetSensors().at(itee->_index);
+            if( itee->_index >= 0 && itee->_index < (int)_probot->GetAttachedSensors().size()) {
+                RobotBase::AttachedSensorConstPtr sensor = _probot->GetAttachedSensors().at(itee->_index);
                 if( !!sensor->GetAttachingLink() ) {
                     RaveTransform<float> tgrasp = vtrans.at(sensor->GetAttachingLink()->GetIndex())*sensor->GetRelativeTransform();
                     SetSoTransform(itee->_ptrans, transInvRoot * tgrasp);

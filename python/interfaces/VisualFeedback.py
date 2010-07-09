@@ -58,7 +58,12 @@ class VisualFeedback:
         if res is None:
             raise planning_error()
         return res
-    def ProcessVisibilityExtents(self,localtargetcenter=None,numrolls=None,transforms=None,extents=None,sphere=None):
+    def ProcessVisibilityExtents(self,localtargetcenter=None,numrolls=None,transforms=None,extents=None,sphere=None,conedirangle=None):
+        """Processes the visibility extents of the target and initializes the camera transforms.
+
+        :type sphere: Sets the transforms along a sphere density and the distances
+        :type conedirangle: Prunes the currently set transforms along a cone centered at the local target center and directed towards conedirangle with a half-angle of ``|conedirangle|``
+        """
         cmd = 'ProcessVisibilityExtents '
         if localtargetcenter is not None:
             cmd += 'localtargetcenter %f %f %f '%(localtargetcenter[0],localtargetcenter[1],localtargetcenter[2])
@@ -76,6 +81,8 @@ class VisualFeedback:
             cmd += 'sphere %d %d '%(sphere[0],len(sphere)-1)
             for s in sphere[1:]:
                 cmd += '%f '%s
+        if conedirangle is not None:
+            cmd += 'conedirangle %f %f %f '%(conedirangle[0],conedirangle[1],conedirangle[2])
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise planning_error()

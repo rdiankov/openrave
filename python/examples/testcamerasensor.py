@@ -91,7 +91,7 @@ class OpenRAVEScene:
         
         # create a camera viewer for every camera sensor
         self.viewers = []
-        for attachedsensor in self.robot.GetSensors():
+        for attachedsensor in self.robot.GetAttachedSensors():
             if attachedsensor.GetSensor() is not None:
                 sensordata = attachedsensor.GetSensor().GetSensorData()
                 if sensordata is not None and sensordata.type == Sensor.SensorType.Camera:

@@ -462,7 +462,7 @@ public:
           ExtractSensors<domArticulated_system>(articulated_system,probot);
 
 //          //  Debug
-//          RAVELOG_INFO("Number of sensors of the Robot: %d\n",(int)probot->GetSensors().size());
+//          RAVELOG_INFO("Number of sensors of the Robot: %d\n",(int)probot->GetAttachedSensors().size());
 //
 //          //  Setup Manipulator of the Robot
 //          RobotBase::ManipulatorPtr manipulator(new RobotBase::Manipulator(probot));
@@ -710,7 +710,7 @@ public:
     //RobotBase::AttachedSensorPtr att_SensorActuator(new RobotBase::AttachedSensor(probot));
     att_Sensor = boost::shared_ptr<RobotBase::AttachedSensor>(new RobotBase::AttachedSensor(probot));
 
-    probot->GetSensors().push_back(att_Sensor);
+    probot->GetAttachedSensors().push_back(att_Sensor);
 
     //  Create Sensor of the TYPE required
     att_Sensor->psensor = probot->GetEnv()->CreateSensor(definition_type.c_str());
@@ -1120,7 +1120,7 @@ public:
           ExtractSensors<domArticulated_system>(articulated_system,probot);
 
           //  Debug
-          RAVELOG_INFO(str(boost::format("Number of sensors of the Robot: %d\n")%probot->GetSensors().size()));
+          RAVELOG_INFO(str(boost::format("Number of sensors of the Robot: %d\n")%probot->GetAttachedSensors().size()));
 
           //  Setup Manipulator of the Robot
           RobotBase::ManipulatorPtr manipulator(new RobotBase::Manipulator(probot));
