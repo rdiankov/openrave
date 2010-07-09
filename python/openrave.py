@@ -124,11 +124,12 @@ if __name__ == "__main__":
             sr = env.CreateProblem(options.server)
             if sr is not None:
                 env.LoadProblem(sr,'%d'%options.serverport)
+        if options.viewer:
+            env.SetViewer(options.viewer)
+        # load files after viewer is loaded since they may contain information about where to place the camera
         for arg in args:
             if arg.endswith('.xml') or arg.endswith('.dae'):
                 env.Load(arg)
-        if options.viewer:
-            env.SetViewer(options.viewer)
         if options.ipython:
             with env:
                 robots=env.GetRobots()
