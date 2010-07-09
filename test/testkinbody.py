@@ -229,3 +229,12 @@ def test_save():
     env.Save('test.dae')
     env.Reset()
     env.Load('test.dae')
+
+def test_drawjoints():
+    """draws the joint axes of the robot
+    """
+    env = robot.GetEnv()
+    while True:
+        h = None
+        h = [env.drawlinelist(array([j.GetAnchor()-j.GetAxis(0),j.GetAnchor()+j.GetAxis(0)]),5,array([0,0,0]))  for j in robot.GetJoints()]
+        time.sleep(0.1)

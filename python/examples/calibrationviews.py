@@ -50,7 +50,7 @@ class CalibrationViews(metaclass.AutoReloader):
             print 'Assuming target \'%s\' is attached to %s'%(target.GetName(),self.vmodel.manip)
             self.Tpatternrobot = dot(linalg.inv(self.vmodel.target.GetTransform()),self.vmodel.manip.GetEndEffectorTransform())
 
-    def computevisibilityposes(self,dists=arange(0.05,2.0,0.15),orientationdensity=1,num=inf):
+    def computevisibilityposes(self,dists=arange(0.05,1.0,0.15),orientationdensity=1,num=inf):
         """Computes robot poses using visibility information from the target.
 
         Sample the transformations of the camera. the camera x and y axes should always be aligned with the 
@@ -79,7 +79,6 @@ class CalibrationViews(metaclass.AutoReloader):
                 posebase = poseFromMatrix(Tbase)
                 poses = []
                 configs = []
-                print 'computing poses...'
                 for relativepose in visibilitytransforms:
                     for center in centers:
                         if self.Tpatternrobot is not None:
@@ -97,7 +96,6 @@ class CalibrationViews(metaclass.AutoReloader):
                                 return array(poses), array(configs)
                         except planning_error:
                             pass
-                print 'done'
                 return array(poses), array(configs)
 
     def computelocalposes(self,maxconeangle = 0.5,maxconedist = 0.15,averagedist=0.03,angledelta=0.2,**kwargs):

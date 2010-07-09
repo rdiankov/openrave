@@ -50,13 +50,14 @@ def test_ik():
     import inversekinematics
     env = Environment()
     env.SetDebugLevel(DebugLevel.Debug)
-    robot = env.ReadRobotXMLFile('robots/puma.robot.xml')#pr2-beta-static.robot.xml')
+    robot = env.ReadRobotXMLFile('/home/rdiankov/ros/honda/binpicking/robots/tx90.robot.xml')
     env.AddRobot(robot)
+    manip=robot.GetActiveManipulator()
     #manip=robot.SetActiveManipulator('leftarm_torso')
     self = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
     self.load()
     self.perftiming(10)
-    robot.SetJointValues([0.17, 1, 1, 0, 0, 0, 0, 0],manip.GetArmJoints())
+    robot.SetJointValues([-2.62361, 1.5708, -0.17691, -3.2652, 0, -3.33643],manip.GetArmJoints())
     T=manip.GetEndEffectorTransform()
     print robot.CheckSelfCollision()
     #[j.SetJointLimits([-pi],[pi]) for j in robot.GetJoints()]
@@ -67,6 +68,14 @@ def test_ik():
     robot.SetJointValues (values,manip.GetArmJoints())
     print manip.GetEndEffectorTransform()
     
+    sols=manip.FindIKSolutions(T,False)
+    for i,sol in enumerate(sols):
+        robot.SetJointValues(sol)
+        Tnew = manip.GetEndEffectorTransform()
+        if sum((Tnew-T)**2) > 0.0001:
+            print i
+            break
+        
 def debug_ik():
     env = Environment()
     env.Reset()
@@ -158,15 +167,15 @@ def test_6dik():
     from sympy import *
     env = Environment()
     env.Reset()
-    robot = env.ReadRobotXMLFile('robots/pr2-beta-static.robot.xml')
+    robot = env.ReadRobotXMLFile('/home/rdiankov/ros/honda/binpicking/robots/tx90.robot.xml')
     env.AddRobot(robot)
-    manip = robot.SetActiveManipulator('rightarm')
+    manip = robot.SetActiveManipulator('arm')
     ikmodel = inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
 
     solvefn=ikfast.IKFastSolver.solveFullIK_6D
     solvejoints = list(manip.GetArmJoints())
-    solvejoints.remove(58)
-    freeparams=[58]
+    #solvejoints.remove(58)
+    freeparams=[]
     sourcefilename = 'temp.cpp'
     self = ikfast.IKFastSolver(kinbody=robot,accuracy=None,precision=None)
     #code = self.generateIkSolver(manip.GetBase().GetIndex(),manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejoints,usedummyjoints=False,solvefn=solvefn)

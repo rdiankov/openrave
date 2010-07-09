@@ -1683,10 +1683,6 @@ void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, bool bCheck
                 vjointang.resize((*itjoint)->GetDOF());
                 for(int iang = 0; iang < (*itjoint)->GetDOF(); ++iang) { 
                     vjointang[iang] = pvalues[iang]-(*itjoint)->GetOffset();
-                    if( !(*itjoint)->IsCircular() && (*itjoint)->GetType() != Joint::JointSlider && (*itjoint)->GetType() != Joint::JointSpherical ) {
-                        if( vjointang[iang] < -PI+0.001f ) vjointang[iang] = -PI+0.001f;
-                        else if( vjointang[iang] > PI-0.001f ) vjointang[iang] = PI-0.001f;
-                    }
                 }
 
                 if( !!bodies[0] && !!bodies[1] && !bodies[1]->IsStatic()) {

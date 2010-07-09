@@ -634,7 +634,7 @@ namespace OpenRAVEXMLParser
 
             if( _processingtag.size() > 0 ) {
                 if( _processingtag == "geom" ) {
-                    return (xmlname == "translation" || xmlname=="rotationmat" || xmlname=="rotationaxis" || xmlname=="quat" || xmlname=="diffusecolor" || xmlname == "ambientcolor" || xmlname == "transparency" || xmlname=="render" || xmlname == "extents" || xmlname == "radius" || xmlname == "height" || (_itgeomprop->GetType() == KinBody::Link::GEOMPROPERTIES::GeomTrimesh && (xmlname=="data"||xmlname=="vertices"))) ? PE_Support : PE_Ignore;
+                    return (xmlname == "translation" || xmlname=="rotationmat" || xmlname=="rotationaxis" || xmlname=="quat" || xmlname=="diffusecolor" || xmlname == "ambientcolor" || xmlname == "transparency" || xmlname=="render" || xmlname == "extents" || xmlname == "radius" || xmlname == "height" || (_itgeomprop->GetType() == KinBody::Link::GEOMPROPERTIES::GeomTrimesh && (xmlname=="collision"||xmlname=="data"||xmlname=="vertices"))) ? PE_Support : PE_Ignore;
                 }
                 else if( _processingtag == "mass" ) {
                     return (xmlname == "density" || xmlname == "total" || xmlname == "radius" || !(_masstype == MT_Box && xmlname == "extents") || (_masstype == MT_Custom && xmlname == "com") || (_masstype == MT_Custom && xmlname == "inertia")) ? PE_Support : PE_Ignore;
@@ -812,7 +812,7 @@ namespace OpenRAVEXMLParser
                             _ss >> _itgeomprop->vGeomData.y;
                         break;
                     case KinBody::Link::GEOMPROPERTIES::GeomTrimesh:
-                        if( xmlname == "data" ) {
+                        if( xmlname == "data" || xmlname == "collision") {
                             string orgrenderfile;
                             Vector vScale(1,1,1);
                             _ss >> orgrenderfile;
