@@ -14,7 +14,9 @@ cd ..
 cp latex/refman.pdf openrave.pdf
 cd ..
 
-python build_doc.py build_doc --outdir="english/openravepy-html"
+python build_doc.py build_doc --outdir="english/openravepy-html" --languagecode=en
+
+python build_doc.py build_doc --outdir="japanese/openravepy-html" --languagecode=ja
 
 echo "OUTPUT_LANGUAGE = Japanese
 OUTPUT_DIRECTORY = ./japanese/" | cat Doxyfile - > Doxyfile.japanese
@@ -28,6 +30,6 @@ doxygen Doxyfile.japanese
 # cd ../..
 #cp japanese/latex/refman.pdf japanese/openrave_japanese.pdf
 
-tar czf ordocs.tgz english/html english/openravepy-html images/*.jpg japanese/html english/openrave.pdf
+tar czf ordocs.tgz english/html english/openravepy-html english/openrave.pdf images/*.jpg japanese/html japanese/openravepy-html 
 scp ordocs.tgz diankov@programmingvision.com:~/openrave/ordocs/
 ssh diankov@programmingvision.com "cd ~/openrave/ordocs; rm -rf english japanese; tar xzf ordocs.tgz; rm -rf ordocs.tgz"

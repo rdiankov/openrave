@@ -18,7 +18,9 @@ class build_doc(Command):
         ('without-apidocs', None,
          "whether to skip the generation of API documentaton"),
         ('outdir=',None,
-         "output dir of the document")
+         "output dir of the document"),
+        ('languagecode=',None,
+         "language code to compile text with")
     ]
     boolean_options = ['force', 'without-apidocs']
 
@@ -26,15 +28,20 @@ class build_doc(Command):
         self.force = False
         self.without_apidocs = False
         self.outdir = None
+        self.languagecode = None
 
     def finalize_options(self):
         if self.outdir is None:
             self.outdir = 'openravepy-html'
+        if self.languagecode is None:
+            self.languagecode = 'en'
 
     def run(self):
+        languagecode = self.languagecode
         from docutils.core import publish_cmdline
         from docutils.nodes import raw
         from docutils.parsers import rst
+        from docutils.parsers.rst import Directive
         import __builtin__
         __builtin__.__openravepy_build_doc__ = True # notify openravepy that will be building docs so it can re-arrange its imports
 
@@ -48,8 +55,7 @@ class build_doc(Command):
             from pygments.lexers import get_lexer_by_name
             from pygments.formatters import HtmlFormatter
 
-            def code_block(name, arguments, options, content, lineno,
-                           content_offset, block_text, state, state_machine):
+            def code_block(name, arguments, options, content, lineno, content_offset, block_text, state, state_machine):
                 lexer = get_lexer_by_name(arguments[0])
                 html = highlight('\n'.join(content), lexer, HtmlFormatter())
                 return [raw('', html, format='html')]
@@ -59,6 +65,27 @@ class build_doc(Command):
             rst.directives.register_directive('code-block', code_block)
         except ImportError:
             print 'Pygments not installed, syntax highlighting disabled'
+
+        # register a custom language handler
+        class LangBlockDirective(Directive):
+            required_arguments = 1
+            optional_arguments = 0
+            final_argument = False
+            option_spec = {'language':rst.directives.unchanged}
+            has_content = True
+            node_class = rst.nodes.paragraph
+            def run(self):
+                self.assert_has_content()
+                if self.arguments[0] != languagecode:
+                    return [] # does not match language code, so ignore
+                text = '\n'.join(self.content)
+                node = self.node_class(text)
+                #node['classes'] += self.options.get('class', [])
+                if text:
+                    self.state.nested_parse(self.content, self.content_offset, node)
+                return [node]
+        rst.directives.register_directive('lang-block', LangBlockDirective)
+        rst.languages.get_language('ja')
 
         for source in glob('*.txt'):
             dest = os.path.splitext(source)[0] + '.html'
@@ -72,6 +99,7 @@ class build_doc(Command):
         if not self.without_apidocs:
             try:
                 from epydoc import cli
+                from epydoc import docbuilder
                 old_argv = sys.argv[1:]
                 sys.argv[1:] = [
                     '--config=%s' % epydoc_conf,

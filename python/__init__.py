@@ -9,10 +9,20 @@ openravepy usage
 Introduction
 ------------
 
-OpenRAVE_ can be used with Python seamlessly through the `openravepy` module. The bindings with the
-C++ API are developed using the Boost.Python library. Because `openravepy` directly links with
-OpenRAVE_ instead of going through the network, it allows much faster execution times in a much more
-natural setting. In fact, most of the python bindings match the exactly C++ header files exactly.
+.. lang-block:: ja
+
+  はじめに
+
+.. lang-block:: en
+
+  OpenRAVE_ can be used with Python seamlessly through the `openravepy` module. The bindings with the
+  C++ API are developed using the Boost.Python library. Because `openravepy` directly links with
+  OpenRAVE_ instead of going through the network, it allows much faster execution times in a much more
+  natural setting. In fact, most of the python bindings match the exactly C++ header files exactly.
+
+.. lang-block:: ja
+
+  OpenRAVE_ の機能はopenravepyモジュールによってPythonで使える．バインディングはネットワーク通信やシリアライズのではなく，メモリのやりとりで行われているため，非常に早いである．このおかげで，PythonのバインディングはC＋＋のAPIに一致するようになっている．
 
 Setup
 =====
@@ -169,11 +179,10 @@ The openrave.py script is an attempt to make the command line parameters for ope
 
 - Can query all executable databases::
 
-    openrave.py --database=
+    openrave.py --listdatabases
 
   **Output**::
 
-    bad database generator, current list of executable generators are:
      convexdecomposition
      grasping
      inversekinematics
@@ -213,7 +222,7 @@ from openravepy_int import __version__
 from openravepy_int import __author__
 from openravepy_int import __copyright__
 __license__ = 'core: Lesser GPL, examples: Apache License, Version 2.0'
-__docformat__ = 'restructuredtext'
+__docformat__ = 'restructuredtext ja'
 
 from openravepy_ext import *
 
