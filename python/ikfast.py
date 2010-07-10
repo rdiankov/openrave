@@ -1730,15 +1730,19 @@ class IKFastSolver(AutoReloader):
             for comb in eqcombinations:
                 # try to solve for both sin and cos terms
                 s = solve(comb[1],[svar,cvar])
-                if s is not None and s.has_key(svar) and s.has_key(cvar):
-                    if self.chop((s[svar]-s[cvar]).subs(listsymbols),6) == 0:
-                        continue
-                    if s[svar].is_fraction() and s[cvar].is_fraction():
-                        # check the numerator and denominator
-                        if self.chop((s[svar].args[0]-s[cvar].args[0]).subs(listsymbols),6) == 0 and self.chop((s[svar].args[1]-s[cvar].args[1]).subs(listsymbols),6) == 0:
+                try:
+                    if s is not None and s.has_key(svar) and s.has_key(cvar):
+                        if self.chop((s[svar]-s[cvar]).subs(listsymbols),6) == 0:
                             continue
-                    solution = s
-                    break
+                        if s[svar].is_fraction() and s[cvar].is_fraction():
+                            # check the numerator and denominator
+                            if self.chop((s[svar].args[0]-s[cvar].args[0]).subs(listsymbols),6) == 0 and self.chop((s[svar].args[1]-s[cvar].args[1]).subs(listsymbols),6) == 0:
+                                continue
+                        solution = s
+                        break
+                except AttributError,e:
+                    print 'solve is returning bad solution:',s
+            
             if solution is not None:
                 expandedsol = atan2(solution[svar],solution[cvar]).subs(listsymbols)
                 # sometimes the returned simplest solution makes really gross approximations
