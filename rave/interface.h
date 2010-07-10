@@ -71,6 +71,8 @@ public:
     /// \return true if the command is successfully processed, otherwise false
     virtual bool SendCommand(std::ostream& os, std::istream& is) { throw openrave_exception("not commands supported",ORE_CommandNotSupported); }
 
+    /// serializes the interface
+    //virtual void Serialize(std::ostream& o, int options) const;
 protected:
     virtual const char* GetHash() const = 0;
     std::string __description;

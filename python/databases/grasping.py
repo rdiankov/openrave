@@ -22,11 +22,11 @@ Running the Example
 
 **python**::
 
-  python openrave.py --database grasping
+  openrave.py --database grasping
 
 **program options/description**::
 
-  python openrave.py --database grasping --help
+  openrave.py --database grasping --help
 
 **octave/matlab (first start openrave)**::
 

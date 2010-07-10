@@ -88,12 +88,10 @@ class VisibilityModel(OpenRAVEModel):
         clone.basemanip = self.basemanip.clone(envother)
         clone.preprocess()
         return clone
-    def getversion(self):
-        return 1
     def has(self):
         return self.visibilitytransforms is not None and len(self.visibilitytransforms) > 0
     def getversion(self):
-        return 1
+        return 2
     def getfilename(self):
         return os.path.join(OpenRAVEModel.getfilename(self),'visibility.' + self.manip.GetStructureHash() + '.' + self.attachedsensor.GetStructureHash() + '.' + self.target.GetKinematicsGeometryHash()+'.pp')
     def load(self):
@@ -164,6 +162,7 @@ class VisibilityModel(OpenRAVEModel):
                         self.visibilitytransforms = self.visualprob.ProcessVisibilityExtents(extents=loadtxt(extentsfile,float))
                     else:
                         self.visibilitytransforms = self.visualprob.ProcessVisibilityExtents(sphere=sphere,conedirangle=conedirangle)
+                print len(self.visibilitytransforms)
                 self.visualprob.SetCameraTransforms(transforms=self.visibilitytransforms)
         finally:
             for b,enable in bodies:
@@ -175,8 +174,11 @@ class VisibilityModel(OpenRAVEModel):
         pts = array([dot(self.target.GetTransform(),matrixFromPose(pose))[0:3,3] for pose in self.visibilitytransforms])
         h=self.env.plot3(pts,5,colors=array([0.5,0.5,1,0.2]))
         with RobotStateSaver(self.robot):
+            # disable all non-child links
+            for link in self.robot.GetLinks():
+                link.Enable(link in self.manip.GetChildLinks())
             with self.GripperVisibility(self.manip):
-                for pose in self.visibilitytransforms:
+                for i,pose in enumerate(self.visibilitytransforms):
                     with self.env:
                         if len(self.preshapes) > 0:
                             self.robot.SetJointValues(self.preshapes[0],self.manip.GetGripperJoints())
@@ -188,13 +190,13 @@ class VisibilityModel(OpenRAVEModel):
                             link.SetTransform(dot(Tdelta,link.GetTransform()))
                         visibility = self.visualprob.ComputeVisibility()
                         self.env.UpdatePublishedBodies()
-                    raw_input('visibility %d, press any key to continue: '%visibility)
+                    raw_input('%d/%d visibility=%d, press any key to continue: '%(i,len(self.visibilitytransforms),visibility))
     def show(self,options=None):
         self.env.SetViewer('qtcoin')
         return self.showtransforms()
     def moveToPreshape(self):
         """uses a planner to safely move the hand to the preshape and returns the trajectory"""
-        if len(self.preshape) > 0:
+        if len(self.preshapes) > 0:
             preshape=self.preshapes[0]
             with self.robot:
                 self.robot.SetActiveDOFs(self.manip.GetArmJoints())

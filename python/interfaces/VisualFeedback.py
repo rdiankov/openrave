@@ -88,10 +88,12 @@ class VisualFeedback:
             raise planning_error()
         visibilitytransforms = array([float(s) for s in res.split()],float)
         return reshape(visibilitytransforms,(len(visibilitytransforms)/7,7))
-    def SetCameraTransforms(self,transforms):
+    def SetCameraTransforms(self,transforms,mindist=None):
         cmd = 'SetCameraTransforms transforms %d '%len(transforms)
         for f in reshape(transforms,len(transforms)*7):
             cmd += str(f) + ' '
+        if mindist is not None:
+            cmd += 'mindist %f '%(mindist)
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise planning_error()

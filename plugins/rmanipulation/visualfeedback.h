@@ -241,20 +241,28 @@ public:
         virtual ~VisibilityConstraintFunction() {
             _ptargetbox->GetEnv()->RemoveKinBody(_ptargetbox);
         }
-        
-        virtual bool Constraint(const vector<dReal>& pSrcConf, vector<dReal>& pDestConf, int settings)
+
+        virtual bool IsVisible()
         {
             Transform ttarget = _vf->_target->GetTransform();
-            TransformMatrix tcamera = ttarget.inverse()*_vf->_psensor->GetSensor()->GetTransform();
-            if( !InConvexHull(tcamera) )
+            TransformMatrix tcamera = ttarget.inverse()*_vf->_psensor->GetTransform();
+            if( !InConvexHull(tcamera) ) {
+                RAVELOG_DEBUG("box not in camera vision hull (shouldn't happen due to preprocessing\n");
                 return false;
-            // no need to check gripper collision
-            bool bOcclusion = IsOccluded(tcamera);
-            if( bOcclusion )
+            }
+            if( IsOccluded(tcamera) ) {
                 return false;
-            
-            pDestConf = pSrcConf;
+            }
             return true;
+        }
+
+        virtual bool Constraint(const vector<dReal>& pSrcConf, vector<dReal>& pDestConf, int settings)
+        {
+            if( IsVisible() ) {
+                pDestConf = pSrcConf;
+                return true;
+            }
+            return false;
         }
 
         /// samples the ik
@@ -271,8 +279,10 @@ public:
                 ttarget = _vf->_target->GetTransform();
                 tcamera = ttarget.inverse()*t;
             }
-            if( !InConvexHull(tcamera) )
+            if( !InConvexHull(tcamera) ) {
+                RAVELOG_DEBUG("box not in camera vision hull: %s\n");
                 return false;
+            }
 
             // object is inside, find an ik solution
             Transform tgoalee = t*_vf->_ttogripper;
@@ -294,24 +304,19 @@ public:
         }
 
         /// \param tcamera in target coordinate system
-        bool InConvexHull(const TransformMatrix& tcamera)
+        /// \param mindist Minimum distance to keep from the plane (should be non-negative)
+        bool InConvexHull(const TransformMatrix& tcamera, dReal mindist=0)
         {
-            Vector vitrans(-tcamera.m[0]*tcamera.trans.x - tcamera.m[4]*tcamera.trans.y - tcamera.m[8]*tcamera.trans.z,
-                           -tcamera.m[1]*tcamera.trans.x - tcamera.m[5]*tcamera.trans.y - tcamera.m[9]*tcamera.trans.z,
-                           -tcamera.m[2]*tcamera.trans.x - tcamera.m[6]*tcamera.trans.y - tcamera.m[10]*tcamera.trans.z);
             _vconvexplanes3d.resize(_vf->_vconvexplanes.size());
             for(size_t i = 0; i < _vf->_vconvexplanes.size(); ++i) {
                 _vconvexplanes3d[i] = tcamera.rotate(_vf->_vconvexplanes[i]);
-                _vconvexplanes3d[i].w = dot3(vitrans,_vf->_vconvexplanes[i]);
+                _vconvexplanes3d[i].w = -dot3(tcamera.trans,_vconvexplanes3d[i]) - mindist;
             }
-
             FOREACH(itobb,_vTargetOBBs) {
                 if( !IsOBBinConvexHull(*itobb,_vconvexplanes3d) ) {
-                    RAVELOG_VERBOSEA("box not in camera vision hull\n");
                     return false;
                 }
             }
-            
             return true;
         }
 
@@ -320,44 +325,80 @@ public:
         /// \param tcameras in target coordinate system
         bool IsOccluded(const TransformMatrix& tcamera)
         {
+            KinBody::KinBodyStateSaver saver1(_ptargetbox,KinBody::Save_LinkEnable), saver2(_vf->_target,KinBody::Save_LinkEnable);
             TransformMatrix tcamerainv = tcamera.inverse();
-            _ptargetbox->Enable(true);
-            _vf->_target->Enable(false);
             Transform ttarget = _vf->_target->GetTransform();
             _ptargetbox->SetTransform(ttarget);
             Transform tworldcamera = ttarget*tcamera;
-            bool bOcclusion = false;
+            _ptargetbox->Enable(true);
+            _vf->_target->Enable(false);
             FOREACH(itobb,_vTargetOBBs) {
                 OBB cameraobb = TransformOBB(*itobb,tcamerainv);
                 if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::TestRay, this, _1, boost::ref(tworldcamera)),_fAllowableOcclusion) ) {
-                    bOcclusion = true;
                     RAVELOG_VERBOSEA("box is occluded\n");
-                    break;
+                    return true;
                 }
             }
-            _ptargetbox->Enable(false);
-            _vf->_target->Enable(true);
-            return bOcclusion;
+            return false;
         }
 
         bool TestRay(const Vector& v, const TransformMatrix& tcamera)
         {
             RAY r;
             r.dir = tcamera.rotate(2.0f*v);
-            r.pos = tcamera.trans + 0.05f*r.dir; // move the rays a little forward
+            r.pos = tcamera.trans + 0.01f*r.dir; // move the rays a little forward
             if( !_vf->_robot->GetEnv()->CheckCollision(r,_report) ) {
-                RAVELOG_DEBUGA("no collision!?\n");
                 return true; // not supposed to happen, but it is OK
             }
 
 //            RaveVector<float> vpoints[2];
 //            vpoints[0] = r.pos;
-//            BOOST_ASSERT(_report.contacts.size() == 1 );
 //            vpoints[1] = _report.contacts[0].pos;
 //            _vf->_robot->GetEnv()->drawlinestrip(vpoints[0],2,16,1.0f,Vector(0,0,1));
-            if( !(!!_report->plink1 && _report->plink1->GetParent() == _ptargetbox) )
-                RAVELOG_DEBUGA(str(boost::format("bad collision: %s\n")%_report->__str__()));
+            if( !(!!_report->plink1 && _report->plink1->GetParent() == _ptargetbox) ) {
+                Vector v = _report->contacts.at(0).pos;
+                RAVELOG_VERBOSE(str(boost::format("bad collision: %s: %f %f %f\n")%_report->__str__()%v.x%v.y%v.z));
+            }
             return !!_report->plink1 && _report->plink1->GetParent() == _ptargetbox;
+        }
+
+        /// check if just the rigidly attached links of the gripper are in the way
+        /// this function is not meant to be called during planning (only database generation)
+        bool IsOccludedByRigid(const TransformMatrix& tcamera)
+        {
+            KinBody::KinBodyStateSaver saver1(_ptargetbox,KinBody::Save_LinkEnable), saver2(_vf->_target,KinBody::Save_LinkEnable);
+            vector<KinBody::LinkPtr> vattachedlinks;
+            _vf->_robot->GetRigidlyAttachedLinks(_vf->_psensor->GetAttachingLink()->GetIndex(),vattachedlinks);
+            KinBody::KinBodyStateSaver robotsaver(_vf->_robot);
+            FOREACH(itlink,_vf->_robot->GetLinks()) {
+                bool battached = find(vattachedlinks.begin(),vattachedlinks.end(),*itlink)!=vattachedlinks.end();
+                (*itlink)->Enable(battached);
+                if( battached ) {
+                    (*itlink)->SetTransform(_vf->_psensor->GetTransform().inverse()*(*itlink)->GetTransform());
+                }
+            }
+            TransformMatrix tcamerainv = tcamera.inverse();
+            Transform ttarget = _vf->_target->GetTransform();
+            _ptargetbox->SetTransform(ttarget);
+            Transform tworldcamera = ttarget*tcamera;
+            _ptargetbox->Enable(true);
+            _vf->_target->Enable(false);
+            FOREACH(itobb,_vTargetOBBs) {
+                OBB cameraobb = TransformOBB(*itobb,tcamerainv);
+                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::TestRayRigid, this, _1, boost::ref(tworldcamera),boost::ref(vattachedlinks)), 0.0f) ) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        bool TestRayRigid(const Vector& v, const TransformMatrix& tcamera, const vector<KinBody::LinkPtr>& vattachedlinks)
+        {
+            if( _vf->_robot->GetEnv()->CheckCollision(RAY(0.02f*v,2.0f*v),_vf->_robot,_report) ) {
+                //RAVELOG_INFO(str(boost::format("ray col: %s\n")%_report->__str__()));
+                return false;
+            }
+            return true;
         }
 
     private:
@@ -431,7 +472,7 @@ public:
         RegisterCommand("ProcessVisibilityExtents",boost::bind(&VisualFeedbackProblem::ProcessVisibilityExtents,this,_1,_2),
                         "Converts 3D extents to full 6D camera transforms and prunes bad transforms");
         RegisterCommand("SetCameraTransforms",boost::bind(&VisualFeedbackProblem::SetCameraTransforms,this,_1,_2),
-                        "Processes the visibility directions for containment of the object inside the gripper mask");
+                        "Sets new camera transformations. Can optionally choose a minimum distance from all planes of the camera camera convex hull (includes gripper mask)");
         RegisterCommand("ComputeVisibility",boost::bind(&VisualFeedbackProblem::ComputeVisibility,this,_1,_2),
                         "Computes the visibility of the current robot configuration");
         RegisterCommand("ComputeVisibleConfiguration",boost::bind(&VisualFeedbackProblem::ComputeVisibleConfiguration,this,_1,_2),
@@ -489,7 +530,6 @@ public:
         _target.reset();
         RobotBase::AttachedSensorPtr psensor;
         RobotBase::ManipulatorPtr pmanip;
-        vector<Vector> vconvexplanes;
         _sensorrobot = _robot;
 
         string cmd;
@@ -655,16 +695,15 @@ public:
 
         if( _vconvexplanes.size() == 0 ) {
             // pick the camera boundaries
-            _vconvexplanes.push_back(Vector(1,0,_pcamerageom->KK.cx/_pcamerageom->KK.fx,0).normalize3()); // -x
-            _vconvexplanes.push_back(Vector(-1,0,-(_pcamerageom->width-_pcamerageom->KK.cx)/_pcamerageom->KK.fx,0).normalize3()); // +x
-            _vconvexplanes.push_back(Vector(1,0,_pcamerageom->KK.cy/_pcamerageom->KK.fy,0).normalize3()); // -y
-            _vconvexplanes.push_back(Vector(-1,0,-(_pcamerageom->height-_pcamerageom->KK.cy)/_pcamerageom->KK.fy,0).normalize3()); // +y
+            _vconvexplanes.push_back(Vector(_pcamerageom->KK.fx,0,_pcamerageom->KK.cx,0).normalize3()); // -x
+            _vconvexplanes.push_back(Vector(-_pcamerageom->KK.fx,0,_pcamerageom->width-_pcamerageom->KK.cx,0).normalize3()); // +x
+            _vconvexplanes.push_back(Vector(0,_pcamerageom->KK.fy,_pcamerageom->KK.cy,0).normalize3()); // -y
+            _vconvexplanes.push_back(Vector(0,-_pcamerageom->KK.fy,_pcamerageom->height-_pcamerageom->KK.cy,0).normalize3()); // +y
             _vcenterconvex = Vector(0,0,1);
         }
 
         _pmanip = pmanip;
         _psensor = psensor;
-        _vconvexplanes = vconvexplanes;
         sout << _pmanip->GetName();
         return true;
     }
@@ -797,15 +836,18 @@ public:
             }
         }
 
-        KinBody::KinBodyStateSaver saver(_target);
+        KinBody::KinBodyStateSaver saver(_target,KinBody::Save_LinkTransformation);
         _target->SetTransform(Transform());
-        boost::shared_ptr<GoalSampleFunction> pgoalfn(new GoalSampleFunction(shared_problem(), vtransforms));
+        boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
 
         // get all the camera positions and test them
         FOREACHC(itcamera, vtransforms) {
-            if( pgoalfn->_vconstraint.InConvexHull(*itcamera) ) {
-                if( !_pmanip->CheckEndEffectorCollision(*itcamera*_ttogripper) )
-                    sout << *itcamera << " ";
+            if( pconstraintfn->InConvexHull(*itcamera) ) {
+                if( !_pmanip->CheckEndEffectorCollision(*itcamera*_ttogripper) ) {
+                    if( !pconstraintfn->IsOccludedByRigid(*itcamera) ) {
+                        sout << *itcamera << " ";
+                    }
+                }
             }
         }
 
@@ -816,6 +858,7 @@ public:
     {
         string cmd;
         _visibilitytransforms.resize(0);
+        dReal mindist = 0;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput )
@@ -823,11 +866,16 @@ public:
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "transforms" ) {
-                int numtrans=0;
+                size_t numtrans=0;
                 sinput >> numtrans;
                 _visibilitytransforms.resize(numtrans);
-                FOREACH(it,_visibilitytransforms)
-                    sinput >> *it;
+                Transform t;
+                for(size_t i =0; i < numtrans; ++i) {
+                    sinput >> _visibilitytransforms[i];
+                }
+            }
+            else if( cmd == "mindist" ) {
+                sinput >> mindist;
             }
             else {
                 RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
@@ -840,21 +888,20 @@ public:
             }
         }
 
-        bool bSuccess = true;
-        KinBody::KinBodyStateSaver saver(_target);
-        _target->SetTransform(Transform());
-        boost::shared_ptr<GoalSampleFunction> pgoalfn(new GoalSampleFunction(shared_problem(), _visibilitytransforms));
-
-        // get all the camera positions and test them
-        int i = 0;
-        FOREACHC(itcamera, _visibilitytransforms) {
-            if( !pgoalfn->_vconstraint.InConvexHull(*itcamera) ) {
-                RAVELOG_WARN("camera transform %d fails constraints\n",i);
-                bSuccess = false;
+        if( mindist != 0 ) {
+            KinBody::KinBodyStateSaver saver(_target);
+            _target->SetTransform(Transform());
+            boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
+            vector<Transform> visibilitytransforms; visibilitytransforms.swap(_visibilitytransforms);
+            _visibilitytransforms.reserve(visibilitytransforms.size());
+            FOREACH(it,visibilitytransforms) {
+                if( pconstraintfn->InConvexHull(*it,mindist) ) {
+                    _visibilitytransforms.push_back(*it);
+                }
             }
         }
         
-        return bSuccess;
+        return true;
     }
 
     bool ComputeVisibility(ostream& sout, istream& sinput)
@@ -864,9 +911,7 @@ public:
         _robot->SetActiveDOFs(_pmanip->GetArmJoints());
 
         boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
-        vector<dReal> v;
-        _robot->GetActiveDOFValues(v);
-        sout << pconstraintfn->Constraint(v,v,0);
+        sout << pconstraintfn->IsVisible();
         return true;
     }
 

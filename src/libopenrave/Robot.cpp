@@ -513,6 +513,27 @@ void RobotBase::AttachedSensor::serialize(std::ostream& o, int options) const
     o << (pattachedlink.expired() ? -1 : LinkPtr(pattachedlink)->GetIndex()) << " ";
     SerializeRound(o,trelative);
     o << (!pdata ? -1 : pdata->GetType()) << " ";
+    // it is also important to serialize some of the geom parameters for the sensor (in case models are cached to it)
+    if( !!psensor ) {
+        SensorBase::SensorGeometryPtr prawgeom = psensor->GetSensorGeometry();
+        if( !!prawgeom ) {
+            switch(prawgeom->GetType()) {
+                case SensorBase::ST_Laser: {
+                    boost::shared_ptr<SensorBase::LaserGeomData> pgeom = boost::static_pointer_cast<SensorBase::LaserGeomData>(prawgeom);
+                    o << pgeom->min_angle[0] << " " << pgeom->max_angle[0] << " " << pgeom->resolution[0] << " " << pgeom->max_range << " ";
+                    break;
+                }
+                case SensorBase::ST_Camera: {
+                    boost::shared_ptr<SensorBase::CameraGeomData> pgeom = boost::static_pointer_cast<SensorBase::CameraGeomData>(prawgeom);
+                    o << pgeom->KK.fx << " " << pgeom->KK.fy << " " << pgeom->KK.cx << " " << pgeom->KK.cy << " " << pgeom->width << " " << pgeom->height << " ";
+                    break;
+                }
+                default:
+                    // don't support yet
+                    break;
+            }
+        }
+    }
 }
 
 std::string RobotBase::AttachedSensor::GetStructureHash() const

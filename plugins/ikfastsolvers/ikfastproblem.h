@@ -311,18 +311,18 @@ public:
         }
 
         {
-            string cmdhas = str(boost::format("openrave.py --database=\"inversekinematics --gethas --robot=%s --manipname=%s --iktype=%s\"")%probot->GetXMLFilename()%probot->GetActiveManipulator()->GetName()%striktype);
+            string cmdhas = str(boost::format("openrave.py --database inversekinematics --gethas --robot=%s --manipname=%s --iktype=%s")%probot->GetXMLFilename()%probot->GetActiveManipulator()->GetName()%striktype);
             FILE* pipe = popen(cmdhas.c_str(), "r");
             int has = pclose(pipe);
             if( has ) {
-                string cmdgen = str(boost::format("openrave.py --database=\"inversekinematics --robot=%s --manipname=%s --iktype=%s\"")%probot->GetXMLFilename()%probot->GetActiveManipulator()->GetName()%striktype);
+                string cmdgen = str(boost::format("openrave.py --database inversekinematics --robot=%s --manipname=%s --iktype=%s")%probot->GetXMLFilename()%probot->GetActiveManipulator()->GetName()%striktype);
                 FILE* pipe = popen(cmdgen.c_str(), "r");
                 int generateexit = pclose(pipe);
                 RAVELOG_INFO("generate exit: %d\n",generateexit);
             }
         }
         
-        string cmdfilename = str(boost::format("openrave.py --database=\"inversekinematics --getfilename --robot=%s --manipname=%s --iktype=%s\"")%probot->GetXMLFilename()%probot->GetActiveManipulator()->GetName()%striktype);
+        string cmdfilename = str(boost::format("openrave.py --database inversekinematics --getfilename --robot=%s --manipname=%s --iktype=%s")%probot->GetXMLFilename()%probot->GetActiveManipulator()->GetName()%striktype);
         RAVELOG_INFO("executing shell command:\n%s\n",cmdfilename.c_str());
         string ikfilename;
         FILE* pipe = popen(cmdfilename.c_str(), "r");
