@@ -370,7 +370,7 @@ public:
             vector<KinBody::LinkPtr> vattachedlinks;
             _vf->_robot->GetRigidlyAttachedLinks(_vf->_psensor->GetAttachingLink()->GetIndex(),vattachedlinks);
             KinBody::KinBodyStateSaver robotsaver(_vf->_robot);
-            FOREACH(itlink,_vf->_robot->GetLinks()) {
+            FOREACHC(itlink,_vf->_robot->GetLinks()) {
                 bool battached = find(vattachedlinks.begin(),vattachedlinks.end(),*itlink)!=vattachedlinks.end();
                 (*itlink)->Enable(battached);
                 if( battached ) {
