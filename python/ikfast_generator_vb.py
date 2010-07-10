@@ -768,7 +768,7 @@ End Class
         if len(dimvariables) > 0:
             fcode += 'Dim %s As %s\n'%(','.join(name for name in dimvariables),self.ikreal)
         fcode += treecode
-        code += self.indentCode(fcode,4) + self._endforloop()+ "Set ik = numsolutions>0\nEnd Function\n"
+        code += self.indentCode(fcode,4) + self._endforloop()+ "ik = numsolutions>0\nEnd Function\n"
         return code
     def endIKChainRay4D(self, node):
         return ''

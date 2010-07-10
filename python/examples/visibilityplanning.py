@@ -268,6 +268,8 @@ class VisibilityGrasping(metaclass.AutoReloader):
             trajdata = None
             with self.robot:
                 validgrasps,validindices = gmodel.computeValidGrasps()
+                if len(validgrasps) == 0:
+                    continue
                 for iter in range(4):
                     # set the real values for simulation
                     gmodel.setPreshape(validgrasps[0])
