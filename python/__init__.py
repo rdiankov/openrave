@@ -195,16 +195,19 @@ The openrave.py script is an attempt to make the command line parameters for ope
 
     openrave.py --collision=pqp --viewer=qtcoin --physics=ode data/lab1.env.xml
 
-- Can query all the hashes openrave uses to manage robot descriptions::
-
-    openrave.py --bodyhash=data/mug1.kinbody.xml
-    openrave.py --robothash=robots/barrettsegway.robot.xml
-
 - Can set debug mode::
 
     openrave.py --debug=verbose data/lab1.env.xml
 
 Given that environment xml files can now contain tags for any interface, it is possible to setup all the used interfaces in the XML, open it with **openrave.py -i**, and immediately start introspecting on the state.
+
+openrave-hash.py
+----------------
+
+Can query all the hashes openrave uses to manage robot descriptions::
+
+  openrave.py --bodyhash=data/mug1.kinbody.xml
+  openrave.py --robothash=robots/barrettsegway.robot.xml
 
 .. _OpenRAVE: http://openrave.programmingvision.com
 
@@ -222,7 +225,7 @@ from openravepy_int import __version__
 from openravepy_int import __author__
 from openravepy_int import __copyright__
 __license__ = 'core: Lesser GPL, examples: Apache License, Version 2.0'
-__docformat__ = 'restructuredtext ja'
+__docformat__ = 'restructuredtext'
 
 from openravepy_ext import *
 
