@@ -209,6 +209,8 @@ class VisibilityModel(OpenRAVEModel):
 
     def computeValidTransform(self,returnall=False,checkcollision=True,computevisibility=True,randomize=False):
         with self.robot:
+            if self.manip.CheckIndependentCollision():
+                raise planning_error('robot independent links are initiallly in collision')
             validjoints = []
             if randomize:
                 order = random.permutation(len(self.visibilitytransforms))

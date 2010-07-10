@@ -937,6 +937,12 @@ public:
         _robot->SetActiveManipulator(_nManipIndex); BOOST_ASSERT(_robot->GetActiveManipulator()==_pmanip);
         _robot->SetActiveDOFs(_pmanip->GetArmJoints());
 
+        CollisionReportPtr preport(new COLLISIONREPORT());
+        if( _pmanip->CheckIndependentCollision(preport) ) {
+            RAVELOG_WARN(str(boost::format("robot independent links in collision: %s\n")%preport->__str__()));
+            return false;
+        }
+
         boost::shared_ptr<GoalSampleFunction> pgoalsampler(new GoalSampleFunction(shared_problem(),_visibilitytransforms));
      
         uint64_t starttime = GetMicroTime();
