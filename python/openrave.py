@@ -27,13 +27,13 @@ except ImportError:
     try:
         openravepy_path = Popen(['openrave-config','--python-dir'],stdout=PIPE).communicate()
         sys.path.append(openravepy_path[0].strip())
-        from openravepy import *
     except OSError:
         import platform
         if sys.platform.startswith('win') or platform.system().lower() == 'windows':
             # in windows so add the default openravepy installation
             sys.path.append("C:\\Program Files\\openrave\\share\\openrave")
-        
+    from openravepy import *
+
 from numpy import *
 from optparse import OptionParser
 
