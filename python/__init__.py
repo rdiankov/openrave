@@ -148,7 +148,7 @@ For those who want to optimize the locking of the environment every time, they c
 openrave.py
 -----------
 
-The openrave.py script is an attempt to make the command line parameters for openrave much simpler to use. It is functionally equivalent to the original openrave program, except it is consistent and supports many other interesting features:
+The openrave.py script is an attempt to make the command line parameters for openrave much simpler to use. It is a superset of the functions provided by the original *openrave* program, except it supports many other interesting features and provides a window to all openravepy functions. It can also automatically add openravepy to the PYTHONPATH making it simpler for users. Here are some features it supports:
 
 - Opening files with the **-i** option will now drop into the ipython interpreter after loading the particular files specified.  For example::
 

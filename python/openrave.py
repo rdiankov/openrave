@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,10 +17,25 @@ __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
-from openravepy import *
+import sys,time
+try:
+    from openravepy import *
+except ImportError:
+    print "openravepy is not set into PYTHONPATH env variable, attempting to add"
+    # use openrave-config to get the correct install path
+    from subprocess import Popen, PIPE
+    try:
+        openravepy_path = Popen(['openrave-config','--python-dir'],stdout=PIPE).communicate()
+        sys.path.append(openravepy_path[0].strip())
+        from openravepy import *
+    except OSError:
+        import platform
+        if sys.platform.startswith('win') or platform.system().lower() == 'windows':
+            # in windows so add the default openravepy installation
+            sys.path.append("C:\\Program Files\\openrave\\share\\openrave")
+        
 from numpy import *
 from optparse import OptionParser
-import sys,time
 
 if __name__ == "__main__":
     parser = OptionParser(description='OpenRAVE %s'%openravepy.__version__)
