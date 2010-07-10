@@ -210,6 +210,9 @@ class InverseKinematicsModel(OpenRAVEModel):
             if len(code) == 0:
                 raise ValueError('failed to generate ik solver for robot %s:%s'%(self.robot.GetName(),self.manip.GetName()))
             open(sourcefilename,'w').write(code)
+            if outputlang != 'cpp':
+                print 'cannot continue further if outputlang is not cpp'
+                sys.exit(0)
         
         # compile the code and create the shared object
         compiler,compile_flags = self.getcompiler()
@@ -221,7 +224,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         platformsourcefilename = os.path.splitext(output_filename)[0]+'.cpp' # needed in order to prevent interference with machines with different architectures 
         shutil.copyfile(sourcefilename, platformsourcefilename)
         try:
-            objectfiles = compiler.compile(sources=[platformsourcefilename],macros=[('IKFAST_CLIBRARY',1)],extra_postargs=compile_flags,output_dir=output_dir)
+            objectfiles = compiler.compile(sources=[platformsourcefilename],macros=[('IKFAST_CLIBRARY',1),('IKFAST_NO_MAIN',1)],extra_postargs=compile_flags,output_dir=output_dir)
             compiler.link_shared_object(objectfiles,output_filename=output_filename)
             if not self.load():
                 return ValueError('failed to generate ik solver')
