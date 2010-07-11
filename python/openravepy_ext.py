@@ -444,7 +444,7 @@ class OpenRAVEModel(metaclass.AutoReloader):
         loadplugins=True
         if options.getfilename:
             # don't want unnecessary messages cluttering the console...
-            openravepy.RaveSetDebugLevel(openravepy.DebugLevel.Fatal)
+            openravepy.raveSetDebugLevel(openravepy.DebugLevel.Fatal)
             loadplugins = False
         if env is None:
             env = openravepy.Environment(loadplugins)
@@ -462,7 +462,7 @@ class OpenRAVEModel(metaclass.AutoReloader):
                 if options.debug is not None and not options.getfilename:
                     for debuglevel in [openravepy.DebugLevel.Fatal,openravepy.DebugLevel.Error,openravepy.DebugLevel.Warn,openravepy.DebugLevel.Info,openravepy.DebugLevel.Debug,openravepy.DebugLevel.Verbose]:
                         if (not options.debug.isdigit() and options.debug.lower() == debuglevel.name.lower()) or (options.debug.isdigit() and int(options.debug) == int(debuglevel)):
-                            openravepy.RaveSetDebugLevel(debuglevel)
+                            openravepy.raveSetDebugLevel(debuglevel)
                             break
                 robot = env.ReadRobotXMLFile(options.robot)
                 env.AddRobot(robot)

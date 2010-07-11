@@ -73,6 +73,24 @@ public:
         bool GetInfo(PLUGININFO& info) {
             return !!pfnGetPluginAttributes && pfnGetPluginAttributes(&info, sizeof(info));
         }
+
+        InterfaceBasePtr CreateInterface(PluginType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv) {
+            if( pfnCreate == NULL ) {
+#ifdef _MSC_VER
+                pfnCreate = (CreateInterfaceFn)SysLoadSym(plibrary, "?CreateInterface@@YA?AV?$shared_ptr@VInterfaceBase@OpenRAVE@@@boost@@W4PluginType@OpenRAVE@@ABV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@PBDV?$shared_ptr@VEnvironmentBase@OpenRAVE@@@2@@Z");
+#else
+                pfnCreate = (CreateInterfaceFn)SysLoadSym(plibrary, "_Z15CreateInterfaceN8OpenRAVE10PluginTypeERKSsPKcN5boost10shared_ptrINS_15EnvironmentBaseEEE");
+#endif
+                if( pfnCreate == NULL ) {
+                    pfnCreate = (CreateInterfaceFn)SysLoadSym(plibrary, "CreateInterface");
+                    if( pfnCreate == NULL ) {
+                        throw openrave_exception(str(boost::format("%s: can't load CreateInterface function\n")%ppluginname));
+                    }
+                }
+            }
+
+            return pfnCreate(type,name,pluginhash,penv);
+        }
         
     protected:
         boost::weak_ptr<RaveDatabase> _pdatabase;
@@ -148,30 +166,36 @@ public:
                 
         EnvironmentMutex::scoped_lock lock(_mutex);
         const char* hash = RaveGetInterfaceHash(type);
-        for(list<PluginPtr>::iterator itplugin = _listplugins.begin(); itplugin != _listplugins.end(); ++itplugin) {
-            if( (*itplugin)->pfnCreate != NULL ) {
-                try {
-                    InterfaceBasePtr pointer = (*itplugin)->pfnCreate(type, name, hash, penv);
-                    pointer = InterfaceBasePtr(pointer.get(), smart_pointer_deleter<InterfaceBasePtr>(pointer,INTERFACE_DELETER));
-                    if( !!pointer ) {
-                        if( strcmp(pointer->GetHash(), hash) ) {
-                            RAVELOG_FATALA("plugin interface name %s, %s has invalid hash, might be compiled with stale openrave files\n", name.c_str(), RaveGetInterfaceNamesMap().find(type)->second.c_str());
-                            continue;
-                        }
-
-                        pointer->__strpluginname = (*itplugin)->ppluginname;
-                        pointer->__strxmlid = name;
-                        pointer->__plugin = *itplugin;
-                        return pointer;
+        list<PluginPtr>::iterator itplugin = _listplugins.begin();
+        while(itplugin != _listplugins.end()) {
+            try {
+                InterfaceBasePtr pointer = (*itplugin)->CreateInterface(type, name, hash, penv);
+                pointer = InterfaceBasePtr(pointer.get(), smart_pointer_deleter<InterfaceBasePtr>(pointer,INTERFACE_DELETER));
+                if( !!pointer ) {
+                    if( strcmp(pointer->GetHash(), hash) ) {
+                        RAVELOG_FATALA("plugin interface name %s, %s has invalid hash, might be compiled with stale openrave files\n", name.c_str(), RaveGetInterfaceNamesMap().find(type)->second.c_str());
+                        ++itplugin;
+                        continue;
                     }
-                }
-                catch(const openrave_exception& ex) {
-                    RAVELOG_ERROR(str(boost::format("Create Interface: openrave exception , plugin %s: %s\n")%(*itplugin)->ppluginname%ex.what()));
-                }
-                catch(...) {
-                    RAVELOG_ERROR(str(boost::format("Create Interface: unknown exception, plugin %s\n")%(*itplugin)->ppluginname));
+                    
+                    pointer->__strpluginname = (*itplugin)->ppluginname;
+                    pointer->__strxmlid = name;
+                    pointer->__plugin = *itplugin;
+                    return pointer;
                 }
             }
+            catch(const openrave_exception& ex) {
+                RAVELOG_ERROR(str(boost::format("Create Interface: openrave exception , plugin %s: %s\n")%(*itplugin)->ppluginname%ex.what()));
+                if( ex.GetCode() == ORE_PluginInvalid ) {
+                    itplugin = _listplugins.erase(itplugin);
+                    continue;
+                }
+            }
+            catch(...) {
+                RAVELOG_ERROR(str(boost::format("Create Interface: unknown exception, plugin %s\n")%(*itplugin)->ppluginname));
+            }
+
+            ++itplugin;
         }
 
         if( name.size() == 0 ) {
@@ -333,19 +357,6 @@ protected:
         PluginPtr p(new Plugin(shared_from_this()));
         p->ppluginname = libraryname;
         p->plibrary = plibrary;
-
-#ifdef _MSC_VER
-        p->pfnCreate = (CreateInterfaceFn)SysLoadSym(p->plibrary, "?CreateInterface@@YA?AV?$shared_ptr@VInterfaceBase@OpenRAVE@@@boost@@W4PluginType@OpenRAVE@@ABV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@PBDV?$shared_ptr@VEnvironmentBase@OpenRAVE@@@2@@Z");
-#else
-        p->pfnCreate = (CreateInterfaceFn)SysLoadSym(p->plibrary, "_Z15CreateInterfaceN8OpenRAVE10PluginTypeERKSsPKcN5boost10shared_ptrINS_15EnvironmentBaseEEE");
-#endif
-        if( p->pfnCreate == NULL ) {
-            p->pfnCreate = (CreateInterfaceFn)SysLoadSym(p->plibrary, "CreateInterface");
-            if( p->pfnCreate == NULL ) {
-                RAVELOG_ERRORA(str(boost::format("%s: can't load CreateInterface function\n")%p->ppluginname));
-                return PluginPtr();
-            }
-        }
       
 #ifdef _MSC_VER
         p->pfnGetPluginAttributes = (GetPluginAttributesFn)SysLoadSym(p->plibrary, "?GetPluginAttributes@@YA_NPAUPLUGININFO@OpenRAVE@@H@Z");
@@ -374,7 +385,7 @@ protected:
         
 #ifndef _WIN32
         Dl_info info;
-        dladdr((void*)p->pfnCreate, &info);
+        dladdr((void*)p->pfnGetPluginAttributes, &info);
         RAVELOG_DEBUGA("loading plugin: %s\n", info.dli_fname);
 #endif
 
@@ -389,7 +400,7 @@ protected:
             RAVELOG_WARNA("Failed to load %s\n", lib.c_str());
         }
 #else
-        void* plib = dlopen(lib.c_str(), RTLD_NOW);
+        void* plib = dlopen(lib.c_str(), RTLD_LAZY);
         if( plib == NULL )
             RAVELOG_WARNA("%s\n", dlerror());
 #endif

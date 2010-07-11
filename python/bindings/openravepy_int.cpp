@@ -3267,6 +3267,41 @@ std::string openravepyCompilerVersion()
     return ss.str();
 }
 
+void raveLog(const string& s, DebugLevel level)
+{
+    if( s.size() > 0 ) {
+        RavePrintfA(s,level);
+        if( s[s.size()-1] != '\n') {
+            RavePrintfA("\n",level);
+        }
+    }
+}
+
+void raveLogFatal(const string& s)
+{
+    raveLog(s,Level_Verbose);
+}
+void raveLogError(const string& s)
+{
+    raveLog(s,Level_Error);
+}
+void raveLogWarn(const string& s)
+{
+    raveLog(s,Level_Warn);
+}
+void raveLogInfo(const string& s)
+{
+    raveLog(s,Level_Info);
+}
+void raveLogDebug(const string& s)
+{
+    raveLog(s,Level_Debug);
+}
+void raveLogVerbose(const string& s)
+{
+    raveLog(s,Level_Verbose);
+}
+
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetController_overloads, SetController, 1, 2)
@@ -4088,9 +4123,16 @@ BOOST_PYTHON_MODULE(openravepy_int)
     scope().attr("__copyright__") = "2009-2010 Rosen Diankov (rosen.diankov@gmail.com)";
     scope().attr("__license__") = "Lesser GPL";
 
-    def("RaveSetDebugLevel",RaveSetDebugLevel,args("level"), "Sets the global openrave debug level");
-    def("RaveGetDebugLevel",RaveGetDebugLevel,"Returns the openrave debug level");
-    def("RaveGetHomeDirectory",RaveGetHomeDirectory,"Returns the openrave home directory");
+    def("raveSetDebugLevel",RaveSetDebugLevel,args("level"), "Sets the global openrave debug level");
+    def("raveGetDebugLevel",RaveGetDebugLevel,"Returns the openrave debug level");
+    def("raveGetHomeDirectory",RaveGetHomeDirectory,"Returns the openrave home directory");
+    def("raveLogFatal",openravepy::raveLogFatal,args("log"),"Send a fatal log to the openrave system");
+    def("raveLogError",openravepy::raveLogError,args("log"),"Send an error log to the openrave system");
+    def("raveLogWarn",openravepy::raveLogWarn,args("log"),"Send a warn log to the openrave system");
+    def("raveLogInfo",openravepy::raveLogInfo,args("log"),"Send an info log to the openrave system");
+    def("raveLogDebug",openravepy::raveLogDebug,args("log"),"Send a debug log to the openrave system");
+    def("raveLogVerbose",openravepy::raveLogVerbose,args("log"),"Send a verbose log to the openrave system");
+    def("raveLog",openravepy::raveLog,args("log","level"),"Send a log to the openrave system with excplicit level");
 
     def("quatFromAxisAngle",openravepy::quatFromAxisAngle1, args("axis"), "Converts an axis-angle rotation into a quaternion");
     def("quatFromAxisAngle",openravepy::quatFromAxisAngle2, args("axis","angle"), "Converts an axis-angle rotation into a quaternion");

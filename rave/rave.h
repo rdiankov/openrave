@@ -134,6 +134,7 @@ enum OpenRAVEErrorCode {
     ORE_EnvironmentNotLocked=2,
     ORE_CommandNotSupported=3,
     ORE_Assert=4,
+    ORE_PluginInvalid=5,
 };
 
 enum SerializationOptions
@@ -281,6 +282,32 @@ enum DebugLevel {
 #define OPENRAVECOLOR_DEBUGLEVEL 2 // green
 #define OPENRAVECOLOR_VERBOSELEVEL 4 // blue
 
+RAVE_API void RaveSetDebugLevel(DebugLevel level);
+
+inline DebugLevel RaveGetDebugLevel(void) {
+#ifdef RAVE_LIBBUILD
+    extern DebugLevel g_nDebugLevel;
+#else
+    RAVE_API extern DebugLevel g_nDebugLevel;
+#endif
+    return g_nDebugLevel;
+}
+
+/// extracts only the filename
+inline const char* RaveGetSourceFilename(const char* pfilename)
+{
+    if( pfilename == NULL )
+        return "";
+
+    const char* p0 = strrchr(pfilename,'/');
+    const char* p1 = strrchr(pfilename,'\\');
+    const char* p = p0 > p1 ? p0 : p1;
+    if( p == NULL )
+        return pfilename;
+
+    return p+1;
+}
+
 #ifdef _WIN32
 
 #define DefineRavePrintfW(LEVEL) \
@@ -312,6 +339,12 @@ enum DebugLevel {
         /*ResetTextColor(stdout);*/ \
         return r; \
     }
+
+inline int RavePrintfA(const std::string& s, DebugLeve level)
+{
+    printf ("%s", s.c_str());
+    return s.size();
+}
 
 #else
 
@@ -351,6 +384,24 @@ enum DebugLevel {
         return r; \
     } \
 
+
+inline int RavePrintfA(const std::string& s, DebugLevel level)
+{
+    if( OpenRAVE::RaveGetDebugLevel()>=level ) {
+        int color = 0;
+        switch(level) {
+            case Level_Fatal: color = OPENRAVECOLOR_FATALLEVEL; break;
+            case Level_Error: color = OPENRAVECOLOR_ERRORLEVEL; break;
+            case Level_Warn: color = OPENRAVECOLOR_WARNLEVEL; break;
+            case Level_Info: color = OPENRAVECOLOR_INFOLEVEL; break;
+            case Level_Debug: color = OPENRAVECOLOR_DEBUGLEVEL; break;
+            case Level_Verbose: color = OPENRAVECOLOR_VERBOSELEVEL; break;
+        }
+        printf ("%c[0;%d;%dm%s%c[0;38;48m", 0x1B, color + 30,8+40,s.c_str(),0x1B);
+        return s.size();
+    }
+}
+
 #endif
 
 DefineRavePrintfW(_FATALLEVEL)
@@ -366,21 +417,6 @@ DefineRavePrintfA(_WARNLEVEL)
 DefineRavePrintfA(_INFOLEVEL)
 DefineRavePrintfA(_DEBUGLEVEL)
 DefineRavePrintfA(_VERBOSELEVEL)
-
-/// extracts only the filename
-inline const char* RaveGetSourceFilename(const char* pfilename)
-{
-    if( pfilename == NULL )
-        return "";
-
-    const char* p0 = strrchr(pfilename,'/');
-    const char* p1 = strrchr(pfilename,'\\');
-    const char* p = p0 > p1 ? p0 : p1;
-    if( p == NULL )
-        return pfilename;
-
-    return p+1;
-}
 
 #define RAVEPRINTHEADER(LEVEL) OpenRAVE::RavePrintfA##LEVEL("[%s:%d] ", OpenRAVE::RaveGetSourceFilename(__FILE__), __LINE__)
 
@@ -410,17 +446,6 @@ inline const char* RaveGetSourceFilename(const char* pfilename)
 #define RAVELOG_VERBOSE RAVELOG_VERBOSEA
 
 #define IS_DEBUGLEVEL(level) (OpenRAVE::RaveGetDebugLevel()>=(level))
-
-RAVE_API void RaveSetDebugLevel(DebugLevel level);
-
-inline DebugLevel RaveGetDebugLevel(void) {
-#ifdef RAVE_LIBBUILD
-    extern DebugLevel g_nDebugLevel;
-#else
-    RAVE_API extern DebugLevel g_nDebugLevel;
-#endif
-    return g_nDebugLevel;
-}
 
 enum PluginType
 {

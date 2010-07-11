@@ -197,7 +197,20 @@ The openrave.py script is an attempt to make the command line parameters for ope
 
 - Can set debug mode::
 
-    openrave.py --debug=verbose data/lab1.env.xml
+    openrave.py --level=verbose data/lab1.env.xml
+
+- Can execute arbitrary python code::
+
+   openrave.py -p "print 'robot manipulators: ',robot.GetManipulators()" robots/pr2-beta-sim.robot.xml
+
+- Can execute arbitrary python code and step into the ipython interpreter::
+
+   openrave.py -p "manip=robot.GetActiveManipulator()" -i robots/pr2-beta-sim.robot.xml
+
+- Can execute arbitrary python code and exit::
+
+   openrave.py -p "print('links: '+str(robot.GetLinks())); sys.exit(0)" robots/pr2-beta-sim.robot.xml
+
 
 Given that environment xml files can now contain tags for any interface, it is possible to setup all the used interfaces in the XML, open it with **openrave.py -i**, and immediately start introspecting on the state.
 

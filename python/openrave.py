@@ -44,7 +44,8 @@ def vararg_callback(option, opt_str, value, parser):
     setattr(parser.values, option.dest, value)
 
 if __name__ == "__main__":
-    parser = OptionParser(description='OpenRAVE %s'%openravepy.__version__,version=openravepy.__version__)
+    parser = OptionParser(description='OpenRAVE %s'%openravepy.__version__,version=openravepy.__version__,
+                          usage='%prog [options] [loadable openrave xml/robot files...]')
     parser.add_option('--listplugins', action="store_true",dest='listplugins',default=False,
                       help='List all plugins and the interfaces they provide.')
     parser.add_option('--loadplugin', action="append",type='string',dest='loadplugins',default=[],
@@ -59,7 +60,7 @@ if __name__ == "__main__":
                       help='server to use (default=%default).')
     parser.add_option('--serverport', action="store",type='int',dest='serverport',default=4765,
                       help='port to load server on (default=%default).')
-    parser.add_option('--debug','-d', action="store",type='string',dest='debug',default=None,
+    parser.add_option('--level','-l', action="store",type='string',dest='level',default=None,
                       help='Debug level')
     parser.add_option('--database', action="callback",callback=vararg_callback, dest='database',default=None,
                       help='If specified, the next arguments will be used to call a database generator from the openravepy.databases module. The first argument is used to find the database module. For example:     %s --database grasping --robot=robots/pr2-beta-sim.robot.xml'%(sys.argv[0]))
@@ -67,10 +68,12 @@ if __name__ == "__main__":
                       help='If specified, the next arguments will be used to call an example from the openravepy.examples module. The first argument is used to find the example moduel. For example:     %s --example graspplanning --scene=data/lab1.env.xml'%(sys.argv[0]))
     parser.add_option('--ipython', '-i',action="store_true",dest='ipython',default=False,
                       help='if true will drop into the ipython interpreter rather than spin')
-    parser.add_option('--listexamples',action='store_true',dest='listexamples',default=False,
-                      help='Lists the available core examples')
+    parser.add_option('--pythoncmd','-p',action='store',type='string',dest='pythoncmd',default=None,
+                      help='Execute a python command after all loading is done and before the drop to interpreter check. The variables available to use are: "env","robots","robot". It is possible to quit the program after the command is executed by adding a "sys.exit(0)" at the end of the command.')
     parser.add_option('--listdatabases',action='store_true',dest='listdatabases',default=False,
                       help='Lists the available core database generators')
+    parser.add_option('--listexamples',action='store_true',dest='listexamples',default=False,
+                      help='Lists the available examples.')
     (options, args) = parser.parse_args()
     if options.listdatabases:
         for name in dir(databases):
@@ -106,10 +109,10 @@ if __name__ == "__main__":
             sys.exit(1)
         example.run(args=args)
         sys.exit(0)
-    if options.debug is not None:
+    if options.level is not None:
         for debuglevel in [DebugLevel.Fatal,DebugLevel.Error,DebugLevel.Warn,DebugLevel.Info,DebugLevel.Debug,DebugLevel.Verbose]:
-            if (not options.debug.isdigit() and options.debug.lower() == debuglevel.name.lower()) or (options.debug.isdigit() and int(options.debug) == int(debuglevel)):
-                RaveSetDebugLevel(debuglevel)
+            if (not options.level.isdigit() and options.level.lower() == debuglevel.name.lower()) or (options.level.isdigit() and int(options.level) == int(debuglevel)):
+                raveSetDebugLevel(debuglevel)
                 break
     env = Environment()
     try:
@@ -146,10 +149,12 @@ if __name__ == "__main__":
         for arg in args:
             if arg.endswith('.xml') or arg.endswith('.dae'):
                 env.Load(arg)
+        with env:
+            robots=env.GetRobots()
+            robot=None if len(robots) == 0 else robots[0]
+        if options.pythoncmd is not None:
+            eval(compile(options.pythoncmd,'<string>','exec'))
         if options.ipython:
-            with env:
-                robots=env.GetRobots()
-                robot=None if len(robots) == 0 else robots[0]
             from IPython.Shell import IPShellEmbed
             ipshell = IPShellEmbed(argv='',banner = 'OpenRAVE Dropping into IPython',exit_msg = 'Leaving Interpreter and closing program.')
             ipshell(local_ns=locals())
