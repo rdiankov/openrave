@@ -217,7 +217,7 @@ public:
             _report.reset(new COLLISIONREPORT());
 
             _fAllowableOcclusion = 0.1;
-            _fRayMinDist = 0.05f;
+            _fRayMinDist = 0.02f;
 
             // create the dummy box
             {
@@ -346,7 +346,7 @@ public:
         {
             RAY r;
             r.dir = tcamera.rotate(2.0f*v);
-            r.pos = tcamera.trans + 0.01f*r.dir; // move the rays a little forward
+            r.pos = tcamera.trans + 0.5f*_fRayMinDist*r.dir; // move the rays a little forward
             if( !_vf->_robot->GetEnv()->CheckCollision(r,_report) ) {
                 return true; // not supposed to happen, but it is OK
             }
@@ -394,7 +394,7 @@ public:
 
         bool TestRayRigid(const Vector& v, const TransformMatrix& tcamera, const vector<KinBody::LinkPtr>& vattachedlinks)
         {
-            if( _vf->_robot->GetEnv()->CheckCollision(RAY(0.02f*v,2.0f*v),_vf->_robot,_report) ) {
+            if( _vf->_robot->GetEnv()->CheckCollision(RAY(_fRayMinDist*v,2.0f*v),_vf->_robot,_report) ) {
                 //RAVELOG_INFO(str(boost::format("ray col: %s\n")%_report->__str__()));
                 return false;
             }
