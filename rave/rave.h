@@ -340,7 +340,7 @@ inline const char* RaveGetSourceFilename(const char* pfilename)
         return r; \
     }
 
-inline int RavePrintfA(const std::string& s, DebugLeve level)
+inline int RavePrintfA(const std::string& s, DebugLevel level)
 {
     printf ("%s", s.c_str());
     return s.size();
