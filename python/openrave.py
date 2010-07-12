@@ -44,6 +44,7 @@ def vararg_callback(option, opt_str, value, parser):
     setattr(parser.values, option.dest, value)
 
 if __name__ == "__main__":
+    defaultviewer = 'qtcoin'
     parser = OptionParser(description='OpenRAVE %s'%openravepy.__version__,version=openravepy.__version__,
                           usage='%prog [options] [loadable openrave xml/robot files...]')
     parser.add_option('--listplugins', action="store_true",dest='listplugins',default=False,
@@ -54,10 +55,10 @@ if __name__ == "__main__":
                       help='Default collision checker to use')
     parser.add_option('--physics', action="store",type='string',dest='physics',default=None,
                       help='physics engine to use (default=%default)')
-    parser.add_option('--viewer', action="store",type='string',dest='viewer',default='qtcoin',
-                      help='viewer to use (default=%default)' )
+    parser.add_option('--viewer', action="store",type='string',dest='viewer',default=None,
+                      help='viewer to use (default=qtcoin)' )
     parser.add_option('--server', action="store",type='string',dest='server',default=None,
-                      help='server to use (default=%default).')
+                      help='server to use (default=%s).'%defaultviewer)
     parser.add_option('--serverport', action="store",type='int',dest='serverport',default=4765,
                       help='port to load server on (default=%default).')
     parser.add_option('--level','-l', action="store",type='string',dest='level',default=None,
@@ -143,7 +144,7 @@ if __name__ == "__main__":
             sr = env.CreateProblem(options.server)
             if sr is not None:
                 env.LoadProblem(sr,'%d'%options.serverport)
-        if options.viewer:
+        if options.viewer is not None and len(options.viewer) > 0:
             env.SetViewer(options.viewer)
         # load files after viewer is loaded since they may contain information about where to place the camera
         for arg in args:
@@ -154,6 +155,8 @@ if __name__ == "__main__":
             robot=None if len(robots) == 0 else robots[0]
         if options.pythoncmd is not None:
             eval(compile(options.pythoncmd,'<string>','exec'))
+        if options.viewer is None:
+            env.SetViewer(defaultviewer)
         if options.ipython:
             from IPython.Shell import IPShellEmbed
             ipshell = IPShellEmbed(argv='',banner = 'OpenRAVE Dropping into IPython',exit_msg = 'Leaving Interpreter and closing program.')
