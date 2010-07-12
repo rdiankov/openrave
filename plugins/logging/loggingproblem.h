@@ -111,7 +111,10 @@ class LoggingProblem : public ProblemInstance
         fout << "<Environment>" << endl;
 
         int tabwidth = 2;
-        TransformMatrix t = TransformMatrix(GetEnv()->GetCameraTransform());
+        TransformMatrix t;
+        if( !!GetEnv()->GetViewer() ) {
+            t = TransformMatrix(GetEnv()->GetViewer()->GetCameraTransform());
+        }
         fout << setw(tabwidth) << " "
              << "<camtrans>" << t.trans.x << " " << t.trans.y << " " << t.trans.z << "</camtrans>" << endl;
         fout << setw(tabwidth) << " " << "<camrotmat>";

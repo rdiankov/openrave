@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2008 Rosen Diankov (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -117,7 +118,7 @@ public:
         _pgeom->max_range = 100;
         fTimeToScan = 0;
         _vColor = RaveVector<float>(0.5f,0.5f,1,1);
-        _report.reset(new COLLISIONREPORT());
+        _report.reset(new CollisionReport());
     }
     ~BaseLaser2DSensor() { Reset(0); }
     
@@ -315,8 +316,7 @@ protected:
     boost::shared_ptr<LaserGeomData> _pgeom;
     boost::shared_ptr<LaserSensorData> _pdata;
     vector<int> _databodyids; ///< if non 0, for each point in _data, specifies the body that was hit
-
-    boost::shared_ptr<COLLISIONREPORT> _report;
+    CollisionReportPtr _report;
 
     // more geom stuff
     dReal _fGeomMinRange;

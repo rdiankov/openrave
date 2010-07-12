@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2009 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2010 Carnegie Mellon University (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -472,7 +473,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         // collision
         if(_benablecol) {
             if( GetEnv()->HasRegisteredCollisionCallbacks() && !report ) {
-                report.reset(new COLLISIONREPORT());
+                report.reset(new CollisionReport());
                 report->Reset(_options);
             }
 
@@ -503,7 +504,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
                     v3=PQPRealToVector(link2->GetCollisionData().vertices[link2->GetCollisionData().indices[colres.Id2(i)*3+2]],R2,T2);
                 
                     if(TriTriCollision(u1,u2,u3,v1,v2,v3,contactpos,contactnorm)) {
-                        report->contacts.push_back(COLLISIONREPORT::CONTACT(contactpos,contactnorm,0.));
+                        report->contacts.push_back(CollisionReport::CONTACT(contactpos,contactnorm,0.));
                     }            
                 }
 
@@ -525,7 +526,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         // distance
         if(_benabledis) {
             if(!report)
-                throw openrave_exception("CollisionCheckerPQP::DoPQP - ERROR: YOU MUST PASS IN A COLLISIONREPORT STRUCT TO MEASURE DISTANCE!\n");
+                throw openrave_exception("CollisionCheckerPQP::DoPQP - ERROR: YOU MUST PASS IN A CollisionReport STRUCT TO MEASURE DISTANCE!\n");
 
             //don't do a tolerance check, some users wants distance all the time
             //PQP_Tolerance(&tolres,R1,T1,m1,R2,T2,m2,_preport->minDistance);

@@ -1,0 +1,39 @@
+/**
+\mainpage Open Robotics Automation Virtual Environment 0.2.4
+
+\~english
+
+\section intro Introduction
+
+OpenRAVE provides an environment for testing, developing, and employing motion planning and
+higher-level intelligence algorithms in real-world robotics applications.
+
+It includes a seamless integration of 3-D simulation, visualization, planning, scripting and
+control. The plugin architecture allows users to easily write custom controllers or extend
+functionality. With OpenRAVE plugins, any planning algorithm, robot controller, or sensing subsystem
+can be distributed and dynamically loaded at run-time, which frees developers from struggling with
+monolithic code-bases. Users of OpenRAVE can concentrate on the development of planning and
+scripting aspects of a problem without having to explicitly manage the details of robot kinematics
+and dynamics, collision detection, world updates, and robot control. It should be noted that
+OpenRAVE's focus is not on low-level control and message protocols and perception systems; this
+allows is to be easily integrated into such systems.
+
+\section basics OpenRAVE Basics
+
+\image html openrave_architecture.jpg
+\image latex openrave_architecture.pdf "OpenRAVE architecture" width=15cm
+
+OpenRAVE is divided in four main components as shown in the above figure. 
+
+OpenRAVE supports a powerful scripting environment based on Python which makes it simple to control and monitor the demo and environment state. There are also supported interfaces for Octave and Matlab.
+
+\~japanese
+
+\section intro 概念
+
+\section basics 基本
+
+\image html openrave_architecture.jpg
+\image latex openrave_architecture.pdf "OpenRAVE architecture" width=15cm
+
+ */

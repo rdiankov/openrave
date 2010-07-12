@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 // Copyright (C) 2006-2008 Rosen Diankov (rdiankov@cs.cmu.edu), Carnegie Mellon University
 //
 // This program is free software: you can redistribute it and/or modify
@@ -41,7 +42,7 @@ class CM
                 robot->SetActiveDOFValues(curdof);
 
                 // display collision report
-                COLLISIONREPORT report;
+                CollisionReport report;
                 if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot), CollisionReportPtr(&report,null_deleter())) ) {
                     if( !!report.plink1 && !!report.plink2 ) {
                         RAVELOG_WARNA(str(boost::format("Jitter collision %s:%s with %s:%s\n")%report.plink1->GetParent()->GetName()%report.plink1->GetName()%report.plink2->GetParent()->GetName()%report.plink2->GetName()));

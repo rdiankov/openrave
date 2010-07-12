@@ -31,14 +31,14 @@ Setup
 
   openrave-config --python-dir
 
-This path needs to be added into the **PYTHONPATH** environment variable. For unix-based systems, it would look like::
+When directly importing openravepy, this path needs to be added into the **PYTHONPATH** environment variable. For unix-based systems, it would look like::
 
   export PYTHONPATH=$PYTHONPATH:`openrave-config --python-dir`
 
 All the examples are stored in the ``openravepy/examples`` directory. For example, the simplest
 planning example hanoi can be found in ``openravepy/examples/hanoi.py`` and executed by::
 
-  python hanoi.py
+  openrave.py --example hanoi
 
 OpenRAVE should automatically pop up and the puma arm will attempt to grasp the pegs on the table.
 

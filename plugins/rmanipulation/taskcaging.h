@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -206,10 +207,10 @@ public:
             _robot->CalculateActiveJacobian(linkindex, tEE.trans, _J);
             //_robot->CalculateActiveRotationalJacobian(linkindex, tEE.trans, &_J[3*robot->GetActiveDOF()]);
         
-            multtrans_to2<dReal, dReal, dReal>(&_J[0], &_J[0], 3, _robot->GetActiveDOF(), 3, &_JJt[0], false);
+            geometry::multtrans_to2<dReal, dReal, dReal>(&_J[0], &_J[0], 3, _robot->GetActiveDOF(), 3, &_JJt[0], false);
         
             // find the determinant
-            pfeatures[1] = RaveSqrt(RaveFabs(matrixdet3(&_JJt[0], 3)));
+            pfeatures[1] = RaveSqrt(RaveFabs(geometry::matrixdet3(&_JJt[0], 3)));
 
             f = 0;
             for(size_t i = 0; i < vtargvalues.size(); ++i)
@@ -1247,7 +1248,7 @@ private:
             }
         }
         else {
-            CollisionReportPtr report(new COLLISIONREPORT());
+            CollisionReportPtr report(new CollisionReport());
 
             if( taskdata->vtargettraj.size() < 2 ) {
                 RAVELOG_WARNA("not enough trajectory points\n");

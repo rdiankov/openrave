@@ -91,7 +91,7 @@ public:
 
     /// add a force at a particular position in a link
     /// \param force the direction and magnitude of the force
-    /// \param pos in the world where the force is getting applied
+    /// \param position in the world where the force is getting applied
     /// \param bAdd if true, force is added to previous forces, otherwise it is set
     virtual bool SetBodyForce(KinBody::LinkPtr plink, const Vector& force, const Vector& position, bool bAdd) = 0;
 

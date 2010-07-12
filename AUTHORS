@@ -1,7 +1,11 @@
-Rosen Diankov <rdiankov@cs.cmu.edu> core developer
+core developer
+--------------
+Rosen Diankov (rosen.diankov@gmail.com)
 
 contributors
 ------------
 
 Achint Aggarwal - dual manipulation
+Dmitry Berenson - initial pqp collision checker
+Makoto Furukawa - japanese documentation
 Gustavo Puche Rodríguez - collada

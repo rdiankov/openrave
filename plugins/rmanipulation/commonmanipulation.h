@@ -1,3 +1,18 @@
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef COMMON_MANIPULATION_H
 #define COMMON_MANIPULATION_H
 
@@ -44,7 +59,7 @@ class CM
         robot->GetActiveDOFLimits(lower, upper);
         newdof = curdof;
         int iter = 0;
-        COLLISIONREPORT report;
+        CollisionReport report;
         CollisionReportPtr preport(&report,null_deleter());
         bool bCollision = false;
 
@@ -103,7 +118,7 @@ class CM
             return 0;
         // quickly prune grasp is end effector is in collision
         if( ikp.GetType() == IkParameterization::Type_Transform6D ) {
-            CollisionReportPtr report(new COLLISIONREPORT());
+            CollisionReportPtr report(new CollisionReport());
             if( pmanip->CheckEndEffectorCollision(ikp.GetTransform(),report) ) {
                 RAVELOG_VERBOSEA("sampleiksolutions gripper in collision: (%s:%s)x(%s:%s).\n",
                                  !!report->plink1?report->plink1->GetParent()->GetName().c_str():"",

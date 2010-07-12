@@ -758,26 +758,6 @@ class Environment : public EnvironmentBase
         _nCurSimTime += step;
     }
 
-    virtual void SetCamera(const RaveTransform<float>& trans)
-    {
-        _pCurrentViewer->SetCamera(trans.trans, trans.rot);
-    }
-
-    virtual void SetCamera(const RaveVector<float>& pos, const RaveVector<float>& quat)
-    {
-        _pCurrentViewer->SetCamera(pos, quat);
-    }
-
-    virtual void SetCameraLookAt(const RaveVector<float>& lookat, const RaveVector<float>& campos, const RaveVector<float>& camup)
-    {
-        _pCurrentViewer->SetCameraLookAt(lookat, campos, camup);
-    }
-
-    virtual RaveTransform<float> GetCameraTransform()
-    {
-        return _pCurrentViewer->GetCameraTransform();
-    }
-
     virtual EnvironmentMutex& GetMutex() const { return _mutexEnvironment; }
 
     virtual void GetBodies(std::vector<KinBodyPtr>& bodies) const
@@ -1152,16 +1132,6 @@ class Environment : public EnvironmentBase
         RaveViewerBasePtr viewer = wviewer.lock();
         if( !!viewer )
             viewer->closegraph(handle);
-    }
-
-    virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK)
-    {
-        return _pCurrentViewer->GetCameraImage(memory, width, height, t, KK);
-    }
-
-    virtual bool WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension)
-    {
-        return _pCurrentViewer->WriteCameraImage(width,height,t,KK,filename,extension);
     }
 
     virtual KinBodyPtr GetBodyFromNetworkId(int id)
@@ -1543,15 +1513,6 @@ protected:
         }
 
         virtual boost::shared_ptr<void> LockGUI() { return boost::shared_ptr<void>(); }
-    
-        /// Retries a 24bit RGB image of dimensions width and height from the current scene
-        /// extrinsic is the rotation and translation of the camera
-        /// pKK is 4 values such that the intrinsic matrix can be reconstructed [pKK[0] 0 pKK[2]; 0 pKK[1] pKK[3]; 0 0 1];
-        virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK) { return false; }
-        virtual bool WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension) { return false; }
-        virtual void SetCamera(const RaveVector<float>& pos, const RaveVector<float>& quat) {}
-        virtual void SetCameraLookAt(const RaveVector<float>& lookat, const RaveVector<float>& campos, const RaveVector<float>& camup) {}
-        virtual RaveTransform<float> GetCameraTransform() {return RaveTransform<float>();}
 
         virtual void* plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle=0) { return NULL; }
         virtual void* plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle, bool bhasalpha) { return NULL; }
@@ -1573,6 +1534,14 @@ protected:
         virtual void closegraph(void* handle) {}
         virtual void deselect() {}
 
+        virtual void SetCamera(const RaveTransform<float>& trans) {}
+        virtual void SetCameraLookAt(const RaveVector<float>& lookat, const RaveVector<float>& campos, const RaveVector<float>& camup) {}
+        virtual RaveTransform<float> GetCameraTransform() { return RaveTransform<float>(); }
+        
+        virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK) { return false; }
+        
+        virtual bool WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension) { return false; }
+    
         virtual void Reset() {}
         virtual void SetBkgndColor(const RaveVector<float>& color) {}
 

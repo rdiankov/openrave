@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 // Copyright (C) 2006-2010 Carnegie Mellon University (rdiankov@cs.cmu.edu)
 //
 // This program is free software: you can redistribute it and/or modify
@@ -73,7 +74,7 @@ class GrasperProblem : public ProblemInstance
         stringstream ss(args);
         ss >> strRobotName;
 
-        _report.reset(new COLLISIONREPORT());
+        _report.reset(new CollisionReport());
         _robot = GetEnv()->GetRobot(strRobotName);
 
         string plannername = "Grasper";
@@ -228,7 +229,7 @@ class GrasperProblem : public ProblemInstance
         _robot->SetTransform(ptraj->GetPoints().back().trans);
         _robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
 
-        vector< pair<COLLISIONREPORT::CONTACT,int> > contacts;
+        vector< pair<CollisionReport::CONTACT,int> > contacts;
         if( bComputeStableContacts ) {
             Vector vworlddirection = !params->targetbody ? params->vtargetdirection : params->targetbody->GetTransform().rotate(params->vtargetdirection);
             _GetStableContacts(contacts, vworlddirection, friction);
@@ -273,7 +274,7 @@ class GrasperProblem : public ProblemInstance
         GRASPANALYSIS analysis;
         if( bComputeForceClosure ) {
             try {
-                vector<COLLISIONREPORT::CONTACT> c(contacts.size());
+                vector<CollisionReport::CONTACT> c(contacts.size());
                 for(size_t i = 0; i < c.size(); ++i)
                     c[i] = contacts[i].first;
                 analysis = _AnalyzeContacts3D(c,friction,8);
@@ -329,7 +330,7 @@ class GrasperProblem : public ProblemInstance
         _robot->Enable(false);
         targetbody->Enable(true);
 
-        vector<COLLISIONREPORT::CONTACT> vpoints;        
+        vector<CollisionReport::CONTACT> vpoints;        
         BoxSample(targetbody,vpoints,nDistMapSamples,vmapcenter);
         //DeterministicallySample(targetbody, vpoints, 4, vmapcenter);
 
@@ -372,7 +373,7 @@ class GrasperProblem : public ProblemInstance
             }
         }
 
-        vector< pair<COLLISIONREPORT::CONTACT,int> > contacts;
+        vector< pair<CollisionReport::CONTACT,int> > contacts;
         _GetStableContacts(contacts, direction, mu);
         FOREACH(itcontact,contacts) {
             Vector pos = itcontact->first.pos, norm = itcontact->first.norm;
@@ -386,7 +387,7 @@ class GrasperProblem : public ProblemInstance
     }
 
  protected:
-    void SampleObject(KinBodyPtr pbody, vector<COLLISIONREPORT::CONTACT>& vpoints, int N, Vector graspcenter)
+    void SampleObject(KinBodyPtr pbody, vector<CollisionReport::CONTACT>& vpoints, int N, Vector graspcenter)
     {
         RAY r;
         Vector com = graspcenter;
@@ -417,7 +418,7 @@ class GrasperProblem : public ProblemInstance
     }
 
     // generates samples across a geodesic sphere (the higher the level, the higher the number of points
-    void DeterministicallySample(KinBodyPtr pbody, vector<COLLISIONREPORT::CONTACT>& vpoints, int levels, Vector graspcenter)
+    void DeterministicallySample(KinBodyPtr pbody, vector<CollisionReport::CONTACT>& vpoints, int levels, Vector graspcenter)
     {
         RAY r;
         KinBody::Link::TRIMESH tri;
@@ -434,7 +435,7 @@ class GrasperProblem : public ProblemInstance
             r.dir *= 1000;
         
             r.pos = com - 10.0f*r.dir;
-            COLLISIONREPORT::CONTACT p;
+            CollisionReport::CONTACT p;
             if( GetEnv()->CheckCollision(r, KinBodyConstPtr(pbody), _report) ) {
                 p.norm = -_report->contacts.at(0).norm;//-r.dir//_report->contacts.at(0).norm1;
                 p.pos = _report->contacts.at(0).pos + 0.001f * p.norm; // extrude a little
@@ -548,11 +549,11 @@ class GrasperProblem : public ProblemInstance
         tri = *pcur;
     }
 
-    void BoxSample(KinBodyPtr pbody, vector<COLLISIONREPORT::CONTACT>& vpoints, int num_samples, Vector center)
+    void BoxSample(KinBodyPtr pbody, vector<CollisionReport::CONTACT>& vpoints, int num_samples, Vector center)
     {
         RAY r;
         KinBody::Link::TRIMESH tri;
-        COLLISIONREPORT::CONTACT p;
+        CollisionReport::CONTACT p;
         dReal ffar = 1.0f;
 
         GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Contacts|CO_Distance);
@@ -605,7 +606,7 @@ class GrasperProblem : public ProblemInstance
     // computes a distance map. For every point, samples many vectors around the point's normal such that angle
     // between normal and sampled vector doesn't exceeed fTheta. Returns the minimum distance.
     // vpoints needs to already be initialized
-    void _ComputeDistanceMap(vector<COLLISIONREPORT::CONTACT>& vpoints, dReal fTheta)
+    void _ComputeDistanceMap(vector<CollisionReport::CONTACT>& vpoints, dReal fTheta)
     {
         dReal fCosTheta = cosf(fTheta);
         int N;
@@ -652,7 +653,7 @@ class GrasperProblem : public ProblemInstance
         GetEnv()->GetCollisionChecker()->SetCollisionOptions(0);
     }
     
-    void _GetStableContacts(vector< pair<COLLISIONREPORT::CONTACT,int> >& contacts, const Vector& direction, dReal mu)
+    void _GetStableContacts(vector< pair<CollisionReport::CONTACT,int> >& contacts, const Vector& direction, dReal mu)
     {
         BOOST_ASSERT(mu>0);
         RAVELOG_DEBUGA("Starting GetStableContacts...\n");
@@ -727,7 +728,7 @@ class GrasperProblem : public ProblemInstance
         }
     }
 
-    virtual GRASPANALYSIS _AnalyzeContacts3D(const vector<COLLISIONREPORT::CONTACT>& contacts, dReal mu, int Nconepoints)
+    virtual GRASPANALYSIS _AnalyzeContacts3D(const vector<CollisionReport::CONTACT>& contacts, dReal mu, int Nconepoints)
     {
         if( mu == 0 )
             return _AnalyzeContacts3D(contacts);
@@ -741,7 +742,7 @@ class GrasperProblem : public ProblemInstance
             fang += fdeltaang;
         }
         
-        vector<COLLISIONREPORT::CONTACT> newcontacts;
+        vector<CollisionReport::CONTACT> newcontacts;
         newcontacts.reserve(contacts.size()*Nconepoints);
         FOREACHC(itcontact,contacts) {
             // find a coordinate system where z is the normal
@@ -759,13 +760,13 @@ class GrasperProblem : public ProblemInstance
             Vector right(torient.m[0],torient.m[4],torient.m[8]);
             Vector up(torient.m[1],torient.m[5],torient.m[9]);
             FOREACH(it,vsincos)
-                newcontacts.push_back(COLLISIONREPORT::CONTACT(itcontact->pos, (itcontact->norm + mu*it->first*right + mu*it->second*up).normalize3(),0));
+                newcontacts.push_back(CollisionReport::CONTACT(itcontact->pos, (itcontact->norm + mu*it->first*right + mu*it->second*up).normalize3(),0));
         }
 
         return _AnalyzeContacts3D(newcontacts);
     }
 
-    virtual GRASPANALYSIS _AnalyzeContacts3D(const vector<COLLISIONREPORT::CONTACT>& contacts)
+    virtual GRASPANALYSIS _AnalyzeContacts3D(const vector<CollisionReport::CONTACT>& contacts)
     {
         if( contacts.size() < 7 )
             throw openrave_exception("need at least 7 contact wrenches to have force closure in 3D");
@@ -862,7 +863,7 @@ class GrasperProblem : public ProblemInstance
 
     PlannerBasePtr _planner;
     RobotBasePtr _robot;
-    boost::shared_ptr<COLLISIONREPORT> _report;
+    CollisionReportPtr _report;
     boost::mutex _mutex;
     FILE *errfile;
 };

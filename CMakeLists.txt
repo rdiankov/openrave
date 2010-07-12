@@ -8,7 +8,7 @@ set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
 set (OPENRAVE_VERSION_MINOR 2)
-set (OPENRAVE_VERSION_PATCH 3)
+set (OPENRAVE_VERSION_PATCH 4)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR})
 
@@ -268,6 +268,7 @@ add_custom_command(
        "${CMAKE_SOURCE_DIR}/rave/sensor.h" OPENRAVE_SENSOR_HASH
        "${CMAKE_SOURCE_DIR}/rave/viewer.h" OPENRAVE_VIEWER_HASH
        "${CMAKE_SOURCE_DIR}/rave/trajectory.h" OPENRAVE_TRAJECTORY_HASH
+       "${CMAKE_SOURCE_DIR}/rave/environment.h" OPENRAVE_ENVIRONMENT_HASH
        > "${CMAKE_SOURCE_DIR}/rave/classhashes.h"
   DEPENDS cpp-gen-md5
   ${CMAKE_SOURCE_DIR}/rave/collisionchecker.h
@@ -281,7 +282,8 @@ add_custom_command(
   ${CMAKE_SOURCE_DIR}/rave/physicsengine.h
   ${CMAKE_SOURCE_DIR}/rave/sensor.h
   ${CMAKE_SOURCE_DIR}/rave/viewer.h
-  ${CMAKE_SOURCE_DIR}/rave/trajectory.h)
+  ${CMAKE_SOURCE_DIR}/rave/trajectory.h
+  ${CMAKE_SOURCE_DIR}/rave/environment.h)
 
 add_custom_target(classhashes_h ALL DEPENDS ${CMAKE_SOURCE_DIR}/rave/classhashes.h ${EXTRA_MSVC_DEPEND})
 

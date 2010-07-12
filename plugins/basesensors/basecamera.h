@@ -167,18 +167,17 @@ class BaseCameraSensor : public SensorBase
             if( fTimeToImage <= 0 ) {
                 fTimeToImage = 1 / (float)framerate;
                 GetEnv()->UpdatePublishedBodies();
-                if( !GetEnv()->GetCameraImage(vimagedata, _pgeom->width, _pgeom->height, _trans, _pgeom->KK) )
-                    RAVELOG_DEBUGA("camera failed to get image\n");
-                //GetEnv()->WriteCameraImage(_pgeom->width, _pgeom->height, _trans, _pgeom->KK,"cam.jpg","jpg");
-                
-                // copy the data
-                boost::mutex::scoped_lock lock(_mutexdata);
-                pdata->t = _trans;
-                pdata->vimagedata = vimagedata;
-                pdata->__stamp = GetEnv()->GetSimulationTime();
+                if( !!GetEnv()->GetViewer() ) {
+                    if( GetEnv()->GetViewer()->GetCameraImage(vimagedata, _pgeom->width, _pgeom->height, _trans, _pgeom->KK) ) {
+                        // copy the data
+                        boost::mutex::scoped_lock lock(_mutexdata);
+                        pdata->t = _trans;
+                        pdata->vimagedata = vimagedata;
+                        pdata->__stamp = GetEnv()->GetSimulationTime();
+                    }
+                }
             }
         }
-        
         return true;
     }
 

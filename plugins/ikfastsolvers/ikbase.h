@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -370,9 +371,9 @@ private:
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         RobotBasePtr probot = pmanip->GetRobot();
         probot->SetActiveDOFValues(vravesol);
-        COLLISIONREPORT report;
+        CollisionReport report;
         if( IS_DEBUGLEVEL(Level_Verbose) ) {
-            if( probot->CheckSelfCollision(boost::shared_ptr<COLLISIONREPORT>(&report,null_deleter())) )
+            if( probot->CheckSelfCollision(boost::shared_ptr<CollisionReport>(&report,null_deleter())) )
                 return SR_Continue;
         }
         else {
@@ -380,7 +381,7 @@ private:
                 return SR_Continue;
         }
 
-        if( boost::get<2>(freeq0check) && GetEnv()->CheckCollision(KinBodyConstPtr(probot), boost::shared_ptr<COLLISIONREPORT>(&report,null_deleter())) ) {
+        if( boost::get<2>(freeq0check) && GetEnv()->CheckCollision(KinBodyConstPtr(probot), boost::shared_ptr<CollisionReport>(&report,null_deleter())) ) {
             if( !!report.plink1 && !!report.plink2 ) {
                 RAVELOG_VERBOSEA(str(boost::format("IKFastSolver: collision %s:%s with %s:%s\n")%report.plink1->GetParent()->GetName()%report.plink1->GetName()%report.plink2->GetParent()->GetName()%report.plink2->GetName()));
             }
@@ -460,8 +461,8 @@ private:
         RobotBasePtr probot = pmanip->GetRobot();
         probot->SetActiveDOFValues(vravesol);
         if( IS_DEBUGLEVEL(Level_Verbose) ) {
-            COLLISIONREPORT report;
-            if( probot->CheckSelfCollision(boost::shared_ptr<COLLISIONREPORT>(&report,null_deleter())) )
+            CollisionReport report;
+            if( probot->CheckSelfCollision(boost::shared_ptr<CollisionReport>(&report,null_deleter())) )
                 return SR_Continue;
         }
         else {
@@ -502,8 +503,8 @@ private:
 
     bool _CheckIndependentCollision(RobotBase::ManipulatorPtr pmanip)
     {
-        COLLISIONREPORT report;
-        if( pmanip->CheckIndependentCollision(boost::shared_ptr<COLLISIONREPORT>(&report,null_deleter())) ) {
+        CollisionReport report;
+        if( pmanip->CheckIndependentCollision(boost::shared_ptr<CollisionReport>(&report,null_deleter())) ) {
             if( !!report.plink1 && !!report.plink2 ) {
                 RAVELOG_VERBOSEA(str(boost::format("IKFastSolver: indep collision %s:%s with %s:%s\n")%report.plink1->GetParent()->GetName()%report.plink1->GetName()%report.plink2->GetParent()->GetName()%report.plink2->GetName()));
             }

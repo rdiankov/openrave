@@ -19,10 +19,10 @@
 namespace OpenRAVE {
 
 /// OpenRAVE collision report
-class RAVE_API COLLISIONREPORT
+class RAVE_API CollisionReport
 {
 public:
-    COLLISIONREPORT() { Reset(); }
+    CollisionReport() { Reset(); }
 
     struct RAVE_API CONTACT
     {
@@ -34,7 +34,7 @@ public:
         dReal depth;    ///< the penetration depth, positive means the surfaces are penetrating, negative means the surfaces are not colliding (used for distance queries)
     };
 
-    int options;        ///< the options that the COLLISIONREPORT was called with
+    int options;        ///< the options that the CollisionReport was called with
 
     KinBody::LinkConstPtr plink1, plink2; ///< the colliding links if a collision involves a bodies. Collisions do not always occur with 2 bodies like ray collisions, so these fields can be empty.
 
@@ -50,6 +50,8 @@ public:
     virtual void Reset(int coloptions = 0);
     virtual std::string __str__() const;
 };
+
+typedef CollisionReport COLLISIONREPORT;
 
 } // end namespace OpenRAVE
 

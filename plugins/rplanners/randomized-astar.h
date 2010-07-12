@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 // Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This program is free software: you can redistribute it and/or modify
@@ -102,7 +103,7 @@ public:
 RandomizedAStarPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
     {
         __description = "Constrained Grasp Planning Randomized A*";
-        _report.reset(new COLLISIONREPORT());
+        _report.reset(new CollisionReport());
         bUseGauss = false;
         nIndex = 0;
     }

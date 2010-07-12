@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 // Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
@@ -232,7 +233,7 @@ void IvObjectDragger::CheckCollision(bool flag)
             if( !!lock ) {
                 int prevoptions = _viewer->GetEnv()->GetCollisionChecker()->GetCollisionOptions();
                 _viewer->GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Contacts);
-                boost::shared_ptr<COLLISIONREPORT> preport(new COLLISIONREPORT());
+                CollisionReportPtr preport(new CollisionReport());
                 if( pbody->GetBody()->CheckSelfCollision(preport) ) {
                     RAVELOG_VERBOSEA(str(boost::format("self-collision %s\n")%preport->__str__()));
                     _SetColor(COLLISION_COLOR);

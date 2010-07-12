@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -25,7 +26,7 @@ public:
  RrtPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
     {
         __description = "RRT planner (rosen diankov)";
-        _report.reset(new COLLISIONREPORT());
+        _report.reset(new CollisionReport());
     }
     virtual ~RrtPlanner() {}
 

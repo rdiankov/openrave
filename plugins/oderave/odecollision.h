@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 // Copyright (C) 2006-2008 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This program is free software: you can redistribute it and/or modify
@@ -25,7 +26,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         {
             _bHasCallbacks = pchecker->GetEnv()->HasRegisteredCollisionCallbacks();
             if( _bHasCallbacks && !_report )
-                _report.reset(new COLLISIONREPORT());
+                _report.reset(new CollisionReport());
             if( !!_report )
                 _report->Reset(pchecker->GetCollisionOptions());
         }
@@ -220,7 +221,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                 int N = dCollide (geom1, geom2,16,&contact[0].geom,sizeof(dContact));
                 if (N) {
                     if( !report && bHasCallbacks ) {
-                        report.reset(new COLLISIONREPORT());
+                        report.reset(new CollisionReport());
                         report->Reset(_options);
                     }
 
@@ -243,7 +244,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                                 BOOST_ASSERT( checkgeom1 == contact[i].geom.g1 || checkgeom1 == contact[i].geom.g2 );
                                 if( !!report->plink2 && report->plink2->ValidateContactNormal(contact[i].geom.pos,vnorm))
                                     distance = -distance;
-                                report->contacts.push_back(COLLISIONREPORT::CONTACT(contact[i].geom.pos, vnorm, distance));
+                                report->contacts.push_back(CollisionReport::CONTACT(contact[i].geom.pos, vnorm, distance));
                             }
                         }
 
@@ -363,7 +364,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
             if (N > 0) {
 
                 if( !report && bHasCallbacks ) {
-                    report.reset(new COLLISIONREPORT());
+                    report.reset(new CollisionReport());
                     report->Reset(_options);
                 }
 
@@ -403,9 +404,9 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                     if( !!report->plink1 && report->plink1->ValidateContactNormal(contact[index].geom.pos,vnorm) )
                         distance = -distance;
                     if( report->contacts.size() == 0 )
-                        report->contacts.push_back(COLLISIONREPORT::CONTACT(contact[index].geom.pos, vnorm, distance));
+                        report->contacts.push_back(CollisionReport::CONTACT(contact[index].geom.pos, vnorm, distance));
                     else
-                        report->contacts.front() = COLLISIONREPORT::CONTACT(contact[index].geom.pos, vnorm, distance);
+                        report->contacts.front() = CollisionReport::CONTACT(contact[index].geom.pos, vnorm, distance);
 
                     if( listcallbacks.size() == 0 )
                         GetEnv()->GetRegisteredCollisionCallbacks(listcallbacks);
@@ -596,7 +597,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                         }
                         if( !!pcb->_report->plink2 && pcb->_report->plink2->ValidateContactNormal(contact[i].geom.pos,vnorm) )
                             distance = -distance;
-                        pcb->_report->contacts.push_back(COLLISIONREPORT::CONTACT(contact[i].geom.pos, vnorm, distance));
+                        pcb->_report->contacts.push_back(CollisionReport::CONTACT(contact[i].geom.pos, vnorm, distance));
                     }
                 }
 
@@ -671,7 +672,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                         }
                         if( !!pcb->_report->plink2 && pcb->_report->plink2->ValidateContactNormal(contact[i].geom.pos,vnorm) )
                             distance = -distance;
-                        pcb->_report->contacts.push_back(COLLISIONREPORT::CONTACT(contact[i].geom.pos,vnorm,distance));
+                        pcb->_report->contacts.push_back(CollisionReport::CONTACT(contact[i].geom.pos,vnorm,distance));
                     }
                 }
             }
@@ -774,7 +775,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                             }
                             if( !!pcb->_report->plink2 && pcb->_report->plink2->ValidateContactNormal(contact[i].geom.pos,vnorm) )
                                 distance = -distance;
-                            pcb->_report->contacts.push_back(COLLISIONREPORT::CONTACT(contact[i].geom.pos,vnorm,distance));
+                            pcb->_report->contacts.push_back(CollisionReport::CONTACT(contact[i].geom.pos,vnorm,distance));
                         }
                     }
                 }
@@ -862,10 +863,10 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
                 if( !!pcb->_report->plink1 && pcb->_report->plink1->ValidateContactNormal(contact[index].geom.pos,vnorm) )
                     distance = -distance;
                 if( pcb->_report->contacts.size() == 0 ) {
-                    pcb->_report->contacts.push_back(COLLISIONREPORT::CONTACT(contact[index].geom.pos, vnorm, distance));
+                    pcb->_report->contacts.push_back(CollisionReport::CONTACT(contact[index].geom.pos, vnorm, distance));
                 }
                 else
-                    pcb->_report->contacts.front() = COLLISIONREPORT::CONTACT(contact[index].geom.pos, vnorm, distance);
+                    pcb->_report->contacts.front() = CollisionReport::CONTACT(contact[index].geom.pos, vnorm, distance);
                 //}
 
                 FOREACHC(itfn, pcb->GetCallbacks()) {

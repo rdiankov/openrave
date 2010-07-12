@@ -13,10 +13,11 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-/*! --------------------------------------------------------------------
-  \file   Trajectory.h
-  \brief  Define a time-parameterized trajectory of robot configurations
- -------------------------------------------------------------------- */
+/**
+\file trajectory.h
+\brief  Define a time-parameterized trajectory of robot configurations.
+ */
+
 #ifndef TRAJECTORY_H
 #define TRAJECTORY_H
 
@@ -176,6 +177,7 @@ public:
     virtual bool Write(std::ostream& f, int options) const;
         
     /// Reads the trajectory, expects the filename to have a header.
+    /// \param filename the name to parse the trajectory from
     /// \param robot The robot to attach the trajrectory to, if specified, will
     ///              call CalcTrajTiming to get the correct trajectory velocities.
     virtual bool Read(const std::string& filename, RobotBasePtr robot);

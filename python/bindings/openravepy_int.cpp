@@ -2097,6 +2097,26 @@ public:
     }
 
     void EnvironmentSync() { return _pviewer->EnvironmentSync(); }
+
+    void SetCamera(object transform) { _pviewer->SetCamera(ExtractTransform(transform)); }
+
+    void SetCameraLookAt(object lookat, object campos, object camup) {
+        _pviewer->SetCameraLookAt(ExtractFloat3(lookat), ExtractFloat3(campos), ExtractFloat3(camup));
+    }
+    object GetCameraTransform() { return ReturnTransform(_pviewer->GetCameraTransform()); }
+
+    object GetCameraImage(int width, int height, object extrinsic, object oKK)
+    {
+        vector<float> vKK = ExtractArray<float>(oKK);
+        if( vKK.size() != 4 )
+            throw openrave_exception("KK needs to be of size 4");
+        SensorBase::CameraIntrinsics KK(vKK[0],vKK[1],vKK[2],vKK[3]);
+        vector<uint8_t> memory;
+        if( !_pviewer->GetCameraImage(memory, width,height,RaveTransform<float>(ExtractTransform(extrinsic)), KK) )
+            throw openrave_exception("failed to get camera image");
+        std::vector<npy_intp> dims(3); dims[0] = height; dims[1] = width; dims[2] = 3;
+        return toPyArray(memory,dims);
+    }
 };
 
 class PyEnvironmentBase : public boost::enable_shared_from_this<PyEnvironmentBase>
@@ -2930,26 +2950,6 @@ public:
         }
         
         return object(PyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,RaveVector<float>(1,0.5,0.5,1))));
-    }
-
-    void SetCamera(object transform) { _penv->SetCamera(ExtractTransform(transform)); }
-
-    void SetCameraLookAt(object lookat, object campos, object camup) {
-        _penv->SetCameraLookAt(ExtractFloat3(lookat), ExtractFloat3(campos), ExtractFloat3(camup));
-    }
-    object GetCameraTransform() { return ReturnTransform(_penv->GetCameraTransform()); }
-
-    object GetCameraImage(int width, int height, object extrinsic, object oKK)
-    {
-        vector<float> vKK = ExtractArray<float>(oKK);
-        if( vKK.size() != 4 )
-            throw openrave_exception("KK needs to be of size 4");
-        SensorBase::CameraIntrinsics KK(vKK[0],vKK[1],vKK[2],vKK[3]);
-        vector<uint8_t> memory;
-        if( !_penv->GetCameraImage(memory, width,height,RaveTransform<float>(ExtractTransform(extrinsic)), KK) )
-            throw openrave_exception("failed to get camera image");
-        std::vector<npy_intp> dims(3); dims[0] = height; dims[1] = width; dims[2] = 3;
-        return toPyArray(memory,dims);
     }
 
     object GetBodies()
@@ -3964,6 +3964,10 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("LoadModel",&PyRaveViewerBase::LoadModel)
             .def("RegisterCallback",&PyRaveViewerBase::RegisterCallback)
             .def("EnvironmentSync",&PyRaveViewerBase::EnvironmentSync)
+            .def("SetCamera",&PyRaveViewerBase::SetCamera,args("transform"))
+            .def("SetCameraLookAt",&PyRaveViewerBase::SetCameraLookAt,args("lookat","pos","up"))
+            .def("GetCameraTransform",&PyRaveViewerBase::GetCameraTransform)
+            .def("GetCameraImage",&PyRaveViewerBase::GetCameraImage,args("width","height","transform","K"))
             ;
 
         enum_<RaveViewerBase::ViewerEvents>("ViewerEvents")
@@ -4088,10 +4092,6 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("drawplane",drawplane1,args("transform","extents","texture"))
             .def("drawplane",drawplane2,args("transform","extents","texture"))
             .def("drawtrimesh",&PyEnvironmentBase::drawtrimesh,drawtrimesh_overloads(args("points","indices","colors")))
-            .def("SetCamera",&PyEnvironmentBase::SetCamera,args("transform"))
-            .def("SetCameraLookAt",&PyEnvironmentBase::SetCameraLookAt,args("lookat","pos","up"))
-            .def("GetCameraTransform",&PyEnvironmentBase::GetCameraTransform)
-            .def("GetCameraImage",&PyEnvironmentBase::GetCameraImage,args("width","height","transform","K"))
             .def("GetRobots",&PyEnvironmentBase::GetRobots)
             .def("GetBodies",&PyEnvironmentBase::GetBodies)
             .def("UpdatePublishedBodies",&PyEnvironmentBase::UpdatePublishedBodies)

@@ -10,7 +10,7 @@ body {
 	font-family: sans-serif, Arial, Verdana, Helvetica;
 	font-size: 83%;
 	line-height: 125%;
-	color: #434343;
+	color: #404040;
 }
 
 /* MAIN LAYOUT */
@@ -270,9 +270,19 @@ div.admin-panel .description {
 }
 a {
 	text-decoration: none;
+	color: #337;
+}
+a:link {
+	text-decoration: none;
+	color: #337;
+}
+a:visited {
+	text-decoration: none;
+	color: #337;
 }
 a:hover {
 	text-decoration: underline;
+	color: #337;
 }
 fieldset {
 	border: 1px solid #ccc;

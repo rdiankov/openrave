@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 // Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This program is free software: you can redistribute it and/or modify
@@ -664,7 +665,7 @@ class BiSpacePlanner : public PlannerBase
         }
 
         _robot->SetActiveDOFValues(NULL, &_parameters.vinitialconfig[0]);
-        COLLISIONREPORT report;
+        CollisionReport report;
         if( GetEnv()->CheckCollision(_robot, &report) ) {
             RAVEPRINT(L"BiSpace: robot initially in collision %S:%S!\n",
                       report.plink1!=NULL?report.plink1->GetName():L"(NULL)",
@@ -1066,7 +1067,7 @@ class BiSpacePlanner : public PlannerBase
         DVSTARTPROFILE();
 
         _SetRobotConfig(pq, bWorkspace);
-        COLLISIONREPORT report;
+        CollisionReport report;
 
         if( bWorkspace ) {
             FOREACH(itlink, _vHandLinks) {

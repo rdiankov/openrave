@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -14,78 +15,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef OPENRAVE_VISUALSERVOING_PROBLEM
 #define OPENRAVE_VISUALSERVOING_PROBLEM
-
-struct FRUSTUM
-{
-    Vector right, up, dir, pos;
-    dReal fnear, ffar;
-    dReal ffovx,ffovy;
-    dReal fcosfovx,fsinfovx,fcosfovy,fsinfovy;
-
-    void Init(const SensorBase::CameraIntrinsics& KK,int width, int height)
-    {
-        ffovx = atanf(0.5f*width/KK.fx);
-        fcosfovx = cosf(ffovx); fsinfovx = sinf(ffovx);
-        ffovy = atanf(0.5f*height/KK.fy);
-        fcosfovy = cosf(ffovy); fsinfovy = sinf(ffovy);
-    }
-};
-
-inline bool IsOBBinFrustum(const OBB& o, const FRUSTUM& fr)
-{
-	// check OBB against all 6 planes
-	Vector v = o.pos - fr.pos;
-
-	// if v lies on the left or bottom sides of the frustrum
-	// then freflect about the planes to get it on the right and 
-	// top sides
-
-	// side planes
-	Vector vNorm = fr.fcosfovx * fr.right - fr.fsinfovx * fr.dir;
-    if( dot3(v,vNorm) > -o.extents.x * RaveFabs(dot3(vNorm, o.right)) - 
-        o.extents.y * RaveFabs(dot3(vNorm, o.up)) - 
-        o.extents.z * RaveFabs(dot3(vNorm, o.dir)))
-        return false;
-    
-	vNorm = -fr.fcosfovx * fr.right - fr.fsinfovx * fr.dir;
-	if(dot3(v, vNorm) > -o.extents.x * RaveFabs(dot3(vNorm, o.right)) -
-				o.extents.y * RaveFabs(dot3(vNorm, o.up)) -
-				o.extents.z * RaveFabs(dot3(vNorm, o.dir))) return false;
-
-	vNorm = fr.fcosfovy * fr.up - fr.fsinfovy * fr.dir;
-	if(dot3(v, vNorm) > -o.extents.x * RaveFabs(dot3(vNorm, o.right)) -
-				o.extents.y * RaveFabs(dot3(vNorm, o.up)) -
-				o.extents.z * RaveFabs(dot3(vNorm, o.dir))) return false;
-
-	vNorm = -fr.fcosfovy * fr.up - fr.fsinfovy * fr.dir;
-	if(dot3(v, vNorm) > -o.extents.x * RaveFabs(dot3(vNorm, o.right)) -
-				o.extents.y * RaveFabs(dot3(vNorm, o.up)) -
-				o.extents.z * RaveFabs(dot3(vNorm, o.dir))) return false;
-
-	vNorm.x = dot3(v, fr.dir);
-	vNorm.y = o.extents.x * RaveFabs(dot3(fr.dir, o.right)) + 
-					o.extents.y * RaveFabs(dot3(fr.dir, o.up)) + 
-					o.extents.z * RaveFabs(dot3(fr.dir, o.dir));
-
-	if( (vNorm.x < fr.fnear + vNorm.y) || (vNorm.x > fr.ffar - vNorm.y) ) return false;
-
-	return true;
-}
-
-/// returns true if all points on the oriented bounding box are inside the convex hull
-/// planes should be facing inside
-inline bool IsOBBinConvexHull(const OBB& o, const vector<Vector>& vplanes)
-{
-    FOREACHC(itplane, vplanes) {
-        // side planes
-        if( dot3(o.pos,*itplane)+itplane->w < o.extents.x * RaveFabs(dot3(*itplane, o.right))
-            + o.extents.y * RaveFabs(dot3(*itplane, o.up))
-            + o.extents.z * RaveFabs(dot3(*itplane, o.dir)))
-            return false;
-    }
-
-    return true;
-}
 
 /// samples rays from the projected OBB and returns true if the test function returns true
 /// for all the rays. Otherwise, returns false
@@ -210,11 +139,19 @@ public:
     inline boost::shared_ptr<VisualFeedbackProblem const> shared_problem_const() const { return boost::static_pointer_cast<VisualFeedbackProblem const>(shared_from_this()); }
     friend class VisibilityConstraintFunction;
 
+//        void Init(const SensorBase::CameraIntrinsics& KK,int width, int height)
+//    {
+//        ffovx = atanf(0.5f*width/KK.fx);
+//        fcosfovx = cosf(ffovx); fsinfovx = sinf(ffovx);
+//        ffovy = atanf(0.5f*height/KK.fy);
+//        fcosfovy = cosf(ffovy); fsinfovy = sinf(ffovy);
+//    }
+    
     class VisibilityConstraintFunction
     {
     public:
     VisibilityConstraintFunction(boost::shared_ptr<VisualFeedbackProblem> vf) : _vf(vf) {
-            _report.reset(new COLLISIONREPORT());
+            _report.reset(new CollisionReport());
 
             _fAllowableOcclusion = 0.1;
             _fRayMinDist = 0.02f;
@@ -226,7 +163,7 @@ public:
 
                 _vTargetOBBs.reserve(_vf->_target->GetLinks().size());
                 FOREACHC(itlink, _vf->_target->GetLinks())
-                    _vTargetOBBs.push_back(OBBFromAABB((*itlink)->GetCollisionData().ComputeAABB(),(*itlink)->GetTransform()));
+                        _vTargetOBBs.push_back(geometry::OBBFromAABB((*itlink)->GetCollisionData().ComputeAABB(),(*itlink)->GetTransform()));
                 _abTarget = _vf->_target->ComputeAABB();
                 vector<AABB> vboxes; vboxes.push_back(_vf->_target->ComputeAABB());
 
@@ -313,7 +250,7 @@ public:
                 _vconvexplanes3d[i].w = -dot3(tcamera.trans,_vconvexplanes3d[i]) - mindist;
             }
             FOREACH(itobb,_vTargetOBBs) {
-                if( !IsOBBinConvexHull(*itobb,_vconvexplanes3d) ) {
+                if( !geometry::IsOBBinConvexHull(*itobb,_vconvexplanes3d) ) {
                     return false;
                 }
             }
@@ -333,7 +270,7 @@ public:
             _ptargetbox->Enable(true);
             _vf->_target->Enable(false);
             FOREACH(itobb,_vTargetOBBs) {
-                OBB cameraobb = TransformOBB(*itobb,tcamerainv);
+                OBB cameraobb = geometry::TransformOBB(tcamerainv,*itobb);
                 if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::TestRay, this, _1, boost::ref(tworldcamera)),_fAllowableOcclusion) ) {
                     RAVELOG_VERBOSEA("box is occluded\n");
                     return true;
@@ -384,7 +321,7 @@ public:
             _ptargetbox->Enable(true);
             _vf->_target->Enable(false);
             FOREACH(itobb,_vTargetOBBs) {
-                OBB cameraobb = TransformOBB(*itobb,tcamerainv);
+                OBB cameraobb = geometry::TransformOBB(tcamerainv,*itobb);
                 if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::TestRayRigid, this, _1, boost::ref(tworldcamera),boost::ref(vattachedlinks)), 0.0f) ) {
                     return true;
                 }
@@ -982,7 +919,7 @@ public:
         _robot->SetActiveManipulator(_nManipIndex); BOOST_ASSERT(_robot->GetActiveManipulator()==_pmanip);
         _robot->SetActiveDOFs(_pmanip->GetArmJoints());
 
-        CollisionReportPtr preport(new COLLISIONREPORT());
+        CollisionReportPtr preport(new CollisionReport());
         if( _pmanip->CheckIndependentCollision(preport) ) {
             RAVELOG_WARN(str(boost::format("robot independent links in collision: %s\n")%preport->__str__()));
             return false;

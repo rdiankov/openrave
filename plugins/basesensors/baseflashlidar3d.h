@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2008 Rosen Diankov (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -117,7 +118,7 @@ public:
     {
         _pgeom.reset(new BaseFlashLidar3DGeom());
         _pdata.reset(new LaserSensorData());
-        _report.reset(new COLLISIONREPORT());
+        _report.reset(new CollisionReport());
 
         _bRender = false;
         _pgeom->min_angle[0] = -PI/2; _pgeom->min_angle[1] = 0;
@@ -328,7 +329,7 @@ protected:
     boost::shared_ptr<BaseFlashLidar3DGeom> _pgeom;
     boost::shared_ptr<LaserSensorData> _pdata;
     vector<int> _databodyids; ///< if non 0, for each point in _data, specifies the body that was hit
-    boost::shared_ptr<COLLISIONREPORT> _report;
+    CollisionReportPtr _report;
     // more geom stuff
     dReal _fGeomMinRange;
     RaveVector<float> _vColor;

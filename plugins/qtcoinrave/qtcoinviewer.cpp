@@ -525,22 +525,21 @@ bool QtCoinViewer::WriteCameraImage(int width, int height, const RaveTransform<f
 class SetCameraMessage : public QtCoinViewer::EnvMessage
 {
 public:
-    SetCameraMessage(QtCoinViewerPtr pviewer, void** ppreturn,
-                     const RaveVector<float>& pos, const RaveVector<float>& quat)
-            : EnvMessage(pviewer, ppreturn, false), _pos(pos), _quat(quat) {}
+    SetCameraMessage(QtCoinViewerPtr pviewer, void** ppreturn, const RaveTransform<float>& trans)
+            : EnvMessage(pviewer, ppreturn, false), _trans(trans) {}
     
     virtual void viewerexecute() {
-        _pviewer->_SetCamera(_pos, _quat);
+        _pviewer->_SetCamera(_trans);
         EnvMessage::viewerexecute();
     }
 
 private:
-    const RaveVector<float> _pos, _quat;
+    const RaveTransform<float> _trans;
 };
 
-void QtCoinViewer::SetCamera(const RaveVector<float>& pos, const RaveVector<float>& quat)
+void QtCoinViewer::SetCamera(const RaveTransform<float>& trans)
 {
-    EnvMessagePtr pmsg(new SetCameraMessage(shared_viewer(), (void**)NULL, pos, quat));
+    EnvMessagePtr pmsg(new SetCameraMessage(shared_viewer(), (void**)NULL, trans));
     pmsg->callerexecute();
 }
 
@@ -1015,11 +1014,11 @@ void QtCoinViewer::EnvironmentSync()
         RAVELOG_WARNA("failed to update models from environment sync\n");
 }
 
-void QtCoinViewer::_SetCamera(const RaveVector<float>& pos, const RaveVector<float>& quat)
+void QtCoinViewer::_SetCamera(const RaveTransform<float>& t)
 {
     _bAutoSetCamera = false;
-    GetCamera()->position.setValue(pos.x, pos.y, pos.z);
-    GetCamera()->orientation.setValue(quat.y, quat.z, quat.w, quat.x);
+    GetCamera()->position.setValue(t.trans.x, t.trans.y, t.trans.z);
+    GetCamera()->orientation.setValue(t.rot.y, t.rot.z, t.rot.w, t.rot.x);
 }
 
 void QtCoinViewer::_SetCameraLookAt(const RaveVector<float>& lookat, const RaveVector<float>& campos, const RaveVector<float>& camup)
@@ -1055,10 +1054,9 @@ void QtCoinViewer::_SetCameraLookAt(const RaveVector<float>& lookat, const RaveV
     t.m[0] = right.x; t.m[1] = up.x; t.m[2] = dir.x;
     t.m[4] = right.y; t.m[5] = up.y; t.m[6] = dir.y;
     t.m[8] = right.z; t.m[9] = up.z; t.m[10] = dir.z;
-    ofstream of("temp.txt");
-    of << lookat << endl << campos << endl << camup << endl << t << endl;
+    t.trans = campos;
 
-    _SetCamera(campos, RaveTransform<float>(t).rot);
+    _SetCamera(t);
 }
 
 void QtCoinViewer::_SetBkgndColor(const RaveVector<float>& color)
@@ -2742,7 +2740,7 @@ bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int 
     }
 
     // have to flip Z axis
-    RaveTransform<float> trot; trot.rotfromaxisangle(Vector(1,0,0),PI);
+    RaveTransform<float> trot; trot.rotfromaxisangle(RaveVector<float>(1,0,0),(float)PI);
     RaveTransform<float> t = _t * trot;
 
     SoSFVec3f position = GetCamera()->position;
@@ -2797,7 +2795,7 @@ bool QtCoinViewer::_WriteCameraImage(int width, int height, const RaveTransform<
         return false;
 
     // have to flip Z axis
-    RaveTransform<float> trot; trot.rotfromaxisangle(Vector(1,0,0),PI);
+    RaveTransform<float> trot; trot.rotfromaxisangle(RaveVector<float>(1,0,0),(float)PI);
     RaveTransform<float> t = _t * trot;
 
     SoSFVec3f position = GetCamera()->position;

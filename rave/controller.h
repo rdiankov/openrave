@@ -50,7 +50,7 @@ public:
     virtual void Reset(int options) = 0;
 
     /// go to a specific position in configuration space
-    /// \param pValues - final configuration
+    /// \param values - final configuration
     /// \return true if position operation successful
     virtual bool SetDesired(const std::vector<dReal>& values) = 0;
     
@@ -58,15 +58,6 @@ public:
     /// \param ptraj - the trajectory
     /// \return true if trajectory operation successful
     virtual bool SetPath(TrajectoryBaseConstPtr ptraj) = 0;
-
-    /// replace a previous trajectory that has been sent for execution, 
-    /// \param ptraj - the trajectory to be inserted
-    /// \param nTrajectoryId - the unique id of this trajectory. If it is similar to previous trajectory ids
-    /// the controller will attempt to replace the queued trajectory with the current trajectory.
-    /// \param fDivergenceTime - the time where this new trajectory diverges from an old
-    /// trajectory with a similar nTrajectoryId
-    /// \return true if trajectory insertion successful
-    //virtual bool SetPath(TrajectoryConstPtr ptraj, int nTrajectoryId, float fDivergenceTime) = 0;
     
     /// Simulate one step forward for controllers running in the simulation environment
     /// \param fTimeElapsed - time elapsed in simulation environment since last frame

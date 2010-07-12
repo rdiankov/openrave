@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 // Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
@@ -13,10 +14,10 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-/*! --------------------------------------------------------------------
-  \file   Robot.h
-  \brief  Encapsulate a virtual robot description
- -------------------------------------------------------------------- */
+/**
+\file   robot.h
+\brief  Base robot and manipulator description.
+ */
 
 #ifndef  RAVE_ROBOT_H
 #define  RAVE_ROBOT_H
@@ -24,7 +25,8 @@
 namespace OpenRAVE {
 
 /// Parameterization of basic primitives for querying inverse-kinematics solutions.
-/// Defines parameterizations useful for autonomous manipulation scenarios like:
+///
+/// Holds the parameterization of a geometric primitive useful for autonomous manipulation scenarios like:
 /// 6D pose, 3D translation, 3D rotation, 3D look at direction, and ray look at direction.
 class IkParameterization
 {
@@ -111,7 +113,7 @@ public:
         virtual int GetNumFreeParameters() const;
 
         /// gets the free parameters from the current robot configuration
-        /// \param pFreeParameters is filled with GetNumFreeParameters() parameters in [0,1] range
+        /// \param vFreeParameters is filled with GetNumFreeParameters() parameters in [0,1] range
         /// \return true if succeeded
         virtual bool GetFreeParameters(std::vector<dReal>& vFreeParameters) const;
 
@@ -288,7 +290,6 @@ public:
     /// set a controller for a robot and destroy the old
     /// \param pController - if NULL, sets the controller of this robot to NULL. otherwise attemps to set the controller to this robot.
     /// \param args - the argument list to pass when initializing the controller
-    /// \param bDestroyOldController - if true, will destroy the old controller
     virtual bool SetController(ControllerBasePtr pController, const std::string& args) {return false;}
     virtual void SetJointValues(const std::vector<dReal>& vJointValues, bool bCheckLimits = false);
     virtual void SetJointValues(const std::vector<dReal>& vJointValues, const Transform& transbase, bool bCheckLimits = false);
@@ -476,7 +477,7 @@ public:
     virtual void SimulationStep(dReal fElapsedTime);
 
     /// Check if body is self colliding. Links that are joined together are ignored.
-    /// \param optional collision report
+    /// \param report [optional] collision report
     virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr()) const;
 
     /// checks collision of a robot link with the surrounding environment. Attached/Grabbed bodies to this link are also checked for collision.

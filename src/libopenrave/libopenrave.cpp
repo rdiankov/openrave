@@ -88,7 +88,7 @@ std::string RaveGetHomeDirectory()
     return homedirectory;
 }
 
-void COLLISIONREPORT::Reset(int coloptions)
+void CollisionReport::Reset(int coloptions)
 {
     options = coloptions;
     minDistance = 1e20f;
@@ -98,7 +98,7 @@ void COLLISIONREPORT::Reset(int coloptions)
     vLinkColliding.resize(0);
 }
 
-std::string COLLISIONREPORT::__str__() const
+std::string CollisionReport::__str__() const
 {
     stringstream s;
     s << "(";
@@ -843,7 +843,7 @@ bool SimpleSensorSystem::SimpleXMLReader::endElement(const std::string& name)
     else if( name == "rotationaxis" ) {
         Vector axis; dReal fang;
         ss >> axis.x >> axis.y >> axis.z >> fang;
-        _pdata->transOffset.rotfromaxisangle(axis.normalize3(),fang*(PI/180.0f));
+        _pdata->transOffset.rotfromaxisangle(axis.normalize3(),fang*dReal(PI/180.0));
     }
     else if( name == "quat" )
         ss >> _pdata->transOffset.rot;
@@ -857,7 +857,7 @@ bool SimpleSensorSystem::SimpleXMLReader::endElement(const std::string& name)
     else if( name == "prerotationaxis") {
         Vector axis; dReal fang;
         ss >> axis.x >> axis.y >> axis.z >> fang;
-        _pdata->transPreOffset.rotfromaxisangle(axis,fang*(PI/180.0f));
+        _pdata->transPreOffset.rotfromaxisangle(axis,fang*dReal(PI/180.0));
     }
     else if( name == "prequat")
         ss >> _pdata->transPreOffset.rot;

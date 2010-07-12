@@ -122,7 +122,7 @@ int main(int argc, char ** argv)
     probot->SetJointValues(values,true);
 
     int contactpoints = 0;
-    CollisionReportPtr report(new COLLISIONREPORT());
+    CollisionReportPtr report(new CollisionReport());
     penv->GetCollisionChecker()->SetCollisionOptions(CO_Contacts);
     if( probot->CheckSelfCollision(report) ) {
         contactpoints = (int)report->contacts.size();
@@ -132,7 +132,7 @@ int main(int argc, char ** argv)
            << (!!report->plink2 ? report->plink2->GetName() : "") << " at "
            << contactpoints << "contacts" << endl;
         for(int i = 0; i < contactpoints; ++i) {
-            COLLISIONREPORT::CONTACT& c = report->contacts[i];
+            CollisionReport::CONTACT& c = report->contacts[i];
             ss << "contact" << i << ": pos=("
                << c.pos.x << ", " << c.pos.y << ", " << c.pos.z << "), norm=("
                << c.norm.x << ", " << c.norm.y << ", " << c.norm.z << ")" << endl;

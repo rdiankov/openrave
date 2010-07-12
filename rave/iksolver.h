@@ -35,9 +35,7 @@ public:
     
     /// sets the IkSolverBase attached to a specific robot and sets IkSolverBase specific options
     /// For example, some ik solvers might have different ways of computing optimal solutions.
-    /// \param probot The robot whose active manipulator will be used to solve the inverse kinematics for.
     /// \param pmanip The manipulator the IK solver is attached to
-    /// \param options Specific options for the ik solver, refer to each different ik solver for a list of their options
     virtual bool Init(RobotBase::ManipulatorPtr pmanip) = 0;
 
     virtual RobotBase::ManipulatorPtr GetManipulator() const = 0;
@@ -47,49 +45,49 @@ public:
     virtual int GetNumFreeParameters() const = 0;
 
     /// gets the free parameters from the current robot configuration
-    /// \param pFreeParameters is filled with GetNumFreeParameters() parameters in [0,1] range
+    /// \param[out] vFreeParameters is filled with GetNumFreeParameters() parameters in [0,1] range
     /// \return true if succeeded
-    virtual bool GetFreeParameters(std::vector<dReal>& pFreeParameters) const = 0;
+    virtual bool GetFreeParameters(std::vector<dReal>& vFreeParameters) const = 0;
     
     /// Return a joint configuration for the given end effector transform. Robot is checked for self-collisions.
-    /// \param param the pose the end effector has to achieve. Note that the end effector pose 
+    /// \param[in] param the pose the end effector has to achieve. Note that the end effector pose 
     ///                        takes into account the grasp coordinate frame for the RobotBase::Manipulator
-    /// \param q0 Return a solution nearest to the given configuration q0 in terms of the joint distance.
+    /// \param[in] q0 Return a solution nearest to the given configuration q0 in terms of the joint distance.
     ///           If q0 is NULL, returns the first solution found
-    /// \param bCheckEnvCollision If true, will only return solutions that are not colliding with the environment.
-    /// \param qResult Holds the IK solution, must be of size RobotBase::Manipulator::_vecarmjoints
+    /// \param[in] bCheckEnvCollision If true, will only return solutions that are not colliding with the environment.
+    /// \param[out] solution [optional] Holds the IK solution
     /// \return true if solution is found
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, bool bCheckEnvCollision, boost::shared_ptr< std::vector<dReal> > result) = 0;
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, bool bCheckEnvCollision, boost::shared_ptr< std::vector<dReal> > solution) = 0;
 
     /// Return all joint configurations for the given end effector transform. Robot is checked for self-collisions.
-    /// \param param the pose the end effector has to achieve. Note that the end effector pose 
+    /// \param[in] param the pose the end effector has to achieve. Note that the end effector pose 
     ///                        takes into account the grasp coordinate frame for the RobotBase::Manipulator
-    /// \param bCheckEnvCollision If true, will only return solutions that are not colliding with the environment.
-    /// \param qSolutions All solutions within a reasonable discretization level of the free parameters.
+    /// \param[in] bCheckEnvCollision If true, will only return solutions that are not colliding with the environment.
+    /// \param[out] solutions All solutions within a reasonable discretization level of the free parameters.
     /// \return true if at least one solution is found
-    virtual bool Solve(const IkParameterization& param, bool bCheckEnvCollision, std::vector< std::vector<dReal> >& qSolutions) = 0;
+    virtual bool Solve(const IkParameterization& param, bool bCheckEnvCollision, std::vector< std::vector<dReal> >& solutions) = 0;
 
     /// Return a joint configuration for the given end effector transform. Robot is checked for self-collisions.
     /// Can specify the free parameters in [0,1] range. If NULL, the regular equivalent Solve is called
-    /// \param param the pose the end effector has to achieve. Note that the end effector pose 
+    /// \param[in] param the pose the end effector has to achieve. Note that the end effector pose 
     ///                        takes into account the grasp coordinate frame for the RobotBase::Manipulator
-    /// \param q0 Return a solution nearest to the given configuration q0 in terms of the joint distance.
-    ///           If q0 is NULL, returns the first solution found
-    /// \param pFreeParameters The free parameters of the null space of the IK solutions. Always in range of [0,1]
-    /// \param bCheckEnvCollision If true, will only return solutions that are not colliding with the environment.
-    /// \param qResult Holds the IK solution, must be of size RobotBase::Manipulator::_vecarmjoints
+    /// \param[in] q0 Return a solution nearest to the given configuration q0 in terms of the joint distance.
+    ///           If q0 is empty, returns the first solution found
+    /// \param[in] vFreeParameters The free parameters of the null space of the IK solutions. Always in range of [0,1]
+    /// \param[in] bCheckEnvCollision If true, will only return solutions that are not colliding with the environment.
+    /// \param[out] solution Holds the IK solution, must be of size RobotBase::Manipulator::_vecarmjoints
     /// \return true if solution is found
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, bool bCheckEnvCollision, boost::shared_ptr< std::vector<dReal> > result) = 0;
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, bool bCheckEnvCollision, boost::shared_ptr< std::vector<dReal> > solution) = 0;
 
     /// Return all joint configurations for the given end effector transform. Robot is checked for self-collisions.
     /// Can specify the free parameters in [0,1] range. If NULL, the regular equivalent Solve is called
-    /// \param param the pose the end effector has to achieve. Note that the end effector pose 
+    /// \param[in] param the pose the end effector has to achieve. Note that the end effector pose 
     ///                        takes into account the grasp coordinate frame for the RobotBase::Manipulator
-    /// \param pFreeParameters The free parameters of the null space of the IK solutions. Always in range of [0,1]
-    /// \param bCheckEnvCollision If true, will only return solutions that are not colliding with the environment.
-    /// \param qSolutions All solutions within a reasonable discretization level of the free parameters.
+    /// \param[in] vFreeParameters The free parameters of the null space of the IK solutions. Always in range of [0,1]
+    /// \param[in] bCheckEnvCollision If true, will only return solutions that are not colliding with the environment.
+    /// \param[out] solutions All solutions within a reasonable discretization level of the free parameters.
     /// \return true at least one solution is found
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, bool bCheckEnvCollision, std::vector< std::vector<dReal> >& qSolutions) = 0;
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, bool bCheckEnvCollision, std::vector< std::vector<dReal> >& solutions) = 0;
 
 private:
     virtual const char* GetHash() const { return OPENRAVE_IKSOLVER_HASH; }

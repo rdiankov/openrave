@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 // Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This program is free software: you can redistribute it and/or modify
@@ -282,7 +283,7 @@ class TaskManipulation : public ProblemInstance
         int iGraspTransform = -1; // if >= 0, use the grasp transform to check for collisions
 
         string cmd;
-        CollisionReportPtr report(new COLLISIONREPORT);
+        CollisionReportPtr report(new CollisionReport);
     
         while(!sinput.eof()) {
             sinput >> cmd;

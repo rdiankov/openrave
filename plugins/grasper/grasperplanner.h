@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 // Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This program is free software: you can redistribute it and/or modify
@@ -27,7 +28,7 @@ class GrasperPlanner:  public PlannerBase
     };
 
 public:
- GrasperPlanner(EnvironmentBasePtr penv) : PlannerBase(penv), _report(new COLLISIONREPORT()) {}
+ GrasperPlanner(EnvironmentBasePtr penv) : PlannerBase(penv), _report(new CollisionReport()) {}
     bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());

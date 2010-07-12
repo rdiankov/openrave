@@ -1414,7 +1414,7 @@ protected:
         if( !probot )
             return false;
 
-        boost::shared_ptr<COLLISIONREPORT> preport(new COLLISIONREPORT());
+        CollisionReportPtr preport(new CollisionReport());
         os << probot->CheckSelfCollision(preport);
         return true;
     }
@@ -1888,7 +1888,7 @@ protected:
         bool bgetcontacts=false;
         is >> bgetcontacts;
 
-        boost::shared_ptr<COLLISIONREPORT> preport(new COLLISIONREPORT());
+        CollisionReportPtr preport(new CollisionReport());
         vector<KinBody::LinkConstPtr> empty;
         int oldoptions = GetEnv()->GetCollisionChecker()->GetCollisionOptions();
         GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Contacts);
@@ -1929,7 +1929,7 @@ protected:
         int oldoptions = GetEnv()->GetCollisionChecker()->GetCollisionOptions();
         GetEnv()->GetCollisionChecker()->SetCollisionOptions(oldoptions|CO_Contacts);
 
-        boost::shared_ptr<COLLISIONREPORT> preport(new COLLISIONREPORT());
+        CollisionReportPtr preport(new CollisionReport());
         RAY r;
         bool bcollision;
         vector<float> info;
@@ -1946,7 +1946,7 @@ protected:
 
             if(bcollision) {
                 BOOST_ASSERT(preport->contacts.size()>0);
-                COLLISIONREPORT::CONTACT& c = preport->contacts.front();
+                CollisionReport::CONTACT& c = preport->contacts.front();
                 os << "1 ";
                 info.push_back(c.pos.x); info.push_back(c.pos.y); info.push_back(c.pos.z);
                 info.push_back(c.norm.x); info.push_back(c.norm.y); info.push_back(c.norm.z);

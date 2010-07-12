@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2008 Rosen Diankov (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -124,7 +125,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
 
     virtual bool InitEnvironment()
     {
-        _report.reset(new COLLISIONREPORT());
+        _report.reset(new CollisionReport());
 
         odespace->SetSynchornizationCallback(boost::bind(&ODEPhysicsEngine::_SyncCallback, shared_physics(),_1));
         if( !odespace->InitEnvironment() )
@@ -430,7 +431,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
 
             dGeomID checkgeom1 = dGeomGetClass(o1) == dGeomTransformClass ? dGeomTransformGetGeom(o1) : o1;
             for(int i = 0; i < n; ++i)
-                _report->contacts.push_back(COLLISIONREPORT::CONTACT(contact[i].geom.pos, checkgeom1 != contact[i].geom.g1 ? -Vector(contact[i].geom.normal) : Vector(contact[i].geom.normal), contact[i].geom.depth));
+                _report->contacts.push_back(CollisionReport::CONTACT(contact[i].geom.pos, checkgeom1 != contact[i].geom.g1 ? -Vector(contact[i].geom.normal) : Vector(contact[i].geom.normal), contact[i].geom.depth));
 
 
             FOREACH(itfn, _listcallbacks) {

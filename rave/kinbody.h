@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -14,12 +14,12 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-/*! --------------------------------------------------------------------
-  \file   kinbody.h
-  \brief  Encapsulate a kinematic chain of links
- -------------------------------------------------------------------- */
-#ifndef  KIN_CHAIN_H
-#define  KIN_CHAIN_H
+/**
+\file   kinbody.h
+\brief  Definition of the KinBody interface used for all kinematics bodies in the environment.
+ */
+#ifndef  OPENRAVE_KINBODY_H
+#define  OPENRAVE_KINBODY_H
 
 namespace OpenRAVE {
 
@@ -124,8 +124,7 @@ public:
 
         protected:
             /// triangulates the geometry object and initializes collisionmesh. GeomTrimesh types must already be triangulated
-            /// \param fTesselation to control how fine the triangles need to be
-            /// 1.0f is the default value that 
+            /// \param fTessellation to control how fine the triangles need to be. 1.0f is the default value
             bool InitCollisionMesh(float fTessellation=1);
 
             boost::weak_ptr<Link> _parent;
@@ -484,7 +483,7 @@ public:
     virtual bool InitFromBoxes(const std::vector<AABB>& vaabbs, bool bDraw);
 
     /// Create a kinbody with one link composed of an array of oriented bounding boxes
-    /// \param vobbx the array of oriented bounding boxes that will comprise of the body
+    /// \param vobbs the array of oriented bounding boxes that will comprise of the body
     /// \param bDraw if true, the boxes will be rendered in the scene
     virtual bool InitFromBoxes(const std::vector<OBB>& vobbs, bool bDraw);
 
@@ -534,14 +533,13 @@ public:
 
     /// Returns the joints in hierarchical order starting at the base link such that the first joints affect the later ones.
     /// In the case of closed loops, the joints are returned in the order they are defined in _vecjoints.
-    /// \param vjointindices a set of joint indices to be filled with the correct order
     const std::vector<JointPtr>& GetDependencyOrderedJoints() const { return _vDependencyOrderedJoints; }
 
     /// returns the minimal chain of joints that are between two links in the order of linkbaseindex to linkendindex.
     /// Passive joints are used to detect rigidly attached links and mimic joints, otherwise they are ignored in the computation of the chain.
     /// If a mimic joint is found along the path, the joint returned is the source joint!
-    /// \param linkbase the base link to start the search
-    /// \param linkend the link to end the search
+    /// \param linkbaseindex the base link index to start the search
+    /// \param linkendindex the link index where the search ends
     /// \param vjoints the joints to fill that describe the chain
     /// \return true if the two links are connected (vjoints will be filled), false if the links are separate
     bool GetChain(int linkbaseindex, int linkendindex, std::vector<JointPtr>& vjoints) const;
@@ -619,18 +617,19 @@ public:
     /// Calculates the partial differentials for all joints that in the path from the root node to _veclinks[index]
     /// (doesn't touch the rest of the values)
     /// \param linkindex of the link that the rotation is attached to
+    /// \param vjacobian 3xDOF matrix
     virtual void CalculateJacobian(int linkindex, const Vector& offset, boost::multi_array<dReal,2>& vjacobian) const;
     virtual void CalculateJacobian(int linkindex, const Vector& offset, std::vector<dReal>& pfJacobian) const;
 
     /// calculates the rotational jacobian as a quaternion with respect to an initial rotation
     /// \param linkindex of the link that the rotation is attached to
-    /// \param pfJacobian 4xDOF matrix
+    /// \param vjacobian 4xDOF matrix
     virtual void CalculateRotationJacobian(int linkindex, const Vector& qInitialRot, boost::multi_array<dReal,2>& vjacobian) const;
     virtual void CalculateRotationJacobian(int linkindex, const Vector& qInitialRot, std::vector<dReal>& pfJacobian) const;
 
     /// calculates the angular velocity jacobian of a specified link about the axes of world coordinates
     /// \param index of the link that the rotation is attached to
-    /// \param pfJacobian 3xDOF matrix
+    /// \param vjacobian 3xDOF matrix
     virtual void CalculateAngularVelocityJacobian(int linkindex, boost::multi_array<dReal,2>& vjacobian) const;
     virtual void CalculateAngularVelocityJacobian(int linkindex, std::vector<dReal>& pfJacobian) const;
 
@@ -790,4 +789,4 @@ private:
 
 } // end namespace OpenRAVE
 
-#endif   // KIN_CHAIN_H
+#endif

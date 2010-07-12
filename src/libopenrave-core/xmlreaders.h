@@ -2626,10 +2626,12 @@ namespace OpenRAVEXMLParser
             }
             if( xmlname == "environment" ) {
                 // only move the camera if trans is specified
-                if( bTransSpecified )
-                    _penv->SetCamera(tCamera.trans, tCamera.rot);
-        
-                _penv->GetViewer()->SetBkgndColor(vBkgndColor);
+                if( !!_penv->GetViewer() ) {
+                    if( bTransSpecified ) {
+                        _penv->GetViewer()->SetCamera(tCamera);
+                    }
+                    _penv->GetViewer()->SetBkgndColor(vBkgndColor);
+                }
                 return true;
             }
             

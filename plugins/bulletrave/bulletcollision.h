@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2008 Rosen Diankov (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -257,7 +258,7 @@ private:
                 continue;
 
             if( bHasCallbacks && !report ) {
-                report.reset(new COLLISIONREPORT());
+                report.reset(new CollisionReport());
                 report->Reset(_options);
             }
 
@@ -277,7 +278,7 @@ private:
                         dReal distance = pt.m_distance1;
                         if( !!plink1 && plink1->ValidateContactNormal(p,n) )
                             distance = -distance;
-                        report->contacts.push_back(COLLISIONREPORT::CONTACT(p, n, distance));
+                        report->contacts.push_back(CollisionReport::CONTACT(p, n, distance));
                     }
                 }
             }
@@ -541,7 +542,7 @@ public:
         bool bCollision = rayCallback.hasHit();
         if( bCollision ) {
             if( GetEnv()->HasRegisteredCollisionCallbacks() && !report ) {
-                report.reset(new COLLISIONREPORT());
+                report.reset(new CollisionReport());
                 report->Reset(_options);
             }
 
@@ -552,7 +553,7 @@ public:
                 
                 Vector p(rayCallback.m_hitPointWorld[0], rayCallback.m_hitPointWorld[1], rayCallback.m_hitPointWorld[2]);
                 Vector n(rayCallback.m_hitNormalWorld[0], rayCallback.m_hitNormalWorld[1], rayCallback.m_hitNormalWorld[2]);
-                report->contacts.push_back(COLLISIONREPORT::CONTACT(p,n.normalize3(),report->minDistance));
+                report->contacts.push_back(CollisionReport::CONTACT(p,n.normalize3(),report->minDistance));
             }
 
             if( GetEnv()->HasRegisteredCollisionCallbacks() ) {
@@ -608,7 +609,7 @@ public:
         bool bCollision = rayCallback.hasHit();
         if( bCollision ) {
             if( GetEnv()->HasRegisteredCollisionCallbacks() && !report ) {
-                report.reset(new COLLISIONREPORT());
+                report.reset(new CollisionReport());
                 report->Reset(_options);
             }
 
@@ -619,7 +620,7 @@ public:
                 
                 Vector p(rayCallback.m_hitPointWorld[0], rayCallback.m_hitPointWorld[1], rayCallback.m_hitPointWorld[2]);
                 Vector n(rayCallback.m_hitNormalWorld[0], rayCallback.m_hitNormalWorld[1], rayCallback.m_hitNormalWorld[2]);
-                report->contacts.push_back(COLLISIONREPORT::CONTACT(p,n.normalize3(),report->minDistance));
+                report->contacts.push_back(CollisionReport::CONTACT(p,n.normalize3(),report->minDistance));
             }
 
             if( GetEnv()->HasRegisteredCollisionCallbacks() ) {
@@ -672,7 +673,7 @@ public:
         bool bCollision = rayCallback.hasHit();
         if( bCollision ) {
             if( GetEnv()->HasRegisteredCollisionCallbacks() && !report ) {
-                report.reset(new COLLISIONREPORT());
+                report.reset(new CollisionReport());
                 report->Reset(_options);
             }
             
@@ -683,7 +684,7 @@ public:
                 
                 Vector p(rayCallback.m_hitPointWorld[0], rayCallback.m_hitPointWorld[1], rayCallback.m_hitPointWorld[2]);
                 Vector n(rayCallback.m_hitNormalWorld[0], rayCallback.m_hitNormalWorld[1], rayCallback.m_hitNormalWorld[2]);
-                report->contacts.push_back(COLLISIONREPORT::CONTACT(p,n.normalize3(),report->minDistance));
+                report->contacts.push_back(CollisionReport::CONTACT(p,n.normalize3(),report->minDistance));
             }
 
             if( GetEnv()->HasRegisteredCollisionCallbacks() ) {

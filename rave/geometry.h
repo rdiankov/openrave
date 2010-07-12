@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -13,16 +13,14 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-/*! --------------------------------------------------------------------
-  \file   math.h
-  \brief  Defines basic math and gemoetric primitives. dReal is defined in ODE. Any
-    functions not in here like conversions between quaterions 
-    and matrices are most likely defined in ODE.
-    Originally from OpenRAVE (http://openrave.programmingvision.com)
- -------------------------------------------------------------------- */
 
-#ifndef RAVE_MATH_H
-#define RAVE_MATH_H
+/**
+\file   geometry.h
+\brief  Defines basic gemoetric primitives and functions on them.
+ */
+
+#ifndef OPENRAVE_GEOMETRY_H
+#define OPENRAVE_GEOMETRY_H
 
 #include <cmath>
 #include <iostream>
@@ -41,19 +39,18 @@
 #define MATH_ASSERT assert
 #endif
 
+#ifndef MATH_RANDOM_FLOAT
+#define MATH_RANDOM_FLOAT (rand()/((T)RAND_MAX))
+#endif
+
 namespace OpenRAVE {
 
-#if OPENRAVE_PRECISION // 1 if double precision
-typedef double dReal;
-#else
-typedef float dReal;
-#endif
+namespace geometry {
 
 #ifndef PI
-#define PI ((dReal)3.141592654)
+#define PI 3.14159265358979
 #endif
 
-#define g_fEpsilon 1e-8
 #define distinctRoots	0			// roots r0 < r1 < r2
 #define singleRoot		1			// root r0
 #define floatRoot01		2			// roots r0 = r1 < r2
@@ -138,6 +135,8 @@ inline float RaveFabs(float f) { return fabsf(f); }
 inline double RaveFabs(double f) { return fabs(f); }
 inline float RaveAcos(float f) { return acosf(f); }
 inline double RaveAcos(double f) { return acos(f); }
+inline float RaveAsin(float f) { return asinf(f); }
+inline double RaveAsin(double f) { return asin(f); }
 inline float RaveAtan2(float fy, float fx) { return atan2f(fy,fx); }
 inline double RaveAtan2(double fy, double fx) { return atan2(fy,fx); }
 
@@ -237,8 +236,6 @@ public:
         return ucrossv;
     }
 };
-
-typedef RaveVector<dReal> Vector;
 
 template <class T>
 inline RaveVector<T> operator* (float f, const RaveVector<T>& left)
@@ -380,8 +377,6 @@ public:
     RaveVector<T> rot, trans; ///< rot is a quaternion=(cos(ang/2),axisx*sin(ang/2),axisy*sin(ang/2),axisz*sin(ang/2))
 };
 
-typedef RaveTransform<dReal> Transform;
-
 /// affine transformation parameterized with rotation matrices
 template <class T>
 class RaveTransformMatrix
@@ -515,7 +510,6 @@ public:
     T m[12];
     RaveVector<T> trans; ///< translation component
 };
-typedef RaveTransformMatrix<dReal> TransformMatrix;
 
 template <class T>
 RaveTransform<T>::RaveTransform(const RaveTransformMatrix<T>& t)
@@ -569,50 +563,61 @@ RaveTransformMatrix<T>::RaveTransformMatrix(const RaveTransform<T>& t)
 
 }
 
-struct RAY
+/// a ray defined by an origin and a direction
+template <typename T>
+struct ray
 {
-    RAY() {}
-    RAY(const Vector& _pos, const Vector& _dir) : pos(_pos), dir(_dir) {}
-    Vector pos, dir;
+    ray() {}
+    ray(const RaveVector<T>& _pos, const RaveVector<T>& _dir) : pos(_pos), dir(_dir) {}
+    RaveVector<T> pos, dir;
 };
 
-struct AABB
+/// an axis aligned bounding box
+template <typename T>
+struct aabb
 {
-    AABB() {}
-    AABB(const Vector& vpos, const Vector& vextents) : pos(vpos), extents(vextents) {}
-    Vector pos, extents;
+    aabb() {}
+    aabb(const RaveVector<T>& vpos, const RaveVector<T>& vextents) : pos(vpos), extents(vextents) {}
+    RaveVector<T> pos, extents;
 };
 
-struct OBB
+/// an oriented bounding box
+template <typename T>
+struct obb
 {
-    Vector right, up, dir, pos, extents;
+    RaveVector<T> right, up, dir, pos, extents;
 };
 
-struct TRIANGLE
+/// a triangle defined by 3 points
+template <typename T>
+struct triangle
 {
-    TRIANGLE() {}
-    TRIANGLE(const Vector& v1, const Vector& v2, const Vector& v3) : v1(v1), v2(v2), v3(v3) {}
-    ~TRIANGLE() {}
+    triangle() {}
+    triangle(const RaveVector<T>& v1, const RaveVector<T>& v2, const RaveVector<T>& v3) : v1(v1), v2(v2), v3(v3) {}
+    ~triangle() {}
 
-    Vector v1, v2, v3;      //!< the vertices of the triangle
+    RaveVector<T> v1, v2, v3;      //!< the vertices of the triangle
 
-    const Vector& operator[](int i) const { return (&v1)[i]; }
-    Vector&       operator[](int i)       { return (&v1)[i]; }
+    const RaveVector<T>& operator[](int i) const { return (&v1)[i]; }
+    RaveVector<T>& operator[](int i)       { return (&v1)[i]; }
 
     /// assumes CCW ordering of vertices 
-    inline Vector ComputeNormal() {
-        Vector normal;
-        cross3(normal, v2-v1, v3-v1);
-        return normal;
+    inline RaveVector<T> normal() {
+        RaveVector<T> n;
+        cross3(n, v2-v1, v3-v1);
+        return n;
     }
 };
 
-
-/// computes (*pmat) * v
-inline dReal* transcoord3(dReal* pfout, const TransformMatrix* pmat, const dReal* pf);
-
-/// uses only 3x3 upper submatrix
-inline dReal* transnorm3(dReal* pfout, const TransformMatrix* pmat, const dReal* pf);
+/// a frustum object defined as a pyramid with its vertex clipped
+template <typename T>
+struct frustum
+{
+    RaveVector<T> right, up, dir, pos;
+    T fnear, ffar;
+    T ffovx,ffovy;
+    T fcosfovx,fsinfovx,fcosfovy,fsinfovy;
+};
 
 // Routines made for 3D graphics that deal with 3 or 4 dim algebra structures
 // Functions with postfix 3 are for 3x3 operations, etc
@@ -625,34 +630,219 @@ inline dReal* transnorm3(dReal* pfout, const TransformMatrix* pmat, const dReal*
 // More complex ops that deal with arbitrary matrices //
 ////
 
-// extract eigen values and vectors from a 2x2 matrix and returns true if all values are real
-// returned eigen vectors are normalized
-inline bool eig2(const dReal* pfmat, dReal* peigs, dReal& fv1x, dReal& fv1y, dReal& fv2x, dReal& fv2y);
+/// extract eigen values and vectors from a 2x2 matrix and returns true if all values are real
+/// returned eigen vectors are normalized
+template <typename T>
+inline bool eig2(const T* pfmat, T* peigs, T& fv1x, T& fv1y, T& fv2x, T& fv2y);
 
 // Simple routines for linear algebra algorithms //
+
 RAVE_API int CubicRoots (double c0, double c1, double c2, double *r0, double *r1, double *r2);
-template <class T, class S> void Tridiagonal3 (S* mat, T* diag, T* subd);
+template <typename T, typename S> void Tridiagonal3 (S* mat, T* diag, T* subd);
 RAVE_API bool QLAlgorithm3 (float* m_aafEntry, float* afDiag, float* afSubDiag);
 RAVE_API bool QLAlgorithm3 (double* m_aafEntry, double* afDiag, double* afSubDiag);
+RAVE_API void EigenSymmetric3(double* fCovariance, double* eval, double* fAxes);
 
-RAVE_API void EigenSymmetric3(dReal* fCovariance, dReal* eval, dReal* fAxes);
-
-RAVE_API void GetCovarBasisVectors(dReal fCovariance[3][3], Vector* vRight, Vector* vUp, Vector* vDir);
+/// Computes the eigenvectors of the covariance matrix and forms a basis
+/// \param fCovariance a symmetric 3x3 matrix
+template <typename T>
+inline void GetCovarBasisVectors(T fCovariance[3][3], RaveVector<T>& vRight, RaveVector<T>& vUp, RaveVector<T>& vDir)
+{
+    T EigenVals[3];
+    T fAxes[3][3];
+    EigenSymmetric3((T*)fCovariance, EigenVals, (T*)fAxes);
+    // check if we got any 0 vectors
+    vRight.x = fAxes[0][0];		vRight.y = fAxes[1][0];		vRight.z = fAxes[2][0];
+    vUp.x = fAxes[0][1];		vUp.y = fAxes[1][1];		vUp.z = fAxes[2][1];
+    vDir.x = fAxes[0][2];		vDir.y = fAxes[1][2];		vDir.z = fAxes[2][2];
+    // make sure that the new axes follow the left-hand coord system
+    normalize3(&vRight.x, &vRight.x);
+    *vUp -= *vRight * dot3(&vUp.x, &vRight.x);
+    normalize3(&vUp.x, &vUp.x);
+    cross3(&vDir.x, &vRight.x, &vUp.x);
+}
 
 /// SVD of a 3x3 matrix A such that A = U*diag(D)*V'
-/// where U is a 3x3 matrix, V is a 3x3 matrix, and D is a 3x1 vector
-/// The row stride for all matrices is 9 bytes
-RAVE_API void svd3(const dReal* A, dReal* U, dReal* D, dReal* V);
+/// The row stride for all matrices is 3*sizeof(T) bytes
+/// \param[in] A 3x3 matrix
+/// \param[out] U 3x3 matrix
+/// \param[out] D 3x1 matrix
+/// \param[out] V 3x3 matrix
+template <typename T> inline void svd3(const T* A, T* U, T* D, T* V);
 
-// first root returned is always >= second, roots are defined if the quadratic doesn't have real solutions
-RAVE_API void QuadraticSolver(dReal* pfQuadratic, dReal* pfRoots);
+template <typename T>
+inline int insideQuadrilateral(const RaveVector<T>& v, const RaveVector<T>& verts)
+{
+    RaveVector<T> v4,v5;
+    T m1,m2;
+    T anglesum=0,costheta;
+    for (int i=0;i<4;i++) {
+        v4.x = verts[i].x - v->x;
+        v4.y = verts[i].y - v->y;
+        v4.z = verts[i].z - v->z;
+        v5.x = verts[(i+1)%4].x - v->x;
+        v5.y = verts[(i+1)%4].y - v->y;
+        v5.z = verts[(i+1)%4].z - v->z;
+        m1 = v4.lengthsqr3();
+        m2 = v5.lengthsqr3();
+        if (m1*m2 <= g_fEpsilon)
+            return(1); // on a vertex, consider this inside
+        else {
+            costheta = dot3(v4,v5)/RaveSqrt(m1*m2);
+        }
+        anglesum += RaveAcos(costheta);
+    }
+    T diff = anglesum - (T)2.0 * PI;
+    return diff*diff <= g_fEpsilon*g_fEpsilon;
+}
 
-RAVE_API int insideQuadrilateral(const Vector* p0,const Vector* p1, const Vector* p2,const Vector* p3);
-RAVE_API int insideTriangle(const Vector* p0, const Vector* p1, const Vector* p2);
+/// tests a point insdie a 3D triangle
+template <typename T>
+inline int insideTriangle(const RaveVector<T> v, const triangle<T>& tri)
+{
+    RaveVector<T> v4,v5;  
+    T m1,m2;
+    T anglesum=0.0;
+    T costheta;
+    for (int i=0;i<3;i++) {
+        v4.x = tri[i].x - v->x;
+        v4.y = tri[i].y - v->y;
+        v4.z = tri[i].z - v->z;
+        v5.x = tri[(i+1)%3].x - v->x;
+        v5.y = tri[(i+1)%3].y - v->y;
+        v5.z = tri[(i+1)%3].z - v->z;
+        m1 = v4.lengthsqr3();
+        m2 = v5.lengthsqr3();
+        if (m1*m2 <= g_fEpsilon) {
+    	    return(1); // on a vertex, consider this inside
+        }
+        else {
+    	    costheta = dot3(v4,v5)/RaveSqrt(m1*m2);
+        }
+        anglesum += acos(costheta);
+    }
+    T diff = anglesum - (T)2.0 * PI;
+    return diff*diff <= g_fEpsilon*g_fEpsilon;
+}
 
-RAVE_API bool RayAABBTest(const RAY& r, const AABB& ab);
-RAVE_API bool RayOBBTest(const RAY& r, const OBB& obb);
-RAVE_API dReal DistVertexOBBSq(const Vector& v, const OBB& o);
+template <typename T>
+inline bool RayAABBTest(const ray<T>& r, const aabb<T>& ab)
+{
+    RaveVector<T> vd, vpos = r.pos - ab.pos;
+    if( RaveFabs(vpos.x) > ab.extents.x && r.dir.x* vpos.x > 0.0f)
+        return false;
+    if( RaveFabs(vpos.y) > ab.extents.y && r.dir.y * vpos.y > 0.0f)
+        return false;
+    if( RaveFabs(vpos.z) > ab.extents.z && r.dir.z * vpos.z > 0.0f)
+        return false;
+    cross3(vd, r.dir, vpos);
+    if( RaveFabs(vd.x) > ab.extents.y * RaveFabs(r.dir.z) + ab.extents.z * RaveFabs(r.dir.y) )
+        return false;
+    if( RaveFabs(vd.y) > ab.extents.x * RaveFabs(r.dir.z) + ab.extents.z * RaveFabs(r.dir.x) )
+        return false;
+    if( RaveFabs(vd.z) > ab.extents.x * RaveFabs(r.dir.y) + ab.extents.y * RaveFabs(r.dir.x) )
+        return false;
+    return true;
+}
+
+/// Tests if a ray intersects an oriented bounding box
+template <typename T>
+inline bool RayOBBTest(const ray<T>& r, const obb<T>& o)
+{
+    RaveVector<T> vpos, vdir, vd;
+    vd = r.pos - o.pos;
+    vpos.x = dot3(vd, o.right);
+    vdir.x = dot3(r.dir, o.right);
+    if( RaveFabs(vpos.x) > o.extents.x && vdir.x* vpos.x > 0.0f) {
+        return false;
+    }
+    vpos.y = dot3(vd, o.up);
+    vdir.y = dot3(r.dir, o.up);
+    if( RaveFabs(vpos.y) > o.extents.y && vdir.y * vpos.y > 0.0f) {
+        return false;
+    }
+    vpos.z = dot3(vd, o.dir);
+    vdir.z = dot3(r.dir, o.dir);
+    if( RaveFabs(vpos.z) > o.extents.z && vdir.z * vpos.z > 0.0f) {
+        return false;
+    }
+    cross3(vd, vdir, vpos);
+    if( RaveFabs(vd.x) > o.extents.y * RaveFabs(vdir.z) + o.extents.z * RaveFabs(vdir.y) ||
+        RaveFabs(vd.y) > o.extents.x * RaveFabs(vdir.z) + o.extents.z * RaveFabs(vdir.x) ||
+        RaveFabs(vd.z) > o.extents.x * RaveFabs(vdir.y) + o.extents.y * RaveFabs(vdir.x) ) {
+        return false;
+    }
+    return true;
+}
+
+/// the minimum distance form the vertex to the obb
+template <typename T>
+T DistVertexOBBSq(const RaveVector<T>& v, const obb<T>& o)
+{
+    RaveVector<T> vn = v - o.pos;
+    vn.x = RaveFabs(dot3(vn, o.right)) - o.extents.x;
+    vn.y = RaveFabs(dot3(vn, o.up)) - o.extents.y;
+    vn.z = RaveFabs(dot3(vn, o.dir)) - o.extents.z;
+    // now we have the vertex in OBB's frame
+    T fDist = 0;
+    if( vn.x > 0.0f ) {
+        fDist += vn.x * vn.x;
+    }
+    if( vn.y > 0.0f ) {
+        fDist += vn.y * vn.y;
+    }
+    if( vn.z > 0.0f ) {
+        fDist += vn.z * vn.z;
+    }
+    return fDist;
+}
+
+template <typename T>
+inline bool IsOBBinFrustum(const obb<T>& o, const frustum<T>& fr)
+{
+    // check OBB against all 6 planes
+    RaveVector<T> v = o.pos - fr.pos;
+    // if v lies on the left or bottom sides of the frustrum
+    // then freflect about the planes to get it on the right and 
+    // top sides
+    // side planes
+    RaveVector<T> vNorm = fr.fcosfovx * fr.right - fr.fsinfovx * fr.dir;
+    if( dot3(v,vNorm) > -o.extents.x * RaveFabs(dot3(vNorm, o.right)) -  o.extents.y * RaveFabs(dot3(vNorm, o.up)) -  o.extents.z * RaveFabs(dot3(vNorm, o.dir))) {
+        return false;
+    }
+    vNorm = -fr.fcosfovx * fr.right - fr.fsinfovx * fr.dir;
+    if(dot3(v, vNorm) > -o.extents.x * RaveFabs(dot3(vNorm, o.right)) - o.extents.y * RaveFabs(dot3(vNorm, o.up)) - o.extents.z * RaveFabs(dot3(vNorm, o.dir))) {
+        return false;
+    }
+    vNorm = fr.fcosfovy * fr.up - fr.fsinfovy * fr.dir;
+    if(dot3(v, vNorm) > -o.extents.x * RaveFabs(dot3(vNorm, o.right)) - o.extents.y * RaveFabs(dot3(vNorm, o.up)) - o.extents.z * RaveFabs(dot3(vNorm, o.dir))) {
+        return false;
+    }
+    vNorm = -fr.fcosfovy * fr.up - fr.fsinfovy * fr.dir;
+    if(dot3(v, vNorm) > -o.extents.x * RaveFabs(dot3(vNorm, o.right)) - o.extents.y * RaveFabs(dot3(vNorm, o.up)) - o.extents.z * RaveFabs(dot3(vNorm, o.dir))) {
+        return false;
+    }
+    vNorm.x = dot3(v, fr.dir);
+    vNorm.y = o.extents.x * RaveFabs(dot3(fr.dir, o.right)) +  o.extents.y * RaveFabs(dot3(fr.dir, o.up)) +  o.extents.z * RaveFabs(dot3(fr.dir, o.dir));
+    if( (vNorm.x < fr.fnear + vNorm.y) || (vNorm.x > fr.ffar - vNorm.y) ) {
+        return false;
+    }
+    return true;
+}
+
+/// returns true if all points on the oriented bounding box are inside the convex hull
+/// planes should be facing inside
+template <typename T, typename U>
+inline bool IsOBBinConvexHull(const obb<T>& o, const U& vplanes)
+{
+    for(size_t i = 0; i < vplanes.size(); ++i) {
+        RaveVector<T> vplane = vplanes[i];
+        if( dot3(o.pos,vplane)+vplane.w < o.extents.x * RaveFabs(dot3(vplane, o.right)) + o.extents.y * RaveFabs(dot3(vplane, o.up)) + o.extents.z * RaveFabs(dot3(vplane, o.dir))) {
+            return false;
+        }
+    }
+    return true;
+}
 
 template <class T> int Min(T* pts, int stride, int numPts); // returns the index, stride in units of T
 template <class T> int Max(T* pts, int stride, int numPts); // returns the index
@@ -702,39 +892,47 @@ template <class T> inline bool inv2(T* pf, T* pfres);
 ///////////////////////
 // Function Definitions
 ///////////////////////
-bool eig2(const dReal* pfmat, dReal* peigs, dReal& fv1x, dReal& fv1y, dReal& fv2x, dReal& fv2y)
+template <typename T>
+bool eig2(const T* pfmat, T* peigs, T& fv1x, T& fv1y, T& fv2x, T& fv2y)
 {
-	// x^2 + bx + c
-	dReal a, b, c, d;
-	b = -(pfmat[0] + pfmat[3]);
-	c = pfmat[0] * pfmat[3] - pfmat[1] * pfmat[2];
-	d = b * b - 4.0f * c + 1e-16f;
-
-	if( d < 0 ) return false;
-	if( d < 1e-16f ) {
-		a = -0.5f * b;
-		peigs[0] = a;	peigs[1] = a;
-		fv1x = pfmat[1];		fv1y = a - pfmat[0];
-		c = 1 / RaveSqrt(fv1x*fv1x + fv1y*fv1y);
-		fv1x *= c;		fv1y *= c;
-		fv2x = -fv1y;		fv2y = fv1x;
-		return true;
-	}
-	
-	// two roots
-	d = RaveSqrt(d);
-	a = -0.5f * (b + d);
-	peigs[0] = a;
-	fv1x = pfmat[1];		fv1y = a-pfmat[0];
-	c = 1 / RaveSqrt(fv1x*fv1x + fv1y*fv1y);
-	fv1x *= c;		fv1y *= c;
-
-	a += d;
-	peigs[1] = a;
-	fv2x = pfmat[1];		fv2y = a-pfmat[0];
-	c = 1 / RaveSqrt(fv2x*fv2x + fv2y*fv2y);
-	fv2x *= c;		fv2y *= c;
-	return true;
+    // x^2 + bx + c
+    T a, b, c, d;
+    b = -(pfmat[0] + pfmat[3]);
+    c = pfmat[0] * pfmat[3] - pfmat[1] * pfmat[2];
+    d = b * b - 4.0f * c + 1e-16f;
+    if( d < 0 ) {
+        return false;
+    }
+    if( d < 1e-16f ) {
+        a = -0.5f * b;
+        peigs[0] = a;
+        peigs[1] = a;
+        fv1x = pfmat[1];
+        fv1y = a - pfmat[0];
+        c = 1 / RaveSqrt(fv1x*fv1x + fv1y*fv1y);
+        fv1x *= c;
+        fv1y *= c;
+        fv2x = -fv1y;
+        fv2y = fv1x;
+        return true;
+    }
+    // two roots
+    d = RaveSqrt(d);
+    a = -0.5f * (b + d);
+    peigs[0] = a;
+    fv1x = pfmat[1];
+    fv1y = a-pfmat[0];
+    c = 1 / RaveSqrt(fv1x*fv1x + fv1y*fv1y);
+    fv1x *= c;
+    fv1y *= c;
+    a += d;
+    peigs[1] = a;
+    fv2x = pfmat[1];
+    fv2y = a-pfmat[0];
+    c = 1 / RaveSqrt(fv2x*fv2x + fv2y*fv2y);
+    fv2x *= c;
+    fv2y *= c;
+    return true;
 }
 
 // returns the number of real roots, fills r1 and r2 with the answers
@@ -742,17 +940,16 @@ template <class T>
 inline int solvequad(T a, T b, T c, T& r1, T& r2)
 {
     T d = b * b - (T)4 * c * a + (T)1e-16;
-
-	if( d < 0 ) return 0;
-
-	if( d < (T)1e-16 ) {
-		r1 = r2 = (T)-0.5 * b / a;
-		return 1;
-	}
-	
-	// two roots
-	d = RaveSqrt(d);
-	r1 = (T)-0.5 * (b + d) / a;
+    if( d < 0 ) {
+        return 0;
+    }
+    if( d < (T)1e-16 ) {
+        r1 = r2 = (T)-0.5 * b / a;
+        return 1;
+    }
+    // two roots
+    d = RaveSqrt(d);
+    r1 = (T)-0.5 * (b + d) / a;
     r2 = r1 + d/a;
     return 2;
 }
@@ -767,134 +964,130 @@ inline int solvequad(T a, T b, T c, T& r1, T& r2)
 	pfres2[2*stride+0] = pf1[2*stride+0]*pf2[0*stride+0]+pf1[2*stride+1]*pf2[1*stride+0]+pf1[2*stride+2]*pf2[2*stride+0]; \
 	pfres2[2*stride+1] = pf1[2*stride+0]*pf2[0*stride+1]+pf1[2*stride+1]*pf2[1*stride+1]+pf1[2*stride+2]*pf2[2*stride+1]; \
 	pfres2[2*stride+2] = pf1[2*stride+0]*pf2[0*stride+2]+pf1[2*stride+1]*pf2[1*stride+2]+pf1[2*stride+2]*pf2[2*stride+2]; \
-}
+    }
 
 /// mult3 with a 3x3 matrix whose row stride is 16 bytes
 template <class T>
 inline T* _mult3_s4(T* pfres, const T* pf1, const T* pf2)
 {
-	MATH_ASSERT( pf1 != NULL && pf2 != NULL && pfres != NULL );
+    MATH_ASSERT( pf1 != NULL && pf2 != NULL && pfres != NULL );
 
-	T* pfres2;
-	if( pfres == pf1 || pfres == pf2 ) pfres2 = (T*)alloca(12 * sizeof(T));
-	else pfres2 = pfres;
+    T* pfres2;
+    if( pfres == pf1 || pfres == pf2 ) pfres2 = (T*)alloca(12 * sizeof(T));
+    else pfres2 = pfres;
 
-    MULT3(4)
-
-	if( pfres2 != pfres ) memcpy(pfres, pfres2, 12*sizeof(T));
-
-	return pfres;
+    MULT3(4);
+    if( pfres2 != pfres ) memcpy(pfres, pfres2, 12*sizeof(T));
+    return pfres;
 }
 
 /// mult3 with a 3x3 matrix whose row stride is 12 bytes
 template <class T>
 inline T* _mult3_s3(T* pfres, const T* pf1, const T* pf2)
 {
-	MATH_ASSERT( pf1 != NULL && pf2 != NULL && pfres != NULL );
+    MATH_ASSERT( pf1 != NULL && pf2 != NULL && pfres != NULL );
 
-	T* pfres2;
-	if( pfres == pf1 || pfres == pf2 ) pfres2 = (T*)alloca(9 * sizeof(T));
-	else pfres2 = pfres;
+    T* pfres2;
+    if( pfres == pf1 || pfres == pf2 ) pfres2 = (T*)alloca(9 * sizeof(T));
+    else pfres2 = pfres;
 
-    MULT3(3)
+    MULT3(3);
 
-	if( pfres2 != pfres ) memcpy(pfres, pfres2, 9*sizeof(T));
+    if( pfres2 != pfres ) memcpy(pfres, pfres2, 9*sizeof(T));
 
-	return pfres;
+    return pfres;
 }
 
 // mult4
 template <class T> 
 inline T* _mult4(T* pfres, const T* p1, const T* p2)
 {
-	MATH_ASSERT( pfres != NULL && p1 != NULL && p2 != NULL );
+    MATH_ASSERT( pfres != NULL && p1 != NULL && p2 != NULL );
 
-	T* pfres2;
-	if( pfres == p1 || pfres == p2 ) pfres2 = (T*)alloca(16 * sizeof(T));
-	else pfres2 = pfres;
+    T* pfres2;
+    if( pfres == p1 || pfres == p2 ) pfres2 = (T*)alloca(16 * sizeof(T));
+    else pfres2 = pfres;
 
-	pfres2[0*4+0] = p1[0*4+0]*p2[0*4+0] + p1[0*4+1]*p2[1*4+0] + p1[0*4+2]*p2[2*4+0] + p1[0*4+3]*p2[3*4+0];
-	pfres2[0*4+1] = p1[0*4+0]*p2[0*4+1] + p1[0*4+1]*p2[1*4+1] + p1[0*4+2]*p2[2*4+1] + p1[0*4+3]*p2[3*4+1];
-	pfres2[0*4+2] = p1[0*4+0]*p2[0*4+2] + p1[0*4+1]*p2[1*4+2] + p1[0*4+2]*p2[2*4+2] + p1[0*4+3]*p2[3*4+2];
-	pfres2[0*4+3] = p1[0*4+0]*p2[0*4+3] + p1[0*4+1]*p2[1*4+3] + p1[0*4+2]*p2[2*4+3] + p1[0*4+3]*p2[3*4+3];
+    pfres2[0*4+0] = p1[0*4+0]*p2[0*4+0] + p1[0*4+1]*p2[1*4+0] + p1[0*4+2]*p2[2*4+0] + p1[0*4+3]*p2[3*4+0];
+    pfres2[0*4+1] = p1[0*4+0]*p2[0*4+1] + p1[0*4+1]*p2[1*4+1] + p1[0*4+2]*p2[2*4+1] + p1[0*4+3]*p2[3*4+1];
+    pfres2[0*4+2] = p1[0*4+0]*p2[0*4+2] + p1[0*4+1]*p2[1*4+2] + p1[0*4+2]*p2[2*4+2] + p1[0*4+3]*p2[3*4+2];
+    pfres2[0*4+3] = p1[0*4+0]*p2[0*4+3] + p1[0*4+1]*p2[1*4+3] + p1[0*4+2]*p2[2*4+3] + p1[0*4+3]*p2[3*4+3];
 
-	pfres2[1*4+0] = p1[1*4+0]*p2[0*4+0] + p1[1*4+1]*p2[1*4+0] + p1[1*4+2]*p2[2*4+0] + p1[1*4+3]*p2[3*4+0];
-	pfres2[1*4+1] = p1[1*4+0]*p2[0*4+1] + p1[1*4+1]*p2[1*4+1] + p1[1*4+2]*p2[2*4+1] + p1[1*4+3]*p2[3*4+1];
-	pfres2[1*4+2] = p1[1*4+0]*p2[0*4+2] + p1[1*4+1]*p2[1*4+2] + p1[1*4+2]*p2[2*4+2] + p1[1*4+3]*p2[3*4+2];
-	pfres2[1*4+3] = p1[1*4+0]*p2[0*4+3] + p1[1*4+1]*p2[1*4+3] + p1[1*4+2]*p2[2*4+3] + p1[1*4+3]*p2[3*4+3];
+    pfres2[1*4+0] = p1[1*4+0]*p2[0*4+0] + p1[1*4+1]*p2[1*4+0] + p1[1*4+2]*p2[2*4+0] + p1[1*4+3]*p2[3*4+0];
+    pfres2[1*4+1] = p1[1*4+0]*p2[0*4+1] + p1[1*4+1]*p2[1*4+1] + p1[1*4+2]*p2[2*4+1] + p1[1*4+3]*p2[3*4+1];
+    pfres2[1*4+2] = p1[1*4+0]*p2[0*4+2] + p1[1*4+1]*p2[1*4+2] + p1[1*4+2]*p2[2*4+2] + p1[1*4+3]*p2[3*4+2];
+    pfres2[1*4+3] = p1[1*4+0]*p2[0*4+3] + p1[1*4+1]*p2[1*4+3] + p1[1*4+2]*p2[2*4+3] + p1[1*4+3]*p2[3*4+3];
 
-	pfres2[2*4+0] = p1[2*4+0]*p2[0*4+0] + p1[2*4+1]*p2[1*4+0] + p1[2*4+2]*p2[2*4+0] + p1[2*4+3]*p2[3*4+0];
-	pfres2[2*4+1] = p1[2*4+0]*p2[0*4+1] + p1[2*4+1]*p2[1*4+1] + p1[2*4+2]*p2[2*4+1] + p1[2*4+3]*p2[3*4+1];
-	pfres2[2*4+2] = p1[2*4+0]*p2[0*4+2] + p1[2*4+1]*p2[1*4+2] + p1[2*4+2]*p2[2*4+2] + p1[2*4+3]*p2[3*4+2];
-	pfres2[2*4+3] = p1[2*4+0]*p2[0*4+3] + p1[2*4+1]*p2[1*4+3] + p1[2*4+2]*p2[2*4+3] + p1[2*4+3]*p2[3*4+3];
+    pfres2[2*4+0] = p1[2*4+0]*p2[0*4+0] + p1[2*4+1]*p2[1*4+0] + p1[2*4+2]*p2[2*4+0] + p1[2*4+3]*p2[3*4+0];
+    pfres2[2*4+1] = p1[2*4+0]*p2[0*4+1] + p1[2*4+1]*p2[1*4+1] + p1[2*4+2]*p2[2*4+1] + p1[2*4+3]*p2[3*4+1];
+    pfres2[2*4+2] = p1[2*4+0]*p2[0*4+2] + p1[2*4+1]*p2[1*4+2] + p1[2*4+2]*p2[2*4+2] + p1[2*4+3]*p2[3*4+2];
+    pfres2[2*4+3] = p1[2*4+0]*p2[0*4+3] + p1[2*4+1]*p2[1*4+3] + p1[2*4+2]*p2[2*4+3] + p1[2*4+3]*p2[3*4+3];
 
-	pfres2[3*4+0] = p1[3*4+0]*p2[0*4+0] + p1[3*4+1]*p2[1*4+0] + p1[3*4+2]*p2[2*4+0] + p1[3*4+3]*p2[3*4+0];
-	pfres2[3*4+1] = p1[3*4+0]*p2[0*4+1] + p1[3*4+1]*p2[1*4+1] + p1[3*4+2]*p2[2*4+1] + p1[3*4+3]*p2[3*4+1];
-	pfres2[3*4+2] = p1[3*4+0]*p2[0*4+2] + p1[3*4+1]*p2[1*4+2] + p1[3*4+2]*p2[2*4+2] + p1[3*4+3]*p2[3*4+2];
-	pfres2[3*4+3] = p1[3*4+0]*p2[0*4+3] + p1[3*4+1]*p2[1*4+3] + p1[3*4+2]*p2[2*4+3] + p1[3*4+3]*p2[3*4+3];
+    pfres2[3*4+0] = p1[3*4+0]*p2[0*4+0] + p1[3*4+1]*p2[1*4+0] + p1[3*4+2]*p2[2*4+0] + p1[3*4+3]*p2[3*4+0];
+    pfres2[3*4+1] = p1[3*4+0]*p2[0*4+1] + p1[3*4+1]*p2[1*4+1] + p1[3*4+2]*p2[2*4+1] + p1[3*4+3]*p2[3*4+1];
+    pfres2[3*4+2] = p1[3*4+0]*p2[0*4+2] + p1[3*4+1]*p2[1*4+2] + p1[3*4+2]*p2[2*4+2] + p1[3*4+3]*p2[3*4+2];
+    pfres2[3*4+3] = p1[3*4+0]*p2[0*4+3] + p1[3*4+1]*p2[1*4+3] + p1[3*4+2]*p2[2*4+3] + p1[3*4+3]*p2[3*4+3];
 
-	if( pfres != pfres2 ) memcpy(pfres, pfres2, sizeof(T)*16);
-	return pfres;
+    if( pfres != pfres2 ) memcpy(pfres, pfres2, sizeof(T)*16);
+    return pfres;
 }
 
 template <class T> 
 inline T* _multtrans3(T* pfres, const T* pf1, const T* pf2)
 {
-	T* pfres2;
-	if( pfres == pf1 ) pfres2 = (T*)alloca(9 * sizeof(T));
-	else pfres2 = pfres;
+    T* pfres2;
+    if( pfres == pf1 ) pfres2 = (T*)alloca(9 * sizeof(T));
+    else pfres2 = pfres;
 
-	pfres2[0] = pf1[0]*pf2[0]+pf1[3]*pf2[3]+pf1[6]*pf2[6];
-	pfres2[1] = pf1[0]*pf2[1]+pf1[3]*pf2[4]+pf1[6]*pf2[7];
-	pfres2[2] = pf1[0]*pf2[2]+pf1[3]*pf2[5]+pf1[6]*pf2[8];
+    pfres2[0] = pf1[0]*pf2[0]+pf1[3]*pf2[3]+pf1[6]*pf2[6];
+    pfres2[1] = pf1[0]*pf2[1]+pf1[3]*pf2[4]+pf1[6]*pf2[7];
+    pfres2[2] = pf1[0]*pf2[2]+pf1[3]*pf2[5]+pf1[6]*pf2[8];
 
-	pfres2[3] = pf1[1]*pf2[0]+pf1[4]*pf2[3]+pf1[7]*pf2[6];
-	pfres2[4] = pf1[1]*pf2[1]+pf1[4]*pf2[4]+pf1[7]*pf2[7];
-	pfres2[5] = pf1[1]*pf2[2]+pf1[4]*pf2[5]+pf1[7]*pf2[8];
+    pfres2[3] = pf1[1]*pf2[0]+pf1[4]*pf2[3]+pf1[7]*pf2[6];
+    pfres2[4] = pf1[1]*pf2[1]+pf1[4]*pf2[4]+pf1[7]*pf2[7];
+    pfres2[5] = pf1[1]*pf2[2]+pf1[4]*pf2[5]+pf1[7]*pf2[8];
 
-	pfres2[6] = pf1[2]*pf2[0]+pf1[5]*pf2[3]+pf1[8]*pf2[6];
-	pfres2[7] = pf1[2]*pf2[1]+pf1[5]*pf2[4]+pf1[8]*pf2[7];
-	pfres2[8] = pf1[2]*pf2[2]+pf1[5]*pf2[5]+pf1[8]*pf2[8];
+    pfres2[6] = pf1[2]*pf2[0]+pf1[5]*pf2[3]+pf1[8]*pf2[6];
+    pfres2[7] = pf1[2]*pf2[1]+pf1[5]*pf2[4]+pf1[8]*pf2[7];
+    pfres2[8] = pf1[2]*pf2[2]+pf1[5]*pf2[5]+pf1[8]*pf2[8];
 
-	if( pfres2 != pfres ) memcpy(pfres, pfres2, 9*sizeof(T));
+    if( pfres2 != pfres ) memcpy(pfres, pfres2, 9*sizeof(T));
 
-	return pfres;
+    return pfres;
 }
 
 template <class T> 
 inline T* _multtrans4(T* pfres, const T* pf1, const T* pf2)
 {
-	T* pfres2;
-	if( pfres == pf1 ) pfres2 = (T*)alloca(16 * sizeof(T));
-	else pfres2 = pfres;
+    T* pfres2;
+    if( pfres == pf1 ) pfres2 = (T*)alloca(16 * sizeof(T));
+    else pfres2 = pfres;
 
-	for(int i = 0; i < 4; ++i) {
-		for(int j = 0; j < 4; ++j) {
-			pfres[4*i+j] = pf1[i] * pf2[j] + pf1[i+4] * pf2[j+4] + pf1[i+8] * pf2[j+8] + pf1[i+12] * pf2[j+12];
-		}
-	}
+    for(int i = 0; i < 4; ++i) {
+        for(int j = 0; j < 4; ++j) {
+            pfres[4*i+j] = pf1[i] * pf2[j] + pf1[i+4] * pf2[j+4] + pf1[i+8] * pf2[j+8] + pf1[i+12] * pf2[j+12];
+        }
+    }
 
-	return pfres;
+    return pfres;
 }
 
 //generate a random quaternion
-inline Vector GetRandomQuat(void)
+template <typename T>
+inline RaveVector<T> GetRandomQuat()
 {
-    Vector q;
-
+    RaveVector<T> q;
     while(1) {
-        q.x = -1 + 2*(rand()/((dReal)RAND_MAX));
-        q.y = -1 + 2*(rand()/((dReal)RAND_MAX));
-        q.z = -1 + 2*(rand()/((dReal)RAND_MAX));
-        q.w = -1 + 2*(rand()/((dReal)RAND_MAX));
-
-        dReal norm = q.lengthsqr4();
+        q.x = -1 + 2*(T)(MATH_RANDOM_FLOAT);
+        q.y = -1 + 2*(T)(MATH_RANDOM_FLOAT);
+        q.z = -1 + 2*(T)(MATH_RANDOM_FLOAT);
+        q.w = -1 + 2*(T)(MATH_RANDOM_FLOAT);
+        T norm = q.lengthsqr4();
         if(norm <= 1) {
             q = q * (1 / RaveSqrt(norm));
             break;
         }
     }
-    
     return q;
 }
 
@@ -928,42 +1121,42 @@ inline RaveVector<T> quatInverse(const RaveVector<T>& q)
 template <class T>
 inline RaveVector<T> dQSlerp(const RaveVector<T>& qa, const RaveVector<T>& _qb, T t)
 {
-	// quaternion to return
-	RaveVector<T> qb, qm;
-
-    if( dot4(qa,_qb) < 0 )
+    // quaternion to return
+    RaveVector<T> qb, qm;
+    if( dot4(qa,_qb) < 0 ) {
         qb = -_qb;
-    else
+    }
+    else {
         qb = _qb;
+    }
+    // Calculate angle between them.
+    T cosHalfTheta = qa.w * qb.w + qa.x * qb.x + qa.y * qb.y + qa.z * qb.z;
+    // if qa=qb or qa=-qb then theta = 0 and we can return qa
+    if (RaveFabs(cosHalfTheta) >= 1.0){
+        qm.w = qa.w;qm.x = qa.x;qm.y = qa.y;qm.z = qa.z;
+        return qm;
+    }
+    // Calculate temporary values.
+    T halfTheta = RaveAcos(cosHalfTheta);
+    T sinHalfTheta = RaveSqrt(1 - cosHalfTheta*cosHalfTheta);
+    // if theta = 180 degrees then result is not fully defined
+    // we could rotate around any axis normal to qa or qb
+    if (RaveFabs(sinHalfTheta) < 1e-7f){ // fabs is floating point absolute
+        qm.w = (qa.w * 0.5f + qb.w * 0.5f);
+        qm.x = (qa.x * 0.5f + qb.x * 0.5f);
+        qm.y = (qa.y * 0.5f + qb.y * 0.5f);
+        qm.z = (qa.z * 0.5f + qb.z * 0.5f);
+        return qm;
+    }
 
-	// Calculate angle between them.
-	T cosHalfTheta = qa.w * qb.w + qa.x * qb.x + qa.y * qb.y + qa.z * qb.z;
-	// if qa=qb or qa=-qb then theta = 0 and we can return qa
-	if (RaveFabs(cosHalfTheta) >= 1.0){
-		qm.w = qa.w;qm.x = qa.x;qm.y = qa.y;qm.z = qa.z;
-		return qm;
-	}
-	// Calculate temporary values.
-	T halfTheta = RaveAcos(cosHalfTheta);
-	T sinHalfTheta = RaveSqrt(1 - cosHalfTheta*cosHalfTheta);
-	// if theta = 180 degrees then result is not fully defined
-	// we could rotate around any axis normal to qa or qb
-	if (RaveFabs(sinHalfTheta) < 1e-7f){ // fabs is floating point absolute
-		qm.w = (qa.w * 0.5f + qb.w * 0.5f);
-		qm.x = (qa.x * 0.5f + qb.x * 0.5f);
-		qm.y = (qa.y * 0.5f + qb.y * 0.5f);
-		qm.z = (qa.z * 0.5f + qb.z * 0.5f);
-		return qm;
-	}
-
-	T ratioA = RaveSin((1 - t) * halfTheta) / sinHalfTheta;
-	T ratioB = RaveSin(t * halfTheta) / sinHalfTheta; 
-	//calculate Quaternion.
-	qm.w = (qa.w * ratioA + qb.w * ratioB);
-	qm.x = (qa.x * ratioA + qb.x * ratioB);
-	qm.y = (qa.y * ratioA + qb.y * ratioB);
-	qm.z = (qa.z * ratioA + qb.z * ratioB);
-	return qm;
+    T ratioA = RaveSin((1 - t) * halfTheta) / sinHalfTheta;
+    T ratioB = RaveSin(t * halfTheta) / sinHalfTheta; 
+    //calculate Quaternion.
+    qm.w = (qa.w * ratioA + qb.w * ratioB);
+    qm.x = (qa.x * ratioA + qb.x * ratioB);
+    qm.y = (qa.y * ratioA + qb.y * ratioB);
+    qm.z = (qa.z * ratioA + qb.z * ratioB);
+    return qm;
 }
 
 /// return the minimal quaternion that orients vsource to vtarget
@@ -980,10 +1173,10 @@ RaveVector<T> quatRotateDirection(const RaveVector<T>& vsource, const RaveVector
     }
     else if( fcos < 0 ) {
         // hand is flipped 180, rotate around x axis
-        rottodirection = Vector(1,0,0);
+        rottodirection = RaveVector<T>(1,0,0);
         rottodirection -= vsource * dot3(vsource, rottodirection);
         if( rottodirection.lengthsqr3()<1e-8 ) {
-            rottodirection = Vector(0,0,1);
+            rottodirection = RaveVector<T>(0,0,1);
             rottodirection -= vsource * dot3(vsource, rottodirection);
         }
         rottodirection.normalize3();
@@ -1397,19 +1590,151 @@ inline double* mult3_s3(double* pfres, const double* pf1, const double* pf2) { r
 inline double* inv3(const double* pf, double* pfres, double* pfdet, int stride) { return _inv3<double>(pf, pfres, pfdet, stride); }
 inline double* inv4(const double* pf, double* pfres) { return _inv4<double>(pf, pfres); }
 
-// if the two triangles collide, returns true and fills contactpos with the intersection point
-// assuming triangles are declared counter-clockwise!!
-// contactnorm is the normal of the second triangle
-RAVE_API bool TriTriCollision(const RaveVector<float>& u1, const RaveVector<float>& u2, const RaveVector<float>& u3,
-                   const RaveVector<float>& v1, const RaveVector<float>& v2, const RaveVector<float>& v3,
-                     RaveVector<float>& contactpos, RaveVector<float>& contactnorm);
-RAVE_API bool TriTriCollision(const RaveVector<double>& u1, const RaveVector<double>& u2, const RaveVector<double>& u3,
-                   const RaveVector<double>& v1, const RaveVector<double>& v2, const RaveVector<double>& v3,
-                     RaveVector<double>& contactpos, RaveVector<double>& contactnorm);
+/// triangle collision, returns true and fills contactpos with the intersection point
+/// assuming triangles are declared counter-clockwise!!
+/// \param[out] contactnorm if triangles collide, then filled with the normal of the second triangle
+/// \return true if triangles collide
+template <typename T>
+inline bool TriTriCollision(const RaveVector<T>& u1, const RaveVector<T>& u2, const RaveVector<T>& u3, const RaveVector<T>& v1, const RaveVector<T>& v2, const RaveVector<T>& v3, RaveVector<T>& contactpos, RaveVector<T>& contactnorm)
+{
+    // triangle triangle collision test - by Rosen Diankov
 
-RAVE_API OBB OBBFromAABB(const AABB& ab, const TransformMatrix& t);
-RAVE_API OBB TransformOBB(const OBB& obb, const Transform& t);
-RAVE_API bool AABBCollision(const AABB& ab1, const AABB& ab2);
+    // first see if the faces intersect the planes
+    // for the face to be intersecting the plane, one of its
+    // vertices must be on the opposite side of the plane
+    char b = 0;    
+    RaveVector<T> u12 = u2 - u1, u23 = u3 - u2, u31 = u1 - u3;
+    RaveVector<T> v12 = v2 - v1, v23 = v3 - v2, v31 = v1 - v3;
+    RaveVector<T> vedges[3] = {v12, v23, v31};
+    RaveVector<T> unorm, vnorm;
+    cross3(unorm, u31, u12);
+    unorm.w = -dot3(unorm, u1);
+    cross3(vnorm, v31, v12);
+    vnorm.w = -dot3(vnorm, v1);
+    if( dot3(vnorm, u1) + vnorm.w > 0 ) {
+        b |= 1;
+    }
+    if( dot3(vnorm, u2) + vnorm.w > 0 ) {
+        b |= 2;
+    }
+    if( dot3(vnorm, u3) + vnorm.w > 0 ) {
+        b |= 4;
+    }
+    if(b == 7 || b == 0) {
+        return false;
+    }
+    // now get segment from f1 when it crosses f2's plane
+    // note that b gives us information on which edges actually intersected
+    // so figure out the point that is alone on one side of the plane
+    // then get the segment
+    RaveVector<T> p1, p2;
+    const RaveVector<T>* pu=NULL;
+    switch(b) {
+    case 1:
+    case 6:
+        pu = &u1;
+        p1 = u2 - u1;
+        p2 = u3 - u1;
+        break;
+    case 2:
+    case 5:
+        pu = &u2;
+        p1 = u1 - u2;
+        p2 = u3 - u2;
+        break;
+    case 4:
+    case 3:
+        pu = &u3;
+        p1 = u1 - u3;
+        p2 = u2 - u3;
+        break;
+    }
+    
+    T t = dot3(vnorm,*pu)+vnorm.w;
+    p1 = *pu - p1 * (t / dot3(vnorm, p1));
+    p2 = *pu - p2 * (t / dot3(vnorm, p2));
+
+    // go through each of the segments in v2 and clip
+    RaveVector<T> vcross;
+    const RaveVector<T>* pv[] = {&v1, &v2, &v3, &v1};
+
+    for(int i = 0; i < 3; ++i) {
+        const RaveVector<T>* pprev = pv[i];
+        RaveVector<T> q1 = p1 - *pprev;
+        RaveVector<T> q2 = p2 - *pprev;
+        cross3(vcross, vedges[i], vnorm);
+        T t1 = dot3(q1, vcross);
+        T t2 = dot3(q2, vcross);
+
+        // line segment is out of face
+        if( t1 >= 0 && t2 >= 0 ) {
+            return false;
+        }
+        if( t1 > 0 && t2 < 0 ) {
+            // keep second point, clip first
+            RaveVector<T> dq = q2-q1;
+            p1 -= dq*(t1/dot3(dq,vcross));
+        }
+        else if( t1 < 0 && t2 > 0 ) {
+            // keep first point, clip second
+            RaveVector<T> dq = q1-q2;
+            p2 -= dq*(t2/dot3(dq,vcross));
+        }
+    }
+
+    contactpos = 0.5f * (p1 + p2);
+    normalize3(contactnorm, vnorm);
+    return true;
+}
+
+template <typename T>
+inline obb<T> OBBFromAABB(const aabb<T>& ab, const RaveTransformMatrix<T>& t)
+{
+    obb<T> o;
+    o.right = RaveVector<T>(t.m[0],t.m[4],t.m[8]);
+    o.up = RaveVector<T>(t.m[1],t.m[5],t.m[9]);
+    o.dir = RaveVector<T>(t.m[2],t.m[6],t.m[10]);
+    o.pos = t*ab.pos;
+    o.extents = ab.extents;
+    return o;
+}
+
+template <typename T>
+inline obb<T> OBBFromAABB(const aabb<T>& ab, const RaveTransform<T>& t)
+{
+    return OBBFromAABB(ab,RaveTransformMatrix<T>(t));
+}
+
+template <typename T>
+inline obb<T> TransformOBB(const RaveTransform<T>& t, const obb<T>& o)
+{
+    obb<T> newobb;
+    newobb.extents = o.extents;
+    newobb.pos = t*o.pos;
+    newobb.right = t.rotate(o.right);
+    newobb.up = t.rotate(o.up);
+    newobb.dir = t.rotate(o.dir);
+    return newobb;
+}
+
+template <typename T>
+inline obb<T> TransformOBB(const RaveTransformMatrix<T>& t, const obb<T>& o)
+{
+    obb<T> newobb;
+    newobb.extents = o.extents;
+    newobb.pos = t*o.pos;
+    newobb.right = t.rotate(o.right);
+    newobb.up = t.rotate(o.up);
+    newobb.dir = t.rotate(o.dir);
+    return newobb;
+}
+
+template <typename T>
+inline bool AABBCollision(const aabb<T>& ab1, const aabb<T>& ab2)
+{
+    RaveVector<T> v = ab1.pos-ab2.pos;
+    return RaveFabs(v.x) <= ab1.extents.x+ab2.extents.x && RaveFabs(v.y) <= ab1.extents.y+ab2.extents.y && RaveFabs(v.z) <= ab1.extents.z+ab2.extents.z;
+}
 
 template <class T> inline void mult(T* pf, T fa, int r)
 {
@@ -1716,6 +2041,64 @@ void Tridiagonal3 (S* mat, T* diag, T* subd)
     }
 }
 
+template <typename T>
+inline void svd3(const T* A, T* U, T* D, T* V)
+{
+    T VVt[9];
+    T eigenvalues[3];
+    multtrans3(VVt, A, A);
+    // get eigen values of V: VVt  V = V  D^2
+    T afSubDiag[3];
+    std::copy(&VVt,&VVt[9],&V[0]);
+    Tridiagonal3(V,eigenvalues,afSubDiag);
+    QLAlgorithm3(V,eigenvalues,afSubDiag);
+
+    //float fDet =	V[0*3+0] * (V[1*3+1] * V[2*3+2] - V[1*3+2] * V[2*3+1]) +
+    //        V[0*3+1] * (V[1*3+2] * V[2*3+0] - V[1*3+0] * V[2*3+2]) +
+    //        V[0*3+2] * (V[1*3+0] * V[2*3+1] - V[1*3+1] * V[2*3+0]);
+    //    
+    //    if ( fDet < 0.0f ) {
+    //        V[0*3+2] = - V[0*3+2];
+    //        V[1*3+2] = - V[1*3+2];
+    //        V[2*3+2] = - V[2*3+2];
+    //    }
+    
+    mult3_s3(U, A, V); // U = A V = U D
+    for(int i = 0; i < 3; ++i) {
+        D[i] = RaveSqrt(eigenvalues[i]);
+        T f = 1/D[i];
+        U[i] *= f;
+        U[i+3] *= f;
+        U[i+6] *= f;
+    }
+    int maxval = 0;
+    if( D[1] > D[maxval] ) {
+        maxval = 1;
+    }
+    if( D[2] > D[maxval] ) {
+        maxval = 2;
+    }
+    if( maxval > 0 ) {
+        // flip columns
+        swap(U[0], U[maxval]);
+        swap(U[3], U[3+maxval]);
+        swap(U[6], U[6+maxval]);
+        swap(V[0], V[maxval]);
+        swap(V[3], V[3+maxval]);
+        swap(V[6], V[6+maxval]);
+        swap(D[0], D[maxval]);
+    }
+    if( D[1] < D[2] ) {
+        swap(U[1], U[2]);
+        swap(U[4], U[5]);
+        swap(U[7], U[8]);
+        swap(V[1], V[2]);
+        swap(V[4], V[5]);
+        swap(V[7], V[8]);
+        swap(D[1], D[2]);
+    }
+}
+
 template <class T>
 int Min(T* pts, int stride, int numPts)
 {
@@ -1792,6 +2175,7 @@ std::basic_istream<T>& operator>>(std::basic_istream<T>& I, RaveTransformMatrix<
              >> v.trans.x >> v.trans.y >> v.trans.z;
 }
 
+} // end namespace geometry
 } // end namespace OpenRAVE
 
 #endif
