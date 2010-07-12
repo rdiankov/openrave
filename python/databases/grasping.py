@@ -36,6 +36,10 @@ Running the Example
 Description
 -----------
 
+.. lang-block:: ja
+
+  コメントです
+
 OpenRAVE can simulate grasps for any type of robotic hand, evaluate the quality of the grasps, and
 use those grasps in a more complex grasp planning framework. This tutorial is meant to introduce you
 to the '''grasper''' plugin and the scripts provided to manage the testing and simulation. At the

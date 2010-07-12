@@ -36,4 +36,8 @@ OpenRAVE supports a powerful scripting environment based on Python which makes i
 \image html openrave_architecture.jpg
 \image latex openrave_architecture.pdf "OpenRAVE architecture" width=15cm
 
+\~
+
+This is outputted for all languages.
+
  */
