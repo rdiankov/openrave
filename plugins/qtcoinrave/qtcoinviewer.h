@@ -310,7 +310,8 @@ protected:
     std::list< boost::shared_ptr<IvDragger> > _plistdraggers; /// draggers drawn
     SoEventCallback* _eventKeyboardCB;
 
-    SoText2* _messageNode;
+    boost::array<SoText2*,2> _messageNodes;
+    SoTranslation* _messageShadowTranslation;
 
     bool _altDown[2];
     bool _ctrlDown[2];

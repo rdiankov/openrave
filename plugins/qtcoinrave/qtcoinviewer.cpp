@@ -114,15 +114,25 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
 
     _ivBodies = new SoSeparator();
 
+    // add the message texts
     SoSeparator* pmsgsep = new SoSeparator();
-    SoTranslation* pmsgtrans = new SoTranslation();
-    pmsgtrans->translation.setValue(SbVec3f(-0.98f,0.94f,0));
-    pmsgsep->addChild(pmsgtrans);
-    SoBaseColor* pcolor = new SoBaseColor();
-    pcolor->rgb.setValue(0,0,0);
-    pmsgsep->addChild(pcolor);
-    _messageNode = new SoText2();
-    pmsgsep->addChild(_messageNode);
+    SoTranslation* pmsgtrans0 = new SoTranslation();
+    pmsgtrans0->translation.setValue(SbVec3f(-0.978f,0.93f,0));
+    pmsgsep->addChild(pmsgtrans0);
+    SoBaseColor* pcolor0 = new SoBaseColor();
+    pcolor0->rgb.setValue(1.0f,1.0f,1.0f);
+    pmsgsep->addChild(pcolor0);
+    _messageNodes[0] = new SoText2();
+    pmsgsep->addChild(_messageNodes[0]);
+
+    _messageShadowTranslation = new SoTranslation();
+    _messageShadowTranslation->translation.setValue(SbVec3f(-0.002f,0.032f,0));
+    pmsgsep->addChild(_messageShadowTranslation);
+    SoBaseColor* pcolor1 = new SoBaseColor();
+    pcolor1->rgb.setValue(0.0f,0.0f,0.0f);
+    pmsgsep->addChild(pcolor1);
+    _messageNodes[1] = new SoText2();
+    pmsgsep->addChild(_messageNodes[1]);
 
     _ivRoot->addChild(pmsgsep);
     _ivRoot->addChild(_ivCamera);
@@ -2285,9 +2295,16 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
         if( !!_pdragger )
             _pdragger->GetMessage(ss);
 
+        // adjust the shadow text
+        SbViewportRegion v = _pviewer->getViewportRegion();
+        float fwratio = 964.0f/v.getWindowSize()[0], fhratio = 688.0f/v.getWindowSize()[1];
+        _messageShadowTranslation->translation.setValue(SbVec3f(-0.002f*fwratio,0.032f*fhratio,0));
+        
         // search for all new lines
         string msg = ss.str();
-        _messageNode->string.setValue("");
+        for(size_t i = 0; i < _messageNodes.size(); ++i) {
+            _messageNodes[i]->string.setValue("");
+        }
         int index = 0;
         std::string::size_type pos = 0, newpos=0;
         while( pos < msg.size() ) {
@@ -2295,7 +2312,9 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
             
             std::string::size_type n = newpos == std::string::npos ? msg.size()-pos : (newpos-pos);
 
-            _messageNode->string.set1Value(index++, msg.substr(pos, n).c_str());
+            for(size_t i = 0; i < _messageNodes.size(); ++i) {
+                _messageNodes[i]->string.set1Value(index++, msg.substr(pos, n).c_str());
+            }
 
             if( newpos == std::string::npos )
                 break;
@@ -2627,18 +2646,23 @@ void QtCoinViewer::VideoCodecChanged(QAction* pact)
 void QtCoinViewer::ViewToggleFPS(bool on)
 {
     _bDisplayFPS = on;
-    if( !_bDisplayFPS )
-        _messageNode->string.setValue("");
+    if( !_bDisplayFPS ) {
+        for(size_t i = 0; i < _messageNodes.size();++i) {
+            _messageNodes[i]->string.setValue("");
+        }
+    }
 }
 
 void QtCoinViewer::ViewToggleFeedBack(bool on)
 {
     _bDisplayFeedBack = on;
     _pviewer->setFeedbackVisibility(on);
-    if( !_bDisplayFeedBack )
-        _messageNode->string.setValue("Feedback Visibility OFF");
+    if( !_bDisplayFeedBack ) {
+        for(size_t i = 0; i < _messageNodes.size();++i) {
+            _messageNodes[i]->string.setValue("Feedback Visibility OFF");
+        }
+    }
 }
-
 
 void QtCoinViewer::RecordSimtimeVideo(bool on)
 {
