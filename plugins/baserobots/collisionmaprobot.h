@@ -163,9 +163,9 @@ class CollisionMapRobot : public RobotBase
         }
     }
 
-    virtual void ComputeJointHierarchy()
+    virtual void _ComputeInternalInformation()
     {
-        RobotBase::ComputeJointHierarchy();
+        RobotBase::_ComputeInternalInformation();
         boost::shared_ptr<XMLData> cmdata = boost::dynamic_pointer_cast<XMLData>(GetReadableInterface("collisionmap"));
         if( !!cmdata ) {
             // process the collisionmap structures

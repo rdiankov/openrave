@@ -505,7 +505,7 @@ SensorBase::SensorDataPtr RobotBase::AttachedSensor::GetData() const
 void RobotBase::AttachedSensor::SetRelativeTransform(const Transform& t)
 {
     trelative = t;
-    GetRobot()->ParametersChanged(Prop_SensorPlacement);
+    GetRobot()->_ParametersChanged(Prop_SensorPlacement);
 }
 
 void RobotBase::AttachedSensor::serialize(std::ostream& o, int options) const
@@ -657,7 +657,7 @@ void RobotBase::SetTransform(const Transform& trans)
 void RobotBase::_UpdateGrabbedBodies()
 {
     // update grabbed objects
-    vector<GRABBED>::iterator itbody;
+    vector<Grabbed>::iterator itbody;
     FORIT(itbody, _vGrabbedBodies) {
         KinBodyPtr pbody = itbody->pbody.lock();
         if( !!pbody )
@@ -1412,14 +1412,9 @@ void RobotBase::GetFullTrajectoryFromActive(TrajectoryBasePtr pFullTraj, Traject
     pFullTraj->CalcTrajTiming(shared_robot(), pActiveTraj->GetInterpMethod(), false, false);
 }
 
-const std::vector<int>& RobotBase::GetActiveJointIndices()
+const std::vector<int>& RobotBase::GetActiveJointIndices() const
 {
-    if( (int)_vAllJointIndices.size() != GetDOF() ) {
-        _vAllJointIndices.resize(GetDOF());
-        for(int i = 0; i < GetDOF(); ++i) _vAllJointIndices[i] = i;
-    }
-
-    return _nActiveDOF == 0 ? _vAllJointIndices : _vActiveJointIndices;
+    return _nActiveDOF == 0 ? _vAllDOFIndices : _vActiveJointIndices;
 }
 
 void RobotBase::CalculateActiveJacobian(int index, const Vector& offset, boost::multi_array<dReal,2>& mjacobian) const
@@ -1766,8 +1761,8 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
         return true;
     }
 
-    _vGrabbedBodies.push_back(GRABBED());
-    GRABBED& g = _vGrabbedBodies.back();
+    _vGrabbedBodies.push_back(Grabbed());
+    Grabbed& g = _vGrabbedBodies.back();
     g.pbody = pbody;
     g.plinkrobot = plink;
     g.troot = plink->GetTransform().inverse() * pbody->GetTransform();
@@ -1796,8 +1791,8 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::
         return true;
     }
 
-    _vGrabbedBodies.push_back(GRABBED());
-    GRABBED& g = _vGrabbedBodies.back();
+    _vGrabbedBodies.push_back(Grabbed());
+    Grabbed& g = _vGrabbedBodies.back();
     g.pbody = pbody;
     g.plinkrobot = pRobotLinkToGrabWith;
     g.troot = pRobotLinkToGrabWith->GetTransform().inverse() * pbody->GetTransform();
@@ -1818,7 +1813,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::
 
 void RobotBase::Release(KinBodyPtr pbody)
 {
-    vector<GRABBED>::iterator itbody;
+    vector<Grabbed>::iterator itbody;
     FORIT(itbody, _vGrabbedBodies) {
         if( KinBodyPtr(itbody->pbody) == pbody )
             break;
@@ -2018,9 +2013,9 @@ void RobotBase::SimulationStep(dReal fElapsedTime)
     _UpdateAttachedSensors();
 }
 
-void RobotBase::ComputeJointHierarchy()
+void RobotBase::_ComputeInternalInformation()
 {
-    KinBody::ComputeJointHierarchy();
+    KinBody::_ComputeInternalInformation();
     int manipindex=0;
     FOREACH(itmanip,_vecManipulators) {
         if( (*itmanip)->GetName().size() == 0 ) {
@@ -2083,7 +2078,10 @@ void RobotBase::ComputeJointHierarchy()
             (*itsensor)->__hashstructure = GetMD5HashString(ss.str());
         }
     }
-
+    _vAllDOFIndices.resize(GetDOF());
+    for(int i = 0; i < GetDOF(); ++i) {
+        _vAllDOFIndices[i] = i;
+    }
     if( ComputeAABB().extents.lengthsqr3() > 900.0f )
         RAVELOG_WARN(str(boost::format("Robot %s span is greater than 30 meaning that it is most likely defined in a unit other than meters. It is highly encouraged to define all OpenRAVE robots in meters since many metrics, database models, and solvers have been specifically optimized for this unit\n")%GetName()));
 }
@@ -2107,7 +2105,7 @@ bool RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _UpdateAttachedSensors();
 
     _vActiveJointIndices = r->_vActiveJointIndices;
-    _vAllJointIndices = r->_vAllJointIndices;
+    _vAllDOFIndices = r->_vAllDOFIndices;
     vActvAffineRotationAxis = r->vActvAffineRotationAxis;
     _nActiveManip = r->_nActiveManip;
     _nActiveDOF = r->_nActiveDOF;

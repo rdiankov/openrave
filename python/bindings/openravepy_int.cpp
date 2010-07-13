@@ -1028,14 +1028,14 @@ public:
 class PyCollisionReport
 {
 public:
-    PyCollisionReport() : report(new COLLISIONREPORT()) {}
+    PyCollisionReport() : report(new CollisionReport()) {}
     PyCollisionReport(CollisionReportPtr report) : report(report) {}
     virtual ~PyCollisionReport() {}
 
     struct PYCONTACT
     {
         PYCONTACT() {}
-        PYCONTACT(const COLLISIONREPORT::CONTACT& c)
+        PYCONTACT(const CollisionReport::CONTACT& c)
         {
             pos = toPyVector3(c.pos);
             norm = toPyVector3(c.norm);
@@ -1495,7 +1495,7 @@ public:
     class PyGrabbed
     {
     public:
-        PyGrabbed(const RobotBase::GRABBED& grabbed, PyEnvironmentBasePtr pyenv) {
+        PyGrabbed(const RobotBase::Grabbed& grabbed, PyEnvironmentBasePtr pyenv) {
             grabbedbody.reset(new PyKinBody(KinBodyPtr(grabbed.pbody),pyenv));
             linkrobot.reset(new PyLink(KinBody::LinkPtr(grabbed.plinkrobot),pyenv));
 
@@ -1701,7 +1701,6 @@ public:
 //    void GetFullTrajectoryFromActive(PyTrajectory* pFullTraj, PyTrajectory* pActiveTraj, bool bOverwriteTransforms);
 //    void SetActiveMotion(PyTrajectory* ptraj);
 
-    int GetActiveJointIndex(int active_index) const { return _probot->GetActiveJointIndex(active_index); }
     object GetActiveJointIndices() { return toPyArray(_probot->GetActiveJointIndices()); }
 
     boost::multi_array<dReal,2> CalculateActiveJacobian(int index, object offset) const
@@ -2538,7 +2537,7 @@ public:
         if( extract<int>(shape[1]) != 6 )
             throw openrave_exception("rays object needs to be a Nx6 vector\n");
 
-        COLLISIONREPORT report;
+        CollisionReport report;
         CollisionReportPtr preport(&report,null_deleter());
 
         RAY r;
@@ -3752,7 +3751,6 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("SetActiveDOFVelocities",&PyRobotBase::SetActiveDOFVelocities)
             .def("GetActiveDOFVelocities",&PyRobotBase::GetActiveDOFVelocities)
             .def("GetActiveDOFLimits",&PyRobotBase::GetActiveDOFLimits)
-            .def("GetActiveJointIndex",&PyRobotBase::GetActiveJointIndex,args("index"))
             .def("GetActiveJointIndices",&PyRobotBase::GetActiveJointIndices)
             .def("CalculateActiveJacobian",&PyRobotBase::CalculateActiveJacobian,args("linkindex","offset"))
             .def("CalculateActiveRotationJacobian",&PyRobotBase::CalculateActiveRotationJacobian,args("linkindex","quat"))

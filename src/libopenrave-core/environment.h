@@ -487,7 +487,7 @@ class Environment : public EnvironmentBase
         }
         _pCurrentChecker->InitKinBody(pbody);
         _pPhysicsEngine->InitKinBody(pbody);
-        pbody->ComputeJointHierarchy();
+        pbody->_ComputeInternalInformation();
         return true;
     }
     virtual bool AddRobot(RobotBasePtr robot, bool bAnonymous)
@@ -517,7 +517,7 @@ class Environment : public EnvironmentBase
         }
         _pCurrentChecker->InitKinBody(robot);
         _pPhysicsEngine->InitKinBody(robot);
-        robot->ComputeJointHierarchy();
+        robot->_ComputeInternalInformation();
         return true;
     }
 
@@ -1328,7 +1328,7 @@ protected:
                 GetPhysicsEngine()->InitKinBody(*itbody);
             }
             FOREACH(itbody,_vecbodies)
-                (*itbody)->ComputeJointHierarchy();
+                (*itbody)->_ComputeInternalInformation();
         }
         if( options & Clone_Viewer ) {
             if( !!r->GetViewer() ) {

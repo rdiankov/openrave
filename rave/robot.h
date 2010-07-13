@@ -61,7 +61,7 @@ protected:
     Type _type;
 };
 
-/// General dynamic body that has manipulators, controllers, and sensors
+/// A kinematic body that has attached manipulators, sensors, and controllers.
 class RAVE_API RobotBase : public KinBody
 {
 public:
@@ -147,10 +147,12 @@ public:
 
         /// checks collision with only the gripper given its end-effector transform
         /// \param tEE the end effector transform
+        /// \param[out] report [optional] collision report
         /// \return true if a collision occurred
         virtual bool CheckEndEffectorCollision(const Transform& tEE, CollisionReportPtr report = CollisionReportPtr()) const;
 
         /// checks collision with the environment with all the independent links of the robot
+        /// \param[out] report [optional] collision report
         /// \return true if a collision occurred
         virtual bool CheckIndependentCollision(CollisionReportPtr report = CollisionReportPtr()) const;
 
@@ -237,15 +239,16 @@ public:
     typedef boost::shared_ptr<AttachedSensor> AttachedSensorPtr;
     typedef boost::shared_ptr<AttachedSensor const> AttachedSensorConstPtr;
 
-    /// describes the currently grabbed bodies
-    struct RAVE_API GRABBED
+    /// The information of a currently grabbed body.
+    struct RAVE_API Grabbed
     {
         KinBodyWeakPtr pbody; ///< the grabbed body
         LinkPtr plinkrobot; ///< robot link that is grabbing the body
         std::vector<LinkConstPtr> vCollidingLinks, vNonCollidingLinks; ///< robot links that already collide with the body
         Transform troot; // root transform (of first link) relative to end effector
     };
-
+    typedef Grabbed GRABBED RAVE_DEPRECATED;
+    
     /// Helper class derived from KinBodyStateSaver to additionaly save robot information.
     class RAVE_API RobotStateSaver : public KinBodyStateSaver
     {
@@ -258,7 +261,7 @@ public:
         int affinedofs;
         Vector rotationaxis;
         int nActiveManip;
-        std::vector<GRABBED> _vGrabbedBodies;
+        std::vector<Grabbed> _vGrabbedBodies;
     };
 
     virtual ~RobotBase();
@@ -276,13 +279,6 @@ public:
     virtual std::vector<ManipulatorPtr>& GetManipulators() { return _vecManipulators; }
     virtual bool SetMotion(TrajectoryBaseConstPtr ptraj) { return false; }
 
-    /// manipulators, grasping (KinBodys), usually involves the active manipulator
-    virtual void SetActiveManipulator(int index);
-    virtual void SetActiveManipulator(const std::string& manipname);
-    virtual ManipulatorPtr GetActiveManipulator();
-    virtual ManipulatorConstPtr GetActiveManipulator() const;
-    virtual int GetActiveManipulatorIndex() const { return _nActiveManip; }
-
     virtual std::vector<AttachedSensorPtr>& GetSensors() RAVE_DEPRECATED { RAVELOG_WARN("RobotBase::GetSensors() is deprecated\n"); return _vecSensors; }
     virtual std::vector<AttachedSensorPtr>& GetAttachedSensors() { return _vecSensors; }
     virtual ControllerBasePtr GetController() const { return ControllerBasePtr(); }
@@ -295,16 +291,21 @@ public:
     virtual void SetJointValues(const std::vector<dReal>& vJointValues, const Transform& transbase, bool bCheckLimits = false);
 
     virtual void SetBodyTransformations(const std::vector<Transform>& vbodies);
+
+    /// Transforms the robot and updates the attached sensors and grabbed bodies.
     virtual void SetTransform(const Transform& trans);
-
-    /** Set of active degrees of freedoms that all planners plan for. Planner should use the corresponding
-     *  GetActive* methods rather than the Get* methods when setting joints.
-     *  The affine transformation DOFs can be found after the joint DOFs in this order: X, Y, Z, Rotation
-     *  where rotation is one value if a rotation axis is specified or 3 values (angle * axis) if a full 3D rotation is specified.
-     *  Usually the affine transforamtion is with respect to the first link in the body
-     */
-    //@{
-
+    
+    /** Methods using the active degrees of freedoms of the robot. Active DOFs are a way for the
+        user to specify degrees of freedom of interest for a current execution block. All planners
+        by default use the robot's active DOF and active manipultor. For every Get* method, there is
+        a corresponding GetActive* method rather than the methods when setting joints.  The active
+        DOFs also include affine transfomrations of the robot's base. Affine transformation DOFs can
+        be found after the joint DOFs in this order: X, Y, Z, Rotation where rotation can be around
+        a specified axis a full 3D rotation.  Usually the affine transforamtion is with respect to
+        the first link in the body
+        @name Affine DOFs
+        @{
+    */
     /// if planner should plan with affine transformations, use this enumeartion to specify the real dofs
     enum DOFAffine
     {
@@ -320,16 +321,21 @@ public:
         DOF_RotationQuat = 32, ///< robot can rotate freely (4 dof), parameterization is a quaternion
     };
     
-    /// Set the joint indices and affine transformation dofs that the planner should use
-    /// \param nAffineDOsBitmask A bitmask of DOFAffine values (DOF_X)
-    /// if DOF_RotationAxis is specified, pRotationAxis is used as the axis
-    virtual void SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffineDOsBitmask = DOF_NoTransform);
-    virtual void SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffineDOsBitmask, const Vector& pRotationAxis);
+    /// Set the joint indices and affine transformation dofs that the planner should use. If \ref DOF_RotationAxis is specified, the previously set axis is used.
+    /// \param vDOFIndices the indices of the original degrees of freedom to use.
+    /// \param nAffineDOFsBitmask A bitmask of \ref DOFAffine values
+    virtual void SetActiveDOFs(const std::vector<int>& vDOFIndices, int nAffineDOFsBitmask = DOF_NoTransform);
+    /// \param vDOFIndices the indices of the original degrees of freedom to use.
+    /// \param nAffineDOFsBitmask A bitmask of \ref DOFAffine values
+    /// \param pRotationAxis if \ref DOF_RotationAxis is specified, pRotationAxis is used as the new axis
+    virtual void SetActiveDOFs(const std::vector<int>& vDOFIndices, int nAffineDOFsBitmask, const Vector& pRotationAxis);
     virtual int GetActiveDOF() const { return _nActiveDOF != 0 ? _nActiveDOF : GetDOF(); }
     virtual int GetAffineDOF() const { return _nAffineDOFs; }
 
     /// if dof is set in the affine dofs, returns its index in the dof values array, otherwise returns -1
     virtual int GetAffineDOFIndex(DOFAffine dof) const;
+    /// \return the set of active joint indices
+    virtual const std::vector<int>& GetActiveJointIndices() const;
 
     virtual Vector GetAffineRotationAxis() const { return vActvAffineRotationAxis; }
     virtual void SetAffineTranslationLimits(const Vector& lower, const Vector& upper);
@@ -379,37 +385,27 @@ public:
     /// computes the configuration difference q1-q2 and stores it in q1. Takes into account joint limits and circular joints
     virtual void SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vector<dReal>& q2) const;
 
-    /// Specifies the controlled degrees of freedom used to control the robot through torque
-    /// In the general sense, it is not always the case that there's a one-to-one mapping
-    /// between a robot's joints and the motors used to control the robot. A good example
-    /// of this is a differential-drive robot. If developers need such a robot, they
-    /// should derive from RobotBase and override these methods. The function that maps
-    /// control torques to actual movements of the robot should be put in SimulationStep.
-    /// As default, the control degrees of freedom are tied directly to the active degrees
-    /// of freedom; the max torques for affine dofs are 0 in this case.
-    //@{
-    virtual int GetControlDOF() const { return GetActiveDOF(); }
-    virtual void GetControlMaxTorques(std::vector<dReal>& vmaxtorque) const;
-    virtual void SetControlTorques(const std::vector<dReal>& pTorques);
-    //@}
+    /// sets the active manipulator of the robot
+    /// \param index manipulator index
+    virtual void SetActiveManipulator(int index);
+    /// sets the active manipulator of the robot
+    /// \param manipname manipulator name
+    virtual void SetActiveManipulator(const std::string& manipname);
+    virtual ManipulatorPtr GetActiveManipulator();
+    virtual ManipulatorConstPtr GetActiveManipulator() const;
+    /// \return index of the current active manipulator
+    virtual int GetActiveManipulatorIndex() const { return _nActiveManip; }
 
     /// Converts a trajectory specified with the current active degrees of freedom to a full joint/transform trajectory
     /// \param pFullTraj written with the final trajectory,
     /// \param pActiveTraj the input active dof trajectory
     /// \param bOverwriteTransforms if true will use the current robot transform as the base (ie will ignore any transforms specified in pActiveTraj). If false, will use the pActiveTraj transforms specified
     virtual void GetFullTrajectoryFromActive(TrajectoryBasePtr pFullTraj, TrajectoryBaseConstPtr pActiveTraj, bool bOverwriteTransforms = true);
-    virtual int GetActiveJointIndex(int active_index) const {
-        if( _nActiveDOF == 0 )
-            return active_index;
-        return active_index < (int)_vActiveJointIndices.size() ? _vActiveJointIndices[active_index] : -1;
-    }
-    virtual const std::vector<int>& GetActiveJointIndices();
 
     virtual bool SetActiveMotion(TrajectoryBaseConstPtr ptraj) { return false; }
 
     /// the speed at which the robot should go at
     virtual bool SetActiveMotion(TrajectoryBaseConstPtr ptraj, dReal fSpeed) { return SetActiveMotion(ptraj); }
-    //@}
 
     /// gets the jacobian with respect to a link, pfArray is a 3 x ActiveDOF matrix (rotations are not taken into account)
     /// Calculates the partial differentials for the active degrees of freedom that in the path from the root node to _veclinks[index]
@@ -421,55 +417,63 @@ public:
     virtual void CalculateActiveRotationJacobian(int index, const Vector& qInitialRot, std::vector<dReal>& pfJacobian) const;
     /// calculates the angular velocity jacobian of a specified link about the axes of world coordinates
     /// \param index of the link that the rotation is attached to
-    /// \param pfJacobian 3x(num ACTIVE DOF) matrix
+    /// \param vjacobian 3x(num ACTIVE DOF) matrix
     virtual void CalculateActiveAngularVelocityJacobian(int index, boost::multi_array<dReal,2>& vjacobian) const;
     virtual void CalculateActiveAngularVelocityJacobian(int index, std::vector<dReal>& pfJacobian) const;
 
-    /// grab and release the body with the active manipulator. A grabbed body becomes part of the robot
-    /// and its relative pose with respect to a robot's link will be fixed. AttachBody is called for every
-    /// grabbed body, so KinBody::GetAttached() can be used to figure out if anything is grabbing a body.
-    //@{
-    /// grabs a body with the current active manipulator. Body will be attached to the manipulator's end-effector
-    /// \param pbody the body to be grabbed
-    /// \return true if successful
-    virtual bool Grab(KinBodyPtr pbody);
-
-    /// grab and release the body with the active manipulator. A grabbed body becomes part of the robot
-    /// and its relative pose with respect to a robot's link will be fixed. AttachBody is called for every
-    /// grabbed body, so KinBody::GetAttached() can be used to figure out if anything is grabbing a body.
-    //@{
-    /// grabs a body with the current active manipulator. Body will be attached to the manipulator's end-effector
-    /// \param pbody the body to be grabbed
-    /// \param setRobotLinksToIgnore Additional robot link indices that collision checker ignore
+    //@}
+    
+    /** A grabbed body becomes part of the robot and its relative pose with respect to a robot's
+        link will be fixed. KinBody::_AttachBody is called for every grabbed body in order to make
+        the grabbed body a part of the robot. Once grabbed, the inter-collisions between the robot
+        and the body are regarded as self-collisions; any outside collisions of the body and the
+        environment are regarded as environment collisions with the robot.
+        @name Grabbing Bodies
+        @{
+    */
+    /// Grab the body with the specified link.
+    /// \param[in] pbody the body to be grabbed
+    /// \param[in] pRobotLinkToGrabWith the link of this robot that will perform the grab
+    /// \param[in] setRobotLinksToIgnore Additional robot link indices that collision checker ignore
     ///        when checking collisions between the grabbed body and the robot.
-    /// \return true if successful
-    virtual bool Grab(KinBodyPtr pbody, const std::set<int>& setRobotLinksToIgnore);
-
-    /// grabs a body with a specified robot link
-    /// \param pbody the body to be grabbed
-    /// \param plink the link of this robot that will perform the grab
-    /// \return true if successful
-    virtual bool Grab(KinBodyPtr pbody, LinkPtr plink);
-
-    /// grabs a body with a specified robot link
-    /// \param pbody the body to be grabbed
-    /// \param plink the link of this robot that will perform the grab
-    /// \param setRobotLinksToIgnore Additional robot link indices that collision checker ignore
-    ///        when checking collisions between the grabbed body and the robot.
-    /// \return true if successful
+    /// \return true if successful and body is grabbed
     virtual bool Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore);
 
-    virtual void Release(KinBodyPtr pbody); ///< release the body
+    /// Grab a body with the specified link.
+    /// \param[in] pbody the body to be grabbed
+    /// \param[in] pRobotLinkToGrabWith the link of this robot that will perform the grab
+    /// \return true if successful and body is grabbed
+    virtual bool Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith);
+
+    /// Grabs the body with the active manipulator's end effector.
+    /// \param[in] pbody the body to be grabbed
+    /// \param[in] setRobotLinksToIgnore Additional robot link indices that collision checker ignore
+    ///        when checking collisions between the grabbed body and the robot.
+    /// \return true if successful and body is grabbed
+    virtual bool Grab(KinBodyPtr pbody, const std::set<int>& setRobotLinksToIgnore);
+    
+    /// Grabs the body with the active manipulator's end effector.
+    /// \param[in] pbody the body to be grabbed
+    /// \return true if successful and body is grabbed
+    virtual bool Grab(KinBodyPtr pbody);
+
+    /// Release the body if grabbed.
+    /// \param pbody body to release
+    virtual void Release(KinBodyPtr pbody);
+
+    /// Release all grabbed bodies.
     virtual void ReleaseAllGrabbed(); ///< release all bodies
 
-    /// releases and grabs all bodies, has the effect of recalculating all the initial collision with the bodies.
+    /// Releases and grabs all bodies, has the effect of recalculating all the initial collision with the bodies.
     /// In other words, the current collisions any grabbed body makes with the robot will be re-inserted into an ignore list
     virtual void RegrabAll();
 
+    /// \param[in] pbody the body to check
     /// \return the robot link that is currently grabbing the body. If the body is not grabbed, will return an  empty pointer.
     virtual LinkPtr IsGrabbing(KinBodyConstPtr pbody) const;
 
-    /// gets all grabbed bodies whose collisions should also be checked
+    /// gets all grabbed bodies of the robot
+    /// \param[out] vbodies filled with the grabbed bodies
     virtual void GetGrabbed(std::vector<KinBodyPtr>& vbodies) const;
     //@}
 
@@ -481,9 +485,9 @@ public:
     virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr()) const;
 
     /// checks collision of a robot link with the surrounding environment. Attached/Grabbed bodies to this link are also checked for collision.
-    /// \param ilinkindex the index of the link to check
-    /// \param The transform of the link to check
-    /// \param optional collision report
+    /// \param[in] ilinkindex the index of the link to check
+    /// \param[in] tlinktrans The transform of the link to check
+    /// \param[out] report [optional] collision report
     virtual bool CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report = CollisionReportPtr());
     
     /// does not clone the grabbed bodies since it requires pointers from other bodies (that might not be initialized yet)
@@ -492,31 +496,47 @@ public:
     /// \return true if this body is derived from RobotBase
     virtual bool IsRobot() const { return true; }
 
-    virtual void ComputeJointHierarchy();
-
     virtual void serialize(std::ostream& o, int options) const;
 
     /// A md5 hash unique to the particular robot structure that involves manipulation and sensing components
     /// The serialization for the attached sensors will not involve any sensor specific properties (since they can change through calibration)
     virtual std::string GetRobotStructureHash() const;
-    
+
+    /** Specifies the controlled degrees of freedom used to control the robot through torque In the
+        general sense, it is not always the case that there's a one-to-one mapping between a robot's
+        joints and the motors used to control the robot. A good example of this is a
+        differential-drive robot. If developers need such a robot, they should derive from RobotBase
+        and override these methods. The function that maps control torques to actual movements of
+        the robot should be put in SimulationStep.  As default, the control degrees of freedom are
+        tied directly to the active degrees of freedom; the max torques for affine dofs are 0 in
+        this case.
+        @name Control DOF
+        @{
+    */
+    virtual int GetControlDOF() const { return GetActiveDOF(); }
+    virtual void GetControlMaxTorques(std::vector<dReal>& vmaxtorque) const;
+    virtual void SetControlTorques(const std::vector<dReal>& pTorques);
+    //@}
+
+
 protected:
     RobotBase(EnvironmentBasePtr penv);
 
     inline RobotBasePtr shared_robot() { return boost::static_pointer_cast<RobotBase>(shared_from_this()); }
     inline RobotBaseConstPtr shared_robot_const() const { return boost::static_pointer_cast<RobotBase const>(shared_from_this()); }
 
-    std::vector<GRABBED> _vGrabbedBodies;   ///vector of grabbed bodies
+    /// Proprocess the manipulators and sensors and build the specific robot hashes.
+    virtual void _ComputeInternalInformation();
+    
+    std::vector<Grabbed> _vGrabbedBodies;   ///vector of grabbed bodies
     virtual void _UpdateGrabbedBodies();
     virtual void _UpdateAttachedSensors();
-
-    /// manipulation planning
-    std::vector<ManipulatorPtr> _vecManipulators;
-    int _nActiveManip;                  ///< active manipulator
+    std::vector<ManipulatorPtr> _vecManipulators; ///< \see GetManipulators
+    int _nActiveManip;                  ///< \see GetActiveManipulatorIndex
 
     std::vector<AttachedSensorPtr> _vecSensors;
 
-    std::vector<int> _vActiveJointIndices, _vAllJointIndices;
+    std::vector<int> _vActiveJointIndices, _vAllDOFIndices;
     Vector vActvAffineRotationAxis;
     int _nActiveDOF;            ///< Active degrees of freedom; if 0, use robot dofs
     int _nAffineDOFs;           ///< dofs describe what affine transformations are allowed

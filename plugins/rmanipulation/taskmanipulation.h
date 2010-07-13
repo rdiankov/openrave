@@ -1119,10 +1119,9 @@ class TaskManipulation : public ProblemInstance
         string strtrajfilename;
         boost::shared_ptr<ostream> pOutputTrajStream;
         boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
-        graspparams->vgoalconfig.resize(_robot->GetActiveDOF());
 
         // initialize the moving direction as the opposite of the closing direction defined in the manipulators
-		vector<dReal> vclosingsign_full(_robot->GetDOF(), 0);
+        vector<dReal> vclosingsign_full(_robot->GetDOF(), 0);
         FOREACHC(itmanip, _robot->GetManipulators()) {
             BOOST_ASSERT((*itmanip)->GetClosingDirection().size()==(*itmanip)->GetGripperJoints().size());
             for(size_t i = 0; i < (*itmanip)->GetClosingDirection().size(); ++i) {
@@ -1131,12 +1130,12 @@ class TaskManipulation : public ProblemInstance
             }
         }
 
-        for(int i = 0; i < _robot->GetActiveDOF(); ++i) {
-            int index = _robot->GetActiveJointIndex(i);
-            if( index >= 0 )
-                graspparams->vgoalconfig[i] = -vclosingsign_full[index];
+        graspparams->vgoalconfig.resize(_robot->GetActiveDOF());
+        int i = 0;
+        FOREACHC(itindex,_robot->GetActiveJointIndices()) {
+            graspparams->vgoalconfig[i++] = -vclosingsign_full.at(*itindex);
         }
-
+        
         string cmd;
         while(!sinput.eof()) {
             sinput >> cmd;

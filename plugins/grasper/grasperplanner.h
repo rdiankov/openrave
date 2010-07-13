@@ -170,8 +170,9 @@ public:
         ptemp.q.resize(_robot->GetActiveDOF());
         ptemp.qdot.resize(_robot->GetActiveDOF());
 
-        for(int i = 0; i < _robot->GetActiveDOF(); i++)
+        for(int i = 0; i < _robot->GetActiveDOF(); i++) {
             UpdateDependents(i,dofvals);
+        }
 
         Vector vTargetCenter;
         dReal fTargetRadius;
@@ -335,12 +336,12 @@ public:
         ptemp.trans = _robot->GetTransform();
 
         //close the fingers one by one
-        for(int ifing = 0; ifing < _robot->GetActiveDOF(); ifing++) {
-            int nJointIndex = _robot->GetActiveJointIndex(ifing);
-            if( vclosingdir[ifing] == 0 || nJointIndex < 0 )
+        for(size_t ifing = 0; ifing < _robot->GetActiveJointIndices().size(); ifing++) {
+            if( vclosingdir.at(ifing) == 0 ) {
                 // not a real joint, so skip
-                continue;
-
+                break;
+            }
+            int nJointIndex = _robot->GetActiveJointIndices()[ifing];
             dReal fmult = 1;
             if(_robot->GetJoints().at(nJointIndex)->GetType() == KinBody::Joint::JointSlider )
                 fmult = _parameters->ftranslationstepmult;
@@ -362,7 +363,7 @@ public:
             
                 for(int q = 0; q < (int)vlinks.size(); q++) {
                     int ct;
-                    if(_robot->DoesAffect(_robot->GetActiveJointIndex(ifing),vlinks[q]->GetIndex())  && (ct = CheckCollision(vlinks[q])) != CT_None ) {
+                    if(_robot->DoesAffect(nJointIndex,vlinks[q]->GetIndex())  && (ct = CheckCollision(vlinks[q])) != CT_None ) {
                         if( !coarse_pass && (ct & CT_AvoidLinkHit) ) {
                             RAVELOG_VERBOSEA(str(boost::format("hit link that needed to be avoided: %s\n")%_report->__str__()));
                             return false;
@@ -380,7 +381,7 @@ public:
                             }
                             else {
                                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                                    RAVELOG_VERBOSEA(str(boost::format("Collision (%d) of link %s using joint %d [%s]\n")%ct%vlinks.at(q)->GetName()%_robot->GetActiveJointIndex(ifing)%_report->__str__()));
+                                    RAVELOG_VERBOSEA(str(boost::format("Collision (%d) of link %s using joint %d [%s]\n")%ct%vlinks.at(q)->GetName()%nJointIndex%_report->__str__()));
                                     stringstream ss; ss << "Transform: " << vlinks.at(q)->GetTransform() << ", Joint Vals: ";
                                     for(int vi = 0; vi < _robot->GetActiveDOF();vi++)
                                         ss << dofvals[vi] << " ";
@@ -398,7 +399,7 @@ public:
                         }
                         else {
                             if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                                RAVELOG_VERBOSEA(str(boost::format("Collision (%d) of link %s using joint %d [%s]\n")%ct%vlinks.at(q)->GetName()%_robot->GetActiveJointIndex(ifing)%_report->__str__()));
+                                RAVELOG_VERBOSEA(str(boost::format("Collision (%d) of link %s using joint %d [%s]\n")%ct%vlinks.at(q)->GetName()%nJointIndex%_report->__str__()));
                                 stringstream ss; ss << "Transform: " << vlinks.at(q)->GetTransform() << "Joint Vals: ";
                                 for(int vi = 0; vi < _robot->GetActiveDOF();vi++)
                                     ss << dofvals[vi] << " ";
@@ -483,16 +484,13 @@ public:
 
     virtual RobotBasePtr GetRobot() {return _robot; }
 
-    void UpdateDependents(int ifing, vector<dReal>& dofvals)
+    void UpdateDependents(size_t ifing, vector<dReal>& dofvals)
     {
-        for(int c = ifing; c < _robot->GetActiveDOF(); ++c ) {
-            int index = _robot->GetActiveJointIndex(c);
-            if( index < 0 )
-                // not a real joint, so skip
-                continue;
+        for(size_t c = ifing; c < _robot->GetActiveJointIndices().size(); ++c ) {
+            int index = _robot->GetActiveJointIndices()[c];
             KinBody::JointPtr pmimicjoint = _robot->GetJoints().at(index);
             //check that it's the right doff val
-            if( pmimicjoint->GetMimicJointIndex() == _robot->GetActiveJointIndex(ifing)) {
+            if( pmimicjoint->GetMimicJointIndex() == index) {
                 // set accordingly
                 dofvals[c] = pmimicjoint->GetMimicCoeffs()[0]*dofvals[ifing] + pmimicjoint->GetMimicCoeffs()[1];
             }

@@ -42,26 +42,8 @@ public:
     /// do not call inside a SimulationStep call
     virtual void Reset()=0;
 
-    /// @name Plugin functions
+    /// @name Interface Creation and Plugin Management
     //@{
-
-    /// get all the loaded plugins and the interfaces they support
-    /// \param plugins A list of plugins. Each entry has the plugin name and the interfaces it supports
-    virtual void GetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins)=0;
-
-    /// get a list of all the loaded interfaces
-    virtual void GetLoadedInterfaces(PLUGININFO& info) = 0;
-
-    /// load a plugin and its interfaces
-    /// \param name the filename of the plugin to load
-    virtual bool LoadPlugin(const std::string& name) = 0;
-    /// Reloads all currently loaded plugins. The interfaces currently created remain will continue using the old plugins, so this function is safe in that plugins currently loaded remain loaded until the last interface that uses them is released.
-    virtual void ReloadPlugins() = 0;
-
-    /// returns true if interface can be loaded from a plugin, otherwise false
-    virtual bool HasInterface(PluginType type, const std::string& interfacename) = 0;
-    //@}
-
     virtual InterfaceBasePtr CreateInterface(PluginType type,const std::string& interfacename)=0;
     virtual RobotBasePtr CreateRobot(const std::string& name="")=0;
     virtual PlannerBasePtr CreatePlanner(const std::string& name)=0;
@@ -73,7 +55,7 @@ public:
     virtual SensorBasePtr CreateSensor(const std::string& name)=0;
     virtual CollisionCheckerBasePtr CreateCollisionChecker(const std::string& name)=0;
     virtual RaveViewerBasePtr CreateViewer(const std::string& name)=0;
-
+    
     /// \return an empty KinBody instance, deallocate with delete, physics needs to be locked
     virtual KinBodyPtr CreateKinBody(const std::string& name="") = 0;
 
@@ -86,6 +68,25 @@ public:
     /// environment owner if interface is removed
     virtual void DisownInterface(InterfaceBasePtr pinterface) = 0;
 
+    /// returns true if interface can be loaded from a plugin, otherwise false
+    virtual bool HasInterface(PluginType type, const std::string& interfacename) = 0;
+    
+    /// get all the loaded plugins and the interfaces they support
+    /// \param plugins A list of plugins. Each entry has the plugin name and the interfaces it supports
+    virtual void GetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins)=0;
+
+    /// get a list of all the loaded interfaces
+    virtual void GetLoadedInterfaces(PLUGININFO& info) = 0;
+
+    /// load a plugin and its interfaces
+    /// \param name the filename of the plugin to load
+    virtual bool LoadPlugin(const std::string& name) = 0;
+    /// \brief Reloads all currently loaded plugins.
+    ///
+    /// The interfaces currently created remain will continue using the old plugins, so this function is safe in that plugins currently loaded remain loaded until the last interface that uses them is released.
+    virtual void ReloadPlugins() = 0;
+    //@}
+
     /// Returns a clone of the current environment. Clones do not share any memory or resource between each other
     /// or their parent making them ideal for performing separte planning experiments while keeping
     /// the parent environment unchanged.
@@ -94,10 +95,10 @@ public:
     /// \param options A set of CloningOptions describing what is actually cloned.
     virtual EnvironmentBasePtr CloneSelf(int options) = 0;
 
-    /// @name Collision specific functions.
     /// Each function takes an optional pointer to a CollisionReport structure and returns true if collision occurs.
+    /// @name Collision specific functions.
     //@{
-
+    /// set the global environment collision checker
     virtual bool SetCollisionChecker(CollisionCheckerBasePtr pchecker)=0;
     virtual CollisionCheckerBasePtr GetCollisionChecker() const =0;
 
@@ -113,36 +114,39 @@ public:
     /// Check collision with a link and a ray with a specified length.
     /// \param ray holds the origin and direction. The length of the ray is the length of the direction.
     /// \param plink the link to collide with
-    /// \param report an optional collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
+    /// \param[out] report [optional] collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
     virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
     /// Check collision with a link and a ray with a specified length.
     /// \param ray holds the origin and direction. The length of the ray is the length of the direction.
-    /// \param plink the link to collide with
-    /// \param report an optional collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
+    /// \param pbody the link to collide with
+    /// \param[out] report [optional] collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
     virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
     /// Check collision with a body and a ray with a specified length.
     /// \param ray holds the origin and direction. The length of the ray is the length of the direction.
     /// \param pbody the kinbody to look for collisions
-    /// \param report an optional collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
+    /// \param[out] report [optional] collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
+    /// check self collision with the body
     virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
-    //@}
 
-    /// Register a callback to be called whenever a collision is detected between between bodies during a CheckCollision call or physics simulation.
-    /// action = callback(CollisionReport,bool IsCalledFromPhysicsEngine)
-    /// The callback should return an action specifying how the collision should be handled.
-    /// \return a handle to the registration, once the handle loses scope, the callback is unregistered
     typedef boost::function<CollisionAction(CollisionReportPtr,bool)> CollisionCallbackFn;
+        
+    /// Register a collision callback.
+    ///
+    /// Whenever a collision is detected between between bodies during a CheckCollision call or physics simulation, the callback is called.
+    /// The callback should return an action specifying how the collision should be handled:
+    /// <b>action = callback(CollisionReport,bool IsCalledFromPhysicsEngine)</b>
+    /// \return a handle to the registration, once the handle loses scope, the callback is unregistered
     virtual boost::shared_ptr<void> RegisterCollisionCallback(const CollisionCallbackFn& callback) = 0;
     virtual bool HasRegisteredCollisionCallbacks() const = 0;
     virtual void GetRegisteredCollisionCallbacks(std::list<CollisionCallbackFn>&) const = 0;
+    //@}
 
     /// @name Physics/Simulation
     //@{
-
     /// set the physics engine, disabled by default
     /// \param the engine to set, if NULL, environment sets an dummy physics engine
     virtual bool SetPhysicsEngine(PhysicsEngineBasePtr pengine) = 0;
@@ -168,14 +172,12 @@ public:
 
     /// @name XML Parsing, File Loading
     //@{ 
-
     /// Loads a scene from an XML file, environment is locked automatically making this method thread-safe
     virtual bool Load(const std::string& filename) = 0;
     /// Loads a scene from XML-formatted data, environment is locked automatically making this method thread-safe
     virtual bool LoadXMLData(const std::string& data) = 0;
     /// Saves a scene depending on the filename extension. Default is in COLLADA format
     virtual bool Save(const std::string& filename) = 0;
-
     /// Initializes a robot from an XML file. The robot should not be added the environment when calling this function.
     /// \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled
     /// \param filename the name of the file to open
@@ -236,25 +238,28 @@ public:
     /// @name Object Setting/Querying
     //@{
     /// add a body to the environment
-    /// \param pbody the pointer to an initialized body
-    /// \param bAnonymous if true and there exists a body with the same name, will make body's name unique
-    virtual bool AddKinBody(KinBodyPtr pbody, bool bAnonymous=false) = 0;
+    /// \param[in] body the pointer to an initialized body
+    /// \param[in] bAnonymous if true and there exists a body with the same name, will make body's name unique
+    virtual bool AddKinBody(KinBodyPtr body, bool bAnonymous=false) = 0;
     /// add a body to the environment
-    /// \param pbody the pointer to an initialized body
-    /// \param bAnonymous if true and there exists a body with the same name, will make body's name unique
+    /// \param[in] robot the pointer to an initialized body
+    /// \param[in] bAnonymous if true and there exists a body with the same name, will make body's name unique
     virtual bool AddRobot(RobotBasePtr robot, bool bAnonymous=false) = 0;
 
-    /// Removes  KinBody from the environment. If bDestroy is true, also
-    /// deallocates the KinBody memory (physics also needs to be locked!). 
-    virtual bool RemoveKinBody(KinBodyPtr pbody) = 0;
+    /// Removes a body from the environment [multi-thread safe].
+    /// \param[in] body the body to remove
+    virtual bool RemoveKinBody(KinBodyPtr body) = 0;
 
+    /// Query a body from its name [multi-thread safe].
     /// \return first KinBody (including robots) that matches with name
     virtual KinBodyPtr GetKinBody(const std::string& name)=0;
 
-    /// \return first Robot that matches with name
+    /// Query a robot from its name [multi-thread safe].
+    /// \return first Robot that matches the name
     virtual RobotBasePtr GetRobot(const std::string& name)=0;
 
-    /// fill an array with all bodies loaded in the environment (including roobts)
+    /// Get all bodies loaded in the environment (including robots) [multi-thread safe]
+    /// \paramp[out] bodies filled with all the bodies
     virtual void GetBodies(std::vector<KinBodyPtr>& bodies) const = 0;
 
     /// fill an array with all robots loaded in the environment
@@ -274,11 +279,12 @@ public:
     virtual KinBodyPtr GetBodyFromEnvironmentId(int id) = 0;
     virtual KinBodyPtr GetBodyFromNetworkId(int id) RAVE_DEPRECATED = 0;
 
+    /// A set of options specifying what to triangulate
     enum TriangulateOptions
     {
         TO_Obstacles = 1,   ///< everything but robots
-        TO_Robots = 2,
-        TO_Everything = 3,  ///< all KinBodies
+        TO_Robots = 2,      ///< all robots
+        TO_Everything = 3,  ///< all bodies and robots everything
         TO_Body = 4,        ///< only triangulate kinbody
         TO_AllExceptBody = 5 ///< triangulate everything but kinbody
     };

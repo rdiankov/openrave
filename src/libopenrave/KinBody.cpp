@@ -371,7 +371,7 @@ void KinBody::Link::GEOMPROPERTIES::SetCollisionMesh(const TRIMESH& mesh)
     LinkPtr parent(_parent);
     collisionmesh = mesh;
     parent->UpdateCollisionMesh();
-    parent->GetParent()->ParametersChanged(Prop_LinkGeometry);
+    parent->GetParent()->_ParametersChanged(Prop_LinkGeometry);
 }
 
 void KinBody::Link::GEOMPROPERTIES::SetDraw(bool bDraw)
@@ -379,7 +379,7 @@ void KinBody::Link::GEOMPROPERTIES::SetDraw(bool bDraw)
     if( _bDraw != bDraw ) {
         LinkPtr parent(_parent);
         _bDraw = bDraw;
-        parent->GetParent()->ParametersChanged(Prop_LinkDraw);
+        parent->GetParent()->_ParametersChanged(Prop_LinkDraw);
     }
 }
 
@@ -387,7 +387,7 @@ void KinBody::Link::GEOMPROPERTIES::SetTransparency(float f)
 {
     LinkPtr parent(_parent);
     ftransparency = f;
-    parent->GetParent()->ParametersChanged(Prop_LinkDraw);
+    parent->GetParent()->_ParametersChanged(Prop_LinkDraw);
 }
 
 /*
@@ -597,7 +597,7 @@ void KinBody::Link::SwapGeometries(std::list<KinBody::Link::GEOMPROPERTIES>& lis
     FOREACH(itgeom,listNewGeometries)
         itgeom->_parent=pnewlink;
     UpdateCollisionMesh();
-    GetParent()->ParametersChanged(Prop_LinkGeometry);
+    GetParent()->_ParametersChanged(Prop_LinkGeometry);
 }
 
 bool KinBody::Link::ValidateContactNormal(const Vector& position, Vector& normal) const
@@ -813,26 +813,26 @@ dReal KinBody::Joint::GetWeight(int iaxis) const
 void KinBody::Joint::SetJointOffset(dReal newoffset)
 {
     offset = newoffset;
-    GetParent()->ParametersChanged(Prop_JointOffset);
+    GetParent()->_ParametersChanged(Prop_JointOffset);
 }
 
 void KinBody::Joint::SetJointLimits(const std::vector<dReal>& vLowerLimit, const std::vector<dReal>& vUpperLimit)
 {
     _vlowerlimit = vLowerLimit;
     _vupperlimit = vUpperLimit;
-    GetParent()->ParametersChanged(Prop_JointLimits);
+    GetParent()->_ParametersChanged(Prop_JointLimits);
 }
 
 void KinBody::Joint::SetResolution(dReal resolution)
 {
     fResolution = resolution;
-    GetParent()->ParametersChanged(Prop_JointProperties);
+    GetParent()->_ParametersChanged(Prop_JointProperties);
 }
 
 void KinBody::Joint::SetWeights(const std::vector<dReal>& vweights)
 {
     _vweights = vweights;
-    GetParent()->ParametersChanged(Prop_JointProperties);
+    GetParent()->_ParametersChanged(Prop_JointProperties);
 }
 
 void KinBody::Joint::AddTorque(const std::vector<dReal>& pTorques)
@@ -1029,7 +1029,7 @@ void KinBody::SetName(const std::string& newname)
     BOOST_ASSERT(newname.size() > 0);
     if( name != newname ) {
         name = newname;
-        ParametersChanged(Prop_Name);
+        _ParametersChanged(Prop_Name);
     }
 }
 
@@ -2206,7 +2206,7 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report) const
     return false;
 }
 
-void KinBody::ComputeJointHierarchy()
+void KinBody::_ComputeInternalInformation()
 {
     BOOST_ASSERT(_vecJointIndices.size()==_vecjoints.size());
     _bHierarchyComputed = true;
@@ -2837,7 +2837,7 @@ bool KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     return true;
 }
 
-void KinBody::ParametersChanged(int parameters)
+void KinBody::_ParametersChanged(int parameters)
 {
     _nUpdateStampId++;
     std::list<std::pair<int,boost::function<void()> > > listRegisteredCallbacks = _listRegisteredCallbacks; // copy since it can be changed

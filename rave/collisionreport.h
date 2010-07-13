@@ -51,7 +51,7 @@ public:
     virtual std::string __str__() const;
 };
 
-typedef CollisionReport COLLISIONREPORT;
+typedef CollisionReport COLLISIONREPORT RAVE_DEPRECATED;
 
 } // end namespace OpenRAVE
 

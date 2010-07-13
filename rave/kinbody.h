@@ -310,10 +310,14 @@ public:
         /// \return the anchor of the joint in global coordinates
         virtual Vector GetAnchor() const;
 
+        /// \param[in] iaxis the axis to get
         /// \return the axis of the joint in global coordinates
         virtual Vector GetAxis(int iaxis = 0) const;
 
-        /// \param bAppend if true will append to the end of the vector instead of erasing it
+        /// Returns the limits of the joint
+        /// \param[out] vLowerLimit the lower limits
+        /// \param[out] vUpperLimit the upper limits
+        /// \param[in] bAppend if true will append to the end of the vector instead of erasing it
         /// \return degrees of freedom of the joint
         virtual void GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit, bool bAppend=false) const;
 
@@ -491,8 +495,8 @@ public:
     virtual const std::string& GetName() const           { return name; }
     virtual void SetName(const std::string& newname);
 
-    /// @name Basic Information
     /// Methods for accessing basic information about joints
+    /// @name Basic Information
     //@{
 
     /// \return number of controllable degrees of freedom of the body. Only uses _vecjoints and last joint for computation, so can work before ComputeJointHierarchy is called.
@@ -705,17 +709,24 @@ public:
 protected:
     /// constructors declared protected so that user always goes through environment to create bodies
     KinBody(PluginType type, EnvironmentBasePtr penv);
+    inline KinBodyPtr shared_kinbody() { return boost::static_pointer_cast<KinBody>(shared_from_this()); }
+    inline KinBodyConstPtr shared_kinbody_const() const { return boost::static_pointer_cast<KinBody const>(shared_from_this()); }
     
     /// specific data about physics engine, should be set only by the current PhysicsEngineBase
     virtual void SetPhysicsData(boost::shared_ptr<void> pdata) { _pPhysicsData = pdata; }
     virtual void SetCollisionData(boost::shared_ptr<void> pdata) { _pCollisionData = pdata; }
     virtual void SetManageData(ManageDataPtr pdata) { _pManageData = pdata; }
 
-    virtual void ComputeJointHierarchy();
-    virtual void ParametersChanged(int parmameters);
+    /// Proprocess the kinematic body and build the internal hierarchy.
+    ///
+    /// This method is called after the body is finished being initialized with data and before being added to the environment. Also builds the hashes.
+    virtual void _ComputeInternalInformation();
 
-    inline KinBodyPtr shared_kinbody() { return boost::static_pointer_cast<KinBody>(shared_from_this()); }
-    inline KinBodyConstPtr shared_kinbody_const() const { return boost::static_pointer_cast<KinBody const>(shared_from_this()); }
+    /// Called to notify the body that certain groups of parameters have been changed.
+    ///
+    /// This function in calls every registers calledback that is tracking the changes.
+    virtual void _ParametersChanged(int parmameters);
+
 
     /// \return true if two bodies should be considered as one during collision (ie one is grabbing the other)
     virtual bool _IsAttached(KinBodyConstPtr pbody, std::set<KinBodyConstPtr>& setChecked) const;

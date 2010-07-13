@@ -18,28 +18,33 @@
 
 namespace OpenRAVE {
 
-/*! \brief Planner interface that generates trajectories for the robot to follow around the environment
- *
- * Planner should be able to query sensor information from the Robot like its current camera image etc.
- * Planner should be compatible with Robot presented (some hand-shaking happens between the two classes).
- * Examples of planners are:
- * - Manipulation - manipulable objects need to be specified. Objects like doors should be special cases that planners knows about.
- * - Following - Goal easily changes. Attributes can change.
- * - Object Building - Need to describe how parts of object fit together into a bigger part.
- * - Dish Washing - Specific goals are not specified, just a condition that all plates need to be inside.
- * - Foot step planning - Need discrete footsteps and other capabilities from robot.
+/** \brief Planner interface that generates trajectories for the robot to follow around the environment
+        
+ Planner should be able to query sensor information from the Robot like its current camera image etc.
+ Planner should be compatible with Robot presented (some hand-shaking happens between the two classes).
+ Examples of planners are:
+ - Manipulation - manipulable objects need to be specified. Objects like doors should be special cases that planners knows about.
+ - Following - Goal easily changes. Attributes can change.
+ - Object Building - Need to describe how parts of object fit together into a bigger part.
+ - Dish Washing - Specific goals are not specified, just a condition that all plates need to be inside.
+ - Foot step planning - Need discrete footsteps and other capabilities from robot.
 */
 class RAVE_API PlannerBase : public InterfaceBase
 {
 public:
+    /// Options for constraint planning.
     enum ConstraintSettings  {
         CS_TimeBackward=1, ///< if not specified, time is forward
     };
 
-    /// Describes a common interface for planning parameters.
-    /// If extra parameters need to be specified, 
-    /// derive from this class and override the startElement, endElement, and possibly characters calls
-    /// The class can be serialized using the <<, >>, and serialize
+    /** \brief Describes a common and serializable interface for planning parameters.
+
+        The class is serializable to XML, so can be loaded from file or passed around the network.
+        If extra parameters need to be specified, derive from this class and
+        - add the extra tags to PlannerParameters::_vXMLParameters
+        - override PlannerParameters::startElement and PlannerParameters::endElement for processing
+        - possibly override the PlannerParameters::characters
+    */
     class RAVE_API PlannerParameters : public BaseXMLReader, public XMLReadable
     {
     public:
@@ -55,13 +60,13 @@ public:
         /// sets up the planner parameters to use the active joints of the robot
         void SetRobotActiveJoints(RobotBasePtr robot);
 
-        /// Cost function on the state pace (optional)
+        /// \brief Cost function on the state pace (optional).
         ///
         /// cost = costfn(config)
         /// \param cost the cost of being in the current state
         boost::function<dReal(const std::vector<dReal>&)> _costfn;
 
-        /// Goal heuristic function
+        /// \brief Goal heuristic function.
         ///
         /// goal is complete when returns 0 (optional)
         /// distance = goalfn(config)
@@ -71,7 +76,7 @@ public:
         /// optional, Distance metric between configuration spaces, two configurations are considered the same when this returns 0: distmetric(config1,config2)
         boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _distmetricfn;
 
-        /// Filters the current robot configurations (optional)
+        /// \brief Filters the current robot configurations (optional).
         ///
         /// optional, used to maintain certains a movement from a src robot configuration to robot configuration:
         /// success = _constraintfn(vprevconf,vnewconf,settings)
@@ -83,13 +88,13 @@ public:
         /// \param settings options specified in ConstraingSettings 
         boost::function<bool(const std::vector<dReal>&, std::vector<dReal>&, int)> _constraintfn;
 
-        /// Samples a random configuration (mandatory)
+        /// \brief Samples a random configuration (mandatory)
         ///
         /// The dimension of the returned sample is the dimension of the configuration space.
         /// success = samplefn(newsample)
         boost::function<bool(std::vector<dReal>&)> _samplefn;
 
-        /// Samples a valid goal configuration (optional)
+        /// \brief Samples a valid goal configuration (optional).
         ///
         /// If valid, the function should be called
         /// at every iteration. Any type of goal sampling probabilities and conditions can be encoded inside the function.
@@ -97,7 +102,7 @@ public:
         // success = samplegoalfn(newsample)
         boost::function<bool(std::vector<dReal>&)> _samplegoalfn;
 
-        /// Returns a random configuration around a neighborhood (optional)
+        /// \brief Returns a random configuration around a neighborhood (optional).
         /// 
         /// _sampleneighfn(newsample,pCurSample,fRadius)
         /// \param pCurSample - the neighborhood to sample around
@@ -106,11 +111,14 @@ public:
         /// \return if sample was successfully generated return true, otherwise false
         boost::function<bool(std::vector<dReal>&, const std::vector<dReal>&, dReal)> _sampleneighfn;
 
-        /// sets the state of the robot. Default is active robot joints (mandatory)
+        /// \brief Sets the state of the robot. Default is active robot joints (mandatory).
         boost::function<void(const std::vector<dReal>&)> _setstatefn;
-        /// gets the state of the robot. Default is active robot joints (mandatory)
+        /// \brief Gets the state of the robot. Default is active robot joints (mandatory).
         boost::function<void(std::vector<dReal>&)> _getstatefn;
-        /// computes the difference of two states necessary for correct interpolation when there are circular joints. Default is regular subtraction.
+        /// \brief  Computes the difference of two states.
+        ///
+        /// An explicit difference function is necessary for correct interpolation when there are circular joints.
+        /// Default is regular subtraction.
         /// _diffstatefn(q1,q2) -> q1 -= q2
         boost::function<void(std::vector<dReal>&,const std::vector<dReal>&)> _diffstatefn;
 
@@ -147,6 +155,7 @@ public:
         /// default is true
         bool _bCheckSelfCollisions;
 
+        /// \return the degrees of freedom of the planning configuration space
         virtual int GetDOF() const { return (int)_vConfigLowerLimit.size(); }
 
     protected:
@@ -182,28 +191,29 @@ public:
     PlannerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Planner, penv) {}
     virtual ~PlannerBase() {}
 
-    /// return the static interface type this class points to (used for safe casting)
+    /// \return the static interface type this class points to (used for safe casting)
     static inline PluginType GetInterfaceTypeStatic() { return PT_Planner; }
     
-    /// Setup scene, robot, and properties of the plan, and reset all internal structures
+    /// \brief Setup scene, robot, and properties of the plan, and reset all internal structures.
     /// \param probot The robot will be planning for.
     /// \param pparams The parameters of the planner, any class derived from PlannerParameters can be passed. The planner should copy these parameters for future instead of storing the pointer.
     virtual bool InitPlan(RobotBasePtr probot, PlannerParametersConstPtr pparams) = 0;
 
-    /// Setup scene, robot, and properties of the plan, and reset all structures with pparams
+    /// \brief Setup scene, robot, and properties of the plan, and reset all structures with pparams.
     /// \param pbase The robot will be planning for.
     /// \param isParameters The serialized form of the parameters. By default, this exists to allow third parties to
     /// pass information to planners without excplicitly knowning the format/internal structures used
     virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters);
 
-    /// Executes the main planner trying to solve for the goal condition. Fill ptraj with the trajectory
-    /// of the planned path that the robot needs to execute
+    /// \brief Executes the main planner trying to solve for the goal condition.
+    ///
+    /// Fill ptraj with the trajectory of the planned path that the robot needs to execute
     /// \param ptraj The output trajectory the robot has to follow in order to successfully complete the plan. If this planner is a path optimizer, the trajectory can be used as an input for generating a smoother path. The trajectory is for the configuration degrees of freedom defined by the planner parameters.
     /// \param pOutStream If specified, planner will output any other special data
     /// \return true if planner is successful
     virtual bool PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream = boost::shared_ptr<std::ostream>()) = 0;
 
-    /// the internal parameters of the planner
+    /// \return the internal parameters of the planner
     virtual PlannerParametersConstPtr GetParameters() const = 0;
 
 protected:

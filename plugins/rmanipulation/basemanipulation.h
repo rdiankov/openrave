@@ -1187,7 +1187,6 @@ protected:
         string strtrajfilename;
         boost::shared_ptr<ostream> pOutputTrajStream;
         boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
-        graspparams->vgoalconfig.resize(robot->GetActiveDOF());
 
         // initialize the moving direction as the opposite of the closing direction defined in the manipulators
 		vector<dReal> vclosingsign_full(robot->GetDOF(), 0);
@@ -1199,10 +1198,10 @@ protected:
             }
         }
 
-        for(int i = 0; i < robot->GetActiveDOF(); ++i) {
-            int index = robot->GetActiveJointIndex(i);
-            if( index >= 0 )
-                graspparams->vgoalconfig[i] = -vclosingsign_full[index];
+        graspparams->vgoalconfig.resize(robot->GetActiveDOF());
+        int i = 0;
+        FOREACHC(itindex,robot->GetActiveJointIndices()) {
+            graspparams->vgoalconfig[i++] = -vclosingsign_full.at(*itindex);
         }
 
         string cmd;

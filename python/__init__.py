@@ -1,4 +1,16 @@
 # -*- coding: utf-8 -*-
+# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License. 
 """
 ================
 openravepy usage
@@ -41,6 +53,84 @@ planning example hanoi can be found in ``openravepy/examples/hanoi.py`` and exec
   openrave.py --example hanoi
 
 OpenRAVE should automatically pop up and the puma arm will attempt to grasp the pegs on the table.
+
+openrave.py
+===========
+
+The openrave.py script is an attempt to make the command line parameters for openrave much simpler to use. It is a superset of the functions provided by the original *openrave* program, except it supports many other interesting features and provides a window to all openravepy functions. It can also automatically add openravepy to the PYTHONPATH making it simpler for users. Here are some features it supports:
+
+- Opening files with the **-i** option will now drop into the ipython interpreter after loading the particular files specified.  For example::
+
+    openrave.py -i data/lab1.env.xml
+
+  **Output**::
+
+    [openravepy_int.cpp:2679] viewer qtcoin successfully attached
+    OpenRAVE Dropping into IPython
+    In [1]:
+
+  The first robot in the scene is automatically loaded into the 'robot' variable, so it can be immediately used for scripting operations:
+
+  .. code-block:: python
+
+    In [1]: robot.GetJoints()
+    Out[1]:
+    [<env.GetKinBody('BarrettWAM').GetJoint('Shoulder_Yaw')>,
+     <env.GetKinBody('BarrettWAM').GetJoint('Shoulder_Pitch')>, ...]
+
+- Can start a database generation process::
+
+    openrave.py --database inversekinematics --robot=robots/pa10.robot.xml
+
+- Can execute an example::
+
+    openrave.py --example graspplanning
+
+- Can query all executable databases::
+
+    openrave.py --listdatabases
+
+  **Output**::
+
+     convexdecomposition
+     grasping
+     inversekinematics
+     inversereachability
+     kinematicreachability
+     linkstatistics
+     visibilitymodel
+
+- Can set custom collision, physics, and viewer::
+
+    openrave.py --collision=pqp --viewer=qtcoin --physics=ode data/lab1.env.xml
+
+- Can set debug mode::
+
+    openrave.py --level=verbose data/lab1.env.xml
+
+- Can execute arbitrary python code::
+
+   openrave.py -p "print 'robot manipulators: ',robot.GetManipulators()" robots/pr2-beta-sim.robot.xml
+
+- Can execute arbitrary python code and step into the ipython interpreter::
+
+   openrave.py -p "manip=robot.GetActiveManipulator()" -i robots/pr2-beta-sim.robot.xml
+
+- Can execute arbitrary python code and exit::
+
+   openrave.py -p "print('links: '+str(robot.GetLinks())); sys.exit(0)" robots/pr2-beta-sim.robot.xml
+
+
+Given that environment xml files can now contain tags for any interface, it is possible to setup all the used interfaces in the XML, open it with **openrave.py -i**, and immediately start introspecting on the state.
+
+openrave-hash.py
+================
+
+Can query all the hashes openrave uses to manage robot descriptions::
+
+  openrave-hash.py data/mug1.kinbody.xml
+  openrave.py --robothash robots/barrettsegway.robot.xml
+
 
 Quick Examples
 --------------
@@ -145,82 +235,8 @@ For those who want to optimize the locking of the environment every time, they c
   with RobotStateSaver(robot):
     # robot state now preserved
 
-openrave.py
------------
-
-The openrave.py script is an attempt to make the command line parameters for openrave much simpler to use. It is a superset of the functions provided by the original *openrave* program, except it supports many other interesting features and provides a window to all openravepy functions. It can also automatically add openravepy to the PYTHONPATH making it simpler for users. Here are some features it supports:
-
-- Opening files with the **-i** option will now drop into the ipython interpreter after loading the particular files specified.  For example::
-
-    openrave.py -i data/lab1.env.xml
-
-  **Output**::
-
-    [openravepy_int.cpp:2679] viewer qtcoin successfully attached
-    OpenRAVE Dropping into IPython
-    In [1]:
-
-  The first robot in the scene is automatically loaded into the 'robot' variable, so it can be immediately used for scripting operations:
-
-  .. code-block:: python
-
-    In [1]: robot.GetJoints()
-    Out[1]:
-    [<env.GetKinBody('BarrettWAM').GetJoint('Shoulder_Yaw')>,
-     <env.GetKinBody('BarrettWAM').GetJoint('Shoulder_Pitch')>, ...]
-
-- Can start a database generation process::
-
-    openrave.py --database inversekinematics --robot=robots/pa10.robot.xml
-
-- Can execute an example::
-
-    openrave.py --example graspplanning
-
-- Can query all executable databases::
-
-    openrave.py --listdatabases
-
-  **Output**::
-
-     convexdecomposition
-     grasping
-     inversekinematics
-     inversereachability
-     kinematicreachability
-     linkstatistics
-     visibilitymodel
-
-- Can set custom collision, physics, and viewer::
-
-    openrave.py --collision=pqp --viewer=qtcoin --physics=ode data/lab1.env.xml
-
-- Can set debug mode::
-
-    openrave.py --level=verbose data/lab1.env.xml
-
-- Can execute arbitrary python code::
-
-   openrave.py -p "print 'robot manipulators: ',robot.GetManipulators()" robots/pr2-beta-sim.robot.xml
-
-- Can execute arbitrary python code and step into the ipython interpreter::
-
-   openrave.py -p "manip=robot.GetActiveManipulator()" -i robots/pr2-beta-sim.robot.xml
-
-- Can execute arbitrary python code and exit::
-
-   openrave.py -p "print('links: '+str(robot.GetLinks())); sys.exit(0)" robots/pr2-beta-sim.robot.xml
-
-
-Given that environment xml files can now contain tags for any interface, it is possible to setup all the used interfaces in the XML, open it with **openrave.py -i**, and immediately start introspecting on the state.
-
-openrave-hash.py
-----------------
-
-Can query all the hashes openrave uses to manage robot descriptions::
-
-  openrave.py --bodyhash=data/mug1.kinbody.xml
-  openrave.py --robothash=robots/barrettsegway.robot.xml
+Reference
+---------
 
 .. _OpenRAVE: http://openrave.programmingvision.com
 
