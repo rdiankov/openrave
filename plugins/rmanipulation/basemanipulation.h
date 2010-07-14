@@ -51,8 +51,6 @@ public:
                         "see TaskManipulation problem.");
         RegisterCommand("JitterActive",boost::bind(&BaseManipulation::JitterActive,this,_1,_2),
                         "Jitters the active DOF for a collision-free position.");
-        RegisterCommand("IKTest",boost::bind(&BaseManipulation::IKtest,this,_1,_2),
-                        "Tests for an IK solution if active manipulation has an IK solver attached");
         RegisterCommand("SmoothTrajectory",boost::bind(&BaseManipulation::SmoothTrajectory,this,_1,_2),
                         "Smooths a trajectory of points and returns the new trajectory such that\n"
                         "it is guaranteed to contain no co-linear points in configuration space\n");
@@ -1358,84 +1356,6 @@ protected:
         }
 
         CM::SetActiveTrajectory(robot, ptraj, bExecute, "", pOutputTrajStream,_fMaxVelMult);
-        return true;
-    }
-
-    bool IKtest(ostream& sout, istream& sinput)
-    {
-        RAVELOG_DEBUGA("Starting IKtest...\n");
-
-        vector<dReal> varmjointvals, values;
-        RobotBase::ManipulatorConstPtr pmanip = robot->GetActiveManipulator();
-
-        TransformMatrix handTm = pmanip->GetEndEffectorTransform();
-        bool bCheckCollision = true;
-
-        string cmd;
-        while(!sinput.eof()) {
-            sinput >> cmd;
-            if( !sinput )
-                break;
-            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-
-            if( cmd == "trans" ) {
-                RAVELOG_WARN("IKtest: trans parameter has been deprecated, switch to matrix/matrices/poses");
-                sinput >> handTm.trans.x >> handTm.trans.y >> handTm.trans.z;
-            }
-            else if( cmd == "rot" ) {
-                RAVELOG_WARN("IKtest: rot parameter has been deprecated, switch to matrix/matrices/poses");
-                sinput >> handTm.m[0] >> handTm.m[4] >> handTm.m[8]
-                       >> handTm.m[1] >> handTm.m[5] >> handTm.m[9]
-                       >> handTm.m[2] >> handTm.m[6] >> handTm.m[10];
-            }
-            else if( cmd == "matrix" ) {
-                sinput >> handTm;
-            }
-            else if( cmd == "armjoints" ) {
-                varmjointvals.resize(pmanip->GetArmJoints().size());
-                FOREACH(it, varmjointvals)
-                    sinput >> *it;
-            }
-            else if( cmd == "nocol" ) {
-                bCheckCollision = false;
-            }
-            else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
-                break;
-            }
-
-            if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
-                return false;
-            }
-        }
-
-        RobotBase::RobotStateSaver saver(robot);
-
-        Transform handTr(handTm);
-    
-        robot->GetDOFValues(values);
-
-        for(size_t i = 0; i < varmjointvals.size(); i++)
-            values[pmanip->GetArmJoints()[i]] = varmjointvals[i];
-
-        robot->SetJointValues(values);
-
-        vector<dReal> q1;
-    
-        if( !pmanip->FindIKSolution(handTr, q1, bCheckCollision) ) {
-            RAVELOG_WARNA("No IK solution found\n");
-            return false;
-        }
-    
-        stringstream s2;
-        s2 << "ik sol: ";
-        FOREACH(it, q1) {
-            s2 << *it << " ";
-            sout << *it << " ";
-        }
-        s2 << endl;
-        RAVELOG_DEBUGA(s2.str());
         return true;
     }
 

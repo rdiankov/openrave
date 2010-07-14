@@ -45,7 +45,7 @@ for ang = -pi:0.3:pi
     T = T(1:3,:);
 
     % check the IK of the destination
-    s = orProblemSendCommand(['iktest trans ' sprintf('%f ',T(10:12)) ' rot ' sprintf('%f ',T(1:9))],probs.manip)
+    s = orProblemSendCommand(['iktest robot ' probs.robotname ' trans ' sprintf('%f ',T(10:12)) ' rot ' sprintf('%f ',T(1:9))],probs.manip)
     if( isempty(s) )
         % empty so continue
         continue;
@@ -55,7 +55,7 @@ for ang = -pi:0.3:pi
     % and one right above the destination peg
     Tnewhand = Thand*Tgrasp; Tnewhand(:,4) = Tnewhand(:,4) + src_upvec*(max(srcpegbox(:,2))*2.5-0.02);
     % check the IK of the destination
-    s = orProblemSendCommand(['iktest trans ' sprintf('%f ',Tnewhand(10:12)) ' rot ' sprintf('%f ',Tnewhand(1:9))],probs.manip)
+    s = orProblemSendCommand(['iktest robot ' probs.robotname ' trans ' sprintf('%f ',Tnewhand(10:12)) ' rot ' sprintf('%f ',Tnewhand(1:9))],probs.manip)
     if( isempty(s) )       
         % empty so continue
         'Tnewhand invalid'
@@ -64,7 +64,7 @@ for ang = -pi:0.3:pi
 
     Tnewhand2 = T; Tnewhand2(:,4) = Tnewhand2(:,4) + dest_upvec*(max(destpegbox(:,2))*2.5-height);
     % check the IK of the destination
-    s = orProblemSendCommand(['iktest trans ' sprintf('%f ',Tnewhand2(10:12)) ' rot ' sprintf('%f ',Tnewhand2(1:9))],probs.manip)
+    s = orProblemSendCommand(['iktest robot ' probs.robotname ' trans ' sprintf('%f ',Tnewhand2(10:12)) ' rot ' sprintf('%f ',Tnewhand2(1:9))],probs.manip)
     if( isempty(s) )
         % empty so continue
         'Tnewhand2 invalid'

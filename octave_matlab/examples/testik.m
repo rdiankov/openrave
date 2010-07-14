@@ -48,7 +48,7 @@ end
 % links = orBodyGetLinks(robotid);
 % Thand = reshape(links(:,manips{1}.eelink+1),[3 4]);
 % Thand_frombase = inv([reshape(links(:,manips{1}.baselink+1),[3 4]);0 0 0 1]) * [Thand; 0 0 0 1];
-% s = orProblemSendCommand(['iktest matrix ' sprintf('%f ',Thand(:))]);
+% s = orProblemSendCommand(['iktest robot robot matrix ' sprintf('%f ',Thand(:))]);
 % s
 % if( isempty(s) )
 %     return;

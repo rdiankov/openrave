@@ -47,8 +47,6 @@ if __name__ == "__main__":
     defaultviewer = 'qtcoin'
     parser = OptionParser(description='OpenRAVE %s'%openravepy.__version__,version=openravepy.__version__,
                           usage='%prog [options] [loadable openrave xml/robot files...]')
-    parser.add_option('--listplugins', action="store_true",dest='listplugins',default=False,
-                      help='List all plugins and the interfaces they provide.')
     parser.add_option('--loadplugin', action="append",type='string',dest='loadplugins',default=[],
                       help='List all plugins and the interfaces they provide.')
     parser.add_option('--collision', action="store",type='string',dest='collision',default=None,
@@ -71,6 +69,8 @@ if __name__ == "__main__":
                       help='if true will drop into the ipython interpreter rather than spin')
     parser.add_option('--pythoncmd','-p',action='store',type='string',dest='pythoncmd',default=None,
                       help='Execute a python command after all loading is done and before the drop to interpreter check. The variables available to use are: "env","robots","robot". It is possible to quit the program after the command is executed by adding a "sys.exit(0)" at the end of the command.')
+    parser.add_option('--listplugins', action="store_true",dest='listplugins',default=False,
+                      help='List all plugins and the interfaces they provide.')
     parser.add_option('--listdatabases',action='store_true',dest='listdatabases',default=False,
                       help='Lists the available core database generators')
     parser.add_option('--listexamples',action='store_true',dest='listexamples',default=False,
