@@ -1311,32 +1311,32 @@ class IKFastSolver(AutoReloader):
                 
                 curtransvars = transvars[:]
                 uselength=True
-                try:
-                    AllEquations = []
-                    for i in range(len(Positions)):
-                        for j in range(3):
-                            e = Positions[i][j] - Positionsee[i][j]
-                            if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
-                                AllEquations.append(e)
-                        if uselength:
-                            e = self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp((Positions[i][0]**2+Positions[i][1]**2+Positions[i][2]**2).expand())).expand())) - self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp((Positionsee[i][0]**2+Positionsee[i][1]**2+Positionsee[i][2]**2).expand())).expand()))
-                            if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
-                                AllEquations.append(e)
-                    AllEquations.sort(lambda x, y: self.codeComplexity(x)-self.codeComplexity(y))
-                    if not solveRotationFirst:
-                        AllEquations = [eq for eq in AllEquations if not eq.has_any_symbols(*rotvars)]
-                    transtree = self.solveAllEquations(AllEquations,curvars=curtransvars,othersolvedvars = rotvars+freejointvars if solveRotationFirst else freejointvars,solsubs = solsubs,endbranchtree=endbranchtree)
-                except self.CannotSolveError:
-                    print 'failed full solution, resolve to old method'
-                    transtree = self.solveIKTranslationAll(Positions,Positionsee,curtransvars=curtransvars,
-                                                           otherunsolvedvars = [] if solveRotationFirst else rotvars,
-                                                           othersolvedvars = rotvars+freejointvars if solveRotationFirst else freejointvars,
-                                                           endbranchtree=endbranchtree,
-                                                           solsubs = solsubs, uselength=uselength)
+#                 try:
+#                     AllEquations = []
+#                     for i in range(len(Positions)):
+#                         for j in range(3):
+#                             e = Positions[i][j] - Positionsee[i][j]
+#                             if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
+#                                 AllEquations.append(e)
+#                         if uselength:
+#                             e = self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp((Positions[i][0]**2+Positions[i][1]**2+Positions[i][2]**2).expand())).expand())) - self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp((Positionsee[i][0]**2+Positionsee[i][1]**2+Positionsee[i][2]**2).expand())).expand()))
+#                             if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
+#                                 AllEquations.append(e)
+#                     AllEquations.sort(lambda x, y: self.codeComplexity(x)-self.codeComplexity(y))
+#                     if not solveRotationFirst:
+#                         AllEquations = [eq for eq in AllEquations if not eq.has_any_symbols(*rotvars)]
+#                     transtree = self.solveAllEquations(AllEquations,curvars=curtransvars,othersolvedvars = rotvars+freejointvars if solveRotationFirst else freejointvars,solsubs = solsubs,endbranchtree=endbranchtree)
+#                 except self.CannotSolveError:
+                #print 'failed full solution, resolve to old method'
+                transtree = self.solveIKTranslationAll(Positions,Positionsee,curtransvars=curtransvars,
+                                                       otherunsolvedvars = [] if solveRotationFirst else rotvars,
+                                                       othersolvedvars = rotvars+freejointvars if solveRotationFirst else freejointvars,
+                                                       endbranchtree=endbranchtree,
+                                                       solsubs = solsubs, uselength=uselength)
                     
-                    if len(curtransvars) > 0:
-                        print 'error, cannot solve translation for ',freevar,freevalue
-                        continue
+                if len(curtransvars) > 0:
+                    print 'error, cannot solve translation for ',freevar,freevalue
+                    continue
                 
                 solvertree = []
                 solvedvarsubs = valuesubs+self.freevarsubs
