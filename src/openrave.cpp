@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 // Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
@@ -221,7 +222,7 @@ int main(int argc, char ** argv)
         ss << endl << "Number of plugins: " << plugins.size() << endl;
 
         stringstream buf;
-        std::map<PluginType,std::string>::const_iterator ittype;
+        std::map<InterfaceType,std::string>::const_iterator ittype;
         FORIT(ittype,RaveGetInterfaceNamesMap()) {
             vector<string> names;
             FORIT(itplugin, plugins) {

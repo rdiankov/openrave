@@ -97,7 +97,7 @@ def test_drillray():
     env.Reset()
     robot = env.ReadRobotXMLFile('drill.robot.xml')
     env.AddRobot(robot)
-    manip = robot.GetActiveManipulator()#SetActiveManipulator('vision')
+    manip = robot.SetActiveManipulator('vision')
     ikmodel = inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
     #self.generate()
     rawbasedir = manip.GetDirection()
@@ -132,7 +132,8 @@ def test_drillray():
     Tee[2,3] = Symbol("pz")
 
     chaintree = solvefn(self,chain,Tee)
-    ikfast_generator_vb.CodeGeneratorVB6().generate(chaintree)
+    code=ikfast_generator_vb.CodeGeneratorVB6().generate(chaintree)
+    code=ikfast_generator_cpp.CodeGenerator().generate(chaintree)
 
 def drillray_visionsol():
     solutions=[]
@@ -167,15 +168,15 @@ def test_6dik():
     from sympy import *
     env = Environment()
     env.Reset()
-    robot = env.ReadRobotXMLFile('/home/rdiankov/ros/honda/binpicking/robots/tx90.robot.xml')
+    robot = env.ReadRobotXMLFile('robots/barrettwam.robot.xml')
     env.AddRobot(robot)
     manip = robot.SetActiveManipulator('arm')
     ikmodel = inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
 
     solvefn=ikfast.IKFastSolver.solveFullIK_6D
     solvejoints = list(manip.GetArmJoints())
-    #solvejoints.remove(58)
-    freeparams=[]
+    solvejoints.remove(2)
+    freeparams=[2]
     sourcefilename = 'temp.cpp'
     self = ikfast.IKFastSolver(kinbody=robot,accuracy=None,precision=None)
     #code = self.generateIkSolver(manip.GetBase().GetIndex(),manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejoints,usedummyjoints=False,solvefn=solvefn)
@@ -198,3 +199,5 @@ def test_6dik():
     Tee[0,3] = Symbol("px")
     Tee[1,3] = Symbol("py")
     Tee[2,3] = Symbol("pz")
+
+    chaintree = solvefn(self,chain,Tee)

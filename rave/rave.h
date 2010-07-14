@@ -457,25 +457,27 @@ DefineRavePrintfA(_VERBOSELEVEL)
 
 #define IS_DEBUGLEVEL(level) (OpenRAVE::RaveGetDebugLevel()>=(level))
 
-enum PluginType
+enum InterfaceType
 {
-    PT_Planner=1, ///< PlannerBase interface
-    PT_Robot=2, ///< RobotBase interface
-    PT_SensorSystem=3, ///< SensorSystemBase interface
-    PT_Controller=4, ///< ControllerBase interface
-    PT_ProblemInstance=5, ///< ProblemInstance interface
-    PT_InverseKinematicsSolver=6, ///< IkSolverBase interface
-    PT_KinBody=7, ///< arbitrary KinBody
-    PT_PhysicsEngine=8, ///< physics simulation engine
-    PT_Sensor=9, ///< sensor like camera, laser range finder, tactile
-    PT_CollisionChecker=10, ///< collision checker
-    PT_Trajectory=11, ///< holds a trajectory of configuration space points (also performs various smoothing and filtering steps)
-    PT_Viewer=12,///< a viewer for the OpenRAVE state. Each environment can attach one viewer to it
+    PT_Planner=1, ///< describes \ref PlannerBase interface
+    PT_Robot=2, ///< describes \ref RobotBase interface
+    PT_SensorSystem=3, ///< describes \ref SensorSystemBase interface
+    PT_Controller=4, ///< describes \ref ControllerBase interface
+    PT_ProblemInstance=5, ///< describes \ref ProblemInstance interface
+    PT_InverseKinematicsSolver=6, ///< describes \ref IkSolverBase interface
+    PT_KinBody=7, ///< describes \ref KinBody
+    PT_PhysicsEngine=8, ///< describes \ref PhysicsEngineBase
+    PT_Sensor=9, ///< describes \ref SensorBase
+    PT_CollisionChecker=10, ///< describes \ref CollisionCheckerBase
+    PT_Trajectory=11, ///< describes \ref TrajectoryBase
+    PT_Viewer=12,///< describes \ref RaveViewerBase
 };
+
+typedef InterfaceType PluginType RAVE_DEPRECATED;
 
 struct PLUGININFO
 {
-    std::map<PluginType, std::vector<std::string> > interfacenames;
+    std::map<InterfaceType, std::vector<std::string> > interfacenames;
 };
 
 class CollisionReport;
@@ -664,7 +666,7 @@ namespace OpenRAVE {
 namespace OpenRAVE {
 
 /// returns the a 16 character string specifying a hash of the interfaces used for checking changes
-inline const char* RaveGetInterfaceHash(PluginType type)
+inline const char* RaveGetInterfaceHash(InterfaceType type)
 {
     switch(type) {
     case PT_Planner: return OPENRAVE_PLANNER_HASH;
@@ -720,8 +722,8 @@ inline boost::shared_ptr<T const> RaveInterfaceConstCast(InterfaceBaseConstPtr p
 }
 
 /// returns the a lower case string of the interface type
-RAVE_API const std::map<PluginType,std::string>& RaveGetInterfaceNamesMap();
-RAVE_API const std::string& RaveGetInterfaceName(PluginType type);
+RAVE_API const std::map<InterfaceType,std::string>& RaveGetInterfaceNamesMap();
+RAVE_API const std::string& RaveGetInterfaceName(InterfaceType type);
 
 /// returns the openrave home directory where settings, cache, and other files are stored.
 /// On Linux/Unix systems, this is usually $HOME/.openrave, on Windows this is $HOMEPATH/.openrave
@@ -746,7 +748,7 @@ BOOST_STATIC_ASSERT(OPENRAVE_VERSION_PATCH>=0&&OPENRAVE_VERSION_PATCH<=255);
 // register for typeof (MSVC only)
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
-BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::PluginType)
+BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::InterfaceType)
 
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::ProblemInstance)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::ControllerBase)

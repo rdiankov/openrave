@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -19,15 +20,16 @@
 namespace OpenRAVE {
 
 /** \brief Planner interface that generates trajectories for the robot to follow around the environment
-        
- Planner should be able to query sensor information from the Robot like its current camera image etc.
- Planner should be compatible with Robot presented (some hand-shaking happens between the two classes).
- Examples of planners are:
- - Manipulation - manipulable objects need to be specified. Objects like doors should be special cases that planners knows about.
- - Following - Goal easily changes. Attributes can change.
- - Object Building - Need to describe how parts of object fit together into a bigger part.
- - Dish Washing - Specific goals are not specified, just a condition that all plates need to be inside.
- - Foot step planning - Need discrete footsteps and other capabilities from robot.
+
+    \ingroup interfaces
+    Planner should be able to query sensor information from the Robot like its current camera image
+    etc. Planner should be compatible with Robot presented (some hand-shaking happens between the two
+    classes). Examples of planners are: 
+    - Manipulation - manipulable objects need to be specified. Objects like doors should be special cases that planners knows about.
+    - Following - Goal easily changes. Attributes can change.
+    - Object Building - Need to describe how parts of object fit together into a bigger part.
+    - Dish Washing - Specific goals are not specified, just a condition that all plates need to be inside.
+    - Foot step planning - Need discrete footsteps and other capabilities from robot.
 */
 class RAVE_API PlannerBase : public InterfaceBase
 {
@@ -192,7 +194,7 @@ public:
     virtual ~PlannerBase() {}
 
     /// \return the static interface type this class points to (used for safe casting)
-    static inline PluginType GetInterfaceTypeStatic() { return PT_Planner; }
+    static inline InterfaceType GetInterfaceTypeStatic() { return PT_Planner; }
     
     /// \brief Setup scene, robot, and properties of the plan, and reset all internal structures.
     /// \param probot The robot will be planning for.

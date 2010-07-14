@@ -35,7 +35,10 @@ enum CollisionAction
     CA_Ignore = 1, ///< do nothing
 };
 
-/// derive from this class for every different collision checker library that OpenRAVE should support
+/** \brief Responsible for all collision checking queries of the environment ( \ref PT_CollisionChecker ).
+    
+    \ingroup interfaces
+*/
 class RAVE_API CollisionCheckerBase : public InterfaceBase
 {
 public:
@@ -43,7 +46,7 @@ public:
     virtual ~CollisionCheckerBase() {}
 
     /// return the static interface type this class points to (used for safe casting)
-    static inline PluginType GetInterfaceTypeStatic() { return PT_CollisionChecker; }
+    static inline InterfaceType GetInterfaceTypeStatic() { return PT_CollisionChecker; }
     
     /// Set basic collision options using the CollisionOptions enum
     virtual bool SetCollisionOptions(int collisionoptions) = 0;

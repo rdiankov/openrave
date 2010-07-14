@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -18,10 +19,13 @@
 
 namespace OpenRAVE {
 
-/// Base class for problem instances the user might want to instantiate. A problem
-/// instance registers itself with OpenRAVE's SimulateStep calls and can accept
-/// commands from the server or other plugins via SendCommand. A problem instance
-/// stops receiving commands when it is destroyed.
+/** \brief A loadable module of user code meant to solve a specific problem in robotics.
+
+    \ingroup interfaces
+    Base class for problem instances the user might want to instantiate. A problem instance
+    registers itself with OpenRAVE's SimulateStep calls and can accept commands from the server or
+    other plugins via SendCommand. A problem instance stops receiving commands when it is destroyed.
+*/
 class RAVE_API ProblemInstance : public InterfaceBase
 {
 protected:
@@ -48,7 +52,7 @@ public:
     virtual ~ProblemInstance() {}
 
     /// return the static interface type this class points to (used for safe casting)
-    static inline PluginType GetInterfaceTypeStatic() { return PT_ProblemInstance; }
+    static inline InterfaceType GetInterfaceTypeStatic() { return PT_ProblemInstance; }
     
     /// gets called every time a problem instance is loaded to initialize the problem.
     /// Robots might not necessarily be set before this function call

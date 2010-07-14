@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 // Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
@@ -80,9 +81,9 @@ namespace OpenRAVEXMLParser
     }
 
     typedef map<string, EnvironmentBase::CreateXMLReaderFn, CaseInsensitiveCompare> READERSMAP;
-    static map<PluginType, READERSMAP >& GetRegisteredReaders()
+    static map<InterfaceType, READERSMAP >& GetRegisteredReaders()
     {
-        static map<PluginType, READERSMAP > mapreaders;
+        static map<InterfaceType, READERSMAP > mapreaders;
         static bool s_bReadersInit = false;
         if( !s_bReadersInit ) {
             s_bReadersInit = true;
@@ -398,7 +399,7 @@ namespace OpenRAVEXMLParser
         return raveXmlSAXUserParseMemory(GetSAXHandler(), preader, pdata.c_str(), pdata.size())==0;
     }
 
-    static EnvironmentBase::CreateXMLReaderFn RegisterXMLReader(PluginType type, const std::string& xmltag, const EnvironmentBase::CreateXMLReaderFn& fn)
+    static EnvironmentBase::CreateXMLReaderFn RegisterXMLReader(InterfaceType type, const std::string& xmltag, const EnvironmentBase::CreateXMLReaderFn& fn)
     {
         boost::shared_ptr<EnvironmentMutex> m = GetXMLMutex();
         EnvironmentMutex::scoped_lock lock(*m);
@@ -407,7 +408,7 @@ namespace OpenRAVEXMLParser
         return oldfn;
     }
 
-    static void UnregisterXMLReader(PluginType type, const std::string& xmltag, const EnvironmentBase::CreateXMLReaderFn& oldfn)
+    static void UnregisterXMLReader(InterfaceType type, const std::string& xmltag, const EnvironmentBase::CreateXMLReaderFn& oldfn)
     {
         static boost::shared_ptr<EnvironmentMutex> m = GetXMLMutex();
         EnvironmentMutex::scoped_lock lock(*m);
@@ -1400,12 +1401,12 @@ namespace OpenRAVEXMLParser
     typedef boost::shared_ptr<InterfaceXMLReader> InterfaceXMLReaderPtr;
     typedef boost::shared_ptr<InterfaceXMLReader const> InterfaceXMLReaderConstPtr;
 
-    static InterfaceXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, PluginType type, InterfaceBasePtr& pinterface, const std::string& xmltag, const std::list<std::pair<std::string,std::string> >& atts);
+    static InterfaceXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, InterfaceType type, InterfaceBasePtr& pinterface, const std::string& xmltag, const std::list<std::pair<std::string,std::string> >& atts);
 
     class InterfaceXMLReader : public StreamXMLReader
     {
     public:
-    InterfaceXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pinterface, PluginType type, const string& xmltag, const std::list<std::pair<std::string,std::string> >& atts) : _penv(penv), _type(type), _pinterface(pinterface), _xmltag(xmltag) {
+    InterfaceXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pinterface, InterfaceType type, const string& xmltag, const std::list<std::pair<std::string,std::string> >& atts) : _penv(penv), _type(type), _pinterface(pinterface), _xmltag(xmltag) {
             string strtype;
             FOREACHC(itatt,atts) {
                 if( itatt->first == "type" ) {
@@ -1571,7 +1572,7 @@ namespace OpenRAVEXMLParser
 
     protected:        
         EnvironmentBasePtr _penv;
-        PluginType _type;
+        InterfaceType _type;
         InterfaceBasePtr& _pinterface;
         BaseXMLReaderPtr _pcustomreader;
         string _xmltag;
@@ -1582,7 +1583,7 @@ namespace OpenRAVEXMLParser
     class KinBodyXMLReader : public InterfaceXMLReader
     {
     public:
-    KinBodyXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pchain, PluginType type, const std::list<std::pair<std::string,std::string> >& atts, int rootoffset, int rootjoffset) : InterfaceXMLReader(penv,pchain,type,"kinbody",atts), rootoffset(rootoffset), rootjoffset(rootjoffset) {
+    KinBodyXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pchain, InterfaceType type, const std::list<std::pair<std::string,std::string> >& atts, int rootoffset, int rootjoffset) : InterfaceXMLReader(penv,pchain,type,"kinbody",atts), rootoffset(rootoffset), rootjoffset(rootjoffset) {
             _pchain = RaveInterfaceCast<KinBody>(_pinterface);
             _masstype = LinkXMLReader::MT_None;
             _fMassValue = 1;
@@ -2503,7 +2504,7 @@ namespace OpenRAVEXMLParser
         int rootmoffset; ///< the initial number of manipulators when Robot is created
     };
 
-    template <PluginType type> class DummyInterfaceXMLReader : public InterfaceXMLReader
+    template <InterfaceType type> class DummyInterfaceXMLReader : public InterfaceXMLReader
     {
     public:
     DummyInterfaceXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pinterface, const string& xmltag, const std::list<std::pair<std::string,std::string> >& atts) : InterfaceXMLReader(penv,pinterface,type,xmltag,atts) {
@@ -2676,7 +2677,7 @@ namespace OpenRAVEXMLParser
         bool _bInEnvironment;
     };
 
-    static InterfaceXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, PluginType type, InterfaceBasePtr& pinterface, const std::string& xmltag, const std::list<std::pair<std::string,std::string> >& atts)
+    static InterfaceXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, InterfaceType type, InterfaceBasePtr& pinterface, const std::string& xmltag, const std::list<std::pair<std::string,std::string> >& atts)
     {
         switch(type) {
         case PT_Planner: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Planner>(penv,pinterface,xmltag,atts));

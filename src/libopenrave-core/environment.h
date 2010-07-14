@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -146,7 +147,7 @@ class Environment : public EnvironmentBase
                 if( !(*itplugin)->GetInfo(info) ) {
                     continue;
                 }
-                std::map<PluginType, std::vector<std::string> >::const_iterator itnames =info.interfacenames.find(PT_CollisionChecker);
+                std::map<InterfaceType, std::vector<std::string> >::const_iterator itnames =info.interfacenames.find(PT_CollisionChecker);
                 if( itnames != info.interfacenames.end() ) {
                     FOREACHC(itname, itnames->second) {
                         localchecker = _pdatabase->CreateCollisionChecker(shared_from_this(), *itname);
@@ -323,9 +324,9 @@ class Environment : public EnvironmentBase
 
     virtual bool LoadPlugin(const std::string& pname) { return _pdatabase->AddPlugin(pname); }
     virtual void ReloadPlugins() { _pdatabase->ReloadPlugins(); }
-    virtual bool HasInterface(PluginType type, const string& interfacename) { return _pdatabase->HasInterface(type,interfacename); }
+    virtual bool HasInterface(InterfaceType type, const string& interfacename) { return _pdatabase->HasInterface(type,interfacename); }
 
-    virtual InterfaceBasePtr CreateInterface(PluginType type,const std::string& pinterfacename)
+    virtual InterfaceBasePtr CreateInterface(InterfaceType type,const std::string& pinterfacename)
     {
         switch(type) {
         case PT_KinBody: return CreateKinBody(pinterfacename);
@@ -564,7 +565,7 @@ class Environment : public EnvironmentBase
             if((*it)->GetName()==pname)
                 return *it;
         }
-        RAVELOG_VERBOSEA("Environment::GetKinBody - Error: Unknown body %s\n",pname.c_str());
+        RAVELOG_VERBOSE(str(boost::format("Environment::GetKinBody - Error: Unknown body %s\n")%pname));
         return KinBodyPtr();
     }
 
@@ -575,7 +576,7 @@ class Environment : public EnvironmentBase
             if((*it)->GetName()==pname)
                 return *it;
         }
-        RAVELOG_VERBOSEA("Environment::GetRobot - Error: Unknown body %s\n",pname.c_str());
+        RAVELOG_VERBOSE(str(boost::format("Environment::GetRobot - Error: Unknown body %s\n")%pname));
         return RobotBasePtr();
     }
 
@@ -994,7 +995,7 @@ class Environment : public EnvironmentBase
         return InterfaceBasePtr();
     }
 
-    virtual InterfaceBasePtr ReadInterfaceXMLFile(InterfaceBasePtr pinterface, PluginType type, const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts)
+    virtual InterfaceBasePtr ReadInterfaceXMLFile(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         if( (type == PT_KinBody || type == PT_Robot) && _IsColladaFile(filename) ) {
@@ -1026,7 +1027,7 @@ class Environment : public EnvironmentBase
         return pinterface;
     }
 
-    virtual InterfaceBasePtr ReadInterfaceXMLData(InterfaceBasePtr pinterface, PluginType type, const std::string& data, const std::list<std::pair<std::string,std::string> >& atts)
+    virtual InterfaceBasePtr ReadInterfaceXMLData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const std::list<std::pair<std::string,std::string> >& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
@@ -1039,7 +1040,7 @@ class Environment : public EnvironmentBase
         return pinterface;
     }
 
-    virtual boost::shared_ptr<void> RegisterXMLReader(PluginType type, const std::string& xmltag, const CreateXMLReaderFn& fn)
+    virtual boost::shared_ptr<void> RegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn)
     {
         CreateXMLReaderFn oldfn = OpenRAVEXMLParser::RegisterXMLReader(type,xmltag,fn);
         return boost::shared_ptr<void>((void*)1, boost::bind(&OpenRAVEXMLParser::UnregisterXMLReader,type,xmltag,oldfn));

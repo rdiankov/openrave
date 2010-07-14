@@ -20,6 +20,12 @@
 
 #include "libopenrave.h"
 
+#define CHECK_INTERNAL_COMPUTATION { \
+    if( !_bHierarchyComputed ) { \
+        throw openrave_exception(str(boost::format("%s: joint hierarchy needs to be computed (is body added to environment?)\n")%__PRETTY_FUNCTION__)); \
+    } \
+} \
+
 namespace OpenRAVE {
 
 RobotBase::Manipulator::Manipulator(RobotBasePtr probot) : _probot(probot), _vdirection(0,0,1) {}
@@ -2089,9 +2095,9 @@ void RobotBase::_ComputeInternalInformation()
 bool RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 {
     // note that grabbed bodies are not cloned (check out Environment::Clone)
-    if( !KinBody::Clone(preference,cloningoptions) )
+    if( !KinBody::Clone(preference,cloningoptions) ) {
         return false;
-
+    }
     RobotBaseConstPtr r = RaveInterfaceConstCast<RobotBase>(preference);
     __hashrobotstructure = r->__hashrobotstructure;
     
@@ -2160,7 +2166,7 @@ void RobotBase::serialize(std::ostream& o, int options) const
 
 std::string RobotBase::GetRobotStructureHash() const
 {
-    BOOST_ASSERT(_bHierarchyComputed);
+    CHECK_INTERNAL_COMPUTATION;
     return __hashrobotstructure;
 }
 

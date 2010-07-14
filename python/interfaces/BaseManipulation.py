@@ -245,8 +245,3 @@ class BaseManipulation:
         else:
             traj = None
         return final,traj
-    def DebugIK(self,numiters,rotonly=False):
-        cmd = 'DebugIK numtests %d '%numiters
-        if rotonly:
-            cmd += 'rotonly '
-        return float(self.prob.SendCommand(cmd)) # success rate

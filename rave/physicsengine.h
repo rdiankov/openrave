@@ -24,7 +24,10 @@ enum PhysicsEngineOptions
     PEO_SelfCollisions = 1, ///< if set, physics engine will use contact forces from self-collisions
 };
 
-/// A physics engine supports simulating the dynamics of every object in the environment
+/** \brief The physics engine interfaces supporting simulations and dynamics.
+    
+    \ingroup interfaces
+*/
 class RAVE_API PhysicsEngineBase : public InterfaceBase
 {
 public:
@@ -32,7 +35,7 @@ public:
     virtual ~PhysicsEngineBase() {}
 
     /// return the static interface type this class points to (used for safe casting)
-    static inline PluginType GetInterfaceTypeStatic() { return PT_PhysicsEngine; }
+    static inline InterfaceType GetInterfaceTypeStatic() { return PT_PhysicsEngine; }
     
     /// Set basic physics engine using the PhysicsEngineOptions enum
     virtual bool SetPhysicsOptions(int physicsoptions) = 0;

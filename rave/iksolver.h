@@ -18,12 +18,15 @@
 
 namespace OpenRAVE {
 
-/// Base class for all Inverse Kinematic solvers. Each IK solver is defined on a
-/// subset of joints of a Robot specified by the robot's manipulator. 
-/// Given the position in the 3D workspace that an end effector should go to,
-/// an IK solver will find the joint configuration to take that end-effector there. 
-/// Because it is common for an IK solution to have a null space, the IK solver
-/// give functionality to expose the free parameters to move the joints in null space.
+/* \brief Base class for all Inverse Kinematic solvers.
+   
+   \ingroup interfaces
+   Each IK solver is defined on a subset of joints of a Robot specified by the robot's manipulator.
+   Given the position in the 3D workspace that an end effector should go to, an IK solver will find
+   the joint configuration to take that end-effector there.  Because it is common for an IK solution
+   to have a null space, the IK solver give functionality to expose the free parameters to move the
+   joints in null space.
+*/
 class RAVE_API IkSolverBase : public InterfaceBase
 {
 public:
@@ -31,7 +34,7 @@ public:
     virtual ~IkSolverBase() {}
 
     /// return the static interface type this class points to (used for safe casting)
-    static inline PluginType GetInterfaceTypeStatic() { return PT_InverseKinematicsSolver; }
+    static inline InterfaceType GetInterfaceTypeStatic() { return PT_InverseKinematicsSolver; }
     
     /// sets the IkSolverBase attached to a specific robot and sets IkSolverBase specific options
     /// For example, some ik solvers might have different ways of computing optimal solutions.

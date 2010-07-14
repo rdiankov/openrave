@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -18,10 +19,12 @@
 
 namespace OpenRAVE {
 
-/// used to manage objects through a sensor system.
-///
-/// New objects can be created, existing objects can be updated. Every managed
-/// object should set the kinbody's Manager pointer
+/** \brief Used to manage the creation and destruction of bodies.
+
+    \ingroup interfaces
+    New objects can be created, existing objects can be updated. Every managed
+    object should set the kinbody's Manager pointer
+*/
 class RAVE_API SensorSystemBase : public InterfaceBase
 {
 public:
@@ -29,7 +32,7 @@ public:
     virtual ~SensorSystemBase() {}
 
     /// return the static interface type this class points to (used for safe casting)
-    static inline PluginType GetInterfaceTypeStatic() { return PT_SensorSystem; }
+    static inline InterfaceType GetInterfaceTypeStatic() { return PT_SensorSystem; }
     
     /// resets the system and stops managing all objects. Any objects that are not locked, are deleted
     virtual void Reset() = 0;

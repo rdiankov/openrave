@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -18,11 +19,14 @@
 
 namespace OpenRAVE {
 
-/// A sensor measures physical properties from the environment 
-/// and converts them to data. Each sensor is associated with a 
-/// particular position in space, has a geometry with 
-/// properties defining the type of sensor, and can be
-/// queried for sensor data.
+/** \brief A sensor measures physical properties from the environment.
+     
+  \ingroup interfaces
+  A sensor measures physical properties from the environment and converts them
+  to data. Each sensor is associated with a particular position in space, has a geometry with
+  properties defining the type of sensor, and can be queried for sensor data. Available sensor types
+  are specified by \ref SensorType.
+*/
 class RAVE_API SensorBase : public InterfaceBase
 {
 public:
@@ -148,7 +152,7 @@ public:
     virtual ~SensorBase() {}
 
     /// return the static interface type this class points to (used for safe casting)
-    static inline PluginType GetInterfaceTypeStatic() { return PT_Sensor; }
+    static inline InterfaceType GetInterfaceTypeStatic() { return PT_Sensor; }
     
     /// Initializes the sensor
     /// \param args extra arguments that the sensor takes, can be NULL

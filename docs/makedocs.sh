@@ -6,7 +6,8 @@
 # for japanese: latex-cjk-japanese
 rm -rf english japanese openrave.pdf ordocs.tgz
 echo "OUTPUT_LANGUAGE = English
-OUTPUT_DIRECTORY = ./english/" | cat Doxyfile - > Doxyfile.english
+OUTPUT_DIRECTORY = ./english/
+PROJECT_NUMBER = `openrave-config --version`" | cat Doxyfile - > Doxyfile.english
 doxygen Doxyfile.english
 
 # build latex
@@ -20,7 +21,8 @@ cp latex/refman.pdf openrave.pdf
 cd ..
 
 echo "OUTPUT_LANGUAGE = Japanese
-OUTPUT_DIRECTORY = ./japanese/" | cat Doxyfile - > Doxyfile.japanese
+OUTPUT_DIRECTORY = ./japanese/
+PROJECT_NUMBER = `openrave-config --version`" | cat Doxyfile - > Doxyfile.japanese
 doxygen Doxyfile.japanese
 
 # need to figure out how latex can handle japanese...

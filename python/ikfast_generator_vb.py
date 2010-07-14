@@ -188,6 +188,8 @@ Public Function IKatan2(ByVal y As %s, ByVal x As %s) As %s
         IKatan2 = IKPI_2
     ElseIf  Not IsNumeric(x) Then
         IKatan2 = 0
+    ElseIf x = 0 And y = 0 Then
+        IKatan2 = 0
     Else
         If y > 0 Then
             If x >= y Then
@@ -734,7 +736,7 @@ End Class
         fcode += self._startforloop('dummyiter',0,1)
         fcode += 'Dim '        
         for var in node.solvejointvars:
-            fcode += '%s, c%s, s%s,'%(var[0].name,var[0].name,var[0].name)
+            fcode += '%s, c%s, s%s, numsolutions%s, '%(var[0].name,var[0].name,var[0].name,var[0].name)
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
             fcode += '%s, c%s, s%s,'%(name,name,name)
@@ -773,7 +775,7 @@ End Class
     def endIKChainRay4D(self, node):
         return ''
 
-    def generateSolution(self, node):
+    def generateSolution(self, node,declarearray=True,acceptfreevars=True):
         code = ''
         numsolutions = 0
         eqcode = ''
@@ -785,26 +787,26 @@ End Class
             equations = []
             names = []
             for i,expr in enumerate(node.jointeval):
-                
-                m = None
-                for freevar in self.freevars:
-                    if expr.has_any_symbols(Symbol(freevar)):
-                        # has free variables, so have to look for a*freevar+b form
-                        a = Wild('a',exclude=[Symbol(freevar)])
-                        b = Wild('b',exclude=[Symbol(freevar)])
-                        m = expr.match(a*Symbol(freevar)+b)
-                        if m is not None:
-                            self.freevardependencies.append((freevar,name))
-                            assert(len(node.jointeval)==1)
-                            code += self.writeEquations(lambda i: '%smul'%name, m[a])
-                            code += self.writeEquations(lambda i: name, m[b])
-                            node.HasFreeVar = True
-                            return code
-                        else:
-                            print 'failed to extract free variable %s for %s from'%(freevar,node.jointname), expr
-#                             m = dict()
-#                             m[a] = Real(-1,30)
-#                             m[b] = Real(0,30)
+                if acceptfreevars:
+                    m = None
+                    for freevar in self.freevars:
+                        if expr.has_any_symbols(Symbol(freevar)):
+                            # has free variables, so have to look for a*freevar+b form
+                            a = Wild('a',exclude=[Symbol(freevar)])
+                            b = Wild('b',exclude=[Symbol(freevar)])
+                            m = expr.match(a*Symbol(freevar)+b)
+                            if m is not None:
+                                self.freevardependencies.append((freevar,name))
+                                assert(len(node.jointeval)==1)
+                                code += self.writeEquations(lambda i: '%smul'%name, m[a])
+                                code += self.writeEquations(lambda i: name, m[b])
+                                node.HasFreeVar = True
+                                return code
+                            else:
+                                print 'failed to extract free variable %s for %s from'%(freevar,node.jointname), expr
+    #                             m = dict()
+    #                             m[a] = Real(-1,30)
+    #                             m[b] = Real(0,30)
 
                 equations.append(expr)
                 names.append('%sarray(%d)'%(name,i))
@@ -866,6 +868,9 @@ End Class
                 eqcode += '    c%sarray(%d) = 1\n    s%sarray(%d) = 0\n    %sarray(%d) = 0\n'%(name,2*i,name,2*i,name,2*i)
                 eqcode += 'End If\n'
 
+        if not declarearray:
+            return eqcode,numsolutions
+
         code += 'If 1 Then\nReDim %sarray(0 To %d)\nReDim c%sarray(0 To %d)\nReDim s%sarray(0 To %d)\n'%(name,numsolutions-1,name,numsolutions-1,name,numsolutions-1)
         code += 'ReDim %svalid(0 To %d)\n'%(name,numsolutions-1)
         for i in range(numsolutions):
@@ -884,11 +889,55 @@ End Class
             return ''
         return self._endforloop()+'End If\n'
 
+    def generateConditionedSolution(self, node):
+        name=node.solversolutions[0].jointname
+        assert all([name == s.jointname for s in node.solversolutions])
+        origequations = copy.copy(self.dictequations)
+        maxchecks = max([len(s.checkforzeros) for s in node.solversolutions])
+        allnumsolutions = 0
+        checkcode = ''
+        for solversolution in node.solversolutions:
+            assert len(solversolution.checkforzeros) > 0
+            self.dictequations = copy.copy(origequations)
+            checkcode += 'ReDim %seval(0 To %d)\n'%(name,len(solversolution.checkforzeros)-1)
+            checkcode += self.writeEquations(lambda i: '%seval(%d)'%(name,i),solversolution.checkforzeros)
+            checkcode += 'If '
+            for i in range(len(solversolution.checkforzeros)):
+                if i != 0:
+                    checkcode += ' And '
+                checkcode += '%s(%seval(%d)) %s %f '%('Abs' if self.vb6 else 'Math.Abs',name,i,'<=' if solversolution.FeasibleIsZeros else '>',node.thresh)
+            checkcode += ' Then\n'
+            scode,numsolutions = self.generateSolution(solversolution,declarearray=False,acceptfreevars=False)
+            scode += 'numsolutions%s = %d\n'%(name,numsolutions)
+            allnumsolutions = max(allnumsolutions,numsolutions)
+            checkcode += self.indentCode(scode,4)
+            checkcode += '\nElse\n'
+        checkcode += self._continueforloop()  # if got here, then current solution branch is not good, so skip
+        checkcode += 'End If\n'*len(node.solversolutions)
+        checkcode += 'If numsolutions%s = 0 Then\n    '%name+self._continueforloop()+'End If\n'
+
+        self.dictequations = origequations
+        code = 'If 1 Then\nReDim %sarray(0 To %d)\nReDim c%sarray(0 To %d)\nReDim s%sarray(0 To %d)\n'%(name,allnumsolutions-1,name,allnumsolutions-1,name,allnumsolutions-1)
+        code += 'ReDim %svalid(0 To %d)\n'%(name,allnumsolutions-1)
+        code += 'numsolutions%s = 0\n'%name
+        for i in range(allnumsolutions):
+            code += '%svalid(%d) = False\n'%(name,i)
+        code += self.indentCode(checkcode,4)
+        for i,j in combinations(range(allnumsolutions),2):
+            code += 'If %svalid(%d) And %svalid(%d) And %s(c%sarray(%d)-c%sarray(%d)) < 0.0001 And %s(s%sarray(%d)-s%sarray(%d)) < 0.0001 Then\n    %svalid(%d)=False\nEnd If\n'%(name,i,name,j,self._absname(),name,i,name,j,self._absname(),name,i,name,j,name,j)
+        code += self._startforloop('i%s'%name,0,'numsolutions%s'%name)
+        code += 'If Not %svalid(i%s) Then\n%s\nEnd If\n'%(name,name,self.indentCode(self._continueforloop(),4))
+        code += '%s = %sarray(i%s)\nc%s = c%sarray(i%s)\ns%s = s%sarray(i%s)\n'%(name,name,name,name,name,name,name,name,name)
+        return code
+
+    def endConditionedSolution(self, node):
+        return self._endforloop()+'End If\n'
+
     def generateBranch(self, node):
         origequations = copy.copy(self.dictequations)
         name = node.jointname
         code = 'If 1 Then\n'
-        code += self.writeEquations(lambda x: '%seval'%name,[node.jointeval])
+        code += self.writeEquations(lambda x: 'evalcond',[node.jointeval])
         numif = 1
         for branch in node.jointbranches:
             branchcode = ''
@@ -901,7 +950,7 @@ End Class
             if branch[0] is None:
                 code += 'If 1 Then\n' + branchcode + 'End If\n'
             else:
-                code += 'If %seval >= %f And %seval <= %f Then\n'%(name,branch[0]-0.00001,name,branch[0]+0.00001)
+                code += 'If evalcond >= %f And evalcond <= %f Then\n'%(name,branch[0]-0.00001,name,branch[0]+0.00001)
                 code += branchcode + 'Else\n'
                 numif += 1
         code += 'End If\n'*numif

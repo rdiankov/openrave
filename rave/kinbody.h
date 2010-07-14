@@ -23,7 +23,10 @@
 
 namespace OpenRAVE {
 
-/// Encapsulate a kinematic body of links and joints
+/** \brief A kinematic body of links and joints
+    
+    \ingroup interfaces
+*/
 class RAVE_API KinBody : public InterfaceBase
 {
 public:
@@ -472,7 +475,7 @@ public:
     virtual ~KinBody();
 
     /// return the static interface type this class points to (used for safe casting)
-    static inline PluginType GetInterfaceTypeStatic() { return PT_KinBody; }
+    static inline InterfaceType GetInterfaceTypeStatic() { return PT_KinBody; }
     
     virtual void Destroy();
 
@@ -708,7 +711,7 @@ public:
 
 protected:
     /// constructors declared protected so that user always goes through environment to create bodies
-    KinBody(PluginType type, EnvironmentBasePtr penv);
+    KinBody(InterfaceType type, EnvironmentBasePtr penv);
     inline KinBodyPtr shared_kinbody() { return boost::static_pointer_cast<KinBody>(shared_from_this()); }
     inline KinBodyConstPtr shared_kinbody_const() const { return boost::static_pointer_cast<KinBody const>(shared_from_this()); }
     

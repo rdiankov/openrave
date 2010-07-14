@@ -20,10 +20,10 @@ end
 
 orEnvLoadScene('',1);
 robotid = orEnvCreateRobot('robot',robotfile);
-probid = orEnvCreateProblem('basemanipulation','robot');
+probid = orEnvCreateProblem('ikfast');
 manips = orRobotGetManipulators(robotid);
 
-cmd = 'debugik numtests 200 ';
+cmd = 'debugik numtests 200 robot robot ';
 if(rotonly)
     cmd = [cmd ' rotonly '];
 end

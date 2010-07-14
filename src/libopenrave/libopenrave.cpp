@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2009 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2010 Carnegie Mellon University (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -37,9 +38,9 @@ RAVE_API void RaveSetDebugLevel(DebugLevel level)
     g_nDebugLevel = level;
 }
 
-RAVE_API const std::map<PluginType,std::string>& RaveGetInterfaceNamesMap()
+RAVE_API const std::map<InterfaceType,std::string>& RaveGetInterfaceNamesMap()
 {
-    static map<PluginType,string> m;
+    static map<InterfaceType,string> m;
     if( m.size() == 0 ) {
         m[PT_Planner] = "planner";
         m[PT_Robot] = "robot";
@@ -57,9 +58,9 @@ RAVE_API const std::map<PluginType,std::string>& RaveGetInterfaceNamesMap()
     return m;
 }
 
-RAVE_API const std::string& RaveGetInterfaceName(PluginType type)
+RAVE_API const std::string& RaveGetInterfaceName(InterfaceType type)
 {
-    std::map<PluginType,std::string>::const_iterator it = RaveGetInterfaceNamesMap().find(type);
+    std::map<InterfaceType,std::string>::const_iterator it = RaveGetInterfaceNamesMap().find(type);
     if( it == RaveGetInterfaceNamesMap().end() )
         throw openrave_exception(str(boost::format("Invalid type %d specified")%type));
     return it->second;

@@ -264,6 +264,7 @@ private:
             TransformMatrix t = param.GetTransform();
             IKReal eetrans[3] = {t.trans.x, t.trans.y, t.trans.z};
             IKReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
+            //RAVELOG_INFO("trans: %f %f %f\n",eetrans[0],eetrans[1],eetrans[2]);
             if( !_pfnik(eetrans, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions) )
                 return SR_Continue;
         }

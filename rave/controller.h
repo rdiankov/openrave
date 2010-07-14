@@ -18,10 +18,13 @@
 
 namespace OpenRAVE {
 
-/// Abstract base class to encapsulate a local controller. All commands
-/// given to the robot are first filtered through here, then translated
-/// to joint commands. The default controller takes angles. Different controllers
-/// have different path inputs (ie: a robot walking on a floor might just have x,y,angle)
+/** \brief Abstract base class to encapsulate a local controller.
+    
+    \ingroup interfaces
+    All commands given to the robot are first filtered through here, then translated to joint
+    commands. The default controller takes angles. Different controllers have different path inputs (ie:
+    a robot walking on a floor might just have x,y,angle)
+*/
 class RAVE_API ControllerBase : public InterfaceBase
 {
 public:
@@ -37,7 +40,7 @@ public:
     virtual ~ControllerBase() {}
 
     /// return the static interface type this class points to (used for safe casting)
-    static inline PluginType GetInterfaceTypeStatic() { return PT_Controller; }
+    static inline InterfaceType GetInterfaceTypeStatic() { return PT_Controller; }
     
     /// Initializes the controller
     /// \param robot the robot that uses the controller

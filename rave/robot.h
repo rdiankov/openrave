@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -61,7 +61,10 @@ protected:
     Type _type;
 };
 
-/// A kinematic body that has attached manipulators, sensors, and controllers.
+/** \brief A robot is a kinematic body that has attached manipulators, sensors, and controllers.
+    
+    \ingroup interfaces
+*/
 class RAVE_API RobotBase : public KinBody
 {
 public:
@@ -267,7 +270,7 @@ public:
     virtual ~RobotBase();
 
     /// return the static interface type this class points to (used for safe casting)
-    static inline PluginType GetInterfaceTypeStatic() { return PT_Robot; }
+    static inline InterfaceType GetInterfaceTypeStatic() { return PT_Robot; }
     
     virtual void Destroy();
 

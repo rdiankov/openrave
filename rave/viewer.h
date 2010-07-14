@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -18,8 +19,12 @@
 
 namespace OpenRAVE {
 
-/// Base class for the graphics and gui engine. Derive a class called
-/// RaveViewer for anything more specific
+/** \brief Base class for the graphics and gui engine that renders the environment and provides visual sensor information.
+
+    \ingroup interfaces
+
+    Viewer is responsible only for the environment it is attached to.
+*/
 class RAVE_API RaveViewerBase : public InterfaceBase
 {
 public:
@@ -34,7 +39,7 @@ public:
     virtual ~RaveViewerBase() {}
 
     /// return the static interface type this class points to (used for safe casting)
-    static inline PluginType GetInterfaceTypeStatic() { return PT_Viewer; }
+    static inline InterfaceType GetInterfaceTypeStatic() { return PT_Viewer; }
     
     /// reset the camera depending on its mode
     virtual void UpdateCameraTransform() = 0;

@@ -44,7 +44,7 @@ public:
 
     /// @name Interface Creation and Plugin Management
     //@{
-    virtual InterfaceBasePtr CreateInterface(PluginType type,const std::string& interfacename)=0;
+    virtual InterfaceBasePtr CreateInterface(InterfaceType type,const std::string& interfacename)=0;
     virtual RobotBasePtr CreateRobot(const std::string& name="")=0;
     virtual PlannerBasePtr CreatePlanner(const std::string& name)=0;
     virtual SensorSystemBasePtr CreateSensorSystem(const std::string& name)=0;
@@ -69,7 +69,7 @@ public:
     virtual void DisownInterface(InterfaceBasePtr pinterface) = 0;
 
     /// returns true if interface can be loaded from a plugin, otherwise false
-    virtual bool HasInterface(PluginType type, const std::string& interfacename) = 0;
+    virtual bool HasInterface(InterfaceType type, const std::string& interfacename) = 0;
     
     /// get all the loaded plugins and the interfaces they support
     /// \param plugins A list of plugins. Each entry has the plugin name and the interfaces it supports
@@ -145,7 +145,7 @@ public:
     virtual void GetRegisteredCollisionCallbacks(std::list<CollisionCallbackFn>&) const = 0;
     //@}
 
-    /// @name Physics/Simulation
+    /// @name Physics and Simulation
     //@{
     /// set the physics engine, disabled by default
     /// \param the engine to set, if NULL, environment sets an dummy physics engine
@@ -208,14 +208,14 @@ public:
     /// \param pinterface If a null pointer is passed, a new interface will be created, otherwise an existing interface will be filled
     /// \param filename the name of the file to open
     /// \param atts the XML attributes/value pairs
-    virtual InterfaceBasePtr ReadInterfaceXMLFile(InterfaceBasePtr pinterface, PluginType type, const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts) = 0;
+    virtual InterfaceBasePtr ReadInterfaceXMLFile(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts) = 0;
     virtual InterfaceBasePtr ReadInterfaceXMLFile(const std::string& filename) = 0;
 
     /// Initializes an interface from an XML formatted string.
     /// \param pinterface If a null pointer is passed, a new interface will be created, otherwise an existing interface will be filled
     /// \param data string containing XML data
     /// \param atts the XML attributes/value pairs
-    virtual InterfaceBasePtr ReadInterfaceXMLData(InterfaceBasePtr pinterface, PluginType type, const std::string& data, const std::list<std::pair<std::string,std::string> >& atts) = 0;
+    virtual InterfaceBasePtr ReadInterfaceXMLData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const std::list<std::pair<std::string,std::string> >& atts) = 0;
 
     typedef boost::function<BaseXMLReaderPtr(InterfaceBasePtr, const std::list<std::pair<std::string,std::string> >&)> CreateXMLReaderFn;
 
@@ -224,7 +224,7 @@ public:
     /// \param xmltag the tag specified in xmltag is seen in the interface, the the custom reader will be created.
     /// \param fn CreateXMLReaderFn(pinterface,atts) - passed in the pointer to the interface where the tag was seen along with the list of attributes
     /// \return a pointer holding the registration, releasing the pointer will unregister the XML reader
-    virtual boost::shared_ptr<void> RegisterXMLReader(PluginType type, const std::string& xmltag, const CreateXMLReaderFn& fn) = 0;
+    virtual boost::shared_ptr<void> RegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn) = 0;
     
     /// Parses a file for XML data
     virtual bool ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename) = 0;
@@ -235,8 +235,9 @@ public:
     virtual bool ParseXMLData(BaseXMLReaderPtr preader, const std::string& data) = 0;
     //@}
 
-    /// @name Object Setting/Querying
+    /// @name Object Setting and Querying
     //@{
+    
     /// add a body to the environment
     /// \param[in] body the pointer to an initialized body
     /// \param[in] bAnonymous if true and there exists a body with the same name, will make body's name unique

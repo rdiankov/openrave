@@ -23,16 +23,19 @@
 
 namespace OpenRAVE {
 
-/// base class for all interfaces that OpenRAVE provides
+/** \brief Base class for all interfaces that OpenRAVE provides.
+    
+    \ingroup interfaces
+*/
 class RAVE_API InterfaceBase : public boost::enable_shared_from_this<InterfaceBase>
 {
 public:
     typedef std::map<std::string, XMLReadablePtr, CaseInsensitiveCompare> READERSMAP;
 
-    InterfaceBase(PluginType type, EnvironmentBasePtr penv) : __type(type), __penv(penv) {}
+    InterfaceBase(InterfaceType type, EnvironmentBasePtr penv) : __type(type), __penv(penv) {}
 	virtual ~InterfaceBase() {}
 
-    inline PluginType GetInterfaceType() const { return __type; }
+    inline InterfaceType GetInterfaceType() const { return __type; }
 
     /// set internally by RaveDatabase
 	/// \return the unique identifier that describes this class type, case is ignored
@@ -85,7 +88,7 @@ protected:
 private:
     boost::shared_ptr<void> __plugin; ///< handle to plugin that controls the executable code. As long as this plugin pointer is present, module will not be unloaded.
     std::string __strpluginname, __strxmlid; ///< \see GetXMLId
-    PluginType __type; ///< \see GetInterfaceType
+    InterfaceType __type; ///< \see GetInterfaceType
     EnvironmentBasePtr __penv; ///< \see GetEnv
     boost::shared_ptr<void> __pUserData; ///< \see GetUserData
     std::string __strxmlfilename;             ///< \see GetXMLFilename

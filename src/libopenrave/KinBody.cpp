@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2008 Rosen Diankov (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -21,6 +22,12 @@
 #include "libopenrave.h"
 
 #include <algorithm>
+
+#define CHECK_INTERNAL_COMPUTATION { \
+    if( !_bHierarchyComputed ) { \
+        throw openrave_exception(str(boost::format("%s: joint hierarchy needs to be computed (is body added to environment?)\n")%__PRETTY_FUNCTION__)); \
+    } \
+} \
 
 namespace OpenRAVE {
 
@@ -891,7 +898,7 @@ KinBody::KinBodyStateSaver::~KinBodyStateSaver()
     }
 }
 
-KinBody::KinBody(PluginType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)
+KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)
 {
     _bHierarchyComputed = false;
     _bMakeJoinedLinksAdjacent = true;
@@ -2749,35 +2756,28 @@ int KinBody::GetEnvironmentId() const
 
 char KinBody::DoesAffect(int jointindex, int linkindex ) const
 {
-    if( !_bHierarchyComputed )
-        throw openrave_exception("DoesAffect: joint hierarchy needs to be computed");
+    CHECK_INTERNAL_COMPUTATION;
     BOOST_ASSERT(jointindex >= 0 && jointindex < (int)_vecjoints.size());
     return _vecJointHierarchy.at(jointindex*_veclinks.size()+linkindex);
 }
 
 const std::set<int>& KinBody::GetNonAdjacentLinks() const
 {
-    if( !_bHierarchyComputed ) {
-        RAVELOG_WARNA("GetNonAdjacentLinks: joint hierarchy needs to be computed\n");
-    }
-
+    CHECK_INTERNAL_COMPUTATION;
     return _setNonAdjacentLinks;
 }
 
 const std::set<int>& KinBody::GetAdjacentLinks() const
 {
-    if( !_bHierarchyComputed ) {
-        RAVELOG_WARNA("GetAdjacentLinks: joint hierarchy needs to be computed\n");
-    }
-
+    CHECK_INTERNAL_COMPUTATION;
     return _setAdjacentLinks;
 }
 
 bool KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 {
-    if( !InterfaceBase::Clone(preference,cloningoptions) )
+    if( !InterfaceBase::Clone(preference,cloningoptions) ) {
         return false;
-
+    }
     KinBodyConstPtr r = RaveInterfaceConstCast<KinBody>(preference);
 
     name = r->name;
@@ -2865,7 +2865,7 @@ void KinBody::serialize(std::ostream& o, int options) const
 
 std::string KinBody::GetKinematicsGeometryHash() const
 {
-    BOOST_ASSERT(_bHierarchyComputed);
+    CHECK_INTERNAL_COMPUTATION;
     return __hashkinematics;
 }
 

@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2008 Rosen Diankov (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -43,7 +44,7 @@ class RaveDatabase : public boost::enable_shared_from_this<RaveDatabase>
 {
 public:
     /// create the interfaces
-    typedef InterfaceBasePtr (*CreateInterfaceFn)(PluginType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv);
+    typedef InterfaceBasePtr (*CreateInterfaceFn)(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv);
 
     /// called to get information about what the plugin provides
     typedef bool (*GetPluginAttributesFn)(PLUGININFO* pinfo, int size);
@@ -74,12 +75,12 @@ public:
             return !!pfnGetPluginAttributes && pfnGetPluginAttributes(&info, sizeof(info));
         }
 
-        InterfaceBasePtr CreateInterface(PluginType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv) {
+        InterfaceBasePtr CreateInterface(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv) {
             if( pfnCreate == NULL ) {
 #ifdef _MSC_VER
-                pfnCreate = (CreateInterfaceFn)SysLoadSym(plibrary, "?CreateInterface@@YA?AV?$shared_ptr@VInterfaceBase@OpenRAVE@@@boost@@W4PluginType@OpenRAVE@@ABV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@PBDV?$shared_ptr@VEnvironmentBase@OpenRAVE@@@2@@Z");
+                pfnCreate = (CreateInterfaceFn)SysLoadSym(plibrary, "?CreateInterface@@YA?AV?$shared_ptr@VInterfaceBase@OpenRAVE@@@boost@@W4InterfaceType@OpenRAVE@@ABV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@PBDV?$shared_ptr@VEnvironmentBase@OpenRAVE@@@2@@Z");
 #else
-                pfnCreate = (CreateInterfaceFn)SysLoadSym(plibrary, "_Z15CreateInterfaceN8OpenRAVE10PluginTypeERKSsPKcN5boost10shared_ptrINS_15EnvironmentBaseEEE");
+                pfnCreate = (CreateInterfaceFn)SysLoadSym(plibrary, "_Z15CreateInterfaceN8OpenRAVE10InterfaceTypeERKSsPKcN5boost10shared_ptrINS_15EnvironmentBaseEEE");
 #endif
                 if( pfnCreate == NULL ) {
                     pfnCreate = (CreateInterfaceFn)SysLoadSym(plibrary, "CreateInterface");
@@ -151,7 +152,7 @@ public:
         listplugins = _listplugins;
     }
     
-    InterfaceBasePtr Create(EnvironmentBasePtr penv, PluginType type, const std::string& name)
+    InterfaceBasePtr Create(EnvironmentBasePtr penv, InterfaceType type, const std::string& name)
     {
         if( name.size() == 0 )
             return InterfaceBasePtr();
@@ -304,7 +305,7 @@ public:
         return bFound;
     }
 
-    virtual bool HasInterface(PluginType type, const string& interfacename)
+    virtual bool HasInterface(InterfaceType type, const string& interfacename)
     {
         EnvironmentMutex::scoped_lock lock(_mutex);
         size_t ind = interfacename.find_first_of(' ');

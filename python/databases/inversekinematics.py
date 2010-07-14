@@ -25,7 +25,6 @@ else:
     from openravepy import OpenRAVEModel
     from numpy import array
 
-from openravepy.interfaces import BaseManipulation
 from openravepy import ikfast
 import time,platform,shutil,os
 import distutils
@@ -48,7 +47,7 @@ class InverseKinematicsModel(OpenRAVEModel):
     def load(self,*args,**kwargs):
         return self.setrobot(*args,**kwargs)
     def getversion(self):
-        return 7
+        return 8
     def setrobot(self,freeinc=None):
         self.iksolver = None
         self.freeinc=freeinc
@@ -337,8 +336,9 @@ class InverseKinematicsModel(OpenRAVEModel):
                         print 'failed to find: ',targetpos,targetdir,'solution is: ',orgvalues
                 return success/numiktests
             else:
-                basemanip = BaseManipulation(self.robot)
-                successrate = basemanip.DebugIK(numiters=numiktests)
+                ikfastproblem = [p for p in self.env.GetLoadedProblems() if p.GetXMLId().lower() == 'ikfast'][0]
+                print 'robot name: ',self.robot.GetName()
+                successrate = float(ikfastproblem.SendCommand('DebugIK robot %s numtests %d'%(self.robot.GetName(),numiktests)))
         return successrate
 
     @staticmethod
