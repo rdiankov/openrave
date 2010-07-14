@@ -2282,8 +2282,9 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
     if( (nFrame++%16) == 0 ) {
         stringstream ss;
 
-        if( _bDisplayFPS )
-            ss << "fps: " << fixed << setprecision(2) << fFPS << endl;
+        if( _bDisplayFPS ) {
+            ss << "fps: " << fixed << setprecision(2) << fFPS << ", simulation time: " << setprecision(4) << GetEnv()->GetSimulationTime()*1e-6 << "s" << endl;
+        }
 
         if( !_pviewer->isViewing() ) {
             boost::mutex::scoped_lock lock(_mutexMessages);

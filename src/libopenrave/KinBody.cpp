@@ -586,6 +586,16 @@ void KinBody::Link::SetTorque(const Vector& torque, bool bAdd)
     GetParent()->GetEnv()->GetPhysicsEngine()->SetBodyTorque(shared_from_this(), torque, bAdd);
 }
 
+void KinBody::Link::SetVelocity(const Vector& linearvel, const Vector& angularvel)
+{
+    GetParent()->GetEnv()->GetPhysicsEngine()->SetLinkVelocity(shared_from_this(), linearvel, angularvel);
+}
+
+void KinBody::Link::GetVelocity(Vector& linearvel, Vector& angularvel) const
+{
+    GetParent()->GetEnv()->GetPhysicsEngine()->GetLinkVelocity(shared_from_this(), linearvel, angularvel);
+}
+
 KinBody::Link::GEOMPROPERTIES& KinBody::Link::GetGeometry(int index)
 {
     std::list<GEOMPROPERTIES>::iterator it = _listGeomProperties.begin();
@@ -1279,12 +1289,15 @@ Transform KinBody::GetTransform() const
 
 void KinBody::SetVelocity(const Vector& linearvel, const Vector& angularvel)
 {
-    GetEnv()->GetPhysicsEngine()->SetBodyVelocity(shared_kinbody(), linearvel, angularvel);
+    PhysicsEngineBasePtr p = GetEnv()->GetPhysicsEngine();
+    FOREACH(itlink,_veclinks) {
+        p->SetLinkVelocity(*itlink,linearvel,angularvel);
+    }
 }
 
 void KinBody::GetVelocity(Vector& linearvel, Vector& angularvel) const
 {
-    GetEnv()->GetPhysicsEngine()->GetBodyVelocity(shared_kinbody_const(), linearvel, angularvel);
+    GetEnv()->GetPhysicsEngine()->GetLinkVelocity(_veclinks.at(0), linearvel, angularvel);
 }
 
 void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const

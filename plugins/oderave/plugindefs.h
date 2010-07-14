@@ -121,7 +121,7 @@ using OpenRAVE::TransformMatrix;
 using OpenRAVE::CollisionReport;
 using OpenRAVE::CollisionReportPtr;
 using OpenRAVE::RAY;
-using OpenRAVE::PluginType;
+using OpenRAVE::InterfaceType;
 using OpenRAVE::InterfaceBase;
 using OpenRAVE::InterfaceBasePtr;
 using OpenRAVE::InterfaceBaseConstPtr;

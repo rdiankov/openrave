@@ -120,7 +120,7 @@ if __name__ == "__main__":
         if options.listplugins:
             plugins = env.GetPluginInfo()
             interfacenames = dict()
-            for name,type in PluginType.names.iteritems():
+            for name,type in InterfaceType.names.iteritems():
                 interfacenames[type] = []
             for pluginname,info in plugins:
                 for type,names in info.interfacenames:

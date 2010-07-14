@@ -85,39 +85,27 @@ public:
         
         virtual bool serialize(std::ostream& O) const;
     };
-    /// Class for storing joint angles and EE position
-    class RAVE_API JointSensorData : public SensorData
+
+    /// \brief Stores joint angles and EE position.
+    class RAVE_API JointEncoderSensorData : public SensorData
     {
     public:
         public:
         virtual SensorType GetType() { return ST_JointEncoder; }
-		/// Encoder values, i.e. joint angles in radians
-		std::vector<dReal> _encoderValues;
-		/// Pose of the end-effector in relation to the robot base (in meters and radians)
-		std::vector<dReal> _eePose;
+        std::vector<dReal> _encoderValues; ///< measured joint angles in radians
+        std::vector<dReal> _encoderVelocity; ///< measured joint velocity in radians
     };
     
-     /// Class for storing force data (JR3, etc)
+    /// \brief Stores force data (JR3, etc).
     class RAVE_API ForceSensorData : public SensorData
     {
     public:
         public:
         virtual SensorType GetType() { return ST_Force6D; }
-		/// Force in X Y Z, in newtons
-		std::vector<dReal> _forceXYZ;
-		/// Torque in X Y Z, in newtonmeters
-		std::vector<dReal> _torqueXYZ;
-    };
-    
-	/// Class for hardware failure data (singularity, etc)
-    class RAVE_API HardwareFailureData : public SensorData
-    {
-    public:
-        virtual SensorType GetType() { return ST_Invalid; }
-		/// Specifically for singularity detection
-		bool _singularity;
-		/// For other modes of hardware failure
-		std::string _failure;
+        /// Force in X Y Z, in newtons
+        std::vector<dReal> _forceXYZ;
+        /// Torque in X Y Z, in newtonmeters
+        std::vector<dReal> _torqueXYZ;
     };
 
     /// permanent properties of the sensors
@@ -146,6 +134,16 @@ public:
         virtual SensorType GetType() { return ST_Camera; }
         CameraIntrinsics KK; ///< intrinsic matrix
         int width, height; ///< width and height of image
+    };
+    class RAVE_API JointEncoderGeomData : public SensorGeometry
+    {
+    public:
+        virtual SensorType GetType() { return ST_JointEncoder; }
+    };
+    class RAVE_API Force6DGeomData : public SensorGeometry
+    {
+    public:
+        virtual SensorType GetType() { return ST_Force6D; }
     };
 
     SensorBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Sensor, penv) {}
@@ -185,7 +183,7 @@ public:
     virtual Transform GetTransform() = 0;
 	
     /// \return the name of the sensor
-	virtual const std::string& GetName() const { return _name; }
+    virtual const std::string& GetName() const { return _name; }
     virtual void SetName(const std::string& newname) { _name = newname; }
 
 protected:

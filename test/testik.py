@@ -135,6 +135,11 @@ def test_drillray():
     code=ikfast_generator_vb.CodeGeneratorVB6().generate(chaintree)
     code=ikfast_generator_cpp.CodeGenerator().generate(chaintree)
 
+def drill_ray_filter_links():
+    for i in range(len(Links)):
+        Links[i] = Links[i].subs([(158.226930000000010068106348626,Symbol('drillradius')),(-158.226930000000010068106348626,-Symbol('drillradius'))])
+    basepos = Matrix(3,1,[Symbol('offsetx'),Symbol('offsety'),Symbol('offsetz')])
+
 def drillray_visionsol():
     solutions=[]
     solutions.append(ikfast.SolverSolution(Symbol('j3'),jointevalsin=[-Symbol('r00')],IsHinge=True))

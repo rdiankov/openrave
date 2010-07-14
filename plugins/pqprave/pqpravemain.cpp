@@ -15,7 +15,7 @@
 #include "plugindefs.h"
 #include "collisionPQP.h"
 
-RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(PluginType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv)
+RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv)
 {
     if( strcmp(pluginhash,RaveGetInterfaceHash(type)) ) {
         RAVELOG_WARNA("plugin type hash is wrong\n");

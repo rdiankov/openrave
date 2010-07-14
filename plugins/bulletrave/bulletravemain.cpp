@@ -18,7 +18,7 @@
 // need c linkage
 extern "C" {
 
-InterfaceBasePtr CreateInterface(PluginType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv)
+InterfaceBasePtr CreateInterface(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv)
 {
     if( strcmp(pluginhash,RaveGetInterfaceHash(type)) ) {
         RAVELOG_WARNA("plugin type hash is wrong\n");

@@ -1381,7 +1381,8 @@ protected:
         virtual bool InitKinBody(KinBodyPtr pbody) { SetPhysicsData(pbody, boost::shared_ptr<void>()); return true; } 
         virtual bool DestroyKinBody(KinBodyPtr pbody) { SetPhysicsData(pbody, boost::shared_ptr<void>()); return true; }
 
-        virtual bool SetBodyVelocity(KinBodyPtr pbody, const Vector& linearvel, const Vector& angularvel) { return true; }
+        virtual bool GetLinkVelocity(KinBody::LinkConstPtr plink, Vector& linearvel, Vector& angularvel) { return true; }
+        virtual bool SetLinkVelocity(KinBody::LinkPtr plink, const Vector& linearvel, const Vector& angularvel) { return true; }
         virtual bool SetBodyVelocity(KinBodyPtr pbody, const Vector& linearvel, const Vector& angularvel, const std::vector<dReal>& pJointVelocity) { return true; }
         virtual bool SetBodyVelocity(KinBodyPtr pbody, const std::vector<Vector>& pLinearVelocities, const std::vector<Vector>& pAngularVelocities) { return true; }
         virtual bool GetBodyVelocity(KinBodyConstPtr pbody, Vector& linearvel, Vector& angularvel)
@@ -1428,6 +1429,12 @@ protected:
 
         virtual void SetGravity(const Vector& gravity) {}
         virtual Vector GetGravity() { return Vector(0,0,0); }
+
+        virtual bool GetLinkForceTorque(KinBody::LinkConstPtr plink, Vector& force, Vector& torque) {
+            force = Vector(0,0,0);
+            torque = Vector(0,0,0);
+            return true;
+        }
 
         virtual void SimulateStep(dReal fTimeElapsed) { }
     };

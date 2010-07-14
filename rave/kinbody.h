@@ -46,7 +46,8 @@ public:
         Prop_SensorPlacement = 0x00040000, ///< [robot only] relative sensor placement of sensors
     };
 
-    /// rigid body defined by an arbitrary ODE body and a render object
+    /** \brief A rigid body holding all its collision and rendering data.
+     */
     class RAVE_API Link : public boost::enable_shared_from_this<Link>
     {
     public:
@@ -167,31 +168,43 @@ public:
         inline int GetIndex() const { return index; }
         inline const TRIMESH& GetCollisionData() const { return collision; }
 
-        /// return the aabb of all the geometries of the link
+        /// \return the aabb of all the geometries of the link in the world coordinate system
         virtual AABB ComputeAABB() const;
 
+        /// \return current transformation of the link in the world coordinate system
         virtual Transform GetTransform() const;
 
         /// \return the parent link in the kinematics hierarchy (ie the link closest to the root that is immediately connected to this link by a joint). If the link has no parents, returns an empty link. Mimic joints do not affect the parent link.
         inline boost::shared_ptr<Link> GetParentLink() const { return _parentlink.lock(); }
 
-        /// Get the center of mass offset in the link's local coordinate frame
+        /// \return center of mass offset in the link's local coordinate frame
         virtual Vector GetCOMOffset() const {return _transMass.trans; }
         virtual const TransformMatrix& GetInertia() const { return _transMass; }
         virtual dReal GetMass() const { return _mass; }
 
+        /// \param[in] t the new transformation
         virtual void SetTransform(const Transform& t);
         
         /// adds an external force at pos (absolute coords)
-        /// \param force the direction and magnitude of the force
-        /// \param pos in the world where the force is getting applied
-        /// \param bAdd if true, force is added to previous forces, otherwise it is set
+        /// \param[in] force the direction and magnitude of the force
+        /// \param[in] pos in the world where the force is getting applied
+        /// \param[in] bAdd if true, force is added to previous forces, otherwise it is set
         virtual void SetForce(const Vector& force, const Vector& pos, bool bAdd);
 
         /// adds torque to a body (absolute coords)
         /// \param bAdd if true, torque is added to previous torques, otherwise it is set
         virtual void SetTorque(const Vector& torque, bool bAdd);
 
+        /// forces the velocity of the link
+        /// \param[in] linearvel the translational velocity
+        /// \param[in] angularvel is the rotation axis * angular speed
+        virtual void SetVelocity(const Vector& linearvel, const Vector& angularvel);
+
+        /// get the velocity of the link
+        /// \param[out] linearvel the translational velocity
+        /// \param[out] angularvel is the rotation axis * angular speed
+        virtual void GetVelocity(Vector& linearvel, Vector& angularvel) const;
+    
         //typedef std::list<GEOMPROPERTIES>::iterator GeomPtr;
         //typedef std::list<GEOMPROPERTIES>::const_iterator GeomConstPtr;
         const std::list<GEOMPROPERTIES>& GetGeometries() const { return _listGeomProperties; }
@@ -581,7 +594,7 @@ public:
     /// queries the transfromation of the first link of the body
     virtual Transform GetTransform() const;
 
-    /// set the velocity of the base link
+    /// set the velocity of all the links
     /// \param angularvel is the rotation axis * angular speed
     virtual void SetVelocity(const Vector& linearvel, const Vector& angularvel);
 

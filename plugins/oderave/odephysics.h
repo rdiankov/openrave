@@ -171,7 +171,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         return false;
     }
 
-    virtual bool SetBodyVelocity(KinBodyPtr pbody, const Vector& linearvel, const Vector& angularvel)
+    virtual bool SetLinkVelocity(KinBody::LinkPtr plink, const Vector& linearvel, const Vector& angularvel)
     {
         RAVELOG_ERRORA("setting ode body velocities not supported!\n");
         return false;
@@ -187,10 +187,10 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         return false;
     }
 
-    virtual bool GetBodyVelocity(KinBodyConstPtr pbody, Vector& linearvel, Vector& angularvel)
+    virtual bool GetLinkVelocity(KinBody::LinkConstPtr plink, Vector& linearvel, Vector& angularvel)
     {
-        odespace->Synchronize(pbody);
-        dBodyID body = odespace->GetLinkBody(pbody->GetLinks().at(0));
+        odespace->Synchronize(plink->GetParent());
+        dBodyID body = odespace->GetLinkBody(plink);
         if( body ) {
             const dReal* p = dBodyGetLinearVel(body);
             linearvel = Vector(p[0], p[1], p[2]);
@@ -204,7 +204,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
 
     virtual bool GetBodyVelocity(KinBodyConstPtr pbody, Vector& linearvel, Vector& angularvel, std::vector<OpenRAVE::dReal>& pJointVelocity)
     {
-        GetBodyVelocity(pbody,linearvel,angularvel);
+        GetLinkVelocity(pbody->GetLinks().at(0),linearvel,angularvel);
 
         pJointVelocity.resize(pbody->GetDOF());
         vector<JointGetFn>::iterator itfn;
@@ -239,6 +239,22 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
             }
         }
 
+        return true;
+    }
+
+    virtual bool GetLinkForceTorque(KinBody::LinkConstPtr plink, Vector& force, Vector& torque) {
+        odespace->Synchronize(plink->GetParent());
+        dBodyID body = odespace->GetLinkBody(plink);
+        if( body ) {
+            const dReal* pf = dBodyGetForce(body);
+            force = Vector(pf[0],pf[1],pf[2]);
+            const dReal* pt = dBodyGetTorque(body);
+            torque = Vector(pt[0],pt[1],pt[2]);
+        }
+        else {
+            force = Vector(0,0,0);
+            torque = Vector(0,0,0);
+        }
         return true;
     }
 

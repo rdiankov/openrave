@@ -363,7 +363,7 @@ public:
     }
     virtual ~PyInterfaceBase() {}
 
-    PluginType GetInterfaceType() const { return _pbase->GetInterfaceType(); }
+    InterfaceType GetInterfaceType() const { return _pbase->GetInterfaceType(); }
     string GetXMLId() const { return _pbase->GetXMLId(); }
     string GetPluginName() const { return _pbase->GetPluginName(); }
     string GetDescription() const { return _pbase->GetDescription(); }
@@ -384,7 +384,7 @@ public:
         return object(sout.str());
     }
 
-    virtual string __repr__() { return boost::str(boost::format("<env.CreateInterface(PluginType.%s,'%s')>")%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId()); }
+    virtual string __repr__() { return boost::str(boost::format("<env.CreateInterface(InterfaceType.%s,'%s')>")%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId()); }
     virtual string __str__() { return boost::str(boost::format("<%s:%s>")%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId()); }
     virtual bool __eq__(PyInterfaceBasePtr p) { return !!p && _pbase == p->GetInterfaceBase(); }
     virtual bool __ne__(PyInterfaceBasePtr p) { return !p || _pbase != p->GetInterfaceBase(); }
@@ -1937,12 +1937,16 @@ public:
     bool InitEnvironment() { return _pPhysicsEngine->InitEnvironment(); }
     void DestroyEnvironment() { _pPhysicsEngine->DestroyEnvironment(); }
     bool InitKinBody(PyKinBodyPtr pbody) { CHECK_POINTER(pbody); return _pPhysicsEngine->InitKinBody(pbody->GetBody()); }
+    
+    bool SetLinkVelocity(PyKinBody::PyLinkPtr plink, object linearvel, object angularvel)
+    {
+        CHECK_POINTER(plink);
+        return _pPhysicsEngine->SetLinkVelocity(plink->GetLink(),ExtractVector3(linearvel),ExtractVector3(angularvel));
+    }
 
     bool SetBodyVelocity(PyKinBodyPtr pbody, object linearvel, object angularvel, object jointvelocity)
     {
         CHECK_POINTER(pbody);
-        if( !jointvelocity )
-            return _pPhysicsEngine->SetBodyVelocity(pbody->GetBody(),ExtractVector3(linearvel),ExtractVector3(angularvel));
         return _pPhysicsEngine->SetBodyVelocity(pbody->GetBody(),ExtractVector3(linearvel),ExtractVector3(angularvel),ExtractArray<dReal>(jointvelocity));
     }
     bool SetBodyVelocity(PyKinBodyPtr pbody, object LinearVelocities, object AngularVelocities)
@@ -1964,20 +1968,31 @@ public:
         CHECK_POINTER(pbody);
         Vector linearvel, angularvel;
         vector<dReal> vjointvel;
-        if( !_pPhysicsEngine->GetBodyVelocity(pbody->GetBody(),linearvel,angularvel,vjointvel) )
-            throw openrave_exception("Failed to get body velocity");
+        if( !_pPhysicsEngine->GetBodyVelocity(pbody->GetBody(),linearvel,angularvel,vjointvel) ) {
+            return object();
+        }
         return boost::python::make_tuple(toPyVector3(linearvel),toPyVector3(angularvel),toPyArray(vjointvel));
     }
 
-    object GetBodyVelocityLinks(PyKinBodyPtr pbody, Vector* pLinearVelocities, Vector* pAngularVelocities)
+    object GetLinkVelocity(PyKinBody::PyLinkPtr plink)
+    {
+        CHECK_POINTER(plink);
+        Vector linearvel, angularvel;
+        if( !_pPhysicsEngine->GetLinkVelocity(plink->GetLink(),linearvel,angularvel) ) {
+            return object();
+        }
+        return boost::python::make_tuple(toPyVector3(linearvel),toPyVector3(angularvel));
+    }
+    
+    object GetBodyVelocityLinks(PyKinBodyPtr pbody)
     {
         CHECK_POINTER(pbody);
         if( pbody->GetBody()->GetLinks().size() == 0 )
             return boost::python::make_tuple(numeric::array(boost::python::list()),numeric::array(boost::python::list()));
         vector<Vector> linearvel(pbody->GetBody()->GetLinks().size()),angularvel(pbody->GetBody()->GetLinks().size());
-        if( !_pPhysicsEngine->GetBodyVelocity(pbody->GetBody(),linearvel,angularvel) )
-            throw openrave_exception("physics engine failed");
-
+        if( !_pPhysicsEngine->GetBodyVelocity(pbody->GetBody(),linearvel,angularvel) ) {
+            return object();
+        }
         npy_intp dims[] = {pbody->GetBody()->GetDOF(),3};
         PyObject *pylinear = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
         PyObject *pyangular = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
@@ -2231,7 +2246,7 @@ public:
     bool LoadPlugin(const string& name) { return _penv->LoadPlugin(name.c_str()); }
     void ReloadPlugins() { return _penv->ReloadPlugins(); }
 
-    PyInterfaceBasePtr CreateInterface(PluginType type, const string& name)
+    PyInterfaceBasePtr CreateInterface(InterfaceType type, const string& name)
     {
         InterfaceBasePtr p = _penv->CreateInterface(type,name);
         if( !p )
@@ -3349,7 +3364,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
         .value("BodyState",SO_BodyState)
         .value("NamesAndFiles",SO_NamesAndFiles)
         ;
-    enum_<PluginType>("PluginType")
+    enum_<InterfaceType>("InterfaceType")
         .value(RaveGetInterfaceName(PT_Planner).c_str(),PT_Planner)
         .value(RaveGetInterfaceName(PT_Robot).c_str(),PT_Robot)
         .value(RaveGetInterfaceName(PT_SensorSystem).c_str(),PT_SensorSystem)
@@ -3902,6 +3917,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
         .def("InitKinBody",&PyPhysicsEngineBase::InitKinBody)
         .def("SetBodyVelocity",SetBodyVelocity1)
         .def("SetBodyVelocity",SetBodyVelocity2)
+        .def("SetLinkVelocity",&PyPhysicsEngineBase::SetLinkVelocity)
+        .def("GetLinkVelocity",&PyPhysicsEngineBase::GetLinkVelocity)
         .def("GetBodyVelocityJoints",&PyPhysicsEngineBase::GetBodyVelocityJoints)
         .def("GetBodyVelocityLinks",&PyPhysicsEngineBase::GetBodyVelocityLinks)
         .def("SetJointVelocity",&PyPhysicsEngineBase::SetJointVelocity)

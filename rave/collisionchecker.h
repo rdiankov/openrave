@@ -35,7 +35,7 @@ enum CollisionAction
     CA_Ignore = 1, ///< do nothing
 };
 
-/** \brief Responsible for all collision checking queries of the environment ( \ref PT_CollisionChecker ).
+/** \brief Responsible for all collision checking queries of the environment.
     
     \ingroup interfaces
 */
