@@ -331,7 +331,7 @@ public:
 
         bool TestRayRigid(const Vector& v, const TransformMatrix& tcamera, const vector<KinBody::LinkPtr>& vattachedlinks)
         {
-            if( _vf->_robot->GetEnv()->CheckCollision(RAY(_fRayMinDist*v,2.0f*v),_vf->_robot,_report) ) {
+            if( _vf->_robot->GetEnv()->CheckCollision(RAY(_fRayMinDist*v,2.0f*v),KinBodyConstPtr(_vf->_robot),_report) ) {
                 //RAVELOG_INFO(str(boost::format("ray col: %s\n")%_report->__str__()));
                 return false;
             }
