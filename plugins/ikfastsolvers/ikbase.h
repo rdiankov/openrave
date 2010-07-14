@@ -256,35 +256,35 @@ private:
         return SR_Continue;
     }
 
-    SolutionResults _SolveSingle(const IkParameterization& param, const vector<IKReal>& vfree, const vector<dReal>& q0, bool bCheckEnvCollision, boost::shared_ptr< std::vector<dReal> > result, bool& bCheckEndEffector)
+    bool _CallIK(const IkParameterization& param, const vector<IKReal>& vfree, std::vector<Solution>& vsolutions)
     {
-        std::vector<Solution> vsolutions;
-
         if( param.GetType() == IkParameterization::Type_Transform6D ) {
             TransformMatrix t = param.GetTransform();
             IKReal eetrans[3] = {t.trans.x, t.trans.y, t.trans.z};
             IKReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
-            //RAVELOG_INFO("trans: %f %f %f\n",eetrans[0],eetrans[1],eetrans[2]);
-            if( !_pfnik(eetrans, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions) )
-                return SR_Continue;
+//            stringstream ss; ss << "./ik ";
+//            ss << eerot[0]  << " " << eerot[1]  << " " << eerot[2]  << " " << eetrans[0]  << " " << eerot[3]  << " " << eerot[4]  << " " << eerot[5]  << " " << eetrans[1]  << " " << eerot[6]  << " " << eerot[7]  << " " << eerot[8]  << " " << eetrans[2] << " ";
+//            FOREACH(itfree,vfree) {
+//                ss << *itfree << " ";
+//            }
+//            ss << endl;
+//            RAVELOG_INFO(ss.str());
+            return _pfnik(eetrans, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions);
         }
         else if( param.GetType() == IkParameterization::Type_Rotation3D ) {
             TransformMatrix t(Transform(param.GetRotation(),Vector()));
             IKReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
-            if( !_pfnik(NULL, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions) )
-                return SR_Continue;
+            return _pfnik(NULL, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions);
         }
         else if( param.GetType() == IkParameterization::Type_Translation3D ) {
             Vector v = param.GetTranslation();
             IKReal eetrans[3] = {v.x, v.y, v.z};
-            if( !_pfnik(eetrans, NULL, vfree.size()>0?&vfree[0]:NULL, vsolutions) )
-                return SR_Continue;
+            return _pfnik(eetrans, NULL, vfree.size()>0?&vfree[0]:NULL, vsolutions);
         }
         else if( param.GetType() == IkParameterization::Type_Direction3D ) {
             Vector v = param.GetDirection();
             IKReal eerot[9] = {v.x, v.y, v.z,0,0,0,0,0,0};
-            if( !_pfnik(NULL, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions) )
-                return SR_Continue;
+            return _pfnik(NULL, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions);
         }
         else if( param.GetType() == IkParameterization::Type_Ray4D ) {
             Vector pos = param.GetRay().pos;
@@ -292,21 +292,32 @@ private:
             IKReal eetrans[3] = {pos.x,pos.y,pos.z};
             IKReal eerot[9] = {dir.x, dir.y, dir.z,0,0,0,0,0,0};
             //RAVELOG_INFO("ray: %f %f %f %f %f %f\n",eerot[0],eerot[1],eerot[2],eetrans[0],eetrans[1],eetrans[2]);
-            if( !_pfnik(eetrans, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions) )
-                return SR_Continue;
+            if( !_pfnik(eetrans, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions) ) {
+                return false;
+            }
+            //?
             FOREACH(itsol,vsolutions) {
                 FOREACH(it,itsol->basesol) {
                     it->freeind=-1;
                 }
                 itsol->vfree.resize(0);
             }
+            return true;
 //            IKReal s[4];
 //            IKReal free[10];
 //            vsolutions[0].GetSolution(s,free);
 //            RAVELOG_INFO("sol %d: %f %f %f %f\n",(int)vsolutions[0].GetFree().size(),s[0],s[1],s[2],s[3]);
         }
-        else
-            throw openrave_exception(str(boost::format("don't support ik parameterization %d")%param.GetType()));
+
+        throw openrave_exception(str(boost::format("don't support ik parameterization %d")%param.GetType()));
+    }
+
+    SolutionResults _SolveSingle(const IkParameterization& param, const vector<IKReal>& vfree, const vector<dReal>& q0, bool bCheckEnvCollision, boost::shared_ptr< std::vector<dReal> > result, bool& bCheckEndEffector)
+    {
+        std::vector<Solution> vsolutions;
+        if( !_CallIK(param,vfree,vsolutions) ) {
+            return SR_Continue;
+        }
 
         vector<IKReal> vsolfree;
 
@@ -416,15 +427,10 @@ private:
 
     SolutionResults _SolveAll(const IkParameterization& param, const vector<IKReal>& vfree, bool bCheckEnvCollision, std::vector< std::vector<dReal> >& qSolutions, bool& bCheckEndEffector)
     {
-        TransformMatrix t = param.GetTransform();
-        IKReal eetrans[3] = {t.trans.x, t.trans.y, t.trans.z};
-        IKReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
-
         RobotBase::ManipulatorPtr pmanip(_pmanip);
-        RobotBasePtr probot = pmanip->GetRobot();
-        
+        RobotBasePtr probot = pmanip->GetRobot();        
         std::vector<Solution> vsolutions;
-        if( _pfnik(eetrans, eerot, vfree.size() > 0 ? &vfree[0] : NULL, vsolutions) ) {
+        if( _CallIK(param,vfree,vsolutions) ) {
             vector<IKReal> vsolfree;
             vector<dReal> vravesol(pmanip->GetArmJoints().size());
             std::vector<IKReal> sol(pmanip->GetArmJoints().size());
@@ -442,7 +448,6 @@ private:
                 }
             }
         }
-
         return SR_Continue;
     }
 

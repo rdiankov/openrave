@@ -303,11 +303,8 @@ int main(int argc, char** argv)
             fcode = ''
             if len(subexprs) > 0:
                 fcode = 'IKReal '
-                vars = []
-                for var,expr in subexprs:
-                    fcode += str(var) + ', '
-                    vars.append(var)
-                fcode += '__dummy__;\n'
+                vars = [var for var,expr in subexprs]
+                fcode = 'IKReal ' + ','.join(str(var) for var,expr in subexprs) + ';\n'
                 for var,expr in subexprs:
                     fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
             for i in range(len(outputnames)):

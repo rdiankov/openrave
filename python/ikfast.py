@@ -983,15 +983,29 @@ class IKFastSolver(AutoReloader):
                 solsubs = self.freevarsubs[:]
                 endbranchtree = [SolverStoreSolution (jointvars)]                
                 curtransvars = solvejointvars[:]
-                transtree = self.solveIKTranslationAll(Positions,Positionsee,curtransvars,
-                                                       otherunsolvedvars = [],
-                                                       othersolvedvars = freejointvars,
-                                                       endbranchtree=endbranchtree,
-                                                       solsubs = solsubs)
-                
-                if len(curtransvars) > 0:
-                    print 'error, cannot solve translation for ',freevar,freevalue
-                    continue
+                uselength=True
+                try:
+                    AllEquations = []
+                    for i in range(len(Positions)):
+                        for j in range(3):
+                            e = Positions[i][j] - Positionsee[i][j]
+                            if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
+                                AllEquations.append(e)
+                        if uselength:
+                            e = self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp((Positions[i][0]**2+Positions[i][1]**2+Positions[i][2]**2).expand())).expand())) - self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp((Positionsee[i][0]**2+Positionsee[i][1]**2+Positionsee[i][2]**2).expand())).expand()))
+                            if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
+                                AllEquations.append(e)
+                    AllEquations.sort(lambda x, y: self.codeComplexity(x)-self.codeComplexity(y))
+                    transtree = self.solveAllEquations(AllEquations,curvars=curtransvars,othersolvedvars=freejointvars,solsubs = solsubs,endbranchtree=endbranchtree)
+                except self.CannotSolveError:
+                    transtree = self.solveIKTranslationAll(Positions,Positionsee,curtransvars,
+                                                           otherunsolvedvars = [],
+                                                           othersolvedvars = freejointvars,
+                                                           endbranchtree=endbranchtree,
+                                                           solsubs = solsubs,uselength=uselength)
+                    if len(curtransvars) > 0:
+                        print 'error, cannot solve translation for ',freevar,freevalue
+                        continue
                 solverbranches.append((freevarcond,transtree))
 
         if len(solverbranches) == 0 or not solverbranches[-1][0] is None:
@@ -1311,32 +1325,32 @@ class IKFastSolver(AutoReloader):
                 
                 curtransvars = transvars[:]
                 uselength=True
-#                 try:
-#                     AllEquations = []
-#                     for i in range(len(Positions)):
-#                         for j in range(3):
-#                             e = Positions[i][j] - Positionsee[i][j]
-#                             if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
-#                                 AllEquations.append(e)
-#                         if uselength:
-#                             e = self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp((Positions[i][0]**2+Positions[i][1]**2+Positions[i][2]**2).expand())).expand())) - self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp((Positionsee[i][0]**2+Positionsee[i][1]**2+Positionsee[i][2]**2).expand())).expand()))
-#                             if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
-#                                 AllEquations.append(e)
-#                     AllEquations.sort(lambda x, y: self.codeComplexity(x)-self.codeComplexity(y))
-#                     if not solveRotationFirst:
-#                         AllEquations = [eq for eq in AllEquations if not eq.has_any_symbols(*rotvars)]
-#                     transtree = self.solveAllEquations(AllEquations,curvars=curtransvars,othersolvedvars = rotvars+freejointvars if solveRotationFirst else freejointvars,solsubs = solsubs,endbranchtree=endbranchtree)
-#                 except self.CannotSolveError:
-                #print 'failed full solution, resolve to old method'
-                transtree = self.solveIKTranslationAll(Positions,Positionsee,curtransvars=curtransvars,
-                                                       otherunsolvedvars = [] if solveRotationFirst else rotvars,
-                                                       othersolvedvars = rotvars+freejointvars if solveRotationFirst else freejointvars,
-                                                       endbranchtree=endbranchtree,
-                                                       solsubs = solsubs, uselength=uselength)
+                try:
+                    AllEquations = []
+                    for i in range(len(Positions)):
+                        for j in range(3):
+                            e = Positions[i][j] - Positionsee[i][j]
+                            if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
+                                AllEquations.append(e)
+                        if uselength:
+                            e = self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp((Positions[i][0]**2+Positions[i][1]**2+Positions[i][2]**2).expand())).expand())) - self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp((Positionsee[i][0]**2+Positionsee[i][1]**2+Positionsee[i][2]**2).expand())).expand()))
+                            if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
+                                AllEquations.append(e)
+                    AllEquations.sort(lambda x, y: self.codeComplexity(x)-self.codeComplexity(y))
+                    if not solveRotationFirst:
+                        AllEquations = [eq for eq in AllEquations if not eq.has_any_symbols(*rotvars)]
+                    transtree = self.solveAllEquations(AllEquations,curvars=curtransvars,othersolvedvars = rotvars+freejointvars if solveRotationFirst else freejointvars,solsubs = solsubs,endbranchtree=endbranchtree)
+                except self.CannotSolveError:
+                    print 'failed full solution, resolve to old method'
+                    transtree = self.solveIKTranslationAll(Positions,Positionsee,curtransvars=curtransvars,
+                                                           otherunsolvedvars = [] if solveRotationFirst else rotvars,
+                                                           othersolvedvars = rotvars+freejointvars if solveRotationFirst else freejointvars,
+                                                           endbranchtree=endbranchtree,
+                                                           solsubs = solsubs, uselength=uselength)
                     
-                if len(curtransvars) > 0:
-                    print 'error, cannot solve translation for ',freevar,freevalue
-                    continue
+                    if len(curtransvars) > 0:
+                        print 'error, cannot solve translation for ',freevar,freevalue
+                        continue
                 
                 solvertree = []
                 solvedvarsubs = valuesubs+self.freevarsubs
@@ -1841,12 +1855,19 @@ class IKFastSolver(AutoReloader):
                 s = solve(comb[1],[svar,cvar])
                 try:
                     if s is not None and s.has_key(svar) and s.has_key(cvar):
-                        if self.chop((s[svar]-s[cvar]).subs(listsymbols),6) == 0:
+                        if self.chop((s[svar]-s[cvar]).subs(listsymbols)) == 0:
                             continue
+                        # check the numerator and denominator if solutions are the same or for possible divide by zeros
                         if s[svar].is_fraction() and s[cvar].is_fraction():
-                            # check the numerator and denominator
-                            if self.chop((s[svar].args[0]-s[cvar].args[0]).subs(listsymbols),6) == 0 and self.chop((s[svar].args[1]-s[cvar].args[1]).subs(listsymbols),6) == 0:
+                            if self.chop((s[svar].args[0]-s[cvar].args[0]).subs(listsymbols)) == 0 and self.chop((s[svar].args[1]-s[cvar].args[1]).subs(listsymbols)) == 0:
                                 continue
+                        svarsol = s[svar].subs(listsymbols)
+                        cvarsol = s[cvar].subs(listsymbols)
+                        if self.chop(simplify(fraction(svarsol)[1]))== 0:
+                            continue
+                        if self.chop(simplify(fraction(cvarsol)[1]))== 0:
+                            continue
+
                         expandedsol = atan2(s[svar],s[cvar]).subs(listsymbols)
                         # sometimes the returned simplest solution makes really gross approximations
                         simpsol = self.customtrigsimp(expandedsol, deep=True)

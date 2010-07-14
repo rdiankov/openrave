@@ -134,7 +134,6 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
     {
         COLLISIONCALLBACK cb(shared_checker(),report,pbody,KinBody::LinkConstPtr());
         if( pbody->GetLinks().size() == 0 || !pbody->IsEnabled() ) {
-            RAVELOG_WARNA("body %s not valid\n", pbody->GetName().c_str());
             return false;
         }
 
@@ -148,11 +147,9 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
         COLLISIONCALLBACK cb(shared_checker(),report,KinBodyPtr(),KinBody::LinkConstPtr());
 
         if( pbody1->GetLinks().size() == 0 || !pbody1->IsEnabled()  ) {
-            RAVELOG_WARNA("body1 %s not valid\n", pbody1->GetName().c_str());
             return false;
         }
         if( pbody2->GetLinks().size() == 0 || !pbody2->IsEnabled()  ) {
-            RAVELOG_WARNA("body2 %s not valid\n", pbody2->GetName().c_str());
             return false;
         }
 
@@ -274,7 +271,6 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         if( pbody->GetLinks().size() == 0 || !pbody->IsEnabled()  ) {
-            RAVELOG_WARNA("body %s not valid\n", pbody->GetName().c_str());
             return false;
         }
 
@@ -318,7 +314,6 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
     {
         COLLISIONCALLBACK cb(shared_checker(),report,pbody,KinBody::LinkConstPtr());
         if( pbody->GetLinks().size() == 0 || !pbody->IsEnabled() ) {
-            RAVELOG_WARNA("body %s not valid\n", pbody->GetName().c_str());
             return false;
         }
 
@@ -438,9 +433,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
     virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         COLLISIONCALLBACK cb(shared_checker(),report,KinBodyPtr(),KinBody::LinkConstPtr());
-
         if( pbody->GetLinks().size() == 0 || !pbody->IsEnabled()  ) {
-            RAVELOG_WARNA("body %s not valid\n", pbody->GetName().c_str());
             return false;
         }
 

@@ -111,9 +111,9 @@ if __name__ == "__main__":
         example.run(args=args)
         sys.exit(0)
     if options.level is not None:
-        for debuglevel in [DebugLevel.Fatal,DebugLevel.Error,DebugLevel.Warn,DebugLevel.Info,DebugLevel.Debug,DebugLevel.Verbose]:
-            if (not options.level.isdigit() and options.level.lower() == debuglevel.name.lower()) or (options.level.isdigit() and int(options.level) == int(debuglevel)):
-                raveSetDebugLevel(debuglevel)
+        for debuglevel,debugname in DebugLevel.values.iteritems():
+            if (not options.level.isdigit() and options.level.lower() == debugname.name.lower()) or (options.level.isdigit() and int(options.level) == int(debuglevel)):
+                raveSetDebugLevel(debugname)
                 break
     env = Environment()
     try:

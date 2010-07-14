@@ -47,7 +47,7 @@ class InverseKinematicsModel(OpenRAVEModel):
     def load(self,*args,**kwargs):
         return self.setrobot(*args,**kwargs)
     def getversion(self):
-        return 8
+        return 9
     def setrobot(self,freeinc=None):
         self.iksolver = None
         self.freeinc=freeinc
@@ -238,13 +238,17 @@ class InverseKinematicsModel(OpenRAVEModel):
             ikfastproblem = [p for p in self.env.GetLoadedProblems() if p.GetXMLId() == 'IKFast'][0]
             results = ikfastproblem.SendCommand('PerfTiming num %d %s'%(num,self.getfilename()))
             return [double(s)*1e-6 for s in results.split()]
-    def testik(self,numiktests):
+    def testik(self,iktests):
+        """Tests the iksolver.
+        """
         with self.robot:
+            self.robot.Enable(False) # removes self-collisions from being considered
             # set base to identity to avoid complications when reporting errors
             self.robot.SetTransform(dot(linalg.inv(self.manip.GetBase().GetTransform()),self.robot.GetTransform()))
             lower,upper = [v[self.manip.GetArmJoints()] for v in self.robot.GetJointLimits()]
             if self.iktype == IkParameterization.Type.Direction3D:
                 success = 0.0
+                numiktests = int(iktests)
                 for i in range(numiktests):
                     while True:
                         self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
@@ -266,6 +270,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                 return success/numiktests
             elif self.iktype == IkParameterization.Type.Translation3D:
                 success = 0.0
+                numiktests = int(iktests)
                 for i in range(numiktests):
                     while True:
                         self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
@@ -287,6 +292,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                 return success/numiktests
             elif self.iktype == IkParameterization.Type.Rotation3D:
                 success = 0.0
+                numiktests = int(iktests)
                 for i in range(numiktests):
                     while True:
                         self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
@@ -308,7 +314,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                 return success/numiktests
             elif self.iktype == IkParameterization.Type.Ray4D:
                 success = 0.0
-                self.robot.Enable(False)
+                numiktests = int(iktests)
                 for i in range(numiktests):
                     while True:
                         self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
@@ -337,8 +343,12 @@ class InverseKinematicsModel(OpenRAVEModel):
                 return success/numiktests
             else:
                 ikfastproblem = [p for p in self.env.GetLoadedProblems() if p.GetXMLId().lower() == 'ikfast'][0]
-                print 'robot name: ',self.robot.GetName()
-                successrate = float(ikfastproblem.SendCommand('DebugIK robot %s numtests %d'%(self.robot.GetName(),numiktests)))
+                cmd = 'DebugIK robot %s '%self.robot.GetName()
+                if iktests.isdigit():
+                    cmd += 'numtests %d '%int(iktests)
+                else:
+                    cmd += 'readfile %s '%iktests
+                successrate = float(ikfastproblem.SendCommand(cmd))
         return successrate
 
     @staticmethod
@@ -398,25 +408,25 @@ class InverseKinematicsModel(OpenRAVEModel):
         parser.add_option('--usecached', action='store_false', dest='force',default=True,
                           help='If set, will always try to use the cached ik c++ file, instead of generating a new one.')
         parser.add_option('--rotation3donly', action='store_true', dest='rotation3donly',default=False,
-                          help='If true, need to specify only 3 solve joints and will solve for a target rotation')
+                          help='[deprecated] If true, need to specify only 3 solve joints and will solve for a target rotation')
         parser.add_option('--direction3donly', action='store_true', dest='direction3donly',default=False,
-                          help='If true, need to specify only 2 solve joints and will solve for a target direction')
+                          help='[deprecated] If true, need to specify only 2 solve joints and will solve for a target direction')
         parser.add_option('--translation3donly', action='store_true', dest='translation3donly',default=False,
-                          help='If true, need to specify only 3 solve joints and will solve for a target translation')
+                          help='[deprecated] If true, need to specify only 3 solve joints and will solve for a target translation')
         parser.add_option('--ray4donly', action='store_true', dest='ray4donly',default=False,
-                          help='If true, need to specify only 4 solve joints and will solve for a target ray')
+                          help='[deprecated] If true, need to specify only 4 solve joints and will solve for a target ray')
         parser.add_option('--usedummyjoints', action='store_true',dest='usedummyjoints',default=False,
                           help='Treat the unspecified joints in the kinematic chain as dummy and set them to 0. If not specified, treats all unspecified joints as free parameters.')
         parser.add_option('--freeinc', action='store', type='float', dest='freeinc',default=None,
                           help='The discretization value of freejoints.')
-        parser.add_option('--numiktests', action='store',type='int',dest='numiktests',default=None,
-                          help='Will test the ik solver against NUMIKTESTS random robot configurations and program will exit with 0 if success rate exceeds the test success rate, otherwise 1.')
+        parser.add_option('--numiktests','--iktests',action='store',type='string',dest='iktests',default=None,
+                          help='Will test the ik solver and return the success rate. IKTESTS can be an integer to specify number of random tests, it can also be a filename to specify the joint values of the manipulator to test. The formst of the filename is #numiktests [dof values]*')
         parser.add_option('--perftiming', action='store',type='int',dest='perftiming',default=None,
                           help='Number of IK calls for measuring the internal ikfast solver.')
         parser.add_option('--outputlang', action='store',type='string',dest='outputlang',default=None,
                           help='If specified, will output the generated code in that language (ie --outputlang=cpp).')
         parser.add_option('--iktype', action='store',type='string',dest='iktype',default=None,
-                          help='The ik type to build the solver for (replaces rotation3donly, direction3donly, translation3donly, and ray4donly parameters)')
+                          help='The ik type to build the solver current types are: %s'%(', '.join(iktype.name for iktype in IkParameterization.Type.values.values())))
         return parser
     @staticmethod
     def RunFromParser(Model=None,parser=None,args=None,**kwargs):
@@ -424,7 +434,11 @@ class InverseKinematicsModel(OpenRAVEModel):
             parser = InverseKinematicsModel.CreateOptionParser()
         (options, leftargs) = parser.parse_args(args=args)
         if options.iktype is not None:
-            iktype = IkParameterization.Type.names[options.iktype]
+            # cannot use .names due to python 2.5 (or is it boost version?)
+            for value,type in IkParameterization.Type.values.iteritems():
+                if type.name.lower() == options.iktype.lower():
+                    iktype = type
+                    break
         else:
             iktype = IkParameterization.Type.Transform6D
             if options.rotation3donly:
@@ -437,7 +451,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                 iktype = IkParameterization.Type.Ray4D
         Model = lambda robot: InverseKinematicsModel(robot=robot,iktype=iktype)
         OpenRAVEModel.RunFromParser(Model=Model,parser=parser,args=args,**kwargs)
-        if options.numiktests or options.perftiming:
+        if options.iktests is not None or options.perftiming is not None:
             print 'testing the success rate of robot ',options.robot
             env = Environment()
             try:
@@ -448,8 +462,8 @@ class InverseKinematicsModel(OpenRAVEModel):
                 ikmodel = InverseKinematicsModel(robot,iktype=iktype)
                 if not ikmodel.setrobot(freeinc=options.freeinc):
                     raise ValueError('failed to load ik')
-                if options.numiktests:
-                    successrate = ikmodel.testik(numiktests=options.numiktests)
+                if options.iktests is not None:
+                    successrate = ikmodel.testik(iktests=options.iktests)
                     print 'success rate is: ',successrate
                 elif options.perftiming:
                     results = array(ikmodel.perftiming(num=options.perftiming))

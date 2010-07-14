@@ -14,7 +14,8 @@
 from __future__ import with_statement # for python 2.5
 import openravepy
 import metaclass
-import sys, os, optparse, numpy, copy
+import sys, os, numpy, copy
+import optparse
 try:
     import cPickle as pickle
 except:
@@ -417,24 +418,28 @@ class OpenRAVEModel(metaclass.AutoReloader):
         raise NotImplementedError()
     @staticmethod
     def CreateOptionParser(useManipulator=True):
-        parser = optparse.OptionParser(description='Computes an openrave model and caches into file.')
-        parser.add_option('--robot',action='store',type='string',dest='robot',default=os.getenv('OPENRAVE_ROBOT',default='robots/barrettsegway.robot.xml'),
-                          help='OpenRAVE robot to load (default=%default)')
-        if useManipulator:
-            parser.add_option('--manipname',action='store',type='string',dest='manipname',default=None,
-                              help='The name of the manipulator to use')
-        parser.add_option('--collision', action="store",type='string',dest='collision',default=None,
+        parser = optparse.OptionParser(description='OpenRAVE Database Generator.')
+        ogroup = optparse.OptionGroup(parser,"OpenRAVE Environment Options")
+        ogroup.add_option('--collision', action="store",type='string',dest='collision',default=None,
                           help='Default collision checker to use')
-        parser.add_option('--physics', action="store",type='string',dest='physics',default=None,
+        ogroup.add_option('--physics', action="store",type='string',dest='physics',default=None,
                           help='Default physics engine to use')
-        parser.add_option('--show',action='store_true',dest='show',default=False,
-                          help='Graphically shows the built model')
-        parser.add_option('--debug','-d', action="store",type='string',dest='debug',default=None,
+        ogroup.add_option('--debug','-d', action="store",type='string',dest='debug',default=None,
                           help='Debug level')
-        parser.add_option('--getfilename',action="store_true",dest='getfilename',default=False,
-                          help='If set, will return the final database filename where all data is stored')
-        parser.add_option('--gethas',action="store_true",dest='gethas',default=False,
-                          help='If set, will exit with 0 if datafile is generated and up to date, otherwise will return a 1. This will require loading the model and checking versions, so might be a little slow.')
+        parser.add_option_group(ogroup)
+        dbgroup = optparse.OptionGroup(parser,"OpenRAVE Database Generator General Options")
+        dbgroup.add_option('--show',action='store_true',dest='show',default=False,
+                           help='Graphically shows the built model')
+        dbgroup.add_option('--getfilename',action="store_true",dest='getfilename',default=False,
+                           help='If set, will return the final database filename where all data is stored')
+        dbgroup.add_option('--gethas',action="store_true",dest='gethas',default=False,
+                           help='If set, will exit with 0 if datafile is generated and up to date, otherwise will return a 1. This will require loading the model and checking versions, so might be a little slow.')
+        dbgroup.add_option('--robot',action='store',type='string',dest='robot',default=os.getenv('OPENRAVE_ROBOT',default='robots/barrettsegway.robot.xml'),
+                           help='OpenRAVE robot to load (default=%default)')
+        if useManipulator:
+            dbgroup.add_option('--manipname',action='store',type='string',dest='manipname',default=None,
+                               help='The name of the manipulator on the robot to use')
+        parser.add_option_group(dbgroup)
         return parser
     @staticmethod
     def RunFromParser(Model,env=None,parser=None,args=None,**kwargs):
