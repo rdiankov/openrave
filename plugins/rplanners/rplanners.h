@@ -307,9 +307,10 @@ class SpatialTree : public SpatialTreeBase
         // extend
         while(1) {
             dReal fdist = _distmetricfn(pTargetConfig,pnode->q);
-
-            if( fdist > _fStepLength ) fdist = _fStepLength / fdist;
-            else {
+            if( fdist > _fStepLength ) {
+                fdist = _fStepLength / fdist;
+            }
+            else if( fdist <= dReal(0.1) * _fStepLength ) { // return connect if the distance is very close
                 return ET_Connected;
             }
         
@@ -322,8 +323,17 @@ class SpatialTree : public SpatialTreeBase
             if( !!params->_constraintfn ) {
                 params->_setstatefn(_vNewConfig);
                 if( !params->_constraintfn(pnode->q, _vNewConfig, 0) ) {
-                    if(bHasAdded)
+                    if(bHasAdded) {
                         return ET_Sucess;
+                    }
+                    return ET_Failed;
+                }
+
+                // it could be the case that the node didn't move anywhere, in which case we would go into an infinite loop
+                if( _distmetricfn(pnode->q, _vNewConfig) <= dReal(0.01)*_fStepLength ) {
+                    if(bHasAdded) {
+                        return ET_Sucess;
+                    }
                     return ET_Failed;
                 }
             }
