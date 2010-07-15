@@ -16,19 +16,23 @@ There are many cmake options that control how %OpenRAVE is built. Once %OpenRAVE
 ccmake build
 \endverbatim
 
-in the root sources folder. For example, to disable ffmpeg video recording, find the ENABLE_VIDEORECORDING option and turn it to OFF.
-
-It is possible to set these options during the cmake build time by executing cmake yourself (if you notice all the Makefiles do is wrap calls to cmake), and adding command line arguments like \b -DENABLE_VIDEORECORDING=OFF:
+in the root sources folder. For example, to disable ffmpeg video recording, find the \c
+ENABLE_VIDEORECORDING option and turn it to \c OFF. It is possible to set these options during the
+cmake build time by executing cmake yourself (if you notice all the Makefiles do is wrap calls to
+cmake), and adding command line arguments like <tt>-DENABLE_VIDEORECORDING=OFF</tt>:
 
 \verbatim
 cd build
 cmake -DENABLE_VIDEORECORDING=OFF ..
 \endverbatim
 
-\subsection installation_double Double Precision
+\subsection installation_double Setting Precision
 
-To compile %OpenRAVE with double precision support (ie all dReal types become doubles), set '''DOUBLE_PRECISION''' to '''ON''' during cmake. For example:
- cmake -DDOUBLE_PRECISION=ON ...
+To compile %OpenRAVE with <b>double precision</b> (ie all dReal types become \b doubles), set \c DOUBLE_PRECISION to \c ON during cmake. For example:
+\verbatim
+cd build
+cmake -DDOUBLE_PRECISION=ON ...
+\endverbatim
 
 \section install_structure Install Directory Structure
 
@@ -54,7 +58,7 @@ To compile %OpenRAVE with double precision support (ie all dReal types become do
   - octave - All Octave scripting functions and examples. Include this directory into the OCTAVE_PATH.
   - plugins - Plugins compiled by the %OpenRAVE main distribution.
   - openravepy - Python bindings, database generators, and examples. Structure is explained <a href="http://openrave.programmingvision.com/ordocs/english/openravepy-html/index.html#rst-directory-structure">here</a>.
-  - robots - Robot XML files usually containing just a \b <robot> or \b <kinbody> tag.
+  - robots - Robot XML files usually containing just a \c <robot> or \c <kinbody> tag.
 
 */
 
@@ -88,7 +92,7 @@ The \b avcodec library in Ubuntu 8.10 has removed all mpeg encoders due to legal
 that %OpenRAVE recording will always fail with a <b>codec not found</b> message. To get it working,
 please install the \b libavformat-unstripped-52 and \b libavcodec-unstripped-51
 packages. Unfortunately, these packages cannot coexist with the dev packages, so you should first
-compile openrave with the normal \b libavcodec-dev''' and \b libavformat-dev packages, and then
+compile openrave with the normal \b libavcodec-dev and \b libavformat-dev packages, and then
 switch to the unstripped versions when recording.
 
 \subsection ilinux_ubuntu9 Ubuntu 9.x
@@ -105,7 +109,7 @@ Might need to add the livna yum repository for ffmpeg. To install the necessary 
 sudo yum install qt4-devel Coin2-devel glew-devel gsm-devel x264 x264-devel ffmpeg-devel libdc1394-devel libtheora-devel libmp4v2-devel ode-devel boost-devel cmake
 \endverbatim
 
-Be careful if installing \b soqt-devel from the package manager, it may be compiled with the wrong version of Qt. If compiling SoQt from sources, check \b QTDIR and make sure it points to the correct version.
+Be careful if installing \b soqt-devel from the package manager, it may be compiled with the wrong version of Qt. If compiling SoQt from sources, check \c QTDIR and make sure it points to the correct version.
 
 \section ilinux_libraries Necessary libraries for Old Linux Distros
 
@@ -114,16 +118,16 @@ Be careful if installing \b soqt-devel from the package manager, it may be compi
 - \b <a href="http://www.boost.org/users/download/">boost</a>
 - \b <a href="http://www.coin3d.org">Coin3d</a>
 - \b <a href="ftp://ftp.coin3d.org/pub/snapshots/SoQt-latest.tar.gz">SoQt</a>
- - <b>x86-64 users:</b> SoQt might give a compilation error in SoQtComponent.cpp. To fix it, go into \b src/Inventor/Qt/SoQtComponent.cpp:103 and replace <tt>unsigned long key</tt> with <tt>SbDict::Key key</tt>.
+ - <b>x86-64 users:</b> SoQt might give a compilation error in SoQtComponent.cpp. To fix it, go into \c src/Inventor/Qt/SoQtComponent.cpp:103 and replace <tt>unsigned long key</tt> with <tt>SbDict::Key key</tt>.
 
 \section ilinux_collisionphysics Collision Checkers and Physics Simulators
 
 Although %OpenRAVE is not tied to any particular collision checker, it requires at least one is installed to get basic functions. Here are the following libraries that have %OpenRAVE plugins:
 
 - <a href="http://www.ode.org">ODE Collision/Physics</a> - install from sources 0.8-0.10.1 tested to work.  It is possible to compile ODE with double precision.
- - For 0.10.1, configuring with \b --enable-new-trimesh option will randomly crash openrave, so use at your own risk.
- - If not using enable-new-trimesh, disabling asserts (via \b --disable-asserts) is necessary due to some weird bug in normalization bug.
- - For 0.10+. If installing on x86-64 distro, configure ODE with \b --enable-shared.
+ - For 0.10.1, configuring with \c --enable-new-trimesh option will randomly crash openrave, so use at your own risk.
+ - If not using enable-new-trimesh, disabling asserts (via \c --disable-asserts) is necessary due to some weird bug in normalization bug.
+ - For 0.10+. If installing on x86-64 distro, configure ODE with \c --enable-shared.
 
 - <a href="http://www.bulletphysics.com">Bullet Collision</a> (use v2.74 or greater) - Need to install to a system directory so %OpenRAVE can find it using \c pkg-config. If using autotools \c configure, need to remove \c install-sh before running \c autogen.sh. The command lines become:
 \verbatim
@@ -140,7 +144,15 @@ Although %OpenRAVE is not tied to any particular collision checker, it requires 
 
 \section ilinux_python Python
 
-In order to use the python bindings through the <a href="http://openrave.programmingvision.com/ordocs/english/openravepy-html/index.html">openravepy</a> module, install '''python numpy''', '''boost python''', and '''python-dev''' before compiling openrave. To setup the python path in bash add the following line:
+In order to use the python bindings through the <a
+href="http://openrave.programmingvision.com/ordocs/english/openravepy-html/index.html">openravepy</a>
+module, install  the following packages before compiling %OpenRAVE:
+
+\verbatim
+sudo apt-get install libboost-python-dev python python-dev python-numpy python-scipy python-imaging-tk
+\endverbatim
+
+To setup the python path in bash add the following line:
 
 \verbatim
 export PYTHONPATH=$PYTHONPATH:`openrave-config --python-dir`
@@ -148,9 +160,6 @@ export PYTHONPATH=$PYTHONPATH:`openrave-config --python-dir`
 
 The Ubuntu apt command line to install all necessary python packages is:
 
-\verbatim
-sudo apt-get install libboost-python-dev python python-dev python-numpy python-scipy python-imaging-tk
-\endverbatim
 
 \section ilinux_octavematlab Octave/Matlab
 
@@ -158,11 +167,11 @@ Both <a href="http://www.gnu.org/software/octave/">Octave</a> and Matlab are sup
 %OpenRAVE build system automatically detects and compiles the mex files for each.
 
 Octave users:
-- Make sure \b mkoctfile is in your path. If installing octave from the package managers, also install the <b>octave headers</b> package.
+- Make sure \c mkoctfile is in your path. If installing octave from the package managers, also install the <b>octave headers</b> package.
 - Add \c $OPENRAVE_INSTALL/share/openrave/octave to OCTAVE_PATH (default is \c /usr/local/share/openrave/octave).
 
 Matlab users:
-- make sure \b mex is in the system path
+- make sure \c mex is in the system path
 - Add \c $OPENRAVE_INSTALL/share/openrave/matlab to the Matlab path (default is \c /usr/local/share/openrave/matlab).
 
 \section ilinux_building Building OpenRAVE
@@ -201,14 +210,14 @@ If the cached files are not removed, the new system settings will not be noticed
 
 \section iwin_octavematlab Installation of 3rd Party Software
 
-Download the sources from <a href="http://sourceforge.net/projects/openrave">sourceforge</a>. <a href="http://tortoisesvn.tigris.org/">Tortoise SVN</a> is recommended.
-
-Check out the openrave sources '''in a path whose directories do not contain spaces'''!!!. For example \b C:\openrave.
+Download the sources from <a href="http://sourceforge.net/projects/openrave">sourceforge</a> (<a
+href="http://tortoisesvn.tigris.org/">Tortoise SVN</a> is recommended). Check out the openrave
+sources <b>in a path whose directories do not contain spaces</b>!!!. For example \c C:\\openrave.
 
 A lot of the 3rd party libraries like boost 1.39 are already inside the openrave sources. However, the following need to be installed:
 
 - <a href="http://www.cmake.org/cmake/resources/software.html">CMake</a>.
-- Python: <a href="http://python.org/download">Python 2.6</a>, <a href="http://sourceforge.net/projects/numpy/files">numpy superpack</a>, <a href="http://www.pythonware.com/products/pil">Python Imaging Library (PIL)</a> for openravepy python bindings.
+- <a href="http://python.org/download">Python 2.6</a>, <a href="http://sourceforge.net/projects/numpy/files">numpy superpack</a>, <a href="http://www.pythonware.com/products/pil">Python Imaging Library (PIL)</a> for openravepy python bindings.
  - \b openravepy will not compile in Debug mode unless the Python debug libraries are also installed.
  - <a href="http://ipython.scipy.org">IPython</a> is recommended for python development.
  - <a href="http://sourceforge.net/projects/scipy/files/">SciPy</a> - the scientific library for Python is recommended (necessary for some of the examples).
@@ -218,41 +227,47 @@ A lot of the 3rd party libraries like boost 1.39 are already inside the openrave
 Both <a href="http://www.gnu.org/software/octave/">Octave</a> and Matlab are supported and the
 %OpenRAVE build system automatically detects and compiles the mex files for each.
 
-- If using Octave, make sure to add the path to '''mkoctfile''' to the PATH environment variable. If you are using Matlab, make sure that the path to '''mex''' is in the PATH environment variable (ie, typing '''mex''' on the command line gives the MATLAB compiler). On Windows Mik-Tex overwrites the '''mex''' program with its own version, so any matlab paths have to be declared before Mik-Tex in the PATH variable. You can check if the paths are set correctly by starting up the command prompt and typing '''mkoctfile''' or '''mex'''.
+- If using Octave, make sure to add the path to \c mkoctfile to the $Path environment variable. If
+  you are using Matlab, make sure that the path to \c mex is in the PATH environment variable (ie,
+  typing \c mex on the command line gives the MATLAB compiler). On Windows Mik-Tex overwrites the
+  \c mex program with its own version, so any matlab paths have to be declared before Mik-Tex in
+  the PATH variable. You can check if the paths are set correctly by starting up the command prompt
+  and typing \c mkoctfile or \c mex.
 
 
 Octave users:
-- Make sure \b mkoctfile is in your system path.
+- Make sure \c mkoctfile is in your system path.
 - If you having problems with the JVM, try installing octave using gnuplot (rather than jhandles). 
 - Compiling mex files should use the same compiler as was used to build the Octave package. As of October 2008, the official Octave binaries are compiled with Visual Studio 2005 (freely available).
-- Add \c $OPENRAVE_INSTALL\share\openrave\octave to the Octave path (default is <tt>C:\Program Files\openrave\share\openrave\octave</tt>).
+- Add \c $OPENRAVE_INSTALL\\share\\openrave\\octave to the Octave path (default is <tt>C:\\Program Files\\openrave\\share\\openrave\\octave</tt>).
 
 Matlab users:
-- make sure \b mex is in your path and actually points to the Matlab \b mex program.
-- Add \c $OPENRAVE_INSTALL\share\openrave\matlab to the Matlab path (default is <tt>C:\Program Files\openrave\share\openrave\matlab</tt>).
+- make sure \c mex is in your path and actually points to the Matlab \c mex program.
+- Add \c $OPENRAVE_INSTALL\\share\\openrave\\matlab to the Matlab path (default is <tt>C:\\Program Files\\openrave\\share\\openrave\\matlab</tt>).
 
 \section iwin_building Building OpenRAVE
 
-Run \b runcmake_win.bat, which will auto-detect your compiler system. This will extract \b
-msvc_files.tgz, create a \b build directory where the Microsoft Visual Studio solution file \b
-openrave.sln will be found. Open \b openrave.sln and select the \b Release or \b RelWithDebInfo
-configuration, and build everything. Once done, build the INSTALL project. This should install
-everything in '''C:\Program Files\openrave'''. The installation directory can be changed by manually
-calling '''cmake''' with '''-DCMAKE_INSTALL_PREFIX="my/new/install/dir"'''.
+Run \c runcmake_win.bat, which will auto-detect your compiler system. This will extract \c
+msvc_files.tgz and create a \c build directory to full the compiled objects. Open the Microsoft
+Visual Studio solution file from \c build\\openrave.sln and select the \b Release or \b
+RelWithDebInfo configuration, and build everything. Once done, build the INSTALL project. This
+should install everything in <tt>C:\\Program Files\\openrave</tt>. The installation directory can be
+changed by manually calling \c cmake with <tt>-DCMAKE_INSTALL_PREFIX="my/new/install/dir"</tt>.
 
-* Before running anything, have to modify the following environment variables:
-** To '''PYTHONPATH''' - add '''C:\Program Files\openrave\share\openrave'''
-** To '''Path''' - add '''C:\Program Files\openrave\bin''' to the front. Be very careful when putting it in the back since several uses have had problems with different Qt libraries conflicting!
+Before running anything, have to modify the following environment variables:
+- \c PYTHONPATH - add <tt>"C:\\Program Files\\openrave\\share\\openrave"</tt>
+- \c Path - add <tt>"C:\\Program Files\\openrave\\bin"</tt> to the front. Be very careful when putting it in the back since several user have had problems with different Qt libraries conflicting!
 
-Currently '''bullet physics''' is not setup to compile with %OpenRAVE, so don't try to get it working. %OpenRAVE will run just fine without it.
+Currently <b>bullet physics</b> is not setup to compile with %OpenRAVE, so don't try to get it
+working. %OpenRAVE will run just fine without it.
 
 \section iwin_updating Updating Subversion
 
-Whenever updating subversion, it should just be sufficient to run \b runcmake_win.bat again and
+Whenever updating subversion, it should just be sufficient to run \c runcmake_win.bat again and
 then open the solution file build all the projects, and then manually build the INSTALL project. If
 an update to libraries or programs happens (for example Octave/MATLAB/python was
 installed/uninstalled), it is recommended to clear the cmake cache by first removing
-\b build/CMakeCache.txt before running \b runcmake_win.bat.
+\c build\\CMakeCache.txt before running \c runcmake_win.bat.
 
 */
 

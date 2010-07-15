@@ -53,7 +53,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
 
         virtual ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts) {
             _ss.str("");
-            return (name=="friction"||name=="selfcollision"||name=="gravity") ? PE_Support : PE_Pass;
+            return (name=="friction"||name=="selfcollision"||name=="gravity"||name="contact") ? PE_Support : PE_Pass;
         }
 
         virtual bool endElement(const std::string& name)
@@ -74,6 +74,9 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
                 _ss >> v.x >> v.y >> v.z;
                 if( !!_ss )
                     _physics->SetGravity(v);
+            }
+            else if( name == "contact" ) { // check out http://www.ode.org/ode-latest-userguide.html#sec_7_3_7
+                
             }
             else
                 RAVELOG_ERRORA("unknown field %s\n", name.c_str());

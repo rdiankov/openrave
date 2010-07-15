@@ -39,6 +39,6 @@ python build_doc.py build_doc --outdir="english/openravepy-html" --languagecode=
 python build_doc.py build_doc --outdir="japanese/openravepy-html" --languagecode=ja
 
 # send to server
-tar czf ordocs.tgz english/html english/openravepy-html english/openrave.pdf images/*.jpg japanese/html japanese/openravepy-html 
+tar czf ordocs.tgz english/html english/openravepy-html english/openrave.pdf images/*.jpg images/*.png japanese/html japanese/openravepy-html 
 scp ordocs.tgz diankov@programmingvision.com:~/openrave/ordocs/
 ssh diankov@programmingvision.com "cd ~/openrave/ordocs; rm -rf english japanese; tar xzf ordocs.tgz; rm -rf ordocs.tgz"

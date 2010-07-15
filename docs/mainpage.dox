@@ -2,7 +2,6 @@
 /**
 \mainpage Open Robotics Automation Virtual Environment
 
-\~english
 \section main_intro Introduction
 
 %OpenRAVE provides an environment for testing, developing, and deploying motion planning and
@@ -41,12 +40,11 @@ message protocols, and perception systems.
 \section main_reference Reference
 - \subpage interfaces
 
+\~english
+Documentation in Other Languages: <a href="http://openrave.programmingvision.com/ordocs/japanese/html/index.html">日本語</a>
 \~japanese
-\section intro 概念
-\section basics 基本
-
-\image html openrave_architecture.jpg
-\image latex openrave_architecture.pdf "%OpenRAVE architecture" width=15cm
+他言語ドキュメント: <a href="http://openrave.programmingvision.com/ordocs/english/html/index.html">English</a>
+\~
 
  */
 
