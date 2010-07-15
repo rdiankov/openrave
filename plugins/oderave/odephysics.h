@@ -206,7 +206,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
 
     virtual bool GetLinkVelocity(KinBody::LinkConstPtr plink, Vector& linearvel, Vector& angularvel)
     {
-        odespace->Synchronize(plink->GetParent());
+        odespace->Synchronize(KinBodyConstPtr(plink->GetParent()));
         dBodyID body = odespace->GetLinkBody(plink);
         if( body ) {
             const dReal* p = dBodyGetLinearVel(body);
@@ -260,7 +260,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
     }
 
     virtual bool GetLinkForceTorque(KinBody::LinkConstPtr plink, Vector& force, Vector& torque) {
-        odespace->Synchronize(plink->GetParent());
+        odespace->Synchronize(KinBodyConstPtr(plink->GetParent()));
         dBodyID body = odespace->GetLinkBody(plink);
         if( body ) {
             const dReal* pf = dBodyGetForce(body);

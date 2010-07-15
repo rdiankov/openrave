@@ -10,7 +10,11 @@ if( Boost_IOSTREAMS_FOUND )
 endif()
 
 add_library(ikfastsolvers SHARED ikfastsolvers.cpp ikfastproblem.h plugindefs.h)
-target_link_libraries(ikfastsolvers libopenrave ${Boost_IOSTREAMS_LIBRARY})
+if( Boost_IOSTREAMS_FOUND )
+  target_link_libraries(ikfastsolvers libopenrave ${Boost_IOSTREAMS_LIBRARY})
+else()
+  target_link_libraries(ikfastsolvers libopenrave)
+endif()
 include_directories(ikfastsolvers "${CMAKE_SOURCE_DIR}")
 add_dependencies(ikfastsolvers libopenrave)
 set_target_properties(ikfastsolvers PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}"
