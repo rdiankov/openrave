@@ -52,8 +52,17 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         }
 
         virtual ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts) {
+            if( !!_pcurreader ) {
+                if( _pcurreader->startElement(name,atts) == PE_Support )
+                    return PE_Support;
+                return PE_Ignore;
+            }
+            
+            if( name != "friction" && name != "selfcollision" && name != "gravity" && name != "contact" ) {
+                return PE_Pass;
+            }
             _ss.str("");
-            return (name=="friction"||name=="selfcollision"||name=="gravity" || name=="contact") ? PE_Support : PE_Pass;
+            return PE_Support;
         }
 
         virtual bool endElement(const std::string& name)
@@ -89,11 +98,16 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
 
         virtual void characters(const std::string& ch)
         {
-            _ss.clear();
-            _ss << ch;
+            if( !!_pcurreader )
+                _pcurreader->characters(ch);
+            else {
+                _ss.clear();
+                _ss << ch;
+            }
         }
 
     protected:
+        BaseXMLReaderPtr _pcurreader;
         boost::shared_ptr<ODEPhysicsEngine> _physics;
         stringstream _ss;
     };
