@@ -53,7 +53,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
 
         virtual ProcessElement startElement(const std::string& name, const std::list<std::pair<std::string,std::string> >& atts) {
             _ss.str("");
-            return (name=="friction"||name=="selfcollision"||name=="gravity"||name="contact") ? PE_Support : PE_Pass;
+            return (name=="friction"||name=="selfcollision"||name=="gravity" || name=="contact") ? PE_Support : PE_Pass;
         }
 
         virtual bool endElement(const std::string& name)
