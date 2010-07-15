@@ -54,6 +54,13 @@ planning example hanoi can be found in ``openravepy/examples/hanoi.py`` and exec
 
 OpenRAVE should automatically pop up and the puma arm will attempt to grasp the pegs on the table.
 
+Directory Structure
+===================
+
+The openravepy directory structure is as follows.
+
+Tools
+-----
 openrave.py
 ===========
 

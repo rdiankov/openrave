@@ -1,13 +1,4 @@
-OpenRAVE - Open Robotics Automation Virtual Environment (core under the LGPL, other is Apache License, Version 2.0)
+OpenRAVE - Open Robotics Automation Virtual Environment
 
-Read the wiki at http://openrave.programmingvision.com/ for installation for the required packages.
-
-Linux/MacOSX
-============
-
-make
-make install
-
-To change the install path use:
-
-make prefix=/my/install/path
+Official Home Page: http://openrave.programmingvision.com
+Installation Instructions: docs/install.dox

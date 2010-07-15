@@ -3,46 +3,175 @@
 \mainpage Open Robotics Automation Virtual Environment
 
 \~english
-\section intro Introduction
+\section main_intro Introduction
 
-OpenRAVE provides an environment for testing, developing, and employing motion planning and
-higher-level intelligence algorithms in real-world robotics applications.
+%OpenRAVE provides an environment for testing, developing, and deploying motion planning and
+higher-level intelligence algorithms in real-world robotics applications. The <a
+href="http://openrave.programmingvision.com">official home page</a> provdes for examples, usage
+cases, and installation instructions.
 
-It includes a seamless integration of simulation, visualization, planning, scripting and
+%OpenRAVE includes a seamless integration of simulation, visualization, planning, scripting and
 control. The plugin architecture allows users to easily write custom controllers or extend
-functionality. With OpenRAVE plugins, any planning algorithm, robot controller, or sensing subsystem
-can be distributed and dynamically loaded at run-time, which frees developers from struggling with
-monolithic code-bases. Users of OpenRAVE can concentrate on the development of planning and
-scripting aspects of a problem without having to explicitly manage the details of robot kinematics
-and dynamics, collision detection, world updates, and robot control. It should be noted that
-OpenRAVE's focus is not on low-level control and message protocols and perception systems; this
-allows is to be easily integrated into such systems.
+functionality. With %OpenRAVE plugins, any planning algorithm, robot controller, or sensing
+subsystem can be distributed and dynamically loaded at run-time, which frees developers from
+struggling with monolithic code-bases. Users of %OpenRAVE can concentrate on the development of
+planning and scripting aspects of a problem without having to explicitly manage the details of robot
+kinematics and dynamics, collision detection, world updates, and robot control. It should be noted
+that %OpenRAVE's sole focus on simulation and analysis of geometric and dynamic information allows
+is to be easily integrated into existing robotics systems that concentrate on low-level control,
+message protocols, and perception systems.
+
+\section main_started Getting Started
+- \subpage installation
+- \subpage basic_usage
+- \subpage conventions
+- \subpage environment_variables
+
+\section main_system Components
+
+- \subpage database_generation
+- <a href="http://openrave.programmingvision.com/index.php/Started:Formats">XML File Format</a>
+- Scripting
+ - <a href="http://openrave.programmingvision.com/ordocs/english/openravepy-html/index.html">Python Scripting with <b>openravepy </b></a>
+ - <a href="http://openrave.programmingvision.com/index.php/Started:Scripting">Octave/MATLAB Scripting</a>
+
+\section main_architecture Architecture
+- \subpage architecture_concepts
+
+\section main_reference Reference
+- \subpage interfaces
 
 \~japanese
 \section intro 概念
-
-\~english
-\section basics OpenRAVE Basics
-
-\image html openrave_architecture.jpg
-\image latex openrave_architecture.pdf "OpenRAVE architecture" width=15cm
-
-OpenRAVE is divided in four main components as shown in the above figure. The core component is composed of the following set of interfaces:
-- \see KinBody - The core kinematics body
-
-OpenRAVE supports a powerful scripting environment based on Python which makes it simple to control and monitor the demo and environment state. There are also supported interfaces for Octave and Matlab.
-
-\~japanese
 \section basics 基本
 
 \image html openrave_architecture.jpg
-\image latex openrave_architecture.pdf "OpenRAVE architecture" width=15cm
+\image latex openrave_architecture.pdf "%OpenRAVE architecture" width=15cm
 
  */
 
-/**
-  \defgroup interfaces Interface Classes
+/** \page basic_usage Basic Usage and Loading Environments
+*/
 
-Interfaces are provided by plugins and are usually dynamically loaded into OpenRAVE. All interfaces are derived from the \ref InterfaceBase class and contain basic information such as the type, the owning environment, setting user data, cloning, and allowing custom string commands to be sent.
+/** \page conventions System Conventions and Guidelines
+
+This is the set of conventions all users are highly recommended to follow. Sticking to them will
+guarantee that a certain party's %OpenRAVE modules can inter-operate with other modules.
+
+- Internal matrices are in column-order, row-major format. If this is confusing, check out this
+guide. This means affine matrix representation is using the standard math way. All matrices are
+serialized in column-major format, this is to make it simpler for Octave/Matlab to convert between
+matrices. Note that python expects row-major matrices, which require transposition when passed
+around the two interfaces.
+
+- Quaternions, the preferred way of representing rotations, are defined with the scalar value as
+the first component. For example [w x y z] or [cos sin*axis].
+
+- A pose is an affine transformation specified as a quaternion and translation. It serializes into
+7 values, the first 4 being the quaternion.
+
+- Distances between two rotations is \f$\cos^{-1} | q_1 \cdot q_2 |\f$, where each rotation is
+  represented as a quaternion. For rotations close to each other, this is sometimes approximated as: \f$\min\left( | q1 - q2 | \; , \; | q1 + q2 |\right)\f$.
+
+- A robot's up direction is on the positive z-axis, forward direction is the positive x-axis.
+
+- Mobile manipulation is performed in the XY plane.
+
+- The origin of a robot should be defined so that its base perfectly rests on a floor at z=0, and
+its rotation around the z-axis is the center of rotation when the base makes a natural in-place
+turn.
+
+- All objects/robots of human-environment scale should be specified in meters. There are many
+default thresholds and parameters that assume this convention, and not following it will result in
+explosion of computation. A more general convention is that the unit should be chosen so that the
+arm length of the robot is closest to 1.
+
+- Every body added to the environment should have a unique name.
+
+- Every link/manipulator/sensor/joint in a robot/kinbody should have a name that will
+differentiate it from the others.
+
+\section Internal
+
+The rotation of kinbody joint axes is clockwise instead of the counter-clockwise standard. However,
+the only place this convention pops up is when defining the robot file and when using Joint.GetAxis
+directly. Every other place in the code is consistent with how the links move, not how the joint
+axes are defined. For example, the Jacobian explains how a point will move given the angles
+specified through KinBody.SetJointValues.
+
+*/
+
+/** \page environment_variables Environment Variables
+
+This page describes system environment variables read by %OpenRAVE environments on
+initialization. <a href="http://en.wikipedia.org/wiki/Environment_variable">This page</a> describes
+how to set environment variables for the particular system running %OpenRAVE.
+
+- \b OPENRAVE_PLUGINS - Use ':' to separate each directory (';' for Windows). At startup, %OpenRAVE
+  searches for every shared object/dll plugin in these directories and loads them. The default
+  plugins in $OPENRAVE_INSTALL/share/openrave/plugins are always loaded, so there is no need to
+  include them.
+
+- \b OPENRAVE_DATA - Use ':' to separate each directory (';' for Windows). Everytime %OpenRAVE loads
+  a file, it will search it in these directories. The default data directory
+  $OPENRAVE_INSTALL/share/openrave is always included, so there's no need to specify it again.
+
+- \b OPENRAVE_HOME - Used to set the directory where all openrave specific cached data is stored
+  like inverse kinematics solvers, robot pre-processed data, database generation results, etc. The
+  default directory is <b>$HOME/.openrave</b>.
+
+
+*/
+
+/** \page database_generation Robot Database Generators
+
+For now see <a href="http://openrave.programmingvision.com/index.php/Main_Page#Robot-specific_Database_Generation">Database Generation</a>.
+
+*/
+
+/** \page architecture_concepts Introduction to the OpenRAVE Architecture 
+
+\section basics Fundamental Structure
+
+\image html openrave_architecture.jpg
+\image latex openrave_architecture.pdf "%OpenRAVE architecture" width=15cm
+
+%OpenRAVE is divided in four main components as shown in the above figure:
+
+- <b>Core Layer</b> The core is composed of a set of \ref interfaces defining how plugins share
+information, and it provides an environment interface that maintains a world state, which serves as
+the gateway to all functions offered through %OpenRAVE. The global openrave state manages the loaded
+plugins, multiple independent environments, and logging. On the other hand, the \ref OpenRAVE::EnvironmentBase "environment" combines collision checkers, viewers, physics engines, the kinematic world, and all
+its interfaces into a coherent robotics world state.
+
+- <b>Plugins Layer</b> %OpenRAVE is designed as a plugin-based architecture which allows to create
+new components to continuously improve its original specifications. Each plugin is an implementation
+of a standard interface that can be loaded dynamically without the need of recompiling the
+core. Following this design, different kind of plugins can be created such as sensors, planners,
+controllers or physics engines.  The core layer communicates with the hardware through the plugins
+using more appropriate robotics packages such as Player and Robot Operating System (ROS).
+
+- <b>Scripting Layer</b> %OpenRAVE provides network scripting environments like Octave, Matlab and
+Python to communicate with the core layer in order to control the robot and the environment. It is
+possible to send commands to change any aspect of the environment, read any of its information, move
+real robots, or change physics/collision libraries. The scripts also allow the control of multiple
+%OpenRAVE instances across the network, thus allowing different users to independently see and
+interact with the environment.
+
+\section environment Environments
+
+%OpenRAVE supports a powerful scripting environment based on Python which makes it simple to control and monitor the demo and environment state. There are also supported interfaces for Octave and Matlab.
+
+*/
+
+
+/** \defgroup interfaces Interface Classes
+
+Interfaces are provided by plugins and are usually dynamically loaded into %OpenRAVE. All interfaces
+are derived from the \ref InterfaceBase class and contain basic information such as the type, the
+owning \ref OpenRAVE::EnvironmentBase "environment", setting user data, cloning, and allowing custom string commands to be sent.
+
+Every instantiated interface belongs to only one \ref OpenRAVE::EnvironmentBase
+"environment". Interfaces can be cloned using \ref OpenRAVE::InterfaceBase::Clone.
 
  */

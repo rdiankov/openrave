@@ -11,4 +11,5 @@ import testcamerasensor
 import testplotting
 import testupdatingbodies
 import testviewercallback
+import tutorial0
 import visibilityplanning
