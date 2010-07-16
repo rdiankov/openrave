@@ -11,7 +11,9 @@ cd ..
 rootdir=`pwd`
 cd $curdir
 doxycommands="STRIP_FROM_PATH        = $rootdir
-PROJECT_NUMBER = `openrave-config --version`"
+PROJECT_NUMBER = `openrave-config --version`
+ALIASES += openraveversion=`openrave-config --version`
+"
 echo "$doxycommands" | cat Doxyfile.html Doxyfile.english - > Doxyfile.html.english
 echo "$doxycommands" | cat Doxyfile.latex Doxyfile.english - > Doxyfile.latex.english
 echo "$doxycommands" | cat Doxyfile.html Doxyfile.japanese - > Doxyfile.html.japanese

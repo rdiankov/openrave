@@ -31,9 +31,9 @@ RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(InterfaceType type, const std::
     switch(type) {
     case PT_Controller:
         if( interfacename == "idealcontroller")
-            return InterfaceBasePtr(new plugins::IdealController(penv));
+            return InterfaceBasePtr(new IdealController(penv));
         else if( interfacename == "redirectcontroller" )
-            return InterfaceBasePtr(new plugins::RedirectController(penv));
+            return InterfaceBasePtr(new RedirectController(penv));
         break;
     default:
         break;

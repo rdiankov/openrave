@@ -53,7 +53,7 @@ HIDE_FRIEND_COMPOUNDS  = YES
 HIDE_IN_BODY_DOCS      = NO
 INTERNAL_DOCS          = NO
 CASE_SENSE_NAMES       = YES
-HIDE_SCOPE_NAMES       = NO
+HIDE_SCOPE_NAMES       = YES
 SHOW_INCLUDE_FILES     = YES
 INLINE_INFO            = YES
 SORT_MEMBER_DOCS       = YES
@@ -81,7 +81,7 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 # configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT                  = ../rave ./mainpage.dox ./install.dox ../src/libopenrave-core/openrave-core.h ../plugins/basecontrollers ../plugins/baserobots
+INPUT                  = ../rave ./mainpage.dox ./install.dox ../src/libopenrave-core/openrave-core.h
 INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.c \
                          *.cc \
@@ -113,7 +113,7 @@ FILE_PATTERNS          = *.c \
 RECURSIVE              = YES
 EXCLUDE                = 
 EXCLUDE_SYMLINKS       = NO
-EXCLUDE_PATTERNS       = */plugindefs.h */plugins/*main.cpp
+EXCLUDE_PATTERNS       = 
 EXCLUDE_SYMBOLS        = 
 EXAMPLE_PATH           = ../src/cppexamples
 EXAMPLE_PATTERNS       = *.cpp

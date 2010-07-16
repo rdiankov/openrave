@@ -5,8 +5,11 @@
 \section main_intro Introduction
 
 %OpenRAVE provides an environment for testing, developing, and deploying motion planning and
-higher-level intelligence algorithms in real-world robotics applications. The \homepage{official
-home page} provdes for examples, usage cases, and installation instructions.
+higher-level intelligence algorithms in real-world robotics applications. This document covers the
+core %OpenRAVE concepts, the C++ API, examples, and usage of the plugins offered in the base
+installation. All information written here is for <b>%OpenRAVE \openraveversion</b>. Please visit the
+\homepage{<b>official home page</b>} for up to date information on robotics systems using %OpenRAVE,
+official %OpenRAVE releases, and videos/tutorials.
 
 %OpenRAVE includes a seamless integration of simulation, visualization, planning, scripting and
 control. The plugin architecture allows users to easily write custom controllers or extend

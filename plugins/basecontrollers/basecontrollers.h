@@ -15,13 +15,6 @@
 #ifndef RAVE_CONTROLLERS_H
 #define RAVE_CONTROLLERS_H
 
-namespace plugins {
-
-/** Ideal controller
-
-    \ingroup interfaces_all
-    \ingroup interfaces_controller
- */
 class IdealController : public ControllerBase
 {
  public:
@@ -276,5 +269,4 @@ private:
     ControllerBasePtr _pcontroller;
 };
 
-} // end namespace
 #endif
