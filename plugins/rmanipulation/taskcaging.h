@@ -1389,8 +1389,9 @@ private:
                     pbodytraj->AddPoint(tp);
                 }
             }
-        
-            pbodytraj->Write(strbodytraj.c_str(), Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
+
+            ofstream f(strbodytraj.c_str());
+            pbodytraj->Write(f, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
         }
 
         RAVELOG_WARNA("success, time=%dms\n", finaltime);
@@ -1410,7 +1411,8 @@ private:
         if( strsavetraj.size() ) {
             boost::shared_ptr<Trajectory> pfulltraj(GetEnv()->CreateTrajectory(_robot->GetDOF()));
             _robot->GetFullTrajectoryFromActive(pfulltraj, ptraj);
-            pfulltraj->Write(strsavetraj.c_str(), Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
+            ofstream f(strsavetraj.c_str());
+            pfulltraj->Write(f, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
         }
 
         return true;
@@ -1623,14 +1625,16 @@ private:
                 tp.trans = ttarget;
                 pbodytraj->AddPoint(tp);
             }
-        
-            pbodytraj->Write(strbodytraj.c_str(), Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
+
+            ofstream f(strbodytraj.c_str());
+            pbodytraj->Write(f, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
         }
 
         if( strsavetraj.size() ) {
             boost::shared_ptr<Trajectory> pfulltraj(GetEnv()->CreateTrajectory(_robot->GetDOF()));
             _robot->GetFullTrajectoryFromActive(pfulltraj, ptraj);
-            pfulltraj->Write(strsavetraj.c_str(), Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
+            ofstream f(strsavetraj.c_str());
+            pfulltraj->Write(f, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
         }
    
         return true;
@@ -1671,7 +1675,8 @@ private:
             return false;
 
         body.ptraj = GetEnv()->CreateTrajectory(body.ptarget->GetDOF());
-        if( !body.ptraj->Read(strtraj.c_str(), RobotBasePtr()) ) {
+        ifstream f(strtraj.c_str());
+        if( !body.ptraj->Read(f, RobotBasePtr()) ) {
             RAVELOG_ERRORA(str(boost::format("failed to read %s\n")%strtraj));
             return false;
         }

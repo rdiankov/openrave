@@ -55,10 +55,10 @@ public:
     /// Set the camera transformation
     virtual void SetCamera(const RaveTransform<float>& trans) = 0;
 
-    /// Set the camera transformation while looking at a particular point in space
+    /// Set the camera transformation while looking at a particular point in space, this also modifies the focal length of the camera, which is why it is overloaded.
     /// \param lookat the point space to look at, the camera will rotation and zoom around this point
     /// \param campos the position of the camera in space
-    /// \param the up vector from the camera
+    /// \param camup vector from the camera
     virtual void SetCameraLookAt(const RaveVector<float>& lookat, const RaveVector<float>& campos, const RaveVector<float>& camup) = 0;
     virtual RaveTransform<float> GetCameraTransform() = 0;
 
@@ -81,7 +81,9 @@ public:
     /// \param t the rotation and translation of the camera. Note that z is treated as the front of the camera!
     ///        So all points in front of the camera have a positive dot product with its direction.
     /// \param KK 4 values such that the intrinsic matrix can be reconstructed [pKK[0] 0 pKK[2]; 0 pKK[1] pKK[3]; 0 0 1];
-    virtual bool WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension) = 0;
+    /// \param filename filename to write image
+    /// \param extension extension of the image
+    virtual bool WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension) RAVE_DEPRECATED = 0;
     //@}
 
     virtual void Reset() = 0;

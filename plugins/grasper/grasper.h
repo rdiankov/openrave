@@ -221,8 +221,10 @@ class GrasperProblem : public ProblemInstance
         TrajectoryBasePtr pfulltraj = GetEnv()->CreateTrajectory(_robot->GetDOF());
         _robot->GetFullTrajectoryFromActive(pfulltraj,ptraj,false);
 
-        if( strsavetraj.size() > 0 )
-            pfulltraj->Write(strsavetraj, 0);
+        if( strsavetraj.size() > 0 ) {
+            ofstream f(strsavetraj.c_str());
+            pfulltraj->Write(f, 0);
+        }
 
         bodysaver.reset(); // restore target
         BOOST_ASSERT(ptraj->GetPoints().size()>0);
@@ -497,7 +499,7 @@ class GrasperProblem : public ProblemInstance
             v[0] = temp.vertices[indices[i]];
             v[1] = temp.vertices[indices[i+1]];
             v[2] = temp.vertices[indices[i+2]];
-            if( dot3(v[0], (v[1]-v[0]).Cross(v[2]-v[0])) < 0 )
+            if( v[0].dot3((v[1]-v[0]).cross(v[2]-v[0])) < 0 )
                 swap(indices[i], indices[i+1]);
         }
 
@@ -718,7 +720,7 @@ class GrasperProblem : public ProblemInstance
                     }
 
                     // determine if contact is stable (if angle is obtuse, can't be in friction cone)
-                    dReal fsin2 = Vector().Cross(itcontact->norm,deltaxyz).lengthsqr3();
+                    dReal fsin2 = itcontact->norm.cross(deltaxyz).lengthsqr3();
                     dReal fcos = dot3(itcontact->norm,deltaxyz);
                     bool bstable = fcos > 0 && fsin2 <= fcos*fcos*mu*mu;
                     if(bstable)
@@ -746,8 +748,7 @@ class GrasperProblem : public ProblemInstance
         newcontacts.reserve(contacts.size()*Nconepoints);
         FOREACHC(itcontact,contacts) {
             // find a coordinate system where z is the normal
-            Vector rottodirection;
-            rottodirection.Cross(Vector(0,0,1), itcontact->norm);
+            Vector rottodirection = Vector(0,0,1).cross(itcontact->norm);
             dReal fsin = RaveSqrt(rottodirection.lengthsqr3());
             dReal fcos = dot3(Vector(0,0,1), itcontact->norm);
             TransformMatrix torient;
@@ -779,7 +780,7 @@ class GrasperProblem : public ProblemInstance
             *itpoint++ = itcontact->norm.x;
             *itpoint++ = itcontact->norm.y;
             *itpoint++ = itcontact->norm.z;
-            Vector v; v.Cross(itcontact->pos,itcontact->norm);
+            Vector v = itcontact->pos.cross(itcontact->norm);
             *itpoint++ = v.x;
             *itpoint++ = v.y;
             *itpoint++ = v.z;

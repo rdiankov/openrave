@@ -15,8 +15,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
+\htmlonly
 \file   geometry.h
 \brief  Defines basic gemoetric primitives and functions on them.
+\endhtmlonly
  */
 
 #ifndef OPENRAVE_GEOMETRY_H
@@ -45,6 +47,7 @@
 
 namespace OpenRAVE {
 
+/// Templated math and geometric functions
 namespace geometry {
 
 #ifndef PI
@@ -140,8 +143,11 @@ inline double RaveAsin(double f) { return asin(f); }
 inline float RaveAtan2(float fy, float fx) { return atan2f(fy,fx); }
 inline double RaveAtan2(double fy, double fx) { return atan2(fy,fx); }
 
-/// class used for 3 and 4 dim vectors and quaternions
-/// It is better to use this for a 3 dim vector because it is 16byte aligned and SIMD instructions can be used
+/** \brief Vector class containing 4 dimensions.
+    
+    \ingroup affine_math
+     It is better to use this for a 3 dim vector because it is 16byte aligned and SIMD instructions can be used
+*/
 template <class T>
 class RaveVector
 {
@@ -169,8 +175,8 @@ public:
     
     // SCALAR FUNCTIONS
     template <class U> inline T dot(const RaveVector<U> &v) const { return x*v.x + y*v.y + z*v.z + w*v.w; }
+    template <class U> inline T dot3(const RaveVector<U> &v) const { return x*v.x + y*v.y + z*v.z; }
     inline RaveVector<T>& normalize() { return normalize4(); }
-
     inline RaveVector<T>& normalize4() {
         T f = x*x+y*y+z*z+w*w;
         MATH_ASSERT( f > 0 );
@@ -195,11 +201,17 @@ public:
     inline void Set4(const T* pvals) { x = pvals[0]; y = pvals[1]; z = pvals[2]; w = pvals[3]; }
     inline void Set4(T val1, T val2, T val3, T val4) { x = val1; y = val2; z = val3; w = val4;}
     /// 3 dim cross product, w is not touched
-    /// this = this x v
-    inline RaveVector<T>& Cross(const RaveVector<T> &v) { Cross(*this, v); return *this; }
+    inline RaveVector<T> cross(const RaveVector<T> &v) const {
+        RaveVector<T> ucrossv;
+        ucrossv[0] = y * v[2] - z * v[1];
+        ucrossv[1] = z * v[0] - x * v[2];
+        ucrossv[2] = x * v[1] - y * v[0];
+        return ucrossv;
+    }
 
-    /// this = u x v
-    inline RaveVector<T>& Cross(const RaveVector<T> &u, const RaveVector<T> &v) {
+    inline RaveVector<T>& Cross(const RaveVector<T> &v) RAVE_DEPRECATED { Cross(*this, v); return *this; }
+    inline RaveVector<T>& Cross(const RaveVector<T> &u, const RaveVector<T> &v) RAVE_DEPRECATED
+    {
         RaveVector<T> ucrossv;
         ucrossv[0] = u[1] * v[2] - u[2] * v[1];
         ucrossv[1] = u[2] * v[0] - u[0] * v[2];
@@ -259,7 +271,10 @@ inline RaveVector<T> operator* (double f, const RaveVector<T>& left)
     return v;
 }
 
-/// affine transformation parameterized with quaterions
+/** \brief Affine transformation parameterized with quaterions.
+    
+    \ingroup affine_math
+*/
 template <class T>
 class RaveTransform
 {
@@ -377,7 +392,10 @@ public:
     RaveVector<T> rot, trans; ///< rot is a quaternion=(cos(ang/2),axisx*sin(ang/2),axisy*sin(ang/2),axisz*sin(ang/2))
 };
 
-/// affine transformation parameterized with rotation matrices
+/** \brief Affine transformation parameterized with rotation matrices.
+        
+    \ingroup affine_math
+*/
 template <class T>
 class RaveTransformMatrix
 {
@@ -563,7 +581,8 @@ RaveTransformMatrix<T>::RaveTransformMatrix(const RaveTransform<T>& t)
 
 }
 
-/// a ray defined by an origin and a direction
+/// \brief A ray defined by an origin and a direction.
+/// \ingroup geometric_primitives
 template <typename T>
 struct ray
 {
@@ -572,7 +591,8 @@ struct ray
     RaveVector<T> pos, dir;
 };
 
-/// an axis aligned bounding box
+/// \brief An axis aligned bounding box.
+/// \ingroup geometric_primitives
 template <typename T>
 struct aabb
 {
@@ -581,14 +601,16 @@ struct aabb
     RaveVector<T> pos, extents;
 };
 
-/// an oriented bounding box
+/// \brief An oriented bounding box.
+/// \ingroup geometric_primitives
 template <typename T>
 struct obb
 {
     RaveVector<T> right, up, dir, pos, extents;
 };
 
-/// a triangle defined by 3 points
+/// \brief A triangle defined by 3 points.
+/// \ingroup geometric_primitives
 template <typename T>
 struct triangle
 {
@@ -609,7 +631,8 @@ struct triangle
     }
 };
 
-/// a frustum object defined as a pyramid with its vertex clipped
+/// \brief A pyramid with its vertex clipped.
+/// \ingroup geometric_primitives
 template <typename T>
 struct frustum
 {
@@ -641,25 +664,26 @@ RAVE_API int CubicRoots (double c0, double c1, double c2, double *r0, double *r1
 template <typename T, typename S> void Tridiagonal3 (S* mat, T* diag, T* subd);
 RAVE_API bool QLAlgorithm3 (float* m_aafEntry, float* afDiag, float* afSubDiag);
 RAVE_API bool QLAlgorithm3 (double* m_aafEntry, double* afDiag, double* afSubDiag);
-RAVE_API void EigenSymmetric3(double* fCovariance, double* eval, double* fAxes);
+RAVE_API void EigenSymmetric3(const double* fCovariance, double* eval, double* fAxes);
 
 /// Computes the eigenvectors of the covariance matrix and forms a basis
-/// \param fCovariance a symmetric 3x3 matrix
+/// \param[in] fCovariance a symmetric 3x3 matrix.
+/// \param[out] vbasis the basis vectors extracted (form a right hand coordinate system).
 template <typename T>
-inline void GetCovarBasisVectors(T fCovariance[3][3], RaveVector<T>& vRight, RaveVector<T>& vUp, RaveVector<T>& vDir)
+inline void GetCovarBasisVectors(const T fCovariance[3][3], RaveVector<T> vbasis[3])
 {
     T EigenVals[3];
     T fAxes[3][3];
-    EigenSymmetric3((T*)fCovariance, EigenVals, (T*)fAxes);
+    EigenSymmetric3((const T*)fCovariance, EigenVals, (T*)fAxes);
     // check if we got any 0 vectors
-    vRight.x = fAxes[0][0];		vRight.y = fAxes[1][0];		vRight.z = fAxes[2][0];
-    vUp.x = fAxes[0][1];		vUp.y = fAxes[1][1];		vUp.z = fAxes[2][1];
-    vDir.x = fAxes[0][2];		vDir.y = fAxes[1][2];		vDir.z = fAxes[2][2];
-    // make sure that the new axes follow the left-hand coord system
-    normalize3(&vRight.x, &vRight.x);
-    *vUp -= *vRight * dot3(&vUp.x, &vRight.x);
-    normalize3(&vUp.x, &vUp.x);
-    cross3(&vDir.x, &vRight.x, &vUp.x);
+    vbasis[0].x = fAxes[0][0];		vbasis[0].y = fAxes[1][0];		vbasis[0].z = fAxes[2][0];
+    vbasis[1].x = fAxes[0][1];		vbasis[1].y = fAxes[1][1];		vbasis[1].z = fAxes[2][1];
+    vbasis[2].x = fAxes[0][2];		vbasis[2].y = fAxes[1][2];		vbasis[2].z = fAxes[2][2];
+    // make sure that the new axes follow the right-hand coord system
+    vbasis[0].normalize3();
+    vbasis[1] -= vbasis[0] * vbasis[0].dot3(vbasis[1]);
+    vbasis[1].normalize3();
+    vbasis[2] = vbasis[0].cross(vbasis[1]);
 }
 
 /// SVD of a 3x3 matrix A such that A = U*diag(D)*V'
@@ -670,6 +694,8 @@ inline void GetCovarBasisVectors(T fCovariance[3][3], RaveVector<T>& vRight, Rav
 /// \param[out] V 3x3 matrix
 template <typename T> inline void svd3(const T* A, T* U, T* D, T* V);
 
+/// \brief Tests a point inside a 3D quadrilateral.
+/// \ingroup geometric_primitives
 template <typename T>
 inline int insideQuadrilateral(const RaveVector<T>& v, const RaveVector<T>& verts)
 {
@@ -696,7 +722,8 @@ inline int insideQuadrilateral(const RaveVector<T>& v, const RaveVector<T>& vert
     return diff*diff <= g_fEpsilon*g_fEpsilon;
 }
 
-/// tests a point insdie a 3D triangle
+/// \brief Tests a point insdie a 3D triangle.
+/// \ingroup geometric_primitives
 template <typename T>
 inline int insideTriangle(const RaveVector<T> v, const triangle<T>& tri)
 {
@@ -725,6 +752,8 @@ inline int insideTriangle(const RaveVector<T> v, const triangle<T>& tri)
     return diff*diff <= g_fEpsilon*g_fEpsilon;
 }
 
+/// \brief Test collision of a ray with an axis aligned bounding box.
+/// \ingroup geometric_primitives
 template <typename T>
 inline bool RayAABBTest(const ray<T>& r, const aabb<T>& ab)
 {
@@ -745,7 +774,8 @@ inline bool RayAABBTest(const ray<T>& r, const aabb<T>& ab)
     return true;
 }
 
-/// Tests if a ray intersects an oriented bounding box
+/// \brief Test collision of a ray and an oriented bounding box.
+/// \ingroup geometric_primitives
 template <typename T>
 inline bool RayOBBTest(const ray<T>& r, const obb<T>& o)
 {
@@ -775,7 +805,8 @@ inline bool RayOBBTest(const ray<T>& r, const obb<T>& o)
     return true;
 }
 
-/// the minimum distance form the vertex to the obb
+/// \brief The minimum distance form the vertex to the oriented bounding box.
+/// \ingroup geometric_primitives
 template <typename T>
 T DistVertexOBBSq(const RaveVector<T>& v, const obb<T>& o)
 {
@@ -797,6 +828,8 @@ T DistVertexOBBSq(const RaveVector<T>& v, const obb<T>& o)
     return fDist;
 }
 
+/// \brief Test collision of an oriented bounding box and a frustum.
+/// \ingroup geometric_primitives
 template <typename T>
 inline bool IsOBBinFrustum(const obb<T>& o, const frustum<T>& fr)
 {
@@ -830,8 +863,10 @@ inline bool IsOBBinFrustum(const obb<T>& o, const frustum<T>& fr)
     return true;
 }
 
-/// returns true if all points on the oriented bounding box are inside the convex hull
-/// planes should be facing inside
+/// \brief Tests if an oriented bounding box is inside a 3D convex hull.
+///
+/// \ingroup geometric_primitives
+/// \param vplanes the plane normals of the convex hull, normals should be facing inside.
 template <typename T, typename U>
 inline bool IsOBBinConvexHull(const obb<T>& o, const U& vplanes)
 {
@@ -842,6 +877,184 @@ inline bool IsOBBinConvexHull(const obb<T>& o, const U& vplanes)
         }
     }
     return true;
+}
+
+
+/// \brief Test collision if two 3D triangles.
+/// \ingroup geometric_primitives
+///
+/// Assuming triangle vertices are declared counter-clockwise!!
+/// \param[out] contactnorm if triangles collide, then filled with the normal of the second triangle
+/// \return true if triangles collide.
+template <typename T>
+inline bool TriTriCollision(const RaveVector<T>& u1, const RaveVector<T>& u2, const RaveVector<T>& u3, const RaveVector<T>& v1, const RaveVector<T>& v2, const RaveVector<T>& v3, RaveVector<T>& contactpos, RaveVector<T>& contactnorm)
+{
+    // triangle triangle collision test - by Rosen Diankov
+
+    // first see if the faces intersect the planes
+    // for the face to be intersecting the plane, one of its
+    // vertices must be on the opposite side of the plane
+    char b = 0;    
+    RaveVector<T> u12 = u2 - u1, u23 = u3 - u2, u31 = u1 - u3;
+    RaveVector<T> v12 = v2 - v1, v23 = v3 - v2, v31 = v1 - v3;
+    RaveVector<T> vedges[3] = {v12, v23, v31};
+    RaveVector<T> unorm, vnorm;
+    cross3(unorm, u31, u12);
+    unorm.w = -dot3(unorm, u1);
+    cross3(vnorm, v31, v12);
+    vnorm.w = -dot3(vnorm, v1);
+    if( dot3(vnorm, u1) + vnorm.w > 0 ) {
+        b |= 1;
+    }
+    if( dot3(vnorm, u2) + vnorm.w > 0 ) {
+        b |= 2;
+    }
+    if( dot3(vnorm, u3) + vnorm.w > 0 ) {
+        b |= 4;
+    }
+    if(b == 7 || b == 0) {
+        return false;
+    }
+    // now get segment from f1 when it crosses f2's plane
+    // note that b gives us information on which edges actually intersected
+    // so figure out the point that is alone on one side of the plane
+    // then get the segment
+    RaveVector<T> p1, p2;
+    const RaveVector<T>* pu=NULL;
+    switch(b) {
+    case 1:
+    case 6:
+        pu = &u1;
+        p1 = u2 - u1;
+        p2 = u3 - u1;
+        break;
+    case 2:
+    case 5:
+        pu = &u2;
+        p1 = u1 - u2;
+        p2 = u3 - u2;
+        break;
+    case 4:
+    case 3:
+        pu = &u3;
+        p1 = u1 - u3;
+        p2 = u2 - u3;
+        break;
+    }
+    
+    T t = dot3(vnorm,*pu)+vnorm.w;
+    p1 = *pu - p1 * (t / dot3(vnorm, p1));
+    p2 = *pu - p2 * (t / dot3(vnorm, p2));
+
+    // go through each of the segments in v2 and clip
+    RaveVector<T> vcross;
+    const RaveVector<T>* pv[] = {&v1, &v2, &v3, &v1};
+
+    for(int i = 0; i < 3; ++i) {
+        const RaveVector<T>* pprev = pv[i];
+        RaveVector<T> q1 = p1 - *pprev;
+        RaveVector<T> q2 = p2 - *pprev;
+        cross3(vcross, vedges[i], vnorm);
+        T t1 = dot3(q1, vcross);
+        T t2 = dot3(q2, vcross);
+
+        // line segment is out of face
+        if( t1 >= 0 && t2 >= 0 ) {
+            return false;
+        }
+        if( t1 > 0 && t2 < 0 ) {
+            // keep second point, clip first
+            RaveVector<T> dq = q2-q1;
+            p1 -= dq*(t1/dot3(dq,vcross));
+        }
+        else if( t1 < 0 && t2 > 0 ) {
+            // keep first point, clip second
+            RaveVector<T> dq = q1-q2;
+            p2 -= dq*(t2/dot3(dq,vcross));
+        }
+    }
+
+    contactpos = 0.5f * (p1 + p2);
+    normalize3(contactnorm, vnorm);
+    return true;
+}
+
+/// \brief Transform an axis aligned bounding box to an oriented bounding box.
+///
+/// \ingroup geometric_primitives
+/// \param[in] t transformation used to set the coordinate system of ab.
+template <typename T>
+inline obb<T> OBBFromAABB(const aabb<T>& ab, const RaveTransformMatrix<T>& t)
+{
+    obb<T> o;
+    o.right = RaveVector<T>(t.m[0],t.m[4],t.m[8]);
+    o.up = RaveVector<T>(t.m[1],t.m[5],t.m[9]);
+    o.dir = RaveVector<T>(t.m[2],t.m[6],t.m[10]);
+    o.pos = t*ab.pos;
+    o.extents = ab.extents;
+    return o;
+}
+
+/// \brief Transform an axis aligned bounding box to an oriented bounding box.
+///
+/// \ingroup geometric_primitives
+/// \param[in] t transformation used to set the coordinate system of ab.
+template <typename T>
+inline obb<T> OBBFromAABB(const aabb<T>& ab, const RaveTransform<T>& t)
+{
+    return OBBFromAABB(ab,RaveTransformMatrix<T>(t));
+}
+
+/// \brief Transforms an oriented bounding box.
+///
+/// \ingroup geometric_primitives
+/// \param[in] t transformation used to set the coordinate system of o.
+template <typename T>
+inline obb<T> TransformOBB(const RaveTransform<T>& t, const obb<T>& o)
+{
+    obb<T> newobb;
+    newobb.extents = o.extents;
+    newobb.pos = t*o.pos;
+    newobb.right = t.rotate(o.right);
+    newobb.up = t.rotate(o.up);
+    newobb.dir = t.rotate(o.dir);
+    return newobb;
+}
+
+/// \brief Transforms an oriented bounding box.
+///
+/// \ingroup geometric_primitives
+/// \param[in] t transformation used to set the coordinate system of o.
+template <typename T>
+inline obb<T> TransformOBB(const RaveTransformMatrix<T>& t, const obb<T>& o)
+{
+    obb<T> newobb;
+    newobb.extents = o.extents;
+    newobb.pos = t*o.pos;
+    newobb.right = t.rotate(o.right);
+    newobb.up = t.rotate(o.up);
+    newobb.dir = t.rotate(o.dir);
+    return newobb;
+}
+
+/// \brief Test collision between two axis-aligned bounding boxes.
+///
+/// \ingroup geometric_primitives
+template <typename T>
+inline bool AABBCollision(const aabb<T>& ab1, const aabb<T>& ab2)
+{
+    RaveVector<T> v = ab1.pos-ab2.pos;
+    return RaveFabs(v.x) <= ab1.extents.x+ab2.extents.x && RaveFabs(v.y) <= ab1.extents.y+ab2.extents.y && RaveFabs(v.z) <= ab1.extents.z+ab2.extents.z;
+}
+
+template <class T> inline void mult(T* pf, T fa, int r)
+{
+	MATH_ASSERT( pf != NULL );
+
+	while(r > 0) {
+		--r;
+		pf[r] *= fa;
+	}
 }
 
 template <class T> int Min(T* pts, int stride, int numPts); // returns the index, stride in units of T
@@ -886,7 +1099,8 @@ template <class T> inline T dot(T* pf1, T* pf2, int length);
 
 template <class T> inline T sum(T* pf, int length);
 
-// takes the inverse of the 3x3 matrix pf and stores it into pfres, returns true if matrix is invertible
+/// takes the inverse of the 2x2 matrix pf and stores it into pfres, returns true if matrix is invertible
+/// \ingroup affine_math
 template <class T> inline bool inv2(T* pf, T* pfres);
 
 ///////////////////////
@@ -1072,7 +1286,8 @@ inline T* _multtrans4(T* pfres, const T* pf1, const T* pf2)
     return pfres;
 }
 
-//generate a random quaternion
+/// \brief Generate a uniformly distributed random quaternion.
+/// \ingroup affine_math
 template <typename T>
 inline RaveVector<T> GetRandomQuat()
 {
@@ -1091,6 +1306,8 @@ inline RaveVector<T> GetRandomQuat()
     return q;
 }
 
+/// \brief Convertex axis angle reprensetation to quaternions.
+/// \ingroup affine_math
 template <class T>
 inline RaveVector<T> AxisAngle2Quat(const RaveVector<T>& rotaxis, T angle)
 {
@@ -1099,6 +1316,8 @@ inline RaveVector<T> AxisAngle2Quat(const RaveVector<T>& rotaxis, T angle)
     return RaveVector<T>(RaveCos(angle), rotaxis.x*fsin, rotaxis.y * fsin, rotaxis.z * fsin);
 }
 
+/// \brief Multiply two quaternions
+/// \ingroup affine_math
 template <class T>
 inline RaveVector<T> quatMultiply(const RaveVector<T>& q0, const RaveVector<T>& q1)
 {
@@ -1112,12 +1331,16 @@ inline RaveVector<T> quatMultiply(const RaveVector<T>& q0, const RaveVector<T>& 
     return q * (T(1)/RaveSqrt(fnorm));
 }
 
+/// \brief Inverted a quaternion rotation.
+/// \ingroup affine_math
 template <class T>
 inline RaveVector<T> quatInverse(const RaveVector<T>& q)
 {
     return RaveVector<T>(q.x,-q.y,-q.z,-q.w);
 }
 
+/// \brief Quaternion spherical linear interpolation.
+/// \ingroup affine_math
 template <class T>
 inline RaveVector<T> dQSlerp(const RaveVector<T>& qa, const RaveVector<T>& _qb, T t)
 {
@@ -1159,7 +1382,8 @@ inline RaveVector<T> dQSlerp(const RaveVector<T>& qa, const RaveVector<T>& _qb, 
     return qm;
 }
 
-/// return the minimal quaternion that orients vsource to vtarget
+/// \brief Return the minimal quaternion that orients vsource to vtarget.
+/// \ingroup affine_math
 template<typename T>
 RaveVector<T> quatRotateDirection(const RaveVector<T>& vsource, const RaveVector<T>& vtarget)
 {
@@ -1185,7 +1409,8 @@ RaveVector<T> quatRotateDirection(const RaveVector<T>& vsource, const RaveVector
     return torient.rot;
 }
 
-/// calculates the determinant of a 3x3 matrix whose row stride stride elements
+/// \brief Compute the determinant of a 3x3 matrix whose row stride stride elements.
+/// \ingroup affine_math
 template <class T> inline T matrixdet3(const T* pf, int stride)
 {
     return pf[0*stride+2] * (pf[1*stride + 0] * pf[2*stride + 1] - pf[1*stride + 1] * pf[2*stride + 0]) +
@@ -1193,8 +1418,14 @@ template <class T> inline T matrixdet3(const T* pf, int stride)
         pf[2*stride+2] * (pf[0*stride + 0] * pf[1*stride + 1] - pf[0*stride + 1] * pf[1*stride + 0]);
 }
 
-/// stride is in T
-/// if pfdet is not NULL, fills it with the determinant of the source matrix
+/** \brief 3x3 matrix inverse.
+
+    \ingroup affine_math
+    \param[in] pf the input 3x3 matrix
+    \param[out] pf the result of the operation, can be the same matrix as pf
+    \param[out] pfdet if not NULL, fills it with the determinant of the source matrix
+    \param[in] stride the stride in elements between elements.
+*/
 template <class T>
 inline T* _inv3(const T* pf, T* pfres, T* pfdet, int stride)
 {
@@ -1247,7 +1478,8 @@ inline T* _inv3(const T* pf, T* pfres, T* pfdet, int stride)
 	return pfres;
 }
 
-// inverse if 92 mults and 39 adds
+/// \brief 4x4 matrix inverse.
+/// \ingroup affine_math
 template <class T>
 inline T* _inv4(const T* pf, T* pfres)
 {
@@ -1325,6 +1557,8 @@ inline T* _inv4(const T* pf, T* pfres)
 	return pfres;
 }
 
+/// \brief Transpose a 3x3 matrix.
+/// \ingroup affine_math
 template <class T>
 inline T* _transpose3(const T* pf, T* pfres)
 {
@@ -1344,6 +1578,8 @@ inline T* _transpose3(const T* pf, T* pfres)
 	return pfres;
 }
 
+/// \brief Transpose a 4x4 matrix.
+/// \ingroup affine_math
 template <class T>
 inline T* _transpose4(const T* pf, T* pfres)
 {
@@ -1589,162 +1825,6 @@ inline double* mult3_s3(double* pfres, const double* pf1, const double* pf2) { r
 
 inline double* inv3(const double* pf, double* pfres, double* pfdet, int stride) { return _inv3<double>(pf, pfres, pfdet, stride); }
 inline double* inv4(const double* pf, double* pfres) { return _inv4<double>(pf, pfres); }
-
-/// triangle collision, returns true and fills contactpos with the intersection point
-/// assuming triangles are declared counter-clockwise!!
-/// \param[out] contactnorm if triangles collide, then filled with the normal of the second triangle
-/// \return true if triangles collide
-template <typename T>
-inline bool TriTriCollision(const RaveVector<T>& u1, const RaveVector<T>& u2, const RaveVector<T>& u3, const RaveVector<T>& v1, const RaveVector<T>& v2, const RaveVector<T>& v3, RaveVector<T>& contactpos, RaveVector<T>& contactnorm)
-{
-    // triangle triangle collision test - by Rosen Diankov
-
-    // first see if the faces intersect the planes
-    // for the face to be intersecting the plane, one of its
-    // vertices must be on the opposite side of the plane
-    char b = 0;    
-    RaveVector<T> u12 = u2 - u1, u23 = u3 - u2, u31 = u1 - u3;
-    RaveVector<T> v12 = v2 - v1, v23 = v3 - v2, v31 = v1 - v3;
-    RaveVector<T> vedges[3] = {v12, v23, v31};
-    RaveVector<T> unorm, vnorm;
-    cross3(unorm, u31, u12);
-    unorm.w = -dot3(unorm, u1);
-    cross3(vnorm, v31, v12);
-    vnorm.w = -dot3(vnorm, v1);
-    if( dot3(vnorm, u1) + vnorm.w > 0 ) {
-        b |= 1;
-    }
-    if( dot3(vnorm, u2) + vnorm.w > 0 ) {
-        b |= 2;
-    }
-    if( dot3(vnorm, u3) + vnorm.w > 0 ) {
-        b |= 4;
-    }
-    if(b == 7 || b == 0) {
-        return false;
-    }
-    // now get segment from f1 when it crosses f2's plane
-    // note that b gives us information on which edges actually intersected
-    // so figure out the point that is alone on one side of the plane
-    // then get the segment
-    RaveVector<T> p1, p2;
-    const RaveVector<T>* pu=NULL;
-    switch(b) {
-    case 1:
-    case 6:
-        pu = &u1;
-        p1 = u2 - u1;
-        p2 = u3 - u1;
-        break;
-    case 2:
-    case 5:
-        pu = &u2;
-        p1 = u1 - u2;
-        p2 = u3 - u2;
-        break;
-    case 4:
-    case 3:
-        pu = &u3;
-        p1 = u1 - u3;
-        p2 = u2 - u3;
-        break;
-    }
-    
-    T t = dot3(vnorm,*pu)+vnorm.w;
-    p1 = *pu - p1 * (t / dot3(vnorm, p1));
-    p2 = *pu - p2 * (t / dot3(vnorm, p2));
-
-    // go through each of the segments in v2 and clip
-    RaveVector<T> vcross;
-    const RaveVector<T>* pv[] = {&v1, &v2, &v3, &v1};
-
-    for(int i = 0; i < 3; ++i) {
-        const RaveVector<T>* pprev = pv[i];
-        RaveVector<T> q1 = p1 - *pprev;
-        RaveVector<T> q2 = p2 - *pprev;
-        cross3(vcross, vedges[i], vnorm);
-        T t1 = dot3(q1, vcross);
-        T t2 = dot3(q2, vcross);
-
-        // line segment is out of face
-        if( t1 >= 0 && t2 >= 0 ) {
-            return false;
-        }
-        if( t1 > 0 && t2 < 0 ) {
-            // keep second point, clip first
-            RaveVector<T> dq = q2-q1;
-            p1 -= dq*(t1/dot3(dq,vcross));
-        }
-        else if( t1 < 0 && t2 > 0 ) {
-            // keep first point, clip second
-            RaveVector<T> dq = q1-q2;
-            p2 -= dq*(t2/dot3(dq,vcross));
-        }
-    }
-
-    contactpos = 0.5f * (p1 + p2);
-    normalize3(contactnorm, vnorm);
-    return true;
-}
-
-template <typename T>
-inline obb<T> OBBFromAABB(const aabb<T>& ab, const RaveTransformMatrix<T>& t)
-{
-    obb<T> o;
-    o.right = RaveVector<T>(t.m[0],t.m[4],t.m[8]);
-    o.up = RaveVector<T>(t.m[1],t.m[5],t.m[9]);
-    o.dir = RaveVector<T>(t.m[2],t.m[6],t.m[10]);
-    o.pos = t*ab.pos;
-    o.extents = ab.extents;
-    return o;
-}
-
-template <typename T>
-inline obb<T> OBBFromAABB(const aabb<T>& ab, const RaveTransform<T>& t)
-{
-    return OBBFromAABB(ab,RaveTransformMatrix<T>(t));
-}
-
-template <typename T>
-inline obb<T> TransformOBB(const RaveTransform<T>& t, const obb<T>& o)
-{
-    obb<T> newobb;
-    newobb.extents = o.extents;
-    newobb.pos = t*o.pos;
-    newobb.right = t.rotate(o.right);
-    newobb.up = t.rotate(o.up);
-    newobb.dir = t.rotate(o.dir);
-    return newobb;
-}
-
-template <typename T>
-inline obb<T> TransformOBB(const RaveTransformMatrix<T>& t, const obb<T>& o)
-{
-    obb<T> newobb;
-    newobb.extents = o.extents;
-    newobb.pos = t*o.pos;
-    newobb.right = t.rotate(o.right);
-    newobb.up = t.rotate(o.up);
-    newobb.dir = t.rotate(o.dir);
-    return newobb;
-}
-
-template <typename T>
-inline bool AABBCollision(const aabb<T>& ab1, const aabb<T>& ab2)
-{
-    RaveVector<T> v = ab1.pos-ab2.pos;
-    return RaveFabs(v.x) <= ab1.extents.x+ab2.extents.x && RaveFabs(v.y) <= ab1.extents.y+ab2.extents.y && RaveFabs(v.z) <= ab1.extents.z+ab2.extents.z;
-}
-
-template <class T> inline void mult(T* pf, T fa, int r)
-{
-	MATH_ASSERT( pf != NULL );
-
-	while(r > 0) {
-		--r;
-		pf[r] *= fa;
-	}
-}
 
 template <class T, class R, class S>
 inline S* mult(T* pf1, R* pf2, int r1, int c1, int c2, S* pfres, bool badd)

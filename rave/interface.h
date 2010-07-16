@@ -14,8 +14,10 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /**
+\htmlonly
 \file   interface.h
 \brief  Base interface definition that all exported interfaces derive from.
+\endhtmlonly
  */
 
 #ifndef OPENRAVE_INTERFACE_BASE
@@ -26,6 +28,10 @@ namespace OpenRAVE {
 /** \brief Base class for all interfaces that OpenRAVE provides.
     
     \ingroup interfaces
+    Every interface can have its own custom commands. Sending \b help will return a list of all the
+    commands the interface supports (think of it as a command-line way of sending commands to the
+    interface). The GetDescription() returns a string briefly explaining the functionality, the
+    authors, and the license of the plugin.
 */
 class RAVE_API InterfaceBase : public boost::enable_shared_from_this<InterfaceBase>
 {

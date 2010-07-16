@@ -15,8 +15,10 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /**
+\htmlonly
 \file   kinbody.h
 \brief  Definition of the KinBody interface used for all kinematics bodies in the environment.
+\endhtmlonly
  */
 #ifndef  OPENRAVE_KINBODY_H
 #define  OPENRAVE_KINBODY_H
@@ -633,22 +635,27 @@ public:
     virtual void SetBodyTransformations(const std::vector<Transform>& vbodies);
     virtual void SetJointVelocities(const std::vector<dReal>& pJointVelocities);
 
-    /// gets the jacobian with respect to a link, pfArray is a 3 x DOF matrix (rotations are not taken into account)
-    /// Calculates the partial differentials for all joints that in the path from the root node to _veclinks[index]
+    /// \brief Computes the translation jacobian with respect to a world position.
+    /// 
+    /// Gets the jacobian with respect to a link by computing the partial differentials for all joints that in the path from the root node to _veclinks[index]
     /// (doesn't touch the rest of the values)
     /// \param linkindex of the link that the rotation is attached to
+    /// \param position position in world space where to compute derivatives from.
     /// \param vjacobian 3xDOF matrix
-    virtual void CalculateJacobian(int linkindex, const Vector& offset, boost::multi_array<dReal,2>& vjacobian) const;
-    virtual void CalculateJacobian(int linkindex, const Vector& offset, std::vector<dReal>& pfJacobian) const;
+    virtual void CalculateJacobian(int linkindex, const Vector& position, boost::multi_array<dReal,2>& vjacobian) const;
+    virtual void CalculateJacobian(int linkindex, const Vector& position, std::vector<dReal>& pfJacobian) const;
 
-    /// calculates the rotational jacobian as a quaternion with respect to an initial rotation
+    /// \brief Computes the rotational jacobian as a quaternion with respect to an initial rotation.
+    /// 
     /// \param linkindex of the link that the rotation is attached to
+    /// \param qInitialRot the rotation in world space whose derivative to take from.
     /// \param vjacobian 4xDOF matrix
     virtual void CalculateRotationJacobian(int linkindex, const Vector& qInitialRot, boost::multi_array<dReal,2>& vjacobian) const;
     virtual void CalculateRotationJacobian(int linkindex, const Vector& qInitialRot, std::vector<dReal>& pfJacobian) const;
 
-    /// calculates the angular velocity jacobian of a specified link about the axes of world coordinates
-    /// \param index of the link that the rotation is attached to
+    /// \brief Computes the angular velocity jacobian of a specified link about the axes of world coordinates.
+    /// 
+    /// \param linkindex of the link that the rotation is attached to
     /// \param vjacobian 3xDOF matrix
     virtual void CalculateAngularVelocityJacobian(int linkindex, boost::multi_array<dReal,2>& vjacobian) const;
     virtual void CalculateAngularVelocityJacobian(int linkindex, std::vector<dReal>& pfJacobian) const;

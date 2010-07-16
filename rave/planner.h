@@ -182,9 +182,9 @@ public:
         std::string __processingtag;
         int _plannerparametersdepth;
 
-        /// outputs the data and surrounds it with <PlannerParameters> tags
+        /// outputs the data and surrounds it with \verbatim <PlannerParameters> \endverbatim tags
         friend RAVE_API std::ostream& operator<<(std::ostream& O, const PlannerParameters& v);
-        /// expects <PlannerParameters> to be the first token. Parses stream until </PlannerParameters> reached
+        /// expects \verbatim <PlannerParameters> \endverbatim to be the first token. Parses stream until \verbatim </PlannerParameters> \endverbatim reached
         friend RAVE_API std::istream& operator>>(std::istream& I, PlannerParameters& v);
     };
     typedef boost::shared_ptr<PlannerParameters> PlannerParametersPtr;

@@ -15,8 +15,10 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /**
+\htmlonly
 \file trajectory.h
 \brief  Define a time-parameterized trajectory of robot configurations.
+\endhtmlonly
  */
 
 #ifndef TRAJECTORY_H
@@ -29,23 +31,31 @@ namespace OpenRAVE {
     \ingroup interfaces
     A trajectory is a path between a set of configuration space points. It
     performs smoothing and filtering on this path.
+
+    \b Exporting options:
+    The file format is:
+    \verbatim
+    #points #dof #options
+    [timestamp 1] [dof joint values 1] [transform 1] [dof joint velocities 1] [linear and angular velocity 1]
+    [timestamp 2] [dof joint values 2] [transform 2] [dof joint velocities 2] [linear and angular velocity 2]
+    ...
+    \endverbatim
+
+    Export format:
+    - linear velocity - xyz velocity
+    - angular velocity - axis * angular_speed
+    - transform - outputs quaternion first then translation
+
+    An example file that contains 2 points with timestamps for a 3 dof robot is:
+    \verbatim
+    2 3 4
+    0.5 0 0   0
+    1.5 1 2.2 3.3
+    \endverbatim
 */
 class RAVE_API TrajectoryBase : public InterfaceBase
 {
 public:
-    /// exporting options
-    /// The file format is:
-    /// #points #dof #options
-    /// [timestamp 1] [dof joint values 1] [transform 1] [dof joint velocities 1] [linear and angular velocity 1]
-    /// [timestamp 2] [dof joint values 2] [transform 2] [dof joint velocities 2] [linear and angular velocity 2]
-    /// ...
-    /// linear velocity - xyz velocity
-    /// angular velocity - axis * angular_speed
-    /// transform - look at Transform::operator <<, outputs quaternion first then translation
-    /// an example file that contains 2 points with timestamps for a 3 dof robot is
-    /// 2 3 4
-    /// 0.5 0 0   0
-    /// 1.5 1 2.2 3.3
     enum TrajectoryOptions {
         TO_OneLine = 1, ///< if set, will write everything without newlines, otherwise
                         ///< will start a newline for the header and every trajectory point
@@ -149,15 +159,18 @@ public:
     /// The trajectory will use the robot's active degrees of freedom, so
     /// make sure that the trajectory's _nDOF == pRobot->GetActiveDOF().
 
-    /// Preprocesses the trajectory for later sampling
-    /// if the 'bAutoCalTiming' flag is set, then the timing of the
-    /// trajectory is automatically calculated based on the maximum
-    /// joint velocities and accelerations.
-    /// \param bActiveDOFs If true, then the trajectory is specified in the robot's active degrees of freedom
-    /// and the maximum velocities and accelerations will be extracted appropriately. Affine transformations
-    /// are ignored in the retiming if true. If false, then use the
-    /// robot's full joint configuration and affine transformation for max velocities.
-    virtual bool CalcTrajTiming(RobotBaseConstPtr pRobot, InterpEnum interpolationMethod, bool bAutoCalcTiming, bool bActiveDOFs, dReal fMaxVelMult=1);
+    /** Preprocesses the trajectory for later sampling.
+        
+        \param[in] robot [optional] robot to do the timing for
+        \param[in] interpolationMethod method to use for interpolation
+        \param bAutoCalcTiming If true, will retime the trajectory using maximum joint velocities and accelerations, otherwise it expects the time stamps of each point to be set.
+        \param[in] bActiveDOFs If true, then the trajectory is specified in the robot's active degrees of freedom
+        and the maximum velocities and accelerations will be extracted appropriately. Affine transformations
+        are ignored in the retiming if true. If false, then use the
+        robot's full joint configuration and affine transformation for max velocities.
+        \param[in] fMaxVelMult The percentage of the max velocity of each joint to use when retiming.
+    */
+    virtual bool CalcTrajTiming(RobotBaseConstPtr robot, InterpEnum interpolationMethod, bool bAutoCalcTiming, bool bActiveDOFs, dReal fMaxVelMult=1);
 
     /// perform basic error checking on the trajectory internal data
     virtual bool IsValid() const;
@@ -167,28 +180,19 @@ public:
     /// sample the trajectory at the given time 
     virtual bool SampleTrajectory(dReal  time, TPOINT &sample) const;
 
-    /// Read/Write the data to and from streams/files
-    //@{
-
-    /// Write to a filename, see TrajectoryOptions for file format.
-    /// \param options a combination of enums in TrajectoryOptions
-    virtual bool Write(const std::string& filename, int options) const;
-
-    /// Write to a FILE, see TrajectoryOptions for file format.
-    /// \param options a combination of enums in TrajectoryOptions
-    virtual bool Write(FILE* f, int options) const;
-
     /// Write to a stream, see TrajectoryOptions for file format
+    /// \param sinput stream to read the data from
     /// \param options a combination of enums in TrajectoryOptions
-    virtual bool Write(std::ostream& f, int options) const;
+    virtual bool Write(std::ostream& sinput, int options) const;
         
     /// Reads the trajectory, expects the filename to have a header.
-    /// \param filename the name to parse the trajectory from
+    /// \param sout stream to output the trajectory data
     /// \param robot The robot to attach the trajrectory to, if specified, will
     ///              call CalcTrajTiming to get the correct trajectory velocities.
-    virtual bool Read(const std::string& filename, RobotBasePtr robot);
-    virtual bool Read(std::istream& f, RobotBasePtr robot);
-    //@}
+    virtual bool Read(std::istream& sout, RobotBasePtr robot);
+
+    virtual bool Read(const std::string& filename, RobotBasePtr robot) RAVE_DEPRECATED;
+    virtual bool Write(const std::string& filename, int options) const RAVE_DEPRECATED;
 
     virtual int GetDOF() const { return _nDOF; }
 private:
@@ -197,10 +201,7 @@ private:
     bool _SetLinear(bool bAutoCalcTiming, bool bActiveDOFs);
 
     bool _SetLinearBlend(bool bAutoCalcTiming);
-    void _CalculateLinearBlendCoefficients(TSEGMENT::Type segType,
-                                                  TSEGMENT& seg, TSEGMENT& prev,
-                                                  TPOINT& p0, TPOINT& p1,
-                                                  const dReal blendAccel[]);
+    void _CalculateLinearBlendCoefficients(TSEGMENT::Type segType,TSEGMENT& seg, TSEGMENT& prev,TPOINT& p0, TPOINT& p1,const dReal blendAccel[]);
 
     bool _SetCubic(bool bAutoCalcTiming, bool bActiveDOFs);
     void _CalculateCubicCoefficients(TSEGMENT& , const TPOINT& tp0, const TPOINT& tp1);

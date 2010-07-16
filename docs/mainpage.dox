@@ -5,9 +5,8 @@
 \section main_intro Introduction
 
 %OpenRAVE provides an environment for testing, developing, and deploying motion planning and
-higher-level intelligence algorithms in real-world robotics applications. The <a
-href="http://openrave.programmingvision.com">official home page</a> provdes for examples, usage
-cases, and installation instructions.
+higher-level intelligence algorithms in real-world robotics applications. The \homepage{official
+home page} provdes for examples, usage cases, and installation instructions.
 
 %OpenRAVE includes a seamless integration of simulation, visualization, planning, scripting and
 control. The plugin architecture allows users to easily write custom controllers or extend
@@ -22,7 +21,7 @@ message protocols, and perception systems.
 
 \section main_started Getting Started
 - \subpage installation
-- \subpage basic_usage
+- \subpage p_basic_usage
 - \subpage conventions
 - \subpage environment_variables
 
@@ -31,24 +30,44 @@ message protocols, and perception systems.
 - \subpage database_generation
 - <a href="http://openrave.programmingvision.com/index.php/Started:Formats">XML File Format</a>
 - Scripting
- - <a href="http://openrave.programmingvision.com/ordocs/english/openravepy-html/index.html">Python Scripting with <b>openravepy </b></a>
- - <a href="http://openrave.programmingvision.com/index.php/Started:Scripting">Octave/MATLAB Scripting</a>
+ - \openravepy{Python Scripting with <b>openravepy </b>}
+ - \octave{Octave/MATLAB Scripting}
 
 \section main_architecture Architecture
 - \subpage architecture_concepts
+- \subpage writing_plugins
+- \subpage plotting3d
 
 \section main_reference Reference
 - \subpage interfaces
+- \subpage geometric_primitives
+- \subpage affine_math
 
 \~english
-Documentation in Other Languages: <a href="http://openrave.programmingvision.com/ordocs/japanese/html/index.html">日本語</a>
+Documentation in Other Languages: \japanesedoc
 \~japanese
-他言語ドキュメント: <a href="http://openrave.programmingvision.com/ordocs/english/html/index.html">English</a>
+他言語ドキュメント: \englishdoc
 \~
 
  */
 
-/** \page basic_usage Basic Usage and Loading Environments
+/** \page p_basic_usage Basic Usage and Loading Environments
+
+To check out the plugins loaded type
+\verbatim
+openrave --listplugins
+\endverbatim
+
+To load a simple robot into the scene type:
+\verbatim
+openrave robots/puma.robot.xml
+\endverbatim
+
+If a plugin declares a ProblemInsance named \b MyProblem, then to launch the problem at startup type
+\verbatim
+openrave robots/puma.robot.xml -problem MyProblem 'myarguments'
+\endverbatim
+
 */
 
 /** \page conventions System Conventions and Guidelines
@@ -102,8 +121,8 @@ specified through KinBody.SetJointValues.
 /** \page environment_variables Environment Variables
 
 This page describes system environment variables read by %OpenRAVE environments on
-initialization. <a href="http://en.wikipedia.org/wiki/Environment_variable">This page</a> describes
-how to set environment variables for the particular system running %OpenRAVE.
+initialization. \envvarwiki{This page} describes how to set environment variables for the particular
+system running %OpenRAVE.
 
 - \b OPENRAVE_PLUGINS - Use ':' to separate each directory (';' for Windows). At startup, %OpenRAVE
   searches for every shared object/dll plugin in these directories and loads them. The default
@@ -129,7 +148,7 @@ For now see <a href="http://openrave.programmingvision.com/index.php/Main_Page#R
 
 /** \page architecture_concepts Introduction to the OpenRAVE Architecture 
 
-\section basics Fundamental Structure
+\section fundamental_structure Fundamental Structure
 
 \image html openrave_architecture.jpg
 \image latex openrave_architecture.pdf "%OpenRAVE architecture" width=15cm
@@ -142,28 +161,69 @@ the gateway to all functions offered through %OpenRAVE. The global openrave stat
 plugins, multiple independent environments, and logging. On the other hand, the \ref OpenRAVE::EnvironmentBase "environment" combines collision checkers, viewers, physics engines, the kinematic world, and all
 its interfaces into a coherent robotics world state.
 
-- <b>Plugins Layer</b> %OpenRAVE is designed as a plugin-based architecture which allows to create
-new components to continuously improve its original specifications. Each plugin is an implementation
-of a standard interface that can be loaded dynamically without the need of recompiling the
-core. Following this design, different kind of plugins can be created such as sensors, planners,
-controllers or physics engines.  The core layer communicates with the hardware through the plugins
-using more appropriate robotics packages such as Player and Robot Operating System (ROS).
+- <b>Plugins Layer</b> %OpenRAVE is designed as a plugin-based architecture where a plugin offers
+implementations of the \ref interfaces that are loaded dynamically into the \ref
+OpenRAVE::EnvironmentBase "environment". Plugins can be linked with other robotics libraries
+allowing OpenRAVE to expand its functionality, or it can offer OpenRAVE services to another robotics
+system. A plugin needs to export several functions that allow %OpenRAVE to gather information about
+what functions it provides and create its interfaces. During startup, %OpenRAVE parses the \ref
+environment_variables "OPENRAVE_PLUGINS" environment variable and loads all the shared objects it
+finds. If the shared object exports the correct functions, the plugin and its interfaces are
+registered with the %OpenRAVE run-time database, and the rest of the environment loading
+occurs. Plugins themselves can query functionality offer by other plugins through the environment's
+\ref plugin_functionality "interface querying functions".
+ - Refer to \ref writing_plugins for a tutorial on how to build and
+compile plugins.
 
-- <b>Scripting Layer</b> %OpenRAVE provides network scripting environments like Octave, Matlab and
-Python to communicate with the core layer in order to control the robot and the environment. It is
-possible to send commands to change any aspect of the environment, read any of its information, move
-real robots, or change physics/collision libraries. The scripts also allow the control of multiple
-%OpenRAVE instances across the network, thus allowing different users to independently see and
-interact with the environment.
+- <b>Scripting Layer</b> %OpenRAVE provides scripting environments for \openravepy{Python} and
+\octave{Octave/Matlab}. Python communicates with the core layer directly with in-memory calls,
+making it extremely fast. On the other hand, the Octave/Matlab scripting protocol send commands
+through TCP/IP, with a plugin offering a text server on the %OpenRAVE core side. Scripting allows
+real-time modifications to any aspect of the environment without requiring shutdown, making it ideal
+to testing new algorithms. The Python scripting is so powerful, that most of the %OpenRAVE examples
+and demo code are offered through it. In fact, users should treat the scripting language as an
+integral part of the entire system, not as a replacement to the C++ API.
+
+- <b>Robot Database Layer</b> Kinematically and dynamically analyze and the robot and its task and
+  store such information for later re-use.
+
+
+All the base planners and problem interfaces should be applicable to any robot structure you can
+throw at it. One of OpenRAVE's strongest points when compared with other planning packages is the
+idea of being able to apply algorithms in openrave to any robot, with very little
+modification. Recently, a planning database structure has been introduced that allows computation of
+properties like convex hull decomposition, grasp sets, reachability maps, analytic inverse
+kinematics, etc. If the robot is defined properly, then all these functions should work out of the
+box.
+
+Although the low level stuff is general, the examples usually single out one environment and one
+robot to show you the technology. Some examples like graspplanning.py are more applicable in that
+they just re-use the grasp sets and ik databases for moving the robot.
+
+It is possible to send a \b help command to every \ref InterfaceBase "interface" to get a
+description of the commands it supports and what they do.
+
 
 \section environment Environments
 
-%OpenRAVE supports a powerful scripting environment based on Python which makes it simple to control and monitor the demo and environment state. There are also supported interfaces for Octave and Matlab.
+- Locking Environments
+- Plugin Management
+- Cloning
+
+One of the strengths of %OpenRAVE is in allowing multiple \ref OpenRAVE::EnvironmentBase "environments" work simultaneously in the same process.
 
 */
 
 
-/** \defgroup interfaces Interface Classes
+/** \page writing_plugins Writing C++ Plugins
+
+You can find a complete stand-alone plugin example in the share/openrave/examples/plugincpp folder. To build it just type: 
+
+\example plugincpp.cpp
+
+*/
+
+/** \defgroup interfaces Base Interface Classes
 
 Interfaces are provided by plugins and are usually dynamically loaded into %OpenRAVE. All interfaces
 are derived from the \ref InterfaceBase class and contain basic information such as the type, the
@@ -173,3 +233,28 @@ Every instantiated interface belongs to only one \ref OpenRAVE::EnvironmentBase
 "environment". Interfaces can be cloned using \ref OpenRAVE::InterfaceBase::Clone.
 
  */
+
+/** \defgroup geometric_primitives Geometric Primitives
+
+A set of geometric primitives and functions offering collision detection and other distance measurement capabilities.
+
+*/
+
+/** \defgroup affine_math Affine Math
+
+A set of classes and functions that provide the basic affine math operations with vectors, matrices, and quaternions.
+
+*/
+
+/** \defgroup interfaces_all List of All Plugin Interfaces
+
+This lists the set of interfaces that are distributed with the %OpenRAVE distribution.
+
+- \subpage interfaces_controller
+*/
+
+/** \defgroup interfaces_controller List of Controller Interfaces
+
+This lists the set of offered \ref OpenRAVE::ControllerBase interfaces.
+
+*/

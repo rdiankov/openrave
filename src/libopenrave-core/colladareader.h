@@ -2831,7 +2831,7 @@ public:
 
       up *= 1/RaveSqrt(len);
 
-      Vector right; right.Cross(up,dir);
+      Vector right = up.cross(dir);
       t.m[0] = right.x; t.m[1] = up.x; t.m[2] = dir.x;
       t.m[4] = right.y; t.m[5] = up.y; t.m[6] = dir.y;
       t.m[8] = right.z; t.m[9] = up.z; t.m[10] = dir.z;

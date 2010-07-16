@@ -177,8 +177,8 @@ protected:
         }
         else {
             RAVELOG_VERBOSEA(str(boost::format("BaseManipulation: reading trajectory: %s\n")%filename));
-
-            if( !ptraj->Read(filename, robot) ) {
+            ifstream f(filename.c_str());
+            if( !ptraj->Read(f, robot) ) {
                 RAVELOG_ERRORA(str(boost::format("BaseManipulation: failed to read trajectory %s\n")%filename));
                 return false;
             }
@@ -1479,7 +1479,8 @@ protected:
             else if( cmd == "trajfile" ) {
                 string filename;
                 sinput >> filename;
-                if( !ptraj->Read(filename,robot) ) {
+                ifstream f(filename.c_str());
+                if( !ptraj->Read(f,robot) ) {
                     RAVELOG_ERRORA("failed to read trajectory\n");
                     return false;
                 }

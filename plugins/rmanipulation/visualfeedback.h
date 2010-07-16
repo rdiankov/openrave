@@ -68,7 +68,7 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
             Vector v0 = vpoints[faceindices[i][0]];
             Vector v1 = vpoints[faceindices[i][1]]-v0;
             Vector v2 = vpoints[faceindices[i][2]]-v0;
-            Vector v;v.Cross(v1,v2);
+            Vector v = v1.cross(v2);
             farea += v.lengthsqr3();
         }
         nallowableoutliers = (int)(allowableocclusion*farea*0.5/(delta*delta));

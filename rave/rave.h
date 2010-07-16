@@ -15,9 +15,10 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /**
-  \file   rave.h
-  \brief  Defines the public headers that every plugin must include
-    in order to use openrave properly.
+\htmlonly
+\file   rave.h
+\brief  Defines the public headers that every plugin must include in order to use openrave properly.
+\endhtmlonly
 */
 #ifndef OPENRAVE_H
 #define OPENRAVE_H
@@ -105,6 +106,7 @@
 
 #define MATH_RANDOM_FLOAT RaveRandomFloat()
 
+/// Includes the entire %OpenRAVE library
 namespace OpenRAVE {
     
 #include <rave/defines.h>
@@ -732,6 +734,7 @@ RAVE_API std::string RaveGetHomeDirectory();
 } // end namespace OpenRAVE
 
 #if !defined(RAVE_DISABLE_ASSERT_HANDLER) && defined(BOOST_ENABLE_ASSERT_HANDLER)
+/// Modifications controlling %boost library behavior.
 namespace boost
 {
 inline void assertion_failed(char const * expr, char const * function, char const * file, long line)

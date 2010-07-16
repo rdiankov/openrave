@@ -152,8 +152,8 @@ public:
     /// return the static interface type this class points to (used for safe casting)
     static inline InterfaceType GetInterfaceTypeStatic() { return PT_Sensor; }
     
-    /// Initializes the sensor
-    /// \param args extra arguments that the sensor takes, can be NULL
+    /// Initializes the sensor.
+    /// \param cmd extra arguments that the sensor
     /// \return true on successful initialization
     virtual bool Init(const std::string& cmd) = 0;
 

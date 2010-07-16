@@ -1,0 +1,8 @@
+# -*- coding: utf-8 -*-
+PAPER_TYPE             = letter
+OUTPUT_LANGUAGE = English
+OUTPUT_DIRECTORY = ./english/
+ALIASES                += openravepy{1}="<a href=\"http://openrave.programmingvision.com/ordocs/english/openravepy-html/index.html\">\1</a>"
+ALIASES                += octave{1}="<a href=\"http://openrave.programmingvision.com/index.php/Started:Scripting\">\1</a>"
+ALIASES                += homepage{1}="<a href=\"http://openrave.programmingvision.com\">\1</a>"
+ALIASES                += envvarwiki{1}="<a href=\"http://en.wikipedia.org/wiki/Environment_variable\">\1</a>"

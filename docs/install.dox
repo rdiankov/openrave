@@ -39,8 +39,7 @@ cmake -DDOUBLE_PRECISION=ON ...
 - bin
  - \b openrave - Start a simple environment and attach the default viewer, collision checkers, physics
    engines, and servers.
- - \b openrave.py - Start a simple environment through <a
-   href="http://openrave.programmingvision.com/ordocs/english/openravepy-html/index.html">openravepy</a>. Allows
+ - \b openrave.py - Start a simple environment through \openravepy{openravepy}. Allows
    access to all openrave functionality including database generation and examples.
  - \b openrave-config - configuration file that helps users find the %OpenRAVE installation.
 - include
@@ -57,20 +56,20 @@ cmake -DDOUBLE_PRECISION=ON ...
   - models - 3D model resources
   - octave - All Octave scripting functions and examples. Include this directory into the OCTAVE_PATH.
   - plugins - Plugins compiled by the %OpenRAVE main distribution.
-  - openravepy - Python bindings, database generators, and examples. Structure is explained <a href="http://openrave.programmingvision.com/ordocs/english/openravepy-html/index.html#rst-directory-structure">here</a>.
+  - openravepy - Python bindings, database generators, and examples. Directory structure is explained <a href="http://openrave.programmingvision.com/ordocs/english/openravepy-html/index.html#rst-directory-structure">here</a>.
   - robots - Robot XML files usually containing just a \c <robot> or \c <kinbody> tag.
 
 */
 
 /** \page installation_linux Building and Installing on Linux
 
-Download the sources from <a href="http://sourceforge.net/projects/openrave">sourceforge</a>.
+Download the sources from \sourcesdownload{sourceforge}.
 
 \verbatim
 svn co https://openrave.svn.sourceforge.net/svnroot/openrave/trunk openrave
 \endverbatim
 
-OpenRAVE works only with qt4! Before compiling SoQt or %OpenRAVE make sure to remove any qt3 related dev packages like \c qt3-dev-tools or \c libqt3-headers.
+%OpenRAVE works only with qt4! Before compiling SoQt or %OpenRAVE make sure to remove any qt3 related dev packages like \c qt3-dev-tools or \c libqt3-headers.
 
 If there are compilation errors with templates, might have to use gcc version 4.1 or greater. You can check your version of gcc by <tt>gcc --version</tt>
 
@@ -144,9 +143,7 @@ Although %OpenRAVE is not tied to any particular collision checker, it requires 
 
 \section ilinux_python Python
 
-In order to use the python bindings through the <a
-href="http://openrave.programmingvision.com/ordocs/english/openravepy-html/index.html">openravepy</a>
-module, install  the following packages before compiling %OpenRAVE:
+In order to use the python bindings through the \openravepy{openravepy} module, install  the following packages before compiling %OpenRAVE:
 
 \verbatim
 sudo apt-get install libboost-python-dev python python-dev python-numpy python-scipy python-imaging-tk
@@ -210,7 +207,7 @@ If the cached files are not removed, the new system settings will not be noticed
 
 \section iwin_octavematlab Installation of 3rd Party Software
 
-Download the sources from <a href="http://sourceforge.net/projects/openrave">sourceforge</a> (<a
+Download the sources from \sourcesdownload{sourceforge} (<a
 href="http://tortoisesvn.tigris.org/">Tortoise SVN</a> is recommended). Check out the openrave
 sources <b>in a path whose directories do not contain spaces</b>!!!. For example \c C:\\openrave.
 

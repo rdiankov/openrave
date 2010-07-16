@@ -230,7 +230,7 @@ bool QLAlgorithm3 (double* m_aafEntry, double* afDiag, double* afSubDiag)
     return _QLAlgorithm3<double>(m_aafEntry, afDiag, afSubDiag);
 }
 
-void EigenSymmetric3(double* fmat, double* afEigenvalue, double* fevecs)
+void EigenSymmetric3(const double* fmat, double* afEigenvalue, double* fevecs)
 {
     double afSubDiag[3];
 

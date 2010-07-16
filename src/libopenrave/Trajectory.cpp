@@ -13,10 +13,6 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-/*! --------------------------------------------------------------------
-\file   Trajectory.cpp
-\brief  Implements a time-parameterized trajectory of robot configurations
--------------------------------------------------------------------- */
 #include "libopenrave.h"
 
 namespace OpenRAVE {
@@ -1034,20 +1030,6 @@ bool TrajectoryBase::Write(const std::string& filename, int options) const
     }
 
     return Write(of, options);
-}
-
-bool TrajectoryBase::Write(FILE* f, int options) const
-{
-    if( f == NULL ) {
-        RAVELOG_WARNA("invalid file handle\n");
-        return false;
-    }
-
-    stringstream ss;
-    if( !Write(ss, options) )
-        return false;
-
-    return fwrite(ss.str().c_str(), ss.str().size(), 1, f) != 0;
 }
 
 bool TrajectoryBase::Write(std::ostream& f, int options) const

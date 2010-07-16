@@ -1049,7 +1049,7 @@ void QtCoinViewer::_SetCameraLookAt(const RaveVector<float>& lookat, const RaveV
 
     up *= 1/RaveSqrt(len);
     
-    RaveVector<float> right; right.Cross(up,dir);
+    RaveVector<float> right = up.cross(dir);
     RaveTransformMatrix<float> t;
     t.m[0] = right.x; t.m[1] = up.x; t.m[2] = dir.x;
     t.m[4] = right.y; t.m[5] = up.y; t.m[6] = dir.y;

@@ -4,34 +4,28 @@
 # packages used: doxygen, python-docutils, python-pygments, python-epydoc
 # for latex: dot2tex, texlive-base, texlive-latex-base, texlive-pictures, texlive-fonts-recommended
 # for japanese: latex-cjk-japanese
+
+# create all the temporary doxygen files
+curdir=`pwd`
+cd ..
+rootdir=`pwd`
+cd $curdir
+doxycommands="STRIP_FROM_PATH        = $rootdir
+PROJECT_NUMBER = `openrave-config --version`"
+echo "$doxycommands" | cat Doxyfile.html Doxyfile.english - > Doxyfile.html.english
+echo "$doxycommands" | cat Doxyfile.latex Doxyfile.english - > Doxyfile.latex.english
+echo "$doxycommands" | cat Doxyfile.html Doxyfile.japanese - > Doxyfile.html.japanese
+echo "$doxycommands" | cat Doxyfile.latex Doxyfile.japanese - > Doxyfile.latex.japanese
+
+# run doxygen, assuming v1.7.1+
 rm -rf english japanese openrave.pdf ordocs.tgz
-echo "OUTPUT_LANGUAGE = English
-OUTPUT_DIRECTORY = ./english/
-PROJECT_NUMBER = `openrave-config --version`" | cat Doxyfile - > Doxyfile.english
-doxygen Doxyfile.english
+doxygen Doxyfile.html.english
+doxygen Doxyfile.latex.english
+python build_latex.py english/latex
+cp english/latex/refman.pdf english/openrave.pdf
 
-# build latex
-cd english/latex
-# yes, 3 times
-pdflatex refman.tex
-pdflatex refman.tex
-pdflatex refman.tex
-cd ..
-cp latex/refman.pdf openrave.pdf
-cd ..
-
-echo "OUTPUT_LANGUAGE = Japanese
-OUTPUT_DIRECTORY = ./japanese/
-PROJECT_NUMBER = `openrave-config --version`" | cat Doxyfile - > Doxyfile.japanese
-doxygen Doxyfile.japanese
-
-# need to figure out how latex can handle japanese...
-# cd japanese/latex
-# # yes, 3 times
-# pdflatex refman.tex
-# pdflatex refman.tex
-# pdflatex refman.tex
-# cd ../..
+doxygen Doxyfile.html.japanese
+#python build_latex.py japanese/latex
 #cp japanese/latex/refman.pdf japanese/openrave_japanese.pdf
 
 # build openravepy documentation

@@ -212,8 +212,9 @@ void GenerateSphereTriangulation(KinBody::Link::TRIMESH& tri, int levels)
         v[0] = temp.vertices[indices[i]];
         v[1] = temp.vertices[indices[i+1]];
         v[2] = temp.vertices[indices[i+2]];
-        if( dot3(v[0], (v[1]-v[0]).Cross(v[2]-v[0])) < 0 )
+        if( v[0].dot3((v[1]-v[0]).cross(v[2]-v[0])) < 0 ) {
             swap(indices[i], indices[i+1]);
+        }
     }
 
     temp.indices.resize(nindices);
@@ -709,8 +710,8 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
             Vector vec3;
             vec1 = (vAxes[1] - vAxes[0].dot(vAxes[1])*vAxes[0]).normalize();
             vec2 = (axis2cur - vAxes[0].dot(axis2cur)*vAxes[0]).normalize();
-            vec3 = vAxes[0]; vec3.Cross(vec1);
-            f = 2.0*RaveAtan2(vec3.dot(vec2), vec1.dot(vec2));
+            vec3 = vAxes[0].cross(vec1);
+            f = 2.0*RaveAtan2(vec3.dot3(vec2), vec1.dot3(vec2));
             if( f < -PI )
                 f += 2*PI;
             else if( f > PI )
@@ -718,7 +719,7 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
             pValues.push_back(offset-f);
             vec1 = (vAxes[0] - axis2cur.dot(vAxes[0])*axis2cur).normalize();
             vec2 = (axis1cur - axis2cur.dot(axis1cur)*axis2cur).normalize();
-            vec3 = axis2cur; vec3.Cross(vec1);
+            vec3 = axis2cur.cross(vec1);
             f = 2.0*RaveAtan2(vec3.dot(vec2), vec1.dot(vec2));
             if( f < -PI )
                 f += 2*PI;
@@ -1371,7 +1372,7 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
                             Transform tdelta = tbody0 * (*itjoint)->tLeft;
                             Vector vparent = velocities[bodies[0]->GetIndex()].first;
                             Vector wparent = velocities[bodies[0]->GetIndex()].second;
-                            velocities[bodies[1]->GetIndex()].first = vparent + tdelta.rotate(v) + Vector().Cross(wparent,bodies[1]->GetTransform().trans-tbody0.trans);
+                            velocities[bodies[1]->GetIndex()].first = vparent + tdelta.rotate(v) + wparent.cross(bodies[1]->GetTransform().trans-tbody0.trans);
                             velocities[bodies[1]->GetIndex()].second = wparent + tdelta.rotate(w);
 
                             bodies[1]->userdata = 1;
@@ -1406,7 +1407,7 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
                         Transform tdelta = tbody1 * (*itjoint)->tinvRight;
                         Vector vparent = velocities[bodies[1]->GetIndex()].first;
                         Vector wparent = velocities[bodies[1]->GetIndex()].second;
-                        velocities[bodies[0]->GetIndex()].first = vparent + tdelta.rotate(v) + Vector().Cross(wparent,bodies[0]->GetTransform().trans-tbody1.trans);
+                        velocities[bodies[0]->GetIndex()].first = vparent + tdelta.rotate(v) + wparent.cross(bodies[0]->GetTransform().trans-tbody1.trans);
                         velocities[bodies[0]->GetIndex()].second = wparent + tdelta.rotate(w);
 
                         bodies[0]->userdata = 1;
@@ -1441,7 +1442,7 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
                     Transform tdelta = tbody * (*itjoint)->tLeft;
                     Vector vparent = velocities[0].first;
                     Vector wparent = velocities[0].second;
-                    velocities[bodies[0]->GetIndex()].first = vparent + tdelta.rotate(v) + Vector().Cross(wparent,bodies[0]->GetTransform().trans-tbody.trans);
+                    velocities[bodies[0]->GetIndex()].first = vparent + tdelta.rotate(v) + wparent.cross(bodies[0]->GetTransform().trans-tbody.trans);
                     velocities[bodies[0]->GetIndex()].second = wparent + tdelta.rotate(w);
 
                     bodies[0]->userdata = 1;

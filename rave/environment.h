@@ -15,8 +15,10 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /**
-\file   environment.h
-\brief  Definition of the EnvironmentBase interface used for managing all objects in an environment.
+\htmlonly
+\file environment.h
+\brief Definition of the EnvironmentBase interface used for managing all objects in an environment.
+\endhtmlonly
  */
 #ifndef  OPENRAVE_ENVIRONMENTBASE_H
 #define  OPENRAVE_ENVIRONMENTBASE_H
@@ -25,9 +27,12 @@ namespace OpenRAVE {
 
 typedef boost::recursive_try_mutex EnvironmentMutex;
 
-/// Environment class
-/// Holds everything necessary to load the environment, simulate a problem, and gather statistics.
-/// It should be free of rendering and GUI work.
+/** \brief Maintains a world state, which serves as the gateway to all functions offered through %OpenRAVE.
+
+    Whenever objects in the environment are written or read, the user has to \b lock the environment
+    mutex mutex GetMutex(). This prevents any other process from modifying the enviornment while the
+    user is working.
+*/
 class EnvironmentBase : public boost::enable_shared_from_this<EnvironmentBase>
 {
 public:
@@ -42,7 +47,8 @@ public:
     /// do not call inside a SimulationStep call
     virtual void Reset()=0;
 
-    /// @name Interface Creation and Plugin Management
+    /// \name Interface Creation and Plugin Management
+    /// \anchor plugin_functionality
     //@{
     virtual InterfaceBasePtr CreateInterface(InterfaceType type,const std::string& interfacename)=0;
     virtual RobotBasePtr CreateRobot(const std::string& name="")=0;
@@ -219,17 +225,19 @@ public:
 
     typedef boost::function<BaseXMLReaderPtr(InterfaceBasePtr, const std::list<std::pair<std::string,std::string> >&)> CreateXMLReaderFn;
 
-    /// registers a custom xml reader for a particular interface. Once registered, anytime an interface is created through XML and
+    /// \brief Registers a custom xml reader for a particular interface.
+    ///
+    /// Once registered, anytime an interface is created through XML and
     /// the xmltag is seen, the function CreateXMLReaderFn will be called to get a reader for that tag
     /// \param xmltag the tag specified in xmltag is seen in the interface, the the custom reader will be created.
     /// \param fn CreateXMLReaderFn(pinterface,atts) - passed in the pointer to the interface where the tag was seen along with the list of attributes
     /// \return a pointer holding the registration, releasing the pointer will unregister the XML reader
     virtual boost::shared_ptr<void> RegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn) = 0;
     
-    /// Parses a file for XML data
+    /// \brief Parses a file for OpenRAVE XML formatted data.
     virtual bool ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename) = 0;
 
-    /// Parses a data file for XML data
+    /// \brief Parses a data file for XML data.
     /// \param pdata The data of the buffer
     /// \param len the number of bytes valid in pdata
     virtual bool ParseXMLData(BaseXMLReaderPtr preader, const std::string& data) = 0;
@@ -238,7 +246,8 @@ public:
     /// @name Object Setting and Querying
     //@{
     
-    /// add a body to the environment
+    /// \brief Add a body to the environment.
+    ///
     /// \param[in] body the pointer to an initialized body
     /// \param[in] bAnonymous if true and there exists a body with the same name, will make body's name unique
     virtual bool AddKinBody(KinBodyPtr body, bool bAnonymous=false) = 0;
@@ -247,27 +256,29 @@ public:
     /// \param[in] bAnonymous if true and there exists a body with the same name, will make body's name unique
     virtual bool AddRobot(RobotBasePtr robot, bool bAnonymous=false) = 0;
 
-    /// Removes a body from the environment [multi-thread safe].
+    /// \brief Removes a body from the environment <b>[multi-thread safe]</b>
+    ///
     /// \param[in] body the body to remove
     virtual bool RemoveKinBody(KinBodyPtr body) = 0;
 
-    /// Query a body from its name [multi-thread safe].
+    /// \brief Query a body from its name. <b>[multi-thread safe]</b>
     /// \return first KinBody (including robots) that matches with name
     virtual KinBodyPtr GetKinBody(const std::string& name)=0;
 
-    /// Query a robot from its name [multi-thread safe].
+    /// \brief Query a robot from its name. <b>[multi-thread safe]</b>
     /// \return first Robot that matches the name
     virtual RobotBasePtr GetRobot(const std::string& name)=0;
 
-    /// Get all bodies loaded in the environment (including robots) [multi-thread safe]
-    /// \paramp[out] bodies filled with all the bodies
+    /// \brief Get all bodies loaded in the environment (including robots). <b>[multi-thread safe]</b>
+    /// \param[out] bodies filled with all the bodies
     virtual void GetBodies(std::vector<KinBodyPtr>& bodies) const = 0;
 
-    /// fill an array with all robots loaded in the environment
+    /// \brief Fill an array with all robots loaded in the environment. <b>[multi-thread safe]</b>
     virtual void GetRobots(std::vector<RobotBasePtr>& robots) const = 0;
     
-    /// retrieve published bodies, note that the pbody pointer might become invalid
-    /// as soon as GetPublishedBodies returns
+    /// \brief Retrieve published bodies, completes even if environment is locked. <b>[multi-thread safe]</b>
+    ///
+    /// Note that the pbody pointer might become invalid as soon as GetPublishedBodies returns.
     virtual void GetPublishedBodies(std::vector<KinBody::BodyState>& vbodies) = 0;
 
     /// updates the published bodies that viewers and other programs listening in on the environment see.
@@ -317,11 +328,14 @@ public:
     virtual bool AttachViewer(RaveViewerBasePtr pnewviewer) = 0;
     virtual RaveViewerBasePtr GetViewer() const = 0;
 
-    /// @name 3D plotting methods. All plotting calls are thread safe
+    /// \name 3D plotting methods. <b>[multi-thread safe]</b>
     //@{
 
+    /// Handle holding the plot. The plot will continue to be drawn as long as a reference to this handle is held.
     typedef boost::shared_ptr<void> GraphHandlePtr;
 
+    /// \brief Plot a point cloud
+    ///
     /// \param ppoints array of points
     /// \param numPoints number of points to plot
     /// \param stride stride in bytes to next point, ie: nextpoint = (float*)((char*)ppoints+stride)

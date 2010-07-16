@@ -760,8 +760,10 @@ class TaskManipulation : public ProblemInstance
             if( bInitialRobotChanged )
                 ptrajfinal->AddPoint(Trajectory::TPOINT(vOrgRobotValues,_robot->GetTransform(), 0));
 
-            if( strpreshapetraj.size() > 0 ) // write the preshape
-                itpreshapetraj->second->Write(strpreshapetraj, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
+            if( strpreshapetraj.size() > 0 ) { // write the preshape
+                ofstream f(strpreshapetraj.c_str());
+                itpreshapetraj->second->Write(f, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
+            }
             if( bCombinePreShapeTraj) { // add the preshape
                 FOREACHC(itpoint, itpreshapetraj->second->GetPoints())
                     ptrajfinal->AddPoint(*itpoint);

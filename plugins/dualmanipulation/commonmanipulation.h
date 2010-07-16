@@ -233,8 +233,10 @@ class CM
             TrajectoryBasePtr pfulltraj = robot->GetEnv()->CreateTrajectory(robot->GetDOF());
             robot->GetFullTrajectoryFromActive(pfulltraj, pActiveTraj);
 
-            if( strsavetraj.size() > 0 )
-                pfulltraj->Write(strsavetraj, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
+            if( strsavetraj.size() > 0 ) {
+                ofstream f(strsavetraj.c_str());
+                pfulltraj->Write(f, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
+            }
 
             if( !!pout )
                 pfulltraj->Write(*pout, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation|Trajectory::TO_OneLine);
@@ -299,8 +301,9 @@ class CM
             v[0] = temp.vertices[indices[i]];
             v[1] = temp.vertices[indices[i+1]];
             v[2] = temp.vertices[indices[i+2]];
-            if( dot3(v[0], (v[1]-v[0]).Cross(v[2]-v[0])) < 0 )
+            if( v[0].dot3((v[1]-v[0]).cross(v[2]-v[0])) < 0 ) {
                 swap(indices[i], indices[i+1]);
+            }
         }
 
         temp.indices.resize(nindices);
