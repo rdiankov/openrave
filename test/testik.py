@@ -218,7 +218,7 @@ def test_3dik():
     env.Reset()
     robot = env.ReadRobotXMLFile('/home/rdiankov/downloads/TestRobot/robots/TestRobot.robot.xml')
     env.AddRobot(robot)
-    manip = robot.GetManipulator('arm2')
+    manip = robot.GetManipulator('arm')
     ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Translation3D)
     #self.generate()
     rawbasepos = manip.GetGraspTransform()[0:3,3]
@@ -229,7 +229,8 @@ def test_3dik():
     solvefn=solveFullIK_Translation3D
     solvejoints = list(manip.GetArmJoints())
     solvejoints.remove(3)
-    freeparams=[3]
+    solvejoints.remove(4)
+    freeparams=[3,4]
     sourcefilename = 'temp.cpp'
     self = ikfast.IKFastSolver(kinbody=robot,precision=None)
     #code = self.generateIkSolver(manip.GetBase().GetIndex(),manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejoints,usedummyjoints=False,solvefn=solvefn)

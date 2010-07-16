@@ -954,7 +954,7 @@ class IKFastSolver(AutoReloader):
                     valuesubs = []
                     freevarcond = None
                 
-                Positions = [Matrix(3,1,map(lambda x: self.customtrigsimp(x), LinksAccumRightAll[i][0:3,3].subs(valuesubs))) for i in range(len(LinksAccumRightAll))]
+                Positions = [Matrix(3,1,map(lambda x: self.customtrigsimp(x), (LinksAccumRightAll[i][0:3,0:3]*basepos+LinksAccumRightAll[i][0:3,3]).subs(valuesubs))) for i in range(len(LinksAccumRightAll))]
                 Positionsee = [Matrix(3,1,map(lambda x: self.customtrigsimp(x), (LinksAccumLeftInvAll[i][0:3,0:3]*Pee+LinksAccumLeftInvAll[i][0:3,3]).subs(valuesubs))) for i in range(len(LinksAccumLeftInvAll))]
                 
                 # try to shift all the constants of each Position expression to one side
@@ -1013,7 +1013,7 @@ class IKFastSolver(AutoReloader):
         if len(solverbranches) == 0 or not solverbranches[-1][0] is None:
             print 'failed to solve for direction3d kinematics'
             return None
-        return SolverIKChainTranslation3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], TfirstleftInv[0:3,0:3] * Pee + TfirstleftInv[0:3,3] , [SolverBranchConds(solverbranches)],Pfk = Tfirstleft * LinksAccumRightAll[0][0:4,3])
+        return SolverIKChainTranslation3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], TfirstleftInv[0:3,0:3] * Pee + TfirstleftInv[0:3,3] , [SolverBranchConds(solverbranches)],Pfk = Tfirstleft * (LinksAccumRightAll[0]*Matrix(4,1,[basepos[0],basepos[1],basepos[2],1.0])))
 
     def solveFullIK_Ray4D(self,chain,Tee,rawbasedir,rawbasepos):
         """basedir,basepos needs to be filled with a direction and position of the ray to control"""
