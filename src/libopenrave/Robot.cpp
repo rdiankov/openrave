@@ -180,8 +180,6 @@ bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, con
         localgoal.SetRotation(q);
     }
     else if( goal.GetType() == IkParameterization::Type_Translation3D ) {
-        if( TransformDistanceFast(_tGrasp,Transform()) > 1e-4f )
-            throw openrave_exception("Grasp transform has to be the identity for translation-only IK");
         if( !!_pBase )
             localgoal.SetTranslation(_pBase->GetTransform().inverse()*goal.GetTranslation());
         else

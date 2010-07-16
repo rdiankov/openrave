@@ -161,7 +161,11 @@ class InverseKinematicsModel(OpenRAVEModel):
                 return ikfast.IKFastSolver.solveFullIK_Ray4D(*args,**kwargs)
             solvefn=solveFullIK_Ray4D
         elif self.iktype == IkParameterization.Type.Translation3D:
-            solvefn=ikfast.IKFastSolver.solveFullIK_Translation3D
+            rawbasepos=self.manip.GetGraspTransform()[0:3,3]
+            def solveFullIK_Translation3D(*args,**kwargs):
+                kwargs['rawbasepos'] = rawbasepos
+                return ikfast.IKFastSolver.solveFullIK_Translation3D(*args,**kwargs)
+            solvefn=solveFullIK_Translation3D
         elif self.iktype == IkParameterization.Type.Transform6D:
             solvefn=ikfast.IKFastSolver.solveFullIK_6D
         else:

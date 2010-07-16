@@ -903,13 +903,15 @@ class IKFastSolver(AutoReloader):
             return None
         return SolverIKChainRotation3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], Tfirstleft.inv()[0:3,0:3] * Ree * Tfirstright.inv()[0:3,0:3], [SolverBranchConds(solverbranches)],Rfk = Tfirstleft[0:3,0:3] * LinksAccumRightAll[0][0:3,0:3])
 
-    def solveFullIK_Translation3D(self,chain,Tee):
+    def solveFullIK_Translation3D(self,chain,Tee,rawbasepos):
         Links, jointvars, isolvejointvars, ifreejointvars = self.forwardKinematicsChain(chain)
         Tfirstleft = Links.pop(0)
         TfirstleftInv = Tfirstleft.inv()
         LinksInv = [self.affineInverse(link) for link in Links]
         solvejointvars = [jointvars[i] for i in isolvejointvars]
         freejointvars = [jointvars[i] for i in ifreejointvars]
+
+        basepos = Matrix(3,1,rawbasepos.tolist())
 
         if not len(solvejointvars) == 3:
             raise ValueError('solve joints needs to be 3')
