@@ -401,7 +401,7 @@ protected:
             RAVELOG_WARNA("Failed to load %s\n", lib.c_str());
         }
 #else
-        void* plib = dlopen(lib.c_str(), RTLD_LAZY);
+        void* plib = dlopen(lib.c_str(), RTLD_NOW);
         if( plib == NULL )
             RAVELOG_WARNA("%s\n", dlerror());
 #endif
