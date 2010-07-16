@@ -50,6 +50,7 @@ int main(int argc, char ** argv)
         RobotBasePtr probot = penv->ReadRobotXMLFile(robotname);
         if( !probot ) {
             printhelp();
+            penv->Destroy();
             return 2;
         }
         penv->AddRobot(probot);
@@ -64,6 +65,7 @@ int main(int argc, char ** argv)
         probot->SetActiveManipulator(probot->GetManipulators().at(0)->GetName());
         if( !pikfast->SendCommand(ssout,ssin) ) {
             RAVELOG_ERROR("failed to load iksolver\n");
+            penv->Destroy();
             return 1;
         }
 

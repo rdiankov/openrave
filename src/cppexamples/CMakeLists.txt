@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 2.4)
-project (plugincpp)
+project (cppexamples)
 
-set(CMAKE_BUILD_TYPE RelWithDebInfo)
+set(CMAKE_BUILD_TYPE Debug)#RelWithDebInfo)
 include(FindOpenRAVE.cmake)
 
 if( NOT OPENRAVE_FOUND )

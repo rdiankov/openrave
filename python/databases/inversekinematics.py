@@ -33,11 +33,15 @@ from optparse import OptionParser
 
 class InverseKinematicsModel(OpenRAVEModel):
     """Generates analytical inverse-kinematics solutions, compiles them into a shared object/DLL, and sets the robot's iksolver. Only generates the models for the robot's active manipulator. To generate IK models for each manipulator in the robot, mulitple InverseKinematicsModel classes have to be created."""
-    def __init__(self,robot,iktype=None):
+    def __init__(self,robot,iktype=None,forceikfast=False):
+        """
+        :param forceikfast: if set will always force the ikfast solver
+        """
         OpenRAVEModel.__init__(self,robot=robot)
         self.iktype = iktype
         self.iksolver = None
         self.freeinc = None
+        self.forceikfast = forceikfast
     def clone(self,envother):
         clone = OpenRAVEModel.clone(self,envother)
         clone.setrobot(self.freeinc)
@@ -63,6 +67,8 @@ class InverseKinematicsModel(OpenRAVEModel):
                 ikname = 'ikfast.%s.%s'%(self.robot.GetRobotStructureHash(),self.manip.GetName())
                 iktype = ikfastproblem.SendCommand('AddIkLibrary %s %s'%(ikname,self.getfilename()))
                 if iktype is None:
+                    if self.forceikfast:
+                        return False
                     self.iksolver = self.env.CreateIkSolver(self.manip.GetIKSolverName()+iksuffix) if self.manip.HasIKSolver() else None
                 else:
                     if int(self.iktype) != int(iktype):
@@ -449,7 +455,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                 iktype = IkParameterization.Type.Translation3D
             if options.ray4donly:
                 iktype = IkParameterization.Type.Ray4D
-        Model = lambda robot: InverseKinematicsModel(robot=robot,iktype=iktype)
+        Model = lambda robot: InverseKinematicsModel(robot=robot,iktype=iktype,forceikfast=True)
         OpenRAVEModel.RunFromParser(Model=Model,parser=parser,args=args,**kwargs)
         if options.iktests is not None or options.perftiming is not None:
             print 'testing the success rate of robot ',options.robot
@@ -459,7 +465,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                 env.AddRobot(robot)
                 if options.manipname is not None:
                     robot.SetActiveManipulator(options.manipname)
-                ikmodel = InverseKinematicsModel(robot,iktype=iktype)
+                ikmodel = InverseKinematicsModel(robot,iktype=iktype,forceikfast=True)
                 if not ikmodel.setrobot(freeinc=options.freeinc):
                     raise ValueError('failed to load ik')
                 if options.iktests is not None:

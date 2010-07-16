@@ -114,7 +114,7 @@ int main(int argc, char ** argv)
 
     RobotBasePtr probot = vrobots.at(0);
     vector<dReal> values;
-    probot->GetJointValues(values);
+    probot->GetDOFValues(values);
     
     // set new values
     for(int i = 0; i < (int)vsetvalues.size() && i < (int)values.size(); ++i)
