@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2010 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -14,6 +14,9 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+/** \file problems.h
+    \brief Problem instances and functions related to characterization of robotics problems.
+*/
 #ifndef OPENRAVE_COMMAND_PROBLEM_INSTANCE_H
 #define OPENRAVE_COMMAND_PROBLEM_INSTANCE_H
 

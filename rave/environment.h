@@ -14,11 +14,8 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-/**
-\htmlonly
-\file environment.h
-\brief Definition of the EnvironmentBase interface used for managing all objects in an environment.
-\endhtmlonly
+/** \file environment.h
+    \brief Definition of the EnvironmentBase interface used for managing all objects in an environment.
  */
 #ifndef  OPENRAVE_ENVIRONMENTBASE_H
 #define  OPENRAVE_ENVIRONMENTBASE_H

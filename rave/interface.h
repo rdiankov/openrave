@@ -13,11 +13,8 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-/**
-\htmlonly
-\file   interface.h
-\brief  Base interface definition that all exported interfaces derive from.
-\endhtmlonly
+/** \file   interface.h
+    \brief  Base interface definition that all exported interfaces derive from.
  */
 
 #ifndef OPENRAVE_INTERFACE_BASE

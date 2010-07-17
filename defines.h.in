@@ -1,3 +1,6 @@
+/** \file defines.h
+    \brief Defines installation-specific variables.
+*/
 #ifndef OPENRAVE_DEFINITIONS_H
 #define OPENRAVE_DEFINITIONS_H
 

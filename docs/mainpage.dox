@@ -298,7 +298,7 @@ One of the strengths of %OpenRAVE is in allowing multiple \ref OpenRAVE::Environ
 
 
 /** 
-\~english \page writing_plugins Writing Plugins and Interfaces
+\page writing_plugins Writing Plugins and Interfaces
 
 Every plugin needs to export several functions as defined in \ref plugin_exports to notify %OpenRAVE
 what interfaces it has. When a plugin is first loaded, its \ref OpenRAVEGetPluginAttributes function
@@ -373,13 +373,21 @@ set_target_properties(plugincpp PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 target_link_libraries(plugincpp ${OPENRAVE_LIBRARY})
 \endverbatim
 
-\subsection writing_plugins_linux Other Build Systems - Linux
+\subsection writing_plugins_linux Other Build Systems
 
-Depending on where openrave was installed, a \ref openrave_config should have been created in the bin
-folder. You can use openrave-config --cflags and rave-config --libs to get the correct paths and
-flags to include in gcc to link with libopenrave.so.
+If not using CMake, then here's how the development files are organized:
 
-\subsection writing_plugins_win Other Build Systems - Windows Users
+<b>Linux Users</b>
+
+Depending on where openrave was installed, a \ref openrave_config should have been created in the \c $OPENRAVE_INSTALL/bin
+directory. It is possible to call <tt>openrave-config --cflags</tt> to get the correct paths and
+flags to include in gcc to link with \c libopenrave.so.
+
+<b>Windows Users</b>
+
+Because Windows does not provide a way to share libraries and DLLs, All the include headers and DLLs
+of libraries that %OpenRAVE links with are provided in the \c $OPENRAVE_INSTALL\\bin and \c
+$OPENRAVE_INSTALL\\include directories.
 
 \section writing_plugins_usage Using the Plugin
 
@@ -453,6 +461,25 @@ orProblemSendCommand('load data/lab1.env.xml',prob);
 numbodies = orProblemSendCommand('numbodies',prob);
 disp(['number of bodies are: ' num2str(numbodies)])
 \endverbatim
+
+\section writing_plugins_doc Documenting Interfaces
+
+The description of an interface and all information about its usage should be provided by two places:
+
+- OpenRAVE::InterfaceBase::GetDescription() - Returns the full documentation of the interface
+  description.
+
+- OpenRAVE::InterfaceBase::SendCommand("help") - Sending \b help should return a list of all the
+  commands the interface parses and their arguments.
+
+The format of both descriptions are in terms of a widely adopted standard <a
+href="http://docutils.sourceforge.net/rst.html">reStructuredText</a>. These descriptions are
+automatically parsed and put on the web.
+
+The reason why doxygen and other commenting tools are not adopted for plugin documentation is
+because the \ref interfaces are the only binding between plugins. Even if the header file or
+provided functions of a particular plugin were provided, other plugins would not be able to use them
+if not offered through the %OpenRAVE's channels.
 
 \~japanese \page writing_plugins プラグインとインターフェースの作成
 

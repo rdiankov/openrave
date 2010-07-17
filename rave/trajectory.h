@@ -14,11 +14,8 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-/**
-\htmlonly
-\file trajectory.h
-\brief  Define a time-parameterized trajectory of robot configurations.
-\endhtmlonly
+/** \file trajectory.h
+    \brief  Define a time-parameterized trajectory of robot configurations.
  */
 
 #ifndef TRAJECTORY_H

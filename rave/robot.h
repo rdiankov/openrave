@@ -14,54 +14,14 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-/**
-\htmlonly
-\file   robot.h
-\brief  Base robot and manipulator description.
-\endhtmlonly
+/** \file   robot.h
+    \brief  Base robot and manipulator description.
  */
 
 #ifndef  RAVE_ROBOT_H
 #define  RAVE_ROBOT_H
 
 namespace OpenRAVE {
-
-/// Parameterization of basic primitives for querying inverse-kinematics solutions.
-///
-/// Holds the parameterization of a geometric primitive useful for autonomous manipulation scenarios like:
-/// 6D pose, 3D translation, 3D rotation, 3D look at direction, and ray look at direction.
-class IkParameterization
-{
-public:
-    enum Type {
-        Type_None=0,
-        Type_Transform6D=1,
-        Type_Rotation3D=2,
-        Type_Translation3D=3,
-        Type_Direction3D=4,
-        Type_Ray4D=5,
-    };
-
-    IkParameterization() : _type(Type_None) {}
-    IkParameterization(const Transform& t) { SetTransform(t); }
-    IkParameterization(const RAY& r) { SetRay(r); }
-
-    inline void SetTransform(const Transform& t) { _type = Type_Transform6D; _transform = t; }
-    inline void SetRotation(const Vector& quaternion) { _type = Type_Rotation3D; _transform.rot = quaternion; }
-    inline void SetTranslation(const Vector& trans) { _type = Type_Translation3D; _transform.trans = trans; }
-    inline void SetDirection(const Vector& dir) { _type = Type_Direction3D; _transform.rot = dir; }
-    inline void SetRay(const RAY& ray) { _type = Type_Ray4D; _transform.trans = ray.pos; _transform.rot = ray.dir; }
-
-    inline Type GetType() const { return _type; }
-    inline const Transform& GetTransform() const { return _transform; }
-    inline const Vector& GetRotation() const { return _transform.rot; }
-    inline const Vector& GetTranslation() const { return _transform.trans; }
-    inline const Vector& GetDirection() const { return _transform.rot; }
-    inline const RAY GetRay() const { return RAY(_transform.trans,_transform.rot); }
-protected:
-    Transform _transform;
-    Type _type;
-};
 
 /** \brief A robot is a kinematic body that has attached manipulators, sensors, and controllers.
     

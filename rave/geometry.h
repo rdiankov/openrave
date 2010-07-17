@@ -13,12 +13,8 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-/**
-\htmlonly
-\file   geometry.h
-\brief  Defines basic gemoetric primitives and functions on them.
-\endhtmlonly
+/** \file   geometry.h
+    \brief  Basic gemoetric primitives and functions on them.
  */
 
 #ifndef OPENRAVE_GEOMETRY_H

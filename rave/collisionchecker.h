@@ -14,6 +14,9 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+/** \file collisionchecker.h
+    \brief Collision checking related definitions.
+ */
 #ifndef OPENRAVE_COLLISIONCHECKER_H
 #define OPENRAVE_COLLISIONCHECKER_H
 
@@ -34,6 +37,41 @@ enum CollisionAction
     CA_DefaultAction = 0, ///< let the physics/collision engine resolve the action
     CA_Ignore = 1, ///< do nothing
 };
+
+/// \brief Holds information about a particular collision that occured.
+class RAVE_API CollisionReport
+{
+public:
+    CollisionReport() { Reset(); }
+
+    struct RAVE_API CONTACT
+    {
+        CONTACT() : depth(0) {}
+        CONTACT(const Vector& p, const Vector& n, dReal d) : pos(p), norm(n) {depth = d;}
+
+        Vector pos;             ///< where the contact occured
+        Vector norm;    ///< the normals of the faces
+        dReal depth;    ///< the penetration depth, positive means the surfaces are penetrating, negative means the surfaces are not colliding (used for distance queries)
+    };
+
+    int options;        ///< the options that the CollisionReport was called with
+
+    KinBody::LinkConstPtr plink1, plink2; ///< the colliding links if a collision involves a bodies. Collisions do not always occur with 2 bodies like ray collisions, so these fields can be empty.
+
+    //KinBody::Link::GeomConstPtr pgeom1, pgeom2; ///< the specified geometries hit for the given links
+    int numCols;            ///< this is the number of objects that collide with the object of interest
+    std::vector<KinBody::LinkConstPtr> vLinkColliding; ///< objects colliding with this object
+
+    dReal minDistance;      ///< minimum distance from last query, filled if CO_Distance option is set
+    int numWithinTol;       ///< number of objects within tolerance of this object, filled if CO_UseTolerance option is set
+
+    std::vector<CONTACT> contacts; ///< the convention is that the normal will be "out" of plink1's surface. Filled if CO_UseContacts option is set.
+
+    virtual void Reset(int coloptions = 0);
+    virtual std::string __str__() const;
+};
+
+typedef CollisionReport COLLISIONREPORT RAVE_DEPRECATED;
 
 /** \brief Responsible for all collision checking queries of the environment.
     

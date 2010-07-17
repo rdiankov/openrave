@@ -13,6 +13,9 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+/** \file controller.h
+    \brief Controller related definitions.
+*/
 #ifndef OPENRAVE_CONTROLLER_H
 #define OPENRAVE_CONTROLLER_H
 

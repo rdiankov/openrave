@@ -14,11 +14,8 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-/**
-\htmlonly
-\file   rave.h
-\brief  Defines the public headers that every plugin must include in order to use openrave properly.
-\endhtmlonly
+/** \file rave.h
+    \brief  Defines the public headers that every plugin must include in order to use openrave properly.
 */
 #ifndef OPENRAVE_H
 #define OPENRAVE_H
@@ -483,6 +480,7 @@ class PhysicsEngineBase;
 class SensorBase;
 class CollisionCheckerBase;
 class RaveViewerBase;
+class IkParameterization;
 
 typedef boost::shared_ptr<CollisionReport> CollisionReportPtr;
 typedef boost::shared_ptr<CollisionReport const> CollisionReportConstPtr;
@@ -640,7 +638,6 @@ namespace OpenRAVE {
 #include <rave/kinbody.h>
 #include <rave/trajectory.h>
 #include <rave/problems.h>
-#include <rave/collisionreport.h>
 #include <rave/collisionchecker.h>
 #include <rave/sensor.h>
 #include <rave/robot.h>

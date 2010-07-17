@@ -14,11 +14,8 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-/**
-\htmlonly
-\file   kinbody.h
-\brief  Definition of the KinBody interface used for all kinematics bodies in the environment.
-\endhtmlonly
+/** \file   kinbody.h
+    \brief  Kinematics body related definitions.
  */
 #ifndef  OPENRAVE_KINBODY_H
 #define  OPENRAVE_KINBODY_H
