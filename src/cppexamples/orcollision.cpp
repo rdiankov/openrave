@@ -107,7 +107,7 @@ int main(int argc, char ** argv)
     EnvironmentMutex::scoped_lock lock(penv->GetMutex());
 
     vector<KinBodyPtr> vbodies;
-    penv->GetBodies()(vbodies);
+    penv->GetBodies(vbodies);
     // get the first body
     if( vbodies.size() == 0 ) {
         RAVELOG_ERRORA("no bodies loaded\n");
