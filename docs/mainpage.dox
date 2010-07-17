@@ -30,6 +30,7 @@ low-level control, message protocols, and perception systems.
 
 %OpenRAVEはシミュレーション，可視化，動作計画，スクリプトと制御機能等の統合環境を備えています．そのプラグインアーキテクチャを使い，ユーザーは簡単にコントローラの変更や機能の拡張をすることができます．使用するプラグイン，動作計画アルゴリズム，ロボットの自律制御，またはセンシングを考慮した動作は個々のモジュールになっており，実行時に動的に呼び出されます．これによって開発者は多くのモジュールが１つの大きな塊となった巨大なコードと格闘することから解放されます．さらに%OpenRAVEのユーザーは，ロボットの運動学と動力学、幾何学的干渉、環境変化、ロボット制御などの詳細が分からなくても知的動作とスクリプトの開発に集中することができます．また%OpenRAVEは，制御ドライバ，通信規格，認識システム等に焦点をあてた世の中に存在する他のロボットシステムとは異なり，幾何学と動力学のシミュレーションと解析に焦点をおいているため，それらのシステムとも容易に共存することが可能です．
 
+\~
 
 \section main_started Getting Started
 - \subpage installation
@@ -37,18 +38,17 @@ low-level control, message protocols, and perception systems.
 - \subpage conventions
 - \subpage environment_variables
 
-\section main_system Components
+\section main_architecture Architecture
+- \subpage architecture_concepts
+- \subpage writing_plugins
+- \subpage plotting3d
 
+\section main_system Components
 - \subpage database_generation
 - <a href="http://openrave.programmingvision.com/index.php/Started:Formats">XML File Format</a>
 - Scripting
  - \openravepy{Python Scripting with <b>openravepy </b>}
  - \octave{Octave/MATLAB Scripting}
-
-\section main_architecture Architecture
-- \subpage architecture_concepts
-- \subpage writing_plugins
-- \subpage plotting3d
 
 \section main_reference Reference
 - \subpage interfaces
