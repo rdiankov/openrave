@@ -328,9 +328,9 @@ private:
                     }
                 }
             }
-
-            if( qbest.size() == 0 )
+            if( qbest.size() == 0 ) {
                 break;
+            }
             listpath.push_back(qbest);
             if( bestdist < 0.0001f ) {// we're done
                 RAVELOG_INFOA("done after %d iters\n", iter);

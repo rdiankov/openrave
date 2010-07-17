@@ -1,3 +1,18 @@
+/** /file cpp-gen-md5.cpp
+    /brief Generates a md5 hash from the lexical tokens of a C++ ignoring directives and whitespace.
+    /author Rosen Diankov
+
+    Usage:
+    \verbatim
+    cpp-gen-md5 [filename1 define1] [filename2 define2] ...
+    \endverbatim
+    
+    If only a filename is given, will output a 16 byte string. If both filename and define are given
+    will output a file consisting of the hashes:
+    \verbatim
+    #define @define2@ "@md5hash@"
+    \endverbatim
+ */
 #include "cpp_lexer.hpp"
 
 #include <iostream>
@@ -111,44 +126,3 @@ string getmd5hash(const char* fname, const vector<char>& vbasedata)
 	    sprintf(hex_output + di * 2, "%02x", digest[di]);
     return string(hex_output);
 }
-
-//#include <math.h>
-//#include <stdio.h>
-//#include <string.h>
-//static int do_test(void)
-//{
-//    static const char *const test[7*2] = {
-//	"", "d41d8cd98f00b204e9800998ecf8427e",
-//	"a", "0cc175b9c0f1b6a831c399e269772661",
-//	"abc", "900150983cd24fb0d6963f7d28e17f72",
-//	"message digest", "f96b697d7cb7938d525a2f31aaf161d0",
-//	"abcdefghijklmnopqrstuvwxyz", "c3fcd3d76192e4007dfb496cca67e13b",
-//	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",
-//				"d174ab98d277d9f5a5611c2c9f419d9f",
-//	"12345678901234567890123456789012345678901234567890123456789012345678901234567890", "57edf4a22be3c955ac49da2e2107b67a"
-//    };
-//    int i;
-//    int status = 0;
-//
-//    for (i = 0; i < 7*2; i += 2) {
-//	md5_state_t state;
-//	md5_byte_t digest[16];
-//	char hex_output[16*2 + 1];
-//	int di;
-//
-//	md5_init(&state);
-//	md5_append(&state, (const md5_byte_t *)test[i], strlen(test[i]));
-//	md5_finish(&state, digest);
-//	for (di = 0; di < 16; ++di)
-//	    sprintf(hex_output + di * 2, "%02x", digest[di]);
-//	if (strcmp(hex_output, test[i + 1])) {
-//	    printf("MD5 (\"%s\") = ", test[i]);
-//	    puts(hex_output);
-//	    printf("**** ERROR, should be: %s\n", test[i + 1]);
-//	    status = 1;
-//	}
-//    }
-//    if (status == 0)
-//	puts("md5 self-test completed successfully.");
-//    return status;
-//}

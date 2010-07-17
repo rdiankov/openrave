@@ -18,21 +18,11 @@
 #include "odephysics.h"
 #include "odecontroller.h"
 
-static list< boost::shared_ptr<void> > s_listRegisteredReaders;
-RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv)
-{
-    if( strcmp(pluginhash,RaveGetInterfaceHash(type)) ) {
-        RAVELOG_WARNA("plugin type hash is wrong\n");
-        throw openrave_exception("bad plugin hash");
-    }
-    if( !penv )
-        return InterfaceBasePtr();
-    
-    stringstream ss(name);
-    string interfacename;
-    ss >> interfacename;
-    std::transform(interfacename.begin(), interfacename.end(), interfacename.begin(), ::tolower);
+#include <rave/plugin.h>
 
+static list< boost::shared_ptr<void> > s_listRegisteredReaders;
+InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
+{
     if( s_listRegisteredReaders.size() == 0 ) {
         s_listRegisteredReaders.push_back(penv->RegisterXMLReader(OpenRAVE::PT_PhysicsEngine,"odeproperties",ODEPhysicsEngine::CreateXMLReader));
     }
@@ -57,19 +47,11 @@ RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(InterfaceType type, const std::
     return InterfaceBasePtr();
 }
 
-RAVE_PLUGIN_API bool GetPluginAttributes(PLUGININFO* pinfo, int size)
+void GetPluginAttributesValidated(PLUGININFO& info)
 {
-    if( pinfo == NULL ) return false;
-    if( size != sizeof(PLUGININFO) ) {
-        RAVELOG_ERRORA("bad plugin info sizes %d != %d\n", size, sizeof(PLUGININFO));
-        return false;
-    }
-
-    // fill pinfo
-    pinfo->interfacenames[OpenRAVE::PT_CollisionChecker].push_back("ode");
-    pinfo->interfacenames[OpenRAVE::PT_PhysicsEngine].push_back("ode");
-    pinfo->interfacenames[OpenRAVE::PT_Controller].push_back("odevelocity");
-    return true;
+    info.interfacenames[OpenRAVE::PT_CollisionChecker].push_back("ode");
+    info.interfacenames[OpenRAVE::PT_PhysicsEngine].push_back("ode");
+    info.interfacenames[OpenRAVE::PT_Controller].push_back("odevelocity");
 }
 
 RAVE_PLUGIN_API void DestroyPlugin()

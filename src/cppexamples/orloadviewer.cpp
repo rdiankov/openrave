@@ -1,15 +1,21 @@
-// Copyright (c) 2008-2010 Rosen Diankov (rosen.diankov@gmail.com)
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//     http://www.apache.org/licenses/LICENSE-2.0
-// 
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/** \example orloadviewer.cpp
+    \author Rosen Diankov
+
+    Shows how to load a robot into the openrave environment and start a viewer.
+    
+    Usage:
+    \verbatim
+    orloadviewer [--num n] [--scene filename] viewername
+    \endverbatim
+
+    - \b --num - Number of environments/viewers to create simultaneously
+    - \b --scene - The filename of the scene to load.
+
+    Example:
+    \verbatim
+    ./orloadviewer --scene data/lab1.env.xml qtcoin
+    \endverbatim
+*/    
 #include <openrave-core.h>
 #include <vector>
 #include <cstring>
@@ -20,16 +26,6 @@
 
 using namespace OpenRAVE;
 using namespace std;
-
-
-void printhelp()
-{
-    RAVELOG_INFOA("orloadviewer [--num n] [--scene filename] viewername\n"
-                  "  Shows how to load a robot into the openrave environment\n"
-                  //"--num     Number of environments/viewers to create simultaneously\n"
-                  "--scene          The filename of the scene to load\n"
-                  );
-}
 
 void SetViewer(EnvironmentBasePtr penv, const string& viewername)
 {
@@ -55,7 +51,7 @@ int main(int argc, char ** argv)
     int i = 1;
     while(i < argc) {
         if( strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "-?") == 0 || strcmp(argv[i], "/?") == 0 || strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-help") == 0 ) {
-            printhelp();
+            RAVELOG_INFO("orloadviewer [--num n] [--scene filename] viewername\n");
             return 0;
         }
 //        else if( strcmp(argv[i], "--num") == 0 ) {
@@ -85,8 +81,8 @@ int main(int argc, char ** argv)
 
         // load the scene
         if( !penv->Load(scenefilename) ) {
-            printhelp();
-            return -2;
+            penv->Destroy();
+            return 2;
         }
     }
 

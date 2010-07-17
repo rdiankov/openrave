@@ -2690,7 +2690,7 @@ bool ReadFile(const char* pfilename, KinBody::Link::TRIMESH& mesh)
             Vector v1 = mesh.vertices[i+1];
             Vector v2 = mesh.vertices[i+2];
             Vector vcross;
-            if( (v1-v0).Cross(v2-v0).lengthsqr3() > 1e-10 ) {
+            if( (v1-v0).cross(v2-v0).lengthsqr3() > 1e-10 ) {
                 mesh.indices.push_back(i);
                 mesh.indices.push_back(i+1);
                 mesh.indices.push_back(i+2);

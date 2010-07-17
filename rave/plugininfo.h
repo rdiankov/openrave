@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -13,30 +13,27 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+/**
+\htmlonly
+\file   plugininfo.h
+\brief  Holds the plugin information structure.
+\endhtmlonly
+ */
+#ifndef OPENRAVE_PLUGIN_INFO
+#define OPENRAVE_PLUGIN_INFO
 
-#ifndef OPENRAVE_CORE_H
-#define OPENRAVE_CORE_H
+namespace OpenRAVE {
 
-// public headers
-#include <rave/rave.h>
-
-#if defined(_MSC_VER) && defined(RAVE_CORE_USEDLL)
-#ifdef RAVE_CORE_LIBBUILD
-#define RAVE_CORE_API __declspec(dllexport)
-#else
-#define RAVE_CORE_API __declspec(dllimport)
-#endif
-#else
-#define RAVE_CORE_API 
-#endif
-
-namespace OpenRAVE
+/** \brief Holds all the %OpenRAVE-specific information provided by a plugin.
+    
+    \ingroup plugin_exports
+    PLUGININFO has a hash computed for it to validate its size and type before having a plugin fill it.
+*/
+struct PLUGININFO
 {
+    std::map<InterfaceType, std::vector<std::string> > interfacenames;
+};
 
-/// Creates an OpenRAVE environment.
-/// \param bLoadAllPlugins If true will load all the openrave plugins automatically that can be found in the OPENRAVE_PLUGINS environment path
-RAVE_CORE_API EnvironmentBasePtr CreateEnvironment(bool bLoadAllPlugins=true);
-
-} // end namespace OpenRAVE
+}
 
 #endif

@@ -25,6 +25,18 @@
 
 namespace OpenRAVE {
 
+/// serialization options for interfaces
+enum SerializationOptions
+{
+    SO_Kinematics = 0x01, ///< kinematics information
+    SO_Dynamics = 0x02, ///< dynamics information
+    SO_BodyState = 0x04, ///< state of the body
+    SO_NamesAndFiles = 0x08, ///< resource files and names
+    SO_RobotManipulators = 0x10, ///< serialize robot manipulators
+    SO_RobotSensors = 0x20, ///< serialize robot sensors
+    SO_Geometry = 0x40, ///< geometry information (for collision detection)
+};
+
 /** \brief Base class for all interfaces that OpenRAVE provides.
     
     \ingroup interfaces
@@ -44,7 +56,7 @@ public:
     inline InterfaceType GetInterfaceType() const { return __type; }
 
     /// set internally by RaveDatabase
-	/// \return the unique identifier that describes this class type, case is ignored
+    /// \return the unique identifier that describes this class type, case is ignored
     /// should be the same id used to create the object
     inline const std::string& GetXMLId() const { return __strxmlid; }
 
@@ -62,7 +74,10 @@ public:
         return it != __mapReadableInterfaces.end() ? it->second : XMLReadablePtr();
     }
 
-    /// \return a user-provided description of the interface
+    /** All documentation of the interface.
+        
+        \return a user-provided description of the interface
+    */
     virtual const std::string& GetDescription() const { return __description; };
 
     /// set user data

@@ -2,8 +2,6 @@
 /**
 \mainpage Open Robotics Automation Virtual Environment
 
-\section main_intro Introduction
-
 %OpenRAVE provides an environment for testing, developing, and deploying motion planning and
 higher-level intelligence algorithms in real-world robotics applications. This document covers the
 core %OpenRAVE concepts, the C++ API, examples, and usage of the plugins offered in the base
@@ -45,6 +43,7 @@ message protocols, and perception systems.
 - \subpage interfaces
 - \subpage geometric_primitives
 - \subpage affine_math
+- \subpage cpp_examples
 
 \~english
 Documentation in Other Languages: \japanesedoc
@@ -55,6 +54,9 @@ Documentation in Other Languages: \japanesedoc
  */
 
 /** \page p_basic_usage Basic Usage and Loading Environments
+
+
+\~english
 
 To check out the plugins loaded type
 \verbatim
@@ -71,9 +73,34 @@ If a plugin declares a ProblemInsance named \b MyProblem, then to launch the pro
 openrave robots/puma.robot.xml -problem MyProblem 'myarguments'
 \endverbatim
 
+The \openrave_py{openrave.py} program is similar to \c openrave, but supports much more
+functionality. In fact, \c openrave potentially calls into \openrave_py{openrave.py} for commands it
+cannot support.
+
+\~japanese
+
+提供されているプラグインとインターフェイスの表示
+\verbatim
+openrave --listplugins
+\endverbatim
+
+ロボットのロード
+\verbatim
+openrave robots/puma.robot.xml
+\endverbatim
+
+プラグインが\b MyProblemというProblemInstanceを定義している場合，コマンドラインから起動出来る
+\verbatim
+openrave robots/puma.robot.xml -problem MyProblem 'myarguments'
+\endverbatim
+
+\openrave_py{openrave.py}のもっとも便利なプログラムが推奨される．openrave.pyはPythonで書いてあるため，
+OpenRAVEで提供されているすべてのモジュールにアクセス出来る．openraveの方がC++でコンパイルされているた
+め，Pythonがなくても実行出来る．
+
 */
 
-/** \page conventions System Conventions and Guidelines
+/** \~english \page conventions System Conventions and Guidelines
 
 This is the set of conventions all users are highly recommended to follow. Sticking to them will
 guarantee that a certain party's %OpenRAVE modules can inter-operate with other modules.
@@ -85,7 +112,7 @@ matrices. Note that python expects row-major matrices, which require transpositi
 around the two interfaces.
 
 - Quaternions, the preferred way of representing rotations, are defined with the scalar value as
-the first component. For example [w x y z] or [cos sin*axis].
+the first component. For example <b>[w x y z]</b> or <b>[cos sin*axis]</b>.
 
 - A pose is an affine transformation specified as a quaternion and translation. It serializes into
 7 values, the first 4 being the quaternion.
@@ -114,10 +141,52 @@ differentiate it from the others.
 \section Internal
 
 The rotation of kinbody joint axes is clockwise instead of the counter-clockwise standard. However,
-the only place this convention pops up is when defining the robot file and when using Joint.GetAxis
+the only place this convention pops up is when defining the robot file and when using \ref OpenRAVE::KinBody::Joint::GetAxis
 directly. Every other place in the code is consistent with how the links move, not how the joint
 axes are defined. For example, the Jacobian explains how a point will move given the angles
-specified through KinBody.SetJointValues.
+specified through \ref OpenRAVE::KinBody::SetJointValues.
+
+\~japanese \page conventions システム開発上で覚えておくべきこと
+
+すべてのOpenRAVEモジュールは以下のルールに従っている．新しいモジュールもこの規則を守れば，互いの機能
+を使うことが容易になる．
+
+- 座標は右手系である．
+
+- OpenRAVEの変換行列は列ベクトルを使い，メモリ配置は横（行）に並べる（詳細は[[Started:MatrixFormats|
+  ここで参照]]）．言い換えると標準的な線形代数の慣習に従っている．しかし，Octave/Matlabの使い方を容易
+  にするためにシリアライズする時にメモリ配置を縦（列）で入出力する．Pythonの行列メモリ配置は横（行）
+  並びであるため，シリアライズがところで転置する必要がある．
+
+- 回転を示す時にはクオータニオンを使うことが推奨される．クオータニオンのスカラーは最初の要素である．
+  例えば<b>[w x y z]</b>か<b>[cos sin*axis]</b>・
+
+- \b poseは変換行列をクオータニオンと移動で指定されている．7値にシリアライズ，最初の4つがクオータ
+  ニオンの値を示し，残りの3つは移動の<b>[x y z]</b>である．
+
+- 2つの回転の距離は\f$\cos^{-1} | q_1 \cdot q_2 |\f$で定義されている．\f$q_1\f$，\f$q_2\f$はクオータニオンとして表現される．これは最小角度を示している．回転が互いに近い場合は\f$\min\left( | q1 - q2 | \; , \; | q1 + q2 |\right)\f$に近似出来る．
+
+- ロボットの上の方向は\b +Z軸，進行方向は\b +X軸である．
+
+- モバイルマニピュレーションは\b XY平面で行われる．
+
+- ロボットの座標原点は，ベースリンクがZ=0の平面に配置される．ロボットが移動し，回転する時にもっとも自
+  然的な回転軸の原点が座標原点に一致する．
+
+- 人間環境で活動するロボットの長さの単位はメートル（m)である．あらゆるしきい値がそれを仮定しているた
+  め，別の単位を使う場合は計算時間が膨大になる可能性がある．単位を選ぶ時にもっとも一般的な慣習
+  は，<b>アームの長さ</b>を大体1にすることである．
+
+- OpenRAVE環境に加えられている物体はユニークな名前を持つ必要がある．
+
+- 物体の中でされているリンク，マニピュレーター，センサー，関節の名前が互いにユニークである必要がある．
+
+\section OpenRAVE内部の慣習
+
+関節の回転方向は時計回りになっている（逆時計回りが標準であるため，ロボットの回転軸をマイナスにする必
+要がある）．しかし，この慣習はロボットを定義する時と，\ref OpenRAVE::KinBody::Joint::GetAxisを呼び出す時のみに現れるから，ほと
+んど気にする必要がない．ヤコビアンとリンクの動きが同調している．例えば，ヤコビアンが
+\ref OpenRAVE::KinBody::SetJointValuesの角度の微分に大して座標系の変換を表す．
 
 */
 
@@ -161,8 +230,9 @@ For now see <a href="http://openrave.programmingvision.com/index.php/Main_Page#R
 - <b>Core Layer</b> The core is composed of a set of \ref interfaces defining how plugins share
 information, and it provides an environment interface that maintains a world state, which serves as
 the gateway to all functions offered through %OpenRAVE. The global openrave state manages the loaded
-plugins, multiple independent environments, and logging. On the other hand, the \ref OpenRAVE::EnvironmentBase "environment" combines collision checkers, viewers, physics engines, the kinematic world, and all
-its interfaces into a coherent robotics world state.
+plugins, multiple independent environments, and logging. On the other hand, the \ref
+OpenRAVE::EnvironmentBase "environment" combines collision checkers, viewers, physics engines, the
+kinematic world, and all its interfaces into a coherent robotics world state.
 
 - <b>Plugins Layer</b> %OpenRAVE is designed as a plugin-based architecture where a plugin offers
 implementations of the \ref interfaces that are loaded dynamically into the \ref
@@ -199,11 +269,7 @@ properties like convex hull decomposition, grasp sets, reachability maps, analyt
 kinematics, etc. If the robot is defined properly, then all these functions should work out of the
 box.
 
-Although the low level stuff is general, the examples usually single out one environment and one
-robot to show you the technology. Some examples like graspplanning.py are more applicable in that
-they just re-use the grasp sets and ik databases for moving the robot.
-
-It is possible to send a \b help command to every \ref InterfaceBase "interface" to get a
+It is possible to send a \b help command to every \ref OpenRAVE::InterfaceBase "interface" to get a
 description of the commands it supports and what they do.
 
 
@@ -213,23 +279,80 @@ description of the commands it supports and what they do.
 - Plugin Management
 - Cloning
 
-One of the strengths of %OpenRAVE is in allowing multiple \ref OpenRAVE::EnvironmentBase "environments" work simultaneously in the same process.
+One of the strengths of %OpenRAVE is in allowing multiple \ref OpenRAVE::EnvironmentBase
+"environments" work simultaneously in the same process.
 
 */
 
 
-/** \page writing_plugins Writing C++ Plugins
+/** 
+\~english \page writing_plugins Writing Plugins and Interfaces
 
-You can find a complete stand-alone plugin example in the share/openrave/examples/plugincpp folder. To build it just type: 
+Every plugin needs to export several functions as defined in \ref plugin_exports to notify %OpenRAVE
+what interfaces it has. When a plugin is first loaded, its \ref OpenRAVEGetPluginAttributes function
+will be called in order so the %OpenRAVE core can register the names of its provided
+interfaces. 
 
-\example plugincpp.cpp
+\section writing_plugins_hash Plugins Loading Safety
 
+Many mechanisms have been put in place to prevent mismatching/old plugins to be loaded by the
+core. In order to protect plugins compiled with a different version, %OpenRAVE creates a hash from
+each interface class definition using \ref cpp-gen-md5 and stores them in \ref
+rave/classhashes.h. The interface hash can be retrieved using \ref RaveGetInterfaceHash. For an
+interface to be loaded successfully, the plugin has to check that the hash of the core loading the
+plugin matches the hash of the
+
+\section writing_plugins_example Example
+
+There are several %OpenRAVE functions offered in \ref rave/plugin.h to help write robust
+exports, so plugin authors are recommended to include \ref rave/plugin.h in the main C++ file compiled.
+
+
+The simplest example is shown in \ref plugincpp.cpp
+
+
+\section example_interfaces Example interfaces
+
+\~japanese \page writing_plugins プラグインとインターフェースの作成
+
+\section example_demos OpenRAVEコアを使用する例
+
+
+\section example_interfaces インターフェース例
+
+*/
+
+/**
+\~english \page cpp_examples C++ Examples
+
+All C++ examples are stored in \c $OPENRAVE_INSTALL/share/openrave/cppexamples. Use the \c CMakeLists.txt file the build the examples by:
+\verbatim
+cd `openrave-config --prefix`/share/openrave/cppexamples
+mkdir build
+cd build
+cmake ..
+make
+\endverbatim
+
+The current examples are:
+
+\ref customreader.cpp
+\ref ikfastloader.cpp
+\ref orcollision.cpp
+\ref orloadviewer.cpp
+\ref plugincpp.cpp
+
+*/
+
+/** \defgroup plugin_exports Plugin Export Functions
+
+    Every plugin needs to export these functions
 */
 
 /** \defgroup interfaces Base Interface Classes
 
 Interfaces are provided by plugins and are usually dynamically loaded into %OpenRAVE. All interfaces
-are derived from the \ref InterfaceBase class and contain basic information such as the type, the
+are derived from the \ref OpenRAVE::InterfaceBase class and contain basic information such as the type, the
 owning \ref OpenRAVE::EnvironmentBase "environment", setting user data, cloning, and allowing custom string commands to be sent.
 
 Every instantiated interface belongs to only one \ref OpenRAVE::EnvironmentBase

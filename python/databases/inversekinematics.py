@@ -42,6 +42,11 @@ class InverseKinematicsModel(OpenRAVEModel):
         self.iksolver = None
         self.freeinc = None
         self.forceikfast = forceikfast
+        self.ikfastproblem = self.env.CreateProblem('ikfast')
+        self.env.LoadProblem(self.ikfastproblem,'')
+    def  __del__(self):
+        if self.ikfastproblem is not None:
+            self.env.RemoveProblem(self.ikfastproblem)
     def clone(self,envother):
         clone = OpenRAVEModel.clone(self,envother)
         clone.setrobot(self.freeinc)
@@ -63,9 +68,8 @@ class InverseKinematicsModel(OpenRAVEModel):
 #             self.iksolver = self.env.CreateIkSolver(self.manip.GetIKSolverName()+iksuffix) if self.manip.HasIKSolver() else None
         if self.iksolver is None:
             with self.env:
-                ikfastproblem = [p for p in self.env.GetLoadedProblems() if p.GetXMLId().lower() == 'ikfast'][0]
                 ikname = 'ikfast.%s.%s'%(self.robot.GetRobotStructureHash(),self.manip.GetName())
-                iktype = ikfastproblem.SendCommand('AddIkLibrary %s %s'%(ikname,self.getfilename()))
+                iktype = self.ikfastproblem.SendCommand('AddIkLibrary %s %s'%(ikname,self.getfilename()))
                 if iktype is None:
                     if self.forceikfast:
                         return False
@@ -73,6 +77,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                 else:
                     if int(self.iktype) != int(iktype):
                         raise ValueError('ik does not match types %s!=%s'%(self.iktype,iktype))
+                    ikname = 'ikfast ' + ikname
                     self.iksolver = self.env.CreateIkSolver(ikname+iksuffix)
         if self.iksolver is not None:
             self.manip.SetIKSolver(self.iksolver)
@@ -245,8 +250,7 @@ class InverseKinematicsModel(OpenRAVEModel):
 
     def perftiming(self,num):
         with self.env:
-            ikfastproblem = [p for p in self.env.GetLoadedProblems() if p.GetXMLId() == 'IKFast'][0]
-            results = ikfastproblem.SendCommand('PerfTiming num %d %s'%(num,self.getfilename()))
+            results = self.ikfastproblem.SendCommand('PerfTiming num %d %s'%(num,self.getfilename()))
             return [double(s)*1e-6 for s in results.split()]
     def testik(self,iktests):
         """Tests the iksolver.
@@ -352,13 +356,12 @@ class InverseKinematicsModel(OpenRAVEModel):
                         print 'failed to find: ',targetpos,targetdir,'solution is: ',orgvalues
                 return success/numiktests
             else:
-                ikfastproblem = [p for p in self.env.GetLoadedProblems() if p.GetXMLId().lower() == 'ikfast'][0]
                 cmd = 'DebugIK robot %s '%self.robot.GetName()
                 if iktests.isdigit():
                     cmd += 'numtests %d '%int(iktests)
                 else:
                     cmd += 'readfile %s '%iktests
-                successrate = float(ikfastproblem.SendCommand(cmd))
+                successrate = float(self.ikfastproblem.SendCommand(cmd))
         return successrate
 
     @staticmethod

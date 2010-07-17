@@ -10,7 +10,7 @@ if( QHULL_FOUND AND QHULL_INCLUDE_DIR )
   include_directories("${QHULL_INCLUDE_DIR}")
 endif()
 
-add_library(grasper SHARED graspermain.cpp grasper.h grasperplanner.h  plugindefs.h)
+add_library(grasper SHARED grasper.cpp grasper.h grasperplanner.h  plugindefs.h)
 
 if( QHULL_FOUND )
   target_link_libraries(grasper libopenrave qhull)

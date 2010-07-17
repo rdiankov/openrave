@@ -8,7 +8,7 @@ set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
 set (OPENRAVE_VERSION_MINOR 2)
-set (OPENRAVE_VERSION_PATCH 5)
+set (OPENRAVE_VERSION_PATCH 6)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR})
 
@@ -89,9 +89,10 @@ message(STATUS "installing to ${CMAKE_INSTALL_PREFIX}")
 # Custom CMake options
 ##############################################################################
 
-option(ENABLE_VIDEORECORDING "Enable video recording" ON)
-option(PLUGINS "Build the pluings" ON)
-option(DOUBLE_PRECISION "Use double precision" OFF)
+option(OPT_VIDEORECORDING "Enable video recording" ON)
+option(OPT_PLUGINS "Build the pluings" ON)
+option(OPT_DOUBLE_PRECISION "Use double precision" OFF)
+option(OPT_STATIC "Build static libraries" OFF)
 
 ##############################################################################
 # Required packages
@@ -269,6 +270,7 @@ add_custom_command(
        "${CMAKE_SOURCE_DIR}/rave/viewer.h" OPENRAVE_VIEWER_HASH
        "${CMAKE_SOURCE_DIR}/rave/trajectory.h" OPENRAVE_TRAJECTORY_HASH
        "${CMAKE_SOURCE_DIR}/rave/environment.h" OPENRAVE_ENVIRONMENT_HASH
+       "${CMAKE_SOURCE_DIR}/rave/plugininfo.h" OPENRAVE_PLUGININFO_HASH
        > "${CMAKE_SOURCE_DIR}/rave/classhashes.h"
   DEPENDS cpp-gen-md5
   ${CMAKE_SOURCE_DIR}/rave/collisionchecker.h
@@ -300,7 +302,7 @@ else()
   endif()
 endif()
 
-if(DOUBLE_PRECISION)
+if(OPT_DOUBLE_PRECISION)
   set(OPENRAVE_PRECISION 1)
   message(STATUS "Using double precision")
 else()
@@ -509,7 +511,7 @@ endif()
 
 add_subdirectory(python)
 
-if(PLUGINS)
+if(OPT_PLUGINS)
   add_subdirectory(plugins)
 endif()
 

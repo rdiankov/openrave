@@ -16,30 +16,17 @@
 #include "baselaser.h"
 #include "baseflashlidar3d.h"
 #include "basecamera.h"
+#include <rave/plugin.h>
 
-// need c linkage
 static list< boost::shared_ptr<void> > s_listRegisteredReaders;
-RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv)
+InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
-    if( strcmp(pluginhash,RaveGetInterfaceHash(type)) ) {
-        RAVELOG_WARNA("plugin type hash is wrong\n");
-        throw openrave_exception("bad plugin hash");
-    }
-    if( !penv )
-        return InterfaceBasePtr();
-    
     if( s_listRegisteredReaders.size() == 0 ) {
         s_listRegisteredReaders.push_back(penv->RegisterXMLReader(PT_Sensor,"baselaser2d",BaseLaser2DSensor::CreateXMLReader));
         s_listRegisteredReaders.push_back(penv->RegisterXMLReader(PT_Sensor,"basespinninglaser2d",BaseSpinningLaser2DSensor::CreateXMLReader));
         s_listRegisteredReaders.push_back(penv->RegisterXMLReader(PT_Sensor,"baseflashlidar3d",BaseFlashLidar3DSensor::CreateXMLReader));
         s_listRegisteredReaders.push_back(penv->RegisterXMLReader(PT_Sensor,"basecamera",BaseCameraSensor::CreateXMLReader));
     }
-
-    stringstream ss(name);
-    string interfacename;
-    ss >> interfacename;
-    std::transform(interfacename.begin(), interfacename.end(), interfacename.begin(), ::tolower);
-
     switch(type) {
     case PT_Sensor:
         if( interfacename == "baselaser2d" )
@@ -54,24 +41,15 @@ RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(InterfaceType type, const std::
     default:
         break;
     }
-
     return InterfaceBasePtr();
 }
 
-RAVE_PLUGIN_API bool GetPluginAttributes(PLUGININFO* pinfo, int size)
+void GetPluginAttributesValidated(PLUGININFO& info)
 {
-    if( pinfo == NULL ) return false;
-    if( size != sizeof(PLUGININFO) ) {
-        RAVELOG_ERRORA("bad plugin info sizes %d != %d\n", size, sizeof(PLUGININFO));
-        return false;
-    }
-
-    // fill pinfo
-    pinfo->interfacenames[OpenRAVE::PT_Sensor].push_back("BaseLaser2D");
-    pinfo->interfacenames[OpenRAVE::PT_Sensor].push_back("BaseSpinningLaser2D");
-    pinfo->interfacenames[OpenRAVE::PT_Sensor].push_back("BaseFlashLidar3D");
-    pinfo->interfacenames[OpenRAVE::PT_Sensor].push_back("BaseCamera");
-    return true;
+    info.interfacenames[OpenRAVE::PT_Sensor].push_back("BaseLaser2D");
+    info.interfacenames[OpenRAVE::PT_Sensor].push_back("BaseSpinningLaser2D");
+    info.interfacenames[OpenRAVE::PT_Sensor].push_back("BaseFlashLidar3D");
+    info.interfacenames[OpenRAVE::PT_Sensor].push_back("BaseCamera");
 }
 
 RAVE_PLUGIN_API void DestroyPlugin()

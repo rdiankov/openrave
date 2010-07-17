@@ -14,21 +14,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
 #include "collisionPQP.h"
+#include <rave/plugin.h>
 
-RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv)
+InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
-    if( strcmp(pluginhash,RaveGetInterfaceHash(type)) ) {
-        RAVELOG_WARNA("plugin type hash is wrong\n");
-        throw openrave_exception("bad plugin hash");
-    }
-    if( !penv )
-        return InterfaceBasePtr();
-    
-    stringstream ss(name);
-    string interfacename;
-    ss >> interfacename;
-    std::transform(interfacename.begin(), interfacename.end(), interfacename.begin(), ::tolower);
-
     switch(type) {
     case OpenRAVE::PT_CollisionChecker:
         if( interfacename == "pqp")
@@ -41,17 +30,9 @@ RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(InterfaceType type, const std::
     return InterfaceBasePtr();
 }
 
-RAVE_PLUGIN_API bool GetPluginAttributes(PLUGININFO* pinfo, int size)
+void GetPluginAttributesValidated(PLUGININFO& info)
 {
-    if( pinfo == NULL ) return false;
-    if( size != sizeof(PLUGININFO) ) {
-        RAVELOG_ERRORA("bad plugin info sizes %d != %d\n", size, sizeof(PLUGININFO));
-        return false;
-    }
-
-    // fill pinfo
-    pinfo->interfacenames[OpenRAVE::PT_CollisionChecker].push_back("pqp");
-    return true;
+    info.interfacenames[OpenRAVE::PT_CollisionChecker].push_back("pqp");
 }
 
 RAVE_PLUGIN_API void DestroyPlugin()

@@ -168,8 +168,6 @@ class Environment : public EnvironmentBase
         else
             RAVELOG_WARNA("failed to find any collision checker.\n");
 
-        AddIKSolvers();
-
         if( !!_threadSimulation )
             _threadSimulation->join();
         _threadSimulation.reset(new boost::thread(boost::bind(&Environment::_SimulationThread,this)));
@@ -1347,7 +1345,6 @@ protected:
             _nSimStartTime = r->_nSimStartTime;
         }
 
-        AddIKSolvers();
         if( !!_threadSimulation )
             _threadSimulation->join();
         _threadSimulation.reset(new boost::thread(boost::bind(&Environment::_SimulationThread,this)));
@@ -1587,67 +1584,6 @@ protected:
         boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
         _mapBodies.erase(pbody->_environmentid);
         pbody->_environmentid = 0;
-    }
-
-    void AddIKSolvers()
-    {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        ProblemInstancePtr pIKFastLoader;
-
-        {
-            boost::mutex::scoped_lock lock(_mutexProblems);
-            
-            FOREACHC(itprob, _listProblems) {
-                if( stricmp((*itprob)->GetXMLId().c_str(),"ikfast") == 0 ) {
-                    pIKFastLoader = *itprob;
-                    break;
-                }
-            }
-
-            if( !pIKFastLoader ) {
-                pIKFastLoader = _pdatabase->CreateProblem(shared_from_this(),"IKFast");
-                if( !pIKFastLoader ) {
-                    RAVELOG_WARNA("Failed to load IKFast problem\n");
-                    return;
-                }
-                else {
-                    int ret = pIKFastLoader->main("");
-                    if( ret != 0 ) {
-                        RAVELOG_WARNA("Error %d with executing IKFast problem\n", ret);
-                        return;
-                    }
-                    else {
-                        _listProblems.push_back(pIKFastLoader);
-                    }
-                }
-            }
-        }
-
-        string ikname, iklibrary;
-        stringstream ss,sresponse;
-        vector<string> vikfastsolvers;
-        if( ParseDirectories(getenv("OPENRAVE_IKFAST"), vikfastsolvers) ) {
-            FOREACH(it,vikfastsolvers) {
-                string::size_type pos = it->find('=');
-                if( pos == string::npos ) {
-                    if( it->size() > 0 )
-                        RAVELOG_WARNA("cannot extract name and file from OPENRAVE_IKFAST string %s (no =)\n",it->c_str());
-                }
-                else {
-                    ikname = it->substr(0,pos);
-                    iklibrary = it->substr(pos+1);
-                    ss.str(""); ss.clear();
-                    ss << "AddIkLibrary " << ikname << " " << iklibrary;
-                    try {
-                        if( !pIKFastLoader->SendCommand(sresponse,ss) )
-                            RAVELOG_WARNA(str(boost::format("failed to load %s\n")%iklibrary.c_str()));
-                    }
-                    catch(const openrave_exception& ex) {
-                        RAVELOG_FATALA(str(boost::format("error during ikfast loading of %s: %s\n")%iklibrary%ex.what()));
-                    }
-                }
-            }
-        }
     }
 
     void _SimulationThread()

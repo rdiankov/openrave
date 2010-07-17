@@ -20,7 +20,7 @@ if( ODE_HAVE_ALLOCATE_DATA_THREAD )
 endif()
 
   include_directories(${CMAKE_SOURCE_DIR} ${ODE_INCLUDE_DIRS})
-  add_library(oderave SHARED oderavemain.cpp odecollision.h odephysics.h odespace.h odecontroller.h plugindefs.h)
+  add_library(oderave SHARED oderave.cpp odecollision.h odephysics.h odespace.h odecontroller.h plugindefs.h)
 
   # test for ode version 0.10
   set(CMAKE_REQUIRED_INCLUDES ${ODE_INCLUDE_DIRS})

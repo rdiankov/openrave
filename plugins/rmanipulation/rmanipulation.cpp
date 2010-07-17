@@ -19,20 +19,10 @@
 #include "taskcaging.h"
 #include "visualfeedback.h"
 
-RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv)
-{
-    if( strcmp(pluginhash,RaveGetInterfaceHash(type)) ) {
-        RAVELOG_WARNA("plugin type hash is wrong\n");
-        throw openrave_exception("bad plugin hash");
-    }
-    if( !penv )
-        return InterfaceBasePtr();
-    
-    stringstream ss(name);
-    string interfacename;
-    ss >> interfacename;
-    std::transform(interfacename.begin(), interfacename.end(), interfacename.begin(), ::tolower);
+#include <rave/plugin.h>
 
+InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
+{
     switch(type) {
     case PT_ProblemInstance:
         if( interfacename == "basemanipulation")
@@ -47,24 +37,15 @@ RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(InterfaceType type, const std::
     default:
         break;
     }
-
     return InterfaceBasePtr();
 }
 
-RAVE_PLUGIN_API bool GetPluginAttributes(PLUGININFO* pinfo, int size)
+void GetPluginAttributesValidated(PLUGININFO& info)
 {
-    if( pinfo == NULL ) return false;
-    if( size != sizeof(PLUGININFO) ) {
-        RAVELOG_ERRORA("bad plugin info sizes %d != %d\n", size, sizeof(PLUGININFO));
-        return false;
-    }
-
-    // fill pinfo
-    pinfo->interfacenames[PT_ProblemInstance].push_back("BaseManipulation");
-    pinfo->interfacenames[PT_ProblemInstance].push_back("TaskManipulation");
-    pinfo->interfacenames[PT_ProblemInstance].push_back("TaskCaging");
-    pinfo->interfacenames[PT_ProblemInstance].push_back("VisualFeedback");
-    return true;
+    info.interfacenames[PT_ProblemInstance].push_back("BaseManipulation");
+    info.interfacenames[PT_ProblemInstance].push_back("TaskManipulation");
+    info.interfacenames[PT_ProblemInstance].push_back("TaskCaging");
+    info.interfacenames[PT_ProblemInstance].push_back("VisualFeedback");
 }
 
 RAVE_PLUGIN_API void DestroyPlugin()

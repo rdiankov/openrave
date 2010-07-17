@@ -5,7 +5,7 @@ if(APPLE)
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup")
 endif(APPLE)
 
-add_library(basesensors SHARED basesensorsmain.cpp basecamera.h  baseflashlidar3d.h  baselaser.h plugindefs.h)
+add_library(basesensors SHARED basesensors.cpp basecamera.h  baseflashlidar3d.h  baselaser.h plugindefs.h)
 
 target_link_libraries(basesensors libopenrave)
 include_directories(basesensors "${CMAKE_SOURCE_DIR}")

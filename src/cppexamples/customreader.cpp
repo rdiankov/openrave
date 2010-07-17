@@ -1,20 +1,10 @@
-// Copyright (c) 2008-2010 Rosen Diankov (rosen.diankov@gmail.com)
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//     http://www.apache.org/licenses/LICENSE-2.0
-// 
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/** \example customreader.cpp
+    \author Rosen Diankov
 
-/// A simple openrave plugin that registers a custom XML reader. This allows users
-/// to extend the XML files to add their own tags. 
-/// Once the plugin is compiled, cd to where the plugin was installed and open customreader.env.xml with openrave
+    Creates a simple OpenRAVE::ControllerBase and shows how to add a custom XML reader to it.
+*/
 #include <rave/rave.h>
+#include <rave/plugin.h>
 
 using namespace std;
 using namespace OpenRAVE;
@@ -121,25 +111,12 @@ protected:
 
 static boost::shared_ptr<void> s_RegisteredReader;
 
-RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv)
+InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
-    if( strcmp(pluginhash,RaveGetInterfaceHash(type)) ) {
-        RAVELOG_WARNA("plugin type hash is wrong\n");
-        throw openrave_exception("bad plugin hash");
-    }
-    if( !penv )
-        return InterfaceBasePtr();
- 
     if( !s_RegisteredReader ) {
         /// as long as this pointer is valid, the reader will remain registered
         s_RegisteredReader = penv->RegisterXMLReader(PT_Controller,"piddata",CustomController::CreateXMLReader);
     }
-
-    stringstream ss(name);
-    string interfacename;
-    ss >> interfacename;
-    std::transform(interfacename.begin(), interfacename.end(), interfacename.begin(), ::tolower);
-
     switch(type) {
     case PT_Controller:
         if( interfacename == "customcontroller")
@@ -148,21 +125,12 @@ RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(InterfaceType type, const std::
     default:
         break;
     }
-
     return InterfaceBasePtr();
 }
 
-RAVE_PLUGIN_API bool GetPluginAttributes(PLUGININFO* pinfo, int size)
+void GetPluginAttributesValidated(PLUGININFO& info)
 {
-    if( pinfo == NULL ) return false;
-    if( size != sizeof(PLUGININFO) ) {
-        RAVELOG_ERRORA("bad plugin info sizes %d != %d\n", size, sizeof(PLUGININFO));
-        return false;
-    }
-
-    // fill pinfo
-    pinfo->interfacenames[PT_Controller].push_back("CustomController");
-    return true;
+    info.interfacenames[PT_Controller].push_back("CustomController");
 }
 
 RAVE_PLUGIN_API void DestroyPlugin()

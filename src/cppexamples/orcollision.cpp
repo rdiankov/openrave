@@ -1,15 +1,23 @@
-// Copyright (c) 2008-2010 Rosen Diankov (rosen.diankov@gmail.com)
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//     http://www.apache.org/licenses/LICENSE-2.0
-// 
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/** \example orcollision.cpp
+    \author Rosen Diankov
+
+    Load a robot into the openrave environment, set it at [joint values] and check for self
+    collisions. Returns number of contact points.
+    
+    Usage:
+    \verbatim
+    orcollision [--list] [--checker checker_name] [--joints #values [values]] body_model
+    \endverbatim
+
+    - \b --list - List all the loadable interfaces (ie, collision checkers).
+    - \b --checker - name Load a different collision checker instead of the default one.
+    - <b>--joints \#values [values]</b> - Set the robot to specific joint values
+                  
+    Example:
+    \verbatim
+    orcollision --checker ode robots/barrettwam.robot.xml
+    \endverbatim
+*/
 #include <openrave-core.h>
 #include <vector>
 #include <cstring>
@@ -21,12 +29,7 @@ using namespace std;
 
 void printhelp()
 {
-    RAVELOG_INFOA("orcollision [--list] [--checker checker_name] [--joints #values [values]] robot_model\n"
-                  "  Load a robot into the openrave environment, set it at [joint values] and\n"
-                  "  check for self collisions. Returns number of contact points.\n"
-                  "--list             List all the loadable interfaces (ie, collision checkers).\n"
-                  "--checker name            Load a different collision checker instead of the default one\n"
-                  "--joints #values [values] Set the robot to specific joint values\n");
+    RAVELOG_INFOA("orcollision [--list] [--checker checker_name] [--joints #values [values]] body_model\n");
 }
 
 void printinterfaces(EnvironmentBasePtr penv)
@@ -92,42 +95,41 @@ int main(int argc, char ** argv)
     if( i >= argc ) {
         RAVELOG_ERRORA("not enough parameters\n");
         printhelp();
-        return -1;
+        return 1;
     }
 
     // load the scene
     if( !penv->Load(argv[i]) ) {
-        printhelp();
-        return -2;
+        return 2;
     }
     
     // lock the environment to prevent thigns from changes
     EnvironmentMutex::scoped_lock lock(penv->GetMutex());
 
-    vector<RobotBasePtr> vrobots;
-    penv->GetRobots(vrobots);
-    // get the first robot
-    if( vrobots.size() == 0 ) {
-        RAVELOG_ERRORA("no robots loaded\n");
+    vector<KinBodyPtr> vbodies;
+    penv->GetBodies()(vbodies);
+    // get the first body
+    if( vbodies.size() == 0 ) {
+        RAVELOG_ERRORA("no bodies loaded\n");
         return -3;
     }
 
-    RobotBasePtr probot = vrobots.at(0);
+    KinBodyPtr pbody = vbodies.at(0);
     vector<dReal> values;
-    probot->GetDOFValues(values);
+    pbody->GetDOFValues(values);
     
     // set new values
     for(int i = 0; i < (int)vsetvalues.size() && i < (int)values.size(); ++i)
         values[i] = vsetvalues[i];
-    probot->SetJointValues(values,true);
+    pbody->SetJointValues(values,true);
 
     int contactpoints = 0;
     CollisionReportPtr report(new CollisionReport());
     penv->GetCollisionChecker()->SetCollisionOptions(CO_Contacts);
-    if( probot->CheckSelfCollision(report) ) {
+    if( pbody->CheckSelfCollision(report) ) {
         contactpoints = (int)report->contacts.size();
         stringstream ss;
-        ss << "robot in self-collision "
+        ss << "body in self-collision "
            << (!!report->plink1 ? report->plink1->GetName() : "") << ":"
            << (!!report->plink2 ? report->plink2->GetName() : "") << " at "
            << contactpoints << "contacts" << endl;
@@ -140,11 +142,11 @@ int main(int argc, char ** argv)
         
         RAVELOG_INFOA(ss.str());
     }
-    else RAVELOG_INFOA("robot not in collision\n");
+    else RAVELOG_INFOA("body not in collision\n");
 
     // get the transformations of all the links
     vector<Transform> vlinktransforms;
-    probot->GetBodyTransformations(vlinktransforms);
+    pbody->GetBodyTransformations(vlinktransforms);
 
     penv->Destroy(); // destroy
     return contactpoints;

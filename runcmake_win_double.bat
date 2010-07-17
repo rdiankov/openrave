@@ -4,5 +4,5 @@ if not exist sympy cmake -E tar zxf sympy_0.6.3.tgz
 cd ..
 mkdir build
 cd build
-cmake -DDOUBLE_PRECISION=ON ..
+cmake -DOPT_DOUBLE_PRECISION=ON ..
 cd ..

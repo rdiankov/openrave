@@ -106,7 +106,7 @@
 
 #define MATH_RANDOM_FLOAT RaveRandomFloat()
 
-/// Includes the entire %OpenRAVE library
+/// The entire %OpenRAVE library
 namespace OpenRAVE {
     
 #include <rave/defines.h>
@@ -122,24 +122,15 @@ typedef float dReal;
 
 #define PI ((dReal)3.14159265358979)
 
+/// %OpenRAVE error codes
 enum OpenRAVEErrorCode {
     ORE_Failed=0,
     ORE_InvalidArguments=1,
     ORE_EnvironmentNotLocked=2,
     ORE_CommandNotSupported=3,
     ORE_Assert=4,
-    ORE_PluginInvalid=5,
-};
-
-enum SerializationOptions
-{
-    SO_Kinematics = 0x01, ///< kinematics information
-    SO_Dynamics = 0x02, ///< dynamics information
-    SO_BodyState = 0x04, ///< state of the body
-    SO_NamesAndFiles = 0x08, ///< resource files and names
-    SO_RobotManipulators = 0x10, ///< serialize robot manipulators
-    SO_RobotSensors = 0x20, ///< serialize robot sensors
-    SO_Geometry = 0x40, ///< geometry information (for collision detection)
+    ORE_InvalidPlugin=5, ///< shared object is not a valid plugin
+    ORE_InvalidInterfaceHash=6, ///< interface hashes do not match between plugins
 };
 
 struct openrave_exception : std::exception
@@ -477,11 +468,6 @@ enum InterfaceType
 
 typedef InterfaceType PluginType RAVE_DEPRECATED;
 
-struct PLUGININFO
-{
-    std::map<InterfaceType, std::vector<std::string> > interfacenames;
-};
-
 class CollisionReport;
 class InterfaceBase;
 class IkSolverBase;
@@ -648,7 +634,8 @@ namespace OpenRAVE {
     typedef aabb<dReal> AABB;
     typedef ray<dReal> RAY;
 }
-            
+
+#include <rave/plugininfo.h>
 #include <rave/interface.h>
 #include <rave/kinbody.h>
 #include <rave/trajectory.h>
@@ -667,7 +654,7 @@ namespace OpenRAVE {
 
 namespace OpenRAVE {
 
-/// returns the a 16 character string specifying a hash of the interfaces used for checking changes
+/// \brief Returns the a 16 character null-terminated string specifying a hash of the interfaces used for checking changes.
 inline const char* RaveGetInterfaceHash(InterfaceType type)
 {
     switch(type) {
@@ -730,6 +717,27 @@ RAVE_API const std::string& RaveGetInterfaceName(InterfaceType type);
 /// returns the openrave home directory where settings, cache, and other files are stored.
 /// On Linux/Unix systems, this is usually $HOME/.openrave, on Windows this is $HOMEPATH/.openrave
 RAVE_API std::string RaveGetHomeDirectory();
+
+/// create the interfaces
+typedef InterfaceBasePtr (*PluginExportFn_CreateInterface)(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv);
+
+/// \brief Create an interface.
+/// \ingroup plugin_exports
+typedef InterfaceBasePtr (*PluginExportFn_OpenRAVECreateInterface)(InterfaceType type, const std::string& name, const char* pluginhash, const char* envhash, EnvironmentBasePtr penv);
+
+/** \brief Called to fill information about the plugin.
+    
+    \ingroup plugin_exports
+    This function is called only once initially to determine what the plugin offers. It should be
+    the safest funcdtion and should not create any static resources for the plugin.
+*/
+typedef bool (*PluginExportFn_OpenRAVEGetPluginAttributes)(PLUGININFO* pinfo, int size, const char* infohash);
+
+typedef bool (*PluginExportFn_GetPluginAttributes)(PLUGININFO* pinfo, int size);
+
+/// \brief Called before plugin is unloaded from openrave.
+/// \ingroup plugin_exports
+typedef void (*PluginExportFn_DestroyPlugin)();
 
 } // end namespace OpenRAVE
 

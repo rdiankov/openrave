@@ -142,31 +142,12 @@ inline static uint32_t GetMilliTime()
 
 #endif
 
-inline static int RANDOM_INT(int maximum)
+// returns a lower case version of the string 
+inline std::string tolowerstring(const std::string & s)
 {
-#if defined(__IRIX__)
-    return (random() % maximum);
-#else
-    return (rand() % maximum);
-#endif
-}
-
-inline static float RANDOM_FLOAT()
-{
-#if defined(__IRIX__)
-    return drand48();
-#else
-    return rand()/((float)RAND_MAX);
-#endif
-}
-
-inline static float RANDOM_FLOAT(float maximum)
-{
-#if defined(__IRIX__)
-    return (drand48() * maximum);
-#else
-    return (RANDOM_FLOAT() * maximum);
-#endif
+    std::string d = s;
+    std::transform(d.begin(), d.end(), d.begin(), ::tolower);
+    return d;
 }
 
 // need the prototypes in order to keep them free of the OpenRAVE namespace

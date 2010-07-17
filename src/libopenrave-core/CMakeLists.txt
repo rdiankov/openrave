@@ -38,31 +38,33 @@ else()
 endif()
 install(FILES openrave-core.h DESTINATION include)
 
-# visual studio needs static built
-add_library(libopenrave-core_static STATIC ${openrave_core_SOURCES})
+if( OPT_STATIC )
+  # visual studio needs static built
+  add_library(libopenrave-core_static STATIC ${openrave_core_SOURCES})
 
-if( MSVC )
-  # static version needs to have different name
-  set(LIBOPENRAVE_CORE_NAME libopenrave-core-s)
-else()
-  set(LIBOPENRAVE_CORE_NAME openrave-core)
+  if( MSVC )
+    # static version needs to have different name
+    set(LIBOPENRAVE_CORE_NAME libopenrave-core-s)
+  else()
+    set(LIBOPENRAVE_CORE_NAME openrave-core)
+  endif()
+
+  if( COLLADA_FOUND )
+    add_dependencies(libopenrave-core_static ${COLLADA_LIBRARY})
+  endif()
+
+  set_target_properties(libopenrave-core_static PROPERTIES OUTPUT_NAME ${LIBOPENRAVE_CORE_NAME}
+                                                SOVERSION ${OPENRAVE_SOVERSION}
+                                                VERSION ${OPENRAVE_VERSION}
+                                                CLEAN_DIRECT_OUTPUT 1
+                                                COMPILE_FLAGS "${LIB_COMPILE_FLAGS}"
+                                                LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${COIN_LINK_FLAGS}")
+  if( MSVC )
+    # set "link library dependencies" for visual studio in order to include symbols for other statically linked libs
+    # this is such an unbelievable hack, that it's disgusting
+    set_target_properties(libopenrave-core_static PROPERTIES STATIC_LIBRARY_FLAGS "\" LinkLibraryDependencies=\"true")
+  endif()
+
+  target_link_libraries (libopenrave-core_static ${Boost_THREAD_LIBRARY} ${LIBXML2_LIBRARIES} ${COIN_LIBRARY} libopenrave_static ${coreLIBS})
+  install(TARGETS libopenrave-core_static DESTINATION lib)
 endif()
-
-if( COLLADA_FOUND )
-  add_dependencies(libopenrave-core_static ${COLLADA_LIBRARY})
-endif()
-
-set_target_properties(libopenrave-core_static PROPERTIES OUTPUT_NAME ${LIBOPENRAVE_CORE_NAME}
-                                              SOVERSION ${OPENRAVE_SOVERSION}
-                                              VERSION ${OPENRAVE_VERSION}
-                                              CLEAN_DIRECT_OUTPUT 1
-                                              COMPILE_FLAGS "${LIB_COMPILE_FLAGS}"
-                                              LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${COIN_LINK_FLAGS}")
-if( MSVC )
-  # set "link library dependencies" for visual studio in order to include symbols for other statically linked libs
-  # this is such an unbelievable hack, that it's disgusting
-  set_target_properties(libopenrave-core_static PROPERTIES STATIC_LIBRARY_FLAGS "\" LinkLibraryDependencies=\"true")
-endif()
-
-target_link_libraries (libopenrave-core_static ${Boost_THREAD_LIBRARY} ${LIBXML2_LIBRARIES} ${COIN_LIBRARY} libopenrave_static ${coreLIBS})
-install(TARGETS libopenrave-core_static DESTINATION lib)

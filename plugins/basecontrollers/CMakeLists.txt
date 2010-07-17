@@ -5,7 +5,7 @@ if(APPLE)
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup")
 endif(APPLE)
 
-add_library(basecontrollers SHARED basecontrollersmain.cpp basecontrollers.h plugindefs.h)
+add_library(basecontrollers SHARED basecontrollers.cpp basecontrollers.h plugindefs.h)
 
 target_link_libraries(basecontrollers libopenrave)
 include_directories(basecontrollers "${CMAKE_SOURCE_DIR}")

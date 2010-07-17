@@ -5,7 +5,7 @@ if(APPLE)
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup")
 endif(APPLE)
 
-add_library(baserobots SHARED baserobotsmain.cpp genericrobot.h collisionmaprobot.h plugindefs.h)
+add_library(baserobots SHARED baserobots.cpp genericrobot.h collisionmaprobot.h plugindefs.h)
 
 target_link_libraries(baserobots libopenrave)
 include_directories(baserobots "${CMAKE_SOURCE_DIR}")

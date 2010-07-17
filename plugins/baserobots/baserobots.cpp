@@ -15,28 +15,17 @@
 #include "plugindefs.h"
 #include "genericrobot.h"
 #include "collisionmaprobot.h"
+#include <rave/plugin.h>
 
 static boost::shared_ptr<void> s_RegisteredReader;
 
-RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv)
+InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
-    if( strcmp(pluginhash,RaveGetInterfaceHash(type)) ) {
-        RAVELOG_WARNA("plugin type hash is wrong\n");
-        throw openrave_exception("bad plugin hash");
-    }
-    if( !penv )
-        return InterfaceBasePtr();
-
     if( !s_RegisteredReader ) {
         /// as long as this pointer is valid, the reader will remain registered
         s_RegisteredReader = penv->RegisterXMLReader(PT_Robot,"collisionmap",CollisionMapRobot::CreateXMLReader);
     }
     
-    stringstream ss(name);
-    string interfacename;
-    ss >> interfacename;
-    std::transform(interfacename.begin(), interfacename.end(), interfacename.begin(), ::tolower);
-
     switch(type) {
     case PT_Robot:
         if( interfacename == "genericrobot")
@@ -51,18 +40,10 @@ RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(InterfaceType type, const std::
     return InterfaceBasePtr();
 }
 
-RAVE_PLUGIN_API bool GetPluginAttributes(PLUGININFO* pinfo, int size)
+void GetPluginAttributesValidated(PLUGININFO& info)
 {
-    if( pinfo == NULL ) return false;
-    if( size != sizeof(PLUGININFO) ) {
-        RAVELOG_ERRORA("bad plugin info sizes %d != %d\n", size, sizeof(PLUGININFO));
-        return false;
-    }
-
-    // fill pinfo
-    pinfo->interfacenames[PT_Robot].push_back("GenericRobot");
-    pinfo->interfacenames[PT_Robot].push_back("CollisionMapRobot");
-    return true;
+    info.interfacenames[PT_Robot].push_back("GenericRobot");
+    info.interfacenames[PT_Robot].push_back("CollisionMapRobot");
 }
 
 RAVE_PLUGIN_API void DestroyPlugin()
