@@ -1,7 +1,8 @@
-/** /file cpp-gen-md5.cpp
-    /brief Generates a md5 hash from the lexical tokens of a C++ ignoring directives and whitespace.
-    /author Rosen Diankov
-
+/** \file cpp-gen-md5.cpp
+    \brief Generates a md5 hash from the lexical tokens of a C++ ignoring directives and whitespace.
+    \author Rosen Diankov
+    \anchor cpp-gen-md5
+    
     Usage:
     \verbatim
     cpp-gen-md5 [filename1 define1] [filename2 define2] ...

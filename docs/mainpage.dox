@@ -1,8 +1,7 @@
 // -*- coding: utf-8 -*-
 /**
-\mainpage Open Robotics Automation Virtual Environment
+\~english \mainpage Open Robotics Automation Virtual Environment
 
-\~english
 %OpenRAVE provides an environment for testing, developing, and deploying motion planning and
 higher-level intelligence algorithms in real-world robotics applications. This document covers the
 core %OpenRAVE concepts, the C++ API, examples, and usage of the plugins offered in the base
@@ -11,12 +10,14 @@ installation. All information written here is for <b>%OpenRAVE \openraveversion<
 official %OpenRAVE releases, and videos/tutorials.
 
 \~japanese
-%OpenRAVEは現実世界の自律型ロボットアプリケーションをターゲットとし，そのテストと開発のためのモーションプランニングと高度な知的アルゴリズムを備えた開発環境を提供します．このドキュメントは%OpenRAVEの主要な概念，C++のAPI，使用例，インストール時に提供されたプラグインの使い方について記載しています．ここに記載された全ての情報は<b>%OpenRAVE \openraveversion</b>用のものです．%OpenRAVEを用いたロボットシステム，%OpenRAVEの公式リリース，ビデオ／チュートリアルなどの最新情報はオフィシャルHPにて更新されますので\homepage{<b>こちら</b>}をご参照ください．
+
+%OpenRAVEは現実世界の自律型ロボットアプリケーションをターゲットとし，そのテストと開発のためのモーションプランニングと高度な知的アルゴリズムを備えた開発環境を提供します．このドキュメントは%OpenRAVEの主要な概念，C++のAPI，使用例，インストール時に提供されたプラグインの使い方について記載しています．ここに記載された全ての情報は<b>%OpenRAVE \openraveversion</b>用のものです．%OpenRAVEを用いたロボットシステム，%OpenRAVEの公式リリース，ビデオ／チュートリアルなどの最新情報は\homepage{<b>公式HP</b>}をご参照ください．
 
 \~english
+
 %OpenRAVE includes a seamless integration of simulation, visualization, planning, scripting and
 control. The plugin architecture allows users to easily write custom controllers or extend
-functionality. Using %OpenRAVE plugins, any planning algorithm, robot controller, or sensing
+functionality. Using %OpenRAVE plugins, any planning algorithm, robot control, or sensing-based
 subsystem can be distributed and dynamically loaded at run-time; this distributed nature frees
 developers from struggling with monolithic code-bases. Users of %OpenRAVE can concentrate on the
 development of planning and scripting aspects of a problem without having to explicitly manage the
@@ -25,8 +26,9 @@ should be noted that %OpenRAVE's sole focus on simulation and analysis of geomet
 information allows is to be easily integrated into existing robotics systems that concentrate on
 low-level control, message protocols, and perception systems.
 
-\~japanese
-OpenRAVEはシミュレーション，可視化，プランニング，スクリプトと制御機能のシームレスな統合環境を備えています．そのプラグインアーキテクチャを使い，ユーザーは簡単にコントローラの変更や機能の拡張をすることができます．使用するプラグイン，全てのプランニングアルゴリズム，ロボットコントローラー，またはセンシングのサブシステムは個々のモジュールになっており実行時に動的に呼び出されます．これによって開発者は多くのモジュールが１つの大きな塊となった巨大なコードと格闘することから解放されます．さらにOpenRAVEのユーザーは，ロボットの運動学とダイナミクス、干渉検査、環境変化、ロボット制御などの詳細が分からなくてもプランニングとスクリプトの開発に集中することができるようになります．また%OpenRAVEは，ローレベル制御，メッセージプロトコルや認識システムに焦点をあてた世の中に存在する他のロボットシステムとは異なり，幾何学と動力学のシミュレーションと解析に焦点をおいているため，それらのシステムとも容易に共存することが可能です．
+\~japanese \mainpage Open Robotics Automation Virtual Environment
+
+%OpenRAVEはシミュレーション，可視化，動作計画，スクリプトと制御機能等の統合環境を備えています．そのプラグインアーキテクチャを使い，ユーザーは簡単にコントローラの変更や機能の拡張をすることができます．使用するプラグイン，動作計画アルゴリズム，ロボットの自律制御，またはセンシングを考慮した動作は個々のモジュールになっており，実行時に動的に呼び出されます．これによって開発者は多くのモジュールが１つの大きな塊となった巨大なコードと格闘することから解放されます．さらに%OpenRAVEのユーザーは，ロボットの運動学と動力学、幾何学的干渉、環境変化、ロボット制御などの詳細が分からなくても知的動作とスクリプトの開発に集中することができます．また%OpenRAVEは，制御ドライバ，通信規格，認識システム等に焦点をあてた世の中に存在する他のロボットシステムとは異なり，幾何学と動力学のシミュレーションと解析に焦点をおいているため，それらのシステムとも容易に共存することが可能です．
 
 
 \section main_started Getting Started
@@ -50,6 +52,7 @@ OpenRAVEはシミュレーション，可視化，プランニング，スクリ
 
 \section main_reference Reference
 - \subpage interfaces
+- \subpage executables
 - \subpage geometric_primitives
 - \subpage affine_math
 - \subpage cpp_examples
@@ -207,12 +210,12 @@ system running %OpenRAVE.
 
 - \b OPENRAVE_PLUGINS - Use ':' to separate each directory (';' for Windows). At startup, %OpenRAVE
   searches for every shared object/dll plugin in these directories and loads them. The default
-  plugins in $OPENRAVE_INSTALL/share/openrave/plugins are always loaded, so there is no need to
+  plugins in \c $OPENRAVE_INSTALL/share/openrave/plugins are always loaded, so there is no need to
   include them.
 
 - \b OPENRAVE_DATA - Use ':' to separate each directory (';' for Windows). Everytime %OpenRAVE loads
   a file, it will search it in these directories. The default data directory
-  $OPENRAVE_INSTALL/share/openrave is always included, so there's no need to specify it again.
+  \c $OPENRAVE_INSTALL/share/openrave is always included, so there's no need to specify it again.
 
 - \b OPENRAVE_HOME - Used to set the directory where all openrave specific cached data is stored
   like inverse kinematics solvers, robot pre-processed data, database generation results, etc. The
@@ -307,16 +310,14 @@ interfaces.
 Many mechanisms have been put in place to prevent mismatching/old plugins to be loaded by the
 core. In order to protect plugins compiled with a different version, %OpenRAVE creates a hash from
 each interface class definition using \ref cpp-gen-md5 and stores them in \ref
-rave/classhashes.h. The interface hash can be retrieved using \ref RaveGetInterfaceHash. For an
+rave/classhashes.h. The interface hash can be retrieved using \ref OpenRAVE::RaveGetInterfaceHash. For an
 interface to be loaded successfully, the plugin has to check that the hash the core is using matches
 the hash compiled with the plugin. These types of checks ensure that stale plugins will never be
 loaded; helper functions are offered in \ref rave/plugin.h, which all plugin authors should use.
 
 \section writing_plugins_example Providing a Simple Interface
 
-Example \ref plugincpp.cpp creates a \ref ProblemInstance interface named \b MyProblem and have it offer two commands: \b numbodies and \load.
-
-
+Example \ref plugincpp.cpp "plugincpp.cpp" creates a \ref OpenRAVE::ProblemInstance interface named \b MyProblem and have it offer two commands: \b numbodies and \b load.
 
 \dontinclude plugincpp.cpp
 
@@ -331,7 +332,7 @@ Now register the two commands of the problem. \c boost::bind is necessary for sp
 
 Provide the implementations for the member functions:
 \skipline bool
-\until } //
+\until };
 
 It is recommend to plugin authors to include \ref rave/plugin.h in their main C++
 file, this will provide implementations for the export functions and ask the user to provide a new
@@ -342,12 +343,119 @@ Providing \b MyProblem would look like:
 \skipline InterfaceBasePtr
 \until }
 
-In order to tell OpenRAVE what is provided, have to define:
+In order to tell %OpenRAVE what is provided, have to define:
 
 \skipline GetPluginAttributesValidated
 \until }
 
+\section writing_plugins_build Building a Plugin
+
+\subsection writing_plugins_cmake Using CMake
+
+The main build system of %OpenRAVE is cmake, and \ref FindOpenRAVE.cmake "FindOpenRAVE.cmake" can be used to find the %OpenRAVE installation (found in <tt>$OPENRAVE_INSTALL/share/openrave/cppexamples/FindOpenRAVE.cmake</tt>). An example of the \c CMakeLists.txt file for compiling a plugin using \ref FindOpenRAVE.cmake "FindOpenRAVE.cmake" is:
+
+\verbatim
+cmake_minimum_required (VERSION 2.4)
+project (plugincpp)
+
+# Include OpenRAVE paths
+include(FindOpenRAVE.cmake) 
+if( NOT OPENRAVE_FOUND )
+  message(FATAL_ERROR "could not find openrave, check for openrave-config in path")
+endif( NOT OPENRAVE_FOUND )
+
+# Create the plugincpp plugin
+include_directories(${OPENRAVE_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR})
+link_directories(${OPENRAVE_LINK_DIRS})
+add_library(plugincpp SHARED plugincpp.cpp)
+set_target_properties(plugincpp PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+set_target_properties(plugincpp PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+target_link_libraries(plugincpp ${OPENRAVE_LIBRARY})
+\endverbatim
+
+\subsection writing_plugins_linux Other Build Systems - Linux
+
+Depending on where openrave was installed, a \ref openrave_config should have been created in the bin
+folder. You can use openrave-config --cflags and rave-config --libs to get the correct paths and
+flags to include in gcc to link with libopenrave.so.
+
+\subsection writing_plugins_win Other Build Systems - Windows Users
+
+\section writing_plugins_usage Using the Plugin
+
+There are several ways to load the generated plugin.
+
+- The most simplest method is to add its installation directory to the \ref environment_variables "OPENRAVE_PLUGINS" environment variable. %OpenRAVE will automatically load it up at start up. You can confirm this is the case using:
+\verbatim
+openrave --listplugins
+\endverbatim
+
+- A more explicit way is to load it from the command line using any one of the following methods:
+\verbatim
+openrave --loadplugin $SOMEPATH/libplugincpp
+openrave --loadplugin $SOMEPATH/libplugincpp.so
+openrave --loadplugin ./libplugincpp.so
+\endverbatim
+ where /c $SOMEPATH is the absolute/relative path of the shared object. 
+
+- Another way is to load it from the C++/Python/APIs:<br/>
+\b C++
+\code
+env->LoadPlugin("libplugincpp");
+\endcode
+\b Python
+\verbatim
+env.LoadPlugin('libplugincpp');
+\endverbatim
+\b Octave
+\verbatim
+orEnvLoadPlugin('libplugincpp');
+\endverbatim
+
+Once the plugin is loaded, we can create the interface and call its commands to load an environment and return the number of bodies:
+
+\b C++
+\code
+ProblemInstancePtr prob = env->CreateProblem("MyProblem");
+env->LoadProblem(prob,"");
+stringstream sinput, sout;
+// input the load command
+sinput << "load data/lab1.env.xml";
+if( !prob->SendCommand(sout,sinput) ) {
+    RAVELOG_WARN("command failed!\n");
+}
+else {
+    sinput.str(""); // have to reset the stream from the previous command
+    sinput << "numbodies"; // input the numbodies command
+    prob->SendCommand(sout,sinput);
+    int numbodies;
+    sout >> numbodies;
+    RAVELOG_INFO("number of bodies are: %d\n",numbodies);
+}
+\endcode
+
+\b Python
+\verbatim
+prob = env.CreateProblem('MyProblem')
+env.LoadProblem(prob,args='')
+cmdout = prob.SendCommand('load data/lab1.env.xml')
+if cmdout is None:
+    raveLogWarn('command failed!')
+else:
+    cmdout = prob.SendCommand('numbodies')
+    print 'number of bodies are: ',cmdout
+\endverbatim
+
+\b Octave (only simple commands possible)
+\verbatim
+prob = orEnvCreateProblem('MyProblem');
+orProblemSendCommand('load data/lab1.env.xml',prob);
+numbodies = orProblemSendCommand('numbodies',prob);
+disp(['number of bodies are: ' num2str(numbodies)])
+\endverbatim
+
 \~japanese \page writing_plugins プラグインとインターフェースの作成
+
 
 */
 
@@ -370,7 +478,7 @@ make
 - \ref customreader.cpp
 - \ref plugincpp.cpp
 
-\section cpp_examples_plugins Examples loading the %OpenRAVE core:
+\section cpp_examples_programs Examples loading the OpenRAVE core:
 
 - \ref ikfastloader.cpp
 - \ref orcollision.cpp
@@ -416,5 +524,46 @@ This lists the set of interfaces that are distributed with the %OpenRAVE distrib
 /** \defgroup interfaces_controller List of Controller Interfaces
 
 This lists the set of offered \ref OpenRAVE::ControllerBase interfaces.
+
+*/
+
+/**
+\example FindOpenRAVE.cmake
+
+Allows %OpenRAVE installation to be found when using the CMake build system.
+*/
+
+/**
+\page executables Executable Programs
+
+- \subpage openrave
+- \subpage openrave-config
+- \subpage openrave_py{openrave.py}
+- \subpage openrave_py{openrave-hash.py}
+
+*/
+
+/**
+\page openrave_config openrave-config
+
+Used to find the %OpenRAVE installation location and all the include/development/examples files.
+
+Usage:
+\verbatim
+openrave-config
+  [--prefix[=DIR]]
+  [--exec-prefix[=DIR]]
+  [--version] [--cflags]
+  [--libs]
+  [--libs-core]
+  [--libs-only-l]
+  [--libs-only-L]
+  [--cflags-only-I]
+  [--shared-libs]
+  [--python-dir]
+  [--octave-dir]
+  [--matlab-dir]
+  [--usage | --help]
+\endverbatim
 
 */

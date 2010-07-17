@@ -29,7 +29,7 @@ using namespace std;
 
 void printhelp()
 {
-    RAVELOG_INFOA("orcollision [--list] [--checker checker_name] [--joints #values [values]] body_model\n");
+    RAVELOG_INFO("orcollision [--list] [--checker checker_name] [--joints #values [values]] body_model\n");
 }
 
 void printinterfaces(EnvironmentBasePtr penv)
@@ -71,7 +71,7 @@ int main(int argc, char ** argv)
             // create requested collision checker
             CollisionCheckerBasePtr pchecker = penv->CreateCollisionChecker(argv[i+1]);
             if( !pchecker ) {
-                RAVELOG_ERRORA("failed to create checker %s\n", argv[i+1]);
+                RAVELOG_ERROR("failed to create checker %s\n", argv[i+1]);
                 return -3;
             }
             penv->SetCollisionChecker(pchecker);
@@ -93,7 +93,7 @@ int main(int argc, char ** argv)
     }
     
     if( i >= argc ) {
-        RAVELOG_ERRORA("not enough parameters\n");
+        RAVELOG_ERROR("not enough parameters\n");
         printhelp();
         return 1;
     }
@@ -110,7 +110,7 @@ int main(int argc, char ** argv)
     penv->GetBodies(vbodies);
     // get the first body
     if( vbodies.size() == 0 ) {
-        RAVELOG_ERRORA("no bodies loaded\n");
+        RAVELOG_ERROR("no bodies loaded\n");
         return -3;
     }
 
@@ -142,7 +142,7 @@ int main(int argc, char ** argv)
         
         RAVELOG_INFOA(ss.str());
     }
-    else RAVELOG_INFOA("body not in collision\n");
+    else RAVELOG_INFO("body not in collision\n");
 
     // get the transformations of all the links
     vector<Transform> vlinktransforms;

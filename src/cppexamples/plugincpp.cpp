@@ -21,12 +21,12 @@ public:
     }
 
     void Destroy() {
-        RAVELOG_INFOA("problem unloaded from environment\n");
+        RAVELOG_INFO("problem unloaded from environment\n");
     }
 
     int main(const string& cmd)
     {
-        RAVELOG_INFOA("problem initialized cmd; %s\n", cmd.c_str());
+        RAVELOG_INFO("problem initialized cmd; %s\n", cmd.c_str());
         return 0;
     }
 
@@ -34,7 +34,7 @@ public:
     {
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
-        sout << vbodies.size();
+        sout << vbodies.size(); // publish the results
         return true;
     }
 
@@ -43,9 +43,8 @@ public:
         string filename;
         sinput >> filename;
         bool bSuccess = GetEnv()->Load(filename.c_str()); // load the file
-        sout << bSuccess; // publish the results
-        return true;
-    } //
+        return bSuccess;
+    }
 };
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)

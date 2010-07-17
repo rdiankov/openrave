@@ -96,7 +96,7 @@ int main(int argc, char ** argv)
                          "--nogui             Run without a GUI (does not initialize the graphics engine nor communicate with any window manager)\n"
                          "--hidegui           Run with a hidden GUI, this allows 3D rendering and images to be captured\n"
                          "--listplugins       List all plugins and the interfaces they provide\n"
-                         "-loadplugin [path] load a plugin at the following path\n"
+                         "--loadplugin [path] load a plugin at the following path\n"
                          "-serverport [port] start up the server on a specific port (default is 4765)\n"
                          "-collision [name]  Default collision checker to use\n"
                          "-viewer [name]     Default viewer to use\n"

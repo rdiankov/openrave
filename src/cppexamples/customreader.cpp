@@ -26,9 +26,9 @@ public:
             _piddata = piddata;
             if( !_piddata )
                 _piddata.reset(new XMLData());
-            RAVELOG_INFOA("the attributes piddata is created with are:\n");
+            RAVELOG_INFO("the attributes piddata is created with are:\n");
             for(std::list<std::pair<std::string,std::string> >::const_iterator itatt = atts.begin(); itatt != atts.end(); ++itatt)
-                RAVELOG_INFOA("%s=%s\n",itatt->first.c_str(),itatt->second.c_str());
+                RAVELOG_INFO("%s=%s\n",itatt->first.c_str(),itatt->second.c_str());
         }
 
         virtual XMLReadablePtr GetReadable() { return _piddata; }
@@ -49,7 +49,7 @@ public:
                 // read all the float values into a vector
                 _piddata->igains = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
             else
-                RAVELOG_ERRORA("unknown field %s\n", name.c_str());
+                RAVELOG_ERROR("unknown field %s\n", name.c_str());
 
             return false;
         }
@@ -93,7 +93,7 @@ public:
             RAVELOG_INFOA(ss.str());
         }
         else
-            RAVELOG_WARNA("failed to find piddata\n");
+            RAVELOG_WARN("failed to find piddata\n");
         return true;
     }
 
