@@ -4,6 +4,7 @@
     Creates a simple OpenRAVE::ProblemInstance interface.
 */
 #include <rave/rave.h>
+#include <rave/plugin.h>
 #include <boost/bind.hpp>
 
 using namespace std;
@@ -44,18 +45,13 @@ public:
         bool bSuccess = GetEnv()->Load(filename.c_str()); // load the file
         sout << bSuccess; // publish the results
         return true;
-    }
+    } //
 };
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
-    switch(type) {
-    case PT_ProblemInstance:
-        if( interfacename == "myproblem")
-            return InterfaceBasePtr(new MyProblemInstance(penv));
-        break;
-    default:
-        break;
+    if( type == PT_ProblemInstance && interfacename == "myproblem" ) {
+        return InterfaceBasePtr(new MyProblemInstance(penv));
     }
     return InterfaceBasePtr();
 }

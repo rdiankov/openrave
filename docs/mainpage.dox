@@ -11,14 +11,14 @@ official %OpenRAVE releases, and videos/tutorials.
 
 %OpenRAVE includes a seamless integration of simulation, visualization, planning, scripting and
 control. The plugin architecture allows users to easily write custom controllers or extend
-functionality. With %OpenRAVE plugins, any planning algorithm, robot controller, or sensing
-subsystem can be distributed and dynamically loaded at run-time, which frees developers from
-struggling with monolithic code-bases. Users of %OpenRAVE can concentrate on the development of
-planning and scripting aspects of a problem without having to explicitly manage the details of robot
-kinematics and dynamics, collision detection, world updates, and robot control. It should be noted
-that %OpenRAVE's sole focus on simulation and analysis of geometric and dynamic information allows
-is to be easily integrated into existing robotics systems that concentrate on low-level control,
-message protocols, and perception systems.
+functionality. Using %OpenRAVE plugins, any planning algorithm, robot controller, or sensing
+subsystem can be distributed and dynamically loaded at run-time; this distributed nature frees
+developers from struggling with monolithic code-bases. Users of %OpenRAVE can concentrate on the
+development of planning and scripting aspects of a problem without having to explicitly manage the
+details of robot kinematics and dynamics, collision detection, world updates, and robot control. It
+should be noted that %OpenRAVE's sole focus on simulation and analysis of geometric and dynamic
+information allows is to be easily integrated into existing robotics systems that concentrate on
+low-level control, message protocols, and perception systems.
 
 \section main_started Getting Started
 - \subpage installation
@@ -293,37 +293,59 @@ what interfaces it has. When a plugin is first loaded, its \ref OpenRAVEGetPlugi
 will be called in order so the %OpenRAVE core can register the names of its provided
 interfaces. 
 
-\section writing_plugins_hash Plugins Loading Safety
+\section writing_plugins_hash Loading Plugins Safety
 
 Many mechanisms have been put in place to prevent mismatching/old plugins to be loaded by the
 core. In order to protect plugins compiled with a different version, %OpenRAVE creates a hash from
 each interface class definition using \ref cpp-gen-md5 and stores them in \ref
 rave/classhashes.h. The interface hash can be retrieved using \ref RaveGetInterfaceHash. For an
-interface to be loaded successfully, the plugin has to check that the hash of the core loading the
-plugin matches the hash of the
+interface to be loaded successfully, the plugin has to check that the hash the core is using matches
+the hash compiled with the plugin. These types of checks ensure that stale plugins will never be
+loaded; helper functions are offered in \ref rave/plugin.h, which all plugin authors should use.
 
-\section writing_plugins_example Example
+\section writing_plugins_example Providing a Simple Interface
 
-There are several %OpenRAVE functions offered in \ref rave/plugin.h to help write robust
-exports, so plugin authors are recommended to include \ref rave/plugin.h in the main C++ file compiled.
-
-
-The simplest example is shown in \ref plugincpp.cpp
+Example \ref plugincpp.cpp creates a \ref ProblemInstance interface named \b MyProblem and have it offer two commands: \b numbodies and \load.
 
 
-\section example_interfaces Example interfaces
+
+\dontinclude plugincpp.cpp
+
+The first \#include the compiler sees has to be \ref rave/rave.h. Then for the main C++ file, we include \ref rave/plugin.h for several helper functions.
+
+\until {
+
+Now register the two commands of the problem. \c boost::bind is necessary for specifying member functions as callbacks.
+
+\skipline MyProblemInstance(
+\until }
+
+Provide the implementations for the member functions:
+\skipline bool
+\until } //
+
+It is recommend to plugin authors to include \ref rave/plugin.h in their main C++
+file, this will provide implementations for the export functions and ask the user to provide a new
+set of functions \ref CreateInterfaceValidated and \ref GetPluginAttributesValidated.
+
+Providing \b MyProblem would look like:
+
+\skipline InterfaceBasePtr
+\until }
+
+In order to tell OpenRAVE what is provided, have to define:
+
+\skipline GetPluginAttributesValidated
+\until }
 
 \~japanese \page writing_plugins プラグインとインターフェースの作成
-
-\section example_demos OpenRAVEコアを使用する例
-
-
-\section example_interfaces インターフェース例
 
 */
 
 /**
-\~english \page cpp_examples C++ Examples
+\page cpp_examples C++ Examples
+
+\section cpp_examples_build Building
 
 All C++ examples are stored in \c $OPENRAVE_INSTALL/share/openrave/cppexamples. Use the \c CMakeLists.txt file the build the examples by:
 \verbatim
@@ -334,13 +356,16 @@ cmake ..
 make
 \endverbatim
 
-The current examples are:
+\section cpp_examples_plugins Examples Plugins
 
-\ref customreader.cpp
-\ref ikfastloader.cpp
-\ref orcollision.cpp
-\ref orloadviewer.cpp
-\ref plugincpp.cpp
+- \ref customreader.cpp
+- \ref plugincpp.cpp
+
+\section cpp_examples_plugins Examples loading the %OpenRAVE core:
+
+- \ref ikfastloader.cpp
+- \ref orcollision.cpp
+- \ref orloadviewer.cpp
 
 */
 
