@@ -33,54 +33,29 @@ low-level control, message protocols, and perception systems.
 \~japanese
 %OpenRAVEはシミュレーション，可視化，動作計画，スクリプトと制御機能等の統合環境を備えています．そのプラグインアーキテクチャを使い，ユーザーは簡単にコントローラの変更や機能の拡張をすることができます．使用するプラグイン，動作計画アルゴリズム，ロボットの自律制御，またはセンシングを考慮した動作は個々のモジュールになっており，実行時に動的に呼び出されます．これによって開発者は多くのモジュールが１つの大きな塊となった巨大なコードと格闘することから解放されます．さらに%OpenRAVEのユーザーは，ロボットの運動学と動力学、幾何学的干渉、環境変化、ロボット制御などの詳細が分からなくても知的動作とスクリプトの開発に集中することができます．また%OpenRAVEは，制御ドライバ，通信規格，認識システム等に焦点をあてた世の中に存在する他のロボットシステムとは異なり，幾何学と動力学のシミュレーションと解析に焦点をおいているため，それらのシステムとも容易に共存することが可能です．
 
-\~english
-
-\section main_started Getting Started
+\~english  \section main_started Getting Started
+\~japanese \section main_started はじめに
 - \subpage installation
 - \subpage p_basic_usage
 - \subpage conventions
 - \subpage environment_variables
 
-\section main_architecture Architecture
+\~english  \section main_architecture Architecture
+\~japanese \section main_architecture OpenRAVEの構造
 - \subpage architecture_concepts
 - \subpage writing_plugins
 - \subpage plotting3d
 
-\section main_system Components
+\~english  \section main_system Components
+\~japanese \section main_system OpenRAVEの構成要素
 - \subpage database_generation
 - <a href="http://openrave.programmingvision.com/index.php/Started:Formats">XML File Format</a>
 - Scripting
  - \openravepy{Python Scripting with <b>openravepy </b>}
  - \octave{Octave/MATLAB Scripting}
 
-\section main_reference Reference
-- \subpage interfaces
-- \subpage executables
-- \subpage geometric_primitives
-- \subpage affine_math
-- \subpage cpp_examples
-
-\~japanese
-
-\section main_started はじめに
-- \subpage installation
-- \subpage p_basic_usage
-- \subpage conventions
-- \subpage environment_variables
-
-\section main_architecture OpenRAVEの構造
-- \subpage architecture_concepts
-- \subpage writing_plugins
-- \subpage plotting3d
-
-\section main_system OpenRAVEの構成要素
-- \subpage database_generation
-- <a href="http://openrave.programmingvision.com/index.php/Started:Formats">XML File Format</a>
-- Scripting
- - \openravepy{Python Scripting with <b>openravepy </b>}
- - \octave{Octave/MATLAB Scripting}
-
-\section main_reference 参考資料
+\~english  \section main_reference Reference
+\~japanese \section main_reference 参考資料
 - \subpage interfaces
 - \subpage executables
 - \subpage geometric_primitives
@@ -229,7 +204,8 @@ specified through \ref OpenRAVE::KinBody::SetJointValues.
 
 */
 
-/** \page environment_variables Environment Variables
+/**
+\~english \page environment_variables Environment Variables
 
 This page describes system environment variables read by %OpenRAVE environments on
 initialization. \envvarwiki{This page} describes how to set environment variables for the particular
@@ -248,6 +224,15 @@ system running %OpenRAVE.
   like inverse kinematics solvers, robot pre-processed data, database generation results, etc. The
   default directory is <b>$HOME/.openrave</b>.
 
+\~japanese \page environment_variables 環境変数の設定
+
+このページでは%OpenRAVEが最初に読み出す環境変数の設定の方法について説明します．
+
+- \b OPENRAVE_PLUGINS - %OpenRAVEは起動時に，ここに設定されたディレクトリの全てのobject/dllプラグインを探索し読み出します．複数のディレクトリを設定する場合，個々のディレクトリは ':' （Windows環境の場合は ';' ）を使って分けてください．\c $OPENRAVE_INSTALL/share/openrave/pluginsにあるデフォルトのプラグインは常に読み出されますので，設定する必要はありません．
+
+- \b OPENRAVE_DATA - %OpenRAVEは常に，ここに設定されたディレクトリのファイルを探索し読み出します．複数のディレクトリを設定する場合，個々のディレクトリは ':' （Windows環境の場合は ';' ）を使って分けてください．デフォルトは\c $OPENRAVE_INSTALL/share/openraveですので，これは再度設定する必要はありません．
+
+- \b OPENRAVE_HOME - 全ての%OpenRAVEの固有データを保存する場所を指定しています．%OpenRAVEの固有データとは，逆運動学の解析結果のようなロボットの事前に計算された結果や生成されたデータベース等のことです．デフォルトのディレクトリは<b>$HOME/.openrave</b>です．
 
 */
 
