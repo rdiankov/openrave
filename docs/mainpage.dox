@@ -376,7 +376,7 @@ In order to tell %OpenRAVE what is provided, have to define:
 \skipline GetPluginAttributesValidated
 \until }
 
-\section writing_plugins_build Building a Plugin
+\section writing_plugins_build Building the Plugin
 
 \subsection writing_plugins_cmake Using CMake
 
@@ -432,7 +432,7 @@ openrave --loadplugin $SOMEPATH/libplugincpp
 openrave --loadplugin $SOMEPATH/libplugincpp.so
 openrave --loadplugin ./libplugincpp.so
 \endverbatim
- where /c $SOMEPATH is the absolute/relative path of the shared object. 
+ where \c $SOMEPATH is the absolute/relative path of the shared object. 
 
 - Another way is to load it from the C++/Python/APIs:<br/>
 \b C++

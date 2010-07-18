@@ -528,7 +528,17 @@ protected:
             }
         }
         catch(const openrave_exception& ex) {
-            RAVELOG_WARN("failed to load: %s\n",ex.what());
+            if( OPENRAVE_LAZY_LOADING ) {
+                p->plibrary = NULL; // NOTE: for some reason, closing the lazy loaded library can make the system crash, so instead keep the pointer around, but create a new one with RTLD_NOW
+            }
+            RAVELOG_WARN(str(boost::format("%s failed to load: %s\n")%libraryname%ex.what()));
+            return PluginPtr();
+        }
+        catch(...) {
+            if( OPENRAVE_LAZY_LOADING ) {
+                p->plibrary = NULL; // NOTE: for some reason, closing the lazy loaded library can make the system crash, so instead keep the pointer around, but create a new one with RTLD_NOW
+            }
+            RAVELOG_WARN(str(boost::format("%s: unknown exception\n")%libraryname));
             return PluginPtr();
         }
 
