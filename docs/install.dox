@@ -22,53 +22,68 @@
 \~japanese \section installation_cmake CMakeを行う際のオプション設定について
 
 \~english
-There are many cmake options that control how %OpenRAVE is built. Once %OpenRAVE is built, most of them can be set by executing
+The root Makefile creates a \c build directory and calls cmake with a set of options. All compiled object files are stored in \c build. There are many cmake options that control how %OpenRAVE is built. Once %OpenRAVE is built, most of them can be set by executing
 
-\~japanese
-%OpenRAVEをどのようにビルドするかを制御するたくさんのcmakeオプションがあります．
-ソースコードをダウンロードしたフォルダで，以下のコマンドを実行することによってそれらのオプションをGUIを使って設定することができます．
-
-\~
 \verbatim
 ccmake build
 \endverbatim
 
-\~english
-in the root sources folder. For example, to disable ffmpeg video recording, find the \c
-OPT_VIDEORECORDING option and turn it to \c OFF. It is possible to set these options during the
-cmake build time by executing cmake yourself (if you notice all the Makefiles do is wrap calls to
-cmake), and adding command line arguments like <tt>-DOPT_VIDEORECORDING=OFF</tt>:
+in the root sources folder. It is also possible to call cmake from the command line with a new set of options:
 
-\~japanese
-オプションを設定するもう１つの方法としては，cmakeコマンドを使って変更する方法があります．（実際Makefileの中身を見るとcmakeコマンドを呼び出して各デフォルトのオプションを設定していることがわかります）
-具体的にはbuildのディレクトリに移動し，cmakeのコマンドの後に変更したいオプションの設定を追加し実行します．例えば，ffmpegの録画を無効にするために，\c OPT_VIDEORECORDINGオプションを\c OFFにするには，以下のようにします．
-
-\~
 \verbatim
-cd build
+cd build; cmake -DCMAKE_INSTALL_PREFIX=/my/new/install/dir -DCMAKE_BUILD_TYPE=Debug ..
+\endverbatim
+
+- <b>Video Recording</b> To disable ffmpeg video recording, find the \c OPT_VIDEORECORDING option and turn it to \c
+OFF. It is possible to set these options during the cmake build time by executing cmake yourself
+\verbatim
 cmake -DOPT_VIDEORECORDING=OFF ..
 \endverbatim
 
-\~english
 - <b>Double Precision</b> To compile %OpenRAVE with <b>double precision</b> (ie all dReal types become \b doubles), set \c OPT_DOUBLE_PRECISION to \c ON during cmake. For example:
-
-\~japanese
-- <b>Double Precision</b>：倍精度でコンパイルするには，\c OPT_DOUBLE_PRECISIONのオプションを\c ONにします．
-
-\~
 \verbatim
-cmake -DOPT_DOUBLE_PRECISION=ON ...
+cmake -DOPT_DOUBLE_PRECISION=ON ..
 \endverbatim
 
-\~english
 - <b>Static Libraries</b> To also build static libraries of openrave use the \c OPT_STATIC option. Plugins will still be linked dynamically.
+\verbatim
+cmake -DOPT_STATIC=ON ..
+\endverbatim
+
+- <b>Plugin Compilation</b> It is possible to only compile the core and skip the plugins using the \c OPT_PLUGINS option.
+\verbatim
+cmake -DOPT_PLUGINS=OFF ..
+\endverbatim
+
 
 \~japanese
-- <b>Static Libraries</b>： 静的なライブラリを構築するには \c OPT_STATIC のオプションを使用します．プラグインは変わらず動的に呼び出されます．
 
-\~
+%OpenRAVEをどのようにビルドするかを制御するたくさんのcmakeオプションがあります．
+ソースコードをダウンロードしたフォルダで，以下のコマンドを実行することによってそれらのオプションをGUIを使って設定することができます．
+
+
+オプションを設定するもう１つの方法としては，cmakeコマンドを使って変更する方法があります．（実際Makefileの中身を見るとcmakeコマンドを呼び出して各デフォルトのオプションを設定していることがわかります）
+
+- <b>録画</b> 具体的にはbuildのディレクトリに移動し，cmakeのコマンドの後に変更したいオプションの設定を追加し実行します．例えば，ffmpegの録画を無効にするために，\c OPT_VIDEORECORDINGオプションを\c OFFにするには，以下のようにします．
+
 \verbatim
-cmake -DOPT_STATIC=ON ...
+cmake -DOPT_VIDEORECORDING=OFF ..
+\endverbatim
+
+- <b>精度設定</b>：倍精度でコンパイルするには，\c OPT_DOUBLE_PRECISIONのオプションを\c ONにします．
+
+\verbatim
+cmake -DOPT_DOUBLE_PRECISION=ON ..
+\endverbatim
+
+- <b>静的ライブラリ</b>：静的なライブラリも構築するには \c OPT_STATICを使用します．プラグインは変わらず動的なライブラリにリンクされます．
+\verbatim
+cmake -DOPT_STATIC=ON ..
+\endverbatim
+
+- <b>プラグイン生成</b>：\c OPT_PLUGINSをOFFにするとプラグインのコンパイルをしません．
+\verbatim
+cmake -DOPT_PLUGINS=OFF ..
 \endverbatim
 
 \~english \section install_structure Install Directory Structure
@@ -124,45 +139,43 @@ cmake -DOPT_STATIC=ON ...
 
 /** 
 \~english  \page installation_linux Building and Installing on Linux
-\~japanese \page installation_linux Linuxユーザーのためのインストール方法
 
-\~english
 Download the sources from \sourcesdownload{sourceforge}.
 
-\~japanese
-まずは以下のコマンドを入力しソースコードをダウンロードしてください．
-
-\~
 \verbatim
 svn co https://openrave.svn.sourceforge.net/svnroot/openrave/trunk openrave
 \endverbatim
 
-\~english
 %OpenRAVE works only with qt4! Before compiling SoQt or %OpenRAVE make sure to remove any qt3 related dev packages like \c qt3-dev-tools or \c libqt3-headers.
 
 If there are compilation errors with templates, might have to use gcc version 4.1 or greater. You can check your version of gcc by <tt>gcc --version</tt>
+ 
+\~japanese \page installation_linux Linuxユーザーのためのインストール方法
 
-\~japanese
+まずは以下のコマンドを入力しソースコードをダウンロードしてください．
+
+\verbatim
+svn co https://openrave.svn.sourceforge.net/svnroot/openrave/trunk openrave
+\endverbatim
+
 %OpenRAVEはqt4でのみ動作します．SoQtまたは%OpenRAVEをコンパイルする前に\c qt3-dev-tools や \c libqt3-headers のような，全てのqt3に関連するパッケージを削除してください．
 
 もし通常の手順にしたがってコンパイルしたのにエラーが発生した場合，それはgccのバージョンが旧い為かもしれません．gccのバージョンはver. 4.1もしくはそれ以上のものを使用してください．あなたのPC環境でのgccのバージョンは<tt>gcc --version</tt>で確認することができます．
 
-
-
 \~english  \section ilinux_package Installing from Package Manager
+
 \~japanese \section ilinux_package 必要なパッケージのインストール
 
 %OpenRAVEはいくつかの標準パッケージを使用して開発されています．あなたのPC環境に合わせてパッケージマネージャから必要なパッケージをインストールしてください．
 
-\~english  \subsection ilinux_ubuntu804 Ubuntu 8.04 or earlier
+\~english \subsection ilinux_ubuntu804 Ubuntu 8.04 or earlier
 \~japanese \subsection ilinux_ubuntu804 Ubuntu 8.04 もしくはそれ以前
 
 \~ \verbatim
 sudo apt-get install g++ cmake libqt4-dev qt4-dev-tools ffmpeg libavcodec-dev libavformat-dev libxvidcore-dev libx264-dev libfaac-dev libogg-dev libvorbis-dev libdc1394-dev liblame-dev libgsm1-dev libboost-dev libboost-regex-dev libxml2-dev libglew-dev  libboost-graph-dev libboost-wave-dev libboost-serialization-dev libboost-filesystem-dev libpcre3-dev libboost-thread-dev
 \endverbatim
 
-\~
-\subsection ilinux_ubuntu810 Ubuntu 8.10
+\~ \subsection ilinux_ubuntu810 Ubuntu 8.10
 
 \verbatim
 sudo apt-get install g++ cmake libqt4-dev qt4-dev-tools ffmpeg libavcodec-dev libavformat-dev libxvidcore4-dev libx264-dev libfaac-dev libogg-dev libvorbis-dev libdc1394-22-dev libgsm1-dev libboost-dev libboost-regex-dev libxml2-dev libglew1.5-dev libsoqt4-dev libboost-graph-dev libode0-dev libboost-wave-dev libboost-serialization-dev libboost-filesystem-dev libpcre3-dev libboost-thread-dev
@@ -181,42 +194,37 @@ switch to the unstripped versions when recording.
 
 残念ながら，これらのパッケージはdevパッケージと共存することができません．このため始めに通常の<b>libavcodec-dev</b>と<b>libavformat-dev</b>で%OpenRAVEのコンパイルを行い，その後録画機能をお使いの際にunstrippedバージョンに切り替えてください．
 
-\~
-\subsection ilinux_ubuntu9 Ubuntu 9.x
+\~ \subsection ilinux_ubuntu9 Ubuntu 9.x
 
 \verbatim
 sudo apt-get install g++ cmake libqt4-dev qt4-dev-tools ffmpeg libavcodec-dev libavformat-dev libxvidcore4-dev libfaac-dev libogg-dev libvorbis-dev libdc1394-22-dev libgsm1-dev libboost-dev libboost-regex-dev libxml2-dev libsoqt4-dev libboost-graph-dev libode0-dev libboost-wave-dev libboost-serialization-dev libboost-filesystem-dev libpcre3-dev libboost-thread-dev libswscale-dev
 \endverbatim
 
-\~english  
-\subsection ilinux_fedora Fedora Core Users
+\~english \subsection ilinux_fedora Fedora Core Users
 
 Might need to add the livna yum repository for ffmpeg. To install the necessary packages type
 
-\~japanese 
-\subsection ilinux_fedora Fedoraユーザ
-
-ffmpegのためにlivna yumレポジトリを追加する必要があるかもしれません．必要なパッケージをインストールするには以下のコマンドを実行してください．
-
-\~
 \verbatim
 sudo yum install qt4-devel Coin2-devel glew-devel gsm-devel x264 x264-devel ffmpeg-devel libdc1394-devel libtheora-devel libmp4v2-devel ode-devel boost-devel cmake
 \endverbatim
 
-\~english
 Be careful if installing \b soqt-devel from the package manager, it may be compiled with the wrong version of Qt. If compiling SoQt from sources, check \c QTDIR and make sure it points to the correct version.
 
-\~japanese
+\~japanese \subsection ilinux_fedora Fedoraユーザ
+
+ffmpegのためにlivna yumレポジトリを追加する必要があるかもしれません．必要なパッケージをインストールするには以下のコマンドを実行してください．
+
+\verbatim
+sudo yum install qt4-devel Coin2-devel glew-devel gsm-devel x264 x264-devel ffmpeg-devel libdc1394-devel libtheora-devel libmp4v2-devel ode-devel boost-devel cmake
+\endverbatim
+
 パッケージマネージャから<b>soqt-develをインストールする場合には，間違ったバージョンのQtをコンパイルするかもしれませんので注意してください．</b>もしソースファイルからSoQtをコンパイルする場合には，\c QTDIR と正しいバージョンであることを確認してください．
 
-
-\~english
-\section ilinux_libraries Necessary libraries for Old Linux Distros
+\~english \section ilinux_libraries Necessary libraries for Old Linux Distros
 
 (Only install these libraries from sources if not in package manager.
 
-\~japanese
-\section ilinux_libraries 旧Linuxに必要なライブラリ
+\~japanese \section ilinux_libraries 旧Linuxに必要なライブラリ
 
 （パッケージマネージャにない場合のみ，これらのライブラリをソースからインストールしてください．
 
@@ -229,8 +237,7 @@ Be careful if installing \b soqt-devel from the package manager, it may be compi
 \~japanese
  - <b>x86-64ユーザ：</b> SoQtはSoQtComponent.cppでコンパイルエラーを起こすかもしれません．これを修正するため，\c src/Inventor/Qt/SoQtComponent.cppファイルの<tt>unsigned long key</tt>を<tt>SbDict::Key key</tt>に置換してください．
 
-\~english
-\section ilinux_collisionphysics Collision Checkers and Physics Simulators
+\~english \section ilinux_collisionphysics Collision Checkers and Physics Simulators
 
 Although %OpenRAVE is not tied to any particular collision checker, it requires at least one is installed to get basic functions. Here are the following libraries that have %OpenRAVE plugins:
 
@@ -240,9 +247,18 @@ Although %OpenRAVE is not tied to any particular collision checker, it requires 
  - For 0.10+. If installing on x86-64 distro, configure ODE with \c --enable-shared.
 
 - <a href="http://www.bulletphysics.com">Bullet Collision</a> (use v2.74 or greater) - Need to install to a system directory so %OpenRAVE can find it using \c pkg-config. If using autotools \c configure, need to remove \c install-sh before running \c autogen.sh. The command lines become:
+\verbatim
+rm install-sh
+./autogen.sh
+./configure
+make
+make install
+\endverbatim
+ Bullet is detected using \c pkg-config, so \c bullet.pc is needed.
 
-\~japanese
-\section ilinux_collisionphysics 干渉検知と物理シミュレータ
+- <a href="http://www.cs.unc.edu/~geom/SSV/">PQP Collision</a> - source code separate inside \b pqprave plugin.
+
+\~japanese \section ilinux_collisionphysics 干渉検知と物理シミュレータ
 
 %OpenRAVEは特定の干渉検知器と提携しているわけではありませんが，基本的な機能のために少なくとも１つの干渉検知器を必要とします．ここに%OpenRAVEのプラグインをもつ以下のライブラリを紹介します．
 
@@ -251,26 +267,20 @@ Although %OpenRAVE is not tied to any particular collision checker, it requires 
  - もしenable-new-trimeshオプションを使用しない場合，奇妙なバグのためにassertsを無効にする（\c --disable-asserts）ことが必要です．
  - 0.10以上のバージョンでx86-64のディストリビューションにインストールする場合，ODEの構成を\c --enable-sharedにしてください．
 
-\~english
-- <a href="http://www.bulletphysics.com">Bullet Collision</a> (use v2.74 or greater) - Need to install to a system directory so %OpenRAVE can find it using \c pkg-config. If using autotools \c configure, need to remove \c install-sh before running \c autogen.sh. The command lines become:
+- <a href="http://www.bulletphysics.com">Bullet Collision</a> (v2.74以上) - システムディレクトリにインストールすることが必要です．そうすれば%OpenRAVEは\c pkg-configで見つけることができます．もし\c configureの自動ツールを使っている場合，\c autogen.shを実行する前に\c install-shを削除する必要があります．コマンドラインでは以下のようになります．</br>
 
-\~japanese
-- <a href="http://www.bulletphysics.com">Bullet Collision</a> (v2.74以上) - システムディレクトリにインストールすることが必要です．そうすれば%OpenRAVEは\c pkg-configで見つけることができます．もし\c configureの自動ツールを使っている場合，\c autogen.shを実行する前に\c install-shを削除する必要があります．コマンドラインでは以下のようになります．
-
-\~
 \verbatim
- rm install-sh
- ./autogen.sh
- ./configure
- make
- make install
+rm install-sh
+./autogen.sh
+./configure
+make
+make install
 \endverbatim
- %OpenRAVE detects bullet using:
-\verbatim
+ Bulletのインストールは\c pkg-configで認識されているから，\c bullet.pcが必要です．
 
-- <a href="http://www.cs.unc.edu/~geom/SSV/">PQP Collision</a> - source code separate inside \b pqprave plugin.
+- <a href="http://www.cs.unc.edu/~geom/SSV/">PQP</a> - ソースコードは内部の\b pqpraveプラグインに含まれています．
 
-\section ilinux_python Python
+\~english \section ilinux_python Python
 
 In order to use the python bindings through the \openravepy{openravepy} module, install  the following packages before compiling %OpenRAVE:
 
@@ -278,19 +288,27 @@ In order to use the python bindings through the \openravepy{openravepy} module, 
 sudo apt-get install libboost-python-dev python python-dev python-numpy python-scipy python-imaging-tk
 \endverbatim
 
-\~english  To setup the python path in bash add the following line:
-\~japanese Pythonパスを設定するために，bashファイルに以下の行を追加してください．
+To setup the python path in bash add the following line:
 
-\~
 \verbatim
 export PYTHONPATH=$PYTHONPATH:`openrave-config --python-dir`
 \endverbatim
 
-The Ubuntu apt command line to install all necessary python packages is:
+\~japanese \section ilinux_python Python
 
+\openravepy{openravepy}を利用するために%OpenRAVEをコンパイルする前に以下のパッケージをインストールしてください．
 
-\~english
-\section ilinux_octavematlab Octave/Matlab
+\verbatim
+sudo apt-get install libboost-python-dev python python-dev python-numpy python-scipy python-imaging-tk
+\endverbatim
+
+Pythonパスを設定するために，bashファイルに以下の行を追加してください．
+
+\verbatim
+export PYTHONPATH=$PYTHONPATH:`openrave-config --python-dir`
+\endverbatim
+
+\~english \section ilinux_octavematlab Octave/Matlab
 
 Both <a href="http://www.gnu.org/software/octave/">Octave</a> and Matlab are supported and the
 %OpenRAVE build system automatically detects and compiles the mex files for each.
@@ -303,8 +321,7 @@ Matlab users:
 - make sure \c mex is in the system path
 - Add \c $OPENRAVE_INSTALL/share/openrave/matlab to the Matlab path (default is \c /usr/local/share/openrave/matlab).
 
-\~japanese
-\section ilinux_octavematlab Octave/Matlab
+\~japanese \section ilinux_octavematlab Octave/Matlab
 
 <a href="http://www.gnu.org/software/octave/">Octave</a> と Matlab は共にサポートされています．%OpenRAVEのビルドシステムはOctave/Matlabを自動的に検出し，それぞれのmexファイルをコンパイルします．
 
@@ -316,47 +333,55 @@ Matlab ユーザー:
 - \c mex がシステムパスにあることを確認してください．
 - Matlabのパス（デフォルトは\c /usr/local/share/openrave/matlab）に\c $OPENRAVE_INSTALL/share/openrave/matlab を追加してください．
 
-\~english
-\section ilinux_building Building OpenRAVE
+\~english \section ilinux_building Building OpenRAVE
 
 After all necessary libraries have been installed, it is time to finally build and install %OpenRAVE. In the root openrave folder type
 
-\~japanese
-\section ilinux_building OpenRAVEのインストール
-
-全ての必要なライブラリがインストールされたら，ついに%OpenRAVEをインストールです．%OpenRAVEのソースファイルをダウンロードしたフォルダに移動し，以下を入力してください．
-
-\~
 \verbatim
 make
 \endverbatim
 
-\~english  This will compile all files. To install the files type
-\~japanese このコマンドは全てのファイルをコンパイルします．それが終了した後，それらのファイルをインストールするには次のコマンドを入力してください．
+This will compile all files. To install the files type
 
-\~
 \verbatim
 make install
 \endverbatim
 
-\~english  Currently the default install directory is \c /usr/local. To choose a different install directory, type
-\~japanese 現在のデフォルトのインストール先は\c /usr/localです．異なるインストール先を指定したい場合は，以下のオプションと共にmakeを実行してください．
+Currently the default install directory is \c /usr/local. To choose a different install directory, type
 
-\~
 \verbatim
 make prefix=/my/new/dir
 \endverbatim
 
-\~english  In case libraries are added after the initial install of %OpenRAVE, remove the cmake cached files using:
-\~japanese 最初のインストールの後，ライブラリが追加された場合，cmakeがキャッシュされたファイルを以下のように削除してください．もしキャッシュファイルが削除されない場合，新しいシステム設定は反映されません．
+In case libraries are added after the initial install of %OpenRAVE, remove the cmake cached files using:
 
-
-\~
 \verbatim
 rm build/CMakeCache.txt
 \endverbatim
 
-\~english  If the cached files are not removed, the new system settings will not be noticed.
+If the cached files are not removed, the new system settings will not be noticed.
+
+\~japanese \section ilinux_building OpenRAVEのインストール
+
+全ての必要なライブラリがインストールされたら，ついに%OpenRAVEをインストールです．%OpenRAVEのソースファイルをダウンロードしたフォルダに移動し，以下を入力してください．
+
+このコマンドは全てのファイルをコンパイルします．それが終了した後，それらのファイルをインストールするには次のコマンドを入力してください．
+
+\verbatim
+make install
+\endverbatim
+
+現在のデフォルトのインストール先は\c /usr/localです．異なるインストール先を指定したい場合は，以下のオプションと共にmakeを実行してください．
+
+\verbatim
+make prefix=/my/new/dir
+\endverbatim
+
+最初のインストールの後，ライブラリが追加された場合，cmakeがキャッシュされたファイルを以下のように削除してください．もしキャッシュファイルが削除されない場合，新しいシステム設定は反映されません．
+
+\verbatim
+rm build/CMakeCache.txt
+\endverbatim
 
 */
 
@@ -434,17 +459,10 @@ installed/uninstalled), it is recommended to clear the cmake cache by first remo
 
 First execute this command:
 
-\~japanese
-\page installation_macosx Mac OSXユーザーのためのインストール方法
-
-はじめに以下のコマンドを実行してください．
-
-\~
 \verbatim
 sudo port install cmake boost libxml2 glew octave
 \endverbatim
 
-\~english
 It is necessary to install these libraries:
 
 - <a href="http://trolltech.com/developer/downloads/qt/mac">Qt</a> - download the installer. Can also use
@@ -459,6 +477,14 @@ but it could take an hour or two.
 After this, follow the instructions on \ref installation_linux.
 
 \~japanese
+\page installation_macosx Mac OSXユーザーのためのインストール方法
+
+はじめに以下のコマンドを実行してください．
+
+\verbatim
+sudo port install cmake boost libxml2 glew octave
+\endverbatim
+
 以下のライブラリのインストールが必要です．
 
 - <a href="http://trolltech.com/developer/downloads/qt/mac">Qt</a> - インストーラーをダウンロードしてください．以下のコマンドを使用することもできますが，１〜２時間かかるかもしれません．

@@ -111,10 +111,10 @@ the amount of error checking code people do. For example, C code usually has thi
 \code
 bool somefun(KinBodyPtr pbody)
 {
-  if( !pbody )
-    return false;
-  pbody->GetTransform();
-  ...
+    if( !pbody )
+        return false;
+    pbody->GetTransform();
+    ...
 }
 \endcode
 
@@ -123,9 +123,9 @@ or
 \code
 bool somefun(KinBodyPtr pbody)
 {
-  assert( !!pbody );
-  pbody->GetTransform();
-  ...
+    assert( !!pbody );
+    pbody->GetTransform();
+    ...
 }
 \endcode
 
@@ -135,8 +135,8 @@ code. In openrave, you can safely get away with:
 \code
 bool somefun(KinBodyPtr pbody)
 {
-  pbody->GetTransform();
-  ...
+    pbody->GetTransform();
+    ...
 }
 \endcode
 
@@ -144,12 +144,16 @@ then for handling errors (for example in the most top-level script), do
 
 \code
 try {
-  ...
-  somefun(pbody)
-  ...
+    ...
+    somefun(pbody)
+    ...
 }
 catch(const openrave_exception& ex) {
- ...
+    RAVELOG_WARN("exception caught: %s\n",ex.what());
+    if( ex.GetCode() == ORE_EnvironmentNotLocked ) {
+        RAVELOG_WARN("user forgot to lock environment!\n");
+    }
+    ...
 }
 \endcode
 
