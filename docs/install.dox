@@ -1,42 +1,77 @@
 // -*- coding: utf-8 -*-
 
-/** \page installation Building and Installing
+/** 
+\~english 
+
+\page installation Building and Installing
 
 %OpenRAVE uses <a href="http://www.cmake.org/">CMake</a>, which can create the correct build systems files for a variety of system configurations. Refer to the pages below for specific systems:
 
+\~japanese 
+
+\page installation ビルドとインストール
+
+%OpenRAVEは様々なユーザーのPCの構成にあった正しいビルドシステムを生成するために<a href="http://www.cmake.org/">CMake</a>を使っています．それぞれのユーザー仕様に合った以下のページを参照してください．:
+
+\~ 
 - \subpage installation_linux
 - \subpage installation_win
 - \subpage installation_macosx
 
-\section installation_cmake CMake Options
+\~english  \section installation_cmake CMake Options
+\~japanese \section installation_cmake CMakeを行う際のオプション設定について
 
+\~english
 There are many cmake options that control how %OpenRAVE is built. Once %OpenRAVE is built, most of them can be set by executing
 
+\~japanese
+%OpenRAVEをどのようにビルドするかを制御するたくさんのcmakeオプションがあります．
+ソースコードをダウンロードしたフォルダで，以下のコマンドを実行することによってそれらのオプションをGUIを使って設定することができます．
+
+\~
 \verbatim
 ccmake build
 \endverbatim
 
+\~english
 in the root sources folder. For example, to disable ffmpeg video recording, find the \c
 OPT_VIDEORECORDING option and turn it to \c OFF. It is possible to set these options during the
 cmake build time by executing cmake yourself (if you notice all the Makefiles do is wrap calls to
 cmake), and adding command line arguments like <tt>-DOPT_VIDEORECORDING=OFF</tt>:
 
+\~japanese
+オプションを設定するもう１つの方法としては，cmakeコマンドを使って変更する方法があります．（実際Makefileの中身を見るとcmakeコマンドを呼び出して各デフォルトのオプションを設定していることがわかります）
+具体的にはbuildのディレクトリに移動し，cmakeのコマンドの後に変更したいオプションの設定を追加し実行します．例えば，ffmpegの録画を無効にするために，\c OPT_VIDEORECORDINGオプションを\c OFFにするには，以下のようにします．
+
+\~
 \verbatim
 cd build
 cmake -DOPT_VIDEORECORDING=OFF ..
 \endverbatim
 
+\~english
 - <b>Double Precision</b> To compile %OpenRAVE with <b>double precision</b> (ie all dReal types become \b doubles), set \c OPT_DOUBLE_PRECISION to \c ON during cmake. For example:
+
+\~japanese
+- <b>Double Precision</b>：倍精度でコンパイルするには，\c OPT_DOUBLE_PRECISIONのオプションを\c ONにします．
+
+\~
 \verbatim
 cmake -DOPT_DOUBLE_PRECISION=ON ...
 \endverbatim
 
+\~english
 - <b>Static Libraries</b> To also build static libraries of openrave use the \c OPT_STATIC option. Plugins will still be linked dynamically.
+
+\~japanese
+- <b>Static Libraries</b>： 静的なライブラリを構築するには \c OPT_STATIC のオプションを使用します．プラグインは変わらず動的に呼び出されます．
+
+\~
 \verbatim
 cmake -DOPT_STATIC=ON ...
 \endverbatim
 
-\section install_structure Install Directory Structure
+\~english \section install_structure Install Directory Structure
 
 - bin
  - \b openrave - Start a simple environment and attach the default viewer, collision checkers, physics
@@ -60,6 +95,30 @@ cmake -DOPT_STATIC=ON ...
   - plugins - Plugins compiled by the %OpenRAVE main distribution.
   - openravepy - Python bindings, database generators, and examples. Directory structure is explained <a href="http://openrave.programmingvision.com/ordocs/english/openravepy-html/index.html#rst-directory-structure">here</a>.
   - robots - Robot XML files usually containing just a \c \<robot\> or \c \<kinbody\> tag.
+
+\~japanese \section install_structure インストールディレクトリの構造
+
+- bin
+ - \b openrave - 環境ビューワ，干渉検知，物理エンジン，サービスを起動するための実行ファイル
+ - \b openrave.py - \openravepy{openravepy}を通じて，環境を起動するための実行ファイル．データーベース生成，実行例を含む全てのopenrave機能を使用できます．
+ - \b openrave-config - 環境設定ファイル
+- include
+ - rave - 全てのヘッダファイルのためのディレクトリ
+- lib
+ - \b libopenrave (.so, .a, .dll, .lib) - 提供されている\ref interfacesにリンクした全てのプラグインライブラリ
+ - \b libopenrave-core (.so, .a, .dll, .lib) - 内部で%OpenRAVEコアを起動することを許可されたアプリケーションのライブラリ
+- share
+ - openrave
+  - cppexamples - 全てのC++実行例
+   - \b CMakeLists.txt - 全ての実行例をコンパイルするための<a href="http://www.cmake.org/">cmake</a>ファイル
+  - data - %OpenRAVE環境に呼び出し可能な環境と物体のデータファイル
+  - models - 3Dモデルのデータ（例えばCADのデータ）
+  - matlab - 全てのMatlabスクリプトと実行例．このスクリプトを実行するためにMATLABのパスにこのディレクトリを追加する必要があります．
+  - octave - 全てのOctaveスクリプトと実行例．このスクリプトを実行するためにOCTAVEのパスにこのディレクトリを追加する必要があります．
+  - plugins - コンパイルされたプラグイン
+  - openravepy - Pythonと連動した，データベース生成器や実行例．ディレクトリ構造の詳細は<a href="http://openrave.programmingvision.com/ordocs/english/openravepy-html/index.html#rst-directory-structure">ここ</a>をご参照ください．
+  - robots - \c \<robot\> or \c \<kinbody\> を含む，ロボットXMLファイル
+
 
 */
 
