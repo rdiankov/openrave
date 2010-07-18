@@ -2,8 +2,13 @@
 
 \section fundamental_structure Fundamental Structure
 
-\image html openrave_architecture.jpg
+\~english
+\image html openrave_architecture.png
 \image latex openrave_architecture.pdf "%OpenRAVE architecture" width=15cm
+\~japanese
+\image html openrave_architecture_jp.png
+\image latex openrave_architecture_jp.pdf "抽象アーキテクチャー" width=15cm
+\~
 
 %OpenRAVE is divided in four main components as shown in the above figure:
 
