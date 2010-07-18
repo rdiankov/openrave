@@ -1,6 +1,10 @@
 // -*- coding: utf-8 -*-
 /**
-\~english \mainpage Open Robotics Automation Virtual Environment
+\~
+
+\mainpage Open Robotics Automation Virtual Environment
+
+\~english
 
 %OpenRAVE provides an environment for testing, developing, and deploying motion planning and
 higher-level intelligence algorithms in real-world robotics applications. This document covers the
@@ -26,11 +30,10 @@ should be noted that %OpenRAVE's sole focus on simulation and analysis of geomet
 information allows is to be easily integrated into existing robotics systems that concentrate on
 low-level control, message protocols, and perception systems.
 
-\~japanese \mainpage Open Robotics Automation Virtual Environment
-
+\~japanese
 %OpenRAVEはシミュレーション，可視化，動作計画，スクリプトと制御機能等の統合環境を備えています．そのプラグインアーキテクチャを使い，ユーザーは簡単にコントローラの変更や機能の拡張をすることができます．使用するプラグイン，動作計画アルゴリズム，ロボットの自律制御，またはセンシングを考慮した動作は個々のモジュールになっており，実行時に動的に呼び出されます．これによって開発者は多くのモジュールが１つの大きな塊となった巨大なコードと格闘することから解放されます．さらに%OpenRAVEのユーザーは，ロボットの運動学と動力学、幾何学的干渉、環境変化、ロボット制御などの詳細が分からなくても知的動作とスクリプトの開発に集中することができます．また%OpenRAVEは，制御ドライバ，通信規格，認識システム等に焦点をあてた世の中に存在する他のロボットシステムとは異なり，幾何学と動力学のシミュレーションと解析に焦点をおいているため，それらのシステムとも容易に共存することが可能です．
 
-\~
+\~english
 
 \section main_started Getting Started
 - \subpage installation
@@ -57,18 +60,44 @@ low-level control, message protocols, and perception systems.
 - \subpage affine_math
 - \subpage cpp_examples
 
+\~japanese
+
+\section main_started はじめに
+- \subpage installation
+- \subpage p_basic_usage
+- \subpage conventions
+- \subpage environment_variables
+
+\section main_architecture OpenRAVEの構造
+- \subpage architecture_concepts
+- \subpage writing_plugins
+- \subpage plotting3d
+
+\section main_system OpenRAVEの構成要素
+- \subpage database_generation
+- <a href="http://openrave.programmingvision.com/index.php/Started:Formats">XML File Format</a>
+- Scripting
+ - \openravepy{Python Scripting with <b>openravepy </b>}
+ - \octave{Octave/MATLAB Scripting}
+
+\section main_reference 参考資料
+- \subpage interfaces
+- \subpage executables
+- \subpage geometric_primitives
+- \subpage affine_math
+- \subpage cpp_examples
+
 \~english
 Documentation in Other Languages: \japanesedoc
+
 \~japanese
 他言語ドキュメント: \englishdoc
 \~
 
  */
 
-/** \page p_basic_usage Basic Usage and Loading Environments
-
-
-\~english
+/** 
+\~english  \page p_basic_usage Basic Usage and Loading Environments
 
 To check out the plugins loaded type
 \verbatim
@@ -89,30 +118,30 @@ The \openrave_py{openrave.py} program is similar to \c openrave, but supports mu
 functionality. In fact, \c openrave potentially calls into \openrave_py{openrave.py} for commands it
 cannot support.
 
-\~japanese
+\~japanese \page p_basic_usage 基本的な使い方
 
-提供されているプラグインとインターフェイスの表示
+提供されているプラグインのリストを表示するには次のコマンドを実行して下さい．
 \verbatim
 openrave --listplugins
 \endverbatim
 
-ロボットのロード
+xmlファイルで定義されたロボットをOpenRAVE環境に読み出すには次のコマンドを実行して下さい．
 \verbatim
 openrave robots/puma.robot.xml
 \endverbatim
 
-プラグインが\b MyProblemというProblemInstanceを定義している場合，コマンドラインから起動出来る
+プラグインが<b>MyProblem</b>という問題例を定義している場合，次のコマンドで起動することができます．
 \verbatim
 openrave robots/puma.robot.xml -problem MyProblem 'myarguments'
 \endverbatim
 
-\openrave_py{openrave.py}のもっとも便利なプログラムが推奨される．openrave.pyはPythonで書いてあるため，
-OpenRAVEで提供されているすべてのモジュールにアクセス出来る．openraveの方がC++でコンパイルされているた
-め，Pythonがなくても実行出来る．
+openraveと似たコマンドに\openrave_py{openrave.py}というコマンドがあります．こちらはPythonで書かれているためOpenRAVEで提供されているすべてのモジュールにアクセスすることが可能で非常に機能的です．一方，openraveコマンドは既にC++でコンパイルされているため，Pythonがインストールされている開発環境でなくても実行することが可能です．
 
 */
 
-/** \~english \page conventions System Conventions and Guidelines
+/** 
+
+\~english \page conventions System Conventions and Guidelines
 
 This is the set of conventions all users are highly recommended to follow. Sticking to them will
 guarantee that a certain party's %OpenRAVE modules can inter-operate with other modules.
@@ -160,45 +189,43 @@ specified through \ref OpenRAVE::KinBody::SetJointValues.
 
 \~japanese \page conventions システム開発上で覚えておくべきこと
 
-すべてのOpenRAVEモジュールは以下のルールに従っている．新しいモジュールもこの規則を守れば，互いの機能
-を使うことが容易になる．
+すべてのOpenRAVEモジュールは以下のルールに従っています．新しいモジュールを作成する際にも，この規則を守れば互いの機能を使うことが容易になりますので是非覚えておきましょう．
 
-- 座標は右手系である．
+- 座標は右手系です．
 
-- OpenRAVEの変換行列は列ベクトルを使い，メモリ配置は横（行）に並べる（詳細は[[Started:MatrixFormats|
-  ここで参照]]）．言い換えると標準的な線形代数の慣習に従っている．しかし，Octave/Matlabの使い方を容易
-  にするためにシリアライズする時にメモリ配置を縦（列）で入出力する．Pythonの行列メモリ配置は横（行）
-  並びであるため，シリアライズがところで転置する必要がある．
+- OpenRAVEの変換行列は列ベクトルを使い，メモリ配置は横（行）に並べます（詳細は[[Started:MatrixFormats|
+  ここで参照]]）．言い換えると標準的な線形代数の慣習に従っています．しかし，Octave/Matlabの使い方を容易
+  にするためにシリアライズする際にはメモリ配置を縦（列）で入出力します．Pythonの行列メモリ配置は横（行）
+  並びであるため，シリアライズを行った場合には転置する必要があることに注意して下さい．
 
-- 回転を示す時にはクオータニオンを使うことが推奨される．クオータニオンのスカラーは最初の要素である．
+- 回転を示す時にはクオータニオンを使うことが推奨されます．クオータニオンのスカラーは最初の要素です．
   例えば<b>[w x y z]</b>か<b>[cos sin*axis]</b>・
 
-- \b poseは変換行列をクオータニオンと移動で指定されている．7値にシリアライズ，最初の4つがクオータ
-  ニオンの値を示し，残りの3つは移動の<b>[x y z]</b>である．
+- \b poseは変換行列をクオータニオンと移動で指定されています．7値にシリアライズされていて，最初の4つがクオータ
+  ニオンの値を示し，残りの3つは移動の<b>[x y z]</b>を示しています．
 
-- 2つの回転の距離は\f$\cos^{-1} | q_1 \cdot q_2 |\f$で定義されている．\f$q_1\f$，\f$q_2\f$はクオータニオンとして表現される．これは最小角度を示している．回転が互いに近い場合は\f$\min\left( | q1 - q2 | \; , \; | q1 + q2 |\right)\f$に近似出来る．
+- 2つの回転の距離は\f$\cos^{-1} | q_1 \cdot q_2 |\f$で定義されています．\f$q_1\f$，\f$q_2\f$はクオータニオンとして表現され，最小角度を示しています．回転が互いに近い場合は\f$\min\left( | q1 - q2 | \; , \; | q1 + q2 |\right)\f$に近似することが出来ます．
 
-- ロボットの上の方向は\b +Z軸，進行方向は\b +X軸である．
+- ロボットの上方向は\b +Z軸，進行方向は\b +X軸とします．
 
-- モバイルマニピュレーションは\b XY平面で行われる．
+- モバイルマニピュレーションは\b XY平面でのみ行うことができます．
 
-- ロボットの座標原点は，ベースリンクがZ=0の平面に配置される．ロボットが移動し，回転する時にもっとも自
-  然的な回転軸の原点が座標原点に一致する．
+- ロボットの座標原点は，ベースリンクがZ=0の平面に配置されます．ロボットが移動し，回転する時にもっとも自
+  然的な回転軸の原点が座標原点に一致します．
 
-- 人間環境で活動するロボットの長さの単位はメートル（m)である．あらゆるしきい値がそれを仮定しているた
-  め，別の単位を使う場合は計算時間が膨大になる可能性がある．単位を選ぶ時にもっとも一般的な慣習
-  は，<b>アームの長さ</b>を大体1にすることである．
+- 人間環境で活動するロボットの長さの単位はメートル（m)です．あらゆるしきい値がそれを仮定しているた
+  め，別の単位を使う場合は計算時間が膨大になる可能性があります．単位を選ぶ時にもっとも一般的な慣習
+  は，<b>アームの長さ</b>を大体1にすることです．
 
-- OpenRAVE環境に加えられている物体はユニークな名前を持つ必要がある．
+- OpenRAVE環境に加えられている物体は固有の名前を持つ必要があります．
 
-- 物体の中でされているリンク，マニピュレーター，センサー，関節の名前が互いにユニークである必要がある．
+- 物体の中で定義されているリンク，マニピュレーター，センサー，関節の名前は互いに固有である必要があります．
 
 \section OpenRAVE内部の慣習
 
-関節の回転方向は時計回りになっている（逆時計回りが標準であるため，ロボットの回転軸をマイナスにする必
-要がある）．しかし，この慣習はロボットを定義する時と，\ref OpenRAVE::KinBody::Joint::GetAxisを呼び出す時のみに現れるから，ほと
-んど気にする必要がない．ヤコビアンとリンクの動きが同調している．例えば，ヤコビアンが
-\ref OpenRAVE::KinBody::SetJointValuesの角度の微分に大して座標系の変換を表す．
+関節の回転方向は時計回りになっています（逆時計回りが標準であるため，ロボットの回転軸をマイナスにする必
+要があります）．しかし，この慣習はロボットを定義する時と，\ref OpenRAVE::KinBody::Joint::GetAxisを呼び出す時のみに現れますから，それほど気にする必要はありません．ヤコビアンとリンクの動きは同調しています．例えば，ヤコビアンが
+\ref OpenRAVE::KinBody::SetJointValuesの角度の微分に大して座標系の変換を表します．
 
 */
 
@@ -224,7 +251,8 @@ system running %OpenRAVE.
 
 */
 
-/** \page database_generation Robot Database Generators
+/** 
+\page database_generation Robot Database Generators
 
 For now see <a href="http://openrave.programmingvision.com/index.php/Main_Page#Robot-specific_Database_Generation">Database Generation</a>.
 
