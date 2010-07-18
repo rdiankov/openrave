@@ -22,17 +22,8 @@
 
 namespace OpenRAVE {
 
-/** \brief Planner interface that generates trajectories for the robot to follow around the environment
-
+/** \brief <b>[interface]</b> Planner interface that generates trajectories for the robot to follow around the environment. See \ref arch_planner.
     \ingroup interfaces
-    Planner should be able to query sensor information from the Robot like its current camera image
-    etc. Planner should be compatible with Robot presented (some hand-shaking happens between the two
-    classes). Examples of planners are: 
-    - Manipulation - manipulable objects need to be specified. Objects like doors should be special cases that planners knows about.
-    - Following - Goal easily changes. Attributes can change.
-    - Object Building - Need to describe how parts of object fit together into a bigger part.
-    - Dish Washing - Specific goals are not specified, just a condition that all plates need to be inside.
-    - Foot step planning - Need discrete footsteps and other capabilities from robot.
 */
 class RAVE_API PlannerBase : public InterfaceBase
 {

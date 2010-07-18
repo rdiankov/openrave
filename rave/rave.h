@@ -460,7 +460,7 @@ enum InterfaceType
     PT_Sensor=9, ///< describes \ref SensorBase
     PT_CollisionChecker=10, ///< describes \ref CollisionCheckerBase
     PT_Trajectory=11, ///< describes \ref TrajectoryBase
-    PT_Viewer=12,///< describes \ref RaveViewerBase
+    PT_Viewer=12,///< describes \ref ViewerBase
 };
 
 typedef InterfaceType PluginType RAVE_DEPRECATED;
@@ -479,7 +479,7 @@ class SensorSystemBase;
 class PhysicsEngineBase;
 class SensorBase;
 class CollisionCheckerBase;
-class RaveViewerBase;
+class ViewerBase;
 class IkParameterization;
 
 typedef boost::shared_ptr<CollisionReport> CollisionReportPtr;
@@ -520,9 +520,9 @@ typedef boost::weak_ptr<SensorSystemBase> SensorSystemBaseWeakPtr;
 typedef boost::shared_ptr<TrajectoryBase> TrajectoryBasePtr;
 typedef boost::shared_ptr<TrajectoryBase const> TrajectoryBaseConstPtr;
 typedef boost::weak_ptr<TrajectoryBase> TrajectoryBaseWeakPtr;
-typedef boost::shared_ptr<RaveViewerBase> RaveViewerBasePtr;
-typedef boost::shared_ptr<RaveViewerBase const> RaveViewerBaseConstPtr;
-typedef boost::weak_ptr<RaveViewerBase> RaveViewerBaseWeakPtr;
+typedef boost::shared_ptr<ViewerBase> ViewerBasePtr;
+typedef boost::shared_ptr<ViewerBase const> ViewerBaseConstPtr;
+typedef boost::weak_ptr<ViewerBase> ViewerBaseWeakPtr;
 typedef boost::shared_ptr<EnvironmentBase> EnvironmentBasePtr;
 typedef boost::shared_ptr<EnvironmentBase const> EnvironmentBaseConstPtr;
 typedef boost::weak_ptr<EnvironmentBase> EnvironmentBaseWeakPtr;

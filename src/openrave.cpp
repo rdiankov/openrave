@@ -55,7 +55,7 @@ void MainOpenRAVEThread();
 static bool bDisplayGUI = true, bShowGUI = true;
 
 static EnvironmentBasePtr penv;
-static RaveViewerBasePtr s_viewer;
+static ViewerBasePtr s_viewer;
 static ProblemInstancePtr s_server;
 static boost::shared_ptr<boost::thread> s_mainThread;
 static string s_sceneFile;
@@ -275,7 +275,7 @@ int main(int argc, char ** argv)
     s_mainThread.reset(new boost::thread(boost::bind(MainOpenRAVEThread)));
     s_mainThread->join();
 
-    penv->AttachViewer(RaveViewerBasePtr());
+    penv->AttachViewer(ViewerBasePtr());
     s_viewer.reset();
     s_server.reset();
     penv->Destroy();
@@ -360,7 +360,7 @@ void MainOpenRAVEThread()
     penv->GetViewer()->main(bShowGUI);
 
     if( !bThreadDestroyed ) {
-        penv->AttachViewer(RaveViewerBasePtr());
+        penv->AttachViewer(ViewerBasePtr());
         s_viewer.reset();
         penv->RemoveProblem(s_server);
         s_server.reset();

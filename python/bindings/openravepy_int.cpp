@@ -90,7 +90,7 @@ class PySensorSystemBase;
 class PyControllerBase;
 class PyTrajectoryBase;
 class PyProblemInstance;
-class PyRaveViewerBase;
+class PyViewerBase;
 
 typedef boost::shared_ptr<PyInterfaceBase> PyInterfaceBasePtr;
 typedef boost::shared_ptr<PyInterfaceBase const> PyInterfaceBaseConstPtr;
@@ -120,8 +120,8 @@ typedef boost::shared_ptr<PyControllerBase> PyControllerBasePtr;
 typedef boost::shared_ptr<PyControllerBase const> PyControllerBaseConstPtr;
 typedef boost::shared_ptr<PyProblemInstance> PyProblemInstancePtr;
 typedef boost::shared_ptr<PyProblemInstance const> PyProblemInstanceConstPtr;
-typedef boost::shared_ptr<PyRaveViewerBase> PyRaveViewerBasePtr;
-typedef boost::shared_ptr<PyRaveViewerBase const> PyRaveViewerBaseConstPtr;
+typedef boost::shared_ptr<PyViewerBase> PyViewerBasePtr;
+typedef boost::shared_ptr<PyViewerBase const> PyViewerBaseConstPtr;
 
 inline RaveVector<float> ExtractFloat3(const object& o)
 {
@@ -2058,10 +2058,10 @@ public:
     int GetCollisionOptions() const { return _pCollisionChecker->GetCollisionOptions(); }
 };
 
-class PyRaveViewerBase : public PyInterfaceBase
+class PyViewerBase : public PyInterfaceBase
 {
 protected:
-    RaveViewerBasePtr _pviewer;
+    ViewerBasePtr _pviewer;
 
     static bool _ViewerCallback(object fncallback, PyEnvironmentBasePtr pyenv, KinBody::LinkPtr plink,RaveVector<float> position,RaveVector<float> direction)
     {
@@ -2087,10 +2087,10 @@ protected:
     }
 public:
 
-    PyRaveViewerBase(RaveViewerBasePtr pviewer, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pviewer, pyenv), _pviewer(pviewer) {}
-    virtual ~PyRaveViewerBase() {}
+    PyViewerBase(ViewerBasePtr pviewer, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pviewer, pyenv), _pviewer(pviewer) {}
+    virtual ~PyViewerBase() {}
 
-    RaveViewerBasePtr GetViewer() { return _pviewer; }
+    ViewerBasePtr GetViewer() { return _pviewer; }
 
     int main(bool bShow) { return _pviewer->main(bShow); }
     void quitmainloop() { return _pviewer->quitmainloop(); }
@@ -2100,11 +2100,11 @@ public:
     void ViewerSetTitle(const string& title) { _pviewer->ViewerSetTitle(title.c_str()); }
     bool LoadModel(const string& filename) { return _pviewer->LoadModel(filename.c_str()); }
 
-    PyVoidHandle RegisterCallback(RaveViewerBase::ViewerEvents properties, object fncallback)
+    PyVoidHandle RegisterCallback(ViewerBase::ViewerEvents properties, object fncallback)
     {
         if( !fncallback )
             throw openrave_exception("callback not specified");
-        boost::shared_ptr<void> p = _pviewer->RegisterCallback(properties,boost::bind(&PyRaveViewerBase::_ViewerCallback,fncallback,_pyenv,_1,_2,_3));
+        boost::shared_ptr<void> p = _pviewer->RegisterCallback(properties,boost::bind(&PyViewerBase::_ViewerCallback,fncallback,_pyenv,_1,_2,_3));
         if( !p )
             throw openrave_exception("no registration callback returned");
         return PyVoidHandle(p);
@@ -2147,7 +2147,7 @@ protected:
 
     void _ViewerThread(const string& strviewer, bool bShowViewer)
     {
-        RaveViewerBasePtr pviewer;
+        ViewerBasePtr pviewer;
         {
             boost::mutex::scoped_lock lock(_mutexViewer);
             pviewer = _penv->CreateViewer(strviewer.c_str());
@@ -2161,7 +2161,7 @@ protected:
             return;
 
         pviewer->main(bShowViewer); // spin until quitfrommainloop is called
-        _penv->AttachViewer(RaveViewerBasePtr());
+        _penv->AttachViewer(ViewerBasePtr());
         pviewer.reset();
     }
 
@@ -2211,7 +2211,7 @@ public:
     {
         {
             boost::mutex::scoped_lock lockcreate(_mutexViewer);
-            _penv->AttachViewer(RaveViewerBasePtr());
+            _penv->AttachViewer(ViewerBasePtr());
         }
 
         if( !!_threadviewer )
@@ -2316,12 +2316,12 @@ public:
             return PyCollisionCheckerBasePtr();
         return PyCollisionCheckerBasePtr(new PyCollisionCheckerBase(p, shared_from_this()));
     }
-    PyRaveViewerBasePtr CreateViewer(const string& name)
+    PyViewerBasePtr CreateViewer(const string& name)
     {
-        RaveViewerBasePtr p = _penv->CreateViewer(name);
+        ViewerBasePtr p = _penv->CreateViewer(name);
         if( !p )
-            return PyRaveViewerBasePtr();
-        return PyRaveViewerBasePtr(new PyRaveViewerBase(p, shared_from_this()));
+            return PyViewerBasePtr();
+        return PyViewerBasePtr(new PyViewerBase(p, shared_from_this()));
     }
 
     PyEnvironmentBasePtr CloneSelf(int options)
@@ -2655,7 +2655,7 @@ public:
         case PT_Sensor: return PySensorBasePtr(new PySensorBase(boost::static_pointer_cast<SensorBase>(pbody),shared_from_this()));
         case PT_CollisionChecker: return PyCollisionCheckerBasePtr(new PyCollisionCheckerBase(boost::static_pointer_cast<CollisionCheckerBase>(pbody),shared_from_this()));
         case PT_Trajectory: return PyTrajectoryBasePtr(new PyTrajectoryBase(boost::static_pointer_cast<TrajectoryBase>(pbody),shared_from_this()));
-        case PT_Viewer: return PyRaveViewerBasePtr(new PyRaveViewerBase(boost::static_pointer_cast<RaveViewerBase>(pbody),shared_from_this()));
+        case PT_Viewer: return PyViewerBasePtr(new PyViewerBase(boost::static_pointer_cast<ViewerBase>(pbody),shared_from_this()));
         }
         return PyInterfaceBasePtr();
     }
@@ -2782,7 +2782,7 @@ public:
             _threadviewer->join();
         _threadviewer.reset();
         
-        _penv->AttachViewer(RaveViewerBasePtr());
+        _penv->AttachViewer(ViewerBasePtr());
 
         if( viewername.size() > 0 ) {
             boost::mutex::scoped_lock lock(_mutexViewer);
@@ -2802,7 +2802,7 @@ public:
         return true;
     }
 
-    PyRaveViewerBasePtr GetViewer() { return PyRaveViewerBasePtr(new PyRaveViewerBase(_penv->GetViewer(),shared_from_this())); }
+    PyViewerBasePtr GetViewer() { return PyViewerBasePtr(new PyViewerBase(_penv->GetViewer(),shared_from_this())); }
 
     object plot3(object opoints,float pointsize,object ocolors=object(),int drawstyle=0)
     {
@@ -3970,23 +3970,23 @@ BOOST_PYTHON_MODULE(openravepy_int)
 
 
     {
-        scope viewer = class_<PyRaveViewerBase, boost::shared_ptr<PyRaveViewerBase>, bases<PyInterfaceBase> >("Viewer", no_init)
-            .def("main",&PyRaveViewerBase::main)
-            .def("quitmainloop",&PyRaveViewerBase::quitmainloop)
-            .def("SetSize",&PyRaveViewerBase::ViewerSetSize)
-            .def("Move",&PyRaveViewerBase::ViewerMove)
-            .def("SetTitle",&PyRaveViewerBase::ViewerSetTitle)
-            .def("LoadModel",&PyRaveViewerBase::LoadModel)
-            .def("RegisterCallback",&PyRaveViewerBase::RegisterCallback)
-            .def("EnvironmentSync",&PyRaveViewerBase::EnvironmentSync)
-            .def("SetCamera",&PyRaveViewerBase::SetCamera,args("transform"))
-            .def("SetCameraLookAt",&PyRaveViewerBase::SetCameraLookAt,args("lookat","pos","up"))
-            .def("GetCameraTransform",&PyRaveViewerBase::GetCameraTransform)
-            .def("GetCameraImage",&PyRaveViewerBase::GetCameraImage,args("width","height","transform","K"))
+        scope viewer = class_<PyViewerBase, boost::shared_ptr<PyViewerBase>, bases<PyInterfaceBase> >("Viewer", no_init)
+            .def("main",&PyViewerBase::main)
+            .def("quitmainloop",&PyViewerBase::quitmainloop)
+            .def("SetSize",&PyViewerBase::ViewerSetSize)
+            .def("Move",&PyViewerBase::ViewerMove)
+            .def("SetTitle",&PyViewerBase::ViewerSetTitle)
+            .def("LoadModel",&PyViewerBase::LoadModel)
+            .def("RegisterCallback",&PyViewerBase::RegisterCallback)
+            .def("EnvironmentSync",&PyViewerBase::EnvironmentSync)
+            .def("SetCamera",&PyViewerBase::SetCamera,args("transform"))
+            .def("SetCameraLookAt",&PyViewerBase::SetCameraLookAt,args("lookat","pos","up"))
+            .def("GetCameraTransform",&PyViewerBase::GetCameraTransform)
+            .def("GetCameraImage",&PyViewerBase::GetCameraImage,args("width","height","transform","K"))
             ;
 
-        enum_<RaveViewerBase::ViewerEvents>("ViewerEvents")
-            .value("ItemSelection",RaveViewerBase::VE_ItemSelection)
+        enum_<ViewerBase::ViewerEvents>("Events")
+            .value("ItemSelection",ViewerBase::VE_ItemSelection)
             ;
     }
 

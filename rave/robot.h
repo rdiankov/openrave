@@ -23,14 +23,13 @@
 
 namespace OpenRAVE {
 
-/** \brief A robot is a kinematic body that has attached manipulators, sensors, and controllers.
-    
+/** \brief <b>[interface]</b> A robot is a kinematic body that has attached manipulators, sensors, and controllers. See \ref arch_robot.    
     \ingroup interfaces
 */
 class RAVE_API RobotBase : public KinBody
 {
 public:
-    /// handles manipulators of the robot (usually 1 dim)
+    /// \brief Defines a chain of joints for an arm and set of joints for a gripper. Simplifies operating with them.
     class RAVE_API Manipulator : public boost::enable_shared_from_this<Manipulator>
     {
         Manipulator(RobotBasePtr probot);
@@ -157,6 +156,7 @@ public:
     typedef boost::shared_ptr<Manipulator const> ManipulatorConstPtr;
     typedef boost::weak_ptr<Manipulator> ManipulatorWeakPtr;
 
+    /// \brief Attaches a sensor to a link on the robot.
     class RAVE_API AttachedSensor : public boost::enable_shared_from_this<AttachedSensor>
     {
     public:
@@ -204,7 +204,7 @@ public:
     typedef boost::shared_ptr<AttachedSensor> AttachedSensorPtr;
     typedef boost::shared_ptr<AttachedSensor const> AttachedSensorConstPtr;
 
-    /// The information of a currently grabbed body.
+    /// \brief The information of a currently grabbed body.
     struct RAVE_API Grabbed
     {
         KinBodyWeakPtr pbody; ///< the grabbed body
@@ -214,7 +214,7 @@ public:
     };
     typedef Grabbed GRABBED RAVE_DEPRECATED;
     
-    /// Helper class derived from KinBodyStateSaver to additionaly save robot information.
+    /// \brief Helper class derived from KinBodyStateSaver to additionaly save robot information.
     class RAVE_API RobotStateSaver : public KinBodyStateSaver
     {
     public:
@@ -231,12 +231,12 @@ public:
 
     virtual ~RobotBase();
 
-    /// return the static interface type this class points to (used for safe casting)
+    /// \brief Return the static interface type this class points to (used for safe casting).
     static inline InterfaceType GetInterfaceTypeStatic() { return PT_Robot; }
     
     virtual void Destroy();
 
-    /// Build the robot from a file
+    /// \brief Build the robot from a file.
     virtual bool InitFromFile(const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts);
     virtual bool InitFromData(const std::string& data, const std::list<std::pair<std::string,std::string> >& atts);
 

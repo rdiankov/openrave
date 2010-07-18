@@ -46,7 +46,7 @@
 class RaveDatabase : public boost::enable_shared_from_this<RaveDatabase>
 {
 public:
-    class Plugin
+    class Plugin : public boost::enable_shared_from_this<Plugin>
     {
     public:
         Plugin(boost::shared_ptr<RaveDatabase> pdatabase) : _pdatabase(pdatabase), plibrary(NULL), pfnCreate(NULL), pfnCreateNew(NULL), pfnGetPluginAttributes(NULL), pfnGetPluginAttributesNew(NULL), pfnDestroyPlugin(NULL), _bShutdown(false) {}
@@ -73,9 +73,10 @@ public:
             pfnDestroyPlugin = NULL;
             pfnGetPluginAttributes = NULL;
             pfnGetPluginAttributesNew = NULL;
+            _bShutdown = true;
         }
 
-        virtual bool IsValid() { return !_bShutdown&&!!plibrary; }
+        virtual bool IsValid() { return !_bShutdown; }
 
         const string& GetName() const { return ppluginname; }
         bool GetInfo(PLUGININFO& info) {
@@ -161,12 +162,14 @@ public:
         /// Check that name is actually supported.
         bool hasInterface(InterfaceType type, const string& name)
         {
+            if( name.size() == 0 )
+                return false;
             std::map<InterfaceType, std::vector<std::string> >::iterator itregisterednames = _infocached.interfacenames.find(type);
             if( itregisterednames == _infocached.interfacenames.end() ) {
                 return false;
             }
             FOREACH(it,itregisterednames->second) {
-                if( name.size() >= it->size() && strnicmp(&name[0],&(*it)[0],it->size()) == 0 ) {
+                if( name.size() >= it->size() && strnicmp(&name[0],it->c_str(),it->size()) == 0 ) {
                     return true;
                 }
             }
@@ -179,9 +182,9 @@ public:
                 return InterfaceBasePtr();
             }
 
-//            if( !hasInterface(type,name) ) {
-//                return InterfaceBasePtr();
-//            }
+            if( !hasInterface(type,name) ) {
+                return InterfaceBasePtr();
+            }
             
             try {
                 if( !Load_CreateInterfaceGlobal() ) {
@@ -226,6 +229,7 @@ public:
             // first test the library before locking
             if( plibrary == NULL ) {
                 boost::mutex::scoped_lock lock(_mutex);
+                _pdatabase.lock()->_AddToLoader(shared_from_this());
                 do {
                     if( plibrary ) {
                         return;
@@ -287,7 +291,7 @@ public:
     PhysicsEngineBasePtr CreatePhysicsEngine(EnvironmentBasePtr penv, const std::string& pname) { return RaveInterfaceCast<PhysicsEngineBase>(Create(penv, PT_PhysicsEngine, pname)); }
     SensorBasePtr CreateSensor(EnvironmentBasePtr penv, const std::string& pname) { return RaveInterfaceCast<SensorBase>(Create(penv, PT_Sensor, pname)); }
     CollisionCheckerBasePtr CreateCollisionChecker(EnvironmentBasePtr penv, const std::string& pname) { return RaveInterfaceCast<CollisionCheckerBase>(Create(penv, PT_CollisionChecker, pname)); }
-    RaveViewerBasePtr CreateViewer(EnvironmentBasePtr penv, const std::string& pname) { return RaveInterfaceCast<RaveViewerBase>(Create(penv, PT_Viewer, pname)); }
+    ViewerBasePtr CreateViewer(EnvironmentBasePtr penv, const std::string& pname) { return RaveInterfaceCast<ViewerBase>(Create(penv, PT_Viewer, pname)); }
 
     /// Destroy all plugins and directories
     virtual void Destroy()
@@ -556,10 +560,7 @@ protected:
             // have confirmed that plugin is ok, so reload with no-lazy loading
             p->plibrary = NULL; // NOTE: for some reason, closing the lazy loaded library can make the system crash, so instead keep the pointer around, but create a new one with RTLD_NOW
             p->Destroy();
-            CleanupUnusedLibraries();
-            boost::mutex::scoped_lock lock(_mutexPluginLoader);
-            _listPluginsToLoad.push_back(p);
-            _condLoaderHasWork.notify_all();
+            p->_bShutdown = false;
         }
         
         return p;
@@ -641,6 +642,13 @@ protected:
         }
     }
 
+    void _AddToLoader(PluginPtr p)
+    {
+        boost::mutex::scoped_lock lock(_mutexPluginLoader);
+        _listPluginsToLoad.push_back(p);
+        _condLoaderHasWork.notify_all();
+    }
+    
     void _PluginLoaderThread()
     {
         while(!_bShutdown) {

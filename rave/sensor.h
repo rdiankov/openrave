@@ -22,13 +22,8 @@
 
 namespace OpenRAVE {
 
-/** \brief A sensor measures physical properties from the environment.
-     
+/** \brief <b>[interface]</b> A sensor measures physical properties from the environment. See \ref arch_sensor.     
   \ingroup interfaces
-  A sensor measures physical properties from the environment and converts them
-  to data. Each sensor is associated with a particular position in space, has a geometry with
-  properties defining the type of sensor, and can be queried for sensor data. Available sensor types
-  are specified by \ref SensorType.
 */
 class RAVE_API SensorBase : public InterfaceBase
 {

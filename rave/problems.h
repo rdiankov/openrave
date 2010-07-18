@@ -22,13 +22,8 @@
 
 namespace OpenRAVE {
 
-/** \brief A loadable module of user code meant to solve a specific problem in robotics.
-
+/** \brief <b>[interface]</b> A loadable module of user code meant to solve a specific problem in robotics. See \ref arch_problem.
     \ingroup interfaces
-    Base class for problem instances the user might want to instantiate. A problem instance
-    registers itself with OpenRAVE's SimulateStep calls and can accept commands from the server or
-    other plugins via SendCommand. A problem instance stops receiving commands when it is
-    destroyed. Problems are an easy way for developers to run and test their own code.
 */
 class RAVE_API ProblemInstance : public InterfaceBase
 {

@@ -23,7 +23,7 @@
 #include <boost/filesystem/operations.hpp>
 #endif
 
-#define GRAPH_DELETER boost::bind(&Environment::_CloseGraphCallback,boost::static_pointer_cast<Environment>(shared_from_this()),RaveViewerBaseWeakPtr(_pCurrentViewer),_1)
+#define GRAPH_DELETER boost::bind(&Environment::_CloseGraphCallback,boost::static_pointer_cast<Environment>(shared_from_this()),ViewerBaseWeakPtr(_pCurrentViewer),_1)
 
 #define CHECK_INTERFACE(pinterface) { \
         if( (pinterface)->GetEnv() != shared_from_this() ) \
@@ -122,7 +122,7 @@ class Environment : public EnvironmentBase
         if( !_pCurrentChecker )
             _pCurrentChecker.reset(new DummyCollisionChecker(shared_from_this()));
         if( !_pCurrentViewer )
-            _pCurrentViewer.reset(new DummyRaveViewer(shared_from_this()));
+            _pCurrentViewer.reset(new DummyViewer(shared_from_this()));
         if( !_pPhysicsEngine )
             _pPhysicsEngine.reset(new DummyPhysicsEngine(shared_from_this()));
 
@@ -370,7 +370,7 @@ class Environment : public EnvironmentBase
     virtual PhysicsEngineBasePtr CreatePhysicsEngine(const std::string& pname) { return _pdatabase->CreatePhysicsEngine(shared_from_this(),pname); }
     virtual SensorBasePtr CreateSensor(const std::string& pname) { return _pdatabase->CreateSensor(shared_from_this(),pname); }
     virtual CollisionCheckerBasePtr CreateCollisionChecker(const std::string& pname) { return _pdatabase->CreateCollisionChecker(shared_from_this(),pname); }
-    virtual RaveViewerBasePtr CreateViewer(const std::string& pname) { return _pdatabase->CreateViewer(shared_from_this(),pname); }
+    virtual ViewerBasePtr CreateViewer(const std::string& pname) { return _pdatabase->CreateViewer(shared_from_this(),pname); }
 
     virtual void OwnInterface(InterfaceBasePtr pinterface)
     {
@@ -1058,7 +1058,7 @@ class Environment : public EnvironmentBase
         return OpenRAVEXMLParser::RaveParseXMLData(preader, pdata);
     }
 
-    virtual bool AttachViewer(RaveViewerBasePtr pnewviewer)
+    virtual bool AttachViewer(ViewerBasePtr pnewviewer)
     {
         if( _pCurrentViewer == pnewviewer )
             return true;
@@ -1069,14 +1069,14 @@ class Environment : public EnvironmentBase
         
         _pCurrentViewer = pnewviewer;
         if( !_pCurrentViewer )
-            _pCurrentViewer.reset(new DummyRaveViewer(shared_from_this()));
+            _pCurrentViewer.reset(new DummyViewer(shared_from_this()));
 
         if( _pCurrentViewer->GetEnv() != shared_from_this() )
             throw openrave_exception("Viewer needs to be created by the current environment");
         return true;
     }
 
-    virtual RaveViewerBasePtr GetViewer() const
+    virtual ViewerBasePtr GetViewer() const
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         return _pCurrentViewer;
@@ -1126,9 +1126,9 @@ class Environment : public EnvironmentBase
     {
         return GraphHandlePtr(_pCurrentViewer->drawtrimesh(ppoints, stride, pIndices, numTriangles, colors), GRAPH_DELETER);
     }
-    virtual void _CloseGraphCallback(RaveViewerBaseWeakPtr wviewer, void* handle)
+    virtual void _CloseGraphCallback(ViewerBaseWeakPtr wviewer, void* handle)
     {
-        RaveViewerBasePtr viewer = wviewer.lock();
+        ViewerBasePtr viewer = wviewer.lock();
         if( !!viewer )
             viewer->closegraph(handle);
     }
@@ -1205,13 +1205,13 @@ protected:
     virtual void Clone(boost::shared_ptr<Environment const> r, int options)
     {
         Destroy();
-        AttachViewer(RaveViewerBasePtr());
+        AttachViewer(ViewerBasePtr());
         SetCollisionChecker(CollisionCheckerBasePtr());
         SetPhysicsEngine(PhysicsEngineBasePtr());
 
         _nBodiesModifiedStamp = r->_nBodiesModifiedStamp;
         _homedirectory = r->_homedirectory;
-        _pCurrentViewer.reset(new DummyRaveViewer(shared_from_this()));
+        _pCurrentViewer.reset(new DummyViewer(shared_from_this()));
         _fDeltaSimTime = r->_fDeltaSimTime;
         _nCurSimTime = 0;
         _nSimStartTime = GetMicroTime();
@@ -1473,14 +1473,14 @@ protected:
     };
 
     /// Base class for the graphics and gui engine. Derive a class called
-    /// RaveViewer for anything more specific
-    class DummyRaveViewer : public RaveViewerBase
+    /// Viewer for anything more specific
+    class DummyViewer : public ViewerBase
     {
     public:
-        DummyRaveViewer(EnvironmentBasePtr penv) : RaveViewerBase(penv) {
+        DummyViewer(EnvironmentBasePtr penv) : ViewerBase(penv) {
             _bQuitMainLoop = true;
         }
-        virtual ~DummyRaveViewer() {}
+        virtual ~DummyViewer() {}
 
         //void   AddItem(Item *pItem, bool bVisibility = false);
         /// reset the camera depending on its mode
@@ -1667,7 +1667,7 @@ protected:
 
     CollisionCheckerBasePtr _pCurrentChecker;
     PhysicsEngineBasePtr _pPhysicsEngine;
-    RaveViewerBasePtr _pCurrentViewer;
+    ViewerBasePtr _pCurrentViewer;
     
     int _nEnvironmentIndex;               ///< next network index
     std::map<int, KinBodyWeakPtr> _mapBodies; ///< a map of all the bodies in the environment. Controlled through the KinBody constructor and destructors

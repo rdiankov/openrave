@@ -21,12 +21,8 @@
 
 namespace OpenRAVE {
 
-/** \brief Abstract base class to encapsulate a local controller.
-    
+/** \brief <b>[interface]</b> Abstract base class to encapsulate a local controller. See \ref arch_controller.
     \ingroup interfaces
-    All commands given to the robot are first filtered through here, then translated to joint
-    commands. The default controller takes angles. Different controllers have different path inputs (ie:
-    a robot walking on a floor might just have x,y,angle)
 */
 class RAVE_API ControllerBase : public InterfaceBase
 {

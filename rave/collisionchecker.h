@@ -73,8 +73,7 @@ public:
 
 typedef CollisionReport COLLISIONREPORT RAVE_DEPRECATED;
 
-/** \brief Responsible for all collision checking queries of the environment.
-    
+/** \brief <b>[interface]</b> Responsible for all collision checking queries of the environment. See \ref arch_collisionchecker.    
     \ingroup interfaces
 */
 class RAVE_API CollisionCheckerBase : public InterfaceBase

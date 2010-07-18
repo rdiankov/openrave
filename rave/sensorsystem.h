@@ -22,11 +22,8 @@
 
 namespace OpenRAVE {
 
-/** \brief Used to manage the creation and destruction of bodies.
-
+/** \brief <b>[interface]</b> Used to manage the creation and destruction of bodies. See \ref arch_sensorsystem.
     \ingroup interfaces
-    New objects can be created, existing objects can be updated. Every managed
-    object should set the kinbody's Manager pointer
 */
 class RAVE_API SensorSystemBase : public InterfaceBase
 {

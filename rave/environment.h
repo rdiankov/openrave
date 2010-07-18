@@ -24,11 +24,7 @@ namespace OpenRAVE {
 
 typedef boost::recursive_try_mutex EnvironmentMutex;
 
-/** \brief Maintains a world state, which serves as the gateway to all functions offered through %OpenRAVE.
-
-    Whenever objects in the environment are written or read, the user has to \b lock the environment
-    mutex mutex GetMutex(). This prevents any other process from modifying the enviornment while the
-    user is working.
+/** \brief Maintains a world state, which serves as the gateway to all functions offered through %OpenRAVE. See \ref arch_environment.
 */
 class EnvironmentBase : public boost::enable_shared_from_this<EnvironmentBase>
 {
@@ -45,7 +41,7 @@ public:
     virtual void Reset()=0;
 
     /// \name Interface Creation and Plugin Management
-    /// \anchor plugin_functionality
+    /// \anchor env_plugin_functionality
     //@{
     virtual InterfaceBasePtr CreateInterface(InterfaceType type,const std::string& interfacename)=0;
     virtual RobotBasePtr CreateRobot(const std::string& name="")=0;
@@ -57,7 +53,7 @@ public:
     virtual PhysicsEngineBasePtr CreatePhysicsEngine(const std::string& name)=0;
     virtual SensorBasePtr CreateSensor(const std::string& name)=0;
     virtual CollisionCheckerBasePtr CreateCollisionChecker(const std::string& name)=0;
-    virtual RaveViewerBasePtr CreateViewer(const std::string& name)=0;
+    virtual ViewerBasePtr CreateViewer(const std::string& name)=0;
     
     /// \return an empty KinBody instance, deallocate with delete, physics needs to be locked
     virtual KinBodyPtr CreateKinBody(const std::string& name="") = 0;
@@ -99,7 +95,8 @@ public:
     virtual EnvironmentBasePtr CloneSelf(int options) = 0;
 
     /// Each function takes an optional pointer to a CollisionReport structure and returns true if collision occurs.
-    /// @name Collision specific functions.
+    /// \name Collision specific functions.
+    /// \anchor env_collision_checking
     //@{
     /// set the global environment collision checker
     virtual bool SetCollisionChecker(CollisionCheckerBasePtr pchecker)=0;
@@ -148,7 +145,7 @@ public:
     virtual void GetRegisteredCollisionCallbacks(std::list<CollisionCallbackFn>&) const = 0;
     //@}
 
-    /// @name Physics and Simulation
+    /// \name Physics and Simulation
     //@{
     /// set the physics engine, disabled by default
     /// \param the engine to set, if NULL, environment sets an dummy physics engine
@@ -173,7 +170,8 @@ public:
     virtual uint64_t GetSimulationTime() = 0;
     //@}
 
-    /// @name XML Parsing, File Loading
+    /// \name XML Parsing, File Loading
+    /// \anchor env_loading
     //@{ 
     /// Loads a scene from an XML file, environment is locked automatically making this method thread-safe
     virtual bool Load(const std::string& filename) = 0;
@@ -240,7 +238,8 @@ public:
     virtual bool ParseXMLData(BaseXMLReaderPtr preader, const std::string& data) = 0;
     //@}
 
-    /// @name Object Setting and Querying
+    /// \name Object Setting and Querying
+    /// \anchor env_objects
     //@{
     
     /// \brief Add a body to the environment.
@@ -322,10 +321,11 @@ public:
     /// \return the mutex used to control the lock.
     virtual EnvironmentMutex& GetMutex() const = 0;
 
-    virtual bool AttachViewer(RaveViewerBasePtr pnewviewer) = 0;
-    virtual RaveViewerBasePtr GetViewer() const = 0;
+    virtual bool AttachViewer(ViewerBasePtr pnewviewer) = 0;
+    virtual ViewerBasePtr GetViewer() const = 0;
 
     /// \name 3D plotting methods. <b>[multi-thread safe]</b>
+    /// \anchor env_plotting
     //@{
 
     /// Handle holding the plot. The plot will continue to be drawn as long as a reference to this handle is held.

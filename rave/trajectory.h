@@ -23,32 +23,8 @@
 
 namespace OpenRAVE {
 
-/** \brief Encapsulate a time-parameterized trajectories of robot configurations.
-
+/** \brief <b>[interface]</b> Encapsulate a time-parameterized trajectories of robot configurations. See \ref arch_trajectory.
     \ingroup interfaces
-    A trajectory is a path between a set of configuration space points. It
-    performs smoothing and filtering on this path.
-
-    \b Exporting options:
-    The file format is:
-    \verbatim
-    #points #dof #options
-    [timestamp 1] [dof joint values 1] [transform 1] [dof joint velocities 1] [linear and angular velocity 1]
-    [timestamp 2] [dof joint values 2] [transform 2] [dof joint velocities 2] [linear and angular velocity 2]
-    ...
-    \endverbatim
-
-    Export format:
-    - linear velocity - xyz velocity
-    - angular velocity - axis * angular_speed
-    - transform - outputs quaternion first then translation
-
-    An example file that contains 2 points with timestamps for a 3 dof robot is:
-    \verbatim
-    2 3 4
-    0.5 0 0   0
-    1.5 1 2.2 3.3
-    \endverbatim
 */
 class RAVE_API TrajectoryBase : public InterfaceBase
 {

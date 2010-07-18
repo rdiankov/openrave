@@ -38,7 +38,7 @@
 #include <qgl.h>
 #endif
 
-//const QMetaObject RaveViewer::staticMetaObject;
+//const QMetaObject Viewer::staticMetaObject;
 const float TIMER_SENSOR_INTERVAL = (1.0f/60.0f);
 
 #define VIDEO_WIDTH 640
@@ -72,7 +72,7 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
 #else
       : QMainWindow(NULL, "OpenRAVE", Qt::WType_TopLevel),
 #endif
-      RaveViewerBase(penv), _ivOffscreen(SbViewportRegion(VIDEO_WIDTH, VIDEO_HEIGHT))
+      ViewerBase(penv), _ivOffscreen(SbViewportRegion(VIDEO_WIDTH, VIDEO_HEIGHT))
 {
 #if QT_VERSION >= 0x040000 // check for qt4
     setWindowTitle("OpenRAVE");

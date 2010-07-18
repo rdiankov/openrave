@@ -35,40 +35,41 @@ low-level control, message protocols, and perception systems.
 
 \~english  \section main_started Getting Started
 \~japanese \section main_started はじめに
+\~
 - \subpage installation
 - \subpage p_basic_usage
 - \subpage conventions
 - \subpage environment_variables
 
 \~english  \section main_architecture Architecture
-\~japanese \section main_architecture OpenRAVEの構造
+\~japanese \section main_architecture 構造
+\~
 - \subpage architecture_concepts
+- \subpage interface_concepts
 - \subpage writing_plugins
 - \subpage plotting3d
 
 \~english  \section main_system Components
-\~japanese \section main_system OpenRAVEの構成要素
+\~japanese \section main_system 構成要素
+\~
 - \subpage database_generation
 - <a href="http://openrave.programmingvision.com/index.php/Started:Formats">XML File Format</a>
 - Scripting
  - \openravepy{Python Scripting with <b>openravepy </b>}
  - \octave{Octave/MATLAB Scripting}
 
-\~english  \section main_reference Reference
+\~english \section main_reference Reference
 \~japanese \section main_reference 参考資料
+\~
 - \subpage interfaces
 - \subpage executables
 - \subpage geometric_primitives
 - \subpage affine_math
 - \subpage cpp_examples
 
-\~english
-Documentation in Other Languages: \japanesedoc
-
-\~japanese
-他言語ドキュメント: \englishdoc
+\~english Documentation in Other Languages: \japanesedoc
+\~japanese 他言語ドキュメント: \englishdoc
 \~
-
  */
 
 /** 
@@ -243,73 +244,6 @@ For now see <a href="http://openrave.programmingvision.com/index.php/Main_Page#R
 
 */
 
-/** \page architecture_concepts Introduction to the OpenRAVE Architecture 
-
-\section fundamental_structure Fundamental Structure
-
-\image html openrave_architecture.jpg
-\image latex openrave_architecture.pdf "%OpenRAVE architecture" width=15cm
-
-%OpenRAVE is divided in four main components as shown in the above figure:
-
-- <b>Core Layer</b> The core is composed of a set of \ref interfaces defining how plugins share
-information, and it provides an environment interface that maintains a world state, which serves as
-the gateway to all functions offered through %OpenRAVE. The global openrave state manages the loaded
-plugins, multiple independent environments, and logging. On the other hand, the \ref
-OpenRAVE::EnvironmentBase "environment" combines collision checkers, viewers, physics engines, the
-kinematic world, and all its interfaces into a coherent robotics world state.
-
-- <b>Plugins Layer</b> %OpenRAVE is designed as a plugin-based architecture where a plugin offers
-implementations of the \ref interfaces that are loaded dynamically into the \ref
-OpenRAVE::EnvironmentBase "environment". Plugins can be linked with other robotics libraries
-allowing OpenRAVE to expand its functionality, or it can offer OpenRAVE services to another robotics
-system. A plugin needs to export several functions that allow %OpenRAVE to gather information about
-what functions it provides and create its interfaces. During startup, %OpenRAVE parses the \ref
-environment_variables "OPENRAVE_PLUGINS" environment variable and loads all the shared objects it
-finds. If the shared object exports the correct functions, the plugin and its interfaces are
-registered with the %OpenRAVE run-time database, and the rest of the environment loading
-occurs. Plugins themselves can query functionality offer by other plugins through the environment's
-\ref plugin_functionality "interface querying functions".
- - Refer to \ref writing_plugins for a tutorial on how to build and
-compile plugins.
-
-- <b>Scripting Layer</b> %OpenRAVE provides scripting environments for \openravepy{Python} and
-\octave{Octave/Matlab}. Python communicates with the core layer directly with in-memory calls,
-making it extremely fast. On the other hand, the Octave/Matlab scripting protocol send commands
-through TCP/IP, with a plugin offering a text server on the %OpenRAVE core side. Scripting allows
-real-time modifications to any aspect of the environment without requiring shutdown, making it ideal
-to testing new algorithms. The Python scripting is so powerful, that most of the %OpenRAVE examples
-and demo code are offered through it. In fact, users should treat the scripting language as an
-integral part of the entire system, not as a replacement to the C++ API.
-
-- <b>Robot Database Layer</b> Kinematically and dynamically analyze and the robot and its task and
-  store such information for later re-use.
-
-
-All the base planners and problem interfaces should be applicable to any robot structure you can
-throw at it. One of OpenRAVE's strongest points when compared with other planning packages is the
-idea of being able to apply algorithms in openrave to any robot, with very little
-modification. Recently, a planning database structure has been introduced that allows computation of
-properties like convex hull decomposition, grasp sets, reachability maps, analytic inverse
-kinematics, etc. If the robot is defined properly, then all these functions should work out of the
-box.
-
-It is possible to send a \b help command to every \ref OpenRAVE::InterfaceBase "interface" to get a
-description of the commands it supports and what they do.
-
-
-\section environment Environments
-
-- Locking Environments
-- Plugin Management
-- Cloning
-
-One of the strengths of %OpenRAVE is in allowing multiple \ref OpenRAVE::EnvironmentBase
-"environments" work simultaneously in the same process.
-
-*/
-
-
 /** 
 \page writing_plugins Writing Plugins and Interfaces
 
@@ -318,15 +252,19 @@ what interfaces it has. When a plugin is first loaded, its \ref OpenRAVEGetPlugi
 will be called in order so the %OpenRAVE core can register the names of its provided
 interfaces. 
 
-\section writing_plugins_hash Loading Plugins Safety
+\section writing_plugins_hash Loading Plugins
 
 Many mechanisms have been put in place to prevent mismatching/old plugins to be loaded by the
-core. In order to protect plugins compiled with a different version, %OpenRAVE creates a hash from
-each interface class definition using \ref cpp-gen-md5 and stores them in \ref
-rave/classhashes.h. The interface hash can be retrieved using \ref OpenRAVE::RaveGetInterfaceHash. For an
-interface to be loaded successfully, the plugin has to check that the hash the core is using matches
-the hash compiled with the plugin. These types of checks ensure that stale plugins will never be
-loaded; helper functions are offered in \ref rave/plugin.h, which all plugin authors should use.
+core. Using interfaces from stale plugins can lead to unexpected crashes that are very difficult to
+debug. It is possible to automatically come up with a unique hash of the interface functions and
+members by running each interface through a C++ lexer and then creating a 128bit unique md5 hash.
+In order to protect plugins compiled with a different version, %OpenRAVE creates a md5 hash from
+each interface class definition using \ref cpp-gen-md5 and stores them in \ref rave/classhashes.h.
+
+The interface hash can be retrieved using \ref OpenRAVE::RaveGetInterfaceHash. For an interface to
+be loaded successfully, the plugin has to check that the hash the core is using matches the hash
+compiled with the plugin. These types of checks ensure that stale plugins will never be loaded;
+helper functions are offered in \ref rave/plugin.h, which all plugin authors should use.
 
 \section writing_plugins_example Providing a Simple Interface
 
@@ -533,13 +471,7 @@ make
 
 /** \defgroup interfaces Base Interface Classes
 
-Interfaces are provided by plugins and are usually dynamically loaded into %OpenRAVE. All interfaces
-are derived from the \ref OpenRAVE::InterfaceBase class and contain basic information such as the type, the
-owning \ref OpenRAVE::EnvironmentBase "environment", setting user data, cloning, and allowing custom string commands to be sent.
-
-Every instantiated interface belongs to only one \ref OpenRAVE::EnvironmentBase
-"environment". Interfaces can be cloned using \ref OpenRAVE::InterfaceBase::Clone.
-
+A list of the %OpenRAVE interface templates. See \ref arch_interface for an explanation.
  */
 
 /** \defgroup geometric_primitives Geometric Primitives

@@ -37,7 +37,7 @@
 #include "qtcoin.h"
 
 /// Render and GUI engine. Can be used to simulate a camera sensor
-class QtCoinViewer : public QMainWindow, public RaveViewerBase
+class QtCoinViewer : public QMainWindow, public ViewerBase
 {
     Q_OBJECT
 

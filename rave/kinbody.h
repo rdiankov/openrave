@@ -22,8 +22,7 @@
 
 namespace OpenRAVE {
 
-/** \brief A kinematic body of links and joints
-    
+/** \brief <b>[interface]</b> A kinematic body of links and joints. See \ref arch_kinbody.
     \ingroup interfaces
 */
 class RAVE_API KinBody : public InterfaceBase
@@ -45,8 +44,7 @@ public:
         Prop_SensorPlacement = 0x00040000, ///< [robot only] relative sensor placement of sensors
     };
 
-    /** \brief A rigid body holding all its collision and rendering data.
-     */
+    // \brief A rigid body holding all its collision and rendering data.
     class RAVE_API Link : public boost::enable_shared_from_this<Link>
     {
     public:
@@ -259,7 +257,7 @@ public:
     typedef boost::shared_ptr<Link const> LinkConstPtr;
     typedef boost::weak_ptr<Link> LinkWeakPtr;
 
-    /// Information about a joint
+    /// \brief Information about a joint that controls the relationship between two links.
     class RAVE_API Joint : public boost::enable_shared_from_this<Joint>
     {
     public:
@@ -404,8 +402,7 @@ public:
     typedef boost::shared_ptr<Joint> JointPtr;
     typedef boost::shared_ptr<Joint const> JointConstPtr;
 
-    /// Holds the state of the current body that is published in a thread safe way
-    /// from the environment without requiring locking the environment.
+    /// \brief Stores the state of the current body that is published in a thread safe way from the environment without requiring locking the environment.
     class BodyState
     {
     public:
@@ -421,7 +418,7 @@ public:
     typedef boost::shared_ptr<BodyState> BodyStatePtr;
     typedef boost::shared_ptr<BodyState const> BodyStateConstPtr;
 
-    /// Access point of the sensor system that manages the body.
+    /// \brief Access point of the sensor system that manages the body.
     class RAVE_API ManageData : public boost::enable_shared_from_this<ManageData>
     {
     public:
@@ -470,7 +467,8 @@ public:
         Save_GrabbedBodies=0x00040000, ///< [robot only], saves the grabbed state of the bodies. This does not affect the configuraiton of those bodies.
     };
 
-    /// Helper class to save the entire kinbody state
+    /// \brief Helper class to save and restore the entire kinbody state.
+    ///
     /// Options can be passed to the constructor in order to choose which parameters to save (see SaveParameters)
     class RAVE_API KinBodyStateSaver
     {

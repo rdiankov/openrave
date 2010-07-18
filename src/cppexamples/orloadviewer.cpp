@@ -29,7 +29,7 @@ using namespace std;
 
 void SetViewer(EnvironmentBasePtr penv, const string& viewername)
 {
-    RaveViewerBasePtr viewer = penv->CreateViewer(viewername);
+    ViewerBasePtr viewer = penv->CreateViewer(viewername);
     BOOST_ASSERT(!!viewer);
 
     // attach it to the environment:

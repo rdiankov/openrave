@@ -59,14 +59,8 @@ protected:
     Type _type;
 };
 
-/* \brief Base class for all Inverse Kinematic solvers.
-   
+/* \brief <b>[interface]</b> Base class for all Inverse Kinematic solvers. See \ref arch_iksolver.   
    \ingroup interfaces
-   Each IK solver is defined on a subset of joints of a Robot specified by the robot's manipulator.
-   Given the position in the 3D workspace that an end effector should go to, an IK solver will find
-   the joint configuration to take that end-effector there.  Because it is common for an IK solution
-   to have a null space, the IK solver give functionality to expose the free parameters to move the
-   joints in null space.
 */
 class RAVE_API IkSolverBase : public InterfaceBase
 {

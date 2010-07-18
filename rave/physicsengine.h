@@ -28,8 +28,7 @@ enum PhysicsEngineOptions
     PEO_SelfCollisions = 1, ///< if set, physics engine will use contact forces from self-collisions
 };
 
-/** \brief The physics engine interfaces supporting simulations and dynamics.
-    
+/** \brief <b>[interface]</b> The physics engine interfaces supporting simulations and dynamics. See \ref arch_physicsengine.    
     \ingroup interfaces
 */
 class RAVE_API PhysicsEngineBase : public InterfaceBase

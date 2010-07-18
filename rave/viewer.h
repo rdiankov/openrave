@@ -22,13 +22,10 @@
 
 namespace OpenRAVE {
 
-/** \brief Base class for the graphics and gui engine that renders the environment and provides visual sensor information.
-
+/** \brief <b>[interface]</b> Base class for the graphics and gui engine that renders the environment and provides visual sensor information.
     \ingroup interfaces
-
-    Viewer is responsible only for the environment it is attached to.
 */
-class RAVE_API RaveViewerBase : public InterfaceBase
+class RAVE_API ViewerBase : public InterfaceBase
 {
 public:
     enum ViewerEvents
@@ -38,8 +35,8 @@ public:
         VE_ItemSelection = 1,
     };
 
-    RaveViewerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Viewer, penv) {}
-    virtual ~RaveViewerBase() {}
+    ViewerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Viewer, penv) {}
+    virtual ~ViewerBase() {}
 
     /// return the static interface type this class points to (used for safe casting)
     static inline InterfaceType GetInterfaceTypeStatic() { return PT_Viewer; }
@@ -146,6 +143,11 @@ private:
 #endif
 #endif
 };
+
+typedef ViewerBase RaveViewerBase RAVE_DEPRECATED;
+typedef ViewerBasePtr RaveViewerBasePtr RAVE_DEPRECATED;
+typedef ViewerBaseConstPtr RaveViewerBaseConstPtr RAVE_DEPRECATED;
+typedef ViewerBaseWeakPtr RaveViewerBaseWeakPtr RAVE_DEPRECATED;
 
 } // end namespace OpenRAVE
 
