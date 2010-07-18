@@ -43,7 +43,8 @@ class InverseKinematicsModel(OpenRAVEModel):
         self.freeinc = None
         self.forceikfast = forceikfast
         self.ikfastproblem = self.env.CreateProblem('ikfast')
-        self.env.LoadProblem(self.ikfastproblem,'')
+        if self.ikfastproblem is not None:
+            self.env.LoadProblem(self.ikfastproblem,'')
     def  __del__(self):
         if self.ikfastproblem is not None:
             self.env.RemoveProblem(self.ikfastproblem)
