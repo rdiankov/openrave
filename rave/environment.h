@@ -324,14 +324,14 @@ public:
     virtual bool AttachViewer(ViewerBasePtr pnewviewer) = 0;
     virtual ViewerBasePtr GetViewer() const = 0;
 
-    /// \name 3D plotting methods. <b>[multi-thread safe]</b>
+    /// \name 3D plotting methods.
     /// \anchor env_plotting
     //@{
 
     /// Handle holding the plot. The plot will continue to be drawn as long as a reference to this handle is held.
     typedef boost::shared_ptr<void> GraphHandlePtr;
 
-    /// \brief Plot a point cloud
+    /// \brief Plot a point cloud with one color. <b>[multi-thread safe]</b>
     ///
     /// \param ppoints array of points
     /// \param numPoints number of points to plot
@@ -342,7 +342,9 @@ public:
     /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color = RaveVector<float>(1,0.5,0.5,1), int drawstyle = 0) = 0;
 
-    /// plots 3D points. Arguments same as plot3 with one color, except has an individual color for every point
+    /// \brief. Plots 3D points with individual colors. <b>[multi-thread safe]</b>
+    ///
+    /// Arguments same as plot3 with one color, except has an individual color for every point
     /// \param colors An array of rgb colors of size numPoints where each channel is in [0,1].
     ///               colors+(bhasalpha?4:3) points to the second color.
     /// \param stride stride in bytes to next point, ie: nextpoint = (float*)((char*)ppoints+stride)
@@ -351,44 +353,54 @@ public:
     /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle = 0, bool bhasalpha = false) = 0;
     
-    /// draws a series of connected lines
+    /// \brief Draws a series of connected lines with one color. <b>[multi-thread safe]</b>
+    ///
     /// \param stride stride in bytes to next point, ie: nextpoint = (float*)((char*)ppoints+stride)
     /// \param color the rgb color of the point. The last component of the color is used for alpha blending
     /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color = RaveVector<float>(1,0.5,0.5,1)) = 0;
 
+    /// \brief Draws a series of connected lines with individual colors. <b>[multi-thread safe]</b>
+    ///
     /// \param stride stride in bytes to next point, ie: nextpoint = (float*)((char*)ppoints+stride)
     /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors) = 0;
 
-    /// draws a list of individual lines, each specified by a succeeding pair of points
+    /// \brief Draws a list of individual lines, each specified by a succeeding pair of points. <b>[multi-thread safe]</b>
+    ///
     /// \param stride stride in bytes to next point, ie: nextpoint = (float*)((char*)ppoints+stride)
     /// \param color the rgb color of the point. The last component of the color is used for alpha blending.
     /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color = RaveVector<float>(1,0.5,0.5,1)) = 0;
 
+    /// \brief Draws a list of individual lines, each specified by a succeeding pair of points. <b>[multi-thread safe]</b>
+    ///
     /// \param stride stride in bytes to next point, ie: nextpoint = (float*)((char*)ppoints+stride)
     /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors) = 0;
 
-    /// draws an arrow p1 is start, p2 is finish
+    /// \brief Draws an arrow p1 is start, p2 is finish. <b>[multi-thread safe]</b>
+    ///
     /// \param color the rgb color of the point. The last component of the color is used for alpha blending.
     /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual GraphHandlePtr drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color = RaveVector<float>(1,0.5,0.5,1)) = 0;
     
-    /// draws a box
+    /// \brief Draws a box. <b>[multi-thread safe]</b>
+    ///
     /// extents are half the width, height, and depth of the box
     /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual GraphHandlePtr drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents) = 0;
 
-    /// draws a textured plane
+    /// \brief Draws a textured plane. <b>[multi-thread safe]</b>
+    ///
     /// \param tplane describes the center of the plane. the zaxis of this coordinate is the normal of the plane
     /// \param vextents the extents of the plane along the x and y directions (z is ignored)
     /// \param vtexture a 3D array specifying height x width x color (the color dimension can be 1, 3, or 4 (for alpha blending))
     /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual GraphHandlePtr drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture) = 0;
 
-    /// draws a triangle mesh, each vertices of each triangle should be counter-clockwise.
+    /// \brief Draws a triangle mesh, each vertices of each triangle should be counter-clockwise. <b>[multi-thread safe]</b>
+    ///
     /// \param ppoints - array of 3D points
     /// \param stride stride in bytes to next point, ie: nextpoint = (float*)((char*)ppoints+stride)
     /// \param pIndices If not NULL, zero-based indices into the points for every triangle. pIndices
@@ -400,7 +412,8 @@ public:
     virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors) = 0;
     //@}
 
-    /// returns the openrave home directory where settings, cache, and other files are stored.
+    /// \brief Returns the openrave home directory where settings, cache, and other files are stored.
+    ///
     /// On Linux/Unix systems, this is usually $HOME/.openrave, on Windows this is $HOMEPATH/.openrave
     virtual const std::string& GetHomeDirectory() const = 0;
 

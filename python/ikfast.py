@@ -1190,71 +1190,86 @@ class IKFastSolver(AutoReloader):
             var = self.Variable(freevar)
             self.freevarsubs += [(cos(var.var), var.cvar), (sin(var.var), var.svar)]
             self.freevars += [var.cvar,var.svar]
-        
-        #Tee = Tfirstleft.inv() * Tee_in * Tfirstright.inv()
-        # LinksAccumLeftInv[x] * Tee = LinksAccumRight[x]
-        # LinksAccumLeftInv[x] = InvLinks[x-1] * ... * InvLinks[0]
-        # LinksAccumRight[x] = Links[x]*Links[x+1]...*Links[-1]
-        LinksAccumLeftAll = [eye(4)]
-        LinksAccumLeftInvAll = [eye(4)]
-        LinksAccumRightAll = [eye(4)]
-        for i in range(len(Links)):
-            LinksAccumLeftAll.append(LinksAccumLeftAll[-1]*Links[i])
-            LinksAccumLeftInvAll.append(LinksInv[i]*LinksAccumLeftInvAll[-1])
-            LinksAccumRightAll.append(Links[len(Links)-i-1]*LinksAccumRightAll[-1])
-        LinksAccumRightAll.reverse()
-        
-        LinksAccumLeftAll = map(lambda T: self.affineSimplify(T), LinksAccumLeftAll)
-        LinksAccumLeftInvAll = map(lambda T: self.affineSimplify(T), LinksAccumLeftInvAll)
-        LinksAccumRightAll = map(lambda T: self.affineSimplify(T), LinksAccumRightAll)
-        
-        # create LinksAccumX indexed by joint indices
-        assert( len(LinksAccumLeftAll)%2 == 0 )
-        LinksAccumLeft = []
-        LinksAccumLeftInv = []
-        LinksAccumRight = []
-        for i in range(0,len(LinksAccumLeftAll),2)+[len(LinksAccumLeftAll)-1]:
-            LinksAccumLeft.append(LinksAccumLeftAll[i])
-            LinksAccumLeftInv.append(LinksAccumLeftInvAll[i])
-            LinksAccumRight.append(LinksAccumRightAll[i])
-        assert( len(LinksAccumLeft) == len(jointvars)+1 )
-        
-        # find last point that separates translation and rotation
-        lastsepindex = -1
-        for i in isolvejointvars:
-            testjoints = [j for j in jointvars[i:] if not any([j==jfree for jfree in freejointvars])]
-            if not any([LinksAccumRight[i][j,3].has_any_symbols(*testjoints) for j in range(0,3)]):
-                lastsepindex = i
-                break
-        
-        if lastsepindex < 0:
-            print 'failed to find joint index to separate translation and rotation'
-            return None
-        
-        # find a set of joints starting from the last that can solve for a full 3D rotation
-        rotindex = min(len(jointvars)-3,lastsepindex)
-        while rotindex>=0:
-            # check if any entries are constant
-            if all([not LinksAccumRight[rotindex][i,j].is_zero for i in range(3) for j in range(3)]):
-                break
-            rotindex = rotindex-1
 
-        if rotindex < 0:
-            print 'Current joints cannot solve for a full 3D rotation'
+        inverted = False
+        while True:
+            #Tee = Tfirstleft.inv() * Tee_in * Tfirstright.inv()
+            # LinksAccumLeftInv[x] * Tee = LinksAccumRight[x]
+            # LinksAccumLeftInv[x] = InvLinks[x-1] * ... * InvLinks[0]
+            # LinksAccumRight[x] = Links[x]*Links[x+1]...*Links[-1]
+            LinksAccumLeftAll = [eye(4)]
+            LinksAccumLeftInvAll = [eye(4)]
+            LinksAccumRightAll = [eye(4)]
+            for i in range(len(Links)):
+                LinksAccumLeftAll.append(LinksAccumLeftAll[-1]*Links[i])
+                LinksAccumLeftInvAll.append(LinksInv[i]*LinksAccumLeftInvAll[-1])
+                LinksAccumRightAll.append(Links[len(Links)-i-1]*LinksAccumRightAll[-1])
+            LinksAccumRightAll.reverse()
 
-        # add all but first 3 vars to free parameters
-        rotvars = []
-        transvars = []
-        for svar in solvejointvars:
-            if any([LinksAccumRight[rotindex][i,j].has_any_symbols(svar) for i in range(3) for j in range(3)]):
-                rotvars.append(svar)
-            else:
-                transvars.append(svar)
-        #transvars = solvejointvars[0:min(3,lastsepindex)]
+            LinksAccumLeftAll = map(lambda T: self.affineSimplify(T), LinksAccumLeftAll)
+            LinksAccumLeftInvAll = map(lambda T: self.affineSimplify(T), LinksAccumLeftInvAll)
+            LinksAccumRightAll = map(lambda T: self.affineSimplify(T), LinksAccumRightAll)
 
-        if len(rotvars) != 3 or len(transvars) != 3:
-            print 'rotvars: ',rotvars,' transvars: ',transvars,' not 3 dims'
-            return None
+            # create LinksAccumX indexed by joint indices
+            assert( len(LinksAccumLeftAll)%2 == 0 )
+            LinksAccumLeft = []
+            LinksAccumLeftInv = []
+            LinksAccumRight = []
+            for i in range(0,len(LinksAccumLeftAll),2)+[len(LinksAccumLeftAll)-1]:
+                LinksAccumLeft.append(LinksAccumLeftAll[i])
+                LinksAccumLeftInv.append(LinksAccumLeftInvAll[i])
+                LinksAccumRight.append(LinksAccumRightAll[i])
+            assert( len(LinksAccumLeft) == len(jointvars)+1 )
+
+            # find last point that separates translation and rotation
+            lastsepindex = -1
+            for i in isolvejointvars:
+                testjoints = [j for j in jointvars[i:] if not any([j==jfree for jfree in freejointvars])]
+                if not any([LinksAccumRight[i][j,3].has_any_symbols(*testjoints) for j in range(0,3)]):
+                    lastsepindex = i
+                    break
+
+            if lastsepindex < 0:
+                if inverted:
+                    print 'failed to find joint index to separate translation and rotation'
+                    return None
+                print "Taking the inverse of the mechanism (sometimes intersecting joints are on the base)"
+                Links = [self.affineInverse(Links[i]) for i in range(len(Links)-1,-1,-1)]
+                LinksInv = [self.affineInverse(link) for link in Links]
+                inverted=True
+                continue
+
+            # find a set of joints starting from the last that can solve for a full 3D rotation
+            rotindex = min(len(jointvars)-3,lastsepindex)
+            while rotindex>=0:
+                # check if any entries are constant
+                if all([not LinksAccumRight[rotindex][i,j].is_zero for i in range(3) for j in range(3)]):
+                    break
+                rotindex = rotindex-1
+
+            if rotindex < 0:
+                print 'Current joints cannot solve for a full 3D rotation'
+
+            # add all but first 3 vars to free parameters
+            rotvars = []
+            transvars = []
+            for svar in solvejointvars:
+                if any([LinksAccumRight[rotindex][i,j].has_any_symbols(svar) for i in range(3) for j in range(3)]):
+                    rotvars.append(svar)
+                else:
+                    transvars.append(svar)
+            #transvars = solvejointvars[0:min(3,lastsepindex)]
+
+            if len(rotvars) != 3 or len(transvars) != 3:
+                if inverted:
+                    print 'rotvars: ',rotvars,' transvars: ',transvars,' not 3 dims'
+                    return None
+                print "Taking the inverse of the mechanism (sometimes intersecting joints are on the base)"
+                Links = [self.affineInverse(Links[i]) for i in range(len(Links)-1,-1,-1)]
+                LinksInv = [self.affineInverse(link) for link in Links]
+                inverted=True
+                continue
+            break
 
         # check if the translation variables affect rotation or the rotation variables affect translation.
         # If translation variables do not affect rotation, solve for rotation first.
@@ -1380,7 +1395,10 @@ class IKFastSolver(AutoReloader):
         if len(solverbranches) == 0 or not solverbranches[-1][0] is None:
             print 'failed to solve for kinematics'
             return None
-        return SolverIKChainTransform6D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], Tfirstleft.inv() * Tee * Tfirstright.inv(), [SolverBranchConds(solverbranches)],Tfk=Tfirstleft * LinksAccumRightAll[0] * Tfirstright)
+        Tgoal = Tfirstleft.inv() * Tee * Tfirstright.inv()
+        if inverted:
+            Tgoal = self.affineInverse(Tgoal)
+        return SolverIKChainTransform6D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], Tgoal, [SolverBranchConds(solverbranches)],Tfk=Tfirstleft * LinksAccumRightAll[0] * Tfirstright)
 
     def isExpressionUnique(self, exprs, expr):
         for exprtest in exprs:
@@ -1800,7 +1818,6 @@ class IKFastSolver(AutoReloader):
                     usedsolutions.append(solution)
         newvars=curvars[:]
         newvars.remove(var)
-
         # finally as a last resort, test the boundaries of the current variable [0,pi/2,pi,-pi/2]
         # by forcing the value of the variable to them.
         # The variable should in fact be *free*, but things get complicated with checking conditions, therefore, pick a couple of values and manually set them
@@ -1853,6 +1870,8 @@ class IKFastSolver(AutoReloader):
             eqcombinations.sort(lambda x, y: x[0]-y[0])
             solutions = []
             for comb in eqcombinations:
+                if len(solutions) > 0 and comb[0] > 200: # skip if too complex
+                    break
                 # try to solve for both sin and cos terms
                 s = solve(comb[1],[svar,cvar])
                 try:

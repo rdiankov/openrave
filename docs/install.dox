@@ -89,11 +89,11 @@ cmake -DOPT_PLUGINS=OFF ..
 \~english \section install_structure Install Directory Structure
 
 - bin
- - \b openrave - Start a simple environment and attach the default viewer, collision checkers, physics
+ - \ref p_basic_usage "openrave" - Start a simple environment and attach the default viewer, collision checkers, physics
    engines, and servers.
- - \b openrave.py - Start a simple environment through \openravepy{openravepy}. Allows
+ - \openrave_py{<b>openrave.py</b>} - Start a simple environment through \openravepy{openravepy}. Allows
    access to all openrave functionality including database generation and examples.
- - \b openrave-config - configuration file that helps users find the %OpenRAVE installation.
+ - \ref openrave_config - configuration file that helps users find the %OpenRAVE installation.
 - include
  - rave - Directory for all public %OpenRAVE header files.
 - lib
@@ -114,9 +114,9 @@ cmake -DOPT_PLUGINS=OFF ..
 \~japanese \section install_structure インストールディレクトリの構造
 
 - bin
- - \b openrave - 環境ビューワ，干渉検知，物理エンジン，サービスを起動するための実行ファイル
- - \b openrave.py - \openravepy{openravepy}を通じて，環境を起動するための実行ファイル．データーベース生成，実行例を含む全てのopenrave機能を使用できます．
- - \b openrave-config - 環境設定ファイル
+ - \ref p_basic_usage "openrave" - 環境ビューワ，干渉検知，物理エンジン，サービスを起動するための実行ファイル
+ - \openrave_py{<b>openrave.py</b>} - \openravepy{openravepy}を通じて，環境を起動するための実行ファイル．データーベース生成，実行例を含む全てのopenrave機能を使用できます．
+ - \ref openrave_config - 環境設定ファイル
 - include
  - rave - 全てのヘッダファイルのためのディレクトリ
 - lib
@@ -152,7 +152,7 @@ If there are compilation errors with templates, might have to use gcc version 4.
  
 \~japanese \page installation_linux Linuxユーザーのためのインストール方法
 
-まずは以下のコマンドを入力しソースコードをダウンロードしてください．
+最新のソースコードは\sourcesdownload{sourceforge}から入手できます．まずは以下のコマンドを入力しソースコードをダウンロードしてください．
 
 \verbatim
 svn co https://openrave.svn.sourceforge.net/svnroot/openrave/trunk openrave
