@@ -130,6 +130,7 @@ enum OpenRAVEErrorCode {
     ORE_InvalidInterfaceHash=6, ///< interface hashes do not match between plugins
 };
 
+/// \brief Exception that all OpenRAVE internal methods throw; the error codes are held in \ref OpenRAVEErrorCode.
 struct openrave_exception : std::exception
 {
     openrave_exception() : std::exception(), _s("unknown exception"), _error(ORE_Failed) {}
@@ -715,26 +716,23 @@ RAVE_API const std::string& RaveGetInterfaceName(InterfaceType type);
 /// On Linux/Unix systems, this is usually $HOME/.openrave, on Windows this is $HOMEPATH/.openrave
 RAVE_API std::string RaveGetHomeDirectory();
 
-/// create the interfaces
-typedef InterfaceBasePtr (*PluginExportFn_CreateInterface)(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv);
-
-/// \brief Create an interface.
+/// \brief Create the interfaces, see \ref CreateInterfaceValidated.
 /// \ingroup plugin_exports
 typedef InterfaceBasePtr (*PluginExportFn_OpenRAVECreateInterface)(InterfaceType type, const std::string& name, const char* pluginhash, const char* envhash, EnvironmentBasePtr penv);
 
-/** \brief Called to fill information about the plugin.
-    
-    \ingroup plugin_exports
-    This function is called only once initially to determine what the plugin offers. It should be
-    the safest funcdtion and should not create any static resources for the plugin.
-*/
+/// \brief Called to fill information about the plugin, see \ref GetPluginAttributesValidated.
+/// \ingroup plugin_exports
 typedef bool (*PluginExportFn_OpenRAVEGetPluginAttributes)(PLUGININFO* pinfo, int size, const char* infohash);
 
-typedef bool (*PluginExportFn_GetPluginAttributes)(PLUGININFO* pinfo, int size);
-
-/// \brief Called before plugin is unloaded from openrave.
+/// \brief Called before plugin is unloaded from openrave. See \ref DestroyPlugin. 
 /// \ingroup plugin_exports
 typedef void (*PluginExportFn_DestroyPlugin)();
+
+/// \deprecated
+typedef InterfaceBasePtr (*PluginExportFn_CreateInterface)(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv);
+
+/// \deprecated
+typedef bool (*PluginExportFn_GetPluginAttributes)(PLUGININFO* pinfo, int size);
 
 } // end namespace OpenRAVE
 

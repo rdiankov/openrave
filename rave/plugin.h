@@ -23,9 +23,11 @@
 #include <rave/rave.h>
 #include <boost/format.hpp>
 
-/// \brief \b [helper] Validated function callback for creating an interface function. No checks need to be made on the parmaeters.
+/// \brief \b <b>[helper]</b> Validated function callback for creating an interface function. No checks need to be made on the parmaeters.
 ///
 /// \ingroup plugin_exports
+/// If possible, always returns a valid pointer regardless of initialization failure since the actual interface
+/// pointer stores documentation information and is used in introspection.
 /// Only use when \ref rave/plugin.h is included.
 /// \param[in] type the interface type
 /// \param[in] name the lowercase letters of the interface name
@@ -34,14 +36,17 @@
 /// \return a pointer to the interface if one could have been created.
 OpenRAVE::InterfaceBasePtr CreateInterfaceValidated(OpenRAVE::InterfaceType type, const std::string& name, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv);
 
-/// \brief \b [helper] Validated function callback for returning a plugin's information. No checks need to be made on the parmaeters.
-///
-/// \ingroup plugin_exports
-/// Only use when \ref rave/plugin.h is included.
-/// \param[out] info Holds information on what services this plugin provides.
+/** \brief \b <b>[helper]</b> Validated function callback for returning a plugin's information. No checks need to be made on the parmaeters.
+
+    \ingroup plugin_exports
+    This function is called only once initially to determine what the plugin offers. It should be
+    the safest funcdtion and should not create any static resources for the plugin.
+    Only use when \ref rave/plugin.h is included.
+    \param[out] info Holds information on what services this plugin provides.
+*/
 void GetPluginAttributesValidated(OpenRAVE::PLUGININFO& info);
 
-/// \brief [export] Definition of a plugin export. Requires \ref GetPluginAttributesValidated to be defined.
+/// \brief <b>[export]</b> Definition of a plugin export. Requires \ref CreateInterfaceValidated to be defined.
 /// \ingroup plugin_exports
 RAVE_PLUGIN_API OpenRAVE::InterfaceBasePtr OpenRAVECreateInterface(OpenRAVE::InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, OpenRAVE::EnvironmentBasePtr penv)
 {
@@ -62,7 +67,7 @@ RAVE_PLUGIN_API OpenRAVE::InterfaceBasePtr OpenRAVECreateInterface(OpenRAVE::Int
     return CreateInterfaceValidated(type,interfacename,sinput,penv);
 }
 
-/// \brief \b [export] Definition of a plugin export. Requires \ref GetPluginAttributesValidated to be defined.
+/// \brief \b <b>[export]</b> Definition of a plugin export. Requires \ref GetPluginAttributesValidated to be defined.
 /// \ingroup plugin_exports
 RAVE_PLUGIN_API void OpenRAVEGetPluginAttributes(OpenRAVE::PLUGININFO* pinfo, int size, const char* infohash)
 {
@@ -78,7 +83,7 @@ RAVE_PLUGIN_API void OpenRAVEGetPluginAttributes(OpenRAVE::PLUGININFO* pinfo, in
     GetPluginAttributesValidated(*pinfo);
 }
 
-/// \brief \b [export] Stub function to be defined by plugin that includes \ref rave/plugin.h.
+/// \brief \b <b>[export]</b> Stub function to be defined by plugin that includes \ref rave/plugin.h.
 /// \ingroup plugin_exports
 RAVE_PLUGIN_API void DestroyPlugin();
 

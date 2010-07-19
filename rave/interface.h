@@ -16,7 +16,6 @@
 /** \file   interface.h
     \brief  Base interface definition that all exported interfaces derive from.
  */
-
 #ifndef OPENRAVE_INTERFACE_BASE
 #define OPENRAVE_INTERFACE_BASE
 
@@ -39,11 +38,26 @@ enum SerializationOptions
 */
 class RAVE_API InterfaceBase : public boost::enable_shared_from_this<InterfaceBase>
 {
+protected:
+    /// \brief The function to be executed for every command.
+    ///
+    /// \param sinput - input of the command
+    /// \param sout - output of the command
+    /// \return If false, there was an error with the command, true if successful
+    typedef boost::function<bool(std::ostream&, std::istream&)> InterfaceCommandFn;
+    struct InterfaceCommand
+    {
+        InterfaceCommand() {}
+        InterfaceCommand(InterfaceCommandFn newfn, const std::string& newhelp) : fn(newfn), help(newhelp) {}
+        InterfaceCommandFn fn; ///< command function to run
+        std::string help; ///< help string explaining command arguments
+    };
+
 public:
     typedef std::map<std::string, XMLReadablePtr, CaseInsensitiveCompare> READERSMAP;
 
-    InterfaceBase(InterfaceType type, EnvironmentBasePtr penv) : __type(type), __penv(penv) {}
-	virtual ~InterfaceBase() {}
+    InterfaceBase(InterfaceType type, EnvironmentBasePtr penv);
+	virtual ~InterfaceBase();
 
     inline InterfaceType GetInterfaceType() const { return __type; }
 
@@ -66,10 +80,7 @@ public:
         return it != __mapReadableInterfaces.end() ? it->second : XMLReadablePtr();
     }
 
-    /** All documentation of the interface.
-        
-        \return a user-provided description of the interface
-    */
+    /// \brief Documentation of the interface in reStructuredText format. See \ref writing_plugins_doc.
     virtual const std::string& GetDescription() const { return __description; };
 
     /// set user data
@@ -80,32 +91,61 @@ public:
     /// \return the XML filename used to load the interface (sometimes this is not possible if the definition lies inside an environment file).
     virtual const std::string& GetXMLFilename() const { return __strxmlfilename; }
 
-    /// clone the contents of an interface to the current interface
+    /// \brief Clone the contents of an interface to the current interface.
+    ///
     /// \param preference the interface whose information to clone
     /// \param cloningoptions mask of CloningOptions
     virtual bool Clone(InterfaceBaseConstPtr preference, int cloningoptions);
 
-    /// Used to send special commands to the interface
-    /// If the command is not supported, will throw an openrave_exception
-    /// \param is the input stream containing the command
-    /// \param os the output stream containing the output
-    /// \return true if the command is successfully processed, otherwise false
-    virtual bool SendCommand(std::ostream& os, std::istream& is) { throw openrave_exception("not commands supported",ORE_CommandNotSupported); }
+    /** \brief Used to send special commands to the interface and receive output.
 
-    /// serializes the interface
+        The command must be registered by \ref RegisterCommand. A special command '\b help' is
+        always supported and provides a way for the user to query the current commands and the help
+        string. The format of the returned help commands are in reStructuredText. The following commands are possible:
+        - '\b help [command name]' - get the help string of just that command.
+        - '\b help commands' - return the names of all the possible commands
+
+        \param is the input stream containing the command
+        \param os the output stream containing the output
+        \exception openrave_exception Throw if the command is not supported.
+        \return true if the command is successfully processed, otherwise false.
+    */
+    virtual bool SendCommand(std::ostream& os, std::istream& is);
+
+    // serializes the interface, use an official serialization library?
     //virtual void Serialize(std::ostream& o, int options) const;
+
 protected:
+    /// \brief Registers a command and its help string.
+    ///
+    /// \param cmdname - command name, converted to lower case
+    /// \param fncmd function to execute for the command
+    /// \param strhelp - help string in reStructuredText, see \ref writing_plugins_doc.
+    /// \exception openrave_exception Throw if there exists a registered command already.
+    virtual void RegisterCommand(const std::string& cmdname, InterfaceCommandFn fncmd, const std::string& strhelp);
+    
+    /// \brief Unregisters the command.
+    virtual void UnregisterCommand(const std::string& cmdname);
+
     virtual const char* GetHash() const = 0;
-    std::string __description;
+    std::string __description; /// \see GetDescription()
 
 private:
-    boost::shared_ptr<void> __plugin; ///< handle to plugin that controls the executable code. As long as this plugin pointer is present, module will not be unloaded.
-    std::string __strpluginname, __strxmlid; ///< \see GetXMLId
+    /// Write the help commands to an output stream
+    virtual bool _GetCommandHelp(std::ostream& sout, std::istream& sinput) const;
+
+    mutable boost::mutex _mutexInterface; ///< internal mutex for protecting data from methods that might be access from any thread (those methods should be commented).
     InterfaceType __type; ///< \see GetInterfaceType
+    boost::shared_ptr<void> __plugin; ///< handle to plugin that controls the executable code. As long as this plugin pointer is present, module will not be unloaded.
+    std::string __strxmlfilename;             ///< \see GetXMLFilename    
+    std::string __strpluginname; ///< the name of the plugin, necessary?
+    std::string __strxmlid; ///< \see GetXMLId
     EnvironmentBasePtr __penv; ///< \see GetEnv
     boost::shared_ptr<void> __pUserData; ///< \see GetUserData
-    std::string __strxmlfilename;             ///< \see GetXMLFilename
+    
     READERSMAP __mapReadableInterfaces; ///< pointers to extra interfaces that are included with this object
+    typedef std::map<std::string, boost::shared_ptr<InterfaceCommand>, CaseInsensitiveCompare> CMDMAP;
+    CMDMAP __mapCommands; ///< all registered commands
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER

@@ -707,6 +707,15 @@ RAVE_API std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameter
     return I;
 }
 
+InterfaceBase::~InterfaceBase()
+{
+    boost::mutex::scoped_lock lock(_mutexInterface);
+    __mapCommands.clear();
+    __pUserData.reset();
+    __mapReadableInterfaces.clear();
+    __penv.reset();
+}
+
 bool InterfaceBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 {
     if( !preference )
@@ -717,80 +726,90 @@ bool InterfaceBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     return true;
 }
 
-ProblemInstance::ProblemInstance(EnvironmentBasePtr penv) : InterfaceBase(PT_ProblemInstance, penv)
+InterfaceBase::InterfaceBase(InterfaceType type, EnvironmentBasePtr penv) : __type(type), __penv(penv)
 {
-    RegisterCommand("help",boost::bind(&ProblemInstance::GetCommandHelp,this,_1,_2),
-                    "display help message.");
+    RegisterCommand("help",boost::bind(&InterfaceBase::_GetCommandHelp,this,_1,_2),
+                    "display help commands.");
+    __description = "Not documented yet.";
 }
 
-bool ProblemInstance::SendCommand(ostream& sout, istream& sinput)
+bool InterfaceBase::SendCommand(ostream& sout, istream& sinput)
 {
     string cmd;
     sinput >> cmd;
-    if( !sinput )
-        throw openrave_exception("invalid argument",ORE_InvalidArguments);
-    
-    CMDMAP::iterator it = __mapCommands.find(cmd);
-    if( it == __mapCommands.end() )
-        throw openrave_exception(str(boost::format("failed to find command %s in problem %s\n")%cmd.c_str()%GetXMLId()),ORE_CommandNotSupported);
-    if( !it->second.fn(sout,sinput) ) {
-        RAVELOG_DEBUGA("command failed in problem %s: %s\n", GetXMLId().c_str(), cmd.c_str());
+    if( !sinput ) {
+        throw openrave_exception("invalid command",ORE_InvalidArguments);
+    }
+    boost::shared_ptr<InterfaceCommand> interfacecmd;
+    {
+        boost::mutex::scoped_lock lock(_mutexInterface);
+        CMDMAP::iterator it = __mapCommands.find(cmd);
+        if( it == __mapCommands.end() ) {
+            throw openrave_exception(str(boost::format("failed to find command '%s' in interface %s\n")%cmd.c_str()%GetXMLId()),ORE_CommandNotSupported);
+        }
+        interfacecmd = it->second;
+    }
+    if( !interfacecmd->fn(sout,sinput) ) {
+        RAVELOG_VERBOSE(str(boost::format("command failed in problem %s: %s\n")%GetXMLId()%cmd));
         return false;
     }
     return true;
 }
 
-void ProblemInstance::RegisterCommand(const std::string& cmdname, CommandFn fncmd, const std::string& strhelp)
+void InterfaceBase::RegisterCommand(const std::string& _cmdname, InterfaceBase::InterfaceCommandFn fncmd, const std::string& strhelp)
 {
-    if( cmdname.size() == 0 || __mapCommands.find(cmdname) != __mapCommands.end() )
-        throw openrave_exception(str(boost::format("command %s already registered")%cmdname));
-    __mapCommands[cmdname] = COMMAND(fncmd, strhelp);
-}
-
-void ProblemInstance::DeleteCommand(const std::string& cmdname)
-{
-    CMDMAP::iterator it = __mapCommands.find(cmdname);
-    if( it != __mapCommands.end() )
-        __mapCommands.erase(it);
-}
-
-const ProblemInstance::CMDMAP& ProblemInstance::GetCommands() const
-{
-    return __mapCommands;
-}
-
-bool ProblemInstance::GetCommandHelp(std::ostream& o, std::istream& sinput) const
-{
-    int maxlen = 0;
-    CMDMAP::const_iterator it;
-    for(it = __mapCommands.begin(); it != __mapCommands.end(); ++it) {
-        if( maxlen  < (int)it->first.size() )
-            maxlen = (int)it->first.size();
+    boost::mutex::scoped_lock lock(_mutexInterface);
+    string cmdname = tolowerstring(_cmdname);
+    if( cmdname == "commands" || cmdname.size() == 0 || !IsValidName(cmdname) ) {
+        throw openrave_exception(str(boost::format("command '%s' invalid")%cmdname),ORE_InvalidArguments);
     }
-    
-    o << "----------------------------------" << endl
-      << GetXMLId() << " Commands:" << endl;
-    for(it = __mapCommands.begin(); it != __mapCommands.end(); ++it) {
-        // search for all new lines
-        std::string::size_type pos = 0, newpos=0;
-        while( pos < it->second.help.size() ) {
+    if( __mapCommands.find(cmdname) != __mapCommands.end() ) {
+        throw openrave_exception(str(boost::format("command '%s' already registered")%cmdname),ORE_InvalidArguments);
+    }
+    __mapCommands[cmdname] = boost::shared_ptr<InterfaceCommand>(new InterfaceCommand(fncmd, strhelp));
+}
 
-            newpos = it->second.help.find('\n', pos);
-            
-            std::string::size_type n = newpos == std::string::npos ? it->second.help.size()-pos : (newpos-pos);
+void InterfaceBase::UnregisterCommand(const std::string& cmdname)
+{
+    boost::mutex::scoped_lock lock(_mutexInterface);
+    CMDMAP::iterator it = __mapCommands.find(cmdname);
+    if( it != __mapCommands.end() ) {
+        __mapCommands.erase(it);
+    }
+}
 
-            if( pos == 0 )
-                o << std::setw(maxlen) << std::left << it->first << " - " << it->second.help.substr(pos, n) << std::endl;
-            else
-                o << std::setw(maxlen+3) << std::setfill(' ') << " " << it->second.help.substr(pos, n) << std::endl;
-
-            if( newpos == std::string::npos )
-                break;
-            
-            pos = newpos+1;
+bool InterfaceBase::_GetCommandHelp(std::ostream& o, std::istream& sinput) const
+{
+    boost::mutex::scoped_lock lock(_mutexInterface);
+    string cmd;
+    sinput >> cmd;
+    CMDMAP::const_iterator it;
+    if( !!sinput && cmd == "commands" ) {
+        for(it = __mapCommands.begin(); it != __mapCommands.end(); ++it) {
+            o << it->first << " ";
         }
     }
-    o << "----------------------------------" << endl;
+    else {
+        it = __mapCommands.find(cmd);
+        if( !sinput || it == __mapCommands.end() ) {
+            // display full help string
+            o << endl << GetXMLId() << " Commands" << endl;
+            for(size_t i = 0; i < GetXMLId().size(); ++i) {
+                o << "=";
+            }
+            o << "=========" << endl << endl;
+            for(it = __mapCommands.begin(); it != __mapCommands.end(); ++it) {
+                o << endl << "**" << it->first << "**" << endl;
+                for(size_t i = 0; i < it->first.size()+4; ++i) {
+                    o << "~";
+                }
+                o << endl << endl << it->second->help << endl;
+            }
+        }
+        else {
+            o << it->second->help;
+        }
+    }
     return true;
 }
 

@@ -59,7 +59,7 @@ protected:
     Type _type;
 };
 
-/* \brief <b>[interface]</b> Base class for all Inverse Kinematic solvers. See \ref arch_iksolver.   
+/** \brief <b>[interface]</b> Base class for all Inverse Kinematic solvers. See \ref arch_iksolver.   
    \ingroup interfaces
 */
 class RAVE_API IkSolverBase : public InterfaceBase

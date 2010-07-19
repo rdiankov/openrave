@@ -25,7 +25,12 @@ public:
     
  RrtPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
     {
-        __description = "RRT planner (rosen diankov)";
+        __description = "\
+:Author:\n\
+  Rosen Diankov\n\
+\n\
+Implements the Rapidly-Exploring Random Trees Algorithm.\n\
+";
         _report.reset(new CollisionReport());
     }
     virtual ~RrtPlanner() {}
