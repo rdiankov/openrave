@@ -385,7 +385,9 @@ rm build/CMakeCache.txt
 
 */
 
-/** \page installation_win Building and Installing on Windows
+/** 
+\~english
+\page installation_win Building and Installing on Windows
 
 
 <b>NOTE:</b> Only Windows XP has been tested.
@@ -450,6 +452,55 @@ then open the solution file build all the projects, and then manually build the 
 an update to libraries or programs happens (for example Octave/MATLAB/python was
 installed/uninstalled), it is recommended to clear the cmake cache by first removing
 \c build\\CMakeCache.txt before running \c runcmake_win.bat.
+
+\~japanese
+\page installation_win Windowsユーザーのためのインストール方法
+
+
+<b>注意：</b> 現在はWindows XPのみサポートしています．
+
+\section iwin_thirdparty 第三者ソフトウェアのインストール
+
+ソースコードを\sourcesdownload{sourceforge}からダウンロードしてください．（subversionのソフトウェアとしては<a href="http://tortoisesvn.tigris.org/">Tortoise SVN</a>がお勧めです．）ソースコードをチェックアウトするディレクトリには<b>スペースを含めないように注意してください</b>．例えば\c C:\\openraveのように指定してください．
+
+boost1.39のような多くの第三者ライブラリは既にopenraveのソースに含まれています．しかし，以下のものはインストールが必要です．
+
+- <a href="http://www.cmake.org/cmake/resources/software.html">CMake</a>.
+- <a href="http://python.org/download">Python 2.6</a>, <a href="http://sourceforge.net/projects/numpy/files">numpy superpack</a>, <a href="http://www.pythonware.com/products/pil">Python Imaging Library (PIL)</a> openravepy用
+ - Pythonデバッグライブラリもインストールされないと，<b>openravepy</b>はデバッグモードでコンパイルされません．
+ - <a href="http://ipython.scipy.org">IPython</a> がPythonスクリプトでの開発には推奨されます．
+ - <a href="http://sourceforge.net/projects/scipy/files/">SciPy</a> - 科学，工学のためのpython用ライブラリ（いくつかの実行例を試すには必要です）
+
+\subsection iwin_octavematlab Octave/Matlab
+
+<a href="http://www.gnu.org/software/octave/">Octave</a> と Matlab は共にサポートされています．%OpenRAVEのビルドシステムはOctave/Matlabを自動的に検出し，それぞれのmexファイルをコンパイルします．
+
+- WindowsではMik-Texはmexプログラムを自身のバージョンで上書きします．そのためパス変数の中の全てのmatlabパスはMik-Texの前に宣言されていなければなりません．パスが正しく設定されているかどうかは起動後，\c mkoctfileか\c mexと入力することで確認できます．</br>
+
+Octave ユーザー:
+- \c mkoctfile があなたの環境パスにあることを確認してください．
+- JVMで問題が合った場合は，gbuplotのoctaveをインストールしてみてください．
+- mexファイルをコンパイルするにはOctaveパッケージをコンパイルした時と同じコンパイラを使わなければなりません．
+- OCTAVE_PATH （デフォルトは<tt>C:\\Program Files\\openrave\\share\\openrave\\octave</tt>）に\c $OPENRAVE_INSTALL\\share\\openrave\\octaveを追加してください．
+
+Matlab ユーザー:
+- \c mex がパスにあることを確認してください．
+- Matlabのパス（デフォルトは<tt>C:\\Program Files\\openrave\\share\\openrave\\matlab</tt>）に\c $OPENRAVE_INSTALL\\share\\openrave\\matlabを追加してください．
+
+\section iwin_building OpenRAVEのビルドとインストール
+
+\c runcmake_win.batを実行してください．これはあなたの環境にあるコンパイラを自動で検出して実行します．そして，\c msvc_files.tgzを展開し，コンパイルされたオブジェクトを\c buildに生成します．\c build\\openrave.slnでMicrosoft Visual Studioのソリューションファイルを開き<b>Release</b>か<b>RelWithDebInfo</b>設定を選択して全てをビルドします．それが終了したらINSTALLプロジェクトをビルドします．これは全てを<tt>C:\\Program Files\\openrave</tt>にインストールします．インストール先のディレクトリは\c cmake with <tt>-DCMAKE_INSTALL_PREFIX="my/new/install/dir"</tt>を行うことで手動で変更可能です．
+
+OpenRAVEを実行する前に，以下の環境変数を変更する必要があります．
+- \c PYTHONPATH - <tt>C:\\Program Files\\openrave\\share\\openrave</tt>を追加してください．
+- \c Path - <tt>C:\\Program Files\\openrave\\bin</tt>を今ある全てのパス設定の前に追加してください．後に追加すると異なるQtライブラリと衝突する問題が報告されていますので注意してください．
+
+現在，<b>bullet physics</b>は%OpenRAVEにセットアップされませんので注意してください．
+
+\section iwin_updating Subversionの更新
+
+subversionを更新したときには常に\c runcmake_win.batを再度実行し，Solution Fileを開いて全てのプロジェクトをビルドして，INSTALLプロジェクトを手動でビルドする必要があります．ライブラリが更新される，もしくはプログラムが更新される（例えばOctave/Matlab/Pythonが追加/削除される）場合は，\c runcmake_win.batを実行する前にはじめに\c build\\CMakeCache.txtを削除しcmakeのキャッシュを空にしてください．
+
 
 */
 
