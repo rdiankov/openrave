@@ -21,16 +21,14 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 {
     switch(type) {
     case PT_Planner:
-        if( interfacename == "grasper" )
+        if( interfacename == "grasper" ) {
             return InterfaceBasePtr(new GrasperPlanner(penv));
+        }
         break;
     case PT_ProblemInstance:
-        if( interfacename == "grasperproblem") {
-            RAVELOG_WARN("grasperproblem name deprecated, please use Grasper\n");
+        if( interfacename == "grasper") {
             return InterfaceBasePtr(new GrasperProblem(penv));
         }
-        else if( interfacename == "grasper")
-            return InterfaceBasePtr(new GrasperProblem(penv));
         break;
     default:
         break;
@@ -41,7 +39,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 void GetPluginAttributesValidated(PLUGININFO& info)
 {
     info.interfacenames[OpenRAVE::PT_Planner].push_back("Grasper");
-    info.interfacenames[OpenRAVE::PT_ProblemInstance].push_back("GrasperProblem");
+    info.interfacenames[OpenRAVE::PT_ProblemInstance].push_back("Grasper");
 }
 
 RAVE_PLUGIN_API void DestroyPlugin()
