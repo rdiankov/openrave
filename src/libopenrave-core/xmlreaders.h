@@ -1053,6 +1053,7 @@ namespace OpenRAVEXMLParser
     {
     public:
     JointXMLReader(KinBody::JointPtr& pjoint, KinBodyPtr pparent, const std::list<std::pair<std::string,std::string> >& atts) : _pjoint(pjoint) {
+            _bNegateJoint = false;
             _bMimicJoint = false;
             bDisabled = false;
             _pparent = pparent;
@@ -1136,7 +1137,7 @@ namespace OpenRAVEXMLParser
                 case PE_Ignore: return PE_Ignore;
             }
             
-            return (xmlname == "body" || xmlname == "offsetfrom" || xmlname == "weight" || xmlname == "lostop" || xmlname == "histop" || xmlname == "maxvel" || xmlname == "hardmaxvel" || xmlname == "maxaccel" || xmlname == "maxtorque" || xmlname == "maxforce" || xmlname == "resolution" || xmlname == "anchor" || xmlname == "axis" || xmlname == "axis1" || xmlname == "axis2" || xmlname=="axis3" || xmlname == "mode") ? PE_Support : PE_Pass;
+            return (xmlname == "body" || xmlname == "offsetfrom" || xmlname == "weight" || xmlname == "lostop" || xmlname == "histop" || xmlname == "limits" || xmlname == "limitsrad" || xmlname == "limitsdeg" || xmlname == "maxvel" || xmlname == "hardmaxvel" || xmlname == "maxaccel" || xmlname == "maxtorque" || xmlname == "maxforce" || xmlname == "resolution" || xmlname == "anchor" || xmlname == "axis" || xmlname == "axis1" || xmlname == "axis2" || xmlname=="axis3" || xmlname == "mode") ? PE_Support : PE_Pass;
         }
 
         virtual bool endElement(const std::string& xmlname)
@@ -1189,9 +1190,16 @@ namespace OpenRAVEXMLParser
                 // make sure first body is always closer to the root, unless the second body is static
                 if( !_pjoint->bodies[1]->IsStatic() ) {
                     if( _pjoint->bodies[0]->IsStatic() || (_pjoint->bodies[0]->GetIndex() > _pjoint->bodies[1]->GetIndex() && !_pjoint->bodies[1]->IsStatic()) ) {
-                        for(int i = 0; i < _pjoint->GetDOF(); ++i)
+                        for(int i = 0; i < _pjoint->GetDOF(); ++i) {
                             _pjoint->vAxes[i] = -_pjoint->vAxes[i];
+                        }
                         swap(_pjoint->bodies[0], _pjoint->bodies[1]);
+                    }
+                }
+
+                if( _bNegateJoint ) {
+                    for(int i = 0; i < _pjoint->GetDOF(); ++i) {
+                        _pjoint->vAxes[i] = -_pjoint->vAxes[i];
                     }
                 }
 
@@ -1200,10 +1208,12 @@ namespace OpenRAVEXMLParser
 
                 Transform toffsetfrom;
                 if( !!_offsetfrom ) {
-                    if( !!_fnGetOffsetFrom )
+                    if( !!_fnGetOffsetFrom ) {
                         toffsetfrom = _fnGetOffsetFrom(_offsetfrom);
-                    else
+                    }
+                    else {
                         toffsetfrom = _offsetfrom->GetTransform();
+                    }
                 }
 
                 Transform trel;
@@ -1221,12 +1231,13 @@ namespace OpenRAVEXMLParser
                 }
 
                 _pjoint->vanchor = toffsetfrom*_pjoint->vanchor;
-                for(int i = 0; i < _pjoint->GetDOF(); ++i)
+                for(int i = 0; i < _pjoint->GetDOF(); ++i) {
                     _pjoint->vAxes[i] = toffsetfrom.rotate(_pjoint->vAxes[i]);
+                }
 
                 switch(_pjoint->type) {
                 case KinBody::Joint::JointHinge:
-                    _pjoint->tLeft.rotfromaxisangle(_pjoint->vAxes[0], -_pjoint->offset);
+                    _pjoint->tLeft.rotfromaxisangle(_pjoint->vAxes[0], _pjoint->offset);
                     _pjoint->tLeft.trans = _pjoint->vanchor;
                     _pjoint->tRight.trans = -_pjoint->vanchor;
                     _pjoint->tRight = _pjoint->tRight * trel;
@@ -1295,7 +1306,25 @@ namespace OpenRAVEXMLParser
                     GetXMLErrorCount()++;
                 }
             }
+            else if( xmlname == "limits" || xmlname == "limitsrad" || xmlname == "limitsdeg" ) {
+                if( _bNegateJoint ) {
+                    throw openrave_exception("cannot specify <limits> with <lostop> and <histop>, choose one");
+                }
+                dReal fmult = xmlname == "limitsdeg" ? fRatio : dReal(1.0);
+                vector<dReal> values = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
+                if( (int)values.size() == 2*_pjoint->GetDOF() ) {
+                    for(int i = 0; i < _pjoint->GetDOF(); ++i ) {
+                        _pjoint->_vlowerlimit.at(i) = fmult*std::min(values[2*i+0],values[2*i+1]);
+                        _pjoint->_vupperlimit.at(i) = fmult*std::max(values[2*i+0],values[2*i+1]);
+                    }
+                }
+                else {
+                    RAVELOG_WARN(str(boost::format("<limits> tag has %d values, expected %d! ignoring...\n")%values.size()%_pjoint->GetDOF()));
+                }
+            }
             else if( xmlname == "lostop" ) {
+                _bNegateJoint = true;
+                RAVELOG_ERROR("<lostop> is deprecated, please use <limits> (now in radians), <limitsrad>, or <limitsdeg> tag and negate your joint axis!\n");
                 _pjoint->_vlowerlimit.resize(numindices);
                 FOREACH(it,_pjoint->_vlowerlimit) {
                     _ss >> *it;
@@ -1303,6 +1332,8 @@ namespace OpenRAVEXMLParser
                 }
             }
             else if( xmlname == "histop" ) {
+                _bNegateJoint = true;
+                RAVELOG_ERROR("<histop> deprecated, please use <limits> (now in radians), <limitsrad>, <limitsdeg> tag and negate your joint axis!\n");
                 _pjoint->_vupperlimit.resize(numindices);
                 FOREACH(it,_pjoint->_vupperlimit) {
                     _ss >> *it;
@@ -1395,6 +1426,7 @@ namespace OpenRAVEXMLParser
         string _strmimicjoint;
         bool bDisabled; // if true, joint is not counted as a controllable degree of freedom
         bool _bMimicJoint;
+        bool _bNegateJoint;
     };
 
     class InterfaceXMLReader;

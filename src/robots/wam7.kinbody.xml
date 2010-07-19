@@ -32,9 +32,8 @@
     <Body>wam0</Body>
     <Body>wam1</Body>
     <offsetfrom>wam1</offsetfrom>
-    <axis>0 0 -1</axis>
-    <lostop>-150</lostop>
-    <histop>150</histop>
+    <axis>0 0 1</axis>
+    <limitsdeg>-150 150</limitsdeg>
     <weight>2</weight>
     <maxvel>1.5708</maxvel>
     <resolution>1</resolution>
@@ -55,9 +54,8 @@
     <Body>wam1</Body>
     <Body>wam2</Body>
     <offsetfrom>wam2</offsetfrom>
-    <axis>0 0 -1</axis>
-    <lostop>-113</lostop>
-    <histop>113</histop>
+    <axis>0 0 1</axis>
+    <limitsdeg>-113 113</limitsdeg>
     <weight>2</weight>
     <maxvel>1.0472</maxvel>
     <resolution>1</resolution>
@@ -78,8 +76,7 @@
     <Body>wam3</Body>
     <offsetfrom>wam3</offsetfrom>
     <axis>0 0 -1</axis>
-    <lostop>-157</lostop>
-    <histop>157</histop>
+    <limitsdeg>-157 157</limitsdeg>
     <weight>2</weight>
     <maxvel>2.0944</maxvel>
     <resolution>1</resolution>
@@ -100,9 +97,8 @@
     <Body>wam3</Body>
     <Body>wam4</Body>
     <offsetfrom>wam4</offsetfrom>
-    <axis>0 0 -1</axis>
-    <lostop>-50</lostop>
-    <histop>180</histop>
+    <axis>0 0 1</axis>
+    <limitsdeg>-50 180</limitsdeg>
     <weight>2</weight>
     <maxvel>2.0944</maxvel>
     <resolution>1</resolution>
@@ -123,9 +119,8 @@
     <Body>wam4</Body>
     <Body>wam5</Body>
     <offsetfrom>wam5</offsetfrom>
-    <axis>0 0 -1</axis>
-    <lostop>-275</lostop>
-    <histop>75</histop>
+    <axis>0 0 1</axis>
+    <limitsdeg>-275 75</limitsdeg>
     <weight>1</weight>
     <maxvel>4.1888</maxvel>
     <resolution>2</resolution>
@@ -148,9 +143,8 @@
     <Body>wam5</Body>
     <Body>wam6</Body>
     <offsetfrom>wam6</offsetfrom>
-    <axis>0 0 -1</axis>
-    <lostop>-90</lostop>
-    <histop>90</histop>
+    <axis>0 0 1</axis>
+    <limitsdeg>-90 90</limitsdeg>
     <weight>1</weight>
     <maxvel>4.1888</maxvel>
     <resolution>2</resolution>
@@ -173,8 +167,7 @@
     <Body>wam7</Body>
     <offsetfrom>wam7</offsetfrom>
     <axis>0 0 -1</axis>
-    <lostop>-172</lostop>
-    <histop>172</histop>
+    <limitsdeg>-172 172</limitsdeg>
     <weight>1</weight>
     <maxvel>1.0472</maxvel>
     <resolution>2</resolution>

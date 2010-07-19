@@ -12,7 +12,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// generated 2010-07-14 14:29:38.466717
+/// generated 2010-07-19 11:11:18.855692
 /// To compile with gcc use: gcc -lstdc++ 
 /// To compile without any main function use: gcc -lstdc++ -DIKFAST_NO_MAIN
 #include <math.h>
@@ -146,7 +146,7 @@ IKFAST_API int getIKType() { return 1; }
 /// solves the forward kinematics equations.
 /// \param pfree is an array specifying the free joints of the chain.
 IKFAST_API void fk(const IKReal* j, IKReal* eetrans, IKReal* eerot) {
-    IKReal x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13;
+    IKReal x0,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13;
     x0=IKsin(j[0]);
     x1=IKsin(j[2]);
     x2=IKcos(j[3]);

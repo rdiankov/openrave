@@ -76,7 +76,7 @@ def test_jacobianconstraints():
 def test_jacobian():
     """tests if jacobians work"""
     env = Environment()
-    robot = env.ReadRobotXMLFile('robots/barretthand.robot.xml')
+    robot = env.ReadRobotXMLFile('robots/barrettwam.robot.xml')#barretthand.robot.xml')
     env.AddRobot(robot)
     fingertip_global = array([-0.15,0,0.2])
     # get a link name

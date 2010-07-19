@@ -116,9 +116,8 @@
       <Body>left-arm1</Body>
       <offsetfrom>left-arm1</offsetfrom>
       <weight>1</weight>
-      <lostop>-179</lostop>
-      <histop>179</histop>
-      <axis>0 1 0</axis>
+      <limitsdeg>-179 179</limitsdeg>
+      <axis>0 -1 0</axis>
       <maxvel>0.5</maxvel>
       <resolution>1</resolution>
     </Joint>
@@ -127,9 +126,8 @@
       <Body>left-arm2</Body>
       <offsetfrom>left-arm2</offsetfrom>
       <weight>1</weight>
-      <lostop>-179</lostop>
-      <histop>179</histop>
-      <axis>1 0 0</axis>
+      <limitsdeg>-179 179</limitsdeg>
+      <axis>-1 0 0</axis>
       <maxvel>0.5</maxvel>
       <resolution>1</resolution>
     </Joint>
@@ -138,9 +136,8 @@
       <Body>left-arm3</Body>
       <offsetfrom>left-arm3</offsetfrom>
       <weight>1</weight>
-      <lostop>-179</lostop>
-      <histop>179</histop>
-      <axis>0 1 0</axis>
+      <limitsdeg>-179 179</limitsdeg>
+      <axis>0 -1 0</axis>
       <maxvel>0.5</maxvel>
       <resolution>1</resolution>
     </Joint>
@@ -149,9 +146,8 @@
       <Body>left-arm4</Body>
       <offsetfrom>left-arm4</offsetfrom>
       <weight>1</weight>
-      <lostop>-179</lostop>
-      <histop>179</histop>
-      <axis>0 1 0</axis>
+      <limitsdeg>-179 179</limitsdeg>
+      <axis>0 -1 0</axis>
       <maxvel>0.5</maxvel>
       <resolution>1</resolution>
     </Joint>
@@ -160,9 +156,8 @@
       <Body>left-arm5</Body>
       <offsetfrom>left-arm5</offsetfrom>
       <weight>1</weight>
-      <lostop>0</lostop>
-      <histop>120</histop>
-      <axis>0 -1 0</axis>
+      <limitsdeg>0 120</limitsdeg>
+      <axis>0 1 0</axis>
       <maxvel>0.5</maxvel>
       <resolution>1</resolution>
     </Joint>
@@ -171,9 +166,8 @@
       <Body>left-hand-base</Body>
       <offsetfrom>left-hand-base</offsetfrom>
       <weight>1</weight>
-      <lostop>-179</lostop>
-      <histop>179</histop>
-      <axis>0 1 0</axis>
+      <limitsdeg>-179 179</limitsdeg>
+      <axis>0 -1 0</axis>
       <maxvel>0.5</maxvel>
       <resolution>1</resolution>
     </Joint>
@@ -182,9 +176,8 @@
       <Body>left-hand-proximal-r</Body>
       <offsetfrom>left-hand-proximal-r</offsetfrom>
       <weight>1</weight>
-      <lostop>-45</lostop>
-      <histop>6</histop>
-      <axis>0 -1 0</axis>
+      <limitsdeg>-45 6</limitsdeg>
+      <axis>0 1 0</axis>
       <maxvel>0.5</maxvel>
       <resolution>4</resolution>
     </Joint>
@@ -193,9 +186,8 @@
       <Body>left-hand-distal-r</Body>
       <offsetfrom>left-hand-distal-r</offsetfrom>
       <weight>1</weight>
-      <lostop>-179</lostop>
-      <histop>179</histop>
-      <axis>0 -1 0</axis>
+      <limitsdeg>-179 179</limitsdeg>
+      <axis>0 1 0</axis>
       <maxvel>0.5</maxvel>
       <resolution>4</resolution>
     </Joint>
@@ -204,9 +196,8 @@
       <Body>left-hand-proximal-l</Body>
       <offsetfrom>left-hand-proximal-l</offsetfrom>
       <weight>1</weight>
-      <lostop>-179</lostop>
-      <histop>179</histop>
-      <axis>0 -1 0</axis>
+      <limitsdeg>-179 179</limitsdeg>
+      <axis>0 1 0</axis>
       <maxvel>0.5</maxvel>
       <resolution>4</resolution>
     </Joint>
@@ -215,9 +206,8 @@
       <Body>left-hand-distal-l</Body>
       <offsetfrom>left-hand-distal-l</offsetfrom>
       <weight>1</weight>
-      <lostop>-179</lostop>
-      <histop>179</histop>
-      <axis>0 -1 0</axis>
+      <limitsdeg>-179 179</limitsdeg>
+      <axis>0 1 0</axis>
       <maxvel>0.5</maxvel>
       <resolution>4</resolution>
     </Joint>

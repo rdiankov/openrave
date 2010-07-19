@@ -22,9 +22,8 @@
     <Body>base</Body>
     <Body>link1</Body>
     <offsetfrom>link1</offsetfrom>
-    <axis>0 0 1</axis>
-    <lostop>-170</lostop>
-    <histop>170</histop>
+    <limitsdeg>-170 170</limitsdeg>
+    <axis>0 0 -1</axis>
     <resolution>0.5</resolution>
     <maxvel>0.43808</maxvel>
     <maxaccel>1.7541</maxaccel>
@@ -43,10 +42,9 @@
     <Body>link1</Body>
     <Body>link2</Body>
     <offsetfrom>link2</offsetfrom>
-    <axis>0 -1 0</axis>
     <anchor>0.075 0 0.335</anchor>
-    <lostop>-100</lostop>
-    <histop>135</histop>
+    <limitsdeg>-100 135</limitsdeg>
+    <axis>0 1 0</axis>
     <resolution>0.5</resolution>
     <maxvel>0.58469</maxvel>
     <maxaccel>2.3405</maxaccel>
@@ -65,10 +63,9 @@
     <Body>link2</Body>
     <Body>link3</Body>
     <offsetfrom>link3</offsetfrom>
-    <axis>0 -1 0</axis>
     <anchor>0.075 0 0.7</anchor>
-    <lostop>-209</lostop>
-    <histop>76</histop>
+    <limitsdeg>-209 76</limitsdeg>
+    <axis>0 1 0</axis>
     <resolution>1</resolution>
     <maxvel>0.41888</maxvel>
     <maxaccel>1.6598</maxaccel>
@@ -87,10 +84,9 @@
     <Body>link3</Body>
     <Body>link4</Body>
     <offsetfrom>link4</offsetfrom>
-    <axis>1 0 0</axis>
     <anchor>0.293 0 0.79</anchor>
-    <lostop>-190</lostop>
-    <histop>190</histop>
+    <limitsdeg>-190 190</limitsdeg>
+    <axis>-1 0 0</axis>
     <resolution>1</resolution>
     <maxvel>0.55851</maxvel>
     <maxaccel>2.2323</maxaccel>
@@ -109,10 +105,9 @@
     <Body>link4</Body>
     <Body>link5</Body>
     <offsetfrom>link5</offsetfrom>
-    <axis>0 -1 0</axis>
     <anchor>0.48 0 0.79</anchor>
-    <lostop>-120</lostop>
-    <histop>120</histop>
+    <limitsdeg>-120 120</limitsdeg>
+    <axis>0 1 0</axis>
     <resolution>1</resolution>
     <maxvel>0.47473</maxvel>
     <maxaccel>1.8972</maxaccel>
@@ -131,10 +126,9 @@
     <Body>link5</Body>
     <Body>link6</Body>
     <offsetfrom>link6</offsetfrom>
-    <axis>1 0 0</axis>
     <anchor>0.56 0 0.79</anchor>
-    <lostop>-350</lostop>
-    <histop>350</histop>
+    <limitsdeg>-350 350</limitsdeg>
+    <axis>-1 0 0</axis>
     <resolution>1</resolution>
     <maxvel>0.87266</maxvel>
     <maxaccel>3.4907</maxaccel>

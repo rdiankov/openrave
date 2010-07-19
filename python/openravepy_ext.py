@@ -452,6 +452,8 @@ class OpenRAVEModel(metaclass.AutoReloader):
             # don't want unnecessary messages cluttering the console...
             openravepy.raveSetDebugLevel(openravepy.DebugLevel.Fatal)
             loadplugins = False
+        if options.gethas:
+            openravepy.raveSetDebugLevel(openravepy.DebugLevel.Fatal)
         if env is None:
             env = openravepy.Environment(loadplugins)
             destroyenv = True
@@ -486,10 +488,10 @@ class OpenRAVEModel(metaclass.AutoReloader):
                 print model.getfilename()
                 sys.exit(0)
             if options.gethas:
-                if model.load():
-                    sys.exit(0)
-                else:
-                    sys.exit(1)
+                hasmodel=model.load()
+                print int(hasmodel)
+                env.Destroy()
+                sys.exit(not hasmodel)
             if options.show:
                 if not model.load():
                     raise ValueError('failed to find cached model %s'%model.getfilename())

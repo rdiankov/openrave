@@ -153,13 +153,7 @@ arm length of the robot is closest to 1.
 - Every link/manipulator/sensor/joint in a robot/kinbody should have a name that will
 differentiate it from the others.
 
-\section Internal
-
-The rotation of kinbody joint axes is clockwise instead of the counter-clockwise standard. However,
-the only place this convention pops up is when defining the robot file and when using \ref OpenRAVE::KinBody::Joint::GetAxis
-directly. Every other place in the code is consistent with how the links move, not how the joint
-axes are defined. For example, the Jacobian explains how a point will move given the angles
-specified through \ref OpenRAVE::KinBody::SetJointValues.
+- Joint axis rotation is counter-cockwise.
 
 \~japanese \page conventions システム開発上で覚えておくべきこと
 
@@ -195,11 +189,7 @@ specified through \ref OpenRAVE::KinBody::SetJointValues.
 
 - 物体の中で定義されているリンク，マニピュレーター，センサー，関節の名前は互いに固有である必要があります．
 
-\section OpenRAVE内部の慣習
-
-関節の回転方向は時計回りになっています（逆時計回りが標準であるため，ロボットの回転軸をマイナスにする必
-要があります）．しかし，この慣習はロボットを定義する時と，\ref OpenRAVE::KinBody::Joint::GetAxisを呼び出す時のみに現れますから，それほど気にする必要はありません．ヤコビアンとリンクの動きは同調しています．例えば，ヤコビアンが
-\ref OpenRAVE::KinBody::SetJointValuesの角度の微分に大して座標系の変換を表します．
+- 関節の回転方向は逆時計回りになっています．
 
 */
 

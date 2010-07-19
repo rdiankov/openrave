@@ -106,9 +106,8 @@
     <Body>L1</Body>
     <offsetfrom>L1</offsetfrom>
     <weight>1</weight>
-    <lostop>-169.5</lostop>
-    <histop>169.5</histop>
-    <axis>0 0 1</axis>
+    <limitsdeg>-169.5 169.5</limitsdeg>
+    <axis>0 0 -1</axis>
     <maxvel>1</maxvel>
     <resolution>1</resolution>
   </Joint>
@@ -116,9 +115,8 @@
     <Body>L1</Body>
     <Body>L2</Body>
     <offsetfrom>L2</offsetfrom>
-    <lostop>-34.25</lostop>
-    <histop>108.75</histop>
-    <axis>0 -1 0</axis>
+    <limitsdeg>-34.25 108.75</limitsdeg>
+    <axis>0 1 0</axis>
     <maxvel>1</maxvel>
     <resolution>1</resolution>
   </Joint>
@@ -126,9 +124,8 @@
     <Body>L2</Body>
     <Body>L3</Body>
     <offsetfrom>L3</offsetfrom>
-    <lostop>-122.7</lostop>
-    <histop>127.3</histop>
-    <axis>0 -1 0</axis>
+    <limitsdeg>-122.7 127.3</limitsdeg>
+    <axis>0 1 0</axis>
     <maxvel>1</maxvel>
     <resolution>1</resolution>
   </Joint>
@@ -138,9 +135,8 @@
     <Body>L3</Body>
     <Body>dummylink</Body>
     <offsetfrom>dummylink</offsetfrom>
-    <lostop>-0.01</lostop>
-    <histop>0.01</histop>
-    <axis>0 0 1</axis>
+    <limitsdeg>-0.01 0.01</limitsdeg>
+    <axis>0 0 -1</axis>
     <maxvel>1</maxvel>
     <resolution>1</resolution>
   </Joint>
@@ -148,9 +144,8 @@
     <Body>dummylink</Body>
     <Body>L4</Body>
     <offsetfrom>L4</offsetfrom>
-    <lostop>-116.5</lostop>
-    <histop>116.5</histop>
-    <axis>0 1 0</axis>
+    <limitsdeg>-116.5 116.5</limitsdeg>
+    <axis>0 -1 0</axis>
     <maxvel>1</maxvel>
     <resolution>1</resolution>
   </Joint>
@@ -158,9 +153,8 @@
     <Body>L4</Body>
     <Body>L5</Body>
     <offsetfrom>L5</offsetfrom>
-    <lostop>-171.5</lostop>
-    <histop>171.5</histop>
-    <axis>0 0 -1</axis>
+    <limitsdeg>-171.5 171.5</limitsdeg>
+    <axis>0 0 1</axis>
     <maxvel>1</maxvel>
     <resolution>1</resolution>
   </Joint>
@@ -168,9 +162,8 @@
     <Body>L5</Body>
     <Body>Gripper_Base</Body>
     <offsetfrom>Gripper_Base</offsetfrom>
-    <lostop>0</lostop>
-    <histop>0</histop>
-    <axis>0 0 1</axis>
+    <limitsdeg>0 0</limitsdeg>
+    <axis>0 0 -1</axis>
     <maxvel>1</maxvel>
     <resolution>1</resolution>
   </Joint>
@@ -179,9 +172,8 @@
     <Body>Gripper_Base</Body>
     <Body>Gripper_Right</Body>
     <offsetfrom>Gripper_Right</offsetfrom>
-    <lostop>-25</lostop>
-    <histop>20</histop>
-    <axis>0 0 1</axis>
+    <limitsdeg>-25 20</limitsdeg>
+    <axis>0 0 -1</axis>
     <maxvel>1</maxvel>
     <resolution>1</resolution>
   </Joint>
@@ -189,7 +181,7 @@
     <Body>Gripper_Base</Body>
     <Body>Gripper_Left</Body>
     <offsetfrom>Gripper_Left</offsetfrom>
-    <axis>0 0 -1</axis>
+    <axis>0 0 1</axis>
     <maxvel>1</maxvel>
     <resolution>1</resolution>
   </Joint>

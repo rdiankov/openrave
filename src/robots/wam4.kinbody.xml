@@ -32,9 +32,8 @@
     <Body>wam0</Body>
     <Body>wam1</Body>
     <offsetfrom>wam1</offsetfrom>
-    <axis>0 0 -1</axis>
-    <lostop>-150</lostop>
-    <histop>150</histop>
+    <axis>0 0 1</axis>
+    <limitsdeg>-150 150</limitsdeg>
     <weight>4</weight>
     <maxvel>1.5708</maxvel>
     <resolution>1</resolution>
@@ -55,9 +54,8 @@
     <Body>wam1</Body>
     <Body>wam2</Body>
     <offsetfrom>wam2</offsetfrom>
-    <axis>0 0 -1</axis>
-    <lostop>-113</lostop>
-    <histop>113</histop>
+    <axis>0 0 1</axis>
+    <limitsdeg>-113 113</limitsdeg>
     <weight>4</weight>
     <maxvel>1.0472</maxvel>
     <resolution>1</resolution>
@@ -77,9 +75,8 @@
     <Body>wam2</Body>
     <Body>wam3</Body>
     <offsetfrom>wam3</offsetfrom>
-    <axis>0 0 -1</axis>
-    <lostop>-157</lostop>
-    <histop>157</histop>
+    <axis>0 0 1</axis>
+    <limitsdeg>-157 157</limitsdeg>
     <weight>2</weight>
     <maxvel>2.0944</maxvel>
     <resolution>1</resolution>
@@ -114,10 +111,9 @@
     <Body>wam3</Body>
     <Body>wam4</Body>
     <offsetfrom>wam4</offsetfrom>
-    <axis>0 -1 0</axis>
+    <axis>0 1 0</axis>
     <anchor>0.045 0 -0.3</anchor>
-    <lostop>-50</lostop>
-    <histop>180</histop>
+    <limitsdeg>-50 180</limitsdeg>
     <weight>2</weight>
     <maxvel>2.0944</maxvel>
     <resolution>1</resolution>

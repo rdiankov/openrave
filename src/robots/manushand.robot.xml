@@ -56,9 +56,8 @@
       <Body>hand-proximal-r</Body>
       <offsetfrom>hand-proximal-r</offsetfrom>
       <weight>1</weight>
-      <lostop>-45</lostop>
-      <histop>6</histop>
-      <axis>0 -1 0</axis>
+      <limitsdeg>-45 6</limitsdeg>
+      <axis>0 1 0</axis>
       <maxvel>1</maxvel>
       <resolution>4</resolution>
     </Joint>
@@ -67,9 +66,8 @@
       <Body>hand-distal-r</Body>
       <offsetfrom>hand-distal-r</offsetfrom>
       <weight>1</weight>
-      <lostop>-179</lostop>
-      <histop>179</histop>
-      <axis>0 -1 0</axis>
+      <limitsdeg>-179 179</limitsdeg>
+      <axis>0 1 0</axis>
       <maxvel>1</maxvel>
       <resolution>4</resolution>
     </Joint>
@@ -78,9 +76,8 @@
       <Body>hand-proximal-l</Body>
       <offsetfrom>hand-proximal-l</offsetfrom>
       <weight>1</weight>
-      <lostop>-179</lostop>
-      <histop>179</histop>
-      <axis>0 -1 0</axis>
+      <limitsdeg>-179 179</limitsdeg>
+      <axis>0 1 0</axis>
       <maxvel>1</maxvel>
       <resolution>4</resolution>
     </Joint>
@@ -89,9 +86,8 @@
       <Body>hand-distal-l</Body>
       <offsetfrom>hand-distal-l</offsetfrom>
       <weight>1</weight>
-      <lostop>-179</lostop>
-      <histop>179</histop>
-      <axis>0 -1 0</axis>
+      <limitsdeg>-179 179</limitsdeg>
+      <axis>0 1 0</axis>
       <maxvel>1</maxvel>
       <resolution>4</resolution>
     </Joint>

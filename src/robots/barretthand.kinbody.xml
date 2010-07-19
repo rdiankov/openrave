@@ -54,9 +54,8 @@
     <Body>Finger0-1</Body>
     <offsetfrom>Finger0-1</offsetfrom>
     <weight>4</weight>
-    <lostop>0</lostop>
-    <histop>140</histop>
-    <axis>0 0 -1</axis>
+    <limitsdeg>0 140</limitsdeg>
+    <axis>0 0 1</axis>
     <maxvel>2</maxvel>
     <resolution>1</resolution>
   </Joint>
@@ -75,9 +74,8 @@
     <Body>Finger0-2</Body>
     <offsetfrom>Finger0-2</offsetfrom>
     <weight>4</weight>
-    <lostop>0</lostop>
-    <histop>90</histop>
-    <axis>0 0 -1</axis>
+    <limitsdeg>0 90</limitsdeg>
+    <axis>0 0 1</axis>
     <maxvel>1</maxvel>
     <resolution>1</resolution>
   </Joint>
@@ -106,9 +104,8 @@
     <Body>Finger1-1</Body>
     <offsetfrom>Finger1-1</offsetfrom>
     <weight>4</weight>
-    <lostop>0</lostop>
-    <histop>140</histop>
-    <axis>0 0 -1</axis>
+    <limitsdeg>0 140</limitsdeg>
+    <axis>0 0 1</axis>
     <maxvel>2</maxvel>
     <resolution>1</resolution>
   </Joint>
@@ -127,9 +124,8 @@
     <Body>Finger1-2</Body>
     <offsetfrom>Finger1-2</offsetfrom>
     <weight>4</weight>
-    <lostop>0</lostop>
-    <histop>90</histop>
-    <axis>0 0 -1</axis>
+    <limitsdeg>0 90</limitsdeg>
+    <axis>0 0 1</axis>
     <maxvel>1</maxvel>
     <resolution>1</resolution>
   </Joint>
@@ -151,9 +147,8 @@
     <Body>Finger2-1</Body>
     <offsetfrom>Finger2-1</offsetfrom>
     <weight>4</weight>
-    <lostop>0</lostop>
-    <histop>140</histop>
-    <axis>0 0 -1</axis>
+    <limitsdeg>0 140</limitsdeg>
+    <axis>0 0 1</axis>
     <maxvel>2</maxvel>
     <resolution>1</resolution>
   </Joint>
@@ -172,9 +167,8 @@
     <Body>Finger2-2</Body>
     <offsetfrom>Finger2-2</offsetfrom>
     <weight>4</weight>
-    <lostop>0</lostop>
-    <histop>90</histop>
-    <axis>0 0 -1</axis>
+    <limitsdeg>0 90</limitsdeg>
+    <axis>0 0 1</axis>
     <maxvel>1</maxvel>
     <resolution>1</resolution>
   </Joint>
@@ -185,9 +179,8 @@
     <Body>Finger0-0</Body>
     <offsetfrom>Finger0-0</offsetfrom>
     <weight>4</weight>
-    <lostop>-1</lostop>
-    <histop>181</histop>
-    <axis>0 0 1</axis>
+    <limitsdeg>-1 181</limitsdeg>
+    <axis>0 0 -1</axis>
     <!-- <anchor>0.025 0 0</anchor> -->
     <maxvel>2</maxvel>
     <resolution>1</resolution>
@@ -197,7 +190,7 @@
     <Body>Finger1-0</Body>
     <offsetfrom>Finger1-0</offsetfrom>
     <weight>4</weight>
-    <axis>0 0 -1</axis>
+    <axis>0 0 1</axis>
     <!-- <anchor>-0.025 0 0</anchor> -->
     <maxvel>2</maxvel>
     <resolution>1</resolution>

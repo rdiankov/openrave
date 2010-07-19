@@ -449,7 +449,7 @@ void IvJointDragger::UpdateSkeleton()
     SbMatrix mrot;
     _trackball->rotation.getValue().getValue(mrot);
 
-    float fang = atan2f(mrot[2][1], mrot[1][1]);
+    float fang = -atan2f(mrot[2][1], mrot[1][1]);
 
     // if a robot, reset the controller
     RobotItemPtr probotitem = boost::dynamic_pointer_cast<RobotItem>(pbody);
@@ -522,7 +522,7 @@ void IvJointDragger::UpdateDragger()
             else
                 fang = 0;
         }
-        _trackball->rotation = SbRotation(SbVec3f(1,0,0), -fang);
+        _trackball->rotation = SbRotation(SbVec3f(1,0,0), fang);
     }
 }
 

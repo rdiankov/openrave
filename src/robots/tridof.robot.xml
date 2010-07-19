@@ -30,8 +30,7 @@
       <Body>Arm0</Body>
       <offsetfrom>Arm0</offsetfrom>
       <weight>4</weight>
-      <lostop>-180</lostop>
-      <histop>180</histop>
+      <limitsdeg>-180 180</limitsdeg>
       <axis>0 1 0</axis>
       <maxvel>3</maxvel>
       <resolution>1</resolution>
@@ -52,8 +51,7 @@
       <Body>Arm1</Body>
       <offsetfrom>Arm1</offsetfrom>
       <weight>3</weight>
-      <lostop>-180</lostop>
-      <histop>180</histop>
+      <limitsdeg>-180 180</limitsdeg>
       <axis>0 1 0</axis>
       <maxvel>4</maxvel>
       <resolution>1</resolution>
@@ -74,8 +72,7 @@
       <Body>Arm2</Body>
       <offsetfrom>Arm2</offsetfrom>
       <weight>3</weight>
-      <lostop>-180</lostop>
-      <histop>180</histop>
+      <limitsdeg>-180 180</limitsdeg>
       <axis>0 1 0</axis>
       <maxvel>2</maxvel>
       <resolution>2</resolution>
@@ -97,9 +94,8 @@
       <Body>RClaw</Body>
       <offsetfrom>RClaw</offsetfrom>
       <weight>0.2</weight>
-      <lostop>-56</lostop>
-      <histop>16</histop>
-      <axis>0 0 -1</axis>
+      <limitsdeg>-56 16</limitsdeg>
+      <axis>0 0 1</axis>
       <maxvel>0.4</maxvel>
       <resolution>3</resolution>
     </Joint>
@@ -119,9 +115,8 @@
       <Body>LClaw</Body>
       <offsetfrom>LClaw</offsetfrom>
       <weight>0.2</weight>
-      <lostop>-56</lostop>
-      <histop>16</histop>
-      <axis>0 0 1</axis>
+      <limitsdeg>-56 16</limitsdeg>
+      <axis>0 0 -1</axis>
       <maxvel>0.4</maxvel>
       <resolution>3</resolution>
     </Joint>

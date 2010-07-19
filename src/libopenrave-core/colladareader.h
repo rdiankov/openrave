@@ -1602,7 +1602,7 @@ public:
           //          }
 
           //  Axes and Anchor assignment.
-          pjoint->vAxes[0] = Vector(-pdomaxis->getAxis()->getValue()[0], -pdomaxis->getAxis()->getValue()[1], -pdomaxis->getAxis()->getValue()[2]).normalize3();
+          pjoint->vAxes[0] = Vector(pdomaxis->getAxis()->getValue()[0], pdomaxis->getAxis()->getValue()[1], pdomaxis->getAxis()->getValue()[2]).normalize3();
           pjoint->vanchor = Vector(0,0,0);
 
           int numbad = 0;
@@ -1785,7 +1785,7 @@ public:
 
           if( pjoint->type == KinBody::Joint::JointRevolute )
           {
-            pjoint->tLeft.rotfromaxisangle(pjoint->vAxes[0], -pjoint->offset);
+              pjoint->tLeft.rotfromaxisangle(pjoint->vAxes[0], -pjoint->offset);
           }
 
           pjoint->fMaxVel = pjoint->GetType() == KinBody::Joint::JointPrismatic ? 0.013 : 0.5f;

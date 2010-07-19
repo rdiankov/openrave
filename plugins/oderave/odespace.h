@@ -320,8 +320,8 @@ public:
             FOREACHC(itjoint, vbodyjoints) {
                 //bool bPassive = (*itjoint)->GetJointIndex()<0;
                 RaveVector<dReal> anchor = (*itjoint)->GetAnchor();
-                RaveVector<dReal> axis0 = (*itjoint)->GetAxis(0);
-                RaveVector<dReal> axis1 = (*itjoint)->GetAxis(1);
+                RaveVector<dReal> axis0 = -(*itjoint)->GetAxis(0);
+                RaveVector<dReal> axis1 = -(*itjoint)->GetAxis(1);
                 dBodyID body0 = (!!(*itjoint)->GetFirstAttached() && !(*itjoint)->GetFirstAttached()->IsStatic()) ? pinfo->vlinks[(*itjoint)->GetFirstAttached()->GetIndex()]->body : NULL;
                 dBodyID body1 = (!!(*itjoint)->GetSecondAttached() && !(*itjoint)->GetSecondAttached()->IsStatic()) ? pinfo->vlinks[(*itjoint)->GetSecondAttached()->GetIndex()]->body : NULL;
 

@@ -53,9 +53,8 @@
     <offsetfrom>gripper_base</offsetfrom>
     <body>gripper_base</body>
     <body>L_finger</body>
-    <axis>0 1 0</axis>
-    <lostop>0</lostop>
-    <histop>0.034</histop>
+    <axis>0 -1 0</axis>
+    <limits>0 0.034</limits>
     <maxvel>0.02</maxvel>
   </Joint>
 
@@ -63,8 +62,7 @@
     <offsetfrom>gripper_base</offsetfrom>
     <body>gripper_base</body>
     <body>R_finger</body>
-    <axis>0 1 0</axis>
-    <lostop>0</lostop>
-    <histop>0.034</histop>
+    <axis>0 -1 0</axis>
+    <limits>0 0.034</limits>
   </Joint>
 </KinBody>

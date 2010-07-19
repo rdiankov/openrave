@@ -23,9 +23,8 @@
       <Body>Base</Body>
       <Body>Axis1</Body>
       <offsetfrom>Base</offsetfrom>
-      <lostop>-179</lostop>
-      <histop>179</histop>
-      <axis>0 0 -1</axis>
+      <limitsdeg>-179 179</limitsdeg>
+      <axis>0 0 1</axis>
       <maxvel>3.0</maxvel>
       <resolution>1</resolution>
     </Joint>
@@ -44,9 +43,8 @@
       <Body>Axis2</Body>
       <offsetfrom>Base</offsetfrom>
       <anchor>0 0 0.227</anchor>
-      <lostop>-60</lostop>
-      <histop>+60</histop>
-      <axis>1 0 0</axis>
+      <limitsdeg>-60 60</limitsdeg>
+      <axis>-1 0 0</axis>
       <maxvel>3</maxvel>
       <resolution> 1</resolution>
     </Joint>
@@ -65,9 +63,8 @@
       <Body>Axis2</Body>
       <Body>Axis3</Body>
       <offsetfrom>Axis2</offsetfrom>
-      <lostop>-179</lostop>
-      <histop>+179</histop>
-      <axis>0 0 1</axis>
+      <limitsdeg>-179 179</limitsdeg>
+      <axis>0 0 -1</axis>
       <maxvel>3</maxvel>
       <resolution> 1</resolution>
     </Joint>

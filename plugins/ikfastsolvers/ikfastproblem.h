@@ -318,8 +318,14 @@ public:
         {
             string cmdhas = str(boost::format("openrave.py --database inversekinematics --gethas --robot=%s --manipname=%s --iktype=%s")%probot->GetXMLFilename()%probot->GetActiveManipulator()->GetName()%striktype);
             FILE* pipe = popen(cmdhas.c_str(), "r");
-            int haserror = pclose(pipe);
-            if( haserror ) {
+            string hasik;
+            {
+                boost::iostreams::stream_buffer<boost::iostreams::file_descriptor_source> fpstream(fileno(pipe));
+                std::istream in(&fpstream);
+                std::getline(in, hasik);
+            }
+            pclose(pipe);
+            if( hasik != "1" ) {
                 RAVELOG_INFO(str(boost::format("Generating inverse kinematics for manip %s:%s\n")%probot->GetName()%probot->GetActiveManipulator()->GetName()));
                 string cmdgen = str(boost::format("openrave.py --database inversekinematics --robot=%s --manipname=%s --iktype=%s")%probot->GetXMLFilename()%probot->GetActiveManipulator()->GetName()%striktype);
                 FILE* pipe = popen(cmdgen.c_str(), "r");

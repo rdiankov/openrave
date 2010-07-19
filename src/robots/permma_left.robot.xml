@@ -29,9 +29,8 @@
       <Body>l-lift-arm</Body>
       <offsetfrom>l-lift-arm</offsetfrom>
       <weight>1</weight>
-      <lostop>0</lostop>
-      <histop>179</histop>
-      <axis>0 1 0</axis>
+      <limitsdeg>0 179</limitsdeg>
+      <axis>0 -1 0</axis>
       <maxvel>0.5</maxvel>
       <resolution>1</resolution>
     </Joint>

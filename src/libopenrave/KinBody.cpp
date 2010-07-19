@@ -699,7 +699,7 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
             f += 2*PI;
         else if( f > PI )
             f -= 2*PI;
-        pValues.push_back(offset-f);
+        pValues.push_back(offset+f);
         break;
     case JointHinge2:
         {
@@ -708,15 +708,15 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
             Vector vec1;
             Vector vec2;
             Vector vec3;
-            vec1 = (vAxes[1] - vAxes[0].dot(vAxes[1])*vAxes[0]).normalize();
-            vec2 = (axis2cur - vAxes[0].dot(axis2cur)*vAxes[0]).normalize();
+            vec1 = (vAxes[1] - vAxes[0].dot3(vAxes[1])*vAxes[0]).normalize();
+            vec2 = (axis2cur - vAxes[0].dot3(axis2cur)*vAxes[0]).normalize();
             vec3 = vAxes[0].cross(vec1);
             f = 2.0*RaveAtan2(vec3.dot3(vec2), vec1.dot3(vec2));
             if( f < -PI )
                 f += 2*PI;
             else if( f > PI )
                 f -= 2*PI;
-            pValues.push_back(offset-f);
+            pValues.push_back(offset+f);
             vec1 = (vAxes[0] - axis2cur.dot(vAxes[0])*axis2cur).normalize();
             vec2 = (axis1cur - axis2cur.dot(axis1cur)*axis2cur).normalize();
             vec3 = axis2cur.cross(vec1);
@@ -725,11 +725,11 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
                 f += 2*PI;
             else if( f > PI )
                 f -= 2*PI;
-            pValues.push_back(-f);
+            pValues.push_back(f);
         }
         break;
     case JointSlider:
-        pValues.push_back(offset-(tjoint.trans.x*vAxes[0].x+tjoint.trans.y*vAxes[0].y+tjoint.trans.z*vAxes[0].z));
+        pValues.push_back(offset+(tjoint.trans.x*vAxes[0].x+tjoint.trans.y*vAxes[0].y+tjoint.trans.z*vAxes[0].z));
         break;
     case JointSpherical: {
         dReal fsinang2 = tjoint.rot.y*tjoint.rot.y+tjoint.rot.z*tjoint.rot.z+tjoint.rot.w*tjoint.rot.w;
@@ -764,17 +764,20 @@ Vector KinBody::Joint::GetAnchor() const
 
 Vector KinBody::Joint::GetAxis(int iaxis) const
 {
-    if( !bodies[0] )
+    if( !bodies[0] ) {
         return vAxes.at(iaxis);
-    else if( !!bodies[1] && bodies[1]->IsStatic() )
+    }
+    else if( !!bodies[1] && bodies[1]->IsStatic() ) {
         return bodies[1]->GetTransform().rotate(vAxes.at(iaxis));
-    else
+    }
+    else {
         return bodies[0]->GetTransform().rotate(vAxes.at(iaxis));
+    }
 }
 
 Vector KinBody::Joint::GetInternalHierarchyAxis(int iaxis) const
 {
-    return -vAxes.at(iaxis);
+    return vAxes.at(iaxis);
 }
 
 Transform KinBody::Joint::GetInternalHierarchyLeftTransform() const
@@ -782,18 +785,21 @@ Transform KinBody::Joint::GetInternalHierarchyLeftTransform() const
     if( !!bodies[1] && bodies[1] == bodies[0]->GetParentLink() ) {
         // bodies[0] is a child
         Transform tjoint;
-        if( GetType() == Joint::JointHinge )
-            tjoint.rotfromaxisangle(vAxes.at(0),-GetOffset());
-        else if( GetType() == Joint::JointSlider )
-            tjoint.trans = vAxes.at(0)*(-GetOffset());
+        if( GetType() == Joint::JointHinge ) {
+            tjoint.rotfromaxisangle(vAxes.at(0),GetOffset());
+        }
+        else if( GetType() == Joint::JointSlider ) {
+            tjoint.trans = vAxes.at(0)*(GetOffset());
+        }
         return tinvRight*tjoint;
     }
-
     Transform tjoint;
-    if( GetType() == Joint::JointHinge )
-        tjoint.rotfromaxisangle(vAxes.at(0),GetOffset());
-    else if( GetType() == Joint::JointSlider )
-        tjoint.trans = vAxes.at(0)*GetOffset();
+    if( GetType() == Joint::JointHinge ) {
+        tjoint.rotfromaxisangle(vAxes.at(0),-GetOffset());
+    }
+    else if( GetType() == Joint::JointSlider ) {
+        tjoint.trans = vAxes.at(0)*(-GetOffset());
+    }
     return tLeft*tjoint;
 }
 
@@ -1349,16 +1355,16 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
                             // init 1 from 0
                             switch((*itjoint)->GetType()) {
                             case Joint::JointHinge:
-                                w = -vjointvel[0]*(*itjoint)->vAxes[0];
+                                w = vjointvel[0]*(*itjoint)->vAxes[0];
                                 break;
                             case Joint::JointHinge2: {
                                 Transform tfirst;
-                                tfirst.rotfromaxisangle((*itjoint)->vAxes[0], -vjointang[0]);
-                                w = -vjointvel[0]*(*itjoint)->vAxes[0] + tfirst.rotate(-vjointvel[1]*(*itjoint)->vAxes[1]);
+                                tfirst.rotfromaxisangle((*itjoint)->vAxes[0], vjointang[0]);
+                                w = vjointvel[0]*(*itjoint)->vAxes[0] + tfirst.rotate(vjointvel[1]*(*itjoint)->vAxes[1]);
                                 break;
                             }
                             case Joint::JointSlider:
-                                v = -vjointvel[0]*(*itjoint)->vAxes[0];
+                                v = vjointvel[0]*(*itjoint)->vAxes[0];
                                 break;
                             case Joint::JointSpherical:
                                 w.x = vjointvel[0]; w.y = vjointvel[1]; w.z = vjointvel[2];
@@ -1384,16 +1390,16 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
                         // init 1 from 0
                         switch((*itjoint)->GetType()) {
                         case Joint::JointHinge:
-                            w = vjointvel[0]*(*itjoint)->vAxes[0];
+                            w = -vjointvel[0]*(*itjoint)->vAxes[0];
                             break;
                         case Joint::JointHinge2: {
                             Transform tfirst;
-                            tfirst.rotfromaxisangle((*itjoint)->vAxes[0], vjointang[0]);
-                            w = vjointvel[0]*(*itjoint)->vAxes[0] + tfirst.rotate(vjointvel[1]*(*itjoint)->vAxes[1]);
+                            tfirst.rotfromaxisangle((*itjoint)->vAxes[0], -vjointang[0]);
+                            w = -(vjointvel[0]*(*itjoint)->vAxes[0] + tfirst.rotate(vjointvel[1]*(*itjoint)->vAxes[1]));
                             break;
                         }
                         case Joint::JointSlider:
-                            v = vjointvel[0]*(*itjoint)->vAxes[0];
+                            v = -vjointvel[0]*(*itjoint)->vAxes[0];
                             break;
                         case Joint::JointSpherical:
                             w.x = -vjointvel[0]; w.y = -vjointvel[1]; w.z = -vjointvel[2];
@@ -1419,16 +1425,16 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
                     // joint attached to static environment (it will never be [1])
                     switch((*itjoint)->GetType()) {
                     case Joint::JointHinge:
-                        w = -vjointvel[0]*(*itjoint)->vAxes[0];
+                        w = vjointvel[0]*(*itjoint)->vAxes[0];
                         break;
                     case Joint::JointHinge2: {
                         Transform tfirst;
-                        tfirst.rotfromaxisangle((*itjoint)->vAxes[0], -vjointang[0]);
-                        w = -vjointvel[0]*(*itjoint)->vAxes[0] + tfirst.rotate(-vjointvel[1]*(*itjoint)->vAxes[1]);
+                        tfirst.rotfromaxisangle((*itjoint)->vAxes[0], vjointang[0]);
+                        w = vjointvel[0]*(*itjoint)->vAxes[0] + tfirst.rotate(vjointvel[1]*(*itjoint)->vAxes[1]);
                         break;
                     }
                     case Joint::JointSlider:
-                        v = -vjointvel[0]*(*itjoint)->vAxes[0];
+                        v = vjointvel[0]*(*itjoint)->vAxes[0];
                         break;
                     case Joint::JointSpherical:
                         w.x = vjointvel[0]; w.y = vjointvel[1]; w.z = vjointvel[2];
@@ -1715,18 +1721,18 @@ void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, bool bCheck
                             // init 1 from 0
                             switch((*itjoint)->GetType()) {
                             case Joint::JointHinge:
-                                tjoint.rotfromaxisangle(axis, -vjointang[0]);
+                                tjoint.rotfromaxisangle(axis, vjointang[0]);
                                 break;
                             case Joint::JointHinge2: {
                                 Transform tfirst;
-                                tfirst.rotfromaxisangle((*itjoint)->vAxes[0], -vjointang[0]);
+                                tfirst.rotfromaxisangle((*itjoint)->vAxes[0], vjointang[0]);
                                 Transform tsecond;
-                                tsecond.rotfromaxisangle(tfirst.rotate((*itjoint)->vAxes[1]), -vjointang[1]);
+                                tsecond.rotfromaxisangle(tfirst.rotate((*itjoint)->vAxes[1]), vjointang[1]);
                                 tjoint = tsecond * tfirst;
                                 break;
                             }
                             case Joint::JointSlider:
-                                tjoint.trans = -axis * vjointang[0];
+                                tjoint.trans = axis * vjointang[0];
                                 break;
                             case Joint::JointSpherical: {
                                 dReal fang = vjointang[0]*vjointang[0]+vjointang[1]*vjointang[1]+vjointang[2]*vjointang[2];
@@ -1756,18 +1762,18 @@ void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, bool bCheck
                         // init 1 from 0
                         switch((*itjoint)->GetType()) {
                         case Joint::JointHinge:
-                            tjoint.rotfromaxisangle(axis, vjointang[0]);
+                            tjoint.rotfromaxisangle(axis, -vjointang[0]);
                             break;
                         case Joint::JointHinge2: {
                             Transform tfirst;
-                            tfirst.rotfromaxisangle((*itjoint)->vAxes[0], vjointang[0]);
+                            tfirst.rotfromaxisangle((*itjoint)->vAxes[0], -vjointang[0]);
                             Transform tsecond;
-                            tsecond.rotfromaxisangle(tfirst.rotate((*itjoint)->vAxes[1]), vjointang[1]);
+                            tsecond.rotfromaxisangle(tfirst.rotate((*itjoint)->vAxes[1]), -vjointang[1]);
                             tjoint = tsecond * tfirst;
                             break;
                         }
                         case Joint::JointSlider:
-                            tjoint.trans = axis * vjointang[0];
+                            tjoint.trans = -axis * vjointang[0];
                             break;
                         case Joint::JointSpherical: {
                             dReal fang = vjointang[0]*vjointang[0]+vjointang[1]*vjointang[1]+vjointang[2]*vjointang[2];
@@ -1797,18 +1803,18 @@ void KinBody::SetJointValues(const std::vector<dReal>& vJointValues, bool bCheck
                     // joint attached to static environment (it will never be [1])
                     switch((*itjoint)->GetType()) {
                     case Joint::JointHinge:
-                        tjoint.rotfromaxisangle(axis, -vjointang[0]);
+                        tjoint.rotfromaxisangle(axis, vjointang[0]);
                         break;
                     case Joint::JointHinge2: {
                         Transform tfirst;
-                        tfirst.rotfromaxisangle((*itjoint)->vAxes[0], -vjointang[0]);
+                        tfirst.rotfromaxisangle((*itjoint)->vAxes[0], vjointang[0]);
                         Transform tsecond;
-                        tsecond.rotfromaxisangle(tfirst.rotate((*itjoint)->vAxes[1]), -vjointang[1]);
+                        tsecond.rotfromaxisangle(tfirst.rotate((*itjoint)->vAxes[1]), vjointang[1]);
                         tjoint = tsecond * tfirst;
                         break;
                     }
                     case Joint::JointSlider:
-                        tjoint.trans = -axis * vjointang[0];
+                        tjoint.trans = axis * vjointang[0];
                         break;
                     case Joint::JointSpherical: {
                         dReal fang = vjointang[0]*vjointang[0]+vjointang[1]*vjointang[1]+vjointang[2]*vjointang[2];
@@ -2012,10 +2018,10 @@ void KinBody::CalculateJacobian(int index, const Vector& trans, boost::multi_arr
             else {
                 switch((*itjoint)->GetType()) {
                 case Joint::JointHinge:
-                    cross3(v, (*itjoint)->GetAxis(dof), (*itjoint)->GetAnchor()-trans);
+                    cross3(v, (*itjoint)->GetAxis(dof), trans-(*itjoint)->GetAnchor());
                     break;
                 case Joint::JointSlider:
-                    v = -(*itjoint)->GetAxis(dof);
+                    v = (*itjoint)->GetAxis(dof);
                     break;
                 default:
                     RAVELOG_WARNA("CalculateJacobian joint %d not supported\n", (*itjoint)->GetType());
@@ -2035,10 +2041,10 @@ void KinBody::CalculateJacobian(int index, const Vector& trans, boost::multi_arr
             for(int dof = 0; dof < (*itjoint)->GetDOF(); ++dof) {
                 switch((*itjoint)->GetType()) {
                 case Joint::JointHinge:
-                    cross3(v, (*itjoint)->GetAxis(dof), (*itjoint)->GetAnchor()-trans);
+                    cross3(v, (*itjoint)->GetAxis(dof), trans-(*itjoint)->GetAnchor());
                     break;
                 case Joint::JointSlider:
-                    v = -(*itjoint)->GetAxis(dof);
+                    v = (*itjoint)->GetAxis(dof);
                     break;
                 default:
                     RAVELOG_WARNA("CalculateJacobian joint %d not supported\n", (*itjoint)->GetType());
@@ -2085,7 +2091,7 @@ void KinBody::CalculateRotationJacobian(int index, const Vector& q, boost::multi
             else {
                 switch((*itjoint)->GetType()) {
                 case Joint::JointHinge:
-                    v = -(*itjoint)->GetAxis(0);
+                    v = (*itjoint)->GetAxis(0);
                     break;
                 case Joint::JointSlider:
                     v = Vector(0,0,0);
@@ -2111,7 +2117,7 @@ void KinBody::CalculateRotationJacobian(int index, const Vector& q, boost::multi
             for(int dof = 0; dof < (*itjoint)->GetDOF(); ++dof) {
                 switch((*itjoint)->GetType()) {
                 case Joint::JointHinge:
-                    v = -(*itjoint)->GetAxis(0);
+                    v = (*itjoint)->GetAxis(0);
                     break;
                 case Joint::JointSlider:
                     v = Vector(0,0,0);
@@ -2164,7 +2170,7 @@ void KinBody::CalculateAngularVelocityJacobian(int index, boost::multi_array<dRe
             else {
                 switch((*itjoint)->GetType()) {
                 case Joint::JointHinge:
-                    v = -(*itjoint)->GetAxis(0);
+                    v = (*itjoint)->GetAxis(0);
                     break;
                 case Joint::JointSlider:
                     v = Vector(0,0,0);
@@ -2187,7 +2193,7 @@ void KinBody::CalculateAngularVelocityJacobian(int index, boost::multi_array<dRe
             for(int dof = 0; dof < (*itjoint)->GetDOF(); ++dof) {
                 switch((*itjoint)->GetType()) {
                 case Joint::JointHinge:
-                    v = -(*itjoint)->GetAxis(0);
+                    v = (*itjoint)->GetAxis(0);
                     break;
                 case Joint::JointSlider:
                     v = Vector(0,0,0);
@@ -2516,13 +2522,15 @@ void KinBody::WriteForwardKinematics(std::ostream& f)
                             case Joint::JointHinge:
                             case Joint::JointSlider: {
                                 info.type = (*itjoint)->GetType() == Joint::JointHinge ? "hinge" : "slider";
-                                info.vjointaxis = -(*itjoint)->vAxes[0];
+                                info.vjointaxis = (*itjoint)->vAxes[0];
                                 info.Tright = (*itjoint)->tRight;
                                 Transform tjoint;
-                                if( (*itjoint)->GetType() == Joint::JointHinge )
-                                    tjoint.rotfromaxisangle(info.vjointaxis,-(*itjoint)->offset);
-                                else if( (*itjoint)->GetType() == Joint::JointSlider )
-                                    tjoint.trans = -info.vjointaxis*(*itjoint)->offset;
+                                if( (*itjoint)->GetType() == Joint::JointHinge ) {
+                                    tjoint.rotfromaxisangle(info.vjointaxis,(*itjoint)->offset);
+                                }
+                                else if( (*itjoint)->GetType() == Joint::JointSlider ) {
+                                    tjoint.trans = info.vjointaxis*(*itjoint)->offset;
+                                }
                                 info.Tleft = (*itjoint)->tLeft*tjoint;
                                 info.linkcur = bodies[1]->GetIndex();
                                 info.linkbase = bodies[0]->GetIndex();
@@ -2558,13 +2566,15 @@ void KinBody::WriteForwardKinematics(std::ostream& f)
                         case Joint::JointHinge:
                         case Joint::JointSlider: {
                             info.type = (*itjoint)->GetType() == Joint::JointHinge ? "hinge" : "slider";
-                            info.vjointaxis = -(*itjoint)->vAxes[0];
+                            info.vjointaxis = (*itjoint)->vAxes[0];
                             info.Tright = (*itjoint)->tinvLeft;
                             Transform tjoint;
-                            if( (*itjoint)->GetType() == Joint::JointHinge )
-                                tjoint.rotfromaxisangle(info.vjointaxis,(*itjoint)->offset);
-                            else if( (*itjoint)->GetType() == Joint::JointSlider )
-                                tjoint.trans = info.vjointaxis*(*itjoint)->offset;
+                            if( (*itjoint)->GetType() == Joint::JointHinge ) {
+                                tjoint.rotfromaxisangle(info.vjointaxis,-(*itjoint)->offset);
+                            }
+                            else if( (*itjoint)->GetType() == Joint::JointSlider ) {
+                                tjoint.trans = -info.vjointaxis*(*itjoint)->offset;
+                            }
                             info.Tleft = (*itjoint)->tinvRight*tjoint;
                             info.linkcur = bodies[0]->GetIndex();
                             info.linkbase = bodies[1]->GetIndex();
@@ -2603,16 +2613,14 @@ void KinBody::WriteForwardKinematics(std::ostream& f)
                         // reset body
                         LINKTRANSINFO info;
                         info.type = (*itjoint)->GetType() == Joint::JointHinge ? "hinge" : "slider";
-                        info.vjointaxis = -(*itjoint)->vAxes[0];
+                        info.vjointaxis = (*itjoint)->vAxes[0];
                         info.linkcur = bodies[0]->GetIndex();
                         info.linkbase = -1;
                         info.jointindex = jointindex;
                         info.bRecord =true;
-                        
                         info.Tright = (*itjoint)->tRight;
                         info.Tleft = (*itjoint)->tLeft;
                         listlinkinfo.push_back(info);
-                        
                         break;
                     }
                     case Joint::JointSpherical: {

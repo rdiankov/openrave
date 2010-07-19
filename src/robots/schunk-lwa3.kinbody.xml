@@ -23,9 +23,8 @@
     <Body>base</Body>
     <Body>link1</Body>
     <offsetfrom>link1</offsetfrom>
-    <axis>0 0 -1</axis>
-    <lostop>-180</lostop>
-    <histop>180</histop>
+    <axis>0 0 1</axis>
+    <limitsdeg>-180 180</limitsdeg>
     <resolution>0.5</resolution>
     <maxvel>0.43808</maxvel>
     <maxaccel>1.7541</maxaccel>
@@ -46,9 +45,8 @@
     <Body>link1</Body>
     <Body>link2</Body>
     <offsetfrom>link2</offsetfrom>
-    <axis>0 0 -1</axis>
-    <lostop>-130</lostop>
-    <histop>130</histop>
+    <axis>0 0 1</axis>
+    <limitsdeg>-130 130</limitsdeg>
     <resolution>0.5</resolution>
     <maxvel>0.58469</maxvel>
     <maxaccel>2.3405</maxaccel>
@@ -69,9 +67,8 @@
     <Body>link2</Body>
     <Body>link3</Body>
     <offsetfrom>link3</offsetfrom>
-    <axis>0 0 -1</axis>
-    <lostop>-160</lostop>
-    <histop>160</histop>
+    <axis>0 0 1</axis>
+    <limitsdeg>-160 160</limitsdeg>
     <resolution>1</resolution>
     <maxvel>0.41888</maxvel>
     <maxaccel>1.6598</maxaccel>
@@ -92,9 +89,8 @@
     <Body>link3</Body>
     <Body>link4</Body>
     <offsetfrom>link4</offsetfrom>
-    <axis>0 0 -1</axis>
-    <lostop>-130</lostop>
-    <histop>130</histop>
+    <axis>0 0 1</axis>
+    <limitsdeg>-130 130</limitsdeg>
     <resolution>1</resolution>
     <maxvel>0.55851</maxvel>
     <maxaccel>2.2323</maxaccel>
@@ -115,9 +111,8 @@
     <Body>link4</Body>
     <Body>link5</Body>
     <offsetfrom>link5</offsetfrom>
-    <axis>0 0 -1</axis>
-    <lostop>-160</lostop>
-    <histop>160</histop>
+    <axis>0 0 1</axis>
+    <limitsdeg>-160 160</limitsdeg>
     <resolution>1</resolution>
     <maxvel>0.47473</maxvel>
     <maxaccel>1.8972</maxaccel>
@@ -138,9 +133,8 @@
     <Body>link5</Body>
     <Body>link6</Body>
     <offsetfrom>link6</offsetfrom>
-    <axis>0 0 -1</axis>
-    <lostop>-130</lostop>
-    <histop>130</histop>
+    <axis>0 0 1</axis>
+    <limitsdeg>-130 130</limitsdeg>
     <resolution>1</resolution>
     <maxvel>0.87266</maxvel>
     <maxaccel>3.4907</maxaccel>
@@ -162,9 +156,8 @@
     <Body>link6</Body>
     <Body>link7</Body>
     <offsetfrom>link7</offsetfrom>
-    <axis>0 0 -1</axis>
-    <lostop>-160</lostop>
-    <histop>160</histop>
+    <axis>0 0 1</axis>
+    <limitsdeg>-160 160</limitsdeg>
     <resolution>1</resolution>
     <maxvel>0.87266</maxvel>
     <maxaccel>3.4907</maxaccel>

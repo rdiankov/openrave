@@ -29,9 +29,8 @@
       <Body>Finger0-0</Body>
       <offsetfrom>Palm</offsetfrom>
       <weight>4</weight>
-      <lostop>-1</lostop>
-      <histop>181</histop>
-      <axis>0 0 1</axis>
+      <limitsdeg>-1 181</limitsdeg>
+      <axis>0 0 -1</axis>
       <anchor>0.025 0 0</anchor>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
@@ -52,9 +51,8 @@
       <Body>Finger0-1</Body>
       <offsetfrom>Finger0-0</offsetfrom>
       <weight>4</weight>
-      <lostop>-5</lostop>
-      <histop>139</histop>
-      <axis>0 0 -1</axis>
+      <limitsdeg>-5 139</limitsdeg>
+      <axis>0 0 1</axis>
       <anchor>0.025 0 0.001</anchor>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
@@ -75,9 +73,8 @@
       <Body>Finger0-2</Body>
       <offsetfrom>Finger0-1</offsetfrom>
       <weight>4</weight>
-      <lostop>-1</lostop>
-      <histop>143</histop>
-      <axis>0 0 -1</axis>
+      <limitsdeg>-1 143</limitsdeg>
+      <axis>0 0 1</axis>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
     </Joint>
@@ -100,7 +97,7 @@
       <Body>Finger1-0</Body>
       <offsetfrom>Palm</offsetfrom>
       <weight>4</weight>
-      <axis>0 0 -1</axis>
+      <axis>0 0 1</axis>
       <anchor>-0.025 0 0</anchor>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
@@ -121,9 +118,8 @@
       <Body>Finger1-1</Body>
       <offsetfrom>Finger1-0</offsetfrom>
       <weight>4</weight>
-      <lostop>-5</lostop>
-      <histop>139</histop>
-      <axis>0 0 -1</axis>
+      <limitsdeg>-5 139</limitsdeg>
+      <axis>0 0 1</axis>
       <anchor>-0.025 0 0.001</anchor>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
@@ -144,9 +140,8 @@
       <Body>Finger1-2</Body>
       <offsetfrom>Finger1-1</offsetfrom>
       <weight>4</weight>
-      <lostop>-1</lostop>
-      <histop>143</histop>
-      <axis>0 0 -1</axis>
+      <limitsdeg>-1 143</limitsdeg>
+      <axis>0 0 1</axis>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
     </Joint>
@@ -168,9 +163,8 @@
       <Body>Finger2-0</Body>
       <offsetfrom>Palm</offsetfrom>
       <weight>4</weight>
-      <lostop>-5</lostop>
-      <histop>139</histop>
-      <axis>1 0 0</axis>
+      <limitsdeg>-5 139</limitsdeg>
+      <axis>-1 0 0</axis>
       <anchor>0 -0.05 -0.001</anchor>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
@@ -191,9 +185,8 @@
       <Body>Finger2-1</Body>
       <offsetfrom>Finger2-0</offsetfrom>
       <weight>4</weight>
-      <lostop>-1</lostop>
-      <histop>143</histop>
-      <axis>0 0 1</axis>
+      <limitsdeg>-1 143</limitsdeg>
+      <axis>0 0 -1</axis>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
     </Joint>

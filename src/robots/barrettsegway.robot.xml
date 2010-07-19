@@ -22,8 +22,7 @@
     <joint type="hinge" enable="false">
       <body>segway</body>
       <body>wam0</body>
-      <lostop>0</lostop>
-      <histop>0</histop>
+      <limits>0 0</limits>
     </joint>
   </KinBody>
 </Robot>

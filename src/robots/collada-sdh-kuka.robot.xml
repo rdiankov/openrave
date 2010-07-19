@@ -10,8 +10,7 @@
    <joint type="hinge" enable="false">
      <body>link6</body>
      <body>hand_root</body>
-     <lostop>0</lostop>
-     <histop>0</histop>
+     <limits>0 0</limits>
    </joint>
  </kinbody>
 </robot>

@@ -23,14 +23,12 @@
     <joint name="leftdummy" type="hinge" enable="false">
       <body>chest</body>
       <body>l_base</body>
-      <lostop>0</lostop>
-      <histop>0</histop>
+      <limitsdeg>0 0</limitsdeg>
     </joint>
     <joint name="rightdummy" type="hinge" enable="false">
       <body>chest</body>
       <body>r_base</body>
-      <lostop>0</lostop>
-      <histop>0</histop>
+      <limitsdeg>0 0</limitsdeg>
     </joint>
   </KinBody>
   <Manipulator name="leftarm">

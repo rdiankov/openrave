@@ -9,17 +9,15 @@
       <joint type="hinge" enable="false">
         <body>staticbase</body>
         <body>link0</body>
-        <lostop>0</lostop>
-        <histop>0</histop>
+        <limitsdeg>0 0</limitsdeg>
       </joint>
     </kinbody>
-    <KinBody file="schunk_manip.kinbody.xml"/>
+    <KinBody file="schunk_manip.kinbody.xml"></KinBody>
     <Joint name="dummy" type="hinge" enable="false">
       <body>link7</body>
       <body>gripper_base</body>
       <axis>0 0 1</axis>
-      <lostop>0</lostop>
-      <histop>0</histop>
+      <limitsdeg>0 0</limitsdeg>
     </Joint>
   </KinBody>
 

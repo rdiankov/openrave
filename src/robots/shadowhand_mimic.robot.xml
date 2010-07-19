@@ -1,7 +1,5 @@
 <Robot name="ShadowHand">
   <KinBody>
-
-
     <Body name="palm" type="dynamic">
       <Geom modifiable="false" type="trimesh">
         <data>models/shadow/palm.iv 0.001</data>
@@ -21,7 +19,7 @@
       </Geom>
     </Body>
 
-<!-- little finger (0) -->
+    <!-- little finger (0) -->
 
     <Body name="LMeta" type="dynamic">
       <Geom modifiable="false" type="trimesh">
@@ -71,22 +69,20 @@
       <Body>LMeta</Body>
       <offsetfrom>palm</offsetfrom>
       <weight>4</weight>
-      <lostop>0</lostop>
-      <histop>40</histop>
-      <axis>-0.8275 0 0.5615</axis>
+      <limitsdeg>0 40</limitsdeg>
+      <axis>0.8275 0 -0.5615</axis>
       <anchor>0.0451 -0.0059 0.0043</anchor>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
     </Joint>
 
-   <Joint type="hinge" name="JF0_2">
+    <Joint type="hinge" name="JF0_2">
       <Body>LMeta</Body>
       <Body>Finger0-R</Body>
       <offsetfrom>Finger0-R</offsetfrom>
       <weight>4</weight>
-      <lostop>-25</lostop>
-      <histop>25</histop>
-      <axis>0 1 0</axis>
+      <limitsdeg>-25 25</limitsdeg>
+      <axis>0 -1 0</axis>
       <anchor>0.0865 -0.0043 0.0204</anchor>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
@@ -99,9 +95,8 @@
       <Body>Finger0-0</Body>
       <offsetfrom>Finger0-0</offsetfrom>
       <weight>4</weight>
-      <lostop>-20</lostop>
-      <histop>90</histop>
-      <axis>0 0 1</axis>
+      <limitsdeg>-20 90</limitsdeg>
+      <axis>0 0 -1</axis>
       <anchor>0.0865 -0.0043 0.0204</anchor>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
@@ -113,9 +108,8 @@
       <Body>Finger0-1</Body>
       <offsetfrom>Finger0-0</offsetfrom>
       <weight>4</weight>
-      <lostop>0</lostop>
-      <histop>90</histop>
-      <axis>0 0 1</axis>
+      <limitsdeg>0 90</limitsdeg>
+      <axis>0 0 -1</axis>
       <anchor>0.1315 -0.0043 0.0204</anchor>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
@@ -126,15 +120,14 @@
       <Body>Finger0-2</Body>
       <offsetfrom>Finger0-0</offsetfrom>
       <weight>4</weight>
-      <lostop>-20</lostop>
-      <histop>90</histop>
-      <axis>0 0 1</axis>
+      <limitsdeg>-20 90</limitsdeg>
+      <axis>0 0 -1</axis>
       <anchor>0.1572 -0.0043 0.0204</anchor>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
     </Joint>
 
-<!-- ring finger (1) -->
+    <!-- ring finger (1) -->
 
     <Body name="Finger1-R" type="dynamic">
       <Geom modifiable="false" type="trimesh">
@@ -166,14 +159,13 @@
       </Geom>
     </Body>
 
-   <Joint type="hinge" name="JF1_1">
+    <Joint type="hinge" name="JF1_1">
       <Body>palm</Body>
       <Body>Finger1-R</Body>
       <offsetfrom>Finger1-R</offsetfrom>
       <weight>4</weight>
-      <lostop>-25</lostop>
-      <histop>25</histop>
-      <axis>0 1 0</axis>
+      <limitsdeg>-25 25</limitsdeg>
+      <axis>0 -1 0</axis>
       <anchor>0.0954 -0.0051 -0.0004</anchor>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
@@ -185,9 +177,8 @@
       <Body>Finger1-0</Body>
       <offsetfrom>Finger1-0</offsetfrom>
       <weight>4</weight>
-      <lostop>-20</lostop>
-      <histop>90</histop>
-      <axis>0 0 1</axis>    
+      <limitsdeg>-20 90</limitsdeg>
+      <axis>0 0 -1</axis>    
       <anchor>0.0954 -0.0051 -0.0004</anchor>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
@@ -199,9 +190,8 @@
       <Body>Finger1-1</Body>
       <offsetfrom>Finger1-0</offsetfrom>
       <weight>4</weight>
-      <lostop>0</lostop>
-      <histop>90</histop>
-      <axis>0 0 1</axis>
+      <limitsdeg>0 90</limitsdeg>
+      <axis>0 0 -1</axis>
       <anchor>0.1407 -0.0051 -0.0004</anchor>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
@@ -212,16 +202,15 @@
       <Body>Finger1-2</Body>
       <offsetfrom>Finger1-0</offsetfrom>
       <weight>4</weight>
-      <lostop>-20</lostop>
-      <histop>90</histop>
-      <axis>0 0 1</axis>
+      <limitsdeg>-20 90</limitsdeg>
+      <axis>0 0 -1</axis>
       <anchor>0.1655 -0.0051 -0.0004</anchor>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
     </Joint>
 
 
-<!-- middle finger (2) -->
+    <!-- middle finger (2) -->
 
     <Body name="Finger2-R" type="dynamic">
       <Geom modifiable="false" type="trimesh">
@@ -254,14 +243,13 @@
     </Body>
 
 
-   <Joint type="hinge" name="JF2_1">
+    <Joint type="hinge" name="JF2_1">
       <Body>palm</Body>
       <Body>Finger2-R</Body>
       <offsetfrom>Finger2-R</offsetfrom>
       <weight>4</weight>
-      <lostop>-25</lostop>
-      <histop>25</histop>
-      <axis>0 1 0</axis>
+      <limitsdeg>-25 25</limitsdeg>
+      <axis>0 -1 0</axis>
       <anchor>0.0987   -0.0052   -0.0226</anchor>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
@@ -272,9 +260,8 @@
       <Body>Finger2-0</Body>
       <offsetfrom>Finger2-0</offsetfrom>
       <weight>4</weight>
-      <lostop>-20</lostop>
-      <histop>90</histop>
-      <axis>0 0 1</axis>
+      <limitsdeg>-20 90</limitsdeg>
+      <axis>0 0 -1</axis>
       <anchor>0.0987   -0.0052   -0.0226</anchor>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
@@ -286,9 +273,8 @@
       <Body>Finger2-1</Body>
       <offsetfrom>Finger2-0</offsetfrom>
       <weight>4</weight>
-      <lostop>0</lostop>
-      <histop>90</histop>
-      <axis>0 0 1</axis>
+      <limitsdeg>0 90</limitsdeg>
+      <axis>0 0 -1</axis>
       <anchor>0.1446   -0.0052   -0.0226</anchor>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
@@ -299,15 +285,14 @@
       <Body>Finger2-2</Body>
       <offsetfrom>Finger2-0</offsetfrom>
       <weight>4</weight>
-      <lostop>-20</lostop>
-      <histop>90</histop>
-      <axis>0 0 1</axis>
+      <limitsdeg>-20 90</limitsdeg>
+      <axis>0 0 -1</axis>
       <anchor> 0.1701 -0.0052   -0.0226</anchor>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
     </Joint>
 
-<!-- index finger (3) -->
+    <!-- index finger (3) -->
     <Body name="Finger3-R" type="dynamic">
       <Geom modifiable="false" type="trimesh">
         <data>models/shadow/FRotor.iv 0.001</data>
@@ -338,14 +323,13 @@
       </Geom>
     </Body>
 
-   <Joint type="hinge" name="JF3_1">
+    <Joint type="hinge" name="JF3_1">
       <Body>palm</Body>
       <Body>Finger3-R</Body>
       <offsetfrom>Finger3-R</offsetfrom>
       <weight>4</weight>
-      <lostop>-25</lostop>
-      <histop>25</histop>
-      <axis>0 1 0</axis>
+      <limitsdeg>-25 25</limitsdeg>
+      <axis>0 -1 0</axis>
       <anchor>0.0960   -0.0050   -0.0445</anchor>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
@@ -356,9 +340,8 @@
       <Body>Finger3-0</Body>
       <offsetfrom>Finger3-0</offsetfrom>
       <weight>4</weight>
-      <lostop>-20</lostop>
-      <histop>90</histop>
-      <axis>0 0 1</axis>
+      <limitsdeg>-20 90</limitsdeg>
+      <axis>0 0 -1</axis>
       <anchor>0.0960   -0.0050   -0.0445</anchor>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
@@ -370,9 +353,8 @@
       <Body>Finger3-1</Body>
       <offsetfrom>Finger3-0</offsetfrom>
       <weight>4</weight>
-      <lostop>0</lostop>
-      <histop>90</histop>
-      <axis>0 0 1</axis>
+      <limitsdeg>0 90</limitsdeg>
+      <axis>0 0 -1</axis>
       <anchor>0.1410   -0.0050   -0.0445</anchor>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
@@ -383,15 +365,14 @@
       <Body>Finger3-2</Body>
       <offsetfrom>Finger3-0</offsetfrom>
       <weight>4</weight>
-      <lostop>-20</lostop>
-      <histop>90</histop>
-      <axis>0 0 1</axis>
+      <limitsdeg>-20 90</limitsdeg>
+      <axis>0 0 -1</axis>
       <anchor>0.1665   -0.0050   -0.0445</anchor>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
     </Joint>
 
-<!-- thumb (4) -->
+    <!-- thumb (4) -->
 
     <Body name="Finger4-dummy1" type="dynamic">
       <Geom modifiable="false" type="sphere">
@@ -436,9 +417,8 @@
       <Body>Finger4-dummy1</Body>
       <offsetfrom>Finger4-dummy1</offsetfrom>
       <weight>4</weight>
-      <lostop>-60</lostop>
-      <histop>60</histop>
-      <axis>0.7071 0 -0.7071</axis>
+      <limitsdeg>-60 60</limitsdeg>
+      <axis>-0.7071 0 0.7071</axis>
       <anchor>0.0386 -0.0134 -0.0401</anchor>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
@@ -450,9 +430,8 @@
       <Body>Finger4-0</Body>
       <offsetfrom>Finger4-0</offsetfrom>
       <weight>4</weight>
-      <lostop>0</lostop>
-      <histop>80</histop>
-      <axis>0.7071 0 0.7071</axis>
+      <limitsdeg>0 80</limitsdeg>
+      <axis>-0.7071 0 -0.7071</axis>
       <anchor>0.0386 -0.0134 -0.0401</anchor>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
@@ -464,22 +443,20 @@
       <Body>Finger4-dummy2</Body>
       <offsetfrom>Finger4-dummy2</offsetfrom>
       <weight>4</weight>
-      <lostop>-15</lostop>
-      <histop>15</histop>
-      <axis>0.7071 0 0.7071</axis>
+      <limitsdeg>-15 15</limitsdeg>
+      <axis>-0.7071 0 -0.7071</axis>
       <anchor>0.0667 -0.0134 -0.0685</anchor>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
     </Joint>
 
-   <Joint type="hinge" name="JF4_4">
+    <Joint type="hinge" name="JF4_4">
       <Body>Finger4-dummy2</Body>
       <Body>Finger4-1</Body>
       <offsetfrom>Finger4-1</offsetfrom>
       <weight>4</weight>
-      <lostop>-40</lostop>
-      <histop>40</histop>
-      <axis>0 1 0</axis>
+      <limitsdeg>-40 40</limitsdeg>
+      <axis>0 -1 0</axis>
       <anchor>0.0667 -0.0134 -0.0685</anchor>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
@@ -490,9 +467,8 @@
       <Body>Finger4-2</Body>
       <offsetfrom>Finger4-2</offsetfrom>
       <weight>4</weight>
-      <lostop>-20</lostop>
-      <histop>90</histop>
-      <axis>0 1 0</axis>
+      <limitsdeg>-20 90</limitsdeg>
+      <axis>0 -1 0</axis>
       <anchor>0.0901 -0.0133 -0.0934</anchor>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
@@ -512,6 +488,4 @@
     <closingdirection>1 1 1 1 1</closingdirection>
     <direction>0 -1 0</direction>
   </Manipulator>
-
 </Robot>
-

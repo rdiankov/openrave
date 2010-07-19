@@ -22,9 +22,8 @@
       <Body>Hips</Body>
       <Body>LThigh</Body>
       <offsetfrom>LThigh</offsetfrom>
-      <axis>1 0 0</axis>
-      <lostop>-60</lostop>
-      <histop>120</histop>
+      <axis>-1 0 0</axis>
+      <limitsdeg>-60 120</limitsdeg>
       <weight>4</weight>
       <maxvel>1</maxvel>
       <resolution>1</resolution>
@@ -41,9 +40,8 @@
       <Body>LThigh</Body>
       <Body>LCalf</Body>
       <offsetfrom>LCalf</offsetfrom>
-      <axis>1 0 0</axis>
-      <lostop>-120</lostop>
-      <histop>1</histop>
+      <axis>-1 0 0</axis>
+      <limitsdeg>-120 1</limitsdeg>
       <weight>2</weight>
       <maxvel>1</maxvel>
       <resolution>1</resolution>
@@ -60,9 +58,8 @@
       <Body>LCalf</Body>
       <Body>LFoot</Body>
       <offsetfrom>LFoot</offsetfrom>
-      <axis>1 0 0</axis>
-      <lostop>-60</lostop>
-      <histop>60</histop>
+      <axis>-1 0 0</axis>
+      <limitsdeg>-60 60</limitsdeg>
       <weight>2</weight>
       <maxvel>1</maxvel>
       <resolution>1</resolution>
@@ -79,9 +76,8 @@
       <Body>LFoot</Body>
       <Body>LToe</Body>
       <offsetfrom>LToe</offsetfrom>
-      <axis>1 0 0</axis>
-      <lostop>-30</lostop>
-      <histop>30</histop>
+      <axis>-1 0 0</axis>
+      <limitsdeg>-30 30</limitsdeg>
       <weight>0.5</weight>
       <maxvel>1</maxvel>
       <resolution>1</resolution>
@@ -100,9 +96,8 @@
       <Body>Hips</Body>
       <Body>RThigh</Body>
       <offsetfrom>RThigh</offsetfrom>
-      <axis>1 0 0</axis>
-      <lostop>-60</lostop>
-      <histop>120</histop>
+      <axis>-1 0 0</axis>
+      <limitsdeg>-60 120</limitsdeg>
       <weight>4</weight>
       <maxvel>1</maxvel>
       <resolution>1</resolution>
@@ -119,9 +114,8 @@
       <Body>RThigh</Body>
       <Body>RCalf</Body>
       <offsetfrom>RCalf</offsetfrom>
-      <axis>1 0 0</axis>
-      <lostop>-120</lostop>
-      <histop>1</histop>
+      <axis>-1 0 0</axis>
+      <limitsdeg>-120 1</limitsdeg>
       <weight>2</weight>
       <maxvel>1</maxvel>
       <resolution>1</resolution>
@@ -138,9 +132,8 @@
       <Body>RCalf</Body>
       <Body>RFoot</Body>
       <offsetfrom>RFoot</offsetfrom>
-      <axis>1 0 0</axis>
-      <lostop>-60</lostop>
-      <histop>60</histop>
+      <axis>-1 0 0</axis>
+      <limitsdeg>-60 60</limitsdeg>
       <weight>2</weight>
       <maxvel>1</maxvel>
       <resolution>1</resolution>
@@ -157,9 +150,8 @@
       <Body>RFoot</Body>
       <Body>RToe</Body>
       <offsetfrom>RToe</offsetfrom>
-      <axis>1 0 0</axis>
-      <lostop>-30</lostop>
-      <histop>30</histop>
+      <axis>-1 0 0</axis>
+      <limitsdeg>-30 30</limitsdeg>
       <weight>0.5</weight>
       <maxvel>1</maxvel>
       <resolution>1</resolution>
@@ -177,9 +169,8 @@
       <Body>Hips</Body>
       <Body>Chest</Body>
       <offsetfrom>Chest</offsetfrom>
-      <axis>1 0 0</axis>
-      <lostop>-120</lostop>
-      <histop>60</histop>
+      <axis>-1 0 0</axis>
+      <limitsdeg>-120 60</limitsdeg>
       <weight>4</weight>
       <maxvel>1</maxvel>
       <resolution>1</resolution>
@@ -199,9 +190,8 @@
       <Body>Chest</Body>
       <Body>LCollar</Body>
       <offsetfrom>LCollar</offsetfrom>
-      <axis>0 0 1</axis>
-      <lostop>-10</lostop>
-      <histop>10</histop>
+      <axis>0 0 -1</axis>
+      <limitsdeg>-10 10</limitsdeg>
       <weight>3</weight>
       <maxvel>1</maxvel>
       <resolution>0.5</resolution>
@@ -218,9 +208,8 @@
       <Body>LCollar</Body>
       <Body>LShoulder</Body>
       <offsetfrom>LShoulder</offsetfrom>
-      <axis>-1 0 0</axis>
-      <lostop>-188</lostop>
-      <histop>61</histop>
+      <axis>1 0 0</axis>
+      <limitsdeg>-188 61</limitsdeg>
       <weight>3</weight>
       <maxvel>1</maxvel>
       <resolution>0.5</resolution>
@@ -236,9 +225,8 @@
       <Body>LShoulder</Body>
       <Body>LShoulder2</Body>
       <offsetfrom>LShoulder2</offsetfrom>
-      <axis>0 0 1</axis>
-      <lostop>-134</lostop>
-      <histop>48</histop>
+      <axis>0 0 -1</axis>
+      <limitsdeg>-134 48</limitsdeg>
       <weight>3</weight>
       <maxvel>1</maxvel>
       <resolution>0.5</resolution>
@@ -254,9 +242,8 @@
       <Body>LShoulder2</Body>
       <Body>LShoulder3</Body>
       <offsetfrom>LShoulder3</offsetfrom>
-      <axis>0 -1 0</axis>
-      <lostop>-94</lostop>
-      <histop>34</histop>
+      <axis>0 1 0</axis>
+      <limitsdeg>-94 34</limitsdeg>
       <weight>3</weight>
       <maxvel>1</maxvel>
       <resolution>0.5</resolution>
@@ -273,9 +260,8 @@
       <Body>LShoulder3</Body>
       <Body>LForearm</Body>
       <offsetfrom>LForearm</offsetfrom>
-      <axis>-1 0 0</axis>
-      <lostop>-142</lostop>
-      <histop>1</histop>
+      <axis>1 0 0</axis>
+      <limitsdeg>-142 1</limitsdeg>
       <weight>2</weight>
       <maxvel>1</maxvel>
       <resolution>1</resolution>
@@ -292,9 +278,8 @@
       <Body>LForearm</Body>
       <Body>LHand</Body>
       <offsetfrom>LHand</offsetfrom>
-      <axis>0 1 0</axis>
-      <lostop>-77</lostop>
-      <histop>113</histop>
+      <axis>0 -1 0</axis>
+      <limitsdeg>-77 113</limitsdeg>
       <weight>2</weight>
       <maxvel>1</maxvel>
       <resolution>1</resolution>
@@ -310,9 +295,8 @@
       <Body>LHand</Body>
       <Body>LHand2</Body>
       <offsetfrom>LHand2</offsetfrom>
-      <axis>1 0 0</axis>
-      <lostop>-47</lostop>
-      <histop>27</histop>
+      <axis>-1 0 0</axis>
+      <limitsdeg>-47 27</limitsdeg>
       <weight>2</weight>
       <maxvel>1</maxvel>
       <resolution>1</resolution>
@@ -328,9 +312,8 @@
       <Body>LHand2</Body>
       <Body>LHand3</Body>
       <offsetfrom>LHand3</offsetfrom>
-      <axis>0 0 -1</axis>
-      <lostop>-90</lostop>
-      <histop>81</histop>
+      <axis>0 0 1</axis>
+      <limitsdeg>-90 81</limitsdeg>
       <weight>2</weight>
       <maxvel>1</maxvel>
       <resolution>3</resolution>
@@ -348,9 +331,8 @@
       <Body>LHand3</Body>
       <Body>LThumbBase</Body>
       <offsetfrom>LThumbBase</offsetfrom>
-      <axis>1 0 0</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>-1 0 0</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>1</weight>
       <maxvel>2</maxvel>
       <resolution>3</resolution>
@@ -366,9 +348,8 @@
       <Body>LThumbBase</Body>
       <Body>LThumbBase2</Body>
       <offsetfrom>LThumbBase2</offsetfrom>
-      <axis>0 1 0</axis>
-      <lostop>-100</lostop>
-      <histop>170</histop>
+      <axis>0 -1 0</axis>
+      <limitsdeg>-100 170</limitsdeg>
       <weight>1</weight>
       <maxvel>2</maxvel>
       <resolution>3</resolution>
@@ -384,9 +365,8 @@
       <Body>LThumbBase2</Body>
       <Body>LThumb0</Body>
       <offsetfrom>LThumb0</offsetfrom>
-      <axis>0 0 1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 -1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>1</weight>
       <maxvel>2</maxvel>
       <resolution>3</resolution>
@@ -403,9 +383,8 @@
       <Body>LThumb0</Body>
       <Body>LThumb1</Body>
       <offsetfrom>LThumb1</offsetfrom>
-      <axis>0 0 1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 -1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>1</weight>
       <maxvel>2</maxvel>
       <resolution>3</resolution>
@@ -422,9 +401,8 @@
       <Body>LThumb1</Body>
       <Body>LThumb2</Body>
       <offsetfrom>LThumb2</offsetfrom>
-      <axis>0 0 1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 -1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>0.5</weight>
       <maxvel>2</maxvel>
       <resolution>5</resolution>
@@ -441,9 +419,8 @@
       <Body>LHand3</Body>
       <Body>LFing40</Body>
       <offsetfrom>LFing40</offsetfrom>
-      <axis>0 0 1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 -1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>1</weight>
       <maxvel>2</maxvel>
       <resolution>3</resolution>
@@ -460,9 +437,8 @@
       <Body>LFing40</Body>
       <Body>LFing41</Body>
       <offsetfrom>LFing41</offsetfrom>
-      <axis>0 0 1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 -1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>1</weight>
       <maxvel>2</maxvel>
       <resolution>3</resolution>
@@ -479,9 +455,8 @@
       <Body>LFing41</Body>
       <Body>LFing42</Body>
       <offsetfrom>LFing42</offsetfrom>
-      <axis>0 0 1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 -1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>0.5</weight>
       <maxvel>2</maxvel>
       <resolution>5</resolution>
@@ -498,9 +473,8 @@
       <Body>LHand3</Body>
       <Body>LFing30</Body>
       <offsetfrom>LFing30</offsetfrom>
-      <axis>0 0 1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 -1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>1</weight>
       <maxvel>2</maxvel>
       <resolution>3</resolution>
@@ -517,9 +491,8 @@
       <Body>LFing30</Body>
       <Body>LFing31</Body>
       <offsetfrom>LFing31</offsetfrom>
-      <axis>0 0 1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 -1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>1</weight>
       <maxvel>2</maxvel>
       <resolution>3</resolution>
@@ -536,9 +509,8 @@
       <Body>LFing31</Body>
       <Body>LFing32</Body>
       <offsetfrom>LFing32</offsetfrom>
-      <axis>0 0 1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 -1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>0.5</weight>
       <maxvel>2</maxvel>
       <resolution>5</resolution>
@@ -555,9 +527,8 @@
       <Body>LHand3</Body>
       <Body>LFing20</Body>
       <offsetfrom>LFing20</offsetfrom>
-      <axis>0 0 1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 -1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>1</weight>
       <maxvel>2</maxvel>
       <resolution>3</resolution>
@@ -574,9 +545,8 @@
       <Body>LFing20</Body>
       <Body>LFing21</Body>
       <offsetfrom>LFing21</offsetfrom>
-      <axis>0 0 1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 -1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>1</weight>
       <maxvel>2</maxvel>
       <resolution>3</resolution>
@@ -593,9 +563,8 @@
       <Body>LFing21</Body>
       <Body>LFing22</Body>
       <offsetfrom>LFing22</offsetfrom>
-      <axis>0 0 1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 -1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>0.5</weight>
       <maxvel>2</maxvel>
       <resolution>5</resolution>
@@ -612,9 +581,8 @@
       <Body>LHand3</Body>
       <Body>LFing10</Body>
       <offsetfrom>LFing10</offsetfrom>
-      <axis>0 0 1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 -1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>1</weight>
       <maxvel>2</maxvel>
       <resolution>3</resolution>
@@ -631,9 +599,8 @@
       <Body>LFing10</Body>
       <Body>LFing11</Body>
       <offsetfrom>LFing11</offsetfrom>
-      <axis>0 0 1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 -1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>1</weight>
       <maxvel>2</maxvel>
       <resolution>3</resolution>
@@ -650,9 +617,8 @@
       <Body>LFing11</Body>
       <Body>LFing12</Body>
       <offsetfrom>LFing12</offsetfrom>
-      <axis>0 0 1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 -1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>0.5</weight>
       <maxvel>2</maxvel>
       <resolution>5</resolution>
@@ -671,9 +637,8 @@
       <Body>Chest</Body>
       <Body>RCollar</Body>
       <offsetfrom>RCollar</offsetfrom>
-      <axis>0 0 1</axis>
-      <lostop>-10</lostop>
-      <histop>10</histop>
+      <axis>0 0 -1</axis>
+      <limitsdeg>-10 10</limitsdeg>
       <weight>3</weight>
       <maxvel>1</maxvel>
       <resolution>0.5</resolution>
@@ -690,9 +655,8 @@
       <Body>RCollar</Body>
       <Body>RShoulder</Body>
       <offsetfrom>RShoulder</offsetfrom>
-      <axis>-1 0 0</axis>
-      <lostop>-188</lostop>
-      <histop>61</histop>
+      <axis>1 0 0</axis>
+      <limitsdeg>-188 61</limitsdeg>
       <weight>3</weight>
       <maxvel>1</maxvel>
       <resolution>0.5</resolution>
@@ -708,9 +672,8 @@
       <Body>RShoulder</Body>
       <Body>RShoulder2</Body>
       <offsetfrom>RShoulder2</offsetfrom>
-      <axis>0 0 -1</axis>
-      <lostop>-134</lostop>
-      <histop>48</histop>
+      <axis>0 0 1</axis>
+      <limitsdeg>-134 48</limitsdeg>
       <weight>3</weight>
       <maxvel>1</maxvel>
       <resolution>0.5</resolution>
@@ -726,9 +689,8 @@
       <Body>RShoulder2</Body>
       <Body>RShoulder3</Body>
       <offsetfrom>RShoulder3</offsetfrom>
-      <axis>0 1 0</axis>
-      <lostop>-94</lostop>
-      <histop>34</histop>
+      <axis>0 -1 0</axis>
+      <limitsdeg>-94 34</limitsdeg>
       <weight>3</weight>
       <maxvel>1</maxvel>
       <resolution>0.5</resolution>
@@ -745,9 +707,8 @@
       <Body>RShoulder3</Body>
       <Body>RForearm</Body>
       <offsetfrom>RForearm</offsetfrom>
-      <axis>-1 0 0</axis>
-      <lostop>-142</lostop>
-      <histop>1</histop>
+      <axis>1 0 0</axis>
+      <limitsdeg>-142 1</limitsdeg>
       <weight>2</weight>
       <maxvel>1</maxvel>
       <resolution>1</resolution>
@@ -764,9 +725,8 @@
       <Body>RForearm</Body>
       <Body>RHand</Body>
       <offsetfrom>RHand</offsetfrom>
-      <axis>0 -1 0</axis>
-      <lostop>-77</lostop>
-      <histop>113</histop>
+      <axis>0 1 0</axis>
+      <limitsdeg>-77 113</limitsdeg>
       <weight>2</weight>
       <maxvel>1</maxvel>
       <resolution>1</resolution>
@@ -782,9 +742,8 @@
       <Body>RHand</Body>
       <Body>RHand2</Body>
       <offsetfrom>RHand2</offsetfrom>
-      <axis>1 0 0</axis>
-      <lostop>-47</lostop>
-      <histop>27</histop>
+      <axis>-1 0 0</axis>
+      <limitsdeg>-47 27</limitsdeg>
       <weight>2</weight>
       <maxvel>1</maxvel>
       <resolution>1</resolution>
@@ -800,9 +759,8 @@
       <Body>RHand2</Body>
       <Body>RHand3</Body>
       <offsetfrom>RHand3</offsetfrom>
-      <axis>0 0 1</axis>
-      <lostop>-90</lostop>
-      <histop>81</histop>
+      <axis>0 0 -1</axis>
+      <limitsdeg>-90 81</limitsdeg>
       <weight>2</weight>
       <maxvel>1</maxvel>
       <resolution>3</resolution>
@@ -820,9 +778,8 @@
       <Body>RHand3</Body>
       <Body>RThumbBase</Body>
       <offsetfrom>RThumbBase</offsetfrom>
-      <axis>1 0 0</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>-1 0 0</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>1</weight>
       <maxvel>2</maxvel>
       <resolution>3</resolution>
@@ -838,9 +795,8 @@
       <Body>RThumbBase</Body>
       <Body>RThumbBase2</Body>
       <offsetfrom>RThumbBase2</offsetfrom>
-      <axis>0 -1 0</axis>
-      <lostop>-170</lostop>
-      <histop>100</histop>
+      <axis>0 1 0</axis>
+      <limitsdeg>-170 100</limitsdeg>
       <weight>1</weight>
       <maxvel>2</maxvel>
       <resolution>3</resolution>
@@ -856,9 +812,8 @@
       <Body>RThumbBase2</Body>
       <Body>RThumb0</Body>
       <offsetfrom>RThumb0</offsetfrom>
-      <axis>0 0 -1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>1</weight>
       <maxvel>2</maxvel>
       <resolution>3</resolution>
@@ -875,9 +830,8 @@
       <Body>RThumb0</Body>
       <Body>RThumb1</Body>
       <offsetfrom>RThumb1</offsetfrom>
-      <axis>0 0 -1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>1</weight>
       <maxvel>2</maxvel>
       <resolution>3</resolution>
@@ -894,9 +848,8 @@
       <Body>RThumb1</Body>
       <Body>RThumb2</Body>
       <offsetfrom>RThumb2</offsetfrom>
-      <axis>0 0 -1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>0.5</weight>
       <maxvel>2</maxvel>
       <resolution>5</resolution>
@@ -913,9 +866,8 @@
       <Body>RHand3</Body>
       <Body>RFing40</Body>
       <offsetfrom>RFing40</offsetfrom>
-      <axis>0 0 -1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>1</weight>
       <maxvel>2</maxvel>
       <resolution>3</resolution>
@@ -932,9 +884,8 @@
       <Body>RFing40</Body>
       <Body>RFing41</Body>
       <offsetfrom>RFing41</offsetfrom>
-      <axis>0 0 -1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>1</weight>
       <maxvel>2</maxvel>
       <resolution>3</resolution>
@@ -951,9 +902,8 @@
       <Body>RFing41</Body>
       <Body>RFing42</Body>
       <offsetfrom>RFing42</offsetfrom>
-      <axis>0 0 -1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>0.5</weight>
       <maxvel>2</maxvel>
       <resolution>5</resolution>
@@ -970,9 +920,8 @@
       <Body>RHand3</Body>
       <Body>RFing30</Body>
       <offsetfrom>RFing30</offsetfrom>
-      <axis>0 0 -1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>1</weight>
       <maxvel>2</maxvel>
       <resolution>3</resolution>
@@ -989,9 +938,8 @@
       <Body>RFing30</Body>
       <Body>RFing31</Body>
       <offsetfrom>RFing31</offsetfrom>
-      <axis>0 0 -1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>1</weight>
       <maxvel>2</maxvel>
       <resolution>3</resolution>
@@ -1008,9 +956,8 @@
       <Body>RFing31</Body>
       <Body>RFing32</Body>
       <offsetfrom>RFing32</offsetfrom>
-      <axis>0 0 -1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>0.5</weight>
       <maxvel>2</maxvel>
       <resolution>5</resolution>
@@ -1027,9 +974,8 @@
       <Body>RHand3</Body>
       <Body>RFing20</Body>
       <offsetfrom>RFing20</offsetfrom>
-      <axis>0 0 -1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>1</weight>
       <maxvel>2</maxvel>
       <resolution>3</resolution>
@@ -1046,9 +992,8 @@
       <Body>RFing20</Body>
       <Body>RFing21</Body>
       <offsetfrom>RFing21</offsetfrom>
-      <axis>0 0 -1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>1</weight>
       <maxvel>2</maxvel>
       <resolution>3</resolution>
@@ -1065,9 +1010,8 @@
       <Body>RFing21</Body>
       <Body>RFing22</Body>
       <offsetfrom>RFing22</offsetfrom>
-      <axis>0 0 -1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>0.5</weight>
       <maxvel>2</maxvel>
       <resolution>5</resolution>
@@ -1084,9 +1028,8 @@
       <Body>RHand3</Body>
       <Body>RFing10</Body>
       <offsetfrom>RFing10</offsetfrom>
-      <axis>0 0 -1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>1</weight>
       <maxvel>2</maxvel>
       <resolution>3</resolution>
@@ -1103,9 +1046,8 @@
       <Body>RFing10</Body>
       <Body>RFing11</Body>
       <offsetfrom>RFing11</offsetfrom>
-      <axis>0 0 -1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>1</weight>
       <maxvel>2</maxvel>
       <resolution>3</resolution>
@@ -1122,9 +1064,8 @@
       <Body>RFing11</Body>
       <Body>RFing12</Body>
       <offsetfrom>RFing12</offsetfrom>
-      <axis>0 0 -1</axis>
-      <lostop>-100</lostop>
-      <histop>100</histop>
+      <axis>0 0 1</axis>
+      <limitsdeg>-100 100</limitsdeg>
       <weight>0.5</weight>
       <maxvel>2</maxvel>
       <resolution>5</resolution>
@@ -1143,9 +1084,8 @@
       <Body>Chest</Body>
       <Body>Neck</Body>
       <offsetfrom>Neck</offsetfrom>
-      <axis>1 0 0</axis>
-      <lostop>-60</lostop>
-      <histop>30</histop>
+      <axis>-1 0 0</axis>
+      <limitsdeg>-60 30</limitsdeg>
       <weight>2</weight>
       <maxvel>1</maxvel>
       <resolution>1</resolution>
@@ -1162,9 +1102,8 @@
       <Body>Neck</Body>
       <Body>Head</Body>
       <offsetfrom>Head</offsetfrom>
-      <axis>0 1 0</axis>
-      <lostop>-90</lostop>
-      <histop>90</histop>
+      <axis>0 -1 0</axis>
+      <limitsdeg>-90 90</limitsdeg>
       <weight>2</weight>
       <maxvel>1</maxvel>
       <resolution>1</resolution>
@@ -1181,9 +1120,8 @@
       <Body>Head</Body>
       <Body>LeftEye</Body>
       <offsetfrom>LeftEye</offsetfrom>
-      <axis>0 1 0</axis>
-      <lostop>-35</lostop>
-      <histop>35</histop>
+      <axis>0 -1 0</axis>
+      <limitsdeg>-35 35</limitsdeg>
       <weight>0.5</weight>
       <maxvel>4</maxvel>
       <resolution>1</resolution>
@@ -1200,9 +1138,8 @@
       <Body>Head</Body>
       <Body>RightEye</Body>
       <offsetfrom>RightEye</offsetfrom>
-      <axis>0 1 0</axis>
-      <lostop>-35</lostop>
-      <histop>35</histop>
+      <axis>0 -1 0</axis>
+      <limitsdeg>-35 35</limitsdeg>
       <weight>0.5</weight>
       <maxvel>4</maxvel>
       <resolution>1</resolution>

@@ -54,9 +54,8 @@
       <Body>Link1</Body>
       <offsetfrom>Link1</offsetfrom>
       <weight>4</weight>
-      <lostop>-85</lostop>
-      <histop>85</histop>
-      <axis>0 1 0</axis>
+      <limitsdeg>-85 85</limitsdeg>
+      <axis>0 -1 0</axis>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
     </Joint>
@@ -79,9 +78,8 @@
       <Body>Link2</Body>
       <offsetfrom>Link2</offsetfrom>
       <weight>3</weight>
-      <lostop>-80</lostop>
-      <histop>80</histop>
-      <axis>0 0 -1</axis>
+      <limitsdeg>-80 80</limitsdeg>
+      <axis>0 0 1</axis>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
     </Joint>
@@ -101,8 +99,7 @@
       <Body>Link3</Body>
       <offsetfrom>Link3</offsetfrom>
       <weight>3</weight>
-      <lostop>-60</lostop>
-      <histop>80</histop>
+      <limitsdeg>-60 80</limitsdeg>
       <axis>0 0 1</axis>
       <maxvel>2</maxvel>
       <resolution>1</resolution>
@@ -133,9 +130,8 @@
       <Body>Link4</Body>
       <offsetfrom>Link4</offsetfrom>
       <weight>3</weight>
-      <lostop>-100</lostop>
-      <histop>100</histop>
-      <axis>0 0 -1</axis>
+      <limitsdeg>-100 100</limitsdeg>
+      <axis>0 0 1</axis>
       <maxvel>2</maxvel>
       <resolution>2</resolution>
     </Joint>
@@ -154,9 +150,8 @@
       <Body>Link5</Body>
       <offsetfrom>Link5</offsetfrom>
       <weight>3</weight>
-      <lostop>-85</lostop>
-      <histop>85</histop>
-      <axis>1 0 0</axis>
+      <limitsdeg>-85 85</limitsdeg>
+      <axis>-1 0 0</axis>
       <maxvel>2</maxvel>
       <resolution>4</resolution>
     </Joint>
@@ -199,9 +194,8 @@
       <Body>ManipRD</Body>
       <offsetfrom>ManipRD</offsetfrom>
       <weight>3</weight>
-      <lostop>-60</lostop>
-      <histop>60</histop>
-      <axis>0 1 0</axis>
+      <limitsdeg>-60 60</limitsdeg>
+      <axis>0 -1 0</axis>
       <maxvel>2</maxvel>
       <resolution>2</resolution>
     </Joint>
@@ -210,9 +204,8 @@
       <Body>ManipLD</Body>
       <offsetfrom>ManipLD</offsetfrom>
       <weight>3</weight>
-      <lostop>-60</lostop>
-      <histop>60</histop>
-      <axis>0 -1 0</axis>
+      <limitsdeg>-60 60</limitsdeg>
+      <axis>0 1 0</axis>
       <maxvel>2</maxvel>
       <resolution>2</resolution>
     </Joint>
@@ -239,23 +232,21 @@
       </Geom>
     </Body>
 
-    <Joint type="hinge" enable="false" mimic="JR">
+    <Joint type="hinge" enable="false" mimic="JR 1 0">
       <Body>Link5</Body>
       <Body>ManipRU</Body>
       <offsetfrom>ManipRU</offsetfrom>
       <weight>3</weight>
-      <lostop>-50</lostop>
-      <histop>50</histop>
-      <axis>0 1 0</axis>
+      <limitsdeg>-50 50</limitsdeg>
+      <axis>0 -1 0</axis>
     </Joint>
-    <Joint type="hinge" enable="false" mimic="JL">
+    <Joint type="hinge" enable="false" mimic="JL 1 0">
       <Body>Link5</Body>
       <Body>ManipLU</Body>
       <offsetfrom>ManipLU</offsetfrom>
       <weight>3</weight>
-      <lostop>-50</lostop>
-      <histop>50</histop>
-      <axis>0 -1 0</axis>
+      <limitsdeg>-50 50</limitsdeg>
+      <axis>0 1 0</axis>
     </Joint>
 
     <!-- form the manipulator links and join to the 2 support links on each side -->
@@ -296,44 +287,40 @@
       </Mass>-->
     </Body>
 
-    <Joint type="hinge" enable="false" mimic="JL">
+    <Joint type="hinge" enable="false" mimic="JL 1 0">
       <Body>ManipLD</Body>
       <Body>ManipL</Body>
       <offsetfrom>ManipLD</offsetfrom>
       <weight>3</weight>
-      <lostop>-90</lostop>
-      <histop>90</histop>
-      <axis>0 1 0</axis>
+      <limitsdeg>-90 90</limitsdeg>
+      <axis>0 -1 0</axis>
       <anchor>0.0143 0 0</anchor>
     </Joint>
-    <Joint type="hinge" enable="false" mimic="JL">
+    <Joint type="hinge" enable="false" mimic="JL 1 0">
       <Body>ManipLU</Body>
       <Body>ManipL</Body>
       <offsetfrom>ManipLU</offsetfrom>
       <weight>3</weight>
-      <lostop>-90</lostop>
-      <histop>90</histop>
-      <axis>0 1 0</axis>
+      <limitsdeg>-90 90</limitsdeg>
+      <axis>0 -1 0</axis>
       <anchor>0.0143 0 0</anchor>
     </Joint>
-    <Joint type="hinge" enable="false" mimic="JR">
+    <Joint type="hinge" enable="false" mimic="JR 1 0">
       <Body>ManipRD</Body>
       <Body>ManipR</Body>
       <offsetfrom>ManipRD</offsetfrom>
       <weight>3</weight>
-      <lostop>-90</lostop>
-      <histop>90</histop>
-      <axis>0 -1 0</axis>
+      <limitsdeg>-90 90</limitsdeg>
+      <axis>0 1 0</axis>
       <anchor>0.0143 0 0</anchor>
     </Joint>
-    <Joint type="hinge" enable="false" mimic="JR">
+    <Joint type="hinge" enable="false" mimic="JR 1 0">
       <Body>ManipRU</Body>
       <Body>ManipR</Body>
       <offsetfrom>ManipRU</offsetfrom>
       <weight>3</weight>
-      <lostop>-90</lostop>
-      <histop>90</histop>
-      <axis>0 -1 0</axis>
+      <limitsdeg>-90 90</limitsdeg>
+      <axis>0 1 0</axis>
       <anchor>0.0143 0 0</anchor>
     </Joint>
   </KinBody>

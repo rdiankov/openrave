@@ -2,20 +2,22 @@
      real robots are defined in other files and have attached hands -->
 <KinBody name="PUMA">
   <Body name="Base" type="dynamic">
-    <Translation>0.0  0.0  0.0</Translation>
     <Geom type="trimesh">
+      <quat>0.707106769 0.707106769 0 0</quat>
       <Data>models/puma/pumaB.iv</Data>
       <Render>models/puma/pumaB.iv</Render>
     </Geom>
     <Geom type="cylinder">
+      <quat>0.707106769 0.707106769 0 0</quat>
       <radius>0.2</radius>
       <height>0.01</height>
       <diffuseColor>0.05 0.05 0.05</diffuseColor>
     </Geom>
     <Geom type="trimesh">
+      <quat>0.707106769 0.707106769 0 0</quat>
       <Data>models/puma/puma0.iv</Data>
       <Render>models/puma/puma0.iv</Render>
-      <Translation>0.0 0.701 0.0</Translation>
+      <Translation>0.0 0 0.701</Translation>
     </Geom>
     <mass type="sphere">
       <total>25.0</total>
@@ -24,9 +26,10 @@
   </Body>
   <Body name="Puma1" type="dynamic">
     <!--0 0.67 0 -->
-	<Translation>0 1.371 0</Translation>
+	<Translation>0 0 1.371</Translation>
 	<offsetfrom>Base</offsetfrom>
     <Geom type="trimesh">
+      <quat>0.707106769 0.707106769 0 0</quat>
       <Data>models/puma/puma1.iv</Data>
       <Render>models/puma/puma1.iv</Render>
     </Geom>
@@ -41,17 +44,17 @@
     <Body>Puma1</Body>
     <offsetfrom>Puma1</offsetfrom>
     <weight>2</weight>
-    <lostop>-160</lostop>
-    <histop>160</histop>
-    <axis>0 -1 0</axis>
+    <limitsdeg>-160 160</limitsdeg>
+    <axis>0 0 1</axis>
     <maxvel>2</maxvel>
     <resolution>0.5</resolution>
   </Joint>
   
   <Body name="Puma2" type="dynamic">
-	<Translation>0 0 -0.2435</Translation>
+	<Translation>0 0.2435 0</Translation>
 	<offsetfrom>Puma1</offsetfrom>
     <Geom type="trimesh">
+      <quat>0.707106769 0.707106769 0 0</quat>
       <Data>models/puma/puma2.iv</Data>
       <Render>models/puma/puma2.iv</Render>
     </Geom>
@@ -66,17 +69,17 @@
     <Body>Puma2</Body>
     <offsetfrom>Puma2</offsetfrom>
     <weight>1.5</weight>
-    <lostop>-223</lostop>
-    <histop>43</histop>
-    <axis>0 0 1</axis>
+    <limitsdeg>-223 43</limitsdeg>
+    <axis>0 1 0</axis>
     <maxvel>1.5</maxvel>
     <resolution>0.25</resolution>
   </Joint>
   
   <Body name="Puma3" type="dynamic">
-	<Translation>0.4318 0 0.0934</Translation>
+	<Translation>0.4318 -0.0934 0</Translation>
 	<offsetfrom>Puma2</offsetfrom>
     <Geom type="trimesh">
+      <quat>0.707106769 0.707106769 0 0</quat>
       <Data>models/puma/puma3.iv</Data>
       <Render>models/puma/puma3.iv</Render>
     </Geom>
@@ -91,17 +94,17 @@
     <Body>Puma3</Body>
     <offsetfrom>Puma3</offsetfrom>
     <weight>1.5</weight>
-    <lostop>-40</lostop>
-    <histop>240</histop>
-    <axis>0 0 1</axis>
+    <limitsdeg>-40 240</limitsdeg>
+    <axis>0 1 0</axis>
     <maxvel>1.5</maxvel>
     <resolution>0.5</resolution>
   </Joint>
 
   <Body name="Puma4" type="dynamic">
-	<Translation>-0.0203 0.4331 0</Translation>
+	<Translation>-0.0203 0 0.4331</Translation>
 	<offsetfrom>Puma3</offsetfrom>
     <Geom type="trimesh">
+      <quat>0.707106769 0.707106769 0 0</quat>
       <Data>models/puma/puma4.iv</Data>
       <Render>models/puma/puma4.iv</Render>
     </Geom>
@@ -116,9 +119,8 @@
     <Body>Puma4</Body>
     <offsetfrom>Puma4</offsetfrom>
     <weight>1</weight>
-    <lostop>-130</lostop>
-    <histop>180</histop>
-    <axis>0 -1 0</axis>
+    <limitsdeg>-130 180</limitsdeg>
+    <axis>0 0 1</axis>
     <maxvel>2</maxvel>
     <resolution>1</resolution>
   </Joint>
@@ -127,6 +129,7 @@
 	<Translation>0 0 0</Translation>
 	<offsetfrom>Puma4</offsetfrom>
     <Geom type="trimesh">
+      <quat>0.707106769 0.707106769 0 0</quat>
       <Data>models/puma/puma5.iv</Data>
       <Render>models/puma/puma5.iv</Render>
     </Geom>
@@ -141,9 +144,8 @@
     <Body>Puma5</Body>
     <offsetfrom>Puma5</offsetfrom>
     <weight>1</weight>
-    <lostop>-100</lostop>
-    <histop>100</histop>
-    <axis>0 0 1</axis>
+    <limitsdeg>-100 100</limitsdeg>
+    <axis>0 1 0</axis>
     <maxvel>2</maxvel>
     <resolution>1</resolution>
   </Joint>
@@ -152,6 +154,7 @@
 	<Translation>0 0 0</Translation>
 	<offsetfrom>Puma5</offsetfrom>
     <Geom type="trimesh">
+      <quat>0.707106769 0.707106769 0 0</quat>
       <Data>models/puma/puma6.iv</Data>
       <Render>models/puma/puma6.iv</Render>
     </Geom>
@@ -166,9 +169,8 @@
     <Body>Puma6</Body>
     <offsetfrom>Puma6</offsetfrom>
     <weight>0.5</weight>
-    <lostop>-180</lostop>
-    <histop>180</histop>
-    <axis>0 -1 0</axis>
+    <limitsdeg>-180 180</limitsdeg>
+    <axis>0 0 1</axis>
     <maxvel>2</maxvel>
     <resolution>2</resolution>
   </Joint>

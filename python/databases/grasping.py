@@ -250,12 +250,12 @@ class GraspingModel(OpenRAVEModel):
                 plannername = options.plannername
             updateenv = options.useviewer
         # check for specific robots
-        if self.robot.GetRobotStructureHash() == '2b5c20ef6f6e802a05de7abf53e37a28' and self.manip.GetName() == 'arm' and self.target.GetKinematicsGeometryHash() == 'bbf03c6db8efc712a765f955a27b0d0f': # barrett hand
+        if self.robot.GetRobotStructureHash() == 'a7a10f9467fe3eba4f72596f21903a5d' and self.manip.GetName() == 'arm' and self.target.GetKinematicsGeometryHash() == 'bbf03c6db8efc712a765f955a27b0d0f': # barrett hand
             if preshapes is None:
                 preshapes=array(((0.5,0.5,0.5,pi/3),(0.5,0.5,0.5,0),(0,0,0,pi/2)))
             if graspingnoise is None:
                 graspingnoise = 0.01 # 0.01m of noise
-        elif self.robot.GetRobotStructureHash() == '2e4fc3f92a8fcf6741fba7fc060e09e6': # pa10
+        elif self.robot.GetRobotStructureHash() == 'a43d21a7b6d60d7443922d012bd3b43e': # pa10
             if graspingnoise is None:
                 graspingnoise = 0.01 # 0.01m of noise
         if preshapes is None:

@@ -26,10 +26,9 @@
     <offsetfrom>link0</offsetfrom>
     <body>link0</body>
     <body>link1</body>
-    <axis>0 0 -1</axis>
+    <axis>0 0 1</axis>
     <anchor>0 0 0.315</anchor>
-    <lostop>-177</lostop>
-    <histop>177</histop>
+    <limitsdeg>-177 177</limitsdeg>
     <maxvel>0.4</maxvel>
     <hardmaxvel>1</hardmaxvel>
   </Joint>
@@ -49,10 +48,9 @@
     <offsetfrom>link1</offsetfrom>
     <body>link1</body>
     <body>link2</body>
-    <axis>0 -1 0</axis>
+    <axis>0 1 0</axis>
     <anchor>0 0 0.315</anchor>
-    <lostop>-91</lostop>
-    <histop>91</histop>
+    <limitsdeg>-91 91</limitsdeg>
     <maxvel>0.4</maxvel>
     <hardmaxvel>1</hardmaxvel>
   </Joint>
@@ -72,10 +70,9 @@
     <offsetfrom>link2</offsetfrom>
     <body>link2</body>
     <body>link3</body>
-    <axis>0 0 -1</axis>
+    <axis>0 0 1</axis>
     <anchor>0 0 0.315</anchor>
-    <lostop>-174</lostop>
-    <histop>174</histop>
+    <limitsdeg>-174 174</limitsdeg>
     <maxvel>0.5</maxvel>
     <hardmaxvel>1.5</hardmaxvel>
   </Joint>
@@ -95,10 +92,9 @@
     <offsetfrom>link3</offsetfrom>
     <body>link3</body>
     <body>link4</body>
-    <axis>0 -1 0</axis>
+    <axis>0 1 0</axis>
     <anchor>0 0 0.765</anchor>
-    <lostop>-137</lostop>
-    <histop>137</histop>
+    <limitsdeg>-137 137</limitsdeg>
     <maxvel>0.5</maxvel>
     <hardmaxvel>2</hardmaxvel>
   </Joint>
@@ -118,10 +114,9 @@
     <offsetfrom>link4</offsetfrom>
     <body>link4</body>
     <body>link5</body>
-    <axis>0 0 -1</axis>
+    <axis>0 0 1</axis>
     <anchor>0 0 0.765</anchor>
-    <lostop>-255</lostop>
-    <histop>255</histop>
+    <limitsdeg>-255 255</limitsdeg>
     <maxvel>1</maxvel>
     <hardmaxvel>6.28</hardmaxvel>
   </Joint>
@@ -141,10 +136,9 @@
     <offsetfrom>link5</offsetfrom>
     <body>link5</body>
     <body>link6</body>
-    <axis>0 -1 0</axis>
+    <axis>0 1 0</axis>
     <anchor>0 0 1.265</anchor>
-    <lostop>-165</lostop>
-    <histop>165</histop>
+    <limitsdeg>-165 165</limitsdeg>
     <maxvel>1</maxvel>
     <hardmaxvel>6.28</hardmaxvel>
   </Joint>
@@ -163,11 +157,11 @@
       <com>0 0 1.3145</com>
     </mass>
   </Body>
-  <Joint name="W2" type="hinge" nolimit="true">
+  <Joint name="W2" type="hinge" circular="true">
     <offsetfrom>link6</offsetfrom>
     <body>link6</body>
     <body>link7</body>
-    <axis>0 0 -1</axis>
+    <axis>0 0 1</axis>
     <anchor>0 0 1.265</anchor>
     <!-- no joint limits -->
     <maxvel>1</maxvel>
