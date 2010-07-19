@@ -1,7 +1,7 @@
 #!/bin/sh
 # Internal use
 # script creates the doc files, and sends them over to the programmingvision server
-# packages used: doxygen, python-docutils, python-pygments, python-epydoc
+# packages used: doxygen, python-docutils, python-pygments, python-epydoc, python-sphinx
 # for latex: dot2tex, texlive-base, texlive-latex-base, texlive-pictures, texlive-fonts-recommended
 # for japanese: latex-cjk-japanese
 
@@ -36,7 +36,11 @@ doxygen Doxyfile.html.japanese
 python build_doc.py build_doc --outdir="english/openravepy-html" --languagecode=en
 python build_doc.py build_doc --outdir="japanese/openravepy-html" --languagecode=ja
 
+# build interfaces
+rm -rf sphinx/interfaces
+sphinx-build sphinx sphinx/sphinx-docs
+
 # send to server
-tar czf ordocs.tgz english/html english/openravepy-html english/openrave.pdf images/*.jpg images/*.png japanese/html japanese/openravepy-html 
+tar czf ordocs.tgz english/html english/openravepy-html english/openrave.pdf images/*.jpg images/*.png japanese/html japanese/openravepy-html sphinx/sphinx-docs
 scp ordocs.tgz diankov@programmingvision.com:~/openrave/ordocs/
 ssh diankov@programmingvision.com "cd ~/openrave/ordocs; rm -rf english japanese; tar xzf ordocs.tgz; rm -rf ordocs.tgz"

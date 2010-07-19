@@ -421,7 +421,8 @@ The description of an interface and all information about its usage should be pr
 
 The format of both descriptions are in terms of a widely adopted standard <a
 href="http://docutils.sourceforge.net/rst.html">reStructuredText</a>. These descriptions are
-automatically parsed and put on the web.
+automatically parsed using Sphinx and put on the web. If opening new sections in the description,
+make sure not to use '-', '=', '~' since %OpenRAVE uses them for organization of modules.
 
 The reason why doxygen and other commenting tools are not adopted for plugin documentation is
 because the \ref interfaces are the only binding between plugins. Even if the header file or
