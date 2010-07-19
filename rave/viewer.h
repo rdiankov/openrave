@@ -52,14 +52,12 @@ public:
 
     //@{ GUI interaction methods
 
-    /// Set the camera transformation
-    virtual void SetCamera(const RaveTransform<float>& trans) = 0;
+    /// \brief Set the camera transformation.
+    /// \param trans new camera transformation in the world coordinate system
+    /// \param focalDistance The new focal distance of the camera (higher values is higher zoom). If 0, then the previous focal distance is preserved.
+    virtual void SetCamera(const RaveTransform<float>& trans, float focalDistance=0) = 0;
 
-    /// Set the camera transformation while looking at a particular point in space, this also modifies the focal length of the camera, which is why it is overloaded.
-    /// \param lookat the point space to look at, the camera will rotation and zoom around this point
-    /// \param campos the position of the camera in space
-    /// \param camup vector from the camera
-    virtual void SetCameraLookAt(const RaveVector<float>& lookat, const RaveVector<float>& campos, const RaveVector<float>& camup) = 0;
+    /// \brief Return the current camera transform that the viewer is rendering the environment at.
     virtual RaveTransform<float> GetCameraTransform() = 0;
 
     /// Renders a 24bit RGB image of dimensions width and height from the current scene. The camera

@@ -108,8 +108,7 @@ public:
 
     virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK);
     virtual bool WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension);
-    virtual void SetCamera(const RaveTransform<float>& trans);
-    virtual void SetCameraLookAt(const RaveVector<float>& lookat, const RaveVector<float>& campos, const RaveVector<float>& camup);
+    virtual void SetCamera(const RaveTransform<float>& trans, float focalDistance=0);
     virtual void SetBkgndColor(const RaveVector<float>& color);
 
     virtual void PrintCamera();
@@ -224,8 +223,7 @@ protected:
 
     virtual bool _GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK);
     virtual bool _WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension);
-    virtual void _SetCamera(const RaveTransform<float>& trans);
-    virtual void _SetCameraLookAt(const RaveVector<float>& lookat, const RaveVector<float>& campos, const RaveVector<float>& camup);
+    virtual void _SetCamera(const RaveTransform<float>& trans, float focalDistance);
 
     virtual void* _plot3(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color);
     virtual void* _plot3(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, bool bhasalpha);
@@ -397,7 +395,6 @@ protected:
     friend class GetCameraImageMessage;
     friend class WriteCameraImageMessage;
     friend class SetCameraMessage;
-    friend class SetCameraLookAtMessage;
     friend class DrawMessage;
     friend class DrawArrowMessage;
     friend class DrawBoxMessage;

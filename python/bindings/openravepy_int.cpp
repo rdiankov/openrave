@@ -313,6 +313,9 @@ public:
     object dir() { return toPyVector3(r.dir); }
     object pos() { return toPyVector3(r.pos); }
 
+    virtual string __repr__() { return boost::str(boost::format("<Ray([%f,%f,%f],[%f,%f,%f])>")%r.pos.x%r.pos.y%r.pos.z%r.dir.x%r.dir.y%r.dir.z); }
+    virtual string __str__() { return boost::str(boost::format("<%f %f %f %f %f %f>")%r.pos.x%r.pos.y%r.pos.z%r.dir.x%r.dir.y%r.dir.z); }
+
     RAY r;
 };
 
@@ -337,6 +340,9 @@ public:
 
     object extents() { return toPyVector3(ab.extents); }
     object pos() { return toPyVector3(ab.pos); }
+
+    virtual string __repr__() { return boost::str(boost::format("<AABB([%f,%f,%f],[%f,%f,%f])>")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z); }
+    virtual string __str__() { return boost::str(boost::format("<%f %f %f %f %f %f>")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z); }
 
     AABB ab;
 };
@@ -2113,10 +2119,8 @@ public:
     void EnvironmentSync() { return _pviewer->EnvironmentSync(); }
 
     void SetCamera(object transform) { _pviewer->SetCamera(ExtractTransform(transform)); }
+    void SetCamera(object transform, float focalDistance) { _pviewer->SetCamera(ExtractTransform(transform),focalDistance); }
 
-    void SetCameraLookAt(object lookat, object campos, object camup) {
-        _pviewer->SetCameraLookAt(ExtractFloat3(lookat), ExtractFloat3(campos), ExtractFloat3(camup));
-    }
     object GetCameraTransform() { return ReturnTransform(_pviewer->GetCameraTransform()); }
 
     object GetCameraImage(int width, int height, object extrinsic, object oKK)
@@ -2804,101 +2808,136 @@ public:
 
     PyViewerBasePtr GetViewer() { return PyViewerBasePtr(new PyViewerBase(_penv->GetViewer(),shared_from_this())); }
 
+    /// returns the number of points
+    static size_t _getGraphPoints(object opoints, vector<float>& vpoints)
+    {
+        if( PyObject_HasAttrString(opoints.ptr(),"shape") ) {
+            object pointshape = opoints.attr("shape");
+            switch(len(pointshape)) {
+            case 1:
+                vpoints = ExtractArray<float>(opoints);
+                if( vpoints.size()%3 ) {
+                    throw openrave_exception(boost::str(boost::format("points have bad size %d")%vpoints.size()),ORE_InvalidArguments);
+                }
+                return vpoints.size()/3;
+            case 2: {
+                int num = extract<int>(pointshape[0]);
+                int dim = extract<int>(pointshape[1]);
+                vpoints = ExtractArray<float>(opoints.attr("flat"));
+                if(dim != 3) {
+                    throw openrave_exception(boost::str(boost::format("points have bad size %dx%d")%num%dim),ORE_InvalidArguments);
+                }
+                return num;
+            }
+            default:
+                throw openrave_exception("points have bad dimension");
+            }
+        }
+        // assume it is a regular 1D list
+        vpoints = ExtractArray<float>(opoints);
+        if( vpoints.size()% 3 ) {
+            throw openrave_exception(boost::str(boost::format("points have bad size %d")%vpoints.size()),ORE_InvalidArguments);
+        }
+        return vpoints.size()/3;
+    }
+
+    /// returns the number of colors
+    static size_t _getGraphColors(object ocolors, vector<float>& vcolors)
+    {
+        if( ocolors != object() ) {
+            if( PyObject_HasAttrString(ocolors.ptr(),"shape") ) {
+                object colorshape = ocolors.attr("shape");
+                switch( len(colorshape) ) {
+                case 1:
+                    break;
+                case 2: {
+                    int numcolors = extract<int>(colorshape[0]);
+                    int colordim = extract<int>(colorshape[1]);
+                    if( colordim != 3 && colordim != 4 ) {
+                        throw openrave_exception("colors dim needs to be 3 or 4");
+                    }
+                    vcolors = ExtractArray<float>(ocolors.attr("flat"));
+                    return numcolors;
+                }
+                default:
+                    throw openrave_exception("colors has wrong number of dimensions",ORE_InvalidArguments);
+                }
+            }
+            vcolors = ExtractArray<float>(ocolors);
+            if( vcolors.size() == 3 ) {
+                vcolors.push_back(1.0f);
+            }
+            else if( vcolors.size() != 4 ) {
+                throw openrave_exception("colors has incorrect number of values",ORE_InvalidArguments);
+            }
+            return 1;
+        }
+        // default
+        RaveVector<float> vcolor(1,0.5,0.5,1.0);
+        vcolors.resize(4);
+        vcolors[0] = 1; vcolors[1] = 0.5f; vcolors[2] = 0.5f; vcolors[3] = 1.0f;
+        return 1;
+    }
+
+    static pair<size_t,size_t> _getGraphPointsColors(object opoints, object ocolors, vector<float>& vpoints, vector<float>& vcolors)
+    {
+        size_t numpoints = _getGraphPoints(opoints,vpoints);
+        size_t numcolors = _getGraphColors(ocolors,vcolors);
+        if( numpoints <= 0 ) {
+            throw openrave_exception("points cannot be empty",ORE_InvalidArguments);
+        }
+        if( numcolors > 1 && numpoints != numcolors ) {
+            throw openrave_exception(boost::str(boost::format("number of points (%d) need to match number of colors (%d)")%numpoints%numcolors));
+        }
+        return make_pair(numpoints,numcolors);
+    }
+
     object plot3(object opoints,float pointsize,object ocolors=object(),int drawstyle=0)
     {
-        object shape = opoints.attr("shape");
-        int num = extract<int>(shape[0]);
-        if( num <= 0 )
-            throw openrave_exception("points cannot be empty");
-
-        if( len(shape) > 1 ) {
-            int dim = extract<int>(shape[1]);
-            if( dim != 3 )
-                throw openrave_exception("points array needs to be Nx3 matrix");
+        vector<float> vpoints, vcolors;
+        pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
+        bool bhasalpha = vcolors.size() == 4*sizes.second;
+        if( sizes.first == sizes.second ) {
+            return object(PyGraphHandle(_penv->plot3(&vpoints[0],sizes.first,sizeof(float)*3,pointsize,&vcolors[0],drawstyle,bhasalpha)));
         }
-
-        vector<float> vpoints = ExtractArray<float>(opoints.attr("flat"));
-        RaveVector<float> vcolor(1,0.5,0.5,1.0);
-        if( ocolors != object() ) {
-            object colorshape = ocolors.attr("shape");
-            if( len(colorshape) == 1 )
-                vcolor = ExtractVector34(ocolors,1.0f);
-            else if( len(colorshape) == 2 ) {
-                int numcolors = extract<int>(colorshape[0]);
-                int colordim = extract<int>(colorshape[1]);
-                if( numcolors*3 != (int)vpoints.size() )
-                    throw openrave_exception(boost::str(boost::format("len colors needs to be %d")%(vpoints.size()/3)));
-                bool bhasalpha = false;
-                if( colordim == 4 )
-                    bhasalpha = true;
-                else if( colordim != 3 )
-                    throw openrave_exception("colors dim needs to be 3 or 4");
-                
-                vector<float> vcolors = ExtractArray<float>(ocolors.attr("flat"));
-                return object(PyGraphHandle(_penv->plot3(&vpoints[0],vpoints.size()/3,sizeof(float)*3,pointsize,&vcolors[0],drawstyle,bhasalpha)));
-            }
-            else
-                throw openrave_exception("color is wrong dim");
+        BOOST_ASSERT(vcolors.size()<=4);
+        RaveVector<float> vcolor;
+        for(size_t i = 0; i < vcolors.size(); ++i) {
+            vcolor[i] = vcolors[i];
         }
-        return object(PyGraphHandle(_penv->plot3(&vpoints[0],vpoints.size()/3,sizeof(float)*3,pointsize,vcolor,drawstyle)));
+        return object(PyGraphHandle(_penv->plot3(&vpoints[0],sizes.first,sizeof(float)*3,pointsize,vcolor,drawstyle)));
     }
 
     object drawlinestrip(object opoints,float linewidth,object ocolors=object(),int drawstyle=0)
     {
-        object shape = opoints.attr("shape");
-        int num = extract<int>(shape[0]);
-        if( num <= 0 )
-            throw openrave_exception("points cannot be empty");
-
-        if( len(shape) > 1 ) {
-            int dim = extract<int>(shape[1]);
-            if( dim != 3 )
-                throw openrave_exception("points array needs to be Nx3 matrix");
+        vector<float> vpoints, vcolors;
+        pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
+        //bool bhasalpha = vcolors.size() == 4*sizes.second;
+        if( sizes.first == sizes.second ) {
+            return object(PyGraphHandle(_penv->drawlinestrip(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,&vcolors[0])));
         }
-
-        vector<float> vpoints = ExtractArray<float>(opoints.attr("flat"));
-        RaveVector<float> vcolor(1,0.5,0.5,1);
-        if( ocolors != object() ) {
-            object shape = ocolors.attr("shape");
-            if( len(shape) == 1 )
-                vcolor = ExtractVector34(ocolors,1.0f);
-            else {
-                vector<float> vcolors = ExtractArray<float>(ocolors.attr("flat"));
-                if( vcolors.size() != vpoints.size() )
-                    throw openrave_exception("colors needs to be Nx3 matrix");
-                return object(PyGraphHandle(_penv->drawlinestrip(&vpoints[0],vpoints.size()/3,sizeof(float)*3,linewidth,&vcolors[0])));
-            }
+        BOOST_ASSERT(vcolors.size()<=4);
+        RaveVector<float> vcolor;
+        for(size_t i = 0; i < vcolors.size(); ++i) {
+            vcolor[i] = vcolors[i];
         }
-        return object(PyGraphHandle(_penv->drawlinestrip(&vpoints[0],vpoints.size()/3,sizeof(float)*3,linewidth,vcolor)));
+        return object(PyGraphHandle(_penv->drawlinestrip(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,vcolor)));
     }
 
     object drawlinelist(object opoints,float linewidth,object ocolors=object(),int drawstyle=0)
     {
-        object shape = opoints.attr("shape");
-        int num = extract<int>(shape[0]);
-        if( num <= 0 )
-            throw openrave_exception("points cannot be empty");
-
-        if( len(shape) > 1 ) {
-            int dim = extract<int>(shape[1]);
-            if( dim != 3 )
-                throw openrave_exception("points array needs to be Nx3 matrix");
+        vector<float> vpoints, vcolors;
+        pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
+        //bool bhasalpha = vcolors.size() == 4*sizes.second;
+        if( sizes.first == sizes.second ) {
+            return object(PyGraphHandle(_penv->drawlinelist(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,&vcolors[0])));
         }
-
-        vector<float> vpoints = ExtractArray<float>(opoints.attr("flat"));
-        RaveVector<float> vcolor(1,0.5,0.5,1);
-        if( ocolors != object() ) {
-            object shape = ocolors.attr("shape");
-            if( len(shape) == 1 )
-                vcolor = ExtractVector34(ocolors,1.0f);
-            else {
-                vector<float> vcolors = ExtractArray<float>(ocolors.attr("flat"));
-                if( vcolors.size() != vpoints.size() )
-                    throw openrave_exception("colors needs to be Nx3 matrix");
-                return object(PyGraphHandle(_penv->drawlinelist(&vpoints[0],vpoints.size()/3,sizeof(float)*3,linewidth,&vcolors[0])));
-            }
+        BOOST_ASSERT(vcolors.size()<=4);
+        RaveVector<float> vcolor;
+        for(size_t i = 0; i < vcolors.size(); ++i) {
+            vcolor[i] = vcolors[i];
         }
-        return object(PyGraphHandle(_penv->drawlinelist(&vpoints[0],vpoints.size()/3,sizeof(float)*3,linewidth,vcolor)));
+        return object(PyGraphHandle(_penv->drawlinelist(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,vcolor)));
     }
     
     object drawarrow(object op1, object op2, float linewidth=0.002, object ocolor=object())
@@ -2932,15 +2971,8 @@ public:
 
     object drawtrimesh(object opoints, object oindices=object(), object ocolors=object())
     {
-        object shape = opoints.attr("shape");
-        int num = extract<int>(shape[0]);
-        if( num <= 0 )
-            throw openrave_exception("points cannot be empty");
-        int dim = extract<int>(shape[1]);
-        if( dim != 3 )
-            throw openrave_exception("points array needs to be Nx3 matrix");
-        vector<float> vpoints = ExtractArray<float>(opoints.attr("flat"));
-
+        vector<float> vpoints;
+        _getGraphPoints(opoints,vpoints);
         vector<int> vindices;
         int* pindices = NULL;
         int numTriangles = vpoints.size()/9;
@@ -2951,18 +2983,17 @@ public:
                 pindices = &vindices[0];
             }
         }
-
         RaveVector<float> vcolor(1,0.5,0.5,1);
         if( ocolors != object() ) {
             object shape = ocolors.attr("shape");
-            if( len(shape) == 1 )
+            if( len(shape) == 1 ) {
                 return object(PyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,ExtractVector34(ocolors,1.0f))));
+            }
             else {
                 BOOST_ASSERT(extract<size_t>(shape[0])==vpoints.size()/3);
                 return object(PyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,extract<boost::multi_array<float,2> >(ocolors))));
             }
         }
-        
         return object(PyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,RaveVector<float>(1,0.5,0.5,1))));
     }
 
@@ -3256,6 +3287,11 @@ object poseMult(object opose1, object opose2)
     return toPyArray(ExtractTransformType<dReal>(opose1)*ExtractTransformType<dReal>(opose2));
 }
 
+object transformLookat(object olookat, object ocamerapos, object ocameraup)
+{
+    return toPyArray(transformLookat(ExtractVector3(olookat),ExtractVector3(ocamerapos),ExtractVector3(ocameraup)));
+}
+
 string matrixSerialization(object o)
 {
     stringstream ss; ss << ExtractTransformMatrix(o);
@@ -3318,6 +3354,7 @@ void raveLogVerbose(const string& s)
 
 }
 
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetCamera_overloads, SetCamera, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetController_overloads, SetController, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(StartSimulation_overloads, StartSimulation, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetViewer_overloads, SetViewer, 1, 2)
@@ -3407,12 +3444,16 @@ BOOST_PYTHON_MODULE(openravepy_int)
         .def(init<object,object>())
         .def("dir",&PyRay::dir)
         .def("pos",&PyRay::pos)
+        .def("__str__",&PyRay::__str__)
+        .def("__repr__",&PyRay::__repr__)
         .def_pickle(Ray_pickle_suite())
         ;
     class_<PyAABB, boost::shared_ptr<PyAABB> >("AABB")
         .def(init<object,object>())
         .def("extents",&PyAABB::extents)
         .def("pos",&PyAABB::pos)
+        .def("__str__",&PyAABB::__str__)
+        .def("__repr__",&PyAABB::__repr__)
         .def_pickle(AABB_pickle_suite())
         ;
     class_<PyInterfaceBase, boost::shared_ptr<PyInterfaceBase> >("Interface", no_init)
@@ -3970,6 +4011,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
 
 
     {
+        void (PyViewerBase::*setcamera1)(object) = &PyViewerBase::SetCamera;
+        void (PyViewerBase::*setcamera2)(object,float) = &PyViewerBase::SetCamera;
         scope viewer = class_<PyViewerBase, boost::shared_ptr<PyViewerBase>, bases<PyInterfaceBase> >("Viewer", no_init)
             .def("main",&PyViewerBase::main)
             .def("quitmainloop",&PyViewerBase::quitmainloop)
@@ -3979,8 +4022,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("LoadModel",&PyViewerBase::LoadModel)
             .def("RegisterCallback",&PyViewerBase::RegisterCallback)
             .def("EnvironmentSync",&PyViewerBase::EnvironmentSync)
-            .def("SetCamera",&PyViewerBase::SetCamera,args("transform"))
-            .def("SetCameraLookAt",&PyViewerBase::SetCameraLookAt,args("lookat","pos","up"))
+            .def("SetCamera",setcamera1,args("transform"))
+            .def("SetCamera",setcamera2,args("transform","focalDistance"))
             .def("GetCameraTransform",&PyViewerBase::GetCameraTransform)
             .def("GetCameraImage",&PyViewerBase::GetCameraImage,args("width","height","transform","K"))
             ;
@@ -4169,6 +4212,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
     def("quatRotateDirection",openravepy::quatRotateDirection,args("sourcedir,targetdir"),"Returns the minimal quaternion rotation that rotates sourcedir into targetdir");
     def("quatMult",openravepy::quatMult,args("quat1","quat2"),"Multiplies two 1-dimensional quaternions.");
     def("poseMult",openravepy::poseMult,args("pose1","pose2"),"multiplies two poses");
+    def("transformLookat",openravepy::transformLookat,args("lookat","camerapos","cameraup"),"Returns a camera matrix that looks along a ray with a desired up vector.");
     def("matrixSerialization",openravepy::matrixSerialization,args("matrix"),"Serializes a transformation into a string representing a 3x4 matrix");
     def("poseSerialization",openravepy::poseSerialization, args("pose"), "Serializes a transformation into a string representing a quaternion with translation");
     def("openravepyCompilerVersion",openravepy::openravepyCompilerVersion,"Returns the compiler version that openravepy_int was compiled with");

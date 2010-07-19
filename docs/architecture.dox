@@ -21,16 +21,10 @@ kinematic world, and all its interfaces into a coherent robotics world state.
 implementations of the \ref interfaces that are loaded dynamically into the \ref
 OpenRAVE::EnvironmentBase "environment". Plugins can be linked with other robotics libraries
 allowing OpenRAVE to expand its functionality, or it can offer OpenRAVE services to another robotics
-system. A plugin needs to export several functions that allow %OpenRAVE to gather information about
-what functions it provides and create its interfaces. During startup, %OpenRAVE parses the \ref
-environment_variables "OPENRAVE_PLUGINS" environment variable and loads all the shared objects it
-finds. If the shared object exports the correct functions, the plugin and its interfaces are
-registered with the %OpenRAVE run-time database, and the rest of the environment loading
-occurs. Plugins themselves can query functionality offer by other plugins through the environment's
-\ref env_plugin_functionality "interface querying functions".
+system.  During startup, %OpenRAVE parses the \ref environment_variables "OPENRAVE_PLUGINS"
+environment variable and loads all the plugins it finds.
+ - Refer to \ref writing_plugins for a tutorial on how to build and compile plugins.
  - Refer to \ref interface_concepts for interface details.
- - Refer to \ref writing_plugins for a tutorial on how to build and
-compile plugins.
 
 - <b>Scripting Layer</b> %OpenRAVE provides scripting environments for \openravepy{Python} and
 \octave{Octave/Matlab}. Python communicates with the core layer directly with in-memory calls,

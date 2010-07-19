@@ -1405,6 +1405,45 @@ RaveVector<T> quatRotateDirection(const RaveVector<T>& vsource, const RaveVector
     return torient.rot;
 }
 
+/// \brief Returns a camera matrix that looks along a ray with a desired up vector.
+///
+/// \ingroup affine_math
+/// \param lookat the point space to look at, the camera will rotation and zoom around this point
+/// \param campos the position of the camera in space
+/// \param camup vector from the camera
+template<typename T>
+RaveTransformMatrix<T> transformLookat(const RaveVector<T>& vlookat, const RaveVector<T>& vcamerapos, const RaveVector<T>& vcameraup)
+{
+    RaveVector<T> dir = vlookat - vcamerapos;
+    T len = RaveSqrt(dir.lengthsqr3());
+    if( len > 1e-6 ) {
+        dir *= 1/len;
+    }
+    else {
+        dir = RaveVector<T>(0,0,1);
+    }
+    RaveVector<T> up = vcameraup - dir * dir.dot3(vcameraup);
+    len = up.lengthsqr3();
+    if( len < 1e-8 ) {
+        up = RaveVector<T>(0,1,0);
+        up -= dir * dir.dot3(up);
+        len = up.lengthsqr3();
+        if( len < 1e-8 ) {
+            up = RaveVector<T>(1,0,0);
+            up -= dir * dir.dot3(up);
+            len = up.lengthsqr3();
+        }
+    }
+    up *= 1/RaveSqrt(len);
+    RaveVector<T> right = up.cross(dir);
+    RaveTransformMatrix<T> t;
+    t.m[0] = right.x; t.m[1] = up.x; t.m[2] = dir.x;
+    t.m[4] = right.y; t.m[5] = up.y; t.m[6] = dir.y;
+    t.m[8] = right.z; t.m[9] = up.z; t.m[10] = dir.z;
+    t.trans = vcamerapos;
+    return t;
+}
+
 /// \brief Compute the determinant of a 3x3 matrix whose row stride stride elements.
 /// \ingroup affine_math
 template <class T> inline T matrixdet3(const T* pf, int stride)

@@ -9,13 +9,12 @@
 %OpenRAVE provides an environment for testing, developing, and deploying motion planning and
 higher-level intelligence algorithms in real-world robotics applications. This document covers the
 core %OpenRAVE concepts, the C++ API, examples, and usage of the plugins offered in the base
-installation. All information written here is for <b>%OpenRAVE \openraveversion</b>. Please visit the
-\homepage{<b>official home page</b>} for up to date information on robotics systems using %OpenRAVE,
-official %OpenRAVE releases, and videos/tutorials.
+installation. Please visit the \homepage{<b>official home page</b>} for up to date information on
+robotics systems using %OpenRAVE, official %OpenRAVE releases, and videos/tutorials.
 
 \~japanese
 
-%OpenRAVEは現実世界の自律型ロボットアプリケーションをターゲットとし，そのテストと開発のためのモーションプランニングと高度な知的アルゴリズムを備えた開発環境を提供します．このドキュメントは%OpenRAVEの主要な概念，C++のAPI，使用例，インストール時に提供されたプラグインの使い方について記載しています．ここに記載された全ての情報は<b>%OpenRAVE \openraveversion</b>用のものです．%OpenRAVEを用いたロボットシステム，%OpenRAVEの公式リリース，ビデオ／チュートリアルなどの最新情報は\homepage{<b>公式HP</b>}をご参照ください．
+%OpenRAVEは現実世界の自律型ロボットアプリケーションをターゲットとし，そのテストと開発のためのモーションプランニングと高度な知的アルゴリズムを備えた開発環境を提供します．このドキュメントは%OpenRAVEの主要な概念，C++のAPI，使用例，インストール時に提供されたプラグインの使い方について記載しています．%OpenRAVEを用いたロボットシステム，%OpenRAVEの公式リリース，ビデオ／チュートリアルなどの最新情報は\homepage{<b>公式HP</b>}をご参照ください．
 
 \~english
 
@@ -47,7 +46,6 @@ low-level control, message protocols, and perception systems.
 - \subpage architecture_concepts
 - \subpage interface_concepts
 - \subpage writing_plugins
-- \subpage plotting3d
 
 \~english  \section main_system Components
 \~japanese \section main_system 構成要素
@@ -217,12 +215,12 @@ system running %OpenRAVE.
   plugins in \c $OPENRAVE_INSTALL/share/openrave/plugins are always loaded, so there is no need to
   include them.
 
-- \b OPENRAVE_DATA - Use ':' to separate each directory (';' for Windows). Everytime %OpenRAVE loads
+- \b OPENRAVE_DATA - Use ':' to separate each directory (';' for Windows). Every time %OpenRAVE loads
   a file, it will search it in these directories. The default data directory
   \c $OPENRAVE_INSTALL/share/openrave is always included, so there's no need to specify it again.
 
 - \b OPENRAVE_HOME - Used to set the directory where all openrave specific cached data is stored
-  like inverse kinematics solvers, robot pre-processed data, database generation results, etc. The
+  like inverse kinematics solvers, robot preprocessed data, database generation results, etc. The
   default directory is <b>$HOME/.openrave</b>.
 
 \~japanese \page environment_variables 環境変数の設定
@@ -247,10 +245,18 @@ For now see <a href="http://openrave.programmingvision.com/index.php/Main_Page#R
 /** 
 \page writing_plugins Writing Plugins and Interfaces
 
+\section writing_plugins_contents Contents
+- \ref writing_plugins_hash
+- \ref writing_plugins_example
+- \ref writing_plugins_build
+- \ref writing_plugins_usage
+- \ref writing_plugins_doc
+
 Every plugin needs to export several functions as defined in \ref plugin_exports to notify %OpenRAVE
-what interfaces it has. When a plugin is first loaded, its \ref OpenRAVEGetPluginAttributes function
-will be called in order so the %OpenRAVE core can register the names of its provided
-interfaces. 
+what interfaces it has. When a plugin is first loaded, it is validated by the environment and its
+\ref OpenRAVEGetPluginAttributes function will be called in order so the %OpenRAVE core can register
+the names of its provided interfaces. Plugins themselves can query functionality offer by other
+plugins through the environment's \ref env_plugin_functionality "interface querying functions".
 
 \section writing_plugins_hash Loading Plugins
 

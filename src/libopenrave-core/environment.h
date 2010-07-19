@@ -1539,8 +1539,7 @@ protected:
         virtual void closegraph(void* handle) {}
         virtual void deselect() {}
 
-        virtual void SetCamera(const RaveTransform<float>& trans) {}
-        virtual void SetCameraLookAt(const RaveVector<float>& lookat, const RaveVector<float>& campos, const RaveVector<float>& camup) {}
+        virtual void SetCamera(const RaveTransform<float>&, float) {}
         virtual RaveTransform<float> GetCameraTransform() { return RaveTransform<float>(); }
         
         virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK) { return false; }

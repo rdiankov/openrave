@@ -525,43 +525,22 @@ bool QtCoinViewer::WriteCameraImage(int width, int height, const RaveTransform<f
 class SetCameraMessage : public QtCoinViewer::EnvMessage
 {
 public:
-    SetCameraMessage(QtCoinViewerPtr pviewer, void** ppreturn, const RaveTransform<float>& trans)
-            : EnvMessage(pviewer, ppreturn, false), _trans(trans) {}
+    SetCameraMessage(QtCoinViewerPtr pviewer, void** ppreturn, const RaveTransform<float>& trans, float focalDistance)
+        : EnvMessage(pviewer, ppreturn, false), _trans(trans),_focalDistance(focalDistance) {}
     
     virtual void viewerexecute() {
-        _pviewer->_SetCamera(_trans);
+        _pviewer->_SetCamera(_trans,_focalDistance);
         EnvMessage::viewerexecute();
     }
 
 private:
     const RaveTransform<float> _trans;
+    float _focalDistance;
 };
 
-void QtCoinViewer::SetCamera(const RaveTransform<float>& trans)
+void QtCoinViewer::SetCamera(const RaveTransform<float>& trans,float focalDistance)
 {
-    EnvMessagePtr pmsg(new SetCameraMessage(shared_viewer(), (void**)NULL, trans));
-    pmsg->callerexecute();
-}
-
-class SetCameraLookAtMessage : public QtCoinViewer::EnvMessage
-{
-public:
-    SetCameraLookAtMessage(QtCoinViewerPtr pviewer, void** ppreturn, const RaveVector<float>& lookat,
-                           const RaveVector<float>& campos, const RaveVector<float>& camup)
-        : EnvMessage(pviewer, ppreturn, false), _lookat(lookat), _campos(campos), _camup(camup) {}
-    
-    virtual void viewerexecute() {
-        _pviewer->_SetCameraLookAt(_lookat, _campos, _camup);
-        EnvMessage::viewerexecute();
-    }
-
-private:
-    const RaveVector<float> _lookat, _campos, _camup;
-};
-
-void QtCoinViewer::SetCameraLookAt(const RaveVector<float>& lookat, const RaveVector<float>& campos, const RaveVector<float>& camup)
-{
-    EnvMessagePtr pmsg(new SetCameraLookAtMessage(shared_viewer(), (void**)NULL, lookat, campos, camup));
+    EnvMessagePtr pmsg(new SetCameraMessage(shared_viewer(), (void**)NULL, trans,focalDistance));
     pmsg->callerexecute();
 }
 
@@ -1014,49 +993,14 @@ void QtCoinViewer::EnvironmentSync()
         RAVELOG_WARNA("failed to update models from environment sync\n");
 }
 
-void QtCoinViewer::_SetCamera(const RaveTransform<float>& t)
+void QtCoinViewer::_SetCamera(const RaveTransform<float>& t, float focalDistance)
 {
     _bAutoSetCamera = false;
     GetCamera()->position.setValue(t.trans.x, t.trans.y, t.trans.z);
     GetCamera()->orientation.setValue(t.rot.y, t.rot.z, t.rot.w, t.rot.x);
-}
-
-void QtCoinViewer::_SetCameraLookAt(const RaveVector<float>& lookat, const RaveVector<float>& campos, const RaveVector<float>& camup)
-{
-    _bAutoSetCamera = false;
-
-    RaveVector<float> dir = -(lookat - campos);
-    float len = RaveSqrt(dir.lengthsqr3());
-    GetCamera()->focalDistance = len;
-
-    if( len > 1e-6 )
-        dir *= 1/len;
-    else
-        dir = RaveVector<float>(0,0,1);
-
-    RaveVector<float> up = camup - dir * dot3(dir,camup);
-    len = up.lengthsqr3();
-    if( len < 1e-8 ) {
-        up = RaveVector<float>(0,1,0);
-        up -= dir * dot3(dir,up);
-        len = up.lengthsqr3();
-        if( len < 1e-8 ) {
-            up = RaveVector<float>(1,0,0);
-            up -= dir * dot3(dir,up);
-            len = up.lengthsqr3();
-        }
+    if( focalDistance > 0 ) {
+        GetCamera()->focalDistance = focalDistance;
     }
-
-    up *= 1/RaveSqrt(len);
-    
-    RaveVector<float> right = up.cross(dir);
-    RaveTransformMatrix<float> t;
-    t.m[0] = right.x; t.m[1] = up.x; t.m[2] = dir.x;
-    t.m[4] = right.y; t.m[5] = up.y; t.m[6] = dir.y;
-    t.m[8] = right.z; t.m[9] = up.z; t.m[10] = dir.z;
-    t.trans = campos;
-
-    _SetCamera(t);
 }
 
 void QtCoinViewer::_SetBkgndColor(const RaveVector<float>& color)
