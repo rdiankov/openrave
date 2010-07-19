@@ -1,14 +1,12 @@
-/** \page architecture_concepts Introduction to the OpenRAVE Architecture 
-
-\section fundamental_structure Fundamental Structure
+/** 
+\~english  \page architecture_concepts Introduction to the OpenRAVE Architecture 
+\~japanese \page architecture_concepts 基本設計概念の紹介
 
 \~english
+\section fundamental_structure Fundamental Structure
+
 \image html openrave_architecture.png
 \image latex openrave_architecture.pdf "%OpenRAVE architecture" width=15cm
-\~japanese
-\image html openrave_architecture_jp.png
-\image latex openrave_architecture_jp.pdf "抽象アーキテクチャー" width=15cm
-\~
 
 %OpenRAVE is divided in four main components as shown in the above figure:
 
@@ -56,6 +54,33 @@ box.
 
 It is possible to send a \b help command to every \ref OpenRAVE::InterfaceBase "interface" to get a
 description of the commands it supports and what they do.
+
+\~japanese
+\section fundamental_structure 基盤構造
+
+\image html openrave_architecture_jp.png
+\image latex openrave_architecture_jp.pdf "抽象アーキテクチャー" width=15cm
+
+%OpenRAVEは上図で示す４つの主要な構成要素に分けられています．
+
+- <b>コア</b> コアは主に\ref interfacesのセットで構成されています．これらのクラスはプラグインが互いに情報を得る方法を定義しています．コアは実際の環境と%OpenRAVEのシミュレーション環境とを接続する橋渡しの役割をし，ゲートウェイとして%OpenRAVEで提供されてた全ての機能にその情報を提供します．%OpenRAVE全体の状態としてコアは，読み出されたプラグイン，複数の独立した環境，そしてログを管理します．一方，環境クラスは干渉検知器，ビューワ，物理エンジン，運動学などの全てのインターフェースを１つのまとまったロボット世界の状態にまとめています．
+
+- <b>プラグイン</b> %OpenRAVEはプラグインを基盤とした構造で設計されています．プラグインは環境クラスのなかに動的に読み出される\ref interfacesの実装を提供します．プラグインは%OpenRAVEの機能拡張の為に他のロボットライブラリとリンクすることができ，また%OpenRAVEのサービスを他のロボットシステムに提供することも可能です．プラグインは%OpenRAVEに，それがどのような機能を提供しているかという情報を集めることと，インターフェースを生成することのできる機能を外部に提供する必要があります．起動時に%OpenRAVEは\ref environment_variables "OPENRAVE_PLUGINS"の環境変数を渡し，全ての共用オブジェクトを読み出します．もし共用オブジェクトが正しい機能を外部に提供していたら，プラグインとそのインターフェースは%OpenRAVEの実行時のデータベースとして登録され， and the rest of the environment loading occurs. プラグイン自身も他のプラグインが投げる環境の\ref env_plugin_functionality "インターフェース要求機能"によって要求することができます．<br/>
+ - インターフェースの詳細は\ref interface_conceptsを参照してください．
+ - プラグインのビルドとコンパイルのチュートリアルは\ref writing_pluginsを参照してください．
+
+- <b>スクリプト</b> %OpenRAVEは\openravepy{Python}と\octave{Octave/Matlab}の為のスクリプト開発環境を提供します．Pythonではコアと直接通信を行い，メモリ内で呼び出しを行うことで非常に高速に実行することができます．一方，Octave/Matlabでは，プラグインによって%OpenRAVEのコア上で提供されているテキストサーバで，TCP/IPを通して命令を送ります．スクリプトを使うことにより，いちいち%OpenRAVEの再起動をしなくても環境の変化をすぐに反映することが可能です．これにより新しいアルゴリズムを試験することは容易になるでしょう．Pythonのスクリプト開発環境は非常に強力です．多くの%OpenRAVEの実行例やデモはこれによって提供されています．事実，ユーザーはスクリプト言語をC++ APIの置き換えとしてではなく，全システムの統合的な部分として扱うべきです．
+
+- <b>データベース</b> 編集中
+
+全ての基本的なプランナーと問題のインターフェースはどんなロボット構造にでも適用可能である必要があります．他のプランニングパッケージと比較して%OpenRAVEの大きな強みの１つは，非常に少ない変更でどんなロボットにもそのアルゴリズムを適用できるということです．最近，データベースの構造に凸形状分解，把持セット，逆運動学解析解，運動学的到達範囲などが導入されました．もしロボットが定義されたなら，全てのこれらの機能は実行できなければなりません．
+
+全ての\ref OpenRAVE::InterfaceBase "インターフェース"は<b>help</b>命令で，それが提供する命令の詳細と何を実行するかを調べることが可能です．
+
+
+
+
+
 
 \section arch_environment Environment Concepts
 
