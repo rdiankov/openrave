@@ -413,7 +413,10 @@ public:
         RegisterCommand("SetCameraAndTarget",boost::bind(&VisualFeedbackProblem::SetCameraAndTarget,this,_1,_2),
                         "Sets the camera index from the robot and its convex hull");
         RegisterCommand("ProcessVisibilityExtents",boost::bind(&VisualFeedbackProblem::ProcessVisibilityExtents,this,_1,_2),
-                        "Converts 3D extents to full 6D camera transforms and prunes bad transforms");
+                        "Processes the visibility extents of the target and initializes the camera transforms.\n\
+\n\
+:type sphere: Sets the transforms along a sphere density and the distances\n\
+:type conedirangle: Prunes the currently set transforms along a cone centered at the local target center and directed towards conedirangle with a half-angle of ``|conedirangle|``. Can specify multiple cones for an OR effect.");
         RegisterCommand("SetCameraTransforms",boost::bind(&VisualFeedbackProblem::SetCameraTransforms,this,_1,_2),
                         "Sets new camera transformations. Can optionally choose a minimum distance from all planes of the camera camera convex hull (includes gripper mask)");
         RegisterCommand("ComputeVisibility",boost::bind(&VisualFeedbackProblem::ComputeVisibility,this,_1,_2),
@@ -679,6 +682,7 @@ public:
         Vector vTargetLocalCenter;
         bool bSetTargetCenter = false;
         int numrolls=8;
+        vector<Vector> vconedirangles;
         vector<Transform> vtransforms;
         while(!sinput.eof()) {
             sinput >> cmd;
@@ -757,16 +761,10 @@ public:
                 if( fangle == 0 ) {
                     return false;
                 }
+
                 vconedir /= fangle;
-                dReal fcosangle = RaveCos(fangle);
-                vector<Transform> vnewtransforms; vnewtransforms.reserve((int)(vtransforms.size()*(fangle*fangle/(4.0*PI*PI))));
-                FOREACH(itt,vtransforms) {
-                    Vector v = itt->trans-vTargetLocalCenter;
-                    if( dot3(vconedir,v) >= fcosangle*RaveSqrt(v.lengthsqr3()) ) {
-                        vnewtransforms.push_back(*itt);
-                    }
-                }
-                vtransforms = vnewtransforms;
+                vconedir.w = RaveCos(fangle);
+                vconedirangles.push_back(vconedir);
             }
             else {
                 RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
@@ -776,6 +774,25 @@ public:
             if( !sinput ) {
                 RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
+            }
+        }
+
+        if( vconedirangles.size() > 0 ) {
+            vector<Transform> voldtransforms;
+            voldtransforms.swap(vtransforms);
+            vtransforms.reserve(voldtransforms.size());
+            FOREACH(itt,voldtransforms) {
+                Vector v = itt->trans-vTargetLocalCenter;
+                bool bInCone = false;
+                FOREACH(itcone, vconedirangles) {
+                    if( itcone->dot3(v) >= itcone->w*RaveSqrt(v.lengthsqr3()) ) {
+                        bInCone = true;
+                        break;
+                    }
+                }
+                if( bInCone ) {
+                    vtransforms.push_back(*itt);
+                }
             }
         }
 

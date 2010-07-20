@@ -37,6 +37,8 @@ class BaseManipulation:
             raise ValueError('problem failed to initialize')
         return clone
     def TrajFromData(self,data):
+        """.. interface-command:: BaseManipulation TrajFromData
+        """
         return self.prob.SendCommand('traj stream ' + data)
     def MoveHandStraight(self,direction,minsteps=None,maxsteps=None,stepsize=None,ignorefirstcollision=None,jacobian=None,searchall=None,execute=None,outputtraj=None):
         cmd = 'MoveHandStraight direction %f %f %f '%(direction[0],direction[1],direction[2])

@@ -39,6 +39,8 @@ class VisualFeedback:
             raise ValueError('problem failed to initialize')
         return clone
     def SetCameraAndTarget(self,sensorindex=None,sensorname=None,manipname=None,convexdata=None,sensorrobot=None,target=None):
+        """.. interface-command:: VisualFeedback SetCameraAndTarget
+        """
         cmd = 'SetCameraAndTarget '
         if target is not None:
             cmd += 'target %s '%target.GetName()
@@ -58,11 +60,8 @@ class VisualFeedback:
         if res is None:
             raise planning_error()
         return res
-    def ProcessVisibilityExtents(self,localtargetcenter=None,numrolls=None,transforms=None,extents=None,sphere=None,conedirangle=None):
-        """Processes the visibility extents of the target and initializes the camera transforms.
-
-        :type sphere: Sets the transforms along a sphere density and the distances
-        :type conedirangle: Prunes the currently set transforms along a cone centered at the local target center and directed towards conedirangle with a half-angle of ``|conedirangle|``
+    def ProcessVisibilityExtents(self,localtargetcenter=None,numrolls=None,transforms=None,extents=None,sphere=None,conedirangles=None):
+        """.. interface-command:: VisualFeedback ProcessVisibilityExtents
         """
         cmd = 'ProcessVisibilityExtents '
         if localtargetcenter is not None:
@@ -81,14 +80,17 @@ class VisualFeedback:
             cmd += 'sphere %d %d '%(sphere[0],len(sphere)-1)
             for s in sphere[1:]:
                 cmd += '%f '%s
-        if conedirangle is not None:
-            cmd += 'conedirangle %f %f %f '%(conedirangle[0],conedirangle[1],conedirangle[2])
+        if conedirangles is not None:
+            for conedirangle in conedirangles:
+                cmd += 'conedirangle %f %f %f '%(conedirangle[0],conedirangle[1],conedirangle[2])
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise planning_error()
         visibilitytransforms = array([float(s) for s in res.split()],float)
         return reshape(visibilitytransforms,(len(visibilitytransforms)/7,7))
     def SetCameraTransforms(self,transforms,mindist=None):
+        """.. interface-command:: VisualFeedback SetCameraTransforms
+        """
         cmd = 'SetCameraTransforms transforms %d '%len(transforms)
         for f in reshape(transforms,len(transforms)*7):
             cmd += str(f) + ' '
@@ -99,12 +101,16 @@ class VisualFeedback:
             raise planning_error()
         return res
     def ComputeVisibility(self):
+        """.. interface-command:: VisualFeedback ComputeVisibility
+        """
         cmd = 'ComputeVisibility '
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise planning_error()
         return int(res)
     def ComputeVisibleConfiguration(self,pose):
+        """.. interface-command:: VisualFeedback ComputeVisibleConfiguration
+        """
         cmd = 'ComputeVisibleConfiguration '
         cmd += 'pose '
         for i in range(7):
@@ -114,6 +120,8 @@ class VisualFeedback:
             raise planning_error()
         return array([float(s) for s in res.split()])
     def SampleVisibilityGoal(self,numsamples=None):
+        """.. interface-command:: VisualFeedback SampleVisibilityGoal
+        """
         cmd = 'SampleVisibilityGoal '
         if numsamples is not None:
             cmd += 'numsamples %d '%numsamples
@@ -124,6 +132,8 @@ class VisualFeedback:
         returnedsamples = int(samples[0])
         return reshape(array(samples[1:],float),(returnedsamples,(len(samples)-1)/returnedsamples))
     def MoveToObserveTarget(self,affinedofs=None,smoothpath=None,planner=None,sampleprob=None,maxiter=None,execute=None,outputtraj=None):
+        """.. interface-command:: VisualFeedback MoveToObserveTarget
+        """
         cmd = 'MoveToObserveTarget '
         if affinedofs is not None:
             cmd += 'affinedofs %d '%affinedofs
@@ -144,6 +154,8 @@ class VisualFeedback:
             raise planning_error()
         return res
     def VisualFeedbackGrasping(self,graspset,usevisibility=None,planner=None,graspdistthresh=None,visgraspthresh=None,numgradientsamples=None,maxiter=None,execute=None,outputtraj=None):
+        """.. interface-command:: VisualFeedback VisualFeedbackGrasping
+        """
         cmd = 'VisualFeedbackGrasping '
         if graspset is not None:
             cmd += 'graspset %d '%len(graspset)

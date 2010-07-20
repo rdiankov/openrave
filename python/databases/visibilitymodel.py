@@ -122,7 +122,7 @@ class VisibilityModel(OpenRAVEModel):
     def autogenerate(self,options=None,gmodel=None):
         preshapes = None
         sphere =None
-        conedirangle = None
+        conedirangles = None
         if options is not None:
             if options.preshapes is not None:
                 preshapes = zeros((0,len(self.manip.GetGripperJoints())))
@@ -130,8 +130,10 @@ class VisibilityModel(OpenRAVEModel):
                     preshapes = r_[preshapes,[array([float(s) for s in preshape.split()])]]
             if options.sphere is not None:
                 sphere = [float(s) for s in options.sphere.split()]
-            if options.conedirangle is not None:
-                conedirangle = [float(s) for s in options.conedirangle.split()]
+            if options.conedirangles is not None:
+                conedirangles = []
+                for conediranglestring in options.conedirangles:
+                    conedirangles.append([float(s) for s in conediranglestring.split()])
         if not gmodel is None:
             preshapes = array([gmodel.grasps[0][gmodel.graspindices['igrasppreshape']]])
         if preshapes is None:
@@ -140,9 +142,9 @@ class VisibilityModel(OpenRAVEModel):
                 taskmanip = TaskManipulation(self.robot)
                 final,traj = taskmanip.ReleaseFingers(execute=False,outputfinal=True)
             preshapes = array([final])
-        self.generate(preshapes=preshapes,sphere=sphere,conedirangle=conedirangle)
+        self.generate(preshapes=preshapes,sphere=sphere,conedirangles=conedirangles)
         self.save()
-    def generate(self,preshapes,sphere=None,conedirangle=None):
+    def generate(self,preshapes,sphere=None,conedirangles=None):
         self.preshapes=preshapes
         self.preprocess()
         self.sensorname = self.attachedsensor.GetName()
@@ -163,14 +165,11 @@ class VisibilityModel(OpenRAVEModel):
                             self.robot.SetJointValues(self.preshapes[0],self.manip.GetGripperJoints())
                     extentsfile = os.path.join(self.env.GetHomeDirectory(),'kinbody.'+self.target.GetKinematicsGeometryHash(),'visibility.txt')
                     if sphere is None and os.path.isfile(extentsfile):
-                        self.visibilitytransforms = self.visualprob.ProcessVisibilityExtents(extents=loadtxt(extentsfile,float))
-                        if conedirangle is not None:
-                            raveLogWarn('do not support conedirangle when detectability extents are valid')
+                        self.visibilitytransforms = self.visualprob.ProcessVisibilityExtents(extents=loadtxt(extentsfile,float),conedirangles=conedirangles)
                     else:
                         if sphere is None:
                             sphere = [3,0.1,0.15,0.2,0.25,0.3]
-                        print sphere
-                        self.visibilitytransforms = self.visualprob.ProcessVisibilityExtents(sphere=sphere,conedirangle=conedirangle)
+                        self.visibilitytransforms = self.visualprob.ProcessVisibilityExtents(sphere=sphere,conedirangles=conedirangles)
                 print 'total transforms: ',len(self.visibilitytransforms)
                 self.visualprob.SetCameraTransforms(transforms=self.visibilitytransforms)
         finally:
@@ -179,7 +178,7 @@ class VisibilityModel(OpenRAVEModel):
 
     def SetCameraTransforms(self,transforms):
         self.visualprob.SetCameraTransforms(transforms=transforms)
-    def showtransforms(self):
+    def showtransforms(self,options=None):
         pts = array([dot(self.target.GetTransform(),matrixFromPose(pose))[0:3,3] for pose in self.visibilitytransforms])
         h=self.env.plot3(pts,5,colors=array([0.5,0.5,1,0.2]))
         with RobotStateSaver(self.robot):
@@ -199,10 +198,17 @@ class VisibilityModel(OpenRAVEModel):
                             link.SetTransform(dot(Tdelta,link.GetTransform()))
                         visibility = self.visualprob.ComputeVisibility()
                         self.env.UpdatePublishedBodies()
-                    raw_input('%d/%d visibility=%d, press any key to continue: '%(i,len(self.visibilitytransforms),visibility))
+                    msg='%d/%d visibility=%d, press any key to continue: '%(i,len(self.visibilitytransforms),visibility)
+                    if options is not None and options.showimage:
+                        pilutil=__import__('scipy.misc',fromlist=['pilutil'])
+                        I=self.getCameraImage()
+                        print(msg)
+                        pilutil.imshow(I)
+                    else:
+                        raw_input(msg)
     def show(self,options=None):
         self.env.SetViewer('qtcoin')
-        return self.showtransforms()
+        return self.showtransforms(options)
     def moveToPreshape(self):
         """uses a planner to safely move the hand to the preshape and returns the trajectory"""
         if len(self.preshapes) > 0:
@@ -303,10 +309,12 @@ class VisibilityModel(OpenRAVEModel):
                           help='Add a preshape for the manipulator gripper joints')
         parser.add_option('--sphere', action='store', type='string',dest='sphere',default=None,
                           help='Force detectability extents to be distributed around a sphere. Parameter is a string with the first value being density (3 is default) and the rest being distances')
-        parser.add_option('--conedirangle', action='store', type='string',dest='conedirangle',default=None,
-                          help='The direction of the cone multiplied with the half-angle (radian) that the detectability extents are constrained to')
+        parser.add_option('--conedirangle', action='append', type='string',dest='conedirangles',default=None,
+                          help='The direction of the cone multiplied with the half-angle (radian) that the detectability extents are constrained to. Multiple cones can be provided.')
         parser.add_option('--rayoffset',action="store",type='float',dest='rayoffset',default=0.03,
                           help='The offset to move the ray origin (prevents meaningless collisions), default is 0.03')
+        parser.add_option('--showimage',action="store_true",dest='showimage',default=False,
+                          help='If set, will show the camera image when showing the models')
         return parser
     @staticmethod
     def RunFromParser(Model=None,parser=None,args=None,**kwargs):
