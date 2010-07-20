@@ -55,7 +55,7 @@ if (QT_FOUND AND SOQT_LIBRARY_FOUND AND OPENGL_FOUND)
    # build sources, moc'd sources, and rcc'd sources
   add_library(qtcoinrave SHARED aviUtil.cpp IvSelector.cpp Item.cpp qtcoinviewer.cpp qtcoinrave.cpp ${MOC_OUTPUT_FILES} Item.h IvSelector.h qtcoin.h qtcoinviewer.h)
 
-  if( OPTION_VIDEORECORDING )
+  if( OPT_VIDEORECORDING )
     pkg_check_modules(FFMPEG libavformat libavcodec)
     add_definitions(-DENABLE_VIDEORECORDING)
     if (FFMPEG_FOUND)
