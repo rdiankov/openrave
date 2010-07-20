@@ -282,7 +282,8 @@ public:
         bool TestRay(const Vector& v, const TransformMatrix& tcamera)
         {
             RAY r;
-            r.dir = tcamera.rotate(2.0f*v);
+            dReal filen = 1/RaveSqrt(v.lengthsqr3());
+            r.dir = tcamera.rotate((2.0f*filen)*v);
             r.pos = tcamera.trans + 0.5f*_fRayMinDist*r.dir; // move the rays a little forward
             if( !_vf->_robot->GetEnv()->CheckCollision(r,_report) ) {
                 return true; // not supposed to happen, but it is OK
@@ -307,11 +308,12 @@ public:
             vector<KinBody::LinkPtr> vattachedlinks;
             _vf->_robot->GetRigidlyAttachedLinks(_vf->_psensor->GetAttachingLink()->GetIndex(),vattachedlinks);
             KinBody::KinBodyStateSaver robotsaver(_vf->_robot);
+            Transform tsensorinv = _vf->_psensor->GetTransform().inverse();
             FOREACHC(itlink,_vf->_robot->GetLinks()) {
                 bool battached = find(vattachedlinks.begin(),vattachedlinks.end(),*itlink)!=vattachedlinks.end();
                 (*itlink)->Enable(battached);
                 if( battached ) {
-                    (*itlink)->SetTransform(_vf->_psensor->GetTransform().inverse()*(*itlink)->GetTransform());
+                    (*itlink)->SetTransform(tsensorinv*(*itlink)->GetTransform());
                 }
             }
             TransformMatrix tcamerainv = tcamera.inverse();
@@ -331,7 +333,9 @@ public:
 
         bool TestRayRigid(const Vector& v, const TransformMatrix& tcamera, const vector<KinBody::LinkPtr>& vattachedlinks)
         {
-            if( _vf->_robot->GetEnv()->CheckCollision(RAY(_fRayMinDist*v,2.0f*v),KinBodyConstPtr(_vf->_robot),_report) ) {
+            dReal filen = 1/RaveSqrt(v.lengthsqr3());
+            RAY r((_fRayMinDist*filen)*v,(2.0f*filen)*v);
+            if( _vf->_robot->GetEnv()->CheckCollision(r,KinBodyConstPtr(_vf->_robot),_report) ) {
                 //RAVELOG_INFO(str(boost::format("ray col: %s\n")%_report->__str__()));
                 return false;
             }
