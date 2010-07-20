@@ -78,6 +78,7 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     setWindowTitle("OpenRAVE");
     statusBar()->showMessage(tr("Status Bar"));
 #endif
+    __description = ":Interface Author: Rosen Diankov\nProvides a GUI using the Coin3D, Qt4, and SoQt libraries.";
     _bLockEnvironment = true;
     _bAVIInit = false;
     _pToggleDebug = NULL;

@@ -19,7 +19,7 @@ class IdealController : public ControllerBase
 {
  public:
     IdealController(EnvironmentBasePtr penv) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true) {
-        __description = "Simple controller that forces exact robot positions";
+        __description = ":Interface Author: Rosen Diankov\nIdeal controller used for planning and non-physics simulations. Forces exact robot positions.";
         fTime = 0;
         _fSpeed = 1;
     }
@@ -163,7 +163,7 @@ class RedirectController : public ControllerBase
 {
  public:
  RedirectController(EnvironmentBasePtr penv) : ControllerBase(penv), _bAutoSync(true) {
-        __description = "Redirects all input and output to another controller (this avoides cloning the other controller while still allowing it to be used from cloned environments)";
+        __description = ":Interface Author: Rosen Diankov\nRedirects all input and output to another controller (this avoides cloning the other controller while still allowing it to be used from cloned environments)";
     }
     virtual ~RedirectController() {}
     

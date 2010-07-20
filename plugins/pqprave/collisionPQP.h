@@ -46,6 +46,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
     
  CollisionCheckerPQP(EnvironmentBasePtr penv) : CollisionCheckerBase(penv)
     {
+        __description = ":Interface Authors: Dmitry Berenson, Rosen Diankov\nPQP collision checker, slow but allows distance queries to objects.";
         _rel_err = 200.0; //temporary change
         _abs_err = 0.001;   //temporary change
         _tolerance = 0.0;

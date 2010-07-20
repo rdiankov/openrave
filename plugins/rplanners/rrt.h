@@ -26,10 +26,8 @@ public:
  RrtPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
     {
         __description = "\
-:Author:\n\
-  Rosen Diankov\n\
-\n\
-Implements the Rapidly-Exploring Random Trees Algorithm.\n\
+:Interface Author:  Rosen Diankov\n\
+Uses the Rapidly-Exploring Random Trees Algorithm.\n\
 ";
         _report.reset(new CollisionReport());
     }
@@ -138,7 +136,8 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
  public:
  BirrtPlanner(EnvironmentBasePtr penv) : RrtPlanner<SimpleNode>(penv)
     {
-        __description = "Rosen's BiRRT planner";
+        __description += "Bi-directional RRTs. See\n\
+J.J. Kuffner and S.M. LaValle. RRT-Connect: An efficient approach to single-query path planning. In Proc. IEEE Int'l Conf. on Robotics and Automation (ICRA'2000), pages 995-1001, San Francisco, CA, April 2000.";
     }
     virtual ~BirrtPlanner() {}
 
@@ -524,10 +523,9 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
 
 class ExplorationPlanner : public RrtPlanner<SimpleNode>
 {
- public:
-ExplorationPlanner(EnvironmentBasePtr penv) : RrtPlanner<SimpleNode>(penv)
-    {
-        __description = "RRT-based exploration planner";
+public:
+    ExplorationPlanner(EnvironmentBasePtr penv) : RrtPlanner<SimpleNode>(penv) {
+        __description = ":Interface Author: Rosen Diankov\nRRT-based exploration planner";
     }
     virtual ~ExplorationPlanner() {}
 

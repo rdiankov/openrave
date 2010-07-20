@@ -37,7 +37,8 @@ python build_doc.py build_doc --outdir="english/openravepy-html" --languagecode=
 python build_doc.py build_doc --outdir="japanese/openravepy-html" --languagecode=ja
 
 # build interfaces
-rm -rf sphinx/interfaces
+rm -rf sphinx/interfaces sphinx/sphinx-docs
+python build_interfaces.py
 sphinx-build sphinx sphinx/sphinx-docs
 
 # send to server

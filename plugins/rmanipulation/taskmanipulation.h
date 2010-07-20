@@ -50,7 +50,7 @@ class TaskManipulation : public ProblemInstance
     typedef std::map<vector<dReal>, TrajectoryBasePtr, GraspVectorCompare > PRESHAPETRAJMAP;
 
  TaskManipulation(EnvironmentBasePtr penv) : ProblemInstance(penv) {
-        __description = "Task Manipulation Problem - Rosen Diankov";
+        __description = ":Interface Author: Rosen Diankov\nGrasp/Manipulation planning with grasp sets.";
         RegisterCommand("createsystem",boost::bind(&TaskManipulation::CreateSystem,this,_1,_2),
                         "creates a sensor system and initializes it with the current bodies");
 #ifdef HAVE_BOOST_REGEX

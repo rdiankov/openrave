@@ -399,7 +399,9 @@ public:
 
     VisualFeedbackProblem(EnvironmentBasePtr penv) : ProblemInstance(penv)
     {
-        __description = "Planning with Visibility Constraints - Rosen Diankov";
+        __description = ":Interface Author: Rosen Diankov\nAdds grasp planning taking into account camera visibility constraints.\n\
+\n\
+- Rosen Diankov, Takeo Kanade, James Kuffner. Integrating Grasp Planning and Visual Feedback for Reliable Manipulation, IEEE-RAS Intl. Conf. on Humanoid Robots, December 2009. ";
         _nManipIndex = -1;
         _fMaxVelMult=1;
         _bCameraOnManip = false;

@@ -24,7 +24,7 @@ class ODEVelocityController : public ControllerBase
 public:
  ODEVelocityController(EnvironmentBasePtr penv) : ControllerBase(penv)
     {
-        __description = "ODE Velocity controller by Juan Gonzalez and Rosen Diankov";
+        __description = ":Interface Authors: Juan Gonzalez and Rosen Diankov\nODE Velocity controller.";
     }
 
     virtual bool Init(RobotBasePtr robot, const std::string& args)

@@ -94,9 +94,17 @@ class BaseCameraSensor : public SensorBase
     }
     
  BaseCameraSensor(EnvironmentBasePtr penv) : SensorBase(penv) {
+        __description = ":Interface Author: Rosen Diankov\nProvides a simulated camera using the standard pinhole projection.";
+        RegisterCommand("power",boost::bind(&BaseCameraSensor::_Power,this,_1,_2),
+                        "Set the power (1 or 0) of the sensor.");
+        RegisterCommand("render",boost::bind(&BaseCameraSensor::_Render,this,_1,_2),
+                        "Set rendering of the plots (1 or 0).");
+        RegisterCommand("setintrinsic",boost::bind(&BaseCameraSensor::_SetIntrinsic,this,_1,_2),
+                        "Set the intrinsic parameters of the camera (fx,fy,cx,cy).");
+        RegisterCommand("setdims",boost::bind(&BaseCameraSensor::_SetDims,this,_1,_2),
+                    "Set the dimensions of the image (width,height)");
         _pgeom.reset(new CameraGeomData());
         _pdata.reset(new CameraSensorData());
-        _bShowCameraImage = false;
         _bPower = false;
         _vColor = RaveVector<float>(0.5f,0.5f,1,1);
         framerate = 5;
@@ -200,26 +208,29 @@ class BaseCameraSensor : public SensorBase
         return true;
     }
 
-    virtual bool SendCommand(std::ostream& os, std::istream& is)
+    bool _Power(ostream& sout, istream& sinput)
     {
-        string cmd;
-        is >> cmd;
-        if( !is )
-            throw openrave_exception("no command",ORE_InvalidArguments);
-        std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-
-        if( cmd == "show" )
-            is >> _bShowCameraImage;
-        else if( cmd == "power" )
-            is >> _bPower;
-        else if( cmd == "setintrinsic")
-            is >> _pgeom->KK.fx >> _pgeom->KK.fy >> _pgeom->KK.cx >> _pgeom->KK.cy;
-        else if( cmd == "setdims" ) {
-            is >> _pgeom->width >> _pgeom->height;
+        sinput >> _bPower;
+        return !!sinput;
+    }
+    bool _Render(ostream& sout, istream& sinput)
+    {
+        sinput >> _bUpdateCameraPlot;
+        return !!sinput;
+    }
+    bool _SetIntrinsic(ostream& sout, istream& sinput)
+    {
+        sinput >> _pgeom->KK.fx >> _pgeom->KK.fy >> _pgeom->KK.cx >> _pgeom->KK.cy;
+        return !!sinput;
+    }
+    bool _SetDims(ostream& sout, istream& sinput)
+    {
+        sinput >> _pgeom->width >> _pgeom->height;
+        if( !!sinput ) {
             Reset(0);
+            return true;
         }
-    
-        return !!is;
+        return false;
     }
 
     virtual void SetTransform(const Transform& trans)
@@ -238,7 +249,6 @@ class BaseCameraSensor : public SensorBase
         _trans = r->_trans;
         fTimeToImage = r->fTimeToImage;
         framerate = r->framerate;
-        _bShowCameraImage = r->_bShowCameraImage;
         _bUpdateCameraPlot = r->_bUpdateCameraPlot;
         _bPower = r->_bPower;
         Reset(0);
@@ -261,7 +271,6 @@ class BaseCameraSensor : public SensorBase
 
     mutable boost::mutex _mutexdata;
 
-    bool _bShowCameraImage; ///< if true, will show the camera image
     bool _bUpdateCameraPlot;
     bool _bPower; ///< if true, gather data, otherwise don't
 

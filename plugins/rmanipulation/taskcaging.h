@@ -717,7 +717,11 @@ public:
 
 public:
  TaskCagingProblem(EnvironmentBasePtr penv) : ProblemInstance(penv) {
-        __description = "Task Caging Problem - Rosen Diankov";
+        __description = ":Interface Author: Rosen Diankov\nImplements various algorithms to open and close \
+doors by having the hand cage the handles instead of tightly grip. \
+This greatly relaxes the constraints on the robot (see the door manipluation example). The relevant paper is:\n\n\
+\
+- Rosen Diankov, Siddhartha Srinivasa, Dave Ferguson, James Kuffner. Manipulation Planning with Caging Grasps. IEEE-RAS Intl. Conf. on Humanoid Robots, December 2008.";
         RegisterCommand("graspset",boost::bind(&TaskCagingProblem::GraspSet, this, _1, _2),
                         "Creates a grasp set given a robot end-effector floating in space.\n"
                         "Options: step exploreprob size target targetjoint contactconfigdelta cagedconfig");

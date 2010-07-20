@@ -21,7 +21,7 @@ class DualManipulation : public ProblemInstance
 {
  public:
  DualManipulation(EnvironmentBasePtr penv) : ProblemInstance(penv) {
-        __description = "Dual Manipulation Problem - Achint Aggarwal";
+        __description = ":Interface Author: Achint Aggarwal\nInterface for planners using more than one manipulator simultaneously.";
         RegisterCommand("SetActiveManip",boost::bind(&DualManipulation::SetActiveManip,this,_1,_2),
                         "Set the active manipulator");
         RegisterCommand("GrabBody",boost::bind(&DualManipulation::GrabBody,this,_1,_2),

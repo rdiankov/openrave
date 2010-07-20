@@ -116,6 +116,12 @@ public:
 
  BaseFlashLidar3DSensor(EnvironmentBasePtr penv) : SensorBase(penv)
     {
+        __description = ":Interface Author: Rosen Diankov\nProvides a simulated 3D flash lidar sensor. A flash LIDAR instantaneously returns the depth measurements in the form of an image.";
+        RegisterCommand("render",boost::bind(&BaseFlashLidar3DSensor::_Render,this,_1,_2),
+                        "Set rendering of the plots (1 or 0).");
+        RegisterCommand("collidingbodies",boost::bind(&BaseFlashLidar3DSensor::_CollidingBodies,this,_1,_2),
+                        "Returns the ids of the bodies that the laser beams have hit.");
+
         _pgeom.reset(new BaseFlashLidar3DGeom());
         _pdata.reset(new LaserSensorData());
         _report.reset(new CollisionReport());
@@ -277,22 +283,18 @@ public:
         return true;
     }
 
-    virtual bool SendCommand(std::ostream& os, std::istream& is)
+    bool _Render(ostream& sout, istream& sinput)
     {
-        string cmd;
-        is >> cmd;
-        if( !is )
-            throw openrave_exception("no command",ORE_InvalidArguments);
-        std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-
-        if( cmd == "show" || cmd == "render" )
-            is >> _bRender;
-        else if( cmd == "collidingbodies" ) {
-            FOREACH(it, _databodyids)
-                os << *it << " ";
+        sinput >> _bRender;
+        return !!sinput;
+    }
+    bool _CollidingBodies(ostream& sout, istream& sinput)
+    {
+        boost::mutex::scoped_lock lock(_mutexdata);
+        FOREACH(it, _databodyids) {
+            sout << *it << " ";
         }
-
-        return !!is;
+        return true;
     }
 
     virtual void SetTransform(const Transform& trans)

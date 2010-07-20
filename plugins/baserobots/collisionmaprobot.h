@@ -119,7 +119,7 @@ class CollisionMapRobot : public RobotBase
     }
 
     CollisionMapRobot(EnvironmentBasePtr penv) : RobotBase(penv) {
-        __description = "Allows user to specify regions of the robot configuration space that are in self-collision via lookup tables. This is done by the <collisionmap> XML tag";
+        __description = ":Interface Author: Rosen Diankov\nAllows user to specify regions of the robot configuration space that are in self-collision via lookup tables. This is done by the <collisionmap> XML tag.";
     }
     virtual ~CollisionMapRobot() {}
 

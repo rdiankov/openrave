@@ -21,7 +21,7 @@ class BaseManipulation : public ProblemInstance
 {
 public:
  BaseManipulation(EnvironmentBasePtr penv) : ProblemInstance(penv) {
-        __description = ":Author: Rosen Diankov";
+        __description = ":Interface Author: Rosen Diankov\nVery useful routines for manipulation planning and planning in general.";
         RegisterCommand("SetActiveManip",boost::bind(&BaseManipulation::SetActiveManip,this,_1,_2),
                         "Set the active manipulator");
         RegisterCommand("Traj",boost::bind(&BaseManipulation::Traj,this,_1,_2),

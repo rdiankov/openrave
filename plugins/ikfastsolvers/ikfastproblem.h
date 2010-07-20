@@ -233,6 +233,7 @@ class IKFastProblem : public ProblemInstance
 public:
     IKFastProblem(EnvironmentBasePtr penv) : ProblemInstance(penv)
     {
+        __description = ":Interface Author: Rosen Diankov\nAllows dynamic loading and registering of ikfast shared objects to openrave plugins.\nAlso contains several test routines for inverse kinematics.";
         RegisterCommand("AddIkLibrary",boost::bind(&IKFastProblem::AddIkLibrary,this,_1,_2),
                         "Dynamically adds an ik solver to openrave by loading a shared object (based on ikfast code generation).\n"
                         "Usage:\n    AddIkLibrary iksolvername iklibrarypath\n"

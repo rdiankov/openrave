@@ -102,7 +102,7 @@ public:
 
 RandomizedAStarPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
     {
-        __description = "Constrained Grasp Planning Randomized A*";
+        __description = ":Interface Author: Rosen Diankov\nRandomized A*";
         _report.reset(new CollisionReport());
         bUseGauss = false;
         nIndex = 0;

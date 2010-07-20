@@ -65,16 +65,19 @@ Interfaces
                             print e
                         ititle = interface.GetXMLId() + ' - ' + pluginname
                         itext = ititle + '\n' + '-'*len(ititle) + '\n\n'
-                        itext += '*Type:* :ref:`interface-%s`\n\n'%(type)
-                        itext += '*Plugin:* :ref:`plugin-%s`\n\n'%(pluginname)
+                        itext += ':Type: :ref:`interface-%s`\n\n'%(type)
+                        itext += ':Plugin: :ref:`plugin-%s`\n\n'%(pluginname)
                         itext += interface.GetDescription() + '\n\n'
                         itext += helptext
                         interfaceinfo[type].append([name,pluginname,itext])
                         interface = None # destroy
         
-        for type,descs in interfaceinfo.iteritems():
+        sortedtypes = interfaceinfo.keys()
+        sortedtypes.sort(key=lambda x: str(x))
+        for type in sortedtypes:
+            descs = interfaceinfo[type]
             # sort by interface name (lowercase)
-            descs.sort(lambda x, y: x[0].lower() < y[0].lower())
+            descs.sort(key = lambda x: x[0].lower())
             typedir = os.path.join(options.outdir,'interfaces',str(type))
             mkdir_recursive(typedir)
             text += '.. _interface-%s:\n\n'%str(type) # link
@@ -103,8 +106,9 @@ Plugins
 -------
 """
         # sort plugins by root name
-        plugininfo.sort(lambda x, y: x[1].pluginname < y[1].pluginname)
+        plugininfo.sort(key=lambda x: x[1].pluginname)
         for filename,info in plugininfo:
+            print info.pluginname
             text += '.. _plugin-%s:\n\n'%info.pluginname # link
             text += info.pluginname + '\n' + '-'*len(info.pluginname) + '\n\n'
             text += 'Offers: '
