@@ -2902,7 +2902,7 @@ public:
         }
         BOOST_ASSERT(vcolors.size()<=4);
         RaveVector<float> vcolor;
-        for(size_t i = 0; i < vcolors.size(); ++i) {
+        for(int i = 0; i < (int)vcolors.size(); ++i) {
             vcolor[i] = vcolors[i];
         }
         return object(PyGraphHandle(_penv->plot3(&vpoints[0],sizes.first,sizeof(float)*3,pointsize,vcolor,drawstyle)));
@@ -2918,7 +2918,7 @@ public:
         }
         BOOST_ASSERT(vcolors.size()<=4);
         RaveVector<float> vcolor;
-        for(size_t i = 0; i < vcolors.size(); ++i) {
+        for(int i = 0; i < (int)vcolors.size(); ++i) {
             vcolor[i] = vcolors[i];
         }
         return object(PyGraphHandle(_penv->drawlinestrip(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,vcolor)));
@@ -2934,7 +2934,7 @@ public:
         }
         BOOST_ASSERT(vcolors.size()<=4);
         RaveVector<float> vcolor;
-        for(size_t i = 0; i < vcolors.size(); ++i) {
+        for(int i = 0; i < (int)vcolors.size(); ++i) {
             vcolor[i] = vcolors[i];
         }
         return object(PyGraphHandle(_penv->drawlinelist(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,vcolor)));
