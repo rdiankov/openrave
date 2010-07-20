@@ -41,8 +41,12 @@ public:
 protected:
     static const SbColor CHECK_COLOR, COLLISION_COLOR;
 
+    static SoSeparator* _CreateAxes(float fSize=1.0f);
+
     /// Handler for Inventor motion callbacks.
     static void _MotionHandler(void *, SoDragger *);
+
+    /// Get the bounding box of the given subtree.
     void        _GetBounds(SoSeparator *subtree, AABB& ab);
 
     /// Get the Inventor transformation matrix that describes the given node relative to the given root.
@@ -52,7 +56,7 @@ protected:
     SbColor     _normalColor;
     ItemPtr       _selectedItem;
     QtCoinViewerPtr    _viewer;
-    SoSeparator* _axes; // axes of the object's origin
+    vector<SoSeparator*> _vlinkaxes; // axes of the object's origin
     vector<float> vtransparency;
     float       _scale;
     SoSFEnum _prevtransparency;

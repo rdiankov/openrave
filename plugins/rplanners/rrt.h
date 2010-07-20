@@ -136,8 +136,8 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
  public:
  BirrtPlanner(EnvironmentBasePtr penv) : RrtPlanner<SimpleNode>(penv)
     {
-        __description += "Bi-directional RRTs. See\n\
-J.J. Kuffner and S.M. LaValle. RRT-Connect: An efficient approach to single-query path planning. In Proc. IEEE Int'l Conf. on Robotics and Automation (ICRA'2000), pages 995-1001, San Francisco, CA, April 2000.";
+        __description += "Bi-directional RRTs. See\n\n\
+- J.J. Kuffner and S.M. LaValle. RRT-Connect: An efficient approach to single-query path planning. In Proc. IEEE Int'l Conf. on Robotics and Automation (ICRA'2000), pages 995-1001, San Francisco, CA, April 2000.";
     }
     virtual ~BirrtPlanner() {}
 

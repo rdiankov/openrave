@@ -396,8 +396,9 @@ class Environment : public EnvironmentBase
     {
         CHECK_INTERFACE(prob);
         int ret = prob->main(cmdargs);
-        if( ret != 0 )
-            RAVELOG_WARNA("Error %d with executing problem %s\n", ret,prob->GetXMLId().c_str());
+        if( ret != 0 ) {
+            RAVELOG_WARN(str(boost::format("Error %d with executing problem %s\n")%ret%prob->GetXMLId()));
+        }
         else {
             boost::mutex::scoped_lock lock(_mutexProblems);
             _listProblems.push_back(prob);

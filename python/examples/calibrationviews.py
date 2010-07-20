@@ -178,6 +178,7 @@ class CalibrationViews(metaclass.AutoReloader):
     def moveToConfiguration(self,config,waitcond=None):
         """moves the robot to a configuration"""
         with self.env:
+            self.robot.RegrabAll() # necessary in case grabbing stuff and it accidentally gets into collision due to floating point error
             self.robot.SetActiveDOFs(self.vmodel.manip.GetArmJoints())
             self.basemanip.MoveActiveJoints(config)
         while not self.robot.GetController().IsDone():

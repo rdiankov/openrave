@@ -1324,7 +1324,7 @@ namespace OpenRAVEXMLParser
             }
             else if( xmlname == "lostop" ) {
                 _bNegateJoint = true;
-                RAVELOG_ERROR("<lostop> is deprecated, please use <limits> (now in radians), <limitsrad>, or <limitsdeg> tag and negate your joint axis!\n");
+                RAVELOG_ERROR(str(boost::format("%s: <lostop> is deprecated, please use <limits> (now in radians), <limitsrad>, or <limitsdeg> tag and negate your joint axis!\n")%_pparent->GetName()));
                 _pjoint->_vlowerlimit.resize(numindices);
                 FOREACH(it,_pjoint->_vlowerlimit) {
                     _ss >> *it;
@@ -1333,7 +1333,7 @@ namespace OpenRAVEXMLParser
             }
             else if( xmlname == "histop" ) {
                 _bNegateJoint = true;
-                RAVELOG_ERROR("<histop> deprecated, please use <limits> (now in radians), <limitsrad>, <limitsdeg> tag and negate your joint axis!\n");
+                RAVELOG_ERROR(str(boost::format("%s: <histop> deprecated, please use <limits> (now in radians), <limitsrad>, <limitsdeg> tag and negate your joint axis!\n")%_pparent->GetName()));
                 _pjoint->_vupperlimit.resize(numindices);
                 FOREACH(it,_pjoint->_vupperlimit) {
                     _ss >> *it;
@@ -2559,6 +2559,8 @@ namespace OpenRAVEXMLParser
                     int ret = _penv->LoadProblem(problem,_args);
                     if( ret ) {
                         RAVELOG_WARN(str(boost::format("problem %s returned %d\n")%problem->GetXMLId()%ret));
+                        problem.reset();
+                        _pinterface.reset();
                     }
                 }
             }

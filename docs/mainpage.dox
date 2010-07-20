@@ -412,26 +412,22 @@ disp(['number of bodies are: ' num2str(numbodies)])
 
 \section writing_plugins_doc Documenting Interfaces
 
-The description of an interface and all information about its usage should be provided by two places:
+The format of all interface documentation is the widely adopted standard <a
+href="http://docutils.sourceforge.net/rst.html">reStructuredText</a>. The description of an
+interface and all information about its usage should be provided by two places:
 
 - OpenRAVE::InterfaceBase::GetDescription() - Returns the full documentation of the interface
-  description.
+  description. If opening new sections, do not to use '-'.
 
-- OpenRAVE::InterfaceBase::SendCommand("help") - Sending \b help should return a list of all the
-  commands the interface parses and their arguments.
+- OpenRAVE::InterfaceBase::RegisterCommand() - Help string in every command registered. If opening new sections,
+do not to use '-', '=', and '~'.
 
-The format of both descriptions are in terms of a widely adopted standard <a
-href="http://docutils.sourceforge.net/rst.html">reStructuredText</a>. These descriptions are
-automatically parsed using Sphinx and put on the web. If opening new sections in the description,
-make sure not to use '-', '=', '~' since %OpenRAVE uses them for organization of modules.
+These descriptions are automatically parsed using Sphinx and put on the web.
 
 The reason why doxygen and other commenting tools are not adopted for plugin documentation is
 because the \ref interfaces are the only binding between plugins. Even if the header file or
 provided functions of a particular plugin were provided, other plugins would not be able to use them
 if not offered through the %OpenRAVE's channels.
-
-\~japanese \page writing_plugins プラグインとインターフェースの作成
-
 
 */
 

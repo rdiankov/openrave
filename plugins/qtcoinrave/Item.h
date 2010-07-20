@@ -61,6 +61,9 @@ public:
     void SetGeomVisibility(bool bFlag);
     void SetUnpickable();
 
+    virtual SoSeparator* GetIvLink(int index) const { return _ivRoot; }
+    virtual int GetNumIvLinks() const { return 1; }
+ 
 protected:
 
     // Instance Data
@@ -75,7 +78,6 @@ protected:
 typedef boost::shared_ptr<Item> ItemPtr;
 typedef boost::shared_ptr<Item const> ItemConstPtr;
 
-// handles KinBodys
 class KinBodyItem : public Item
 {
  protected:
@@ -104,11 +106,12 @@ public:
 
     inline KinBodyPtr GetBody() const { return _pchain; }
 
-    // gets the link from IV
+    /// gets the link from IV
     virtual KinBody::LinkPtr GetLinkFromIv(SoNode* plinknode) const;
     
-    // gets the link from the index
-    virtual SoSeparator* GetIvLink(int index) const { return _veclinks[index].psep; }
+    /// gets the link from the index
+    virtual SoSeparator* GetIvLink(int index) const { return _veclinks.at(index).psep; }
+    virtual int GetNumIvLinks() const { return _veclinks.size(); }
 
     virtual void SetUserData(int userdata) { _userdata = userdata; }
     virtual int GetUserData() { return _userdata; }

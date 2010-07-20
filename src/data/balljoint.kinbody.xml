@@ -1,5 +1,5 @@
 <!-- demonstrates very simple spherical joint -->
-<KinBody>
+<KinBody name="test">
   <body name="b0">
     <geom type="box">
       <extents>1 0.2 0.2</extents>

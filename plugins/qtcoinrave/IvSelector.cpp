@@ -14,10 +14,10 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-/*! --------------------------------------------------------------------
+/**
 \file   IvSelector.cpp
 \brief  OpenInventor selection class
--------------------------------------------------------------------- */
+*/
 #include "qtcoin.h"
 
 const SbColor IvDragger::CHECK_COLOR(0.2f, 0.8f, 0.3f);
@@ -28,16 +28,14 @@ IvDragger::IvDragger(QtCoinViewerPtr viewer, ItemPtr pItem, float draggerScale)
     _selectedItem = pItem;
     _viewer = viewer;
     _scale = draggerScale;
-    _axes = NULL;
     //_ptext = NULL;
 
     // set some default behavioral options
     _checkCollision = false;
     _prevtransparency = pItem->GetIvTransparency()->value;
     pItem->GetIvTransparency()->value = SoGLRenderAction::SCREEN_DOOR;
-
+    
     if( !!_selectedItem && _selectedItem->GetIvRoot() != NULL ) {
-
         _GetBounds(_selectedItem->GetIvRoot(), _ab);
 
         // make the item transparent
@@ -52,57 +50,65 @@ IvDragger::IvDragger(QtCoinViewerPtr viewer, ItemPtr pItem, float draggerScale)
             pmtrl->transparency = 0.25f;
         }
         
-        _axes = new SoSeparator();
-
-        Vector colors[] = {Vector(0,0,1),Vector(0,1,0),Vector(1,0,0)};
-        Vector rotations[] = {Vector(1,0,0,PI/2), Vector(1,0,0,0), Vector(0,0,1,-PI/2)};
-
-        // add 3 cylinder+cone axes
-        for(int i = 0; i < 3; ++i) {
-            // set a diffuse color
-            SoSeparator* psep = new SoSeparator();
-
-            SoMaterial* mtrl = new SoMaterial;
-            mtrl->diffuseColor = SbColor(colors[i].x, colors[i].y, colors[i].z);
-            mtrl->ambientColor = SbColor(colors[i].x, colors[i].y, colors[i].z);
-            mtrl->setOverride(true);
-            
-            SoTransform* protation = new SoTransform();
-            protation->rotation.setValue(SbVec3f(rotations[i].x, rotations[i].y, rotations[i].z), rotations[i].w);
-
-            SoTransform* pcyltrans = new SoTransform();
-            pcyltrans->translation.setValue(0,0.02f,0);
-
-            SoCylinder* c = new SoCylinder();
-            c->radius = 0.002f;
-            c->height = 0.04f;
-            
-            SoCone* cn = new SoCone();
-            cn->bottomRadius = 0.004f;
-            cn->height = 0.02f;
-            
-            SoTransform* pconetrans = new SoTransform();
-            pconetrans->translation.setValue(0,0.02f,0);
-
-            psep->addChild(mtrl);
-            psep->addChild(protation);
-            psep->addChild(pcyltrans);
-            psep->addChild(c);
-            psep->addChild(pconetrans);
-            psep->addChild(cn);
-            _axes->addChild(psep);
+        _vlinkaxes.resize(_selectedItem->GetNumIvLinks());
+        for(size_t i = 0; i < _vlinkaxes.size(); ++i) {
+            _vlinkaxes[i] = _CreateAxes();
+            _selectedItem->GetIvLink(i)->addChild(_vlinkaxes[i]);
         }
-
-        _selectedItem->GetIvRoot()->addChild(_axes);
     }
-    else _axes = NULL;
 }
 
-// Destructor
+SoSeparator* IvDragger::_CreateAxes(float fSize)
+{
+    SoSeparator* axes = new SoSeparator();
+    Vector colors[] = {Vector(0,0,1),Vector(0,1,0),Vector(1,0,0)};
+    Vector rotations[] = {Vector(1,0,0,PI/2), Vector(1,0,0,0), Vector(0,0,1,-PI/2)};
+
+    // add 3 cylinder+cone axes
+    for(int i = 0; i < 3; ++i) {
+        // set a diffuse color
+        SoSeparator* psep = new SoSeparator();
+
+        SoMaterial* mtrl = new SoMaterial;
+        mtrl->diffuseColor = SbColor(colors[i].x, colors[i].y, colors[i].z);
+        mtrl->ambientColor = SbColor(colors[i].x, colors[i].y, colors[i].z);
+        mtrl->setOverride(true);
+            
+        SoTransform* protation = new SoTransform();
+        protation->rotation.setValue(SbVec3f(rotations[i].x, rotations[i].y, rotations[i].z), rotations[i].w);
+
+        SoTransform* pcyltrans = new SoTransform();
+        pcyltrans->translation.setValue(0,0.02f*fSize,0);
+
+        SoCylinder* c = new SoCylinder();
+        c->radius = 0.002f*fSize;
+        c->height = 0.04f*fSize;
+            
+        SoCone* cn = new SoCone();
+        cn->bottomRadius = 0.004f*fSize;
+        cn->height = 0.02f*fSize;
+            
+        SoTransform* pconetrans = new SoTransform();
+        pconetrans->translation.setValue(0,0.02f*fSize,0);
+
+        psep->addChild(mtrl);
+        psep->addChild(protation);
+        psep->addChild(pcyltrans);
+        psep->addChild(c);
+        psep->addChild(pconetrans);
+        psep->addChild(cn);
+        axes->addChild(psep);
+    }
+    return axes;
+}
+
 IvDragger::~IvDragger()
 {
     if( !!_selectedItem && _selectedItem->GetIvRoot() != NULL ) {
-        _selectedItem->GetIvRoot()->removeChild(_axes);
+        for(size_t i = 0; i < _vlinkaxes.size(); ++i) {
+            _selectedItem->GetIvLink(i)->removeChild(_vlinkaxes[i]);
+        }
+        _vlinkaxes.clear();
 
         // revert transparency
         SoSearchAction search;
@@ -120,7 +126,6 @@ IvDragger::~IvDragger()
     }
 }
 
-// Get the bounding box of the given subtree.
 void IvDragger::_GetBounds(SoSeparator *subtree, AABB& ab)
 {
     SoGetBoundingBoxAction bbox(_viewer->GetViewer()->getViewportRegion());
