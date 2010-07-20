@@ -38,8 +38,8 @@ integral part of the entire system, not as a replacement to the C++ API.
 - <b>Robot Database Layer</b> Kinematically and dynamically analyze and the robot and its task and
   store such information for later re-use.
 
-All the base planners and problem interfaces should be applicable to any robot structure you can
-throw at it. One of OpenRAVE's strongest points when compared with other planning packages is the
+All the base planners and problem interfaces should be applicable to any robot structure that can be
+thrown at it. One of OpenRAVE's strongest points when compared with other planning packages is the
 idea of being able to apply algorithms in openrave to any robot, with very little
 modification. Recently, a planning database structure has been introduced that allows computation of
 properties like convex hull decomposition, grasp sets, reachability maps, analytic inverse
@@ -108,7 +108,42 @@ mutex. (Note that this only applies to environment functions, and not interface 
 \subsection arch_cloning Cloning
     
 One of the strengths of %OpenRAVE is in allowing multiple \ref OpenRAVE::EnvironmentBase
-"environments" work simultaneously in the same process.
+"environments" work simultaneously in the same process. Environment cloning allows %OpenRAVE to
+become truly parallel by managing multiple environments and running simultaneous planners on top of
+them.
+
+Creating a clone is simple, in C++ just type:
+
+\code
+EnvironmentBasePtr pNewEnvironment = GetEnv()->CloneSelf(Clone_Bodies)
+\endcode
+
+to create a clone that copies all the existing bodies (with attachments and grabbed bodies) and
+their current states. Basically the clone can perform any operations that would have
+been done with the original enviornment.
+
+Because there is no shared state across the clone and the original environment, it is not possible
+to use an interface created from one environment in another! For example, if a planner is created in
+one environment, it should be used only by objects in that environment. It is not possible to set a
+planner to plan for objects belonging to a different environment. In this case, it is recommend to
+just create another instance if the planner to use for every new environment clone.
+
+When using on real robots, one extremely important feature that cloning offers is the ability to
+maintain a real-time view of the world (that sensors constantly feed into). When a planner is
+instantiated, it then copies the environment. This is a guarantee for the planner that the scene
+will not change while it is planning. Because the real-world environment possibly has robot
+controllers connected to real robots, having a clone gives the ability to set only simulation
+controllers in order to guarantee robot safety (ie, commands from clone environment don't
+accidentally start the robot).
+
+\subsection arch_cloning_parallel Parallel Execution
+
+Multithreading and Parallel Execution of planning algorithms and pipelined robot control is very
+important. One of the goals of OpenRAVE is to be able to take advantage of tens of computers
+simultaneously while freeing real-time robot execution from the planning and perception
+threads. Cloning allows planners to call kinematics and collision functions in multiple threads (one
+environment clone for each thread) without worrying about data corruption.
+
 
 \~japanese
 \subsection arch_cloning クローン作成
@@ -184,7 +219,7 @@ bool somefun(KinBodyPtr pbody)
 \endcode
 
 If these checks are not done, the code would segfault. However, these checks can really clutter the
-code. In openrave, you can safely get away with:
+code. In openrave, it is safe to get away with:
 
 \code
 bool somefun(KinBodyPtr pbody)

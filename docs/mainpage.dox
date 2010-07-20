@@ -55,6 +55,7 @@ low-level control, message protocols, and perception systems.
 - Scripting
  - \openravepy{Python Scripting with <b>openravepy </b>}
  - \octave{Octave/MATLAB Scripting}
+- \ref arch_cloning
 
 \~english \section main_reference Reference
 \~japanese \section main_reference 参考資料
