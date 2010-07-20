@@ -266,7 +266,7 @@ class GraspingModel(OpenRAVEModel):
                 final,traj = taskmanip.ReleaseFingers(execute=False,outputfinal=True)
             preshapes = array([final])
         if approachrays is None:
-            approachrays = self.computeBoxApproachRays(delta=0.02)
+            approachrays = self.computeBoxApproachRays(delta=0.02,normalanglerange=options.normalanglerange,directiondelta=options.directiondelta)
         if rolls is None:
             rolls = arange(0,2*pi,pi/2)
         if standoffs is None:

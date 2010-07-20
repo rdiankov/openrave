@@ -121,11 +121,17 @@ class VisibilityModel(OpenRAVEModel):
     
     def autogenerate(self,options=None,gmodel=None):
         preshapes = None
+        sphere =None
+        conedirangle = None
         if options is not None:
             if options.preshapes is not None:
                 preshapes = zeros((0,len(self.manip.GetGripperJoints())))
                 for preshape in options.preshapes:
                     preshapes = r_[preshapes,[array([float(s) for s in preshape.split()])]]
+            if options.sphere is not None:
+                sphere = [float(s) for s in options.sphere.split()]
+            if options.conedirangle is not None:
+                conedirangle = [float(s) for s in options.conedirangle.split()]
         if not gmodel is None:
             preshapes = array([gmodel.grasps[0][gmodel.graspindices['igrasppreshape']]])
         if preshapes is None:
@@ -134,7 +140,7 @@ class VisibilityModel(OpenRAVEModel):
                 taskmanip = TaskManipulation(self.robot)
                 final,traj = taskmanip.ReleaseFingers(execute=False,outputfinal=True)
             preshapes = array([final])
-        self.generate(preshapes=preshapes)
+        self.generate(preshapes=preshapes,sphere=sphere,conedirangle=conedirangle)
         self.save()
     def generate(self,preshapes,sphere=None,conedirangle=None):
         self.preshapes=preshapes
@@ -144,8 +150,6 @@ class VisibilityModel(OpenRAVEModel):
         bodies = [(b,b.IsEnabled()) for b in self.env.GetBodies() if b != self.robot and b != self.target]
         for b in bodies:
             b[0].Enable(False)
-        if sphere is None:
-            sphere = [3,0.1,0.15,0.2,0.25,0.3]
         try:
             with self.env:
                 sensor = self.attachedsensor.GetSensor()
@@ -158,11 +162,16 @@ class VisibilityModel(OpenRAVEModel):
                     if len(self.preshapes) > 0:
                             self.robot.SetJointValues(self.preshapes[0],self.manip.GetGripperJoints())
                     extentsfile = os.path.join(self.env.GetHomeDirectory(),'kinbody.'+self.target.GetKinematicsGeometryHash(),'visibility.txt')
-                    if os.path.isfile(extentsfile):
+                    if sphere is None and os.path.isfile(extentsfile):
                         self.visibilitytransforms = self.visualprob.ProcessVisibilityExtents(extents=loadtxt(extentsfile,float))
+                        if conedirangle is not None:
+                            raveLogWarn('do not support conedirangle when detectability extents are valid')
                     else:
+                        if sphere is None:
+                            sphere = [3,0.1,0.15,0.2,0.25,0.3]
+                        print sphere
                         self.visibilitytransforms = self.visualprob.ProcessVisibilityExtents(sphere=sphere,conedirangle=conedirangle)
-                print len(self.visibilitytransforms)
+                print 'total transforms: ',len(self.visibilitytransforms)
                 self.visualprob.SetCameraTransforms(transforms=self.visibilitytransforms)
         finally:
             for b,enable in bodies:
@@ -292,6 +301,10 @@ class VisibilityModel(OpenRAVEModel):
                           help='Name of the sensor to build visibilty model for (has to be camera). If none, takes first possible sensor.')
         parser.add_option('--preshape', action='append', type='string',dest='preshapes',default=None,
                           help='Add a preshape for the manipulator gripper joints')
+        parser.add_option('--sphere', action='store', type='string',dest='sphere',default=None,
+                          help='Force detectability extents to be distributed around a sphere. Parameter is a string with the first value being density (3 is default) and the rest being distances')
+        parser.add_option('--conedirangle', action='store', type='string',dest='conedirangle',default=None,
+                          help='The direction of the cone multiplied with the half-angle (radian) that the detectability extents are constrained to')
         parser.add_option('--rayoffset',action="store",type='float',dest='rayoffset',default=0.03,
                           help='The offset to move the ray origin (prevents meaningless collisions), default is 0.03')
         return parser

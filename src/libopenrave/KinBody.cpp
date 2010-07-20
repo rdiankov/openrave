@@ -2885,7 +2885,7 @@ void KinBody::serialize(std::ostream& o, int options) const
     }
 }
 
-std::string KinBody::GetKinematicsGeometryHash() const
+const std::string& KinBody::GetKinematicsGeometryHash() const
 {
     CHECK_INTERNAL_COMPUTATION;
     return __hashkinematics;

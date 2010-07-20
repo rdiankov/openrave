@@ -436,7 +436,7 @@ class Environment : public EnvironmentBase
             bSuccess = RaveParseColladaFile(shared_from_this(), filename);
         }
         else {
-            bSuccess = ParseXMLFile(boost::shared_ptr<OpenRAVEXMLParser::EnvironmentXMLReader>(new OpenRAVEXMLParser::EnvironmentXMLReader(shared_from_this(),std::list<std::pair<std::string,std::string> >())), filename);
+            bSuccess = ParseXMLFile(boost::shared_ptr<OpenRAVEXMLParser::EnvironmentXMLReader>(new OpenRAVEXMLParser::EnvironmentXMLReader(shared_from_this(),std::list<std::pair<std::string,std::string> >(),false)), filename);
         }
 
         if( !bSuccess ) {
@@ -449,7 +449,7 @@ class Environment : public EnvironmentBase
     virtual bool LoadXMLData(const std::string& data)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        if( !ParseXMLData(boost::shared_ptr<OpenRAVEXMLParser::EnvironmentXMLReader>(new OpenRAVEXMLParser::EnvironmentXMLReader(shared_from_this(),std::list<std::pair<std::string,std::string> >())),data) ) {
+        if( !ParseXMLData(boost::shared_ptr<OpenRAVEXMLParser::EnvironmentXMLReader>(new OpenRAVEXMLParser::EnvironmentXMLReader(shared_from_this(),std::list<std::pair<std::string,std::string> >(),false)),data) ) {
             RAVELOG_WARNA("load failed environment data\n");
             return false;
         }

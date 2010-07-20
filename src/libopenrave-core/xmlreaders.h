@@ -2572,12 +2572,27 @@ namespace OpenRAVEXMLParser
     class EnvironmentXMLReader : public StreamXMLReader
     {
     public:
-    EnvironmentXMLReader(EnvironmentBasePtr penv, const std::list<std::pair<std::string,std::string> >& atts) : _penv(penv)
+    EnvironmentXMLReader(EnvironmentBasePtr penv, const std::list<std::pair<std::string,std::string> >& atts, bool bInEnvironment) : _penv(penv), _bInEnvironment(bInEnvironment)
         {
-            if( !_penv )
-                throw openrave_exception("need valid environment");
-            _bInEnvironment = false;
-            tCamera.trans = Vector(-0.5f, 1.5f, 0.8f);
+            if( !_penv ) {
+                throw openrave_exception("need valid environment",ORE_InvalidArguments);
+            }
+            FOREACHC(itatt,atts) {
+                if( itatt->first == "file" ) {
+                    std::list<std::pair<std::string,std::string> > listnewatts;
+                    FOREACHC(itatt2,atts) {
+                        if( itatt2->first != "file" )
+                            listnewatts.push_back(*itatt2);
+                    }
+
+                    boost::shared_ptr<pair<string,string> > filedata = RaveFindXMLFile(itatt->second);
+                    if( !filedata ) {
+                        continue;
+                    }
+                    _penv->Load(filedata->second);
+                }
+            }
+            tCamera.trans = Vector(0, 1.5f, 0.8f);
             tCamera.rotfromaxisangle(Vector(1, 0, 0), (dReal)-0.5);
             vBkgndColor = Vector(1,1,1);
             bTransSpecified = false;
@@ -2590,10 +2605,9 @@ namespace OpenRAVEXMLParser
                 case PE_Support: return PE_Support;
                 case PE_Ignore: return PE_Ignore;
             }
-
-            if( _processingtag.size() > 0 )
+            if( _processingtag.size() > 0 ) {
                 return PE_Ignore;
-
+            }
             // check for any plugins
             FOREACHC(itname,RaveGetInterfaceNamesMap()) {
                 if( xmlname == itname->second ) {
@@ -2609,7 +2623,7 @@ namespace OpenRAVEXMLParser
             }
 
             if( xmlname == "environment" ) {
-                _bInEnvironment = true;
+                _pcurreader.reset(new EnvironmentXMLReader(_penv,atts,true));
                 return PE_Support;
             }
 

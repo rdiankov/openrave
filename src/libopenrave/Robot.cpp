@@ -465,8 +465,14 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
         SerializeRound(o,*it);
 }
 
-std::string RobotBase::Manipulator::GetStructureHash() const
+const std::string& RobotBase::Manipulator::GetStructureHash() const
 {
+    return __hashstructure;
+}
+
+const std::string& RobotBase::Manipulator::GetKinematicsStructureHash() const
+{
+    BOOST_ASSERT(0);
     return __hashstructure;
 }
 
@@ -540,7 +546,7 @@ void RobotBase::AttachedSensor::serialize(std::ostream& o, int options) const
     }
 }
 
-std::string RobotBase::AttachedSensor::GetStructureHash() const
+const std::string& RobotBase::AttachedSensor::GetStructureHash() const
 {
     return __hashstructure;
 }
@@ -2162,7 +2168,7 @@ void RobotBase::serialize(std::ostream& o, int options) const
     }
 }
 
-std::string RobotBase::GetRobotStructureHash() const
+const std::string& RobotBase::GetRobotStructureHash() const
 {
     CHECK_INTERNAL_COMPUTATION;
     return __hashrobotstructure;

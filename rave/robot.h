@@ -125,8 +125,13 @@ public:
 
         virtual void serialize(std::ostream& o, int options) const;
         
-        /// \return hash of the manipulator definition
-        virtual std::string GetStructureHash() const;
+        /// \brief Return hash of just the manipulator definition.
+        virtual const std::string& GetStructureHash() const;
+
+        /// \brief Return hash of all information that can affect finding inverse kinematics solutions.
+        /// 
+        /// this includes joint axes, joint positions, and final grasp transform.
+        virtual const std::string& GetKinematicsStructureHash() const;
     private:
         RobotBaseWeakPtr _probot;
         LinkPtr _pBase, _pEndEffector;
@@ -179,7 +184,7 @@ public:
         virtual void serialize(std::ostream& o, int options) const;
 
         /// \return hash of the sensor definition
-        virtual std::string GetStructureHash() const;
+        virtual const std::string& GetStructureHash() const;
     private:
         RobotBaseWeakPtr _probot;
         SensorBasePtr psensor;
@@ -465,7 +470,7 @@ public:
 
     /// A md5 hash unique to the particular robot structure that involves manipulation and sensing components
     /// The serialization for the attached sensors will not involve any sensor specific properties (since they can change through calibration)
-    virtual std::string GetRobotStructureHash() const;
+    virtual const std::string& GetRobotStructureHash() const;
 
     /** Specifies the controlled degrees of freedom used to control the robot through torque In the
         general sense, it is not always the case that there's a one-to-one mapping between a robot's
