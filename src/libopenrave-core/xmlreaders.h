@@ -1314,8 +1314,8 @@ namespace OpenRAVEXMLParser
                 vector<dReal> values = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
                 if( (int)values.size() == 2*_pjoint->GetDOF() ) {
                     for(int i = 0; i < _pjoint->GetDOF(); ++i ) {
-                        _pjoint->_vlowerlimit.at(i) = fmult*std::min(values[2*i+0],values[2*i+1]);
-                        _pjoint->_vupperlimit.at(i) = fmult*std::max(values[2*i+0],values[2*i+1]);
+                        _pjoint->_vlowerlimit.at(i) = fmult*min(values[2*i+0],values[2*i+1]);
+                        _pjoint->_vupperlimit.at(i) = fmult*max(values[2*i+0],values[2*i+1]);
                     }
                 }
                 else {

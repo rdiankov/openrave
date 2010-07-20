@@ -197,13 +197,6 @@ public:
                 else if( pfnCreate != NULL ) {
                     pinterface = pfnCreate(type,name,interfacehash,penv);
                 }
-                if( !!pinterface ) {
-                    if( strcmp(pinterface->GetHash(), interfacehash) ) {
-                        RAVELOG_FATALA("plugin interface name %s, %s has invalid hash, might be compiled with stale openrave files\n", name.c_str(), RaveGetInterfaceNamesMap().find(type)->second.c_str());
-                        _setBadInterfaces.insert(p);
-                        return InterfaceBasePtr();
-                    }
-                }
                 return pinterface;
             }
             catch(const openrave_exception& ex) {
@@ -337,6 +330,11 @@ public:
         while(itplugin != _listplugins.end()) {
             InterfaceBasePtr pointer = (*itplugin)->CreateInterface(type, name, hash, penv);
             if( !!pointer ) {
+                if( strcmp(pointer->GetHash(), hash) ) {
+                    RAVELOG_FATALA("plugin interface name %s, %s has invalid hash, might be compiled with stale openrave files\n", name.c_str(), RaveGetInterfaceNamesMap().find(type)->second.c_str());
+                    (*itplugin)->_setBadInterfaces.insert(make_pair(type,tolowerstring(name)));
+                    return InterfaceBasePtr();
+                }
                 pointer = InterfaceBasePtr(pointer.get(), smart_pointer_deleter<InterfaceBasePtr>(pointer,INTERFACE_DELETER));
                 pointer->__strpluginname = (*itplugin)->ppluginname;
                 pointer->__strxmlid = name;

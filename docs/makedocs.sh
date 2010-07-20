@@ -21,8 +21,9 @@ echo "$doxycommands" | cat Doxyfile.latex Doxyfile.japanese - > Doxyfile.latex.j
 
 sh makeimages.sh
 
-# run doxygen, assuming v1.7.1+
 rm -rf english japanese openrave.pdf ordocs.tgz
+
+# run doxygen, assuming v1.7.1+
 doxygen Doxyfile.html.english
 doxygen Doxyfile.latex.english
 python build_latex.py english/latex
