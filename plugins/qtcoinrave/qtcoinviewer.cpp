@@ -311,8 +311,9 @@ void QtCoinViewer::_mousemove_cb(SoEventCallback * node)
             _vMouseSurfacePosition.x = pt->getPoint()[0];
             _vMouseSurfacePosition.y = pt->getPoint()[1];
             _vMouseSurfacePosition.z = pt->getPoint()[2];
-            SbVec3f camerapos = rp.getViewVolume().getProjectionPoint();
-            _vMouseRayDirection = _vMouseSurfacePosition-Vector(camerapos[0],camerapos[1],camerapos[2]);
+            SbVec3f cp = GetCamera()->position.getValue();
+            RaveVector<float> camerapos (cp[0],cp[1],cp[2]);
+            _vMouseRayDirection = _vMouseSurfacePosition-camerapos;
             if( _vMouseRayDirection.lengthsqr3() > 0 )
                 _vMouseRayDirection.normalize3();
             else
@@ -320,18 +321,35 @@ void QtCoinViewer::_mousemove_cb(SoEventCallback * node)
             
             stringstream ss;
             ss << "mouse on " << pKinBody->GetBody()->GetName() << ":";
-            if( !!pSelectedLink )
+            if( !!pSelectedLink ) {
                 ss << pSelectedLink->GetName();
-            else
+            }
+            else {
                 ss << "(NULL)";
+            }
+
+            RaveVector<dReal> vsurfacenormal;
+            bool bHaveNormals=false;
+            boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironment(100000);
+            if( !!lockenv ) {
+                CollisionReportPtr report(new CollisionReport());
+                if( GetEnv()->CheckCollision(RAY(camerapos,dReal(2)*(_vMouseSurfacePosition-camerapos)),report) ) {
+                    if( report->contacts.size() > 0 ) {
+                        bHaveNormals = true;
+                        vsurfacenormal = report->contacts.at(0).norm;
+                    }
+                }
+            }
             ss << " (" << std::fixed << std::setprecision(4)
                << std::setw(8) << std::left << pt->getPoint()[0] << ", "
                << std::setw(8) << std::left << pt->getPoint()[1] << ", "
-               << std::setw(8) << std::left << pt->getPoint()[2] << "), n=("
-               << std::setw(8) << std::left << _vMouseRayDirection.x << ", "
-               << std::setw(8) << std::left << _vMouseRayDirection.y << ", "
-               << std::setw(8) << std::left << _vMouseRayDirection.z << ")" << endl;
-
+               << std::setw(8) << std::left << pt->getPoint()[2] << ")";
+            if( bHaveNormals ) {
+                ss << ", n=(" << std::setw(8) << std::left << vsurfacenormal.x << ", "
+                   << std::setw(8) << std::left << vsurfacenormal.y << ", "
+                   << std::setw(8) << std::left << vsurfacenormal.z << ")";
+            }
+            ss << endl;
             _strMouseMove = ss.str();
         }
         else {
