@@ -307,7 +307,7 @@ public:
             for(int q = 0; q < (int)vlinks.size(); q++) {
                 ct = CheckCollision(vlinks[q]);
                 if( ct&CT_AvoidLinkHit ) {
-                    RAVELOG_VERBOSEA(str(boost::format("hit link that needed to be avoided %s\n")%vlinks.at(q)->GetName()));
+                    RAVELOG_VERBOSEA(str(boost::format("hit link that needed to be avoided %s: %s\n")%vlinks.at(q)->GetName()%_report->__str__()));
                     return false;
                 }
             }

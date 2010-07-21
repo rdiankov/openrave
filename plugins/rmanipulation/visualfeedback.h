@@ -262,7 +262,7 @@ public:
         /// \param tcameras in target coordinate system
         bool IsOccluded(const TransformMatrix& tcamera)
         {
-            KinBody::KinBodyStateSaver saver1(_ptargetbox,KinBody::Save_LinkEnable), saver2(_vf->_target,KinBody::Save_LinkEnable);
+            KinBody::KinBodyStateSaver saver1(_ptargetbox), saver2(_vf->_target);//,KinBody::Save_LinkEnable));
             TransformMatrix tcamerainv = tcamera.inverse();
             Transform ttarget = _vf->_target->GetTransform();
             _ptargetbox->SetTransform(ttarget);
@@ -304,7 +304,7 @@ public:
         /// this function is not meant to be called during planning (only database generation)
         bool IsOccludedByRigid(const TransformMatrix& tcamera)
         {
-            KinBody::KinBodyStateSaver saver1(_ptargetbox,KinBody::Save_LinkEnable), saver2(_vf->_target,KinBody::Save_LinkEnable);
+            KinBody::KinBodyStateSaver saver1(_ptargetbox), saver2(_vf->_target);
             vector<KinBody::LinkPtr> vattachedlinks;
             _vf->_robot->GetRigidlyAttachedLinks(_vf->_psensor->GetAttachingLink()->GetIndex(),vattachedlinks);
             KinBody::KinBodyStateSaver robotsaver(_vf->_robot);

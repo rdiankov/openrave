@@ -358,7 +358,7 @@ class GraspingModel(OpenRAVEModel):
             contactgraph = None
             statesaver = None
 
-    def show(self,delay=0.1,options=None):
+    def show(self,delay=0.1,options=None,forceclosure=True):
         with RobotStateSaver(self.robot):
             with self.GripperVisibility(self.manip):
                 time.sleep(1.0) # let viewer update?
@@ -380,7 +380,7 @@ class GraspingModel(OpenRAVEModel):
                     try:
                         with self.env:
                             #self.env.SetDebugLevel(DebugLevel.Verbose)
-                            contacts,finalconfig,mindist,volume = self.testGrasp(grasp=grasp,translate=True,forceclosure=True,graspingnoise=graspingnoise)
+                            contacts,finalconfig,mindist,volume = self.testGrasp(grasp=grasp,translate=True,forceclosure=forceclosure,graspingnoise=graspingnoise)
                             #contacts,finalconfig,mindist,volume = self.runGrasp(grasp=grasp,translate=True,forceclosure=True)
                             if mindist == 0:
                                 print 'grasp is not in force closure!'

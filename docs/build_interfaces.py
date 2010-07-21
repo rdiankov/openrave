@@ -63,8 +63,9 @@ Interfaces
                             helptext = ''
                             commands = []
                             print e
-                        ititle = interface.GetXMLId() + ' - ' + pluginname
-                        itext = ititle + '\n' + '-'*len(ititle) + '\n\n'
+                        ititle = name + ' - ' + pluginname
+                        itext = '.. _%s-%s:\n\n'%(type,name.lower())
+                        itext += ititle + '\n' + '-'*len(ititle) + '\n\n'
                         itext += ':Type: :ref:`interface-%s`\n\n'%(type)
                         itext += ':Plugin: :ref:`plugin-%s`\n\n'%(pluginname)
                         itext += interface.GetDescription() + '\n\n'
@@ -114,7 +115,7 @@ Plugins
             text += 'Offers: '
             for type,names in info.interfacenames:
                 for name in names:
-                    text += '%s '%(name)
+                    text += ':ref:`%s <%s-%s>` '%(name,str(type),name.lower())
             text += '\n\n'
             if info.pluginname in coreplugins:
                 revision,url = coreplugins[info.pluginname]
