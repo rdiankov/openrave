@@ -327,7 +327,10 @@ void QtCoinViewer::_mousemove_cb(SoEventCallback * node)
             ss << " (" << std::fixed << std::setprecision(4)
                << std::setw(8) << std::left << pt->getPoint()[0] << ", "
                << std::setw(8) << std::left << pt->getPoint()[1] << ", "
-               << std::setw(8) << std::left << pt->getPoint()[2] << ")" << endl;
+               << std::setw(8) << std::left << pt->getPoint()[2] << "), n=("
+               << std::setw(8) << std::left << _vMouseRayDirection.x << ", "
+               << std::setw(8) << std::left << _vMouseRayDirection.y << ", "
+               << std::setw(8) << std::left << _vMouseRayDirection.z << ")" << endl;
 
             _strMouseMove = ss.str();
         }
