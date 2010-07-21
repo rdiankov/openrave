@@ -328,27 +328,28 @@ void QtCoinViewer::_mousemove_cb(SoEventCallback * node)
                 ss << "(NULL)";
             }
 
-            RaveVector<dReal> vsurfacenormal;
-            bool bHaveNormals=false;
-            boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironment(100000);
-            if( !!lockenv ) {
-                CollisionReportPtr report(new CollisionReport());
-                if( GetEnv()->CheckCollision(RAY(camerapos,dReal(2)*(_vMouseSurfacePosition-camerapos)),report) ) {
-                    if( report->contacts.size() > 0 ) {
-                        bHaveNormals = true;
-                        vsurfacenormal = report->contacts.at(0).norm;
-                    }
-                }
-            }
+//            RaveVector<dReal> vsurfacenormal;
+//            bool bHaveNormals=false;
+//            boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironment(100000);
+//            if( !!lockenv ) {
+//                CollisionReportPtr report(new CollisionReport());
+//                if( GetEnv()->CheckCollision(RAY(camerapos,dReal(2)*(_vMouseSurfacePosition-camerapos)),report) ) {
+//                    if( report->contacts.size() > 0 ) {
+//                        bHaveNormals = true;
+//                        vsurfacenormal = report->contacts.at(0).norm;
+//                    }
+//                }
+//                lockenv.reset();
+//            }
             ss << " (" << std::fixed << std::setprecision(4)
                << std::setw(8) << std::left << pt->getPoint()[0] << ", "
                << std::setw(8) << std::left << pt->getPoint()[1] << ", "
                << std::setw(8) << std::left << pt->getPoint()[2] << ")";
-            if( bHaveNormals ) {
-                ss << ", n=(" << std::setw(8) << std::left << vsurfacenormal.x << ", "
-                   << std::setw(8) << std::left << vsurfacenormal.y << ", "
-                   << std::setw(8) << std::left << vsurfacenormal.z << ")";
-            }
+//            if( bHaveNormals ) {
+//                ss << ", n=(" << std::setw(8) << std::left << vsurfacenormal.x << ", "
+//                   << std::setw(8) << std::left << vsurfacenormal.y << ", "
+//                   << std::setw(8) << std::left << vsurfacenormal.z << ")";
+//            }
             ss << endl;
             _strMouseMove = ss.str();
         }
