@@ -20,6 +20,7 @@
   :height: 200
 
 """
+from __future__ import with_statement # for python 2.5
 from openravepy import __build_doc__
 if not __build_doc__:
     from openravepy import *

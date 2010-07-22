@@ -14,8 +14,15 @@ First the inversekinematics database generator is called querying a **Transform6
   if not ikmodel.load():
       ikmodel.autogenerate()
 
-Then a collision-free random configuration is set on the robot:
+.. lang-block:: ja
 
+  衝突していない状態に動かす
+
+.. lang-block:: en
+
+  Then a collision-free random configuration is set on the robot:
+
+.. 
 .. code-block:: python
 
   lower,upper = [v[ikmodel.manip.GetArmIndices()] for v in ikmodel.robot.GetJointLimits()]
@@ -44,6 +51,7 @@ In order to render the ik solutions, create a new robot for every solution and m
 
 
 """
+from __future__ import with_statement # for python 2.5
 from openravepy import __build_doc__
 if not __build_doc__:
     from openravepy import *
