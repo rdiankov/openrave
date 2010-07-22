@@ -13,11 +13,9 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-/*! --------------------------------------------------------------------
-  \file   Robot.cpp
-  \brief  Encapsulate a virtual robot description
- -------------------------------------------------------------------- */
-
+/** \file   Robot.cpp
+    \brief  Definition of OpenRAVE::RobotBase
+ */
 #include "libopenrave.h"
 
 #define CHECK_INTERNAL_COMPUTATION { \
@@ -104,9 +102,9 @@ bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, cons
     vector<dReal> temp;
     GetRobot()->GetDOFValues(temp);
 
-    solution.resize(_varmjoints.size());
-    for(size_t i = 0; i < _varmjoints.size(); ++i)
-        solution[i] = temp[_varmjoints[i]];
+    solution.resize(_varmdofindices.size());
+    for(size_t i = 0; i < _varmdofindices.size(); ++i)
+        solution[i] = temp[_varmdofindices[i]];
 
     IkParameterization localgoal;
     if( goal.GetType() == IkParameterization::Type_Transform6D ) {
@@ -222,7 +220,7 @@ void RobotBase::Manipulator::GetChildJoints(std::vector<JointPtr>& vjoints) cons
         int ilink = (*itlink)->GetIndex();
         if( ilink == iattlink )
             continue;
-        if( _varmjoints.size() > 0 && !probot->DoesAffect(_varmjoints[0],ilink) )
+        if( _varmdofindices.size() > 0 && !probot->DoesAffect(_varmdofindices[0],ilink) )
             continue;
         for(int idof = 0; idof < probot->GetDOF(); ++idof) {
             KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(idof);
@@ -255,7 +253,7 @@ void RobotBase::Manipulator::GetChildDOFIndices(std::vector<int>& vdofindices) c
         int ilink = (*itlink)->GetIndex();
         if( ilink == iattlink )
             continue;
-        if( _varmjoints.size() > 0 && !probot->DoesAffect(_varmjoints[0],ilink) )
+        if( _varmdofindices.size() > 0 && !probot->DoesAffect(_varmdofindices[0],ilink) )
             continue;
         for(int idof = 0; idof < probot->GetDOF(); ++idof) {
             KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(idof);
@@ -291,7 +289,7 @@ void RobotBase::Manipulator::GetChildLinks(std::vector<LinkPtr>& vlinks) const
             continue;
         // gripper needs to be affected by all joints
         bool bGripperLink = true;
-        FOREACHC(itarmjoint,_varmjoints) {
+        FOREACHC(itarmjoint,_varmdofindices) {
             if( !probot->DoesAffect(*itarmjoint,ilink) ) {
                 bGripperLink = false;
                 break;
@@ -313,13 +311,13 @@ void RobotBase::Manipulator::GetIndependentLinks(std::vector<LinkPtr>& vlinks) c
     RobotBasePtr probot(_probot);
     FOREACHC(itlink, probot->GetLinks()) {
         bool bAffected = false;
-        FOREACHC(itindex,_varmjoints) {
+        FOREACHC(itindex,_varmdofindices) {
             if( probot->DoesAffect(*itindex,(*itlink)->GetIndex()) ) {
                 bAffected = true;
                 break;
             }
         }
-        FOREACHC(itindex,_vgripperjoints) {
+        FOREACHC(itindex,_vgripperdofindices) {
             if( probot->DoesAffect(*itindex,(*itlink)->GetIndex()) ) {
                 bAffected = true;
                 break;
@@ -363,7 +361,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
             continue;
         // gripper needs to be affected by all joints
         bool bGripperLink = true;
-        FOREACHC(itarmjoint,_varmjoints) {
+        FOREACHC(itarmjoint,_varmdofindices) {
             if( !probot->DoesAffect(*itarmjoint,ilink) ) {
                 bGripperLink = false;
                 break;
@@ -390,14 +388,14 @@ bool RobotBase::Manipulator::CheckIndependentCollision(CollisionReportPtr report
 
     FOREACHC(itlink, probot->GetLinks()) {
         bool bAffected = false;
-        FOREACHC(itindex,_varmjoints) {
+        FOREACHC(itindex,_varmdofindices) {
             if( probot->DoesAffect(*itindex,(*itlink)->GetIndex()) ) {
                 bAffected = true;
                 break;
             }
         }
         if( !bAffected ) {
-            FOREACHC(itindex,_vgripperjoints) {
+            FOREACHC(itindex,_vgripperdofindices) {
                 if( probot->DoesAffect(*itindex,(*itlink)->GetIndex()) ) {
                     bAffected = true;
                     break;
@@ -438,7 +436,7 @@ bool RobotBase::Manipulator::IsGrabbing(KinBodyConstPtr pbody) const
                 continue;
             // gripper needs to be affected by all joints
             bool bGripperLink = true;
-            FOREACHC(itarmjoint,_varmjoints) {
+            FOREACHC(itarmjoint,_varmdofindices) {
                 if( !probot->DoesAffect(*itarmjoint,ilink) ) {
                     bGripperLink = false;
                     break;
@@ -453,16 +451,46 @@ bool RobotBase::Manipulator::IsGrabbing(KinBodyConstPtr pbody) const
 
 void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
 {
-    o << (!_pBase ? -1 : _pBase->GetIndex()) << " " << (!_pEndEffector ? -1 : _pEndEffector->GetIndex()) << " ";
-    SerializeRound(o,_tGrasp);
-    SerializeRound3(o,_vdirection);
-    o << _vgripperjoints.size() << " " << _varmjoints.size() << " " << _vClosingDirection.size() << " ";
-    FOREACHC(it,_vgripperjoints)
-        o << *it << " ";
-    FOREACHC(it,_varmjoints)
-        o << *it << " ";
-    FOREACHC(it,_vClosingDirection)
-        SerializeRound(o,*it);
+    if( options & SO_RobotManipulators ) {
+        o << (!_pBase ? -1 : _pBase->GetIndex()) << " " << (!_pEndEffector ? -1 : _pEndEffector->GetIndex()) << " ";
+        o << _vgripperdofindices.size() << " " << _varmdofindices.size() << " " << _vClosingDirection.size() << " ";
+        FOREACHC(it,_vgripperdofindices) {
+            o << *it << " ";
+        }
+        FOREACHC(it,_varmdofindices) {
+            o << *it << " ";
+        }
+        FOREACHC(it,_vClosingDirection) {
+            SerializeRound(o,*it);
+        }
+        SerializeRound(o,_tGrasp);
+    }
+    if( options & SO_Kinematics ) {
+        RobotBasePtr probot(_probot);
+        KinBody::KinBodyStateSaver saver(probot);
+        vector<dReal> vzeros(probot->GetDOF(),0);
+        probot->SetJointValues(vzeros);
+        Transform tbaseinv;
+        if( !!_pBase ) {
+            tbaseinv = _pBase->GetTransform().inverse();
+        }
+        if( !_pEndEffector ) {
+            SerializeRound(o,tbaseinv * _tGrasp);
+        }
+        else {
+            SerializeRound(o,tbaseinv * GetEndEffectorTransform());
+        }
+        o << _varmdofindices.size() << " ";
+        FOREACHC(it,_varmdofindices) {
+            JointPtr pjoint = probot->GetJointFromDOFIndex(*it);
+            o << pjoint->GetType() << " ";
+            SerializeRound3(o,tbaseinv*pjoint->GetAnchor());
+            SerializeRound3(o,tbaseinv.rotate(pjoint->GetAxis(*it-pjoint->GetDOFIndex())));
+        }
+    }
+    if( options & (SO_Kinematics|SO_RobotManipulators) ) {
+        SerializeRound3(o,_vdirection);
+    }
 }
 
 const std::string& RobotBase::Manipulator::GetStructureHash() const
@@ -472,8 +500,7 @@ const std::string& RobotBase::Manipulator::GetStructureHash() const
 
 const std::string& RobotBase::Manipulator::GetKinematicsStructureHash() const
 {
-    BOOST_ASSERT(0);
-    return __hashstructure;
+    return __hashkinematicsstructure;
 }
 
 RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot) : _probot(probot)
@@ -2039,10 +2066,10 @@ void RobotBase::_ComputeInternalInformation()
         if( !!(*itmanip)->GetBase() && !!(*itmanip)->GetEndEffector() ) {
             vector<JointPtr> vjoints;
             if( GetChain((*itmanip)->GetBase()->GetIndex(),(*itmanip)->GetEndEffector()->GetIndex(), vjoints) ) {
-                (*itmanip)->_varmjoints.resize(0);
+                (*itmanip)->_varmdofindices.resize(0);
                 FOREACH(it,vjoints) {
                     for(int i = 0; i < (*it)->GetDOF(); ++i) {
-                        (*itmanip)->_varmjoints.push_back((*it)->GetDOFIndex()+i);
+                        (*itmanip)->_varmdofindices.push_back((*it)->GetDOFIndex()+i);
                     }
                 }
             }
@@ -2079,12 +2106,15 @@ void RobotBase::_ComputeInternalInformation()
 
         FOREACH(itmanip,_vecManipulators) {
             ss.str("");
-            (*itmanip)->serialize(ss,0);
+            (*itmanip)->serialize(ss,SO_RobotManipulators);
             (*itmanip)->__hashstructure = GetMD5HashString(ss.str());
+            ss.str("");
+            (*itmanip)->serialize(ss,SO_Kinematics);
+            (*itmanip)->__hashkinematicsstructure = GetMD5HashString(ss.str());
         }
         FOREACH(itsensor,_vecSensors) {
             ss.str("");
-            (*itsensor)->serialize(ss,0);
+            (*itsensor)->serialize(ss,SO_RobotSensors);
             (*itsensor)->__hashstructure = GetMD5HashString(ss.str());
         }
     }

@@ -479,7 +479,7 @@ public:
                 bInitialized = true;
             }
             else if( cmd == "armjoints" ) {
-                varmjointvals.resize(pmanip->GetArmJoints().size());
+                varmjointvals.resize(pmanip->GetArmIndices().size());
                 FOREACH(it, varmjointvals)
                     sinput >> *it;
             }
@@ -516,7 +516,7 @@ public:
         robot->GetDOFValues(values);
 
         for(size_t i = 0; i < varmjointvals.size(); i++)
-            values[pmanip->GetArmJoints()[i]] = varmjointvals[i];
+            values[pmanip->GetArmIndices()[i]] = varmjointvals[i];
 
         robot->SetJointValues(values);
 
@@ -623,13 +623,13 @@ public:
         }
 
         RobotBase::ManipulatorPtr pmanip = robot->GetActiveManipulator();
-        vector<dReal> vjoints(pmanip->GetArmJoints().size(),0), vrand(pmanip->GetArmJoints().size(),0);
+        vector<dReal> vjoints(pmanip->GetArmIndices().size(),0), vrand(pmanip->GetArmIndices().size(),0);
         vector<dReal> vlowerlimit, vupperlimit, viksolution;
         vector< vector<dReal> > viksolutions;
 
         RAVELOG_DEBUGA("Starting DebugIK... iter=%d\n", num_itrs);
     
-        robot->SetActiveDOFs(pmanip->GetArmJoints());
+        robot->SetActiveDOFs(pmanip->GetArmIndices());
         robot->GetActiveDOFLimits(vlowerlimit, vupperlimit);
     
         if(bGenFile) {

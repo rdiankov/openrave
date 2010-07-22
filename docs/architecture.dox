@@ -363,9 +363,51 @@ Ability to register custom xml reader interfaces.
 \page arch_controller Controller Concepts
 \b Reference: \ref OpenRAVE::ControllerBase
 
-All commands given to the robot are first filtered through here, then translated to joint
-commands. The default controller takes angles. Different controllers have different path inputs (ie:
-a robot walking on a floor might just have x,y,angle)
+In order for openrave to control certain robot hardware, a \ref OpenRAVE::ControllerBase controller
+has to be created that will interface with the hardware-specific libraries. This controller
+interface then has to be created through the environment and set onto an existing robot. All
+commands given to the robot are first filtered through the controller, then translated to joint
+commands. Different controllers can have different path inputs (ie: a robot walking on a floor might
+just have x,y,angle), but the default is the DOF joint values.
+
+
+Assuming that there exists a plugin with a controller interface named \b MyController, here are some ways to set an openrave robot to use it:
+
+- XML
+ - add a \b <controller> tag in the openrave robot XML file like this:
+\verbatim
+<robot file="robots/schunk-lwa3.robot.xml">
+  <controller type="MyController" args="controller arguments here"></controller>
+</robot>
+\endverbatim
+ - It is also possible to set a controller outside of the robot definition by specifying the robot's name. For example: 
+\verbatim
+<environment>
+  <robot name="schunk-lwa3" file="robots/schunk-lwa3.robot.xml">
+  </robot>
+  <controller type="MyController" robot="schunk-lwa3" args="controller arguments here"></controller>
+  </environment>
+\endverbatim
+
+- C++ 
+\code
+RobotBasePtr probot = GetEnv()->GetRobot("schunk-lwa3");
+ControllerBasePtr pcontroller = GetEnv()->CreateController("MyController");
+probot->SetController(pcontroller,"controller arguments here");
+\endcode
+
+- Python 
+\code
+robot = env.GetRobot('schunk-lwa3')
+controller = env.CreateController('MyController')
+robot.SetController(controller,'controller arguments here')
+\endcode
+
+- Octave/MATLAB 
+\verbatim
+robotid = orEnvGetBody('schunk-lwa3');
+orRobotControllerSet(robotid,'MyController','controller arguments here')
+\endverbatim
 
 */
 

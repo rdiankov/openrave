@@ -137,7 +137,7 @@ class HanoiPuzzle:
 
     def hanoimove(self, disk, srcpeg, destpeg, height):
         """Moves the arm and manipulator to grasp a peg and place it on a different peg"""
-        openhandfn = lambda: self.MoveToPosition([-0.7],self.robot.GetActiveManipulator().GetGripperJoints())
+        openhandfn = lambda: self.MoveToPosition([-0.7],self.robot.GetActiveManipulator().GetGripperIndices())
         openhandfn()
         Tdisk = disk.GetTransform()
         for ang2 in arange(-pi/2,1.5*pi,0.4):
@@ -185,7 +185,7 @@ class HanoiPuzzle:
             self.hanoisolve(n-1, pegby, pegto, pegfrom)
 
 def run(args=None):
-    """Executes the hanoi example
+    """Executes the hanoi example.
 
     :type args: arguments for script to parse, if not specified will use sys.argv
     """

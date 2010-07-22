@@ -1840,8 +1840,8 @@ void QtCoinViewer::SetupMenus()
     ADD_MENU("&Simulation", true, NULL, "Control environment simulation loop", ToggleSimulation);
     _pToggleSimulation = pact;
 
-    PLUGININFO info;
-    GetEnv()->GetLoadedInterfaces(info);
+    std::map<InterfaceType, std::vector<std::string> > interfacenames;
+    GetEnv()->GetLoadedInterfaces(interfacenames);
 
     psubmenu = pcurmenu->addMenu(tr("&Collision Checkers"));
     _pSelectedCollisionChecker = new QActionGroup(this);
@@ -1855,7 +1855,7 @@ void QtCoinViewer::SetupMenus()
         _pSelectedCollisionChecker->addAction(pact);
     }
 
-    FOREACH(itname,info.interfacenames[PT_CollisionChecker]) {
+    FOREACH(itname,interfacenames[PT_CollisionChecker]) {
         pact = new QAction(tr(itname->c_str()), this);
         pact->setCheckable(true);
         pact->setChecked(false);
@@ -1878,7 +1878,7 @@ void QtCoinViewer::SetupMenus()
         _pSelectedPhysicsEngine->addAction(pact);
     }
 
-    FOREACH(itname,info.interfacenames[PT_PhysicsEngine]) {
+    FOREACH(itname,interfacenames[PT_PhysicsEngine]) {
         pact = new QAction(tr(itname->c_str()), this);
         pact->setCheckable(true);
         pact->setChecked(false);

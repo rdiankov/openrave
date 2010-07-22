@@ -69,7 +69,7 @@ class InverseKinematicsModel(OpenRAVEModel):
 #             self.iksolver = self.env.CreateIkSolver(self.manip.GetIKSolverName()+iksuffix) if self.manip.HasIKSolver() else None
         if self.iksolver is None:
             with self.env:
-                ikname = 'ikfast.%s.%s'%(self.robot.GetRobotStructureHash(),self.manip.GetName())
+                ikname = 'ikfast.%s.%s'%(self.manip.GetKinematicsStructureHash(),self.manip.GetName())
                 iktype = self.ikfastproblem.SendCommand('AddIkLibrary %s %s'%(ikname,self.getfilename()))
                 if iktype is None:
                     if self.forceikfast:
@@ -90,10 +90,11 @@ class InverseKinematicsModel(OpenRAVEModel):
         pass # already saved as a lib
     
     def getfilename(self):
-        basename = 'ikfast' + str(self.getversion()) + '.' + self.manip.GetStructureHash() + '.' + str(self.iktype) + '.' + platform.machine()
-        return ccompiler.new_compiler().shared_object_filename(basename=basename,output_dir=OpenRAVEModel.getfilename(self))
+        basename = 'ikfast' + str(self.getversion()) + '.' + str(self.iktype) + '.' + platform.machine()
+        output_dir = os.path.join(self.env.GetHomeDirectory(),'kinematics.'+self.manip.GetKinematicsStructureHash())
+        return ccompiler.new_compiler().shared_object_filename(basename=basename,output_dir=output_dir)
     def getsourcefilename(self):
-        return os.path.join(OpenRAVEModel.getfilename(self),'ikfast' + str(self.getversion()) + '.' + self.manip.GetStructureHash() + '.' + str(self.iktype))
+        return os.path.join(self.env.GetHomeDirectory(),'kinematics.'+self.manip.GetKinematicsStructureHash(),'ikfast' + str(self.getversion()) + '.' + str(self.iktype))
     def autogenerate(self,options=None):
         freejoints = None
         iktype = None
@@ -118,18 +119,18 @@ class InverseKinematicsModel(OpenRAVEModel):
             if options.freejoints is not None:
                 freejoints=options.freejoints
             outputlang=options.outputlang
-        if self.robot.GetKinematicsGeometryHash() == '7543c4bc79f7efddba92556084c8cdb1' or self.robot.GetKinematicsGeometryHash() == '2fe791ac1e75cd969dedeb7b005a058d': # wam 7dof
+        if self.manip.GetKinematicsStructureHash() == 'b4ff7e5e04780df16a6bda565e714741': # wam 7dof
             if freejoints is None:
                 freejoints = ['Shoulder_Roll']
-        elif self.robot.GetKinematicsGeometryHash() == '2a394d63aba7686589a09b586d036608': # wam 4dof
+        elif self.robot.GetKinematicsGeometryHash() == '232990f2f57747b840887c2637181718': # wam 4dof
             if iktype is None:
                 iktype=IkParameterization.Type.Translation3D
             if iktype == IkParameterization.Type.Translation3D and freejoints is None:
                 freejoints = ['Shoulder_Roll']
-        elif self.robot.GetKinematicsGeometryHash() == '02415aee6a9e0246771a243fcc4aa6e6': # stage
+        elif self.robot.GetKinematicsGeometryHash() == 'bfc61bd497e9993b85f1ab511ee7bdbc': # stage
             if iktype is None:
                 iktype=IkParameterization.Type.Rotation3D
-        elif self.robot.GetKinematicsGeometryHash() == 'b873d8723a5126f7ebbb05e8300a4a61': # pr2
+        elif self.robot.GetKinematicsGeometryHash() == '3570892d8bd568b3a9f39f3211f08786': # pr2
             if iktype is None:
                 if self.manip.GetName().find('camera') >= 0:
                     # cameras are attached, so use a ray parameterization
@@ -138,7 +139,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                     iktype=IkParameterization.Type.Transform6D
             if freejoints is None:
                 # take the first joints
-                jointinds=self.manip.GetArmJoints()[0:(len(self.manip.GetArmJoints())-6)]
+                jointinds=self.manip.GetArmIndices()[0:(len(self.manip.GetArmIndices())-6)]
                 freejoints=[self.robot.GetJoints()[ind].GetName() for ind in jointinds]
         self.generate(iktype=iktype,freejoints=freejoints,usedummyjoints=usedummyjoints,accuracy=accuracy,precision=precision,forceikbuild=forceikbuild,outputlang=outputlang)
         self.save()
@@ -176,7 +177,7 @@ class InverseKinematicsModel(OpenRAVEModel):
             solvefn=ikfast.IKFastSolver.solveFullIK_6D
         else:
             raise ValueError('bad type')
-        solvejoints = list(self.manip.GetArmJoints())
+        solvejoints = list(self.manip.GetArmIndices())
         freejointinds = []
         if freejoints is not None:
             for jointname in freejoints:
@@ -260,21 +261,21 @@ class InverseKinematicsModel(OpenRAVEModel):
             self.robot.Enable(False) # removes self-collisions from being considered
             # set base to identity to avoid complications when reporting errors
             self.robot.SetTransform(dot(linalg.inv(self.manip.GetBase().GetTransform()),self.robot.GetTransform()))
-            lower,upper = [v[self.manip.GetArmJoints()] for v in self.robot.GetJointLimits()]
+            lower,upper = [v[self.manip.GetArmIndices()] for v in self.robot.GetJointLimits()]
             if self.iktype == IkParameterization.Type.Direction3D:
                 success = 0.0
                 numiktests = int(iktests)
                 for i in range(numiktests):
                     while True:
-                        self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
+                        self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
                         if not self.robot.CheckSelfCollision():
                             break
-                    orgvalues = self.robot.GetDOFValues(self.manip.GetArmJoints())
+                    orgvalues = self.robot.GetDOFValues(self.manip.GetArmIndices())
                     targetdir = dot(self.manip.GetEndEffectorTransform()[0:3,0:3],self.manip.GetDirection())
-                    self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
+                    self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
                     sol = self.manip.FindIKSolution(IkParameterization(targetdir,self.iktype),False)
                     if sol is not None:
-                        self.robot.SetJointValues(sol,self.manip.GetArmJoints())
+                        self.robot.SetJointValues(sol,self.manip.GetArmIndices())
                         realdir = dot(self.manip.GetEndEffectorTransform()[0:3,0:3],self.manip.GetDirection())
                         if sum((targetdir-realdir)**2) < 1e-7:
                             success += 1
@@ -288,15 +289,15 @@ class InverseKinematicsModel(OpenRAVEModel):
                 numiktests = int(iktests)
                 for i in range(numiktests):
                     while True:
-                        self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
+                        self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
                         if not self.robot.CheckSelfCollision():
                             break
-                    orgvalues = self.robot.GetDOFValues(self.manip.GetArmJoints())
+                    orgvalues = self.robot.GetDOFValues(self.manip.GetArmIndices())
                     targetpos = self.manip.GetEndEffectorTransform()[0:3,3]
-                    #self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
+                    #self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
                     sol = self.manip.FindIKSolution(IkParameterization(targetpos,self.iktype),False)
                     if sol is not None:
-                        self.robot.SetJointValues(sol,self.manip.GetArmJoints())
+                        self.robot.SetJointValues(sol,self.manip.GetArmIndices())
                         realpos = self.manip.GetEndEffectorTransform()[0:3,3]
                         if sum((targetpos-realpos)**2) < 1e-7:
                             success += 1
@@ -310,15 +311,15 @@ class InverseKinematicsModel(OpenRAVEModel):
                 numiktests = int(iktests)
                 for i in range(numiktests):
                     while True:
-                        self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
+                        self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
                         if not self.robot.CheckSelfCollision():
                             break
-                    orgvalues = self.robot.GetDOFValues(self.manip.GetArmJoints())
+                    orgvalues = self.robot.GetDOFValues(self.manip.GetArmIndices())
                     targetquat = quatFromRotationMatrix(self.manip.GetEndEffectorTransform()[0:3,0:3])
-                    self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
+                    self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
                     sol = self.manip.FindIKSolution(IkParameterization(targetquat,self.iktype),False)
                     if sol is not None:
-                        self.robot.SetJointValues(sol,self.manip.GetArmJoints())
+                        self.robot.SetJointValues(sol,self.manip.GetArmIndices())
                         realquat = quatFromRotationMatrix(self.manip.GetEndEffectorTransform()[0:3,0:3])
                         if quatArrayTDist(targetquat,realquat) < 1e-3:
                             success += 1
@@ -332,19 +333,19 @@ class InverseKinematicsModel(OpenRAVEModel):
                 numiktests = int(iktests)
                 for i in range(numiktests):
                     while True:
-                        self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
+                        self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
                         if not self.robot.CheckSelfCollision():
                             break
-                    orgvalues = self.robot.GetDOFValues(self.manip.GetArmJoints())
+                    orgvalues = self.robot.GetDOFValues(self.manip.GetArmIndices())
                     targetdir = dot(self.manip.GetEndEffectorTransform()[0:3,0:3],self.manip.GetDirection())
                     targetpos = self.manip.GetEndEffectorTransform()[0:3,3]
                     targetpos += (random.rand()-0.5)*sqrt(sum(targetpos**2))*targetdir
                     #print targetdir[0],targetdir[1],targetdir[2],targetpos[0],0,0,0,targetpos[1],0,0,0,targetpos[2]
                     targetprojpos = targetpos - targetdir*dot(targetdir,targetpos)
-                    self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmJoints()) # set random values
+                    self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
                     sol = self.manip.FindIKSolution(IkParameterization(Ray(targetpos,targetdir),self.iktype),False)
                     if sol is not None:
-                        self.robot.SetJointValues(sol,self.manip.GetArmJoints())
+                        self.robot.SetJointValues(sol,self.manip.GetArmIndices())
                         realdir = dot(self.manip.GetEndEffectorTransform()[0:3,0:3],self.manip.GetDirection())
                         realpos = self.manip.GetEndEffectorTransform()[0:3,3]
                         realprojpos = realpos - realdir*dot(realdir,realpos)

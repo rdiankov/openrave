@@ -379,7 +379,7 @@ class TaskManipulation : public ProblemInstance
 
         bool bInitialRobotChanged = false;
         vector<dReal> vCurHandValues, vCurRobotValues, vOrgRobotValues;
-        _robot->SetActiveDOFs(pmanip->GetGripperJoints());
+        _robot->SetActiveDOFs(pmanip->GetGripperIndices());
         _robot->GetActiveDOFValues(vCurHandValues);
         _robot->GetDOFValues(vOrgRobotValues);
 
@@ -387,7 +387,7 @@ class TaskManipulation : public ProblemInstance
         _UpdateSwitchModels(true,true);
         // check if robot is in collision with padded models
         if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) ) {
-            _robot->SetActiveDOFs(pmanip->GetArmJoints());
+            _robot->SetActiveDOFs(pmanip->GetArmIndices());
             if( !CM::JitterActiveDOF(_robot) ) {
                 RAVELOG_ERRORA("failed to jitter robot\n");
                 return false;
@@ -475,9 +475,9 @@ class TaskManipulation : public ProblemInstance
                     vgoalpreshape[j] = pgrasp[iGraspPreshape+j];
             }
             else {
-                vgoalpreshape.resize(pmanip->GetGripperJoints().size());
-                for(size_t j = 0; j < pmanip->GetGripperJoints().size(); ++j)
-                    vgoalpreshape[j] = vCurRobotValues[pmanip->GetGripperJoints()[j]];
+                vgoalpreshape.resize(pmanip->GetGripperIndices().size());
+                for(size_t j = 0; j < pmanip->GetGripperIndices().size(); ++j)
+                    vgoalpreshape[j] = vCurRobotValues[pmanip->GetGripperIndices()[j]];
             }
 
             PRESHAPETRAJMAP::iterator itpreshapetraj = mapPreshapeTrajectories.find(vgoalpreshape);
@@ -491,12 +491,12 @@ class TaskManipulation : public ProblemInstance
 
             Transform tGoalEndEffector;
             // set the goal preshape
-            _robot->SetActiveDOFs(pmanip->GetGripperJoints(), RobotBase::DOF_NoTransform);
+            _robot->SetActiveDOFs(pmanip->GetGripperIndices(), RobotBase::DOF_NoTransform);
             _robot->SetActiveDOFValues(vgoalpreshape,true);
         
             if( !!_pGrasperPlanner ) {
                 // set the preshape
-                _robot->SetActiveDOFs(pmanip->GetGripperJoints(), RobotBase::DOF_X|RobotBase::DOF_Y|RobotBase::DOF_Z);
+                _robot->SetActiveDOFs(pmanip->GetGripperIndices(), RobotBase::DOF_X|RobotBase::DOF_Y|RobotBase::DOF_Z);
 
                 if( !phandtraj )
                     phandtraj = GetEnv()->CreateTrajectory(_robot->GetActiveDOF());
@@ -536,7 +536,7 @@ class TaskManipulation : public ProblemInstance
                     if( iGraspDir >= 0 )
                         vglobalpalmdir = transTarg.rotate(Vector(pgrasp[iGraspDir], pgrasp[iGraspDir+1], pgrasp[iGraspDir+2]));
                     else
-                        vglobalpalmdir = pmanip->GetEndEffectorTransform().rotate(pmanip->GetPalmDirection());
+                        vglobalpalmdir = pmanip->GetEndEffectorTransform().rotate(pmanip->GetDirection());
 
                     while(GetEnv()->CheckCollision(KinBodyConstPtr(_robot),KinBodyConstPtr(ptarget))) {
                         t.trans -= vglobalpalmdir*0.001f;
@@ -545,7 +545,7 @@ class TaskManipulation : public ProblemInstance
                 }
 
                 tGoalEndEffector = t * _robot->GetTransform().inverse() * pmanip->GetEndEffectorTransform(); // find the end effector transform
-                vFinalGripperValues.resize(pmanip->GetGripperJoints().size());
+                vFinalGripperValues.resize(pmanip->GetGripperIndices().size());
                 std::copy(phandtraj->GetPoints().back().q.begin(),phandtraj->GetPoints().back().q.begin()+vFinalGripperValues.size(),vFinalGripperValues.begin());
             }
             else if( iGraspTransform >= 0 ) {
@@ -573,7 +573,7 @@ class TaskManipulation : public ProblemInstance
             }
 
             // set the initial hand joints
-            _robot->SetActiveDOFs(pmanip->GetGripperJoints());
+            _robot->SetActiveDOFs(pmanip->GetGripperIndices());
             if( iGraspPreshape >= 0 )
                 _robot->SetActiveDOFValues(vector<dReal>(pgrasp+iGraspPreshape,pgrasp+iGraspPreshape+_robot->GetActiveDOF()),true);
 
@@ -584,7 +584,7 @@ class TaskManipulation : public ProblemInstance
                 if( iGraspDir >= 0 )
                     vglobalpalmdir = transTarg.rotate(Vector(pgrasp[iGraspDir], pgrasp[iGraspDir+1], pgrasp[iGraspDir+2]));
                 else
-                    vglobalpalmdir = tApproachEndEffector.rotate(pmanip->GetPalmDirection());
+                    vglobalpalmdir = tApproachEndEffector.rotate(pmanip->GetDirection());
 
                 dReal fSmallOffset = 0.002f;
                 tApproachEndEffector.trans -= fSmallOffset * vglobalpalmdir;
@@ -601,7 +601,7 @@ class TaskManipulation : public ProblemInstance
                     tApproachEndEffector.trans -= (fApproachOffset-fSmallOffset) * vglobalpalmdir;
                     
                     // set the previous robot ik configuration to get the closest configuration!!
-                    _robot->SetActiveDOFs(pmanip->GetArmJoints());
+                    _robot->SetActiveDOFs(pmanip->GetArmIndices());
                     _robot->SetActiveDOFValues(viksolution);
                     if( !pmanip->FindIKSolution(tApproachEndEffector, viksolution, true) ) {
                         _robot->SetJointValues(vCurRobotValues); // reset robot to original position
@@ -620,7 +620,7 @@ class TaskManipulation : public ProblemInstance
             }
 
             // set the joints that the grasper plugin calculated
-            _robot->SetActiveDOFs(pmanip->GetGripperJoints());
+            _robot->SetActiveDOFs(pmanip->GetGripperIndices());
             if( vFinalGripperValues.size() > 0 )
                 _robot->SetActiveDOFValues(vFinalGripperValues, true);
 
@@ -673,9 +673,9 @@ class TaskManipulation : public ProblemInstance
                 // note that this changes trajectory of robot!
                 _robot->SetActiveDOFValues(vCurHandValues, true);
                 
-                _robot->SetActiveDOFs(pmanip->GetArmJoints());
-                TrajectoryBasePtr ptrajToPreshape = GetEnv()->CreateTrajectory(pmanip->GetArmJoints().size());
-                bool bSuccess = CM::MoveUnsync::_MoveUnsyncJoints(GetEnv(), _robot, ptrajToPreshape, pmanip->GetGripperJoints(), vgoalpreshape);
+                _robot->SetActiveDOFs(pmanip->GetArmIndices());
+                TrajectoryBasePtr ptrajToPreshape = GetEnv()->CreateTrajectory(pmanip->GetArmIndices().size());
+                bool bSuccess = CM::MoveUnsync::_MoveUnsyncJoints(GetEnv(), _robot, ptrajToPreshape, pmanip->GetGripperIndices(), vgoalpreshape);
                 
                 if( !bSuccess ) {
                     mapPreshapeTrajectories[vgoalpreshape].reset(); // set to empty
@@ -691,7 +691,7 @@ class TaskManipulation : public ProblemInstance
                 Trajectory::TPOINT tpopenhand;
                 BOOST_ASSERT(ptrajToPreshapeFull->GetPoints().size()>0);
                 _robot->SetJointValues(ptrajToPreshapeFull->GetPoints().back().q);
-                _robot->SetActiveDOFs(pmanip->GetGripperJoints());
+                _robot->SetActiveDOFs(pmanip->GetGripperIndices());
                 if( iGraspPreshape >= 0 )
                     _robot->SetActiveDOFValues(vector<dReal>(pgrasp+iGraspPreshape,pgrasp+iGraspPreshape+_robot->GetActiveDOF()),true);
                 _robot->GetDOFValues(tpopenhand.q);
@@ -711,7 +711,7 @@ class TaskManipulation : public ProblemInstance
             goal.tgrasp = tApproachEndEffector;
             goal.viksolution = viksolution;
             goal.listDests.swap(listDests);
-            goal.vpreshape.resize(pmanip->GetGripperJoints().size());
+            goal.vpreshape.resize(pmanip->GetGripperIndices().size());
             if( iGraspPreshape >= 0 ) {
                 for(int j = 0; j < (int)goal.vpreshape.size(); ++j)
                     goal.vpreshape[j] = pgrasp[iGraspPreshape+j];
@@ -925,7 +925,7 @@ class TaskManipulation : public ProblemInstance
             else if( cmd == "outputfinal" )
                 bOutputFinal = true;
             else if( cmd == "offset" ) {
-                voffset.resize(pmanip->GetGripperJoints().size());
+                voffset.resize(pmanip->GetGripperIndices().size());
                 FOREACH(it, voffset)
                     sinput >> *it;
             }
@@ -945,7 +945,7 @@ class TaskManipulation : public ProblemInstance
         }
 
         RobotBase::RobotStateSaver saver(_robot);
-        _robot->SetActiveDOFs(pmanip->GetGripperJoints());
+        _robot->SetActiveDOFs(pmanip->GetGripperIndices());
 
         // have to add the first point
         Trajectory::TPOINT ptfirst;
@@ -1046,7 +1046,7 @@ class TaskManipulation : public ProblemInstance
         }
 
         RobotBase::RobotStateSaver saver(_robot);
-        _robot->SetActiveDOFs(pmanip->GetGripperJoints());
+        _robot->SetActiveDOFs(pmanip->GetGripperIndices());
         boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(_robot->GetActiveDOF()));
         // have to add the first point
         Trajectory::TPOINT ptfirst;
@@ -1125,10 +1125,10 @@ class TaskManipulation : public ProblemInstance
         // initialize the moving direction as the opposite of the closing direction defined in the manipulators
         vector<dReal> vclosingsign_full(_robot->GetDOF(), 0);
         FOREACHC(itmanip, _robot->GetManipulators()) {
-            BOOST_ASSERT((*itmanip)->GetClosingDirection().size()==(*itmanip)->GetGripperJoints().size());
+            BOOST_ASSERT((*itmanip)->GetClosingDirection().size()==(*itmanip)->GetGripperIndices().size());
             for(size_t i = 0; i < (*itmanip)->GetClosingDirection().size(); ++i) {
                 if( (*itmanip)->GetClosingDirection()[i] != 0 )
-                    vclosingsign_full[(*itmanip)->GetGripperJoints()[i]] = (*itmanip)->GetClosingDirection()[i];
+                    vclosingsign_full[(*itmanip)->GetGripperIndices()[i]] = (*itmanip)->GetClosingDirection()[i];
             }
         }
 
@@ -1386,7 +1386,7 @@ protected:
         RobotBase::RobotStateSaver _saver(_robot);
 
         // set back to the initial hand joints
-        _robot->SetActiveDOFs(pmanip->GetGripperJoints());
+        _robot->SetActiveDOFs(pmanip->GetGripperIndices());
         vector<dReal> vpreshape = listGraspGoals.front().vpreshape;
         
         _robot->SetActiveDOFValues(vpreshape,true);
@@ -1424,7 +1424,7 @@ protected:
 
         vector<dReal> vgoalconfigs;
         FOREACH(itgoal, listgraspsused) {
-            BOOST_ASSERT( itgoal->viksolution.size() == pmanip->GetArmJoints().size() );
+            BOOST_ASSERT( itgoal->viksolution.size() == pmanip->GetArmIndices().size() );
             vgoalconfigs.insert(vgoalconfigs.end(), itgoal->viksolution.begin(), itgoal->viksolution.end());
 
             int nsampled = CM::SampleIkSolutions(_robot, itgoal->tgrasp, nSeedIkSolutions, vgoalconfigs);
@@ -1437,7 +1437,7 @@ protected:
         }
                 
         int nGraspIndex = 0;
-        ptraj = _MoveArm(pmanip->GetArmJoints(), vgoalconfigs, nGraspIndex, nMaxIterations);
+        ptraj = _MoveArm(pmanip->GetArmIndices(), vgoalconfigs, nGraspIndex, nMaxIterations);
         if (!ptraj )
             return ptraj;
 
@@ -1447,7 +1447,7 @@ protected:
         goalfound = *it;
 
         TrajectoryBasePtr pfulltraj = GetEnv()->CreateTrajectory(_robot->GetDOF());
-        _robot->SetActiveDOFs(pmanip->GetArmJoints());
+        _robot->SetActiveDOFs(pmanip->GetArmIndices());
         _robot->GetFullTrajectoryFromActive(pfulltraj, ptraj);
         
         RAVELOG_DEBUGA("total planning time %d ms\n", (uint32_t)(GetMicroTime()-tbase)/1000);

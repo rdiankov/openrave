@@ -179,7 +179,7 @@ class GraspPlanning(metaclass.AutoReloader):
             if self.switchpatterns is not None:
                 self.taskmanip.SwitchModels(switchpatterns=self.switchpatterns)
             robot.SetActiveManipulator(gmodel.manip)
-            robot.SetActiveDOFs(gmodel.manip.GetArmJoints())
+            robot.SetActiveDOFs(gmodel.manip.GetArmIndices())
         istartgrasp = 0
         approachoffset = 0.02
         target = gmodel.target
@@ -252,7 +252,7 @@ class GraspPlanning(metaclass.AutoReloader):
                 if res is None:
                     print 'forcing fingers'
                     with env:
-                        robot.SetJointValues(gmodel.grasps[graspindex][gmodel.graspindices['igrasppreshape']],manip.GetGripperJoints())
+                        robot.SetJointValues(gmodel.grasps[graspindex][gmodel.graspindices['igrasppreshape']],manip.GetGripperIndices())
             self.waitrobot(robot)
             with env:
                 robot.ReleaseAllGrabbed()

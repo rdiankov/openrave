@@ -45,7 +45,7 @@ class IkFastSolver : public IkSolverBase
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         RobotBasePtr probot = pmanip->GetRobot();
         RobotBase::RobotStateSaver saver(probot);
-        probot->SetActiveDOFs(pmanip->GetArmJoints());
+        probot->SetActiveDOFs(pmanip->GetArmIndices());
         probot->GetActiveDOFLimits(_qlower,_qupper);
         _vfreeparamscales.resize(0);
         FOREACH(itfree, _vfreeparams) {
@@ -65,24 +65,24 @@ class IkFastSolver : public IkSolverBase
         RobotBasePtr probot = pmanip->GetRobot();
         _cblimits = probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IkFastSolver<IKReal,Solution>::SetJointLimits,boost::bind(&sptr_from<IkFastSolver<IKReal,Solution> >, weak_solver())));
 
-        if( _nTotalJoints != (int)pmanip->GetArmJoints().size() ) {
-            RAVELOG_ERRORA(str(boost::format("ik %s configured with different number of joints than robot manipulator (%d!=%d)\n")%GetXMLId()%pmanip->GetArmJoints().size()%_nTotalJoints));
+        if( _nTotalJoints != (int)pmanip->GetArmIndices().size() ) {
+            RAVELOG_ERRORA(str(boost::format("ik %s configured with different number of joints than robot manipulator (%d!=%d)\n")%GetXMLId()%pmanip->GetArmIndices().size()%_nTotalJoints));
             return false;
         }
 
         _vfreetypes.resize(0);
         FOREACH(itfree, _vfreeparams) {
-            _vfreetypes.push_back(probot->GetJoints().at(pmanip->GetArmJoints().at(*itfree))->GetType());
+            _vfreetypes.push_back(probot->GetJoints().at(pmanip->GetArmIndices().at(*itfree))->GetType());
         }
 
         _vjointtypes.resize(0);
-        FOREACHC(it,pmanip->GetArmJoints()) {
+        FOREACHC(it,pmanip->GetArmIndices()) {
             _vjointtypes.push_back(probot->GetJoints().at(*it)->GetType());
         }
 
         // get the joint limits
         RobotBase::RobotStateSaver saver(probot);
-        probot->SetActiveDOFs(pmanip->GetArmJoints());
+        probot->SetActiveDOFs(pmanip->GetArmIndices());
         SetJointLimits();
         return true;
     }
@@ -100,7 +100,7 @@ class IkFastSolver : public IkSolverBase
         
         RobotBasePtr probot = pmanip->GetRobot();
         RobotBase::RobotStateSaver saver(probot);
-        probot->SetActiveDOFs(pmanip->GetArmJoints());
+        probot->SetActiveDOFs(pmanip->GetArmIndices());
         std::vector<IKReal> vfree(_vfreeparams.size());
         bool bCheckEndEffector = true;
         return ComposeSolution(_vfreeparams, vfree, 0, q0, boost::bind(&IkFastSolver::_SolveSingle,shared_solver(), boost::ref(param),boost::ref(vfree),boost::ref(q0),bCheckEnvCollision,result,boost::ref(bCheckEndEffector))) == SR_Success;
@@ -119,7 +119,7 @@ class IkFastSolver : public IkSolverBase
 
         RobotBasePtr probot = pmanip->GetRobot();
         RobotBase::RobotStateSaver saver(probot);
-        probot->SetActiveDOFs(pmanip->GetArmJoints());
+        probot->SetActiveDOFs(pmanip->GetArmIndices());
         std::vector<IKReal> vfree(_vfreeparams.size());
         qSolutions.resize(0);
         bool bCheckEndEffector = true;
@@ -144,7 +144,7 @@ class IkFastSolver : public IkSolverBase
 
         RobotBasePtr probot = pmanip->GetRobot();
         RobotBase::RobotStateSaver saver(probot);
-        probot->SetActiveDOFs(pmanip->GetArmJoints());
+        probot->SetActiveDOFs(pmanip->GetArmIndices());
         std::vector<IKReal> vfree(_vfreeparams.size());
         for(size_t i = 0; i < _vfreeparams.size(); ++i)
             vfree[i] = vFreeParameters[i]*(_qupper[_vfreeparams[i]]-_qlower[_vfreeparams[i]]) + _qlower[_vfreeparams[i]];
@@ -167,7 +167,7 @@ class IkFastSolver : public IkSolverBase
 
         RobotBasePtr probot = pmanip->GetRobot();
         RobotBase::RobotStateSaver saver(probot);
-        probot->SetActiveDOFs(pmanip->GetArmJoints());
+        probot->SetActiveDOFs(pmanip->GetArmIndices());
         std::vector<IKReal> vfree(_vfreeparams.size());
         for(size_t i = 0; i < _vfreeparams.size(); ++i)
             vfree[i] = vFreeParameters[i]*(_qupper[_vfreeparams[i]]-_qlower[_vfreeparams[i]]) + _qlower[_vfreeparams[i]];
@@ -188,7 +188,7 @@ class IkFastSolver : public IkSolverBase
         probot->GetDOFValues(values);
         pFreeParameters.resize(_vfreeparams.size());
         for(size_t i = 0; i < _vfreeparams.size(); ++i)
-            pFreeParameters[i] = (values[pmanip->GetArmJoints()[_vfreeparams[i]]]-_qlower[_vfreeparams[i]]) * *itscale++;
+            pFreeParameters[i] = (values[pmanip->GetArmIndices()[_vfreeparams[i]]]-_qlower[_vfreeparams[i]]) * *itscale++;
 
         return true;
     }
@@ -323,9 +323,9 @@ private:
 
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         dReal bestdist = 1e30;
-        std::vector<dReal> vravesol(pmanip->GetArmJoints().size());
+        std::vector<dReal> vravesol(pmanip->GetArmIndices().size());
         std::vector<dReal> vbest;
-        std::vector<IKReal> sol(pmanip->GetArmJoints().size());
+        std::vector<IKReal> sol(pmanip->GetArmIndices().size());
         // find the first valid solution that satisfies joint constraints and collisions
         boost::tuple<const vector<IKReal>&, const vector<dReal>&,bool> textra(vsolfree, q0, bCheckEnvCollision);
 
@@ -345,13 +345,13 @@ private:
                 return SR_Quit;
 
             // stop if there is no solution we are attempting to get close to
-            if( res == SR_Success && q0.size() != pmanip->GetArmJoints().size() )
+            if( res == SR_Success && q0.size() != pmanip->GetArmIndices().size() )
                 break;
         }
 
         // return as soon as a solution is found, since we're visiting phis starting from q0, we are guaranteed
         // that the solution will be close (ie, phi's dominate in the search). This is to speed things up
-        if( vbest.size() == pmanip->GetArmJoints().size() ) {
+        if( vbest.size() == pmanip->GetArmIndices().size() ) {
             if( !!result )
                 *result = vbest;
             return SR_Success;
@@ -410,9 +410,9 @@ private:
         }
 
         // solution is valid, check with q0
-        if( boost::get<1>(freeq0check).size() == pmanip->GetArmJoints().size() ) {
+        if( boost::get<1>(freeq0check).size() == pmanip->GetArmIndices().size() ) {
             dReal d = 0;
-            for(int k = 0; k < (int)pmanip->GetArmJoints().size(); ++k)
+            for(int k = 0; k < (int)pmanip->GetArmIndices().size(); ++k)
                 d += SQR(vravesol[k]-boost::get<1>(freeq0check)[k]);
 
             if( bestdist > d ) {
@@ -432,8 +432,8 @@ private:
         std::vector<Solution> vsolutions;
         if( _CallIK(param,vfree,vsolutions) ) {
             vector<IKReal> vsolfree;
-            vector<dReal> vravesol(pmanip->GetArmJoints().size());
-            std::vector<IKReal> sol(pmanip->GetArmJoints().size());
+            vector<dReal> vravesol(pmanip->GetArmIndices().size());
+            std::vector<IKReal> sol(pmanip->GetArmIndices().size());
             FOREACH(itsol, vsolutions) {
                 if( itsol->GetFree().size() > 0 ) {
                     // have to search over all the free parameters of the solution!

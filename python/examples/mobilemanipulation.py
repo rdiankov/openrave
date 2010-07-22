@@ -118,7 +118,7 @@ class GraspReachability(metaclass.AutoReloader):
                         q = gmodel.manip.FindIKSolution(gmodel.getGlobalGraspTransform(grasp,collisionfree=True),envcheck=True)
                         if q is not None:
                             values = self.robot.GetDOFValues()
-                            values[gmodel.manip.GetArmJoints()] = q
+                            values[gmodel.manip.GetArmIndices()] = q
                             goals.append((grasp,pose,values))
                         elif gmodel.manip.FindIKSolution(gmodel.getGlobalGraspTransform(grasp,collisionfree=True),envcheck=False) is None:
                             numfailures += 1
@@ -159,7 +159,7 @@ class GraspReachability(metaclass.AutoReloader):
                     q = irmodel.manip.FindIKSolution(gmodel.getGlobalGraspTransform(grasp,collisionfree=True),envcheck=True)
                     if q is not None:
                         values = self.robot.GetDOFValues()
-                        values[irmodel.manip.GetArmJoints()] = q
+                        values[irmodel.manip.GetArmIndices()] = q
                         statesaver.close()
                         yield pose,values,grasp,graspindex
                         statesaver = self.robot.CreateRobotStateSaver()
@@ -194,7 +194,7 @@ class GraspReachability(metaclass.AutoReloader):
                         gmodel.setPreshape(grasp)
                         self.robot.SetJointValues(values)
                         final,traj = taskmanip.CloseFingers(execute=False,outputfinal=True)
-                        self.robot.SetJointValues(final,gmodel.manip.GetGripperJoints())
+                        self.robot.SetJointValues(final,gmodel.manip.GetGripperIndices())
                         self.env.UpdatePublishedBodies()
                     if delay > 0:
                         time.sleep(delay)
@@ -311,7 +311,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                 if finalarmsolution is None:
                     print 'final grasp has no valid IK'
                     continue
-                armjoints=gmodel.manip.GetArmJoints()
+                armjoints=gmodel.manip.GetArmIndices()
                 Tfirstgrasp = array(Tgrasp)
                 Tfirstgrasp[0:3,3] -= approachoffset*gmodel.getGlobalApproachDir(grasp)
                 solutions = gmodel.manip.FindIKSolutions(Tfirstgrasp,True)
@@ -403,7 +403,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                 continue
             self.waitrobot()
             usejacobian = False
-            armjoints = gmodel.manip.GetArmJoints()
+            armjoints = gmodel.manip.GetArmIndices()
             self.robot.SetActiveDOFs(armjoints)
             grasp=gmodel.grasps[graspindex]
             with self.env:
@@ -479,9 +479,9 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                     alltrajdata = []
                     self.robot.SetJointValues(origjointvalues)
                     for manip in manips:
-                        self.robot.SetActiveDOFs(manip.GetArmJoints())
-                        alltrajdata.append(self.basemanip.MoveActiveJoints(goal=goaljointvalues[manip.GetArmJoints()],execute=False,outputtraj=True))
-                        self.robot.SetJointValues(goaljointvalues[manip.GetArmJoints()],manip.GetArmJoints())
+                        self.robot.SetActiveDOFs(manip.GetArmIndices())
+                        alltrajdata.append(self.basemanip.MoveActiveJoints(goal=goaljointvalues[manip.GetArmIndices()],execute=False,outputtraj=True))
+                        self.robot.SetJointValues(goaljointvalues[manip.GetArmIndices()],manip.GetArmIndices())
                 except planning_error:
                     alltrajdata = None
             if alltrajdata is None:
@@ -520,12 +520,12 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                             if ikcollisionbody is not None:
                                 # have to check self collision
                                 with self.robot:
-                                    self.robot.SetJointValues(s,manip.GetArmJoints())
+                                    self.robot.SetJointValues(s,manip.GetArmIndices())
                                     if self.robot.CheckSelfCollision():
                                         success = False
                                         break
                             startjointvalues.append(self.robot.GetDOFValues())
-                            self.robot.SetJointValues(s,manip.GetArmJoints())
+                            self.robot.SetJointValues(s,manip.GetArmIndices())
                     if not success:
                         continue
                     try:
@@ -534,8 +534,8 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                         alltrajdata = []
                         for jointvalues,manip in izip(startjointvalues,manips):
                             self.robot.SetJointValues(jointvalues)
-                            self.robot.SetActiveDOFs(manip.GetArmJoints())
-                            alltrajdata.append(self.basemanip.MoveActiveJoints(goal=goaljointvalues[manip.GetArmJoints()],execute=False,outputtraj=True))
+                            self.robot.SetActiveDOFs(manip.GetArmIndices())
+                            alltrajdata.append(self.basemanip.MoveActiveJoints(goal=goaljointvalues[manip.GetArmIndices()],execute=False,outputtraj=True))
                         break
                     except planning_error:
                         alltrajdata = None
@@ -619,9 +619,9 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         self.basemanip.ReleaseFingers(target=gmodel.target)
         self.waitrobot()
 #         with self.env:
-#             self.robot.SetActiveDOFs(gmodel.manip.GetArmJoints())
+#             self.robot.SetActiveDOFs(gmodel.manip.GetArmIndices())
 #             try:
-#                 self.basemanip.MoveActiveJoints(goal=origjointvalues[gmodel.manip.GetArmJoints()],maxiter=3000)
+#                 self.basemanip.MoveActiveJoints(goal=origjointvalues[gmodel.manip.GetArmIndices()],maxiter=3000)
 #             except:
 #                 print 'failed to move arm closer'
 
@@ -638,9 +638,9 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         gmodel = self.graspObjectMobile(pose,values,grasp,graspindex,**kwargs)
 #         # move to original position
 #         with self.env:
-#             self.robot.SetActiveDOFs(gmodel.manip.GetArmJoints())
+#             self.robot.SetActiveDOFs(gmodel.manip.GetArmIndices())
 #             try:
-#                 self.basemanip.MoveActiveJoints(goal=origjointvalues[gmodel.manip.GetArmJoints()],maxiter=3000)
+#                 self.basemanip.MoveActiveJoints(goal=origjointvalues[gmodel.manip.GetArmIndices()],maxiter=3000)
 #             except:
 #                 print 'failed to move arm closer'
 #         self.waitrobot()
@@ -653,7 +653,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
             self.taskmanip.CloseFingers()
         self.waitrobot()
         with self.env:
-            expectedvalues = self.robot.GetDOFValues(self.robot.GetActiveManipulator().GetGripperJoints())
+            expectedvalues = self.robot.GetDOFValues(self.robot.GetActiveManipulator().GetGripperIndices())
         if target is not None:
             with TaskManipulation.SwitchState(self.taskmanip): # grab the fat object!
                 with self.env:
@@ -711,7 +711,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         self.robot.SetActiveManipulator(gmodel.manip)
         self.moveBase(pose)
         with self.env:
-            armjoints=gmodel.manip.GetArmJoints()
+            armjoints=gmodel.manip.GetArmIndices()
             #finalarmsolution = values[armjoints]
             dofindices = inversereachability.InverseReachabilityModel.getdofindices(gmodel.manip)
         if len(dofindices) > 0:

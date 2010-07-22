@@ -119,10 +119,10 @@ public:
             _robot->SetTransform(Transform()); // this is necessary to reset any 'randomness' introduced from the current state
 
             if( !!pmanip ) {
-                tbase.rotfromaxisangle(pmanip->GetPalmDirection(),_parameters->ftargetroll);
+                tbase.rotfromaxisangle(pmanip->GetDirection(),_parameters->ftargetroll);
 
                 // set the robot so that its palm is facing the approach direction find the closest rotation
-                Transform torient; torient.rot = quatRotateDirection(pmanip->GetPalmDirection(), _parameters->vtargetdirection);
+                Transform torient; torient.rot = quatRotateDirection(pmanip->GetDirection(), _parameters->vtargetdirection);
                 tbase = torient * tbase;
                 // make sure origin of pbase is on target position
                 tbase.trans = _parameters->vtargetposition;
@@ -324,7 +324,7 @@ public:
             for(size_t i = 0; i < _robot->GetActiveJointIndices().size(); ++i) {
                 FOREACHC(itmanip, _robot->GetManipulators()) {
                     vector<dReal>::const_iterator itclosing = (*itmanip)->GetClosingDirection().begin();
-                    FOREACHC(itgripper,(*itmanip)->GetGripperJoints()) {
+                    FOREACHC(itgripper,(*itmanip)->GetGripperIndices()) {
                         if( *itclosing != 0 && *itgripper == _robot->GetActiveJointIndices().at(i) ) {
                             vclosingdir.at(i) = *itclosing;
                             break;

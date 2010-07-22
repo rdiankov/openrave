@@ -413,7 +413,7 @@ public:
         std::vector<dReal> jointvalues;
         boost::shared_ptr<void> pguidata, puserdata;
         std::string strname; ///< name of the body
-        int environmentid; ///< unique network id
+        int environmentid;
     };
     typedef boost::shared_ptr<BodyState> BodyStatePtr;
     typedef boost::shared_ptr<BodyState const> BodyStateConstPtr;
@@ -525,7 +525,7 @@ public:
     virtual void GetDOFResolutions(std::vector<dReal>& v) const;
     virtual void GetDOFWeights(std::vector<dReal>& v) const;
     
-    /// \deprecated Returns all the joint values in the order of GetJoints() (use GetDOFValues instead)
+    /// \deprecated Returns all the joint values in the order of GetJoints() (use GetDOFValues instead) (10/07/10)
     virtual void GetJointValues(std::vector<dReal>& v) const RAVE_DEPRECATED;
     virtual void GetJointVelocities(std::vector<dReal>& v) const RAVE_DEPRECATED;
     virtual void GetJointLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const RAVE_DEPRECATED;
@@ -655,35 +655,48 @@ public:
     virtual void CalculateAngularVelocityJacobian(int linkindex, boost::multi_array<dReal,2>& vjacobian) const;
     virtual void CalculateAngularVelocityJacobian(int linkindex, std::vector<dReal>& pfJacobian) const;
 
-    /// Check if body is self colliding. Links that are joined together are ignored.
+    /// \brief Check if body is self colliding. Links that are joined together are ignored.
     virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr()) const;
 
     /// \return true if two bodies should be considered as one during collision (ie one is grabbing the other)
     virtual bool IsAttached(KinBodyConstPtr pbody) const;
 
-    /// \param setAttached inserts all attached bodies of this body, including this body. If any bodies are already in setAttached, then ignores recursing on their attached bodies.
+    /// \brief Recursively get all attached bodies of this body, including this body.
+    ///
+    /// \param setAttached fills with the attached bodies. If any bodies are already in setAttached, then ignores recursing on their attached bodies.
     virtual void GetAttached(std::set<KinBodyPtr>& setAttached) const;
 
-    /// \return true if this body is derived from RobotBase
+    /// \brief Return true if this body is derived from RobotBase.
     virtual bool IsRobot() const { return false; }
-    
-    /// \return an environment unique id. if object is not added to the environment, this will return 0. So checking if GetEnvironmentId() is 0 is a good way to check if object is present in the environment.
+
+    /// \brief return a unique id of the body used in the environment.
+    /// 
+    /// If object is not added to the environment, this will return 0. So checking if GetEnvironmentId() is 0 is a good way to check if object is present in the environment.
+    /// This id will not be copied when cloning in order to respect another environment's ids.
     virtual int GetEnvironmentId() const;
 
-    virtual int GetNetworkId() const { return GetEnvironmentId(); }
+    /// \deprecated (10/07/01)
+    virtual int GetNetworkId() const RAVE_DEPRECATED { return GetEnvironmentId(); }
     
     /// returns how the joint effects the link. If zero, link is unaffected. If negative, the partial derivative of the Jacobian should be negated.
     /// \param jointindex index of the joint
     /// \param linkindex index of the link
     virtual char DoesAffect(int jointindex, int linkindex) const;
 
-    /// writes a string for the forward kinematics of the robot (only hinge joints are handled)
-    /// format of the string is:
-    /// [link_cur link_base joint_index joint_axis T_left T_right]
-    /// basically T(link_cur) = T(link_base) * T_left * Rotation(joint_axis, joint_angle) * T_right
-    /// T_left and T_right are 3x4 matrices specified in row order (write the first row first)
-    /// joint_axis is the unit vector for the joint_axis
-    /// if link_base is -1, attached to static environment
+    /** Writes a string for the forward kinematics of the robot (only hinge joints are handled).
+    
+        Format of the string is:
+        \verbatim
+        [link_cur link_base joint_index joint_axis T_left T_right]
+        ...
+        \endverbatim
+
+        \f$T_{linkcur} = T_{linkbase} \; T_{left} \; {\bf Rotation}(jointaxis, jointangle) \; T_{right}\f$
+
+        where \f$T_{left}\f$ and \f$T_{right}\f$ are 3x4 matrices specified in row order (write the first row first)
+        joint_axis is the unit vector for the joint_axis.
+        If link_base is -1, attached to static environment
+    */
     virtual void WriteForwardKinematics(std::ostream& f);
 
     virtual void SetGuiData(boost::shared_ptr<void> pdata) { _pGuiData = pdata; }
@@ -698,6 +711,8 @@ public:
     virtual boost::shared_ptr<void> GetCollisionData() const { return _pCollisionData; }
     virtual ManageDataPtr GetManageData() const { return _pManageData; }
 
+    /// \brief Return a unique id for every transformation state change of any link. Used to check if robot state has changed.
+    ///
     /// The stamp is used by the collision checkers, physics engines, or any other item
     /// that needs to keep track of any changes of the KinBody as it moves.
     /// Currently stamps monotonically increment for every transformation/joint angle change.
@@ -777,9 +792,8 @@ protected:
 
     std::list<KinBodyWeakPtr> _listAttachedBodies; ///< list of bodies that are directly attached to this body (can have duplicates)
 
-    int _environmentid;                          ///< unique id of the body solely used by the environment. This id will not be copied when cloning.
-    int _nUpdateStampId;                         ///< unique id for every unique transformation change of any link,
-                                            ////< monotically increases as body is updated.
+    int _environmentid;                          ///< \see GetEnvironmentId
+    int _nUpdateStampId;                         ///< \see GetUpdateStamp
     boost::shared_ptr<void> _pGuiData;                        ///< GUI data to let the viewer store specific graphic handles for the object
     boost::shared_ptr<void> _pPhysicsData;                ///< data set by the physics engine
     boost::shared_ptr<void> _pCollisionData; ///< internal collision model

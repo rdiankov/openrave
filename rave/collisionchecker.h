@@ -114,6 +114,10 @@ protected:
     /// \return true if operation succeeded
     virtual bool EnableLink(KinBody::LinkConstPtr pbody, bool bEnable) = 0;
 
+    /// Each function takes an optional pointer to a CollisionReport structure and returns true if collision occurs.
+    /// \name Collision specific functions.
+    /// \anchor collision_checking
+    //@{
     virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report = CollisionReportPtr())=0;
     virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report = CollisionReportPtr())=0;
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr())=0;
@@ -122,12 +126,31 @@ protected:
     
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report = CollisionReportPtr())=0;
     virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report = CollisionReportPtr())=0;
-    
+
+    /// \brief Check collision with a link and a ray with a specified length.
+    ///
+    /// \param ray holds the origin and direction. The length of the ray is the length of the direction.
+    /// \param plink the link to collide with
+    /// \param[out] report [optional] collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
     virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr()) = 0;
+    
+    /// \brief Check collision with a link and a ray with a specified length.
+    ///
+    /// \param ray holds the origin and direction. The length of the ray is the length of the direction.
+    /// \param pbody the link to collide with
+    /// \param[out] report [optional] collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
     virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
+
+    /// \brief Check collision with a body and a ray with a specified length.
+    ///
+    /// \param ray holds the origin and direction. The length of the ray is the length of the direction.
+    /// \param pbody the kinbody to look for collisions
+    /// \param[out] report [optional] collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
-    /// checks self collision only with the links of the passed in body
+    /// \brief Checks self collision only with the links of the passed in body.
+    ///
+    /// Links that are joined together are ignored.
     virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
 	virtual void SetCollisionData(KinBodyPtr pbody, boost::shared_ptr<void> data) { pbody->SetCollisionData(data); }

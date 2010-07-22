@@ -159,7 +159,7 @@ class CM
             bool a= _pmanipI->FindIKSolution(tInew,vsolution, false);
 
             if(a){
-                vector<int> JointIndicesI = _pmanipI->GetArmJoints();
+                vector<int> JointIndicesI = _pmanipI->GetArmIndices();
 
                 for (size_t i=0;i<JointIndicesI.size();i++) {//this check is important to make sure the IK solution does not fly too far away since there are multiple Ik solutions possible
                     if(fabs(vsolution.at(i)-vprev[JointIndicesI.at(i)])<errorRot*2)

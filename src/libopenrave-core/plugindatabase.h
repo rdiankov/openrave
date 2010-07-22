@@ -80,14 +80,8 @@ public:
 
         const string& GetName() const { return ppluginname; }
         bool GetInfo(PLUGININFO& info) {
-            // for now just return the cached info (so quering is faster)
-            FOREACH(it,_infocached.interfacenames) {
-                std::vector<std::string>& vnames = info.interfacenames[it->first];
-                vnames.insert(vnames.end(),it->second.begin(),it->second.end());
-            }
+            info = _infocached;
             return true;
-            // Load_GetPluginAttributes()
-            //return !!pfnGetPluginAttributes && pfnGetPluginAttributes(&info, sizeof(info));
         }
 
         virtual bool Load_CreateInterfaceGlobal()
@@ -159,8 +153,7 @@ public:
             return pfnDestroyPlugin!=NULL;
         }
 
-        /// Check that name is actually supported.
-        bool hasInterface(InterfaceType type, const string& name)
+        bool HasInterface(InterfaceType type, const string& name)
         {
             if( name.size() == 0 )
                 return false;
@@ -182,7 +175,7 @@ public:
                 return InterfaceBasePtr();
             }
 
-            if( !hasInterface(type,name) ) {
+            if( !HasInterface(type,name) ) {
                 return InterfaceBasePtr();
             }
             
@@ -461,20 +454,9 @@ public:
     virtual bool HasInterface(InterfaceType type, const string& interfacename)
     {
         EnvironmentMutex::scoped_lock lock(_mutex);
-        size_t ind = interfacename.find_first_of(' ');
-        if( ind == string::npos ) {
-            ind = interfacename.size();
-        }
         FOREACHC(itplugin, _listplugins) {
-            PLUGININFO info;
-            if( (*itplugin)->GetInfo(info) ) {
-                FOREACHC(itname, info.interfacenames[type]) {
-                    if( ind >= itname->size() && strnicmp(itname->c_str(),interfacename.c_str(),ind) == 0 )
-                        return true;
-                }
-            }
-            else {
-                RAVELOG_WARNA(str(boost::format("%s: GetPluginAttributes failed\n")%(*itplugin)->ppluginname));
+            if( (*itplugin)->HasInterface(type,interfacename) ) {
+                return true;
             }
         }
         return false;

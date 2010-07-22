@@ -401,7 +401,7 @@ class DualManipulation : public ProblemInstance
 
         RobotBase::RobotStateSaver saver(robot);
 
-        //robot->SetActiveDOFs(pmanip->GetArmJoints());
+        //robot->SetActiveDOFs(pmanip->GetArmIndices());
         CM::JitterActiveDOF(robot,100); // try to jitter out, don't worry if it fails
 
         boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(robot->GetActiveDOF()));
@@ -431,7 +431,7 @@ class DualManipulation : public ProblemInstance
                 }
                 else {
                     int index = 0;
-                    FOREACHC(it, pmanip0->GetArmJoints())
+                    FOREACHC(it, pmanip0->GetArmIndices())
                         point.q.at(*it) = v0Joints.at(index++);
                 }
             }
@@ -444,7 +444,7 @@ class DualManipulation : public ProblemInstance
                 }
                 else  {
                     int index = 0;
-                    FOREACHC(it, pmanip1->GetArmJoints())
+                    FOREACHC(it, pmanip1->GetArmIndices())
                         point.q.at(*it) = v1Joints.at(index++);
                 }
             }

@@ -147,12 +147,12 @@ class VisibilityGrasping(metaclass.AutoReloader):
             homevalues = self.homevalues
         print 'moving arm'
         self.robotreal.SetActiveManipulator(self.manip)
-        trajdata = self.basemanip.MoveManipulator(goal=homevalues[self.manip.GetArmJoints()],execute=False,outputtraj=True)
+        trajdata = self.basemanip.MoveManipulator(goal=homevalues[self.manip.GetArmIndices()],execute=False,outputtraj=True)
         self.starttrajectory(trajdata)
         
         print 'moving hand'
         values = self.robotreal.GetDOFValues()
-        values[self.manip.GetGripperJoints()] = homevalues[self.manip.GetGripperJoints()]
+        values[self.manip.GetGripperIndices()] = homevalues[self.manip.GetGripperIndices()]
         self.robotreal.GetController().SetDesired(values)
         self.waitrobot()
         if not self.robot is None:
@@ -161,11 +161,11 @@ class VisibilityGrasping(metaclass.AutoReloader):
     def movegripper(self,grippervalues,robot=None):
         if robot is None:
             robot = self.robotreal
-        gripperjoints = self.manip.GetGripperJoints()
+        gripperjoints = self.manip.GetGripperIndices()
         assert len(gripperjoints) == len(grippervalues)
 
         with robot:
-            robot.SetActiveDOFs(self.manip.GetArmJoints())
+            robot.SetActiveDOFs(self.manip.GetArmIndices())
             trajdata = self.basemanip.MoveUnsyncJoints(jointvalues=grippervalues,jointinds=gripperjoints,outputtraj=True)
             self.trajectorylog.append(trajdata)
         self.waitrobot()
@@ -284,7 +284,7 @@ class VisibilityGrasping(metaclass.AutoReloader):
             self.starttrajectory(trajdata)
 
             try:
-                final,trajdata = taskmanip.CloseFingers(offset=self.graspoffset*ones(len(self.manip.GetGripperJoints())),execute=False,outputtraj=True)
+                final,trajdata = taskmanip.CloseFingers(offset=self.graspoffset*ones(len(self.manip.GetGripperIndices())),execute=False,outputtraj=True)
                 self.starttrajectory(trajdata)
             except planning_error:
                 raise ValueError('failed to find visual feedback grasp')

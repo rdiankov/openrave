@@ -81,6 +81,7 @@ RAVE_PLUGIN_API void OpenRAVEGetPluginAttributes(OpenRAVE::PLUGININFO* pinfo, in
         throw OpenRAVE::openrave_exception("bad plugin info hash",OpenRAVE::ORE_InvalidPlugin);
     }
     GetPluginAttributesValidated(*pinfo);
+    pinfo->version = OPENRAVE_VERSION;
 }
 
 /// \brief \b <b>[export]</b> Stub function to be defined by plugin that includes \ref rave/plugin.h.

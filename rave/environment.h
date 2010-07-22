@@ -32,12 +32,14 @@ public:
     EnvironmentBase() {}
     virtual ~EnvironmentBase() {}
 
-    /// releases all environment resources. Should be called whenever the environment stops being used
-    /// (removing all environment pointer might not be enough to destroy the environment resources)
+    /// \brief Releases all environment resources, should be always called when environment stops being used.
+    ///
+    /// Removing all environment pointer might not be enough to destroy the environment resources.
     virtual void Destroy()=0;
 
-    /// Resets all objects of the scene (preserves all problems, planners)
-    /// do not call inside a SimulationStep call
+    /// \brief Resets all objects of the scene (preserves all problems, planners).
+    ///
+    /// Do not call inside a SimulationStep call
     virtual void Reset()=0;
 
     /// \name Interface Creation and Plugin Management
@@ -55,43 +57,50 @@ public:
     virtual CollisionCheckerBasePtr CreateCollisionChecker(const std::string& name)=0;
     virtual ViewerBasePtr CreateViewer(const std::string& name)=0;
     
-    /// \return an empty KinBody instance, deallocate with delete, physics needs to be locked
+    /// \brief Return an empty KinBody instance.
     virtual KinBodyPtr CreateKinBody(const std::string& name="") = 0;
 
-    /// \return an empty trajectory instance initialized to nDOF degrees of freedom. Deallocate with delete.
+    /// \brief Return an empty trajectory instance initialized to nDOF degrees of freedom.
     virtual TrajectoryBasePtr CreateTrajectory(int nDOF) = 0;
 
-    /// environment will own the interface until Destroy is called
+    /// \brief Environment will own the interface until EnvironmentBase::Destroy is called.
     virtual void OwnInterface(InterfaceBasePtr pinterface) = 0;
 
-    /// environment owner if interface is removed
+    /// \brief Remove ownership of the interface.
     virtual void DisownInterface(InterfaceBasePtr pinterface) = 0;
 
-    /// returns true if interface can be loaded from a plugin, otherwise false
-    virtual bool HasInterface(InterfaceType type, const std::string& interfacename) = 0;
+    /// \brief Returns true if interface can be created, otherwise false.
+    virtual bool HasInterface(InterfaceType type, const std::string& interfacename) const = 0;
     
-    /// get all the loaded plugins and the interfaces they support
+    /// \brief Get all the loaded plugins and the interfaces they support.
+    ///
     /// \param plugins A list of plugins. Each entry has the plugin name and the interfaces it supports
     virtual void GetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins)=0;
 
-    /// get a list of all the loaded interfaces
-    virtual void GetLoadedInterfaces(PLUGININFO& info) = 0;
+    /// \brief Get a list of all the loaded interfaces.
+    virtual void GetLoadedInterfaces(std::map<InterfaceType, std::vector<std::string> >& interfacenames) const = 0;
 
-    /// load a plugin and its interfaces
+    /// \brief Load a plugin and its interfaces.
+    ///
+    /// If the plugin is already loaded, will reload it.
     /// \param name the filename of the plugin to load
     virtual bool LoadPlugin(const std::string& name) = 0;
+
     /// \brief Reloads all currently loaded plugins.
     ///
     /// The interfaces currently created remain will continue using the old plugins, so this function is safe in that plugins currently loaded remain loaded until the last interface that uses them is released.
     virtual void ReloadPlugins() = 0;
     //@}
 
-    /// Returns a clone of the current environment. Clones do not share any memory or resource between each other
+    /// \brief Create and return a clone of the current environment.
+    ///
+    /// Clones do not share any memory or resource between each other.
     /// or their parent making them ideal for performing separte planning experiments while keeping
     /// the parent environment unchanged.
     /// By default a clone only copies the collision checkers and physics engine.
     /// When bodies are cloned, the unique ids are preserved across environments (each body can be referenced with its id in both environments). The attached and grabbed bodies of each body/robot are also copied to the new environment.
     /// \param options A set of CloningOptions describing what is actually cloned.
+    /// \return An environment of the same type as this environment containing the copied information.
     virtual EnvironmentBasePtr CloneSelf(int options) = 0;
 
     /// Each function takes an optional pointer to a CollisionReport structure and returns true if collision occurs.
@@ -102,34 +111,37 @@ public:
     virtual bool SetCollisionChecker(CollisionCheckerBasePtr pchecker)=0;
     virtual CollisionCheckerBasePtr GetCollisionChecker() const =0;
 
+    /// \see CollisionCheckerBase::CheckCollision(KinBodyConstPtr,CollisionReportPtr)
     virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report = CollisionReportPtr())=0;
+
+    /// \see CollisionCheckerBase::CheckCollision(KinBodyConstPtr,KinBodyConstPtr,CollisionReportPtr)
     virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report = CollisionReportPtr())=0;
+
+    /// \see CollisionCheckerBase::CheckCollision(KinBody::LinkConstPtr,CollisionReportPtr)
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr())=0;
+
+    /// \see CollisionCheckerBase::CheckCollision(KinBody::LinkConstPtr,KinBody::LinkConstPtr,CollisionReportPtr)
     virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report = CollisionReportPtr())=0;
+
+    /// \see CollisionCheckerBase::CheckCollision(KinBody::LinkConstPtr,KinBodyConstPtr,CollisionReportPtr)
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())=0;
     
+    /// \see CollisionCheckerBase::CheckCollision(KinBody::LinkConstPtr,const std::vector<KinBodyConstPtr>&,const std::vector<KinBody::LinkConstPtr>&,CollisionReportPtr)
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report = CollisionReportPtr())=0;
+
+    /// \see CollisionCheckerBase::CheckCollision(KinBodyConstPtr,const std::vector<KinBodyConstPtr>&,const std::vector<KinBody::LinkConstPtr>&,CollisionReportPtr)
     virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report = CollisionReportPtr())=0;
 
-    /// Check collision with a link and a ray with a specified length.
-    /// \param ray holds the origin and direction. The length of the ray is the length of the direction.
-    /// \param plink the link to collide with
-    /// \param[out] report [optional] collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
+    /// \see CollisionCheckerBase::CheckCollision(const RAY&,KinBody::LinkConstPtr,CollisionReportPtr)
     virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
-    /// Check collision with a link and a ray with a specified length.
-    /// \param ray holds the origin and direction. The length of the ray is the length of the direction.
-    /// \param pbody the link to collide with
-    /// \param[out] report [optional] collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
+    /// \see CollisionCheckerBase::CheckCollision(const RAY&,KinBodyConstPtr,CollisionReportPtr)
     virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
-    /// Check collision with a body and a ray with a specified length.
-    /// \param ray holds the origin and direction. The length of the ray is the length of the direction.
-    /// \param pbody the kinbody to look for collisions
-    /// \param[out] report [optional] collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
+    /// \see CollisionCheckerBase::CheckCollision(const RAY&,CollisionReportPtr)
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
-    /// check self collision with the body
+    /// \see CollisionCheckerBase::CheckSelfCollision
     virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
     typedef boost::function<CollisionAction(CollisionReportPtr,bool)> CollisionCallbackFn;

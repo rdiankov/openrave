@@ -16,7 +16,7 @@
   env.AddKinBody(body)
   body.SetTransform(np.eye(4))
 
-.. image:: ../../images/tutorial0_Mug_readkinbody.png
+.. image:: ../../images/examples_tutorial0_mug_readkinbody.png
   :height: 200
 
 """
@@ -25,13 +25,13 @@ if not __build_doc__:
     from openravepy import *
 else:
     from openravepy import OpenRAVEModel
-import numpy as np
+from numpy import eye
 def run():
     env = Environment()
     env.SetViewer('qtcoin')
     body = env.ReadKinBodyXMLFile(filename='data/mug1.kinbody.xml')
     env.AddKinBody(body)
-    body.SetTransform(np.eye(4))
+    body.SetTransform(eye(4))
 
 if __name__ == "__main__":
     run()

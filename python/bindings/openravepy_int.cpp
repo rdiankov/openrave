@@ -284,9 +284,11 @@ public:
                 names.append(*itname);
             interfacenames.append(boost::python::make_tuple(it->first,names));
         }
+        version = OPENRAVE_VERSION_STRING_FORMAT(info.version);
     }
 
     boost::python::list interfacenames;
+    string version;
 };
 
 class PyGraphHandle
@@ -884,7 +886,8 @@ public:
     bool IsEnabled() const { return _pbody->IsEnabled(); }
 
     void SetTransform(object transform) { _pbody->SetTransform(ExtractTransform(transform)); }
-    void SetJointValues(object o)
+
+    void SetDOFValues(object o)
     {
         if( _pbody->GetDOF() == 0 )
             return;
@@ -894,7 +897,7 @@ public:
             throw openrave_exception("values do not equal to body degrees of freedom");
         _pbody->SetJointValues(values,true);
     }
-    void SetTransformWithJointValues(object otrans,object ojoints)
+    void SetTransformWithDOFValues(object otrans,object ojoints)
     {
         if( _pbody->GetDOF() == 0 ) {
             _pbody->SetTransform(ExtractTransform(otrans));
@@ -908,7 +911,7 @@ public:
         _pbody->SetJointValues(values,ExtractTransform(otrans),true);
     }
 
-    void SetJointValues(object o,object indices)
+    void SetDOFValues(object o, object indices)
     {
         if( _pbody->GetDOF() == 0 || len(indices) == 0 )
             return;
@@ -979,7 +982,7 @@ public:
     }
 
     bool IsRobot() const { return _pbody->IsRobot(); }
-    int GetNetworkId() const { return _pbody->GetNetworkId(); }
+    int GetEnvironmentId() const { return _pbody->GetEnvironmentId(); }
 
     int DoesAffect(int jointindex, int linkindex ) const { return _pbody->DoesAffect(jointindex,linkindex); }
 
@@ -1323,10 +1326,12 @@ public:
         boost::shared_ptr<PyLink> GetBase() { return !_pmanip->GetBase() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pmanip->GetBase(),_pyenv)); }
         boost::shared_ptr<PyLink> GetEndEffector() { return !_pmanip->GetEndEffector() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pmanip->GetEndEffector(),_pyenv)); }
         object GetGraspTransform() { return ReturnTransform(_pmanip->GetGraspTransform()); }
-        object GetGripperJoints() { return toPyArray(_pmanip->GetGripperJoints()); }
-        object GetArmJoints() { return toPyArray(_pmanip->GetArmJoints()); }
+        object GetGripperJoints() { RAVELOG_DEBUG("GetGripperJoints is deprecated, use GetGripperIndices\n"); return toPyArray(_pmanip->GetGripperIndices()); }
+        object GetGripperIndices() { return toPyArray(_pmanip->GetGripperIndices()); }
+        object GetArmJoints() { RAVELOG_DEBUG("GetArmJoints is deprecated, use GetArmIndices\n"); return toPyArray(_pmanip->GetArmIndices()); }
+        object GetArmIndices() { return toPyArray(_pmanip->GetArmIndices()); }
         object GetClosingDirection() { return toPyArray(_pmanip->GetClosingDirection()); }
-        object GetPalmDirection() { return toPyVector3(_pmanip->GetPalmDirection()); }
+        object GetPalmDirection() { RAVELOG_INFO("GetPalmDirection deprecated to GetDirection\n"); return toPyVector3(_pmanip->GetDirection()); }
         object GetDirection() { return toPyVector3(_pmanip->GetDirection()); }
         bool IsGrabbing(PyKinBodyPtr pbody) { return _pmanip->IsGrabbing(pbody->GetBody()); }
 
@@ -1456,6 +1461,7 @@ public:
         }
 
         string GetStructureHash() const { return _pmanip->GetStructureHash(); }
+        string GetKinematicsStructureHash() const { return _pmanip->GetKinematicsStructureHash(); }
         string __repr__() { return boost::str(boost::format("<env.GetRobot('%s').GetManipulator('%s')>")%_pmanip->GetRobot()->GetName()%_pmanip->GetName()); }
         string __str__() { return boost::str(boost::format("<manipulator:%s, parent=%s>")%_pmanip->GetName()%_pmanip->GetRobot()->GetName()); }
         bool __eq__(boost::shared_ptr<PyManipulator> p) { return !!p && _pmanip==p->_pmanip; }
@@ -2240,11 +2246,18 @@ public:
         return plugins;
     }
 
-    boost::shared_ptr<PyPluginInfo> GetLoadedInterfaces()
+    boost::python::list GetLoadedInterfaces()
     {
-        PLUGININFO info;
-        _penv->GetLoadedInterfaces(info);
-        return boost::shared_ptr<PyPluginInfo>(new PyPluginInfo(info));
+        std::map<InterfaceType, std::vector<std::string> > interfacenames;
+        _penv->GetLoadedInterfaces(interfacenames);
+        boost::python::list ointerfacenames;
+        FOREACHC(it, interfacenames) {
+            boost::python::list names;
+            FOREACHC(itname,it->second)
+                names.append(*itname);
+            ointerfacenames.append(boost::python::make_tuple(it->first,names));
+        }
+        return ointerfacenames;
     }
 
     bool LoadPlugin(const string& name) { return _penv->LoadPlugin(name.c_str()); }
@@ -3474,13 +3487,14 @@ BOOST_PYTHON_MODULE(openravepy_int)
 
     class_<PyPluginInfo, boost::shared_ptr<PyPluginInfo> >("PluginInfo",no_init)
         .def_readonly("interfacenames",&PyPluginInfo::interfacenames)
+        .def_readonly("version",&PyPluginInfo::version)
         ;
 
     {    
         bool (PyKinBody::*pkinbodyself)() = &PyKinBody::CheckSelfCollision;
         bool (PyKinBody::*pkinbodyselfr)(PyCollisionReportPtr) = &PyKinBody::CheckSelfCollision;
-        void (PyKinBody::*psetjointvalues1)(object) = &PyKinBody::SetJointValues;
-        void (PyKinBody::*psetjointvalues2)(object,object) = &PyKinBody::SetJointValues;
+        void (PyKinBody::*psetdofvalues1)(object) = &PyKinBody::SetDOFValues;
+        void (PyKinBody::*psetdofvalues2)(object,object) = &PyKinBody::SetDOFValues;
         PyVoidHandle (PyKinBody::*statesaver1)() = &PyKinBody::CreateKinBodyStateSaver;
         PyVoidHandle (PyKinBody::*statesaver2)(int) = &PyKinBody::CreateKinBodyStateSaver;
         object (PyKinBody::*getdofvalues1)() const = &PyKinBody::GetDOFValues;
@@ -3519,10 +3533,13 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("Enable",&PyKinBody::Enable,args("enable"))
             .def("IsEnabled",&PyKinBody::IsEnabled)
             .def("SetTransform",&PyKinBody::SetTransform,args("transform"))
-            .def("SetJointValues",psetjointvalues1,args("values"))
-            .def("SetJointValues",psetjointvalues2,args("values","jointindices"))
+            .def("SetJointValues",psetdofvalues1,args("values"))
+            .def("SetJointValues",psetdofvalues2,args("values","jointindices"))
+            .def("SetDOFValues",psetdofvalues1,args("values"))
+            .def("SetDOFValues",psetdofvalues2,args("values","jointindices"))
             .def("SetJointTorques",&PyKinBody::SetJointTorques,args("torques","add"))
-            .def("SetTransformWithJointValues",&PyKinBody::SetTransformWithJointValues,args("transform","values"))
+            .def("SetTransformWithJointValues",&PyKinBody::SetTransformWithDOFValues,args("transform","values"))
+            .def("SetTransformWithDOFValues",&PyKinBody::SetTransformWithDOFValues,args("transform","values"))
             .def("CalculateJacobian",&PyKinBody::CalculateJacobian,args("linkindex","offset"))
             .def("CalculateRotationJacobian",&PyKinBody::CalculateRotationJacobian,args("linkindex","quat"))
             .def("CalculateAngularVelocityJacobian",&PyKinBody::CalculateAngularVelocityJacobian,args("linkindex"))
@@ -3531,7 +3548,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("IsAttached",&PyKinBody::IsAttached,args("body"))
             .def("GetAttached",&PyKinBody::GetAttached)
             .def("IsRobot",&PyKinBody::IsRobot)
-            .def("GetNetworkId",&PyKinBody::GetNetworkId)
+            .def("GetEnvironmentId",&PyKinBody::GetEnvironmentId)
             .def("DoesAffect",&PyKinBody::DoesAffect,args("jointindex","linkindex"))
             .def("GetForwardKinematics",&PyKinBody::GetForwardKinematics)
             .def("SetGuiData",&PyKinBody::SetGuiData,args("data"))
@@ -3856,7 +3873,9 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetEndEffector",&PyRobotBase::PyManipulator::GetEndEffector)
             .def("GetGraspTransform",&PyRobotBase::PyManipulator::GetGraspTransform)
             .def("GetGripperJoints",&PyRobotBase::PyManipulator::GetGripperJoints)
+            .def("GetGripperIndices",&PyRobotBase::PyManipulator::GetGripperIndices)
             .def("GetArmJoints",&PyRobotBase::PyManipulator::GetArmJoints)
+            .def("GetArmIndices",&PyRobotBase::PyManipulator::GetArmIndices)
             .def("GetClosingDirection",&PyRobotBase::PyManipulator::GetClosingDirection)
             .def("GetPalmDirection",&PyRobotBase::PyManipulator::GetPalmDirection)
             .def("GetDirection",&PyRobotBase::PyManipulator::GetDirection)
@@ -3870,6 +3889,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("CheckIndependentCollision",pCheckIndependentCollision1)
             .def("CheckIndependentCollision",pCheckIndependentCollision2,args("report"))
             .def("GetStructureHash",&PyRobotBase::PyManipulator::GetStructureHash)
+            .def("GetKinematicsStructureHash",&PyRobotBase::PyManipulator::GetKinematicsStructureHash)
             .def("__repr__",&PyRobotBase::PyManipulator::__repr__)
             .def("__str__",&PyRobotBase::PyManipulator::__str__)
             .def("__eq__",&PyRobotBase::PyManipulator::__eq__)
@@ -4176,7 +4196,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .add_property("ReturnTransformQuaternions",GetReturnTransformQuaternions,SetReturnTransformQuaternions);
     }
 
-    scope().attr("__version__") = boost::str(boost::format("%x.%x.%x")%OPENRAVE_VERSION_MAJOR%OPENRAVE_VERSION_MINOR%OPENRAVE_VERSION_PATCH);
+    scope().attr("__version__") = OPENRAVE_VERSION_STRING;
     scope().attr("__author__") = "Rosen Diankov";
     scope().attr("__copyright__") = "2009-2010 Rosen Diankov (rosen.diankov@gmail.com)";
     scope().attr("__license__") = "Lesser GPL";

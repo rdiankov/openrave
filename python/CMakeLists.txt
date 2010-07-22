@@ -1,23 +1,3 @@
-# add ikfast program
-set(IKFAST_EXECUTABLE ${CMAKE_CURRENT_SOURCE_DIR}/ikfast.py)
-if( UNIX OR NOT PYTHON_EXECUTABLE )
-  execute_process(
-    COMMAND ${IKFAST_EXECUTABLE} --help
-    RESULT_VARIABLE _ikfast_success
-    ERROR_VARIABLE _ikfast_error
-    OUTPUT_VARIABLE _ikfast_output)
-else()
-  set(_ikfast_success 0)
-endif()
-
-if( _ikfast_success MATCHES 0 OR _ikfast_success MATCHES 1 )
-  set(IKFAST_FOUND 1)
-  message(STATUS "ikfast found (${IKFAST_EXECUTABLE})")
-else()
-  set(IKFAST_FOUND 0)
-  message(STATUS "failed to execute ${IKFAST_EXECUTABLE}, return: ${_ikfast_success}")
-endif()
-
 add_subdirectory(bindings)
 
 # install all python files

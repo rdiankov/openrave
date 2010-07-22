@@ -670,7 +670,7 @@ class GrasperProblem : public ProblemInstance
         vector<dReal> closingdir(_robot->GetDOF(),0);
         FOREACH(itmanip,_robot->GetManipulators()) {
             vector<dReal>::const_iterator itclosing = (*itmanip)->GetClosingDirection().begin();
-            FOREACHC(itgripper,(*itmanip)->GetGripperJoints()) {
+            FOREACHC(itgripper,(*itmanip)->GetGripperIndices()) {
                 closingdir.at(*itgripper) = *itclosing++;
             }
         }

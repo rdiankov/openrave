@@ -63,7 +63,7 @@ class BaseManipulation:
             raise planning_error('MoveHandStraight')
         return res
     def MoveManipulator(self,goal,maxiter=None,execute=None,outputtraj=None):
-        assert(len(goal) == len(self.robot.GetActiveManipulator().GetArmJoints()) and len(goal) > 0)
+        assert(len(goal) == len(self.robot.GetActiveManipulator().GetArmIndices()) and len(goal) > 0)
         cmd = 'MoveManipulator goal ' + ' '.join(str(f) for f in goal) + ' '
         if execute is not None:
             cmd += 'execute %d '%execute
@@ -141,7 +141,7 @@ class BaseManipulation:
         return res
     def CloseFingers(self,offset=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None):
         cmd = 'CloseFingers '
-        dof=len(self.robot.GetActiveManipulator().GetGripperJoints())
+        dof=len(self.robot.GetActiveManipulator().GetGripperIndices())
         if offset is not None:
             assert(len(offset) == dof)
             cmd += 'offset ' + ' '.join(str(f) for f in offset) + ' '
@@ -170,7 +170,7 @@ class BaseManipulation:
         return final,traj
     def ReleaseFingers(self,target=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None):
         cmd = 'ReleaseFingers '
-        dof=len(self.robot.GetActiveManipulator().GetGripperJoints())
+        dof=len(self.robot.GetActiveManipulator().GetGripperIndices())
         if target is not None:
             cmd += 'target %s '%target.GetName()
         if movingdir is not None:

@@ -106,7 +106,7 @@ class TaskManipulation:
         return iters,newconfigs
     def CloseFingers(self,offset=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None):
         cmd = 'CloseFingers '
-        dof=len(self.robot.GetActiveManipulator().GetGripperJoints())
+        dof=len(self.robot.GetActiveManipulator().GetGripperIndices())
         if offset is not None:
             assert(len(offset) == dof)
             cmd += 'offset ' + ' '.join(str(f) for f in offset) + ' '
@@ -135,7 +135,7 @@ class TaskManipulation:
         return final,traj
     def ReleaseFingers(self,target=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None):
         cmd = 'ReleaseFingers '
-        dof=len(self.robot.GetActiveManipulator().GetGripperJoints())
+        dof=len(self.robot.GetActiveManipulator().GetGripperIndices())
         if target is not None:
             cmd += 'target %s '%target.GetName()
         if movingdir is not None:

@@ -301,10 +301,10 @@ void MainOpenRAVEThread()
         }
 
         if( !s_viewer ) { // take any viewer
-            PLUGININFO info;
-            penv->GetLoadedInterfaces(info);
+            std::map<InterfaceType, std::vector<std::string> > interfacenames;
+            penv->GetLoadedInterfaces(interfacenames);
             std::vector<std::string>::const_iterator itname;
-            FORIT(itname, info.interfacenames[PT_Viewer]) {
+            FORIT(itname, interfacenames[PT_Viewer]) {
                 s_viewer = penv->CreateViewer(*itname);
                 if( !!s_viewer )
                     break;

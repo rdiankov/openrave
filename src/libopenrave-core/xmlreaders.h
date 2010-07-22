@@ -2067,11 +2067,11 @@ namespace OpenRAVEXMLParser
             if( xmlname == "manipulator" ) {
                 if( _pmanip->_vClosingDirection.size() == 0 ) {
                     RAVELOG_DEBUG(str(boost::format("setting manipulator %s closing direction to zeros\n")%_pmanip->GetName()));
-                    _pmanip->_vClosingDirection.resize(_pmanip->_vgripperjoints.size(),0);
+                    _pmanip->_vClosingDirection.resize(_pmanip->_vgripperdofindices.size(),0);
                 }
-                else if( _pmanip->_vgripperjoints.size() != _pmanip->_vClosingDirection.size() ) {
-                    RAVELOG_WARN(str(boost::format("Manipulator %s has closing direction grasps wrong %d!=%d\n")%_pmanip->GetName()%_pmanip->_vgripperjoints.size()%_pmanip->_vClosingDirection.size()));
-                    _pmanip->_vClosingDirection.resize(_pmanip->_vgripperjoints.size(),0);
+                else if( _pmanip->_vgripperdofindices.size() != _pmanip->_vClosingDirection.size() ) {
+                    RAVELOG_WARN(str(boost::format("Manipulator %s has closing direction grasps wrong %d!=%d\n")%_pmanip->GetName()%_pmanip->_vgripperdofindices.size()%_pmanip->_vClosingDirection.size()));
+                    _pmanip->_vClosingDirection.resize(_pmanip->_vgripperdofindices.size(),0);
                 }
                 return true;
             }
@@ -2095,13 +2095,13 @@ namespace OpenRAVEXMLParser
             }
             else if( xmlname == "joints" || xmlname == "gripperjoints" ) {
                 vector<string> jointnames((istream_iterator<string>(_ss)), istream_iterator<string>());
-                _pmanip->_vgripperjoints.resize(0);
+                _pmanip->_vgripperdofindices.resize(0);
                 FOREACH(itname,jointnames) {
                     int index = _probot->GetJointIndex(*itname);
                     if( index < 0 )
                         RAVELOG_WARNA(str(boost::format("failed to find gripper joint name %s\n")%*itname));
                     else
-                        _pmanip->_vgripperjoints.push_back(index);
+                        _pmanip->_vgripperdofindices.push_back(index);
                 }
             }
             else if( xmlname == "armjoints" ) {

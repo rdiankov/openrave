@@ -308,21 +308,29 @@ class Environment : public EnvironmentBase
         }
     }
 
-    virtual void GetLoadedInterfaces(PLUGININFO& info)
+    virtual void GetLoadedInterfaces(std::map<InterfaceType, std::vector<std::string> >& interfacenames) const
     {
-        info.interfacenames.clear();
+        interfacenames.clear();
         list<RaveDatabase::PluginPtr> listdbplugins;
         _pdatabase->GetPlugins(listdbplugins);
         FOREACHC(itplugin, listdbplugins) {
-            if( !(*itplugin)->GetInfo(info) ) {
+            PLUGININFO localinfo;
+            if( !(*itplugin)->GetInfo(localinfo) ) {
                 RAVELOG_WARN(str(boost::format("failed to get plugin info: %s\n")%(*itplugin)->GetName()));
+            }
+            else {
+                // for now just return the cached info (so quering is faster)
+                FOREACH(it,localinfo.interfacenames) {
+                    std::vector<std::string>& vnames = interfacenames[it->first];
+                    vnames.insert(vnames.end(),it->second.begin(),it->second.end());
+                }
             }
         }
     }
 
     virtual bool LoadPlugin(const std::string& pname) { return _pdatabase->AddPlugin(pname); }
     virtual void ReloadPlugins() { _pdatabase->ReloadPlugins(); }
-    virtual bool HasInterface(InterfaceType type, const string& interfacename) { return _pdatabase->HasInterface(type,interfacename); }
+    virtual bool HasInterface(InterfaceType type, const string& interfacename) const { return _pdatabase->HasInterface(type,interfacename); }
 
     virtual InterfaceBasePtr CreateInterface(InterfaceType type,const std::string& pinterfacename)
     {

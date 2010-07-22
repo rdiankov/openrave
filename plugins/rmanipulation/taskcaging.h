@@ -717,7 +717,10 @@ public:
 
 public:
  TaskCagingProblem(EnvironmentBasePtr penv) : ProblemInstance(penv) {
-        __description = ":Interface Author: Rosen Diankov\nImplements various algorithms to open and close \
+        __description = ":Interface Author: Rosen Diankov\n\n\
+.. image:: ../../../images/taskcaging_concept.jpg\n\
+  :width: 500\n\
+Implements various algorithms to open and close \
 doors by having the hand cage the handles instead of tightly grip. \
 This greatly relaxes the constraints on the robot (see the door manipluation example). The relevant paper is:\n\n\
 \
@@ -1136,7 +1139,7 @@ private:
         RobotBase::RobotStateSaver saver(_robot);
         KinBody::KinBodyStateSaver targetsaver(taskdata->ptarget);
 
-        _robot->SetActiveDOFs(pmanip->GetArmJoints());
+        _robot->SetActiveDOFs(pmanip->GetArmIndices());
     
         boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(_robot->GetActiveDOF()));
     
@@ -1528,7 +1531,7 @@ private:
         RobotBase::RobotStateSaver saver(_robot);
         KinBody::KinBodyStateSaver targetsaver(taskdata->ptarget);
 
-        _robot->SetActiveDOFs(pmanip->GetArmJoints());
+        _robot->SetActiveDOFs(pmanip->GetArmIndices());
         taskdata->SetRobot(_robot);
 
         uint32_t basetime = timeGetTime();

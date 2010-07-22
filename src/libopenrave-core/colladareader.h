@@ -509,7 +509,7 @@ public:
 //          //  Initialize indices that then manipulator controls
 //          for (size_t i   =   0;  i < probot->GetJointIndices().size();   i++)
 //          {
-//            manipulator->_vgripperjoints.push_back(probot->GetJointIndices()[i]);
+//            manipulator->_vgripperdofindices.push_back(probot->GetJointIndices()[i]);
 //          }
 //
 //          RAVELOG_VERBOSEA("Indices initialized...\n");
@@ -1167,7 +1167,7 @@ public:
           //  Initialize indices that then manipulator controls
           for (size_t i   =   0;  i < probot->GetJointIndices().size();   i++)
           {
-            manipulator->_vgripperjoints.push_back(probot->GetJointIndices()[i]);
+            manipulator->_vgripperdofindices.push_back(probot->GetJointIndices()[i]);
           }
 
           RAVELOG_VERBOSEA("Indices initialized...\n");

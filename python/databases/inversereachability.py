@@ -96,7 +96,7 @@ class InverseReachabilityModel(OpenRAVEModel):
         links = manip.GetChildLinks()
         robot=manip.GetRobot()
         joints = robot.GetJoints()
-        for jindex in r_[manip.GetArmJoints(),InverseReachabilityModel.getdofindices(manip)]:
+        for jindex in r_[manip.GetArmIndices(),InverseReachabilityModel.getdofindices(manip)]:
             joint = joints[jindex]
             if joint.GetFirstAttached() and not joint.GetFirstAttached() in links:
                 links.append(joint.GetFirstAttached())
@@ -565,7 +565,7 @@ class InverseReachabilityModel(OpenRAVEModel):
                 self.robot.SetJointValues(*self.necessaryjointstate())
                 solution = self.manip.FindIKSolution(Tgrasp,False)
                 if solution is not None:
-                    self.robot.SetJointValues(solution,self.manip.GetArmJoints())
+                    self.robot.SetJointValues(solution,self.manip.GetArmIndices())
                     robotlocs.append((self.robot.GetTransform(),self.robot.GetDOFValues()))
         self.env.RemoveKinBody(self.robot)
         newrobots = []

@@ -1408,9 +1408,9 @@ RaveVector<T> quatRotateDirection(const RaveVector<T>& vsource, const RaveVector
 /// \brief Returns a camera matrix that looks along a ray with a desired up vector.
 ///
 /// \ingroup affine_math
-/// \param lookat the point space to look at, the camera will rotation and zoom around this point
-/// \param campos the position of the camera in space
-/// \param camup vector from the camera
+/// \param[in] vlookat the point space to look at, the camera will rotation and zoom around this point
+/// \param[in] vcampos the position of the camera in space
+/// \param[in] vcamup vector from the camera
 template<typename T>
 RaveTransformMatrix<T> transformLookat(const RaveVector<T>& vlookat, const RaveVector<T>& vcamerapos, const RaveVector<T>& vcameraup)
 {

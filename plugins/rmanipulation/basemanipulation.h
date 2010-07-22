@@ -301,7 +301,7 @@ protected:
 
         RobotBase::RobotStateSaver saver(robot);
 
-        robot->SetActiveDOFs(pmanip->GetArmJoints());
+        robot->SetActiveDOFs(pmanip->GetArmIndices());
         CM::JitterActiveDOF(robot,100); // try to jitter out, don't worry if it fails
 
         boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(robot->GetActiveDOF()));
@@ -463,7 +463,7 @@ protected:
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "armvals" || cmd == "goal" ) {
-                goals.resize(pmanip->GetArmJoints().size());
+                goals.resize(pmanip->GetArmIndices().size());
                 FOREACH(it, goals)
                     sinput >> *it;
             }
@@ -486,12 +486,12 @@ protected:
             }
         }
     
-        if( goals.size() != pmanip->GetArmJoints().size() )
+        if( goals.size() != pmanip->GetArmIndices().size() )
             return false;
 
         RobotBase::RobotStateSaver saver(robot);
 
-        robot->SetActiveDOFs(pmanip->GetArmJoints());
+        robot->SetActiveDOFs(pmanip->GetArmIndices());
         params->SetRobotActiveJoints(robot);
         CM::JitterActiveDOF(robot);
     
@@ -763,7 +763,7 @@ protected:
             FOREACH(ittrans, listgoals) {
                 pmanip->FindIKSolutions(*ittrans, solutions, true);
             
-                armgoals.reserve(armgoals.size()+solutions.size()*pmanip->GetArmJoints().size());
+                armgoals.reserve(armgoals.size()+solutions.size()*pmanip->GetArmIndices().size());
                 FOREACH(itsol, solutions)
                     armgoals.insert(armgoals.end(), itsol->begin(), itsol->end());
             }
@@ -794,20 +794,20 @@ protected:
             return false;
         }
 
-        RAVELOG_INFO(str(boost::format("MoveToHandPosition found %d solutions\n")%(armgoals.size()/pmanip->GetArmJoints().size())));
+        RAVELOG_INFO(str(boost::format("MoveToHandPosition found %d solutions\n")%(armgoals.size()/pmanip->GetArmIndices().size())));
     
-        robot->SetActiveDOFs(pmanip->GetArmJoints(), affinedofs);
+        robot->SetActiveDOFs(pmanip->GetArmIndices(), affinedofs);
         params->SetRobotActiveJoints(robot);
         robot->GetActiveDOFValues(params->vinitialconfig);        
-        robot->SetActiveDOFs(pmanip->GetArmJoints(), 0);
+        robot->SetActiveDOFs(pmanip->GetArmIndices(), 0);
 
         vector<dReal> vgoals;
         params->vgoalconfig.reserve(armgoals.size());
-        for(int i = 0; i < (int)armgoals.size(); i += pmanip->GetArmJoints().size()) {
-            vector<dReal> v(armgoals.begin()+i,armgoals.begin()+i+pmanip->GetArmJoints().size());
+        for(int i = 0; i < (int)armgoals.size(); i += pmanip->GetArmIndices().size()) {
+            vector<dReal> v(armgoals.begin()+i,armgoals.begin()+i+pmanip->GetArmIndices().size());
             robot->SetActiveDOFValues(v);
 
-            robot->SetActiveDOFs(pmanip->GetArmJoints(), affinedofs);
+            robot->SetActiveDOFs(pmanip->GetArmIndices(), affinedofs);
 
             if( CM::JitterActiveDOF(robot) ) {
                 robot->GetActiveDOFValues(vgoals);
@@ -987,7 +987,7 @@ protected:
             else if( cmd == "outputfinal" )
                 bOutputFinal = true;
             else if( cmd == "offset" ) {
-                voffset.resize(pmanip->GetGripperJoints().size());
+                voffset.resize(pmanip->GetGripperIndices().size());
                 FOREACH(it, voffset)
                     sinput >> *it;
             }
@@ -1007,7 +1007,7 @@ protected:
         }
 
         RobotBase::RobotStateSaver saver(robot);
-        robot->SetActiveDOFs(pmanip->GetGripperJoints());
+        robot->SetActiveDOFs(pmanip->GetGripperIndices());
 
         // have to add the first point
         Trajectory::TPOINT ptfirst;
@@ -1108,7 +1108,7 @@ protected:
         }
 
         RobotBase::RobotStateSaver saver(robot);
-        robot->SetActiveDOFs(pmanip->GetGripperJoints());
+        robot->SetActiveDOFs(pmanip->GetGripperIndices());
         boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(robot->GetActiveDOF()));
         // have to add the first point
         Trajectory::TPOINT ptfirst;
@@ -1187,10 +1187,10 @@ protected:
         // initialize the moving direction as the opposite of the closing direction defined in the manipulators
 		vector<dReal> vclosingsign_full(robot->GetDOF(), 0);
         FOREACHC(itmanip, robot->GetManipulators()) {
-            BOOST_ASSERT((*itmanip)->GetClosingDirection().size()==(*itmanip)->GetGripperJoints().size());
+            BOOST_ASSERT((*itmanip)->GetClosingDirection().size()==(*itmanip)->GetGripperIndices().size());
             for(size_t i = 0; i < (*itmanip)->GetClosingDirection().size(); ++i) {
                 if( (*itmanip)->GetClosingDirection()[i] != 0 )
-                    vclosingsign_full[(*itmanip)->GetGripperJoints()[i]] = (*itmanip)->GetClosingDirection()[i];
+                    vclosingsign_full[(*itmanip)->GetGripperIndices()[i]] = (*itmanip)->GetClosingDirection()[i];
             }
         }
 

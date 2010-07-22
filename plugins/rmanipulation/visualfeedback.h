@@ -230,10 +230,10 @@ public:
 
             // convert the solution into active dofs
             _vf->_robot->GetActiveDOFValues(pNewSample);
-            FOREACHC(itarm,_vf->_pmanip->GetArmJoints()) {
+            FOREACHC(itarm,_vf->_pmanip->GetArmIndices()) {
                 vector<int>::const_iterator itactive = find(_vf->_robot->GetActiveJointIndices().begin(),_vf->_robot->GetActiveJointIndices().end(),*itarm);
                 if( itactive != _vf->_robot->GetActiveJointIndices().end() )
-                    pNewSample.at((int)(itactive-_vf->_robot->GetActiveJointIndices().begin())) = _vsolution.at((int)(itarm-_vf->_pmanip->GetArmJoints().begin()));
+                    pNewSample.at((int)(itactive-_vf->_robot->GetActiveJointIndices().begin())) = _vsolution.at((int)(itarm-_vf->_pmanip->GetArmIndices().begin()));
             }
             _vf->_robot->SetActiveDOFValues(pNewSample);
             
@@ -403,8 +403,11 @@ public:
 
     VisualFeedbackProblem(EnvironmentBasePtr penv) : ProblemInstance(penv)
     {
-        __description = ":Interface Author: Rosen Diankov\nAdds grasp planning taking into account camera visibility constraints.\n\
+        __description = ":Interface Author: Rosen Diankov\n\n\
+.. image:: ../../../images/visualfeedback_concept.jpg\n\
+  :width: 500\n\
 \n\
+Adds grasp planning taking into account camera visibility constraints. The relevant paper is:\n\n\
 - Rosen Diankov, Takeo Kanade, James Kuffner. Integrating Grasp Planning and Visual Feedback for Reliable Manipulation, IEEE-RAS Intl. Conf. on Humanoid Robots, December 2009. ";
         _nManipIndex = -1;
         _fMaxVelMult=1;
@@ -418,7 +421,7 @@ public:
 :type sphere: Sets the transforms along a sphere density and the distances\n\
 :type conedirangle: Prunes the currently set transforms along a cone centered at the local target center and directed towards conedirangle with a half-angle of ``|conedirangle|``. Can specify multiple cones for an OR effect.");
         RegisterCommand("SetCameraTransforms",boost::bind(&VisualFeedbackProblem::SetCameraTransforms,this,_1,_2),
-                        "Sets new camera transformations. Can optionally choose a minimum distance from all planes of the camera camera convex hull (includes gripper mask)");
+                        "Sets new camera transformations. Can optionally choose a minimum distance from all planes of the camera convex hull (includes gripper mask)");
         RegisterCommand("ComputeVisibility",boost::bind(&VisualFeedbackProblem::ComputeVisibility,this,_1,_2),
                         "Computes the visibility of the current robot configuration");
         RegisterCommand("ComputeVisibleConfiguration",boost::bind(&VisualFeedbackProblem::ComputeVisibleConfiguration,this,_1,_2),
@@ -868,7 +871,7 @@ public:
     {
         RobotBase::RobotStateSaver saver(_robot);
         _robot->SetActiveManipulator(_nManipIndex); BOOST_ASSERT(_robot->GetActiveManipulator()==_pmanip);
-        _robot->SetActiveDOFs(_pmanip->GetArmJoints());
+        _robot->SetActiveDOFs(_pmanip->GetArmIndices());
 
         boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
         sout << pconstraintfn->IsVisible();
@@ -902,7 +905,7 @@ public:
         vector<dReal> vsample;
         RobotBase::RobotStateSaver saver(_robot);
         _robot->SetActiveManipulator(_nManipIndex); BOOST_ASSERT(_robot->GetActiveManipulator()==_pmanip);
-        _robot->SetActiveDOFs(_pmanip->GetArmJoints());
+        _robot->SetActiveDOFs(_pmanip->GetArmIndices());
         boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
         if( _pmanip->CheckEndEffectorCollision(t*_ttogripper) )
             return false;
@@ -940,7 +943,7 @@ public:
 
         RobotBase::RobotStateSaver saver(_robot);
         _robot->SetActiveManipulator(_nManipIndex); BOOST_ASSERT(_robot->GetActiveManipulator()==_pmanip);
-        _robot->SetActiveDOFs(_pmanip->GetArmJoints());
+        _robot->SetActiveDOFs(_pmanip->GetArmIndices());
 
         CollisionReportPtr preport(new CollisionReport());
         if( _pmanip->CheckIndependentCollision(preport) ) {
@@ -1018,7 +1021,7 @@ public:
 
         RobotBase::RobotStateSaver saver(_robot);
         _robot->SetActiveManipulator(_nManipIndex); BOOST_ASSERT(_robot->GetActiveManipulator()==_pmanip);
-        _robot->SetActiveDOFs(_pmanip->GetArmJoints(), affinedofs);
+        _robot->SetActiveDOFs(_pmanip->GetArmIndices(), affinedofs);
 
         boost::shared_ptr<GoalSampleFunction> pgoalsampler(new GoalSampleFunction(shared_problem(),_visibilitytransforms));
         pgoalsampler->_fSampleGoalProb = fSampleGoalProb;
@@ -1131,7 +1134,7 @@ public:
 
         RobotBase::RobotStateSaver saver(_robot);
         _robot->SetActiveManipulator(_nManipIndex); BOOST_ASSERT(_robot->GetActiveManipulator()==_pmanip);
-        _robot->SetActiveDOFs(_pmanip->GetArmJoints());
+        _robot->SetActiveDOFs(_pmanip->GetArmIndices());
         params->SetRobotActiveJoints(_robot);
 
         if( bUseVisibility ) {

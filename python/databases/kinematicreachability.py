@@ -131,7 +131,7 @@ class ReachabilityModel(OpenRAVEModel):
         self.save()
 
     def getOrderedArmJoints(self):
-        return [j for j in self.robot.GetDependencyOrderedJoints() if j.GetJointIndex() in self.manip.GetArmJoints()]
+        return [j for j in self.robot.GetDependencyOrderedJoints() if j.GetJointIndex() in self.manip.GetArmIndices()]
     @staticmethod
     def getManipulatorLinks(manip):
         links = manip.GetChildLinks()
@@ -143,7 +143,7 @@ class ReachabilityModel(OpenRAVEModel):
             tobasedofs = []
         robot = manip.GetRobot()
         joints = robot.GetJoints()
-        for jindex in r_[manip.GetArmJoints(),tobasedofs]:
+        for jindex in r_[manip.GetArmIndices(),tobasedofs]:
             joint = joints[jindex]
             if joint.GetFirstAttached() and not joint.GetFirstAttached() in links:
                 links.append(joint.GetFirstAttached())

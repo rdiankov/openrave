@@ -1580,16 +1580,16 @@ protected:
             else
                 os << (*itmanip)->GetEndEffector()->GetIndex() << " ";
             os << TransformMatrix((*itmanip)->GetGraspTransform()) << " ";
-            os << (*itmanip)->GetGripperJoints().size() << " ";
-            FOREACHC(it, (*itmanip)->GetGripperJoints())
+            os << (*itmanip)->GetGripperIndices().size() << " ";
+            FOREACHC(it, (*itmanip)->GetGripperIndices())
                 os << *it << " ";
-            os << (*itmanip)->GetArmJoints().size() << " ";
-            FOREACHC(it, (*itmanip)->GetArmJoints())
+            os << (*itmanip)->GetArmIndices().size() << " ";
+            FOREACHC(it, (*itmanip)->GetArmIndices())
                 os << *it << " ";
             os << (*itmanip)->GetClosingDirection().size() << " ";
             FOREACHC(it, (*itmanip)->GetClosingDirection())
                 os << *it << " ";
-            os << (*itmanip)->GetPalmDirection().x << " " << (*itmanip)->GetPalmDirection().y << " " << (*itmanip)->GetPalmDirection().z << " ";
+            os << (*itmanip)->GetDirection().x << " " << (*itmanip)->GetDirection().y << " " << (*itmanip)->GetDirection().z << " ";
             os << (*itmanip)->GetName().size() << " " << (*itmanip)->GetName() << " ";
             os << (*itmanip)->GetIKSolverName().size() << " " << (*itmanip)->GetIKSolverName() << " ";
         }

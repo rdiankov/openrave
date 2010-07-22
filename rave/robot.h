@@ -39,6 +39,9 @@ public:
     public:
         virtual ~Manipulator();
 
+        /// \brief Return the transformation of the end effector (manipulator frame).
+        /// 
+        /// All inverse kinematics and grasping queries are specifying this frame.
         virtual Transform GetEndEffectorTransform() const;
 
         virtual const std::string& GetName() const { return _name; }
@@ -58,17 +61,26 @@ public:
         /// \return transform with respect to end effector defining the grasp coordinate system
         virtual Transform GetGraspTransform() const { return _tGrasp; }
 
-        /// gripper indices of the joints that the  manipulator controls
-        virtual const std::vector<int>& GetGripperJoints() const { return _vgripperjoints; }
+        /// \brief Gripper indices of the joints that the  manipulator controls.
+        virtual const std::vector<int>& GetGripperIndices() const { return _vgripperdofindices; }
 
-        /// indices of the joints of the arm (used for IK, etc).
-        /// They are usually the joints from pBase to pEndEffector
-        virtual const std::vector<int>& GetArmJoints() const { return _varmjoints; }
+        /// \deprecated (10/07/22) see GetGripperIndices()
+        virtual const std::vector<int>& GetGripperJoints() const RAVE_DEPRECATED { return _vgripperdofindices; }
+        
+        /// \deprecated (10/07/22) see GetArmIndices()
+        virtual const std::vector<int>& GetArmJoints() const RAVE_DEPRECATED { return _varmdofindices; }
+
+        /// \brief Return the indices of the DOFs of the arm (used for IK, etc).
+        ///
+        /// Usually the DOF indices from pBase to pEndEffector
+        virtual const std::vector<int>& GetArmIndices() const { return _varmdofindices; }
 
         /// normal direction to move joints to 'close' the hand
         virtual const std::vector<dReal>& GetClosingDirection() const { return _vClosingDirection; }
 
-        virtual Vector GetPalmDirection() const { return _vdirection; }
+        /// \deprecated (10/07/01) see GetDirection()
+        virtual Vector GetPalmDirection() const RAVE_DEPRECATED { return _vdirection; }
+
         /// direction of palm/head/manipulator used for approaching inside the grasp coordinate system
         virtual Vector GetDirection() const { return _vdirection; }
 
@@ -84,14 +96,14 @@ public:
         /// will find the closest solution to the current robot's joint values
         /// Note that this does NOT use the active dof of the robot
         /// \param goal The transformation of the end-effector in the global coord system
-        /// \param solution Will be of size _varmjoints.size() and contain the best solution
+        /// \param solution Will be of size GetArmIndices().size() and contain the best solution
         /// \param bColCheck If true, will check collision with the environment. If false, will ignore environment. In every case, self-collisions with the robot are checked.
         virtual bool FindIKSolution(const IkParameterization& goal, std::vector<dReal>& solution, bool bColCheck) const;
         virtual bool FindIKSolution(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, std::vector<dReal>& solution, bool bColCheck) const;
 
         /// will find all the IK solutions for the given end effector transform
         /// \param goal The transformation of the end-effector in the global coord system
-        /// \param solutions An array of all solutions, each element in solutions is of size _varmjoints.size()
+        /// \param solutions An array of all solutions, each element in solutions is of size GetArmIndices().size()
         /// \param bColCheck If true, will check collision with the environment. If false, will ignore environment. In every case, self-collisions with the robot are checked.
         virtual bool FindIKSolutions(const IkParameterization& goal, std::vector<std::vector<dReal> >& solutions, bool bColCheck) const;
         virtual bool FindIKSolutions(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, bool bColCheck) const;
@@ -128,21 +140,21 @@ public:
         /// \brief Return hash of just the manipulator definition.
         virtual const std::string& GetStructureHash() const;
 
-        /// \brief Return hash of all information that can affect finding inverse kinematics solutions.
+        /// \brief Return hash of all kinematics information that involves solving the inverse kinematics equations.
         /// 
-        /// this includes joint axes, joint positions, and final grasp transform.
+        /// This includes joint axes, joint positions, and final grasp transform. Hash is used to cache the solvers.
         virtual const std::string& GetKinematicsStructureHash() const;
     private:
         RobotBaseWeakPtr _probot;
         LinkPtr _pBase, _pEndEffector;
         Transform _tGrasp;
-        std::vector<int> _vgripperjoints, _varmjoints;
+        std::vector<int> _vgripperdofindices, _varmdofindices;
         std::vector<dReal> _vClosingDirection;
         Vector _vdirection;
         IkSolverBasePtr _pIkSolver;
-        std::string _name; ///< name of the manipulator
-        std::string _strIkSolver;         ///< string name of the iksolver
-        std::string __hashstructure;
+        std::string _name;
+        std::string _strIkSolver;
+        std::string __hashstructure, __hashkinematicsstructure;
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
@@ -217,6 +229,8 @@ public:
         std::vector<LinkConstPtr> vCollidingLinks, vNonCollidingLinks; ///< robot links that already collide with the body
         Transform troot; // root transform (of first link) relative to end effector
     };
+
+    /// \deprecated (10/07/10) 
     typedef Grabbed GRABBED RAVE_DEPRECATED;
     
     /// \brief Helper class derived from KinBodyStateSaver to additionaly save robot information.
@@ -249,6 +263,7 @@ public:
     virtual std::vector<ManipulatorPtr>& GetManipulators() { return _vecManipulators; }
     virtual bool SetMotion(TrajectoryBaseConstPtr ptraj) { return false; }
 
+    /// deprecated (10/07/10) 
     virtual std::vector<AttachedSensorPtr>& GetSensors() RAVE_DEPRECATED { RAVELOG_WARN("RobotBase::GetSensors() is deprecated\n"); return _vecSensors; }
     virtual std::vector<AttachedSensorPtr>& GetAttachedSensors() { return _vecSensors; }
     virtual ControllerBasePtr GetController() const { return ControllerBasePtr(); }

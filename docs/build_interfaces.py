@@ -115,11 +115,12 @@ Plugins
             text += 'Offers: '
             for type,names in info.interfacenames:
                 for name in names:
-                    text += ':ref:`%s <%s-%s>` '%(name,str(type),name.lower())
+                    text += ':ref:`%s:%s <%s-%s>` '%(str(type),name,str(type),name.lower())
             text += '\n\n'
+            text += 'OpenRAVE Version: %s\n\n'%info.version
             if info.pluginname in coreplugins:
                 revision,url = coreplugins[info.pluginname]
-                text += 'Core Plugin r%s\n\nURL: %s'%(revision,url)
+                text += 'Core Plugin: Last updated r%s\n\nURL: %s'%(revision,url)
             else:
                 url=getsvnurl(os.path.join(info.dirname,'..'))
                 if url is not None:

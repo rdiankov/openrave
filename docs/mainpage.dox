@@ -46,6 +46,7 @@ low-level control, message protocols, and perception systems.
 - \subpage architecture_concepts
 - \subpage interface_concepts
 - \subpage writing_plugins
+- \ref arch_controller "Writing Controllers"
 
 \~english  \section main_system Components
 \~japanese \section main_system 構成要素
