@@ -407,7 +407,7 @@ class OpenRAVEModel(metaclass.AutoReloader):
         return 0
     def save(self,params):
         print 'saving model to %s'%self.getfilename()
-        mkdir_recursive(os.path.join(self.env.GetHomeDirectory(),'robot.'+self.robot.GetKinematicsGeometryHash()))
+        mkdir_recursive(os.path.split(self.getfilename())[0])
         pickle.dump((self.getversion(),params), open(self.getfilename(), 'w'))
     def generate(self):
         raise NotImplementedError()

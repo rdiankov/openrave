@@ -89,12 +89,13 @@ class InverseKinematicsModel(OpenRAVEModel):
     def save(self):
         pass # already saved as a lib
     
+    def getdir(self):
+        return os.path.join(self.env.GetHomeDirectory(),'kinematics.'+self.manip.GetKinematicsStructureHash())
     def getfilename(self):
         basename = 'ikfast' + str(self.getversion()) + '.' + str(self.iktype) + '.' + platform.machine()
-        output_dir = os.path.join(self.env.GetHomeDirectory(),'kinematics.'+self.manip.GetKinematicsStructureHash())
-        return ccompiler.new_compiler().shared_object_filename(basename=basename,output_dir=output_dir)
+        return ccompiler.new_compiler().shared_object_filename(basename=basename,output_dir=self.getdir())
     def getsourcefilename(self):
-        return os.path.join(self.env.GetHomeDirectory(),'kinematics.'+self.manip.GetKinematicsStructureHash(),'ikfast' + str(self.getversion()) + '.' + str(self.iktype))
+        return os.path.join(self.getdir(),'ikfast' + str(self.getversion()) + '.' + str(self.iktype))
     def autogenerate(self,options=None):
         freejoints = None
         iktype = None
@@ -220,7 +221,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         sourcefilename += '.' + outputlang
         if forceikbuild or not os.path.isfile(sourcefilename):
             print 'generating inverse kinematics file %s'%sourcefilename
-            mkdir_recursive(OpenRAVEModel.getfilename(self))
+            mkdir_recursive(self.getdir())
             solver = ikfast.IKFastSolver(kinbody=self.robot,accuracy=accuracy,precision=precision)
             code = solver.generateIkSolver(self.manip.GetBase().GetIndex(),self.manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejointinds,usedummyjoints=usedummyjoints,solvefn=solvefn,lang=outputlang)
             if len(code) == 0:
