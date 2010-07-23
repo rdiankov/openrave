@@ -945,7 +945,7 @@ public:
         /// start from the newer libraries
         boost::mutex::scoped_lock lock(GetLibraryMutex());
         for(list< boost::shared_ptr<IKLibrary> >::reverse_iterator itlib = GetLibraries().rbegin(); itlib != GetLibraries().rend(); ++itlib) {
-            FOREACH(itikname,(*itlib)->GetIKNames()) {
+            FOREACHC(itikname,(*itlib)->GetIKNames()) {
                 if( name == *itikname ) {
                     return (*itlib)->CreateSolver(penv,freeinc);
                 }
