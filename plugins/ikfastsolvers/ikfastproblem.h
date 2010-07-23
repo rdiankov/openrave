@@ -940,8 +940,10 @@ public:
         return s_LibraryMutex;
     }
 
-    static IkSolverBasePtr CreateIkSolver(const string& name, dReal freeinc, EnvironmentBasePtr penv)
+    static IkSolverBasePtr CreateIkSolver(const string& _name, dReal freeinc, EnvironmentBasePtr penv)
     {
+        string name; name.resize(_name.size());
+        std::transform(_name.begin(), _name.end(), name.begin(), ::tolower);
         /// start from the newer libraries
         boost::mutex::scoped_lock lock(GetLibraryMutex());
         for(list< boost::shared_ptr<IKLibrary> >::reverse_iterator itlib = GetLibraries().rbegin(); itlib != GetLibraries().rend(); ++itlib) {
