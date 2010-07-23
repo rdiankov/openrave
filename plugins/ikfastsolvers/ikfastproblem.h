@@ -21,6 +21,10 @@
 #include <dirent.h>
 #endif
 
+#ifdef HAVE_BOOST_FILESYSTEM
+#include <boost/filesystem/operations.hpp>
+#endif
+
 #define DECLFNPTR(name, paramlist) (*name) paramlist
 #define IK2PI  6.28318530717959
 #define IKPI  3.14159265358979
@@ -108,7 +112,7 @@ class IKFastProblem : public ProblemInstance
     typedef int DECLFNPTR(getIKTypeFn, ());
     static int getDefaultIKType() { return IkParameterization::Type_Transform6D; }
 
-    class IKLibrary
+    class IKLibrary : public boost::enable_shared_from_this<IKLibrary>
     {
     public:
         IKLibrary() : plib(NULL) {}
@@ -120,7 +124,7 @@ class IKFastProblem : public ProblemInstance
 
         bool Init(const string& ikname, const string& libraryname)
         {
-            _ikname = ikname;
+            _viknames.resize(1); _viknames[0] = ikname;
             _libraryname = libraryname;
             plib = SysLoadLibrary(_libraryname.c_str());
             if( plib == NULL ) {
@@ -176,8 +180,9 @@ class IKFastProblem : public ProblemInstance
             throw openrave_exception("bad real size");
         }
 
-        const string& GetIKName() { return _ikname; }
-        const string& GetLibraryName() { return _libraryname; }
+        const vector<string>& GetIKNames() const { return _viknames; }
+        void AddIKName(const string& ikname) { _viknames.push_back(ikname); }
+        const string& GetLibraryName() const { return _libraryname; }
         int GetIKType() { return getIKType(); }
 
         getNumFreeParametersFn getNumFreeParameters;
@@ -223,7 +228,8 @@ class IKFastProblem : public ProblemInstance
         }
     
         void* plib;
-        string _ikname, _libraryname;
+        string _libraryname;
+        vector<string> _viknames;
         vector<int> vfree;
     };
 
@@ -259,13 +265,11 @@ public:
 
     int main(const string& cmd)
     {
-        GetProblems().push_back(shared_problem());
         return 0;
     }
 
     virtual void Destroy()
     {
-        GetProblems().erase(find(GetProblems().begin(),GetProblems().end(),shared_problem()));
     }
 
     bool AddIkLibrary(ostream& sout, istream& sinput)
@@ -283,12 +287,41 @@ public:
             RAVELOG_DEBUGA("bad input\n");
             return false;
         }
-        boost::shared_ptr<IKLibrary> lib(new IKLibrary());
-        if( !lib->Init(ikname, libraryname) )
+
+        boost::shared_ptr<IKLibrary> lib = _AddIkLibrary(ikname,libraryname);
+        if( !lib ) {
             return false;
+        }
         sout << lib->GetIKType();
-        _vlibraries.push_back(lib);
         return true;
+    }
+
+    boost::shared_ptr<IKLibrary> _AddIkLibrary(const string& ikname, const string& _libraryname)
+    {
+#ifdef HAVE_BOOST_FILESYSTEM
+        string libraryname = boost::filesystem::system_complete(boost::filesystem::path(_libraryname, boost::filesystem::native)).string();
+#else
+        string libraryname=_libraryname;
+#endif
+
+        // before adding a new library, check for existing
+        boost::mutex::scoped_lock lock(GetLibraryMutex());
+        boost::shared_ptr<IKLibrary> lib;
+        FOREACH(it, GetLibraries()) {
+            if( libraryname == (*it)->GetLibraryName() ) {
+                lib = *it;
+                lib->AddIKName(ikname);
+                break;
+            }
+        }
+        if( !lib ) {
+            lib.reset(new IKLibrary());
+            if( !lib->Init(ikname, libraryname) ) {
+                return boost::shared_ptr<IKLibrary>();
+            }
+            GetLibraries().push_back(lib);
+        }
+        return lib;
     }
 
 #ifdef Boost_IOSTREAMS_FOUND
@@ -351,8 +384,9 @@ public:
         pclose(pipe);
 
         string ikfastname = str(boost::format("ikfast.%s.%s")%probot->GetRobotStructureHash()%probot->GetActiveManipulator()->GetName());
-        boost::shared_ptr<IKLibrary> lib(new IKLibrary());
-        if( !lib->Init(ikfastname, ikfilename) ) {
+
+        boost::shared_ptr<IKLibrary> lib = _AddIkLibrary(ikfastname,ikfilename);
+        if( !lib ) {
             return false;
         }
         if( lib->GetIKType() != niktype ) {
@@ -362,7 +396,6 @@ public:
         if( !iksolver ) {
             return false;
         }
-        _vlibraries.push_back(lib);
         probot->GetActiveManipulator()->SetIKSolver(iksolver);
         return probot->GetActiveManipulator()->InitIKSolver();
     }
@@ -895,18 +928,28 @@ public:
         return true;
     }
 
-    static vector< boost::shared_ptr<IKFastProblem> >& GetProblems()
+    static list< boost::shared_ptr<IKLibrary> >& GetLibraries()
     {
-        static vector< boost::shared_ptr<IKFastProblem> > s_vStaticProblems;
-        return s_vStaticProblems;
+        static list< boost::shared_ptr<IKLibrary> > s_vStaticLibraries;
+        return s_vStaticLibraries;
     }
 
-    IkSolverBasePtr CreateIkSolver(const string& name, dReal freeinc, EnvironmentBasePtr penv)
+    static boost::mutex& GetLibraryMutex()
+    {
+        static boost::mutex s_LibraryMutex;
+        return s_LibraryMutex;
+    }
+
+    static IkSolverBasePtr CreateIkSolver(const string& name, dReal freeinc, EnvironmentBasePtr penv)
     {
         /// start from the newer libraries
-        for(vector< boost::shared_ptr<IKLibrary> >::reverse_iterator itlib = _vlibraries.rbegin(); itlib != _vlibraries.rend(); ++itlib) {
-            if( name == (*itlib)->GetIKName() )
-                return (*itlib)->CreateSolver(penv,freeinc);
+        boost::mutex::scoped_lock lock(GetLibraryMutex());
+        for(list< boost::shared_ptr<IKLibrary> >::reverse_iterator itlib = GetLibraries().rbegin(); itlib != GetLibraries().rend(); ++itlib) {
+            FOREACH(itikname,(*itlib)->GetIKNames()) {
+                if( name == *itikname ) {
+                    return (*itlib)->CreateSolver(penv,freeinc);
+                }
+            }
         }
         return IkSolverBasePtr();
     }
@@ -917,8 +960,6 @@ private:
         dReal facos = RaveAcos(min(dReal(1),RaveFabs(dot4(t1.rot,t2.rot))));
         return (t1.trans-t2.trans).lengthsqr3() + frotweight*facos*facos;
     }
-
-    vector< boost::shared_ptr<IKLibrary> > _vlibraries;
 };
 
 #ifdef RAVE_REGISTER_BOOST

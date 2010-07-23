@@ -65,10 +65,9 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
             if( !!sinput ) {
                 sinput >> freeinc;
                 // look at all the ikfast problem solvers
-                FOREACHC(itprob, IKFastProblem::GetProblems()) {
-                    IkSolverBasePtr psolver = (*itprob)->CreateIkSolver(ikfastname, freeinc, penv);
-                    if( !!psolver )
-                        return psolver;
+                IkSolverBasePtr psolver = IKFastProblem::CreateIkSolver(ikfastname, freeinc, penv);
+                if( !!psolver ) {
+                    return psolver;
                 }
             }
         }
@@ -145,4 +144,5 @@ void GetPluginAttributesValidated(PLUGININFO& info)
 
 RAVE_PLUGIN_API void DestroyPlugin()
 {
+    IKFastProblem::GetLibraries().clear();
 }
