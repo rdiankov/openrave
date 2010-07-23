@@ -1269,20 +1269,26 @@ class IKFastSolver(AutoReloader):
                 LinksInv = [self.affineInverse(link) for link in Links]
                 inverted=True
                 continue
+            
+            # check if the translation variables affect rotation or the rotation variables affect translation.
+            # If translation variables do not affect rotation, solve for rotation first.
+            solveRotationFirst = None
+            if not any([LinksAccumRight[0][i,j].has_any_symbols(*transvars) for i in range(3) for j in range(3)]):
+                solveRotationFirst = True
+            # If rotation variables do not affect translation, solve for translation first
+            elif not any([LinksAccumRight[0][i,3].has_any_symbols(*rotvars) for i in range(3)]):
+                solveRotationFirst = False
+            else:
+                # If both affect each other, fail
+                if inverted:
+                    print 'could not divide translation/rotation'
+                    return None
+                print "Taking the inverse of the mechanism (sometimes intersecting joints are on the base)"
+                Links = [self.affineInverse(Links[i]) for i in range(len(Links)-1,-1,-1)]
+                LinksInv = [self.affineInverse(link) for link in Links]
+                inverted=True
+                continue
             break
-
-        # check if the translation variables affect rotation or the rotation variables affect translation.
-        # If translation variables do not affect rotation, solve for rotation first.
-        solveRotationFirst = None
-        if not any([LinksAccumRight[0][i,j].has_any_symbols(*transvars) for i in range(3) for j in range(3)]):
-            solveRotationFirst = True
-        # If rotation variables do not affect translation, solve for translation first
-        elif not any([LinksAccumRight[0][i,3].has_any_symbols(*rotvars) for i in range(3)]):
-            solveRotationFirst = False
-        else:
-            # If both affect each other, fail
-            print 'could not divide translation/rotation'
-            return None
 
         solverbranches = []
         # depending on the free variable values, sometimes the rotation matrix can have zeros where it does not expect zeros. Therefore, test all boundaries of all free variables

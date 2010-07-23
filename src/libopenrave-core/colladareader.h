@@ -1380,443 +1380,364 @@ public:
   }
 
   //  Extract Link info and adds it to OpenRAVE
-  KinBody::LinkPtr  ExtractLink(KinBodyPtr pkinbody, const domLinkRef pdomlink,
-      const domNodeRef pdomnode, Transform tParentLink, const vector<
-      domJointRef>& vdomjoints, const vector<KINEMATICSBINDING>& vbindings) {
-
-    //  Initially the link has the name of the node
-    string linkname;
-    if (pdomnode->getName() == NULL)
-    {
-      linkname = pdomnode->getId();
-    }
-    else
-    {
-      linkname = pdomnode->getName();
-    }
-
-    //  Set link name with the name of the COLLADA's Link
-    if (!!pdomlink && pdomlink->getName())
-    {
-      linkname = pdomlink->getName();
-    }
-
-    KinBody::LinkPtr plink = pkinbody->GetLink(linkname);
-    if( !plink ) {
-        plink.reset(new KinBody::Link(pkinbody));
-        plink->name = linkname;
-
-    //  Initialize Link Mass
-    plink->_mass    =   1.0;
-
-    plink->bStatic  = false;
-    plink->index    = (int) pkinbody->_veclinks.size();
-        pkinbody->_veclinks.push_back(plink);
-    }
-
-    if (pkinbody->GetName() == "")
-    {
-      //  Sets name of kinbody
-      pkinbody->SetName(string(pdomnode->getName()));
-    }
-
-    RAVELOG_VERBOSEA("Node Id %s and Name %s\n", pdomnode->getId(), pdomnode->getName());
-
-    if (!pdomlink)
-    {
-      //  Debug
-      RAVELOG_INFO("Extract object NOT kinematics !!!\n");
-
-      // Get the geometry
-      ExtractGeometry(pdomnode,plink,vbindings);
-    }
-    else
-    {
-      //  Debug
-      RAVELOG_VERBOSEA("ExtractLink !!!\n");
-
-      //  Debug
-      RAVELOG_DEBUGA("Attachment link elements: %d\n",pdomlink->getAttachment_full_array().getCount());
-
-      Transform tlink = getFullTransform(pdomlink);
-      plink->_t = tParentLink * tlink; // use the kinematics coordinate system for each link
-
-      // Get the geometry
-      ExtractGeometry(pdomnode,plink,vbindings);
-
-      //  Debug
-      RAVELOG_DEBUGA("After ExtractGeometry Attachment link elements: %d\n",pdomlink->getAttachment_full_array().getCount());
-
-      //  Process all atached links
-      for (size_t iatt = 0; iatt < pdomlink->getAttachment_full_array().getCount(); ++iatt) {
-        domLink::domAttachment_fullRef pattfull =
-          pdomlink->getAttachment_full_array()[iatt];
-
-        // get link kinematics transformation
-        TransformMatrix tatt = getFullTransform(pattfull);
-
-        // process attached links
-        daeElement* peltjoint =
-          daeSidRef(pattfull->getJoint(), pattfull).resolve().elt;
-        domJointRef pdomjoint = daeSafeCast<domJoint> (peltjoint);
-
-        if (!pdomjoint) {
-          domInstance_jointRef pdomijoint = daeSafeCast<domInstance_joint> (
-              peltjoint);
-          if (!!pdomijoint)
-            pdomjoint = daeSafeCast<domJoint> (
-                pdomijoint->getUrl().getElement().cast());
-        }
-
-        if (!pdomjoint || pdomjoint->typeID() != domJoint::ID()) {
-          RAVELOG_WARNA("could not find attached joint %s!\n",
-              pattfull->getJoint());
-          return KinBody::LinkPtr();
-        }
-
-        // get direct child link
-        if (!pattfull->getLink()) {
-          RAVELOG_WARNA("joint %s needs to be attached to a valid link\n",
-              pdomjoint->getID());
-          continue;
-        }
-
-        // find the correct node in vbindings
-        daeTArray<domAxis_constraintRef>  vdomaxes            = pdomjoint->getChildrenByType<domAxis_constraint> ();
-        domNodeRef                        pchildnode          = NULL;
-        daeElementRef                     paxisnode           = NULL;
-        domKinematics_axis_infoRef        pkinematicaxisinfo  = NULL;
-        domMotion_axis_infoRef            pmotionaxisinfo     = NULL;
-
-        for (size_t ibind = 0; ibind < vbindings.size() && !pchildnode
-        && !paxisnode; ++ibind)
-        {
-          domAxis_constraintRef   paxisfound  = NULL;
-          for (size_t ic = 0; ic < vdomaxes.getCount(); ++ic)
-          {
-            //  If the binding for the joint axis is found, retrieve the info
-            if (vdomaxes[ic] == vbindings[ibind].pkinematicaxis)
-            {
-              pchildnode          = vbindings[ibind].pvisualnode;
-              paxisnode           = vbindings[ibind].pvisualtrans;
-              pkinematicaxisinfo  = vbindings[ibind].pkinematicaxisinfo;
-              pmotionaxisinfo     = vbindings[ibind].pmotionaxisinfo;
-              break;
-            }
-          }
-        }
-
-        if (!pchildnode) {
-          RAVELOG_ERROR("failed to find associating node for joint %s\n",
-              pdomjoint->getID());
-          continue;
-        }
-
-        // create the joints before creating the child links
-        vector<KinBody::JointPtr> vjoints(vdomaxes.getCount());
-        RAVELOG_WARN("vdomaxes.getCount: %d\n",vdomaxes.getCount());
-
-        for (size_t ic = 0; ic < vdomaxes.getCount(); ++ic) {
-          KinBody::JointPtr pjoint(new KinBody::Joint(pkinbody));
-          pjoint->bodies[0] = plink;
-          pjoint->bodies[1].reset();
-          pjoint->name = pdomjoint->getName();
-          pjoint->jointindex = (int) pkinbody->_vecjoints.size();
-
-          //  Set type of the joint
-          domAxis_constraintRef pdomaxis = vdomaxes[ic];
-
-          if( strcmp(pdomaxis->getElementName(), "revolute") == 0 )
-          {
-            RAVELOG_WARNA("Revolute joint\n");
-            pjoint->type = KinBody::Joint::JointRevolute;
-          }
-          else if( strcmp(pdomaxis->getElementName(), "prismatic") == 0 )
-          {
-            RAVELOG_WARNA("Prismatic joint\n");
-            pjoint->type = KinBody::Joint::JointPrismatic;
-          }
-
-          RAVELOG_INFO("dofindex %d\n",pkinbody->GetDOF());
-          pjoint->dofindex = pkinbody->GetDOF();
-          RAVELOG_INFO("pjoint->dofindex %d\n",pjoint->dofindex);
-
-          pjoint->_vweights.resize(pjoint->GetDOF());
-          FOREACH(it,pjoint->_vweights) {
-              *it = 1;
-          }
-          pkinbody->_vecJointIndices.push_back(pjoint->dofindex);
-          pkinbody->_vecjoints.push_back(pjoint);
-          RAVELOG_WARN("Number of pkinbody->_vecjoints: %d\n",pkinbody->_vecjoints.size());
-          vjoints[ic] = pjoint;
-        }
-
-        KinBody::LinkPtr pchildlink = ExtractLink(pkinbody, pattfull->getLink(),
-            pchildnode, plink->_t * tatt, vdomjoints, vbindings);
-
-        if (pchildlink == NULL) {
-          //  Debug
-          RAVELOG_WARNA("Link NULL: %s \n", plink->GetName().c_str());
-
-          continue;
-        }
-
-        int numjoints = 0;
-        for (size_t ic = 0; ic < vdomaxes.getCount(); ++ic) {
-          domAxis_constraintRef pdomaxis = vdomaxes[ic];
-
-          if (!pchildlink) {
-            // create dummy child link
-            // multiple axes can be easily done with "empty links"
-            RAVELOG_WARNA(
-                "openrave does not support collada joints with > 1 degrees: \n");
-
-            //      Debug.
-            RAVELOG_WARNA("Link: %s Num joints %d\n", plink->GetName().c_str(), numjoints);
-
-            stringstream ss;
-            ss << plink->name;
-            ss <<"_dummy" << numjoints;
-            pchildlink.reset(new KinBody::Link(pkinbody));
-            pchildlink->name = ss.str().c_str();
-            pchildlink->bStatic = false;
-            pchildlink->index = (int)pkinbody->_veclinks.size();
-            pkinbody->_veclinks.push_back(pchildlink);
-          }
-
-          RAVELOG_WARNA("Joint assigned %d \n",ic);
-
-          KinBody::JointPtr pjoint = vjoints[ic];
-          pjoint->bodies[1] = pchildlink;
-
-          //          //  Set type of the joint
-          //          if( strcmp(pdomaxis->getElementName(), "revolute") == 0 )
-          //          {
-          //            RAVELOG_WARNA("Revolute joint\n");
-          //            pjoint->type = KinBody::Joint::JointRevolute;
-          //          }
-          //          else if( strcmp(pdomaxis->getElementName(), "prismatic") == 0 )
-          //          {
-          //            RAVELOG_WARNA("Prismatic joint\n");
-          //            pjoint->type = KinBody::Joint::JointPrismatic;
-          //          }
-
-          //  Axes and Anchor assignment.
-          pjoint->vAxes[0] = Vector(pdomaxis->getAxis()->getValue()[0], pdomaxis->getAxis()->getValue()[1], pdomaxis->getAxis()->getValue()[2]).normalize3();
-          pjoint->vanchor = Vector(0,0,0);
-
-          int numbad = 0;
-          pjoint->offset = 0; // to overcome -pi to pi boundary
-
-          if (!pmotionaxisinfo)
-          {
-            RAVELOG_ERRORA(str(boost::format("Not Exists Motion axis info, joint %s\n")%pjoint->GetName()));
-          }
-
-          //  Sets the Speed and the Acceleration of the joint
-          if (pmotionaxisinfo != NULL)
-          {
-            if (pmotionaxisinfo->getSpeed() != NULL)
-            {
-              pjoint->fMaxVel = pmotionaxisinfo->getSpeed()->getFloat()->getValue();
-
-              //  Debug
-              RAVELOG_VERBOSEA("... Joint Speed: %f...\n",pjoint->GetMaxVel());
-            }
-            if (pmotionaxisinfo->getAcceleration())
-            {
-              pjoint->fMaxAccel = pmotionaxisinfo->getAcceleration()->getFloat()->getValue();
-
-              //  Debug
-              RAVELOG_VERBOSEA("... Joint Acceleration: %f...\n",pjoint->GetMaxAccel());
-            }
-          }
-
-          //  If the joint is locked or NOT
-          bool    joint_locked            = false;
-          bool    kinematics_limits   =    false;
-
-          //  If there is NO kinematicaxisinfo
-          if (!!pkinematicaxisinfo)
-          {
-            //  Debug
-            RAVELOG_VERBOSEA("Axis_info Start...\n");
-
-            if (!pkinematicaxisinfo->getActive())
-            {
-              //  Debug
-              RAVELOG_WARNA("Joint Disable...\n");
-              pjoint->GetParent()->Enable(false);
-            }
-
-            if (!!pkinematicaxisinfo->getLocked())
-            {
-              if (pkinematicaxisinfo->getLocked()->getBool()->getValue())
-              {
-                //  Debug
-                RAVELOG_WARNA("Joint Locked...\n");
-                joint_locked = true;
-              }
-            }
-
-            // If joint is locked set limits to 0. There is NO move
-            if (joint_locked)
-            {
-              if( pjoint->type == KinBody::Joint::JointRevolute
-                  ||
-                  pjoint->type ==KinBody::Joint::JointPrismatic)
-              {
-                pjoint->_vlowerlimit.push_back(0.0f);
-                pjoint->_vupperlimit.push_back(0.0f);
-              }
-            }
-            // If there are articulated system kinematics limits
-            else if (pkinematicaxisinfo->getLimits())
-            {
-              //  There is a kinematics limits
-              kinematics_limits   = true;
-
-              RAVELOG_WARNA("Articulated System Joint Limit Min: %f, Max: %f\n",
-                  pkinematicaxisinfo->getLimits()->getMin()->getFloat()->getValue(),
-                  pkinematicaxisinfo->getLimits()->getMax()->getFloat()->getValue());
-
-              if( pjoint->type == KinBody::Joint::JointRevolute
-                  ||
-                  pjoint->type ==KinBody::Joint::JointPrismatic)
-              {
-                pjoint->_vlowerlimit.push_back((dReal)(pkinematicaxisinfo->getLimits()->getMin()->getFloat()->getValue()));
-                pjoint->_vupperlimit.push_back((dReal)(pkinematicaxisinfo->getLimits()->getMax()->getFloat()->getValue()));
-              }
-            }
-          }
-
-          //  Search limits in the joints section
-          if ((!joint_locked && !kinematics_limits) || !pkinematicaxisinfo)
-          {
-            RAVELOG_WARNA("Degrees of Freedom: %d\n",pjoint->GetDOF());
-
-            for(int i = 0; i < pjoint->GetDOF(); ++i)
-            {
-              //  Debug
-              RAVELOG_WARNA("DOF Number %d...\n",i);
-
-              //  If there are NOT LIMITS
-              if( !pdomaxis->getLimits() )
-              {
-                //  Debug
-                RAVELOG_WARNA("There are NO LIMITS in the joint ...\n");
-                if( pjoint->type == KinBody::Joint::JointRevolute )
-                {
-                  pjoint->_bIsCircular = true;
-                  pjoint->_vlowerlimit.push_back(-PI);
-                  pjoint->_vupperlimit.push_back(PI);
-                }
-                else
-                {
-                  pjoint->_vlowerlimit.push_back(-100000);
-                  pjoint->_vupperlimit.push_back(100000);
-                }
-              }
-              //  If there are LIMITS
-              else
-              {
-                //  Debug
-                RAVELOG_WARNA("There are LIMITS in the joint ...\n");
-
-                dReal fscale = (pjoint->type == KinBody::Joint::JointRevolute)?(PI/180.0f):1.0f;
-
-                //  Debug
-                RAVELOG_WARNA("Joint Limits ...\n");
-
-                pjoint->_vlowerlimit.push_back(pdomaxis->getLimits()->getMin()->getValue()*fscale);
-                pjoint->_vupperlimit.push_back(pdomaxis->getLimits()->getMax()->getValue()*fscale);
-
-                //  Debug
-                RAVELOG_WARNA("Joint offset ...\n");
-
-                if( pjoint->type == KinBody::Joint::JointRevolute )
-                {
-                  if( pjoint->_vlowerlimit.back() < -PI || pjoint->_vupperlimit.back()> PI )
-                  {
-                    pjoint->offset += 0.5f * (pjoint->_vlowerlimit[i] + pjoint->_vupperlimit[i]);
-                    ++numbad;
-                  }
-                }
-              }
-            }
-          }
-
-          if( numbad> 0 )
-          {
-            pjoint->offset *= 1.0f / (dReal)numbad;
-            RAVELOG_VERBOSEA("joint %s offset is %f\n", pjoint->GetName().c_str(), (float)pjoint->offset);
-          }
-
-          // Transform applied to the joint
-          Transform tbody0, tbody1;
-          tbody0 = pjoint->bodies[0]->GetTransform();
-          tbody1 = pjoint->bodies[1]->GetTransform();
-          Transform trel;
-          trel = tbody0.inverse() * tbody1;
-
-          Transform toffsetfrom;
-
-          if (!!pchildnode)
-          {
-            RAVELOG_INFO("Applies Transform Offset From Parent Link!!!\n");
-            toffsetfrom = plink->_t * tatt;
-            toffsetfrom = tbody0.inverse() * toffsetfrom;
-          }
-
-          pjoint->vanchor = toffsetfrom * pjoint->vanchor;
-
-          //  Debug.
-          RAVELOG_DEBUG("Node %s offset is %f\n", pdomnode->getName(), (float)pjoint->offset);
-          RAVELOG_DEBUG("OffsetFrom Translation trans.x:%f, trans.y:%f, trans.z:%f\n",toffsetfrom.trans.x,toffsetfrom.trans.y,toffsetfrom.trans.z);
-          RAVELOG_DEBUG("OffsetFrom Rotation rot.x:%f, rot.y:%f, rot.z:%f, rot.w:%f\n",toffsetfrom.rot.x,toffsetfrom.rot.y,toffsetfrom.rot.z,toffsetfrom.rot.w);
-          RAVELOG_DEBUG("vAnchor (%s) x:%f, y:%f, z:%f\n",pjoint->GetName().c_str(),pjoint->vanchor.x,pjoint->vanchor.y,pjoint->vanchor.z);
-          RAVELOG_DEBUG("vAxes x:%f, y:%f, z:%f\n",pjoint->vAxes[0].x,pjoint->vAxes[0].y,pjoint->vAxes[0].z);
-
-          //  Rotate axis from the parent offset
-          for(int i = 0; i < pjoint->GetDOF(); ++i)
-          {
-              pjoint->vAxes[i] = toffsetfrom.rotate(pjoint->vAxes[i]);
-          }
-
-          if( pjoint->type == KinBody::Joint::JointRevolute )
-          {
-              pjoint->tLeft.rotfromaxisangle(pjoint->vAxes[0], -pjoint->offset);
-          }
-
-          pjoint->fMaxVel = pjoint->GetType() == KinBody::Joint::JointPrismatic ? 0.013 : 0.5f;
-          
-          pjoint->tLeft.trans   = pjoint->vanchor;
-          pjoint->tRight.trans  = -pjoint->vanchor;
-          pjoint->tRight = pjoint->tRight * trel;
-
-          pjoint->tinvLeft = pjoint->tLeft.inverse();
-          pjoint->tinvRight = pjoint->tRight.inverse();
-
-          // mimic joints
-          //pjoint->nMimicJointIndex = -1;
-          //pjoint->fMimicCoeffs[0] = 1; pjoint->fMimicCoeffs[1] = 0;
-          //            _pchain->_vecPassiveJoints.push_back(pnewjoint);
-          // physics, control?
-          //                pjoint->fMaxVel;
-          //                pjoint->fMaxAccel;
-          //                pjoint->fMaxTorque;
-          //                pjoint->fResolution;
-
-          pchildlink.reset();
-          ++numjoints;
-        }
+  KinBody::LinkPtr  ExtractLink(KinBodyPtr pkinbody, const domLinkRef pdomlink,const domNodeRef pdomnode, Transform tParentLink, const vector<domJointRef>& vdomjoints, const vector<KINEMATICSBINDING>& vbindings) {
+      //  Initially the link has the name of the node
+      string linkname;
+      if (pdomnode->getName() == NULL) {
+          linkname = pdomnode->getId();
+      }
+      else {
+          linkname = pdomnode->getName();
       }
 
-    }
-    //pdomlink->getAttachment_start_array();
-    //pdomlink->getAttachment_end_array();
+      //  Set link name with the name of the COLLADA's Link
+      if (!!pdomlink && pdomlink->getName()) {
+          linkname = pdomlink->getName();
+      }
 
-    return plink;
+      KinBody::LinkPtr plink = pkinbody->GetLink(linkname);
+      if( !plink ) {
+          plink.reset(new KinBody::Link(pkinbody));
+          plink->name = linkname;
+
+          //  Initialize Link Mass
+          plink->_mass    =   1.0;
+
+          plink->bStatic  = false;
+          plink->index    = (int) pkinbody->_veclinks.size();
+          pkinbody->_veclinks.push_back(plink);
+      }
+
+      if (pkinbody->GetName() == "") {
+          pkinbody->SetName(string(pdomnode->getName()));
+      }
+
+      RAVELOG_VERBOSEA("Node Id %s and Name %s\n", pdomnode->getId(), pdomnode->getName());
+
+      if (!pdomlink) {
+          RAVELOG_INFO("Extract object NOT kinematics !!!\n");
+          ExtractGeometry(pdomnode,plink,vbindings);
+      }
+      else {
+          RAVELOG_VERBOSEA("ExtractLink !!!\n");
+          RAVELOG_DEBUGA("Attachment link elements: %d\n",pdomlink->getAttachment_full_array().getCount());
+
+          Transform tlink = getFullTransform(pdomlink);
+          plink->_t = tParentLink * tlink; // use the kinematics coordinate system for each link
+          
+          {
+              stringstream ss; ss << plink->GetName() << ": " << plink->_t << endl;
+              RAVELOG_INFO(ss.str());
+          }
+          
+          // Get the geometry
+          ExtractGeometry(pdomnode,plink,vbindings);
+          
+          //  Debug
+          RAVELOG_DEBUGA("After ExtractGeometry Attachment link elements: %d\n",pdomlink->getAttachment_full_array().getCount());
+          
+          //  Process all atached links
+          for (size_t iatt = 0; iatt < pdomlink->getAttachment_full_array().getCount(); ++iatt) {
+              domLink::domAttachment_fullRef pattfull = pdomlink->getAttachment_full_array()[iatt];
+
+              // get link kinematics transformation
+              TransformMatrix tatt = getFullTransform(pattfull);
+
+              // process attached links
+              daeElement* peltjoint =
+                  daeSidRef(pattfull->getJoint(), pattfull).resolve().elt;
+              domJointRef pdomjoint = daeSafeCast<domJoint> (peltjoint);
+
+              if (!pdomjoint) {
+                  domInstance_jointRef pdomijoint = daeSafeCast<domInstance_joint> (peltjoint);
+                  if (!!pdomijoint) {
+                      pdomjoint = daeSafeCast<domJoint> (pdomijoint->getUrl().getElement().cast());
+                  }
+              }
+
+              if (!pdomjoint || pdomjoint->typeID() != domJoint::ID()) {
+                  RAVELOG_WARNA("could not find attached joint %s!\n",pattfull->getJoint());
+                  return KinBody::LinkPtr();
+              }
+
+              // get direct child link
+              if (!pattfull->getLink()) {
+                  RAVELOG_WARNA("joint %s needs to be attached to a valid link\n",pdomjoint->getID());
+                  continue;
+              }
+
+              // find the correct node in vbindings
+              daeTArray<domAxis_constraintRef>  vdomaxes            = pdomjoint->getChildrenByType<domAxis_constraint> ();
+              domNodeRef                        pchildnode          = NULL;
+              daeElementRef                     paxisnode           = NULL;
+              domKinematics_axis_infoRef        pkinematicaxisinfo  = NULL;
+              domMotion_axis_infoRef            pmotionaxisinfo     = NULL;
+
+              for (size_t ibind = 0; ibind < vbindings.size() && !pchildnode && !paxisnode; ++ibind) {
+                  domAxis_constraintRef   paxisfound  = NULL;
+                  for (size_t ic = 0; ic < vdomaxes.getCount(); ++ic) {
+                      //  If the binding for the joint axis is found, retrieve the info
+                      if (vdomaxes[ic] == vbindings[ibind].pkinematicaxis) {
+                          pchildnode          = vbindings[ibind].pvisualnode;
+                          paxisnode           = vbindings[ibind].pvisualtrans;
+                          pkinematicaxisinfo  = vbindings[ibind].pkinematicaxisinfo;
+                          pmotionaxisinfo     = vbindings[ibind].pmotionaxisinfo;
+                          break;
+                      }
+                  }
+              }
+              
+              if (!pchildnode) {
+                  RAVELOG_ERROR("failed to find associating node for joint %s\n", pdomjoint->getID());
+                  continue;
+              }
+
+              // create the joints before creating the child links
+              vector<KinBody::JointPtr> vjoints(vdomaxes.getCount());
+              RAVELOG_WARN("vdomaxes.getCount: %d\n",vdomaxes.getCount());
+
+              for (size_t ic = 0; ic < vdomaxes.getCount(); ++ic) {
+                  KinBody::JointPtr pjoint(new KinBody::Joint(pkinbody));
+                  pjoint->bodies[0] = plink;
+                  pjoint->bodies[1].reset();
+                  pjoint->name = pdomjoint->getName();
+                  pjoint->jointindex = (int) pkinbody->_vecjoints.size();
+
+                  //  Set type of the joint
+                  domAxis_constraintRef pdomaxis = vdomaxes[ic];
+
+                  if( strcmp(pdomaxis->getElementName(), "revolute") == 0 ) {
+                      RAVELOG_WARNA("Revolute joint\n");
+                      pjoint->type = KinBody::Joint::JointRevolute;
+                  }
+                  else if( strcmp(pdomaxis->getElementName(), "prismatic") == 0 ) {
+                      RAVELOG_WARNA("Prismatic joint\n");
+                      pjoint->type = KinBody::Joint::JointPrismatic;
+                  }
+
+                  pjoint->dofindex = pkinbody->GetDOF();
+                  pjoint->_vweights.resize(pjoint->GetDOF());
+                  FOREACH(it,pjoint->_vweights) {
+                      *it = 1;
+                  }
+                  pkinbody->_vecJointIndices.push_back(pjoint->dofindex);
+                  pkinbody->_vecjoints.push_back(pjoint);
+                  RAVELOG_WARN("Number of pkinbody->_vecjoints: %d\n",pkinbody->_vecjoints.size());
+                  vjoints[ic] = pjoint;
+              }
+
+              KinBody::LinkPtr pchildlink = ExtractLink(pkinbody, pattfull->getLink(), pchildnode, plink->_t * tatt, vdomjoints, vbindings);
+
+              if (pchildlink == NULL) {
+                  RAVELOG_WARNA("Link NULL: %s \n", plink->GetName().c_str());
+                  continue;
+              }
+
+              int numjoints = 0;
+              for (size_t ic = 0; ic < vdomaxes.getCount(); ++ic) {
+                  domAxis_constraintRef pdomaxis = vdomaxes[ic];
+                  if (!pchildlink) {
+                      // create dummy child link
+                      // multiple axes can be easily done with "empty links"
+                      RAVELOG_WARNA("openrave does not support collada joints with > 1 degrees: \n");
+                      RAVELOG_WARNA("Link: %s Num joints %d\n", plink->GetName().c_str(), numjoints);
+
+                      stringstream ss;
+                      ss << plink->name;
+                      ss <<"_dummy" << numjoints;
+                      pchildlink.reset(new KinBody::Link(pkinbody));
+                      pchildlink->name = ss.str().c_str();
+                      pchildlink->bStatic = false;
+                      pchildlink->index = (int)pkinbody->_veclinks.size();
+                      pkinbody->_veclinks.push_back(pchildlink);
+                  }
+
+                  RAVELOG_WARNA("Joint assigned %d \n",ic);
+                  KinBody::JointPtr pjoint = vjoints[ic];
+                  pjoint->bodies[1] = pchildlink;
+
+                  //          //  Set type of the joint
+                  //          if( strcmp(pdomaxis->getElementName(), "revolute") == 0 )
+                  //          {
+                  //            RAVELOG_WARNA("Revolute joint\n");
+                  //            pjoint->type = KinBody::Joint::JointRevolute;
+                  //          }
+                  //          else if( strcmp(pdomaxis->getElementName(), "prismatic") == 0 )
+                  //          {
+                  //            RAVELOG_WARNA("Prismatic joint\n");
+                  //            pjoint->type = KinBody::Joint::JointPrismatic;
+                  //          }
+
+                  //  Axes and Anchor assignment.
+                  pjoint->vAxes[0] = Vector(pdomaxis->getAxis()->getValue()[0], pdomaxis->getAxis()->getValue()[1], pdomaxis->getAxis()->getValue()[2]).normalize3();
+                  pjoint->vanchor = Vector(0,0,0);
+
+                  int numbad = 0;
+                  pjoint->offset = 0; // to overcome -pi to pi boundary
+
+                  if (!pmotionaxisinfo) {
+                      RAVELOG_ERRORA(str(boost::format("Not Exists Motion axis info, joint %s\n")%pjoint->GetName()));
+                  }
+
+                  //  Sets the Speed and the Acceleration of the joint
+                  if (pmotionaxisinfo != NULL) {
+                      if (pmotionaxisinfo->getSpeed() != NULL) {
+                          pjoint->fMaxVel = pmotionaxisinfo->getSpeed()->getFloat()->getValue();
+                          RAVELOG_VERBOSEA("... Joint Speed: %f...\n",pjoint->GetMaxVel());
+                      }
+                      if (pmotionaxisinfo->getAcceleration()) {
+                          pjoint->fMaxAccel = pmotionaxisinfo->getAcceleration()->getFloat()->getValue();
+                          RAVELOG_VERBOSEA("... Joint Acceleration: %f...\n",pjoint->GetMaxAccel());
+                      }
+                  }
+
+                  //  If the joint is locked or NOT
+                  bool    joint_locked            = false;
+                  bool    kinematics_limits   =    false;
+
+                  //  If there is NO kinematicaxisinfo
+                  if (!!pkinematicaxisinfo) {
+                      RAVELOG_VERBOSEA("Axis_info Start...\n");
+                      if (!pkinematicaxisinfo->getActive()) {
+                          RAVELOG_WARNA("Joint Disable...\n");
+                          pjoint->GetParent()->Enable(false);
+                      }
+                          
+                      if (!!pkinematicaxisinfo->getLocked()) {
+                          if (pkinematicaxisinfo->getLocked()->getBool()->getValue()) {
+                              RAVELOG_WARNA("Joint Locked...\n");
+                              joint_locked = true;
+                          }
+                      }
+
+                      // If joint is locked set limits to 0. There is NO move
+                      if (joint_locked) {
+                          if( pjoint->type == KinBody::Joint::JointRevolute || pjoint->type ==KinBody::Joint::JointPrismatic) {
+                              pjoint->_vlowerlimit.push_back(0.0f);
+                              pjoint->_vupperlimit.push_back(0.0f);
+                          }
+                      }
+                      // If there are articulated system kinematics limits
+                      else if (pkinematicaxisinfo->getLimits()) {
+                          //  There is a kinematics limits
+                          kinematics_limits   = true;
+                              
+                          RAVELOG_WARNA("Articulated System Joint Limit Min: %f, Max: %f\n", pkinematicaxisinfo->getLimits()->getMin()->getFloat()->getValue(), pkinematicaxisinfo->getLimits()->getMax()->getFloat()->getValue());
+                              
+                          if( pjoint->type == KinBody::Joint::JointRevolute || pjoint->type ==KinBody::Joint::JointPrismatic) {
+                              pjoint->_vlowerlimit.push_back((dReal)(pkinematicaxisinfo->getLimits()->getMin()->getFloat()->getValue()));
+                              pjoint->_vupperlimit.push_back((dReal)(pkinematicaxisinfo->getLimits()->getMax()->getFloat()->getValue()));
+                          }
+                      }
+                  }
+                  
+                  //  Search limits in the joints section
+                  if ((!joint_locked && !kinematics_limits) || !pkinematicaxisinfo) {
+                      RAVELOG_WARNA("Degrees of Freedom: %d\n",pjoint->GetDOF());
+                      for(int i = 0; i < pjoint->GetDOF(); ++i) {
+                          RAVELOG_WARNA("DOF Number %d...\n",i);
+
+                          //  If there are NOT LIMITS
+                          if( !pdomaxis->getLimits() ) {
+                              RAVELOG_WARNA("There are NO LIMITS in the joint ...\n");
+                              if( pjoint->type == KinBody::Joint::JointRevolute ) {
+                                  pjoint->_bIsCircular = true;
+                                  pjoint->_vlowerlimit.push_back(-PI);
+                                  pjoint->_vupperlimit.push_back(PI);
+                              }
+                              else {
+                                  pjoint->_vlowerlimit.push_back(-100000);
+                                  pjoint->_vupperlimit.push_back(100000);
+                              }
+                          }
+                          else {
+                              RAVELOG_WARNA("There are LIMITS in the joint ...\n");
+                                      
+                              dReal fscale = (pjoint->type == KinBody::Joint::JointRevolute)?(PI/180.0f):1.0f;
+                                      
+                              RAVELOG_WARNA("Joint Limits ...\n");
+
+                              pjoint->_vlowerlimit.push_back(pdomaxis->getLimits()->getMin()->getValue()*fscale);
+                              pjoint->_vupperlimit.push_back(pdomaxis->getLimits()->getMax()->getValue()*fscale);
+                                      
+                              RAVELOG_WARNA("Joint offset ...\n");
+                                      
+                              if( pjoint->type == KinBody::Joint::JointRevolute ) {
+                                  if( pjoint->_vlowerlimit.back() < -PI || pjoint->_vupperlimit.back()> PI ) {
+                                      pjoint->offset += 0.5f * (pjoint->_vlowerlimit[i] + pjoint->_vupperlimit[i]);
+                                      ++numbad;
+                                  }
+                              }
+                          }
+                      }
+                  }
+
+                  if( numbad> 0 ) {
+                      pjoint->offset *= 1.0f / (dReal)numbad;
+                      RAVELOG_VERBOSEA("joint %s offset is %f\n", pjoint->GetName().c_str(), (float)pjoint->offset);
+                  }
+                  
+                  // Transform applied to the joint
+                  Transform tbody0, tbody1;
+                  tbody0 = pjoint->bodies[0]->GetTransform();
+                  tbody1 = pjoint->bodies[1]->GetTransform();
+                  Transform trel;
+                  trel = tbody0.inverse() * tbody1;
+
+                  Transform toffsetfrom;
+
+                  if (!!pchildnode) {
+                      RAVELOG_INFO(str(boost::format("Applies Transform Offset From Parent Link (%s:%s)!!!\n")%pjoint->bodies[0]->GetName()%pjoint->bodies[1]->GetName()));
+                      toffsetfrom = plink->_t * tatt;
+                      toffsetfrom = tbody0.inverse() * toffsetfrom;
+                  }
+                  
+                  pjoint->vanchor = toffsetfrom * pjoint->vanchor;
+
+                  //  Debug.
+                  RAVELOG_DEBUG("joint dof: %d, Node %s offset is %f\n", pjoint->dofindex, pdomnode->getName(), (float)pjoint->offset);
+                  RAVELOG_DEBUG("OffsetFrom Translation trans.x:%f, trans.y:%f, trans.z:%f\n",toffsetfrom.trans.x,toffsetfrom.trans.y,toffsetfrom.trans.z);
+                  RAVELOG_DEBUG("OffsetFrom Rotation rot.x:%f, rot.y:%f, rot.z:%f, rot.w:%f\n",toffsetfrom.rot.x,toffsetfrom.rot.y,toffsetfrom.rot.z,toffsetfrom.rot.w);
+                  RAVELOG_DEBUG("vAnchor (%s) x:%f, y:%f, z:%f\n",pjoint->GetName().c_str(),pjoint->vanchor.x,pjoint->vanchor.y,pjoint->vanchor.z);
+                  RAVELOG_DEBUG("vAxes x:%f, y:%f, z:%f\n",pjoint->vAxes[0].x,pjoint->vAxes[0].y,pjoint->vAxes[0].z);
+
+                  //  Rotate axis from the parent offset
+                  for(int i = 0; i < pjoint->GetDOF(); ++i) {
+                      pjoint->vAxes[i] = toffsetfrom.rotate(pjoint->vAxes[i]);
+                  }
+
+                  if( pjoint->type == KinBody::Joint::JointRevolute ) {
+                      pjoint->tLeft.rotfromaxisangle(pjoint->vAxes[0], -pjoint->offset);
+                  }
+
+                  pjoint->fMaxVel = pjoint->GetType() == KinBody::Joint::JointPrismatic ? 0.01 : 0.5f;
+          
+                  pjoint->tLeft.trans   = pjoint->vanchor;
+                  pjoint->tRight.trans  = -pjoint->vanchor;
+                  pjoint->tRight = pjoint->tRight * trel;
+
+                  pjoint->tinvLeft = pjoint->tLeft.inverse();
+                  pjoint->tinvRight = pjoint->tRight.inverse();
+
+                  // mimic joints
+                  //pjoint->nMimicJointIndex = -1;
+                  //pjoint->fMimicCoeffs[0] = 1; pjoint->fMimicCoeffs[1] = 0;
+                  //            _pchain->_vecPassiveJoints.push_back(pnewjoint);
+                  // physics, control?
+                  //                pjoint->fMaxVel;
+                  //                pjoint->fMaxAccel;
+                  //                pjoint->fMaxTorque;
+                  //                pjoint->fResolution;
+                  
+                  pchildlink.reset();
+                  ++numjoints;
+              }
+          }
+      }
+      //pdomlink->getAttachment_start_array();
+      //pdomlink->getAttachment_end_array();
+
+      return plink;
   }
 
   /// Extract Geometry and apply the transformations of the node

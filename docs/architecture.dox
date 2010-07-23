@@ -370,6 +370,7 @@ commands given to the robot are first filtered through the controller, then tran
 commands. Different controllers can have different path inputs (ie: a robot walking on a floor might
 just have x,y,angle), but the default is the DOF joint values.
 
+\section arch_controller_writing Writing and Using Controllers
 
 Assuming that there exists a plugin with a controller interface named \b MyController, here are some ways to set an openrave robot to use it:
 
