@@ -87,7 +87,8 @@ class InverseKinematicsModel(OpenRAVEModel):
         return self.has()
     
     def save(self):
-        pass # already saved as a lib
+        # already saved as a lib
+        print 'inversekinematics generation is done, compiled shared object: %s'%self.getfilename()
     
     def getdir(self):
         return os.path.join(self.env.GetHomeDirectory(),'kinematics.'+self.manip.GetKinematicsStructureHash())
