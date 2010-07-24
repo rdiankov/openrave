@@ -5,6 +5,8 @@ import doctest
 from glob import glob
 import os
 import sys
+import breathe # for doxygen links
+import sphinx # for better rst docs? needed by breathe
 try:
     from setuptools import setup
 except ImportError:
@@ -39,6 +41,7 @@ class build_doc(Command):
     def run(self):
         languagecode = self.languagecode
         from docutils.core import publish_cmdline
+        import docutils.nodes
         from docutils.nodes import raw
         from docutils.parsers import rst
         from docutils.parsers.rst import Directive
@@ -85,6 +88,37 @@ class build_doc(Command):
                     self.state.nested_parse(self.content, self.content_offset, node)
                 return [node]
         rst.directives.register_directive('lang-block', LangBlockDirective)
+
+        class InterfaceCommandDirective(Directive):
+            required_arguments = 2
+            optional_arguments = 0
+            final_argument = False
+            option_spec = {'interface':rst.directives.unchanged,'command':rst.directives.unchanged}
+            has_content = True
+            node_class = rst.nodes.paragraph
+            def run(self):
+                return []
+        rst.directives.register_directive('interface-command', InterfaceCommandDirective)
+
+        # doxygen links using breathe
+        parser_factory = breathe.DoxygenParserFactory()
+        matcher_factory = breathe.ItemMatcherFactory()
+        item_finder_factory_creator = breathe.DoxygenItemFinderFactoryCreator(parser_factory, matcher_factory)
+        index_parser = breathe.DoxygenIndexParser()
+        finder_factory = breathe.FinderFactory(index_parser, item_finder_factory_creator)
+        node_factory = breathe.NodeFactory(docutils.nodes,sphinx.addnodes)
+        renderer_factory_creator = breathe.DoxygenToRstRendererFactoryCreator(node_factory, parser_factory)
+        builder_factory = breathe.BuilderFactory(breathe.RstBuilder, renderer_factory_creator)
+        project_info_factory = breathe.ProjectInfoFactory()
+        directive_factory = breathe.DoxygenDirectiveFactory(builder_factory, finder_factory, matcher_factory, project_info_factory)
+        project_info_factory.update({'openrave':os.path.join(os.path.split(self.outdir)[0], 'xml')},'openrave')
+        rst.directives.register_directive("doxygenindex", directive_factory.create_index_directive_container())
+        rst.directives.register_directive("doxygenfunction", directive_factory.create_function_directive_container())
+        rst.directives.register_directive("doxygenstruct", directive_factory.create_struct_directive_container())
+        rst.directives.register_directive("doxygenenum",directive_factory.create_enum_directive_container())
+        rst.directives.register_directive("doxygentypedef",directive_factory.create_typedef_directive_container())
+        rst.directives.register_directive("doxygenclass",directive_factory.create_class_directive_container())
+
         rst.languages.get_language('ja')
 
         for source in glob('*.txt'):
@@ -100,6 +134,31 @@ class build_doc(Command):
             try:
                 from epydoc import cli
                 from epydoc import docbuilder
+
+                # override the default html translator to support non-default tags (from sphinx)
+                from epydoc.markup import restructuredtext
+                class NewEpydocHTMLTranslator(restructuredtext._EpydocHTMLTranslator):
+                    def visit_pending_xref(self, node):
+                        typ = node['reftype']
+                        target = node['reftarget']
+                        if typ == 'ref':
+                            if target.rfind('_') >= 0:
+                                if target.startswith('openrave'):
+                                    target = target[8:]
+                                elif target.startswith('project0'):
+                                    target = target[8:]
+                                index = target.rfind('_')
+                                refuri = '../html/' + target[:index]+'.html#'+target[(index+2):]
+                                self.body.append('<a href="%s">%s</a>'%(refuri,node.astext()))
+                                raise docutils.nodes.SkipNode()
+                    def depart_pending_xref(self, node):
+                        pass
+                    def visit_warning(self,node):
+                        pass
+                    def depart_warning(self,node):
+                        pass
+                restructuredtext._EpydocHTMLTranslator = NewEpydocHTMLTranslator
+
                 old_argv = sys.argv[1:]
                 sys.argv[1:] = [
                     '--config=%s' % epydoc_conf,

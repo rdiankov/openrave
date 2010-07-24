@@ -383,11 +383,12 @@ make prefix=/my/new/dir
 rm build/CMakeCache.txt
 \endverbatim
 
-\~ \section ilinux_bash Bash
+\~english \section ilinux_bash Bash Shell
 
-\~ Can enable automatic completion of several openrave programs like \c openrave.py by sourcing the \c openravebash file. Add this to your \c ~./.bashrc file:
+Can enable automatic completion of several openrave programs like \c openrave.py by sourcing the \c openravebash file. Add this to your \c ~./.bashrc file:
 
-\~japanese タブでOpenRAVEプログラムのコマンドを補完したり，bashでの最適なOpenRAVE環境を入れるのに以下のコマンドを\c ~/.bashrcファイルにいれてください．
+\~japanese \section ilinux_bash Bashシェル
+タブでOpenRAVEプログラムのコマンドを補完したり，bashでの最適なOpenRAVE環境を入れるのに以下のコマンドを\c ~/.bashrcファイルにいれてください．
 
 \~
 \verbatim
@@ -401,7 +402,7 @@ source `openrave-config --prefix`/share/openrave/openravebash
 \page installation_win Building and Installing on Windows
 
 
-<b>NOTE:</b> Only Windows XP has been tested.
+<b>NOTE:</b> Only Windows XP has been tested. Windows 7 and others have been reported to work, but might need to modify the executable properties to <b>windows95 compatibility mode</b> after the executable has been built.
 
 \section iwin_octavematlab Installation of 3rd Party Software
 

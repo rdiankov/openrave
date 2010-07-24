@@ -6,6 +6,7 @@
 
 body {
 	margin: 0;
+    margin-left: 4px;
 	padding: 0;
 	font-family: sans-serif, Arial, Verdana, Helvetica;
 	font-size: 83%;

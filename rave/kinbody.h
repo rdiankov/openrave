@@ -28,7 +28,7 @@ namespace OpenRAVE {
 class RAVE_API KinBody : public InterfaceBase
 {
 public:
-    /// A set of properties for the kinbody. These properties are used to describe a set of variables used in KinBody.
+    /// \brief A set of properties for the kinbody. These properties are used to describe a set of variables used in KinBody.
     enum KinBodyProperty {
         Prop_Joints=0x1, ///< all properties of all joints
         Prop_JointLimits=0x2,
@@ -80,6 +80,7 @@ public:
         /// Contains everything associated with a physical body along with a seprate (optional) render file.
         struct RAVE_API GEOMPROPERTIES
         {
+            /// \brief The type of geometry primitive.
             enum GeomType {
                 GeomNone = 0,
                 GeomBox = 1,
@@ -261,6 +262,7 @@ public:
     class RAVE_API Joint : public boost::enable_shared_from_this<Joint>
     {
     public:
+        /// \brief The type of joint movement.
         enum JointType {
             JointNone = 0,
             JointHinge = 1,
@@ -457,6 +459,7 @@ public:
     typedef boost::shared_ptr<ManageData> ManageDataPtr;
     typedef boost::shared_ptr<ManageData const> ManageDataConstPtr;
 
+    /// \brief Parameters passed into the state savers to control what information gets saved.
     enum SaveParameters
     {
         Save_LinkTransformation=0x00000001, ///< save link transformations
@@ -621,11 +624,11 @@ public:
 
     /// sets the joint angles manually, if ptrans is not NULL, represents the transformation of the first body
     /// calculates the transformations of every body by treating the first body as set with transformation ptrans
-    virtual void SetJointValues(const std::vector<dReal>& vJointValues, const Transform& transBase, bool bCheckLimits = false);
+    virtual void SetJointValues(const std::vector<dReal>& vJointValues, bool bCheckLimits = false);
 
     /// sets the joint angles manually, if ptrans is not NULL, represents the transformation of the first body
     /// calculates the transformations of every body by treating the first body as set with transformation ptrans
-    virtual void SetJointValues(const std::vector<dReal>& vJointValues, bool bCheckLimits = false);
+    virtual void SetJointValues(const std::vector<dReal>& vJointValues, const Transform& transBase, bool bCheckLimits = false);
 
     virtual void SetBodyTransformations(const std::vector<Transform>& vbodies);
     virtual void SetJointVelocities(const std::vector<dReal>& pJointVelocities);

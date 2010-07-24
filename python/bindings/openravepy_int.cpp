@@ -39,6 +39,7 @@
 #define PY_ARRAY_UNIQUE_SYMBOL PyArrayHandle
 #include <boost/python.hpp>
 #include <boost/python/exception_translator.hpp>
+#include <boost/python/docstring_options.hpp>
 #include <pyconfig.h>
 #include <numpy/arrayobject.h>
 
@@ -52,6 +53,9 @@
 using namespace boost::python;
 using namespace std;
 using namespace OpenRAVE;
+
+#define DOXY_ENUM(name) ".. doxygenenum:: "#name"\n"
+#define DOXY_FN(name) ".. doxygenfunction:: "#name"\n\n"
 
 uint64_t GetMicroTime()
 {
@@ -748,33 +752,33 @@ public:
     object GetJointValues() const
     {
         vector<dReal> values;
-        _pbody->GetJointValues(values);
+        _pbody->GetDOFValues(values);
         return toPyArray(values);
     }
 
     object GetJointVelocities() const
     {
         vector<dReal> values;
-        _pbody->GetJointVelocities(values);
+        _pbody->GetDOFVelocities(values);
         return toPyArray(values);
     }
 
     object GetJointLimits() const
     {
         vector<dReal> vlower, vupper;
-        _pbody->GetJointLimits(vlower,vupper);
+        _pbody->GetDOFLimits(vlower,vupper);
         return boost::python::make_tuple(toPyArray(vlower),toPyArray(vupper));
     }
     object GetJointMaxVel() const
     {
         vector<dReal> values;
-        _pbody->GetJointMaxVel(values);
+        _pbody->GetDOFMaxVel(values);
         return toPyArray(values);
     }
     object GetJointWeights() const
     {
         vector<dReal> values;
-        _pbody->GetJointWeights(values);
+        _pbody->GetDOFWeights(values);
         return toPyArray(values);
     }
     
@@ -922,7 +926,7 @@ public:
             throw openrave_exception("sizes do not match");
 
         vector<dReal> values;
-        _pbody->GetJointValues(values);
+        _pbody->GetDOFValues(values);
         vector<dReal>::iterator itv = vsetvalues.begin();
         FOREACH(it, vindices) {
             if( *it < 0 || *it >= _pbody->GetDOF() )
@@ -986,7 +990,7 @@ public:
 
     int DoesAffect(int jointindex, int linkindex ) const { return _pbody->DoesAffect(jointindex,linkindex); }
 
-    std::string GetForwardKinematics() const {
+    std::string WriteForwardKinematics() const {
         stringstream ss;
         _pbody->WriteForwardKinematics(ss);
         return ss.str();
@@ -1939,13 +1943,6 @@ public:
 
     bool SetPhysicsOptions(int physicsoptions) { return _pPhysicsEngine->SetPhysicsOptions(physicsoptions); }
     int GetPhysicsOptions() const { return _pPhysicsEngine->GetPhysicsOptions(); }
-
-    object SetPhysicsOptions(const string& s) {
-        stringstream sinput(s), sout;
-        if( !_pPhysicsEngine->SetPhysicsOptions(sout,sinput) )
-            throw openrave_exception("failed to set physics options");
-        return object(sout.str());
-    }
     bool InitEnvironment() { return _pPhysicsEngine->InitEnvironment(); }
     void DestroyEnvironment() { _pPhysicsEngine->DestroyEnvironment(); }
     bool InitKinBody(PyKinBodyPtr pbody) { CHECK_POINTER(pbody); return _pPhysicsEngine->InitKinBody(pbody->GetBody()); }
@@ -3179,13 +3176,13 @@ object rotationMatrixFromAxisAngle1(object oaxis)
     return toPyArrayRotation(TransformMatrix(t));
 }
 
-object rotationMatrixFromAxisAngle2(object oaxis, object oangle)
+object rotationMatrixFromAxisAngle2(object oaxis, dReal angle)
 {
     Vector axis = ExtractVector3(oaxis);
     dReal axislen = RaveSqrt(axis.lengthsqr3());
     if( axislen == 0 )
         return numeric::array(boost::python::make_tuple((dReal)1,(dReal)0,(dReal)0,(dReal)0));
-    dReal angle = extract<dReal>(oangle)*0.5f;
+    angle *= dReal(0.5);
     dReal sang = RaveSin(angle)/axislen;
     Transform t; t.rot = Vector(RaveCos(angle),axis[0]*sang,axis[1]*sang,axis[2]*sang);
     return toPyArrayRotation(TransformMatrix(t));
@@ -3202,13 +3199,13 @@ object matrixFromAxisAngle1(object oaxis)
     return toPyArray(TransformMatrix(t));
 }
 
-object matrixFromAxisAngle2(object oaxis, object oangle)
+object matrixFromAxisAngle2(object oaxis, dReal angle)
 {
     Vector axis = ExtractVector3(oaxis);
     dReal axislen = RaveSqrt(axis.lengthsqr3());
     if( axislen == 0 )
         return numeric::array(boost::python::make_tuple((dReal)1,(dReal)0,(dReal)0,(dReal)0));
-    dReal angle = extract<dReal>(oangle)*0.5f;
+    angle *= dReal(0.5);
     dReal sang = RaveSin(angle)/axislen;
     Transform t; t.rot = Vector(RaveCos(angle),axis[0]*sang,axis[1]*sang,axis[2]*sang);
     return toPyArray(TransformMatrix(t));
@@ -3384,6 +3381,10 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Save_overloads, Save, 1, 2)
 
 BOOST_PYTHON_MODULE(openravepy_int)
 {
+    docstring_options doc_options;
+    doc_options.disable_cpp_signatures();
+    doc_options.enable_py_signatures();
+    doc_options.enable_user_defined();
     import_array();
     numeric::array::set_module_and_type("numpy", "ndarray");
     int_from_int();
@@ -3400,7 +3401,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
         ;
     exception_translator<openrave_exception>();
 
-    enum_<DebugLevel>("DebugLevel")
+    enum_<DebugLevel>("DebugLevel",DOXY_ENUM(DebugLevel))
         .value("Fatal",Level_Fatal)
         .value("Error",Level_Error)
         .value("Warn",Level_Warn)
@@ -3408,13 +3409,13 @@ BOOST_PYTHON_MODULE(openravepy_int)
         .value("Debug",Level_Debug)
         .value("Verbose",Level_Verbose)
         ;
-    enum_<SerializationOptions>("SerializationOptions")
+    enum_<SerializationOptions>("SerializationOptions",DOXY_ENUM(SerializationOptions))
         .value("Kinematics",SO_Kinematics)
         .value("Dynamics",SO_Dynamics)
         .value("BodyState",SO_BodyState)
         .value("NamesAndFiles",SO_NamesAndFiles)
         ;
-    enum_<InterfaceType>("InterfaceType")
+    enum_<InterfaceType>("InterfaceType",DOXY_ENUM(InterfaceType))
         .value(RaveGetInterfaceName(PT_Planner).c_str(),PT_Planner)
         .value(RaveGetInterfaceName(PT_Robot).c_str(),PT_Robot)
         .value(RaveGetInterfaceName(PT_SensorSystem).c_str(),PT_SensorSystem)
@@ -3428,23 +3429,23 @@ BOOST_PYTHON_MODULE(openravepy_int)
         .value(RaveGetInterfaceName(PT_Trajectory).c_str(),PT_Trajectory)
         .value(RaveGetInterfaceName(PT_Viewer).c_str(),PT_Viewer)
         ;
-    enum_<CollisionOptions>("CollisionOptions")
+    enum_<CollisionOptions>("CollisionOptions",DOXY_ENUM(CollisionOptions))
         .value("Distance",CO_Distance)
         .value("UseTolerance",CO_UseTolerance)
         .value("Contacts",CO_Contacts)
         .value("RayAnyHit",CO_RayAnyHit)
         ;
-    enum_<CollisionAction>("CollisionAction")
+    enum_<CollisionAction>("CollisionAction",DOXY_ENUM(CollisionAction))
         .value("DefaultAction",CA_DefaultAction)
         .value("Ignore",CA_Ignore)
         ;
-    enum_<CloningOptions>("CloningOptions")
+    enum_<CloningOptions>("CloningOptions",DOXY_ENUM(CloningOptions))
         .value("Bodies",Clone_Bodies)
         .value("Viewer",Clone_Viewer)
         .value("Simulation",Clone_Simulation)
         .value("RealControllers",Clone_RealControllers)
         ;
-    enum_<PhysicsEngineOptions>("PhysicsEngineOptions")
+    enum_<PhysicsEngineOptions>("PhysicsEngineOptions",DOXY_ENUM(PhysicsEngineOptions))
         .value("SelfCollisions",PEO_SelfCollisions)
         ;
 
@@ -3470,15 +3471,15 @@ BOOST_PYTHON_MODULE(openravepy_int)
         .def_pickle(AABB_pickle_suite())
         ;
     class_<PyInterfaceBase, boost::shared_ptr<PyInterfaceBase> >("Interface", no_init)
-        .def("GetInterfaceType",&PyInterfaceBase::GetInterfaceType)
-        .def("GetXMLId",&PyInterfaceBase::GetXMLId)
-        .def("GetPluginName",&PyInterfaceBase::GetPluginName)
-        .def("GetDescription",&PyInterfaceBase::GetDescription)
-        .def("GetEnv",&PyInterfaceBase::GetEnv)
-        .def("Clone",&PyInterfaceBase::Clone,args("ref","cloningoptions"))
-        .def("SetUserData",&PyInterfaceBase::SetUserData,args("data"))
-        .def("GetUserData",&PyInterfaceBase::GetUserData)
-        .def("SendCommand",&PyInterfaceBase::SendCommand,args("cmd"))
+        .def("GetInterfaceType",&PyInterfaceBase::GetInterfaceType, DOXY_FN(GetInterfaceType))
+        .def("GetXMLId",&PyInterfaceBase::GetXMLId, DOXY_FN(GetXMLId))
+        .def("GetPluginName",&PyInterfaceBase::GetPluginName, DOXY_FN(GetPluginName))
+        .def("GetDescription",&PyInterfaceBase::GetDescription, DOXY_FN(GetDescription))
+        .def("GetEnv",&PyInterfaceBase::GetEnv, DOXY_FN(GetEnv))
+        .def("Clone",&PyInterfaceBase::Clone,args("ref","cloningoptions"), DOXY_FN(Clone))
+        .def("SetUserData",&PyInterfaceBase::SetUserData,args("data"), DOXY_FN(SetUserData))
+        .def("GetUserData",&PyInterfaceBase::GetUserData, DOXY_FN(GetUserData))
+        .def("SendCommand",&PyInterfaceBase::SendCommand,args("cmd"), DOXY_FN(SendCommand))
         .def("__repr__", &PyInterfaceBase::__repr__)
         .def("__str__", &PyInterfaceBase::__str__)
         .def("__eq__",&PyInterfaceBase::__eq__)
@@ -3500,75 +3501,75 @@ BOOST_PYTHON_MODULE(openravepy_int)
         object (PyKinBody::*getdofvalues1)() const = &PyKinBody::GetDOFValues;
         object (PyKinBody::*getdofvalues2)(object) const = &PyKinBody::GetDOFValues;
         scope kinbody = class_<PyKinBody, boost::shared_ptr<PyKinBody>, bases<PyInterfaceBase> >("KinBody", no_init)
-            .def("InitFromFile",&PyKinBody::InitFromFile,args("filename"))
-            .def("InitFromData",&PyKinBody::InitFromData,args("data"))
-            .def("InitFromBoxes",&PyKinBody::InitFromBoxes,args("boxes","draw"))
-            .def("SetName", &PyKinBody::SetName,args("name"))
-            .def("GetName",&PyKinBody::GetName)
-            .def("GetDOF",&PyKinBody::GetDOF)
-            .def("GetDOFValues",getdofvalues1)
-            .def("GetDOFValues",getdofvalues2)
-            .def("GetDOFVelocities",&PyKinBody::GetDOFVelocities)
-            .def("GetDOFLimits",&PyKinBody::GetDOFLimits)
-            .def("GetDOFMaxVel",&PyKinBody::GetDOFMaxVel)
-            .def("GetDOFWeights",&PyKinBody::GetDOFWeights)
-            .def("GetJointValues",&PyKinBody::GetJointValues)
-            .def("GetJointVelocities",&PyKinBody::GetJointVelocities)
-            .def("GetJointLimits",&PyKinBody::GetJointLimits)
-            .def("GetJointMaxVel",&PyKinBody::GetJointMaxVel)
-            .def("GetJointWeights",&PyKinBody::GetJointWeights)
-            .def("GetLinks",&PyKinBody::GetLinks)
-            .def("GetLink",&PyKinBody::GetLink,args("name"))
-            .def("GetJoints",&PyKinBody::GetJoints)
-            .def("GetPassiveJoints",&PyKinBody::GetPassiveJoints)
-            .def("GetDependencyOrderedJoints",&PyKinBody::GetDependencyOrderedJoints)
-            .def("GetRigidlyAttachedLinks",&PyKinBody::GetRigidlyAttachedLinks,args("linkindex"))
-            .def("GetChain",&PyKinBody::GetChain,args("linkbaseindex","linkendindex"))
-            .def("GetJoint",&PyKinBody::GetJoint,args("name"))
-            .def("GetTransform",&PyKinBody::GetTransform)
-            .def("GetBodyTransformations",&PyKinBody::GetBodyTransformations)
-            .def("SetBodyTransformations",&PyKinBody::SetBodyTransformations,args("transforms"))
-            .def("GetLinkVelocities",&PyKinBody::GetLinkVelocities)
-            .def("ComputeAABB",&PyKinBody::ComputeAABB)
-            .def("Enable",&PyKinBody::Enable,args("enable"))
-            .def("IsEnabled",&PyKinBody::IsEnabled)
-            .def("SetTransform",&PyKinBody::SetTransform,args("transform"))
-            .def("SetJointValues",psetdofvalues1,args("values"))
-            .def("SetJointValues",psetdofvalues2,args("values","jointindices"))
-            .def("SetDOFValues",psetdofvalues1,args("values"))
-            .def("SetDOFValues",psetdofvalues2,args("values","jointindices"))
-            .def("SetJointTorques",&PyKinBody::SetJointTorques,args("torques","add"))
-            .def("SetTransformWithJointValues",&PyKinBody::SetTransformWithDOFValues,args("transform","values"))
-            .def("SetTransformWithDOFValues",&PyKinBody::SetTransformWithDOFValues,args("transform","values"))
-            .def("CalculateJacobian",&PyKinBody::CalculateJacobian,args("linkindex","offset"))
-            .def("CalculateRotationJacobian",&PyKinBody::CalculateRotationJacobian,args("linkindex","quat"))
-            .def("CalculateAngularVelocityJacobian",&PyKinBody::CalculateAngularVelocityJacobian,args("linkindex"))
-            .def("CheckSelfCollision",pkinbodyself)
-            .def("CheckSelfCollision",pkinbodyselfr,args("report"))
-            .def("IsAttached",&PyKinBody::IsAttached,args("body"))
-            .def("GetAttached",&PyKinBody::GetAttached)
-            .def("IsRobot",&PyKinBody::IsRobot)
-            .def("GetEnvironmentId",&PyKinBody::GetEnvironmentId)
-            .def("DoesAffect",&PyKinBody::DoesAffect,args("jointindex","linkindex"))
-            .def("GetForwardKinematics",&PyKinBody::GetForwardKinematics)
-            .def("SetGuiData",&PyKinBody::SetGuiData,args("data"))
-            .def("GetGuiData",&PyKinBody::GetGuiData)
-            .def("GetXMLFilename",&PyKinBody::GetXMLFilename)
-            .def("GetNonAdjacentLinks",&PyKinBody::GetNonAdjacentLinks)
-            .def("GetAdjacentLinks",&PyKinBody::GetAdjacentLinks)
-            .def("GetPhysicsData",&PyKinBody::GetPhysicsData)
-            .def("GetCollisionData",&PyKinBody::GetCollisionData)
-            .def("GetManageData",&PyKinBody::GetManageData)
-            .def("GetUpdateStamp",&PyKinBody::GetUpdateStamp)
-            .def("serialize",&PyKinBody::serialize,args("options"))
-            .def("GetKinematicsGeometryHash",&PyKinBody::GetKinematicsGeometryHash)
-            .def("CreateKinBodyStateSaver",statesaver1)
-            .def("CreateKinBodyStateSaver",statesaver2)
+            .def("InitFromFile",&PyKinBody::InitFromFile,args("filename"),DOXY_FN(InitFromFile))
+            .def("InitFromData",&PyKinBody::InitFromData,args("data"), DOXY_FN(InitFromData))
+            .def("InitFromBoxes",&PyKinBody::InitFromBoxes,args("boxes","draw"), DOXY_FN(InitFromBoxes))
+            .def("SetName", &PyKinBody::SetName,args("name"),DOXY_FN(SetName))
+            .def("GetName",&PyKinBody::GetName,DOXY_FN(GetName))
+            .def("GetDOF",&PyKinBody::GetDOF,DOXY_FN(GetDOF))
+            .def("GetDOFValues",getdofvalues1,DOXY_FN(GetDOFValues))
+            .def("GetDOFValues",getdofvalues2,DOXY_FN(GetDOFValues))
+            .def("GetDOFVelocities",&PyKinBody::GetDOFVelocities, DOXY_FN(GetDOFVelocities))
+            .def("GetDOFLimits",&PyKinBody::GetDOFLimits, DOXY_FN(GetDOFLimits))
+            .def("GetDOFMaxVel",&PyKinBody::GetDOFMaxVel, DOXY_FN(GetDOFMaxVel))
+            .def("GetDOFWeights",&PyKinBody::GetDOFWeights, DOXY_FN(GetDOFWeights))
+            .def("GetJointValues",&PyKinBody::GetJointValues, DOXY_FN(GetJointValues))
+            .def("GetJointVelocities",&PyKinBody::GetJointVelocities, DOXY_FN(GetJointVelocities))
+            .def("GetJointLimits",&PyKinBody::GetJointLimits, DOXY_FN(GetJointLimits))
+            .def("GetJointMaxVel",&PyKinBody::GetJointMaxVel, DOXY_FN(GetJointMaxVel))
+            .def("GetJointWeights",&PyKinBody::GetJointWeights, DOXY_FN(GetJointWeights))
+            .def("GetLinks",&PyKinBody::GetLinks, DOXY_FN(GetLinks))
+            .def("GetLink",&PyKinBody::GetLink,args("name"), DOXY_FN(GetLink))
+            .def("GetJoints",&PyKinBody::GetJoints, DOXY_FN(GetJoints))
+            .def("GetPassiveJoints",&PyKinBody::GetPassiveJoints, DOXY_FN(GetPassiveJoints))
+            .def("GetDependencyOrderedJoints",&PyKinBody::GetDependencyOrderedJoints, DOXY_FN(GetDependencyOrderedJoints))
+            .def("GetRigidlyAttachedLinks",&PyKinBody::GetRigidlyAttachedLinks,args("linkindex"), DOXY_FN(GetRigidlyAttachedLinks))
+            .def("GetChain",&PyKinBody::GetChain,args("linkbaseindex","linkendindex"), DOXY_FN(GetChain))
+            .def("GetJoint",&PyKinBody::GetJoint,args("name"), DOXY_FN(GetJoint))
+            .def("GetTransform",&PyKinBody::GetTransform, DOXY_FN(GetTransform))
+            .def("GetBodyTransformations",&PyKinBody::GetBodyTransformations, DOXY_FN(GetBodyTransformations))
+            .def("SetBodyTransformations",&PyKinBody::SetBodyTransformations,args("transforms"), DOXY_FN(SetBodyTransformations))
+            .def("GetLinkVelocities",&PyKinBody::GetLinkVelocities, DOXY_FN(GetLinkVelocities))
+            .def("ComputeAABB",&PyKinBody::ComputeAABB, DOXY_FN(ComputeAABB))
+            .def("Enable",&PyKinBody::Enable,args("enable"), DOXY_FN(Enable))
+            .def("IsEnabled",&PyKinBody::IsEnabled, DOXY_FN(IsEnabled))
+            .def("SetTransform",&PyKinBody::SetTransform,args("transform"), DOXY_FN(SetTransform))
+            .def("SetJointValues",psetdofvalues1,args("values"), DOXY_FN(SetJointValues))
+            .def("SetJointValues",psetdofvalues2,args("values","jointindices"), DOXY_FN(SetJointValues))
+            .def("SetDOFValues",psetdofvalues1,args("values"), DOXY_FN(SetDOFValues))
+            .def("SetDOFValues",psetdofvalues2,args("values","jointindices"), DOXY_FN(SetDOFValues))
+            .def("SetJointTorques",&PyKinBody::SetJointTorques,args("torques","add"), DOXY_FN(SetJointTorques))
+            .def("SetTransformWithJointValues",&PyKinBody::SetTransformWithDOFValues,args("transform","values"), DOXY_FN(SetJointValues))
+            .def("SetTransformWithDOFValues",&PyKinBody::SetTransformWithDOFValues,args("transform","values"), DOXY_FN(SetJointValues))
+            .def("CalculateJacobian",&PyKinBody::CalculateJacobian,args("linkindex","offset"), DOXY_FN(CalculateJacobian))
+            .def("CalculateRotationJacobian",&PyKinBody::CalculateRotationJacobian,args("linkindex","quat"), DOXY_FN(CalculateRotationJacobian))
+            .def("CalculateAngularVelocityJacobian",&PyKinBody::CalculateAngularVelocityJacobian,args("linkindex"), DOXY_FN(CalculateAngularVelocityJacobian))
+            .def("CheckSelfCollision",pkinbodyself, DOXY_FN(CheckSelfCollision))
+            .def("CheckSelfCollision",pkinbodyselfr,args("report"), DOXY_FN(CheckSelfCollision))
+            .def("IsAttached",&PyKinBody::IsAttached,args("body"), DOXY_FN(IsAttached))
+            .def("GetAttached",&PyKinBody::GetAttached, DOXY_FN(GetAttached))
+            .def("IsRobot",&PyKinBody::IsRobot, DOXY_FN(IsRobot))
+            .def("GetEnvironmentId",&PyKinBody::GetEnvironmentId, DOXY_FN(GetEnvironmentId))
+            .def("DoesAffect",&PyKinBody::DoesAffect,args("jointindex","linkindex"), DOXY_FN(DoesAffect))
+            .def("WriteForwardKinematics",&PyKinBody::WriteForwardKinematics, DOXY_FN(WriteForwardKinematics))
+            .def("SetGuiData",&PyKinBody::SetGuiData,args("data"), DOXY_FN(SetGuiData))
+            .def("GetGuiData",&PyKinBody::GetGuiData, DOXY_FN(GetGuiData))
+            .def("GetXMLFilename",&PyKinBody::GetXMLFilename, DOXY_FN(GetXMLFilename))
+            .def("GetNonAdjacentLinks",&PyKinBody::GetNonAdjacentLinks, DOXY_FN(GetNonAdjacentLinks))
+            .def("GetAdjacentLinks",&PyKinBody::GetAdjacentLinks, DOXY_FN(GetAdjacentLinks))
+            .def("GetPhysicsData",&PyKinBody::GetPhysicsData, DOXY_FN(GetPhysicsData))
+            .def("GetCollisionData",&PyKinBody::GetCollisionData, DOXY_FN(GetCollisionData))
+            .def("GetManageData",&PyKinBody::GetManageData, DOXY_FN(GetManageData))
+            .def("GetUpdateStamp",&PyKinBody::GetUpdateStamp, DOXY_FN(GetUpdateStamp))
+            .def("serialize",&PyKinBody::serialize,args("options"), DOXY_FN(serialize))
+            .def("GetKinematicsGeometryHash",&PyKinBody::GetKinematicsGeometryHash, DOXY_FN(GetKinematicsGeometryHash))
+            .def("CreateKinBodyStateSaver",statesaver1, "Creates KinBodySaveStater for this body")
+            .def("CreateKinBodyStateSaver",statesaver2, args("options"), "Creates KinBodySaveStater for this body")
             .def("__enter__",&PyKinBody::__enter__)
             .def("__exit__",&PyKinBody::__exit__)
             ;
 
-        enum_<KinBody::SaveParameters>("SaveParameters")
+        enum_<KinBody::SaveParameters>("SaveParameters",DOXY_ENUM(SaveParameters))
             .value("LinkTransformation",KinBody::Save_LinkTransformation)
             .value("LinkEnable",KinBody::Save_LinkEnable)
             .value("ActiveDOF",KinBody::Save_ActiveDOF)
@@ -3578,23 +3579,23 @@ BOOST_PYTHON_MODULE(openravepy_int)
 
         {
             scope link = class_<PyKinBody::PyLink, boost::shared_ptr<PyKinBody::PyLink> >("Link", no_init)
-                .def("GetName",&PyKinBody::PyLink::GetName)
-                .def("GetIndex",&PyKinBody::PyLink::GetIndex)
-                .def("IsEnabled",&PyKinBody::PyLink::IsEnabled)
-                .def("IsStatic",&PyKinBody::PyLink::IsStatic)
-                .def("Enable",&PyKinBody::PyLink::Enable,args("enable"))
-                .def("GetParent",&PyKinBody::PyLink::GetParent)
-                .def("GetParentLink",&PyKinBody::PyLink::GetParentLink)
-                .def("GetCollisionData",&PyKinBody::PyLink::GetCollisionData)
-                .def("ComputeAABB",&PyKinBody::PyLink::ComputeAABB)
-                .def("GetTransform",&PyKinBody::PyLink::GetTransform)
-                .def("GetCOMOffset",&PyKinBody::PyLink::GetCOMOffset)
-                .def("GetInertia",&PyKinBody::PyLink::GetInertia)
-                .def("GetMass",&PyKinBody::PyLink::GetMass)
-                .def("SetTransform",&PyKinBody::PyLink::SetTransform,args("transform"))
-                .def("SetForce",&PyKinBody::PyLink::SetForce,args("force","pos","add"))
-                .def("SetTorque",&PyKinBody::PyLink::SetTorque,args("torque","add"))
-                .def("GetGeometries",&PyKinBody::PyLink::GetGeometries)
+                .def("GetName",&PyKinBody::PyLink::GetName, DOXY_FN(GetName))
+                .def("GetIndex",&PyKinBody::PyLink::GetIndex, DOXY_FN(GetIndex))
+                .def("IsEnabled",&PyKinBody::PyLink::IsEnabled, DOXY_FN(IsEnabled))
+                .def("IsStatic",&PyKinBody::PyLink::IsStatic, DOXY_FN(IsStatic))
+                .def("Enable",&PyKinBody::PyLink::Enable,args("enable"), DOXY_FN(Enable))
+                .def("GetParent",&PyKinBody::PyLink::GetParent, DOXY_FN(GetParent))
+                .def("GetParentLink",&PyKinBody::PyLink::GetParentLink, DOXY_FN(GetParentLink))
+                .def("GetCollisionData",&PyKinBody::PyLink::GetCollisionData, DOXY_FN(GetCollisionData))
+                .def("ComputeAABB",&PyKinBody::PyLink::ComputeAABB, DOXY_FN(ComputeAABB))
+                .def("GetTransform",&PyKinBody::PyLink::GetTransform, DOXY_FN(GetTransform))
+                .def("GetCOMOffset",&PyKinBody::PyLink::GetCOMOffset, DOXY_FN(GetCOMOffset))
+                .def("GetInertia",&PyKinBody::PyLink::GetInertia, DOXY_FN(GetInertia))
+                .def("GetMass",&PyKinBody::PyLink::GetMass, DOXY_FN(GetMass))
+                .def("SetTransform",&PyKinBody::PyLink::SetTransform,args("transform"), DOXY_FN(SetTransform))
+                .def("SetForce",&PyKinBody::PyLink::SetForce,args("force","pos","add"), DOXY_FN(SetForce))
+                .def("SetTorque",&PyKinBody::PyLink::SetTorque,args("torque","add"), DOXY_FN(SetTorque))
+                .def("GetGeometries",&PyKinBody::PyLink::GetGeometries, DOXY_FN(GetGeometries))
                 .def("__repr__", &PyKinBody::PyLink::__repr__)
                 .def("__str__", &PyKinBody::PyLink::__str__)
                 .def("__eq__",&PyKinBody::PyLink::__eq__)
@@ -3610,24 +3611,24 @@ BOOST_PYTHON_MODULE(openravepy_int)
 
             {
                 scope geomproperties = class_<PyKinBody::PyLink::PyGeomProperties, boost::shared_ptr<PyKinBody::PyLink::PyGeomProperties> >("GeomProperties",no_init)
-                    .def("SetCollisionMesh",&PyKinBody::PyLink::PyGeomProperties::SetCollisionMesh,args("trimesh"))
-                    .def("GetCollisionMesh",&PyKinBody::PyLink::PyGeomProperties::GetCollisionMesh)
-                    .def("SetDraw",&PyKinBody::PyLink::PyGeomProperties::SetDraw,args("draw"))
-                    .def("SetTransparency",&PyKinBody::PyLink::PyGeomProperties::SetTransparency,args("transparency"))
-                    .def("IsDraw",&PyKinBody::PyLink::PyGeomProperties::IsDraw)
-                    .def("IsModifiable",&PyKinBody::PyLink::PyGeomProperties::IsModifiable)
-                    .def("GetType",&PyKinBody::PyLink::PyGeomProperties::GetType)
-                    .def("GetTransform",&PyKinBody::PyLink::PyGeomProperties::GetTransform)
-                    .def("GetSphereRadius",&PyKinBody::PyLink::PyGeomProperties::GetSphereRadius)
-                    .def("GetCylinderRadius",&PyKinBody::PyLink::PyGeomProperties::GetCylinderRadius)
-                    .def("GetCylinderHeight",&PyKinBody::PyLink::PyGeomProperties::GetCylinderHeight)
-                    .def("GetBoxExtents",&PyKinBody::PyLink::PyGeomProperties::GetBoxExtents)
-                    .def("GetRenderScale",&PyKinBody::PyLink::PyGeomProperties::GetRenderScale)
-                    .def("GetRenderFilename",&PyKinBody::PyLink::PyGeomProperties::GetRenderFilename)
+                    .def("SetCollisionMesh",&PyKinBody::PyLink::PyGeomProperties::SetCollisionMesh,args("trimesh"), DOXY_FN(SetCollisionMesh))
+                    .def("GetCollisionMesh",&PyKinBody::PyLink::PyGeomProperties::GetCollisionMesh, DOXY_FN(GetCollisionMesh))
+                    .def("SetDraw",&PyKinBody::PyLink::PyGeomProperties::SetDraw,args("draw"), DOXY_FN(SetDraw))
+                    .def("SetTransparency",&PyKinBody::PyLink::PyGeomProperties::SetTransparency,args("transparency"), DOXY_FN(SetTransparency))
+                    .def("IsDraw",&PyKinBody::PyLink::PyGeomProperties::IsDraw, DOXY_FN(IsDraw))
+                    .def("IsModifiable",&PyKinBody::PyLink::PyGeomProperties::IsModifiable, DOXY_FN(IsModifiable))
+                    .def("GetType",&PyKinBody::PyLink::PyGeomProperties::GetType, DOXY_FN(GetType))
+                    .def("GetTransform",&PyKinBody::PyLink::PyGeomProperties::GetTransform, DOXY_FN(GetTransform))
+                    .def("GetSphereRadius",&PyKinBody::PyLink::PyGeomProperties::GetSphereRadius, DOXY_FN(GetSphereRadius))
+                    .def("GetCylinderRadius",&PyKinBody::PyLink::PyGeomProperties::GetCylinderRadius, DOXY_FN(GetCylinderRadius))
+                    .def("GetCylinderHeight",&PyKinBody::PyLink::PyGeomProperties::GetCylinderHeight, DOXY_FN(GetCylinderHeight))
+                    .def("GetBoxExtents",&PyKinBody::PyLink::PyGeomProperties::GetBoxExtents, DOXY_FN(GetBoxExtents))
+                    .def("GetRenderScale",&PyKinBody::PyLink::PyGeomProperties::GetRenderScale, DOXY_FN(GetRenderScale))
+                    .def("GetRenderFilename",&PyKinBody::PyLink::PyGeomProperties::GetRenderFilename, DOXY_FN(GetRenderFilename))
                     .def("__eq__",&PyKinBody::PyLink::PyGeomProperties::__eq__)
                     .def("__ne__",&PyKinBody::PyLink::PyGeomProperties::__ne__)
                     ;
-                enum_<KinBody::Link::GEOMPROPERTIES::GeomType>("Type")
+                enum_<KinBody::Link::GEOMPROPERTIES::GeomType>("Type", DOXY_ENUM(GeomType))
                     .value("None",KinBody::Link::GEOMPROPERTIES::GeomNone)
                     .value("Box",KinBody::Link::GEOMPROPERTIES::GeomBox)
                     .value("Sphere",KinBody::Link::GEOMPROPERTIES::GeomSphere)
@@ -3639,43 +3640,43 @@ BOOST_PYTHON_MODULE(openravepy_int)
 
         {
             scope joint = class_<PyKinBody::PyJoint, boost::shared_ptr<PyKinBody::PyJoint> >("Joint",no_init)
-                .def("GetName", &PyKinBody::PyJoint::GetName)
-                .def("GetMimicJointIndex", &PyKinBody::PyJoint::GetMimicJointIndex)
-                .def("GetMimicCoeffs", &PyKinBody::PyJoint::GetMimicCoeffs)
-                .def("GetMaxVel", &PyKinBody::PyJoint::GetMaxVel)
-                .def("GetMaxAccel", &PyKinBody::PyJoint::GetMaxAccel)
-                .def("GetMaxTorque", &PyKinBody::PyJoint::GetMaxTorque)
-                .def("GetDOFIndex", &PyKinBody::PyJoint::GetDOFIndex)
-                .def("GetJointIndex", &PyKinBody::PyJoint::GetJointIndex)
-                .def("GetParent", &PyKinBody::PyJoint::GetParent)
-                .def("GetFirstAttached", &PyKinBody::PyJoint::GetFirstAttached)
-                .def("GetSecondAttached", &PyKinBody::PyJoint::GetSecondAttached)
-                .def("IsStatic",&PyKinBody::PyJoint::IsStatic)
-                .def("IsCircular",&PyKinBody::PyJoint::IsCircular)
-                .def("GetType", &PyKinBody::PyJoint::GetType)
-                .def("GetDOF", &PyKinBody::PyJoint::GetDOF)
-                .def("GetValues", &PyKinBody::PyJoint::GetValues)
-                .def("GetVelocities", &PyKinBody::PyJoint::GetVelocities)
-                .def("GetAnchor", &PyKinBody::PyJoint::GetAnchor)
-                .def("GetAxis", &PyKinBody::PyJoint::GetAxis,args("axis"))
-                .def("GetInternalHierarchyAnchor", &PyKinBody::PyJoint::GetInternalHierarchyAnchor)
-                .def("GetInternalHierarchyAxis", &PyKinBody::PyJoint::GetInternalHierarchyAxis,args("axis"))
-                .def("GetInternalHierarchyLeftTransform",&PyKinBody::PyJoint::GetInternalHierarchyLeftTransform)
-                .def("GetInternalHierarchyRightTransform",&PyKinBody::PyJoint::GetInternalHierarchyRightTransform)
-                .def("GetLimits", &PyKinBody::PyJoint::GetLimits)
-                .def("GetWeights", &PyKinBody::PyJoint::GetWeights)
-                .def("SetJointOffset",&PyKinBody::PyJoint::SetJointOffset,args("offset"))
-                .def("SetJointLimits",&PyKinBody::PyJoint::SetJointLimits,args("lower","upper"))
-                .def("SetResolution",&PyKinBody::PyJoint::SetResolution,args("resolution"))
-                .def("SetWeights",&PyKinBody::PyJoint::SetWeights,args("weights"))
-                .def("AddTorque",&PyKinBody::PyJoint::AddTorque,args("torques"))
+                .def("GetName", &PyKinBody::PyJoint::GetName, DOXY_FN(GetName))
+                .def("GetMimicJointIndex", &PyKinBody::PyJoint::GetMimicJointIndex, DOXY_FN(GetMimicJointIndex))
+                .def("GetMimicCoeffs", &PyKinBody::PyJoint::GetMimicCoeffs, DOXY_FN(GetMimicCoeffs))
+                .def("GetMaxVel", &PyKinBody::PyJoint::GetMaxVel, DOXY_FN(GetMaxVel))
+                .def("GetMaxAccel", &PyKinBody::PyJoint::GetMaxAccel, DOXY_FN(GetMaxAccel))
+                .def("GetMaxTorque", &PyKinBody::PyJoint::GetMaxTorque, DOXY_FN(GetMaxTorque))
+                .def("GetDOFIndex", &PyKinBody::PyJoint::GetDOFIndex, DOXY_FN(GetDOFIndex))
+                .def("GetJointIndex", &PyKinBody::PyJoint::GetJointIndex, DOXY_FN(GetJointIndex))
+                .def("GetParent", &PyKinBody::PyJoint::GetParent, DOXY_FN(GetParent))
+                .def("GetFirstAttached", &PyKinBody::PyJoint::GetFirstAttached, DOXY_FN(GetFirstAttached))
+                .def("GetSecondAttached", &PyKinBody::PyJoint::GetSecondAttached, DOXY_FN(GetSecondAttached))
+                .def("IsStatic",&PyKinBody::PyJoint::IsStatic, DOXY_FN(IsStatic))
+                .def("IsCircular",&PyKinBody::PyJoint::IsCircular, DOXY_FN(IsCircular))
+                .def("GetType", &PyKinBody::PyJoint::GetType, DOXY_FN(GetType))
+                .def("GetDOF", &PyKinBody::PyJoint::GetDOF, DOXY_FN(GetDOF))
+                .def("GetValues", &PyKinBody::PyJoint::GetValues, DOXY_FN(GetValues))
+                .def("GetVelocities", &PyKinBody::PyJoint::GetVelocities, DOXY_FN(GetVelocities))
+                .def("GetAnchor", &PyKinBody::PyJoint::GetAnchor, DOXY_FN(GetAnchor))
+                .def("GetAxis", &PyKinBody::PyJoint::GetAxis,args("axis"), DOXY_FN(GetAxis))
+                .def("GetInternalHierarchyAnchor", &PyKinBody::PyJoint::GetInternalHierarchyAnchor, DOXY_FN(GetInternalHierarchyAnchor))
+                .def("GetInternalHierarchyAxis", &PyKinBody::PyJoint::GetInternalHierarchyAxis,args("axis"), DOXY_FN(GetInternalHierarchyAxis))
+                .def("GetInternalHierarchyLeftTransform",&PyKinBody::PyJoint::GetInternalHierarchyLeftTransform, DOXY_FN(GetInternalHierarchyLeftTransform))
+                .def("GetInternalHierarchyRightTransform",&PyKinBody::PyJoint::GetInternalHierarchyRightTransform, DOXY_FN(GetInternalHierarchyRightTransform))
+                .def("GetLimits", &PyKinBody::PyJoint::GetLimits, DOXY_FN(GetLimits))
+                .def("GetWeights", &PyKinBody::PyJoint::GetWeights, DOXY_FN(GetWeights))
+                .def("SetJointOffset",&PyKinBody::PyJoint::SetJointOffset,args("offset"), DOXY_FN(SetJointOffset))
+                .def("SetJointLimits",&PyKinBody::PyJoint::SetJointLimits,args("lower","upper"), DOXY_FN(SetJointLimits))
+                .def("SetResolution",&PyKinBody::PyJoint::SetResolution,args("resolution"), DOXY_FN(SetResolution))
+                .def("SetWeights",&PyKinBody::PyJoint::SetWeights,args("weights"), DOXY_FN(SetWeights))
+                .def("AddTorque",&PyKinBody::PyJoint::AddTorque,args("torques"), DOXY_FN(AddTorque))
                 .def("__repr__", &PyKinBody::PyJoint::__repr__)
                 .def("__str__", &PyKinBody::PyJoint::__str__)
                 .def("__eq__",&PyKinBody::PyJoint::__eq__)
                 .def("__ne__",&PyKinBody::PyJoint::__ne__)
                 ;
             
-            enum_<KinBody::Joint::JointType>("Type")
+            enum_<KinBody::Joint::JointType>("Type",DOXY_ENUM(JointType))
                 .value("None",KinBody::Joint::JointNone)
                 .value("Hinge",KinBody::Joint::JointHinge)
                 .value("Revolute",KinBody::Joint::JointRevolute)
@@ -3689,13 +3690,13 @@ BOOST_PYTHON_MODULE(openravepy_int)
 
         {
             scope managedata = class_<PyKinBody::PyManageData, boost::shared_ptr<PyKinBody::PyManageData> >("ManageData",no_init)
-                .def("GetSystem", &PyKinBody::PyManageData::GetSystem)
-                .def("GetData", &PyKinBody::PyManageData::GetData)
-                .def("GetOffsetLink", &PyKinBody::PyManageData::GetOffsetLink)
-                .def("IsPresent", &PyKinBody::PyManageData::IsPresent)
-                .def("IsEnabled", &PyKinBody::PyManageData::IsEnabled)
-                .def("IsLocked", &PyKinBody::PyManageData::IsLocked)
-                .def("Lock", &PyKinBody::PyManageData::Lock,args("dolock"))
+                .def("GetSystem", &PyKinBody::PyManageData::GetSystem, DOXY_FN(GetSystem))
+                .def("GetData", &PyKinBody::PyManageData::GetData, DOXY_FN(GetData))
+                .def("GetOffsetLink", &PyKinBody::PyManageData::GetOffsetLink, DOXY_FN(GetOffsetLink))
+                .def("IsPresent", &PyKinBody::PyManageData::IsPresent, DOXY_FN(IsPresent)) 
+                .def("IsEnabled", &PyKinBody::PyManageData::IsEnabled, DOXY_FN(IsEnabled))
+                .def("IsLocked", &PyKinBody::PyManageData::IsLocked, DOXY_FN(IsLocked))
+                .def("Lock", &PyKinBody::PyManageData::Lock,args("dolock"), DOXY_FN(Lock))
                 .def("__repr__", &PyKinBody::PyJoint::__repr__)
                 .def("__str__", &PyKinBody::PyJoint::__str__)
                 .def("__eq__",&PyKinBody::PyJoint::__eq__)
@@ -3724,21 +3725,21 @@ BOOST_PYTHON_MODULE(openravepy_int)
     {
         scope ikparameterization = class_<PyIkParameterization, boost::shared_ptr<PyIkParameterization> >("IkParameterization")
             .def(init<object,IkParameterization::Type>())
-            .def("SetTransform",&PyIkParameterization::SetTransform,args("transform"))
-            .def("SetRotation",&PyIkParameterization::SetRotation,args("quat"))
-            .def("SetTranslation",&PyIkParameterization::SetTranslation,args("pos"))
-            .def("SetDirection",&PyIkParameterization::SetDirection,args("dir"))
-            .def("SetRay",&PyIkParameterization::SetRay,args("quat"))
-            .def("GetType",&PyIkParameterization::GetType)
-            .def("GetTransform",&PyIkParameterization::GetTransform)
-            .def("GetRotation",&PyIkParameterization::GetRotation)
-            .def("GetTranslation",&PyIkParameterization::GetTranslation)
-            .def("GetDirection",&PyIkParameterization::GetDirection)
-            .def("GetRay",&PyIkParameterization::GetRay)
+            .def("SetTransform",&PyIkParameterization::SetTransform,args("transform"), DOXY_FN(SetTransform))
+            .def("SetRotation",&PyIkParameterization::SetRotation,args("quat"), DOXY_FN(SetRotation))
+            .def("SetTranslation",&PyIkParameterization::SetTranslation,args("pos"), DOXY_FN(SetTranslation))
+            .def("SetDirection",&PyIkParameterization::SetDirection,args("dir"), DOXY_FN(SetDirection))
+            .def("SetRay",&PyIkParameterization::SetRay,args("quat"), DOXY_FN(SetRay))
+            .def("GetType",&PyIkParameterization::GetType, DOXY_FN(GetType))
+            .def("GetTransform",&PyIkParameterization::GetTransform, DOXY_FN(GetTransform))
+            .def("GetRotation",&PyIkParameterization::GetRotation, DOXY_FN(GetRotation))
+            .def("GetTranslation",&PyIkParameterization::GetTranslation, DOXY_FN(GetTranslation))
+            .def("GetDirection",&PyIkParameterization::GetDirection, DOXY_FN(GetDirection))
+            .def("GetRay",&PyIkParameterization::GetRay, DOXY_FN(GetRay))
             .def_pickle(IkParameterization_pickle_suite())
             ;
 
-        enum_<IkParameterization::Type>("Type")
+        enum_<IkParameterization::Type>("Type",DOXY_ENUM(IkParameterization))
             .value("Transform6D",IkParameterization::Type_Transform6D)
             .value("Rotation3D",IkParameterization::Type_Rotation3D)
             .value("Translation3D",IkParameterization::Type_Translation3D)
@@ -3766,81 +3767,81 @@ BOOST_PYTHON_MODULE(openravepy_int)
         PyVoidHandle (PyRobotBase::*statesaver1)() = &PyRobotBase::CreateRobotStateSaver;
         PyVoidHandle (PyRobotBase::*statesaver2)(int) = &PyRobotBase::CreateRobotStateSaver;
         scope robot = class_<PyRobotBase, boost::shared_ptr<PyRobotBase>, bases<PyKinBody, PyInterfaceBase> >("Robot", no_init)
-            .def("GetManipulators",GetManipulators1)
-            .def("GetManipulators",GetManipulators2,args("manipname"))
-            .def("GetManipulator",&PyRobotBase::GetManipulator,args("manipname"))
-            .def("SetActiveManipulator",setactivemanipulator1,args("manipindex"))
-            .def("SetActiveManipulator",setactivemanipulator2,args("manipname"))
-            .def("SetActiveManipulator",setactivemanipulator3,args("manip"))
-            .def("GetActiveManipulator",&PyRobotBase::GetActiveManipulator)
-            .def("GetActiveManipulatorIndex",&PyRobotBase::GetActiveManipulatorIndex)
-            .def("GetAttachedSensors",&PyRobotBase::GetAttachedSensors)
-            .def("GetAttachedSensor",&PyRobotBase::GetAttachedSensor,args("sensorname"))
-            .def("GetSensors",&PyRobotBase::GetSensors)
-            .def("GetSensor",&PyRobotBase::GetSensor,args("sensorname"))
-            .def("GetController",&PyRobotBase::GetController)
-            .def("SetController",&PyRobotBase::SetController,SetController_overloads(args("controller","args")))
-            .def("SetActiveDOFs",psetactivedofs1,args("jointindices"))
-            .def("SetActiveDOFs",psetactivedofs2,args("jointindices","affine"))
-            .def("SetActiveDOFs",psetactivedofs3,args("jointindices","affine","rotationaxis"))
-            .def("GetActiveDOF",&PyRobotBase::GetActiveDOF)
-            .def("GetAffineDOF",&PyRobotBase::GetAffineDOF)
-            .def("GetAffineDOFIndex",&PyRobotBase::GetAffineDOFIndex,args("index"))
-            .def("GetAffineRotationAxis",&PyRobotBase::GetAffineRotationAxis)
-            .def("SetAffineTranslationLimits",&PyRobotBase::SetAffineTranslationLimits,args("lower","upper"))
-            .def("SetAffineRotationAxisLimits",&PyRobotBase::SetAffineRotationAxisLimits,args("lower","upper"))
-            .def("SetAffineRotation3DLimits",&PyRobotBase::SetAffineRotation3DLimits,args("lower","upper"))
-            .def("SetAffineRotationQuatLimits",&PyRobotBase::SetAffineRotationQuatLimits,args("lower","upper"))
-            .def("SetAffineTranslationMaxVels",&PyRobotBase::SetAffineTranslationMaxVels,args("lower","upper"))
-            .def("SetAffineRotationAxisMaxVels",&PyRobotBase::SetAffineRotationAxisMaxVels,args("velocity"))
-            .def("SetAffineRotation3DMaxVels",&PyRobotBase::SetAffineRotation3DMaxVels,args("velocity"))
-            .def("SetAffineRotationQuatMaxVels",&PyRobotBase::SetAffineRotationQuatMaxVels,args("velocity"))
-            .def("SetAffineTranslationResolution",&PyRobotBase::SetAffineTranslationResolution,args("resolution"))
-            .def("SetAffineRotationAxisResolution",&PyRobotBase::SetAffineRotationAxisResolution,args("resolution"))
-            .def("SetAffineRotation3DResolution",&PyRobotBase::SetAffineRotation3DResolution,args("resolution"))
-            .def("SetAffineRotationQuatResolution",&PyRobotBase::SetAffineRotationQuatResolution,args("resolution"))
-            .def("SetAffineTranslationWeights",&PyRobotBase::SetAffineTranslationWeights,args("weights"))
-            .def("SetAffineRotationAxisWeights",&PyRobotBase::SetAffineRotationAxisWeights,args("weights"))
-            .def("SetAffineRotation3DWeights",&PyRobotBase::SetAffineRotation3DWeights,args("weights"))
-            .def("SetAffineRotationQuatWeights",&PyRobotBase::SetAffineRotationQuatWeights,args("weights"))
-            .def("GetAffineTranslationLimits",&PyRobotBase::GetAffineTranslationLimits)
-            .def("GetAffineRotationAxisLimits",&PyRobotBase::GetAffineRotationAxisLimits)
-            .def("GetAffineRotation3DLimits",&PyRobotBase::GetAffineRotation3DLimits)
-            .def("GetAffineRotationQuatLimits",&PyRobotBase::GetAffineRotationQuatLimits)
-            .def("GetAffineTranslationMaxVels",&PyRobotBase::GetAffineTranslationMaxVels)
-            .def("GetAffineRotationAxisMaxVels",&PyRobotBase::GetAffineRotationAxisMaxVels)
-            .def("GetAffineRotation3DMaxVels",&PyRobotBase::GetAffineRotation3DMaxVels)
-            .def("GetAffineRotationQuatMaxVels",&PyRobotBase::GetAffineRotationQuatMaxVels)
-            .def("GetAffineTranslationResolution",&PyRobotBase::GetAffineTranslationResolution)
-            .def("GetAffineRotationAxisResolution",&PyRobotBase::GetAffineRotationAxisResolution)
-            .def("GetAffineRotation3DResolution",&PyRobotBase::GetAffineRotation3DResolution)
-            .def("GetAffineRotationQuatResolution",&PyRobotBase::GetAffineRotationQuatResolution)
-            .def("GetAffineTranslationWeights",&PyRobotBase::GetAffineTranslationWeights)
-            .def("GetAffineRotationAxisWeights",&PyRobotBase::GetAffineRotationAxisWeights)
-            .def("GetAffineRotation3DWeights",&PyRobotBase::GetAffineRotation3DWeights)
-            .def("GetAffineRotationQuatWeights",&PyRobotBase::GetAffineRotationQuatWeights)
-            .def("SetActiveDOFValues",&PyRobotBase::SetActiveDOFValues,args("values"))
-            .def("GetActiveDOFValues",&PyRobotBase::GetActiveDOFValues)
-            .def("SetActiveDOFVelocities",&PyRobotBase::SetActiveDOFVelocities)
-            .def("GetActiveDOFVelocities",&PyRobotBase::GetActiveDOFVelocities)
-            .def("GetActiveDOFLimits",&PyRobotBase::GetActiveDOFLimits)
-            .def("GetActiveJointIndices",&PyRobotBase::GetActiveJointIndices)
-            .def("CalculateActiveJacobian",&PyRobotBase::CalculateActiveJacobian,args("linkindex","offset"))
-            .def("CalculateActiveRotationJacobian",&PyRobotBase::CalculateActiveRotationJacobian,args("linkindex","quat"))
-            .def("CalculateActiveAngularVelocityJacobian",&PyRobotBase::CalculateActiveAngularVelocityJacobian,args("linkindex"))
-            .def("Grab",pgrab1,args("body"))
-            .def("Grab",pgrab2,args("body"))
-            .def("Grab",pgrab3,args("body"))
-            .def("Grab",pgrab4,args("body"))
-            .def("Release",&PyRobotBase::Release,args("body"))
-            .def("ReleaseAllGrabbed",&PyRobotBase::ReleaseAllGrabbed)
-            .def("RegrabAll",&PyRobotBase::RegrabAll)
-            .def("IsGrabbing",&PyRobotBase::IsGrabbing,args("body"))
-            .def("GetGrabbed",&PyRobotBase::GetGrabbed)
-            .def("WaitForController",&PyRobotBase::WaitForController,args("timeout"))
-            .def("GetRobotStructureHash",&PyRobotBase::GetRobotStructureHash)
-            .def("CreateRobotStateSaver",statesaver1)
-            .def("CreateRobotStateSaver",statesaver2)
+            .def("GetManipulators",GetManipulators1, DOXY_FN(GetManipulators))
+            .def("GetManipulators",GetManipulators2,args("manipname"), DOXY_FN(GetManipulators))
+            .def("GetManipulator",&PyRobotBase::GetManipulator,args("manipname"), DOXY_FN(GetManipulator))
+            .def("SetActiveManipulator",setactivemanipulator1,args("manipindex"), DOXY_FN(SetActiveManipulator))
+            .def("SetActiveManipulator",setactivemanipulator2,args("manipname"), DOXY_FN(SetActiveManipulator))
+            .def("SetActiveManipulator",setactivemanipulator3,args("manip"), DOXY_FN(SetActiveManipulator))
+            .def("GetActiveManipulator",&PyRobotBase::GetActiveManipulator, DOXY_FN(GetActiveManipulator))
+            .def("GetActiveManipulatorIndex",&PyRobotBase::GetActiveManipulatorIndex, DOXY_FN(GetActiveManipulatorIndex))
+            .def("GetAttachedSensors",&PyRobotBase::GetAttachedSensors, DOXY_FN(GetAttachedSensors))
+            .def("GetAttachedSensor",&PyRobotBase::GetAttachedSensor,args("sensorname"), DOXY_FN(GetAttachedSensor))
+            .def("GetSensors",&PyRobotBase::GetSensors, DOXY_FN(GetSensors))
+            .def("GetSensor",&PyRobotBase::GetSensor,args("sensorname"), DOXY_FN(GetSensor))
+            .def("GetController",&PyRobotBase::GetController, DOXY_FN(GetController))
+            .def("SetController",&PyRobotBase::SetController,SetController_overloads(args("controller","args"), DOXY_FN(SetController)))
+            .def("SetActiveDOFs",psetactivedofs1,args("jointindices"), DOXY_FN(SetActiveDOFs))
+            .def("SetActiveDOFs",psetactivedofs2,args("jointindices","affine"), DOXY_FN(SetActiveDOFs))
+            .def("SetActiveDOFs",psetactivedofs3,args("jointindices","affine","rotationaxis"), DOXY_FN(SetActiveDOFs))
+            .def("GetActiveDOF",&PyRobotBase::GetActiveDOF, DOXY_FN(GetActiveDOF))
+            .def("GetAffineDOF",&PyRobotBase::GetAffineDOF, DOXY_FN(GetAffineDOF))
+            .def("GetAffineDOFIndex",&PyRobotBase::GetAffineDOFIndex,args("index"), DOXY_FN(GetAffineDOFIndex))
+            .def("GetAffineRotationAxis",&PyRobotBase::GetAffineRotationAxis, DOXY_FN(GetAffineRotationAxis))
+            .def("SetAffineTranslationLimits",&PyRobotBase::SetAffineTranslationLimits,args("lower","upper"), DOXY_FN(SetAffineTranslationLimits))
+            .def("SetAffineRotationAxisLimits",&PyRobotBase::SetAffineRotationAxisLimits,args("lower","upper"), DOXY_FN(SetAffineRotationAxisLimits))
+            .def("SetAffineRotation3DLimits",&PyRobotBase::SetAffineRotation3DLimits,args("lower","upper"), DOXY_FN(SetAffineRotation3DLimits))
+            .def("SetAffineRotationQuatLimits",&PyRobotBase::SetAffineRotationQuatLimits,args("lower","upper"), DOXY_FN(SetAffineRotationQuatLimits))
+            .def("SetAffineTranslationMaxVels",&PyRobotBase::SetAffineTranslationMaxVels,args("lower","upper"), DOXY_FN(SetAffineTranslationMaxVels))
+            .def("SetAffineRotationAxisMaxVels",&PyRobotBase::SetAffineRotationAxisMaxVels,args("velocity"), DOXY_FN(SetAffineRotationAxisMaxVels))
+            .def("SetAffineRotation3DMaxVels",&PyRobotBase::SetAffineRotation3DMaxVels,args("velocity"), DOXY_FN(SetAffineRotation3DMaxVels))
+            .def("SetAffineRotationQuatMaxVels",&PyRobotBase::SetAffineRotationQuatMaxVels,args("velocity"), DOXY_FN(SetAffineRotationQuatMaxVels))
+            .def("SetAffineTranslationResolution",&PyRobotBase::SetAffineTranslationResolution,args("resolution"), DOXY_FN(SetAffineTranslationResolution))
+            .def("SetAffineRotationAxisResolution",&PyRobotBase::SetAffineRotationAxisResolution,args("resolution"), DOXY_FN(SetAffineRotationAxisResolution))
+            .def("SetAffineRotation3DResolution",&PyRobotBase::SetAffineRotation3DResolution,args("resolution"), DOXY_FN(SetAffineRotation3DResolution))
+            .def("SetAffineRotationQuatResolution",&PyRobotBase::SetAffineRotationQuatResolution,args("resolution"), DOXY_FN(SetAffineRotationQuatResolution))
+            .def("SetAffineTranslationWeights",&PyRobotBase::SetAffineTranslationWeights,args("weights"), DOXY_FN(SetAffineTranslationWeights))
+            .def("SetAffineRotationAxisWeights",&PyRobotBase::SetAffineRotationAxisWeights,args("weights"), DOXY_FN(SetAffineRotationAxisWeights))
+            .def("SetAffineRotation3DWeights",&PyRobotBase::SetAffineRotation3DWeights,args("weights"), DOXY_FN(SetAffineRotation3DWeights))
+            .def("SetAffineRotationQuatWeights",&PyRobotBase::SetAffineRotationQuatWeights,args("weights"), DOXY_FN(SetAffineRotationQuatWeights))
+            .def("GetAffineTranslationLimits",&PyRobotBase::GetAffineTranslationLimits, DOXY_FN(GetAffineTranslationLimits))
+            .def("GetAffineRotationAxisLimits",&PyRobotBase::GetAffineRotationAxisLimits, DOXY_FN(GetAffineRotationAxisLimits))
+            .def("GetAffineRotation3DLimits",&PyRobotBase::GetAffineRotation3DLimits, DOXY_FN(GetAffineRotation3DLimits))
+            .def("GetAffineRotationQuatLimits",&PyRobotBase::GetAffineRotationQuatLimits, DOXY_FN(GetAffineRotationQuatLimits))
+            .def("GetAffineTranslationMaxVels",&PyRobotBase::GetAffineTranslationMaxVels, DOXY_FN(GetAffineTranslationMaxVels))
+            .def("GetAffineRotationAxisMaxVels",&PyRobotBase::GetAffineRotationAxisMaxVels, DOXY_FN(GetAffineRotationAxisMaxVels))
+            .def("GetAffineRotation3DMaxVels",&PyRobotBase::GetAffineRotation3DMaxVels, DOXY_FN(GetAffineRotation3DMaxVels))
+            .def("GetAffineRotationQuatMaxVels",&PyRobotBase::GetAffineRotationQuatMaxVels, DOXY_FN(GetAffineRotationQuatMaxVels))
+            .def("GetAffineTranslationResolution",&PyRobotBase::GetAffineTranslationResolution, DOXY_FN(GetAffineTranslationResolution))
+            .def("GetAffineRotationAxisResolution",&PyRobotBase::GetAffineRotationAxisResolution, DOXY_FN(GetAffineRotationAxisResolution))
+            .def("GetAffineRotation3DResolution",&PyRobotBase::GetAffineRotation3DResolution, DOXY_FN(GetAffineRotation3DResolution))
+            .def("GetAffineRotationQuatResolution",&PyRobotBase::GetAffineRotationQuatResolution, DOXY_FN(GetAffineRotationQuatResolution))
+            .def("GetAffineTranslationWeights",&PyRobotBase::GetAffineTranslationWeights, DOXY_FN(GetAffineTranslationWeights))
+            .def("GetAffineRotationAxisWeights",&PyRobotBase::GetAffineRotationAxisWeights, DOXY_FN(GetAffineRotationAxisWeights))
+            .def("GetAffineRotation3DWeights",&PyRobotBase::GetAffineRotation3DWeights, DOXY_FN(GetAffineRotation3DWeights))
+            .def("GetAffineRotationQuatWeights",&PyRobotBase::GetAffineRotationQuatWeights, DOXY_FN(GetAffineRotationQuatWeights))
+            .def("SetActiveDOFValues",&PyRobotBase::SetActiveDOFValues,args("values"), DOXY_FN(SetActiveDOFValues))
+            .def("GetActiveDOFValues",&PyRobotBase::GetActiveDOFValues, DOXY_FN(GetActiveDOFValues))
+            .def("SetActiveDOFVelocities",&PyRobotBase::SetActiveDOFVelocities, DOXY_FN(SetActiveDOFVelocities))
+            .def("GetActiveDOFVelocities",&PyRobotBase::GetActiveDOFVelocities, DOXY_FN(GetActiveDOFVelocities))
+            .def("GetActiveDOFLimits",&PyRobotBase::GetActiveDOFLimits, DOXY_FN(GetActiveDOFLimits))
+            .def("GetActiveJointIndices",&PyRobotBase::GetActiveJointIndices, DOXY_FN(GetActiveJointIndices))
+            .def("CalculateActiveJacobian",&PyRobotBase::CalculateActiveJacobian,args("linkindex","offset"), DOXY_FN(CalculateActiveJacobian))
+            .def("CalculateActiveRotationJacobian",&PyRobotBase::CalculateActiveRotationJacobian,args("linkindex","quat"), DOXY_FN(CalculateActiveRotationJacobian))
+            .def("CalculateActiveAngularVelocityJacobian",&PyRobotBase::CalculateActiveAngularVelocityJacobian,args("linkindex"), DOXY_FN(CalculateActiveAngularVelocityJacobian))
+            .def("Grab",pgrab1,args("body"), DOXY_FN(Grab))
+            .def("Grab",pgrab2,args("body","linkstoignre"), DOXY_FN(Grab))
+            .def("Grab",pgrab3,args("body","grablink"), DOXY_FN(Grab))
+            .def("Grab",pgrab4,args("body","grablink","linkstoignore"), DOXY_FN(Grab))
+            .def("Release",&PyRobotBase::Release,args("body"), DOXY_FN(Release))
+            .def("ReleaseAllGrabbed",&PyRobotBase::ReleaseAllGrabbed, DOXY_FN(ReleaseAllGrabbed))
+            .def("RegrabAll",&PyRobotBase::RegrabAll, DOXY_FN(RegrabAll))
+            .def("IsGrabbing",&PyRobotBase::IsGrabbing,args("body"), DOXY_FN(IsGrabbing))
+            .def("GetGrabbed",&PyRobotBase::GetGrabbed, DOXY_FN(GetGrabbed))
+            .def("WaitForController",&PyRobotBase::WaitForController,args("timeout"), DOXY_FN(WaitForController))
+            .def("GetRobotStructureHash",&PyRobotBase::GetRobotStructureHash, DOXY_FN(GetRobotStructureHash))
+            .def("CreateRobotStateSaver",statesaver1,"Creates RobotSaveStater for this robot.")
+            .def("CreateRobotStateSaver",statesaver2,args("options"),"Creates RobotSaveStater for this robot.")
             .def("__repr__", &PyRobotBase::__repr__)
             .def("__str__", &PyRobotBase::__str__)
             ;
@@ -3856,40 +3857,40 @@ BOOST_PYTHON_MODULE(openravepy_int)
         bool (PyRobotBase::PyManipulator::*pCheckIndependentCollision2)(PyCollisionReportPtr) const = &PyRobotBase::PyManipulator::CheckIndependentCollision;
 
         class_<PyRobotBase::PyManipulator, boost::shared_ptr<PyRobotBase::PyManipulator> >("Manipulator", no_init)
-            .def("GetEndEffectorTransform", &PyRobotBase::PyManipulator::GetEndEffectorTransform)
-            .def("GetName",&PyRobotBase::PyManipulator::GetName)
-            .def("GetRobot",&PyRobotBase::PyManipulator::GetRobot)
-            .def("SetIKSolver",&PyRobotBase::PyManipulator::SetIKSolver)
-            .def("InitIKSolver",&PyRobotBase::PyManipulator::InitIKSolver,args("iksolver"))
-            .def("GetIKSolverName",&PyRobotBase::PyManipulator::GetIKSolverName)
-            .def("HasIKSolver",&PyRobotBase::PyManipulator::HasIKSolver)
-            .def("GetNumFreeParameters",&PyRobotBase::PyManipulator::GetNumFreeParameters)
-            .def("GetFreeParameters",&PyRobotBase::PyManipulator::GetFreeParameters)
-            .def("FindIKSolution",pmanipik,args("param","envcheck"))
-            .def("FindIKSolution",pmanipikf,args("param","freevalues","envcheck"))
-            .def("FindIKSolutions",pmanipiks,args("param","envcheck"))
-            .def("FindIKSolutions",pmanipiksf,args("param","freevalues","envcheck"))
-            .def("GetBase",&PyRobotBase::PyManipulator::GetBase)
-            .def("GetEndEffector",&PyRobotBase::PyManipulator::GetEndEffector)
-            .def("GetGraspTransform",&PyRobotBase::PyManipulator::GetGraspTransform)
-            .def("GetGripperJoints",&PyRobotBase::PyManipulator::GetGripperJoints)
-            .def("GetGripperIndices",&PyRobotBase::PyManipulator::GetGripperIndices)
-            .def("GetArmJoints",&PyRobotBase::PyManipulator::GetArmJoints)
-            .def("GetArmIndices",&PyRobotBase::PyManipulator::GetArmIndices)
-            .def("GetClosingDirection",&PyRobotBase::PyManipulator::GetClosingDirection)
-            .def("GetPalmDirection",&PyRobotBase::PyManipulator::GetPalmDirection)
-            .def("GetDirection",&PyRobotBase::PyManipulator::GetDirection)
-            .def("IsGrabbing",&PyRobotBase::PyManipulator::IsGrabbing,args("body"))
-            .def("GetChildJoints",&PyRobotBase::PyManipulator::GetChildJoints)
-            .def("GetChildDOFIndices",&PyRobotBase::PyManipulator::GetChildDOFIndices)
-            .def("GetChildLinks",&PyRobotBase::PyManipulator::GetChildLinks)
-            .def("GetIndependentLinks",&PyRobotBase::PyManipulator::GetIndependentLinks)
-            .def("CheckEndEffectorCollision",pCheckEndEffectorCollision1,args("transform"))
-            .def("CheckEndEffectorCollision",pCheckEndEffectorCollision2,args("transform","report"))
-            .def("CheckIndependentCollision",pCheckIndependentCollision1)
-            .def("CheckIndependentCollision",pCheckIndependentCollision2,args("report"))
-            .def("GetStructureHash",&PyRobotBase::PyManipulator::GetStructureHash)
-            .def("GetKinematicsStructureHash",&PyRobotBase::PyManipulator::GetKinematicsStructureHash)
+            .def("GetEndEffectorTransform", &PyRobotBase::PyManipulator::GetEndEffectorTransform, DOXY_FN(GetEndEffectorTransform))
+            .def("GetName",&PyRobotBase::PyManipulator::GetName, DOXY_FN(GetName))
+            .def("GetRobot",&PyRobotBase::PyManipulator::GetRobot, DOXY_FN(GetRobot))
+            .def("SetIKSolver",&PyRobotBase::PyManipulator::SetIKSolver, DOXY_FN(SetIKSolver))
+            .def("InitIKSolver",&PyRobotBase::PyManipulator::InitIKSolver,args("iksolver"), DOXY_FN(InitIKSolver))
+            .def("GetIKSolverName",&PyRobotBase::PyManipulator::GetIKSolverName, DOXY_FN(GetIKSolverName))
+            .def("HasIKSolver",&PyRobotBase::PyManipulator::HasIKSolver, DOXY_FN(HasIKSolver))
+            .def("GetNumFreeParameters",&PyRobotBase::PyManipulator::GetNumFreeParameters, DOXY_FN(GetNumFreeParameters))
+            .def("GetFreeParameters",&PyRobotBase::PyManipulator::GetFreeParameters, DOXY_FN(GetFreeParameters))
+            .def("FindIKSolution",pmanipik,args("param","envcheck"), DOXY_FN(FindIKSolution))
+            .def("FindIKSolution",pmanipikf,args("param","freevalues","envcheck"), DOXY_FN(FindIKSolution))
+            .def("FindIKSolutions",pmanipiks,args("param","envcheck"), DOXY_FN(FindIKSolutions))
+            .def("FindIKSolutions",pmanipiksf,args("param","freevalues","envcheck"), DOXY_FN(FindIKSolutions))
+            .def("GetBase",&PyRobotBase::PyManipulator::GetBase, DOXY_FN(GetBase))
+            .def("GetEndEffector",&PyRobotBase::PyManipulator::GetEndEffector, DOXY_FN(GetEndEffector))
+            .def("GetGraspTransform",&PyRobotBase::PyManipulator::GetGraspTransform, DOXY_FN(GetGraspTransform))
+            .def("GetGripperJoints",&PyRobotBase::PyManipulator::GetGripperJoints, DOXY_FN(GetGripperIndices))
+            .def("GetGripperIndices",&PyRobotBase::PyManipulator::GetGripperIndices, DOXY_FN(GetGripperIndices))
+            .def("GetArmJoints",&PyRobotBase::PyManipulator::GetArmJoints, DOXY_FN(GetArmIndices))
+            .def("GetArmIndices",&PyRobotBase::PyManipulator::GetArmIndices, DOXY_FN(GetArmIndices))
+            .def("GetClosingDirection",&PyRobotBase::PyManipulator::GetClosingDirection, DOXY_FN(GetClosingDirection))
+            .def("GetPalmDirection",&PyRobotBase::PyManipulator::GetPalmDirection, DOXY_FN(GetDirection))
+            .def("GetDirection",&PyRobotBase::PyManipulator::GetDirection, DOXY_FN(GetDirection))
+            .def("IsGrabbing",&PyRobotBase::PyManipulator::IsGrabbing,args("body"), DOXY_FN(IsGrabbing))
+            .def("GetChildJoints",&PyRobotBase::PyManipulator::GetChildJoints, DOXY_FN(GetChildJoints))
+            .def("GetChildDOFIndices",&PyRobotBase::PyManipulator::GetChildDOFIndices, DOXY_FN(GetChildDOFIndices))
+            .def("GetChildLinks",&PyRobotBase::PyManipulator::GetChildLinks, DOXY_FN(GetChildLinks))
+            .def("GetIndependentLinks",&PyRobotBase::PyManipulator::GetIndependentLinks, DOXY_FN(GetIndependentLinks))
+            .def("CheckEndEffectorCollision",pCheckEndEffectorCollision1,args("transform"), DOXY_FN(CheckEndEffectorCollision))
+            .def("CheckEndEffectorCollision",pCheckEndEffectorCollision2,args("transform","report"), DOXY_FN(CheckEndEffectorCollision))
+            .def("CheckIndependentCollision",pCheckIndependentCollision1, DOXY_FN(CheckIndependentCollision))
+            .def("CheckIndependentCollision",pCheckIndependentCollision2,args("report"), DOXY_FN(CheckIndependentCollision))
+            .def("GetStructureHash",&PyRobotBase::PyManipulator::GetStructureHash, DOXY_FN(GetStructureHash))
+            .def("GetKinematicsStructureHash",&PyRobotBase::PyManipulator::GetKinematicsStructureHash, DOXY_FN(GetKinematicsStructureHash))
             .def("__repr__",&PyRobotBase::PyManipulator::__repr__)
             .def("__str__",&PyRobotBase::PyManipulator::__str__)
             .def("__eq__",&PyRobotBase::PyManipulator::__eq__)
@@ -3897,15 +3898,15 @@ BOOST_PYTHON_MODULE(openravepy_int)
             ;
 
         class_<PyRobotBase::PyAttachedSensor, boost::shared_ptr<PyRobotBase::PyAttachedSensor> >("AttachedSensor", no_init)
-            .def("GetSensor",&PyRobotBase::PyAttachedSensor::GetSensor)
-            .def("GetAttachingLink",&PyRobotBase::PyAttachedSensor::GetAttachingLink)
-            .def("GetRelativeTransform",&PyRobotBase::PyAttachedSensor::GetRelativeTransform)
-            .def("GetTransform",&PyRobotBase::PyAttachedSensor::GetTransform)
-            .def("GetRobot",&PyRobotBase::PyAttachedSensor::GetRobot)
-            .def("GetName",&PyRobotBase::PyAttachedSensor::GetName)
-            .def("GetData",&PyRobotBase::PyAttachedSensor::GetData)
-            .def("SetRelativeTransform",&PyRobotBase::PyAttachedSensor::SetRelativeTransform,args("transform"))
-            .def("GetStructureHash",&PyRobotBase::PyAttachedSensor::GetStructureHash)
+            .def("GetSensor",&PyRobotBase::PyAttachedSensor::GetSensor, DOXY_FN(GetSensor))
+            .def("GetAttachingLink",&PyRobotBase::PyAttachedSensor::GetAttachingLink, DOXY_FN(GetAttachingLink))
+            .def("GetRelativeTransform",&PyRobotBase::PyAttachedSensor::GetRelativeTransform, DOXY_FN(GetRelativeTransform))
+            .def("GetTransform",&PyRobotBase::PyAttachedSensor::GetTransform, DOXY_FN(GetTransform))
+            .def("GetRobot",&PyRobotBase::PyAttachedSensor::GetRobot, DOXY_FN(GetRobot))
+            .def("GetName",&PyRobotBase::PyAttachedSensor::GetName, DOXY_FN(GetName))
+            .def("GetData",&PyRobotBase::PyAttachedSensor::GetData, DOXY_FN(GetData))
+            .def("SetRelativeTransform",&PyRobotBase::PyAttachedSensor::SetRelativeTransform,args("transform"), DOXY_FN(SetRelativeTransform))
+            .def("GetStructureHash",&PyRobotBase::PyAttachedSensor::GetStructureHash, DOXY_FN(GetStructureHash))
             .def("__str__",&PyRobotBase::PyAttachedSensor::__str__)
             .def("__repr__",&PyRobotBase::PyAttachedSensor::__repr__)
             .def("__eq__",&PyRobotBase::PyAttachedSensor::__eq__)
@@ -3919,7 +3920,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def_readwrite("troot",&PyRobotBase::PyGrabbed::troot)
             ;
 
-        enum_<RobotBase::DOFAffine>("DOFAffine")
+        enum_<RobotBase::DOFAffine>("DOFAffine",DOXY_ENUM(DOFAffine))
             .value("NoTransform",RobotBase::DOF_NoTransform)
             .value("X",RobotBase::DOF_X)
             .value("Y",RobotBase::DOF_Y)
@@ -3934,10 +3935,10 @@ BOOST_PYTHON_MODULE(openravepy_int)
         bool (PyPlannerBase::*InitPlan1)(PyRobotBasePtr, boost::shared_ptr<PyPlannerBase::PyPlannerParameters>) = &PyPlannerBase::InitPlan;
         bool (PyPlannerBase::*InitPlan2)(PyRobotBasePtr, const string&) = &PyPlannerBase::InitPlan;
         scope planner = class_<PyPlannerBase, boost::shared_ptr<PyPlannerBase>, bases<PyInterfaceBase> >("Planner", no_init)
-                .def("InitPlan",InitPlan1,args("robot","params"))
-                .def("InitPlan",InitPlan2,args("robot","xmlparams"))
-                .def("PlanPath",&PyPlannerBase::PlanPath,args("traj","output"))
-                .def("GetParameters",&PyPlannerBase::GetParameters)
+                .def("InitPlan",InitPlan1,args("robot","params"), DOXY_FN(InitPlan))
+                .def("InitPlan",InitPlan2,args("robot","xmlparams"), DOXY_FN(InitPlan))
+                .def("PlanPath",&PyPlannerBase::PlanPath,args("traj","output"), DOXY_FN(PlanPath))
+                .def("GetParameters",&PyPlannerBase::GetParameters, DOXY_FN(GetParameters))
                 ;
         
         class_<PyPlannerBase::PyPlannerParameters, boost::shared_ptr<PyPlannerBase::PyPlannerParameters> >("PlannerParameters",no_init)
@@ -3950,53 +3951,50 @@ BOOST_PYTHON_MODULE(openravepy_int)
     class_<PySensorSystemBase, boost::shared_ptr<PySensorSystemBase>, bases<PyInterfaceBase> >("SensorSystem", no_init);
     class_<PyTrajectoryBase, boost::shared_ptr<PyTrajectoryBase>, bases<PyInterfaceBase> >("Trajectory", no_init);
     class_<PyControllerBase, boost::shared_ptr<PyControllerBase>, bases<PyInterfaceBase> >("Controller", no_init)
-        .def("Init",&PyControllerBase::Init)
-        .def("Reset",&PyControllerBase::Reset)
-        .def("SetDesired",&PyControllerBase::SetDesired)
-        .def("SetPath",&PyControllerBase::SetPath)
-        .def("SimulationStep",&PyControllerBase::SimulationStep)
-        .def("IsDone",&PyControllerBase::IsDone)
-        .def("GetTime",&PyControllerBase::GetTime)
-        .def("GetVelocity",&PyControllerBase::GetVelocity)
-        .def("GetTorque",&PyControllerBase::GetTorque)
+        .def("Init",&PyControllerBase::Init, DOXY_FN(Init))
+        .def("Reset",&PyControllerBase::Reset, DOXY_FN(Reset))
+        .def("SetDesired",&PyControllerBase::SetDesired, DOXY_FN(SetDesired))
+        .def("SetPath",&PyControllerBase::SetPath, DOXY_FN(SetPath))
+        .def("SimulationStep",&PyControllerBase::SimulationStep, DOXY_FN(SimulationStep))
+        .def("IsDone",&PyControllerBase::IsDone, DOXY_FN(IsDone))
+        .def("GetTime",&PyControllerBase::GetTime, DOXY_FN(GetTime))
+        .def("GetVelocity",&PyControllerBase::GetVelocity, DOXY_FN(GetVelocity))
+        .def("GetTorque",&PyControllerBase::GetTorque, DOXY_FN(GetTorque))
         ;
     class_<PyProblemInstance, boost::shared_ptr<PyProblemInstance>, bases<PyInterfaceBase> >("Problem", no_init)
-        .def("SimulationStep",&PyProblemInstance::SimulationStep)
+        .def("SimulationStep",&PyProblemInstance::SimulationStep, DOXY_FN("SimulationStep"))
         ;
     class_<PyIkSolverBase, boost::shared_ptr<PyIkSolverBase>, bases<PyInterfaceBase> >("IkSolver", no_init);
 
-    object (PyPhysicsEngineBase::*SetPhysicsOptions1)(const string&) = &PyPhysicsEngineBase::SetPhysicsOptions;
-    bool (PyPhysicsEngineBase::*SetPhysicsOptions2)(int) = &PyPhysicsEngineBase::SetPhysicsOptions;
     bool (PyPhysicsEngineBase::*SetBodyVelocity1)(PyKinBodyPtr, object, object, object) = &PyPhysicsEngineBase::SetBodyVelocity;
     bool (PyPhysicsEngineBase::*SetBodyVelocity2)(PyKinBodyPtr, object, object) = &PyPhysicsEngineBase::SetBodyVelocity;
     class_<PyPhysicsEngineBase, boost::shared_ptr<PyPhysicsEngineBase>, bases<PyInterfaceBase> >("PhysicsEngine", no_init)
-        .def("GetPhysicsOptions",&PyPhysicsEngineBase::GetPhysicsOptions)
-        .def("GetPhysicsOptions",SetPhysicsOptions1)
-        .def("SetPhysicsOptions",SetPhysicsOptions2)
-        .def("InitEnvironment",&PyPhysicsEngineBase::InitEnvironment)
-        .def("DestroyEnvironment",&PyPhysicsEngineBase::DestroyEnvironment)
-        .def("InitKinBody",&PyPhysicsEngineBase::InitKinBody)
-        .def("SetBodyVelocity",SetBodyVelocity1)
-        .def("SetBodyVelocity",SetBodyVelocity2)
-        .def("SetLinkVelocity",&PyPhysicsEngineBase::SetLinkVelocity)
-        .def("GetLinkVelocity",&PyPhysicsEngineBase::GetLinkVelocity)
-        .def("GetBodyVelocityJoints",&PyPhysicsEngineBase::GetBodyVelocityJoints)
-        .def("GetBodyVelocityLinks",&PyPhysicsEngineBase::GetBodyVelocityLinks)
-        .def("SetJointVelocity",&PyPhysicsEngineBase::SetJointVelocity)
-        .def("GetJointVelocity",&PyPhysicsEngineBase::GetJointVelocity)
-        .def("SetBodyForce",&PyPhysicsEngineBase::SetBodyForce)
-        .def("SetBodyTorque",&PyPhysicsEngineBase::SetBodyTorque)
-        .def("AddJointTorque",&PyPhysicsEngineBase::AddJointTorque)
-        .def("SetGravity",&PyPhysicsEngineBase::SetGravity)
-        .def("GetGravity",&PyPhysicsEngineBase::GetGravity)
-        .def("SimulateStep",&PyPhysicsEngineBase::SimulateStep)
+        .def("GetPhysicsOptions",&PyPhysicsEngineBase::GetPhysicsOptions, DOXY_FN(GetPhysicsOptions))
+        .def("SetPhysicsOptions",&PyPhysicsEngineBase::SetPhysicsOptions, DOXY_FN(SetPhysicsOptions))
+        .def("InitEnvironment",&PyPhysicsEngineBase::InitEnvironment, DOXY_FN(InitEnvironment))
+        .def("DestroyEnvironment",&PyPhysicsEngineBase::DestroyEnvironment, DOXY_FN(DestroyEnvironment))
+        .def("InitKinBody",&PyPhysicsEngineBase::InitKinBody, DOXY_FN(InitKinBody))
+        .def("SetBodyVelocity",SetBodyVelocity1, DOXY_FN(SetBodyVelocity))
+        .def("SetBodyVelocity",SetBodyVelocity2, DOXY_FN(SetBodyVelocity))
+        .def("SetLinkVelocity",&PyPhysicsEngineBase::SetLinkVelocity, DOXY_FN(SetLinkVelocity))
+        .def("GetLinkVelocity",&PyPhysicsEngineBase::GetLinkVelocity, DOXY_FN(GetLinkVelocity))
+        .def("GetBodyVelocityJoints",&PyPhysicsEngineBase::GetBodyVelocityJoints, DOXY_FN(GetBodyVelocityJoints))
+        .def("GetBodyVelocityLinks",&PyPhysicsEngineBase::GetBodyVelocityLinks, DOXY_FN(GetBodyVelocityLinks))
+        .def("SetJointVelocity",&PyPhysicsEngineBase::SetJointVelocity, DOXY_FN(SetJointVelocity))
+        .def("GetJointVelocity",&PyPhysicsEngineBase::GetJointVelocity, DOXY_FN(GetJointVelocity))
+        .def("SetBodyForce",&PyPhysicsEngineBase::SetBodyForce, DOXY_FN(SetBodyForce))
+        .def("SetBodyTorque",&PyPhysicsEngineBase::SetBodyTorque, DOXY_FN(SetBodyTorque))
+        .def("AddJointTorque",&PyPhysicsEngineBase::AddJointTorque, DOXY_FN(AddJointTorque))
+        .def("SetGravity",&PyPhysicsEngineBase::SetGravity, DOXY_FN(SetGravity))
+        .def("GetGravity",&PyPhysicsEngineBase::GetGravity, DOXY_FN(GetGravity))
+        .def("SimulateStep",&PyPhysicsEngineBase::SimulateStep, DOXY_FN(SimulateStep))
         ;
     {
         scope sensor = class_<PySensorBase, boost::shared_ptr<PySensorBase>, bases<PyInterfaceBase> >("Sensor", no_init)
-            .def("GetSensorData",&PySensorBase::GetSensorData)
-            .def("SetTransform",&PySensorBase::SetTransform)
-            .def("GetTransform",&PySensorBase::GetTransform)
-            .def("GetName",&PySensorBase::GetName)
+            .def("GetSensorData",&PySensorBase::GetSensorData, DOXY_FN(GetSensorData))
+            .def("SetTransform",&PySensorBase::SetTransform, DOXY_FN(SetTransform))
+            .def("GetTransform",&PySensorBase::GetTransform, DOXY_FN(GetTransform))
+            .def("GetName",&PySensorBase::GetName, DOXY_FN(GetName))
             ;
 
         class_<PySensorBase::PySensorData, boost::shared_ptr<PySensorBase::PySensorData> >("SensorData",no_init)
@@ -4015,7 +4013,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def_readonly("KK",&PySensorBase::PyCameraSensorData::KK)
             ;
 
-        enum_<SensorBase::SensorType>("Type")
+        enum_<SensorBase::SensorType>("Type",DOXY_ENUM(SensorType))
             .value("Invalid",SensorBase::ST_Invalid)
             .value("Laser",SensorBase::ST_Laser)
             .value("Camera",SensorBase::ST_Camera)
@@ -4025,8 +4023,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
     }
 
     class_<PyCollisionCheckerBase, boost::shared_ptr<PyCollisionCheckerBase>, bases<PyInterfaceBase> >("CollisionChecker", no_init)
-        .def("SetCollisionOptions",&PyCollisionCheckerBase::SetCollisionOptions)
-        .def("GetCollisionOptions",&PyCollisionCheckerBase::GetCollisionOptions)
+        .def("SetCollisionOptions",&PyCollisionCheckerBase::SetCollisionOptions, DOXY_FN(SetCollisionOptions))
+        .def("GetCollisionOptions",&PyCollisionCheckerBase::GetCollisionOptions, DOXY_FN(GetCollisionOptions))
         ;
 
 
@@ -4034,21 +4032,21 @@ BOOST_PYTHON_MODULE(openravepy_int)
         void (PyViewerBase::*setcamera1)(object) = &PyViewerBase::SetCamera;
         void (PyViewerBase::*setcamera2)(object,float) = &PyViewerBase::SetCamera;
         scope viewer = class_<PyViewerBase, boost::shared_ptr<PyViewerBase>, bases<PyInterfaceBase> >("Viewer", no_init)
-            .def("main",&PyViewerBase::main)
-            .def("quitmainloop",&PyViewerBase::quitmainloop)
-            .def("SetSize",&PyViewerBase::ViewerSetSize)
-            .def("Move",&PyViewerBase::ViewerMove)
-            .def("SetTitle",&PyViewerBase::ViewerSetTitle)
-            .def("LoadModel",&PyViewerBase::LoadModel)
-            .def("RegisterCallback",&PyViewerBase::RegisterCallback)
-            .def("EnvironmentSync",&PyViewerBase::EnvironmentSync)
-            .def("SetCamera",setcamera1,args("transform"))
-            .def("SetCamera",setcamera2,args("transform","focalDistance"))
-            .def("GetCameraTransform",&PyViewerBase::GetCameraTransform)
-            .def("GetCameraImage",&PyViewerBase::GetCameraImage,args("width","height","transform","K"))
+            .def("main",&PyViewerBase::main, DOXY_FN(main))
+            .def("quitmainloop",&PyViewerBase::quitmainloop, DOXY_FN(quitmainloop))
+            .def("SetSize",&PyViewerBase::ViewerSetSize, DOXY_FN(SetSize))
+            .def("Move",&PyViewerBase::ViewerMove, DOXY_FN(Move))
+            .def("SetTitle",&PyViewerBase::ViewerSetTitle, DOXY_FN(SetTitle))
+            .def("LoadModel",&PyViewerBase::LoadModel, DOXY_FN(LoadModel))
+            .def("RegisterCallback",&PyViewerBase::RegisterCallback, DOXY_FN(RegisterCallback))
+            .def("EnvironmentSync",&PyViewerBase::EnvironmentSync, DOXY_FN(EnvironmentSync))
+            .def("SetCamera",setcamera1,args("transform"), DOXY_FN(SetCamera))
+            .def("SetCamera",setcamera2,args("transform","focalDistance"), DOXY_FN(SetCamera))
+            .def("GetCameraTransform",&PyViewerBase::GetCameraTransform, DOXY_FN(GetCameraTransform))
+            .def("GetCameraImage",&PyViewerBase::GetCameraImage,args("width","height","transform","K"), DOXY_FN(GetCameraImage))
             ;
 
-        enum_<ViewerBase::ViewerEvents>("Events")
+        enum_<ViewerBase::ViewerEvents>("Events",DOXY_ENUM(ViewerEvents))
             .value("ItemSelection",ViewerBase::VE_ItemSelection)
             ;
     }
@@ -4086,103 +4084,103 @@ BOOST_PYTHON_MODULE(openravepy_int)
         scope env = classenv
             .def(init<>())
             .def(init<bool>())
-            .def("Reset",&PyEnvironmentBase::Reset)
-            .def("Destroy",&PyEnvironmentBase::Destroy)
-            .def("GetPluginInfo",&PyEnvironmentBase::GetPluginInfo)
-            .def("GetLoadedInterfaces",&PyEnvironmentBase::GetLoadedInterfaces)
-            .def("LoadPlugin",&PyEnvironmentBase::LoadPlugin,args("filename"))
-            .def("ReloadPlugins",&PyEnvironmentBase::ReloadPlugins)
-            .def("CreateInterface", &PyEnvironmentBase::CreateInterface,args("type","name"))
-            .def("CreateRobot", &PyEnvironmentBase::CreateRobot,args("name"))
-            .def("CreatePlanner", &PyEnvironmentBase::CreatePlanner,args("name"))
-            .def("CreateSensorSystem", &PyEnvironmentBase::CreateSensorSystem,args("name"))
-            .def("CreateController", &PyEnvironmentBase::CreateController,args("name"))
-            .def("CreateProblem", &PyEnvironmentBase::CreateProblem,args("name"))
-            .def("CreateIkSolver", &PyEnvironmentBase::CreateIkSolver,args("name"))
-            .def("CreatePhysicsEngine", &PyEnvironmentBase::CreatePhysicsEngine,args("name"))
-            .def("CreateSensor", &PyEnvironmentBase::CreateSensor,args("name"))
-            .def("CreateCollisionChecker", &PyEnvironmentBase::CreateCollisionChecker,args("name"))
-            .def("CreateViewer", &PyEnvironmentBase::CreateViewer,args("name"))
+            .def("Reset",&PyEnvironmentBase::Reset, DOXY_FN(Reset))
+            .def("Destroy",&PyEnvironmentBase::Destroy, DOXY_FN(Destroy))
+            .def("GetPluginInfo",&PyEnvironmentBase::GetPluginInfo, DOXY_FN(GetPluginInfo))
+            .def("GetLoadedInterfaces",&PyEnvironmentBase::GetLoadedInterfaces, DOXY_FN(GetLoadedInterfaces))
+            .def("LoadPlugin",&PyEnvironmentBase::LoadPlugin,args("filename"), DOXY_FN(LoadPlugin))
+            .def("ReloadPlugins",&PyEnvironmentBase::ReloadPlugins, DOXY_FN(ReloadPlugins))
+            .def("CreateInterface", &PyEnvironmentBase::CreateInterface,args("type","name"), DOXY_FN(ReloadPlugins))
+            .def("CreateRobot", &PyEnvironmentBase::CreateRobot,args("name"), DOXY_FN(CreateRobot))
+            .def("CreatePlanner", &PyEnvironmentBase::CreatePlanner,args("name"), DOXY_FN(CreatePlanner))
+            .def("CreateSensorSystem", &PyEnvironmentBase::CreateSensorSystem,args("name"), DOXY_FN(CreateSensorSystem))
+            .def("CreateController", &PyEnvironmentBase::CreateController,args("name"), DOXY_FN(CreateController))
+            .def("CreateProblem", &PyEnvironmentBase::CreateProblem,args("name"), DOXY_FN(CreateProblem))
+            .def("CreateIkSolver", &PyEnvironmentBase::CreateIkSolver,args("name"), DOXY_FN(CreateIkSolver))
+            .def("CreatePhysicsEngine", &PyEnvironmentBase::CreatePhysicsEngine,args("name"), DOXY_FN(CreateIkSolver))
+            .def("CreateSensor", &PyEnvironmentBase::CreateSensor,args("name"), DOXY_FN(CreateIkSolver))
+            .def("CreateCollisionChecker", &PyEnvironmentBase::CreateCollisionChecker,args("name"), DOXY_FN(CreateIkSolver))
+            .def("CreateViewer", &PyEnvironmentBase::CreateViewer,args("name"), DOXY_FN(CreateViewer))
             
-            .def("CloneSelf",&PyEnvironmentBase::CloneSelf,args("options"))
-            .def("SetCollisionChecker",&PyEnvironmentBase::SetCollisionChecker,args("collisionchecker"))
-            .def("GetCollisionChecker",&PyEnvironmentBase::GetCollisionChecker)
+            .def("CloneSelf",&PyEnvironmentBase::CloneSelf,args("options"), DOXY_FN(CloneSelf))
+            .def("SetCollisionChecker",&PyEnvironmentBase::SetCollisionChecker,args("collisionchecker"), DOXY_FN(SetCollisionChecker))
+            .def("GetCollisionChecker",&PyEnvironmentBase::GetCollisionChecker, DOXY_FN(GetCollisionChecker))
 
-            .def("CheckCollision",pcolb,args("body"))
-            .def("CheckCollision",pcolbr,args("body","report"))
-            .def("CheckCollision",pcolbb,args("body1","body2"))
-            .def("CheckCollision",pcolbbr,args("body1","body2","report"))
-            .def("CheckCollision",pcoll,args("link"))
-            .def("CheckCollision",pcollr,args("link","report"))
-            .def("CheckCollision",pcolll,args("link1","link2"))
-            .def("CheckCollision",pcolllr,args("link1","link2","report"))
-            .def("CheckCollision",pcollb,args("link","body"))
-            .def("CheckCollision",pcollbr,args("link","body","report"))
-            .def("CheckCollision",pcolle,args("link","bodyexcluded","linkexcluded"))
-            .def("CheckCollision",pcoller,args("link","bodyexcluded","linkexcluded","report") )
-            .def("CheckCollision",pcolbe,args("body","bodyexcluded","linkexcluded"))
-            .def("CheckCollision",pcolber,args("body","bodyexcluded","linkexcluded","report"))
-            .def("CheckCollision",pcolyb,args("ray","body"))
-            .def("CheckCollision",pcolybr,args("ray","body","report"))
-            .def("CheckCollision",pcoly,args("ray"))
-            .def("CheckCollision",pcolyr,args("ray"))
+            .def("CheckCollision",pcolb,args("body"), DOXY_FN(CheckCollision))
+            .def("CheckCollision",pcolbr,args("body","report"), DOXY_FN(CheckCollision))
+            .def("CheckCollision",pcolbb,args("body1","body2"), DOXY_FN(CheckCollision))
+            .def("CheckCollision",pcolbbr,args("body1","body2","report"), DOXY_FN(CheckCollision))
+            .def("CheckCollision",pcoll,args("link"), DOXY_FN(CheckCollision))
+            .def("CheckCollision",pcollr,args("link","report"), DOXY_FN(CheckCollision))
+            .def("CheckCollision",pcolll,args("link1","link2"), DOXY_FN(CheckCollision))
+            .def("CheckCollision",pcolllr,args("link1","link2","report"), DOXY_FN(CheckCollision))
+            .def("CheckCollision",pcollb,args("link","body"), DOXY_FN(CheckCollision))
+            .def("CheckCollision",pcollbr,args("link","body","report"), DOXY_FN(CheckCollision))
+            .def("CheckCollision",pcolle,args("link","bodyexcluded","linkexcluded"), DOXY_FN(CheckCollision))
+            .def("CheckCollision",pcoller,args("link","bodyexcluded","linkexcluded","report") , DOXY_FN(CheckCollision))
+            .def("CheckCollision",pcolbe,args("body","bodyexcluded","linkexcluded"), DOXY_FN(CheckCollision))
+            .def("CheckCollision",pcolber,args("body","bodyexcluded","linkexcluded","report"), DOXY_FN(CheckCollision))
+            .def("CheckCollision",pcolyb,args("ray","body"), DOXY_FN(CheckCollision))
+            .def("CheckCollision",pcolybr,args("ray","body","report"), DOXY_FN(CheckCollision))
+            .def("CheckCollision",pcoly,args("ray"), DOXY_FN(CheckCollision))
+            .def("CheckCollision",pcolyr,args("ray"), DOXY_FN(CheckCollision))
             .def("CheckCollisionRays",&PyEnvironmentBase::CheckCollisionRays,
                  CheckCollisionRays_overloads(args("rays","body","front_facing_only"), 
                                               "Check if any rays hit the body and returns their contact points along with a vector specifying if a collision occured or not. Rays is a Nx6 array, first 3 columsn are position, last 3 are direction+range."))
-            .def("Load",&PyEnvironmentBase::Load,args("filename"))
-            .def("Save",&PyEnvironmentBase::Save,args("filename"))
-            .def("ReadRobotXMLFile",&PyEnvironmentBase::ReadRobotXMLFile,args("filename"))
-            .def("ReadRobotXMLData",&PyEnvironmentBase::ReadRobotXMLData,args("data"))
-            .def("ReadKinBodyXMLFile",&PyEnvironmentBase::ReadKinBodyXMLFile,args("filename"))
-            .def("ReadKinBodyXMLData",&PyEnvironmentBase::ReadKinBodyXMLData,args("data"))
-            .def("ReadInterfaceXMLFile",&PyEnvironmentBase::ReadInterfaceXMLFile,args("filename"))
-            .def("AddKinBody",addkinbody1,args("body"))
-            .def("AddKinBody",addkinbody2,args("body","anonymous"))
-            .def("AddRobot",addrobot1,args("robot"))
-            .def("AddRobot",addrobot2,args("robot","anonymous"))
-            .def("RemoveKinBody",&PyEnvironmentBase::RemoveKinBody,args("body"))
-            .def("GetKinBody",&PyEnvironmentBase::GetKinBody,args("name"))
-            .def("GetRobot",&PyEnvironmentBase::GetRobot,args("name"))
-            .def("GetBodyFromEnvironmentId",&PyEnvironmentBase::GetBodyFromEnvironmentId )
-            .def("CreateKinBody",&PyEnvironmentBase::CreateKinBody)
-            .def("CreateTrajectory",&PyEnvironmentBase::CreateTrajectory,args("dof"))
-            .def("LoadProblem",&PyEnvironmentBase::LoadProblem,args("problem","args"))
-            .def("RemoveProblem",&PyEnvironmentBase::RemoveProblem,args("prob"))
-            .def("GetLoadedProblems",&PyEnvironmentBase::GetLoadedProblems)
-            .def("SetPhysicsEngine",&PyEnvironmentBase::SetPhysicsEngine,args("physics"))
-            .def("GetPhysicsEngine",&PyEnvironmentBase::GetPhysicsEngine)
-            .def("RegisterCollisionCallback",&PyEnvironmentBase::RegisterCollisionCallback,args("callback"))
-            .def("StepSimulation",&PyEnvironmentBase::StepSimulation,args("timestep"))
-            .def("StartSimulation",&PyEnvironmentBase::StartSimulation,StartSimulation_overloads(args("timestep","realtime")))
-            .def("StopSimulation",&PyEnvironmentBase::StopSimulation)
-            .def("GetSimulationTime",&PyEnvironmentBase::GetSimulationTime)
-            .def("LockPhysics",LockPhysics1,args("lock"))
-            .def("LockPhysics",LockPhysics2,args("lock","timeout"))
-            .def("__enter__",&PyEnvironmentBase::__enter__)
-            .def("__exit__",&PyEnvironmentBase::__exit__)
-            .def("SetViewer",&PyEnvironmentBase::SetViewer,SetViewer_overloads(args("viewername","showviewer")))
-            .def("GetViewer",&PyEnvironmentBase::GetViewer)
-            .def("plot3",&PyEnvironmentBase::plot3,plot3_overloads(args("points","pointsize","colors","drawstyle")))
-            .def("drawlinestrip",&PyEnvironmentBase::drawlinestrip,drawlinestrip_overloads(args("points","linewidth","colors","drawstyle")))
-            .def("drawlinelist",&PyEnvironmentBase::drawlinelist,drawlinelist_overloads(args("points","linewidth","colors","drawstyle")))
-            .def("drawarrow",&PyEnvironmentBase::drawarrow,drawarrow_overloads(args("p1","p2","linewidth","color")))
-            .def("drawbox",&PyEnvironmentBase::drawbox,drawbox_overloads(args("pos","extents","color")))
-            .def("drawplane",drawplane1,args("transform","extents","texture"))
-            .def("drawplane",drawplane2,args("transform","extents","texture"))
-            .def("drawtrimesh",&PyEnvironmentBase::drawtrimesh,drawtrimesh_overloads(args("points","indices","colors")))
-            .def("GetRobots",&PyEnvironmentBase::GetRobots)
-            .def("GetBodies",&PyEnvironmentBase::GetBodies)
-            .def("UpdatePublishedBodies",&PyEnvironmentBase::UpdatePublishedBodies)
-            .def("Triangulate",&PyEnvironmentBase::Triangulate,args("body"))
-            .def("TriangulateScene",&PyEnvironmentBase::TriangulateScene,args("options","name"))
-            .def("SetDebugLevel",&PyEnvironmentBase::SetDebugLevel,args("level"))
-            .def("GetDebugLevel",&PyEnvironmentBase::GetDebugLevel)
-            .def("GetHomeDirectory",&PyEnvironmentBase::GetHomeDirectory)
+            .def("Load",&PyEnvironmentBase::Load,args("filename"), DOXY_FN(Load))
+            .def("Save",&PyEnvironmentBase::Save,args("filename"), DOXY_FN(Save))
+            .def("ReadRobotXMLFile",&PyEnvironmentBase::ReadRobotXMLFile,args("filename"), DOXY_FN(ReadRobotXMLFile))
+            .def("ReadRobotXMLData",&PyEnvironmentBase::ReadRobotXMLData,args("data"), DOXY_FN(ReadRobotXMLData))
+            .def("ReadKinBodyXMLFile",&PyEnvironmentBase::ReadKinBodyXMLFile,args("filename"), DOXY_FN(ReadKinBodyXMLFile))
+            .def("ReadKinBodyXMLData",&PyEnvironmentBase::ReadKinBodyXMLData,args("data"), DOXY_FN(ReadKinBodyXMLData))
+            .def("ReadInterfaceXMLFile",&PyEnvironmentBase::ReadInterfaceXMLFile,args("filename"), DOXY_FN(ReadInterfaceXMLFile))
+            .def("AddKinBody",addkinbody1,args("body"), DOXY_FN(AddKinBody))
+            .def("AddKinBody",addkinbody2,args("body","anonymous"), DOXY_FN(AddKinBody))
+            .def("AddRobot",addrobot1,args("robot"), DOXY_FN(AddRobot))
+            .def("AddRobot",addrobot2,args("robot","anonymous"), DOXY_FN(AddRobot))
+            .def("RemoveKinBody",&PyEnvironmentBase::RemoveKinBody,args("body"), DOXY_FN(RemoveKinBody))
+            .def("GetKinBody",&PyEnvironmentBase::GetKinBody,args("name"), DOXY_FN(GetKinBody))
+            .def("GetRobot",&PyEnvironmentBase::GetRobot,args("name"), DOXY_FN(GetRobot))
+            .def("GetBodyFromEnvironmentId",&PyEnvironmentBase::GetBodyFromEnvironmentId , DOXY_FN(GetBodyFromEnvironmentId))
+            .def("CreateKinBody",&PyEnvironmentBase::CreateKinBody, DOXY_FN(CreateKinBody))
+            .def("CreateTrajectory",&PyEnvironmentBase::CreateTrajectory,args("dof"), DOXY_FN(CreateTrajectory))
+            .def("LoadProblem",&PyEnvironmentBase::LoadProblem,args("problem","args"), DOXY_FN(LoadProblem))
+            .def("RemoveProblem",&PyEnvironmentBase::RemoveProblem,args("prob"), DOXY_FN(RemoveProblem))
+            .def("GetLoadedProblems",&PyEnvironmentBase::GetLoadedProblems, DOXY_FN(GetLoadedProblems))
+            .def("SetPhysicsEngine",&PyEnvironmentBase::SetPhysicsEngine,args("physics"), DOXY_FN(SetPhysicsEngine))
+            .def("GetPhysicsEngine",&PyEnvironmentBase::GetPhysicsEngine, DOXY_FN(GetPhysicsEngine))
+            .def("RegisterCollisionCallback",&PyEnvironmentBase::RegisterCollisionCallback,args("callback"), DOXY_FN(RegisterCollisionCallback))
+            .def("StepSimulation",&PyEnvironmentBase::StepSimulation,args("timestep"), DOXY_FN(StepSimulation))
+            .def("StartSimulation",&PyEnvironmentBase::StartSimulation,StartSimulation_overloads(args("timestep","realtime"), DOXY_FN(StartSimulation_overloads)))
+            .def("StopSimulation",&PyEnvironmentBase::StopSimulation, DOXY_FN(StopSimulation))
+            .def("GetSimulationTime",&PyEnvironmentBase::GetSimulationTime, DOXY_FN(GetSimulationTime))
+            .def("LockPhysics",LockPhysics1,args("lock"), "Locks the environment mutex.")
+            .def("LockPhysics",LockPhysics2,args("lock","timeout"), "Locks the environment mutex with a timeout.")
+            .def("SetViewer",&PyEnvironmentBase::SetViewer,SetViewer_overloads(args("viewername","showviewer"), DOXY_FN(SetViewer)))
+            .def("GetViewer",&PyEnvironmentBase::GetViewer, DOXY_FN(GetViewer))
+            .def("plot3",&PyEnvironmentBase::plot3,plot3_overloads(args("points","pointsize","colors","drawstyle"), DOXY_FN(plot3)))
+            .def("drawlinestrip",&PyEnvironmentBase::drawlinestrip,drawlinestrip_overloads(args("points","linewidth","colors","drawstyle"), DOXY_FN(drawlinestrip)))
+            .def("drawlinelist",&PyEnvironmentBase::drawlinelist,drawlinelist_overloads(args("points","linewidth","colors","drawstyle"), DOXY_FN(drawlinelist)))
+            .def("drawarrow",&PyEnvironmentBase::drawarrow,drawarrow_overloads(args("p1","p2","linewidth","color"), DOXY_FN(drawarrow)))
+            .def("drawbox",&PyEnvironmentBase::drawbox,drawbox_overloads(args("pos","extents","color"), DOXY_FN(drawbox)))
+            .def("drawplane",drawplane1,args("transform","extents","texture"), DOXY_FN(drawplane))
+            .def("drawplane",drawplane2,args("transform","extents","texture"), DOXY_FN(drawplane))
+            .def("drawtrimesh",&PyEnvironmentBase::drawtrimesh,drawtrimesh_overloads(args("points","indices","colors"), DOXY_FN(drawtrimesh)))
+            .def("GetRobots",&PyEnvironmentBase::GetRobots, DOXY_FN(GetRobots))
+            .def("GetBodies",&PyEnvironmentBase::GetBodies, DOXY_FN(GetBodies))
+            .def("UpdatePublishedBodies",&PyEnvironmentBase::UpdatePublishedBodies, DOXY_FN(UpdatePublishedBodies))
+            .def("Triangulate",&PyEnvironmentBase::Triangulate,args("body"), DOXY_FN(Triangulate))
+            .def("TriangulateScene",&PyEnvironmentBase::TriangulateScene,args("options","name"), DOXY_FN(TriangulateScene))
+            .def("SetDebugLevel",&PyEnvironmentBase::SetDebugLevel,args("level"), DOXY_FN(SetDebugLevel))
+            .def("GetDebugLevel",&PyEnvironmentBase::GetDebugLevel, DOXY_FN(GetDebugLevel))
+            .def("GetHomeDirectory",&PyEnvironmentBase::GetHomeDirectory, DOXY_FN(GetHomeDirectory))
+            .def("__enter__",&PyEnvironmentBase::__enter__, DOXY_FN())
+            .def("__exit__",&PyEnvironmentBase::__exit__, DOXY_FN())
             .def("__eq__",&PyEnvironmentBase::__eq__)
             .def("__ne__",&PyEnvironmentBase::__ne__)
             ;
 
-        enum_<EnvironmentBase::TriangulateOptions>("TriangulateOptions")
+        enum_<EnvironmentBase::TriangulateOptions>("TriangulateOptions",DOXY_ENUM(TriangulateOptions))
             .value("Obstacles",EnvironmentBase::TO_Obstacles)
             .value("Robots",EnvironmentBase::TO_Robots)
             .value("Everything",EnvironmentBase::TO_Everything)
@@ -4212,28 +4210,28 @@ BOOST_PYTHON_MODULE(openravepy_int)
     def("raveLogVerbose",openravepy::raveLogVerbose,args("log"),"Send a verbose log to the openrave system");
     def("raveLog",openravepy::raveLog,args("log","level"),"Send a log to the openrave system with excplicit level");
 
-    def("quatFromAxisAngle",openravepy::quatFromAxisAngle1, args("axis"), "Converts an axis-angle rotation into a quaternion");
-    def("quatFromAxisAngle",openravepy::quatFromAxisAngle2, args("axis","angle"), "Converts an axis-angle rotation into a quaternion");
-    def("quatFromRotationMatrix",openravepy::quatFromRotationMatrix, args("rotation"), "Converts the rotation of a matrix into a quaternion");
-    def("axisAngleFromRotationMatrix",openravepy::axisAngleFromRotationMatrix, args("rotation"), "Converts the rotation of a matrix into axis-angle representation");
-    def("axisAngleFromQuat",openravepy::axisAngleFromQuat, args("quat"), "Converts a quaternion into the axis-angle representation");
-    def("rotationMatrixFromQuat",openravepy::rotationMatrixFromQuat, args("quat"), "Converts a quaternion to a 3x3 matrix");
-    def("rotationMatrixFromQArray",openravepy::rotationMatrixFromQArray,args("quatarray"),"Converts an array of quaternions to a list of 3x3 rotation matrices");
-    def("matrixFromQuat",openravepy::matrixFromQuat, args("quat"), "Converts a quaternion to a 4x4 affine matrix");
-    def("rotationMatrixFromAxisAngle",openravepy::rotationMatrixFromAxisAngle1, args("axis"), "Converts an axis-angle rotation to a 3x3 matrix");
-    def("rotationMatrixFromAxisAngle",openravepy::rotationMatrixFromAxisAngle2, args("axis","angle"), "Converts an axis-angle rotation to a 3x3 matrix");
+    def("quatFromAxisAngle",openravepy::quatFromAxisAngle1, args("axisangle"), "Converts an axis-angle rotation into a quaternion.\n\n:param axisangle: unit axis * rotation angle, 3 values\n");
+    def("quatFromAxisAngle",openravepy::quatFromAxisAngle2, args("axis","angle"), "Converts an axis-angle rotation into a quaternion.\n\n:param axis: unit axis, 3 values\n\n:param angle: rotation angle\n");
+    def("quatFromRotationMatrix",openravepy::quatFromRotationMatrix, args("rotation"), "Converts the rotation of a matrix into a quaternion.\n\n:param rotation: 3x3 array");
+    def("axisAngleFromRotationMatrix",openravepy::axisAngleFromRotationMatrix, args("rotation"), "Converts the rotation of a matrix into axis-angle representation.\n\n:param quat: 4 values\n");
+    def("axisAngleFromQuat",openravepy::axisAngleFromQuat, args("quat"), "Converts a quaternion into the axis-angle representation.\n\n:param quat: 4 values\n");
+    def("rotationMatrixFromQuat",openravepy::rotationMatrixFromQuat, args("quat"), "Converts a quaternion to a 3x3 matrix.\n\n:param quat: 4 values\n");
+    def("rotationMatrixFromQArray",openravepy::rotationMatrixFromQArray,args("quatarray"),"Converts an array of quaternions to a list of 3x3 rotation matrices.\n\n:param quatarray: nx4 array\n");
+    def("matrixFromQuat",openravepy::matrixFromQuat, args("quat"), "Converts a quaternion to a 4x4 affine matrix.\n\n:param quat: 4 values\n");
+    def("rotationMatrixFromAxisAngle",openravepy::rotationMatrixFromAxisAngle1, args("axisangle"), "Converts an axis-angle rotation to a 3x3 matrix.\n\n:param axisangle: unit axis * rotation angle, 3 values\n");
+    def("rotationMatrixFromAxisAngle",openravepy::rotationMatrixFromAxisAngle2, args("axis","angle"), "Converts an axis-angle rotation to a 3x3 matrix.\n\n:param axis: unit axis, 3 values\n\n:param angle: rotation angle\n");
     def("matrixFromAxisAngle",openravepy::matrixFromAxisAngle1, args("axis"), "Converts an axis-angle rotation to a 4x4 affine matrix");
-    def("matrixFromAxisAngle",openravepy::matrixFromAxisAngle2, args("axis","angle"), "Converts an axis-angle rotation to a 4x4 affine matrix");
-    def("matrixFromPose",openravepy::matrixFromPose, args("pose"), "Converts a 7 element quaterion+translation transform to a 4x4 matrix");
-    def("matrixFromPoses",openravepy::matrixFromPoses, args("poses"), "Converts a Nx7 element quaterion+translation array to a 4x4 matrices");
-    def("poseFromMatrix",openravepy::poseFromMatrix, args("transform"), "Converts a 4x4 matrix to a 7 element quaternion+translation representation");
-    def("poseFromMatrices",openravepy::poseFromMatrices, args("transforms"), "Converts an array/list of 4x4 matrices to a Nx7 array where each row is quaternion+translation representation");
-    def("invertPoses",openravepy::invertPoses,args("poses"), "Inverts a Nx7 array of poses where first 4 columns are the quaternion and last 3 are the translation components");
-    def("quatRotateDirection",openravepy::quatRotateDirection,args("sourcedir,targetdir"),"Returns the minimal quaternion rotation that rotates sourcedir into targetdir");
-    def("quatMult",openravepy::quatMult,args("quat1","quat2"),"Multiplies two 1-dimensional quaternions.");
-    def("poseMult",openravepy::poseMult,args("pose1","pose2"),"multiplies two poses");
-    def("transformLookat",openravepy::transformLookat,args("lookat","camerapos","cameraup"),"Returns a camera matrix that looks along a ray with a desired up vector.");
-    def("matrixSerialization",openravepy::matrixSerialization,args("matrix"),"Serializes a transformation into a string representing a 3x4 matrix");
-    def("poseSerialization",openravepy::poseSerialization, args("pose"), "Serializes a transformation into a string representing a quaternion with translation");
+    def("matrixFromAxisAngle",openravepy::matrixFromAxisAngle2, args("axis","angle"), "Converts an axis-angle rotation to a 4x4 affine matrix.\n\n:param axis: unit axis, 3 values\n\n:param angle: rotation angle\n");
+    def("matrixFromPose",openravepy::matrixFromPose, args("pose"), "Converts a 7 element quaterion+translation transform to a 4x4 matrix.\n\n:param pose: 7 values\n");
+    def("matrixFromPoses",openravepy::matrixFromPoses, args("poses"), "Converts a Nx7 element quaterion+translation array to a 4x4 matrices.\n\n:param poses: nx7 array\n");
+    def("poseFromMatrix",openravepy::poseFromMatrix, args("transform"), "Converts a 4x4 matrix to a 7 element quaternion+translation representation.\n\n:param transform: 3x4 or 4x4 affine matrix\n");
+    def("poseFromMatrices",openravepy::poseFromMatrices, args("transforms"), "Converts an array/list of 4x4 matrices to a Nx7 array where each row is quaternion+translation representation.\n\n:param transforms: list of 3x4 or 4x4 affine matrices\n");
+    def("invertPoses",openravepy::invertPoses,args("poses"), "Inverts a Nx7 array of poses where first 4 columns are the quaternion and last 3 are the translation components.\n\n:param poses: nx7 array");
+    def("quatRotateDirection",openravepy::quatRotateDirection,args("sourcedir,targetdir"),"Returns the minimal quaternion rotation that rotates sourcedir into targetdir.\n\n:param sourcedir: unit axis, 3 values\n\n:param targetdir: unit axis: 3 values\n");
+    def("quatMult",openravepy::quatMult,args("quat1","quat2"),"Multiplies two 1-dimensional quaternions.\n\n:param quat1: 4 values\n:param quat2: 4 values\n");
+    def("poseMult",openravepy::poseMult,args("pose1","pose2"),"multiplies two poses.\n\n:param pose1: 7 values\n\n:param pose2: 7 values\n");
+    def("transformLookat",openravepy::transformLookat,args("lookat","camerapos","cameraup"),"Returns a camera matrix that looks along a ray with a desired up vector.\n\n:param lookat: unit axis, 3 values\n\n:param camerapos: 3 values\n\n:param cameraup: unit axis, 3 values\n");
+    def("matrixSerialization",openravepy::matrixSerialization,args("transform"),"Serializes a transformation into a string representing a 3x4 matrix.\n\n:param transform: 3x4 or 4x4 array\n");
+    def("poseSerialization",openravepy::poseSerialization, args("pose"), "Serializes a transformation into a string representing a quaternion with translation.\n\n:param pose: 7 values\n");
     def("openravepyCompilerVersion",openravepy::openravepyCompilerVersion,"Returns the compiler version that openravepy_int was compiled with");
 }
