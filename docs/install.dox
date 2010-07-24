@@ -383,6 +383,17 @@ make prefix=/my/new/dir
 rm build/CMakeCache.txt
 \endverbatim
 
+\~ \section ilinux_bash Bash
+
+\~ Can enable automatic completion of several openrave functions by sourcing the \c openravebash file. Add this to your \c ~./.bashrc file:
+
+\~japanese タブでコマンドを完成したり，bashでの最適なOpenRAVE環境を入れるのに以下のコマンドを\c ~/.bashrcファイルにいれてください．
+
+\~
+\verbatim
+source `openrave-config --prefix`/share/openrave/openravebash
+\endverbatim
+
 */
 
 /** 

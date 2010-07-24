@@ -55,10 +55,13 @@ public:
         }
 
         virtual void Destroy() {
+            if( plibrary ) {
+                Load_DestroyPlugin();
+            }
             boost::mutex::scoped_lock lock(_mutex);
             // do some more checking here, there still might be instances of robots, planners, and sensors out there
             if (plibrary) {
-                RAVELOG_DEBUGA("RaveDatabase: closing plugin %s\n", ppluginname.c_str()); Sleep(10);
+                RAVELOG_DEBUGA("RaveDatabase: closing plugin %s\n", ppluginname.c_str());// Sleep(10);
                 if( pfnDestroyPlugin != NULL ) {
                     pfnDestroyPlugin();
                 }
@@ -250,7 +253,7 @@ public:
     friend class Plugin;
 
     RaveDatabase() : _bShutdown(false) {
-        _threadPluginLoader = boost::thread(boost::bind(&RaveDatabase::_PluginLoaderThread, this));
+        _threadPluginLoader.reset(new boost::thread(boost::bind(&RaveDatabase::_PluginLoaderThread, this)));
     }
     virtual ~RaveDatabase() { Destroy(); }
 
@@ -288,7 +291,8 @@ public:
             _bShutdown = true;
             _condLoaderHasWork.notify_all();
         }
-        _threadPluginLoader.join();
+        _threadPluginLoader->join();
+        _threadPluginLoader.reset();
         {
             EnvironmentMutex::scoped_lock lock(_mutex);
             _listplugins.clear();
@@ -671,7 +675,7 @@ protected:
     mutable boost::mutex _mutexPluginLoader; ///< specifically for loading shared objects
     boost::condition _condLoaderHasWork;
     list<PluginPtr> _listPluginsToLoad;
-    boost::thread _threadPluginLoader;
+    boost::shared_ptr<boost::thread> _threadPluginLoader;
     bool _bShutdown;
     //@}
 };

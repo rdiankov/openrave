@@ -69,6 +69,8 @@ if __name__ == "__main__":
                       help='if true will drop into the ipython interpreter rather than spin')
     parser.add_option('--pythoncmd','-p',action='store',type='string',dest='pythoncmd',default=None,
                       help='Execute a python command after all loading is done and before the drop to interpreter check. The variables available to use are: "env","robots","robot". It is possible to quit the program after the command is executed by adding a "sys.exit(0)" at the end of the command.')
+    parser.add_option('--listinterfaces', action="store",type='string',dest='listinterfaces',default=None,
+                      help='List the provided interfaces of a particular type from all plugins. Possible values are: %s.'%(', '.join(type.name for type in InterfaceType.values.values())))
     parser.add_option('--listplugins', action="store_true",dest='listplugins',default=False,
                       help='List all plugins and the interfaces they provide.')
     parser.add_option('--listdatabases',action='store_true',dest='listdatabases',default=False,
@@ -115,12 +117,22 @@ if __name__ == "__main__":
             if (not options.level.isdigit() and options.level.lower() == debugname.name.lower()) or (options.level.isdigit() and int(options.level) == int(debuglevel)):
                 raveSetDebugLevel(debugname)
                 break
+    if options.listinterfaces is not None or options.listplugins:
+        raveSetDebugLevel(DebugLevel.Error)
     env = Environment()
     try:
+        if options.listinterfaces is not None:
+            interfaces = env.GetLoadedInterfaces()
+            for type,names in interfaces:
+                if options.listinterfaces.lower() == str(type).lower():
+                    for name in names:
+                        print name
+                    break
+            sys.exit(0)
         if options.listplugins:
             plugins = env.GetPluginInfo()
             interfacenames = dict()
-            for name,type in InterfaceType.names.iteritems():
+            for type in InterfaceType.values.values():
                 interfacenames[type] = []
             for pluginname,info in plugins:
                 for type,names in info.interfacenames:

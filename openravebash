@@ -1,0 +1,42 @@
+function _complete_openravepy {
+    COMPREPLY=()
+    arg="${COMP_WORDS[COMP_CWORD]}"
+
+    if [[ $COMP_CWORD == 1 ]]; then
+        opts="--loadplugin --collision --physics --viewer --server --serverport --level -l --database --example --ipython --pythoncmd --listinterfaces --listplugins  --listdatabases --listexamples"
+        COMPREPLY=($(compgen -W "$opts" -- ${arg}))
+    elif [[ $COMP_CWORD -ge 2 ]]; then
+        case ${COMP_WORDS[1]} in
+            --listinterfaces)
+                opts="planner robot sensorsystem controller probleminstance inversekinematicssolver kinbody physicsengine sensor collisionchecker trajectory viewer"
+                COMPREPLY=($(compgen -W "$opts" -- ${arg}))
+                ;;
+            --level|-l)
+                opts="fatal error warn info debug verbose"
+                COMPREPLY=($(compgen -W "$opts" -- ${arg}))
+                ;;
+            --example)
+                opts=`openrave.py --listexamples`
+                COMPREPLY=($(compgen -W "$opts" -- ${arg}))
+                ;;
+            --database)
+                opts=`openrave.py --listdatabases`
+                COMPREPLY=($(compgen -W "$opts" -- ${arg}))
+                ;;
+            --collision)
+                opts=`openrave.py --listinterfaces collisionchecker`
+                COMPREPLY=($(compgen -W "$opts" -- ${arg}))
+                ;;
+            --viewer)
+                opts=`openrave.py --listinterfaces viewer`
+                COMPREPLY=($(compgen -W "$opts" -- ${arg}))
+                ;;
+            --physics)
+                opts=`openrave.py --listinterfaces physics`
+                COMPREPLY=($(compgen -W "$opts" -- ${arg}))
+                ;;
+        esac
+    fi
+}
+
+complete -F "_complete_openravepy" "openrave.py"

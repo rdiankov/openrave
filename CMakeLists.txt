@@ -520,6 +520,7 @@ configure_file(
   "${CMAKE_CURRENT_BINARY_DIR}/openrave-config"
   IMMEDIATE @ONLY)
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/openrave-config DESTINATION bin)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/openravebash DESTINATION share/openrave)
 
 configure_file(
   "${CMAKE_CURRENT_SOURCE_DIR}/openrave.pc.cmake.in"
