@@ -72,23 +72,19 @@ class HanoiPuzzle:
             srcpegbox = srcpeg.ComputeAABB()
             destpegbox = destpeg.ComputeAABB()
             # get all the transformations
-            Thand = self.robot.GetActiveManipulator().GetEndEffector().GetTransform()
+            Thand = self.robot.GetActiveManipulator().GetEndEffectorTransform()
             Tdisk = disk.GetTransform()
             Tsrcpeg = srcpeg.GetTransform()
             Tpeg = destpeg.GetTransform()
-        src_upvec = Tsrcpeg[0:3,1:2]
-        dest_upvec = Tpeg[0:3,1:2]
-        
-        # the IK grasp system is [0 0.175 0] from the center of rotation
-        Tgrasp = eye(4)
-        Tgrasp[1,3] = 0.175
-        Tdiff = dot(dot(linalg.inv(Tdisk), Thand), Tgrasp)
+        src_upvec = Tsrcpeg[0:3,2:3]
+        dest_upvec = Tpeg[0:3,2:3]
+        Tdiff = dot(linalg.inv(Tdisk), Thand)
         
         # iterate across all possible orientations the destination peg can be in
         for ang in arange(-pi,pi,0.3):
             # find the dest position
-            p = Tpeg[0:3,3:4] + height * Tpeg[0:3,1:2]
-            R = dot(Tpeg[0:3,0:3], array(((cos(ang),0,sin(ang)),(0,1,0),(-sin(ang),0,cos(ang)))))
+            p = Tpeg[0:3,3:4] + height * dest_upvec
+            R = dot(Tpeg[0:3,0:3], array(((cos(ang),-sin(ang),0),(sin(ang),cos(ang),0),(0,0,1))))
             T = dot(r_[c_[R,p], [[0,0,0,1]]], Tdiff)
             with self.env:
                 # check the IK of the destination
@@ -96,42 +92,42 @@ class HanoiPuzzle:
                     continue
                 # add two intermediate positions, one right above the source peg
                 # and one right above the destination peg
-                Tnewhand = dot(Thand, Tgrasp)
-                Tnewhand[0:3,3:4] = Tnewhand[0:3,3:4] + src_upvec*(max(srcpegbox.extents())*2.5-0.02)
+                Tnewhand = array(Thand)
+                Tnewhand[0:3,3:4] += src_upvec*(max(srcpegbox.extents())*2.5-0.02)
                 # check the IK of the destination
                 if self.robot.GetActiveManipulator().FindIKSolution(Tnewhand,True) is None:
                     print('Tnewhand invalid')
                     continue
                 Tnewhand2 = array(T)
-                Tnewhand2[0:3,3:4] = Tnewhand2[0:3,3:4] + dest_upvec*(max(destpegbox.extents())*2.5-height)
+                Tnewhand2[0:3,3:4] += dest_upvec*(max(destpegbox.extents())*2.5-height)
                 # check the IK of the destination
                 if self.robot.GetActiveManipulator().FindIKSolution(Tnewhand2,True) is None:
                     print('Tnewhand2 invalid')
                     continue
             try:
                 self.basemanip.MoveToHandPosition(matrices=[Tnewhand])
-                print 'move to position above source peg'
+                raveLogInfo('move to position above source peg')
                 self.waitrobot() # wait for robot to complete all trajectories
 
                 self.basemanip.MoveToHandPosition(matrices=[Tnewhand2])
-                print 'move to position above dest peg'
+                raveLogInfo('move to position above dest peg')
                 self.waitrobot() # wait for robot to complete all trajectories
 
                 self.basemanip.MoveToHandPosition(matrices=[T])
-                print 'move to dest peg'
+                raveLogInfo('move to dest peg')
                 self.waitrobot() # wait for robot to complete all trajectories
                 return True
             except planning_error, e:
-                print e
+                raveLogWarn(str(e))
         raise planning_error('failed to put block')
 
     def GetGrasp(self, Tdisk, radius, angles):
         """ returns the transform of the grasp given its orientation and the location/size of the disk"""
-        ydir = -dot(Tdisk[0:3,0:3],vstack([cos(angles[0])*cos(angles[1]),-sin(angles[0]),cos(angles[0])*sin(angles[1])]))
-        pos = Tdisk[0:3,3:4] + radius*dot(Tdisk[0:3,0:3],vstack([cos(angles[1]),0,sin(angles[1])]))
-        xdir = cross(Tdisk[0:3,1:2],ydir,axis=0)
+        zdir = -dot(Tdisk[0:3,0:3],vstack([cos(angles[0])*cos(angles[1]),-cos(angles[0])*sin(angles[1]),-sin(angles[0])]))
+        pos = Tdisk[0:3,3:4] + radius*dot(Tdisk[0:3,0:3],vstack([cos(angles[1]),-sin(angles[1]),0]))
+        xdir = cross(Tdisk[0:3,1:2],zdir,axis=0)
         xdir = xdir / linalg.norm(xdir)
-        zdir = cross(xdir,ydir,axis=0)
+        ydir = cross(zdir,xdir,axis=0)
         Tgrasp = r_[c_[xdir,ydir,zdir,pos],[[0,0,0,1]]]
         return [Tgrasp,dot(Tgrasp, array([[-1,0,0,0],[0,1,0,0],[0,0,-1,0],[0,0,0,1]]))]
 
@@ -146,7 +142,7 @@ class HanoiPuzzle:
                 for Tgrasp in Tgrasps: # for each of the grasps
                     try:
                         self.basemanip.MoveToHandPosition(matrices=[Tgrasp])
-                        print 'moving hand to location'
+                        raveLogInfo('moving hand to location')
                         self.waitrobot()
 
                         # succeeded so grab the disk
@@ -163,7 +159,7 @@ class HanoiPuzzle:
                         openhandfn()
                         return True
                     except planning_error,e:
-                        print e
+                        raveLogWarn(str(e))
                         with self.env:
                             self.robot.ReleaseAllGrabbed()
                         openhandfn()

@@ -21,7 +21,6 @@
     <!-- joint values of the closed and opened positions -->
     <closingdirection>1.0 1.0 1.0</closingdirection>
     <direction>0 0 1</direction>
-    <RotationAxis>1 0 0 -90</RotationAxis>
     <IkSolver>PUMAikfast</IkSolver>
   </Manipulator>
 </Robot>
