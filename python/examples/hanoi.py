@@ -144,7 +144,6 @@ class HanoiPuzzle:
                         self.basemanip.MoveToHandPosition(matrices=[Tgrasp])
                         raveLogInfo('moving hand to location')
                         self.waitrobot()
-
                         # succeeded so grab the disk
                         self.taskmanip.CloseFingers()
                         self.waitrobot()

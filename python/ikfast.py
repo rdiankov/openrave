@@ -3011,7 +3011,7 @@ ikfast.py --fkfile=fk_WAM7.txt --baselink=0 --eelink=7 --savefile=ik.cpp 1 2 3 4
 
     tstart = time.time()
     kinematics = IKFastSolver(options.fkfile)
-    code = kinematics.generateIkSolver(options.baselink,options.eelink,solvejoints,options.freeparams,options.usedummyjoints,solvefn=solvefn,lang=lang)
+    code = kinematics.generateIkSolver(options.baselink,options.eelink,solvejoints,options.freeparams,options.usedummyjoints,solvefn=solvefn,lang=options.lang)
 
     success = True if len(code) > 0 else False
 
