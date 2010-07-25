@@ -175,27 +175,30 @@ from numpy.random import rand
 
 def run(args=None):
     env = Environment()
-    env.SetViewer('qtcoin')
-    body1 = env.ReadKinBodyXMLFile(filename='data/mug1.kinbody.xml')
-    env.AddKinBody(body1)
-    body1.SetTransform(eye(4))
-    body2 = env.ReadKinBodyXMLFile(filename='data/mug2.kinbody.xml')
-    env.AddKinBody(body2)
-    body2.SetTransform(eye(4))
-    raw_input('キーを押すと現在の変換行列を出力します．')
-    tran1 = body1.GetTransform()
-    print tran1
-    raw_input('キーを押すとXに+0.5移動し，移動後の変換行列を出力します．')
-    tran1[0,3] = 0.2 
-    body1.SetTransform(tran1)
-    print tran1
-    while True:
-        raw_input("キーを押すとランダムに移動します．")
-        tran1 = matrixFromAxisAngle(axis=[0,0,1],angle=rand(1))
-        tran1[0:3,3] = 0.2*(rand(3)-0.5)
+    try:
+        env.SetViewer('qtcoin')
+        body1 = env.ReadKinBodyXMLFile(filename='data/mug1.kinbody.xml')
+        env.AddKinBody(body1)
+        body1.SetTransform(eye(4))
+        body2 = env.ReadKinBodyXMLFile(filename='data/mug2.kinbody.xml')
+        env.AddKinBody(body2)
+        body2.SetTransform(eye(4))
+        raw_input('キーを押すと現在の変換行列を出力します．')
+        tran1 = body1.GetTransform()
+        print tran1
+        raw_input('キーを押すとXに+0.5移動し，移動後の変換行列を出力します．')
+        tran1[0,3] = 0.2 
         body1.SetTransform(tran1)
-        print "X=%f Y=%f Z=%f"%(tran1[0,3],tran1[1,3],tran1[2,3])
-        print 'pose: ',poseFromMatrix(tran1)
+        print tran1
+        while True:
+            raw_input("キーを押すとランダムに移動します．")
+            tran1 = matrixFromAxisAngle(axis=[0,0,1],angle=rand(1))
+            tran1[0:3,3] = 0.2*(rand(3)-0.5)
+            body1.SetTransform(tran1)
+            print "X=%f Y=%f Z=%f"%(tran1[0,3],tran1[1,3],tran1[2,3])
+            print 'pose: ',poseFromMatrix(tran1)
+    finally:
+        env.Destroy()
 
 if __name__ == "__main__":
     run()
