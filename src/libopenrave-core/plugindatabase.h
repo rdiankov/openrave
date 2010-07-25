@@ -226,7 +226,7 @@ public:
                     if( _bShutdown ) {
                         throw openrave_exception("library is shutting down",ORE_InvalidPlugin);
                     }
-                    _cond.wait(_mutex);
+                    _cond.wait(lock);
                 } while(1);
             }
         }
@@ -640,7 +640,7 @@ protected:
             {
                 boost::mutex::scoped_lock lock(_mutexPluginLoader);
                 if( _listPluginsToLoad.size() == 0 ) {
-                    _condLoaderHasWork.wait(_mutexPluginLoader);
+                    _condLoaderHasWork.wait(lock);
                     if( _bShutdown ) {
                         break;
                     }
