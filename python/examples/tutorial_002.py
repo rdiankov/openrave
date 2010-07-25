@@ -44,6 +44,7 @@
       if s is 'q':
           break
       else:
+          tran1 = matrixFromAxisAngle(axis=rand(3)-0.5,angle=rand(1))
           tran1[0:3,3] = rand(1,3) 
           body1.SetTransform(tran1)
           print "X=%f Y=%f Z=%f"%(tran1[0,3],tran1[1,3],tran1[2,3])
@@ -147,16 +148,16 @@ X軸の移動は変換行列の０行３列目（tran1[0,3]）なので，そこ
 .. code-block:: python
 
   while True:
-    s  = raw_input("キーを押すとランダムに移動します．終了するには'q'を押してください．")
-    if s is 'q':
-      break
-    else:
-      tran1[0:3,3] = rand(1,3) 
-      body1.SetTransform(tran1)
-      print "X=%f Y=%f Z=%f"%(tran1[0,3],tran1[1,3],tran1[2,3])
+      s  = raw_input("キーを押すとランダムに移動します．終了するには'q'を押してください．")
+      if s is 'q':
+          break
+      else:
+          tran1 = matrixFromAxisAngle(axis=[0,0,1],angle=rand(1))
+          tran1[0:3,3] = rand(1,3) 
+          body1.SetTransform(tran1)
+          print "X=%f Y=%f Z=%f"%(tran1[0,3],tran1[1,3],tran1[2,3])
 
 最後はrand関数を使って物体の位置をランダムに作成し移動し，現在の位置を出力します．
-whileループによって'q'が入力されるまで繰り返します．
 
 NEXT
 --------------------------------------
@@ -168,34 +169,33 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Makoto Furukawa'
 __copyright__ = '2010 Makoto Furukawa'
 __license__ = 'Apache License, Version 2.0'
-from openravepy import Environment
+from openravepy import Environment, matrixFromAxisAngle, poseFromMatrix
 from numpy import eye
 from numpy.random import rand
 
 def run(args=None):
-  env = Environment()
-  env.SetViewer('qtcoin')
-  body1 = env.ReadKinBodyXMLFile(filename='data/mug1.kinbody.xml')
-  env.AddKinBody(body1)
-  body1.SetTransform(eye(4))
-  body2 = env.ReadKinBodyXMLFile(filename='data/mug2.kinbody.xml')
-  env.AddKinBody(body2)
-  body2.SetTransform(eye(4))
-  raw_input('キーを押すと現在の変換行列を出力します．')
-  tran1 = body1.GetTransform()
-  print tran1
-  raw_input('キーを押すとXに+0.5移動し，移動後の変換行列を出力します．')
-  tran1[0,3] = 0.5 
-  body1.SetTransform(tran1)
-  print tran1
-  while True:
-    s  = raw_input("キーを押すとランダムに移動します．終了するには'q'を押してください．")
-    if s is 'q':
-      break
-    else:
-      tran1[0:3,3] = rand(1,3) 
-      body1.SetTransform(tran1)
-      print "X=%f Y=%f Z=%f"%(tran1[0,3],tran1[1,3],tran1[2,3])
+    env = Environment()
+    env.SetViewer('qtcoin')
+    body1 = env.ReadKinBodyXMLFile(filename='data/mug1.kinbody.xml')
+    env.AddKinBody(body1)
+    body1.SetTransform(eye(4))
+    body2 = env.ReadKinBodyXMLFile(filename='data/mug2.kinbody.xml')
+    env.AddKinBody(body2)
+    body2.SetTransform(eye(4))
+    raw_input('キーを押すと現在の変換行列を出力します．')
+    tran1 = body1.GetTransform()
+    print tran1
+    raw_input('キーを押すとXに+0.5移動し，移動後の変換行列を出力します．')
+    tran1[0,3] = 0.2 
+    body1.SetTransform(tran1)
+    print tran1
+    while True:
+        raw_input("キーを押すとランダムに移動します．")
+        tran1 = matrixFromAxisAngle(axis=[0,0,1],angle=rand(1))
+        tran1[0:3,3] = 0.2*(rand(3)-0.5)
+        body1.SetTransform(tran1)
+        print "X=%f Y=%f Z=%f"%(tran1[0,3],tran1[1,3],tran1[2,3])
+        print 'pose: ',poseFromMatrix(tran1)
 
 if __name__ == "__main__":
     run()
