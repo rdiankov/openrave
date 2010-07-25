@@ -3381,10 +3381,12 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Save_overloads, Save, 1, 2)
 
 BOOST_PYTHON_MODULE(openravepy_int)
 {
+#if BOOST_VERSION >= 103500
     docstring_options doc_options;
     doc_options.disable_cpp_signatures();
     doc_options.enable_py_signatures();
     doc_options.enable_user_defined();
+#endif
     import_array();
     numeric::array::set_module_and_type("numpy", "ndarray");
     int_from_int();
