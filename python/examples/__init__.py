@@ -15,4 +15,5 @@ import visibilityplanning
 
 # tutorials showing various functionality
 import tutorial0
+import tutorial_002
 import tutorial_ik
