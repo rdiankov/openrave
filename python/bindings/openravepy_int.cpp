@@ -54,7 +54,12 @@ using namespace boost::python;
 using namespace std;
 using namespace OpenRAVE;
 
-#define DOXY_ENUM(name) ".. doxygenenum:: "#name"\n"
+#if BOOST_VERSION >= 103500
+#define DOXY_ENUM(name) ,".. doxygenenum:: "#name"\n"
+#else
+#define DOXY_ENUM(name) 
+#endif
+
 #define DOXY_FN(name) ".. doxygenfunction:: "#name"\n\n"
 
 uint64_t GetMicroTime()
@@ -3403,7 +3408,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
         ;
     exception_translator<openrave_exception>();
 
-    enum_<DebugLevel>("DebugLevel",DOXY_ENUM(DebugLevel))
+    enum_<DebugLevel>("DebugLevel" DOXY_ENUM(DebugLevel))
         .value("Fatal",Level_Fatal)
         .value("Error",Level_Error)
         .value("Warn",Level_Warn)
@@ -3411,13 +3416,13 @@ BOOST_PYTHON_MODULE(openravepy_int)
         .value("Debug",Level_Debug)
         .value("Verbose",Level_Verbose)
         ;
-    enum_<SerializationOptions>("SerializationOptions",DOXY_ENUM(SerializationOptions))
+    enum_<SerializationOptions>("SerializationOptions" DOXY_ENUM(SerializationOptions))
         .value("Kinematics",SO_Kinematics)
         .value("Dynamics",SO_Dynamics)
         .value("BodyState",SO_BodyState)
         .value("NamesAndFiles",SO_NamesAndFiles)
         ;
-    enum_<InterfaceType>("InterfaceType",DOXY_ENUM(InterfaceType))
+    enum_<InterfaceType>("InterfaceType" DOXY_ENUM(InterfaceType))
         .value(RaveGetInterfaceName(PT_Planner).c_str(),PT_Planner)
         .value(RaveGetInterfaceName(PT_Robot).c_str(),PT_Robot)
         .value(RaveGetInterfaceName(PT_SensorSystem).c_str(),PT_SensorSystem)
@@ -3431,23 +3436,23 @@ BOOST_PYTHON_MODULE(openravepy_int)
         .value(RaveGetInterfaceName(PT_Trajectory).c_str(),PT_Trajectory)
         .value(RaveGetInterfaceName(PT_Viewer).c_str(),PT_Viewer)
         ;
-    enum_<CollisionOptions>("CollisionOptions",DOXY_ENUM(CollisionOptions))
+    enum_<CollisionOptions>("CollisionOptions" DOXY_ENUM(CollisionOptions))
         .value("Distance",CO_Distance)
         .value("UseTolerance",CO_UseTolerance)
         .value("Contacts",CO_Contacts)
         .value("RayAnyHit",CO_RayAnyHit)
         ;
-    enum_<CollisionAction>("CollisionAction",DOXY_ENUM(CollisionAction))
+    enum_<CollisionAction>("CollisionAction" DOXY_ENUM(CollisionAction))
         .value("DefaultAction",CA_DefaultAction)
         .value("Ignore",CA_Ignore)
         ;
-    enum_<CloningOptions>("CloningOptions",DOXY_ENUM(CloningOptions))
+    enum_<CloningOptions>("CloningOptions" DOXY_ENUM(CloningOptions))
         .value("Bodies",Clone_Bodies)
         .value("Viewer",Clone_Viewer)
         .value("Simulation",Clone_Simulation)
         .value("RealControllers",Clone_RealControllers)
         ;
-    enum_<PhysicsEngineOptions>("PhysicsEngineOptions",DOXY_ENUM(PhysicsEngineOptions))
+    enum_<PhysicsEngineOptions>("PhysicsEngineOptions" DOXY_ENUM(PhysicsEngineOptions))
         .value("SelfCollisions",PEO_SelfCollisions)
         ;
 
@@ -3571,7 +3576,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("__exit__",&PyKinBody::__exit__)
             ;
 
-        enum_<KinBody::SaveParameters>("SaveParameters",DOXY_ENUM(SaveParameters))
+        enum_<KinBody::SaveParameters>("SaveParameters" DOXY_ENUM(SaveParameters))
             .value("LinkTransformation",KinBody::Save_LinkTransformation)
             .value("LinkEnable",KinBody::Save_LinkEnable)
             .value("ActiveDOF",KinBody::Save_ActiveDOF)
@@ -3630,7 +3635,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
                     .def("__eq__",&PyKinBody::PyLink::PyGeomProperties::__eq__)
                     .def("__ne__",&PyKinBody::PyLink::PyGeomProperties::__ne__)
                     ;
-                enum_<KinBody::Link::GEOMPROPERTIES::GeomType>("Type", DOXY_ENUM(GeomType))
+                enum_<KinBody::Link::GEOMPROPERTIES::GeomType>("Type" DOXY_ENUM(GeomType))
                     .value("None",KinBody::Link::GEOMPROPERTIES::GeomNone)
                     .value("Box",KinBody::Link::GEOMPROPERTIES::GeomBox)
                     .value("Sphere",KinBody::Link::GEOMPROPERTIES::GeomSphere)
@@ -3678,7 +3683,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
                 .def("__ne__",&PyKinBody::PyJoint::__ne__)
                 ;
             
-            enum_<KinBody::Joint::JointType>("Type",DOXY_ENUM(JointType))
+            enum_<KinBody::Joint::JointType>("Type" DOXY_ENUM(JointType))
                 .value("None",KinBody::Joint::JointNone)
                 .value("Hinge",KinBody::Joint::JointHinge)
                 .value("Revolute",KinBody::Joint::JointRevolute)
@@ -3741,7 +3746,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def_pickle(IkParameterization_pickle_suite())
             ;
 
-        enum_<IkParameterization::Type>("Type",DOXY_ENUM(IkParameterization))
+        enum_<IkParameterization::Type>("Type" DOXY_ENUM(IkParameterization))
             .value("Transform6D",IkParameterization::Type_Transform6D)
             .value("Rotation3D",IkParameterization::Type_Rotation3D)
             .value("Translation3D",IkParameterization::Type_Translation3D)
@@ -3922,7 +3927,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def_readwrite("troot",&PyRobotBase::PyGrabbed::troot)
             ;
 
-        enum_<RobotBase::DOFAffine>("DOFAffine",DOXY_ENUM(DOFAffine))
+        enum_<RobotBase::DOFAffine>("DOFAffine" DOXY_ENUM(DOFAffine))
             .value("NoTransform",RobotBase::DOF_NoTransform)
             .value("X",RobotBase::DOF_X)
             .value("Y",RobotBase::DOF_Y)
@@ -4015,7 +4020,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def_readonly("KK",&PySensorBase::PyCameraSensorData::KK)
             ;
 
-        enum_<SensorBase::SensorType>("Type",DOXY_ENUM(SensorType))
+        enum_<SensorBase::SensorType>("Type" DOXY_ENUM(SensorType))
             .value("Invalid",SensorBase::ST_Invalid)
             .value("Laser",SensorBase::ST_Laser)
             .value("Camera",SensorBase::ST_Camera)
@@ -4048,7 +4053,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetCameraImage",&PyViewerBase::GetCameraImage,args("width","height","transform","K"), DOXY_FN(GetCameraImage))
             ;
 
-        enum_<ViewerBase::ViewerEvents>("Events",DOXY_ENUM(ViewerEvents))
+        enum_<ViewerBase::ViewerEvents>("Events" DOXY_ENUM(ViewerEvents))
             .value("ItemSelection",ViewerBase::VE_ItemSelection)
             ;
     }
@@ -4182,7 +4187,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("__ne__",&PyEnvironmentBase::__ne__)
             ;
 
-        enum_<EnvironmentBase::TriangulateOptions>("TriangulateOptions",DOXY_ENUM(TriangulateOptions))
+        enum_<EnvironmentBase::TriangulateOptions>("TriangulateOptions" DOXY_ENUM(TriangulateOptions))
             .value("Obstacles",EnvironmentBase::TO_Obstacles)
             .value("Robots",EnvironmentBase::TO_Robots)
             .value("Everything",EnvironmentBase::TO_Everything)
