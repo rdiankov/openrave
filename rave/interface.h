@@ -45,8 +45,9 @@ protected:
     /// \param sout - output of the command
     /// \return If false, there was an error with the command, true if successful
     typedef boost::function<bool(std::ostream&, std::istream&)> InterfaceCommandFn;
-    struct InterfaceCommand
+    class InterfaceCommand
     {
+    public:
         InterfaceCommand() {}
         InterfaceCommand(InterfaceCommandFn newfn, const std::string& newhelp) : fn(newfn), help(newhelp) {}
         InterfaceCommandFn fn; ///< command function to run
@@ -84,7 +85,7 @@ public:
     virtual const std::string& GetDescription() const { return __description; };
 
     /// set user data
-    virtual void SetUserData(boost::shared_ptr<void> pdata) { __pUserData = pdata; }
+    virtual void SetUserData(boost::shared_ptr<void> data) { __pUserData = data; }
     /// \return user custom data
     virtual boost::shared_ptr<void> GetUserData() const { return __pUserData; }
     

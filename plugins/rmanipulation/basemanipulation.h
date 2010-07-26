@@ -1196,7 +1196,7 @@ protected:
 
         graspparams->vgoalconfig.resize(robot->GetActiveDOF());
         int i = 0;
-        FOREACHC(itindex,robot->GetActiveJointIndices()) {
+        FOREACHC(itindex,robot->GetActiveDOFIndices()) {
             graspparams->vgoalconfig[i++] = -vclosingsign_full.at(*itindex);
         }
 

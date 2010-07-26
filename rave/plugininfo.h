@@ -26,8 +26,9 @@ namespace OpenRAVE {
     \ingroup plugin_exports
     PLUGININFO has a hash computed for it to validate its size and type before having a plugin fill it.
 */
-struct PLUGININFO
+class PLUGININFO
 {
+public:
     PLUGININFO() : version(0) {}
     std::map<InterfaceType, std::vector<std::string> > interfacenames; ///< offered interfaces
     int version; ///< OPENRAVE_VERSION

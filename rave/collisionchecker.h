@@ -44,8 +44,9 @@ class RAVE_API CollisionReport
 public:
     CollisionReport() { Reset(); }
 
-    struct RAVE_API CONTACT
+    class RAVE_API CONTACT
     {
+    public:
         CONTACT() : depth(0) {}
         CONTACT(const Vector& p, const Vector& n, dReal d) : pos(p), norm(n) {depth = d;}
 
@@ -91,7 +92,7 @@ public:
 
     /// set and get various collision checker options
     /// \return true if command succeeded
-    virtual bool SetCollisionOptions(std::ostream& sout, std::istream& sinput) = 0;
+    virtual bool SetCollisionOptions(std::ostream& sout, std::istream& sinput) RAVE_DEPRECATED = 0;
     virtual void SetTolerance(dReal tolerance) = 0;
 
 protected:

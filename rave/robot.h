@@ -202,7 +202,7 @@ public:
         SensorBasePtr psensor;
         LinkWeakPtr pattachedlink; ///< the robot link that the sensor is attached to
         Transform trelative; ///< relative transform of the sensor with respect to the attached link
-        SensorBase::SensorDataPtr pdata; ///< pointer to a preallocated data struct using psensor->CreateSensorData()
+        SensorBase::SensorDataPtr pdata; ///< pointer to a preallocated data using psensor->CreateSensorData()
         std::string _name; ///< name of the attached sensor
         std::string __hashstructure;
 #ifdef RAVE_PRIVATE
@@ -222,8 +222,9 @@ public:
     typedef boost::shared_ptr<AttachedSensor const> AttachedSensorConstPtr;
 
     /// \brief The information of a currently grabbed body.
-    struct RAVE_API Grabbed
+    class RAVE_API Grabbed
     {
+    public:
         KinBodyWeakPtr pbody; ///< the grabbed body
         LinkPtr plinkrobot; ///< robot link that is grabbing the body
         std::vector<LinkConstPtr> vCollidingLinks, vNonCollidingLinks; ///< robot links that already collide with the body
@@ -259,11 +260,11 @@ public:
     virtual bool InitFromFile(const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts);
     virtual bool InitFromData(const std::string& data, const std::list<std::pair<std::string,std::string> >& atts);
 
-    /// returns true if reached goal
+    /// \brief Returns the manipulators of the robot
     virtual std::vector<ManipulatorPtr>& GetManipulators() { return _vecManipulators; }
     virtual bool SetMotion(TrajectoryBaseConstPtr ptraj) { return false; }
 
-    /// deprecated (10/07/10) 
+    /// \deprecated (10/07/10) 
     virtual std::vector<AttachedSensorPtr>& GetSensors() RAVE_DEPRECATED { RAVELOG_WARN("RobotBase::GetSensors() is deprecated\n"); return _vecSensors; }
     virtual std::vector<AttachedSensorPtr>& GetAttachedSensors() { return _vecSensors; }
     virtual ControllerBasePtr GetController() const { return ControllerBasePtr(); }
@@ -271,7 +272,7 @@ public:
     /// set a controller for a robot and destroy the old
     /// \param pController - if NULL, sets the controller of this robot to NULL. otherwise attemps to set the controller to this robot.
     /// \param args - the argument list to pass when initializing the controller
-    virtual bool SetController(ControllerBasePtr pController, const std::string& args) {return false;}
+    virtual bool SetController(ControllerBasePtr controller, const std::string& args) {return false;}
     virtual void SetJointValues(const std::vector<dReal>& vJointValues, bool bCheckLimits = false);
     virtual void SetJointValues(const std::vector<dReal>& vJointValues, const Transform& transbase, bool bCheckLimits = false);
 
@@ -307,20 +308,24 @@ public:
     };
     
     /// Set the joint indices and affine transformation dofs that the planner should use. If \ref DOF_RotationAxis is specified, the previously set axis is used.
-    /// \param vDOFIndices the indices of the original degrees of freedom to use.
-    /// \param nAffineDOFsBitmask A bitmask of \ref DOFAffine values
-    virtual void SetActiveDOFs(const std::vector<int>& vDOFIndices, int nAffineDOFsBitmask = DOF_NoTransform);
+    /// \param dofindices the indices of the original degrees of freedom to use.
+    /// \param affine A bitmask of \ref DOFAffine values
+    virtual void SetActiveDOFs(const std::vector<int>& dofindices, int affine = DOF_NoTransform);
     /// \param vDOFIndices the indices of the original degrees of freedom to use.
     /// \param nAffineDOFsBitmask A bitmask of \ref DOFAffine values
     /// \param pRotationAxis if \ref DOF_RotationAxis is specified, pRotationAxis is used as the new axis
-    virtual void SetActiveDOFs(const std::vector<int>& vDOFIndices, int nAffineDOFsBitmask, const Vector& pRotationAxis);
+    virtual void SetActiveDOFs(const std::vector<int>& dofindices, int affine, const Vector& rotationaxis);
     virtual int GetActiveDOF() const { return _nActiveDOF != 0 ? _nActiveDOF : GetDOF(); }
     virtual int GetAffineDOF() const { return _nAffineDOFs; }
 
     /// if dof is set in the affine dofs, returns its index in the dof values array, otherwise returns -1
     virtual int GetAffineDOFIndex(DOFAffine dof) const;
-    /// \return the set of active joint indices
-    virtual const std::vector<int>& GetActiveJointIndices() const;
+
+    /// \deprecated (10/07/25)
+    virtual const std::vector<int>& GetActiveJointIndices() const RAVE_DEPRECATED { return GetActiveDOFIndices(); }
+
+    /// \brief Return the set of active dof indices of the joints.
+    virtual const std::vector<int>& GetActiveDOFIndices() const;
 
     virtual Vector GetAffineRotationAxis() const { return vActvAffineRotationAxis; }
     virtual void SetAffineTranslationLimits(const Vector& lower, const Vector& upper);

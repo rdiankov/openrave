@@ -231,9 +231,9 @@ public:
             // convert the solution into active dofs
             _vf->_robot->GetActiveDOFValues(pNewSample);
             FOREACHC(itarm,_vf->_pmanip->GetArmIndices()) {
-                vector<int>::const_iterator itactive = find(_vf->_robot->GetActiveJointIndices().begin(),_vf->_robot->GetActiveJointIndices().end(),*itarm);
-                if( itactive != _vf->_robot->GetActiveJointIndices().end() )
-                    pNewSample.at((int)(itactive-_vf->_robot->GetActiveJointIndices().begin())) = _vsolution.at((int)(itarm-_vf->_pmanip->GetArmIndices().begin()));
+                vector<int>::const_iterator itactive = find(_vf->_robot->GetActiveDOFIndices().begin(),_vf->_robot->GetActiveDOFIndices().end(),*itarm);
+                if( itactive != _vf->_robot->GetActiveDOFIndices().end() )
+                    pNewSample.at((int)(itactive-_vf->_robot->GetActiveDOFIndices().begin())) = _vsolution.at((int)(itarm-_vf->_pmanip->GetArmIndices().begin()));
             }
             _vf->_robot->SetActiveDOFValues(pNewSample);
             

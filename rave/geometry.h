@@ -580,8 +580,9 @@ RaveTransformMatrix<T>::RaveTransformMatrix(const RaveTransform<T>& t)
 /// \brief A ray defined by an origin and a direction.
 /// \ingroup geometric_primitives
 template <typename T>
-struct ray
+class ray
 {
+public:
     ray() {}
     ray(const RaveVector<T>& _pos, const RaveVector<T>& _dir) : pos(_pos), dir(_dir) {}
     RaveVector<T> pos, dir;
@@ -590,8 +591,9 @@ struct ray
 /// \brief An axis aligned bounding box.
 /// \ingroup geometric_primitives
 template <typename T>
-struct aabb
+class aabb
 {
+public:
     aabb() {}
     aabb(const RaveVector<T>& vpos, const RaveVector<T>& vextents) : pos(vpos), extents(vextents) {}
     RaveVector<T> pos, extents;
@@ -600,16 +602,18 @@ struct aabb
 /// \brief An oriented bounding box.
 /// \ingroup geometric_primitives
 template <typename T>
-struct obb
+class obb
 {
+public:
     RaveVector<T> right, up, dir, pos, extents;
 };
 
 /// \brief A triangle defined by 3 points.
 /// \ingroup geometric_primitives
 template <typename T>
-struct triangle
+class triangle
 {
+public:
     triangle() {}
     triangle(const RaveVector<T>& v1, const RaveVector<T>& v2, const RaveVector<T>& v3) : v1(v1), v2(v2), v3(v3) {}
     ~triangle() {}
@@ -630,8 +634,9 @@ struct triangle
 /// \brief A pyramid with its vertex clipped.
 /// \ingroup geometric_primitives
 template <typename T>
-struct frustum
+class frustum
 {
+public:
     RaveVector<T> right, up, dir, pos;
     T fnear, ffar;
     T ffovx,ffovy;

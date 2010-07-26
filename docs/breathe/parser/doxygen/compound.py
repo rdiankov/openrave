@@ -731,7 +731,19 @@ class docParaTypeSub(supermod.docParaType):
             obj_ = supermod.docRefTextType.factory()
             obj_.build(child_)
             self.content.append(obj_)
-
+        elif child_.nodeType == Node.ELEMENT_NODE and \
+                nodeName_ == 'simplesect':
+            childobj_ = docParaTypeSub.factory()
+            childobj_.build(child_)
+            obj_ = self.mixedclass_(MixedContainer.CategoryText, MixedContainer.TypeNone, '', childobj_)
+            self.content.append(obj_)
+        elif child_.nodeType == Node.ELEMENT_NODE and \
+                nodeName_ == 'para':
+            childobj_ = docParaTypeSub.factory()
+            childobj_.build(child_)
+            obj_ = self.mixedclass_(MixedContainer.CategoryText,
+                MixedContainer.TypeNone, '', childobj_)
+            self.content.append(obj_)
 
         if child_.nodeType == Node.ELEMENT_NODE and \
                 nodeName_ == 'parameterlist':

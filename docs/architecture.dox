@@ -1,8 +1,8 @@
 /** 
-\~english  \page architecture_concepts Introduction to the OpenRAVE Architecture 
-\~japanese \page architecture_concepts 基本設計概念の紹介
+\en  \page architecture_concepts Introduction to the OpenRAVE Architecture 
+\ja \page architecture_concepts 基本設計概念の紹介
 
-\~english
+\en
 \section fundamental_structure Fundamental Structure
 
 \image html openrave_architecture.png
@@ -49,7 +49,7 @@ box.
 It is possible to send a \b help command to every \ref OpenRAVE::InterfaceBase "interface" to get a
 description of the commands it supports and what they do.
 
-\~japanese
+\ja
 \section fundamental_structure 基盤構造
 
 \image html openrave_architecture_jp.png
@@ -73,7 +73,7 @@ description of the commands it supports and what they do.
 
 \~
 
-\~english
+\en
 \section arch_environment Environment Concepts
 
 All of %OpenRAVE's services are offered through the environment. For example, requesting a
@@ -92,7 +92,7 @@ as many times as needed within the same thread. This has allowed all environment
 require locking to always guarantee the mutex is locked, regardless if the user has locked the
 mutex. (Note that this only applies to environment functions, and not interface functions).
 
-\~japanese
+\ja
 \section arch_environment 環境の概念
 全ての%OpenRAVEのサービスはその環境を通じて提供されます．例えば，'BiRRT'と呼ばれるプランナーインターフェースへの要求はCreatePlanner()を通じて行われます．環境は以下をサポートします．
 
@@ -104,7 +104,7 @@ mutex. (Note that this only applies to environment functions, and not interface 
 
 環境内の物体が読み書きされるときはいつでも，ユーザーはGetMutex()コマンドで<b>ロック</b>しなければなりません．これはユーザーが作業している間，他のプロセスから環境が変更されることを防止します．なぜなら環境は再帰的な相互排除を使っているからです．それは同じスレッド内で必要なだけロックをかけることが可能です．さらにユーザーが相互排除をロックしたかどうかに依らず，ロックを要求する全ての環境関数に常に相互排除はロックされることを保証しています．（これは環境関数のみに適用され，インターフェース関数には適用されません）
 
-\~english
+\en
 \subsection arch_cloning Cloning
     
 One of the strengths of %OpenRAVE is in allowing multiple \ref OpenRAVE::EnvironmentBase
@@ -145,12 +145,12 @@ threads. Cloning allows planners to call kinematics and collision functions in m
 environment clone for each thread) without worrying about data corruption.
 
 
-\~japanese
+\ja
 \subsection arch_cloning クローン作成
     
 %OpenRAVEの１つの強みは，同じプロセスで複数の環境を同時に稼働できることです，
 
-\~english
+\en
 \section arch_dualnature Dual Simulation/Control Nature
 
 OpenRAVE can be simultaneously used as a simulation, a controller, or both at the same time. Here
@@ -174,7 +174,7 @@ This is why users need to explicitly lock the environment mutex whenever playing
 openrave state like setting joint values or link transformations (in planners for
 example). Otherwise, the controller or physics engine will overwrite them.
 
-\~japanese
+\ja
 \section arch_dualnature 2重のシミュレーション/制御機能
 
 %OpenRAVEはシミュレーション，制御，もしくはその両方に対して同時に使うことができます．以下にいくつかの覚えておくべきことを記載します．
@@ -191,7 +191,7 @@ example). Otherwise, the controller or physics engine will overwrite them.
 
 このためユーザーは，関節の値やリンクの変換などの内部状態をセットするときにはいつでも，環境相互排除をロックする必要があります．さもなければ，コントローラーもしくは物理エンジンはそれらを上書きしてしまいます．
 
-\~english  
+\en  
 \section arch_exceptions Exception Handling
 
 Any type of boost error, or null pointer access throws an openrave_exception. This greatly reduces
@@ -249,7 +249,7 @@ catch(const openrave_exception& ex) {
 When using openravepy in python, such unhandled C++ errors throw a python exception, which can be
 safely caught and processed there.
 
-\~japanese  
+\ja  
 \section arch_exceptions 例外処理
 
 全てのboostエラー，nullポインタアクセスはopenrave_exceptionを投げます．これによって人々が行っているエラーをチェックするコードの量を大幅に減らすことができます．例えば，Cのコードにはよくこのパターンがあります．</br>
@@ -348,10 +348,10 @@ Ability to register custom xml reader interfaces.
 - \subpage arch_controller
 - \subpage arch_iksolver
 - \subpage arch_kinbody
-- \subpage arch_robot
 - \subpage arch_physicsengine
 - \subpage arch_planner
 - \subpage arch_problem
+- \subpage arch_robot
 - \subpage arch_sensor
 - \subpage arch_sensorsystem
 - \subpage arch_trajectory

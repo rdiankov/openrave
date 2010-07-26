@@ -49,8 +49,9 @@ public:
 	         NUM_METHODS=5 };     //!< number of interpolation methods
 
     /// Via point along the trajectory (joint configuration with a timestamp)
-    struct TPOINT
+    class TPOINT
     {
+    public:
         TPOINT() : time(0), blend_radius(0) {}
         TPOINT(const std::vector<dReal>& newq, dReal newtime) : time(newtime), blend_radius(0) { q = newq; }
         TPOINT(const std::vector<dReal>& newq, const Transform& newtrans, dReal newtime) : time(newtime), blend_radius(0) { q = newq; trans = newtrans; }
@@ -81,8 +82,9 @@ public:
         dReal  blend_radius;
     };
 
-    struct TSEGMENT
+    class TSEGMENT
     {
+    public:
         //! the different segment types
         enum Type {  START=0,     //!< starting trajectory segment
                MIDDLE,      //!< middle trajectory segment

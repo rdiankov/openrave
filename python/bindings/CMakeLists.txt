@@ -45,7 +45,7 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
       include_directories("${CMAKE_SOURCE_DIR}/src/libopenrave-core")
 
       ## openrave bindings
-      add_library(openravepy_int SHARED openravepy_int.cpp bindings.cpp bindings.h)
+      add_library(openravepy_int SHARED openravepy_int.cpp bindings.cpp bindings.h docstrings.cpp docstrings.h)
       # stdc++ has to be included before opengl libraries due to some ATI bug (http://wiki.fifengine.de/Segfault_in_cxa_allocate_exception#Workaround)
       target_link_libraries(openravepy_int ${STDC_LIBRARY} libopenrave libopenrave-core ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY})
       add_dependencies(openravepy_int libopenrave libopenrave-core)

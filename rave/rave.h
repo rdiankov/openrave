@@ -131,8 +131,9 @@ enum OpenRAVEErrorCode {
 };
 
 /// \brief Exception that all OpenRAVE internal methods throw; the error codes are held in \ref OpenRAVEErrorCode.
-struct openrave_exception : std::exception
+class openrave_exception : std::exception
 {
+public:
     openrave_exception() : std::exception(), _s("unknown exception"), _error(ORE_Failed) {}
     openrave_exception(const std::string& s, OpenRAVEErrorCode error=ORE_Failed) : std::exception() { _s = "OpenRAVE: " + s; _error = error; }
     virtual ~openrave_exception() throw() {}
@@ -448,6 +449,7 @@ DefineRavePrintfA(_VERBOSELEVEL)
 
 #define IS_DEBUGLEVEL(level) (OpenRAVE::RaveGetDebugLevel()>=(level))
 
+/// \brief Enumeration of all the interfaces.
 enum InterfaceType
 {
     PT_Planner=1, ///< describes \ref PlannerBase interface

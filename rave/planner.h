@@ -48,7 +48,7 @@ public:
         virtual ~PlannerParameters() {}
 
         /// tries to copy data from one set of parameters to another in the safest manner.
-        /// First serializes the data of the right hand into a string, then initializes the current parameters struct via >>
+        /// First serializes the data of the right hand into a string, then initializes the current parameters via >>
         /// pointers to functions are copied directly
         virtual PlannerParameters& operator=(const PlannerParameters& r);
         virtual void copy(boost::shared_ptr<PlannerParameters const> r);

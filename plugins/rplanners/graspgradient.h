@@ -78,12 +78,12 @@ GraspGradientPlanner(EnvironmentBasePtr penv) : PlannerBase(penv) {
             return false;
         }
 
-        if( _robot->GetActiveDOF() != (int)_pmanip->GetArmIndices().size() || _robot->GetActiveJointIndices().size() != _pmanip->GetArmIndices().size() ) {
+        if( _robot->GetActiveDOF() != (int)_pmanip->GetArmIndices().size() || _robot->GetActiveDOFIndices().size() != _pmanip->GetArmIndices().size() ) {
             RAVELOG_ERRORA("active dof not equal to arm joints\n");
             return false;
         }
         for(int i = 0; i < _robot->GetActiveDOF(); ++i) {
-            if( _pmanip->GetArmIndices().at(i) != _robot->GetActiveJointIndices().at(i) ) {
+            if( _pmanip->GetArmIndices().at(i) != _robot->GetActiveDOFIndices().at(i) ) {
                 RAVELOG_ERRORA("active dof not equal to arm joints\n");
                 return false;
             }

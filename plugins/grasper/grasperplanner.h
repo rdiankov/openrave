@@ -321,11 +321,11 @@ public:
         }
         else {
             // get closing direction from manipulators
-            for(size_t i = 0; i < _robot->GetActiveJointIndices().size(); ++i) {
+            for(size_t i = 0; i < _robot->GetActiveDOFIndices().size(); ++i) {
                 FOREACHC(itmanip, _robot->GetManipulators()) {
                     vector<dReal>::const_iterator itclosing = (*itmanip)->GetClosingDirection().begin();
                     FOREACHC(itgripper,(*itmanip)->GetGripperIndices()) {
-                        if( *itclosing != 0 && *itgripper == _robot->GetActiveJointIndices().at(i) ) {
+                        if( *itclosing != 0 && *itgripper == _robot->GetActiveDOFIndices().at(i) ) {
                             vclosingdir.at(i) = *itclosing;
                             break;
                         }
@@ -338,12 +338,12 @@ public:
         ptemp.trans = _robot->GetTransform();
 
         //close the fingers one by one
-        for(size_t ifing = 0; ifing < _robot->GetActiveJointIndices().size(); ifing++) {
+        for(size_t ifing = 0; ifing < _robot->GetActiveDOFIndices().size(); ifing++) {
             if( vclosingdir.at(ifing) == 0 ) {
                 // not a real joint, so skip
                 break;
             }
-            int nJointIndex = _robot->GetActiveJointIndices()[ifing];
+            int nJointIndex = _robot->GetActiveDOFIndices()[ifing];
             dReal fmult = 1;
             if(_robot->GetJoints().at(nJointIndex)->GetType() == KinBody::Joint::JointSlider )
                 fmult = _parameters->ftranslationstepmult;
@@ -488,8 +488,8 @@ public:
 
     void UpdateDependents(size_t ifing, vector<dReal>& dofvals)
     {
-        for(size_t c = ifing; c < _robot->GetActiveJointIndices().size(); ++c ) {
-            int index = _robot->GetActiveJointIndices()[c];
+        for(size_t c = ifing; c < _robot->GetActiveDOFIndices().size(); ++c ) {
+            int index = _robot->GetActiveDOFIndices()[c];
             KinBody::JointPtr pmimicjoint = _robot->GetJoints().at(index);
             //check that it's the right doff val
             if( pmimicjoint->GetMimicJointIndex() == index) {

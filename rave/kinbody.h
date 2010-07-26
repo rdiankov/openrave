@@ -57,11 +57,12 @@ public:
         virtual bool IsEnabled() const; ///< returns true if enabled
 
         ///< enables a Link. An enabled link takes part in collision detection and physics simulations
-        virtual void Enable(bool bEnable);
+        virtual void Enable(bool enable);
 
         /// user data for trimesh geometries
-        struct RAVE_API TRIMESH
+        class RAVE_API TRIMESH
         {
+        public:
             std::vector<Vector> vertices;
             std::vector<int> indices;
 
@@ -78,8 +79,9 @@ public:
 
         /// Describes the properties of a basic geometric primitive.
         /// Contains everything associated with a physical body along with a seprate (optional) render file.
-        struct RAVE_API GEOMPROPERTIES
+        class RAVE_API GEOMPROPERTIES
         {
+        public:
             /// \brief The type of geometry primitive.
             enum GeomType {
                 GeomNone = 0,
@@ -181,17 +183,17 @@ public:
         virtual dReal GetMass() const { return _mass; }
 
         /// \param[in] t the new transformation
-        virtual void SetTransform(const Transform& t);
+        virtual void SetTransform(const Transform& transform);
         
         /// adds an external force at pos (absolute coords)
         /// \param[in] force the direction and magnitude of the force
         /// \param[in] pos in the world where the force is getting applied
-        /// \param[in] bAdd if true, force is added to previous forces, otherwise it is set
-        virtual void SetForce(const Vector& force, const Vector& pos, bool bAdd);
+        /// \param[in] add if true, force is added to previous forces, otherwise it is set
+        virtual void SetForce(const Vector& force, const Vector& pos, bool add);
 
         /// adds torque to a body (absolute coords)
-        /// \param bAdd if true, torque is added to previous torques, otherwise it is set
-        virtual void SetTorque(const Vector& torque, bool bAdd);
+        /// \param add if true, torque is added to previous torques, otherwise it is set
+        virtual void SetTorque(const Vector& torque, bool add);
 
         /// forces the velocity of the link
         /// \param[in] linearvel the translational velocity
@@ -325,9 +327,9 @@ public:
         /// \return the anchor of the joint in global coordinates
         virtual Vector GetAnchor() const;
 
-        /// \param[in] iaxis the axis to get
+        /// \param[in] axis the axis to get
         /// \return the axis of the joint in global coordinates
-        virtual Vector GetAxis(int iaxis = 0) const;
+        virtual Vector GetAxis(int axis = 0) const;
 
         /// Returns the limits of the joint
         /// \param[out] vLowerLimit the lower limits
@@ -340,9 +342,9 @@ public:
         virtual dReal GetWeight(int iaxis=0) const;
 
         virtual void SetJointOffset(dReal offset);
-        virtual void SetJointLimits(const std::vector<dReal>& vLowerLimit, const std::vector<dReal>& vUpperLimit);
+        virtual void SetJointLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper);
         virtual void SetResolution(dReal resolution);
-        virtual void SetWeights(const std::vector<dReal>& vweights);
+        virtual void SetWeights(const std::vector<dReal>& weights);
 
         virtual void serialize(std::ostream& o, int options) const;
 
@@ -497,19 +499,23 @@ public:
     /// Build the robot from a string representing XML information
     virtual bool InitFromData(const std::string& data, const std::list<std::pair<std::string,std::string> >& atts);
 
-    /// Create a kinbody with one link composed of an array of aligned bounding boxes
+    /// \brief Create a kinbody with one link composed of an array of aligned bounding boxes.
+    ///
     /// \param vaabbs the array of aligned bounding boxes that will comprise of the body
     /// \param bDraw if true, the boxes will be rendered in the scene
-    virtual bool InitFromBoxes(const std::vector<AABB>& vaabbs, bool bDraw);
+    virtual bool InitFromBoxes(const std::vector<AABB>& boxes, bool draw);
 
-    /// Create a kinbody with one link composed of an array of oriented bounding boxes
+    /// \brief Create a kinbody with one link composed of an array of oriented bounding boxes.
+    ///
     /// \param vobbs the array of oriented bounding boxes that will comprise of the body
     /// \param bDraw if true, the boxes will be rendered in the scene
-    virtual bool InitFromBoxes(const std::vector<OBB>& vobbs, bool bDraw);
+    virtual bool InitFromBoxes(const std::vector<OBB>& boxes, bool draw);
 
-    //! Get the name of the robot
+    /// \brief Unique name of the robot.
     virtual const std::string& GetName() const           { return name; }
-    virtual void SetName(const std::string& newname);
+
+    /// \brief Set the name of the robot, notifies the environment and checks for uniqueness.
+    virtual void SetName(const std::string& name);
 
     /// Methods for accessing basic information about joints
     /// @name Basic Information
@@ -538,54 +544,72 @@ public:
     virtual void GetJointResolutions(std::vector<dReal>& v) const RAVE_DEPRECATED;
     virtual void GetJointWeights(std::vector<dReal>& v) const RAVE_DEPRECATED;
 
-    ///< \return a vector that stores the start dof indices of each joint joints, size() is equal to GetJoints().size()
+    /// \brief Returns a vector that stores the start dof indices of each joint joints, size() is equal to GetJoints().size().
     virtual const std::vector<int>& GetJointIndices() const { return _vecJointIndices; }
 
-    /// returns the joints making up the degrees of freedom in the user-defined order
+    /// \brief Returns the joints making up the degrees of freedom in the user-defined order.
     const std::vector<JointPtr>& GetJoints() const { return _vecjoints; }
-    /// returns the passive joints, order does not matter
+    /// \brief Returns the passive joints, order does not matter.
     const std::vector<JointPtr>& GetPassiveJoints() const { return _vecPassiveJoints; }
 
-    /// Gets all the rigidly attached links to plink, also adds the link to the list.
+    /// \brief Gets all the rigidly attached links to linkindex, also adds the link to the list.
+    ///
     /// \param linkindex the index to check for attached links. If < 0, then will return all links attached to the environment
     /// \param vattachedlinks the array to insert all links attached to linkindex with the link itself.
     virtual void GetRigidlyAttachedLinks(int linkindex, std::vector<LinkPtr>& vattachedlinks) const;
 
-    /// Returns the joints in hierarchical order starting at the base link such that the first joints affect the later ones.
+    /// \brief Returns the joints in hierarchical order starting at the base link.
+    ///
     /// In the case of closed loops, the joints are returned in the order they are defined in _vecjoints.
+    /// \return Vector of joints such that the beginning joints affect the later ones.
     const std::vector<JointPtr>& GetDependencyOrderedJoints() const { return _vDependencyOrderedJoints; }
 
-    /// returns the minimal chain of joints that are between two links in the order of linkbaseindex to linkendindex.
-    /// Passive joints are used to detect rigidly attached links and mimic joints, otherwise they are ignored in the computation of the chain.
-    /// If a mimic joint is found along the path, the joint returned is the source joint!
-    /// \param linkbaseindex the base link index to start the search
-    /// \param linkendindex the link index where the search ends
-    /// \param vjoints the joints to fill that describe the chain
-    /// \return true if the two links are connected (vjoints will be filled), false if the links are separate
+    /** \~english \brief Computes the minimal chain of joints that are between two links in the order of linkbaseindex to linkendindex.
+    
+        Passive joints are used to detect rigidly attached links and mimic joints, otherwise they are ignored in the computation of the chain.
+        If a mimic joint is found along the path, the joint returned is the source joint!
+        \param[in] linkbaseindex the base link index to start the search
+        \param[in] linkendindex the link index where the search ends
+        \param[out] vjoints the joints to fill that describe the chain
+        \return true if the two links are connected (vjoints will be filled), false if the links are separate
+
+        \~japanese \brief 二つのリンクを繋ぐ関節の最短経路を計算する．
+        
+        受動的な関節は，位置関係が固定されているリンクを見つけるために調べられている．ミミック関節が最短経路にある場合，元の関節が返されるので，注意する必要がある．
+        \param[in] linkbaseindex 始点リンクインデックス
+        \param[in] linkendindex 終点リンクインデックス
+        \param[out] vjoints　関節の経路
+        \return 経路が存在している場合，trueを返す．
+    */
     bool GetChain(int linkbaseindex, int linkendindex, std::vector<JointPtr>& vjoints) const;
 
-    /// return a pointer to the joint with the given name, else -1
-    /// gets a joint indexed from GetJoints(). Note that the mapping of joint structures is not the same as
-    /// the values in GetJointValues since each joint can have more than one degree of freedom.
-    virtual int GetJointIndex(const std::string& jointname) const;
-    virtual JointPtr GetJoint(const std::string& jointname) const;
+    /// \brief Return the index of the joint with the given name, else -1.
+    virtual int GetJointIndex(const std::string& name) const;
 
-    /// gets the joint that covers the degree of freedom index
+    /// \brief Return a pointer to the joint with the given name.
+    virtual JointPtr GetJoint(const std::string& name) const;
+
+    /// \brief Returns the joint that covers the degree of freedom index.
+    ///
+    /// Note that the mapping of joint structures is not the same as the values in GetJointValues since each joint can have more than one degree of freedom.
     virtual JointPtr GetJointFromDOFIndex(int dofindex) const;
     //@}
 
-    /// computes the configuration difference q1-q2 and stores it in q1. Takes into account joint limits and circular joints
+    /// \brief Computes the configuration difference q1-q2 and stores it in q1.
+    ///
+    /// Takes into account joint limits and circular joints
     virtual void SubtractJointValues(std::vector<dReal>& q1, const std::vector<dReal>& q2) const;
 
-    /// adds a torque to every joint
+    /// \brief Adds a torque to every joint.
+    ///
     /// \param bAdd if true, adds to previous torques, otherwise resets the torques on all bodies and starts from 0
-    virtual void SetJointTorques(const std::vector<dReal>& torques, bool bAdd);
+    virtual void SetJointTorques(const std::vector<dReal>& torques, bool add);
 
     /// \return the links of the robot
     const std::vector<LinkPtr>& GetLinks() const { return _veclinks; }
 
 	/// return a pointer to the link with the given name
-    virtual LinkPtr GetLink(const std::string& linkname) const;
+    virtual LinkPtr GetLink(const std::string& name) const;
 
     /// Updates the bounding box and any other parameters that could have changed by a simulation step
     virtual void SimulationStep(dReal fElapsedTime);
@@ -605,32 +629,43 @@ public:
     /// Returns the linear and angular velocities for each link
     virtual void GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const;
 
-    /// \~japanese 最初リンクの絶対姿勢を設定、残りのリンクは運動学の構造を通して計算される
-    /// \~english set the transform of the first link (the rest of the links are computed based on the joint values)
-    virtual void SetTransform(const Transform& trans);
+    /** \~english \brief set the transform of the first link (the rest of the links are computed based on the joint values).
+        
+        \param transform affine transformation
+        
+        \~japanese \brief 胴体の絶対姿勢を設定、残りのリンクは運動学の構造に従って変換される．
 
-    /// \return an axis-aligned bounding box of the entire object
+        \param transform 変換行列
+    */
+    virtual void SetTransform(const Transform& transform);
+
+    /// \brief Return an axis-aligned bounding box of the entire object.
     virtual AABB ComputeAABB() const;
 
-    /// \return center of mass of entire robot
+    /// \brief Return the center of mass of entire robot.
     virtual Vector GetCenterOfMass() const;
 
-    /// enables or disables the bodies
-    virtual void Enable(bool bEnable);
-    virtual void EnableLink(LinkConstPtr plink, bool bEnable);
+    /// \brief Enables or disables the bodies.
+    virtual void Enable(bool enable);
+    virtual void EnableLink(LinkConstPtr link, bool bEnable);
 
     /// \return true if any link of the KinBody is enabled
     virtual bool IsEnabled() const;
 
-    /// sets the joint angles manually, if ptrans is not NULL, represents the transformation of the first body
-    /// calculates the transformations of every body by treating the first body as set with transformation ptrans
-    virtual void SetJointValues(const std::vector<dReal>& vJointValues, bool bCheckLimits = false);
+    /// \brief Sets the joint values of the robot. 
+    ///
+    /// \param values the values to set the joint angles (ordered by the dof indices)
+    /// \praam checklimits if true, will excplicitly check the joint limits before setting the values.
+    virtual void SetJointValues(const std::vector<dReal>& values, bool checklimits = false);
 
-    /// sets the joint angles manually, if ptrans is not NULL, represents the transformation of the first body
-    /// calculates the transformations of every body by treating the first body as set with transformation ptrans
-    virtual void SetJointValues(const std::vector<dReal>& vJointValues, const Transform& transBase, bool bCheckLimits = false);
+    /// \brief Sets the joint values and transformation of the body.
+    ///
+    /// \param values the values to set the joint angles (ordered by the dof indices)
+    /// \param transform represents the transformation of the first body.
+    /// \praam checklimits if true, will excplicitly check the joint limits before setting the values.
+    virtual void SetJointValues(const std::vector<dReal>& values, const Transform& transform, bool checklimits = false);
 
-    virtual void SetBodyTransformations(const std::vector<Transform>& vbodies);
+    virtual void SetBodyTransformations(const std::vector<Transform>& transforms);
     virtual void SetJointVelocities(const std::vector<dReal>& pJointVelocities);
 
     /// \brief Computes the translation jacobian with respect to a world position.
@@ -640,16 +675,16 @@ public:
     /// \param linkindex of the link that the rotation is attached to
     /// \param position position in world space where to compute derivatives from.
     /// \param vjacobian 3xDOF matrix
-    virtual void CalculateJacobian(int linkindex, const Vector& position, boost::multi_array<dReal,2>& vjacobian) const;
-    virtual void CalculateJacobian(int linkindex, const Vector& position, std::vector<dReal>& pfJacobian) const;
+    virtual void CalculateJacobian(int linkindex, const Vector& offset, boost::multi_array<dReal,2>& vjacobian) const;
+    virtual void CalculateJacobian(int linkindex, const Vector& offset, std::vector<dReal>& pfJacobian) const;
 
     /// \brief Computes the rotational jacobian as a quaternion with respect to an initial rotation.
     /// 
     /// \param linkindex of the link that the rotation is attached to
     /// \param qInitialRot the rotation in world space whose derivative to take from.
     /// \param vjacobian 4xDOF matrix
-    virtual void CalculateRotationJacobian(int linkindex, const Vector& qInitialRot, boost::multi_array<dReal,2>& vjacobian) const;
-    virtual void CalculateRotationJacobian(int linkindex, const Vector& qInitialRot, std::vector<dReal>& pfJacobian) const;
+    virtual void CalculateRotationJacobian(int linkindex, const Vector& quat, boost::multi_array<dReal,2>& vjacobian) const;
+    virtual void CalculateRotationJacobian(int linkindex, const Vector& quat, std::vector<dReal>& pfJacobian) const;
 
     /// \brief Computes the angular velocity jacobian of a specified link about the axes of world coordinates.
     /// 
@@ -662,7 +697,7 @@ public:
     virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr()) const;
 
     /// \return true if two bodies should be considered as one during collision (ie one is grabbing the other)
-    virtual bool IsAttached(KinBodyConstPtr pbody) const;
+    virtual bool IsAttached(KinBodyConstPtr body) const;
 
     /// \brief Recursively get all attached bodies of this body, including this body.
     ///
@@ -702,7 +737,7 @@ public:
     */
     virtual void WriteForwardKinematics(std::ostream& f);
 
-    virtual void SetGuiData(boost::shared_ptr<void> pdata) { _pGuiData = pdata; }
+    virtual void SetGuiData(boost::shared_ptr<void> data) { _pGuiData = data; }
     virtual boost::shared_ptr<void> GetGuiData() const { return _pGuiData; }
 
     /// \return all possible link pairs that could get in collision
@@ -766,14 +801,14 @@ protected:
 
 
     /// \return true if two bodies should be considered as one during collision (ie one is grabbing the other)
-    virtual bool _IsAttached(KinBodyConstPtr pbody, std::set<KinBodyConstPtr>& setChecked) const;
+    virtual bool _IsAttached(KinBodyConstPtr body, std::set<KinBodyConstPtr>& setChecked) const;
 
     /// adds an attached body
-    virtual void _AttachBody(KinBodyPtr pbody);
+    virtual void _AttachBody(KinBodyPtr body);
 
     /// removes an attached body
-    /// \return true if pbody was successfully found and removed
-    virtual bool _RemoveAttachedBody(KinBodyPtr pbody);
+    /// \return true if body was successfully found and removed
+    virtual bool _RemoveAttachedBody(KinBodyPtr body);
 
     std::string name; ///< name of body
 

@@ -68,7 +68,7 @@ class DoxygenFunctionDirective(BaseDirective):
     def run(self):
 
         function_name = self.arguments[0]
-
+        print 'options: ',self.options
         project_info = self.project_info_factory.create_project_info(self.options)
 
         finder = self.finder_factory.create_finder(project_info)

@@ -37,8 +37,9 @@ public:
         ST_Force6D=4,
     };
 
-    struct CameraIntrinsics
+    class CameraIntrinsics
     {
+    public:
         CameraIntrinsics() : fx(0),fy(0),cx(0),cy(0) {}
         CameraIntrinsics(float fx, float fy, float cx, float cy) : fx(fx), fy(fy), cx(cx), cy(cy) {}
         float fx,fy, cx,cy;
@@ -166,7 +167,7 @@ public:
     /// \return sensor geometry pointer, use delete to destroy it
     virtual SensorGeometryPtr GetSensorGeometry() = 0;
 
-    /// Creates the sensor data struct to be specifically used by this class
+    /// Creates the sensor data to be specifically used by this class
     /// \return new SensorData class, destroy with delete
     virtual SensorDataPtr CreateSensorData() = 0;
 

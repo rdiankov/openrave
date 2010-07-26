@@ -1134,7 +1134,7 @@ class TaskManipulation : public ProblemInstance
 
         graspparams->vgoalconfig.resize(_robot->GetActiveDOF());
         int i = 0;
-        FOREACHC(itindex,_robot->GetActiveJointIndices()) {
+        FOREACHC(itindex,_robot->GetActiveDOFIndices()) {
             graspparams->vgoalconfig[i++] = -vclosingsign_full.at(*itindex);
         }
         

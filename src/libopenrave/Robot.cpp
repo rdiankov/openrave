@@ -581,7 +581,7 @@ const std::string& RobotBase::AttachedSensor::GetStructureHash() const
     RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : KinBodyStateSaver(probot, options), _probot(probot)
 {
     if( _options & Save_ActiveDOF ) {
-        vactivedofs = _probot->GetActiveJointIndices();
+        vactivedofs = _probot->GetActiveDOFIndices();
         affinedofs = _probot->GetAffineDOF();
         rotationaxis = _probot->GetAffineRotationAxis();
     }
@@ -1449,7 +1449,7 @@ void RobotBase::GetFullTrajectoryFromActive(TrajectoryBasePtr pFullTraj, Traject
     pFullTraj->CalcTrajTiming(shared_robot(), pActiveTraj->GetInterpMethod(), false, false);
 }
 
-const std::vector<int>& RobotBase::GetActiveJointIndices() const
+const std::vector<int>& RobotBase::GetActiveDOFIndices() const
 {
     return _nActiveDOF == 0 ? _vAllDOFIndices : _vActiveJointIndices;
 }

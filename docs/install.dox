@@ -1,13 +1,13 @@
 // -*- coding: utf-8 -*-
 
 /** 
-\~english 
+\en 
 
 \page installation Building and Installing
 
 %OpenRAVE uses <a href="http://www.cmake.org/">CMake</a>, which can create the correct build systems files for a variety of system configurations. Refer to the pages below for specific systems:
 
-\~japanese 
+\ja 
 
 \page installation インストール方法
 
@@ -18,10 +18,10 @@
 - \subpage installation_win
 - \subpage installation_macosx
 
-\~english  \section installation_cmake CMake Options
-\~japanese \section installation_cmake CMakeを行う際のオプション設定について
+\en  \section installation_cmake CMake Options
+\ja \section installation_cmake CMakeを行う際のオプション設定について
 
-\~english
+\en
 The root Makefile creates a \c build directory and calls cmake with a set of options. All compiled object files are stored in \c build. There are many cmake options that control how %OpenRAVE is built. Once %OpenRAVE is built, most of them can be set by executing
 
 \verbatim
@@ -56,7 +56,7 @@ cmake -DOPT_PLUGINS=OFF ..
 \endverbatim
 
 
-\~japanese
+\ja
 
 %OpenRAVEをどのようにビルドするかを制御するたくさんのcmakeオプションがあります．
 ソースコードをダウンロードしたフォルダで，以下のコマンドを実行することによってそれらのオプションをGUIを使って設定することができます．
@@ -86,7 +86,7 @@ cmake -DOPT_STATIC=ON ..
 cmake -DOPT_PLUGINS=OFF ..
 \endverbatim
 
-\~english \section install_structure Install Directory Structure
+\en \section install_structure Install Directory Structure
 
 - bin
  - \ref p_basic_usage "openrave" - Start a simple environment and attach the default viewer, collision checkers, physics
@@ -108,10 +108,10 @@ cmake -DOPT_PLUGINS=OFF ..
   - models - 3D model resources
   - octave - All Octave scripting functions and examples. Include this directory into the OCTAVE_PATH.
   - plugins - Plugins compiled by the %OpenRAVE main distribution.
-  - openravepy - Python bindings, database generators, and examples. Directory structure is explained <a href="http://openrave.programmingvision.com/ordocs/english/openravepy-html/index.html#rst-directory-structure">here</a>.
+  - openravepy - Python bindings, database generators, and examples. Directory structure is explained \openrave_py_dir{here}.
   - robots - Robot XML files usually containing just a \c \<robot\> or \c \<kinbody\> tag.
 
-\~japanese \section install_structure インストールディレクトリの構造
+\ja \section install_structure インストールディレクトリの構造
 
 - bin
  - \ref p_basic_usage "openrave" - 環境ビューワ，干渉検知，物理エンジン，サービスを起動するための実行ファイル
@@ -131,14 +131,14 @@ cmake -DOPT_PLUGINS=OFF ..
   - matlab - 全てのMatlabスクリプトと実行例．このスクリプトを実行するためにMATLABのパスにこのディレクトリを追加する必要があります．
   - octave - 全てのOctaveスクリプトと実行例．このスクリプトを実行するためにOCTAVEのパスにこのディレクトリを追加する必要があります．
   - plugins - コンパイルされたプラグイン
-  - openravepy - Pythonと連動した，データベース生成器や実行例．ディレクトリ構造の詳細は<a href="http://openrave.programmingvision.com/ordocs/english/openravepy-html/index.html#rst-directory-structure">ここ</a>をご参照ください．
+  - openravepy - Pythonと連動した，データベース生成器や実行例．ディレクトリ構造の詳細は\openrave_py_dir{ここ}をご参照ください．
   - robots - \c \<robot\> or \c \<kinbody\> を含む，ロボットXMLファイル
 
 
 */
 
 /** 
-\~english  \page installation_linux Building and Installing on Linux
+\en  \page installation_linux Building and Installing on Linux
 
 Download the sources from \sourcesdownload{sourceforge}.
 
@@ -150,7 +150,7 @@ svn co https://openrave.svn.sourceforge.net/svnroot/openrave/trunk openrave
 
 If there are compilation errors with templates, might have to use gcc version 4.1 or greater. You can check your version of gcc by <tt>gcc --version</tt>
  
-\~japanese \page installation_linux Linuxユーザーのためのインストール方法
+\ja \page installation_linux Linuxユーザーのためのインストール方法
 
 最新のソースコードは\sourcesdownload{sourceforge}から入手できます．まずは以下のコマンドを入力しソースコードをダウンロードしてください．
 
@@ -162,14 +162,14 @@ svn co https://openrave.svn.sourceforge.net/svnroot/openrave/trunk openrave
 
 もし通常の手順にしたがってコンパイルしたのにエラーが発生した場合，それはgccのバージョンが旧い為かもしれません．gccのバージョンはver. 4.1もしくはそれ以上のものを使用してください．あなたのPC環境でのgccのバージョンは<tt>gcc --version</tt>で確認することができます．
 
-\~english  \section ilinux_package Installing from Package Manager
+\en  \section ilinux_package Installing from Package Manager
 
-\~japanese \section ilinux_package 必要なパッケージのインストール
+\ja \section ilinux_package 必要なパッケージのインストール
 
 %OpenRAVEはいくつかの標準パッケージを使用して開発されています．あなたのPC環境に合わせてパッケージマネージャから必要なパッケージをインストールしてください．
 
-\~english \subsection ilinux_ubuntu804 Ubuntu 8.04 or earlier
-\~japanese \subsection ilinux_ubuntu804 Ubuntu 8.04 もしくはそれ以前
+\en \subsection ilinux_ubuntu804 Ubuntu 8.04 or earlier
+\ja \subsection ilinux_ubuntu804 Ubuntu 8.04 もしくはそれ以前
 
 \~ \verbatim
 sudo apt-get install g++ cmake libqt4-dev qt4-dev-tools ffmpeg libavcodec-dev libavformat-dev libxvidcore-dev libx264-dev libfaac-dev libogg-dev libvorbis-dev libdc1394-dev liblame-dev libgsm1-dev libboost-dev libboost-regex-dev libxml2-dev libglew-dev  libboost-graph-dev libboost-wave-dev libboost-serialization-dev libboost-filesystem-dev libpcre3-dev libboost-thread-dev
@@ -181,7 +181,7 @@ sudo apt-get install g++ cmake libqt4-dev qt4-dev-tools ffmpeg libavcodec-dev li
 sudo apt-get install g++ cmake libqt4-dev qt4-dev-tools ffmpeg libavcodec-dev libavformat-dev libxvidcore4-dev libx264-dev libfaac-dev libogg-dev libvorbis-dev libdc1394-22-dev libgsm1-dev libboost-dev libboost-regex-dev libxml2-dev libglew1.5-dev libsoqt4-dev libboost-graph-dev libode0-dev libboost-wave-dev libboost-serialization-dev libboost-filesystem-dev libpcre3-dev libboost-thread-dev
 \endverbatim
 
-\~english
+\en
 The \b avcodec library in Ubuntu 8.10 has removed all mpeg encoders due to legal issues, this means
 that %OpenRAVE recording will always fail with a <b>codec not found</b> message. To get it working,
 please install the \b libavformat-unstripped-52 and \b libavcodec-unstripped-51
@@ -189,7 +189,7 @@ packages. Unfortunately, these packages cannot coexist with the dev packages, so
 compile openrave with the normal \b libavcodec-dev and \b libavformat-dev packages, and then
 switch to the unstripped versions when recording.
 
-\~japanese
+\ja
 %OpenRAVEはそのシミュレーション動画を録画する機能をもっています．しかしUbuntu 8.10以降，法的な問題で<b>avcodec</b>から全てのmpegエンコーダが削除されました．これは録画機能を使おうとすると，常に<b>codec not found</b>というエラーメッセージが発生することを意味しています．これを避けるため，<b>libavformat-unstripped-52</b>と<b>libavcodec-unstripped-51</b>のパッケージをインストールしてください．
 
 残念ながら，これらのパッケージはdevパッケージと共存することができません．このため始めに通常の<b>libavcodec-dev</b>と<b>libavformat-dev</b>で%OpenRAVEのコンパイルを行い，その後録画機能をお使いの際にunstrippedバージョンに切り替えてください．
@@ -200,7 +200,7 @@ switch to the unstripped versions when recording.
 sudo apt-get install g++ cmake libqt4-dev qt4-dev-tools ffmpeg libavcodec-dev libavformat-dev libxvidcore4-dev libfaac-dev libogg-dev libvorbis-dev libdc1394-22-dev libgsm1-dev libboost-dev libboost-regex-dev libxml2-dev libsoqt4-dev libboost-graph-dev libode0-dev libboost-wave-dev libboost-serialization-dev libboost-filesystem-dev libpcre3-dev libboost-thread-dev libswscale-dev
 \endverbatim
 
-\~english \subsection ilinux_fedora Fedora Core Users
+\en \subsection ilinux_fedora Fedora Core Users
 
 Might need to add the livna yum repository for ffmpeg. To install the necessary packages type
 
@@ -210,7 +210,7 @@ sudo yum install qt4-devel Coin2-devel glew-devel gsm-devel x264 x264-devel ffmp
 
 Be careful if installing \b soqt-devel from the package manager, it may be compiled with the wrong version of Qt. If compiling SoQt from sources, check \c QTDIR and make sure it points to the correct version.
 
-\~japanese \subsection ilinux_fedora Fedoraユーザ
+\ja \subsection ilinux_fedora Fedoraユーザ
 
 ffmpegのためにlivna yumレポジトリを追加する必要があるかもしれません．必要なパッケージをインストールするには以下のコマンドを実行してください．
 
@@ -220,11 +220,11 @@ sudo yum install qt4-devel Coin2-devel glew-devel gsm-devel x264 x264-devel ffmp
 
 パッケージマネージャから<b>soqt-develをインストールする場合には，間違ったバージョンのQtをコンパイルするかもしれませんので注意してください．</b>もしソースファイルからSoQtをコンパイルする場合には，\c QTDIR と正しいバージョンであることを確認してください．
 
-\~english \section ilinux_libraries Necessary libraries for Old Linux Distros
+\en \section ilinux_libraries Necessary libraries for Old Linux Distros
 
 (Only install these libraries from sources if not in package manager.
 
-\~japanese \section ilinux_libraries 旧Linuxに必要なライブラリ
+\ja \section ilinux_libraries 旧Linuxに必要なライブラリ
 
 （パッケージマネージャにない場合のみ，これらのライブラリをソースからインストールしてください．
 
@@ -232,12 +232,12 @@ sudo yum install qt4-devel Coin2-devel glew-devel gsm-devel x264 x264-devel ffmp
 - \b <a href="http://www.boost.org/users/download/">boost</a>
 - \b <a href="http://www.coin3d.org">Coin3d</a>
 - \b <a href="ftp://ftp.coin3d.org/pub/snapshots/SoQt-latest.tar.gz">SoQt</a>
-\~english
+\en
  - <b>x86-64 users:</b> SoQt might give a compilation error in SoQtComponent.cpp. To fix it, go into \c src/Inventor/Qt/SoQtComponent.cpp:103 and replace <tt>unsigned long key</tt> with <tt>SbDict::Key key</tt>.
-\~japanese
+\ja
  - <b>x86-64ユーザ：</b> SoQtはSoQtComponent.cppでコンパイルエラーを起こすかもしれません．これを修正するため，\c src/Inventor/Qt/SoQtComponent.cppファイルの<tt>unsigned long key</tt>を<tt>SbDict::Key key</tt>に置換してください．
 
-\~english \section ilinux_collisionphysics Collision Checkers and Physics Simulators
+\en \section ilinux_collisionphysics Collision Checkers and Physics Simulators
 
 Although %OpenRAVE is not tied to any particular collision checker, it requires at least one is installed to get basic functions. Here are the following libraries that have %OpenRAVE plugins:
 
@@ -258,7 +258,7 @@ make install
 
 - <a href="http://www.cs.unc.edu/~geom/SSV/">PQP Collision</a> - source code separate inside \b pqprave plugin.
 
-\~japanese \section ilinux_collisionphysics 干渉検知と物理シミュレータ
+\ja \section ilinux_collisionphysics 干渉検知と物理シミュレータ
 
 %OpenRAVEは特定の干渉検知器と提携しているわけではありませんが，基本的な機能のために少なくとも１つの干渉検知器を必要とします．ここに%OpenRAVEのプラグインをもつ以下のライブラリを紹介します．
 
@@ -280,7 +280,7 @@ make install
 
 - <a href="http://www.cs.unc.edu/~geom/SSV/">PQP</a> - ソースコードは内部の\b pqpraveプラグインに含まれています．
 
-\~english \section ilinux_python Python
+\en \section ilinux_python Python
 
 In order to use the python bindings through the \openravepy{openravepy} module, install  the following packages before compiling %OpenRAVE:
 
@@ -294,7 +294,7 @@ To setup the python path in bash add the following line:
 export PYTHONPATH=$PYTHONPATH:`openrave-config --python-dir`
 \endverbatim
 
-\~japanese \section ilinux_python Python
+\ja \section ilinux_python Python
 
 \openravepy{openravepy}を利用するために%OpenRAVEをコンパイルする前に以下のパッケージをインストールしてください．
 
@@ -308,7 +308,7 @@ Pythonパスを設定するために，bashファイルに以下の行を追加�
 export PYTHONPATH=$PYTHONPATH:`openrave-config --python-dir`
 \endverbatim
 
-\~english \section ilinux_octavematlab Octave/Matlab
+\en \section ilinux_octavematlab Octave/Matlab
 
 Both <a href="http://www.gnu.org/software/octave/">Octave</a> and Matlab are supported and the
 %OpenRAVE build system automatically detects and compiles the mex files for each.
@@ -321,7 +321,7 @@ Matlab users:
 - make sure \c mex is in the system path
 - Add \c $OPENRAVE_INSTALL/share/openrave/matlab to the Matlab path (default is \c /usr/local/share/openrave/matlab).
 
-\~japanese \section ilinux_octavematlab Octave/Matlab
+\ja \section ilinux_octavematlab Octave/Matlab
 
 <a href="http://www.gnu.org/software/octave/">Octave</a> と Matlab は共にサポートされています．%OpenRAVEのビルドシステムはOctave/Matlabを自動的に検出し，それぞれのmexファイルをコンパイルします．
 
@@ -333,7 +333,7 @@ Matlab ユーザー:
 - \c mex がシステムパスにあることを確認してください．
 - Matlabのパス（デフォルトは\c /usr/local/share/openrave/matlab）に\c $OPENRAVE_INSTALL/share/openrave/matlab を追加してください．
 
-\~english \section ilinux_building Building OpenRAVE
+\en \section ilinux_building Building OpenRAVE
 
 After all necessary libraries have been installed, it is time to finally build and install %OpenRAVE. In the root openrave folder type
 
@@ -361,7 +361,7 @@ rm build/CMakeCache.txt
 
 If the cached files are not removed, the new system settings will not be noticed.
 
-\~japanese \section ilinux_building OpenRAVEのインストール
+\ja \section ilinux_building OpenRAVEのインストール
 
 全ての必要なライブラリがインストールされたら，ついに%OpenRAVEをインストールです．%OpenRAVEのソースファイルをダウンロードしたフォルダに移動し，以下を入力してください．
 
@@ -383,11 +383,11 @@ make prefix=/my/new/dir
 rm build/CMakeCache.txt
 \endverbatim
 
-\~english \section ilinux_bash Bash Shell
+\en \section ilinux_bash Bash Shell
 
 Can enable automatic completion of several openrave programs like \c openrave.py by sourcing the \c openravebash file. Add this to your \c ~./.bashrc file:
 
-\~japanese \section ilinux_bash Bashシェル
+\ja \section ilinux_bash Bashシェル
 タブでOpenRAVEプログラムのコマンドを補完したり，bashでの最適なOpenRAVE環境を入れるのに以下のコマンドを\c ~/.bashrcファイルにいれてください．
 
 \~
@@ -398,7 +398,7 @@ source `openrave-config --prefix`/share/openrave/openravebash
 */
 
 /** 
-\~english
+\en
 \page installation_win Building and Installing on Windows
 
 
@@ -465,7 +465,7 @@ an update to libraries or programs happens (for example Octave/MATLAB/python was
 installed/uninstalled), it is recommended to clear the cmake cache by first removing
 \c build\\CMakeCache.txt before running \c runcmake_win.bat.
 
-\~japanese
+\ja
 \page installation_win Windowsユーザーのためのインストール方法
 
 
@@ -517,7 +517,7 @@ subversionを更新したときには常に\c runcmake_win.batを再度実行し
 */
 
 /**
-\~english
+\en
 \page installation_macosx Building and Installing on Mac OSX
 
 First execute this command:
@@ -539,7 +539,7 @@ but it could take an hour or two.
 
 After this, follow the instructions on \ref installation_linux.
 
-\~japanese
+\ja
 \page installation_macosx Mac OSXユーザーのためのインストール方法
 
 はじめに以下のコマンドを実行してください．

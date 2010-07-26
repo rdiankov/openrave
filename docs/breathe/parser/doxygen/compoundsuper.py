@@ -5714,7 +5714,7 @@ class docTitleType(GeneratedsSuper):
 class docParaType(GeneratedsSuper):
     subclass = None
     superclass = None
-    def __init__(self, valueOf_='', mixedclass_=None, content_=None):
+    def __init__(self, valueOf_='', mixedclass_=None, content_=None,simplesect=None,para=None):
         if mixedclass_ is None:
             self.mixedclass_ = MixedContainer
         else:
@@ -5729,6 +5729,14 @@ class docParaType(GeneratedsSuper):
         else:
             return docParaType(*args_, **kwargs_)
     factory = staticmethod(factory)
+    def get_simplesect(self): return self.simplesect
+    def set_simplesect(self, simplesect): self.simplesect = simplesect
+    def add_simplesect(self, value): self.simplesect.append(value)
+    def insert_simplesect(self, index, value): self.simplesect[index] = value
+    def get_para(self): return self.para
+    def set_para(self, para): self.para = para
+    def add_para(self, value): self.para.append(value)
+    def insert_para(self, index, value): self.para[index] = value
     def getValueOf_(self): return self.valueOf_
     def setValueOf_(self, valueOf_): self.valueOf_ = valueOf_
     def export(self, outfile, level, namespace_='', name_='docParaType', namespacedef_=''):
@@ -5750,7 +5758,9 @@ class docParaType(GeneratedsSuper):
             outfile.write(quote_xml('%s' % self.valueOf_))
     def hasContent_(self):
         if (
-            self.valueOf_ is not None
+            self.valueOf_ is not None or
+            self.simplesect is not None or
+            self.para is not None
             ):
             return True
         else:
@@ -5783,6 +5793,19 @@ class docParaType(GeneratedsSuper):
             self.valueOf_ += child_.nodeValue
         elif child_.nodeType == Node.CDATA_SECTION_NODE:
             self.valueOf_ += '![CDATA['+child_.nodeValue+']]'
+        elif child_.nodeType == Node.ELEMENT_NODE and \
+            nodeName_ == 'simplesect':
+            # HACK!! for now in order to get OK highlighting....
+            childobj_ = docParaType.factory()
+            childobj_.build(child_)
+            self.valueOf_ += "Return: "+childobj_.valueOf_
+        elif child_.nodeType == Node.ELEMENT_NODE and \
+            nodeName_ == 'para':
+            childobj_ = docParaType.factory()
+            childobj_.build(child_)
+            self.valueOf_ += childobj_.valueOf_
+
+
 # end class docParaType
 
 

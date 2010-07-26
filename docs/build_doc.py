@@ -111,7 +111,7 @@ class build_doc(Command):
         builder_factory = breathe.BuilderFactory(breathe.RstBuilder, renderer_factory_creator)
         project_info_factory = breathe.ProjectInfoFactory()
         directive_factory = breathe.DoxygenDirectiveFactory(builder_factory, finder_factory, matcher_factory, project_info_factory)
-        project_info_factory.update({'openrave':os.path.join(os.path.split(self.outdir)[0], 'xml')},'openrave')
+        project_info_factory.update({'openrave':os.path.join(languagecode, 'xml')},'openrave')
         rst.directives.register_directive("doxygenindex", directive_factory.create_index_directive_container())
         rst.directives.register_directive("doxygenfunction", directive_factory.create_function_directive_container())
         rst.directives.register_directive("doxygenstruct", directive_factory.create_struct_directive_container())
