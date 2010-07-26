@@ -74,16 +74,10 @@ int main(int argc, char ** argv)
     penv->SetDebugLevel(Level_Debug);
 
     boost::thread thviewer(boost::bind(SetViewer,penv,viewername));
-
-    {
-        // lock the environment to prevent changes
-        EnvironmentMutex::scoped_lock lock(penv->GetMutex());
-
-        // load the scene
-        if( !penv->Load(scenefilename) ) {
-            penv->Destroy();
-            return 2;
-        }
+    // load the scene
+    if( !penv->Load(scenefilename) ) {
+        penv->Destroy();
+        return 2;
     }
 
     thviewer.join(); // wait for the viewer thread to exit

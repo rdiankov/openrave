@@ -34,13 +34,13 @@ void printhelp()
 
 void printinterfaces(EnvironmentBasePtr penv)
 {
-    PLUGININFO info;
-    penv->GetLoadedInterfaces(info);
+    std::map<InterfaceType, std::vector<std::string> > interfacenames;
+    penv->GetLoadedInterfaces(interfacenames);
 
     stringstream ss;
             
     ss << endl << "Loadable interfaces: " << endl;
-    for(std::map<InterfaceType, std::vector<std::string> >::iterator itinterface = info.interfacenames.begin(); itinterface != info.interfacenames.end(); ++itinterface) {
+    for(std::map<InterfaceType, std::vector<std::string> >::iterator itinterface = interfacenames.begin(); itinterface != interfacenames.end(); ++itinterface) {
         ss << RaveGetInterfaceName(itinterface->first) << "(" << itinterface->second.size() << "):" << endl;
         for(vector<string>::iterator it = itinterface->second.begin(); it != itinterface->second.end(); ++it)
             ss << " " << *it << endl;

@@ -170,10 +170,9 @@ bool TrajectoryBase::SampleTrajectory(dReal time, TPOINT &sample) const
 
     // set up interpolation
     int index = _FindActiveInterval(time);
-    BOOST_ASSERT (index < (int)_vecpoints.size() - 1);
-    const TPOINT& p0 = _vecpoints[index];
-    const TPOINT& p1 = _vecpoints[index+1];
-    const TSEGMENT& seg = _vecsegments[index];
+    const TPOINT& p0 = _vecpoints.at(index);
+    const TPOINT& p1 = _vecpoints.at(index+1);
+    const TSEGMENT& seg = _vecsegments.at(index);
     BOOST_ASSERT (p1.time != p0.time);
     BOOST_ASSERT (seg._fduration > 0.0);
 
