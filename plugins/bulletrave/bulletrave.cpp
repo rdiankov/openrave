@@ -36,5 +36,3 @@ void GetPluginAttributesValidated(PLUGININFO& info)
 void DestroyPlugin()
 {
 }
-
-}
