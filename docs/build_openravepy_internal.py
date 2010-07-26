@@ -35,7 +35,7 @@ class FunctionArgumentMatcher(breathe.finder.doxygen.ItemMatcher):
         if paramindex>=0:
             endparamindex = name.rfind('"')
             if endparamindex >= 0:
-                self.params = [s.strip() for s in name[(paramindex+1):endparamindex].split(',') if len(s.strip()) > 0]
+                self.params = [s.strip() for s in name[(paramindex+1):endparamindex].split(';') if len(s.strip()) > 0]
             name = name[:paramindex]
         breathe.finder.doxygen.ItemMatcher.__init__(self,name.strip(),'function')
     def match(self, data_object):
@@ -71,7 +71,6 @@ class FunctionArgumentMatcher(breathe.finder.doxygen.ItemMatcher):
                                         break
                                     argtypetext = argtypetext[:index] + argtypetext[(startkeywordindex+1):endindex] + argtypetext[(endindex+6):]
                                 if not argtypetext.startswith(self.params[i]):
-                                    print 'failed: ',argtypetext
                                     matches = False
                                     break
         return matches
@@ -95,7 +94,7 @@ Uses python docutils, sphinx, breathe, and xml2rst.""")
 
     # brief+detailed descriptions only, do not include entire scope
     rawcppdata = open(options.infile,'r').read()
-    functions=re.findall('DOXY_FN\(\s*([\w:]*)\s*,\s*([\w]*)\s*\)',rawcppdata)
+    functions=re.findall('DOXY_FN\(\s*([\w:]*)\s*,([\s\w:;* <>&"]*)\)',rawcppdata)
     while len(functions) > 0 and functions[0][0] == 'class':
         functions.pop(0) # remove the #define's
     # add all functions without member classes
@@ -244,6 +243,7 @@ Uses python docutils, sphinx, breathe, and xml2rst.""")
             comment=re.sub('\n','\\\\n',comment)
             comment=re.sub('\t','\\\\t',comment)
             comment=re.sub('"','\\\\"',comment)
+            id=re.sub('"','\\\\"',id)
             comments += 'm["%s"] = "\\n\\n%s";\n'%(id,comment)
             inF.close()
             outF.close()
