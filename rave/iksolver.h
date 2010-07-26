@@ -29,6 +29,7 @@ namespace OpenRAVE {
 class IkParameterization
 {
 public:
+    /// \brief The types of inverse kinematics parameterizations supported.
     enum Type {
         Type_None=0,
         Type_Transform6D=1,

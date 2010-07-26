@@ -16,8 +16,10 @@
 #ifndef OPENRAVE_PYTHON_DOCSTRINGS
 #define OPENRAVE_PYTHON_DOCSTRINGS
 
+#include <locale>
 #include <sstream>
 #include <map>
+#include <stdio.h>
 
 #if BOOST_VERSION >= 103500
 //#define DOXY_ENUM(name) ,".. doxygenenum:: "#name"\n"
@@ -35,9 +37,13 @@
 
 namespace openravepy {
 
+/// only english and japanese are supports, default to english.
 inline std::string InitializeLanguageCode()
 {
-    // only english and japanese are supports, default to english.
+    std::string localename=std::locale("").name();
+    if( localename.find_first_of("ja") == 0 ) { // for example, ja_JP.UTF-8
+        return "ja";
+    }
     return "en";
 }
 

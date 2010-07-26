@@ -238,6 +238,8 @@ Uses python docutils, sphinx, breathe, and xml2rst.""")
             xml2rst.convert(inF=inF,outF=outF,mainXsltF=mainXsltF)
             outF.seek(0)
             comment = outF.read()
+            # make sure there are at most two consecutive new lines (otherwise reading gets difficult)
+            comment=re.sub('[\n\s]*(\n[\s]*\n)','\g<1>',comment)
             # need to go through the C string parser..
             comment=re.sub('\\\\','\\\\\\\\',comment)
             comment=re.sub('\n','\\\\n',comment)

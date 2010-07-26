@@ -133,7 +133,7 @@ public:
         virtual bool CheckIndependentCollision(CollisionReportPtr report = CollisionReportPtr()) const;
 
         /// \return true if the body is being grabbed by any link on this manipulator
-        virtual bool IsGrabbing(KinBodyConstPtr pbody) const;
+        virtual bool IsGrabbing(KinBodyConstPtr body) const;
 
         virtual void serialize(std::ostream& o, int options) const;
         
@@ -422,34 +422,34 @@ public:
         @{
     */
     /// Grab the body with the specified link.
-    /// \param[in] pbody the body to be grabbed
+    /// \param[in] body the body to be grabbed
     /// \param[in] pRobotLinkToGrabWith the link of this robot that will perform the grab
     /// \param[in] setRobotLinksToIgnore Additional robot link indices that collision checker ignore
     ///        when checking collisions between the grabbed body and the robot.
     /// \return true if successful and body is grabbed
-    virtual bool Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore);
+    virtual bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore);
 
     /// Grab a body with the specified link.
-    /// \param[in] pbody the body to be grabbed
+    /// \param[in] body the body to be grabbed
     /// \param[in] pRobotLinkToGrabWith the link of this robot that will perform the grab
     /// \return true if successful and body is grabbed
-    virtual bool Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith);
+    virtual bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith);
 
     /// Grabs the body with the active manipulator's end effector.
-    /// \param[in] pbody the body to be grabbed
+    /// \param[in] body the body to be grabbed
     /// \param[in] setRobotLinksToIgnore Additional robot link indices that collision checker ignore
     ///        when checking collisions between the grabbed body and the robot.
     /// \return true if successful and body is grabbed
-    virtual bool Grab(KinBodyPtr pbody, const std::set<int>& setRobotLinksToIgnore);
+    virtual bool Grab(KinBodyPtr body, const std::set<int>& setRobotLinksToIgnore);
     
     /// Grabs the body with the active manipulator's end effector.
-    /// \param[in] pbody the body to be grabbed
+    /// \param[in] body the body to be grabbed
     /// \return true if successful and body is grabbed
-    virtual bool Grab(KinBodyPtr pbody);
+    virtual bool Grab(KinBodyPtr body);
 
     /// Release the body if grabbed.
-    /// \param pbody body to release
-    virtual void Release(KinBodyPtr pbody);
+    /// \param body body to release
+    virtual void Release(KinBodyPtr body);
 
     /// Release all grabbed bodies.
     virtual void ReleaseAllGrabbed(); ///< release all bodies
@@ -458,9 +458,9 @@ public:
     /// In other words, the current collisions any grabbed body makes with the robot will be re-inserted into an ignore list
     virtual void RegrabAll();
 
-    /// \param[in] pbody the body to check
+    /// \param[in] body the body to check
     /// \return the robot link that is currently grabbing the body. If the body is not grabbed, will return an  empty pointer.
-    virtual LinkPtr IsGrabbing(KinBodyConstPtr pbody) const;
+    virtual LinkPtr IsGrabbing(KinBodyConstPtr body) const;
 
     /// gets all grabbed bodies of the robot
     /// \param[out] vbodies filled with the grabbed bodies

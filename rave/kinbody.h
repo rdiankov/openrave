@@ -573,7 +573,7 @@ public:
         \param[out] vjoints the joints to fill that describe the chain
         \return true if the two links are connected (vjoints will be filled), false if the links are separate
 
-        \~japanese \brief 二つのリンクを繋ぐ関節の最短経路を計算する．
+        \~japanese \brief 2つのリンクを繋ぐ関節の最短経路を計算する．
         
         受動的な関節は，位置関係が固定されているリンクを見つけるために調べられている．ミミック関節が最短経路にある場合，元の関節が返されるので，注意する必要がある．
         \param[in] linkbaseindex 始点リンクインデックス
