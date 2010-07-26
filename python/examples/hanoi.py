@@ -11,16 +11,34 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Solves the hanoi problem using simple arm planning.
+
+.. image:: ../../images/examples_hanoi.jpg
+  :height: 200
+
+**Running the Example**::
+
+  openrave.py --example hanoi
+
+Description
+-----------
+
+This example solves the Hanoi Puzzle using the Puma arm. You can easily change the locations of the
+pegs, disks, or add obstacles in the environment files **data/hanoi_complex.env.xml** and
+**data/hanoi.env.xml** to make the problem harder. The default planner used is the rBiRRT, you can
+easily change it to a different planner by changing the arguments to the BaseManipulation problem.
+
+"""
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
 import time
-from openravepy import *
+from openravepy import Environment, IkParameterization, planning_error, raveLogInfo, raveLogWarn
 from openravepy.interfaces import BaseManipulation, TaskManipulation
 from openravepy.databases import inversekinematics
-from numpy import *
+from numpy import array, arange, linalg, pi, dot, vstack, cos, sin, cross, r_, c_
 from optparse import OptionParser
 
 class HanoiPuzzle:
@@ -180,11 +198,13 @@ class HanoiPuzzle:
             self.hanoisolve(n-1, pegby, pegto, pegfrom)
 
 def run(args=None):
-    """Executes the hanoi example.
-
-    :type args: arguments for script to parse, if not specified will use sys.argv
+    """Executes the example, ``args`` specifies a list of the arguments to the script.
+    
+    **Help**
+    
+    .. shell-block:: openrave.py --example hanoi --help
     """
-    parser = OptionParser(description='Manipulation planning example solving the hanoi problem.')
+    parser = OptionParser(description='Manipulation planning example solving the hanoi problem.', usage='openrave.py --example hanoi [options]')
     parser.add_option('--scene',
                       action="store",type='string',dest='scene',default='data/hanoi_complex.env.xml',
                       help='Scene file to load (default=%default)')

@@ -749,16 +749,7 @@ class GrasperProblem : public ProblemInstance
         newcontacts.reserve(contacts.size()*Nconepoints);
         FOREACHC(itcontact,contacts) {
             // find a coordinate system where z is the normal
-            Vector rottodirection = Vector(0,0,1).cross(itcontact->norm);
-            dReal fsin = RaveSqrt(rottodirection.lengthsqr3());
-            dReal fcos = dot3(Vector(0,0,1), itcontact->norm);
-            TransformMatrix torient;
-            if( fsin > 1e-6f )
-                torient.rotfromaxisangle(rottodirection*(1/fsin), RaveAtan2(fsin, fcos));
-            else if( fcos < 0 )
-                // flipped 180, rotate around x axis
-                torient.rotfromaxisangle(Vector(1,0,0), RaveAtan2(fsin, fcos));
-
+            TransformMatrix torient = rotationMatrixFromQuat(quatRotateDirection(Vector(0,0,1),itcontact->norm));
             Vector right(torient.m[0],torient.m[4],torient.m[8]);
             Vector up(torient.m[1],torient.m[5],torient.m[9]);
             FOREACH(it,vsincos)

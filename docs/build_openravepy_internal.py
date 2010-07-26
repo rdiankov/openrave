@@ -98,7 +98,7 @@ Uses python docutils, sphinx, breathe, and xml2rst.""")
     while len(functions) > 0 and functions[0][0] == 'class':
         functions.pop(0) # remove the #define's
     # add all functions without member classes
-    functions2=re.findall('DOXY_FN\(\s*([\w:]*)\s*\)',rawcppdata)
+    functions2=re.findall('DOXY_FN1\(([\s\w:;* <>&"]*)\)',rawcppdata)
     for name in functions2:
         if name != 'name':
             functions.append((None,name))
@@ -142,8 +142,8 @@ Uses python docutils, sphinx, breathe, and xml2rst.""")
                 matcher = matcher_factory.create_name_type_matcher(class_name,'class')
                 found_classes = finder.find(matcher)
             if len(found_classes) > 0:
-                class_objects.append(found_classes[0])
                 #comment_objects.append(('%s class %s'%(lang,class_name),found_classes[0]))
+                class_objects.append(found_classes[0])
             else:
                 print 'failed to find class %s'%class_name
 

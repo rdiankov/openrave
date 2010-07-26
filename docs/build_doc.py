@@ -11,6 +11,8 @@ try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
+import StringIO, shlex, subprocess # for shell commands
+import re
 
 class build_doc(Command):
     description = 'Builds the OpenRAVE python documentation'
@@ -99,6 +101,19 @@ class build_doc(Command):
             def run(self):
                 return []
         rst.directives.register_directive('interface-command', InterfaceCommandDirective)
+
+        class ShellCommandDirective(Directive):
+            required_arguments = 0
+            optional_arguments = 0
+            final_argument = False
+            option_spec = {}
+            has_content = True
+            def run(self):
+                self.assert_has_content()
+                args = shlex.split(self.content[0].encode('ascii'))
+                text = subprocess.Popen(args,stdout=subprocess.PIPE).communicate()[0]
+                return [docutils.nodes.literal_block(text=text)]
+        rst.directives.register_directive('shell-block', ShellCommandDirective)
 
         # doxygen links using breathe
         parser_factory = breathe.DoxygenParserFactory()

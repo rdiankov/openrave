@@ -3084,23 +3084,12 @@ namespace openravepy {
 
 object quatFromAxisAngle1(object oaxis)
 {
-    Vector axis = ExtractVector3(oaxis);
-    dReal axislen = RaveSqrt(axis.lengthsqr3());
-    if( axislen < 1e-6 )
-        return numeric::array(boost::python::make_tuple((dReal)1,(dReal)0,(dReal)0,(dReal)0));
-    dReal sang = RaveSin(axislen*0.5f)/axislen;
-    return toPyVector4(Vector(RaveCos(axislen*0.5f),axis[0]*sang,axis[1]*sang,axis[2]*sang));
+    return toPyVector4(quatFromAxisAngle(ExtractVector3(oaxis)));
 }
 
-object quatFromAxisAngle2(object oaxis, object oangle)
+object quatFromAxisAngle2(object oaxis, dReal angle)
 {
-    Vector axis = ExtractVector3(oaxis);
-    dReal axislen = RaveSqrt(axis.lengthsqr3());
-    if( axislen == 0 )
-        return numeric::array(boost::python::make_tuple((dReal)1,(dReal)0,(dReal)0,(dReal)0));
-    dReal angle = extract<dReal>(oangle)*0.5f;
-    dReal sang = RaveSin(angle)/axislen;
-    return toPyVector4(Vector(RaveCos(angle),axis[0]*sang,axis[1]*sang,axis[2]*sang));
+    return toPyVector4(quatFromAxisAngle(ExtractVector3(oaxis),angle));
 }
 
 object quatFromRotationMatrix(object R)
@@ -3109,7 +3098,12 @@ object quatFromRotationMatrix(object R)
     t.rotfrommat(extract<dReal>(R[0][0]), extract<dReal>(R[0][1]), extract<dReal>(R[0][2]),
                  extract<dReal>(R[1][0]), extract<dReal>(R[1][1]), extract<dReal>(R[1][2]),
                  extract<dReal>(R[2][0]), extract<dReal>(R[2][1]), extract<dReal>(R[2][2]));
-    return toPyVector4(Transform(t).rot);
+    return toPyVector4(quatFromRotationMatrix(t));
+}
+
+object quatSlerp(object q1, object q2, dReal t)
+{
+    return toPyVector4(quatSlerp(ExtractVector4(q1),ExtractVector4(q2),t));
 }
 
 object axisAngleFromRotationMatrix(object R)
@@ -3146,8 +3140,7 @@ object axisAngleFromQuat(object oquat)
 
 object rotationMatrixFromQuat(object oquat)
 {
-    Transform t; t.rot = ExtractVector4(oquat);
-    return toPyArrayRotation(TransformMatrix(t));
+    return toPyArrayRotation(rotationMatrixFromQuat(ExtractVector4(oquat)));
 }
 
 object rotationMatrixFromQArray(object qarray)
@@ -3161,54 +3154,27 @@ object rotationMatrixFromQArray(object qarray)
 
 object matrixFromQuat(object oquat)
 {
-    Transform t; t.rot = ExtractVector4(oquat);
-    return toPyArray(TransformMatrix(t));
+    return toPyArray(rotationMatrixFromQuat(ExtractVector4(oquat)))
 }
 
 object rotationMatrixFromAxisAngle1(object oaxis)
 {
-    Vector axis = ExtractVector3(oaxis);
-    dReal axislen = RaveSqrt(axis.lengthsqr3());
-    if( axislen < 1e-6 )
-        return numeric::array(boost::python::make_tuple((dReal)1,(dReal)0,(dReal)0,(dReal)0));
-    dReal sang = RaveSin(axislen*0.5f)/axislen;
-    Transform t; t.rot = Vector(RaveCos(axislen*0.5f),axis[0]*sang,axis[1]*sang,axis[2]*sang);
-    return toPyArrayRotation(TransformMatrix(t));
+    return toPyArrayRotation(rotationMatrixFromAxisAngle(ExtractVector3(oaxis)));
 }
 
 object rotationMatrixFromAxisAngle2(object oaxis, dReal angle)
 {
-    Vector axis = ExtractVector3(oaxis);
-    dReal axislen = RaveSqrt(axis.lengthsqr3());
-    if( axislen == 0 )
-        return numeric::array(boost::python::make_tuple((dReal)1,(dReal)0,(dReal)0,(dReal)0));
-    angle *= dReal(0.5);
-    dReal sang = RaveSin(angle)/axislen;
-    Transform t; t.rot = Vector(RaveCos(angle),axis[0]*sang,axis[1]*sang,axis[2]*sang);
-    return toPyArrayRotation(TransformMatrix(t));
+    return toPyArrayRotation(rotationMatrixFromAxisAngle(ExtractVector3(oaxis),angle));
 }
 
 object matrixFromAxisAngle1(object oaxis)
 {
-    Vector axis = ExtractVector3(oaxis);
-    dReal axislen = RaveSqrt(axis.lengthsqr3());
-    if( axislen < 1e-6 )
-        return numeric::array(boost::python::make_tuple((dReal)1,(dReal)0,(dReal)0,(dReal)0));
-    dReal sang = RaveSin(axislen*0.5f)/axislen;
-    Transform t; t.rot = Vector(RaveCos(axislen*0.5f),axis[0]*sang,axis[1]*sang,axis[2]*sang);
-    return toPyArray(TransformMatrix(t));
+    return toPyArray(rotationMatrixFromAxisAngle(ExtractVector3(oaxis)));
 }
 
 object matrixFromAxisAngle2(object oaxis, dReal angle)
 {
-    Vector axis = ExtractVector3(oaxis);
-    dReal axislen = RaveSqrt(axis.lengthsqr3());
-    if( axislen == 0 )
-        return numeric::array(boost::python::make_tuple((dReal)1,(dReal)0,(dReal)0,(dReal)0));
-    angle *= dReal(0.5);
-    dReal sang = RaveSin(angle)/axislen;
-    Transform t; t.rot = Vector(RaveCos(angle),axis[0]*sang,axis[1]*sang,axis[2]*sang);
-    return toPyArray(TransformMatrix(t));
+    return toPyArray(rotationMatrixFromAxisAngle(ExtractVector3(oaxis),angle));
 }
 
 object matrixFromPose(object opose)
@@ -4213,18 +4179,19 @@ BOOST_PYTHON_MODULE(openravepy_int)
     def("raveLogVerbose",openravepy::raveLogVerbose,args("log"),"Send a verbose log to the openrave system");
     def("raveLog",openravepy::raveLog,args("log","level"),"Send a log to the openrave system with excplicit level");
 
-    def("quatFromAxisAngle",openravepy::quatFromAxisAngle1, args("axisangle"), "Converts an axis-angle rotation into a quaternion.\n\n:param axisangle: unit axis * rotation angle, 3 values\n");
-    def("quatFromAxisAngle",openravepy::quatFromAxisAngle2, args("axis","angle"), "Converts an axis-angle rotation into a quaternion.\n\n:param axis: unit axis, 3 values\n\n:param angle: rotation angle\n");
-    def("quatFromRotationMatrix",openravepy::quatFromRotationMatrix, args("rotation"), "Converts the rotation of a matrix into a quaternion.\n\n:param rotation: 3x3 array");
+    def("quatFromAxisAngle",openravepy::quatFromAxisAngle1, args("axisangle"), DOXY_FN1(quatFromAxisAngle "const RaveVector"));
+    def("quatFromAxisAngle",openravepy::quatFromAxisAngle2, args("axis","angle"), DOXY_FN1(quatFromAxisAngle "const RaveVector; T"));
+    def("quatFromRotationMatrix",openravepy::quatFromRotationMatrix, args("rotation"), DOXY_FN1(quatFromRotationMatrix "const RaveTransform"));
+    def("quatSlerp",openravepy::quatSlerp, args("quat0","quat1","t"), DOXY_FN1(quatSlerp "const RaveVector; const RaveVector; T"));
     def("axisAngleFromRotationMatrix",openravepy::axisAngleFromRotationMatrix, args("rotation"), "Converts the rotation of a matrix into axis-angle representation.\n\n:param quat: 4 values\n");
     def("axisAngleFromQuat",openravepy::axisAngleFromQuat, args("quat"), "Converts a quaternion into the axis-angle representation.\n\n:param quat: 4 values\n");
-    def("rotationMatrixFromQuat",openravepy::rotationMatrixFromQuat, args("quat"), "Converts a quaternion to a 3x3 matrix.\n\n:param quat: 4 values\n");
+    def("rotationMatrixFromQuat",openravepy::rotationMatrixFromQuat, args("quat"), DOXY_FN1(rotationMatrixFromQuat "const RaveVector"));
     def("rotationMatrixFromQArray",openravepy::rotationMatrixFromQArray,args("quatarray"),"Converts an array of quaternions to a list of 3x3 rotation matrices.\n\n:param quatarray: nx4 array\n");
     def("matrixFromQuat",openravepy::matrixFromQuat, args("quat"), "Converts a quaternion to a 4x4 affine matrix.\n\n:param quat: 4 values\n");
-    def("rotationMatrixFromAxisAngle",openravepy::rotationMatrixFromAxisAngle1, args("axisangle"), "Converts an axis-angle rotation to a 3x3 matrix.\n\n:param axisangle: unit axis * rotation angle, 3 values\n");
-    def("rotationMatrixFromAxisAngle",openravepy::rotationMatrixFromAxisAngle2, args("axis","angle"), "Converts an axis-angle rotation to a 3x3 matrix.\n\n:param axis: unit axis, 3 values\n\n:param angle: rotation angle\n");
-    def("matrixFromAxisAngle",openravepy::matrixFromAxisAngle1, args("axis"), "Converts an axis-angle rotation to a 4x4 affine matrix");
-    def("matrixFromAxisAngle",openravepy::matrixFromAxisAngle2, args("axis","angle"), "Converts an axis-angle rotation to a 4x4 affine matrix.\n\n:param axis: unit axis, 3 values\n\n:param angle: rotation angle\n");
+    def("rotationMatrixFromAxisAngle",openravepy::rotationMatrixFromAxisAngle1, args("axisangle"), DOXY_FN1(rotationMatrixFromAxisAngle "const RaveVector"));
+    def("rotationMatrixFromAxisAngle",openravepy::rotationMatrixFromAxisAngle2, args("axis","angle"), DOXY_FN1(rotationMatrixFromAxisAngle "const RaveVector, T"));
+    def("matrixFromAxisAngle",openravepy::matrixFromAxisAngle1, args("axisangle"), DOXY_FN1(rotationMatrixFromAxisAngle "const RaveVector"));
+    def("matrixFromAxisAngle",openravepy::matrixFromAxisAngle2, args("axis","angle"), DOXY_FN1(rotationMatrixFromAxisAngle "const RaveVector, T"));
     def("matrixFromPose",openravepy::matrixFromPose, args("pose"), "Converts a 7 element quaterion+translation transform to a 4x4 matrix.\n\n:param pose: 7 values\n");
     def("matrixFromPoses",openravepy::matrixFromPoses, args("poses"), "Converts a Nx7 element quaterion+translation array to a 4x4 matrices.\n\n:param poses: nx7 array\n");
     def("poseFromMatrix",openravepy::poseFromMatrix, args("transform"), "Converts a 4x4 matrix to a 7 element quaternion+translation representation.\n\n:param transform: 3x4 or 4x4 affine matrix\n");

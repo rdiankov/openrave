@@ -130,11 +130,7 @@ public:
     /// add a point to the trajectory
     virtual void AddPoint(const TPOINT& p) { assert( _nDOF == (int)p.q.size()); _vecpoints.push_back(p); }
 
-    /// Specify the trajectory timing and interpolation method for a given robot.
-    /// The trajectory will use the robot's active degrees of freedom, so
-    /// make sure that the trajectory's _nDOF == pRobot->GetActiveDOF().
-
-    /** Preprocesses the trajectory for later sampling.
+    /** \brief Preprocesses the trajectory for later sampling and set its interpolation method.
         
         \param[in] robot [optional] robot to do the timing for
         \param[in] interpolationMethod method to use for interpolation
@@ -147,12 +143,16 @@ public:
     */
     virtual bool CalcTrajTiming(RobotBaseConstPtr robot, InterpEnum interpolationMethod, bool bAutoCalcTiming, bool bActiveDOFs, dReal fMaxVelMult=1);
 
-    /// perform basic error checking on the trajectory internal data
+    /// perform basic error checking on the trajectory internal data.
+    ///
+    /// checks internal data structures and verifies that all trajectory
+    /// via points do not violate joint position, velocity, and
+    /// acceleration limits.
     virtual bool IsValid() const;
     /// tests if a point violates any position, velocity or accel constraints
     //virtual bool  IsValidPoint(const TPOINT& tp) const;
 
-    /// sample the trajectory at the given time 
+    /// \brief Sample the trajectory at the given time using the current interpolation method.
     virtual bool SampleTrajectory(dReal  time, TPOINT &sample) const;
 
     /// Write to a stream, see TrajectoryOptions for file format
@@ -172,38 +172,71 @@ public:
     virtual int GetDOF() const { return _nDOF; }
 private:
 
-    // timing methods
+    /// \brief Linear interpolation using the maximum joint velocities for timing.
     bool _SetLinear(bool bAutoCalcTiming, bool bActiveDOFs);
 
+    //// linear interpolation with parabolic blends
     bool _SetLinearBlend(bool bAutoCalcTiming);
+
+    /// calculate the coefficients of a the parabolic and linear blends
+    ///  with continuous endpoint positions and velocities for via points.
     void _CalculateLinearBlendCoefficients(TSEGMENT::Type segType,TSEGMENT& seg, TSEGMENT& prev,TPOINT& p0, TPOINT& p1,const dReal blendAccel[]);
 
+    /// cubic spline interpolation
     bool _SetCubic(bool bAutoCalcTiming, bool bActiveDOFs);
+
+    /// calculate the coefficients of a smooth cubic spline with
+    ///  continuous endpoint positions and velocities for via points.
     void _CalculateCubicCoefficients(TSEGMENT& , const TPOINT& tp0, const TPOINT& tp1);
 
     //bool _SetQuintic(bool bAutoCalcTiming, bool bActiveDOFs);
+
+    /// calculate the coefficients of a smooth quintic spline with
+    ///  continuous endpoint positions and velocities for via points
+    ///  using minimum jerk heuristics
     //void _CalculateQuinticCoefficients(TSEGMENT&, TPOINT& tp0, TPOINT& tp1);
 
+    /// recalculate all via point velocities and accelerations
     void _RecalculateViaPointDerivatives();
 
+    /// computes minimum time interval for linear interpolation between
+    ///  path points that does not exceed the maximum joint velocities 
     dReal _MinimumTimeLinear(const TPOINT& p0, const TPOINT& p1, bool bActiveDOFs);
+
+    /// computes minimum time interval for cubic interpolation between
+    ///  path points that does not exceed the maximum joint velocities 
+    ///  or accelerations
     dReal _MinimumTimeCubic(const TPOINT& p0, const TPOINT& p1, bool bActiveDOFs);
+
+    /// computes minimum time interval for cubic interpolation between
+    ///  path points that does not exceed the maximum joint velocities 
+    ///  or accelerations assuming zero velocities at endpoints
     dReal _MinimumTimeCubicZero(const TPOINT& p0, const TPOINT& p1, bool bActiveDOFs);
+
+    /// computes minimum time interval for quintic interpolation between
+    ///  path points that does not exceed the maximum joint velocities 
+    ///  or accelerations
     dReal _MinimumTimeQuintic(const TPOINT& p0, const TPOINT& p1, bool bActiveDOFs);
     dReal _MinimumTimeTransform(const Transform& t0, const Transform& t1);
 
-    // sampling methods
+    /// find the active trajectory interval covering the given time
+    ///  (returns the index of the start point of the interval)
     inline int  _FindActiveInterval(dReal time) const;
 
+    /// \brief Sample the trajectory using linear interpolation.
     bool _SampleLinear(const TPOINT& p0, const TPOINT& p1, const TSEGMENT& seg, dReal time, TPOINT& sample) const;
+
+    /// \brief Sample using linear interpolation with parabolic blends.
     bool _SampleLinearBlend(const TPOINT& p0, const TPOINT& p1, const TSEGMENT& seg, dReal time, TPOINT& sample) const;
+
+    /// \brief Sample the trajectory using cubic interpolation.
     bool _SampleCubic(const TPOINT& p0, const TPOINT& p1, const TSEGMENT& seg, dReal time, TPOINT& sample) const;
+
+    /// \brief Sample the trajectory using quintic interpolation with minimum jerk.
     bool _SampleQuintic(const TPOINT& p0, const TPOINT& p1, const TSEGMENT& seg, dReal time, TPOINT& sample) const;
 
     std::vector<TPOINT> _vecpoints;
     std::vector<TSEGMENT> _vecsegments;
-    
-    // cache
     std::vector<dReal> _lowerJointLimit, _upperJointLimit, _maxJointVel, _maxJointAccel;
     Vector _maxAffineTranslationVel, _maxAffineRotationQuatVel;
 

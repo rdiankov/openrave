@@ -16,9 +16,10 @@ from openravepy import *
 from numpy import *
 from optparse import OptionParser
 import os
+import subprocess
 
 def getsvnurl(dirname):
-    outinfo=os.popen('svn info '+dirname,'r').read()
+    outinfo=subprocess.Popen(['svn','info',dirname],stdout=subprocess.PIPE).communicate()[0]
     url=None
     for line in outinfo.splitlines():
         if line.startswith('URL:'):

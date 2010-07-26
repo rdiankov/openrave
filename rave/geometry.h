@@ -41,6 +41,10 @@
 #define MATH_RANDOM_FLOAT (rand()/((T)RAND_MAX))
 #endif
 
+#ifndef g_fEpsilon
+#define g_fEpsilon 2e-7f
+#endif
+
 namespace OpenRAVE {
 
 /// Templated math and geometric functions
@@ -56,8 +60,8 @@ namespace geometry {
 #define floatRoot12		4			// roots r0 < r1 = r2
 #define tripleRoot		6			// roots r0 = r1 = r2
 
-template <class T> class RaveTransform;
-template <class T> class RaveTransformMatrix;
+template <typename T> class RaveTransform;
+template <typename T> class RaveTransformMatrix;
 
 // multiplies 4x4 matrices
 inline float* mult4(float* pfres, const float* pf1, const float* pf2);
@@ -144,7 +148,7 @@ inline double RaveAtan2(double fy, double fx) { return atan2(fy,fx); }
     \ingroup affine_math
      It is better to use this for a 3 dim vector because it is 16byte aligned and SIMD instructions can be used
 */
-template <class T>
+template <typename T>
 class RaveVector
 {
 public:
@@ -245,7 +249,7 @@ public:
     }
 };
 
-template <class T>
+template <typename T>
 inline RaveVector<T> operator* (float f, const RaveVector<T>& left)
 {
     RaveVector<T> v;
@@ -256,7 +260,7 @@ inline RaveVector<T> operator* (float f, const RaveVector<T>& left)
     return v;
 }
 
-template <class T>
+template <typename T>
 inline RaveVector<T> operator* (double f, const RaveVector<T>& left)
 {
     RaveVector<T> v;
@@ -271,7 +275,7 @@ inline RaveVector<T> operator* (double f, const RaveVector<T>& left)
     
     \ingroup affine_math
 */
-template <class T>
+template <typename T>
 class RaveTransform
 {
 public:
@@ -392,7 +396,7 @@ public:
         
     \ingroup affine_math
 */
-template <class T>
+template <typename T>
 class RaveTransformMatrix
 {
 public:
@@ -412,38 +416,7 @@ public:
         m[8] = 0; m[9] = 0; m[10] = 1;
         trans.x = trans.y = trans.z = 0;
     }
-    
-    template <class U> inline RaveTransformMatrix<T>& rotfromaxisangle(const RaveVector<U>& axis, U angle) {
-        RaveVector<T> quat;
-        U sinang = (U)RaveSin(angle/2);
-        quat.x = (U)RaveCos(angle/2);
-        quat.y = axis.x*sinang;
-        quat.z = axis.y*sinang;
-        quat.w = axis.z*sinang;
-        rotfromquat(quat);
-        return *this;
-    }
 
-    template <class U>
-    inline void rotfromquat(const RaveVector<U>& quat) {
-            // q = (s,vx,vy,vz)
-        T qq1 = 2*quat[1]*quat[1];
-        T qq2 = 2*quat[2]*quat[2];
-        T qq3 = 2*quat[3]*quat[3];
-        m[4*0+0] = 1 - qq2 - qq3;
-        m[4*0+1] = 2*(quat[1]*quat[2] - quat[0]*quat[3]);
-        m[4*0+2] = 2*(quat[1]*quat[3] + quat[0]*quat[2]);
-        m[4*0+3] = 0;
-        m[4*1+0] = 2*(quat[1]*quat[2] + quat[0]*quat[3]);
-        m[4*1+1] = 1 - qq1 - qq3;
-        m[4*1+2] = 2*(quat[2]*quat[3] - quat[0]*quat[1]);
-        m[4*1+3] = 0;
-        m[4*2+0] = 2*(quat[1]*quat[3] - quat[0]*quat[2]);
-        m[4*2+1] = 2*(quat[2]*quat[3] + quat[0]*quat[1]);
-        m[4*2+2] = 1 - qq1 - qq2;
-        m[4*2+3] = 0;
-    }
-    
     inline void rotfrommat(T m_00, T m_01, T m_02, T m_10, T m_11, T m_12, T m_20, T m_21, T m_22) {
         m[0] = m_00; m[1] = m_01; m[2] = m_02; m[3] = 0;
         m[4] = m_10; m[5] = m_11; m[6] = m_12; m[7] = 0;
@@ -524,58 +497,6 @@ public:
     T m[12];
     RaveVector<T> trans; ///< translation component
 };
-
-template <class T>
-RaveTransform<T>::RaveTransform(const RaveTransformMatrix<T>& t)
-{
-    trans = t.trans;
-    T tr = t.m[4*0+0] + t.m[4*1+1] + t.m[4*2+2];
-    if (tr >= 0) {
-        rot[0] = tr + 1;
-        rot[1] = (t.m[4*2+1] - t.m[4*1+2]);
-        rot[2] = (t.m[4*0+2] - t.m[4*2+0]);
-        rot[3] = (t.m[4*1+0] - t.m[4*0+1]);
-    }
-    else {
-        // find the largest diagonal element and jump to the appropriate case
-        if (t.m[4*1+1] > t.m[4*0+0]) {
-            if (t.m[4*2+2] > t.m[4*1+1]) {
-                rot[3] = (t.m[4*2+2] - (t.m[4*0+0] + t.m[4*1+1])) + 1;
-                rot[1] = (t.m[4*2+0] + t.m[4*0+2]);
-                rot[2] = (t.m[4*1+2] + t.m[4*2+1]);
-                rot[0] = (t.m[4*1+0] - t.m[4*0+1]);
-            }
-            else {
-                rot[2] = (t.m[4*1+1] - (t.m[4*2+2] + t.m[4*0+0])) + 1;
-                rot[3] = (t.m[4*1+2] + t.m[4*2+1]);
-                rot[1] = (t.m[4*0+1] + t.m[4*1+0]);
-                rot[0] = (t.m[4*0+2] - t.m[4*2+0]);
-            }
-        }
-        else if (t.m[4*2+2] > t.m[4*0+0]) {
-            rot[3] = (t.m[4*2+2] - (t.m[4*0+0] + t.m[4*1+1])) + 1;
-            rot[1] = (t.m[4*2+0] + t.m[4*0+2]);
-            rot[2] = (t.m[4*1+2] + t.m[4*2+1]);
-            rot[0] = (t.m[4*1+0] - t.m[4*0+1]);
-        }
-        else {
-            rot[1] = (t.m[4*0+0] - (t.m[4*1+1] + t.m[4*2+2])) + 1;
-            rot[2] = (t.m[4*0+1] + t.m[4*1+0]);
-            rot[3] = (t.m[4*2+0] + t.m[4*0+2]);
-            rot[0] = (t.m[4*2+1] - t.m[4*1+2]);
-        }
-    }
-
-    rot *= (T)1 / RaveSqrt(rot.lengthsqr4());
-}
-
-template <class T>
-RaveTransformMatrix<T>::RaveTransformMatrix(const RaveTransform<T>& t)
-{
-    rotfromquat(t.rot);
-    trans = t.trans;
-
-}
 
 /// \brief A ray defined by an origin and a direction.
 /// \ingroup geometric_primitives
@@ -1048,7 +969,7 @@ inline bool AABBCollision(const aabb<T>& ab1, const aabb<T>& ab2)
     return RaveFabs(v.x) <= ab1.extents.x+ab2.extents.x && RaveFabs(v.y) <= ab1.extents.y+ab2.extents.y && RaveFabs(v.z) <= ab1.extents.z+ab2.extents.z;
 }
 
-template <class T> inline void mult(T* pf, T fa, int r)
+template <typename T> inline void mult(T* pf, T fa, int r)
 {
 	MATH_ASSERT( pf != NULL );
 
@@ -1058,11 +979,11 @@ template <class T> inline void mult(T* pf, T fa, int r)
 	}
 }
 
-template <class T> int Min(T* pts, int stride, int numPts); // returns the index, stride in units of T
-template <class T> int Max(T* pts, int stride, int numPts); // returns the index
+template <typename T> int Min(T* pts, int stride, int numPts); // returns the index, stride in units of T
+template <typename T> int Max(T* pts, int stride, int numPts); // returns the index
 
 // multiplies a matrix by a scalar
-template <class T> inline void mult(T* pf, T fa, int r);
+template <typename T> inline void mult(T* pf, T fa, int r);
 
 // multiplies a r1xc1 by c1xc2 matrix into pfres, if badd is true adds the result to pfres
 // does not handle cases where pfres is equal to pf1 or pf2, use multtox for those cases
@@ -1086,23 +1007,23 @@ inline S* multtrans_to2(T* pf1, R* pf2, int r1, int c1, int r2, S* pfres, bool b
 // the function needs a temporary buffer the size of c doubles, if pftemp == NULL,
 // the function will allocate the necessary memory, otherwise pftemp should be big
 // enough to store all the entries
-template <class T> inline T* multto1(T* pf1, T* pf2, int r1, int c1, T* pftemp = NULL);
+template <typename T> inline T* multto1(T* pf1, T* pf2, int r1, int c1, T* pftemp = NULL);
 
 // same as multto1 except stores the result in pf2, pf1 has to be an r2xr2 matrix
 // pftemp must be of size r2 if not NULL
 template <class T, class S> inline T* multto2(T* pf1, S* pf2, int r2, int c2, S* pftemp = NULL);
 
 // add pf1 + pf2 and store in pf1
-template <class T> inline void sub(T* pf1, T* pf2, int r);
-template <class T> inline T normsqr(const T* pf1, int r);
-template <class T> inline T lengthsqr(const T* pf1, const T* pf2, int length);
-template <class T> inline T dot(T* pf1, T* pf2, int length);
+template <typename T> inline void sub(T* pf1, T* pf2, int r);
+template <typename T> inline T normsqr(const T* pf1, int r);
+template <typename T> inline T lengthsqr(const T* pf1, const T* pf2, int length);
+template <typename T> inline T dot(T* pf1, T* pf2, int length);
 
-template <class T> inline T sum(T* pf, int length);
+template <typename T> inline T sum(T* pf, int length);
 
 /// takes the inverse of the 2x2 matrix pf and stores it into pfres, returns true if matrix is invertible
 /// \ingroup affine_math
-template <class T> inline bool inv2(T* pf, T* pfres);
+template <typename T> inline bool inv2(T* pf, T* pfres);
 
 ///////////////////////
 // Function Definitions
@@ -1151,7 +1072,7 @@ bool eig2(const T* pfmat, T* peigs, T& fv1x, T& fv1y, T& fv2x, T& fv2y)
 }
 
 // returns the number of real roots, fills r1 and r2 with the answers
-template <class T>
+template <typename T>
 inline int solvequad(T a, T b, T c, T& r1, T& r2)
 {
     T d = b * b - (T)4 * c * a + (T)1e-16;
@@ -1182,7 +1103,7 @@ inline int solvequad(T a, T b, T c, T& r1, T& r2)
     }
 
 /// mult3 with a 3x3 matrix whose row stride is 16 bytes
-template <class T>
+template <typename T>
 inline T* _mult3_s4(T* pfres, const T* pf1, const T* pf2)
 {
     MATH_ASSERT( pf1 != NULL && pf2 != NULL && pfres != NULL );
@@ -1197,7 +1118,7 @@ inline T* _mult3_s4(T* pfres, const T* pf1, const T* pf2)
 }
 
 /// mult3 with a 3x3 matrix whose row stride is 12 bytes
-template <class T>
+template <typename T>
 inline T* _mult3_s3(T* pfres, const T* pf1, const T* pf2)
 {
     MATH_ASSERT( pf1 != NULL && pf2 != NULL && pfres != NULL );
@@ -1214,7 +1135,7 @@ inline T* _mult3_s3(T* pfres, const T* pf1, const T* pf2)
 }
 
 // mult4
-template <class T> 
+template <typename T> 
 inline T* _mult4(T* pfres, const T* p1, const T* p2)
 {
     MATH_ASSERT( pfres != NULL && p1 != NULL && p2 != NULL );
@@ -1247,7 +1168,7 @@ inline T* _mult4(T* pfres, const T* p1, const T* p2)
     return pfres;
 }
 
-template <class T> 
+template <typename T> 
 inline T* _multtrans3(T* pfres, const T* pf1, const T* pf2)
 {
     T* pfres2;
@@ -1271,7 +1192,7 @@ inline T* _multtrans3(T* pfres, const T* pf1, const T* pf2)
     return pfres;
 }
 
-template <class T> 
+template <typename T> 
 inline T* _multtrans4(T* pfres, const T* pf1, const T* pf2)
 {
     T* pfres2;
@@ -1289,8 +1210,7 @@ inline T* _multtrans4(T* pfres, const T* pf1, const T* pf2)
 
 /// \brief Generate a uniformly distributed random quaternion.
 /// \ingroup affine_math
-template <typename T>
-inline RaveVector<T> GetRandomQuat()
+template <typename T> inline RaveVector<T> GetRandomQuat()
 {
     RaveVector<T> q;
     while(1) {
@@ -1307,80 +1227,242 @@ inline RaveVector<T> GetRandomQuat()
     return q;
 }
 
+template <typename T> inline RaveVector<T> AxisAngle2Quat(const RaveVector<T>& rotaxis, T angle) RAVE_DEPRECATED;
+
 /// \brief Convertex axis angle reprensetation to quaternions.
 /// \ingroup affine_math
-template <class T>
-inline RaveVector<T> AxisAngle2Quat(const RaveVector<T>& rotaxis, T angle)
+template <typename T> inline RaveVector<T> AxisAngle2Quat(const RaveVector<T>& rotaxis, T angle)
 {
     angle *= (T)0.5;
     T fsin = RaveSin(angle);
     return RaveVector<T>(RaveCos(angle), rotaxis.x*fsin, rotaxis.y * fsin, rotaxis.z * fsin);
 }
 
-/// \brief Multiply two quaternions
+/// \brief Converts an axis-angle rotation into a quaternion.
+///
 /// \ingroup affine_math
-template <class T>
-inline RaveVector<T> quatMultiply(const RaveVector<T>& q0, const RaveVector<T>& q1)
+/// \param axis unit axis, 3 values
+/// \param angle rotation angle (radians)
+template <typename T> inline RaveVector<T> quatFromAxisAngle(const RaveVector<T>& axis, T angle)
 {
-    RaveVector<T> q(q0.x*q1.x - q0.y*q1.y - q0.z*q1.z - q0.w*q1.w,
-                    q0.x*q1.y + q0.y*q1.x + q0.z*q1.w - q0.w*q1.z,
-                    q0.x*q1.z + q0.z*q1.x + q0.w*q1.y - q0.y*q1.w,
-                    q0.x*q1.w + q0.w*q1.x + q0.y*q1.z - q0.z*q1.y);
-    // normalize the quaternion
-    T fnorm = q.lengthsqr4();
-    MATH_ASSERT( fnorm > 0.98f && fnorm < 1.02f );
+    T axislen = RaveSqrt(axis.lengthsqr3());
+    if( axislen == 0 ) {
+        return RaveVector<T>(T(1),T(0),T(0),T(0));
+    }
+    angle *= T(0.5);
+    T sang = RaveSin(angle)/axislen;
+    return RaveVector<T>(RaveCos(angle),axis.x*sang,axis.y*sang,axis.z*sang);
+}
+
+/// \brief Converts an axis-angle rotation into a quaternion.
+///
+/// \ingroup affine_math
+/// \param axisangle unit axis * rotation angle (radians), 3 values
+template <typename T> inline RaveVector<T> quatFromAxisAngle(const RaveVector<T>& axisangle)
+{
+    T axislen = RaveSqrt(axisangle.lengthsqr3());
+    if( axislen < g_fEpsilon ) {
+        return RaveVector<T>(T(1),T(0),T(0),T(0));
+    }
+    T sang = RaveSin(axislen*T(0.5))/axislen;
+    return RaveVector<T>(RaveCos(axislen*T(0.5)),axisangle.x*sang,axisangle.y*sang,axisangle.z*sang);
+}
+
+/// \brief Converts the rotation of a matrix into a quaternion.
+///
+/// \ingroup affine_math
+/// \param t transform for extracting the 3x3 rotation.
+template <typename T> inline RaveVector<T> quatFromRotationMatrix(const RaveTransformMatrix<T>& rotation)
+{
+    RaveVector<T> rot;
+    T tr = rotation.m[4*0+0] + rotation.m[4*1+1] + rotation.m[4*2+2];
+    if (tr >= 0) {
+        rot[0] = tr + 1;
+        rot[1] = (rotation.m[4*2+1] - rotation.m[4*1+2]);
+        rot[2] = (rotation.m[4*0+2] - rotation.m[4*2+0]);
+        rot[3] = (rotation.m[4*1+0] - rotation.m[4*0+1]);
+    }
+    else {
+        // find the largest diagonal element and jump to the appropriate case
+        if (rotation.m[4*1+1] > rotation.m[4*0+0]) {
+            if (rotation.m[4*2+2] > rotation.m[4*1+1]) {
+                rot[3] = (rotation.m[4*2+2] - (rotation.m[4*0+0] + rotation.m[4*1+1])) + 1;
+                rot[1] = (rotation.m[4*2+0] + rotation.m[4*0+2]);
+                rot[2] = (rotation.m[4*1+2] + rotation.m[4*2+1]);
+                rot[0] = (rotation.m[4*1+0] - rotation.m[4*0+1]);
+            }
+            else {
+                rot[2] = (rotation.m[4*1+1] - (rotation.m[4*2+2] + rotation.m[4*0+0])) + 1;
+                rot[3] = (rotation.m[4*1+2] + rotation.m[4*2+1]);
+                rot[1] = (rotation.m[4*0+1] + rotation.m[4*1+0]);
+                rot[0] = (rotation.m[4*0+2] - rotation.m[4*2+0]);
+            }
+        }
+        else if (rotation.m[4*2+2] > rotation.m[4*0+0]) {
+            rot[3] = (rotation.m[4*2+2] - (rotation.m[4*0+0] + rotation.m[4*1+1])) + 1;
+            rot[1] = (rotation.m[4*2+0] + rotation.m[4*0+2]);
+            rot[2] = (rotation.m[4*1+2] + rotation.m[4*2+1]);
+            rot[0] = (rotation.m[4*1+0] - rotation.m[4*0+1]);
+        }
+        else {
+            rot[1] = (rotation.m[4*0+0] - (rotation.m[4*1+1] + rotation.m[4*2+2])) + 1;
+            rot[2] = (rotation.m[4*0+1] + rotation.m[4*1+0]);
+            rot[3] = (rotation.m[4*2+0] + rotation.m[4*0+2]);
+            rot[0] = (rotation.m[4*2+1] - rotation.m[4*1+2]);
+        }
+    }
+    return rot * (T(1) / RaveSqrt(rot.lengthsqr4()));
+}
+
+/// \brief Converts a quaternion to a 3x3 matrix
+///
+/// \ingroup affine_math
+/// \param[in] quat quaternion, (s,vx,vy,vz)
+template <typename T> inline RaveTransformMatrix<T> rotationMatrixFromQuat(const RaveVector<T>& quat)
+{
+    RaveTransformMatrix<T> t;
+    T qq1 = 2*quat[1]*quat[1];
+    T qq2 = 2*quat[2]*quat[2];
+    T qq3 = 2*quat[3]*quat[3];
+    t.m[4*0+0] = 1 - qq2 - qq3;
+    t.m[4*0+1] = 2*(quat[1]*quat[2] - quat[0]*quat[3]);
+    t.m[4*0+2] = 2*(quat[1]*quat[3] + quat[0]*quat[2]);
+    t.m[4*0+3] = 0;
+    t.m[4*1+0] = 2*(quat[1]*quat[2] + quat[0]*quat[3]);
+    t.m[4*1+1] = 1 - qq1 - qq3;
+    t.m[4*1+2] = 2*(quat[2]*quat[3] - quat[0]*quat[1]);
+    t.m[4*1+3] = 0;
+    t.m[4*2+0] = 2*(quat[1]*quat[3] - quat[0]*quat[2]);
+    t.m[4*2+1] = 2*(quat[2]*quat[3] + quat[0]*quat[1]);
+    t.m[4*2+2] = 1 - qq1 - qq2;
+    t.m[4*2+3] = 0;
+    return t;
+}
+
+/// \brief Converts a quaternion to a 3x3 matrix
+///
+/// \ingroup affine_math
+/// \param[out] rotation 
+/// \param[in] quat quaternion, (s,vx,vy,vz)
+template <typename T> void rotationMatrixFromQuat(RaveTransformMatrix<T>& rotation, const RaveVector<T>& quat)
+{
+    T qq1 = 2*quat[1]*quat[1];
+    T qq2 = 2*quat[2]*quat[2];
+    T qq3 = 2*quat[3]*quat[3];
+    rotation.m[4*0+0] = 1 - qq2 - qq3;
+    rotation.m[4*0+1] = 2*(quat[1]*quat[2] - quat[0]*quat[3]);
+    rotation.m[4*0+2] = 2*(quat[1]*quat[3] + quat[0]*quat[2]);
+    rotation.m[4*0+3] = 0;
+    rotation.m[4*1+0] = 2*(quat[1]*quat[2] + quat[0]*quat[3]);
+    rotation.m[4*1+1] = 1 - qq1 - qq3;
+    rotation.m[4*1+2] = 2*(quat[2]*quat[3] - quat[0]*quat[1]);
+    rotation.m[4*1+3] = 0;
+    rotation.m[4*2+0] = 2*(quat[1]*quat[3] - quat[0]*quat[2]);
+    rotation.m[4*2+1] = 2*(quat[2]*quat[3] + quat[0]*quat[1]);
+    rotation.m[4*2+2] = 1 - qq1 - qq2;
+    rotation.m[4*2+3] = 0;
+}
+
+/// \brief Converts an axis-angle rotation to a 3x3 matrix.
+///
+/// \ingroup affine_math
+/// \param axis unit axis, 3 values
+/// \param angle rotation angle (radians)
+template <typename T> inline RaveTransformMatrix<T> rotationMatrixFromAxisAngle(const RaveVector<T>& axis, T angle)
+{
+    return rotationMatrixFromQuat(quatFromAxisAngle(axis,angle));
+}
+
+/// \brief Converts an axis-angle rotation to a 3x3 matrix.
+///
+/// \ingroup affine_math
+/// \param axis unit axis * rotation angle (radians), 3 values
+template <typename T> inline RaveTransformMatrix<T> rotationMatrixFromAxisAngle(const RaveVector<T>& axisangle)
+{
+    return rotationMatrixFromQuat(quatFromAxisAngle(axisangle));
+}
+
+/// \brief Multiply two quaternions
+///
+/// \ingroup affine_math
+/// \param quat0 quaternion, (s,vx,vy,vz)
+/// \param quat1 quaternion, (s,vx,vy,vz)
+template <typename T>
+inline RaveVector<T> quatMultiply(const RaveVector<T>& quat0, const RaveVector<T>& quat1)
+{
+    RaveVector<T> q(quat0.x*quat1.x - quat0.y*quat1.y - quat0.z*quat1.z - quat0.w*quat1.w,
+                    quat0.x*quat1.y + quat0.y*quat1.x + quat0.z*quat1.w - quat0.w*quat1.z,
+                    quat0.x*quat1.z + quat0.z*quat1.x + quat0.w*quat1.y - quat0.y*quat1.w,
+                    quat0.x*quat1.w + quat0.w*quat1.x + quat0.y*quat1.z - quat0.z*quat1.y);
+    T fnorm = q.lengthsqr4(); // normalize the quaternion
+    MATH_ASSERT( fnorm > 0.98f && fnorm < 1.02f ); // catches multi-threading errors
     return q * (T(1)/RaveSqrt(fnorm));
 }
 
 /// \brief Inverted a quaternion rotation.
+///
 /// \ingroup affine_math
-template <class T>
-inline RaveVector<T> quatInverse(const RaveVector<T>& q)
+/// \param quat quaternion, (s,vx,vy,vz)
+template <typename T>
+inline RaveVector<T> quatInverse(const RaveVector<T>& quat)
 {
-    return RaveVector<T>(q.x,-q.y,-q.z,-q.w);
+    return RaveVector<T>(quat.x,-quat.y,-quat.z,-quat.w);
 }
 
-/// \brief Quaternion spherical linear interpolation.
+/// \brief Sphereical linear interpolation between two quaternions.
+///
 /// \ingroup affine_math
-template <class T>
-inline RaveVector<T> dQSlerp(const RaveVector<T>& qa, const RaveVector<T>& _qb, T t)
+/// \param quat0 quaternion, (s,vx,vy,vz)
+/// \param quat1 quaternion, (s,vx,vy,vz)
+/// \param t real value in [0,1]. 0 returns quat1, 1 returns quat2
+template <typename T>
+inline RaveVector<T> quatSlerp(const RaveVector<T>& quat0, const RaveVector<T>& quat1, T t)
 {
     // quaternion to return
     RaveVector<T> qb, qm;
-    if( dot4(qa,_qb) < 0 ) {
-        qb = -_qb;
+    if( dot4(quat0,quat1) < 0 ) {
+        qb = -quat1;
     }
     else {
-        qb = _qb;
+        qb = quat1;
     }
     // Calculate angle between them.
-    T cosHalfTheta = qa.w * qb.w + qa.x * qb.x + qa.y * qb.y + qa.z * qb.z;
-    // if qa=qb or qa=-qb then theta = 0 and we can return qa
+    T cosHalfTheta = quat0.w * qb.w + quat0.x * qb.x + quat0.y * qb.y + quat0.z * qb.z;
+    // if quat0=qb or quat0=-qb then theta = 0 and we can return quat0
     if (RaveFabs(cosHalfTheta) >= 1.0){
-        qm.w = qa.w;qm.x = qa.x;qm.y = qa.y;qm.z = qa.z;
+        qm.w = quat0.w;qm.x = quat0.x;qm.y = quat0.y;qm.z = quat0.z;
         return qm;
     }
     // Calculate temporary values.
     T halfTheta = RaveAcos(cosHalfTheta);
     T sinHalfTheta = RaveSqrt(1 - cosHalfTheta*cosHalfTheta);
     // if theta = 180 degrees then result is not fully defined
-    // we could rotate around any axis normal to qa or qb
+    // we could rotate around any axis normal to quat0 or qb
     if (RaveFabs(sinHalfTheta) < 1e-7f){ // fabs is floating point absolute
-        qm.w = (qa.w * 0.5f + qb.w * 0.5f);
-        qm.x = (qa.x * 0.5f + qb.x * 0.5f);
-        qm.y = (qa.y * 0.5f + qb.y * 0.5f);
-        qm.z = (qa.z * 0.5f + qb.z * 0.5f);
+        qm.w = (quat0.w * 0.5f + qb.w * 0.5f);
+        qm.x = (quat0.x * 0.5f + qb.x * 0.5f);
+        qm.y = (quat0.y * 0.5f + qb.y * 0.5f);
+        qm.z = (quat0.z * 0.5f + qb.z * 0.5f);
         return qm;
     }
 
     T ratioA = RaveSin((1 - t) * halfTheta) / sinHalfTheta;
     T ratioB = RaveSin(t * halfTheta) / sinHalfTheta; 
     //calculate Quaternion.
-    qm.w = (qa.w * ratioA + qb.w * ratioB);
-    qm.x = (qa.x * ratioA + qb.x * ratioB);
-    qm.y = (qa.y * ratioA + qb.y * ratioB);
-    qm.z = (qa.z * ratioA + qb.z * ratioB);
+    qm.w = (quat0.w * ratioA + qb.w * ratioB);
+    qm.x = (quat0.x * ratioA + qb.x * ratioB);
+    qm.y = (quat0.y * ratioA + qb.y * ratioB);
+    qm.z = (quat0.z * ratioA + qb.z * ratioB);
     return qm;
+}
+
+template <typename T>
+inline RaveVector<T> dQSlerp(const RaveVector<T>& qa, const RaveVector<T>& _qb, T t) RAVE_DEPRECATED;
+
+template <typename T>
+inline RaveVector<T> dQSlerp(const RaveVector<T>& qa, const RaveVector<T>& _qb, T t)
+{
+    return quatSlerp<T>(qa,_qb,t);
 }
 
 /// \brief Return the minimal quaternion that orients vsource to vtarget.
@@ -1408,6 +1490,21 @@ RaveVector<T> quatRotateDirection(const RaveVector<T>& vsource, const RaveVector
         torient.rotfromaxisangle(rottodirection, RaveAtan2(fsin, fcos));
     }
     return torient.rot;
+}
+
+template <typename T>
+RaveTransform<T>::RaveTransform(const RaveTransformMatrix<T>& t)
+{
+    trans = t.trans;
+    rot = quatFromRotationMatrix(t);
+}
+
+template <typename T>
+RaveTransformMatrix<T>::RaveTransformMatrix(const RaveTransform<T>& t)
+{
+    rotationMatrixFromQuat(*this, t.rot);
+    trans = t.trans;
+
 }
 
 /// \brief Returns a camera matrix that looks along a ray with a desired up vector.
@@ -1451,7 +1548,7 @@ RaveTransformMatrix<T> transformLookat(const RaveVector<T>& vlookat, const RaveV
 
 /// \brief Compute the determinant of a 3x3 matrix whose row stride stride elements.
 /// \ingroup affine_math
-template <class T> inline T matrixdet3(const T* pf, int stride)
+template <typename T> inline T matrixdet3(const T* pf, int stride)
 {
     return pf[0*stride+2] * (pf[1*stride + 0] * pf[2*stride + 1] - pf[1*stride + 1] * pf[2*stride + 0]) +
         pf[1*stride+2] * (pf[0*stride + 1] * pf[2*stride + 0] - pf[0*stride + 0] * pf[2*stride + 1]) +
@@ -1466,7 +1563,7 @@ template <class T> inline T matrixdet3(const T* pf, int stride)
     \param[out] pfdet if not NULL, fills it with the determinant of the source matrix
     \param[in] stride the stride in elements between elements.
 */
-template <class T>
+template <typename T>
 inline T* _inv3(const T* pf, T* pfres, T* pfdet, int stride)
 {
 	T* pfres2;
@@ -1520,7 +1617,7 @@ inline T* _inv3(const T* pf, T* pfres, T* pfdet, int stride)
 
 /// \brief 4x4 matrix inverse.
 /// \ingroup affine_math
-template <class T>
+template <typename T>
 inline T* _inv4(const T* pf, T* pfres)
 {
 	T* pfres2;
@@ -1599,7 +1696,7 @@ inline T* _inv4(const T* pf, T* pfres)
 
 /// \brief Transpose a 3x3 matrix.
 /// \ingroup affine_math
-template <class T>
+template <typename T>
 inline T* _transpose3(const T* pf, T* pfres)
 {
 	MATH_ASSERT( pf != NULL && pfres != NULL );
@@ -1620,7 +1717,7 @@ inline T* _transpose3(const T* pf, T* pfres)
 
 /// \brief Transpose a 4x4 matrix.
 /// \ingroup affine_math
-template <class T>
+template <typename T>
 inline T* _transpose4(const T* pf, T* pfres)
 {
 	MATH_ASSERT( pf != NULL && pfres != NULL );
@@ -1642,49 +1739,49 @@ inline T* _transpose4(const T* pf, T* pfres)
 	return pfres;
 }
 
-template <class T>
+template <typename T>
 inline T _dot2(const T* pf1, const T* pf2)
 {
 	MATH_ASSERT( pf1 != NULL && pf2 != NULL );
 	return pf1[0]*pf2[0] + pf1[1]*pf2[1];
 }
 
-template <class T>
+template <typename T>
 inline T _dot3(const T* pf1, const T* pf2)
 {
 	MATH_ASSERT( pf1 != NULL && pf2 != NULL );
 	return pf1[0]*pf2[0] + pf1[1]*pf2[1] + pf1[2]*pf2[2];
 }
 
-template <class T>
+template <typename T>
 inline T _dot4(const T* pf1, const T* pf2)
 {
 	MATH_ASSERT( pf1 != NULL && pf2 != NULL );
 	return pf1[0]*pf2[0] + pf1[1]*pf2[1] + pf1[2]*pf2[2] + pf1[3] * pf2[3];
 }
 
-template <class T>
+template <typename T>
 inline T _lengthsqr2(const T* pf)
 {
 	MATH_ASSERT( pf != NULL );
 	return pf[0] * pf[0] + pf[1] * pf[1];
 }
 
-template <class T>
+template <typename T>
 inline T _lengthsqr3(const T* pf)
 {
 	MATH_ASSERT( pf != NULL );
 	return pf[0] * pf[0] + pf[1] * pf[1] + pf[2] * pf[2];
 }
 
-template <class T>
+template <typename T>
 inline T _lengthsqr4(const T* pf)
 {
 	MATH_ASSERT( pf != NULL );
 	return pf[0] * pf[0] + pf[1] * pf[1] + pf[2] * pf[2] + pf[3] * pf[3];
 }
 
-template <class T>
+template <typename T>
 inline T* _normalize2(T* pfout, const T* pf)
 {
 	MATH_ASSERT(pf != NULL);
@@ -1697,7 +1794,7 @@ inline T* _normalize2(T* pfout, const T* pf)
 	return pfout;
 }
 
-template <class T>
+template <typename T>
 inline T* _normalize3(T* pfout, const T* pf)
 {
 	MATH_ASSERT(pf != NULL);
@@ -1712,7 +1809,7 @@ inline T* _normalize3(T* pfout, const T* pf)
 	return pfout;
 }
 
-template <class T>
+template <typename T>
 inline T* _normalize4(T* pfout, const T* pf)
 {
 	MATH_ASSERT(pf != NULL);
@@ -1728,7 +1825,7 @@ inline T* _normalize4(T* pfout, const T* pf)
 	return pfout;
 }
 
-template <class T>
+template <typename T>
 inline T* _cross3(T* pfout, const T* pf1, const T* pf2)
 {
 	MATH_ASSERT( pfout != NULL && pf1 != NULL && pf2 != NULL );
@@ -1742,7 +1839,7 @@ inline T* _cross3(T* pfout, const T* pf1, const T* pf2)
     return pfout;
 }
 
-template <class T>
+template <typename T>
 inline T* transcoord3(T* pfout, const RaveTransformMatrix<T>* pmat, const T* pf)
 {
 	MATH_ASSERT( pfout != NULL && pf != NULL && pmat != NULL );
@@ -1763,7 +1860,7 @@ inline T* transcoord3(T* pfout, const RaveTransformMatrix<T>* pmat, const T* pf)
 	return pfout;
 }
 
-template <class T>
+template <typename T>
 inline T* _transnorm3(T* pfout, const T* pfmat, const T* pf)
 {
 	MATH_ASSERT( pfout != NULL && pf != NULL && pfmat != NULL );
@@ -1784,7 +1881,7 @@ inline T* _transnorm3(T* pfout, const T* pfmat, const T* pf)
 	return pfout;
 }
 
-template <class T>
+template <typename T>
 inline T* transnorm3(T* pfout, const RaveTransformMatrix<T>* pmat, const T* pf)
 {
 	MATH_ASSERT( pfout != NULL && pf != NULL && pmat != NULL );
@@ -1953,7 +2050,7 @@ inline S* multtrans_to2(T* pf1, R* pf2, int r1, int c1, int r2, S* pfres, bool b
 	return pfres;
 }
 
-template <class T> inline T* multto1(T* pf1, T* pf2, int r, int c, T* pftemp)
+template <typename T> inline T* multto1(T* pf1, T* pf2, int r, int c, T* pftemp)
 {
 	MATH_ASSERT( pf1 != NULL && pf2 != NULL );
 
@@ -2032,7 +2129,7 @@ template <class T, class S> inline T* multto2(T* pf1, S* pf2, int r2, int c2, S*
 	return pf1;
 }
 
-template <class T> inline void add(T* pf1, T* pf2, int r)
+template <typename T> inline void add(T* pf1, T* pf2, int r)
 {
 	MATH_ASSERT( pf1 != NULL && pf2 != NULL);
 
@@ -2042,7 +2139,7 @@ template <class T> inline void add(T* pf1, T* pf2, int r)
 	}
 }
 
-template <class T> inline void sub(T* pf1, T* pf2, int r)
+template <typename T> inline void sub(T* pf1, T* pf2, int r)
 {
 	MATH_ASSERT( pf1 != NULL && pf2 != NULL);
 
@@ -2052,7 +2149,7 @@ template <class T> inline void sub(T* pf1, T* pf2, int r)
 	}
 }
 
-template <class T> inline T normsqr(const T* pf1, int r)
+template <typename T> inline T normsqr(const T* pf1, int r)
 {
 	MATH_ASSERT( pf1 != NULL );
 
@@ -2065,7 +2162,7 @@ template <class T> inline T normsqr(const T* pf1, int r)
 	return d;
 }
 
-template <class T> inline T lengthsqr(const T* pf1, const T* pf2, int length)
+template <typename T> inline T lengthsqr(const T* pf1, const T* pf2, int length)
 {
 	T d = 0;
 	while(length > 0) {
@@ -2077,7 +2174,7 @@ template <class T> inline T lengthsqr(const T* pf1, const T* pf2, int length)
 	return d;
 }
 
-template <class T> inline T dot(T* pf1, T* pf2, int length)
+template <typename T> inline T dot(T* pf1, T* pf2, int length)
 {
 	T d = 0;
 	while(length > 0) {
@@ -2088,7 +2185,7 @@ template <class T> inline T dot(T* pf1, T* pf2, int length)
 	return d;
 }
 
-template <class T> inline T sum(T* pf, int length)
+template <typename T> inline T sum(T* pf, int length)
 {
 	T d = 0;
 	while(length > 0) {
@@ -2099,7 +2196,7 @@ template <class T> inline T sum(T* pf, int length)
 	return d;
 }
 
-template <class T> inline bool inv2(T* pf, T* pfres)
+template <typename T> inline bool inv2(T* pf, T* pfres)
 {
 	T fdet = pf[0] * pf[3] - pf[1] * pf[2];
 
@@ -2219,7 +2316,7 @@ inline void svd3(const T* A, T* U, T* D, T* V)
     }
 }
 
-template <class T>
+template <typename T>
 int Min(T* pts, int stride, int numPts)
 {
     MATH_ASSERT( pts != NULL && numPts > 0 && stride > 0 );
@@ -2233,7 +2330,7 @@ int Min(T* pts, int stride, int numPts)
     return best;
 }
 
-template <class T>
+template <typename T>
 int Max(T* pts, int stride, int numPts)
 {
     MATH_ASSERT( pts != NULL && numPts > 0 && stride > 0 );

@@ -64,11 +64,6 @@ void TrajectoryBase::Clear()
     _vecsegments.resize(0);
 }
 
-//! specify the trajectory timing and interpolation method.
-//
-//  if the 'bAutoCalTiming' flag is set, then the timing of the
-//  trajectory is automatically calculated based on the maximum
-//  joint velocities and accelerations.
 bool TrajectoryBase::CalcTrajTiming(RobotBaseConstPtr pRobot, InterpEnum interpolationMethod, bool bAutoCalcTiming, bool bActiveDOFs, dReal fMaxVelMult)
 {
     if( _vecpoints.size() == 0 )
@@ -140,8 +135,6 @@ bool TrajectoryBase::CalcTrajTiming(RobotBaseConstPtr pRobot, InterpEnum interpo
     return bSuccess;
 }
 
-//! sample the trajectory at a given time using the current
-//   interpolation  method 
 bool TrajectoryBase::SampleTrajectory(dReal time, TPOINT &sample) const
 {
     if (_vecpoints.size() < 2) {
@@ -212,11 +205,6 @@ bool TrajectoryBase::SampleTrajectory(dReal time, TPOINT &sample) const
     return false;
 }
 
-//! perform basic error checking on the trajectory via points.
-//
-//  checks internal data structures and verifies that all trajectory
-//  via points do not violate joint position, velocity, and
-//  acceleration limits.
 bool TrajectoryBase::IsValid() const
 {
     RAVELOG_VERBOSEA("Checking validity of trajectory points...\n");
@@ -248,11 +236,6 @@ bool TrajectoryBase::IsValid() const
     return bResult;
 }
 
-////////////////
-//
-// PRIVATE METHODS
-
-//! linear interpolation using the maximum joint velocities for timing
 bool TrajectoryBase::_SetLinear(bool bAutoCalcTiming, bool bActiveDOFs)
 {
     _vecsegments.resize(_vecpoints.size());
@@ -343,7 +326,6 @@ bool TrajectoryBase::_SetLinear(bool bAutoCalcTiming, bool bActiveDOFs)
     return true;
 }
 
-////! linear interpolation with parabolic blends
 //bool TrajectoryBase::_SetLinearBlend(bool bAutoCalcTiming)
 //{
 //    cerr << "Setting linear blend trajectory..." << endl;
@@ -410,8 +392,6 @@ bool TrajectoryBase::_SetLinear(bool bAutoCalcTiming, bool bActiveDOFs)
 //    return true;
 //}
 //
-////! calculate the coefficients of a the parabolic and linear blends
-////  with continuous endpoint positions and velocities for via points.
 //inline bool TrajectoryBase::_CalculateLinearBlendCoefficients(TSEGMENT::Type segType,
 //                                                          TSEGMENT& seg, TSEGMENT& prev,
 //                                                          TPOINT& p0, TPOINT& p1,
@@ -490,7 +470,6 @@ bool TrajectoryBase::_SetLinear(bool bAutoCalcTiming, bool bActiveDOFs)
 //}
 //
 
-/// cubic spline interpolation
 bool TrajectoryBase::_SetCubic(bool bAutoCalcTiming, bool bActiveDOFs)
 {
     _vecsegments.resize(_vecpoints.size());
@@ -547,8 +526,6 @@ bool TrajectoryBase::_SetCubic(bool bAutoCalcTiming, bool bActiveDOFs)
     return true;
 }
 
-/// calculate the coefficients of a smooth cubic spline with
-///  continuous endpoint positions and velocities for via points.
 void TrajectoryBase::_CalculateCubicCoefficients(TrajectoryBase::TSEGMENT& seg, const TPOINT& tp0, const TPOINT& tp1)
 {
     dReal t = tp1.time - tp0.time; // extract duration
@@ -628,7 +605,6 @@ void TrajectoryBase::_CalculateCubicCoefficients(TrajectoryBase::TSEGMENT& seg, 
 //    return true;
 //}
 
-//! recalculate all via point velocities and accelerations
 void TrajectoryBase::_RecalculateViaPointDerivatives()
 {
     dReal prevSlope, nextSlope;
@@ -675,9 +651,6 @@ void TrajectoryBase::_RecalculateViaPointDerivatives()
     }
 }
 
-////! calculate the coefficients of a smooth quintic spline with
-////  continuous endpoint positions and velocities for via points
-////  using minimum jerk heuristics
 //inline bool TrajectoryBase::_CalculateQuinticCoefficients(JointConfig a[],
 //                                                      TPOINT& tp0,
 //                                                      TPOINT& tp1)
@@ -722,8 +695,6 @@ void TrajectoryBase::_RecalculateViaPointDerivatives()
 //    return true;
 //}
 
-/// computes minimum time interval for linear interpolation between
-///  path points that does not exceed the maximum joint velocities 
 inline dReal TrajectoryBase::_MinimumTimeLinear(const TPOINT& tp0, const TPOINT& tp1, bool bActiveDOFs)
 {
     dReal minJointTime;
@@ -753,9 +724,6 @@ inline dReal TrajectoryBase::_MinimumTimeLinear(const TPOINT& tp0, const TPOINT&
     return minPathTime;
 }
 
-/// computes minimum time interval for cubic interpolation between
-///  path points that does not exceed the maximum joint velocities 
-///  or accelerations
 dReal TrajectoryBase::_MinimumTimeCubic(const TPOINT& tp0, const TPOINT& tp1, bool bActiveDOFs)
 {
     dReal minJointTime, jointDiff;
@@ -791,9 +759,6 @@ dReal TrajectoryBase::_MinimumTimeCubic(const TPOINT& tp0, const TPOINT& tp1, bo
     return minPathTime;
 }
 
-/// computes minimum time interval for cubic interpolation between
-///  path points that does not exceed the maximum joint velocities 
-///  or accelerations assuming zero velocities at endpoints
 dReal TrajectoryBase::_MinimumTimeCubicZero(const TPOINT& tp0, const TPOINT& tp1, bool bActiveDOFs)
 {
     dReal minJointTime, jointDiff;
@@ -827,9 +792,6 @@ dReal TrajectoryBase::_MinimumTimeCubicZero(const TPOINT& tp0, const TPOINT& tp1
     return minPathTime;
 }
 
-/// computes minimum time interval for quintic interpolation between
-///  path points that does not exceed the maximum joint velocities 
-///  or accelerations
 dReal TrajectoryBase::_MinimumTimeQuintic(const TPOINT& tp0, const TPOINT& tp1, bool bActiveDOFs)
 {
     RAVELOG_ERRORA("Trajectory: ERROR - inaccurate minimum time quintic calculation used.\n");
@@ -877,8 +839,6 @@ dReal TrajectoryBase::_MinimumTimeTransform(const Transform& t0, const Transform
     return max(max(max(x_time,y_time),z_time),rot_dist);
 }
 
-/// find the active trajectory interval covering the given time
-///  (returns the index of the start point of the interval)
 int TrajectoryBase::_FindActiveInterval(dReal time) const
 {
     int index = 0;
@@ -891,7 +851,6 @@ int TrajectoryBase::_FindActiveInterval(dReal time) const
     return index;
 }
 
-/// sample the trajectory using linear interpolation.
 inline bool TrajectoryBase::_SampleLinear(const TPOINT& p0, const TPOINT& p1,
                                       const TSEGMENT& seg, dReal time,
                                       TPOINT& sample) const
@@ -915,12 +874,11 @@ inline bool TrajectoryBase::_SampleLinear(const TPOINT& p0, const TPOINT& p1,
     //NEED TO do t/(seg._fduration-step)
     sample.time = time;
     sample.trans.trans = p0.trans.trans + (t/(seg._fduration))*(p1.trans.trans - p0.trans.trans);
-    sample.trans.rot = dQSlerp(p0.trans.rot, p1.trans.rot,(t/(seg._fduration)));
+    sample.trans.rot = quatSlerp(p0.trans.rot, p1.trans.rot,(t/(seg._fduration)));
     
     return true;
 }
 
-/// sample using linear interpolation with parabolic blends.
 inline bool TrajectoryBase::_SampleLinearBlend(const TPOINT& p0, const TPOINT& p1,
                                            const TSEGMENT& seg, dReal time,
                                            TPOINT& sample) const
@@ -955,12 +913,11 @@ inline bool TrajectoryBase::_SampleLinearBlend(const TPOINT& p0, const TPOINT& p
 
     sample.time = time;
     sample.trans.trans = p0.trans.trans + (t/(seg._fduration))*(p1.trans.trans - p0.trans.trans);
-    sample.trans.rot = dQSlerp(p0.trans.rot, p1.trans.rot,(t/(seg._fduration)));
+    sample.trans.rot = quatSlerp(p0.trans.rot, p1.trans.rot,(t/(seg._fduration)));
 
     return true;
 }
 
-/// sample the trajectory using cubic interpolation.
 inline bool TrajectoryBase::_SampleCubic(const TPOINT& p0, const TPOINT& p1,
                                      const TSEGMENT& seg, dReal time,
                                      TPOINT& sample) const
@@ -983,12 +940,11 @@ inline bool TrajectoryBase::_SampleCubic(const TPOINT& p0, const TPOINT& p1,
     }
     sample.time = time;
     sample.trans.trans = p0.trans.trans + (t/(seg._fduration))*(p1.trans.trans - p0.trans.trans);
-    sample.trans.rot = dQSlerp(p0.trans.rot, p1.trans.rot,(t/(seg._fduration)));
+    sample.trans.rot = quatSlerp(p0.trans.rot, p1.trans.rot,(t/(seg._fduration)));
 
     return true;
 }
 
-//! sample the trajectory using quintic interpolation with minimum jerk.
 inline bool TrajectoryBase::_SampleQuintic(const TPOINT& p0, const TPOINT& p1,
                                        const TSEGMENT& seg, dReal time,
                                        TPOINT& sample) const
@@ -1018,7 +974,7 @@ inline bool TrajectoryBase::_SampleQuintic(const TPOINT& p0, const TPOINT& p1,
     }
     sample.time = time;
     sample.trans.trans = p0.trans.trans + (t/(seg._fduration))*(p1.trans.trans - p0.trans.trans);
-    sample.trans.rot = dQSlerp(p0.trans.rot, p1.trans.rot,(t/(seg._fduration)));
+    sample.trans.rot = quatSlerp(p0.trans.rot, p1.trans.rot,(t/(seg._fduration)));
 
     return true;
 }

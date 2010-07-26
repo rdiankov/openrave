@@ -12,9 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
+"""Generates grasp sets given a robot and a target object.
 
-.. image:: ../../images/grasping_examples.jpg
+.. image:: ../../images/examples_grasping.jpg
   :height: 200
 
 Running the Example
@@ -708,6 +708,7 @@ class GraspingModel(OpenRAVEModel):
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser()
         parser.description='Grasp set generation example for any robot/body pair.'
+        parser.usage='openrave.py --database grasping [options]'
         parser.add_option('--plannername',action="store",type='string',dest='plannername',default=None,
                           help='The grasper planner to use for this model (default=%default)')
         parser.add_option('--target',action="store",type='string',dest='target',default='data/mug1.kinbody.xml',
@@ -759,7 +760,11 @@ class GraspingModel(OpenRAVEModel):
             env.Destroy()
 
 def run(*args,**kwargs):
-    """Executes the grasping database generation
+    """Executes the grasping database generation, ``args`` specifies a list of the arguments to the script.
+    
+    **Help**
+    
+    .. shell-block:: openrave.py --database grasping --help
     """
     GraspingModel.RunFromParser(*args,**kwargs)
 
