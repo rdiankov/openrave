@@ -12,6 +12,8 @@
     \endverbatim
     
     Show how to load an ikfast solver from C++ by specifying the robot and iktype.
+
+    <b>Full Example Code:</b>
  */
 #include <openrave-core.h>
 #include <vector>

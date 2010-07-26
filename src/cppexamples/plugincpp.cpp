@@ -2,6 +2,8 @@
     \author Rosen Diankov
 
     Creates a simple OpenRAVE::ProblemInstance interface.
+
+    <b>Full Example Code:</b>
 */
 #include <rave/rave.h>
 #include <rave/plugin.h>

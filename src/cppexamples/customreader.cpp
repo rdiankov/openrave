@@ -2,6 +2,8 @@
     \author Rosen Diankov
 
     Creates a simple OpenRAVE::ControllerBase and shows how to add a custom XML reader to it.
+
+    <b>Full Example Code:</b>
 */
 #include <rave/rave.h>
 #include <rave/plugin.h>

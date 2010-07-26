@@ -17,8 +17,21 @@
     \endcode
     
     The demo also adds a collision check at the target point to make sure robot is going to a
-    collision free configuration. In order for the path itself to be collision free, we would have
-    to use planners.
+    collision free configuration.
+
+    \code
+    {
+        RobotBase::RobotStateSaver saver(probot); // add a state saver so robot is not moved permenantly
+        probot->SetJointValues(q);
+        if( penv->CheckCollision(RobotBaseConstPtr(probot)) ) {
+            continue; // robot in collision at final point, so reject
+        }
+    }
+    \endcode
+    
+    In order for the path itself to be collision free, we would have to use planners.
+
+    <b>Full Example Code:</b>
 */    
 #include <openrave-core.h>
 #include <vector>
@@ -70,9 +83,16 @@ int main(int argc, char ** argv)
             probot->GetDOFValues(q); // get current values
             traj->AddPoint(TrajectoryBase::TPOINT(q,probot->GetTransform(),0.0f));
             q[RaveRandomInt()%probot->GetDOF()] += RaveRandomFloat()-0.5; // move a random axis
-            if( penv->CheckCollision(RobotBaseConstPtr(probot)) ) {
-                continue; // robot in collision at final point, so reject
+
+            // check for collisions
+            {
+                RobotBase::RobotStateSaver saver(probot); // add a state saver so robot is not moved permenantly
+                probot->SetJointValues(q);
+                if( penv->CheckCollision(RobotBaseConstPtr(probot)) ) {
+                    continue; // robot in collision at final point, so reject
+                }
             }
+
             traj->AddPoint(TrajectoryBase::TPOINT(q,probot->GetTransform(),2.0f));
             traj->CalcTrajTiming(probot,TrajectoryBase::CUBIC,false,false); // initialize the trajectory structures
             probot->GetController()->SetPath(traj);

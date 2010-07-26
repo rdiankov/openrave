@@ -15,6 +15,8 @@
     \verbatim
     ./orloadviewer --scene data/lab1.env.xml qtcoin
     \endverbatim
+
+    <b>Full Example Code:</b>
 */    
 #include <openrave-core.h>
 #include <vector>

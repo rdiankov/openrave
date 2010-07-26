@@ -17,6 +17,8 @@
     \verbatim
     orcollision --checker ode robots/barrettwam.robot.xml
     \endverbatim
+
+    <b>Full Example Code:</b>
 */
 #include <openrave-core.h>
 #include <vector>
