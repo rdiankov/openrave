@@ -134,6 +134,7 @@ class build_doc(Command):
             try:
                 from epydoc import cli
                 from epydoc import docbuilder
+                from epydoc import docintrospecter
 
                 # override the default html translator to support non-default tags (from sphinx)
                 from epydoc.markup import restructuredtext
@@ -158,6 +159,15 @@ class build_doc(Command):
                     def depart_warning(self,node):
                         pass
                 restructuredtext._EpydocHTMLTranslator = NewEpydocHTMLTranslator
+                
+                # have to set default encoding to utf-8
+                epydoc_get_docstring = docintrospecter.get_docstring
+                def new_get_docstring(value, module_name=None):
+                    if module_name is None and docintrospecter.get_containing_module(value) is None:
+                        # default to openravepy in order to get utf-8!
+                        module_name='openravepy'
+                    return epydoc_get_docstring(value, module_name)
+                docintrospecter.get_docstring = new_get_docstring
 
                 old_argv = sys.argv[1:]
                 sys.argv[1:] = [

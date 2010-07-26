@@ -37,8 +37,12 @@ doxygen Doxyfile.html.ja
 python build_openravepy_internal.py --languagecode en --languagecode ja
 
 # build openravepy documentation
+prevlang=$LANG
+export LANG=en_US.UTF-8
 python build_doc.py build_doc --outdir="en/openravepy-html" --languagecode=en
+export LANG=ja_JP.UTF-8
 python build_doc.py build_doc --outdir="ja/openravepy-html" --languagecode=ja
+export LANG=$prevlang
 
 # build interfaces
 rm -rf sphinx/interfaces sphinx/sphinx-docs
