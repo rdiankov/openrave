@@ -1036,12 +1036,11 @@ protected:
             t.trans.y = values[1];
             t.trans.z = values[2];
         }
-        else
+        else {
             return false;
-
+        }
         // normalize the rotation first
-        normalize4(t.rot, t.rot);
-
+        t.rot.normalize4();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         pbody->SetTransform(t);
         

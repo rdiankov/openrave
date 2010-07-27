@@ -352,9 +352,9 @@ IvJointDragger::IvJointDragger(QtCoinViewerPtr viewer, ItemPtr pItem, int iSelec
         vaxes[i] = tlink.inverse().rotate(pjoint->GetAxis(i));
 
     // need to make sure the rotation is pointed towards the joint axis
-    Vector vnorm; cross3(vnorm, Vector(1,0,0), vaxes[0]);
-    float fsinang = sqrtf(lengthsqr3(vnorm));
-    if( fsinang > 0.01f )
+    Vector vnorm = Vector(1,0,0).cross(vaxes[0]);
+    dReal fsinang = RaveSqrt(vnorm.lengthsqr3());
+    if( fsinang > 0.0001f )
         vnorm /= fsinang;   
     else vnorm = Vector(1,0,0);
     

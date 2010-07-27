@@ -455,7 +455,7 @@ class CM
     
     inline static dReal TransformDistance2(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)
     {
-        dReal facos = RaveAcos(min(dReal(1),RaveFabs(dot4(t1.rot,t2.rot))));
+        dReal facos = RaveAcos(min(dReal(1),RaveFabs(t1.rot.dot(t2.rot))));
         return (t1.trans-t2.trans).lengthsqr3() + frotweight*facos*facos;
     }
 
@@ -1010,6 +1010,28 @@ class RealVectorCompare
 
     dReal _thresh;
 };
+
+#ifndef MATH_RANDOM_FLOAT
+#define MATH_RANDOM_FLOAT (rand()/((T)RAND_MAX))
+#endif
+
+/// \brief Generate a uniformly distributed random quaternion.
+template <typename T> inline RaveVector<T> GetRandomQuat()
+{
+    RaveVector<T> q;
+    while(1) {
+        q.x = -1 + 2*(T)(MATH_RANDOM_FLOAT);
+        q.y = -1 + 2*(T)(MATH_RANDOM_FLOAT);
+        q.z = -1 + 2*(T)(MATH_RANDOM_FLOAT);
+        q.w = -1 + 2*(T)(MATH_RANDOM_FLOAT);
+        T norm = q.lengthsqr4();
+        if(norm <= 1) {
+            q = q * (1 / RaveSqrt(norm));
+            break;
+        }
+    }
+    return q;
+}
 
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()

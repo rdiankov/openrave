@@ -835,7 +835,7 @@ dReal TrajectoryBase::_MinimumTimeTransform(const Transform& t0, const Transform
     dReal x_time = fabs(t1.trans.x - t0.trans.x) / _maxAffineTranslationVel.x;
     dReal y_time = fabs(t1.trans.y - t0.trans.y) / _maxAffineTranslationVel.y;
     dReal z_time = fabs(t1.trans.z - t0.trans.z) / _maxAffineTranslationVel.z;
-    dReal rot_dist = RaveAcos(min(dReal(1),RaveFabs(dot4(t0.rot,t1.rot))))/_maxAffineRotationQuatVel.x;
+    dReal rot_dist = RaveAcos(min(dReal(1),RaveFabs(t0.rot.dot(t1.rot))))/_maxAffineRotationQuatVel.x;
     return max(max(max(x_time,y_time),z_time),rot_dist);
 }
 

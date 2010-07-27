@@ -315,9 +315,9 @@ bool KinBody::Link::GEOMPROPERTIES::InitCollisionMesh(float fTessellation)
             Vector v1 = v[indices[i]];
             Vector v2 = v[indices[i+1]];
             Vector v3 = v[indices[i+2]];
-            Vector vtemp;
-            if( dot3(v1, cross3(vtemp, v2-v1, v3-v1)) < 0 )
+            if( v1.dot3(v2-v1.cross(v3-v1)) < 0 ) {
                 swap(indices[i], indices[i+1]);
+            }
         }
 
         collisionmesh.vertices.resize(8);
@@ -488,7 +488,7 @@ bool KinBody::Link::GEOMPROPERTIES::ValidateContactNormal(const Vector& _positio
         break;
     }
     case KinBody::Link::GEOMPROPERTIES::GeomSphere:
-        if( dot3(normal,position) < 0 ) {
+        if( normal.dot3(position) < 0 ) {
             _normal = -_normal;
             return true;
         }
@@ -2016,7 +2016,7 @@ void KinBody::CalculateJacobian(int index, const Vector& trans, boost::multi_arr
             else {
                 switch((*itjoint)->GetType()) {
                 case Joint::JointHinge:
-                    cross3(v, (*itjoint)->GetAxis(dof), trans-(*itjoint)->GetAnchor());
+                    v = (*itjoint)->GetAxis(dof).cross(trans-(*itjoint)->GetAnchor());
                     break;
                 case Joint::JointSlider:
                     v = (*itjoint)->GetAxis(dof);
@@ -2039,7 +2039,7 @@ void KinBody::CalculateJacobian(int index, const Vector& trans, boost::multi_arr
             for(int dof = 0; dof < (*itjoint)->GetDOF(); ++dof) {
                 switch((*itjoint)->GetType()) {
                 case Joint::JointHinge:
-                    cross3(v, (*itjoint)->GetAxis(dof), trans-(*itjoint)->GetAnchor());
+                    v = (*itjoint)->GetAxis(dof).cross(trans-(*itjoint)->GetAnchor());
                     break;
                 case Joint::JointSlider:
                     v = (*itjoint)->GetAxis(dof);

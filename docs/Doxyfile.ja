@@ -8,3 +8,4 @@ ALIASES                += openrave_py_dir{1}="<a href=\"http://openrave.programm
 ALIASES                += octave{1}="<a href=\"http://openrave.programmingvision.com/index.php/Started:Scripting\">\1</a>"
 ALIASES                += homepage{1}="<a href=\"http://openrave.programmingvision.com/index.php/Main_Page/ja\">\1</a>"
 ALIASES                += envvarwiki{1}="<a href=\"http://ja.wikipedia.org/wiki/%E7%92%B0%E5%A2%83%E5%A4%89%E6%95%B0\"></a>"
+ALIASES                += provided_interfaces{1}="<a href=\"http://openrave.programmingvision.com/ordocs/sphinx/sphinx-docs/index.html\">\1</a>"

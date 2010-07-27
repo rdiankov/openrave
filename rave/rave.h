@@ -613,6 +613,7 @@ private:
 
 
 #include <rave/geometry.h>
+#include <rave/mathextra.h>
 
 namespace OpenRAVE {
     using geometry::RaveVector;
@@ -625,15 +626,28 @@ namespace OpenRAVE {
     using geometry::RaveAcos;
     using geometry::RaveAsin;
     using geometry::RaveAtan2;
-    using geometry::aabb;
-    using geometry::obb;
-    using geometry::ray;
     typedef RaveVector<dReal> Vector;
     typedef RaveTransform<dReal> Transform;
     typedef RaveTransformMatrix<dReal> TransformMatrix;
-    typedef obb<dReal> OBB;
-    typedef aabb<dReal> AABB;
-    typedef ray<dReal> RAY;
+    typedef geometry::obb<dReal> OBB;
+    typedef geometry::aabb<dReal> AABB;
+    typedef geometry::ray<dReal> RAY;
+    // for compatibility
+    //@{
+    using mathextra::dot2;
+    using mathextra::dot3;
+    using mathextra::dot4;
+    using mathextra::normalize2;
+    using mathextra::normalize3;
+    using mathextra::normalize4;
+    using mathextra::cross3;
+    using mathextra::inv3;
+    using mathextra::inv4;
+    using mathextra::lengthsqr2;
+    using mathextra::lengthsqr3;
+    using mathextra::lengthsqr4;
+    using mathextra::mult4;
+    //@}
 }
 
 #include <rave/plugininfo.h>

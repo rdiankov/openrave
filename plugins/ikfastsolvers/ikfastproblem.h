@@ -959,7 +959,7 @@ public:
 private:
     inline static dReal _TransformDistance2(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)
     {
-        dReal facos = RaveAcos(min(dReal(1),RaveFabs(dot4(t1.rot,t2.rot))));
+        dReal facos = RaveAcos(min(dReal(1),RaveFabs(t1.rot.dot(t2.rot))));
         return (t1.trans-t2.trans).lengthsqr3() + frotweight*facos*facos;
     }
 };

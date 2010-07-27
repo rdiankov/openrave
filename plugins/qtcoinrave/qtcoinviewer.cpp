@@ -1415,32 +1415,30 @@ void* QtCoinViewer::_drawarrow(SoSeparator* pparent, const RaveVector<float>& p1
 
     RaveVector<float> vrotaxis;
     RaveVector<float> direction = p2-p1;
-    float fheight = sqrt(lengthsqr3(direction));
+    float fheight = RaveSqrt(direction.lengthsqr3());
 
     float coneheight = fheight/10.0f;
 
-    normalize3(direction,direction);
+    direction.normalize3();
     //check to make sure points aren't the same
-    if(sqrt(lengthsqr3(direction)) < 0.9f)
+    if(RaveSqrt(direction.lengthsqr3()) < 0.9f)
     {
         RAVELOG_WARNA("QtCoinViewer::drawarrow - Error: End points are the same.\n");
         return pparent;
     }
 
     //rotate to face point
-    cross3(vrotaxis,direction,RaveVector<float>(0,1,0));
-    normalize3(vrotaxis,vrotaxis);
+    vrotaxis = direction.cross(RaveVector<float>(0,1,0));
+    vrotaxis.normalize3();
 
-    float angle = -acos(dot3(direction,RaveVector<float>(0,1,0)));
+    float angle = -RaveAcos(direction.dot3(RaveVector<float>(0,1,0)));
     //check to make sure direction isn't pointing along y axis, if it is, don't need to rotate
-    if(lengthsqr3(vrotaxis) > 0.9f)
+    if(vrotaxis.lengthsqr3() > 0.9f) {
         ptrans->rotation.setValue(SbVec3f(vrotaxis.x, vrotaxis.y, vrotaxis.z), angle); 
-    
+    }
     //reusing direction vector for efficieny
     RaveVector<float> linetranslation = p1 + (fheight/2.0f-coneheight/2.0f)*direction;
     ptrans->translation.setValue(linetranslation.x, linetranslation.y, linetranslation.z);
-
-
 
     psep->addChild(ptrans);
     pparent->addChild(psep);
@@ -1459,9 +1457,8 @@ void* QtCoinViewer::_drawarrow(SoSeparator* pparent, const RaveVector<float>& p1
     cn->bottomRadius = fwidth;
     cn->height = coneheight;
 
-        
     ptrans = new SoTransform();
-    if(lengthsqr3(vrotaxis) > 0.9f)
+    if(vrotaxis.lengthsqr3() > 0.9f)
         ptrans->rotation.setValue(SbVec3f(vrotaxis.x, vrotaxis.y, vrotaxis.z), angle);
     else if(fabs(fabs(angle)-M_PI) < 0.001f)
         ptrans->rotation.setValue(SbVec3f(1, 0, 0), M_PI);

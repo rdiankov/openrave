@@ -62,6 +62,7 @@ low-level control, message protocols, and perception systems.
 \~japanese \section main_reference 参考資料
 \~
 - \subpage interfaces
+- \provided_interfaces{List of Interface Implementations}
 - \subpage executables
 - \subpage geometric_primitives
 - \subpage affine_math
@@ -481,19 +482,6 @@ A set of classes and functions that provide the basic affine math operations wit
 
 */
 
-/** \defgroup interfaces_all List of All Plugin Interfaces
-
-This lists the set of interfaces that are distributed with the %OpenRAVE distribution.
-
-- \subpage interfaces_controller
-*/
-
-/** \defgroup interfaces_controller List of Controller Interfaces
-
-This lists the set of offered \ref OpenRAVE::ControllerBase interfaces.
-
-*/
-
 /**
 \example FindOpenRAVE.cmake
 
@@ -505,8 +493,8 @@ Allows %OpenRAVE installation to be found when using the CMake build system.
 
 - \subpage openrave
 - \subpage openrave-config
-- \subpage openrave_py{openrave.py}
-- \subpage openrave_py{openrave-hash.py}
+- \subpage \openrave_py{openrave.py}
+- \subpage \openrave_py{openrave-hash.py}
 
 */
 

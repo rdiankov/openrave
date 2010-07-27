@@ -252,7 +252,7 @@ public:
 
                 // check if robot is already past all objects
                 AABB abRobot = _robot->ComputeAABB();
-                if( dot3(vapproachdir, abRobot.pos-vTargetCenter) > fTargetRadius + RaveSqrt(abRobot.extents.lengthsqr3()) ) {
+                if( vapproachdir.dot(abRobot.pos-vTargetCenter) > fTargetRadius + RaveSqrt(abRobot.extents.lengthsqr3()) ) {
                     RAVELOG_DEBUG("robot did not hit anything, planner failing...\n");
                     return false;
                 }

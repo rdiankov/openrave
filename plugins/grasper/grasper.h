@@ -434,7 +434,7 @@ class GrasperProblem : public ProblemInstance
         vpoints.reserve(tri.indices.size()/3);
         for(int i = 0; i < (int)tri.indices.size(); i += 3) {
             r.dir = 0.33333f * (tri.vertices[tri.indices[i]] + tri.vertices[tri.indices[i+1]] + tri.vertices[tri.indices[i+2]]);
-            normalize3(r.dir, r.dir);
+            r.dir.normalize3();
             r.dir *= 1000;
         
             r.pos = com - 10.0f*r.dir;
@@ -629,10 +629,9 @@ class GrasperProblem : public ProblemInstance
 
             Vector vright = Vector(1,0,0);
             if( fabsf(vpoints[i].norm.x) > 0.9 ) vright.y = 1;
-            vright -= vpoints[i].norm * dot3(vright,vpoints[i].norm);
-            normalize3(vright,vright);
-            Vector vup;
-            cross3(vup, vpoints[i].norm, vright);
+            vright -= vpoints[i].norm * vright.dot3(vpoints[i].norm);
+            vright.normalize3();
+            Vector vup = vpoints[i].norm.cross(vright);
 
             dReal fMinDist = 2;
             for(int j = 0; j < N; ++j) {
@@ -722,7 +721,7 @@ class GrasperProblem : public ProblemInstance
 
                     // determine if contact is stable (if angle is obtuse, can't be in friction cone)
                     dReal fsin2 = itcontact->norm.cross(deltaxyz).lengthsqr3();
-                    dReal fcos = dot3(itcontact->norm,deltaxyz);
+                    dReal fcos = itcontact->norm.dot3(deltaxyz);
                     bool bstable = fcos > 0 && fsin2 <= fcos*fcos*mu*mu;
                     if(bstable)
                         contacts.push_back(make_pair(*itcontact,(*itlink)->GetIndex()));

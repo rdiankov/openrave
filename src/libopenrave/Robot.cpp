@@ -1076,7 +1076,7 @@ void RobotBase::GetActiveDOFVelocities(std::vector<dReal>& velocities) const
     if( _nAffineDOFs & DOF_Z ) *pVelocities++ = linearvel.z;
     if( _nAffineDOFs & DOF_RotationAxis ) {
 
-        *pVelocities++ = dot3(vActvAffineRotationAxis, angularvel);
+        *pVelocities++ = vActvAffineRotationAxis.dot3(angularvel);
     }
     else if( _nAffineDOFs & DOF_Rotation3D ) {
         *pVelocities++ = angularvel.x;
@@ -1495,8 +1495,7 @@ void RobotBase::CalculateActiveJacobian(int index, const Vector& offset, boost::
         ind++;
     }
     if( _nAffineDOFs & DOF_RotationAxis ) {
-        Vector vj;
-        cross3(vj, vActvAffineRotationAxis, GetTransform().trans-offset);
+        Vector vj = vActvAffineRotationAxis.cross(GetTransform().trans-offset);
         mjacobian[0][ind] = vj.x;
         mjacobian[1][ind] = vj.y;
         mjacobian[2][ind] = vj.z;

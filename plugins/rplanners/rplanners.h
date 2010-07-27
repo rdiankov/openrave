@@ -210,7 +210,7 @@ public:
     {
         _robot->SetActiveDOFValues(c1);
         Transform cur = _robot->GetActiveManipulator()->GetEndEffectorTransform();
-        dReal f = RaveSqrt(lengthsqr3(tgoal.trans - cur.trans));
+        dReal f = RaveSqrt((tgoal.trans - cur.trans).lengthsqr3());
         return f < _thresh ? 0 : f;
     }
 

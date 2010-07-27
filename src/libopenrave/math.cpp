@@ -18,7 +18,7 @@
 #include <algorithm>
 
 namespace OpenRAVE {
-namespace geometry {
+namespace mathextra {
 
 // code from MagicSoftware by Dave Eberly
 

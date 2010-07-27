@@ -372,7 +372,15 @@ class RobotStateSaver:
         self.handle.close()
 
 class OpenRAVEModel(metaclass.AutoReloader):
-    """The base class defining the structure of the openrave database generators.
+    """
+    .. lang-block:: en
+
+      The base class defining the structure of the openrave database generators.
+
+    .. lang-block:: ja
+    
+      データベース生成の構造を定義した基本クラス
+
     """
     def __init__(self,robot):
         self.robot = robot

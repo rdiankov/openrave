@@ -207,10 +207,10 @@ public:
             _robot->CalculateActiveJacobian(linkindex, tEE.trans, _J);
             //_robot->CalculateActiveRotationalJacobian(linkindex, tEE.trans, &_J[3*robot->GetActiveDOF()]);
         
-            geometry::multtrans_to2<dReal, dReal, dReal>(&_J[0], &_J[0], 3, _robot->GetActiveDOF(), 3, &_JJt[0], false);
+            mathextra::multtrans_to2<dReal, dReal, dReal>(&_J[0], &_J[0], 3, _robot->GetActiveDOF(), 3, &_JJt[0], false);
         
             // find the determinant
-            pfeatures[1] = RaveSqrt(RaveFabs(geometry::matrixdet3(&_JJt[0], 3)));
+            pfeatures[1] = RaveSqrt(RaveFabs(mathextra::matrixdet3(&_JJt[0], 3)));
 
             f = 0;
             for(size_t i = 0; i < vtargvalues.size(); ++i)

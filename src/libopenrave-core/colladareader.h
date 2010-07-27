@@ -2726,37 +2726,7 @@ public:
       Vector campos(pcamera->getValue()[0], pcamera->getValue()[1], pcamera->getValue()[2]);
       Vector lookat(pcamera->getValue()[3], pcamera->getValue()[4], pcamera->getValue()[5]);
       Vector camup(pcamera->getValue()[6], pcamera->getValue()[7], pcamera->getValue()[8]);
-
-      Vector dir = -(lookat - campos);
-      dReal len = RaveSqrt(dir.lengthsqr3());
-
-      if( len> 1e-6 )
-        dir *= 1/len;
-      else
-        dir = Vector(0,0,1);
-
-      Vector up = camup - dir * dot3(dir,camup);
-      len = up.lengthsqr3();
-      if( len < 1e-8 )
-      {
-        up = Vector(0,1,0);
-        up -= dir * dot3(dir,up);
-        len = up.lengthsqr3();
-        if( len < 1e-8 )
-        {
-          up = Vector(1,0,0);
-          up -= dir * dot3(dir,up);
-          len = up.lengthsqr3();
-        }
-      }
-
-      up *= 1/RaveSqrt(len);
-
-      Vector right = up.cross(dir);
-      t.m[0] = right.x; t.m[1] = up.x; t.m[2] = dir.x;
-      t.m[4] = right.y; t.m[5] = up.y; t.m[6] = dir.y;
-      t.m[8] = right.z; t.m[9] = up.z; t.m[10] = dir.z;
-      t.trans = campos * GetUnitScale(pelt);
+      t = transformLookat(lookat,campos*GetUnitScale(pelt),camup);
       return t;
     }
 

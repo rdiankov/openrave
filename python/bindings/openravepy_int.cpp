@@ -2591,7 +2591,7 @@ public:
             pcollision[i] = false;
             ppos[0] = 0; ppos[1] = 0; ppos[2] = 0; ppos[3] = 0; ppos[4] = 0; ppos[5] = 0;
             if( bCollision && report.contacts.size() > 0 ) {
-                if( !bFrontFacingOnly || dot3(report.contacts[0].norm,r.dir)<0 ) {
+                if( !bFrontFacingOnly || report.contacts[0].norm.dot3(r.dir)<0 ) {
                     pcollision[i] = true;
                     ppos[0] = report.contacts[0].pos.x;
                     ppos[1] = report.contacts[0].pos.y;

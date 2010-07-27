@@ -82,13 +82,13 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
         dReal f3length = RaveSqrt(v3.lengthsqr2());
         Vector v3norm = v3 * (1.0f/f3length);
         Vector v3perp(-v3norm.y,v3norm.x,0,0);
-        dReal f1proj = RaveFabs(dot2(v3perp,v1)), f2proj = RaveFabs(dot2(v3perp,v2));
+        dReal f1proj = RaveFabs(v3perp.x*v1.x+v3perp.y*v1.y), f2proj = RaveFabs(v3perp.x*v2.x+v3perp.y*v2.y);
         
         int n1 = (int)(f1proj/delta);
         dReal n1scale = 1.0f/n1;
         Vector vdelta1 = v1*n1scale;
         Vector vdelta2 = (v1-v3)*n1scale;
-        dReal fdeltalen = (RaveFabs(dot2(v3norm,v1)) + RaveFabs(dot2(v3norm,v1-v3)))*n1scale;
+        dReal fdeltalen = (RaveFabs(v3norm.x*v1.x+v3norm.y*v1.y) + RaveFabs(v3norm.x*(v1.x-v3.x)+v3norm.y*(v1.y-v3.y)))*n1scale;
         dReal ftotalen = f3length;
         Vector vcur1 = v0, vcur2 = v0+v3;
         for(int j = 0; j <= n1; ++j, vcur1 += vdelta1, vcur2 += vdelta2, ftotalen -= fdeltalen ) {
@@ -113,7 +113,7 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
         dReal n2scale = 1.0f/n2;
         vdelta1 = v2*n2scale;
         vdelta2 = (v2-v3)*n2scale;
-        fdeltalen = (RaveFabs(dot2(v3norm,v2)) + RaveFabs(dot2(v3norm,v2-v3)))*n2scale;
+        fdeltalen = (RaveFabs(v3norm.x*v2.x+v3norm.y*v2.y) + RaveFabs(v3norm.x*(v2.x-v3.x)+v3norm.y*(v2.y-v3.y)))*n2scale;
         ftotalen = f3length;
         vcur1 = v0; vcur2 = v0+v3;
         vcur1 += vdelta1; vcur2 += vdelta2; ftotalen -= fdeltalen; // do one step
@@ -247,7 +247,7 @@ public:
             _vconvexplanes3d.resize(_vf->_vconvexplanes.size());
             for(size_t i = 0; i < _vf->_vconvexplanes.size(); ++i) {
                 _vconvexplanes3d[i] = tcamera.rotate(_vf->_vconvexplanes[i]);
-                _vconvexplanes3d[i].w = -dot3(tcamera.trans,_vconvexplanes3d[i]) - mindist;
+                _vconvexplanes3d[i].w = -tcamera.trans.dot3(_vconvexplanes3d[i]) - mindist;
             }
             FOREACH(itobb,_vTargetOBBs) {
                 if( !geometry::IsOBBinConvexHull(*itobb,_vconvexplanes3d) ) {
@@ -550,7 +550,7 @@ Adds grasp planning taking into account camera visibility constraints. The relev
                         vnorm.x = vdir.y;
                         vnorm.y = -vdir.x;
                         // normal has to be facing inside
-                        if( dot2(vnorm,vcenter-vprev) < 0 ) {
+                        if( vnorm.x*(vcenter.x-vprev.x)+vnorm.y*(vcenter.y-vprev.y) < 0 ) {
                             vnorm = -vnorm;
                         }
                         vnorm.z = -(vnorm.x*vprev.x+vnorm.y*vprev.y);
@@ -667,7 +667,7 @@ Adds grasp planning taking into account camera visibility constraints. The relev
         }
             
         vup *= (dReal)1.0/RaveSqrt(uplen);
-        cross3(vright,vup,vdir);
+        vright = vup.cross(vdir);
         TransformMatrix tcamera;
         tcamera.m[2] = vdir.x; tcamera.m[6] = vdir.y; tcamera.m[10] = vdir.z;
 
