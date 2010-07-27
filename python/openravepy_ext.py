@@ -21,6 +21,11 @@ try:
 except:
     import pickle
 
+try:
+    from itertools import izip
+except ImportError:
+    pass
+
 def mkdir_recursive(newdir):
     """works the way a good mkdir should :)
         - already exists, silently complete
@@ -185,6 +190,57 @@ def transformPoints(T,points):
     """Transforms a Nxk array of points by an affine matrix"""
     kminus = T.shape[1]-1
     return numpy.dot(points,numpy.transpose(T[0:kminus,0:kminus]))+numpy.tile(T[0:kminus,kminus],(len(points),1))
+
+def sequence_cross_product(*sequences):
+    # visualize an odometer, with "wheels" displaying "digits"...:
+    wheels = map(iter, sequences)
+    digits = [it.next( ) for it in wheels]
+    while True:
+        yield tuple(digits)
+        for i in range(len(digits)-1, -1, -1):
+            try:
+                digits[i] = wheels[i].next( )
+                break
+            except StopIteration:
+                wheels[i] = iter(sequences[i])
+                digits[i] = wheels[i].next( )
+        else:
+            break
+
+class MultiManipIKSolver(metaclass.AutoReloader):
+    """Finds the simultaneous IK solutions of all disjoint manipulators (no manipulators share a joint)"""
+    def __init__(self,manips):
+        self.robot = manips[0].GetRobot()
+        self.manips = manips
+        indeplinksets=[set([l.GetName() for l in manip.GetIndependentLinks()]) for manip in self.manips]
+        indeplinknames=indeplinksets[0].intersection(*indeplinksets[1:])
+        alllinknames = set([l.GetName() for l in self.robot.GetLinks()])
+        self.enablelinknames = [alllinknames.difference(indeplinksets[i]).union(indeplinknames) for i in range(len(self.manips))]
+    
+    def findMultiIKSolution(self,Tgrasps,envcheck=True):
+        """return one ik solution"""
+        assert(len(Tgrasps)==len(self.manips))
+        with self.robot:
+            alljointvalues = []
+            for i,manip in enumerate(self.manips):
+                # invalidate all manip links for now (since will be moving them later)
+                for link in self.robot.GetLinks():
+                    link.Enable(link.GetName() in self.enablelinknames[i])
+                values=manip.FindIKSolutions(Tgrasps[i],envcheck)
+                if values is not None and len(values) > 0:
+                    alljointvalues.append(values)
+                else:
+                    return None
+                
+            # take all combinations of the solutions
+            for sols in sequence_cross_product(*alljointvalues):
+                for sol,manip in izip(sols,self.manips):
+                    self.robot.SetJointValues(sol,manip.GetArmIndices()) 
+                if not self.robot.CheckSelfCollision():
+                    if not envcheck or not self.robot.GetEnv().CheckCollision(self.robot):
+                        return sols
+                    
+            return None
 
 class SpaceSampler(metaclass.AutoReloader):
     def __init__(self):

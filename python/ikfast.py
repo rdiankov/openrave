@@ -34,8 +34,9 @@ try:
 except ImportError:
     pass
 
+from itertools import izip
 try:
-    from itertools import izip, combinations
+    from itertools import combinations
 except ImportError:
     def combinations(items,n):
         if n == 0: yield[]
