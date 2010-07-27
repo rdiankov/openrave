@@ -12,6 +12,42 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+.. lang-block:: en
+
+  Inverse reachability space clustering.
+
+.. lang-block:: ja
+
+  逆運動学的到達範囲の分布と使用
+
+.. image:: ../../images/databases_inversereachability_wam1.jpg
+  :height: 250
+
+**Running the Generator**
+
+.. code-block:: bash
+
+  openrave.py --database inversereachability --robot=robots/barrettsegway.robot.xml
+
+Description
+-----------
+
+.. lang-block:: en
+
+  Clusters the reachability space for a base-placement sampling distribution that can be used to find out where the robot should stand in order to perform a manipulation task.
+
+.. lang-block:: ja
+
+  胴体をどこに置いて物体を掴められるかかを計算するのに、到達範囲を利用した逆範囲の分布で求められます。
+
+.. image:: ../../images/databases_inversereachability_wam2.jpg
+  :height: 200
+
+.. image:: ../../images/databases_inversereachability_wam3.jpg
+  :height: 200
+
+"""
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
@@ -588,6 +624,8 @@ class InverseReachabilityModel(OpenRAVEModel):
     @staticmethod
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser()
+        parser.description = 'Generates model storing the inverse reachability space and its clusters.'
+        parser.usage='openrave.py --database inversereachability [options]'
         parser.add_option('--heightthresh',action='store',type='float',dest='heightthresh',default=None,
                           help='The max radius of the arm to perform the computation (default=0.05)')
         parser.add_option('--quatthresh',action='store',type='float',dest='quatthresh',default=None,
@@ -606,7 +644,11 @@ class InverseReachabilityModel(OpenRAVEModel):
         OpenRAVEModel.RunFromParser(Model=Model,parser=parser,args=args,**kwargs)
 
 def run(*args,**kwargs):
-    """Executes the inversereachability database generation
+    """Executes the inversereachability database generation,  ``args`` specifies a list of the arguments to the script.
+    
+    **Help**
+    
+    .. shell-block:: openrave.py --database inversereachability --help
     """
     InverseReachabilityModel.RunFromParser(*args,**kwargs)
             

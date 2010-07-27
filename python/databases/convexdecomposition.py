@@ -30,7 +30,7 @@
 .. image:: ../../images/databases_convexdecomposition_hrp2.jpg
   :height: 200
 
-**Running the Example**
+**Running the Generator**
 
 .. code-block:: bash
 
@@ -242,6 +242,7 @@ class ConvexDecompositionModel(OpenRAVEModel):
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser(useManipulator=False)
         parser.description='Computes the set of convex hulls for each triangle mesh geometry.using convexdecomposition'
+        parser.usage='openrave.py --database convexdecomposition [options]'
         parser.add_option('--skinWidth',action='store',type='float',dest='skinWidth',default=0.0,
                           help='Skin width on the convex hulls generated, convex decomposition side (default=%default)')
         parser.add_option('--padding',action='store',type='float',dest='padding',default=0.005,

@@ -12,6 +12,50 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+.. lang-block:: en
+
+  Computes statistics on body links like swept volumes.
+
+.. lang-block:: ja
+
+  掃引体積等のリンク統計
+
+.. image:: ../../images/databases_linkstatistics_wam_sweptvolume_j0.jpg
+  :height: 200
+
+.. image:: ../../images/databases_linkstatistics_wam_sweptvolume_j1.jpg
+  :height: 200
+
+.. image:: ../../images/databases_linkstatistics_wam_sweptvolume_j2.jpg
+  :height: 200
+
+.. image:: ../../images/databases_linkstatistics_wam_sweptvolume_j3.jpg
+  :height: 200
+
+.. image:: ../../images/databases_linkstatistics_wam_sweptvolume_j4.jpg
+  :height: 200
+
+.. image:: ../../images/databases_linkstatistics_wam_sweptvolume_j5.jpg
+  :height: 200
+
+.. image:: ../../images/databases_linkstatistics_wam_sweptvolume_j6.jpg
+  :height: 200
+
+**Running the Generator**
+
+.. code-block:: bash
+
+  openrave.py --database linkstatistics --robot=robots/barrettsegway.robot.xml
+
+**Showing the Reachability** (uses mayavi2)
+
+.. code-block:: bash
+
+  openrave.py --database linkstatistics --robot=robots/barrettsegway.robot.xml --show
+
+"""
+
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
@@ -391,6 +435,7 @@ class LinkStatisticsModel(OpenRAVEModel):
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser(useManipulator=False)
         parser.description='Computes statistics about the link geometry'
+        parser.usage='openrave.py --database linkstatistics [options]'
         parser.add_option('--samplingdelta',action='store',type='float',dest='samplingdelta',default=None,
                           help='Skin width on the convex hulls generated (default=0.01)')
         return parser
@@ -407,7 +452,11 @@ class LinkStatisticsModel(OpenRAVEModel):
             env.Destroy()
 
 def run(*args,**kwargs):
-    """Executes the linkstatistics database generation
+    """Executes the linkstatistics database generation,  ``args`` specifies a list of the arguments to the script.
+    
+    **Help**
+    
+    .. shell-block:: openrave.py --database linkstatistics --help
     """
     LinkStatisticsModel.RunFromParser(*args,**kwargs)
 

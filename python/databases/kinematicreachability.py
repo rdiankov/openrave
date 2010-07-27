@@ -19,12 +19,12 @@
 
 .. lang-block:: ja
 
-  6D到達可能範囲の生成と使用
+  6D運動学的到達範囲の生成と使用
 
 .. image:: ../../images/databases_reachability.jpg
   :height: 300
 
-**Running the Example**
+**Running the Generator**
 
 .. code-block:: bash
 
@@ -324,6 +324,7 @@ class ReachabilityModel(OpenRAVEModel):
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser()
         parser.description='Computes the reachability region of a robot manipulator and python pickles it into a file.'
+        parser.usage='openrave.py --database kinematicreachability [options]'
         parser.add_option('--maxradius',action='store',type='float',dest='maxradius',default=None,
                           help='The max radius of the arm to perform the computation')
         parser.add_option('--xyzdelta',action='store',type='float',dest='xyzdelta',default=None,
@@ -355,7 +356,7 @@ def run(*args,**kwargs):
     
     **Help**
     
-    .. shell-block:: openrave.py --database inversekinematics --help
+    .. shell-block:: openrave.py --database kinematicreachability --help
     """
     ReachabilityModel.RunFromParser(*args,**kwargs)
 

@@ -24,7 +24,7 @@
 .. image:: ../../images/databases_grasping.jpg
   :height: 170
 
-**Running the Example**
+**Running the Generator**
 
 .. code-block:: bash
 

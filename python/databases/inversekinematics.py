@@ -24,7 +24,7 @@
 .. image:: ../../images/databases_inversekinematics_wam.png
   :height: 250
 
-**Running the Example**
+**Running the Generator**
 
 .. code-block:: bash
 
@@ -509,6 +509,7 @@ class InverseKinematicsModel(OpenRAVEModel):
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser()
         parser.description='Computes the closed-form inverse kinematics equations of a robot manipulator, generates a C++ file, and compiles this file into a shared object which can then be loaded by OpenRAVE'
+        parser.usage='openrave.py --database inversekinematics [options]'
         parser.add_option('--freejoint', action='append', type='string', dest='freejoints',default=None,
                           help='Optional joint name specifying a free parameter of the manipulator. If nothing specified, assumes all joints not solving for are free parameters. Can be specified multiple times for multiple free parameters.')
         parser.add_option('--precision', action='store', type='int', dest='precision',default=10,
