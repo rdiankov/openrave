@@ -2163,12 +2163,16 @@ namespace OpenRAVEXMLParser
                                 if( !ifstream(fullname.c_str()) || !pIKFastLoader->SendCommand(sout, scmd)) {
                                 }
                                 else {
-                                    string fullname = GetParseDirectory(); fullname.push_back(s_filesep); fullname += iklibraryname;
+                                    // need to use the original iklibrary string due to parameters being passed in
+                                    string fullname = "ikfast ";
+                                    fullname += GetParseDirectory(); fullname.push_back(s_filesep); fullname += iklibraryname;
                                     piksolver = _probot->GetEnv()->CreateIkSolver(fullname);
                                 }
                             }
-                            else
-                                piksolver = _probot->GetEnv()->CreateIkSolver(iklibraryname);
+                            else {
+                                string fullname = "ikfast "; fullname += iklibraryname;
+                                piksolver = _probot->GetEnv()->CreateIkSolver(fullname);
+                            }
                         }
                         else {
                             RAVELOG_WARNA("Failed to load IKFast problem\n");
