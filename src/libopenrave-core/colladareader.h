@@ -1707,7 +1707,7 @@ public:
                   }
 
                   if( pjoint->type == KinBody::Joint::JointRevolute ) {
-                      pjoint->tLeft = rotationMatrixFromAxisAngle(pjoint->vAxes[0], -pjoint->offset);
+                      pjoint->tLeft = matrixFromAxisAngle(pjoint->vAxes[0], -pjoint->offset);
                   }
 
                   pjoint->fMaxVel = pjoint->GetType() == KinBody::Joint::JointPrismatic ? 0.01 : 0.5f;
@@ -2682,7 +2682,7 @@ public:
     if( !!protate )
     {
 //        if( !protate->getSid() ) { // if sid is valid, then controlled by joint?
-        t = rotationMatrixFromAxisAngle(Vector(protate->getValue()[0],protate->getValue()[1],protate->getValue()[2]), (dReal)(protate->getValue()[3]*(PI/180.0)));
+        t = matrixFromAxisAngle(Vector(protate->getValue()[0],protate->getValue()[1],protate->getValue()[2]), (dReal)(protate->getValue()[3]*(PI/180.0)));
 //      }
         return t;
     }

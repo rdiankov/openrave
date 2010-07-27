@@ -749,7 +749,7 @@ class GrasperProblem : public ProblemInstance
         newcontacts.reserve(contacts.size()*Nconepoints);
         FOREACHC(itcontact,contacts) {
             // find a coordinate system where z is the normal
-            TransformMatrix torient = rotationMatrixFromQuat(quatRotateDirection(Vector(0,0,1),itcontact->norm));
+            TransformMatrix torient = matrixFromQuat(quatRotateDirection(Vector(0,0,1),itcontact->norm));
             Vector right(torient.m[0],torient.m[4],torient.m[8]);
             Vector up(torient.m[1],torient.m[5],torient.m[9]);
             FOREACH(it,vsincos)

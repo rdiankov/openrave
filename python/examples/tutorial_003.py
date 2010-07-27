@@ -12,8 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-環境に読み込んだ物体の回転（回転行列）
+"""環境に読み込んだ物体の回転（回転行列）
+
+**例の実行**
+
+.. code-block:: bash
+
+  openrave.py --example tutorial_003
 
 ソースコード
 --------------------------------------
@@ -55,13 +60,7 @@
 ソースコードの実行
 --------------------------------------
 
-上のソースコードを実行してください． 
-
-.. code-block:: bash
-
-  openrave.py --example tutorial_003
-
-すると，OpenRAVEのGUIが立ち上がり，下のような画像が現れます．
+上のソースコードを実行してください． すると，OpenRAVEのGUIが立ち上がり，下のような画像が現れます．
 
 .. image:: ../../images/example_tutorials/003_mug_origin.png
   :height: 200
@@ -144,14 +143,11 @@ NEXT
 
 
 """
-from __future__ import with_statement # for python 2.5
 __author__ = 'Makoto Furukawa'
 __copyright__ = '2010 Makoto Furukawa'
 __license__ = 'Apache License, Version 2.0'
 from openravepy import Environment, rotationMatrixFromAxisAngle, axisAngleFromRotationMatrix, quatFromRotationMatrix
 from numpy import eye, dot, pi, array
-from numpy.random import rand
-from time import time
 
 def run(args=None):
     try:

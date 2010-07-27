@@ -158,10 +158,10 @@ public:
         
     RaveVector(T x, T y, T z) : x(x), y(y), z(z), w(0) {}
     RaveVector(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {}
-    template<class U> RaveVector(const RaveVector<U> &vec) : x((T)vec.x), y((T)vec.y), z((T)vec.z), w((T)vec.w) {}
+    template<typename U> RaveVector(const RaveVector<U> &vec) : x((T)vec.x), y((T)vec.y), z((T)vec.z), w((T)vec.w) {}
 
     /// note, it only copes 3 values!
-    template<class U> RaveVector(const U* pf) { MATH_ASSERT(pf != NULL); x = (T)pf[0]; y = (T)pf[1]; z = (T)pf[2]; w = 0; }
+    template<typename U> RaveVector(const U* pf) { MATH_ASSERT(pf != NULL); x = (T)pf[0]; y = (T)pf[1]; z = (T)pf[2]; w = 0; }
     
     T  operator[](int i) const       { return (&x)[i]; }
     T& operator[](int i)             { return (&x)[i]; }
@@ -170,12 +170,12 @@ public:
     operator T* () { return &x; }
     operator const T* () const { return (const T*)&x; }
 
-    template <class U>
+    template <typename U>
     RaveVector<T>& operator=(const RaveVector<U>& r) { x = (T)r.x; y = (T)r.y; z = (T)r.z; w = (T)r.w; return *this; }
     
     // SCALAR FUNCTIONS
-    template <class U> inline T dot(const RaveVector<U> &v) const { return x*v.x + y*v.y + z*v.z + w*v.w; }
-    template <class U> inline T dot3(const RaveVector<U> &v) const { return x*v.x + y*v.y + z*v.z; }
+    template <typename U> inline T dot(const RaveVector<U> &v) const { return x*v.x + y*v.y + z*v.z + w*v.w; }
+    template <typename U> inline T dot3(const RaveVector<U> &v) const { return x*v.x + y*v.y + z*v.z; }
     inline RaveVector<T>& normalize() { return normalize4(); }
     inline RaveVector<T>& normalize4() {
         T f = x*x+y*y+z*z+w*w;
@@ -221,26 +221,26 @@ public:
     }
 
     inline RaveVector<T> operator-() const { RaveVector<T> v; v.x = -x; v.y = -y; v.z = -z; v.w = -w; return v; }
-    template <class U> inline RaveVector<T> operator+(const RaveVector<U> &r) const { RaveVector<T> v; v.x = x+r.x; v.y = y+r.y; v.z = z+r.z; v.w = w+r.w; return v; }
-    template <class U> inline RaveVector<T> operator-(const RaveVector<U> &r) const { RaveVector<T> v; v.x = x-r.x; v.y = y-r.y; v.z = z-r.z; v.w = w-r.w; return v; }
-    template <class U> inline RaveVector<T> operator*(const RaveVector<U> &r) const { RaveVector<T> v; v.x = r.x*x; v.y = r.y*y; v.z = r.z*z; v.w = r.w*w; return v; }
+    template <typename U> inline RaveVector<T> operator+(const RaveVector<U> &r) const { RaveVector<T> v; v.x = x+r.x; v.y = y+r.y; v.z = z+r.z; v.w = w+r.w; return v; }
+    template <typename U> inline RaveVector<T> operator-(const RaveVector<U> &r) const { RaveVector<T> v; v.x = x-r.x; v.y = y-r.y; v.z = z-r.z; v.w = w-r.w; return v; }
+    template <typename U> inline RaveVector<T> operator*(const RaveVector<U> &r) const { RaveVector<T> v; v.x = r.x*x; v.y = r.y*y; v.z = r.z*z; v.w = r.w*w; return v; }
     inline RaveVector<T> operator*(T k) const { RaveVector<T> v; v.x = k*x; v.y = k*y; v.z = k*z; v.w = k*w; return v; }
 
-    template <class U> inline RaveVector<T>& operator += (const RaveVector<U>& r) { x += r.x; y += r.y; z += r.z; w += r.w; return *this; }
-    template <class U> inline RaveVector<T>& operator -= (const RaveVector<U>& r) { x -= r.x; y -= r.y; z -= r.z; w -= r.w; return *this; }
-    template <class U> inline RaveVector<T>& operator *= (const RaveVector<U>& r) { x *= r.x; y *= r.y; z *= r.z; w *= r.w; return *this; }
+    template <typename U> inline RaveVector<T>& operator += (const RaveVector<U>& r) { x += r.x; y += r.y; z += r.z; w += r.w; return *this; }
+    template <typename U> inline RaveVector<T>& operator -= (const RaveVector<U>& r) { x -= r.x; y -= r.y; z -= r.z; w -= r.w; return *this; }
+    template <typename U> inline RaveVector<T>& operator *= (const RaveVector<U>& r) { x *= r.x; y *= r.y; z *= r.z; w *= r.w; return *this; }
     
     inline RaveVector<T>& operator *= (const T k) { x *= k; y *= k; z *= k; w *= k; return *this; }
     inline RaveVector<T>& operator /= (const T _k) { T k=1/_k; x *= k; y *= k; z *= k; w *= k; return *this; }
 
-    template <class U> friend RaveVector<U> operator* (float f, const RaveVector<U>& v);
-    template <class U> friend RaveVector<U> operator* (double f, const RaveVector<U>& v);
+    template <typename U> friend RaveVector<U> operator* (float f, const RaveVector<U>& v);
+    template <typename U> friend RaveVector<U> operator* (double f, const RaveVector<U>& v);
     
-    template <class S, class U> friend std::basic_ostream<S>& operator<<(std::basic_ostream<S>& O, const RaveVector<U>& v);
-    template <class S, class U> friend std::basic_istream<S>& operator>>(std::basic_istream<S>& I, RaveVector<U>& v);
+    template <typename S, typename U> friend std::basic_ostream<S>& operator<<(std::basic_ostream<S>& O, const RaveVector<U>& v);
+    template <typename S, typename U> friend std::basic_istream<S>& operator>>(std::basic_istream<S>& I, RaveVector<U>& v);
 
     /// cross product operator
-    template <class U> inline RaveVector<T> operator^(const RaveVector<U> &v) const { 
+    template <typename U> inline RaveVector<T> operator^(const RaveVector<U> &v) const { 
         RaveVector<T> ucrossv;
         ucrossv[0] = y * v[2] - z * v[1];
         ucrossv[1] = z * v[0] - x * v[2];
@@ -280,13 +280,13 @@ class RaveTransform
 {
 public:
     RaveTransform() { rot.x = 1; }
-    template <class U> RaveTransform(const RaveTransform<U>& t) {
+    template <typename U> RaveTransform(const RaveTransform<U>& t) {
         rot = t.rot;
         trans = t.trans;
         T fnorm = rot.lengthsqr4();
         MATH_ASSERT( fnorm > 0.99f && fnorm < 1.01f );
     }
-    template <class U> RaveTransform(const RaveVector<U>& rot, const RaveVector<U>& trans) : rot(rot), trans(trans) {
+    template <typename U> RaveTransform(const RaveVector<U>& rot, const RaveVector<U>& trans) : rot(rot), trans(trans) {
         T fnorm = rot.lengthsqr4();
         MATH_ASSERT( fnorm > 0.99f && fnorm < 1.01f );
     }
@@ -297,16 +297,8 @@ public:
         trans.x = trans.y = trans.z = 0;
     }
     
-    template <class U> inline RaveTransform<T>& rotfromaxisangle(const RaveVector<U>& axis, U angle) {
-        U sinang = (U)RaveSin(angle/2);
-        rot.x = (U)RaveCos(angle/2);
-        rot.y = axis.x*sinang;
-        rot.z = axis.y*sinang;
-        rot.w = axis.z*sinang;
-        T fnorm = rot.lengthsqr4();
-        MATH_ASSERT( fnorm > 0.99f && fnorm < 1.01f );
-        return *this;
-    }
+    /// \deprecated (10/07/26) use quatFromAxisAngle
+    template <typename U> inline RaveTransform<T>& rotfromaxisangle(const RaveVector<U>& axis, U angle) RAVE_DEPRECATED;
 
     /// transform a 3 dim vector
     inline RaveVector<T> operator* (const RaveVector<T>& r) const {
@@ -378,7 +370,7 @@ public:
         return inv;
     }
 
-    template <class U> inline RaveTransform<T>& operator= (const RaveTransform<U>& r) {
+    template <typename U> inline RaveTransform<T>& operator= (const RaveTransform<U>& r) {
         trans = r.trans;
         rot = r.rot;
         T fnorm = rot.lengthsqr4();
@@ -386,8 +378,8 @@ public:
         return *this;
     }
 
-    template <class S, class U> friend std::basic_ostream<S>& operator<<(std::basic_ostream<S>& O, const RaveTransform<U>& v);
-    template <class S, class U> friend std::basic_istream<S>& operator>>(std::basic_istream<S>& I, RaveTransform<U>& v);
+    template <typename S, typename U> friend std::basic_ostream<S>& operator<<(std::basic_ostream<S>& O, const RaveTransform<U>& v);
+    template <typename S, typename U> friend std::basic_istream<S>& operator>>(std::basic_istream<S>& I, RaveTransform<U>& v);
 
     RaveVector<T> rot, trans; ///< rot is a quaternion=(cos(ang/2),axisx*sin(ang/2),axisy*sin(ang/2),axisz*sin(ang/2))
 };
@@ -401,7 +393,7 @@ class RaveTransformMatrix
 {
 public:
     inline RaveTransformMatrix() { identity(); m[3] = m[7] = m[11] = 0; }
-    template <class U> RaveTransformMatrix(const RaveTransformMatrix<U>& t) {
+    template <typename U> RaveTransformMatrix(const RaveTransformMatrix<U>& t) {
         // don't memcpy!
         m[0] = t.m[0]; m[1] = t.m[1]; m[2] = t.m[2]; m[3] = t.m[3];
         m[4] = t.m[4]; m[5] = t.m[5]; m[6] = t.m[6]; m[7] = t.m[7];
@@ -416,6 +408,9 @@ public:
         m[8] = 0; m[9] = 0; m[10] = 1;
         trans.x = trans.y = trans.z = 0;
     }
+
+    /// \deprecated (10/07/26) use matrixFromAxisAngle
+    template <typename U> inline RaveTransformMatrix<T>& rotfromaxisangle(const RaveVector<U>& axis, U angle) RAVE_DEPRECATED;
 
     inline void rotfrommat(T m_00, T m_01, T m_02, T m_10, T m_11, T m_12, T m_20, T m_21, T m_22) {
         m[0] = m_00; m[1] = m_01; m[2] = m_02; m[3] = 0;
@@ -432,7 +427,7 @@ public:
         return m[4*i+j];
     }
     
-    template <class U>
+    template <typename U>
     inline RaveVector<T> operator* (const RaveVector<U>& r) const {
         RaveVector<T> v;
         v[0] = r[0] * m[0] + r[1] * m[1] + r[2] * m[2] + trans.x;
@@ -456,7 +451,7 @@ public:
         return *this;
     }
 
-    template <class U>
+    template <typename U>
     inline RaveVector<U> rotate(const RaveVector<U>& r) const {
         RaveVector<U> v;
         v.x = r.x * m[0] + r.y * m[1] + r.z * m[2];
@@ -481,7 +476,7 @@ public:
         return inv;
     }
 
-    template <class U>
+    template <typename U>
     inline void Extract(RaveVector<U>& right, RaveVector<U>& up, RaveVector<U>& dir, RaveVector<U>& pos) const {
         pos = trans;
         right.x = m[0]; up.x = m[1]; dir.x = m[2];
@@ -489,8 +484,8 @@ public:
         right.z = m[8]; up.z = m[9]; dir.z = m[10];
     }
 
-    template <class S, class U> friend std::basic_ostream<S>& operator<<(std::basic_ostream<S>& O, const RaveTransformMatrix<U>& v);
-    template <class S, class U> friend std::basic_istream<S>& operator>>(std::basic_istream<S>& I, RaveTransformMatrix<U>& v);
+    template <typename S, typename U> friend std::basic_ostream<S>& operator<<(std::basic_ostream<S>& O, const RaveTransformMatrix<U>& v);
+    template <typename S, typename U> friend std::basic_istream<S>& operator>>(std::basic_istream<S>& I, RaveTransformMatrix<U>& v);
 
     /// 3x3 rotation matrix. Note that each row is 4 elements long! So row 1 starts at m[4], row 2 at m[8]
     /// The reason is to maintain 16 byte alignment when sizeof(T) is 4 bytes
@@ -987,20 +982,20 @@ template <typename T> inline void mult(T* pf, T fa, int r);
 
 // multiplies a r1xc1 by c1xc2 matrix into pfres, if badd is true adds the result to pfres
 // does not handle cases where pfres is equal to pf1 or pf2, use multtox for those cases
-template <class T, class R, class S>
+template <typename T, typename R, typename S>
 inline S* mult(T* pf1, R* pf2, int r1, int c1, int c2, S* pfres, bool badd = false);
 
 // pf1 is transposed before mult
 // rows of pf2 must equal rows of pf1
 // pfres will be c1xc2 matrix
-template <class T, class R, class S>
+template <typename T, typename R, typename S>
 inline S* multtrans(T* pf1, R* pf2, int r1, int c1, int c2, S* pfres, bool badd = false);
 
 // pf2 is transposed before mult
 // the columns of both matrices must be the same and equal to c1
 // r2 is the number of rows in pf2
 // pfres must be an r1xr2 matrix
-template <class T, class R, class S>
+template <typename T, typename R, typename S>
 inline S* multtrans_to2(T* pf1, R* pf2, int r1, int c1, int r2, S* pfres, bool badd = false);
 
 // multiplies rxc matrix pf1 and cxc matrix pf2 and stores the result in pf1, 
@@ -1011,7 +1006,7 @@ template <typename T> inline T* multto1(T* pf1, T* pf2, int r1, int c1, T* pftem
 
 // same as multto1 except stores the result in pf2, pf1 has to be an r2xr2 matrix
 // pftemp must be of size r2 if not NULL
-template <class T, class S> inline T* multto2(T* pf1, S* pf2, int r2, int c2, S* pftemp = NULL);
+template <typename T, typename S> inline T* multto2(T* pf1, S* pf2, int r2, int c2, S* pftemp = NULL);
 
 // add pf1 + pf2 and store in pf1
 template <typename T> inline void sub(T* pf1, T* pf2, int r);
@@ -1272,7 +1267,7 @@ template <typename T> inline RaveVector<T> quatFromAxisAngle(const RaveVector<T>
 ///
 /// \ingroup affine_math
 /// \param t transform for extracting the 3x3 rotation.
-template <typename T> inline RaveVector<T> quatFromRotationMatrix(const RaveTransformMatrix<T>& rotation)
+template <typename T> inline RaveVector<T> quatFromMatrix(const RaveTransformMatrix<T>& rotation)
 {
     RaveVector<T> rot;
     T tr = rotation.m[4*0+0] + rotation.m[4*1+1] + rotation.m[4*2+2];
@@ -1318,7 +1313,7 @@ template <typename T> inline RaveVector<T> quatFromRotationMatrix(const RaveTran
 ///
 /// \ingroup affine_math
 /// \param[in] quat quaternion, (s,vx,vy,vz)
-template <typename T> inline RaveTransformMatrix<T> rotationMatrixFromQuat(const RaveVector<T>& quat)
+template <typename T> inline RaveTransformMatrix<T> matrixFromQuat(const RaveVector<T>& quat)
 {
     RaveTransformMatrix<T> t;
     T qq1 = 2*quat[1]*quat[1];
@@ -1344,7 +1339,7 @@ template <typename T> inline RaveTransformMatrix<T> rotationMatrixFromQuat(const
 /// \ingroup affine_math
 /// \param[out] rotation 
 /// \param[in] quat quaternion, (s,vx,vy,vz)
-template <typename T> void rotationMatrixFromQuat(RaveTransformMatrix<T>& rotation, const RaveVector<T>& quat)
+template <typename T> void matrixFromQuat(RaveTransformMatrix<T>& rotation, const RaveVector<T>& quat)
 {
     T qq1 = 2*quat[1]*quat[1];
     T qq2 = 2*quat[2]*quat[2];
@@ -1368,18 +1363,18 @@ template <typename T> void rotationMatrixFromQuat(RaveTransformMatrix<T>& rotati
 /// \ingroup affine_math
 /// \param axis unit axis, 3 values
 /// \param angle rotation angle (radians)
-template <typename T> inline RaveTransformMatrix<T> rotationMatrixFromAxisAngle(const RaveVector<T>& axis, T angle)
+template <typename T> inline RaveTransformMatrix<T> matrixFromAxisAngle(const RaveVector<T>& axis, T angle)
 {
-    return rotationMatrixFromQuat(quatFromAxisAngle(axis,angle));
+    return matrixFromQuat(quatFromAxisAngle(axis,angle));
 }
 
 /// \brief Converts an axis-angle rotation to a 3x3 matrix.
 ///
 /// \ingroup affine_math
 /// \param axis unit axis * rotation angle (radians), 3 values
-template <typename T> inline RaveTransformMatrix<T> rotationMatrixFromAxisAngle(const RaveVector<T>& axisangle)
+template <typename T> inline RaveTransformMatrix<T> matrixFromAxisAngle(const RaveVector<T>& axisangle)
 {
-    return rotationMatrixFromQuat(quatFromAxisAngle(axisangle));
+    return matrixFromQuat(quatFromAxisAngle(axisangle));
 }
 
 /// \brief Multiply two quaternions
@@ -1445,7 +1440,6 @@ inline RaveVector<T> quatSlerp(const RaveVector<T>& quat0, const RaveVector<T>& 
         qm.z = (quat0.z * 0.5f + qb.z * 0.5f);
         return qm;
     }
-
     T ratioA = RaveSin((1 - t) * halfTheta) / sinHalfTheta;
     T ratioB = RaveSin(t * halfTheta) / sinHalfTheta; 
     //calculate Quaternion.
@@ -1465,48 +1459,99 @@ inline RaveVector<T> dQSlerp(const RaveVector<T>& qa, const RaveVector<T>& _qb, 
     return quatSlerp<T>(qa,_qb,t);
 }
 
-/// \brief Return the minimal quaternion that orients vsource to vtarget.
+/// \brief Return the minimal quaternion that orients sourcedir to targetdir
+///
 /// \ingroup affine_math
+/// \param sourcedir direction of the original vector, 3 values
+/// \param targetdir new direction, 3 values
 template<typename T>
-RaveVector<T> quatRotateDirection(const RaveVector<T>& vsource, const RaveVector<T>& vtarget)
+RaveVector<T> quatRotateDirection(const RaveVector<T>& sourcedir, const RaveVector<T>& targetdir)
 {
     RaveVector<T> rottodirection;
-    cross3(rottodirection, vsource,vtarget);
+    cross3(rottodirection, sourcedir,targetdir);
     T fsin = RaveSqrt(rottodirection.lengthsqr3());
-    T fcos = dot3(vsource, vtarget);
+    T fcos = dot3(sourcedir, targetdir);
     RaveTransform<T> torient;
-    if( fsin > 1e-6f ) {
-        torient.rotfromaxisangle(rottodirection*(1/fsin), RaveAtan2(fsin, fcos));
+    if( fsin > g_fEpsilon ) {
+        return quatFromAxisAngle(rottodirection*(1/fsin), RaveAtan2(fsin, fcos));
     }
-    else if( fcos < 0 ) {
+    if( fcos < 0 ) {
         // hand is flipped 180, rotate around x axis
         rottodirection = RaveVector<T>(1,0,0);
-        rottodirection -= vsource * dot3(vsource, rottodirection);
+        rottodirection -= sourcedir * dot3(sourcedir, rottodirection);
         if( rottodirection.lengthsqr3()<1e-8 ) {
             rottodirection = RaveVector<T>(0,0,1);
-            rottodirection -= vsource * dot3(vsource, rottodirection);
+            rottodirection -= sourcedir * dot3(sourcedir, rottodirection);
         }
         rottodirection.normalize3();
-        torient.rotfromaxisangle(rottodirection, RaveAtan2(fsin, fcos));
+        return quatFromAxisAngle(rottodirection, RaveAtan2(fsin, fcos));
     }
-    return torient.rot;
+    return RaveVector<T>(T(1),T(0),T(0),T(0));
+}
+
+/// \brief Converts a quaternion into the axis-angle representation.
+///
+/// \ingroup affine_math
+/// \param quat quaternion, (s,vx,vy,vz)
+template<typename T>
+RaveVector<T> axisAngleFromQuat(const RaveVector<T>& quat)
+{
+    T sinang = quat.y*quat.y+quat.z*quat.z+quat.w*quat.w;
+    if( RaveFabs(sinang) < g_fEpsilon ) {
+        return RaveVector<T>(0,0,0);
+    }
+    RaveVector<T> _quat;
+    if( quat.x < 0 ) {
+        _quat = -quat;
+    }
+    else {
+        _quat = quat;
+    }
+    sinang = RaveSqrt(sinang);
+    T f = 2.0*RaveAtan2(sinang,_quat.x)/sinang;
+    return RaveVector<T>(_quat.y*f,_quat.z*f,_quat.w*f);
+}
+
+/// \brief Converts the rotation of a matrix into axis-angle representation.
+///
+/// \ingroup affine_math
+/// \param rotation 3x3 rotation matrix
+template<typename T>
+RaveVector<T> axisAngleFromMatrix(const RaveTransformMatrix<T>& rotation)
+{
+    return axisAngleFromQuat(quatFromMatrix(rotation));
 }
 
 template <typename T>
 RaveTransform<T>::RaveTransform(const RaveTransformMatrix<T>& t)
 {
     trans = t.trans;
-    rot = quatFromRotationMatrix(t);
+    rot = quatFromMatrix(t);
 }
 
 template <typename T>
 RaveTransformMatrix<T>::RaveTransformMatrix(const RaveTransform<T>& t)
 {
-    rotationMatrixFromQuat(*this, t.rot);
+    matrixFromQuat(*this, t.rot);
     trans = t.trans;
 
 }
 
+template <typename T> template <typename U> inline RaveTransformMatrix<T>& RaveTransformMatrix<T>::rotfromaxisangle(const RaveVector<U>& axis, U angle)
+{
+    *this = matrixFromAxisAngle(axis,angle);
+}
+
+template <typename T> template <typename U> inline RaveTransform<T>& RaveTransform<T>::rotfromaxisangle(const RaveVector<U>& axis, U angle) {
+    U sinang = (U)RaveSin(angle/2);
+    rot.x = (U)RaveCos(angle/2);
+    rot.y = axis.x*sinang;
+    rot.z = axis.y*sinang;
+    rot.w = axis.z*sinang;
+    T fnorm = rot.lengthsqr4();
+    MATH_ASSERT( fnorm > 0.99f && fnorm < 1.01f );
+    return *this;
+}
 /// \brief Returns a camera matrix that looks along a ray with a desired up vector.
 ///
 /// \ingroup affine_math
@@ -1963,7 +2008,7 @@ inline double* mult3_s3(double* pfres, const double* pf1, const double* pf2) { r
 inline double* inv3(const double* pf, double* pfres, double* pfdet, int stride) { return _inv3<double>(pf, pfres, pfdet, stride); }
 inline double* inv4(const double* pf, double* pfres) { return _inv4<double>(pf, pfres); }
 
-template <class T, class R, class S>
+template <typename T, typename R, typename S>
 inline S* mult(T* pf1, R* pf2, int r1, int c1, int c2, S* pfres, bool badd)
 {
 	MATH_ASSERT( pf1 != NULL && pf2 != NULL && pfres != NULL);
@@ -1991,7 +2036,7 @@ inline S* mult(T* pf1, R* pf2, int r1, int c1, int c2, S* pfres, bool badd)
 	return pfres;
 }
 
-template <class T, class R, class S>
+template <typename T, typename R, typename S>
 inline S* multtrans(T* pf1, R* pf2, int r1, int c1, int c2, S* pfres, bool badd)
 {
 	MATH_ASSERT( pf1 != NULL && pf2 != NULL && pfres != NULL);
@@ -2022,7 +2067,7 @@ inline S* multtrans(T* pf1, R* pf2, int r1, int c1, int c2, S* pfres, bool badd)
 	return pfres;
 }
 
-template <class T, class R, class S>
+template <typename T, typename R, typename S>
 inline S* multtrans_to2(T* pf1, R* pf2, int r1, int c1, int r2, S* pfres, bool badd)
 {
 	MATH_ASSERT( pf1 != NULL && pf2 != NULL && pfres != NULL);
@@ -2087,7 +2132,7 @@ template <typename T> inline T* multto1(T* pf1, T* pf2, int r, int c, T* pftemp)
 	return pf1;
 }
 
-template <class T, class S> inline T* multto2(T* pf1, S* pf2, int r2, int c2, S* pftemp)
+template <typename T, typename S> inline T* multto2(T* pf1, S* pf2, int r2, int c2, S* pftemp)
 {
 	MATH_ASSERT( pf1 != NULL && pf2 != NULL );
 
@@ -2220,7 +2265,7 @@ template <typename T> inline bool inv2(T* pf, T* pfres)
 	return true;
 }
 
-template <class T, class S>
+template <typename T, typename S>
 void Tridiagonal3 (S* mat, T* diag, T* subd)
 {
     T a, b, c, d, e, f, ell, q;
@@ -2347,33 +2392,33 @@ int Max(T* pts, int stride, int numPts)
 // Don't add new lines to the output << operators. Some applications use it to serialize the data
 // to send across the network.
 
-template <class T, class U>
+template <typename T, typename U>
 std::basic_ostream<T>& operator<<(std::basic_ostream<T>& O, const RaveVector<U>& v)
 {
     return O << v.x << " " << v.y << " " << v.z << " " << v.w << " ";
 }
 
-template <class T, class U>
+template <typename T, typename U>
 std::basic_istream<T>& operator>>(std::basic_istream<T>& I, RaveVector<U>& v)
 {
     return I >> v.x >> v.y >> v.z >> v.w;
 }
 
-template <class T, class U>
+template <typename T, typename U>
 std::basic_ostream<T>& operator<<(std::basic_ostream<T>& O, const RaveTransform<U>& v)
 {
     return O << v.rot.x << " " << v.rot.y << " " << v.rot.z << " " << v.rot.w << " "
              << v.trans.x << " " << v.trans.y << " " << v.trans.z << " ";
 }
 
-template <class T, class U>
+template <typename T, typename U>
 std::basic_istream<T>& operator>>(std::basic_istream<T>& I, RaveTransform<U>& v)
 {
     return I >> v.rot.x >> v.rot.y >> v.rot.z >> v.rot.w >> v.trans.x >> v.trans.y >> v.trans.z;
 }
 
 // serial in column order! This is the format transformations are passed across the network
-template <class T, class U>
+template <typename T, typename U>
 std::basic_ostream<T>& operator<<(std::basic_ostream<T>& O, const RaveTransformMatrix<U>& v)
 {
     return O << v.m[0] << " " << v.m[4] << " " << v.m[8] << " "
@@ -2383,7 +2428,7 @@ std::basic_ostream<T>& operator<<(std::basic_ostream<T>& O, const RaveTransformM
 }
 
 // read in column order! This is the format transformations are passed across the network
-template <class T, class U>
+template <typename T, typename U>
 std::basic_istream<T>& operator>>(std::basic_istream<T>& I, RaveTransformMatrix<U>& v)
 {
     return I >> v.m[0] >> v.m[4] >> v.m[8]

@@ -173,7 +173,7 @@ Uses python docutils, sphinx, breathe, and xml2rst.""")
                     functionname = classname + ' ' + functionname
                 comment_objects.append(('%s function %s'%(lang,functionname),data_object))
             else:
-                print 'Cannot find "%s" function in xml output' %(classname+'::'+functionname)
+                print 'Cannot find "%s::%s" function in xml output' %(classname, functionname)
 
         for name in enums:
             matcher = matcher_factory.create_name_type_matcher(name,'enum')

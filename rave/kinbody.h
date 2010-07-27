@@ -564,7 +564,7 @@ public:
     /// \return Vector of joints such that the beginning joints affect the later ones.
     const std::vector<JointPtr>& GetDependencyOrderedJoints() const { return _vDependencyOrderedJoints; }
 
-    /** \~english \brief Computes the minimal chain of joints that are between two links in the order of linkbaseindex to linkendindex.
+    /** \en \brief Computes the minimal chain of joints that are between two links in the order of linkbaseindex to linkendindex.
     
         Passive joints are used to detect rigidly attached links and mimic joints, otherwise they are ignored in the computation of the chain.
         If a mimic joint is found along the path, the joint returned is the source joint!
@@ -573,7 +573,7 @@ public:
         \param[out] vjoints the joints to fill that describe the chain
         \return true if the two links are connected (vjoints will be filled), false if the links are separate
 
-        \~japanese \brief 2つのリンクを繋ぐ関節の最短経路を計算する．
+        \ja \brief 2つのリンクを繋ぐ関節の最短経路を計算する．
         
         受動的な関節は，位置関係が固定されているリンクを見つけるために調べられている．ミミック関節が最短経路にある場合，元の関節が返されるので，注意する必要がある．
         \param[in] linkbaseindex 始点リンクインデックス
@@ -629,11 +629,11 @@ public:
     /// Returns the linear and angular velocities for each link
     virtual void GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const;
 
-    /** \~english \brief set the transform of the first link (the rest of the links are computed based on the joint values).
+    /** \en \brief set the transform of the first link (the rest of the links are computed based on the joint values).
         
         \param transform affine transformation
         
-        \~japanese \brief 胴体の絶対姿勢を設定、残りのリンクは運動学の構造に従って変換される．
+        \ja \brief 胴体の絶対姿勢を設定、残りのリンクは運動学の構造に従って変換される．
 
         \param transform 変換行列
     */

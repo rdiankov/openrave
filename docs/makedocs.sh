@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Internal use
 # script creates the doc files, and sends them over to the programmingvision server
 # packages used: doxygen, python-docutils, python-pygments, python-epydoc, python-sphinx, python-lxml, python-sphinx
@@ -19,7 +19,7 @@ echo "$doxycommands" | cat Doxyfile.latex Doxyfile.en - > Doxyfile.latex.en
 echo "$doxycommands" | cat Doxyfile.html Doxyfile.ja - > Doxyfile.html.ja
 echo "$doxycommands" | cat Doxyfile.latex Doxyfile.ja - > Doxyfile.latex.ja
 
-sh makeimages.sh
+bash makeimages.sh
 
 rm -rf en ja openrave.pdf ordocs.tgz
 
@@ -35,6 +35,7 @@ doxygen Doxyfile.html.ja
 
 # build internal openravepy docs
 python build_openravepy_internal.py --languagecode en --languagecode ja
+# have to rebuild openravepy_int!!
 
 # build openravepy documentation
 prevlang=$LANG
@@ -48,8 +49,3 @@ export LANG=$prevlang
 rm -rf sphinx/interfaces sphinx/sphinx-docs
 python build_interfaces.py
 sphinx-build sphinx sphinx/sphinx-docs
-
-# send to server
-tar czf ordocs.tgz en/html en/openravepy-html en/openrave.pdf images/*.jpg images/*.png ja/html ja/openravepy-html sphinx/sphinx-docs
-scp ordocs.tgz diankov@programmingvision.com:~/openrave/ordocs/
-ssh diankov@programmingvision.com "cd ~/openrave/ordocs; rm -rf en ja; tar xzf ordocs.tgz; rm -rf ordocs.tgz"

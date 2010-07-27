@@ -15,6 +15,12 @@
 """
 環境に読み込んだ物体の移動
 
+**例の実行**
+
+.. code-block:: bash
+
+  openrave.py --example tutorial_002
+
 ソースコード
 --------------------------------------
 
@@ -52,13 +58,7 @@
 ソースコードの実行
 --------------------------------------
 
-上のソースコードを実行してください． 
-
-.. code-block:: bash
-
-  openrave.py --example tutorial_002
-  
-すると，OpenRAVEのGUIが立ち上がり，下のような画像が現れます．
+上のソースコードを実行してください． すると，OpenRAVEのGUIが立ち上がり，下のような画像が現れます．
 
 .. image:: ../../images/example_tutorials/002_two_mugs_read_kinbody.png
   :height: 200

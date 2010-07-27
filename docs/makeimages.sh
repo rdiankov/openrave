@@ -1,3 +1,4 @@
+#!/bin/bash
 # compiles all necessary images
 dia -e images/openrave_architecture.eps images/openrave_architecture.dia
 dia -e images/openrave_architecture.png -s 700 images/openrave_architecture.dia
