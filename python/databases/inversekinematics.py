@@ -12,6 +12,99 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+.. lang-block:: en
+
+  Automatically generate and load inverse kinematics equations for robots.
+
+.. lang-block:: ja
+
+  逆運動学解析解の自動作成
+
+.. image:: ../../images/databases_inversekinematics_wam.png
+  :height: 250
+
+**Running the Example**
+
+.. code-block:: bash
+
+  openrave.py --database inversekinematics --robot=robots/barrettsegway.robot.xml
+
+**Testing the Solvers**
+
+.. code-block:: bash
+
+  openrave.py --database inversekinematics --robot=robots/barrettsegway.robot.xml --iktests=100
+
+Usage
+-----
+
+Dynamically generate/load the inverse kinematics for a robot's manipulator:
+
+.. code-block:: python
+
+  robot.SetActiveManipulator(...)
+  ikmodel = openravepy.databases.inversekinematics.InverseKinematicsModel(robot,iktype=IkParameterization.Type.Transform6D)
+  if not ikmodel.load():
+      ikmodel.autogenerate()
+
+Description
+-----------
+
+This process allows users to generate OpenRAVE inverse kinematics solvers for any robot
+manipulator. The manipulator's arm joints are used for obtaining the joints to solve for. The user
+can specify the IK type (Rotation, Translation, Full 6D, Ray 4D, etc), the free joints of the
+kinematics, and the accuracy. For example, generating the right arm 6D IK for the PR2 robot where
+the free joint is the first joint and the free increment is 0.01 radians is:
+
+.. code-block:: bash
+
+  openrave.py --database inversekinematics --robot=robots/pr2-beta-static.robot.xml --manipname=rightarm  --freejoint=r_shoulder_pan_joint --freeinc=0.01
+
+Generating the 3d rotation IK for the stage below is:
+
+.. code-block:: bash
+
+  openrave.py --database inversekinematics --robot=robots/rotation_stage.robot.xml --rotation3donly
+
+
+.. image:: ../../images/databases_inversekinematics_rotation_stage.jpg
+  :height: 200
+
+Generating the ray inverse kinematics for the 4 degrees of freedom barrett wam is:
+
+.. code-block:: bash
+
+  openrave.py --database inversekinematics --robot=drill.robot.xml --ray4donly 
+
+Testing
+-------
+
+Every IK solver should be tested with the robot using ``--iktests=XXX``. However, calling
+``inversekinematics`` will always re-generate the IK, even if one already exists. In order to just
+run tests, it is possible to specify the ``--usecached`` option to prevent re-generation and
+specifically test:
+
+.. code-block:: bash
+
+  openrave.py --database inversekinematics --robot=robots/barrettwam.robot.xml --usecached --iktests=100
+
+This will give the success rate along with information whether the IK gives a wrong results or fails
+to find a solution.
+
+If there are a lot of free joints in the IK solver, then their discretization can greatly affect
+whether solutions are found or not. In this case, it is advisable to reduce the discretization
+threshold by using the ``--freeinc`` option.
+
+Loading from C++
+----------------
+
+It is possible to use the auto-generation process through c++ by loading the IKFast problem and
+calling LoadIKFastSolver command. Check out the `ikfastloader.cpp`_ example program.
+
+.. _`ikfastloader.cpp`: http://openrave.programmingvision.com/ordocs/en/html/ikfastloader_8cpp-example.html
+
+"""
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
@@ -489,7 +582,11 @@ class InverseKinematicsModel(OpenRAVEModel):
                 env.Destroy()
 
 def run(*args,**kwargs):
-    """Executes the inversekinematics database generation
+    """Executes the inversekinematics database generation,  ``args`` specifies a list of the arguments to the script.
+    
+    **Help**
+    
+    .. shell-block:: openrave.py --database inversekinematics --help
     """
     InverseKinematicsModel.RunFromParser(*args,**kwargs)
 

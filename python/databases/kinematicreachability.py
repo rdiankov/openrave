@@ -12,6 +12,42 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+.. lang-block:: en
+
+  6D kinematic reachability space of a robot's manipulators.
+
+.. lang-block:: ja
+
+  6D到達可能範囲の生成と使用
+
+.. image:: ../../images/databases_reachability.jpg
+  :height: 300
+
+**Running the Example**
+
+.. code-block:: bash
+
+  openrave.py --database kinematicreachability --robot=robots/barrettsegway.robot.xml
+
+**Showing the Reachability** (uses mayavi2)
+
+.. code-block:: bash
+
+  openrave.py --database kinematicreachability --robot=robots/barrettsegway.robot.xml --show
+
+Description
+-----------
+
+This is the reachability when counting the total number of configurations possible at each pose. 
+
+.. image:: ../../images/databases_reachability_wamfull.png
+  :height: 200
+
+.. image:: ../../images/databases_reachability_pa10full.png
+  :height: 200
+
+"""
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
@@ -315,7 +351,11 @@ class ReachabilityModel(OpenRAVEModel):
             env.Destroy()
 
 def run(*args,**kwargs):
-    """Executes the kinematicreachability database generation
+    """Executes the kinematicreachability database generation,  ``args`` specifies a list of the arguments to the script.
+    
+    **Help**
+    
+    .. shell-block:: openrave.py --database inversekinematics --help
     """
     ReachabilityModel.RunFromParser(*args,**kwargs)
 

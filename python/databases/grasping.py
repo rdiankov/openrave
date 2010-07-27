@@ -12,26 +12,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Generates grasp sets given a robot and a target object.
+"""
+.. lang-block:: en
 
-.. image:: ../../images/examples_grasping.jpg
-  :height: 200
+  Simulate grasping of objects and computing force closure metrics.  
 
-Running the Example
--------------------
+.. lang-block:: ja
 
-**python**::
+  把持を探索する手法と接触点による安定性の計算
+
+.. image:: ../../images/databases_grasping.jpg
+  :height: 170
+
+**Running the Example**
+
+.. code-block:: bash
 
   openrave.py --database grasping
-
-**program options/description**::
-
-  openrave.py --database grasping --help
-
-**octave/matlab (first start openrave)**::
-
-  cd `openrave-config --octave-dir`/databases/grasping
-  octave --eval MakeBarrettHandTable
 
 Description
 -----------
@@ -42,28 +39,40 @@ Description
 
 OpenRAVE can simulate grasps for any type of robotic hand, evaluate the quality of the grasps, and
 use those grasps in a more complex grasp planning framework. This tutorial is meant to introduce you
-to the '''grasper''' plugin and the scripts provided to manage the testing and simulation. At the
-end, you should be able to create grasp tables and use them effectively in OpenRAVE. You can find
-the Octave/Matlab scripts for this tutorial in '''databases/grasping'''.
+to the ``grasper`` plugin and the scripts provided to manage the testing and simulation. At the
+end, you should be able to create grasp tables and use them effectively in OpenRAVE.
 
-A grasp is simulated by giving the end-effector an initial pose and initial joint angles (preshape). Then the end effector moves along a direction (usually along the normal of the palm) until it hits the target object. Once hit, the 'fingers' of the end-effector slowly close around the object until they cannot close further. The contacts between the end-effector and target object are extracted, and force closure is calculated. The '''grasper''' plugin is responsible for this simulation, the scripts just pass in the correct parameters to it.
+A grasp is simulated by giving the end-effector an initial pose and initial joint angles
+(preshape). Then the end effector moves along a direction (usually along the normal of the palm)
+until it hits the target object. Once hit, the 'fingers' of the end-effector slowly close around the
+object until they cannot close further. The contacts between the end-effector and target object are
+extracted, and force closure is calculated. The `grasper plugin`_ is responsible for this simulation, the scripts just pass in the correct parameters to it.
 
-Grasp set creation first tries to uniformly sample the surface of the object to determine where to the approach directions should be. Sampling the actual geometric surface of the object can lead to unwanted results due to possible concavities like the handle of a cup. A simpler approach is to take the bounding box of the object and sample its surface uniformly (see `GraspingModel.computeBoxApproachRays`).
+Grasp set creation first tries to uniformly sample the surface of the object to determine where to
+the approach directions should be. Sampling the actual geometric surface of the object can lead to
+unwanted results due to possible concavities like the handle of a cup. A simpler approach is to take
+the bounding box of the object and sample its surface uniformly (see
+`GraspingModel.computeBoxApproachRays`).
 
 .. image:: ../../images/grasping_box_sampling.jpg
   :width: 250
 
-Once the surface of the box is sampled, the intersection of the object and a ray originating from each point going inward is taken. The normal of the object's surface from each of these intersection points is taken to be the approaching direction of the end-effector. The red lines in the above image indicate the rays along which the end-effector will approach the cup.
+Once the surface of the box is sampled, the intersection of the object and a ray originating from
+each point going inward is taken. The normal of the object's surface from each of these intersection
+points is taken to be the approaching direction of the end-effector. The red lines in the above
+image indicate the rays along which the end-effector will approach the cup.
 
 .. image:: ../../images/grasping_surface_sampling.jpg
   :width: 200
 
-Once the initial pose, preshape, and approach direction are chosen, the grasper planner is called, which queries the contact points of the grasp and analyzes them for force closure.
+Once the initial pose, preshape, and approach direction are chosen, the grasper planner is called,
+which queries the contact points of the grasp and analyzes them for force closure.
 
 .. image:: ../../images/barrett_grasp_strategy.jpg
   :width: 700
 
-Render the final configuration of the end-effector closing down on the target object along with the friction cones at each contact point (red transparent cones). 
+Render the final configuration of the end-effector closing down on the target object along with the
+friction cones at each contact point (red transparent cones).
 
 .. image:: ../../images/grasping_barrett_mug1.jpg
   :width: 300
@@ -71,7 +80,7 @@ Render the final configuration of the end-effector closing down on the target ob
 .. image:: ../../images/grasping_barrett_mug3.jpg
   :width: 300
 
-Calling '''MakeBarrettHandTable('data/ketchup.kinbody.xml')''' generates tables for a ketchup bottle.
+Calling `GraspingModel.generate` generates tables for a ketchup bottle.
 
 .. image:: ../../images/grasping_barrett_ketchup1.jpg
   :width: 250
@@ -93,6 +102,8 @@ Here's a short list of features of the grasper planner and problem interfaces:
 - The grasp coordinate system is defined to be the manipulator's grasp coordinate system (ie, it isn't a link). This allows grasps to define a center of approach. The manipulator definition itself also supports specifying a 'palm direction', which the grasper planner now uses.
 
 - Because the grasper planner reads the gripper links from the manipulator definition, it can now function correctly just by being passed the full robot. Inside the loop, the gripper is separated momentarily to complete the grasping process, the rest of the body is ignored. This allows users to test grasps on a real scene without having to introduce a floating hand into the scene.
+
+.. _`grasper plugin`: http://openrave.programmingvision.com/ordocs/sphinx/sphinx-docs/plugins.html#grasper
 
 """
 from __future__ import with_statement # for python 2.5

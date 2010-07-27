@@ -12,6 +12,66 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+.. lang-block:: en
+
+  Convex decomposition of the link geometry of the robot.
+
+.. lang-block:: ja
+
+  剛体を複数の凸形状での近似
+
+.. image:: ../../images/databases_convexdecomposition_wam.jpg
+  :height: 200
+
+.. image:: ../../images/databases_convexdecomposition_sda10.jpg
+  :height: 200
+
+.. image:: ../../images/databases_convexdecomposition_hrp2.jpg
+  :height: 200
+
+**Running the Example**
+
+.. code-block:: bash
+
+  openrave.py --database convexdecomposition --robot=robots/barrettsegway.robot.xml
+
+
+**Showing the Decomposition**
+
+.. code-block:: bash
+
+  openrave.py --database convexdecomposition --robot=robots/barrettsegway.robot.xml --show
+
+Usage
+-----
+
+Dynamically load the convex hulls for a robot:
+
+.. code-block:: python
+
+  cdmodel = openravepy.databases.convexdecomposition.ConvexDecompositionModel(robot)
+  if not cdmodel.load():
+      cdmodel.autogenerate()
+
+.. lang-block:: ja
+
+  **解説**
+
+  凸形状の一つの利点は体積が計算出来る．
+
+
+Description
+-----------
+
+Approximates each of the links with a set of convex hulls using John Ratcliff's `convexdecomposition library`_. 
+
+.. _`convexdecomposition library`: http://codesuppository.blogspot.com/2009/11/convex-decomposition-library-now.html
+
+.. image:: ../../images/databases_convexdecomposition_wamenv.jpg
+  :height: 250
+
+"""
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
@@ -216,7 +276,11 @@ class ConvexDecompositionModel(OpenRAVEModel):
             env.Destroy()
 
 def run(*args,**kwargs):
-    """Executes the convexdecomposition database generation
+    """Executes the convexdecomposition database generation,  ``args`` specifies a list of the arguments to the script.
+    
+    **Help**
+    
+    .. shell-block:: openrave.py --database convexdecomposition --help
     """
     ConvexDecompositionModel.RunFromParser(*args,**kwargs)
 
