@@ -208,7 +208,10 @@ def sequence_cross_product(*sequences):
             break
 
 class MultiManipIKSolver(metaclass.AutoReloader):
-    """Finds the simultaneous IK solutions of all disjoint manipulators (no manipulators share a joint)"""
+    """Finds the simultaneous IK solutions of all disjoint manipulators (no manipulators share a joint).
+
+    The class is extremely useful in dual-manipulation IK solutions. It also handled grabbed bodies correctly.
+    """
     def __init__(self,manips):
         self.robot = manips[0].GetRobot()
         self.manips = manips
@@ -218,28 +221,44 @@ class MultiManipIKSolver(metaclass.AutoReloader):
         self.enablelinknames = [alllinknames.difference(indeplinksets[i]).union(indeplinknames) for i in range(len(self.manips))]
     
     def findMultiIKSolution(self,Tgrasps,envcheck=True):
-        """return one ik solution"""
+        """Return one set collision-free ik solutions for all manipulators.
+
+        Method always checks self-collisions.
+        
+        :param Tgrasps: a list of all the end effector transforms of each of the manipualtors
+        : param envcheck: If true will check environment collisions.
+        """
         assert(len(Tgrasps)==len(self.manips))
         with self.robot:
             alljointvalues = []
-            for i,manip in enumerate(self.manips):
-                # invalidate all manip links for now (since will be moving them later)
-                for link in self.robot.GetLinks():
-                    link.Enable(link.GetName() in self.enablelinknames[i])
-                values=manip.FindIKSolutions(Tgrasps[i],envcheck)
-                if values is not None and len(values) > 0:
-                    alljointvalues.append(values)
-                else:
-                    return None
-                
-            # take all combinations of the solutions
+            grabbed = self.robot.GetGrabbed()
+            statesavers = [body.CreateKinBodyStateSaver() for body in grabbed]
+            try:
+                with RobotStateSaver(self.robot): # for storing enabled state
+                    for i,manip in enumerate(self.manips):
+                        # invalidate all links that are controlled by the other manipulators
+                        for link in self.robot.GetLinks():
+                            link.Enable(link.GetName() in self.enablelinknames[i])
+                        # enable only the grabbed bodies of this manipulator
+                        for body in grabbed:
+                            body.Enable(manip.IsGrabbing(body))
+                        values=manip.FindIKSolutions(Tgrasps[i],envcheck)
+                        if values is not None and len(values) > 0:
+                            alljointvalues.append(values)
+                        else:
+                            return None
+                        
+            finally:
+                del statesavers # destroy them
+
+            
             for sols in sequence_cross_product(*alljointvalues):
                 for sol,manip in izip(sols,self.manips):
                     self.robot.SetJointValues(sol,manip.GetArmIndices()) 
                 if not self.robot.CheckSelfCollision():
                     if not envcheck or not self.robot.GetEnv().CheckCollision(self.robot):
                         return sols
-                    
+            
             return None
 
 class SpaceSampler(metaclass.AutoReloader):

@@ -96,7 +96,6 @@ class Schunkplanner:
         print ('Moving to Grasping position for object: %s'%(obj))
         self.planDualPath(obj)
         self.WaitForController()
-        time.sleep(1)
 
         print ('Grasping body %s'%(obj))
         self.graspObject()

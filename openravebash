@@ -3,23 +3,29 @@ function _complete_openravepy {
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
     if [[ $COMP_CWORD -ge 2 ]]; then
-        case ${COMP_WORDS[1]} in
-            --listinterfaces)
-                opts="planner robot sensorsystem controller probleminstance inversekinematicssolver kinbody physicsengine sensor collisionchecker trajectory viewer"
-                COMPREPLY=($(compgen -W "$opts" -- ${cur}))
-                return 0
-                ;;
-            --example)
-                opts=`openrave.py --listexamples`
-                COMPREPLY=($(compgen -W "$opts" -- ${cur}))
-                return 0
-                ;;
-            --database)
-                opts=`openrave.py --listdatabases`
-                COMPREPLY=($(compgen -W "$opts" -- ${cur}))
-                return 0
-                ;;
-        esac
+        if [[ $COMP_CWORD == 2 ]]; then
+            case ${COMP_WORDS[1]} in
+                --listinterfaces)
+                    opts="planner robot sensorsystem controller probleminstance inversekinematicssolver kinbody physicsengine sensor collisionchecker trajectory viewer"
+                    COMPREPLY=($(compgen -W "$opts" -- ${cur}))
+                    return 0
+                    ;;
+                --example)
+                    opts=`openrave.py --listexamples`
+                    COMPREPLY=($(compgen -W "$opts" -- ${cur}))
+                    return 0
+                    ;;
+                --database)
+                    opts=`openrave.py --listdatabases`
+                    COMPREPLY=($(compgen -W "$opts" -- ${cur}))
+                    return 0
+                    ;;
+            esac
+        else
+            # just add in the xml and dae files, we don't have auto-completations for the examples/databases yet
+            COMPREPLY=($(compgen -f -X "!*.+(dae|xml)" -- ${cur}))
+            return 0
+        fi
     fi
 
     case "${prev}" in
