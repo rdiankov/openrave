@@ -226,7 +226,7 @@ class MultiManipIKSolver(metaclass.AutoReloader):
         Method always checks self-collisions.
         
         :param Tgrasps: a list of all the end effector transforms of each of the manipualtors
-        : param envcheck: If true will check environment collisions.
+        :param envcheck: If true will check environment collisions.
         """
         assert(len(Tgrasps)==len(self.manips))
         with self.robot:

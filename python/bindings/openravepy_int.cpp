@@ -3816,8 +3816,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("HasIKSolver",&PyRobotBase::PyManipulator::HasIKSolver, DOXY_FN(RobotBase::Manipulator,HasIKSolver))
             .def("GetNumFreeParameters",&PyRobotBase::PyManipulator::GetNumFreeParameters, DOXY_FN(RobotBase::Manipulator,GetNumFreeParameters))
             .def("GetFreeParameters",&PyRobotBase::PyManipulator::GetFreeParameters, DOXY_FN(RobotBase::Manipulator,GetFreeParameters))
-            .def("FindIKSolution",pmanipik,args("param","envcheck"), DOXY_FN(RobotBase::Manipulator,FindIKSolution "const IkParameterization; std::vector, bool"))
-            .def("FindIKSolution",pmanipikf,args("param","freevalues","envcheck"), DOXY_FN(RobotBase::Manipulator,FindIKSolution "const IkParameterization; const std::vector; std::vector, bool"))
+            .def("FindIKSolution",pmanipik,args("param","envcheck"), DOXY_FN(RobotBase::Manipulator,FindIKSolution "const IkParameterization; std::vector; bool"))
+            .def("FindIKSolution",pmanipikf,args("param","freevalues","envcheck"), DOXY_FN(RobotBase::Manipulator,FindIKSolution "const IkParameterization; const std::vector; std::vector; bool"))
             .def("FindIKSolutions",pmanipiks,args("param","envcheck"), DOXY_FN(RobotBase::Manipulator,FindIKSolutions "const IkParameterization; std::vector; bool"))
             .def("FindIKSolutions",pmanipiksf,args("param","freevalues","envcheck"), DOXY_FN(RobotBase::Manipulator,FindIKSolutions "const IkParameterization; const std::vector; std::vector; bool"))
             .def("GetBase",&PyRobotBase::PyManipulator::GetBase, DOXY_FN(RobotBase::Manipulator,GetBase))
@@ -4167,7 +4167,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
     def("quatSlerp",openravepy::quatSlerp, args("quat0","quat1","t"), DOXY_FN1(quatSlerp "const RaveVector; const RaveVector; T"));
     def("axisAngleFromRotationMatrix",openravepy::axisAngleFromRotationMatrix, args("rotation"), DOXY_FN1(axisAngleFromMatrix "const RaveTransformMatrix"));
     def("axisAngleFromQuat",openravepy::axisAngleFromQuat, args("quat"), DOXY_FN1(axisAngleFromQuat "const RaveVector"));
-    def("rotationMatrixFromQuat",openravepy::rotationMatrixFromQuat, args("quat"), DOXY_FN1(rotationMatrixFromQuat "const RaveVector"));
+    def("rotationMatrixFromQuat",openravepy::rotationMatrixFromQuat, args("quat"), DOXY_FN1(matrixFromQuat "const RaveVector"));
     def("rotationMatrixFromQArray",openravepy::rotationMatrixFromQArray,args("quatarray"),"Converts an array of quaternions to a list of 3x3 rotation matrices.\n\n:param quatarray: nx4 array\n");
     def("matrixFromQuat",openravepy::matrixFromQuat, args("quat"), "Converts a quaternion to a 4x4 affine matrix.\n\n:param quat: 4 values\n");
     def("rotationMatrixFromAxisAngle",openravepy::rotationMatrixFromAxisAngle1, args("axisangle"), DOXY_FN1(matrixFromAxisAngle "const RaveVector"));
