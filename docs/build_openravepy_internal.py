@@ -29,6 +29,10 @@ class FunctionArgumentMatcher(breathe.finder.doxygen.ItemMatcher):
     Can optionally specify a set of ids in which the matching function has be at least one of them
     """
     def __init__(self, name,ids=None):
+        """Input the function name to match and create the cached data.
+
+        :param name: Of the form **funcname "type1; type2; ..."**. For now using ';' for separating the arguments, but it can be easily changed to ','.
+        """
         self.ids=None
         self.params = None
         paramindex = name.find('"')
