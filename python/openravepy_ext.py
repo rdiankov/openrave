@@ -561,7 +561,7 @@ class OpenRAVEModel(metaclass.AutoReloader):
                 if hasattr(options,'manipname'):
                     if options.manipname is None:
                         # prioritize manipulators with ik solvers
-                        indices = [i for i,m in enumerate(robot.GetManipulators()) if m.HasIKSolver()]
+                        indices = [i for i,m in enumerate(robot.GetManipulators()) if m.GetIkSolver() is not None]
                         if len(indices) > 0:
                             robot.SetActiveManipulator(indices[0])
                     else:

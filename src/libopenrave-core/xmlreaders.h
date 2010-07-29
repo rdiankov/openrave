@@ -2186,7 +2186,10 @@ namespace OpenRAVEXMLParser
                     _pmanip->_strIkSolver = piksolver->GetXMLId();
                 }
 
-                _pmanip->SetIKSolver(piksolver);
+                _pmanip->_pIkSolver = piksolver;
+                if( !!piksolver ) {
+                    _pmanip->_strIkSolver = piksolver->GetXMLId();
+                }
             }
             else if( xmlname == "closingdirection" || xmlname == "closingdir" ) {
                 _pmanip->_vClosingDirection = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());

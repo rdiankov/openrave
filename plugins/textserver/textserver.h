@@ -1590,7 +1590,13 @@ protected:
                 os << *it << " ";
             os << (*itmanip)->GetDirection().x << " " << (*itmanip)->GetDirection().y << " " << (*itmanip)->GetDirection().z << " ";
             os << (*itmanip)->GetName().size() << " " << (*itmanip)->GetName() << " ";
-            os << (*itmanip)->GetIKSolverName().size() << " " << (*itmanip)->GetIKSolverName() << " ";
+            if( !!(*itmanip)->GetIkSolver() ) {
+                string name = (*itmanip)->GetIkSolver()->GetXMLId();
+                os << name.size() << " " << name << " ";
+            }
+            else {
+                os << "0 ";
+            }
         }
 
         return true;

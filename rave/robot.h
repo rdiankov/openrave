@@ -47,10 +47,20 @@ public:
         virtual const std::string& GetName() const { return _name; }
         virtual RobotBasePtr GetRobot() const { return RobotBasePtr(_probot); }
         
-        virtual void SetIKSolver(IkSolverBasePtr iksolver);
-        virtual bool InitIKSolver();
-        virtual const std::string& GetIKSolverName() const;
-        virtual bool HasIKSolver() const;
+        /// \brief Sets the ik solver and initializes it with the current manipulator.
+        virtual bool SetIkSolver(IkSolverBasePtr iksolver) ;
+
+        /// \brief Returns the currently set ik solver
+        virtual IkSolverBasePtr GetIkSolver() const { return _pIkSolver; }
+
+        /// \deprecated (10/07/29)
+        virtual bool SetIKSolver(IkSolverBasePtr iksolver) RAVE_DEPRECATED { return SetIkSolver(iksolver); }
+        /// \deprecated (10/07/29)
+        virtual bool InitIKSolver() RAVE_DEPRECATED;
+        /// \deprecated (10/07/29)
+        virtual const std::string& GetIKSolverName() const RAVE_DEPRECATED { return _strIkSolver; }
+        /// \deprecated (10/07/29)
+        virtual bool HasIKSolver() const RAVE_DEPRECATED { return !!_pIkSolver; }
 
         /// the base used for the iksolver
         virtual LinkPtr GetBase() const { return _pBase; }

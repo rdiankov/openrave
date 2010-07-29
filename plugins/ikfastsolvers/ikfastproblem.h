@@ -396,8 +396,7 @@ public:
         if( !iksolver ) {
             return false;
         }
-        probot->GetActiveManipulator()->SetIKSolver(iksolver);
-        return probot->GetActiveManipulator()->InitIKSolver();
+        return probot->GetActiveManipulator()->SetIkSolver(iksolver);
     }
 #endif
     

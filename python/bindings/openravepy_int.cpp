@@ -1321,10 +1321,11 @@ public:
         string GetName() const { return _pmanip->GetName(); }
         PyRobotBasePtr GetRobot() { return PyRobotBasePtr(new PyRobotBase(_pmanip->GetRobot(),_pyenv)); }
 
-		void SetIKSolver(PyIkSolverBasePtr iksolver) { CHECK_POINTER(iksolver); _pmanip->SetIKSolver(iksolver->GetIkSolver()); }
-        bool InitIKSolver() { return _pmanip->InitIKSolver(); }
-        string GetIKSolverName() const { return _pmanip->GetIKSolverName(); }
-        bool HasIKSolver() const { return _pmanip->HasIKSolver(); }
+		bool SetIkSolver(PyIkSolverBasePtr iksolver) { CHECK_POINTER(iksolver); return _pmanip->SetIkSolver(iksolver->GetIkSolver()); }
+        PyIkSolverBasePtr GetIkSolver() { IkSolverBasePtr iksolver = _pmanip->GetIkSolver(); return !iksolver ? PyIkSolverBasePtr() : PyIkSolverBasePtr(new PyIkSolverBase(iksolver,_pyenv)); }
+        bool InitIKSolver() { RAVELOG_WARN("Manipulator::InitIKSolver has been deprecated\n"); return _pmanip->InitIKSolver(); }
+        string GetIKSolverName() const { RAVELOG_WARN("Manipulator::GetIKSolverName  has been deprecated\n");  return _pmanip->GetIKSolverName(); }
+        bool HasIKSolver() const { RAVELOG_WARN("Manipulator::HasIKSolver has been deprecated, use GetIkSolver\n");  return _pmanip->HasIKSolver(); }
 
         boost::shared_ptr<PyLink> GetBase() { return !_pmanip->GetBase() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pmanip->GetBase(),_pyenv)); }
         boost::shared_ptr<PyLink> GetEndEffector() { return !_pmanip->GetEndEffector() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pmanip->GetEndEffector(),_pyenv)); }
@@ -3810,7 +3811,9 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetEndEffectorTransform", &PyRobotBase::PyManipulator::GetEndEffectorTransform, DOXY_FN(RobotBase::Manipulator,GetEndEffectorTransform))
             .def("GetName",&PyRobotBase::PyManipulator::GetName, DOXY_FN(RobotBase::Manipulator,GetName))
             .def("GetRobot",&PyRobotBase::PyManipulator::GetRobot, DOXY_FN(RobotBase::Manipulator,GetRobot))
-            .def("SetIKSolver",&PyRobotBase::PyManipulator::SetIKSolver, DOXY_FN(RobotBase::Manipulator,SetIKSolver))
+            .def("SetIkSolver",&PyRobotBase::PyManipulator::SetIkSolver, DOXY_FN(RobotBase::Manipulator,SetIkSolver))
+            .def("GetIkSolver",&PyRobotBase::PyManipulator::GetIkSolver, DOXY_FN(RobotBase::Manipulator,GetIkSolver))
+            .def("SetIKSolver",&PyRobotBase::PyManipulator::SetIkSolver, DOXY_FN(RobotBase::Manipulator,SetIkSolver))
             .def("InitIKSolver",&PyRobotBase::PyManipulator::InitIKSolver,args("iksolver"), DOXY_FN(RobotBase::Manipulator,InitIKSolver))
             .def("GetIKSolverName",&PyRobotBase::PyManipulator::GetIKSolverName, DOXY_FN(RobotBase::Manipulator,GetIKSolverName))
             .def("HasIKSolver",&PyRobotBase::PyManipulator::HasIKSolver, DOXY_FN(RobotBase::Manipulator,HasIKSolver))

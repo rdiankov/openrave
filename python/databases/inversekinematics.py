@@ -146,7 +146,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         clone.setrobot(self.freeinc)
         return clone    
     def has(self):
-        return self.iksolver is not None and self.manip.HasIKSolver()
+        return self.iksolver is not None and self.manip.GetIkSolver() is not None
     def load(self,*args,**kwargs):
         return self.setrobot(*args,**kwargs)
     def getversion(self):
@@ -158,8 +158,8 @@ class InverseKinematicsModel(OpenRAVEModel):
             iksuffix = ' %f'%freeinc
         else:
             iksuffix = ''
-#         if self.manip.HasIKSolver():
-#             self.iksolver = self.env.CreateIkSolver(self.manip.GetIKSolverName()+iksuffix) if self.manip.HasIKSolver() else None
+#         if self.manip.GetIkSolver() is not None:
+#             self.iksolver = self.env.CreateIkSolver(self.manip.GetIKSolverName()+iksuffix)
         if self.iksolver is None:
             with self.env:
                 ikname = 'ikfast.%s.%s'%(self.manip.GetKinematicsStructureHash(),self.manip.GetName())
@@ -167,16 +167,14 @@ class InverseKinematicsModel(OpenRAVEModel):
                 if iktype is None:
                     if self.forceikfast:
                         return False
-                    self.iksolver = self.env.CreateIkSolver(self.manip.GetIKSolverName()+iksuffix) if self.manip.HasIKSolver() else None
+                    self.iksolver = self.env.CreateIkSolver(self.manip.GetIKSolverName()+iksuffix) if self.manip.GetIkSolver() is not None else None
                 else:
                     if int(self.iktype) != int(iktype):
                         raise ValueError('ik does not match types %s!=%s'%(self.iktype,iktype))
                     ikname = 'ikfast ' + ikname
                     self.iksolver = self.env.CreateIkSolver(ikname+iksuffix)
         if self.iksolver is not None:
-            self.manip.SetIKSolver(self.iksolver)
-            if not self.manip.InitIKSolver():
-                return False
+            return self.manip.SetIKSolver(self.iksolver)
         return self.has()
     
     def save(self):

@@ -1131,7 +1131,7 @@ private:
         taskdata->ptargetlink = taskdata->ptarget->GetLinks()[nLinkIndex];
 
         RobotBase::ManipulatorPtr pmanip = _robot->GetActiveManipulator();
-        if( !pmanip->HasIKSolver() ) {
+        if( !pmanip->GetIkSolver() ) {
             RAVELOG_WARNA("need to select a robot manipulator with ik solver\n");
             return false;
         }
@@ -1517,7 +1517,7 @@ private:
         taskdata->ptargetlink = taskdata->ptarget->GetLinks()[nLinkIndex];
 
         RobotBase::ManipulatorPtr pmanip = _robot->GetActiveManipulator();
-        if( !pmanip->HasIKSolver() ) {
+        if( !pmanip->GetIkSolver() ) {
             RAVELOG_WARNA("need to select a robot manipulator with ik solver\n");
             return false;
         }
@@ -1696,7 +1696,7 @@ private:
     {
         //RAVELOG_WARNA("%d\n", j);
         RobotBase::ManipulatorPtr pmanip = _robot->GetActiveManipulator();
-        BOOST_ASSERT( pmanip->HasIKSolver() );
+        BOOST_ASSERT( !!pmanip->GetIkSolver() );
     
         taskdata->ptarget->SetJointValues(taskdata->vtargettraj[j]);
     

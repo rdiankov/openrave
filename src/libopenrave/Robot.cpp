@@ -56,26 +56,19 @@ Transform RobotBase::Manipulator::GetEndEffectorTransform() const
     return _pEndEffector->GetTransform() * _tGrasp;
 }
 
-void RobotBase::Manipulator::SetIKSolver(IkSolverBasePtr iksolver)
+bool RobotBase::Manipulator::SetIkSolver(IkSolverBasePtr iksolver)
 {
     _pIkSolver = iksolver;
-    if( !!_pIkSolver )
+    if( !!_pIkSolver ) {
         _strIkSolver = _pIkSolver->GetXMLId();
+        return _pIkSolver->Init(shared_from_this());
+    }
+    return true;
 }
 
 bool RobotBase::Manipulator::InitIKSolver()
 {
     return !_pIkSolver ? false : _pIkSolver->Init(shared_from_this());
-}
-
-const std::string& RobotBase::Manipulator::GetIKSolverName() const
-{
-    return _strIkSolver;
-}
-
-bool RobotBase::Manipulator::HasIKSolver() const
-{
-    return !!_pIkSolver;
 }
 
 int RobotBase::Manipulator::GetNumFreeParameters() const
@@ -2078,7 +2071,10 @@ void RobotBase::_ComputeInternalInformation()
         }
         else
             RAVELOG_WARN(str(boost::format("manipulator %s has undefined base and end effector links\n")%(*itmanip)->GetName()));
-        (*itmanip)->InitIKSolver();
+
+        if( !!(*itmanip)->_pIkSolver ) {
+            (*itmanip)->_pIkSolver->Init(*itmanip);
+        }
         vector<ManipulatorPtr>::iterator itmanip2 = itmanip; ++itmanip2;
         for(;itmanip2 != _vecManipulators.end(); ++itmanip2) {
             if( (*itmanip)->GetName() == (*itmanip2)->GetName() )
