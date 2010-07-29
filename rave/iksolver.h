@@ -60,12 +60,42 @@ protected:
     Type _type;
 };
 
+/// \brief Return value for the ik filter that can be optionally set on an ik solver.
+enum IkFilterReturn
+{
+    IKFR_Success = 0, ///< the ik solution is good
+    IKFR_Reject = 1, ///< reject the ik solution
+    IKFR_Quit = 2, ///< the ik solution is rejected and the ik call itself should quit with failure
+};
+
+/// \brief Controls what information gets validated when searching for an inverse kinematics solution.
+enum IkFilterOptions
+{
+    IKFO_CheckEnvCollisions=1, ///< will check environment collisions with the robot (not checked by default)
+    IKFO_IgnoreSelfCollisions=2, ///< will not check the self-collision of the robot (checked by default)
+    IKFO_IgnoreJointLimits=4, ///< will not check the joint limits of the robot (checked by default)
+    IKFO_IgnoreCustomFilter=8, ///< will not use the custom filter, even if one is set
+};
+
 /** \brief <b>[interface]</b> Base class for all Inverse Kinematic solvers. See \ref arch_iksolver.   
    \ingroup interfaces
 */
 class RAVE_API IkSolverBase : public InterfaceBase
 {
 public:
+    /** Inverse kinematics filter callback function.
+
+        The filter is of the form <tt>return = filterfn(solution, manipulator, param)</tt>.
+        The solution is guaranteed to be set on the robot's joint values before this function is called.
+        If modifying the robot state, should restore it before this function returns.
+
+        \param solution The current solution of the manipulator. Can be modified by this function, but note that it will not go through previous checks again.
+        \param manipulator The current manipulator that the ik is being solved for.
+        \param param The paramterization that IK was called with.
+        \return \ref IkFilterReturn controlling the behavior of the ik search process.
+    */
+    typedef boost::function<IkFilterReturn(std::vector<dReal>&, RobotBase::ManipulatorPtr, const IkParameterization&)> IkFilterCallbackFn;
+
     IkSolverBase(EnvironmentBasePtr penv) : InterfaceBase(PT_InverseKinematicsSolver, penv) {}
     virtual ~IkSolverBase() {}
 
@@ -78,6 +108,12 @@ public:
     virtual bool Init(RobotBase::ManipulatorPtr pmanip) = 0;
 
     virtual RobotBase::ManipulatorPtr GetManipulator() const = 0;
+
+    /// \brief Sets an ik solution filter that is called for every ik solution.
+    ///
+    /// \param filterfn - an optional filter function to be called. The default does nothing.  see \ref IkFilterCallbackFn
+    /// \exception openrave_exception Throw if filters are not supported.
+    virtual void SetCustomFilter(const IkFilterCallbackFn& filterfn) { throw openrave_exception("ik filters ignored",ORE_NotImplemented); }
 
     /// \return Number of free parameters defining the null solution space.
     ///         Each parameter is always in the range of [0,1].
@@ -93,18 +129,18 @@ public:
     ///                        takes into account the grasp coordinate frame for the RobotBase::Manipulator
     /// \param[in] q0 Return a solution nearest to the given configuration q0 in terms of the joint distance.
     ///           If q0 is NULL, returns the first solution found
-    /// \param[in] bCheckEnvCollision If true, will only return solutions that are not colliding with the environment.
+    /// \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
     /// \param[out] solution [optional] Holds the IK solution
     /// \return true if solution is found
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, bool bCheckEnvCollision, boost::shared_ptr< std::vector<dReal> > solution) = 0;
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, boost::shared_ptr< std::vector<dReal> > solution) = 0;
 
     /// Return all joint configurations for the given end effector transform. Robot is checked for self-collisions.
     /// \param[in] param the pose the end effector has to achieve. Note that the end effector pose 
     ///                        takes into account the grasp coordinate frame for the RobotBase::Manipulator
-    /// \param[in] bCheckEnvCollision If true, will only return solutions that are not colliding with the environment.
+    /// \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
     /// \param[out] solutions All solutions within a reasonable discretization level of the free parameters.
     /// \return true if at least one solution is found
-    virtual bool Solve(const IkParameterization& param, bool bCheckEnvCollision, std::vector< std::vector<dReal> >& solutions) = 0;
+    virtual bool Solve(const IkParameterization& param, int filteroptions, std::vector< std::vector<dReal> >& solutions) = 0;
 
     /// Return a joint configuration for the given end effector transform. Robot is checked for self-collisions.
     /// Can specify the free parameters in [0,1] range. If NULL, the regular equivalent Solve is called
@@ -113,20 +149,20 @@ public:
     /// \param[in] q0 Return a solution nearest to the given configuration q0 in terms of the joint distance.
     ///           If q0 is empty, returns the first solution found
     /// \param[in] vFreeParameters The free parameters of the null space of the IK solutions. Always in range of [0,1]
-    /// \param[in] bCheckEnvCollision If true, will only return solutions that are not colliding with the environment.
+    /// \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
     /// \param[out] solution Holds the IK solution, must be of size RobotBase::Manipulator::_vecarmjoints
     /// \return true if solution is found
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, bool bCheckEnvCollision, boost::shared_ptr< std::vector<dReal> > solution) = 0;
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, boost::shared_ptr< std::vector<dReal> > solution) = 0;
 
     /// Return all joint configurations for the given end effector transform. Robot is checked for self-collisions.
     /// Can specify the free parameters in [0,1] range. If NULL, the regular equivalent Solve is called
     /// \param[in] param the pose the end effector has to achieve. Note that the end effector pose 
     ///                        takes into account the grasp coordinate frame for the RobotBase::Manipulator
     /// \param[in] vFreeParameters The free parameters of the null space of the IK solutions. Always in range of [0,1]
-    /// \param[in] bCheckEnvCollision If true, will only return solutions that are not colliding with the environment.
+    /// \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
     /// \param[out] solutions All solutions within a reasonable discretization level of the free parameters.
     /// \return true at least one solution is found
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, bool bCheckEnvCollision, std::vector< std::vector<dReal> >& solutions) = 0;
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector< std::vector<dReal> >& solutions) = 0;
 
 private:
     virtual const char* GetHash() const { return OPENRAVE_IKSOLVER_HASH; }

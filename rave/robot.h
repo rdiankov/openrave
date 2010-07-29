@@ -107,16 +107,16 @@ public:
         /// Note that this does NOT use the active dof of the robot
         /// \param goal The transformation of the end-effector in the global coord system
         /// \param solution Will be of size GetArmIndices().size() and contain the best solution
-        /// \param bColCheck If true, will check collision with the environment. If false, will ignore environment. In every case, self-collisions with the robot are checked.
-        virtual bool FindIKSolution(const IkParameterization& goal, std::vector<dReal>& solution, bool bColCheck) const;
-        virtual bool FindIKSolution(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, std::vector<dReal>& solution, bool bColCheck) const;
+        /// \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
+        virtual bool FindIKSolution(const IkParameterization& goal, std::vector<dReal>& solution, int filteroptions) const;
+        virtual bool FindIKSolution(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, std::vector<dReal>& solution, int filteroptions) const;
 
         /// will find all the IK solutions for the given end effector transform
         /// \param goal The transformation of the end-effector in the global coord system
         /// \param solutions An array of all solutions, each element in solutions is of size GetArmIndices().size()
-        /// \param bColCheck If true, will check collision with the environment. If false, will ignore environment. In every case, self-collisions with the robot are checked.
-        virtual bool FindIKSolutions(const IkParameterization& goal, std::vector<std::vector<dReal> >& solutions, bool bColCheck) const;
-        virtual bool FindIKSolutions(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, bool bColCheck) const;
+        /// \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
+        virtual bool FindIKSolutions(const IkParameterization& goal, std::vector<std::vector<dReal> >& solutions, int filteroptions) const;
+        virtual bool FindIKSolutions(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, int filteroptions) const;
 
         /// get all child joints of the manipulator starting at the pEndEffector link
         virtual void GetChildJoints(std::vector<JointPtr>& vjoints) const;

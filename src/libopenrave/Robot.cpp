@@ -81,12 +81,12 @@ bool RobotBase::Manipulator::GetFreeParameters(std::vector<dReal>& vFreeParamete
     return !_pIkSolver ? false : _pIkSolver->GetFreeParameters(vFreeParameters);
 }
 
-bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, vector<dReal>& solution, bool bColCheck) const
+bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, vector<dReal>& solution, int filteroptions) const
 {
-    return FindIKSolution(goal, vector<dReal>(), solution, bColCheck);
+    return FindIKSolution(goal, vector<dReal>(), solution, filteroptions);
 }
 
-bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, vector<dReal>& solution, bool bColCheck) const
+bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, vector<dReal>& solution, int filteroptions) const
 {
     if( !_pIkSolver )
         throw openrave_exception(str(boost::format("manipulator %s:%s does not have an IK solver set")%RobotBasePtr(_probot)->GetName()%GetName()));
@@ -143,15 +143,15 @@ bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, cons
         throw openrave_exception(str(boost::format("does not support parameterization %d")%goal.GetType()));
 
     boost::shared_ptr< vector<dReal> > psolution(&solution, null_deleter());
-    return vFreeParameters.size() == 0 ? _pIkSolver->Solve(localgoal, solution, bColCheck, psolution) : _pIkSolver->Solve(localgoal, solution, vFreeParameters, bColCheck, psolution);
+    return vFreeParameters.size() == 0 ? _pIkSolver->Solve(localgoal, solution, filteroptions, psolution) : _pIkSolver->Solve(localgoal, solution, vFreeParameters, filteroptions, psolution);
 }
    
-bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, std::vector<std::vector<dReal> >& solutions, bool bColCheck) const
+bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, std::vector<std::vector<dReal> >& solutions, int filteroptions) const
 {
-    return FindIKSolutions(goal, vector<dReal>(), solutions, bColCheck);
+    return FindIKSolutions(goal, vector<dReal>(), solutions, filteroptions);
 }
 
-bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, bool bColCheck) const
+bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, int filteroptions) const
 {
     if( !_pIkSolver )
         throw openrave_exception(str(boost::format("manipulator %s:%s does not have an IK solver set")%RobotBasePtr(_probot)->GetName()%GetName()));
@@ -198,7 +198,7 @@ bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, con
     else
         throw openrave_exception(str(boost::format("does not support parameterization %d")%goal.GetType()));
 
-    return vFreeParameters.size() == 0 ? _pIkSolver->Solve(localgoal,bColCheck,solutions) : _pIkSolver->Solve(localgoal,vFreeParameters,bColCheck,solutions);
+    return vFreeParameters.size() == 0 ? _pIkSolver->Solve(localgoal,filteroptions,solutions) : _pIkSolver->Solve(localgoal,vFreeParameters,filteroptions,solutions);
 }
 
 void RobotBase::Manipulator::GetChildJoints(std::vector<JointPtr>& vjoints) const

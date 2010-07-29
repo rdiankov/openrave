@@ -220,13 +220,13 @@ class MultiManipIKSolver(metaclass.AutoReloader):
         alllinknames = set([l.GetName() for l in self.robot.GetLinks()])
         self.enablelinknames = [alllinknames.difference(indeplinksets[i]).union(indeplinknames) for i in range(len(self.manips))]
     
-    def findMultiIKSolution(self,Tgrasps,envcheck=True):
+    def findMultiIKSolution(self,Tgrasps,filteroptions=openravepy.IkFilterOptions.CheckEnvCollisions):
         """Return one set collision-free ik solutions for all manipulators.
 
         Method always checks self-collisions.
         
         :param Tgrasps: a list of all the end effector transforms of each of the manipualtors
-        :param envcheck: If true will check environment collisions.
+        :param filteroptions: a bitmask of `IkFilterOptions`
         """
         assert(len(Tgrasps)==len(self.manips))
         with self.robot:
@@ -242,7 +242,7 @@ class MultiManipIKSolver(metaclass.AutoReloader):
                         # enable only the grabbed bodies of this manipulator
                         for body in grabbed:
                             body.Enable(manip.IsGrabbing(body))
-                        values=manip.FindIKSolutions(Tgrasps[i],envcheck)
+                        values=manip.FindIKSolutions(Tgrasps[i],filteroptions)
                         if values is not None and len(values) > 0:
                             alljointvalues.append(values)
                         else:
@@ -256,7 +256,7 @@ class MultiManipIKSolver(metaclass.AutoReloader):
                 for sol,manip in izip(sols,self.manips):
                     self.robot.SetJointValues(sol,manip.GetArmIndices()) 
                 if not self.robot.CheckSelfCollision():
-                    if not envcheck or not self.robot.GetEnv().CheckCollision(self.robot):
+                    if not (filteroptions&openravepy.IkFilterOptions.CheckEnvCollisions) or not self.robot.GetEnv().CheckCollision(self.robot):
                         return sols
             
             return None

@@ -1325,7 +1325,7 @@ public:
         PyIkSolverBasePtr GetIkSolver() { IkSolverBasePtr iksolver = _pmanip->GetIkSolver(); return !iksolver ? PyIkSolverBasePtr() : PyIkSolverBasePtr(new PyIkSolverBase(iksolver,_pyenv)); }
         bool InitIKSolver() { RAVELOG_WARN("Manipulator::InitIKSolver has been deprecated\n"); return _pmanip->InitIKSolver(); }
         string GetIKSolverName() const { RAVELOG_WARN("Manipulator::GetIKSolverName  has been deprecated\n");  return _pmanip->GetIKSolverName(); }
-        bool HasIKSolver() const { RAVELOG_WARN("Manipulator::HasIKSolver has been deprecated, use GetIkSolver\n");  return _pmanip->HasIKSolver(); }
+        bool HasIKSolver() const { RAVELOG_WARN("Manipulator::HasIKSolver has been deprecated, use GetIkSolver\n");  return !!_pmanip->GetIkSolver(); }
 
         boost::shared_ptr<PyLink> GetBase() { return !_pmanip->GetBase() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pmanip->GetBase(),_pyenv)); }
         boost::shared_ptr<PyLink> GetEndEffector() { return !_pmanip->GetEndEffector() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pmanip->GetEndEffector(),_pyenv)); }
@@ -1349,44 +1349,44 @@ public:
             return toPyArray(values);
         }
 
-        object FindIKSolution(object oparam, bool bColCheck) const
+        object FindIKSolution(object oparam, int filteroptions) const
         {
             vector<dReal> solution;
             extract<boost::shared_ptr<PyIkParameterization> > ikparam(oparam);
             if( ikparam.check() ) {
-                if( !_pmanip->FindIKSolution(((boost::shared_ptr<PyIkParameterization>)ikparam)->_param,solution,bColCheck) )
+                if( !_pmanip->FindIKSolution(((boost::shared_ptr<PyIkParameterization>)ikparam)->_param,solution,filteroptions) )
                     return object();
             }
             // assume transformation matrix
-            else if( !_pmanip->FindIKSolution(ExtractTransform(oparam),solution,bColCheck) )
+            else if( !_pmanip->FindIKSolution(ExtractTransform(oparam),solution,filteroptions) )
                 return object();
             return toPyArrayN(&solution[0],solution.size());
         }
 
-        object FindIKSolution(object oparam, object freeparams, bool bColCheck) const
+        object FindIKSolution(object oparam, object freeparams, int filteroptions) const
         {
             vector<dReal> solution, vfreeparams = ExtractArray<dReal>(freeparams);
             extract<boost::shared_ptr<PyIkParameterization> > ikparam(oparam);
             if( ikparam.check() ) {
-                if( !_pmanip->FindIKSolution(((boost::shared_ptr<PyIkParameterization>)ikparam)->_param,vfreeparams,solution,bColCheck) )
+                if( !_pmanip->FindIKSolution(((boost::shared_ptr<PyIkParameterization>)ikparam)->_param,vfreeparams,solution,filteroptions) )
                     return object();
             }
             // assume transformation matrix
-            else if( !_pmanip->FindIKSolution(ExtractTransform(oparam),vfreeparams, solution,bColCheck) )
+            else if( !_pmanip->FindIKSolution(ExtractTransform(oparam),vfreeparams, solution,filteroptions) )
                 return object();
             return toPyArray(solution);
         }
 
-        object FindIKSolutions(object oparam, bool bColCheck) const
+        object FindIKSolutions(object oparam, int filteroptions) const
         {
             std::vector<std::vector<dReal> > vsolutions;
             extract<boost::shared_ptr<PyIkParameterization> > ikparam(oparam);
             if( ikparam.check() ) {
-                if( !_pmanip->FindIKSolutions(((boost::shared_ptr<PyIkParameterization>)ikparam)->_param,vsolutions,bColCheck) )
+                if( !_pmanip->FindIKSolutions(((boost::shared_ptr<PyIkParameterization>)ikparam)->_param,vsolutions,filteroptions) )
                     return object();
             }
             // assume transformation matrix
-            else if( !_pmanip->FindIKSolutions(ExtractTransform(oparam),vsolutions,bColCheck) )
+            else if( !_pmanip->FindIKSolutions(ExtractTransform(oparam),vsolutions,filteroptions) )
                 return object();
             boost::python::list solutions;
             FOREACH(itsol,vsolutions)
@@ -1394,17 +1394,17 @@ public:
             return solutions;
         }
 
-        object FindIKSolutions(object oparam, object freeparams, bool bColCheck) const
+        object FindIKSolutions(object oparam, object freeparams, int filteroptions) const
         {
             std::vector<std::vector<dReal> > vsolutions;
             vector<dReal> vfreeparams = ExtractArray<dReal>(freeparams);
             extract<boost::shared_ptr<PyIkParameterization> > ikparam(oparam);
             if( ikparam.check() ) {
-                if( !_pmanip->FindIKSolutions(((boost::shared_ptr<PyIkParameterization>)ikparam)->_param,vfreeparams,vsolutions,bColCheck) )
+                if( !_pmanip->FindIKSolutions(((boost::shared_ptr<PyIkParameterization>)ikparam)->_param,vfreeparams,vsolutions,filteroptions) )
                     return object();
             }
             // assume transformation matrix
-            else if( !_pmanip->FindIKSolutions(ExtractTransform(oparam),vfreeparams, vsolutions,bColCheck) )
+            else if( !_pmanip->FindIKSolutions(ExtractTransform(oparam),vfreeparams, vsolutions,filteroptions) )
                 return object();
             boost::python::list solutions;
             FOREACH(itsol,vsolutions)
@@ -3399,6 +3399,17 @@ BOOST_PYTHON_MODULE(openravepy_int)
     enum_<PhysicsEngineOptions>("PhysicsEngineOptions" DOXY_ENUM(PhysicsEngineOptions))
         .value("SelfCollisions",PEO_SelfCollisions)
         ;
+    enum_<IkFilterOptions>("IkFilterOptions" DOXY_ENUM(IkFilterOptions))
+        .value("CheckEnvCollisions",IKFO_CheckEnvCollisions)
+        .value("IgnoreSelfCollisions",IKFO_IgnoreSelfCollisions)
+        .value("IgnoreJointLimits",IKFO_IgnoreJointLimits)
+        .value("IgnoreCustomFilter",IKFO_IgnoreCustomFilter)
+        ;
+    enum_<IkFilterReturn>("IkFilterReturn" DOXY_ENUM(IkFilterReturn))
+        .value("Success",IKFR_Success)
+        .value("Reject",IKFR_Reject)
+        .value("Quit",IKFR_Quit)
+        ;
 
     class_< boost::shared_ptr< void > >("VoidPointer", "Holds auto-managed resources, deleting it releases its shared data.");
 
@@ -3797,10 +3808,10 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("__str__", &PyRobotBase::__str__)
             ;
         
-        object (PyRobotBase::PyManipulator::*pmanipik)(object, bool) const = &PyRobotBase::PyManipulator::FindIKSolution;
-        object (PyRobotBase::PyManipulator::*pmanipikf)(object, object, bool) const = &PyRobotBase::PyManipulator::FindIKSolution;
-        object (PyRobotBase::PyManipulator::*pmanipiks)(object, bool) const = &PyRobotBase::PyManipulator::FindIKSolutions;
-        object (PyRobotBase::PyManipulator::*pmanipiksf)(object, object, bool) const = &PyRobotBase::PyManipulator::FindIKSolutions;
+        object (PyRobotBase::PyManipulator::*pmanipik)(object, int) const = &PyRobotBase::PyManipulator::FindIKSolution;
+        object (PyRobotBase::PyManipulator::*pmanipikf)(object, object, int) const = &PyRobotBase::PyManipulator::FindIKSolution;
+        object (PyRobotBase::PyManipulator::*pmanipiks)(object, int) const = &PyRobotBase::PyManipulator::FindIKSolutions;
+        object (PyRobotBase::PyManipulator::*pmanipiksf)(object, object, int) const = &PyRobotBase::PyManipulator::FindIKSolutions;
 
         bool (PyRobotBase::PyManipulator::*pCheckEndEffectorCollision1)(object) const = &PyRobotBase::PyManipulator::CheckEndEffectorCollision;
         bool (PyRobotBase::PyManipulator::*pCheckEndEffectorCollision2)(object,PyCollisionReportPtr) const = &PyRobotBase::PyManipulator::CheckEndEffectorCollision;
@@ -3819,10 +3830,10 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("HasIKSolver",&PyRobotBase::PyManipulator::HasIKSolver, DOXY_FN(RobotBase::Manipulator,HasIKSolver))
             .def("GetNumFreeParameters",&PyRobotBase::PyManipulator::GetNumFreeParameters, DOXY_FN(RobotBase::Manipulator,GetNumFreeParameters))
             .def("GetFreeParameters",&PyRobotBase::PyManipulator::GetFreeParameters, DOXY_FN(RobotBase::Manipulator,GetFreeParameters))
-            .def("FindIKSolution",pmanipik,args("param","envcheck"), DOXY_FN(RobotBase::Manipulator,FindIKSolution "const IkParameterization; std::vector; bool"))
-            .def("FindIKSolution",pmanipikf,args("param","freevalues","envcheck"), DOXY_FN(RobotBase::Manipulator,FindIKSolution "const IkParameterization; const std::vector; std::vector; bool"))
-            .def("FindIKSolutions",pmanipiks,args("param","envcheck"), DOXY_FN(RobotBase::Manipulator,FindIKSolutions "const IkParameterization; std::vector; bool"))
-            .def("FindIKSolutions",pmanipiksf,args("param","freevalues","envcheck"), DOXY_FN(RobotBase::Manipulator,FindIKSolutions "const IkParameterization; const std::vector; std::vector; bool"))
+            .def("FindIKSolution",pmanipik,args("param","filteroptions"), DOXY_FN(RobotBase::Manipulator,FindIKSolution "const IkParameterization; std::vector; bool"))
+            .def("FindIKSolution",pmanipikf,args("param","freevalues","filteroptions"), DOXY_FN(RobotBase::Manipulator,FindIKSolution "const IkParameterization; const std::vector; std::vector; bool"))
+            .def("FindIKSolutions",pmanipiks,args("param","filteropitons"), DOXY_FN(RobotBase::Manipulator,FindIKSolutions "const IkParameterization; std::vector; bool"))
+            .def("FindIKSolutions",pmanipiksf,args("param","freevalues","filteroptions"), DOXY_FN(RobotBase::Manipulator,FindIKSolutions "const IkParameterization; const std::vector; std::vector; bool"))
             .def("GetBase",&PyRobotBase::PyManipulator::GetBase, DOXY_FN(RobotBase::Manipulator,GetBase))
             .def("GetEndEffector",&PyRobotBase::PyManipulator::GetEndEffector, DOXY_FN(RobotBase::Manipulator,GetEndEffector))
             .def("GetGraspTransform",&PyRobotBase::PyManipulator::GetGraspTransform, DOXY_FN(RobotBase::Manipulator,GetGraspTransform))

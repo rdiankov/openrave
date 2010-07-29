@@ -66,7 +66,7 @@ class Schunkplanner:
         TRightGrasp= dot(Tbody,array([[0, 0, -1, 0],[1, 0, 0, (halfwidth+.1)],[0, -1, 0, 0],[0, 0, 0, 1]]))
         TLeftGrasp= dot(Tbody,array([[0, 0, -1, 0],[-1, 0, 0,-(halfwidth+.1)],[0, 1, 0, 0],[0, 0, 0, 1]])) #to determine the grasp for the eef given the transform of the object
 
-        solutions = self.dualsolver.findMultiIKSolution(Tgrasps=[TLeftGrasp,TRightGrasp],envcheck=True)
+        solutions = self.dualsolver.findMultiIKSolution(Tgrasps=[TLeftGrasp,TRightGrasp],filteroptions=IkFilterOptions.CheckEnvCollisions)
         if not self.MoveArmsToJointPosition(r_[solutions[0],solutions[1]]):
             print('failed to move to position next to object')
 
@@ -79,7 +79,7 @@ class Schunkplanner:
         
         TRightGrasp= dot(Tbody,array([[0, 0, -1, 0],[1, 0, 0, (halfwidth+.04)],[0, -1, 0, 0 ],[0, 0, 0, 1]])) #.04 is just half the thickness of the EEF
         TLeftGrasp= dot(Tbody,array([[0, 0, -1, 0],[-1, 0, 0, -(halfwidth+.04)],[0, 1, 0, 0],[0, 0, 0, 1]])) #to determine the grasp for the eef given the transform of the object
-        solutions = self.dualsolver.findMultiIKSolution(Tgrasps=[TLeftGrasp,TRightGrasp],envcheck=True)
+        solutions = self.dualsolver.findMultiIKSolution(Tgrasps=[TLeftGrasp,TRightGrasp],filteroptions=IkFilterOptions.CheckEnvCollisions)
         self.MoveObjectToPosition(r_[solutions[0],solutions[1]])
 
     def graspObject(self):

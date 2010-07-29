@@ -167,7 +167,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                 if iktype is None:
                     if self.forceikfast:
                         return False
-                    self.iksolver = self.env.CreateIkSolver(self.manip.GetIKSolverName()+iksuffix) if self.manip.GetIkSolver() is not None else None
+                    self.iksolver = self.env.CreateIkSolver(self.manip.GetIkSolver().GetXMLId()+iksuffix) if self.manip.GetIkSolver() is not None else None
                 else:
                     if int(self.iktype) != int(iktype):
                         raise ValueError('ik does not match types %s!=%s'%(self.iktype,iktype))

@@ -124,10 +124,11 @@ enum OpenRAVEErrorCode {
     ORE_Failed=0,
     ORE_InvalidArguments=1,
     ORE_EnvironmentNotLocked=2,
-    ORE_CommandNotSupported=3,
+    ORE_CommandNotSupported=3, ///< string command could not be parsed or is not supported
     ORE_Assert=4,
     ORE_InvalidPlugin=5, ///< shared object is not a valid plugin
     ORE_InvalidInterfaceHash=6, ///< interface hashes do not match between plugins
+    ORE_NotImplemented=7, ///< function is not implemented by the interface.
 };
 
 /// \brief Exception that all OpenRAVE internal methods throw; the error codes are held in \ref OpenRAVEErrorCode.
@@ -135,7 +136,25 @@ class openrave_exception : std::exception
 {
 public:
     openrave_exception() : std::exception(), _s("unknown exception"), _error(ORE_Failed) {}
-    openrave_exception(const std::string& s, OpenRAVEErrorCode error=ORE_Failed) : std::exception() { _s = "OpenRAVE: " + s; _error = error; }
+    openrave_exception(const std::string& s, OpenRAVEErrorCode error=ORE_Failed) : std::exception() {
+        _error = error;
+        _s = "openrave (";
+        switch(_error) {
+        case ORE_Failed: _s += "Failed"; break;
+        case ORE_InvalidArguments: _s += "InvalidArguments"; break;
+        case ORE_EnvironmentNotLocked: _s += "EnvironmentNotLocked"; break;
+        case ORE_CommandNotSupported: _s += "CommandNotSupported"; break;
+        case ORE_Assert: _s += "Assert"; break;
+        case ORE_InvalidPlugin: _s += "InvalidPlugin"; break;
+        case ORE_InvalidInterfaceHash: _s += "InvalidInterfaceHash"; break;
+        case ORE_NotImplemented: _s += "NotImplemented"; break;
+        default:
+            _s += boost::str(boost::format("%8.8x")%static_cast<int>(_error));
+            break;
+        }
+        _s += "): ";
+        _s += s; 
+    }
     virtual ~openrave_exception() throw() {}
     char const* what() const throw() { return _s.c_str(); }
     const std::string& message() const { return _s; }
@@ -758,7 +777,7 @@ namespace boost
 {
 inline void assertion_failed(char const * expr, char const * function, char const * file, long line)
 {
-    throw OpenRAVE::openrave_exception(str(boost::format("[%s:%d] -> %s, expr: %s")%file%line%function%expr),OpenRAVE::ORE_Assert);
+    throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] -> %s, expr: %s")%file%line%function%expr),OpenRAVE::ORE_Assert);
 }
 }
 #endif
