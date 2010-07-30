@@ -111,7 +111,7 @@ public:
 
     /// \brief Sets an ik solution filter that is called for every ik solution.
     ///
-    /// \param filterfn - an optional filter function to be called. The default does nothing.  see \ref IkFilterCallbackFn
+    /// \param filterfn - an optional filter function to be called, see \ref IkFilterCallbackFn.
     /// \exception openrave_exception Throw if filters are not supported.
     virtual void SetCustomFilter(const IkFilterCallbackFn& filterfn) { throw openrave_exception("ik filters ignored",ORE_NotImplemented); }
 

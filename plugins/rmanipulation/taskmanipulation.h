@@ -628,8 +628,9 @@ class TaskManipulation : public ProblemInstance
             _UpdateSwitchModels(false,false); // should test destination with thin models
 
             list< TransformMatrix > listDests;
-            if( bRandomDests )
+            if( bRandomDests ) {
                 PermutateRandomly(vdestpermuation);
+            }
 
             for(int idestperm = 0; idestperm < (int)vdestpermuation.size(); ++idestperm) {
                 Transform& transDestTarget = vObjDestinations[vdestpermuation[idestperm]];
@@ -1310,7 +1311,8 @@ protected:
         PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
         _robot->SetActiveDOFs(activejoints);
         params->SetRobotActiveJoints(_robot);
-
+        //params->_sPathOptimizationPlanner = ""; // no smoothing
+        
         vector<dReal> pzero;
         _robot->GetActiveDOFValues(pzero);
 

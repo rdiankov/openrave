@@ -128,7 +128,33 @@ def test_graspplanning():
     self = graspplanning.GraspPlanning(robot)
     gmodel=self.graspables[0][0]
     dests=self.graspables[0][1]
-    self.graspAndPlaceObject(gm=gm,dests=dests)
+    self.graspAndPlaceObject(gmodel=gmodel,dests=dests)
+
+    # draw all valid grasps
+    configs = []
+    for gmodel,dests in self.graspables:
+        validgrasps = gmodel.computeValidGrasps(checkcollision=True)[0]
+        for g in validgrasps:
+            T = dot(gmodel.getGlobalGraspTransform(g),linalg.inv(robot.GetActiveManipulator().GetGraspTransform()))
+            configs.append((T,g[gmodel.graspindices['igrasppreshape']]))
+
+    robotfilename='robots/barretthand.robot.xml'
+    transparency=0.7
+    newrobots=[]
+    for T,preshape in configs:
+        print len(newrobots)
+        newrobot = env.ReadRobotXMLFile(robotfilename)
+        for link in newrobot.GetLinks():
+            for geom in link.GetGeometries():
+                geom.SetTransparency(transparency)
+        env.AddRobot(newrobot,True)
+        newrobot.SetTransform(T)
+        newrobot.SetDOFValues(preshape)
+        newrobots.append(newrobot)
+    for newrobot in newrobots:
+        env.RemoveKinBody(newrobot)
+    newrobots=[]
+
 
 def test_graspreachability():
     import mobilemanipulation,graspplanning

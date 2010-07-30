@@ -1413,7 +1413,6 @@ void* QtCoinViewer::_drawarrow(SoSeparator* pparent, const RaveVector<float>& p1
     _style->style = SoDrawStyle::FILLED;
     pparent->addChild(_style);  
 
-    RaveVector<float> vrotaxis;
     RaveVector<float> direction = p2-p1;
     float fheight = RaveSqrt(direction.lengthsqr3());
 
@@ -1428,14 +1427,13 @@ void* QtCoinViewer::_drawarrow(SoSeparator* pparent, const RaveVector<float>& p1
     }
 
     //rotate to face point
-    vrotaxis = direction.cross(RaveVector<float>(0,1,0));
-    vrotaxis.normalize3();
-
-    float angle = -RaveAcos(direction.dot3(RaveVector<float>(0,1,0)));
-    //check to make sure direction isn't pointing along y axis, if it is, don't need to rotate
-    if(vrotaxis.lengthsqr3() > 0.9f) {
-        ptrans->rotation.setValue(SbVec3f(vrotaxis.x, vrotaxis.y, vrotaxis.z), angle); 
-    }
+    RaveVector<float> qrot = quatRotateDirection(RaveVector<float>(0,1,0),direction);
+    RaveVector<float> vaxis = axisAngleFromQuat(qrot);
+    dReal angle = RaveSqrt(vaxis.lengthsqr3());
+    if( angle > 0 )
+        vaxis *= 1/angle;
+    ptrans->rotation.setValue(SbVec3f(vaxis.x, vaxis.y, vaxis.z), angle); 
+    
     //reusing direction vector for efficieny
     RaveVector<float> linetranslation = p1 + (fheight/2.0f-coneheight/2.0f)*direction;
     ptrans->translation.setValue(linetranslation.x, linetranslation.y, linetranslation.z);
@@ -1458,11 +1456,7 @@ void* QtCoinViewer::_drawarrow(SoSeparator* pparent, const RaveVector<float>& p1
     cn->height = coneheight;
 
     ptrans = new SoTransform();
-    if(vrotaxis.lengthsqr3() > 0.9f)
-        ptrans->rotation.setValue(SbVec3f(vrotaxis.x, vrotaxis.y, vrotaxis.z), angle);
-    else if(fabs(fabs(angle)-M_PI) < 0.001f)
-        ptrans->rotation.setValue(SbVec3f(1, 0, 0), M_PI);
-
+    ptrans->rotation.setValue(SbVec3f(vaxis.x, vaxis.y, vaxis.z), angle);
     linetranslation = p2 - coneheight/2.0f*direction;
     ptrans->translation.setValue(linetranslation.x, linetranslation.y, linetranslation.z);
 

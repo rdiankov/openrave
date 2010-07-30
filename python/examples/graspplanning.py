@@ -200,7 +200,7 @@ class GraspPlanning(metaclass.AutoReloader):
             print 'moving hand'
             expectedsteps = floor(approachoffset/stepsize)
             try:
-                res = self.basemanip.MoveHandStraight(direction=dot(gmodel.manip.GetEndEffectorTransform()[0:3,0:3],gmodel.manip.GetPalmDirection()),
+                res = self.basemanip.MoveHandStraight(direction=dot(gmodel.manip.GetEndEffectorTransform()[0:3,0:3],gmodel.manip.GetDirection()),
                                                       ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps-2,maxsteps=expectedsteps+1)
             except planning_error:
                 # use a planner to move the rest of the way
@@ -259,7 +259,7 @@ class GraspPlanning(metaclass.AutoReloader):
             if env.CheckCollision(robot):
                 print 'robot in collision, moving back a little'
                 try:
-                    self.basemanip.MoveHandStraight(direction=-dot(manip.GetEndEffectorTransform()[0:3,0:3],manip.GetPalmDirection()),
+                    self.basemanip.MoveHandStraight(direction=-dot(manip.GetEndEffectorTransform()[0:3,0:3],manip.GetDirection()),
                                                     jacobian=0.02,stepsize=stepsize,minsteps=1,maxsteps=10)
                     self.waitrobot(robot)
                 except planning_error,e:
