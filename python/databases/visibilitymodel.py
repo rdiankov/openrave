@@ -12,6 +12,66 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+.. lang-block:: en
+
+  Samples visible locations of a target object and a sensor.
+
+.. lang-block:: ja
+
+  認識可能な空間を利用したセンサ視認性計画
+
+.. image:: ../../images/databases_visibilitymodel_extents.jpg
+  :height: 250
+
+**Running the Generator**
+
+.. code-block:: bash
+
+  openrave.py --database visibilitymodel --robot=robots/pa10schunk.robot.xml
+
+**Showing Visible Locations**
+
+.. code-block:: bash
+
+  openrave.py --database visibilitymodel --robot=robots/pa10schunk.robot.xml --show
+
+Usage
+-----
+
+Dynamically generate/load the visibility sampler for a manipulator/sensor/target combination:
+
+.. code-block:: python
+
+  robot.SetActiveManipulator(...)
+  ikmodel = openravepy.databases.visibilitymodel.VisibilityModel(robot,target,sensorname)
+  if not vmodel.load():
+      vmodel.autogenerate()
+
+
+Description
+-----------
+
+As long as a sensor is attached to a robot arm, can be applied to any robot to get immediate visibiliy planning:
+
+.. image:: ../../images/databases_visibilitymodel_hrp3_camera.jpg
+  :height: 200
+
+.. image:: ../../images/databases_visibilitymodel_pa10_camera.jpg
+  :height: 200
+
+.. image:: ../../images/databases_visibilitymodel_hrp2_camera.jpg
+  :height: 200
+
+.. image:: ../../images/databases_visibilitymodel_wam_camera.jpg
+  :height: 200
+
+The visibility database generator uses the `VisualFeedback interface`_ for the underlying visibility
+computation. The higher level functions it provides are sampling configurations, computing all valid
+configurations with the manipulator, and display.
+
+.. _`VisualFeedback interface`: http://openrave.programmingvision.com/ordocs/sphinx/sphinx-docs/interfaces/probleminstance/visualfeedback.html
+"""
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
@@ -335,7 +395,11 @@ class VisibilityModel(OpenRAVEModel):
             env.Destroy()
 
 def run(*args,**kwargs):
-    """Executes the visibilitymodel database generation
+    """Executes the visibilitymodel database generation,  ``args`` specifies a list of the arguments to the script.
+    
+    **Help**
+    
+    .. shell-block:: openrave.py --database visibilitymodel --help
     """
     VisibilityModel.RunFromParser(*args,**kwargs)
 

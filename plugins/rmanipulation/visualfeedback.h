@@ -408,7 +408,12 @@ public:
   :width: 500\n\
 \n\
 Adds grasp planning taking into account camera visibility constraints. The relevant paper is:\n\n\
-- Rosen Diankov, Takeo Kanade, James Kuffner. Integrating Grasp Planning and Visual Feedback for Reliable Manipulation, IEEE-RAS Intl. Conf. on Humanoid Robots, December 2009. ";
+- Rosen Diankov, Takeo Kanade, James Kuffner. Integrating Grasp Planning and Visual Feedback for Reliable Manipulation, IEEE-RAS Intl. Conf. on Humanoid Robots, December 2009.\n\
+\n\
+Visibility computation checks occlusion with other objects using ray sampling in the image space:\n\n\
+.. image:: ../../../images/visualfeedback_occlusions.jpg\n\
+  :height: 200\n\
+";
         _nManipIndex = -1;
         _fMaxVelMult=1;
         _bCameraOnManip = false;

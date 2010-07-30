@@ -30,6 +30,18 @@
 
   openrave.py --database grasping
 
+Usage
+-----
+
+Dynamically generate/load the grasping set for a robot manipulator and target object:
+
+.. code-block:: python
+
+  robot.SetActiveManipulator(...)
+  gmodel = openravepy.databases.grasping.GraspingModel(robot,target)
+  if not gmodel.load():
+      gmodel.autogenerate()
+
 Description
 -----------
 
