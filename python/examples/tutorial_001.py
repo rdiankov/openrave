@@ -16,13 +16,11 @@
 
 .. contents::
 
-関連関数
+実行
 --------------------------------------
-
- `Environment` , `Environment.SetViewer` , `Environment.ReadKinBodyXMLFile` , `Environment.AddKinBody` , `KinBody.SetTransform` , `Environment.Reset` , `Environment.Destroy`
 
 実行方法
---------------------------------------
+========
 
 - openrave.pyから直接実行する方法
 
@@ -31,17 +29,15 @@
   openrave.py --example tutorial_001
 
 - pythonからコマンドラインで実行する方法
-
-  OpenRAVEでは，よりインタラクティブな機能を持ったipythonの使用を推奨しています．ipythonを立ち上げます．
-
-  ソースコードを順番に入力（コピー＆ペースト）して実行してください． 
+  
+  OpenRAVEでは，よりインタラクティブな機能を持ったipythonの使用を推奨しています．ipythonを立ち上げソースコードを順番に入力（コピー＆ペースト）して実行してください．
 
 .. code-block:: bash
 
   ipython
 
 内容説明
---------------------------------------
+========
 
 - チュートリアルを実行すると，OpenRAVEのGUIが立ち上がり，下のような画像が現れます．
 
@@ -64,7 +60,7 @@
   raw_input('キーを押すとリセットします．')
   env.Reset()
 
-ソースコードの解説
+解説
 --------------------------------------
 
 .. code-block:: python
@@ -150,17 +146,22 @@
 
 .. code-block:: bash
 
-  openrave.py -listexample
+  openrave.py --listexamples
 
 覚えておくと便利なこと
 --------------------------------------
 
 - ipythonを終了するにはexit()またはquit()です．Ctrl+Dのショートカットも使用できます．
 
-次回
+関連関数
 --------------------------------------
 
-- 環境に読み込んだ物体の移動
+ `Environment` , `Environment.SetViewer` , `Environment.ReadKinBodyXMLFile` , `Environment.AddKinBody` , `KinBody.SetTransform` , `Environment.Reset` , `Environment.Destroy`
+
+関連チュートリアル
+--------------------------------------
+
+- `examples.tutorial_002` - 環境に読み込んだ物体の移動
 
 """
 from __future__ import with_statement # for python 2.5
@@ -182,7 +183,6 @@ def run(args=None):
         env.Reset()
     finally:
         env.Destroy()
-        print 'The env was destroyed'
 
 if __name__ == "__main__":
     run()
