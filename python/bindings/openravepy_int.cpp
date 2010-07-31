@@ -145,12 +145,12 @@ inline Vector ExtractVector4Type(const object& o)
 
 inline Vector ExtractVector3(const object& oraw)
 {
-    return ExtractVector3Type<dReal>(oraw);//.attr("flat"));
+    return ExtractVector3Type<dReal>(oraw);
 }
 
 inline Vector ExtractVector4(const object& oraw)
 {
-    return ExtractVector4Type<dReal>(oraw);//.attr("flat"));
+    return ExtractVector4Type<dReal>(oraw);
 }
 
 template <typename T>
@@ -175,10 +175,11 @@ inline Transform ExtractTransformType(const object& o)
                          Vector(extract<T>(o[4]), extract<T>(o[5]), extract<T>(o[6])));
     TransformMatrix t;
     for(int i = 0; i < 3; ++i) {
-        t.m[4*i+0] = extract<T>(o[4*i+0]);
-        t.m[4*i+1] = extract<T>(o[4*i+1]);
-        t.m[4*i+2] = extract<T>(o[4*i+2]);
-        t.trans[i] = extract<T>(o[4*i+3]);
+        object orow = o[i];
+        t.m[4*i+0] = extract<T>(orow[0]);
+        t.m[4*i+1] = extract<T>(orow[1]);
+        t.m[4*i+2] = extract<T>(orow[2]);
+        t.trans[i] = extract<T>(orow[3]);
     }
     return t;
 }
@@ -191,22 +192,23 @@ inline TransformMatrix ExtractTransformMatrixType(const object& o)
                          Vector(extract<T>(o[4]), extract<T>(o[5]), extract<T>(o[6])));
     TransformMatrix t;
     for(int i = 0; i < 3; ++i) {
-        t.m[4*i+0] = extract<T>(o[4*i+0]);
-        t.m[4*i+1] = extract<T>(o[4*i+1]);
-        t.m[4*i+2] = extract<T>(o[4*i+2]);
-        t.trans[i] = extract<T>(o[4*i+3]);
+        object orow = o[i];
+        t.m[4*i+0] = extract<T>(orow[0]);
+        t.m[4*i+1] = extract<T>(orow[1]);
+        t.m[4*i+2] = extract<T>(orow[2]);
+        t.trans[i] = extract<T>(orow[3]);
     }
     return t;
 }
 
 inline Transform ExtractTransform(const object& oraw)
 {
-    return ExtractTransformType<dReal>(oraw.attr("flat"));
+    return ExtractTransformType<dReal>(oraw);
 }
 
 inline TransformMatrix ExtractTransformMatrix(const object& oraw)
 {
-    return ExtractTransformMatrixType<dReal>(oraw.attr("flat"));
+    return ExtractTransformMatrixType<dReal>(oraw);
 }
 
 inline object toPyArray(const TransformMatrix& t)

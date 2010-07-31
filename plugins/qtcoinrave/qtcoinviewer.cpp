@@ -1430,8 +1430,12 @@ void* QtCoinViewer::_drawarrow(SoSeparator* pparent, const RaveVector<float>& p1
     RaveVector<float> qrot = quatRotateDirection(RaveVector<float>(0,1,0),direction);
     RaveVector<float> vaxis = axisAngleFromQuat(qrot);
     dReal angle = RaveSqrt(vaxis.lengthsqr3());
-    if( angle > 0 )
+    if( angle > 0 ) {
         vaxis *= 1/angle;
+    }
+    else {
+        vaxis = RaveVector<float>(1,0,0);
+    }
     ptrans->rotation.setValue(SbVec3f(vaxis.x, vaxis.y, vaxis.z), angle); 
     
     //reusing direction vector for efficieny
