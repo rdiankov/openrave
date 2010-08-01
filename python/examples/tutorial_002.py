@@ -12,14 +12,44 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-環境に読み込んだ物体の移動
+"""環境に読み込んだ物体の移動
 
-**例の実行**
+.. contents::
+
+実行
+--------------------------------------
+
+実行方法
+========
 
 .. code-block:: bash
 
   openrave.py --example tutorial_002
+
+内容説明
+========
+
+- チュートリアルを実行すると，OpenRAVEのGUIが立ち上がり，下のような画像が現れます．
+
+  .. image:: ../../images/example_tutorials/002_two_mugs_read_kinbody.png
+    :height: 200
+
+- いま同じ場所に２つのマグカップを読み出してしまったため，重なってしまいました．このため，青いマグカップを移動させてみましょう．\n
+  物体を移動するには変換行列を使う方法と，poseを使う方法の２種類があります．まずは変換行列を使って移動させます．\n
+  キーを１回押すと青いマグカップが移動し，移動前後の変換行列を出力します．
+
+  .. image:: ../../images/example_tutorials/002_two_mugs_move1.png
+    :height: 200
+
+- 次にposeを使って移動させます．キーを１回押すと青いマグカップが再度移動し，移動前後のposeを出力します．
+
+  .. image:: ../../images/example_tutorials/002_two_mugs_move2.png
+    :height: 200
+
+- この次からは，キーを押す度に青いマグカップがランダムに移動します．
+
+  .. image:: ../../images/example_tutorials/002_two_mugs_moverand.png
+    :height: 200
 
 ソースコード
 --------------------------------------
@@ -27,172 +57,212 @@
 .. code-block:: python
 
   #!/usr/bin/env python
-  from openravepy import Environment
+  from openravepy import Environment,poseFromMatrix
   from numpy import eye
   from numpy.random import rand
   env = Environment()
   env.SetViewer('qtcoin')
-  body1 = env.ReadKinBodyXMLFile(filename='data/mug1.kinbody.xml')
-  env.AddKinBody(body1)
+  env.AddKinBody(env.ReadKinBodyXMLFile(filename='data/mug1.kinbody.xml'))
+  env.AddKinBody(env.ReadKinBodyXMLFile(filename='data/mug2.kinbody.xml'))
+  bodies = env.GetBodies()
+  body1 = bodies[0]
   body1.SetTransform(eye(4))
-  body2 = env.ReadKinBodyXMLFile(filename='data/mug2.kinbody.xml')
-  env.AddKinBody(body2)
-  body2.SetTransform(eye(4))
-  raw_input('キーを押すと現在の変換行列を出力します．')
+  body2 = env.GetKinBody('mug2')
+  body2.SetTransform([1,0,0,0,0,0,0])
+  raw_input('キーを押すとXに+0.2移動し，移動前と移動後の変換行列を出力します．')
   tran1 = body1.GetTransform()
+  print '移動前'
   print tran1
-  raw_input('キーを押すとXに+0.5移動し，移動後の変換行列を出力します．')
-  tran1[0,3] = 0.5 
+  tran1[0,3] = 0.2 
   body1.SetTransform(tran1)
+  print '移動後'
   print tran1
+  raw_input('キーを押すとYに+0.1移動し，移動前と移動後のポーズを出力します．')
+  pose1 = poseFromMatrix (tran1)
+  print '移動前'
+  print 'pose: ',pose1
+  pose1[5] = 0.1
+  body1.SetTransform(pose1)
+  print '移動後'
+  print 'pose: ',pose1
   while True:
-      s  = raw_input("キーを押すとランダムに移動します．終了するには'q'を押してください．")
-      if s is 'q':
-          break
-      else:
-          tran1 = matrixFromAxisAngle(axis=rand(3)-0.5,angle=rand(1))
-          tran1[0:3,3] = rand(1,3) 
-          body1.SetTransform(tran1)
-          print "X=%f Y=%f Z=%f"%(tran1[0,3],tran1[1,3],tran1[2,3])
+      raw_input("キーを押すとランダムに移動します．")
+      tran1[0:3,3] = 0.2*(rand(3)-0.5)
+      body1.SetTransform(tran1)
+      print "X=%f Y=%f Z=%f"%(tran1[0,3],tran1[1,3],tran1[2,3])
+      print 'pose: ',poseFromMatrix(tran1)
 
-ソースコードの実行
+解説
 --------------------------------------
 
-上のソースコードを実行してください． すると，OpenRAVEのGUIが立ち上がり，下のような画像が現れます．
+.. code-block:: python
 
-.. image:: ../../images/example_tutorials/002_two_mugs_read_kinbody.png
-  :height: 200
+  from openravepy import Environment,poseFromMatrix
 
-いま同じ場所に２つのマグカップを読み出してしまったため，重なってしまいました．
-このため，物体を移動させてみましょう．キーを１回押すと現在の変換行列を出力します．
-もう一度キーを押すと物体が移動し，新しい変換行列を出力します．
-すると，以下のような画像が現れるはずです．\n
-
-.. image:: ../../images/example_tutorials/002_two_mugs_one_moved.png
-  :height: 200
-
-青色のマグカップがなくなってしまいました！
-安心して下さい，青色のマグカップが無事に移動したからです．
-この様な場合はマウスのスクロールボタンを使って手動でズームアウトするか，GUIの右側にある眼のアイコンを使ってビューを調整することができます．
-
-.. image:: ../../images/example_tutorials/002_two_mugs_both_visible.png
-  :height: 200
-
-この次からは，キーを押す度に物体がランダムに移動します．
-終了するには'q'を入力して下さい．
-
-
-ソースコードの解説
---------------------------------------
-
-それではソースコードを詳しく見てみましょう． 
+- openravepyから，EnvironmentとposeFromMatrixのモジュールをインポートしています． 
 
 .. code-block:: python
 
   from numpy.random import rand
 
-これはnumpy.randomからrandのモジュールを読み込んでいます．後で物体の位置をランダムに生成するのに使用します．
+- numpy.randomからrandのモジュールを読み込んでいます．後で物体の位置をランダムに生成するのに使用します．
 
 .. code-block:: python
 
-  body2 = env.ReadKinBodyXMLFile(filename='data/mug2.kinbody.xml')
-  env.AddKinBody(body2)
-  body2.SetTransform(eye(4))
+  env.AddKinBody(env.ReadKinBodyXMLFile(filename='data/mug1.kinbody.xml'))
+  env.AddKinBody(env.ReadKinBodyXMLFile(filename='data/mug2.kinbody.xml'))
 
-2つ目の物体としてmug2を読み込んで環境に加えています．
+- dataフォルダからmug1.kinbody.xmlとmug2.kinbody.xmlの２つをロードし，環境に加えています．
 
 .. code-block:: python
 
-  raw_input('キーを押すと現在の変換行列を出力します．')
+  bodies = env.GetBodies()
+  body1 = bodies[0]
 
-pythonの標準関数であるraw_inputはキーボードから何かの入力を待ちます．
+-  `Environment.GetBodies` 関数を使って環境にある全ての物体を読み出し，0番目の物体（mug1：青いマグカップ）をbody1としてインスタンスを作成しています．
+
+.. code-block:: python
+
+  body2 = env.GetKinBody('mug2')
+
+- 物体の名前がわかっていれば `Environment.GetKinBody` 関数を使って直接インスタンスを作成することもできます．上の例ではmug2（赤いマグカップ）をbody2としています．
+
+.. code-block:: python
+
+  body2.SetTransform([1,0,0,0,0,0,0])
+
+- 物体の位置姿勢をSetする方法はtutorial_001で説明した変換行列を用いる方法の他に，poseを用いる方法があります．\n
+  poseは7つの数字からなるList（もしくはarray）で，はじめの4つの数字が回転，後の3つの数字が移動を表しています．
+
+.. code-block:: python
+
+  raw_input('キーを押すとXに+0.2移動し，移動前と移動後の変換行列を出力します．')
+
+- pythonの標準関数であるraw_inputはキーボードから入力を待ちます．
 
 .. code-block:: python
 
   tran1 = body1.GetTransform()
+  print '移動前'
   print tran1
 
-環境からGetTransform関数を使ってbody1（mug1）の現在の変換行列をtran1に読み出し，それをプリントで表示しています．
+- 環境から `KinBody.GetTransform` 関数を使ってbody1の現在の変換行列をtran1に読み出し，移動前の変換行列を出力しています．\n
+  4×4の変換行列を使った物体の回転と移動では，左上の3×3の行列が回転，右上の3×1の行列が移動を示しています．
 
 .. code-block:: python
 
+  tran1[0,3] = 0.2 
+  body1.SetTransform(tran1)
+  print '移動後'
+  print tran1
+
+- その後X軸の移動を示す変換行列に+0.2を代入し，環境に反映されて物体が移動して移動後の変換行列が出力されます．
+
+.. code-block:: python
+
+  移動前
   [[ 1.  0.  0.  0.]
    [ 0.  1.  0.  0.]
    [ 0.  0.  1.  0.]
    [ 0.  0.  0.  1.]]
-
-OpenRaveでは物体の回転と移動を４×４の変換行列で行います．左上の３×３の行列が回転，右上の３×１の行列が移動を示しています．
-body1はまだ回転も移動もしていませんので，プリントされた変換行列は上のような単位行列になっていることが確認できます．
-
-.. code-block:: python
-
-  raw_input('キーを押すとXに+0.5移動し，移動後の変換行列を出力します．')
-  tran1[0,3] = 0.5 
-  body1.SetTransform(tran1)
-  print tran1
-
-キーを押すと，X軸の移動を示す変換行列に+0.5を代入します．
-その後，SetTransform関数で物体の変換行列がセットされ，環境に反映されて物体が移動します．
-
-.. code-block:: python
-
-  [[ 1.   0.   0.   0.5]
+  移動後
+  [[ 1.   0.   0.   0.2]
    [ 0.   1.   0.   0. ]
    [ 0.   0.   1.   0. ]
    [ 0.   0.   0.   1. ]]
 
-X軸の移動は変換行列の０行３列目（tran1[0,3]）なので，そこに+0.5になっていることが確認できます．
-その他，Y軸の移動は１行３列目（tran1[1,3]），Z軸の移動は２行３列目（tran1[2,3]）です．
+- X軸の移動は変換行列の0行3列目（tran1[0,3]）なので，そこが+0.2になっていることが確認できます．\n
+  その他，Y軸の移動は1行3列目（tran1[1,3]），Z軸の移動は2行3列目（tran1[2,3]）です．
 
+.. code-block:: python
+
+  raw_input('キーを押すとYに+0.1移動し，移動前と移動後のポーズを出力します．')
+  pose1 = poseFromMatrix (tran1)
+  print '移動前'
+  print 'pose: ',pose1
+
+-  `poseFromMatrix` 関数を使って現在の変換行列tran1からpose1に変換して，移動前のposeを出力しています．
+
+.. code-block:: python
+
+  pose1[5] = 0.1
+  body1.SetTransform(pose1)
+  print '移動後'
+  print 'pose: ',pose1
+
+- その後Y軸の移動を示すposeに+0.1を代入し，環境に反映されて物体が移動して移動後のposeが出力されます．
+
+.. code-block:: python
+
+  移動前
+  pose:  [ 1.   0.   0.   0.   0.2  0.   0. ]
+  移動後
+  pose:  [ 1.   0.   0.   0.   0.2  0.1   0. ]
+
+- Y軸の移動はposeの5列目（pose1[5]）なので，そこが0.1となっていることが確認できます．\n
+  その他，X軸の移動は4列目（pose1[4]），Z軸の移動は6列目（pose1[6]）です．
 
 .. code-block:: python
 
   while True:
-      s  = raw_input("キーを押すとランダムに移動します．終了するには'q'を押してください．")
-      if s is 'q':
-          break
-      else:
-          tran1 = matrixFromAxisAngle(axis=[0,0,1],angle=rand(1))
-          tran1[0:3,3] = rand(1,3) 
-          body1.SetTransform(tran1)
-          print "X=%f Y=%f Z=%f"%(tran1[0,3],tran1[1,3],tran1[2,3])
+      raw_input("キーを押すとランダムに移動します．")
+      tran1[0:3,3] = 0.2*(rand(3)-0.5)
+      body1.SetTransform(tran1)
+      print "X=%f Y=%f Z=%f"%(tran1[0,3],tran1[1,3],tran1[2,3])
+      print 'pose: ',poseFromMatrix(tran1)
 
-最後はrand関数を使って物体の位置をランダムに作成し移動し，現在の位置を出力します．
+- 最後はrand関数を使って物体の位置をランダムに作成し移動し，現在の位置とposeを出力します．
 
-NEXT
+
+関連関数
 --------------------------------------
 
-環境に読み込んだ物体の回転
+ `Environment.GetBodies` , `Environment.GetKinBody` , `KinBody.GetTransform` , `poseFromMatrix`
+
+関連チュートリアル
+--------------------------------------
+
+- `examples.tutorial_003` - 環境に読み込んだ物体の回転（回転行列）
+- `examples.tutorial_004` - 環境に読み込んだ物体の回転（クォータニオン）
 
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Makoto Furukawa'
 __copyright__ = '2010 Makoto Furukawa'
 __license__ = 'Apache License, Version 2.0'
-from openravepy import Environment, matrixFromAxisAngle, poseFromMatrix
+from openravepy import Environment,poseFromMatrix
 from numpy import eye
 from numpy.random import rand
 
 def run(args=None):
-    env = Environment()
     try:
+        env = Environment()
         env.SetViewer('qtcoin')
-        body1 = env.ReadKinBodyXMLFile(filename='data/mug1.kinbody.xml')
-        env.AddKinBody(body1)
+        env.AddKinBody(env.ReadKinBodyXMLFile(filename='data/mug1.kinbody.xml'))
+        env.AddKinBody(env.ReadKinBodyXMLFile(filename='data/mug2.kinbody.xml'))
+        bodies = env.GetBodies()
+        body1 = bodies[0]
         body1.SetTransform(eye(4))
-        body2 = env.ReadKinBodyXMLFile(filename='data/mug2.kinbody.xml')
-        env.AddKinBody(body2)
-        body2.SetTransform(eye(4))
-        raw_input('キーを押すと現在の変換行列を出力します．')
+        body2 = env.GetKinBody('mug2')
+        body2.SetTransform([1,0,0,0,0,0,0])
+        raw_input('キーを押すとXに+0.2移動し，移動前と移動後の変換行列を出力します．')
         tran1 = body1.GetTransform()
+        print '移動前'
         print tran1
-        raw_input('キーを押すとXに+0.5移動し，移動後の変換行列を出力します．')
         tran1[0,3] = 0.2 
         body1.SetTransform(tran1)
+        print '移動後'
         print tran1
+        raw_input('キーを押すとYに+0.1移動し，移動前と移動後のポーズを出力します．')
+        pose1 = poseFromMatrix (tran1)
+        print '移動前'
+        print 'pose: ',pose1
+        pose1[5] = 0.1
+        body1.SetTransform(pose1)
+        print '移動後'
+        print 'pose: ',pose1
         while True:
             raw_input("キーを押すとランダムに移動します．")
-            tran1 = matrixFromAxisAngle(axis=[0,0,1],angle=rand(1))
             tran1[0:3,3] = 0.2*(rand(3)-0.5)
             body1.SetTransform(tran1)
             print "X=%f Y=%f Z=%f"%(tran1[0,3],tran1[1,3],tran1[2,3])
