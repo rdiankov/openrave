@@ -52,7 +52,7 @@ Dynamically generate/load the visibility sampler for a manipulator/sensor/target
 Description
 -----------
 
-As long as a sensor is attached to a robot arm, can be applied to any robot to get immediate visibiliy planning:
+As long as a sensor is attached to a robot arm, can be applied to any robot to get immediate visibiliy configuration sampling:
 
 .. image:: ../../images/databases_visibilitymodel_hrp3_camera.jpg
   :height: 200

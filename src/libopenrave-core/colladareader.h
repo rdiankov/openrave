@@ -453,7 +453,10 @@ public:
         else
         {
           //  Create Robot
-          probot  = _penv->CreateRobot("");
+          probot = _penv->CreateRobot("GenericRobot");
+          if( !probot ) {
+            probot  = _penv->CreateRobot("");
+          }
 
           //  Copy the kinbody information into the Robot structure
           probot->KinBody::Clone(pbody,0);
@@ -842,7 +845,10 @@ public:
   bool Extract(RobotBasePtr& probot) {
 
     if (!probot) {
-      probot = _penv->CreateRobot();
+      probot = _penv->CreateRobot("GenericRobot");
+      if( !probot ) {
+        probot  = _penv->CreateRobot("");
+      }
     }
     BOOST_ASSERT(probot->IsRobot());
 

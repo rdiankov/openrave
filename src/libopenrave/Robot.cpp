@@ -2117,8 +2117,14 @@ void RobotBase::_ComputeInternalInformation()
     for(int i = 0; i < GetDOF(); ++i) {
         _vAllDOFIndices[i] = i;
     }
-    if( ComputeAABB().extents.lengthsqr3() > 900.0f )
+    if( ComputeAABB().extents.lengthsqr3() > 900.0f ) {
         RAVELOG_WARN(str(boost::format("Robot %s span is greater than 30 meaning that it is most likely defined in a unit other than meters. It is highly encouraged to define all OpenRAVE robots in meters since many metrics, database models, and solvers have been specifically optimized for this unit\n")%GetName()));
+    }
+
+    if( !GetController() ) {
+        RAVELOG_WARN(str(boost::format("no default controller set on robot %s\n")%GetName()));
+        SetController(GetEnv()->CreateController("IdealController"),"");
+    }
 }
 
 bool RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)

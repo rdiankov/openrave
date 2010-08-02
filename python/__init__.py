@@ -112,15 +112,9 @@ features it supports:
 
     openrave.py --listdatabases
 
-  **Output**::
+  **Output**:
 
-     convexdecomposition
-     grasping
-     inversekinematics
-     inversereachability
-     kinematicreachability
-     linkstatistics
-     visibilitymodel
+.. shell-block:: openrave.py --listdatabases
 
 - Can set custom collision, physics, and viewer::
 

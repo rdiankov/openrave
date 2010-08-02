@@ -341,7 +341,7 @@ public:
         for(size_t ifing = 0; ifing < _robot->GetActiveDOFIndices().size(); ifing++) {
             if( vclosingdir.at(ifing) == 0 ) {
                 // not a real joint, so skip
-                break;
+                continue;
             }
             int nJointIndex = _robot->GetActiveDOFIndices()[ifing];
             dReal fmult = 1;
