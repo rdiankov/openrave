@@ -223,7 +223,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         elif self.manip.GetKinematicsStructureHash() == 'bfc61bd497e9993b85f1ab511ee7bdbc': # stage
             if iktype is None:
                 iktype=IkParameterization.Type.Rotation3D
-        elif self.robot.GetKinematicsGeometryHash() == 'b873d8723a5126f7ebbb05e8300a4a61': # pr2
+        elif self.robot.GetKinematicsGeometryHash() == 'b873d8723a5126f7ebbb05e8300a4a61' or self.robot.GetKinematicsGeometryHash() == '4bfa05546af802c21ea3fa1ee45fd351' or self.manip.GetKinematicsStructureHash() == '3570892d8bd568b3a9f39f3211f08786' or self.manip.GetKinematicsStructureHash() == 'fd215d0cf8fff569c9efb9a5487e883c' or self.manip.GetKinematicsStructureHash() == 'f923cb814fcc2351d56d823254f4f1d4' or self.manip.GetKinematicsStructureHash() == '608bbeb4a33c8ba7b90238d82894841e': # pr2
             if iktype is None:
                 if self.manip.GetName().find('camera') >= 0:
                     # cameras are attached, so use a ray parameterization
