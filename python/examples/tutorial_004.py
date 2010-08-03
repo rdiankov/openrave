@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""環境に読み込んだ物体の回転（回転行列）
+"""環境に読み込んだ物体の回転（クォータニオン）
 
 .. contents::
 
@@ -24,7 +24,7 @@
 
 .. code-block:: bash
 
-  openrave.py --example tutorial_003
+  openrave.py --example tutorial_004
 
 内容説明
 ========
@@ -60,53 +60,58 @@
 .. code-block:: python
 
   #!/usr/bin/env python
-  from openravepy import Environment, rotationMatrixFromAxisAngle, axisAngleFromRotationMatrix, matrixFromAxisAngle
-  from numpy import eye, dot, pi
+  from openravepy import Environment, poseFromMatrix, quatFromAxisAngle, axisAngleFromQuat, quatRotate, quatMult, poseMult
+  from numpy import pi, r_
   env = Environment()
   env.SetViewer('qtcoin')
   body = env.ReadKinBodyXMLFile(filename='data/mug2.kinbody.xml')
   env.AddKinBody(body)
-  body.SetTransform(eye(4))
-  tran = body.GetTransform()
+  body.SetTransform([1,0,0,0,0,0,0])
+  pose = poseFromMatrix(body.GetTransform())
   handles=[]
   handles.append(env.drawarrow(p1=[0.0,0.0,0.0],p2=[0.5,0.0,0.0],linewidth=0.01,color=[1.0,0.0,0.0]))
   handles.append(env.drawarrow(p1=[0.0,0.0,0.0],p2=[0.0,0.5,0.0],linewidth=0.01,color=[0.0,1.0,0.0]))
   handles.append(env.drawarrow(p1=[0.0,0.0,0.0],p2=[0.0,0.0,0.5],linewidth=0.01,color=[0.0,0.0,0.1]))
   deg = raw_input('X軸の回転角度を入力して下さい．[degree] X = ')
-  rot_mat = rotationMatrixFromAxisAngle([1,0,0],float(deg)*pi/180.0)
-  print 'AxisAngle = ',axisAngleFromRotationMatrix(rot_mat)
-  tran[0:3,0:3] = dot(rot_mat, tran[0:3,0:3])
-  body.SetTransform(tran)
-  P1 = dot(rot_mat, [0,0,1])
+  rot_quat = quatFromAxisAngle([1,0,0],float(deg)*pi/180.0)
+  print 'AxisAngle = ',axisAngleFromQuat(rot_quat)
+  pose[0:4] = quatMult(rot_quat, pose[0:4])
+  body.SetTransform(pose)
+  P1 = quatRotate(rot_quat, [0,0,1])
   handles.append(env.drawarrow([0.0,0.0,0.0],P1,linewidth=0.01,color=[1.0,1.0,0.0]))
   deg = raw_input('Y軸の回転角度を入力して下さい．[degree] Y = ')
-  rot_mat = rotationMatrixFromAxisAngle([0,1,0],float(deg)*pi/180.0)
-  print 'AxisAngle = ',axisAngleFromRotationMatrix(rot_mat)
-  tran[0:3,0:3] = dot(rot_mat, tran[0:3,0:3])
-  body.SetTransform(tran)
-  P2 = dot(rot_mat, P1)
+  rot_quat = quatFromAxisAngle([0,1,0],float(deg)*pi/180.0)
+  print 'AxisAngle = ',axisAngleFromQuat(rot_quat)
+  pose[0:4] = quatMult(rot_quat, pose[0:4])
+  body.SetTransform(pose)
+  P2 = quatRotate(rot_quat, P1)
   handles.append(env.drawarrow([0.0,0.0,0.0],P2,linewidth=0.01,color=[1.0,1.0,0.0]))
   while True:
       raw_input('キーを押すと回転しながら移動します．')
-      Tdelta = matrixFromAxisAngle ([0,0,0.5])
-      Tdelta[2,3] = 0.01
-      tran = dot(tran, Tdelta)
-      body.SetTransform(tran)
+      posedelta = r_[quatFromAxisAngle([0,0,0.5]), 0, 0, 0.01]
+      pose=poseMult(pose, posedelta)
+      body.SetTransform(pose)
 
 解説
 ------------------------------------
 
 .. code-block:: python
 
-  from openravepy import Environment, rotationMatrixFromAxisAngle, axisAngleFromRotationMatrix, matrixFromAxisAngle
+  from openravepy import Environment, poseFromMatrix, quatFromAxisAngle, axisAngleFromQuat, quatRotate, quatMult, poseMult
                                       
-- openravepyから `Environment` , `rotationMatrixFromAxisAngle` , `axisAngleFromRotationMatrix` ,  `matrixFromAxisAngle` のモジュールを読み込んでいます．
+- openravepyから `Environment` , `poseFromMatrix` , `quatFromAxisAngle` , `axisAngleFromQuat` , `quatRotate` , `quatMult` , `poseMult` のモジュールを読み込んでいます．
 
 .. code-block:: python
 
-  from numpy import eye, dot, pi
+  from numpy import pi, r_
 
 - numpyから必要なモジュールを読み込んでいます．
+
+.. code-block:: python
+
+  pose = poseFromMatrix(body.GetTransform())
+
+- `poseFromMatrix` を使って変換行列からposeを求めています．
 
 .. code-block:: python
 
@@ -125,39 +130,39 @@
 
 .. code-block:: python
 
-  rot_mat = rotationMatrixFromAxisAngle([1,0,0],float(deg)*pi/180.0)
+  rot_quat = quatFromAxisAngle([1,0,0],float(deg)*pi/180.0)
 
-- `rotationMatrixFromAxisAngle` を使ってX軸で入力された角度（deg）回転する回転行列rot_matを作成しています．\n
+- `quatFromAxisAngle` を使ってX軸で入力された角度（deg）回転するクォータニオンrot_quatを作成しています．\n
   AxisAngleは例のように([単位ベクトル] , 角度(rad))でも指定することが可能です．
 
 .. code-block:: python
 
-  print 'AxisAngle = ',axisAngleFromRotationMatrix(rot_mat)
+  print 'AxisAngle = ',axisAngleFromQuat(rot_quat)
 
--  `axisAngleFromRotationMatrix` を使って実際のAxisAngleの値（3列のベクトル値）を出力します．
-
-.. code-block:: python
-
-  tran[0:3,0:3] = dot(rot_mat, tran[0:3,0:3])
-  body.SetTransform(tran)
-
-- 変換行列(tran)から現在の回転行列を切り出し，dot関数で回転行列(rot_mat)の掛け算をして，それを再び変換行列に代入して新たな姿勢をセットしています．
+-  `axisAngleFromQuat` を使って実際のAxisAngleの値（3列のベクトル値）を出力します．
 
 .. code-block:: python
 
-  P1 = dot(rot_mat, [0,0,1])
+  pose[0:4] = quatMult(rot_quat, pose[0:4])
+  body.SetTransform(pose)
+
+- poseから現在のクォータニオンを切り出し， `quatMult` 関数でクォータニオン(rot_quat)の掛け算をして，それを再びクォータニオンに代入して新たな姿勢をセットしています．
+
+.. code-block:: python
+
+  P1 = quatRotate(rot_quat, [0,0,1])
   handles.append(env.drawarrow([0.0,0.0,0.0],P1,linewidth=0.01,color=[1.0,1.0,0.0]))
 
-- カップの上方向（Z軸方向）を回転させて，黄色い矢印を表示させています．\n
+- カップの上方向（Z軸方向）を `quatRotate` で回転させて，黄色い矢印を表示させています．\n
 
 .. code-block:: python
 
   deg = raw_input('Y軸の回転角度を入力して下さい．[degree] Y = ')
-  rot_mat = rotationMatrixFromAxisAngle([0,1,0],float(deg)*pi/180.0)
-  print 'AxisAngle = ',axisAngleFromRotationMatrix(rot_mat)
-  tran[0:3,0:3] = dot(rot_mat, tran[0:3,0:3])
-  body.SetTransform(tran)
-  P2 = dot(rot_mat, P1)
+  rot_quat = quatFromAxisAngle([0,1,0],float(deg)*pi/180.0)
+  print 'AxisAngle = ',axisAngleFromQuat(rot_quat)
+  pose[0:4] = quatMult(rot_quat, pose[0:4])
+  body.SetTransform(pose)
+  P2 = quatRotate(rot_quat, P1)
   handles.append(env.drawarrow([0.0,0.0,0.0],P2,linewidth=0.01,color=[1.0,1.0,0.0]))
 
 - Y軸の回転に関しても同様に行います．
@@ -166,31 +171,30 @@
 
   while True:
       raw_input('キーを押すと回転しながら移動します．')
-      Tdelta = matrixFromAxisAngle ([0,0,0.5])
-      Tdelta[2,3] = 0.01
-      tran = dot(tran, Tdelta)
-      body.SetTransform(tran)
+      posedelta = r_[quatFromAxisAngle([0,0,0.5]), 0, 0, 0.01]
+      pose=poseMult(pose, posedelta)
+      body.SetTransform(pose)
 
-- Tdelta（Z軸の回転と移動）を作成し，dot関数で現在の変換行列tranとの掛け算をして，それを再びtranに代入して新たな姿勢をセットしています．\n
+- posedelta（Z軸の回転と移動）を作成し， `poseMult` で現在のposeとの掛け算をして，それを再びposeに代入して新たな姿勢をセットしています．\n
   これによりキーが入力される度に，カップの回転軸（黄色い矢印）で回転しながら移動します．\n
 
 関連関数
 --------------------------------------
 
- `Environment.drawarrow` , `rotationMatrixFromAxisAngle` , `axisAngleFromRotationMatrix` , `matrixFromAxisAngle` , `matrixFromPose` , `matrixFromQuat` , `quatFromRotationMatrix` , `rotationMatrixFromQuat`
+ `poseFromMatrix` , `quatFromAxisAngle` , `axisAngleFromQuat` , `quatRotate` , `quatMult` , `poseMult` , `matrixFromPose` , `matrixFromQuat` , `quatFromRotationMatrix` , `rotationMatrixFromQuat`
 
 関連チュートリアル
 --------------------------------------
 
-- `examples.tutorial_004` - 環境に読み込んだ物体の回転（クォータニオン）
+- `examples.tutorial_003` - 環境に読み込んだ物体の回転（回転行列）
 
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Makoto Furukawa'
 __copyright__ = '2010 Makoto Furukawa'
 __license__ = 'Apache License, Version 2.0'
-from openravepy import Environment, rotationMatrixFromAxisAngle, axisAngleFromRotationMatrix, matrixFromAxisAngle
-from numpy import eye, dot, pi
+from openravepy import Environment, poseFromMatrix, quatFromAxisAngle, axisAngleFromQuat, quatRotate, quatMult, poseMult
+from numpy import pi, r_
 
 def run(args=None):
     try:
@@ -198,42 +202,41 @@ def run(args=None):
         env.SetViewer('qtcoin')
         body = env.ReadKinBodyXMLFile(filename='data/mug2.kinbody.xml')
         env.AddKinBody(body)
-        body.SetTransform(eye(4))
-        tran = body.GetTransform()
-    
+        body.SetTransform([1,0,0,0,0,0,0])
+        pose = poseFromMatrix(body.GetTransform())
+
         handles=[]
         handles.append(env.drawarrow(p1=[0.0,0.0,0.0],p2=[0.5,0.0,0.0],linewidth=0.01,color=[1.0,0.0,0.0]))
         handles.append(env.drawarrow(p1=[0.0,0.0,0.0],p2=[0.0,0.5,0.0],linewidth=0.01,color=[0.0,1.0,0.0]))
         handles.append(env.drawarrow(p1=[0.0,0.0,0.0],p2=[0.0,0.0,0.5],linewidth=0.01,color=[0.0,0.0,0.1]))
-    
+
         deg = raw_input('X軸の回転角度を入力して下さい．[degree] X = ')
         if len(deg) == 0:
             deg = -45
-        rot_mat = rotationMatrixFromAxisAngle([1,0,0],float(deg)*pi/180.0)
-        print 'AxisAngle = ',axisAngleFromRotationMatrix(rot_mat)
-        tran[0:3,0:3] = dot(rot_mat, tran[0:3,0:3])
-        body.SetTransform(tran)
-
-        P1 = dot(rot_mat, [0,0,1])
+        rot_quat = quatFromAxisAngle([1,0,0],float(deg)*pi/180.0)
+        print 'AxisAngle = ',axisAngleFromQuat(rot_quat)
+        pose[0:4] = quatMult(rot_quat, pose[0:4])
+        body.SetTransform(pose)
+        
+        P1 = quatRotate(rot_quat, [0,0,1])
         handles.append(env.drawarrow([0.0,0.0,0.0],P1,linewidth=0.01,color=[1.0,1.0,0.0]))
 
         deg = raw_input('Y軸の回転角度を入力して下さい．[degree] Y = ')
         if len(deg) == 0:
             deg = 45
-        rot_mat = rotationMatrixFromAxisAngle([0,1,0],float(deg)*pi/180.0)
-        print 'AxisAngle = ',axisAngleFromRotationMatrix(rot_mat)
-        tran[0:3,0:3] = dot(rot_mat, tran[0:3,0:3])
-        body.SetTransform(tran)
+        rot_quat = quatFromAxisAngle([0,1,0],float(deg)*pi/180.0)
+        print 'AxisAngle = ',axisAngleFromQuat(rot_quat)
+        pose[0:4] = quatMult(rot_quat, pose[0:4])
+        body.SetTransform(pose)
 
-        P2 = dot(rot_mat, P1)
+        P2 = quatRotate(rot_quat, P1)
         handles.append(env.drawarrow([0.0,0.0,0.0],P2,linewidth=0.01,color=[1.0,1.0,0.0]))
 
         while True:
             raw_input('キーを押すと回転しながら移動します．')
-            Tdelta = matrixFromAxisAngle ([0,0,0.5])
-            Tdelta[2,3] = 0.01
-            tran = dot(tran, Tdelta)
-            body.SetTransform(tran)
+            posedelta = r_[quatFromAxisAngle([0,0,0.5]), 0, 0, 0.01]
+            pose=poseMult(pose, posedelta)
+            body.SetTransform(pose)
 
     finally:
         env.Destroy()
