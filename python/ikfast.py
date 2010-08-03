@@ -1561,7 +1561,7 @@ class IKFastSolver(AutoReloader):
                         m = eqnew2.match(a*var.cvar+b*var.svar+c)
                         if m is not None:
                             symbols += [(var.svar,sin(var.var)),(var.cvar,cos(var.var))]
-                            asinsol = asin(-m[c]/sqrt(m[a]*m[a]+m[b]*m[b])).subs(symbols)
+                            asinsol = asin(-m[c]/abs(sqrt(m[a]*m[a]+m[b]*m[b]))).subs(symbols)
                             constsol = -atan2(m[a],m[b]).subs(symbols).evalf()
                             jointsolutions = [constsol+asinsol,constsol+pi.evalf()-asinsol]
                             solvedvars.append((var.var,SolverSolution(var.var.name,jointeval=jointsolutions,IsHinge=self.IsHinge(var.var.name)), [self.codeComplexity(s) for s in jointsolutions]))
@@ -1934,7 +1934,7 @@ class IKFastSolver(AutoReloader):
                 m = eqnew2.match(a*cvar+b*svar+c)
                 if m is not None:
                     symbols += [(svar,sin(var)),(cvar,cos(var))]
-                    asinsol = trigsimp(asin(-m[c]/sqrt(m[a]*m[a]+m[b]*m[b])).subs(symbols),deep=True)
+                    asinsol = trigsimp(asin(-m[c]/abs(sqrt(m[a]*m[a]+m[b]*m[b]))).subs(symbols),deep=True)
                     constsol = -atan2(m[a],m[b]).subs(symbols).evalf()
                     jointsolutions = [constsol+asinsol,constsol+pi.evalf()-asinsol]
                     solutions.append(SolverSolution(var.name,jointeval=jointsolutions,IsHinge=self.IsHinge(var.name)))
@@ -2331,7 +2331,7 @@ class IKFastSolver(AutoReloader):
                 m = (Rsolve[inds[0]]-Ree[inds[0]]).match(a*var.cvar+b*var.svar+c)
                 if m is not None:
                     symbols = [(var.svar,sin(var.var)),(var.cvar,cos(var.var))]
-                    asinsol = asin(-m[c]/sqrt(m[a]*m[a]+m[b]*m[b])).subs(symbols)
+                    asinsol = asin(-m[c]/abs(sqrt(m[a]*m[a]+m[b]*m[b]))).subs(symbols)
                     constsol = -atan2(m[a],m[b]).subs(symbols).evalf()
                     solvedvars[var.var] = [constsol+asinsol,constsol+pi.evalf()-asinsol]
                     continue

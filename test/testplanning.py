@@ -636,3 +636,15 @@ def test_calibviews():
             #self.robot.SetJointValues(q,self.vmodel.manip.GetArmJoints())
             self.vmodel.visualprob.ComputeVisibleConfiguration(pose=pose)
             raw_input('asdf')
+
+def test_freejoints():
+    env=Environment()
+    env.SetViewer('qtcoin')
+    env.Load('data/lab1.env.xml')
+    robot=env.GetRobots()[0]
+    robot.SetJointValues(array([ -3.64122450e-01,   1.27151251e+00,  -7.88666554e-09, 1.29461884e+00,  -2.69412994e-05,   4.65967804e-01, 9.38504954e-08,   2.44345713e+00,   2.44345832e+00, 2.44345665e+00,   0.00000000e+00]))
+    task=interfaces.TaskManipulation(robot)
+    basemanip=interfaces.BaseManipulation(robot)
+    m=robot.GetActiveManipulator()
+    robot.SetActiveDOFs(m.GetArmIndices())
+    basemanip.MoveUnsyncJoints(jointvalues=[0,0,0,0],jointinds=manip.GetGripperIndices())
