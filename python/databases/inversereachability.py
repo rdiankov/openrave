@@ -586,40 +586,46 @@ class InverseReachabilityModel(OpenRAVEModel):
             colors = c_[0*normalizedprobs,normalizedprobs,normalizedprobs,normalizedprobs]
             points = c_[poses[inds,4:6],A.flatten()[inds]+zoffset]
             return self.env.plot3(points=array(points),colors=array(colors),pointsize=10)
-    def showEquivalenceClass(self,equivalenceclass,transparency = 0.8,neighthresh=0.1):
+    def showEquivalenceClass(self,equivalenceclass,transparency = 0.8,neighthresh=0.1,onlymaniplinks=True):
         """Overlays several robots of the same equivalence class"""
         inds = linkstatistics.LinkStatisticsModel.prunePointsKDTree(equivalenceclass[2][:,0:3],neighthresh,1)
         robotlocs = []
         with self.robot:
+            if onlymaniplinks:
+                maniplinks = self.getManipulatorLinks(self.manip)
+                for link in self.robot.GetLinks():
+                    link.Enable(link in maniplinks)
             Tgrasp = matrixFromQuat(equivalenceclass[0][0:4])
             Tgrasp[2,3] = equivalenceclass[0][4]
-            Tmanipframe = dot(self.robot.GetTransform(), linalg.inv(self.manip.GetBase().GetTransform()))
             for sample in equivalenceclass[2][inds,:]:
                 Tmanip = matrixFromAxisAngle([0,0,1],sample[0])
                 Tmanip[0:2,3] = sample[1:3]
-                self.robot.SetTransform(dot(Tmanipframe,Tmanip))
+                self.robot.SetTransform(Tmanip)
                 self.robot.SetJointValues(*self.necessaryjointstate())
                 solution = self.manip.FindIKSolution(Tgrasp,False)
                 if solution is not None:
                     self.robot.SetJointValues(solution,self.manip.GetArmIndices())
                     robotlocs.append((self.robot.GetTransform(),self.robot.GetDOFValues()))
-        self.env.RemoveKinBody(self.robot)
-        newrobots = []
-        for T,values in robotlocs:
-            newrobot = self.env.ReadRobotXMLFile(self.robot.GetXMLFilename())
-            newrobot.SetName('robot%d'%random.randint(10000))
-            for link in newrobot.GetLinks():
-                for geom in link.GetGeometries():
-                    geom.SetTransparency(transparency)
-            self.env.AddRobot(newrobot)
-            with self.env:
-                newrobot.SetTransform(T)
-                newrobot.SetJointValues(values)
-            newrobots.append(newrobot)
-        raw_input('press any key to continue')
-        for newrobot in newrobots:
-            self.env.RemoveKinBody(newrobot)
-        self.env.AddRobot(self.robot)
+        try:
+            print 'number of locations: ',len(robotlocs)
+            self.env.RemoveKinBody(self.robot)
+            newrobots = []
+            for T,values in robotlocs:
+                newrobot = self.env.ReadRobotXMLFile(self.robot.GetXMLFilename())
+                newrobot.SetName(self.robot.GetName())
+                for link in newrobot.GetLinks():
+                    for geom in link.GetGeometries():
+                        geom.SetTransparency(transparency)
+                self.env.AddRobot(newrobot,True)
+                with self.env:
+                    newrobot.SetTransform(T)
+                    newrobot.SetJointValues(values)
+                newrobots.append(newrobot)
+            raw_input('press any key to continue')
+        finally:
+            for newrobot in newrobots:
+                self.env.RemoveKinBody(newrobot)
+            self.env.AddRobot(self.robot)
 
     @staticmethod
     def CreateOptionParser():
