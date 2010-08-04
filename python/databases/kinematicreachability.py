@@ -224,7 +224,7 @@ class ReachabilityModel(OpenRAVEModel):
                     armlength += sqrt(sum((eetrans-j.GetAnchor())**2))
                     eetrans = j.GetAnchor()    
                 if maxradius is None:
-                    maxradius = armlength+xyzdelta
+                    maxradius = armlength+xyzdelta*sqrt(3.0)
 
                 allpoints,insideinds,shape,self.pointscale = self.UniformlySampleSpace(maxradius,delta=xyzdelta)
                 qarray = SpaceSampler().sampleSO3(quatdelta=quatdelta)

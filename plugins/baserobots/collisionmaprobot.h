@@ -92,12 +92,12 @@ class CollisionMapRobot : public RobotBase
                     }
                 }
                 if( !_ss )
-                    RAVELOG_WARNA("failed to read collision pair values\n");
+                    RAVELOG_WARN("failed to read collision pair values\n");
             }
             else if( name == "collisionmap" )
                 return true;
             else
-                RAVELOG_ERRORA("unknown field %s\n", name.c_str());
+                RAVELOG_ERROR("unknown field %s\n", name.c_str());
             return false;
         }
 
@@ -128,7 +128,7 @@ class CollisionMapRobot : public RobotBase
         _pController = p;
         if( !!_pController ) {
             if( !_pController->Init(shared_robot(),args) ) {
-                RAVELOG_WARNA(str(boost::format("GenericRobot %s: Failed to init controller %s\n")%GetName()%p->GetXMLId()));
+                RAVELOG_WARN(str(boost::format("GenericRobot %s: Failed to init controller %s\n")%GetName()%p->GetXMLId()));
                 _pController.reset();
                 return false;
             }
@@ -236,7 +236,7 @@ class CollisionMapRobot : public RobotBase
                         if( vLinkColliding.size() > 1 )
                             report->plink2 = vLinkColliding.at(1);
                     }
-                    RAVELOG_VERBOSEA(str(boost::format("Self collision: joints %s(%d):%s(%d)\n")%curmap.jointnames[0]%indices[0]%curmap.jointnames[1]%indices[1]));
+                    RAVELOG_VERBOSE(str(boost::format("Self collision: joints %s(%d):%s(%d)\n")%curmap.jointnames[0]%indices[0]%curmap.jointnames[1]%indices[1]));
                     return true;
                 }
             }

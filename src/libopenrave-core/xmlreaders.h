@@ -1956,7 +1956,6 @@ namespace OpenRAVEXMLParser
                 RAVELOG_VERBOSEA("%s: COM = (%f,%f,%f)\n", _pchain->GetName().c_str(), com.x, com.y, com.z);
                 return true;
             }
-
             return false;
         }
 
@@ -2434,6 +2433,39 @@ namespace OpenRAVEXMLParser
                 _probot = RaveInterfaceCast<RobotBase>(_pinterface); // might be updated by readers
                 return false;
             }
+            else if( _processingtag.size() > 0 ) {
+                if( xmlname == "translation" ) {
+                    Vector v;
+                    _ss >> v.x >> v.y >> v.z;
+                    _trans.trans += v;
+                }
+                else if( xmlname == "rotationaxis" ) {
+                    Vector vaxis; dReal fangle=0;
+                    _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
+                    Transform tnew; tnew.rotfromaxisangle(vaxis.normalize3(), fangle * PI / 180.0f);
+                    _trans.rot = (tnew*_trans).rot;
+                }
+                else if( xmlname == "quat" ) {
+                    Transform tnew;
+                    _ss >> tnew.rot.x >> tnew.rot.y >> tnew.rot.z >> tnew.rot.w;
+                    tnew.rot.normalize4();
+                    _trans.rot = (tnew*_trans).rot;
+                }
+                else if( xmlname == "rotationmat" ) {
+                    TransformMatrix tnew;
+                    _ss >> tnew.m[0] >> tnew.m[1] >> tnew.m[2] >> tnew.m[4] >> tnew.m[5] >> tnew.m[6] >> tnew.m[8] >> tnew.m[9] >> tnew.m[10];
+                    _trans.rot = (Transform(tnew)*_trans).rot;
+                }
+                else if( xmlname == "controller" ) {
+                }
+                else if( xmlname == "jointvalues" ) {
+                    _vjointvalues = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
+                }
+
+                if( xmlname !=_processingtag )
+                    RAVELOG_WARN(str(boost::format("invalid tag %s!=%s\n")%xmlname%_processingtag));
+                _processingtag = "";
+            }
             else if( InterfaceXMLReader::endElement(xmlname) ) {
                 if( _robotname.size() > 0 )
                     _probot->SetName(_robotname);
@@ -2492,37 +2524,6 @@ namespace OpenRAVEXMLParser
 
                 return true;
             }
-            else if( xmlname == "translation" ) {
-                Vector v;
-                _ss >> v.x >> v.y >> v.z;
-                _trans.trans += v;
-            }
-            else if( xmlname == "rotationaxis" ) {
-                Vector vaxis; dReal fangle=0;
-                _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
-                Transform tnew; tnew.rotfromaxisangle(vaxis.normalize3(), fangle * PI / 180.0f);
-                _trans.rot = (tnew*_trans).rot;
-            }
-            else if( xmlname == "quat" ) {
-                Transform tnew;
-                _ss >> tnew.rot.x >> tnew.rot.y >> tnew.rot.z >> tnew.rot.w;
-                tnew.rot.normalize4();
-                _trans.rot = (tnew*_trans).rot;
-            }
-            else if( xmlname == "rotationmat" ) {
-                TransformMatrix tnew;
-                _ss >> tnew.m[0] >> tnew.m[1] >> tnew.m[2] >> tnew.m[4] >> tnew.m[5] >> tnew.m[6] >> tnew.m[8] >> tnew.m[9] >> tnew.m[10];
-                _trans.rot = (Transform(tnew)*_trans).rot;
-            }
-            else if( xmlname == "controller" ) {
-            }
-            else if( xmlname == "jointvalues" ) {
-                _vjointvalues = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
-            }
-
-            if( xmlname !=_processingtag )
-                RAVELOG_WARN(str(boost::format("invalid tag %s!=%s\n")%xmlname%_processingtag));
-            _processingtag = "";
             return false;
         }
 
