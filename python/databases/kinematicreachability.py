@@ -275,6 +275,7 @@ class ReachabilityModel(OpenRAVEModel):
                 b.Enable(enable)
 
     def show(self,showrobot=True,contours=[0.01,0.1,0.2,0.5,0.8,0.9,0.99],opacity=None,figureid=1, xrange=None,options=None):
+        mlab = __import__('enthought.mayavi.mlab',fromlist=['mlab'])
         mlab.figure(figureid,fgcolor=(0,0,0), bgcolor=(1,1,1),size=(1024,768))
         mlab.clf()
         print 'max reachability: ',numpy.max(self.reachability3d)
@@ -361,11 +362,4 @@ def run(*args,**kwargs):
     ReachabilityModel.RunFromParser(*args,**kwargs)
 
 if __name__=='__main__':
-    parser = ReachabilityModel.CreateOptionParser()
-    (options, args) = parser.parse_args()
-    if options.show: # only load mayavi if showing
-        try:
-            from enthought.mayavi import mlab
-        except ImportError:
-            pass
     run()
