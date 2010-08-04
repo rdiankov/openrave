@@ -431,7 +431,8 @@ class GraspingModel(OpenRAVEModel):
                     for link in self.manip.GetChildLinks():
                         link.SetTransform(dot(Tdelta,link.GetTransform()))
                     self.env.UpdatePublishedBodies()
-                raw_input('press any key to continue: ')
+                    # wait while environment is locked?
+                    raw_input('press any key to continue: ')
     def testGrasp(self,graspingnoise=None,Ngraspingtries = 20,forceclosurethreshold=1e-9,**kwargs):
         contacts,finalconfig,mindist,volume = self.runGrasp(graspingnoise=0,**kwargs)
         if mindist >= forceclosurethreshold and graspingnoise > 0:

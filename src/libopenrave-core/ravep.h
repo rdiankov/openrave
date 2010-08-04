@@ -66,18 +66,20 @@ build openrave must include (used in place of rave.h). Precompiled header.
 #include <iostream>
 #include <sstream>
 
-#include <sys/timeb.h>    // ftime(), struct timeb
+#include <time.h>
 
 #ifndef _WIN32
+#if POSIX_TIMERS <= 0 && _POSIX_TIMERS <= 0
 #include <sys/time.h>
+#endif
 #define Sleep(milli) usleep(1000*milli)
 #else
 #define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
+#include <sys/timeb.h>    // ftime(), struct timeb
 #endif
 
 #ifdef _WIN32
-
 inline static uint32_t GetMilliTime()
 {
     LARGE_INTEGER count, freq;
@@ -106,7 +108,7 @@ inline static uint64_t GetNanoTime()
 
 inline static void getWallTime(uint32_t& sec, uint32_t& nsec)
 {
-#if POSIX_TIMERS > 0
+#if POSIX_TIMERS > 0 || _POSIX_TIMERS > 0
   struct timespec start;
   clock_gettime(CLOCK_REALTIME, &start);
   sec  = start.tv_sec;
