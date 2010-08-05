@@ -119,9 +119,9 @@ class InverseReachabilityModel(OpenRAVEModel):
 
     def getfilename(self):
         if self.id is None:
-            basename='invreachability.' + self.manip.GetName() + '.pp'
+            basename='invreachability.' + self.manip.GetStructureHash() + '.pp'
         else:
-            basename='invreachability.' + self.manip.GetName() + '.' + str(self.id) + '.pp'
+            basename='invreachability.' + self.manip.GetStructureHash() + '.' + str(self.id) + '.pp'
         return os.path.join(OpenRAVEModel.getfilename(self),basename)
     @staticmethod
     def getdofindices(manip):
@@ -361,12 +361,14 @@ class InverseReachabilityModel(OpenRAVEModel):
         weights = array(())
         graspindices = []
         graspindexoffsets = []
+        highestlogll = -inf
         for Tgrasp,graspindex in Tgrasps:
             posetarget = poseFromMatrix(dot(linalg.inv(Tbase),Tgrasp))
             qnormalized,znormangle = normalizeZRotation(reshape(posetarget[0:4],(1,4)))
             # find the closest cluster
             logll = quatArrayTDist(qnormalized[0],self.equivalencemeans[:,0:4])**2*self.equivalenceweights[:,0] + (posetarget[6]-self.equivalencemeans[:,4])**2*self.equivalenceweights[:,1] + self.equivalenceoffset
             bestindex = argmax(logll)
+            highestlogll = max(highestlogll,logll[bestindex])
             if logll[bestindex] <logllthresh:
                 continue
             graspindices.append(graspindex)
@@ -379,7 +381,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             weights = r_[weights,equivalenceclass[2][:,3]*normalizationconst]
 
         if len(points) == 0:
-            print 'inversereachability: could not find base distribution, logllthresh too high?'
+            print 'inversereachability: could not find base distribution, logllthresh too high?', highestlogll
             return None,None,None
         
         # transform points by the base pose

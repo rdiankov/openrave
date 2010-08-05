@@ -79,20 +79,21 @@ class GraspReachability(metaclass.AutoReloader):
                 for grasp,graspindex in izip(validgrasps,validindices):
                     yield gmodel.getGlobalGraspTransform(grasp,collisionfree=True),(gmodel,graspindex)
             densityfn,samplerfn,bounds = irmodel.computeAggregateBaseDistribution(graspiter(),**kwargs)
-            densityfns.append(densityfn)
-            samplerfns.append(samplerfn)
-            if totalbounds is None:
-                totalbounds = bounds
-            else:
-                bounds = array((numpy.minimum(bounds[0,:],totalbounds[0,:]),numpy.maximum(bounds[1,:],totalbounds[1,:])))
-        def totaldensityfn(**kwargs):
+            if densityfn is not None:
+                densityfns.append(densityfn)
+                samplerfns.append(samplerfn)
+                if totalbounds is None:
+                    totalbounds = bounds
+                else:
+                    bounds = array((numpy.minimum(bounds[0,:],totalbounds[0,:]),numpy.maximum(bounds[1,:],totalbounds[1,:])))
+        def totaldensityfn(*args,**kwargs):
             res = None
             for densityfn in densityfns:
-                s = densityfn(**kwargs)
+                s = densityfn(*args,**kwargs)
                 res = res+s if res is not None else s
             return res
-        def totalsamplerfn(**kwargs):
-            return samplerfns[random.randint(len(samplerfns))](**kwargs)
+        def totalsamplerfn(*args,**kwargs):
+            return samplerfns[random.randint(len(samplerfns))](*args,**kwargs)
         return totaldensityfn,totalsamplerfn,totalbounds
     def sampleGoals(self,samplerfn,N=1,updateenv=False,timeout=inf):
         """samples a base placement and attemps to find an IK solution there.
