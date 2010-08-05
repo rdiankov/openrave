@@ -409,11 +409,11 @@ class InverseReachabilityModel(OpenRAVEModel):
             return probs
         def gaussiankernelsampler(N=1,weight=1.0):
             """samples the distribution and returns a transform as a pose"""
-            sampledgraspindices = zeros(N,int)
+            sampledgraspindices = []
             sampledpoints = zeros((N,3))
             for i in range(N):
                 pointindex = bisect.bisect(cumweights,random.rand())
-                sampledgraspindices[i] = graspindices[bisect.bisect(graspindexoffsets,pointindex)-1]
+                sampledgraspindices.append(graspindices[bisect.bisect(graspindexoffsets,pointindex)-1])
                 sampledpoints[i,:] = points[pointindex,:]
             samples = random.normal(sampledpoints,bandwidth*weight)
             samples[:,0] *= 0.5*irotweight
@@ -585,7 +585,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             normalizedprobs = numpy.minimum(1,probs[inds]/maxprob)
             colors = c_[0*normalizedprobs,normalizedprobs,normalizedprobs,normalizedprobs]
             points = c_[poses[inds,4:6],A.flatten()[inds]+zoffset]
-            return self.env.plot3(points=array(points),colors=array(colors),pointsize=10)
+            return env.plot3(points=array(points),colors=array(colors),pointsize=10)
     def showEquivalenceClass(self,equivalenceclass,transparency = 0.8,neighthresh=0.1,onlymaniplinks=True):
         """Overlays several robots of the same equivalence class"""
         inds = linkstatistics.LinkStatisticsModel.prunePointsKDTree(equivalenceclass[2][:,0:3],neighthresh,1)
@@ -608,19 +608,21 @@ class InverseReachabilityModel(OpenRAVEModel):
                     robotlocs.append((self.robot.GetTransform(),self.robot.GetDOFValues()))
         try:
             print 'number of locations: ',len(robotlocs)
-            self.env.RemoveKinBody(self.robot)
-            newrobots = []
-            for T,values in robotlocs:
-                newrobot = self.env.ReadRobotXMLFile(self.robot.GetXMLFilename())
-                newrobot.SetName(self.robot.GetName())
-                for link in newrobot.GetLinks():
-                    for geom in link.GetGeometries():
-                        geom.SetTransparency(transparency)
-                self.env.AddRobot(newrobot,True)
-                with self.env:
-                    newrobot.SetTransform(T)
-                    newrobot.SetJointValues(values)
-                newrobots.append(newrobot)
+            with self.env:
+                self.env.RemoveKinBody(self.robot)
+                newrobots = []
+                for T,values in robotlocs:
+                    newrobot = self.env.ReadRobotXMLFile('robots/hrp2jsk08.robot.xml')#self.robot.GetXMLFilename())
+                    newrobot.SetName(self.robot.GetName())
+                    for link in newrobot.GetLinks():
+                        for geom in link.GetGeometries():
+                            geom.SetTransparency(transparency)
+                    self.env.AddRobot(newrobot,True)
+                    with self.env:
+                        newrobot.SetTransform(T)
+                        newrobot.SetJointValues(values)
+                    newrobots.append(newrobot)
+                    #time.sleep(0.1)
             raw_input('press any key to continue')
         finally:
             for newrobot in newrobots:

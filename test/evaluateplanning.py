@@ -16,7 +16,8 @@ __copyright__ = 'Copyright (C) 2009-2010'
 __license__ = 'Apache License, Version 2.0'
 
 from openravepy import *
-from openravepy.examples import mobilemanipulation,graspplanning,inversereachability,linkstatistics
+from openravepy.examples import mobilemanipulation,graspplanning
+from openravepy.databases import inversereachability,linkstatistics
 from numpy import *
 import numpy,time,os,pickle
 from itertools import izip
@@ -87,12 +88,16 @@ class EvaluateInverseReachability(OpenRAVEEvaluator):
 
     @staticmethod
     def getdataprefix(robot):
-        return os.path.join(robot.GetEnv().GetHomeDirectory(),'robot.'+robot.GetRobotStructureHash(),'irstats.')
+        return os.path.join(robot.GetEnv().GetHomeDirectory(),'robot.'+robot.GetKinematicsGeometryHash(),'irstats.')
     def testgraspables(self,Nsamples=1000,logllthresh=2.4,weight=1.0):
         for gmodel,dests in self.planning.graspables:
-            gr = mobilemanipulation.GraspReachability(robot=self.robot,gmodel=gmodel)
+            self.robot.SetActiveManipulator(gmodel.manip)
+            irmodel=databases.inversereachability.InverseReachabilityModel (self.robot)
+            if not irmodel.load():
+                irmodel.autogenerate()
+            gr = mobilemanipulation.GraspReachability(robot=self.robot,irgmodels=[(irmodel,gmodel)])
             starttime = time.time()
-            densityfn,samplerfn,bounds,validgrasps = gr.computeGraspDistribution(logllthresh=logllthresh)
+            densityfn,samplerfn,bounds = gr.computeGraspDistribution(logllthresh=logllthresh)
             print 'time to build distribution: %fs'%(time.time()-starttime)
             #h = gr.irmodel.showBaseDistribution(densityfn,bounds,self.target.GetTransform()[2,3],thresh=1.0)
             data = StatisticsData()
@@ -101,20 +106,21 @@ class EvaluateInverseReachability(OpenRAVEEvaluator):
             data.samplingfailures = array(())
             for i in range(10):
                 starttime = time.time()
-                goals,numfailures = gr.sampleGoals(lambda N: samplerfn(N,weight=weight),N=Nsamples,timeout=Nsamples)
+                goals,numfailures = gr.sampleGoals(lambda N: samplerfn(N=N,weight=weight),N=Nsamples,timeout=Nsamples)
                 data.samplingavg = r_[data.samplingavg,min(Nsamples,(time.time()-starttime)/(len(goals)+1e-8))]
                 data.samplingfailures = r_[data.samplingfailures,numfailures/float(len(goals)+numfailures)]
 
             data.randomavg = array(())
             data.randomfailures = array(())
             Trobot = self.robot.GetTransform()
-            Tgrasps = [(gr.gmodel.getGlobalGraspTransform(grasp),i) for i,grasp in enumerate(validgrasps)]
+            validgrasps,validindices = gmodel.computeValidGrasps(checkik=False)
+            Tgrasps = [(gmodel.getGlobalGraspTransform(grasp),i) for i,grasp in enumerate(validgrasps)]
             bounds = array(((0,-1.2,-1.2),(2*pi,1.2,1.2)))
             def randomsampler(N,weight=1.0):
                 indices = random.randint(0,len(Tgrasps),N)
                 angles = 0.5*random.rand(N)*(bounds[1,0]-bounds[0,0])+bounds[0,0]
                 XY = [Tgrasps[i][0][0:2,3]+random.rand(2)*(bounds[1,1:3]-bounds[0,1:3])+bounds[0,1:3]  for i in indices]
-                return c_[cos(angles),zeros((N,2)),sin(angles),array(XY),tile(Trobot[2,3],N)],array([Tgrasps[i][1] for i in indices])
+                return c_[cos(angles),zeros((N,2)),sin(angles),array(XY),tile(Trobot[2,3],N)],[(gmodel,i) for i in indices],([],[])
 
             for i in range(10):
                 starttime = time.time()
@@ -225,7 +231,7 @@ class EvaluateDistanceMetric(OpenRAVEEvaluator):
             self.lsmodel.autogenerate()
     @staticmethod
     def getdataprefix(robot):
-        return os.path.join(robot.GetEnv().GetHomeDirectory(),'robot.'+robot.GetRobotStructureHash(),'diststats.')
+        return os.path.join(robot.GetEnv().GetHomeDirectory(),'robot.'+robot.GetKinematicsGeometryHash(),'diststats.')
 
     def testgraspables(self,weightexp=0.005,N=10):
         gmodel,dests = self.planning.graspables[0]
@@ -292,7 +298,7 @@ class EvaluateResolutions(OpenRAVEEvaluator):
             self.lsmodel.autogenerate()
     @staticmethod
     def getdataprefix(robot):
-        return os.path.join(robot.GetEnv().GetHomeDirectory(),'robot.'+robot.GetRobotStructureHash(),'resstats.')
+        return os.path.join(robot.GetEnv().GetHomeDirectory(),'robot.'+robot.GetKinematicsGeometryHash(),'resstats.')
 
     def testgraspables(self,xyzdelta=0.005,N=10):
         gmodel,dests = self.planning.graspables[0]

@@ -783,11 +783,23 @@ public:
         return toPyArray(values);
     }
     
-    object GetLinks()
+    object GetLinks() const
     {
         boost::python::list links;
         FOREACHC(itlink, _pbody->GetLinks())
             links.append(PyLinkPtr(new PyLink(*itlink, GetEnv())));
+        return links;
+    }
+
+    object GetLinks(object oindices) const
+    {
+        if( oindices == object() )
+            return GetLinks();
+        vector<int> vindices = ExtractArray<int>(oindices);
+        boost::python::list links;
+        FOREACHC(it, vindices) {
+            links.append(PyLinkPtr(new PyLink(_pbody->GetLinks().at(*it),GetEnv())));
+        }
         return links;
     }
 
@@ -797,11 +809,24 @@ public:
         return !plink ? PyLinkPtr() : PyLinkPtr(new PyLink(plink,GetEnv()));
     }
 
-    object GetJoints()
+    object GetJoints() const
     {
         boost::python::list joints;
-        FOREACHC(itjoint, _pbody->GetJoints())
+        FOREACHC(itjoint, _pbody->GetJoints()) {
             joints.append(PyJointPtr(new PyJoint(*itjoint, GetEnv())));
+        }
+        return joints;
+    }
+
+    object GetJoints(object oindices) const
+    {
+        if( oindices == object() )
+            return GetJoints();
+        vector<int> vindices = ExtractArray<int>(oindices);
+        boost::python::list joints;
+        FOREACHC(it, vindices) {
+            joints.append(PyJointPtr(new PyJoint(_pbody->GetJoints().at(*it),GetEnv())));
+        }
         return joints;
     }
 
@@ -3463,6 +3488,10 @@ BOOST_PYTHON_MODULE(openravepy_int)
         PyVoidHandle (PyKinBody::*statesaver2)(int) = &PyKinBody::CreateKinBodyStateSaver;
         object (PyKinBody::*getdofvalues1)() const = &PyKinBody::GetDOFValues;
         object (PyKinBody::*getdofvalues2)(object) const = &PyKinBody::GetDOFValues;
+        object (PyKinBody::*getlinks1)() const = &PyKinBody::GetLinks;
+        object (PyKinBody::*getlinks2)(object) const = &PyKinBody::GetLinks;
+        object (PyKinBody::*getjoints1)() const = &PyKinBody::GetJoints;
+        object (PyKinBody::*getjoints2)(object) const = &PyKinBody::GetJoints;
         scope kinbody = class_<PyKinBody, boost::shared_ptr<PyKinBody>, bases<PyInterfaceBase> >("KinBody", DOXY_CLASS(KinBody), no_init)
             .def("InitFromFile",&PyKinBody::InitFromFile,args("filename"),DOXY_FN(KinBody,InitFromFile))
             .def("InitFromData",&PyKinBody::InitFromData,args("data"), DOXY_FN(KinBody,InitFromData))
@@ -3471,7 +3500,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetName",&PyKinBody::GetName,DOXY_FN(KinBody,GetName))
             .def("GetDOF",&PyKinBody::GetDOF,DOXY_FN(KinBody,GetDOF))
             .def("GetDOFValues",getdofvalues1,DOXY_FN(KinBody,GetDOFValues))
-            .def("GetDOFValues",getdofvalues2,DOXY_FN(KinBody,GetDOFValues))
+            .def("GetDOFValues",getdofvalues2,args("indices"),DOXY_FN(KinBody,GetDOFValues))
             .def("GetDOFVelocities",&PyKinBody::GetDOFVelocities, DOXY_FN(KinBody,GetDOFVelocities))
             .def("GetDOFLimits",&PyKinBody::GetDOFLimits, DOXY_FN(KinBody,GetDOFLimits))
             .def("GetDOFMaxVel",&PyKinBody::GetDOFMaxVel, DOXY_FN(KinBody,GetDOFMaxVel))
@@ -3481,9 +3510,11 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetJointLimits",&PyKinBody::GetJointLimits, DOXY_FN(KinBody,GetJointLimits))
             .def("GetJointMaxVel",&PyKinBody::GetJointMaxVel, DOXY_FN(KinBody,GetJointMaxVel))
             .def("GetJointWeights",&PyKinBody::GetJointWeights, DOXY_FN(KinBody,GetJointWeights))
-            .def("GetLinks",&PyKinBody::GetLinks, DOXY_FN(KinBody,GetLinks))
+            .def("GetLinks",getlinks1, DOXY_FN(KinBody,GetLinks))
+            .def("GetLinks",getlinks2, args("indices"), DOXY_FN(KinBody,GetLinks))
             .def("GetLink",&PyKinBody::GetLink,args("name"), DOXY_FN(KinBody,GetLink))
-            .def("GetJoints",&PyKinBody::GetJoints, DOXY_FN(KinBody,GetJoints))
+            .def("GetJoints",getjoints1, DOXY_FN(KinBody,GetJoints))
+            .def("GetJoints",getjoints2, args("indices"), DOXY_FN(KinBody,GetJoints))
             .def("GetPassiveJoints",&PyKinBody::GetPassiveJoints, DOXY_FN(KinBody,GetPassiveJoints))
             .def("GetDependencyOrderedJoints",&PyKinBody::GetDependencyOrderedJoints, DOXY_FN(KinBody,GetDependencyOrderedJoints))
             .def("GetRigidlyAttachedLinks",&PyKinBody::GetRigidlyAttachedLinks,args("linkindex"), DOXY_FN(KinBody,GetRigidlyAttachedLinks))

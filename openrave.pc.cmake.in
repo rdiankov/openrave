@@ -10,5 +10,5 @@ Description: Open Robotics Automation Virtual Environment
 Version: @OPENRAVE_VERSION@
 URL: http://openrave.programmingvision.com
 Libs: -L${libdir} -lopenrave
-Libs.Private: @OPENRAVE_BOOST_LIB_DIRS@ @Boost_THREAD_LIBRARY@
+Libs.private: @OPENRAVE_BOOST_LIB_DIRS@ @Boost_THREAD_LIBRARY@
 Cflags: -I${includedir} @OPENRAVE_BOOST_INCLUDE_DIRS@

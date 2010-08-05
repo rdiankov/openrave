@@ -74,13 +74,13 @@ class GraspReachability(metaclass.AutoReloader):
         samplerfns = []
         totalbounds = None
         for irmodel,gmodel in self.irgmodels:
-            #validgrasps,validindices = gmodel.computeValidGrasps(checkik=False,backupdist=0.01)
+            validgrasps,validindices = gmodel.computeValidGrasps(checkik=False,backupdist=0.01)
             def graspiter():
                 for grasp,graspindex in izip(validgrasps,validindices):
                     yield gmodel.getGlobalGraspTransform(grasp,collisionfree=True),(gmodel,graspindex)
             densityfn,samplerfn,bounds = irmodel.computeAggregateBaseDistribution(graspiter(),**kwargs)
             densityfns.append(densityfn)
-            samplerfns.append(samplerfns)
+            samplerfns.append(samplerfn)
             if totalbounds is None:
                 totalbounds = bounds
             else:
@@ -115,12 +115,12 @@ class GraspReachability(metaclass.AutoReloader):
                     if not gmodel.manip.CheckIndependentCollision(CollisionReport()):
                         grasp = gmodel.grasps[graspindex[1]]
                         gmodel.setPreshape(grasp)
-                        q = gmodel.manip.FindIKSolution(gmodel.getGlobalGraspTransform(grasp,collisionfree=True),envcheck=True)
+                        q = gmodel.manip.FindIKSolution(gmodel.getGlobalGraspTransform(grasp,collisionfree=True),filteroptions=IkFilterOptions.CheckEnvCollisions)
                         if q is not None:
                             values = self.robot.GetDOFValues()
                             values[gmodel.manip.GetArmIndices()] = q
                             goals.append((grasp,pose,values))
-                        elif gmodel.manip.FindIKSolution(gmodel.getGlobalGraspTransform(grasp,collisionfree=True),envcheck=False) is None:
+                        elif gmodel.manip.FindIKSolution(gmodel.getGlobalGraspTransform(grasp,collisionfree=True),0) is None:
                             numfailures += 1
         return goals,numfailures
     def sampleValidPlacementIterator(self,giveuptime=inf,randomgrasps=False,updateenv=False,randomplacement=False,**kwargs):
@@ -156,7 +156,7 @@ class GraspReachability(metaclass.AutoReloader):
                     gmodel = graspindex[0]
                     grasp = gmodel.grasps[graspindex[1]]
                     gmodel.setPreshape(grasp)
-                    q = irmodel.manip.FindIKSolution(gmodel.getGlobalGraspTransform(grasp,collisionfree=True),envcheck=True)
+                    q = irmodel.manip.FindIKSolution(gmodel.getGlobalGraspTransform(grasp,collisionfree=True),filteroptions=IkFilterOptions.CheckEnvCollisions)
                     if q is not None:
                         values = self.robot.GetDOFValues()
                         values[irmodel.manip.GetArmIndices()] = q
@@ -307,14 +307,14 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
             with self.env:
                 self.robot.SetActiveManipulator(gmodel.manip)
                 Tgrasp=gmodel.getGlobalGraspTransform(grasp,collisionfree=True)
-                finalarmsolution = gmodel.manip.FindIKSolution(Tgrasp,True)
+                finalarmsolution = gmodel.manip.FindIKSolution(Tgrasp,filteroptions=IkFilterOptions.CheckEnvCollisions)
                 if finalarmsolution is None:
                     print 'final grasp has no valid IK'
                     continue
                 armjoints=gmodel.manip.GetArmIndices()
                 Tfirstgrasp = array(Tgrasp)
                 Tfirstgrasp[0:3,3] -= approachoffset*gmodel.getGlobalApproachDir(grasp)
-                solutions = gmodel.manip.FindIKSolutions(Tfirstgrasp,True)
+                solutions = gmodel.manip.FindIKSolutions(Tfirstgrasp,filteroptions=IkFilterOptions.CheckEnvCollisions)
                 if solutions is None or len(solutions) == 0:
                     continue
                 # find the closest solution
@@ -410,7 +410,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                 # although values holds the final configuration, robot should approach from a distance of approachoffset
                 self.robot.SetActiveManipulator(gmodel.manip)
                 Tgrasp = gmodel.getGlobalGraspTransform(grasp,collisionfree=True)
-                finalarmsolution = gmodel.manip.FindIKSolution(Tgrasp,True)
+                finalarmsolution = gmodel.manip.FindIKSolution(Tgrasp,filteroptions=IkFilterOptions.CheckEnvCollisions)
                 if finalarmsolution is None:
                     print 'final grasp has no valid IK'
                     continue
@@ -507,7 +507,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                                 ikcollisionbody.Enable(True)
                                 for link in manip.GetIndependentLinks():
                                     link.Enable(False)
-                            s = manip.FindIKSolution(T,True)
+                            s = manip.FindIKSolution(T,filteroptions=IkFilterOptions.CheckEnvCollisions)
                         finally:
                             if ikcollisionbody is not None:
                                 ikcollisionbody.Enable(False)
@@ -605,7 +605,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                         gmodel.setPreshape(grasp)
                         for T in dests[0]:
                             Tnewgrasp = dot(T,Trelative)
-                            if gmodel.manip.FindIKSolution(Tnewgrasp,True) is not None:
+                            if gmodel.manip.FindIKSolution(Tnewgrasp,filteroptions=IkFilterOptions.CheckEnvCollisions) is not None:
                                 Ttarget = T
                                 break
                     if Ttarget is not None:
@@ -730,12 +730,12 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         with self.env:
             # although values holds the final configuration, robot should approach from a distance of approachoffset
             Tgrasp = gmodel.getGlobalGraspTransform(grasp,collisionfree=True)
-            finalarmsolution = gmodel.manip.FindIKSolution(Tgrasp,True)
+            finalarmsolution = gmodel.manip.FindIKSolution(Tgrasp,filteroptions=IkFilterOptions.CheckEnvCollisions)
             if finalarmsolution is None:
                 raise planning_error('final grasp has no valid IK')
             Tfirstgrasp = array(Tgrasp)
             Tfirstgrasp[0:3,3] -= approachoffset*gmodel.getGlobalApproachDir(grasp)
-            solutions = gmodel.manip.FindIKSolutions(Tfirstgrasp,True)
+            solutions = gmodel.manip.FindIKSolutions(Tfirstgrasp,filteroptions=IkFilterOptions.CheckEnvCollisions)
             if solutions is None or len(solutions) == 0:
                 return self.graspObject([gmodel])
             # find the closest solution
