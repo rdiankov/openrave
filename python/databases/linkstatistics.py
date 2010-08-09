@@ -148,7 +148,7 @@ class LinkStatisticsModel(OpenRAVEModel):
         if options is not None:
             if options.samplingdelta is not None:
                 samplingdelta=options.samplingdelta
-        if self.robot.GetKinematicsGeometryHash() == '7543c4bc79f7efddba92556084c8cdb1' or self.robot.GetKinematicsGeometryHash() == '2fe791ac1e75cd969dedeb7b005a058d': # wam 7dof
+        if self.manip.GetKinematicsStructureHash() == '7543c4bc79f7efddba92556084c8cdb1'or self.manip.GetKinematicsStructureHash() == '2fe791ac1e75cd969dedeb7b005a058d': # wam 7dof
             if samplingdelta is None:
                 samplingdelta=0.009
         self.generate(samplingdelta=samplingdelta)
