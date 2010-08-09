@@ -129,7 +129,7 @@ class LinkStatisticsModel(OpenRAVEModel):
                     else:
                         accumvolume = sum(array([volume for ilink,volume in enumerate(linkvolumes) if self.robot.DoesAffect(ijoint,ilink)]))
                     return (volumeinfo['volumedelta']*accumvolume)**weightexp
-                jweights = [getweight(ijoint,jv) for ijoint,jv in enumerate(self.jointvolumeS)]
+                jweights = [getweight(ijoint,jv) for ijoint,jv in enumerate(self.jointvolumes)]
                 for w,j in izip(jweights,self.robot.GetJoints()):
                     j.SetWeights(tile(w,j.GetDOF()))
                 self.robot.SetAffineTranslationWeights([getweight(-1,self.affinevolumes[i]) for i in range(3)])
