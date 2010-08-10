@@ -1622,6 +1622,9 @@ protected:
                         _nSimStartTime += -sleeptime;//deltasimtime;
                     }
                 }
+                else {
+                    nLastSleptTime = GetMicroTime();
+                }
                 
                 //RAVELOG_INFOA("sim: %f, real: %f\n",_nCurSimTime*1e-6f,(GetMicroTime()-_nSimStartTime)*1e-6f);
             }
