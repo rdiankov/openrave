@@ -68,7 +68,7 @@ class DoxygenFunctionDirective(BaseDirective):
     def run(self):
 
         function_name = self.arguments[0]
-        print 'options: ',self.options
+
         project_info = self.project_info_factory.create_project_info(self.options)
 
         finder = self.finder_factory.create_finder(project_info)
@@ -299,7 +299,8 @@ class NodeFactory(object):
                 return getattr(source, node_name)
             except AttributeError:
                 pass
-        raise ValueError(node_name)
+
+        raise NodeNotFoundError(node_name)
 
 
 # Setup

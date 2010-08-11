@@ -70,6 +70,7 @@ class DoxygenToRstRendererFactoryCreator(object):
             compound.docParamNameListSub : compoundrenderer.DocParamNameListSubRenderer,
             compound.docParamNameSub : compoundrenderer.DocParamNameSubRenderer,
             compound.docSect1TypeSub : compoundrenderer.DocSect1TypeSubRenderer,
+            compound.docSimpleSectTypeSub : compoundrenderer.DocSimpleSectTypeSubRenderer,
             compoundsuper.MixedContainer : compoundrenderer.MixedContainerRenderer,
             unicode : UnicodeRenderer,
             }

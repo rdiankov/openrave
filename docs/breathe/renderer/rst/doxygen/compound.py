@@ -73,11 +73,11 @@ class CompoundDefTypeSubRenderer(Renderer):
 
         if self.data_object.briefdescription:
             renderer = self.renderer_factory.create_renderer(self.data_object.briefdescription)
-            nodelist.extend( renderer.render() )
+            nodelist.append(self.node_factory.paragraph("", "", *renderer.render()))
 
         if self.data_object.detaileddescription:
             renderer = self.renderer_factory.create_renderer(self.data_object.detaileddescription)
-            nodelist.extend( renderer.render() )
+            nodelist.append(self.node_factory.paragraph("", "", *renderer.render()))
 
         # Order the results in an appropriate manner
         for entry in self.section_titles:
@@ -99,10 +99,11 @@ class SectionDefTypeSubRenderer(Renderer):
             renderer = self.renderer_factory.create_renderer(memberdef)
             defs.extend(renderer.render())
 
-        def_list = self.node_factory.definition_list("", *defs)
+        if defs:
+            return [self.node_factory.definition_list("", *defs)]
 
         # Return with information about which section this is
-        return [def_list]
+        return []
 
 class MemberDefTypeSubRenderer(Renderer):
 
@@ -138,20 +139,15 @@ class MemberDefTypeSubRenderer(Renderer):
 
         if self.data_object.briefdescription:
             renderer = self.renderer_factory.create_renderer(self.data_object.briefdescription)
-            description_nodes.extend( renderer.render() )
+            description_nodes.append(self.node_factory.paragraph("", "", *renderer.render()))
 
         if self.data_object.detaileddescription:
             renderer = self.renderer_factory.create_renderer(self.data_object.detaileddescription)
-            description_nodes.extend( renderer.render() )
+            description_nodes.append(self.node_factory.paragraph( "", "", *renderer.render()))
 
         definition = self.node_factory.definition("", *description_nodes)
 
         refid = "%s%s" % (self.project_info.name(), self.data_object.id)
-        # modify into a html link 
-#        refid = self.data_object.id
-#         if refid.rfind('_') >= 0:
-#             index = refid.rfind('_')
-#             refid = './html/' + refid[:index]+'.html#'+refid[(index+2):]
         target = self.node_factory.target(refid=refid, ids=[refid], names=[refid])
 
         # Tell the document about our target
@@ -175,10 +171,7 @@ class DescriptionTypeSubRenderer(Renderer):
         # Get description in rst_nodes if possible
         for item in self.data_object.content_:
             renderer = self.renderer_factory.create_renderer(item)
-            nodelist.extend( renderer.render() )
-
-
-        nodelist = [self.node_factory.paragraph("", "", *nodelist)]
+            nodelist.extend(renderer.render())
 
         return nodelist
 
@@ -192,18 +185,9 @@ class LinkedTextTypeSubRenderer(Renderer):
         # Recursively process where possible
         for i in self.data_object.content_:
             renderer = self.renderer_factory.create_renderer(i)
-            nodelist.extend( renderer.render() )
-
-            # value = i.getValue()
-            # if hasattr( value, "rst_nodes" ):
-            #     ns = i.getValue().rst_nodes()
-            #     nodelist.extend(ns)
-            # else:
-            #     nodelist.append(nodes.emphasis(text=i.getValue()))
-
+            nodelist.extend(renderer.render())
             nodelist.append(self.node_factory.Text(" "))
 
-        # nodelist = [self.node_factory.paragraph("", "", *nodelist)]
 
         return nodelist
 
@@ -245,8 +229,6 @@ class DocRefTextTypeSubRenderer(Renderer):
             renderer = self.renderer_factory.create_renderer(item)
             nodelist.extend(renderer.render())
 
-        # nodelist = [self.node_factory.paragraph("", "", *nodelist)]
-
         refid = "%s%s" % (self.project_info.name(), self.data_object.refid)
         nodelist = [
                 self.node_factory.pending_xref(
@@ -259,8 +241,6 @@ class DocRefTextTypeSubRenderer(Renderer):
                     *nodelist
                     )
                 ]
-
-        # nodelist = [self.node_factory.reference("", *nodelist, refid=self.data_object.refid )]
 
         return nodelist
 
@@ -277,9 +257,22 @@ class DocParaTypeSubRenderer(Renderer):
             renderer = self.renderer_factory.create_renderer(item)
             nodelist.extend(renderer.render())
 
-        return [self.node_factory.paragraph("", "", *nodelist)]
+        def_list_items = []
+        for item in self.data_object.simplesects:
+            renderer = self.renderer_factory.create_renderer(item)
+            def_list_items.extend(renderer.render())
+
+        if def_list_items:
+            nodelist.append(self.node_factory.definition_list("", *def_list_items))
+        
+        return nodelist
 
 class DocParamListTypeSubRenderer(Renderer):
+
+    lookup = {
+            "param" : "Parameters",
+            "exception" : "Exceptions",
+            }
 
     def render(self):
 
@@ -288,9 +281,11 @@ class DocParamListTypeSubRenderer(Renderer):
             renderer = self.renderer_factory.create_renderer(entry)
             nodelist.extend(renderer.render())
 
-        def_list = self.node_factory.definition_list("", *nodelist)
+        name = self.lookup[self.data_object.kind]
+        title = self.node_factory.emphasis("", self.node_factory.Text(name))
 
-        return [def_list]
+        return [title,self.node_factory.bullet_list("", *nodelist)]
+
 
 
 class DocParamListItemSubRenderer(Renderer):
@@ -302,7 +297,9 @@ class DocParamListItemSubRenderer(Renderer):
             renderer = self.renderer_factory.create_renderer(entry)
             nodelist.extend(renderer.render())
 
-        term = self.node_factory.term("","", *nodelist)
+        term = self.node_factory.literal("","", *nodelist)
+
+        separator = self.node_factory.Text(" - ")
 
         nodelist = []
 
@@ -310,9 +307,7 @@ class DocParamListItemSubRenderer(Renderer):
             renderer = self.renderer_factory.create_renderer(self.data_object.parameterdescription)
             nodelist.extend(renderer.render())
 
-        definition = self.node_factory.definition("", *nodelist)
-
-        return [self.node_factory.definition_list_item("", term, definition)]
+        return [self.node_factory.list_item("", term, separator, *nodelist)]
 
 class DocParamNameListSubRenderer(Renderer):
 
@@ -341,6 +336,24 @@ class DocSect1TypeSubRenderer(Renderer):
     def render(self):
 
         return []
+
+
+class DocSimpleSectTypeSubRenderer(Renderer):
+
+    def render(self):
+
+        text = self.node_factory.Text(self.data_object.kind.capitalize())
+        emphasis = self.node_factory.emphasis("", text)
+        term = self.node_factory.term("","", emphasis)
+
+        nodelist = []
+        for item in self.data_object.para:
+            renderer = self.renderer_factory.create_renderer(item)
+            nodelist.append(self.node_factory.paragraph("", "", *renderer.render()))
+
+        definition = self.node_factory.definition("", *nodelist)
+
+        return [self.node_factory.definition_list_item("", term, definition)]
 
 
 class MixedContainerRenderer(Renderer):

@@ -20,15 +20,6 @@ class DoxygenTypeSub(supermod.DoxygenType):
     def __init__(self, version=None, compounddef=None):
         supermod.DoxygenType.__init__(self, version, compounddef)
 
-    def rst_nodes(self):
-        """
-        Returns Rst nodes for compounddef child as we're not interested in
-        other data in this xml entity
-        """
-
-        # Only interested in the compounddef child node
-        return self.compounddef.rst_nodes()
-
     def find(self, details):
 
         return self.compounddef.find(details)
@@ -40,40 +31,6 @@ supermod.DoxygenType.subclass = DoxygenTypeSub
 class compounddefTypeSub(supermod.compounddefType):
     def __init__(self, kind=None, prot=None, id=None, compoundname='', title='', basecompoundref=None, derivedcompoundref=None, includes=None, includedby=None, incdepgraph=None, invincdepgraph=None, innerdir=None, innerfile=None, innerclass=None, innernamespace=None, innerpage=None, innergroup=None, templateparamlist=None, sectiondef=None, briefdescription=None, detaileddescription=None, inheritancegraph=None, collaborationgraph=None, programlisting=None, location=None, listofallmembers=None):
         supermod.compounddefType.__init__(self, kind, prot, id, compoundname, title, basecompoundref, derivedcompoundref, includes, includedby, incdepgraph, invincdepgraph, innerdir, innerfile, innerclass, innernamespace, innerpage, innergroup, templateparamlist, sectiondef, briefdescription, detaileddescription, inheritancegraph, collaborationgraph, programlisting, location, listofallmembers)
-
-    def extend_nodelist(self, nodelist, section, title, section_nodelists):
-
-        # Add title and contents if found
-        if section_nodelists.has_key(section):
-            nodelist.append(nodes.emphasis(text=title))
-            nodelist.append(nodes.block_quote("", *section_nodelists[section]))
-
-
-    def rst_nodes(self):
-
-        section_nodelists = {}
-
-        # Get all sub sections
-        for sectiondef in self.sectiondef:
-            kind = sectiondef.section_kind()
-            subnodes = sectiondef.rst_nodes()
-            section_nodelists[kind] = subnodes
-
-        nodelist = []    
-
-        if self.briefdescription:
-            nodelist.extend( self.briefdescription.rst_nodes() )
-
-        if self.detaileddescription:
-            nodelist.extend( self.detaileddescription.rst_nodes() )
-
-        # Order the results in an appropriate manner
-        for entry in sectiondefTypeSub.section_titles:
-            self.extend_nodelist(nodelist, entry[0], entry[1], section_nodelists)
-
-        self.extend_nodelist(nodelist, "", "", section_nodelists)
-
-        return [nodes.block_quote("", *nodelist)]
 
     def find(self, details):
 
@@ -137,13 +94,6 @@ class refTextTypeSub(supermod.refTextType):
     def __init__(self, refid=None, kindref=None, external=None, valueOf_='', mixedclass_=None, content_=None):
         supermod.refTextType.__init__(self, mixedclass_, content_)
 
-    def rst_nodes(self):
-
-        # Create a reference using the refid
-        nodelist = [nodes.reference("", self.valueOf_, refid=self.refid )]
-
-        return nodelist
-
 supermod.refTextType.subclass = refTextTypeSub
 # end class refTextTypeSub
 
@@ -152,27 +102,6 @@ class sectiondefTypeSub(supermod.sectiondefType):
 
     def __init__(self, kind=None, header='', description=None, memberdef=None):
         supermod.sectiondefType.__init__(self, kind, header, description, memberdef)
-
-    def section_kind(self):
-        """"
-        Returns the section's kind which corresponds to one of the entries in
-        the section_titles class attribute
-        """
-
-        return self.kind
-
-    def rst_nodes(self):
-
-        defs = []
-
-        # Get all the memberdef info
-        for memberdef in self.memberdef:
-            defs.extend(memberdef.rst_nodes())
-
-        def_list = nodes.definition_list("", *defs)
-
-        # Return with information about which section this is
-        return [def_list]
 
     def find(self, details):
 
@@ -190,47 +119,6 @@ supermod.sectiondefType.subclass = sectiondefTypeSub
 class memberdefTypeSub(supermod.memberdefType):
     def __init__(self, initonly=None, kind=None, volatile=None, const=None, raise_=None, virt=None, readable=None, prot=None, explicit=None, new=None, final=None, writable=None, add=None, static=None, remove=None, sealed=None, mutable=None, gettable=None, inline=None, settable=None, id=None, templateparamlist=None, type_=None, definition='', argsstring='', name='', read='', write='', bitfield='', reimplements=None, reimplementedby=None, param=None, enumvalue=None, initializer=None, exceptions=None, briefdescription=None, detaileddescription=None, inbodydescription=None, location=None, references=None, referencedby=None):
         supermod.memberdefType.__init__(self, initonly, kind, volatile, const, raise_, virt, readable, prot, explicit, new, final, writable, add, static, remove, sealed, mutable, gettable, inline, settable, id, templateparamlist, type_, definition, argsstring, name, read, write, bitfield, reimplements, reimplementedby, param, enumvalue, initializer, exceptions, briefdescription, detaileddescription, inbodydescription, location, references, referencedby)
-
-    def rst_nodes(self):
-
-        kind = []
-        
-        # Variable type or function return type
-        if self.type_:
-            kind = self.type_.rst_nodes()
-
-        name = nodes.strong(text=self.name)
-
-        args = []
-        args.extend(kind)
-        args.extend([nodes.Text(" "), name])
-
-        if self.kind == "function":
-
-            # Get the function arguments
-            args.append(nodes.Text("("))
-            for i, parameter in enumerate(self.param):
-                if i: args.append(nodes.Text(", "))
-                args.extend(parameter.rst_nodes())
-            args.append(nodes.Text(")"))
-
-        term = nodes.term("","", *args)
-
-        description_nodes = []
-
-        if self.briefdescription:
-            description_nodes.extend(self.briefdescription.rst_nodes())
-
-        if self.detaileddescription:
-            description_nodes.extend(self.detaileddescription.rst_nodes())
-
-        definition = nodes.definition("", *description_nodes)
-
-        # Build the list item
-        nodelist = [nodes.definition_list_item("",term, definition)]
-
-        return nodelist
-
 supermod.memberdefType.subclass = memberdefTypeSub
 # end class memberdefTypeSub
 
@@ -238,24 +126,6 @@ supermod.memberdefType.subclass = memberdefTypeSub
 class descriptionTypeSub(supermod.descriptionType):
     def __init__(self, title='', para=None, sect1=None, internal=None, mixedclass_=None, content_=None):
         supermod.descriptionType.__init__(self, mixedclass_, content_)
-
-    def rst_nodes(self):
-
-        nodelist = []
-        
-        # Get description in rst_nodes if possible
-        for item in self.content_:
-            value = item.getValue()
-            if hasattr(value, "rst_nodes"):
-                nodelist.extend(value.rst_nodes())
-            else:
-                pass
-
-            # nodelist.extend(self.para.rst_nodes())
-
-        return nodelist
-
-
 supermod.descriptionType.subclass = descriptionTypeSub
 # end class descriptionTypeSub
 
@@ -277,33 +147,6 @@ supermod.templateparamlistType.subclass = templateparamlistTypeSub
 class paramTypeSub(supermod.paramType):
     def __init__(self, type_=None, declname='', defname='', array='', defval=None, briefdescription=None):
         supermod.paramType.__init__(self, type_, declname, defname, array, defval, briefdescription)
-    
-    def rst_nodes(self):
-
-        nodelist = []
-
-        kind = []
-        
-        # Parameter type
-        if self.type_:
-            kind = self.type_.rst_nodes()
-
-        nodelist.extend(kind)
-
-        # Parameter name
-        if self.declname:
-            nodelist.append(nodes.Text(self.declname))
-
-        if self.defname:
-            nodelist.append(nodes.Text(self.defname))
-
-        # Default value
-        if self.defval:
-            nodelist.append(nodes.Text(" = "))
-            nodelist.extend(self.defval.rst_nodes())
-
-        return nodelist
-
 supermod.paramType.subclass = paramTypeSub
 # end class paramTypeSub
 
@@ -311,24 +154,6 @@ supermod.paramType.subclass = paramTypeSub
 class linkedTextTypeSub(supermod.linkedTextType):
     def __init__(self, ref=None, mixedclass_=None, content_=None):
         supermod.linkedTextType.__init__(self, mixedclass_, content_)
-
-    def rst_nodes(self):
-
-        nodelist = []
-
-        # Recursively process where possible
-        for i in self.content_:
-            value = i.getValue()
-            if hasattr( value, "rst_nodes" ):
-                ns = i.getValue().rst_nodes()
-                nodelist.extend(ns)
-            else:
-                nodelist.append(nodes.emphasis(text=i.getValue()))
-
-            nodelist.append(nodes.Text(" "))
-
-        return nodelist
-
 supermod.linkedTextType.subclass = linkedTextTypeSub
 # end class linkedTextTypeSub
 
@@ -518,13 +343,6 @@ supermod.docVarListEntryType.subclass = docVarListEntryTypeSub
 class docRefTextTypeSub(supermod.docRefTextType):
     def __init__(self, refid=None, kindref=None, external=None, valueOf_='', mixedclass_=None, content_=None):
         supermod.docRefTextType.__init__(self, mixedclass_, content_)
-
-    def rst_nodes(self):
-
-        nodelist = [nodes.reference("", self.valueOf_, refid=self.refid )]
-
-        return nodelist
-
 supermod.docRefTextType.subclass = docRefTextTypeSub
 # end class docRefTextTypeSub
 
@@ -595,18 +413,6 @@ supermod.docLanguageType.subclass = docLanguageTypeSub
 class docParamListTypeSub(supermod.docParamListType):
     def __init__(self, kind=None, parameteritem=None):
         supermod.docParamListType.__init__(self, kind, parameteritem)
-
-    def rst_nodes(self):
-
-        nodelist = []
-        for entry in self.parameteritem:
-            nodelist.extend(entry.rst_nodes())
-
-        def_list = nodes.definition_list("", *nodelist)
-
-        return [def_list]
-
-
 supermod.docParamListType.subclass = docParamListTypeSub
 # end class docParamListTypeSub
 
@@ -614,25 +420,6 @@ supermod.docParamListType.subclass = docParamListTypeSub
 class docParamListItemSub(supermod.docParamListItem):
     def __init__(self, parameternamelist=None, parameterdescription=None):
         supermod.docParamListItem.__init__(self, parameternamelist, parameterdescription)
-
-    def rst_nodes(self):
-
-        nodelist = []
-        for entry in self.parameternamelist:
-            nodelist.extend(entry.rst_nodes())
-
-        term = nodes.term("","", *nodelist)
-
-        nodelist = []
-
-        if self.parameterdescription:
-            nodelist.extend(self.parameterdescription.rst_nodes())
-
-        definition = nodes.definition("", *nodelist)
-
-        return [nodes.definition_list_item("", term, definition)]
-
-
 supermod.docParamListItem.subclass = docParamListItemSub
 # end class docParamListItemSub
 
@@ -640,16 +427,6 @@ supermod.docParamListItem.subclass = docParamListItemSub
 class docParamNameListSub(supermod.docParamNameList):
     def __init__(self, parametername=None):
         supermod.docParamNameList.__init__(self, parametername)
-
-    def rst_nodes(self):
-
-        nodelist = []
-        for entry in self.parametername:
-            nodelist.extend(entry.rst_nodes())
-
-        return nodelist
-
-
 supermod.docParamNameList.subclass = docParamNameListSub
 # end class docParamNameListSub
 
@@ -657,20 +434,6 @@ supermod.docParamNameList.subclass = docParamNameListSub
 class docParamNameSub(supermod.docParamName):
     def __init__(self, direction=None, ref=None, mixedclass_=None, content_=None):
         supermod.docParamName.__init__(self, mixedclass_, content_)
-
-    def rst_nodes(self):
-
-        nodelist = []
-        for item in self.content_:
-            value = item.getValue()
-            if hasattr(value, "rst_nodes"):
-                nodelist.extend(value.rst_nodes())
-            else:
-                nodelist.extend(nodes.Text(value))
-
-
-        return nodelist
-
 supermod.docParamName.subclass = docParamNameSub
 # end class docParamNameSub
 
@@ -700,24 +463,8 @@ class docParaTypeSub(supermod.docParaType):
         supermod.docParaType.__init__(self, char)
 
         self.parameterlist = []
+        self.simplesects = []
         self.content = []
-
-    def rst_nodes(self):
-
-        nodelist = []
-        for entry in self.parameterlist:
-            nodelist.extend(entry.rst_nodes())
-
-        for item in self.content:
-            if hasattr(item, "rst_nodes"):
-                nodes_ = item.rst_nodes()
-                nodelist.extend(nodes_)
-            else:
-                value = item.getValue()
-                nodelist.extend(nodes.Text(value))
-
-
-        return [nodes.paragraph("", "", *nodelist)]
 
     def buildChildren(self, child_, nodeName_):
         supermod.docParaType.buildChildren(self, child_, nodeName_)
@@ -732,24 +479,16 @@ class docParaTypeSub(supermod.docParaType):
             obj_.build(child_)
             self.content.append(obj_)
         elif child_.nodeType == Node.ELEMENT_NODE and \
-                nodeName_ == 'simplesect':
-            childobj_ = docParaTypeSub.factory()
-            childobj_.build(child_)
-            obj_ = self.mixedclass_(MixedContainer.CategoryText, MixedContainer.TypeNone, '', childobj_)
-            self.content.append(obj_)
-        elif child_.nodeType == Node.ELEMENT_NODE and \
-                nodeName_ == 'para':
-            childobj_ = docParaTypeSub.factory()
-            childobj_.build(child_)
-            obj_ = self.mixedclass_(MixedContainer.CategoryText,
-                MixedContainer.TypeNone, '', childobj_)
-            self.content.append(obj_)
-
-        if child_.nodeType == Node.ELEMENT_NODE and \
                 nodeName_ == 'parameterlist':
             obj_ = supermod.docParamListType.factory()
             obj_.build(child_)
             self.parameterlist.append(obj_)
+        elif child_.nodeType == Node.ELEMENT_NODE and \
+                nodeName_ == 'simplesect':
+            obj_ = supermod.docSimpleSectType.factory()
+            obj_.build(child_)
+            self.simplesects.append(obj_)
+
 
 supermod.docParaType.subclass = docParaTypeSub
 # end class docParaTypeSub

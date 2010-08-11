@@ -106,6 +106,22 @@ mutex. (Note that this only applies to environment functions, and not interface 
 
 環境内の物体が読み書きされるときはいつでも，ユーザーはGetMutex()コマンドで<b>ロック</b>しなければなりません．これはユーザーが作業している間，他のプロセスから環境が変更されることを防止します．なぜなら環境は再帰的な相互排除を使っているからです．それは同じスレッド内で必要なだけロックをかけることが可能です．さらにユーザーが相互排除をロックしたかどうかに依らず，ロックを要求する全ての環境関数に常に相互排除はロックされることを保証しています．（これは環境関数のみに適用され，インターフェース関数には適用されません）
 
+\~
+\subsection arch_cloning Locking
+
+Because %OpenRAVE is a highly multi-threaded environment, there are many threads that can be
+accessing the environment state (kinbodides and loaded interfaces, etc). It is necessary to lock the
+environment before modifying or shared state like body information, etc. All the functions exposed
+in EnvironmentBase implicitly lock the environment before doing anything state-changing, so they are
+thread-safe. However, directly accessing the KinBody and RobotBase objects is dangerous without
+having the environment lock acquired.
+
+\subsection arch_cloning Simulation Thread
+
+A thread is always running in the background periodically calling SimulationStep on all the
+controllers and problem interfaces, and calling the physics engine simulation step. The simulation
+thread keeps track the the global time.
+
 \en
 \subsection arch_cloning Cloning
     
