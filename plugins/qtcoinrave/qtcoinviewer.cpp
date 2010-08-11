@@ -1057,7 +1057,7 @@ RaveTransform<float> QtCoinViewer::GetCameraTransform()
 void* QtCoinViewer::_plot3(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color)
 {
     if( pparent == NULL || numPoints <= 0 )
-        return NULL;
+        return pparent;
    
     SoMaterial* mtrl = new SoMaterial;
     mtrl->diffuseColor = SbColor(color.x, color.y, color.z);
@@ -1106,7 +1106,7 @@ void* QtCoinViewer::_plot3(SoSeparator* pparent, const float* ppoints, int numPo
 void* QtCoinViewer::_plot3(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, bool bhasalpha)
 {
     if( pparent == NULL || numPoints <= 0 )
-        return NULL;
+        return pparent;
 
     SoMaterial* mtrl = new SoMaterial;
     if( bhasalpha ) {
