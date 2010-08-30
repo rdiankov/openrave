@@ -407,8 +407,13 @@ source `openrave-config --prefix`/share/openrave/openravebash
 \section iwin_octavematlab Installation of 3rd Party Software
 
 Download the sources from \sourcesdownload{sourceforge} (<a
-href="http://tortoisesvn.tigris.org/">Tortoise SVN</a> is recommended). Check out the openrave
-sources <b>in a path whose directories do not contain spaces</b>!!!. For example \c C:\\openrave.
+href="http://tortoisesvn.tigris.org/">Tortoise SVN</a> is recommended). The subversion url is:
+
+\verbatim
+https://openrave.svn.sourceforge.net/svnroot/openrave/trunk
+\endverbatim
+
+Check out the openrave sources <b>in a path whose directories do not contain spaces</b>!!!. For example \c C:\\openrave.
 
 A lot of the 3rd party libraries like boost 1.39 are already inside the openrave sources. However, the following need to be installed:
 
@@ -442,7 +447,7 @@ Matlab users:
 - Add \c $OPENRAVE_INSTALL\\share\\openrave\\matlab to the Matlab path (default is <tt>C:\\Program Files\\openrave\\share\\openrave\\matlab</tt>).
 
 \section iwin_building Building OpenRAVE
-
+ 
 Run \c runcmake_win.bat, which will auto-detect your compiler system. This will extract \c
 msvc_files.tgz and create a \c build directory to full the compiled objects. Open the Microsoft
 Visual Studio solution file from \c build\\openrave.sln and select the \b Release or \b

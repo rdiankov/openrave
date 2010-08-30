@@ -167,7 +167,8 @@ public:
     /// Makes one simulation step
     virtual void StepSimulation(dReal timeStep) = 0;
 
-    /// Start the internal physics engine loop, calls SimulateStep for all modules
+    /// Start the internal simulation thread that calls the physics engine loop and SimulateStep for all modules.
+    /// Resets simulation time to 0.
     /// \param fDeltaTime the delta step to take in simulation
     /// \param bRealTime if false will call SimulateStep as fast as possible, otherwise will time the simulate step calls so that simulation progresses with real system time.
     virtual void StartSimulation(dReal fDeltaTime, bool bRealTime=true) = 0;

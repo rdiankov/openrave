@@ -2637,10 +2637,19 @@ void QtCoinViewer::RecordRealtimeVideo(bool on)
 
 void QtCoinViewer::ToggleSimulation(bool on)
 {
-    if( on )
-        GetEnv()->StartSimulation(0.01f);
-    else
-        GetEnv()->StopSimulation();
+    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironment(200000);
+    if( !!lockenv ) {
+        if( on ) {
+            GetEnv()->StartSimulation(0.01f);
+        }
+        else {
+            GetEnv()->StopSimulation();
+        }
+        lockenv.reset();
+    }
+    else {
+        RAVELOG_WARN("failed to lock environment\n");
+    }
 }
 
 void QtCoinViewer::_UpdateToggleSimulation()

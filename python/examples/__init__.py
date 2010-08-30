@@ -8,6 +8,8 @@ import graspplanning
 import mobilemanipulation
 import simplenavigation
 import testcamerasensor
+import testphysics
+import testphysicscontroller
 import testplotting
 import testupdatingbodies
 import testviewercallback

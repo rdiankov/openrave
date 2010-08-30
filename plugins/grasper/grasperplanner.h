@@ -108,7 +108,7 @@ public:
                 // find furthest point from origin of body and rotate around center
                 AABB ab = _parameters->targetbody->ComputeAABB();
                 dReal fmaxradius = RaveSqrt(ab.extents.lengthsqr3());
-                tTargetOffset.rotfromaxisangle(vrandaxis.normalize3(),RaveRandomFloat()*_parameters->fgraspingnoise*frotratio*fmaxradius);
+                tTargetOffset.rotfromaxisangle(vrandaxis.normalize3(),RaveRandomFloat()*_parameters->fgraspingnoise*frotratio/fmaxradius);
                 tTargetOffset.trans = tTargetOffset.rotate(-ab.pos)+ab.pos+vrandtrans;
             }
         }
