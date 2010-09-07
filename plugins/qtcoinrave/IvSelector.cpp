@@ -52,16 +52,16 @@ IvDragger::IvDragger(QtCoinViewerPtr viewer, ItemPtr pItem, float draggerScale)
         
         _vlinkaxes.resize(_selectedItem->GetNumIvLinks());
         for(size_t i = 0; i < _vlinkaxes.size(); ++i) {
-            _vlinkaxes[i] = _CreateAxes();
+            _vlinkaxes[i] = _CreateAxes(0.5f,0.5f);
             _selectedItem->GetIvLink(i)->addChild(_vlinkaxes[i]);
         }
     }
 }
 
-SoSeparator* IvDragger::_CreateAxes(float fSize)
+SoSeparator* IvDragger::_CreateAxes(float fSize,float fColor)
 {
     SoSeparator* axes = new SoSeparator();
-    Vector colors[] = {Vector(0,0,1),Vector(0,1,0),Vector(1,0,0)};
+    Vector colors[] = {Vector(0,0,fColor),Vector(0,fColor,0),Vector(fColor,0,0)};
     Vector rotations[] = {Vector(1,0,0,PI/2), Vector(1,0,0,0), Vector(0,0,1,-PI/2)};
 
     // add 3 cylinder+cone axes

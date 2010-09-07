@@ -41,7 +41,7 @@ public:
 protected:
     static const SbColor CHECK_COLOR, COLLISION_COLOR;
 
-    static SoSeparator* _CreateAxes(float fSize=1.0f);
+    static SoSeparator* _CreateAxes(float fSize=1.0f,float fColor=1.0f);
 
     /// Handler for Inventor motion callbacks.
     static void _MotionHandler(void *, SoDragger *);
