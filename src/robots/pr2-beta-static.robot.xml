@@ -1,6 +1,16 @@
 <!-- base kinematics of pr2 robot with all frames defined -->
 <robot>
   <robot name="pr2" file="pr2-beta-static.dae">
+    <kinbody>
+      <adjacent>base_link br_caster_r_wheel_link</adjacent>
+      <adjacent>base_link br_caster_l_wheel_link</adjacent>
+      <adjacent>base_link fr_caster_r_wheel_link</adjacent>
+      <adjacent>base_link fr_caster_l_wheel_link</adjacent>
+      <adjacent>base_link fl_caster_r_wheel_link</adjacent>
+      <adjacent>base_link fl_caster_l_wheel_link</adjacent>
+      <adjacent>base_link bl_caster_r_wheel_link</adjacent>
+      <adjacent>base_link bl_caster_l_wheel_link</adjacent>
+    </kinbody>
   </robot>
   <manipulator name="leftarm">
     <base>torso_lift_link</base>
