@@ -744,8 +744,9 @@ int main(int argc, char** argv)
         code += '{\nIKReal %sarray[%d], c%sarray[%d], s%sarray[%d];\n'%(name,allnumsolutions,name,allnumsolutions,name,allnumsolutions)
         code += 'bool %svalid[%d]={false};\n'%(name,allnumsolutions)
         code += eqcode
-        for i,j in combinations(range(allnumsolutions),2):
-            code += 'if( %svalid[%d] && %svalid[%d] && IKabs(c%sarray[%d]-c%sarray[%d]) < 0.0001 && IKabs(s%sarray[%d]-s%sarray[%d]) < 0.0001 )\n    %svalid[%d]=false;\n'%(name,i,name,j,name,i,name,j,name,i,name,j,name,j)
+        if allnumsolutions > 1:
+            for i,j in combinations(range(allnumsolutions),2):
+                code += 'if( %svalid[%d] && %svalid[%d] && IKabs(c%sarray[%d]-c%sarray[%d]) < 0.0001 && IKabs(s%sarray[%d]-s%sarray[%d]) < 0.0001 )\n    %svalid[%d]=false;\n'%(name,i,name,j,name,i,name,j,name,i,name,j,name,j)
         code += 'for(int i%s = 0; i%s < %d; ++i%s)\n{\n'%(name,name,allnumsolutions,name)
         code += 'if( !%svalid[i%s] ) { continue; }\n'%(name,name)
         code += '%s = %sarray[i%s]; c%s = c%sarray[i%s]; s%s = s%sarray[i%s];\n\n'%(name,name,name,name,name,name,name,name,name)
@@ -788,8 +789,9 @@ int main(int argc, char** argv)
         code += 'IKReal %sarray[%d], c%sarray[%d], s%sarray[%d];\n'%(name,allnumsolutions,name,allnumsolutions,name,allnumsolutions)
         code += 'bool %svalid[%d]={false};\n'%(name,allnumsolutions)
         code += self.indentCode(checkcode,4)
-        for i,j in combinations(range(allnumsolutions),2):
-            code += 'if( %svalid[%d] && %svalid[%d] && IKabs(c%sarray[%d]-c%sarray[%d]) < 0.0001 && IKabs(s%sarray[%d]-s%sarray[%d]) < 0.0001 )\n    %svalid[%d]=false;\n'%(name,i,name,j,name,i,name,j,name,i,name,j,name,j)
+        if allnumsolutions > 1:
+            for i,j in combinations(range(allnumsolutions),2):
+                code += 'if( %svalid[%d] && %svalid[%d] && IKabs(c%sarray[%d]-c%sarray[%d]) < 0.0001 && IKabs(s%sarray[%d]-s%sarray[%d]) < 0.0001 )\n    %svalid[%d]=false;\n'%(name,i,name,j,name,i,name,j,name,i,name,j,name,j)
         code += 'for(int i%s = 0; i%s < numsolutions%s; ++i%s)\n{\n'%(name,name,name,name)
         code += 'if( !%svalid[i%s] ) { continue; }\n'%(name,name)
         code += '%s = %sarray[i%s]; c%s = c%sarray[i%s]; s%s = s%sarray[i%s];\n\n'%(name,name,name,name,name,name,name,name,name)
