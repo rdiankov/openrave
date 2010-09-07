@@ -212,7 +212,6 @@ inline std::string ChangeTextColor (int attribute, int fg, int bg)
 {
     char command[13];
     sprintf (command, "%c[%d;%d;%dm", 0x1B, attribute, fg + 30, bg + 40);
-    //fwprintf (stream, L"%s", command);
     return command;
 }
 
@@ -222,7 +221,14 @@ inline std::string ChangeTextColor (int attribute, int fg)
     char command[13];
     sprintf (command, "%c[%d;%dm", 0x1B, attribute, fg + 30);
     return command;
-    //fwprintf (stream, L"%s", command);
+}
+
+/// Reset the text color (on either stdout or stderr) to its original state (thanks to Radu Rusu for the code)
+inline std::string ResetTextColor()
+{
+    char command[8];
+    sprintf (command, "%c[0m", 0x1B);
+    return command;
 }
 
 inline std::wstring ChangeTextColorW (int attribute, int fg)
@@ -230,15 +236,6 @@ inline std::wstring ChangeTextColorW (int attribute, int fg)
     wchar_t command[13];
     swprintf (command, 13, L"%c[%d;%dm", 0x1B, attribute, fg + 30);
     return command;
-}
-
-/// Reset the text color (on either stdout or stderr) to its original state (thanks to Radu Rusu for the code)
-inline std::string ResetTextColor ()
-{
-    char command[13];
-    sprintf (command, "%c[0;38;48m", 0x1B);
-    return command;
-    //fwprintf (stream, L"%s", command);
 }
 
 inline std::wstring RavePrintTransformString(const wchar_t* fmt)
@@ -388,10 +385,25 @@ inline int RavePrintfA(const std::string& s, DebugLevel level)
 // for programmers who want to use regular format strings without
 // the L in front, we will take their regular string and widen it
 // for them.
+    inline int RavePrintfA_INFOLEVEL(const std::string& s)
+    {
+        printf ("%s", s.c_str());
+        return s.size();
+    }
+    
+    inline int RavePrintfA_INFOLEVEL(const char *fmt, ...)
+    {
+        va_list list;
+	    va_start(list,fmt);
+        int r = vprintf(fmt, list);
+        va_end(list);
+        return r;
+    }
+
 #define DefineRavePrintfA(LEVEL) \
     inline int RavePrintfA##LEVEL(const std::string& s) \
     { \
-        printf ("%c[0;%d;%dm%s%c[0;38;48m", 0x1B, OPENRAVECOLOR##LEVEL + 30,8+40,s.c_str(),0x1B); \
+        printf ("%c[0;%d;%dm%s%c[m", 0x1B, OPENRAVECOLOR##LEVEL + 30,8+40,s.c_str(),0x1B); \
         return s.size(); \
     } \
     \
@@ -428,14 +440,14 @@ inline int RavePrintfA(const std::string& s, DebugLevel level)
 DefineRavePrintfW(_FATALLEVEL)
 DefineRavePrintfW(_ERRORLEVEL)
 DefineRavePrintfW(_WARNLEVEL)
-DefineRavePrintfW(_INFOLEVEL)
+//DefineRavePrintfW(_INFOLEVEL)
 DefineRavePrintfW(_DEBUGLEVEL)
 DefineRavePrintfW(_VERBOSELEVEL)
 
 DefineRavePrintfA(_FATALLEVEL)
 DefineRavePrintfA(_ERRORLEVEL)
 DefineRavePrintfA(_WARNLEVEL)
-DefineRavePrintfA(_INFOLEVEL)
+//DefineRavePrintfA(_INFOLEVEL)
 DefineRavePrintfA(_DEBUGLEVEL)
 DefineRavePrintfA(_VERBOSELEVEL)
 

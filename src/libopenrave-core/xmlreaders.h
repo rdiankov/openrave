@@ -824,6 +824,9 @@ namespace OpenRAVEXMLParser
                             bool bSuccess = false;
                             if( renderfile.size() > 0 ) {
 #ifdef OPENRAVE_COIN3D
+                                if(!SoDB::isInitialized()) {
+                                    SoDB::init();
+                                }
                                 SoDB::readlock(); // have to lock coin3d, or otherwise state gets corrupted
                                 SoInput mySceneInput;
                                 if (!mySceneInput.openFile(renderfile.c_str())) {
