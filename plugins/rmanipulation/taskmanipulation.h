@@ -637,9 +637,14 @@ class TaskManipulation : public ProblemInstance
                 Transform tDestEndEffector = transDestTarget * transInvTarget * tGoalEndEffector;
                  
                 ptarget->SetTransform(transDestTarget);
-                _robot->Enable(false); // remove from target collisions
-                bool bTargetCollision = GetEnv()->CheckCollision(KinBodyConstPtr(ptarget));
-                _robot->Enable(true); // remove from target collisions
+
+                bool bTargetCollision;
+                {
+                    KinBody::KinBodyStateSaver linksaver(_robot,KinBody::Save_LinkEnable);
+                    _robot->Enable(false); // remove robot from target collisions
+                    bTargetCollision = GetEnv()->CheckCollision(KinBodyConstPtr(ptarget));
+                }
+
                 ptarget->SetTransform(transTarg);
                 if( bTargetCollision ) {
                     RAVELOG_VERBOSEA("target collision at dest\n");

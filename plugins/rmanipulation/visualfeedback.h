@@ -262,7 +262,7 @@ public:
         /// \param tcameras in target coordinate system
         bool IsOccluded(const TransformMatrix& tcamera)
         {
-            KinBody::KinBodyStateSaver saver1(_ptargetbox), saver2(_vf->_target);//,KinBody::Save_LinkEnable));
+            KinBody::KinBodyStateSaver saver1(_ptargetbox), saver2(_vf->_target,KinBody::Save_LinkEnable);
             TransformMatrix tcamerainv = tcamera.inverse();
             Transform ttarget = _vf->_target->GetTransform();
             _ptargetbox->SetTransform(ttarget);

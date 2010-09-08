@@ -2751,18 +2751,19 @@ bool KinBody::_RemoveAttachedBody(KinBodyPtr pbody)
 void KinBody::Enable(bool bEnable)
 {
     GetEnv()->GetCollisionChecker()->Enable(shared_kinbody(),bEnable);
-    FOREACH(it, _veclinks)
+    FOREACH(it, _veclinks) {
         (*it)->_bIsEnabled = bEnable;
+    }
 }
 
 bool KinBody::IsEnabled() const
 {
     // enable/disable everything
     FOREACHC(it, _veclinks) {
-        if((*it)->IsEnabled())
+        if((*it)->IsEnabled()) {
             return true;
+        }
     }
-
     return false;
 }
 
