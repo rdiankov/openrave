@@ -255,7 +255,7 @@ public:
                         vup -= axis0*dot3(axis0,vup);
                     }
                     vup.normalize3();
-                    Vector vdir; vdir.Cross(axis0,vup);
+                    Vector vdir = axis0.cross(vup);
                 
                     tslider.m[0] = axis0.x; tslider.m[1] = vup.x; tslider.m[2] = vdir.x;
                     tslider.m[4] = axis0.y; tslider.m[5] = vup.y; tslider.m[6] = vdir.y;

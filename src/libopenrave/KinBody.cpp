@@ -520,7 +520,10 @@ bool KinBody::Link::IsEnabled() const
 
 void KinBody::Link::Enable(bool bEnable)
 {
-    GetParent()->EnableLink(shared_from_this(),bEnable);
+    KinBodyPtr parent = GetParent();
+    if( !parent->GetEnv()->GetCollisionChecker()->EnableLink(LinkConstPtr(shared_from_this()),bEnable) ) {
+        throw openrave_exception(str(boost::format("failed to enable link %s:%s")%parent->GetName()%GetName()));
+    }
     _bIsEnabled = bEnable;
 }
 
@@ -2750,12 +2753,6 @@ void KinBody::Enable(bool bEnable)
     GetEnv()->GetCollisionChecker()->Enable(shared_kinbody(),bEnable);
     FOREACH(it, _veclinks)
         (*it)->_bIsEnabled = bEnable;
-}
-
-void KinBody::EnableLink(LinkConstPtr plink, bool bEnable)
-{
-    if( !GetEnv()->GetCollisionChecker()->EnableLink(plink,bEnable) )
-        throw openrave_exception(str(boost::format("failed to enable link %s:%s")%GetName()%plink->GetName()));
 }
 
 bool KinBody::IsEnabled() const

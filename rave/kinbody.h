@@ -647,7 +647,9 @@ public:
 
     /// \brief Enables or disables the bodies.
     virtual void Enable(bool enable);
-    virtual void EnableLink(LinkConstPtr link, bool bEnable);
+
+    /// \deprecated (10/09/08)
+    virtual void EnableLink(LinkPtr plink, bool bEnable) RAVE_DEPRECATED { plink->Enable(bEnable); }
 
     /// \return true if any link of the KinBody is enabled
     virtual bool IsEnabled() const;
