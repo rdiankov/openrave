@@ -363,6 +363,9 @@ inline int RavePrintfA(const std::string& s, DebugLevel level)
     return s.size();
 }
 
+DefineRavePrintfW(_INFOLEVEL)
+DefineRavePrintfA(_INFOLEVEL)
+
 #else
 
 #define DefineRavePrintfW(LEVEL) \

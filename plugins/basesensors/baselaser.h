@@ -33,7 +33,7 @@ protected:
                 return PE_Ignore;
             }
 
-            if( name != "sensor" && name != "minangle" && name != "maxangle" && name != "maxrange" && name != "scantime" && name != "color" && name != "resolution" ) {
+            if( name != "sensor" && name != "minangle" && name != "maxangle" && name != "maxrange" && name != "scantime" && name != "color" && name != "resolution" && name != "time_scan" && name != "time_increment" ) {
                 return PE_Pass;
             }
             ss.str("");
@@ -67,8 +67,11 @@ protected:
             else if( name == "maxrange" ) {
                 ss >> _psensor->_pgeom->max_range;
             }
-            else if( name == "scantime" ) {
-                ss >> _psensor->fScanTime;
+            else if( name == "scantime" || name == "time_scan" ) {
+                ss >> _psensor->_pgeom->time_scan;
+            }
+            else if( name == "time_increment" ) {
+                ss >> _psensor->_pgeom->time_increment;
             }
             else if( name == "color" ) {
                 ss >> _psensor->_vColor.x >> _psensor->_vColor.y >> _psensor->_vColor.z;
@@ -155,7 +158,7 @@ public:
     {
         fTimeToScan -= fTimeElapsed;
         if( fTimeToScan <= 0 ) {
-            fTimeToScan = fScanTime;
+            fTimeToScan = _pgeom->time_scan;
             Vector rotaxis(0,0,1);
             Transform trot;
             RAY r;
@@ -328,7 +331,7 @@ protected:
     EnvironmentBase::GraphHandlePtr _iconhandle;
     vector<RaveVector<float> > viconpoints;
     vector<int> viconindices;
-    dReal fTimeToScan, fScanTime;
+    dReal fTimeToScan;
 
     boost::mutex _mutexdata;
     bool _bRender;

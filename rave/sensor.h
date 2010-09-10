@@ -35,14 +35,15 @@ public:
         ST_Camera=2,
         ST_JointEncoder=3,
         ST_Force6D=4,
+        ST_IMU=5
     };
 
     class CameraIntrinsics
     {
     public:
         CameraIntrinsics() : fx(0),fy(0),cx(0),cy(0) {}
-        CameraIntrinsics(float fx, float fy, float cx, float cy) : fx(fx), fy(fy), cx(cx), cy(cy) {}
-        float fx,fy, cx,cy;
+        CameraIntrinsics(dReal fx, dReal fy, dReal cx, dReal cy) : fx(fx), fy(fy), cx(cx), cy(cy) {}
+        dReal fx,fy, cx,cy;
     };
 
     /// used to pass sensor data around
@@ -66,11 +67,10 @@ public:
         virtual SensorType GetType() { return ST_Laser; }
 
         Transform t;     ///< the coordinate system all the measurements are in
-        std::vector<RaveVector<float> > positions; ///< world coordinates of the origins of each of the laser points.
+        std::vector<RaveVector<dReal> > positions; ///< world coordinates of the origins of each of the laser points.
                                        ///< if positions is empty, assume the origin is t.trans for all points
-        std::vector<RaveVector<float> > ranges; ///< Range and direction readings, should be returned in the order laser detected them in.
-        std::vector<float> intensity; ///< Intensity readings.
-        int id; ///< A unique, increasing, ID for the scan
+        std::vector<RaveVector<dReal> > ranges; ///< Range and direction readings, should be returned in the order laser detected them in.
+        std::vector<dReal> intensity; ///< Intensity readings.
 
         virtual bool serialize(std::ostream& O) const;
     };
@@ -95,16 +95,25 @@ public:
         std::vector<dReal> _encoderVelocity; ///< measured joint velocity in radians
     };
     
-    /// \brief Stores force data (JR3, etc).
+    /// \brief Stores force data
     class RAVE_API ForceSensorData : public SensorData
     {
     public:
         public:
         virtual SensorType GetType() { return ST_Force6D; }
-        /// Force in X Y Z, in newtons
-        std::vector<dReal> _forceXYZ;
-        /// Torque in X Y Z, in newtonmeters
-        std::vector<dReal> _torqueXYZ;
+        std::vector<dReal> _forceXYZ; ///< Force in X Y Z, in newtons
+        std::vector<dReal> _torqueXYZ; ///< Torque in X Y Z, in newtonmeters
+    };
+
+    /// \brief Stores IMU data
+    class RAVE_API IMUSensorData : public SensorData
+    {
+    public:
+        public:
+        virtual SensorType GetType() { return ST_IMU; }
+        Vector rotation; ///< quaternion
+        Vector angular_velocity;
+        Vector linear_acceleration;
     };
 
     /// permanent properties of the sensors
@@ -120,12 +129,14 @@ public:
     class RAVE_API LaserGeomData : public SensorGeometry
     {
     public:
+    LaserGeomData() : min_range(0), max_range(0), time_increment(0), time_scan(0) { min_angle[0] = min_angle[1] = max_angle[0] = max_angle[1] = resolution[0] = resolution[1] = 0; }
         virtual SensorType GetType() { return ST_Laser; }
-        
-        float min_angle[2]; ///< Start for the laser scan [rad].
-        float max_angle[2]; ///< End angles for the laser scan [rad].
-        float resolution[2]; ///< Angular resolutions for each axis of rotation [rad].
-        float max_range; ///< Maximum range [m].
+        dReal min_angle[2]; ///< Start for the laser scan [rad].
+        dReal max_angle[2]; ///< End angles for the laser scan [rad].
+        dReal resolution[2]; ///< Angular resolutions for each axis of rotation [rad].
+        dReal min_range, max_range; ///< Maximum range [m].
+        dReal time_increment; ///< time between individual measurements [seconds]
+        dReal time_scan; ///< time between scans [seconds]
     };
     class RAVE_API CameraGeomData : public SensorGeometry
     {
@@ -143,6 +154,15 @@ public:
     {
     public:
         virtual SensorType GetType() { return ST_Force6D; }
+    };
+    class RAVE_API IMUGeomData : public SensorGeometry
+    {
+    public:
+        virtual SensorType GetType() { return ST_IMU; }
+        dReal time_measurement; ///< time between measurements
+        dReal orientation_covariance[9]; ///< Row major about x, y, z axes
+        dReal angular_velocity_covariance[9]; ///< Row major about x, y, z axes
+        dReal linear_acceleration_covariance[9]; ///< Row major x, y z axes
     };
 
     SensorBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Sensor, penv) {}

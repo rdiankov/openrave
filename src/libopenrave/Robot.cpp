@@ -2053,8 +2053,9 @@ void RobotBase::_ComputeInternalInformation()
             RAVELOG_WARN(str(boost::format("robot %s has a manipulator with no name, setting to %s\n")%GetName()%ss.str()));
             (*itmanip)->_name = ss.str();
         }
-        else if( !IsValidName((*itmanip)->GetName()) )
+        else if( !IsValidName((*itmanip)->GetName()) ) {
             throw openrave_exception(str(boost::format("manipulator name \"%s\" is not valid")%(*itmanip)->GetName()));
+        }
         if( !!(*itmanip)->GetBase() && !!(*itmanip)->GetEndEffector() ) {
             vector<JointPtr> vjoints;
             if( GetChain((*itmanip)->GetBase()->GetIndex(),(*itmanip)->GetEndEffector()->GetIndex(), vjoints) ) {
@@ -2069,28 +2070,33 @@ void RobotBase::_ComputeInternalInformation()
                 RAVELOG_WARN(str(boost::format("manipulator %s failed to find chain between %s and %s links\n")%(*itmanip)->GetName()%(*itmanip)->GetBase()->GetName()%(*itmanip)->GetEndEffector()->GetName()));
             }
         }
-        else
+        else {
             RAVELOG_WARN(str(boost::format("manipulator %s has undefined base and end effector links\n")%(*itmanip)->GetName()));
-
+        }
         if( !!(*itmanip)->_pIkSolver ) {
             (*itmanip)->_pIkSolver->Init(*itmanip);
         }
         vector<ManipulatorPtr>::iterator itmanip2 = itmanip; ++itmanip2;
         for(;itmanip2 != _vecManipulators.end(); ++itmanip2) {
-            if( (*itmanip)->GetName() == (*itmanip2)->GetName() )
+            if( (*itmanip)->GetName() == (*itmanip2)->GetName() ) {
                 RAVELOG_WARN(str(boost::format("robot %s has two manipulators with the same name: %s!\n")%GetName()%(*itmanip)->GetName()));
+            }
         }
+        manipindex++;
     }
 
+    int sensorindex=0;
     FOREACH(itsensor,_vecSensors) {
         if( (*itsensor)->GetName().size() == 0 ) {
             stringstream ss;
-            ss << "sensor" << manipindex;
+            ss << "sensor" << sensorindex;
             RAVELOG_WARN(str(boost::format("robot %s has a sensor with no name, setting to %s\n")%GetName()%ss.str()));
             (*itsensor)->_name = ss.str();
         }
-        else if( !IsValidName((*itsensor)->GetName()) )
+        else if( !IsValidName((*itsensor)->GetName()) ) {
             throw openrave_exception(str(boost::format("sensor name \"%s\" is not valid")%(*itsensor)->GetName()));
+        }
+        sensorindex++;
     }
 
     {
