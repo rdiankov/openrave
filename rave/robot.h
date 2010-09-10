@@ -103,8 +103,9 @@ public:
         /// \return true if succeeded
         virtual bool GetFreeParameters(std::vector<dReal>& vFreeParameters) const;
 
-        /// will find the closest solution to the current robot's joint values
-        /// Note that this does NOT use the active dof of the robot
+        /// will find a close solution to the current robot's joint values. The function is a wrapper around the IkSolver interface.
+        /// Note that the solution returned is not guaranteed to be the closest solution. In order to compute that, will have to
+        /// compute all the ik solutions using FindIKSolutions.
         /// \param goal The transformation of the end-effector in the global coord system
         /// \param solution Will be of size GetArmIndices().size() and contain the best solution
         /// \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.

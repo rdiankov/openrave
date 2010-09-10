@@ -259,6 +259,21 @@ inline object toPyArray3(const vector<RaveVector<float> >& v)
     return static_cast<numeric::array>(handle<>(pyvalues));
 }
 
+inline object toPyArray3(const vector<RaveVector<double> >& v)
+{
+    npy_intp dims[] = {v.size(),3};
+    PyObject *pyvalues = PyArray_SimpleNew(2,dims, PyArray_DOUBLE);
+    if( v.size() > 0 ) {
+        float* pf = (float*)PyArray_DATA(pyvalues);
+        FOREACHC(it,v) {
+            *pf++ = it->x;
+            *pf++ = it->y;
+            *pf++ = it->z;
+        }
+    }
+    return static_cast<numeric::array>(handle<>(pyvalues));
+}
+
 template <typename T>
 inline object ReturnTransform(T t)
 {
