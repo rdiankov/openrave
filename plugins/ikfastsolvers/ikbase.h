@@ -314,6 +314,11 @@ private:
         throw openrave_exception(str(boost::format("don't support ik parameterization %d")%param.GetType()));
     }
 
+    static bool SortSolutionDistances(const pair<int,dReal>& p1, const pair<int,dReal>& p2)
+    {
+        return p1.second < p2.second;
+    }
+
     SolutionResults _SolveSingle(const IkParameterization& param, const vector<IKReal>& vfree, const vector<dReal>& q0, int filteroptions, boost::shared_ptr< std::vector<dReal> > result, bool& bCheckEndEffector)
     {
         std::vector<Solution> vsolutions;
@@ -321,26 +326,53 @@ private:
             return SR_Continue;
         }
 
-        vector<IKReal> vsolfree;
-
         RobotBase::ManipulatorPtr pmanip(_pmanip);
+        RobotBasePtr probot = pmanip->GetRobot();
         dReal bestdist = 1e30;
         std::vector<dReal> vravesol(pmanip->GetArmIndices().size());
         std::vector<dReal> vbest;
-        std::vector<IKReal> sol(pmanip->GetArmIndices().size());
+        std::vector<IKReal> sol(pmanip->GetArmIndices().size()), vsolfree;
         // find the first valid solution that satisfies joint constraints and collisions
         boost::tuple<const vector<IKReal>&, const vector<dReal>&,int> textra(vsolfree, q0, filteroptions);
 
-        FOREACH(itsol, vsolutions) {
-            SolutionResults res;
-            if( itsol->GetFree().size() > 0 ) {
-                // have to search over all the free parameters of the solution!
+        vector<int> vsolutionorder(vsolutions.size());
+        if( vravesol.size() == q0.size() ) {
+            // sort the solutions from closest to farthest
+            vector<pair<int,dReal> > vdists; vdists.reserve(vsolutions.size());
+            FOREACH(itsol, vsolutions) {
                 vsolfree.resize(itsol->GetFree().size());
-                res = ComposeSolution(itsol->GetFree(), vsolfree, 0, q0, boost::bind(&IkFastSolver::_ValidateSolutionSingle,shared_solver(), boost::ref(*itsol), boost::ref(textra), boost::ref(sol), boost::ref(vravesol), boost::ref(vbest), boost::ref(bestdist), boost::ref(param), boost::ref(bCheckEndEffector)));
+                for(size_t ifree = 0; ifree < itsol->GetFree().size(); ++ifree) {
+                    vsolfree[ifree] = q0.at(itsol->GetFree()[ifree]);
+                }
+                itsol->GetSolution(&sol[0],vsolfree.size()>0?&vsolfree[0]:NULL);
+                for(int i = 0; i < (int)sol.size(); ++i) {
+                    vravesol[i] = (dReal)sol[i];
+                }
+                vdists.push_back(make_pair((int)vdists.size(),_configdist2(probot,vravesol,q0)));
+            }
+
+            std::sort(vdists.begin(),vdists.end(),SortSolutionDistances);
+            for(size_t i = 0; i < vsolutionorder.size(); ++i) {
+                vsolutionorder[i] = vdists[i].first;
+            }
+        }
+        else {
+            for(size_t i = 0; i < vsolutionorder.size(); ++i) {
+                vsolutionorder[i] = i;
+            }
+        }
+
+        FOREACH(itindex,vsolutionorder) {
+            Solution& iksol = vsolutions.at(*itindex);
+            SolutionResults res;
+            if( iksol.GetFree().size() > 0 ) {
+                // have to search over all the free parameters of the solution!
+                vsolfree.resize(iksol.GetFree().size());
+                res = ComposeSolution(iksol.GetFree(), vsolfree, 0, q0, boost::bind(&IkFastSolver::_ValidateSolutionSingle,shared_solver(), boost::ref(iksol), boost::ref(textra), boost::ref(sol), boost::ref(vravesol), boost::ref(vbest), boost::ref(bestdist), boost::ref(param), boost::ref(bCheckEndEffector)));
             }
             else {
                 vsolfree.resize(0);
-                res = _ValidateSolutionSingle(*itsol, textra, sol, vravesol, vbest, bestdist, param, bCheckEndEffector);
+                res = _ValidateSolutionSingle(iksol, textra, sol, vravesol, vbest, bestdist, param, bCheckEndEffector);
             }
 
             if( res == SR_Quit )
@@ -354,8 +386,9 @@ private:
         // return as soon as a solution is found, since we're visiting phis starting from q0, we are guaranteed
         // that the solution will be close (ie, phi's dominate in the search). This is to speed things up
         if( vbest.size() == pmanip->GetArmIndices().size() ) {
-            if( !!result )
+            if( !!result ) {
                 *result = vbest;
+            }
             return SR_Success;
         }
 
@@ -372,13 +405,13 @@ private:
             vravesol[i] = dReal(sol[i]);
         }
 
+        RobotBase::ManipulatorPtr pmanip(_pmanip);
+        RobotBasePtr probot = pmanip->GetRobot();
+
         /// if have to check for closest solution, make sure this new solution is closer than best found so far
         dReal d = dReal(1e30);
         if( boost::get<1>(freeq0check).size() == vravesol.size() ) {
-            dReal d = 0;
-            for(size_t k = 0; k < vravesol.size(); ++k) {
-                d += SQR(vravesol[k]-boost::get<1>(freeq0check)[k]);
-            }
+            d = _configdist2(probot,vravesol,boost::get<1>(freeq0check));
             if( bestdist <= d ) {
                 return SR_Continue;
             }
@@ -386,7 +419,7 @@ private:
 
         int filteroptions = boost::get<2>(freeq0check);
         if( !(filteroptions&IKFO_IgnoreJointLimits) ) {
-            if( !checkjointangles(vravesol) ) {
+            if( !_checkjointangles(vravesol) ) {
                 //            stringstream ss; ss << "bad joint angles: ";
                 //            FOREACH(it,vravesol)
                 //                ss << *it << " ";
@@ -397,8 +430,6 @@ private:
         }
 
         // check for self collisions
-        RobotBase::ManipulatorPtr pmanip(_pmanip);
-        RobotBasePtr probot = pmanip->GetRobot();
         probot->SetActiveDOFValues(vravesol);
         CollisionReport report;
         if( !(filteroptions&IKFO_IgnoreSelfCollisions) ) {
@@ -417,8 +448,9 @@ private:
             if( !!report.plink1 && !!report.plink2 ) {
                 RAVELOG_VERBOSEA(str(boost::format("IKFastSolver: collision %s:%s with %s:%s\n")%report.plink1->GetParent()->GetName()%report.plink1->GetName()%report.plink2->GetParent()->GetName()%report.plink2->GetName()));
             }
-            else
+            else {
                 RAVELOG_VERBOSEA("ik collision, no link\n");
+            }
 
             // if gripper is colliding, solutions will always fail, so completely stop solution process
             if( bCheckEndEffector && param.GetType() == IkParameterization::Type_Transform6D && pmanip->CheckEndEffectorCollision(pmanip->GetBase()->GetTransform()*param.GetTransform()*pmanip->GetGraspTransform()) ) {
@@ -454,14 +486,14 @@ private:
             FOREACH(itsol, vsolutions) {
                 if( itsol->GetFree().size() > 0 ) {
                     // have to search over all the free parameters of the solution!
-                    vsolfree.resize(itsol->GetFree().size());
-                    
+                    vsolfree.resize(itsol->GetFree().size());                    
                     if( ComposeSolution(itsol->GetFree(), vsolfree, 0, vector<dReal>(), boost::bind(&IkFastSolver::_ValidateSolutionAll,shared_solver(), boost::ref(param), boost::ref(*itsol), boost::ref(vsolfree), filteroptions, boost::ref(sol), boost::ref(vravesol), boost::ref(qSolutions), boost::ref(bCheckEndEffector))) == SR_Quit)
                         return SR_Quit;
                 }
                 else {
-                    if( _ValidateSolutionAll(param, *itsol, vector<IKReal>(), filteroptions, sol, vravesol, qSolutions, bCheckEndEffector) == SR_Quit )
+                    if( _ValidateSolutionAll(param, *itsol, vector<IKReal>(), filteroptions, sol, vravesol, qSolutions, bCheckEndEffector) == SR_Quit ) {
                         return SR_Quit;
+                    }
                 }
             }
         }
@@ -477,7 +509,7 @@ private:
             
         // find the first valid solutino that satisfies joint constraints and collisions
         if( !(filteroptions&IKFO_IgnoreJointLimits) ) {
-            if( !checkjointangles(vravesol) )
+            if( !_checkjointangles(vravesol) )
                 return SR_Continue;
         }
 
@@ -520,7 +552,7 @@ private:
         return SR_Continue;
     }
 
-    bool checkjointangles(std::vector<dReal>& vravesol)
+    bool _checkjointangles(std::vector<dReal>& vravesol) const
     {
         for(int j = 0; j < (int)_qlower.size(); ++j) {
             if( _vjointtypes.at(j) != KinBody::Joint::JointPrismatic ) {
@@ -548,6 +580,19 @@ private:
         }
 
         return false;
+    }
+
+    dReal _configdist2(RobotBasePtr probot, const vector<dReal>& q1, const vector<dReal>& q2) const
+    {
+        vector<dReal> q = q1;
+        probot->SubtractActiveDOFValues(q,q2);
+        vector<dReal>::iterator itq = q.begin();
+        dReal dist = 0;
+        FOREACHC(it, probot->GetActiveDOFIndices()) {
+            KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(*it);
+            dist += *itq**itq * pjoint->GetWeight(*it-pjoint->GetDOFIndex());
+        }
+        return dist;
     }
 
     template <typename U> U SQR(U t) { return t*t; }

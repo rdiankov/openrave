@@ -1910,7 +1910,11 @@ class IKFastSolver(AutoReloader):
                         if len(solutions) >= 4: # probably more than enough already?
                             break
                 except AttributeError,e:
+                    print e
                     print 'solve is returning bad solution:',s
+                    print comb[1]
+                    print comb[1][0].subs(listsymbols)
+                    print comb[1][1].subs(listsymbols)
             if len(solutions) > 0:
                 return solutions
 

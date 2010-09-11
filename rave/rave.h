@@ -226,8 +226,8 @@ inline std::string ChangeTextColor (int attribute, int fg)
 /// Reset the text color (on either stdout or stderr) to its original state (thanks to Radu Rusu for the code)
 inline std::string ResetTextColor()
 {
-    char command[8];
-    sprintf (command, "%c[0m", 0x1B);
+    char command[12];
+    sprintf (command, "%c[0;38;48m", 0x1B);
     return command;
 }
 
@@ -425,12 +425,12 @@ inline int RavePrintfA(const std::string& s, DebugLevel level)
     if( OpenRAVE::RaveGetDebugLevel()>=level ) {
         int color = 0;
         switch(level) {
-            case Level_Fatal: color = OPENRAVECOLOR_FATALLEVEL; break;
-            case Level_Error: color = OPENRAVECOLOR_ERRORLEVEL; break;
-            case Level_Warn: color = OPENRAVECOLOR_WARNLEVEL; break;
-            case Level_Info: color = OPENRAVECOLOR_INFOLEVEL; break;
-            case Level_Debug: color = OPENRAVECOLOR_DEBUGLEVEL; break;
-            case Level_Verbose: color = OPENRAVECOLOR_VERBOSELEVEL; break;
+        case Level_Fatal: color = OPENRAVECOLOR_FATALLEVEL; break;
+        case Level_Error: color = OPENRAVECOLOR_ERRORLEVEL; break;
+        case Level_Warn: color = OPENRAVECOLOR_WARNLEVEL; break;
+        case Level_Info: printf ("%s",s.c_str()); return s.size(); // print regular
+        case Level_Debug: color = OPENRAVECOLOR_DEBUGLEVEL; break;
+        case Level_Verbose: color = OPENRAVECOLOR_VERBOSELEVEL; break;
         }
         printf ("%c[0;%d;%dm%s%c[0;38;48m", 0x1B, color + 30,8+40,s.c_str(),0x1B);
         return s.size();

@@ -1476,7 +1476,7 @@ namespace OpenRAVEXMLParser
                     GetFullFilename() = oldfile;
                     
                     if( !pinterface ) {
-                        RAVELOG_DEBUGA(str(boost::format("Failed to load kinbody filename %s\n")%itatt->second));
+                        RAVELOG_DEBUGA(str(boost::format("Failed to load filename %s\n")%itatt->second));
                         GetXMLErrorCount()++;
                         break;
                     }

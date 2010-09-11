@@ -167,21 +167,20 @@ def test_6dik():
     #python inversekinematics.py --robot=/home/rdiankov/downloads/SDA10-OpenRave/robots/SDA10-dual.robot.xml
     from openravepy import *
     import numpy,time
-    from openravepy.databases import inversekinematics
     import ikfast
     from ikfast import SolverStoreSolution, SolverSequence
     from sympy import *
     env = Environment()
     env.Reset()
-    robot = env.ReadRobotXMLFile('robots/pr2-beta-static.robot.xml')
+    robot = env.ReadRobotXMLFile('/home/rdiankov/downloads/justin.robot.xml')
     env.AddRobot(robot)
-    manip = robot.SetActiveManipulator('leftarm2')
-    ikmodel = inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
+    manip = robot.SetActiveManipulator('leftarm')
+    ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
 
     solvefn=ikfast.IKFastSolver.solveFullIK_6D
     solvejoints = list(manip.GetArmJoints())
-    solvejoints.remove(35)
-    freeparams=[35]
+    solvejoints.remove(25)
+    freeparams=[25]
     sourcefilename = 'temp.cpp'
     self = ikfast.IKFastSolver(kinbody=robot,accuracy=None,precision=None)
     #code = self.generateIkSolver(manip.GetBase().GetIndex(),manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejoints,usedummyjoints=False,solvefn=solvefn)
