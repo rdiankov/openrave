@@ -1618,10 +1618,10 @@ void RobotBase::CalculateActiveRotationJacobian(int index, const Vector& q, boos
     }
     if( _nAffineDOFs & DOF_RotationAxis ) {
         const Vector& v = vActvAffineRotationAxis;
-        mjacobian[0][ind] = -q.y*v.x - q.z*v.y - q.w*v.z;
-        mjacobian[1][ind] = q.x*v.x - q.z*v.z + q.w*v.y;
-        mjacobian[2][ind] = q.x*v.y + q.y*v.z - q.w*v.x;
-        mjacobian[3][ind] = q.x*v.z - q.y*v.y + q.z*v.x;
+        mjacobian[0][ind] = dReal(0.5)*(-q.y*v.x - q.z*v.y - q.w*v.z);
+        mjacobian[1][ind] = dReal(0.5)*(q.x*v.x - q.z*v.z + q.w*v.y);
+        mjacobian[2][ind] = dReal(0.5)*(q.x*v.y + q.y*v.z - q.w*v.x);
+        mjacobian[3][ind] = dReal(0.5)*(q.x*v.z - q.y*v.y + q.z*v.x);
         ind++;
     }
     else if( _nAffineDOFs & DOF_Rotation3D ) {

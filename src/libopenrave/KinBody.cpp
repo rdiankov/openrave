@@ -2103,10 +2103,10 @@ void KinBody::CalculateRotationJacobian(int index, const Vector& q, boost::multi
                     break;
                 }
 
-                vjacobian[0][dofindex+dof] = -q.y*v.x - q.z*v.y - q.w*v.z;
-                vjacobian[1][dofindex+dof] = q.x*v.x - q.z*v.z + q.w*v.y;
-                vjacobian[2][dofindex+dof] = q.x*v.y + q.y*v.z - q.w*v.x;
-                vjacobian[3][dofindex+dof] = q.x*v.z - q.y*v.y + q.z*v.x;
+                vjacobian[0][dofindex+dof] = dReal(0.5)*(-q.y*v.x - q.z*v.y - q.w*v.z);
+                vjacobian[1][dofindex+dof] = dReal(0.5)*(q.x*v.x - q.z*v.z + q.w*v.y);
+                vjacobian[2][dofindex+dof] = dReal(0.5)*(q.x*v.y + q.y*v.z - q.w*v.x);
+                vjacobian[3][dofindex+dof] = dReal(0.5)*(q.x*v.z - q.y*v.y + q.z*v.x);
             }
         }
     }
@@ -2130,10 +2130,10 @@ void KinBody::CalculateRotationJacobian(int index, const Vector& q, boost::multi
                 }
 
                 v *= (*itjoint)->GetMimicCoeffs()[0];
-                vjacobian[0][dofindex+dof] += -q.y*v.x - q.z*v.y - q.w*v.z;
-                vjacobian[1][dofindex+dof] += q.x*v.x - q.z*v.z + q.w*v.y;
-                vjacobian[2][dofindex+dof] += q.x*v.y + q.y*v.z - q.w*v.x;
-                vjacobian[3][dofindex+dof] += q.x*v.z - q.y*v.y + q.z*v.x;
+                vjacobian[0][dofindex+dof] += dReal(0.5)*(-q.y*v.x - q.z*v.y - q.w*v.z);
+                vjacobian[1][dofindex+dof] += dReal(0.5)*(q.x*v.x - q.z*v.z + q.w*v.y);
+                vjacobian[2][dofindex+dof] += dReal(0.5)*(q.x*v.y + q.y*v.z - q.w*v.x);
+                vjacobian[3][dofindex+dof] += dReal(0.5)*(q.x*v.z - q.y*v.y + q.z*v.x);
             }
         }
     }
