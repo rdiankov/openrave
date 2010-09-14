@@ -701,8 +701,9 @@ public:
     bool InitFromData(const string& data) { return _pbody->InitFromData(data,std::list<std::pair<std::string,std::string> >()); }
     bool InitFromBoxes(const boost::multi_array<dReal,2>& vboxes, bool bDraw)
     {
-        if( vboxes.shape()[1] != 6 )
+        if( vboxes.shape()[1] != 6 ) {
             throw openrave_exception("boxes needs to be a Nx6 vector\n");
+        }
         std::vector<AABB> vaabbs(vboxes.shape()[0]);
         for(size_t i = 0; i < vaabbs.size(); ++i) {
             vaabbs[i].pos = Vector(vboxes[i][0],vboxes[i][1],vboxes[i][2]);
@@ -710,6 +711,12 @@ public:
         }
 
         return _pbody->InitFromBoxes(vaabbs,bDraw);
+    }
+    bool InitFromTrimesh(boost::shared_ptr<PyKinBody::PyLink::PyTriMesh> pytrimesh, bool bDraw)
+    {
+        KinBody::Link::TRIMESH mesh;
+        pytrimesh->GetTriMesh(mesh);
+        return _pbody->InitFromTrimesh(mesh,bDraw);
     }
 
     void SetName(const string& name) { _pbody->SetName(name); }
@@ -3511,6 +3518,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("InitFromFile",&PyKinBody::InitFromFile,args("filename"),DOXY_FN(KinBody,InitFromFile))
             .def("InitFromData",&PyKinBody::InitFromData,args("data"), DOXY_FN(KinBody,InitFromData))
             .def("InitFromBoxes",&PyKinBody::InitFromBoxes,args("boxes","draw"), DOXY_FN(KinBody,InitFromBoxes "const std::vector< AABB; bool"))
+            .def("InitFromTrimesh",&PyKinBody::InitFromTrimesh,args("trimesh","draw"), DOXY_FN(KinBody,InitFromTrimesh))
             .def("SetName", &PyKinBody::SetName,args("name"),DOXY_FN(KinBody,SetName))
             .def("GetName",&PyKinBody::GetName,DOXY_FN(KinBody,GetName))
             .def("GetDOF",&PyKinBody::GetDOF,DOXY_FN(KinBody,GetDOF))

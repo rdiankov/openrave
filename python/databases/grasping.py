@@ -608,7 +608,11 @@ class GraspingModel(OpenRAVEModel):
             self.target.SetTransform(eye(4))
             ab=self.target.ComputeAABB()
             for grasp in self.grasps:
-                contacts,finalconfig,mindist,volume = self.runGrasp(grasp=grasp,translate=True,forceclosure=False)
+                try:
+                    contacts,finalconfig,mindist,volume = self.runGrasp(grasp=grasp,translate=True,forceclosure=False)
+                except planning_error, e:
+                    print 'grasp failed: ',e
+                    contacts = []
                 # find closest contact to center of object
                 if len(contacts) > 0: # sometimes we get no contacts?!
                     contactdists.append(numpy.min(sum((contacts[:,0:3]-tile(ab.pos(),(len(contacts),1)))**2,1)))

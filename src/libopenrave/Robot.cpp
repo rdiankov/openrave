@@ -2096,6 +2096,9 @@ void RobotBase::_ComputeInternalInformation()
         else if( !IsValidName((*itsensor)->GetName()) ) {
             throw openrave_exception(str(boost::format("sensor name \"%s\" is not valid")%(*itsensor)->GetName()));
         }
+        if( !!(*itsensor)->psensor ) {
+            (*itsensor)->psensor->SetName((*itsensor)->_name);
+        }
         sensorindex++;
     }
 

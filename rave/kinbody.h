@@ -511,6 +511,12 @@ public:
     /// \param bDraw if true, the boxes will be rendered in the scene
     virtual bool InitFromBoxes(const std::vector<OBB>& boxes, bool draw);
 
+    /// \brief Create a kinbody with one link composed of a triangle mesh surface
+    ///
+    /// \param trimesh the triangle mesh
+    /// \param bDraw if true, will be rendered in the scene
+    virtual bool InitFromTrimesh(const Link::TRIMESH& trimesh, bool draw);
+
     /// \brief Unique name of the robot.
     virtual const std::string& GetName() const           { return name; }
 

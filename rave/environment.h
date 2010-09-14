@@ -284,6 +284,9 @@ public:
 
     /// \brief Fill an array with all robots loaded in the environment. <b>[multi-thread safe]</b>
     virtual void GetRobots(std::vector<RobotBasePtr>& robots) const = 0;
+
+    /// \brief Fill an array with all sensors loaded in the environment. <b>[multi-thread safe]</b>
+    //virtual void GetSensors(std::vector<SensorBasePtr>& sensors) const = 0;
     
     /// \brief Retrieve published bodies, completes even if environment is locked. <b>[multi-thread safe]</b>
     ///

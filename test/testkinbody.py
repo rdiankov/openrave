@@ -244,3 +244,11 @@ def test_drawjoints():
         joints = [robot.GetJoints()[i] for i in robot.GetManipulator('leftarm').GetArmJoints()]
         h = [env.drawlinelist(array([j.GetAnchor()-j.GetAxis(0),j.GetAnchor()+j.GetAxis(0)]),5,array([0,0,i/8.0]))  for i,j in enumerate(joints)]
         time.sleep(0.1)
+
+def test_trimesh():
+    env = Environment()
+    body = env.CreateKinBody()
+    vertices = array()
+    indices = array()
+    body.InitFromTrimesh(KinBody.Link.TriMesh(vertices,indices),True)
+    env.AddKinBody(body)
