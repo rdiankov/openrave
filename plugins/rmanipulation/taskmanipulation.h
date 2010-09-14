@@ -640,9 +640,10 @@ class TaskManipulation : public ProblemInstance
 
                 bool bTargetCollision;
                 {
-                    KinBody::KinBodyStateSaver linksaver(_robot,KinBody::Save_LinkEnable);
+                    //KinBody::KinBodyStateSaver linksaver(_robot,KinBody::Save_LinkEnable);
                     _robot->Enable(false); // remove robot from target collisions
                     bTargetCollision = GetEnv()->CheckCollision(KinBodyConstPtr(ptarget));
+                    _robot->Enable(true);
                 }
 
                 ptarget->SetTransform(transTarg);
