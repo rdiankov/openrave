@@ -530,7 +530,7 @@ class TaskManipulation : public ProblemInstance
 
                 // move back a little if robot/target in collision
                 if( !!ptarget ) {
-                    KinBody::KinBodyStateSaver saverlocal(_robot);
+                    RobotBase::RobotStateSaver saverlocal(_robot);
                     _robot->SetTransform(t);
                     Vector vglobalpalmdir;
                     if( iGraspDir >= 0 )
@@ -638,13 +638,14 @@ class TaskManipulation : public ProblemInstance
                  
                 ptarget->SetTransform(transDestTarget);
 
-                bool bTargetCollision;
+                _robot->Enable(true);
+                bool bTargetCollision; 
                 {
-                    //KinBody::KinBodyStateSaver linksaver(_robot,KinBody::Save_LinkEnable);
-                    _robot->Enable(false); // remove robot from target collisions
+                    RobotBase::RobotStateSaver linksaver(_robot,KinBody::Save_LinkEnable);
+                    _robot->Enable(false); // remove robot from target collisions 
                     bTargetCollision = GetEnv()->CheckCollision(KinBodyConstPtr(ptarget));
-                    _robot->Enable(true);
                 }
+                BOOST_ASSERT(_robot->IsEnabled());
 
                 ptarget->SetTransform(transTarg);
                 if( bTargetCollision ) {

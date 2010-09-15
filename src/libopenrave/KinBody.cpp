@@ -897,7 +897,7 @@ KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _
         _pbody->GetBodyTransformations(_vLinkTransforms);
     }
     if( _options & Save_LinkEnable ) {
-        _vEnabledLinks.resize(_vLinkTransforms.size());
+        _vEnabledLinks.resize(_pbody->GetLinks().size());
         for(size_t i = 0; i < _vEnabledLinks.size(); ++i)
             _vEnabledLinks[i] = _pbody->GetLinks().at(i)->IsEnabled();
     }
@@ -910,8 +910,9 @@ KinBody::KinBodyStateSaver::~KinBodyStateSaver()
     }
     if( _options & Save_LinkEnable ) {
         for(size_t i = 0; i < _vEnabledLinks.size(); ++i) {
-            if( _pbody->GetLinks().at(i)->IsEnabled() != !!_vEnabledLinks[i] )
+            if( _pbody->GetLinks().at(i)->IsEnabled() != !!_vEnabledLinks[i] ) {
                 _pbody->GetLinks().at(i)->Enable(!!_vEnabledLinks[i]);
+            }
         }
     }
 }

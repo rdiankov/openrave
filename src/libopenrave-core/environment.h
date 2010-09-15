@@ -779,6 +779,11 @@ class Environment : public EnvironmentBase
         boost::shared_ptr<boost::mutex::scoped_lock> plock(new boost::mutex::scoped_lock(_mutexBodies));
         robots = _vecrobots;
     }
+
+    virtual void GetSensors(std::vector<SensorBasePtr>& sensors) const
+    {
+        sensors.clear();
+    }
     
     /// triangulation of the body including its current transformation. trimesh will be appended the new data.
     virtual bool Triangulate(KinBody::Link::TRIMESH& trimesh, KinBodyConstPtr pbody)

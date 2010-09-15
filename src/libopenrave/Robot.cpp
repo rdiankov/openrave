@@ -460,7 +460,7 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
     }
     if( options & SO_Kinematics ) {
         RobotBasePtr probot(_probot);
-        KinBody::KinBodyStateSaver saver(probot);
+        KinBody::KinBodyStateSaver saver(probot,Save_LinkTransformation);
         vector<dReal> vzeros(probot->GetDOF(),0);
         probot->SetJointValues(vzeros);
         Transform tbaseinv;
@@ -571,7 +571,7 @@ const std::string& RobotBase::AttachedSensor::GetStructureHash() const
     return __hashstructure;
 }
 
-    RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : KinBodyStateSaver(probot, options), _probot(probot)
+RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : KinBodyStateSaver(probot, options), _probot(probot)
 {
     if( _options & Save_ActiveDOF ) {
         vactivedofs = _probot->GetActiveDOFIndices();
@@ -2017,9 +2017,10 @@ bool RobotBase::CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, 
         if( itgrabbed->plinkrobot == plink ) {
             KinBodyPtr pbody = itgrabbed->pbody.lock();
             if( !!pbody ) {
-                if( vbodyexcluded.size() == 0 )
+                if( vbodyexcluded.size() == 0 ) {
                     vbodyexcluded.push_back(shared_kinbody_const());
-                KinBodyStateSaver bodysaver(pbody);
+                }
+                KinBodyStateSaver bodysaver(pbody,Save_LinkTransformation);
                 pbody->SetTransform(plink->GetTransform() * itgrabbed->troot);
                 if( GetEnv()->CheckCollision(KinBodyConstPtr(pbody),vbodyexcluded, vlinkexcluded, report) )
                     return true;

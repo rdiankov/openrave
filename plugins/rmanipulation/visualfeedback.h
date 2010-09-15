@@ -262,7 +262,7 @@ public:
         /// \param tcameras in target coordinate system
         bool IsOccluded(const TransformMatrix& tcamera)
         {
-            KinBody::KinBodyStateSaver saver1(_ptargetbox), saver2(_vf->_target);//,KinBody::Save_LinkEnable);
+            KinBody::KinBodyStateSaver saver1(_ptargetbox), saver2(_vf->_target,KinBody::Save_LinkEnable);
             TransformMatrix tcamerainv = tcamera.inverse();
             Transform ttarget = _vf->_target->GetTransform();
             _ptargetbox->SetTransform(ttarget);
@@ -307,7 +307,7 @@ public:
             KinBody::KinBodyStateSaver saver1(_ptargetbox), saver2(_vf->_target);
             vector<KinBody::LinkPtr> vattachedlinks;
             _vf->_robot->GetRigidlyAttachedLinks(_vf->_psensor->GetAttachingLink()->GetIndex(),vattachedlinks);
-            KinBody::KinBodyStateSaver robotsaver(_vf->_robot);
+            RobotBase::RobotStateSaver robotsaver(_vf->_robot,RobotBase::Save_LinkTransformation|RobotBase::Save_LinkEnable);
             Transform tsensorinv = _vf->_psensor->GetTransform().inverse();
             FOREACHC(itlink,_vf->_robot->GetLinks()) {
                 bool battached = find(vattachedlinks.begin(),vattachedlinks.end(),*itlink)!=vattachedlinks.end();
