@@ -771,6 +771,12 @@ public:
         _pbody->GetDOFWeights(values);
         return toPyArray(values);
     }
+    object GetDOFResolutions() const
+    {
+        vector<dReal> values;
+        _pbody->GetDOFResolutions(values);
+        return toPyArray(values);
+    }
 
     object GetJointValues() const
     {
@@ -3528,6 +3534,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetDOFLimits",&PyKinBody::GetDOFLimits, DOXY_FN(KinBody,GetDOFLimits))
             .def("GetDOFMaxVel",&PyKinBody::GetDOFMaxVel, DOXY_FN(KinBody,GetDOFMaxVel))
             .def("GetDOFWeights",&PyKinBody::GetDOFWeights, DOXY_FN(KinBody,GetDOFWeights))
+            .def("GetDOFResolutions",&PyKinBody::GetDOFResolutions, DOXY_FN(KinBody,GetDOFResolutions))
             .def("GetJointValues",&PyKinBody::GetJointValues, DOXY_FN(KinBody,GetJointValues))
             .def("GetJointVelocities",&PyKinBody::GetJointVelocities, DOXY_FN(KinBody,GetJointVelocities))
             .def("GetJointLimits",&PyKinBody::GetJointLimits, DOXY_FN(KinBody,GetJointLimits))
