@@ -140,7 +140,7 @@ class InverseKinematicsModel(OpenRAVEModel):
             self.env.LoadProblem(self.ikfastproblem,'')
     def  __del__(self):
         if self.ikfastproblem is not None:
-            self.env.RemoveProblem(self.ikfastproblem)
+            self.env.Remove(self.ikfastproblem)
     def clone(self,envother):
         clone = OpenRAVEModel.clone(self,envother)
         clone.setrobot(self.freeinc)

@@ -63,7 +63,7 @@ public:
     /// \brief Return an empty trajectory instance initialized to nDOF degrees of freedom.
     virtual TrajectoryBasePtr CreateTrajectory(int nDOF) = 0;
 
-    /// \brief Environment will own the interface until EnvironmentBase::Destroy is called.
+    /// \brief Environment will own the interface until EnvironmentBase::Destroy is called. 
     virtual void OwnInterface(InterfaceBasePtr pinterface) = 0;
 
     /// \brief Remove ownership of the interface.
@@ -255,24 +255,44 @@ public:
     /// \anchor env_objects
     //@{
     
-    /// \brief Add a body to the environment.
+    /// \brief Add a body to the environment
     ///
     /// \param[in] body the pointer to an initialized body
-    /// \param[in] bAnonymous if true and there exists a body with the same name, will make body's name unique
+    /// \param[in] bAnonymous if true and there exists a body/robot with the same name, will make body's name unique
     virtual bool AddKinBody(KinBodyPtr body, bool bAnonymous=false) = 0;
-    /// add a body to the environment
-    /// \param[in] robot the pointer to an initialized body
-    /// \param[in] bAnonymous if true and there exists a body with the same name, will make body's name unique
+
+    /// \brief add a robot to the environment
+    ///
+    /// \param[in] robot the pointer to an initialized robot
+    /// \param[in] bAnonymous if true and there exists a body/robot with the same name, will make robot's name unique
     virtual bool AddRobot(RobotBasePtr robot, bool bAnonymous=false) = 0;
 
-    /// \brief Removes a body from the environment <b>[multi-thread safe]</b>
+    /// \brief add a sensor to the environment
     ///
-    /// \param[in] body the body to remove
-    virtual bool RemoveKinBody(KinBodyPtr body) = 0;
+    /// \param[in] sensor the pointer to an initialized sensor
+    /// \param[in] bAnonymous if true and there exists a sensor with the same name, will make sensor's name unique
+    virtual bool AddSensor(SensorBasePtr sensor, bool bAnonymous=false) = 0;
+
+    /// \deprecated (10/09/15) see \ref EnvironmentBase::Remove
+    virtual bool RemoveKinBody(KinBodyPtr body) RAVE_DEPRECATED = 0;
+
+    /// \brief Removes a currently loaded interface from the environment <b>[multi-thread safe]</b>
+    ///
+    /// The function removes currently loaded bodies, robots, sensors, problems from the actively used
+    /// interfaces of the environment. This does not destroy the interface, but it does remove all 
+    /// references managed. Some interfaces like problems have destroy methods that are called to signal
+    /// unloading. Note that the active interfaces are different from the owned interfaces.
+    /// \param[in] interface interface to remove
+    /// \return true if the interface was successfully removed from the environment.
+    virtual bool Remove(InterfaceBasePtr interface) = 0;
 
     /// \brief Query a body from its name. <b>[multi-thread safe]</b>
     /// \return first KinBody (including robots) that matches with name
     virtual KinBodyPtr GetKinBody(const std::string& name)=0;
+
+    /// \brief Query a sensor from its name. <b>[multi-thread safe]</b>
+    /// \return first sensor that matches with name, note that sensors attached to robots have the robot name as a prefix.
+    virtual SensorBasePtr GetSensor(const std::string& name)=0;
 
     /// \brief Query a robot from its name. <b>[multi-thread safe]</b>
     /// \return first Robot that matches the name
@@ -286,7 +306,9 @@ public:
     virtual void GetRobots(std::vector<RobotBasePtr>& robots) const = 0;
 
     /// \brief Fill an array with all sensors loaded in the environment. <b>[multi-thread safe]</b>
-    //virtual void GetSensors(std::vector<SensorBasePtr>& sensors) const = 0;
+    ///
+    /// The sensors come from the currently loaded robots and the explicitly added sensors
+    virtual void GetSensors(std::vector<SensorBasePtr>& sensors) const = 0;
     
     /// \brief Retrieve published bodies, completes even if environment is locked. <b>[multi-thread safe]</b>
     ///
@@ -323,8 +345,8 @@ public:
 
     /// Load a new problem, need to Lock if calling outside simulation thread
     virtual int LoadProblem(ProblemInstancePtr prob, const std::string& cmdargs) = 0;
-    /// Load a new problem, need to Lock if calling outside simulation thread
-    virtual bool RemoveProblem(ProblemInstancePtr prob) = 0;
+    /// \deprecated (10/09/15) see \ref EnvironmentBase::Remove
+    virtual bool RemoveProblem(ProblemInstancePtr prob) RAVE_DEPRECATED = 0;
 
     /// Returns a list of loaded problems with a lock. As long as the lock is held, the problems
     /// are guaranteed to stay loaded in the environment.

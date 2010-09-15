@@ -31,7 +31,7 @@ class TaskManipulation:
         if env.LoadProblem(self.prob,self.args) != 0:
             raise ValueError('problem failed to initialize')
     def  __del__(self):
-        self.prob.GetEnv().RemoveProblem(self.prob)
+        self.prob.GetEnv().Remove(self.prob)
     def clone(self,envother):
         clone = shallowcopy(self)
         clone.prob = envother.CreateProblem('TaskManipulation')

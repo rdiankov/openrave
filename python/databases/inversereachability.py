@@ -611,7 +611,7 @@ class InverseReachabilityModel(OpenRAVEModel):
         try:
             print 'number of locations: ',len(robotlocs)
             with self.env:
-                self.env.RemoveKinBody(self.robot)
+                self.env.Remove(self.robot)
                 newrobots = []
                 for T,values in robotlocs:
                     newrobot = self.env.ReadRobotXMLFile('robots/hrp2jsk08.robot.xml')#self.robot.GetXMLFilename())
@@ -628,7 +628,7 @@ class InverseReachabilityModel(OpenRAVEModel):
             raw_input('press any key to continue')
         finally:
             for newrobot in newrobots:
-                self.env.RemoveKinBody(newrobot)
+                self.env.Remove(newrobot)
             self.env.AddRobot(self.robot)
 
     @staticmethod

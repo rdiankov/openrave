@@ -362,7 +362,7 @@ void MainOpenRAVEThread()
     if( !bThreadDestroyed ) {
         penv->AttachViewer(ViewerBasePtr());
         s_viewer.reset();
-        penv->RemoveProblem(s_server);
+        penv->Remove(s_server);
         s_server.reset();
         
 //        if( penv != NULL ) {        

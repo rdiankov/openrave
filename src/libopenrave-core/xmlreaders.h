@@ -270,9 +270,9 @@ namespace OpenRAVEXMLParser
 
     static boost::shared_ptr<pair<string,string> > RaveFindXMLFile(const string& filename)
     {
-        if( filename.size() == 0 )
+        if( filename.size() == 0 ) {
             return boost::shared_ptr<pair<string,string> >();
-
+        }
         boost::shared_ptr<EnvironmentMutex> m = GetXMLMutex();
         EnvironmentMutex::scoped_lock lock(*m);
 
@@ -355,9 +355,9 @@ namespace OpenRAVEXMLParser
     static bool RaveParseXMLFile(BaseXMLReaderPtr preader, const string& filename)
     {
         boost::shared_ptr<pair<string,string> > filedata = RaveFindXMLFile(filename);
-        if( !filedata )
+        if( !filedata ) {
             return false;
-
+        }
         boost::shared_ptr<EnvironmentMutex> m = GetXMLMutex();
         EnvironmentMutex::scoped_lock lock(*m);
 
@@ -1450,8 +1450,9 @@ namespace OpenRAVEXMLParser
                 else if( itatt->first == "file" ) {
                     std::list<std::pair<std::string,std::string> > listnewatts;
                     FOREACHC(itatt2,atts) {
-                        if( itatt2->first != "file" )
+                        if( itatt2->first != "file" ) {
                             listnewatts.push_back(*itatt2);
+                        }
                     }
 
                     //BaseXMLReaderPtr preader = CreateInterfaceReader(_penv,_type,_pinterface, xmltag, listnewatts);
@@ -1466,7 +1467,17 @@ namespace OpenRAVEXMLParser
                     try {
                         GetParseDirectory() = filedata->first;
                         GetFullFilename() = filedata->second;
-                        pinterface = _penv->ReadInterfaceXMLFile(pinterface,_type,filedata->second,listnewatts);
+                        if( !pinterface ) {
+                            // there is no reason to bring in the other attributes since interface is not created yet
+                            pinterface = _penv->ReadInterfaceXMLFile(filedata->second);
+                            if( !!pinterface && pinterface->GetInterfaceType() != _type ) {
+                                RAVELOG_ERROR(str(boost::format("unexpected interface created %s\n")%RaveGetInterfaceName(pinterface->GetInterfaceType())));
+                                pinterface.reset();
+                            }
+                        }
+                        else {
+                            pinterface = _penv->ReadInterfaceXMLFile(pinterface,_type,filedata->second,listnewatts);
+                        }
                     }
                     catch(...) {
                         RAVELOG_ERROR(str(boost::format("failed to process %s\n")%itatt->second));
@@ -1511,20 +1522,22 @@ namespace OpenRAVEXMLParser
                 }
             }
 
-            if( !_pinterface )
+            if( !_pinterface ) {
                 RAVELOG_ERRORA(str(boost::format("xml readers failed to create instance of type %s:%s\n")%RaveGetInterfaceName(type)%strtype));
+            }
             else {
                 _type = _pinterface->GetInterfaceType();
 
                 // check to see if a reader is registered for this type
                 READERSMAP::iterator it = GetRegisteredReaders()[_type].find(_pinterface->GetXMLId());
-                if( it != GetRegisteredReaders()[_type].end() )
+                if( it != GetRegisteredReaders()[_type].end() ) {
                     _pcustomreader = it->second(_pinterface, atts);
+                }
             }
 
-            if( _xmltag.size() == 0 )
+            if( _xmltag.size() == 0 ) {
                 _xmltag = RaveGetInterfaceName(_type);
-
+            }
             SetXMLFilename(_filename);
         }
 
@@ -2276,9 +2289,9 @@ namespace OpenRAVEXMLParser
                 case PE_Ignore: return PE_Ignore;
             }
 
-            if( _processingtag.size() > 0 )
+            if( _processingtag.size() > 0 ) {
                 return PE_Ignore;
-
+            }
             if( xmlname == "sensor" ) {
                 // create the sensor
                 _psensorinterface.reset();
@@ -2658,28 +2671,24 @@ namespace OpenRAVEXMLParser
                     if( !!boost::dynamic_pointer_cast<RobotXMLReader>(_pcurreader) ) {
                         BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_Robot);
                         _penv->AddRobot(RaveInterfaceCast<RobotBase>(_pinterface));
-                        _pinterface.reset();
                     }
                     else if( !!boost::dynamic_pointer_cast<KinBodyXMLReader>(_pcurreader) ) {
                         BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_KinBody);
                         _penv->AddKinBody(RaveInterfaceCast<KinBody>(_pinterface));
-                        _pinterface.reset();
                     }
                     else if( !!boost::dynamic_pointer_cast< DummyInterfaceXMLReader<PT_PhysicsEngine> >(_pcurreader) ) {
                         BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_PhysicsEngine);
                         _penv->SetPhysicsEngine(RaveInterfaceCast<PhysicsEngineBase>(_pinterface));
-                        _pinterface.reset();
                     }
                     else if( !!boost::dynamic_pointer_cast< DummyInterfaceXMLReader<PT_CollisionChecker> >(_pcurreader) ) {
                         BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_CollisionChecker);
                         _penv->SetCollisionChecker(RaveInterfaceCast<CollisionCheckerBase>(_pinterface));
-                        _pinterface.reset();
                     }
                     else if( !!_pinterface ) {
                         RAVELOG_DEBUGA("owning interface %s, type: %s\n",_pinterface->GetXMLId().c_str(),RaveGetInterfaceName(_pinterface->GetInterfaceType()).c_str());
                         _penv->OwnInterface(_pinterface);
-                        _pinterface.reset();
                     }
+                    _pinterface.reset();
                     _pcurreader.reset();
                 }
                 return false;
@@ -2791,11 +2800,13 @@ namespace OpenRAVEXMLParser
             // check for any plugins
             FOREACHC(itname,RaveGetInterfaceNamesMap()) {
                 if( xmlname == itname->second ) {
-                    if( !!_pinterface )
+                    if( !!_pinterface ) {
                         throw openrave_exception("interface should not be initialized");
+                    }
                     _pcurreader = CreateInterfaceReader(_penv,itname->first,_pinterface,"",atts);
-                    if( !_pinterface )
+                    if( !_pinterface ) {
                         throw openrave_exception(str(boost::format("failed to create interface %s")%itname->second));
+                    }
                     return PE_Support;
                 }
             }

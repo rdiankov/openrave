@@ -131,9 +131,9 @@ public:
     public:
     LaserGeomData() : min_range(0), max_range(0), time_increment(0), time_scan(0) { min_angle[0] = min_angle[1] = max_angle[0] = max_angle[1] = resolution[0] = resolution[1] = 0; }
         virtual SensorType GetType() { return ST_Laser; }
-        dReal min_angle[2]; ///< Start for the laser scan [rad].
-        dReal max_angle[2]; ///< End angles for the laser scan [rad].
-        dReal resolution[2]; ///< Angular resolutions for each axis of rotation [rad].
+        boost::array<dReal,2> min_angle; ///< Start for the laser scan [rad].
+        boost::array<dReal,2> max_angle; ///< End angles for the laser scan [rad].
+        boost::array<dReal,2> resolution; ///< Angular resolutions for each axis of rotation [rad].
         dReal min_range, max_range; ///< Maximum range [m].
         dReal time_increment; ///< time between individual measurements [seconds]
         dReal time_scan; ///< time between scans [seconds]
@@ -160,9 +160,9 @@ public:
     public:
         virtual SensorType GetType() { return ST_IMU; }
         dReal time_measurement; ///< time between measurements
-        dReal orientation_covariance[9]; ///< Row major about x, y, z axes
-        dReal angular_velocity_covariance[9]; ///< Row major about x, y, z axes
-        dReal linear_acceleration_covariance[9]; ///< Row major x, y z axes
+        boost::array<dReal,9> rotation_covariance; ///< Row major about x, y, z axes
+        boost::array<dReal,9> angular_velocity_covariance; ///< Row major about x, y, z axes
+        boost::array<dReal,9> linear_acceleration_covariance; ///< Row major x, y z axes
     };
 
     SensorBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Sensor, penv) {}

@@ -566,10 +566,11 @@ typedef boost::weak_ptr<EnvironmentBase> EnvironmentBaseWeakPtr;
 
 ///< Cloning Options for interfaces and environments
 enum CloningOptions {
-    Clone_Bodies = 1, ///< clone all the bodies/robots of the environment
+    Clone_Bodies = 1, ///< clone all the bodies/robots of the environment, exclude attached interfaces like sensors/controllers
     Clone_Viewer = 2, ///< clone the viewer type, although figures won't be copied, new viewer does try to match views
     Clone_Simulation = 4, ///< clone the physics engine and simulation state (ie, timesteps, gravity)
     Clone_RealControllers = 8, ///< if specified, will clone the real controllers of all the robots, otherwise each robot gets ideal controller
+    Clone_Sensors = 16, ///< if specified, will clone the sensors attached to the robot and added to the environment
 };
 
 /// base class for readable interfaces

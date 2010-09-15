@@ -507,18 +507,19 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const AttachedSen
     psensor.reset();
     pdata.reset();
     pattachedlink.reset();
-    if( !!sensor.psensor ) {
+    if( (cloningoptions&Clone_Sensors) && !!sensor.psensor ) {
         psensor = probot->GetEnv()->CreateSensor(sensor.psensor->GetXMLId());
         if( !!psensor ) {
             psensor->Clone(sensor.psensor,cloningoptions);
-            if( !!psensor )
+            if( !!psensor ) {
                 pdata = psensor->CreateSensorData();
+            }
         }
     }
-    
     int index = LinkPtr(sensor.pattachedlink)->GetIndex();
-    if( index >= 0 && index < (int)probot->GetLinks().size())
+    if( index >= 0 && index < (int)probot->GetLinks().size()) {
         pattachedlink = probot->GetLinks().at(index);
+    }
 }
 
 RobotBase::AttachedSensor::~AttachedSensor()
@@ -2033,12 +2034,6 @@ bool RobotBase::CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, 
 void RobotBase::SimulationStep(dReal fElapsedTime)
 {
     KinBody::SimulationStep(fElapsedTime);
-
-    FOREACH(itsensor, _vecSensors) {
-        if( !!(*itsensor)->psensor )
-            (*itsensor)->psensor->SimulationStep(fElapsedTime);
-    }
-
     _UpdateGrabbedBodies();
     _UpdateAttachedSensors();
 }
@@ -2097,8 +2092,9 @@ void RobotBase::_ComputeInternalInformation()
         else if( !IsValidName((*itsensor)->GetName()) ) {
             throw openrave_exception(str(boost::format("sensor name \"%s\" is not valid")%(*itsensor)->GetName()));
         }
-        if( !!(*itsensor)->psensor ) {
-            (*itsensor)->psensor->SetName((*itsensor)->_name);
+        if( !!(*itsensor)->GetSensor() ) {
+            stringstream ss; ss << GetName() << "_" << (*itsensor)->GetName(); // global unique name?
+            (*itsensor)->GetSensor()->SetName(ss.str());
         }
         sensorindex++;
     }
@@ -2147,12 +2143,14 @@ bool RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     __hashrobotstructure = r->__hashrobotstructure;
     
     _vecManipulators.clear();
-    FOREACHC(itmanip, r->_vecManipulators)
+    FOREACHC(itmanip, r->_vecManipulators) {
         _vecManipulators.push_back(ManipulatorPtr(new Manipulator(shared_robot(),**itmanip)));
+    }
 
     _vecSensors.clear();
-    FOREACHC(itsensor, r->_vecSensors)
+    FOREACHC(itsensor, r->_vecSensors) {
         _vecSensors.push_back(AttachedSensorPtr(new AttachedSensor(shared_robot(),**itsensor,cloningoptions)));
+    }
     _UpdateAttachedSensors();
 
     _vActiveJointIndices = r->_vActiveJointIndices;

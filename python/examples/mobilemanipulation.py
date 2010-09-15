@@ -694,7 +694,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
                         targets = robotreal.GetGrabbed()
                         robotreal.ReleaseAllGrabbed()
 #                         for target in targets:
-#                             self.envreal.RemoveKinBody(target)
+#                             self.envreal.Remove(target)
             except openrave_exception,e:
                 print 'releasefingers:',e
 

@@ -1302,6 +1302,9 @@ public:
     object GetTransform() { return ReturnTransform(_psensor->GetTransform()); }
 
     string GetName() { return _psensor->GetName(); }
+    
+    virtual string __repr__() { return boost::str(boost::format("<env.GetSensor('%s')>")%_psensor->GetName()); }
+    virtual string __str__() { return boost::str(boost::format("<%s:%s - %s>")%RaveGetInterfaceName(_psensor->GetInterfaceType())%_psensor->GetXMLId()%_psensor->GetName()); }
 };
 
 class PyIkParameterization
@@ -2734,7 +2737,7 @@ public:
     bool AddKinBody(PyKinBodyPtr pbody, bool bAnonymous) { CHECK_POINTER(pbody); return _penv->AddKinBody(pbody->GetBody(),bAnonymous); }
     bool AddRobot(PyRobotBasePtr robot) { CHECK_POINTER(robot); return _penv->AddRobot(robot->GetRobot()); }
     bool AddRobot(PyRobotBasePtr robot, bool bAnonymous) { CHECK_POINTER(robot); return _penv->AddRobot(robot->GetRobot(),bAnonymous); }
-    bool RemoveKinBody(PyKinBodyPtr pbody) { CHECK_POINTER(pbody); return _penv->RemoveKinBody(pbody->GetBody()); }
+    bool RemoveKinBody(PyKinBodyPtr pbody) { CHECK_POINTER(pbody); RAVELOG_WARN("openravepy RemoveKinBody deprecated, use Remove\n"); return _penv->Remove(pbody->GetBody()); }
     
     PyKinBodyPtr GetKinBody(const string& name)
     {
@@ -2754,6 +2757,15 @@ public:
         }
         return PyRobotBasePtr(new PyRobotBase(probot,shared_from_this()));
     }
+    PySensorBasePtr GetSensor(const string& name)
+    {
+        SensorBasePtr psensor = _penv->GetSensor(name);
+        if( !psensor ) {
+            return PySensorBasePtr();
+            //throw openrave_exception(boost::str(boost::format("failed to get sensor %s")%name));
+        }
+        return PySensorBasePtr(new PySensorBase(psensor,shared_from_this()));
+    }
 
     PyKinBodyPtr GetBodyFromEnvironmentId(int id)
     {
@@ -2771,7 +2783,8 @@ public:
     PyTrajectoryBasePtr CreateTrajectory(int nDOF) { return PyTrajectoryBasePtr(new PyTrajectoryBase(_penv->CreateTrajectory(nDOF),shared_from_this())); }
 
     int LoadProblem(PyProblemInstancePtr prob, const string& args) { CHECK_POINTER(prob); return _penv->LoadProblem(prob->GetProblem(),args); }
-    bool RemoveProblem(PyProblemInstancePtr prob) { CHECK_POINTER(prob); return _penv->RemoveProblem(prob->GetProblem()); }
+    bool RemoveProblem(PyProblemInstancePtr prob) { CHECK_POINTER(prob); RAVELOG_WARN("openravepy RemoveProblem deprecated, use Remove\n");return _penv->Remove(prob->GetProblem()); }
+    bool Remove(PyInterfaceBasePtr interface) { CHECK_POINTER(interface); return _penv->Remove(interface->GetInterfaceBase()); }
     
     object GetLoadedProblems()
     {
@@ -3081,6 +3094,16 @@ public:
         FOREACHC(itrobot, vrobots)
             robots.append(PyRobotBasePtr(new PyRobotBase(*itrobot,shared_from_this())));
         return robots;
+    }
+
+    object GetSensors()
+    {
+        std::vector<SensorBasePtr> vsensors;
+        _penv->GetSensors(vsensors);
+        boost::python::list sensors;
+        FOREACHC(itsensor, vsensors)
+            sensors.append(PySensorBasePtr(new PySensorBase(*itsensor,shared_from_this())));
+        return sensors;
     }
 
     void UpdatePublishedBodies()
@@ -3450,6 +3473,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
         .value("Viewer",Clone_Viewer)
         .value("Simulation",Clone_Simulation)
         .value("RealControllers",Clone_RealControllers)
+        .value("Sensors",Clone_Sensors)
         ;
     enum_<PhysicsEngineOptions>("PhysicsEngineOptions" DOXY_ENUM(PhysicsEngineOptions))
         .value("SelfCollisions",PEO_SelfCollisions)
@@ -4022,6 +4046,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("SetTransform",&PySensorBase::SetTransform, DOXY_FN(SensorBase,SetTransform))
             .def("GetTransform",&PySensorBase::GetTransform, DOXY_FN(SensorBase,GetTransform))
             .def("GetName",&PySensorBase::GetName, DOXY_FN(SensorBase,GetName))
+            .def("__str__",&PySensorBase::__str__)
+            .def("__repr__",&PySensorBase::__repr__)
             ;
 
         class_<PySensorBase::PySensorData, boost::shared_ptr<PySensorBase::PySensorData> >("SensorData", DOXY_CLASS(SensorBase::SensorData),no_init)
@@ -4166,8 +4192,10 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("AddRobot",addrobot1,args("robot"), DOXY_FN(EnvironmentBase,AddRobot))
             .def("AddRobot",addrobot2,args("robot","anonymous"), DOXY_FN(EnvironmentBase,AddRobot))
             .def("RemoveKinBody",&PyEnvironmentBase::RemoveKinBody,args("body"), DOXY_FN(EnvironmentBase,RemoveKinBody))
+            .def("Remove",&PyEnvironmentBase::Remove,args("interface"), DOXY_FN(EnvironmentBase,Remove))
             .def("GetKinBody",&PyEnvironmentBase::GetKinBody,args("name"), DOXY_FN(EnvironmentBase,GetKinBody))
             .def("GetRobot",&PyEnvironmentBase::GetRobot,args("name"), DOXY_FN(EnvironmentBase,GetRobot))
+            .def("GetSensor",&PyEnvironmentBase::GetSensor,args("name"), DOXY_FN(EnvironmentBase,GetSensor))
             .def("GetBodyFromEnvironmentId",&PyEnvironmentBase::GetBodyFromEnvironmentId , DOXY_FN(EnvironmentBase,GetBodyFromEnvironmentId))
             .def("CreateKinBody",&PyEnvironmentBase::CreateKinBody, DOXY_FN(EnvironmentBase,CreateKinBody))
             .def("CreateTrajectory",&PyEnvironmentBase::CreateTrajectory,args("dof"), DOXY_FN(EnvironmentBase,CreateTrajectory))
@@ -4195,6 +4223,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("drawtrimesh",&PyEnvironmentBase::drawtrimesh,drawtrimesh_overloads(args("points","indices","colors"), DOXY_FN(EnvironmentBase,drawtrimesh "const float; int; const int; int; const boost::multi_array")))
             .def("GetRobots",&PyEnvironmentBase::GetRobots, DOXY_FN(EnvironmentBase,GetRobots))
             .def("GetBodies",&PyEnvironmentBase::GetBodies, DOXY_FN(EnvironmentBase,GetBodies))
+            .def("GetSensors",&PyEnvironmentBase::GetSensors, DOXY_FN(EnvironmentBase,GetSensors))
             .def("UpdatePublishedBodies",&PyEnvironmentBase::UpdatePublishedBodies, DOXY_FN(EnvironmentBase,UpdatePublishedBodies))
             .def("Triangulate",&PyEnvironmentBase::Triangulate,args("body"), DOXY_FN(EnvironmentBase,Triangulate))
             .def("TriangulateScene",&PyEnvironmentBase::TriangulateScene,args("options","name"), DOXY_FN(EnvironmentBase,TriangulateScene))

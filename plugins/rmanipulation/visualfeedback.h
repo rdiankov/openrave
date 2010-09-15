@@ -176,7 +176,7 @@ public:
             }
         }
         virtual ~VisibilityConstraintFunction() {
-            _ptargetbox->GetEnv()->RemoveKinBody(_ptargetbox);
+            _ptargetbox->GetEnv()->Remove(_ptargetbox);
         }
 
         virtual bool IsVisible()

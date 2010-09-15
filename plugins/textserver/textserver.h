@@ -878,7 +878,7 @@ protected:
             while(itprob != _mapProblems.end()) {
                 if( itprob->second->GetXMLId() == problemname ) {
                     RAVELOG_DEBUGA("deleting duplicate problem %s\n", problemname.c_str());
-                    if( !GetEnv()->RemoveProblem(itprob->second) )
+                    if( !GetEnv()->Remove(itprob->second) )
                         RAVELOG_WARNA("environment failed to remove duplicate problem %s\n", problemname.c_str());
                     _mapProblems.erase(itprob++);
                 }
@@ -915,7 +915,7 @@ protected:
             return false;
         map<int, ProblemInstancePtr >::iterator it = _mapProblems.find(index);
         if( it != _mapProblems.end() ) {
-            if( !GetEnv()->RemoveProblem(it->second) )
+            if( !GetEnv()->Remove(it->second) )
                 RAVELOG_WARNA("orEnvDestroyProblem: failed to remove problem from environment\n");
             _mapProblems.erase(it);
         }
@@ -1062,7 +1062,7 @@ protected:
         KinBodyPtr pbody = orMacroGetBody(is);
         if( !pbody )
             return false;
-        return GetEnv()->RemoveKinBody(pbody);
+        return GetEnv()->Remove(pbody);
     }
 
     bool orBodyEnable(istream& is, ostream& os, boost::shared_ptr<void>& pdata)

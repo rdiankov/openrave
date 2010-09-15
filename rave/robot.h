@@ -478,7 +478,9 @@ public:
     virtual void GetGrabbed(std::vector<KinBodyPtr>& vbodies) const;
     //@}
 
-    /// Add simulating attached sensors
+    /// \brief Simulate the robot and update the grabbed bodies and attached sensors
+    ///
+    /// Do not call SimulationStep for the attached sensors in this function.
     virtual void SimulationStep(dReal fElapsedTime);
 
     /// Check if body is self colliding. Links that are joined together are ignored.

@@ -253,6 +253,6 @@ bool RaveWriteColladaFile(RobotBasePtr probot, const std::string& filename);
 #include "ivcon.h"
 #include "xmlreaders.h"
 #include "plugindatabase.h"
-#include "environment.h"
+#include "environment-core.h"
 
 #endif

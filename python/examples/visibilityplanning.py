@@ -215,7 +215,7 @@ class VisibilityGrasping(metaclass.AutoReloader):
         
         while True:
             self.robotreal.ReleaseAllGrabbed()
-            self.orenv = self.orenvreal.CloneSelf(CloningOptions.Bodies)
+            self.orenv = self.orenvreal.CloneSelf(CloningOptions.Bodies+CloningOptions.Sensors)
             self.robot = self.orenv.GetRobot(self.robotreal.GetName())
             for sensor in self.robot.GetAttachedSensors():
                 if sensor.GetSensor() is not None:
@@ -247,9 +247,9 @@ class VisibilityGrasping(metaclass.AutoReloader):
             T = self.target.GetTransform()
             targetfilename = self.target.GetXMLFilename()
             if usevision:
-                self.orenvreal.RemoveKinBody(self.orenvreal.GetKinBody(self.target.GetName()))
+                self.orenvreal.Remove(self.orenvreal.GetKinBody(self.target.GetName()))
                 print 'waiting for object to be detected'
-            self.orenv.RemoveKinBody(self.target)
+            self.orenv.Remove(self.target)
             self.target = None
             while True:
                 target = self.gettarget(self.orenvreal)
@@ -402,7 +402,7 @@ class PA10GraspExample(VisibilityGrasping):
                                 body = None
                                 break
                         if body is not None:
-                            self.orenvreal.RemoveKinBody(body)
+                            self.orenvreal.Remove(body)
                         if numcreated >= maxcreate:
                             break
 

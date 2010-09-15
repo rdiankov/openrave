@@ -118,7 +118,7 @@ def run(args=None):
         raw_input('press any key for another configuration')
         # remove the robots
         for newrobot in newrobots:
-            env.RemoveKinBody(newrobot)
+            env.Remove(newrobot)
         del newrobots
 
 if __name__ == "__main__":

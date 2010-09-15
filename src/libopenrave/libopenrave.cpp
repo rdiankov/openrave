@@ -1063,7 +1063,7 @@ void SimpleSensorSystem::_UpdateBodies(list<SimpleSensorSystem::SNAPSHOT>& listb
             if( !itbody->second->IsLocked() ) {
                 if( !!plink ) {
                     //RAVELOG_VERBOSEA(str(boost::format("object %s expired %fs\n")%plink->GetParent()->GetName()*((curtime-itbody->second->lastupdated)*1e-6f)));
-                    GetEnv()->RemoveKinBody(plink->GetParent());
+                    GetEnv()->Remove(plink->GetParent());
                 }
                 _mapbodies.erase(itbody++);
                 continue;
