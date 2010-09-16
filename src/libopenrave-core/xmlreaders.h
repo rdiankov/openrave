@@ -2602,10 +2602,13 @@ namespace OpenRAVEXMLParser
     {
     public:
         SensorXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pinterface, const std::list<std::pair<std::string,std::string> >& atts) : InterfaceXMLReader(penv,pinterface,PT_Sensor,RaveGetInterfaceName(PT_Sensor),atts) {
-            string strname;
+            string strname, args;
             FOREACHC(itatt,atts) {
                 if( itatt->first == "name" ) {
                     strname = itatt->second;
+                }
+                else if( itatt->first == "args" ) {
+                    _args = itatt->second;
                 }
             }
 
@@ -2616,6 +2619,8 @@ namespace OpenRAVEXMLParser
                 }
             }
         }
+
+        string _args;
     };
 
     class EnvironmentXMLReader : public StreamXMLReader
@@ -2703,7 +2708,7 @@ namespace OpenRAVEXMLParser
                     }
                     else if( !!boost::dynamic_pointer_cast<SensorXMLReader>(_pcurreader) ) {
                         BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_Sensor);
-                        _penv->AddSensor(RaveInterfaceCast<SensorBase>(_pinterface));
+                        _penv->AddSensor(RaveInterfaceCast<SensorBase>(_pinterface),boost::dynamic_pointer_cast<SensorXMLReader>(_pcurreader)->_args);
                     }
                     else if( !!boost::dynamic_pointer_cast< DummyInterfaceXMLReader<PT_PhysicsEngine> >(_pcurreader) ) {
                         BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_PhysicsEngine);

@@ -550,7 +550,7 @@ class Environment : public EnvironmentBase
         return true;
     }
 
-    virtual bool AddSensor(SensorBasePtr psensor, bool bAnonymous)
+    virtual bool AddSensor(SensorBasePtr psensor, const std::string& args, bool bAnonymous)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_INTERFACE(psensor);
@@ -571,6 +571,7 @@ class Environment : public EnvironmentBase
             boost::mutex::scoped_lock lock(_mutexInterfaces);
             _listSensors.push_back(psensor);
         }
+        psensor->Init(args);
         return true;
     }
 

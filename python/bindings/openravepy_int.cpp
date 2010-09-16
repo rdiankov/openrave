@@ -2737,6 +2737,8 @@ public:
     bool AddKinBody(PyKinBodyPtr pbody, bool bAnonymous) { CHECK_POINTER(pbody); return _penv->AddKinBody(pbody->GetBody(),bAnonymous); }
     bool AddRobot(PyRobotBasePtr robot) { CHECK_POINTER(robot); return _penv->AddRobot(robot->GetRobot()); }
     bool AddRobot(PyRobotBasePtr robot, bool bAnonymous) { CHECK_POINTER(robot); return _penv->AddRobot(robot->GetRobot(),bAnonymous); }
+    bool AddSensor(PySensorBasePtr sensor, const std::string& args) { CHECK_POINTER(sensor); return _penv->AddSensor(sensor->GetSensor(),args); }
+    bool AddSensor(PySensorBasePtr sensor, const std::string& args, bool bAnonymous) { CHECK_POINTER(sensor); return _penv->AddSensor(sensor->GetSensor(),args, bAnonymous); }
     bool RemoveKinBody(PyKinBodyPtr pbody) { CHECK_POINTER(pbody); RAVELOG_WARN("openravepy RemoveKinBody deprecated, use Remove\n"); return _penv->Remove(pbody->GetBody()); }
     
     PyKinBodyPtr GetKinBody(const string& name)
@@ -4133,6 +4135,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
     bool (PyEnvironmentBase::*addkinbody2)(PyKinBodyPtr,bool) = &PyEnvironmentBase::AddKinBody;
     bool (PyEnvironmentBase::*addrobot1)(PyRobotBasePtr) = &PyEnvironmentBase::AddRobot;
     bool (PyEnvironmentBase::*addrobot2)(PyRobotBasePtr,bool) = &PyEnvironmentBase::AddRobot;
+    bool (PyEnvironmentBase::*addsensor1)(PySensorBasePtr, const std::string&) = &PyEnvironmentBase::AddSensor;
+    bool (PyEnvironmentBase::*addsensor2)(PySensorBasePtr,const std::string&,bool) = &PyEnvironmentBase::AddSensor;
     {
         scope env = classenv
             .def(init<>())
@@ -4191,6 +4195,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("AddKinBody",addkinbody2,args("body","anonymous"), DOXY_FN(EnvironmentBase,AddKinBody))
             .def("AddRobot",addrobot1,args("robot"), DOXY_FN(EnvironmentBase,AddRobot))
             .def("AddRobot",addrobot2,args("robot","anonymous"), DOXY_FN(EnvironmentBase,AddRobot))
+            .def("AddSensor",addsensor1,args("sensor","args"), DOXY_FN(EnvironmentBase,AddSensor))
+            .def("AddSensor",addsensor2,args("sensor","args","anonymous"), DOXY_FN(EnvironmentBase,AddSensor))
             .def("RemoveKinBody",&PyEnvironmentBase::RemoveKinBody,args("body"), DOXY_FN(EnvironmentBase,RemoveKinBody))
             .def("Remove",&PyEnvironmentBase::Remove,args("interface"), DOXY_FN(EnvironmentBase,Remove))
             .def("GetKinBody",&PyEnvironmentBase::GetKinBody,args("name"), DOXY_FN(EnvironmentBase,GetKinBody))
