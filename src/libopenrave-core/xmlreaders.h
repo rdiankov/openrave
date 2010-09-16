@@ -374,6 +374,10 @@ namespace OpenRAVEXMLParser
                 RAVELOG_WARN(str(boost::format("xmlSAXUserParseFile: error parsing %s (error %d)\n")%GetFullFilename()%ret));
             }
         }
+        catch(const openrave_exception& ex) {
+            RAVELOG_ERROR(str(boost::format("xmlSAXUserParseFile: error parsing %s: %s\n")%GetFullFilename()%ex.what()));
+            ret = -1;
+        }
         catch (...) {
             RAVELOG_ERROR(str(boost::format("xmlSAXUserParseFile: error parsing %s\n")%GetFullFilename()));
             ret = -1;
@@ -2573,8 +2577,9 @@ namespace OpenRAVEXMLParser
     public:
         ProblemXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pinterface, const std::list<std::pair<std::string,std::string> >& atts) : InterfaceXMLReader(penv,pinterface,PT_ProblemInstance,RaveGetInterfaceName(PT_ProblemInstance),atts) {
             FOREACHC(itatt,atts) {
-                if( itatt->first == "args" )
+                if( itatt->first == "args" ) {
                     _args = itatt->second;
+                }
             }
 
             if( !!_pinterface ) {
@@ -2591,6 +2596,26 @@ namespace OpenRAVEXMLParser
         }
 
         string _args;
+    };
+
+    class SensorXMLReader : public InterfaceXMLReader
+    {
+    public:
+        SensorXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pinterface, const std::list<std::pair<std::string,std::string> >& atts) : InterfaceXMLReader(penv,pinterface,PT_Sensor,RaveGetInterfaceName(PT_Sensor),atts) {
+            string strname;
+            FOREACHC(itatt,atts) {
+                if( itatt->first == "name" ) {
+                    strname = itatt->second;
+                }
+            }
+
+            if( !!_pinterface ) {
+                SensorBasePtr sensor = RaveInterfaceCast<SensorBase>(_pinterface);
+                if( !!sensor ) {
+                    sensor->SetName(strname);
+                }
+            }
+        }
     };
 
     class EnvironmentXMLReader : public StreamXMLReader
@@ -2675,6 +2700,10 @@ namespace OpenRAVEXMLParser
                     else if( !!boost::dynamic_pointer_cast<KinBodyXMLReader>(_pcurreader) ) {
                         BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_KinBody);
                         _penv->AddKinBody(RaveInterfaceCast<KinBody>(_pinterface));
+                    }
+                    else if( !!boost::dynamic_pointer_cast<SensorXMLReader>(_pcurreader) ) {
+                        BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_Sensor);
+                        _penv->AddSensor(RaveInterfaceCast<SensorBase>(_pinterface));
                     }
                     else if( !!boost::dynamic_pointer_cast< DummyInterfaceXMLReader<PT_PhysicsEngine> >(_pcurreader) ) {
                         BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_PhysicsEngine);
@@ -2776,7 +2805,7 @@ namespace OpenRAVEXMLParser
             return InterfaceXMLReaderPtr(new KinBodyXMLReader(penv,pinterface,type,atts,rootoffset,rootjoffset));
         }
         case PT_PhysicsEngine: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_PhysicsEngine>(penv,pinterface,xmltag,atts));
-        case PT_Sensor: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Sensor>(penv,pinterface,xmltag,atts));
+        case PT_Sensor: return InterfaceXMLReaderPtr(new SensorXMLReader(penv,pinterface,atts));
         case PT_CollisionChecker: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_CollisionChecker>(penv,pinterface,xmltag,atts));
         case PT_Trajectory: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Trajectory>(penv,pinterface,xmltag,atts));
         case PT_Viewer: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Viewer>(penv,pinterface,xmltag,atts));

@@ -160,8 +160,8 @@ public:
     /// \name Physics and Simulation
     //@{
     /// set the physics engine, disabled by default
-    /// \param the engine to set, if NULL, environment sets an dummy physics engine
-    virtual bool SetPhysicsEngine(PhysicsEngineBasePtr pengine) = 0;
+    /// \param physics the engine to set, if NULL, environment sets an dummy physics engine
+    virtual bool SetPhysicsEngine(PhysicsEngineBasePtr physics) = 0;
     virtual PhysicsEngineBasePtr GetPhysicsEngine() const = 0;
 
     /// Makes one simulation step
@@ -336,11 +336,13 @@ public:
     };
     
     /// triangulation of the body including its current transformation. trimesh will be appended the new data.
+    /// \param body body the triangulate
     virtual bool Triangulate(KinBody::Link::TRIMESH& trimesh, KinBodyConstPtr pbody) = 0;
 
     /// general triangulation of the whole scene. trimesh will be appended the new data.
-    /// \param opts - Controlls what to triangulate
-    virtual bool TriangulateScene(KinBody::Link::TRIMESH& trimesh, TriangulateOptions opts, const std::string& name) = 0;
+    /// \param options - Controlls what to triangulate
+    /// \param name - name of the body used in options
+    virtual bool TriangulateScene(KinBody::Link::TRIMESH& trimesh, TriangulateOptions options, const std::string& name) = 0;
     //@}
 
     /// Load a new problem, need to Lock if calling outside simulation thread
