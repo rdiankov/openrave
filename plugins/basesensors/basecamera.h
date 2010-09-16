@@ -60,15 +60,16 @@ class BaseCameraSensor : public SensorBase
             else if( name == "color" ) {
                 ss >> _psensor->_vColor.x >> _psensor->_vColor.y >> _psensor->_vColor.z;
                 // ok if not everything specified
-                if( !ss )
+                if( !ss ) {
                     ss.clear();
+                }
             }
-            else
+            else {
                 RAVELOG_WARNA(str(boost::format("bad tag: %s")%name));
-
-            if( !ss )
+            }
+            if( !ss ) {
                 RAVELOG_WARNA(str(boost::format("BaseCameraSensor error parsing %s\n")%name));
-
+            }
             return false;
         }
         
