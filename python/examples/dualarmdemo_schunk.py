@@ -132,14 +132,12 @@ def run(args=None):
     :type args: arguments for script to parse, if not specified will use sys.argv
     """
     parser = OptionParser(description="Schunk Manipulation planning example\nFor a dual arm robot with Schunk LWA3 arms, plan trajectories for grasping an object and manipulating it on a shelf.")
+    OpenRAVEGlobalArguments.addOptions(parser)
     parser.add_option('--scene',
                       action="store",type='string',dest='scene',default='data/dualarmmanipulation.env.xml',
                       help='Scene file to load')   
     (options, leftargs) = parser.parse_args(args=args)
-
-    env = Environment()
-    env.SetCollisionChecker(env.CreateCollisionChecker('ode'))
-    env.SetViewer('qtcoin')
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)    
     env.Load(options.scene)
     schunk = Schunkplanner(env)
     time.sleep(1)

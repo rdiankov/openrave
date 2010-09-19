@@ -19,17 +19,22 @@ __license__ = 'Apache License, Version 2.0'
 from openravepy import *
 from numpy import *
 import time
+from optparse import OptionParser
 
 def run(args=None):
     """Executes the testphysics example
 
     :type args: arguments for script to parse, if not specified will use sys.argv
     """
-    env = Environment()
-    env.SetViewer('qtcoin')
+    parser = OptionParser(description="test physics")
+    OpenRAVEGlobalArguments.addOptions(parser)
+    (options, leftargs) = parser.parse_args(args=args)
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
     env.Load('data/hanoi.env.xml')
-    physics = env.CreatePhysicsEngine('ode')
-    env.SetPhysicsEngine(physics)
+    if options._physics is None:
+        # no physics engine set, so set one
+        physics = env.CreatePhysicsEngine('ode')
+        env.SetPhysicsEngine(physics)
     physics.SetGravity(array((0,0,-9.8)))
     bodynames = ['data/lego2.kinbody.xml', 'data/lego4.kinbody.xml', 'data/mug1.kinbody.xml']
     numbodies = 0

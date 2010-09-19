@@ -98,10 +98,10 @@ int main(int argc, char ** argv)
                          "--listplugins       List all plugins and the interfaces they provide\n"
                          "--loadplugin [path] load a plugin at the following path\n"
                          "-serverport [port] start up the server on a specific port (default is 4765)\n"
-                         "-collision [name]  Default collision checker to use\n"
-                         "-viewer [name]     Default viewer to use\n"
+                         "--collision [name]  Default collision checker to use\n"
+                         "--viewer [name]     Default viewer to use\n"
                          "-server [name]     Default server to use\n"
-                         "-physics [name]    Default physics engine to use\n"
+                         "--physics [name]    Default physics engine to use\n"
                          "-d [debug-level]   start up OpenRAVE with the specified debug level (higher numbers print more).\n"
                          "                   Default level is 2 for release builds, and 4 for debug builds.\n"
                          "-wdims [width] [height] start up the GUI window with these dimensions\n"
@@ -126,15 +126,15 @@ int main(int argc, char ** argv)
             s_saveScene = argv[i+1];
             i += 2;
         }
-        else if( stricmp(argv[i], "-collision") == 0 ) {
+        else if( stricmp(argv[i], "--collision") == 0 || stricmp(argv[i], "-collision") == 0 ) {
             collisionchecker = argv[i+1];
             i += 2;
         }
-        else if( stricmp(argv[i], "-viewer") == 0 ) {
+        else if( stricmp(argv[i], "--viewer") == 0 || stricmp(argv[i], "-viewer") == 0 ) {
             s_viewerName = argv[i+1];
             i += 2;
         }
-        else if( stricmp(argv[i], "-physics") == 0 ) {
+        else if( stricmp(argv[i], "--physics") == 0 || stricmp(argv[i], "-physics") == 0 ) {
             physicsengine = argv[i+1];
             i += 2;
         }

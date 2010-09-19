@@ -35,7 +35,7 @@ __copyright__ = '2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
 import time
-from openravepy import Environment, IkParameterization, planning_error, raveLogInfo, raveLogWarn
+from openravepy import Environment, IkParameterization, planning_error, raveLogInfo, raveLogWarn, OpenRAVEGlobalArguments
 from openravepy.interfaces import BaseManipulation, TaskManipulation
 from openravepy.databases import inversekinematics
 from numpy import array, arange, linalg, pi, dot, vstack, cos, sin, cross, r_, c_
@@ -205,14 +205,13 @@ def run(args=None):
     .. shell-block:: openrave.py --example hanoi --help
     """
     parser = OptionParser(description='Manipulation planning example solving the hanoi problem.', usage='openrave.py --example hanoi [options]')
+    OpenRAVEGlobalArguments.addOptions(parser)
     parser.add_option('--scene',
                       action="store",type='string',dest='scene',default='data/hanoi_complex.env.xml',
                       help='Scene file to load (default=%default)')
     (options, leftargs) = parser.parse_args(args=args)
-    
-    env = Environment()
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
     try:
-        env.SetViewer('qtcoin')
         env.Load(options.scene)
         hanoi = HanoiPuzzle(env,env.GetRobots()[0])
         hanoi.hanoisolve(3,hanoi.srcpeg,hanoi.destpeg,hanoi.peg)

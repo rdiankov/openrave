@@ -329,7 +329,7 @@ public:
     {
         EnvironmentMutex::scoped_lock envlock(GetEnv()->GetMutex());
         string robotname, striktype;
-        int niktype;
+        int niktype=-1;
         sinput >> robotname;
         sinput >> niktype;
         if( !sinput ) {

@@ -80,9 +80,8 @@ class CameraViewerGUI(threading.Thread):
 
 class VisibilityGrasping(metaclass.AutoReloader):
     """Calls on the openrave grasp planners to get a robot to pick up objects while guaranteeing visibility with its cameras"""
-    def __init__(self):
-        self.orenvreal = Environment()
-        self.orenvreal.SetViewer('qtcoin')
+    def __init__(self,env):
+        self.orenvreal = env
         self.trajectorylog = []
         self.graspoffset = 0
 
@@ -426,12 +425,14 @@ def run(args=None):
     :type args: arguments for script to parse, if not specified will use sys.argv
     """
     parser = OptionParser(description='Visibility Planning Module.')
+    OpenRAVEGlobalArguments.addOptions(parser)
     parser.add_option('--scene',action="store",type='string',dest='scene',default='data/pa10grasp.env.xml',
                       help='openrave scene to load')
     parser.add_option('--nocameraview',action="store_false",dest='usecameraview',default=True,
                       help='If set, will not open any camera views')
     (options, leftargs) = parser.parse_args(args=args)
-    scene = PA10GraspExample()
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+    scene = PA10GraspExample(env)
     scene.loadscene(scenefilename=options.scene,sensorname='wristcam',usecameraview=options.usecameraview)
     scene.start()
 

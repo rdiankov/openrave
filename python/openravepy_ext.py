@@ -191,22 +191,6 @@ def transformPoints(T,points):
     kminus = T.shape[1]-1
     return numpy.dot(points,numpy.transpose(T[0:kminus,0:kminus]))+numpy.tile(T[0:kminus,kminus],(len(points),1))
 
-def sequence_cross_product(*sequences):
-    # visualize an odometer, with "wheels" displaying "digits"...:
-    wheels = map(iter, sequences)
-    digits = [it.next( ) for it in wheels]
-    while True:
-        yield tuple(digits)
-        for i in range(len(digits)-1, -1, -1):
-            try:
-                digits[i] = wheels[i].next( )
-                break
-            except StopIteration:
-                wheels[i] = iter(sequences[i])
-                digits[i] = wheels[i].next( )
-        else:
-            break
-
 class MultiManipIKSolver(metaclass.AutoReloader):
     """Finds the simultaneous IK solutions of all disjoint manipulators (no manipulators share a joint).
 
@@ -250,9 +234,8 @@ class MultiManipIKSolver(metaclass.AutoReloader):
                         
             finally:
                 del statesavers # destroy them
-
             
-            for sols in sequence_cross_product(*alljointvalues):
+            for sols in self.sequence_cross_product(*alljointvalues):
                 for sol,manip in izip(sols,self.manips):
                     self.robot.SetJointValues(sol,manip.GetArmIndices()) 
                 if not self.robot.CheckSelfCollision():
@@ -260,6 +243,24 @@ class MultiManipIKSolver(metaclass.AutoReloader):
                         return sols
             
             return None
+    
+    @staticmethod
+    def sequence_cross_product(*sequences):
+        # visualize an odometer, with "wheels" displaying "digits"...:
+        wheels = map(iter, sequences)
+        digits = [it.next( ) for it in wheels]
+        while True:
+            yield tuple(digits)
+            for i in range(len(digits)-1, -1, -1):
+                try:
+                    digits[i] = wheels[i].next( )
+                    break
+                except StopIteration:
+                    wheels[i] = iter(sequences[i])
+                    digits[i] = wheels[i].next( )
+            else:
+                break
+
 
 class SpaceSampler(metaclass.AutoReloader):
     def __init__(self):
@@ -446,6 +447,77 @@ class RobotStateSaver:
     def __exit__(self, type, value, traceback):
         self.handle.close()
 
+class OpenRAVEGlobalArguments:
+    """manages a global set of command-line options applicable to all openrave environments"""
+    @staticmethod
+    def addOptions(parser):
+        ogroup = optparse.OptionGroup(parser,"OpenRAVE Environment Options")
+        ogroup.add_option('--loadplugin', action="append",type='string',dest='_loadplugins',default=[],
+                          help='List all plugins and the interfaces they provide.')
+        ogroup.add_option('--collision', action="store",type='string',dest='_collision',default=None,
+                          help='Default collision checker to use')
+        ogroup.add_option('--physics', action="store",type='string',dest='_physics',default=None,
+                          help='physics engine to use (default=%default)')
+        ogroup.add_option('--viewer', action="store",type='string',dest='_viewer',default=None,
+                          help='viewer to use (default=qtcoin)' )
+        ogroup.add_option('--server', action="store",type='string',dest='_server',default=None,
+                          help='server to use (default=None).')
+        ogroup.add_option('--serverport', action="store",type='int',dest='_serverport',default=4765,
+                          help='port to load server on (default=%default).')
+        ogroup.add_option('--level','-l', action="store",type='string',dest='_level',default=None,
+                          help='Debug level')
+        parser.add_option_group(ogroup)
+    @staticmethod
+    def parseGlobal(options,**kwargs):
+        """Parses all global options independent of the environment"""
+        if options._level is not None:
+            for debuglevel,debugname in openravepy.DebugLevel.values.iteritems():
+                if (not options._level.isdigit() and options._level.lower() == debugname.name.lower()) or (options._level.isdigit() and int(options._level) == int(debuglevel)):
+                    openravepy.raveSetDebugLevel(debugname)
+                    break
+    
+    @staticmethod
+    def parseEnvironment(options,env,defaultviewer=False,**kwargs):
+        """Parses all options that affect the environment"""
+        try:
+            if options._collision:
+                cc = env.CreateCollisionChecker(options._collision)
+                if cc is not None:
+                    env.SetCollisionChecker(cc)
+        except openrave_exception, e:
+            print e
+        try:
+            if options._physics:
+                ph = env.CreatePhysicsEngine(options._physics)
+                if ph is not None:
+                    env.SetPhysicsEngine(ph)
+        except openrave_exception, e:
+            print e
+        try:
+            if options._server:
+                sr = env.CreateProblem(options._server)
+                if sr is not None:
+                    env.LoadProblem(sr,'%d'%options._serverport)
+        except openrave_exception, e:
+            print e
+        try:
+            if options._viewer is not None:
+                if len(options._viewer) > 0:
+                    env.SetViewer(options._viewer)
+            elif defaultviewer:
+                env.SetViewer('qtcoin')
+        except openrave_exception, e:
+            print e
+    @staticmethod
+    def parseAndCreate(options,createenv=openravepy.Environment,**kwargs):
+        """Parse all options and create the global Environment. The left over arguments are passed to the parse functions"""
+        OpenRAVEGlobalArguments.parseGlobal(options,**kwargs)
+        if createenv is None:
+            return None
+        env = createenv()
+        OpenRAVEGlobalArguments.parseEnvironment(options,env,**kwargs)
+        return env
+
 class OpenRAVEModel(metaclass.AutoReloader):
     """
     .. lang-block:: en
@@ -502,14 +574,7 @@ class OpenRAVEModel(metaclass.AutoReloader):
     @staticmethod
     def CreateOptionParser(useManipulator=True):
         parser = optparse.OptionParser(description='OpenRAVE Database Generator.')
-        ogroup = optparse.OptionGroup(parser,"OpenRAVE Environment Options")
-        ogroup.add_option('--collision', action="store",type='string',dest='collision',default=None,
-                          help='Default collision checker to use')
-        ogroup.add_option('--physics', action="store",type='string',dest='physics',default=None,
-                          help='Default physics engine to use')
-        ogroup.add_option('--debug','-d', action="store",type='string',dest='debug',default=None,
-                          help='Debug level')
-        parser.add_option_group(ogroup)
+        OpenRAVEGlobalArguments.addOptions(parser)
         dbgroup = optparse.OptionGroup(parser,"OpenRAVE Database Generator General Options")
         dbgroup.add_option('--show',action='store_true',dest='show',default=False,
                            help='Graphically shows the built model')
@@ -529,6 +594,7 @@ class OpenRAVEModel(metaclass.AutoReloader):
         if parser is None:
             parser = OpenRAVEModel.CreateOptionParser()
         (options, args) = parser.parse_args(args=args)
+        OpenRAVEGlobalArguments.parseGlobal(options)
         destroyenv = False
         loadplugins=True
         if options.getfilename:
@@ -542,19 +608,7 @@ class OpenRAVEModel(metaclass.AutoReloader):
             destroyenv = True
         try:
             with env:
-                if options.collision is not None:
-                    collision = env.CreateCollisionChecker(options.collision)
-                    if collision is not None:
-                        env.SetCollisionChecker(collision)
-                if options.physics is not None:
-                    physics = env.CreatePhysicsEngine(options.physics)
-                    if physics is not None:
-                        env.SetPhysicsEngine(physics)
-                if options.debug is not None and not options.getfilename:
-                    for debuglevel in [openravepy.DebugLevel.Fatal,openravepy.DebugLevel.Error,openravepy.DebugLevel.Warn,openravepy.DebugLevel.Info,openravepy.DebugLevel.Debug,openravepy.DebugLevel.Verbose]:
-                        if (not options.debug.isdigit() and options.debug.lower() == debuglevel.name.lower()) or (options.debug.isdigit() and int(options.debug) == int(debuglevel)):
-                            openravepy.raveSetDebugLevel(debuglevel)
-                            break
+                OpenRAVEGlobalArguments.parseEnvironment(options,env)
                 robot = env.ReadRobotXMLFile(options.robot)
                 env.AddRobot(robot)
                 robot.SetTransform(numpy.eye(4))

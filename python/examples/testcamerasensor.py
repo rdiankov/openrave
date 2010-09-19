@@ -76,9 +76,8 @@ class CameraViewerGUI(threading.Thread):
         self.main.mainloop()
 
 class OpenRAVEScene:
-    def __init__(self,scenefilename,robotname=None):
-        self.orenv = Environment()
-        self.orenv.SetViewer('qtcoin')
+    def __init__(self,env,scenefilename,robotname=None):
+        self.orenv = env
         if not self.orenv.Load(scenefilename):
             raise ValueError('failed to open %s openrave file'%scenefilename)
         if len(self.orenv.GetRobots()) == 0:
@@ -124,6 +123,7 @@ def run(args=None):
     :type args: arguments for script to parse, if not specified will use sys.argv
     """
     parser = OptionParser(description='Displays all images of all camera sensors attached to a robot.')
+    OpenRAVEGlobalArguments.addOptions(parser)
     parser.add_option('--scene',
                       action="store",type='string',dest='scene',default='data/testwamcamera.env.xml',
                       help='OpenRAVE scene to load')
@@ -131,7 +131,8 @@ def run(args=None):
                       action="store",type='string',dest='robotname',default=None,
                       help='Specific robot sensors to display (otherwise first robot found will be displayed)')
     (options, leftargs) = parser.parse_args(args=args)
-    scene = OpenRAVEScene(options.scene,options.robotname)
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+    scene = OpenRAVEScene(env,options.scene,options.robotname)
     while(True):
         cmd = raw_input('Enter command (q-quit,c-capture image): ')
         if cmd == 'q':

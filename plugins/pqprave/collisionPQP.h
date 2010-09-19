@@ -88,18 +88,19 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         PQP_REAL p1[3], p2[3], p3[3];
         pinfo->vlinks.reserve(pbody->GetLinks().size());
         FOREACHC(itlink, pbody->GetLinks()) {
-            boost::shared_ptr<PQP_Model> pm(new PQP_Model());
-
-            pm->BeginModel();
             const KinBody::Link::TRIMESH& trimesh = (*itlink)->GetCollisionData();
-    
-            for(int j = 0; j < (int)trimesh.indices.size(); j+=3) { 
-                p1[0] = trimesh.vertices[trimesh.indices[j]].x;     p1[1] = trimesh.vertices[trimesh.indices[j]].y;     p1[2] = trimesh.vertices[trimesh.indices[j]].z;
-                p2[0] = trimesh.vertices[trimesh.indices[j+1]].x;   p2[1] = trimesh.vertices[trimesh.indices[j+1]].y;     p2[2] = trimesh.vertices[trimesh.indices[j+1]].z;
-                p3[0] = trimesh.vertices[trimesh.indices[j+2]].x;   p3[1] = trimesh.vertices[trimesh.indices[j+2]].y;     p3[2] = trimesh.vertices[trimesh.indices[j+2]].z;
-                pm->AddTri(p1, p2, p3, j/3);
+            boost::shared_ptr<PQP_Model> pm;
+            if( trimesh.indices.size() > 0 ) {
+                pm.reset(new PQP_Model());
+                pm->BeginModel();
+                for(int j = 0; j < (int)trimesh.indices.size(); j+=3) { 
+                    p1[0] = trimesh.vertices[trimesh.indices[j]].x;     p1[1] = trimesh.vertices[trimesh.indices[j]].y;     p1[2] = trimesh.vertices[trimesh.indices[j]].z;
+                    p2[0] = trimesh.vertices[trimesh.indices[j+1]].x;   p2[1] = trimesh.vertices[trimesh.indices[j+1]].y;     p2[2] = trimesh.vertices[trimesh.indices[j+1]].z;
+                    p3[0] = trimesh.vertices[trimesh.indices[j+2]].x;   p3[1] = trimesh.vertices[trimesh.indices[j+2]].y;     p3[2] = trimesh.vertices[trimesh.indices[j+2]].z;
+                    pm->AddTri(p1, p2, p3, j/3);
+                }
+                pm->EndModel();
             }
-            pm->EndModel();
             pinfo->vlinks.push_back(pm);
         }
 
@@ -470,7 +471,9 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         boost::shared_ptr<PQP_Model> m1 = GetLinkModel(link1);
         boost::shared_ptr<PQP_Model> m2 = GetLinkModel(link2);
         bool bcollision = false;
-    
+        if( !m1 || !m2 ) {
+            return false;
+        }
         // collision
         if(_benablecol) {
             if( GetEnv()->HasRegisteredCollisionCallbacks() && !report ) {

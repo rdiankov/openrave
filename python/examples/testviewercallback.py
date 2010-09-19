@@ -33,17 +33,13 @@ def run(args=None):
     :type args: arguments for script to parse, if not specified will use sys.argv
     """
     parser = OptionParser(description='Shows how to attach a callback to a viewer to perform functions.')
+    OpenRAVEGlobalArguments.addOptions(parser)
     parser.add_option('--scene',
                       action="store",type='string',dest='scene',default='data/lab1.env.xml',
                       help='OpenRAVE scene to load')
-    parser.add_option('--viewer',
-                      action="store",type='string',dest='viewer',default='qtcoin',
-                      help='Viewer to load')
     (options, leftargs) = parser.parse_args(args=args)
-
-    env = Environment()
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
     env.Load(options.scene)
-    env.SetViewer(options.viewer)
     handle = env.GetViewer().RegisterCallback(Viewer.ViewerEvents.ItemSelection,lambda link,pos,org: itemselectioncb(link,pos,org,env))
     if handle is None:
         print 'failed to register handle'

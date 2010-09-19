@@ -47,20 +47,7 @@ if __name__ == "__main__":
     defaultviewer = 'qtcoin'
     parser = OptionParser(description='OpenRAVE %s'%openravepy.__version__,version=openravepy.__version__,
                           usage='%prog [options] [loadable openrave xml/robot files...]')
-    parser.add_option('--loadplugin', action="append",type='string',dest='loadplugins',default=[],
-                      help='List all plugins and the interfaces they provide.')
-    parser.add_option('--collision', action="store",type='string',dest='collision',default=None,
-                      help='Default collision checker to use')
-    parser.add_option('--physics', action="store",type='string',dest='physics',default=None,
-                      help='physics engine to use (default=%default)')
-    parser.add_option('--viewer', action="store",type='string',dest='viewer',default=None,
-                      help='viewer to use (default=qtcoin)' )
-    parser.add_option('--server', action="store",type='string',dest='server',default=None,
-                      help='server to use (default=%s).'%defaultviewer)
-    parser.add_option('--serverport', action="store",type='int',dest='serverport',default=4765,
-                      help='port to load server on (default=%default).')
-    parser.add_option('--level','-l', action="store",type='string',dest='level',default=None,
-                      help='Debug level')
+    OpenRAVEGlobalArguments.addOptions(parser)
     parser.add_option('--database', action="callback",callback=vararg_callback, dest='database',default=None,
                       help='If specified, the next arguments will be used to call a database generator from the openravepy.databases module. The first argument is used to find the database module. For example:     %s --database grasping --robot=robots/pr2-beta-sim.robot.xml'%(sys.argv[0]))
     parser.add_option('--example', action="callback",callback=vararg_callback, dest='example',default=None,
@@ -112,11 +99,7 @@ if __name__ == "__main__":
             sys.exit(1)
         example.run(args=args)
         sys.exit(0)
-    if options.level is not None:
-        for debuglevel,debugname in DebugLevel.values.iteritems():
-            if (not options.level.isdigit() and options.level.lower() == debugname.name.lower()) or (options.level.isdigit() and int(options.level) == int(debuglevel)):
-                raveSetDebugLevel(debugname)
-                break
+    OpenRAVEGlobalArguments.parseGlobal(options)
     if options.listinterfaces is not None or options.listplugins:
         raveSetDebugLevel(DebugLevel.Error)
     env = Environment()
@@ -129,6 +112,7 @@ if __name__ == "__main__":
                         print name
                     break
             sys.exit(0)
+        OpenRAVEGlobalArguments.parseEnvironment(options,env,defaultviewer=False)
         if options.listplugins:
             plugins = env.GetPluginInfo()
             interfacenames = dict()
@@ -144,20 +128,6 @@ if __name__ == "__main__":
                 for interfacename,pluginname in names:
                     print '  %s - %s'%(interfacename,pluginname)
             sys.exit(0)
-        if options.collision:
-            cc = env.CreateCollisionChecker(options.collision)
-            if cc is not None:
-                env.SetCollisionChecker(cc)
-        if options.physics:
-            ph = env.CreatePhysicsEngine(options.physics)
-            if ph is not None:
-                env.SetPhysicsEngine(ph)
-        if options.server:
-            sr = env.CreateProblem(options.server)
-            if sr is not None:
-                env.LoadProblem(sr,'%d'%options.serverport)
-        if options.viewer is not None and len(options.viewer) > 0:
-            env.SetViewer(options.viewer)
         # load files after viewer is loaded since they may contain information about where to place the camera
         for arg in args:
             if arg.endswith('.xml') or arg.endswith('.dae'):
@@ -167,7 +137,7 @@ if __name__ == "__main__":
             robot=None if len(robots) == 0 else robots[0]
         if options.pythoncmd is not None:
             eval(compile(options.pythoncmd,'<string>','exec'))
-        if options.viewer is None:
+        if options._viewer is None:
             env.SetViewer(defaultviewer)
         if options.ipython:
             from IPython.Shell import IPShellEmbed

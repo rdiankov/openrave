@@ -43,15 +43,11 @@ def run(args=None):
     :type args: arguments for script to parse, if not specified will use sys.argv
     """
     parser = OptionParser(description='Example shows how to query collision detection information using openravepy')
-    parser.add_option('--collision', action="store",type='string',dest='collision',default=None,
-                      help='collision checker')
+    OpenRAVEGlobalArguments.addOptions(parser)
     (options, leftargs) = parser.parse_args(args=args)
-
-    env = Environment()
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
     try:
         env.Load('robots/barrettwam.robot.xml')
-        if options.collision is not None:
-            env.SetCollisionChecker(env.CreateCollisionChecker(options.collision))
 
         # register an optional collision callback
         handle = env.RegisterCollisionCallback(collisioncallback)
@@ -91,7 +87,7 @@ def run(args=None):
         T = eye(4)
         T[1,3] = 0.5
         body1.SetTransform(T)
-        env.SetViewer('qtcoin')
+        
         print 'move the robots to update the closest distance'
         if not env.GetCollisionChecker().SetCollisionOptions(CollisionOptions.Distance|CollisionOptions.Contacts):
             print 'current checker does not support distance, switching to pqp...'

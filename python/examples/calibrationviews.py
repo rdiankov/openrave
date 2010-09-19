@@ -224,6 +224,7 @@ def run(args=None):
     :type args: arguments for script to parse, if not specified will use sys.argv
     """
     parser = OptionParser(description='Views a calibration pattern from multiple locations.')
+    OpenRAVEGlobalArguments.addOptions(parser)
     parser.add_option('--scene',action="store",type='string',dest='scene',default='data/pa10calib.env.xml',
                       help='Scene file to load (default=%default)')
     parser.add_option('--sensorname',action="store",type='string',dest='sensorname',default=None,
@@ -237,10 +238,8 @@ def run(args=None):
     parser.add_option('--posedist',action="store",type='float',dest='posedist',default=0.05,
                       help='An average distance between gathered poses. The smaller the value, the more poses robot will gather close to each other')
     (options, leftargs) = parser.parse_args(args=args)
-
-    env = Environment()
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
     try:
-        env.SetViewer('qtcoin')
         env.Load(options.scene)
         robot = env.GetRobots()[0]
         sensorrobot = None if options.sensorrobot is None else env.GetRobot(options.sensorrobot)

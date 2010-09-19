@@ -296,6 +296,7 @@ def run(args=None):
     :type args: arguments for script to parse, if not specified will use sys.argv
     """
     parser = OptionParser(description='Autonomous grasp and manipulation planning example.')
+    OpenRAVEGlobalArguments.addOptions(parser)
     parser.add_option('--scene',
                       action="store",type='string',dest='scene',default='data/lab1.env.xml',
                       help='Scene file to load (default=%default)')
@@ -304,10 +305,8 @@ def run(args=None):
     parser.add_option('--norandomize', action='store_false',dest='randomize',default=True,
                       help='If set, will not randomize the bodies and robot position in the scene.')
     (options, leftargs) = parser.parse_args(args=args)
-
-    env = Environment()
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
     try:
-        env.SetViewer('qtcoin')
         env.Load(options.scene)
         robot = env.GetRobots()[0]
         env.UpdatePublishedBodies()

@@ -57,7 +57,7 @@ from openravepy import __build_doc__
 if not __build_doc__:
     from openravepy import *
 else:
-    from openravepy import OpenRAVEModel
+    from openravepy import OpenRAVEModel, OpenRAVEGlobalArguments
 from numpy import random, array, linspace
 from optparse import OptionParser
 
@@ -68,6 +68,7 @@ def run(args=None):
     """
 
     parser = OptionParser(description='tutorial_ik.')
+    OpenRAVEGlobalArguments.addOptions(parser)
     parser.add_option('--scene',action="store",type='string',dest='scene',default='data/lab1.env.xml',
                       help='Scene file to load (default=%default)')
     parser.add_option('--transparency',action="store",type='float',dest='transparency',default=0.8,
@@ -75,9 +76,7 @@ def run(args=None):
     parser.add_option('--maxnumber',action="store",type='int',dest='maxnumber',default=10,
                       help='Max number of robots to render (default=%default)')
     (options, leftargs) = parser.parse_args(args=args)
-
-    env = Environment()
-    env.SetViewer('qtcoin')
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
     env.Load(options.scene)
     while True:
         robot = env.GetRobots()[0]

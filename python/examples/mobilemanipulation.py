@@ -928,9 +928,15 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         print repr(self.robot.GetTransform())
         return target,vmodel.manip
 def run():
-    env = Environment()
+    """Executes the mobilemanipulation example
+
+    :type args: arguments for script to parse, if not specified will use sys.argv
+    """
+    parser = OptionParser(description="mobile manipulation")
+    OpenRAVEGlobalArguments.addOptions(parser)
+    (options, leftargs) = parser.parse_args(args=args)
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
     try:
-        env.SetViewer('qtcoin')
         env.Load('data/lab1.env.xml')
         robot = env.GetRobots()[0]
         env.UpdatePublishedBodies()

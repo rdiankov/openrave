@@ -89,14 +89,13 @@ def run(args=None):
     :type args: arguments for script to parse, if not specified will use sys.argv
     """
     parser = OptionParser(description='RRT motion planning with constraints on the robot end effector.')
+    OpenRAVEGlobalArguments.addOptions(parser)
     parser.add_option('--scene',
                       action="store",type='string',dest='scene',default='data/lab1.env.xml',
                       help='Scene file to load (default=%default)')
     (options, leftargs) = parser.parse_args(args=args)
-
-    env = Environment()
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
     try:
-        env.SetViewer('qtcoin')
         env.Load(options.scene)
         robot = env.GetRobots()[0]
         env.UpdatePublishedBodies()
