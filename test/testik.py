@@ -172,15 +172,15 @@ def test_6dik():
     from sympy import *
     env = Environment()
     env.Reset()
-    robot = env.ReadRobotXMLFile('/home/rdiankov/downloads/justin.robot.xml')
+    robot = env.ReadRobotXMLFile('/home/rdiankov/downloads/ikfast_fail_arm_robot.xml')
     env.AddRobot(robot)
-    manip = robot.SetActiveManipulator('leftarm')
+    manip = robot.SetActiveManipulator('arm')
     ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
 
     solvefn=ikfast.IKFastSolver.solveFullIK_6D
     solvejoints = list(manip.GetArmJoints())
-    solvejoints.remove(25)
-    freeparams=[25]
+    solvejoints.remove(2)
+    freeparams=[2]
     sourcefilename = 'temp.cpp'
     self = ikfast.IKFastSolver(kinbody=robot,accuracy=None,precision=None)
     #code = self.generateIkSolver(manip.GetBase().GetIndex(),manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejoints,usedummyjoints=False,solvefn=solvefn)

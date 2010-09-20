@@ -505,32 +505,40 @@ class IKFastSolver(AutoReloader):
 
         if len(jointinds) > 0:
             iright = jointinds[-1]
-            Ttrans = eye(4); Ttrans[0:3,3] = Links[iright-1][0:3,0:3].transpose() * Links[iright-1][0:3,3]
+            Ttrans = eye(4)
+            Ttrans[0:3,3] = Links[iright-1][0:3,0:3].transpose() * Links[iright-1][0:3,3]
             Trot_with_trans = Ttrans * Links[iright]
             separated_trans = Trot_with_trans[0:3,0:3].transpose() * Trot_with_trans[0:3,3]
-            if not any([separated_trans[j].has_any_symbols(jointvars[-1]) for j in range(0,3)]):
-                Ttrans[0:3,3] = separated_trans
-                Links[iright+1] = Ttrans * Links[iright+1]
-                Links[iright-1][0:3,3] = Matrix(3,1,[Real(0,30)]*3)
-                print "moved translation ",separated_trans.transpose(),"to right end"
+            for j in range(0,3):
+                if separated_trans[j].has_any_symbols(jointvars[-1]):
+                    Ttrans[j,3] = Real(0,30)
+                else:
+                    Ttrans[j,3] = separated_trans[j]
+            Links[iright+1] = Ttrans * Links[iright+1]
+            Links[iright-1] = Links[iright-1] * self.affineInverse(Ttrans)
+            print "moved translation ",Ttrans[0:3,3].transpose(),"to right end"
         
         if len(jointinds) > 1:
             ileft = jointinds[0]
             separated_trans = Links[ileft][0:3,0:3] * Links[ileft+1][0:3,3]
-            if not any([separated_trans[j].has_any_symbols(jointvars[0]) for j in range(0,3)]):
-                Ttrans = eye(4); Ttrans[0:3,3] = separated_trans
-                Links[ileft-1] = Links[ileft-1] * Ttrans
-                Links[ileft+1][0:3,3] = Matrix(3,1,[Real(0,30)]*3)
-                print "moved translation ",separated_trans.transpose(),"to left end"
+            Ttrans = eye(4)
+            for j in range(0,3):
+                if not separated_trans[j].has_any_symbols(jointvars[0]):
+                    Ttrans[j,3] = separated_trans[j]
+            Links[ileft-1] = Links[ileft-1] * Ttrans
+            Links[ileft+1] = self.affineInverse(Ttrans) * Links[ileft+1]
+            print "moved translation ",Ttrans[0:3,3].transpose(),"to left end"
 
         if len(jointinds) > 3: # last 3 axes always have to be intersecting, move the translation of the first axis to the left
             ileft = jointinds[-3]
             separated_trans = Links[ileft][0:3,0:3] * Links[ileft+1][0:3,3]
-            if not any([separated_trans[j].has_any_symbols(jointvars[-3]) for j in range(0,3)]):
-                Ttrans = eye(4); Ttrans[0:3,3] = separated_trans
-                Links[ileft-1] = Links[ileft-1] * Ttrans
-                Links[ileft+1][0:3,3] = Matrix(3,1,[Real(0,30)]*3)
-                print "moved translation on intersecting axis ",separated_trans.transpose(),"to left"
+            Ttrans = eye(4)
+            for j in range(0,3):
+                if not separated_trans[j].has_any_symbols(jointvars[-3]):
+                    Ttrans[j,3] = separated_trans[j]
+            Links[ileft-1] = Links[ileft-1] * Ttrans
+            Links[ileft+1] = self.affineInverse(Ttrans) * Links[ileft+1]
+            print "moved translation on intersecting axis ",Ttrans[0:3,3].transpose(),"to left"
 
         return Links, jointvars, isolvejointvars, ifreejointvars
         
@@ -1260,7 +1268,6 @@ class IKFastSolver(AutoReloader):
                 else:
                     transvars.append(svar)
             #transvars = solvejointvars[0:min(3,lastsepindex)]
-
             if len(rotvars) != 3 or len(transvars) != 3:
                 if inverted:
                     print 'rotvars: ',rotvars,' transvars: ',transvars,' not 3 dims'
