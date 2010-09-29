@@ -153,9 +153,6 @@ public:
     VisibilityConstraintFunction(boost::shared_ptr<VisualFeedbackProblem> vf) : _vf(vf) {
             _report.reset(new CollisionReport());
 
-            _fAllowableOcclusion = 0.1;
-            _fRayMinDist = 0.02f;
-
             // create the dummy box
             {
                 KinBody::KinBodyStateSaver saver(_vf->_target,KinBody::Save_LinkTransformation);
@@ -271,7 +268,7 @@ public:
             _vf->_target->Enable(false);
             FOREACH(itobb,_vTargetOBBs) {
                 OBB cameraobb = geometry::TransformOBB(tcamerainv,*itobb);
-                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::TestRay, this, _1, boost::ref(tworldcamera)),_fAllowableOcclusion) ) {
+                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::TestRay, this, _1, boost::ref(tworldcamera)),_vf->_fAllowableOcclusion) ) {
                     RAVELOG_VERBOSEA("box is occluded\n");
                     return true;
                 }
@@ -284,7 +281,7 @@ public:
             RAY r;
             dReal filen = 1/RaveSqrt(v.lengthsqr3());
             r.dir = tcamera.rotate((2.0f*filen)*v);
-            r.pos = tcamera.trans + 0.5f*_fRayMinDist*r.dir; // move the rays a little forward
+            r.pos = tcamera.trans + 0.5f*_vf->_fRayMinDist*r.dir; // move the rays a little forward
             if( !_vf->_robot->GetEnv()->CheckCollision(r,_report) ) {
                 return true; // not supposed to happen, but it is OK
             }
@@ -334,7 +331,7 @@ public:
         bool TestRayRigid(const Vector& v, const TransformMatrix& tcamera, const vector<KinBody::LinkPtr>& vattachedlinks)
         {
             dReal filen = 1/RaveSqrt(v.lengthsqr3());
-            RAY r((_fRayMinDist*filen)*v,(2.0f*filen)*v);
+            RAY r((_vf->_fRayMinDist*filen)*v,(2.0f*filen)*v);
             if( _vf->_robot->GetEnv()->CheckCollision(r,KinBodyConstPtr(_vf->_robot),_report) ) {
                 //RAVELOG_INFO(str(boost::format("ray col: %s\n")%_report->__str__()));
                 return false;
@@ -351,7 +348,6 @@ public:
         CollisionReportPtr _report;
         AABB _abTarget; // target aabb
         vector<Vector> _vconvexplanes3d;
-        dReal _fRayMinDist, _fAllowableOcclusion;
     };
 
     class GoalSampleFunction
@@ -418,6 +414,8 @@ Visibility computation checks occlusion with other objects using ray sampling in
         _fMaxVelMult=1;
         _bCameraOnManip = false;
         _fSampleRayDensity = 0.001;
+        _fAllowableOcclusion = 0.1;
+        _fRayMinDist = 0.02f;
         RegisterCommand("SetCameraAndTarget",boost::bind(&VisualFeedbackProblem::SetCameraAndTarget,this,_1,_2),
                         "Sets the camera index from the robot and its convex hull");
         RegisterCommand("ProcessVisibilityExtents",boost::bind(&VisualFeedbackProblem::ProcessVisibilityExtents,this,_1,_2),
@@ -437,6 +435,8 @@ Visibility computation checks occlusion with other objects using ray sampling in
                         "Approaches a target object while choosing a goal such that the robot's camera sensor sees the object ");
         RegisterCommand("VisualFeedbackGrasping",boost::bind(&VisualFeedbackProblem::VisualFeedbackGrasping,this,_1,_2),
                         "Stochastic greedy grasp planner considering visibility");
+        RegisterCommand("SetParameter",boost::bind(&VisualFeedbackProblem::SetParameter,this,_1,_2),
+                        "Sets internal parameters of visibility computation");
     }
 
     virtual ~VisualFeedbackProblem() {}
@@ -485,7 +485,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         RobotBase::AttachedSensorPtr psensor;
         RobotBase::ManipulatorPtr pmanip;
         _sensorrobot = _robot;
-
+        bool bHasRayDensity = false;
         string cmd;
         while(!sinput.eof()) {
             sinput >> cmd;
@@ -579,6 +579,10 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 else
                     RAVELOG_WARNA(str(boost::format("convex data does not have enough points %d\n")%vconvexdata.size()));
             }
+            else if( cmd == "raydensity" ) {
+                sinput >> _fSampleRayDensity;
+                bHasRayDensity = true;
+            }
             else {
                 RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -609,7 +613,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             _robot->GetRigidlyAttachedLinks(psensor->GetAttachingLink()->GetIndex(), vattachedlinks);
             if( !!pmanip ) {
                 if( pmanip->GetEndEffector() != psensor->GetAttachingLink() && find(vattachedlinks.begin(),vattachedlinks.end(),pmanip->GetEndEffector()) == vattachedlinks.end() ) {
-                    RAVELOG_INFO(str(boost::format("specified manipulator %s end effector not attached to specified sensor %s\n")%pmanip->GetName()%psensor->GetName()));
+                    RAVELOG_DEBUG(str(boost::format("specified manipulator %s end effector not attached to specified sensor %s\n")%pmanip->GetName()%psensor->GetName()));
                 }
                 else {
                     _bCameraOnManip = true;
@@ -645,7 +649,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
         }
 
         _pcamerageom = boost::static_pointer_cast<SensorBase::CameraGeomData>(psensor->GetSensor()->GetSensorGeometry());
-        _fSampleRayDensity = 20.0f/_pcamerageom->KK.fx;
+        if( !bHasRayDensity ) {
+            _fSampleRayDensity = 20.0f/_pcamerageom->KK.fx;
+        }
 
         if( _vconvexplanes.size() == 0 ) {
             // pick the camera boundaries
@@ -880,6 +886,38 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
         boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
         sout << pconstraintfn->IsVisible();
+        return true;
+    }
+
+    bool SetParameter(ostream& sout, istream& sinput)
+    {
+        string cmd;
+        Transform t;
+        while(!sinput.eof()) {
+            sinput >> cmd;
+            if( !sinput )
+                break;
+            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+
+            if( cmd == "raydensity" ) {
+                sinput >> _fSampleRayDensity;
+            }
+            else if( cmd == "raymindist") {
+                sinput >> _fRayMinDist;
+            }
+            else if( cmd == "allowableocclusion" ) {
+                sinput >> _fAllowableOcclusion;
+            }
+            else {
+                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
+
+            if( !sinput ) {
+                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                return false;
+            }
+        }
         return true;
     }
 
@@ -1196,7 +1234,7 @@ protected:
     boost::shared_ptr<SensorBase::CameraGeomData> _pcamerageom;
     Transform _ttogripper; ///< transforms a coord system to the gripper coordsystem
     vector<Transform> _visibilitytransforms;
-    dReal _fSampleRayDensity;
+    dReal _fRayMinDist, _fAllowableOcclusion, _fSampleRayDensity;
 
     vector<Vector> _vconvexplanes; ///< the planes defining the bounding visibility region (posive is inside)
     Vector _vcenterconvex; ///< center point on the z=1 plane of the convex region

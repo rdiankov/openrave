@@ -220,8 +220,8 @@ public:
 
         virtual void serialize(std::ostream& o, int options) const;
     private:
-        /// updates the collision mesh from the geometries. Note that this might change the robot/kinbody hash!!
-        void UpdateCollisionMesh();
+        /// \brief Updates the cached information due to changes in the collision data.
+        virtual void Update();
 
         Transform _t;           ///< current transform of the link
         TransformMatrix _transMass; ///< the 3x3 inertia and center of mass of the link in the link's coordinate system
@@ -804,9 +804,9 @@ protected:
 
     /// Called to notify the body that certain groups of parameters have been changed.
     ///
-    /// This function in calls every registers calledback that is tracking the changes.
-    virtual void _ParametersChanged(int parmameters);
-
+    /// This function in calls every registers calledback that is tracking the changes. It also
+    /// recomputes the hashes if geometry changed.
+    virtual void _ParametersChanged(int parameters);
 
     /// \return true if two bodies should be considered as one during collision (ie one is grabbing the other)
     virtual bool _IsAttached(KinBodyConstPtr body, std::set<KinBodyConstPtr>& setChecked) const;

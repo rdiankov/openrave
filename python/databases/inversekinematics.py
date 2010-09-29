@@ -184,9 +184,13 @@ class InverseKinematicsModel(OpenRAVEModel):
     def getdir(self):
         return os.path.join(self.env.GetHomeDirectory(),'kinematics.'+self.manip.GetKinematicsStructureHash())
     def getfilename(self):
+        if self.iktype is None:
+            raise ValueError('ik type is not set')
         basename = 'ikfast' + str(self.getversion()) + '.' + str(self.iktype) + '.' + platform.machine()
         return ccompiler.new_compiler().shared_object_filename(basename=basename,output_dir=self.getdir())
     def getsourcefilename(self):
+        if self.iktype is None:
+            raise ValueError('ik type is not set')
         return os.path.join(self.getdir(),'ikfast' + str(self.getversion()) + '.' + str(self.iktype))
     def autogenerate(self,options=None):
         freejoints = None

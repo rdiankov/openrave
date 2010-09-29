@@ -530,6 +530,11 @@ protected:
 
     /// Proprocess the manipulators and sensors and build the specific robot hashes.
     virtual void _ComputeInternalInformation();
+
+    /// Called to notify the body that certain groups of parameters have been changed.
+    ///
+    /// This function in calls every registers calledback that is tracking the changes.
+    virtual void _ParametersChanged(int parameters);
     
     std::vector<Grabbed> _vGrabbedBodies;   ///vector of grabbed bodies
     virtual void _UpdateGrabbedBodies();

@@ -38,7 +38,7 @@ class VisualFeedback:
         if envother.LoadProblem(clone.prob,clone.args) != 0:
             raise ValueError('problem failed to initialize')
         return clone
-    def SetCameraAndTarget(self,sensorindex=None,sensorname=None,manipname=None,convexdata=None,sensorrobot=None,target=None):
+    def SetCameraAndTarget(self,sensorindex=None,sensorname=None,manipname=None,convexdata=None,sensorrobot=None,target=None,raydensity=None):
         """.. interface-command:: VisualFeedback SetCameraAndTarget
         """
         cmd = 'SetCameraAndTarget '
@@ -52,6 +52,8 @@ class VisualFeedback:
             cmd += 'sensorname %s '%sensorname
         if manipname is not None:
             cmd += 'manipname %s '%manipname
+        if raydensity is not None:
+            cmd += 'raydensity %f '%raydensity
         if convexdata is not None:
             cmd += 'convexdata %d '%len(convexdata)
             for f in reshape(convexdata,len(convexdata)*2):
@@ -181,3 +183,14 @@ class VisualFeedback:
         if res is None:
             raise planning_error()
         return res
+    def SetParameter(self,raydensity=None,raymindist=None,allowableocclusion=None):
+        """.. interface-command:: VisualFeedback SetParameter
+        """
+        cmd = 'SetParameter '
+        if raydensity is not None:
+            cmd += 'raydensity %f '%raydensity
+        if raymindist is not None:
+            cmd += 'raymindist %f '%raymindist
+        if allowableocclusion is not None:
+            cmd += 'allowableocclusion %f '%allowableocclusion
+        return self.prob.SendCommand(cmd)

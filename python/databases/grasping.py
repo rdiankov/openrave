@@ -210,7 +210,7 @@ class GraspingModel(OpenRAVEModel):
             self.grasps,self.graspindices,friction,linknames,plannername = params
             self.grasper = Grasper(self.robot,friction,avoidlinks = [self.robot.GetLink(name) for name in linknames],plannername=plannername)
             return self.has()
-        except e:
+        except:
             return False
     def save(self):
         OpenRAVEModel.save(self,(self.grasps,self.graspindices,self.grasper.friction,[link.GetName() for link in self.grasper.avoidlinks],self.grasper.plannername))
@@ -314,7 +314,7 @@ class GraspingModel(OpenRAVEModel):
         """Generates a grasp set by searching space and evaluating contact points.
 
         All grasp parameters have to be in the bodies's coordinate system (ie: approachrays).
-        @param checkgraspfn: If set, then will be used to validate the grasp. If its evaluation returns false, then grasp will not be added to set. Called by checkgraspfn(contacts,finalconfig,info)"""
+        @param checkgraspfn: If set, then will be used to validate the grasp. If its evaluation returns false, then grasp will not be added to set. Called by checkgraspfn(contacts,finalconfig,grasp,info)"""
         print 'Generating Grasp Set for %s:%s:%s'%(self.robot.GetName(),self.manip.GetName(),self.target.GetName())
         time.sleep(0.1) # sleep or otherwise viewer might not load well
         N = approachrays.shape[0]
@@ -373,7 +373,7 @@ class GraspingModel(OpenRAVEModel):
                         grasp[self.graspindices.get('grasptrans_nocol')] = reshape(transpose(Tlocalgrasp_nocol[0:3,0:4]),12)
                         grasp[self.graspindices.get('forceclosure')] = mindist if mindist is not None else 0
                         if not forceclosure or mindist >= forceclosurethreshold:
-                            if checkgraspfn is None or checkgraspfn(contacts,finalconfig,{'mindist':mindist,'volume':volume}):
+                            if checkgraspfn is None or checkgraspfn(contacts,finalconfig,grasp,{'mindist':mindist,'volume':volume}):
                                 print 'found good grasp',len(self.grasps),'config: ',array(finalconfig[0])[self.manip.GetGripperIndices()]
                                 self.grasps.append(grasp)
                 self.grasps = array(self.grasps)
@@ -559,7 +559,7 @@ class GraspingModel(OpenRAVEModel):
                 if checkcollision and checkgrasper:
                     try:
                         self.runGraspFromTrans(grasp)
-                    except planning_error:
+                    except planning_error, e:
                         continue
                 validgrasps.append(grasp)
                 validindices.append(i)
@@ -598,7 +598,7 @@ class GraspingModel(OpenRAVEModel):
                 if checkcollision and checkgrasper:
                     try:
                         self.runGraspFromTrans(grasp)
-                    except planning_error:
+                    except planning_error, e:
                         continue
             yield grasp,i
     def orderGrasps(self):

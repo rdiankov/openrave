@@ -376,8 +376,7 @@ void KinBody::Link::GEOMPROPERTIES::SetCollisionMesh(const TRIMESH& mesh)
         throw openrave_exception("geometry cannot be modified");
     LinkPtr parent(_parent);
     collisionmesh = mesh;
-    parent->UpdateCollisionMesh();
-    parent->GetParent()->_ParametersChanged(Prop_LinkGeometry);
+    parent->Update();
 }
 
 void KinBody::Link::GEOMPROPERTIES::SetDraw(bool bDraw)
@@ -608,14 +607,17 @@ KinBody::Link::GEOMPROPERTIES& KinBody::Link::GetGeometry(int index)
 void KinBody::Link::SwapGeometries(std::list<KinBody::Link::GEOMPROPERTIES>& listNewGeometries)
 {
     LinkWeakPtr pnewlink;
-    if( listNewGeometries.size() > 0 )
+    if( listNewGeometries.size() > 0 ) {
         pnewlink=listNewGeometries.front()._parent;
+    }
     _listGeomProperties.swap(listNewGeometries);
-    FOREACH(itgeom,_listGeomProperties)
+    FOREACH(itgeom,_listGeomProperties) {
         itgeom->_parent = LinkWeakPtr(shared_from_this());
-    FOREACH(itgeom,listNewGeometries)
+    }
+    FOREACH(itgeom,listNewGeometries) {
         itgeom->_parent=pnewlink;
-    UpdateCollisionMesh();
+    }
+    Update();
     GetParent()->_ParametersChanged(Prop_LinkGeometry);
 }
 
@@ -627,12 +629,14 @@ bool KinBody::Link::ValidateContactNormal(const Vector& position, Vector& normal
     return false;
 }
 
-void KinBody::Link::UpdateCollisionMesh()
+void KinBody::Link::Update()
 {
     collision.vertices.resize(0);
     collision.indices.resize(0);
-    FOREACH(itgeom,_listGeomProperties)
+    FOREACH(itgeom,_listGeomProperties) {
         collision.Append(itgeom->GetCollisionMesh(),itgeom->GetTransform());
+    }
+    GetParent()->_ParametersChanged(Prop_LinkGeometry);
 }
 
 KinBody::Joint::Joint(KinBodyPtr parent)
@@ -640,8 +644,9 @@ KinBody::Joint::Joint(KinBodyPtr parent)
     _parent = parent;
     vMimicCoeffs.resize(2); vMimicCoeffs[0] = 1; vMimicCoeffs[1] = 0;
     // fill vAxes with valid values
-    FOREACH(it,vAxes)
+    FOREACH(it,vAxes) {
         *it = Vector(0,0,1);
+    }
     nMimicJointIndex = -1;
     fResolution = dReal(0.02);
     fMaxVel = 1e5f;
@@ -2298,9 +2303,9 @@ void KinBody::_ComputeInternalInformation()
         for(int i = 0; i < (int)_vecjoints.size(); ++i) {
             ljoints.push_back(JOINTPAIR(_vecjoints[i], i));
         }
-        for(int i = 0; i < (int)_vecPassiveJoints.size(); ++i)
+        for(int i = 0; i < (int)_vecPassiveJoints.size(); ++i) {
             ljoints.push_back(JOINTPAIR(_vecPassiveJoints[i], -1));
-
+        }
         list<JOINTPAIR>::iterator itjoint;
         _vDependencyOrderedJoints.resize(0);
 
@@ -2884,6 +2889,12 @@ void KinBody::_ParametersChanged(int parameters)
     FOREACH(itfns,listRegisteredCallbacks) {
         if( itfns->first & parameters )
             itfns->second();
+    }
+    if( parameters & (Prop_Joints|Prop_Links|Prop_LinkGeometry) ) {
+        ostringstream ss;
+        ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
+        serialize(ss,SO_Kinematics|SO_Geometry);
+        __hashkinematics = GetMD5HashString(ss.str());
     }
 }
 

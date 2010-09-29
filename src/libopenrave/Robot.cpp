@@ -2133,6 +2133,29 @@ void RobotBase::_ComputeInternalInformation()
     }
 }
 
+void RobotBase::_ParametersChanged(int parameters)
+{
+    KinBody::_ParametersChanged(parameters);
+    stringstream ss;
+    if( parameters & (Prop_Sensors|Prop_SensorPlacement) ) {
+        FOREACH(itsensor,_vecSensors) {
+            ss.str("");
+            (*itsensor)->serialize(ss,SO_RobotSensors);
+            (*itsensor)->__hashstructure = GetMD5HashString(ss.str());
+        }
+    }
+    if( parameters & Prop_Manipulators ) {
+        FOREACH(itmanip,_vecManipulators) {
+            ss.str("");
+            (*itmanip)->serialize(ss,SO_RobotManipulators);
+            (*itmanip)->__hashstructure = GetMD5HashString(ss.str());
+            ss.str("");
+            (*itmanip)->serialize(ss,SO_Kinematics);
+            (*itmanip)->__hashkinematicsstructure = GetMD5HashString(ss.str());
+        }
+    }
+}
+
 bool RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 {
     // note that grabbed bodies are not cloned (check out Environment::Clone)

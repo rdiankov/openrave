@@ -1,5 +1,6 @@
 # all 'runnable' examples
 import calibrationviews
+import checkvisibility
 import collision
 import constraintplanning
 import dualarmdemo_schunk
