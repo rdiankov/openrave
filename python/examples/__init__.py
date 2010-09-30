@@ -4,6 +4,7 @@ import checkvisibility
 import collision
 import constraintplanning
 import dualarmdemo_schunk
+import fastgrasping
 import hanoi
 import graspplanning
 import mobilemanipulation

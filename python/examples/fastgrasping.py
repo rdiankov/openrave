@@ -28,7 +28,8 @@ class FastGrasping(metaclass.AutoReloader):
     """Computes a valid grasp for a given object as fast as possible without relying on a pre-computed grasp set
     """
     class GraspingException(Exception):
-        pass
+        def __init__(self,args):
+            self.args=args
 
     def __init__(self,robot,target):
         self.robot = robot
@@ -36,10 +37,32 @@ class FastGrasping(metaclass.AutoReloader):
         if not self.ikmodel.load():
             self.ikmodel.autogenerate()
         self.gmodel = databases.grasping.GraspingModel(robot,target)
+        self.gmodel.init(friction=0.4,avoidlinks=[])
+
+    def checkgraspfn(self, contacts,finalconfig,grasp,info):
+        # check if grasp can be reached by robot
+        Tglobalgrasp = self.gmodel.getGlobalGraspTransform(grasp,collisionfree=True)
+        sol = self.gmodel.manip.FindIKSolution(Tglobalgrasp,True)
+        if sol is not None:
+            jointvalues = array(finalconfig[0])
+            jointvalues[self.gmodel.manip.GetArmIndices()] = sol
+            raise self.GraspingException([grasp,jointvalues])
+        return True
 
     def computeGrasp(self):
-        self.gmodel.autogenerate()
+        approachrays = self.gmodel.computeBoxApproachRays(delta=0.02,normalanglerange=0.5) # rays to approach object
+        standoffs = [0]
+        # roll discretization
+        rolls = arange(0,2*pi,0.5*pi)
+        # initial preshape for robot is the current joint angles
+        preshapes = [self.robot.GetJointValues()[self.gmodel.manip.GetGripperIndices()]]
+        try:
+            self.gmodel.generate(preshapes=preshapes,standoffs=standoffs,rolls=rolls,approachrays=approachrays,checkgraspfn=self.checkgraspfn,disableallbodies=False)
+            return None,None # did not find anything
+        except self.GraspingException, e:
+            return e.args
 
+        
 def run(args=None):
     """Executes the fastgrasping example
 
@@ -48,17 +71,24 @@ def run(args=None):
     parser = OptionParser(description='Example showing how to compute a valid grasp as fast as possible without computing a grasp set, this is used when the target objects change frequently.')
     OpenRAVEGlobalArguments.addOptions(parser)
     parser.add_option('--scene',
-                      action="store",type='string',dest='scene',default='data/lab1.env.xml',
+                      action="store",type='string',dest='scene',default='data/wamtest1.env.xml',
                       help='Scene file to load (default=%default)')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
     try:
         env.Load(options.scene)
         robot = env.GetRobots()[0]
-        self = GraspPlanning(robot,randomize=options.randomize,nodestinations=options.nodestinations)
-        self.performGraspPlanning()
+        # find an appropriate target
+        bodies = [b for b in env.GetBodies() if not b.IsRobot() and linalg.norm(b.ComputeAABB().extents()) < 0.2]
+        self = FastGrasping(robot,target=bodies[0])
+        grasp,jointvalues = self.computeGrasp()
+        if grasp is not None:
+            print 'grasp is found!'
+            self.gmodel.showgrasp(grasp)
+            self.robot.SetJointValues(jointvalues)
+            raw_input('press any key to exit')
     finally:
         env.Destroy()
 
-# if __name__ == "__main__":
-#     run()
+if __name__ == "__main__":
+    run()

@@ -310,7 +310,7 @@ class GraspingModel(OpenRAVEModel):
         self.generate(preshapes=preshapes,rolls=rolls,graspingnoise=graspingnoise,standoffs=standoffs,approachrays=approachrays,updateenv=updateenv)
         self.save()
 
-    def generate(self,preshapes,standoffs,rolls,approachrays, graspingnoise=None,updateenv=True,forceclosure=True,forceclosurethreshold=1e-9,checkgraspfn=None):
+    def generate(self,preshapes,standoffs,rolls,approachrays, graspingnoise=None,updateenv=True,forceclosure=True,forceclosurethreshold=1e-9,checkgraspfn=None,disableallbodies=True):
         """Generates a grasp set by searching space and evaluating contact points.
 
         All grasp parameters have to be in the bodies's coordinate system (ie: approachrays).
@@ -331,8 +331,9 @@ class GraspingModel(OpenRAVEModel):
         self.grasps = []
         statesaver = self.robot.CreateRobotStateSaver()
         bodies = [(b,b.IsEnabled()) for b in self.env.GetBodies() if b != self.robot and b != self.target]
-        for b in bodies:
-            b[0].Enable(False)
+        if disableallbodies:
+            for b in bodies:
+                b[0].Enable(False)
         try:
             with self.GripperVisibility(self.manip):
                 if updateenv:
@@ -354,7 +355,7 @@ class GraspingModel(OpenRAVEModel):
                             traceback.print_exc(e)
                             continue
                         Tlocalgrasp = eye(4)
-                        with self.env:
+                        with self.robot:
                             self.robot.SetTransform(finalconfig[1])
                             Tgrasp = self.manip.GetEndEffectorTransform()
                             Tlocalgrasp = dot(linalg.inv(self.target.GetTransform()),Tgrasp)
