@@ -470,10 +470,11 @@ class OpenRAVEGlobalArguments:
     @staticmethod
     def parseGlobal(options,**kwargs):
         """Parses all global options independent of the environment"""
+        openravepy.RaveInitialize(True)
         if options._level is not None:
             for debuglevel,debugname in openravepy.DebugLevel.values.iteritems():
                 if (not options._level.isdigit() and options._level.lower() == debugname.name.lower()) or (options._level.isdigit() and int(options._level) == int(debuglevel)):
-                    openravepy.raveSetDebugLevel(debugname)
+                    openravepy.RaveSetDebugLevel(openravepy.DebugLevel.Verbose)
                     break
     
     @staticmethod
@@ -481,21 +482,21 @@ class OpenRAVEGlobalArguments:
         """Parses all options that affect the environment"""
         try:
             if options._collision:
-                cc = env.CreateCollisionChecker(options._collision)
+                cc = RaveCreateCollisionChecker(env,options._collision)
                 if cc is not None:
                     env.SetCollisionChecker(cc)
         except openrave_exception, e:
             print e
         try:
             if options._physics:
-                ph = env.CreatePhysicsEngine(options._physics)
+                ph = RaveCreatePhysicsEngine(env,options._physics)
                 if ph is not None:
                     env.SetPhysicsEngine(ph)
         except openrave_exception, e:
             print e
         try:
             if options._server:
-                sr = env.CreateProblem(options._server)
+                sr = RaveCreateProblem(env,options._server)
                 if sr is not None:
                     env.LoadProblem(sr,'%d'%options._serverport)
         except openrave_exception, e:
@@ -545,7 +546,7 @@ class OpenRAVEModel(metaclass.AutoReloader):
     def has(self):
         raise NotImplementedError()
     def getfilename(self):
-        return os.path.join(self.env.GetHomeDirectory(),'robot.'+self.robot.GetKinematicsGeometryHash())
+        return os.path.join(openravepy.RaveGetHomeDirectory(),'robot.'+self.robot.GetKinematicsGeometryHash())
     def load(self):
         if not os.path.isfile(self.getfilename()):
             return None
@@ -599,10 +600,10 @@ class OpenRAVEModel(metaclass.AutoReloader):
         loadplugins=True
         if options.getfilename:
             # don't want unnecessary messages cluttering the console...
-            openravepy.raveSetDebugLevel(openravepy.DebugLevel.Fatal)
+            openravepy.RaveSetDebugLevel(openravepy.DebugLevel.Fatal)
             loadplugins = False
         if options.gethas:
-            openravepy.raveSetDebugLevel(openravepy.DebugLevel.Fatal)
+            openravepy.RaveSetDebugLevel(openravepy.DebugLevel.Fatal)
         if env is None:
             env = openravepy.Environment(loadplugins)
             destroyenv = True

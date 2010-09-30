@@ -164,7 +164,7 @@ public:
                 _abTarget = _vf->_target->ComputeAABB();
                 vector<AABB> vboxes; vboxes.push_back(_vf->_target->ComputeAABB());
 
-                _ptargetbox = _vf->_target->GetEnv()->CreateKinBody();
+                _ptargetbox = RaveCreateKinBody(_vf->_target->GetEnv());
                 _ptargetbox->InitFromBoxes(vboxes,false);
                 _ptargetbox->SetName("__visualfeedbacktest__");
                 _ptargetbox->GetEnv()->AddKinBody(_ptargetbox,true);
@@ -1074,7 +1074,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         _robot->GetActiveDOFValues(params->vinitialconfig);
 
         params->_samplegoalfn = boost::bind(&GoalSampleFunction::Sample,pgoalsampler,_1);
-        TrajectoryBasePtr ptraj = GetEnv()->CreateTrajectory(_robot->GetActiveDOF());
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF());
 
         Trajectory::TPOINT pt;
         pt.q = params->vinitialconfig;
@@ -1087,7 +1087,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         }
         _robot->GetActiveDOFValues(params->vinitialconfig);
 
-        PlannerBasePtr planner = GetEnv()->CreatePlanner(plannername);
+        PlannerBasePtr planner = RaveCreatePlanner(GetEnv(),plannername);
         if( !planner ) {
             RAVELOG_ERRORA("failed to create BiRRTs\n");
             return false;
@@ -1189,8 +1189,8 @@ Visibility computation checks occlusion with other objects using ray sampling in
         params->_ptarget = _target;
         _robot->GetActiveDOFValues(params->vinitialconfig);
 
-        TrajectoryBasePtr ptraj = GetEnv()->CreateTrajectory(_robot->GetActiveDOF());
-        PlannerBasePtr planner = GetEnv()->CreatePlanner(plannername);
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF());
+        PlannerBasePtr planner = RaveCreatePlanner(GetEnv(),plannername);
         if( !planner ) {
             RAVELOG_ERRORA("failed to create BiRRTs\n");
             return false;

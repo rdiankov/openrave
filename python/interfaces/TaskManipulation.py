@@ -19,7 +19,7 @@ from copy import copy as shallowcopy
 class TaskManipulation:
     def __init__(self,robot,plannername=None,maxvelmult=None,graspername=None):
         env = robot.GetEnv()
-        self.prob = env.CreateProblem('TaskManipulation')
+        self.prob = RaveCreateProblem(env,'TaskManipulation')
         self.robot = robot
         self.args = self.robot.GetName()
         if plannername is not None and len(plannername) > 0:
@@ -34,7 +34,7 @@ class TaskManipulation:
         self.prob.GetEnv().Remove(self.prob)
     def clone(self,envother):
         clone = shallowcopy(self)
-        clone.prob = envother.CreateProblem('TaskManipulation')
+        clone.prob = RaveCreateProblem(envother,'TaskManipulation')
         clone.robot = envother.GetRobot(self.robot.GetName())
         if envother.LoadProblem(clone.prob,clone.args) != 0:
             raise ValueError('problem failed to initialize')

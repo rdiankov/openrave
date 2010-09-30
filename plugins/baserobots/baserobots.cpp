@@ -23,7 +23,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 {
     if( !s_RegisteredReader ) {
         /// as long as this pointer is valid, the reader will remain registered
-        s_RegisteredReader = penv->RegisterXMLReader(PT_Robot,"collisionmap",CollisionMapRobot::CreateXMLReader);
+        s_RegisteredReader = RaveRegisterXMLReader(PT_Robot,"collisionmap",CollisionMapRobot::CreateXMLReader);
     }
     
     switch(type) {

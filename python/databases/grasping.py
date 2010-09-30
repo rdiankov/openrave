@@ -624,7 +624,7 @@ class GraspingModel(OpenRAVEModel):
 
     def computePlaneApproachRays(self,center,sidex,sidey,delta=0.02,normalanglerange=0,directiondelta=0.4):
         # ode gives the most accurate rays
-        cc = self.env.CreateCollisionChecker('ode')
+        cc = RaveCreateCollisionChecker(self.env,'ode')
         if cc is not None:
             ccold = self.env.GetCollisionChecker()
             self.env.SetCollisionChecker(cc)
@@ -666,7 +666,7 @@ class GraspingModel(OpenRAVEModel):
 
     def computeBoxApproachRays(self,delta=0.02,normalanglerange=0,directiondelta=0.4):
         # ode gives the most accurate rays
-        cc = self.env.CreateCollisionChecker('ode')
+        cc = RaveCreateCollisionChecker(self.env,'ode')
         if cc is not None:
             ccold = self.env.GetCollisionChecker()
             self.env.SetCollisionChecker(cc)

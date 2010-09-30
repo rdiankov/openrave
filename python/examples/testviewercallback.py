@@ -39,18 +39,19 @@ def run(args=None):
                       help='OpenRAVE scene to load')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    env.Load(options.scene)
-    handle = env.GetViewer().RegisterCallback(Viewer.ViewerEvents.ItemSelection,lambda link,pos,org: itemselectioncb(link,pos,org,env))
-    if handle is None:
-        print 'failed to register handle'
-        sys.exit(1)
-
-    while(True):
-        cmd = raw_input('In selection mode, click anywhere on the viewer. Enter command (q-quit): ')
-        if cmd == 'q':
-            break
-    handle = None
-    env.Destroy() # done with the environment
+    try:
+        env.Load(options.scene)
+        handle = env.GetViewer().RegisterCallback(Viewer.Events.ItemSelection,lambda link,pos,org: itemselectioncb(link,pos,org,env))
+        if handle is None:
+            print 'failed to register handle'
+            sys.exit(1)
+        while True:
+            cmd = raw_input('In selection mode, click anywhere on the viewer. Enter command (q-quit): ')
+            if cmd == 'q':
+                break
+        handle = None
+    finally:
+        env.Destroy() # done with the environment
 
 if __name__=='__main__':
     run()

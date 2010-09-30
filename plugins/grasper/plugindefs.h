@@ -120,7 +120,7 @@ class CollisionCheckerMngr
         _coloptions = _pprevchecker->GetCollisionOptions();
 
         if( collisionchecker.size() > 0 ) {
-            _pnewchecker = _penv->CreateCollisionChecker(collisionchecker);
+            _pnewchecker = RaveCreateCollisionChecker(_penv,collisionchecker);
             if( !!_pnewchecker ) {
                 RAVELOG_VERBOSEA(str(boost::format("setting collision checker %s\n")%collisionchecker));
                 _penv->SetCollisionChecker(_pnewchecker);

@@ -1836,7 +1836,7 @@ void QtCoinViewer::SetupMenus()
     _pToggleSimulation = pact;
 
     std::map<InterfaceType, std::vector<std::string> > interfacenames;
-    GetEnv()->GetLoadedInterfaces(interfacenames);
+    RaveGetLoadedInterfaces(interfacenames);
 
     psubmenu = pcurmenu->addMenu(tr("&Collision Checkers"));
     _pSelectedCollisionChecker = new QActionGroup(this);
@@ -2880,7 +2880,7 @@ void QtCoinViewer::CollisionCheckerChanged(QAction* pact)
     if( pact->data().toString().size() == 0 )
         GetEnv()->SetCollisionChecker(CollisionCheckerBasePtr());
     else {
-        CollisionCheckerBasePtr p = GetEnv()->CreateCollisionChecker(pact->data().toString().toStdString());
+        CollisionCheckerBasePtr p = RaveCreateCollisionChecker(GetEnv(),pact->data().toString().toStdString());
         if( !!p )
             GetEnv()->SetCollisionChecker(p);
         else
@@ -2913,7 +2913,7 @@ void QtCoinViewer::PhysicsEngineChanged(QAction* pact)
     if( pact->data().toString().size() == 0 )
         GetEnv()->SetPhysicsEngine(PhysicsEngineBasePtr());
     else {
-        PhysicsEngineBasePtr p = GetEnv()->CreatePhysicsEngine(pact->data().toString().toStdString());
+        PhysicsEngineBasePtr p = RaveCreatePhysicsEngine(GetEnv(),pact->data().toString().toStdString());
         if( !!p )
             GetEnv()->SetPhysicsEngine(p);
         else

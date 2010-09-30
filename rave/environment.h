@@ -42,55 +42,51 @@ public:
     /// Do not call inside a SimulationStep call
     virtual void Reset()=0;
 
-    /// \name Interface Creation and Plugin Management
-    /// \anchor env_plugin_functionality
-    //@{
-    virtual InterfaceBasePtr CreateInterface(InterfaceType type,const std::string& interfacename)=0;
-    virtual RobotBasePtr CreateRobot(const std::string& name="")=0;
-    virtual PlannerBasePtr CreatePlanner(const std::string& name)=0;
-    virtual SensorSystemBasePtr CreateSensorSystem(const std::string& name)=0;
-    virtual ControllerBasePtr CreateController(const std::string& name)=0;
-    virtual ProblemInstancePtr CreateProblem(const std::string& name)=0;
-    virtual IkSolverBasePtr CreateIkSolver(const std::string& name)=0;
-    virtual PhysicsEngineBasePtr CreatePhysicsEngine(const std::string& name)=0;
-    virtual SensorBasePtr CreateSensor(const std::string& name)=0;
-    virtual CollisionCheckerBasePtr CreateCollisionChecker(const std::string& name)=0;
-    virtual ViewerBasePtr CreateViewer(const std::string& name)=0;
-    
-    /// \brief Return an empty KinBody instance.
-    virtual KinBodyPtr CreateKinBody(const std::string& name="") = 0;
+    /// \brief Returns the OpenRAVE global state, used for initializing plugins
+    virtual boost::shared_ptr<void> GlobalState() = 0;
 
-    /// \brief Return an empty trajectory instance initialized to nDOF degrees of freedom.
-    virtual TrajectoryBasePtr CreateTrajectory(int nDOF) = 0;
+    /// \deprecated (10/09/23) see \ref RaveCreateInterface
+    virtual InterfaceBasePtr CreateInterface(InterfaceType type,const std::string& interfacename) RAVE_DEPRECATED =0;
+    /// \deprecated (10/09/23) see \ref RaveCreateRobot
+    virtual RobotBasePtr CreateRobot(const std::string& name="") RAVE_DEPRECATED =0;
+    /// \deprecated (10/09/23) see \ref RaveCreatePlanner
+    virtual PlannerBasePtr CreatePlanner(const std::string& name) RAVE_DEPRECATED =0;
+    /// \deprecated (10/09/23) see \ref RaveCreateSensorSystem
+    virtual SensorSystemBasePtr CreateSensorSystem(const std::string& name) RAVE_DEPRECATED =0;
+    /// \deprecated (10/09/23) see \ref RaveCreateController
+    virtual ControllerBasePtr CreateController(const std::string& name) RAVE_DEPRECATED =0;
+    /// \deprecated (10/09/23) see \ref RaveCreateProblem
+    virtual ProblemInstancePtr CreateProblem(const std::string& name) RAVE_DEPRECATED =0;
+    /// \deprecated (10/09/23) see \ref RaveCreateIkSolver
+    virtual IkSolverBasePtr CreateIkSolver(const std::string& name) RAVE_DEPRECATED =0;
+    /// \deprecated (10/09/23) see \ref RaveCreatePhysicsEngine
+    virtual PhysicsEngineBasePtr CreatePhysicsEngine(const std::string& name) RAVE_DEPRECATED =0;
+    /// \deprecated (10/09/23) see \ref RaveCreateSensor
+    virtual SensorBasePtr CreateSensor(const std::string& name) RAVE_DEPRECATED =0;
+    /// \deprecated (10/09/23) see \ref RaveCreateCollisionChecker
+    virtual CollisionCheckerBasePtr CreateCollisionChecker(const std::string& name) RAVE_DEPRECATED =0;
+    /// \deprecated (10/09/23) see \ref RaveCreateViewer
+    virtual ViewerBasePtr CreateViewer(const std::string& name) RAVE_DEPRECATED =0;
+    /// \deprecated (10/09/23) see \ref RaveCreateKinBody
+    virtual KinBodyPtr CreateKinBody(const std::string& name="") RAVE_DEPRECATED = 0;
+    /// \deprecated (10/09/23) see \ref RaveCreateTrajectory
+    virtual TrajectoryBasePtr CreateTrajectory(int nDOF) RAVE_DEPRECATED = 0;
+    /// \deprecated (10/09/23) see \ref RaveLoadPlugin
+    virtual void GetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins) RAVE_DEPRECATED =0;
+    /// \deprecated (10/09/23) see \ref RaveLoadPlugin
+    virtual void GetLoadedInterfaces(std::map<InterfaceType, std::vector<std::string> >& interfacenames) const RAVE_DEPRECATED = 0;
+    /// \deprecated (10/09/23) see \ref RaveLoadPlugin
+    virtual bool LoadPlugin(const std::string& name) RAVE_DEPRECATED = 0;
+    /// \deprecated (10/09/23) see \ref RaveReloadPlugins
+    virtual void ReloadPlugins() RAVE_DEPRECATED = 0;
+    /// \deprecated (10/09/23) see \ref RaveHasInterface
+    virtual bool HasInterface(InterfaceType type, const std::string& interfacename) const RAVE_DEPRECATED = 0;
 
     /// \brief Environment will own the interface until EnvironmentBase::Destroy is called. 
     virtual void OwnInterface(InterfaceBasePtr pinterface) = 0;
 
     /// \brief Remove ownership of the interface.
     virtual void DisownInterface(InterfaceBasePtr pinterface) = 0;
-
-    /// \brief Returns true if interface can be created, otherwise false.
-    virtual bool HasInterface(InterfaceType type, const std::string& interfacename) const = 0;
-    
-    /// \brief Get all the loaded plugins and the interfaces they support.
-    ///
-    /// \param plugins A list of plugins. Each entry has the plugin name and the interfaces it supports
-    virtual void GetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins)=0;
-
-    /// \brief Get a list of all the loaded interfaces.
-    virtual void GetLoadedInterfaces(std::map<InterfaceType, std::vector<std::string> >& interfacenames) const = 0;
-
-    /// \brief Load a plugin and its interfaces.
-    ///
-    /// If the plugin is already loaded, will reload it.
-    /// \param name the filename of the plugin to load
-    virtual bool LoadPlugin(const std::string& name) = 0;
-
-    /// \brief Reloads all currently loaded plugins.
-    ///
-    /// The interfaces currently created remain will continue using the old plugins, so this function is safe in that plugins currently loaded remain loaded until the last interface that uses them is released.
-    virtual void ReloadPlugins() = 0;
-    //@}
 
     /// \brief Create and return a clone of the current environment.
     ///
@@ -230,17 +226,9 @@ public:
     /// \param data string containing XML data
     /// \param atts the XML attributes/value pairs
     virtual InterfaceBasePtr ReadInterfaceXMLData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const std::list<std::pair<std::string,std::string> >& atts) = 0;
-
-    typedef boost::function<BaseXMLReaderPtr(InterfaceBasePtr, const std::list<std::pair<std::string,std::string> >&)> CreateXMLReaderFn;
-
-    /// \brief Registers a custom xml reader for a particular interface.
-    ///
-    /// Once registered, anytime an interface is created through XML and
-    /// the xmltag is seen, the function CreateXMLReaderFn will be called to get a reader for that tag
-    /// \param xmltag the tag specified in xmltag is seen in the interface, the the custom reader will be created.
-    /// \param fn CreateXMLReaderFn(pinterface,atts) - passed in the pointer to the interface where the tag was seen along with the list of attributes
-    /// \return a pointer holding the registration, releasing the pointer will unregister the XML reader
-    virtual boost::shared_ptr<void> RegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn) = 0;
+    
+    /// \deprecated (10/09/30) see \ref RaveRegisterXMLReader
+    virtual boost::shared_ptr<void> RegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn) RAVE_DEPRECATED = 0;
     
     /// \brief Parses a file for OpenRAVE XML formatted data.
     virtual bool ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename) = 0;
@@ -454,10 +442,8 @@ public:
     virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors) = 0;
     //@}
 
-    /// \brief Returns the openrave home directory where settings, cache, and other files are stored.
-    ///
-    /// On Linux/Unix systems, this is usually $HOME/.openrave, on Windows this is $HOMEPATH/.openrave
-    virtual const std::string& GetHomeDirectory() const = 0;
+    /// \deprecated (10/09/23) see \ref RaveGetHomeDirectory
+    virtual const std::string& GetHomeDirectory() const RAVE_DEPRECATED = 0;
 
     //@{ debug/global commands
     

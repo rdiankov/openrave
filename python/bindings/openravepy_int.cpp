@@ -14,265 +14,12 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#ifndef _WIN32
-#include <sys/time.h>
-#define Sleep(milli) usleep(1000*milli)
-#else
-#define WIN32_LEAN_AND_MEAN
-#include <winsock2.h>
-#endif
-
-#include "openrave-core.h"
-#include <Python.h>
-
-#include <sstream>
-#include <exception>
-
-#include <boost/array.hpp>
-#include <boost/thread/thread.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/condition.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/format.hpp>
-#include <boost/enable_shared_from_this.hpp> 
-#include <boost/version.hpp>
-
-#define PY_ARRAY_UNIQUE_SYMBOL PyArrayHandle
-#include <boost/python.hpp>
-#include <boost/python/exception_translator.hpp>
-#include <boost/python/docstring_options.hpp>
-#include <pyconfig.h>
-#include <numpy/arrayobject.h>
-
-#define OPENRAVE_BININGS_PYARRAY
-#include "bindings.h"
-#include "docstrings.h"
-
-#define CHECK_POINTER(p) { \
-        if( !(p) ) throw openrave_exception(boost::str(boost::format("[%s:%d]: invalid pointer")%__PRETTY_FUNCTION__%__LINE__)); \
-}
-
-using namespace boost::python;
-using namespace std;
-using namespace OpenRAVE;
-
-uint64_t GetMicroTime()
-{
-#ifdef _WIN32
-    LARGE_INTEGER count, freq;
-    QueryPerformanceCounter(&count);
-    QueryPerformanceFrequency(&freq);
-    return (count.QuadPart * 1000000) / freq.QuadPart;
-#else
-    struct timeval t;
-    gettimeofday(&t, NULL);
-    return (uint64_t)t.tv_sec*1000000+t.tv_usec;
-#endif
-}
-
-struct null_deleter { void operator()(void const *) const {} };
+#include "openravepy_int.h"
 
 /// if set, will return all transforms are 1x7 vectors where first 4 compoonents are quaternion
 static bool s_bReturnTransformQuaternions = false;
 bool GetReturnTransformQuaternions() { return s_bReturnTransformQuaternions; }
 void SetReturnTransformQuaternions(bool bset) { s_bReturnTransformQuaternions = bset; }
-
-struct DummyStruct {};
-
-class PyInterfaceBase;
-class PyKinBody;
-class PyRobotBase;
-class PyEnvironmentBase;
-class PyCollisionReport;
-class PyPhysicsEngineBase;
-class PyCollisionCheckerBase;
-class PyIkSolverBase;
-class PyPlannerBase;
-class PySensorBase;
-class PySensorSystemBase;
-class PyControllerBase;
-class PyTrajectoryBase;
-class PyProblemInstance;
-class PyViewerBase;
-
-typedef boost::shared_ptr<PyInterfaceBase> PyInterfaceBasePtr;
-typedef boost::shared_ptr<PyInterfaceBase const> PyInterfaceBaseConstPtr;
-typedef boost::shared_ptr<PyKinBody> PyKinBodyPtr;
-typedef boost::shared_ptr<PyKinBody const> PyKinBodyConstPtr;
-typedef boost::shared_ptr<PyRobotBase> PyRobotBasePtr;
-typedef boost::shared_ptr<PyRobotBase const> PyRobotBaseConstPtr;
-typedef boost::shared_ptr<PyEnvironmentBase> PyEnvironmentBasePtr;
-typedef boost::shared_ptr<PyEnvironmentBase const> PyEnvironmentBaseConstPtr;
-typedef boost::shared_ptr<PyIkSolverBase> PyIkSolverBasePtr;
-typedef boost::shared_ptr<PyIkSolverBase const> PyIkSolverBaseConstPtr;
-typedef boost::shared_ptr<PyTrajectoryBase> PyTrajectoryBasePtr;
-typedef boost::shared_ptr<PyTrajectoryBase const> PyTrajectoryBaseConstPtr;
-typedef boost::shared_ptr<PyCollisionReport> PyCollisionReportPtr;
-typedef boost::shared_ptr<PyCollisionReport const> PyCollisionReportConstPtr;
-typedef boost::shared_ptr<PyPhysicsEngineBase> PyPhysicsEngineBasePtr;
-typedef boost::shared_ptr<PyPhysicsEngineBase const> PyPhysicsEngineBaseConstPtr;
-typedef boost::shared_ptr<PyCollisionCheckerBase> PyCollisionCheckerBasePtr;
-typedef boost::shared_ptr<PyCollisionCheckerBase const> PyCollisionCheckerBaseConstPtr;
-typedef boost::shared_ptr<PyPlannerBase> PyPlannerBasePtr;
-typedef boost::shared_ptr<PyPlannerBase const> PyPlannerBaseConstPtr;
-typedef boost::shared_ptr<PySensorBase> PySensorBasePtr;
-typedef boost::shared_ptr<PySensorBase const> PySensorBaseConstPtr;
-typedef boost::shared_ptr<PySensorSystemBase> PySensorSystemBasePtr;
-typedef boost::shared_ptr<PySensorSystemBase const> PySensorSystemBaseConstPtr;
-typedef boost::shared_ptr<PyControllerBase> PyControllerBasePtr;
-typedef boost::shared_ptr<PyControllerBase const> PyControllerBaseConstPtr;
-typedef boost::shared_ptr<PyProblemInstance> PyProblemInstancePtr;
-typedef boost::shared_ptr<PyProblemInstance const> PyProblemInstanceConstPtr;
-typedef boost::shared_ptr<PyViewerBase> PyViewerBasePtr;
-typedef boost::shared_ptr<PyViewerBase const> PyViewerBaseConstPtr;
-
-inline RaveVector<float> ExtractFloat3(const object& o)
-{
-    return RaveVector<float>(extract<float>(o[0]), extract<float>(o[1]), extract<float>(o[2]));
-}
-
-template <typename T>
-inline Vector ExtractVector3Type(const object& o)
-{
-    return Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]));
-}
-
-template <typename T>
-inline Vector ExtractVector4Type(const object& o)
-{
-    return Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3]));
-}
-
-inline Vector ExtractVector3(const object& oraw)
-{
-    return ExtractVector3Type<dReal>(oraw);
-}
-
-inline Vector ExtractVector4(const object& oraw)
-{
-    return ExtractVector4Type<dReal>(oraw);
-}
-
-template <typename T>
-inline RaveVector<T> ExtractVector34(const object& oraw,T fdefaultw)
-{
-    int n = len(oraw);
-    if( n == 3 ) {
-        RaveVector<T> v = ExtractVector3Type<T>(oraw);
-        v.w = fdefaultw;
-        return v;
-    }
-    else if( n == 4 )
-        return ExtractVector4Type<T>(oraw);
-    throw openrave_exception("unexpected vector size");
-}
-
-template <typename T>
-inline Transform ExtractTransformType(const object& o)
-{
-    if( len(o) == 7 )
-        return Transform(Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3])),
-                         Vector(extract<T>(o[4]), extract<T>(o[5]), extract<T>(o[6])));
-    TransformMatrix t;
-    for(int i = 0; i < 3; ++i) {
-        object orow = o[i];
-        t.m[4*i+0] = extract<T>(orow[0]);
-        t.m[4*i+1] = extract<T>(orow[1]);
-        t.m[4*i+2] = extract<T>(orow[2]);
-        t.trans[i] = extract<T>(orow[3]);
-    }
-    return t;
-}
-
-template <typename T>
-inline TransformMatrix ExtractTransformMatrixType(const object& o)
-{
-    if( len(o) == 7 )
-        return Transform(Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3])),
-                         Vector(extract<T>(o[4]), extract<T>(o[5]), extract<T>(o[6])));
-    TransformMatrix t;
-    for(int i = 0; i < 3; ++i) {
-        object orow = o[i];
-        t.m[4*i+0] = extract<T>(orow[0]);
-        t.m[4*i+1] = extract<T>(orow[1]);
-        t.m[4*i+2] = extract<T>(orow[2]);
-        t.trans[i] = extract<T>(orow[3]);
-    }
-    return t;
-}
-
-inline Transform ExtractTransform(const object& oraw)
-{
-    return ExtractTransformType<dReal>(oraw);
-}
-
-inline TransformMatrix ExtractTransformMatrix(const object& oraw)
-{
-    return ExtractTransformMatrixType<dReal>(oraw);
-}
-
-inline object toPyArray(const TransformMatrix& t)
-{
-    npy_intp dims[] = {4,4};
-    PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-    dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
-    pdata[0] = t.m[0]; pdata[1] = t.m[1]; pdata[2] = t.m[2]; pdata[3] = t.trans.x;
-    pdata[4] = t.m[4]; pdata[5] = t.m[5]; pdata[6] = t.m[6]; pdata[7] = t.trans.y;
-    pdata[8] = t.m[8]; pdata[9] = t.m[9]; pdata[10] = t.m[10]; pdata[11] = t.trans.z;
-    pdata[12] = 0; pdata[13] = 0; pdata[14] = 0; pdata[15] = 1;
-    return static_cast<numeric::array>(handle<>(pyvalues));
-}
-
-inline object toPyArrayRotation(const TransformMatrix& t)
-{
-    npy_intp dims[] = {3,3};
-    PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-    dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
-    pdata[0] = t.m[0]; pdata[1] = t.m[1]; pdata[2] = t.m[2];
-    pdata[3] = t.m[4]; pdata[4] = t.m[5]; pdata[5] = t.m[6];
-    pdata[6] = t.m[8]; pdata[7] = t.m[9]; pdata[8] = t.m[10];
-    return static_cast<numeric::array>(handle<>(pyvalues));
-}
-
-inline object toPyArray(const Transform& t)
-{
-    npy_intp dims[] = {7};
-    PyObject *pyvalues = PyArray_SimpleNew(1,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-    dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
-    pdata[0] = t.rot.x; pdata[1] = t.rot.y; pdata[2] = t.rot.z; pdata[3] = t.rot.w;
-    pdata[4] = t.trans.x; pdata[5] = t.trans.y; pdata[6] = t.trans.z;
-    return static_cast<numeric::array>(handle<>(pyvalues));
-}
-
-inline object toPyArray3(const vector<RaveVector<float> >& v)
-{
-    npy_intp dims[] = {v.size(),3};
-    PyObject *pyvalues = PyArray_SimpleNew(2,dims, PyArray_FLOAT);
-    if( v.size() > 0 ) {
-        float* pf = (float*)PyArray_DATA(pyvalues);
-        FOREACHC(it,v) {
-            *pf++ = it->x;
-            *pf++ = it->y;
-            *pf++ = it->z;
-        }
-    }
-    return static_cast<numeric::array>(handle<>(pyvalues));
-}
-
-inline object toPyArray3(const vector<RaveVector<double> >& v)
-{
-    npy_intp dims[] = {v.size(),3};
-    PyObject *pyvalues = PyArray_SimpleNew(2,dims, PyArray_DOUBLE);
-    if( v.size() > 0 ) {
-        float* pf = (float*)PyArray_DATA(pyvalues);
-        FOREACHC(it,v) {
-            *pf++ = it->x;
-            *pf++ = it->y;
-            *pf++ = it->z;
-        }
-    }
-    return static_cast<numeric::array>(handle<>(pyvalues));
-}
 
 template <typename T>
 inline object ReturnTransform(T t)
@@ -282,45 +29,6 @@ inline object ReturnTransform(T t)
     else
         return toPyArray(TransformMatrix(t));
 }
-
-inline object toPyVector3(Vector v)
-{
-    return numeric::array(boost::python::make_tuple(v.x,v.y,v.z));
-}
-
-inline object toPyVector4(Vector v)
-{
-    return numeric::array(boost::python::make_tuple(v.x,v.y,v.z,v.w));
-}
-
-class PyPluginInfo
-{
-public:
-    PyPluginInfo(const PLUGININFO& info)
-    {
-        FOREACHC(it, info.interfacenames) {
-            boost::python::list names;
-            FOREACHC(itname,it->second)
-                names.append(*itname);
-            interfacenames.append(boost::python::make_tuple(it->first,names));
-        }
-        version = OPENRAVE_VERSION_STRING_FORMAT(info.version);
-    }
-
-    boost::python::list interfacenames;
-    string version;
-};
-
-class PyGraphHandle
-{
-public:
-    PyGraphHandle() {}
-    PyGraphHandle(EnvironmentBase::GraphHandlePtr handle) : _handle(handle) {}
-    virtual ~PyGraphHandle() {}
-
-private:
-    EnvironmentBase::GraphHandlePtr _handle;
-};
 
 class PyRay
 {
@@ -2216,7 +1924,7 @@ protected:
         ViewerBasePtr pviewer;
         {
             boost::mutex::scoped_lock lock(_mutexViewer);
-            pviewer = _penv->CreateViewer(strviewer.c_str());
+            pviewer = RaveCreateViewer(_penv, strviewer.c_str());
             if( !!pviewer ) {
                 _penv->AttachViewer(pviewer);
             }
@@ -2259,11 +1967,10 @@ protected:
 public:
     PyEnvironmentBase()
     {
-        _penv = CreateEnvironment(true);
-    }
-    PyEnvironmentBase(bool bLoadPlugins)
-    {
-        _penv = CreateEnvironment(bLoadPlugins);
+        if( !RaveGlobalState() ) {
+            RaveInitialize(true);
+        }
+        _penv = RaveCreateEnvironment();
     }
     PyEnvironmentBase(EnvironmentBasePtr penv) : _penv(penv) {
     }
@@ -2294,107 +2001,73 @@ public:
 
     object GetPluginInfo()
     {
-        boost::python::list plugins;
-        std::list< std::pair<std::string, PLUGININFO> > listplugins;
-        _penv->GetPluginInfo(listplugins);
-        FOREACH(itplugin, listplugins)
-            plugins.append(boost::python::make_tuple(itplugin->first,object(boost::shared_ptr<PyPluginInfo>(new PyPluginInfo(itplugin->second)))));
-        return plugins;
+        RAVELOG_WARN("Environment.GetPluginInfo deprecated, use RaveGetPluginInfo\n");
+        return openravepy::RaveGetPluginInfo();
     }
 
-    boost::python::list GetLoadedInterfaces()
+    object GetLoadedInterfaces()
     {
-        std::map<InterfaceType, std::vector<std::string> > interfacenames;
-        _penv->GetLoadedInterfaces(interfacenames);
-        boost::python::list ointerfacenames;
-        FOREACHC(it, interfacenames) {
-            boost::python::list names;
-            FOREACHC(itname,it->second)
-                names.append(*itname);
-            ointerfacenames.append(boost::python::make_tuple(it->first,names));
-        }
-        return ointerfacenames;
+        RAVELOG_WARN("Environment.GetLoadedInterfaces deprecated, use RaveGetLoadedInterfaces\n");
+        return openravepy::RaveGetLoadedInterfaces();
     }
 
-    bool LoadPlugin(const string& name) { return _penv->LoadPlugin(name.c_str()); }
-    void ReloadPlugins() { return _penv->ReloadPlugins(); }
+    bool LoadPlugin(const string& name) { RAVELOG_WARN("Environment.LoadPlugin deprecated, use RaveLoadPlugin\n");  return RaveLoadPlugin(name.c_str()); }
+    void ReloadPlugins() { RAVELOG_WARN("Environment.ReloadPlugins deprecated, use RaveReloadPlugins\n"); return RaveReloadPlugins(); }
 
     PyInterfaceBasePtr CreateInterface(InterfaceType type, const string& name)
     {
-        InterfaceBasePtr p = _penv->CreateInterface(type,name);
-        if( !p )
-            return PyInterfaceBasePtr();
-        return PyInterfaceBasePtr(new PyInterfaceBase(p,shared_from_this()));
+        RAVELOG_WARN("Environment.CreateInterface deprecated, use RaveCreateInterface\n");
+        return openravepy::RaveCreateInterface(shared_from_this(),type,name);
     }
     PyRobotBasePtr CreateRobot(const string& name)
     {
-        RobotBasePtr p = _penv->CreateRobot(name);
-        if( !p )
-            return PyRobotBasePtr();
-        return PyRobotBasePtr(new PyRobotBase(p, shared_from_this()));
+        RAVELOG_WARN("Environment.CreateRobot deprecated, use RaveCreateRobot\n");
+        return openravepy::RaveCreateRobot(shared_from_this(),name);
     }
     PyPlannerBasePtr CreatePlanner(const string& name)
     {
-        PlannerBasePtr p = _penv->CreatePlanner(name);
-        if( !p )
-            return PyPlannerBasePtr();
-        return PyPlannerBasePtr(new PyPlannerBase(p, shared_from_this()));
+        RAVELOG_WARN("Environment.CreatePlanner deprecated, use RaveCreatePlanner\n");
+        return openravepy::RaveCreatePlanner(shared_from_this(),name);
     }
     PySensorSystemBasePtr CreateSensorSystem(const string& name)
     {
-        SensorSystemBasePtr p = _penv->CreateSensorSystem(name);
-        if( !p )
-            return PySensorSystemBasePtr();
-        return PySensorSystemBasePtr(new PySensorSystemBase(p, shared_from_this()));
+        RAVELOG_WARN("Environment.CreateSensorSystem deprecated, use RaveCreateSensorSystem\n");
+        return openravepy::RaveCreateSensorSystem(shared_from_this(),name);
     }
     PyControllerBasePtr CreateController(const string& name)
     {
-        ControllerBasePtr p = _penv->CreateController(name);
-        if( !p )
-            return PyControllerBasePtr();
-        return PyControllerBasePtr(new PyControllerBase(p, shared_from_this()));
+        RAVELOG_WARN("Environment.CreateController deprecated, use RaveCreateController\n");
+        return openravepy::RaveCreateController(shared_from_this(),name);
     }
     PyProblemInstancePtr CreateProblem(const string& name)
     {
-        ProblemInstancePtr p = _penv->CreateProblem(name);
-        if( !p )
-            return PyProblemInstancePtr();
-        return PyProblemInstancePtr(new PyProblemInstance(p, shared_from_this()));
+        RAVELOG_WARN("Environment.CreateProblem deprecated, use RaveCreateProblem\n");
+        return openravepy::RaveCreateProblem(shared_from_this(),name);
     }
     PyIkSolverBasePtr CreateIkSolver(const string& name)
     {
-        IkSolverBasePtr p = _penv->CreateIkSolver(name);
-        if( !p )
-            return PyIkSolverBasePtr();
-        return PyIkSolverBasePtr(new PyIkSolverBase(p, shared_from_this()));
+        RAVELOG_WARN("Environment.CreateIkSolver deprecated, use RaveCreateIkSolver\n");
+        return openravepy::RaveCreateIkSolver(shared_from_this(),name);
     }
     PyPhysicsEngineBasePtr CreatePhysicsEngine(const string& name)
     {
-        PhysicsEngineBasePtr p = _penv->CreatePhysicsEngine(name);
-        if( !p )
-            return PyPhysicsEngineBasePtr();
-        return PyPhysicsEngineBasePtr(new PyPhysicsEngineBase(p, shared_from_this()));
+        RAVELOG_WARN("Environment.CreatePhysicsEngine deprecated, use RaveCreatePhysicsEngine\n");
+        return openravepy::RaveCreatePhysicsEngine(shared_from_this(),name);
     }
     PySensorBasePtr CreateSensor(const string& name)
     {
-        SensorBasePtr p = _penv->CreateSensor(name);
-        if( !p )
-            return PySensorBasePtr();
-        return PySensorBasePtr(new PySensorBase(p, shared_from_this()));
+        RAVELOG_WARN("Environment.CreateSensor deprecated, use RaveCreateSensor\n");
+        return openravepy::RaveCreateSensor(shared_from_this(),name);
     }
     PyCollisionCheckerBasePtr CreateCollisionChecker(const string& name)
     {
-        CollisionCheckerBasePtr p = _penv->CreateCollisionChecker(name);
-        if( !p )
-            return PyCollisionCheckerBasePtr();
-        return PyCollisionCheckerBasePtr(new PyCollisionCheckerBase(p, shared_from_this()));
+        RAVELOG_WARN("Environment.CreateCollisionChecker deprecated, use RaveCreateCollisionChecker\n");
+        return openravepy::RaveCreateCollisionChecker(shared_from_this(),name);
     }
     PyViewerBasePtr CreateViewer(const string& name)
     {
-        ViewerBasePtr p = _penv->CreateViewer(name);
-        if( !p )
-            return PyViewerBasePtr();
-        return PyViewerBasePtr(new PyViewerBase(p, shared_from_this()));
+        RAVELOG_WARN("Environment.CreateViewer deprecated, use RaveCreateViewer\n");
+        return openravepy::RaveCreateViewer(shared_from_this(),name);
     }
 
     PyEnvironmentBasePtr CloneSelf(int options)
@@ -2779,10 +2452,10 @@ public:
 
     PyKinBodyPtr CreateKinBody()
     {
-        return PyKinBodyPtr(new PyKinBody(_penv->CreateKinBody(),shared_from_this()));
+        return PyKinBodyPtr(new PyKinBody(RaveCreateKinBody(_penv),shared_from_this()));
     }
 
-    PyTrajectoryBasePtr CreateTrajectory(int nDOF) { return PyTrajectoryBasePtr(new PyTrajectoryBase(_penv->CreateTrajectory(nDOF),shared_from_this())); }
+    PyTrajectoryBasePtr CreateTrajectory(int nDOF) { return PyTrajectoryBasePtr(new PyTrajectoryBase(RaveCreateTrajectory(_penv,nDOF),shared_from_this())); }
 
     int LoadProblem(PyProblemInstancePtr prob, const string& args) { CHECK_POINTER(prob); return _penv->LoadProblem(prob->GetProblem(),args); }
     bool RemoveProblem(PyProblemInstancePtr prob) { CHECK_POINTER(prob); RAVELOG_WARN("openravepy RemoveProblem deprecated, use Remove\n");return _penv->Remove(prob->GetProblem()); }
@@ -3132,9 +2805,11 @@ public:
     void SetDebugLevel(DebugLevel level) { _penv->SetDebugLevel(level); }
     DebugLevel GetDebugLevel() const { return _penv->GetDebugLevel(); }
 
-    string GetHomeDirectory() { return _penv->GetHomeDirectory(); }
+    string GetHomeDirectory() { RAVELOG_WARN("Environment.GetHomeDirectory is deprecated, use RaveGetHomeDirectory\n"); return RaveGetHomeDirectory(); }
     bool __eq__(PyEnvironmentBasePtr p) { return !!p && _penv==p->_penv; }
     bool __ne__(PyEnvironmentBasePtr p) { return !p || _penv!=p->_penv; }
+
+    EnvironmentBasePtr GetEnv() const { return _penv; }
 };
 
 void PyKinBody::__enter__()
@@ -3161,236 +2836,124 @@ void PyRobotBase::__enter__()
     _listStateSavers.push_back(boost::shared_ptr<void>(new RobotBase::RobotStateSaver(_probot)));
 }
 
-namespace openravepy {
-
-object quatFromAxisAngle1(object oaxis)
+namespace openravepy
 {
-    return toPyVector4(quatFromAxisAngle(ExtractVector3(oaxis)));
-}
-
-object quatFromAxisAngle2(object oaxis, dReal angle)
-{
-    return toPyVector4(quatFromAxisAngle(ExtractVector3(oaxis),angle));
-}
-
-object quatFromRotationMatrix(object R)
-{
-    TransformMatrix t;
-    t.rotfrommat(extract<dReal>(R[0][0]), extract<dReal>(R[0][1]), extract<dReal>(R[0][2]),
-                 extract<dReal>(R[1][0]), extract<dReal>(R[1][1]), extract<dReal>(R[1][2]),
-                 extract<dReal>(R[2][0]), extract<dReal>(R[2][1]), extract<dReal>(R[2][2]));
-    return toPyVector4(quatFromMatrix(t));
-}
-
-object quatSlerp(object q1, object q2, dReal t)
-{
-    return toPyVector4(quatSlerp(ExtractVector4(q1),ExtractVector4(q2),t));
-}
-
-object axisAngleFromRotationMatrix(object R)
-{
-    TransformMatrix t;
-    t.rotfrommat(extract<dReal>(R[0][0]), extract<dReal>(R[0][1]), extract<dReal>(R[0][2]),
-                 extract<dReal>(R[1][0]), extract<dReal>(R[1][1]), extract<dReal>(R[1][2]),
-                 extract<dReal>(R[2][0]), extract<dReal>(R[2][1]), extract<dReal>(R[2][2]));
-    return toPyVector3(axisAngleFromMatrix(t));
-}
-
-object axisAngleFromQuat(object oquat)
-{
-    return toPyVector3(axisAngleFromQuat(ExtractVector4(oquat)));
-}
-
-object rotationMatrixFromQuat(object oquat)
-{
-    return toPyArrayRotation(matrixFromQuat(ExtractVector4(oquat)));
-}
-
-object rotationMatrixFromQArray(object qarray)
-{
-    boost::python::list orots;
-    int N = len(qarray);
-    for(int i = 0; i < N; ++i)
-        orots.append(rotationMatrixFromQuat(qarray[i]));
-    return orots;
-}
-
-object matrixFromQuat(object oquat)
-{
-    return toPyArray(matrixFromQuat(ExtractVector4(oquat)));
-}
-
-object rotationMatrixFromAxisAngle1(object oaxis)
-{
-    return toPyArrayRotation(matrixFromAxisAngle(ExtractVector3(oaxis)));
-}
-
-object rotationMatrixFromAxisAngle2(object oaxis, dReal angle)
-{
-    return toPyArrayRotation(matrixFromAxisAngle(ExtractVector3(oaxis),angle));
-}
-
-object matrixFromAxisAngle1(object oaxis)
-{
-    return toPyArray(matrixFromAxisAngle(ExtractVector3(oaxis)));
-}
-
-object matrixFromAxisAngle2(object oaxis, dReal angle)
-{
-    return toPyArray(matrixFromAxisAngle(ExtractVector3(oaxis),angle));
-}
-
-object matrixFromPose(object opose)
-{
-    return toPyArray(TransformMatrix(ExtractTransformType<dReal>(opose)));
-}
-
-object matrixFromPoses(object oposes)
-{
-    boost::python::list omatrices;
-    int N = len(oposes);
-    for(int i = 0; i < N; ++i)
-        omatrices.append(matrixFromPose(oposes[i]));
-    return omatrices;
-}
-
-object poseFromMatrix(object o)
-{
-    TransformMatrix t;
-    for(int i = 0; i < 3; ++i) {
-        t.m[4*i+0] = extract<dReal>(o[i][0]);
-        t.m[4*i+1] = extract<dReal>(o[i][1]);
-        t.m[4*i+2] = extract<dReal>(o[i][2]);
-        t.trans[i] = extract<dReal>(o[i][3]);
-    }
-    return toPyArray(Transform(t));
-}
-
-object poseFromMatrices(object otransforms)
-{
-    int N = len(otransforms);
-    if( N == 0 )
-        return static_cast<numeric::array>(handle<>());
-
-    npy_intp dims[] = {N,7};
-    PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-    dReal* pvalues = (dReal*)PyArray_DATA(pyvalues);
-    TransformMatrix tm;
-    for(int j = 0; j < N; ++j) {
-        object o = otransforms[j];
-        for(int i = 0; i < 3; ++i) {
-            tm.m[4*i+0] = extract<dReal>(o[i][0]);
-            tm.m[4*i+1] = extract<dReal>(o[i][1]);
-            tm.m[4*i+2] = extract<dReal>(o[i][2]);
-            tm.trans[i] = extract<dReal>(o[i][3]);
+    PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType type, const std::string& name)
+    {
+        InterfaceBasePtr p = OpenRAVE::RaveCreateInterface(pyenv->GetEnv(), type, name);
+        if( !p ) {
+            return PyInterfaceBasePtr();
         }
-        Transform tpose(tm);
-        pvalues[0] = tpose.rot.x; pvalues[1] = tpose.rot.y; pvalues[2] = tpose.rot.z; pvalues[3] = tpose.rot.w;
-        pvalues[4] = tpose.trans.x; pvalues[5] = tpose.trans.y; pvalues[6] = tpose.trans.z;
-        pvalues += 7;
+        return PyInterfaceBasePtr(new PyInterfaceBase(p,pyenv));
     }
-    return static_cast<numeric::array>(handle<>(pyvalues));
-}
-
-object invertPoses(object o)
-{
-    int N = len(o);
-    if( N == 0 )
-        return numeric::array(boost::python::list());
-
-    npy_intp dims[] = {N,7};
-    PyObject *pytrans = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-    dReal* ptrans = (dReal*)PyArray_DATA(pytrans);
-    for(int i = 0; i < N; ++i, ptrans += 7) {
-        object oinputtrans = o[i];
-        Transform t = Transform(Vector(extract<dReal>(oinputtrans[0]),extract<dReal>(oinputtrans[1]),extract<dReal>(oinputtrans[2]),extract<dReal>(oinputtrans[3])),
-                                Vector(extract<dReal>(oinputtrans[4]),extract<dReal>(oinputtrans[5]),extract<dReal>(oinputtrans[6]))).inverse();
-        ptrans[0] = t.rot.x; ptrans[1] = t.rot.y; ptrans[2] = t.rot.z; ptrans[3] = t.rot.w;
-        ptrans[4] = t.trans.x; ptrans[5] = t.trans.y; ptrans[6] = t.trans.z;
-    }
-    return static_cast<numeric::array>(handle<>(pytrans));
-}
-
-object quatRotateDirection(object source, object target)
-{
-    return toPyVector4(quatRotateDirection(ExtractVector3(source), ExtractVector3(target)));
-}
-
-object quatMult(object oquat1, object oquat2)
-{
-    return toPyVector4(quatMultiply(ExtractVector4(oquat1),ExtractVector4(oquat2)));
-}
-
-object poseMult(object opose1, object opose2)
-{
-    return toPyArray(ExtractTransformType<dReal>(opose1)*ExtractTransformType<dReal>(opose2));
-}
-
-object transformLookat(object olookat, object ocamerapos, object ocameraup)
-{
-    return toPyArray(transformLookat(ExtractVector3(olookat),ExtractVector3(ocamerapos),ExtractVector3(ocameraup)));
-}
-
-string matrixSerialization(object o)
-{
-    stringstream ss; ss << ExtractTransformMatrix(o);
-    return ss.str();
-}
-
-string poseSerialization(object o)
-{
-    stringstream ss; ss << ExtractTransform(o);
-    return ss.str();
-}
-
-std::string openravepyCompilerVersion()
-{
-    stringstream ss;
-#if defined(_MSC_VER)
-    ss << "msvc " << _MSC_VER;
-#elif defined(__GNUC__)
-    ss << "gcc " << __GNUC__ << "." << __GNUC_MINOR__ << "." << __GNUC_PATCHLEVEL__;
-#elif defined(__MINGW32_VERSION)
-    ss << "mingw " << __MINGW32_VERSION;
-#endif
-    return ss.str();
-}
-
-void raveLog(const string& s, DebugLevel level)
-{
-    if( s.size() > 0 ) {
-        RavePrintfA(s,level);
-        if( s[s.size()-1] != '\n') {
-            RavePrintfA("\n",level);
+    
+    PyRobotBasePtr RaveCreateRobot(PyEnvironmentBasePtr pyenv, const std::string& name)
+    {
+        RobotBasePtr p = OpenRAVE::RaveCreateRobot(pyenv->GetEnv(), name);
+        if( !p ) {
+            return PyRobotBasePtr();
         }
+        return PyRobotBasePtr(new PyRobotBase(p,pyenv));
     }
-}
 
-void raveLogFatal(const string& s)
-{
-    raveLog(s,Level_Verbose);
-}
-void raveLogError(const string& s)
-{
-    raveLog(s,Level_Error);
-}
-void raveLogWarn(const string& s)
-{
-    raveLog(s,Level_Warn);
-}
-void raveLogInfo(const string& s)
-{
-    raveLog(s,Level_Info);
-}
-void raveLogDebug(const string& s)
-{
-    raveLog(s,Level_Debug);
-}
-void raveLogVerbose(const string& s)
-{
-    raveLog(s,Level_Verbose);
-}
+    PyPlannerBasePtr RaveCreatePlanner(PyEnvironmentBasePtr pyenv, const std::string& name)
+    {
+        PlannerBasePtr p = OpenRAVE::RaveCreatePlanner(pyenv->GetEnv(), name);
+        if( !p ) {
+            return PyPlannerBasePtr();
+        }
+        return PyPlannerBasePtr(new PyPlannerBase(p,pyenv));
+    }
 
+    PySensorSystemBasePtr RaveCreateSensorSystem(PyEnvironmentBasePtr pyenv, const std::string& name)
+    {
+        SensorSystemBasePtr p = OpenRAVE::RaveCreateSensorSystem(pyenv->GetEnv(), name);
+        if( !p ) {
+            return PySensorSystemBasePtr();
+        }
+        return PySensorSystemBasePtr(new PySensorSystemBase(p,pyenv));
+    }
+
+    PyControllerBasePtr RaveCreateController(PyEnvironmentBasePtr pyenv, const std::string& name)
+    {
+        ControllerBasePtr p = OpenRAVE::RaveCreateController(pyenv->GetEnv(), name);
+        if( !p ) {
+            return PyControllerBasePtr();
+        }
+        return PyControllerBasePtr(new PyControllerBase(p,pyenv));
+    }
+
+    PyProblemInstancePtr RaveCreateProblem(PyEnvironmentBasePtr pyenv, const std::string& name)
+    {
+        ProblemInstancePtr p = OpenRAVE::RaveCreateProblem(pyenv->GetEnv(), name);
+        if( !p ) {
+            return PyProblemInstancePtr();
+        }
+        return PyProblemInstancePtr(new PyProblemInstance(p,pyenv));
+    }
+
+    PyIkSolverBasePtr RaveCreateIkSolver(PyEnvironmentBasePtr pyenv, const std::string& name)
+    {
+        IkSolverBasePtr p = OpenRAVE::RaveCreateIkSolver(pyenv->GetEnv(), name);
+        if( !p ) {
+            return PyIkSolverBasePtr();
+        }
+        return PyIkSolverBasePtr(new PyIkSolverBase(p,pyenv));
+    }
+
+    PyPhysicsEngineBasePtr RaveCreatePhysicsEngine(PyEnvironmentBasePtr pyenv, const std::string& name)
+    {
+        PhysicsEngineBasePtr p = OpenRAVE::RaveCreatePhysicsEngine(pyenv->GetEnv(), name);
+        if( !p ) {
+            return PyPhysicsEngineBasePtr();
+        }
+        return PyPhysicsEngineBasePtr(new PyPhysicsEngineBase(p,pyenv));
+    }
+
+    PySensorBasePtr RaveCreateSensor(PyEnvironmentBasePtr pyenv, const std::string& name)
+    {
+        SensorBasePtr p = OpenRAVE::RaveCreateSensor(pyenv->GetEnv(), name);
+        if( !p ) {
+            return PySensorBasePtr();
+        }
+        return PySensorBasePtr(new PySensorBase(p,pyenv));
+    }
+
+    PyCollisionCheckerBasePtr RaveCreateCollisionChecker(PyEnvironmentBasePtr pyenv, const std::string& name)
+    {
+        CollisionCheckerBasePtr p = OpenRAVE::RaveCreateCollisionChecker(pyenv->GetEnv(), name);
+        if( !p ) {
+            return PyCollisionCheckerBasePtr();
+        }
+        return PyCollisionCheckerBasePtr(new PyCollisionCheckerBase(p,pyenv));
+    }
+
+    PyViewerBasePtr RaveCreateViewer(PyEnvironmentBasePtr pyenv, const std::string& name)
+    {
+        ViewerBasePtr p = OpenRAVE::RaveCreateViewer(pyenv->GetEnv(), name);
+        if( !p ) {
+            return PyViewerBasePtr();
+        }
+        return PyViewerBasePtr(new PyViewerBase(p,pyenv));
+    }
+
+    PyKinBodyPtr RaveCreateKinBody(PyEnvironmentBasePtr pyenv, const std::string& name)
+    {
+        KinBodyPtr p = OpenRAVE::RaveCreateKinBody(pyenv->GetEnv(), name);
+        if( !p ) {
+            return PyKinBodyPtr();
+        }
+        return PyKinBodyPtr(new PyKinBody(p,pyenv));
+    }
+
+    PyTrajectoryBasePtr RaveCreateTrajectory(PyEnvironmentBasePtr pyenv, const std::string& name)
+    {
+        TrajectoryBasePtr p = OpenRAVE::RaveCreateTrajectory(pyenv->GetEnv(), name);
+        if( !p ) {
+            return PyTrajectoryBasePtr();
+        }
+        return PyTrajectoryBasePtr(new PyTrajectoryBase(p,pyenv));
+    }
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetCamera_overloads, SetCamera, 2, 4)
@@ -4140,7 +3703,6 @@ BOOST_PYTHON_MODULE(openravepy_int)
     {
         scope env = classenv
             .def(init<>())
-            .def(init<bool>())
             .def("Reset",&PyEnvironmentBase::Reset, DOXY_FN(EnvironmentBase,Reset))
             .def("Destroy",&PyEnvironmentBase::Destroy, DOXY_FN(EnvironmentBase,Destroy))
             .def("GetPluginInfo",&PyEnvironmentBase::GetPluginInfo, DOXY_FN(EnvironmentBase,GetPluginInfo))
@@ -4262,41 +3824,20 @@ BOOST_PYTHON_MODULE(openravepy_int)
     scope().attr("__license__") = "Lesser GPL";
     scope().attr("__docformat__") = "restructuredtext";
 
-    def("raveSetDebugLevel",RaveSetDebugLevel,args("level"), "Sets the global openrave debug level");
-    def("raveGetDebugLevel",RaveGetDebugLevel,"Returns the openrave debug level");
-    def("raveGetHomeDirectory",RaveGetHomeDirectory,"Returns the openrave home directory");
-    def("raveLogFatal",openravepy::raveLogFatal,args("log"),"Send a fatal log to the openrave system");
-    def("raveLogError",openravepy::raveLogError,args("log"),"Send an error log to the openrave system");
-    def("raveLogWarn",openravepy::raveLogWarn,args("log"),"Send a warn log to the openrave system");
-    def("raveLogInfo",openravepy::raveLogInfo,args("log"),"Send an info log to the openrave system");
-    def("raveLogDebug",openravepy::raveLogDebug,args("log"),"Send a debug log to the openrave system");
-    def("raveLogVerbose",openravepy::raveLogVerbose,args("log"),"Send a verbose log to the openrave system");
-    def("raveLog",openravepy::raveLog,args("log","level"),"Send a log to the openrave system with excplicit level");
+    openravepy::init_openravepy_global();
 
-    def("quatFromAxisAngle",openravepy::quatFromAxisAngle1, args("axisangle"), DOXY_FN1(quatFromAxisAngle "const RaveVector"));
-    def("quatFromAxisAngle",openravepy::quatFromAxisAngle2, args("axis","angle"), DOXY_FN1(quatFromAxisAngle "const RaveVector; T"));
-    def("quatFromRotationMatrix",openravepy::quatFromRotationMatrix, args("rotation"), DOXY_FN1(quatFromMatrix "const RaveTransform"));
-    def("quatSlerp",openravepy::quatSlerp, args("quat0","quat1","t"), DOXY_FN1(quatSlerp "const RaveVector; const RaveVector; T"));
-    def("axisAngleFromRotationMatrix",openravepy::axisAngleFromRotationMatrix, args("rotation"), DOXY_FN1(axisAngleFromMatrix "const RaveTransformMatrix"));
-    def("axisAngleFromQuat",openravepy::axisAngleFromQuat, args("quat"), DOXY_FN1(axisAngleFromQuat "const RaveVector"));
-    def("rotationMatrixFromQuat",openravepy::rotationMatrixFromQuat, args("quat"), DOXY_FN1(matrixFromQuat "const RaveVector"));
-    def("rotationMatrixFromQArray",openravepy::rotationMatrixFromQArray,args("quatarray"),"Converts an array of quaternions to a list of 3x3 rotation matrices.\n\n:param quatarray: nx4 array\n");
-    def("matrixFromQuat",openravepy::matrixFromQuat, args("quat"), "Converts a quaternion to a 4x4 affine matrix.\n\n:param quat: 4 values\n");
-    def("rotationMatrixFromAxisAngle",openravepy::rotationMatrixFromAxisAngle1, args("axisangle"), DOXY_FN1(matrixFromAxisAngle "const RaveVector"));
-    def("rotationMatrixFromAxisAngle",openravepy::rotationMatrixFromAxisAngle2, args("axis","angle"), DOXY_FN1(matrixFromAxisAngle "const RaveVector, T"));
-    def("matrixFromAxisAngle",openravepy::matrixFromAxisAngle1, args("axisangle"), DOXY_FN1(matrixFromAxisAngle "const RaveVector"));
-    def("matrixFromAxisAngle",openravepy::matrixFromAxisAngle2, args("axis","angle"), DOXY_FN1(matrixFromAxisAngle "const RaveVector, T"));
-    def("matrixFromPose",openravepy::matrixFromPose, args("pose"), "Converts a 7 element quaterion+translation transform to a 4x4 matrix.\n\n:param pose: 7 values\n");
-    def("matrixFromPoses",openravepy::matrixFromPoses, args("poses"), "Converts a Nx7 element quaterion+translation array to a 4x4 matrices.\n\n:param poses: nx7 array\n");
-    def("poseFromMatrix",openravepy::poseFromMatrix, args("transform"), "Converts a 4x4 matrix to a 7 element quaternion+translation representation.\n\n:param transform: 3x4 or 4x4 affine matrix\n");
-    def("poseFromMatrices",openravepy::poseFromMatrices, args("transforms"), "Converts an array/list of 4x4 matrices to a Nx7 array where each row is quaternion+translation representation.\n\n:param transforms: list of 3x4 or 4x4 affine matrices\n");
-    def("invertPoses",openravepy::invertPoses,args("poses"), "Inverts a Nx7 array of poses where first 4 columns are the quaternion and last 3 are the translation components.\n\n:param poses: nx7 array");
-    def("quatRotateDirection",openravepy::quatRotateDirection,args("sourcedir,targetdir"), DOXY_FN1(quatRotateDirection));
-    def("quatMult",openravepy::quatMult,args("quat0","quat1"),DOXY_FN1(quatMultiply));
-    def("quatMultiply",openravepy::quatMult,args("quat0","quat1"),DOXY_FN1(quatMultiply));
-    def("poseMult",openravepy::poseMult,args("pose1","pose2"),"multiplies two poses.\n\n:param pose1: 7 values\n\n:param pose2: 7 values\n");
-    def("transformLookat",openravepy::transformLookat,args("lookat","camerapos","cameraup"),"Returns a camera matrix that looks along a ray with a desired up vector.\n\n:param lookat: unit axis, 3 values\n\n:param camerapos: 3 values\n\n:param cameraup: unit axis, 3 values\n");
-    def("matrixSerialization",openravepy::matrixSerialization,args("transform"),"Serializes a transformation into a string representing a 3x4 matrix.\n\n:param transform: 3x4 or 4x4 array\n");
-    def("poseSerialization",openravepy::poseSerialization, args("pose"), "Serializes a transformation into a string representing a quaternion with translation.\n\n:param pose: 7 values\n");
-    def("openravepyCompilerVersion",openravepy::openravepyCompilerVersion,"Returns the compiler version that openravepy_int was compiled with");
+    def("RaveCreateInterface",openravepy::RaveCreateInterface,args("env","type","name"),DOXY_FN1(RaveCreateInterface));
+    def("RaveCreateRobot",openravepy::RaveCreateRobot,args("env","name"),DOXY_FN1(RaveCreateRobot));
+    def("RaveCreatePlanner",openravepy::RaveCreatePlanner,args("env","name"),DOXY_FN1(RaveCreatePlanner));
+    def("RaveCreateSensorSystem",openravepy::RaveCreateSensorSystem,args("env","name"),DOXY_FN1(RaveCreateSensorSystem));
+    def("RaveCreateController",openravepy::RaveCreateController,args("env","name"),DOXY_FN1(RaveCreateController));
+    def("RaveCreateProblem",openravepy::RaveCreateProblem,args("env","name"),DOXY_FN1(RaveCreateProblem));
+    def("RaveCreateIkSolver",openravepy::RaveCreateIkSolver,args("env","name"),DOXY_FN1(RaveCreateIkSolver));
+    def("RaveCreatePhysicsEngine",openravepy::RaveCreatePhysicsEngine,args("env","name"),DOXY_FN1(RaveCreatePhysicsEngine));
+    def("RaveCreateSensor",openravepy::RaveCreateSensor,args("env","name"),DOXY_FN1(RaveCreateSensor));
+    def("RaveCreateCollisionChecker",openravepy::RaveCreateCollisionChecker,args("env","name"),DOXY_FN1(RaveCreateCollisionChecker));
+    def("RaveCreateViewer",openravepy::RaveCreateViewer,args("env","name"),DOXY_FN1(RaveCreateViewer));
+    def("RaveCreateKinBody",openravepy::RaveCreateKinBody,args("env","name"),DOXY_FN1(RaveCreateKinBody));
+    def("RaveCreateTrajectory",openravepy::RaveCreateTrajectory,args("env","name"),DOXY_FN1(RaveCreateTrajectory));
+
 }

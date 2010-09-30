@@ -1,4 +1,4 @@
-set(coreLIBS)
+set(coreLIBS ${openrave_libraries})
 
 if( COLLADA_FOUND )
   set(LIB_COMPILE_FLAGS "${LIB_COMPILE_FLAGS} -DOPENRAVE_COLLADA_SUPPORT")
@@ -6,15 +6,10 @@ if( COLLADA_FOUND )
   set (coreLIBS ${coreLIBS} ${COLLADA_LIBRARY})
 endif()
 
-if( Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
-  set(coreLIBS ${coreLIBS} ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY})
-  add_definitions(-DHAVE_BOOST_FILESYSTEM)
-endif()
-
 # necessary for function parser library
 check_library_exists(gmp __gmpz_init "" GMP_FOUND_LIB)
 
-set (openrave_core_SOURCES openrave-core.cpp ivcon.cpp colladareader.h  environment-core.h  openrave-core.h ravep.h   xmlreaders.h colladawriter.h  ivcon.h  plugindatabase.h)
+set (openrave_core_SOURCES openrave-core.cpp ivcon.cpp colladareader.h  environment-core.h  openrave-core.h ravep.h   xmlreaders.h colladawriter.h  ivcon.h )
 
 add_library(libopenrave-core SHARED ${openrave_core_SOURCES})
 add_dependencies(libopenrave-core libopenrave)
@@ -30,7 +25,7 @@ set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave-core
                                   COMPILE_FLAGS "${LIB_COMPILE_FLAGS} -DRAVE_CORE_LIBBUILD -DRAVE_CORE_USEDLL"
                                   LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${COIN_LINK_FLAGS}")
 
-target_link_libraries (libopenrave-core ${Boost_THREAD_LIBRARY} ${LIBXML2_LIBRARIES} ${COIN_LIBRARY} libopenrave ${coreLIBS})
+target_link_libraries (libopenrave-core ${COIN_LIBRARY} libopenrave ${coreLIBS})
 if( MSVC )
   install(TARGETS libopenrave-core RUNTIME DESTINATION bin LIBRARY DESTINATION bin ARCHIVE DESTINATION lib)
 else()
@@ -65,6 +60,6 @@ if( OPT_STATIC )
     set_target_properties(libopenrave-core_static PROPERTIES STATIC_LIBRARY_FLAGS "\" LinkLibraryDependencies=\"true")
   endif()
 
-  target_link_libraries (libopenrave-core_static ${Boost_THREAD_LIBRARY} ${LIBXML2_LIBRARIES} ${COIN_LIBRARY} libopenrave_static ${coreLIBS})
+  target_link_libraries (libopenrave-core_static ${COIN_LIBRARY} libopenrave_static ${coreLIBS})
   install(TARGETS libopenrave-core_static DESTINATION lib)
 endif()

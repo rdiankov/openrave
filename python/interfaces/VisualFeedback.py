@@ -22,7 +22,7 @@ from copy import copy as shallowcopy
 class VisualFeedback:
     def __init__(self,robot,maxvelmult=None):
         env = robot.GetEnv()
-        self.prob = env.CreateProblem('VisualFeedback')
+        self.prob = RaveCreateProblem(env,'VisualFeedback')
         self.robot = robot
         self.args = self.robot.GetName()
         if maxvelmult is not None:
@@ -33,7 +33,7 @@ class VisualFeedback:
         self.prob.GetEnv().Remove(self.prob)
     def clone(self,envother):
         clone = shallowcopy(self)
-        clone.prob = envother.CreateProblem('VisualFeedback')
+        clone.prob = RaveCreateProblem(envother,'VisualFeedback')
         clone.robot = envother.GetRobot(self.robot.GetName())
         if envother.LoadProblem(clone.prob,clone.args) != 0:
             raise ValueError('problem failed to initialize')

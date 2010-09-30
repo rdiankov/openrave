@@ -875,6 +875,7 @@ private:
     friend class PhysicsEngineBase;
     friend class CollisionCheckerBase;
     friend class SensorSystemBase;
+    friend class RaveDatabase;
 };
 
 } // end namespace OpenRAVE

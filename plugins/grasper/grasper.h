@@ -94,7 +94,7 @@ class GrasperProblem : public ProblemInstance
                 break;
         }
 
-        _planner = GetEnv()->CreatePlanner(plannername);
+        _planner = RaveCreatePlanner(GetEnv(),plannername);
         if( !_planner ) {
             RAVELOG_WARNA("Failed to create planner\n");
             return -1;
@@ -214,12 +214,12 @@ class GrasperProblem : public ProblemInstance
             return false;
         }
 
-        TrajectoryBasePtr ptraj = GetEnv()->CreateTrajectory(_robot->GetActiveDOF());
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF());
         if( !_planner->PlanPath(ptraj) || ptraj->GetPoints().size() == 0 )
             return false;
 
         ptraj->CalcTrajTiming(_robot, ptraj->GetInterpMethod(), true, true);
-        TrajectoryBasePtr pfulltraj = GetEnv()->CreateTrajectory(_robot->GetDOF());
+        TrajectoryBasePtr pfulltraj = RaveCreateTrajectory(GetEnv(),_robot->GetDOF());
         _robot->GetFullTrajectoryFromActive(pfulltraj,ptraj,false);
 
         if( strsavetraj.size() > 0 ) {

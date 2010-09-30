@@ -34,7 +34,7 @@ RobotBase::Manipulator::Manipulator(const RobotBase::Manipulator& r)
     *this = r;
     _pIkSolver.reset();
     if( _strIkSolver.size() > 0 )
-        _pIkSolver = GetRobot()->GetEnv()->CreateIkSolver(_strIkSolver);
+        _pIkSolver = RaveCreateIkSolver(GetRobot()->GetEnv(), _strIkSolver);
 }
 
 RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::Manipulator& r)
@@ -48,7 +48,7 @@ RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::Manipu
     
     _pIkSolver.reset();
     if( _strIkSolver.size() > 0 )
-        _pIkSolver = probot->GetEnv()->CreateIkSolver(_strIkSolver);
+        _pIkSolver = RaveCreateIkSolver(probot->GetEnv(), _strIkSolver);
 }
 
 Transform RobotBase::Manipulator::GetEndEffectorTransform() const
@@ -508,7 +508,7 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const AttachedSen
     pdata.reset();
     pattachedlink.reset();
     if( (cloningoptions&Clone_Sensors) && !!sensor.psensor ) {
-        psensor = probot->GetEnv()->CreateSensor(sensor.psensor->GetXMLId());
+        psensor = RaveCreateSensor(probot->GetEnv(), sensor.psensor->GetXMLId());
         if( !!psensor ) {
             psensor->Clone(sensor.psensor,cloningoptions);
             if( !!psensor ) {
@@ -2129,7 +2129,7 @@ void RobotBase::_ComputeInternalInformation()
 
     if( !GetController() ) {
         RAVELOG_WARN(str(boost::format("no default controller set on robot %s\n")%GetName()));
-        SetController(GetEnv()->CreateController("IdealController"),"");
+        SetController(RaveCreateController(GetEnv(), "IdealController"),"");
     }
 }
 
@@ -2202,13 +2202,13 @@ bool RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 
     // clone the controller
     if( (cloningoptions&Clone_RealControllers) && !!r->GetController() ) {
-        if( !SetController(GetEnv()->CreateController(r->GetController()->GetXMLId()),"") ) {
+        if( !SetController(RaveCreateController(GetEnv(), r->GetController()->GetXMLId()),"") ) {
             RAVELOG_WARNA("failed to set %s controller for robot %s\n", r->GetController()->GetXMLId().c_str(), GetName().c_str());
         }
     }
 
     if( !GetController() ) {
-        if( !SetController(GetEnv()->CreateController("IdealController"),"") ) {
+        if( !SetController(RaveCreateController(GetEnv(), "IdealController"),"") ) {
             RAVELOG_WARNA("failed to set IdealController\n");
             return false;
         }

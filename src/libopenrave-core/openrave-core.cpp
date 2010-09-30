@@ -16,47 +16,16 @@
 #include "ravep.h"
 
 namespace OpenRAVE {
-    EnvironmentBasePtr CreateEnvironment(bool bLoadAllPlugins) {
-        srand(GetMilliTime());
-        RaveInitRandomGeneration(GetMilliTime());
-
-        boost::shared_ptr<Environment> p(new Environment(bLoadAllPlugins));
+    EnvironmentBasePtr RaveCreateEnvironment() {
+        boost::shared_ptr<Environment> p(new Environment());
         p->Init();
         return p;
     }
+
+    EnvironmentBasePtr CreateEnvironment(bool bLoadAllPlugins) { return RaveCreateEnvironment(); }
 }
 
 #include <streambuf>
-
-bool ParseDirectories(const char* pdirs, std::vector<std::string>& vdirs)
-{
-    vdirs.resize(0);
-
-    if( pdirs == NULL )
-        return false;
-
-    // search for all directories separated by ':'
-    string tmp = pdirs;
-    std::string::size_type pos = 0, newpos=0;
-    while( pos < tmp.size() ) {
-
-#ifdef _WIN32
-        newpos = tmp.find(';', pos);
-#else
-		newpos = tmp.find(':', pos);
-#endif
-
-        std::string::size_type n = newpos == std::string::npos ? tmp.size()-pos : (newpos-pos);
-        vdirs.push_back(tmp.substr(pos, n));
-
-        if( newpos == std::string::npos )
-            break;
-            
-        pos = newpos+1;
-    }
-
-    return true;
-}
 
 #ifdef OPENRAVE_COIN3D
 

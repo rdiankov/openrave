@@ -41,6 +41,10 @@
 
 #define INTERFACE_DELETER boost::bind(&RaveDatabase::_InterfaceDestroyCallbackShared,shared_from_this(),_1)
 
+#include <boost/thread/condition.hpp>
+#include <boost/thread/mutex.hpp>
+
+namespace OpenRAVE {
 
 /// database of planners, obstacles, sensors, and problem from plugins
 class RaveDatabase : public boost::enable_shared_from_this<RaveDatabase>
@@ -257,30 +261,18 @@ public:
     }
     virtual ~RaveDatabase() { Destroy(); }
 
-    RobotBasePtr CreateRobot(EnvironmentBasePtr penv, const std::string& pname)
-    {
-        RobotBasePtr probot = RaveInterfaceCast<RobotBase>(Create(penv, PT_Robot, pname));
-        if( !!probot ) {
-            if( strcmp(probot->GetKinBodyHash(), OPENRAVE_KINBODY_HASH) ) {
-                RAVELOG_FATALA("plugin interface Robot, name %s has invalid hash, might be compiled with stale openrave files\n", pname.c_str());
-                probot.reset();
-            }
-        }
-
-        BOOST_ASSERT( !probot || probot->IsRobot() );
-        return probot;
-    }
-
-    KinBodyPtr CreateKinBody(EnvironmentBasePtr penv, const std::string& pname) { return RaveInterfaceCast<KinBody>(Create(penv, PT_KinBody, pname)); }
-    PlannerBasePtr CreatePlanner(EnvironmentBasePtr penv, const std::string& pname) { return RaveInterfaceCast<PlannerBase>(Create(penv, PT_Planner, pname)); }
-    SensorSystemBasePtr CreateSensorSystem(EnvironmentBasePtr penv, const std::string& pname) { return RaveInterfaceCast<SensorSystemBase>(Create(penv, PT_SensorSystem, pname)); }
-    ControllerBasePtr CreateController(EnvironmentBasePtr penv, const std::string& pname) { return RaveInterfaceCast<ControllerBase>(Create(penv, PT_Controller, pname)); }
-    ProblemInstancePtr CreateProblem(EnvironmentBasePtr penv, const std::string& pname) { return RaveInterfaceCast<ProblemInstance>(Create(penv, PT_ProblemInstance, pname)); }
-    IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr penv, const std::string& pname) { return RaveInterfaceCast<IkSolverBase>(Create(penv, PT_InverseKinematicsSolver, pname)); }
-    PhysicsEngineBasePtr CreatePhysicsEngine(EnvironmentBasePtr penv, const std::string& pname) { return RaveInterfaceCast<PhysicsEngineBase>(Create(penv, PT_PhysicsEngine, pname)); }
-    SensorBasePtr CreateSensor(EnvironmentBasePtr penv, const std::string& pname) { return RaveInterfaceCast<SensorBase>(Create(penv, PT_Sensor, pname)); }
-    CollisionCheckerBasePtr CreateCollisionChecker(EnvironmentBasePtr penv, const std::string& pname) { return RaveInterfaceCast<CollisionCheckerBase>(Create(penv, PT_CollisionChecker, pname)); }
-    ViewerBasePtr CreateViewer(EnvironmentBasePtr penv, const std::string& pname) { return RaveInterfaceCast<ViewerBase>(Create(penv, PT_Viewer, pname)); }
+    RobotBasePtr CreateRobot(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<RobotBase>(Create(penv, PT_Robot, name)); }
+    KinBodyPtr CreateKinBody(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<KinBody>(Create(penv, PT_KinBody, name)); }
+    PlannerBasePtr CreatePlanner(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<PlannerBase>(Create(penv, PT_Planner, name)); }
+    SensorSystemBasePtr CreateSensorSystem(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<SensorSystemBase>(Create(penv, PT_SensorSystem, name)); }
+    ControllerBasePtr CreateController(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<ControllerBase>(Create(penv, PT_Controller, name)); }
+    ProblemInstancePtr CreateProblem(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<ProblemInstance>(Create(penv, PT_ProblemInstance, name)); }
+    IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<IkSolverBase>(Create(penv, PT_InverseKinematicsSolver, name)); }
+    PhysicsEngineBasePtr CreatePhysicsEngine(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<PhysicsEngineBase>(Create(penv, PT_PhysicsEngine, name)); }
+    SensorBasePtr CreateSensor(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<SensorBase>(Create(penv, PT_Sensor, name)); }
+    CollisionCheckerBasePtr CreateCollisionChecker(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<CollisionCheckerBase>(Create(penv, PT_CollisionChecker, name)); }
+    ViewerBasePtr CreateViewer(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<ViewerBase>(Create(penv, PT_Viewer, name)); }
+    TrajectoryBasePtr CreateTrajectory(EnvironmentBasePtr penv, const std::string& name) { return RaveInterfaceCast<TrajectoryBase>(Create(penv, PT_Trajectory, name)); }
 
     /// Destroy all plugins and directories
     virtual void Destroy()
@@ -296,13 +288,12 @@ public:
         {
             EnvironmentMutex::scoped_lock lock(_mutex);
             _listplugins.clear();
-            vplugindirs.clear();
         }
         RAVELOG_DEBUG("cleaning libraries\n");
         CleanupUnusedLibraries();
     }
 
-    void GetPlugins(std::list<PluginPtr>& listplugins)
+    void GetPlugins(std::list<PluginPtr>& listplugins) const
     {
         EnvironmentMutex::scoped_lock lock(_mutex);
         listplugins = _listplugins;
@@ -310,54 +301,86 @@ public:
     
     InterfaceBasePtr Create(EnvironmentBasePtr penv, InterfaceType type, const std::string& name)
     {
-        if( name.size() == 0 )
-            return InterfaceBasePtr();
-
-        size_t nInterfaceNameLength = name.find_first_of(' ');
-        if( nInterfaceNameLength == string::npos )
-            nInterfaceNameLength = name.size();
-        if( nInterfaceNameLength == 0 ) {
-            RAVELOG_WARN(str(boost::format("interface name \"%s\" needs to start with a valid character\n")%name));
-            return InterfaceBasePtr();
-        }
-                
-        EnvironmentMutex::scoped_lock lock(_mutex);
-        const char* hash = RaveGetInterfaceHash(type);
-        list<PluginPtr>::iterator itplugin = _listplugins.begin();
-        while(itplugin != _listplugins.end()) {
-            InterfaceBasePtr pointer = (*itplugin)->CreateInterface(type, name, hash, penv);
-            if( !!pointer ) {
-                if( strcmp(pointer->GetHash(), hash) ) {
-                    RAVELOG_FATALA("plugin interface name %s, %s has invalid hash, might be compiled with stale openrave files\n", name.c_str(), RaveGetInterfaceNamesMap().find(type)->second.c_str());
-                    (*itplugin)->_setBadInterfaces.insert(make_pair(type,tolowerstring(name)));
-                    return InterfaceBasePtr();
-                }
-                pointer = InterfaceBasePtr(pointer.get(), smart_pointer_deleter<InterfaceBasePtr>(pointer,INTERFACE_DELETER));
-                pointer->__strpluginname = (*itplugin)->ppluginname;
-                pointer->__strxmlid = name;
-                pointer->__plugin = *itplugin;
-                return pointer;
-            }
-            
-            if( (*itplugin)->IsValid() ) {
-                ++itplugin;
-            }
-            else {
-                itplugin = _listplugins.erase(itplugin);
-            }
-        }
-
+        InterfaceBasePtr pointer;
         if( name.size() == 0 ) {
             switch(type) {
-            case PT_KinBody: return penv->CreateKinBody();
-            case PT_Trajectory: return penv->CreateTrajectory(0);
+            case PT_KinBody: {
+                pointer.reset(new KinBody(PT_KinBody,penv));
+                pointer->__strxmlid = "KinBody";
+                break;
+            }
+            case PT_Robot: {
+                pointer.reset(new RobotBase(penv));
+                pointer->__strxmlid = "RobotBase";
+                break;
+            }
+            case PT_Trajectory:
+                pointer.reset(new TrajectoryBase(penv,0));
+                pointer->__strxmlid = "TrajectoryBase";
+                break;
             default:
                 break;
             }
         }
+        else {
+            size_t nInterfaceNameLength = name.find_first_of(' ');
+            if( nInterfaceNameLength == string::npos )
+                nInterfaceNameLength = name.size();
+            if( nInterfaceNameLength == 0 ) {
+                RAVELOG_WARN(str(boost::format("interface name \"%s\" needs to start with a valid character\n")%name));
+                return InterfaceBasePtr();
+            }
+                
+            EnvironmentMutex::scoped_lock lock(_mutex);
+            const char* hash = RaveGetInterfaceHash(type);
+            list<PluginPtr>::iterator itplugin = _listplugins.begin();
+            while(itplugin != _listplugins.end()) {
+                pointer = (*itplugin)->CreateInterface(type, name, hash, penv);
+                if( !!pointer ) {
+                    if( strcmp(pointer->GetHash(), hash) ) {
+                        RAVELOG_FATAL(str(boost::format("plugin interface name %s, %s has invalid hash, might be compiled with stale openrave files\n")%name%RaveGetInterfaceName(type)));
+                        (*itplugin)->_setBadInterfaces.insert(make_pair(type,tolowerstring(name)));
+                        pointer.reset();
+                    }
+                    else if( pointer->GetInterfaceType() != type ) {
+                        RAVELOG_FATAL(str(boost::format("plugin interface name %s, type %s, types do not match\n")%name%RaveGetInterfaceName(type)));
+                        (*itplugin)->_setBadInterfaces.insert(make_pair(type,tolowerstring(name)));
+                        pointer.reset();
+                    }
+                    else {
+                        pointer = InterfaceBasePtr(pointer.get(), smart_pointer_deleter<InterfaceBasePtr>(pointer,INTERFACE_DELETER));
+                        pointer->__strpluginname = (*itplugin)->ppluginname;
+                        pointer->__strxmlid = name;
+                        pointer->__plugin = *itplugin;
+                        break;
+                    }
+                }
+                if( (*itplugin)->IsValid() ) {
+                    ++itplugin;
+                }
+                else {
+                    itplugin = _listplugins.erase(itplugin);
+                }
+            }
+        }
 
-        RAVELOG_WARNA("Failed to create name %s, interface %s\n", name.c_str(), RaveGetInterfaceNamesMap().find(type)->second.c_str());
-        return InterfaceBasePtr();
+        if( !!pointer ) {
+            if( type == PT_Robot ) {
+                RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pointer);
+                if( strcmp(probot->GetKinBodyHash(), OPENRAVE_KINBODY_HASH) ) {
+                    RAVELOG_FATAL(str(boost::format("plugin interface Robot, name %s has invalid hash, might be compiled with stale openrave files\n")%name));
+                    pointer.reset();
+                }
+                if( !probot->IsRobot() ) {
+                    RAVELOG_FATAL(str(boost::format("interface Robot, name %s should have IsRobot() return true\n")%name));
+                    pointer.reset();
+                }
+            }
+        }
+        if( !pointer ) {
+            RAVELOG_WARNA("Failed to create name %s, interface %s\n", name.c_str(), RaveGetInterfaceNamesMap().find(type)->second.c_str());
+        }
+        return pointer;
     }
 
     /// loads all the plugins in this dir
@@ -377,23 +400,20 @@ public:
             RAVELOG_DEBUGA("No plugins in dir: %s (GetLastError reports %d)\n", pdir.c_str(), GetLastError ());
             return false;
         } 
-        else 
-            {
-                do {
-                    RAVELOG_DEBUGA("Adding plugin %s\n", FindFileData.cFileName);
-                    string strplugin = pdir;
-                    strplugin += "\\";
-                    strplugin += FindFileData.cFileName;
-                    AddPlugin(strplugin.c_str());
-                } while (FindNextFileA(hFind, &FindFileData) != 0);
-
-                FindClose(hFind);
-            }
+        else  {
+            do {
+                RAVELOG_DEBUGA("Adding plugin %s\n", FindFileData.cFileName);
+                string strplugin = pdir;
+                strplugin += "\\";
+                strplugin += FindFileData.cFileName;
+                LoadPlugin(strplugin.c_str());
+            } while (FindNextFileA(hFind, &FindFileData) != 0);    
+            FindClose(hFind);
+        }
 #else
         // linux
         DIR *dp;
         struct dirent *ep;
-
         dp = opendir (pdir.c_str());
         if (dp != NULL) {
             while ( (ep = readdir (dp)) != NULL ) {
@@ -402,15 +422,15 @@ public:
                     string strplugin = pdir;
                     strplugin += "/";
                     strplugin += ep->d_name;
-                    AddPlugin(strplugin.c_str());
+                    LoadPlugin(strplugin.c_str());
                 }
             }
             (void) closedir (dp);
         }
-        else
+        else {
             RAVELOG_WARNA("Couldn't open directory %s\n", pdir.c_str());
+        }
 #endif
-
         return true;
     }
 
@@ -425,7 +445,7 @@ public:
         CleanupUnusedLibraries();   
     }
 
-    bool AddPlugin(const std::string& libraryname)
+    bool LoadPlugin(const std::string& libraryname)
     {
         EnvironmentMutex::scoped_lock lock(_mutex);
         DeletePlugin(libraryname); // first delete it
@@ -473,6 +493,39 @@ public:
             RaveDatabase::_SysCloseLibrary(*it);
         }
         _listDestroyLibraryQueue.clear();
+    }
+
+    void GetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins) const
+    {
+        plugins.clear();
+        list<RaveDatabase::PluginPtr> listdbplugins;
+        GetPlugins(listdbplugins);
+        FOREACHC(itplugin, listdbplugins) {
+            PLUGININFO info;
+            if( (*itplugin)->GetInfo(info) ) {
+                plugins.push_back(pair<string,PLUGININFO>((*itplugin)->GetName(),info));
+            }
+        }
+    }
+
+    void GetLoadedInterfaces(std::map<InterfaceType, std::vector<std::string> >& interfacenames) const
+    {
+        interfacenames.clear();
+        list<RaveDatabase::PluginPtr> listdbplugins;
+        GetPlugins(listdbplugins);
+        FOREACHC(itplugin, listdbplugins) {
+            PLUGININFO localinfo;
+            if( !(*itplugin)->GetInfo(localinfo) ) {
+                RAVELOG_WARN(str(boost::format("failed to get plugin info: %s\n")%(*itplugin)->GetName()));
+            }
+            else {
+                // for now just return the cached info (so quering is faster)
+                FOREACH(it,localinfo.interfacenames) {
+                    std::vector<std::string>& vnames = interfacenames[it->first];
+                    vnames.insert(vnames.end(),it->second.begin(),it->second.end());
+                }
+            }
+        }
     }
 
     static const char* GetInterfaceHash(InterfaceBasePtr pint) { return pint->GetHash(); }
@@ -666,8 +719,7 @@ protected:
     }
     
     list<PluginPtr> _listplugins;
-    vector<string> vplugindirs; ///< local directory for all plugins
-    EnvironmentMutex _mutex; ///< changing plugin database
+    mutable EnvironmentMutex _mutex; ///< changing plugin database
     list<void*> _listDestroyLibraryQueue;
 
     /// \name plugin loading
@@ -679,6 +731,8 @@ protected:
     bool _bShutdown;
     //@}
 };
+
+} // end namespace OpenRAVE
 
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()

@@ -185,7 +185,6 @@ class GraspPlanning(metaclass.AutoReloader):
         target = gmodel.target
         stepsize = 0.001
         Tlocalgrasp = eye(4)
-        env.SetDebugLevel(DebugLevel.Debug)
         while istartgrasp < len(gmodel.grasps):
             goals,graspindex,searchtime,trajdata = self.taskmanip.GraspPlanning(graspindices=gmodel.graspindices,grasps=gmodel.grasps[istartgrasp:],
                                                                                 target=target,approachoffset=approachoffset,destposes=dests,

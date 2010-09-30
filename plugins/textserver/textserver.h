@@ -301,7 +301,7 @@ class SimpleTextServer : public ProblemInstance
         mapNetworkFns["test"] = RAVENETWORKFN(OpenRaveNetworkFn(), OpenRaveWorkerFn(), false);
         mapNetworkFns["wait"] = RAVENETWORKFN(boost::bind(&SimpleTextServer::orEnvWait,this,_1,_2,_3), OpenRaveWorkerFn(), true);
 
-        string logfilename = GetEnv()->GetHomeDirectory() + string("/textserver.log");
+        string logfilename = RaveGetHomeDirectory() + string("/textserver.log");
         flog.open(logfilename.c_str());
         if( !!flog )
             RAVELOG_DEBUGA("logging network to %s.txt\n",logfilename.c_str());
@@ -730,7 +730,7 @@ protected:
                     GetEnv()->SetPhysicsEngine(PhysicsEngineBasePtr());
                 }
                 else {
-                    PhysicsEngineBasePtr pnewengine = GetEnv()->CreatePhysicsEngine(name);
+                    PhysicsEngineBasePtr pnewengine = RaveCreatePhysicsEngine(GetEnv(),name);
                     
                     if( !!pnewengine ) {
                         RAVELOG_DEBUGA("setting physics engine to %s\n",name.c_str());
@@ -746,7 +746,7 @@ protected:
                     GetEnv()->SetCollisionChecker(CollisionCheckerBasePtr());
                 }
                 else {
-                    CollisionCheckerBasePtr p = GetEnv()->CreateCollisionChecker(name);
+                    CollisionCheckerBasePtr p = RaveCreateCollisionChecker(GetEnv(),name);
                     
                     if( !!p ) {
                         RAVELOG_DEBUGA("setting collision checker to %s\n",name.c_str());
@@ -845,7 +845,7 @@ protected:
             return false;
 
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        RobotBasePtr robot = GetEnv()->CreateRobot(robottype);
+        RobotBasePtr robot = RaveCreateRobot(GetEnv(),robottype);
         if( !robot )
             return false;
         if( !robot->InitFromFile(xmlfile, list<pair<string,string> >()) )
@@ -886,7 +886,7 @@ protected:
             }
         }
     
-        ProblemInstancePtr prob = GetEnv()->CreateProblem(problemname);
+        ProblemInstancePtr prob = RaveCreateProblem(GetEnv(),problemname);
         if( !prob ) {
             RAVELOG_ERRORA("Cannot find probleminstance: %s\n", problemname.c_str());
             return false;
@@ -1248,7 +1248,7 @@ protected:
         is >> controllername;
         if( !is )
             return false;
-        ControllerBasePtr pcontroller = GetEnv()->CreateController(controllername);
+        ControllerBasePtr pcontroller = RaveCreateController(GetEnv(),controllername);
         if( !pcontroller )
             return false;
 
@@ -1839,10 +1839,10 @@ protected:
         }
 
         // add all the points
-        TrajectoryBasePtr pfulltraj = GetEnv()->CreateTrajectory(probot->GetDOF());
+        TrajectoryBasePtr pfulltraj = RaveCreateTrajectory(GetEnv(),probot->GetDOF());
 
         if( probot->GetActiveDOF() > 0 ) {
-            TrajectoryBasePtr ptraj = GetEnv()->CreateTrajectory(probot->GetActiveDOF());
+            TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),probot->GetActiveDOF());
             FOREACH(it, vpoints)
                 ptraj->AddPoint(*it);
             probot->GetFullTrajectoryFromActive(pfulltraj, ptraj, false);
@@ -2116,7 +2116,7 @@ protected:
         if( !is )
             return false;
 
-        return GetEnv()->LoadPlugin(pluginname);
+        return RaveLoadPlugin(pluginname);
     }
 
 };

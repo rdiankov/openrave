@@ -67,10 +67,10 @@ class DualManipulation : public ProblemInstance
 
         PlannerBasePtr planner;
         if( _strRRTPlannerName.size() > 0 )
-            planner = GetEnv()->CreatePlanner(_strRRTPlannerName);
+            planner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
         if( !planner ) {
             _strRRTPlannerName = "BiRRT";
-            planner = GetEnv()->CreatePlanner(_strRRTPlannerName);
+            planner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
             if( !planner )
                 _strRRTPlannerName = "";
         }
@@ -282,14 +282,14 @@ class DualManipulation : public ProblemInstance
             params->_nMaxIterations = 1000;
         }
 
-        boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(robot->GetActiveDOF()));
+        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
         Trajectory::TPOINT pt;
 
         robot->SetActiveDOFValues(params->vinitialconfig);
         pt.q = params->vinitialconfig;
         ptraj->AddPoint(pt);
 
-        boost::shared_ptr<PlannerBase> rrtplanner = GetEnv()->CreatePlanner(_strRRTPlannerName);
+        boost::shared_ptr<PlannerBase> rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
         
         if( !rrtplanner ) {
             RAVELOG_ERRORA("failed to create BiRRTs\n");
@@ -404,7 +404,7 @@ class DualManipulation : public ProblemInstance
         //robot->SetActiveDOFs(pmanip->GetArmIndices());
         CM::JitterActiveDOF(robot,100); // try to jitter out, don't worry if it fails
 
-        boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(robot->GetActiveDOF()));
+        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
         Trajectory::TPOINT point;
         vector<dReal> vPrevValues,v0Joints,v1Joints;
         bool bPrevInCollision = GetEnv()->CheckCollision(KinBodyConstPtr(robot))||robot->CheckSelfCollision();

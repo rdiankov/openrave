@@ -34,8 +34,11 @@ namespace OpenRAVE
 {
 
 /// Creates an OpenRAVE environment.
-/// \param bLoadAllPlugins If true will load all the openrave plugins automatically that can be found in the OPENRAVE_PLUGINS environment path
-RAVE_CORE_API EnvironmentBasePtr CreateEnvironment(bool bLoadAllPlugins=true);
+/// \param bLoadAllPlugins passed into \ref RaveInitialize
+RAVE_CORE_API EnvironmentBasePtr RaveCreateEnvironment();
+
+/// \deprecated (10/09/23) see \ref RaveCreateEnvironment
+RAVE_CORE_API EnvironmentBasePtr CreateEnvironment(bool bLoadAllPlugins=true) RAVE_DEPRECATED;
 
 } // end namespace OpenRAVE
 

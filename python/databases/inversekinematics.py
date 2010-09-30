@@ -135,7 +135,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         self.iksolver = None
         self.freeinc = None
         self.forceikfast = forceikfast
-        self.ikfastproblem = self.env.CreateProblem('ikfast')
+        self.ikfastproblem = RaveCreateProblem(self.env,'ikfast')
         if self.ikfastproblem is not None:
             self.env.LoadProblem(self.ikfastproblem,'')
     def  __del__(self):
@@ -159,7 +159,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         else:
             iksuffix = ''
 #         if self.manip.GetIkSolver() is not None:
-#             self.iksolver = self.env.CreateIkSolver(self.manip.GetIKSolverName()+iksuffix)
+#             self.iksolver = RaveCreateIkSolver(self.env,self.manip.GetIKSolverName()+iksuffix)
         if self.iksolver is None:
             with self.env:
                 ikname = 'ikfast.%s.%s'%(self.manip.GetKinematicsStructureHash(),self.manip.GetName())
@@ -167,12 +167,12 @@ class InverseKinematicsModel(OpenRAVEModel):
                 if iktype is None:
                     if self.forceikfast:
                         return False
-                    self.iksolver = self.env.CreateIkSolver(self.manip.GetIkSolver().GetXMLId()+iksuffix) if self.manip.GetIkSolver() is not None else None
+                    self.iksolver = RaveCreateIkSolver(self.env,self.manip.GetIkSolver().GetXMLId()+iksuffix) if self.manip.GetIkSolver() is not None else None
                 else:
                     if int(self.iktype) != int(iktype):
                         raise ValueError('ik does not match types %s!=%s'%(self.iktype,iktype))
                     ikname = 'ikfast ' + ikname
-                    self.iksolver = self.env.CreateIkSolver(ikname+iksuffix)
+                    self.iksolver = RaveCreateIkSolver(self.env,ikname+iksuffix)
         if self.iksolver is not None:
             return self.manip.SetIKSolver(self.iksolver)
         return self.has()
@@ -182,7 +182,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         print 'inversekinematics generation is done, compiled shared object: %s'%self.getfilename()
     
     def getdir(self):
-        return os.path.join(self.env.GetHomeDirectory(),'kinematics.'+self.manip.GetKinematicsStructureHash())
+        return os.path.join(RaveGetHomeDirectory(),'kinematics.'+self.manip.GetKinematicsStructureHash())
     def getfilename(self):
         if self.iktype is None:
             raise ValueError('ik type is not set')

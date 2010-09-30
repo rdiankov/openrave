@@ -53,7 +53,7 @@ class GenericRobot : public RobotBase
     {
         BOOST_ASSERT(ptraj->GetPoints().size() > 0 || !"trajectory has no points\n");
         BOOST_ASSERT(ptraj->GetDOF() == GetActiveDOF() || !"trajectory of wrong dimension");
-        TrajectoryBasePtr pfulltraj = GetEnv()->CreateTrajectory(ptraj->GetDOF());
+        TrajectoryBasePtr pfulltraj = RaveCreateTrajectory(GetEnv(),ptraj->GetDOF());
         GetFullTrajectoryFromActive(pfulltraj, ptraj);
         _trajcur = pfulltraj;
 

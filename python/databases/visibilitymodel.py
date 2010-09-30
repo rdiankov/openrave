@@ -223,7 +223,7 @@ class VisibilityModel(OpenRAVEModel):
                     # find better way of handling multiple grasps
                     if len(self.preshapes) > 0:
                             self.robot.SetJointValues(self.preshapes[0],self.manip.GetGripperIndices())
-                    extentsfile = os.path.join(self.env.GetHomeDirectory(),'kinbody.'+self.target.GetKinematicsGeometryHash(),'visibility.txt')
+                    extentsfile = os.path.join(RaveGetHomeDirectory(),'kinbody.'+self.target.GetKinematicsGeometryHash(),'visibility.txt')
                     if sphere is None and os.path.isfile(extentsfile):
                         self.visibilitytransforms = self.visualprob.ProcessVisibilityExtents(extents=loadtxt(extentsfile,float),conedirangles=conedirangles)
                     else:

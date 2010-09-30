@@ -32,9 +32,10 @@ using namespace std;
 #include <boost/bind.hpp>
 #include <boost/algorithm/string.hpp>
 
-//#ifndef _WIN32
-//#include <signal.h>
-//#endif
+#ifndef _WIN32
+#include <signal.h>
+void sigint_handler(int sig);
+#endif
 
 #ifndef _WIN32
 #define strnicmp strncasecmp
@@ -54,9 +55,7 @@ void MainOpenRAVEThread();
 
 static bool bDisplayGUI = true, bShowGUI = true;
 
-static EnvironmentBasePtr penv;
-static ViewerBasePtr s_viewer;
-static ProblemInstancePtr s_server;
+static EnvironmentBasePtr s_penv;
 static boost::shared_ptr<boost::thread> s_mainThread;
 static string s_sceneFile;
 static string s_saveScene; // if not NULL, saves the scene and exits
@@ -70,7 +69,7 @@ static int s_WindowPosX, s_WindowPosY;
 static bool s_bSetWindowPosition = false;
 int g_argc;
 char** g_argv;
-bool bThreadDestroyed = false;
+static bool s_bThreadDestroyed = false;
 
 #ifndef _WIN32
 #include <sys/stat.h>
@@ -107,6 +106,7 @@ int main(int argc, char ** argv)
                          "-wdims [width] [height] start up the GUI window with these dimensions\n"
                          "-wpos x y set the position of the GUI window\n"
                          "-problem [problemname] [args] Start openrave with a problem instance. If args involves spaces, surround it with double quotes. args is optional.\n"
+                         "--version          Output the current openrave version\n\n"
                          "-f [scene]         Load a openrave environment file\n\n");
             return 0;
         }
@@ -117,6 +117,10 @@ int main(int argc, char ** argv)
         else if( stricmp(argv[i], "--listplugins") == 0 || stricmp(argv[i], "-listplugins") == 0 ) {
             bListPlugins = true;
             i++;
+        }
+        else if( stricmp(argv[i], "--version") == 0 ) {
+            printf("%s\n",OPENRAVE_VERSION_STRING);
+            return 0;
         }
         else if( stricmp(argv[i], "-f") == 0 ) {
             s_sceneFile = argv[i+1];
@@ -193,25 +197,25 @@ int main(int argc, char ** argv)
         }
     }
 
+    RaveInitialize(true);
+
     // create environment and start a command-line controlled simulation 
     RaveSetDebugLevel(debuglevel);
-    penv = CreateEnvironment(true);
-    if( !penv )
-        return -1;
-    penv->SetDebugLevel(debuglevel);
-    for(list<string>::iterator it = listLoadPlugins.begin(); it != listLoadPlugins.end(); ++it)
-        penv->LoadPlugin(*it);
-
-//#ifndef _WIN32
-//    // add a signal handler
-//    signal(SIGINT,sigint_handler); // control C
-//#endif
+    s_penv = RaveCreateEnvironment();
+    RaveSetDebugLevel(debuglevel);
+    for(list<string>::iterator it = listLoadPlugins.begin(); it != listLoadPlugins.end(); ++it) {
+        RaveLoadPlugin(*it);
+    }
+#ifndef _WIN32
+    // add a signal handler
+    signal(SIGINT,sigint_handler); // control C
+#endif
 
     if( bListPlugins ) {
 
         std::list< std::pair<std::string, PLUGININFO> > plugins;
         std::list< std::pair<std::string, PLUGININFO> >::iterator itplugin;
-        penv->GetPluginInfo(plugins);
+        RaveGetPluginInfo(plugins);
 
         // output all the plugins and exit
         vector<string>::const_iterator itnames;     
@@ -246,40 +250,38 @@ int main(int argc, char ** argv)
                 ss << itname->c_str() << endl;
         }
         printf("%s",ss.str().c_str());
-        penv->Destroy();
+        s_penv->Destroy();
         return 0;
     }
 
     if( servername.size() > 0 && nServPort > 0 ) {
-        s_server = penv->CreateProblem(servername);
-        if( !!s_server ) {
+        ProblemInstancePtr pserver = RaveCreateProblem(s_penv, servername);
+        if( !!pserver ) {
             stringstream ss;
             ss << nServPort;
-            if( penv->LoadProblem(s_server,ss.str()) != 0 )
+            if( s_penv->LoadProblem(pserver,ss.str()) != 0 )
                 RAVELOG_WARNA("failed to load server\n");
         }
     }
 
     if( collisionchecker.size() > 0 ) {
-        CollisionCheckerBasePtr p = penv->CreateCollisionChecker(collisionchecker);
-        if( !!p )
-            penv->SetCollisionChecker(p);
+        CollisionCheckerBasePtr p = RaveCreateCollisionChecker(s_penv, collisionchecker);
+        if( !!p ) {
+            s_penv->SetCollisionChecker(p);
+        }
     }
     if( physicsengine.size() > 0 ) {
-        PhysicsEngineBasePtr p = penv->CreatePhysicsEngine(physicsengine);
-        if( !!p )
-            penv->SetPhysicsEngine(p);
+        PhysicsEngineBasePtr p = RaveCreatePhysicsEngine(s_penv, physicsengine);
+        if( !!p ) {
+            s_penv->SetPhysicsEngine(p);
+        }
     }
 
-    bThreadDestroyed = false;
+    s_bThreadDestroyed = false;
     s_mainThread.reset(new boost::thread(boost::bind(MainOpenRAVEThread)));
     s_mainThread->join();
-
-    penv->AttachViewer(ViewerBasePtr());
-    s_viewer.reset();
-    s_server.reset();
-    penv->Destroy();
-    penv.reset();
+    s_penv->Destroy();
+    s_penv.reset();
     return 0;
 }
 
@@ -287,100 +289,89 @@ int main(int argc, char ** argv)
 void MainOpenRAVEThread()
 {
     if( bDisplayGUI ) {
+        ViewerBasePtr pviewer;
         // find a viewer
-        if( s_viewerName.size() > 0 )
-            s_viewer = penv->CreateViewer(s_viewerName);
-
-        if( !s_viewer ) {
+        if( s_viewerName.size() > 0 ) {
+            pviewer = RaveCreateViewer(s_penv, s_viewerName);
+        }
+        if( !pviewer ) {
             boost::array<string,1> viewer_prefs = {{"qtcoin"}};
             for(size_t i = 0; i < viewer_prefs.size(); ++i) {
-                s_viewer = penv->CreateViewer(viewer_prefs[i]);
-                if( !!s_viewer )
+                pviewer = RaveCreateViewer(s_penv, viewer_prefs[i]);
+                if( !!pviewer ) {
                     break;
+                }
             }
         }
 
-        if( !s_viewer ) { // take any viewer
+        if( !pviewer ) { // take any viewer
             std::map<InterfaceType, std::vector<std::string> > interfacenames;
-            penv->GetLoadedInterfaces(interfacenames);
+            RaveGetLoadedInterfaces(interfacenames);
             std::vector<std::string>::const_iterator itname;
             FORIT(itname, interfacenames[PT_Viewer]) {
-                s_viewer = penv->CreateViewer(*itname);
-                if( !!s_viewer )
+                pviewer = RaveCreateViewer(s_penv, *itname);
+                if( !!pviewer ) {
                     break;
+                }
             }
         }
         
-        if( !s_viewer )
+        if( !pviewer )
             RAVELOG_WARNA("failed to find an OpenRAVE viewer.\n");
         else {
-            RAVELOG_DEBUGA("using %s viewer\n", s_viewer->GetXMLId().c_str());
+            RAVELOG_DEBUGA("using %s viewer\n", pviewer->GetXMLId().c_str());
 
-            s_viewer->ViewerSetSize(s_WindowWidth, s_WindowHeight);
+            pviewer->ViewerSetSize(s_WindowWidth, s_WindowHeight);
             if( s_bSetWindowPosition )
-                s_viewer->ViewerMove(s_WindowPosX,s_WindowPosY);
-            penv->AttachViewer(s_viewer);
-
+                pviewer->ViewerMove(s_WindowPosX,s_WindowPosY);
+            s_penv->AttachViewer(pviewer);
             for(size_t i = 0; i < vIvFiles.size(); ++i) {
-                if( !s_viewer->LoadModel(vIvFiles[i]) )
+                if( !pviewer->LoadModel(vIvFiles[i]) )
                     RAVELOG_WARNA("failed to open %s\n", vIvFiles[i].c_str());
             }
         }
     }
 
     {
-        EnvironmentMutex::scoped_lock lock(penv->GetMutex());
+        EnvironmentMutex::scoped_lock lock(s_penv->GetMutex());
 
-        if( s_sceneFile.size() > 0 )
-            penv->Load(s_sceneFile);
-
+        if( s_sceneFile.size() > 0 ) {
+            s_penv->Load(s_sceneFile);
+        }
         vector<string>::iterator it;
-        FORIT(it, vXMLFiles)
-            penv->Load(*it);
-
+        FORIT(it, vXMLFiles) {
+            s_penv->Load(*it);
+        }
         list< pair<string, string> >::iterator itprob;
         FORIT(itprob, s_listProblems) {
-            ProblemInstancePtr prob = penv->CreateProblem(itprob->first);
-            if( !!prob )
-                penv->LoadProblem(prob, itprob->second);
+            ProblemInstancePtr prob = RaveCreateProblem(s_penv, itprob->first);
+            if( !!prob ) {
+                s_penv->LoadProblem(prob, itprob->second);
+            }
         }
 
         if( s_saveScene.size() > 0 ) {
-            penv->Save(s_saveScene);
+            s_penv->Save(s_saveScene);
     //        if( !bSaveScene )
     //            RAVELOG_ERRORA("save scene at file %s failed\n", s_saveScene);
     //        else
     //            RAVELOG_INFOA("save scene at file %s succeeded\n", s_saveScene);
 
-            bThreadDestroyed = true;
+            s_bThreadDestroyed = true;
             return;
         }
     }
     
-    penv->GetViewer()->main(bShowGUI);
-
-    if( !bThreadDestroyed ) {
-        penv->AttachViewer(ViewerBasePtr());
-        s_viewer.reset();
-        penv->Remove(s_server);
-        s_server.reset();
-        
-//        if( penv != NULL ) {        
-//            delete penv; penv = NULL;
-//        }
-
-        bThreadDestroyed = true;
-    }
+    s_penv->GetViewer()->main(bShowGUI);
+    s_bThreadDestroyed = true;
 }
 
-//void sigint_handler(int)
-//{
-//    if( !bThreadDestroyed ) {
-//#ifndef _WIN32
-//        s_mainThread.kill(SIGINT);
-//#else
-//        s_mainThread.kill(SIGINT);
-//#endif
-//        bThreadDestroyed = true;
-//    }
-//}
+#ifndef _WIN32
+void sigint_handler(int sig)
+{
+    s_penv->Destroy();    
+    // have to let the default sigint properly shutdown the program
+	signal(SIGINT, SIG_DFL);
+	kill(getpid(), SIGINT);
+}
+#endif

@@ -4,6 +4,12 @@ set (openrave_SOURCES openrave.cpp)
 include_directories(${CMAKE_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
+set(openrave_libraries ${LIBXML2_LIBRARIES} ${Boost_THREAD_LIBRARY} openrave-md5)
+if( Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
+  set(openrave_libraries ${openrave_libraries} ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY})
+  add_definitions(-DHAVE_BOOST_FILESYSTEM)
+endif()
+
 set(LIB_COMPILE_FLAGS "${Boost_CFLAGS}")
 
 if( NEED_TRIINDEX  )

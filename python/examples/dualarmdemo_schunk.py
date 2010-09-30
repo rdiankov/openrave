@@ -28,7 +28,7 @@ class Schunkplanner:
     def __init__(self,env):
         self.env = env
         self.robot = self.env.GetRobots()[0]
-        self.probsmanip = self.env.CreateProblem('dualmanipulation')
+        self.probsmanip = RaveCreateProblem(self.env,'dualmanipulation')
         args = self.robot.GetName()
         #args += ' planner birrt' 
         self.env.LoadProblem(self.probsmanip,args)
@@ -161,7 +161,7 @@ if __name__ == "__main__":
 def test():
     import dualarmdemo_schunk
     env = Environment()
-    env.SetCollisionChecker(env.CreateCollisionChecker('ode'))
+    env.SetCollisionChecker(RaveCreateCollisionChecker(env,'ode'))
     env.SetViewer('qtcoin')
     env.Load('data/dualarmmanipulation.env.xml')
     self = dualarmdemo_schunk.Schunkplanner(env)

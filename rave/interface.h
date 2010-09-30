@@ -150,15 +150,14 @@ private:
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
-    friend class RaveDatabase;
     friend class Environment;
     friend class OpenRAVEXMLParser::InterfaceXMLReader;
 #else
-    friend class ::RaveDatabase;
     friend class ::Environment;
     friend class ::OpenRAVEXMLParser::InterfaceXMLReader;
 #endif
 #endif
+    friend class RaveDatabase;
 };
 
 } // end namespace OpenRAVE

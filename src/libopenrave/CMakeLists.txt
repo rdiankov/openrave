@@ -1,4 +1,4 @@
-set(openrave_lib_SOURCES KinBody.cpp math.cpp libopenrave.cpp Robot.cpp Trajectory.cpp mt19937ar.cpp libopenrave.h  mt19937ar.h ${rave_header_files})
+set(openrave_lib_SOURCES KinBody.cpp math.cpp libopenrave.cpp Robot.cpp Trajectory.cpp mt19937ar.cpp libopenrave.h  mt19937ar.h plugindatabase.h ${rave_header_files})
 
 add_library(libopenrave SHARED ${openrave_lib_SOURCES})
 add_dependencies(libopenrave classhashes_h openrave-md5)
@@ -8,7 +8,7 @@ set_target_properties(libopenrave PROPERTIES OUTPUT_NAME openrave
                                   CLEAN_DIRECT_OUTPUT 1
                                   COMPILE_FLAGS "${LIB_COMPILE_FLAGS} -DRAVE_LIBBUILD -DRAVE_USEDLL"
                                   LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
-target_link_libraries(libopenrave ${LIBXML2_LIBRARIES} ${Boost_THREAD_LIBRARY} openrave-md5)
+target_link_libraries(libopenrave ${openrave_libraries})
 if( MSVC )
   install(TARGETS libopenrave RUNTIME DESTINATION bin LIBRARY DESTINATION bin ARCHIVE DESTINATION lib)
 else()
@@ -37,7 +37,7 @@ if( OPT_STATIC )
     set_target_properties(libopenrave_static PROPERTIES STATIC_LIBRARY_FLAGS "\" LinkLibraryDependencies=\"true")
   endif()
 
-  target_link_libraries(libopenrave_static ${LIBXML2_LIBRARIES} ${Boost_THREAD_LIBRARY} openrave-md5)
+  target_link_libraries(libopenrave_static ${openrave_libraries})
   add_dependencies(libopenrave_static classhashes_h openrave-md5)
   install(TARGETS libopenrave_static DESTINATION lib)
 endif()

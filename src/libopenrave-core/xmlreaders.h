@@ -40,6 +40,9 @@
 #include <boost/filesystem/operations.hpp>
 #endif
 
+#include <boost/utility.hpp>
+#include <boost/thread/once.hpp>
+
 BOOST_STATIC_ASSERT(sizeof(xmlChar) == 1);
 
 #ifdef _WIN32
@@ -50,11 +53,18 @@ const char s_filesep = '/';
 
 namespace OpenRAVEXMLParser
 {
-    static boost::shared_ptr<EnvironmentMutex> GetXMLMutex() {
-        static boost::shared_ptr<EnvironmentMutex> m; ///< lock for parsing XML
-        if( !m )
-            m.reset(new EnvironmentMutex());
-        return m;
+    static boost::once_flag __onceCreateXMLMutex = BOOST_ONCE_INIT;
+    /// lock for parsing XML, don't destroy it in order to ensure it remains valid for as long as possible
+    static EnvironmentMutex* __mutexXML;
+    void __CreateXMLMutex()
+    {
+        __mutexXML = new EnvironmentMutex();
+    }
+
+    EnvironmentMutex* GetXMLMutex()
+    {
+        boost::call_once(__CreateXMLMutex,__onceCreateXMLMutex);
+        return __mutexXML;
     }
 
     /// the directory of the file currently parsing
@@ -69,8 +79,7 @@ namespace OpenRAVEXMLParser
     }
 
     static void SetDataDirs(const vector<string>& vdatadirs) {
-        boost::shared_ptr<EnvironmentMutex> m = GetXMLMutex();
-        EnvironmentMutex::scoped_lock lock(*m);
+        EnvironmentMutex::scoped_lock lock(*GetXMLMutex());
         GetDataDirs() = vdatadirs;
     }
 
@@ -78,19 +87,6 @@ namespace OpenRAVEXMLParser
     {
         static int errorcount=0;
         return errorcount;
-    }
-
-    typedef map<string, EnvironmentBase::CreateXMLReaderFn, CaseInsensitiveCompare> READERSMAP;
-    static map<InterfaceType, READERSMAP >& GetRegisteredReaders()
-    {
-        static map<InterfaceType, READERSMAP > mapreaders;
-        static bool s_bReadersInit = false;
-        if( !s_bReadersInit ) {
-            s_bReadersInit = true;
-            //mapreaders[PT_KinBody][RaveGetInterfaceName(PT_KinBody)] = boost::bind(xmltag,atts
-        }
-
-        return mapreaders;
     }
 
     struct XMLREADERDATA
@@ -273,8 +269,7 @@ namespace OpenRAVEXMLParser
         if( filename.size() == 0 ) {
             return boost::shared_ptr<pair<string,string> >();
         }
-        boost::shared_ptr<EnvironmentMutex> m = GetXMLMutex();
-        EnvironmentMutex::scoped_lock lock(*m);
+        EnvironmentMutex::scoped_lock lock(*GetXMLMutex());
 
         // init the dir (for some reason msvc confuses the linking of the string class with soqt, so do it the old fashioned way)
         string appended;
@@ -358,8 +353,7 @@ namespace OpenRAVEXMLParser
         if( !filedata ) {
             return false;
         }
-        boost::shared_ptr<EnvironmentMutex> m = GetXMLMutex();
-        EnvironmentMutex::scoped_lock lock(*m);
+        EnvironmentMutex::scoped_lock lock(*GetXMLMutex());
 
         string olddir = GetParseDirectory();
         string oldfile = GetFullFilename();
@@ -396,27 +390,11 @@ namespace OpenRAVEXMLParser
     
     static bool RaveParseXMLData(BaseXMLReaderPtr preader, const std::string& pdata)
     {
-        if( pdata.size() == 0 )
+        if( pdata.size() == 0 ) {
             return false;
-        boost::shared_ptr<EnvironmentMutex> m = GetXMLMutex();
-        EnvironmentMutex::scoped_lock lock(*m);
+        }
+        EnvironmentMutex::scoped_lock lock(*GetXMLMutex());
         return raveXmlSAXUserParseMemory(GetSAXHandler(), preader, pdata.c_str(), pdata.size())==0;
-    }
-
-    static EnvironmentBase::CreateXMLReaderFn RegisterXMLReader(InterfaceType type, const std::string& xmltag, const EnvironmentBase::CreateXMLReaderFn& fn)
-    {
-        boost::shared_ptr<EnvironmentMutex> m = GetXMLMutex();
-        EnvironmentMutex::scoped_lock lock(*m);
-        EnvironmentBase::CreateXMLReaderFn oldfn = GetRegisteredReaders()[type][xmltag];
-        GetRegisteredReaders()[type][xmltag] = fn;
-        return oldfn;
-    }
-
-    static void UnregisterXMLReader(InterfaceType type, const std::string& xmltag, const EnvironmentBase::CreateXMLReaderFn& oldfn)
-    {
-        static boost::shared_ptr<EnvironmentMutex> m = GetXMLMutex();
-        EnvironmentMutex::scoped_lock lock(*m);
-        GetRegisteredReaders()[type][xmltag] = oldfn;
     }
 
     /// mass of objects
@@ -1530,7 +1508,7 @@ namespace OpenRAVEXMLParser
 
             if( !_pinterface ) {
                 if( strtype.size() > 0 ) {
-                    _pinterface = _penv->CreateInterface(type,strtype);
+                    _pinterface = RaveCreateInterface(_penv, type,strtype);
                     if( !_pinterface )
                         GetXMLErrorCount()++;
                 }
@@ -1538,18 +1516,18 @@ namespace OpenRAVEXMLParser
                 if( !_pinterface ) {
                     switch(type) {
                     case PT_KinBody:
-                        _pinterface = penv->CreateKinBody();
+                        _pinterface = RaveCreateKinBody(_penv);
                         break;
                     case PT_Robot:
-                        _pinterface = _penv->CreateInterface(PT_Robot, "GenericRobot");
+                        _pinterface = RaveCreateInterface(_penv, PT_Robot, "GenericRobot");
                         if( !_pinterface )
-                            _pinterface = _penv->CreateInterface(PT_Robot, "");
+                            _pinterface = RaveCreateInterface(_penv, PT_Robot, "");
                         break;
                     case PT_Controller:
-                        _pinterface = _penv->CreateInterface(PT_Controller, "IdealController");
+                        _pinterface = RaveCreateInterface(_penv, PT_Controller, "IdealController");
                         break;
                     default:
-                        _pinterface = _penv->CreateInterface(type, "");
+                        _pinterface = RaveCreateInterface(_penv, type, "");
                         break;
                     }
                 }
@@ -1559,12 +1537,11 @@ namespace OpenRAVEXMLParser
                 RAVELOG_ERRORA(str(boost::format("xml readers failed to create instance of type %s:%s\n")%RaveGetInterfaceName(type)%strtype));
             }
             else {
-                _type = _pinterface->GetInterfaceType();
-
-                // check to see if a reader is registered for this type
-                READERSMAP::iterator it = GetRegisteredReaders()[_type].find(_pinterface->GetXMLId());
-                if( it != GetRegisteredReaders()[_type].end() ) {
-                    _pcustomreader = it->second(_pinterface, atts);
+                try {
+                    _pcustomreader = RaveGetXMLReader(_pinterface->GetInterfaceType(),_pinterface->GetXMLId())(_pinterface,atts);
+                }
+                catch(const openrave_exception& ex) {
+                    _pcustomreader.reset();
                 }
             }
 
@@ -1592,13 +1569,15 @@ namespace OpenRAVEXMLParser
             }
 
             // check for registers readers
-            READERSMAP::iterator it = GetRegisteredReaders()[_type].find(xmlname);
-            if( it != GetRegisteredReaders()[_type].end() ) {
+            try {
+                _pcustomreader = RaveGetXMLReader(_type,xmlname)(_pinterface,atts);
                 _readername = xmlname;
-                _pcustomreader = it->second(_pinterface, atts);
                 if( !!_pcustomreader ) {
                     return PE_Support;
                 }
+            }
+            catch(const openrave_exception& ex) {
+                _pcustomreader.reset();
             }
 
             if (xmlname == "sendcommand" ) {
@@ -2192,13 +2171,14 @@ namespace OpenRAVEXMLParser
                 string iklibraryname = _ss.str();
 
                 IkSolverBasePtr piksolver;
-                if( _probot->GetEnv()->HasInterface(PT_InverseKinematicsSolver,iklibraryname) )
-                    piksolver = _probot->GetEnv()->CreateIkSolver(iklibraryname);
+                if( RaveHasInterface(PT_InverseKinematicsSolver,iklibraryname) ) {
+                    piksolver = RaveCreateIkSolver(_probot->GetEnv(), iklibraryname);
+                }
                 if( !piksolver ) {
                     // try adding the current directory
-                    if( _probot->GetEnv()->HasInterface(PT_InverseKinematicsSolver,GetParseDirectory()+s_filesep+iklibraryname)) {
+                    if( RaveHasInterface(PT_InverseKinematicsSolver,GetParseDirectory()+s_filesep+iklibraryname)) {
                         string fullname = GetParseDirectory(); fullname.push_back(s_filesep); fullname += iklibraryname;
-                        piksolver = _probot->GetEnv()->CreateIkSolver(fullname);
+                        piksolver = RaveCreateIkSolver(_probot->GetEnv(), fullname);
                     }
 
                     if( !piksolver ) {
@@ -2216,7 +2196,7 @@ namespace OpenRAVEXMLParser
                         }
 
                         if( !pIKFastLoader ) {
-                            pIKFastLoader = _probot->GetEnv()->CreateProblem("ikfast");
+                            pIKFastLoader = RaveCreateProblem(_probot->GetEnv(), "ikfast");
                             if( !!pIKFastLoader )
                                 _probot->GetEnv()->LoadProblem(pIKFastLoader,"");
                         }
@@ -2235,12 +2215,12 @@ namespace OpenRAVEXMLParser
                                     // need to use the original iklibrary string due to parameters being passed in
                                     string fullname = "ikfast ";
                                     fullname += GetParseDirectory(); fullname.push_back(s_filesep); fullname += iklibraryname;
-                                    piksolver = _probot->GetEnv()->CreateIkSolver(fullname);
+                                    piksolver = RaveCreateIkSolver(_probot->GetEnv(), fullname);
                                 }
                             }
                             else {
                                 string fullname = "ikfast "; fullname += iklibraryname;
-                                piksolver = _probot->GetEnv()->CreateIkSolver(fullname);
+                                piksolver = RaveCreateIkSolver(_probot->GetEnv(), fullname);
                             }
                         }
                         else {
@@ -2607,7 +2587,7 @@ namespace OpenRAVEXMLParser
 
                 // set a default controller
                 if( !_probot->GetController() )
-                    _probot->SetController(_probot->GetEnv()->CreateController("IdealController"),"");
+                    _probot->SetController(RaveCreateController(_probot->GetEnv(), "IdealController"),"");
 
                 // forces robot to reupdate its internal objects
                 _probot->SetTransform(_probot->GetTransform());
@@ -2931,11 +2911,12 @@ namespace OpenRAVEXMLParser
             else if( xmlname == "plugin" ) {
                 string pluginname;
                 _ss >> pluginname;
-                _penv->LoadPlugin(pluginname);
+                RaveLoadPlugin(pluginname);
             }
 
-            if( xmlname !=_processingtag )
+            if( xmlname !=_processingtag ) {
                 RAVELOG_WARN(str(boost::format("invalid tag %s!=%s\n")%xmlname%_processingtag));
+            }
             _processingtag = "";
             return false;
         }

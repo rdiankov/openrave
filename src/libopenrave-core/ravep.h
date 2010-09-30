@@ -175,8 +175,6 @@ class ColladaWriter;
 using namespace OpenRAVE;
 using namespace std;
 
-bool ParseDirectories(const char* pdirs, std::vector<std::string>& vdirs);
-
 #ifdef OPENRAVE_COIN3D
 
 #include <Inventor/SoDB.h>
@@ -252,7 +250,6 @@ bool RaveWriteColladaFile(RobotBasePtr probot, const std::string& filename);
 
 #include "ivcon.h"
 #include "xmlreaders.h"
-#include "plugindatabase.h"
 #include "environment-core.h"
 
 #endif

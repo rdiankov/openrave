@@ -2924,8 +2924,9 @@ void KinBody::__erase_iterator(KinBodyWeakPtr pweakbody, std::list<std::pair<int
 {
     if( !!pit ) {
         KinBodyPtr pbody = pweakbody.lock();
-        if( !!pbody )
+        if( !!pbody ) {
             pbody->_listRegisteredCallbacks.erase(*pit);
+        }
         delete pit;
     }
 }

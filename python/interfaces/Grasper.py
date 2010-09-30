@@ -19,7 +19,7 @@ from copy import copy as shallowcopy
 class Grasper:
     def __init__(self,robot,friction=0.3,avoidlinks=None,plannername=None):
         env = robot.GetEnv()
-        self.prob = env.CreateProblem('Grasper')
+        self.prob = RaveCreateProblem(env,'Grasper')
         self.robot = robot
         self.friction = friction
         self.avoidlinks = avoidlinks
@@ -33,7 +33,7 @@ class Grasper:
         self.prob.GetEnv().Remove(self.prob)
     def clone(self,envother):
         clone = shallowcopy(self)
-        clone.prob = envother.CreateProblem('Grasper')
+        clone.prob = RaveCreateProblem(envother,'Grasper')
         clone.robot = envother.GetRobot(self.robot.GetName())
         clone.avoidlinks = [clone.robot.GetLink(link.GetName()) for link in self.avoidlinks]
         if envother.LoadProblem(clone.prob,clone.args) != 0:

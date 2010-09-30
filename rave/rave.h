@@ -174,17 +174,19 @@ public:
         
         //has the end of at least one of the strings been reached?
         while ( (it1!=s1.end()) && (it2!=s2.end()) )  { 
-            if(::toupper(*it1) != ::toupper(*it2)) //letters differ?
+            if(::toupper(*it1) != ::toupper(*it2)) { //letters differ?
                 // return -1 to indicate 'smaller than', 1 otherwise
                 return ::toupper(*it1) < ::toupper(*it2);
+            }
             //proceed to the next character in each string
             ++it1;
             ++it2;
         }
         std::size_t size1=s1.size(), size2=s2.size();// cache lengths
         //return -1,0 or 1 according to strings' lengths
-        if (size1==size2) 
+        if (size1==size2) {
             return 0;
+        }
         return size1<size2;
     }
 };
@@ -299,16 +301,11 @@ RAVE_API double RaveRandomDouble();
 RAVE_API void RaveRandomDouble(int n, std::vector<double>& v);
 //@}
 
+/// Sets the global openrave debug level
 RAVE_API void RaveSetDebugLevel(DebugLevel level);
 
-inline DebugLevel RaveGetDebugLevel(void) {
-#ifdef RAVE_LIBBUILD
-    extern DebugLevel g_nDebugLevel;
-#else
-    RAVE_API extern DebugLevel g_nDebugLevel;
-#endif
-    return g_nDebugLevel;
-}
+/// Returns the openrave debug level
+RAVE_API DebugLevel RaveGetDebugLevel();
 
 /// extracts only the filename
 inline const char* RaveGetSourceFilename(const char* pfilename)
@@ -498,6 +495,7 @@ enum InterfaceType
     PT_CollisionChecker=10, ///< describes \ref CollisionCheckerBase
     PT_Trajectory=11, ///< describes \ref TrajectoryBase
     PT_Viewer=12,///< describes \ref ViewerBase
+    PT_NumberOfInterfaces=12 ///< number of interfaces, do not forget to update
 };
 
 typedef InterfaceType PluginType RAVE_DEPRECATED;
@@ -628,6 +626,8 @@ public:
 typedef boost::shared_ptr<BaseXMLReader> BaseXMLReaderPtr;
 typedef boost::shared_ptr<BaseXMLReader const> BaseXMLReaderConstPtr;
 
+typedef boost::function<BaseXMLReaderPtr(InterfaceBasePtr, const std::list<std::pair<std::string,std::string> >&)> CreateXMLReaderFn;
+
 /// reads until the tag ends
 class RAVE_API DummyXMLReader : public BaseXMLReader
 {
@@ -703,6 +703,10 @@ namespace OpenRAVE {
 
 namespace OpenRAVE {
 
+/// \name Global Functionality - Interface Creation, Plugin Management, Logging
+/// \anchor global_functionality
+//@{
+
 /// \brief Returns the a 16 character null-terminated string specifying a hash of the interfaces used for checking changes.
 inline const char* RaveGetInterfaceHash(InterfaceType type)
 {
@@ -759,13 +763,122 @@ inline boost::shared_ptr<T const> RaveInterfaceConstCast(InterfaceBaseConstPtr p
     return boost::shared_ptr<T>();
 }
 
-/// returns the a lower case string of the interface type
+/// \brief returns a lower case string of the interface type
 RAVE_API const std::map<InterfaceType,std::string>& RaveGetInterfaceNamesMap();
 RAVE_API const std::string& RaveGetInterfaceName(InterfaceType type);
 
-/// returns the openrave home directory where settings, cache, and other files are stored.
+/// \brief Returns the openrave home directory where settings, cache, and other files are stored.
+///
 /// On Linux/Unix systems, this is usually $HOME/.openrave, on Windows this is $HOMEPATH/.openrave
 RAVE_API std::string RaveGetHomeDirectory();
+
+/// \brief Explicitly initializes the global OpenRAVE state (optional).
+///
+/// Optional function to initialize openrave plugins and logging.
+/// Although environment creation will automatically make sure this function is called, users might want
+/// explicit control of when this happens.
+/// \param bLoadAllPlugins If true will load all the openrave plugins automatically that can be found in the OPENRAVE_PLUGINS environment path
+/// \return 0 if successful, otherwise an error code
+RAVE_API int RaveInitialize(bool bLoadAllPlugins=true);
+
+/// \brief Initializes the global state from an already loaded OpenRAVE environment.
+///
+/// Because of shared object boundaries, it is necessary to pass the global state pointer
+/// around. If using plugin.h, this function is automatically called by \ref CreateInterfaceValidated.
+/// It is also called by and every InterfaceBase constructor.
+/// \param[in] globalstate 
+RAVE_API void RaveInitializeFromState(boost::shared_ptr<void> globalstate);
+
+/// \brief A pointer to the global openrave state
+/// \return a managed pointer to the state.
+RAVE_API boost::shared_ptr<void> RaveGlobalState();
+
+/// \brief Destroys the entire OpenRAVE state and all loaded environments. 
+///
+/// This functions should be always called before program shutdown in order to assure all
+/// resources are relased appropriately.
+RAVE_API void RaveDestroy();
+
+/// \brief Get all the loaded plugins and the interfaces they support.
+///
+/// \param plugins A list of plugins. Each entry has the plugin name and the interfaces it supports
+RAVE_API void RaveGetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins);
+
+/// \brief Get a list of all the loaded interfaces.
+RAVE_API void RaveGetLoadedInterfaces(std::map<InterfaceType, std::vector<std::string> >& interfacenames);
+
+/// \brief Reloads all the plugins.
+///
+/// The interfaces currently created remain will continue using the old plugins, so this function is safe in that plugins currently loaded remain loaded until the last interface that uses them is released.
+RAVE_API void RaveReloadPlugins();
+
+/// \brief Load a plugin and its interfaces.
+///
+/// If the plugin is already loaded, will reload it.
+/// \param name the filename of the plugin to load
+RAVE_API bool RaveLoadPlugin(const std::string& libraryname);
+
+/// \brief Returns true if interface can be created, otherwise false.
+RAVE_API bool RaveHasInterface(InterfaceType type, const std::string& interfacename);
+
+RAVE_API InterfaceBasePtr RaveCreateInterface(EnvironmentBasePtr penv, InterfaceType type,const std::string& interfacename);
+RAVE_API RobotBasePtr RaveCreateRobot(EnvironmentBasePtr penv, const std::string& name="");
+RAVE_API PlannerBasePtr RaveCreatePlanner(EnvironmentBasePtr penv, const std::string& name);
+RAVE_API SensorSystemBasePtr RaveCreateSensorSystem(EnvironmentBasePtr penv, const std::string& name);
+RAVE_API ControllerBasePtr RaveCreateController(EnvironmentBasePtr penv, const std::string& name);
+RAVE_API ProblemInstancePtr RaveCreateProblem(EnvironmentBasePtr penv, const std::string& name);
+RAVE_API IkSolverBasePtr RaveCreateIkSolver(EnvironmentBasePtr penv, const std::string& name);
+RAVE_API PhysicsEngineBasePtr RaveCreatePhysicsEngine(EnvironmentBasePtr penv, const std::string& name);
+RAVE_API SensorBasePtr RaveCreateSensor(EnvironmentBasePtr penv, const std::string& name);
+RAVE_API CollisionCheckerBasePtr RaveCreateCollisionChecker(EnvironmentBasePtr penv, const std::string& name);
+RAVE_API ViewerBasePtr RaveCreateViewer(EnvironmentBasePtr penv, const std::string& name);
+RAVE_API  KinBodyPtr RaveCreateKinBody(EnvironmentBasePtr penv, const std::string& name="");
+/// \brief Return an empty trajectory instance initialized to nDOF degrees of freedom. Will be deprecated soon
+RAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, int nDOF);
+/// \brief Return an empty trajectory instance.
+RAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, const std::string& name="");
+
+/// \brief Registers a custom xml reader for a particular interface.
+///
+/// Once registered, anytime an interface is created through XML and
+/// the xmltag is seen, the function CreateXMLReaderFn will be called to get a reader for that tag
+/// \param xmltag the tag specified in xmltag is seen in the interface, the the custom reader will be created.
+/// \param fn CreateXMLReaderFn(pinterface,atts) - passed in the pointer to the interface where the tag was seen along with the list of attributes
+/// \return a pointer holding the registration, releasing the pointer will unregister the XML reader
+RAVE_API boost::shared_ptr<void> RaveRegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn);
+
+/// \brief Returns the current registered reader for the interface type/xmlid
+///
+/// \throw openrave_exception Will throw with ORE_InvalidArguments if registered function could not be found.
+RAVE_API const CreateXMLReaderFn& RaveGetXMLReader(InterfaceType type, const std::string& xmltag);
+
+//@}
+
+/// \brief separates the directories from a string and returns them in a vector
+inline bool RaveParseDirectories(const char* pdirs, std::vector<std::string>& vdirs)
+{
+    vdirs.resize(0);
+    if( !pdirs ) {
+        return false;
+    }
+    // search for all directories separated by ':'
+    std::string tmp = pdirs;
+    std::string::size_type pos = 0, newpos=0;
+    while( pos < tmp.size() ) {
+#ifdef _WIN32
+        newpos = tmp.find(';', pos);
+#else
+		newpos = tmp.find(':', pos);
+#endif
+        std::string::size_type n = newpos == std::string::npos ? tmp.size()-pos : (newpos-pos);
+        vdirs.push_back(tmp.substr(pos, n));
+        if( newpos == std::string::npos ) {
+            break;
+        }
+        pos = newpos+1;
+    }
+    return true;
+}
 
 /// \brief Create the interfaces, see \ref CreateInterfaceValidated.
 /// \ingroup plugin_exports

@@ -93,10 +93,10 @@ public:
 
         PlannerBasePtr planner;
         if( _strRRTPlannerName.size() > 0 )
-            planner = GetEnv()->CreatePlanner(_strRRTPlannerName);
+            planner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
         if( !planner ) {
             _strRRTPlannerName = "BiRRT";
-            planner = GetEnv()->CreatePlanner(_strRRTPlannerName);
+            planner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
             if( !planner )
                 _strRRTPlannerName = "";
         }
@@ -158,7 +158,7 @@ protected:
         if( !sinput )
             return false;
 
-        TrajectoryBasePtr ptraj = GetEnv()->CreateTrajectory(robot->GetDOF());
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),robot->GetDOF());
     
         char sep = ' ';
         if( filename == "sep" ) {
@@ -304,7 +304,7 @@ protected:
         robot->SetActiveDOFs(pmanip->GetArmIndices());
         CM::JitterActiveDOF(robot,100); // try to jitter out, don't worry if it fails
 
-        boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(robot->GetActiveDOF()));
+        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
         Trajectory::TPOINT point;
         vector<dReal> vPrevValues;
         bool bPrevInCollision = GetEnv()->CheckCollision(KinBodyConstPtr(robot))||robot->CheckSelfCollision();
@@ -495,7 +495,7 @@ protected:
         params->SetRobotActiveJoints(robot);
         CM::JitterActiveDOF(robot);
     
-        boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(robot->GetActiveDOF()));
+        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
 
         std::vector<dReal> values;
         robot->GetActiveDOFValues(values);
@@ -516,7 +516,7 @@ protected:
         }
         robot->GetActiveDOFValues(params->vinitialconfig);
 
-        boost::shared_ptr<PlannerBase> rrtplanner = GetEnv()->CreatePlanner(_strRRTPlannerName);
+        boost::shared_ptr<PlannerBase> rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
         if( !rrtplanner ) {
             RAVELOG_WARNA("failed to create planner\n");
             return false;
@@ -613,14 +613,14 @@ protected:
             return false;
         }
 
-        boost::shared_ptr<PlannerBase> rrtplanner = GetEnv()->CreatePlanner(_strRRTPlannerName);
+        boost::shared_ptr<PlannerBase> rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
 
         if( !rrtplanner ) {
             RAVELOG_ERRORA("failed to create BiRRTs\n");
             return false;
         }
     
-        boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(robot->GetActiveDOF()));
+        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
     
         RAVELOG_DEBUGA("starting planning\n");
         bool bSuccess = false;
@@ -823,7 +823,7 @@ protected:
         // restore
         robot->SetActiveDOFValues(params->vinitialconfig);
 
-        boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(robot->GetActiveDOF()));
+        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
 
         Trajectory::TPOINT pt;
         pt.q = params->vinitialconfig;
@@ -843,7 +843,7 @@ protected:
             params->_constraintfn = boost::bind(&CM::GripperJacobianConstrains<double>::RetractionConstraint,pconstraints,_1,_2,_3);
         }
 
-        boost::shared_ptr<PlannerBase> rrtplanner = GetEnv()->CreatePlanner(_strRRTPlannerName);
+        boost::shared_ptr<PlannerBase> rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
         if( !rrtplanner ) {
             RAVELOG_ERRORA("failed to create BiRRTs\n");
             return false;
@@ -935,7 +935,7 @@ protected:
             RAVELOG_WARNA("failed to jitter robot out of collision\n");
         }
 
-        boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(robot->GetActiveDOF()));
+        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
     
         bool bSuccess = false;
         for(int itry = 0; itry < nMaxTries; ++itry) {
@@ -1013,7 +1013,7 @@ protected:
         Trajectory::TPOINT ptfirst;
         robot->GetActiveDOFValues(ptfirst.q);
  
-        boost::shared_ptr<PlannerBase> graspplanner = GetEnv()->CreatePlanner("Grasper");
+        boost::shared_ptr<PlannerBase> graspplanner = RaveCreatePlanner(GetEnv(),"Grasper");
         if( !graspplanner ) {
             RAVELOG_ERRORA("grasping planner failure!\n");
             return false;
@@ -1025,7 +1025,7 @@ protected:
         graspparams->breturntrajectory = false;
         graspparams->bonlycontacttarget = false;
 
-        boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(robot->GetActiveDOF()));
+        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
         ptraj->AddPoint(ptfirst);
 
         if( !graspplanner->InitPlan(robot, graspparams) ) {
@@ -1109,7 +1109,7 @@ protected:
 
         RobotBase::RobotStateSaver saver(robot);
         robot->SetActiveDOFs(pmanip->GetGripperIndices());
-        boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(robot->GetActiveDOF()));
+        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
         // have to add the first point
         Trajectory::TPOINT ptfirst;
         robot->GetActiveDOFValues(ptfirst.q);
@@ -1124,7 +1124,7 @@ protected:
             break;
         }
  
-        boost::shared_ptr<PlannerBase> graspplanner = GetEnv()->CreatePlanner("Grasper");
+        boost::shared_ptr<PlannerBase> graspplanner = RaveCreatePlanner(GetEnv(),"Grasper");
         if( !graspplanner ) {
             RAVELOG_ERRORA("grasping planner failure!\n");
             return false;
@@ -1232,7 +1232,7 @@ protected:
         }
 
         RobotBase::RobotStateSaver saver(robot);
-        boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(robot->GetActiveDOF()));
+        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
 
         // have to add the first point
         Trajectory::TPOINT ptfirst;
@@ -1248,7 +1248,7 @@ protected:
             break;
         }
  
-        boost::shared_ptr<PlannerBase> graspplanner = GetEnv()->CreatePlanner("Grasper");
+        boost::shared_ptr<PlannerBase> graspplanner = RaveCreatePlanner(GetEnv(),"Grasper");
         if( !graspplanner ) {
             RAVELOG_ERRORA("grasping planner failure!\n");
             return false;
@@ -1333,7 +1333,7 @@ protected:
         }
 
         RobotBase::RobotStateSaver saver(robot);
-        boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(robot->GetActiveDOF()));
+        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
 
         // have to add the first point
         Trajectory::TPOINT ptfirst;
@@ -1460,7 +1460,7 @@ protected:
     {
         bool bExecute = true;
         int nMaxSmoothIterations = 100;
-        boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(robot->GetDOF()));
+        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetDOF()));
         vector<dReal> qresolutioninv(robot->GetDOF(),50.0f);
 
         string cmd;
@@ -1517,7 +1517,7 @@ protected:
         OptimizePathRandomized(robot,path,qresolutioninv, nMaxSmoothIterations);
         OptimizePathAll(robot, path, qresolutioninv);
 
-        boost::shared_ptr<Trajectory> pnewtraj(GetEnv()->CreateTrajectory(robot->GetDOF()));
+        boost::shared_ptr<Trajectory> pnewtraj(RaveCreateTrajectory(GetEnv(),robot->GetDOF()));
         FOREACH(it, path) {
             pnewtraj->AddPoint(Trajectory::TPOINT(it->q,it->trans,0));
         }

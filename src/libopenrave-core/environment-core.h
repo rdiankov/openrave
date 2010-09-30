@@ -41,8 +41,13 @@
 class Environment : public EnvironmentBase
 {
  public:
-    Environment(bool bLoadAllPlugins=true) : EnvironmentBase()
+    Environment() : EnvironmentBase()
     {
+        if( !RaveGlobalState() ) {
+            RAVELOG_WARN("OpenRAVE global state not initialized! Need to call RaveInitialize before any OpenRAVE services can be used. For now, initializing with default parameters.\n");
+            RaveInitialize(true);
+        }
+
         // set to the classic locale so that number serialization/hashing works correctly
         std::locale::global(std::locale::classic());
         _homedirectory = RaveGetHomeDirectory();
@@ -55,43 +60,15 @@ class Environment : public EnvironmentBase
         _nCurSimTime = 0;
         _nSimStartTime = GetMicroTime();
         _bRealTime = true;
-
-        _bDestroying = true;
-        _bDestroyed = false;
+        _bInit = false;
         _bEnableSimulation = true; // need to start by default
     
-        _pdatabase.reset(new RaveDatabase());
-        if( bLoadAllPlugins ) {
-            ParseDirectories(getenv("OPENRAVE_PLUGINS"), _vplugindirs);
-            bool bExists=false;
-#ifdef HAVE_BOOST_FILESYSTEM
-            boost::filesystem::path pluginsfilename = boost::filesystem::system_complete(boost::filesystem::path(OPENRAVE_PLUGINS_INSTALL_DIR, boost::filesystem::native));
-            FOREACH(itname, _vplugindirs) {
-                if( pluginsfilename == boost::filesystem::system_complete(boost::filesystem::path(*itname, boost::filesystem::native)) ) {
-                    bExists = true;
-                    break;
-                }
-            }
-#else
-            string pluginsfilename=OPENRAVE_PLUGINS_INSTALL_DIR;
-            FOREACH(itname, _vplugindirs) {
-                if( pluginsfilename == OPENRAVE_PLUGINS_INSTALL_DIR ) {
-                    bExists = true;
-                    break;
-                }
-            }
-#endif
-            if( !bExists ) {
-                _vplugindirs.push_back(OPENRAVE_PLUGINS_INSTALL_DIR);
-            }
-        }
-
         {
-            ParseDirectories(getenv("OPENRAVE_DATA"), _vdatadirs);
+            RaveParseDirectories(getenv("OPENRAVE_DATA"), _vdatadirs);
             bool bExists=false;
 #ifdef HAVE_BOOST_FILESYSTEM
             boost::filesystem::path datafilename = boost::filesystem::system_complete(boost::filesystem::path(OPENRAVE_DATA_INSTALL_DIR, boost::filesystem::native));
-            FOREACH(itname, _vplugindirs) {
+            FOREACH(itname, _vdatadirs) {
                 if( datafilename == boost::filesystem::system_complete(boost::filesystem::path(*itname, boost::filesystem::native)) ) {
                     bExists = true;
                     break;
@@ -99,7 +76,7 @@ class Environment : public EnvironmentBase
             }
 #else
             string datafilename=OPENRAVE_DATA_INSTALL_DIR;
-            FOREACH(itname, _vplugindirs) {
+            FOREACH(itname, _vdatadirs) {
                 if( datafilename == OPENRAVE_DATA_INSTALL_DIR ) {
                     bExists = true;
                     break;
@@ -118,7 +95,21 @@ class Environment : public EnvironmentBase
 
     virtual void Init()
     {
-        _bDestroying = false;
+        boost::mutex::scoped_lock(_mutexInit);
+        if( _bInit ) {
+            RAVELOG_WARN("environment is already initialized, ignoring\n");
+            return;
+        }
+
+        _nBodiesModifiedStamp = 0;
+        _nEnvironmentIndex = 1;
+
+        _fDeltaSimTime = 0.01f;
+        _nCurSimTime = 0;
+        _nSimStartTime = GetMicroTime();
+        _bRealTime = true;
+        _bEnableSimulation = true; // need to start by default
+
         if( !_pCurrentChecker ) {
             _pCurrentChecker.reset(new DummyCollisionChecker(shared_from_this()));
         }
@@ -129,36 +120,26 @@ class Environment : public EnvironmentBase
             _pPhysicsEngine.reset(new DummyPhysicsEngine(shared_from_this()));
         }
 
-        FOREACH(it, _vplugindirs) {
-            if( it->size() > 0 ) {
-                _pdatabase->AddDirectory(it->c_str());
-            }
-        }
+        // try to set init as early as possible since will be calling into user code
+        _bInit = true;
 
         // set a collision checker, don't call EnvironmentBase::CreateCollisionChecker
         CollisionCheckerBasePtr localchecker;
         boost::array<string,3> checker_prefs = {{"ode", "bullet", "pqp"}}; // ode takes priority since bullet has some bugs with deleting bodies
         FOREACH(itchecker,checker_prefs) {
-            localchecker = _pdatabase->CreateCollisionChecker(shared_from_this(), *itchecker);
+            localchecker = RaveCreateCollisionChecker(shared_from_this(), *itchecker);
             if( !!localchecker ) {
                 break;
             }
         }
 
         if( !localchecker ) { // take any collision checker
-            std::list<RaveDatabase::PluginPtr> listplugins; _pdatabase->GetPlugins(listplugins);
-            FOREACHC(itplugin, listplugins) {
-                PLUGININFO info;
-                if( !(*itplugin)->GetInfo(info) ) {
-                    continue;
-                }
-                std::map<InterfaceType, std::vector<std::string> >::const_iterator itnames =info.interfacenames.find(PT_CollisionChecker);
-                if( itnames != info.interfacenames.end() ) {
-                    FOREACHC(itname, itnames->second) {
-                        localchecker = _pdatabase->CreateCollisionChecker(shared_from_this(), *itname);
-                        if( !!localchecker )
-                            break;
-                    }
+            std::map<InterfaceType, std::vector<std::string> > interfacenames;
+            RaveGetLoadedInterfaces(interfacenames);
+            std::map<InterfaceType, std::vector<std::string> >::const_iterator itnames =interfacenames.find(PT_CollisionChecker);
+            if( itnames != interfacenames.end() ) {
+                FOREACHC(itname, itnames->second) {
+                    localchecker = RaveCreateCollisionChecker(shared_from_this(), *itname);
                     if( !!localchecker ) {
                         break;
                     }
@@ -176,15 +157,22 @@ class Environment : public EnvironmentBase
         if( !!_threadSimulation ) {
             _threadSimulation->join();
         }
+
         _threadSimulation.reset(new boost::thread(boost::bind(&Environment::_SimulationThread,this)));
     }
 
     virtual void Destroy()
     {
-        // destruction order is *very* important, don't touch it without consultation
-        _bDestroying = true;
+        boost::mutex::scoped_lock lockdestroy(_mutexInit);
+        if( !_bInit ) {
+            RAVELOG_VERBOSE("environment is already destroyed\n");
+            return;
+        }
 
-        RAVELOG_DEBUGA("Environment destructor\n");
+        // destruction order is *very* important, don't touch it without consultation
+        _bInit = false;
+
+        RAVELOG_VERBOSE("Environment destructor\n");
         if( !!_threadSimulation ) {
             _threadSimulation->join(); // might not return?
         }
@@ -245,12 +233,13 @@ class Environment : public EnvironmentBase
                 _listProblems.clear();
                 _listOwnedInterfaces.clear();
             }
-            // release all other interfaces
-            _pCurrentChecker.reset();
-            _pPhysicsEngine.reset();
-            _pCurrentViewer.reset();
-            _pdatabase.reset();
         }
+
+        // release all other interfaces, not necessary to hold a mutex?
+        _pCurrentChecker.reset();
+        _pPhysicsEngine.reset();
+        _pCurrentViewer.reset();
+        RAVELOG_VERBOSE("Environment destroyed\n");
     }
 
     virtual void Reset()
@@ -305,107 +294,40 @@ class Environment : public EnvironmentBase
             (*itproblem)->Reset();
         }
         listProblems.clear();
-
-//        {
-//            boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
-//            _mapBodies.clear();
-//            _nEnvironmentIndex = 1;
-//        }
         _listOwnedInterfaces.clear();
 
         // load the dummy physics engine
         SetPhysicsEngine(PhysicsEngineBasePtr());
 
-        if( !!_pCurrentChecker )
+        if( !!_pCurrentChecker ) {
             _pCurrentChecker->InitEnvironment();
-        if( !!_pPhysicsEngine )
+        }
+        if( !!_pPhysicsEngine ) {
             _pPhysicsEngine->InitEnvironment();
-    }
-
-    virtual void GetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins)
-    {
-        plugins.clear();
-        list<RaveDatabase::PluginPtr> listdbplugins;
-        _pdatabase->GetPlugins(listdbplugins);
-        FOREACHC(itplugin, listdbplugins) {
-            PLUGININFO info;
-            if( (*itplugin)->GetInfo(info) ) {
-                plugins.push_back(pair<string,PLUGININFO>((*itplugin)->GetName(),info));
-            }
         }
     }
 
-    virtual void GetLoadedInterfaces(std::map<InterfaceType, std::vector<std::string> >& interfacenames) const
-    {
-        interfacenames.clear();
-        list<RaveDatabase::PluginPtr> listdbplugins;
-        _pdatabase->GetPlugins(listdbplugins);
-        FOREACHC(itplugin, listdbplugins) {
-            PLUGININFO localinfo;
-            if( !(*itplugin)->GetInfo(localinfo) ) {
-                RAVELOG_WARN(str(boost::format("failed to get plugin info: %s\n")%(*itplugin)->GetName()));
-            }
-            else {
-                // for now just return the cached info (so quering is faster)
-                FOREACH(it,localinfo.interfacenames) {
-                    std::vector<std::string>& vnames = interfacenames[it->first];
-                    vnames.insert(vnames.end(),it->second.begin(),it->second.end());
-                }
-            }
-        }
-    }
+    virtual boost::shared_ptr<void> GlobalState() { return RaveGlobalState(); }
 
-    virtual bool LoadPlugin(const std::string& pname) { return _pdatabase->AddPlugin(pname); }
-    virtual void ReloadPlugins() { _pdatabase->ReloadPlugins(); }
-    virtual bool HasInterface(InterfaceType type, const string& interfacename) const { return _pdatabase->HasInterface(type,interfacename); }
+    virtual void GetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins) { RaveGetPluginInfo(plugins); }
+    virtual void GetLoadedInterfaces(std::map<InterfaceType, std::vector<std::string> >& interfacenames) const { RaveGetLoadedInterfaces(interfacenames); }
+    virtual bool LoadPlugin(const std::string& pname) { return RaveLoadPlugin(pname); }
+    virtual void ReloadPlugins() { RaveReloadPlugins(); }
+    virtual bool HasInterface(InterfaceType type, const string& interfacename) const { return RaveHasInterface(type,interfacename); }
 
-    virtual InterfaceBasePtr CreateInterface(InterfaceType type,const std::string& pinterfacename)
-    {
-        switch(type) {
-        case PT_KinBody: return CreateKinBody(pinterfacename);
-        case PT_Robot: return CreateRobot(pinterfacename);
-        default: return _pdatabase->Create(shared_from_this(),type,pinterfacename);
-        }
-        throw openrave_exception("Bad interface type");
-    }
-
-    virtual RobotBasePtr CreateRobot(const std::string& pname)
-    {
-        RobotBasePtr probot;
-        if( pname.size() > 0 )
-            probot = _pdatabase->CreateRobot(shared_from_this(), pname);
-        else {
-            probot.reset(new RobotBase(shared_from_this()));
-            probot->__strxmlid = "RobotBase";
-        }
-        return probot;
-    }
-
-    virtual KinBodyPtr CreateKinBody(const std::string& pname)
-    {
-        KinBodyPtr pbody;
-        if( pname.size() > 0 )
-            pbody = _pdatabase->CreateKinBody(shared_from_this(), pname);
-        else {
-            pbody.reset(new KinBody(PT_KinBody,shared_from_this()));
-            pbody->__strxmlid = "KinBody";
-        }
-        return pbody;
-    }
-
-    virtual TrajectoryBasePtr CreateTrajectory(int nDOF) {
-        return TrajectoryBasePtr(new TrajectoryBase(shared_from_this(),nDOF));
-    }
-
-    virtual PlannerBasePtr CreatePlanner(const std::string& pname) { return _pdatabase->CreatePlanner(shared_from_this(),pname); }
-    virtual SensorSystemBasePtr CreateSensorSystem(const std::string& pname) { return _pdatabase->CreateSensorSystem(shared_from_this(),pname); }
-    virtual ControllerBasePtr CreateController(const std::string& pname) { return _pdatabase->CreateController(shared_from_this(),pname); }
-    virtual ProblemInstancePtr CreateProblem(const std::string& pname) { return _pdatabase->CreateProblem(shared_from_this(),pname); }
-    virtual IkSolverBasePtr CreateIkSolver(const std::string& pname) { return _pdatabase->CreateIkSolver(shared_from_this(),pname); }
-    virtual PhysicsEngineBasePtr CreatePhysicsEngine(const std::string& pname) { return _pdatabase->CreatePhysicsEngine(shared_from_this(),pname); }
-    virtual SensorBasePtr CreateSensor(const std::string& pname) { return _pdatabase->CreateSensor(shared_from_this(),pname); }
-    virtual CollisionCheckerBasePtr CreateCollisionChecker(const std::string& pname) { return _pdatabase->CreateCollisionChecker(shared_from_this(),pname); }
-    virtual ViewerBasePtr CreateViewer(const std::string& pname) { return _pdatabase->CreateViewer(shared_from_this(),pname); }
+    virtual InterfaceBasePtr CreateInterface(InterfaceType type,const std::string& pinterfacename) { return RaveCreateInterface(shared_from_this(),type,pinterfacename); }
+    virtual RobotBasePtr CreateRobot(const std::string& pname) { return RaveCreateRobot(shared_from_this(), pname); }
+    virtual KinBodyPtr CreateKinBody(const std::string& pname) { return RaveCreateKinBody(shared_from_this(), pname); }
+    virtual TrajectoryBasePtr CreateTrajectory(int nDOF) { return RaveCreateTrajectory(shared_from_this(), nDOF); }
+    virtual PlannerBasePtr CreatePlanner(const std::string& pname) { return RaveCreatePlanner(shared_from_this(),pname); }
+    virtual SensorSystemBasePtr CreateSensorSystem(const std::string& pname) { return RaveCreateSensorSystem(shared_from_this(),pname); }
+    virtual ControllerBasePtr CreateController(const std::string& pname) { return RaveCreateController(shared_from_this(),pname); }
+    virtual ProblemInstancePtr CreateProblem(const std::string& pname) { return RaveCreateProblem(shared_from_this(),pname); }
+    virtual IkSolverBasePtr CreateIkSolver(const std::string& pname) { return RaveCreateIkSolver(shared_from_this(),pname); }
+    virtual PhysicsEngineBasePtr CreatePhysicsEngine(const std::string& pname) { return RaveCreatePhysicsEngine(shared_from_this(),pname); }
+    virtual SensorBasePtr CreateSensor(const std::string& pname) { return RaveCreateSensor(shared_from_this(),pname); }
+    virtual CollisionCheckerBasePtr CreateCollisionChecker(const std::string& pname) { return RaveCreateCollisionChecker(shared_from_this(),pname); }
+    virtual ViewerBasePtr CreateViewer(const std::string& pname) { return RaveCreateViewer(shared_from_this(),pname); }
 
     virtual void OwnInterface(InterfaceBasePtr pinterface)
     {
@@ -424,7 +346,7 @@ class Environment : public EnvironmentBase
     virtual EnvironmentBasePtr CloneSelf(int options)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        boost::shared_ptr<Environment> penv(new Environment(false));
+        boost::shared_ptr<Environment> penv(new Environment());
         penv->Clone(boost::static_pointer_cast<Environment const>(shared_from_this()),options);
         return penv;
     }
@@ -1178,8 +1100,7 @@ class Environment : public EnvironmentBase
 
     virtual boost::shared_ptr<void> RegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn)
     {
-        CreateXMLReaderFn oldfn = OpenRAVEXMLParser::RegisterXMLReader(type,xmltag,fn);
-        return boost::shared_ptr<void>((void*)1, boost::bind(&OpenRAVEXMLParser::UnregisterXMLReader,type,xmltag,oldfn));
+        return RaveRegisterXMLReader(type,xmltag,fn);
     }
     
     virtual bool ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename)
@@ -1344,6 +1265,8 @@ protected:
     virtual void Clone(boost::shared_ptr<Environment const> r, int options)
     {
         Destroy();
+
+        boost::mutex::scoped_lock(_mutexInit);
         AttachViewer(ViewerBasePtr());
         SetCollisionChecker(CollisionCheckerBasePtr());
         SetPhysicsEngine(PhysicsEngineBasePtr());
@@ -1357,8 +1280,7 @@ protected:
         _nEnvironmentIndex = r->_nEnvironmentIndex;
         _bRealTime = r->_bRealTime;
 
-        _bDestroying = false;
-        _bDestroyed = false;
+        _bInit = true;
         _bEnableSimulation = r->_bEnableSimulation;
 
         SetDebugLevel(r->GetDebugLevel());
@@ -1372,9 +1294,6 @@ protected:
         }
         mapBodies.clear();
 
-        _pdatabase = r->_pdatabase;
-
-        _vplugindirs = r->_vplugindirs;
         _vdatadirs = r->_vdatadirs;
 
         EnvironmentMutex::scoped_lock lock(GetMutex());
@@ -1388,7 +1307,7 @@ protected:
         if( options & Clone_Bodies ) {
             boost::mutex::scoped_lock lock(r->_mutexInterfaces);
             FOREACHC(itrobot, r->_vecrobots) {
-                RobotBasePtr pnewrobot = _pdatabase->CreateRobot(shared_from_this(), (*itrobot)->GetXMLId());
+                RobotBasePtr pnewrobot = RaveCreateRobot(shared_from_this(), (*itrobot)->GetXMLId());
                 if( !pnewrobot ) {
                     RAVELOG_ERRORA("failed to create robot %s\n", (*itrobot)->GetXMLId().c_str());
                     continue;
@@ -1471,7 +1390,7 @@ protected:
         if( options & Clone_Sensors ) {
             boost::mutex::scoped_lock lock(r->_mutexInterfaces);
             FOREACHC(itsensor,r->_listSensors) {
-                SensorBasePtr pnewsensor = _pdatabase->CreateSensor(shared_from_this(), (*itsensor)->GetXMLId());
+                SensorBasePtr pnewsensor = RaveCreateSensor(shared_from_this(), (*itsensor)->GetXMLId());
                 if( !pnewsensor ) {
                     RAVELOG_ERRORA("failed to create sensor %s\n", (*itsensor)->GetXMLId().c_str());
                     continue;
@@ -1648,39 +1567,24 @@ protected:
         }
         virtual ~DummyViewer() {}
 
-        //void   AddItem(Item *pItem, bool bVisibility = false);
         /// reset the camera depending on its mode
         virtual void UpdateCameraTransform() {}
 
-        /// goes into the main loop
+        // dummy loop
         virtual int main(bool bShow) {
-            _bQuitMainLoop = false;
-            GetEnv()->StartSimulation(0.01f,true);
-
-            while(!_bQuitMainLoop) {
-                AdvanceFrame(true);
+            boost::mutex::scoped_lock lock(_mutex);
+            if(!_bQuitMainLoop) {
+                return -1;
             }
-
+            _bQuitMainLoop = false;
+            _cond.wait(lock);
             return 0;
         }
         
         virtual void quitmainloop() {
-            if( !_bQuitMainLoop ) {
-                GetEnv()->StopSimulation();
-                _bQuitMainLoop = true;
-            }
-        }
-
-        /// methods relating to playback
-        virtual void AdvanceFrame(bool bForward) {
-            // update the camera
-            UpdateCameraTransform();
-
-            if( _bSaveVideo )
-                _RecordVideo();
-
-            // process sensors (camera images)
-            Sleep(1);
+            boost::mutex::scoped_lock lock(_mutex);
+            _bQuitMainLoop = true;
+            _cond.notify_all();
         }
 
         virtual boost::shared_ptr<void> LockGUI() { return boost::shared_ptr<void>(); }
@@ -1715,8 +1619,6 @@ protected:
         virtual void Reset() {}
         virtual void SetBkgndColor(const RaveVector<float>& color) {}
 
-        virtual bool _RecordVideo() { return false; }
-
         virtual boost::shared_ptr<void> RegisterCallback(int properties, const ViewerCallbackFn& fncallback) { return boost::shared_ptr<void>(); }
         virtual void SetEnvironmentSync(bool) {}
         virtual void EnvironmentSync() {}
@@ -1727,11 +1629,8 @@ protected:
         
         virtual bool LoadModel(const std::string& pfilename) { return true; }
     protected:
-
-        bool _bTimeElapsed;
-        bool _bSaveVideo;
-    
-        // environment thread related
+        boost::mutex _mutex;
+        boost::condition _cond;
         bool _bQuitMainLoop;
     };
 
@@ -1755,7 +1654,7 @@ protected:
     {
         uint64_t nLastUpdateTime = GetMicroTime();
         uint64_t nLastSleptTime = GetMicroTime();
-        while( !_bDestroying ) {
+        while( _bInit ) {
             bool bNeedSleep = true;
 
             if( _bEnableSimulation ) {
@@ -1801,11 +1700,6 @@ protected:
                 nLastUpdateTime = GetMicroTime();
                 UpdatePublishedBodies();
             }
-
-            if( bNeedSleep ) {
-                Sleep(1);
-                _pdatabase->CleanupUnusedLibraries();
-            }
         }
     }
 
@@ -1824,8 +1718,6 @@ protected:
             return false;
         return count_if(s.begin(), s.end(), IsValidCharInName) == (int)s.size();
     }
-
-    boost::shared_ptr<RaveDatabase> _pdatabase;
 
     std::vector<RobotBasePtr> _vecrobots;  ///< robots (possibly controlled)
     std::vector<KinBodyPtr> _vecbodies; ///< all objects that are collidable (includes robots)
@@ -1849,20 +1741,19 @@ protected:
     boost::shared_ptr<boost::thread> _threadSimulation;                  ///< main loop for environment simulation
 
     mutable EnvironmentMutex _mutexEnvironment;      ///< protects internal data from multithreading issues
-
     mutable boost::mutex _mutexEnvironmentIds;  ///< protects _vecbodies/_vecrobots from multithreading issues
     mutable boost::mutex _mutexInterfaces; ///< lock when managing interfaces like _listOwnedInterfaces, _listProblems, _mapBodies
+    mutable boost::mutex _mutexInit; ///< lock for destroying the environment
 
     vector<KinBody::BodyState> _vPublishedBodies;
-    vector<string> _vplugindirs, _vdatadirs;
+    vector<string> _vdatadirs;
     string _homedirectory;
 
     list<InterfaceBasePtr> _listOwnedInterfaces;
 
     std::list<CollisionCallbackFn> _listRegisteredCollisionCallbacks; ///< see EnvironmentBase::RegisterCollisionCallback
 
-    bool _bDestroying;              ///< destroying envrionment, so exit from all processes
-    bool _bDestroyed;               ///< environment has been destroyed
+    bool _bInit;               ///< environment is initialized
     bool _bEnableSimulation;        ///< enable simulation loop
 
     friend class EnvironmentXMLReader;

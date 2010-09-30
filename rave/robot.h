@@ -554,15 +554,15 @@ protected:
     Vector _vRotationAxisLowerLimits, _vRotationAxisUpperLimits, _vRotationAxisMaxVels, _vRotationAxisResolutions, _vRotationAxisWeights;
     Vector _vRotation3DLowerLimits, _vRotation3DUpperLimits, _vRotation3DMaxVels, _vRotation3DResolutions, _vRotation3DWeights;
     Vector _vRotationQuatLowerLimits, _vRotationQuatUpperLimits, _vRotationQuatMaxVels, _vRotationQuatResolutions, _vRotationQuatWeights;
+
 private:
-    std::string __hashrobotstructure;
-    mutable std::vector<dReal> _vTempRobotJoints;
     virtual const char* GetHash() const { return OPENRAVE_ROBOT_HASH; }
     virtual const char* GetKinBodyHash() const { return OPENRAVE_KINBODY_HASH; }
+    std::string __hashrobotstructure;
+    mutable std::vector<dReal> _vTempRobotJoints;
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
-    friend class RaveDatabase;
     friend class Environment;
     friend class ColladaReader;
     friend class ColladaWriter;
@@ -570,7 +570,6 @@ private:
     friend class OpenRAVEXMLParser::ManipulatorXMLReader;
     friend class OpenRAVEXMLParser::AttachedSensorXMLReader;
 #else
-    friend class ::RaveDatabase;
     friend class ::Environment;
     friend class ::ColladaReader;
     friend class ::ColladaWriter;
@@ -579,6 +578,7 @@ private:
     friend class ::OpenRAVEXMLParser::AttachedSensorXMLReader;
 #endif
 #endif
+    friend class RaveDatabase;
 };
 
 } // end namespace OpenRAVE

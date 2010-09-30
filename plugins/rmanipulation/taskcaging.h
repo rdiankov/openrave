@@ -862,7 +862,7 @@ private:
             vTargetSides.resize(graspfn->vtargetjoints.size(),0);
 
         string plannername = "ExplorationRRT";
-        PlannerBasePtr planner = GetEnv()->CreatePlanner(plannername);
+        PlannerBasePtr planner = RaveCreatePlanner(GetEnv(),plannername);
         if( !planner ) {
             RAVELOG_WARNA(str(boost::format("failed to find planner %s\n")%plannername));
             return false;
@@ -912,7 +912,7 @@ private:
         }
 
         uint32_t basetime = timeGetTime();
-        TrajectoryBasePtr ptraj = GetEnv()->CreateTrajectory(_robot->GetActiveDOF());
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF());
 
         if( !planner->PlanPath(ptraj) ) {
             RAVELOG_WARNA("failed to plan\n");
@@ -1141,12 +1141,12 @@ private:
 
         _robot->SetActiveDOFs(pmanip->GetArmIndices());
     
-        boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(_robot->GetActiveDOF()));
+        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF()));
     
         uint32_t basetime = timeGetTime(), finaltime;
         taskdata->SetRobot(_robot);
 
-        boost::shared_ptr<Trajectory> ptrajtemp(GetEnv()->CreateTrajectory(taskdata->GetDOF()));
+        boost::shared_ptr<Trajectory> ptrajtemp(RaveCreateTrajectory(GetEnv(),taskdata->GetDOF()));
         bool bReverseTrajectory = false;
 
         if( plannername.size() > 0 ) {
@@ -1239,7 +1239,7 @@ private:
 
             taskdata->SetState(params->vinitialconfig);
 
-            boost::shared_ptr<PlannerBase> pra(GetEnv()->CreatePlanner(plannername.c_str()));
+            boost::shared_ptr<PlannerBase> pra(RaveCreatePlanner(GetEnv(),plannername.c_str()));
             if( !pra ) {
                 RAVELOG_WARNA(str(boost::format("could not find %s planner\n")%plannername));
                 return false;
@@ -1372,7 +1372,7 @@ private:
     
         if( strbodytraj.size() > 0 ) {
         
-            boost::shared_ptr<Trajectory> pbodytraj(GetEnv()->CreateTrajectory(taskdata->ptarget->GetDOF()));
+            boost::shared_ptr<Trajectory> pbodytraj(RaveCreateTrajectory(GetEnv(),taskdata->ptarget->GetDOF()));
         
             vector<Trajectory::TPOINT>::const_iterator itrobottraj = ptraj->GetPoints().begin();
             taskdata->ptarget->GetDOFValues(tp.q);
@@ -1416,7 +1416,7 @@ private:
             sout << *it << " ";
     
         if( strsavetraj.size() ) {
-            boost::shared_ptr<Trajectory> pfulltraj(GetEnv()->CreateTrajectory(_robot->GetDOF()));
+            boost::shared_ptr<Trajectory> pfulltraj(RaveCreateTrajectory(GetEnv(),_robot->GetDOF()));
             _robot->GetFullTrajectoryFromActive(pfulltraj, ptraj);
             ofstream f(strsavetraj.c_str());
             pfulltraj->Write(f, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
@@ -1605,7 +1605,7 @@ private:
         FOREACH(it, values)
             sout << *it << " ";
 
-        boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(_robot->GetActiveDOF()));
+        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF()));
         Trajectory::TPOINT tp;
         FOREACHR(itsol, vtrajectory) {
             tp.q.resize(0);
@@ -1619,7 +1619,7 @@ private:
 
         if( strbodytraj.size() > 0 ) {
 
-            boost::shared_ptr<Trajectory> pbodytraj(GetEnv()->CreateTrajectory(taskdata->ptarget->GetDOF()));
+            boost::shared_ptr<Trajectory> pbodytraj(RaveCreateTrajectory(GetEnv(),taskdata->ptarget->GetDOF()));
             vector<Trajectory::TPOINT>::const_iterator itrobottraj = ptraj->GetPoints().begin();
         
             taskdata->ptarget->GetDOFValues(tp.q);
@@ -1638,7 +1638,7 @@ private:
         }
 
         if( strsavetraj.size() ) {
-            boost::shared_ptr<Trajectory> pfulltraj(GetEnv()->CreateTrajectory(_robot->GetDOF()));
+            boost::shared_ptr<Trajectory> pfulltraj(RaveCreateTrajectory(GetEnv(),_robot->GetDOF()));
             _robot->GetFullTrajectoryFromActive(pfulltraj, ptraj);
             ofstream f(strsavetraj.c_str());
             pfulltraj->Write(f, Trajectory::TO_IncludeTimestamps|Trajectory::TO_IncludeBaseTransformation);
@@ -1681,7 +1681,7 @@ private:
         if( !body.ptarget )
             return false;
 
-        body.ptraj = GetEnv()->CreateTrajectory(body.ptarget->GetDOF());
+        body.ptraj = RaveCreateTrajectory(GetEnv(),body.ptarget->GetDOF());
         ifstream f(strtraj.c_str());
         if( !body.ptraj->Read(f, RobotBasePtr()) ) {
             RAVELOG_ERRORA(str(boost::format("failed to read %s\n")%strtraj));

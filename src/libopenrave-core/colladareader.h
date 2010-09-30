@@ -453,9 +453,9 @@ public:
         else
         {
           //  Create Robot
-          probot = _penv->CreateRobot("GenericRobot");
+            probot = RaveCreateRobot(_penv, "GenericRobot");
           if( !probot ) {
-            probot  = _penv->CreateRobot("");
+              probot  = RaveCreateRobot(_penv, "");
           }
 
           //  Copy the kinbody information into the Robot structure
@@ -716,7 +716,7 @@ public:
     probot->GetAttachedSensors().push_back(att_Sensor);
 
     //  Create Sensor of the TYPE required
-    att_Sensor->psensor = probot->GetEnv()->CreateSensor(definition_type.c_str());
+    att_Sensor->psensor = RaveCreateSensor(probot->GetEnv(), definition_type.c_str());
 
     att_Sensor->psensor->SetName(definition_id.c_str());
 
@@ -727,16 +727,14 @@ public:
     RAVELOG_WARN("Sensor name: %s\n",att_Sensor->GetName().c_str());
 
     //  Create XML reader for this Sensor TYPE
-    OpenRAVEXMLParser::READERSMAP::iterator it = OpenRAVEXMLParser::GetRegisteredReaders()[PT_Sensor].find(att_Sensor->psensor->GetXMLId());
-    if( it != OpenRAVEXMLParser::GetRegisteredReaders()[PT_Sensor].end() )
-    {
-      _pcurreader = it->second(att_Sensor->psensor, std::list<std::pair<std::string,std::string> >());
+    try {
+        _pcurreader = RaveGetXMLReader(PT_Sensor,att_Sensor->psensor->GetXMLId())(att_Sensor->psensor, std::list<std::pair<std::string,std::string> >());
     }
-    else
-    {
-      _pcurreader.reset();
+    catch(const openrave_exception& ex) {
+        RAVELOG_VERBOSE(ex.what());
+        _pcurreader.reset();
     }
-
+    
     RAVELOG_VERBOSE("XML (Sensor) Reader Initialized\n");
 
     //  Fill params from the COLLADA's file
@@ -837,7 +835,7 @@ public:
 
   bool Extract(RobotBasePtr& probot, domArticulated_systemRef partic) {
     if (!probot) {
-      probot = _penv->CreateRobot(partic->getID());
+        probot = RaveCreateRobot(_penv, partic->getID());
     }
     return true;
   }
@@ -845,10 +843,10 @@ public:
   bool Extract(RobotBasePtr& probot) {
 
     if (!probot) {
-      probot = _penv->CreateRobot("GenericRobot");
-      if( !probot ) {
-        probot  = _penv->CreateRobot("");
-      }
+        probot = RaveCreateRobot(_penv, "GenericRobot");
+        if( !probot ) {
+            probot  = RaveCreateRobot(_penv, "");
+        }
     }
     BOOST_ASSERT(probot->IsRobot());
 
@@ -1203,7 +1201,7 @@ public:
     {
       //  Debug
       RAVELOG_WARNA("Create a KINBODY......................\n");
-      pkinbody = _penv->CreateKinBody();
+      pkinbody = RaveCreateKinBody(_penv);
     }
 
     //  If there is a Kinematic Model

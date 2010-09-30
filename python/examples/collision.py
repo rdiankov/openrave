@@ -91,7 +91,7 @@ def run(args=None):
         print 'move the robots to update the closest distance'
         if not env.GetCollisionChecker().SetCollisionOptions(CollisionOptions.Distance|CollisionOptions.Contacts):
             print 'current checker does not support distance, switching to pqp...'
-            collisionChecker = env.CreateCollisionChecker('pqp')
+            collisionChecker = RaveCreateCollisionChecker(env,'pqp')
             collisionChecker.SetCollisionOptions(CollisionOptions.Distance|CollisionOptions.Contacts)
             env.SetCollisionChecker(collisionChecker)
         report = CollisionReport()

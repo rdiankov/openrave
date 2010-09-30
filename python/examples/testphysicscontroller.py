@@ -33,13 +33,13 @@ def run(args=None):
     env.Load('data/hanoi.env.xml')
     if options._physics is None:
         # no physics engine set, so set one
-        physics = env.CreatePhysicsEngine('ode')
+        physics = RaveCreatePhysicsEngine(env,'ode')
         env.SetPhysicsEngine(physics)
     physics.SetGravity(array((0,0,-9.8)))
 
     with env:
         robot = env.GetRobots()[0]
-        robot.SetController(env.CreateController('odevelocity'))
+        robot.SetController(RaveCreateController(env,'odevelocity'))
         env.StopSimulation()
         env.StartSimulation(timestep=0.001)
 

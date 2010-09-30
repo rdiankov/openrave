@@ -32,7 +32,7 @@ class IdealController : public ControllerBase
             flog.close();
 
         if( !!_probot ) {
-            string filename = GetEnv()->GetHomeDirectory() + string("/") + _probot->GetName() + string(".traj");
+            string filename = RaveGetHomeDirectory() + string("/") + _probot->GetName() + string(".traj");
             flog.open(filename.c_str());
             if( !flog )
                 RAVELOG_WARN(str(boost::format("failed to open %s\n")%filename));

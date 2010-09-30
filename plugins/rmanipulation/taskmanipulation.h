@@ -93,9 +93,9 @@ class TaskManipulation : public ProblemInstance
         listsystems.clear();
         // recreate the planners since they store state
         if( !!_pRRTPlanner )
-            _pRRTPlanner = GetEnv()->CreatePlanner(_pRRTPlanner->GetXMLId());
+            _pRRTPlanner = RaveCreatePlanner(GetEnv(),_pRRTPlanner->GetXMLId());
         if( !!_pGrasperPlanner )
-            _pGrasperPlanner = GetEnv()->CreatePlanner(_pGrasperPlanner->GetXMLId());
+            _pGrasperPlanner = RaveCreatePlanner(GetEnv(),_pGrasperPlanner->GetXMLId());
     }
 
     int main(const string& args)
@@ -129,10 +129,10 @@ class TaskManipulation : public ProblemInstance
         }
 
         if( plannername.size() > 0 )
-            _pRRTPlanner = GetEnv()->CreatePlanner(plannername);
+            _pRRTPlanner = RaveCreatePlanner(GetEnv(),plannername);
         if( !_pRRTPlanner ) {
             plannername = "BiRRT";
-            _pRRTPlanner = GetEnv()->CreatePlanner(plannername);
+            _pRRTPlanner = RaveCreatePlanner(GetEnv(),plannername);
         }
 
         if( !_pRRTPlanner ) {
@@ -141,7 +141,7 @@ class TaskManipulation : public ProblemInstance
         }
         RAVELOG_DEBUGA(str(boost::format("using %s planner\n")%plannername));
 
-        _pGrasperPlanner = GetEnv()->CreatePlanner(graspername);
+        _pGrasperPlanner = RaveCreatePlanner(GetEnv(),graspername);
         if( !_pGrasperPlanner )
             RAVELOG_WARNA(str(boost::format("Failed to create a grasper planner %s\n")%graspername));
             
@@ -162,7 +162,7 @@ class TaskManipulation : public ProblemInstance
         if( !sinput )
             return false;
 
-        SensorSystemBasePtr psystem = GetEnv()->CreateSensorSystem(systemname);
+        SensorSystemBasePtr psystem = RaveCreateSensorSystem(GetEnv(),systemname);
         if( !psystem )
             return false;
 
@@ -407,7 +407,7 @@ class TaskManipulation : public ProblemInstance
         PRESHAPETRAJMAP mapPreshapeTrajectories;
         {
             // fill with a trajectory with one point
-            TrajectoryBasePtr pstarttraj = GetEnv()->CreateTrajectory(_robot->GetDOF());
+            TrajectoryBasePtr pstarttraj = RaveCreateTrajectory(GetEnv(),_robot->GetDOF());
             Trajectory::TPOINT tpstarthand;
             _robot->GetDOFValues(tpstarthand.q);
             tpstarthand.trans = _robot->GetTransform();
@@ -498,11 +498,12 @@ class TaskManipulation : public ProblemInstance
                 // set the preshape
                 _robot->SetActiveDOFs(pmanip->GetGripperIndices(), RobotBase::DOF_X|RobotBase::DOF_Y|RobotBase::DOF_Z);
 
-                if( !phandtraj )
-                    phandtraj = GetEnv()->CreateTrajectory(_robot->GetActiveDOF());
-                else
+                if( !phandtraj ) {
+                    phandtraj = RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF());
+                }
+                else {
                     phandtraj->Reset(_robot->GetActiveDOF());
-
+                }
                 graspparams->fstandoff = pgrasp[iGraspStandoff];
                 graspparams->targetbody = ptarget;
                 graspparams->ftargetroll = pgrasp[iGraspRoll];
@@ -682,7 +683,7 @@ class TaskManipulation : public ProblemInstance
                 _robot->SetActiveDOFValues(vCurHandValues, true);
                 
                 _robot->SetActiveDOFs(pmanip->GetArmIndices());
-                TrajectoryBasePtr ptrajToPreshape = GetEnv()->CreateTrajectory(pmanip->GetArmIndices().size());
+                TrajectoryBasePtr ptrajToPreshape = RaveCreateTrajectory(GetEnv(),pmanip->GetArmIndices().size());
                 bool bSuccess = CM::MoveUnsync::_MoveUnsyncJoints(GetEnv(), _robot, ptrajToPreshape, pmanip->GetGripperIndices(), vgoalpreshape);
                 
                 if( !bSuccess ) {
@@ -692,7 +693,7 @@ class TaskManipulation : public ProblemInstance
                 }
 
                 // get the full trajectory
-                TrajectoryBasePtr ptrajToPreshapeFull = GetEnv()->CreateTrajectory(_robot->GetDOF());
+                TrajectoryBasePtr ptrajToPreshapeFull = RaveCreateTrajectory(GetEnv(),_robot->GetDOF());
                 _robot->GetFullTrajectoryFromActive(ptrajToPreshapeFull, ptrajToPreshape);
 
                 // add a grasp with the full preshape
@@ -763,7 +764,7 @@ class TaskManipulation : public ProblemInstance
                 return false;
             }
 
-            TrajectoryBasePtr ptrajfinal = GetEnv()->CreateTrajectory(_robot->GetDOF());
+            TrajectoryBasePtr ptrajfinal = RaveCreateTrajectory(GetEnv(),_robot->GetDOF());
 
             if( bInitialRobotChanged )
                 ptrajfinal->AddPoint(Trajectory::TPOINT(vOrgRobotValues,_robot->GetTransform(), 0));
@@ -959,7 +960,7 @@ class TaskManipulation : public ProblemInstance
         Trajectory::TPOINT ptfirst;
         _robot->GetActiveDOFValues(ptfirst.q);
  
-        boost::shared_ptr<PlannerBase> graspplanner = GetEnv()->CreatePlanner("Grasper");
+        boost::shared_ptr<PlannerBase> graspplanner = RaveCreatePlanner(GetEnv(),"Grasper");
         if( !graspplanner ) {
             RAVELOG_ERRORA("grasping planner failure!\n");
             return false;
@@ -971,7 +972,7 @@ class TaskManipulation : public ProblemInstance
         graspparams->breturntrajectory = false;
         graspparams->bonlycontacttarget = false;
 
-        boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(_robot->GetActiveDOF()));
+        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF()));
         ptraj->AddPoint(ptfirst);
 
         if( !graspplanner->InitPlan(_robot, graspparams) ) {
@@ -1055,7 +1056,7 @@ class TaskManipulation : public ProblemInstance
 
         RobotBase::RobotStateSaver saver(_robot);
         _robot->SetActiveDOFs(pmanip->GetGripperIndices());
-        boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(_robot->GetActiveDOF()));
+        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF()));
         // have to add the first point
         Trajectory::TPOINT ptfirst;
         _robot->GetActiveDOFValues(ptfirst.q);
@@ -1070,7 +1071,7 @@ class TaskManipulation : public ProblemInstance
             break;
         }
  
-        boost::shared_ptr<PlannerBase> graspplanner = GetEnv()->CreatePlanner("Grasper");
+        boost::shared_ptr<PlannerBase> graspplanner = RaveCreatePlanner(GetEnv(),"Grasper");
         if( !graspplanner ) {
             RAVELOG_ERRORA("grasping planner failure!\n");
             return false;
@@ -1178,7 +1179,7 @@ class TaskManipulation : public ProblemInstance
         }
 
         RobotBase::RobotStateSaver saver(_robot);
-        boost::shared_ptr<Trajectory> ptraj(GetEnv()->CreateTrajectory(_robot->GetActiveDOF()));
+        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF()));
 
         // have to add the first point
         Trajectory::TPOINT ptfirst;
@@ -1194,7 +1195,7 @@ class TaskManipulation : public ProblemInstance
             break;
         }
  
-        boost::shared_ptr<PlannerBase> graspplanner = GetEnv()->CreatePlanner("Grasper");
+        boost::shared_ptr<PlannerBase> graspplanner = RaveCreatePlanner(GetEnv(),"Grasper");
         if( !graspplanner ) {
             RAVELOG_ERRORA("grasping planner failure!\n");
             return false;
@@ -1348,7 +1349,7 @@ protected:
             return ptraj;
 
         _robot->GetActiveDOFValues(params->vinitialconfig);
-        ptraj = GetEnv()->CreateTrajectory(_robot->GetActiveDOF());
+        ptraj = RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF());
 
         params->_nMaxIterations = nMaxIterations; // max iterations before failure
 
@@ -1455,7 +1456,7 @@ protected:
         advance(it,nGraspIndex/(1+nSeedIkSolutions));
         goalfound = *it;
 
-        TrajectoryBasePtr pfulltraj = GetEnv()->CreateTrajectory(_robot->GetDOF());
+        TrajectoryBasePtr pfulltraj = RaveCreateTrajectory(GetEnv(),_robot->GetDOF());
         _robot->SetActiveDOFs(pmanip->GetArmIndices());
         _robot->GetFullTrajectoryFromActive(pfulltraj, ptraj);
         

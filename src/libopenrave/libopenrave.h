@@ -115,6 +115,10 @@ inline static uint64_t GetMicroTime()
 
 #include <boost/bind.hpp>
 
+#ifdef HAVE_BOOST_FILESYSTEM
+#include <boost/filesystem/operations.hpp>
+#endif
+
 namespace OpenRAVE {
 
 struct null_deleter
@@ -235,6 +239,30 @@ index_cmp(const T arr) : arr(arr) {}
     { return arr[a] < arr[b]; }
     const T arr;
 };
+
+template<class P>
+struct smart_pointer_deleter
+{
+private:
+    P p_;
+    boost::function<void(void const*)> _deleterfn;
+public:
+smart_pointer_deleter(P const & p, const boost::function<void(void const*)>& deleterfn): p_(p), _deleterfn(deleterfn)
+    {
+    }
+
+    void operator()(void const * x)
+    {
+        _deleterfn(x);
+        p_.reset();
+    }
+    
+    P const & get() const
+    {
+        return p_;
+    }
+};
+
 }
 
 // need the prototypes in order to keep them free of the OpenRAVE namespace

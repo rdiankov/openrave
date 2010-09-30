@@ -33,7 +33,7 @@ def run(args=None):
     env.Load('data/hanoi.env.xml')
     if options._physics is None:
         # no physics engine set, so set one
-        physics = env.CreatePhysicsEngine('ode')
+        physics = RaveCreatePhysicsEngine(env,'ode')
         env.SetPhysicsEngine(physics)
     physics.SetGravity(array((0,0,-9.8)))
     bodynames = ['data/lego2.kinbody.xml', 'data/lego4.kinbody.xml', 'data/mug1.kinbody.xml']

@@ -221,7 +221,7 @@ class CM
             }
             // have to set anyway since calling script will orEnvWait!
             else if( !!robot->GetController() ) {
-                TrajectoryBasePtr pfulltraj = robot->GetEnv()->CreateTrajectory(robot->GetDOF());
+                TrajectoryBasePtr pfulltraj = RaveCreateTrajectory(robot->GetEnv(),robot->GetDOF());
                 robot->GetFullTrajectoryFromActive(pfulltraj, pActiveTraj);
 
                 if( robot->GetController()->SetDesired(pfulltraj->GetPoints()[0].q))
@@ -230,7 +230,7 @@ class CM
         }
 
         if( strsavetraj.size() || !!pout ) {
-            TrajectoryBasePtr pfulltraj = robot->GetEnv()->CreateTrajectory(robot->GetDOF());
+            TrajectoryBasePtr pfulltraj = RaveCreateTrajectory(robot->GetEnv(),robot->GetDOF());
             robot->GetFullTrajectoryFromActive(pfulltraj, pActiveTraj);
 
             if( strsavetraj.size() > 0 ) {

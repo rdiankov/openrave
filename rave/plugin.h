@@ -59,7 +59,7 @@ RAVE_PLUGIN_API OpenRAVE::InterfaceBasePtr OpenRAVECreateInterface(OpenRAVE::Int
     if( strcmp(envhash,OPENRAVE_ENVIRONMENT_HASH) ) {
         throw OpenRAVE::openrave_exception("bad environment hash",OpenRAVE::ORE_InvalidPlugin);
     }
-
+    OpenRAVE::RaveInitializeFromState(penv->GlobalState()); // make sure global state is set
     std::stringstream sinput(name);
     std::string interfacename;
     sinput >> interfacename;

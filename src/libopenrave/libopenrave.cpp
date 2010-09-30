@@ -1,4 +1,4 @@
-// -*- coding: utf-8 -*-
+
 // Copyright (C) 2006-2010 Carnegie Mellon University (rdiankov@cs.cmu.edu)
 //
 // This file is part of OpenRAVE.
@@ -16,6 +16,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 
+#include <boost/scoped_ptr.hpp>
+#include <boost/utility.hpp>
+#include <boost/thread/once.hpp>
+
 #include <streambuf>
 #include "mt19937ar.h"
 #include "md5.h"
@@ -25,68 +29,358 @@
 #include <sys/types.h>
 #endif
 
+#include "plugindatabase.h"
+
 namespace OpenRAVE {
 
+static boost::once_flag _onceRaveInitialize = BOOST_ONCE_INIT;
+
+/// there is only once global openrave state. It is created when openrave
+/// is first used, and destroyed when the program quits or RaveDestroy is called.
+class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_this<RaveGlobal>
+{
+    typedef std::map<std::string, CreateXMLReaderFn, CaseInsensitiveCompare> READERSMAP;
+
+    RaveGlobal()
+    {
+        // is this really necessary?
+        //srand(timeGetTime());
+        //RaveInitRandomGeneration(timeGetTime());
+        _nDebugLevel = Level_Info;
+
+        _mapinterfacenames[PT_Planner] = "planner";
+        _mapinterfacenames[PT_Robot] = "robot";
+        _mapinterfacenames[PT_SensorSystem] = "sensorsystem";
+        _mapinterfacenames[PT_Controller] = "controller";
+        _mapinterfacenames[PT_ProblemInstance] = "probleminstance";
+        _mapinterfacenames[PT_InverseKinematicsSolver] = "inversekinematicssolver";
+        _mapinterfacenames[PT_KinBody] = "kinbody";
+        _mapinterfacenames[PT_PhysicsEngine] = "physicsengine";
+        _mapinterfacenames[PT_Sensor] = "sensor";
+        _mapinterfacenames[PT_CollisionChecker] = "collisionchecker";
+        _mapinterfacenames[PT_Trajectory] = "trajectory";
+        _mapinterfacenames[PT_Viewer] = "viewer";
+        BOOST_ASSERT(_mapinterfacenames.size()==PT_NumberOfInterfaces);
+    }
+public:
+    virtual ~RaveGlobal() {
+        Destroy();
+    }
+    
+    static boost::shared_ptr<RaveGlobal>& instance()
+    {
+        boost::call_once(_create,_onceRaveInitialize);
+        return _state;
+    }
+    
+    int Initialize(bool bLoadAllPlugins)
+    {
+        RAVELOG_INFO("initializing!!!!\n");
+        Destroy();
+
 #ifdef _DEBUG
-RAVE_API DebugLevel g_nDebugLevel = Level_Debug;
+        _nDebugLevel = Level_Debug;
 #else
-RAVE_API DebugLevel g_nDebugLevel = Level_Info;
+        _nDebugLevel = Level_Info;
 #endif
+
+        _pdatabase.reset(new RaveDatabase());
+        if( bLoadAllPlugins ) {
+            vector<std::string> vplugindirs;
+            RaveParseDirectories(getenv("OPENRAVE_PLUGINS"), vplugindirs);
+            bool bExists=false;
+#ifdef HAVE_BOOST_FILESYSTEM
+            boost::filesystem::path pluginsfilename = boost::filesystem::system_complete(boost::filesystem::path(OPENRAVE_PLUGINS_INSTALL_DIR, boost::filesystem::native));
+            FOREACH(itname, vplugindirs) {
+                if( pluginsfilename == boost::filesystem::system_complete(boost::filesystem::path(*itname, boost::filesystem::native)) ) {
+                    bExists = true;
+                    break;
+                }
+            }
+#else
+            string pluginsfilename=OPENRAVE_PLUGINS_INSTALL_DIR;
+            FOREACH(itname, vplugindirs) {
+                if( pluginsfilename == *itname ) {
+                    bExists = true;
+                    break;
+                }
+            }
+#endif
+            if( !bExists ) {
+                vplugindirs.push_back(OPENRAVE_PLUGINS_INSTALL_DIR);
+            }
+            FOREACH(it, vplugindirs) {
+                if( it->size() > 0 ) {
+                    _pdatabase->AddDirectory(it->c_str());
+                }
+            }
+        }
+        return 0;
+    }
+
+    void Destroy()
+    {
+        RAVELOG_VERBOSE("shutting down openrave\n");
+        // destroy all environments
+        _pdatabase.reset();
+    }
+
+    std::string GetHomeDirectory()
+    {
+        string homedirectory;
+        char* phomedir = getenv("OPENRAVE_HOME");
+        if( phomedir == NULL )
+            phomedir = getenv("OPENRAVE_CACHEPATH");
+        if( phomedir == NULL ) {
+#ifndef _WIN32
+            homedirectory = string(getenv("HOME"))+string("/.openrave");
+#else
+            homedirectory = string(getenv("HOMEDRIVE"))+string(getenv("HOMEPATH"))+string("\\.openrave");
+#endif
+        }
+        else
+            homedirectory = phomedir;
+#ifndef _WIN32
+        mkdir(homedirectory.c_str(),S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH | S_IRWXU);
+#else
+        CreateDirectory(homedirectory.c_str(),NULL);
+#endif
+        return homedirectory;
+    }
+
+    void SetDebugLevel(DebugLevel level)
+    {
+        _nDebugLevel = level;
+    }
+
+    DebugLevel GetDebugLevel()
+    {
+        return _nDebugLevel;
+    }
+
+    boost::shared_ptr<void> RegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn)
+    {
+        boost::mutex::scoped_lock lock(_mutexXML);
+        CreateXMLReaderFn oldfn = _mapreaders[type][xmltag];
+        _mapreaders[type][xmltag] = fn;
+        return boost::shared_ptr<void>((void*)1, boost::bind(&RaveGlobal::_UnregisterXMLReader,boost::weak_ptr<RaveGlobal>(shared_from_this()),type,xmltag,oldfn));
+    }
+
+    const CreateXMLReaderFn& GetXMLReader(InterfaceType type, const std::string& xmltag)
+    {
+        READERSMAP::iterator it = _mapreaders[type].find(xmltag);
+        if( it == _mapreaders[type].end() ) {
+            throw openrave_exception(str(boost::format("No function registered for interface %s xml tag %s")%GetInterfaceName(type)%xmltag),ORE_InvalidArguments);
+        }
+        return it->second;
+    }
+
+    boost::shared_ptr<RaveDatabase> GetDatabase() const { return _pdatabase; }
+    const std::map<InterfaceType,std::string>& GetInterfaceNamesMap() const { return _mapinterfacenames; }
+
+    const std::string& GetInterfaceName(InterfaceType type)
+    {
+        std::map<InterfaceType,std::string>::const_iterator it = _mapinterfacenames.find(type);
+        if( it == _mapinterfacenames.end() ) {
+            throw openrave_exception(str(boost::format("Invalid type %d specified")%type));
+        }
+        return it->second;
+    }
+
+protected:
+    static void _UnregisterXMLReader(boost::weak_ptr<RaveGlobal> pweakstate, InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& oldfn)
+    {
+        boost::shared_ptr<RaveGlobal> pstate = pweakstate.lock();
+        if( !!pstate ) {
+            boost::mutex::scoped_lock lock(pstate->_mutexXML);
+            pstate->_mapreaders[type][xmltag] = oldfn;
+        }
+    }
+
+    static void _create()
+    {
+        if( !_state ) {
+            _state.reset(new RaveGlobal());
+        }
+    }
+
+    bool IsInitialized() const { return !!_pdatabase; }
+
+private:
+    static boost::shared_ptr<RaveGlobal> _state;
+    // state that is always present
+
+    // state that is initialized/destroyed
+    boost::shared_ptr<RaveDatabase> _pdatabase;
+    DebugLevel _nDebugLevel;
+    boost::mutex _mutexXML;
+    std::map<InterfaceType, READERSMAP > _mapreaders;
+    std::map<InterfaceType,string> _mapinterfacenames;
+
+    friend void RaveInitializeFromState(boost::shared_ptr<void>);
+    friend boost::shared_ptr<void> RaveGlobalState();
+};
+
+boost::shared_ptr<RaveGlobal> RaveGlobal::_state;
 
 RAVE_API void RaveSetDebugLevel(DebugLevel level)
 {
-    g_nDebugLevel = level;
+    RaveGlobal::instance()->SetDebugLevel(level);
+}
+
+RAVE_API DebugLevel RaveGetDebugLevel()
+{
+    return RaveGlobal::instance()->GetDebugLevel();
 }
 
 RAVE_API const std::map<InterfaceType,std::string>& RaveGetInterfaceNamesMap()
 {
-    static map<InterfaceType,string> m;
-    if( m.size() == 0 ) {
-        m[PT_Planner] = "planner";
-        m[PT_Robot] = "robot";
-        m[PT_SensorSystem] = "sensorsystem";
-        m[PT_Controller] = "controller";
-        m[PT_ProblemInstance] = "probleminstance";
-        m[PT_InverseKinematicsSolver] = "inversekinematicssolver";
-        m[PT_KinBody] = "kinbody";
-        m[PT_PhysicsEngine] = "physicsengine";
-        m[PT_Sensor] = "sensor";
-        m[PT_CollisionChecker] = "collisionchecker";
-        m[PT_Trajectory] = "trajectory";
-        m[PT_Viewer] = "viewer";
-    }
-    return m;
+    return RaveGlobal::instance()->GetInterfaceNamesMap();
 }
 
 RAVE_API const std::string& RaveGetInterfaceName(InterfaceType type)
 {
-    std::map<InterfaceType,std::string>::const_iterator it = RaveGetInterfaceNamesMap().find(type);
-    if( it == RaveGetInterfaceNamesMap().end() )
-        throw openrave_exception(str(boost::format("Invalid type %d specified")%type));
-    return it->second;
+    return RaveGlobal::instance()->GetInterfaceName(type);
 }
 
 std::string RaveGetHomeDirectory()
 {
-    string homedirectory;
-    char* phomedir = getenv("OPENRAVE_HOME");
-    if( phomedir == NULL )
-        phomedir = getenv("OPENRAVE_CACHEPATH");
-    if( phomedir == NULL ) {
-#ifndef _WIN32
-        homedirectory = string(getenv("HOME"))+string("/.openrave");
-#else
-        homedirectory = string(getenv("HOMEDRIVE"))+string(getenv("HOMEPATH"))+string("\\.openrave");
-#endif
-        }
-    else
-        homedirectory = phomedir;
-#ifndef _WIN32
-    mkdir(homedirectory.c_str(),S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH | S_IRWXU);
-#else
-    CreateDirectory(homedirectory.c_str(),NULL);
-#endif
-    return homedirectory;
+    return RaveGlobal::instance()->GetHomeDirectory();
+}
+
+int RaveInitialize(bool bLoadAllPlugins)
+{
+    return RaveGlobal::instance()->Initialize(bLoadAllPlugins);
+}
+
+void RaveInitializeFromState(boost::shared_ptr<void> globalstate)
+{
+    RaveGlobal::_state = boost::static_pointer_cast<RaveGlobal>(globalstate);
+}
+
+boost::shared_ptr<void> RaveGlobalState()
+{
+    // only return valid pointer if initialized!
+    boost::shared_ptr<RaveGlobal> state = RaveGlobal::_state;
+    if( !!state && state->IsInitialized() ) {
+        return state;
+    }
+    return boost::shared_ptr<void>();
+}
+   
+void RaveDestroy()
+{
+    RaveGlobal::instance()->Destroy();
+}
+
+void RaveGetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins)
+{
+    RaveGlobal::instance()->GetDatabase()->GetPluginInfo(plugins);
+}
+
+void RaveGetLoadedInterfaces(std::map<InterfaceType, std::vector<std::string> >& interfacenames)
+{
+    RaveGlobal::instance()->GetDatabase()->GetLoadedInterfaces(interfacenames);
+}
+
+void RaveReloadPlugins()
+{
+    RaveGlobal::instance()->GetDatabase()->ReloadPlugins();
+}
+
+bool RaveLoadPlugin(const std::string& libraryname)
+{
+    return RaveGlobal::instance()->GetDatabase()->LoadPlugin(libraryname);
+}
+
+bool RaveHasInterface(InterfaceType type, const std::string& interfacename)
+{
+    return RaveGlobal::instance()->GetDatabase()->HasInterface(type,interfacename);
+}
+
+InterfaceBasePtr RaveCreateInterface(EnvironmentBasePtr penv, InterfaceType type,const std::string& interfacename)
+{
+    return RaveGlobal::instance()->GetDatabase()->Create(penv, type,interfacename);
+}
+
+RobotBasePtr RaveCreateRobot(EnvironmentBasePtr penv, const std::string& name)
+{
+    return RaveGlobal::instance()->GetDatabase()->CreateRobot(penv,name);
+}
+
+PlannerBasePtr RaveCreatePlanner(EnvironmentBasePtr penv, const std::string& name)
+{
+    return RaveGlobal::instance()->GetDatabase()->CreatePlanner(penv, name);
+}
+
+SensorSystemBasePtr RaveCreateSensorSystem(EnvironmentBasePtr penv, const std::string& name)
+{
+    return RaveGlobal::instance()->GetDatabase()->CreateSensorSystem(penv, name);
+}
+
+ControllerBasePtr RaveCreateController(EnvironmentBasePtr penv, const std::string& name)
+{
+    return RaveGlobal::instance()->GetDatabase()->CreateController(penv, name);
+}
+
+ProblemInstancePtr RaveCreateProblem(EnvironmentBasePtr penv, const std::string& name)
+{
+    return RaveGlobal::instance()->GetDatabase()->CreateProblem(penv, name);
+}
+
+IkSolverBasePtr RaveCreateIkSolver(EnvironmentBasePtr penv, const std::string& name)
+{
+    return RaveGlobal::instance()->GetDatabase()->CreateIkSolver(penv, name);
+}
+
+PhysicsEngineBasePtr RaveCreatePhysicsEngine(EnvironmentBasePtr penv, const std::string& name)
+{
+    return RaveGlobal::instance()->GetDatabase()->CreatePhysicsEngine(penv, name);
+}
+
+SensorBasePtr RaveCreateSensor(EnvironmentBasePtr penv, const std::string& name)
+{
+    return RaveGlobal::instance()->GetDatabase()->CreateSensor(penv, name);
+}
+
+CollisionCheckerBasePtr RaveCreateCollisionChecker(EnvironmentBasePtr penv, const std::string& name)
+{
+    return RaveGlobal::instance()->GetDatabase()->CreateCollisionChecker(penv, name);
+}
+
+ViewerBasePtr RaveCreateViewer(EnvironmentBasePtr penv, const std::string& name)
+{
+    return RaveGlobal::instance()->GetDatabase()->CreateViewer(penv, name);
+}
+
+KinBodyPtr RaveCreateKinBody(EnvironmentBasePtr penv, const std::string& name)
+{
+    return RaveGlobal::instance()->GetDatabase()->CreateKinBody(penv, name);
+}
+
+TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, int nDOF)
+{
+    TrajectoryBasePtr ptraj = RaveGlobal::instance()->GetDatabase()->CreateTrajectory(penv,"");
+    if( !!ptraj ) {
+        ptraj->Reset(nDOF);
+    }
+    return ptraj;
+}
+
+TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, const std::string& name)
+{
+    return RaveGlobal::instance()->GetDatabase()->CreateTrajectory(penv, name);
+}
+
+boost::shared_ptr<void> RaveRegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn)
+{
+    return RaveGlobal::instance()->RegisterXMLReader(type,xmltag,fn);
+}
+
+
+const CreateXMLReaderFn& RaveGetXMLReader(InterfaceType type, const std::string& xmltag)
+{
+    return RaveGlobal::instance()->GetXMLReader(type,xmltag);
 }
 
 void CollisionReport::Reset(int coloptions)
@@ -492,7 +786,7 @@ bool PlannerBase::_OptimizePath(RobotBasePtr probot, TrajectoryBasePtr ptraj)
 {
     if( GetParameters()->_sPathOptimizationPlanner.size() == 0 )
         return true;
-    PlannerBasePtr planner = GetEnv()->CreatePlanner(GetParameters()->_sPathOptimizationPlanner);
+    PlannerBasePtr planner = RaveCreatePlanner(GetEnv(), GetParameters()->_sPathOptimizationPlanner);
     if( !planner )
         return false;
     PlannerParametersPtr params(new PlannerParameters());
@@ -608,7 +902,7 @@ void DefaultCharactersSAXFunc(void *ctx, const xmlChar *ch, int len)
         pdata->_preader->characters(string((const char*)ch, len));
 }
 
-static bool xmlDetectSAX2(xmlParserCtxtPtr ctxt)
+bool xmlDetectSAX2(xmlParserCtxtPtr ctxt)
 {
     if (ctxt == NULL)
         return false;
@@ -634,9 +928,9 @@ static bool xmlDetectSAX2(xmlParserCtxtPtr ctxt)
 bool ParseXMLData(BaseXMLReaderPtr preader, const char* buffer, int size)
 {
     static xmlSAXHandler s_DefaultSAXHandler = {0};
-
-    if( size <= 0 )
+    if( size <= 0 ) {
         size = strlen(buffer);
+    }
     if( !s_DefaultSAXHandler.initialized ) {
         // first time, so init
         s_DefaultSAXHandler.startElement = DefaultStartElementSAXFunc;
@@ -651,9 +945,12 @@ bool ParseXMLData(BaseXMLReaderPtr preader, const char* buffer, int size)
     xmlParserCtxtPtr ctxt;
 
     ctxt = xmlCreateMemoryParserCtxt(buffer, size);
-    if (ctxt == NULL) return false;
-    if (ctxt->sax != (xmlSAXHandlerPtr) &xmlDefaultSAXHandler)
+    if (ctxt == NULL) {
+        return false;
+    }
+    if (ctxt->sax != (xmlSAXHandlerPtr) &xmlDefaultSAXHandler) {
         xmlFree(ctxt->sax);
+    }
     ctxt->sax = sax;
     xmlDetectSAX2(ctxt);
 
@@ -662,16 +959,20 @@ bool ParseXMLData(BaseXMLReaderPtr preader, const char* buffer, int size)
     
     xmlParseDocument(ctxt);
     
-    if (ctxt->wellFormed)
+    if (ctxt->wellFormed) {
         ret = 0;
-    else {
-        if (ctxt->errNo != 0)
-            ret = ctxt->errNo;
-        else
-            ret = -1;
     }
-    if (sax != NULL)
+    else {
+        if (ctxt->errNo != 0) {
+            ret = ctxt->errNo;
+        }
+        else {
+            ret = -1;
+        }
+    }
+    if (sax != NULL) {
         ctxt->sax = NULL;
+    }
     if (ctxt->myDoc != NULL) {
         xmlFreeDoc(ctxt->myDoc);
         ctxt->myDoc = NULL;
@@ -707,6 +1008,14 @@ RAVE_API std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameter
     return I;
 }
 
+InterfaceBase::InterfaceBase(InterfaceType type, EnvironmentBasePtr penv) : __type(type), __penv(penv)
+{
+    RaveInitializeFromState(penv->GlobalState()); // make sure global state is set
+    RegisterCommand("help",boost::bind(&InterfaceBase::_GetCommandHelp,this,_1,_2),
+                    "display help commands.");
+    __description = "Not documented yet.";
+}
+
 InterfaceBase::~InterfaceBase()
 {
     boost::mutex::scoped_lock lock(_mutexInterface);
@@ -724,13 +1033,6 @@ bool InterfaceBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     __strxmlfilename = preference->__strxmlfilename;
     __mapReadableInterfaces = preference->__mapReadableInterfaces;
     return true;
-}
-
-InterfaceBase::InterfaceBase(InterfaceType type, EnvironmentBasePtr penv) : __type(type), __penv(penv)
-{
-    RegisterCommand("help",boost::bind(&InterfaceBase::_GetCommandHelp,this,_1,_2),
-                    "display help commands.");
-    __description = "Not documented yet.";
 }
 
 bool InterfaceBase::SendCommand(ostream& sout, istream& sinput)
@@ -901,7 +1203,7 @@ BaseXMLReaderPtr SimpleSensorSystem::CreateXMLReaderId(const string& xmlid, Inte
 
 boost::shared_ptr<void> SimpleSensorSystem::RegisterXMLReaderId(EnvironmentBasePtr penv, const string& xmlid)
 {
-    return penv->RegisterXMLReader(PT_KinBody,xmlid, boost::bind(&SimpleSensorSystem::CreateXMLReaderId,xmlid, _1,_2));
+    return RaveRegisterXMLReader(PT_KinBody,xmlid, boost::bind(&SimpleSensorSystem::CreateXMLReaderId,xmlid, _1,_2));
 }
 
 SimpleSensorSystem::SimpleSensorSystem(const std::string& xmlid, EnvironmentBasePtr penv) : SensorSystemBase(penv), _expirationtime(2000000), _bShutdown(false), _threadUpdate(boost::bind(&SimpleSensorSystem::_UpdateBodiesThread,this))

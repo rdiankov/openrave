@@ -29,7 +29,7 @@ if __name__ == "__main__":
                       help='if set, will output the robot hash of the loaded body')
     (options, args) = parser.parse_args()
     body = None
-    raveSetDebugLevel(DebugLevel.Fatal)
+    RaveSetDebugLevel(DebugLevel.Fatal)
     env=Environment(False) # ideally, the hashes should *not* be overloaded by other users, so we should expect the same values regardless of what plugins are loaded
     try:
         env.Load(args[0])
