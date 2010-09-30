@@ -73,11 +73,16 @@ def run(args=None):
     parser.add_option('--scene',
                       action="store",type='string',dest='scene',default='data/wamtest1.env.xml',
                       help='Scene file to load (default=%default)')
+    parser.add_option('--manipname',
+                      action="store",type='string',dest='manipname',default=None,
+                      help='Choose the manipulator to perform the grasping for')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
     try:
         env.Load(options.scene)
         robot = env.GetRobots()[0]
+        if options.manipname is not None:
+            robot.SetActiveManipulator(options.manipname)
         # find an appropriate target
         bodies = [b for b in env.GetBodies() if not b.IsRobot() and linalg.norm(b.ComputeAABB().extents()) < 0.2]
         self = FastGrasping(robot,target=bodies[0])
