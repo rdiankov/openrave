@@ -66,11 +66,7 @@ int main(int argc, char ** argv)
     boost::thread thviewer(boost::bind(SetViewer,penv,viewername)); // create the viewer
     usleep(300000); // wait for the viewer to init
 
-    if( !penv->Load(scenefilename) ) {
-        penv->Destroy();
-        return 2;
-    }
-
+    penv->Load(scenefilename);
     vector<RobotBasePtr> vrobots;
     penv->GetRobots(vrobots);
     RobotBasePtr probot = vrobots.at(0);

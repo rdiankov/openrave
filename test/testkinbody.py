@@ -236,12 +236,12 @@ def test_drawjoints():
     env = robot.GetEnv()
     while True:
         h = None
-        h = [env.drawlinelist(array([j.GetAnchor()-j.GetAxis(0),j.GetAnchor()+j.GetAxis(0)]),5,array([0,0,0]))  for j in robot.GetJoints()[4:7]]
+        h = [env.drawlinelist(array([j.GetAnchor()-j.GetAxis(0),j.GetAnchor()+j.GetAxis(0)]),5,array([0,0,0]))  for j in robot.GetJoints()]
         time.sleep(0.1)
 
     while True:
         h = None
-        joints = [robot.GetJoints()[i] for i in robot.GetManipulator('leftarm').GetArmJoints()]
+        joints = [robot.GetJoints()[i] for i in robot.GetManipulator('arm').GetArmJoints()]
         h = [env.drawlinelist(array([j.GetAnchor()-j.GetAxis(0),j.GetAnchor()+j.GetAxis(0)]),5,array([0,0,i/8.0]))  for i,j in enumerate(joints)]
         time.sleep(0.1)
 

@@ -120,8 +120,9 @@ int main(int argc, char ** argv)
     pbody->GetDOFValues(values);
     
     // set new values
-    for(int i = 0; i < (int)vsetvalues.size() && i < (int)values.size(); ++i)
+    for(int i = 0; i < (int)vsetvalues.size() && i < (int)values.size(); ++i) {
         values[i] = vsetvalues[i];
+    }
     pbody->SetJointValues(values,true);
 
     int contactpoints = 0;
@@ -143,7 +144,9 @@ int main(int argc, char ** argv)
         
         RAVELOG_INFOA(ss.str());
     }
-    else RAVELOG_INFO("body not in collision\n");
+    else {
+        RAVELOG_INFO("body not in collision\n");
+    }
 
     // get the transformations of all the links
     vector<Transform> vlinktransforms;

@@ -63,7 +63,7 @@
 	  For amotors, can specify mode, axis1, axis2, axis3. For each axis, for 3 values are the axis
 	  and the last value is the relative coord system (see ODE documentation).
 	  Every joint can have certain properties:
-      <lostop>, <histop>, and <maxforce> are in number of degrees of freedom.
+      <limitsdeg>, <limits>, and <maxforce> are in number of degrees of freedom.
       <maxvel>, <resolution>, <damping>, <stiffness> are scalar and apply to all DOFs.
    -->
   <Joint name="j1" type="hinge">

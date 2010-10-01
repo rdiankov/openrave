@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -171,7 +171,7 @@ protected:
             RAVELOG_VERBOSEA("BaseManipulation: reading trajectory from stream\n");
 
             if( !ptraj->Read(sinput, robot) ) {
-                RAVELOG_ERRORA("BaseManipulation: failed to get trajectory\n");
+                RAVELOG_ERROR("BaseManipulation: failed to get trajectory\n");
                 return false;
             }
         }
@@ -179,7 +179,7 @@ protected:
             RAVELOG_VERBOSEA(str(boost::format("BaseManipulation: reading trajectory: %s\n")%filename));
             ifstream f(filename.c_str());
             if( !ptraj->Read(f, robot) ) {
-                RAVELOG_ERRORA(str(boost::format("BaseManipulation: failed to read trajectory %s\n")%filename));
+                RAVELOG_ERROR(str(boost::format("BaseManipulation: failed to read trajectory %s\n")%filename));
                 return false;
             }
         }
@@ -219,13 +219,13 @@ protected:
             else break;
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
 
         if(!ptarget) {
-            RAVELOG_ERRORA("ERROR Manipulation::GrabBody - Invalid body name.\n");
+            RAVELOG_ERROR("ERROR Manipulation::GrabBody - Invalid body name.\n");
             return false;
         }
 
@@ -286,12 +286,12 @@ protected:
             else if( cmd == "searchall" )
                 sinput >> bSearchAll;
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -311,7 +311,7 @@ protected:
         robot->GetActiveDOFValues(vPrevValues);
 
         if( bPrevInCollision && !bIgnoreFirstCollision ) {
-            RAVELOG_WARNA("MoveHandStraight: robot in collision\n");
+            RAVELOG_WARN("MoveHandStraight: robot in collision\n");
             return false;
         }
 
@@ -476,12 +476,12 @@ protected:
             else if( cmd == "writetraj" )
                 sinput >> strtrajfilename;
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -503,7 +503,7 @@ protected:
         // make sure the initial and goal configs are not in collision
         robot->SetActiveDOFValues(goals, true);
         if( CM::JitterActiveDOF(robot) == 0 ) {
-            RAVELOG_WARNA("jitter failed\n");
+            RAVELOG_WARN("jitter failed\n");
             return false;
         }
         robot->GetActiveDOFValues(params->vgoalconfig);
@@ -511,32 +511,32 @@ protected:
     
         // jitter again for initial collision
         if( CM::JitterActiveDOF(robot) == 0 ) {
-            RAVELOG_WARNA("jitter failed\n");
+            RAVELOG_WARN("jitter failed\n");
             return false;
         }
         robot->GetActiveDOFValues(params->vinitialconfig);
 
         boost::shared_ptr<PlannerBase> rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
         if( !rrtplanner ) {
-            RAVELOG_WARNA("failed to create planner\n");
+            RAVELOG_WARN("failed to create planner\n");
             return false;
         }
     
         bool bSuccess = false;
-        RAVELOG_INFOA("starting planning\n");
+        RAVELOG_INFO("starting planning\n");
     
         for(int iter = 0; iter < 3; ++iter) {
             if( !rrtplanner->InitPlan(robot, params) ) {
-                RAVELOG_ERRORA("InitPlan failed\n");
+                RAVELOG_ERROR("InitPlan failed\n");
                 break;
             }
         
             if( rrtplanner->PlanPath(ptraj) ) {
                 bSuccess = true;
-                RAVELOG_INFOA("finished planning\n");
+                RAVELOG_INFO("finished planning\n");
                 break;
             }
-            else RAVELOG_WARNA("PlanPath failed\n");
+            else RAVELOG_WARN("PlanPath failed\n");
         }
 
         if( !bSuccess )
@@ -582,12 +582,12 @@ protected:
             else if( cmd == "maxtries" )
                 sinput >> nMaxTries;
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -598,7 +598,7 @@ protected:
         RobotBase::RobotStateSaver saver(robot);
 
         if( CM::JitterActiveDOF(robot) == 0 ) {
-            RAVELOG_WARNA("failed\n");
+            RAVELOG_WARN("failed\n");
             return false;
         }
 
@@ -609,14 +609,14 @@ protected:
     
         // jitter again for goal
         if( CM::JitterActiveDOF(robot) == 0 ) {
-            RAVELOG_WARNA("failed\n");
+            RAVELOG_WARN("failed\n");
             return false;
         }
 
         boost::shared_ptr<PlannerBase> rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
 
         if( !rrtplanner ) {
-            RAVELOG_ERRORA("failed to create BiRRTs\n");
+            RAVELOG_ERROR("failed to create BiRRTs\n");
             return false;
         }
     
@@ -626,16 +626,16 @@ protected:
         bool bSuccess = false;
         for(int itry = 0; itry < nMaxTries; ++itry) {
             if( !rrtplanner->InitPlan(robot, params) ) {
-                RAVELOG_ERRORA("InitPlan failed\n");
+                RAVELOG_ERROR("InitPlan failed\n");
                 return false;
             }
             
             if( !rrtplanner->PlanPath(ptraj) ) {
-                RAVELOG_WARNA("PlanPath failed\n");
+                RAVELOG_WARN("PlanPath failed\n");
             }
             else {
                 bSuccess = true;
-                RAVELOG_DEBUGA("finished planning\n");
+                RAVELOG_DEBUG("finished planning\n");
                 break;
             }
         }
@@ -742,12 +742,12 @@ protected:
             else if( cmd == "constrainterrorthresh" )
                 sinput >> constrainterrorthresh;
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -772,7 +772,7 @@ protected:
             FOREACH(ittrans, listgoals) {
                 int nsampled = CM::SampleIkSolutions(robot, *ittrans, nSeedIkSolutions, armgoals);
                 if( nsampled != nSeedIkSolutions )
-                    RAVELOG_WARNA("only found %d/%d ik solutions\n", nsampled, nSeedIkSolutions);
+                    RAVELOG_WARN("only found %d/%d ik solutions\n", nsampled, nSeedIkSolutions);
             }
         }
         else {
@@ -790,7 +790,7 @@ protected:
         }
 
         if( armgoals.size() == 0 ) {
-            RAVELOG_WARNA("No IK Solution found\n");
+            RAVELOG_WARN("No IK Solution found\n");
             return false;
         }
 
@@ -816,7 +816,7 @@ protected:
         }
 
         if( params->vgoalconfig.size() == 0 ) {
-            RAVELOG_WARNA("jitter failed for goal\n");
+            RAVELOG_WARN("jitter failed for goal\n");
             return false;
         }
 
@@ -831,7 +831,7 @@ protected:
     
         // jitter again for initial collision
         if( CM::JitterActiveDOF(robot) == 0 ) {
-            RAVELOG_WARNA("jitter failed for initial\n");
+            RAVELOG_WARN("jitter failed for initial\n");
             return false;
         }
         robot->GetActiveDOFValues(params->vinitialconfig);
@@ -845,26 +845,26 @@ protected:
 
         boost::shared_ptr<PlannerBase> rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
         if( !rrtplanner ) {
-            RAVELOG_ERRORA("failed to create BiRRTs\n");
+            RAVELOG_ERROR("failed to create BiRRTs\n");
             return false;
         }
     
         bool bSuccess = false;
-        RAVELOG_INFOA("starting planning\n");
+        RAVELOG_INFO("starting planning\n");
         
         for(int iter = 0; iter < nMaxTries; ++iter) {
             if( !rrtplanner->InitPlan(robot, params) ) {
-                RAVELOG_ERRORA("InitPlan failed\n");
+                RAVELOG_ERROR("InitPlan failed\n");
                 return false;
             }
         
             if( rrtplanner->PlanPath(ptraj) ) {
                 bSuccess = true;
-                RAVELOG_INFOA("finished planning\n");
+                RAVELOG_INFO("finished planning\n");
                 break;
             }
             else
-                RAVELOG_WARNA("PlanPath failed\n");
+                RAVELOG_WARN("PlanPath failed\n");
         }
 
         rrtplanner.reset(); // have to destroy before environment
@@ -919,12 +919,12 @@ protected:
             else if( cmd == "maxdivision" )
                 sinput >> maxdivision;
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -932,7 +932,7 @@ protected:
         uint32_t starttime = timeGetTime();
 
         if( CM::JitterActiveDOF(robot) == 0 ) {
-            RAVELOG_WARNA("failed to jitter robot out of collision\n");
+            RAVELOG_WARN("failed to jitter robot out of collision\n");
         }
 
         boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
@@ -996,12 +996,12 @@ protected:
                     sinput >> *it;
             }
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -1015,7 +1015,7 @@ protected:
  
         boost::shared_ptr<PlannerBase> graspplanner = RaveCreatePlanner(GetEnv(),"Grasper");
         if( !graspplanner ) {
-            RAVELOG_ERRORA("grasping planner failure!\n");
+            RAVELOG_ERROR("grasping planner failure!\n");
             return false;
         }
     
@@ -1029,12 +1029,12 @@ protected:
         ptraj->AddPoint(ptfirst);
 
         if( !graspplanner->InitPlan(robot, graspparams) ) {
-            RAVELOG_ERRORA("InitPlan failed\n");
+            RAVELOG_ERROR("InitPlan failed\n");
             return false;
         }
     
         if( !graspplanner->PlanPath(ptraj) ) {
-            RAVELOG_WARNA("PlanPath failed\n");
+            RAVELOG_WARN("PlanPath failed\n");
             return false;
         }   
 
@@ -1097,12 +1097,12 @@ protected:
                     sinput >> *it;
             }
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -1116,7 +1116,7 @@ protected:
         ptraj->AddPoint(ptfirst);
         switch(CM::JitterActiveDOF(robot) ) {
         case 0:
-            RAVELOG_WARNA("robot initially in collision\n");
+            RAVELOG_WARN("robot initially in collision\n");
             return false;
         case 1:
             robot->GetActiveDOFValues(ptfirst.q);
@@ -1126,7 +1126,7 @@ protected:
  
         boost::shared_ptr<PlannerBase> graspplanner = RaveCreatePlanner(GetEnv(),"Grasper");
         if( !graspplanner ) {
-            RAVELOG_ERRORA("grasping planner failure!\n");
+            RAVELOG_ERROR("grasping planner failure!\n");
             return false;
         }
     
@@ -1138,12 +1138,12 @@ protected:
         graspparams->bavoidcontact = true;
 
         if( !graspplanner->InitPlan(robot, graspparams) ) {
-            RAVELOG_ERRORA("InitPlan failed\n");
+            RAVELOG_ERROR("InitPlan failed\n");
             return false;
         }
     
         if( !graspplanner->PlanPath(ptraj) ) {
-            RAVELOG_WARNA("PlanPath failed\n");
+            RAVELOG_WARN("PlanPath failed\n");
             return false;
         }   
 
@@ -1160,7 +1160,7 @@ protected:
             RobotBase::RobotStateSaver saver2(robot);
             robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
             if( CM::JitterActiveDOF(robot) > 0 ) {
-                RAVELOG_WARNA("robot final configuration is in collision\n");
+                RAVELOG_WARN("robot final configuration is in collision\n");
                 Trajectory::TPOINT pt = ptraj->GetPoints().back();
                 robot->GetActiveDOFValues(pt.q);
                 ptraj->AddPoint(pt);
@@ -1221,12 +1221,12 @@ protected:
                     sinput >> *it;
             }
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -1240,7 +1240,7 @@ protected:
         ptraj->AddPoint(ptfirst);
         switch( CM::JitterActiveDOF(robot) ) {
         case 0:
-            RAVELOG_WARNA("robot initially in collision\n");
+            RAVELOG_WARN("robot initially in collision\n");
             return false;
         case 1:
             robot->GetActiveDOFValues(ptfirst.q);
@@ -1250,7 +1250,7 @@ protected:
  
         boost::shared_ptr<PlannerBase> graspplanner = RaveCreatePlanner(GetEnv(),"Grasper");
         if( !graspplanner ) {
-            RAVELOG_ERRORA("grasping planner failure!\n");
+            RAVELOG_ERROR("grasping planner failure!\n");
             return false;
         }
         
@@ -1263,12 +1263,12 @@ protected:
         graspparams->bavoidcontact = true;
 
         if( !graspplanner->InitPlan(robot, graspparams) ) {
-            RAVELOG_ERRORA("InitPlan failed\n");
+            RAVELOG_ERROR("InitPlan failed\n");
             return false;
         }
     
         if( !graspplanner->PlanPath(ptraj) ) {
-            RAVELOG_WARNA("PlanPath failed\n");
+            RAVELOG_WARN("PlanPath failed\n");
             return false;
         }
 
@@ -1286,7 +1286,7 @@ protected:
             RobotBase::RobotStateSaver saver2(robot);
             robot->SetActiveDOFValues(ptraj->GetPoints().back().q);
             if( CM::JitterActiveDOF(robot) > 0 ) {
-                RAVELOG_WARNA("robot final configuration is in collision\n");
+                RAVELOG_WARN("robot final configuration is in collision\n");
                 Trajectory::TPOINT pt = ptraj->GetPoints().back();
                 robot->GetActiveDOFValues(pt.q);
                 ptraj->AddPoint(pt);
@@ -1322,12 +1322,12 @@ protected:
             else if( cmd == "outputfinal" )
                 bOutputFinal = true;
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
@@ -1341,7 +1341,7 @@ protected:
         ptraj->AddPoint(ptfirst);
         switch( CM::JitterActiveDOF(robot,nMaxIterations,fJitter) ) {
         case 0:
-            RAVELOG_WARNA("could not jitter out of collision\n");
+            RAVELOG_WARN("could not jitter out of collision\n");
             return false;
         case 1:
             robot->GetActiveDOFValues(ptfirst.q);
@@ -1472,7 +1472,7 @@ protected:
 
             if( cmd == "traj" ) {
                 if( !ptraj->Read(sinput,robot) ) {
-                    RAVELOG_ERRORA("failed to read trajectory\n");
+                    RAVELOG_ERROR("failed to read trajectory\n");
                     return false;
                 }
             }
@@ -1481,7 +1481,7 @@ protected:
                 sinput >> filename;
                 ifstream f(filename.c_str());
                 if( !ptraj->Read(f,robot) ) {
-                    RAVELOG_ERRORA("failed to read trajectory\n");
+                    RAVELOG_ERROR("failed to read trajectory\n");
                     return false;
                 }
             }
@@ -1495,18 +1495,18 @@ protected:
             else if( cmd == "execute" )
                 sinput >> bExecute;
             else {
-                RAVELOG_WARNA(str(boost::format("unrecognized command: %s\n")%cmd));
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
             }
 
             if( !sinput ) {
-                RAVELOG_ERRORA(str(boost::format("failed processing command %s\n")%cmd));
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
                 return false;
             }
         }
 
         if( ptraj->GetPoints().size() == 0 ) {
-            RAVELOG_ERRORA("trajectory not initialized\n");
+            RAVELOG_ERROR("trajectory not initialized\n");
             return false;
         }
 

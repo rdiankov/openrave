@@ -51,3 +51,15 @@ set_target_properties(ortrajectory PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS
 set_target_properties(ortrajectory PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 target_link_libraries(ortrajectory ${OPENRAVE_LIBRARY} ${OPENRAVE_CORE_LIBRARY})
 install(TARGETS ortrajectory DESTINATION . )
+
+add_executable(orplanning_problem orplanning_problem.cpp)
+set_target_properties(orplanning_problem PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+set_target_properties(orplanning_problem PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+target_link_libraries(orplanning_problem ${OPENRAVE_LIBRARY} ${OPENRAVE_CORE_LIBRARY})
+install(TARGETS orplanning_problem DESTINATION . )
+
+add_executable(orplanning_planner orplanning_planner.cpp)
+set_target_properties(orplanning_planner PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+set_target_properties(orplanning_planner PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+target_link_libraries(orplanning_planner ${OPENRAVE_LIBRARY} ${OPENRAVE_CORE_LIBRARY})
+install(TARGETS orplanning_planner DESTINATION . )

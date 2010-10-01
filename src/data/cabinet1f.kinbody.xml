@@ -136,17 +136,15 @@
   <Joint name="J_right" type="hinge">
     <body>base</body>
     <body>door-right</body>
-    <lostop>0</lostop>
-    <histop>90</histop>
-    <axis>0 0 -1</axis>
+    <limitsdeg>0 90</limitsdeg>
+    <axis>0 0 1</axis>
     <anchor>0.146 0.31 0.694</anchor>
   </Joint>
   <Joint name="J_left" type="hinge">
     <body>base</body>
     <body>door-left</body>
-    <lostop>0</lostop>
-    <histop>90</histop>
-    <axis>0 0 -1</axis>
+    <limitsdeg>0 90</limitsdeg>
+    <axis>0 0 1</axis>
     <anchor>0.146 -0.31 0.694</anchor>
   </Joint>
 

@@ -207,7 +207,7 @@ def run(args=None):
     parser = OptionParser(description='Manipulation planning example solving the hanoi problem.', usage='openrave.py --example hanoi [options]')
     OpenRAVEGlobalArguments.addOptions(parser)
     parser.add_option('--scene',
-                      action="store",type='string',dest='scene',default='data/hanoi_complex.env.xml',
+                      action="store",type='string',dest='scene',default='data/hanoi_complex2.env.xml',
                       help='Scene file to load (default=%default)')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)

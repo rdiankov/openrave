@@ -1480,14 +1480,33 @@ namespace OpenRAVEXMLParser
                         GetFullFilename() = filedata->second;
                         if( !pinterface ) {
                             // there is no reason to bring in the other attributes since interface is not created yet
-                            pinterface = _penv->ReadInterfaceXMLFile(filedata->second);
+                            switch(_type) {
+                            case PT_KinBody:
+                                pinterface = _penv->ReadKinBodyXMLFile(filedata->second);
+                                break;
+                            case PT_Robot:
+                                pinterface = _penv->ReadRobotXMLFile(filedata->second);
+                                break;
+                            default:
+                                pinterface = _penv->ReadInterfaceXMLFile(filedata->second);
+                            }
                             if( !!pinterface && pinterface->GetInterfaceType() != _type ) {
                                 RAVELOG_ERROR(str(boost::format("unexpected interface created %s\n")%RaveGetInterfaceName(pinterface->GetInterfaceType())));
                                 pinterface.reset();
                             }
                         }
                         else {
-                            pinterface = _penv->ReadInterfaceXMLFile(pinterface,_type,filedata->second,listnewatts);
+                            switch(_type) {
+                            case PT_KinBody:
+                                pinterface = _penv->ReadKinBodyXMLFile(RaveInterfaceCast<KinBody>(pinterface),filedata->second,listnewatts);
+                                break;
+                            case PT_Robot:
+                                pinterface = _penv->ReadRobotXMLFile(RaveInterfaceCast<RobotBase>(pinterface),filedata->second,listnewatts);
+                                break;
+                            default:
+                                pinterface = _penv->ReadInterfaceXMLFile(pinterface,_type,filedata->second,listnewatts);
+                            }
+                            
                         }
                     }
                     catch(...) {

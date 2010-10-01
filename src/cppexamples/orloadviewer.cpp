@@ -67,21 +67,16 @@ int main(int argc, char ** argv)
         else
             break;
     }
-
-    if( i < argc )
+    if( i < argc ) {
         viewername = argv[i++];
+    }
     
     RaveInitialize(true); // start openrave core
     EnvironmentBasePtr penv = RaveCreateEnvironment(); // create the main environment
     RaveSetDebugLevel(Level_Debug);
 
     boost::thread thviewer(boost::bind(SetViewer,penv,viewername));
-    // load the scene
-    if( !penv->Load(scenefilename) ) {
-        penv->Destroy();
-        return 2;
-    }
-
+    penv->Load(scenefilename); // load the scene
     thviewer.join(); // wait for the viewer thread to exit
     penv->Destroy(); // destroy
     return 0;
