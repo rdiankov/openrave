@@ -604,8 +604,9 @@ class OpenRAVEModel(metaclass.AutoReloader):
             loadplugins = False
         if options.gethas:
             openravepy.RaveSetDebugLevel(openravepy.DebugLevel.Fatal)
+        openravepy.RaveInitialize(loadplugins)
         if env is None:
-            env = openravepy.Environment(loadplugins)
+            env = openravepy.Environment()
             destroyenv = True
         try:
             with env:
