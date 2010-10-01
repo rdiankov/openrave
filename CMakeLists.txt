@@ -91,7 +91,7 @@ message(STATUS "installing to ${CMAKE_INSTALL_PREFIX}")
 
 option(OPT_VIDEORECORDING "Enable video recording" ON)
 option(OPT_PLUGINS "Build the pluings" ON)
-option(OPT_DOUBLE_PRECISION "Use double precision" OFF)
+option(OPT_DOUBLE_PRECISION "Use double precision" ON)
 option(OPT_STATIC "Build static libraries" OFF)
 
 ##############################################################################
