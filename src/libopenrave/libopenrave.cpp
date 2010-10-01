@@ -75,7 +75,6 @@ public:
     
     int Initialize(bool bLoadAllPlugins)
     {
-        RAVELOG_INFO("initializing!!!!\n");
         Destroy();
 
 #ifdef _DEBUG
