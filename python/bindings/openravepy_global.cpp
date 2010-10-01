@@ -273,6 +273,8 @@ string poseSerialization(object o)
     return ss.str();
 }
 
+BOOST_PYTHON_FUNCTION_OVERLOADS(RaveInitialize_overloads, RaveInitialize, 0, 2)
+
 void init_openravepy_global()
 {
     def("RaveSetDebugLevel",OpenRAVE::RaveSetDebugLevel,args("level"), DOXY_FN1(RaveSetDebugLevel));
@@ -285,7 +287,7 @@ void init_openravepy_global()
     def("RaveLogDebug",openravepy::raveLogDebug,args("log"),"Send a debug log to the openrave system");
     def("RaveLogVerbose",openravepy::raveLogVerbose,args("log"),"Send a verbose log to the openrave system");
     def("RaveLog",openravepy::raveLog,args("log","level"),"Send a log to the openrave system with excplicit level");
-    def("RaveInitialize",RaveInitialize,args("load_all_plugins"),DOXY_FN1(RaveInitialize));
+    def("RaveInitialize",RaveInitialize,RaveInitialize_overloads(args("load_all_plugins","level"),DOXY_FN1(RaveInitialize)));
     def("RaveDestroy",RaveDestroy,DOXY_FN1(RaveDestroy));
     def("RaveGetPluginInfo",openravepy::RaveGetPluginInfo,DOXY_FN1(RaveGetPluginInfo));
     def("RaveGetLoadedInterfaces",openravepy::RaveGetLoadedInterfaces,DOXY_FN1(raveGetLoadedInterfaces));

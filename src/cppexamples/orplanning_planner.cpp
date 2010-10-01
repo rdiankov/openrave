@@ -44,7 +44,7 @@ int main(int argc, char ** argv)
     penv->GetRobots(vrobots);
     RobotBasePtr probot = vrobots.at(0);
     // find the longest manipulator chain to move
-    RobotBase::ManipulatorPtr pmanip = probot->GetManipulators()[0];
+    RobotBase::ManipulatorPtr pmanip = probot->GetManipulators().at(0);
     for(size_t i = 1; i < probot->GetManipulators().size(); ++i) {
         if( pmanip->GetArmIndices().size() < probot->GetManipulators()[i]->GetArmIndices().size() ) {
             pmanip = probot->GetManipulators()[i];

@@ -253,10 +253,18 @@ else()
   set(CPPGENMD5 "${CMAKE_CURRENT_BINARY_DIR}/cpp-gen-md5/cpp-gen-md5")
 endif()
 
+if(OPT_DOUBLE_PRECISION)
+  set(OPENRAVE_PRECISION 1)
+  message(STATUS "Using double precision")
+else()
+  set(OPENRAVE_PRECISION 0)
+  message(STATUS "Using single precision")
+endif()
+
 add_custom_command(
   OUTPUT ${CMAKE_SOURCE_DIR}/rave/classhashes.h
   COMMAND ${CPPGENMD5}
-  ARGS "${CMAKE_SOURCE_DIR}/rave/interface.h"
+  ARGS "${OPENRAVE_PRECISION}" "${CMAKE_SOURCE_DIR}/rave/interface.h"
        "${CMAKE_SOURCE_DIR}/rave/collisionchecker.h" OPENRAVE_COLLISIONCHECKER_HASH
        "${CMAKE_SOURCE_DIR}/rave/robot.h" OPENRAVE_ROBOT_HASH
        "${CMAKE_SOURCE_DIR}/rave/planner.h" OPENRAVE_PLANNER_HASH
@@ -300,14 +308,6 @@ else()
   if( NOT COIN_LIBRARY_FOUND )
     message(STATUS "Could not find Coin3D. Please install Coin3D (http://www.coin3d.org)")
   endif()
-endif()
-
-if(OPT_DOUBLE_PRECISION)
-  set(OPENRAVE_PRECISION 1)
-  message(STATUS "Using double precision")
-else()
-  set(OPENRAVE_PRECISION 0)
-  message(STATUS "Using single precision")
 endif()
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )

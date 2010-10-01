@@ -470,7 +470,6 @@ class OpenRAVEGlobalArguments:
     @staticmethod
     def parseGlobal(options,**kwargs):
         """Parses all global options independent of the environment"""
-        openravepy.RaveInitialize(True)
         if options._level is not None:
             for debuglevel,debugname in openravepy.DebugLevel.values.iteritems():
                 if (not options._level.isdigit() and options._level.lower() == debugname.name.lower()) or (options._level.isdigit() and int(options._level) == int(debuglevel)):
@@ -512,6 +511,7 @@ class OpenRAVEGlobalArguments:
     @staticmethod
     def parseAndCreate(options,createenv=openravepy.Environment,**kwargs):
         """Parse all options and create the global Environment. The left over arguments are passed to the parse functions"""
+        openravepy.RaveInitialize(True)
         OpenRAVEGlobalArguments.parseGlobal(options,**kwargs)
         if createenv is None:
             return None
@@ -595,16 +595,16 @@ class OpenRAVEModel(metaclass.AutoReloader):
         if parser is None:
             parser = OpenRAVEModel.CreateOptionParser()
         (options, args) = parser.parse_args(args=args)
-        OpenRAVEGlobalArguments.parseGlobal(options)
         destroyenv = False
         loadplugins=True
+        level=openravepy.DebugLevel.Info
         if options.getfilename:
-            # don't want unnecessary messages cluttering the console...
-            openravepy.RaveSetDebugLevel(openravepy.DebugLevel.Fatal)
             loadplugins = False
+            level = openravepy.DebugLevel.Fatal
         if options.gethas:
-            openravepy.RaveSetDebugLevel(openravepy.DebugLevel.Fatal)
-        openravepy.RaveInitialize(loadplugins)
+            level = openravepy.DebugLevel.Fatal
+        openravepy.RaveInitialize(loadplugins,level)
+        OpenRAVEGlobalArguments.parseGlobal(options)
         if env is None:
             env = openravepy.Environment()
             destroyenv = True
@@ -625,6 +625,7 @@ class OpenRAVEModel(metaclass.AutoReloader):
             model = Model(robot=robot)
             if options.getfilename:
                 print model.getfilename()
+                env.Destroy()
                 sys.exit(0)
             if options.gethas:
                 hasmodel=model.load()

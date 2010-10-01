@@ -63,3 +63,10 @@ set_target_properties(orplanning_planner PROPERTIES COMPILE_FLAGS "${OPENRAVE_CX
 set_target_properties(orplanning_planner PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 target_link_libraries(orplanning_planner ${OPENRAVE_LIBRARY} ${OPENRAVE_CORE_LIBRARY})
 install(TARGETS orplanning_planner DESTINATION . )
+
+add_executable(orplanning_ik orplanning_ik.cpp)
+set_target_properties(orplanning_ik PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+set_target_properties(orplanning_ik PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+target_link_libraries(orplanning_ik ${OPENRAVE_LIBRARY} ${OPENRAVE_CORE_LIBRARY})
+install(TARGETS orplanning_ik DESTINATION . )
+

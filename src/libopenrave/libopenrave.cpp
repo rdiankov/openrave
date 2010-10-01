@@ -75,18 +75,15 @@ public:
         return _state;
     }
     
-    int Initialize(bool bLoadAllPlugins)
+    int Initialize(bool bLoadAllPlugins, DebugLevel level)
     {
-        Destroy();
+        if( IsInitialized() ) {
+            Destroy();
+        }
 
         // set to the classic locale so that number serialization/hashing works correctly
         std::locale::global(std::locale::classic());
-
-#ifdef _DEBUG
-        _nDebugLevel = Level_Debug;
-#else
-        _nDebugLevel = Level_Info;
-#endif
+        _nDebugLevel = level;
 
         _pdatabase.reset(new RaveDatabase());
         if( bLoadAllPlugins ) {
@@ -170,13 +167,14 @@ public:
         return boost::shared_ptr<void>((void*)1, boost::bind(&RaveGlobal::_UnregisterXMLReader,boost::weak_ptr<RaveGlobal>(shared_from_this()),type,xmltag,oldfn));
     }
 
-    const CreateXMLReaderFn& GetXMLReader(InterfaceType type, const std::string& xmltag)
+    const BaseXMLReaderPtr CallXMLReader(InterfaceType type, const std::string& xmltag, InterfaceBasePtr pinterface, const std::list<std::pair<std::string,std::string> >& atts)
     {
         READERSMAP::iterator it = _mapreaders[type].find(xmltag);
         if( it == _mapreaders[type].end() ) {
-            throw openrave_exception(str(boost::format("No function registered for interface %s xml tag %s")%GetInterfaceName(type)%xmltag),ORE_InvalidArguments);
+            //throw openrave_exception(str(boost::format("No function registered for interface %s xml tag %s")%GetInterfaceName(type)%xmltag),ORE_InvalidArguments);
+            return BaseXMLReaderPtr();
         }
-        return it->second;
+        return it->second(pinterface,atts);
     }
 
     boost::shared_ptr<RaveDatabase> GetDatabase() const { return _pdatabase; }
@@ -252,9 +250,9 @@ std::string RaveGetHomeDirectory()
     return RaveGlobal::instance()->GetHomeDirectory();
 }
 
-int RaveInitialize(bool bLoadAllPlugins)
+int RaveInitialize(bool bLoadAllPlugins, DebugLevel level)
 {
-    return RaveGlobal::instance()->Initialize(bLoadAllPlugins);
+    return RaveGlobal::instance()->Initialize(bLoadAllPlugins,level);
 }
 
 void RaveInitializeFromState(boost::shared_ptr<void> globalstate)
@@ -382,9 +380,9 @@ boost::shared_ptr<void> RaveRegisterXMLReader(InterfaceType type, const std::str
 }
 
 
-const CreateXMLReaderFn& RaveGetXMLReader(InterfaceType type, const std::string& xmltag)
+BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::string& xmltag, InterfaceBasePtr pinterface, const std::list<std::pair<std::string,std::string> >& atts)
 {
-    return RaveGlobal::instance()->GetXMLReader(type,xmltag);
+    return RaveGlobal::instance()->CallXMLReader(type,xmltag,pinterface,atts);
 }
 
 void CollisionReport::Reset(int coloptions)

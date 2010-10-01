@@ -779,7 +779,7 @@ RAVE_API std::string RaveGetHomeDirectory();
 /// explicit control of when this happens.
 /// \param bLoadAllPlugins If true will load all the openrave plugins automatically that can be found in the OPENRAVE_PLUGINS environment path
 /// \return 0 if successful, otherwise an error code
-RAVE_API int RaveInitialize(bool bLoadAllPlugins=true);
+RAVE_API int RaveInitialize(bool bLoadAllPlugins=true, DebugLevel level = Level_Info);
 
 /// \brief Initializes the global state from an already loaded OpenRAVE environment.
 ///
@@ -850,7 +850,7 @@ RAVE_API boost::shared_ptr<void> RaveRegisterXMLReader(InterfaceType type, const
 /// \brief Returns the current registered reader for the interface type/xmlid
 ///
 /// \throw openrave_exception Will throw with ORE_InvalidArguments if registered function could not be found.
-RAVE_API const CreateXMLReaderFn& RaveGetXMLReader(InterfaceType type, const std::string& xmltag);
+RAVE_API BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::string& xmltag, InterfaceBasePtr pinterface, const std::list<std::pair<std::string,std::string> >& atts);
 
 //@}
 

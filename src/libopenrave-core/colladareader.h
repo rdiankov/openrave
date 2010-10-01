@@ -727,13 +727,7 @@ public:
     RAVELOG_WARN("Sensor name: %s\n",att_Sensor->GetName().c_str());
 
     //  Create XML reader for this Sensor TYPE
-    try {
-        _pcurreader = RaveGetXMLReader(PT_Sensor,att_Sensor->psensor->GetXMLId())(att_Sensor->psensor, std::list<std::pair<std::string,std::string> >());
-    }
-    catch(const openrave_exception& ex) {
-        RAVELOG_VERBOSE(ex.what());
-        _pcurreader.reset();
-    }
+    _pcurreader = RaveCallXMLReader(PT_Sensor,att_Sensor->psensor->GetXMLId(),att_Sensor->psensor, std::list<std::pair<std::string,std::string> >());
     
     RAVELOG_VERBOSE("XML (Sensor) Reader Initialized\n");
 

@@ -307,7 +307,7 @@ public:
         // before adding a new library, check for existing
         boost::mutex::scoped_lock lock(GetLibraryMutex());
         boost::shared_ptr<IKLibrary> lib;
-        FOREACH(it, GetLibraries()) {
+        FOREACH(it, *GetLibraries()) {
             if( libraryname == (*it)->GetLibraryName() ) {
                 lib = *it;
                 lib->AddIKName(ikname);
@@ -319,7 +319,7 @@ public:
             if( !lib->Init(ikname, libraryname) ) {
                 return boost::shared_ptr<IKLibrary>();
             }
-            GetLibraries().push_back(lib);
+            GetLibraries()->push_back(lib);
         }
         return lib;
     }
@@ -357,14 +357,21 @@ public:
                 boost::iostreams::stream_buffer<boost::iostreams::file_descriptor_source> fpstream(fileno(pipe));
                 std::istream in(&fpstream);
                 std::getline(in, hasik);
+            }            
+            int generateexit = pclose(pipe);
+            if( generateexit != 0 ) {
+                Sleep(100);
+                RAVELOG_DEBUG("failed to close pipe\n");
             }
-            pclose(pipe);
             if( hasik != "1" ) {
-                RAVELOG_INFO(str(boost::format("Generating inverse kinematics for manip %s:%s\n")%probot->GetName()%probot->GetActiveManipulator()->GetName()));
+                RAVELOG_INFO(str(boost::format("Generating inverse kinematics for manip %s:%s, will take several minutes...\n")%probot->GetName()%probot->GetActiveManipulator()->GetName()));
                 string cmdgen = str(boost::format("openrave.py --database inversekinematics --robot=%s --manipname=%s --iktype=%s")%probot->GetXMLFilename()%probot->GetActiveManipulator()->GetName()%striktype);
                 FILE* pipe = popen(cmdgen.c_str(), "r");
                 int generateexit = pclose(pipe);
-                RAVELOG_INFO("generate exit: %d\n",generateexit);
+                if( generateexit != 0 ) {
+                    Sleep(100);
+                    RAVELOG_DEBUG("failed to close pipe\n");
+                }
             }
         }
         
@@ -377,14 +384,18 @@ public:
             std::istream in(&fpstream);
             std::getline(in, ikfilename);
             if( !in ) {
+                RAVELOG_INFO("filed to get line: %s?!\n",ikfilename.c_str());
                 pclose(pipe);
                 return false;
             }
         }
-        pclose(pipe);
-
+        int generateexit = pclose(pipe);
+        if( generateexit != 0 ) {
+            Sleep(100);
+            RAVELOG_DEBUG("failed to close pipe\n");
+        }
+        
         string ikfastname = str(boost::format("ikfast.%s.%s")%probot->GetRobotStructureHash()%probot->GetActiveManipulator()->GetName());
-
         boost::shared_ptr<IKLibrary> lib = _AddIkLibrary(ikfastname,ikfilename);
         if( !lib ) {
             return false;
@@ -927,9 +938,12 @@ public:
         return true;
     }
 
-    static list< boost::shared_ptr<IKLibrary> >& GetLibraries()
+    static list< boost::shared_ptr<IKLibrary> >*& GetLibraries()
     {
-        static list< boost::shared_ptr<IKLibrary> > s_vStaticLibraries;
+        static list< boost::shared_ptr<IKLibrary> >* s_vStaticLibraries=NULL;
+        if( s_vStaticLibraries == NULL ) {
+            s_vStaticLibraries = new list< boost::shared_ptr<IKLibrary> >();
+        }
         return s_vStaticLibraries;
     }
 
@@ -945,7 +959,7 @@ public:
         std::transform(_name.begin(), _name.end(), name.begin(), ::tolower);
         /// start from the newer libraries
         boost::mutex::scoped_lock lock(GetLibraryMutex());
-        for(list< boost::shared_ptr<IKLibrary> >::reverse_iterator itlib = GetLibraries().rbegin(); itlib != GetLibraries().rend(); ++itlib) {
+        for(list< boost::shared_ptr<IKLibrary> >::reverse_iterator itlib = GetLibraries()->rbegin(); itlib != GetLibraries()->rend(); ++itlib) {
             FOREACHC(itikname,(*itlib)->GetIKNames()) {
                 if( name == *itikname ) {
                     return (*itlib)->CreateSolver(penv,freeinc);

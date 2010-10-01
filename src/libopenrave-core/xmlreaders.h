@@ -1556,12 +1556,7 @@ namespace OpenRAVEXMLParser
                 RAVELOG_ERRORA(str(boost::format("xml readers failed to create instance of type %s:%s\n")%RaveGetInterfaceName(type)%strtype));
             }
             else {
-                try {
-                    _pcustomreader = RaveGetXMLReader(_pinterface->GetInterfaceType(),_pinterface->GetXMLId())(_pinterface,atts);
-                }
-                catch(const openrave_exception& ex) {
-                    _pcustomreader.reset();
-                }
+                _pcustomreader = RaveCallXMLReader(_pinterface->GetInterfaceType(),_pinterface->GetXMLId(),_pinterface,atts);
             }
 
             if( _xmltag.size() == 0 ) {
@@ -1588,15 +1583,12 @@ namespace OpenRAVEXMLParser
             }
 
             // check for registers readers
-            try {
-                _pcustomreader = RaveGetXMLReader(_type,xmlname)(_pinterface,atts);
+            _pcustomreader = RaveCallXMLReader(_type,xmlname,_pinterface,atts);
+            if( !!_pcustomreader ) {
                 _readername = xmlname;
                 if( !!_pcustomreader ) {
                     return PE_Support;
                 }
-            }
-            catch(const openrave_exception& ex) {
-                _pcustomreader.reset();
             }
 
             if (xmlname == "sendcommand" ) {

@@ -144,5 +144,6 @@ void GetPluginAttributesValidated(PLUGININFO& info)
 
 RAVE_PLUGIN_API void DestroyPlugin()
 {
-    IKFastProblem::GetLibraries().clear();
+    delete IKFastProblem::GetLibraries();
+    IKFastProblem::GetLibraries() = NULL;
 }

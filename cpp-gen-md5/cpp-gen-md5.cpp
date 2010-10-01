@@ -20,6 +20,7 @@
 #include <vector>
 #include <sstream>
 #include <cstdio>
+#include <cstring>
 
 #include "md5.h"
 
@@ -32,7 +33,7 @@ int main(int argc, char* argv[])
 {
     if( argc < 2 ) {
         cerr << "No filename given" << endl
-             << "cpp-gen-md5 [filename1 define1] [filename2 define2] ..." << endl
+             << "cpp-gen-md5 [common-string] [shared-filename] [filename1 define1] [filename2 define2]* ..." << endl
              << "Generates a md5 sum from the lexical tokens of a C++ ignoring directives and whitespace." << endl
              << "If only a filename is given, will output a 16 byte string" << endl
              << "If both filename and define are given will output #define @define2@ \"@md5hash@\"" << endl;
@@ -40,9 +41,13 @@ int main(int argc, char* argv[])
     }    
     
     vector<char> vbasedata;
-    getTokenData(argv[1],vbasedata);
+    vbasedata.resize(strlen(argv[1]));
+    if( vbasedata.size() > 0 ) {
+        memcpy(&vbasedata[0],argv[1],vbasedata.size());
+    }
+    getTokenData(argv[2],vbasedata);
 
-    for(int i = 2; i < argc; i += 2) {
+    for(int i = 3; i < argc; i += 2) {
         string md5hash = getmd5hash(argv[i],vbasedata);
         if( md5hash == "" )
             return 1;
