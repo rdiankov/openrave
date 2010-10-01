@@ -31,7 +31,7 @@ using namespace std;
 
 void SetViewer(EnvironmentBasePtr penv, const string& viewername)
 {
-    ViewerBasePtr viewer = penv->CreateViewer(viewername);
+    ViewerBasePtr viewer = RaveCreateViewer(penv,viewername);
     BOOST_ASSERT(!!viewer);
 
     // attach it to the environment:
@@ -71,9 +71,9 @@ int main(int argc, char ** argv)
     if( i < argc )
         viewername = argv[i++];
     
-    // create the main environment
-    EnvironmentBasePtr penv = CreateEnvironment(true);
-    penv->SetDebugLevel(Level_Debug);
+    RaveInitialize(true); // start openrave core
+    EnvironmentBasePtr penv = RaveCreateEnvironment(); // create the main environment
+    RaveSetDebugLevel(Level_Debug);
 
     boost::thread thviewer(boost::bind(SetViewer,penv,viewername));
     // load the scene

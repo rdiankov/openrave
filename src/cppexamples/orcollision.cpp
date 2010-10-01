@@ -37,8 +37,7 @@ void printhelp()
 void printinterfaces(EnvironmentBasePtr penv)
 {
     std::map<InterfaceType, std::vector<std::string> > interfacenames;
-    penv->GetLoadedInterfaces(interfacenames);
-
+    RaveGetLoadedInterfaces(interfacenames);
     stringstream ss;
             
     ss << endl << "Loadable interfaces: " << endl;
@@ -58,8 +57,8 @@ int main(int argc, char ** argv)
         return -1; // no robots to load
     }
 
-    // create the main environment
-    EnvironmentBasePtr penv = CreateEnvironment(true);
+    RaveInitialize(true); // start openrave core
+    EnvironmentBasePtr penv = RaveCreateEnvironment(); // create the main environment
     vector<dReal> vsetvalues; 
 
     // parse the command line options
@@ -71,7 +70,7 @@ int main(int argc, char ** argv)
         }
         else if( strcmp(argv[i], "--checker") == 0 ) {
             // create requested collision checker
-            CollisionCheckerBasePtr pchecker = penv->CreateCollisionChecker(argv[i+1]);
+            CollisionCheckerBasePtr pchecker = RaveCreateCollisionChecker(penv,argv[i+1]);
             if( !pchecker ) {
                 RAVELOG_ERROR("failed to create checker %s\n", argv[i+1]);
                 return -3;

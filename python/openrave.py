@@ -100,7 +100,7 @@ if __name__ == "__main__":
         example.run(args=args)
         sys.exit(0)
     OpenRAVEGlobalArguments.parseGlobal(options)
-    RaveInitialize()
+    RaveInitialize(True)
     if options.listinterfaces is not None or options.listplugins:
         RaveSetDebugLevel(DebugLevel.Error)
     env = Environment()

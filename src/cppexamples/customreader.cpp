@@ -117,7 +117,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 {
     if( !s_RegisteredReader ) {
         /// as long as this pointer is valid, the reader will remain registered
-        s_RegisteredReader = penv->RegisterXMLReader(PT_Controller,"piddata",CustomController::CreateXMLReader);
+        s_RegisteredReader = RaveRegisterXMLReader(PT_Controller,"piddata",CustomController::CreateXMLReader);
     }
     switch(type) {
     case PT_Controller:

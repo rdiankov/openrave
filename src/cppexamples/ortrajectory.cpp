@@ -50,7 +50,7 @@ using namespace std;
 
 void SetViewer(EnvironmentBasePtr penv, const string& viewername)
 {
-    ViewerBasePtr viewer = penv->CreateViewer(viewername);
+    ViewerBasePtr viewer = RaveCreateViewer(penv,viewername);
     penv->AttachViewer(viewer);
     viewer->main(true);
 }
@@ -59,7 +59,8 @@ int main(int argc, char ** argv)
 {
     string scenefilename = "data/lab1.env.xml";
     string viewername = "qtcoin";
-    EnvironmentBasePtr penv = CreateEnvironment(true);
+    RaveInitialize(true);
+    EnvironmentBasePtr penv = RaveCreateEnvironment();
     penv->SetDebugLevel(Level_Debug);
 
     boost::thread thviewer(boost::bind(SetViewer,penv,viewername)); // create the viewer
@@ -79,7 +80,7 @@ int main(int argc, char ** argv)
         {
             EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
         
-            TrajectoryBasePtr traj = penv->CreateTrajectory(probot->GetDOF());
+            TrajectoryBasePtr traj = RaveCreateTrajectory(penv,probot->GetDOF());
             probot->GetDOFValues(q); // get current values
             traj->AddPoint(TrajectoryBase::TPOINT(q,probot->GetTransform(),0.0f));
             q[RaveRandomInt()%probot->GetDOF()] += RaveRandomFloat()-0.5; // move a random axis

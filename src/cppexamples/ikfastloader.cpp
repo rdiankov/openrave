@@ -37,9 +37,9 @@ int main(int argc, char ** argv)
     
     string robotname = argv[1];
     string iktype = argv[2];
+    RaveInitialize(true); // start openrave core
 
-    // create the main environment
-    EnvironmentBasePtr penv = CreateEnvironment(true);
+    EnvironmentBasePtr penv = RaveCreateEnvironment(); // create the main environment
 
     {
         // lock the environment to prevent changes
@@ -52,7 +52,7 @@ int main(int argc, char ** argv)
         }
         penv->AddRobot(probot);
 
-        ProblemInstancePtr pikfast = penv->CreateProblem("ikfast");
+        ProblemInstancePtr pikfast = RaveCreateProblem(penv,"ikfast");
         penv->LoadProblem(pikfast,"");
         stringstream ssin,ssout;
         ssin << "LoadIKFastSolver " << probot->GetName() << " " << (int)IkParameterization::Type_Transform6D;
