@@ -17,8 +17,6 @@
 #ifndef RAVE_ENVIRONMENT_H
 #define RAVE_ENVIRONMENT_H
 
-#include <locale>
-
 #ifdef HAVE_BOOST_FILESYSTEM
 #include <boost/filesystem/operations.hpp>
 #endif
@@ -48,8 +46,6 @@ class Environment : public EnvironmentBase
             RaveInitialize(true);
         }
 
-        // set to the classic locale so that number serialization/hashing works correctly
-        std::locale::global(std::locale::classic());
         _homedirectory = RaveGetHomeDirectory();
         RAVELOG_DEBUGA("setting openrave cache directory to %s\n",_homedirectory.c_str());
 

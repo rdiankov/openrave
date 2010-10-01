@@ -29,6 +29,8 @@
 #include <sys/types.h>
 #endif
 
+#include <locale>
+
 #include "plugindatabase.h"
 
 namespace OpenRAVE {
@@ -76,6 +78,9 @@ public:
     int Initialize(bool bLoadAllPlugins)
     {
         Destroy();
+
+        // set to the classic locale so that number serialization/hashing works correctly
+        std::locale::global(std::locale::classic());
 
 #ifdef _DEBUG
         _nDebugLevel = Level_Debug;

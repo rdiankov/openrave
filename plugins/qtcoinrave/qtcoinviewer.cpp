@@ -38,6 +38,8 @@
 #include <qgl.h>
 #endif
 
+#include <locale>
+
 //const QMetaObject Viewer::staticMetaObject;
 const float TIMER_SENSOR_INTERVAL = (1.0f/60.0f);
 
@@ -214,8 +216,13 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     _timerVideo->setInterval(SbTime(1/(float)VIDEO_FRAMERATE));
 
     
-    if (!_timerVideo->isScheduled())
-        _timerVideo->schedule(); 
+    if (!_timerVideo->isScheduled()) {
+        _timerVideo->schedule();
+    }
+
+    // set to the classic locale so that number serialization/hashing works correctly
+    // for some reason qt4 resets the locale to the default locale at some point, and openrave stops working
+    std::locale::global(std::locale::classic());
 }
 
 QtCoinViewer::~QtCoinViewer()
