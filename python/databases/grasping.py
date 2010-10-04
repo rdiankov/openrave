@@ -287,35 +287,38 @@ class GraspingModel(OpenRAVEModel):
         elif self.robot.GetRobotStructureHash() == 'a43d21a7b6d60d7443922d012bd3b43e': # pa10
             if graspingnoise is None:
                 graspingnoise = 0.01 # 0.01m of noise
+        if avoidlinks is None:
+            avoidlinks = []
+        if friction is None:
+            friction = 0.4
+        if approachrays is None:
+            approachrays = self.computeBoxApproachRays(delta=0.02,normalanglerange=normalanglerange,directiondelta=directiondelta)
+        self.init(friction=friction,avoidlinks=avoidlinks,plannername=plannername)
+        self.generate(preshapes=preshapes,rolls=rolls,graspingnoise=graspingnoise,standoffs=standoffs,approachrays=approachrays,updateenv=updateenv)
+        self.save()
+
+    def generate(self,preshapes=None,standoffs=None,rolls=None,approachrays=None, graspingnoise=None,updateenv=True,forceclosure=True,forceclosurethreshold=1e-9,checkgraspfn=None,disableallbodies=True):
+        """Generates a grasp set by searching space and evaluating contact points.
+
+        All grasp parameters have to be in the bodies's coordinate system (ie: approachrays).
+        @param checkgraspfn: If set, then will be used to validate the grasp. If its evaluation returns false, then grasp will not be added to set. Called by checkgraspfn(contacts,finalconfig,grasp,info)"""
+        print 'Generating Grasp Set for %s:%s:%s'%(self.robot.GetName(),self.manip.GetName(),self.target.GetName())
+        if approachrays is None:
+            approachrays = self.computeBoxApproachRays(delta=0.02,normalanglerange=0)
         if preshapes is None:
+            # should disable everything but the robot
             with self.target:
                 self.target.Enable(False)
                 # do not fill with plannername
                 taskmanip = TaskManipulation(self.robot)
                 final,traj = taskmanip.ReleaseFingers(execute=False,outputfinal=True)
             preshapes = array([final])
-        if approachrays is None:
-            approachrays = self.computeBoxApproachRays(delta=0.02,normalanglerange=normalanglerange,directiondelta=directiondelta)
         if rolls is None:
             rolls = arange(0,2*pi,pi/2)
         if standoffs is None:
             standoffs = array([0,0.025])
-        if friction is None:
-            friction = 0.4
-        if avoidlinks is None:
-            avoidlinks = []
         if graspingnoise is None:
             graspingnoise = 0.0
-        self.init(friction=friction,avoidlinks=avoidlinks,plannername=plannername)
-        self.generate(preshapes=preshapes,rolls=rolls,graspingnoise=graspingnoise,standoffs=standoffs,approachrays=approachrays,updateenv=updateenv)
-        self.save()
-
-    def generate(self,preshapes,standoffs,rolls,approachrays, graspingnoise=None,updateenv=True,forceclosure=True,forceclosurethreshold=1e-9,checkgraspfn=None,disableallbodies=True):
-        """Generates a grasp set by searching space and evaluating contact points.
-
-        All grasp parameters have to be in the bodies's coordinate system (ie: approachrays).
-        @param checkgraspfn: If set, then will be used to validate the grasp. If its evaluation returns false, then grasp will not be added to set. Called by checkgraspfn(contacts,finalconfig,grasp,info)"""
-        print 'Generating Grasp Set for %s:%s:%s'%(self.robot.GetName(),self.manip.GetName(),self.target.GetName())
         time.sleep(0.1) # sleep or otherwise viewer might not load well
         N = approachrays.shape[0]
         with self.env:
