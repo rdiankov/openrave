@@ -2993,6 +2993,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
         .def( "message", &openrave_exception::message, return_copy_const_ref() )
         .def( "__str__", &openrave_exception::message, return_copy_const_ref() )
         ;
+    //exception_translator<std::exception>();
     exception_translator<openrave_exception>();
 
     enum_<DebugLevel>("DebugLevel" DOXY_ENUM(DebugLevel))

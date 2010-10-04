@@ -2462,11 +2462,15 @@ void KinBody::_ComputeInternalInformation()
     }
 
     // set a default pose
-    for(size_t i = 0; i < _veclinks.size(); ++i) {
-        for(size_t j = i+1; j < _veclinks.size(); ++j) {
-            if( _setAdjacentLinks.find(i|(j<<16)) == _setAdjacentLinks.end() &&
-                !GetEnv()->CheckCollision(LinkConstPtr(_veclinks[i]), LinkConstPtr(_veclinks[j])) )
-                _setNonAdjacentLinks.insert(i|(j<<16));
+    {
+        CollisionOptionSaver colsaver(GetEnv(),0); // have to reset the collision options
+        for(size_t i = 0; i < _veclinks.size(); ++i) {
+            for(size_t j = i+1; j < _veclinks.size(); ++j) {
+                if( _setAdjacentLinks.find(i|(j<<16)) == _setAdjacentLinks.end() &&
+                    !GetEnv()->CheckCollision(LinkConstPtr(_veclinks[i]), LinkConstPtr(_veclinks[j])) ) {
+                    _setNonAdjacentLinks.insert(i|(j<<16));
+                }
+            }
         }
     }
 
