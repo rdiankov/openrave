@@ -599,6 +599,10 @@ class InverseReachabilityModel(OpenRAVEModel):
                     link.Enable(link in maniplinks)
             Tgrasp = matrixFromQuat(equivalenceclass[0][0:4])
             Tgrasp[2,3] = equivalenceclass[0][4]
+            Tgrasp = dot(dot(linalg.inv(self.robot.GetTransform()),self.manip.GetBase().GetTransform()),Tgrasp)
+            #posebase = poseFromMatrix(Tbase)
+            #qbaserobotnorm,zbaseangle = normalizeZRotation(reshape(posebase[0:4],(1,4)))
+            #qbaserobotnorm,zbaseangle = normalizeZRotation(
             for sample in equivalenceclass[2][inds,:]:
                 Tmanip = matrixFromAxisAngle([0,0,1],sample[0])
                 Tmanip[0:2,3] = sample[1:3]

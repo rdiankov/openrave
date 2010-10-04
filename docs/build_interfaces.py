@@ -34,7 +34,7 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
     env=Environment()
     try:
-        plugininfo=env.GetPluginInfo()
+        plugininfo=RaveGetPluginInfo()
         text="""
 ----------
 Interfaces
@@ -53,7 +53,7 @@ Interfaces
             for type,names in info.interfacenames:
                 for name in names:
                     print name
-                    interface = env.CreateInterface(type,name)
+                    interface = RaveCreateInterface(env,type,name)
                     if interface is None:
                         print 'failed to create ',type,name
                     else:

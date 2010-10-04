@@ -100,8 +100,10 @@ class CodeGenerator(AutoReloader):
 /// limitations under the License.
 ///
 /// generated %s
-/// To compile with gcc use: gcc -lstdc++ 
-/// To compile without any main function use: gcc -lstdc++ -DIKFAST_NO_MAIN
+/// To compile with gcc:
+///     gcc -lstdc++ ik.cpp
+/// To compile without any main function as a shared object:
+///     gcc -fPIC -lstdc++ -DIKFAST_NO_MAIN -shared -Wl,-soname,ik.so -o ik.so ik.cpp
 #include <math.h>
 #include <assert.h>
 #include <vector>
