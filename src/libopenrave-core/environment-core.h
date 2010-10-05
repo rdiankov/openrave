@@ -1696,6 +1696,10 @@ protected:
                 nLastUpdateTime = GetMicroTime();
                 UpdatePublishedBodies();
             }
+
+            if( bNeedSleep ) {
+                Sleep(1);
+            }
         }
     }
 
