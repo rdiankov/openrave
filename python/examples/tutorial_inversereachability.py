@@ -13,10 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-======================================================
-Move Hand to Target: Use Inverse Reachability Database
-======================================================
-
 This tutorial shows how to generate and use the inverse-reachability database along with the grasping database in OpenRAVE for PR2.
 
 .. image:: ../../images/example_tutorials/ir_grasps.png
@@ -355,7 +351,7 @@ import time,sys
 from optparse import OptionParser
 from openravepy.databases import inversereachability
 
-class GraspReachability:
+class InverseReachabilityDemo:
     def __init__(self,env):
         self.env = env
         self.robot = self.env.GetRobot('pr2')
@@ -400,6 +396,7 @@ class GraspReachability:
         
     def getPossibleBasePoses(self,Tgrasp, gripper_angle=.548,N=1):
         """return possible base poses for grasp specified by Tgrasp
+
         :param Tgrasp: 4x4 numpy.array, row major matrix, the grasp transform in global frame equals manip.GetEndEffectorTransform() in the goal state
         
         :param gripper_angle: float, the gripper angle
@@ -480,7 +477,9 @@ class GraspReachability:
     
     # Code fragment from `databases.grasping`
     class GripperVisibility:
-        """When 'entered' will hide all the non-gripper links in order to facilitate visiblity of the gripper"""
+        """When 'entered' will hide all the non-gripper links in order to facilitate visiblity of the gripper
+
+        """
         def __init__(self,manip):
             self.manip = manip
             self.robot = self.manip.GetRobot()
@@ -507,6 +506,7 @@ class GraspReachability:
 
     def showGrasp(self,TGrasp,angle=.548):
         """visualizes a grasp transform
+
         :param TGrasp: a 4x4 mat in global frame
         :param angle: is between 0 and .548
         """
@@ -555,7 +555,7 @@ def run(args=None):
         gripper_angle = .1
     
         # use inversereachability dabase to find the possible robot base poses for the grasp  
-        gr = GraspReachability(env)
+        gr = InverseReachabilityDemo(env)
         gr.getPossibleBasePoses(O_T_grasp,gripper_angle,10)
     
     finally:
