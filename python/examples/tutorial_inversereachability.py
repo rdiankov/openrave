@@ -4,7 +4,7 @@
 Move Hand to Target: Use Inverse Reachability Database
 ======================================================
 
-This tutorial shows how to generate and use the inverse-reachability database along with the grasping database in OpenRAVE for PR2.
+This tutorial shows how to generate and use the inverse-reachability database in OpenRAVE for PR2.
 
 .. image:: ../../images/example_tutorials/ir_grasps.png
    :width: 200px
@@ -23,7 +23,7 @@ Prerequisite
 OpenRAVE version
 ~~~~~~~~~~~~~~~~
 
-Make sure OpenRAVE is built with r1753 or higher, to check::
+Make sure OpenRAVE is built with r1764 or higher, to check::
 
   roscd openrave
   cat Makefile | grep SVN_REVISION
@@ -198,7 +198,7 @@ Load database
         print 'loading irmodel'
         if not self.irmodel.load():
             print 'do you want to generate irmodel for your robot? it might take several hours'
-            print 'or you can go to http://people.csail.mit.edu/liuhuan/pr2/openrave/.openrave/ to get the database for PR2 for openrave r1753'
+            print 'or you can go to http://people.csail.mit.edu/liuhuan/pr2/openrave/.openrave/ to get the database for PR2 for openrave r1764'
             input = raw_input('[Y/n]')
             if input == 'y' or input == 'Y' or input == '\\n' or input == '':
                 class IrmodelOption:
@@ -363,7 +363,7 @@ class InverseReachabilityDemo:
         print 'loading irmodel'
         if not self.irmodel.load():
             print 'do you want to generate irmodel for your robot? it might take several hours'
-            print 'or you can go to http://people.csail.mit.edu/liuhuan/pr2/openrave/.openrave/ to get the database for PR2 for openrave r1753'
+            print 'or you can go to http://people.csail.mit.edu/liuhuan/pr2/openrave/.openrave/ to get the database for PR2 for openrave r1764'
             input = raw_input('[Y/n]')
             if input == 'y' or input == 'Y' or input == '\n' or input == '':
                 class IrmodelOption:
@@ -388,8 +388,7 @@ class InverseReachabilityDemo:
     def showPossibleBasePoses(self,Tgrasp, gripper_angle=.548,N=1):
         """visualizes possible base poses for a grasp specified by Tgrasp and gripper_angle
         
-        :param Tgrasp: 4x4 numpy.array, row major matrix, the grasp transform in global frame
-                       equals manip.GetEndEffectorTransform() in the goal state
+        :param Tgrasp: 4x4 numpy.array, row major matrix, the grasp transform in global frame. equals manip.GetEndEffectorTransform() in the goal state
         :param gripper_angle: float, the gripper angle
         :param N: int, the number of sample poses we want to get 
         """
