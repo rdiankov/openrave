@@ -67,7 +67,6 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
         _treeForward._distmetricfn = params->_distmetricfn;
         _treeForward.AddNode(-1, params->vinitialconfig);
 
-        RAVELOG_DEBUGA("RrtPlanner::InitPlan - RRT Planner Initialized\n");
         return true;
     }
 
@@ -144,42 +143,42 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        _parameters.reset();
-        PlannerParametersPtr parameters(new PlannerParameters());
-        parameters->copy(pparams);
-        if( !RrtPlanner<SimpleNode>::_InitPlan(pbase,parameters) ) {
+        _parameters.reset(new PlannerParameters());
+        _parameters->copy(pparams);
+        if( !RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters) ) {
+            _parameters.reset();
             return false;
         }
 
         RobotBase::RobotStateSaver savestate(_robot);
 
-        _treeBackward.Reset(shared_planner(), parameters->GetDOF());
-        _treeBackward._fStepLength = parameters->_fStepLength;
-        _treeBackward._distmetricfn = parameters->_distmetricfn;
+        _treeBackward.Reset(shared_planner(), _parameters->GetDOF());
+        _treeBackward._fStepLength = _parameters->_fStepLength;
+        _treeBackward._distmetricfn = _parameters->_distmetricfn;
     
         //read in all goals
         int goal_index = 0;
         int num_goals = 0;
-        vector<dReal> vgoal(parameters->GetDOF());
+        vector<dReal> vgoal(_parameters->GetDOF());
 
-        while(goal_index < (int)parameters->vgoalconfig.size()) {
-            for(int i = 0 ; i < parameters->GetDOF(); i++) {
-                if(goal_index < (int)parameters->vgoalconfig.size())
-                    vgoal[i] = parameters->vgoalconfig[goal_index];
+        while(goal_index < (int)_parameters->vgoalconfig.size()) {
+            for(int i = 0 ; i < _parameters->GetDOF(); i++) {
+                if(goal_index < (int)_parameters->vgoalconfig.size())
+                    vgoal[i] = _parameters->vgoalconfig[goal_index];
                 else {
                     RAVELOG_ERRORA("BirrtPlanner::InitPlan - Error: goals are improperly specified:\n");
-                    parameters.reset();
+                    _parameters.reset();
                     return false;
                 }
                 goal_index++;
             }
         
-            if(!CollisionFunctions::CheckCollision(parameters,_robot,vgoal)) {
+            if(!CollisionFunctions::CheckCollision(_parameters,_robot,vgoal)) {
 
                 bool bSuccess = true;     
-                if( !!parameters->_constraintfn ) {
+                if( !!_parameters->_constraintfn ) {
                     // filter
-                    if( !parameters->_constraintfn(vgoal, vgoal, 0) ) {
+                    if( !_parameters->_constraintfn(vgoal, vgoal, 0) ) {
                         // failed
                         RAVELOG_WARNA("goal state rejected by constraint fn\n");
                         bSuccess = false;
@@ -200,16 +199,17 @@ class BirrtPlanner : public RrtPlanner<SimpleNode>
             }
         }
     
-        if( num_goals == 0 && !parameters->_samplegoalfn ) {
+        if( num_goals == 0 && !_parameters->_samplegoalfn ) {
             RAVELOG_WARNA("no goals specified\n");
-            parameters.reset();
+            _parameters.reset();
             return false;
         }    
 
-        if( parameters->_nMaxIterations <= 0 )
-            parameters->_nMaxIterations = 10000;
+        if( _parameters->_nMaxIterations <= 0 ) {
+            _parameters->_nMaxIterations = 10000;
+        }
 
-        _parameters=parameters;
+        RAVELOG_DEBUGA("BirrtPlanner::InitPlan - RRT Planner Initialized\n");
         return true;
     }
 
@@ -348,27 +348,26 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
     bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        _parameters.reset();
-        boost::shared_ptr<BasicRRTParameters> parameters(new BasicRRTParameters());
-        parameters->copy(pparams);
-        if( !RrtPlanner<SimpleNode>::_InitPlan(pbase,parameters) ) {
-            parameters.reset();
+        _parameters.reset(new BasicRRTParameters());
+        _parameters->copy(pparams);
+        if( !RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters) ) {
+            _parameters.reset();
             return false;
         }
         //_bOneStep = parameters->vnParameters[0]>0;
     
         //read in all goals
         int goal_index = 0;
-        vector<dReal> vgoal(parameters->GetDOF());
+        vector<dReal> vgoal(_parameters->GetDOF());
         _vecGoals.resize(0);
 
-        while(parameters->vgoalconfig.size() > 0) {
-            for(int i = 0 ; i < parameters->GetDOF(); i++) {
-                if(goal_index < (int)parameters->vgoalconfig.size())
-                    vgoal[i] = parameters->vgoalconfig[goal_index];
+        while(_parameters->vgoalconfig.size() > 0) {
+            for(int i = 0 ; i < _parameters->GetDOF(); i++) {
+                if(goal_index < (int)_parameters->vgoalconfig.size())
+                    vgoal[i] = _parameters->vgoalconfig[goal_index];
                 else {
                     RAVELOG_ERRORA("BirrtPlanner::InitPlan - Error: goals are improperly specified:\n");
-                    parameters.reset();
+                    _parameters.reset();
                     return false;
                 }
                 goal_index++;
@@ -377,9 +376,9 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
             if(!CollisionFunctions::CheckCollision(GetParameters(),_robot,vgoal)) {
 
                 bool bSuccess = true;     
-                if( !!parameters->_constraintfn ) {
+                if( !!_parameters->_constraintfn ) {
                     // filter
-                    if( !parameters->_constraintfn(vgoal, vgoal, 0) ) {
+                    if( !_parameters->_constraintfn(vgoal, vgoal, 0) ) {
                         // failed
                         RAVELOG_WARNA("goal state rejected by constraint fn\n");
                         bSuccess = false;
@@ -398,18 +397,17 @@ class BasicRrtPlanner : public RrtPlanner<SimpleNode>
                 }
             }
         
-            if(goal_index == (int)parameters->vgoalconfig.size())
+            if(goal_index == (int)_parameters->vgoalconfig.size())
                 break;
         }
         
-        if( _vecGoals.size() == 0 && !parameters->_goalfn ) {
+        if( _vecGoals.size() == 0 && !_parameters->_goalfn ) {
             RAVELOG_WARNA("no goals or goal function specified\n");
-            parameters.reset();
+            _parameters.reset();
             return false;
         }
         
         RAVELOG_DEBUGA("RrtPlanner::InitPlan - RRT Planner Initialized\n");
-        _parameters=parameters;
         return true;
     }
 
@@ -532,13 +530,13 @@ public:
     bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        _parameters.reset();
-        boost::shared_ptr<ExplorationParameters> parameters(new ExplorationParameters());
-        parameters->copy(pparams);
-        if( !RrtPlanner<SimpleNode>::_InitPlan(pbase,parameters) ) {
+        _parameters.reset(new ExplorationParameters());
+        _parameters->copy(pparams);
+        if( !RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters) ) {
+            _parameters.reset();
             return false;
         }
-        _parameters=parameters;
+        RAVELOG_DEBUG("ExplorationPlanner::InitPlan - RRT Planner Initialized\n");
         return true;
     }
 

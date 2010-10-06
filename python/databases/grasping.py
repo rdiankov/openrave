@@ -422,10 +422,13 @@ class GraspingModel(OpenRAVEModel):
                             self.robot.SetJointValues(finalconfig[0])
                             self.robot.SetTransform(finalconfig[1])
                             self.env.UpdatePublishedBodies()
-                        time.sleep(delay)
+                        if delay is None:
+                            raw_input('press any key to continue: ')
+                        elif delay > 0:
+                            time.sleep(delay)
                     except planning_error,e:
                         print 'bad grasp!',e
-    def showgrasp(self,grasp,collisionfree=False):
+    def showgrasp(self,grasp,collisionfree=False,delay=None):
         with RobotStateSaver(self.robot):
             with self.GripperVisibility(self.manip):
                 with self.env:
@@ -436,7 +439,10 @@ class GraspingModel(OpenRAVEModel):
                         link.SetTransform(dot(Tdelta,link.GetTransform()))
                     self.env.UpdatePublishedBodies()
                     # wait while environment is locked?
-                    raw_input('press any key to continue: ')
+                    if delay is None:
+                        raw_input('press any key to continue: ')
+                    elif delay > 0:
+                        time.sleep(delay)
     def testGrasp(self,graspingnoise=None,Ngraspingtries = 20,forceclosurethreshold=1e-9,**kwargs):
         contacts,finalconfig,mindist,volume = self.runGrasp(graspingnoise=0,**kwargs)
         if mindist >= forceclosurethreshold and graspingnoise > 0:
