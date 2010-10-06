@@ -624,9 +624,8 @@ class InverseReachabilityModel(OpenRAVEModel):
                         for geom in link.GetGeometries():
                             geom.SetTransparency(transparency)
                     self.env.AddRobot(newrobot,True)
-                    with self.env:
-                        newrobot.SetTransform(T)
-                        newrobot.SetJointValues(values)
+                    newrobot.SetTransform(T)
+                    newrobot.SetJointValues(values)
                     newrobots.append(newrobot)
                     #time.sleep(0.1)
             raw_input('press any key to continue')

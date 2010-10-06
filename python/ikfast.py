@@ -1884,7 +1884,8 @@ class IKFastSolver(AutoReloader):
             eqcombinations.sort(lambda x, y: x[0]-y[0])
             solutions = []
             for comb in eqcombinations:
-                if len(solutions) > 0 and comb[0] > 200: # skip if too complex
+                # skip if too complex
+                if len(solutions) > 0 and comb[0] > 200:
                     break
                 # try to solve for both sin and cos terms
                 s = solve(comb[1],[svar,cvar])
@@ -1902,7 +1903,6 @@ class IKFastSolver(AutoReloader):
                             continue
                         if self.chop(simplify(fraction(cvarsol)[1]))== 0:
                             continue
-
                         expandedsol = atan2(s[svar],s[cvar]).subs(listsymbols)
                         # sometimes the returned simplest solution makes really gross approximations
                         simpsol = self.customtrigsimp(expandedsol, deep=True)
@@ -1914,14 +1914,16 @@ class IKFastSolver(AutoReloader):
                             solutions.append(SolverSolution(var.name,jointeval=[simpsol],IsHinge=self.IsHinge(var.name)))
                             if len(self.checkForDivideByZero(simpsol)) == 0:
                                 break
-                        if len(solutions) >= 4: # probably more than enough already?
-                            break
+                        if len(solutions) >= 4:
+                            # probably more than enough already?
+                            break                
                 except AttributeError,e:
                     print e
                     print 'solve is returning bad solution:',s
                     print comb[1]
                     print comb[1][0].subs(listsymbols)
                     print comb[1][1].subs(listsymbols)
+
             if len(solutions) > 0:
                 return solutions
 

@@ -101,9 +101,9 @@ int main(int argc, char ** argv)
             // re-timing the trajectory with cubic interpolation
             ptraj->CalcTrajTiming(probot,TrajectoryBase::CUBIC,true,true);
 
-            /// draw the end effector of the trajectory
+            // draw the end effector of the trajectory
             {
-                RobotBase::RobotStateSaver saver(probot); // save the state of the robot since
+                RobotBase::RobotStateSaver saver(probot); // save the state of the robot since will be setting joint values
                 vector<RaveVector<float> > vpoints;
                 for(dReal ftime = 0; ftime <= ptraj->GetTotalDuration(); ftime += 0.01) {
                     TrajectoryBase::TPOINT tp;

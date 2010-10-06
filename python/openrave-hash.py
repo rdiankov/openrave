@@ -27,19 +27,27 @@ if __name__ == "__main__":
                       help='if manipulator name is specified will return the manipulator hash of the robot')
     parser.add_option('--robothash',action='store_true',dest='robothash',default=False,
                       help='if set, will output the robot hash of the loaded body')
+    parser.add_option('--kinematics',action='store_true',dest='kinematics',default=False,
+                      help='If set, will only return kinematics information')
     (options, args) = parser.parse_args()
     body = None
-    RaveSetDebugLevel(DebugLevel.Fatal)
-    env=Environment(False) # ideally, the hashes should *not* be overloaded by other users, so we should expect the same values regardless of what plugins are loaded
+    RaveInitialize(False, DebugLevel.Fatal)
+    env=Environment()
+    # ideally, the hashes should *not* be overloaded by other users, so we should expect the same values regardless of what plugins are loaded
     try:
         env.Load(args[0])
         if options.manipname:
-            print env.GetRobots()[0].GetManipulator(options.manipname).GetStructureHash()
+            if options.kinematics:
+                print env.GetRobots()[0].GetManipulator(options.manipname).GetKinematicsStructureHash()
+            else:
+                print env.GetRobots()[0].GetManipulator(options.manipname).GetStructureHash()
         elif options.sensorname:
             print env.GetRobots()[0].GetSensor(options.sensorname).GetStructureHash()
         elif options.robothash:
+            assert(not options.kinematics)
             print env.GetRobots()[0].GetRobotStructureHash()
         else:
+            assert(not options.kinematics)
             print env.GetBodies()[0].GetKinematicsGeometryHash()
     finally:
         env.Destroy()
