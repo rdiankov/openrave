@@ -67,6 +67,7 @@ int main(int argc, char ** argv)
     boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(penv,probot->GetActiveDOF()));
 
     while(1) {
+        EnvironmentBase::GraphHandlePtr pgraph;
         {
             EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
 
@@ -99,6 +100,19 @@ int main(int argc, char ** argv)
 
             // re-timing the trajectory with cubic interpolation
             ptraj->CalcTrajTiming(probot,TrajectoryBase::CUBIC,true,true);
+
+            /// draw the end effector of the trajectory
+            {
+                RobotBase::RobotStateSaver saver(probot); // save the state of the robot since
+                vector<RaveVector<float> > vpoints;
+                for(dReal ftime = 0; ftime <= ptraj->GetTotalDuration(); ftime += 0.01) {
+                    TrajectoryBase::TPOINT tp;
+                    ptraj->SampleTrajectory(ftime,tp);
+                    probot->SetActiveDOFValues(tp.q);
+                    vpoints.push_back(pmanip->GetEndEffectorTransform().trans);
+                }
+                pgraph = penv->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),0.01f);
+            }
         }
 
         // send the trajectory to the robot
