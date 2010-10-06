@@ -1,18 +1,9 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
-# 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#     http://www.apache.org/licenses/LICENSE-2.0
-# 
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 """
+======================================================
+Move Hand to Target: Use Inverse Reachability Database
+======================================================
+
 This tutorial shows how to generate and use the inverse-reachability database along with the grasping database in OpenRAVE for PR2.
 
 .. image:: ../../images/example_tutorials/ir_grasps.png
@@ -349,7 +340,7 @@ else:
 
 import time,sys
 from optparse import OptionParser
-from openravepy.databases import inversereachability
+from openravepy.databases import inversereachability,grasping
 
 class InverseReachabilityDemo:
     def __init__(self,env):
@@ -394,13 +385,12 @@ class InverseReachabilityDemo:
         # make sure the robot and manipulator match the database
         assert self.irmodel.robot == self.robot and self.irmodel.manip == self.robot.GetActiveManipulator()   
         
-    def getPossibleBasePoses(self,Tgrasp, gripper_angle=.548,N=1):
-        """return possible base poses for grasp specified by Tgrasp
-
-        :param Tgrasp: 4x4 numpy.array, row major matrix, the grasp transform in global frame equals manip.GetEndEffectorTransform() in the goal state
+    def showPossibleBasePoses(self,Tgrasp, gripper_angle=.548,N=1):
+        """visualizes possible base poses for a grasp specified by Tgrasp and gripper_angle
         
+        :param Tgrasp: 4x4 numpy.array, row major matrix, the grasp transform in global frame
+                       equals manip.GetEndEffectorTransform() in the goal state
         :param gripper_angle: float, the gripper angle
-        
         :param N: int, the number of sample poses we want to get 
         """
         # setting the gripper angle
@@ -475,52 +465,23 @@ class InverseReachabilityDemo:
         time.sleep(10)
         pause()
     
-    # Code fragment from `databases.grasping`
-    class GripperVisibility:
-        """When 'entered' will hide all the non-gripper links in order to facilitate visiblity of the gripper
-
-        """
-        def __init__(self,manip):
-            self.manip = manip
-            self.robot = self.manip.GetRobot()
-            self.hiddengeoms = []
-        def __enter__(self):
-            self.hiddengeoms = []
-            with self.robot.GetEnv():
-                # stop rendering the non-gripper links
-                childlinkids = [link.GetIndex() for link in self.manip.GetChildLinks()]
-                for link in self.robot.GetLinks():
-                    if link.GetIndex() not in childlinkids:
-                        for geom in link.GetGeometries():
-                            self.hiddengeoms.append((geom,geom.IsDraw()))
-                            geom.SetDraw(False)
-                        link.Enable(False) # disable collision checking
-        def __exit__(self,type,value,traceback):
-            with self.robot.GetEnv():
-                for geom,isdraw in self.hiddengeoms:
-                    geom.SetDraw(isdraw)
-                childlinkids = [link.GetIndex() for link in self.manip.GetChildLinks()]
-                for link in self.robot.GetLinks():
-                    if link.GetIndex() not in childlinkids:
-                        link.Enable(True)
-
-    def showGrasp(self,TGrasp,angle=.548):
+    def showGrasp(self,Tgrasp,angle=.548):
         """visualizes a grasp transform
-
-        :param TGrasp: a 4x4 mat in global frame
-        :param angle: is between 0 and .548
+        
+        :param Tgrasp: a 4x4 mat in global frame
+        :param angle: between 0 and .548
         """
         probot = self.robot
         pmanip = probot.GetActiveManipulator()
         v = probot.GetActiveDOFValues()
         v[47] = angle
         probot.SetActiveDOFValues(v)
-        with self.GripperVisibility(pmanip): # show only the gripper
+        with grasping.GraspingModel.GripperVisibility(pmanip): # show only the gripper
             O_T_R = mat(probot.GetTransform()) # robot transform R in global frame O 
             O_T_G = mat(pmanip.GetEndEffectorTransform()) # grasping frame G in global frame O
             G_T_O = linalg.inv(O_T_G) # global frame O in grasping frame G
             G_T_R = dot(G_T_O, O_T_R) # robot frame R in grasping frame G
-            O_T_G_goal = mat(TGrasp) # final grasping frame G_goal in global frame O 
+            O_T_G_goal = mat(Tgrasp) # final grasping frame G_goal in global frame O 
             O_T_R_goal = dot(O_T_G_goal,G_T_R) # final robot transform R_goal in global frame O
                             
             probot.SetTransform(array(O_T_R_goal))
@@ -531,6 +492,10 @@ def pause():
     raw_input('press ENTER to continue...')
 
 def run(args=None):
+    """
+    
+    :param args: arguments for script to parse, if not specified will use sys.argv
+    """
     # set up planning environment
     parser = OptionParser(description='Move base where the robot can perform target grasp using inversereachability database.')
     OpenRAVEGlobalArguments.addOptions(parser)
@@ -556,7 +521,7 @@ def run(args=None):
     
         # use inversereachability dabase to find the possible robot base poses for the grasp  
         gr = InverseReachabilityDemo(env)
-        gr.getPossibleBasePoses(O_T_grasp,gripper_angle,10)
+        gr.showPossibleBasePoses(O_T_grasp,gripper_angle,10)
     
     finally:
         # destroy planning environment and clean up
