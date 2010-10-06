@@ -1,4 +1,17 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 ======================================================
 Move Hand to Target: Use Inverse Reachability Database
@@ -387,10 +400,11 @@ class GraspReachability:
         
     def getPossibleBasePoses(self,Tgrasp, gripper_angle=.548,N=1):
         """return possible base poses for grasp specified by Tgrasp
-        Tgrasp: 4x4 numpy.array, row major matrix, the grasp transform in global frame
-                equals manip.GetEndEffectorTransform() in the goal state
-        gripper_angle: float, the gripper angle
-        N: int, the number of sample poses we want to get 
+        :param Tgrasp: 4x4 numpy.array, row major matrix, the grasp transform in global frame equals manip.GetEndEffectorTransform() in the goal state
+        
+        :param gripper_angle: float, the gripper angle
+        
+        :param N: int, the number of sample poses we want to get 
         """
         # setting the gripper angle
         v = self.robot.GetActiveDOFValues()
@@ -493,8 +507,8 @@ class GraspReachability:
 
     def showGrasp(self,TGrasp,angle=.548):
         """visualizes a grasp transform
-        TGrasp is a 4x4 mat in global frame
-        angle is between 0 and .548
+        :param TGrasp: a 4x4 mat in global frame
+        :param angle: is between 0 and .548
         """
         probot = self.robot
         pmanip = probot.GetActiveManipulator()
