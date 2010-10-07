@@ -141,7 +141,7 @@ Set up environment
         target = env.ReadKinBodyXMLFile('data/mug2.kinbody.xml')
         env.AddKinBody(target)
         # initialize target pose, for visualization and collision checking purpose only
-        O_T_Target = mat([[1,0,0,1],[0,1,0,0],[0,0,1,.9],[0,0,0,1]])
+        O_T_Target = array([[1,0,0,1],[0,1,0,0],[0,0,1,.9],[0,0,0,1]])
         target.SetTransform(array(O_T_Target))
 
         ...
@@ -467,7 +467,7 @@ class InverseReachabilityDemo:
     def showGrasp(self,Tgrasp,angle=.548):
         """visualizes a grasp transform
         
-        :param Tgrasp: a 4x4 mat in global frame
+        :param Tgrasp: a 4x4 row-major matrix in numpy.array format in global frame
         :param angle: between 0 and .548
         """
         probot = self.robot
@@ -476,16 +476,16 @@ class InverseReachabilityDemo:
         v[47] = angle
         probot.SetActiveDOFValues(v)
         with grasping.GraspingModel.GripperVisibility(pmanip): # show only the gripper
-            O_T_R = mat(probot.GetTransform()) # robot transform R in global frame O 
-            O_T_G = mat(pmanip.GetEndEffectorTransform()) # grasping frame G in global frame O
+            O_T_R = probot.GetTransform() # robot transform R in global frame O 
+            O_T_G = pmanip.GetEndEffectorTransform() # grasping frame G in global frame O
             G_T_O = linalg.inv(O_T_G) # global frame O in grasping frame G
             G_T_R = dot(G_T_O, O_T_R) # robot frame R in grasping frame G
-            O_T_G_goal = mat(Tgrasp) # final grasping frame G_goal in global frame O 
+            O_T_G_goal = Tgrasp # final grasping frame G_goal in global frame O 
             O_T_R_goal = dot(O_T_G_goal,G_T_R) # final robot transform R_goal in global frame O
                             
-            probot.SetTransform(array(O_T_R_goal))
+            probot.SetTransform(O_T_R_goal)
             pause()
-            probot.SetTransform(array(O_T_R))
+            probot.SetTransform(O_T_R)
 
 def pause():
     raw_input('press ENTER to continue...')
