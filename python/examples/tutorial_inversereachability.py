@@ -20,14 +20,6 @@ This tutorial shows how to generate and use the inverse-reachability database in
 Prerequisite
 ------------
 
-OpenRAVE version
-~~~~~~~~~~~~~~~~
-
-Make sure OpenRAVE is built with r1764 or higher, to check::
-
-  roscd openrave
-  cat Makefile | grep SVN_REVISION
-  
 IK solvers
 ~~~~~~~~~~
 
@@ -181,7 +173,7 @@ Load database
         print 'loading irmodel'
         if not self.irmodel.load():
             print 'do you want to generate irmodel for your robot? it might take several hours'
-            print 'or you can go to http://people.csail.mit.edu/liuhuan/pr2/openrave/.openrave/ to get the database for PR2 for openrave r1764'
+            print 'or you can go to http://people.csail.mit.edu/liuhuan/pr2/openrave/.openrave/ to get the database for PR2'
             input = raw_input('[Y/n]')
             if input == 'y' or input == 'Y' or input == '\\n' or input == '':
                 class IrmodelOption:
@@ -346,7 +338,7 @@ class InverseReachabilityDemo:
         print 'loading irmodel'
         if not self.irmodel.load():
             print 'do you want to generate irmodel for your robot? it might take several hours'
-            print 'or you can go to http://people.csail.mit.edu/liuhuan/pr2/openrave/.openrave/ to get the database for PR2 for openrave r1764'
+            print 'or you can go to http://people.csail.mit.edu/liuhuan/pr2/openrave/.openrave/ to get the database for PR2'
             input = raw_input('[Y/n]')
             if input == 'y' or input == 'Y' or input == '\n' or input == '':
                 class IrmodelOption:
