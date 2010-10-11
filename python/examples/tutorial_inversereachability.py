@@ -131,26 +131,9 @@ Set up environment
 .. code-block:: python
 
     # set up planning environment
-    parser = OptionParser(description='Move base where the robot can perform target grasp using inversereachability database.')
-    OpenRAVEGlobalArguments.addOptions(parser)
-    (options, leftargs) = parser.parse_args(args=args) # use default options
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    try:
-        robot = env.ReadRobotXMLFile('robots/pr2-beta-static.robot.xml')
-        env.AddRobot(robot)
-        target = env.ReadKinBodyXMLFile('data/mug2.kinbody.xml')
-        env.AddKinBody(target)
-        # initialize target pose, for visualization and collision checking purpose only
-        O_T_Target = array([[1,0,0,1],[0,1,0,0],[0,0,1,.9],[0,0,0,1]])
-        target.SetTransform(array(O_T_Target))
-
-        ...
-        
-    finally:
-        # destroy planning environment and clean up
-        env.Destroy()
-        RaveDestroy()
-        
+    env = Environment()
+    env.SetViewer('qtcoin')
+    
 Set up goal
 ~~~~~~~~~~~
 
@@ -499,7 +482,7 @@ def run(args=None):
     parser = OptionParser(description='Move base where the robot can perform target grasp using inversereachability database.')
     OpenRAVEGlobalArguments.addOptions(parser)
     (options, leftargs) = parser.parse_args(args=args) # use default options 
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True) # the special setup for openrave tutorial
     try:
         robot = env.ReadRobotXMLFile('robots/pr2-beta-static.robot.xml')
         env.AddRobot(robot)

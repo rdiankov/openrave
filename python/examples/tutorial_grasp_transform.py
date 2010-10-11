@@ -26,10 +26,8 @@ Initialize the environment
 .. code-block:: python
 
     # set up planning environment
-    parser = OptionParser(description='Find the transform that moves the hand to target')
-    OpenRAVEGlobalArguments.addOptions(parser)
-    (options, leftargs) = parser.parse_args(args=args) # use default options 
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+    env = Environment()
+    env.SetViewer('qtcoin')
 
 Load the robot and object
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -164,7 +162,7 @@ def run(args=None):
     parser = OptionParser(description='Find the transform that moves the hand to target')
     OpenRAVEGlobalArguments.addOptions(parser)
     (options, leftargs) = parser.parse_args(args=args) # use default options 
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True) # the special setup for openrave tutorial
     try:
         robot = env.ReadRobotXMLFile('robots/pr2-beta-static.robot.xml')
         env.AddRobot(robot)
