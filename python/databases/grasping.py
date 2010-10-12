@@ -180,7 +180,7 @@ class GraspingModel(OpenRAVEModel):
         self.grasps = []
         self.graspindices = dict()
         self.grasper = None
-        self.basemanip = BaseManipulation(self.robot,maxvelmult=maxvelmult)
+        self.basemanip = None
         self.preprocess()
         # only the indices used by the TaskManipulation plugin should start with an 'i'
         graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':len(self.manip.GetGripperIndices()),'igrasptrans':12,'forceclosure':1,'grasptrans_nocol':12}
@@ -200,6 +200,7 @@ class GraspingModel(OpenRAVEModel):
     def getversion(self):
         return 4
     def init(self,friction,avoidlinks,plannername=None):
+        self.basemanip = BaseManipulation(self.robot,maxvelmult=maxvelmult)
         self.grasper = Grasper(self.robot,friction=friction,avoidlinks=avoidlinks,plannername=plannername)
         self.grasps = []
     def load(self):
