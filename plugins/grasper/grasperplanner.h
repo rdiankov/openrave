@@ -323,6 +323,7 @@ public:
             // get closing direction from manipulators
             for(size_t i = 0; i < _robot->GetActiveDOFIndices().size(); ++i) {
                 FOREACHC(itmanip, _robot->GetManipulators()) {
+                    BOOST_ASSERT((*itmanip)->GetClosingDirection().size() == (*itmanip)->GetGripperIndices().size());
                     vector<dReal>::const_iterator itclosing = (*itmanip)->GetClosingDirection().begin();
                     FOREACHC(itgripper,(*itmanip)->GetGripperIndices()) {
                         if( *itclosing != 0 && *itgripper == _robot->GetActiveDOFIndices().at(i) ) {
