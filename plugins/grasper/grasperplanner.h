@@ -402,14 +402,14 @@ public:
                         }
                         else {
                             if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                                RAVELOG_VERBOSEA(str(boost::format("Collision (%d) of link %s using joint %d [%s]\n")%ct%vlinks.at(q)->GetName()%nJointIndex%_report->__str__()));
+                                RAVELOG_VERBOSEA(str(boost::format("Collision (%d) of link %s using joint %d, value=%f [%s]\n")%ct%vlinks.at(q)->GetName()%nJointIndex%dofvals[ifing]%_report->__str__()));
                                 stringstream ss; ss << "Transform: " << vlinks.at(q)->GetTransform() << "Joint Vals: ";
                                 for(int vi = 0; vi < _robot->GetActiveDOF();vi++)
                                     ss << dofvals[vi] << " ";
                                 ss << endl;
                                 RAVELOG_VERBOSEA(ss.str());
                             }
-                     
+                            
                             if( (ct & CT_SelfCollision) || _parameters->bavoidcontact ) {
                                 // don't want the robot to end up in self collision, so back up
                                 dofvals[ifing] -= vclosingdir[ifing] * step_size;
@@ -421,20 +421,22 @@ public:
                     }
                 }
 
-                for(int j = 0; j < _robot->GetActiveDOF(); j++)
+                for(int j = 0; j < _robot->GetActiveDOF(); j++) {
                     ptemp.q[j] = dofvals[j];
-                if(_parameters->breturntrajectory)
+                }
+                if(_parameters->breturntrajectory) {
                     ptraj->AddPoint(ptemp); 
-
-                if(collision)
+                }
+                if(collision) {
                     break;
-
+                }
                 dofvals[ifing] += vclosingdir[ifing] * step_size;
                 bMoved = true;
             }
         }
 
         bool bAddLastPoint = true;
+        _robot->SetActiveDOFValues(dofvals,true);
         for(int q = 0; q < (int)vlinks.size(); q++) {
             int ct = CheckCollision(vlinks[q]);
             if( ct & CT_AvoidLinkHit )
@@ -446,7 +448,6 @@ public:
 
         if( bAddLastPoint ) {
             // don't forget the final point!
-            _robot->SetActiveDOFValues(dofvals,true);
             _robot->GetActiveDOFValues(dofvals);
             for(int j = 0; j < _robot->GetActiveDOF(); j++)
                 ptemp.q[j] = dofvals[j];
