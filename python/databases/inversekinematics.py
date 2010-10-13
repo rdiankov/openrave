@@ -304,7 +304,9 @@ class InverseKinematicsModel(OpenRAVEModel):
                 if self.dofexpected == 6:
                     freejointinds.append(solvejoints.pop(2))
                 else:
-                    freejointinds.append(solvejoints.pop(0))
+                    # if not 6D, then don't need to worry about intersecting joints
+                    # so remove the least important joints
+                    freejointinds.append(solvejoints.pop(-1))
         
         if not len(solvejoints) == self.dofexpected:
             raise ValueError('Need %d solve joints, got: %d'%(self.dofexpected, len(solvejoints)))
