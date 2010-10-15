@@ -641,7 +641,6 @@ class OpenRAVEModel(metaclass.AutoReloader):
         finally:
             if destroyenv:
                 env.Destroy()
-            del env
 
 class openrave_exception(Exception):
     """wrap up the C++ openrave_exception"""
