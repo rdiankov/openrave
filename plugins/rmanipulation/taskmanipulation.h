@@ -423,16 +423,16 @@ class TaskManipulation : public ProblemInstance
         list<GRASPGOAL> listGraspGoals;
 
         vector<int> vdestpermuation(vObjDestinations.size());
-        for(int i = 0; i < (int)vObjDestinations.size(); ++i)
+        for(int i = 0; i < (int)vObjDestinations.size(); ++i) {
             vdestpermuation[i] = i;
-
+        }
         vector<int> vgrasppermuation(nNumGrasps);
-        for(int i = 0; i < nNumGrasps; ++i)
+        for(int i = 0; i < nNumGrasps; ++i) {
             vgrasppermuation[i] = i;
-
-        if( bRandomGrasps )
+        }
+        if( bRandomGrasps ) {
             PermutateRandomly(vgrasppermuation);
-
+        }
         if( iGraspTransform < 0 ) {
             if( !_pGrasperPlanner ) {
                 RAVELOG_ERRORA("grasper problem not valid\n");
@@ -514,7 +514,7 @@ class TaskManipulation : public ProblemInstance
                 graspparams->bonlycontacttarget = true;
                 graspparams->btightgrasp = false;
                 graspparams->bavoidcontact = true;
-                graspparams->ffinestep = 0.2; // aren't computing contact points, so don't need such precision
+                // TODO: in order to reproduce the same exact conditions as the original grasp, have to also transfer the step sizes
 
                 if( !_pGrasperPlanner->InitPlan(_robot,graspparams) ) {
                     RAVELOG_DEBUGA("grasper planner failed: %d\n", igrasp);
@@ -556,10 +556,12 @@ class TaskManipulation : public ProblemInstance
                 tm.m[0] = pm[0]; tm.m[1] = pm[3]; tm.m[2] = pm[6]; tm.trans.x = pm[9];
                 tm.m[4] = pm[1]; tm.m[5] = pm[4]; tm.m[6] = pm[7]; tm.trans.y = pm[10];
                 tm.m[8] = pm[2]; tm.m[9] = pm[5]; tm.m[10] = pm[8]; tm.trans.z = pm[11];
-                if( !ptarget )
+                if( !ptarget ) {
                     tGoalEndEffector = tm;
-                else
+                }
+                else {
                     tGoalEndEffector = ptarget->GetTransform() * Transform(tm);
+                }
 
                 if( pmanip->CheckEndEffectorCollision(tGoalEndEffector,report) ) {
                     RAVELOG_DEBUGA(str(boost::format("grasp %d: in collision (%s)\n")%igrasp%report->__str__()));
@@ -636,17 +638,13 @@ class TaskManipulation : public ProblemInstance
             for(int idestperm = 0; idestperm < (int)vdestpermuation.size(); ++idestperm) {
                 Transform& transDestTarget = vObjDestinations[vdestpermuation[idestperm]];
                 Transform tDestEndEffector = transDestTarget * transInvTarget * tGoalEndEffector;
-                 
                 ptarget->SetTransform(transDestTarget);
-
-                _robot->Enable(true);
                 bool bTargetCollision; 
                 {
                     RobotBase::RobotStateSaver linksaver(_robot,KinBody::Save_LinkEnable);
                     _robot->Enable(false); // remove robot from target collisions 
                     bTargetCollision = GetEnv()->CheckCollision(KinBodyConstPtr(ptarget));
                 }
-                BOOST_ASSERT(_robot->IsEnabled());
 
                 ptarget->SetTransform(transTarg);
                 if( bTargetCollision ) {
