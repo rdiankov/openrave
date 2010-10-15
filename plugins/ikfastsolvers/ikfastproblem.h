@@ -174,9 +174,9 @@ class IKFastProblem : public ProblemInstance
         IkSolverBasePtr CreateSolver(EnvironmentBasePtr penv, dReal ffreedelta)
         {
             if( getIKRealSize() == 4 )
-                return IkSolverBasePtr(new IkFastSolver<float,IKSolutionFloat >((IkFastSolver<float,IKSolutionFloat >::IkFn)ikfn,vfree,ffreedelta,getNumJoints(),(IkParameterization::Type)getIKType(),penv));
+                return IkSolverBasePtr(new IkFastSolver<float,IKSolutionFloat >((IkFastSolver<float,IKSolutionFloat >::IkFn)ikfn,vfree,ffreedelta,getNumJoints(),(IkParameterization::Type)getIKType(),shared_from_this(),penv));
             else if( getIKRealSize() == 8 )
-                return IkSolverBasePtr(new IkFastSolver<double,IKSolutionDouble >((IkFastSolver<double,IKSolutionDouble >::IkFn)ikfn,vfree,ffreedelta,getNumJoints(),(IkParameterization::Type)getIKType(),penv));
+                return IkSolverBasePtr(new IkFastSolver<double,IKSolutionDouble >((IkFastSolver<double,IKSolutionDouble >::IkFn)ikfn,vfree,ffreedelta,getNumJoints(),(IkParameterization::Type)getIKType(),shared_from_this(),penv));
             throw openrave_exception("bad real size");
         }
 
@@ -571,6 +571,9 @@ public:
         }
     
         stringstream s2;
+#if OPENRAVE_PRECISION
+        s2 << std::setprecision(16); // if double precision, set to full 16 digits
+#endif
         s2 << "ik sol: ";
         FOREACH(it, q1) {
             s2 << *it << " ";
@@ -621,6 +624,9 @@ public:
     {
         int num_itrs = 10000;
         stringstream s;
+#if OPENRAVE_PRECISION
+        s << std::setprecision(16); // if double precision, set to full 16 digits
+#endif
         fstream fsfile;
 
         string readfilename, genfilename;
@@ -674,7 +680,14 @@ public:
     
         robot->SetActiveDOFs(pmanip->GetArmIndices());
         robot->GetActiveDOFLimits(vlowerlimit, vupperlimit);
-    
+        // shrink the limits to prevent solutions close to limits from returning errors
+        for(size_t i = 0; i < vlowerlimit.size(); ++i) {
+            dReal newlower = vlowerlimit[i]*0.9999+0.0001*vupperlimit[i];
+            dReal newupper = vlowerlimit[i]*0.0001+0.9999*vupperlimit[i];
+            vlowerlimit[i] = newlower;
+            vupperlimit[i] = newupper;
+        }
+
         if(bGenFile) {
             fsfile.open(genfilename.c_str(),ios_base::out);
             fsfile << num_itrs <<endl;
@@ -690,6 +703,7 @@ public:
             fsfile >> num_itrs;
         }
 
+        RaveInitRandomGeneration(GetMilliTime()); // have to seed a new number
         vector<dReal> vfreeparams(pmanip->GetNumFreeParameters()) ,vfreeparams2(pmanip->GetNumFreeParameters());
 
         Transform twrist, twrist_out;
@@ -697,10 +711,12 @@ public:
         int success = 0;
         while(i < num_itrs) {
             if(bReadFile) {
-                FOREACH(it, vjoints)
+                FOREACH(it, vjoints) {
                     fsfile >> *it;
-            
-                fsfile >> twrist;
+                }
+                if( !fsfile ) {
+                    break;
+                }
             }
             else {
                 if( i == 0 ) {
@@ -716,10 +732,9 @@ public:
                         }
                         else {
                             switch(RaveRandomInt()%3) {
-                                case 0: vjoints[j] = -PI*0.5; break;
-                                case 2: vjoints[j] = PI*0.5; break;
-                                default:
-                                    vjoints[j] = 0;
+                            case 0: vjoints[j] = CLAMP_ON_RANGE(dReal(-PI*0.5),vlowerlimit[j],vupperlimit[j]); break;
+                            case 2: vjoints[j] = CLAMP_ON_RANGE(dReal(PI*0.5),vlowerlimit[j],vupperlimit[j]); break;
+                            default: vjoints[j] = CLAMP_ON_RANGE(dReal(0),vlowerlimit[j],vupperlimit[j]); break;
                             }
                         }
                     }
@@ -762,7 +777,19 @@ public:
                 s << "FindIKSolution: No ik solution found, i = " << i << endl << "Joint Val: ";
                 FOREACH(it, vjoints)
                     s << *it << " ";
-                s << endl << "Transform: " << twrist << endl << endl;
+                s << endl << "Transform: " << twrist << endl;
+                TransformMatrix tm(pmanip->GetBase()->GetTransform().inverse()*twrist*pmanip->GetGraspTransform().inverse());
+                vector<dReal> vfree;
+                pmanip->GetFreeParameters(vfree);
+                s << "raw ik command: "
+                  << tm.m[0] << " " << tm.m[1] << " " << tm.m[2] << " " << tm.trans[0] << " "
+                  << tm.m[4] << " " << tm.m[5] << " " << tm.m[6] << " " << tm.trans[1] << " "
+                  << tm.m[8] << " " << tm.m[9] << " " << tm.m[10] << " " << tm.trans[2] << " ";
+                FOREACH(itfree,vfree) {
+                    s << *itfree << " ";
+                }
+
+                s << endl << endl;
                 RAVELOG_WARNA(s.str());
                 ++i;
                 continue;
@@ -781,8 +808,19 @@ public:
                 FOREACH(it, viksolution)
                     s << *it << " ";
                 s << endl << "Transform in: " << twrist << endl;
-                s << "Transform out: " << twrist_out << endl << endl;
-                RAVELOG_WARNA(s.str());
+                s << "Transform out: " << twrist_out << endl;
+                TransformMatrix tm(pmanip->GetBase()->GetTransform().inverse()*twrist*pmanip->GetGraspTransform().inverse());
+                vector<dReal> vfree;
+                pmanip->GetFreeParameters(vfree);
+                s << "raw ik command: "
+                  << tm.m[0] << " " << tm.m[1] << " " << tm.m[2] << " " << tm.trans[0] << " "
+                  << tm.m[4] << " " << tm.m[5] << " " << tm.m[6] << " " << tm.trans[1] << " "
+                  << tm.m[8] << " " << tm.m[9] << " " << tm.m[10] << " " << tm.trans[2] << " ";
+                FOREACH(itfree,vfree) {
+                    s << *itfree << " ";
+                }
+                s << endl << endl;
+                RAVELOG_WARN(s.str());
                 ++i;
                 continue;
             }
@@ -814,7 +852,18 @@ public:
                     FOREACH(it, *itsol)
                         s << *it << " ";
                     s << endl << "Transform in: " << twrist << endl;
-                    s << "Transform out: " << twrist_out << endl << endl;
+                    s << "Transform out: " << twrist_out << endl;
+                    TransformMatrix tm(pmanip->GetBase()->GetTransform().inverse()*twrist*pmanip->GetGraspTransform().inverse());
+                    vector<dReal> vfree;
+                    pmanip->GetFreeParameters(vfree);
+                    s << "raw ik command: "
+                      << tm.m[0] << " " << tm.m[1] << " " << tm.m[2] << " " << tm.trans[0] << " "
+                      << tm.m[4] << " " << tm.m[5] << " " << tm.m[6] << " " << tm.trans[1] << " "
+                      << tm.m[8] << " " << tm.m[9] << " " << tm.m[10] << " " << tm.trans[2] << " ";
+                    FOREACH(itfree,vfree) {
+                        s << *itfree << " ";
+                    }
+                    s << endl << endl;
                     RAVELOG_WARNA(s.str());
                     bfail = true;
                     break;

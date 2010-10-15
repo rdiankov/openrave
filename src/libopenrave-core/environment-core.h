@@ -41,11 +41,6 @@ class Environment : public EnvironmentBase
  public:
     Environment() : EnvironmentBase()
     {
-        if( !RaveGlobalState() ) {
-            RAVELOG_WARN("OpenRAVE global state not initialized! Need to call RaveInitialize before any OpenRAVE services can be used. For now, initializing with default parameters.\n");
-            RaveInitialize(true);
-        }
-
         _homedirectory = RaveGetHomeDirectory();
         RAVELOG_DEBUGA("setting openrave cache directory to %s\n",_homedirectory.c_str());
 

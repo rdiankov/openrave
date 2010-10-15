@@ -144,13 +144,13 @@ class InverseKinematicsModel(OpenRAVEModel):
     def clone(self,envother):
         clone = OpenRAVEModel.clone(self,envother)
         clone.setrobot(self.freeinc)
-        return clone    
+        return clone
     def has(self):
         return self.iksolver is not None and self.manip.GetIkSolver() is not None
     def load(self,*args,**kwargs):
         return self.setrobot(*args,**kwargs)
     def getversion(self):
-        return 11
+        return 13
     def setrobot(self,freeinc=None):
         self.iksolver = None
         self.freeinc=freeinc

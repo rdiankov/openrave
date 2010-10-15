@@ -1154,6 +1154,15 @@ End Class
                 code += '%s('%(self._cosname())
                 code2,sepcode = self.writeExprCode(expr.args[0])
                 code += code2
+            elif expr.func == atan2:
+                code += 'IKfmod('
+                # check for divides by 0 in arguments, this could give two possible solutions?!?
+                # if common arguments is nan! solution is lost!
+                code2,sepcode = self.writeExprCode(expr.args[0])
+                code += code2+', '
+                code3,sepcode2 = self.writeExprCode(expr.args[1])
+                code += code3
+                sepcode += sepcode2
             else:
                 code += expr.func.__name__ + '('
                 for arg in expr.args:

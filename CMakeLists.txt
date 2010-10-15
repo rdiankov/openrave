@@ -498,8 +498,8 @@ if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" STRGRE
   add_custom_command(
     OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/sympy/__init__.py
     COMMAND ${CMAKE_COMMAND} -E chdir
-    ARGS "${CMAKE_CURRENT_SOURCE_DIR}" ${CMAKE_COMMAND} -E tar xzf "${CMAKE_CURRENT_SOURCE_DIR}/sympy_0.6.3.tgz"
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sympy_0.6.3.tgz)
+    ARGS "${CMAKE_CURRENT_SOURCE_DIR}" ${CMAKE_COMMAND} -E tar xzf "${CMAKE_CURRENT_SOURCE_DIR}/sympy_0.6.7.tgz"
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sympy_0.6.7.tgz)
   add_custom_target(sympy_files ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sympy/__init__.py)
   #add_dependencies(openravepy_int sympy_files)
 

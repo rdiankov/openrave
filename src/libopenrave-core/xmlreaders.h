@@ -2597,8 +2597,9 @@ namespace OpenRAVEXMLParser
                 }
 
                 // set a default controller
-                if( !_probot->GetController() )
+                if( !_probot->GetController() ) {
                     _probot->SetController(RaveCreateController(_probot->GetEnv(), "IdealController"),"");
+                }
 
                 // forces robot to reupdate its internal objects
                 _probot->SetTransform(_probot->GetTransform());

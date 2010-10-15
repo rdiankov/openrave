@@ -122,7 +122,20 @@ public:
     void Destroy()
     {
         RAVELOG_VERBOSE("shutting down openrave\n");
-        // destroy all environments
+        // environments have to be destroyed carefully since their destructors can be called, which will attempt to unregister the environment
+        std::list<EnvironmentBase*> listenvironments;
+        {
+            boost::mutex::scoped_lock lock(_mutexXML);
+            listenvironments.swap(_listenvironments);
+        }
+        FOREACH(itenv,listenvironments) {
+            // equire a shared pointer to prevent environment from getting deleted during Destroy loop
+            EnvironmentBasePtr penv = (*itenv)->shared_from_this();
+            penv->Destroy();
+        }
+        listenvironments.clear();
+
+        _mapreaders.clear();
         _pdatabase.reset();
     }
 
@@ -189,6 +202,20 @@ public:
         return it->second;
     }
 
+    // have to take in pointer instead of shared_ptr since method will be called in EnvironmentBase constructor
+    void RegisterEnvironment(EnvironmentBase* penv)
+    {
+        BOOST_ASSERT(!!_pdatabase);
+        boost::mutex::scoped_lock lock(_mutexXML);
+        _listenvironments.push_back(penv);
+    }
+
+    void UnregisterEnvironment(EnvironmentBase* penv)
+    {
+        boost::mutex::scoped_lock lock(_mutexXML);
+        _listenvironments.remove(penv);
+    }
+
 protected:
     static void _UnregisterXMLReader(boost::weak_ptr<RaveGlobal> pweakstate, InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& oldfn)
     {
@@ -218,6 +245,7 @@ private:
     boost::mutex _mutexXML;
     std::map<InterfaceType, READERSMAP > _mapreaders;
     std::map<InterfaceType,string> _mapinterfacenames;
+    std::list<EnvironmentBase*> _listenvironments;
 
     friend void RaveInitializeFromState(boost::shared_ptr<void>);
     friend boost::shared_ptr<void> RaveGlobalState();
@@ -1008,6 +1036,20 @@ RAVE_API std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameter
     }
 
     return I;
+}
+
+EnvironmentBase::EnvironmentBase()
+{
+    if( !RaveGlobalState() ) {
+        RAVELOG_WARN("OpenRAVE global state not initialized! Need to call RaveInitialize before any OpenRAVE services can be used. For now, initializing with default parameters.\n");
+        RaveInitialize(true);
+    }
+    RaveGlobal::instance()->RegisterEnvironment(this);
+}
+
+EnvironmentBase::~EnvironmentBase()
+{
+    RaveGlobal::instance()->UnregisterEnvironment(this);
 }
 
 InterfaceBase::InterfaceBase(InterfaceType type, EnvironmentBasePtr penv) : __type(type), __penv(penv)

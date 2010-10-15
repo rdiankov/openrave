@@ -77,43 +77,43 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
                 vector<int> vfree(barrettwam::getNumFreeParameters());
                 for(size_t i = 0; i < vfree.size(); ++i)
                     vfree[i] = barrettwam::getFreeParameters()[i];
-                return InterfaceBasePtr(new IkFastSolver<barrettwam::IKReal,barrettwam::IKSolution>(barrettwam::ik,vfree,freeinc,barrettwam::getNumJoints(),(IkParameterization::Type)barrettwam::getIKType(), penv));
+                return InterfaceBasePtr(new IkFastSolver<barrettwam::IKReal,barrettwam::IKSolution>(barrettwam::ik,vfree,freeinc,barrettwam::getNumJoints(),(IkParameterization::Type)barrettwam::getIKType(), boost::shared_ptr<void>(), penv));
             }
             else if( interfacename == "pa10ikfast" ) {
                 vector<int> vfree(pa10::getNumFreeParameters());
                 for(size_t i = 0; i < vfree.size(); ++i)
                     vfree[i] = pa10::getFreeParameters()[i];
-                return InterfaceBasePtr(new IkFastSolver<pa10::IKReal,pa10::IKSolution>(pa10::ik,vfree,freeinc,pa10::getNumJoints(),(IkParameterization::Type)pa10::getIKType(), penv));
+                return InterfaceBasePtr(new IkFastSolver<pa10::IKReal,pa10::IKSolution>(pa10::ik,vfree,freeinc,pa10::getNumJoints(),(IkParameterization::Type)pa10::getIKType(), boost::shared_ptr<void>(), penv));
             }
             else if( interfacename == "pumaikfast" ) {
                 vector<int> vfree(puma::getNumFreeParameters());
                 for(size_t i = 0; i < vfree.size(); ++i)
                     vfree[i] = puma::getFreeParameters()[i];
-                return InterfaceBasePtr(new IkFastSolver<puma::IKReal,puma::IKSolution>(puma::ik,vfree,freeinc,puma::getNumJoints(),(IkParameterization::Type)puma::getIKType(), penv));
+                return InterfaceBasePtr(new IkFastSolver<puma::IKReal,puma::IKSolution>(puma::ik,vfree,freeinc,puma::getNumJoints(),(IkParameterization::Type)puma::getIKType(), boost::shared_ptr<void>(), penv));
             }
             else if( interfacename == "manusleftarmikfast" ) {
                 vector<int> vfree(manusleft::getNumFreeParameters());
                 for(size_t i = 0; i < vfree.size(); ++i)
                     vfree[i] = manusleft::getFreeParameters()[i];
-                return InterfaceBasePtr(new IkFastSolver<manusleft::IKReal,manusleft::IKSolution>(manusleft::ik,vfree,freeinc,manusleft::getNumJoints(),(IkParameterization::Type)manusleft::getIKType(), penv));
+                return InterfaceBasePtr(new IkFastSolver<manusleft::IKReal,manusleft::IKSolution>(manusleft::ik,vfree,freeinc,manusleft::getNumJoints(),(IkParameterization::Type)manusleft::getIKType(), boost::shared_ptr<void>(), penv));
             }
             else if( interfacename == "man1leftikfast" ) {
                 vector<int> vfree(man1left::getNumFreeParameters());
                 for(size_t i = 0; i < vfree.size(); ++i)
                     vfree[i] = man1left::getFreeParameters()[i];
-                return InterfaceBasePtr(new IkFastSolver<man1left::IKReal,man1left::IKSolution>(man1left::ik,vfree,freeinc,man1left::getNumJoints(),(IkParameterization::Type)man1left::getIKType(), penv));
+                return InterfaceBasePtr(new IkFastSolver<man1left::IKReal,man1left::IKSolution>(man1left::ik,vfree,freeinc,man1left::getNumJoints(),(IkParameterization::Type)man1left::getIKType(), boost::shared_ptr<void>(), penv));
             }
             else if( interfacename == "man1rightikfast" ) {
                 vector<int> vfree(man1right::getNumFreeParameters());
                 for(size_t i = 0; i < vfree.size(); ++i)
                     vfree[i] = man1right::getFreeParameters()[i];
-                return InterfaceBasePtr(new IkFastSolver<man1right::IKReal,man1right::IKSolution>(man1right::ik,vfree,freeinc,man1right::getNumJoints(),(IkParameterization::Type)man1right::getIKType(), penv));
+                return InterfaceBasePtr(new IkFastSolver<man1right::IKReal,man1right::IKSolution>(man1right::ik,vfree,freeinc,man1right::getNumJoints(),(IkParameterization::Type)man1right::getIKType(), boost::shared_ptr<void>(), penv));
             }
             else if( interfacename == "katanaikfast" ) {
                 vector<int> vfree(katana::getNumFreeParameters());
                 for(size_t i = 0; i < vfree.size(); ++i)
                     vfree[i] = katana::getFreeParameters()[i];
-                return InterfaceBasePtr(new IkFastSolver<katana::IKReal,katana::IKSolution>(katana::ik,vfree,freeinc,katana::getNumJoints(),(IkParameterization::Type)katana::getIKType(), penv));
+                return InterfaceBasePtr(new IkFastSolver<katana::IKReal,katana::IKSolution>(katana::ik,vfree,freeinc,katana::getNumJoints(),(IkParameterization::Type)katana::getIKType(), boost::shared_ptr<void>(), penv));
             }
         }
         break;

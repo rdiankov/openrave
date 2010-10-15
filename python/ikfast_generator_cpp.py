@@ -49,6 +49,10 @@ except ImportError:
                 for cc in combinations(items[i+1:],n-1):
                     yield [items[i]]+cc
 
+class fmod(core.function.Function):
+    nargs = 2
+    is_real = True
+
 def customcse(exprs,symbols=None):
     replacements,reduced_exprs = cse(exprs,symbols=symbols)
     newreplacements = []
@@ -183,6 +187,24 @@ assert( f > -1.001 && f < 1.001 ); // any more error implies something is wrong 
 if( f <= -1 ) return -IKPI_2;
 else if( f >= 1 ) return IKPI_2;
 return asin(f);
+}
+
+// return positive value in [0,y)
+inline float IKfmod(float x, float y)
+{
+    while(x < 0) {
+        x += y;
+    }
+    return fmodf(x,y);
+}
+
+// return positive value in [0,y)
+inline float IKfmod(double x, double y)
+{
+    while(x < 0) {
+        x += y;
+    }
+    return fmod(x,y);
 }
 
 inline float IKacos(float f)
@@ -829,15 +851,25 @@ int main(int argc, char** argv)
     def generateBranchConds(self, node):
         origequations = copy.copy(self.dictequations)
         code = '{\n'
-        if any([branch[0] for branch in node.jointbranches]):
-            code += 'IKReal evalcond;\n'
+        numevals = None
+        for branch in node.jointbranches:
+            if branch[0] is not None:
+                if numevals is None or numevals < len(branch[0]):
+                    numevals=len(branch[0])
+        if numevals is not None:
+            code += 'IKReal evalcond[%d];\n'%numevals
         for branch in node.jointbranches:
             self.dictequations = copy.copy(origequations)
             if branch[0] is None:
                 branchcode = 'if( 1 )\n{\n'
             else:
-                branchcode = self.writeEquations(lambda x: 'evalcond',branch[0])
-                branchcode += 'if( IKabs(evalcond) < 0.00001 )\n{\n'
+                branchcode = self.writeEquations(lambda x: 'evalcond[%d]'%x,branch[0])
+                branchcode += 'if( '
+                for i in range(len(branch[0])):
+                    if i != 0:
+                        branchcode += ' && '
+                    branchcode += 'IKabs(evalcond[%d]) < %f '%(i,node.thresh)
+                branchcode += ' )\n{\n'
             for n in branch[1]:
                 branchcode += n.generate(self)
             for n in reversed(branch[1]):
@@ -1013,6 +1045,13 @@ int main(int argc, char** argv)
                 code += 'IKcos('
                 code2,sepcode = self.writeExprCode(expr.args[0])
                 code += code2
+            elif expr.func == fmod:
+                code += 'IKfmod('
+                code2,sepcode = self.writeExprCode(expr.args[0])
+                code += code2+', '
+                code3,sepcode2 = self.writeExprCode(expr.args[1])
+                code += code3
+                sepcode += sepcode2
             else:
                 code += expr.func.__name__ + '('
                 for arg in expr.args:

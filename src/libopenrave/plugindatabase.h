@@ -277,7 +277,7 @@ public:
     /// Destroy all plugins and directories
     virtual void Destroy()
     {
-        RAVELOG_DEBUG("shutting down\n");
+        RAVELOG_DEBUG("plugin database shutting down...\n");
         {
             boost::mutex::scoped_lock lock(_mutexPluginLoader);
             _bShutdown = true;
@@ -291,6 +291,7 @@ public:
         }
         RAVELOG_DEBUG("cleaning libraries\n");
         CleanupUnusedLibraries();
+        RAVELOG_DEBUG("plugin database finished\n");
     }
 
     void GetPlugins(std::list<PluginPtr>& listplugins) const

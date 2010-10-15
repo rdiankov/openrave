@@ -282,6 +282,7 @@ int main(int argc, char ** argv)
     s_mainThread->join();
     s_penv->Destroy();
     s_penv.reset();
+    RaveDestroy();
     return 0;
 }
 
@@ -369,7 +370,9 @@ void MainOpenRAVEThread()
 #ifndef _WIN32
 void sigint_handler(int sig)
 {
-    s_penv->Destroy();    
+    s_penv->Destroy();
+    s_penv.reset();
+    RaveDestroy();
     // have to let the default sigint properly shutdown the program
 	signal(SIGINT, SIG_DFL);
 	kill(getpid(), SIGINT);

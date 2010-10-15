@@ -163,6 +163,7 @@ def drillray_visionsol():
         sourcefilename += '_f'+'_'.join(str(ind) for ind in freejointinds)
     sourcefilename += '.cpp'
     open(sourcefilename,'w').write(code)
+
 def test_6dik():
     #python inversekinematics.py --robot=/home/rdiankov/downloads/SDA10-OpenRave/robots/SDA10-dual.robot.xml
     from openravepy import *
@@ -172,16 +173,16 @@ def test_6dik():
     from sympy import *
     env = Environment()
     env.Reset()
-    robot = env.ReadRobotXMLFile('robots/hrp2jsk07.robot.xml')
+    robot = env.ReadRobotXMLFile('robots/pr2-beta-static.robot.xml')
     env.AddRobot(robot)
-    manip = robot.SetActiveManipulator('leftarm_chest')
+    manip = robot.SetActiveManipulator('leftarm_torso')
     ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
 
     solvefn=ikfast.IKFastSolver.solveFullIK_6D
     solvejoints = list(manip.GetArmJoints())
-    solvejoints.remove(24)
-    solvejoints.remove(25)
-    freeparams=[24,25]
+    freeparams=solvejoints[0:2]
+    solvejoints.pop(0)
+    solvejoints.pop(0)
     sourcefilename = 'temp.cpp'
     self = ikfast.IKFastSolver(kinbody=robot,accuracy=None,precision=None)
     #code = self.generateIkSolver(manip.GetBase().GetIndex(),manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejoints,usedummyjoints=False,solvefn=solvefn)

@@ -29,8 +29,8 @@ typedef boost::recursive_try_mutex EnvironmentMutex;
 class EnvironmentBase : public boost::enable_shared_from_this<EnvironmentBase>
 {
 public:
-    EnvironmentBase() {}
-    virtual ~EnvironmentBase() {}
+    EnvironmentBase();
+    virtual ~EnvironmentBase();
 
     /// \brief Releases all environment resources, should be always called when environment stops being used.
     ///

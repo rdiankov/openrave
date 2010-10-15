@@ -33,7 +33,7 @@ class IkFastSolver : public IkSolverBase
     typedef bool (*IkFn)(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<Solution>& vsolutions);
     typedef bool (*FkFn)(const IKReal* j, IKReal* eetrans, IKReal* eerot);
     
- IkFastSolver(IkFn pfnik, const std::vector<int>& vfreeparams, dReal fFreeInc, int nTotalDOF, IkParameterization::Type iktype, EnvironmentBasePtr penv) : IkSolverBase(penv), _vfreeparams(vfreeparams), _pfnik(pfnik), _fFreeInc(fFreeInc), _nTotalDOF(nTotalDOF), _iktype(iktype) {}
+ IkFastSolver(IkFn pfnik, const std::vector<int>& vfreeparams, dReal fFreeInc, int nTotalDOF, IkParameterization::Type iktype, boost::shared_ptr<void> resource, EnvironmentBasePtr penv) : IkSolverBase(penv), _vfreeparams(vfreeparams), _pfnik(pfnik), _fFreeInc(fFreeInc), _nTotalDOF(nTotalDOF), _iktype(iktype), _resource(resource) {}
     virtual ~IkFastSolver() {}
 
     inline boost::shared_ptr<IkFastSolver<IKReal,Solution> > shared_solver() { return boost::static_pointer_cast<IkFastSolver<IKReal,Solution> >(shared_from_this()); }
@@ -189,9 +189,9 @@ class IkFastSolver : public IkSolverBase
         std::vector<dReal>::const_iterator itscale = _vfreeparamscales.begin();
         probot->GetDOFValues(values);
         pFreeParameters.resize(_vfreeparams.size());
-        for(size_t i = 0; i < _vfreeparams.size(); ++i)
-            pFreeParameters[i] = (values[pmanip->GetArmIndices()[_vfreeparams[i]]]-_qlower[_vfreeparams[i]]) * *itscale++;
-
+        for(size_t i = 0; i < _vfreeparams.size(); ++i) {
+            pFreeParameters[i] = (values.at(pmanip->GetArmIndices().at(_vfreeparams[i]))-_qlower.at(_vfreeparams[i])) * *itscale++;
+        }
         return true;
     }
 
@@ -264,7 +264,7 @@ private:
             TransformMatrix t = param.GetTransform();
             IKReal eetrans[3] = {t.trans.x, t.trans.y, t.trans.z};
             IKReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
-//            stringstream ss; ss << "./ik ";
+//            stringstream ss; ss << "./ik " << std::setprecision(16);
 //            ss << eerot[0]  << " " << eerot[1]  << " " << eerot[2]  << " " << eetrans[0]  << " " << eerot[3]  << " " << eerot[4]  << " " << eerot[5]  << " " << eetrans[1]  << " " << eerot[6]  << " " << eerot[7]  << " " << eerot[8]  << " " << eetrans[2] << " ";
 //            FOREACH(itfree,vfree) {
 //                ss << *itfree << " ";
@@ -561,7 +561,8 @@ private:
                 if( _qupper[j] > PI && vravesol[j] < _qlower[j] )
                     vravesol[j] += 2*PI;
             }
-            if( vravesol[j] < _qlower[j]-1e-5 || vravesol[j] > _qupper[j]+1e-5 ) {
+            // due to error propagation, give error bounds for lower and upper limits
+            if( vravesol[j] < _qlower[j]-10*g_fEpsilon || vravesol[j] > _qupper[j]+10*g_fEpsilon ) {
                 return false;
             }
         }
@@ -608,6 +609,7 @@ private:
     std::vector<dReal> _qlower, _qupper;
     IkFilterCallbackFn _filterfn;
     IkParameterization::Type _iktype;
+    boost::shared_ptr<void> _resource;
 };
 
 #endif
