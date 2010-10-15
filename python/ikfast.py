@@ -852,7 +852,7 @@ class IKFastSolver(AutoReloader):
                 if freevar is not None and freevalue is not None:
                     var = self.Variable(freevar)
                     valuesubs = [(var.var,freevalue),(var.svar,sin(freevalue)),(var.cvar,cos(freevalue))] if freevalue is not None else []
-                    freevarcond = freevar-freevalue
+                    freevarcond = [freevar-freevalue]
                 else:
                     valuesubs = []
                     freevarcond = None
@@ -863,7 +863,7 @@ class IKFastSolver(AutoReloader):
                 rotvars = [var for var in jointvars if any([var==svar for svar in solvejointvars])]
                 D = Matrix(3,1, map(lambda x: x.subs(self.freevarsubs), LinksAccumRightAll[0][0:3,2]))
                 rottree = self.solveIKRotation(R=D,Ree = Dee.subs(rotsubs),rawvars = rotvars,endbranchtree=storesolutiontree,solvedvarsubs=solvedvarsubs)
-                solverbranches.append(([freevarcond],[SolverDirection(LinksAccumLeftInvAll[0].subs(solvedvarsubs)[0:3,0:3]*Dee, rottree)]))
+                solverbranches.append((freevarcond,[SolverDirection(LinksAccumLeftInvAll[0].subs(solvedvarsubs)[0:3,0:3]*Dee, rottree)]))
 
         if len(solverbranches) == 0 or not solverbranches[-1][0] is None:
             print 'failed to solve for kinematics'
@@ -914,7 +914,7 @@ class IKFastSolver(AutoReloader):
                 if freevar is not None and freevalue is not None:
                     var = self.Variable(freevar)
                     valuesubs = [(var.var,freevalue),(var.svar,sin(freevalue)),(var.cvar,cos(freevalue))] if freevalue is not None else []
-                    freevarcond = freevar-freevalue
+                    freevarcond = [freevar-freevalue]
                 else:
                     valuesubs = []
                     freevarcond = None
@@ -925,7 +925,7 @@ class IKFastSolver(AutoReloader):
                 rotvars = [var for var in jointvars if any([var==svar for svar in solvejointvars])]
                 R = Matrix(3,3, map(lambda x: x.subs(solvedvarsubs), LinksAccumRightAll[0][0:3,0:3]))
                 rottree = self.solveIKRotation(R=R,Ree = Ree.subs(rotsubs),rawvars = rotvars,endbranchtree=storesolutiontree,solvedvarsubs=solvedvarsubs)
-                solverbranches.append(([freevarcond],[SolverRotation(LinksAccumLeftInvAll[0].subs(solvedvarsubs)*Tee, rottree)]))
+                solverbranches.append((freevarcond,[SolverRotation(LinksAccumLeftInvAll[0].subs(solvedvarsubs)*Tee, rottree)]))
 
         if len(solverbranches) == 0 or not solverbranches[-1][0] is None:
             print 'failed to solve for kinematics'
@@ -1019,7 +1019,7 @@ class IKFastSolver(AutoReloader):
                     AllEquations.append(e)
         AllEquations.sort(lambda x, y: self.codeComplexity(x)-self.codeComplexity(y))
         transtree = self.solveAllEquations(AllEquations,curvars=curtransvars,othersolvedvars=freejointvars,solsubs = solsubs,endbranchtree=endbranchtree)
-        solverbranches.append(([freevarcond],transtree))
+        solverbranches.append((None,transtree))
         return SolverIKChainTranslation3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], TfirstleftInv[0:3,0:3] * Pee + TfirstleftInv[0:3,3] , [SolverBranchConds(solverbranches)],Pfk = Tfirstleft * (LinksAccumRightAll[0]*Matrix(4,1,[basepos[0],basepos[1],basepos[2],1.0])))
 
     def solveFullIK_Ray4D(self,chain,Tee,rawbasedir,rawbasepos):
