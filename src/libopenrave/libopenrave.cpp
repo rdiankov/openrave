@@ -78,7 +78,7 @@ public:
     int Initialize(bool bLoadAllPlugins, DebugLevel level)
     {
         if( IsInitialized() ) {
-            Destroy();
+            return 0; // already initialized
         }
 
         // set to the classic locale so that number serialization/hashing works correctly
