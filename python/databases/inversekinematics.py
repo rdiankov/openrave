@@ -491,7 +491,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                         self.robot.SetJointValues(sol,self.manip.GetArmIndices())
                         realdir = dot(self.manip.GetEndEffectorTransform()[0:3,0:3],self.manip.GetDirection())
                         realpos = self.manip.GetEndEffectorTransform()[0:3,3]
-                        if linalg.norm(cross(realdir,realpos-targetpos)) < 1e-6:
+                        if linalg.norm(cross(realdir,realpos-targetpos)) < 2e-6:
                             success += 1
                         else:
                             print 'wrong solution to: ',targetpos,targetdir, 'returned is: ',realpos,realdir,'wrong sol is:',sol,', org values are:',orgvalues
