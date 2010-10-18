@@ -317,29 +317,29 @@ void KinBodyItem::DrawChangedCallback()
 
 bool KinBodyItem::UpdateFromModel()
 {
-    if( !_pchain )
+    if( !_pchain ) {
         return false;
-
+    }
     vector<Transform> vtrans;
     vector<dReal> vjointvalues;
 
     {
         boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer->LockEnvironment(50000,false);
-        if( !lockenv )
+        if( !lockenv ) {
             return false;
-
-        if( _bReload || _bDrawStateChanged )
+        }
+        if( _bReload || _bDrawStateChanged ) {
             Load();
-
+        }
         // make sure the body is still present!
         if( _pchain->GetEnv()->GetBodyFromEnvironmentId(networkid) == _pchain ) {
             _pchain->GetBodyTransformations(_vtrans);
             _pchain->GetDOFValues(vjointvalues);
         }
-        else
+        else {
             _pchain.reset();
+        }
     }
-
     return UpdateFromModel(vjointvalues,vtrans);
 }
 

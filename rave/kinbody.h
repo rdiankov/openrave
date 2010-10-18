@@ -114,11 +114,16 @@ public:
             virtual AABB ComputeAABB(const Transform& t) const;
             virtual void serialize(std::ostream& o, int options) const;
 
-            /// sets a new collision mesh and notifies every registered callback about it
+            /// \brief sets a new collision mesh and notifies every registered callback about it
             virtual void SetCollisionMesh(const TRIMESH& mesh);
-            /// sets a drawing and notifies every registered callback about it
+            /// \brief sets a drawing and notifies every registered callback about it
             virtual void SetDraw(bool bDraw);
+            /// \brief set transparency level (0 is opaque)
             virtual void SetTransparency(float f);
+            /// \brief override diffuse color of geometry material
+            virtual void SetDiffuseColor(const RaveVector<float>& color);
+            /// \brief override ambient color of geometry material
+            virtual void SetAmbientColor(const RaveVector<float>& color);
 
             /// validates the contact normal on the surface of the geometry and makes sure the normal faces "outside" of the shape.
             /// \param position the position of the contact point specified in the link's coordinate system

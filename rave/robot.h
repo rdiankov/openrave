@@ -283,7 +283,7 @@ public:
     /// set a controller for a robot and destroy the old
     /// \param pController - if NULL, sets the controller of this robot to NULL. otherwise attemps to set the controller to this robot.
     /// \param args - the argument list to pass when initializing the controller
-    virtual bool SetController(ControllerBasePtr controller, const std::string& args) {return false;}
+    virtual bool SetController(ControllerBasePtr controller, const std::string& args);
     virtual void SetJointValues(const std::vector<dReal>& vJointValues, bool bCheckLimits = false);
     virtual void SetJointValues(const std::vector<dReal>& vJointValues, const Transform& transbase, bool bCheckLimits = false);
 
@@ -326,7 +326,7 @@ public:
     /// \param nAffineDOFsBitmask A bitmask of \ref DOFAffine values
     /// \param pRotationAxis if \ref DOF_RotationAxis is specified, pRotationAxis is used as the new axis
     virtual void SetActiveDOFs(const std::vector<int>& dofindices, int affine, const Vector& rotationaxis);
-    virtual int GetActiveDOF() const { return _nActiveDOF != 0 ? _nActiveDOF : GetDOF(); }
+    virtual int GetActiveDOF() const { return _nActiveDOF >= 0 ? _nActiveDOF : GetDOF(); }
     virtual int GetAffineDOF() const { return _nAffineDOFs; }
 
     /// if dof is set in the affine dofs, returns its index in the dof values array, otherwise returns -1
@@ -546,7 +546,7 @@ protected:
 
     std::vector<int> _vActiveJointIndices, _vAllDOFIndices;
     Vector vActvAffineRotationAxis;
-    int _nActiveDOF;            ///< Active degrees of freedom; if 0, use robot dofs
+    int _nActiveDOF;            ///< Active degrees of freedom; if -1, use robot dofs
     int _nAffineDOFs;           ///< dofs describe what affine transformations are allowed
 
     Vector _vTranslationLowerLimits, _vTranslationUpperLimits, _vTranslationMaxVels, _vTranslationResolutions, _vTranslationWeights;

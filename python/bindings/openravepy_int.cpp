@@ -24,10 +24,12 @@ void SetReturnTransformQuaternions(bool bset) { s_bReturnTransformQuaternions = 
 template <typename T>
 inline object ReturnTransform(T t)
 {
-    if( s_bReturnTransformQuaternions) 
+    if( s_bReturnTransformQuaternions) {
         return toPyArray(Transform(t));
-    else
+    }
+    else {
         return toPyArray(TransformMatrix(t));
+    }
 }
 
 class PyRay
@@ -206,6 +208,8 @@ public:
             boost::shared_ptr<PyTriMesh> GetCollisionMesh() { return boost::shared_ptr<PyTriMesh>(new PyTriMesh(_plink->GetGeometry(_geomindex).GetCollisionMesh())); }
             void SetDraw(bool bDraw) { _plink->GetGeometry(_geomindex).SetDraw(bDraw); }
             void SetTransparency(float f) { _plink->GetGeometry(_geomindex).SetTransparency(f); }
+            void SetAmbientColor(object ocolor) { _plink->GetGeometry(_geomindex).SetAmbientColor(ExtractVector3(ocolor)); }
+            void SetDiffuseColor(object ocolor) { _plink->GetGeometry(_geomindex).SetDiffuseColor(ExtractVector3(ocolor)); }
             bool IsDraw() { return _plink->GetGeometry(_geomindex).IsDraw(); }
             bool IsModifiable() { return _plink->GetGeometry(_geomindex).IsModifiable(); }
             KinBody::Link::GEOMPROPERTIES::GeomType GetType() { return _plink->GetGeometry(_geomindex).GetType(); }
@@ -439,11 +443,13 @@ public:
     }
     object GetDOFValues(object oindices) const
     {
-        if( oindices == object() )
+        if( oindices == object() ) {
             return numeric::array(boost::python::list());
+        }
         vector<int> vindices = ExtractArray<int>(oindices);
-        if( vindices.size() == 0 )
+        if( vindices.size() == 0 ) {
             return numeric::array(boost::python::list());
+        }
         vector<dReal> values, v;
         values.reserve(vindices.size());
         FOREACHC(it, vindices) {
@@ -467,6 +473,28 @@ public:
         _pbody->GetDOFLimits(vlower,vupper);
         return boost::python::make_tuple(toPyArray(vlower),toPyArray(vupper));
     }
+
+    object GetDOFLimits(object oindices) const
+    {
+        if( oindices == object() ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<int> vindices = ExtractArray<int>(oindices);
+        if( vindices.size() == 0 ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<dReal> vlower, vupper, vtemplower, vtempupper;
+        vlower.reserve(vindices.size());
+        vupper.reserve(vindices.size());
+        FOREACHC(it, vindices) {
+            KinBody::JointPtr pjoint = _pbody->GetJointFromDOFIndex(*it);
+            pjoint->GetLimits(vtemplower,vtempupper,false);
+            vlower.push_back(vtemplower.at(*it-pjoint->GetDOFIndex()));
+            vupper.push_back(vtempupper.at(*it-pjoint->GetDOFIndex()));
+        }
+        return boost::python::make_tuple(toPyArray(vlower),toPyArray(vupper));
+    }
+
     object GetDOFMaxVel() const
     {
         vector<dReal> values;
@@ -3106,6 +3134,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
         PyVoidHandle (PyKinBody::*statesaver2)(int) = &PyKinBody::CreateKinBodyStateSaver;
         object (PyKinBody::*getdofvalues1)() const = &PyKinBody::GetDOFValues;
         object (PyKinBody::*getdofvalues2)(object) const = &PyKinBody::GetDOFValues;
+        object (PyKinBody::*getdoflimits1)() const = &PyKinBody::GetDOFLimits;
+        object (PyKinBody::*getdoflimits2)(object) const = &PyKinBody::GetDOFLimits;
         object (PyKinBody::*getlinks1)() const = &PyKinBody::GetLinks;
         object (PyKinBody::*getlinks2)(object) const = &PyKinBody::GetLinks;
         object (PyKinBody::*getjoints1)() const = &PyKinBody::GetJoints;
@@ -3121,7 +3151,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetDOFValues",getdofvalues1,DOXY_FN(KinBody,GetDOFValues))
             .def("GetDOFValues",getdofvalues2,args("indices"),DOXY_FN(KinBody,GetDOFValues))
             .def("GetDOFVelocities",&PyKinBody::GetDOFVelocities, DOXY_FN(KinBody,GetDOFVelocities))
-            .def("GetDOFLimits",&PyKinBody::GetDOFLimits, DOXY_FN(KinBody,GetDOFLimits))
+            .def("GetDOFLimits",getdoflimits1, DOXY_FN(KinBody,GetDOFLimits))
+            .def("GetDOFLimits",getdoflimits2, args("indices"),DOXY_FN(KinBody,GetDOFLimits))
             .def("GetDOFMaxVel",&PyKinBody::GetDOFMaxVel, DOXY_FN(KinBody,GetDOFMaxVel))
             .def("GetDOFWeights",&PyKinBody::GetDOFWeights, DOXY_FN(KinBody,GetDOFWeights))
             .def("GetDOFResolutions",&PyKinBody::GetDOFResolutions, DOXY_FN(KinBody,GetDOFResolutions))
@@ -3229,6 +3260,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
                     .def("GetCollisionMesh",&PyKinBody::PyLink::PyGeomProperties::GetCollisionMesh, DOXY_FN(KinBody::Link::GEOMPROPERTIES,GetCollisionMesh))
                     .def("SetDraw",&PyKinBody::PyLink::PyGeomProperties::SetDraw,args("draw"), DOXY_FN(KinBody::Link::GEOMPROPERTIES,SetDraw))
                     .def("SetTransparency",&PyKinBody::PyLink::PyGeomProperties::SetTransparency,args("transparency"), DOXY_FN(KinBody::Link::GEOMPROPERTIES,SetTransparency))
+                    .def("SetDiffuseColor",&PyKinBody::PyLink::PyGeomProperties::SetDiffuseColor,args("color"), DOXY_FN(KinBody::Link::GEOMPROPERTIES,SetDiffuseColor))
+                    .def("SetAmbientColor",&PyKinBody::PyLink::PyGeomProperties::SetAmbientColor,args("color"), DOXY_FN(KinBody::Link::GEOMPROPERTIES,SetAmbientColor))
                     .def("IsDraw",&PyKinBody::PyLink::PyGeomProperties::IsDraw, DOXY_FN(KinBody::Link::GEOMPROPERTIES,IsDraw))
                     .def("IsModifiable",&PyKinBody::PyLink::PyGeomProperties::IsModifiable, DOXY_FN(KinBody::Link::GEOMPROPERTIES,IsModifiable))
                     .def("GetType",&PyKinBody::PyLink::PyGeomProperties::GetType, DOXY_FN(KinBody::Link::GEOMPROPERTIES,GetType))

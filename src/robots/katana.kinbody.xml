@@ -35,13 +35,6 @@
       <Render>L3.wrl 0.001</Render>
     </Geom>
   </Body>
-  <Body name="dummylink" type="dynamic">
-    <offsetfrom>L3</offsetfrom>
-    <Translation>0.0 0.0 0.139</Translation>
-    <Geom type="box">
-      <extents>0.001 0.001 0.001</extents>
-    </Geom>
-  </Body>
   <Body name="L4" type="dynamic">
     <offsetfrom>L3</offsetfrom>
     <Translation>0.0 0.0 0.139</Translation>
@@ -163,19 +156,8 @@
     <maxvel>1</maxvel>
     <resolution>1</resolution>
   </Joint>
-  
-  <!-- this joint is dummy, but needs to exist for IK to work. It has nonzero limits to prevent IK from completely failing (due to numerical precision errors) -->
-  <Joint name="jdummy" type="hinge">
-    <Body>L3</Body>
-    <Body>dummylink</Body>
-    <offsetfrom>dummylink</offsetfrom>
-    <limitsdeg>-0.01 0.01</limitsdeg>
-    <axis>0 0 -1</axis>
-    <maxvel>1</maxvel>
-    <resolution>1</resolution>
-  </Joint>
   <Joint name="j4" type="hinge">
-    <Body>dummylink</Body>
+    <Body>L3</Body>
     <Body>L4</Body>
     <offsetfrom>L4</offsetfrom>
     <limitsdeg>-116.5 116.5</limitsdeg>

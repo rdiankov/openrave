@@ -395,6 +395,20 @@ void KinBody::Link::GEOMPROPERTIES::SetTransparency(float f)
     parent->GetParent()->_ParametersChanged(Prop_LinkDraw);
 }
 
+void KinBody::Link::GEOMPROPERTIES::SetDiffuseColor(const RaveVector<float>& color)
+{
+    LinkPtr parent(_parent);
+    diffuseColor = color;
+    parent->GetParent()->_ParametersChanged(Prop_LinkDraw);
+}
+
+void KinBody::Link::GEOMPROPERTIES::SetAmbientColor(const RaveVector<float>& color)
+{
+    LinkPtr parent(_parent);
+    ambientColor = color;
+    parent->GetParent()->_ParametersChanged(Prop_LinkDraw);
+}
+
 /*
  * Ray-box intersection using IEEE numerical properties to ensure that the
  * test is both robust and efficient, as described in:

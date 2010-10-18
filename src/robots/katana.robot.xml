@@ -6,6 +6,12 @@
 	<joints>gj1</joints>
     <closingdirection>-1</closingdirection>
 	<Translation>0 0 0.165</Translation>
-    <iksolver>Katanaikfast 0.01</iksolver>
+  </Manipulator>
+  <Manipulator name="arm6">
+	<effector>Gripper_Base</effector>
+	<base>Base</base>
+	<joints>gj1</joints>
+    <closingdirection>-1</closingdirection>
+	<Translation>0 0 0.165</Translation>
   </Manipulator>
 </Robot>
