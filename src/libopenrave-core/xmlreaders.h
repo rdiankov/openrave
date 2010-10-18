@@ -2124,13 +2124,15 @@ namespace OpenRAVEXMLParser
                 return true;
 
             if( xmlname == "manipulator" ) {
-                if( _pmanip->_vClosingDirection.size() == 0 ) {
-                    RAVELOG_DEBUG(str(boost::format("setting manipulator %s closing direction to zeros\n")%_pmanip->GetName()));
-                    _pmanip->_vClosingDirection.resize(_pmanip->_vgripperdofindices.size(),0);
-                }
-                else if( _pmanip->_vgripperdofindices.size() != _pmanip->_vClosingDirection.size() ) {
-                    RAVELOG_WARN(str(boost::format("Manipulator %s has closing direction grasps wrong %d!=%d\n")%_pmanip->GetName()%_pmanip->_vgripperdofindices.size()%_pmanip->_vClosingDirection.size()));
-                    _pmanip->_vClosingDirection.resize(_pmanip->_vgripperdofindices.size(),0);
+                if( _pmanip->_vgripperdofindices.size() != _pmanip->_vClosingDirection.size() ) {
+                    if( _pmanip->_vClosingDirection.size() == 0 ) {
+                        RAVELOG_DEBUG(str(boost::format("setting manipulator %s closing direction to zeros\n")%_pmanip->GetName()));
+                        _pmanip->_vClosingDirection.resize(_pmanip->_vgripperdofindices.size(),0);
+                    }
+                    else {
+                        RAVELOG_WARN(str(boost::format("Manipulator %s has closing direction grasps wrong %d!=%d\n")%_pmanip->GetName()%_pmanip->_vgripperdofindices.size()%_pmanip->_vClosingDirection.size()));
+                        _pmanip->_vClosingDirection.resize(_pmanip->_vgripperdofindices.size(),0);
+                    }
                 }
                 return true;
             }

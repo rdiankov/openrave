@@ -217,7 +217,7 @@ def test_3dik():
     from sympy import *
     env = Environment()
     env.Reset()
-    robot = env.ReadRobotXMLFile('/home/rdiankov/downloads/TestRobot/robots/TestRobot.robot.xml')
+    robot = env.ReadRobotXMLFile('robots/barrettwam4.robot.xml')
     env.AddRobot(robot)
     manip = robot.GetManipulator('arm')
     ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Translation3D)
@@ -229,9 +229,9 @@ def test_3dik():
 
     solvefn=solveFullIK_Translation3D
     solvejoints = list(manip.GetArmJoints())
-    solvejoints.remove(3)
-    solvejoints.remove(4)
-    freeparams=[3,4]
+    solvejoints.pop(3)
+    #solvejoints.remove(4)
+    freeparams=[3]#3,4]
     sourcefilename = 'temp.cpp'
     self = ikfast.IKFastSolver(kinbody=robot,precision=None)
     #code = self.generateIkSolver(manip.GetBase().GetIndex(),manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejoints,usedummyjoints=False,solvefn=solvefn)
@@ -256,3 +256,51 @@ def test_3dik():
     chaintree = solvefn(self,chain,Tee)
     code=ikfast_generator_vb.CodeGeneratorVB6().generate(chaintree)
     code=ikfast_generator_cpp.CodeGenerator().generate(chaintree)
+
+def test_lookatik():
+    from openravepy import *
+    import numpy,time
+    import ikfast
+    from ikfast import SolverStoreSolution, SolverSequence
+    from sympy import *
+    env = Environment()
+    env.Reset()
+    robot = env.ReadRobotXMLFile('robots/hrp2jsk07.robot.xml')
+    env.AddRobot(robot)
+    manip = robot.GetManipulator('head')
+    ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Translation3D)
+    #self.generate()
+    rawbasedir=numpy.dot(manip.GetGraspTransform()[0:3,0:3],manip.GetDirection())
+    rawbasepos=manip.GetGraspTransform()[0:3,3]
+    def solveFullIK_Lookat3D(*args,**kwargs):
+        kwargs['rawbasedir'] = rawbasedir
+        kwargs['rawbasepos'] = rawbasepos
+        return ikfast.IKFastSolver.solveFullIK_Lookat3D(*args,**kwargs)
+
+    solvefn=solveFullIK_Lookat3D
+    solvejoints = list(manip.GetArmJoints())
+    freeparams=[]
+    sourcefilename = 'temp.cpp'
+    self = ikfast.IKFastSolver(kinbody=robot,precision=None)
+    #code = self.generateIkSolver(manip.GetBase().GetIndex(),manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejoints,usedummyjoints=False,solvefn=solvefn)
+    baselink=manip.GetBase().GetIndex()
+    eelink=manip.GetEndEffector().GetIndex()
+    alljoints = self.getJointsInChain(baselink, eelink)
+    usedummyjoints=False
+    chain = []
+    for joint in alljoints:
+        issolvejoint = any([i == joint.jointindex for i in solvejoints])
+        joint.isdummy = usedummyjoints and not issolvejoint and not any([i == joint.jointindex for i in freeparams])
+        joint.isfreejoint = not issolvejoint and not joint.isdummy
+        chain.append(joint)
+    Tee = eye(4)
+    for i in range(0,3):
+        for j in range(0,3):
+            Tee[i,j] = Symbol("r%d%d"%(i,j))
+    Tee[0,3] = Symbol("px")
+    Tee[1,3] = Symbol("py")
+    Tee[2,3] = Symbol("pz")
+
+    chaintree = solvefn(self,chain,Tee)
+    code=ikfast_generator_cpp.CodeGenerator().generate(chaintree)
+    

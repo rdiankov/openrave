@@ -86,6 +86,7 @@ class CodeGenerator(AutoReloader):
     strprinter = printing.StrPrinter()
     freevars = None # list of free variables in the solution
     freevardependencies = None # list of variables depending on the free variables
+    functions = dict()
 
     def generate(self, solvertree):
         print 'generating c++ code...'
@@ -335,27 +336,33 @@ int main(int argc, char** argv)
                 fcode += self.writeEquations(lambda k: outputnames[i],reduced_exprs[i])
             code += self.indentCode(fcode,4)
             code += '}\n\n'
-        code += "/// solves the inverse kinematics equations.\n"
-        code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
-        code += "IKFAST_API bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
-        code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
-        fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"
-        fcode += 'IKReal '
+        code += "class IKSolver {\npublic:\n"
+        code += 'IKReal '
         
         for var in node.solvejointvars:
-            fcode += '%s, c%s, s%s,\n'%(var[0].name,var[0].name,var[0].name)
+            code += '%s, c%s, s%s,\n'%(var[0].name,var[0].name,var[0].name)
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
-            fcode += '%s=pfree[%d], c%s=cos(pfree[%d]), s%s=sin(pfree[%d]),\n'%(name,i,name,i,name,i)
+            code += '%s, c%s, s%s,\n'%(name,name,name)
 
         for i in range(3):
             for j in range(3):
-                fcode += "new_r%d%d, r%d%d = eerot[%d*3+%d],\n"%(i,j,i,j,i,j)
-        fcode += "new_px, new_py, new_pz, px = eetrans[0], py = eetrans[1], pz = eetrans[2];\n\n"
+                code += "new_r%d%d, r%d%d,\n"%(i,j,i,j)
+        code += "new_px, new_py, new_pz, px, py, pz;\n\n"
         
         rotsubs = [(Symbol("r%d%d"%(i,j)),Symbol("new_r%d%d"%(i,j))) for i in range(3) for j in range(3)]
         rotsubs += [(Symbol("px"),Symbol("new_px")),(Symbol("py"),Symbol("new_py")),(Symbol("pz"),Symbol("new_pz"))]
 
+        code += "bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
+        code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
+        fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"
+        for i in range(len(node.freejointvars)):
+            name = node.freejointvars[i][0].name
+            code += '%s=pfree[%d]; c%s=cos(pfree[%d]); s%s=sin(pfree[%d]);\n'%(name,i,name,i,name,i)
+        for i in range(3):
+            for j in range(3):
+                fcode += "r%d%d = eerot[%d*3+%d];\n"%(i,j,i,j)
+        fcode += "px = eetrans[0]; py = eetrans[1]; pz = eetrans[2];\n\n"
         psymbols = ["new_px","new_py","new_pz"]
         for i in range(3):
             for j in range(3):
@@ -368,6 +375,19 @@ int main(int argc, char** argv)
 
         fcode += self.generateTree(node.jointtree)
         code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
+
+        # write other functions
+        for name,functioncode in self.functions.iteritems():
+            code += self.indentCode(functioncode,4)
+        code += """};
+
+/// solves the inverse kinematics equations.
+/// \param pfree is an array specifying the free joints of the chain.
+IKFAST_API bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {
+IKSolver solver;
+return solver.ik(eetrans,eerot,pfree,vsolutions);
+}
+"""
         return code
     def endChain(self, node):
         return ""
@@ -670,6 +690,77 @@ int main(int argc, char** argv)
     def endIKChainRay4D(self, node):
         return ''
 
+    def generateIKChainLookat3D(self, node):
+        self.freevars = []
+        self.freevardependencies = []
+        self.dictequations = []
+        self.symbolgen = cse_main.numbered_symbols('x')
+        
+        code = "IKFAST_API int getNumFreeParameters() { return %d; }\n"%len(node.freejointvars)
+        if len(node.freejointvars) == 0:
+            code += "IKFAST_API int* getFreeParameters() { return NULL; }\n"
+        else:
+            code += "IKFAST_API int* getFreeParameters() { static int freeparams[] = {"
+            for i,freejointvar in enumerate(node.freejointvars):
+                code += "%d"%(freejointvar[1])
+                if i < len(node.freejointvars)-1:
+                    code += ", "
+            code += "}; return freeparams; }\n"
+        code += "IKFAST_API int getNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
+        code += "IKFAST_API int getIKRealSize() { return sizeof(IKReal); }\n\n"
+        code += 'IKFAST_API int getIKType() { return %d; }\n\n'%IkType.Lookat3D
+        if node.Dfk and node.Pfk:
+            code += "/// solves the inverse kinematics equations.\n"
+            code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
+            code += "IKFAST_API void fk(const IKReal* j, IKReal* eetrans, IKReal* eerot) {\n"
+            allvars = node.solvejointvars + node.freejointvars
+            allsubs = [(v[0],Symbol('j[%d]'%v[1])) for v in allvars]
+            eqs = []
+            for eq in node.Pfk[0:3]:
+                eqs.append(eq.subs(allsubs))
+            for eq in node.Dfk[0:3]:
+                eqs.append(eq.subs(allsubs))
+            subexprs,reduced_exprs=customcse (eqs)
+            outputnames = ['eetrans[0]','eetrans[1]','eetrans[2]','eerot[0]','eerot[1]','eerot[2]']
+            fcode = ''
+            if len(subexprs) > 0:
+                fcode = 'IKReal '
+                vars = []
+                for var,expr in subexprs:
+                    fcode += str(var) + ', '
+                    vars.append(var)
+                fcode += '__dummy__;\n'
+                for var,expr in subexprs:
+                    fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
+            for i in range(len(outputnames)):
+                fcode += self.writeEquations(lambda k: outputnames[i],reduced_exprs[i])
+            code += self.indentCode(fcode,4)
+            code += '}\n\n'
+        code += "/// solves the inverse kinematics equations.\n"
+        code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
+        code += "IKFAST_API bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
+        code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
+        fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"
+        fcode += 'IKReal '
+        
+        for var in node.solvejointvars:
+            fcode += '%s, c%s, s%s,\n'%(var[0].name,var[0].name,var[0].name)
+        for i in range(len(node.freejointvars)):
+            name = node.freejointvars[i][0].name
+            fcode += '%s=pfree[%d], c%s=cos(pfree[%d]), s%s=sin(pfree[%d]),\n'%(name,i,name,i,name,i)
+
+        fcode += "new_px, new_py, new_pz, px = eetrans[0], py = eetrans[1], pz = eetrans[2];\n\n"
+        rotsubs = [(Symbol("px"),Symbol("new_px")),(Symbol("py"),Symbol("new_py")),(Symbol("pz"),Symbol("new_pz"))]
+        psymbols = ["new_px","new_py","new_pz"]
+        for i in range(3):
+            fcode += self.writeEquations(lambda k: psymbols[i],node.Pee[i])
+        fcode += "px = new_px; py = new_py; pz = new_pz;\n"
+        fcode += self.generateTree(node.jointtree)
+        code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
+        return code
+    def endIKChainLookat3D(self, node):
+        return ''
+
     def generateSolution(self, node,declarearray=True,acceptfreevars=True):
         code = ''
         numsolutions = 0
@@ -926,16 +1017,23 @@ int main(int argc, char** argv)
     def endBreak(self,node):
         return ''
     def generateRotation(self, node):
-        code = ''
-        listequations = []
-        names = []
-        for i in range(3):
-            for j in range(3):
-                listequations.append(node.T[i,j])
-                names.append(Symbol('new_r%d%d'%(i,j)))
-        code += self.writeEquations(lambda i: names[i],listequations)
-        code += self.generateTree(node.jointtree)
-        return code
+        if not node.functionid in self.functions:
+            code = 'void rotationfunction%d(std::vector<IKSolution>& vsolutions) {\n'%(node.functionid)
+            origequations = self.dictequations
+            self.dictequations = []
+            listequations = []
+            names = []
+            for i in range(3):
+                for j in range(3):
+                    listequations.append(node.T[i,j])
+                    names.append(Symbol('new_r%d%d'%(i,j)))
+            code += self.indentCode(self.writeEquations(lambda i: names[i],listequations),4)
+            code += self.indentCode(self.generateTree(node.jointtree),4)
+            code += '}'
+            self.dictequations = origequations
+            self.functions[node.functionid] = code
+        return 'rotationfunction%d(vsolutions);\n'%(node.functionid)
+
     def endRotation(self, node):
         return ''
     def generateDirection(self, node):

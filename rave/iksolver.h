@@ -32,11 +32,12 @@ public:
     /// \brief The types of inverse kinematics parameterizations supported.
     enum Type {
         Type_None=0,
-        Type_Transform6D=1,
-        Type_Rotation3D=2,
-        Type_Translation3D=3,
-        Type_Direction3D=4,
-        Type_Ray4D=5,
+        Type_Transform6D=1, ///< end effector reaches desired 6D transformation
+        Type_Rotation3D=2, ///< end effector reaches desired 3D rotation
+        Type_Translation3D=3, ///< end effector origin reaches desired 3D translation
+        Type_Direction3D=4, ///< direction on end effector coordinate system reaches desired direction
+        Type_Ray4D=5, ///< ray on end effector coordinate system reaches desired global ray
+        Type_Lookat3D=6, ///< direction on end effector coordinate system points to desired 3D position
     };
 
     IkParameterization() : _type(Type_None) {}
@@ -48,17 +49,39 @@ public:
     inline void SetTranslation(const Vector& trans) { _type = Type_Translation3D; _transform.trans = trans; }
     inline void SetDirection(const Vector& dir) { _type = Type_Direction3D; _transform.rot = dir; }
     inline void SetRay(const RAY& ray) { _type = Type_Ray4D; _transform.trans = ray.pos; _transform.rot = ray.dir; }
+    inline void SetLookat(const Vector& trans) { _type = Type_Lookat3D; _transform.trans = trans; }
 
     inline Type GetType() const { return _type; }
     inline const Transform& GetTransform() const { return _transform; }
     inline const Vector& GetRotation() const { return _transform.rot; }
     inline const Vector& GetTranslation() const { return _transform.trans; }
     inline const Vector& GetDirection() const { return _transform.rot; }
+    inline const Vector& GetLookat() const { return _transform.trans; }
     inline const RAY GetRay() const { return RAY(_transform.trans,_transform.rot); }
+
 protected:
     Transform _transform;
     Type _type;
+
+    friend IkParameterization operator* (const Transform& t, const IkParameterization& ikparam);
 };
+
+inline IkParameterization operator* (const Transform& t, const IkParameterization& ikparam)
+{
+    IkParameterization local;
+    switch(ikparam.GetType()) {
+    case IkParameterization::Type_Transform6D: local.SetTransform(t * ikparam.GetTransform()); break;
+    case IkParameterization::Type_Rotation3D: local.SetRotation(quatMultiply(quatInverse(t.rot),ikparam.GetRotation())); break;
+    case IkParameterization::Type_Translation3D: local.SetTranslation(t*ikparam.GetTranslation()); break;
+    case IkParameterization::Type_Direction3D: local.SetDirection(t.rotate(ikparam.GetDirection())); break; 
+    case IkParameterization::Type_Ray4D: {
+            local.SetRay(RAY(t*ikparam.GetRay().pos,t.rotate(ikparam.GetRay().dir))); break;
+    }
+    case IkParameterization::Type_Lookat3D: local.SetLookat(t*ikparam.GetLookat()); break;
+    default: throw openrave_exception(str(boost::format("does not support parameterization %d")%ikparam.GetType()));
+    }
+    return local;
+}
 
 /// \brief Return value for the ik filter that can be optionally set on an ik solver.
 enum IkFilterReturn

@@ -1055,6 +1055,7 @@ public:
         case IkParameterization::Type_Translation3D: SetTranslation(o); break;
         case IkParameterization::Type_Direction3D: SetDirection(o); break;
         case IkParameterization::Type_Ray4D: SetRay(extract<boost::shared_ptr<PyRay> >(o)); break;
+        case IkParameterization::Type_Lookat3D: SetLookat(o); break;
         default: throw openrave_exception(boost::str(boost::format("incorrect ik parameterization type %d")%type));
         }
     }
@@ -1064,6 +1065,7 @@ public:
     void SetTranslation(object o) { _param.SetTranslation(ExtractVector3(o)); }
     void SetDirection(object o) { _param.SetDirection(ExtractVector3(o)); }
     void SetRay(boost::shared_ptr<PyRay> ray) { _param.SetRay(ray->r); }
+    void SetLookat(object o) { _param.SetLookat(ExtractVector3(o)); }
 
     IkParameterization::Type GetType() { return _param.GetType(); }
     object GetTransform() { return ReturnTransform(_param.GetTransform()); }
@@ -1071,6 +1073,7 @@ public:
     object GetTranslation() { return toPyVector3(_param.GetTranslation()); }
     object GetDirection() { return toPyVector3(_param.GetDirection()); }
     PyRay GetRay() { return PyRay(_param.GetRay()); }
+    object GetLookat() { return toPyVector3(_param.GetLookat()); }
 
     IkParameterization _param;
 };
@@ -3392,6 +3395,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .value("Translation3D",IkParameterization::Type_Translation3D)
             .value("Direction3D",IkParameterization::Type_Direction3D)
             .value("Ray4D",IkParameterization::Type_Ray4D)
+            .value("Lookat3D",IkParameterization::Type_Lookat3D)
         ;
     }
 

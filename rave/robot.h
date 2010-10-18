@@ -48,7 +48,11 @@ public:
         virtual RobotBasePtr GetRobot() const { return RobotBasePtr(_probot); }
         
         /// \brief Sets the ik solver and initializes it with the current manipulator.
-        virtual bool SetIkSolver(IkSolverBasePtr iksolver) ;
+        ///
+        /// Due to complications with translation,rotation,direction,and ray ik,
+        /// the ik solver should take into account the grasp transform (_tGrasp) internally.
+        /// The actual ik primitives are transformed into the base frame only.
+        virtual bool SetIkSolver(IkSolverBasePtr iksolver);
 
         /// \brief Returns the currently set ik solver
         virtual IkSolverBasePtr GetIkSolver() const { return _pIkSolver; }

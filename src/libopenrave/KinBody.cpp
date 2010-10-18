@@ -1956,8 +1956,9 @@ bool KinBody::GetChain(int linkbaseindex, int linkendindex, std::vector<JointPtr
     list<pair<LinkConstPtr, int > > listlinks;
     vector<LinkPtr> vattachedlinks;
     GetRigidlyAttachedLinks(linkbaseindex,vattachedlinks);
-    FOREACHC(itlink,vattachedlinks)
+    FOREACHC(itlink,vattachedlinks) {
         listlinks.push_back(make_pair(LinkConstPtr(*itlink),-1));
+    }
     while(listlinks.size()>0) {
         LinkConstPtr plink = listlinks.front().first;
         int parentjoint = listlinks.front().second;
@@ -1969,28 +1970,31 @@ bool KinBody::GetChain(int linkbaseindex, int linkendindex, std::vector<JointPtr
                 parentjoint = vjointparents.at(parentjoint);
             }
             vjoints.resize(0); vjoints.reserve(listpath.size());
-            FOREACH(it,listpath)
+            FOREACH(it,listpath) {
                 vjoints.push_back(_vecjoints.at(*it));
+            }
             return true;
         }
-
         listlinks.pop_front();
         FOREACHC(itjoint, _vecjoints) {
             int jointindex = (*itjoint)->GetJointIndex();
             // use the source mimic joint
             if( vjointparents.at(jointindex) == numjoints ) {
                 LinkConstPtr pother;
-                if( (*itjoint)->GetFirstAttached() == plink && !!(*itjoint)->GetSecondAttached() )
+                if( (*itjoint)->GetFirstAttached() == plink && !!(*itjoint)->GetSecondAttached() ) {
                     pother = (*itjoint)->GetSecondAttached();
-                if( (*itjoint)->GetSecondAttached() == plink && !!(*itjoint)->GetFirstAttached() )
+                }
+                if( (*itjoint)->GetSecondAttached() == plink && !!(*itjoint)->GetFirstAttached() ) {
                     pother = (*itjoint)->GetFirstAttached();
+                }
                 if( !!pother ) {
                     vjointparents[jointindex] = parentjoint;
                     int addjointindex = (*itjoint)->GetMimicJointIndex() >= 0 ? (*itjoint)->GetMimicJointIndex() : jointindex;
                     vattachedlinks.resize(0);
                     GetRigidlyAttachedLinks(pother->GetIndex(),vattachedlinks);
-                    FOREACHC(itlink,vattachedlinks)
+                    FOREACHC(itlink,vattachedlinks) {
                         listlinks.push_back(make_pair(LinkConstPtr(*itlink),addjointindex));
+                    }
                 }
             }
         }
@@ -2008,14 +2012,14 @@ bool KinBody::GetChain(int linkbaseindex, int linkendindex, std::vector<JointPtr
                         vjointparents[numjoints+jointindex] = parentjoint;
                         vattachedlinks.resize(0);
                         GetRigidlyAttachedLinks(pother->GetIndex(),vattachedlinks);
-                        FOREACHC(itlink,vattachedlinks)
+                        FOREACHC(itlink,vattachedlinks) {
                             listlinks.push_back(make_pair(LinkConstPtr(*itlink),(*itjoint)->GetMimicJointIndex()));
+                        }
                     }
                 }
             }
         }
     }
-
     return false;
 }
 

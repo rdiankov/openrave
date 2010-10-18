@@ -260,7 +260,8 @@ private:
 
     bool _CallIK(const IkParameterization& param, const vector<IKReal>& vfree, std::vector<Solution>& vsolutions)
     {
-        if( param.GetType() == IkParameterization::Type_Transform6D ) {
+        switch(param.GetType()) {
+        case IkParameterization::Type_Transform6D: {
             TransformMatrix t = param.GetTransform();
             IKReal eetrans[3] = {t.trans.x, t.trans.y, t.trans.z};
             IKReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
@@ -273,22 +274,27 @@ private:
 //            RAVELOG_INFO(ss.str());
             return _pfnik(eetrans, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions);
         }
-        else if( param.GetType() == IkParameterization::Type_Rotation3D ) {
+        case IkParameterization::Type_Rotation3D: {
             TransformMatrix t(Transform(param.GetRotation(),Vector()));
             IKReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
             return _pfnik(NULL, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions);
         }
-        else if( param.GetType() == IkParameterization::Type_Translation3D ) {
+        case IkParameterization::Type_Translation3D: {
             Vector v = param.GetTranslation();
             IKReal eetrans[3] = {v.x, v.y, v.z};
             return _pfnik(eetrans, NULL, vfree.size()>0?&vfree[0]:NULL, vsolutions);
         }
-        else if( param.GetType() == IkParameterization::Type_Direction3D ) {
+        case IkParameterization::Type_Direction3D: {
             Vector v = param.GetDirection();
             IKReal eerot[9] = {v.x, v.y, v.z,0,0,0,0,0,0};
             return _pfnik(NULL, eerot, vfree.size()>0?&vfree[0]:NULL, vsolutions);
         }
-        else if( param.GetType() == IkParameterization::Type_Ray4D ) {
+        case IkParameterization::Type_Lookat3D: {
+            Vector v = param.GetLookat();
+            IKReal eetrans[3] = {v.x, v.y, v.z};
+            return _pfnik(eetrans, NULL, vfree.size()>0?&vfree[0]:NULL, vsolutions);
+        }
+        case IkParameterization::Type_Ray4D: {
             Vector pos = param.GetRay().pos;
             Vector dir = param.GetRay().dir;
             IKReal eetrans[3] = {pos.x,pos.y,pos.z};
@@ -310,8 +316,9 @@ private:
 //            vsolutions[0].GetSolution(s,free);
 //            RAVELOG_INFO("sol %d: %f %f %f %f\n",(int)vsolutions[0].GetFree().size(),s[0],s[1],s[2],s[3]);
         }
-
-        throw openrave_exception(str(boost::format("don't support ik parameterization %d")%param.GetType()));
+        default:
+            throw openrave_exception(str(boost::format("don't support ik parameterization %d")%param.GetType()));
+        }
     }
 
     static bool SortSolutionDistances(const pair<int,dReal>& p1, const pair<int,dReal>& p2)

@@ -340,13 +340,13 @@ public:
             return false;
         }
         switch (static_cast<IkParameterization::Type>(niktype)) {
-            case IkParameterization::Type_Transform6D: striktype="Transform6D"; break;
-            case IkParameterization::Type_Rotation3D: striktype="Rotation3D"; break;
-            case IkParameterization::Type_Translation3D: striktype="Translation3D"; break;
-            case IkParameterization::Type_Direction3D: striktype="Direction3D"; break;
-            case IkParameterization::Type_Ray4D: striktype="Ray4D"; break;
-            default:
-                return false;
+        case IkParameterization::Type_Transform6D: striktype="Transform6D"; break;
+        case IkParameterization::Type_Rotation3D: striktype="Rotation3D"; break;
+        case IkParameterization::Type_Translation3D: striktype="Translation3D"; break;
+        case IkParameterization::Type_Direction3D: striktype="Direction3D"; break;
+        case IkParameterization::Type_Ray4D: striktype="Ray4D"; break;
+        case IkParameterization::Type_Lookat3D: striktype="Lookat3D"; break;
+        default: return false;
         }
 
         {
