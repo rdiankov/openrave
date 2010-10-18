@@ -460,7 +460,7 @@ private:
             }
 
             // if gripper is colliding, solutions will always fail, so completely stop solution process
-            if( bCheckEndEffector && param.GetType() == IkParameterization::Type_Transform6D && pmanip->CheckEndEffectorCollision(pmanip->GetBase()->GetTransform()*param.GetTransform()*pmanip->GetGraspTransform()) ) {
+            if( bCheckEndEffector && param.GetType() == IkParameterization::Type_Transform6D && pmanip->CheckEndEffectorCollision(pmanip->GetBase()->GetTransform()*param.GetTransform()) ) {
                 return SR_Quit; // stop the search
             }
             
@@ -539,7 +539,7 @@ private:
         }
         if( (filteroptions&IKFO_CheckEnvCollisions) ) {
             if( bCheckEndEffector && param.GetType() == IkParameterization::Type_Transform6D ) {
-                if( pmanip->CheckEndEffectorCollision(pmanip->GetBase()->GetTransform()*param.GetTransform()*pmanip->GetGraspTransform()) )
+                if( pmanip->CheckEndEffectorCollision(pmanip->GetBase()->GetTransform()*param.GetTransform()) )
                     return SR_Quit; // stop the search
                 bCheckEndEffector = false;
             }
