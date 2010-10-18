@@ -120,7 +120,7 @@ bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, con
     BOOST_ASSERT(_pIkSolver->GetManipulator() == shared_from_this() );
     IkParameterization localgoal;
     if( !!_pBase ) {
-        localgoal = _pBase->GetTransform()*goal;
+        localgoal = _pBase->GetTransform().inverse()*goal;
     }
     else {
         localgoal=goal;

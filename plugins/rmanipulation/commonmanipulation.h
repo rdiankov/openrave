@@ -134,27 +134,31 @@ class CM
         vector< vector<dReal> > viksolutions;
         vector<dReal> vfree(pmanip->GetNumFreeParameters());
         for(int iter = 0; iter < 50*numsamples; ++iter) {
-            for(int i = 0; i < (int)vfree.size(); ++i)
+            for(int i = 0; i < (int)vfree.size(); ++i) {
                 vfree[i] = RaveRandomFloat();
-            
+            }
             if( pmanip->FindIKSolutions(ikp, vfree, viksolutions, true) ) {
                 FOREACH(itsol, viksolutions) {
                     vsolutions.insert(vsolutions.end(), itsol->begin(), itsol->end());
-                    if( --_numsamples <= 0 )
+                    if( --_numsamples <= 0 ) {
                         return numsamples;
+                    }
                 }
             }
         }
         
         bool bSuccess = pmanip->FindIKSolutions(ikp, viksolutions, true);
-        if( !bSuccess || viksolutions.size() == 0 )
+        if( !bSuccess || viksolutions.size() == 0 ) {
+            //RAVELOG_WARN("findiksolutions returns nothing\n");
             return false;
+        }
 
         while(1) {
             FOREACH(itsol, viksolutions) {
                 vsolutions.insert(vsolutions.end(), itsol->begin(), itsol->end());
-                if( --_numsamples <= 0 )
+                if( --_numsamples <= 0 ) {
                     return numsamples;
+                }
             }
         }
 
