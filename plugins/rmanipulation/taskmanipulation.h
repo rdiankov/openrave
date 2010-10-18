@@ -438,13 +438,7 @@ class TaskManipulation : public ProblemInstance
                 RAVELOG_ERRORA("grasper problem not valid\n");
                 return false;
             }
-            if( iGraspDir < 0 || iGraspPos < 0 || iGraspRoll < 0 || iGraspPreshape < 0 || iGraspStandoff < 0 ) {
-                RAVELOG_ERRORA("grasp indices not all initialized\n");
-                return false;
-            }
-        }
-        else {
-            if( iGraspPreshape < 0 ) {
+            if( iGraspDir < 0 || iGraspPos < 0 || iGraspRoll < 0 || iGraspStandoff < 0 ) {
                 RAVELOG_ERRORA("grasp indices not all initialized\n");
                 return false;
             }
@@ -471,13 +465,15 @@ class TaskManipulation : public ProblemInstance
 
             vector<dReal> vgoalpreshape(vCurHandValues.size());
             if( iGraspPreshape >= 0 ) {
-                for(size_t j = 0; j < vCurHandValues.size(); ++j)
+                for(size_t j = 0; j < vCurHandValues.size(); ++j) {
                     vgoalpreshape[j] = pgrasp[iGraspPreshape+j];
+                }
             }
             else {
                 vgoalpreshape.resize(pmanip->GetGripperIndices().size());
-                for(size_t j = 0; j < pmanip->GetGripperIndices().size(); ++j)
+                for(size_t j = 0; j < pmanip->GetGripperIndices().size(); ++j) {
                     vgoalpreshape[j] = vCurRobotValues[pmanip->GetGripperIndices()[j]];
+                }
             }
 
             PRESHAPETRAJMAP::iterator itpreshapetraj = mapPreshapeTrajectories.find(vgoalpreshape);
@@ -577,8 +573,9 @@ class TaskManipulation : public ProblemInstance
 
             // set the initial hand joints
             _robot->SetActiveDOFs(pmanip->GetGripperIndices());
-            if( iGraspPreshape >= 0 )
+            if( iGraspPreshape >= 0 ) {
                 _robot->SetActiveDOFValues(vector<dReal>(pgrasp+iGraspPreshape,pgrasp+iGraspPreshape+_robot->GetActiveDOF()),true);
+            }
 
             Transform tApproachEndEffector = tGoalEndEffector;
             if( !bMobileBase ) {
@@ -699,8 +696,9 @@ class TaskManipulation : public ProblemInstance
                 BOOST_ASSERT(ptrajToPreshapeFull->GetPoints().size()>0);
                 _robot->SetJointValues(ptrajToPreshapeFull->GetPoints().back().q);
                 _robot->SetActiveDOFs(pmanip->GetGripperIndices());
-                if( iGraspPreshape >= 0 )
+                if( iGraspPreshape >= 0 ) {
                     _robot->SetActiveDOFValues(vector<dReal>(pgrasp+iGraspPreshape,pgrasp+iGraspPreshape+_robot->GetActiveDOF()),true);
+                }
                 _robot->GetDOFValues(tpopenhand.q);
                 tpopenhand.trans = _robot->GetTransform();
                 ptrajToPreshapeFull->AddPoint(tpopenhand);
@@ -709,9 +707,9 @@ class TaskManipulation : public ProblemInstance
                 mapPreshapeTrajectories[vgoalpreshape] = ptrajToPreshapeFull;
             }
 
-            if( iGraspPreshape >= 0 )
+            if( iGraspPreshape >= 0 ) {
                 _robot->SetActiveDOFValues(vector<dReal>(pgrasp+iGraspPreshape,pgrasp+iGraspPreshape+_robot->GetActiveDOF()),true);
-
+            }
             listGraspGoals.push_back(GRASPGOAL());
             GRASPGOAL& goal = listGraspGoals.back();
             goal.index = igrasp;
