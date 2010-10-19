@@ -1168,6 +1168,17 @@ public:
             manipulator->_vgripperdofindices.push_back(probot->GetJointIndices()[i]);
           }
 
+          if( manipulator->_vgripperdofindices.size() != manipulator->_vClosingDirection.size() ) {
+              if( manipulator->_vClosingDirection.size() == 0 ) {
+                  RAVELOG_DEBUG(str(boost::format("setting manipulator %s closing direction to zeros\n")%manipulator->GetName()));
+                  manipulator->_vClosingDirection.resize(manipulator->_vgripperdofindices.size(),0);
+              }
+              else {
+                  RAVELOG_WARN(str(boost::format("Manipulator %s has closing direction grasps wrong %d!=%d\n")%manipulator->GetName()%manipulator->_vgripperdofindices.size()%manipulator->_vClosingDirection.size()));
+                  manipulator->_vClosingDirection.resize(manipulator->_vgripperdofindices.size(),0);
+              }
+          }
+
           RAVELOG_VERBOSEA("Indices initialized...\n");
         }
         
