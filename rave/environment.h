@@ -26,7 +26,7 @@ typedef boost::recursive_try_mutex EnvironmentMutex;
 
 /** \brief Maintains a world state, which serves as the gateway to all functions offered through %OpenRAVE. See \ref arch_environment.
 */
-class EnvironmentBase : public boost::enable_shared_from_this<EnvironmentBase>
+class RAVE_API EnvironmentBase : public boost::enable_shared_from_this<EnvironmentBase>
 {
 public:
     EnvironmentBase();
@@ -192,40 +192,40 @@ public:
     /// \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled
     /// \param filename the name of the file to open
     /// \param atts the XML attributes/value pairs
-    virtual RobotBasePtr ReadRobotXMLFile(RobotBasePtr robot, const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts) = 0;
+    virtual RobotBasePtr ReadRobotXMLFile(RobotBasePtr robot, const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts = XMLAttributesList()) = 0;
     virtual RobotBasePtr ReadRobotXMLFile(const std::string& filename) = 0;
 
     /// Initialize a robot from an XML formatted string
     /// The robot should not be added the environment when calling this function.
     /// \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled
     /// \param atts the XML attributes/value pairs
-    virtual RobotBasePtr ReadRobotXMLData(RobotBasePtr robot, const std::string& data, const std::list<std::pair<std::string,std::string> >& atts) = 0;
+    virtual RobotBasePtr ReadRobotXMLData(RobotBasePtr robot, const std::string& data, const std::list<std::pair<std::string,std::string> >& atts = XMLAttributesList()) = 0;
 
     /// Initializes a kinematic body from an XML file. The body should not be added to the environment when calling this function.
     /// \param filename the name of the file to open
     /// \param body If a null pointer is passed, a new body will be created, otherwise an existing robot will be filled
     /// \param atts the XML attributes/value pairs
-    virtual KinBodyPtr ReadKinBodyXMLFile(KinBodyPtr body, const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts) = 0;
+    virtual KinBodyPtr ReadKinBodyXMLFile(KinBodyPtr body, const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts = XMLAttributesList()) = 0;
     virtual KinBodyPtr ReadKinBodyXMLFile(const std::string& filename) = 0;
 
     /// Initializes a kinematic body from an XML formatted string.
     // The body should not be added to the environment when calling this function.
     /// \param body If a null pointer is passed, a new body will be created, otherwise an existing robot will be filled
     /// \param atts the XML attributes/value pairs
-    virtual KinBodyPtr ReadKinBodyXMLData(KinBodyPtr body, const std::string& data, const std::list<std::pair<std::string,std::string> >& atts) = 0;
+    virtual KinBodyPtr ReadKinBodyXMLData(KinBodyPtr body, const std::string& data, const std::list<std::pair<std::string,std::string> >& atts = XMLAttributesList()) = 0;
 
     /// Initializes an interface from an XML file.
     /// \param pinterface If a null pointer is passed, a new interface will be created, otherwise an existing interface will be filled
     /// \param filename the name of the file to open
     /// \param atts the XML attributes/value pairs
-    virtual InterfaceBasePtr ReadInterfaceXMLFile(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts) = 0;
+    virtual InterfaceBasePtr ReadInterfaceXMLFile(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts = XMLAttributesList()) = 0;
     virtual InterfaceBasePtr ReadInterfaceXMLFile(const std::string& filename) = 0;
 
     /// Initializes an interface from an XML formatted string.
     /// \param pinterface If a null pointer is passed, a new interface will be created, otherwise an existing interface will be filled
     /// \param data string containing XML data
     /// \param atts the XML attributes/value pairs
-    virtual InterfaceBasePtr ReadInterfaceXMLData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const std::list<std::pair<std::string,std::string> >& atts) = 0;
+    virtual InterfaceBasePtr ReadInterfaceXMLData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const std::list<std::pair<std::string,std::string> >& atts = XMLAttributesList()) = 0;
     
     /// \deprecated (10/09/30) see \ref RaveRegisterXMLReader
     virtual boost::shared_ptr<void> RegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn) RAVE_DEPRECATED = 0;

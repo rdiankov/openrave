@@ -272,8 +272,8 @@ public:
     virtual void Destroy();
 
     /// \brief Build the robot from a file.
-    virtual bool InitFromFile(const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts);
-    virtual bool InitFromData(const std::string& data, const std::list<std::pair<std::string,std::string> >& atts);
+    virtual bool InitFromFile(const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts = XMLAttributesList());
+    virtual bool InitFromData(const std::string& data, const std::list<std::pair<std::string,std::string> >& atts = XMLAttributesList());
 
     /// \brief Returns the manipulators of the robot
     virtual std::vector<ManipulatorPtr>& GetManipulators() { return _vecManipulators; }

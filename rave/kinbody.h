@@ -500,9 +500,9 @@ public:
     virtual void Destroy();
 
     /// Build the robot from an XML filename
-    virtual bool InitFromFile(const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts);
+    virtual bool InitFromFile(const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts = XMLAttributesList());
     /// Build the robot from a string representing XML information
-    virtual bool InitFromData(const std::string& data, const std::list<std::pair<std::string,std::string> >& atts);
+    virtual bool InitFromData(const std::string& data, const std::list<std::pair<std::string,std::string> >& atts = XMLAttributesList());
 
     /// \brief Create a kinbody with one link composed of an array of aligned bounding boxes.
     ///

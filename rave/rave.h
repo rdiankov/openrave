@@ -584,6 +584,7 @@ private:
 
 typedef boost::shared_ptr<XMLReadable> XMLReadablePtr;
 typedef boost::shared_ptr<XMLReadable const> XMLReadableConstPtr;
+typedef std::list<std::pair<std::string,std::string> > XMLAttributesList;
 
 /// base class for all xml readers. XMLReaders are used to process data from
 /// xml files. Custom readers can be registered through EnvironmentBase.
