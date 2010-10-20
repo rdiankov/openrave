@@ -481,21 +481,21 @@ class OpenRAVEGlobalArguments:
         """Parses all options that affect the environment"""
         try:
             if options._collision:
-                cc = RaveCreateCollisionChecker(env,options._collision)
+                cc = openravepy.RaveCreateCollisionChecker(env,options._collision)
                 if cc is not None:
                     env.SetCollisionChecker(cc)
         except openrave_exception, e:
             print e
         try:
             if options._physics:
-                ph = RaveCreatePhysicsEngine(env,options._physics)
+                ph = openravepy.RaveCreatePhysicsEngine(env,options._physics)
                 if ph is not None:
                     env.SetPhysicsEngine(ph)
         except openrave_exception, e:
             print e
         try:
             if options._server:
-                sr = RaveCreateProblem(env,options._server)
+                sr = openravepy.RaveCreateProblem(env,options._server)
                 if sr is not None:
                     env.LoadProblem(sr,'%d'%options._serverport)
         except openrave_exception, e:
