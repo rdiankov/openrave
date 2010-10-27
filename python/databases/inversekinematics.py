@@ -234,6 +234,9 @@ class InverseKinematicsModel(OpenRAVEModel):
                 freejoints=[self.robot.GetJoints()[self.manip.GetArmIndices()[ind]].GetName() for ind in [0,3]]
         elif self.manip.GetKinematicsStructureHash()=='0c314a70ee8eadd2c4cb0ff7770893f8' or self.manip.GetKinematicsStructureHash()=='f202b5bed247928f6a730bc6105058b9': # pr2 cameras
             iktype=IkParameterization.Type.Ray4D
+        elif self.manip.GetKinematicsStructureHash()=='cc9744737db7b45be2451aedff296c08': # katana
+            if iktype==IkParameterization.Type.Translation3D or (iktype==None and self.iktype==IkParameterization.Type.Translation3D):
+                freejoints = [self.robot.GetJoints()[ind].GetName() for ind in self.manip.GetArmIndices()[3:]]
         self.generate(iktype=iktype,freejoints=freejoints,usedummyjoints=usedummyjoints,accuracy=accuracy,precision=precision,forceikbuild=forceikbuild,outputlang=outputlang)
         self.save()
 
