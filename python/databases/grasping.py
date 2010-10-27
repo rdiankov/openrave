@@ -279,7 +279,7 @@ class GraspingModel(OpenRAVEModel):
                 normalanglerange = options.normalanglerange
             if options.directiondelta is not None:
                 directiondelta = options.directiondelta
-            updateenv = options.useviewer
+            updateenv = True#options.useviewer
         # check for specific robots
         if self.robot.GetRobotStructureHash() == 'a7a10f9467fe3eba4f72596f21903a5d' and self.manip.GetName() == 'arm' and self.target.GetKinematicsGeometryHash() == 'bbf03c6db8efc712a765f955a27b0d0f': # barrett hand
             if preshapes is None:
@@ -753,8 +753,8 @@ class GraspingModel(OpenRAVEModel):
                           help='The grasper planner to use for this model (default=%default)')
         parser.add_option('--target',action="store",type='string',dest='target',default='data/mug1.kinbody.xml',
                           help='The filename of the target body whose grasp set to be generated (default=%default)')
-        parser.add_option('--noviewer', action='store_false', dest='useviewer',default=True,
-                          help='If specified, will generate the tables without launching a viewer')
+#         parser.add_option('--noviewer', action='store_false', dest='useviewer',default=True,
+#                           help='If specified, will generate the tables without launching a viewer')
         parser.add_option('--boxdelta', action='store', type='float',dest='boxdelta',default=None,
                           help='Step size of of box surface sampling')
         parser.add_option('--spheredelta', action='store', type='float',dest='spheredelta',default=None,
@@ -792,10 +792,10 @@ class GraspingModel(OpenRAVEModel):
                 env.AddKinBody(target)
             if Model is None:
                 Model = lambda robot: GraspingModel(robot=robot,target=target)
-            if options.useviewer:
-                env.SetViewer('qtcoin')
-                env.UpdatePublishedBodies()
-            OpenRAVEModel.RunFromParser(env=env,Model=Model,parser=parser,args=args,**kwargs)
+#             if options.useviewer:
+#                 env.SetViewer('qtcoin')
+#                 env.UpdatePublishedBodies()
+            OpenRAVEModel.RunFromParser(env=env,Model=Model,parser=parser,args=args,defaultviewer=True,**kwargs)
         finally:
             env.Destroy()
 

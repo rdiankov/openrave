@@ -109,10 +109,12 @@ class CodeGenerator(AutoReloader):
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object:
 ///     gcc -fPIC -lstdc++ -DIKFAST_NO_MAIN -shared -Wl,-soname,ik.so -o ik.so ik.cpp
-#include <math.h>
-#include <assert.h>
+#include <cmath>
+#include <cassert>
 #include <vector>
-#include <float.h>
+#include <limits>
+#include <algorithm>
+#include <complex>
 
 #define IK2PI  6.28318530717959
 #define IKPI  3.14159265358979
@@ -174,6 +176,9 @@ public:
 
 inline float IKabs(float f) { return fabsf(f); }
 inline double IKabs(double f) { return fabs(f); }
+
+inline float IKlog(float f) { return logf(f); }
+inline double IKlog(double f) { return log(f); }
 
 inline float IKasin(float f)
 {
@@ -252,6 +257,14 @@ inline double IKatan2(double fy, double fx) {
         code += solvertree.end(self)
 
         code += """
+
+/// solves the inverse kinematics equations.
+/// \param pfree is an array specifying the free joints of the chain.
+IKFAST_API bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {
+IKSolver solver;
+return solver.ik(eetrans,eerot,pfree,vsolutions);
+}
+
 #ifndef IKFAST_NO_MAIN
 #include <stdio.h>
 #include <stdlib.h>
@@ -358,7 +371,7 @@ int main(int argc, char** argv)
         fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
-            code += '%s=pfree[%d]; c%s=cos(pfree[%d]); s%s=sin(pfree[%d]);\n'%(name,i,name,i,name,i)
+            fcode += '%s=pfree[%d]; c%s=cos(pfree[%d]); s%s=sin(pfree[%d]);\n'%(name,i,name,i,name,i)
         for i in range(3):
             for j in range(3):
                 fcode += "r%d%d = eerot[%d*3+%d];\n"%(i,j,i,j)
@@ -379,15 +392,7 @@ int main(int argc, char** argv)
         # write other functions
         for name,functioncode in self.functions.iteritems():
             code += self.indentCode(functioncode,4)
-        code += """};
-
-/// solves the inverse kinematics equations.
-/// \param pfree is an array specifying the free joints of the chain.
-IKFAST_API bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {
-IKSolver solver;
-return solver.ik(eetrans,eerot,pfree,vsolutions);
-}
-"""
+        code += "};\n"
         return code
     def endChain(self, node):
         return ""
@@ -462,6 +467,11 @@ return solver.ik(eetrans,eerot,pfree,vsolutions);
         fcode += '\n'
         fcode += self.generateTree(node.jointtree)
         code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
+
+        # write other functions
+        for name,functioncode in self.functions.iteritems():
+            code += self.indentCode(functioncode,4)
+
         return code
     def endIKChainRotation3D(self, node):
         return ""
@@ -530,6 +540,11 @@ return solver.ik(eetrans,eerot,pfree,vsolutions);
         fcode += "px = new_px; py = new_py; pz = new_pz;\n"
         fcode += self.generateTree(node.jointtree)
         code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
+
+        # write other functions
+        for name,functioncode in self.functions.iteritems():
+            code += self.indentCode(functioncode,4)
+
         return code
     def endIKChainTranslation3D(self, node):
         return ""
@@ -606,6 +621,11 @@ return solver.ik(eetrans,eerot,pfree,vsolutions);
 
         fcode += self.generateTree(node.jointtree)
         code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
+
+        # write other functions
+        for name,functioncode in self.functions.iteritems():
+            code += self.indentCode(functioncode,4)
+
         return code
     def endIKChainDirection3D(self, node):
         return ''
@@ -656,21 +676,28 @@ return solver.ik(eetrans,eerot,pfree,vsolutions);
                 fcode += self.writeEquations(lambda k: outputnames[i],reduced_exprs[i])
             code += self.indentCode(fcode,4)
             code += '}\n\n'
-        code += "/// solves the inverse kinematics equations.\n"
-        code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
-        code += "IKFAST_API bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
-        code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
-        fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"
-        fcode += 'IKReal '
-        
+
+        code += "class IKSolver {\npublic:\n"
+        code += 'IKReal '
         for var in node.solvejointvars:
             fcode += '%s, c%s, s%s,\n'%(var[0].name,var[0].name,var[0].name)
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
-            fcode += '%s=pfree[%d], c%s=cos(pfree[%d]), s%s=sin(pfree[%d]),\n'%(name,i,name,i,name,i)
+            fcode += '%s, c%s, s%s,\n'%(name,i,name,i,name,i)
         for i in range(3):
-            fcode += "new_r0%d, r0%d = eerot[%d],\n"%(i,i,i)
-        fcode += "new_px, new_py, new_pz, px = eetrans[0], py = eetrans[1], pz = eetrans[2];\n"
+            fcode += "new_r0%d, r0%d,\n"%(i,i,i)
+        fcode += "new_px, new_py, new_pz, px, py, pz;\n"
+
+        code += "bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
+        code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
+        fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"
+        fcode += "px = eetrans[0]; py = eetrans[1]; pz = eetrans[2];\n\n"
+        for i in range(len(node.freejointvars)):
+            name = node.freejointvars[i][0].name
+            fcode += '%s=pfree[%d]; c%s=cos(pfree[%d]); s%s=sin(pfree[%d]);\n'%(name,i,name,i,name,i)
+        for i in range(3):
+            fcode += "r0%d = eerot[%d];\n"%(i,i,i)
+        fcode += "px = eetrans[0]; py = eetrans[1]; pz = eetrans[2];\n"
 
         rotsubs = [(Symbol("r%d%d"%(0,i)),Symbol("new_r%d%d"%(0,i))) for i in range(3)]
         rotsubs += [(Symbol("px"),Symbol("new_px")),(Symbol("py"),Symbol("new_py")),(Symbol("pz"),Symbol("new_pz"))]
@@ -686,6 +713,11 @@ return solver.ik(eetrans,eerot,pfree,vsolutions);
 
         fcode += self.generateTree(node.jointtree)
         code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
+
+        # write other functions
+        for name,functioncode in self.functions.iteritems():
+            code += self.indentCode(functioncode,4)
+        code += "};\n"
         return code
     def endIKChainRay4D(self, node):
         return ''
@@ -736,27 +768,36 @@ return solver.ik(eetrans,eerot,pfree,vsolutions);
                 fcode += self.writeEquations(lambda k: outputnames[i],reduced_exprs[i])
             code += self.indentCode(fcode,4)
             code += '}\n\n'
-        code += "/// solves the inverse kinematics equations.\n"
-        code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
-        code += "IKFAST_API bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
-        code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
-        fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"
-        fcode += 'IKReal '
-        
+
+        code += "class IKSolver {\npublic:\n"
+        code += 'IKReal '
         for var in node.solvejointvars:
-            fcode += '%s, c%s, s%s,\n'%(var[0].name,var[0].name,var[0].name)
+            code += '%s, c%s, s%s,\n'%(var[0].name,var[0].name,var[0].name)
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
-            fcode += '%s=pfree[%d], c%s=cos(pfree[%d]), s%s=sin(pfree[%d]),\n'%(name,i,name,i,name,i)
+            code += '%s, c%s, s%s,\n'%(name,name,name)
+        code += "new_px, new_py, new_pz, px, py, pz;\n\n"
 
-        fcode += "new_px, new_py, new_pz, px = eetrans[0], py = eetrans[1], pz = eetrans[2];\n\n"
+        code += "bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
+        code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
+        fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"
+        fcode += "px = eetrans[0]; py = eetrans[1]; pz = eetrans[2];\n\n"
+        
+        for i in range(len(node.freejointvars)):
+            name = node.freejointvars[i][0].name
+            fcode += '%s=pfree[%d]; c%s=cos(pfree[%d]); s%s=sin(pfree[%d]);\n'%(name,i,name,i,name,i)
+
         rotsubs = [(Symbol("px"),Symbol("new_px")),(Symbol("py"),Symbol("new_py")),(Symbol("pz"),Symbol("new_pz"))]
         psymbols = ["new_px","new_py","new_pz"]
         for i in range(3):
             fcode += self.writeEquations(lambda k: psymbols[i],node.Pee[i])
         fcode += "px = new_px; py = new_py; pz = new_pz;\n"
         fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
+        code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n\n"
+        # write other functions
+        for name,functioncode in self.functions.iteritems():
+            code += self.indentCode(functioncode,4)
+        code += "};\n"
         return code
     def endIKChainLookat3D(self, node):
         return ''
@@ -915,6 +956,109 @@ return solver.ik(eetrans,eerot,pfree,vsolutions);
 
     def endConditionedSolution(self, node):
         return '}\n}\n'
+
+    def generatePolynomialRoots(self, node):
+        D=node.poly.degree
+        polyroots=self.using_polyroots(D)
+        name = node.jointname
+        polyvar = node.poly.symbols[0].name[0]
+        code = 'IKReal op[%d+1], zeror[%d];\nint numroots;\n'%(D,D)
+        numevals = 0
+        if node.postcheckforzeros is not None:
+            numevals = max(numevals,len(node.postcheckforzeros))
+        if node.postcheckfornonzeros is not None:
+            numevals = max(numevals,len(node.postcheckfornonzeros))
+        if node.postcheckforrange is not None:
+            numevals = max(numevals,len(node.postcheckforrange))
+        if numevals > 0:
+            code += 'IKReal %sevalpoly[%d];\n'%(name,numevals)
+        code += self.writeEquations(lambda i: 'op[%d]'%(i),[node.poly.coeff(i) for i in range(D,-1,-1)])
+        code += "%s(op,zeror,numroots);\n"%(polyroots)
+        code += 'IKReal %sarray[%d], c%sarray[%d], s%sarray[%d], temp%sarray[%d];\n'%(name,len(node.jointeval)*D,name,len(node.jointeval)*D,name,len(node.jointeval)*D,name,len(node.jointeval))
+        code += 'int numsolutions = 0;\n'
+        code += 'for(int i%s = 0; i%s < numroots; ++i%s)\n{\n'%(name,name,name)
+        fcode = '%s = zeror[i%s];\n'%(node.poly.symbols[0].name,name)
+        origequations = copy.copy(self.dictequations)
+        fcode += self.writeEquations(lambda i: 'temp%sarray[%d]'%(name,i), node.jointeval)
+        self.dictequations = origequations
+        fcode += 'for(int k%s = 0; k%s < %d; ++k%s)\n{\n'%(name,name,len(node.jointeval),name)
+        fcode += '%sarray[numsolutions] = temp%sarray[k%s];\n'%(name,name,name)
+        if node.IsHinge:
+            fcode += 'if( %sarray[numsolutions] > IKPI )\n    %sarray[numsolutions]-=IK2PI;\nelse if( %sarray[numsolutions] < -IKPI )\n    %sarray[numsolutions]+=IK2PI;\n'%(name,name,name,name)
+        fcode += '%c%sarray[numsolutions] = zeror[i%s];\n'%(polyvar,name,name)
+        if polyvar == 'c':
+            fcode += 's%sarray[numsolutions] = IKsin(%sarray[numsolutions]);\n'%(name,name)
+        else:
+            fcode += 'c%sarray[numsolutions] = IKcos(%sarray[numsolutions]);\n'%(name,name)
+        fcode += 'bool valid = true;\n'
+        # test all the solutions up to now for validity
+        fcode += 'for( int j%s = 0; j%s < numsolutions; ++j%s)\n{\n'%(name,name,name)
+        fcode += '    if( IKabs(c%sarray[j%s]-c%sarray[numsolutions]) < 0.0001 && IKabs(s%sarray[j%s]-s%sarray[numsolutions]) < 0.0001 )\n    {\n        valid=false; break;\n    }\n'%(name,name,name,name,name,name)
+        fcode += '}\n'
+        fcode += 'if( valid ) { numsolutions++; }\n'
+        fcode += '}\n'
+        code += self.indentCode(fcode,4)
+        code += '}\n'
+        code += 'for(int i%s = 0; i%s < numsolutions; ++i%s)\n    {\n'%(name,name,name)
+        code += '    %s = %sarray[i%s]; c%s = c%sarray[i%s]; s%s = s%sarray[i%s];\n\n'%(name,name,name,name,name,name,name,name,name)
+        if node.postcheckforzeros is not None and len(node.postcheckforzeros) > 0:
+            fcode = self.writeEquations(lambda i: '%sevalpoly[%d]'%(name,i),node.postcheckforzeros)
+            fcode += 'if( '
+            for i in range(len(node.postcheckforzeros)):
+                if i != 0:
+                    fcode += ' || '
+                fcode += 'IKabs(%sevalpoly[%d]) < %f '%(name,i,node.thresh)
+            fcode += ' )\n{\n    continue;\n}\n'
+            code += self.indentCode(fcode,4)
+        if node.postcheckfornonzeros is not None and len(node.postcheckfornonzeros) > 0:
+            fcode = self.writeEquations(lambda i: '%sevalpoly[%d]'%(name,i),node.postcheckfornonzeros)
+            fcode += 'if( '
+            for i in range(len(node.postcheckfornonzeros)):
+                if i != 0:
+                    fcode += ' || '
+                fcode += 'IKabs(%sevalpoly[%d]) > %f '%(name,i,node.thresh)
+            fcode += ' )\n{\n    continue;\n}\n'
+            code += self.indentCode(fcode,4)
+        if node.postcheckforrange is not None and len(node.postcheckforrange) > 0:
+            fcode = self.writeEquations(lambda i: '%sevalpoly[%d]'%(name,i),node.postcheckforrange)
+            fcode += 'if( '
+            for i in range(len(node.postcheckforrange)):
+                if i != 0:
+                    fcode += ' || '
+                fcode += ' (%sevalpoly[%d] < %f || %sevalpoly[%d] > %f) '%(name,i,-1.0-node.thresh,name,i,1.0+node.thresh)
+            fcode += ' )\n{\n    continue;\n}\n'
+            code += self.indentCode(fcode,4)
+
+        return code
+    def endPolynomialRoots(self, node):
+        return '    }\n'
+
+    def generateConicRoots(self, node):
+        conicsolver=self.using_conicsolver()
+        name = node.jointname
+        cvar = Symbol('c%s'%name)
+        svar = Symbol('s%s'%name)
+        code = 'IKReal coniccoeffs[6], %sarray[4];\nint numsolutions;\n'%(name)
+        if node.checkforzeros is not None and len(node.checkforzeros) > 0:
+            code += 'IKReal %seval[%d];\n'%(name,len(node.checkforzeros))
+            fcode = self.writeEquations(lambda i: '%seval[%d]'%(name,i),node.checkforzeros)
+            fcode += 'if( '
+            for i in range(len(node.checkforzeros)):
+                if i != 0:
+                    fcode += ' || '
+                fcode += 'IKabs(%sevalpoly[%d]) < %f '%(name,i,node.thresh)
+            fcode += ' )\n{\n    continue;\n}\n'
+            code += self.indentCode(fcode,4)
+        
+        conicpoly = Poly(node.jointeval[0],cvar,svar)
+        coeffs = [conicpoly.coeff(2,0),0.5*conicpoly.coeff(1,1),0.5*conicpoly.coeff(1,0),conicpoly.coeff(0,2),0.5*conicpoly.coeff(0,1),conicpoly.coeff(0,0)]
+        code += self.writeEquations(lambda i: 'coniccoeffs[%d]'%(i),coeffs)
+        code += '%s(coniccoeffs,%sarray,numsolutions);\n'%(conicsolver,name)
+        code += 'for(int i%s = 0; i%s < numsolutions; ++i%s)\n{\n'%(name,name,name)
+        code += '    %s = %sarray[i%s]; c%s = IKcos(%s); s%s = IKsin(%s);\n\n'%(name, name,name,name,name,name,name)
+        return code
+    def endConicRoots(self, node):
+        return '    }\n'
 
     def generateBranch(self, node):
         origequations = copy.copy(self.dictequations)
@@ -1085,15 +1229,18 @@ return solver.ik(eetrans,eerot,pfree,vsolutions);
         code = ''
         [replacements,reduced_exprs] = customcse(exprs,symbols=self.symbolgen)
         for rep in replacements:                
-            eqns = filter(lambda x: rep[1]-x[1]==0, self.dictequations)
-            if len(eqns) > 0:
-                self.dictequations.append((rep[0],eqns[0][0]))
-                code += 'IKReal %s=%s;\n'%(rep[0],eqns[0][0])
-            else:
+            comparerep = rep[1].subs(self.dictequations)
+            found = False
+            for x in self.dictequations:
+                if comparerep-x[1].subs(self.dictequations)==0:
+                    self.dictequations.append((rep[0],x[0]))
+                    code += 'IKReal %s=%s;\n'%(rep[0],x[0])
+                    found = True
+                    break
+            if not found:
                 self.dictequations.append(rep)
                 code2,sepcode2 = self.writeExprCode(rep[1])
                 code += sepcode2+'IKReal %s=%s;\n'%(rep[0],code2)
-
         for i,rexpr in enumerate(reduced_exprs):
             code2,sepcode2 = self.writeExprCode(rexpr)
             code += sepcode2+'%s=%s;\n'%(varnamefn(i), code2)
@@ -1202,10 +1349,233 @@ return solver.ik(eetrans,eerot,pfree,vsolutions);
 
     def indentCode(self, code, numspaces):
         lcode = list(code)
-        locations = [i for i in range(len(lcode)) if lcode[i]=='\n']
+        locations = [i for i in range(len(lcode)-1) if lcode[i]=='\n']
         locations.reverse()
         insertcode = [' ' for i in range(numspaces)]
         for loc in locations:
             lcode[loc+1:0] = insertcode
         lcode[:0] = insertcode
         return ''.join(lcode)
+
+    def using_polyroots(self, deg):
+        name = 'polyroots%d'%deg
+        if not name in self.functions:
+            if deg == 1:            
+                fcode = """static void %s(IKReal rawcoeffs[deg+1], IKReal rawroots[deg], int& numroots) {
+    rawroots[0] = -rawcoeffs[1]/rawcoeffs[0];
+    numroots=1;
+}
+"""%name
+            elif deg == 2:
+                fcode = """static void %s(IKReal rawcoeffs[2+1], IKReal rawroots[2], int& numroots) {
+    IKReal det = rawcoeffs[1]*rawcoeffs[1]-4*rawcoeffs[0]*rawcoeffs[2];
+    if( det < 0 ) {
+        numroots=0;
+    }
+    else if( det == 0 ) {
+        rawroots[0] = -0.5*rawcoeffs[1]/rawcoeffs[0];
+        numroots = 1;
+    }
+    else {
+        det = IKsqrt(det);
+        rawroots[0] = 0.5*(-rawcoeffs[1]+det)/rawcoeffs[0];
+        rawroots[1] = 0.5*(-rawcoeffs[1]-det)/rawcoeffs[0];
+        numroots = 2;
+    }
+}
+"""%name
+            elif False:#deg == 3: # amazing, cubic formula is not as accurate as iterative method...
+                fcode = """static void %s(IKReal rawcoeffs[%d+1], IKReal rawroots[%d], int& numroots)
+{
+    using std::complex;
+    assert(rawcoeffs[0] != 0);
+    IKReal a0 = rawcoeffs[3]/rawcoeffs[0], a1 = rawcoeffs[2]/rawcoeffs[0], a2 = rawcoeffs[1]/rawcoeffs[0];
+    IKReal a2_3 = a2/3.0;
+    IKReal Q = (3*a1-a2*a2)/9, R = (9*a2*a1-27*a0-2*a2*a2*a2)/54;
+    complex<IKReal> D(Q*Q*Q+R*R,0.0);
+    complex<IKReal> Dsqrt = sqrt(D);
+    complex<IKReal> S, T;
+    if( imag(Dsqrt) != 0 ) {
+        S = pow(complex<IKReal>(R,0)+Dsqrt,IKReal(1.0/3.0));
+        T = pow(complex<IKReal>(R,0)-Dsqrt,IKReal(1.0/3.0));
+    }
+    else {
+        IKReal temp = R+real(Dsqrt);
+        S = pow(IKabs(temp),IKReal(1.0/3.0));
+        if( temp < 0 ) {
+            S = -S;
+        }
+        temp = R-real(Dsqrt);
+        T = pow(IKabs(temp),IKReal(1.0/3.0));
+        if( temp < 0 ) {
+            T = -T;
+        }
+    }
+    complex<IKReal> B = S+T, A = S-T;
+    numroots = 0;
+    if( IKabs(imag(B)) < std::numeric_limits<IKReal>::epsilon() ) {
+        rawroots[numroots++] = -a2_3+real(B);
+    }
+    complex<IKReal> Arot = complex<IKReal>(0,SQRT_3)*A;
+    if( IKabs(imag(B-Arot)) < std::numeric_limits<IKReal>::epsilon() ) {
+        rawroots[numroots++] = -a2_3-0.5*real(B-Arot);
+        rawroots[numroots++] = -a2_3-0.5*real(B+Arot);
+    }
+}
+"""%name
+            else:
+                fcode = """/// Durand-Kerner polynomial root finding method
+static void %s(IKReal rawcoeffs[%d+1], IKReal rawroots[%d], int& numroots)
+{
+    using std::complex;
+    assert(rawcoeffs[0] != 0);
+    const IKReal tol = 128.0*std::numeric_limits<IKReal>::epsilon();
+    complex<IKReal> coeffs[%d];
+    const int maxsteps = 50;
+    for(int i = 0; i < %d; ++i) {
+        coeffs[i] = complex<IKReal>(rawcoeffs[i+1]/rawcoeffs[0]);
+    }
+    complex<IKReal> roots[%d];
+    IKReal err[%d];
+    roots[0] = complex<IKReal>(1,0);
+    roots[1] = complex<IKReal>(0.4,0.9); // any complex number not a root of unity is works
+    err[0] = 1.0;
+    err[1] = 1.0;
+    for(int i = 2; i < %d; ++i) {
+        roots[i] = roots[i-1]*roots[1];
+        err[i] = 1.0;
+    }
+    for(int step = 0; step < maxsteps; ++step) {
+        bool changed = false;
+        for(int i = 0; i < %d; ++i) {
+            if ( err[i] >= tol ) {
+                changed = true;
+                // evaluate
+                complex<IKReal> x = roots[i] + coeffs[0];
+                for(int j = 1; j < %d; ++j) {
+                    x = roots[i] * x + coeffs[j];
+                }
+                for(int j = 0; j < %d; ++j) {
+                    if( i != j ) {
+                        if( roots[i] != roots[j] ) {
+                            x /= (roots[i] - roots[j]);
+                        }
+                    }
+                }
+                roots[i] -= x;
+                err[i] = abs(x);
+            }
+        }
+        if( !changed ) {
+            break;
+        }
+    }
+    numroots = 0;
+    for(int i = 0; i < %d; ++i) {
+        if( IKabs(imag(roots[i])) < std::numeric_limits<IKReal>::epsilon() ) {
+            rawroots[numroots++] = real(roots[i]);
+        }
+    }
+}
+"""%(name,deg,deg,deg,deg,deg,deg,deg,deg,deg,deg,deg)
+            self.functions[name] = fcode
+        return name
+
+    def using_conicsolver(self):
+        """ the general method to solve an intersection of two conics C1 and C2 is to first
+        note that any solution to their intersection is also a solution of
+        x^T C x = 0, where C = t0*C0 + t1*C1
+        for t0, t1 in Reals. Without loss of generality, we set t1 = 1, and find t0 when
+        C becomes degenerate, ie det(C) = 0. This produces a cubic equation in t0,
+        which gives 4 solutions. Gathering all the equations produced by the degenerate
+        conic should give rise to two equations of lines. Intersect these lines with the simpler of the
+        two conics, the unit circle: c^2+s^2-1 = 0
+        """
+        polyroots2=self.using_polyroots(2)
+        polyroots3=self.using_polyroots(3)
+        name = 'conicsolver'
+        if not name in self.functions:
+            fcode = """/// intersection of a conic and the unit circle
+static void %s(IKReal C0[6], IKReal roots[4], int& numroots)
+{
+    IKReal rawcoeffs[4] = {-1,
+                           C0[5] - C0[0] - C0[3],
+                           C0[0]*C0[5] + C0[3]*C0[5] - C0[0]*C0[3] + C0[1]*C0[1] - C0[2]*C0[2] - C0[4]*C0[4],
+                           C0[0]*C0[3]*C0[5] + 2*C0[1]*C0[2]*C0[4] - C0[0]*C0[4]*C0[4] - C0[3]*C0[2]*C0[2] - C0[5]*C0[1]*C0[1]};
+    IKReal proots[3];
+    int numproots, numyroots;
+    %s(rawcoeffs,proots,numproots);
+    numroots = 0;
+    int iroot=0;
+    IKReal a, b, c, d, e, f;
+    a = C0[0]+proots[iroot]; b = C0[1]; c = C0[3]+proots[iroot]; d = C0[2]; e = C0[4]; f = C0[5]-proots[iroot];
+    IKReal adjugate[9] = {c*f-e*e, -b*f+e*d, b*e-c*d, -b*f+d*e, a*f-d*d, -a*e+b*d, b*e-d*c, -a*e+d*b, a*c-b*b};
+    // find the greatest absolute value of adjugate and take that column
+    int maxindex = 0;
+    IKReal val = IKabs(adjugate[maxindex]);
+    for(int i = 1; i < 9; ++i) {
+        IKReal newval = IKabs(adjugate[i]);
+        if( val < newval ) {
+            val = newval;
+            maxindex = i;
+        }
+    }
+    maxindex = maxindex%%3;
+    if( adjugate[0] > 0 || adjugate[4] > 0 || adjugate[8] > 0 || adjugate[4*maxindex] >= 0 ) {
+        // according to the structure of the matrix, should be always negative if a solution exists...
+        return;
+    }
+    IKReal bmult = 1.0/IKsqrt(-adjugate[4*maxindex]);
+    IKReal p[3] = {adjugate[maxindex]*bmult, adjugate[3+maxindex]*bmult, adjugate[6+maxindex]*bmult}; // intersection point
+    // C = C0 - [p_x] = 2gh^t, C is rank1
+    IKReal C[9] = {a,b+p[2],d-p[1],b-p[2],c,e+p[0],d+p[1],e-p[0],f};
+    maxindex = 0;
+    val = IKabs(C[maxindex]);
+    for(int i = 1; i < 9; ++i) {
+        IKReal newval = IKabs(C[i]);
+        if( val < newval ) {
+            val = newval;
+            maxindex = i;
+        }
+    }
+    int row = maxindex/3;
+    int col = maxindex%%3;
+    IKReal lineequation[3], coeffs[3], yintersections[2];
+    for(int i = 0; i < 2; ++i) {
+        if( i == 0 ) {
+            lineequation[0] = C[3*row];
+            lineequation[1] = C[3*row+1];
+            lineequation[2] = C[3*row+2];
+        }
+        else {
+            lineequation[0] = C[col];
+            lineequation[1] = C[3+col];
+            lineequation[2] = C[6+col];
+        }
+
+        if( IKabs(lineequation[0]) < std::numeric_limits<IKReal>::epsilon() ) {
+            yintersections[0] = -lineequation[2]/lineequation[1];
+            IKReal x = 1-yintersections[0]*yintersections[0];
+            if( x <= 0 && x > -std::numeric_limits<IKReal>::epsilon() ) {
+                roots[numroots++] = yintersections[0] > 0 ? IKPI_2 : -IKPI_2;
+            }
+            else {
+                x = IKsqrt(x);
+                roots[numroots++] = IKatan2(yintersections[0], x);
+                roots[numroots] = IKPI - roots[numroots-1]; numroots++;
+            }
+        }
+        else {
+            coeffs[0] = lineequation[0]*lineequation[0]+lineequation[1]*lineequation[1];
+            coeffs[1] = 2*lineequation[1]*lineequation[2];
+            coeffs[2] = lineequation[2]*lineequation[2]-lineequation[0]*lineequation[0];
+            %s(coeffs,yintersections,numyroots);
+            for(int j = 0; j < numyroots; ++j) {
+                roots[numroots++] = IKatan2(yintersections[j],-(lineequation[1]*yintersections[j]+lineequation[2])/lineequation[0]);
+            }
+        }
+    }
+}
+"""%(name,polyroots3,polyroots2)
+            self.functions[name] = fcode
+        return name

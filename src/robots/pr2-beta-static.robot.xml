@@ -23,6 +23,7 @@
     <closingdirection>-1</closingdirection>
     <translation>0.18 0 0</translation>
     <direction>1 0 0</direction>
+    <iksolver>ikfast_pr2_leftarm</iksolver>
   </manipulator>
   <manipulator name="leftarm_torso">
     <base>base_link</base>
@@ -31,6 +32,7 @@
     <closingdirection>-1</closingdirection>
     <translation>0.18 0 0</translation>
     <direction>1 0 0</direction>
+    <iksolver>ikfast_pr2_leftarm_torso</iksolver>
   </manipulator>
   <manipulator name="rightarm">
     <base>torso_lift_link</base>
@@ -39,6 +41,7 @@
     <closingdirection>-1</closingdirection>
     <translation>0.18 0 0</translation>
     <direction>1 0 0</direction>
+    <iksolver>ikfast_pr2_rightarm</iksolver>
   </manipulator>
   <manipulator name="rightarm_torso">
     <base>base_link</base>
@@ -47,6 +50,7 @@
     <closingdirection>-1</closingdirection>
     <translation>0.18 0 0</translation>
     <direction>1 0 0</direction>
+    <iksolver>ikfast_pr2_rightarm_torso</iksolver>
   </manipulator>
   <manipulator name="leftarm_camera">
     <base>torso_lift_link</base>
@@ -57,6 +61,18 @@
     <base>torso_lift_link</base>
     <effector>r_forearm_cam_optical_frame</effector>
     <direction>0 0 1</direction>
+  </manipulator>
+  <manipulator name="head">
+    <base>torso_lift_link</base>
+    <effector>wide_stereo_optical_frame</effector>
+    <direction>0 0 1</direction>
+    <iksolver>ikfast_pr2_head</iksolver>
+  </manipulator>
+  <manipulator name="head_torso">
+    <base>base_link</base>
+    <effector>wide_stereo_optical_frame</effector>
+    <direction>0 0 1</direction>
+    <iksolver>ikfast_pr2_head_torso</iksolver>
   </manipulator>
   <attachedsensor name="l_forearm_cam_optical_frame">
     <link>l_forearm_cam_optical_frame</link>

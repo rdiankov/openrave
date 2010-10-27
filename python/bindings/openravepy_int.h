@@ -17,6 +17,8 @@
 #ifndef OPENRAVEPY_INTERNAL_H
 #define OPENRAVEPY_INTERNAL_H
 
+#include "openrave-core.h"
+
 #ifndef _WIN32
 #include <sys/time.h>
 #define Sleep(milli) usleep(1000*milli)
@@ -25,7 +27,6 @@
 #include <winsock2.h>
 #endif
 
-#include "openrave-core.h"
 #include <Python.h>
 
 #include <sstream>

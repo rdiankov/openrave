@@ -120,7 +120,8 @@ def test_drillray():
     chain = []
     for joint in alljoints:
         issolvejoint = any([i == joint.jointindex for i in solvejoints])
-        joint.isdummy = usedummyjoints and not issolvejoint and not any([i == joint.jointindex for i in freeparams])
+        if usedummyjoints and not issolvejoint and not any([i == joint.jointindex for i in freeparams]):
+            joint.isdummy = True
         joint.isfreejoint = not issolvejoint and not joint.isdummy
         chain.append(joint)
     Tee = eye(4)
@@ -169,20 +170,21 @@ def test_6dik():
     from openravepy import *
     import numpy,time
     import ikfast
-    from ikfast import SolverStoreSolution, SolverSequence
+    from ikfast import SolverStoreSolution, SolverSequence,combinations
     from sympy import *
+    import __builtin__
     env = Environment()
     env.Reset()
     robot = env.ReadRobotXMLFile('robots/pr2-beta-static.robot.xml')
     env.AddRobot(robot)
-    manip = robot.SetActiveManipulator('leftarm_torso')
+    manip = robot.SetActiveManipulator('leftarm')
     ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
+    Tgripperraw = manip.GetGraspTransform()
 
     solvefn=ikfast.IKFastSolver.solveFullIK_6D
     solvejoints = list(manip.GetArmJoints())
-    freeparams=solvejoints[0:2]
-    solvejoints.pop(0)
-    solvejoints.pop(0)
+    freeparams=solvejoints[2:3]
+    solvejoints.pop(2)
     sourcefilename = 'temp.cpp'
     self = ikfast.IKFastSolver(kinbody=robot,accuracy=None,precision=None)
     #code = self.generateIkSolver(manip.GetBase().GetIndex(),manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejoints,usedummyjoints=False,solvefn=solvefn)
@@ -195,7 +197,8 @@ def test_6dik():
     chain = []
     for joint in alljoints:
         issolvejoint = any([i == joint.jointindex for i in solvejoints])
-        joint.isdummy = usedummyjoints and not issolvejoint and not any([i == joint.jointindex for i in freeparams])
+        if usedummyjoints and not issolvejoint and not any([i == joint.jointindex for i in freeparams]):
+            joint.isdummy = True
         joint.isfreejoint = not issolvejoint and not joint.isdummy
         chain.append(joint)
     Tee = eye(4)
@@ -242,7 +245,8 @@ def test_3dik():
     chain = []
     for joint in alljoints:
         issolvejoint = any([i == joint.jointindex for i in solvejoints])
-        joint.isdummy = usedummyjoints and not issolvejoint and not any([i == joint.jointindex for i in freeparams])
+        if usedummyjoints and not issolvejoint and not any([i == joint.jointindex for i in freeparams]):
+            joint.isdummy = True
         joint.isfreejoint = not issolvejoint and not joint.isdummy
         chain.append(joint)
     Tee = eye(4)
@@ -261,13 +265,14 @@ def test_lookatik():
     from openravepy import *
     import numpy,time
     import ikfast
-    from ikfast import SolverStoreSolution, SolverSequence
+    from ikfast import SolverStoreSolution, SolverSequence, combinations
     from sympy import *
+    import __builtin__
     env = Environment()
     env.Reset()
-    robot = env.ReadRobotXMLFile('robots/hrp2jsk07.robot.xml')
+    robot = env.ReadRobotXMLFile('robots/pr2-beta-static.robot.xml')
     env.AddRobot(robot)
-    manip = robot.GetManipulator('head')
+    manip = robot.GetManipulator('head_torso')
     ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Translation3D)
     #self.generate()
     rawbasedir=numpy.dot(manip.GetGraspTransform()[0:3,0:3],manip.GetDirection())
@@ -279,7 +284,8 @@ def test_lookatik():
 
     solvefn=solveFullIK_Lookat3D
     solvejoints = list(manip.GetArmJoints())
-    freeparams=[]
+    freeparams=solvejoints[0:1]
+    solvejoints.pop(0)
     sourcefilename = 'temp.cpp'
     self = ikfast.IKFastSolver(kinbody=robot,precision=None)
     #code = self.generateIkSolver(manip.GetBase().GetIndex(),manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejoints,usedummyjoints=False,solvefn=solvefn)
@@ -290,7 +296,8 @@ def test_lookatik():
     chain = []
     for joint in alljoints:
         issolvejoint = any([i == joint.jointindex for i in solvejoints])
-        joint.isdummy = usedummyjoints and not issolvejoint and not any([i == joint.jointindex for i in freeparams])
+        if usedummyjoints and not issolvejoint and not any([i == joint.jointindex for i in freeparams]):
+            joint.isdummy = True
         joint.isfreejoint = not issolvejoint and not joint.isdummy
         chain.append(joint)
     Tee = eye(4)

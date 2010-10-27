@@ -588,7 +588,7 @@ void RobotBase::Destroy()
 
 bool RobotBase::SetController(ControllerBasePtr controller, const std::string& args)
 {
-    RAVELOG_WARN("default robot doesn't not support setting controllers (try GenericRobot)\n");
+    RAVELOG_DEBUG("default robot doesn't not support setting controllers (try GenericRobot)\n");
     return false;
 }
 

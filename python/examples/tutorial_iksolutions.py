@@ -14,7 +14,7 @@
 # limitations under the License.
 """
 
-.. image:: ../../images/examples_tutorial_ik.jpg
+.. image:: ../../images/example_tutorials/iksolutions.jpg
   :height: 200
 
 Shows how to call an IK solver and render all the solutions.
@@ -110,7 +110,7 @@ def run(args=None):
                 lower,upper = [v[ikmodel.manip.GetArmIndices()] for v in ikmodel.robot.GetJointLimits()]
                 robot.SetDOFValues(random.rand()*(upper-lower)+lower,ikmodel.manip.GetArmIndices()) # set random values
                 if not robot.CheckSelfCollision():
-                    solutions = ikmodel.manip.FindIKSolutions(ikmodel.manip.GetEndEffectorTransform(),True)
+                    solutions = ikmodel.manip.FindIKSolutions(ikmodel.manip.GetEndEffectorTransform(),IkFilterOptions.CheckEnvCollisions)
                     if solutions is not None and len(solutions) > 0: # if found, then break
                         break
             

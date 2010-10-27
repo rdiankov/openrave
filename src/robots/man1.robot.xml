@@ -1148,7 +1148,6 @@
   <Manipulator name="leftarm">
     <base>LCollar</base>
     <effector>LHand3</effector>
-    <iksolver>Man1Leftikfast</iksolver>
     <joints>JLThumbBase JLThumbBase2 JLThumb0 JLThumb1 JLThumb2 JLFing40 JLFing41 JLFing42 JLFing30 JLFing31 JLFing32 JLFing20 JLFing21 JLFing22 JLFing10 JLFing11 JLFing12</joints>
     <closingdirection>1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1</closingdirection>
     <direction>-1 0 0</direction>
@@ -1157,7 +1156,6 @@
   <Manipulator name="rightarm">
     <base>RCollar</base>
     <effector>RHand3</effector>
-    <iksolver>Man1Rightikfast</iksolver>
     <joints>JRThumbBase JRThumbBase2 JRThumb0 JRThumb1 JRThumb2 JRFing40 JRFing41 JRFing42 JRFing30 JRFing31 JRFing32 JRFing20 JRFing21 JRFing22 JRFing10 JRFing11 JRFing12</joints>
     <closingdirection>-1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1</closingdirection>
     <direction>1 0 0</direction>

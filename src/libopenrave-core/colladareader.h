@@ -1754,123 +1754,109 @@ public:
   /// \param plink    Link of the kinematics model
   void ExtractGeometry(const domNodeRef pdomnode,KinBody::LinkPtr plink, const vector<KINEMATICSBINDING> &vbindings)
   {
-    //  Debug
-    RAVELOG_WARNA("ExtractGeometry(node,link) of %s\n",pdomnode->getName());
+      //  Debug
+      RAVELOG_WARNA("ExtractGeometry(node,link) of %s\n",pdomnode->getName());
 
-
-    for (size_t i = 0; i < pdomnode->getNode_array().getCount(); i++)
-    {
-      RAVELOG_VERBOSEA("[stef] (%d/%d) Children %s (%s)\n",i,pdomnode->getNode_array().getCount(),pdomnode->getNode_array()[i]->getID(), pdomnode->getID());
-    }
-
-    // For all child nodes of pdomnode
-    for (size_t i = 0; i < pdomnode->getNode_array().getCount(); i++)
-    {
-      RAVELOG_VERBOSEA("[stef]  %s: Process Children Children %s (%d/%d) \n",pdomnode->getID(),pdomnode->getNode_array()[i]->getID(),i,pdomnode->getNode_array().getCount());
-      // check if contains a joint
-      bool contains=false;
-      for (vector<KINEMATICSBINDING>::const_iterator it=vbindings.begin(); it!= vbindings.end();it++){
-        RAVELOG_VERBOSEA("[stef] child node '%s' ?=  link node '%s'",pdomnode->getNode_array()[i]->getID(), it->pvisualnode->getID());
-
-        // don't check ID's check if the reference is the same!
-        //if (string(pdomnode->getNode_array()[i]->getID()).compare(string(it->pvisualnode->getID()))==0){
-        if ( (pdomnode->getNode_array()[i])  == (it->pvisualnode)){
-          //domNode *pv = *(it->pvisualnode);
-          //domNode *child = *(pdomnode->getNode_array()[i]);
-          //if ( (child) == pv){
-          contains=true;
-          RAVELOG_VERBOSEA(" yes\n");
-          break;
-        }
-        RAVELOG_VERBOSEA(" no\n");
-      }
-      if (contains) continue;
-
-      RAVELOG_VERBOSEA("[stef] Process child node: %s\n", pdomnode->getNode_array()[i]->getID());
-
-      ExtractGeometry(pdomnode->getNode_array()[i],plink, vbindings);
-      // Plink stayes the same for all children
-      // replace pdomnode by child = pdomnode->getNode_array()[i]
-      // hope for the best!
-      // put everything in a subroutine in order to process pdomnode too!
-    }
-
-
-    unsigned int nGeomBefore =  plink->_listGeomProperties.size(); // #of Meshes already associated to this link
-
-    // get the geometry
-    for (size_t igeom = 0; igeom
-    < pdomnode->getInstance_geometry_array().getCount(); ++igeom) {
-
-      domInstance_geometryRef domigeom =
-        pdomnode->getInstance_geometry_array()[igeom];
-
-      domGeometryRef domgeom = daeSafeCast<domGeometry> (
-          domigeom->getUrl().getElement());
-
-      if (!domgeom) {
-        RAVELOG_WARNA("link %s does not have valid geometry\n",
-            plink->GetName().c_str());
-        continue;
+      for (size_t i = 0; i < pdomnode->getNode_array().getCount(); i++) {
+          RAVELOG_VERBOSEA("[stef] (%d/%d) Children %s (%s)\n",i,pdomnode->getNode_array().getCount(),pdomnode->getNode_array()[i]->getID(), pdomnode->getID());
       }
 
-      //  Gets materials
-      map<string, domMaterialRef> mapmaterials;
-      if (!!domigeom->getBind_material()
-          && !!domigeom->getBind_material()->getTechnique_common()) {
-        const domInstance_material_Array
-        & matarray =
-          domigeom->getBind_material()->getTechnique_common()->getInstance_material_array();
-        for (size_t imat = 0; imat < matarray.getCount(); ++imat) {
-          domMaterialRef pmat = daeSafeCast<domMaterial> (
-              matarray[imat]->getTarget().getElement());
-          if (!!pmat)
-            mapmaterials[matarray[imat]->getSymbol()] = pmat;
-        }
+      // For all child nodes of pdomnode
+      for (size_t i = 0; i < pdomnode->getNode_array().getCount(); i++) {
+          RAVELOG_VERBOSEA("[stef]  %s: Process Children Children %s (%d/%d) \n",pdomnode->getID(),pdomnode->getNode_array()[i]->getID(),i,pdomnode->getNode_array().getCount());
+          // check if contains a joint
+          bool contains=false;
+          for (vector<KINEMATICSBINDING>::const_iterator it=vbindings.begin(); it!= vbindings.end();it++) {
+              RAVELOG_VERBOSEA("[stef] child node '%s' ?=  link node '%s'",pdomnode->getNode_array()[i]->getID(), it->pvisualnode->getID());
+
+              // don't check ID's check if the reference is the same!
+              //if (string(pdomnode->getNode_array()[i]->getID()).compare(string(it->pvisualnode->getID()))==0){
+              if ( (pdomnode->getNode_array()[i])  == (it->pvisualnode)){
+                  //domNode *pv = *(it->pvisualnode);
+                  //domNode *child = *(pdomnode->getNode_array()[i]);
+                  //if ( (child) == pv){
+                  contains=true;
+                  RAVELOG_VERBOSEA(" yes\n");
+                  break;
+              }
+              RAVELOG_VERBOSEA(" no\n");
+          }
+          if (contains) continue;
+
+          RAVELOG_VERBOSEA("[stef] Process child node: %s\n", pdomnode->getNode_array()[i]->getID());
+
+          ExtractGeometry(pdomnode->getNode_array()[i],plink, vbindings);
+          // Plink stayes the same for all children
+          // replace pdomnode by child = pdomnode->getNode_array()[i]
+          // hope for the best!
+          // put everything in a subroutine in order to process pdomnode too!
       }
 
-      //  Gets the geometry
-      ExtractGeometry(domgeom, mapmaterials, plink);
-    }
-    TransformMatrix tmnodegeom = (TransformMatrix) plink->_t.inverse()
-    * getNodeParentTransform(pdomnode) * getFullTransform(pdomnode);
-    Transform tnodegeom;
-    Vector vscale;
-    decompose(tmnodegeom, tnodegeom, vscale);
+      unsigned int nGeomBefore =  plink->_listGeomProperties.size(); // #of Meshes already associated to this link
 
+      // get the geometry
+      for (size_t igeom = 0; igeom < pdomnode->getInstance_geometry_array().getCount(); ++igeom) {
+          domInstance_geometryRef domigeom = pdomnode->getInstance_geometry_array()[igeom];
+          domGeometryRef domgeom = daeSafeCast<domGeometry> (domigeom->getUrl().getElement());
+          if (!domgeom) {
+              RAVELOG_WARNA("link %s does not have valid geometry\n", plink->GetName().c_str());
+              continue;
+          }
 
-    list<KinBody::Link::GEOMPROPERTIES>::iterator itgeom= plink->_listGeomProperties.begin();
-    for (unsigned int i=0; i< nGeomBefore; i++) itgeom++; // change only the transformations of the newly found geometries.
+          //  Gets materials
+          map<string, domMaterialRef> mapmaterials;
+          if (!!domigeom->getBind_material() && !!domigeom->getBind_material()->getTechnique_common()) {
+              const domInstance_material_Array& matarray = domigeom->getBind_material()->getTechnique_common()->getInstance_material_array();
+              for (size_t imat = 0; imat < matarray.getCount(); ++imat) {
+                  domMaterialRef pmat = daeSafeCast<domMaterial>(matarray[imat]->getTarget().getElement());
+                  if (!!pmat) {
+                      mapmaterials[matarray[imat]->getSymbol()] = pmat;
+                  }
+              }
+          }
 
-    //  Switch between different type of geometry PRIMITIVES
-    for (; itgeom != plink->_listGeomProperties.end(); itgeom++)
-    {
-      itgeom->_t = tnodegeom;
-      switch (itgeom->GetType()) {
-      case KinBody::Link::GEOMPROPERTIES::GeomBox:
-        itgeom->vGeomData *= vscale;
-        break;
-      case KinBody::Link::GEOMPROPERTIES::GeomSphere:
-        itgeom->vGeomData *= max(vscale.z, max(vscale.x, vscale.y));
-        break;
-      case KinBody::Link::GEOMPROPERTIES::GeomCylinder:
-        itgeom->vGeomData.x *= max(vscale.x, vscale.y);
-        itgeom->vGeomData.y *= vscale.z;
-        break;
-      case KinBody::Link::GEOMPROPERTIES::GeomTrimesh:
-        itgeom->collisionmesh.ApplyTransform(tmnodegeom);
-        itgeom->_t = Transform(); // reset back to identity
-        break;
-      default:
-        RAVELOG_WARNA("unknown geometry type: %d\n", itgeom->GetType());
+          //  Gets the geometry
+          ExtractGeometry(domgeom, mapmaterials, plink);
       }
 
-      //  Gets collision mesh
-      KinBody::Link::TRIMESH trimesh = itgeom->GetCollisionMesh();
-      trimesh.ApplyTransform(itgeom->_t);
-      plink->collision.Append(trimesh);
-    }
-    //      RAVELOG_VERBOSEA("End Extract Geometry (%s)\n",pdomnode->getID());
+      TransformMatrix tmnodegeom = (TransformMatrix) plink->_t.inverse() * getNodeParentTransform(pdomnode) * getFullTransform(pdomnode);
+      Transform tnodegeom;
+      Vector vscale;
+      decompose(tmnodegeom, tnodegeom, vscale);
+
+      list<KinBody::Link::GEOMPROPERTIES>::iterator itgeom= plink->_listGeomProperties.begin();
+      for (unsigned int i=0; i< nGeomBefore; i++) {
+          itgeom++; // change only the transformations of the newly found geometries.
+      }
+
+      //  Switch between different type of geometry PRIMITIVES
+      for (; itgeom != plink->_listGeomProperties.end(); itgeom++) {
+          itgeom->_t = tnodegeom;
+          switch (itgeom->GetType()) {
+          case KinBody::Link::GEOMPROPERTIES::GeomBox:
+              itgeom->vGeomData *= vscale;
+              break;
+          case KinBody::Link::GEOMPROPERTIES::GeomSphere:
+              itgeom->vGeomData *= max(vscale.z, max(vscale.x, vscale.y));
+              break;
+          case KinBody::Link::GEOMPROPERTIES::GeomCylinder:
+              itgeom->vGeomData.x *= max(vscale.x, vscale.y);
+              itgeom->vGeomData.y *= vscale.z;
+              break;
+          case KinBody::Link::GEOMPROPERTIES::GeomTrimesh:
+              itgeom->collisionmesh.ApplyTransform(tmnodegeom);
+              itgeom->_t = Transform(); // reset back to identity
+              break;
+          default:
+              RAVELOG_WARNA("unknown geometry type: %d\n", itgeom->GetType());
+          }
+
+          //  Gets collision mesh
+          KinBody::Link::TRIMESH trimesh = itgeom->GetCollisionMesh();
+          trimesh.ApplyTransform(itgeom->_t);
+          plink->collision.Append(trimesh);
+      }
+      //      RAVELOG_VERBOSEA("End Extract Geometry (%s)\n",pdomnode->getID());
   }
 
   /// Paint the Geometry with the color material
@@ -1920,9 +1906,12 @@ public:
     geom.type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
 
     // resolve the material and assign correct colors to the geometry
-    map<string,domMaterialRef>::const_iterator itmat = mapmaterials.find(triRef->getMaterial());
-    if( itmat != mapmaterials.end() )
-      FillGeometryColor(itmat->second,geom);
+    if( !!triRef->getMaterial() ) {
+        map<string,domMaterialRef>::const_iterator itmat = mapmaterials.find(triRef->getMaterial());
+        if( itmat != mapmaterials.end() ) {
+            FillGeometryColor(itmat->second,geom);
+        }
+    }
 
     int triangleIndexStride = 0;
     int vertexoffset = -1;
@@ -2019,9 +2008,12 @@ public:
     geom.type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
 
     // resolve the material and assign correct colors to the geometry
-    map<string,domMaterialRef>::const_iterator itmat = mapmaterials.find(triRef->getMaterial());
-    if( itmat != mapmaterials.end() )
-      FillGeometryColor(itmat->second,geom);
+    if( !!triRef->getMaterial() ) {
+        map<string,domMaterialRef>::const_iterator itmat = mapmaterials.find(triRef->getMaterial());
+        if( itmat != mapmaterials.end() ) {
+            FillGeometryColor(itmat->second,geom);
+        }
+    }
 
     int triangleIndexStride = 0;
     int vertexoffset = -1;
@@ -2112,10 +2104,12 @@ public:
     geom.type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
 
     // resolve the material and assign correct colors to the geometry
-    map<string,domMaterialRef>::const_iterator itmat = mapmaterials.find(triRef->getMaterial());
-    if( itmat != mapmaterials.end() )
-      FillGeometryColor(itmat->second,geom);
-
+    if( !!triRef->getMaterial() ) {
+        map<string,domMaterialRef>::const_iterator itmat = mapmaterials.find(triRef->getMaterial());
+        if( itmat != mapmaterials.end() ) {
+            FillGeometryColor(itmat->second,geom);
+        }
+    }
     int triangleIndexStride = 0;
     int vertexoffset = -1;
     domInput_local_offsetRef indexOffsetRef;

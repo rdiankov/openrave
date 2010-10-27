@@ -5,6 +5,7 @@
 #include <boost/algorithm/string.hpp>
 
 #ifdef Boost_IOSTREAMS_FOUND
+#define BOOST_IOSTREAMS_USE_DEPRECATED // needed for newer versions of boost
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>
 #endif
@@ -778,7 +779,7 @@ public:
                 FOREACH(it, vjoints)
                     s << *it << " ";
                 s << endl << "Transform: " << twrist << endl;
-                TransformMatrix tm(pmanip->GetBase()->GetTransform().inverse()*twrist*pmanip->GetGraspTransform().inverse());
+                TransformMatrix tm(pmanip->GetBase()->GetTransform().inverse()*twrist);
                 vector<dReal> vfree;
                 pmanip->GetFreeParameters(vfree);
                 s << "raw ik command: "
@@ -809,7 +810,7 @@ public:
                     s << *it << " ";
                 s << endl << "Transform in: " << twrist << endl;
                 s << "Transform out: " << twrist_out << endl;
-                TransformMatrix tm(pmanip->GetBase()->GetTransform().inverse()*twrist*pmanip->GetGraspTransform().inverse());
+                TransformMatrix tm(pmanip->GetBase()->GetTransform().inverse()*twrist);
                 vector<dReal> vfree;
                 pmanip->GetFreeParameters(vfree);
                 s << "raw ik command: "
@@ -853,7 +854,7 @@ public:
                         s << *it << " ";
                     s << endl << "Transform in: " << twrist << endl;
                     s << "Transform out: " << twrist_out << endl;
-                    TransformMatrix tm(pmanip->GetBase()->GetTransform().inverse()*twrist*pmanip->GetGraspTransform().inverse());
+                    TransformMatrix tm(pmanip->GetBase()->GetTransform().inverse()*twrist);
                     vector<dReal> vfree;
                     pmanip->GetFreeParameters(vfree);
                     s << "raw ik command: "

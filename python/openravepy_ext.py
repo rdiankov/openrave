@@ -591,7 +591,7 @@ class OpenRAVEModel(metaclass.AutoReloader):
         parser.add_option_group(dbgroup)
         return parser
     @staticmethod
-    def RunFromParser(Model,env=None,parser=None,args=None,**kwargs):
+    def RunFromParser(Model,env=None,parser=None,args=None,defaultviewer=False,**kwargs):
         if parser is None:
             parser = OpenRAVEModel.CreateOptionParser()
         (options, args) = parser.parse_args(args=args)
@@ -609,8 +609,8 @@ class OpenRAVEModel(metaclass.AutoReloader):
             env = openravepy.Environment()
             destroyenv = True
         try:
+            OpenRAVEGlobalArguments.parseEnvironment(options,env,defaultviewer=defaultviewer)
             with env:
-                OpenRAVEGlobalArguments.parseEnvironment(options,env)
                 robot = env.ReadRobotXMLFile(options.robot)
                 env.AddRobot(robot)
                 robot.SetTransform(numpy.eye(4))

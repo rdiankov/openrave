@@ -521,7 +521,7 @@ class InverseReachabilityModel(OpenRAVEModel):
                     for pose in poses:
                         self.robot.SetTransform(matrixFromPose(pose))
                         self.robot.SetJointValues(*jointstate)
-                        if self.manip.FindIKSolution(eye(4),False) is None:
+                        if self.manip.FindIKSolution(eye(4),0) is None:
                             #print 'pose failed: ',pose
                             failures += 1
                     print 'height %f, failures: %d'%(height,failures)
@@ -541,7 +541,7 @@ class InverseReachabilityModel(OpenRAVEModel):
                 Tmanip = matrixFromAxisAngle([0,0,1],sample[0])
                 Tmanip[0:2,3] = sample[1:3]
                 self.robot.SetTransform(Tmanip)
-                solution = self.manip.FindIKSolution(Tgrasp,False)
+                solution = self.manip.FindIKSolution(Tgrasp,0)
                 if solution is None:
                     failed += 1
             return float(failed)/len(equivalenceclass[2])
@@ -549,7 +549,7 @@ class InverseReachabilityModel(OpenRAVEModel):
         with self.env:
             Torggrasp = array(Tgrasp)
             while True:
-                solution = self.manip.FindIKSolution(Tgrasp,False)
+                solution = self.manip.FindIKSolution(Tgrasp,0)
                 if solution is not None:
                     break
                 Tgrasp[0:3,3] = Torggrasp[0:3,3] + (random.rand(3)-0.5)*0.01
@@ -608,7 +608,7 @@ class InverseReachabilityModel(OpenRAVEModel):
                 Tmanip[0:2,3] = sample[1:3]
                 self.robot.SetTransform(Tmanip)
                 self.robot.SetJointValues(*self.necessaryjointstate())
-                solution = self.manip.FindIKSolution(Tgrasp,False)
+                solution = self.manip.FindIKSolution(Tgrasp,0)
                 if solution is not None:
                     self.robot.SetJointValues(solution,self.manip.GetArmIndices())
                     robotlocs.append((self.robot.GetTransform(),self.robot.GetDOFValues()))

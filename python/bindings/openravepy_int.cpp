@@ -1178,16 +1178,19 @@ public:
         {
             std::vector<std::vector<dReal> > vsolutions;
             extract<boost::shared_ptr<PyIkParameterization> > ikparam(oparam);
+            boost::python::list solutions;
             if( ikparam.check() ) {
-                if( !_pmanip->FindIKSolutions(((boost::shared_ptr<PyIkParameterization>)ikparam)->_param,vsolutions,filteroptions) )
-                    return object();
+                if( !_pmanip->FindIKSolutions(((boost::shared_ptr<PyIkParameterization>)ikparam)->_param,vsolutions,filteroptions) ) {
+                    return solutions;
+                }
             }
             // assume transformation matrix
-            else if( !_pmanip->FindIKSolutions(ExtractTransform(oparam),vsolutions,filteroptions) )
-                return object();
-            boost::python::list solutions;
-            FOREACH(itsol,vsolutions)
+            else if( !_pmanip->FindIKSolutions(ExtractTransform(oparam),vsolutions,filteroptions) ) {
+                return solutions;
+            }
+            FOREACH(itsol,vsolutions) {
                 solutions.append(toPyArrayN(&(*itsol)[0],itsol->size()));
+            }
             return solutions;
         }
 
@@ -1196,16 +1199,19 @@ public:
             std::vector<std::vector<dReal> > vsolutions;
             vector<dReal> vfreeparams = ExtractArray<dReal>(freeparams);
             extract<boost::shared_ptr<PyIkParameterization> > ikparam(oparam);
+            boost::python::list solutions;
             if( ikparam.check() ) {
-                if( !_pmanip->FindIKSolutions(((boost::shared_ptr<PyIkParameterization>)ikparam)->_param,vfreeparams,vsolutions,filteroptions) )
-                    return object();
+                if( !_pmanip->FindIKSolutions(((boost::shared_ptr<PyIkParameterization>)ikparam)->_param,vfreeparams,vsolutions,filteroptions) ) {
+                    return solutions;
+                }
             }
             // assume transformation matrix
-            else if( !_pmanip->FindIKSolutions(ExtractTransform(oparam),vfreeparams, vsolutions,filteroptions) )
-                return object();
-            boost::python::list solutions;
-            FOREACH(itsol,vsolutions)
+            else if( !_pmanip->FindIKSolutions(ExtractTransform(oparam),vfreeparams, vsolutions,filteroptions) ) {
+                return solutions;
+            }
+            FOREACH(itsol,vsolutions) {
                 solutions.append(toPyArray(*itsol));
+            }
             return solutions;
         }
         

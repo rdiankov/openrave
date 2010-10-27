@@ -251,13 +251,13 @@ class ReachabilityModel(OpenRAVEModel):
                         for rotation in rotations:
                             T[0:3,0:3] = rotation
                             if usefreespace:
-                                solutions = self.manip.FindIKSolutions(dot(Tbase,T),False) # do not want to include the environment
+                                solutions = self.manip.FindIKSolutions(dot(Tbase,T),0) # do not want to include the environment
                                 if solutions is not None:
                                     self.reachabilitystats.append(r_[poseFromMatrix(T),len(solutions)])
                                     numvalid += len(solutions)
                                     numrotvalid += 1
                             else:
-                                solution = self.manip.FindIKSolution(dot(Tbase,T),False)
+                                solution = self.manip.FindIKSolution(dot(Tbase,T),0)
                                 if solution is not None:
                                     self.reachabilitystats.append(r_[poseFromMatrix(T),1])
                                     numvalid += 1
