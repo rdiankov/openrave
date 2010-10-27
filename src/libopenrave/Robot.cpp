@@ -2004,6 +2004,10 @@ void RobotBase::SimulationStep(dReal fElapsedTime)
 void RobotBase::_ComputeInternalInformation()
 {
     KinBody::_ComputeInternalInformation();
+    _vAllDOFIndices.resize(GetDOF());
+    for(int i = 0; i < GetDOF(); ++i) {
+        _vAllDOFIndices[i] = i;
+    }
     int manipindex=0;
     FOREACH(itmanip,_vecManipulators) {
         if( (*itmanip)->GetName().size() == 0 ) {
@@ -2081,10 +2085,6 @@ void RobotBase::_ComputeInternalInformation()
             (*itsensor)->serialize(ss,SO_RobotSensors);
             (*itsensor)->__hashstructure = GetMD5HashString(ss.str());
         }
-    }
-    _vAllDOFIndices.resize(GetDOF());
-    for(int i = 0; i < GetDOF(); ++i) {
-        _vAllDOFIndices[i] = i;
     }
     if( ComputeAABB().extents.lengthsqr3() > 900.0f ) {
         RAVELOG_WARN(str(boost::format("Robot %s span is greater than 30 meaning that it is most likely defined in a unit other than meters. It is highly encouraged to define all OpenRAVE robots in meters since many metrics, database models, and solvers have been specifically optimized for this unit\n")%GetName()));
