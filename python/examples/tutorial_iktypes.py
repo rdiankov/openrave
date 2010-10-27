@@ -30,6 +30,7 @@ else:
     from openravepy import OpenRAVEModel, OpenRAVEGlobalArguments
 from numpy import random, array, linspace
 from optparse import OptionParser
+import time
 
 def run(args=None):
     """Executes tutorial_iktypes
@@ -48,25 +49,29 @@ def run(args=None):
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
     env.Load(options.scene)
+    robot = env.GetRobots()[0]
+    robot.SetActiveManipulator('arm')
+    lower,upper = robot.GetDOFLimits(robot.GetActiveManipulator().GetArmIndices())
+
+    # generate the ik solver
+    ikmodel = databases.inversekinematics.InverseKinematicsModel(robot, iktype=IkParameterization.Type.Translation3D)
+    if not ikmodel.load():
+        ikmodel.autogenerate()
+
     while True:
-        robot = env.GetRobots()[0]
-        robot.SetActiveManipulator('arm')
-        lower,upper = robot.GetDOFLimits(robot.GetActiveManipulator().GetArmIndices())
-
-        # generate the ik solver
-        ikmodel = databases.inversekinematics.InverseKinematicsModel(robot, iktype=IkParameterization.Type.Translation3D)
-        if not ikmodel.load():
-            ikmodel.autogenerate()
-
         with env:
-            # move the robot in a random collision-free position and call the IK
-            ikmodel.manip.GetEndEffectorTransform()[0:3,3]
-            for i in range(4):
-                
-                if not robot.CheckSelfCollision():
-                    solutions = ikmodel.manip.FindIKSolutions(ikmodel.manip.GetEndEffectorTransform(),True)
-                    if solutions is not None and len(solutions) > 0: # if found, then break
-                        break
+            while True:
+                target=ikmodel.manip.GetEndEffectorTransform()[0:3,3]+(random.rand(3)-0.5)
+                solutions = ikmodel.manip.FindIKSolutions(IkParameterization(target,IkParameterization.Type.Translation3D),True)
+                if solutions is not None and len(solutions) > 0: # if found, then break
+                    break
+        h=env.plot3(array([target]),20.0)
+        for i in random.permutation(len(solutions))[0:min(20,len(solutions))]:
+            with env:
+                robot.SetJointValues(solutions[i],ikmodel.manip.GetArmIndices())
+                env.UpdatePublishedBodies()
+            time.sleep(0.2)
+        h=None
 
 if __name__ == "__main__":
     run()

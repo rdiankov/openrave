@@ -53,14 +53,16 @@ def run(args=None):
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
     env.Load(options.scene)
-    while True:
-        robot = env.GetRobots()[0]
-        robot.SetActiveManipulator(options.manipname)
 
-        # generate the ik solver
-        ikmodel = databases.inversekinematics.InverseKinematicsModel(robot, iktype=IkParameterization.Type.Lookat3D)
-        if not ikmodel.load():
-            ikmodel.autogenerate()
+    robot = env.GetRobots()[0]
+    robot.SetActiveManipulator(options.manipname)
+
+    # generate the ik solver
+    ikmodel = databases.inversekinematics.InverseKinematicsModel(robot, iktype=IkParameterization.Type.Lookat3D)
+    if not ikmodel.load():
+        ikmodel.autogenerate()
+
+    while True:
 
         with env:
             # move the robot in a random collision-free position and call the IK
@@ -70,7 +72,7 @@ def run(args=None):
                 if len(solutions) > 0:
                     break
         h=env.plot3(array([target]),20.0)
-        for i in random.permutation(len(solutions))[0:100]:
+        for i in random.permutation(len(solutions))[0:min(100,len(solutions))]:
             with env:
                 # first test to see if dot product is positive before displaying the solution
                 with KinBodyStateSaver(robot):
