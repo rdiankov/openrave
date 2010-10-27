@@ -22,6 +22,8 @@ import tutorial_001
 import tutorial_002
 import tutorial_003
 import tutorial_004
-import tutorial_iksolutions
-import tutorial_inversereachability
 import tutorial_grasp_transform
+import tutorial_iklookat
+import tutorial_iksolutions
+import tutorial_iktypes
+import tutorial_inversereachability
