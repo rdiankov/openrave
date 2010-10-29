@@ -150,7 +150,7 @@ class InverseKinematicsModel(OpenRAVEModel):
     def load(self,*args,**kwargs):
         return self.setrobot(*args,**kwargs)
     def getversion(self):
-        return 15
+        return 16
     def setrobot(self,freeinc=None):
         self.iksolver = None
         self.freeinc=freeinc
@@ -428,7 +428,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                         if sum((targetpos-realpos)**2) < 1e-7:
                             success += 1
                         else:
-                            print 'wrong solution to: ',targetpos, 'returned is: ',realpos
+                            print 'wrong solution to: ',targetpos, 'returned is: ',realpos,'wrong sol is:',sol,', org values are:',orgvalues
                     else:
                         print 'failed to find: ',targetpos,'solution is: ',orgvalues
                 return success/numiktests

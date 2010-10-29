@@ -232,9 +232,9 @@ def test_3dik():
 
     solvefn=solveFullIK_Translation3D
     solvejoints = list(manip.GetArmJoints())
-    solvejoints.pop(3)
+    solvejoints.pop(2)
     #solvejoints.remove(4)
-    freeparams=[3]#3,4]
+    freeparams=[2]#3,4]
     sourcefilename = 'temp.cpp'
     self = ikfast.IKFastSolver(kinbody=robot,precision=None)
     #code = self.generateIkSolver(manip.GetBase().GetIndex(),manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejoints,usedummyjoints=False,solvefn=solvefn)

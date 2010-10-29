@@ -538,6 +538,9 @@ int main(int argc, char** argv)
         code += "bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
         code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
         fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"
+        for i in range(len(node.freejointvars)):
+            name = node.freejointvars[i][0].name
+            fcode += '%s=pfree[%d]; c%s=cos(pfree[%d]); s%s=sin(pfree[%d]);\n'%(name,i,name,i,name,i)
         fcode += "px = eetrans[0]; py = eetrans[1]; pz = eetrans[2];\n\n"
 
         rotsubs = [(Symbol("px"),Symbol("new_px")),(Symbol("py"),Symbol("new_py")),(Symbol("pz"),Symbol("new_pz"))]
@@ -788,7 +791,6 @@ int main(int argc, char** argv)
         code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
         fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"
         fcode += "px = eetrans[0]; py = eetrans[1]; pz = eetrans[2];\n\n"
-        
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
             fcode += '%s=pfree[%d]; c%s=cos(pfree[%d]); s%s=sin(pfree[%d]);\n'%(name,i,name,i,name,i)

@@ -1101,7 +1101,7 @@ class IKFastSolver(AutoReloader):
         AllEquations = []
         for i in range(len(Positions)):
             for j in range(3):
-                e = Positions[i][j] - Positionsee[i][j]
+                e = self.customtrigsimp(Positions[i][j] - Positionsee[i][j])
                 if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
                     AllEquations.append(e)
             if uselength:
