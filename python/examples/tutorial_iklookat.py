@@ -14,7 +14,7 @@
 # limitations under the License.
 """
 
-.. image:: ../../images/example_tutorials/iktranslation.jpg
+.. image:: ../../images/example_tutorials/iklookat.jpg
   :height: 200
 
 Shows how to use lookat inverse kinematics to maintain line of sight with a moving object.

@@ -200,6 +200,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         precision = None
         forceikbuild = True
         outputlang = None
+        ipython = None
         if options is not None:
             if options.rotation3donly:
                 iktype = IkParameterization.Type.Rotation3D
@@ -216,6 +217,7 @@ class InverseKinematicsModel(OpenRAVEModel):
             if options.freejoints is not None:
                 freejoints=options.freejoints
             outputlang=options.outputlang
+            ipython=options.ipython
         if self.manip.GetKinematicsStructureHash() == 'b4ff7e5e04780df16a6bda565e714741': # wam 7dof
             if freejoints is None:
                 freejoints = ['Shoulder_Roll']
@@ -237,10 +239,10 @@ class InverseKinematicsModel(OpenRAVEModel):
         elif self.manip.GetKinematicsStructureHash()=='cc9744737db7b45be2451aedff296c08': # katana
             if iktype==IkParameterization.Type.Translation3D or (iktype==None and self.iktype==IkParameterization.Type.Translation3D):
                 freejoints = [self.robot.GetJoints()[ind].GetName() for ind in self.manip.GetArmIndices()[3:]]
-        self.generate(iktype=iktype,freejoints=freejoints,usedummyjoints=usedummyjoints,accuracy=accuracy,precision=precision,forceikbuild=forceikbuild,outputlang=outputlang)
+        self.generate(iktype=iktype,freejoints=freejoints,usedummyjoints=usedummyjoints,accuracy=accuracy,precision=precision,forceikbuild=forceikbuild,outputlang=outputlang,ipython=ipython)
         self.save()
 
-    def generate(self,iktype=None,freejoints=None,usedummyjoints=False,accuracy=None,precision=None,forceikbuild=True,outputlang=None):
+    def generate(self,iktype=None,freejoints=None,usedummyjoints=False,accuracy=None,precision=None,forceikbuild=True,outputlang=None,ipython=False):
         if iktype is not None:
             self.iktype = iktype
         if self.iktype is None:
@@ -341,7 +343,14 @@ class InverseKinematicsModel(OpenRAVEModel):
             print 'generating inverse kinematics file %s'%sourcefilename
             mkdir_recursive(self.getdir())
             solver = ikfast.IKFastSolver(kinbody=self.robot,accuracy=accuracy,precision=precision)
-            code = solver.generateIkSolver(self.manip.GetBase().GetIndex(),self.manip.GetEndEffector().GetIndex(),solvejoints=solvejoints,freeparams=freejointinds,usedummyjoints=usedummyjoints,solvefn=solvefn,lang=outputlang)
+            baselink=self.manip.GetBase().GetIndex()
+            eelink=self.manip.GetEndEffector().GetIndex()
+            if ipython:
+                IPython = __import__('IPython')
+                ipshell = IPython.Shell.IPShellEmbed(argv='',banner = 'inversekinematics dropping into ipython',exit_msg = 'Leaving Interpreter and continuing solver.')
+                ipshell(local_ns=locals())
+                reload(ikfast) # in case changes occurred
+            code = solver.generateIkSolver(baselink=baselink,eelink=eelink,solvejoints=solvejoints,freejointinds=freejointinds,usedummyjoints=usedummyjoints,solvefn=solvefn,lang=outputlang)
             if len(code) == 0:
                 raise ValueError('failed to generate ik solver for robot %s:%s'%(self.robot.GetName(),self.manip.GetName()))
             open(sourcefilename,'w').write(code)
@@ -574,6 +583,8 @@ class InverseKinematicsModel(OpenRAVEModel):
                           help='Number of IK calls for measuring the internal ikfast solver.')
         parser.add_option('--outputlang', action='store',type='string',dest='outputlang',default=None,
                           help='If specified, will output the generated code in that language (ie --outputlang=cpp).')
+        parser.add_option('--ipython', '-i',action="store_true",dest='ipython',default=False,
+                          help='if true will drop into the ipython interpreter right before ikfast is called')
         parser.add_option('--iktype', action='store',type='string',dest='iktype',default=None,
                           help='The ik type to build the solver current types are: %s'%(', '.join(iktype.name for iktype in IkParameterization.Type.values.values())))
         return parser

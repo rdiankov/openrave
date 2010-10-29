@@ -39,8 +39,14 @@ namespace pr2_head_torso {
 namespace pr2_leftarm {
 #include "ik_pr2_leftarm.h"
 }
+namespace pr2_leftarm_torso {
+#include "ik_pr2_leftarm_torso.h"
+}
 namespace pr2_rightarm {
 #include "ik_pr2_rightarm.h"
+}
+namespace pr2_rightarm_torso {
+#include "ik_pr2_rightarm_torso.h"
 }
 namespace katana {
 #include "ik_katana.h"
@@ -125,11 +131,23 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
                     vfree[i] = pr2_rightarm::getFreeParameters()[i];
                 return InterfaceBasePtr(new IkFastSolver<pr2_rightarm::IKReal,pr2_rightarm::IKSolution>(pr2_rightarm::ik,vfree,freeinc,pr2_rightarm::getNumJoints(),(IkParameterization::Type)pr2_rightarm::getIKType(), boost::shared_ptr<void>(), penv));
             }
+            else if( interfacename == "ikfast_pr2_rightarm_torso" ) {
+                vector<int> vfree(pr2_rightarm_torso::getNumFreeParameters());
+                for(size_t i = 0; i < vfree.size(); ++i)
+                    vfree[i] = pr2_rightarm_torso::getFreeParameters()[i];
+                return InterfaceBasePtr(new IkFastSolver<pr2_rightarm_torso::IKReal,pr2_rightarm_torso::IKSolution>(pr2_rightarm_torso::ik,vfree,freeinc,pr2_rightarm_torso::getNumJoints(),(IkParameterization::Type)pr2_rightarm_torso::getIKType(), boost::shared_ptr<void>(), penv));
+            }
             else if( interfacename == "ikfast_pr2_leftarm" ) {
                 vector<int> vfree(pr2_leftarm::getNumFreeParameters());
                 for(size_t i = 0; i < vfree.size(); ++i)
                     vfree[i] = pr2_leftarm::getFreeParameters()[i];
                 return InterfaceBasePtr(new IkFastSolver<pr2_leftarm::IKReal,pr2_leftarm::IKSolution>(pr2_leftarm::ik,vfree,freeinc,pr2_leftarm::getNumJoints(),(IkParameterization::Type)pr2_leftarm::getIKType(), boost::shared_ptr<void>(), penv));
+            }
+            else if( interfacename == "ikfast_pr2_leftarm_torso" ) {
+                vector<int> vfree(pr2_leftarm_torso::getNumFreeParameters());
+                for(size_t i = 0; i < vfree.size(); ++i)
+                    vfree[i] = pr2_leftarm_torso::getFreeParameters()[i];
+                return InterfaceBasePtr(new IkFastSolver<pr2_leftarm_torso::IKReal,pr2_leftarm_torso::IKSolution>(pr2_leftarm_torso::ik,vfree,freeinc,pr2_leftarm_torso::getNumJoints(),(IkParameterization::Type)pr2_leftarm_torso::getIKType(), boost::shared_ptr<void>(), penv));
             }
         }
         break;

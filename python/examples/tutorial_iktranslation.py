@@ -13,12 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-
 .. image:: ../../images/example_tutorials/iktranslation.jpg
   :height: 200
 
 Shows how to use translational inverse kinematics for an arm with few joints
-
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
@@ -51,28 +49,29 @@ def run(args=None):
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
     env.Load(options.scene)
-    while True:
-        robot = env.GetRobots()[0]
-        robot.SetActiveManipulator('arm')
-        
-        # generate the ik solver
-        ikmodel = databases.inversekinematics.InverseKinematicsModel(robot, iktype=IkParameterization.Type.Translation3D)
-        if not ikmodel.load():
-            ikmodel.autogenerate()
+    robot = env.GetRobots()[0]
+    robot.SetActiveManipulator('arm')
+    lower,upper = robot.GetDOFLimits(robot.GetActiveManipulator().GetArmIndices())
 
+    # generate the ik solver
+    ikmodel = databases.inversekinematics.InverseKinematicsModel(robot, iktype=IkParameterization.Type.Translation3D)
+    if not ikmodel.load():
+        ikmodel.autogenerate()
+
+    while True:
         with env:
-            # move the robot in a random collision-free position and call the IK
             while True:
-                t=ikmodel.manip.GetEndEffectorTransform()[0:3,3]+(random.rand(3)-0.5)
-                solutions = ikmodel.manip.FindIKSolutions(IkParameterization(t,IkParameterization.Type.Translation3D),IkFilterOptions.CheckEnvCollisions)
-                if len(solutions) > 0:
+                target=ikmodel.manip.GetEndEffectorTransform()[0:3,3]+(random.rand(3)-0.5)
+                solutions = ikmodel.manip.FindIKSolutions(IkParameterization(target,IkParameterization.Type.Translation3D),IkFilterOptions.CheckEnvCollisions)
+                if solutions is not None and len(solutions) > 0: # if found, then break
                     break
-        h=env.plot3(array([t]),10.0)
-        for i in random.permutation(len(solutions))[0:100]:
+        h=env.plot3(array([target]),10.0)
+        for i in random.permutation(len(solutions))[0:min(80,len(solutions))]:
             with env:
                 robot.SetJointValues(solutions[i],ikmodel.manip.GetArmIndices())
                 env.UpdatePublishedBodies()
             time.sleep(0.05)
+        h=None
 
 if __name__ == "__main__":
     run()
