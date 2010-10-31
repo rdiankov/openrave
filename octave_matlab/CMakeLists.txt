@@ -13,10 +13,14 @@ orBodySetTransform.m    orEnvGetRobots.m       orRobotSetDOFValues.m
 orCommunicator.m        orEnvLoadPlugin.m      orRobotCheckSelfCollision.m 
 orRobotControllerSend.m  orRobotStartActiveTrajectory.m orSetCommunication.m )
 
-add_subdirectory(matlab)
-add_subdirectory(octave)
+if(OPT_MATLAB)
+  add_subdirectory(matlab)
+  install(FILES ${MATLAB_FILES} DESTINATION ${OPENRAVE_MATLAB_INSTALL_DIR})
+  install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/examples" DESTINATION ${OPENRAVE_MATLAB_INSTALL_DIR} PATTERN ".svn" EXCLUDE)
+endif()
 
-install(FILES ${MATLAB_FILES} DESTINATION ${OPENRAVE_MATLAB_INSTALL_DIR})
-install(FILES ${MATLAB_FILES} DESTINATION ${OPENRAVE_OCTAVE_INSTALL_DIR})
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/examples" DESTINATION ${OPENRAVE_OCTAVE_INSTALL_DIR} PATTERN ".svn" EXCLUDE)
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/examples" DESTINATION ${OPENRAVE_MATLAB_INSTALL_DIR} PATTERN ".svn" EXCLUDE)
+if(OPT_OCTAVE)
+  add_subdirectory(octave)
+  install(FILES ${MATLAB_FILES} DESTINATION ${OPENRAVE_OCTAVE_INSTALL_DIR})
+  install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/examples" DESTINATION ${OPENRAVE_OCTAVE_INSTALL_DIR} PATTERN ".svn" EXCLUDE)
+endif()

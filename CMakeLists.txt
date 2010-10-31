@@ -92,6 +92,9 @@ message(STATUS "installing to ${CMAKE_INSTALL_PREFIX}")
 option(OPT_VIDEORECORDING "Enable video recording" ON)
 option(OPT_PLUGINS "Build the pluings" ON)
 option(OPT_DOUBLE_PRECISION "Use double precision" ON)
+option(OPT_PYTHON "Build python bindings" ON)
+option(OPT_OCTAVE "Build octave bindings" ON)
+option(OPT_MATLAB "Build matlab bindings" ON)
 option(OPT_STATIC "Build static libraries" OFF)
 
 ##############################################################################
@@ -508,8 +511,9 @@ else()
   message(WARNING "Could not install sympy needed by ikfast (cmake version ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION} needs to be >= 2.4.6)")
 endif()
 
-
-add_subdirectory(python)
+if(OPT_PYTHON)
+  add_subdirectory(python)
+endif()
 
 if(OPT_PLUGINS)
   add_subdirectory(plugins)
