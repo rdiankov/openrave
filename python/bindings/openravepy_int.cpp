@@ -1022,11 +1022,11 @@ public:
     public:
         PyForce6DSensorData(boost::shared_ptr<SensorBase::Force6DGeomData> pgeom, boost::shared_ptr<SensorBase::Force6DSensorData> pdata) : PySensorData(pdata)
         {
-            forceXYZ = toPyArray(pdata->forceXYZ);
-            torqueXYZ = toPyArray(pdata->torqueXYZ);
+            force = toPyVector3(pdata->force);
+            torque = toPyVector3(pdata->torque);
         }
         virtual ~PyForce6DSensorData() {}
-        object forceXYZ, torqueXYZ;
+        object force, torque;
     };
 
     class PyIMUSensorData : public PySensorData
@@ -1080,8 +1080,9 @@ public:
     SensorBasePtr GetSensor() { return _psensor; }
     boost::shared_ptr<PySensorData> GetSensorData()
     {
-        if( !_psensor->GetSensorData(_psensordata) )
+        if( !_psensor->GetSensorData(_psensordata) ) {
             throw openrave_exception("SensorData failed");
+        }
         switch(_psensordata->GetType()) {
         case SensorBase::ST_Laser:
             return boost::shared_ptr<PySensorData>(new PyLaserSensorData(boost::static_pointer_cast<SensorBase::LaserGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::LaserSensorData>(_psensordata)));            
@@ -1095,6 +1096,8 @@ public:
             return boost::shared_ptr<PySensorData>(new PyIMUSensorData(boost::static_pointer_cast<SensorBase::IMUGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::IMUSensorData>(_psensordata)));
         case SensorBase::ST_Odometry:
             return boost::shared_ptr<PySensorData>(new PyOdometrySensorData(boost::static_pointer_cast<SensorBase::OdometryGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::OdometrySensorData>(_psensordata)));
+        case SensorBase::ST_Invalid:
+            break;
         }
         stringstream ss;
         ss << "unknown sensor data type: " << _psensordata->GetType() << endl;
@@ -3746,8 +3749,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def_readonly("encoderVelocity",&PySensorBase::PyJointEncoderSensorData::encoderVelocity)
             ;
         class_<PySensorBase::PyForce6DSensorData, boost::shared_ptr<PySensorBase::PyForce6DSensorData>, bases<PySensorBase::PySensorData> >("Force6DSensorData", DOXY_CLASS(SensorBase::Force6DSensorData),no_init)
-            .def_readonly("forceXYZ",&PySensorBase::PyForce6DSensorData::forceXYZ)
-            .def_readonly("torqueXYZ",&PySensorBase::PyForce6DSensorData::torqueXYZ)
+            .def_readonly("force",&PySensorBase::PyForce6DSensorData::force)
+            .def_readonly("torque",&PySensorBase::PyForce6DSensorData::torque)
             ;
         class_<PySensorBase::PyIMUSensorData, boost::shared_ptr<PySensorBase::PyIMUSensorData>, bases<PySensorBase::PySensorData> >("IMUSensorData", DOXY_CLASS(SensorBase::IMUSensorData),no_init)
             .def_readonly("rotation",&PySensorBase::PyIMUSensorData::rotation)

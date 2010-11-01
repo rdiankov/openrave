@@ -99,8 +99,8 @@ public:
     {
     public:
         virtual SensorType GetType() { return ST_Force6D; }
-        std::vector<dReal> forceXYZ; ///< Force in X Y Z, in newtons
-        std::vector<dReal> torqueXYZ; ///< Torque in X Y Z, in newtonmeters
+        Vector force; ///< Force in X Y Z, in newtons
+        Vector torque; ///< Torque in X Y Z, in newtonmeters
     };
 
     /// \brief Stores IMU data
