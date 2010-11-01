@@ -948,7 +948,8 @@ class PySensorBase : public PyInterfaceBase
 {
 protected:
     SensorBasePtr _psensor;
-    SensorBase::SensorDataPtr _psensordata;
+    std::map<SensorBase::SensorType, SensorBase::SensorDataPtr> _mapsensordata;
+
 public:
     class PySensorData
     {
@@ -1073,37 +1074,51 @@ public:
 
     PySensorBase(SensorBasePtr psensor, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(psensor, pyenv), _psensor(psensor)
     {
-        _psensordata = _psensor->CreateSensorData();
     }
     virtual ~PySensorBase() { }
 
     SensorBasePtr GetSensor() { return _psensor; }
+
     boost::shared_ptr<PySensorData> GetSensorData()
     {
-        if( !_psensor->GetSensorData(_psensordata) ) {
+        return GetSensorData(SensorBase::ST_Invalid);
+    }
+    boost::shared_ptr<PySensorData> GetSensorData(SensorBase::SensorType type)
+    {
+        SensorBase::SensorDataPtr psensordata;
+        if( _mapsensordata.find(type) == _mapsensordata.end() ) {
+            psensordata = _psensor->CreateSensorData(type);
+            _mapsensordata[type] = psensordata;
+        }
+        else {
+            psensordata = _mapsensordata[type];
+        }
+        if( !_psensor->GetSensorData(psensordata) ) {
             throw openrave_exception("SensorData failed");
         }
-        switch(_psensordata->GetType()) {
+        switch(psensordata->GetType()) {
         case SensorBase::ST_Laser:
-            return boost::shared_ptr<PySensorData>(new PyLaserSensorData(boost::static_pointer_cast<SensorBase::LaserGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::LaserSensorData>(_psensordata)));            
+            return boost::shared_ptr<PySensorData>(new PyLaserSensorData(boost::static_pointer_cast<SensorBase::LaserGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::LaserSensorData>(psensordata)));            
         case SensorBase::ST_Camera:
-            return boost::shared_ptr<PySensorData>(new PyCameraSensorData(boost::static_pointer_cast<SensorBase::CameraGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::CameraSensorData>(_psensordata)));
+            return boost::shared_ptr<PySensorData>(new PyCameraSensorData(boost::static_pointer_cast<SensorBase::CameraGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::CameraSensorData>(psensordata)));
         case SensorBase::ST_JointEncoder:
-            return boost::shared_ptr<PySensorData>(new PyJointEncoderSensorData(boost::static_pointer_cast<SensorBase::JointEncoderGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::JointEncoderSensorData>(_psensordata)));
+            return boost::shared_ptr<PySensorData>(new PyJointEncoderSensorData(boost::static_pointer_cast<SensorBase::JointEncoderGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::JointEncoderSensorData>(psensordata)));
         case SensorBase::ST_Force6D:
-            return boost::shared_ptr<PySensorData>(new PyForce6DSensorData(boost::static_pointer_cast<SensorBase::Force6DGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::Force6DSensorData>(_psensordata)));
+            return boost::shared_ptr<PySensorData>(new PyForce6DSensorData(boost::static_pointer_cast<SensorBase::Force6DGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::Force6DSensorData>(psensordata)));
         case SensorBase::ST_IMU:
-            return boost::shared_ptr<PySensorData>(new PyIMUSensorData(boost::static_pointer_cast<SensorBase::IMUGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::IMUSensorData>(_psensordata)));
+            return boost::shared_ptr<PySensorData>(new PyIMUSensorData(boost::static_pointer_cast<SensorBase::IMUGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::IMUSensorData>(psensordata)));
         case SensorBase::ST_Odometry:
-            return boost::shared_ptr<PySensorData>(new PyOdometrySensorData(boost::static_pointer_cast<SensorBase::OdometryGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::OdometrySensorData>(_psensordata)));
+            return boost::shared_ptr<PySensorData>(new PyOdometrySensorData(boost::static_pointer_cast<SensorBase::OdometryGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::OdometrySensorData>(psensordata)));
         case SensorBase::ST_Invalid:
             break;
         }
         stringstream ss;
-        ss << "unknown sensor data type: " << _psensordata->GetType() << endl;
+        ss << "unknown sensor data type: " << psensordata->GetType() << endl;
         throw openrave_exception(ss.str());
     }
     
+    bool Supports(SensorBase::SensorType type) { return _psensor->Supports(type); }
+
     void SetTransform(object transform) { _psensor->SetTransform(ExtractTransform(transform)); }
     object GetTransform() { return ReturnTransform(_psensor->GetTransform()); }
 
@@ -3720,11 +3735,15 @@ BOOST_PYTHON_MODULE(openravepy_int)
         .def("SimulateStep",&PyPhysicsEngineBase::SimulateStep, DOXY_FN(PhysicsEngineBase,SimulateStep))
         ;
     {
+        boost::shared_ptr<PySensorBase::PySensorData> (PySensorBase::*GetSensorData1)() = &PySensorBase::GetSensorData;
+        boost::shared_ptr<PySensorBase::PySensorData> (PySensorBase::*GetSensorData2)(SensorBase::SensorType) = &PySensorBase::GetSensorData;
         scope sensor = class_<PySensorBase, boost::shared_ptr<PySensorBase>, bases<PyInterfaceBase> >("Sensor", DOXY_CLASS(SensorBase), no_init)
-            .def("GetSensorData",&PySensorBase::GetSensorData, DOXY_FN(SensorBase,GetSensorData))
+            .def("GetSensorData",GetSensorData1, DOXY_FN(SensorBase,GetSensorData))
+            .def("GetSensorData",GetSensorData2, DOXY_FN(SensorBase,GetSensorData))
             .def("SetTransform",&PySensorBase::SetTransform, DOXY_FN(SensorBase,SetTransform))
             .def("GetTransform",&PySensorBase::GetTransform, DOXY_FN(SensorBase,GetTransform))
             .def("GetName",&PySensorBase::GetName, DOXY_FN(SensorBase,GetName))
+            .def("Supports",&PySensorBase::Supports, DOXY_FN(SensorBase,Supports))
             .def("__str__",&PySensorBase::__str__)
             .def("__repr__",&PySensorBase::__repr__)
             ;
