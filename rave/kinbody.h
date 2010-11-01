@@ -44,7 +44,7 @@ public:
         Prop_SensorPlacement = 0x00040000, ///< [robot only] relative sensor placement of sensors
     };
 
-    // \brief A rigid body holding all its collision and rendering data.
+    /// \brief A rigid body holding all its collision and rendering data.
     class RAVE_API Link : public boost::enable_shared_from_this<Link>
     {
     public:
@@ -774,7 +774,9 @@ public:
     /// Preserves the XML readers
     virtual bool Clone(InterfaceBaseConstPtr preference, int cloningoptions);
 
-    /// Register a callback with the interface. Everytime a static property of the interface changes, all
+    /// \brief Register a callback with the interface.
+    ///
+    /// Everytime a static property of the interface changes, all
     /// registered callbacks are called to update the users of the changes. Note that the callbacks will
     /// block the thread that made the parameter change.
     /// \param callback 

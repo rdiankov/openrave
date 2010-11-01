@@ -190,24 +190,35 @@ class BaseCameraSensor : public SensorBase
         return true;
     }
 
-    virtual SensorGeometryPtr GetSensorGeometry()
+    virtual SensorGeometryPtr GetSensorGeometry(SensorType type)
     {
-        CameraGeomData* pgeom = new CameraGeomData();
-        *pgeom = *_pgeom;
-        return SensorGeometryPtr(pgeom);
+        if( type == ST_Invalid || type == ST_Camera ) {
+            CameraGeomData* pgeom = new CameraGeomData();
+            *pgeom = *_pgeom;
+            return SensorGeometryPtr(pgeom);
+        }
+        return SensorGeometryPtr();
     }
 
-    virtual SensorDataPtr CreateSensorData()
+    virtual SensorDataPtr CreateSensorData(SensorType type)
     {
-        return SensorDataPtr(new CameraSensorData());
+        if( type == ST_Invalid || type == ST_Camera ) {
+            return SensorDataPtr(new CameraSensorData());
+        }
+        return SensorDataPtr();
     }
 
     virtual bool GetSensorData(SensorDataPtr psensordata)
     {
-        boost::mutex::scoped_lock lock(_mutexdata);
-        *boost::dynamic_pointer_cast<CameraSensorData>(psensordata) = *_pdata;
-        return true;
+        if( psensordata->GetType() == ST_Camera ) {
+            boost::mutex::scoped_lock lock(_mutexdata);
+            *boost::dynamic_pointer_cast<CameraSensorData>(psensordata) = *_pdata;
+            return true;
+        }
+        return false;
     }
+
+    virtual bool Supports(SensorType type) { return type == ST_Camera; }
 
     bool _Power(ostream& sout, istream& sinput)
     {

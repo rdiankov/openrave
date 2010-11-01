@@ -533,13 +533,9 @@ sudo port install cmake boost libxml2 glew octave
 
 It is necessary to install these libraries:
 
-- <a href="http://trolltech.com/developer/downloads/qt/mac">Qt</a> - download the installer. Can also use
-\verbatim
-port install qt4-mac
-\endverbatim
-but it could take an hour or two.
-- <a href="http://www.coin3d.org/lib/coin">Coin3D</a> - download the installer 
-- <a href="http://www.coin3d.org/lib/soqt">SoQt</a> - downoad the latest source from <a href="http://ftp.coin3d.org/coin/src/snapshots/SoQt-latest.tar.gz">here</a>. Might ask you to set QTDIR to the correct directory.
+- <a href="http://trolltech.com/developer/downloads/qt/mac">Qt</a> - download the installer. Users have reported problems with using <b>port install qt4-mac</b> due to Cocoa. It is highly recommended to use the official qt4 installer package.
+- <a href="http://www.coin3d.org/lib/coin">Coin3D</a> - build from sources
+- <a href="http://www.coin3d.org/lib/soqt">SoQt</a> - build from sources. Might ask you to set QTDIR to the correct directory.
 - ffmpeg and other video recording codecs
 
 After this, follow the instructions on \ref installation_linux.

@@ -26,9 +26,9 @@
     <translation>-0.06514 -0.00494 0.12267</translation>
     <rotationmat>0.93581   0.02765   0.35142  -0.03113   0.99951   0.00426  -0.35113  -0.01493   0.93621</rotationmat>
     <sensor type="BaseCamera" args="">
-      <KK>866.662109 868.02655 515.534058 346.636261</KK>
-      <width>1024</width>
-      <height>768</height>
+      <KK>600 600 320 240</KK>
+      <width>640</width>
+      <height>480</height>
       <framerate>5</framerate>
       <color>0.5 0.5 1</color>
       <power>0</power>

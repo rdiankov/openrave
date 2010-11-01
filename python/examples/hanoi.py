@@ -212,9 +212,11 @@ def run(args=None):
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
     try:
-        env.Load(options.scene)
-        hanoi = HanoiPuzzle(env,env.GetRobots()[0])
-        hanoi.hanoisolve(3,hanoi.srcpeg,hanoi.destpeg,hanoi.peg)
+        while True:
+            env.Reset()
+            env.Load(options.scene)
+            hanoi = HanoiPuzzle(env,env.GetRobots()[0])
+            hanoi.hanoisolve(3,hanoi.srcpeg,hanoi.destpeg,hanoi.peg)
     finally:
         env.Destroy() # done with the environment
 

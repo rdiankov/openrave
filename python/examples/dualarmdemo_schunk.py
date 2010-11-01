@@ -67,6 +67,8 @@ class Schunkplanner:
         TLeftGrasp= dot(Tbody,array([[0, 0, -1, 0],[-1, 0, 0,-(halfwidth+.1)],[0, 1, 0, 0],[0, 0, 0, 1]])) #to determine the grasp for the eef given the transform of the object
 
         solutions = self.dualsolver.findMultiIKSolution(Tgrasps=[TLeftGrasp,TRightGrasp],filteroptions=IkFilterOptions.CheckEnvCollisions)
+        if solutions is None or len(solutions) == 0:
+            raise planning_error('failed to find solution')
         if not self.MoveArmsToJointPosition(r_[solutions[0],solutions[1]]):
             print('failed to move to position next to object')
 
@@ -80,6 +82,8 @@ class Schunkplanner:
         TRightGrasp= dot(Tbody,array([[0, 0, -1, 0],[1, 0, 0, (halfwidth+.04)],[0, -1, 0, 0 ],[0, 0, 0, 1]])) #.04 is just half the thickness of the EEF
         TLeftGrasp= dot(Tbody,array([[0, 0, -1, 0],[-1, 0, 0, -(halfwidth+.04)],[0, 1, 0, 0],[0, 0, 0, 1]])) #to determine the grasp for the eef given the transform of the object
         solutions = self.dualsolver.findMultiIKSolution(Tgrasps=[TLeftGrasp,TRightGrasp],filteroptions=IkFilterOptions.CheckEnvCollisions)
+        if solutions is None or len(solutions) == 0:
+            raise planning_error('failed to find solution')
         self.MoveObjectToPosition(r_[solutions[0],solutions[1]])
 
     def graspObject(self):
@@ -92,7 +96,7 @@ class Schunkplanner:
         ThandL=self.robot.GetManipulators()[1].GetEndEffectorTransform()
         self.probsmanip.SendCommand('movebothhandsstraight direction1 %lf ' %(ThandL[0,3]-ThandR[0,3]) +'%lf '%(ThandL[1,3]-ThandR[1,3]) +'%lf'%(ThandL[2,3]-ThandR[2,3]) +' direction0 %lf ' %(ThandR[0,3]-ThandL[0,3]) +'%lf '%(ThandR[1,3]-ThandL[1,3]) +'%lf'%(ThandR[2,3]-ThandL[2,3]) +' maxsteps 100')
 
-    def graspAndMoveObject(self,T,obj):
+    def graspAndMoveObject(self,jointvalues,obj):
         print ('Moving to Grasping position for object: %s'%(obj))
         self.planDualPath(obj)
         self.WaitForController()
@@ -121,7 +125,7 @@ class Schunkplanner:
         self.WaitForController()
 
         print ('Returning to Starting position')
-        self.MoveArmsToJointPosition(T)
+        self.MoveArmsToJointPosition(jointvalues)
         self.WaitForController()
 
         print ('Body %s successfully manipulated'%(obj))
@@ -140,18 +144,29 @@ def run(args=None):
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)    
     env.Load(options.scene)
     schunk = Schunkplanner(env)
-    time.sleep(1)
-    
+    time.sleep(1)    
     try:
-        T=array([0,0,0,0,0,0,0,0,0,0,0,0,0,0])#Set initial position		
-        schunk.robot.SetActiveDOFValues(T)
-        time.sleep(1)
-        schunk.robot.SetActiveManipulator(schunk.rightArm)
-        schunk.graspAndMoveObject(T,env.GetKinBody('Object1'))
-        schunk.WaitForController()
-        print "Path Planning complete...."
+        while True:
+            # initialize
+            with env:
+                jointvalues=schunk.robot.GetJointValues()
+                schunk.robot.SetActiveManipulator(schunk.rightArm)
+                obj=env.GetKinBody('Object1')
+                while True:
+                    with obj:
+                        T=obj.GetTransform()
+                        T[0:3,3] += 0.4*(random.rand(3)-0.5) # yz only
+                        obj.SetTransform(T)
+                        if not env.CheckCollision(obj):
+                            break
+                obj.SetTransform(T)
+            try:
+                schunk.graspAndMoveObject(jointvalues,obj)
+                schunk.WaitForController()
+                print "Path Planning complete...."
+            except planning_error:
+                pass
     finally:
-        time.sleep(5)
         del schunk
         env.Destroy() # done with the environment
 

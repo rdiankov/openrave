@@ -44,7 +44,6 @@ def vararg_callback(option, opt_str, value, parser):
     setattr(parser.values, option.dest, value)
 
 if __name__ == "__main__":
-    defaultviewer = 'qtcoin'
     parser = OptionParser(description='OpenRAVE %s'%openravepy.__version__,version=openravepy.__version__,
                           usage='%prog [options] [loadable openrave xml/robot files...]')
     OpenRAVEGlobalArguments.addOptions(parser)
@@ -99,36 +98,36 @@ if __name__ == "__main__":
             sys.exit(1)
         example.run(args=args)
         sys.exit(0)
-    OpenRAVEGlobalArguments.parseGlobal(options)
-    RaveInitialize(True)
+
+    level = DebugLevel.Info
     if options.listinterfaces is not None or options.listplugins:
-        RaveSetDebugLevel(DebugLevel.Error)
-    env = Environment()
+        level = DebugLevel.Error
+    RaveInitialize(True,level=level)
+    if options.listinterfaces is not None:
+        interfaces = RaveGetLoadedInterfaces()
+        for type,names in interfaces:
+            if options.listinterfaces.lower() == str(type).lower():
+                for name in names:
+                    print name
+                break
+        sys.exit(0)
+    if options.listplugins:
+        plugins = RaveGetPluginInfo()
+        interfacenames = dict()
+        for type in InterfaceType.values.values():
+            interfacenames[type] = []
+        for pluginname,info in plugins:
+            for type,names in info.interfacenames:
+                interfacenames[type] += [(n,pluginname) for n in names]
+        print 'Number of plugins: %d'%len(plugins)
+        for type,names in interfacenames.iteritems():
+            print '%s: %d'%(str(type),len(names))
+            names.sort()
+            for interfacename,pluginname in names:
+                print '  %s - %s'%(interfacename,pluginname)
+        sys.exit(0)
+    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=False)
     try:
-        if options.listinterfaces is not None:
-            interfaces = env.GetLoadedInterfaces()
-            for type,names in interfaces:
-                if options.listinterfaces.lower() == str(type).lower():
-                    for name in names:
-                        print name
-                    break
-            sys.exit(0)
-        OpenRAVEGlobalArguments.parseEnvironment(options,env,defaultviewer=False)
-        if options.listplugins:
-            plugins = env.GetPluginInfo()
-            interfacenames = dict()
-            for type in InterfaceType.values.values():
-                interfacenames[type] = []
-            for pluginname,info in plugins:
-                for type,names in info.interfacenames:
-                    interfacenames[type] += [(n,pluginname) for n in names]
-            print 'Number of plugins: %d'%len(plugins)
-            for type,names in interfacenames.iteritems():
-                print '%s: %d'%(str(type),len(names))
-                names.sort()
-                for interfacename,pluginname in names:
-                    print '  %s - %s'%(interfacename,pluginname)
-            sys.exit(0)
         # load files after viewer is loaded since they may contain information about where to place the camera
         for arg in args:
             if arg.endswith('.xml') or arg.endswith('.dae'):
@@ -139,7 +138,7 @@ if __name__ == "__main__":
         if options.pythoncmd is not None:
             eval(compile(options.pythoncmd,'<string>','exec'))
         if options._viewer is None:
-            env.SetViewer(defaultviewer)
+            env.SetViewer('qtcon')
         if options.ipython:
             from IPython.Shell import IPShellEmbed
             ipshell = IPShellEmbed(argv='',banner = 'OpenRAVE Dropping into IPython',exit_msg = 'Leaving Interpreter and closing program.')

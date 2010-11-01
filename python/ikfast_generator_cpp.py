@@ -1170,7 +1170,7 @@ int main(int argc, char** argv)
         return ''
     def generateRotation(self, node):
         if not node.functionid in self.functions:
-            code = 'void rotationfunction%d(std::vector<IKSolution>& vsolutions) {\n'%(node.functionid)
+            code = 'inline void rotationfunction%d(std::vector<IKSolution>& vsolutions) {\n'%(node.functionid)
             origequations = self.dictequations
             self.dictequations = []
             listequations = []

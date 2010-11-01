@@ -243,7 +243,7 @@ inline object toPyArray(const Transform& t)
     return static_cast<numeric::array>(handle<>(pyvalues));
 }
 
-inline object toPyArray3(const vector<RaveVector<float> >& v)
+inline object toPyArray3(const std::vector<RaveVector<float> >& v)
 {
     npy_intp dims[] = {v.size(),3};
     PyObject *pyvalues = PyArray_SimpleNew(2,dims, PyArray_FLOAT);
@@ -258,7 +258,7 @@ inline object toPyArray3(const vector<RaveVector<float> >& v)
     return static_cast<numeric::array>(handle<>(pyvalues));
 }
 
-inline object toPyArray3(const vector<RaveVector<double> >& v)
+inline object toPyArray3(const std::vector<RaveVector<double> >& v)
 {
     npy_intp dims[] = {v.size(),3};
     PyObject *pyvalues = PyArray_SimpleNew(2,dims, PyArray_DOUBLE);

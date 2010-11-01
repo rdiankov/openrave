@@ -53,30 +53,7 @@ class GraspPlanning(metaclass.AutoReloader):
                     self.graspables = self.getGraspables(dests=dests)
 
             if randomize:
-                for graspable in self.graspables:
-                    target = graspable[0].target
-                    Tbody = target.GetTransform()
-                    for iter in range(5):
-                        Tnew = array(Tbody)
-                        Tnew[0,3] += -0.1 + 0.2 * random.rand()
-                        Tnew[1,3] += -0.1 + 0.2 * random.rand()
-                        target.SetTransform(Tnew)
-                        if not self.envreal.CheckCollision(target):
-                            Tbody = Tnew
-                            break
-                    target.SetTransform(Tbody)
-
-                # randomize the robot
-                Trobot = self.robot.GetTransform()
-                for iter in range(5):
-                    Tnew = array(Trobot)
-                    Tnew[0,3] += -0.1 + 0.2 * random.rand()
-                    Tnew[1,3] += -0.1 + 0.2 * random.rand()
-                    self.robot.SetTransform(Tnew)
-                    if not self.envreal.CheckCollision(self.robot):
-                        Trobot = Tnew
-                        break
-                self.robot.SetTransform(Trobot)
+                self.randomizeObjects()
 
             if dests is None and not self.nodestinations:
                 tablename = 'table'
@@ -107,6 +84,33 @@ class GraspPlanning(metaclass.AutoReloader):
                     print '%s is graspable'%target.GetName()
                     graspables.append([gmodel,dests])
         return graspables
+
+    def randomizeObjects(self):
+        for graspable in self.graspables:
+            target = graspable[0].target
+            Tbody = target.GetTransform()
+            for iter in range(5):
+                Tnew = array(Tbody)
+                Tnew[0,3] += -0.1 + 0.2 * random.rand()
+                Tnew[1,3] += -0.1 + 0.2 * random.rand()
+                target.SetTransform(Tnew)
+                if not self.envreal.CheckCollision(target):
+                    Tbody = Tnew
+                    break
+            target.SetTransform(Tbody)
+
+        # randomize the robot
+        Trobot = self.robot.GetTransform()
+        for iter in range(5):
+            Tnew = array(Trobot)
+            Tnew[0,3] += -0.1 + 0.2 * random.rand()
+            Tnew[1,3] += -0.1 + 0.2 * random.rand()
+            self.robot.SetTransform(Tnew)
+            if not self.envreal.CheckCollision(self.robot):
+                Trobot = Tnew
+                break
+        self.robot.SetTransform(Trobot)
+
     @staticmethod
     def setRandomDestinations(targets, table,transdelta=0.1,zoffset=0.01,Trolls=None,randomize=False,preserverotation=True):
         with table.GetEnv():
@@ -278,7 +282,13 @@ class GraspPlanning(metaclass.AutoReloader):
     def performGraspPlanning(self,withreplacement=True,**kwargs):
         print 'starting to pick and place random objects'
         graspables = self.graspables
-        while len(graspables) > 0:
+        while True:
+            if len(graspables) == 0:
+                if withreplacement:
+                    self.randomizeObjects()
+                    graspables = self.graspables
+                else:
+                    break
             i = random.randint(len(graspables))
             try:
                 print 'grasping object %s'%graspables[i][0].target.GetName()

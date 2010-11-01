@@ -26,6 +26,56 @@ from openravepy import *
 from openravepy.interfaces import BaseManipulation
 from openravepy.databases import inversekinematics,visibilitymodel
 
+
+try:
+    from Tkinter import *
+    import tkFileDialog
+    import Image, ImageDraw, ImageTk
+except ImportError:
+    pass
+
+class CameraViewerGUI(threading.Thread):
+    class Container:
+        pass
+    def __init__(self,sensor,title='Camera Viewer'):
+        threading.Thread.__init__(self)
+        self.sensor = sensor
+        self.title = title
+        self.laststamp = None
+        self.imagelck = threading.Lock()
+    def updateimage(self):
+        data = self.sensor.GetSensorData()
+        if data is not None and not self.laststamp == data.stamp:
+            width = data.imagedata.shape[1]
+            height = data.imagedata.shape[0]
+            self.imagelck.acquire()
+            self.image = Image.frombuffer('RGB',[width,height], data.imagedata.tostring(), 'raw','RGB',0,1)
+            self.imagelck.release()
+            photo = ImageTk.PhotoImage(self.image)
+            if self.container is None:
+                self.container = self.Container()
+                self.container.width = width
+                self.container.height = height
+                self.container.main = self.main
+                self.container.canvas = Canvas(self.main, width=width, height=height)
+                self.container.canvas.pack(expand=1, fill=BOTH)#side=TOP,fill=X)#
+                self.container.obr = None
+            self.container.canvas.create_image(self.container.width/2, self.container.height/2, image=photo)
+            self.container.obr = photo
+            self.laststamp = data.stamp
+        self.main.after(100,self.updateimage)
+    def saveimage(self,filename):
+        self.imagelck.acquire()
+        self.image.save(filename)
+        self.imagelck.release()
+    def run(self):
+        self.main = Tk()
+        self.main.title(self.title)      # window title
+        self.main.resizable(width=True, height=True)
+        self.container = None
+        self.main.after(0,self.updateimage)
+        self.main.mainloop()
+
 class CalibrationViews(metaclass.AutoReloader):
     def __init__(self,robot,sensorname=None,sensorrobot=None,target=None,maxvelmult=None,randomize=False):
         """Starts a calibration sequencer using a robot and a sensor.
@@ -246,8 +296,27 @@ def run(args=None):
         env.UpdatePublishedBodies()
         time.sleep(0.1) # give time for environment to update
         self = CalibrationViews(robot,sensorname=options.sensorname,sensorrobot=sensorrobot,randomize=options.randomize)
-        self.computeAndMoveToObservations(usevisibility=options.usevisibility,posedist=options.posedist)
-        raw_input('press any key to exit... ')
+
+        # create a camera viewer for every camera sensor
+        try:
+            attachedsensor = self.vmodel.attachedsensor
+            if attachedsensor.GetSensor() is not None:
+                sensordata = attachedsensor.GetSensor().GetSensorData()
+                if sensordata is not None and sensordata.type == Sensor.Type.Camera:
+                    attachedsensor.GetSensor().SendCommand('power 1')
+                    if len(attachedsensor.GetName()) > 0:
+                        title = 'calibrationviews: ' + attachedsensor.GetName()
+                    else:
+                        title = 'calibrationviews: ' + attachedsensor.GetSensor().GetName()
+                    viewer = CameraViewerGUI(sensor=attachedsensor.GetSensor(),title=title)
+                    viewer.start()
+        except NameError,e:
+            print 'failed to create camera gui: ',e
+            viewers = []
+
+        while True:
+            self.computeAndMoveToObservations(usevisibility=options.usevisibility,posedist=options.posedist)
+        
     finally:
         env.Destroy()
 

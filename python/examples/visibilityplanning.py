@@ -40,7 +40,6 @@ class CameraViewerGUI(threading.Thread):
         self.title = title
         self.laststamp = None
         self.imagelck = threading.Lock()
-
     def updateimage(self):
         data = self.sensor.GetSensorData()
         if data is not None and not self.laststamp == data.stamp:
@@ -49,7 +48,6 @@ class CameraViewerGUI(threading.Thread):
             self.imagelck.acquire()
             self.image = Image.frombuffer('RGB',[width,height], data.imagedata.tostring(), 'raw','RGB',0,1)
             self.imagelck.release()
-
             photo = ImageTk.PhotoImage(self.image)
             if self.container is None:
                 self.container = self.Container()
@@ -59,17 +57,14 @@ class CameraViewerGUI(threading.Thread):
                 self.container.canvas = Canvas(self.main, width=width, height=height)
                 self.container.canvas.pack(expand=1, fill=BOTH)#side=TOP,fill=X)#
                 self.container.obr = None
-
             self.container.canvas.create_image(self.container.width/2, self.container.height/2, image=photo)
             self.container.obr = photo
             self.laststamp = data.stamp
         self.main.after(100,self.updateimage)
-
     def saveimage(self,filename):
         self.imagelck.acquire()
         self.image.save(filename)
         self.imagelck.release()
-
     def run(self):
         self.main = Tk()
         self.main.title(self.title)      # window title
@@ -111,11 +106,10 @@ class VisibilityGrasping(metaclass.AutoReloader):
                                 sensordata = attachedsensor.GetSensor().GetSensorData()
                                 if sensordata is not None and sensordata.type == Sensor.Type.Camera:
                                     attachedsensor.GetSensor().SendCommand('power 1')
-                                    title = attachedsensor.GetName()
-                                    if len(title) == 0:
-                                        title = attachedsensor.GetSensor().GetName()
-                                        if len(title) == 0:
-                                            title = 'Camera Sensor'
+                                    if len(attachedsensor.GetName()) > 0:
+                                        title = 'visibilityplanning: ' + attachedsensor.GetName()
+                                    else:
+                                        title = 'visibilityplanning: ' + attachedsensor.GetSensor().GetName()
                                     self.viewers.append(CameraViewerGUI(sensor=attachedsensor.GetSensor(),title=title))
                                     break # can only support one camera
                         print 'found %d camera sensors on robot %s'%(len(self.viewers),self.robotreal.GetName())

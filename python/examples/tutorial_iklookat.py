@@ -49,7 +49,7 @@ def run(args=None):
     parser.add_option('--scene',action="store",type='string',dest='scene',default='data/pr2test1.env.xml',
                       help='Scene file to load (default=%default)')
     parser.add_option('--manipname',action="store",type='string',dest='manipname',default='head_torso',
-                      help='Scene file to load (default=%default)')
+                      help='name of manipulator to use (default=%default)')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
     env.Load(options.scene)

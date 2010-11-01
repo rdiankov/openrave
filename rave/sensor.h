@@ -35,7 +35,9 @@ public:
         ST_Camera=2,
         ST_JointEncoder=3,
         ST_Force6D=4,
-        ST_IMU=5
+        ST_IMU=5,
+        ST_Odometry=6,
+        ST_NumberofSensorTypes=6
     };
 
     class CameraIntrinsics
@@ -78,10 +80,8 @@ public:
     {
     public:
         virtual SensorType GetType() { return ST_Camera; }
-        
         Transform t;     ///< the coordinate system all the measurements were taken in
         std::vector<uint8_t> vimagedata; ///< rgb image data, if camera only outputs in grayscale, fill each channel with the same value
-        
         virtual bool serialize(std::ostream& O) const;
     };
 
@@ -89,31 +89,41 @@ public:
     class RAVE_API JointEncoderSensorData : public SensorData
     {
     public:
-        public:
         virtual SensorType GetType() { return ST_JointEncoder; }
-        std::vector<dReal> _encoderValues; ///< measured joint angles in radians
-        std::vector<dReal> _encoderVelocity; ///< measured joint velocity in radians
+        std::vector<dReal> encoderValues; ///< measured joint angles in radians
+        std::vector<dReal> encoderVelocity; ///< measured joint velocity in radians
     };
     
     /// \brief Stores force data
-    class RAVE_API ForceSensorData : public SensorData
+    class RAVE_API Force6DSensorData : public SensorData
     {
     public:
-        public:
         virtual SensorType GetType() { return ST_Force6D; }
-        std::vector<dReal> _forceXYZ; ///< Force in X Y Z, in newtons
-        std::vector<dReal> _torqueXYZ; ///< Torque in X Y Z, in newtonmeters
+        std::vector<dReal> forceXYZ; ///< Force in X Y Z, in newtons
+        std::vector<dReal> torqueXYZ; ///< Torque in X Y Z, in newtonmeters
     };
 
     /// \brief Stores IMU data
     class RAVE_API IMUSensorData : public SensorData
     {
     public:
-        public:
         virtual SensorType GetType() { return ST_IMU; }
         Vector rotation; ///< quaternion
         Vector angular_velocity;
         Vector linear_acceleration;
+        boost::array<dReal,9> rotation_covariance; ///< Row major about x, y, z axes
+        boost::array<dReal,9> angular_velocity_covariance; ///< Row major about x, y, z axes
+        boost::array<dReal,9> linear_acceleration_covariance; ///< Row major x, y z axes
+    };
+
+    /// \brief odometry data storing full 6D pose and velocity
+    class RAVE_API OdometrySensorData : public SensorData
+    {
+    public:
+        virtual SensorType GetType() { return ST_Odometry; }
+        Transform pose; ///< measured pose
+        Vector linear_velocity, angular_velocity; ///< measured velocity
+        boost::array<dReal,36> pose_covariance, velocity_covariance; ///< Row major of 6x6 matrix about linear x, y, z and rotational x, y, z axes
     };
 
     /// permanent properties of the sensors
@@ -160,9 +170,11 @@ public:
     public:
         virtual SensorType GetType() { return ST_IMU; }
         dReal time_measurement; ///< time between measurements
-        boost::array<dReal,9> rotation_covariance; ///< Row major about x, y, z axes
-        boost::array<dReal,9> angular_velocity_covariance; ///< Row major about x, y, z axes
-        boost::array<dReal,9> linear_acceleration_covariance; ///< Row major x, y z axes
+    };
+    class RAVE_API OdometryGeomData : public SensorGeometry
+    {
+    public:
+        virtual SensorType GetType() { return ST_Odometry; }
     };
 
     SensorBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Sensor, penv) {}
@@ -179,27 +191,44 @@ public:
     /// Resets any state associated with the sensor
     virtual void Reset(int options) = 0;
 
-    /// Simulate one step forward for sensors, only valid if this sensor is simulation based
-    /// A sensor hooked up to a real device can ignore this call
+    /// \brief Simulate one step forward for sensors.
+    ///
+    /// Only valid if this sensor is simulation based. A sensor hooked up to a real device can ignore this call
     virtual bool SimulationStep(dReal fTimeElapsed) = 0;
 
-    /// Returns the sensor geometry. This method is thread safe.
+    /// \brief Returns the sensor geometry. This method is thread safe.
+    ///
+    /// \param type the requested sensor type to create. A sensor can support many types. If type is ST_Invalid, then returns a data structure
     /// \return sensor geometry pointer, use delete to destroy it
-    virtual SensorGeometryPtr GetSensorGeometry() = 0;
+    virtual SensorGeometryPtr GetSensorGeometry(SensorType type=ST_Invalid) = 0;
 
-    /// Creates the sensor data to be specifically used by this class
-    /// \return new SensorData class, destroy with delete
-    virtual SensorDataPtr CreateSensorData() = 0;
+    /// \brief Creates the sensor data to be specifically used by this class
+    /// \param type the requested sensor type to create. A sensor can support many types. If type is ST_Invalid, then returns a data structure
+    /// of the type most representative of this sensor.
+    /// \return new SensorData class
+    virtual SensorDataPtr CreateSensorData(SensorType type=ST_Invalid) = 0;
 
-    /// Copy the most recent published data of the sensor. Once GetSensorData returns, the
-    /// caller has full access to the data. This method is thread safe.
-    /// \param psensordata A pointer to SensorData returned from CreateSensorData
+    /// \brief Copy the most recent published data of the sensor given the type.
+    ///
+    /// Once GetSensorData returns, the caller has full unrestricted access to the data. This method is thread safe.
+    /// \param psensordata A pointer to SensorData returned from CreateSensorData, the plugin will use
+    /// psensordata->GetType() in order to return the correctly supported type.
     virtual bool GetSensorData(SensorDataPtr psensordata) = 0;
 
-    /// Set the transform of a sensor.
+    /// \brief returns true if sensor supports a particular sensor type
+    virtual bool Supports(SensorType type) = 0;
+
+    /// \brief Set the transform of a sensor (global coordinate system).
+    ///
+    /// Sensors attached to the robot have their transforms automatically set every time the robot is moved
     /// \param trans - The transform defining the frame of the sensor.
     virtual void SetTransform(const Transform& trans) = 0;
     virtual Transform GetTransform() = 0;
+
+    /// \brief Register a callback whenever new sensor data comes in.
+    /// \param type the sensor type to register for
+    /// \param callback the user function to call, note that this might block the thread generating/receiving sensor data
+    virtual boost::shared_ptr<void> RegisterDataCallback(SensorType type, const boost::function<void(SensorDataConstPtr)>& callback) { throw openrave_exception("SensorBase::RegisterDataCallback",ORE_NotImplemented); }
 	
     /// \return the name of the sensor
     virtual const std::string& GetName() const { return _name; }

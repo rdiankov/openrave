@@ -76,6 +76,7 @@ else:
     from openravepy import OpenRAVEModel, OpenRAVEGlobalArguments
 from numpy import random, array, linspace
 from optparse import OptionParser
+import time
 
 def run(args=None):
     """Executes tutorial_iksolutions.
@@ -95,11 +96,26 @@ def run(args=None):
                       help='Transparency for every robot (default=%default)')
     parser.add_option('--maxnumber',action="store",type='int',dest='maxnumber',default=10,
                       help='Max number of robots to render (default=%default)')
+    parser.add_option('--manipname',action="store",type='string',dest='manipname',default=None,
+                      help='name of manipulator to use (default=%default)')
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
     env.Load(options.scene)
+    robot = env.GetRobots()[0]
+    if options.manipname is not None:
+        robot.SetActiveManipulator(options.manipname)
+    newrobots = []
+    for ind in range(options.maxnumber):
+        newrobot = env.ReadRobotXMLFile(robot.GetXMLFilename())
+        for link in newrobot.GetLinks():
+            for geom in link.GetGeometries():
+                geom.SetTransparency(options.transparency)
+        newrobots.append(newrobot)
+    for link in robot.GetLinks():
+        for geom in link.GetGeometries():
+            geom.SetTransparency(options.transparency)
+
     while True:
-        robot = env.GetRobots()[0]
         # generate the ik solver
         ikmodel = databases.inversekinematics.InverseKinematicsModel(robot, iktype=IkParameterization.Type.Transform6D)
         if not ikmodel.load():
@@ -115,30 +131,24 @@ def run(args=None):
                         break
             
             print 'found %d solutions, rendering solutions:'%len(solutions)
-            newrobots = []
             if len(solutions) < options.maxnumber:
                 inds = range(len(solutions))
             else:
                 inds = array(linspace(0,len(solutions)-1,options.maxnumber),int)
-            for ind in inds:
+            for i,ind in enumerate(inds):
                 print ind
-                newrobot = env.ReadRobotXMLFile(robot.GetXMLFilename())
-                for link in newrobot.GetLinks():
-                    for geom in link.GetGeometries():
-                        geom.SetTransparency(options.transparency)
+                newrobot = newrobots[i]
                 env.AddRobot(newrobot,True)
                 newrobot.SetTransform(robot.GetTransform())
                 newrobot.SetDOFValues(solutions[ind],ikmodel.manip.GetArmIndices())
-                newrobots.append(newrobot)
-            for link in robot.GetLinks():
-                for geom in link.GetGeometries():
-                    geom.SetTransparency(options.transparency)
 
-        raw_input('press any key for another configuration')
+        env.UpdatePublishedBodies()
+        print('waiting...')
+        time.sleep(10)
         # remove the robots
         for newrobot in newrobots:
             env.Remove(newrobot)
-        del newrobots
+    del newrobots
 
 if __name__ == "__main__":
     run()

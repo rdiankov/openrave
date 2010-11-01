@@ -1002,9 +1002,73 @@ public:
             }
         }
         virtual ~PyCameraSensorData() {}
+        object transform, imagedata, KK;
+    };
 
-        object transform, imagedata;
-        object KK;
+    class PyJointEncoderSensorData : public PySensorData
+    {
+    public:
+        PyJointEncoderSensorData(boost::shared_ptr<SensorBase::JointEncoderGeomData> pgeom, boost::shared_ptr<SensorBase::JointEncoderSensorData> pdata) : PySensorData(pdata)
+        {
+            encoderValues = toPyArray(pdata->encoderValues);
+            encoderVelocity = toPyArray(pdata->encoderVelocity);
+        }
+        virtual ~PyJointEncoderSensorData() {}
+        object encoderValues, encoderVelocity;
+    };
+
+    class PyForce6DSensorData : public PySensorData
+    {
+    public:
+        PyForce6DSensorData(boost::shared_ptr<SensorBase::Force6DGeomData> pgeom, boost::shared_ptr<SensorBase::Force6DSensorData> pdata) : PySensorData(pdata)
+        {
+            forceXYZ = toPyArray(pdata->forceXYZ);
+            torqueXYZ = toPyArray(pdata->torqueXYZ);
+        }
+        virtual ~PyForce6DSensorData() {}
+        object forceXYZ, torqueXYZ;
+    };
+
+    class PyIMUSensorData : public PySensorData
+    {
+    public:
+        PyIMUSensorData(boost::shared_ptr<SensorBase::IMUGeomData> pgeom, boost::shared_ptr<SensorBase::IMUSensorData> pdata) : PySensorData(pdata)
+        {
+            rotation = toPyVector4(pdata->rotation);
+            angular_velocity = toPyVector3(pdata->angular_velocity);
+            linear_acceleration = toPyVector3(pdata->linear_acceleration);
+            numeric::array arr = toPyArrayN(&pdata->rotation_covariance[0],pdata->rotation_covariance.size());
+            arr.resize(3,3);
+            rotation_covariance = arr;
+            arr = toPyArrayN(&pdata->angular_velocity_covariance[0],pdata->angular_velocity_covariance.size());
+            arr.resize(3,3);
+            angular_velocity_covariance = arr;
+            arr = toPyArrayN(&pdata->linear_acceleration_covariance[0],pdata->linear_acceleration_covariance.size());
+            arr.resize(3,3);
+            linear_acceleration_covariance = arr;
+        }
+        virtual ~PyIMUSensorData() {}
+        object rotation, angular_velocity, linear_acceleration, rotation_covariance, angular_velocity_covariance, linear_acceleration_covariance;
+    };
+
+    class PyOdometrySensorData : public PySensorData
+    {
+    public:
+        PyOdometrySensorData(boost::shared_ptr<SensorBase::OdometryGeomData> pgeom, boost::shared_ptr<SensorBase::OdometrySensorData> pdata) : PySensorData(pdata)
+        {
+            pose = toPyArray(pdata->pose);
+            linear_velocity = toPyVector3(pdata->linear_velocity);
+            angular_velocity = toPyVector3(pdata->angular_velocity);
+            numeric::array arr = toPyArrayN(&pdata->pose_covariance[0],pdata->pose_covariance.size());
+            arr.resize(3,3);
+            pose_covariance = arr;
+            arr = toPyArrayN(&pdata->velocity_covariance[0],pdata->velocity_covariance.size());
+            arr.resize(3,3);
+            velocity_covariance = arr;
+
+        }
+        virtual ~PyOdometrySensorData() {}
+        object pose, linear_velocity, angular_velocity, pose_covariance, velocity_covariance;
     };
 
     PySensorBase(SensorBasePtr psensor, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(psensor, pyenv), _psensor(psensor)
@@ -1020,18 +1084,21 @@ public:
             throw openrave_exception("SensorData failed");
         switch(_psensordata->GetType()) {
         case SensorBase::ST_Laser:
-            return boost::shared_ptr<PySensorData>(new PyLaserSensorData(boost::static_pointer_cast<SensorBase::LaserGeomData>(_psensor->GetSensorGeometry()),
-                                                                         boost::static_pointer_cast<SensorBase::LaserSensorData>(_psensordata)));
-            
+            return boost::shared_ptr<PySensorData>(new PyLaserSensorData(boost::static_pointer_cast<SensorBase::LaserGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::LaserSensorData>(_psensordata)));            
         case SensorBase::ST_Camera:
-            return boost::shared_ptr<PySensorData>(new PyCameraSensorData(boost::static_pointer_cast<SensorBase::CameraGeomData>(_psensor->GetSensorGeometry()),
-                                                                          boost::static_pointer_cast<SensorBase::CameraSensorData>(_psensordata)));
-        default: {
-            stringstream ss;
-            ss << "unknown sensor data type: " << _psensordata->GetType() << endl;
-            throw openrave_exception(ss.str());
+            return boost::shared_ptr<PySensorData>(new PyCameraSensorData(boost::static_pointer_cast<SensorBase::CameraGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::CameraSensorData>(_psensordata)));
+        case SensorBase::ST_JointEncoder:
+            return boost::shared_ptr<PySensorData>(new PyJointEncoderSensorData(boost::static_pointer_cast<SensorBase::JointEncoderGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::JointEncoderSensorData>(_psensordata)));
+        case SensorBase::ST_Force6D:
+            return boost::shared_ptr<PySensorData>(new PyForce6DSensorData(boost::static_pointer_cast<SensorBase::Force6DGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::Force6DSensorData>(_psensordata)));
+        case SensorBase::ST_IMU:
+            return boost::shared_ptr<PySensorData>(new PyIMUSensorData(boost::static_pointer_cast<SensorBase::IMUGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::IMUSensorData>(_psensordata)));
+        case SensorBase::ST_Odometry:
+            return boost::shared_ptr<PySensorData>(new PyOdometrySensorData(boost::static_pointer_cast<SensorBase::OdometryGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::OdometrySensorData>(_psensordata)));
         }
-        }
+        stringstream ss;
+        ss << "unknown sensor data type: " << _psensordata->GetType() << endl;
+        throw openrave_exception(ss.str());
     }
     
     void SetTransform(object transform) { _psensor->SetTransform(ExtractTransform(transform)); }
@@ -3674,6 +3741,29 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def_readonly("imagedata",&PySensorBase::PyCameraSensorData::imagedata)
             .def_readonly("KK",&PySensorBase::PyCameraSensorData::KK)
             ;
+        class_<PySensorBase::PyJointEncoderSensorData, boost::shared_ptr<PySensorBase::PyJointEncoderSensorData>, bases<PySensorBase::PySensorData> >("JointEncoderSensorData", DOXY_CLASS(SensorBase::JointEncoderSensorData),no_init)
+            .def_readonly("encoderValues",&PySensorBase::PyJointEncoderSensorData::encoderValues)
+            .def_readonly("encoderVelocity",&PySensorBase::PyJointEncoderSensorData::encoderVelocity)
+            ;
+        class_<PySensorBase::PyForce6DSensorData, boost::shared_ptr<PySensorBase::PyForce6DSensorData>, bases<PySensorBase::PySensorData> >("Force6DSensorData", DOXY_CLASS(SensorBase::Force6DSensorData),no_init)
+            .def_readonly("forceXYZ",&PySensorBase::PyForce6DSensorData::forceXYZ)
+            .def_readonly("torqueXYZ",&PySensorBase::PyForce6DSensorData::torqueXYZ)
+            ;
+        class_<PySensorBase::PyIMUSensorData, boost::shared_ptr<PySensorBase::PyIMUSensorData>, bases<PySensorBase::PySensorData> >("IMUSensorData", DOXY_CLASS(SensorBase::IMUSensorData),no_init)
+            .def_readonly("rotation",&PySensorBase::PyIMUSensorData::rotation)
+            .def_readonly("angular_velocity",&PySensorBase::PyIMUSensorData::angular_velocity)
+            .def_readonly("linear_acceleration",&PySensorBase::PyIMUSensorData::linear_acceleration)
+            .def_readonly("rotation_covariance",&PySensorBase::PyIMUSensorData::rotation_covariance)
+            .def_readonly("angular_velocity_covariance",&PySensorBase::PyIMUSensorData::angular_velocity_covariance)
+            .def_readonly("linear_acceleration_covariance",&PySensorBase::PyIMUSensorData::linear_acceleration_covariance)
+            ;
+        class_<PySensorBase::PyOdometrySensorData, boost::shared_ptr<PySensorBase::PyOdometrySensorData>, bases<PySensorBase::PySensorData> >("OdometrySensorData", DOXY_CLASS(SensorBase::OdometrySensorData),no_init)
+            .def_readonly("pose",&PySensorBase::PyOdometrySensorData::pose)
+            .def_readonly("linear_velocity",&PySensorBase::PyOdometrySensorData::linear_velocity)
+            .def_readonly("angular_velocity",&PySensorBase::PyOdometrySensorData::angular_velocity)
+            .def_readonly("pose_covariance",&PySensorBase::PyOdometrySensorData::pose_covariance)
+            .def_readonly("velocity_covariance",&PySensorBase::PyOdometrySensorData::velocity_covariance)
+            ;
 
         enum_<SensorBase::SensorType>("Type" DOXY_ENUM(SensorType))
             .value("Invalid",SensorBase::ST_Invalid)
@@ -3681,6 +3771,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .value("Camera",SensorBase::ST_Camera)
             .value("JointEncoder",SensorBase::ST_JointEncoder)
             .value("Force6D",SensorBase::ST_Force6D)
+            .value("IMU",SensorBase::ST_IMU)
+            .value("Odometry",SensorBase::ST_Odometry)
             ;
     }
 
