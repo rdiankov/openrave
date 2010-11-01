@@ -896,6 +896,66 @@ class IKFastSolver(AutoReloader):
             M[0:3,0:3] = IKFastSolver.rodrigues(rottodirection.normalized(), atan2(fsin, fcos))
         return M
 
+    @staticmethod
+    def buildPositionEquations(Links, LinksInv, P, Pee):
+        Positions = [Matrix(3,1,[IKFastSolver.customtrigsimp(x) for x in T[0:3,0:3]*P+T[0:3,3]]) for T in Links]
+        Positionsee = [Matrix(3,1,[IKFastSolver.customtrigsimp(x) for x in T[0:3,0:3]*Pee+T[0:3,3]]) for T in LinksInv]
+
+        # try to shift all the constants of each Position expression to one side
+        for i in range(len(Positions)):
+            for j in range(3):
+                p = Positions[i][j]
+                pee = Positionsee[i][j]
+                pconstterm = None
+                peeconstterm = None
+                if p.is_Add:
+                    pconstterm = [term for term in p.args if term.is_number]
+                elif p.is_number:
+                    pconstterm = [p]
+                else:
+                    continue
+                if pee.is_Add:
+                    peeconstterm = [term for term in pee.args if term.is_number]
+                elif pee.is_number:
+                    peeconstterm = [pee]
+                else:
+                    continue
+                if len(pconstterm) > 0 and len(peeconstterm) > 0:
+                    # shift it to the one that has the least terms
+                    for term in peeconstterm if len(p.args) < len(pee.args) else pconstterm:
+                        Positions[i][j] -= term
+                        Positionsee[i][j] -= term
+
+        # remove similar equations
+        i = 1
+        while i < len(Positions):
+            if all([Positions[i][j]-Positions[i-1][j] == S.Zero and Positionsee[i][j]-Positionsee[i-1][j] == S.Zero for j in range(3)]):
+                Positions.pop(i)
+                Positionsee.pop(i)
+            else:
+                i += 1
+        return Positions,Positionsee
+
+    def buildEquationsFromPositions(self,Positions,Positionsee,uselength=True):
+        AllEquations = []
+        for i in range(len(Positions)):
+            for j in range(3):
+                e = self.customtrigsimp(Positions[i][j] - Positionsee[i][j])
+                if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
+                    AllEquations.append(e)
+            if uselength:
+                p2 = (Positions[i][0]**2+Positions[i][1]**2+Positions[i][2]**2).expand()
+                pe2 = (Positionsee[i][0]**2+Positionsee[i][1]**2+Positionsee[i][2]**2).expand()
+                if self.codeComplexity(p2) < 2000 and self.codeComplexity(pe2) < 2000:
+                    # sympy's trigsimp/customtrigsimp give up too easily
+                    e = self.customtrigsimp(self.customtrigsimp(self.customtrigsimp(self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp(p2)).expand())) - self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp(pe2)).expand())))))
+                    if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
+                        AllEquations.append(e)
+                else:
+                    print 'length equations too big, skipping...'
+        self.sortComplexity(AllEquations)
+        return AllEquations
+
     def solveFullIK_Direction3D(self,chain,Tee,rawbasedir=Matrix(3,1,[S.Zero,S.Zero,S.One])):
         """basedir needs to be filled with a 3elemtn vector of the initial direction to control"""
         Links, jointvars, isolvejointvars, ifreejointvars = self.forwardKinematicsChain(chain)
@@ -1068,50 +1128,11 @@ class IKFastSolver(AutoReloader):
         valuesubs = []
         freevarcond = None
                 
-        Positions = [Matrix(3,1,[self.customtrigsimp(x) for x in (T[0:3,0:3]*basepos+T[0:3,3]).subs(valuesubs)]) for T in LinksAccumRightAll]
-        Positionsee = [Matrix(3,1,[self.customtrigsimp(x) for x in (T[0:3,0:3]*Pee+T[0:3,3]).subs(valuesubs)]) for T in LinksAccumLeftInvAll]
-
-        # try to shift all the constants of each Position expression to one side
-        for i in range(len(Positions)):
-            for j in range(3):
-                p = Positions[i][j]
-                pee = Positionsee[i][j]
-                pconstterm = None
-                peeconstterm = None
-                if p.is_Add:
-                    pconstterm = [term for term in p.args if term.is_number]
-                elif p.is_number:
-                    pconstterm = [p]
-                else:
-                    continue
-                if pee.is_Add:
-                    peeconstterm = [term for term in pee.args if term.is_number]
-                elif pee.is_number:
-                    peeconstterm = [pee]
-                else:
-                    continue
-                if len(pconstterm) > 0 and len(peeconstterm) > 0:
-                    # shift it to the one that has the least terms
-                    for term in peeconstterm if len(p.args) < len(pee.args) else pconstterm:
-                        Positions[i][j] -= term
-                        Positionsee[i][j] -= term
-
+        Positions, Positionsee = self.buildPositionEquations(LinksAccumRightAll, LinksAccumLeftInvAll,basepos,Pee)
         solsubs = self.freevarsubs[:]
         endbranchtree = [SolverStoreSolution (jointvars)]                
         curtransvars = solvejointvars[:]
-        uselength=True
-
-        AllEquations = []
-        for i in range(len(Positions)):
-            for j in range(3):
-                e = self.customtrigsimp(Positions[i][j] - Positionsee[i][j])
-                if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
-                    AllEquations.append(e)
-            if uselength:
-                e = self.customtrigsimp(self.customtrigsimp(self.customtrigsimp(self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp((Positions[i][0]**2+Positions[i][1]**2+Positions[i][2]**2).expand())).expand())) - self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp((Positionsee[i][0]**2+Positionsee[i][1]**2+Positionsee[i][2]**2).expand())).expand())))))
-                if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
-                    AllEquations.append(e)
-        self.sortComplexity(AllEquations)
+        AllEquations = self.buildEquationsFromPositions(Positions,Positionsee)
         transtree = self.solveAllEquations(AllEquations,curvars=curtransvars,othersolvedvars=freejointvars,solsubs = solsubs,endbranchtree=endbranchtree)
         solverbranches.append((None,transtree))
         return SolverIKChainTranslation3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], TfirstleftInv[0:3,0:3] * Pee + TfirstleftInv[0:3,3], [SolverBranchConds(solverbranches)],Pfk = Tfirstleft * (LinksAccumRightAll[0]*Matrix(4,1,[basepos[0],basepos[1],basepos[2],1.0])))
@@ -1180,8 +1201,7 @@ class IKFastSolver(AutoReloader):
 
         Ds = [Matrix(3,1, [self.chop(x,accuracy=self.accuracy*10.0) for x in T[0:3,0:3]*basedir]) for T in LinksAccumRightAll[0:5]]
         Dsee = [Matrix(3,1, [self.chop(x,accuracy=self.accuracy*10.0) for x in T[0:3,0:3]*Dee]) for T in LinksAccumRightAll[0:5]]
-        Positions = [Matrix(3,1,[self.customtrigsimp(x) for x in (T[0:3,0:3]*basepos+T[0:3,3]).subs(valuesubs)]) for T in LinksAccumRightAll[0:5]]
-        Positionsee = [Matrix(3,1,[self.customtrigsimp(x) for x in (T[0:3,0:3]*Pee+T[0:3,3]).subs(valuesubs)]) for T in LinksAccumLeftInvAll[0:5]]
+        Positions, Positionsee = self.buildPositionEquations(LinksAccumRightAll[0:5], LinksAccumLeftInvAll[0:5],basepos,Pee)
         for i in range(len(Positions)):
             #Positions[i] -= Dsee[i]*(Dsee[i][0]*Positions[i][0]+Dsee[i][1]*Positions[i][1]+Dsee[i][2]*Positions[i][2])
             Positions[i] = Positions[i].cross(Dsee[i])
@@ -1220,19 +1240,10 @@ class IKFastSolver(AutoReloader):
         rottree = []
         endbranchtree = [SolverSequence([rottree])]
 
-        # attempt the full solution
-        print 'attempting full solutions'
-        AllEquations = []
+        AllEquations = self.buildEquationsFromPositions(Positions,Positionsee)
         for i in range(len(Positions)):
             for j in range(3):
-                e = self.customtrigsimp(Positions[i][j] - Positionsee[i][j])
-                if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
-                    AllEquations.append(e)
                 e = self.customtrigsimp(Ds[i][j] - Dsee[i][j])
-                if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
-                    AllEquations.append(e)
-            if uselength:
-                e = self.customtrigsimp(self.customtrigsimp(self.customtrigsimp(self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp((Positions[i][0]**2+Positions[i][1]**2+Positions[i][2]**2).expand())).expand())) - self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp((Positionsee[i][0]**2+Positionsee[i][1]**2+Positionsee[i][2]**2).expand())).expand())))))
                 if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
                     AllEquations.append(e)
         self.sortComplexity(AllEquations)
@@ -1298,8 +1309,7 @@ class IKFastSolver(AutoReloader):
         freevarcond = None
 
         Ds = [Matrix(3,1, [self.chop(x,accuracy=self.accuracy*10.0) for x in T[0:3,0:3]*basedir]) for T in LinksAccumRightAll[0:5]]
-        Positions = [Matrix(3,1,[self.customtrigsimp(x) for x in (T[0:3,0:3]*basepos+T[0:3,3]).subs(valuesubs)]) for T in LinksAccumRightAll[0:5]]
-        Positionsee = [Matrix(3,1,[self.customtrigsimp(x) for x in (T[0:3,0:3]*Pee+T[0:3,3]).subs(valuesubs)]) for T in LinksAccumLeftInvAll[0:5]]
+        Positions, Positionsee = self.buildPositionEquations(LinksAccumRightAll[0:5], LinksAccumLeftInvAll[0:5],basepos,Pee)
         for i in range(len(Positions)):
             Positions[i] = Positions[i].cross(Ds[i])
             Positions[i] = Matrix(3,1,[self.customtrigsimp(self.customtrigsimp(x)) for x in Positions[i]])
@@ -1333,18 +1343,7 @@ class IKFastSolver(AutoReloader):
 
         uselength=False
         orgsolsubs = self.freevarsubs[:]
-
-        AllEquations = []
-        for i in range(len(Positions)):
-            for j in range(3):
-                e = self.customtrigsimp(Positions[i][j] - Positionsee[i][j])
-                if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
-                    AllEquations.append(e)
-            if uselength:
-                e = self.customtrigsimp(self.customtrigsimp(self.customtrigsimp(self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp((Positions[i][0]**2+Positions[i][1]**2+Positions[i][2]**2).expand())).expand())) - self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp((Positionsee[i][0]**2+Positionsee[i][1]**2+Positionsee[i][2]**2).expand())).expand())))))
-                if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
-                    AllEquations.append(e)
-        self.sortComplexity(AllEquations)
+        AllEquations = self.buildEquationsFromPositions(Positions,Positionsee)
         endbranchtree = [SolverStoreSolution (jointvars)]
         fulltree = self.solveAllEquations(AllEquations,curvars=solvejointvars,othersolvedvars = freejointvars[:],solsubs = orgsolsubs,endbranchtree=endbranchtree)
         solverbranches = [(freevarcond,fulltree)]
@@ -1474,34 +1473,7 @@ class IKFastSolver(AutoReloader):
         valuesubs = []
         freevarcond = None
                 
-        Positions = [Matrix(3,1,[self.customtrigsimp(x) for x in LinksAccumRightAll[i][0:3,3].subs(valuesubs)]) for i in range(0,1+lastsepindex*2)]
-        Positionsee = [Matrix(3,1,[self.customtrigsimp(x) for x in (LinksAccumLeftInvAll[i]*Tee)[0:3,3].subs(valuesubs)]) for i in range(0,1+lastsepindex*2)]
-
-        # try to shift all the constants of each Position expression to one side
-        for i in range(len(Positions)):
-            for j in range(3):
-                p = Positions[i][j]
-                pee = Positionsee[i][j]
-                pconstterm = None
-                peeconstterm = None
-                if p.is_Add:
-                    pconstterm = [term for term in p.args if term.is_number]
-                elif p.is_number:
-                    pconstterm = [p]
-                else:
-                    continue
-                if pee.is_Add:
-                    peeconstterm = [term for term in pee.args if term.is_number]
-                elif pee.is_number:
-                    peeconstterm = [pee]
-                else:
-                    continue
-                if len(pconstterm) > 0 and len(peeconstterm) > 0:
-                    # shift it to the one that has the least terms
-                    for term in peeconstterm if len(p.args) < len(pee.args) else pconstterm:
-                        Positions[i][j] -= term
-                        Positionsee[i][j] -= term
-
+        Positions, Positionsee = self.buildPositionEquations(LinksAccumRightAll[0:(1+lastsepindex*2)], LinksAccumLeftInvAll[0:(1+lastsepindex*2)],zeros((3,1)),Tee[0:3,3])
         rottree = []
         solsubs = self.freevarsubs[:]
         if solveRotationFirst:
@@ -1512,24 +1484,7 @@ class IKFastSolver(AutoReloader):
             endbranchtree = [SolverSequence([rottree])]
 
         curtransvars = transvars[:]
-        AllEquations = []
-        for i in range(len(Positions)):
-            for j in range(3):
-                e = self.customtrigsimp(Positions[i][j] - Positionsee[i][j])
-                if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
-                    AllEquations.append(e)
-        self.sortComplexity(AllEquations)
-        if not solveRotationFirst:
-            AllEquations = [eq for eq in AllEquations if not eq.has_any_symbols(*rotvars)]
-#         try:
-#             transtree = self.solveAllEquations(AllEquations,curvars=curtransvars,othersolvedvars = rotvars+freejointvars if solveRotationFirst else freejointvars,solsubs = solsubs,endbranchtree=endbranchtree)
-#         except self.CannotSolveError:
-        # adding in length
-        for i in range(len(Positions)):
-            e = self.customtrigsimp(self.customtrigsimp(self.customtrigsimp(self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp((Positions[i][0]**2+Positions[i][1]**2+Positions[i][2]**2).expand())).expand())) - self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp((Positionsee[i][0]**2+Positionsee[i][1]**2+Positionsee[i][2]**2).expand())).expand())))))
-            if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
-                AllEquations.append(e)
-        self.sortComplexity(AllEquations)
+        AllEquations = self.buildEquationsFromPositions(Positions,Positionsee)
         if not solveRotationFirst:
             AllEquations = [eq for eq in AllEquations if not eq.has_any_symbols(*rotvars)]
         transtree = self.solveAllEquations(AllEquations,curvars=curtransvars,othersolvedvars = rotvars+freejointvars if solveRotationFirst else freejointvars,solsubs = solsubs,endbranchtree=endbranchtree)
@@ -2827,7 +2782,8 @@ class IKFastSolver(AutoReloader):
                 eq += expr/common
         return eq
 
-    def customtrigsimp(self,expr, deep=False):
+    @staticmethod
+    def customtrigsimp(expr, deep=False):
         """
         Usage
         =====
@@ -2888,7 +2844,7 @@ class IKFastSolver(AutoReloader):
 
         if expr.is_Function:
             if deep:
-                newargs = [self.customtrigsimp(a, deep) for a in expr.args]
+                newargs = [IKFastSolver.customtrigsimp(a, deep) for a in expr.args]
 
                 if expr.func == atan2:
                     # check special simplification
@@ -2916,10 +2872,10 @@ class IKFastSolver(AutoReloader):
         elif expr.is_Mul:
             ret = S.One
             for x in expr.args:
-                ret *= self.customtrigsimp(x, deep)
+                ret *= IKFastSolver.customtrigsimp(x, deep)
             return ret.expand()
         elif expr.is_Pow:
-            return Pow(self.customtrigsimp(expr.base, deep), self.customtrigsimp(expr.exp, deep))
+            return Pow(IKFastSolver.customtrigsimp(expr.base, deep), IKFastSolver.customtrigsimp(expr.exp, deep))
         elif expr.is_Add:
             # TODO this needs to be faster
             # The types of trig functions we are looking for
@@ -2932,7 +2888,7 @@ class IKFastSolver(AutoReloader):
             # Scan for the terms we need
             ret = S.Zero
             for term in expr.args:
-                term = self.customtrigsimp(term, deep)
+                term = IKFastSolver.customtrigsimp(term, deep)
                 res = None
                 for pattern, result in matchers:
                     res = term.match(pattern)
