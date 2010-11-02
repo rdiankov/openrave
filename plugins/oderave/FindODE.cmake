@@ -14,7 +14,6 @@ find_program(ODE_CONFIG_EXECUTABLE NAMES ode-config DOC "ode-config executable")
 mark_as_advanced(ODE_CONFIG_EXECUTABLE)
 
 if(ODE_CONFIG_EXECUTABLE)
-  set(ODE_LIBRARY_FOUND 1)
   execute_process(
     COMMAND ${ODE_CONFIG_EXECUTABLE} --cflags
     OUTPUT_VARIABLE _odeconfig_cflags
@@ -28,6 +27,7 @@ if(ODE_CONFIG_EXECUTABLE)
 endif()
 
 if(_odeconfig_cflags AND _odeconfig_lflags)
+  set(ODE_LIBRARY_FOUND 1)
   string(REGEX MATCHALL "(^| )-L([./+-_\\a-zA-Z]*)" _odeconfig_ldirs "${_odeconfig_lflags}")
   string(REGEX REPLACE "(^| )-L" "" _odeconfig_ldirs "${_odeconfig_ldirs}")
 
