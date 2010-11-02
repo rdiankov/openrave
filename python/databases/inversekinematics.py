@@ -150,7 +150,7 @@ class InverseKinematicsModel(OpenRAVEModel):
     def load(self,*args,**kwargs):
         return self.setrobot(*args,**kwargs)
     def getversion(self):
-        return 16
+        return 17
     def setrobot(self,freeinc=None):
         self.iksolver = None
         self.freeinc=freeinc
@@ -194,7 +194,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         return os.path.join(self.getdir(),'ikfast' + str(self.getversion()) + '.' + str(self.iktype))
     def autogenerate(self,options=None):
         freejoints = None
-        iktype = None
+        iktype = self.iktype
         usedummyjoints = None
         accuracy = None
         precision = None
@@ -230,12 +230,14 @@ class InverseKinematicsModel(OpenRAVEModel):
             if iktype is None:
                 iktype=IkParameterization.Type.Rotation3D
         elif self.manip.GetKinematicsStructureHash() == '3d237bf9cd0926ca3151dfca1d0d8936' or self.manip.GetKinematicsStructureHash() == '63aa5661bbae9c2637e1f44660108a4f': # pr2
-            iktype=IkParameterization.Type.Transform6D
+            if iktype == None:
+                iktype=IkParameterization.Type.Transform6D
             if freejoints is None:
                 # take the torso and roll joint
                 freejoints=[self.robot.GetJoints()[self.manip.GetArmIndices()[ind]].GetName() for ind in [0,3]]
         elif self.manip.GetKinematicsStructureHash()=='0c314a70ee8eadd2c4cb0ff7770893f8' or self.manip.GetKinematicsStructureHash()=='f202b5bed247928f6a730bc6105058b9': # pr2 cameras
-            iktype=IkParameterization.Type.Ray4D
+            if iktype is None:
+                iktype=IkParameterization.Type.Ray4D
         elif self.manip.GetKinematicsStructureHash()=='cc9744737db7b45be2451aedff296c08': # katana
             if iktype==IkParameterization.Type.Translation3D or (iktype==None and self.iktype==IkParameterization.Type.Translation3D):
                 freejoints = [self.robot.GetJoints()[ind].GetName() for ind in self.manip.GetArmIndices()[3:]]

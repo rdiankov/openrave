@@ -1,7 +1,7 @@
 # Try to find Ode
 # Once done this will define
 #
-# ODE_LIBRARY_FOUND - if Ode3d is found
+# ODE_LIBRARY_FOUND - if ode is found
 # ODE_CXXFLAGS - extra flags
 # ODE_INCLUDE_DIRS - include directories
 # ODE_LINK_DIRS - link directories
@@ -15,7 +15,6 @@ mark_as_advanced(ODE_CONFIG_EXECUTABLE)
 
 if(ODE_CONFIG_EXECUTABLE)
   set(ODE_LIBRARY_FOUND 1)
-
   execute_process(
     COMMAND ${ODE_CONFIG_EXECUTABLE} --cflags
     OUTPUT_VARIABLE _odeconfig_cflags
@@ -26,7 +25,9 @@ if(ODE_CONFIG_EXECUTABLE)
     OUTPUT_VARIABLE _odeconfig_lflags
     RESULT_VARIABLE _odeconfig_failed)
   string(REGEX REPLACE "[\r\n]" " " _odeconfig_lflags "${_odeconfig_lflags}")
+endif()
 
+if(_odeconfig_cflags AND _odeconfig_lflags)
   string(REGEX MATCHALL "(^| )-L([./+-_\\a-zA-Z]*)" _odeconfig_ldirs "${_odeconfig_lflags}")
   string(REGEX REPLACE "(^| )-L" "" _odeconfig_ldirs "${_odeconfig_ldirs}")
 
@@ -49,7 +50,7 @@ if(ODE_CONFIG_EXECUTABLE)
   else(_odeconfig_double )
     set( ODE_PRECISION "SINGLE")
   endif(_odeconfig_double )
-else(ODE_CONFIG_EXECUTABLE)
+else()
   # ode include files in local directory
   if( MSVC AND NOT MSVC70 AND NOT MSVC71 AND NOT MSVC80 AND NOT MSVC81 )
   	# must be MSVC90 or later?
@@ -74,7 +75,7 @@ else(ODE_CONFIG_EXECUTABLE)
     set(ODE_LIBRARY_FOUND 0)
     MESSAGE("WARNING: Could not find ODE. Please install ODE (http://www.ode.org)")
   endif()  
-endif(ODE_CONFIG_EXECUTABLE)
+endif()
 
 MARK_AS_ADVANCED(
     ODE_LIBRARY_FOUND

@@ -747,9 +747,23 @@ class IKFastSolver(AutoReloader):
         return complexity
     def sortComplexity(self,exprs):
         exprs.sort(lambda x, y: self.codeComplexity(x)-self.codeComplexity(y))
+
+#     def checkDivideByZero(self,expr):
+#         checkforzero = []                
+#         if expr.is_Function or expr.is_Add or expr.is_Mul:
+#             for arg in expr.args:
+#                 checkforzero += self.checkDivideByZero(arg)
+#         elif expr.is_Pow and expr.exp.is_real and expr.exp < 0:
+#             checkforzero.append(expr.base)
+#         return checkforzero
+
     def checkForDivideByZero(self,eq):
         try:
             checkforzeros = []
+            if eq.is_Function:
+                for arg in eq.args:
+                    checkforzeros += self.checkForDivideByZero(arg)
+                return checkforzeros
             subexprs,reduced_exprs = customcse(eq)
             def checkpow(expr,sexprs):
                 if expr.is_Pow:
@@ -791,18 +805,18 @@ class IKFastSolver(AutoReloader):
                 sol.score = 400*len(sol.jointeval)
                 for s in sol.jointeval:
                     sol.score += self.codeComplexity(s)
-                subexprs,reduced_exprs = customcse(sol.jointeval)
+                subexprs = sol.jointeval
             elif sol.jointevalsin is not None:
                 sol.score = 400*len(sol.jointevalsin)
                 for s in sol.jointevalsin:
                     sol.score += self.codeComplexity(s)
-                subexprs,reduced_exprs = customcse(sol.jointevalsin)
+                subexprs = sol.jointevalsin
                 #sol.score += 500
             elif sol.jointevalcos is not None:
                 sol.score = 400*len(sol.jointevalcos)
                 for s in sol.jointevalcos:
                     sol.score += self.codeComplexity(s)
-                subexprs,reduced_exprs = customcse(sol.jointevalcos)
+                subexprs = sol.jointevalcos
                 #sol.score += 500
             else:
                 assert False
@@ -814,21 +828,21 @@ class IKFastSolver(AutoReloader):
                     if expr.base.is_finite is not None and not expr.baseis_finite:
                         return oo # infinity
                     if expr.exp.is_real and expr.exp < 0:
-                        exprbase = self.subsExpressions(expr.base,subexprs)
+                        #exprbase = self.subsExpressions(expr.base,subexprs)
                         # check if exprbase contains any variables that have already been solved
-                        containsjointvar = exprbase.has_any_symbols(*solvedvars)
-                        cancheckexpr = not exprbase.has_any_symbols(*unsolvedvars)
+                        containsjointvar = expr.base.has_any_symbols(*solvedvars)
+                        cancheckexpr = not expr.base.has_any_symbols(*unsolvedvars)
                         score += 10000
                         if not cancheckexpr:
                             score += 100000
                         else:
-                            if self.isExpressionUnique(sol.checkforzeros,-exprbase) and self.isExpressionUnique(sol.checkforzeros,exprbase):
-                                sol.checkforzeros.append(exprbase)
+                            if self.isExpressionUnique(sol.checkforzeros,-expr.base) and self.isExpressionUnique(sol.checkforzeros,expr.base):
+                                sol.checkforzeros.append(expr.base)
                 elif not self.isValidSolution(expr):
                     return oo # infinity
                 return score
             
-            sexprs = [subexpr[1] for subexpr in subexprs]+reduced_exprs
+            sexprs = subexprs[:]
             while len(sexprs) > 0:
                 sexpr = sexprs.pop(0)
                 if sexpr.is_Add:
@@ -940,7 +954,9 @@ class IKFastSolver(AutoReloader):
         AllEquations = []
         for i in range(len(Positions)):
             for j in range(3):
-                e = self.customtrigsimp(Positions[i][j] - Positionsee[i][j])
+                e = Positions[i][j] - Positionsee[i][j]
+                if self.codeComplexity(e) < 1500:
+                    e = self.customtrigsimp(e)
                 if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
                     AllEquations.append(e)
             if uselength:
@@ -1195,20 +1211,25 @@ class IKFastSolver(AutoReloader):
         assert( len(LinksAccumLeft) == len(jointvars)+1 )
         
         solverbranches = []
-        # depending on the free variable values, sometimes the rotation matrix can have zeros where it does not expect zeros. Therefore, test all boundaries of all free variables
         valuesubs = []
         freevarcond = None
 
         Ds = [Matrix(3,1, [self.chop(x,accuracy=self.accuracy*10.0) for x in T[0:3,0:3]*basedir]) for T in LinksAccumRightAll[0:5]]
-        Dsee = [Matrix(3,1, [self.chop(x,accuracy=self.accuracy*10.0) for x in T[0:3,0:3]*Dee]) for T in LinksAccumRightAll[0:5]]
+        Dsee = [Matrix(3,1, [self.chop(x,accuracy=self.accuracy*10.0) for x in T[0:3,0:3]*Dee]) for T in LinksAccumLeftInvAll[0:5]]
         Positions, Positionsee = self.buildPositionEquations(LinksAccumRightAll[0:5], LinksAccumLeftInvAll[0:5],basepos,Pee)
+        Positionsnew = []
+        Positionseenew = []
         for i in range(len(Positions)):
-            #Positions[i] -= Dsee[i]*(Dsee[i][0]*Positions[i][0]+Dsee[i][1]*Positions[i][1]+Dsee[i][2]*Positions[i][2])
-            Positions[i] = Positions[i].cross(Dsee[i])
-            Positions[i] = Matrix(3,1,[self.customtrigsimp(self.customtrigsimp(x)) for x in Positions[i]])
-            #Positionsee[i] -= Dsee[i]*(Dsee[i][0]*Positionsee[i][0]+Dsee[i][1]*Positionsee[i][1]+Dsee[i][2]*Positionsee[i][2])
-            Positionsee[i] = Positionsee[i].cross(Dsee[i])
-            Positionsee[i] = Matrix(3,1,[self.customtrigsimp(self.customtrigsimp(x)) for x in Positionsee[i]])
+            p = Positions[i].cross(Dsee[i]).expand()
+            if all([self.codeComplexity(x)<2000 for x in p]):
+                p = Matrix(3,1,[self.customtrigsimp(self.customtrigsimp(x)) for x in p])
+            pee = Positionsee[i].cross(Dsee[i]).expand()
+            if all([self.codeComplexity(x)<2000 for x in pee]):
+                pee = Matrix(3,1,[self.customtrigsimp(self.customtrigsimp(x)) for x in pee])
+            Positionsnew.append(p)
+            Positionseenew.append(pee)
+        Positions = Positionsnew
+        Positionsee = Positionseenew
 
         # try to shift all the constants of each Position expression to one side
         for i in range(len(Positions)):
@@ -1235,15 +1256,15 @@ class IKFastSolver(AutoReloader):
                         Positions[i][j] -= term
                         Positionsee[i][j] -= term
 
-        uselength=False
         orgsolsubs = self.freevarsubs[:]
         rottree = []
         endbranchtree = [SolverSequence([rottree])]
-
-        AllEquations = self.buildEquationsFromPositions(Positions,Positionsee)
+        AllEquations = self.buildEquationsFromPositions(Positions,Positionsee,uselength=False)
         for i in range(len(Positions)):
             for j in range(3):
-                e = self.customtrigsimp(Ds[i][j] - Dsee[i][j])
+                e = (Ds[i][j] - Dsee[i][j]).expand()
+                if self.codeComplexity(e) <= 1000:
+                    e = self.customtrigsimp(e)
                 if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
                     AllEquations.append(e)
         self.sortComplexity(AllEquations)
@@ -1310,11 +1331,20 @@ class IKFastSolver(AutoReloader):
 
         Ds = [Matrix(3,1, [self.chop(x,accuracy=self.accuracy*10.0) for x in T[0:3,0:3]*basedir]) for T in LinksAccumRightAll[0:5]]
         Positions, Positionsee = self.buildPositionEquations(LinksAccumRightAll[0:5], LinksAccumLeftInvAll[0:5],basepos,Pee)
+
+        Positionsnew = []
+        Positionseenew = []
         for i in range(len(Positions)):
-            Positions[i] = Positions[i].cross(Ds[i])
-            Positions[i] = Matrix(3,1,[self.customtrigsimp(self.customtrigsimp(x)) for x in Positions[i]])
-            Positionsee[i] = Positionsee[i].cross(Ds[i])
-            Positionsee[i] = Matrix(3,1,[self.customtrigsimp(self.customtrigsimp(x)) for x in Positionsee[i]])
+            p = Positions[i].cross(Ds[i]).expand()
+            if all([self.codeComplexity(x)<2000 for x in p]):
+                p = Matrix(3,1,[self.customtrigsimp(self.customtrigsimp(x)) for x in p])
+            pee = Positionsee[i].cross(Ds[i]).expand()
+            if all([self.codeComplexity(x)<2000 for x in pee]):
+                pee = Matrix(3,1,[self.customtrigsimp(self.customtrigsimp(x)) for x in pee])
+            Positionsnew.append(p)
+            Positionseenew.append(pee)
+        Positions = Positionsnew
+        Positionsee = Positionseenew
 
         # try to shift all the constants of each Position expression to one side
         for i in range(len(Positions)):
@@ -1341,7 +1371,6 @@ class IKFastSolver(AutoReloader):
                         Positions[i][j] -= term
                         Positionsee[i][j] -= term
 
-        uselength=False
         orgsolsubs = self.freevarsubs[:]
         AllEquations = self.buildEquationsFromPositions(Positions,Positionsee)
         endbranchtree = [SolverStoreSolution (jointvars)]
@@ -1803,7 +1832,9 @@ class IKFastSolver(AutoReloader):
                     continue
                 enew2,symbols2 = self.factorLinearTerms(enew,[svar,cvar,var],symbolgen)
                 symbols += [(s[0],s[1].subs(symbols)) for s in symbols2]
-                rank = self.codeComplexity(enew2)+reduce(lambda x,y: x+self.codeComplexity(y[1]),symbols,0)
+                rank = self.codeComplexity(enew2)
+                for s in symbols:
+                    rank += self.codeComplexity(s[1])
                 neweqns.append((rank,enew2))
                 listsymbols += symbols
             # since we're solving for two variables, we only want to use two equations, so
@@ -1840,26 +1871,29 @@ class IKFastSolver(AutoReloader):
                             break
                         # check the numerator and denominator if solutions are the same or for possible divide by zeros
                         svarfrac=fraction(svarsol)
+                        svarfrac = [svarfrac[0].subs(listsymbols), svarfrac[1].subs(listsymbols)]
                         cvarfrac=fraction(cvarsol)
-                        if self.chop((svarfrac[0]-cvarfrac[0]).subs(listsymbols)) == 0 and self.chop((svarfrac[1]-cvarfrac[1]).subs(listsymbols)) == 0:
+                        cvarfrac = [cvarfrac[0].subs(listsymbols), cvarfrac[1].subs(listsymbols)]
+                        if self.chop(svarfrac[0]-cvarfrac[0]) == 0 and self.chop(svarfrac[1]-cvarfrac[1]) == 0:
                             break
-                        svarsol = svarsol.subs(listsymbols)
-                        cvarsol = cvarsol.subs(listsymbols)
-                        if self.codeComplexity(svarsol) > 700 or self.codeComplexity(cvarsol) > 700:
-                            print 'equation too complex for single variable solution (%d,%d).... (probably wrong?)'%(self.codeComplexity(svarsol), self.codeComplexity(cvarsol))
+                        scomplexity = self.codeComplexity(svarfrac[0])+self.codeComplexity(svarfrac[1])
+                        ccomplexity = self.codeComplexity(cvarfrac[0])+self.codeComplexity(cvarfrac[1])
+                        if scomplexity > 700 or ccomplexity > 700:
+                            print 'equation too complex for single variable solution (%d,%d).... (probably wrong?)'%(scomplexity,ccomplexity)
                             break
-                        if self.chop(simplify(fraction(svarsol)[1]))== 0:
+                        svarfrac[1] = simplify(svarfrac[1])
+                        if self.chop(svarfrac[1])== 0:
                             break
-                        if self.chop(simplify(fraction(cvarsol)[1]))== 0:
+                        cvarfrac[1] = simplify(cvarfrac[1])
+                        if self.chop(cvarfrac[1])== 0:
                             break
-                        expandedsol = atan2(svarsol,cvarsol).subs(listsymbols)
-                        if not self.isValidSolution(expandedsol):
+                        if not self.isValidSolution(svarfrac[0]) or not self.isValidSolution(svarfrac[1]) or not self.isValidSolution(cvarfrac[0]) or not self.isValidSolution(cvarfrac[1]):
                             continue
                         # sometimes the returned simplest solution makes really gross approximations
-                        if self.codeComplexity(expandedsol) < 1000:
-                            simpsol = self.customtrigsimp(expandedsol, deep=True)
-                        else:
-                            simpsol = expandedsol # too long, so give up on optimization
+                        svarsol = svarfrac[0]/svarfrac[1]
+                        cvarsol = cvarfrac[0]/cvarfrac[1]
+                        expandedsol = atan2(svarsol,cvarsol)
+                        simpsol = atan2(self.customtrigsimp(svarsol,deep=True),self.customtrigsimp(cvarsol,deep=True))
                         if self.codeComplexity(expandedsol) < self.codeComplexity(simpsol):
                             solversolution.jointeval.append(expandedsol)
                             if len(self.checkForDivideByZero(expandedsol)) == 0:
@@ -2295,7 +2329,7 @@ class IKFastSolver(AutoReloader):
             for var,solutions in solvedvars.iteritems():
                 jointbranches = []
                 for solution in solutions:
-                    checkforzero = self.checkDivideByZero(self.customtrigsimp(solution.subs(subrealinv+invsolvedvarsubs),deep=True))
+                    checkforzero = self.checkForDivideByZero(self.customtrigsimp(solution.subs(subrealinv+invsolvedvarsubs),deep=True))
                     if len(checkforzero) > 0:
                         for sraw in checkforzero:
                             s = sraw.subs(solvedvarsubs)
@@ -2347,7 +2381,7 @@ class IKFastSolver(AutoReloader):
             nextvars = filter(lambda x: not x.var == nextsol[0], nextvars)
             jointbranches = []
             for solution in nextsol[1]:
-                checkforzero = self.checkDivideByZero(self.customtrigsimp(solution.subs(subrealinv+invsolvedvarsubs),deep=True))
+                checkforzero = self.checkForDivideByZero(self.customtrigsimp(solution.subs(subrealinv+invsolvedvarsubs),deep=True))
                 if len(checkforzero) > 0:
                     for sraw in checkforzero:
                         s = sraw.subs(solvedvarsubs)
@@ -2643,15 +2677,6 @@ class IKFastSolver(AutoReloader):
                 break
             expr = newexpr
         return expr
-
-    def checkDivideByZero(self,expr):
-        checkforzero = []                
-        if expr.is_Function or expr.is_Add or expr.is_Mul:
-            for arg in expr.args:
-                checkforzero += self.checkDivideByZero(arg)
-        elif expr.is_Pow and expr.exp.is_real and expr.exp < 0:
-            checkforzero.append(expr.base)
-        return checkforzero
 
 #     @staticmethod
 #     def sub_in(expression, pattern, replacement, match=True):

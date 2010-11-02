@@ -191,6 +191,23 @@ def transformPoints(T,points):
     kminus = T.shape[1]-1
     return numpy.dot(points,numpy.transpose(T[0:kminus,0:kminus]))+numpy.tile(T[0:kminus,kminus],(len(points),1))
 
+def sequence_cross_product(*sequences):
+    """iterates through the cross product of all items in the sequences"""
+    # visualize an odometer, with "wheels" displaying "digits"...:
+    wheels = map(iter, sequences)
+    digits = [it.next( ) for it in wheels]
+    while True:
+        yield tuple(digits)
+        for i in range(len(digits)-1, -1, -1):
+            try:
+                digits[i] = wheels[i].next( )
+                break
+            except StopIteration:
+                wheels[i] = iter(sequences[i])
+                digits[i] = wheels[i].next( )
+        else:
+            break
+
 class MultiManipIKSolver(metaclass.AutoReloader):
     """Finds the simultaneous IK solutions of all disjoint manipulators (no manipulators share a joint).
 
@@ -235,7 +252,7 @@ class MultiManipIKSolver(metaclass.AutoReloader):
             finally:
                 del statesavers # destroy them
             
-            for sols in self.sequence_cross_product(*alljointvalues):
+            for sols in sequence_cross_product(*alljointvalues):
                 for sol,manip in izip(sols,self.manips):
                     self.robot.SetJointValues(sol,manip.GetArmIndices()) 
                 if not self.robot.CheckSelfCollision():
@@ -243,23 +260,6 @@ class MultiManipIKSolver(metaclass.AutoReloader):
                         return sols
             
             return None
-    
-    @staticmethod
-    def sequence_cross_product(*sequences):
-        # visualize an odometer, with "wheels" displaying "digits"...:
-        wheels = map(iter, sequences)
-        digits = [it.next( ) for it in wheels]
-        while True:
-            yield tuple(digits)
-            for i in range(len(digits)-1, -1, -1):
-                try:
-                    digits[i] = wheels[i].next( )
-                    break
-                except StopIteration:
-                    wheels[i] = iter(sequences[i])
-                    digits[i] = wheels[i].next( )
-            else:
-                break
 
 
 class SpaceSampler(metaclass.AutoReloader):

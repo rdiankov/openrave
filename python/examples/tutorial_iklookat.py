@@ -35,13 +35,13 @@ from optparse import OptionParser
 import time
 
 def run(args=None):
-    """Executes tutorial_iktranslation
+    """Executes tutorial_iklookat
 
     :type args: arguments for script to parse, if not specified will use sys.argv
 
     **Help**
     
-    .. shell-block:: openrave.py --example tutorial_iktranslation --help
+    .. shell-block:: openrave.py --example tutorial_iklookat --help
     """
 
     parser = OptionParser(description='Shows how to use different IK solutions for arms with few joints.')
@@ -63,7 +63,6 @@ def run(args=None):
         ikmodel.autogenerate()
 
     while True:
-
         with env:
             # move the robot in a random collision-free position and call the IK
             while True:

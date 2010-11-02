@@ -689,13 +689,13 @@ int main(int argc, char** argv)
         code += "class IKSolver {\npublic:\n"
         code += 'IKReal '
         for var in node.solvejointvars:
-            fcode += '%s, c%s, s%s,\n'%(var[0].name,var[0].name,var[0].name)
+            code += '%s, c%s, s%s,\n'%(var[0].name,var[0].name,var[0].name)
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
-            fcode += '%s, c%s, s%s,\n'%(name,i,name,i,name,i)
+            code += '%s, c%s, s%s,\n'%(name,i,name,i,name,i)
         for i in range(3):
-            fcode += "new_r0%d, r0%d,\n"%(i,i,i)
-        fcode += "new_px, new_py, new_pz, px, py, pz;\n"
+            code += "new_r0%d, r0%d,\n"%(i,i)
+        code += "new_px, new_py, new_pz, px, py, pz;\n"
 
         code += "bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
         code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
@@ -705,7 +705,7 @@ int main(int argc, char** argv)
             name = node.freejointvars[i][0].name
             fcode += '%s=pfree[%d]; c%s=cos(pfree[%d]); s%s=sin(pfree[%d]);\n'%(name,i,name,i,name,i)
         for i in range(3):
-            fcode += "r0%d = eerot[%d];\n"%(i,i,i)
+            fcode += "r0%d = eerot[%d];\n"%(i,i)
         fcode += "px = eetrans[0]; py = eetrans[1]; pz = eetrans[2];\n"
 
         rotsubs = [(Symbol("r%d%d"%(0,i)),Symbol("new_r%d%d"%(0,i))) for i in range(3)]
