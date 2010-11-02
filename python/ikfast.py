@@ -441,9 +441,10 @@ class IKFastSolver(AutoReloader):
             self.cvar = Symbol("c%s"%var.name)
             self.tvar = Symbol("t%s"%var.name)
 
-    def __init__(self, robotfile=None,robotfiledata=None,kinbody=None,accuracy=None,precision=None):
+    def __init__(self, robotfile=None,robotfiledata=None,kinbody=None,kinematicshash='',accuracy=None,precision=None):
         self.joints = []
         self.freevarsubs = []
+        self.kinematicshash = kinematicshash
         if accuracy is None:
             self.accuracy=1e-12
         else:
@@ -676,7 +677,7 @@ class IKFastSolver(AutoReloader):
         if lang is None:
             # prioritize c++
             generator = CodeGenerators.get('cpp',CodeGenerators.values()[0])
-        return CodeGenerators[lang]().generate(chaintree)
+        return CodeGenerators[lang]().generate(chaintree,kinematicshash=self.kinematicshash)
 
     @staticmethod
     def affineInverse(affinematrix):

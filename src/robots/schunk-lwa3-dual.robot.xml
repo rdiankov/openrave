@@ -34,9 +34,11 @@
   <Manipulator name="leftarm">
     <base>l_base</base>
     <effector>l_link7</effector>
+    <iksolver>ikfast_schunk_lwa3</iksolver>
   </Manipulator>
   <Manipulator name="rightarm">
     <base>r_base</base>
     <effector>r_link7</effector>
+    <iksolver>ikfast_schunk_lwa3</iksolver>
   </Manipulator>
 </Robot>

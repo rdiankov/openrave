@@ -41,5 +41,6 @@
     <joints>jfinger_L</joints>
     <closingdirection>-1</closingdirection>
     <direction>0 0 1</direction>
+    <iksolver>PA10ikfast 0.1</iksolver>
   </Manipulator>
 </Robot>

@@ -33,7 +33,8 @@ class IkFastSolver : public IkSolverBase
     typedef bool (*IkFn)(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<Solution>& vsolutions);
     typedef bool (*FkFn)(const IKReal* j, IKReal* eetrans, IKReal* eerot);
     
- IkFastSolver(IkFn pfnik, const std::vector<int>& vfreeparams, dReal fFreeInc, int nTotalDOF, IkParameterization::Type iktype, boost::shared_ptr<void> resource, EnvironmentBasePtr penv) : IkSolverBase(penv), _vfreeparams(vfreeparams), _pfnik(pfnik), _fFreeInc(fFreeInc), _nTotalDOF(nTotalDOF), _iktype(iktype), _resource(resource) {}
+ IkFastSolver(IkFn pfnik, const std::vector<int>& vfreeparams, dReal fFreeInc, int nTotalDOF, IkParameterization::Type iktype, boost::shared_ptr<void> resource, const std::string kinematicshash, EnvironmentBasePtr penv) : IkSolverBase(penv), _vfreeparams(vfreeparams), _pfnik(pfnik), _fFreeInc(fFreeInc), _nTotalDOF(nTotalDOF), _iktype(iktype), _resource(resource), _kinematicshash(kinematicshash) {
+    }
     virtual ~IkFastSolver() {}
 
     inline boost::shared_ptr<IkFastSolver<IKReal,Solution> > shared_solver() { return boost::static_pointer_cast<IkFastSolver<IKReal,Solution> >(shared_from_this()); }
@@ -63,6 +64,9 @@ class IkFastSolver : public IkSolverBase
 
     virtual bool Init(RobotBase::ManipulatorPtr pmanip)
     {
+        if( _kinematicshash.size() > 0 && pmanip->GetKinematicsStructureHash() != _kinematicshash ) {
+            RAVELOG_ERROR(str(boost::format("inverse kinematics hashes do not match for manip %s:%s: %s!=%s\n")%pmanip->GetRobot()->GetName()%pmanip->GetName()%pmanip->GetKinematicsStructureHash()%_kinematicshash));
+        }
         _pmanip = pmanip;
         RobotBasePtr probot = pmanip->GetRobot();
         _cblimits = probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IkFastSolver<IKReal,Solution>::SetJointLimits,boost::bind(&sptr_from<IkFastSolver<IKReal,Solution> >, weak_solver())));
@@ -617,6 +621,7 @@ private:
     IkFilterCallbackFn _filterfn;
     IkParameterization::Type _iktype;
     boost::shared_ptr<void> _resource;
+    std::string _kinematicshash;
 };
 
 #endif

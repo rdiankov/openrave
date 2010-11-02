@@ -109,6 +109,7 @@ class IKFastProblem : public ProblemInstance
     typedef int DECLFNPTR(getNumFreeParametersFn, ());
     typedef int* DECLFNPTR(getFreeParametersFn, ());
     typedef int DECLFNPTR(getNumJointsFn, ());
+    typedef const char* DECLFNPTR(getKinematicsHashFn, ());
     typedef int DECLFNPTR(getIKRealSizeFn, ());
     typedef int DECLFNPTR(getIKTypeFn, ());
     static int getDefaultIKType() { return IkParameterization::Type_Transform6D; }
@@ -116,7 +117,7 @@ class IKFastProblem : public ProblemInstance
     class IKLibrary : public boost::enable_shared_from_this<IKLibrary>
     {
     public:
-        IKLibrary() : plib(NULL) {}
+        IKLibrary() : plib(NULL), getKinematicsHash(NULL) {}
         ~IKLibrary() {
             if( plib != NULL ) {
                 SysCloseLibrary(plib);
@@ -159,6 +160,11 @@ class IKFastProblem : public ProblemInstance
                 getIKType = getDefaultIKType;
                 //return false;
             }
+            getKinematicsHash = (getKinematicsHashFn)SysLoadSym(plib, "getKinematicsHash");
+            if( getKinematicsHash == NULL ) {
+                RAVELOG_WARNA("failed to find getKinematicsHash in %s, will not be able to validate inverse kinematics structure\n", _libraryname.c_str());
+            }
+
             ikfn = SysLoadSym(plib, "ik");
             if( ikfn == NULL ) {
                 RAVELOG_WARNA("failed to find ik in %s\n", _libraryname.c_str());
@@ -174,10 +180,14 @@ class IKFastProblem : public ProblemInstance
 
         IkSolverBasePtr CreateSolver(EnvironmentBasePtr penv, dReal ffreedelta)
         {
+            string kinematicshash;
+            if( getKinematicsHash != NULL ) {
+                kinematicshash =getKinematicsHash();
+            }
             if( getIKRealSize() == 4 )
-                return IkSolverBasePtr(new IkFastSolver<float,IKSolutionFloat >((IkFastSolver<float,IKSolutionFloat >::IkFn)ikfn,vfree,ffreedelta,getNumJoints(),(IkParameterization::Type)getIKType(),shared_from_this(),penv));
+                return IkSolverBasePtr(new IkFastSolver<float,IKSolutionFloat >((IkFastSolver<float,IKSolutionFloat >::IkFn)ikfn,vfree,ffreedelta,getNumJoints(),(IkParameterization::Type)getIKType(),shared_from_this(),kinematicshash, penv));
             else if( getIKRealSize() == 8 )
-                return IkSolverBasePtr(new IkFastSolver<double,IKSolutionDouble >((IkFastSolver<double,IKSolutionDouble >::IkFn)ikfn,vfree,ffreedelta,getNumJoints(),(IkParameterization::Type)getIKType(),shared_from_this(),penv));
+                return IkSolverBasePtr(new IkFastSolver<double,IKSolutionDouble >((IkFastSolver<double,IKSolutionDouble >::IkFn)ikfn,vfree,ffreedelta,getNumJoints(),(IkParameterization::Type)getIKType(),shared_from_this(),kinematicshash, penv));
             throw openrave_exception("bad real size");
         }
 
@@ -189,6 +199,7 @@ class IKFastProblem : public ProblemInstance
         getNumFreeParametersFn getNumFreeParameters;
         getFreeParametersFn getFreeParameters;
         getNumJointsFn getNumJoints;
+        getKinematicsHashFn getKinematicsHash;
         getIKRealSizeFn getIKRealSize;
         getIKTypeFn getIKType;
         void* ikfn, *fkfn;

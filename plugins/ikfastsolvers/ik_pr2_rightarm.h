@@ -1587,6 +1587,8 @@ IKSolver solver;
 return solver.ik(eetrans,eerot,pfree,vsolutions);
 }
 
+IKFAST_API const char* getKinematicsHash() { return "30b0c746bc8e2c01a8b0478ad7acb287"; }
+
 #ifndef IKFAST_NO_MAIN
 #include <stdio.h>
 #include <stdlib.h>

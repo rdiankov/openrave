@@ -3,6 +3,5 @@
   <Manipulator name="arm">
     <base>link0</base>
     <effector>link7</effector>
-    <iksolver>PA10ikfast 0.1</iksolver>
   </Manipulator>
 </Robot>

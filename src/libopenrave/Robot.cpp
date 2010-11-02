@@ -2036,9 +2036,6 @@ void RobotBase::_ComputeInternalInformation()
         else {
             RAVELOG_WARN(str(boost::format("manipulator %s has undefined base and end effector links\n")%(*itmanip)->GetName()));
         }
-        if( !!(*itmanip)->_pIkSolver ) {
-            (*itmanip)->_pIkSolver->Init(*itmanip);
-        }
         vector<ManipulatorPtr>::iterator itmanip2 = itmanip; ++itmanip2;
         for(;itmanip2 != _vecManipulators.end(); ++itmanip2) {
             if( (*itmanip)->GetName() == (*itmanip2)->GetName() ) {
@@ -2084,6 +2081,12 @@ void RobotBase::_ComputeInternalInformation()
             ss.str("");
             (*itsensor)->serialize(ss,SO_RobotSensors);
             (*itsensor)->__hashstructure = GetMD5HashString(ss.str());
+        }
+    }
+    // finally initialize the ik solvers (might depend on the hashes)
+    FOREACH(itmanip, _vecManipulators) {
+        if( !!(*itmanip)->_pIkSolver ) {
+            (*itmanip)->_pIkSolver->Init(*itmanip);
         }
     }
     if( ComputeAABB().extents.lengthsqr3() > 900.0f ) {

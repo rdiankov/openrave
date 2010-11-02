@@ -4,5 +4,6 @@
   <Manipulator name="arm">
     <base>base</base>
     <effector>link7</effector>
+    <iksolver>ikfast_schunk_lwa3</iksolver>
   </Manipulator>
 </Robot>

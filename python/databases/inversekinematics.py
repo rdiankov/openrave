@@ -140,9 +140,15 @@ class InverseKinematicsModel(OpenRAVEModel):
             self.env.LoadProblem(self.ikfastproblem,'')
     def  __del__(self):
         if self.ikfastproblem is not None:
-            self.env.Remove(self.ikfastproblem)
+            try:
+                self.env.Remove(self.ikfastproblem)
+            except openrave_exception, e:
+                print '__del__',e
     def clone(self,envother):
         clone = OpenRAVEModel.clone(self,envother)
+        clone.ikfastproblem = RaveCreateProblem(envother,'ikfast')
+        if clone.ikfastproblem is not None:
+            envother.LoadProblem(clone.ikfastproblem,'')
         clone.setrobot(self.freeinc)
         return clone
     def has(self):
@@ -150,7 +156,7 @@ class InverseKinematicsModel(OpenRAVEModel):
     def load(self,*args,**kwargs):
         return self.setrobot(*args,**kwargs)
     def getversion(self):
-        return 17
+        return 18
     def setrobot(self,freeinc=None):
         self.iksolver = None
         self.freeinc=freeinc
@@ -342,7 +348,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         if forceikbuild or not os.path.isfile(sourcefilename):
             print 'generating inverse kinematics file %s'%sourcefilename
             mkdir_recursive(os.path.split(sourcefilename)[0])
-            solver = ikfast.IKFastSolver(kinbody=self.robot,accuracy=accuracy,precision=precision)
+            solver = ikfast.IKFastSolver(kinbody=self.robot,kinematicshash=self.manip.GetKinematicsStructureHash(),accuracy=accuracy,precision=precision)
             baselink=self.manip.GetBase().GetIndex()
             eelink=self.manip.GetEndEffector().GetIndex()
             if ipython:
