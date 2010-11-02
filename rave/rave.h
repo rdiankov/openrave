@@ -773,6 +773,13 @@ RAVE_API const std::string& RaveGetInterfaceName(InterfaceType type);
 /// On Linux/Unix systems, this is usually $HOME/.openrave, on Windows this is $HOMEPATH/.openrave
 RAVE_API std::string RaveGetHomeDirectory();
 
+/// \brief Searches for a filename in the database and returns a full path/URL to it
+///
+/// \param filename the relative filename in the database
+/// \param bRead if true will only return a file if it exists. If false, will return the filename of the first valid database directory.
+/// \return a non-empty string if a file could be found.
+RAVE_API std::string RaveFindDatabaseFile(const std::string& filename, bool bRead=true);
+
 /// \brief Explicitly initializes the global OpenRAVE state (optional).
 ///
 /// Optional function to initialize openrave plugins and logging.

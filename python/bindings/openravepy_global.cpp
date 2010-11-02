@@ -280,6 +280,7 @@ void init_openravepy_global()
     def("RaveSetDebugLevel",OpenRAVE::RaveSetDebugLevel,args("level"), DOXY_FN1(RaveSetDebugLevel));
     def("RaveGetDebugLevel",OpenRAVE::RaveGetDebugLevel,DOXY_FN1(RaveGetDebugLevel));
     def("RaveGetHomeDirectory",OpenRAVE::RaveGetHomeDirectory,DOXY_FN1(RaveGetHomeDirectory));
+    def("RaveFindDatabaseFile",OpenRAVE::RaveFindDatabaseFile,DOXY_FN1(RaveFindDatabaseFile));
     def("RaveLogFatal",openravepy::raveLogFatal,args("log"),"Send a fatal log to the openrave system");
     def("RaveLogError",openravepy::raveLogError,args("log"),"Send an error log to the openrave system");
     def("RaveLogWarn",openravepy::raveLogWarn,args("log"),"Send a warn log to the openrave system");

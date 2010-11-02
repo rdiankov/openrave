@@ -152,8 +152,8 @@ class VisibilityModel(OpenRAVEModel):
         return self.visibilitytransforms is not None and len(self.visibilitytransforms) > 0
     def getversion(self):
         return 2
-    def getfilename(self):
-        return os.path.join(OpenRAVEModel.getfilename(self),'visibility.' + self.manip.GetStructureHash() + '.' + self.attachedsensor.GetStructureHash() + '.' + self.target.GetKinematicsGeometryHash()+'.pp')
+    def getfilename(self,read=False):
+        return RaveFindDatabaseFile(os.path.join('robot.'+self.robot.GetKinematicsGeometryHash(), 'visibility.' + self.manip.GetStructureHash() + '.' + self.attachedsensor.GetStructureHash() + '.' + self.target.GetKinematicsGeometryHash()+'.pp'),read)
     def load(self):
         try:
             params = OpenRAVEModel.load(self)

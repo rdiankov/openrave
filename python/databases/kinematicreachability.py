@@ -136,8 +136,8 @@ class ReachabilityModel(OpenRAVEModel):
     def save(self):
         OpenRAVEModel.save(self,(self.reachabilitystats,self.reachabilitydensity3d,self.reachability3d, self.pointscale,self.xyzdelta,self.quatdelta))
 
-    def getfilename(self):
-        return os.path.join(OpenRAVEModel.getfilename(self),'reachability.' + self.manip.GetStructureHash() + '.pp')
+    def getfilename(self,read=False):
+        return RaveFindDatabaseFile(os.path.join('robot.'+self.robot.GetKinematicsGeometryHash(), 'reachability.' + self.manip.GetStructureHash() + '.pp'),read)
 
     def autogenerate(self,options=None):
         maxradius=None

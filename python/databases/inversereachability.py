@@ -117,12 +117,12 @@ class InverseReachabilityModel(OpenRAVEModel):
     def save(self):
         OpenRAVEModel.save(self,(self.equivalenceclasses,self.rotweight,self.xyzdelta,self.quatdelta,self.jointvalues))
 
-    def getfilename(self):
+    def getfilename(self,read=False):
         if self.id is None:
             basename='invreachability.' + self.manip.GetStructureHash() + '.pp'
         else:
             basename='invreachability.' + self.manip.GetStructureHash() + '.' + str(self.id) + '.pp'
-        return os.path.join(OpenRAVEModel.getfilename(self),basename)
+        return RaveFindDatabaseFile(os.path.join('robot.'+self.robot.GetKinematicsGeometryHash(), basename),read)
     @staticmethod
     def getdofindices(manip):
         joints = manip.GetRobot().GetChain(0,manip.GetBase().GetIndex())

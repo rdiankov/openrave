@@ -477,8 +477,8 @@ class OpenRAVEGlobalArguments:
                     break
     
     @staticmethod
-    def parseEnvironment(options,env,defaultviewer=False,**kwargs):
-        """Parses all options that affect the environment"""
+    def parseEnvironment(options,env,defaultviewer=False,returnviewer=False,**kwargs):
+        """Parses all options that affect the environment. If returnviewer is set, will return the viewer to set instead of setting it"""
         try:
             if options._collision:
                 cc = openravepy.RaveCreateCollisionChecker(env,options._collision)
@@ -501,11 +501,16 @@ class OpenRAVEGlobalArguments:
         except openrave_exception, e:
             print e
         try:
+            viewer=None
             if options._viewer is not None:
                 if len(options._viewer) > 0:
-                    env.SetViewer(options._viewer)
+                    viewer=options._viewer
             elif defaultviewer:
-                env.SetViewer('qtcoin')
+                viewer='qtcoin'
+            if returnviewer:
+                return viewer
+            elif viewer is not None:
+                env.SetViewer(viewer)
         except openrave_exception, e:
             print e
     @staticmethod
@@ -545,13 +550,14 @@ class OpenRAVEModel(metaclass.AutoReloader):
         return clone
     def has(self):
         raise NotImplementedError()
-    def getfilename(self):
-        return os.path.join(openravepy.RaveGetHomeDirectory(),'robot.'+self.robot.GetKinematicsGeometryHash())
+    def getfilename(self,read=False):
+        return NotImplementedError()
     def load(self):
-        if not os.path.isfile(self.getfilename()):
+        filename = self.getfilename(True)
+        if len(filename) == 0:
             return None
         try:
-            modelversion,params = pickle.load(open(self.getfilename(), 'r'))
+            modelversion,params = pickle.load(open(filename, 'r'))
             if modelversion == self.getversion():
                 return params
             else:
@@ -562,9 +568,10 @@ class OpenRAVEModel(metaclass.AutoReloader):
     def getversion(self):
         return 0
     def save(self,params):
-        print 'saving model to %s'%self.getfilename()
-        mkdir_recursive(os.path.split(self.getfilename())[0])
-        pickle.dump((self.getversion(),params), open(self.getfilename(), 'w'))
+        filename=self.getfilename(False)
+        print 'saving model to %s'%filename
+        mkdir_recursive(os.path.split(filename)[0])
+        pickle.dump((self.getversion(),params), open(filename, 'w'))
     def generate(self):
         raise NotImplementedError()
     def show(self,options=None):
@@ -609,7 +616,7 @@ class OpenRAVEModel(metaclass.AutoReloader):
             env = openravepy.Environment()
             destroyenv = True
         try:
-            OpenRAVEGlobalArguments.parseEnvironment(options,env,defaultviewer=defaultviewer)
+            viewername=OpenRAVEGlobalArguments.parseEnvironment(options,env,defaultviewer=defaultviewer,returnviewer=True)
             with env:
                 robot = env.ReadRobotXMLFile(options.robot)
                 env.AddRobot(robot)
@@ -624,17 +631,23 @@ class OpenRAVEModel(metaclass.AutoReloader):
                         robot.SetActiveManipulator([i for i,m in enumerate(robot.GetManipulators()) if m.GetName()==options.manipname][0])
             model = Model(robot=robot)
             if options.getfilename:
-                print model.getfilename()
-                env.Destroy()
+                # prioritize first available
+                filename=model.getfilename(True)
+                if len(filename) == 0:
+                    filename=model.getfilename(False)
+                print filename
+                openravepy.RaveDestroy()
                 sys.exit(0)
             if options.gethas:
                 hasmodel=model.load()
                 print int(hasmodel)
-                env.Destroy()
+                openravepy.RaveDestroy()
                 sys.exit(not hasmodel)
+            if viewername is not None:
+                env.SetViewer(viewername)
             if options.show:
                 if not model.load():
-                    raise ValueError('failed to find cached model %s'%model.getfilename())
+                    raise ValueError('failed to find cached model %s:%s'%(model.getfilename(True),model.getfilename(False)))
                 model.show(options=options)
                 return
             model.autogenerate(options=options)

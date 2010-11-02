@@ -211,18 +211,23 @@ This page describes system environment variables read by %OpenRAVE environments 
 initialization. \envvarwiki{This page} describes how to set environment variables for the particular
 system running %OpenRAVE.
 
-- \b OPENRAVE_PLUGINS - Use ':' to separate each directory (';' for Windows). At startup, %OpenRAVE
-  searches for every shared object/dll plugin in these directories and loads them. The default
-  plugins in \c $OPENRAVE_INSTALL/share/openrave/plugins are always loaded, so there is no need to
-  include them.
+- \b OPENRAVE_DATA - Use ':' to separate each directory (';' for Windows). Search paths/URLs for loading
+  robot/environment/model files. The default data directory \c $OPENRAVE_INSTALL/share/openrave is
+  always included, so there's no need to specify it again.
 
-- \b OPENRAVE_DATA - Use ':' to separate each directory (';' for Windows). Every time %OpenRAVE loads
-  a file, it will search it in these directories. The default data directory
-  \c $OPENRAVE_INSTALL/share/openrave is always included, so there's no need to specify it again.
+- \b OPENRAVE_DATABASE - Use ':' to separate each directory (';' for Windows). Search paths for
+  loading database files created by the openrave database system. Databases are used to store useful
+  information/statistics about the robot, target object, and sensors that take a long time to
+  pre-compute or rely on real-world data. When writing, the first valid directory is used.
 
 - \b OPENRAVE_HOME - Used to set the directory where all openrave specific cached data is stored
   like inverse kinematics solvers, robot preprocessed data, database generation results, etc. The
   default directory is <b>$HOME/.openrave</b>.
+
+- \b OPENRAVE_PLUGINS - Use ':' to separate each directory (';' for Windows). At startup, %OpenRAVE
+  searches for every shared object/dll plugin in these directories and loads them. The default
+  plugins in \c $OPENRAVE_INSTALL/share/openrave/plugins are always loaded, so there is no need to
+  include them.
 
 \~japanese \page environment_variables 環境変数の設定
 

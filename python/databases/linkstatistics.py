@@ -102,8 +102,8 @@ class LinkStatisticsModel(OpenRAVEModel):
     def save(self):
         OpenRAVEModel.save(self,(self.linkstats,self.jointvolumes,self.affinevolumes,self.samplingdelta))
 
-    def getfilename(self):
-        return os.path.join(OpenRAVEModel.getfilename(self),'linkstatistics.pp')
+    def getfilename(self,read=False):
+        return RaveFindDatabaseFile(os.path.join('robot.'+self.robot.GetKinematicsGeometryHash(), 'linkstatistics.pp'),read)
 
     def setRobotResolutions(self,xyzdelta=0.005):
         """sets the robot resolution

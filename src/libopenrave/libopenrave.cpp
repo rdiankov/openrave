@@ -35,6 +35,12 @@
 
 namespace OpenRAVE {
 
+#ifdef _WIN32
+const char s_filesep = '\\';
+#else
+const char s_filesep = '/';
+#endif
+
 static boost::once_flag _onceRaveInitialize = BOOST_ONCE_INIT;
 
 /// there is only once global openrave state. It is created when openrave
@@ -116,6 +122,29 @@ public:
                 }
             }
         }
+
+        char* phomedir = getenv("OPENRAVE_HOME");
+        if( phomedir == NULL ) {
+#ifndef _WIN32
+            _homedirectory = string(getenv("HOME"))+string("/.openrave");
+#else
+            _homedirectory = string(getenv("HOMEDRIVE"))+string(getenv("HOMEPATH"))+string("\\.openrave");
+#endif
+        }
+        else {
+            _homedirectory = phomedir;
+        }
+#ifndef _WIN32
+        mkdir(_homedirectory.c_str(),S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH | S_IRWXU);
+#else
+        CreateDirectory(_homedirectory.c_str(),NULL);
+#endif
+
+        _vdbdirectories.clear();
+        if( !RaveParseDirectories(getenv("OPENRAVE_DATABASE"), _vdbdirectories) ) {
+            _vdbdirectories.push_back(_homedirectory);
+        }
+
         return 0;
     }
 
@@ -141,25 +170,30 @@ public:
 
     std::string GetHomeDirectory()
     {
-        string homedirectory;
-        char* phomedir = getenv("OPENRAVE_HOME");
-        if( phomedir == NULL )
-            phomedir = getenv("OPENRAVE_CACHEPATH");
-        if( phomedir == NULL ) {
-#ifndef _WIN32
-            homedirectory = string(getenv("HOME"))+string("/.openrave");
+        return _homedirectory;
+    }
+
+    std::string FindDatabaseFile(const std::string& filename, bool bRead)
+    {
+        FOREACH(itdirectory,_vdbdirectories) {
+#ifdef HAVE_BOOST_FILESYSTEM
+            std::string fullfilename = boost::filesystem::system_complete(boost::filesystem::path(*itdirectory, boost::filesystem::native)/filename).string();
 #else
-            homedirectory = string(getenv("HOMEDRIVE"))+string(getenv("HOMEPATH"))+string("\\.openrave");
+            std::string fullfilename = *itdirectory;
+            fullfilename += s_filesep;
+            fullfilename += filename;
 #endif
+            if( bRead ) {
+                if( !!ifstream(fullfilename.c_str()) ) {
+                    return fullfilename;
+                }
+            }
+            else {
+                return fullfilename;
+            }
+            //#endif
         }
-        else
-            homedirectory = phomedir;
-#ifndef _WIN32
-        mkdir(homedirectory.c_str(),S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH | S_IRWXU);
-#else
-        CreateDirectory(homedirectory.c_str(),NULL);
-#endif
-        return homedirectory;
+        return "";
     }
 
     void SetDebugLevel(DebugLevel level)
@@ -246,6 +280,8 @@ private:
     std::map<InterfaceType, READERSMAP > _mapreaders;
     std::map<InterfaceType,string> _mapinterfacenames;
     std::list<EnvironmentBase*> _listenvironments;
+    std::string _homedirectory;
+    std::vector<std::string> _vdbdirectories;
 
     friend void RaveInitializeFromState(boost::shared_ptr<void>);
     friend boost::shared_ptr<void> RaveGlobalState();
@@ -276,6 +312,11 @@ RAVE_API const std::string& RaveGetInterfaceName(InterfaceType type)
 std::string RaveGetHomeDirectory()
 {
     return RaveGlobal::instance()->GetHomeDirectory();
+}
+
+std::string RaveFindDatabaseFile(const std::string& filename, bool bRead)
+{
+    return RaveGlobal::instance()->FindDatabaseFile(filename,bRead);
 }
 
 int RaveInitialize(bool bLoadAllPlugins, DebugLevel level)
@@ -747,9 +788,9 @@ public:
         BOOST_ASSERT(pCurSample.size()==lower.size());
         sample.resize(lower.size());
         int dof = lower.size();
-        for (int i = 0; i < dof; i++)
+        for (int i = 0; i < dof; i++) {
             sample[i] = pCurSample[i] + 10.0f*fRadius*(RaveRandomFloat()-0.5f);
-
+        }
         // normalize
         dReal fRatio = max((dReal)1e-5f,fRadius*(0.1f+0.9f*RaveRandomFloat()));
             

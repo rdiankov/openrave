@@ -163,7 +163,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         if self.iksolver is None:
             with self.env:
                 ikname = 'ikfast.%s.%s'%(self.manip.GetKinematicsStructureHash(),self.manip.GetName())
-                iktype = self.ikfastproblem.SendCommand('AddIkLibrary %s %s'%(ikname,self.getfilename()))
+                iktype = self.ikfastproblem.SendCommand('AddIkLibrary %s %s'%(ikname,self.getfilename(True)))
                 if iktype is None:
                     if self.forceikfast:
                         return False
@@ -179,19 +179,17 @@ class InverseKinematicsModel(OpenRAVEModel):
     
     def save(self):
         # already saved as a lib
-        print 'inversekinematics generation is done, compiled shared object: %s'%self.getfilename()
+        print 'inversekinematics generation is done, compiled shared object: %s'%self.getfilename(False)
     
-    def getdir(self):
-        return os.path.join(RaveGetHomeDirectory(),'kinematics.'+self.manip.GetKinematicsStructureHash())
-    def getfilename(self):
+    def getfilename(self,read=False):
         if self.iktype is None:
             raise ValueError('ik type is not set')
         basename = 'ikfast' + str(self.getversion()) + '.' + str(self.iktype) + '.' + platform.machine()
-        return ccompiler.new_compiler().shared_object_filename(basename=basename,output_dir=self.getdir())
-    def getsourcefilename(self):
+        return RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetKinematicsStructureHash(),ccompiler.new_compiler().shared_object_filename(basename=basename)),read)
+    def getsourcefilename(self,read=False):
         if self.iktype is None:
             raise ValueError('ik type is not set')
-        return os.path.join(self.getdir(),'ikfast' + str(self.getversion()) + '.' + str(self.iktype))
+        return RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetKinematicsStructureHash(),'ikfast' + str(self.getversion()) + '.' + str(self.iktype)),read)
     def autogenerate(self,options=None):
         freejoints = None
         iktype = self.iktype
@@ -249,8 +247,8 @@ class InverseKinematicsModel(OpenRAVEModel):
             self.iktype = iktype
         if self.iktype is None:
             self.iktype = iktype = IkParameterization.Type.Transform6D
-        output_filename = self.getfilename()
-        sourcefilename = self.getsourcefilename()
+        output_filename = self.getfilename(False)
+        sourcefilename = self.getsourcefilename(False)
         if self.iktype == IkParameterization.Type.Rotation3D:
             Rbaseraw=self.manip.GetGraspTransform()[0:3,0:3]
             def solveFullIK_Rotation3D(*args,**kwargs):
@@ -343,7 +341,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         sourcefilename += '.' + outputlang
         if forceikbuild or not os.path.isfile(sourcefilename):
             print 'generating inverse kinematics file %s'%sourcefilename
-            mkdir_recursive(self.getdir())
+            mkdir_recursive(os.path.split(sourcefilename)[0])
             solver = ikfast.IKFastSolver(kinbody=self.robot,accuracy=accuracy,precision=precision)
             baselink=self.manip.GetBase().GetIndex()
             eelink=self.manip.GetEndEffector().GetIndex()
@@ -382,7 +380,7 @@ class InverseKinematicsModel(OpenRAVEModel):
 
     def perftiming(self,num):
         with self.env:
-            results = self.ikfastproblem.SendCommand('PerfTiming num %d %s'%(num,self.getfilename()))
+            results = self.ikfastproblem.SendCommand('PerfTiming num %d %s'%(num,self.getfilename(True)))
             return [double(s)*1e-6 for s in results.split()]
     def testik(self,iktests):
         """Tests the iksolver.

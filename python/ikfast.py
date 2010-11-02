@@ -968,7 +968,7 @@ class IKFastSolver(AutoReloader):
                     if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
                         AllEquations.append(e)
                 else:
-                    print 'length equations too big, skipping...'
+                    print 'length equations too big, skipping...',self.codeComplexity(p2),self.codeComplexity(pe2)
         self.sortComplexity(AllEquations)
         return AllEquations
 
@@ -1228,14 +1228,21 @@ class IKFastSolver(AutoReloader):
                 pee = Matrix(3,1,[self.customtrigsimp(self.customtrigsimp(x)) for x in pee])
             Positionsnew.append(p)
             Positionseenew.append(pee)
-        Positions = Positionsnew
-        Positionsee = Positionseenew
+        for i in range(len(Positions)):
+            p = Positions[i].cross(Ds[i]).expand()
+            if all([self.codeComplexity(x)<2000 for x in p]):
+                p = Matrix(3,1,[self.customtrigsimp(self.customtrigsimp(x)) for x in p])
+            pee = Positionsee[i].cross(Ds[i]).expand()
+            if all([self.codeComplexity(x)<2000 for x in pee]):
+                pee = Matrix(3,1,[self.customtrigsimp(self.customtrigsimp(x)) for x in pee])
+            Positionsnew.append(p)
+            Positionseenew.append(pee)
 
         # try to shift all the constants of each Position expression to one side
-        for i in range(len(Positions)):
+        for i in range(len(Positionsnew)):
             for j in range(3):
-                p = Positions[i][j]
-                pee = Positionsee[i][j]
+                p = Positionsnew[i][j]
+                pee = Positionseenew[i][j]
                 pconstterm = None
                 peeconstterm = None
                 if p.is_Add:
@@ -1253,14 +1260,14 @@ class IKFastSolver(AutoReloader):
                 if len(pconstterm) > 0 and len(peeconstterm) > 0:
                     # shift it to the one that has the least terms
                     for term in peeconstterm if len(p.args) < len(pee.args) else pconstterm:
-                        Positions[i][j] -= term
-                        Positionsee[i][j] -= term
+                        Positionsnew[i][j] -= term
+                        Positionseenew[i][j] -= term
 
         orgsolsubs = self.freevarsubs[:]
         rottree = []
         endbranchtree = [SolverSequence([rottree])]
-        AllEquations = self.buildEquationsFromPositions(Positions,Positionsee,uselength=False)
-        for i in range(len(Positions)):
+        AllEquations = self.buildEquationsFromPositions(Positionsnew,Positionseenew,uselength=False)
+        for i in range(len(Ds)):
             for j in range(3):
                 e = (Ds[i][j] - Dsee[i][j]).expand()
                 if self.codeComplexity(e) <= 1000:
