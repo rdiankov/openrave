@@ -263,7 +263,7 @@ inline object toPyArray3(const std::vector<RaveVector<double> >& v)
     npy_intp dims[] = {v.size(),3};
     PyObject *pyvalues = PyArray_SimpleNew(2,dims, PyArray_DOUBLE);
     if( v.size() > 0 ) {
-        float* pf = (float*)PyArray_DATA(pyvalues);
+        double* pf = (double*)PyArray_DATA(pyvalues);
         FOREACHC(it,v) {
             *pf++ = it->x;
             *pf++ = it->y;
