@@ -86,11 +86,12 @@ def debug_ik():
     prob.DebugIK(10)
 
 def test_ik():
+    from sympy import *
+    import __builtin__
+    from openravepy.ikfast import SolverStoreSolution, SolverSolution, combinations, SolverSequence, fmod
     ikmodel=self
     self = solver
-    from sympy import *
     alljoints = self.getJointsInChain(baselink, eelink)
-    from openravepy.ikfast import SolverStoreSolution, SolverSolution, combinations, SolverSequence
     chain = []
     for joint in alljoints:
         issolvejoint = any([i == joint.jointindex for i in solvejoints])

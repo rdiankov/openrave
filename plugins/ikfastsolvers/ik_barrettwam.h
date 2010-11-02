@@ -12,7 +12,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// generated 2010-11-02 19:10:45.489748
+/// generated 2010-11-03 00:12:25.359445
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object:
@@ -372,7 +372,96 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                                     {
                                                         if( 1 )
                                                         {
-                                                        continue;
+                                                        {
+                                                            IKReal j1eval[1];
+                                                            j1eval[0]=((((0.550000000000000)*(pz)))+(((-0.300000000000000)*(py)*(sj0)*(sj3)))+(((-0.300000000000000)*(cj0)*(px)*(sj3)))+(((-0.0450000000000000)*(py)*(sj0)))+(((0.0450000000000000)*(cj3)*(py)*(sj0)))+(((0.0450000000000000)*(cj0)*(cj3)*(px)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3)))+(((-0.0450000000000000)*(cj0)*(px))));
+                                                            if( IKabs(j1eval[0]) < 0.000001  )
+                                                            {
+                                                                {
+                                                                IKReal evalcond[4];
+                                                                    IKReal x26=x23;
+                                                                    IKReal x27=x24;
+                                                                    IKReal x28=((((-1.00000000000000)*(x27)))+(x26));
+                                                                    evalcond[0]=((IKabs(((((-1.00000000000000)*(3.14159265358979)))+(IKfmod(((3.14159265358979)+(j3)), ((2.00000000000000)*(3.14159265358979)))))))+(IKabs(pz)));
+                                                                    evalcond[1]=((0.722500000000000)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                    evalcond[2]=x28;
+                                                                    evalcond[3]=x28;
+                                                                    if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  )
+                                                                    {
+                                                                    {
+                                                                    IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                    bool j1valid[1]={false};
+                                                                    j1array[0]=IKatan2(((((1.17647058823529)*(py)*(sj0)))+(((1.17647058823529)*(cj0)*(px)))), ((1.17647058823529)*(pz)));
+                                                                    sj1array[0]=IKsin(j1array[0]);
+                                                                    cj1array[0]=IKcos(j1array[0]);
+                                                                    if( j1array[0] > IKPI )
+                                                                        j1array[0]-=IK2PI;
+                                                                    else if( j1array[0] < -IKPI )
+                                                                        j1array[0]+=IK2PI;
+                                                                    j1valid[0] = true;
+                                                                    for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                    {
+                                                                    if( !j1valid[ij1] ) { continue; }
+                                                                    j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                    
+                                                                    rotationfunction0(vsolutions);
+                                                                    }
+                                                                    }
+                                                                
+                                                                } else
+                                                                {
+                                                                    if( 1 )
+                                                                    {
+                                                                    continue;
+                                                                
+                                                                } else
+                                                                {
+                                                                }
+                                                                }
+                                                                }
+                                                            
+                                                            } else
+                                                            {
+                                                                {
+                                                                IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                bool j1valid[1]={false};
+                                                                IKReal x70=((0.300000000000000)*(sj3));
+                                                                IKReal x71=((0.0450000000000000)+(x70));
+                                                                IKReal x72=((0.0450000000000000)*(cj3));
+                                                                IKReal x73=((((-1.00000000000000)*(x72)))+(x71));
+                                                                IKReal x74=((0.550000000000000)*(pz));
+                                                                IKReal x75=((1.00000000000000)*(py)*(sj0)*(x72));
+                                                                IKReal x76=((1.00000000000000)*(cj0)*(px)*(x72));
+                                                                IKReal x77=((0.300000000000000)*(cj3)*(pz));
+                                                                IKReal x78=((0.0450000000000000)*(pz)*(sj3));
+                                                                IKReal x79=((x77)+(x76)+(x75)+(x74)+(x78));
+                                                                IKReal x80=((0.0450000000000000)*(cj0)*(px));
+                                                                IKReal x81=((py)*(sj0)*(x70));
+                                                                IKReal x82=((0.0450000000000000)*(py)*(sj0));
+                                                                IKReal x83=((cj0)*(px)*(x70));
+                                                                IKReal x84=((x82)+(x83)+(x80)+(x81));
+                                                                IKReal x85=((x79)+(((-1.00000000000000)*(x84))));
+                                                                IKReal x86=((IKabs(x85) != 0)?((IKReal)1/(x85)):(IKReal)1.0e30);
+                                                                j1array[0]=IKatan2(((-1.00000000000000)*(x86)*(((((x73)*(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3)))))))+(((pz)*(((((-1.00000000000000)*(py)*(sj0)))+(((-1.00000000000000)*(cj0)*(px)))))))))), ((x86)*(((((-1.00000000000000)*((x73)*(x73))))+((pz)*(pz))))));
+                                                                sj1array[0]=IKsin(j1array[0]);
+                                                                cj1array[0]=IKcos(j1array[0]);
+                                                                if( j1array[0] > IKPI )
+                                                                    j1array[0]-=IK2PI;
+                                                                else if( j1array[0] < -IKPI )
+                                                                    j1array[0]+=IK2PI;
+                                                                j1valid[0] = true;
+                                                                for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                {
+                                                                if( !j1valid[ij1] ) { continue; }
+                                                                j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                
+                                                                rotationfunction0(vsolutions);
+                                                                }
+                                                                }
+                                                            
+                                                            }
+                                                        
+                                                        }
                                                     
                                                     } else
                                                     {
@@ -384,22 +473,22 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                                     {
                                                     IKReal j1array[1], cj1array[1], sj1array[1];
                                                     bool j1valid[1]={false};
-                                                    IKReal x26=((0.0450000000000000)*(sj3));
-                                                    IKReal x27=((0.300000000000000)*(cj3));
-                                                    IKReal x28=((0.550000000000000)+(x26)+(x27));
-                                                    IKReal x29=((0.0450000000000000)*(cj3)*(pz));
-                                                    IKReal x30=((0.550000000000000)*(py)*(sj0));
-                                                    IKReal x31=((1.00000000000000)*(cj0)*(px)*(x26));
-                                                    IKReal x32=((0.300000000000000)*(pz)*(sj3));
-                                                    IKReal x33=((1.00000000000000)*(py)*(sj0)*(x26));
-                                                    IKReal x34=((0.550000000000000)*(cj0)*(px));
-                                                    IKReal x35=((0.0450000000000000)*(pz));
-                                                    IKReal x36=((py)*(sj0)*(x27));
-                                                    IKReal x37=((cj0)*(px)*(x27));
-                                                    IKReal x38=((x33)+(x32)+(x31)+(x30)+(x37)+(x36)+(x35)+(x34));
-                                                    IKReal x39=((((-1.00000000000000)*(x38)))+(x29));
-                                                    IKReal x40=((IKabs(x39) != 0)?((IKReal)1/(x39)):(IKReal)1.0e30);
-                                                    j1array[0]=IKatan2(((x40)*(((((-1.00000000000000)*((x28)*(x28))))+((pz)*(pz))))), ((x40)*(((((-1.00000000000000)*(x28)*(((0.0450000000000000)+(((-0.0450000000000000)*(cj3)))+(((0.300000000000000)*(sj3)))))))+(((pz)*(((((-1.00000000000000)*(py)*(sj0)))+(((-1.00000000000000)*(cj0)*(px)))))))))));
+                                                    IKReal x87=((0.0450000000000000)*(sj3));
+                                                    IKReal x88=((0.300000000000000)*(cj3));
+                                                    IKReal x89=((0.550000000000000)+(x88)+(x87));
+                                                    IKReal x90=((0.0450000000000000)*(cj3)*(pz));
+                                                    IKReal x91=((0.550000000000000)*(py)*(sj0));
+                                                    IKReal x92=((1.00000000000000)*(cj0)*(px)*(x87));
+                                                    IKReal x93=((0.300000000000000)*(pz)*(sj3));
+                                                    IKReal x94=((1.00000000000000)*(py)*(sj0)*(x87));
+                                                    IKReal x95=((0.550000000000000)*(cj0)*(px));
+                                                    IKReal x96=((0.0450000000000000)*(pz));
+                                                    IKReal x97=((py)*(sj0)*(x88));
+                                                    IKReal x98=((cj0)*(px)*(x88));
+                                                    IKReal x99=((x98)+(x91)+(x93)+(x92)+(x95)+(x94)+(x97)+(x96));
+                                                    IKReal x100=((x90)+(((-1.00000000000000)*(x99))));
+                                                    IKReal x101=((IKabs(x100) != 0)?((IKReal)1/(x100)):(IKReal)1.0e30);
+                                                    j1array[0]=IKatan2(((x101)*((((pz)*(pz))+(((-1.00000000000000)*((x89)*(x89))))))), ((x101)*(((((pz)*(((((-1.00000000000000)*(py)*(sj0)))+(((-1.00000000000000)*(cj0)*(px)))))))+(((-1.00000000000000)*(x89)*(((0.0450000000000000)+(((-0.0450000000000000)*(cj3)))+(((0.300000000000000)*(sj3)))))))))));
                                                     sj1array[0]=IKsin(j1array[0]);
                                                     cj1array[0]=IKcos(j1array[0]);
                                                     if( j1array[0] > IKPI )
@@ -430,27 +519,27 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                         {
                                         IKReal j1array[1], cj1array[1], sj1array[1];
                                         bool j1valid[1]={false};
-                                        IKReal x82=x2;
-                                        IKReal x83=(sj0)*(sj0);
-                                        IKReal x84=((x82)*(x83));
-                                        IKReal x85=((2.00000000000000)*(cj0)*(px)*(py)*(sj0));
-                                        IKReal x86=x0;
-                                        IKReal x87=(cj0)*(cj0);
-                                        IKReal x88=x4;
-                                        IKReal x89=((x87)*(x88));
-                                        IKReal x90=((x89)+(x86)+(x84)+(x85));
-                                        IKReal x91=((IKabs(x90) != 0)?((IKReal)1/(x90)):(IKReal)1.0e30);
-                                        IKReal x92=((0.0450000000000000)*(sj3));
-                                        IKReal x93=((0.300000000000000)*(cj3));
-                                        IKReal x94=((0.550000000000000)+(x93)+(x92));
-                                        IKReal x95=((cj0)*(px));
-                                        IKReal x96=((py)*(sj0));
-                                        IKReal x97=((x95)+(x96));
-                                        IKReal x98=((0.300000000000000)*(sj3));
-                                        IKReal x99=((0.0450000000000000)+(x98));
-                                        IKReal x100=((0.0450000000000000)*(cj3));
-                                        IKReal x101=((((-1.00000000000000)*(x100)))+(x99));
-                                        j1array[0]=IKatan2(((-1.00000000000000)*(x91)*(((((-1.00000000000000)*(x94)*(x97)))+(((pz)*(x101)))))), ((x91)*(((((x101)*(x97)))+(((pz)*(x94)))))));
+                                        IKReal x102=x2;
+                                        IKReal x103=(sj0)*(sj0);
+                                        IKReal x104=((x102)*(x103));
+                                        IKReal x105=((2.00000000000000)*(cj0)*(px)*(py)*(sj0));
+                                        IKReal x106=x0;
+                                        IKReal x107=(cj0)*(cj0);
+                                        IKReal x108=x4;
+                                        IKReal x109=((x107)*(x108));
+                                        IKReal x110=((x109)+(x104)+(x105)+(x106));
+                                        IKReal x111=((IKabs(x110) != 0)?((IKReal)1/(x110)):(IKReal)1.0e30);
+                                        IKReal x112=((0.0450000000000000)*(sj3));
+                                        IKReal x113=((0.300000000000000)*(cj3));
+                                        IKReal x114=((0.550000000000000)+(x113)+(x112));
+                                        IKReal x115=((cj0)*(px));
+                                        IKReal x116=((py)*(sj0));
+                                        IKReal x117=((x116)+(x115));
+                                        IKReal x118=((0.300000000000000)*(sj3));
+                                        IKReal x119=((0.0450000000000000)+(x118));
+                                        IKReal x120=((0.0450000000000000)*(cj3));
+                                        IKReal x121=((((-1.00000000000000)*(x120)))+(x119));
+                                        j1array[0]=IKatan2(((x111)*(((((-1.00000000000000)*(pz)*(x121)))+(((x114)*(x117)))))), ((x111)*(((((x117)*(x121)))+(((pz)*(x114)))))));
                                         sj1array[0]=IKsin(j1array[0]);
                                         cj1array[0]=IKcos(j1array[0]);
                                         if( j1array[0] > IKPI )
@@ -473,12 +562,12 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                             
                             } else
                             {
-                                IKReal x102=((cj0)*(py));
-                                IKReal x103=((px)*(sj0));
+                                IKReal x122=((cj0)*(py));
+                                IKReal x123=((px)*(sj0));
                                 evalcond[0]=((IKfmod(((-3.14159265358979)+(3.14159265358979)+(j2)), ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))));
                                 evalcond[1]=((0.396550000000000)+(((0.0765000000000000)*(sj3)))+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz))))+(((0.325950000000000)*(cj3))));
-                                evalcond[2]=((((-1.00000000000000)*(x102)))+(x103));
-                                evalcond[3]=((((-1.00000000000000)*(x103)))+(x102));
+                                evalcond[2]=((((-1.00000000000000)*(x122)))+(x123));
+                                evalcond[3]=((((-1.00000000000000)*(x123)))+(x122));
                                 if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  )
                                 {
                                 {
@@ -497,7 +586,95 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                                     {
                                                         if( 1 )
                                                         {
-                                                        continue;
+                                                        {
+                                                            IKReal j1eval[1];
+                                                            j1eval[0]=((((0.550000000000000)*(pz)))+(((0.0450000000000000)*(cj0)*(px)))+(((0.300000000000000)*(py)*(sj0)*(sj3)))+(((0.0450000000000000)*(py)*(sj0)))+(((0.300000000000000)*(cj0)*(px)*(sj3)))+(((-0.0450000000000000)*(cj0)*(cj3)*(px)))+(((0.300000000000000)*(cj3)*(pz)))+(((-0.0450000000000000)*(cj3)*(py)*(sj0)))+(((0.0450000000000000)*(pz)*(sj3))));
+                                                            if( IKabs(j1eval[0]) < 0.000001  )
+                                                            {
+                                                                {
+                                                                IKReal evalcond[4];
+                                                                    IKReal x124=x122;
+                                                                    IKReal x125=x123;
+                                                                    evalcond[0]=((IKabs(((((-1.00000000000000)*(3.14159265358979)))+(IKfmod(((3.14159265358979)+(j3)), ((2.00000000000000)*(3.14159265358979)))))))+(IKabs(pz)));
+                                                                    evalcond[1]=((0.722500000000000)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                    evalcond[2]=((((-1.00000000000000)*(x124)))+(x125));
+                                                                    evalcond[3]=((((-1.00000000000000)*(x125)))+(x124));
+                                                                    if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  )
+                                                                    {
+                                                                    {
+                                                                    IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                    bool j1valid[1]={false};
+                                                                    j1array[0]=IKatan2(((((1.17647058823529)*(py)*(sj0)))+(((1.17647058823529)*(cj0)*(px)))), ((1.17647058823529)*(pz)));
+                                                                    sj1array[0]=IKsin(j1array[0]);
+                                                                    cj1array[0]=IKcos(j1array[0]);
+                                                                    if( j1array[0] > IKPI )
+                                                                        j1array[0]-=IK2PI;
+                                                                    else if( j1array[0] < -IKPI )
+                                                                        j1array[0]+=IK2PI;
+                                                                    j1valid[0] = true;
+                                                                    for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                    {
+                                                                    if( !j1valid[ij1] ) { continue; }
+                                                                    j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                    
+                                                                    rotationfunction0(vsolutions);
+                                                                    }
+                                                                    }
+                                                                
+                                                                } else
+                                                                {
+                                                                    if( 1 )
+                                                                    {
+                                                                    continue;
+                                                                
+                                                                } else
+                                                                {
+                                                                }
+                                                                }
+                                                                }
+                                                            
+                                                            } else
+                                                            {
+                                                                {
+                                                                IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                bool j1valid[1]={false};
+                                                                IKReal x126=((0.300000000000000)*(sj3));
+                                                                IKReal x127=((0.0450000000000000)+(x126));
+                                                                IKReal x128=((0.0450000000000000)*(cj3));
+                                                                IKReal x129=((((-1.00000000000000)*(x128)))+(x127));
+                                                                IKReal x130=((0.550000000000000)*(pz));
+                                                                IKReal x131=((0.0450000000000000)*(cj0)*(px));
+                                                                IKReal x132=((py)*(sj0)*(x126));
+                                                                IKReal x133=((0.0450000000000000)*(py)*(sj0));
+                                                                IKReal x134=((cj0)*(px)*(x126));
+                                                                IKReal x135=((0.300000000000000)*(cj3)*(pz));
+                                                                IKReal x136=((0.0450000000000000)*(pz)*(sj3));
+                                                                IKReal x137=((x135)+(x134)+(x136)+(x131)+(x130)+(x133)+(x132));
+                                                                IKReal x138=((1.00000000000000)*(py)*(sj0)*(x128));
+                                                                IKReal x139=((1.00000000000000)*(cj0)*(px)*(x128));
+                                                                IKReal x140=((x139)+(x138));
+                                                                IKReal x141=((((-1.00000000000000)*(x140)))+(x137));
+                                                                IKReal x142=((IKabs(x141) != 0)?((IKReal)1/(x141)):(IKReal)1.0e30);
+                                                                j1array[0]=IKatan2(((x142)*(((((-1.00000000000000)*(pz)*(((((-1.00000000000000)*(py)*(sj0)))+(((-1.00000000000000)*(cj0)*(px)))))))+(((x129)*(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3)))))))))), ((x142)*((((pz)*(pz))+(((-1.00000000000000)*((x129)*(x129))))))));
+                                                                sj1array[0]=IKsin(j1array[0]);
+                                                                cj1array[0]=IKcos(j1array[0]);
+                                                                if( j1array[0] > IKPI )
+                                                                    j1array[0]-=IK2PI;
+                                                                else if( j1array[0] < -IKPI )
+                                                                    j1array[0]+=IK2PI;
+                                                                j1valid[0] = true;
+                                                                for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                {
+                                                                if( !j1valid[ij1] ) { continue; }
+                                                                j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                
+                                                                rotationfunction0(vsolutions);
+                                                                }
+                                                                }
+                                                            
+                                                            }
+                                                        
+                                                        }
                                                     
                                                     } else
                                                     {
@@ -509,23 +686,23 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                                     {
                                                     IKReal j1array[1], cj1array[1], sj1array[1];
                                                     bool j1valid[1]={false};
-                                                    IKReal x104=((0.0450000000000000)*(sj3));
-                                                    IKReal x105=((0.300000000000000)*(cj3));
-                                                    IKReal x106=((0.550000000000000)+(x104)+(x105));
-                                                    IKReal x107=((0.300000000000000)*(pz)*(sj3));
-                                                    IKReal x108=((0.0450000000000000)*(pz));
-                                                    IKReal x109=((x108)+(x107));
-                                                    IKReal x110=((0.550000000000000)*(py)*(sj0));
-                                                    IKReal x111=((1.00000000000000)*(cj0)*(px)*(x104));
-                                                    IKReal x112=((1.00000000000000)*(py)*(sj0)*(x104));
-                                                    IKReal x113=((0.550000000000000)*(cj0)*(px));
-                                                    IKReal x114=((1.00000000000000)*(cj3)*(x108));
-                                                    IKReal x115=((py)*(sj0)*(x105));
-                                                    IKReal x116=((cj0)*(px)*(x105));
-                                                    IKReal x117=((x113)+(x112)+(x111)+(x110)+(x116)+(x115)+(x114));
-                                                    IKReal x118=((((-1.00000000000000)*(x117)))+(x109));
-                                                    IKReal x119=((IKabs(x118) != 0)?((IKReal)1/(x118)):(IKReal)1.0e30);
-                                                    j1array[0]=IKatan2(((x119)*(((((-1.00000000000000)*((x106)*(x106))))+((pz)*(pz))))), ((x119)*(((((x106)*(((0.0450000000000000)+(((-0.0450000000000000)*(cj3)))+(((0.300000000000000)*(sj3)))))))+(((pz)*(((((-1.00000000000000)*(py)*(sj0)))+(((-1.00000000000000)*(cj0)*(px)))))))))));
+                                                    IKReal x143=((0.0450000000000000)*(sj3));
+                                                    IKReal x144=((0.300000000000000)*(cj3));
+                                                    IKReal x145=((0.550000000000000)+(x143)+(x144));
+                                                    IKReal x146=((0.300000000000000)*(pz)*(sj3));
+                                                    IKReal x147=((0.0450000000000000)*(pz));
+                                                    IKReal x148=((x146)+(x147));
+                                                    IKReal x149=((0.550000000000000)*(py)*(sj0));
+                                                    IKReal x150=((1.00000000000000)*(cj0)*(px)*(x143));
+                                                    IKReal x151=((1.00000000000000)*(py)*(sj0)*(x143));
+                                                    IKReal x152=((0.550000000000000)*(cj0)*(px));
+                                                    IKReal x153=((1.00000000000000)*(cj3)*(x147));
+                                                    IKReal x154=((py)*(sj0)*(x144));
+                                                    IKReal x155=((cj0)*(px)*(x144));
+                                                    IKReal x156=((x155)+(x154)+(x153)+(x152)+(x151)+(x150)+(x149));
+                                                    IKReal x157=((((-1.00000000000000)*(x156)))+(x148));
+                                                    IKReal x158=((IKabs(x157) != 0)?((IKReal)1/(x157)):(IKReal)1.0e30);
+                                                    j1array[0]=IKatan2(((x158)*((((pz)*(pz))+(((-1.00000000000000)*((x145)*(x145))))))), ((x158)*(((((x145)*(((0.0450000000000000)+(((-0.0450000000000000)*(cj3)))+(((0.300000000000000)*(sj3)))))))+(((pz)*(((((-1.00000000000000)*(py)*(sj0)))+(((-1.00000000000000)*(cj0)*(px)))))))))));
                                                     sj1array[0]=IKsin(j1array[0]);
                                                     cj1array[0]=IKcos(j1array[0]);
                                                     if( j1array[0] > IKPI )
@@ -556,28 +733,27 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                                         {
                                         IKReal j1array[1], cj1array[1], sj1array[1];
                                         bool j1valid[1]={false};
-                                        IKReal x120=x2;
-                                        IKReal x121=(sj0)*(sj0);
-                                        IKReal x122=((x120)*(x121));
-                                        IKReal x123=((2.00000000000000)*(cj0)*(px)*(py)*(sj0));
-                                        IKReal x124=x0;
-                                        IKReal x125=(cj0)*(cj0);
-                                        IKReal x126=x4;
-                                        IKReal x127=((x125)*(x126));
-                                        IKReal x128=((x127)+(x124)+(x122)+(x123));
-                                        IKReal x129=((IKabs(x128) != 0)?((IKReal)1/(x128)):(IKReal)1.0e30);
-                                        IKReal x130=((cj0)*(px));
-                                        IKReal x131=((py)*(sj0));
-                                        IKReal x132=((x131)+(x130));
-                                        IKReal x133=((-1.00000000000000)*(x132));
-                                        IKReal x134=((0.300000000000000)*(sj3));
-                                        IKReal x135=((0.0450000000000000)+(x134));
-                                        IKReal x136=((0.0450000000000000)*(cj3));
-                                        IKReal x137=((x135)+(((-1.00000000000000)*(x136))));
-                                        IKReal x138=((0.0450000000000000)*(sj3));
-                                        IKReal x139=((0.300000000000000)*(cj3));
-                                        IKReal x140=((0.550000000000000)+(x139)+(x138));
-                                        j1array[0]=IKatan2(((x129)*(((((-1.00000000000000)*(x133)*(x140)))+(((pz)*(x137)))))), ((x129)*(((((pz)*(x140)))+(((x133)*(x137)))))));
+                                        IKReal x159=x2;
+                                        IKReal x160=(sj0)*(sj0);
+                                        IKReal x161=((x159)*(x160));
+                                        IKReal x162=((2.00000000000000)*(cj0)*(px)*(py)*(sj0));
+                                        IKReal x163=x0;
+                                        IKReal x164=(cj0)*(cj0);
+                                        IKReal x165=x4;
+                                        IKReal x166=((x164)*(x165));
+                                        IKReal x167=((x162)+(x163)+(x161)+(x166));
+                                        IKReal x168=((IKabs(x167) != 0)?((IKReal)1/(x167)):(IKReal)1.0e30);
+                                        IKReal x169=((cj0)*(px));
+                                        IKReal x170=((py)*(sj0));
+                                        IKReal x171=((x170)+(x169));
+                                        IKReal x172=((0.300000000000000)*(sj3));
+                                        IKReal x173=((0.0450000000000000)+(x172));
+                                        IKReal x174=((0.0450000000000000)*(cj3));
+                                        IKReal x175=((((-1.00000000000000)*(x174)))+(x173));
+                                        IKReal x176=((0.0450000000000000)*(sj3));
+                                        IKReal x177=((0.300000000000000)*(cj3));
+                                        IKReal x178=((0.550000000000000)+(x177)+(x176));
+                                        j1array[0]=IKatan2(((x168)*(((((pz)*(x175)))+(((x171)*(x178)))))), ((x168)*(((((pz)*(x178)))+(((-1.00000000000000)*(x171)*(x175)))))));
                                         sj1array[0]=IKsin(j1array[0]);
                                         cj1array[0]=IKcos(j1array[0]);
                                         if( j1array[0] > IKPI )
@@ -602,7 +778,2463 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                             {
                                 if( 1 )
                                 {
-                                continue;
+                                {
+                                    IKReal j1eval[1];
+                                    j1eval[0]=((((cj2)*((py)*(py))*((sj0)*(sj0))))+(((cj2)*((cj0)*(cj0))*((px)*(px))))+(((2.00000000000000)*(cj0)*(cj2)*(px)*(py)*(sj0)))+(((cj2)*((pz)*(pz)))));
+                                    if( IKabs(j1eval[0]) < 0.000001  )
+                                    {
+                                        {
+                                        IKReal evalcond[4];
+                                            IKReal x179=((0.300000000000000)*(sj3));
+                                            IKReal x180=((cj0)*(py));
+                                            IKReal x181=((0.0450000000000000)*(cj3));
+                                            IKReal x182=((px)*(sj0));
+                                            evalcond[0]=((IKfmod(((-1.57079632679490)+(3.14159265358979)+(j2)), ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))));
+                                            evalcond[1]=((0.396550000000000)+(((0.0765000000000000)*(sj3)))+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz))))+(((0.325950000000000)*(cj3))));
+                                            evalcond[2]=((-0.0450000000000000)+(((-1.00000000000000)*(x179)))+(((-1.00000000000000)*(x180)))+(x181)+(x182));
+                                            evalcond[3]=((0.0450000000000000)+(((-1.00000000000000)*(x182)))+(((-1.00000000000000)*(x181)))+(x179)+(x180));
+                                            if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  )
+                                            {
+                                            {
+                                                IKReal j1eval[1];
+                                                j1eval[0]=((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))));
+                                                if( IKabs(j1eval[0]) < 0.000001  )
+                                                {
+                                                    {
+                                                        if( 1 )
+                                                        {
+                                                        {
+                                                            IKReal j1eval[2];
+                                                            j1eval[0]=((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3))));
+                                                            j1eval[1]=((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))));
+                                                            if( IKabs(j1eval[0]) < 0.000001  || IKabs(j1eval[1]) < 0.000001  )
+                                                            {
+                                                                {
+                                                                    if( 1 )
+                                                                    {
+                                                                    {
+                                                                        IKReal j1eval[2];
+                                                                        j1eval[0]=((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))));
+                                                                        j1eval[1]=((((-0.300000000000000)*(cj3)*(py)*(sj0)))+(((-0.300000000000000)*(cj0)*(cj3)*(px)))+(((-0.0450000000000000)*(cj0)*(px)*(sj3)))+(((-0.550000000000000)*(cj0)*(px)))+(((-0.550000000000000)*(py)*(sj0)))+(((-0.0450000000000000)*(py)*(sj0)*(sj3))));
+                                                                        if( IKabs(j1eval[0]) < 0.000001  || IKabs(j1eval[1]) < 0.000001  )
+                                                                        {
+                                                                            {
+                                                                            IKReal evalcond[5];
+                                                                                IKReal x183=x179;
+                                                                                IKReal x184=x181;
+                                                                                IKReal x185=((-0.0450000000000000)+(x184));
+                                                                                IKReal x186=((x183)+(py));
+                                                                                IKReal x187=((((-1.00000000000000)*(x186)))+(x185));
+                                                                                evalcond[0]=((IKabs(px))+(IKabs(((IKfmod(((3.14159265358979)+(j0)), ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979)))))));
+                                                                                evalcond[1]=((0.396550000000000)+(((0.0765000000000000)*(sj3)))+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz))))+(((0.325950000000000)*(cj3))));
+                                                                                evalcond[2]=x187;
+                                                                                evalcond[3]=((0.0450000000000000)+(((-1.00000000000000)*(x184)))+(x186));
+                                                                                evalcond[4]=x187;
+                                                                                if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  && IKabs(evalcond[4]) < 0.000010  )
+                                                                                {
+                                                                                {
+                                                                                    IKReal j1eval[2];
+                                                                                    j1eval[0]=((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3))));
+                                                                                    j1eval[1]=((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))));
+                                                                                    if( IKabs(j1eval[0]) < 0.000001  || IKabs(j1eval[1]) < 0.000001  )
+                                                                                    {
+                                                                                        {
+                                                                                            if( 1 )
+                                                                                            {
+                                                                                            {
+                                                                                                IKReal j1eval[2];
+                                                                                                j1eval[0]=((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))));
+                                                                                                j1eval[1]=((((-0.300000000000000)*(cj3)*(px)))+(((-0.0450000000000000)*(px)*(sj3)))+(((-0.550000000000000)*(px))));
+                                                                                                if( IKabs(j1eval[0]) < 0.000001  || IKabs(j1eval[1]) < 0.000001  )
+                                                                                                {
+                                                                                                    {
+                                                                                                    IKReal evalcond[4];
+                                                                                                        evalcond[0]=((IKabs(((((-1.00000000000000)*(3.14159265358979)))+(IKfmod(((3.14159265358979)+(j3)), ((2.00000000000000)*(3.14159265358979)))))))+(IKabs(px)));
+                                                                                                        evalcond[1]=((0.722500000000000)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                                        evalcond[2]=((-1.00000000000000)*(py));
+                                                                                                        evalcond[3]=py;
+                                                                                                        if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  )
+                                                                                                        {
+                                                                                                        {
+                                                                                                        IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                        bool j1valid[1]={false};
+                                                                                                        j1array[0]=IKatan2(((1.17647058823529)*(px)), ((1.17647058823529)*(pz)));
+                                                                                                        sj1array[0]=IKsin(j1array[0]);
+                                                                                                        cj1array[0]=IKcos(j1array[0]);
+                                                                                                        if( j1array[0] > IKPI )
+                                                                                                            j1array[0]-=IK2PI;
+                                                                                                        else if( j1array[0] < -IKPI )
+                                                                                                            j1array[0]+=IK2PI;
+                                                                                                        j1valid[0] = true;
+                                                                                                        for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                        {
+                                                                                                        if( !j1valid[ij1] ) { continue; }
+                                                                                                        j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                        
+                                                                                                        rotationfunction0(vsolutions);
+                                                                                                        }
+                                                                                                        }
+                                                                                                    
+                                                                                                    } else
+                                                                                                    {
+                                                                                                        evalcond[0]=((IKabs(((IKfmod(((((0.500000000000000)*(3.14159265358979)))+(j3)), ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))))))+(IKabs(px)));
+                                                                                                        evalcond[1]=((0.473050000000000)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                                        evalcond[2]=((-0.345000000000000)+(((-1.00000000000000)*(py))));
+                                                                                                        evalcond[3]=((0.345000000000000)+(py));
+                                                                                                        if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  )
+                                                                                                        {
+                                                                                                        {
+                                                                                                        IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                        bool j1valid[1]={false};
+                                                                                                        j1array[0]=IKatan2(((1.68067226890756)*(px)), ((1.68067226890756)*(pz)));
+                                                                                                        sj1array[0]=IKsin(j1array[0]);
+                                                                                                        cj1array[0]=IKcos(j1array[0]);
+                                                                                                        if( j1array[0] > IKPI )
+                                                                                                            j1array[0]-=IK2PI;
+                                                                                                        else if( j1array[0] < -IKPI )
+                                                                                                            j1array[0]+=IK2PI;
+                                                                                                        j1valid[0] = true;
+                                                                                                        for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                        {
+                                                                                                        if( !j1valid[ij1] ) { continue; }
+                                                                                                        j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                        
+                                                                                                        rotationfunction0(vsolutions);
+                                                                                                        }
+                                                                                                        }
+                                                                                                    
+                                                                                                    } else
+                                                                                                    {
+                                                                                                        evalcond[0]=((IKabs(((IKfmod(j3, ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))))))+(IKabs(px)));
+                                                                                                        evalcond[1]=((0.0706000000000001)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                                        evalcond[2]=((-0.0900000000000000)+(((-1.00000000000000)*(py))));
+                                                                                                        evalcond[3]=((0.0900000000000000)+(py));
+                                                                                                        if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  )
+                                                                                                        {
+                                                                                                        {
+                                                                                                        IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                        bool j1valid[1]={false};
+                                                                                                        j1array[0]=IKatan2(((4.00000000000000)*(px)), ((4.00000000000000)*(pz)));
+                                                                                                        sj1array[0]=IKsin(j1array[0]);
+                                                                                                        cj1array[0]=IKcos(j1array[0]);
+                                                                                                        if( j1array[0] > IKPI )
+                                                                                                            j1array[0]-=IK2PI;
+                                                                                                        else if( j1array[0] < -IKPI )
+                                                                                                            j1array[0]+=IK2PI;
+                                                                                                        j1valid[0] = true;
+                                                                                                        for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                        {
+                                                                                                        if( !j1valid[ij1] ) { continue; }
+                                                                                                        j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                        
+                                                                                                        rotationfunction0(vsolutions);
+                                                                                                        }
+                                                                                                        }
+                                                                                                    
+                                                                                                    } else
+                                                                                                    {
+                                                                                                        evalcond[0]=((IKabs(((IKfmod(((((1.50000000000000)*(3.14159265358979)))+(j3)), ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))))))+(IKabs(px)));
+                                                                                                        evalcond[1]=((0.320050000000000)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                                        evalcond[2]=((0.255000000000000)+(((-1.00000000000000)*(py))));
+                                                                                                        evalcond[3]=((-0.255000000000000)+(py));
+                                                                                                        if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  )
+                                                                                                        {
+                                                                                                        {
+                                                                                                        IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                        bool j1valid[1]={false};
+                                                                                                        j1array[0]=IKatan2(((1.98019801980198)*(px)), ((1.98019801980198)*(pz)));
+                                                                                                        sj1array[0]=IKsin(j1array[0]);
+                                                                                                        cj1array[0]=IKcos(j1array[0]);
+                                                                                                        if( j1array[0] > IKPI )
+                                                                                                            j1array[0]-=IK2PI;
+                                                                                                        else if( j1array[0] < -IKPI )
+                                                                                                            j1array[0]+=IK2PI;
+                                                                                                        j1valid[0] = true;
+                                                                                                        for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                        {
+                                                                                                        if( !j1valid[ij1] ) { continue; }
+                                                                                                        j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                        
+                                                                                                        rotationfunction0(vsolutions);
+                                                                                                        }
+                                                                                                        }
+                                                                                                    
+                                                                                                    } else
+                                                                                                    {
+                                                                                                        if( 1 )
+                                                                                                        {
+                                                                                                        {
+                                                                                                            IKReal j1eval[1];
+                                                                                                            j1eval[0]=((((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                                            if( IKabs(j1eval[0]) < 0.000001  )
+                                                                                                            {
+                                                                                                                {
+                                                                                                                    if( 1 )
+                                                                                                                    {
+                                                                                                                    continue;
+                                                                                                                
+                                                                                                                } else
+                                                                                                                {
+                                                                                                                }
+                                                                                                                }
+                                                                                                            
+                                                                                                            } else
+                                                                                                            {
+                                                                                                                {
+                                                                                                                IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                                bool j1valid[1]={false};
+                                                                                                                IKReal x188=x4;
+                                                                                                                IKReal x189=x0;
+                                                                                                                IKReal x190=((x188)+(x189));
+                                                                                                                IKReal x191=((0.0450000000000000)*(sj3));
+                                                                                                                IKReal x192=((0.300000000000000)*(cj3));
+                                                                                                                IKReal x193=((0.550000000000000)+(x192)+(x191));
+                                                                                                                j1array[0]=IKatan2(((px)*(x193)*(((IKabs(x190) != 0)?((IKReal)1/(x190)):(IKReal)1.0e30))), ((pz)*(x193)*(((IKabs(x190) != 0)?((IKReal)1/(x190)):(IKReal)1.0e30))));
+                                                                                                                sj1array[0]=IKsin(j1array[0]);
+                                                                                                                cj1array[0]=IKcos(j1array[0]);
+                                                                                                                if( j1array[0] > IKPI )
+                                                                                                                    j1array[0]-=IK2PI;
+                                                                                                                else if( j1array[0] < -IKPI )
+                                                                                                                    j1array[0]+=IK2PI;
+                                                                                                                j1valid[0] = true;
+                                                                                                                for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                                {
+                                                                                                                if( !j1valid[ij1] ) { continue; }
+                                                                                                                j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                                
+                                                                                                                rotationfunction0(vsolutions);
+                                                                                                                }
+                                                                                                                }
+                                                                                                            
+                                                                                                            }
+                                                                                                        
+                                                                                                        }
+                                                                                                    
+                                                                                                    } else
+                                                                                                    {
+                                                                                                    }
+                                                                                                    }
+                                                                                                    }
+                                                                                                    }
+                                                                                                    }
+                                                                                                    }
+                                                                                                
+                                                                                                } else
+                                                                                                {
+                                                                                                    {
+                                                                                                    IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                    bool j1valid[1]={false};
+                                                                                                    j1array[0]=IKatan2(((px)*(((IKabs(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))))) != 0)?((IKReal)1/(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3)))))):(IKReal)1.0e30))), ((-1.00000000000000)*(px)*(pz)*(((IKabs(((((-0.300000000000000)*(cj3)*(px)))+(((-0.0450000000000000)*(px)*(sj3)))+(((-0.550000000000000)*(px))))) != 0)?((IKReal)1/(((((-0.300000000000000)*(cj3)*(px)))+(((-0.0450000000000000)*(px)*(sj3)))+(((-0.550000000000000)*(px)))))):(IKReal)1.0e30))));
+                                                                                                    sj1array[0]=IKsin(j1array[0]);
+                                                                                                    cj1array[0]=IKcos(j1array[0]);
+                                                                                                    if( j1array[0] > IKPI )
+                                                                                                        j1array[0]-=IK2PI;
+                                                                                                    else if( j1array[0] < -IKPI )
+                                                                                                        j1array[0]+=IK2PI;
+                                                                                                    j1valid[0] = true;
+                                                                                                    for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                    {
+                                                                                                    if( !j1valid[ij1] ) { continue; }
+                                                                                                    j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                    
+                                                                                                    rotationfunction0(vsolutions);
+                                                                                                    }
+                                                                                                    }
+                                                                                                
+                                                                                                }
+                                                                                            
+                                                                                            }
+                                                                                        
+                                                                                        } else
+                                                                                        {
+                                                                                        }
+                                                                                        }
+                                                                                    
+                                                                                    } else
+                                                                                    {
+                                                                                        {
+                                                                                        IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                        bool j1valid[1]={false};
+                                                                                        j1array[0]=IKatan2(((px)*(pz)*(((IKabs(((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3))))) != 0)?((IKReal)1/(((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3)))))):(IKReal)1.0e30))), ((pz)*(((IKabs(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))))) != 0)?((IKReal)1/(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3)))))):(IKReal)1.0e30))));
+                                                                                        sj1array[0]=IKsin(j1array[0]);
+                                                                                        cj1array[0]=IKcos(j1array[0]);
+                                                                                        if( j1array[0] > IKPI )
+                                                                                            j1array[0]-=IK2PI;
+                                                                                        else if( j1array[0] < -IKPI )
+                                                                                            j1array[0]+=IK2PI;
+                                                                                        j1valid[0] = true;
+                                                                                        for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                        {
+                                                                                        if( !j1valid[ij1] ) { continue; }
+                                                                                        j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                        
+                                                                                        rotationfunction0(vsolutions);
+                                                                                        }
+                                                                                        }
+                                                                                    
+                                                                                    }
+                                                                                
+                                                                                }
+                                                                            
+                                                                            } else
+                                                                            {
+                                                                                IKReal x194=x179;
+                                                                                IKReal x195=x181;
+                                                                                IKReal x196=((0.0450000000000000)+(x194));
+                                                                                IKReal x197=((x195)+(py));
+                                                                                IKReal x198=((((-1.00000000000000)*(x197)))+(x196));
+                                                                                evalcond[0]=((IKabs(px))+(IKabs(((IKfmod(j0, ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979)))))));
+                                                                                evalcond[1]=((0.396550000000000)+(((0.0765000000000000)*(sj3)))+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz))))+(((0.325950000000000)*(cj3))));
+                                                                                evalcond[2]=((-0.0450000000000000)+(((-1.00000000000000)*(x194)))+(x197));
+                                                                                evalcond[3]=x198;
+                                                                                evalcond[4]=x198;
+                                                                                if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  && IKabs(evalcond[4]) < 0.000010  )
+                                                                                {
+                                                                                {
+                                                                                    IKReal j1eval[2];
+                                                                                    j1eval[0]=((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))));
+                                                                                    j1eval[1]=((((0.550000000000000)*(px)))+(((0.0450000000000000)*(px)*(sj3)))+(((0.300000000000000)*(cj3)*(px))));
+                                                                                    if( IKabs(j1eval[0]) < 0.000001  || IKabs(j1eval[1]) < 0.000001  )
+                                                                                    {
+                                                                                        {
+                                                                                        IKReal evalcond[4];
+                                                                                            evalcond[0]=((IKabs(((((-1.00000000000000)*(3.14159265358979)))+(IKfmod(((3.14159265358979)+(j3)), ((2.00000000000000)*(3.14159265358979)))))))+(IKabs(px)));
+                                                                                            evalcond[1]=((0.722500000000000)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                            evalcond[2]=py;
+                                                                                            evalcond[3]=((-1.00000000000000)*(py));
+                                                                                            if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  )
+                                                                                            {
+                                                                                            {
+                                                                                            IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                            bool j1valid[1]={false};
+                                                                                            j1array[0]=IKatan2(((-1.17647058823529)*(px)), ((1.17647058823529)*(pz)));
+                                                                                            sj1array[0]=IKsin(j1array[0]);
+                                                                                            cj1array[0]=IKcos(j1array[0]);
+                                                                                            if( j1array[0] > IKPI )
+                                                                                                j1array[0]-=IK2PI;
+                                                                                            else if( j1array[0] < -IKPI )
+                                                                                                j1array[0]+=IK2PI;
+                                                                                            j1valid[0] = true;
+                                                                                            for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                            {
+                                                                                            if( !j1valid[ij1] ) { continue; }
+                                                                                            j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                            
+                                                                                            rotationfunction0(vsolutions);
+                                                                                            }
+                                                                                            }
+                                                                                        
+                                                                                        } else
+                                                                                        {
+                                                                                            evalcond[0]=((IKabs(((IKfmod(((((0.500000000000000)*(3.14159265358979)))+(j3)), ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))))))+(IKabs(px)));
+                                                                                            evalcond[1]=((0.473050000000000)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                            evalcond[2]=((-0.345000000000000)+(py));
+                                                                                            evalcond[3]=((0.345000000000000)+(((-1.00000000000000)*(py))));
+                                                                                            if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  )
+                                                                                            {
+                                                                                            {
+                                                                                            IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                            bool j1valid[1]={false};
+                                                                                            j1array[0]=IKatan2(((-1.68067226890756)*(px)), ((1.68067226890756)*(pz)));
+                                                                                            sj1array[0]=IKsin(j1array[0]);
+                                                                                            cj1array[0]=IKcos(j1array[0]);
+                                                                                            if( j1array[0] > IKPI )
+                                                                                                j1array[0]-=IK2PI;
+                                                                                            else if( j1array[0] < -IKPI )
+                                                                                                j1array[0]+=IK2PI;
+                                                                                            j1valid[0] = true;
+                                                                                            for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                            {
+                                                                                            if( !j1valid[ij1] ) { continue; }
+                                                                                            j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                            
+                                                                                            rotationfunction0(vsolutions);
+                                                                                            }
+                                                                                            }
+                                                                                        
+                                                                                        } else
+                                                                                        {
+                                                                                            evalcond[0]=((IKabs(((IKfmod(j3, ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))))))+(IKabs(px)));
+                                                                                            evalcond[1]=((0.0706000000000001)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                            evalcond[2]=((-0.0900000000000000)+(py));
+                                                                                            evalcond[3]=((0.0900000000000000)+(((-1.00000000000000)*(py))));
+                                                                                            if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  )
+                                                                                            {
+                                                                                            {
+                                                                                            IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                            bool j1valid[1]={false};
+                                                                                            j1array[0]=IKatan2(((-4.00000000000000)*(px)), ((4.00000000000000)*(pz)));
+                                                                                            sj1array[0]=IKsin(j1array[0]);
+                                                                                            cj1array[0]=IKcos(j1array[0]);
+                                                                                            if( j1array[0] > IKPI )
+                                                                                                j1array[0]-=IK2PI;
+                                                                                            else if( j1array[0] < -IKPI )
+                                                                                                j1array[0]+=IK2PI;
+                                                                                            j1valid[0] = true;
+                                                                                            for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                            {
+                                                                                            if( !j1valid[ij1] ) { continue; }
+                                                                                            j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                            
+                                                                                            rotationfunction0(vsolutions);
+                                                                                            }
+                                                                                            }
+                                                                                        
+                                                                                        } else
+                                                                                        {
+                                                                                            evalcond[0]=((IKabs(((IKfmod(((((1.50000000000000)*(3.14159265358979)))+(j3)), ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))))))+(IKabs(px)));
+                                                                                            evalcond[1]=((0.320050000000000)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                            evalcond[2]=((0.255000000000000)+(py));
+                                                                                            evalcond[3]=((-0.255000000000000)+(((-1.00000000000000)*(py))));
+                                                                                            if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  )
+                                                                                            {
+                                                                                            {
+                                                                                            IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                            bool j1valid[1]={false};
+                                                                                            j1array[0]=IKatan2(((-1.98019801980198)*(px)), ((1.98019801980198)*(pz)));
+                                                                                            sj1array[0]=IKsin(j1array[0]);
+                                                                                            cj1array[0]=IKcos(j1array[0]);
+                                                                                            if( j1array[0] > IKPI )
+                                                                                                j1array[0]-=IK2PI;
+                                                                                            else if( j1array[0] < -IKPI )
+                                                                                                j1array[0]+=IK2PI;
+                                                                                            j1valid[0] = true;
+                                                                                            for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                            {
+                                                                                            if( !j1valid[ij1] ) { continue; }
+                                                                                            j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                            
+                                                                                            rotationfunction0(vsolutions);
+                                                                                            }
+                                                                                            }
+                                                                                        
+                                                                                        } else
+                                                                                        {
+                                                                                            if( 1 )
+                                                                                            {
+                                                                                            {
+                                                                                                IKReal j1eval[2];
+                                                                                                j1eval[0]=((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3))));
+                                                                                                j1eval[1]=((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))));
+                                                                                                if( IKabs(j1eval[0]) < 0.000001  || IKabs(j1eval[1]) < 0.000001  )
+                                                                                                {
+                                                                                                    {
+                                                                                                        if( 1 )
+                                                                                                        {
+                                                                                                        {
+                                                                                                            IKReal j1eval[1];
+                                                                                                            j1eval[0]=((((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                                            if( IKabs(j1eval[0]) < 0.000001  )
+                                                                                                            {
+                                                                                                                {
+                                                                                                                    if( 1 )
+                                                                                                                    {
+                                                                                                                    continue;
+                                                                                                                
+                                                                                                                } else
+                                                                                                                {
+                                                                                                                }
+                                                                                                                }
+                                                                                                            
+                                                                                                            } else
+                                                                                                            {
+                                                                                                                {
+                                                                                                                IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                                bool j1valid[1]={false};
+                                                                                                                IKReal x199=x4;
+                                                                                                                IKReal x200=x0;
+                                                                                                                IKReal x201=((x199)+(x200));
+                                                                                                                IKReal x202=((0.0450000000000000)*(sj3));
+                                                                                                                IKReal x203=((0.300000000000000)*(cj3));
+                                                                                                                IKReal x204=((0.550000000000000)+(x203)+(x202));
+                                                                                                                j1array[0]=IKatan2(((-1.00000000000000)*(px)*(x204)*(((IKabs(x201) != 0)?((IKReal)1/(x201)):(IKReal)1.0e30))), ((pz)*(x204)*(((IKabs(x201) != 0)?((IKReal)1/(x201)):(IKReal)1.0e30))));
+                                                                                                                sj1array[0]=IKsin(j1array[0]);
+                                                                                                                cj1array[0]=IKcos(j1array[0]);
+                                                                                                                if( j1array[0] > IKPI )
+                                                                                                                    j1array[0]-=IK2PI;
+                                                                                                                else if( j1array[0] < -IKPI )
+                                                                                                                    j1array[0]+=IK2PI;
+                                                                                                                j1valid[0] = true;
+                                                                                                                for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                                {
+                                                                                                                if( !j1valid[ij1] ) { continue; }
+                                                                                                                j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                                
+                                                                                                                rotationfunction0(vsolutions);
+                                                                                                                }
+                                                                                                                }
+                                                                                                            
+                                                                                                            }
+                                                                                                        
+                                                                                                        }
+                                                                                                    
+                                                                                                    } else
+                                                                                                    {
+                                                                                                    }
+                                                                                                    }
+                                                                                                
+                                                                                                } else
+                                                                                                {
+                                                                                                    {
+                                                                                                    IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                    bool j1valid[1]={false};
+                                                                                                    j1array[0]=IKatan2(((-1.00000000000000)*(px)*(pz)*(((IKabs(((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3))))) != 0)?((IKReal)1/(((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3)))))):(IKReal)1.0e30))), ((pz)*(((IKabs(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))))) != 0)?((IKReal)1/(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3)))))):(IKReal)1.0e30))));
+                                                                                                    sj1array[0]=IKsin(j1array[0]);
+                                                                                                    cj1array[0]=IKcos(j1array[0]);
+                                                                                                    if( j1array[0] > IKPI )
+                                                                                                        j1array[0]-=IK2PI;
+                                                                                                    else if( j1array[0] < -IKPI )
+                                                                                                        j1array[0]+=IK2PI;
+                                                                                                    j1valid[0] = true;
+                                                                                                    for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                    {
+                                                                                                    if( !j1valid[ij1] ) { continue; }
+                                                                                                    j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                    
+                                                                                                    rotationfunction0(vsolutions);
+                                                                                                    }
+                                                                                                    }
+                                                                                                
+                                                                                                }
+                                                                                            
+                                                                                            }
+                                                                                        
+                                                                                        } else
+                                                                                        {
+                                                                                        }
+                                                                                        }
+                                                                                        }
+                                                                                        }
+                                                                                        }
+                                                                                        }
+                                                                                    
+                                                                                    } else
+                                                                                    {
+                                                                                        {
+                                                                                        IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                        bool j1valid[1]={false};
+                                                                                        j1array[0]=IKatan2(((-1.00000000000000)*(px)*(((IKabs(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))))) != 0)?((IKReal)1/(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3)))))):(IKReal)1.0e30))), ((px)*(pz)*(((IKabs(((((0.550000000000000)*(px)))+(((0.0450000000000000)*(px)*(sj3)))+(((0.300000000000000)*(cj3)*(px))))) != 0)?((IKReal)1/(((((0.550000000000000)*(px)))+(((0.0450000000000000)*(px)*(sj3)))+(((0.300000000000000)*(cj3)*(px)))))):(IKReal)1.0e30))));
+                                                                                        sj1array[0]=IKsin(j1array[0]);
+                                                                                        cj1array[0]=IKcos(j1array[0]);
+                                                                                        if( j1array[0] > IKPI )
+                                                                                            j1array[0]-=IK2PI;
+                                                                                        else if( j1array[0] < -IKPI )
+                                                                                            j1array[0]+=IK2PI;
+                                                                                        j1valid[0] = true;
+                                                                                        for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                        {
+                                                                                        if( !j1valid[ij1] ) { continue; }
+                                                                                        j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                        
+                                                                                        rotationfunction0(vsolutions);
+                                                                                        }
+                                                                                        }
+                                                                                    
+                                                                                    }
+                                                                                
+                                                                                }
+                                                                            
+                                                                            } else
+                                                                            {
+                                                                                IKReal x205=x179;
+                                                                                IKReal x206=x181;
+                                                                                IKReal x207=((0.0450000000000000)+(x205));
+                                                                                IKReal x208=((x206)+(px));
+                                                                                IKReal x209=((((-1.00000000000000)*(x208)))+(x207));
+                                                                                evalcond[0]=((IKabs(((IKfmod(((((0.500000000000000)*(3.14159265358979)))+(j0)), ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))))))+(IKabs(py)));
+                                                                                evalcond[1]=((0.396550000000000)+(((0.0765000000000000)*(sj3)))+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz))))+(((0.325950000000000)*(cj3))));
+                                                                                evalcond[2]=((-0.0450000000000000)+(((-1.00000000000000)*(x205)))+(x208));
+                                                                                evalcond[3]=x209;
+                                                                                evalcond[4]=x209;
+                                                                                if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  && IKabs(evalcond[4]) < 0.000010  )
+                                                                                {
+                                                                                {
+                                                                                    IKReal j1eval[2];
+                                                                                    j1eval[0]=((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3))));
+                                                                                    j1eval[1]=((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))));
+                                                                                    if( IKabs(j1eval[0]) < 0.000001  || IKabs(j1eval[1]) < 0.000001  )
+                                                                                    {
+                                                                                        {
+                                                                                            if( 1 )
+                                                                                            {
+                                                                                            {
+                                                                                                IKReal j1eval[2];
+                                                                                                j1eval[0]=((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))));
+                                                                                                j1eval[1]=((((-0.0450000000000000)*(py)*(sj3)))+(((-0.300000000000000)*(cj3)*(py)))+(((-0.550000000000000)*(py))));
+                                                                                                if( IKabs(j1eval[0]) < 0.000001  || IKabs(j1eval[1]) < 0.000001  )
+                                                                                                {
+                                                                                                    {
+                                                                                                    IKReal evalcond[4];
+                                                                                                        evalcond[0]=((IKabs(((((-1.00000000000000)*(3.14159265358979)))+(IKfmod(((3.14159265358979)+(j3)), ((2.00000000000000)*(3.14159265358979)))))))+(IKabs(py)));
+                                                                                                        evalcond[1]=((0.722500000000000)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                                        evalcond[2]=px;
+                                                                                                        evalcond[3]=((-1.00000000000000)*(px));
+                                                                                                        if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  )
+                                                                                                        {
+                                                                                                        {
+                                                                                                        IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                        bool j1valid[1]={false};
+                                                                                                        j1array[0]=IKatan2(((1.17647058823529)*(py)), ((1.17647058823529)*(pz)));
+                                                                                                        sj1array[0]=IKsin(j1array[0]);
+                                                                                                        cj1array[0]=IKcos(j1array[0]);
+                                                                                                        if( j1array[0] > IKPI )
+                                                                                                            j1array[0]-=IK2PI;
+                                                                                                        else if( j1array[0] < -IKPI )
+                                                                                                            j1array[0]+=IK2PI;
+                                                                                                        j1valid[0] = true;
+                                                                                                        for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                        {
+                                                                                                        if( !j1valid[ij1] ) { continue; }
+                                                                                                        j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                        
+                                                                                                        rotationfunction0(vsolutions);
+                                                                                                        }
+                                                                                                        }
+                                                                                                    
+                                                                                                    } else
+                                                                                                    {
+                                                                                                        evalcond[0]=((IKabs(((IKfmod(((((0.500000000000000)*(3.14159265358979)))+(j3)), ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))))))+(IKabs(py)));
+                                                                                                        evalcond[1]=((0.473050000000000)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                                        evalcond[2]=((-0.345000000000000)+(px));
+                                                                                                        evalcond[3]=((0.345000000000000)+(((-1.00000000000000)*(px))));
+                                                                                                        if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  )
+                                                                                                        {
+                                                                                                        {
+                                                                                                        IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                        bool j1valid[1]={false};
+                                                                                                        j1array[0]=IKatan2(((1.68067226890756)*(py)), ((1.68067226890756)*(pz)));
+                                                                                                        sj1array[0]=IKsin(j1array[0]);
+                                                                                                        cj1array[0]=IKcos(j1array[0]);
+                                                                                                        if( j1array[0] > IKPI )
+                                                                                                            j1array[0]-=IK2PI;
+                                                                                                        else if( j1array[0] < -IKPI )
+                                                                                                            j1array[0]+=IK2PI;
+                                                                                                        j1valid[0] = true;
+                                                                                                        for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                        {
+                                                                                                        if( !j1valid[ij1] ) { continue; }
+                                                                                                        j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                        
+                                                                                                        rotationfunction0(vsolutions);
+                                                                                                        }
+                                                                                                        }
+                                                                                                    
+                                                                                                    } else
+                                                                                                    {
+                                                                                                        evalcond[0]=((IKabs(((IKfmod(j3, ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))))))+(IKabs(py)));
+                                                                                                        evalcond[1]=((0.0706000000000001)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                                        evalcond[2]=((-0.0900000000000000)+(px));
+                                                                                                        evalcond[3]=((0.0900000000000000)+(((-1.00000000000000)*(px))));
+                                                                                                        if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  )
+                                                                                                        {
+                                                                                                        {
+                                                                                                        IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                        bool j1valid[1]={false};
+                                                                                                        j1array[0]=IKatan2(((4.00000000000000)*(py)), ((4.00000000000000)*(pz)));
+                                                                                                        sj1array[0]=IKsin(j1array[0]);
+                                                                                                        cj1array[0]=IKcos(j1array[0]);
+                                                                                                        if( j1array[0] > IKPI )
+                                                                                                            j1array[0]-=IK2PI;
+                                                                                                        else if( j1array[0] < -IKPI )
+                                                                                                            j1array[0]+=IK2PI;
+                                                                                                        j1valid[0] = true;
+                                                                                                        for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                        {
+                                                                                                        if( !j1valid[ij1] ) { continue; }
+                                                                                                        j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                        
+                                                                                                        rotationfunction0(vsolutions);
+                                                                                                        }
+                                                                                                        }
+                                                                                                    
+                                                                                                    } else
+                                                                                                    {
+                                                                                                        evalcond[0]=((IKabs(((IKfmod(((((1.50000000000000)*(3.14159265358979)))+(j3)), ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))))))+(IKabs(py)));
+                                                                                                        evalcond[1]=((0.320050000000000)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                                        evalcond[2]=((0.255000000000000)+(px));
+                                                                                                        evalcond[3]=((-0.255000000000000)+(((-1.00000000000000)*(px))));
+                                                                                                        if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  )
+                                                                                                        {
+                                                                                                        {
+                                                                                                        IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                        bool j1valid[1]={false};
+                                                                                                        j1array[0]=IKatan2(((1.98019801980198)*(py)), ((1.98019801980198)*(pz)));
+                                                                                                        sj1array[0]=IKsin(j1array[0]);
+                                                                                                        cj1array[0]=IKcos(j1array[0]);
+                                                                                                        if( j1array[0] > IKPI )
+                                                                                                            j1array[0]-=IK2PI;
+                                                                                                        else if( j1array[0] < -IKPI )
+                                                                                                            j1array[0]+=IK2PI;
+                                                                                                        j1valid[0] = true;
+                                                                                                        for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                        {
+                                                                                                        if( !j1valid[ij1] ) { continue; }
+                                                                                                        j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                        
+                                                                                                        rotationfunction0(vsolutions);
+                                                                                                        }
+                                                                                                        }
+                                                                                                    
+                                                                                                    } else
+                                                                                                    {
+                                                                                                        if( 1 )
+                                                                                                        {
+                                                                                                        {
+                                                                                                            IKReal j1eval[1];
+                                                                                                            j1eval[0]=((((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                                            if( IKabs(j1eval[0]) < 0.000001  )
+                                                                                                            {
+                                                                                                                {
+                                                                                                                    if( 1 )
+                                                                                                                    {
+                                                                                                                    continue;
+                                                                                                                
+                                                                                                                } else
+                                                                                                                {
+                                                                                                                }
+                                                                                                                }
+                                                                                                            
+                                                                                                            } else
+                                                                                                            {
+                                                                                                                {
+                                                                                                                IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                                bool j1valid[1]={false};
+                                                                                                                IKReal x210=x2;
+                                                                                                                IKReal x211=x0;
+                                                                                                                IKReal x212=((x210)+(x211));
+                                                                                                                IKReal x213=((0.0450000000000000)*(sj3));
+                                                                                                                IKReal x214=((0.300000000000000)*(cj3));
+                                                                                                                IKReal x215=((0.550000000000000)+(x213)+(x214));
+                                                                                                                j1array[0]=IKatan2(((py)*(x215)*(((IKabs(x212) != 0)?((IKReal)1/(x212)):(IKReal)1.0e30))), ((pz)*(x215)*(((IKabs(x212) != 0)?((IKReal)1/(x212)):(IKReal)1.0e30))));
+                                                                                                                sj1array[0]=IKsin(j1array[0]);
+                                                                                                                cj1array[0]=IKcos(j1array[0]);
+                                                                                                                if( j1array[0] > IKPI )
+                                                                                                                    j1array[0]-=IK2PI;
+                                                                                                                else if( j1array[0] < -IKPI )
+                                                                                                                    j1array[0]+=IK2PI;
+                                                                                                                j1valid[0] = true;
+                                                                                                                for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                                {
+                                                                                                                if( !j1valid[ij1] ) { continue; }
+                                                                                                                j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                                
+                                                                                                                rotationfunction0(vsolutions);
+                                                                                                                }
+                                                                                                                }
+                                                                                                            
+                                                                                                            }
+                                                                                                        
+                                                                                                        }
+                                                                                                    
+                                                                                                    } else
+                                                                                                    {
+                                                                                                    }
+                                                                                                    }
+                                                                                                    }
+                                                                                                    }
+                                                                                                    }
+                                                                                                    }
+                                                                                                
+                                                                                                } else
+                                                                                                {
+                                                                                                    {
+                                                                                                    IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                    bool j1valid[1]={false};
+                                                                                                    j1array[0]=IKatan2(((py)*(((IKabs(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))))) != 0)?((IKReal)1/(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3)))))):(IKReal)1.0e30))), ((-1.00000000000000)*(py)*(pz)*(((IKabs(((((-0.0450000000000000)*(py)*(sj3)))+(((-0.300000000000000)*(cj3)*(py)))+(((-0.550000000000000)*(py))))) != 0)?((IKReal)1/(((((-0.0450000000000000)*(py)*(sj3)))+(((-0.300000000000000)*(cj3)*(py)))+(((-0.550000000000000)*(py)))))):(IKReal)1.0e30))));
+                                                                                                    sj1array[0]=IKsin(j1array[0]);
+                                                                                                    cj1array[0]=IKcos(j1array[0]);
+                                                                                                    if( j1array[0] > IKPI )
+                                                                                                        j1array[0]-=IK2PI;
+                                                                                                    else if( j1array[0] < -IKPI )
+                                                                                                        j1array[0]+=IK2PI;
+                                                                                                    j1valid[0] = true;
+                                                                                                    for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                    {
+                                                                                                    if( !j1valid[ij1] ) { continue; }
+                                                                                                    j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                    
+                                                                                                    rotationfunction0(vsolutions);
+                                                                                                    }
+                                                                                                    }
+                                                                                                
+                                                                                                }
+                                                                                            
+                                                                                            }
+                                                                                        
+                                                                                        } else
+                                                                                        {
+                                                                                        }
+                                                                                        }
+                                                                                    
+                                                                                    } else
+                                                                                    {
+                                                                                        {
+                                                                                        IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                        bool j1valid[1]={false};
+                                                                                        j1array[0]=IKatan2(((py)*(pz)*(((IKabs(((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3))))) != 0)?((IKReal)1/(((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3)))))):(IKReal)1.0e30))), ((pz)*(((IKabs(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))))) != 0)?((IKReal)1/(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3)))))):(IKReal)1.0e30))));
+                                                                                        sj1array[0]=IKsin(j1array[0]);
+                                                                                        cj1array[0]=IKcos(j1array[0]);
+                                                                                        if( j1array[0] > IKPI )
+                                                                                            j1array[0]-=IK2PI;
+                                                                                        else if( j1array[0] < -IKPI )
+                                                                                            j1array[0]+=IK2PI;
+                                                                                        j1valid[0] = true;
+                                                                                        for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                        {
+                                                                                        if( !j1valid[ij1] ) { continue; }
+                                                                                        j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                        
+                                                                                        rotationfunction0(vsolutions);
+                                                                                        }
+                                                                                        }
+                                                                                    
+                                                                                    }
+                                                                                
+                                                                                }
+                                                                            
+                                                                            } else
+                                                                            {
+                                                                                IKReal x216=x179;
+                                                                                IKReal x217=x181;
+                                                                                IKReal x218=((-0.0450000000000000)+(x217));
+                                                                                IKReal x219=((x216)+(px));
+                                                                                IKReal x220=((x218)+(((-1.00000000000000)*(x219))));
+                                                                                evalcond[0]=((IKabs(py))+(IKabs(((IKfmod(((((1.50000000000000)*(3.14159265358979)))+(j0)), ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979)))))));
+                                                                                evalcond[1]=((0.396550000000000)+(((0.0765000000000000)*(sj3)))+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz))))+(((0.325950000000000)*(cj3))));
+                                                                                evalcond[2]=x220;
+                                                                                evalcond[3]=((0.0450000000000000)+(x219)+(((-1.00000000000000)*(x217))));
+                                                                                evalcond[4]=x220;
+                                                                                if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  && IKabs(evalcond[4]) < 0.000010  )
+                                                                                {
+                                                                                {
+                                                                                    IKReal j1eval[2];
+                                                                                    j1eval[0]=((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))));
+                                                                                    j1eval[1]=((((0.550000000000000)*(py)))+(((0.0450000000000000)*(py)*(sj3)))+(((0.300000000000000)*(cj3)*(py))));
+                                                                                    if( IKabs(j1eval[0]) < 0.000001  || IKabs(j1eval[1]) < 0.000001  )
+                                                                                    {
+                                                                                        {
+                                                                                        IKReal evalcond[4];
+                                                                                            evalcond[0]=((IKabs(((((-1.00000000000000)*(3.14159265358979)))+(IKfmod(((3.14159265358979)+(j3)), ((2.00000000000000)*(3.14159265358979)))))))+(IKabs(py)));
+                                                                                            evalcond[1]=((0.722500000000000)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                            evalcond[2]=((-1.00000000000000)*(px));
+                                                                                            evalcond[3]=px;
+                                                                                            if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  )
+                                                                                            {
+                                                                                            {
+                                                                                            IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                            bool j1valid[1]={false};
+                                                                                            j1array[0]=IKatan2(((-1.17647058823529)*(py)), ((1.17647058823529)*(pz)));
+                                                                                            sj1array[0]=IKsin(j1array[0]);
+                                                                                            cj1array[0]=IKcos(j1array[0]);
+                                                                                            if( j1array[0] > IKPI )
+                                                                                                j1array[0]-=IK2PI;
+                                                                                            else if( j1array[0] < -IKPI )
+                                                                                                j1array[0]+=IK2PI;
+                                                                                            j1valid[0] = true;
+                                                                                            for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                            {
+                                                                                            if( !j1valid[ij1] ) { continue; }
+                                                                                            j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                            
+                                                                                            rotationfunction0(vsolutions);
+                                                                                            }
+                                                                                            }
+                                                                                        
+                                                                                        } else
+                                                                                        {
+                                                                                            evalcond[0]=((IKabs(((IKfmod(((((0.500000000000000)*(3.14159265358979)))+(j3)), ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))))))+(IKabs(py)));
+                                                                                            evalcond[1]=((0.473050000000000)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                            evalcond[2]=((-0.345000000000000)+(((-1.00000000000000)*(px))));
+                                                                                            evalcond[3]=((0.345000000000000)+(px));
+                                                                                            if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  )
+                                                                                            {
+                                                                                            {
+                                                                                            IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                            bool j1valid[1]={false};
+                                                                                            j1array[0]=IKatan2(((-1.68067226890756)*(py)), ((1.68067226890756)*(pz)));
+                                                                                            sj1array[0]=IKsin(j1array[0]);
+                                                                                            cj1array[0]=IKcos(j1array[0]);
+                                                                                            if( j1array[0] > IKPI )
+                                                                                                j1array[0]-=IK2PI;
+                                                                                            else if( j1array[0] < -IKPI )
+                                                                                                j1array[0]+=IK2PI;
+                                                                                            j1valid[0] = true;
+                                                                                            for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                            {
+                                                                                            if( !j1valid[ij1] ) { continue; }
+                                                                                            j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                            
+                                                                                            rotationfunction0(vsolutions);
+                                                                                            }
+                                                                                            }
+                                                                                        
+                                                                                        } else
+                                                                                        {
+                                                                                            evalcond[0]=((IKabs(((IKfmod(j3, ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))))))+(IKabs(py)));
+                                                                                            evalcond[1]=((0.0706000000000001)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                            evalcond[2]=((-0.0900000000000000)+(((-1.00000000000000)*(px))));
+                                                                                            evalcond[3]=((0.0900000000000000)+(px));
+                                                                                            if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  )
+                                                                                            {
+                                                                                            {
+                                                                                            IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                            bool j1valid[1]={false};
+                                                                                            j1array[0]=IKatan2(((-4.00000000000000)*(py)), ((4.00000000000000)*(pz)));
+                                                                                            sj1array[0]=IKsin(j1array[0]);
+                                                                                            cj1array[0]=IKcos(j1array[0]);
+                                                                                            if( j1array[0] > IKPI )
+                                                                                                j1array[0]-=IK2PI;
+                                                                                            else if( j1array[0] < -IKPI )
+                                                                                                j1array[0]+=IK2PI;
+                                                                                            j1valid[0] = true;
+                                                                                            for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                            {
+                                                                                            if( !j1valid[ij1] ) { continue; }
+                                                                                            j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                            
+                                                                                            rotationfunction0(vsolutions);
+                                                                                            }
+                                                                                            }
+                                                                                        
+                                                                                        } else
+                                                                                        {
+                                                                                            evalcond[0]=((IKabs(((IKfmod(((((1.50000000000000)*(3.14159265358979)))+(j3)), ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))))))+(IKabs(py)));
+                                                                                            evalcond[1]=((0.320050000000000)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                            evalcond[2]=((0.255000000000000)+(((-1.00000000000000)*(px))));
+                                                                                            evalcond[3]=((-0.255000000000000)+(px));
+                                                                                            if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  )
+                                                                                            {
+                                                                                            {
+                                                                                            IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                            bool j1valid[1]={false};
+                                                                                            j1array[0]=IKatan2(((-1.98019801980198)*(py)), ((1.98019801980198)*(pz)));
+                                                                                            sj1array[0]=IKsin(j1array[0]);
+                                                                                            cj1array[0]=IKcos(j1array[0]);
+                                                                                            if( j1array[0] > IKPI )
+                                                                                                j1array[0]-=IK2PI;
+                                                                                            else if( j1array[0] < -IKPI )
+                                                                                                j1array[0]+=IK2PI;
+                                                                                            j1valid[0] = true;
+                                                                                            for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                            {
+                                                                                            if( !j1valid[ij1] ) { continue; }
+                                                                                            j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                            
+                                                                                            rotationfunction0(vsolutions);
+                                                                                            }
+                                                                                            }
+                                                                                        
+                                                                                        } else
+                                                                                        {
+                                                                                            if( 1 )
+                                                                                            {
+                                                                                            {
+                                                                                                IKReal j1eval[2];
+                                                                                                j1eval[0]=((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3))));
+                                                                                                j1eval[1]=((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))));
+                                                                                                if( IKabs(j1eval[0]) < 0.000001  || IKabs(j1eval[1]) < 0.000001  )
+                                                                                                {
+                                                                                                    {
+                                                                                                        if( 1 )
+                                                                                                        {
+                                                                                                        {
+                                                                                                            IKReal j1eval[1];
+                                                                                                            j1eval[0]=((((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                                            if( IKabs(j1eval[0]) < 0.000001  )
+                                                                                                            {
+                                                                                                                {
+                                                                                                                    if( 1 )
+                                                                                                                    {
+                                                                                                                    continue;
+                                                                                                                
+                                                                                                                } else
+                                                                                                                {
+                                                                                                                }
+                                                                                                                }
+                                                                                                            
+                                                                                                            } else
+                                                                                                            {
+                                                                                                                {
+                                                                                                                IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                                bool j1valid[1]={false};
+                                                                                                                IKReal x221=x2;
+                                                                                                                IKReal x222=x0;
+                                                                                                                IKReal x223=((x221)+(x222));
+                                                                                                                IKReal x224=((0.0450000000000000)*(sj3));
+                                                                                                                IKReal x225=((0.300000000000000)*(cj3));
+                                                                                                                IKReal x226=((0.550000000000000)+(x225)+(x224));
+                                                                                                                j1array[0]=IKatan2(((-1.00000000000000)*(py)*(x226)*(((IKabs(x223) != 0)?((IKReal)1/(x223)):(IKReal)1.0e30))), ((pz)*(x226)*(((IKabs(x223) != 0)?((IKReal)1/(x223)):(IKReal)1.0e30))));
+                                                                                                                sj1array[0]=IKsin(j1array[0]);
+                                                                                                                cj1array[0]=IKcos(j1array[0]);
+                                                                                                                if( j1array[0] > IKPI )
+                                                                                                                    j1array[0]-=IK2PI;
+                                                                                                                else if( j1array[0] < -IKPI )
+                                                                                                                    j1array[0]+=IK2PI;
+                                                                                                                j1valid[0] = true;
+                                                                                                                for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                                {
+                                                                                                                if( !j1valid[ij1] ) { continue; }
+                                                                                                                j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                                
+                                                                                                                rotationfunction0(vsolutions);
+                                                                                                                }
+                                                                                                                }
+                                                                                                            
+                                                                                                            }
+                                                                                                        
+                                                                                                        }
+                                                                                                    
+                                                                                                    } else
+                                                                                                    {
+                                                                                                    }
+                                                                                                    }
+                                                                                                
+                                                                                                } else
+                                                                                                {
+                                                                                                    {
+                                                                                                    IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                    bool j1valid[1]={false};
+                                                                                                    j1array[0]=IKatan2(((-1.00000000000000)*(py)*(pz)*(((IKabs(((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3))))) != 0)?((IKReal)1/(((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3)))))):(IKReal)1.0e30))), ((pz)*(((IKabs(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))))) != 0)?((IKReal)1/(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3)))))):(IKReal)1.0e30))));
+                                                                                                    sj1array[0]=IKsin(j1array[0]);
+                                                                                                    cj1array[0]=IKcos(j1array[0]);
+                                                                                                    if( j1array[0] > IKPI )
+                                                                                                        j1array[0]-=IK2PI;
+                                                                                                    else if( j1array[0] < -IKPI )
+                                                                                                        j1array[0]+=IK2PI;
+                                                                                                    j1valid[0] = true;
+                                                                                                    for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                    {
+                                                                                                    if( !j1valid[ij1] ) { continue; }
+                                                                                                    j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                    
+                                                                                                    rotationfunction0(vsolutions);
+                                                                                                    }
+                                                                                                    }
+                                                                                                
+                                                                                                }
+                                                                                            
+                                                                                            }
+                                                                                        
+                                                                                        } else
+                                                                                        {
+                                                                                        }
+                                                                                        }
+                                                                                        }
+                                                                                        }
+                                                                                        }
+                                                                                        }
+                                                                                    
+                                                                                    } else
+                                                                                    {
+                                                                                        {
+                                                                                        IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                        bool j1valid[1]={false};
+                                                                                        j1array[0]=IKatan2(((-1.00000000000000)*(py)*(((IKabs(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))))) != 0)?((IKReal)1/(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3)))))):(IKReal)1.0e30))), ((py)*(pz)*(((IKabs(((((0.550000000000000)*(py)))+(((0.0450000000000000)*(py)*(sj3)))+(((0.300000000000000)*(cj3)*(py))))) != 0)?((IKReal)1/(((((0.550000000000000)*(py)))+(((0.0450000000000000)*(py)*(sj3)))+(((0.300000000000000)*(cj3)*(py)))))):(IKReal)1.0e30))));
+                                                                                        sj1array[0]=IKsin(j1array[0]);
+                                                                                        cj1array[0]=IKcos(j1array[0]);
+                                                                                        if( j1array[0] > IKPI )
+                                                                                            j1array[0]-=IK2PI;
+                                                                                        else if( j1array[0] < -IKPI )
+                                                                                            j1array[0]+=IK2PI;
+                                                                                        j1valid[0] = true;
+                                                                                        for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                        {
+                                                                                        if( !j1valid[ij1] ) { continue; }
+                                                                                        j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                        
+                                                                                        rotationfunction0(vsolutions);
+                                                                                        }
+                                                                                        }
+                                                                                    
+                                                                                    }
+                                                                                
+                                                                                }
+                                                                            
+                                                                            } else
+                                                                            {
+                                                                                if( 1 )
+                                                                                {
+                                                                                continue;
+                                                                            
+                                                                            } else
+                                                                            {
+                                                                            }
+                                                                            }
+                                                                            }
+                                                                            }
+                                                                            }
+                                                                            }
+                                                                        
+                                                                        } else
+                                                                        {
+                                                                            {
+                                                                            IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                            bool j1valid[1]={false};
+                                                                            IKReal x227=((cj0)*(px));
+                                                                            IKReal x228=((py)*(sj0));
+                                                                            IKReal x229=((x228)+(x227));
+                                                                            j1array[0]=IKatan2(((x229)*(((IKabs(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))))) != 0)?((IKReal)1/(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3)))))):(IKReal)1.0e30))), ((-1.00000000000000)*(pz)*(x229)*(((IKabs(((((-0.0450000000000000)*(sj3)*(x228)))+(((-0.0450000000000000)*(sj3)*(x227)))+(((-0.550000000000000)*(x228)))+(((-0.550000000000000)*(x227)))+(((-0.300000000000000)*(cj3)*(x227)))+(((-0.300000000000000)*(cj3)*(x228))))) != 0)?((IKReal)1/(((((-0.0450000000000000)*(sj3)*(x228)))+(((-0.0450000000000000)*(sj3)*(x227)))+(((-0.550000000000000)*(x228)))+(((-0.550000000000000)*(x227)))+(((-0.300000000000000)*(cj3)*(x227)))+(((-0.300000000000000)*(cj3)*(x228)))))):(IKReal)1.0e30))));
+                                                                            sj1array[0]=IKsin(j1array[0]);
+                                                                            cj1array[0]=IKcos(j1array[0]);
+                                                                            if( j1array[0] > IKPI )
+                                                                                j1array[0]-=IK2PI;
+                                                                            else if( j1array[0] < -IKPI )
+                                                                                j1array[0]+=IK2PI;
+                                                                            j1valid[0] = true;
+                                                                            for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                            {
+                                                                            if( !j1valid[ij1] ) { continue; }
+                                                                            j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                            
+                                                                            rotationfunction0(vsolutions);
+                                                                            }
+                                                                            }
+                                                                        
+                                                                        }
+                                                                    
+                                                                    }
+                                                                
+                                                                } else
+                                                                {
+                                                                }
+                                                                }
+                                                            
+                                                            } else
+                                                            {
+                                                                {
+                                                                IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                bool j1valid[1]={false};
+                                                                j1array[0]=IKatan2(((-1.00000000000000)*(pz)*(((IKabs(((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3))))) != 0)?((IKReal)1/(((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3)))))):(IKReal)1.0e30))*(((((-1.00000000000000)*(py)*(sj0)))+(((-1.00000000000000)*(cj0)*(px)))))), ((pz)*(((IKabs(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))))) != 0)?((IKReal)1/(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3)))))):(IKReal)1.0e30))));
+                                                                sj1array[0]=IKsin(j1array[0]);
+                                                                cj1array[0]=IKcos(j1array[0]);
+                                                                if( j1array[0] > IKPI )
+                                                                    j1array[0]-=IK2PI;
+                                                                else if( j1array[0] < -IKPI )
+                                                                    j1array[0]+=IK2PI;
+                                                                j1valid[0] = true;
+                                                                for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                {
+                                                                if( !j1valid[ij1] ) { continue; }
+                                                                j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                
+                                                                rotationfunction0(vsolutions);
+                                                                }
+                                                                }
+                                                            
+                                                            }
+                                                        
+                                                        }
+                                                    
+                                                    } else
+                                                    {
+                                                    }
+                                                    }
+                                                
+                                                } else
+                                                {
+                                                    {
+                                                    IKReal j1array[1], cj1array[1], sj1array[1];
+                                                    bool j1valid[1]={false};
+                                                    IKReal x230=((0.0450000000000000)*(sj3));
+                                                    IKReal x231=((0.300000000000000)*(cj3));
+                                                    IKReal x232=((0.550000000000000)+(x230)+(x231));
+                                                    IKReal x233=((IKabs(x232) != 0)?((IKReal)1/(x232)):(IKReal)1.0e30);
+                                                    j1array[0]=IKatan2(((x233)*(((((cj0)*(px)))+(((py)*(sj0)))))), ((pz)*(x233)));
+                                                    sj1array[0]=IKsin(j1array[0]);
+                                                    cj1array[0]=IKcos(j1array[0]);
+                                                    if( j1array[0] > IKPI )
+                                                        j1array[0]-=IK2PI;
+                                                    else if( j1array[0] < -IKPI )
+                                                        j1array[0]+=IK2PI;
+                                                    j1valid[0] = true;
+                                                    for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                    {
+                                                    if( !j1valid[ij1] ) { continue; }
+                                                    j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                    
+                                                    rotationfunction0(vsolutions);
+                                                    }
+                                                    }
+                                                
+                                                }
+                                            
+                                            }
+                                        
+                                        } else
+                                        {
+                                            IKReal x234=((0.300000000000000)*(sj3));
+                                            IKReal x235=((px)*(sj0));
+                                            IKReal x236=((0.0450000000000000)+(x234)+(x235));
+                                            IKReal x237=((0.0450000000000000)*(cj3));
+                                            IKReal x238=((cj0)*(py));
+                                            IKReal x239=((x238)+(x237));
+                                            IKReal x240=((((-1.00000000000000)*(x239)))+(x236));
+                                            evalcond[0]=((((-1.00000000000000)*(3.14159265358979)))+(IKfmod(((1.57079632679490)+(3.14159265358979)+(j2)), ((2.00000000000000)*(3.14159265358979)))));
+                                            evalcond[1]=((0.396550000000000)+(((0.0765000000000000)*(sj3)))+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz))))+(((0.325950000000000)*(cj3))));
+                                            evalcond[2]=x240;
+                                            evalcond[3]=x240;
+                                            if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  )
+                                            {
+                                            {
+                                                IKReal j1eval[1];
+                                                j1eval[0]=((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))));
+                                                if( IKabs(j1eval[0]) < 0.000001  )
+                                                {
+                                                    {
+                                                        if( 1 )
+                                                        {
+                                                        {
+                                                            IKReal j1eval[2];
+                                                            j1eval[0]=((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3))));
+                                                            j1eval[1]=((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))));
+                                                            if( IKabs(j1eval[0]) < 0.000001  || IKabs(j1eval[1]) < 0.000001  )
+                                                            {
+                                                                {
+                                                                    if( 1 )
+                                                                    {
+                                                                    {
+                                                                        IKReal j1eval[2];
+                                                                        j1eval[0]=((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))));
+                                                                        j1eval[1]=((((-0.300000000000000)*(cj3)*(py)*(sj0)))+(((-0.300000000000000)*(cj0)*(cj3)*(px)))+(((-0.0450000000000000)*(cj0)*(px)*(sj3)))+(((-0.550000000000000)*(cj0)*(px)))+(((-0.550000000000000)*(py)*(sj0)))+(((-0.0450000000000000)*(py)*(sj0)*(sj3))));
+                                                                        if( IKabs(j1eval[0]) < 0.000001  || IKabs(j1eval[1]) < 0.000001  )
+                                                                        {
+                                                                            {
+                                                                            IKReal evalcond[5];
+                                                                                IKReal x241=x234;
+                                                                                IKReal x242=((0.0450000000000000)+(x241));
+                                                                                IKReal x243=x237;
+                                                                                IKReal x244=((x243)+(py));
+                                                                                IKReal x245=((x242)+(((-1.00000000000000)*(x244))));
+                                                                                evalcond[0]=((IKabs(px))+(IKabs(((IKfmod(((3.14159265358979)+(j0)), ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979)))))));
+                                                                                evalcond[1]=((0.396550000000000)+(((0.0765000000000000)*(sj3)))+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz))))+(((0.325950000000000)*(cj3))));
+                                                                                evalcond[2]=x245;
+                                                                                evalcond[3]=x245;
+                                                                                evalcond[4]=x245;
+                                                                                if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  && IKabs(evalcond[4]) < 0.000010  )
+                                                                                {
+                                                                                {
+                                                                                    IKReal j1eval[2];
+                                                                                    j1eval[0]=((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3))));
+                                                                                    j1eval[1]=((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))));
+                                                                                    if( IKabs(j1eval[0]) < 0.000001  || IKabs(j1eval[1]) < 0.000001  )
+                                                                                    {
+                                                                                        {
+                                                                                            if( 1 )
+                                                                                            {
+                                                                                            {
+                                                                                                IKReal j1eval[2];
+                                                                                                j1eval[0]=((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))));
+                                                                                                j1eval[1]=((((-0.300000000000000)*(cj3)*(px)))+(((-0.0450000000000000)*(px)*(sj3)))+(((-0.550000000000000)*(px))));
+                                                                                                if( IKabs(j1eval[0]) < 0.000001  || IKabs(j1eval[1]) < 0.000001  )
+                                                                                                {
+                                                                                                    {
+                                                                                                    IKReal evalcond[6];
+                                                                                                        IKReal x246=x21;
+                                                                                                        evalcond[0]=((IKabs(((((-1.00000000000000)*(3.14159265358979)))+(IKfmod(((3.14159265358979)+(j3)), ((2.00000000000000)*(3.14159265358979)))))))+(IKabs(px)));
+                                                                                                        evalcond[1]=((0.722500000000000)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                                        evalcond[2]=x246;
+                                                                                                        evalcond[3]=x246;
+                                                                                                        evalcond[4]=x246;
+                                                                                                        evalcond[5]=x246;
+                                                                                                        if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  && IKabs(evalcond[4]) < 0.000010  && IKabs(evalcond[5]) < 0.000010  )
+                                                                                                        {
+                                                                                                        {
+                                                                                                        IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                        bool j1valid[1]={false};
+                                                                                                        j1array[0]=IKatan2(((1.17647058823529)*(px)), ((1.17647058823529)*(pz)));
+                                                                                                        sj1array[0]=IKsin(j1array[0]);
+                                                                                                        cj1array[0]=IKcos(j1array[0]);
+                                                                                                        if( j1array[0] > IKPI )
+                                                                                                            j1array[0]-=IK2PI;
+                                                                                                        else if( j1array[0] < -IKPI )
+                                                                                                            j1array[0]+=IK2PI;
+                                                                                                        j1valid[0] = true;
+                                                                                                        for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                        {
+                                                                                                        if( !j1valid[ij1] ) { continue; }
+                                                                                                        j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                        
+                                                                                                        rotationfunction0(vsolutions);
+                                                                                                        }
+                                                                                                        }
+                                                                                                    
+                                                                                                    } else
+                                                                                                    {
+                                                                                                        IKReal x247=((0.345000000000000)+(((-1.00000000000000)*(py))));
+                                                                                                        evalcond[0]=((IKabs(((IKfmod(((((0.500000000000000)*(3.14159265358979)))+(j3)), ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))))))+(IKabs(px)));
+                                                                                                        evalcond[1]=((0.473050000000000)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                                        evalcond[2]=x247;
+                                                                                                        evalcond[3]=x247;
+                                                                                                        evalcond[4]=x247;
+                                                                                                        evalcond[5]=x247;
+                                                                                                        if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  && IKabs(evalcond[4]) < 0.000010  && IKabs(evalcond[5]) < 0.000010  )
+                                                                                                        {
+                                                                                                        {
+                                                                                                        IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                        bool j1valid[1]={false};
+                                                                                                        j1array[0]=IKatan2(((1.68067226890756)*(px)), ((1.68067226890756)*(pz)));
+                                                                                                        sj1array[0]=IKsin(j1array[0]);
+                                                                                                        cj1array[0]=IKcos(j1array[0]);
+                                                                                                        if( j1array[0] > IKPI )
+                                                                                                            j1array[0]-=IK2PI;
+                                                                                                        else if( j1array[0] < -IKPI )
+                                                                                                            j1array[0]+=IK2PI;
+                                                                                                        j1valid[0] = true;
+                                                                                                        for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                        {
+                                                                                                        if( !j1valid[ij1] ) { continue; }
+                                                                                                        j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                        
+                                                                                                        rotationfunction0(vsolutions);
+                                                                                                        }
+                                                                                                        }
+                                                                                                    
+                                                                                                    } else
+                                                                                                    {
+                                                                                                        IKReal x248=((0.0900000000000000)+(((-1.00000000000000)*(py))));
+                                                                                                        evalcond[0]=((IKabs(((IKfmod(j3, ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))))))+(IKabs(px)));
+                                                                                                        evalcond[1]=((0.0706000000000001)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                                        evalcond[2]=x248;
+                                                                                                        evalcond[3]=x248;
+                                                                                                        evalcond[4]=x248;
+                                                                                                        evalcond[5]=((-0.0900000000000000)+(py));
+                                                                                                        if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  && IKabs(evalcond[4]) < 0.000010  && IKabs(evalcond[5]) < 0.000010  )
+                                                                                                        {
+                                                                                                        {
+                                                                                                        IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                        bool j1valid[1]={false};
+                                                                                                        j1array[0]=IKatan2(((4.00000000000000)*(px)), ((4.00000000000000)*(pz)));
+                                                                                                        sj1array[0]=IKsin(j1array[0]);
+                                                                                                        cj1array[0]=IKcos(j1array[0]);
+                                                                                                        if( j1array[0] > IKPI )
+                                                                                                            j1array[0]-=IK2PI;
+                                                                                                        else if( j1array[0] < -IKPI )
+                                                                                                            j1array[0]+=IK2PI;
+                                                                                                        j1valid[0] = true;
+                                                                                                        for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                        {
+                                                                                                        if( !j1valid[ij1] ) { continue; }
+                                                                                                        j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                        
+                                                                                                        rotationfunction0(vsolutions);
+                                                                                                        }
+                                                                                                        }
+                                                                                                    
+                                                                                                    } else
+                                                                                                    {
+                                                                                                        IKReal x249=((-0.255000000000000)+(((-1.00000000000000)*(py))));
+                                                                                                        evalcond[0]=((IKabs(((IKfmod(((((1.50000000000000)*(3.14159265358979)))+(j3)), ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))))))+(IKabs(px)));
+                                                                                                        evalcond[1]=((0.320050000000000)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                                        evalcond[2]=x249;
+                                                                                                        evalcond[3]=x249;
+                                                                                                        evalcond[4]=x249;
+                                                                                                        evalcond[5]=((0.255000000000000)+(py));
+                                                                                                        if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  && IKabs(evalcond[4]) < 0.000010  && IKabs(evalcond[5]) < 0.000010  )
+                                                                                                        {
+                                                                                                        {
+                                                                                                        IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                        bool j1valid[1]={false};
+                                                                                                        j1array[0]=IKatan2(((1.98019801980198)*(px)), ((1.98019801980198)*(pz)));
+                                                                                                        sj1array[0]=IKsin(j1array[0]);
+                                                                                                        cj1array[0]=IKcos(j1array[0]);
+                                                                                                        if( j1array[0] > IKPI )
+                                                                                                            j1array[0]-=IK2PI;
+                                                                                                        else if( j1array[0] < -IKPI )
+                                                                                                            j1array[0]+=IK2PI;
+                                                                                                        j1valid[0] = true;
+                                                                                                        for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                        {
+                                                                                                        if( !j1valid[ij1] ) { continue; }
+                                                                                                        j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                        
+                                                                                                        rotationfunction0(vsolutions);
+                                                                                                        }
+                                                                                                        }
+                                                                                                    
+                                                                                                    } else
+                                                                                                    {
+                                                                                                        if( 1 )
+                                                                                                        {
+                                                                                                        {
+                                                                                                            IKReal j1eval[1];
+                                                                                                            j1eval[0]=((((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                                            if( IKabs(j1eval[0]) < 0.000001  )
+                                                                                                            {
+                                                                                                                {
+                                                                                                                    if( 1 )
+                                                                                                                    {
+                                                                                                                    continue;
+                                                                                                                
+                                                                                                                } else
+                                                                                                                {
+                                                                                                                }
+                                                                                                                }
+                                                                                                            
+                                                                                                            } else
+                                                                                                            {
+                                                                                                                {
+                                                                                                                IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                                bool j1valid[1]={false};
+                                                                                                                IKReal x250=x4;
+                                                                                                                IKReal x251=x0;
+                                                                                                                IKReal x252=((x250)+(x251));
+                                                                                                                IKReal x253=((0.0450000000000000)*(sj3));
+                                                                                                                IKReal x254=((0.300000000000000)*(cj3));
+                                                                                                                IKReal x255=((0.550000000000000)+(x254)+(x253));
+                                                                                                                j1array[0]=IKatan2(((px)*(x255)*(((IKabs(x252) != 0)?((IKReal)1/(x252)):(IKReal)1.0e30))), ((pz)*(x255)*(((IKabs(x252) != 0)?((IKReal)1/(x252)):(IKReal)1.0e30))));
+                                                                                                                sj1array[0]=IKsin(j1array[0]);
+                                                                                                                cj1array[0]=IKcos(j1array[0]);
+                                                                                                                if( j1array[0] > IKPI )
+                                                                                                                    j1array[0]-=IK2PI;
+                                                                                                                else if( j1array[0] < -IKPI )
+                                                                                                                    j1array[0]+=IK2PI;
+                                                                                                                j1valid[0] = true;
+                                                                                                                for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                                {
+                                                                                                                if( !j1valid[ij1] ) { continue; }
+                                                                                                                j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                                
+                                                                                                                rotationfunction0(vsolutions);
+                                                                                                                }
+                                                                                                                }
+                                                                                                            
+                                                                                                            }
+                                                                                                        
+                                                                                                        }
+                                                                                                    
+                                                                                                    } else
+                                                                                                    {
+                                                                                                    }
+                                                                                                    }
+                                                                                                    }
+                                                                                                    }
+                                                                                                    }
+                                                                                                    }
+                                                                                                
+                                                                                                } else
+                                                                                                {
+                                                                                                    {
+                                                                                                    IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                    bool j1valid[1]={false};
+                                                                                                    j1array[0]=IKatan2(((px)*(((IKabs(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))))) != 0)?((IKReal)1/(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3)))))):(IKReal)1.0e30))), ((-1.00000000000000)*(px)*(pz)*(((IKabs(((((-0.300000000000000)*(cj3)*(px)))+(((-0.0450000000000000)*(px)*(sj3)))+(((-0.550000000000000)*(px))))) != 0)?((IKReal)1/(((((-0.300000000000000)*(cj3)*(px)))+(((-0.0450000000000000)*(px)*(sj3)))+(((-0.550000000000000)*(px)))))):(IKReal)1.0e30))));
+                                                                                                    sj1array[0]=IKsin(j1array[0]);
+                                                                                                    cj1array[0]=IKcos(j1array[0]);
+                                                                                                    if( j1array[0] > IKPI )
+                                                                                                        j1array[0]-=IK2PI;
+                                                                                                    else if( j1array[0] < -IKPI )
+                                                                                                        j1array[0]+=IK2PI;
+                                                                                                    j1valid[0] = true;
+                                                                                                    for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                    {
+                                                                                                    if( !j1valid[ij1] ) { continue; }
+                                                                                                    j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                    
+                                                                                                    rotationfunction0(vsolutions);
+                                                                                                    }
+                                                                                                    }
+                                                                                                
+                                                                                                }
+                                                                                            
+                                                                                            }
+                                                                                        
+                                                                                        } else
+                                                                                        {
+                                                                                        }
+                                                                                        }
+                                                                                    
+                                                                                    } else
+                                                                                    {
+                                                                                        {
+                                                                                        IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                        bool j1valid[1]={false};
+                                                                                        j1array[0]=IKatan2(((px)*(pz)*(((IKabs(((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3))))) != 0)?((IKReal)1/(((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3)))))):(IKReal)1.0e30))), ((pz)*(((IKabs(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))))) != 0)?((IKReal)1/(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3)))))):(IKReal)1.0e30))));
+                                                                                        sj1array[0]=IKsin(j1array[0]);
+                                                                                        cj1array[0]=IKcos(j1array[0]);
+                                                                                        if( j1array[0] > IKPI )
+                                                                                            j1array[0]-=IK2PI;
+                                                                                        else if( j1array[0] < -IKPI )
+                                                                                            j1array[0]+=IK2PI;
+                                                                                        j1valid[0] = true;
+                                                                                        for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                        {
+                                                                                        if( !j1valid[ij1] ) { continue; }
+                                                                                        j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                        
+                                                                                        rotationfunction0(vsolutions);
+                                                                                        }
+                                                                                        }
+                                                                                    
+                                                                                    }
+                                                                                
+                                                                                }
+                                                                            
+                                                                            } else
+                                                                            {
+                                                                                IKReal x256=x234;
+                                                                                IKReal x257=((0.0450000000000000)+(x256)+(py));
+                                                                                IKReal x258=x237;
+                                                                                IKReal x259=((x257)+(((-1.00000000000000)*(x258))));
+                                                                                evalcond[0]=((IKabs(px))+(IKabs(((IKfmod(j0, ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979)))))));
+                                                                                evalcond[1]=((0.396550000000000)+(((0.0765000000000000)*(sj3)))+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz))))+(((0.325950000000000)*(cj3))));
+                                                                                evalcond[2]=x259;
+                                                                                evalcond[3]=x259;
+                                                                                evalcond[4]=((x258)+(((-1.00000000000000)*(x257))));
+                                                                                if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  && IKabs(evalcond[4]) < 0.000010  )
+                                                                                {
+                                                                                {
+                                                                                    IKReal j1eval[2];
+                                                                                    j1eval[0]=((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))));
+                                                                                    j1eval[1]=((((0.550000000000000)*(px)))+(((0.0450000000000000)*(px)*(sj3)))+(((0.300000000000000)*(cj3)*(px))));
+                                                                                    if( IKabs(j1eval[0]) < 0.000001  || IKabs(j1eval[1]) < 0.000001  )
+                                                                                    {
+                                                                                        {
+                                                                                        IKReal evalcond[5];
+                                                                                            evalcond[0]=((IKabs(((((-1.00000000000000)*(3.14159265358979)))+(IKfmod(((3.14159265358979)+(j3)), ((2.00000000000000)*(3.14159265358979)))))))+(IKabs(px)));
+                                                                                            evalcond[1]=((0.722500000000000)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                            evalcond[2]=py;
+                                                                                            evalcond[3]=py;
+                                                                                            evalcond[4]=((-1.00000000000000)*(py));
+                                                                                            if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  && IKabs(evalcond[4]) < 0.000010  )
+                                                                                            {
+                                                                                            {
+                                                                                            IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                            bool j1valid[1]={false};
+                                                                                            j1array[0]=IKatan2(((-1.17647058823529)*(px)), ((1.17647058823529)*(pz)));
+                                                                                            sj1array[0]=IKsin(j1array[0]);
+                                                                                            cj1array[0]=IKcos(j1array[0]);
+                                                                                            if( j1array[0] > IKPI )
+                                                                                                j1array[0]-=IK2PI;
+                                                                                            else if( j1array[0] < -IKPI )
+                                                                                                j1array[0]+=IK2PI;
+                                                                                            j1valid[0] = true;
+                                                                                            for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                            {
+                                                                                            if( !j1valid[ij1] ) { continue; }
+                                                                                            j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                            
+                                                                                            rotationfunction0(vsolutions);
+                                                                                            }
+                                                                                            }
+                                                                                        
+                                                                                        } else
+                                                                                        {
+                                                                                            IKReal x260=((0.345000000000000)+(py));
+                                                                                            evalcond[0]=((IKabs(((IKfmod(((((0.500000000000000)*(3.14159265358979)))+(j3)), ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))))))+(IKabs(px)));
+                                                                                            evalcond[1]=((0.473050000000000)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                            evalcond[2]=x260;
+                                                                                            evalcond[3]=x260;
+                                                                                            evalcond[4]=((-0.345000000000000)+(((-1.00000000000000)*(py))));
+                                                                                            if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  && IKabs(evalcond[4]) < 0.000010  )
+                                                                                            {
+                                                                                            {
+                                                                                            IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                            bool j1valid[1]={false};
+                                                                                            j1array[0]=IKatan2(((-1.68067226890756)*(px)), ((1.68067226890756)*(pz)));
+                                                                                            sj1array[0]=IKsin(j1array[0]);
+                                                                                            cj1array[0]=IKcos(j1array[0]);
+                                                                                            if( j1array[0] > IKPI )
+                                                                                                j1array[0]-=IK2PI;
+                                                                                            else if( j1array[0] < -IKPI )
+                                                                                                j1array[0]+=IK2PI;
+                                                                                            j1valid[0] = true;
+                                                                                            for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                            {
+                                                                                            if( !j1valid[ij1] ) { continue; }
+                                                                                            j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                            
+                                                                                            rotationfunction0(vsolutions);
+                                                                                            }
+                                                                                            }
+                                                                                        
+                                                                                        } else
+                                                                                        {
+                                                                                            IKReal x261=((0.0900000000000000)+(py));
+                                                                                            evalcond[0]=((IKabs(((IKfmod(j3, ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))))))+(IKabs(px)));
+                                                                                            evalcond[1]=((0.0706000000000001)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                            evalcond[2]=x261;
+                                                                                            evalcond[3]=x261;
+                                                                                            evalcond[4]=((-0.0900000000000000)+(((-1.00000000000000)*(py))));
+                                                                                            if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  && IKabs(evalcond[4]) < 0.000010  )
+                                                                                            {
+                                                                                            {
+                                                                                            IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                            bool j1valid[1]={false};
+                                                                                            j1array[0]=IKatan2(((-4.00000000000000)*(px)), ((4.00000000000000)*(pz)));
+                                                                                            sj1array[0]=IKsin(j1array[0]);
+                                                                                            cj1array[0]=IKcos(j1array[0]);
+                                                                                            if( j1array[0] > IKPI )
+                                                                                                j1array[0]-=IK2PI;
+                                                                                            else if( j1array[0] < -IKPI )
+                                                                                                j1array[0]+=IK2PI;
+                                                                                            j1valid[0] = true;
+                                                                                            for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                            {
+                                                                                            if( !j1valid[ij1] ) { continue; }
+                                                                                            j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                            
+                                                                                            rotationfunction0(vsolutions);
+                                                                                            }
+                                                                                            }
+                                                                                        
+                                                                                        } else
+                                                                                        {
+                                                                                            IKReal x262=((-0.255000000000000)+(py));
+                                                                                            evalcond[0]=((IKabs(((IKfmod(((((1.50000000000000)*(3.14159265358979)))+(j3)), ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))))))+(IKabs(px)));
+                                                                                            evalcond[1]=((0.320050000000000)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                            evalcond[2]=x262;
+                                                                                            evalcond[3]=x262;
+                                                                                            evalcond[4]=((0.255000000000000)+(((-1.00000000000000)*(py))));
+                                                                                            if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  && IKabs(evalcond[4]) < 0.000010  )
+                                                                                            {
+                                                                                            {
+                                                                                            IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                            bool j1valid[1]={false};
+                                                                                            j1array[0]=IKatan2(((-1.98019801980198)*(px)), ((1.98019801980198)*(pz)));
+                                                                                            sj1array[0]=IKsin(j1array[0]);
+                                                                                            cj1array[0]=IKcos(j1array[0]);
+                                                                                            if( j1array[0] > IKPI )
+                                                                                                j1array[0]-=IK2PI;
+                                                                                            else if( j1array[0] < -IKPI )
+                                                                                                j1array[0]+=IK2PI;
+                                                                                            j1valid[0] = true;
+                                                                                            for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                            {
+                                                                                            if( !j1valid[ij1] ) { continue; }
+                                                                                            j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                            
+                                                                                            rotationfunction0(vsolutions);
+                                                                                            }
+                                                                                            }
+                                                                                        
+                                                                                        } else
+                                                                                        {
+                                                                                            if( 1 )
+                                                                                            {
+                                                                                            {
+                                                                                                IKReal j1eval[2];
+                                                                                                j1eval[0]=((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3))));
+                                                                                                j1eval[1]=((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))));
+                                                                                                if( IKabs(j1eval[0]) < 0.000001  || IKabs(j1eval[1]) < 0.000001  )
+                                                                                                {
+                                                                                                    {
+                                                                                                        if( 1 )
+                                                                                                        {
+                                                                                                        {
+                                                                                                            IKReal j1eval[1];
+                                                                                                            j1eval[0]=((((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                                            if( IKabs(j1eval[0]) < 0.000001  )
+                                                                                                            {
+                                                                                                                {
+                                                                                                                    if( 1 )
+                                                                                                                    {
+                                                                                                                    continue;
+                                                                                                                
+                                                                                                                } else
+                                                                                                                {
+                                                                                                                }
+                                                                                                                }
+                                                                                                            
+                                                                                                            } else
+                                                                                                            {
+                                                                                                                {
+                                                                                                                IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                                bool j1valid[1]={false};
+                                                                                                                IKReal x263=x4;
+                                                                                                                IKReal x264=x0;
+                                                                                                                IKReal x265=((x264)+(x263));
+                                                                                                                IKReal x266=((0.0450000000000000)*(sj3));
+                                                                                                                IKReal x267=((0.300000000000000)*(cj3));
+                                                                                                                IKReal x268=((0.550000000000000)+(x267)+(x266));
+                                                                                                                j1array[0]=IKatan2(((-1.00000000000000)*(px)*(x268)*(((IKabs(x265) != 0)?((IKReal)1/(x265)):(IKReal)1.0e30))), ((pz)*(x268)*(((IKabs(x265) != 0)?((IKReal)1/(x265)):(IKReal)1.0e30))));
+                                                                                                                sj1array[0]=IKsin(j1array[0]);
+                                                                                                                cj1array[0]=IKcos(j1array[0]);
+                                                                                                                if( j1array[0] > IKPI )
+                                                                                                                    j1array[0]-=IK2PI;
+                                                                                                                else if( j1array[0] < -IKPI )
+                                                                                                                    j1array[0]+=IK2PI;
+                                                                                                                j1valid[0] = true;
+                                                                                                                for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                                {
+                                                                                                                if( !j1valid[ij1] ) { continue; }
+                                                                                                                j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                                
+                                                                                                                rotationfunction0(vsolutions);
+                                                                                                                }
+                                                                                                                }
+                                                                                                            
+                                                                                                            }
+                                                                                                        
+                                                                                                        }
+                                                                                                    
+                                                                                                    } else
+                                                                                                    {
+                                                                                                    }
+                                                                                                    }
+                                                                                                
+                                                                                                } else
+                                                                                                {
+                                                                                                    {
+                                                                                                    IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                    bool j1valid[1]={false};
+                                                                                                    j1array[0]=IKatan2(((-1.00000000000000)*(px)*(pz)*(((IKabs(((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3))))) != 0)?((IKReal)1/(((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3)))))):(IKReal)1.0e30))), ((pz)*(((IKabs(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))))) != 0)?((IKReal)1/(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3)))))):(IKReal)1.0e30))));
+                                                                                                    sj1array[0]=IKsin(j1array[0]);
+                                                                                                    cj1array[0]=IKcos(j1array[0]);
+                                                                                                    if( j1array[0] > IKPI )
+                                                                                                        j1array[0]-=IK2PI;
+                                                                                                    else if( j1array[0] < -IKPI )
+                                                                                                        j1array[0]+=IK2PI;
+                                                                                                    j1valid[0] = true;
+                                                                                                    for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                    {
+                                                                                                    if( !j1valid[ij1] ) { continue; }
+                                                                                                    j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                    
+                                                                                                    rotationfunction0(vsolutions);
+                                                                                                    }
+                                                                                                    }
+                                                                                                
+                                                                                                }
+                                                                                            
+                                                                                            }
+                                                                                        
+                                                                                        } else
+                                                                                        {
+                                                                                        }
+                                                                                        }
+                                                                                        }
+                                                                                        }
+                                                                                        }
+                                                                                        }
+                                                                                    
+                                                                                    } else
+                                                                                    {
+                                                                                        {
+                                                                                        IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                        bool j1valid[1]={false};
+                                                                                        j1array[0]=IKatan2(((-1.00000000000000)*(px)*(((IKabs(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))))) != 0)?((IKReal)1/(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3)))))):(IKReal)1.0e30))), ((px)*(pz)*(((IKabs(((((0.550000000000000)*(px)))+(((0.0450000000000000)*(px)*(sj3)))+(((0.300000000000000)*(cj3)*(px))))) != 0)?((IKReal)1/(((((0.550000000000000)*(px)))+(((0.0450000000000000)*(px)*(sj3)))+(((0.300000000000000)*(cj3)*(px)))))):(IKReal)1.0e30))));
+                                                                                        sj1array[0]=IKsin(j1array[0]);
+                                                                                        cj1array[0]=IKcos(j1array[0]);
+                                                                                        if( j1array[0] > IKPI )
+                                                                                            j1array[0]-=IK2PI;
+                                                                                        else if( j1array[0] < -IKPI )
+                                                                                            j1array[0]+=IK2PI;
+                                                                                        j1valid[0] = true;
+                                                                                        for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                        {
+                                                                                        if( !j1valid[ij1] ) { continue; }
+                                                                                        j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                        
+                                                                                        rotationfunction0(vsolutions);
+                                                                                        }
+                                                                                        }
+                                                                                    
+                                                                                    }
+                                                                                
+                                                                                }
+                                                                            
+                                                                            } else
+                                                                            {
+                                                                                IKReal x269=x234;
+                                                                                IKReal x270=((0.0450000000000000)+(x269)+(px));
+                                                                                IKReal x271=x237;
+                                                                                IKReal x272=((x270)+(((-1.00000000000000)*(x271))));
+                                                                                evalcond[0]=((IKabs(((IKfmod(((((0.500000000000000)*(3.14159265358979)))+(j0)), ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))))))+(IKabs(py)));
+                                                                                evalcond[1]=((0.396550000000000)+(((0.0765000000000000)*(sj3)))+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz))))+(((0.325950000000000)*(cj3))));
+                                                                                evalcond[2]=x272;
+                                                                                evalcond[3]=x272;
+                                                                                evalcond[4]=((x271)+(((-1.00000000000000)*(x270))));
+                                                                                if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  && IKabs(evalcond[4]) < 0.000010  )
+                                                                                {
+                                                                                {
+                                                                                    IKReal j1eval[2];
+                                                                                    j1eval[0]=((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3))));
+                                                                                    j1eval[1]=((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))));
+                                                                                    if( IKabs(j1eval[0]) < 0.000001  || IKabs(j1eval[1]) < 0.000001  )
+                                                                                    {
+                                                                                        {
+                                                                                            if( 1 )
+                                                                                            {
+                                                                                            {
+                                                                                                IKReal j1eval[2];
+                                                                                                j1eval[0]=((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))));
+                                                                                                j1eval[1]=((((-0.0450000000000000)*(py)*(sj3)))+(((-0.300000000000000)*(cj3)*(py)))+(((-0.550000000000000)*(py))));
+                                                                                                if( IKabs(j1eval[0]) < 0.000001  || IKabs(j1eval[1]) < 0.000001  )
+                                                                                                {
+                                                                                                    {
+                                                                                                    IKReal evalcond[5];
+                                                                                                        evalcond[0]=((IKabs(((((-1.00000000000000)*(3.14159265358979)))+(IKfmod(((3.14159265358979)+(j3)), ((2.00000000000000)*(3.14159265358979)))))))+(IKabs(py)));
+                                                                                                        evalcond[1]=((0.722500000000000)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                                        evalcond[2]=px;
+                                                                                                        evalcond[3]=px;
+                                                                                                        evalcond[4]=((-1.00000000000000)*(px));
+                                                                                                        if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  && IKabs(evalcond[4]) < 0.000010  )
+                                                                                                        {
+                                                                                                        {
+                                                                                                        IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                        bool j1valid[1]={false};
+                                                                                                        j1array[0]=IKatan2(((1.17647058823529)*(py)), ((1.17647058823529)*(pz)));
+                                                                                                        sj1array[0]=IKsin(j1array[0]);
+                                                                                                        cj1array[0]=IKcos(j1array[0]);
+                                                                                                        if( j1array[0] > IKPI )
+                                                                                                            j1array[0]-=IK2PI;
+                                                                                                        else if( j1array[0] < -IKPI )
+                                                                                                            j1array[0]+=IK2PI;
+                                                                                                        j1valid[0] = true;
+                                                                                                        for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                        {
+                                                                                                        if( !j1valid[ij1] ) { continue; }
+                                                                                                        j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                        
+                                                                                                        rotationfunction0(vsolutions);
+                                                                                                        }
+                                                                                                        }
+                                                                                                    
+                                                                                                    } else
+                                                                                                    {
+                                                                                                        IKReal x273=((0.345000000000000)+(px));
+                                                                                                        evalcond[0]=((IKabs(((IKfmod(((((0.500000000000000)*(3.14159265358979)))+(j3)), ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))))))+(IKabs(py)));
+                                                                                                        evalcond[1]=((0.473050000000000)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                                        evalcond[2]=x273;
+                                                                                                        evalcond[3]=x273;
+                                                                                                        evalcond[4]=((-0.345000000000000)+(((-1.00000000000000)*(px))));
+                                                                                                        if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  && IKabs(evalcond[4]) < 0.000010  )
+                                                                                                        {
+                                                                                                        {
+                                                                                                        IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                        bool j1valid[1]={false};
+                                                                                                        j1array[0]=IKatan2(((1.68067226890756)*(py)), ((1.68067226890756)*(pz)));
+                                                                                                        sj1array[0]=IKsin(j1array[0]);
+                                                                                                        cj1array[0]=IKcos(j1array[0]);
+                                                                                                        if( j1array[0] > IKPI )
+                                                                                                            j1array[0]-=IK2PI;
+                                                                                                        else if( j1array[0] < -IKPI )
+                                                                                                            j1array[0]+=IK2PI;
+                                                                                                        j1valid[0] = true;
+                                                                                                        for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                        {
+                                                                                                        if( !j1valid[ij1] ) { continue; }
+                                                                                                        j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                        
+                                                                                                        rotationfunction0(vsolutions);
+                                                                                                        }
+                                                                                                        }
+                                                                                                    
+                                                                                                    } else
+                                                                                                    {
+                                                                                                        IKReal x274=((0.0900000000000000)+(px));
+                                                                                                        evalcond[0]=((IKabs(((IKfmod(j3, ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))))))+(IKabs(py)));
+                                                                                                        evalcond[1]=((0.0706000000000001)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                                        evalcond[2]=x274;
+                                                                                                        evalcond[3]=x274;
+                                                                                                        evalcond[4]=((-0.0900000000000000)+(((-1.00000000000000)*(px))));
+                                                                                                        if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  && IKabs(evalcond[4]) < 0.000010  )
+                                                                                                        {
+                                                                                                        {
+                                                                                                        IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                        bool j1valid[1]={false};
+                                                                                                        j1array[0]=IKatan2(((4.00000000000000)*(py)), ((4.00000000000000)*(pz)));
+                                                                                                        sj1array[0]=IKsin(j1array[0]);
+                                                                                                        cj1array[0]=IKcos(j1array[0]);
+                                                                                                        if( j1array[0] > IKPI )
+                                                                                                            j1array[0]-=IK2PI;
+                                                                                                        else if( j1array[0] < -IKPI )
+                                                                                                            j1array[0]+=IK2PI;
+                                                                                                        j1valid[0] = true;
+                                                                                                        for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                        {
+                                                                                                        if( !j1valid[ij1] ) { continue; }
+                                                                                                        j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                        
+                                                                                                        rotationfunction0(vsolutions);
+                                                                                                        }
+                                                                                                        }
+                                                                                                    
+                                                                                                    } else
+                                                                                                    {
+                                                                                                        IKReal x275=((-0.255000000000000)+(px));
+                                                                                                        evalcond[0]=((IKabs(((IKfmod(((((1.50000000000000)*(3.14159265358979)))+(j3)), ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))))))+(IKabs(py)));
+                                                                                                        evalcond[1]=((0.320050000000000)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                                        evalcond[2]=x275;
+                                                                                                        evalcond[3]=x275;
+                                                                                                        evalcond[4]=((0.255000000000000)+(((-1.00000000000000)*(px))));
+                                                                                                        if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  && IKabs(evalcond[4]) < 0.000010  )
+                                                                                                        {
+                                                                                                        {
+                                                                                                        IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                        bool j1valid[1]={false};
+                                                                                                        j1array[0]=IKatan2(((1.98019801980198)*(py)), ((1.98019801980198)*(pz)));
+                                                                                                        sj1array[0]=IKsin(j1array[0]);
+                                                                                                        cj1array[0]=IKcos(j1array[0]);
+                                                                                                        if( j1array[0] > IKPI )
+                                                                                                            j1array[0]-=IK2PI;
+                                                                                                        else if( j1array[0] < -IKPI )
+                                                                                                            j1array[0]+=IK2PI;
+                                                                                                        j1valid[0] = true;
+                                                                                                        for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                        {
+                                                                                                        if( !j1valid[ij1] ) { continue; }
+                                                                                                        j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                        
+                                                                                                        rotationfunction0(vsolutions);
+                                                                                                        }
+                                                                                                        }
+                                                                                                    
+                                                                                                    } else
+                                                                                                    {
+                                                                                                        if( 1 )
+                                                                                                        {
+                                                                                                        {
+                                                                                                            IKReal j1eval[1];
+                                                                                                            j1eval[0]=((((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                                            if( IKabs(j1eval[0]) < 0.000001  )
+                                                                                                            {
+                                                                                                                {
+                                                                                                                    if( 1 )
+                                                                                                                    {
+                                                                                                                    continue;
+                                                                                                                
+                                                                                                                } else
+                                                                                                                {
+                                                                                                                }
+                                                                                                                }
+                                                                                                            
+                                                                                                            } else
+                                                                                                            {
+                                                                                                                {
+                                                                                                                IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                                bool j1valid[1]={false};
+                                                                                                                IKReal x276=x2;
+                                                                                                                IKReal x277=x0;
+                                                                                                                IKReal x278=((x276)+(x277));
+                                                                                                                IKReal x279=((0.0450000000000000)*(sj3));
+                                                                                                                IKReal x280=((0.300000000000000)*(cj3));
+                                                                                                                IKReal x281=((0.550000000000000)+(x279)+(x280));
+                                                                                                                j1array[0]=IKatan2(((py)*(x281)*(((IKabs(x278) != 0)?((IKReal)1/(x278)):(IKReal)1.0e30))), ((pz)*(x281)*(((IKabs(x278) != 0)?((IKReal)1/(x278)):(IKReal)1.0e30))));
+                                                                                                                sj1array[0]=IKsin(j1array[0]);
+                                                                                                                cj1array[0]=IKcos(j1array[0]);
+                                                                                                                if( j1array[0] > IKPI )
+                                                                                                                    j1array[0]-=IK2PI;
+                                                                                                                else if( j1array[0] < -IKPI )
+                                                                                                                    j1array[0]+=IK2PI;
+                                                                                                                j1valid[0] = true;
+                                                                                                                for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                                {
+                                                                                                                if( !j1valid[ij1] ) { continue; }
+                                                                                                                j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                                
+                                                                                                                rotationfunction0(vsolutions);
+                                                                                                                }
+                                                                                                                }
+                                                                                                            
+                                                                                                            }
+                                                                                                        
+                                                                                                        }
+                                                                                                    
+                                                                                                    } else
+                                                                                                    {
+                                                                                                    }
+                                                                                                    }
+                                                                                                    }
+                                                                                                    }
+                                                                                                    }
+                                                                                                    }
+                                                                                                
+                                                                                                } else
+                                                                                                {
+                                                                                                    {
+                                                                                                    IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                    bool j1valid[1]={false};
+                                                                                                    j1array[0]=IKatan2(((py)*(((IKabs(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))))) != 0)?((IKReal)1/(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3)))))):(IKReal)1.0e30))), ((-1.00000000000000)*(py)*(pz)*(((IKabs(((((-0.0450000000000000)*(py)*(sj3)))+(((-0.300000000000000)*(cj3)*(py)))+(((-0.550000000000000)*(py))))) != 0)?((IKReal)1/(((((-0.0450000000000000)*(py)*(sj3)))+(((-0.300000000000000)*(cj3)*(py)))+(((-0.550000000000000)*(py)))))):(IKReal)1.0e30))));
+                                                                                                    sj1array[0]=IKsin(j1array[0]);
+                                                                                                    cj1array[0]=IKcos(j1array[0]);
+                                                                                                    if( j1array[0] > IKPI )
+                                                                                                        j1array[0]-=IK2PI;
+                                                                                                    else if( j1array[0] < -IKPI )
+                                                                                                        j1array[0]+=IK2PI;
+                                                                                                    j1valid[0] = true;
+                                                                                                    for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                    {
+                                                                                                    if( !j1valid[ij1] ) { continue; }
+                                                                                                    j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                    
+                                                                                                    rotationfunction0(vsolutions);
+                                                                                                    }
+                                                                                                    }
+                                                                                                
+                                                                                                }
+                                                                                            
+                                                                                            }
+                                                                                        
+                                                                                        } else
+                                                                                        {
+                                                                                        }
+                                                                                        }
+                                                                                    
+                                                                                    } else
+                                                                                    {
+                                                                                        {
+                                                                                        IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                        bool j1valid[1]={false};
+                                                                                        j1array[0]=IKatan2(((py)*(pz)*(((IKabs(((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3))))) != 0)?((IKReal)1/(((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3)))))):(IKReal)1.0e30))), ((pz)*(((IKabs(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))))) != 0)?((IKReal)1/(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3)))))):(IKReal)1.0e30))));
+                                                                                        sj1array[0]=IKsin(j1array[0]);
+                                                                                        cj1array[0]=IKcos(j1array[0]);
+                                                                                        if( j1array[0] > IKPI )
+                                                                                            j1array[0]-=IK2PI;
+                                                                                        else if( j1array[0] < -IKPI )
+                                                                                            j1array[0]+=IK2PI;
+                                                                                        j1valid[0] = true;
+                                                                                        for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                        {
+                                                                                        if( !j1valid[ij1] ) { continue; }
+                                                                                        j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                        
+                                                                                        rotationfunction0(vsolutions);
+                                                                                        }
+                                                                                        }
+                                                                                    
+                                                                                    }
+                                                                                
+                                                                                }
+                                                                            
+                                                                            } else
+                                                                            {
+                                                                                IKReal x282=x234;
+                                                                                IKReal x283=((0.0450000000000000)+(x282));
+                                                                                IKReal x284=x237;
+                                                                                IKReal x285=((x284)+(px));
+                                                                                IKReal x286=((x283)+(((-1.00000000000000)*(x285))));
+                                                                                evalcond[0]=((IKabs(py))+(IKabs(((IKfmod(((((1.50000000000000)*(3.14159265358979)))+(j0)), ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979)))))));
+                                                                                evalcond[1]=((0.396550000000000)+(((0.0765000000000000)*(sj3)))+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz))))+(((0.325950000000000)*(cj3))));
+                                                                                evalcond[2]=x286;
+                                                                                evalcond[3]=x286;
+                                                                                evalcond[4]=x286;
+                                                                                if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  && IKabs(evalcond[4]) < 0.000010  )
+                                                                                {
+                                                                                {
+                                                                                    IKReal j1eval[2];
+                                                                                    j1eval[0]=((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))));
+                                                                                    j1eval[1]=((((0.550000000000000)*(py)))+(((0.0450000000000000)*(py)*(sj3)))+(((0.300000000000000)*(cj3)*(py))));
+                                                                                    if( IKabs(j1eval[0]) < 0.000001  || IKabs(j1eval[1]) < 0.000001  )
+                                                                                    {
+                                                                                        {
+                                                                                        IKReal evalcond[6];
+                                                                                            IKReal x287=((-1.00000000000000)*(px));
+                                                                                            evalcond[0]=((IKabs(((((-1.00000000000000)*(3.14159265358979)))+(IKfmod(((3.14159265358979)+(j3)), ((2.00000000000000)*(3.14159265358979)))))))+(IKabs(py)));
+                                                                                            evalcond[1]=((0.722500000000000)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                            evalcond[2]=x287;
+                                                                                            evalcond[3]=x287;
+                                                                                            evalcond[4]=x287;
+                                                                                            evalcond[5]=x287;
+                                                                                            if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  && IKabs(evalcond[4]) < 0.000010  && IKabs(evalcond[5]) < 0.000010  )
+                                                                                            {
+                                                                                            {
+                                                                                            IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                            bool j1valid[1]={false};
+                                                                                            j1array[0]=IKatan2(((-1.17647058823529)*(py)), ((1.17647058823529)*(pz)));
+                                                                                            sj1array[0]=IKsin(j1array[0]);
+                                                                                            cj1array[0]=IKcos(j1array[0]);
+                                                                                            if( j1array[0] > IKPI )
+                                                                                                j1array[0]-=IK2PI;
+                                                                                            else if( j1array[0] < -IKPI )
+                                                                                                j1array[0]+=IK2PI;
+                                                                                            j1valid[0] = true;
+                                                                                            for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                            {
+                                                                                            if( !j1valid[ij1] ) { continue; }
+                                                                                            j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                            
+                                                                                            rotationfunction0(vsolutions);
+                                                                                            }
+                                                                                            }
+                                                                                        
+                                                                                        } else
+                                                                                        {
+                                                                                            IKReal x288=((0.345000000000000)+(((-1.00000000000000)*(px))));
+                                                                                            evalcond[0]=((IKabs(((IKfmod(((((0.500000000000000)*(3.14159265358979)))+(j3)), ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))))))+(IKabs(py)));
+                                                                                            evalcond[1]=((0.473050000000000)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                            evalcond[2]=x288;
+                                                                                            evalcond[3]=x288;
+                                                                                            evalcond[4]=x288;
+                                                                                            evalcond[5]=x288;
+                                                                                            if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  && IKabs(evalcond[4]) < 0.000010  && IKabs(evalcond[5]) < 0.000010  )
+                                                                                            {
+                                                                                            {
+                                                                                            IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                            bool j1valid[1]={false};
+                                                                                            j1array[0]=IKatan2(((-1.68067226890756)*(py)), ((1.68067226890756)*(pz)));
+                                                                                            sj1array[0]=IKsin(j1array[0]);
+                                                                                            cj1array[0]=IKcos(j1array[0]);
+                                                                                            if( j1array[0] > IKPI )
+                                                                                                j1array[0]-=IK2PI;
+                                                                                            else if( j1array[0] < -IKPI )
+                                                                                                j1array[0]+=IK2PI;
+                                                                                            j1valid[0] = true;
+                                                                                            for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                            {
+                                                                                            if( !j1valid[ij1] ) { continue; }
+                                                                                            j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                            
+                                                                                            rotationfunction0(vsolutions);
+                                                                                            }
+                                                                                            }
+                                                                                        
+                                                                                        } else
+                                                                                        {
+                                                                                            IKReal x289=((0.0900000000000000)+(((-1.00000000000000)*(px))));
+                                                                                            evalcond[0]=((IKabs(((IKfmod(j3, ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))))))+(IKabs(py)));
+                                                                                            evalcond[1]=((0.0706000000000001)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                            evalcond[2]=x289;
+                                                                                            evalcond[3]=x289;
+                                                                                            evalcond[4]=x289;
+                                                                                            evalcond[5]=((-0.0900000000000000)+(px));
+                                                                                            if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  && IKabs(evalcond[4]) < 0.000010  && IKabs(evalcond[5]) < 0.000010  )
+                                                                                            {
+                                                                                            {
+                                                                                            IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                            bool j1valid[1]={false};
+                                                                                            j1array[0]=IKatan2(((-4.00000000000000)*(py)), ((4.00000000000000)*(pz)));
+                                                                                            sj1array[0]=IKsin(j1array[0]);
+                                                                                            cj1array[0]=IKcos(j1array[0]);
+                                                                                            if( j1array[0] > IKPI )
+                                                                                                j1array[0]-=IK2PI;
+                                                                                            else if( j1array[0] < -IKPI )
+                                                                                                j1array[0]+=IK2PI;
+                                                                                            j1valid[0] = true;
+                                                                                            for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                            {
+                                                                                            if( !j1valid[ij1] ) { continue; }
+                                                                                            j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                            
+                                                                                            rotationfunction0(vsolutions);
+                                                                                            }
+                                                                                            }
+                                                                                        
+                                                                                        } else
+                                                                                        {
+                                                                                            IKReal x290=((-0.255000000000000)+(((-1.00000000000000)*(px))));
+                                                                                            evalcond[0]=((IKabs(((IKfmod(((((1.50000000000000)*(3.14159265358979)))+(j3)), ((2.00000000000000)*(3.14159265358979))))+(((-1.00000000000000)*(3.14159265358979))))))+(IKabs(py)));
+                                                                                            evalcond[1]=((0.320050000000000)+(((-1.00000000000000)*((px)*(px))))+(((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                            evalcond[2]=x290;
+                                                                                            evalcond[3]=x290;
+                                                                                            evalcond[4]=x290;
+                                                                                            evalcond[5]=((0.255000000000000)+(px));
+                                                                                            if( IKabs(evalcond[0]) < 0.000010  && IKabs(evalcond[1]) < 0.000010  && IKabs(evalcond[2]) < 0.000010  && IKabs(evalcond[3]) < 0.000010  && IKabs(evalcond[4]) < 0.000010  && IKabs(evalcond[5]) < 0.000010  )
+                                                                                            {
+                                                                                            {
+                                                                                            IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                            bool j1valid[1]={false};
+                                                                                            j1array[0]=IKatan2(((-1.98019801980198)*(py)), ((1.98019801980198)*(pz)));
+                                                                                            sj1array[0]=IKsin(j1array[0]);
+                                                                                            cj1array[0]=IKcos(j1array[0]);
+                                                                                            if( j1array[0] > IKPI )
+                                                                                                j1array[0]-=IK2PI;
+                                                                                            else if( j1array[0] < -IKPI )
+                                                                                                j1array[0]+=IK2PI;
+                                                                                            j1valid[0] = true;
+                                                                                            for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                            {
+                                                                                            if( !j1valid[ij1] ) { continue; }
+                                                                                            j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                            
+                                                                                            rotationfunction0(vsolutions);
+                                                                                            }
+                                                                                            }
+                                                                                        
+                                                                                        } else
+                                                                                        {
+                                                                                            if( 1 )
+                                                                                            {
+                                                                                            {
+                                                                                                IKReal j1eval[2];
+                                                                                                j1eval[0]=((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3))));
+                                                                                                j1eval[1]=((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))));
+                                                                                                if( IKabs(j1eval[0]) < 0.000001  || IKabs(j1eval[1]) < 0.000001  )
+                                                                                                {
+                                                                                                    {
+                                                                                                        if( 1 )
+                                                                                                        {
+                                                                                                        {
+                                                                                                            IKReal j1eval[1];
+                                                                                                            j1eval[0]=((((-1.00000000000000)*((py)*(py))))+(((-1.00000000000000)*((pz)*(pz)))));
+                                                                                                            if( IKabs(j1eval[0]) < 0.000001  )
+                                                                                                            {
+                                                                                                                {
+                                                                                                                    if( 1 )
+                                                                                                                    {
+                                                                                                                    continue;
+                                                                                                                
+                                                                                                                } else
+                                                                                                                {
+                                                                                                                }
+                                                                                                                }
+                                                                                                            
+                                                                                                            } else
+                                                                                                            {
+                                                                                                                {
+                                                                                                                IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                                bool j1valid[1]={false};
+                                                                                                                IKReal x291=x2;
+                                                                                                                IKReal x292=x0;
+                                                                                                                IKReal x293=((x291)+(x292));
+                                                                                                                IKReal x294=((0.0450000000000000)*(sj3));
+                                                                                                                IKReal x295=((0.300000000000000)*(cj3));
+                                                                                                                IKReal x296=((0.550000000000000)+(x294)+(x295));
+                                                                                                                j1array[0]=IKatan2(((-1.00000000000000)*(py)*(x296)*(((IKabs(x293) != 0)?((IKReal)1/(x293)):(IKReal)1.0e30))), ((pz)*(x296)*(((IKabs(x293) != 0)?((IKReal)1/(x293)):(IKReal)1.0e30))));
+                                                                                                                sj1array[0]=IKsin(j1array[0]);
+                                                                                                                cj1array[0]=IKcos(j1array[0]);
+                                                                                                                if( j1array[0] > IKPI )
+                                                                                                                    j1array[0]-=IK2PI;
+                                                                                                                else if( j1array[0] < -IKPI )
+                                                                                                                    j1array[0]+=IK2PI;
+                                                                                                                j1valid[0] = true;
+                                                                                                                for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                                {
+                                                                                                                if( !j1valid[ij1] ) { continue; }
+                                                                                                                j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                                
+                                                                                                                rotationfunction0(vsolutions);
+                                                                                                                }
+                                                                                                                }
+                                                                                                            
+                                                                                                            }
+                                                                                                        
+                                                                                                        }
+                                                                                                    
+                                                                                                    } else
+                                                                                                    {
+                                                                                                    }
+                                                                                                    }
+                                                                                                
+                                                                                                } else
+                                                                                                {
+                                                                                                    {
+                                                                                                    IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                                    bool j1valid[1]={false};
+                                                                                                    j1array[0]=IKatan2(((-1.00000000000000)*(py)*(pz)*(((IKabs(((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3))))) != 0)?((IKReal)1/(((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3)))))):(IKReal)1.0e30))), ((pz)*(((IKabs(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))))) != 0)?((IKReal)1/(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3)))))):(IKReal)1.0e30))));
+                                                                                                    sj1array[0]=IKsin(j1array[0]);
+                                                                                                    cj1array[0]=IKcos(j1array[0]);
+                                                                                                    if( j1array[0] > IKPI )
+                                                                                                        j1array[0]-=IK2PI;
+                                                                                                    else if( j1array[0] < -IKPI )
+                                                                                                        j1array[0]+=IK2PI;
+                                                                                                    j1valid[0] = true;
+                                                                                                    for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                                    {
+                                                                                                    if( !j1valid[ij1] ) { continue; }
+                                                                                                    j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                                    
+                                                                                                    rotationfunction0(vsolutions);
+                                                                                                    }
+                                                                                                    }
+                                                                                                
+                                                                                                }
+                                                                                            
+                                                                                            }
+                                                                                        
+                                                                                        } else
+                                                                                        {
+                                                                                        }
+                                                                                        }
+                                                                                        }
+                                                                                        }
+                                                                                        }
+                                                                                        }
+                                                                                    
+                                                                                    } else
+                                                                                    {
+                                                                                        {
+                                                                                        IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                                        bool j1valid[1]={false};
+                                                                                        j1array[0]=IKatan2(((-1.00000000000000)*(py)*(((IKabs(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))))) != 0)?((IKReal)1/(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3)))))):(IKReal)1.0e30))), ((py)*(pz)*(((IKabs(((((0.550000000000000)*(py)))+(((0.0450000000000000)*(py)*(sj3)))+(((0.300000000000000)*(cj3)*(py))))) != 0)?((IKReal)1/(((((0.550000000000000)*(py)))+(((0.0450000000000000)*(py)*(sj3)))+(((0.300000000000000)*(cj3)*(py)))))):(IKReal)1.0e30))));
+                                                                                        sj1array[0]=IKsin(j1array[0]);
+                                                                                        cj1array[0]=IKcos(j1array[0]);
+                                                                                        if( j1array[0] > IKPI )
+                                                                                            j1array[0]-=IK2PI;
+                                                                                        else if( j1array[0] < -IKPI )
+                                                                                            j1array[0]+=IK2PI;
+                                                                                        j1valid[0] = true;
+                                                                                        for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                                        {
+                                                                                        if( !j1valid[ij1] ) { continue; }
+                                                                                        j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                                        
+                                                                                        rotationfunction0(vsolutions);
+                                                                                        }
+                                                                                        }
+                                                                                    
+                                                                                    }
+                                                                                
+                                                                                }
+                                                                            
+                                                                            } else
+                                                                            {
+                                                                                if( 1 )
+                                                                                {
+                                                                                continue;
+                                                                            
+                                                                            } else
+                                                                            {
+                                                                            }
+                                                                            }
+                                                                            }
+                                                                            }
+                                                                            }
+                                                                            }
+                                                                        
+                                                                        } else
+                                                                        {
+                                                                            {
+                                                                            IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                            bool j1valid[1]={false};
+                                                                            IKReal x297=((cj0)*(px));
+                                                                            IKReal x298=((py)*(sj0));
+                                                                            IKReal x299=((x298)+(x297));
+                                                                            j1array[0]=IKatan2(((x299)*(((IKabs(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))))) != 0)?((IKReal)1/(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3)))))):(IKReal)1.0e30))), ((-1.00000000000000)*(pz)*(x299)*(((IKabs(((((-0.300000000000000)*(cj3)*(x297)))+(((-0.300000000000000)*(cj3)*(x298)))+(((-0.0450000000000000)*(sj3)*(x297)))+(((-0.0450000000000000)*(sj3)*(x298)))+(((-0.550000000000000)*(x298)))+(((-0.550000000000000)*(x297))))) != 0)?((IKReal)1/(((((-0.300000000000000)*(cj3)*(x297)))+(((-0.300000000000000)*(cj3)*(x298)))+(((-0.0450000000000000)*(sj3)*(x297)))+(((-0.0450000000000000)*(sj3)*(x298)))+(((-0.550000000000000)*(x298)))+(((-0.550000000000000)*(x297)))))):(IKReal)1.0e30))));
+                                                                            sj1array[0]=IKsin(j1array[0]);
+                                                                            cj1array[0]=IKcos(j1array[0]);
+                                                                            if( j1array[0] > IKPI )
+                                                                                j1array[0]-=IK2PI;
+                                                                            else if( j1array[0] < -IKPI )
+                                                                                j1array[0]+=IK2PI;
+                                                                            j1valid[0] = true;
+                                                                            for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                            {
+                                                                            if( !j1valid[ij1] ) { continue; }
+                                                                            j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                            
+                                                                            rotationfunction0(vsolutions);
+                                                                            }
+                                                                            }
+                                                                        
+                                                                        }
+                                                                    
+                                                                    }
+                                                                
+                                                                } else
+                                                                {
+                                                                }
+                                                                }
+                                                            
+                                                            } else
+                                                            {
+                                                                {
+                                                                IKReal j1array[1], cj1array[1], sj1array[1];
+                                                                bool j1valid[1]={false};
+                                                                j1array[0]=IKatan2(((-1.00000000000000)*(pz)*(((IKabs(((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3))))) != 0)?((IKReal)1/(((((0.550000000000000)*(pz)))+(((0.300000000000000)*(cj3)*(pz)))+(((0.0450000000000000)*(pz)*(sj3)))))):(IKReal)1.0e30))*(((((-1.00000000000000)*(py)*(sj0)))+(((-1.00000000000000)*(cj0)*(px)))))), ((pz)*(((IKabs(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3))))) != 0)?((IKReal)1/(((0.550000000000000)+(((0.0450000000000000)*(sj3)))+(((0.300000000000000)*(cj3)))))):(IKReal)1.0e30))));
+                                                                sj1array[0]=IKsin(j1array[0]);
+                                                                cj1array[0]=IKcos(j1array[0]);
+                                                                if( j1array[0] > IKPI )
+                                                                    j1array[0]-=IK2PI;
+                                                                else if( j1array[0] < -IKPI )
+                                                                    j1array[0]+=IK2PI;
+                                                                j1valid[0] = true;
+                                                                for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                                {
+                                                                if( !j1valid[ij1] ) { continue; }
+                                                                j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                                
+                                                                rotationfunction0(vsolutions);
+                                                                }
+                                                                }
+                                                            
+                                                            }
+                                                        
+                                                        }
+                                                    
+                                                    } else
+                                                    {
+                                                    }
+                                                    }
+                                                
+                                                } else
+                                                {
+                                                    {
+                                                    IKReal j1array[1], cj1array[1], sj1array[1];
+                                                    bool j1valid[1]={false};
+                                                    IKReal x300=((0.0450000000000000)*(sj3));
+                                                    IKReal x301=((0.300000000000000)*(cj3));
+                                                    IKReal x302=((0.550000000000000)+(x300)+(x301));
+                                                    IKReal x303=((IKabs(x302) != 0)?((IKReal)1/(x302)):(IKReal)1.0e30);
+                                                    j1array[0]=IKatan2(((x303)*(((((cj0)*(px)))+(((py)*(sj0)))))), ((pz)*(x303)));
+                                                    sj1array[0]=IKsin(j1array[0]);
+                                                    cj1array[0]=IKcos(j1array[0]);
+                                                    if( j1array[0] > IKPI )
+                                                        j1array[0]-=IK2PI;
+                                                    else if( j1array[0] < -IKPI )
+                                                        j1array[0]+=IK2PI;
+                                                    j1valid[0] = true;
+                                                    for(int ij1 = 0; ij1 < 1; ++ij1)
+                                                    {
+                                                    if( !j1valid[ij1] ) { continue; }
+                                                    j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                                    
+                                                    rotationfunction0(vsolutions);
+                                                    }
+                                                    }
+                                                
+                                                }
+                                            
+                                            }
+                                        
+                                        } else
+                                        {
+                                            if( 1 )
+                                            {
+                                            continue;
+                                        
+                                        } else
+                                        {
+                                        }
+                                        }
+                                        }
+                                        }
+                                    
+                                    } else
+                                    {
+                                        {
+                                        IKReal j1array[1], cj1array[1], sj1array[1];
+                                        bool j1valid[1]={false};
+                                        IKReal x304=x2;
+                                        IKReal x305=(sj0)*(sj0);
+                                        IKReal x306=((cj2)*(x304)*(x305));
+                                        IKReal x307=(cj0)*(cj0);
+                                        IKReal x308=x4;
+                                        IKReal x309=((cj2)*(x307)*(x308));
+                                        IKReal x310=((2.00000000000000)*(cj0)*(cj2)*(px)*(py)*(sj0));
+                                        IKReal x311=x0;
+                                        IKReal x312=((cj2)*(x311));
+                                        IKReal x313=((x309)+(x306)+(x310)+(x312));
+                                        IKReal x314=((IKabs(x313) != 0)?((IKReal)1/(x313)):(IKReal)1.0e30);
+                                        IKReal x315=((0.300000000000000)*(cj3));
+                                        IKReal x316=((0.0450000000000000)*(sj3));
+                                        IKReal x317=((0.550000000000000)+(x315)+(x316));
+                                        IKReal x318=((cj0)*(py)*(sj2));
+                                        IKReal x319=((0.300000000000000)*(sj3));
+                                        IKReal x320=((0.0450000000000000)+(x319)+(x318));
+                                        IKReal x321=((0.0450000000000000)*(cj3));
+                                        IKReal x322=((px)*(sj0)*(sj2));
+                                        IKReal x323=((x321)+(x322));
+                                        IKReal x324=((((-1.00000000000000)*(x323)))+(x320));
+                                        j1array[0]=IKatan2(((x314)*(((((x317)*(((((cj2)*(py)*(sj0)))+(((cj0)*(cj2)*(px)))))))+(((-1.00000000000000)*(pz)*(x324)))))), ((x314)*(((((x324)*(((((cj0)*(px)))+(((py)*(sj0)))))))+(((cj2)*(pz)*(x317)))))));
+                                        sj1array[0]=IKsin(j1array[0]);
+                                        cj1array[0]=IKcos(j1array[0]);
+                                        if( j1array[0] > IKPI )
+                                            j1array[0]-=IK2PI;
+                                        else if( j1array[0] < -IKPI )
+                                            j1array[0]+=IK2PI;
+                                        j1valid[0] = true;
+                                        for(int ij1 = 0; ij1 < 1; ++ij1)
+                                        {
+                                        if( !j1valid[ij1] ) { continue; }
+                                        j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+                                        
+                                        rotationfunction0(vsolutions);
+                                        }
+                                        }
+                                    
+                                    }
+                                
+                                }
                             
                             } else
                             {
@@ -616,24 +3248,24 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                             {
                             IKReal j1array[1], cj1array[1], sj1array[1];
                             bool j1valid[1]={false};
-                            IKReal x141=x0;
-                            IKReal x142=((sj2)*(x141));
-                            IKReal x143=(cj0)*(cj0);
-                            IKReal x144=x4;
-                            IKReal x145=((sj2)*(x143)*(x144));
-                            IKReal x146=((2.00000000000000)*(cj0)*(px)*(py)*(sj0)*(sj2));
-                            IKReal x147=x2;
-                            IKReal x148=(sj0)*(sj0);
-                            IKReal x149=((sj2)*(x147)*(x148));
-                            IKReal x150=((x142)+(x145)+(x146)+(x149));
-                            IKReal x151=((IKabs(x150) != 0)?((IKReal)1/(x150)):(IKReal)1.0e30);
-                            IKReal x152=((cj2)*(px)*(sj0));
-                            IKReal x153=((cj0)*(cj2)*(py));
-                            IKReal x154=((((-1.00000000000000)*(x153)))+(x152));
-                            IKReal x155=((0.300000000000000)*(cj3));
-                            IKReal x156=((0.0450000000000000)*(sj3));
-                            IKReal x157=((0.550000000000000)+(x156)+(x155));
-                            j1array[0]=IKatan2(((-1.00000000000000)*(x151)*(((((x157)*(((((-1.00000000000000)*(py)*(sj0)*(sj2)))+(((-1.00000000000000)*(cj0)*(px)*(sj2)))))))+(((pz)*(x154)))))), ((x151)*(((((pz)*(sj2)*(x157)))+(((x154)*(((((cj0)*(px)))+(((py)*(sj0)))))))))));
+                            IKReal x325=x0;
+                            IKReal x326=((sj2)*(x325));
+                            IKReal x327=(cj0)*(cj0);
+                            IKReal x328=x4;
+                            IKReal x329=((sj2)*(x327)*(x328));
+                            IKReal x330=((2.00000000000000)*(cj0)*(px)*(py)*(sj0)*(sj2));
+                            IKReal x331=x2;
+                            IKReal x332=(sj0)*(sj0);
+                            IKReal x333=((sj2)*(x331)*(x332));
+                            IKReal x334=((x333)+(x330)+(x326)+(x329));
+                            IKReal x335=((IKabs(x334) != 0)?((IKReal)1/(x334)):(IKReal)1.0e30);
+                            IKReal x336=((cj2)*(px)*(sj0));
+                            IKReal x337=((cj0)*(cj2)*(py));
+                            IKReal x338=((x336)+(((-1.00000000000000)*(x337))));
+                            IKReal x339=((0.300000000000000)*(cj3));
+                            IKReal x340=((0.0450000000000000)*(sj3));
+                            IKReal x341=((0.550000000000000)+(x339)+(x340));
+                            j1array[0]=IKatan2(((x335)*(((((-1.00000000000000)*(pz)*(x338)))+(((x341)*(((((cj0)*(px)*(sj2)))+(((py)*(sj0)*(sj2)))))))))), ((x335)*(((((pz)*(sj2)*(x341)))+(((x338)*(((((cj0)*(px)))+(((py)*(sj0)))))))))));
                             sj1array[0]=IKsin(j1array[0]);
                             cj1array[0]=IKcos(j1array[0]);
                             if( j1array[0] > IKPI )
@@ -664,25 +3296,28 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
                 {
                 IKReal j1array[1], cj1array[1], sj1array[1];
                 bool j1valid[1]={false};
-                IKReal x158=x2;
-                IKReal x159=(sj0)*(sj0);
-                IKReal x160=((x158)*(x159));
-                IKReal x161=((2.00000000000000)*(cj0)*(px)*(py)*(sj0));
-                IKReal x162=x0;
-                IKReal x163=(cj0)*(cj0);
-                IKReal x164=x4;
-                IKReal x165=((x163)*(x164));
-                IKReal x166=((x162)+(x160)+(x161)+(x165));
-                IKReal x167=((IKabs(x166) != 0)?((IKReal)1/(x166)):(IKReal)1.0e30);
-                IKReal x168=((0.300000000000000)*(cj3));
-                IKReal x169=((0.0450000000000000)*(sj3));
-                IKReal x170=((0.550000000000000)+(x168)+(x169));
-                IKReal x171=((0.0450000000000000)*(cj2)*(cj3));
-                IKReal x172=((cj0)*(px));
-                IKReal x173=((py)*(sj0));
-                IKReal x174=((x173)+(x172));
-                IKReal x175=((-1.00000000000000)*(x174));
-                j1array[0]=IKatan2(((-1.00000000000000)*(x167)*(((((pz)*(((((0.0450000000000000)*(cj2)))+(((-1.00000000000000)*(x171)))+(((0.300000000000000)*(cj2)*(sj3)))))))+(((x170)*(x175)))))), ((x167)*(((((pz)*(x170)))+(((x175)*(((x171)+(((-0.0450000000000000)*(cj2)))+(((-0.300000000000000)*(cj2)*(sj3)))))))))));
+                IKReal x342=x2;
+                IKReal x343=(sj0)*(sj0);
+                IKReal x344=((x342)*(x343));
+                IKReal x345=((2.00000000000000)*(cj0)*(px)*(py)*(sj0));
+                IKReal x346=x0;
+                IKReal x347=(cj0)*(cj0);
+                IKReal x348=x4;
+                IKReal x349=((x347)*(x348));
+                IKReal x350=((x346)+(x344)+(x345)+(x349));
+                IKReal x351=((IKabs(x350) != 0)?((IKReal)1/(x350)):(IKReal)1.0e30);
+                IKReal x352=((cj0)*(px));
+                IKReal x353=((py)*(sj0));
+                IKReal x354=((x353)+(x352));
+                IKReal x355=((0.0450000000000000)*(cj2));
+                IKReal x356=((0.300000000000000)*(cj2)*(sj3));
+                IKReal x357=((x355)+(x356));
+                IKReal x358=((1.00000000000000)*(cj3)*(x355));
+                IKReal x359=((((-1.00000000000000)*(x358)))+(x357));
+                IKReal x360=((0.300000000000000)*(cj3));
+                IKReal x361=((0.0450000000000000)*(sj3));
+                IKReal x362=((0.550000000000000)+(x360)+(x361));
+                j1array[0]=IKatan2(((x351)*(((((x354)*(x362)))+(((-1.00000000000000)*(pz)*(x359)))))), ((x351)*(((((x354)*(x359)))+(((pz)*(x362)))))));
                 sj1array[0]=IKsin(j1array[0]);
                 cj1array[0]=IKcos(j1array[0]);
                 if( j1array[0] > IKPI )
@@ -715,48 +3350,48 @@ for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
 return vsolutions.size()>0;
 }
     inline void rotationfunction0(std::vector<IKSolution>& vsolutions) {
-        IKReal x41=((cj1)*(sj3));
-        IKReal x42=((cj2)*(cj3)*(sj1));
-        IKReal x43=((x42)+(x41));
-        IKReal x44=((-1.00000000000000)*(x43));
-        IKReal x45=((cj1)*(cj2)*(cj3)*(sj0));
-        IKReal x46=((cj0)*(cj3)*(sj2));
-        IKReal x47=((sj0)*(sj1)*(sj3));
-        IKReal x48=((x46)+(x47));
-        IKReal x49=((((-1.00000000000000)*(x48)))+(x45));
-        IKReal x50=((cj0)*(cj1)*(cj2)*(cj3));
-        IKReal x51=((cj3)*(sj0)*(sj2));
-        IKReal x52=((x51)+(x50));
-        IKReal x53=((cj0)*(sj1)*(sj3));
-        IKReal x54=((x52)+(((-1.00000000000000)*(x53))));
-        IKReal x55=((cj0)*(sj2)*(sj3));
-        IKReal x56=((cj2)*(sj0)*(x41));
-        IKReal x57=((cj3)*(sj0)*(sj1));
-        IKReal x58=((x57)+(x56));
-        IKReal x59=((x55)+(((-1.00000000000000)*(x58))));
-        IKReal x60=((cj0)*(cj3)*(sj1));
-        IKReal x61=((cj0)*(cj2)*(x41));
-        IKReal x62=((sj0)*(sj2)*(sj3));
-        IKReal x63=((x60)+(x61)+(x62));
-        IKReal x64=((-1.00000000000000)*(x63));
-        IKReal x65=((cj2)*(sj1)*(sj3));
-        IKReal x66=((cj1)*(cj3));
-        IKReal x67=((x65)+(((-1.00000000000000)*(x66))));
-        IKReal x68=((cj0)*(cj1)*(sj2));
-        IKReal x69=((cj2)*(sj0));
-        IKReal x70=((x68)+(((-1.00000000000000)*(x69))));
-        IKReal x71=((cj0)*(cj2));
-        IKReal x72=((cj1)*(sj0)*(sj2));
-        IKReal x73=((x72)+(x71));
-        new_r00=((((r20)*(x44)))+(((r10)*(x49)))+(((r00)*(x54))));
-        new_r01=((((r01)*(x54)))+(((r11)*(x49)))+(((r21)*(x44))));
-        new_r02=((((r02)*(x54)))+(((r22)*(x44)))+(((r12)*(x49))));
-        new_r10=((((r10)*(x59)))+(((r20)*(x67)))+(((r00)*(x64))));
-        new_r11=((((r11)*(x59)))+(((r01)*(x64)))+(((r21)*(x67))));
-        new_r12=((((r22)*(x67)))+(((r02)*(x64)))+(((r12)*(x59))));
-        new_r20=((((r10)*(x73)))+(((-1.00000000000000)*(r20)*(sj1)*(sj2)))+(((r00)*(x70))));
-        new_r21=((((r11)*(x73)))+(((-1.00000000000000)*(r21)*(sj1)*(sj2)))+(((r01)*(x70))));
-        new_r22=((((r02)*(x70)))+(((-1.00000000000000)*(r22)*(sj1)*(sj2)))+(((r12)*(x73))));
+        IKReal x29=((cj1)*(sj3));
+        IKReal x30=((cj2)*(cj3)*(sj1));
+        IKReal x31=((x30)+(x29));
+        IKReal x32=((-1.00000000000000)*(x31));
+        IKReal x33=((cj1)*(cj2)*(cj3)*(sj0));
+        IKReal x34=((cj0)*(cj3)*(sj2));
+        IKReal x35=((sj0)*(sj1)*(sj3));
+        IKReal x36=((x35)+(x34));
+        IKReal x37=((((-1.00000000000000)*(x36)))+(x33));
+        IKReal x38=((cj0)*(cj1)*(cj2)*(cj3));
+        IKReal x39=((cj3)*(sj0)*(sj2));
+        IKReal x40=((x39)+(x38));
+        IKReal x41=((cj0)*(sj1)*(sj3));
+        IKReal x42=((((-1.00000000000000)*(x41)))+(x40));
+        IKReal x43=((cj0)*(sj2)*(sj3));
+        IKReal x44=((cj2)*(sj0)*(x29));
+        IKReal x45=((cj3)*(sj0)*(sj1));
+        IKReal x46=((x44)+(x45));
+        IKReal x47=((((-1.00000000000000)*(x46)))+(x43));
+        IKReal x48=((cj0)*(cj3)*(sj1));
+        IKReal x49=((cj0)*(cj2)*(x29));
+        IKReal x50=((sj0)*(sj2)*(sj3));
+        IKReal x51=((x48)+(x49)+(x50));
+        IKReal x52=((-1.00000000000000)*(x51));
+        IKReal x53=((cj2)*(sj1)*(sj3));
+        IKReal x54=((cj1)*(cj3));
+        IKReal x55=((x53)+(((-1.00000000000000)*(x54))));
+        IKReal x56=((cj0)*(cj1)*(sj2));
+        IKReal x57=((cj2)*(sj0));
+        IKReal x58=((x56)+(((-1.00000000000000)*(x57))));
+        IKReal x59=((cj0)*(cj2));
+        IKReal x60=((cj1)*(sj0)*(sj2));
+        IKReal x61=((x59)+(x60));
+        new_r00=((((r20)*(x32)))+(((r00)*(x42)))+(((r10)*(x37))));
+        new_r01=((((r01)*(x42)))+(((r11)*(x37)))+(((r21)*(x32))));
+        new_r02=((((r22)*(x32)))+(((r02)*(x42)))+(((r12)*(x37))));
+        new_r10=((((r10)*(x47)))+(((r00)*(x52)))+(((r20)*(x55))));
+        new_r11=((((r01)*(x52)))+(((r21)*(x55)))+(((r11)*(x47))));
+        new_r12=((((r22)*(x55)))+(((r02)*(x52)))+(((r12)*(x47))));
+        new_r20=((((r10)*(x61)))+(((-1.00000000000000)*(r20)*(sj1)*(sj2)))+(((r00)*(x58))));
+        new_r21=((((r11)*(x61)))+(((-1.00000000000000)*(r21)*(sj1)*(sj2)))+(((r01)*(x58))));
+        new_r22=((((r02)*(x58)))+(((-1.00000000000000)*(r22)*(sj1)*(sj2)))+(((r12)*(x61))));
         {
         IKReal j5eval;
         j5eval=new_r11;
@@ -863,9 +3498,9 @@ return vsolutions.size()>0;
                 {
                 IKReal j6array[1], cj6array[1], sj6array[1];
                 bool j6valid[1]={false};
-                IKReal x74=IKsin(j4);
-                IKReal x75=((IKabs(x74) != 0)?((IKReal)1/(x74)):(IKReal)1.0e30);
-                j6array[0]=IKatan2(((new_r00)*(x75)), ((-1.00000000000000)*(new_r02)*(x75)));
+                IKReal x62=IKsin(j4);
+                IKReal x63=((IKabs(x62) != 0)?((IKReal)1/(x62)):(IKReal)1.0e30);
+                j6array[0]=IKatan2(((new_r00)*(x63)), ((-1.00000000000000)*(new_r02)*(x63)));
                 sj6array[0]=IKsin(j6array[0]);
                 cj6array[0]=IKcos(j6array[0]);
                 if( j6array[0] > IKPI )
@@ -921,11 +3556,11 @@ return vsolutions.size()>0;
                     {
                     IKReal j6array[1], cj6array[1], sj6array[1];
                     bool j6valid[1]={false};
-                    IKReal x76=IKcos(j5);
-                    IKReal x77=((IKabs(x76) != 0)?((IKReal)1/(x76)):(IKReal)1.0e30);
-                    IKReal x78=IKcos(j4);
-                    IKReal x79=IKsin(j4);
-                    j6array[0]=IKatan2(((((new_r02)*(x77)*(x78)))+(((new_r22)*(x77)*(x79)))), ((((-1.00000000000000)*(new_r02)*(x79)))+(((new_r22)*(x78)))));
+                    IKReal x64=IKcos(j5);
+                    IKReal x65=((IKabs(x64) != 0)?((IKReal)1/(x64)):(IKReal)1.0e30);
+                    IKReal x66=IKcos(j4);
+                    IKReal x67=IKsin(j4);
+                    j6array[0]=IKatan2(((((new_r02)*(x65)*(x66)))+(((new_r22)*(x65)*(x67)))), ((((new_r22)*(x66)))+(((-1.00000000000000)*(new_r02)*(x67)))));
                     sj6array[0]=IKsin(j6array[0]);
                     cj6array[0]=IKcos(j6array[0]);
                     if( j6array[0] > IKPI )
@@ -958,9 +3593,9 @@ return vsolutions.size()>0;
                     {
                     IKReal j6array[1], cj6array[1], sj6array[1];
                     bool j6valid[1]={false};
-                    IKReal x80=IKsin(j5);
-                    IKReal x81=((IKabs(x80) != 0)?((IKReal)1/(x80)):(IKReal)1.0e30);
-                    j6array[0]=IKatan2(((new_r12)*(x81)), ((new_r10)*(x81)));
+                    IKReal x68=IKsin(j5);
+                    IKReal x69=((IKabs(x68) != 0)?((IKReal)1/(x68)):(IKReal)1.0e30);
+                    j6array[0]=IKatan2(((new_r12)*(x69)), ((new_r10)*(x69)));
                     sj6array[0]=IKsin(j6array[0]);
                     cj6array[0]=IKcos(j6array[0]);
                     if( j6array[0] > IKPI )

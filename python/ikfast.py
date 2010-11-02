@@ -103,6 +103,8 @@ class SolverSolution:
             self.jointevalcos = [e.subs(solsubs) for e in self.jointevalcos]
         if self.jointevalsin is not None:
             self.jointevalsin = [e.subs(solsubs) for e in self.jointevalsin]
+        if self.checkforzeros is not None:
+            self.checkforzeros = [e.subs(solsubs) for e in self.checkforzeros]
         if not self.checkValidSolution():
             raise IKFastSolver.CannotSolveError('substitution produced invalid results')
         return self
@@ -129,6 +131,7 @@ class SolverPolynomialRoots:
     jointeval = None
     jointevalcos = None # not used
     jointevalsin = None # not used
+    checkforzeros = None
     postcheckforzeros = None # fail if zero
     postcheckfornonzeros = None # fail if nonzero
     postcheckforrange = None # checks that value is within [-1,1]
@@ -144,6 +147,14 @@ class SolverPolynomialRoots:
     def subs(self,solsubs):
         if self.jointeval is not None:
             self.jointeval = [e.subs(solsubs) for e in self.jointeval]
+        if self.checkforzeros is not None:
+            self.checkforzeros = [e.subs(solsubs) for e in self.checkforzeros]
+        if self.postcheckforzeros is not None:
+            self.postcheckforzeros = [e.subs(solsubs) for e in self.postcheckforzeros]
+        if self.postcheckfornonzeros is not None:
+            self.postcheckfornonzeros = [e.subs(solsubs) for e in self.postcheckfornonzeros]
+        if self.postcheckforrange is not None:
+            self.postcheckforrange = [e.subs(solsubs) for e in self.postcheckforrange]
         self.poly = self.poly.subs(solsubs)
         assert self.checkValidSolution()
         return self
@@ -163,7 +174,8 @@ class SolverConicRoots:
     jointname = None
     jointeval = None # only one polynomial in cos(jointname) sin(jointname)
     IsHinge = True
-    score = None  
+    score = None
+    checkforzeros = None
     def __init__(self, jointname, jointeval=None,IsHinge=True):
         self.jointname=jointname
         self.jointeval = jointeval
@@ -171,6 +183,8 @@ class SolverConicRoots:
     def subs(self,solsubs):
         if self.jointeval is not None:
             self.jointeval = [e.subs(solsubs) for e in self.jointeval]
+        if self.checkforzeros is not None:
+            self.checkforzeros = [e.subs(solsubs) for e in self.checkforzeros]
         assert self.checkValidSolution()
         return self
     def generate(self, generator):
@@ -963,7 +977,7 @@ class IKFastSolver(AutoReloader):
             if uselength:
                 p2 = (Positions[i][0]**2+Positions[i][1]**2+Positions[i][2]**2).expand()
                 pe2 = (Positionsee[i][0]**2+Positionsee[i][1]**2+Positionsee[i][2]**2).expand()
-                if self.codeComplexity(p2) < 2000 and self.codeComplexity(pe2) < 2000:
+                if self.codeComplexity(p2) < 1500 and self.codeComplexity(pe2) < 1500:
                     # sympy's trigsimp/customtrigsimp give up too easily
                     e = self.customtrigsimp(self.customtrigsimp(self.customtrigsimp(self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp(p2)).expand())) - self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp(pe2)).expand())))))
                     if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
@@ -1712,8 +1726,8 @@ class IKFastSolver(AutoReloader):
                             break
                 if not match:
                     usedsolutions.append((solution,var))
-                    if len(usedsolutions) >= 2:
-                        break # don't need more than two alternatives
+                    if len(usedsolutions) >= 3:
+                        break # don't need more than three alternatives (used to be two, but then lookat barrettwam4 proved that wrong)
         nextsolutions = dict()
         allvars = curvars+[Symbol('s%s'%v.name) for v in curvars]+[Symbol('c%s'%v.name) for v in curvars]
         lastbranch=None
@@ -1732,7 +1746,7 @@ class IKFastSolver(AutoReloader):
                     if checkzero.has_any_symbols(othervar,sothervar,cothervar):
                         # the easiest thing to check first is if the equation evaluates to zero on boundaries 0,pi/2,pi,-pi/2
                         s = SolverSolution(othervar.name,jointeval=[],IsHinge=self.IsHinge(othervar.name))
-                        for value in [0,pi/2,pi,-pi/2]:
+                        for value in [S.Zero,pi/2,pi,-pi/2]:
                             try:
                                 checkzerosub=checkzero.subs([(othervar,value),(sothervar,sin(value).evalf()),(cothervar,cos(value).evalf())])
                                 if self.isValidSolution(checkzerosub) and checkzerosub.evalf() == S.Zero:
@@ -1758,26 +1772,45 @@ class IKFastSolver(AutoReloader):
                                     if eq.is_real:
                                         cond=othervar-eq.evalf()
                                         if self.isExpressionUnique([tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique([tempeq[0] for tempeq in eqs],cond):
-                                            eqs.append((cond,[(othervar,eq),(sothervar,sin(eq).evalf()),(sin(othervar),sin(eq).evalf()),(cothervar,cos(eq).evalf()),(cos(othervar),cos(eq).evalf())]))
+                                            eqs.append([cond,[(othervar,eq),(sothervar,sin(eq).evalf()),(sin(othervar),sin(eq).evalf()),(cothervar,cos(eq).evalf()),(cos(othervar),cos(eq).evalf())]])
                             elif s.jointevalsin is not None:
                                 for eq in s.jointevalsin:
                                     if eq.is_real:
                                         cond=othervar-asin(eq).evalf()
                                         if self.isExpressionUnique([tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique([tempeq[0] for tempeq in eqs],cond):
-                                            eqs.append((cond0,[(othervar,asin(eq).evalf()),(sothervar,eq),(sin(othervar),eq),(cothervar,sqrt(1-eq*eq).evalf()),(cos(othervar),sqrt(1-eq*eq).evalf())]))
+                                            eqs.append([cond0,[(othervar,asin(eq).evalf()),(sothervar,eq),(sin(othervar),eq),(cothervar,sqrt(1-eq*eq).evalf()),(cos(othervar),sqrt(1-eq*eq).evalf())]])
                                         cond=othervar-(pi-asin(eq).evalf())
                                         if self.isExpressionUnique([tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique([tempeq[0] for tempeq in eqs],cond):
-                                            eqs.append((cond,[(othervar,(pi-asin(eq)).evalf()),(sothervar,eq),(sin(othervar),eq),(cothervar,-sqrt(1-eq*eq).evalf()),(cos(othervar),-sqrt(1-eq*eq).evalf())]))
+                                            eqs.append([cond,[(othervar,(pi-asin(eq)).evalf()),(sothervar,eq),(sin(othervar),eq),(cothervar,-sqrt(1-eq*eq).evalf()),(cos(othervar),-sqrt(1-eq*eq).evalf())]])
                             elif s.jointevalcos is not None:
                                 for eq in s.jointevalcos:
                                     if eq.is_real:
                                         cond=othervar-acos(eq).evalf()
                                         if self.isExpressionUnique([tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique([tempeq[0] for tempeq in eqs],cond):
-                                            eqs.append((cond,[(othervar,acos(eq).evalf()),(sothervar,sqrt(1-eq*eq).evalf()),(sin(othervar),sqrt(1-eq*eq).evalf()),(cothervar,eq),(cos(othervar),eq)]))
+                                            eqs.append([cond,[(othervar,acos(eq).evalf()),(sothervar,sqrt(1-eq*eq).evalf()),(sin(othervar),sqrt(1-eq*eq).evalf()),(cothervar,eq),(cos(othervar),eq)]])
                                         cond=othervar+acos(eq).evalf()
                                         if self.isExpressionUnique([tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique([tempeq[0] for tempeq in eqs],cond):
-                                            eqs.append((cond,[(othervar,-acos(eq).evalf()),(sothervar,-sqrt(1-eq*eq).evalf()),(sin(othervar),-sqrt(1-eq*eq).evalf()),(cothervar,eq),(cos(othervar),eq)]))
-                                        
+                                            eqs.append([cond,[(othervar,-acos(eq).evalf()),(sothervar,-sqrt(1-eq*eq).evalf()),(sin(othervar),-sqrt(1-eq*eq).evalf()),(cothervar,eq),(cos(othervar),eq)]])
+            # have to compare with mod 2*pi for hinge joints
+            for i in range(len(eqs)):
+                if self.IsHinge(eqs[i][1][0][0].name):
+                    eqs[i][0]=fmod(eqs[i][0]+pi,2*pi)-pi
+
+            if len(eqs) == 0:
+                # try setting px, py, or pz to 0 (barrettwam4 lookat)
+                for othervar in othersolvedvars:
+                    if not self.IsHinge(othervar.name):
+                        continue
+                    sothervar = Symbol('s%s'%othervar.name)
+                    cothervar = Symbol('c%s'%othervar.name)
+                    if checkzero.has_any_symbols(othervar,sothervar,cothervar):
+                        for preal in [Symbol('px'),Symbol('py'),Symbol('pz')]:
+                            if checkzero.has_any_symbols(preal):
+                                for value in [S.Zero,pi/2,pi,-pi/2]:
+                                    eq = checkzero.subs([(othervar,value),(sothervar,sin(value).evalf()),(cothervar,cos(value).evalf()),(preal,S.Zero)]).evalf()
+                                    if eq == S.Zero:
+                                        eqs.append([abs(fmod(othervar-value+pi,2*pi)-pi)+abs(preal),[(othervar,value),(sothervar,sin(value).evalf()),(sin(othervar),sin(value).evalf()),(cothervar,cos(value).evalf()),(cos(othervar),cos(value).evalf())]])
+                                        print '%s=%s,%s=0 in %s'%(str(othervar),str(value),str(preal),str(checkzero))
             # test the solutions
             zerobranches = []
             for cond,othervarsubs in eqs:
@@ -1797,9 +1830,6 @@ class IKFastSolver(AutoReloader):
                         if not expr.has_any_symbols(*allvars) and (self.isExpressionUnique(extrazerochecks,expr) or self.isExpressionUnique(extrazerochecks,-expr)):
                             extrazerochecks.append(expr.subs(solsubs).evalf())
                     if extrazerochecks is not None:
-                        if self.IsHinge(othervarsubs[0][0].name):
-                            # have to compare with mod 2*pi
-                            cond=fmod(cond+pi,2*pi)-pi
                         zerobranches.append(([cond]+extrazerochecks,self.solveAllEquations(NewEquations,curvars,othersolvedvars,solsubs,endbranchtree)))
                 except self.CannotSolveError:
                     continue
@@ -1852,7 +1882,7 @@ class IKFastSolver(AutoReloader):
                 eqcombinations.append((eqs[0][0]+eqs[1][0],[Eq(e[1],0) for e in eqs]))
             eqcombinations.sort(lambda x, y: x[0]-y[0])
             solutions = []
-            for comb in eqcombinations:
+            for icomb,comb in enumerate(eqcombinations):
                 # skip if too complex
                 if len(solutions) > 0 and comb[0] > 200:
                     break
@@ -1901,7 +1931,8 @@ class IKFastSolver(AutoReloader):
                         svarsol = svarfrac[0]/svarfrac[1]
                         cvarsol = cvarfrac[0]/cvarfrac[1]
                         expandedsol = atan2(svarsol,cvarsol)
-                        simpsol = atan2(self.customtrigsimp(svarsol,deep=True),self.customtrigsimp(cvarsol,deep=True))
+                        # sometimes customtrigsimp freezes, so use trigsimp?
+                        simpsol = atan2(trigsimp(svarsol),trigsimp(cvarsol))
                         if self.codeComplexity(expandedsol) < self.codeComplexity(simpsol):
                             solversolution.jointeval.append(expandedsol)
                             if len(self.checkForDivideByZero(expandedsol)) == 0:
@@ -2193,7 +2224,10 @@ class IKFastSolver(AutoReloader):
                                             # wrong solutions to pass through since complementvar is actually constrained, but the constraint
                                             # is ignored. Therefore, this requires us to explicitly check denominator for zero and
                                             # that each solution is within the [-1,1] range.
-                                            neweq = self.chop(simplify(eq0num*eq1denom-eq1num*eq0denom),accuracy=self.accuracy*0.01)
+                                            neweq = eq0num*eq1denom-eq1num*eq0denom
+                                            if self.codeComplexity(neweq.expand()) < 700:
+                                                neweq = simplify(neweq)
+                                            neweq = self.chop(neweq,accuracy=self.accuracy*0.01)
                                             if neweq != S.Zero:
                                                 othervarpoly = Poly(neweq,*othervars).subs(othervars[0]**2,1-othervars[1]**2).subs(othervars[1]**2,1-othervars[0]**2)
                                                 if othervarpoly != S.Zero:
@@ -2218,8 +2252,13 @@ class IKFastSolver(AutoReloader):
                                     othervarpoly_simp = othervarpoly1
                                     solvevar = othervars[0]
                             if solvevar is not None:
-                                # squaring on both sides introduces bad solutions!
-                                finaleq = Poly(simplify((solvevar**2-S.One)*othervarpoly_simp.coeff(1)**2 + othervarpoly_simp.coeff(0)**2),solvevar)
+                                # note that squaring on both sides introduces bad solutions!
+                                # chop with a very small threshold
+                                finaleq_expand = self.chop(((solvevar**2-S.One)*othervarpoly_simp.coeff(1)**2 + othervarpoly_simp.coeff(0)**2).expand(),accuracy=self.accuracy**2)
+                                if self.codeComplexity(finaleq_expand) < 4000:
+                                    print 'simplifying final equation',self.codeComplexity(finaleq_expand)
+                                    finaleq_expand = simplify(finaleq_expand)
+                                finaleq = Poly(finaleq_expand,solvevar)
                                 # finaleq can be pretty big degree!
                                 print 'deg: ',finaleq.degree
                                 complementvarsol = -othervarpoly_simp.coeff(0)/othervarpoly_simp.coeff(1)
