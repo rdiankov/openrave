@@ -138,7 +138,7 @@ if __name__ == "__main__":
         if options.pythoncmd is not None:
             eval(compile(options.pythoncmd,'<string>','exec'))
         if options._viewer is None:
-            env.SetViewer('qtcon')
+            env.SetViewer('qtcoin')
         if options.ipython:
             from IPython.Shell import IPShellEmbed
             ipshell = IPShellEmbed(argv='',banner = 'OpenRAVE Dropping into IPython',exit_msg = 'Leaving Interpreter and closing program.')
