@@ -1806,7 +1806,7 @@ class IKFastSolver(AutoReloader):
                     if checkzero.has_any_symbols(othervar,sothervar,cothervar):
                         for preal in [Symbol('px'),Symbol('py'),Symbol('pz')]:
                             if checkzero.has_any_symbols(preal):
-                                for value in [S.Zero,pi/2,pi,-pi/2]:
+                                for value in [S.Zero,pi/2]: # not necessary to test pi, -pi/2?
                                     eq = checkzero.subs([(othervar,value),(sothervar,sin(value).evalf()),(cothervar,cos(value).evalf()),(preal,S.Zero)]).evalf()
                                     if eq == S.Zero:
                                         eqs.append([abs(fmod(othervar-value+pi,2*pi)-pi)+abs(preal),[(othervar,value),(sothervar,sin(value).evalf()),(sin(othervar),sin(value).evalf()),(cothervar,cos(value).evalf()),(cos(othervar),cos(value).evalf()),(preal,S.Zero)]])
@@ -1914,9 +1914,11 @@ class IKFastSolver(AutoReloader):
                         cvarfrac = [cvarfrac[0].subs(listsymbols), cvarfrac[1].subs(listsymbols)]
                         if self.chop(svarfrac[0]-cvarfrac[0]) == 0 and self.chop(svarfrac[1]-cvarfrac[1]) == 0:
                             break
+                        if not self.isValidSolution(svarfrac[0]) or not self.isValidSolution(svarfrac[1]) or not self.isValidSolution(cvarfrac[0]) or not self.isValidSolution(cvarfrac[1]):
+                            continue
                         scomplexity = self.codeComplexity(svarfrac[0])+self.codeComplexity(svarfrac[1])
                         ccomplexity = self.codeComplexity(cvarfrac[0])+self.codeComplexity(cvarfrac[1])
-                        if scomplexity > 700 or ccomplexity > 700:
+                        if scomplexity > 1200 or ccomplexity > 1200:
                             print 'equation too complex for single variable solution (%d,%d).... (probably wrong?)'%(scomplexity,ccomplexity)
                             break
                         svarfrac[1] = simplify(svarfrac[1])
@@ -1925,14 +1927,15 @@ class IKFastSolver(AutoReloader):
                         cvarfrac[1] = simplify(cvarfrac[1])
                         if self.chop(cvarfrac[1])== 0:
                             break
-                        if not self.isValidSolution(svarfrac[0]) or not self.isValidSolution(svarfrac[1]) or not self.isValidSolution(cvarfrac[0]) or not self.isValidSolution(cvarfrac[1]):
-                            continue
                         # sometimes the returned simplest solution makes really gross approximations
                         svarsol = svarfrac[0]/svarfrac[1]
                         cvarsol = cvarfrac[0]/cvarfrac[1]
                         expandedsol = atan2(svarsol,cvarsol)
-                        # sometimes customtrigsimp freezes, so use trigsimp?
-                        simpsol = atan2(trigsimp(svarsol),trigsimp(cvarsol))
+                        if scomplexity < 700 and ccomplexity < 700:
+                            # sometimes customtrigsimp freezes, so use trigsimp?
+                            simpsol = atan2(trigsimp(svarsol),trigsimp(cvarsol))
+                        else:
+                            simpsol = expandedsol
                         if self.codeComplexity(expandedsol) < self.codeComplexity(simpsol):
                             solversolution.jointeval.append(expandedsol)
                             if len(self.checkForDivideByZero(expandedsol)) == 0:
