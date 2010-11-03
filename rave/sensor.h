@@ -123,7 +123,8 @@ public:
         virtual SensorType GetType() { return ST_Odometry; }
         Transform pose; ///< measured pose
         Vector linear_velocity, angular_velocity; ///< measured velocity
-        boost::array<dReal,36> pose_covariance, velocity_covariance; ///< Row major of 6x6 matrix about linear x, y, z and rotational x, y, z axes
+        boost::array<dReal,36> pose_covariance; ///< Row major of 6x6 matrix about linear x, y, z axes
+        boost::array<dReal,36> velocity_covariance; ///< Row major of 6x6 matrix about rotational x, y, z axes
     };
 
     /// permanent properties of the sensors
@@ -175,6 +176,7 @@ public:
     {
     public:
         virtual SensorType GetType() { return ST_Odometry; }
+        std::string targetid; ///< id of the target whose odometry/pose messages are being published for
     };
 
     SensorBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Sensor, penv) {}

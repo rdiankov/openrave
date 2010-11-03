@@ -1066,10 +1066,12 @@ public:
             arr = toPyArrayN(&pdata->velocity_covariance[0],pdata->velocity_covariance.size());
             arr.resize(3,3);
             velocity_covariance = arr;
+            targetid = pgeom->targetid;
 
         }
         virtual ~PyOdometrySensorData() {}
         object pose, linear_velocity, angular_velocity, pose_covariance, velocity_covariance;
+        std::string targetid;
     };
 
     PySensorBase(SensorBasePtr psensor, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(psensor, pyenv), _psensor(psensor)
@@ -3785,6 +3787,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def_readonly("angular_velocity",&PySensorBase::PyOdometrySensorData::angular_velocity)
             .def_readonly("pose_covariance",&PySensorBase::PyOdometrySensorData::pose_covariance)
             .def_readonly("velocity_covariance",&PySensorBase::PyOdometrySensorData::velocity_covariance)
+            .def_readonly("targetid",&PySensorBase::PyOdometrySensorData::targetid)
             ;
 
         enum_<SensorBase::SensorType>("Type" DOXY_ENUM(SensorType))

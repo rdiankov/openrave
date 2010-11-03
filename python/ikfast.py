@@ -1809,7 +1809,7 @@ class IKFastSolver(AutoReloader):
                                 for value in [S.Zero,pi/2,pi,-pi/2]:
                                     eq = checkzero.subs([(othervar,value),(sothervar,sin(value).evalf()),(cothervar,cos(value).evalf()),(preal,S.Zero)]).evalf()
                                     if eq == S.Zero:
-                                        eqs.append([abs(fmod(othervar-value+pi,2*pi)-pi)+abs(preal),[(othervar,value),(sothervar,sin(value).evalf()),(sin(othervar),sin(value).evalf()),(cothervar,cos(value).evalf()),(cos(othervar),cos(value).evalf())]])
+                                        eqs.append([abs(fmod(othervar-value+pi,2*pi)-pi)+abs(preal),[(othervar,value),(sothervar,sin(value).evalf()),(sin(othervar),sin(value).evalf()),(cothervar,cos(value).evalf()),(cos(othervar),cos(value).evalf()),(preal,S.Zero)]])
                                         print '%s=%s,%s=0 in %s'%(str(othervar),str(value),str(preal),str(checkzero))
             # test the solutions
             zerobranches = []
@@ -1965,10 +1965,10 @@ class IKFastSolver(AutoReloader):
                     print 'cannot solve equation with high degree'
                     continue
                 if ps.coeff(0) == S.Zero and len(ps.monoms) > 0:
-                    print 'equation %s has trivial solution, ignoring...'%(str(ps))
+                    #print 'equation %s has trivial solution, ignoring...'%(str(ps))
                     continue
                 if pc.coeff(0) == S.Zero and len(pc.monoms) > 0:
-                    print 'equation %s has trivial solution, ignoring...'%(str(pc))
+                    #print 'equation %s has trivial solution, ignoring...'%(str(pc))
                     continue
             except polys.polynomial.PolynomialError:
                 # might not be a polynomial, so ignore
