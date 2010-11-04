@@ -383,7 +383,7 @@ class InverseReachabilityDemo:
         #      densityfn: gaussian kernel density function taking poses of openrave quaternion type, returns probabilities
         #      samplerfn: gaussian kernel sampler function taking number of sample and weight, returns robot base poses and joint states
         #      bounds: 2x3 array, bounds of samples, [[min rotation, min x, min y],[max rotation, max x, max y]]
-        densityfn,samplerfn,bounds = self.irmodel.computeBaseDistribution(Tgrasp)
+        densityfn,samplerfn,bounds = self.irmodel.computeBaseDistribution(Tgrasp,logllthresh=1.8)
         if densityfn == None:
             print 'the specified grasp is not reachable!'
             return
