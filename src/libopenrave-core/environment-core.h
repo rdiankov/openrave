@@ -1566,6 +1566,10 @@ protected:
             _cond.notify_all();
         }
 
+        virtual void deselect() {}
+        virtual void Reset() {}
+        virtual void SetBkgndColor(const RaveVector<float>& color) {}
+        
     protected:
         boost::mutex _mutex;
         boost::condition _cond;
