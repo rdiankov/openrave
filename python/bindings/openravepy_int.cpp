@@ -2316,7 +2316,7 @@ public:
                 RAVELOG_ERRORA("failed to get excluded body\n");
         }
         std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-        for(int i = 0; i < len(bodyexcluded); ++i) {
+        for(int i = 0; i < len(linkexcluded); ++i) {
             PyKinBody::PyLinkPtr plink = extract<PyKinBody::PyLinkPtr>(linkexcluded[i]);
             if( !!plink )
                 vlinkexcluded.push_back(plink->GetLink());
@@ -2337,7 +2337,7 @@ public:
                 RAVELOG_ERRORA("failed to get excluded body\n");
         }
         std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-        for(int i = 0; i < len(bodyexcluded); ++i) {
+        for(int i = 0; i < len(linkexcluded); ++i) {
             PyKinBody::PyLinkPtr plink = extract<PyKinBody::PyLinkPtr>(linkexcluded[i]);
             if( !!plink )
                 vlinkexcluded.push_back(plink->GetLink());
@@ -2364,7 +2364,7 @@ public:
                 RAVELOG_ERRORA("failed to get excluded body\n");
         }
         std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-        for(int i = 0; i < len(bodyexcluded); ++i) {
+        for(int i = 0; i < len(linkexcluded); ++i) {
             PyKinBody::PyLinkPtr plink = extract<PyKinBody::PyLinkPtr>(linkexcluded[i]);
             if( plink != NULL )
                 vlinkexcluded.push_back(plink->GetLink());
@@ -2385,7 +2385,7 @@ public:
                 RAVELOG_ERRORA("failed to get excluded body\n");
         }
         std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-        for(int i = 0; i < len(bodyexcluded); ++i) {
+        for(int i = 0; i < len(linkexcluded); ++i) {
             PyKinBody::PyLinkPtr plink = extract<PyKinBody::PyLinkPtr>(linkexcluded[i]);
             if( plink != NULL )
                 vlinkexcluded.push_back(plink->GetLink());
