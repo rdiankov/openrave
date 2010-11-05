@@ -125,7 +125,7 @@ class ConvexDecompositionModel(OpenRAVEModel):
         OpenRAVEModel.save(self,(self.linkgeometry,self.convexparams))
 
     def getfilename(self,read=False):
-        return RaveFindDatabaseFile(os.path.join('robot.'+self.robot.GetKinematicsGeometryHash(), 'convexdecomposition.pp', read),read)
+        return RaveFindDatabaseFile(os.path.join('robot.'+self.robot.GetKinematicsGeometryHash(), 'convexdecomposition.pp'),read)
 
     def autogenerate(self,options=None):
         if options is not None:

@@ -965,13 +965,14 @@ class IKFastSolver(AutoReloader):
                 i += 1
         return Positions,Positionsee
 
-    def buildEquationsFromPositions(self,Positions,Positionsee,uselength=True):
+    def buildEquationsFromPositions(self,Positions,Positionsee,uselength=True,uselength2=False):
         AllEquations = []
         for i in range(len(Positions)):
             for j in range(3):
                 e = Positions[i][j] - Positionsee[i][j]
                 if self.codeComplexity(e) < 1500:
                     e = self.customtrigsimp(e)
+
                 if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
                     AllEquations.append(e)
             if uselength:
@@ -984,6 +985,17 @@ class IKFastSolver(AutoReloader):
                         AllEquations.append(e)
                 else:
                     print 'length equations too big, skipping...',self.codeComplexity(p2),self.codeComplexity(pe2)
+            if uselength2:
+                for j0,j1 in combinations(range(3),2):
+                    p2 = (Positions[i][j0]**2+Positions[i][j1]**2).expand()
+                    pe2 = (Positionsee[i][j0]**2+Positionsee[i][j1]**2).expand()
+                    if self.codeComplexity(p2) < 1500 and self.codeComplexity(pe2) < 1500:
+                        # sympy's trigsimp/customtrigsimp give up too easily
+                        e = self.customtrigsimp(self.customtrigsimp(self.customtrigsimp(self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp(p2)).expand())) - self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp(pe2)).expand())))))
+                        if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
+                            AllEquations.append(e)
+                    else:
+                        print 'length2 equations too big, skipping...',self.codeComplexity(p2),self.codeComplexity(pe2)
         self.sortComplexity(AllEquations)
         return AllEquations
 
@@ -1229,25 +1241,34 @@ class IKFastSolver(AutoReloader):
         valuesubs = []
         freevarcond = None
 
-        Ds = [Matrix(3,1, [self.chop(x,accuracy=self.accuracy*10.0) for x in T[0:3,0:3]*basedir]) for T in LinksAccumRightAll[0:5]]
-        Dsee = [Matrix(3,1, [self.chop(x,accuracy=self.accuracy*10.0) for x in T[0:3,0:3]*Dee]) for T in LinksAccumLeftInvAll[0:5]]
+        Ds = [Matrix(3,1, [self.chop(x,accuracy=self.accuracy*10.0) for x in T[0:3,0:3]*basedir]) for T in LinksAccumRightAll[0:6]]
+        Dsee = [Matrix(3,1, [self.chop(x,accuracy=self.accuracy*10.0) for x in T[0:3,0:3]*Dee]) for T in LinksAccumLeftInvAll[0:6]]
         Positions, Positionsee = self.buildPositionEquations(LinksAccumRightAll[0:5], LinksAccumLeftInvAll[0:5],basepos,Pee)
         Positionsnew = []
         Positionseenew = []
-        for i in range(len(Positions)):
-            p = Positions[i].cross(Dsee[i]).expand()
-            if all([self.codeComplexity(x)<2000 for x in p]):
-                p = Matrix(3,1,[self.customtrigsimp(self.customtrigsimp(x)) for x in p])
-            pee = Positionsee[i].cross(Dsee[i]).expand()
-            if all([self.codeComplexity(x)<2000 for x in pee]):
-                pee = Matrix(3,1,[self.customtrigsimp(self.customtrigsimp(x)) for x in pee])
-            Positionsnew.append(p)
-            Positionseenew.append(pee)
+#         for i in range(len(Positions)):
+#             p = Positions[i].cross(Dsee[i]).expand()
+#             if all([self.codeComplexity(x)<2000 for x in p]):
+#                 p = Matrix(3,1,[self.customtrigsimp(self.customtrigsimp(x)) for x in p])
+#             pee = Positionsee[i].cross(Dsee[i]).expand()
+#             if all([self.codeComplexity(x)<2000 for x in pee]):
+#                 pee = Matrix(3,1,[self.customtrigsimp(self.customtrigsimp(x)) for x in pee])
+#             Positionsnew.append(p)
+#             Positionseenew.append(pee)
+#         for i in range(len(Positions)):
+#             p = Positions[i].cross(Ds[i]).expand()
+#             if all([self.codeComplexity(x)<2000 for x in p]):
+#                 p = Matrix(3,1,[self.customtrigsimp(self.customtrigsimp(x)) for x in p])
+#             pee = Positionsee[i].cross(Ds[i]).expand()
+#             if all([self.codeComplexity(x)<2000 for x in pee]):
+#                 pee = Matrix(3,1,[self.customtrigsimp(self.customtrigsimp(x)) for x in pee])
+#             Positionsnew.append(p)
+#             Positionseenew.append(pee)
         for i in range(len(Positions)):
             p = Positions[i].cross(Ds[i]).expand()
             if all([self.codeComplexity(x)<2000 for x in p]):
                 p = Matrix(3,1,[self.customtrigsimp(self.customtrigsimp(x)) for x in p])
-            pee = Positionsee[i].cross(Ds[i]).expand()
+            pee = Positionsee[i].cross(Dsee[i]).expand()
             if all([self.codeComplexity(x)<2000 for x in pee]):
                 pee = Matrix(3,1,[self.customtrigsimp(self.customtrigsimp(x)) for x in pee])
             Positionsnew.append(p)
@@ -1281,7 +1302,7 @@ class IKFastSolver(AutoReloader):
         orgsolsubs = self.freevarsubs[:]
         rottree = []
         endbranchtree = [SolverSequence([rottree])]
-        AllEquations = self.buildEquationsFromPositions(Positionsnew,Positionseenew,uselength=False)
+        AllEquations = self.buildEquationsFromPositions(Positionsnew,Positionseenew,uselength=False,uselength2=True)
         for i in range(len(Ds)):
             for j in range(3):
                 e = (Ds[i][j] - Dsee[i][j]).expand()
@@ -1360,7 +1381,7 @@ class IKFastSolver(AutoReloader):
             p = Positions[i].cross(Ds[i]).expand()
             if all([self.codeComplexity(x)<2000 for x in p]):
                 p = Matrix(3,1,[self.customtrigsimp(self.customtrigsimp(x)) for x in p])
-            pee = Positionsee[i].cross(Ds[i]).expand()
+            pee = Positionsee[i].cross(Dsee[i]).expand()
             if all([self.codeComplexity(x)<2000 for x in pee]):
                 pee = Matrix(3,1,[self.customtrigsimp(self.customtrigsimp(x)) for x in pee])
             Positionsnew.append(p)
