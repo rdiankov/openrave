@@ -35,7 +35,7 @@ public:
     ///
     /// \param t new transformation of the plot
     virtual void SetTransform(const RaveTransform<float>& t) { throw openrave_exception("GraphHandle::SetTransform not implemented",ORE_NotImplemented); }
-    /// \brief shows or hides the plot without destroying its resources
+    /// \brief Shows or hides the plot without destroying its resources. <b>[multi-thread safe]</b>
     virtual void SetShow(bool bshow) { throw openrave_exception("GraphHandle::SetShow not implemented",ORE_NotImplemented); }
 };
 
