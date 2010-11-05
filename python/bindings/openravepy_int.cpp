@@ -1073,6 +1073,19 @@ public:
         object pose, linear_velocity, angular_velocity, pose_covariance, velocity_covariance;
         std::string targetid;
     };
+    class PyTactileSensorData : public PySensorData
+    {
+    public:
+        PyTactileSensorData(boost::shared_ptr<SensorBase::TactileGeomData> pgeom, boost::shared_ptr<SensorBase::TactileSensorData> pdata) : PySensorData(pdata)
+        {
+            forces = toPyArray3(pdata->forces);
+            numeric::array arr = toPyArrayN(&pdata->force_covariance[0],pdata->force_covariance.size());
+            arr.resize(3,3);
+            force_covariance = arr;            
+        }
+        virtual ~PyTactileSensorData() {}
+        object forces, force_covariance;
+    };
 
     PySensorBase(SensorBasePtr psensor, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(psensor, pyenv), _psensor(psensor)
     {
@@ -1111,6 +1124,8 @@ public:
             return boost::shared_ptr<PySensorData>(new PyIMUSensorData(boost::static_pointer_cast<SensorBase::IMUGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::IMUSensorData>(psensordata)));
         case SensorBase::ST_Odometry:
             return boost::shared_ptr<PySensorData>(new PyOdometrySensorData(boost::static_pointer_cast<SensorBase::OdometryGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::OdometrySensorData>(psensordata)));
+        case SensorBase::ST_Tactile:
+            return boost::shared_ptr<PySensorData>(new PyTactileSensorData(boost::static_pointer_cast<SensorBase::TactileGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::TactileSensorData>(psensordata)));
         case SensorBase::ST_Invalid:
             break;
         }
@@ -3812,6 +3827,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .value("Force6D",SensorBase::ST_Force6D)
             .value("IMU",SensorBase::ST_IMU)
             .value("Odometry",SensorBase::ST_Odometry)
+            .value("Tactile",SensorBase::ST_Tactile)
             ;
     }
 

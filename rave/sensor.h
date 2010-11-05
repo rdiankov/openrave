@@ -37,7 +37,8 @@ public:
         ST_Force6D=4,
         ST_IMU=5,
         ST_Odometry=6,
-        ST_NumberofSensorTypes=6
+        ST_Tactile=7,
+        ST_NumberofSensorTypes=7
     };
 
     class CameraIntrinsics
@@ -127,6 +128,15 @@ public:
         boost::array<dReal,36> velocity_covariance; ///< Row major of 6x6 matrix about rotational x, y, z axes
     };
 
+    /// \brief tactle data
+    class RAVE_API TactileSensorData : public SensorData
+    {
+    public:
+        virtual SensorType GetType() { return ST_Tactile; }
+        std::vector<Vector> forces; /// xyz force of each individual element
+        boost::array<dReal,9> force_covariance; ///< row major 3x3 matrix of the uncertainty on the xyz force measurements
+    };
+
     /// permanent properties of the sensors
     class RAVE_API SensorGeometry
     {
@@ -177,6 +187,22 @@ public:
     public:
         virtual SensorType GetType() { return ST_Odometry; }
         std::string targetid; ///< id of the target whose odometry/pose messages are being published for
+    };
+    class RAVE_API TactileGeomData : public SensorGeometry
+    {
+    public:
+        /// LuGre friction model?
+        struct Friction
+        {
+            dReal sigma_0; ///< the stiffness coefficient of the contacting surfaces
+            dReal sigma_1; ///< the friction damping coefficient.
+            dReal mu_s; ///< static friction coefficient
+            dReal mu_d; ///< dynamic friction coefficient
+        };
+        std::vector<Vector> positions; ///< 3D positions of all the elements in the sensor frame
+        dReal thickness; ///< the thickness of the tactile sensors (used for determining contact and computing force)
+        ///dReal normal_force_stiffness, normal_force_damping; ///< simple model for determining contact force from depressed distance... necessary?
+        std::map<std::string, Friction> _mapfriction; ///< friction coefficients references by target objects
     };
 
     SensorBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Sensor, penv) {}
