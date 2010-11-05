@@ -3183,7 +3183,10 @@ BOOST_PYTHON_MODULE(openravepy_int)
     class_< boost::shared_ptr< void > >("VoidPointer", "Holds auto-managed resources, deleting it releases its shared data.");
 
     class_<PyEnvironmentBase, boost::shared_ptr<PyEnvironmentBase> > classenv("Environment", DOXY_CLASS(EnvironmentBase));
-    class_<PyGraphHandle, boost::shared_ptr<PyGraphHandle> >("GraphHandle", "Holds auto-managed graphh resources, callings close() or deleting it closes the graphs.");
+    class_<PyGraphHandle, boost::shared_ptr<PyGraphHandle> >("GraphHandle", DOXY_CLASS(GraphHandle), no_init)
+        .def("SetTransform",&PyGraphHandle::SetTransform,DOXY_FN(GraphHandle,SetTransform))
+        .def("SetShow",&PyGraphHandle::SetShow,DOXY_FN(GraphHandle,SetShow))
+        ;
     class_<PyRay, boost::shared_ptr<PyRay> >("Ray", DOXY_CLASS(geometry::ray))
         .def(init<object,object>())
         .def("dir",&PyRay::dir)

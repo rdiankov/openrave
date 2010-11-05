@@ -26,7 +26,7 @@ namespace OpenRAVE {
     Holds the parameterization of a geometric primitive useful for autonomous manipulation scenarios like:
     6D pose, 3D translation, 3D rotation, 3D look at direction, and ray look at direction.
 */
-class IkParameterization
+class RAVE_API IkParameterization
 {
 public:
     /// \brief The types of inverse kinematics parameterizations supported.

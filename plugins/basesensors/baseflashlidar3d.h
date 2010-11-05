@@ -219,7 +219,7 @@ public:
             if( _bRender ) {
 
                 // If can render, check if some time passed before last update
-                list<EnvironmentBase::GraphHandlePtr> listhandles;
+                list<GraphHandlePtr> listhandles;
                 int N = 0;
                 vector<RaveVector<float> > vpoints;
                 vector<int> vindices;
@@ -311,28 +311,31 @@ public:
     virtual void SetTransform(const Transform& trans)
     {
         _trans = trans;
-
-        // draw new graph
         Transform t = GetTransform();
-    
-        viconpoints.resize(5);
-        viconindices.resize(6*3);
-        viconpoints[0] = t.trans;
-        viconpoints[1] = t.trans+0.1f*t.rotate(Vector(_iKK[2], _iKK[3],1));
-        viconpoints[2] = t.trans+0.1f*t.rotate(Vector(_iKK[2], (float)_pgeom->height*_iKK[1] + _iKK[3],1));
-        viconpoints[3] = t.trans+0.1f*t.rotate(Vector((float)_pgeom->width*_iKK[0] + _iKK[2], _iKK[3],1));
-        viconpoints[4] = t.trans+0.1f*t.rotate(Vector((float)_pgeom->width*_iKK[0] + _iKK[2], (float)_pgeom->height*_iKK[1] + _iKK[3],1));
+        if( !_iconhandle ) {
+            viconpoints.resize(5);
+            viconindices.resize(6*3);
+            viconpoints[0] = Vector(0,0,0);
+            viconpoints[1] = 0.1f*Vector(_iKK[2], _iKK[3],1);
+            viconpoints[2] = 0.1f*Vector(_iKK[2], (float)_pgeom->height*_iKK[1] + _iKK[3],1);
+            viconpoints[3] = 0.1f*Vector((float)_pgeom->width*_iKK[0] + _iKK[2], _iKK[3],1);
+            viconpoints[4] = 0.1f*Vector((float)_pgeom->width*_iKK[0] + _iKK[2], (float)_pgeom->height*_iKK[1] + _iKK[3],1);
 
-        viconindices[0] = 0; viconindices[1] = 1; viconindices[2] = 2;
-        viconindices[3] = 0; viconindices[4] = 4; viconindices[5] = 2;
-        viconindices[6] = 0; viconindices[7] = 3; viconindices[8] = 4;
-        viconindices[9] = 0; viconindices[10] = 1; viconindices[11] = 3;
-        viconindices[12] = 1; viconindices[13] = 3; viconindices[14] = 2;
-        viconindices[15] = 3; viconindices[16] = 4; viconindices[17] = 2;
+            viconindices[0] = 0; viconindices[1] = 1; viconindices[2] = 2;
+            viconindices[3] = 0; viconindices[4] = 4; viconindices[5] = 2;
+            viconindices[6] = 0; viconindices[7] = 3; viconindices[8] = 4;
+            viconindices[9] = 0; viconindices[10] = 1; viconindices[11] = 3;
+            viconindices[12] = 1; viconindices[13] = 3; viconindices[14] = 2;
+            viconindices[15] = 3; viconindices[16] = 4; viconindices[17] = 2;
 
-        RaveVector<float> vcolor = _vColor*0.5f;
-        vcolor.w = 0.7f;
-        _iconhandle = GetEnv()->drawtrimesh(viconpoints[0], sizeof(viconpoints[0]), &viconindices[0], 6, vcolor);
+            RaveVector<float> vcolor = _vColor*0.5f;
+            vcolor.w = 0.7f;
+
+            _iconhandle = GetEnv()->drawtrimesh(viconpoints[0], sizeof(viconpoints[0]), &viconindices[0], 6, vcolor);
+        }
+        if( !!_iconhandle ) {
+            _iconhandle->SetTransform(t);
+        }
     }
 
     virtual Transform GetTransform() { return _trans; }
@@ -349,8 +352,8 @@ protected:
     float _iKK[4]; // inverse of KK
 
     Transform _trans;
-    list<EnvironmentBase::GraphHandlePtr> _listGraphicsHandles;
-    EnvironmentBase::GraphHandlePtr _iconhandle;
+    list<GraphHandlePtr> _listGraphicsHandles;
+    GraphHandlePtr _iconhandle;
     vector<RaveVector<float> > viconpoints;
     vector<int> viconindices;
     dReal fTimeToScan, fScanTime;

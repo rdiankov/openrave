@@ -305,11 +305,13 @@ class PyGraphHandle
 {
 public:
     PyGraphHandle() {}
-    PyGraphHandle(EnvironmentBase::GraphHandlePtr handle) : _handle(handle) {}
+    PyGraphHandle(GraphHandlePtr handle) : _handle(handle) {}
     virtual ~PyGraphHandle() {}
 
+    void SetTransform(object otrans) { _handle->SetTransform(RaveTransform<float>(ExtractTransformMatrixType<float>(otrans))); }
+    void SetShow(bool bshow) { _handle->SetShow(bshow); }
 private:
-    EnvironmentBase::GraphHandlePtr _handle;
+    GraphHandlePtr _handle;
 };
 
 namespace openravepy

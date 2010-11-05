@@ -135,40 +135,44 @@ class BaseCameraSensor : public SensorBase
     {
         boost::shared_ptr<CameraSensorData> pdata = _pdata;
 
-        if( _bUpdateCameraPlot ) {
-            // render a simple frustum outlining camera's dimension
-            // the frustum is colored with vColor, the x and y axes are colored separetely
-            Vector points[7];
-            float ik0 = 1/_pgeom->KK.fx, ik1 = 1/_pgeom->KK.fy;
-            points[0] = Vector(0,0,0);
-            points[1] = Vector(((float)_pgeom->width-_pgeom->KK.cx)*ik0, ((float)_pgeom->height-_pgeom->KK.cy)*ik1, 1);
-            points[2] = Vector(-_pgeom->KK.cx*ik0, ((float)_pgeom->height-_pgeom->KK.cy)*ik1, 1);
-            points[3] = Vector(-_pgeom->KK.cx*ik0, -_pgeom->KK.cy*ik1, 1);
-            points[4] = Vector(((float)_pgeom->width-_pgeom->KK.cx)*ik0, -_pgeom->KK.cy*ik1, 1);
-            points[5] = Vector(0.5f,0,0);
-            points[6] = Vector(0,0.5f,0);
+        if( _bUpdateCameraPlot ) {            
+            if( !_iconhandle ) {
+                // render a simple frustum outlining camera's dimension
+                // the frustum is colored with vColor, the x and y axes are colored separetely
+                Vector points[7];
+                float ik0 = 1/_pgeom->KK.fx, ik1 = 1/_pgeom->KK.fy;
+                points[0] = Vector(0,0,0);
+                points[1] = Vector(((float)_pgeom->width-_pgeom->KK.cx)*ik0, ((float)_pgeom->height-_pgeom->KK.cy)*ik1, 1);
+                points[2] = Vector(-_pgeom->KK.cx*ik0, ((float)_pgeom->height-_pgeom->KK.cy)*ik1, 1);
+                points[3] = Vector(-_pgeom->KK.cx*ik0, -_pgeom->KK.cy*ik1, 1);
+                points[4] = Vector(((float)_pgeom->width-_pgeom->KK.cx)*ik0, -_pgeom->KK.cy*ik1, 1);
+                points[5] = Vector(0.5f,0,0);
+                points[6] = Vector(0,0.5f,0);
 
-            boost::array<int,16> inds = {{0,1,2,3,4,1,4,0,2,3,0,0,5,0,0,6}};
+                boost::array<int,16> inds = {{0,1,2,3,4,1,4,0,2,3,0,0,5,0,0,6}};
 
-            viconpoints.resize(inds.size());
-            vector<float> vcolors(inds.size()*3);
+                viconpoints.resize(inds.size());
+                vector<float> vcolors(inds.size()*3);
 
-            for(size_t i = 0; i < inds.size(); ++i) {
-                viconpoints[i] = _trans * (0.02*points[inds[i]]);
-                vcolors[3*i+0] = _vColor.x;
-                vcolors[3*i+1] = _vColor.y;
-                vcolors[3*i+2] = _vColor.z;
+                for(size_t i = 0; i < inds.size(); ++i) {
+                    viconpoints[i] = 0.02*points[inds[i]];
+                    vcolors[3*i+0] = _vColor.x;
+                    vcolors[3*i+1] = _vColor.y;
+                    vcolors[3*i+2] = _vColor.z;
+                }
+
+                float xaxis[3] = {1,0,0};
+                float yaxis[3] = {0,1,0};
+                float* pstart = &vcolors[vcolors.size()-3*5];
+                for(int i = 0; i < 3; ++i) {
+                    pstart[i] = pstart[3+i] = pstart[6+i] = xaxis[i];
+                    pstart[9+i] = pstart[12+i] = yaxis[i];
+                }
+                _iconhandle = GetEnv()->drawlinestrip(viconpoints[0], viconpoints.size(), sizeof(viconpoints[0]), 1, &vcolors[0]);
             }
-
-            float xaxis[3] = {1,0,0};
-            float yaxis[3] = {0,1,0};
-            float* pstart = &vcolors[vcolors.size()-3*5];
-            for(int i = 0; i < 3; ++i) {
-                pstart[i] = pstart[3+i] = pstart[6+i] = xaxis[i];
-                pstart[9+i] = pstart[12+i] = yaxis[i];
+            if( !!_iconhandle ) {
+                _iconhandle->SetTransform(_trans);
             }
-        
-            _iconhandle = GetEnv()->drawlinestrip(viconpoints[0], viconpoints.size(), sizeof(viconpoints[0]), 1, &vcolors[0]);
         }
 
         if( _pgeom->width > 0 && _pgeom->height > 0 && _bPower) {
@@ -278,7 +282,7 @@ class BaseCameraSensor : public SensorBase
     Transform _trans;
     dReal fTimeToImage;
     int framerate;
-    EnvironmentBase::GraphHandlePtr _iconhandle;
+    GraphHandlePtr _iconhandle;
     vector<RaveVector<float> > viconpoints;
 
     mutable boost::mutex _mutexdata;

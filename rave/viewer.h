@@ -22,6 +22,27 @@
 
 namespace OpenRAVE {
 
+/// \brief Handle holding the plot from the viewers. The plot will continue to be drawn as long as a reference to this handle is held.
+///
+/// Designed to be multi-thread safe and destruction and modification of the viewer plot can be done at any time. The viewers
+/// internally handle synchronization and threading issues.
+class RAVE_API GraphHandle
+{
+public:
+    virtual ~GraphHandle() {}
+
+    /// \brief Changes the underlying transformation of the plot. <b>[multi-thread safe]</b>
+    ///
+    /// \param t new transformation of the plot
+    virtual void SetTransform(const RaveTransform<float>& t) { throw openrave_exception("GraphHandle::SetTransform not implemented",ORE_NotImplemented); }
+    /// \brief shows or hides the plot without destroying its resources
+    virtual void SetShow(bool bshow) { throw openrave_exception("GraphHandle::SetShow not implemented",ORE_NotImplemented); }
+};
+
+typedef boost::shared_ptr<GraphHandle> GraphHandlePtr;
+typedef boost::shared_ptr<GraphHandle const> GraphHandleConstPtr;
+typedef boost::weak_ptr<GraphHandle const> GraphHandleWeakPtr;
+
 /** \brief <b>[interface]</b> Base class for the graphics and gui engine that renders the environment and provides visual sensor information.
     \ingroup interfaces
 */
@@ -41,9 +62,6 @@ public:
     /// return the static interface type this class points to (used for safe casting)
     static inline InterfaceType GetInterfaceTypeStatic() { return PT_Viewer; }
     
-    /// reset the camera depending on its mode
-    virtual void UpdateCameraTransform() = 0;
-
     /// goes into the main loop
     /// \param bShow if true will show the window
     virtual int main(bool bShow = true) = 0;
@@ -55,10 +73,13 @@ public:
     /// \brief Set the camera transformation.
     /// \param trans new camera transformation in the world coordinate system
     /// \param focalDistance The new focal distance of the camera (higher values is higher zoom). If 0, then the previous focal distance is preserved.
-    virtual void SetCamera(const RaveTransform<float>& trans, float focalDistance=0) = 0;
+    virtual void SetCamera(const RaveTransform<float>& trans, float focalDistance=0) { throw openrave_exception("ViewerBase::SetCamera not implemented",ORE_NotImplemented); }
 
     /// \brief Return the current camera transform that the viewer is rendering the environment at.
-    virtual RaveTransform<float> GetCameraTransform() = 0;
+    virtual RaveTransform<float> GetCameraTransform() { throw openrave_exception("ViewerBase::GetCameraTransform not implemented",ORE_NotImplemented); }
+
+    /// reset the camera depending on its mode
+    virtual void UpdateCameraTransform() { throw openrave_exception("ViewerBase::UpdateCameraTransform not implemented",ORE_NotImplemented); }
 
     /// Renders a 24bit RGB image of dimensions width and height from the current scene. The camera
     /// is meant to show the underlying OpenRAVE world as a robot would see it, so all graphs
@@ -69,23 +90,12 @@ public:
     /// \param t the rotation and translation of the camera. Note that z is treated as the front of the camera!
     ///        So all points in front of the camera have a positive dot product with its direction.
     /// \param KK 4 values such that the intrinsic matrix can be reconstructed [pKK[0] 0 pKK[2]; 0 pKK[1] pKK[3]; 0 0 1];
-    virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK) = 0;
+    virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK) { throw openrave_exception("ViewerBase::GetCameraImage not implemented",ORE_NotImplemented); }
 
-    /// Renders a 24bit RGB image of dimensions width and height from the current scene and saves it to a file.
-    /// The camera is meant to show the underlying OpenRAVE world as a robot would see it, so all graphs
-    /// rendered with the plotX and drawX functions are hidden.
-    /// \param width width of the image
-    /// \param height height of the image
-    /// \param t the rotation and translation of the camera. Note that z is treated as the front of the camera!
-    ///        So all points in front of the camera have a positive dot product with its direction.
-    /// \param KK 4 values such that the intrinsic matrix can be reconstructed [pKK[0] 0 pKK[2]; 0 pKK[1] pKK[3]; 0 0 1];
-    /// \param filename filename to write image
-    /// \param extension extension of the image
-    virtual bool WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension) RAVE_DEPRECATED = 0;
     //@}
 
-    virtual void Reset() = 0;
-    virtual void SetBkgndColor(const RaveVector<float>& color) = 0;
+    virtual void Reset() { throw openrave_exception("ViewerBase::Reset not implemented",ORE_NotImplemented); }
+    virtual void SetBkgndColor(const RaveVector<float>& color) { throw openrave_exception("ViewerBase::SetBkgndColor not implemented",ORE_NotImplemented); }
 
     /// callback viewer function when for viewer events
     /// first parameter - target openrave link
@@ -95,40 +105,39 @@ public:
 
     /// registers a function with the viewer that gets called everytime a specified event occurs (part of ViewerEvents enum)
     /// \return a handle to the callback. If this handle is deleted, the callback will be unregistered
-    virtual boost::shared_ptr<void> RegisterCallback(int properties, const ViewerCallbackFn& fncallback) = 0;
+    virtual boost::shared_ptr<void> RegisterCallback(int properties, const ViewerCallbackFn& fncallback) { throw openrave_exception("ViewerBase::RegisterCallback not implemented",ORE_NotImplemented); }
 
     /// controls whether the viewer synchronizes with the newest environment
-    virtual void SetEnvironmentSync(bool bUpdate) = 0;
+    virtual void SetEnvironmentSync(bool bUpdate) { throw openrave_exception("ViewerBase::SetEnvironmentSync not implemented",ORE_NotImplemented); }
 
     /// forces synchronization with the environment, returns when the environment is fully synchronized.
     /// Note that this method might not work if environment is locked in current thread
-    virtual void EnvironmentSync() = 0;
+    virtual void EnvironmentSync() { throw openrave_exception("ViewerBase::EnvironmentSync not implemented",ORE_NotImplemented); }
 
-    virtual void ViewerSetSize(int w, int h) = 0;
-    virtual void ViewerMove(int x, int y) = 0;
-    virtual void ViewerSetTitle(const std::string& ptitle) = 0;
-    virtual bool LoadModel(const std::string& pfilename) = 0;
+    virtual void ViewerSetSize(int w, int h) { throw openrave_exception("ViewerBase::ViewerSetSize not implemented",ORE_NotImplemented); }
+    virtual void ViewerMove(int x, int y) { throw openrave_exception("ViewerBase::ViewerMove not implemented",ORE_NotImplemented); }
+    virtual void ViewerSetTitle(const std::string& ptitle) { throw openrave_exception("ViewerBase::ViewerSetTitle not implemented",ORE_NotImplemented); }
+    virtual bool LoadModel(const std::string& pfilename) { throw openrave_exception("ViewerBase::LoadModel not implemented",ORE_NotImplemented); }
 
 protected:
-    virtual void* plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle = 0) = 0;
-    virtual void* plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle = 0, bool bhasalpha=false) = 0;
+    virtual GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle = 0) { throw openrave_exception("ViewerBase::plot3 not implemented",ORE_NotImplemented); }
+    virtual GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle = 0, bool bhasalpha=false) { throw openrave_exception("ViewerBase::plot3 not implemented",ORE_NotImplemented); }
 
-    virtual void* drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color) = 0;
-    virtual void* drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors) = 0;
+    virtual GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color) { throw openrave_exception("ViewerBase::drawlinestrip not implemented",ORE_NotImplemented); }
+    virtual GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors) { throw openrave_exception("ViewerBase::drawlinestrip not implemented",ORE_NotImplemented); }
 
-    virtual void* drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color) = 0;
-    virtual void* drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors) = 0;
+    virtual GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color) { throw openrave_exception("ViewerBase::drawlinelist not implemented",ORE_NotImplemented); }
+    virtual GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors) { throw openrave_exception("ViewerBase::drawlinelist not implemented",ORE_NotImplemented); }
 
-    virtual void* drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color) = 0;
+    virtual GraphHandlePtr drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color) { throw openrave_exception("ViewerBase::drawarrow not implemented",ORE_NotImplemented); }
 
-    virtual void* drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents) = 0;
-    virtual void* drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture) = 0;
+    virtual GraphHandlePtr drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents) { throw openrave_exception("ViewerBase::drawbox not implemented",ORE_NotImplemented); }
+    virtual GraphHandlePtr drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture) { throw openrave_exception("ViewerBase::drawplane not implemented",ORE_NotImplemented); }
     
-    virtual void* drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color) = 0;
-    virtual void* drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors) = 0;
+    virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color) { throw openrave_exception("ViewerBase::drawtrimesh not implemented",ORE_NotImplemented); }
+    virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors) { throw openrave_exception("ViewerBase::drawtrimesh not implemented",ORE_NotImplemented); }
 
-    virtual void closegraph(void* handle) = 0;
-    virtual void deselect() = 0;
+    virtual void deselect() { throw openrave_exception("ViewerBase::deselect not implemented",ORE_NotImplemented); }
 
 private:
     virtual const char* GetHash() const { return OPENRAVE_VIEWER_HASH; }

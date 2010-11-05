@@ -112,21 +112,20 @@ public:
     virtual void SetBkgndColor(const RaveVector<float>& color);
 
     virtual void PrintCamera();
-    virtual void* plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle = 0);
-    virtual void* plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle = 0, bool bhasalpha=false);
+    virtual GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle = 0);
+    virtual GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle = 0, bool bhasalpha=false);
 
-    virtual void* drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color);
-    virtual void* drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors);
+    virtual GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color);
+    virtual GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors);
 
-    virtual void* drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color);
-    virtual void* drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors);
+    virtual GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color);
+    virtual GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors);
 
-    virtual void* drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color);
-    virtual void* drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents);
-    virtual void* drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture);
-    virtual void* drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color);
-    virtual void* drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors);
-    virtual void closegraph(void* handle);
+    virtual GraphHandlePtr drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color);
+    virtual GraphHandlePtr drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents);
+    virtual GraphHandlePtr drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture);
+    virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color);
+    virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors);
 
     virtual void SetEnvironmentSync(bool bUpdate);
     virtual void EnvironmentSync();
@@ -211,6 +210,39 @@ public:
     static int s_InitRefCount;
 
 protected:
+    class PrivateGraphHandle : public GraphHandle
+    {
+    public:
+    PrivateGraphHandle(boost::weak_ptr<QtCoinViewer> wviewer, SoSwitch* handle) : _handle(handle), _wviewer(wviewer) {
+            BOOST_ASSERT(_handle!=NULL);
+        }
+        virtual ~PrivateGraphHandle() {
+            boost::shared_ptr<QtCoinViewer> viewer = _wviewer.lock();
+            if( !!viewer ) {
+                viewer->closegraph(_handle);
+            }
+        }
+        
+        virtual void SetTransform(const RaveTransform<float>& t)
+        {
+            boost::shared_ptr<QtCoinViewer> viewer = _wviewer.lock();
+            if( !!viewer ) {
+                viewer->SetGraphTransform(_handle,t);
+            }
+        }
+
+        virtual void SetShow(bool bshow)
+        {
+            boost::shared_ptr<QtCoinViewer> viewer = _wviewer.lock();
+            if( !!viewer ) {
+                viewer->SetGraphShow(_handle,bshow);
+            }
+        }
+
+        SoSwitch* _handle;
+        boost::weak_ptr<QtCoinViewer> _wviewer;
+    };
+
     inline QtCoinViewerPtr shared_viewer() { return boost::static_pointer_cast<QtCoinViewer>(shared_from_this()); }
     inline QtCoinViewerConstPtr shared_viewer_const() const { return boost::static_pointer_cast<QtCoinViewer const>(shared_from_this()); }
 
@@ -225,33 +257,40 @@ protected:
     virtual bool _WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension);
     virtual void _SetCamera(const RaveTransform<float>& trans, float focalDistance);
 
-    virtual void* _plot3(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color);
-    virtual void* _plot3(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, bool bhasalpha);
+    virtual void closegraph(SoSwitch* handle);
+    virtual void SetGraphTransform(SoSwitch* handle, const RaveTransform<float>& t);
+    virtual void SetGraphShow(SoSwitch* handle, bool bshow);
+
+    virtual SoSwitch* _createhandle();
+    virtual void* _plot3(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color);
+    virtual void* _plot3(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, bool bhasalpha);
     
-    virtual void* _drawspheres(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color);
-    virtual void* _drawspheres(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, bool bhasalpha);
+    virtual void* _drawspheres(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color);
+    virtual void* _drawspheres(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, bool bhasalpha);
 
-    virtual void* _drawlinestrip(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color);
-    virtual void* _drawlinestrip(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fwidth, const float* colors);
+    virtual void* _drawlinestrip(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color);
+    virtual void* _drawlinestrip(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fwidth, const float* colors);
 
-    virtual void* _drawlinelist(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color);
-    virtual void* _drawlinelist(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fwidth, const float* colors);
+    virtual void* _drawlinelist(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color);
+    virtual void* _drawlinelist(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fwidth, const float* colors);
 
-    virtual void* _drawarrow(SoSeparator* pparent, const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color);
+    virtual void* _drawarrow(SoSwitch* handle, const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color);
 
-    virtual void* _drawbox(SoSeparator* pparent, const RaveVector<float>& vpos, const RaveVector<float>& vextents);
-    virtual void* _drawplane(SoSeparator* pparent, const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture);
-    virtual void* _drawtrimesh(SoSeparator* pparent, const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color);
-    virtual void* _drawtrimesh(SoSeparator* pparent, const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors);
+    virtual void* _drawbox(SoSwitch* handle, const RaveVector<float>& vpos, const RaveVector<float>& vextents);
+    virtual void* _drawplane(SoSwitch* handle, const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture);
+    virtual void* _drawtrimesh(SoSwitch* handle, const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color);
+    virtual void* _drawtrimesh(SoSwitch* handle, const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors);
 
-    virtual void _closegraph(void* handle);
     virtual void _deselect();
 
-    virtual void _SetMaterial(SoSeparator*, const RaveVector<float>& color);
-    virtual void _SetMaterial(SoSeparator*, const boost::multi_array<float,2>& colors);
+    virtual void _SetMaterial(SoGroup* pparent, const RaveVector<float>& color);
+    virtual void _SetMaterial(SoGroup* pparent, const boost::multi_array<float,2>& colors);
     virtual void _SetTriangleMesh(SoSeparator* pparent, const float* ppoints, int stride, const int* pIndices, int numTriangles);
     virtual void _Reset();
     virtual void _SetBkgndColor(const RaveVector<float>& color);
+    virtual void _closegraph(SoSwitch* handle);
+    virtual void _SetGraphTransform(SoSwitch* handle, const RaveTransform<float>& t);
+    virtual void _SetGraphShow(SoSwitch* handle, bool bshow);
 
     virtual void _StartPlaybackTimer();
     virtual void _StopPlaybackTimer();
@@ -407,6 +446,8 @@ protected:
     friend class SetBkgndColorMessage;
     friend class StartPlaybackTimerMessage;
     friend class StopPlaybackTimerMessage;
+    friend class SetGraphTransformMessage;
+    friend class SetGraphShowMessage;
 };
 
 #ifdef RAVE_REGISTER_BOOST

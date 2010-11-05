@@ -67,7 +67,7 @@ int main(int argc, char ** argv)
     boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(penv,probot->GetActiveDOF()));
 
     while(1) {
-        EnvironmentBase::GraphHandlePtr pgraph;
+        GraphHandlePtr pgraph;
         {
             EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
 

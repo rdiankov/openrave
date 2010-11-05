@@ -642,7 +642,7 @@ class SimpleTextServer : public ProblemInstance
 
     int _nIdIndex;
     map<int, ProblemInstancePtr > _mapProblems;
-    map<int, EnvironmentBase::GraphHandlePtr> _mapFigureIds;
+    map<int, GraphHandlePtr> _mapFigureIds;
     int _nNextFigureId;
 
     bool _bWorking; ///< worker thread processing current work items
@@ -1315,8 +1315,7 @@ protected:
             numcolors = 1;
         }
 
-        EnvironmentBase::GraphHandlePtr figure;
-
+        GraphHandlePtr figure;
         switch(drawstyle) {
         case 0: // regular points
             if( numcolors != numpoints ) 

@@ -147,11 +147,12 @@ public:
         _pdata->ranges.resize(N);
         _pdata->intensity.resize(N);
         _databodyids.resize(N);
-
-        FOREACH(it, _pdata->ranges)
+        FOREACH(it, _pdata->ranges) {
             *it = Vector(0,0,0);
-        FOREACH(it, _pdata->intensity)
+        }
+        FOREACH(it, _pdata->intensity) {
             *it = 0;
+        }
     }
 
     virtual bool SimulationStep(dReal fTimeElapsed)
@@ -205,7 +206,7 @@ public:
             if( _bRender ) {
 
                 // If can render, check if some time passed before last update
-                list<EnvironmentBase::GraphHandlePtr> listhandles;
+                list<GraphHandlePtr> listhandles;
                 int N = 0;
                 vector<RaveVector<float> > vpoints;
                 vector<int> vindices;
@@ -298,28 +299,32 @@ public:
     {
         _trans = trans;
         Transform t = GetLaserPlaneTransform();
-    
-        int N = 10;
-        viconpoints.resize(N+2);
-        viconindices.resize(3*N);
-        viconpoints[0] = t.trans;
-        Transform trot;
+        if( !_iconhandle ) {
+            int N = 10;
+            viconpoints.resize(N+2);
+            viconindices.resize(3*N);
+            viconpoints[0] = Vector(0,0,0);
+            Transform trot;
 
-        for(int i = 0; i <= N; ++i) {
-            dReal fang = _pgeom->min_angle[0] + (_pgeom->max_angle[0]-_pgeom->min_angle[0])*(float)i/(float)N;
-            trot.rotfromaxisangle(Vector(0,0,1), fang);
-            viconpoints[i+1] = t * trot.rotate(Vector(0.05f,0,0));
+            for(int i = 0; i <= N; ++i) {
+                dReal fang = _pgeom->min_angle[0] + (_pgeom->max_angle[0]-_pgeom->min_angle[0])*(float)i/(float)N;
+                trot.rotfromaxisangle(Vector(0,0,1), fang);
+                viconpoints[i+1] = trot.rotate(Vector(0.05f,0,0));
 
-            if( i < N ) {
-                viconindices[3*i+0] = 0;
-                viconindices[3*i+1] = i+1;
-                viconindices[3*i+2] = i+2;
+                if( i < N ) {
+                    viconindices[3*i+0] = 0;
+                    viconindices[3*i+1] = i+1;
+                    viconindices[3*i+2] = i+2;
+                }
             }
-        }
 
-        RaveVector<float> vcolor = _vColor*0.5f;
-        vcolor.w = 0.7f;
-        _iconhandle = GetEnv()->drawtrimesh(viconpoints[0], sizeof(viconpoints[0]), &viconindices[0], N, vcolor);
+            RaveVector<float> vcolor = _vColor*0.5f;
+            vcolor.w = 0.7f;
+            _iconhandle = GetEnv()->drawtrimesh(viconpoints[0], sizeof(viconpoints[0]), &viconindices[0], N, vcolor);
+        }
+        if( !!_iconhandle ) {
+            _iconhandle->SetTransform(t);
+        }
     }
 
     virtual Transform GetTransform() { return _trans; }
@@ -338,8 +343,8 @@ protected:
     RaveVector<float> _vColor;
 
     Transform _trans;
-    list<EnvironmentBase::GraphHandlePtr> _listGraphicsHandles;
-    EnvironmentBase::GraphHandlePtr _iconhandle;
+    list<GraphHandlePtr> _listGraphicsHandles;
+    GraphHandlePtr _iconhandle;
     vector<RaveVector<float> > viconpoints;
     vector<int> viconindices;
     dReal fTimeToScan;

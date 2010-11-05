@@ -50,6 +50,7 @@ const float TIMER_SENSOR_INTERVAL = (1.0f/60.0f);
 int QtCoinViewer::s_InitRefCount = 0;
 
 #define ITEM_DELETER boost::bind(&QtCoinViewer::_DeleteItemCallback,shared_viewer(),_1)
+#define GRAPH_DELETER boost::bind(&Environment::_CloseGraphCallback,boost::static_pointer_cast<Environment>(shared_from_this()),ViewerBaseWeakPtr(_pCurrentViewer),_1)
 
 static SoErrorCB* s_DefaultHandlerCB=NULL;
 void CustomCoinHandlerCB(const class SoError * error, void * data)
@@ -585,10 +586,10 @@ public:
         DT_LineList,
     };
 
-    DrawMessage(QtCoinViewerPtr pviewer, SoSeparator* pparent, const float* ppoints, int numPoints,
+    DrawMessage(QtCoinViewerPtr pviewer, SoSwitch* handle, const float* ppoints, int numPoints,
                 int stride, float fwidth, const float* colors, DrawType type, bool bhasalpha)
         : EnvMessage(pviewer, NULL, false), _numPoints(numPoints),
-          _fwidth(fwidth), _pparent(pparent), _type(type), _bhasalpha(bhasalpha)
+          _fwidth(fwidth), _handle(handle), _type(type), _bhasalpha(bhasalpha)
     {
         _vpoints.resize(3*numPoints);
         for(int i = 0; i < numPoints; ++i) {
@@ -605,10 +606,10 @@ public:
 
         _bManyColors = true;
     }
-    DrawMessage(QtCoinViewerPtr pviewer, SoSeparator* pparent, const float* ppoints, int numPoints,
+    DrawMessage(QtCoinViewerPtr pviewer, SoSwitch* handle, const float* ppoints, int numPoints,
                         int stride, float fwidth, const RaveVector<float>& color, DrawType type)
         : EnvMessage(pviewer, NULL, false), _numPoints(numPoints),
-          _fwidth(fwidth), _color(color), _pparent(pparent), _type(type)
+          _fwidth(fwidth), _color(color), _handle(handle), _type(type)
     {
         _vpoints.resize(3*numPoints);
         for(int i = 0; i < numPoints; ++i) {
@@ -627,33 +628,33 @@ public:
         switch(_type) {
         case DT_Point:
             if( _bManyColors )
-                ret = _pviewer->_plot3(_pparent, &_vpoints[0], _numPoints, _stride, _fwidth, &_vcolors[0],_bhasalpha);
+                ret = _pviewer->_plot3(_handle, &_vpoints[0], _numPoints, _stride, _fwidth, &_vcolors[0],_bhasalpha);
             else
-                ret = _pviewer->_plot3(_pparent, &_vpoints[0], _numPoints, _stride, _fwidth, _color);
+                ret = _pviewer->_plot3(_handle, &_vpoints[0], _numPoints, _stride, _fwidth, _color);
 
             break;
         case DT_Sphere:
             if( _bManyColors )
-                ret = _pviewer->_drawspheres(_pparent, &_vpoints[0], _numPoints, _stride, _fwidth, &_vcolors[0],_bhasalpha);
+                ret = _pviewer->_drawspheres(_handle, &_vpoints[0], _numPoints, _stride, _fwidth, &_vcolors[0],_bhasalpha);
             else
-                ret = _pviewer->_drawspheres(_pparent, &_vpoints[0], _numPoints, _stride, _fwidth, _color);
+                ret = _pviewer->_drawspheres(_handle, &_vpoints[0], _numPoints, _stride, _fwidth, _color);
 
             break;
         case DT_LineStrip:
             if( _bManyColors )
-                ret = _pviewer->_drawlinestrip(_pparent, &_vpoints[0], _numPoints, _stride, _fwidth, &_vcolors[0]);
+                ret = _pviewer->_drawlinestrip(_handle, &_vpoints[0], _numPoints, _stride, _fwidth, &_vcolors[0]);
             else
-                ret = _pviewer->_drawlinestrip(_pparent, &_vpoints[0], _numPoints, _stride, _fwidth, _color);
+                ret = _pviewer->_drawlinestrip(_handle, &_vpoints[0], _numPoints, _stride, _fwidth, _color);
             break;
         case DT_LineList:
             if( _bManyColors )
-                ret = _pviewer->_drawlinelist(_pparent, &_vpoints[0], _numPoints, _stride, _fwidth, &_vcolors[0]);
+                ret = _pviewer->_drawlinelist(_handle, &_vpoints[0], _numPoints, _stride, _fwidth, &_vcolors[0]);
             else
-                ret = _pviewer->_drawlinelist(_pparent, &_vpoints[0], _numPoints, _stride, _fwidth, _color);
+                ret = _pviewer->_drawlinelist(_handle, &_vpoints[0], _numPoints, _stride, _fwidth, _color);
             break;
         }
         
-        BOOST_ASSERT( _pparent == ret);
+        BOOST_ASSERT( _handle == ret);
         EnvMessage::viewerexecute();
     }
     
@@ -663,131 +664,130 @@ private:
     float _fwidth;
     const RaveVector<float> _color;
     vector<float> _vcolors;
-    SoSeparator* _pparent;
+    SoSwitch* _handle;
     bool _bManyColors;
     DrawType _type;
     bool _bhasalpha;
 };
 
-void* QtCoinViewer::plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle)
+SoSwitch* QtCoinViewer::_createhandle()
 {
-    void* pret = new SoSeparator();
-    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), (SoSeparator*)pret, ppoints, numPoints, stride, fPointSize, color, drawstyle ? DrawMessage::DT_Sphere : DrawMessage::DT_Point));
-    pmsg->callerexecute();
-
-    return pret;
+    SoSwitch* handle = new SoSwitch();
+    handle->whichChild = SO_SWITCH_ALL;
+    return handle;
 }
 
-void* QtCoinViewer::plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle, bool bhasalpha)
+GraphHandlePtr QtCoinViewer::plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle)
 {
-    void* pret = new SoSeparator();
-    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), (SoSeparator*)pret, ppoints, numPoints, stride, fPointSize, colors, drawstyle ? DrawMessage::DT_Sphere : DrawMessage::DT_Point, bhasalpha));
+    SoSwitch* handle = _createhandle();
+    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), handle, ppoints, numPoints, stride, fPointSize, color, drawstyle ? DrawMessage::DT_Sphere : DrawMessage::DT_Point));
     pmsg->callerexecute();
-
-    return pret;
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
-void* QtCoinViewer::drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
+GraphHandlePtr QtCoinViewer::plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle, bool bhasalpha)
 {
-    void* pret = new SoSeparator();
-    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), (SoSeparator*)pret, ppoints, numPoints, stride, fwidth, color,DrawMessage::DT_LineStrip));
+    SoSwitch* handle = _createhandle();
+    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), handle, ppoints, numPoints, stride, fPointSize, colors, drawstyle ? DrawMessage::DT_Sphere : DrawMessage::DT_Point, bhasalpha));
     pmsg->callerexecute();
-
-    return pret;
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
-void* QtCoinViewer::drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
+GraphHandlePtr QtCoinViewer::drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
 {
-    void* pret = new SoSeparator();
-    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), (SoSeparator*)pret, ppoints, numPoints, stride, fwidth, colors, DrawMessage::DT_LineStrip,false));
+    SoSwitch* handle = _createhandle();
+    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), handle, ppoints, numPoints, stride, fwidth, color,DrawMessage::DT_LineStrip));
     pmsg->callerexecute();
-
-    return pret;
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
-void* QtCoinViewer::drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
+GraphHandlePtr QtCoinViewer::drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
 {
-    void* pret = new SoSeparator();
-    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), (SoSeparator*)pret, ppoints, numPoints, stride, fwidth, color, DrawMessage::DT_LineList));
+    SoSwitch* handle = _createhandle();
+    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), handle, ppoints, numPoints, stride, fwidth, colors, DrawMessage::DT_LineStrip,false));
     pmsg->callerexecute();
-
-    return pret;
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
-void* QtCoinViewer::drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
+GraphHandlePtr QtCoinViewer::drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
 {
-    void* pret = new SoSeparator();
-    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), (SoSeparator*)pret, ppoints, numPoints, stride, fwidth, colors, DrawMessage::DT_LineList,false));
+    SoSwitch* handle = _createhandle();
+    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), handle, ppoints, numPoints, stride, fwidth, color, DrawMessage::DT_LineList));
     pmsg->callerexecute();
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+}
 
-    return pret;
+GraphHandlePtr QtCoinViewer::drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
+{
+    SoSwitch* handle = _createhandle();
+    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), handle, ppoints, numPoints, stride, fwidth, colors, DrawMessage::DT_LineList,false));
+    pmsg->callerexecute();
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
 class DrawArrowMessage : public QtCoinViewer::EnvMessage
 {
 public:
-    DrawArrowMessage(QtCoinViewerPtr pviewer, SoSeparator* pparent, const RaveVector<float>& p1,
+    DrawArrowMessage(QtCoinViewerPtr pviewer, SoSwitch* handle, const RaveVector<float>& p1,
                      const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color)
-        : EnvMessage(pviewer, NULL, false), _p1(p1), _p2(p2), _color(color), _pparent(pparent), _fwidth(fwidth) {}
+        : EnvMessage(pviewer, NULL, false), _p1(p1), _p2(p2), _color(color), _handle(handle), _fwidth(fwidth) {}
     
     virtual void viewerexecute() {
-        void* ret = _pviewer->_drawarrow(_pparent, _p1, _p2, _fwidth, _color);
-        BOOST_ASSERT( _pparent == ret );
+        void* ret = _pviewer->_drawarrow(_handle, _p1, _p2, _fwidth, _color);
+        BOOST_ASSERT( _handle == ret );
         EnvMessage::viewerexecute();
     }
 
 private:
     RaveVector<float> _p1, _p2, _color;
-    SoSeparator* _pparent;
+    SoSwitch* _handle;
     float _fwidth;
 };
 
-void* QtCoinViewer::drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color)
+GraphHandlePtr QtCoinViewer::drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color)
 {
-    void* pret = new SoSeparator();
-    EnvMessagePtr pmsg(new DrawArrowMessage(shared_viewer(), (SoSeparator*)pret, p1, p2, fwidth, color));
+    SoSwitch* handle = _createhandle();
+    EnvMessagePtr pmsg(new DrawArrowMessage(shared_viewer(), handle, p1, p2, fwidth, color));
     pmsg->callerexecute();
-
-    return pret;
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
 class DrawBoxMessage : public QtCoinViewer::EnvMessage
 {
 public:
-    DrawBoxMessage(QtCoinViewerPtr pviewer, SoSeparator* pparent,
+    DrawBoxMessage(QtCoinViewerPtr pviewer, SoSwitch* handle,
                    const RaveVector<float>& vpos, const RaveVector<float>& vextents)
-        : EnvMessage(pviewer, NULL, false), _vpos(vpos), _vextents(vextents), _pparent(pparent) {}
+        : EnvMessage(pviewer, NULL, false), _vpos(vpos), _vextents(vextents), _handle(handle) {}
     
     virtual void viewerexecute() {
-        void* ret = _pviewer->_drawbox(_pparent, _vpos, _vextents);
-        BOOST_ASSERT( _pparent == ret);
+        void* ret = _pviewer->_drawbox(_handle, _vpos, _vextents);
+        BOOST_ASSERT( _handle == ret);
         EnvMessage::viewerexecute();
     }
     
 private:
     RaveVector<float> _vpos, _vextents;
-    SoSeparator* _pparent;
+    SoSwitch* _handle;
 };
 
-void* QtCoinViewer::drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents)
+GraphHandlePtr QtCoinViewer::drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents)
 {
-    void* pret = new SoSeparator();
-    EnvMessagePtr pmsg(new DrawBoxMessage(shared_viewer(), (SoSeparator*)pret, vpos, vextents));
+    SoSwitch* handle = _createhandle();
+    EnvMessagePtr pmsg(new DrawBoxMessage(shared_viewer(), handle, vpos, vextents));
     pmsg->callerexecute();
-
-    return pret;
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
 class DrawPlaneMessage : public QtCoinViewer::EnvMessage
 {
 public:
-    DrawPlaneMessage(QtCoinViewerPtr pviewer, SoSeparator* pparent,
+    DrawPlaneMessage(QtCoinViewerPtr pviewer, SoSwitch* handle,
                      const Transform& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture)
-        : EnvMessage(pviewer, NULL, false), _tplane(tplane), _vextents(vextents),_vtexture(vtexture), _pparent(pparent) {}
+        : EnvMessage(pviewer, NULL, false), _tplane(tplane), _vextents(vextents),_vtexture(vtexture), _handle(handle) {}
     
     virtual void viewerexecute() {
-        void* ret = _pviewer->_drawplane(_pparent, _tplane,_vextents,_vtexture);
-        BOOST_ASSERT( _pparent == ret);
+        void* ret = _pviewer->_drawplane(_handle, _tplane,_vextents,_vtexture);
+        BOOST_ASSERT( _handle == ret);
         EnvMessage::viewerexecute();
     }
     
@@ -795,23 +795,22 @@ private:
     RaveTransform<float> _tplane;
     RaveVector<float> _vextents;
     boost::multi_array<float,3> _vtexture;
-    SoSeparator* _pparent;
+    SoSwitch* _handle;
 };
 
-void* QtCoinViewer::drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture)
+GraphHandlePtr QtCoinViewer::drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture)
 {
-    void* pret = new SoSeparator();
-    EnvMessagePtr pmsg(new DrawPlaneMessage(shared_viewer(), (SoSeparator*)pret, tplane,vextents,vtexture));
+    SoSwitch* handle = _createhandle();
+    EnvMessagePtr pmsg(new DrawPlaneMessage(shared_viewer(), handle, tplane,vextents,vtexture));
     pmsg->callerexecute();
-
-    return pret;
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
 class DrawTriMeshMessage : public QtCoinViewer::EnvMessage
 {
 public:
-    DrawTriMeshMessage(QtCoinViewerPtr pviewer, SoSeparator* pparent, const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color)
-        : EnvMessage(pviewer, NULL, false), _color(color), _pparent(pparent)
+    DrawTriMeshMessage(QtCoinViewerPtr pviewer, SoSwitch* handle, const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color)
+        : EnvMessage(pviewer, NULL, false), _color(color), _handle(handle)
     {
         _vpoints.resize(3*3*numTriangles);
         if( pIndices == NULL ) {
@@ -833,22 +832,22 @@ public:
     }
     
     virtual void viewerexecute() {
-        void* ret = _pviewer->_drawtrimesh(_pparent, &_vpoints[0], 3*sizeof(float), NULL, _vpoints.size()/9,_color);
-        BOOST_ASSERT( _pparent == ret);
+        void* ret = _pviewer->_drawtrimesh(_handle, &_vpoints[0], 3*sizeof(float), NULL, _vpoints.size()/9,_color);
+        BOOST_ASSERT( _handle == ret);
         EnvMessage::viewerexecute();
     }
     
 private:
     vector<float> _vpoints;
     RaveVector<float> _color;
-    SoSeparator* _pparent;
+    SoSwitch* _handle;
 };
 
 class DrawTriMeshColorMessage : public QtCoinViewer::EnvMessage
 {
 public:
-    DrawTriMeshColorMessage(QtCoinViewerPtr pviewer, SoSeparator* pparent, const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors)
-        : EnvMessage(pviewer, NULL, false), _colors(colors), _pparent(pparent)
+    DrawTriMeshColorMessage(QtCoinViewerPtr pviewer, SoSwitch* handle, const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors)
+        : EnvMessage(pviewer, NULL, false), _colors(colors), _handle(handle)
     {
         _vpoints.resize(3*3*numTriangles);
         if( pIndices == NULL ) {
@@ -870,40 +869,38 @@ public:
     }
     
     virtual void viewerexecute() {
-        void* ret = _pviewer->_drawtrimesh(_pparent, &_vpoints[0], 3*sizeof(float), NULL, _vpoints.size()/9,_colors);
-        BOOST_ASSERT( _pparent == ret);
+        void* ret = _pviewer->_drawtrimesh(_handle, &_vpoints[0], 3*sizeof(float), NULL, _vpoints.size()/9,_colors);
+        BOOST_ASSERT( _handle == ret);
         EnvMessage::viewerexecute();
     }
     
 private:
     vector<float> _vpoints;
     boost::multi_array<float,2> _colors;
-    SoSeparator* _pparent;
+    SoSwitch* _handle;
 };
 
 
-void* QtCoinViewer::drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color)
+GraphHandlePtr QtCoinViewer::drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color)
 {
-    void* pret = new SoSeparator();
-    EnvMessagePtr pmsg(new DrawTriMeshMessage(shared_viewer(), (SoSeparator*)pret, ppoints, stride, pIndices, numTriangles, color));
+    SoSwitch* handle = _createhandle();
+    EnvMessagePtr pmsg(new DrawTriMeshMessage(shared_viewer(), handle, ppoints, stride, pIndices, numTriangles, color));
     pmsg->callerexecute();
-
-    return pret;
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
-void* QtCoinViewer::drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors)
+GraphHandlePtr QtCoinViewer::drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors)
 {
-    void* pret = new SoSeparator();
-    EnvMessagePtr pmsg(new DrawTriMeshColorMessage(shared_viewer(), (SoSeparator*)pret, ppoints, stride, pIndices, numTriangles, colors));
+    SoSwitch* handle = _createhandle();
+    EnvMessagePtr pmsg(new DrawTriMeshColorMessage(shared_viewer(), handle, ppoints, stride, pIndices, numTriangles, colors));
     pmsg->callerexecute();
-
-    return pret;
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
 class CloseGraphMessage : public QtCoinViewer::EnvMessage
 {
 public:
-    CloseGraphMessage(QtCoinViewerPtr pviewer, void** ppreturn, void* handle)
+    CloseGraphMessage(QtCoinViewerPtr pviewer, void** ppreturn, SoSwitch* handle)
         : EnvMessage(pviewer, ppreturn, false), _handle(handle) {}
     
     virtual void viewerexecute() {
@@ -912,12 +909,56 @@ public:
     }
     
 private:
-    void* _handle;
+    SoSwitch* _handle;
 };
 
-void QtCoinViewer::closegraph(void* handle)
+void QtCoinViewer::closegraph(SoSwitch* handle)
 {
     EnvMessagePtr pmsg(new CloseGraphMessage(shared_viewer(), (void**)NULL, handle));
+    pmsg->callerexecute();
+}
+
+class SetGraphTransformMessage : public QtCoinViewer::EnvMessage
+{
+public:
+    SetGraphTransformMessage(QtCoinViewerPtr pviewer, void** ppreturn, SoSwitch* handle, const RaveTransform<float>& t)
+        : EnvMessage(pviewer, ppreturn, false), _handle(handle), _t(t) {}
+    
+    virtual void viewerexecute() {
+        _pviewer->_SetGraphTransform(_handle,_t);
+        EnvMessage::viewerexecute();
+    }
+    
+private:
+    SoSwitch* _handle;
+    RaveTransform<float> _t;
+};
+
+void QtCoinViewer::SetGraphTransform(SoSwitch* handle, const RaveTransform<float>& t)
+{
+    EnvMessagePtr pmsg(new SetGraphTransformMessage(shared_viewer(), (void**)NULL, handle, t));
+    pmsg->callerexecute();
+}
+
+class SetGraphShowMessage : public QtCoinViewer::EnvMessage
+{
+public:
+    SetGraphShowMessage(QtCoinViewerPtr pviewer, void** ppreturn, SoSwitch* handle, bool bshow)
+        : EnvMessage(pviewer, ppreturn, false), _handle(handle), _bshow(bshow) {}
+    
+    virtual void viewerexecute() {
+        _pviewer->_SetGraphShow(_handle,_bshow);
+        EnvMessage::viewerexecute();
+    }
+    
+private:
+    SoSwitch* _handle;
+    bool _bshow;
+};
+
+void QtCoinViewer::SetGraphShow(SoSwitch* handle, bool bshow)
+{
+    EnvMessagePtr pmsg(new SetGraphShowMessage(shared_viewer(), (void**)NULL, handle, bshow));
     pmsg->callerexecute();
 }
 
@@ -1039,6 +1080,33 @@ void QtCoinViewer::_SetBkgndColor(const RaveVector<float>& color)
     _ivOffscreen.setBackgroundColor(SbColor(color.x, color.y, color.z));
 }
 
+void QtCoinViewer::_closegraph(SoSwitch* handle)
+{
+    if( handle != NULL ) {
+        _pFigureRoot->removeChild(handle);
+    }
+}
+
+void QtCoinViewer::_SetGraphTransform(SoSwitch* handle, const RaveTransform<float>& t)
+{
+    if( handle != NULL ) {
+        SoNode* pparent = handle->getChild(0);
+        if( pparent != NULL && pparent->getTypeId() == SoSeparator::getClassTypeId() ) {
+            SoNode* ptrans = ((SoSeparator*)pparent)->getChild(0);
+            if( ptrans != NULL && ptrans->getTypeId() == SoTransform::getClassTypeId() ) {
+                SetSoTransform((SoTransform*)ptrans, t);
+            }
+        }
+    }
+}
+
+void QtCoinViewer::_SetGraphShow(SoSwitch* handle, bool bshow)
+{
+    if( handle != NULL ) {
+        handle->whichChild = bshow ? SO_SWITCH_ALL : SO_SWITCH_NONE;
+    }
+}
+
 void QtCoinViewer::PrintCamera()
 {
     SbVec3f pos = GetCamera()->position.getValue();
@@ -1061,11 +1129,13 @@ RaveTransform<float> QtCoinViewer::GetCameraTransform()
     return t;
 }
 
-void* QtCoinViewer::_plot3(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color)
+void* QtCoinViewer::_plot3(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color)
 {
-    if( pparent == NULL || numPoints <= 0 )
-        return pparent;
-   
+    if( handle == NULL || numPoints <= 0 ) {
+        return handle;
+    }
+    SoSeparator* pparent = new SoSeparator(); handle->addChild(pparent);
+    pparent->addChild(new SoTransform());
     SoMaterial* mtrl = new SoMaterial;
     mtrl->diffuseColor = SbColor(color.x, color.y, color.z);
     mtrl->ambientColor = SbColor(0,0,0);
@@ -1092,9 +1162,9 @@ void* QtCoinViewer::_plot3(SoSeparator* pparent, const float* ppoints, int numPo
         
         vprop->point.setValues(0,numPoints,(float(*)[3])&mypoints[0]);
     }
-    else
+    else {
         vprop->point.setValues(0,numPoints,(float(*)[3])ppoints);
-    
+    }
     pparent->addChild(vprop);
     
     SoDrawStyle* style = new SoDrawStyle();
@@ -1106,15 +1176,17 @@ void* QtCoinViewer::_plot3(SoSeparator* pparent, const float* ppoints, int numPo
     pointset->numPoints.setValue(-1);    
     pparent->addChild(pointset);
     
-    _pFigureRoot->addChild(pparent);
-    return pparent;
+    _pFigureRoot->addChild(handle);
+    return handle;
 }
 
-void* QtCoinViewer::_plot3(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, bool bhasalpha)
+void* QtCoinViewer::_plot3(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, bool bhasalpha)
 {
-    if( pparent == NULL || numPoints <= 0 )
-        return pparent;
-
+    if( handle == NULL || numPoints <= 0 ) {
+        return handle;
+    }
+    SoSeparator* pparent = new SoSeparator(); handle->addChild(pparent);
+    pparent->addChild(new SoTransform());
     SoMaterial* mtrl = new SoMaterial;
     if( bhasalpha ) {
         vector<float> colorsonly(numPoints*3),alphaonly(numPoints);
@@ -1171,15 +1243,17 @@ void* QtCoinViewer::_plot3(SoSeparator* pparent, const float* ppoints, int numPo
     
     pparent->addChild(pointset);
 
-    _pFigureRoot->addChild(pparent);
-    return pparent;
+    _pFigureRoot->addChild(handle);
+    return handle;
 }
 
-void* QtCoinViewer::_drawspheres(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color)
+void* QtCoinViewer::_drawspheres(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color)
 {
-    if( pparent == NULL || ppoints == NULL || numPoints <= 0 )
-        return pparent;
-   
+    if( handle == NULL || ppoints == NULL || numPoints <= 0 ) {
+        return handle;
+    }
+    SoSeparator* pparent = new SoSeparator(); handle->addChild(pparent);
+    pparent->addChild(new SoTransform());
     for(int i = 0; i < numPoints; ++i) {
         SoSeparator* psep = new SoSeparator();
         SoTransform* ptrans = new SoTransform();
@@ -1197,15 +1271,17 @@ void* QtCoinViewer::_drawspheres(SoSeparator* pparent, const float* ppoints, int
         ppoints = (float*)((char*)ppoints + stride);
     }
     
-    _pFigureRoot->addChild(pparent);
-    return pparent;
+    _pFigureRoot->addChild(handle);
+    return handle;
 }
 
-void* QtCoinViewer::_drawspheres(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, bool bhasalpha)
+void* QtCoinViewer::_drawspheres(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, bool bhasalpha)
 {
-    if( pparent == NULL || ppoints == NULL || numPoints <= 0 )
-        return pparent;
-    
+    if( handle == NULL || ppoints == NULL || numPoints <= 0 ) {
+        return handle;
+    }
+    SoSeparator* pparent = new SoSeparator(); handle->addChild(pparent);
+    pparent->addChild(new SoTransform());
     int colorstride = bhasalpha?4:3;
     for(int i = 0; i < numPoints; ++i) {
         SoSeparator* psep = new SoSeparator();
@@ -1238,15 +1314,17 @@ void* QtCoinViewer::_drawspheres(SoSeparator* pparent, const float* ppoints, int
         ppoints = (float*)((char*)ppoints + stride);
     }
 
-    _pFigureRoot->addChild(pparent);
-    return pparent;
+    _pFigureRoot->addChild(handle);
+    return handle;
 }
 
-void* QtCoinViewer::_drawlinestrip(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
+void* QtCoinViewer::_drawlinestrip(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
 {
-    if( pparent == NULL || numPoints < 2 || ppoints == NULL )
-        return pparent;
-
+    if( handle == NULL || numPoints < 2 || ppoints == NULL ) {
+        return handle;
+    }
+    SoSeparator* pparent = new SoSeparator(); handle->addChild(pparent);
+    pparent->addChild(new SoTransform());
     _SetMaterial(pparent,color);
     
     vector<float> mypoints((numPoints-1)*6);
@@ -1279,15 +1357,17 @@ void* QtCoinViewer::_drawlinestrip(SoSeparator* pparent, const float* ppoints, i
 
     pparent->addChild(pointset);
     
-    _pFigureRoot->addChild(pparent);
-    return pparent;
+    _pFigureRoot->addChild(handle);
+    return handle;
 }
 
-void* QtCoinViewer::_drawlinestrip(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
+void* QtCoinViewer::_drawlinestrip(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
 {
-    if( pparent == NULL || numPoints < 2)
-        return pparent;
-
+    if( handle == NULL || numPoints < 2) {
+        return handle;
+    }
+    SoSeparator* pparent = new SoSeparator(); handle->addChild(pparent);
+    pparent->addChild(new SoTransform());
     SoMaterial* mtrl = new SoMaterial;
     mtrl->setOverride(true);
     pparent->addChild(mtrl);
@@ -1335,15 +1415,17 @@ void* QtCoinViewer::_drawlinestrip(SoSeparator* pparent, const float* ppoints, i
 
     pparent->addChild(pointset);
     
-    _pFigureRoot->addChild(pparent);
-    return pparent;
+    _pFigureRoot->addChild(handle);
+    return handle;
 }
 
-void* QtCoinViewer::_drawlinelist(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
+void* QtCoinViewer::_drawlinelist(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
 {    
-    if( pparent == NULL || numPoints < 2 || ppoints == NULL )
-        return pparent;
-
+    if( handle == NULL || numPoints < 2 || ppoints == NULL ) {
+        return handle;
+    }
+    SoSeparator* pparent = new SoSeparator(); handle->addChild(pparent);
+    pparent->addChild(new SoTransform());
     _SetMaterial(pparent,color);
     
     vector<float> mypoints(numPoints*3);
@@ -1369,15 +1451,17 @@ void* QtCoinViewer::_drawlinelist(SoSeparator* pparent, const float* ppoints, in
 
     pparent->addChild(pointset);
     
-    _pFigureRoot->addChild(pparent);
-    return pparent;
+    _pFigureRoot->addChild(handle);
+    return handle;
 }
 
-void* QtCoinViewer::_drawlinelist(SoSeparator* pparent, const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
-{    
-    if( pparent == NULL || numPoints < 2 || ppoints == NULL )
-        return pparent;
-
+void* QtCoinViewer::_drawlinelist(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
+{
+    if( handle == NULL || numPoints < 2 || ppoints == NULL ) {
+        return handle;
+    }
+    SoSeparator* pparent = new SoSeparator(); handle->addChild(pparent);
+    pparent->addChild(new SoTransform());
     _SetMaterial(pparent,colors);
 
     vector<float> mypoints(numPoints*3);
@@ -1403,18 +1487,19 @@ void* QtCoinViewer::_drawlinelist(SoSeparator* pparent, const float* ppoints, in
 
     pparent->addChild(pointset);
     
-    _pFigureRoot->addChild(pparent);
-    return pparent;
+    _pFigureRoot->addChild(handle);
+    return handle;
 }
 
-void* QtCoinViewer::_drawarrow(SoSeparator* pparent, const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color)
+void* QtCoinViewer::_drawarrow(SoSwitch* handle, const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color)
 {
-    if( pparent == NULL )
-        return pparent;
-
+    if( handle == NULL ) {
+        return handle;
+    }
+    SoSeparator* pparent = new SoSeparator(); handle->addChild(pparent);
+    pparent->addChild(new SoTransform());
     SoSeparator* psep = new SoSeparator();
     SoTransform* ptrans = new SoTransform();
-
 
     SoDrawStyle* _style = new SoDrawStyle();
     _style->style = SoDrawStyle::FILLED;
@@ -1430,7 +1515,7 @@ void* QtCoinViewer::_drawarrow(SoSeparator* pparent, const RaveVector<float>& p1
     if(RaveSqrt(direction.lengthsqr3()) < 0.9f)
     {
         RAVELOG_WARNA("QtCoinViewer::drawarrow - Error: End points are the same.\n");
-        return pparent;
+        return handle;
     }
 
     //rotate to face point
@@ -1478,25 +1563,30 @@ void* QtCoinViewer::_drawarrow(SoSeparator* pparent, const RaveVector<float>& p1
 
     pparent->addChild(psep);
 
-    _pFigureRoot->addChild(pparent);
-    return pparent;
+    _pFigureRoot->addChild(handle);
+    return handle;
 }
 
-void* QtCoinViewer::_drawbox(SoSeparator* pparent, const RaveVector<float>& vpos, const RaveVector<float>& vextents)
+void* QtCoinViewer::_drawbox(SoSwitch* handle, const RaveVector<float>& vpos, const RaveVector<float>& vextents)
 {
-    if( pparent == NULL )
-        return pparent;
+    if( handle == NULL ) {
+        return handle;
+    }
+    SoSeparator* pparent = new SoSeparator(); handle->addChild(pparent);
+    pparent->addChild(new SoTransform());
     RAVELOG_ERRORA("drawbox not implemented\n");
 
-    _pFigureRoot->addChild(pparent);
-    return pparent;
+    _pFigureRoot->addChild(handle);
+    return handle;
 }
 
-void* QtCoinViewer::_drawplane(SoSeparator* pparent, const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture)
+void* QtCoinViewer::_drawplane(SoSwitch* handle, const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture)
 {
-    if( pparent == NULL )
-        return pparent;
-
+    if( handle == NULL ) {
+        return handle;
+    }
+    SoSeparator* pparent = new SoSeparator(); handle->addChild(pparent);
+    pparent->addChild(new SoTransform());
     RaveTransformMatrix<float> m(tplane);
     Vector vright(m.m[0],m.m[4],m.m[8]),vup(m.m[1],m.m[5],m.m[9]),vdir(m.m[2],m.m[6],m.m[10]);
     
@@ -1559,11 +1649,11 @@ void* QtCoinViewer::_drawplane(SoSeparator* pparent, const RaveTransform<float>&
     //faceset->generateDefaultNormals(SoShape, SoNormalCache);
     pparent->addChild(faceset);
 
-    _pFigureRoot->addChild(pparent);
-    return pparent;
+    _pFigureRoot->addChild(handle);
+    return handle;
 }
 
-void QtCoinViewer::_SetMaterial(SoSeparator* pparent, const RaveVector<float>& color)
+void QtCoinViewer::_SetMaterial(SoGroup* pparent, const RaveVector<float>& color)
 {
     SoMaterial* mtrl = new SoMaterial;
     mtrl->diffuseColor = SbColor(color.x, color.y, color.z);
@@ -1583,7 +1673,7 @@ void QtCoinViewer::_SetMaterial(SoSeparator* pparent, const RaveVector<float>& c
     }
 }
 
-void QtCoinViewer::_SetMaterial(SoSeparator* pparent, const boost::multi_array<float,2>& colors)
+void QtCoinViewer::_SetMaterial(SoGroup* pparent, const boost::multi_array<float,2>& colors)
 {
     if( colors.size() == 0 )
         return;
@@ -1667,31 +1757,30 @@ void QtCoinViewer::_SetTriangleMesh(SoSeparator* pparent, const float* ppoints, 
     pparent->addChild(faceset);
 }
 
-void* QtCoinViewer::_drawtrimesh(SoSeparator* pparent, const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color)
+void* QtCoinViewer::_drawtrimesh(SoSwitch* handle, const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color)
 {
-    if( pparent == NULL || ppoints == NULL || numTriangles <= 0 )
-        return pparent;
+    if( handle == NULL || ppoints == NULL || numTriangles <= 0 ) {
+        return handle;
+    }
+    SoSeparator* pparent = new SoSeparator(); handle->addChild(pparent);
+    pparent->addChild(new SoTransform());
     _SetMaterial(pparent,color);
     _SetTriangleMesh(pparent, ppoints,stride,pIndices,numTriangles);
-    _pFigureRoot->addChild(pparent);
-    return pparent;
+    _pFigureRoot->addChild(handle);
+    return handle;
 }
 
-void* QtCoinViewer::_drawtrimesh(SoSeparator* pparent, const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors)
+void* QtCoinViewer::_drawtrimesh(SoSwitch* handle, const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors)
 {
-    if( pparent == NULL || ppoints == NULL || numTriangles <= 0 )
-        return pparent;
+    if( handle == NULL || ppoints == NULL || numTriangles <= 0 ) {
+        return handle;
+    }
+    SoSeparator* pparent = new SoSeparator(); handle->addChild(pparent);
+    pparent->addChild(new SoTransform());
     _SetMaterial(pparent, colors);
     _SetTriangleMesh(pparent, ppoints,stride,pIndices,numTriangles);
-    _pFigureRoot->addChild(pparent);
-    return pparent;
-}
-
-void QtCoinViewer::_closegraph(void* handle)
-{
-    if( handle != NULL ) {
-        _pFigureRoot->removeChild((SoSeparator*)handle);
-    }
+    _pFigureRoot->addChild(handle);
+    return handle;
 }
 
 #define ADD_MENU(name, checkable, shortcut, tip, fn) { \
