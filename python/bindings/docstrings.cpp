@@ -19,7 +19,7 @@
 namespace openravepy {
 void InitializeComments(std::map<std::string,std::string>& m)
 {m["en function GraphHandle SetTransform"] = "\n\nvoid  **SetTransform**\\(const RaveTransform< float > & t)\n    \n    Changes the underlying transformation of the plot.\n    \n    *Parameters*\n     ``t`` - \n      new transformation of the plot \n            ";
-m["en function GraphHandle SetShow"] = "\n\nvoid  **SetShow**\\(bool bshow)\n    \n    shows or hides the plot without destroying its resources\n    \n            ";
+m["en function GraphHandle SetShow"] = "\n\nvoid  **SetShow**\\(bool bshow)\n    \n    Shows or hides the plot without destroying its resources.\n    \n            ";
 m["en function InterfaceBase GetInterfaceType"] = "\n\nInterfaceType  **GetInterfaceType**\\()\n    \n            ";
 m["en function InterfaceBase GetXMLId"] = "\n\nconst std::string &  **GetXMLId**\\()\n    \n    set internally by RaveDatabase\n    \n    *Return*\n        the unique identifier that describes this class type, case is ignored should be the same id used to create the object \n        ";
 m["en function InterfaceBase GetPluginName"] = "\n\nconst std::string &  **GetPluginName**\\()\n    \n    set internally by RaveDatabase\n    \n    *Return*\n        the pluginname this interface was loaded from \n        ";
@@ -454,7 +454,7 @@ m["en enum SensorType"] = "\n\n **SensorType**\n    \n            ";
 m["en enum ViewerEvents"] = "\n\n **ViewerEvents**\n    \n            ";
 m["en enum TriangulateOptions"] = "\n\n **TriangulateOptions**\n    \n    A set of options specifying what to triangulate.\n    \n            ";
 m["ja function GraphHandle SetTransform"] = "\n\nvoid  **SetTransform**\\(const RaveTransform< float > & t)\n    \n    Changes the underlying transformation of the plot.\n    \n    *Parameters*\n     ``t`` - \n      new transformation of the plot \n            ";
-m["ja function GraphHandle SetShow"] = "\n\nvoid  **SetShow**\\(bool bshow)\n    \n    shows or hides the plot without destroying its resources\n    \n            ";
+m["ja function GraphHandle SetShow"] = "\n\nvoid  **SetShow**\\(bool bshow)\n    \n    Shows or hides the plot without destroying its resources.\n    \n            ";
 m["ja function InterfaceBase GetInterfaceType"] = "\n\nInterfaceType  **GetInterfaceType**\\()\n    \n            ";
 m["ja function InterfaceBase GetXMLId"] = "\n\nconst std::string &  **GetXMLId**\\()\n    \n    set internally by RaveDatabase\n    \n    *Return*\n        the unique identifier that describes this class type, case is ignored should be the same id used to create the object \n        ";
 m["ja function InterfaceBase GetPluginName"] = "\n\nconst std::string &  **GetPluginName**\\()\n    \n    set internally by RaveDatabase\n    \n    *Return*\n        the pluginname this interface was loaded from \n        ";

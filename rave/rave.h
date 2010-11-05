@@ -855,6 +855,9 @@ RAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, const s
 /// \return a pointer holding the registration, releasing the pointer will unregister the XML reader
 RAVE_API boost::shared_ptr<void> RaveRegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn);
 
+/// \brief Return all the created OpenRAVE environments.
+RAVE_API void RaveGetEnvironments(std::list<EnvironmentBasePtr>& listenvironments);
+
 /// \brief Returns the current registered reader for the interface type/xmlid
 ///
 /// \throw openrave_exception Will throw with ORE_InvalidArguments if registered function could not be found.
@@ -939,6 +942,9 @@ BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::SensorSystemBase)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::SimpleSensorSystem)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::SimpleSensorSystem::XMLData)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::IkSolverBase)
+BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::ViewerBase)
+BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::GraphHandle)
+BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::IkParameterization)
 BOOST_TYPEOF_REGISTER_TEMPLATE(OpenRAVE::RaveVector, 1)
 BOOST_TYPEOF_REGISTER_TEMPLATE(OpenRAVE::RaveTransform, 1)
 BOOST_TYPEOF_REGISTER_TEMPLATE(OpenRAVE::RaveTransformMatrix, 1)

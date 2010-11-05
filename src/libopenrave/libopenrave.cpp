@@ -250,6 +250,18 @@ public:
         _listenvironments.remove(penv);
     }
 
+    void GetEnvironments(std::list<EnvironmentBasePtr>& listenvironments)
+    {
+        listenvironments.clear();
+        boost::mutex::scoped_lock lock(_mutexXML);
+        FOREACH(it,_listenvironments) {
+            EnvironmentBasePtr penv = (*it)->shared_from_this();
+            if( !!penv ) {
+                listenvironments.push_back(penv);
+            }
+        }
+    }
+
 protected:
     static void _UnregisterXMLReader(boost::weak_ptr<RaveGlobal> pweakstate, InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& oldfn)
     {
@@ -342,6 +354,11 @@ boost::shared_ptr<void> RaveGlobalState()
 void RaveDestroy()
 {
     RaveGlobal::instance()->Destroy();
+}
+
+void RaveGetEnvironments(std::list<EnvironmentBasePtr>& listenvironments)
+{
+    RaveGlobal::instance()->GetEnvironments(listenvironments);
 }
 
 void RaveGetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins)

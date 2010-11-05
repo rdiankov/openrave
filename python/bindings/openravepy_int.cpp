@@ -2962,6 +2962,17 @@ void PyRobotBase::__enter__()
 
 namespace openravepy
 {
+    object RaveGetEnvironments()
+    {
+        std::list<EnvironmentBasePtr> listenvironments;
+        OpenRAVE::RaveGetEnvironments(listenvironments);
+        boost::python::list oenvironments;
+        FOREACH(it,listenvironments) {
+            oenvironments.append(PyEnvironmentBasePtr(new PyEnvironmentBase(*it)));
+        }
+        return oenvironments;
+    }
+
     PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType type, const std::string& name)
     {
         InterfaceBasePtr p = OpenRAVE::RaveCreateInterface(pyenv->GetEnv(), type, name);
@@ -3990,6 +4001,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
 
     openravepy::init_openravepy_global();
 
+    def("RaveGetEnvironments",openravepy::RaveGetEnvironments,DOXY_FN1(RaveGetEnvironments));
     def("RaveCreateInterface",openravepy::RaveCreateInterface,args("env","type","name"),DOXY_FN1(RaveCreateInterface));
     def("RaveCreateRobot",openravepy::RaveCreateRobot,args("env","name"),DOXY_FN1(RaveCreateRobot));
     def("RaveCreatePlanner",openravepy::RaveCreatePlanner,args("env","name"),DOXY_FN1(RaveCreatePlanner));
@@ -4003,5 +4015,4 @@ BOOST_PYTHON_MODULE(openravepy_int)
     def("RaveCreateViewer",openravepy::RaveCreateViewer,args("env","name"),DOXY_FN1(RaveCreateViewer));
     def("RaveCreateKinBody",openravepy::RaveCreateKinBody,args("env","name"),DOXY_FN1(RaveCreateKinBody));
     def("RaveCreateTrajectory",openravepy::RaveCreateTrajectory,args("env","name"),DOXY_FN1(RaveCreateTrajectory));
-
 }
