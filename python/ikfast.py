@@ -965,7 +965,7 @@ class IKFastSolver(AutoReloader):
                 i += 1
         return Positions,Positionsee
 
-    def buildEquationsFromPositions(self,Positions,Positionsee,uselength=True,uselength2=False):
+    def buildEquationsFromPositions(self,Positions,Positionsee,uselength=True):
         AllEquations = []
         for i in range(len(Positions)):
             for j in range(3):
@@ -985,17 +985,6 @@ class IKFastSolver(AutoReloader):
                         AllEquations.append(e)
                 else:
                     print 'length equations too big, skipping...',self.codeComplexity(p2),self.codeComplexity(pe2)
-            if uselength2:
-                for j0,j1 in combinations(range(3),2):
-                    p2 = (Positions[i][j0]**2+Positions[i][j1]**2).expand()
-                    pe2 = (Positionsee[i][j0]**2+Positionsee[i][j1]**2).expand()
-                    if self.codeComplexity(p2) < 1500 and self.codeComplexity(pe2) < 1500:
-                        # sympy's trigsimp/customtrigsimp give up too easily
-                        e = self.customtrigsimp(self.customtrigsimp(self.customtrigsimp(self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp(p2)).expand())) - self.chop(self.customtrigsimp(self.customtrigsimp(self.customtrigsimp(pe2)).expand())))))
-                        if self.isExpressionUnique(AllEquations,e) and self.isExpressionUnique(AllEquations,-e):
-                            AllEquations.append(e)
-                    else:
-                        print 'length2 equations too big, skipping...',self.codeComplexity(p2),self.codeComplexity(pe2)
         self.sortComplexity(AllEquations)
         return AllEquations
 
@@ -1302,7 +1291,7 @@ class IKFastSolver(AutoReloader):
         orgsolsubs = self.freevarsubs[:]
         rottree = []
         endbranchtree = [SolverSequence([rottree])]
-        AllEquations = self.buildEquationsFromPositions(Positionsnew,Positionseenew,uselength=False,uselength2=True)
+        AllEquations = self.buildEquationsFromPositions(Positionsnew,Positionseenew,uselength=False)
         for i in range(len(Ds)):
             for j in range(3):
                 e = (Ds[i][j] - Dsee[i][j]).expand()

@@ -36,14 +36,13 @@ endif()
 
 target_link_libraries (openrave ${Boost_THREAD_LIBRARY} ${SOCKET_LIBS} libopenrave libopenrave-core)
 
-# untar the resource files
-add_custom_command(
-  OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/models/WAM/wam0.iv
-  COMMAND ${CMAKE_COMMAND} -E chdir
-  ARGS "${CMAKE_CURRENT_SOURCE_DIR}" ${CMAKE_COMMAND} -E tar xzf "${CMAKE_SOURCE_DIR}/models.tgz"
-  DEPENDS ${CMAKE_SOURCE_DIR}/models.tgz)
-add_custom_target(resource_files ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/models/WAM/wam0.iv)
-add_dependencies(openrave resource_files)
+# extract the models
+if( NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/models/WAM" OR NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/robots/pr2-beta-static.dae")
+  message(STATUS "extracting models to ${CMAKE_CURRENT_SOURCE_DIR}")
+  execute_process(
+    COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_SOURCE_DIR}/models.tgz"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+endif()
 
 install(TARGETS openrave DESTINATION bin)
 
