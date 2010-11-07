@@ -23,29 +23,6 @@
 #include <dae/daeUtils.h>
 #include <dom/domSource.h>
 
-#include <dom/domInstance_with_extra.h>
-//#include <dom/domInstance_animation.h>
-#include <dom/domInstance_camera.h>
-#include <dom/domInstance_controller.h>
-#include <dom/domInstance_formula.h>
-#include <dom/domInstance_geometry.h>
-#include <dom/domInstance_light.h>
-#include <dom/domInstance_node.h>
-//#include <dom/domInstance_visual_scene.h>
-#include <dom/domInstance_force_field.h>
-#include <dom/domInstance_physics_material.h>
-#include <dom/domInstance_physics_model.h>
-//#include <dom/domInstance_physics_scene.h>
-#include <dom/domInstance_rigid_body.h>
-#include <dom/domInstance_rigid_constraint.h>
-#include <dom/domInstance_effect.h>
-#include <dom/domInstance_image.h>
-#include <dom/domInstance_material.h>
-#include <dom/domInstance_articulated_system.h>
-#include <dom/domInstance_joint.h>
-#include <dom/domInstance_kinematics_model.h>
-#include <dom/domInstance_kinematics_scene.h>
-
 using namespace std;
 
 
@@ -150,7 +127,7 @@ namespace {
 	}
 
 	daeElement* findID(daeElement* elt, const string& id, const string& profile) {
-        return elt ? elt->getDAE()->getDatabase()->idLookup(id, elt->getDocument()) : NULL;
+		return elt ? elt->getDAE()->getDatabase()->idLookup(id, elt->getDocument()) : NULL;
 	}
 	
 	void buildString(const list<string>::iterator& begin,
@@ -175,6 +152,7 @@ namespace {
 	                         list<string>& remainingPart) {
 		remainingPart.clear();
 
+        // custom change for openrave
         if ( strncmp( container->getElementName(), "instance_", 9 ) == 0 ) {
             daeURI *uri = (daeURI*)container->getAttributeValue("url");
             if ( uri != NULL && uri->getElement() != NULL ) {
@@ -208,7 +186,6 @@ namespace {
 		}
 
 		remainingPart.clear();
-
 		return NULL;
 	}
 
@@ -257,10 +234,9 @@ namespace {
 				return daeSidRef::resolveData();
 
 			// Find the element matching the SID
-            result.elt = findWithDots(result.elt, *tok, sidRef.profile, findSidTopDown, remainingPart);
-			if (!result.elt) {
-                return daeSidRef::resolveData();
-            }
+			result.elt = findWithDots(result.elt, *tok, sidRef.profile, findSidTopDown, remainingPart);
+			if (!result.elt)
+				return daeSidRef::resolveData();
 
 			if (!remainingPart.empty()) {
 				list<string>::iterator tmp = tok;

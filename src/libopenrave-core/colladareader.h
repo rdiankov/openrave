@@ -93,11 +93,12 @@ class ColladaReader: public daeErrorHandler {
     struct SidSearchResults
     {
         SidSearchResults() {}
-    SidSearchResults(daeSmartRef<T> ref, domSidref sidref, daeElementRef element, domMotionRef motion_element) : _ref(ref), _sidref(sidref), _element(element), _motion_element(motion_element) {}
-        daeSmartRef<T> _ref;
+    SidSearchResults(daeSmartRef<T> targetref, domSidref sidref, daeElementRef element, domMotionRef motion_element) : _targetref(targetref), _sidref(sidref), _element(element), _motion_element(motion_element) {}
+        daeSmartRef<T> _targetref;
         domSidref _sidref;
         daeElementRef _element;
         domMotionRef _motion_element;
+        daeString _ref;
     };
 
  public:
@@ -112,21 +113,18 @@ class ColladaReader: public daeErrorHandler {
     bool InitFromFile(const string& filename) {
         RAVELOG_VERBOSEA("init COLLADA reader version: %s, namespace: %s, filename: %s\n", COLLADA_VERSION, COLLADA_NAMESPACE, filename.c_str());
         _collada.reset(new DAE);
-        //  Debug
         RAVELOG_VERBOSEA("Open file %s\n",filename.c_str());
 
         _dom = _collada->open(filename);
-        if (!_dom)
+        if (!_dom) {
             return false;
-
-        //  Debug
+        }
         RAVELOG_VERBOSEA("File Opened!!!\n");
 
         size_t maxchildren = countChildren(_dom);
         _vuserdata.resize(0);
         _vuserdata.reserve(maxchildren);
 
-        //  Debug
         dReal dScale = 1.0;
         processUserData(_dom, dScale);
         RAVELOG_VERBOSEA("processed children: %d/%d\n", _vuserdata.size(), maxchildren);
@@ -177,8 +175,8 @@ class ColladaReader: public daeErrorHandler {
 
     /// Extract environment from a COLLADA Scene
     /// This is the main proccess in the parser
-    bool Extract(EnvironmentBasePtr penv) {
-        bool                    isRobot;        //  Distinguish between a Kinematic Model that is a Robot or not
+    bool Extract(EnvironmentBasePtr penv)
+    {
         daeString               robotName = NULL;   //  Articulated System ID. Describes the Robot
         domKinematics_frameRef  pframe_origin = NULL;   //  Manipulator Base
         domKinematics_frameRef  pframe_tip      = NULL; //  Manipulator Effector
@@ -195,36 +193,22 @@ class ColladaReader: public daeErrorHandler {
 
         //  For each Kinematics Scene
         for (size_t iscene = 0; iscene < allscene->getInstance_kinematics_scene_array().getCount(); iscene++) {
-            //  Gets the Scene
             domInstance_kinematics_sceneRef kiscene = allscene->getInstance_kinematics_scene_array()[iscene];
-
+            // scene referenced by the instance
             domKinematics_sceneRef kscene = daeSafeCast<domKinematics_scene> (kiscene->getUrl().getElement().cast());
-
-            // If there is not Kinematic Scene
             if (!kscene) {
                 continue;
             }
-
-            //  For each Bind of Kinematics Model
+            // instance binds the kinematic and visual models, go through all binds to get a kinematics/visual pair
             for (size_t imodel = 0; imodel < kiscene->getBind_kinematics_model_array().getCount(); imodel++) {
-
-                //  Kinimatics model may NOT be a Robot
-                domArticulated_systemRef articulated_system =   NULL;
-
-                //  Initially kinematics model is NOT a Robot
-                isRobot = false;
-
-                // Gets Bind of Kinematics Model
+                domArticulated_systemRef articulated_system = NULL; // if filled, contains robot-specific information, so create a robot
                 domBind_kinematics_modelRef kbindmodel = kiscene->getBind_kinematics_model_array()[imodel];
-                
-                //  If there is no model
                 if (kbindmodel->getNode() == NULL) {
                     RAVELOG_WARNA("do not support kinematics models without references to nodes\n");
                     continue;
                 }
 
-                //  Debug
-                RAVELOG_WARNA("Node: %s\n",kbindmodel->getNode());
+                RAVELOG_DEBUG("Node: %s\n",kbindmodel->getNode());
 
                 // Gets the Node of the Kinematics Model
                 domNodeRef pnode = daeSafeCast<domNode> (daeSidRef(kbindmodel->getNode(), kbindmodel).resolve().elt);
@@ -246,7 +230,7 @@ class ColladaReader: public daeErrorHandler {
 
                 //  Instance Kinematics Model
                 SidSearchResults<domInstance_kinematics_model> searchresults = getSidRef<domInstance_kinematics_model> (kbindmodel,kscene);
-                domInstance_kinematics_modelRef kimodel = searchresults._ref;
+                domInstance_kinematics_modelRef kimodel = searchresults._targetref;
                 if (kimodel == NULL) {
                     RAVELOG_WARNA("bind_kinematics_model does not reference valid kinematics\n");
                 }
@@ -258,7 +242,6 @@ class ColladaReader: public daeErrorHandler {
                     articulated_system = daeSafeCast<domArticulated_system>(searchresults._element.cast());
                     RAVELOG_DEBUGA("Got articulated_system!!!\n");
 
-                    isRobot     = true;
                     robotName   = articulated_system->getId();
 
                     //  Check if there is a technique_common section
@@ -290,7 +273,6 @@ class ColladaReader: public daeErrorHandler {
 
                     pos =   strTarget.find(strNode);
 
-                    //  Debug
                     RAVELOG_DEBUGA("Kinematics Node %s Target %s Pos %d\n",strNode.c_str(),strTarget.c_str(),pos);
 
                     if (pos == -1) {
@@ -312,14 +294,14 @@ class ColladaReader: public daeErrorHandler {
 
                     //  Retrieve the joint
                     SidSearchResults<domAxis_constraint> searchresults = getSidRef<domAxis_constraint> (bindjoint->getAxis(), kscene);
-                    domAxis_constraintRef pjointaxis = searchresults._ref;
+                    domAxis_constraintRef pjointaxis = searchresults._targetref;
                     if (pjointaxis == NULL) {
-                        RAVELOG_ERRORA(str(boost::format("Joint Axis %s NOT found\n")%searchresults._ref));
+                        RAVELOG_ERRORA(str(boost::format("Joint Axis %s NOT found\n")%string(searchresults._ref)));
                         RAVELOG_ERRORA("Bind Joint Axis %s\n",bindjoint->getAxis()->getID());
                         continue;
                     }
 
-                    RAVELOG_WARNA(str(boost::format("Joint Axis %s FOUND!!!\n")%searchresults._ref));
+                    RAVELOG_WARNA(str(boost::format("Joint Axis %s FOUND!!!\n")%string(searchresults._ref)));
                     domInstance_kinematics_model_Array instance_kinematics_array;
 
                     //  If the system is NOT a Robot
@@ -371,13 +353,11 @@ class ColladaReader: public daeErrorHandler {
 
                             strAxis =   string(articulated_system->getID()) + string("/") + string(dkai->getSid());
 
-                            //  Debug
                             RAVELOG_WARNA("str: %s\n",strAxis.c_str());
 
                             //  Gets axis info of the articulated system MOTION
                             dmai    =   getAxisInfo<domMotion_axis_info>(strAxis.c_str(),dmai_array);
 
-                            //  Debug
                             RAVELOG_WARNA("End of the search for AXIS INFO ...\n");
                         }
                     }
@@ -401,7 +381,7 @@ class ColladaReader: public daeErrorHandler {
                 }
 
                 //  The kinbody is NOT a Robot
-                if (!isRobot) {
+                if (articulated_system == NULL ) {
                     //  Adds a Kinbody to the Environment
                     RAVELOG_VERBOSEA("Kinbody %s added to the environment\n",pbody->GetName().c_str());
                     _penv->AddKinBody(pbody);
@@ -419,14 +399,12 @@ class ColladaReader: public daeErrorHandler {
                     //  Extract instances of sensors
                     ExtractSensors<domArticulated_system>(articulated_system,probot);
 
-                    //          //  Debug
                     //          RAVELOG_INFO("Number of sensors of the Robot: %d\n",(int)probot->GetAttachedSensors().size());
                     //
                     //          //  Setup Manipulator of the Robot
                     //          RobotBase::ManipulatorPtr manipulator(new RobotBase::Manipulator(probot));
                     //          probot->GetManipulators().push_back(manipulator);
                     //
-                    //          //  Debug
                     //          RAVELOG_WARNA("Number of Manipulators %d ¡¡¡\n",probot->GetManipulators().size());
                     //
                     //          int     pos;
@@ -507,7 +485,6 @@ class ColladaReader: public daeErrorHandler {
 
                 //  If the node is not part of a kinbody
                 if (!found) {
-                    //  Debug
                     RAVELOG_WARNA("Extract node: %s\n",pnode->getName());
 
                     if (!Extract(rigid_body, NULL, NULL, pnode, v_all_bindings)) {
@@ -753,10 +730,8 @@ class ColladaReader: public daeErrorHandler {
         }
         BOOST_ASSERT(probot->IsRobot());
 
-        //  Debug
         RAVELOG_VERBOSEA("Executing Extract(RobotBasePtr&) !!!!!!!!!!!!!!!!!!\n");
 
-        bool                    isRobot;        //  Distinguish between a Kinematic Model that is a Robot or not
         daeString               robotName = NULL;   //  Articulated System ID. Describes the Robot
         domKinematics_frameRef  pframe_origin = NULL;   //  Manipulator Base
         domKinematics_frameRef  pframe_tip      = NULL; //  Manipulator Effector
@@ -789,9 +764,6 @@ class ColladaReader: public daeErrorHandler {
                 //  Kinimatics model may NOT be a Robot
                 domArticulated_systemRef articulated_system =   NULL;
 
-                //  Initially kinematics model is NOT a Robot
-                isRobot = false;
-
                 // Gets Bind of Kinematics Model
                 domBind_kinematics_modelRef kbindmodel = kiscene->getBind_kinematics_model_array()[imodel];
 
@@ -801,7 +773,6 @@ class ColladaReader: public daeErrorHandler {
                     continue;
                 }
 
-                //  Debug
                 RAVELOG_WARNA("Node: %s\n",kbindmodel->getNode());
 
                 // Gets the Node of the Kinematics Model
@@ -824,7 +795,7 @@ class ColladaReader: public daeErrorHandler {
 
                 //  Instance Kinematics Model
                 SidSearchResults<domInstance_kinematics_model> searchresults = getSidRef<domInstance_kinematics_model> (kbindmodel,kscene);
-                domInstance_kinematics_modelRef kimodel = searchresults._ref;
+                domInstance_kinematics_modelRef kimodel = searchresults._targetref;
                 if (kimodel == NULL) {
                     RAVELOG_WARNA("bind_kinematics_model does not reference valid kinematics\n");
                 }
@@ -835,8 +806,6 @@ class ColladaReader: public daeErrorHandler {
                 if (searchresults._element->typeID() == domArticulated_system::ID()) {
                     articulated_system = daeSafeCast<domArticulated_system>(searchresults._element.cast());
                     RAVELOG_DEBUGA("Got articulated_system!!!\n");
-
-                    isRobot     = true;
                     robotName   = articulated_system->getId();
 
                     //  Check if there is a technique_common section
@@ -868,7 +837,6 @@ class ColladaReader: public daeErrorHandler {
 
                     pos = strTarget.find(strNode);
 
-                    //  Debug
                     RAVELOG_DEBUGA("Kinematics Node %s Target %s Pos %d\n",strNode.c_str(),strTarget.c_str(),pos);
 
                     if (pos == -1) {
@@ -889,13 +857,13 @@ class ColladaReader: public daeErrorHandler {
 
                     //  Retrieve the joint
                     SidSearchResults<domAxis_constraint> searchresults = getSidRef<domAxis_constraint> (bindjoint->getAxis(), kscene);
-                    domAxis_constraintRef pjointaxis = searchresults._ref;
+                    domAxis_constraintRef pjointaxis = searchresults._targetref;
                     if (pjointaxis == NULL) {
-                        RAVELOG_ERRORA(str(boost::format("Joint Axis %s NOT found\n")%searchresults._ref));
+                        RAVELOG_ERRORA(str(boost::format("Joint Axis %s NOT found\n")%string(searchresults._ref)));
                         continue;
                     }
 
-                    RAVELOG_WARNA(str(boost::format("Joint Axis %s FOUND!!!\n")%searchresults._ref));
+                    RAVELOG_WARNA(str(boost::format("Joint Axis %s FOUND!!!\n")%string(searchresults._ref)));
                     domInstance_kinematics_model_Array instance_kinematics_array;
 
                     //  If the system is NOT a Robot
@@ -944,13 +912,11 @@ class ColladaReader: public daeErrorHandler {
 
                             strAxis =   string(articulated_system->getID()) + string("/") + string(dkai->getSid());
 
-                            //  Debug
                             RAVELOG_WARNA("str: %s\n",strAxis.c_str());
 
                             //  Gets axis info of the articulated system MOTION
                             dmai    =   getAxisInfo<domMotion_axis_info>(strAxis.c_str(),dmai_array);
 
-                            //  Debug
                             RAVELOG_WARNA("End of the search for AXIS INFO ...\n");
                         }
                     }
@@ -979,18 +945,16 @@ class ColladaReader: public daeErrorHandler {
                     probot = boost::static_pointer_cast<RobotBase>(pbody);
                 }
 
-                if (isRobot) {
+                if (articulated_system != NULL) {
                     //  Extract instances of sensors
                     ExtractSensors<domArticulated_system>(articulated_system,probot);
 
-                    //  Debug
                     RAVELOG_INFO(str(boost::format("Number of sensors of the Robot: %d\n")%probot->GetAttachedSensors().size()));
 
                     //  Setup Manipulator of the Robot
                     RobotBase::ManipulatorPtr manipulator(new RobotBase::Manipulator(probot));
                     probot->GetManipulators().push_back(manipulator);
 
-                    //  Debug
                     RAVELOG_WARNA(str(boost::format("Number of Manipulators %d\n")%probot->GetManipulators().size()));
 
                     int     pos;
@@ -1115,8 +1079,6 @@ class ColladaReader: public daeErrorHandler {
                 domNodeRef  child = daeSafeCast<domNode>(parent->getChildrenByType<domNode>()[ilink]);
                 // ---
 
-
-                //  Debug
                 RAVELOG_VERBOSEA("Node Name out of ExtractLink: %s\n",child->getName());
 
                 //        ExtractLink(pkinbody, plink, child, Transform(), vdomjoints, vbindings);
@@ -1126,7 +1088,6 @@ class ColladaReader: public daeErrorHandler {
                 // ---
 
 
-                //        //  Debug
                 //        RAVELOG_VERBOSEA("Node Name out of ExtractLink: %s\n",pnode->getName());
                 //
                 //        ExtractLink(pkinbody, plink, pnode, Transform(), vdomjoints, vbindings);
@@ -1286,8 +1247,7 @@ class ColladaReader: public daeErrorHandler {
           
             // Get the geometry
             ExtractGeometry(pdomnode,plink,vbindings);
-          
-            //  Debug
+            
             RAVELOG_DEBUGA("After ExtractGeometry Attachment link elements: %d\n",pdomlink->getAttachment_full_array().getCount());
           
             //  Process all atached links
@@ -1547,7 +1507,6 @@ class ColladaReader: public daeErrorHandler {
                   
                     pjoint->vanchor = toffsetfrom * pjoint->vanchor;
 
-                    //  Debug.
                     RAVELOG_DEBUG("joint dof: %d, Node %s offset is %f\n", pjoint->dofindex, pdomnode->getName(), (float)pjoint->offset);
                     RAVELOG_DEBUG("OffsetFrom Translation trans.x:%f, trans.y:%f, trans.z:%f\n",toffsetfrom.trans.x,toffsetfrom.trans.y,toffsetfrom.trans.z);
                     RAVELOG_DEBUG("OffsetFrom Rotation rot.x:%f, rot.y:%f, rot.z:%f, rot.w:%f\n",toffsetfrom.rot.x,toffsetfrom.rot.y,toffsetfrom.rot.z,toffsetfrom.rot.w);
@@ -1598,7 +1557,6 @@ class ColladaReader: public daeErrorHandler {
     /// \param plink    Link of the kinematics model
     void ExtractGeometry(const domNodeRef pdomnode,KinBody::LinkPtr plink, const vector<KINEMATICSBINDING> &vbindings)
     {
-        //  Debug
         RAVELOG_WARNA("ExtractGeometry(node,link) of %s\n",pdomnode->getName());
 
         for (size_t i = 0; i < pdomnode->getNode_array().getCount(); i++) {
@@ -1731,7 +1689,6 @@ class ColladaReader: public daeErrorHandler {
     /// \param  plink   Link of the kinematics model
     bool ExtractGeometry(const domTrianglesRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::LinkPtr plink)
     {
-        //  Debug
         RAVELOG_VERBOSEA("ExtractGeometry in TRIANGLES and adds to OpenRAVE............\n");
         if( triRef == NULL )
             return false;
@@ -1795,10 +1752,6 @@ class ColladaReader: public daeErrorHandler {
                             domFloat fl0 = listFloats.get(index0);
                             domFloat fl1 = listFloats.get(index0+1);
                             domFloat fl2 = listFloats.get(index0+2);
-
-
-                            //RAVELOG_VERBOSEA("fUnitScale %f \n",fUnitScale);
-
                             k+=triangleIndexStride;
                             trimesh.indices.push_back(trimesh.vertices.size());
                             trimesh.vertices.push_back(Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
@@ -1807,17 +1760,6 @@ class ColladaReader: public daeErrorHandler {
                 }
             }
         }
-
-
-        //  Debug trimesh with 0.0 positions
-        //      for (size_t i = 0;i < trimesh.vertices.size();i++)
-        //      {
-        //          float fl0 = trimesh.vertices[i].x;
-        //          float fl1 = trimesh.vertices[i].y;
-        //          float fl2 = trimesh.vertices[i].z;
-        //
-        //          RAVELOG_VERBOSEA("Trimesh Position %f, %f, %f\n",fl0,fl1,fl2);
-        //      }
 
         geom.InitCollisionMesh();
         return true;
@@ -1830,7 +1772,6 @@ class ColladaReader: public daeErrorHandler {
     /// \param  plink   Link of the kinematics model
     bool ExtractGeometry(const domTrifansRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::LinkPtr plink)
     {
-        //  Debug
         RAVELOG_WARNA("ExtractGeometry in TRIANGLE FANS and adds to OpenRAVE............\n");
 
         plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES(plink));
@@ -2248,6 +2189,7 @@ class ColladaReader: public daeErrorHandler {
                     IKMSearchResultsPtr ikmsearchresults = searchIKM(searchresults->first, searchresults->second);
                     if( !!ikmsearchresults ) {
                         ikmsearchresults->_motion_element = as->getMotion();
+                        ikmsearchresults->_ref = searchresults->first;
                         return ikmsearchresults;
                     }
                 }

@@ -25,7 +25,7 @@
 #pragma warning(disable: 4180 4245)
 #endif
 #ifndef NO_BOOST
-#include <boost/filesystem/convenience.hpp>
+#include <boost/filesystem/convenience.hpp>       // THIS WAS NOT COMMENTED.
 #endif
 #ifdef _MSC_VER
 #pragma warning(pop)

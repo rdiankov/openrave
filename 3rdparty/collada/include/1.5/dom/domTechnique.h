@@ -5,7 +5,6 @@
 #include <dom/domTypes.h>
 #include <dom/domElements.h>
 
-
 class DAE;
 
 /**
@@ -27,7 +26,7 @@ protected:  // Attribute
 /**
  *  The profile attribute indicates the type of profile. This is a vendor
  * defined character  string that indicates the platform or capability target
- * for the technique. Required attribute.
+ * for the technique. Required attribute. 
  */
 	xsNMTOKEN attrProfile;
 
@@ -40,6 +39,7 @@ protected:  // Element
 	 * Used to preserve order in elements that have a complex content model.
 	 */
 	daeUIntArray       _contentsOrder;
+
 
 public:	//Accessors and Mutators
 	/**
@@ -86,7 +86,7 @@ public: // STATIC METHODS
 	static DLLSPEC daeElementRef create(DAE& dae);
 	/**
 	 * Creates a daeMetaElement object that describes this element in the meta object reflection framework.
-	 * If a daeMetaElement already exists it will return that instead of creating a new one.
+	 * If a daeMetaElement already exists it will return that instead of creating a new one. 
 	 * @return A daeMetaElement describing this COLLADA element.
 	 */
 	static DLLSPEC daeMetaElement* registerElement(DAE& dae);

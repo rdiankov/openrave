@@ -224,17 +224,6 @@ domCOLLADA::registerElement(DAE& dae)
 		meta->appendAttribute(ma);
 	}
 
-	//	Add attribute: xmlns:math
-	{
-		daeMetaAttribute *ma = new daeMetaAttribute;
-		ma->setName( "xmlns:math" );
-		ma->setType( dae.getAtomicTypes().get("xsAnyURI"));
-		ma->setOffset( daeOffsetOf( domCOLLADA , attrXmlnsMath ));
-		ma->setContainer( meta );
-	
-		meta->appendAttribute(ma);
-	}
-
 	meta->setElementSize(sizeof(domCOLLADA));
 	meta->validate();
 

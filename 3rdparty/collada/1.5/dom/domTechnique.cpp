@@ -29,6 +29,7 @@ domTechnique::registerElement(DAE& dae)
 
 	daeMetaCMPolicy *cm = NULL;
 	cm = new daeMetaSequence( meta, cm, 0, 1, 1 );
+
 	cm = new daeMetaAny( meta, cm, 0, 0, -1 );
 
 	cm->setMaxOrdinal( 0 );
@@ -36,7 +37,7 @@ domTechnique::registerElement(DAE& dae)
 	cm = cm->getParent();
 
 	cm->setMaxOrdinal( 0 );
-	meta->setCMRoot( cm );
+	meta->setCMRoot( cm );	
 	meta->setAllowsAny( true );
 	// Ordered list of sub-elements
 	meta->addContents(daeOffsetOf(domTechnique,_contents));
@@ -51,7 +52,7 @@ domTechnique::registerElement(DAE& dae)
 		ma->setOffset( daeOffsetOf( domTechnique , attrProfile ));
 		ma->setContainer( meta );
 		ma->setIsRequired( true );
-
+	
 		meta->appendAttribute(ma);
 	}
 

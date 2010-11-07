@@ -6,7 +6,8 @@ include_directories(BEFORE ${libpcrecpp_INCLUDE_DIRS})
 link_directories(${libpcrecpp_LIBRARY_DIRS})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/include/1.5)
-file(GLOB dom_files ${CMAKE_CURRENT_SOURCE_DIR}/1.5/dom/*.cpp)
+file(GLOB dom_files1_4 ${CMAKE_CURRENT_SOURCE_DIR}/1.4/dom/*.cpp)
+file(GLOB dom_files1_5 ${CMAKE_CURRENT_SOURCE_DIR}/1.5/dom/*.cpp)
 file(GLOB dae_files ${CMAKE_CURRENT_SOURCE_DIR}/dae/*.cpp)
 file(GLOB libxmlplugin_files ${CMAKE_CURRENT_SOURCE_DIR}/modules/LIBXMLPlugin/*.cpp)
 file(GLOB stddatabase_files ${CMAKE_CURRENT_SOURCE_DIR}/modules/STLDatabase/*.cpp)
@@ -18,7 +19,7 @@ add_definitions(${Boost_CFLAGS})
 
 add_definitions(-DDOM_INCLUDE_LIBXML)
 
-add_library(collada15reader STATIC ${dom_files} ${dae_files} ${libxmlplugin_files} ${stddatabase_files} ${stderrplugin_files})
+add_library(collada15reader STATIC ${dom_files1_5} ${dae_files} ${libxmlplugin_files} ${stddatabase_files} ${stderrplugin_files})
 
 if( NOT libpcrecpp_FOUND )
   add_dependencies(collada15reader pcre_local)
