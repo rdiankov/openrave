@@ -87,8 +87,14 @@ public:
             return 0; // already initialized
         }
 
-        // set to the classic locale so that number serialization/hashing works correctly
-        std::locale::global(std::locale::classic());
+        try {
+            // set to the classic locale so that number serialization/hashing works correctly
+            std::locale::global(std::locale::classic());
+        }
+        catch(const std::runtime_error& e) {
+            RAVELOG_WARN("failed to set to C locale: %s\n",e.what());
+        }
+
         _nDebugLevel = level;
 
         _pdatabase.reset(new RaveDatabase());
