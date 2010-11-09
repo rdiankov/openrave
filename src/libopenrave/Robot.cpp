@@ -2086,7 +2086,13 @@ void RobotBase::_ComputeInternalInformation()
     // finally initialize the ik solvers (might depend on the hashes)
     FOREACH(itmanip, _vecManipulators) {
         if( !!(*itmanip)->_pIkSolver ) {
-            (*itmanip)->_pIkSolver->Init(*itmanip);
+            try {
+                (*itmanip)->_pIkSolver->Init(*itmanip);
+            }
+            catch(const openrave_exception& e) {
+                RAVELOG_WARN(str(boost::format("failed to init ik solver: %s\n")%e.what()));
+                (*itmanip)->SetIkSolver(IkSolverBasePtr());
+            }
         }
     }
     if( ComputeAABB().extents.lengthsqr3() > 900.0f ) {

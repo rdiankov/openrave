@@ -1360,14 +1360,18 @@ int main(int argc, char** argv)
         return self.strprinter.doprint(expr.evalf()),sepcode
 
     def indentCode(self, code, numspaces):
-        lcode = list(code)
-        locations = [i for i in range(len(lcode)-1) if lcode[i]=='\n']
-        locations.reverse()
-        insertcode = [' ' for i in range(numspaces)]
-        for loc in locations:
-            lcode[loc+1:0] = insertcode
-        lcode[:0] = insertcode
-        return ''.join(lcode)
+        # actually a lot of time can be wasted in this phase...
+        if True:
+            return code
+        else:
+            lcode = list(code)
+            locations = [i for i in range(len(lcode)-1) if lcode[i]=='\n']
+            locations.reverse()
+            insertcode = [' ' for i in range(numspaces)]
+            for loc in locations:
+                lcode[loc+1:0] = insertcode
+            lcode[:0] = insertcode
+            return ''.join(lcode)
 
     def using_polyroots(self, deg):
         name = 'polyroots%d'%deg

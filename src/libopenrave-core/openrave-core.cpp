@@ -98,7 +98,7 @@ bool RaveParseColladaFile(EnvironmentBasePtr penv, const string& filename)
     ColladaReader reader(penv);
     if (!reader.InitFromFile(filename))
         return false;
-    return reader.Extract(penv);
+    return reader.Extract();
 }
 
 bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& filename)
@@ -121,7 +121,7 @@ bool RaveParseColladaData(EnvironmentBasePtr penv, const string& pdata) {
     ColladaReader reader(penv);
     if (!reader.InitFromData(pdata))
         return false;
-    return reader.Extract(penv);
+    return reader.Extract();
 }
 
 bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& pdata)
