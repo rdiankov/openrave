@@ -20,6 +20,7 @@
 #include <sstream>
 #include <map>
 #include <stdio.h>
+#include <exception>
 
 #if BOOST_VERSION >= 103500
 //#define DOXY_ENUM(name) ,".. doxygenenum:: "#name"\n"
@@ -40,9 +41,13 @@ namespace openravepy {
 /// only english and japanese are supports, default to english.
 inline std::string InitializeLanguageCode()
 {
-    std::string localename=std::locale("").name();
-    if( localename.find_first_of("ja") == 0 ) { // for example, ja_JP.UTF-8
-        return "ja";
+    try {
+        std::string localename=std::locale("").name();
+        if( localename.find_first_of("ja") == 0 ) { // for example, ja_JP.UTF-8
+            return "ja";
+        }
+    }
+    catch(const std::exception& e) {
     }
     return "en";
 }
