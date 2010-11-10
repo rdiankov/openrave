@@ -67,6 +67,7 @@ class ColladaReader: public daeErrorHandler
         domMotion_axis_infoRef motion_axis_info;
     };
 
+    /// \brief inter-collada bindings for a kinematics scene
     class KinematicsSceneBindings
     {
     public:
@@ -105,17 +106,20 @@ class ColladaReader: public daeErrorHandler
         }
     };
 
-    struct USERDATA {
+    struct USERDATA
+    {
         USERDATA() {}
         USERDATA(dReal scale) : scale(scale) {}
         dReal scale;
+        boost::shared_ptr<void> p; ///< custom managed data
     };
 
  public:
- ColladaReader(EnvironmentBasePtr penv) : _dom(NULL), _penv(penv) {
+ ColladaReader(EnvironmentBasePtr penv) : _dom(NULL), _penv(penv), _nGlobalSensorId(0), _nGlobalManipulatorId(0) {
         daeErrorHandler::setErrorHandler(this);
     }
     virtual ~ColladaReader() {
+        _vuserdata.clear();
         _collada.reset();
         DAE::cleanup();
     }
@@ -165,14 +169,14 @@ class ColladaReader: public daeErrorHandler
                 RobotBasePtr probot;
                 if( ExtractArticulatedSystem(probot, kscene->getInstance_articulated_system_array()[ias], bindings) && !!probot ) {
                     RAVELOG_DEBUG(str(boost::format("Robot %s added to the environment ...\n")%probot->GetName()));
-                    _penv->AddRobot(probot);
+                    _penv->AddRobot(probot,true);
                 }
             }
             for(size_t ikmodel = 0; ikmodel < kscene->getInstance_kinematics_model_array().getCount(); ++ikmodel) {
                 KinBodyPtr pbody;
                 if( ExtractKinematicsModel(pbody, kscene->getInstance_kinematics_model_array()[ikmodel], bindings) && !!pbody ) {
                     RAVELOG_VERBOSE(str(boost::format("Kinbody %s added to the environment\n")%pbody->GetName()));
-                    _penv->AddKinBody(pbody);
+                    _penv->AddKinBody(pbody,true);
                 }
             }
         }
@@ -211,7 +215,7 @@ class ColladaReader: public daeErrorHandler
 //                        RAVELOG_WARNA("failed to load kinbody WIHTOUT Joints\n");
 //                        continue;
 //                    }
-//                    _penv->AddKinBody(rigid_body);
+//                    _penv->AddKinBody(rigid_body, true);
 //                    RAVELOG_VERBOSEA("Found node %s\n",visual_scene->getNode_array()[node]->getName());
 //                }
 //            }
@@ -283,11 +287,27 @@ class ColladaReader: public daeErrorHandler
         return true;
     }
 
+    domTechniqueRef _ExtractOpenRAVEProfile(const domTechnique_Array& arr)
+    {
+        for(size_t i = 0; i < arr.getCount(); ++i) {
+            if( strcmp(arr[i]->getProfile(), "OpenRAVE") == 0 ) {
+                return arr[i];
+            }
+        }
+        return domTechniqueRef();
+    }
+
     /// \brief returns an openrave interface type from the extra array
     boost::shared_ptr<std::string> _ExtractInterfaceType(const domExtra_Array& arr) {
         for(size_t i = 0; i < arr.getCount(); ++i) {
-            if( strcmp(arr[i]->getType(),"openrave_interface_type") == 0 ) {
-                return boost::shared_ptr<std::string>(new std::string(arr[i]->getName()));
+            if( strcmp(arr[i]->getType(),"interface_type") == 0 ) {
+                domTechniqueRef tec = _ExtractOpenRAVEProfile(arr[i]->getTechnique_array());
+                if( !!tec ) {
+                    daeElement* ptype = tec->getChild("interface");
+                    if( !!ptype ) {
+                        return boost::shared_ptr<std::string>(new std::string(ptype->getCharData()));
+                    }
+                }
             }
         }
         return boost::shared_ptr<std::string>();
@@ -335,31 +355,35 @@ class ColladaReader: public daeErrorHandler
                     }
                 }
             }
-            return ExtractArticulatedSystem(probot,ias_new,bindings);
-        }
-        if( !articulated_system->getKinematics() ) {
-            RAVELOG_WARN(str(boost::format("collada <kinematics> tag empty? instance_articulated_system=%s\n")%ias->getID()));
-            return true;
-        }
-
-        if( !!articulated_system->getKinematics()->getTechnique_common() ) {
-            for(size_t i = 0; i < articulated_system->getKinematics()->getTechnique_common()->getAxis_info_array().getCount(); ++i) {
-                bindings.AddAxisInfo(articulated_system->getKinematics()->getInstance_kinematics_model_array(), articulated_system->getKinematics()->getTechnique_common()->getAxis_info_array()[i], NULL);
+            if( !ExtractArticulatedSystem(probot,ias_new,bindings) ) {
+                return false;
             }
         }
+        else {
+            if( !articulated_system->getKinematics() ) {
+                RAVELOG_WARN(str(boost::format("collada <kinematics> tag empty? instance_articulated_system=%s\n")%ias->getID()));
+                return true;
+            }
 
-        // parse the kinematics information
-        if (!probot) {
-            probot = RaveCreateRobot(_penv, "GenericRobot");
-        }
-        if( !probot ) {
-            probot = RaveCreateRobot(_penv, "");
-        }
-        BOOST_ASSERT(probot->IsRobot());
+            if( !!articulated_system->getKinematics()->getTechnique_common() ) {
+                for(size_t i = 0; i < articulated_system->getKinematics()->getTechnique_common()->getAxis_info_array().getCount(); ++i) {
+                    bindings.AddAxisInfo(articulated_system->getKinematics()->getInstance_kinematics_model_array(), articulated_system->getKinematics()->getTechnique_common()->getAxis_info_array()[i], NULL);
+                }
+            }
 
-        KinBodyPtr pbody = probot;
-        for(size_t ik = 0; ik < articulated_system->getKinematics()->getInstance_kinematics_model_array().getCount(); ++ik) {
-            ExtractKinematicsModel(pbody,articulated_system->getKinematics()->getInstance_kinematics_model_array()[ik],bindings);
+            // parse the kinematics information
+            if (!probot) {
+                probot = RaveCreateRobot(_penv, "GenericRobot");
+            }
+            if( !probot ) {
+                probot = RaveCreateRobot(_penv, "");
+            }
+            BOOST_ASSERT(probot->IsRobot());
+
+            KinBodyPtr pbody = probot;
+            for(size_t ik = 0; ik < articulated_system->getKinematics()->getInstance_kinematics_model_array().getCount(); ++ik) {
+                ExtractKinematicsModel(pbody,articulated_system->getKinematics()->getInstance_kinematics_model_array()[ik],bindings);
+            }
         }
 
         //  Add the robot to the environment
@@ -370,98 +394,9 @@ class ColladaReader: public daeErrorHandler
             probot->SetName(articulated_system->getId());
         }
 
-        ExtractSensors<domArticulated_system>(probot, articulated_system);
+        ExtractRobotManipulators(probot, articulated_system);
+        ExtractRobotAttachedSensors(probot, articulated_system);
         return true;
-    }
-
-    bool ExtractRobotTechnique(RobotBasePtr probot, domInstance_articulated_systemRef kinematics)
-    {
-        domKinematics_frameRef  pframe_origin = NULL;   //  Manipulator Base
-        domKinematics_frameRef  pframe_tip      = NULL; //  Manipulator Effector
-//                if (searchresults._element->typeID() == domArticulated_system::ID()) {
-//                    articulated_system = daeSafeCast<domArticulated_system>(searchresults._element.cast());
-//                    RAVELOG_DEBUGA("Got articulated_system!!!\n");
-//
-//                    //  Check if there is a technique_common section
-//                    if (!articulated_system->getKinematics()->getTechnique_common()) {
-//                        RAVELOG_VERBOSEA("Skip technique_common in articulated_system/kinematics\n");
-//                    }
-//                    else {
-//                        RAVELOG_VERBOSEA("Kinematics Model is an Articulated System (Robot)\n");
-//                        pframe_origin   = articulated_system->getKinematics()->getTechnique_common()->getFrame_origin();
-//                        pframe_tip      = articulated_system->getKinematics()->getTechnique_common()->getFrame_tip();
-//                    }
-//                }
-
-        
-        //          RAVELOG_INFO("Number of sensors of the Robot: %d\n",(int)probot->GetAttachedSensors().size());
-        //
-        //          //  Setup Manipulator of the Robot
-        //          RobotBase::ManipulatorPtr manipulator(new RobotBase::Manipulator(probot));
-        //          probot->GetManipulators().push_back(manipulator);
-        //
-        //          RAVELOG_WARNA("Number of Manipulators %d ¡¡¡\n",probot->GetManipulators().size());
-        //
-        //          int     pos;
-        //          string  linkName  = string(pframe_origin->getLink());
-        //
-        //          pos       = linkName.find_first_of("/");
-        //          linkName  = linkName.substr(pos + 1);
-        //
-        //          RAVELOG_VERBOSEA("Manipulator link name %s\n",linkName.c_str());
-        //
-        //          //  Sets frame_origin and frame_tip
-        //          manipulator->_pBase              = probot->GetLink(linkName);
-        //
-        //          if (!!manipulator->_pBase)
-        //          {
-        //            RAVELOG_WARNA("Manipulator::pBase ... %s\n",manipulator->_pBase->GetName().c_str());
-        //          }
-        //          else
-        //          {
-        //            RAVELOG_WARNA("Error initializing Manipulator::pBase\n");
-        //          }
-        //
-        //          linkName = string(pframe_tip->getLink());
-        //          pos       = linkName.find_first_of("/");
-        //          linkName  = linkName.substr(pos + 1);
-        //
-        //          manipulator->_pEndEffector   = probot->GetLink(linkName);
-        //
-        //          if (!!manipulator->_pEndEffector)
-        //          {
-        //            RAVELOG_WARNA("Manipulator::pEndEffector ... %s\n",manipulator->_pEndEffector->GetName().c_str());
-        //          }
-        //          else
-        //          {
-        //            RAVELOG_WARNA("Error initializing Manipulator::pEndEffector\n");
-        //          }
-        //
-        //          //  Initialize indices that then manipulator controls
-        //          for (size_t i   =   0;  i < probot->GetJointIndices().size();   i++)
-        //          {
-        //            manipulator->_vgripperdofindices.push_back(probot->GetJointIndices()[i]);
-        //          }
-        //
-        //  Initialize indices that then manipulator controls
-
-        // look for openrave technique
-//        for (size_t i   =   0;  i < probot->GetJointIndices().size();   i++) {
-//            manipulator->_vgripperdofindices.push_back(probot->GetJointIndices()[i]);
-//        }
-//
-//        if( manipulator->_vgripperdofindices.size() != manipulator->_vClosingDirection.size() ) {
-//            if( manipulator->_vClosingDirection.size() == 0 ) {
-//                RAVELOG_DEBUG(str(boost::format("setting manipulator %s closing direction to zeros\n")%manipulator->GetName()));
-//                manipulator->_vClosingDirection.resize(manipulator->_vgripperdofindices.size(),0);
-//            }
-//            else {
-//                RAVELOG_WARN(str(boost::format("Manipulator %s has closing direction grasps wrong %d!=%d\n")%manipulator->GetName()%manipulator->_vgripperdofindices.size()%manipulator->_vClosingDirection.size()));
-//                manipulator->_vClosingDirection.resize(manipulator->_vgripperdofindices.size(),0);
-//            }
-//        }
-
-        return false;
     }
 
     bool ExtractKinematicsModel(KinBodyPtr& pkinbody, domInstance_kinematics_modelRef ikm, KinematicsSceneBindings& bindings)
@@ -499,7 +434,7 @@ class ColladaReader: public daeErrorHandler
             return false;
         }
 
-        if (!Extract(pkinbody, kmodel, pvisualnode, pmodel, bindings.listAxisBindings)) {
+        if (!ExtractKinematicsModel(pkinbody, kmodel, pvisualnode, pmodel, bindings.listAxisBindings)) {
             RAVELOG_WARN(str(boost::format("failed to load kinbody from kinematics model %s\n")%kmodel->getID()));
             return false;
         }
@@ -507,14 +442,22 @@ class ColladaReader: public daeErrorHandler
     }
 
     /// \brief append the kinematics model to the openrave kinbody
-    bool Extract(KinBodyPtr& pkinbody, domKinematics_modelRef kmodel, domNodeRef pnode, domPhysics_modelRef pmodel, const std::list<JointAxisBinding>& listAxisBindings)
+    bool ExtractKinematicsModel(KinBodyPtr& pkinbody, domKinematics_modelRef kmodel, domNodeRef pnode, domPhysics_modelRef pmodel, const std::list<JointAxisBinding>& listAxisBindings)
     {
         vector<domJointRef> vdomjoints;
         if (!pkinbody) {
             pkinbody = RaveCreateKinBody(_penv);
         }
-        pkinbody->SetName(kmodel->getName());
-        RAVELOG_DEBUG(str(boost::format("kinematics model: %s, node id: %s\n")%pkinbody->GetName()%pnode->getId()));
+        if( !!kmodel->getName() ) {
+            pkinbody->SetName(kmodel->getName());
+        }
+        if( pkinbody->GetName().size() == 0 && !!kmodel->getID() ) {
+            pkinbody->SetName(kmodel->getID());
+        }
+        RAVELOG_DEBUG(str(boost::format("kinematics model: %s\n")%pkinbody->GetName()));
+        if( !!pnode ) {
+            RAVELOG_DEBUG(str(boost::format("node name: %s\n")%pnode->getId()));
+        }
 
         //  Process joint of the kinbody
         domKinematics_model_techniqueRef ktec = kmodel->getTechnique_common();
@@ -537,15 +480,21 @@ class ColladaReader: public daeErrorHandler
 
         RAVELOG_VERBOSE(str(boost::format("Number of links in the kmodel %d\n")%ktec->getLink_array().getCount()));
 
-        // This is not a safe cast - predecessor might be a transformation
-        domNodeRef  parent  = daeSafeCast<domNode>(pnode->getAncestor(NodeMatcher()));
+        if( !!pnode ) {
+            // This is not a safe cast - predecessor might be a transformation
+            domNodeRef  parent  = daeSafeCast<domNode>(pnode->getAncestor(NodeMatcher()));
 
-        //  Extract all links into the kinematics_model
-        for (size_t ilink = 0; ilink < ktec->getLink_array().getCount(); ++ilink) {
-            domLinkRef plink = ktec->getLink_array()[ilink];
-            domNodeRef  child = daeSafeCast<domNode>(parent->getChildrenByType<domNode>()[ilink]);
-            RAVELOG_VERBOSE(str(boost::format("Node Name out of ExtractLink: %s\n")%child->getName()));
-            ExtractLink(pkinbody, plink, child, getNodeParentTransform(child), vdomjoints, listAxisBindings);
+            //  Extract all links into the kinematics_model
+            for (size_t ilink = 0; ilink < ktec->getLink_array().getCount(); ++ilink) {
+                domNodeRef  child = daeSafeCast<domNode>(parent->getChildrenByType<domNode>()[ilink]);
+                RAVELOG_VERBOSE(str(boost::format("Node Name out of ExtractLink: %s\n")%child->getName()));
+                ExtractLink(pkinbody, ktec->getLink_array()[ilink], child, getNodeParentTransform(child), vdomjoints, listAxisBindings);
+            }
+        }
+        else {
+            for (size_t ilink = 0; ilink < ktec->getLink_array().getCount(); ++ilink) {
+                ExtractLink(pkinbody, ktec->getLink_array()[ilink], domNodeRef(), Transform(), vdomjoints, listAxisBindings);
+            }
         }
 
         //  TODO: implement mathml
@@ -645,40 +594,31 @@ class ColladaReader: public daeErrorHandler
 
     ///  \brief Extract Link info and add it to an existing body
     KinBody::LinkPtr ExtractLink(KinBodyPtr pkinbody, const domLinkRef pdomlink,const domNodeRef pdomnode, Transform tParentLink, const vector<domJointRef>& vdomjoints, const std::list<JointAxisBinding>& listAxisBindings) {
-        //  Initially the link has the name of the node
-        string linkname;
-        if( !!pdomnode ) {
-            if (!pdomnode->getName()) {
-                linkname = pdomnode->getId();
-            }
-            else {
-                linkname = pdomnode->getName();
-            }
-        }
-
         //  Set link name with the name of the COLLADA's Link
-        if (!!pdomlink && pdomlink->getName()) {
-            linkname = pdomlink->getName();
+        std::string linkname = _ExtractLinkName(pdomlink);
+        if( linkname.size() == 0 ) {
+            RAVELOG_WARN("<link> has no name or id!\n");
+            if( !!pdomnode ) {
+                if (!!pdomnode->getName()) {
+                    linkname = pdomnode->getName();
+                }
+                if( linkname.size() == 0 && !!pdomnode->getID()) {
+                    linkname = pdomnode->getID();
+                }
+            }
         }
 
         KinBody::LinkPtr plink = pkinbody->GetLink(linkname);
         if( !plink ) {
             plink.reset(new KinBody::Link(pkinbody));
             plink->name = linkname;
-
-            //  Initialize Link Mass
-            plink->_mass    =   1.0;
-
-            plink->bStatic  = false;
-            plink->index    = (int) pkinbody->_veclinks.size();
+            plink->_mass = 1.0;
+            plink->bStatic = false;
+            plink->index = (int) pkinbody->_veclinks.size();
             pkinbody->_veclinks.push_back(plink);
         }
 
-        if (pkinbody->GetName() == "") {
-            if( !!pdomnode ) {
-                pkinbody->SetName(string(pdomnode->getName()));
-            }
-        }
+        _getUserData(pdomlink)->p = plink;
 
         if( !!pdomnode ) {
             RAVELOG_VERBOSE(str(boost::format("Node Id %s and Name %s\n")%pdomnode->getId()%pdomnode->getName()));
@@ -689,9 +629,8 @@ class ColladaReader: public daeErrorHandler
             ExtractGeometry(pdomnode,plink,listAxisBindings);
         }
         else {
-            RAVELOG_DEBUGA("Attachment link elements: %d\n",pdomlink->getAttachment_full_array().getCount());
-
-            Transform tlink = getFullTransform(pdomlink);
+            RAVELOG_DEBUGA(str(boost::format("Attachment link elements: %d\n")%pdomlink->getAttachment_full_array().getCount()));
+            Transform tlink = _ExtractFullTransform(pdomlink);
             plink->_t = tParentLink * tlink; // use the kinematics coordinate system for each link
           
             {
@@ -702,14 +641,14 @@ class ColladaReader: public daeErrorHandler
             // Get the geometry
             ExtractGeometry(pdomnode,plink,listAxisBindings);
             
-            RAVELOG_DEBUGA("After ExtractGeometry Attachment link elements: %d\n",pdomlink->getAttachment_full_array().getCount());
+            RAVELOG_DEBUG(str(boost::format("After ExtractGeometry Attachment link elements: %d\n")%pdomlink->getAttachment_full_array().getCount()));
           
             //  Process all atached links
             for (size_t iatt = 0; iatt < pdomlink->getAttachment_full_array().getCount(); ++iatt) {
                 domLink::domAttachment_fullRef pattfull = pdomlink->getAttachment_full_array()[iatt];
 
                 // get link kinematics transformation
-                TransformMatrix tatt = getFullTransform(pattfull);
+                TransformMatrix tatt = _ExtractFullTransform(pattfull);
 
                 // process attached links
                 daeElement* peltjoint = daeSidRef(pattfull->getJoint(), pattfull).resolve().elt;
@@ -723,13 +662,13 @@ class ColladaReader: public daeErrorHandler
                 }
 
                 if (!pdomjoint || pdomjoint->typeID() != domJoint::ID()) {
-                    RAVELOG_WARNA("could not find attached joint %s!\n",pattfull->getJoint());
+                    RAVELOG_WARN(str(boost::format("could not find attached joint %s!\n")%pattfull->getJoint()));
                     return KinBody::LinkPtr();
                 }
 
                 // get direct child link
                 if (!pattfull->getLink()) {
-                    RAVELOG_WARNA("joint %s needs to be attached to a valid link\n",pdomjoint->getID());
+                    RAVELOG_WARN(str(boost::format("joint %s needs to be attached to a valid link\n")%pdomjoint->getID()));
                     continue;
                 }
 
@@ -770,9 +709,7 @@ class ColladaReader: public daeErrorHandler
                     pjoint->name = pdomjoint->getName();
                     pjoint->jointindex = (int) pkinbody->_vecjoints.size();
 
-                    //  Set type of the joint
                     domAxis_constraintRef pdomaxis = vdomaxes[ic];
-
                     if( strcmp(pdomaxis->getElementName(), "revolute") == 0 ) {
                         pjoint->type = KinBody::Joint::JointRevolute;
                     }
@@ -790,6 +727,8 @@ class ColladaReader: public daeErrorHandler
                     }
                     pkinbody->_vecJointIndices.push_back(pjoint->dofindex);
                     pkinbody->_vecjoints.push_back(pjoint);
+                    _getUserData(pdomjoint)->p = pjoint;
+                    _getUserData(pdomaxis)->p = boost::shared_ptr<int>(new int(pjoint->dofindex));
                     vjoints[ic] = pjoint;
                 }
 
@@ -1053,7 +992,7 @@ class ColladaReader: public daeErrorHandler
             ExtractGeometry(domgeom, mapmaterials, plink);
         }
 
-        TransformMatrix tmnodegeom = (TransformMatrix) plink->_t.inverse() * getNodeParentTransform(pdomnode) * getFullTransform(pdomnode);
+        TransformMatrix tmnodegeom = (TransformMatrix) plink->_t.inverse() * getNodeParentTransform(pdomnode) * _ExtractFullTransform(pdomnode);
         Transform tnodegeom;
         Vector vscale;
         decompose(tmnodegeom, tnodegeom, vscale);
@@ -1538,21 +1477,103 @@ class ColladaReader: public daeErrorHandler
         return false;
     }
 
-    /// \brief Extract Sensors attached to a Robot
-    template <typename T> bool ExtractSensors(RobotBasePtr probot, const T* parent) {
-        if (parent->getExtra_array().getCount() == 0) {
-            return false;
-        }
-        for (size_t i = 0; i < parent->getExtra_array().getCount(); i++) {
-            domExtraRef extra = parent->getExtra_array()[i];
-            for (size_t j = 0; j < extra->getTechnique_array().getCount(); j++) {
-                domTechniqueRef technique = extra->getTechnique_array()[j];
-                if (strcmp(technique->getProfile(),"OpenRAVE") == 0) {
-                    ExtractInstance_sensor(probot, technique->getContents());
+    /// \brief extract the robot manipulators
+    void ExtractRobotManipulators(RobotBasePtr probot, const domArticulated_systemRef as)
+    {
+        for(size_t ie = 0; ie < as->getExtra_array().getCount(); ++ie) {
+            domExtraRef pextra = as->getExtra_array()[ie];
+            if( strcmp(pextra->getType(), "manipulator") == 0 ) {
+                string name = pextra->getAttribute("name");
+                if( name.size() == 0 ) {
+                    name = str(boost::format("manipulator%d")%_nGlobalManipulatorId++);
+                }
+                domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
+                if( !!tec ) {
+                    RobotBase::ManipulatorPtr pmanip(new RobotBase::Manipulator(probot));
+                    pmanip->_name = name;
+                    daeElement* pframe_origin = tec->getChild("frame_origin");
+                    daeElement* pframe_tip = tec->getChild("frame_tip");
+                    if( !!pframe_origin ) {
+                        domLinkRef plink = daeSafeCast<domLink>(daeSidRef(pframe_origin->getAttribute("link"), as).resolve().elt);
+                        if( !!plink ) {
+                            pmanip->_pBase = boost::static_pointer_cast<KinBody::Link>(_getUserData(plink)->p);
+                        }
+                        if( !pmanip->_pBase ) {
+                            RAVELOG_WARN(str(boost::format("failed to find manipulator %s frame origin %s\n")%name%pframe_origin->getAttribute("link")));
+                            continue;
+                        }
+                    }
+                    if( !!pframe_tip ) {
+                        daeElementRef plink = daeSafeCast<domLink>(daeSidRef(pframe_tip->getAttribute("link"), as).resolve().elt);
+                        if( !!plink ) {
+                            pmanip->_pEndEffector = boost::static_pointer_cast<KinBody::Link>(_getUserData(plink)->p);
+                        }
+                        if( !pmanip->_pEndEffector ) {
+                            RAVELOG_WARN(str(boost::format("failed to find manipulator %s frame tip %s\n")%name%pframe_tip->getAttribute("link")));
+                            continue;
+                        }
+                        pmanip->_tGrasp = _ExtractFullTransformFromChildren(pframe_tip);
+                    }
+
+                    for(size_t ic = 0; ic < tec->getContents().getCount(); ++ic) {
+                        daeElementRef pgripper_axis = tec->getContents()[ic];
+                        if( pgripper_axis->getElementName() == string("gripper_axis") ) {
+                            domAxis_constraintRef paxis = daeSafeCast<domAxis_constraint>(daeSidRef(pgripper_axis->getAttribute("axis"), as).resolve().elt);
+                            if( !!paxis ) {
+                                boost::shared_ptr<int> pdofindex = boost::static_pointer_cast<int>(_getUserData(paxis)->p);
+                                if( !!pdofindex ) {
+                                    dReal closingdirection = 0;
+                                    daeElement* pclosingdirection = pgripper_axis->getChild("closingdirection");
+                                    continue;
+                                }
+                            }
+                            RAVELOG_WARN(str(boost::format("could not find manipulator gripper axis %s\n")%pgripper_axis->getAttribute("axis")));
+                        }
+                    }
+
+//                    for (size_t i   =   0;  i < probot->GetJointIndices().size();   i++) {
+//                        manipulator->_vgripperdofindices.push_back(probot->GetJointIndices()[i]);
+//                    }
+//
+//                    if( manipulator->_vgripperdofindices.size() != manipulator->_vClosingDirection.size() ) {
+//                        if( manipulator->_vClosingDirection.size() == 0 ) {
+//                            RAVELOG_DEBUG(str(boost::format("setting manipulator %s closing direction to zeros\n")%manipulator->GetName()));
+//                            manipulator->_vClosingDirection.resize(manipulator->_vgripperdofindices.size(),0);
+//                        }
+//                        else {
+//                            RAVELOG_WARN(str(boost::format("Manipulator %s has closing direction grasps wrong %d!=%d\n")%manipulator->GetName()%manipulator->_vgripperdofindices.size()%manipulator->_vClosingDirection.size()));
+//                            manipulator->_vClosingDirection.resize(manipulator->_vgripperdofindices.size(),0);
+//                        }
+//                    }
+
+                    probot->GetManipulators().push_back(pmanip);
+                }
+                else {
+                    RAVELOG_WARN(str(boost::format("cannot create robot %s manipulator %s\n")%probot->GetName()%name));
                 }
             }
         }
-        return  true;
+    }
+
+    /// \brief Extract Sensors attached to a Robot
+    void ExtractRobotAttachedSensors(RobotBasePtr probot, const domArticulated_systemRef as)
+    {
+        for (size_t ie = 0; ie < as->getExtra_array().getCount(); ie++) {
+            domExtraRef pextra = as->getExtra_array()[ie];
+            if( strcmp(pextra->getType(), "sensor") == 0 ) {
+                string name = pextra->getAttribute("name");
+                if( name.size() == 0 ) {
+                    name = str(boost::format("sensor%d")%_nGlobalSensorId++);
+                }
+                domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
+                if( !!tec ) {
+                    
+                }
+                else {
+                    RAVELOG_WARN(str(boost::format("cannot create robot %s attached sensor %s\n")%probot->GetName()%name));
+                }
+            }
+        }
     }
 
     /// Extract instance sensor info
@@ -1569,7 +1590,7 @@ class ColladaReader: public daeErrorHandler
         for (size_t i_instance = 0; i_instance < instances.getCount(); i_instance++) {
             daeElementRef instance_SensorActuatorManipulator = instances[i_instance];
             RAVELOG_DEBUG("Instance name: %s\n",instance_SensorActuatorManipulator->getElementName());
-            if ((strcmp(instance_SensorActuatorManipulator->getElementName(),"instance_actuator") == 0) || (strcmp(instance_SensorActuatorManipulator->getElementName(),"instance_sensor") == 0) || (strcmp(instance_SensorActuatorManipulator->getElementName(),"instance_manipulator") == 0)) {
+            if (strcmp(instance_SensorActuatorManipulator->getElementName(),"instance_sensor") == 0) {
                 //  Get instance attributes
                 daeTArray<daeElement::attr> instance_attributes = instance_SensorActuatorManipulator->getAttributes();
                 for (size_t i_ins_attr = 0; i_ins_attr < instance_attributes.getCount(); i_ins_attr++) {
@@ -1677,7 +1698,7 @@ class ColladaReader: public daeErrorHandler
             }
 
             //Relative Transform to sensors
-            att_Sensor->trelative = getFullTransform(instance_SensorActuatorManipulator);
+            att_Sensor->trelative = _ExtractFullTransformFromChildren(instance_SensorActuatorManipulator);
         }
 
         return true;
@@ -1938,11 +1959,11 @@ class ColladaReader: public daeErrorHandler
         if( !pnode ) {
             return TransformMatrix();
         }
-        return getNodeParentTransform(pnode) * getFullTransform(pnode);
+        return getNodeParentTransform(pnode) * _ExtractFullTransform(pnode);
     }
 
-    /// Travel by the transformation array and calls the getTransform method
-    template <typename T> static TransformMatrix getFullTransform(const T pelt) {
+    /// \brief Travel by the transformation array and calls the getTransform method
+    template <typename T> static TransformMatrix _ExtractFullTransform(const T pelt) {
         TransformMatrix t;
         for(size_t i = 0; i < pelt->getContents().getCount(); ++i) {
             t = t * getTransform(pelt->getContents()[i]);
@@ -1950,7 +1971,8 @@ class ColladaReader: public daeErrorHandler
         return t;
     }
 
-    static TransformMatrix getFullTransform(daeElementRef pelt) {
+    /// \brief Travel by the transformation array and calls the getTransform method
+    template <typename T> static TransformMatrix _ExtractFullTransformFromChildren(const T pelt) {
         TransformMatrix t;
         for(size_t i = 0; i < pelt->getChildren().getCount(); ++i) {
             t = t * getTransform(pelt->getChildren()[i]);
@@ -1988,6 +2010,19 @@ class ColladaReader: public daeErrorHandler
     }
 
  private:
+
+    std::string _ExtractLinkName(domLinkRef pdomlink) {
+        std::string linkname;
+        if( !!pdomlink ) {
+            if( !!pdomlink->getName() ) {
+                linkname = pdomlink->getName();
+            }
+            if( linkname.size() == 0 ) {
+                linkname = pdomlink->getID();
+            }
+        }
+        return linkname;
+    }
 
     bool _checkMathML(daeElementRef pelt,const string& type)
     {
@@ -2141,10 +2176,19 @@ class ColladaReader: public daeErrorHandler
         }
     }
 
+    USERDATA* _getUserData(daeElement* pelt)
+    {
+        BOOST_ASSERT(pelt != NULL);
+        void* p = pelt->getUserData();
+        BOOST_ASSERT(p != NULL );
+        return (USERDATA*)p;
+    }
+        
     boost::shared_ptr<DAE> _collada;
     domCOLLADA* _dom;
     EnvironmentBasePtr _penv;
     vector<USERDATA> _vuserdata; // all userdata
+    int _nGlobalSensorId, _nGlobalManipulatorId;
 };
 
 #endif
