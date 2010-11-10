@@ -1370,7 +1370,7 @@ class IKFastSolver(AutoReloader):
             p = Positions[i].cross(Ds[i]).expand()
             if all([self.codeComplexity(x)<2000 for x in p]):
                 p = Matrix(3,1,[self.customtrigsimp(self.customtrigsimp(x)) for x in p])
-            pee = Positionsee[i].cross(Dsee[i]).expand()
+            pee = Positionsee[i].cross(Ds[i]).expand()
             if all([self.codeComplexity(x)<2000 for x in pee]):
                 pee = Matrix(3,1,[self.customtrigsimp(self.customtrigsimp(x)) for x in pee])
             Positionsnew.append(p)
