@@ -1570,6 +1570,18 @@ protected:
         virtual void Reset() {}
         virtual void SetBkgndColor(const RaveVector<float>& color) {}
         
+        virtual OpenRAVE::GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle = 0) { return OpenRAVE::GraphHandlePtr(); }
+        virtual OpenRAVE::GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle = 0, bool bhasalpha=false) { return OpenRAVE::GraphHandlePtr(); }
+        virtual OpenRAVE::GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color) { return OpenRAVE::GraphHandlePtr(); }
+        virtual OpenRAVE::GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors) { return OpenRAVE::GraphHandlePtr(); }
+        virtual OpenRAVE::GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color) { return OpenRAVE::GraphHandlePtr(); }
+        virtual OpenRAVE::GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors) { return OpenRAVE::GraphHandlePtr(); }
+        virtual OpenRAVE::GraphHandlePtr drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color) { return OpenRAVE::GraphHandlePtr(); }
+        virtual OpenRAVE::GraphHandlePtr drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents) { return OpenRAVE::GraphHandlePtr(); }
+        virtual OpenRAVE::GraphHandlePtr drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture) { return OpenRAVE::GraphHandlePtr(); }
+        virtual OpenRAVE::GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color) { return OpenRAVE::GraphHandlePtr(); }
+        virtual OpenRAVE::GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors) { return OpenRAVE::GraphHandlePtr(); }
+
     protected:
         boost::mutex _mutex;
         boost::condition _cond;
@@ -1607,7 +1619,7 @@ protected:
                     StepSimulation(_fDeltaSimTime);
                 }
                 catch(const openrave_exception& ex) {
-                    RAVELOG_ERROR("simulation thread exception: %s",ex.what());
+                    RAVELOG_ERROR("simulation thread exception: %s\n",ex.what());
                 }
                 uint64_t passedtime = GetMicroTime()-_nSimStartTime;
                 int64_t sleeptime = _nCurSimTime-passedtime;
