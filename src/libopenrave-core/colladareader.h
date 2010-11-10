@@ -1522,29 +1522,19 @@ class ColladaReader: public daeErrorHandler
                             if( !!paxis ) {
                                 boost::shared_ptr<int> pdofindex = boost::static_pointer_cast<int>(_getUserData(paxis)->p);
                                 if( !!pdofindex ) {
-                                    dReal closingdirection = 0;
-                                    daeElement* pclosingdirection = pgripper_axis->getChild("closingdirection");
+                                    float closingdirection = 0;
+                                    daeElementRef pclosingdirection = daeElementRef(pgripper_axis->getChild("closingdirection"));
+                                    if( !pclosingdirection || !resolveCommon_float_or_param(pclosingdirection,as,closingdirection) ) {
+                                        RAVELOG_WARN(str(boost::format("manipulator %s gripper axis %s failed to process closing direction\n")%name%pgripper_axis->getAttribute("axis")));
+                                    }
+                                    pmanip->_vgripperdofindices.push_back(*pdofindex);
+                                    pmanip->_vClosingDirection.push_back((dReal)closingdirection);
                                     continue;
                                 }
                             }
                             RAVELOG_WARN(str(boost::format("could not find manipulator gripper axis %s\n")%pgripper_axis->getAttribute("axis")));
                         }
                     }
-
-//                    for (size_t i   =   0;  i < probot->GetJointIndices().size();   i++) {
-//                        manipulator->_vgripperdofindices.push_back(probot->GetJointIndices()[i]);
-//                    }
-//
-//                    if( manipulator->_vgripperdofindices.size() != manipulator->_vClosingDirection.size() ) {
-//                        if( manipulator->_vClosingDirection.size() == 0 ) {
-//                            RAVELOG_DEBUG(str(boost::format("setting manipulator %s closing direction to zeros\n")%manipulator->GetName()));
-//                            manipulator->_vClosingDirection.resize(manipulator->_vgripperdofindices.size(),0);
-//                        }
-//                        else {
-//                            RAVELOG_WARN(str(boost::format("Manipulator %s has closing direction grasps wrong %d!=%d\n")%manipulator->GetName()%manipulator->_vgripperdofindices.size()%manipulator->_vClosingDirection.size()));
-//                            manipulator->_vClosingDirection.resize(manipulator->_vgripperdofindices.size(),0);
-//                        }
-//                    }
 
                     probot->GetManipulators().push_back(pmanip);
                 }
@@ -1892,6 +1882,29 @@ class ColladaReader: public daeErrorHandler
         }
         RAVELOG_WARN(str(boost::format("failed to resolve %s\n")%paddr->getParam()->getValue()));
         return 0;
+    }
+
+    static bool resolveCommon_float_or_param(daeElementRef pcommon, daeElementRef parent, float& f)
+    {
+        daeElement* pfloat = pcommon->getChild("float");
+        if( !!pfloat ) {
+            stringstream sfloat(pfloat->getCharData());
+            sfloat >> f;
+            return !!sfloat;
+        }
+        daeElement* pparam = pcommon->getChild("param");
+        if( !!pparam ) {
+            if( pparam->hasAttribute("ref") ) {
+                RAVELOG_WARN("cannot process param ref\n");
+            }
+            else {
+                daeElement* pelt = daeSidRef(pparam->getCharData(),parent).resolve().elt;
+                if( !!pelt ) {
+                    RAVELOG_WARN(str(boost::format("found param ref: %s from %s\n")%pelt->getCharData()%pparam->getCharData()));
+                }
+            }
+        }
+        return false;
     }
 
     /// Gets all transformations applied to the node
