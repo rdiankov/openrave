@@ -107,8 +107,6 @@ class ReachabilityModel(OpenRAVEModel):
     def __init__(self,robot):
         OpenRAVEModel.__init__(self,robot=robot)
         self.ikmodel = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
-        if not self.ikmodel.load():
-            self.ikmodel.autogenerate()
         self.reachabilitystats = None
         self.reachability3d = None
         self.reachabilitydensity3d = None
@@ -126,6 +124,8 @@ class ReachabilityModel(OpenRAVEModel):
         return 4
     def load(self):
         try:
+            if not self.ikmodel.load():
+                self.ikmodel.autogenerate()
             params = OpenRAVEModel.load(self)
             if params is None:
                 return False
@@ -192,7 +192,9 @@ class ReachabilityModel(OpenRAVEModel):
                     links.append(newlink)
         return links
     def generate(self,maxradius=None,translationonly=False,xyzdelta=None,quatdelta=None,usefreespace=True,useconvex=False):
-        # disable every body but the target and robot
+        if not self.ikmodel.load():
+            self.ikmodel.autogenerate()
+        # disable every body but the target and robot\
         self.kdtree3d = self.kdtree6d = None
         bodies = [(b,b.IsEnabled()) for b in self.env.GetBodies() if b != self.robot]
         for b in bodies:
