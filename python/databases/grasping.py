@@ -210,6 +210,7 @@ class GraspingModel(OpenRAVEModel):
             if params is None:
                 return False;
             self.grasps,self.graspindices,friction,linknames,plannername = params
+            self.basemanip = BaseManipulation(self.robot,maxvelmult=self.maxvelmult)
             self.grasper = Grasper(self.robot,friction,avoidlinks = [self.robot.GetLink(name) for name in linknames],plannername=plannername)
             return self.has()
         except:

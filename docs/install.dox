@@ -94,6 +94,7 @@ cmake -DOPT_PLUGINS=OFF ..
  - \openrave_py{<b>openrave.py</b>} - Start a simple environment through \openravepy{openravepy}. Allows
    access to all openrave functionality including database generation and examples.
  - \ref openrave_config - configuration file that helps users find the %OpenRAVE installation.
+ - \ref openrave-hash.py - Query the body and robot hashes.
 - include
  - rave - Directory for all public %OpenRAVE header files.
 - lib
@@ -117,6 +118,7 @@ cmake -DOPT_PLUGINS=OFF ..
  - \ref p_basic_usage "openrave" - 環境ビューワ，干渉検知，物理エンジン，サービスを起動するための実行ファイル
  - \openrave_py{<b>openrave.py</b>} - \openravepy{openravepy}を通じて，環境を起動するための実行ファイル．データーベース生成，実行例を含む全てのopenrave機能を使用できます．
  - \ref openrave_config - 環境設定ファイル
+ - \ref openrave-hash.py - 物体とロボットハッシュの計算。
 - include
  - rave - 全てのヘッダファイルのためのディレクトリ
 - lib

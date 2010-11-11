@@ -1582,6 +1582,7 @@ protected:
         virtual OpenRAVE::GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color) { return OpenRAVE::GraphHandlePtr(); }
         virtual OpenRAVE::GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors) { return OpenRAVE::GraphHandlePtr(); }
 
+        virtual void SetCamera(const RaveTransform<float>& trans, float focalDistance=0) {}
     protected:
         boost::mutex _mutex;
         boost::condition _cond;
