@@ -1398,11 +1398,11 @@ public:
 
         boost::shared_ptr<PySensorBase::PySensorData> GetData()
         {
-            SensorBase::SensorDataPtr pdata = _pattached->GetData();
-            if( !pdata ) {
+            SensorBasePtr psensor = _pattached->GetSensor();
+            if( !psensor ) {
                 return boost::shared_ptr<PySensorBase::PySensorData>();
             }
-            return boost::shared_ptr<PySensorBase::PySensorData>(new PySensorBase::PySensorData(pdata));
+            return PySensorBase(psensor,_pyenv).GetSensorData();
         }
 
         void SetRelativeTransform(object transform) { _pattached->SetRelativeTransform(ExtractTransform(transform)); }
