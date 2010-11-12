@@ -42,6 +42,11 @@ public:
     /// Do not call inside a SimulationStep call
     virtual void Reset()=0;
 
+    /// \brief set user data
+    virtual void SetUserData(UserDataPtr data) { __pUserData = data; }
+    /// \brief return the user custom data
+    virtual UserDataPtr GetUserData() const { return __pUserData; }
+
     /// \brief Returns the OpenRAVE global state, used for initializing plugins
     virtual boost::shared_ptr<void> GlobalState() = 0;
 
@@ -457,6 +462,8 @@ public:
 
 protected:
     virtual const char* GetHash() const { return OPENRAVE_ENVIRONMENT_HASH; }
+private:
+    UserDataPtr __pUserData; ///< \see GetUserData
 };
 
 } // end namespace OpenRAVE

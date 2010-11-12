@@ -191,6 +191,14 @@ public:
     }
 };
 
+/// \brief base class for all user data
+class UserData
+{
+ public:
+    virtual ~UserData() {} 
+};
+typedef boost::shared_ptr<UserData> UserDataPtr;
+
 // terminal attributes
 //#define RESET           0
 //#define BRIGHT          1

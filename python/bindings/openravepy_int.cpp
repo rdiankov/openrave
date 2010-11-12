@@ -21,6 +21,22 @@ static bool s_bReturnTransformQuaternions = false;
 bool GetReturnTransformQuaternions() { return s_bReturnTransformQuaternions; }
 void SetReturnTransformQuaternions(bool bset) { s_bReturnTransformQuaternions = bset; }
 
+class PyUserData
+{
+public:
+    PyUserData() {}
+    PyUserData(UserDataPtr handle) : _handle(handle) {}
+    void close() { _handle.reset(); }
+    UserDataPtr _handle;
+};
+
+class PyUserObject : public UserData
+{
+public:
+    PyUserObject(object o) : _o(o) {}
+    object _o;
+};
+
 template <typename T>
 inline object ReturnTransform(T t)
 {
@@ -112,8 +128,17 @@ public:
         return _pbase->Clone(preference->GetInterfaceBase(),cloningoptions);
     }
 
-    void SetUserData(PyVoidHandle pdata) { _pbase->SetUserData(pdata._handle); }
-    PyVoidHandle GetUserData() const { return PyVoidHandle(_pbase->GetUserData()); }
+    void SetUserData(PyUserData pdata) { _pbase->SetUserData(pdata._handle); }
+    void SetUserData(object o) { _pbase->SetUserData(boost::shared_ptr<UserData>(new PyUserObject(o))); }
+    object GetUserData() const {
+        boost::shared_ptr<PyUserObject> po = boost::dynamic_pointer_cast<PyUserObject>(_pbase->GetUserData());
+        if( !po ) {
+            return object(PyUserData(_pbase->GetUserData()));
+        }
+        else {
+            return po->_o;
+        }
+    }
 
     object SendCommand(const string& in) {
         stringstream sin(in), sout;
@@ -2945,6 +2970,19 @@ public:
     DebugLevel GetDebugLevel() const { return _penv->GetDebugLevel(); }
 
     string GetHomeDirectory() { RAVELOG_WARN("Environment.GetHomeDirectory is deprecated, use RaveGetHomeDirectory\n"); return RaveGetHomeDirectory(); }
+
+    void SetUserData(PyUserData pdata) { _penv->SetUserData(pdata._handle); }
+    void SetUserData(object o) { _penv->SetUserData(boost::shared_ptr<UserData>(new PyUserObject(o))); }
+    object GetUserData() const {
+        boost::shared_ptr<PyUserObject> po = boost::dynamic_pointer_cast<PyUserObject>(_penv->GetUserData());
+        if( !po ) {
+            return object(PyUserData(_penv->GetUserData()));
+        }
+        else {
+            return po->_o;
+        }
+    }
+
     bool __eq__(PyEnvironmentBasePtr p) { return !!p && _penv==p->_penv; }
     bool __ne__(PyEnvironmentBasePtr p) { return !p || _penv!=p->_penv; }
 
@@ -3229,21 +3267,27 @@ BOOST_PYTHON_MODULE(openravepy_int)
         .def("__repr__",&PyAABB::__repr__)
         .def_pickle(AABB_pickle_suite())
         ;
-    class_<PyInterfaceBase, boost::shared_ptr<PyInterfaceBase> >("Interface", DOXY_CLASS(InterfaceBase), no_init)
-        .def("GetInterfaceType",&PyInterfaceBase::GetInterfaceType, DOXY_FN(InterfaceBase,GetInterfaceType))
-        .def("GetXMLId",&PyInterfaceBase::GetXMLId, DOXY_FN(InterfaceBase,GetXMLId))
-        .def("GetPluginName",&PyInterfaceBase::GetPluginName, DOXY_FN(InterfaceBase,GetPluginName))
-        .def("GetDescription",&PyInterfaceBase::GetDescription, DOXY_FN(InterfaceBase,GetDescription))
-        .def("GetEnv",&PyInterfaceBase::GetEnv, DOXY_FN(InterfaceBase,GetEnv))
-        .def("Clone",&PyInterfaceBase::Clone,args("ref","cloningoptions"), DOXY_FN(InterfaceBase,Clone))
-        .def("SetUserData",&PyInterfaceBase::SetUserData,args("data"), DOXY_FN(InterfaceBase,SetUserData))
-        .def("GetUserData",&PyInterfaceBase::GetUserData, DOXY_FN(InterfaceBase,GetUserData))
-        .def("SendCommand",&PyInterfaceBase::SendCommand,args("cmd"), DOXY_FN(InterfaceBase,SendCommand))
-        .def("__repr__", &PyInterfaceBase::__repr__)
-        .def("__str__", &PyInterfaceBase::__str__)
-        .def("__eq__",&PyInterfaceBase::__eq__)
-        .def("__ne__",&PyInterfaceBase::__ne__)
-        ;
+
+    {
+        void (PyInterfaceBase::*setuserdata1)(PyUserData) = &PyInterfaceBase::SetUserData;
+        void (PyInterfaceBase::*setuserdata2)(object) = &PyInterfaceBase::SetUserData;
+        class_<PyInterfaceBase, boost::shared_ptr<PyInterfaceBase> >("Interface", DOXY_CLASS(InterfaceBase), no_init)
+            .def("GetInterfaceType",&PyInterfaceBase::GetInterfaceType, DOXY_FN(InterfaceBase,GetInterfaceType))
+            .def("GetXMLId",&PyInterfaceBase::GetXMLId, DOXY_FN(InterfaceBase,GetXMLId))
+            .def("GetPluginName",&PyInterfaceBase::GetPluginName, DOXY_FN(InterfaceBase,GetPluginName))
+            .def("GetDescription",&PyInterfaceBase::GetDescription, DOXY_FN(InterfaceBase,GetDescription))
+            .def("GetEnv",&PyInterfaceBase::GetEnv, DOXY_FN(InterfaceBase,GetEnv))
+            .def("Clone",&PyInterfaceBase::Clone,args("ref","cloningoptions"), DOXY_FN(InterfaceBase,Clone))
+            .def("SetUserData",setuserdata1,args("data"), DOXY_FN(InterfaceBase,SetUserData))
+            .def("SetUserData",setuserdata2,args("data"), DOXY_FN(InterfaceBase,SetUserData))
+            .def("GetUserData",&PyInterfaceBase::GetUserData, DOXY_FN(InterfaceBase,GetUserData))
+            .def("SendCommand",&PyInterfaceBase::SendCommand,args("cmd"), DOXY_FN(InterfaceBase,SendCommand))
+            .def("__repr__", &PyInterfaceBase::__repr__)
+            .def("__str__", &PyInterfaceBase::__str__)
+            .def("__eq__",&PyInterfaceBase::__eq__)
+            .def("__ne__",&PyInterfaceBase::__ne__)
+            ;
+    }
 
     class_<PyPluginInfo, boost::shared_ptr<PyPluginInfo> >("PluginInfo", DOXY_CLASS(PLUGININFO),no_init)
         .def_readonly("interfacenames",&PyPluginInfo::interfacenames)
@@ -3860,38 +3904,40 @@ BOOST_PYTHON_MODULE(openravepy_int)
             ;
     }
 
-    bool (PyEnvironmentBase::*pcolb)(PyKinBodyPtr) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcolbr)(PyKinBodyPtr, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcolbb)(PyKinBodyPtr,PyKinBodyPtr) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcolbbr)(PyKinBodyPtr, PyKinBodyPtr,PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcoll)(PyKinBody::PyLinkPtr) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcollr)(PyKinBody::PyLinkPtr, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcolll)(PyKinBody::PyLinkPtr,PyKinBody::PyLinkPtr) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcolllr)(PyKinBody::PyLinkPtr,PyKinBody::PyLinkPtr, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcollb)(PyKinBody::PyLinkPtr, PyKinBodyPtr) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcollbr)(PyKinBody::PyLinkPtr, PyKinBodyPtr, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcolle)(PyKinBody::PyLinkPtr,object,object) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcoller)(PyKinBody::PyLinkPtr, object,object,PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcolbe)(PyKinBodyPtr,object,object) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcolber)(PyKinBodyPtr, object,object,PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcolyb)(boost::shared_ptr<PyRay>,PyKinBodyPtr) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcolybr)(boost::shared_ptr<PyRay>, PyKinBodyPtr, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcoly)(boost::shared_ptr<PyRay>) = &PyEnvironmentBase::CheckCollision;
-    bool (PyEnvironmentBase::*pcolyr)(boost::shared_ptr<PyRay>, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
-
-    void (PyEnvironmentBase::*LockPhysics1)(bool) = &PyEnvironmentBase::LockPhysics;
-    void (PyEnvironmentBase::*LockPhysics2)(bool, float) = &PyEnvironmentBase::LockPhysics;
-
-    object (PyEnvironmentBase::*drawplane1)(object, object, const boost::multi_array<float,2>&) = &PyEnvironmentBase::drawplane;
-    object (PyEnvironmentBase::*drawplane2)(object, object, const boost::multi_array<float,3>&) = &PyEnvironmentBase::drawplane;
-
-    bool (PyEnvironmentBase::*addkinbody1)(PyKinBodyPtr) = &PyEnvironmentBase::AddKinBody;
-    bool (PyEnvironmentBase::*addkinbody2)(PyKinBodyPtr,bool) = &PyEnvironmentBase::AddKinBody;
-    bool (PyEnvironmentBase::*addrobot1)(PyRobotBasePtr) = &PyEnvironmentBase::AddRobot;
-    bool (PyEnvironmentBase::*addrobot2)(PyRobotBasePtr,bool) = &PyEnvironmentBase::AddRobot;
-    bool (PyEnvironmentBase::*addsensor1)(PySensorBasePtr, const std::string&) = &PyEnvironmentBase::AddSensor;
-    bool (PyEnvironmentBase::*addsensor2)(PySensorBasePtr,const std::string&,bool) = &PyEnvironmentBase::AddSensor;
     {
+        bool (PyEnvironmentBase::*pcolb)(PyKinBodyPtr) = &PyEnvironmentBase::CheckCollision;
+        bool (PyEnvironmentBase::*pcolbr)(PyKinBodyPtr, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
+        bool (PyEnvironmentBase::*pcolbb)(PyKinBodyPtr,PyKinBodyPtr) = &PyEnvironmentBase::CheckCollision;
+        bool (PyEnvironmentBase::*pcolbbr)(PyKinBodyPtr, PyKinBodyPtr,PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
+        bool (PyEnvironmentBase::*pcoll)(PyKinBody::PyLinkPtr) = &PyEnvironmentBase::CheckCollision;
+        bool (PyEnvironmentBase::*pcollr)(PyKinBody::PyLinkPtr, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
+        bool (PyEnvironmentBase::*pcolll)(PyKinBody::PyLinkPtr,PyKinBody::PyLinkPtr) = &PyEnvironmentBase::CheckCollision;
+        bool (PyEnvironmentBase::*pcolllr)(PyKinBody::PyLinkPtr,PyKinBody::PyLinkPtr, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
+        bool (PyEnvironmentBase::*pcollb)(PyKinBody::PyLinkPtr, PyKinBodyPtr) = &PyEnvironmentBase::CheckCollision;
+        bool (PyEnvironmentBase::*pcollbr)(PyKinBody::PyLinkPtr, PyKinBodyPtr, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
+        bool (PyEnvironmentBase::*pcolle)(PyKinBody::PyLinkPtr,object,object) = &PyEnvironmentBase::CheckCollision;
+        bool (PyEnvironmentBase::*pcoller)(PyKinBody::PyLinkPtr, object,object,PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
+        bool (PyEnvironmentBase::*pcolbe)(PyKinBodyPtr,object,object) = &PyEnvironmentBase::CheckCollision;
+        bool (PyEnvironmentBase::*pcolber)(PyKinBodyPtr, object,object,PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
+        bool (PyEnvironmentBase::*pcolyb)(boost::shared_ptr<PyRay>,PyKinBodyPtr) = &PyEnvironmentBase::CheckCollision;
+        bool (PyEnvironmentBase::*pcolybr)(boost::shared_ptr<PyRay>, PyKinBodyPtr, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
+        bool (PyEnvironmentBase::*pcoly)(boost::shared_ptr<PyRay>) = &PyEnvironmentBase::CheckCollision;
+        bool (PyEnvironmentBase::*pcolyr)(boost::shared_ptr<PyRay>, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
+
+        void (PyEnvironmentBase::*LockPhysics1)(bool) = &PyEnvironmentBase::LockPhysics;
+        void (PyEnvironmentBase::*LockPhysics2)(bool, float) = &PyEnvironmentBase::LockPhysics;
+
+        object (PyEnvironmentBase::*drawplane1)(object, object, const boost::multi_array<float,2>&) = &PyEnvironmentBase::drawplane;
+        object (PyEnvironmentBase::*drawplane2)(object, object, const boost::multi_array<float,3>&) = &PyEnvironmentBase::drawplane;
+
+        bool (PyEnvironmentBase::*addkinbody1)(PyKinBodyPtr) = &PyEnvironmentBase::AddKinBody;
+        bool (PyEnvironmentBase::*addkinbody2)(PyKinBodyPtr,bool) = &PyEnvironmentBase::AddKinBody;
+        bool (PyEnvironmentBase::*addrobot1)(PyRobotBasePtr) = &PyEnvironmentBase::AddRobot;
+        bool (PyEnvironmentBase::*addrobot2)(PyRobotBasePtr,bool) = &PyEnvironmentBase::AddRobot;
+        bool (PyEnvironmentBase::*addsensor1)(PySensorBasePtr, const std::string&) = &PyEnvironmentBase::AddSensor;
+        bool (PyEnvironmentBase::*addsensor2)(PySensorBasePtr,const std::string&,bool) = &PyEnvironmentBase::AddSensor;
+        void (PyEnvironmentBase::*setuserdata1)(PyUserData) = &PyEnvironmentBase::SetUserData;
+        void (PyEnvironmentBase::*setuserdata2)(object) = &PyEnvironmentBase::SetUserData;
         scope env = classenv
             .def(init<>())
             .def("Reset",&PyEnvironmentBase::Reset, DOXY_FN(EnvironmentBase,Reset))
@@ -3989,6 +4035,9 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("SetDebugLevel",&PyEnvironmentBase::SetDebugLevel,args("level"), DOXY_FN(EnvironmentBase,SetDebugLevel))
             .def("GetDebugLevel",&PyEnvironmentBase::GetDebugLevel, DOXY_FN(EnvironmentBase,GetDebugLevel))
             .def("GetHomeDirectory",&PyEnvironmentBase::GetHomeDirectory, DOXY_FN(EnvironmentBase,GetHomeDirectory))
+            .def("SetUserData",setuserdata1,args("data"), DOXY_FN(InterfaceBase,SetUserData))
+            .def("SetUserData",setuserdata2,args("data"), DOXY_FN(InterfaceBase,SetUserData))
+            .def("GetUserData",&PyEnvironmentBase::GetUserData, DOXY_FN(InterfaceBase,GetUserData))
             .def("__enter__",&PyEnvironmentBase::__enter__)
             .def("__exit__",&PyEnvironmentBase::__exit__)
             .def("__eq__",&PyEnvironmentBase::__eq__)

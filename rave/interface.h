@@ -84,10 +84,12 @@ public:
     /// \brief Documentation of the interface in reStructuredText format. See \ref writing_plugins_doc.
     virtual const std::string& GetDescription() const { return __description; };
 
-    /// set user data
-    virtual void SetUserData(boost::shared_ptr<void> data) { __pUserData = data; }
-    /// \return user custom data
-    virtual boost::shared_ptr<void> GetUserData() const { return __pUserData; }
+    /// \brief set user data
+    virtual void SetUserData(UserDataPtr data) { __pUserData = data; }
+    /// \deprecated
+    virtual void SetUserData(boost::shared_ptr<void> data) RAVE_DEPRECATED { __pUserData = boost::static_pointer_cast<UserData>(data); }
+    /// \brief return the user custom data
+    virtual UserDataPtr GetUserData() const { return __pUserData; }
     
     /// \return the XML filename used to load the interface (sometimes this is not possible if the definition lies inside an environment file).
     virtual const std::string& GetXMLFilename() const { return __strxmlfilename; }
@@ -142,7 +144,7 @@ private:
     std::string __strpluginname; ///< the name of the plugin, necessary?
     std::string __strxmlid; ///< \see GetXMLId
     EnvironmentBasePtr __penv; ///< \see GetEnv
-    boost::shared_ptr<void> __pUserData; ///< \see GetUserData
+    UserDataPtr __pUserData; ///< \see GetUserData
     
     READERSMAP __mapReadableInterfaces; ///< pointers to extra interfaces that are included with this object
     typedef std::map<std::string, boost::shared_ptr<InterfaceCommand>, CaseInsensitiveCompare> CMDMAP;
