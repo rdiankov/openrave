@@ -152,7 +152,7 @@ namespace {
 	                         list<string>& remainingPart) {
 		remainingPart.clear();
 
-        // custom change for openrave
+        // custom change for following instance urls (Rosen Diankov)
         if ( strncmp( container->getElementName(), "instance_", 9 ) == 0 ) {
             daeURI *uri = (daeURI*)container->getAttributeValue("url");
             if ( uri != NULL && uri->getElement() != NULL ) {
@@ -366,6 +366,16 @@ namespace {
 		// If we tried to do member selection but we couldn't resolve it to a doublePtr, fail.
 		if ((!member.empty() || haveArrayIndex1)  &&  result.scalar == NULL)
 			return daeSidRef::resolveData();
+
+        if( !!result.elt && !result.array && !result.scalar ) {
+            // if newparam, follow its SIDREF (Rosen Diankov)
+            if( strcmp(result.elt->getElementName(),"newparam") == 0) {
+                daeElement* psidref = result.elt->getChild("SIDREF");
+                if( !!psidref ) {
+                    return resolveImpl(daeSidRef(psidref->getCharData(),sidRef.refElt,sidRef.profile));
+                }
+            }
+        }
 
 		// SID resolution was successful.
 		return result;

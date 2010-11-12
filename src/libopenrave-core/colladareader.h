@@ -43,8 +43,7 @@ class ColladaReader: public daeErrorHandler
     {
     public:
         JointAxisBinding(daeElementRef pvisualtrans, domAxis_constraintRef pkinematicaxis, domCommon_float_or_paramRef jointvalue, domKinematics_axis_infoRef kinematics_axis_info, domMotion_axis_infoRef motion_axis_info) : pvisualtrans(pvisualtrans), pkinematicaxis(pkinematicaxis), jointvalue(jointvalue), kinematics_axis_info(kinematics_axis_info), motion_axis_info(motion_axis_info) {
-            BOOST_ASSERT( !!pkinematicaxis );   
-            visualnode = NULL;
+            BOOST_ASSERT( !!pkinematicaxis );
             daeElement* pae = pvisualtrans->getParentElement();
             while (!!pae) {
                 visualnode = daeSafeCast<domNode> (pae);            
@@ -347,7 +346,7 @@ class ColladaReader: public daeErrorHandler
                         while(!!pparent && pparent->typeID() != domKinematics::ID()) {
                             pparent = pparent->getParent();
                         }
-                        BOOST_ASSERT(pparent!=NULL);
+                        BOOST_ASSERT(!!pparent);
                         bindings.AddAxisInfo(daeSafeCast<domKinematics>(pparent)->getInstance_kinematics_model_array(), kinematics_axis_info, motion_axis_info);
                     }
                     else {
@@ -387,10 +386,10 @@ class ColladaReader: public daeErrorHandler
         }
 
         //  Add the robot to the environment
-        if( probot->GetName().size() == 0 ) {
+        if( probot->GetName().size() == 0 && !!articulated_system->getName() ) {
             probot->SetName(articulated_system->getName());
         }
-        if( probot->GetName().size() == 0 ) {
+        if( probot->GetName().size() == 0 && !!articulated_system->getId()) {
             probot->SetName(articulated_system->getId());
         }
 
@@ -478,23 +477,9 @@ class ColladaReader: public daeErrorHandler
             }
         }
 
-        RAVELOG_VERBOSE(str(boost::format("Number of links in the kmodel %d\n")%ktec->getLink_array().getCount()));
-
-        if( !!pnode ) {
-            // This is not a safe cast - predecessor might be a transformation
-            domNodeRef  parent  = daeSafeCast<domNode>(pnode->getAncestor(NodeMatcher()));
-
-            //  Extract all links into the kinematics_model
-            for (size_t ilink = 0; ilink < ktec->getLink_array().getCount(); ++ilink) {
-                domNodeRef  child = daeSafeCast<domNode>(parent->getChildrenByType<domNode>()[ilink]);
-                RAVELOG_VERBOSE(str(boost::format("Node Name out of ExtractLink: %s\n")%child->getName()));
-                ExtractLink(pkinbody, ktec->getLink_array()[ilink], child, getNodeParentTransform(child), vdomjoints, listAxisBindings);
-            }
-        }
-        else {
-            for (size_t ilink = 0; ilink < ktec->getLink_array().getCount(); ++ilink) {
-                ExtractLink(pkinbody, ktec->getLink_array()[ilink], domNodeRef(), Transform(), vdomjoints, listAxisBindings);
-            }
+        RAVELOG_VERBOSE(str(boost::format("Number of root links in the kmodel %d\n")%ktec->getLink_array().getCount()));
+        for (size_t ilink = 0; ilink < ktec->getLink_array().getCount(); ++ilink) {
+            ExtractLink(pkinbody, ktec->getLink_array()[ilink], ilink == 0 ? pnode : domNodeRef(), Transform(), vdomjoints, listAxisBindings);
         }
 
         //  TODO: implement mathml
@@ -514,9 +499,11 @@ class ColladaReader: public daeErrorHandler
         
             if (!!pf->getTechnique_common()) {
                 daeElementRef peltmath;
-                for (size_t ichild = 0; ichild < pf->getTechnique_common()->getChildren().getCount(); ++ichild) {
-                    daeElementRef pelt = pf->getTechnique_common()->getChildren()[ichild];
-                    if (pelt->getElementName() == string("math") || pelt->getElementName() == string("math:math")) {
+                daeTArray<daeElementRef> children;
+                pf->getTechnique_common()->getChildren(children);
+                for (size_t ichild = 0; ichild < children.getCount(); ++ichild) {
+                    daeElementRef pelt = children[ichild];
+                    if (_checkMathML(pelt,string("math")) ) {
                         peltmath = pelt;
                     }
                     else {
@@ -570,7 +557,10 @@ class ColladaReader: public daeErrorHandler
                             a = -1;
                             psymboljoint = papplyelt->getChildren()[1];
                         }
-
+                        else {
+                            BOOST_ASSERT(_checkMathML(papplyelt->getChildren()[0],"csymbol"));
+                            psymboljoint = papplyelt->getChildren()[0];
+                        }
                         BOOST_ASSERT(psymboljoint->hasAttribute("encoding"));
                         BOOST_ASSERT(psymboljoint->getAttribute("encoding")==string("COLLADA"));
                         KinBody::JointPtr pbasejoint = _getJointFromRef(psymboljoint->getCharData().c_str(),pf,pkinbody);
@@ -597,7 +587,7 @@ class ColladaReader: public daeErrorHandler
         //  Set link name with the name of the COLLADA's Link
         std::string linkname = _ExtractLinkName(pdomlink);
         if( linkname.size() == 0 ) {
-            RAVELOG_WARN("<link> has no name or id!\n");
+            RAVELOG_WARN("<link> has no name or id, falling back to <node>!\n");
             if( !!pdomnode ) {
                 if (!!pdomnode->getName()) {
                     linkname = pdomnode->getName();
@@ -735,7 +725,7 @@ class ColladaReader: public daeErrorHandler
                 KinBody::LinkPtr pchildlink = ExtractLink(pkinbody, pattfull->getLink(), pchildnode, plink->_t * tatt, vdomjoints, listAxisBindings);
 
                 if (!pchildlink) {
-                    RAVELOG_WARN(str(boost::format("Link NULL: %s\n")%plink->GetName()));
+                    RAVELOG_WARN(str(boost::format("Link has no child: %s\n")%plink->GetName()));
                     continue;
                 }
 
@@ -1058,10 +1048,9 @@ class ColladaReader: public daeErrorHandler
     /// \param  vertsRef    Array of vertices of the COLLADA's model
     /// \param  mapmaterials    Materials applied to the geometry
     /// \param  plink   Link of the kinematics model
-    bool ExtractGeometry(const domTrianglesRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::LinkPtr plink)
+    bool _ExtractGeometry(const domTrianglesRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::LinkPtr plink)
     {
-        RAVELOG_VERBOSE("ExtractGeometry in TRIANGLES and adds to OpenRAVE............\n");
-        if( triRef == NULL ) {
+        if( !triRef ) {
             return false;
         }
         plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES(plink));
@@ -1077,12 +1066,11 @@ class ColladaReader: public daeErrorHandler
             }
         }
 
-        int triangleIndexStride = 0;
-        int vertexoffset = -1;
+        size_t triangleIndexStride = 0, vertexoffset = -1;
         domInput_local_offsetRef indexOffsetRef;
 
         for (unsigned int w=0;w<triRef->getInput_array().getCount();w++) {
-            int offset = triRef->getInput_array()[w]->getOffset();
+            size_t offset = triRef->getInput_array()[w]->getOffset();
             daeString str = triRef->getInput_array()[w]->getSemantic();
             if (!strcmp(str,"VERTEX")) {
                 indexOffsetRef = triRef->getInput_array()[w];
@@ -1092,10 +1080,11 @@ class ColladaReader: public daeErrorHandler
                 triangleIndexStride = offset;
             }
         }
-
         triangleIndexStride++;
-        const domList_of_uints& indexArray =triRef->getP()->getValue();
 
+        const domList_of_uints& indexArray =triRef->getP()->getValue();
+        trimesh.indices.reserve(triRef->getCount()*3);
+        trimesh.vertices.reserve(triRef->getCount()*3);
         for (size_t i=0;i<vertsRef->getInput_array().getCount();++i) {
             domInput_localRef localRef = vertsRef->getInput_array()[i];
             daeString str = localRef->getSemantic();
@@ -1110,28 +1099,29 @@ class ColladaReader: public daeErrorHandler
                     const domList_of_floats& listFloats = flArray->getValue();
                     int k=vertexoffset;
                     int vertexStride = 3;//instead of hardcoded stride, should use the 'accessor'
-
-                    if( trimesh.indices.capacity() < trimesh.indices.size()+triRef->getCount() ) {
-                        trimesh.indices.reserve(trimesh.indices.size()+triRef->getCount());
-                    }
-                    if( trimesh.vertices.capacity() < trimesh.vertices.size()+triRef->getCount() ) {
-                        trimesh.vertices.reserve(trimesh.vertices.size()+triRef->getCount());
-                    }
-                    while(k < (int)indexArray.getCount() ) {
-                        for (int i=0;i<3;i++) {
-                            int index0 = indexArray.get(k)*vertexStride;
-                            domFloat fl0 = listFloats.get(index0);
-                            domFloat fl1 = listFloats.get(index0+1);
-                            domFloat fl2 = listFloats.get(index0+2);
-                            k+=triangleIndexStride;
-                            trimesh.indices.push_back(trimesh.vertices.size());
-                            trimesh.vertices.push_back(Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
+                    for(size_t itri = 0; itri < triRef->getCount(); ++itri) {
+                        if(k+2*triangleIndexStride < indexArray.getCount() ) {
+                            for (int j=0;j<3;j++) {
+                                int index0 = indexArray.get(k)*vertexStride;
+                                domFloat fl0 = listFloats.get(index0);
+                                domFloat fl1 = listFloats.get(index0+1);
+                                domFloat fl2 = listFloats.get(index0+2);
+                                k+=triangleIndexStride;
+                                trimesh.indices.push_back(trimesh.vertices.size());
+                                trimesh.vertices.push_back(Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
+                            }
                         }
                     }
                 }
+                else {
+                    RAVELOG_WARN("float array not defined!\n");
+                }
+                break;
             }
         }
-
+        if( trimesh.indices.size() != 3*triRef->getCount() ) {
+            RAVELOG_WARN("triangles declares wrong count!\n");
+        }
         geom.InitCollisionMesh();
         return true;
     }
@@ -1141,10 +1131,11 @@ class ColladaReader: public daeErrorHandler
     /// \param  vertsRef    Array of vertices of the COLLADA's model
     /// \param  mapmaterials    Materials applied to the geometry
     /// \param  plink   Link of the kinematics model
-    bool ExtractGeometry(const domTrifansRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::LinkPtr plink)
+    bool _ExtractGeometry(const domTrifansRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::LinkPtr plink)
     {
-        RAVELOG_VERBOSE("ExtractGeometry in TRIANGLE FANS and adds to OpenRAVE............\n");
-
+        if( !triRef ) {
+            return false;
+        }
         plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES(plink));
         KinBody::Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
         KinBody::Link::TRIMESH& trimesh = geom.collisionmesh;
@@ -1158,12 +1149,11 @@ class ColladaReader: public daeErrorHandler
             }
         }
 
-        int triangleIndexStride = 0;
-        int vertexoffset = -1;
+        size_t triangleIndexStride = 0, vertexoffset = -1;
         domInput_local_offsetRef indexOffsetRef;
 
         for (unsigned int w=0;w<triRef->getInput_array().getCount();w++) {
-            int offset = triRef->getInput_array()[w]->getOffset();
+            size_t offset = triRef->getInput_array()[w]->getOffset();
             daeString str = triRef->getInput_array()[w]->getSemantic();
             if (!strcmp(str,"VERTEX")) {
                 indexOffsetRef = triRef->getInput_array()[w];
@@ -1174,8 +1164,12 @@ class ColladaReader: public daeErrorHandler
             }
         }
         triangleIndexStride++;
-
-        for(size_t ip = 0; ip < triRef->getP_array().getCount(); ++ip) {
+        size_t primitivecount = triRef->getCount();
+        if( primitivecount > triRef->getP_array().getCount() ) {
+            RAVELOG_WARN("trifans has incorrect count\n");
+            primitivecount = triRef->getP_array().getCount();
+        }
+        for(size_t ip = 0; ip < primitivecount; ++ip) {
             domList_of_uints indexArray =triRef->getP_array()[ip]->getValue();
             for (size_t i=0;i<vertsRef->getInput_array().getCount();++i) {
                 domInput_localRef localRef = vertsRef->getInput_array()[i];
@@ -1191,14 +1185,13 @@ class ColladaReader: public daeErrorHandler
                         const domList_of_floats& listFloats = flArray->getValue();
                         int k=vertexoffset;
                         int vertexStride = 3;//instead of hardcoded stride, should use the 'accessor'
-
-                        if( trimesh.indices.capacity() < trimesh.indices.size()+triRef->getCount() ) {
-                            trimesh.indices.reserve(trimesh.indices.size()+triRef->getCount());
+                        size_t usedindices = 3*(indexArray.getCount()-2);
+                        if( trimesh.indices.capacity() < trimesh.indices.size()+usedindices ) {
+                            trimesh.indices.reserve(trimesh.indices.size()+usedindices);
                         }
-                        if( trimesh.vertices.capacity() < trimesh.vertices.size()+triRef->getCount() ) {
-                            trimesh.vertices.reserve(trimesh.vertices.size()+triRef->getCount());
-                        }
-
+                        if( trimesh.vertices.capacity() < trimesh.vertices.size()+indexArray.getCount() ) {
+                            trimesh.vertices.reserve(trimesh.vertices.size()+indexArray.getCount());
+                        }                        
                         size_t startoffset = (int)trimesh.vertices.size();
                         while(k < (int)indexArray.getCount() ) {
                             int index0 = indexArray.get(k)*vertexStride;
@@ -1208,13 +1201,16 @@ class ColladaReader: public daeErrorHandler
                             k+=triangleIndexStride;
                             trimesh.vertices.push_back(Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
                         }
-
                         for(size_t ivert = startoffset+2; ivert < trimesh.vertices.size(); ++ivert) {
                             trimesh.indices.push_back(startoffset);
                             trimesh.indices.push_back(ivert-1);
                             trimesh.indices.push_back(ivert);
                         }
                     }
+                    else {
+                        RAVELOG_WARN("float array not defined!\n");
+                    }
+                    break;
                 }
             }
         }
@@ -1228,10 +1224,11 @@ class ColladaReader: public daeErrorHandler
     /// \param  vertsRef    Array of vertices of the COLLADA's model
     /// \param  mapmaterials    Materials applied to the geometry
     /// \param  plink   Link of the kinematics model
-    bool ExtractGeometry(const domTristripsRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::LinkPtr plink)
+    bool _ExtractGeometry(const domTristripsRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::LinkPtr plink)
     {
-        RAVELOG_VERBOSE("ExtractGeometry in TRIANGLE STRIPS and adds to OpenRAVE............\n");
-
+        if( !triRef ) {
+            return false;
+        }
         plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES(plink));
         KinBody::Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
         KinBody::Link::TRIMESH& trimesh = geom.collisionmesh;
@@ -1244,12 +1241,11 @@ class ColladaReader: public daeErrorHandler
                 FillGeometryColor(itmat->second,geom);
             }
         }
-        int triangleIndexStride = 0;
-        int vertexoffset = -1;
+        size_t triangleIndexStride = 0, vertexoffset = -1;
         domInput_local_offsetRef indexOffsetRef;
 
         for (unsigned int w=0;w<triRef->getInput_array().getCount();w++) {
-            int offset = triRef->getInput_array()[w]->getOffset();
+            size_t offset = triRef->getInput_array()[w]->getOffset();
             daeString str = triRef->getInput_array()[w]->getSemantic();
             if (!strcmp(str,"VERTEX")) {
                 indexOffsetRef = triRef->getInput_array()[w];
@@ -1260,10 +1256,13 @@ class ColladaReader: public daeErrorHandler
             }
         }
         triangleIndexStride++;
-
-        for(size_t ip = 0; ip < triRef->getP_array().getCount(); ++ip) {
-            domList_of_uints indexArray =triRef->getP_array()[ip]->getValue();
-
+        size_t primitivecount = triRef->getCount();
+        if( primitivecount > triRef->getP_array().getCount() ) {
+            RAVELOG_WARN("tristrips has incorrect count\n");
+            primitivecount = triRef->getP_array().getCount();
+        }
+        for(size_t ip = 0; ip < primitivecount; ++ip) {
+            domList_of_uints indexArray = triRef->getP_array()[ip]->getValue();
             for (size_t i=0;i<vertsRef->getInput_array().getCount();++i) {
                 domInput_localRef localRef = vertsRef->getInput_array()[i];
                 daeString str = localRef->getSemantic();
@@ -1278,16 +1277,15 @@ class ColladaReader: public daeErrorHandler
                         const domList_of_floats& listFloats = flArray->getValue();
                         int k=vertexoffset;
                         int vertexStride = 3;//instead of hardcoded stride, should use the 'accessor'
-
-                        if( trimesh.indices.capacity() < trimesh.indices.size()+triRef->getCount() ) {
-                            trimesh.indices.reserve(trimesh.indices.size()+triRef->getCount());
+                        size_t usedindices = indexArray.getCount()-2;
+                        if( trimesh.indices.capacity() < trimesh.indices.size()+usedindices ) {
+                            trimesh.indices.reserve(trimesh.indices.size()+usedindices);
                         }
-                        if( trimesh.vertices.capacity() < trimesh.vertices.size()+triRef->getCount() ) {
-                            trimesh.vertices.reserve(trimesh.vertices.size()+triRef->getCount());
+                        if( trimesh.vertices.capacity() < trimesh.vertices.size()+indexArray.getCount() ) {
+                            trimesh.vertices.reserve(trimesh.vertices.size()+indexArray.getCount());
                         }
 
                         size_t startoffset = (int)trimesh.vertices.size();
-
                         while(k < (int)indexArray.getCount() ) {
                             int index0 = indexArray.get(k)*vertexStride;
                             domFloat fl0 = listFloats.get(index0);
@@ -1305,10 +1303,96 @@ class ColladaReader: public daeErrorHandler
                             bFlip = !bFlip;
                         }
                     }
+                    else {
+                        RAVELOG_WARN("float array not defined!\n");
+                    }
+                    break;
                 }
             }
         }
 
+        geom.InitCollisionMesh();
+        return false;
+    }
+
+    /// Extract the Geometry in TRIANGLE STRIPS and adds it to OpenRave
+    /// \param  triRef  Array of Triangle Strips of the COLLADA's model
+    /// \param  vertsRef    Array of vertices of the COLLADA's model
+    /// \param  mapmaterials    Materials applied to the geometry
+    /// \param  plink   Link of the kinematics model
+    bool _ExtractGeometry(const domPolylistRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::LinkPtr plink)
+    {
+        if( !triRef ) {
+            return false;
+        }
+        plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES(plink));
+        KinBody::Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
+        KinBody::Link::TRIMESH& trimesh = geom.collisionmesh;
+        geom.type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
+
+        // resolve the material and assign correct colors to the geometry
+        if( !!triRef->getMaterial() ) {
+            map<string,domMaterialRef>::const_iterator itmat = mapmaterials.find(triRef->getMaterial());
+            if( itmat != mapmaterials.end() ) {
+                FillGeometryColor(itmat->second,geom);
+            }
+        }
+
+        size_t triangleIndexStride = 0,vertexoffset = -1;
+        domInput_local_offsetRef indexOffsetRef;
+        for (unsigned int w=0;w<triRef->getInput_array().getCount();w++) {
+            size_t offset = triRef->getInput_array()[w]->getOffset();
+            daeString str = triRef->getInput_array()[w]->getSemantic();
+            if (!strcmp(str,"VERTEX")) {
+                indexOffsetRef = triRef->getInput_array()[w];
+                vertexoffset = offset;
+            }
+            if (offset> triangleIndexStride) {
+                triangleIndexStride = offset;
+            }
+        }
+        triangleIndexStride++;
+        const domList_of_uints& indexArray =triRef->getP()->getValue();        
+        for (size_t i=0;i<vertsRef->getInput_array().getCount();++i) {
+            domInput_localRef localRef = vertsRef->getInput_array()[i];
+            daeString str = localRef->getSemantic();
+            if ( strcmp(str,"POSITION") == 0 ) {
+                const domSourceRef node = daeSafeCast<domSource>(localRef->getSource().getElement());
+                if( !node ) {
+                    continue;
+                }
+                dReal fUnitScale = GetUnitScale(node);
+                const domFloat_arrayRef flArray = node->getFloat_array();
+                if (!!flArray) {
+                    const domList_of_floats& listFloats = flArray->getValue();
+                    size_t k=vertexoffset;
+                    int vertexStride = 3;//instead of hardcoded stride, should use the 'accessor'
+                    for(size_t ipoly = 0; ipoly < triRef->getVcount()->getValue().getCount(); ++ipoly) {
+                        size_t numverts = triRef->getVcount()->getValue()[ipoly];
+                        if(numverts > 0 && k+(numverts-1)*triangleIndexStride < indexArray.getCount() ) {
+                            size_t startoffset = trimesh.vertices.size();
+                            for (size_t j=0;j<numverts;j++) {
+                                int index0 = indexArray.get(k)*vertexStride;
+                                domFloat fl0 = listFloats.get(index0);
+                                domFloat fl1 = listFloats.get(index0+1);
+                                domFloat fl2 = listFloats.get(index0+2);
+                                k+=triangleIndexStride;
+                                trimesh.vertices.push_back(Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
+                            }
+                            for(size_t ivert = startoffset+2; ivert < trimesh.vertices.size(); ++ivert) {
+                                trimesh.indices.push_back(startoffset);
+                                trimesh.indices.push_back(ivert-1);
+                                trimesh.indices.push_back(ivert);
+                            }   
+                        }
+                    }
+                }
+                else {
+                    RAVELOG_WARN("float array not defined!\n");
+                }
+                break;
+            }
+        }
         geom.InitCollisionMesh();
         return false;
     }
@@ -1322,25 +1406,17 @@ class ColladaReader: public daeErrorHandler
         vector<Vector> vconvexhull;
         if (!!geom && geom->getMesh()) {
             const domMeshRef meshRef = geom->getMesh();
-
-            //  Extract Geometry of all array of TRIANGLES
             for (size_t tg = 0;tg<meshRef->getTriangles_array().getCount();tg++) {
-                ExtractGeometry(meshRef->getTriangles_array()[tg], meshRef->getVertices(), mapmaterials, plink);
+                _ExtractGeometry(meshRef->getTriangles_array()[tg], meshRef->getVertices(), mapmaterials, plink);
             }
-
-            //  Extract Geometry of all array of TRIANGLE FANS
             for (size_t tg = 0;tg<meshRef->getTrifans_array().getCount();tg++) {
-                ExtractGeometry(meshRef->getTrifans_array()[tg], meshRef->getVertices(), mapmaterials, plink);
+                _ExtractGeometry(meshRef->getTrifans_array()[tg], meshRef->getVertices(), mapmaterials, plink);
             }
-                
-            // Extract Geometry of all array of TRIANGLE STRIPS
             for (size_t tg = 0;tg<meshRef->getTristrips_array().getCount();tg++) {
-                ExtractGeometry(meshRef->getTristrips_array()[tg], meshRef->getVertices(), mapmaterials, plink);
+                _ExtractGeometry(meshRef->getTristrips_array()[tg], meshRef->getVertices(), mapmaterials, plink);
             }
-
-            // Types of PRIMITIVES NOT SUPPORTED by OpenRAVE
-            if( meshRef->getPolylist_array().getCount()> 0 ) {
-                RAVELOG_WARN("openrave does not support collada polylists\n");
+            for (size_t tg = 0;tg<meshRef->getPolylist_array().getCount();tg++) {
+                _ExtractGeometry(meshRef->getPolylist_array()[tg], meshRef->getVertices(), mapmaterials, plink);
             }
             if( meshRef->getPolygons_array().getCount()> 0 ) {
                 RAVELOG_WARN("openrave does not support collada polygons\n");
@@ -1640,10 +1716,10 @@ class ColladaReader: public daeErrorHandler
         //  Create Sensor of the TYPE required
         att_Sensor->psensor = RaveCreateSensor(probot->GetEnv(), definition_type.c_str());
 
-        att_Sensor->psensor->SetName(definition_id.c_str());
+        att_Sensor->psensor->SetName(definition_id);
 
         //  Sets attached actuator name from instance actuator Id
-        att_Sensor->_name   =   instance_id.c_str();
+        att_Sensor->_name   =   instance_id;
 
         //  Sets sensor name from dom sensor Id
         RAVELOG_DEBUG("Sensor name: %s\n",att_Sensor->GetName().c_str());
@@ -1661,7 +1737,7 @@ class ColladaReader: public daeErrorHandler
             att_Sensor->pdata = att_Sensor->psensor->CreateSensorData();
 
             if( att_Sensor->pattachedlink.expired() ) {
-                RAVELOG_DEBUG("attached link is NULL, setting to base of robot\n");
+                RAVELOG_DEBUG("attached link is none, setting to base of robot\n");
                 if( probot->GetLinks().size() == 0 ) {
                     RAVELOG_WARN("robot has no links!\n");
                 }
@@ -1698,7 +1774,8 @@ class ColladaReader: public daeErrorHandler
     /// dom_SensorActuator  COLLADA sensor/actuator info
     bool setSensorActuatorParams(daeElementRef dom_SensorActuator, boost::shared_ptr<BaseXMLReader> pcurreader)
     {
-        daeTArray<daeElementRef> childrens = dom_SensorActuator->getChildren();
+        daeTArray<daeElementRef> childrens;
+        dom_SensorActuator->getChildren(childrens);
 
         //  For each feature of the Actuator send this INFO to Actuator's plugin
         for (size_t i = 0; i < childrens.getCount(); i++) {
@@ -1987,8 +2064,9 @@ class ColladaReader: public daeErrorHandler
     /// \brief Travel by the transformation array and calls the getTransform method
     template <typename T> static TransformMatrix _ExtractFullTransformFromChildren(const T pelt) {
         TransformMatrix t;
-        for(size_t i = 0; i < pelt->getChildren().getCount(); ++i) {
-            t = t * getTransform(pelt->getChildren()[i]);
+        daeTArray<daeElementRef> children; pelt->getChildren(children);
+        for(size_t i = 0; i < children.getCount(); ++i) {
+            t = t * getTransform(children[i]);
         }
         return t;
     }
@@ -2030,7 +2108,7 @@ class ColladaReader: public daeErrorHandler
             if( !!pdomlink->getName() ) {
                 linkname = pdomlink->getName();
             }
-            if( linkname.size() == 0 ) {
+            if( linkname.size() == 0 && !!pdomlink->getID() ) {
                 linkname = pdomlink->getID();
             }
         }
@@ -2039,7 +2117,16 @@ class ColladaReader: public daeErrorHandler
 
     bool _checkMathML(daeElementRef pelt,const string& type)
     {
-        return pelt->getElementName()==type || pelt->getElementName()==(string("math:")+type);
+        if( pelt->getElementName()==type ) {
+            return true;
+        }
+        // check the substring after ':'
+        string name = pelt->getElementName();
+        size_t pos = name.find_last_of(':');
+        if( pos == string::npos ) {
+            return false;
+        }
+        return name.substr(pos+1)==type;
     }
 
     KinBody::JointPtr _getJointFromRef(xsToken targetref, daeElementRef peltref, KinBodyPtr pkinbody) {
@@ -2075,7 +2162,7 @@ class ColladaReader: public daeErrorHandler
             return;
         }
         for (size_t imodel = 0; imodel < kiscene->getBind_kinematics_model_array().getCount(); imodel++) {
-            domArticulated_systemRef articulated_system = NULL; // if filled, contains robot-specific information, so create a robot
+            domArticulated_systemRef articulated_system; // if filled, contains robot-specific information, so create a robot
             domBind_kinematics_modelRef kbindmodel = kiscene->getBind_kinematics_model_array()[imodel];
             if (!kbindmodel->getNode()) {
                 RAVELOG_WARNA("do not support kinematics models without references to nodes\n");
@@ -2097,7 +2184,7 @@ class ColladaReader: public daeErrorHandler
                     RAVELOG_WARN("bind_kinematics_model does not reference element\n");
                 }
                 else {
-                    RAVELOG_WARN(str(boost::format("bind_kinematics_model does references %s\n")%pelt->getElementName()));
+                    RAVELOG_WARN(str(boost::format("bind_kinematics_model cannot find reference to %s%s:\n")%pelt->getElementName()));
                 }
                 continue;
             }
@@ -2165,8 +2252,10 @@ class ColladaReader: public daeErrorHandler
 
     size_t _countChildren(daeElement* pelt) {
         size_t c = 1;
-        for (size_t i = 0; i < pelt->getChildren().getCount(); ++i) {
-            c += _countChildren(pelt->getChildren()[i]);
+        daeTArray<daeElementRef> children;
+        pelt->getChildren(children);
+        for (size_t i = 0; i < children.getCount(); ++i) {
+            c += _countChildren(children[i]);
         }
         return c;
     }
@@ -2175,25 +2264,26 @@ class ColladaReader: public daeErrorHandler
     {
         // getChild could be optimized since asset tag is supposed to appear as the first element
         domAssetRef passet = daeSafeCast<domAsset> (pelt->getChild("asset"));
-        if (passet != NULL && passet->getUnit() != NULL) {
+        if (!!passet && !!passet->getUnit()) {
             scale = passet->getUnit()->getMeter();
         }
         
         _vuserdata.push_back(USERDATA(scale));
         pelt->setUserData(&_vuserdata.back());
-
-        for (size_t i = 0; i < pelt->getChildren().getCount(); ++i) {
-            if (pelt->getChildren()[i] != passet) {
-                _processUserData(pelt->getChildren()[i], scale);
+        daeTArray<daeElementRef> children;
+        pelt->getChildren(children);
+        for (size_t i = 0; i < children.getCount(); ++i) {
+            if (children[i] != passet) {
+                _processUserData(children[i], scale);
             }
         }
     }
 
     USERDATA* _getUserData(daeElement* pelt)
     {
-        BOOST_ASSERT(pelt != NULL);
+        BOOST_ASSERT(!!pelt);
         void* p = pelt->getUserData();
-        BOOST_ASSERT(p != NULL );
+        BOOST_ASSERT(!!p);
         return (USERDATA*)p;
     }
         
