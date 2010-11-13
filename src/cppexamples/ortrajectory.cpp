@@ -15,7 +15,7 @@
     traj->AddPoint(TrajectoryBase::TPOINT(q,probot->GetTransform(),2.0f));
     traj->CalcTrajTiming(probot,TrajectoryBase::CUBIC,false,false); // initialize the trajectory structures
     \endcode
-    
+
     The demo also adds a collision check at the target point to make sure robot is going to a
     collision free configuration.
 
@@ -28,11 +28,11 @@
         }
     }
     \endcode
-    
+
     In order for the path itself to be collision free, we would have to use planners.
 
     <b>Full Example Code:</b>
-*/    
+*/
 #include <openrave-core.h>
 #include <vector>
 #include <cstring>
@@ -45,6 +45,8 @@ using namespace OpenRAVE;
 using namespace std;
 
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <winsock2.h>
 #define usleep(micro) Sleep(micro/1000)
 #endif
 

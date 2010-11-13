@@ -12,14 +12,19 @@
 
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#define MYPOPEN _popen
+#define MYPCLOSE _pclose
 #else
 #include <dlfcn.h>
 #include <sys/types.h>
 #include <dirent.h>
+#define MYPOPEN popen
+#define MYPCLOSE pclose
 #endif
 
 #ifdef HAVE_BOOST_FILESYSTEM
@@ -362,24 +367,24 @@ public:
         }
 
         {
-            string cmdhas = str(boost::format("openrave.py --database inversekinematics --gethas --robot=%s --manipname=%s --iktype=%s")%probot->GetXMLFilename()%probot->GetActiveManipulator()->GetName()%striktype);
-            FILE* pipe = popen(cmdhas.c_str(), "r");
+            string cmdhas = str(boost::format("openrave.py --database inversekinematics --gethas --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetXMLFilename()%probot->GetActiveManipulator()->GetName()%striktype);
+            FILE* pipe = MYPOPEN(cmdhas.c_str(), "r");
             string hasik;
             {
                 boost::iostreams::stream_buffer<boost::iostreams::file_descriptor_source> fpstream(fileno(pipe));
                 std::istream in(&fpstream);
                 std::getline(in, hasik);
             }            
-            int generateexit = pclose(pipe);
+            int generateexit = MYPCLOSE(pipe);
             if( generateexit != 0 ) {
                 Sleep(100);
                 RAVELOG_DEBUG("failed to close pipe\n");
             }
             if( hasik != "1" ) {
                 RAVELOG_INFO(str(boost::format("Generating inverse kinematics for manip %s:%s, will take several minutes...\n")%probot->GetName()%probot->GetActiveManipulator()->GetName()));
-                string cmdgen = str(boost::format("openrave.py --database inversekinematics --robot=%s --manipname=%s --iktype=%s")%probot->GetXMLFilename()%probot->GetActiveManipulator()->GetName()%striktype);
-                FILE* pipe = popen(cmdgen.c_str(), "r");
-                int generateexit = pclose(pipe);
+                string cmdgen = str(boost::format("openrave.py --database inversekinematics --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetXMLFilename()%probot->GetActiveManipulator()->GetName()%striktype);
+                FILE* pipe = MYPOPEN(cmdgen.c_str(), "r");
+                int generateexit = MYPCLOSE(pipe);
                 if( generateexit != 0 ) {
                     Sleep(100);
                     RAVELOG_DEBUG("failed to close pipe\n");
@@ -387,21 +392,21 @@ public:
             }
         }
         
-        string cmdfilename = str(boost::format("openrave.py --database inversekinematics --getfilename --robot=%s --manipname=%s --iktype=%s")%probot->GetXMLFilename()%probot->GetActiveManipulator()->GetName()%striktype);
+        string cmdfilename = str(boost::format("openrave.py --database inversekinematics --getfilename --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetXMLFilename()%probot->GetActiveManipulator()->GetName()%striktype);
         RAVELOG_INFO("executing shell command:\n%s\n",cmdfilename.c_str());
         string ikfilename;
-        FILE* pipe = popen(cmdfilename.c_str(), "r");
+        FILE* pipe = MYPOPEN(cmdfilename.c_str(), "r");
         {
             boost::iostreams::stream_buffer<boost::iostreams::file_descriptor_source> fpstream(fileno(pipe));
             std::istream in(&fpstream);
             std::getline(in, ikfilename);
             if( !in ) {
                 RAVELOG_INFO("filed to get line: %s?!\n",ikfilename.c_str());
-                pclose(pipe);
+                MYPCLOSE(pipe);
                 return false;
             }
         }
-        int generateexit = pclose(pipe);
+        int generateexit = MYPCLOSE(pipe);
         if( generateexit != 0 ) {
             Sleep(100);
             RAVELOG_DEBUG("failed to close pipe\n");

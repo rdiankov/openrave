@@ -5,7 +5,7 @@
     The default manipulator is used for the robot.
 
     <b>Full Example Code:</b>
-*/    
+*/
 #include <openrave-core.h>
 #include <vector>
 #include <sstream>
@@ -16,6 +16,8 @@ using namespace OpenRAVE;
 using namespace std;
 
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <winsock2.h>
 #define usleep(micro) Sleep(micro/1000)
 #endif
 

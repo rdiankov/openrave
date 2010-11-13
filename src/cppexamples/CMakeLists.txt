@@ -14,7 +14,11 @@ endif( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
 
 find_package(Boost COMPONENTS iostreams)
 
-include_directories(${OPENRAVE_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} ${Boost_INCLUDE_DIRS})
+include_directories(${OPENRAVE_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} )
+if( Boost_INCLUDE_DIRS )
+  include_directories(${Boost_INCLUDE_DIRS})
+endif()
+
 link_directories(${OPENRAVE_LINK_DIRS} ${Boost_LIBRARY_DIRS})
 add_library(plugincpp SHARED plugincpp.cpp)
 set_target_properties(plugincpp PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
