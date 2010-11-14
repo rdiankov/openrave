@@ -380,6 +380,7 @@ public:
                 Sleep(100);
                 RAVELOG_DEBUG("failed to close pipe\n");
             }
+            boost::trim(hasik);
             if( hasik != "1" ) {
                 RAVELOG_INFO(str(boost::format("Generating inverse kinematics for manip %s:%s, will take several minutes...\n")%probot->GetName()%probot->GetActiveManipulator()->GetName()));
                 string cmdgen = str(boost::format("openrave.py --database inversekinematics --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetXMLFilename()%probot->GetActiveManipulator()->GetName()%striktype);
@@ -412,6 +413,7 @@ public:
             RAVELOG_DEBUG("failed to close pipe\n");
         }
         
+        boost::trim(ikfilename);
         string ikfastname = str(boost::format("ikfast.%s.%s")%probot->GetRobotStructureHash()%probot->GetActiveManipulator()->GetName());
         boost::shared_ptr<IKLibrary> lib = _AddIkLibrary(ikfastname,ikfilename);
         if( !lib ) {
