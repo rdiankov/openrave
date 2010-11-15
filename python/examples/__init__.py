@@ -11,7 +11,8 @@ import mobilemanipulation
 import simplenavigation
 import testcamerasensor
 import testphysics
-import testphysicscontroller
+import testphysics_controller
+import testphysics_diffdrive
 import testplotting
 import testupdatingbodies
 import testviewercallback

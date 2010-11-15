@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,7 +23,7 @@ import time
 from optparse import OptionParser
 
 def run(args=None):
-    """Executes the testphysics example
+    """Executes the testphysics_diffdrive example
 
     :type args: arguments for script to parse, if not specified will use sys.argv
     """
@@ -30,7 +31,7 @@ def run(args=None):
     OpenRAVEGlobalArguments.addOptions(parser)
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    env.Load('data/hanoi.env.xml')
+    env.Load('data/diffdrive_sample.env.xml')
     if options._physics is None:
         # no physics engine set, so set one
         physics = RaveCreatePhysicsEngine(env,'ode')
@@ -45,7 +46,8 @@ def run(args=None):
 
     starttime = time.time()
     while True:
-        velocities = 0.5*(random.rand(robot.GetDOF())-0.5)
+        velocities = 2*(random.rand(robot.GetDOF())-0.5)
+        print 'velocities: ',velocities
         robot.GetController().SendCommand('setvelocity '+' '.join(str(f) for f in velocities))
         time.sleep(2.0)
 
