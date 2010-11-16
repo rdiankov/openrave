@@ -154,9 +154,11 @@ private:
 #ifdef _MSC_VER
     friend class Environment;
     friend class OpenRAVEXMLParser::InterfaceXMLReader;
+    friend class ColladaReader;
 #else
     friend class ::Environment;
     friend class ::OpenRAVEXMLParser::InterfaceXMLReader;
+    friend class ::ColladaReader;
 #endif
 #endif
     friend class RaveDatabase;

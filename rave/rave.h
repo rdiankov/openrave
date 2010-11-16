@@ -863,6 +863,13 @@ RAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, const s
 /// \return a pointer holding the registration, releasing the pointer will unregister the XML reader
 RAVE_API boost::shared_ptr<void> RaveRegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn);
 
+/// \brief return the environment's unique id, returns 0 if environment could not be found or not registered
+RAVE_API int RaveGetEnvironmentId(EnvironmentBasePtr penv);
+
+/// \brief get the environment from its unique id
+/// \param id the unique environment id returned by \ref RaveGetEnvironmentId
+RAVE_API EnvironmentBasePtr RaveGetEnvironment(int id);
+
 /// \brief Return all the created OpenRAVE environments.
 RAVE_API void RaveGetEnvironments(std::list<EnvironmentBasePtr>& listenvironments);
 

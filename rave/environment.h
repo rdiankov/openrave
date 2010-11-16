@@ -464,6 +464,7 @@ protected:
     virtual const char* GetHash() const { return OPENRAVE_ENVIRONMENT_HASH; }
 private:
     UserDataPtr __pUserData; ///< \see GetUserData
+    int __nUniqueId; ///< \see GetId
 };
 
 } // end namespace OpenRAVE

@@ -3025,6 +3025,18 @@ namespace openravepy
         }
         return oenvironments;
     }
+    int RaveGetEnvironmentId(PyEnvironmentBasePtr pyenv)
+    {
+        return OpenRAVE::RaveGetEnvironmentId(pyenv->GetEnv());
+    }
+    PyEnvironmentBasePtr RaveGetEnvironment(int id)
+    {
+        EnvironmentBasePtr penv = OpenRAVE::RaveGetEnvironment(id);
+        if( !penv ) {
+            return PyEnvironmentBasePtr();
+        }
+        return PyEnvironmentBasePtr(new PyEnvironmentBase(penv));
+    }
 
     PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType type, const std::string& name)
     {
@@ -4066,6 +4078,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
 
     openravepy::init_openravepy_global();
 
+    def("RaveGetEnvironmentId",openravepy::RaveGetEnvironmentId,DOXY_FN1(RaveGetEnvironmentId));
+    def("RaveGetEnvironment",openravepy::RaveGetEnvironment,DOXY_FN1(RaveGetEnvironment));
     def("RaveGetEnvironments",openravepy::RaveGetEnvironments,DOXY_FN1(RaveGetEnvironments));
     def("RaveCreateInterface",openravepy::RaveCreateInterface,args("env","type","name"),DOXY_FN1(RaveCreateInterface));
     def("RaveCreateRobot",openravepy::RaveCreateRobot,args("env","name"),DOXY_FN1(RaveCreateRobot));

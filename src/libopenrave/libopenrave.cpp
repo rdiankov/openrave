@@ -55,6 +55,7 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
         //srand(timeGetTime());
         //RaveInitRandomGeneration(timeGetTime());
         _nDebugLevel = Level_Info;
+        _nGlobalEnvironmentId = 0;
 
         _mapinterfacenames[PT_Planner] = "planner";
         _mapinterfacenames[PT_Robot] = "robot";
@@ -158,17 +159,18 @@ public:
     {
         RAVELOG_VERBOSE("shutting down openrave\n");
         // environments have to be destroyed carefully since their destructors can be called, which will attempt to unregister the environment
-        std::list<EnvironmentBase*> listenvironments;
+        std::map<int, EnvironmentBase*> mapenvironments;
         {
             boost::mutex::scoped_lock lock(_mutexXML);
-            listenvironments.swap(_listenvironments);
+            mapenvironments = _mapenvironments;
         }
-        FOREACH(itenv,listenvironments) {
+        FOREACH(itenv,mapenvironments) {
             // equire a shared pointer to prevent environment from getting deleted during Destroy loop
-            EnvironmentBasePtr penv = (*itenv)->shared_from_this();
+            EnvironmentBasePtr penv = itenv->second->shared_from_this();
             penv->Destroy();
         }
-        listenvironments.clear();
+        mapenvironments.clear();
+        _mapenvironments.clear();
 
         _mapreaders.clear();
         _pdatabase.reset();
@@ -243,25 +245,52 @@ public:
     }
 
     // have to take in pointer instead of shared_ptr since method will be called in EnvironmentBase constructor
-    void RegisterEnvironment(EnvironmentBase* penv)
+    int RegisterEnvironment(EnvironmentBase* penv)
     {
         BOOST_ASSERT(!!_pdatabase);
         boost::mutex::scoped_lock lock(_mutexXML);
-        _listenvironments.push_back(penv);
+        _mapenvironments[++_nGlobalEnvironmentId] = penv;
+        return _nGlobalEnvironmentId;
     }
 
     void UnregisterEnvironment(EnvironmentBase* penv)
     {
         boost::mutex::scoped_lock lock(_mutexXML);
-        _listenvironments.remove(penv);
+        FOREACH(it, _mapenvironments) {
+            if( it->second == penv ) {
+                _mapenvironments.erase(it);
+                break;
+            }
+        }
+    }
+
+    int GetEnvironmentId(EnvironmentBasePtr penv)
+    {
+        boost::mutex::scoped_lock lock(_mutexXML);
+        FOREACH(it,_mapenvironments) {
+            if( it->second == penv.get() ) {
+                return it->first;
+            }
+        }
+        return 0;
+    }
+
+    EnvironmentBasePtr GetEnvironment(int id)
+    {
+        boost::mutex::scoped_lock lock(_mutexXML);
+        std::map<int, EnvironmentBase*>::iterator it = _mapenvironments.find(id);
+        if( it == _mapenvironments.end() ) {
+            return EnvironmentBasePtr();
+        }
+        return it->second->shared_from_this();
     }
 
     void GetEnvironments(std::list<EnvironmentBasePtr>& listenvironments)
     {
         listenvironments.clear();
         boost::mutex::scoped_lock lock(_mutexXML);
-        FOREACH(it,_listenvironments) {
-            EnvironmentBasePtr penv = (*it)->shared_from_this();
+        FOREACH(it,_mapenvironments) {
+            EnvironmentBasePtr penv = it->second->shared_from_this();
             if( !!penv ) {
                 listenvironments.push_back(penv);
             }
@@ -297,9 +326,10 @@ private:
     boost::mutex _mutexXML;
     std::map<InterfaceType, READERSMAP > _mapreaders;
     std::map<InterfaceType,string> _mapinterfacenames;
-    std::list<EnvironmentBase*> _listenvironments;
+    std::map<int, EnvironmentBase*> _mapenvironments;
     std::string _homedirectory;
     std::vector<std::string> _vdbdirectories;
+    int _nGlobalEnvironmentId;
 
     friend void RaveInitializeFromState(boost::shared_ptr<void>);
     friend boost::shared_ptr<void> RaveGlobalState();
@@ -360,6 +390,16 @@ boost::shared_ptr<void> RaveGlobalState()
 void RaveDestroy()
 {
     RaveGlobal::instance()->Destroy();
+}
+
+int RaveGetEnvironmentId(EnvironmentBasePtr penv)
+{
+    return RaveGlobal::instance()->GetEnvironmentId(penv);
+}
+
+EnvironmentBasePtr RaveGetEnvironment(int id)
+{
+    return RaveGlobal::instance()->GetEnvironment(id);
 }
 
 void RaveGetEnvironments(std::list<EnvironmentBasePtr>& listenvironments)
@@ -1108,7 +1148,7 @@ EnvironmentBase::EnvironmentBase()
         RAVELOG_WARN("OpenRAVE global state not initialized! Need to call RaveInitialize before any OpenRAVE services can be used. For now, initializing with default parameters.\n");
         RaveInitialize(true);
     }
-    RaveGlobal::instance()->RegisterEnvironment(this);
+    __nUniqueId = RaveGlobal::instance()->RegisterEnvironment(this);
 }
 
 EnvironmentBase::~EnvironmentBase()
