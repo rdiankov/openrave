@@ -123,12 +123,12 @@ class CollisionMapRobot : public RobotBase
     }
     virtual ~CollisionMapRobot() {}
 
-    virtual bool SetController(ControllerBasePtr p, const string& args)
+    virtual bool SetController(ControllerBasePtr controller, const std::vector<int>& jointindices, int nControlTransformation)
     {
-        _pController = p;
+        _pController = controller;
         if( !!_pController ) {
-            if( !_pController->Init(shared_robot(),args) ) {
-                RAVELOG_WARN(str(boost::format("GenericRobot %s: Failed to init controller %s\n")%GetName()%p->GetXMLId()));
+            if( !_pController->Init(shared_robot(),jointindices,nControlTransformation) ) {
+                RAVELOG_WARN(str(boost::format("GenericRobot %s: Failed to init controller %s\n")%GetName()%controller->GetXMLId()));
                 _pController.reset();
                 return false;
             }

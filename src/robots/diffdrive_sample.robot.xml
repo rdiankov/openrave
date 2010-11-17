@@ -24,7 +24,7 @@
       <body>base</body>
       <body>wheel_left</body>
       <anchor>0 0 0.2</anchor>
-      <axis>0 -1 0</axis>
+      <axis>0 1 0</axis>
     </joint>
     <joint name="wheel_right" type="hinge" circular="true">
       <body>base</body>

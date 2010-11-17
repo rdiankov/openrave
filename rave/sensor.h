@@ -137,6 +137,15 @@ public:
         boost::array<dReal,9> force_covariance; ///< row major 3x3 matrix of the uncertainty on the xyz force measurements
     };
 
+    // eventually will have an actuator sensor
+//    enum ActuatorState {
+//        AS_Undefined=0, ///< returned when no state is defined
+//        AS_Idle=1,  ///< this actuator is idle
+//        AS_Moving=2, ///< this actuator is in motion from previous commands
+//        AS_Stalled=3, ///< the actuator is stalled, needs to be unstalled by sending a ready signal
+//        AS_Braked=4, ///< the actuator is braked
+//    };
+
     /// permanent properties of the sensors
     class RAVE_API SensorGeometry
     {

@@ -27,9 +27,13 @@ public:
         __description = ":Interface Authors: Juan Gonzalez and Rosen Diankov\nODE Velocity controller.";
     }
 
-    virtual bool Init(RobotBasePtr robot, const std::string& args)
+    virtual bool Init(RobotBasePtr robot, const std::vector<int>& dofindices, int nControlTransformation)
     {
         _probot = robot;
+        _dofindices = dofindices;
+        if( nControlTransformation ) {
+            RAVELOG_WARN("odevelocity controller cannot control transformation\n");
+        }
         Reset(0);
         return true;
     }
@@ -41,18 +45,22 @@ public:
             ODESpace::KinBodyInfoPtr pinfo = GetODESpace();
             if( !!pinfo ) {
                 boost::shared_ptr<ODESpace> odespace(pinfo->_odespace);
-                FOREACHC(itjoint,_probot->GetJoints()) {
-                    dJointID jointid = pinfo->vjoints.at((*itjoint)->GetJointIndex());
-                    for(int i = 0; i < (*itjoint)->GetDOF(); ++i) {
-                        odespace->_jointset[dJointGetType(jointid)](jointid,dParamFMax+dParamGroup*i, 0);
-                    }
+                FOREACHC(it, _dofindices) {
+                    KinBody::JointConstPtr pjoint = _probot->GetJointFromDOFIndex(*it);
+                    dJointID jointid = pinfo->vjoints.at(pjoint->GetJointIndex());
+                    int index = *it-pjoint->GetJointIndex();
+                    BOOST_ASSERT(index>=0);
+                    odespace->_jointset[dJointGetType(jointid)](jointid,dParamFMax+dParamGroup*index, 0);
                 }
             }
         }
         _bVelocityMode = false;
     }
 
-    virtual bool SetDesired(const std::vector<OpenRAVE::dReal>& values) {
+    virtual const std::vector<int>& GetControlDOFIndices() const { return _dofindices; }
+    virtual int IsControlTransformation() const { return 0; }
+
+    virtual bool SetDesired(const std::vector<OpenRAVE::dReal>& values, TransformConstPtr trans) {
         Reset(0);
         return false;
     }
@@ -60,7 +68,7 @@ public:
         Reset(0);
         return false;
     }
-    virtual bool SimulationStep(OpenRAVE::dReal fTimeElapsed) { return false; }
+    virtual void SimulationStep(OpenRAVE::dReal fTimeElapsed) {}
     virtual bool IsDone() { return !_bVelocityMode; }
     virtual OpenRAVE::dReal GetTime() const { return 0; }
     virtual RobotBasePtr GetRobot() const { return _probot; }
@@ -78,11 +86,12 @@ public:
         std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
         if( cmd == "setvelocity" ) {
-            vector<OpenRAVE::dReal> velocities(_probot->GetDOF());
+            vector<OpenRAVE::dReal> velocities(_dofindices.size());
             for(size_t i = 0; i < velocities.size(); ++i) {
                 is >> velocities[i];
-                if( !is )
+                if( !is ) {
                     return false;
+                }
             }
 
             EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -92,12 +101,14 @@ public:
                 return false;
             }
             boost::shared_ptr<ODESpace> odespace(pinfo->_odespace);
-            FOREACHC(itjoint,_probot->GetJoints()) {
-                dJointID jointid = pinfo->vjoints.at((*itjoint)->GetJointIndex());
-                for(int i = 0; i < (*itjoint)->GetDOF(); ++i) {
-                    odespace->_jointset[dJointGetType(jointid)](jointid,dParamFMax+dParamGroup*i, (*itjoint)->GetMaxTorque());
-                    odespace->_jointset[dJointGetType(jointid)](jointid,dParamVel+dParamGroup*i, velocities.at((*itjoint)->GetDOFIndex()+i));
-                }
+            int dofindex = 0;
+            FOREACHC(it, _dofindices) {
+                KinBody::JointConstPtr pjoint = _probot->GetJointFromDOFIndex(*it);
+                dJointID jointid = pinfo->vjoints.at(pjoint->GetJointIndex());
+                int jindex = *it-pjoint->GetJointIndex();
+                BOOST_ASSERT(jindex>=0);
+                odespace->_jointset[dJointGetType(jointid)](jointid,dParamFMax+dParamGroup*jindex, pjoint->GetMaxTorque());
+                odespace->_jointset[dJointGetType(jointid)](jointid,dParamVel+dParamGroup*jindex, velocities.at(dofindex++));
             }
             _bVelocityMode = true;
             return true;
@@ -109,6 +120,7 @@ public:
     
 protected:
     RobotBasePtr _probot;
+    std::vector<int> _dofindices;
     bool _bVelocityMode;
 };
 

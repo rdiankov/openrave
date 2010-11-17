@@ -938,18 +938,33 @@ public:
     ControllerBasePtr GetController() { return _pcontroller; }
 
     bool Init(PyRobotBasePtr robot, const string& args);
+    bool Init(PyRobotBasePtr robot, object dofindices, int nControlTransformation);
+
+    object GetControlDOFIndices() { return toPyArray(_pcontroller->GetControlDOFIndices()); }
+    int IsControlTransformation() { return _pcontroller->IsControlTransformation(); }
+    PyRobotBasePtr GetRobot();
+
     void Reset(int options) { _pcontroller->Reset(options); }
 
     bool SetDesired(object o)
     {
         vector<dReal> values = ExtractArray<dReal>(o);
-        if( values.size() == 0 )
+        if( values.size() == 0 ) {
             throw openrave_exception("no values specified");
+        }
         return _pcontroller->SetDesired(values);
     }
-    
+
+    bool SetDesired(object o, object otransform)
+    {
+        if( otransform == object() ) { 
+            return SetDesired(o);
+        }
+        return _pcontroller->SetDesired(ExtractArray<dReal>(o),TransformConstPtr(new Transform(ExtractTransform(otransform))));
+    }
+
     bool SetPath(PyTrajectoryBasePtr ptraj);
-    bool SimulationStep(dReal fTimeElapsed) { return _pcontroller->SimulationStep(fTimeElapsed); }
+    void SimulationStep(dReal fTimeElapsed) { _pcontroller->SimulationStep(fTimeElapsed); }
 
     bool IsDone() { return _pcontroller->IsDone(); }
     dReal GetTime() { return _pcontroller->GetTime(); }
@@ -1523,13 +1538,41 @@ public:
     }
     
     PyControllerBasePtr GetController() const { return !_probot->GetController() ? PyControllerBasePtr() : PyControllerBasePtr(new PyControllerBase(_probot->GetController(),_pyenv)); }
-    bool SetController(PyControllerBasePtr pController, const string& args=string("")) {
-        if( !pController )
-            return _probot->SetController(ControllerBasePtr(),"");
-        else
-            return _probot->SetController(pController->GetController(),args.c_str());
+
+    bool SetController(PyControllerBasePtr pController, const string& args) {
+        RAVELOG_WARN("RobotBase::SetController(PyControllerBasePtr,args) is deprecated\n");
+        std::vector<int> dofindices;
+        for(int i = 0; i < _probot->GetDOF(); ++i) {
+            dofindices.push_back(i);
+        }
+        if( !pController ) {
+            return _probot->SetController(ControllerBasePtr(),dofindices,1);
+        }
+        else {
+            return _probot->SetController(pController->GetController(),dofindices,1);
+        }
     }
-    
+
+    bool SetController(PyControllerBasePtr pController, object odofindices, int nControlTransformation) {
+        CHECK_POINTER(pController);
+        vector<int> dofindices = ExtractArray<int>(odofindices);
+        return _probot->SetController(pController->GetController(),dofindices,nControlTransformation);
+    }
+
+    bool SetController(PyControllerBasePtr pController) {
+        RAVELOG_VERBOSE("RobotBase::SetController(PyControllerBasePtr) will control all DOFs\n");
+        std::vector<int> dofindices;
+        for(int i = 0; i < _probot->GetDOF(); ++i) {
+            dofindices.push_back(i);
+        }
+        if( !pController ) {
+            return _probot->SetController(ControllerBasePtr(),dofindices,1);
+        }
+        else {
+            return _probot->SetController(pController->GetController(),dofindices,1);
+        }
+    }
+
     void SetActiveDOFs(object dofindices) { _probot->SetActiveDOFs(ExtractArray<int>(dofindices)); }
     void SetActiveDOFs(object dofindices, int nAffineDOsBitmask) { _probot->SetActiveDOFs(ExtractArray<int>(dofindices), nAffineDOsBitmask); }
     void SetActiveDOFs(object dofindices, int nAffineDOsBitmask, object rotationaxis) {
@@ -1755,10 +1798,27 @@ public:
     virtual void __enter__();
 };
 
+PyRobotBasePtr PyControllerBase::GetRobot()
+{
+    return PyRobotBasePtr(new PyRobotBase(_pcontroller->GetRobot(),_pyenv));
+}
+
 bool PyControllerBase::Init(PyRobotBasePtr robot, const string& args)
 {
+    RAVELOG_WARN("PyControllerBase::Init(robot,args) deprecated!\n");
     CHECK_POINTER(robot);
-    return _pcontroller->Init(robot->GetRobot(), args);
+    std::vector<int> dofindices;
+    for(int i = 0; i < robot->GetRobot()->GetDOF(); ++i) {
+        dofindices.push_back(i);
+    }
+    return _pcontroller->Init(robot->GetRobot(), dofindices,1);
+}
+
+bool PyControllerBase::Init(PyRobotBasePtr robot, object odofindices, int nControlTransformation)
+{
+    CHECK_POINTER(robot);
+    vector<int> dofindices = ExtractArray<int>(odofindices);
+    return _pcontroller->Init(robot->GetRobot(),dofindices,nControlTransformation);
 }
 
 class PyPlannerBase : public PyInterfaceBase
@@ -3157,7 +3217,6 @@ namespace openravepy
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetCamera_overloads, SetCamera, 2, 4)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetController_overloads, SetController, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(StartSimulation_overloads, StartSimulation, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetViewer_overloads, SetViewer, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckCollisionRays_overloads, CheckCollisionRays, 2, 3)
@@ -3595,6 +3654,9 @@ BOOST_PYTHON_MODULE(openravepy_int)
         object (PyRobotBase::*GetManipulators2)(const string&) = &PyRobotBase::GetManipulators;
         PyVoidHandle (PyRobotBase::*statesaver1)() = &PyRobotBase::CreateRobotStateSaver;
         PyVoidHandle (PyRobotBase::*statesaver2)(int) = &PyRobotBase::CreateRobotStateSaver;
+        bool (PyRobotBase::*setcontroller1)(PyControllerBasePtr,const string&) = &PyRobotBase::SetController;
+        bool (PyRobotBase::*setcontroller2)(PyControllerBasePtr,object,int) = &PyRobotBase::SetController;
+        bool (PyRobotBase::*setcontroller3)(PyControllerBasePtr) = &PyRobotBase::SetController;
         scope robot = class_<PyRobotBase, boost::shared_ptr<PyRobotBase>, bases<PyKinBody, PyInterfaceBase> >("Robot", DOXY_CLASS(RobotBase), no_init)
             .def("GetManipulators",GetManipulators1, DOXY_FN(RobotBase,GetManipulators))
             .def("GetManipulators",GetManipulators2,args("manipname"), DOXY_FN(RobotBase,GetManipulators))
@@ -3609,7 +3671,9 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetSensors",&PyRobotBase::GetSensors)
             .def("GetSensor",&PyRobotBase::GetSensor,args("sensorname"))
             .def("GetController",&PyRobotBase::GetController, DOXY_FN(RobotBase,GetController))
-            .def("SetController",&PyRobotBase::SetController,SetController_overloads(args("controller","args"), DOXY_FN(RobotBase,SetController)))
+            .def("SetController",setcontroller1,DOXY_FN(RobotBase,SetController))
+            .def("SetController",setcontroller2,args("robot","dofindices","controltransform"), DOXY_FN(RobotBase,SetController))
+            .def("SetController",setcontroller3,DOXY_FN(RobotBase,SetController))
             .def("SetActiveDOFs",psetactivedofs1,args("dofindices"), DOXY_FN(RobotBase,SetActiveDOFs "const std::vector; int"))
             .def("SetActiveDOFs",psetactivedofs2,args("dofindices","affine"), DOXY_FN(RobotBase,SetActiveDOFs "const std::vector; int"))
             .def("SetActiveDOFs",psetactivedofs3,args("dofindices","affine","rotationaxis"), DOXY_FN(RobotBase,SetActiveDOFs "const std::vector; int; const Vector"))
@@ -3782,17 +3846,28 @@ BOOST_PYTHON_MODULE(openravepy_int)
     }
     class_<PySensorSystemBase, boost::shared_ptr<PySensorSystemBase>, bases<PyInterfaceBase> >("SensorSystem", DOXY_CLASS(SensorSystemBase), no_init);
     class_<PyTrajectoryBase, boost::shared_ptr<PyTrajectoryBase>, bases<PyInterfaceBase> >("Trajectory", DOXY_CLASS(TrajectoryBase), no_init);
-    class_<PyControllerBase, boost::shared_ptr<PyControllerBase>, bases<PyInterfaceBase> >("Controller", DOXY_CLASS(ControllerBase), no_init)
-        .def("Init",&PyControllerBase::Init, DOXY_FN(ControllerBase,Init))
-        .def("Reset",&PyControllerBase::Reset, DOXY_FN(ControllerBase,Reset))
-        .def("SetDesired",&PyControllerBase::SetDesired, DOXY_FN(ControllerBase,SetDesired))
-        .def("SetPath",&PyControllerBase::SetPath, DOXY_FN(ControllerBase,SetPath))
-        .def("SimulationStep",&PyControllerBase::SimulationStep, DOXY_FN(ControllerBase,SimulationStep "dReal"))
-        .def("IsDone",&PyControllerBase::IsDone, DOXY_FN(ControllerBase,IsDone))
-        .def("GetTime",&PyControllerBase::GetTime, DOXY_FN(ControllerBase,GetTime))
-        .def("GetVelocity",&PyControllerBase::GetVelocity, DOXY_FN(ControllerBase,GetVelocity))
-        .def("GetTorque",&PyControllerBase::GetTorque, DOXY_FN(ControllerBase,GetTorque))
-        ;
+    {
+        bool (PyControllerBase::*init1)(PyRobotBasePtr,const string&) = &PyControllerBase::Init;
+        bool (PyControllerBase::*init2)(PyRobotBasePtr,object,int) = &PyControllerBase::Init;
+        bool (PyControllerBase::*setdesired1)(object) = &PyControllerBase::SetDesired;
+        bool (PyControllerBase::*setdesired2)(object,object) = &PyControllerBase::SetDesired;
+        class_<PyControllerBase, boost::shared_ptr<PyControllerBase>, bases<PyInterfaceBase> >("Controller", DOXY_CLASS(ControllerBase), no_init)
+            .def("Init",init1, DOXY_FN(ControllerBase,Init))
+            .def("Init",init2, args("robot","dofindices","controltransform"), DOXY_FN(ControllerBase,Init))
+            .def("GetControlDOFIndices",&PyControllerBase::GetControlDOFIndices,DOXY_FN(ControllerBase,GetControlDOFIndices))
+            .def("IsControlTransformation",&PyControllerBase::IsControlTransformation, DOXY_FN(ControllerBase,IsControlTransformation))
+            .def("GetRobot",&PyControllerBase::GetRobot, DOXY_FN(ControllerBase,GetRobot))
+            .def("Reset",&PyControllerBase::Reset, DOXY_FN(ControllerBase,Reset))
+            .def("SetDesired",setdesired1, args("values"), DOXY_FN(ControllerBase,SetDesired))
+            .def("SetDesired",setdesired2, args("values","transform"), DOXY_FN(ControllerBase,SetDesired))
+            .def("SetPath",&PyControllerBase::SetPath, DOXY_FN(ControllerBase,SetPath))
+            .def("SimulationStep",&PyControllerBase::SimulationStep, DOXY_FN(ControllerBase,SimulationStep "dReal"))
+            .def("IsDone",&PyControllerBase::IsDone, DOXY_FN(ControllerBase,IsDone))
+            .def("GetTime",&PyControllerBase::GetTime, DOXY_FN(ControllerBase,GetTime))
+            .def("GetVelocity",&PyControllerBase::GetVelocity, DOXY_FN(ControllerBase,GetVelocity))
+            .def("GetTorque",&PyControllerBase::GetTorque, DOXY_FN(ControllerBase,GetTorque))
+            ;
+    }
     class_<PyProblemInstance, boost::shared_ptr<PyProblemInstance>, bases<PyInterfaceBase> >("Problem", DOXY_CLASS(ProblemInstance), no_init)
         .def("SimulationStep",&PyProblemInstance::SimulationStep, DOXY_FN(ProblemInstance,"SimulationStep"))
         ;

@@ -24,12 +24,12 @@ class GenericRobot : public RobotBase
     }
     virtual ~GenericRobot() {}
 
-    virtual bool SetController(ControllerBasePtr p, const string& args)
+    virtual bool SetController(ControllerBasePtr controller, const std::vector<int>& jointindices, int nControlTransformation)
     {
-        _pController = p;
+        _pController = controller;
         if( !!_pController ) {
-            if( !_pController->Init(shared_robot(),args) ) {
-                RAVELOG_WARNA(str(boost::format("GenericRobot %s: Failed to init controller %s\n")%GetName()%p->GetXMLId()));
+            if( !_pController->Init(shared_robot(),jointindices,nControlTransformation) ) {
+                RAVELOG_WARNA(str(boost::format("GenericRobot %s: Failed to init controller %s\n")%GetName()%controller->GetXMLId()));
                 _pController.reset();
                 return false;
             }
@@ -69,7 +69,8 @@ class GenericRobot : public RobotBase
     {
         RobotBase::SimulationStep(fElapsedTime);
         if( !!_pController ) {
-            if( _pController->SimulationStep(fElapsedTime) ) {
+            _pController->SimulationStep(fElapsedTime);
+            if( _pController->IsDone() ) {
                 _state = ST_NONE;
             }
         }

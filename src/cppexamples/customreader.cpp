@@ -77,9 +77,11 @@ public:
     {
     }
 
-    virtual bool Init(RobotBasePtr robot, const std::string& args)
+    virtual bool Init(RobotBasePtr robot, const std::vector<int>& dofindices, int nControlTransformation)
     {
         _probot = robot;
+        _dofindices = dofindices;
+        _nControlTransformation = nControlTransformation;
 
         // read the gains from the XML
         boost::shared_ptr<XMLData> piddata = boost::dynamic_pointer_cast<XMLData>(GetReadableInterface("piddata"));
@@ -99,16 +101,21 @@ public:
         return true;
     }
 
+    virtual const std::vector<int>& GetControlDOFIndices() const { return _dofindices; }
+    virtual int IsControlTransformation() const { return _nControlTransformation; }
+
     virtual void Reset(int options) {}
-    virtual bool SetDesired(const std::vector<dReal>& values) { return false; }
+    virtual bool SetDesired(const std::vector<dReal>& values, TransformConstPtr trans) { return false; }
     virtual bool SetPath(TrajectoryBaseConstPtr ptraj) { return false; }
-    virtual bool SimulationStep(dReal fTimeElapsed) { return false; }
+    virtual void SimulationStep(dReal fTimeElapsed) {}
     virtual bool IsDone() { return false; }
     virtual dReal GetTime() const { return 0; }
     virtual RobotBasePtr GetRobot() const { return _probot; }
 
 protected:
     RobotBasePtr _probot;
+    std::vector<int> _dofindices;
+    int _nControlTransformation;
 };
 
 static boost::shared_ptr<void> s_RegisteredReader;

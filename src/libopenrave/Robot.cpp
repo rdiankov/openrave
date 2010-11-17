@@ -581,12 +581,12 @@ void RobotBase::Destroy()
     ReleaseAllGrabbed();
     _vecManipulators.clear();
     _vecSensors.clear();
-    SetController(ControllerBasePtr(),"");
+    SetController(ControllerBasePtr(),std::vector<int>(),0);
     
     KinBody::Destroy();
 }
 
-bool RobotBase::SetController(ControllerBasePtr controller, const std::string& args)
+bool RobotBase::SetController(ControllerBasePtr controller, const std::vector<int>& jointindices, int nControlTransformation)
 {
     RAVELOG_DEBUG("default robot doesn't not support setting controllers (try GenericRobot)\n");
     return false;
@@ -1261,61 +1261,6 @@ void RobotBase::SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vecto
         q1.at(index) -= q2.at(index); index++;
         q1.at(index) -= q2.at(index); index++;
         q1.at(index) -= q2.at(index); index++;
-    }
-}
-
-void RobotBase::GetControlMaxTorques(std::vector<dReal>& maxtorques) const
-{
-    if( _nActiveDOF < 0 ) {
-        GetDOFMaxTorque(maxtorques);
-        return;
-    }
-    maxtorques.resize(GetActiveDOF());
-    if( maxtorques.size() == 0 ) {
-        return;
-    }
-    dReal* pMaxTorques = &maxtorques[0];
-
-    if( _vActiveJointIndices.size() != 0 ) {
-        GetDOFMaxTorque(_vTempRobotJoints);
-
-        FOREACHC(it, _vActiveJointIndices)
-            *pMaxTorques++ = _vTempRobotJoints[*it];
-    }
-
-    if( _nAffineDOFs == DOF_NoTransform )
-        return;
-
-    if( _nAffineDOFs & DOF_X ) *pMaxTorques++ = 0;
-    if( _nAffineDOFs & DOF_Y ) *pMaxTorques++ = 0;
-    if( _nAffineDOFs & DOF_Z ) *pMaxTorques++ = 0;
-    if( _nAffineDOFs & DOF_RotationAxis ) *pMaxTorques++ = 0;
-    else if( _nAffineDOFs & DOF_Rotation3D ) {
-        *pMaxTorques++ = 0;
-        *pMaxTorques++ = 0;
-        *pMaxTorques++ = 0;
-    }
-    else if( _nAffineDOFs & DOF_RotationQuat ) {
-        *pMaxTorques++ = 0;
-        *pMaxTorques++ = 0;
-        *pMaxTorques++ = 0;
-        *pMaxTorques++ = 0;
-    }
-}
-
-void RobotBase::SetControlTorques(const std::vector<dReal>& vtorques)
-{
-    if(_nActiveDOF < 0) {
-        SetJointTorques(vtorques, false);
-        return;
-    }
-
-    if( _vActiveJointIndices.size() > 0 ) {
-        _vTempRobotJoints.resize(GetDOF());
-        std::vector<dReal>::const_iterator ittorque = vtorques.begin();
-        FOREACHC(it, _vActiveJointIndices)
-            _vTempRobotJoints[*it] = *ittorque++;
-        SetJointTorques(_vTempRobotJoints,false);
     }
 }
 
@@ -2101,7 +2046,11 @@ void RobotBase::_ComputeInternalInformation()
 
     if( !GetController() ) {
         RAVELOG_WARN(str(boost::format("no default controller set on robot %s\n")%GetName()));
-        SetController(RaveCreateController(GetEnv(), "IdealController"),"");
+        std::vector<int> dofindices;
+        for(int i = 0; i < GetDOF(); ++i) {
+            dofindices.push_back(i);
+        }
+        SetController(RaveCreateController(GetEnv(), "IdealController"),dofindices,1);
     }
 }
 
@@ -2174,13 +2123,17 @@ bool RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 
     // clone the controller
     if( (cloningoptions&Clone_RealControllers) && !!r->GetController() ) {
-        if( !SetController(RaveCreateController(GetEnv(), r->GetController()->GetXMLId()),"") ) {
+        if( !SetController(RaveCreateController(GetEnv(), r->GetController()->GetXMLId()),r->GetController()->GetControlDOFIndices(),r->GetController()->IsControlTransformation()) ) {
             RAVELOG_WARNA("failed to set %s controller for robot %s\n", r->GetController()->GetXMLId().c_str(), GetName().c_str());
         }
     }
 
     if( !GetController() ) {
-        if( !SetController(RaveCreateController(GetEnv(), "IdealController"),"") ) {
+        std::vector<int> dofindices;
+        for(int i = 0; i < GetDOF(); ++i) {
+            dofindices.push_back(i);
+        }
+        if( !SetController(RaveCreateController(GetEnv(), "IdealController"),dofindices, 1) ) {
             RAVELOG_WARNA("failed to set IdealController\n");
             return false;
         }

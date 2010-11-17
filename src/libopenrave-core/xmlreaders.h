@@ -2051,11 +2051,19 @@ namespace OpenRAVEXMLParser
     public:
         ControllerXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pinterface, const std::list<std::pair<std::string,std::string> >& atts,RobotBasePtr probot=RobotBasePtr()) : InterfaceXMLReader(penv,pinterface,PT_Controller,RaveGetInterfaceName(PT_Controller),atts) {
             _probot = probot;
+            nControlTransformation = 0;
             FOREACHC(itatt, atts) {
-                if( itatt->first == "robot" )
+                if( itatt->first == "robot" ) {
                     _robotname = itatt->second;
-                else if( itatt->first == "args" )
-                    _args = itatt->second;
+                }
+                else if( itatt->first == "joints" ) {
+                    stringstream ss(itatt->second);
+                    _vjoints.reset(new std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>()));
+                }
+                else if( itatt->first == "transform" ) {
+                    stringstream ss(itatt->second);
+                    ss >> nControlTransformation;
+                }
             }
         }
         virtual ~ControllerXMLReader() {}
@@ -2071,16 +2079,39 @@ namespace OpenRAVEXMLParser
                     }
                 }
                 
-                if( !!_probot )
-                    _probot->SetController(RaveInterfaceCast<ControllerBase>(_pinterface),_args);
-                else
+                if( !!_probot ) {
+                    std::vector<int> dofindices;
+                    if( !_vjoints ) {
+                        for(int i = 0; i < _probot->GetDOF(); ++i) {
+                            dofindices.push_back(i);
+                        }
+                    }
+                    else {
+                        FOREACH(it,*_vjoints) {
+                            KinBody::JointPtr pjoint = _probot->GetJoint(*it);
+                            if( !!pjoint ) {
+                                for(int i = 0; i < pjoint->GetDOF(); ++i) {
+                                    dofindices.push_back(pjoint->GetDOFIndex()+i);
+                                }
+                            }
+                            else {
+                                RAVELOG_WARN(str(boost::format("could not find joint %s\n")%*it));
+                            }
+                        }
+                    }
+                    _probot->SetController(RaveInterfaceCast<ControllerBase>(_pinterface),dofindices,nControlTransformation);
+                }
+                else {
                     RAVELOG_WARNA("controller is unused\n");
+                }
                 return true;
             }
             return false;
         }
 
-        string _robotname, _args;
+        string _robotname;
+        boost::shared_ptr< vector<string> > _vjoints;
+        int nControlTransformation;
         RobotBasePtr _probot;
     };
 
@@ -2600,7 +2631,11 @@ namespace OpenRAVEXMLParser
 
                 // set a default controller
                 if( !_probot->GetController() ) {
-                    _probot->SetController(RaveCreateController(_probot->GetEnv(), "IdealController"),"");
+                    std::vector<int> dofindices;
+                    for(int i = 0; i < _probot->GetDOF(); ++i) {
+                        dofindices.push_back(i);
+                    }
+                    _probot->SetController(RaveCreateController(_probot->GetEnv(), "IdealController"),dofindices,1);
                 }
 
                 // forces robot to reupdate its internal objects

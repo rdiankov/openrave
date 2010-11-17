@@ -74,3 +74,8 @@ set_target_properties(orplanning_ik PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS
 target_link_libraries(orplanning_ik ${OPENRAVE_LIBRARY} ${OPENRAVE_CORE_LIBRARY})
 install(TARGETS orplanning_ik DESTINATION . )
 
+add_executable(ormulticontrol ormulticontrol.cpp)
+set_target_properties(ormulticontrol PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+set_target_properties(ormulticontrol PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+target_link_libraries(ormulticontrol ${OPENRAVE_LIBRARY} ${OPENRAVE_CORE_LIBRARY})
+install(TARGETS ormulticontrol DESTINATION . )

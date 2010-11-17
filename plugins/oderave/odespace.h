@@ -22,7 +22,7 @@ class ODESpace : public boost::enable_shared_from_this<ODESpace>
 {
     static void DummySetParam(dJointID id, int param, dReal)
     {
-        cerr << "failed to set param to dummy " << dJointGetType(id) << endl;
+        RAVELOG_WARN(str(boost::format("failed to set param to dummy %d\n")%dJointGetType(id)));
     }
 
 //    static void AllocateODEResources()
@@ -389,6 +389,9 @@ public:
 //                    if( (*itjoint)->GetMimicJointIndex() < 0 && !bPassive )
 //                        // setting this makes every joint add like a motor, which is not desired
 //                        _jointset[dJointGetType(joint)](joint,dParamFMax+dParamGroup*i,(*itjoint)->GetMaxTorque());
+                    if( (*itjoint)->GetType() == KinBody::Joint::JointSpherical ) {
+                        continue;
+                    }
                     if( (*itjoint)->IsCircular() ) {
                         _jointset[dJointGetType(joint)](joint,dParamLoStop+dParamGroup*i,-dInfinity);
                         _jointset[dJointGetType(joint)](joint,dParamHiStop+dParamGroup*i,dInfinity);

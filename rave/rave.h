@@ -672,7 +672,11 @@ namespace OpenRAVE {
     using geometry::RaveAtan2;
     typedef RaveVector<dReal> Vector;
     typedef RaveTransform<dReal> Transform;
+    typedef boost::shared_ptr< RaveTransform<dReal> > TransformPtr;
+    typedef boost::shared_ptr< RaveTransform<dReal> const > TransformConstPtr;
     typedef RaveTransformMatrix<dReal> TransformMatrix;
+    typedef boost::shared_ptr< RaveTransformMatrix<dReal> > TransformMatrixPtr;
+    typedef boost::shared_ptr< RaveTransformMatrix<dReal> const > TransformMatrixConstPtr;
     typedef geometry::obb<dReal> OBB;
     typedef geometry::aabb<dReal> AABB;
     typedef geometry::ray<dReal> RAY;

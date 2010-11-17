@@ -23,15 +23,21 @@ import time
 from optparse import OptionParser
 
 def run(args=None):
-    """Executes the testphysics_diffdrive example
-
+    """Executes the testphysics_diffdrive example.
+    
     :type args: arguments for script to parse, if not specified will use sys.argv
+    
+    **Help**
+    
+    .. shell-block:: openrave.py --example testphysics_diffdrive --help
     """
-    parser = OptionParser(description="test physics")
+    parser = OptionParser(description="test physics diff drive controller")
+    parser.add_option('--scene',action="store",type='string',dest='scene',default='data/diffdrive_sample.env.xml',
+                      help='Scene file to load (default=%default)')
     OpenRAVEGlobalArguments.addOptions(parser)
     (options, leftargs) = parser.parse_args(args=args)
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    env.Load('data/diffdrive_sample.env.xml')
+    env.Load(options.scene)
     if options._physics is None:
         # no physics engine set, so set one
         physics = RaveCreatePhysicsEngine(env,'ode')
@@ -40,7 +46,7 @@ def run(args=None):
 
     with env:
         robot = env.GetRobots()[0]
-        robot.SetController(RaveCreateController(env,'odevelocity'))
+        robot.SetController(RaveCreateController(env,'odevelocity'),range(robot.GetDOF()),0)
         env.StopSimulation()
         env.StartSimulation(timestep=0.001)
 

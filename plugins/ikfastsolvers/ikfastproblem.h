@@ -122,7 +122,7 @@ class IKFastProblem : public ProblemInstance
     class IKLibrary : public boost::enable_shared_from_this<IKLibrary>
     {
     public:
-        IKLibrary() : plib(NULL), getKinematicsHash(NULL) {}
+    IKLibrary() : getKinematicsHash(NULL), plib(NULL) {}
         ~IKLibrary() {
             if( plib != NULL ) {
                 SysCloseLibrary(plib);

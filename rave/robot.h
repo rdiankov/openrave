@@ -272,8 +272,8 @@ public:
     virtual void Destroy();
 
     /// \brief Build the robot from a file.
-    virtual bool InitFromFile(const std::string& filename, const std::list<std::pair<std::string,std::string> >& atts = XMLAttributesList());
-    virtual bool InitFromData(const std::string& data, const std::list<std::pair<std::string,std::string> >& atts = XMLAttributesList());
+    virtual bool InitFromFile(const std::string& filename, const XMLAttributesList& atts = XMLAttributesList());
+    virtual bool InitFromData(const std::string& data, const XMLAttributesList& atts = XMLAttributesList());
 
     /// \brief Returns the manipulators of the robot
     virtual std::vector<ManipulatorPtr>& GetManipulators() { return _vecManipulators; }
@@ -282,12 +282,7 @@ public:
     /// \deprecated (10/07/10) 
     virtual std::vector<AttachedSensorPtr>& GetSensors() RAVE_DEPRECATED { RAVELOG_WARN("RobotBase::GetSensors() is deprecated\n"); return _vecSensors; }
     virtual std::vector<AttachedSensorPtr>& GetAttachedSensors() { return _vecSensors; }
-    virtual ControllerBasePtr GetController() const { return ControllerBasePtr(); }
-    
-    /// set a controller for a robot and destroy the old
-    /// \param pController - if NULL, sets the controller of this robot to NULL. otherwise attemps to set the controller to this robot.
-    /// \param args - the argument list to pass when initializing the controller
-    virtual bool SetController(ControllerBasePtr controller, const std::string& args);
+
     virtual void SetJointValues(const std::vector<dReal>& vJointValues, bool bCheckLimits = false);
     virtual void SetJointValues(const std::vector<dReal>& vJointValues, const Transform& transbase, bool bCheckLimits = false);
 
@@ -509,22 +504,22 @@ public:
     /// The serialization for the attached sensors will not involve any sensor specific properties (since they can change through calibration)
     virtual const std::string& GetRobotStructureHash() const;
 
-    /** Specifies the controlled degrees of freedom used to control the robot through torque In the
-        general sense, it is not always the case that there's a one-to-one mapping between a robot's
-        joints and the motors used to control the robot. A good example of this is a
-        differential-drive robot. If developers need such a robot, they should derive from RobotBase
-        and override these methods. The function that maps control torques to actual movements of
-        the robot should be put in SimulationStep.  As default, the control degrees of freedom are
-        tied directly to the active degrees of freedom; the max torques for affine dofs are 0 in
-        this case.
-        @name Control DOF
-        @{
-    */
-    virtual int GetControlDOF() const { return GetActiveDOF(); }
-    virtual void GetControlMaxTorques(std::vector<dReal>& vmaxtorque) const;
-    virtual void SetControlTorques(const std::vector<dReal>& pTorques);
-    //@}
+    /// \brief gets the robot controller
+    virtual ControllerBasePtr GetController() const { return ControllerBasePtr(); }
+    
+    /// \brief set a controller for a robot
+    /// \param pController - if NULL, sets the controller of this robot to NULL. otherwise attemps to set the controller to this robot.
+    /// \param args - the argument list to pass when initializing the controller
+    virtual bool SetController(ControllerBasePtr controller, const std::vector<int>& dofindices, int nControlTransformation);
 
+    /// \deprecated (10/11/16)
+    virtual bool SetController(ControllerBasePtr controller, const std::string& args) RAVE_DEPRECATED {
+        std::vector<int> dofindices;
+        for(int i = 0; i < GetDOF(); ++i) {
+            dofindices.push_back(i);
+        }
+        return SetController(controller,dofindices,1);
+    }
 
 protected:
     RobotBase(EnvironmentBasePtr penv);

@@ -1246,14 +1246,19 @@ protected:
 
         string controllername;
         is >> controllername;
-        if( !is )
+        if( !is ) {
             return false;
+        }
         ControllerBasePtr pcontroller = RaveCreateController(GetEnv(),controllername);
-        if( !pcontroller )
+        if( !pcontroller ) {
             return false;
-
+        }
         std::string strargs((std::istreambuf_iterator<char>(is)), std::istreambuf_iterator<char>());
-        return probot->SetController(pcontroller, strargs);
+        std::vector<int> dofindices;
+        for(int i = 0; i < probot->GetDOF(); ++i) {
+            dofindices.push_back(i);
+        }
+        return probot->SetController(pcontroller, dofindices,1);
     }
 
     bool orEnvClose(istream& is, ostream& os, boost::shared_ptr<void>& pdata)
