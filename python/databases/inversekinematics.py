@@ -363,7 +363,7 @@ class InverseKinematicsModel(OpenRAVEModel):
             if outputlang != 'cpp':
                 print 'cannot continue further if outputlang is not cpp'
                 sys.exit(0)
-        
+
         # compile the code and create the shared object
         compiler,compile_flags = self.getcompiler()
         try:
@@ -371,7 +371,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         except AttributeError: # python 2.5 does not have os.path.relpath
            output_dir = self.myrelpath('/',os.getcwd())
 
-        platformsourcefilename = os.path.splitext(output_filename)[0]+'.cpp' # needed in order to prevent interference with machines with different architectures 
+        platformsourcefilename = os.path.splitext(output_filename)[0]+'.cpp' # needed in order to prevent interference with machines with different architectures
         shutil.copyfile(sourcefilename, platformsourcefilename)
         try:
             objectfiles = compiler.compile(sources=[platformsourcefilename],macros=[('IKFAST_CLIBRARY',1),('IKFAST_NO_MAIN',1)],extra_postargs=compile_flags,output_dir=output_dir)
@@ -382,7 +382,10 @@ class InverseKinematicsModel(OpenRAVEModel):
             # cleanup intermediate files
             os.remove(platformsourcefilename)
             for objectfile in objectfiles:
-                os.remove(objectfile)
+                try:
+                    os.remove(objectfile)
+                except:
+                    pass
 
     def perftiming(self,num):
         with self.env:

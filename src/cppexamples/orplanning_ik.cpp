@@ -92,7 +92,7 @@ int main(int argc, char ** argv)
         }
     }
 
+    RaveDestroy();
     thviewer.join(); // wait for the viewer thread to exit
-    penv->Destroy(); // destroy
     return 0;
 }

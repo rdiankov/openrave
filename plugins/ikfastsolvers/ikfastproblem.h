@@ -367,9 +367,9 @@ public:
         }
 
         {
+            string hasik;
             string cmdhas = str(boost::format("openrave.py --database inversekinematics --gethas --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetXMLFilename()%probot->GetActiveManipulator()->GetName()%striktype);
             FILE* pipe = MYPOPEN(cmdhas.c_str(), "r");
-            string hasik;
             {
                 boost::iostreams::stream_buffer<boost::iostreams::file_descriptor_source> fpstream(fileno(pipe));
                 std::istream in(&fpstream);
@@ -383,9 +383,11 @@ public:
             boost::trim(hasik);
             if( hasik != "1" ) {
                 RAVELOG_INFO(str(boost::format("Generating inverse kinematics for manip %s:%s, will take several minutes...\n")%probot->GetName()%probot->GetActiveManipulator()->GetName()));
-                string cmdgen = str(boost::format("openrave.py --database inversekinematics --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetXMLFilename()%probot->GetActiveManipulator()->GetName()%striktype);
-                FILE* pipe = MYPOPEN(cmdgen.c_str(), "r");
-                int generateexit = MYPCLOSE(pipe);
+                string cmdgen = str(boost::format("openrave.py --database inversekinematics --usecached --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetXMLFilename()%probot->GetActiveManipulator()->GetName()%striktype);
+                // use raw system call, popen causes weird crash in the inversekinematics compiler 
+                int generateexit = system(cmdgen.c_str());
+                //FILE* pipe = MYPOPEN(cmdgen.c_str(), "r");
+                //int generateexit = MYPCLOSE(pipe);
                 if( generateexit != 0 ) {
                     Sleep(100);
                     RAVELOG_DEBUG("failed to close pipe\n");
