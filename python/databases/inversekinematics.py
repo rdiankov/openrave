@@ -156,7 +156,7 @@ class InverseKinematicsModel(OpenRAVEModel):
     def load(self,*args,**kwargs):
         return self.setrobot(*args,**kwargs)
     def getversion(self):
-        return 18
+        return 19
     def setrobot(self,freeinc=None):
         self.iksolver = None
         self.freeinc=freeinc
@@ -363,7 +363,7 @@ class InverseKinematicsModel(OpenRAVEModel):
             if outputlang != 'cpp':
                 print 'cannot continue further if outputlang is not cpp'
                 sys.exit(0)
-
+        
         # compile the code and create the shared object
         compiler,compile_flags = self.getcompiler()
         try:
@@ -371,7 +371,7 @@ class InverseKinematicsModel(OpenRAVEModel):
         except AttributeError: # python 2.5 does not have os.path.relpath
            output_dir = self.myrelpath('/',os.getcwd())
 
-        platformsourcefilename = os.path.splitext(output_filename)[0]+'.cpp' # needed in order to prevent interference with machines with different architectures
+        platformsourcefilename = os.path.splitext(output_filename)[0]+'.cpp' # needed in order to prevent interference with machines with different architectures 
         shutil.copyfile(sourcefilename, platformsourcefilename)
         try:
             objectfiles = compiler.compile(sources=[platformsourcefilename],macros=[('IKFAST_CLIBRARY',1),('IKFAST_NO_MAIN',1)],extra_postargs=compile_flags,output_dir=output_dir)
@@ -447,6 +447,7 @@ class InverseKinematicsModel(OpenRAVEModel):
                             success += 1
                         else:
                             print 'wrong solution to: ',targetpos, 'returned is: ',realpos,'wrong sol is:',sol,', org values are:',orgvalues
+                            print 'squared error is: ',sum((targetpos-realpos)**2)
                     else:
                         print 'failed to find: ',targetpos,'solution is: ',orgvalues
                 return success/numiktests
