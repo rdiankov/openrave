@@ -1595,7 +1595,7 @@ bool MultiController::AttachController(ControllerBasePtr controller, const std::
     if( nControlTransformation ) {
         _ptransformcontroller = controller;
     }
-    FOREACH(it,dofindices) {
+    FOREACHC(it,dofindices) {
         _vcontrollersbydofs.at(*it) = controller;
     }
     _listcontrollers.push_back(controller);
@@ -1647,7 +1647,7 @@ bool MultiController::SetDesired(const std::vector<dReal>& values, TransformCons
     bool bsuccess = true;
     FOREACH(itcontroller,_listcontrollers) {
         v.resize(0);
-        FOREACH(it, (*itcontroller)->GetControlDOFIndices()) {
+        FOREACHC(it, (*itcontroller)->GetControlDOFIndices()) {
             v.push_back(values.at(_dofreverseindices.at(*it)));
         }
         bsuccess &= (*itcontroller)->SetDesired(v,trans);
@@ -1694,7 +1694,7 @@ dReal MultiController::GetTime() const
 {
     boost::mutex::scoped_lock lock(_mutex);
     dReal t = 0;
-    FOREACH(it,_listcontrollers) {
+    FOREACHC(it,_listcontrollers) {
         if( it == _listcontrollers.begin() ) {
             t = (*it)->GetTime();
         }
@@ -1717,7 +1717,7 @@ void MultiController::GetVelocity(std::vector<dReal>& vel) const
         *it = 0;
     }
     vector<dReal> v;
-    FOREACH(itcontroller,_listcontrollers) {
+    FOREACHC(itcontroller,_listcontrollers) {
         (*itcontroller)->GetVelocity(v);
         int index=0;
         FOREACH(it,v) {
@@ -1734,7 +1734,7 @@ void MultiController::GetTorque(std::vector<dReal>& torque) const
         *it = 0;
     }
     vector<dReal> v;
-    FOREACH(itcontroller,_listcontrollers) {
+    FOREACHC(itcontroller,_listcontrollers) {
         (*itcontroller)->GetTorque(v);
         int index=0;
         FOREACH(it,v) {
