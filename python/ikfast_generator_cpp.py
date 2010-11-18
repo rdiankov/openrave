@@ -40,6 +40,11 @@ except:
 from sympy import *
 
 try:
+    import re # for indenting
+except ImportError:
+    pass
+
+try:
     from itertools import izip, combinations
 except ImportError:
     def combinations(items,n):
@@ -1363,7 +1368,10 @@ int main(int argc, char** argv)
         # actually a lot of time can be wasted in this phase...
         if True:
             return code
-        else:
+        numspaces /= 4
+        try:
+            return re.sub('\n','\n'+' '*numspaces,s)
+        except:
             lcode = list(code)
             locations = [i for i in range(len(lcode)-1) if lcode[i]=='\n']
             locations.reverse()
@@ -1512,8 +1520,19 @@ static void %s(IKReal rawcoeffs[%d+1], IKReal rawroots[%d], int& numroots)
         name = 'conicsolver'
         if not name in self.functions:
             fcode = """/// intersection of a conic and the unit circle
-static void %s(IKReal C0[6], IKReal roots[4], int& numroots)
+static void %s(IKReal _C0[6], IKReal roots[4], int& numroots)
 {
+    // have to normalize _C0
+    IKReal maxval = IKabs(_C0[0]);
+    for(int i = 1; i < 6; ++i) {
+        if( maxval < IKabs(_C0[i]) ) {
+            maxval = IKabs(_C0[i]);
+        }
+    }
+    IKReal C0[6];
+    for(int i = 0; i < 6; ++i) {
+        C0[i]=_C0[i]/maxval;
+    }
     IKReal rawcoeffs[4] = {-1,
                            C0[5] - C0[0] - C0[3],
                            C0[0]*C0[5] + C0[3]*C0[5] - C0[0]*C0[3] + C0[1]*C0[1] - C0[2]*C0[2] - C0[4]*C0[4],

@@ -83,24 +83,25 @@ class OpenRAVEScene:
         if len(self.orenv.GetRobots()) == 0:
             raise ValueError('no robots found in scene %s'%scenefilename)
 
-        if robotname is None:
-            self.robot = self.orenv.GetRobots()[0]
-        else:
-            self.robot = [r for r in self.orenv.GetRobots() if r.GetName()==robotname][0]
-        
-        # create a camera viewer for every camera sensor
-        self.viewers = []
-        for attachedsensor in self.robot.GetAttachedSensors():
-            if attachedsensor.GetSensor() is not None:
-                sensordata = attachedsensor.GetSensor().GetSensorData()
-                if sensordata is not None and sensordata.type == Sensor.Type.Camera:
-                    attachedsensor.GetSensor().SendCommand('power 1')
-                    title = attachedsensor.GetName()
-                    if len(title) == 0:
-                        title = attachedsensor.GetSensor().GetName()
+        with env:
+            if robotname is None:
+                self.robot = self.orenv.GetRobots()[0]
+            else:
+                self.robot = [r for r in self.orenv.GetRobots() if r.GetName()==robotname][0]
+
+            # create a camera viewer for every camera sensor
+            self.viewers = []
+            for attachedsensor in self.robot.GetAttachedSensors():
+                if attachedsensor.GetSensor() is not None:
+                    sensordata = attachedsensor.GetSensor().GetSensorData()
+                    if sensordata is not None and sensordata.type == Sensor.Type.Camera:
+                        attachedsensor.GetSensor().SendCommand('power 1')
+                        title = attachedsensor.GetName()
                         if len(title) == 0:
-                            title = 'Camera Sensor'
-                    self.viewers.append(CameraViewerGUI(sensor=attachedsensor.GetSensor(),title=title))
+                            title = attachedsensor.GetSensor().GetName()
+                            if len(title) == 0:
+                                title = 'Camera Sensor'
+                        self.viewers.append(CameraViewerGUI(sensor=attachedsensor.GetSensor(),title=title))
         print 'found %d camera sensors on robot %s'%(len(self.viewers),self.robot.GetName())
         for viewer in self.viewers:
             viewer.start()

@@ -455,9 +455,38 @@ class IKFastSolver(AutoReloader):
             self.cvar = Symbol("c%s"%var.name)
             self.tvar = Symbol("t%s"%var.name)
 
+    class DegenerateCases:
+        def __init__(self):
+            self.handleddegeneratecases = []
+        def clone(self):
+            clone=IKFastSolver.DegenerateCases()
+            clone.handleddegeneratecases = self.handleddegeneratecases[:]
+            return clone
+        def addcasesconds(self,newconds,currentcases):
+            for case in newconds:
+                newcases = set(currentcases)
+                newcases.add(case)
+                assert not self.hascases(newcases)
+                self.handleddegeneratecases.append(newcases)
+        def addcases(self,currentcases):
+            assert not self.hascases(currentcases)
+            self.handleddegeneratecases.append(currentcases)
+        def gethandledconds(self,currentcases):
+            handledconds = []
+            for handledcases in self.handleddegeneratecases:
+                if len(currentcases)+1==len(handledcases) and currentcases < handledcases:
+                    handledconds.append((handledcases - currentcases).pop())
+            return handledconds
+        def hascases(self,currentcases):
+            for handledcases in self.handleddegeneratecases:
+                if handledcases == currentcases:
+                    return True
+            return False
+
     def __init__(self, robotfile=None,robotfiledata=None,kinbody=None,kinematicshash='',accuracy=None,precision=None):
         self.joints = []
         self.freevarsubs = []
+        self.degeneratecases = None
         self.kinematicshash = kinematicshash
         if accuracy is None:
             self.accuracy=1e-12
@@ -661,7 +690,7 @@ class IKFastSolver(AutoReloader):
         if solvefn is None:
             solvefn = IKFastSolver.solveFullIK_6D
         alljoints = self.getJointsInChain(baselink, eelink)
-        
+
         # mark the free joints and form the chain
         chain = []
         for joint in alljoints:
@@ -681,7 +710,8 @@ class IKFastSolver(AutoReloader):
         Tee[0,3] = Symbol("px")
         Tee[1,3] = Symbol("py")
         Tee[2,3] = Symbol("pz")
-        
+        self.degeneratecases = None
+
         chaintree = solvefn(self,chain, Tee)
         if chaintree is None:
             print "failed to genreate ik solution"
@@ -1161,10 +1191,10 @@ class IKFastSolver(AutoReloader):
         freevarcond = None
                 
         Positions, Positionsee = self.buildPositionEquations(LinksAccumRightAll, LinksAccumLeftInvAll,basepos,Pee)
+        AllEquations = self.buildEquationsFromPositions(Positions,Positionsee)
         solsubs = self.freevarsubs[:]
         endbranchtree = [SolverStoreSolution (jointvars)]                
         curtransvars = solvejointvars[:]
-        AllEquations = self.buildEquationsFromPositions(Positions,Positionsee)
         transtree = self.solveAllEquations(AllEquations,curvars=curtransvars,othersolvedvars=freejointvars,solsubs = solsubs,endbranchtree=endbranchtree)
         solverbranches.append((None,transtree))
         return SolverIKChainTranslation3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(jointvars[ijoint],ijoint) for ijoint in ifreejointvars], TfirstleftInv[0:3,0:3] * Pee + TfirstleftInv[0:3,3], [SolverBranchConds(solverbranches)],Pfk = Tfirstleft * (LinksAccumRightAll[0]*Matrix(4,1,[basepos[0],basepos[1],basepos[2],1.0])))
@@ -1583,7 +1613,7 @@ class IKFastSolver(AutoReloader):
                 return False
         return True
 
-    def solveAllEquations(self,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree):
+    def solveAllEquations(self,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=None):
         if len(curvars) == 0:
             return endbranchtree
         print curvars,othersolvedvars
@@ -1611,7 +1641,7 @@ class IKFastSolver(AutoReloader):
                     pass
 
         if len(solutions) > 0:
-            return self.addSolution(solutions,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree)
+            return self.addSolution(solutions,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=currentcases)
 
         curvarsubssol = []
         for var0,var1 in combinations(curvars,2):
@@ -1641,7 +1671,7 @@ class IKFastSolver(AutoReloader):
 
         # take the least complex solution and go on
         if len(solutions) > 0:
-            return self.addSolution(solutions,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree)
+            return self.addSolution(solutions,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=currentcases)
 
         # try to solve one variable for the others and substitute
         # really bad since substitued variable does not constraing cos**2+sin**2=1
@@ -1705,7 +1735,7 @@ class IKFastSolver(AutoReloader):
 
         raise self.CannotSolveError('failed to find a variable to solve')
 
-    def addSolution(self,solutions,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree):
+    def addSolution(self,solutions,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=None):
         """Take the least complex solution of a set of solutions and resume solving
         """
         solutions = [s for s in solutions if s[0].score < oo and s[0].checkValidSolution()] # remove infinite scores
@@ -1717,7 +1747,7 @@ class IKFastSolver(AutoReloader):
                 var = solution[1]
                 newvars=curvars[:]
                 newvars.remove(var)
-                return [solution[0].subs(solsubs)]+self.solveAllEquations(AllEquations,curvars=newvars,othersolvedvars=othersolvedvars+[var],solsubs=solsubs+[(cos(var),self.Variable(var).cvar),(sin(var),self.Variable(var).svar)],endbranchtree=endbranchtree)
+                return [solution[0].subs(solsubs)]+self.solveAllEquations(AllEquations,curvars=newvars,othersolvedvars=othersolvedvars+[var],solsubs=solsubs+[(cos(var),self.Variable(var).cvar),(sin(var),self.Variable(var).svar)],endbranchtree=endbranchtree,currentcases=currentcases)
 
         # all solutions have check for zero equations
         # choose the variable with the shortest solution and compute (this is a conservative approach)
@@ -1740,10 +1770,17 @@ class IKFastSolver(AutoReloader):
                         break # don't need more than three alternatives (used to be two, but then lookat barrettwam4 proved that wrong)
         nextsolutions = dict()
         allvars = curvars+[Symbol('s%s'%v.name) for v in curvars]+[Symbol('c%s'%v.name) for v in curvars]
-        lastbranch=None
+        lastbranch = []
+        prevbranch=lastbranch
+        if currentcases is None:
+            currentcases = set()
+        if self.degeneratecases is None:
+            self.degeneratecases = self.DegenerateCases()
+        handledconds = self.degeneratecases.gethandledconds(currentcases)
+        eqs = []
+        hascheckzeros = False
         for solution,var in usedsolutions[::-1]: # iterate in reverse order
             # there are divide by zeros, so check if they can be explicitly solved for joint variables
-            eqs = []
             checkforzeros = []
             for checkzero in solution.checkforzeros:
                 if checkzero.has_any_symbols(*allvars):
@@ -1781,33 +1818,73 @@ class IKFastSolver(AutoReloader):
                                 for eq in s.jointeval:
                                     if eq.is_real:
                                         cond=othervar-eq.evalf()
-                                        if self.isExpressionUnique([tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique([tempeq[0] for tempeq in eqs],cond):
-                                            eqs.append([cond,[(othervar,eq),(sothervar,sin(eq).evalf()),(sin(othervar),sin(eq).evalf()),(cothervar,cos(eq).evalf()),(cos(othervar),cos(eq).evalf())]])
+                                        if self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],cond):
+                                            if self.IsHinge(othervar.name):
+                                                evalcond=fmod(cond+pi,2*pi)-pi
+                                            else:
+                                                evalcond=cond
+                                            eqs.append([cond,evalcond,[(othervar,eq),(sothervar,sin(eq).evalf()),(sin(othervar),sin(eq).evalf()),(cothervar,cos(eq).evalf()),(cos(othervar),cos(eq).evalf())]])
                             elif s.jointevalsin is not None:
                                 for eq in s.jointevalsin:
                                     if eq.is_real:
                                         cond=othervar-asin(eq).evalf()
-                                        if self.isExpressionUnique([tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique([tempeq[0] for tempeq in eqs],cond):
-                                            eqs.append([cond0,[(othervar,asin(eq).evalf()),(sothervar,eq),(sin(othervar),eq),(cothervar,sqrt(1-eq*eq).evalf()),(cos(othervar),sqrt(1-eq*eq).evalf())]])
+                                        if self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],cond):
+                                            if self.IsHinge(othervar.name):
+                                                evalcond=fmod(cond+pi,2*pi)-pi
+                                            else:
+                                                evalcond=cond
+                                            eqs.append([cond,evalcond,[(othervar,asin(eq).evalf()),(sothervar,eq),(sin(othervar),eq),(cothervar,sqrt(1-eq*eq).evalf()),(cos(othervar),sqrt(1-eq*eq).evalf())]])
                                         cond=othervar-(pi-asin(eq).evalf())
-                                        if self.isExpressionUnique([tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique([tempeq[0] for tempeq in eqs],cond):
-                                            eqs.append([cond,[(othervar,(pi-asin(eq)).evalf()),(sothervar,eq),(sin(othervar),eq),(cothervar,-sqrt(1-eq*eq).evalf()),(cos(othervar),-sqrt(1-eq*eq).evalf())]])
+                                        if self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],cond):
+                                            if self.IsHinge(othervar.name):
+                                                evalcond=fmod(cond+pi,2*pi)-pi
+                                            else:
+                                                evalcond=cond
+                                            eqs.append([cond,evalcond,[(othervar,(pi-asin(eq)).evalf()),(sothervar,eq),(sin(othervar),eq),(cothervar,-sqrt(1-eq*eq).evalf()),(cos(othervar),-sqrt(1-eq*eq).evalf())]])
                             elif s.jointevalcos is not None:
                                 for eq in s.jointevalcos:
                                     if eq.is_real:
                                         cond=othervar-acos(eq).evalf()
-                                        if self.isExpressionUnique([tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique([tempeq[0] for tempeq in eqs],cond):
-                                            eqs.append([cond,[(othervar,acos(eq).evalf()),(sothervar,sqrt(1-eq*eq).evalf()),(sin(othervar),sqrt(1-eq*eq).evalf()),(cothervar,eq),(cos(othervar),eq)]])
+                                        if self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],cond):
+                                            if self.IsHinge(othervar.name):
+                                                evalcond=fmod(cond+pi,2*pi)-pi
+                                            else:
+                                                evalcond=cond
+                                            eqs.append([cond,evalcond,[(othervar,acos(eq).evalf()),(sothervar,sqrt(1-eq*eq).evalf()),(sin(othervar),sqrt(1-eq*eq).evalf()),(cothervar,eq),(cos(othervar),eq)]])
                                         cond=othervar+acos(eq).evalf()
-                                        if self.isExpressionUnique([tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique([tempeq[0] for tempeq in eqs],cond):
-                                            eqs.append([cond,[(othervar,-acos(eq).evalf()),(sothervar,-sqrt(1-eq*eq).evalf()),(sin(othervar),-sqrt(1-eq*eq).evalf()),(cothervar,eq),(cos(othervar),eq)]])
-            # have to compare with mod 2*pi for hinge joints
-            for i in range(len(eqs)):
-                if self.IsHinge(eqs[i][1][0][0].name):
-                    eqs[i][0]=fmod(eqs[i][0]+pi,2*pi)-pi
+                                        if self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],cond):
+                                            if self.IsHinge(othervar.name):
+                                                evalcond=fmod(cond+pi,2*pi)-pi
+                                            else:
+                                                evalcond=cond
+                                            eqs.append([cond,evalcond,[(othervar,-acos(eq).evalf()),(sothervar,-sqrt(1-eq*eq).evalf()),(sin(othervar),-sqrt(1-eq*eq).evalf()),(cothervar,eq),(cos(othervar),eq)]])
+                
+            if not var in nextsolutions:
+                newvars=curvars[:]
+                newvars.remove(var)
+                olddegeneratecases = self.degeneratecases
+                self.degeneratecases = olddegeneratecases.clone()
+                nextsolutions[var] = self.solveAllEquations(AllEquations,curvars=newvars,othersolvedvars=othersolvedvars+[var],solsubs=solsubs+[(cos(var),self.Variable(var).cvar),(sin(var),self.Variable(var).svar)],endbranchtree=endbranchtree,currentcases=currentcases)
+                self.degeneratecases = olddegeneratecases
+            if len(checkforzeros) > 0:
+                hascheckzeros = True
+                prevbranch=[SolverCheckZeros(jointname=var.name,jointcheckeqs=checkforzeros,nonzerobranch=[solution]+nextsolutions[var],zerobranch=prevbranch,thresh = 0.000001,anycondition=True)]
+            else:
+                prevbranch = [solution]+nextsolutions[var]
 
-            if len(eqs) == 0:
-                # try setting px, py, or pz to 0 (barrettwam4 lookat)
+        if len(prevbranch) == 0:
+            raise self.CannotSolveError('failed to add solution!')
+
+        if len(currentcases) >= 4:
+            print '4 levels deep in checking degenerate cases, skipping...'
+            lastbranch.append(SolverBreak())
+            return prevbranch
+
+        # fill the last branch with all the zero conditions
+        if hascheckzeros and len(eqs) == 0:
+            # if not equations found, try setting two variables at once
+            # also try setting px, py, or pz to 0 (barrettwam4 lookat)
+            for solution,var in usedsolutions:
                 for othervar in othersolvedvars:
                     if not self.IsHinge(othervar.name):
                         continue
@@ -1816,47 +1893,47 @@ class IKFastSolver(AutoReloader):
                     if checkzero.has_any_symbols(othervar,sothervar,cothervar):
                         for preal in [Symbol('px'),Symbol('py'),Symbol('pz')]:
                             if checkzero.has_any_symbols(preal):
-                                for value in [S.Zero,pi/2]: # not necessary to test pi, -pi/2?
+                                for value in [S.Zero,pi/2,pi,-pi/2]:
                                     eq = checkzero.subs([(othervar,value),(sothervar,sin(value).evalf()),(cothervar,cos(value).evalf()),(preal,S.Zero)]).evalf()
                                     if eq == S.Zero:
-                                        eqs.append([abs(fmod(othervar-value+pi,2*pi)-pi)+abs(preal),[(othervar,value),(sothervar,sin(value).evalf()),(sin(othervar),sin(value).evalf()),(cothervar,cos(value).evalf()),(cos(othervar),cos(value).evalf()),(preal,S.Zero)]])
-                                        print '%s=%s,%s=0 in %s'%(str(othervar),str(value),str(preal),str(checkzero))
-            # test the solutions
-            zerobranches = []
-            for cond,othervarsubs in eqs:
-                NewEquations = copy.copy(AllEquations)
+                                        cond = abs(othervar-value)+abs(preal)
+                                        evalcond = abs(fmod(othervar-value+pi,2*pi)-pi)+abs(preal)
+                                        if self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],-cond) and self.isExpressionUnique(handledconds+[tempeq[0] for tempeq in eqs],cond):
+                                            eqs.append([cond,evalcond,[(othervar,value),(sothervar,sin(value).evalf()),(sin(othervar),sin(value).evalf()),(cothervar,cos(value).evalf()),(cos(othervar),cos(value).evalf()),(preal,S.Zero)]])
+                                            print '%s=%s,%s=0 in %s'%(str(othervar),str(value),str(preal),str(checkzero))
+
+        # test the solutions
+        zerobranches = []
+        for cond,evalcond,othervarsubs in eqs:
+            NewEquations = copy.copy(AllEquations)
+            for i in range(len(NewEquations)):
+                NewEquations[i] = NewEquations[i].subs(othervarsubs).evalf()
+            try:
+                # forcing a value, so have to check if all equations in NewEquations that do not contain
+                # unknown variables are really 0
+                extrazerochecks=[]
                 for i in range(len(NewEquations)):
-                    NewEquations[i] = NewEquations[i].subs(othervarsubs).evalf()
-                try:
-                    # forcing a value, so have to check if all equations in NewEquations that do not contain
-                    # unknown variables are really 0
-                    extrazerochecks=[]
-                    for i in range(len(NewEquations)):
-                        expr = NewEquations[i]
-                        if not self.isValidSolution(expr):
-                            print 'not valid',expr
-                            extrazerochecks=None
-                            break
-                        if not expr.has_any_symbols(*allvars) and (self.isExpressionUnique(extrazerochecks,expr) or self.isExpressionUnique(extrazerochecks,-expr)):
-                            extrazerochecks.append(expr.subs(solsubs).evalf())
-                    if extrazerochecks is not None:
-                        zerobranches.append(([cond]+extrazerochecks,self.solveAllEquations(NewEquations,curvars,othersolvedvars,solsubs,endbranchtree)))
-                except self.CannotSolveError:
-                    continue
-                
-            if not var in nextsolutions:
-                newvars=curvars[:]
-                newvars.remove(var)
-                nextsolutions[var] = self.solveAllEquations(AllEquations,curvars=newvars,othersolvedvars=othersolvedvars+[var],solsubs=solsubs+[(cos(var),self.Variable(var).cvar),(sin(var),self.Variable(var).svar)],endbranchtree=endbranchtree)
-            if lastbranch is None:
-                lastbranch=[SolverBreak()]
-            if len(checkforzeros) > 0:
-                lastbranch=[SolverCheckZeros(jointname=var.name,jointcheckeqs=checkforzeros,nonzerobranch=[solution]+nextsolutions[var],zerobranch=[SolverBranchConds(zerobranches+[(None,lastbranch)])],thresh = 0.000001,anycondition=True)]
-            else:
-                lastbranch = [solution]+nextsolutions[var]
-        if lastbranch is None:
-            raise self.CannotSolveError('failed to add solution!')
-        return lastbranch
+                    expr = NewEquations[i]
+                    if not self.isValidSolution(expr):
+                        print 'not valid',expr
+                        extrazerochecks=None
+                        break
+                    if not expr.has_any_symbols(*allvars) and (self.isExpressionUnique(extrazerochecks,expr) or self.isExpressionUnique(extrazerochecks,-expr)):
+                        extrazerochecks.append(expr.subs(solsubs).evalf())
+                if extrazerochecks is not None:
+                    newcases = set(currentcases)
+                    newcases.add(cond)
+                    zerobranches.append(([evalcond]+extrazerochecks,self.solveAllEquations(NewEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=newcases)))
+                    self.degeneratecases.addcases(newcases)
+            except self.CannotSolveError:
+                continue
+
+        if len(zerobranches) > 0:
+            lastbranch.append(SolverBranchConds(zerobranches+[(None,[SolverBreak()])]))
+        else:
+            lastbranch.append(SolverBreak())
+
+        return prevbranch
 
     def solveSingleVariable(self,raweqns,var):
         svar = Symbol('s%s'%var.name)
@@ -2944,7 +3021,6 @@ class IKFastSolver(AutoReloader):
                         (-a*sin(b)-c*cos(b),a*cos(b)-c*sin(b),-b-atan2(c,a)),
                         (-a*sin(b)+c*cos(b),-c*sin(b)-a*cos(b),b-atan2(c,a)+pi),
                         ]
-
                     for pattern in patterns:
                         m0 = newargs[0].match(pattern[0])
                         m1 = newargs[1].match(pattern[1])

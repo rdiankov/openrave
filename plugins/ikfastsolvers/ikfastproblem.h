@@ -988,6 +988,11 @@ public:
                         s << *it << " ";
                     s << endl << "Transform in: " << twrist << endl;
                     s << "Transform out: " << twrist_out << endl << endl;
+                    TransformMatrix tm(pmanip->GetBase()->GetTransform().inverse()*twrist);
+                    s << "raw ik command: "
+                      << tm.m[0] << " " << tm.m[1] << " " << tm.m[2] << " " << tm.trans[0] << " "
+                      << tm.m[4] << " " << tm.m[5] << " " << tm.m[6] << " " << tm.trans[1] << " "
+                      << tm.m[8] << " " << tm.m[9] << " " << tm.m[10] << " " << tm.trans[2] << endl;
                     RAVELOG_WARNA(s.str());
                     bfail = true;
                     break;
