@@ -807,11 +807,11 @@ RAVE_API int RaveInitialize(bool bLoadAllPlugins=true, DebugLevel level = Level_
 /// around. If using plugin.h, this function is automatically called by \ref CreateInterfaceValidated.
 /// It is also called by and every InterfaceBase constructor.
 /// \param[in] globalstate 
-RAVE_API void RaveInitializeFromState(boost::shared_ptr<void> globalstate);
+RAVE_API void RaveInitializeFromState(UserDataPtr globalstate);
 
 /// \brief A pointer to the global openrave state
 /// \return a managed pointer to the state.
-RAVE_API boost::shared_ptr<void> RaveGlobalState();
+RAVE_API UserDataPtr RaveGlobalState();
 
 /// \brief Destroys the entire OpenRAVE state and all loaded environments. 
 ///

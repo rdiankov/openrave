@@ -873,10 +873,9 @@ void RobotBase::SetActiveDOFValues(const std::vector<dReal>& values, bool bCheck
 
     if( _vActiveJointIndices.size() > 0 ) {
         GetDOFValues(_vTempRobotJoints);
-
-        for(size_t i = 0; i < _vActiveJointIndices.size(); ++i)
+        for(size_t i = 0; i < _vActiveJointIndices.size(); ++i) {
             _vTempRobotJoints[_vActiveJointIndices[i]] = values[i];
-
+        }
         if( (int)_vActiveJointIndices.size() < _nActiveDOF ) {
             SetJointValues(_vTempRobotJoints, t, bCheckLimits);
         }
@@ -942,20 +941,19 @@ void RobotBase::GetActiveDOFValues(std::vector<dReal>& values) const
     }
 }
 
-void RobotBase::SetActiveDOFVelocities(const std::vector<dReal>& velocities)
+void RobotBase::SetActiveDOFVelocities(const std::vector<dReal>& velocities, bool bCheckLimits)
 {
     if(_nActiveDOF < 0) {
-        SetJointVelocities(velocities);
+        SetDOFVelocities(velocities);
         return;
     }
 
     Vector linearvel, angularvel;
-
     if( (int)_vActiveJointIndices.size() < _nActiveDOF ) {
         // first set the affine transformation of the first link before setting joints
         const dReal* pAffineValues = &velocities[_vActiveJointIndices.size()];
 
-        GetVelocity(linearvel, angularvel);
+        _veclinks.at(0)->GetVelocity(linearvel, angularvel);
         
         if( _nAffineDOFs & DOF_X ) linearvel.x = *pAffineValues++;
         if( _nAffineDOFs & DOF_Y ) linearvel.y = *pAffineValues++;
@@ -972,16 +970,23 @@ void RobotBase::SetActiveDOFVelocities(const std::vector<dReal>& velocities)
             throw openrave_exception("quaternions not supported",ORE_InvalidArguments);
         }
 
-        if( _vActiveJointIndices.size() == 0 )
+        if( _vActiveJointIndices.size() == 0 ) {
             SetVelocity(linearvel, angularvel);
+        }
     }
 
     if( _vActiveJointIndices.size() > 0 ) {
         GetDOFVelocities(_vTempRobotJoints);
         std::vector<dReal>::const_iterator itvel = velocities.begin();
-        FOREACHC(it, _vActiveJointIndices)
+        FOREACHC(it, _vActiveJointIndices) {
             _vTempRobotJoints[*it] = *itvel++;
-        SetJointVelocities(_vTempRobotJoints);
+        }
+        if( (int)_vActiveJointIndices.size() < _nActiveDOF ) {
+            SetDOFVelocities(_vTempRobotJoints,linearvel,angularvel,bCheckLimits);
+        }
+        else {
+            SetDOFVelocities(_vTempRobotJoints,bCheckLimits);
+        }
     }
 }
 
@@ -1007,7 +1012,7 @@ void RobotBase::GetActiveDOFVelocities(std::vector<dReal>& velocities) const
         return;
 
     Vector linearvel, angularvel;
-    GetVelocity(linearvel, angularvel);
+    _veclinks.at(0)->GetVelocity(linearvel, angularvel);
 
     if( _nAffineDOFs & DOF_X ) *pVelocities++ = linearvel.x;
     if( _nAffineDOFs & DOF_Y ) *pVelocities++ = linearvel.y;

@@ -241,7 +241,6 @@ public:
         
         std::list<GEOMPROPERTIES> _listGeomProperties; ///< a list of all the extra geometry properties
         
-        int userdata;   ///< used when iterating through the links
         bool bStatic;       ///< indicates a static body. Static should be used when an object has infinite mass and
                             ///< shouldn't be affected by physics (including gravity). Collision still works
         bool _bIsEnabled;
@@ -343,6 +342,8 @@ public:
         /// \return degrees of freedom of the joint
         virtual void GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit, bool bAppend=false) const;
 
+        virtual void GetVelocityLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit, bool bAppend=false) const;
+
         /// \return the weight associated with a joint's axis for computing a distance in the robot configuration space.
         virtual dReal GetWeight(int iaxis=0) const;
 
@@ -420,7 +421,7 @@ public:
         KinBodyPtr pbody;
         std::vector<RaveTransform<dReal> > vectrans;
         std::vector<dReal> jointvalues;
-        boost::shared_ptr<void> pguidata, puserdata;
+        UserDataPtr pguidata, puserdata;
         std::string strname; ///< name of the body
         int environmentid;
     };
@@ -539,6 +540,7 @@ public:
     virtual void GetDOFValues(std::vector<dReal>& v) const;
     virtual void GetDOFVelocities(std::vector<dReal>& v) const;
     virtual void GetDOFLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const;
+    virtual void GetDOFVelocityLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit) const;
     virtual void GetDOFMaxVel(std::vector<dReal>& v) const;
     virtual void GetDOFMaxAccel(std::vector<dReal>& v) const;
     virtual void GetDOFMaxTorque(std::vector<dReal>& v) const;
@@ -629,16 +631,31 @@ public:
     /// queries the transfromation of the first link of the body
     virtual Transform GetTransform() const;
 
-    /// set the velocity of all the links
+    /// \brief Set the velocity of the base link, rest of links are set to a consistent velocity so entire robot moves correctly.
+    /// \param linearvel linear velocity
     /// \param angularvel is the rotation axis * angular speed
-    virtual void SetVelocity(const Vector& linearvel, const Vector& angularvel);
+    virtual bool SetVelocity(const Vector& linearvel, const Vector& angularvel);
 
-    /// get the velocity of the base link
-    /// \param angularvel is the rotation axis * angular speed
-    virtual void GetVelocity(Vector& linearvel, Vector& angularvel) const;
+    /// \brief Sets the velocity of the base link and each of the joints.
+    ///
+    /// Computes internally what the correponding velocities of each of the links should be in order to 
+    /// achieve consistent results with the joint velocities. Sends the velocities to the physics engine.
+    /// Velocities correspond to the link's coordinate system origin.
+    /// \param[in] linearvel linear velocity of base link
+    /// \param[in] angularvel angular velocity rotation_axis*theta_dot
+    /// \param[in] vDOFVelocities - velocities of each of the degrees of freeom
+    /// \praam checklimits if true, will excplicitly check the joint velocity limits before setting the values.
+    virtual bool SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const Vector& linearvel, const Vector& angularvel,bool checklimits = false);
+
+    /// \brief Sets the velocity of the joints.
+    ///
+    /// Copies the current velocity of the base link and calls SetDOFVelocities(linearvel,angularvel,vDOFVelocities)
+    /// \param[in] vDOFVelocity - velocities of each of the degrees of freeom    
+    /// \praam checklimits if true, will excplicitly check the joint velocity limits before setting the values.
+    virtual bool SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, bool checklimits = false);
 
     /// Returns the linear and angular velocities for each link
-    virtual void GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const;
+    virtual bool GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const;
 
     /** \en \brief set the transform of the first link (the rest of the links are computed based on the joint values).
         
@@ -679,7 +696,6 @@ public:
     virtual void SetJointValues(const std::vector<dReal>& values, const Transform& transform, bool checklimits = false);
 
     virtual void SetBodyTransformations(const std::vector<Transform>& transforms);
-    virtual void SetJointVelocities(const std::vector<dReal>& pJointVelocities);
 
     /// \brief Computes the translation jacobian with respect to a world position.
     /// 
@@ -734,32 +750,16 @@ public:
     /// \param linkindex index of the link
     virtual char DoesAffect(int jointindex, int linkindex) const;
 
-    /** Writes a string for the forward kinematics of the robot (only hinge joints are handled).
-    
-        Format of the string is:
-        \verbatim
-        [link_cur link_base joint_index joint_axis T_left T_right]
-        ...
-        \endverbatim
-
-        \f$T_{linkcur} = T_{linkbase} \; T_{left} \; {\bf Rotation}(jointaxis, jointangle) \; T_{right}\f$
-
-        where \f$T_{left}\f$ and \f$T_{right}\f$ are 3x4 matrices specified in row order (write the first row first)
-        joint_axis is the unit vector for the joint_axis.
-        If link_base is -1, attached to static environment
-    */
-    virtual void WriteForwardKinematics(std::ostream& f);
-
-    virtual void SetGuiData(boost::shared_ptr<void> data) { _pGuiData = data; }
-    virtual boost::shared_ptr<void> GetGuiData() const { return _pGuiData; }
+    virtual void SetGuiData(UserDataPtr data) { _pGuiData = data; }
+    virtual UserDataPtr GetGuiData() const { return _pGuiData; }
 
     /// \return all possible link pairs that could get in collision
     virtual const std::set<int>& GetNonAdjacentLinks() const;
     /// \return all possible link pairs whose collisions are ignored.
     virtual const std::set<int>& GetAdjacentLinks() const;
     
-    virtual boost::shared_ptr<void> GetPhysicsData() const { return _pPhysicsData; }
-    virtual boost::shared_ptr<void> GetCollisionData() const { return _pCollisionData; }
+    virtual UserDataPtr GetPhysicsData() const { return _pPhysicsData; }
+    virtual UserDataPtr GetCollisionData() const { return _pCollisionData; }
     virtual ManageDataPtr GetManageData() const { return _pManageData; }
 
     /// \brief Return a unique id for every transformation state change of any link. Used to check if robot state has changed.
@@ -793,6 +793,14 @@ public:
     /// \return md5 hash string of kinematics/geometry
     virtual const std::string& GetKinematicsGeometryHash() const;
 
+    /// \deprecated (10/11/18)
+    virtual void SetJointVelocities(const std::vector<dReal>& pJointVelocities) RAVE_DEPRECATED {
+        SetDOFVelocities(pJointVelocities);
+    }
+
+    /// \deprecated (10/11/18)
+    virtual void GetVelocity(Vector& linearvel, Vector& angularvel) const RAVE_DEPRECATED;
+
 protected:
     /// constructors declared protected so that user always goes through environment to create bodies
     KinBody(InterfaceType type, EnvironmentBasePtr penv);
@@ -800,8 +808,8 @@ protected:
     inline KinBodyConstPtr shared_kinbody_const() const { return boost::static_pointer_cast<KinBody const>(shared_from_this()); }
     
     /// specific data about physics engine, should be set only by the current PhysicsEngineBase
-    virtual void SetPhysicsData(boost::shared_ptr<void> pdata) { _pPhysicsData = pdata; }
-    virtual void SetCollisionData(boost::shared_ptr<void> pdata) { _pCollisionData = pdata; }
+    virtual void SetPhysicsData(UserDataPtr pdata) { _pPhysicsData = pdata; }
+    virtual void SetCollisionData(UserDataPtr pdata) { _pCollisionData = pdata; }
     virtual void SetManageData(ManageDataPtr pdata) { _pManageData = pdata; }
 
     /// Proprocess the kinematic body and build the internal hierarchy.
@@ -847,9 +855,9 @@ protected:
 
     int _environmentid;                          ///< \see GetEnvironmentId
     int _nUpdateStampId;                         ///< \see GetUpdateStamp
-    boost::shared_ptr<void> _pGuiData;                        ///< GUI data to let the viewer store specific graphic handles for the object
-    boost::shared_ptr<void> _pPhysicsData;                ///< data set by the physics engine
-    boost::shared_ptr<void> _pCollisionData; ///< internal collision model
+    UserDataPtr _pGuiData;                        ///< GUI data to let the viewer store specific graphic handles for the object
+    UserDataPtr _pPhysicsData;                ///< data set by the physics engine
+    UserDataPtr _pCollisionData; ///< internal collision model
     ManageDataPtr _pManageData;
 
     std::list<std::pair<int,boost::function<void()> > > _listRegisteredCallbacks; ///< callbacks to call when particular properties of the body change.

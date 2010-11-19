@@ -178,7 +178,7 @@ def test_fkconsistency():
                 if not all(T1-T2==0):
                     print 'error ',values
 
-def test_kinematics():
+def test_kinematicsstructure():
     env = Environment()
     robot = env.ReadRobotXMLFile('robots/schunk-lwa3-dual.robot.xml')
     env.AddRobot(robot)
@@ -188,14 +188,6 @@ def test_kinematics():
         print [joint.GetJointIndex() for joint in joints]
         joints = robot.GetChain(manip.GetEndEffector().GetIndex(),manip.GetBase().GetIndex())
         print [joint.GetJointIndex() for joint in joints]
-
-def test_kinematics2():
-    env = Environment()
-    robot = env.ReadRobotXMLFile('robots/barretthand.robot.xml')
-    env.AddRobot(robot)
-    for link in robot.GetLinks():
-        joints = robot.GetChain(0,link.GetIndex())
-        print [j.GetName() for j in joints]
     
 def test_dualarm_grabbing():
     env = Environment()
@@ -252,3 +244,61 @@ def test_trimesh():
     indices = array()
     body.InitFromTrimesh(KinBody.Link.TriMesh(vertices,indices),True)
     env.AddKinBody(body)
+
+def test_kinematics():
+    env = Environment()
+    robot = env.ReadRobotXMLFile('robots/barrettwam.robot.xml')
+    env.AddRobot(robot)
+    # use jacobians for validation
+    with env:
+        thresh=1e-5
+        lower,upper = robot.GetDOFLimits()
+        vlower,vupper = robot.GetDOFVelocityLimits()
+        for j in range(robot.GetDOF()):
+            valuestotest = []
+            velocities = linspace(0.1,1.0,robot.GetDOF())
+            if j%2:
+                velocities[0::2] *= -1
+            else:
+                velocities[0::2] *= -1
+            velocities = numpy.minimum(vupper,numpy.maximum(vlower,velocities))
+            robot.SetDOFVelocities(velocities,True)
+            assert linalg.norm(robot.GetDOFVelocities()-velocities) < thresh
+            
+            if 0 >= lower[j] and 0 <= upper[j]:
+                valuestotest.append(0)
+            if lower[j] != upper[j]:
+                valuestotest.append(0.2*upper[j]+0.8*lower[j])
+                valuestotest.append(0.8*upper[j]+0.2*lower[j])
+            for value in valuestotest:
+                robot.SetDOFValues([value],[j])
+                values = robot.GetDOFValues()
+                assert linalg.norm(robot.GetDOFValues()-values) < thresh
+                Tlinks = robot.GetBodyTransformations()
+                robot.SetBodyTransformations(Tlinks)
+                assert linalg.norm(robot.GetDOFValues()-values) < thresh                
+                # test velocities
+                robot.SetDOFVelocities(velocities,True)
+                linkvelocities = robot.GetLinkVelocities()
+                assert linalg.norm(robot.GetDOFVelocities()-velocities) < thresh
+                
+                with robot:
+                    # move each joint a little
+                    for ilink in range(len(robot.GetLinks())):
+                        localtrans = [0.1,0.2,0.3]
+                        worldtrans = transformPoints(Tlinks[ilink],[localtrans])[0]
+                        localquat = [1.0,0.0,0.0,0.0]
+                        worldquat = quatFromRotationMatrix(Tlinks[ilink][0:3,0:3])
+                        Jtrans = robot.CalculateJacobian(ilink,worldtrans)
+                        Jquat = robot.CalculateRotationJacobian(ilink,worldquat)
+                        Jangvel = robot.CalculateAngularVelocityJacobian(ilink)
+                        robot.SetJointValues(values+(upper-lower)*0.001*sign(velocities))
+                        deltavalues = robot.GetJointValues()-values
+                        T=robot.GetLinks()[ilink].GetTransform()
+                        deltatrans = worldtrans - transformPoints(T,[localtrans])[0]
+                        deltarot = dot(linalg.inv(Tlinks[ilink][0:3,0:3]),T[0:3,0:3])
+                        deltaquat = quatFromRotationMatrix(deltarot)
+                        deltaangvel = axisAngleFromRotationMatrix(deltarot)
+                        print dot(Jtrans,deltavalues) - deltatrans
+                        print dot(Jquat,deltavalues) - deltaquat
+                        print dot(Jangvel,deltavalues) - deltaangvel

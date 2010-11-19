@@ -45,7 +45,7 @@ static boost::once_flag _onceRaveInitialize = BOOST_ONCE_INIT;
 
 /// there is only once global openrave state. It is created when openrave
 /// is first used, and destroyed when the program quits or RaveDestroy is called.
-class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_this<RaveGlobal>
+class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_this<RaveGlobal>, public UserData
 {
     typedef std::map<std::string, CreateXMLReaderFn, CaseInsensitiveCompare> READERSMAP;
 
@@ -331,8 +331,8 @@ private:
     std::vector<std::string> _vdbdirectories;
     int _nGlobalEnvironmentId;
 
-    friend void RaveInitializeFromState(boost::shared_ptr<void>);
-    friend boost::shared_ptr<void> RaveGlobalState();
+    friend void RaveInitializeFromState(UserDataPtr);
+    friend UserDataPtr RaveGlobalState();
 };
 
 boost::shared_ptr<RaveGlobal> RaveGlobal::_state;
@@ -372,19 +372,19 @@ int RaveInitialize(bool bLoadAllPlugins, DebugLevel level)
     return RaveGlobal::instance()->Initialize(bLoadAllPlugins,level);
 }
 
-void RaveInitializeFromState(boost::shared_ptr<void> globalstate)
+void RaveInitializeFromState(UserDataPtr globalstate)
 {
-    RaveGlobal::_state = boost::static_pointer_cast<RaveGlobal>(globalstate);
+    RaveGlobal::_state = boost::dynamic_pointer_cast<RaveGlobal>(globalstate);
 }
 
-boost::shared_ptr<void> RaveGlobalState()
+UserDataPtr RaveGlobalState()
 {
     // only return valid pointer if initialized!
     boost::shared_ptr<RaveGlobal> state = RaveGlobal::_state;
     if( !!state && state->IsInitialized() ) {
         return state;
     }
-    return boost::shared_ptr<void>();
+    return UserDataPtr();
 }
    
 void RaveDestroy()

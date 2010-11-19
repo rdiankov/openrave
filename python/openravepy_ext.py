@@ -465,7 +465,7 @@ class OpenRAVEGlobalArguments:
         ogroup.add_option('--serverport', action="store",type='int',dest='_serverport',default=4765,
                           help='port to load server on (default=%default).')
         ogroup.add_option('--level','-l', action="store",type='string',dest='_level',default=None,
-                          help='Debug level')
+                          help='Debug level, one of (%s)'%(','.join(str(debugname).lower() for debuglevel,debugname in openravepy.DebugLevel.values.iteritems())))
         parser.add_option_group(ogroup)
     @staticmethod
     def parseGlobal(options,**kwargs):
@@ -473,7 +473,7 @@ class OpenRAVEGlobalArguments:
         if options._level is not None:
             for debuglevel,debugname in openravepy.DebugLevel.values.iteritems():
                 if (not options._level.isdigit() and options._level.lower() == debugname.name.lower()) or (options._level.isdigit() and int(options._level) == int(debuglevel)):
-                    openravepy.RaveSetDebugLevel(openravepy.DebugLevel.Verbose)
+                    openravepy.RaveSetDebugLevel(debugname)
                     break
     
     @staticmethod

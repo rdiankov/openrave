@@ -374,7 +374,7 @@ public:
 
     virtual void SetActiveDOFValues(const std::vector<dReal>& values, bool bCheckLimits=false);
     virtual void GetActiveDOFValues(std::vector<dReal>& v) const;
-    virtual void SetActiveDOFVelocities(const std::vector<dReal>& velocities);
+    virtual void SetActiveDOFVelocities(const std::vector<dReal>& velocities, bool bCheckLimits=false);
     virtual void GetActiveDOFVelocities(std::vector<dReal>& velocities) const;
     virtual void GetActiveDOFLimits(std::vector<dReal>& lower, std::vector<dReal>& upper) const;
     virtual void GetActiveDOFResolutions(std::vector<dReal>& v) const;

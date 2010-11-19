@@ -499,6 +499,13 @@ public:
         return boost::python::make_tuple(toPyArray(vlower),toPyArray(vupper));
     }
 
+    object GetDOFVelocityLimits() const
+    {
+        vector<dReal> vlower, vupper;
+        _pbody->GetDOFVelocityLimits(vlower,vupper);
+        return boost::python::make_tuple(toPyArray(vlower),toPyArray(vupper));
+    }
+
     object GetDOFLimits(object oindices) const
     {
         if( oindices == object() ) {
@@ -514,6 +521,27 @@ public:
         FOREACHC(it, vindices) {
             KinBody::JointPtr pjoint = _pbody->GetJointFromDOFIndex(*it);
             pjoint->GetLimits(vtemplower,vtempupper,false);
+            vlower.push_back(vtemplower.at(*it-pjoint->GetDOFIndex()));
+            vupper.push_back(vtempupper.at(*it-pjoint->GetDOFIndex()));
+        }
+        return boost::python::make_tuple(toPyArray(vlower),toPyArray(vupper));
+    }
+
+    object GetDOFVelocityLimits(object oindices) const
+    {
+        if( oindices == object() ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<int> vindices = ExtractArray<int>(oindices);
+        if( vindices.size() == 0 ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<dReal> vlower, vupper, vtemplower, vtempupper;
+        vlower.reserve(vindices.size());
+        vupper.reserve(vindices.size());
+        FOREACHC(it, vindices) {
+            KinBody::JointPtr pjoint = _pbody->GetJointFromDOFIndex(*it);
+            pjoint->GetVelocityLimits(vtemplower,vtempupper,false);
             vlower.push_back(vtemplower.at(*it-pjoint->GetDOFIndex()));
             vupper.push_back(vtempupper.at(*it-pjoint->GetDOFIndex()));
         }
@@ -683,21 +711,52 @@ public:
         _pbody->SetBodyTransformations(vtransforms);
     }
 
+    bool SetVelocity(object olinearvel, object oangularvel)
+    {
+        return _pbody->SetVelocity(ExtractVector3(olinearvel),ExtractVector3(oangularvel));
+    }
+
+    bool SetDOFVelocities(object odofvelocities, object olinearvel, object oangularvel, bool checklimits)
+    {
+        return _pbody->SetDOFVelocities(ExtractArray<dReal>(odofvelocities),ExtractVector3(olinearvel),ExtractVector3(oangularvel),checklimits);
+    }
+
+    bool SetDOFVelocities(object odofvelocities, object olinearvel, object oangularvel)
+    {
+        return _pbody->SetDOFVelocities(ExtractArray<dReal>(odofvelocities),ExtractVector3(olinearvel),ExtractVector3(oangularvel));
+    }
+
+    bool SetDOFVelocities(object odofvelocities)
+    {
+        return _pbody->SetDOFVelocities(ExtractArray<dReal>(odofvelocities));
+    }
+
+    bool SetDOFVelocities(object odofvelocities, bool checklimits)
+    {
+        return _pbody->SetDOFVelocities(ExtractArray<dReal>(odofvelocities),checklimits);
+    }
+
     object GetLinkVelocities() const
     {
-        std::vector<std::pair<Vector,Vector> > velocities;
-        _pbody->GetLinkVelocities(velocities);
-
-        npy_intp dims[] = {velocities.size(),3};
-        PyObject *pylinear = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-        PyObject *pyangular = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-        dReal* plinear = (dReal*)PyArray_DATA(pylinear);
-        dReal* pangular = (dReal*)PyArray_DATA(pyangular);
-        FOREACH(it,velocities) {
-            *plinear++ = it->first.x; *plinear++ = it->first.y; *plinear++ = it->first.z;
-            *pangular++ = it->second.x; *pangular++ = it->second.y; *pangular++ = it->second.z;
+        if( _pbody->GetLinks().size() == 0 ) {
+            return numeric::array(boost::python::list());
         }
-        return boost::python::make_tuple(static_cast<numeric::array>(handle<>(pylinear)),static_cast<numeric::array>(handle<>(pyangular)));
+        std::vector<std::pair<Vector,Vector> > velocities;
+        if( !_pbody->GetLinkVelocities(velocities) ) {
+            return object();
+        }
+        npy_intp dims[] = {velocities.size(),6};
+        PyObject *pyvel = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
+        dReal* pfvel = (dReal*)PyArray_DATA(pyvel);
+        for(size_t i = 0; i < velocities.size(); ++i) {
+            pfvel[6*i+0] = velocities[i].first.x;
+            pfvel[6*i+1] = velocities[i].first.y;
+            pfvel[6*i+2] = velocities[i].first.z;
+            pfvel[6*i+3] = velocities[i].second.x;
+            pfvel[6*i+4] = velocities[i].second.y;
+            pfvel[6*i+5] = velocities[i].second.z;
+        }
+        return static_cast<numeric::array>(handle<>(pyvel));
     }
 
     boost::shared_ptr<PyAABB> ComputeAABB() { return boost::shared_ptr<PyAABB>(new PyAABB(_pbody->ComputeAABB())); }
@@ -708,9 +767,9 @@ public:
 
     void SetDOFValues(object o)
     {
-        if( _pbody->GetDOF() == 0 )
+        if( _pbody->GetDOF() == 0 ) {
             return;
-
+        }
         vector<dReal> values = ExtractArray<dReal>(o);
         if( (int)values.size() != GetDOF() )
             throw openrave_exception("values do not equal to body degrees of freedom");
@@ -805,14 +864,8 @@ public:
 
     int DoesAffect(int jointindex, int linkindex ) const { return _pbody->DoesAffect(jointindex,linkindex); }
 
-    std::string WriteForwardKinematics() const {
-        stringstream ss;
-        _pbody->WriteForwardKinematics(ss);
-        return ss.str();
-    }
-
-    void SetGuiData(PyVoidHandle pdata) { _pbody->SetGuiData(pdata._handle); }
-    PyVoidHandle GetGuiData() const { return PyVoidHandle(_pbody->GetGuiData()); }
+    void SetGuiData(PyUserData pdata) { _pbody->SetGuiData(pdata._handle); }
+    PyUserData GetGuiData() const { return PyUserData(_pbody->GetGuiData()); }
 
     std::string GetXMLFilename() const { return _pbody->GetXMLFilename(); }
 
@@ -829,8 +882,8 @@ public:
         return adjacent;
     }
     
-    PyVoidHandle GetPhysicsData() const { return PyVoidHandle(_pbody->GetPhysicsData()); }
-    PyVoidHandle GetCollisionData() const { return PyVoidHandle(_pbody->GetCollisionData()); }
+    PyUserData GetPhysicsData() const { return PyUserData(_pbody->GetPhysicsData()); }
+    PyUserData GetCollisionData() const { return PyUserData(_pbody->GetCollisionData()); }
     PyManageDataPtr GetManageData() const {
         KinBody::ManageDataPtr pdata = _pbody->GetManageData();
         return !pdata ? PyManageDataPtr() : PyManageDataPtr(new PyManageData(pdata,_pyenv));
@@ -1944,34 +1997,21 @@ public:
         return _pPhysicsEngine->SetLinkVelocity(plink->GetLink(),ExtractVector3(linearvel),ExtractVector3(angularvel));
     }
 
-    bool SetBodyVelocity(PyKinBodyPtr pbody, object linearvel, object angularvel, object jointvelocity)
+    bool SetLinkVelocities(PyKinBodyPtr pbody, object ovelocities)
     {
-        CHECK_POINTER(pbody);
-        return _pPhysicsEngine->SetBodyVelocity(pbody->GetBody(),ExtractVector3(linearvel),ExtractVector3(angularvel),ExtractArray<dReal>(jointvelocity));
-    }
-    bool SetBodyVelocity(PyKinBodyPtr pbody, object LinearVelocities, object AngularVelocities)
-    {
-        CHECK_POINTER(pbody);
-        vector<dReal> vLinearVelocities = ExtractArray<dReal>(LinearVelocities);
-        vector<dReal> vAngularVelocities = ExtractArray<dReal>(AngularVelocities);
-        vector<Vector> linearvel(vLinearVelocities.size()/3);
-        for(size_t i = 0; i < vLinearVelocities.size()/3; ++i)
-            linearvel[i] = Vector(vLinearVelocities[3*i],vLinearVelocities[3*i+1],vLinearVelocities[3*i+2]);
-        vector<Vector> angularvel(vAngularVelocities.size()/3);
-        for(size_t i = 0; i < vAngularVelocities.size()/3; ++i)
-            angularvel[i] = Vector(vAngularVelocities[3*i],vAngularVelocities[3*i+1],vAngularVelocities[3*i+2]);
-        return _pPhysicsEngine->SetBodyVelocity(pbody->GetBody(),linearvel,angularvel);
-    }
-
-    object GetBodyVelocityJoints(PyKinBodyPtr pbody)
-    {
-        CHECK_POINTER(pbody);
-        Vector linearvel, angularvel;
-        vector<dReal> vjointvel;
-        if( !_pPhysicsEngine->GetBodyVelocity(pbody->GetBody(),linearvel,angularvel,vjointvel) ) {
-            return object();
+        std::vector<std::pair<Vector,Vector> > velocities;
+        velocities.resize(len(ovelocities));
+        for(size_t i = 0; i < velocities.size(); ++i) {
+            vector<dReal> v = ExtractArray<dReal>(ovelocities[i]);
+            BOOST_ASSERT(v.size()==6);
+            velocities[i].first.x = v[0];
+            velocities[i].first.y = v[1];
+            velocities[i].first.z = v[2];
+            velocities[i].second.x = v[3];
+            velocities[i].second.y = v[4];
+            velocities[i].second.z = v[5];
         }
-        return boost::python::make_tuple(toPyVector3(linearvel),toPyVector3(angularvel),toPyArray(vjointvel));
+        return _pPhysicsEngine->SetLinkVelocities(pbody->GetBody(), velocities);
     }
 
     object GetLinkVelocity(PyKinBody::PyLinkPtr plink)
@@ -1984,40 +2024,28 @@ public:
         return boost::python::make_tuple(toPyVector3(linearvel),toPyVector3(angularvel));
     }
     
-    object GetBodyVelocityLinks(PyKinBodyPtr pbody)
+    object GetLinkVelocities(PyKinBodyPtr pbody)
     {
         CHECK_POINTER(pbody);
-        if( pbody->GetBody()->GetLinks().size() == 0 )
-            return boost::python::make_tuple(numeric::array(boost::python::list()),numeric::array(boost::python::list()));
-        vector<Vector> linearvel(pbody->GetBody()->GetLinks().size()),angularvel(pbody->GetBody()->GetLinks().size());
-        if( !_pPhysicsEngine->GetBodyVelocity(pbody->GetBody(),linearvel,angularvel) ) {
+        if( pbody->GetBody()->GetLinks().size() == 0 ) {
+            return numeric::array(boost::python::list());
+        }
+        std::vector<std::pair<Vector,Vector> > velocities;
+        if( !_pPhysicsEngine->GetLinkVelocities(pbody->GetBody(),velocities) ) {
             return object();
         }
-        npy_intp dims[] = {pbody->GetBody()->GetDOF(),3};
-        PyObject *pylinear = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-        PyObject *pyangular = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
-        dReal* pflinear = (dReal*)PyArray_DATA(pylinear);
-        dReal* pfangular = (dReal*)PyArray_DATA(pyangular);
-        for(size_t i = 0; i < linearvel.size(); ++i) {
-            pflinear[3*i+0] = linearvel[i].x; pflinear[3*i+1] = linearvel[i].y; pflinear[3*i+2] = linearvel[i].z;
-            pfangular[3*i+0] = angularvel[i].x; pfangular[3*i+1] = angularvel[i].y; pfangular[3*i+2] = angularvel[i].z;
+        npy_intp dims[] = {velocities.size(),6};
+        PyObject *pyvel = PyArray_SimpleNew(2,dims, sizeof(dReal)==8?PyArray_DOUBLE:PyArray_FLOAT);
+        dReal* pfvel = (dReal*)PyArray_DATA(pyvel);
+        for(size_t i = 0; i < velocities.size(); ++i) {
+            pfvel[6*i+0] = velocities[i].first.x;
+            pfvel[6*i+1] = velocities[i].first.y;
+            pfvel[6*i+2] = velocities[i].first.z;
+            pfvel[6*i+3] = velocities[i].second.x;
+            pfvel[6*i+4] = velocities[i].second.y;
+            pfvel[6*i+5] = velocities[i].second.z;
         }
-        return boost::python::make_tuple(static_cast<numeric::array>(handle<>(pylinear)),static_cast<numeric::array>(handle<>(pyangular)));
-    }
-
-    bool SetJointVelocity(PyKinBody::PyJointPtr pjoint, object jointvelocity)
-    {
-        CHECK_POINTER(pjoint);
-        return _pPhysicsEngine->SetJointVelocity(pjoint->GetJoint(),ExtractArray<dReal>(jointvelocity));
-    }
-
-    object GetJointVelocity(PyKinBody::PyJointPtr pjoint)
-    {
-        CHECK_POINTER(pjoint);
-        vector<dReal> vel;
-        if( !_pPhysicsEngine->GetJointVelocity(pjoint->GetJoint(),vel) )
-            throw openrave_exception("physics engine failed");
-        return toPyArray(vel);
+        return static_cast<numeric::array>(handle<>(pyvel));
     }
 
     bool SetBodyForce(PyKinBody::PyLinkPtr plink, object force, object position, bool bAdd)
@@ -2718,7 +2746,7 @@ public:
     void StopSimulation() { _penv->StopSimulation(); }
     uint64_t GetSimulationTime() { return _penv->GetSimulationTime(); }
 
-    void LockPhysics(bool bLock)
+    void Lock(bool bLock)
     {
 #if BOOST_VERSION < 103500
         boost::mutex::scoped_lock envlock(_envmutex);
@@ -2742,20 +2770,20 @@ public:
             _penv->GetMutex().unlock();
 #endif
     }
-    void LockPhysics(bool bLock, float timeout)
+    void Lock(bool bLock, float timeout)
     {
-        RAVELOG_WARN("Environment.LockPhysics timeout is ignored\n");
-        LockPhysics(bLock);
+        RAVELOG_WARN("Environment.Lock timeout is ignored\n");
+        Lock(bLock);
     }
 
     void __enter__()
     {
-        LockPhysics(true);
+        Lock(true);
     }
 
     void __exit__(object type, object value, object traceback)
     {
-        LockPhysics(false);
+        Lock(false);
     }
 
     bool SetViewer(const string& viewername, bool showviewer=true)
@@ -3052,8 +3080,9 @@ public:
 void PyKinBody::__enter__()
 {
     // necessary to lock physics to prevent multiple threads from interfering
-    if( _listStateSavers.size() == 0 )
-        _pyenv->LockPhysics(true);
+    if( _listStateSavers.size() == 0 ) {
+        _pyenv->Lock(true);
+    }
     _listStateSavers.push_back(boost::shared_ptr<void>(new KinBody::KinBodyStateSaver(_pbody)));
 }
 
@@ -3061,15 +3090,17 @@ void PyKinBody::__exit__(object type, object value, object traceback)
 {
     BOOST_ASSERT(_listStateSavers.size()>0);
     _listStateSavers.pop_back();
-    if( _listStateSavers.size() == 0 )
-        _pyenv->LockPhysics(false);
+    if( _listStateSavers.size() == 0 ) {
+        _pyenv->Lock(false);
+    }
 }
 
 void PyRobotBase::__enter__()
 {
     // necessary to lock physics to prevent multiple threads from interfering
-    if( _listStateSavers.size() == 0 )
-        _pyenv->LockPhysics(true);
+    if( _listStateSavers.size() == 0 ) {
+        _pyenv->Lock(true);
+    }
     _listStateSavers.push_back(boost::shared_ptr<void>(new RobotBase::RobotStateSaver(_probot)));
 }
 
@@ -3376,10 +3407,16 @@ BOOST_PYTHON_MODULE(openravepy_int)
         object (PyKinBody::*getdofvalues2)(object) const = &PyKinBody::GetDOFValues;
         object (PyKinBody::*getdoflimits1)() const = &PyKinBody::GetDOFLimits;
         object (PyKinBody::*getdoflimits2)(object) const = &PyKinBody::GetDOFLimits;
+        object (PyKinBody::*getdofvelocitylimits1)() const = &PyKinBody::GetDOFVelocityLimits;
+        object (PyKinBody::*getdofvelocitylimits2)(object) const = &PyKinBody::GetDOFVelocityLimits;
         object (PyKinBody::*getlinks1)() const = &PyKinBody::GetLinks;
         object (PyKinBody::*getlinks2)(object) const = &PyKinBody::GetLinks;
         object (PyKinBody::*getjoints1)() const = &PyKinBody::GetJoints;
         object (PyKinBody::*getjoints2)(object) const = &PyKinBody::GetJoints;
+        bool (PyKinBody::*setdofvelocities1)(object) = &PyKinBody::SetDOFVelocities;
+        bool (PyKinBody::*setdofvelocities2)(object,object,object) = &PyKinBody::SetDOFVelocities;
+        bool (PyKinBody::*setdofvelocities3)(object,bool) = &PyKinBody::SetDOFVelocities;
+        bool (PyKinBody::*setdofvelocities4)(object,object,object,bool) = &PyKinBody::SetDOFVelocities;
         scope kinbody = class_<PyKinBody, boost::shared_ptr<PyKinBody>, bases<PyInterfaceBase> >("KinBody", DOXY_CLASS(KinBody), no_init)
             .def("InitFromFile",&PyKinBody::InitFromFile,args("filename"),DOXY_FN(KinBody,InitFromFile))
             .def("InitFromData",&PyKinBody::InitFromData,args("data"), DOXY_FN(KinBody,InitFromData))
@@ -3393,6 +3430,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetDOFVelocities",&PyKinBody::GetDOFVelocities, DOXY_FN(KinBody,GetDOFVelocities))
             .def("GetDOFLimits",getdoflimits1, DOXY_FN(KinBody,GetDOFLimits))
             .def("GetDOFLimits",getdoflimits2, args("indices"),DOXY_FN(KinBody,GetDOFLimits))
+            .def("GetDOFVelocityLimits",getdofvelocitylimits1, DOXY_FN(KinBody,GetDOFVelocityLimits))
+            .def("GetDOFVelocityLimits",getdofvelocitylimits2, args("indices"),DOXY_FN(KinBody,GetDOFVelocityLimits))
             .def("GetDOFMaxVel",&PyKinBody::GetDOFMaxVel, DOXY_FN(KinBody,GetDOFMaxVel))
             .def("GetDOFWeights",&PyKinBody::GetDOFWeights, DOXY_FN(KinBody,GetDOFWeights))
             .def("GetDOFResolutions",&PyKinBody::GetDOFResolutions, DOXY_FN(KinBody,GetDOFResolutions))
@@ -3414,6 +3453,11 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("GetTransform",&PyKinBody::GetTransform, DOXY_FN(KinBody,GetTransform))
             .def("GetBodyTransformations",&PyKinBody::GetBodyTransformations, DOXY_FN(KinBody,GetBodyTransformations))
             .def("SetBodyTransformations",&PyKinBody::SetBodyTransformations,args("transforms"), DOXY_FN(KinBody,SetBodyTransformations))
+            .def("SetVelocity",&PyKinBody::SetVelocity, args("linear","angular"), DOXY_FN(KinBody,SetVelocity "const Vector&; const Vector&"))
+            .def("SetDOFVelocities",setdofvelocities1, args("dofvelocities"), DOXY_FN(KinBody,SetVelocity "const std::vector"))
+            .def("SetDOFVelocities",setdofvelocities2, args("dofvelocities","linear","angular"), DOXY_FN(KinBody,SetVelocity "const Vector&; const Vector&; const std::vector"))
+            .def("SetDOFVelocities",setdofvelocities3, args("dofvelocities","checklimits"), DOXY_FN(KinBody,SetVelocity "const std::vector"))
+            .def("SetDOFVelocities",setdofvelocities4, args("dofvelocities","linear","angular","checklimits"), DOXY_FN(KinBody,SetVelocity "const Vector&; const Vector&; const std::vector"))
             .def("GetLinkVelocities",&PyKinBody::GetLinkVelocities, DOXY_FN(KinBody,GetLinkVelocities))
             .def("ComputeAABB",&PyKinBody::ComputeAABB, DOXY_FN(KinBody,ComputeAABB))
             .def("Enable",&PyKinBody::Enable,args("enable"), DOXY_FN(KinBody,Enable))
@@ -3436,7 +3480,6 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("IsRobot",&PyKinBody::IsRobot, DOXY_FN(KinBody,IsRobot))
             .def("GetEnvironmentId",&PyKinBody::GetEnvironmentId, DOXY_FN(KinBody,GetEnvironmentId))
             .def("DoesAffect",&PyKinBody::DoesAffect,args("jointindex","linkindex"), DOXY_FN(KinBody,DoesAffect))
-            .def("WriteForwardKinematics",&PyKinBody::WriteForwardKinematics, DOXY_FN(KinBody,WriteForwardKinematics))
             .def("SetGuiData",&PyKinBody::SetGuiData,args("data"), DOXY_FN(KinBody,SetGuiData))
             .def("GetGuiData",&PyKinBody::GetGuiData, DOXY_FN(KinBody,GetGuiData))
             .def("GetXMLFilename",&PyKinBody::GetXMLFilename, DOXY_FN(InterfaceBase,GetXMLFilename))
@@ -3873,22 +3916,16 @@ BOOST_PYTHON_MODULE(openravepy_int)
         ;
     class_<PyIkSolverBase, boost::shared_ptr<PyIkSolverBase>, bases<PyInterfaceBase> >("IkSolver", DOXY_CLASS(IkSolverBase), no_init);
 
-    bool (PyPhysicsEngineBase::*SetBodyVelocity1)(PyKinBodyPtr, object, object, object) = &PyPhysicsEngineBase::SetBodyVelocity;
-    bool (PyPhysicsEngineBase::*SetBodyVelocity2)(PyKinBodyPtr, object, object) = &PyPhysicsEngineBase::SetBodyVelocity;
     class_<PyPhysicsEngineBase, boost::shared_ptr<PyPhysicsEngineBase>, bases<PyInterfaceBase> >("PhysicsEngine", DOXY_CLASS(PhysicsEngineBase), no_init)
         .def("GetPhysicsOptions",&PyPhysicsEngineBase::GetPhysicsOptions, DOXY_FN(PhysicsEngineBase,GetPhysicsOptions))
         .def("SetPhysicsOptions",&PyPhysicsEngineBase::SetPhysicsOptions, DOXY_FN(PhysicsEngineBase,SetPhysicsOptions "int"))
         .def("InitEnvironment",&PyPhysicsEngineBase::InitEnvironment, DOXY_FN(PhysicsEngineBase,InitEnvironment))
         .def("DestroyEnvironment",&PyPhysicsEngineBase::DestroyEnvironment, DOXY_FN(PhysicsEngineBase,DestroyEnvironment))
         .def("InitKinBody",&PyPhysicsEngineBase::InitKinBody, DOXY_FN(PhysicsEngineBase,InitKinBody))
-        .def("SetBodyVelocity",SetBodyVelocity1, args("body","linearvel","angularvel","jointvel"), DOXY_FN(PhysicsEngineBase,SetBodyVelocity "KinBodyPtr; const Vector; const Vector; const std::vector"))
-        .def("SetBodyVelocity",SetBodyVelocity2, args("body","linklinearvels","linkangularvels"), DOXY_FN(PhysicsEngineBase,SetBodyVelocity "KinBodyPtr; const std::vector; const std::vector"))
-        .def("SetLinkVelocity",&PyPhysicsEngineBase::SetLinkVelocity, DOXY_FN(PhysicsEngineBase,SetLinkVelocity))
+        .def("SetLinkVelocity",&PyPhysicsEngineBase::SetLinkVelocity, args("link","velocity"), DOXY_FN(PhysicsEngineBase,SetLinkVelocity))
+        .def("SetLinkVelocities",&PyPhysicsEngineBase::SetLinkVelocity, args("body","velocities"), DOXY_FN(PhysicsEngineBase,SetLinkVelocities))
         .def("GetLinkVelocity",&PyPhysicsEngineBase::GetLinkVelocity, DOXY_FN(PhysicsEngineBase,GetLinkVelocity))
-        .def("GetBodyVelocityJoints",&PyPhysicsEngineBase::GetBodyVelocityJoints, DOXY_FN(PhysicsEngineBase,GetBodyVelocityJoints "KinBodyConstPtr; Vector, Vector, std::vector"))
-        .def("GetBodyVelocityLinks",&PyPhysicsEngineBase::GetBodyVelocityLinks, DOXY_FN(PhysicsEngineBase,GetBodyVelocityLinks "KinBodyConstPtr; std::vector, std::vector"))
-        .def("SetJointVelocity",&PyPhysicsEngineBase::SetJointVelocity, DOXY_FN(PhysicsEngineBase,SetJointVelocity))
-        .def("GetJointVelocity",&PyPhysicsEngineBase::GetJointVelocity, DOXY_FN(PhysicsEngineBase,GetJointVelocity))
+        .def("GetLinkVelocities",&PyPhysicsEngineBase::GetLinkVelocity, DOXY_FN(PhysicsEngineBase,GetLinkVelocities))
         .def("SetBodyForce",&PyPhysicsEngineBase::SetBodyForce, DOXY_FN(PhysicsEngineBase,SetBodyForce))
         .def("SetBodyTorque",&PyPhysicsEngineBase::SetBodyTorque, DOXY_FN(PhysicsEngineBase,SetBodyTorque))
         .def("AddJointTorque",&PyPhysicsEngineBase::AddJointTorque, DOXY_FN(PhysicsEngineBase,AddJointTorque))
@@ -4011,8 +4048,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
         bool (PyEnvironmentBase::*pcoly)(boost::shared_ptr<PyRay>) = &PyEnvironmentBase::CheckCollision;
         bool (PyEnvironmentBase::*pcolyr)(boost::shared_ptr<PyRay>, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
 
-        void (PyEnvironmentBase::*LockPhysics1)(bool) = &PyEnvironmentBase::LockPhysics;
-        void (PyEnvironmentBase::*LockPhysics2)(bool, float) = &PyEnvironmentBase::LockPhysics;
+        void (PyEnvironmentBase::*Lock1)(bool) = &PyEnvironmentBase::Lock;
+        void (PyEnvironmentBase::*Lock2)(bool, float) = &PyEnvironmentBase::Lock;
 
         object (PyEnvironmentBase::*drawplane1)(object, object, const boost::multi_array<float,2>&) = &PyEnvironmentBase::drawplane;
         object (PyEnvironmentBase::*drawplane2)(object, object, const boost::multi_array<float,3>&) = &PyEnvironmentBase::drawplane;
@@ -4101,8 +4138,10 @@ BOOST_PYTHON_MODULE(openravepy_int)
             .def("StartSimulation",&PyEnvironmentBase::StartSimulation,StartSimulation_overloads(args("timestep","realtime"), DOXY_FN(EnvironmentBase,StartSimulation)))
             .def("StopSimulation",&PyEnvironmentBase::StopSimulation, DOXY_FN(EnvironmentBase,StopSimulation))
             .def("GetSimulationTime",&PyEnvironmentBase::GetSimulationTime, DOXY_FN(EnvironmentBase,GetSimulationTime))
-            .def("LockPhysics",LockPhysics1,args("lock"), "Locks the environment mutex.")
-            .def("LockPhysics",LockPhysics2,args("lock","timeout"), "Locks the environment mutex with a timeout.")
+            .def("Lock",Lock1,args("lock"), "Locks the environment mutex.")
+            .def("Lock",Lock2,args("lock","timeout"), "Locks the environment mutex with a timeout.")
+            .def("LockPhysics",Lock1,args("lock"), "Locks the environment mutex.")
+            .def("LockPhysics",Lock2,args("lock","timeout"), "Locks the environment mutex with a timeout.")
             .def("SetViewer",&PyEnvironmentBase::SetViewer,SetViewer_overloads(args("viewername","showviewer"), "Attaches the viewer and starts its thread"))
             .def("GetViewer",&PyEnvironmentBase::GetViewer, DOXY_FN(EnvironmentBase,GetViewer))
             .def("plot3",&PyEnvironmentBase::plot3,plot3_overloads(args("points","pointsize","colors","drawstyle"), DOXY_FN(EnvironmentBase,plot3 "const float; int; int; float; const float; int, bool")))

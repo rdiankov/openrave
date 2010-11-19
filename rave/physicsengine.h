@@ -44,7 +44,7 @@ public:
     virtual bool SetPhysicsOptions(int physicsoptions) = 0;
     virtual int GetPhysicsOptions() const = 0;
 
-    /// \deprecated use SendCommand instead
+    /// \deprecated (10/11/18) use SendCommand instead
     virtual bool SetPhysicsOptions(std::ostream& sout, std::istream& sinput) RAVE_DEPRECATED = 0;
 
     /// called when environment sets this physics engine, engine assumes responsibility for KinBody::_pPhysicsData
@@ -57,82 +57,85 @@ public:
     /// notified when a new body has been initialized in the environment
     virtual bool InitKinBody(KinBodyPtr body) = 0;
 
-    /// \brief Force the body velocity of a link.
+    /// \brief Force the body velocity of a link, velocities correspond to the link's coordinate system origin.
     ///
     /// \param[in] link link to set velocities.
     /// \param[in] linearvel linear velocity of base link
     /// \param[in] angularvel angular velocity rotation_axis*theta_dot
     virtual bool SetLinkVelocity(KinBody::LinkPtr link, const Vector& linearvel, const Vector& angularvel) = 0;
 
-    /// Sets the body velocity..
-    /// \param[in] linearvel linear velocity of base link
-    /// \param[in] angularvel angular velocity rotation_axis*theta_dot
-    /// \param[in] pJointVelocity - the joint velocities of the robot
-    virtual bool SetBodyVelocity(KinBodyPtr body, const Vector& linearvel, const Vector& angularvel, const std::vector<dReal>& pJointVelocity) = 0;
-
-    /// \brief Sets the velocities for each link.
+    /// \brief Sets the velocities for each link, velocities correspond to the link's coordinate system origin.
     ///
     /// \param[in] body the body to query velocities from.
-    /// \param[out] pLinearVelocities the linear velocities for each link
-    /// \param[out] pAngularVelocities the angular velocities for each link (axis * angular_speed)
-    virtual bool SetBodyVelocity(KinBodyPtr body, const std::vector<Vector>& pLinearVelocities, const std::vector<Vector>& pAngularVelocities) = 0;
+    /// \param[in] velocities sets the linear and angular (axis * angular_speed) velocities for each link
+    virtual bool SetLinkVelocities(KinBodyPtr body, const std::vector<std::pair<Vector,Vector> >& velocities) = 0;
 
-    /// gets the velocity of a link
+    /// \brief Gets the velocity of a link, velocities correspond to the link's coordinate system origin.
     /// \param[out] linearvel - linear velocity of base link
     /// \param[out] angularvel - angular velocity rotation_axis*theta_dot
     virtual bool GetLinkVelocity(KinBody::LinkConstPtr link, Vector& linearvel, Vector& angularvel) = 0;
 
-    /// gets the velocity
-    /// \param[out] linearvel - linear velocity of base link
-    /// \param[out] angularvel - angular velocity rotation_axis*theta_dot
-    virtual bool GetBodyVelocity(KinBodyConstPtr body, Vector& linearvel, Vector& angularvel, std::vector<dReal>& pJointVelocity) = 0;
-
-    /// sets the velocities for each link
-    /// \param[out] pLinearVelocities the linear velocities for each link, has to be a valid pointer
-    /// \param[out] pAngularVelocities the angular velocities for each link (axis * angular_speed), has to be a valid pointer
-    virtual bool GetBodyVelocity(KinBodyConstPtr body, std::vector<Vector>& pLinearVelocities, std::vector<Vector>& pAngularVelocities) = 0;
-
-    /// sets the joint velocity
-    /// \param[in] pjoint the joint
-    /// \param[in] vJointVelocity the new joint velocity
-    virtual bool SetJointVelocity(KinBody::JointPtr pjoint, const std::vector<dReal>& vJointVelocity) = 0;
-
-    /// gets the joint velocity
-    /// \param[out] vJointVelocity the new joint velocity
-    virtual bool GetJointVelocity(KinBody::JointConstPtr pjoint, std::vector<dReal>& vJointVelocity) = 0;
+    /// \brief Sets the velocities for each link, velocities correspond to the link's coordinate system origin.
+    /// \param[out] velocities the linear and angular (axis * angular_speed) velocities for each link.
+    virtual bool GetLinkVelocities(KinBodyConstPtr body, std::vector<std::pair<Vector,Vector> >& velocities) = 0;
 
     /// add a force at a particular position in a link
     /// \param force the direction and magnitude of the force
     /// \param position in the world where the force is getting applied
     /// \param bAdd if true, force is added to previous forces, otherwise it is set
-    virtual bool SetBodyForce(KinBody::LinkPtr link, const Vector& force, const Vector& position, bool bAdd) = 0;
+    virtual bool SetBodyForce(KinBody::LinkPtr link, const Vector& force, const Vector& position, bool bAdd) { throw openrave_exception("PhysicsEngineBase::SetBodyForce not implemented",ORE_NotImplemented); }
 
     /// adds torque to a body (absolute coords)
     /// \param link the link to add a torque to
     /// \param torque torque vector
     /// \param bAdd if true, torque is added to previous torques, otherwise it is set
-    virtual bool SetBodyTorque(KinBody::LinkPtr link, const Vector& torque, bool bAdd) = 0;
+    virtual bool SetBodyTorque(KinBody::LinkPtr link, const Vector& torque, bool bAdd) { throw openrave_exception("PhysicsEngineBase::SetBodyTorque not implemented",ORE_NotImplemented); }
 
     /// adds torque to a joint
     /// \param pjoint - the joint the torque is added to
     /// \param pTorques - the torques added to the joint. Pointer because the joint dof can be greater than 1.
-    virtual bool AddJointTorque(KinBody::JointPtr pjoint, const std::vector<dReal>& pTorques) = 0;
+    virtual bool AddJointTorque(KinBody::JointPtr pjoint, const std::vector<dReal>& pTorques) { throw openrave_exception("PhysicsEngineBase::AddJointTorque not implemented",ORE_NotImplemented); }
 
     /// \param[in] link the link
     /// \param[out] force current accumulated force on the COM of the link
     /// \param[out] torque current accumulated torque on the COM of the link
-    virtual bool GetLinkForceTorque(KinBody::LinkConstPtr link, Vector& force, Vector& torque) = 0;
+    virtual bool GetLinkForceTorque(KinBody::LinkConstPtr link, Vector& force, Vector& torque) { throw openrave_exception("PhysicsEngineBase::GetLinkForceTorque not implemented",ORE_NotImplemented); }
     
     /// set the gravity direction
-    virtual void SetGravity(const Vector& gravity) = 0;
-    virtual Vector GetGravity() = 0;
+    virtual void SetGravity(const Vector& gravity) { throw openrave_exception("PhysicsEngineBase::SetGravity not implemented",ORE_NotImplemented); }
+    virtual Vector GetGravity() { throw openrave_exception("PhysicsEngineBase::GetGravity not implemented",ORE_NotImplemented); }
 
     /// dynamically simulate system for fTimeElapsed seconds
     /// add torques to the joints of the body. Torques disappear after one timestep of simulation
     virtual void SimulateStep(dReal fTimeElapsed)=0;
     
+    /// \deprecated (10/11/18)
+    virtual bool GetBodyVelocity(KinBodyConstPtr body, std::vector<Vector>& vLinearVelocities, std::vector<Vector>& vAngularVelocities) RAVE_DEPRECATED {
+        std::vector<std::pair<Vector,Vector> > velocities;
+        if( !GetLinkVelocities(body, velocities) ) {
+            return false;
+        }
+        vLinearVelocities.resize(velocities.size());
+        vAngularVelocities.resize(velocities.size());
+        for(size_t i = 0; i < velocities.size(); ++i) {
+            vLinearVelocities[i] = velocities[i].first;
+            vAngularVelocities[i] = velocities[i].second;
+        }
+        return true;
+    }
+
+    virtual bool SetBodyVelocity(KinBodyPtr body, const std::vector<Vector>& vLinearVelocities, const std::vector<Vector>& vAngularVelocities) RAVE_DEPRECATED {
+        BOOST_ASSERT(vLinearVelocities.size()==vAngularVelocities.size());
+        std::vector<std::pair<Vector,Vector> > velocities(vLinearVelocities.size());
+        for(size_t i = 0; i < velocities.size(); ++i) {
+            velocities[i].first = vLinearVelocities[i];
+            velocities[i].second = vAngularVelocities[i];
+        }
+        return SetLinkVelocities(body,velocities);
+    }
+
 protected:
-	virtual void SetPhysicsData(KinBodyPtr body, boost::shared_ptr<void> data) { body->SetPhysicsData(data); }
+	virtual void SetPhysicsData(KinBodyPtr body, UserDataPtr data) { body->SetPhysicsData(data); }
 
 private:
     virtual const char* GetHash() const { return OPENRAVE_PHYSICSENGINE_HASH; }

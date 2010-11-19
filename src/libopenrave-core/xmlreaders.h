@@ -1688,7 +1688,7 @@ namespace OpenRAVEXMLParser
 
             // reisze _vTransforms to be the same size as the initial number of links
             _pchain->GetBodyTransformations(_vTransforms);
-            _pchain->SetGuiData(boost::shared_ptr<void>());
+            _pchain->SetGuiData(UserDataPtr());
         }
 
         Transform GetOffsetFrom(KinBody::LinkPtr plink)

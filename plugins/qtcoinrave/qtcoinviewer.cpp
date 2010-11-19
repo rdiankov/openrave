@@ -50,7 +50,6 @@ const float TIMER_SENSOR_INTERVAL = (1.0f/60.0f);
 int QtCoinViewer::s_InitRefCount = 0;
 
 #define ITEM_DELETER boost::bind(&QtCoinViewer::_DeleteItemCallback,shared_viewer(),_1)
-#define GRAPH_DELETER boost::bind(&Environment::_CloseGraphCallback,boost::static_pointer_cast<Environment>(shared_from_this()),ViewerBaseWeakPtr(_pCurrentViewer),_1)
 
 static SoErrorCB* s_DefaultHandlerCB=NULL;
 void CustomCoinHandlerCB(const class SoError * error, void * data)
@@ -2473,7 +2472,7 @@ void QtCoinViewer::UpdateFromModel()
     FOREACH(itbody, vecbodies) {
         BOOST_ASSERT( !!itbody->pbody );
         KinBodyPtr pbody = itbody->pbody; // try to use only as an id, don't call any methods!
-        KinBodyItemPtr pitem = boost::static_pointer_cast<KinBodyItem>(itbody->pguidata);
+        KinBodyItemPtr pitem = boost::dynamic_pointer_cast<KinBodyItem>(itbody->pguidata);
 
         if( !pitem ) {
             // make sure pbody is actually present
@@ -2517,7 +2516,7 @@ void QtCoinViewer::UpdateFromModel()
                     _mapbodies[pbody] = pitem;
                 }
                 else {
-                    pitem = boost::static_pointer_cast<KinBodyItem>(pbody->GetGuiData());
+                    pitem = boost::dynamic_pointer_cast<KinBodyItem>(pbody->GetGuiData());
                     BOOST_ASSERT( _mapbodies.find(pbody) != _mapbodies.end() && _mapbodies[pbody] == pitem );
                 }
             }
@@ -2544,7 +2543,7 @@ void QtCoinViewer::UpdateFromModel()
     FOREACH_NOINC(it, _mapbodies) {
         if( !it->second->GetUserData() ) {
             // item doesn't exist anymore, remove it
-            it->first->SetGuiData(boost::shared_ptr<void>());
+            it->first->SetGuiData(UserDataPtr());
 
             if( _pSelectedItem == it->second ) {
                 _pdragger.reset();
@@ -2576,7 +2575,7 @@ void QtCoinViewer::_Reset()
 
     FOREACH(itbody, _mapbodies) {
         BOOST_ASSERT( itbody->first->GetGuiData() == itbody->second );
-        itbody->first->SetGuiData(boost::shared_ptr<void>());
+        itbody->first->SetGuiData(UserDataPtr());
     }
     _mapbodies.clear();
 
@@ -2678,7 +2677,7 @@ void QtCoinViewer::ViewGeometryChanged(QAction* pact)
     UpdateFromModel();
     FOREACH(itbody, _mapbodies) {
         BOOST_ASSERT( itbody->first->GetGuiData() == itbody->second );
-        itbody->first->SetGuiData(boost::shared_ptr<void>());
+        itbody->first->SetGuiData(UserDataPtr());
     }
     _mapbodies.clear();
 

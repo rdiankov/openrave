@@ -34,7 +34,7 @@ class BulletSpace : public boost::enable_shared_from_this<BulletSpace>
 
 public:
     // information about the kinematics of the body
-    struct KinBodyInfo
+    struct KinBodyInfo : public OpenRAVE::UserData
     {
         struct LINK
         {
@@ -89,7 +89,7 @@ public:
 
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
     typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
-    typedef boost::function<boost::shared_ptr<void>(KinBodyConstPtr)> GetInfoFn;
+    typedef boost::function<UserDataPtr(KinBodyConstPtr)> GetInfoFn;
     typedef boost::function<void(KinBodyInfoPtr)> SynchornizeCallbackFn;
 
  BulletSpace(EnvironmentBasePtr penv, const GetInfoFn& infofn, bool bPhysics) : _penv(penv), GetInfo(infofn), _bPhysics(bPhysics) {}
@@ -112,7 +112,7 @@ public:
         _world.reset();
     }
     
-    boost::shared_ptr<void> InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr()) {
+    UserDataPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr()) {
         // create all ode bodies and joints
         if( !pinfo )
             pinfo.reset(new KinBodyInfo(_world,_bPhysics));
@@ -298,7 +298,7 @@ public:
         vector<KinBodyPtr> vbodies;
         _penv->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
-            KinBodyInfoPtr pinfo = boost::static_pointer_cast<KinBodyInfo>(GetInfo(*itbody));
+            KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(GetInfo(*itbody));
             BOOST_ASSERT( pinfo->pbody == *itbody );
             if( pinfo->nLastStamp != (*itbody)->GetUpdateStamp() )
                 Synchronize(pinfo);
@@ -307,7 +307,7 @@ public:
 
     void Synchronize(KinBodyConstPtr pbody)
     {
-        KinBodyInfoPtr pinfo = boost::static_pointer_cast<KinBodyInfo>(GetInfo(pbody));
+        KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(GetInfo(pbody));
         BOOST_ASSERT( pinfo->pbody == pbody );
         if( pinfo->nLastStamp != pbody->GetUpdateStamp() )
             Synchronize(pinfo);
@@ -315,7 +315,7 @@ public:
 
     boost::shared_ptr<btCollisionObject> GetLinkObj(KinBody::LinkConstPtr plink)
     {
-        KinBodyInfoPtr pinfo = boost::static_pointer_cast<KinBodyInfo>(GetInfo(plink->GetParent()));
+        KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(GetInfo(plink->GetParent()));
         BOOST_ASSERT(pinfo->pbody == plink->GetParent() );
         BOOST_ASSERT( plink->GetIndex() >= 0 && plink->GetIndex() < (int)pinfo->vlinks.size());
         return pinfo->vlinks[plink->GetIndex()]->obj;
@@ -323,7 +323,7 @@ public:
 
     boost::shared_ptr<btTypedConstraint> GetJoint(KinBody::JointConstPtr pjoint)
     {
-        KinBodyInfoPtr pinfo = boost::static_pointer_cast<KinBodyInfo>(GetInfo(pjoint->GetParent()));
+        KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(GetInfo(pjoint->GetParent()));
         BOOST_ASSERT(pinfo->pbody == pjoint->GetParent() );
         BOOST_ASSERT( pjoint->GetParent()->GetJointFromDOFIndex(pjoint->GetDOFIndex()) == pjoint );
         BOOST_ASSERT( pjoint->GetJointIndex() >= 0 && pjoint->GetJointIndex() < (int)pinfo->vjoints.size());
@@ -361,9 +361,10 @@ private:
     {
         EnvironmentMutex::scoped_lock lock(_penv->GetMutex());
         KinBodyPtr pbody(_pbody);
-        KinBodyInfoPtr pinfo = boost::static_pointer_cast<KinBodyInfo>(GetInfo(pbody));
-        if( !pinfo )
-            return;        
+        KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(GetInfo(pbody));
+        if( !pinfo ) {
+            return;   
+        }     
         BOOST_ASSERT(boost::shared_ptr<BulletSpace>(pinfo->_bulletspace) == shared_from_this());
         BOOST_ASSERT(pinfo->pbody==pbody);
         InitKinBody(pbody,pinfo);

@@ -86,20 +86,22 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
     virtual void DestroyEnvironment()
     {
         if( geomray != NULL ) {
-            dGeomDestroy(geomray); geomray = NULL;
+            dGeomDestroy(geomray);
+            geomray = NULL;
         }
     
         // go through all the KinBodies and destory their collision pointers
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
-        FOREACHC(itbody, vbodies)
-            SetCollisionData(*itbody, boost::shared_ptr<void>());
+        FOREACHC(itbody, vbodies) {
+            SetCollisionData(*itbody, OpenRAVE::UserDataPtr());
+        }
         odespace->DestroyEnvironment();
     }
 
     virtual bool InitKinBody(KinBodyPtr pbody)
     {
-        boost::shared_ptr<void> pinfo = odespace->InitKinBody(pbody);
+        OpenRAVE::UserDataPtr pinfo = odespace->InitKinBody(pbody);
         SetCollisionData(pbody, pinfo);
         return !!pinfo;
     }
@@ -494,7 +496,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
     }
 
  private:
-    static boost::shared_ptr<void> GetCollisionInfo(KinBodyConstPtr pbody) { return pbody->GetCollisionData(); }
+    static OpenRAVE::UserDataPtr GetCollisionInfo(KinBodyConstPtr pbody) { return pbody->GetCollisionData(); }
 
     static void KinBodyCollisionCallback (void *data, dGeomID o1, dGeomID o2)
     {

@@ -790,6 +790,30 @@ template <typename T> inline RaveVector<T> AxisAngle2Quat(const RaveVector<T>& r
     return RaveVector<T>(RaveCos(angle), rotaxis.x*fsin, rotaxis.y * fsin, rotaxis.z * fsin);
 }
 
+/// \brief transform a vector by a quaternion
+///
+/// \ingroup affine_math
+/// \param
+template <typename T>
+RaveVector<T> quatRotate(const RaveVector<T>& q, const RaveVector<T>& t)
+{
+    T xx = 2 * q.y * q.y;
+    T xy = 2 * q.y * q.z;
+    T xz = 2 * q.y * q.w;
+    T xw = 2 * q.y * q.x;
+    T yy = 2 * q.z * q.z;
+    T yz = 2 * q.z * q.w;
+    T yw = 2 * q.z * q.x;
+    T zz = 2 * q.w * q.w;
+    T zw = 2 * q.w * q.x;
+    RaveVector<T> v;
+    v.x = (1-yy-zz) * t.x + (xy-zw) * t.y + (xz+yw)*t.z;
+    v.y = (xy+zw) * t.x + (1-xx-zz) * t.y + (yz-xw)*t.z;
+    v.z = (xz-yw) * t.x + (yz+xw) * t.y + (1-xx-yy)*t.z;
+    return v;
+}
+
+
 /// \brief Return the minimal quaternion that orients sourcedir to targetdir
 ///
 /// \ingroup affine_math

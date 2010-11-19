@@ -32,7 +32,7 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         KinBodyPtr pbody2;
     };
 
-    class KinBodyInfo
+    class KinBodyInfo : public OpenRAVE::UserData
     {
     public:
     KinBodyInfo() : nLastStamp(0) {}
@@ -63,8 +63,9 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
-            if( !InitKinBody(*itbody) )
+            if( !InitKinBody(*itbody) ) {
                 RAVELOG_WARNA("failed to init kinbody\n");
+            }
         }
         return true;
     }
@@ -74,8 +75,9 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         RAVELOG_DEBUGA("destroying pqp collision\n");
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
-        FOREACHC(itbody, vbodies)
-            SetCollisionData(*itbody, boost::shared_ptr<void>());
+        FOREACHC(itbody, vbodies) {
+            SetCollisionData(*itbody, UserDataPtr());
+        }
     }
 
     virtual bool InitKinBody(KinBodyPtr pbody)
@@ -132,16 +134,16 @@ class CollisionCheckerPQP : public CollisionCheckerBase
             RAVELOG_DEBUG("setting pqp distance computation\n");
             _benabledis = true;
         }
-        else
+        else {
             _benabledis = false;
-
+        }
         _benablecol = true;
-
-        if(options & CO_UseTolerance) 
+        if(options & CO_UseTolerance) {
             _benabletol = true;
-        else
+        }
+        else {
             _benabletol = false;
-    
+        }
         _options = options;
 
         return true;
@@ -152,8 +154,9 @@ class CollisionCheckerPQP : public CollisionCheckerBase
 
     virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report)
     {
-        if(!!report)
+        if(!!report) {
             report->Reset(_options);
+        }
         std::vector<KinBodyConstPtr> vexcluded;
         vexcluded.push_back(pbody1);
         return CheckCollision(pbody1,vexcluded,std::vector<KinBody::LinkConstPtr>(),report);
@@ -169,8 +172,9 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         pbody2->GetAttached(s2);
         FOREACH(it1,s1) {
             FOREACH(it2,s2) {
-                if( CheckCollisionP(KinBodyConstPtr(*it1),KinBodyConstPtr(*it2),report) )
+                if( CheckCollisionP(KinBodyConstPtr(*it1),KinBodyConstPtr(*it2),report) ) {
                     return true;
+                }
             }
         }
 
@@ -184,9 +188,9 @@ class CollisionCheckerPQP : public CollisionCheckerBase
 
     virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report)
     {
-        if(!!report)
+        if(!!report) {
             report->Reset(_options);
-    
+        }
         PQP_REAL R1[3][3], R2[3][3], T1[3], T2[3];
         GetPQPTransformFromTransform(plink1->GetTransform(),R1,T1);
         GetPQPTransformFromTransform(plink2->GetTransform(),R2,T2);
@@ -195,10 +199,12 @@ class CollisionCheckerPQP : public CollisionCheckerBase
 
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report)
     {
-        if(!!report )
+        if(!!report ) {
             report->Reset(_options);
-        if( pbody->IsAttached(plink->GetParent()) )
+        }
+        if( pbody->IsAttached(plink->GetParent()) ) {
             return false;
+        }
         std::set<KinBodyPtr> setattached;
         pbody->GetAttached(setattached);
         FOREACH(itbody,setattached) {
@@ -211,9 +217,9 @@ class CollisionCheckerPQP : public CollisionCheckerBase
     
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
     {
-        if(!!report)
+        if(!!report) {
             report->Reset(_options);
-    
+        }
         int tmpnumcols = 0;
         int tmpnumwithintol = 0;
         bool retval;
@@ -234,41 +240,43 @@ class CollisionCheckerPQP : public CollisionCheckerBase
             }
             KinBodyPtr pbody2 = *itbody;
         
-            if(plink->GetParent()->IsAttached(KinBodyConstPtr(pbody2)) )
+            if(plink->GetParent()->IsAttached(KinBodyConstPtr(pbody2)) ) {
                 continue;
-
-            if( find(vbodyexcluded.begin(),vbodyexcluded.end(),pbody2) != vbodyexcluded.end() )
+            }
+            if( find(vbodyexcluded.begin(),vbodyexcluded.end(),pbody2) != vbodyexcluded.end() ) {
                 continue;
-
+            }
             std::vector<KinBody::LinkPtr> veclinks2 = pbody2->GetLinks();
             pbody2->GetBodyTransformations(vtrans2);
             GetPQPTransformFromTransform(vtrans1[plink->GetIndex()],R1,T1);
 
             exclude_link2 = false;
             for(int j = 0; j < (int)vtrans2.size(); j++) {
-
-                if(plink == veclinks2[j])
+                if(plink == veclinks2[j]) {
                     continue;
-
-                if( find(vlinkexcluded.begin(),vlinkexcluded.end(),veclinks2[j]) != vlinkexcluded.end() )
+                }
+                if( find(vlinkexcluded.begin(),vlinkexcluded.end(),veclinks2[j]) != vlinkexcluded.end() ) {
                     continue;
-
+                }
                 GetPQPTransformFromTransform(vtrans2[j],R2,T2);
 
                 retval = DoPQP(plink,R1,T1,veclinks2[j],R2,T2,report);
-                if(!report && _benablecol && !_benabledis && !_benabletol && retval)
+                if(!report && _benablecol && !_benabledis && !_benabletol && retval) {
                     return true;
+                }
                 //return tolerance check result when it is the only thing enabled and there is no report
-                if(!report && !_benablecol && !_benabledis && _benabletol && retval)
+                if(!report && !_benablecol && !_benabledis && _benabletol && retval) {
                     return true;
+                }
             }
             
             if(!!report) {
-                if(report->numWithinTol > 0)
+                if(report->numWithinTol > 0) {
                     tmpnumwithintol++;
-             
-                if(report->numCols > 0)
+                }
+                if(report->numCols > 0) {
                     tmpnumcols++;
+                }
             }
         }
     
@@ -289,8 +297,9 @@ class CollisionCheckerPQP : public CollisionCheckerBase
         std::set<KinBodyPtr> vattached;
         pbody->GetAttached(vattached);
         FOREACHC(itbody, vattached) {
-            if( CheckCollisionP(*itbody, vbodyexcluded, vlinkexcluded, report) )
+            if( CheckCollisionP(*itbody, vbodyexcluded, vlinkexcluded, report) ) {
                 return true;
+            }
         }
 
         return false;
@@ -298,30 +307,33 @@ class CollisionCheckerPQP : public CollisionCheckerBase
     
     virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr())
     {
-        if(!!report )
+        if(!!report ) {
             report->Reset(_options);
+        }
         throw openrave_exception("PQP collision checker does not support ray collision queries\n");
     }
     virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
     {
-        if(!!report )
+        if(!!report ) {
             report->Reset(_options);
+        }
         throw openrave_exception("PQP collision checker does not support ray collision queries\n");
     }
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report = CollisionReportPtr())
     {
-        if(!!report )
+        if(!!report ) {
             report->Reset(_options);
+        }
         throw openrave_exception("PQP collision checker does not support ray collision queries\n");
     }
     virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
     {
-        if( pbody->GetLinks().size() <= 1 )
+        if( pbody->GetLinks().size() <= 1 ) {
             return false;
-
-        if(!!report )
+        }
+        if(!!report ) {
             report->Reset(_options);
-
+        }
         // check collision, ignore adjacent bodies
         FOREACHC(itset, pbody->GetNonAdjacentLinks()) {
             BOOST_ASSERT( (*itset&0xffff) < (int)pbody->GetLinks().size() && (*itset>>16) < (int)pbody->GetLinks().size() );
@@ -336,11 +348,10 @@ class CollisionCheckerPQP : public CollisionCheckerBase
 
     boost::shared_ptr<PQP_Model> GetLinkModel(KinBody::LinkConstPtr plink)
     {
-        KinBodyInfoPtr pinfo = boost::static_pointer_cast<KinBodyInfo>(plink->GetParent()->GetCollisionData());
+        KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(plink->GetParent()->GetCollisionData());
         BOOST_ASSERT( pinfo->pbody == plink->GetParent());
         return pinfo->vlinks.at(plink->GetIndex());
     }
-
 
     void SetTolerance(dReal tol){_benabletol = true; _tolerance = tol;}
 
@@ -370,43 +381,46 @@ class CollisionCheckerPQP : public CollisionCheckerBase
             }
             KinBodyPtr pbody2 = *itbody;
         
-            if(pbody1->IsAttached(KinBodyConstPtr(pbody2)) )
+            if(pbody1->IsAttached(KinBodyConstPtr(pbody2)) ) {
                 continue;
-
-            if( find(vbodyexcluded.begin(),vbodyexcluded.end(),pbody2) != vbodyexcluded.end() )
+            }
+            if( find(vbodyexcluded.begin(),vbodyexcluded.end(),pbody2) != vbodyexcluded.end() ) {
                 continue;
-
+            }
 
             std::vector<KinBody::LinkPtr> veclinks2 = pbody2->GetLinks();
             pbody2->GetBodyTransformations(vtrans2);
         
             exclude_link1 = false;
             for(int i = 0; i < (int)vtrans1.size(); i++) {
-                if(find(vlinkexcluded.begin(),vlinkexcluded.end(),veclinks1[i]) != vlinkexcluded.end())
+                if(find(vlinkexcluded.begin(),vlinkexcluded.end(),veclinks1[i]) != vlinkexcluded.end()) {
                     continue;
-            
+                }
                 GetPQPTransformFromTransform(vtrans1[i],R1,T1);
 
                 exclude_link2 = false;
                 for(int j = 0; j < (int)vtrans2.size(); j++) {
-                    if(find(vlinkexcluded.begin(),vlinkexcluded.end(),veclinks2[j]) != vlinkexcluded.end())
+                    if(find(vlinkexcluded.begin(),vlinkexcluded.end(),veclinks2[j]) != vlinkexcluded.end()) {
                         continue;
-
+                    }
                     GetPQPTransformFromTransform(vtrans2[j],R2,T2);
                     retval = DoPQP(veclinks1[i],R1,T1,veclinks2[j],R2,T2,report);
-                    if(!report && _benablecol && !_benabledis && !_benabletol && retval)
+                    if(!report && _benablecol && !_benabledis && !_benabletol && retval) {
                         return true;
+                    }
                     //return tolerance check result when it is the only thing enabled and there is no report
-                    if(!report && !_benablecol && !_benabledis && _benabletol && retval)
+                    if(!report && !_benablecol && !_benabledis && _benabletol && retval) {
                         return true;
+                    }
                 }
             }
             if(!!report) {
-                if(report->numWithinTol > 0)
+                if(report->numWithinTol > 0) {
                     tmpnumwithintol++;
-             
-                if(report->numCols > 0)
+                }
+                if(report->numCols > 0) {
                     tmpnumcols++;
+                }
             }
         }
         if(!!report) {
@@ -425,11 +439,13 @@ class CollisionCheckerPQP : public CollisionCheckerBase
             FOREACHC(itlink2,pbody2->GetLinks()) {
                 GetPQPTransformFromTransform((*itlink2)->GetTransform(),R2,T2);
                 bool retval = DoPQP(*itlink1,R1,T1,*itlink2,R2,T2,report);
-                if(!report && _benablecol && !_benabledis && !_benabletol && retval)
+                if(!report && _benablecol && !_benabledis && !_benabletol && retval) {
                     return true;
+                }
                 //return tolerance check result when it is the only thing enabled and there is no report
-                if(!report && !_benablecol && !_benabledis && _benabletol && retval)
+                if(!report && !_benablecol && !_benabledis && _benabletol && retval) {
                     return true;
+                }
             }
         }
 
@@ -446,11 +462,13 @@ class CollisionCheckerPQP : public CollisionCheckerBase
             GetPQPTransformFromTransform((*itlink)->GetTransform(),R2,T2);
             bool retval = DoPQP(plink,R1,T1,*itlink,R2,T2,report);
             success |= retval;
-            if(!report && _benablecol && !_benabledis && !_benabletol && retval)
+            if(!report && _benablecol && !_benabledis && !_benabletol && retval) {
                 return true;
+            }
             //return tolerance check result when it is the only thing enabled and there is no report
-            if(!report && !_benablecol && !_benabledis && _benabletol && retval)
+            if(!report && !_benablecol && !_benabledis && _benabletol && retval) {
                 return true;
+            }
         }
 
         return success;
@@ -458,16 +476,14 @@ class CollisionCheckerPQP : public CollisionCheckerBase
 
     Vector PQPRealToVector(const Vector& in, const PQP_REAL R[3][3], const PQP_REAL T[3])
     {
-        return Vector(in.x*R[0][0]+in.y*R[0][1]+in.z*R[0][2]+T[0],
-                      in.x*R[1][0]+in.y*R[1][1]+in.z*R[1][2]+T[1],
-                      in.x*R[2][0]+in.y*R[2][1]+in.z*R[2][2]+T[2]);
+        return Vector(in.x*R[0][0]+in.y*R[0][1]+in.z*R[0][2]+T[0], in.x*R[1][0]+in.y*R[1][1]+in.z*R[1][2]+T[1], in.x*R[2][0]+in.y*R[2][1]+in.z*R[2][2]+T[2]);
     }
 
     bool DoPQP(KinBody::LinkConstPtr link1, PQP_REAL R1[3][3], PQP_REAL T1[3], KinBody::LinkConstPtr link2, PQP_REAL R2[3][3], PQP_REAL T2[3], CollisionReportPtr report)
     {
-        if( !link1->IsEnabled() || !link2->IsEnabled() )
+        if( !link1->IsEnabled() || !link2->IsEnabled() ) {
             return false;
-
+        }
         boost::shared_ptr<PQP_Model> m1 = GetLinkModel(link1);
         boost::shared_ptr<PQP_Model> m2 = GetLinkModel(link2);
         bool bcollision = false;

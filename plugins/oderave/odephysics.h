@@ -146,14 +146,14 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         _report.reset(new CollisionReport());
 
         odespace->SetSynchornizationCallback(boost::bind(&ODEPhysicsEngine::_SyncCallback, shared_physics(),_1));
-        if( !odespace->InitEnvironment() )
+        if( !odespace->InitEnvironment() ) {
             return false;
-
+        }
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
-        FOREACHC(itbody, vbodies)
+        FOREACHC(itbody, vbodies) {
             InitKinBody(*itbody);
-
+        }
         SetGravity(_gravity);
         return true;
     }
@@ -168,7 +168,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
     
     virtual bool InitKinBody(KinBodyPtr pbody)
     {
-        boost::shared_ptr<void> pinfo = odespace->InitKinBody(pbody);
+        OpenRAVE::UserDataPtr pinfo = odespace->InitKinBody(pbody);
         SetPhysicsData(pbody, pinfo);
         return !!pinfo;
     }
@@ -189,30 +189,37 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         return false;
     }
 
-    virtual bool SetLinkVelocity(KinBody::LinkPtr plink, const Vector& linearvel, const Vector& angularvel)
+    virtual bool SetLinkVelocity(KinBody::LinkPtr plink, const Vector& _linearvel, const Vector& angularvel)
     {
-        RAVELOG_ERRORA("setting ode body velocities not supported!\n");
-        return false;
+        odespace->Synchronize(plink->GetParent());
+        dBodyID body = odespace->GetLinkBody(plink);
+        if( !body ) {
+            return false;
+        }
+        Vector linearvel = _linearvel + angularvel.cross(plink->GetTransform()*plink->GetCOMOffset() - plink->GetTransform().trans);
+        dBodySetLinearVel(body, linearvel.x,linearvel.y,linearvel.z);
+        dBodySetAngularVel(body, angularvel.x, angularvel.y, angularvel.z);
+        return true;
     }
-    virtual bool SetBodyVelocity(KinBodyPtr pbody, const Vector& linearvel, const Vector& angularvel, const std::vector<OpenRAVE::dReal>& pJointVelocity)
+
+    virtual bool SetLinkVelocities(KinBodyPtr pbody, const std::vector<std::pair<Vector,Vector> >& velocities)
     {
-        RAVELOG_ERRORA("setting ode body velocities not supported!\n");
-        return false;
-    }
-    virtual bool SetBodyVelocity(KinBodyPtr pbody, const std::vector<Vector>& pLinearVelocities, const std::vector<Vector>& pAngularVelocities)
-    {
+        bool bsuccess = true;
         odespace->Synchronize(pbody);
         FOREACHC(itlink, pbody->GetLinks()) {
             dBodyID body = odespace->GetLinkBody(*itlink);
             if( body ) {
-                Vector v = pLinearVelocities.at((*itlink)->GetIndex());
-                dBodySetLinearVel(body, v.x,v.y,v.z);
-                v = pAngularVelocities.at((*itlink)->GetIndex());
-                dBodySetAngularVel(body, v.x,v.y,v.z);
+                Vector angularvel = velocities.at((*itlink)->GetIndex()).second;
+                dBodySetAngularVel(body, angularvel.x,angularvel.y,angularvel.z);
+                Vector linearvel = velocities.at((*itlink)->GetIndex()).first;
+                linearvel += angularvel.cross((*itlink)->GetTransform()*(*itlink)->GetCOMOffset() - (*itlink)->GetTransform().trans);
+                dBodySetLinearVel(body, linearvel.x,linearvel.y,linearvel.z);
+            }
+            else {
+                bsuccess = false;
             }
         }
-
-        return true;
+        return bsuccess;
     }
 
     virtual bool GetLinkVelocity(KinBody::LinkConstPtr plink, Vector& linearvel, Vector& angularvel)
@@ -220,48 +227,31 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         odespace->Synchronize(KinBodyConstPtr(plink->GetParent()));
         dBodyID body = odespace->GetLinkBody(plink);
         if( body ) {
-            const dReal* p = dBodyGetLinearVel(body);
-            linearvel = Vector(p[0], p[1], p[2]);
-            p = dBodyGetAngularVel(body);
+            const dReal* p = dBodyGetAngularVel(body);
             angularvel = Vector(p[0], p[1], p[2]);
+            p = dBodyGetLinearVel(body);
+            linearvel = Vector(p[0], p[1], p[2]);
+            linearvel -= angularvel.cross(plink->GetTransform()*plink->GetCOMOffset() - plink->GetTransform().trans);
         }
-        else
+        else {
             angularvel = linearvel = Vector(0,0,0);
-        return true;
-    }
-
-    virtual bool GetBodyVelocity(KinBodyConstPtr pbody, Vector& linearvel, Vector& angularvel, std::vector<OpenRAVE::dReal>& pJointVelocity)
-    {
-        GetLinkVelocity(pbody->GetLinks().at(0),linearvel,angularvel);
-
-        pJointVelocity.resize(pbody->GetDOF());
-        vector<JointGetFn>::iterator itfn;
-        FOREACHC(it, pbody->GetJoints()) {
-            dJointID joint = odespace->GetJoint(*it);
-            vector<OpenRAVE::dReal>::iterator itvel = pJointVelocity.begin()+(*it)->GetDOFIndex();
-            FORIT(itfn, _jointgetvel[dJointGetType(joint)])
-                *itvel++ = (*itfn)(joint);
         }
-
         return true;
     }
 
-    virtual bool GetBodyVelocity(KinBodyConstPtr pbody, std::vector<Vector>& pLinearVelocities, std::vector<Vector>& pAngularVelocities)
+    virtual bool GetLinkVelocities(KinBodyConstPtr pbody, std::vector<std::pair<Vector,Vector> >& velocities)
     {
         odespace->Synchronize(pbody);
-        pLinearVelocities.resize(pbody->GetLinks().size());
-        pAngularVelocities.resize(pbody->GetLinks().size());
+        velocities.resize(0);
+        velocities.resize(pbody->GetLinks().size());
         FOREACHC(itlink, pbody->GetLinks()) {
             dBodyID body = odespace->GetLinkBody(*itlink);
             if( body ) {
-                const dReal* pf = dBodyGetLinearVel(body);
-                pLinearVelocities.at((*itlink)->GetIndex()) = Vector(pf[0], pf[1], pf[2]);
-                pf = dBodyGetAngularVel(body);
-                pAngularVelocities.at((*itlink)->GetIndex()) = Vector(pf[0], pf[1], pf[2]);
-            }
-            else {
-                pLinearVelocities.at((*itlink)->GetIndex()) = Vector(0,0,0);
-                pAngularVelocities.at((*itlink)->GetIndex()) = Vector(0,0,0);
+                const dReal* pf = dBodyGetAngularVel(body);
+                Vector angularvel(pf[0], pf[1], pf[2]);
+                velocities.at((*itlink)->GetIndex()).second = angularvel;
+                pf = dBodyGetLinearVel(body);
+                velocities.at((*itlink)->GetIndex()).first = Vector(pf[0], pf[1], pf[2]) - angularvel.cross((*itlink)->GetTransform()*(*itlink)->GetCOMOffset() - (*itlink)->GetTransform().trans);
             }
         }
         return true;
@@ -283,29 +273,18 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         return true;
     }
 
-    virtual bool SetJointVelocity(KinBody::JointPtr pjoint, const std::vector<OpenRAVE::dReal>& pJointVelocity)
-    {
-        dJointID joint = odespace->GetJoint(pjoint);
-        BOOST_ASSERT( joint != NULL );
-
-        std::vector<OpenRAVE::dReal>::const_iterator itvel = pJointVelocity.begin();
-        odespace->Synchronize(KinBodyConstPtr(pjoint->GetParent()));
-        for(int i = 0; i < pjoint->GetDOF(); ++i)
-            odespace->_jointset[dJointGetType(joint)](joint, dParamVel + dParamGroup * i, *itvel++);
-        return true;
-    }
-
-    virtual bool GetJointVelocity(KinBody::JointConstPtr pjoint, std::vector<OpenRAVE::dReal>& pJointVelocity)
+    virtual bool GetJointVelocity(KinBody::JointConstPtr pjoint, std::vector<OpenRAVE::dReal>& vJointVelocity)
     {
         dJointID joint = odespace->GetJoint(pjoint);
         BOOST_ASSERT( joint != NULL );
 
         odespace->Synchronize(KinBodyConstPtr(pjoint->GetParent()));
         vector<JointGetFn>::iterator itfn;
-        pJointVelocity.resize(pjoint->GetDOF());
-        vector<OpenRAVE::dReal>::iterator itvel = pJointVelocity.begin();
-        FORIT(itfn, _jointgetvel[dJointGetType(joint)])
+        vJointVelocity.resize(pjoint->GetDOF());
+        vector<OpenRAVE::dReal>::iterator itvel = vJointVelocity.begin();
+        FORIT(itfn, _jointgetvel[dJointGetType(joint)]) {
             *itvel++ = (*itfn)(joint);
+        }
         return true;
     }
 
@@ -326,9 +305,9 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
     virtual bool SetBodyTorque(KinBody::LinkPtr plink, const Vector& torque, bool bAdd)
     {
         dBodyID body = odespace->GetLinkBody(plink);
-        if( body == NULL )
+        if( body == NULL ) {
             return false;
-
+        }
         odespace->Synchronize(KinBodyConstPtr(plink->GetParent()));
 
         if( !bAdd ) {
@@ -394,7 +373,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         // synchronize all the objects from the ODE world to the OpenRAVE world
         Transform t;
         FOREACHC(itbody, vbodies) {
-            ODESpace::KinBodyInfoPtr pinfo = boost::static_pointer_cast<ODESpace::KinBodyInfo>((*itbody)->GetPhysicsData());
+            ODESpace::KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>((*itbody)->GetPhysicsData());
             BOOST_ASSERT( pinfo->vlinks.size() == (*itbody)->GetLinks().size());
             for(size_t i = 0; i < pinfo->vlinks.size(); ++i) {
                 t.rot = *(RaveVector<dReal>*)dBodyGetQuaternion(pinfo->vlinks[i]->body);
@@ -410,7 +389,7 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
 
     
  private:
-    static boost::shared_ptr<void> GetPhysicsInfo(KinBodyConstPtr pbody) { return pbody->GetPhysicsData(); }
+    static OpenRAVE::UserDataPtr GetPhysicsInfo(KinBodyConstPtr pbody) { return pbody->GetPhysicsData(); }
     
     static void nearCallback(void *data, dGeomID o1, dGeomID o2)
     {
@@ -527,8 +506,9 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
             if( (*itlink)->body != NULL ) {
                 dBodySetAngularVel((*itlink)->body, 0, 0, 0);
                 dBodySetLinearVel((*itlink)->body, 0, 0, 0);
-                dBodySetForce((*itlink)->body, 0, 0, 0);
-                dBodySetTorque((*itlink)->body, 0, 0, 0);
+                // not sure if should reset forces since sync call can happen much later
+                //dBodySetForce((*itlink)->body, 0, 0, 0);
+                //dBodySetTorque((*itlink)->body, 0, 0, 0);
             }
         }
     }

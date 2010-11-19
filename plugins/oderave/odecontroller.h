@@ -74,9 +74,7 @@ public:
     virtual RobotBasePtr GetRobot() const { return _probot; }
 
     virtual ODESpace::KinBodyInfoPtr GetODESpace() {
-        if( GetEnv()->GetPhysicsEngine()->GetXMLId() == "ode" )
-            return boost::static_pointer_cast<ODESpace::KinBodyInfo>(_probot->GetPhysicsData());
-        return ODESpace::KinBodyInfoPtr();
+        return boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>(_probot->GetPhysicsData());
     }
 
     bool SendCommand(std::ostream& os, std::istream& is)

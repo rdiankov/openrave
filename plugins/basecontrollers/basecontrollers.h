@@ -175,79 +175,33 @@ class IdealController : public ControllerBase
 private:
     virtual void _SetDOFValues(const std::vector<dReal>& values)
     {
-        vector<dReal> curvalues;
+        vector<dReal> curvalues, curvel;
         _probot->GetDOFValues(curvalues);
+        _probot->GetDOFVelocities(curvel);
+        Vector linearvel, angularvel;
+        _probot->GetLinks().at(0)->GetVelocity(linearvel,angularvel);
         int i = 0;
         FOREACH(it,_dofindices) {
             curvalues.at(*it) = values.at(i++);
+            curvel.at(*it) = 0;
         }
-//        vector<Vector> vLinearVelocities, vAngularVelocities;
-//        GetEnv()->GetPhysicsEngine()->GetBodyVelocity(KinBodyPtr(_probot),vLinearVelocities,vAngularVelocities);
-//        vector<Vector> vForces(_probot->GetLinks().size()), vTorques(_probot->GetLinks().size());
-//        FOREACH(it,_probot->GetLinks()) {
-//            GetEnv()->GetPhysicsEngine()->GetLinkForceTorque(KinBody::LinkConstPtr(*it), vForces.at((*it)->GetIndex()), vTorques.at((*it)->GetIndex()));
-//        }
         _probot->SetJointValues(curvalues,true);
-//        GetEnv()->GetPhysicsEngine()->SetBodyVelocity(KinBodyPtr(_probot),vLinearVelocities,vAngularVelocities);
-//        FOREACH(it,_probot->GetLinks()) {
-//            (*it)->SetForce(vForces.at((*it)->GetIndex()), (*it)->GetTransform()*(*it)->GetCOMOffset(), false);
-//            (*it)->SetTorque(vTorques.at((*it)->GetIndex()), false);
-//        }
+        _probot->SetDOFVelocities(curvel,linearvel,angularvel);
     }
     virtual void _SetDOFValues(const std::vector<dReal>& values, const Transform& t)
     {
         BOOST_ASSERT(_nControlTransformation);
-        vector<dReal> curvalues;
+        vector<dReal> curvalues, curvel;
         _probot->GetDOFValues(curvalues);
+        _probot->GetDOFVelocities(curvel);
         int i = 0;
         FOREACH(it,_dofindices) {
             curvalues.at(*it) = values.at(i++);
+            curvel.at(*it) = 0;
         }
         _probot->SetJointValues(curvalues,t, true);
+        _probot->SetDOFVelocities(curvel,Vector(),Vector());
     }
-
-    /// reset velocities of all controlling links
-    /// must do this in order to operating along side a running physics engine
-//    virtual void _ResetPhysics(vector<Vector>& vLinearVelocities, vector<Vector>& vAngularVelocities)
-//    {
-//        FOREACH(it,_dofindices) {
-//            KinBody::JointPtr pjoint = _probot->GetJointFromDOFIndex(*it);
-//            int index = _GetChildLink(pjoint)->GetIndex();
-//            vLinearVelocities.at(index) = Vector();
-//            vAngularVelocities.at(index) = Vector();
-//        }
-//        if( _nControlTransformation ) {
-//            vLinearVelocities.at(0) = Vector();
-//            vAngularVelocities.at(0) = Vector();
-//        }
-//        GetEnv()->GetPhysicsEngine()->SetBodyVelocity(KinBodyPtr(_probot),vLinearVelocities,vAngularVelocities);
-//        
-////        vector<Vector> vForces(_probot->GetLinks().size()), vTorques(_probot->GetLinks().size())
-////        FOREACH(it,_probot->GetLinks()) {
-////            GetEnv()->GetPhysicsEngine()->GetLinkForceTorque(KinBody::LinkConstPtr(*it), vForces.at((*it)->GetIndex()), vTorques.at((*it)->GetIndex()));
-////        }
-////        FOREACH(it,_probot->GetLinks()) {
-////            (*it)->SetForce(vForces.at((*it)->GetIndex()), (*it)->GetTransform()*(*it)->GetCOMOffset(), false);
-////            (*it)->SetTorque(vTorques.at((*it)->GetIndex()), false);
-////        }
-//    }
-//
-//    virtual KinBody::LinkPtr _GetChildLink(KinBody::JointConstPtr pjoint) {
-//        if( !!pjoint->GetFirstAttached() && !!pjoint->GetSecondAttached() ) {
-//            if( pjoint->GetFirstAttached()->GetParentLink() == pjoint->GetSecondAttached() )
-//                return pjoint->GetFirstAttached();
-//            else if( pjoint->GetSecondAttached()->GetParentLink() == pjoint->GetFirstAttached() )
-//                return pjoint->GetSecondAttached();
-//        }
-//        else if( !!pjoint->GetFirstAttached() ) {
-//            return pjoint->GetFirstAttached();
-//        }
-//        else if( !!pjoint->GetSecondAttached() ) {
-//            return pjoint->GetSecondAttached();
-//        }
-//        RAVELOG_WARN(str(boost::format("joint %s cannot find child link\n")%pjoint->GetName()));
-//        return KinBody::LinkPtr();
-//    }
 
     RobotBasePtr _probot;           ///< controlled body
     dReal _fSpeed;                ///< how fast the robot should go

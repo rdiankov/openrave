@@ -48,7 +48,7 @@ public:
     virtual UserDataPtr GetUserData() const { return __pUserData; }
 
     /// \brief Returns the OpenRAVE global state, used for initializing plugins
-    virtual boost::shared_ptr<void> GlobalState() = 0;
+    virtual UserDataPtr GlobalState() = 0;
 
     /// \deprecated (10/09/23) see \ref RaveCreateInterface
     virtual InterfaceBasePtr CreateInterface(InterfaceType type,const std::string& interfacename) RAVE_DEPRECATED =0;

@@ -64,7 +64,7 @@ class ODESpace : public boost::enable_shared_from_this<ODESpace>
 
 public:
     // information about the kinematics of the body
-    class KinBodyInfo : public boost::enable_shared_from_this<KinBodyInfo>
+    class KinBodyInfo : public boost::enable_shared_from_this<KinBodyInfo>, public OpenRAVE::UserData
     {
     public:
         struct LINK
@@ -178,7 +178,7 @@ public:
 
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
     typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
-    typedef boost::function<boost::shared_ptr<void>(KinBodyConstPtr)> GetInfoFn;
+    typedef boost::function<OpenRAVE::UserDataPtr(KinBodyConstPtr)> GetInfoFn;
     typedef boost::function<void(KinBodyInfoPtr)> SynchornizeCallbackFn;
     
  ODESpace(EnvironmentBasePtr penv, const GetInfoFn& infofn, bool bCreateJoints) : _penv(penv), GetInfo(infofn), _bCreateJoints(bCreateJoints)
@@ -214,7 +214,7 @@ public:
     
     bool IsInitialized() { return !!_ode; }
 
-    boost::shared_ptr<void> InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr()) {
+    OpenRAVE::UserDataPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr()) {
         EnvironmentMutex::scoped_lock lock(pbody->GetEnv()->GetMutex());
 
         // create all ode bodies and joints
@@ -414,7 +414,7 @@ public:
 
     bool Enable(KinBodyConstPtr pbody, bool bEnable)
     {
-        KinBodyInfoPtr pinfo = boost::static_pointer_cast<KinBodyInfo>(GetInfo(pbody));
+        KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(GetInfo(pbody));
         BOOST_ASSERT( pinfo->pbody == pbody );
         FOREACH(it, pinfo->vlinks)
             (*it)->Enable(bEnable);
@@ -423,7 +423,7 @@ public:
 
     bool EnableLink(KinBody::LinkConstPtr plink, bool bEnable)
     {
-        KinBodyInfoPtr pinfo = boost::static_pointer_cast<KinBodyInfo>(GetInfo(plink->GetParent()));
+        KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(GetInfo(plink->GetParent()));
         BOOST_ASSERT( pinfo->pbody == plink->GetParent() );
         BOOST_ASSERT( plink->GetIndex() >= 0 && plink->GetIndex() < (int)pinfo->vlinks.size());
         pinfo->vlinks[plink->GetIndex()]->Enable(bEnable);
@@ -438,7 +438,7 @@ public:
         vector<KinBodyPtr> vbodies;
         _penv->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
-            KinBodyInfoPtr pinfo = boost::static_pointer_cast<KinBodyInfo>(GetInfo(*itbody));
+            KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(GetInfo(*itbody));
             BOOST_ASSERT( pinfo->pbody == *itbody );
             if( pinfo->nLastStamp != (*itbody)->GetUpdateStamp() )
                 Synchronize(pinfo);
@@ -447,7 +447,7 @@ public:
 
     void Synchronize(KinBodyConstPtr pbody)
     {
-        KinBodyInfoPtr pinfo = boost::static_pointer_cast<KinBodyInfo>(GetInfo(pbody));
+        KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(GetInfo(pbody));
         BOOST_ASSERT( pinfo->pbody == pbody );
         if( pinfo->nLastStamp != pbody->GetUpdateStamp() )
             Synchronize(pinfo);
@@ -455,14 +455,14 @@ public:
 
     dSpaceID GetBodySpace(KinBodyConstPtr pbody)
     {
-        KinBodyInfoPtr pinfo = boost::static_pointer_cast<KinBodyInfo>(GetInfo(pbody));
+        KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(GetInfo(pbody));
         BOOST_ASSERT(pinfo->pbody == pbody );
         return pinfo->space;
     }
 
     dBodyID GetLinkBody(KinBody::LinkConstPtr plink)
     {
-        KinBodyInfoPtr pinfo = boost::static_pointer_cast<KinBodyInfo>(GetInfo(plink->GetParent()));
+        KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(GetInfo(plink->GetParent()));
         BOOST_ASSERT( pinfo->pbody == plink->GetParent() );
         BOOST_ASSERT( plink->GetIndex() >= 0 && plink->GetIndex() < (int)pinfo->vlinks.size());
         return pinfo->vlinks[plink->GetIndex()]->body;
@@ -471,7 +471,7 @@ public:
 
     dGeomID GetLinkGeom(KinBody::LinkConstPtr plink)
     {
-        KinBodyInfoPtr pinfo = boost::static_pointer_cast<KinBodyInfo>(GetInfo(plink->GetParent()));
+        KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(GetInfo(plink->GetParent()));
         BOOST_ASSERT( pinfo->pbody == plink->GetParent() );
         BOOST_ASSERT( plink->GetIndex() >= 0 && plink->GetIndex() < (int)pinfo->vlinks.size());
         return pinfo->vlinks[plink->GetIndex()]->geom;
@@ -479,7 +479,7 @@ public:
 
     dJointID GetJoint(KinBody::JointConstPtr pjoint)
     {
-        KinBodyInfoPtr pinfo = boost::static_pointer_cast<KinBodyInfo>(GetInfo(pjoint->GetParent()));
+        KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(GetInfo(pjoint->GetParent()));
         BOOST_ASSERT( pinfo->pbody == pjoint->GetParent() );
         BOOST_ASSERT( pjoint->GetParent()->GetJointFromDOFIndex(pjoint->GetDOFIndex()) == pjoint );
         BOOST_ASSERT( pjoint->GetJointIndex() >= 0);
@@ -516,7 +516,7 @@ private:
     {
         EnvironmentMutex::scoped_lock lock(_penv->GetMutex());
         KinBodyPtr pbody(_pbody);
-        KinBodyInfoPtr pinfo = boost::static_pointer_cast<KinBodyInfo>(GetInfo(pbody));
+        KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(GetInfo(pbody));
         if( !pinfo )
             return;        
         BOOST_ASSERT(boost::shared_ptr<ODESpace>(pinfo->_odespace) == shared_from_this());

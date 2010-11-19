@@ -154,7 +154,7 @@ protected:
     /// Links that are joined together are ignored.
     virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
-	virtual void SetCollisionData(KinBodyPtr pbody, boost::shared_ptr<void> data) { pbody->SetCollisionData(data); }
+	virtual void SetCollisionData(KinBodyPtr pbody, UserDataPtr data) { pbody->SetCollisionData(data); }
 
 private:
     virtual const char* GetHash() const { return OPENRAVE_COLLISIONCHECKER_HASH; }

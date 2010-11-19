@@ -234,7 +234,6 @@ class Environment : public EnvironmentBase
     virtual void Reset()
     {
         // destruction order is *very* important, don't touch it without consultation
-
         RAVELOG_DEBUGA("resetting raveviewer\n");
         if( !!_pCurrentViewer ) {
             _pCurrentViewer->deselect();
@@ -243,11 +242,12 @@ class Environment : public EnvironmentBase
     
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         
-        if( !!_pPhysicsEngine )
+        if( !!_pPhysicsEngine ) {
             _pPhysicsEngine->DestroyEnvironment();
-        if( !!_pCurrentChecker )
+        }
+        if( !!_pCurrentChecker ) {
             _pCurrentChecker->DestroyEnvironment();
-
+        }
         {
             boost::mutex::scoped_lock lock(_mutexInterfaces);
             boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
@@ -285,9 +285,6 @@ class Environment : public EnvironmentBase
         listProblems.clear();
         _listOwnedInterfaces.clear();
 
-        // load the dummy physics engine
-        SetPhysicsEngine(PhysicsEngineBasePtr());
-
         if( !!_pCurrentChecker ) {
             _pCurrentChecker->InitEnvironment();
         }
@@ -296,7 +293,7 @@ class Environment : public EnvironmentBase
         }
     }
 
-    virtual boost::shared_ptr<void> GlobalState() { return RaveGlobalState(); }
+    virtual UserDataPtr GlobalState() { return RaveGlobalState(); }
 
     virtual void GetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins) { RaveGetPluginInfo(plugins); }
     virtual void GetLoadedInterfaces(std::map<InterfaceType, std::vector<std::string> >& interfacenames) const { RaveGetLoadedInterfaces(interfacenames); }
@@ -321,7 +318,6 @@ class Environment : public EnvironmentBase
     virtual void OwnInterface(InterfaceBasePtr pinterface)
     {
         CHECK_INTERFACE(pinterface);
-        //RAVELOG_VERBOSEA(str(boost::format("environment owning interface: %s\n")%pinterface->GetXMLId()));
         boost::mutex::scoped_lock lock(_mutexInterfaces);
         _listOwnedInterfaces.push_back(pinterface);
     }
@@ -518,8 +514,8 @@ class Environment : public EnvironmentBase
                     _vecrobots.erase(itrobot);
                 }
             }            
-            (*it)->SetPhysicsData(boost::shared_ptr<void>());
-            (*it)->SetCollisionData(boost::shared_ptr<void>());
+            (*it)->SetPhysicsData(UserDataPtr());
+            (*it)->SetCollisionData(UserDataPtr());
             RemoveEnvironmentId(pbody);
             _vecbodies.erase(it);
             _nBodiesModifiedStamp++;
@@ -598,16 +594,17 @@ class Environment : public EnvironmentBase
     virtual bool SetPhysicsEngine(PhysicsEngineBasePtr pengine)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-
-        if( !!_pPhysicsEngine )
+        if( !!_pPhysicsEngine ) {
             _pPhysicsEngine->DestroyEnvironment();
+        }
         _pPhysicsEngine = pengine;
         if( !_pPhysicsEngine ) {
             RAVELOG_DEBUGA("disabling physics\n");
             _pPhysicsEngine.reset(new DummyPhysicsEngine(shared_from_this()));
         }
-        else
+        else {
             RAVELOG_DEBUGA(str(boost::format("setting %s physics engine\n")%_pPhysicsEngine->GetXMLId()));
+        }
         _pPhysicsEngine->InitEnvironment();
         return true;
     }
@@ -618,8 +615,9 @@ class Environment : public EnvironmentBase
     {
         if( !!pit ) {
             boost::shared_ptr<Environment> penv = pweak.lock();
-            if( !!penv )
+            if( !!penv ) {
                 penv->_listRegisteredCollisionCallbacks.erase(*pit);
+            }
             delete pit;
         }
     }
@@ -642,18 +640,20 @@ class Environment : public EnvironmentBase
     virtual bool SetCollisionChecker(CollisionCheckerBasePtr pchecker)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        if( _pCurrentChecker == pchecker )
+        if( _pCurrentChecker == pchecker ) {
             return true;
-        
-        if( !!_pCurrentChecker )
+        }        
+        if( !!_pCurrentChecker ) {
             _pCurrentChecker->DestroyEnvironment(); // delete all resources
+        }
         _pCurrentChecker = pchecker;
         if( !_pCurrentChecker ) {
             RAVELOG_DEBUGA("disabling collisions\n");
             _pCurrentChecker.reset(new DummyCollisionChecker(shared_from_this()));
         }
-        else
+        else {
             RAVELOG_DEBUGA(str(boost::format("setting %s collision checker\n")%_pCurrentChecker->GetXMLId()));
+        }
         return _pCurrentChecker->InitEnvironment();
     }
 
@@ -744,7 +744,6 @@ class Environment : public EnvironmentBase
 
         // call the physics first to get forces
         _pPhysicsEngine->SimulateStep(fTimeStep);
-
 
         // make a copy instead of locking the mutex pointer since will be calling into user functions
         vector<KinBodyPtr> vecbodies;
@@ -895,23 +894,26 @@ class Environment : public EnvironmentBase
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
         if( !!robot ) {
-            robot->SetGuiData(boost::shared_ptr<void>());
+            robot->SetGuiData(UserDataPtr());
             boost::mutex::scoped_lock lock(_mutexInterfaces);
-            if( std::find(_vecrobots.begin(),_vecrobots.end(),robot) != _vecrobots.end() )
+            if( std::find(_vecrobots.begin(),_vecrobots.end(),robot) != _vecrobots.end() ) {
                 throw openrave_exception(str(boost::format("KinRobot::Init for %s, cannot Init a robot while it is added to the environment\n")%robot->GetName()));
+            }
         }
 
         if( _IsColladaFile(filename) ) {
-            if( !RaveParseColladaFile(shared_from_this(), robot, filename) )
+            if( !RaveParseColladaFile(shared_from_this(), robot, filename) ) {
                 return RobotBasePtr();
+            }
         }
         else {
             InterfaceBasePtr pinterface = robot;
             OpenRAVEXMLParser::InterfaceXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_Robot, pinterface, "robot", atts);
             bool bSuccess = ParseXMLFile(preader, filename);
             robot = RaveInterfaceCast<RobotBase>(pinterface);
-            if( !bSuccess || !robot )
+            if( !bSuccess || !robot ) {
                 return RobotBasePtr();
+            }
             robot->__strxmlfilename = filename;
         }
     
@@ -923,10 +925,11 @@ class Environment : public EnvironmentBase
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
         if( !!robot ) {
-            robot->SetGuiData(boost::shared_ptr<void>());
+            robot->SetGuiData(UserDataPtr());
             boost::mutex::scoped_lock lock(_mutexInterfaces);
-            if( std::find(_vecrobots.begin(),_vecrobots.end(),robot) != _vecrobots.end() )
+            if( std::find(_vecrobots.begin(),_vecrobots.end(),robot) != _vecrobots.end() ) {
                 throw openrave_exception(str(boost::format("KinRobot::Init for %s, cannot Init a robot while it is added to the environment\n")%robot->GetName()));
+            }
         }
 
         // check for collada?
@@ -934,8 +937,9 @@ class Environment : public EnvironmentBase
         OpenRAVEXMLParser::InterfaceXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_Robot, pinterface, "robot", atts);
         bool bSuccess = ParseXMLData(preader, data);
         robot = RaveInterfaceCast<RobotBase>(pinterface);
-        if( !bSuccess || !robot )
+        if( !bSuccess || !robot ) {
             return RobotBasePtr();
+        }
         robot->__strxmlfilename = preader->_filename;
         return robot;
     }
@@ -945,8 +949,9 @@ class Environment : public EnvironmentBase
         try {
             if( _IsColladaFile(filename) ) {
                 KinBodyPtr body;
-                if( !RaveParseColladaFile(shared_from_this(), body, filename) )
+                if( !RaveParseColladaFile(shared_from_this(), body, filename) ) {
                     return KinBodyPtr();
+                }
                 return body;
             }
             else {
@@ -966,23 +971,26 @@ class Environment : public EnvironmentBase
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
         if( !!body ) {
-            body->SetGuiData(boost::shared_ptr<void>());
+            body->SetGuiData(UserDataPtr());
             boost::mutex::scoped_lock lock(_mutexInterfaces);
-            if( std::find(_vecbodies.begin(),_vecbodies.end(),body) != _vecbodies.end() )
+            if( std::find(_vecbodies.begin(),_vecbodies.end(),body) != _vecbodies.end() ) {
                 throw openrave_exception(str(boost::format("KinBody::Init for %s, cannot Init a body while it is added to the environment\n")%body->GetName()));
+            }
         }
 
         if( _IsColladaFile(filename) ) {
-            if( !RaveParseColladaFile(shared_from_this(), body, filename) )
+            if( !RaveParseColladaFile(shared_from_this(), body, filename) ) {
                 return KinBodyPtr();
+            }
         }
         else {
             InterfaceBasePtr pinterface = body;
             OpenRAVEXMLParser::InterfaceXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), PT_KinBody, pinterface, "kinbody", atts);
             bool bSuccess = ParseXMLFile(preader, filename);
             body = RaveInterfaceCast<KinBody>(pinterface);
-            if( !bSuccess || !body )
+            if( !bSuccess || !body ) {
                 return KinBodyPtr();
+            }
             body->__strxmlfilename = filename;
         }
 
@@ -994,7 +1002,7 @@ class Environment : public EnvironmentBase
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
         if( !!body ) {
-            body->SetGuiData(boost::shared_ptr<void>());
+            body->SetGuiData(UserDataPtr());
             boost::mutex::scoped_lock lock(_mutexInterfaces);
             if( std::find(_vecbodies.begin(),_vecbodies.end(),body) != _vecbodies.end() ) {
                 throw openrave_exception(str(boost::format("KinBody::Init for %s, cannot Init a body while it is added to the environment\n")%body->GetName()));
@@ -1052,8 +1060,9 @@ class Environment : public EnvironmentBase
                 }
                 pinterface = probot;
             }
-            else
+            else {
                 return InterfaceBasePtr();
+            }
             pinterface->__strxmlfilename = filename;
         }
         else {
@@ -1081,8 +1090,9 @@ class Environment : public EnvironmentBase
         // check for collada?
         OpenRAVEXMLParser::InterfaceXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), type, pinterface, RaveGetInterfaceName(type), atts);
         bool bSuccess = ParseXMLData(preader, data);
-        if( !bSuccess )
+        if( !bSuccess ) {
             return InterfaceBasePtr();
+        }
         pinterface->__strxmlfilename = preader->_filename;
         return pinterface;
     }
@@ -1108,19 +1118,21 @@ class Environment : public EnvironmentBase
 
     virtual bool AttachViewer(ViewerBasePtr pnewviewer)
     {
-        if( _pCurrentViewer == pnewviewer )
+        if( _pCurrentViewer == pnewviewer ) {
             return true;
-
-        if( !!_pCurrentViewer )
+        }
+        if( !!_pCurrentViewer ) {
             _pCurrentViewer->quitmainloop();
+        }
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         
         _pCurrentViewer = pnewviewer;
-        if( !_pCurrentViewer )
+        if( !_pCurrentViewer ) {
             _pCurrentViewer.reset(new DummyViewer(shared_from_this()));
-
-        if( _pCurrentViewer->GetEnv() != shared_from_this() )
+        }
+        if( _pCurrentViewer->GetEnv() != shared_from_this() ) {
             throw openrave_exception("Viewer needs to be created by the current environment");
+        }
         return true;
     }
 
@@ -1312,8 +1324,9 @@ protected:
                 _vecrobots.push_back(pnewrobot);
             }
             FOREACHC(itbody, r->_vecbodies) {
-                if( _mapBodies.find((*itbody)->GetEnvironmentId()) != _mapBodies.end() )
+                if( _mapBodies.find((*itbody)->GetEnvironmentId()) != _mapBodies.end() ) {
                     continue;
+                }
                 KinBodyPtr pnewbody(new KinBody(PT_KinBody,shared_from_this()));
                 if( !pnewbody->Clone(*itbody,options) ) {
                     RAVELOG_ERRORA("failed to clone body %s\n", (*itbody)->GetName().c_str());
@@ -1400,8 +1413,9 @@ protected:
             _nSimStartTime = r->_nSimStartTime;
         }
 
-        if( !!_threadSimulation )
+        if( !!_threadSimulation ) {
             _threadSimulation->join();
+        }
         _threadSimulation.reset(new boost::thread(boost::bind(&Environment::_SimulationThread,this)));
     }
 
@@ -1432,6 +1446,18 @@ protected:
 
     class DummyPhysicsEngine : public PhysicsEngineBase
     {
+        class PhysicsData : public UserData
+        {
+        public:
+            PhysicsData(KinBodyPtr pbody) {
+                linkvelocities.resize(pbody->GetLinks().size());
+            }
+            virtual ~PhysicsData() {}
+            std::vector< std::pair<Vector, Vector> > linkvelocities;
+        };
+
+        boost::shared_ptr<PhysicsData> _GetData(KinBodyConstPtr pbody) { return boost::dynamic_pointer_cast<PhysicsData>(pbody->GetPhysicsData()); }
+
     public:
         DummyPhysicsEngine(EnvironmentBasePtr penv) : PhysicsEngineBase(penv) {}
         virtual bool SetPhysicsOptions(int physicsoptions) { return true; }
@@ -1439,51 +1465,45 @@ protected:
         
         virtual bool SetPhysicsOptions(std::ostream& sout, std::istream& sinput) { return true; }
 
-        virtual bool InitEnvironment() { return true; }
-        virtual void DestroyEnvironment() {}
+        virtual bool InitEnvironment() {
+            vector<KinBodyPtr> vbodies;
+            GetEnv()->GetBodies(vbodies);
+            FOREACH(itbody, vbodies) {
+                InitKinBody(*itbody);
+            }
+            return true;
+        }
+        virtual void DestroyEnvironment()
+        {
+            vector<KinBodyPtr> vbodies;
+            GetEnv()->GetBodies(vbodies);
+            FOREACH(itbody, vbodies) {
+                DestroyKinBody(*itbody);
+            }
+        }
         
-        virtual bool InitKinBody(KinBodyPtr pbody) { SetPhysicsData(pbody, boost::shared_ptr<void>()); return true; } 
-        virtual bool DestroyKinBody(KinBodyPtr pbody) { SetPhysicsData(pbody, boost::shared_ptr<void>()); return true; }
+        virtual bool InitKinBody(KinBodyPtr pbody) { SetPhysicsData(pbody, UserDataPtr(new PhysicsData(pbody))); return true; } 
+        virtual bool DestroyKinBody(KinBodyPtr pbody) { SetPhysicsData(pbody, UserDataPtr()); return true; }
 
-        virtual bool GetLinkVelocity(KinBody::LinkConstPtr plink, Vector& linearvel, Vector& angularvel) { return true; }
-        virtual bool SetLinkVelocity(KinBody::LinkPtr plink, const Vector& linearvel, const Vector& angularvel) { return true; }
-        virtual bool SetBodyVelocity(KinBodyPtr pbody, const Vector& linearvel, const Vector& angularvel, const std::vector<dReal>& pJointVelocity) { return true; }
-        virtual bool SetBodyVelocity(KinBodyPtr pbody, const std::vector<Vector>& pLinearVelocities, const std::vector<Vector>& pAngularVelocities) { return true; }
-        virtual bool GetBodyVelocity(KinBodyConstPtr pbody, Vector& linearvel, Vector& angularvel)
-        {
-            if( !pbody )
-                return false;
-            linearvel = Vector(0,0,0,0);
-            angularvel = Vector(0,0,0,0);
+        virtual bool GetLinkVelocity(KinBody::LinkConstPtr plink, Vector& linearvel, Vector& angularvel) {
+            std::pair<Vector, Vector> vel = _GetData(plink->GetParent())->linkvelocities.at(plink->GetIndex());
+            linearvel = vel.first;
+            angularvel = vel.second;
+            return true;
+        }
+        bool GetLinkVelocities(KinBodyConstPtr body, std::vector<std::pair<Vector,Vector> >& velocities) {
+            velocities = _GetData(body)->linkvelocities;
             return true;
         }
 
-        virtual bool GetBodyVelocity(KinBodyConstPtr pbody, Vector& linearvel, Vector& angularvel, std::vector<dReal>& pJointVelocity)
+        virtual bool SetLinkVelocity(KinBody::LinkPtr plink, const Vector& linearvel, const Vector& angularvel)
         {
-            if( !pbody )
-                return false;
-            linearvel = Vector(0,0,0,0);
-            angularvel = Vector(0,0,0,0);
-    
-            pJointVelocity.resize(0);
-            pJointVelocity.resize(pbody->GetDOF(),0);
+            _GetData(plink->GetParent())->linkvelocities.at(plink->GetIndex()) = make_pair(linearvel,angularvel);
             return true;
         }
-
-        virtual bool GetBodyVelocity(KinBodyConstPtr pbody, std::vector<Vector>& pLinearVelocities, std::vector<Vector>& pAngularVelocities)
+        bool SetLinkVelocities(KinBodyPtr body, const std::vector<std::pair<Vector,Vector> >& velocities)
         {
-            pLinearVelocities.resize(0);
-            pLinearVelocities.resize(3*pbody->GetLinks().size(),Vector());
-            pAngularVelocities.resize(0);
-            pAngularVelocities.resize(3*pbody->GetLinks().size(),Vector());
-            return true;
-        }
-
-        virtual bool SetJointVelocity(KinBody::JointPtr pjoint, const std::vector<dReal>& pJointVelocity) { return true; }
-        virtual bool GetJointVelocity(KinBody::JointConstPtr pjoint, std::vector<dReal>& pJointVelocity)
-        {
-            pJointVelocity.resize(0);
-            pJointVelocity.resize(pjoint->GetDOF(),0);
+            _GetData(body)->linkvelocities = velocities;
             return true;
         }
 
@@ -1512,8 +1532,8 @@ protected:
         virtual bool InitEnvironment() { return true; }
         virtual void DestroyEnvironment() {}
 
-        virtual bool InitKinBody(KinBodyPtr pbody) { SetCollisionData(pbody, boost::shared_ptr<void>()); return true; }
-        virtual bool DestroyKinBody(KinBodyPtr pbody) { SetCollisionData(pbody, boost::shared_ptr<void>()); return true; }
+        virtual bool InitKinBody(KinBodyPtr pbody) { SetCollisionData(pbody, UserDataPtr()); return true; }
+        virtual bool DestroyKinBody(KinBodyPtr pbody) { SetCollisionData(pbody, UserDataPtr()); return true; }
         virtual bool Enable(KinBodyConstPtr pbody, bool bEnable) { return true; }
         virtual bool EnableLink(KinBody::LinkConstPtr pbody, bool bEnable) { return true; }
 

@@ -21,7 +21,7 @@
 class BulletCollisionChecker : public CollisionCheckerBase
 {
 private:
-    static boost::shared_ptr<void> GetCollisionInfo(KinBodyConstPtr pbody) { return pbody->GetCollisionData(); }
+    static UserDataPtr GetCollisionInfo(KinBodyConstPtr pbody) { return pbody->GetCollisionData(); }
 
     struct OpenRAVEFilterCallback : public btOverlapFilterCallback
     {
@@ -344,8 +344,9 @@ public:
         // go through all the KinBodies and destory their collision pointers
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
-        FOREACHC(itbody, vbodies)
-            SetCollisionData(*itbody, boost::shared_ptr<void>());
+        FOREACHC(itbody, vbodies) {
+            SetCollisionData(*itbody, UserDataPtr());
+        }
         bulletspace->DestroyEnvironment();
         if( !!_world && _world->getNumCollisionObjects() )
             RAVELOG_WARNA("world objects still left!\n");
@@ -358,7 +359,7 @@ public:
 
     virtual bool InitKinBody(KinBodyPtr pbody)
     {
-        boost::shared_ptr<void> pinfo = bulletspace->InitKinBody(pbody);
+        UserDataPtr pinfo = bulletspace->InitKinBody(pbody);
         SetCollisionData(pbody, pinfo);
         return !!pinfo;
     }
@@ -536,7 +537,7 @@ public:
 		rayToTrans.setIdentity();
 		rayToTrans.setOrigin(to);
         btCollisionWorld::ClosestRayResultCallback rayCallback(from,to);
-        BulletSpace::KinBodyInfoPtr pinfo = boost::static_pointer_cast<BulletSpace::KinBodyInfo>(GetCollisionInfo(plink->GetParent()));
+        BulletSpace::KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<BulletSpace::KinBodyInfo>(GetCollisionInfo(plink->GetParent()));
         boost::shared_ptr<BulletSpace::KinBodyInfo::LINK> plinkinfo = pinfo->vlinks.at(plink->GetIndex());
         _world->rayTestSingle(rayFromTrans,rayToTrans,plinkinfo->obj.get(),plinkinfo->shape.get(),plinkinfo->obj->getWorldTransform(),rayCallback);
 
@@ -598,7 +599,7 @@ public:
 		rayToTrans.setOrigin(to);
 
         AllRayResultCallback rayCallback(from,to,pbody);
-        BulletSpace::KinBodyInfoPtr pinfo = boost::static_pointer_cast<BulletSpace::KinBodyInfo>(GetCollisionInfo(pbody));
+        BulletSpace::KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<BulletSpace::KinBodyInfo>(GetCollisionInfo(pbody));
         BOOST_ASSERT(pinfo->pbody == pbody );
         FOREACH(itlink,pinfo->vlinks) {
             if( (*itlink)->plink->IsEnabled() ) {

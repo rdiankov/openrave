@@ -28,7 +28,7 @@ enum ViewGeometry {
 };
 
 /// Encapsulate the Inventor rendering of an Item
-class Item : public boost::enable_shared_from_this<Item>
+class Item : public boost::enable_shared_from_this<Item>, public OpenRAVE::UserData
 {
 public:
     Item(QtCoinViewerPtr viewer);
