@@ -62,7 +62,7 @@ public:
     /// return the static interface type this class points to (used for safe casting)
     static inline InterfaceType GetInterfaceTypeStatic() { return PT_Viewer; }
     
-    /// goes into the main loop
+    /// \brief goes into the main loop
     /// \param bShow if true will show the window
     virtual int main(bool bShow = true) = 0;
     /// destroys the main loop
@@ -71,6 +71,7 @@ public:
     //@{ GUI interaction methods
 
     /// \brief Set the camera transformation.
+    ///
     /// \param trans new camera transformation in the world coordinate system
     /// \param focalDistance The new focal distance of the camera (higher values is higher zoom). If 0, then the previous focal distance is preserved.
     virtual void SetCamera(const RaveTransform<float>& trans, float focalDistance=0) { throw openrave_exception("ViewerBase::SetCamera not implemented",ORE_NotImplemented); }
@@ -78,7 +79,7 @@ public:
     /// \brief Return the current camera transform that the viewer is rendering the environment at.
     virtual RaveTransform<float> GetCameraTransform() { throw openrave_exception("ViewerBase::GetCameraTransform not implemented",ORE_NotImplemented); }
 
-    /// reset the camera depending on its mode
+    /// \brief reset the camera depending on its mode
     virtual void UpdateCameraTransform() { throw openrave_exception("ViewerBase::UpdateCameraTransform not implemented",ORE_NotImplemented); }
 
     /// Renders a 24bit RGB image of dimensions width and height from the current scene. The camera
@@ -103,14 +104,15 @@ public:
     /// third parameter - direction
     typedef boost::function<bool(KinBody::LinkPtr plink,RaveVector<float>,RaveVector<float>)> ViewerCallbackFn;
 
-    /// registers a function with the viewer that gets called everytime a specified event occurs (part of ViewerEvents enum)
+    /// \brief registers a function with the viewer that gets called everytime a specified event occurs (part of ViewerEvents enum)
     /// \return a handle to the callback. If this handle is deleted, the callback will be unregistered
     virtual boost::shared_ptr<void> RegisterCallback(int properties, const ViewerCallbackFn& fncallback) { throw openrave_exception("ViewerBase::RegisterCallback not implemented",ORE_NotImplemented); }
 
-    /// controls whether the viewer synchronizes with the newest environment
+    /// \brief controls whether the viewer synchronizes with the newest environment
     virtual void SetEnvironmentSync(bool bUpdate) { throw openrave_exception("ViewerBase::SetEnvironmentSync not implemented",ORE_NotImplemented); }
 
-    /// forces synchronization with the environment, returns when the environment is fully synchronized.
+    /// \brief forces synchronization with the environment, returns when the environment is fully synchronized.
+    ///
     /// Note that this method might not work if environment is locked in current thread
     virtual void EnvironmentSync() { throw openrave_exception("ViewerBase::EnvironmentSync not implemented",ORE_NotImplemented); }
 
