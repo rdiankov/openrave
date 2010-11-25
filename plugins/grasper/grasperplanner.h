@@ -358,7 +358,7 @@ public:
                 // set manip joints that haven't been covered so far
                 UpdateDependents(ifing,dofvals);
 
-                if( (vclosingdir[ifing] > 0 && dofvals[ifing] >  vupperlim[ifing]) || (vclosingdir[ifing] < 0 && dofvals[ifing] < vlowerlim[ifing]) ) {
+                if( (vclosingdir[ifing] > 0 && dofvals[ifing] >  vupperlim[ifing]+step_size) || (vclosingdir[ifing] < 0 && dofvals[ifing] < vlowerlim[ifing]-step_size) ) {
                     break;
                 }
                 _robot->SetActiveDOFValues(dofvals,true);
@@ -368,7 +368,7 @@ public:
                     int ct;
                     if(_robot->DoesAffect(nJointIndex,vlinks[q]->GetIndex())  && (ct = CheckCollision(vlinks[q])) != CT_None ) {
                         if( !coarse_pass && (ct & CT_AvoidLinkHit) ) {
-                            RAVELOG_VERBOSEA(str(boost::format("hit link that needed to be avoided: %s\n")%_report->__str__()));
+                            RAVELOG_VERBOSE(str(boost::format("hit link that needed to be avoided: %s\n")%_report->__str__()));
                             return false;
                         }
                         if(coarse_pass) {
@@ -386,14 +386,14 @@ public:
                                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
                                     RAVELOG_VERBOSEA(str(boost::format("Collision (%d) of link %s using joint %d [%s]\n")%ct%vlinks.at(q)->GetName()%nJointIndex%_report->__str__()));
                                     stringstream ss; ss << "Transform: " << vlinks.at(q)->GetTransform() << ", Joint Vals: ";
-                                    for(int vi = 0; vi < _robot->GetActiveDOF();vi++)
+                                    for(int vi = 0; vi < _robot->GetActiveDOF();vi++) {
                                         ss << dofvals[vi] << " ";
+                                    }
                                     ss << endl;
                                     RAVELOG_VERBOSEA(ss.str());
                                 }
                                 if( ct & CT_SelfCollision ) {
-                                    // don't want the robot to end up in self collision, so back up
-                                    dofvals[ifing] -= vclosingdir[ifing] * step_size;
+                                    RAVELOG_WARN("robot in self collision even though nothing moved!\n");
                                 }
                                 ncollided++;
                                 collision = true;
@@ -411,8 +411,13 @@ public:
                             }
                             
                             if( (ct & CT_SelfCollision) || _parameters->bavoidcontact ) {
-                                // don't want the robot to end up in self collision, so back up
-                                dofvals[ifing] -= vclosingdir[ifing] * step_size;
+                                if(bMoved) {
+                                    // don't want the robot to end up in self collision, so back up
+                                    dofvals[ifing] -= vclosingdir[ifing] * step_size;
+                                }
+                                else {
+                                    RAVELOG_WARN("robot in self collision even though nothing moved!\n");
+                                }
                             }
                             ncollided++;
                             collision = true;

@@ -2629,15 +2629,6 @@ namespace OpenRAVEXMLParser
                         RAVELOG_WARNA(str(boost::format("jointvalues for body %s wrong number (%d!=%d)\n")%_probot->GetName()%_vjointvalues.size()%_probot->GetJoints().size()));
                 }
 
-                // set a default controller
-                if( !_probot->GetController() ) {
-                    std::vector<int> dofindices;
-                    for(int i = 0; i < _probot->GetDOF(); ++i) {
-                        dofindices.push_back(i);
-                    }
-                    _probot->SetController(RaveCreateController(_probot->GetEnv(), "IdealController"),dofindices,1);
-                }
-
                 // forces robot to reupdate its internal objects
                 _probot->SetTransform(_probot->GetTransform());
         

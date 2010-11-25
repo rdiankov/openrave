@@ -2050,7 +2050,7 @@ void RobotBase::_ComputeInternalInformation()
     }
 
     if( !GetController() ) {
-        RAVELOG_WARN(str(boost::format("no default controller set on robot %s\n")%GetName()));
+        RAVELOG_VERBOSE(str(boost::format("no default controller set on robot %s\n")%GetName()));
         std::vector<int> dofindices;
         for(int i = 0; i < GetDOF(); ++i) {
             dofindices.push_back(i);
