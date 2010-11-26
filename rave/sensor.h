@@ -200,6 +200,8 @@ public:
     class RAVE_API TactileGeomData : public SensorGeometry
     {
     public:
+        virtual SensorType GetType() { return ST_Tactile; }
+
         /// LuGre friction model?
         struct Friction
         {
