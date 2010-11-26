@@ -407,6 +407,9 @@ class ColladaReader : public daeErrorHandler
             if( !!pinterface_type ) {
                 pkinbody = RaveCreateKinBody(_penv,*pinterface_type);
             }
+            if( !pkinbody ) {
+                pkinbody = RaveCreateKinBody(_penv,"");
+            }
         }
 
         // find matching visual node

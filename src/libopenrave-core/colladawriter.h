@@ -187,7 +187,7 @@ class ColladaWriter : public daeErrorHandler
         penv->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
             if( !(*itbody)->IsRobot() ) {
-                boost::shared_ptr<instance_kinematics_model_output> ikmout = _WriteInstance_kinematics_model(*itbody,_scene.kscene,"");
+                boost::shared_ptr<instance_kinematics_model_output> ikmout = _WriteInstance_kinematics_model(*itbody,_scene.kscene,_scene.kscene->getID());
                 if( !!ikmout ) {
                     _WriteBindingsInstance_kinematics_scene(_scene.kiscene,*itbody,ikmout->vaxissids,ikmout->vkinematicsbindings);
                 }
@@ -218,7 +218,7 @@ class ColladaWriter : public daeErrorHandler
     {
         EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
         _CreateScene();
-        boost::shared_ptr<instance_kinematics_model_output> ikmout = _WriteInstance_kinematics_model(pbody,_scene.kscene,"");
+        boost::shared_ptr<instance_kinematics_model_output> ikmout = _WriteInstance_kinematics_model(pbody,_scene.kscene,_scene.kscene->getID());
         if( !ikmout ) {
             return false;
         }
@@ -238,6 +238,7 @@ class ColladaWriter : public daeErrorHandler
         domInstance_articulated_systemRef ias = daeSafeCast<domInstance_articulated_system>(_scene.kscene->add(COLLADA_ELEMENT_INSTANCE_ARTICULATED_SYSTEM));
         ias->setSid(iassid.c_str());
         ias->setUrl((string("#")+asmid).c_str());
+        ias->setName(probot->GetName().c_str());
 
         boost::shared_ptr<instance_articulated_system_output> iasout(new instance_articulated_system_output());
         iasout->ias = ias;
@@ -326,6 +327,15 @@ class ColladaWriter : public daeErrorHandler
                 daeSafeCast<domKinematics_param>(abvalue->add(COLLADA_ELEMENT_PARAM))->setRef(str(boost::format("%s.%s")%asmid%kas.valuesid).c_str());
             }
             iasout->vaxissids.push_back(axis_sids(ab->getSymbol(),valuesid,kas.jointnodesid));
+        }
+
+        // interface type
+        {
+            domExtraRef pextra = daeSafeCast<domExtra>(articulated_system_motion->add(COLLADA_ELEMENT_EXTRA));
+            pextra->setType("interface_type");
+            domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
+            ptec->setProfile("OpenRAVE");
+            ptec->add("interface")->setCharData(probot->GetXMLId());
         }
 
         FOREACHC(itmanip, probot->GetManipulators()) {
@@ -580,6 +590,15 @@ class ColladaWriter : public daeErrorHandler
             FOREACH(itprocessed,childinfo.listprocesseddofs) {
                 kmout->vaxissids.at(itprocessed->first).jointnodesid = itprocessed->second;
             }
+        }
+
+        // interface type
+        {
+            domExtraRef pextra = daeSafeCast<domExtra>(kmout->kmodel->add(COLLADA_ELEMENT_EXTRA));
+            pextra->setType("interface_type");
+            domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
+            ptec->setProfile("OpenRAVE");
+            ptec->add("interface")->setCharData(pbody->GetXMLId());
         }
 
         // create the formulas for all mimic joints
