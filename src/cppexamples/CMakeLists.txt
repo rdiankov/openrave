@@ -79,3 +79,9 @@ set_target_properties(ormulticontrol PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLA
 set_target_properties(ormulticontrol PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 target_link_libraries(ormulticontrol ${OPENRAVE_LIBRARY} ${OPENRAVE_CORE_LIBRARY})
 install(TARGETS ormulticontrol DESTINATION . )
+
+add_executable(orconveyormovement orconveyormovement.cpp)
+set_target_properties(orconveyormovement PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+set_target_properties(orconveyormovement PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+target_link_libraries(orconveyormovement ${OPENRAVE_LIBRARY} ${OPENRAVE_CORE_LIBRARY})
+install(TARGETS orconveyormovement DESTINATION . )

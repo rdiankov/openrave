@@ -98,7 +98,7 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
 
             // check if the nodes can be connected by a straight line
             vconfigs.resize(0);
-            if (CollisionFunctions::CheckCollision(params,_robot,(*startNode)->q, (*endNode)->q, OPEN, &vconfigs)) {
+            if (CollisionFunctions::CheckCollision(params,_robot,(*startNode)->q, (*endNode)->q, IT_Open, &vconfigs)) {
 
                 if( nrejected++ > (int)path.size()+8 )
                     break;
@@ -567,7 +567,7 @@ public:
                         continue;
                 }
 
-                if( !CollisionFunctions::CheckCollision(GetParameters(),_robot,pnode->q, vSampleConfig, OPEN_START) ) {
+                if( !CollisionFunctions::CheckCollision(GetParameters(),_robot,pnode->q, vSampleConfig, IT_OpenStart) ) {
                     _treeForward.AddNode(inode,vSampleConfig);
                     GetEnv()->UpdatePublishedBodies();
                     RAVELOG_DEBUGA(str(boost::format("size %d\n")%_treeForward._nodes.size()));

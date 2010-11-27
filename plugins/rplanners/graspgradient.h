@@ -288,7 +288,7 @@ private:
                     _parameters->_sampleneighfn(q,listpath.back(),fRadius);
 
                 vpath.resize(0);
-                if( !CollisionFunctions::CheckCollision(_parameters,_robot,listpath.back(),q,OPEN_START,&vpath) ) {
+                if( !CollisionFunctions::CheckCollision(_parameters,_robot,listpath.back(),q,IT_OpenStart,&vpath) ) {
                     BOOST_ASSERT(vpath.size()>0);
                     if( !!_parameters->_constraintfn ) {
                         vector<dReal> qnew(_robot->GetActiveDOF());

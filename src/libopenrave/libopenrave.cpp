@@ -506,11 +506,15 @@ TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, const std::strin
     return RaveGlobal::instance()->GetDatabase()->CreateTrajectory(penv, name);
 }
 
+boost::shared_ptr<void> RaveRegisterInterface(InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn)
+{
+    return RaveGlobal::instance()->GetDatabase()->RegisterInterface(type, name, interfacehash,envhash,createfn);
+}
+
 boost::shared_ptr<void> RaveRegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn)
 {
     return RaveGlobal::instance()->RegisterXMLReader(type,xmltag,fn);
 }
-
 
 BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::string& xmltag, InterfaceBasePtr pinterface, const std::list<std::pair<std::string,std::string> >& atts)
 {
@@ -1814,26 +1818,41 @@ RAVE_API void RaveRandomInt(int n, std::vector<int>& v)
     FOREACH(it, v) *it = genrand_int32();
 }
 
-RAVE_API float RaveRandomFloat()
+RAVE_API float RaveRandomFloat(IntervalType interval)
 {
-    return (float)genrand_real1();
+    switch(interval) {
+    case IT_Open: return (((float)genrand_int32()) + 0.5f)*(1.0/4294967296.0f);
+    case IT_OpenStart: return (((float)genrand_int32()) + 1.0f)*(1.0/4294967296.0f);
+    case IT_OpenEnd: return (float)genrand_int32()*(1.0/4294967296.0f); 
+    case IT_Closed: return (float)genrand_int32()*(1.0/4294967295.0f);
+    }
 }
 
 RAVE_API void RaveRandomFloat(int n, std::vector<float>& v)
 {
     v.resize(n);
-    FOREACH(it, v) *it = (float)genrand_real1();
+    FOREACH(it, v) {
+        *it = RaveRandomFloat();
+    }
 }
 
-RAVE_API double RaveRandomDouble()
+RAVE_API double RaveRandomDouble(IntervalType interval)
 {
-    return genrand_res53();
+    unsigned long a=genrand_int32()>>5, b=genrand_int32()>>6;
+    switch(interval) {
+    case IT_Open: return (a*67108864.0+b+0.5)*(1.0/9007199254740992.0);
+    case IT_OpenStart: return (a*67108864.0+b+1.0)*(1.0/9007199254740992.0);
+    case IT_OpenEnd: return (a*67108864.0+b)*(1.0/9007199254740992.0);
+    case IT_Closed: return (a*67108864.0+b)*(1.0/9007199254740991.0);
+    }
 }
- 
+
 RAVE_API void RaveRandomDouble(int n, std::vector<double>& v)
 {
     v.resize(n);
-    FOREACH(it, v) *it = genrand_res53();
+    FOREACH(it, v) {
+        *it = RaveRandomDouble();
+    }
 }
 
 std::string GetMD5HashString(const std::string& s)

@@ -406,13 +406,14 @@ class Environment : public EnvironmentBase
         }
         if( !_CheckUniqueName(KinBodyConstPtr(pbody),!bAnonymous) ) {
             // continue to add random numbers until a unique name is found
-            string newname;
+            string oldname=pbody->GetName(),newname;
             for(int i = 0;;++i) {
-                newname = str(boost::format("%s%d")%pbody->GetName()%i);
-                if( IsValidName(newname) )
+                newname = str(boost::format("%s%d")%oldname%i);
+                pbody->SetName(newname);
+                if( IsValidName(newname) && _CheckUniqueName(KinBodyConstPtr(pbody), false) ) {
                     break;
+                }
             }
-            pbody->SetName(newname);
         }
         {
             boost::mutex::scoped_lock lock(_mutexInterfaces);
@@ -436,13 +437,14 @@ class Environment : public EnvironmentBase
 
         if( !_CheckUniqueName(KinBodyConstPtr(robot),!bAnonymous) ) {
             // continue to add random numbers until a unique name is found
-            string newname;
+            string oldname=robot->GetName(),newname;
             for(int i = 0;;++i) {
-                newname = str(boost::format("%s%d")%robot->GetName()%i);
-                if( IsValidName(newname) )
+                newname = str(boost::format("%s%d")%oldname%i);
+                robot->SetName(newname);
+                if( IsValidName(newname) && _CheckUniqueName(KinBodyConstPtr(robot),false) ) {
                     break;
+                }
             }
-            robot->SetName(newname);
         }
         {
             boost::mutex::scoped_lock lock(_mutexInterfaces);
@@ -466,13 +468,14 @@ class Environment : public EnvironmentBase
         }
         if( !_CheckUniqueName(SensorBaseConstPtr(psensor),!bAnonymous) ) {
             // continue to add random numbers until a unique name is found
-            string newname;
+            string oldname=psensor->GetName(),newname;
             for(int i = 0;;++i) {
-                newname = str(boost::format("%s%d")%psensor->GetName()%i);
-                if( IsValidName(newname) )
+                newname = str(boost::format("%s%d")%oldname%i);
+                psensor->SetName(newname);
+                if( IsValidName(newname) && _CheckUniqueName(SensorBaseConstPtr(psensor),false) ) {
                     break;
+                }
             }
-            psensor->SetName(newname);
         }
         {
             boost::mutex::scoped_lock lock(_mutexInterfaces);
@@ -1603,6 +1606,7 @@ protected:
         virtual OpenRAVE::GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors) { return OpenRAVE::GraphHandlePtr(); }
 
         virtual void SetCamera(const RaveTransform<float>& trans, float focalDistance=0) {}
+        virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK) { return false; }
     protected:
         boost::mutex _mutex;
         boost::condition _cond;

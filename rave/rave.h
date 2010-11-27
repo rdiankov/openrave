@@ -294,19 +294,34 @@ enum DebugLevel {
 
 /// Random number generation
 //@{
+enum IntervalType {
+    IT_Open=0, ///< (a,b)
+    IT_OpenStart=1, ///< (a,b]
+    IT_OpenEnd=2, ///< [a,b)
+    IT_Closed=3, ///< [a,b]
+};
+
 RAVE_API void RaveInitRandomGeneration(uint32_t seed);
 /// generate a random integer, 32bit precision
 RAVE_API uint32_t RaveRandomInt();
 /// generate n random integers, 32bit precision
 RAVE_API void RaveRandomInt(int n, std::vector<int>& v);
-/// generate a random float in [0,1], 32bit precision
-RAVE_API float RaveRandomFloat();
-/// generate n random floats in [0,1], 32bit precision
-RAVE_API void RaveRandomFloat(int n, std::vector<float>& v);
-/// generate a random double in [0,1], 53bit precision
-RAVE_API double RaveRandomDouble();
-/// generate n random doubles in [0,1], 53bit precision
-RAVE_API void RaveRandomDouble(int n, std::vector<double>& v);
+
+/// \brief generate a random float in 0-1
+///
+/// \param interval specifies inclusion of 0 and 1 in the result
+RAVE_API float RaveRandomFloat(IntervalType interval=IT_Closed);
+
+/// \deprecated (10/11/27)
+RAVE_API void RaveRandomFloat(int n, std::vector<float>& v) RAVE_DEPRECATED;
+
+/// \brief generate a random double in 0-1, 53bit precision
+///
+/// \param interval specifies inclusion of 0 and 1 in the result
+RAVE_API double RaveRandomDouble(IntervalType interval=IT_Closed);
+
+/// \deprecated (10/11/27)
+RAVE_API void RaveRandomDouble(int n, std::vector<double>& v) RAVE_DEPRECATED;
 //@}
 
 /// Sets the global openrave debug level
@@ -858,13 +873,26 @@ RAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, int nDO
 /// \brief Return an empty trajectory instance.
 RAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, const std::string& name="");
 
-/// \brief Registers a custom xml reader for a particular interface.
-///
-/// Once registered, anytime an interface is created through XML and
-/// the xmltag is seen, the function CreateXMLReaderFn will be called to get a reader for that tag
-/// \param xmltag the tag specified in xmltag is seen in the interface, the the custom reader will be created.
-/// \param fn CreateXMLReaderFn(pinterface,atts) - passed in the pointer to the interface where the tag was seen along with the list of attributes
-/// \return a pointer holding the registration, releasing the pointer will unregister the XML reader
+/** \brief Registers a function to create an interface, this allows the interface to be created by other modules.
+
+    \param type interface type
+    \param name interface name
+    \param interfacehash the hash of the interface being created (use the global defines OPENRAVE_X_HASH)
+    \param envhash the hash of the environment (use the global define OPENRAVE_ENVIRONMENT_HASH)
+    \param createfn functions to create the interface it takes two parameters: the environment and an istream to the rest of the interface creation arguments.
+    \return a handle if function is successfully registered. By destroying the handle, the interface will be automatically unregistered.
+    \throw openrave_exception Will throw with ORE_InvalidInterfaceHash if hashes do not match
+ */
+RAVE_API boost::shared_ptr<void> RaveRegisterInterface(InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn);
+
+/** \brief Registers a custom xml reader for a particular interface.
+    
+    Once registered, anytime an interface is created through XML and
+    the xmltag is seen, the function CreateXMLReaderFn will be called to get a reader for that tag
+    \param xmltag the tag specified in xmltag is seen in the interface, the the custom reader will be created.
+    \param fn CreateXMLReaderFn(pinterface,atts) - passed in the pointer to the interface where the tag was seen along with the list of attributes
+    \return a pointer holding the registration, releasing the pointer will unregister the XML reader
+*/
 RAVE_API boost::shared_ptr<void> RaveRegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn);
 
 /// \brief return the environment's unique id, returns 0 if environment could not be found or not registered

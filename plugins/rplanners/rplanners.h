@@ -18,9 +18,6 @@
 
 #include "plugindefs.h"
 
-// interval types   ( , )      ( , ]       [ , )      [ , ]
-enum IntervalType { OPEN=0,  OPEN_START,  OPEN_END,  CLOSED };
-
 enum ExtendType {
     ET_Failed=0,
     ET_Sucess=1,
@@ -107,16 +104,16 @@ class CollisionFunctions
         int start=0;
         bool bCheckEnd=false;
         switch (interval) {
-        case OPEN:
+        case IT_Open:
             start = 1;  bCheckEnd = false;
             break;
-        case OPEN_START:
+        case IT_OpenStart:
             start = 1;  bCheckEnd = true;
             break;
-        case OPEN_END:
+        case IT_OpenEnd:
             start = 0;  bCheckEnd = false;
             break;
-        case CLOSED:
+        case IT_Closed:
             start = 0;  bCheckEnd = true;
             break;
         default:
@@ -338,7 +335,7 @@ class SpatialTree : public SpatialTreeBase
                 }
             }
 
-            if( CollisionFunctions::CheckCollision(params,planner->GetRobot(),pnode->q, _vNewConfig, OPEN_START) ) {
+            if( CollisionFunctions::CheckCollision(params,planner->GetRobot(),pnode->q, _vNewConfig, IT_OpenStart) ) {
                 if(bHasAdded)
                     return ET_Sucess;
                 return ET_Failed;

@@ -941,13 +941,6 @@ template <class T> void PermutateRandomly(vector<T>& vpermutation)
         std::swap(vpermutation[i], vpermutation[i+(rand()%(vpermutation.size()-i))]);
 }
 
-enum IntervalType {
-    IT_OPEN = 0,
-    IT_OPEN_START,
-    IT_OPEN_END,
-    IT_CLOSED
-};
-
 /// permute a sequence of n numbers
 /// and execute a function for each number in that sequence
 /// if the function returns true, break from executing further

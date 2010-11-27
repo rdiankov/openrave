@@ -1,8 +1,8 @@
 /** \example ormulticontrol.cpp
     \author Rosen Diankov
 
-    \image html cppexample_ormulticontrol.jpg "Robot moving in random configurations."
-    \image latex cppexample_ormulticontrol.jpg "Robot moving in random configurations." width=10cm
+    \image html cppexample_ormulticontrol.jpg "Base moves with velocity control, arm moves with position control."
+    \image latex cppexample_ormulticontrol.jpg "Base moves with velocity control, arm moves with position control." width=10cm
 
     Shows how to set two controllers for a robot using the MultiController class. The differential base moves with velocity control while the arm moves with position control.
 

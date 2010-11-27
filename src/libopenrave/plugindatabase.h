@@ -49,6 +49,15 @@ namespace OpenRAVE {
 /// database of planners, obstacles, sensors, and problem from plugins
 class RaveDatabase : public boost::enable_shared_from_this<RaveDatabase>
 {
+    struct RegisteredInterface
+    {
+    RegisteredInterface(InterfaceType type, const std::string& name, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn) : _type(type), _name(name), _createfn(createfn) {}
+        virtual ~RegisteredInterface() {}
+        InterfaceType _type;
+        std::string _name;
+        boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)> _createfn;
+    };
+
 public:
     class Plugin : public boost::enable_shared_from_this<Plugin>
     {
@@ -162,14 +171,15 @@ public:
 
         bool HasInterface(InterfaceType type, const string& name)
         {
-            if( name.size() == 0 )
+            if( name.size() == 0 ) {
                 return false;
+            }
             std::map<InterfaceType, std::vector<std::string> >::iterator itregisterednames = _infocached.interfacenames.find(type);
             if( itregisterednames == _infocached.interfacenames.end() ) {
                 return false;
             }
             FOREACH(it,itregisterednames->second) {
-                if( name.size() >= it->size() && strnicmp(&name[0],it->c_str(),it->size()) == 0 ) {
+                if( name.size() >= it->size() && strnicmp(name.c_str(),it->c_str(),it->size()) == 0 ) {
                     return true;
                 }
             }
@@ -289,6 +299,7 @@ public:
             EnvironmentMutex::scoped_lock lock(_mutex);
             _listplugins.clear();
         }
+        _listRegisteredInterfaces.clear();
         RAVELOG_DEBUG("cleaning libraries\n");
         CleanupUnusedLibraries();
         RAVELOG_DEBUG("plugin database finished\n");
@@ -325,42 +336,68 @@ public:
         }
         else {
             size_t nInterfaceNameLength = name.find_first_of(' ');
-            if( nInterfaceNameLength == string::npos )
+            if( nInterfaceNameLength == string::npos ) {
                 nInterfaceNameLength = name.size();
+            }
             if( nInterfaceNameLength == 0 ) {
                 RAVELOG_WARN(str(boost::format("interface name \"%s\" needs to start with a valid character\n")%name));
                 return InterfaceBasePtr();
             }
-                
+            
             EnvironmentMutex::scoped_lock lock(_mutex);
-            const char* hash = RaveGetInterfaceHash(type);
-            list<PluginPtr>::iterator itplugin = _listplugins.begin();
-            while(itplugin != _listplugins.end()) {
-                pointer = (*itplugin)->CreateInterface(type, name, hash, penv);
-                if( !!pointer ) {
-                    if( strcmp(pointer->GetHash(), hash) ) {
-                        RAVELOG_FATAL(str(boost::format("plugin interface name %s, %s has invalid hash, might be compiled with stale openrave files\n")%name%RaveGetInterfaceName(type)));
-                        (*itplugin)->_setBadInterfaces.insert(make_pair(type,tolowerstring(name)));
-                        pointer.reset();
+            FOREACH(it, _listRegisteredInterfaces) {
+                if( nInterfaceNameLength >= it->_name.size() && strnicmp(name.c_str(),it->_name.c_str(),it->_name.size()) == 0 ) {
+                    std::stringstream sinput(name);
+                    std::string interfacename;
+                    sinput >> interfacename;
+                    std::transform(interfacename.begin(), interfacename.end(), interfacename.begin(), ::tolower);
+                    pointer = it->_createfn(penv,sinput);
+                    if( !!pointer ) {
+                        if( pointer->GetInterfaceType() != type ) {
+                            RAVELOG_FATAL(str(boost::format("plugin interface name %s, type %s, types do not match\n")%name%RaveGetInterfaceName(type)));
+                            pointer.reset();
+                        }
+                        else {
+                            pointer = InterfaceBasePtr(pointer.get(), smart_pointer_deleter<InterfaceBasePtr>(pointer,INTERFACE_DELETER));
+                            pointer->__strpluginname = "__internal__";
+                            pointer->__strxmlid = name;
+                            //pointer->__plugin; // need to protect resources?
+                            break;
+                        }
                     }
-                    else if( pointer->GetInterfaceType() != type ) {
-                        RAVELOG_FATAL(str(boost::format("plugin interface name %s, type %s, types do not match\n")%name%RaveGetInterfaceName(type)));
-                        (*itplugin)->_setBadInterfaces.insert(make_pair(type,tolowerstring(name)));
-                        pointer.reset();
+                }
+            }
+
+            if( !pointer ) {
+                const char* hash = RaveGetInterfaceHash(type);
+                list<PluginPtr>::iterator itplugin = _listplugins.begin();
+                while(itplugin != _listplugins.end()) {
+                    pointer = (*itplugin)->CreateInterface(type, name, hash, penv);
+                    if( !!pointer ) {
+                        if( strcmp(pointer->GetHash(), hash) ) {
+                            RAVELOG_FATAL(str(boost::format("plugin interface name %s, %s has invalid hash, might be compiled with stale openrave files\n")%name%RaveGetInterfaceName(type)));
+                            (*itplugin)->_setBadInterfaces.insert(make_pair(type,tolowerstring(name)));
+                            pointer.reset();
+                        }
+                        else if( pointer->GetInterfaceType() != type ) {
+                            RAVELOG_FATAL(str(boost::format("plugin interface name %s, type %s, types do not match\n")%name%RaveGetInterfaceName(type)));
+                            (*itplugin)->_setBadInterfaces.insert(make_pair(type,tolowerstring(name)));
+                            pointer.reset();
+                        }
+                        else {
+                            pointer = InterfaceBasePtr(pointer.get(), smart_pointer_deleter<InterfaceBasePtr>(pointer,INTERFACE_DELETER));
+                            pointer->__strpluginname = (*itplugin)->ppluginname;
+                            pointer->__strxmlid = name;
+                            pointer->__plugin = *itplugin;
+                            break;
+                        }
+                    }
+                    if( (*itplugin)->IsValid() ) {
+                        ++itplugin;
                     }
                     else {
-                        pointer = InterfaceBasePtr(pointer.get(), smart_pointer_deleter<InterfaceBasePtr>(pointer,INTERFACE_DELETER));
-                        pointer->__strpluginname = (*itplugin)->ppluginname;
-                        pointer->__strxmlid = name;
-                        pointer->__plugin = *itplugin;
-                        break;
+                        itplugin = _listplugins.erase(itplugin);
                     }
-                }
-                if( (*itplugin)->IsValid() ) {
-                    ++itplugin;
-                }
-                else {
-                    itplugin = _listplugins.erase(itplugin);
                 }
             }
         }
@@ -479,6 +516,11 @@ public:
     virtual bool HasInterface(InterfaceType type, const string& interfacename)
     {
         EnvironmentMutex::scoped_lock lock(_mutex);
+        FOREACHC(it,_listRegisteredInterfaces) {
+            if( interfacename.size() >= it->_name.size() && strnicmp(interfacename.c_str(),it->_name.c_str(),it->_name.size()) == 0 ) {
+                return true;
+            }
+        }
         FOREACHC(itplugin, _listplugins) {
             if( (*itplugin)->HasInterface(type,interfacename) ) {
                 return true;
@@ -499,12 +541,18 @@ public:
     void GetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& plugins) const
     {
         plugins.clear();
-        list<RaveDatabase::PluginPtr> listdbplugins;
-        GetPlugins(listdbplugins);
-        FOREACHC(itplugin, listdbplugins) {
+        EnvironmentMutex::scoped_lock lock(_mutex);
+        FOREACHC(itplugin, _listplugins) {
             PLUGININFO info;
             if( (*itplugin)->GetInfo(info) ) {
                 plugins.push_back(pair<string,PLUGININFO>((*itplugin)->GetName(),info));
+            }
+        }
+        if( _listRegisteredInterfaces.size() > 0 ) {
+            plugins.push_back(make_pair(string("__internal__"),PLUGININFO()));
+            plugins.back().second.version = OPENRAVE_VERSION;
+            FOREACHC(it,_listRegisteredInterfaces) {
+                plugins.back().second.interfacenames[it->_type].push_back(it->_name);
             }
         }
     }
@@ -512,9 +560,11 @@ public:
     void GetLoadedInterfaces(std::map<InterfaceType, std::vector<std::string> >& interfacenames) const
     {
         interfacenames.clear();
-        list<RaveDatabase::PluginPtr> listdbplugins;
-        GetPlugins(listdbplugins);
-        FOREACHC(itplugin, listdbplugins) {
+        EnvironmentMutex::scoped_lock lock(_mutex);
+        FOREACHC(it,_listRegisteredInterfaces) {
+            interfacenames[it->_type].push_back(it->_name);
+        }
+        FOREACHC(itplugin, _listplugins) {
             PLUGININFO localinfo;
             if( !(*itplugin)->GetInfo(localinfo) ) {
                 RAVELOG_WARN(str(boost::format("failed to get plugin info: %s\n")%(*itplugin)->GetName()));
@@ -527,6 +577,20 @@ public:
                 }
             }
         }
+    }
+
+    boost::shared_ptr<void> RegisterInterface(InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn) {
+        BOOST_ASSERT(interfacehash != NULL && envhash != NULL);
+        BOOST_ASSERT(!!createfn);
+        BOOST_ASSERT(name.size()>0);
+        if( strcmp(envhash, OPENRAVE_ENVIRONMENT_HASH) ) {
+            throw openrave_exception(str(boost::format("environment invalid hash %s!=%s\n")%envhash%OPENRAVE_ENVIRONMENT_HASH),ORE_InvalidInterfaceHash);
+        }
+        if( strcmp(interfacehash, RaveGetInterfaceHash(type)) ) {
+            throw openrave_exception(str(boost::format("interface %s invalid hash %s!=%s\n")%RaveGetInterfaceName(type)%interfacehash%RaveGetInterfaceHash(type)),ORE_InvalidInterfaceHash);
+        }
+        EnvironmentMutex::scoped_lock lock(_mutex);
+        return boost::shared_ptr<void>(new std::list<RegisteredInterface>::iterator(_listRegisteredInterfaces.insert(_listRegisteredInterfaces.end(),RegisteredInterface(type,name,createfn))), boost::bind(RaveDatabase::__erase_iterator,boost::weak_ptr<RaveDatabase>(shared_from_this()), _1));
     }
 
     static const char* GetInterfaceHash(InterfaceBasePtr pint) { return pint->GetHash(); }
@@ -718,11 +782,24 @@ protected:
             }
         }
     }
+
+    static void __erase_iterator(boost::weak_ptr<RaveDatabase> pweakdb, std::list<RegisteredInterface>::iterator* pit)
+    {
+        if( !!pit ) {
+            boost::shared_ptr<RaveDatabase> pdb = pweakdb.lock();
+            if( !!pdb ) {
+                EnvironmentMutex::scoped_lock lock(pdb->_mutex);
+                pdb->_listRegisteredInterfaces.erase(*pit);
+            }
+            delete pit;
+        }
+    }
     
     list<PluginPtr> _listplugins;
     mutable EnvironmentMutex _mutex; ///< changing plugin database
     list<void*> _listDestroyLibraryQueue;
-
+    std::list<RegisteredInterface> _listRegisteredInterfaces;
+    
     /// \name plugin loading
     //@{
     mutable boost::mutex _mutexPluginLoader; ///< specifically for loading shared objects

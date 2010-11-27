@@ -84,7 +84,7 @@ ShortcutLinearPlanner(EnvironmentBasePtr penv) : PlannerBase(penv)
 
             // check if the nodes can be connected by a straight line
             vconfigs.resize(0);
-            if (CollisionFunctions::CheckCollision(parameters,_robot,*startNode, *endNode, OPEN, &vconfigs)) {
+            if (CollisionFunctions::CheckCollision(parameters,_robot,*startNode, *endNode, IT_Open, &vconfigs)) {
 
                 if( nrejected++ > (int)path.size()+8 )
                     break;
@@ -224,7 +224,7 @@ protected:
 //            for(int j = 1; j < endIndex-startIndex; ++j,++nextNode) {
 //                qnext = (*nextNode)->q;
 //                qnext[dim] = vdists[j]*itotaldist*((*endNode)->q[dim]-(*startNode)->q[dim])+(*startNode)->q[dim];
-//                if (CollisionFunctions::CheckCollision(params,_robot,qprev, qnext, OPEN_START, &vconfigs)) {
+//                if (CollisionFunctions::CheckCollision(params,_robot,qprev, qnext, IT_OpenStart, &vconfigs)) {
 //                    bCanConnect = false;
 //                    break;
 //                }

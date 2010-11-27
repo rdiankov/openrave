@@ -132,16 +132,16 @@ public:
             int start=0;
             bool bCheckEnd=false;
             switch (interval) {
-            case IT_OPEN:
+            case IT_Open:
                 start = 1;  bCheckEnd = false;
                 break;
-            case IT_OPEN_START:
+            case IT_OpenStart:
                 start = 1;  bCheckEnd = true;
                 break;
-            case IT_OPEN_END:
+            case IT_OpenEnd:
                 start = 0;  bCheckEnd = false;
                 break;
-            case IT_CLOSED:
+            case IT_Closed:
                 start = 0;  bCheckEnd = true;
                 break;
             default:
@@ -1749,7 +1749,7 @@ private:
 
                     // check for intermediate collisions
                     if( taskdata->bCheckFullCollision ) {
-                        if( taskdata->CheckCollisionInterval(qprev, itsol->first, IT_OPEN) ) {
+                        if( taskdata->CheckCollisionInterval(qprev, itsol->first, IT_Open) ) {
                             ++itsol;
                             continue;
                         }
@@ -1830,7 +1830,7 @@ private:
             }
 
             if( taskdata->bCheckFullCollision ) {
-                if( taskdata->CheckCollisionInterval(qprev, *itsol, IT_OPEN) ) {
+                if( taskdata->CheckCollisionInterval(qprev, *itsol, IT_Open) ) {
                     ++itsol;
                     continue;
                 }
