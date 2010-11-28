@@ -920,12 +920,12 @@ class ColladaWriter : public daeErrorHandler
     // binding in instance_kinematics_scene
     void _WriteBindingsInstance_kinematics_scene(domInstance_kinematics_sceneRef ikscene, KinBodyConstPtr pbody, const std::vector<axis_sids>& vaxissids, const std::vector<std::pair<std::string,std::string> >& vkinematicsbindings)
     {
-        FOREACH(it, vkinematicsbindings) {
+        FOREACHC(it, vkinematicsbindings) {
             domBind_kinematics_modelRef pmodelbind = daeSafeCast<domBind_kinematics_model>(ikscene->add(COLLADA_ELEMENT_BIND_KINEMATICS_MODEL));
             pmodelbind->setNode(it->second.c_str());
             daeSafeCast<domCommon_param>(pmodelbind->add(COLLADA_ELEMENT_PARAM))->setValue(it->first.c_str());
         }
-        FOREACH(it, vaxissids) {
+        FOREACHC(it, vaxissids) {
             domBind_joint_axisRef pjointbind = daeSafeCast<domBind_joint_axis>(ikscene->add(COLLADA_ELEMENT_BIND_JOINT_AXIS));
             pjointbind->setTarget(it->jointnodesid.c_str());
             daeSafeCast<domCommon_param>(pjointbind->add(COLLADA_ELEMENT_AXIS)->add(COLLADA_TYPE_PARAM))->setValue(it->axissid.c_str());

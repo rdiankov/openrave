@@ -1,4 +1,4 @@
-/** \example orplanning_problem.cpp
+/** \example orconveyormovement.cpp
     \author Rosen Diankov
 
     \image html cppexample_orconveyormovement.jpg "Parts moving on a conveyor belt."
