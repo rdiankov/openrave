@@ -130,6 +130,7 @@ class ColladaReader : public daeErrorHandler
         if (!_dom) {
             return false;
         }
+        _filename=filename;
 
         size_t maxchildren = _countChildren(_dom);
         _vuserdata.resize(0);
@@ -315,6 +316,7 @@ class ColladaReader : public daeErrorHandler
                 }
             }
         }
+        probot->__strxmlfilename = _filename;
 
         // set the name
         if( probot->GetName().size() == 0 && !!ias->getName() ) {
@@ -411,6 +413,7 @@ class ColladaReader : public daeErrorHandler
                 pkinbody = RaveCreateKinBody(_penv,"");
             }
         }
+        pkinbody->__strxmlfilename = _filename;
 
         // find matching visual node
         domNodeRef pvisualnode;
@@ -2265,6 +2268,7 @@ class ColladaReader : public daeErrorHandler
     EnvironmentBasePtr _penv;
     vector<USERDATA> _vuserdata; // all userdata
     int _nGlobalSensorId, _nGlobalManipulatorId;
+    string _filename;
 };
 
 #endif
