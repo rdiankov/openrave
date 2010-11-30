@@ -218,8 +218,11 @@ class LinkStatisticsModel(OpenRAVEModel):
                 volumeinertia = cov(sweptvolume,rowvar=0,bias=1)*volume
                 # get the cross sections and a dV/dAngle measure
                 crossarea = c_[sqrt(sum(jointvolume[:,0:2]**2,1)),jointvolume[:,2:]]
-                crossarea = crossarea[self.prunePointsKDTree(crossarea, density**2, 1,k=50),:]
-                volumedelta = sum(crossarea[:,0])*density**2
+                if len(crossarea) > 0:
+                    crossarea = crossarea[self.prunePointsKDTree(crossarea, density**2, 1,k=50),:]
+                    volumedelta = sum(crossarea[:,0])*density**2
+                else:
+                    volumedelta = 0
                 self.jointvolumes[joint.GetJointIndex()] = {'sweptpoints':sweptpoints,'sweptindices':sweptindices,'crossarea':crossarea,'volumedelta':volumedelta,'volumecom':volumecom,'volumeinertia':volumeinertia,'volume':volume}
                 jointvolumes_points[joint.GetJointIndex()] = sweptvolume
                 del sweptvolume
