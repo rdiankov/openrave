@@ -234,7 +234,7 @@ class LinkStatisticsModel(OpenRAVEModel):
                 points = transformPoints(dot(linalg.inv(Trobot), link.GetTransform()),linkstat['volumepoints'])
                 if robotvolume is None or len(robotvolume) == 0:
                     robotvolume = points
-                else:
+                elif len(points) > 0:
                     kdtree = pyANN.KDTree(robotvolume)
                     neighs,dists,kball = kdtree.kFRSearchArray(points,self.samplingdelta**2,0,self.samplingdelta*0.01)
                     robotvolume = r_[robotvolume, points[kball==0]]
