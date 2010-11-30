@@ -353,9 +353,7 @@ class InverseReachabilityDemo:
                 self.irmodel.autogenerate(option)
                 self.irmodel.load()
             else:
-                self.env.Destroy()
-                RaveDestroy()
-                sys.exit()
+                self.irmodel.autogenerate()
         print 'time to load inverse-reachability model: %fs'%(time.time()-starttime)
         # make sure the robot and manipulator match the database
         assert self.irmodel.robot == self.robot and self.irmodel.manip == self.robot.GetActiveManipulator()   
@@ -473,12 +471,20 @@ def run(args=None):
     # set up planning environment
     parser = OptionParser(description='Move base where the robot can perform target grasp using inversereachability database.')
     OpenRAVEGlobalArguments.addOptions(parser)
+    parser.add_option('--robot',action="store",type='string',dest='robot',default='robots/pr2-beta-static.robot.xml',
+                      help='Robot filename to use (default=%default)')
+    parser.add_option('--manipname',action="store",type='string',dest='manipname',default=None,
+                      help='name of manipulator to use (default=%default)')
+    parser.add_option('--target',action="store",type='string',dest='target',default='data/mug2.kinbody.xml',
+                      help='filename of the target to use (default=%default)')
     (options, leftargs) = parser.parse_args(args=args) # use default options 
     env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True) # the special setup for openrave tutorial
     try:
-        robot = env.ReadRobotXMLFile('robots/pr2-beta-static.robot.xml')
+        robot = env.ReadRobotXMLFile(options.robot)
         env.AddRobot(robot)
-        target = env.ReadKinBodyXMLFile('data/mug2.kinbody.xml')
+        if options.manipname is not None:
+            robot.SetActiveManipulator(options.manipname)
+        target = env.ReadKinBodyXMLFile(options.target)
         env.AddKinBody(target)
         # initialize target pose, for visualization and collision checking purpose only
         O_T_Target = mat([[1,0,0,1],[0,1,0,0],[0,0,1,.9],[0,0,0,1]])
