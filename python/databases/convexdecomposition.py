@@ -163,8 +163,8 @@ class ConvexDecompositionModel(OpenRAVEModel):
         facenormals = array([cross(vertices[i1]-vertices[i0],vertices[i2]-vertices[i0]) for i0,i1,i2 in indices])
         facenormals *= transpose(tile(1.0/sqrt(sum(facenormals**2,1)),(3,1)))
         # make sure normals are facing outward
-        newvertices = zeros((0,3))
-        newindices = zeros((0,3))
+        newvertices = zeros((0,3),float64)
+        newindices = zeros((0,3),int)
         originaledges = []
         for i in range(len(facenormals)):
             if dot(vertices[indices[i,0]]-M,facenormals[i]) < 0:
@@ -198,7 +198,7 @@ class ConvexDecompositionModel(OpenRAVEModel):
 
     @staticmethod
     def generateTrimeshFromHulls(hulls):
-        allvertices = zeros((0,3),float)
+        allvertices = zeros((0,3),float64)
         allindices = zeros((0,3),int)
         for vertices,indices in hulls:
             allindices = r_[allindices,indices+len(allvertices)]
