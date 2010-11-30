@@ -274,6 +274,8 @@ class LinkStatisticsModel(OpenRAVEModel):
     @staticmethod
     def computeSweptVolume(volumepoints,axis,minangle,maxangle,samplingdelta):
         """Compute the swept volume and mesh of volumepoints around rotated around an axis"""
+        if len(volumepoints) == 0:
+            return zeros((0,3)),zeros(0,int),zeros((0,3))
         maxradius = sqrt(numpy.max(sum(cross(volumepoints,axis)**2,1)))
         anglerange = maxangle-minangle
         angledelta = samplingdelta/maxradius
