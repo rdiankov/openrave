@@ -134,6 +134,8 @@ class ConvexDecompositionModel(OpenRAVEModel):
             self.generate()
         self.save()
     def generate(self,padding=None,**kwargs):
+        if not self.ikmodel.load():
+            self.ikmodel.autogenerate()
         self.convexparams = kwargs
         if padding is None:
             padding = 0.0

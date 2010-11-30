@@ -81,8 +81,6 @@ class LinkStatisticsModel(OpenRAVEModel):
     def __init__(self,robot):
         OpenRAVEModel.__init__(self,robot=robot)
         self.cdmodel = convexdecomposition.ConvexDecompositionModel(self.robot)
-        if not self.cdmodel.load():
-            self.cdmodel.autogenerate()
         self.linkstats = None
         self.jointvolumes = None
         self.affinevolumes = None # affine volumes for x,y,z translation and rotation around x-,y-,z-axes
@@ -92,6 +90,8 @@ class LinkStatisticsModel(OpenRAVEModel):
         return self.linkstats is not None and len(self.linkstats)==len(self.robot.GetLinks())
     def load(self):
         try:
+            if not self.cdmodel.load():
+                self.cdmodel.autogenerate()
             params = OpenRAVEModel.load(self)
             if params is None:
                 return False
@@ -155,6 +155,8 @@ class LinkStatisticsModel(OpenRAVEModel):
         self.generate(samplingdelta=samplingdelta)
         self.save()
     def generate(self,samplingdelta=None,**kwargs):
+        if not self.cdmodel.load():
+            self.cdmodel.autogenerate()
         self.samplingdelta=samplingdelta if samplingdelta is not None else 0.01
         with self.robot:
             self.robot.SetTransform(eye(4))

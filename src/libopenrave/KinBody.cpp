@@ -2888,7 +2888,9 @@ void KinBody::_ParametersChanged(int parameters)
         if( itfns->first & parameters )
             itfns->second();
     }
-    if( parameters & (Prop_Joints|Prop_Links|Prop_LinkGeometry) ) {
+    // do not change hash if geometry changed!
+    //if( parameters&Prop_LinkGeometry )
+    if( parameters & (Prop_Joints|Prop_Links) ) {
         ostringstream ss;
         ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
         serialize(ss,SO_Kinematics|SO_Geometry);
