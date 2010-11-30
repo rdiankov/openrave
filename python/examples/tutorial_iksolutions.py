@@ -106,7 +106,8 @@ def run(args=None):
         robot.SetActiveManipulator(options.manipname)
     newrobots = []
     for ind in range(options.maxnumber):
-        newrobot = env.ReadRobotXMLFile(robot.GetXMLFilename())
+        newrobot = RaveCreateRobot(env,robot.GetXMLId())
+        newrobot.Clone(robot,0)
         for link in newrobot.GetLinks():
             for geom in link.GetGeometries():
                 geom.SetTransparency(options.transparency)

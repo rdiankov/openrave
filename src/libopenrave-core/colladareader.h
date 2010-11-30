@@ -316,7 +316,9 @@ class ColladaReader : public daeErrorHandler
                 }
             }
         }
-        probot->__strxmlfilename = _filename;
+        if( probot->__strxmlfilename.size() == 0 ) {
+            probot->__strxmlfilename = _filename;
+        }
 
         // set the name
         if( probot->GetName().size() == 0 && !!ias->getName() ) {
@@ -413,7 +415,9 @@ class ColladaReader : public daeErrorHandler
                 pkinbody = RaveCreateKinBody(_penv,"");
             }
         }
-        pkinbody->__strxmlfilename = _filename;
+        if( pkinbody->__strxmlfilename.size() == 0 ) {
+            pkinbody->__strxmlfilename = _filename;
+        }
 
         // find matching visual node
         domNodeRef pvisualnode;
