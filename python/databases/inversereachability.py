@@ -623,8 +623,8 @@ class InverseReachabilityModel(OpenRAVEModel):
                 self.env.Remove(self.robot)
                 newrobots = []
                 for T,values in robotlocs:
-                    newrobot = self.env.ReadRobotXMLFile('robots/hrp2jsk08.robot.xml')#self.robot.GetXMLFilename())
-                    newrobot.SetName(self.robot.GetName())
+                    newrobot = RaveCreateRobot(self.robot.GetXMLId())
+                    newrobot.Clone(self.robot,0)
                     for link in newrobot.GetLinks():
                         for geom in link.GetGeometries():
                             geom.SetTransparency(transparency)
@@ -639,6 +639,66 @@ class InverseReachabilityModel(OpenRAVEModel):
                 self.env.Remove(newrobot)
             self.env.AddRobot(self.robot)
 
+    def show(self,options=None):
+        if len(self.env.GetViewer().GetXMLId()) == 0:
+            self.env.SetViewer('qtcoin')
+        maxnumber=20 if options is None else options.show_maxnumber
+        transparency=0.8 if options is None else options.show_transparency
+        with self.env:
+            newrobots = []
+            for ind in range(maxnumber):
+                newrobot = RaveCreateRobot(self.env,self.robot.GetXMLId())
+                newrobot.Clone(self.robot,0)
+                for link in newrobot.GetLinks():
+                    for geom in link.GetGeometries():
+                        geom.SetTransparency(transparency)
+                newrobots.append(newrobot)
+            lower,upper = [v[self.manip.GetArmIndices()] for v in self.robot.GetJointLimits()]
+        while True:
+            # find a random position
+            with self.robot:
+                while True:
+                    self.robot.SetJointValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
+                    if not self.robot.CheckSelfCollision():
+                        break
+                Tgrasp = self.manip.GetEndEffectorTransform()
+            with self.env:
+                densityfn,samplerfn,bounds = self.computeBaseDistribution(Tgrasp,logllthresh=1.0)
+                if densityfn is None:
+                    print 'no distribution exists'
+                    continue
+                goals = []
+                while len(goals) < maxnumber:
+                    poses,jointstate = samplerfn(1,1.0)
+                    for pose in poses:
+                        self.robot.SetTransform(matrixFromPose(pose))
+                        self.robot.SetJointValues(*jointstate)
+                        q = self.manip.FindIKSolution(Tgrasp,filteroptions=IkFilterOptions.CheckEnvCollisions)
+                        if q is not None:
+                            values = self.robot.GetDOFValues()
+                            values[self.manip.GetArmIndices()] = q
+                            goals.append((pose,values))
+                            if len(goals) >= maxnumber:
+                                break
+                        else:
+                            print 'failed to sample'
+            try:
+                h=self.env.plot3(Tgrasp[0:3,3],20.0)
+                with self.env:
+                    self.env.Remove(self.robot)
+                    for i in range(len(goals)):
+                        newrobot = newrobots[i]
+                        self.env.AddRobot(newrobot,True)
+                        newrobot.SetTransform(goals[i][0])
+                        newrobot.SetDOFValues(goals[i][1])
+                raw_input('press any key to continue')
+            finally:
+                h=None
+                for newrobot in newrobots:
+                    self.env.Remove(newrobot)
+                self.env.AddRobot(self.robot)
+
+
     @staticmethod
     def CreateOptionParser():
         parser = OpenRAVEModel.CreateOptionParser()
@@ -652,6 +712,10 @@ class InverseReachabilityModel(OpenRAVEModel):
                           help='Special id differentiating inversereachability models')
         parser.add_option('--jointvalues',action='store',type='string',dest='jointvalues',default=None,
                           help='String of joint values that connect the robot base link to the manipulator base link')
+        parser.add_option('--show_maxnumber',action='store',type='int',dest='show_maxnumber',default=20,
+                          help='Number of robots to show simultaneously (default=%default)')
+        parser.add_option('--show_transparency',action='store',type='float',dest='show_transparency',default=0.8,
+                          help='Transparency of the robots to show (default=%default)')
         return parser
     @staticmethod
     def RunFromParser(Model=None,parser=None,args=None,**kwargs):
