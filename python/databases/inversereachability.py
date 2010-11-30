@@ -64,7 +64,7 @@ else:
     from numpy import array
 
 from openravepy import pyANN
-from openravepy.databases import kinematicreachability, linkstatistics
+from openravepy.databases import kinematicreachability, linkstatistics, inversekinematics
 import numpy
 from optparse import OptionParser
 try:
@@ -78,6 +78,7 @@ class InverseReachabilityModel(OpenRAVEModel):
     def __init__(self,robot,id=None):
         OpenRAVEModel.__init__(self,robot=robot)
         self.rmodel = kinematicreachability.ReachabilityModel(robot=robot)
+        self.ikmodel = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
         self.equivalenceclasses = None
         self.rotweight = 0.2 # in-plane rotation weight with respect to xy offset
         self.id=id
@@ -92,6 +93,8 @@ class InverseReachabilityModel(OpenRAVEModel):
         return 3
     def load(self):
         try:
+            if not self.ikmodel.load():
+                self.ikmodel.autogenerate()
             params = OpenRAVEModel.load(self)
             if params is None:
                 return False
@@ -188,6 +191,8 @@ class InverseReachabilityModel(OpenRAVEModel):
                 Nminimum=10
             if not self.rmodel.load():
                 self.rmodel.autogenerate()
+            if not self.ikmodel.load():
+                self.ikmodel.autogenerate()
             print "Generating Inverse Reachability",heightthresh,quatthresh
             self.robot.SetJointValues(*self.necessaryjointstate())
             # get base of link manipulator with respect to base link
