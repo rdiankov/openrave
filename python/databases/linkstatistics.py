@@ -232,7 +232,7 @@ class LinkStatisticsModel(OpenRAVEModel):
             robotvolume = None
             for link,linkstat in izip(self.robot.GetLinks(),self.linkstats):
                 points = transformPoints(dot(linalg.inv(Trobot), link.GetTransform()),linkstat['volumepoints'])
-                if robotvolume is None:
+                if robotvolume is None or len(robotvolume) == 0:
                     robotvolume = points
                 else:
                     kdtree = pyANN.KDTree(robotvolume)
