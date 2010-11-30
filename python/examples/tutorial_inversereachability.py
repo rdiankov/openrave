@@ -318,9 +318,9 @@ from optparse import OptionParser
 from openravepy.databases import inversereachability,grasping
 
 class InverseReachabilityDemo:
-    def __init__(self,env):
-        self.env = env
-        self.robot = self.env.GetRobot('pr2')
+    def __init__(self,robot):
+        self.robot = robot
+        self.env = self.robot.GetEnv()
         self.manip = self.robot.GetActiveManipulator()
 
         # initialize robot pose
