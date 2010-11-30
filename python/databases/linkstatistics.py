@@ -353,7 +353,7 @@ class LinkStatisticsModel(OpenRAVEModel):
 
     def computeGeometryStatistics(self,hulls):
         if len(hulls) == 0:
-            return {'com':zeros(3),'inertia':zeros((3,3)),'volume':0,'volumepoints':zeros((3,0))}
+            return {'com':zeros(3),'inertia':zeros((3,3)),'volume':0,'volumepoints':zeros((0,3))}
         minpoint = numpy.min([numpy.min(vertices,axis=0) for vertices,indices in hulls],axis=0)
         maxpoint = numpy.max([numpy.max(vertices,axis=0) for vertices,indices in hulls],axis=0)
         hullplanes = self.computeHullPlanes(hulls)
