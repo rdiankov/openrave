@@ -500,7 +500,7 @@ def run(args=None):
         gripper_angle = .1
     
         # use inversereachability dabase to find the possible robot base poses for the grasp  
-        gr = InverseReachabilityDemo(env)
+        gr = InverseReachabilityDemo(robot)
         gr.showPossibleBasePoses(O_T_grasp,gripper_angle,10)
     
     finally:
