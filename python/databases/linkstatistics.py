@@ -285,17 +285,17 @@ class LinkStatisticsModel(OpenRAVEModel):
         angles = r_[arange(0,anglerange,angledelta),anglerange]
         numangles = len(angles)-1
         volumepoints_pow = [volumepoints]
-        maxbit = int(log2(numangles))
-        for i in range(maxbit):
-            kdtree = pyANN.KDTree(volumepoints_pow[-1])
-            R = rotationMatrixFromAxisAngle(axis,angles[2**i])
-            newpoints = dot(volumepoints_pow[-1],transpose(R))
-            # only choose points that do not have neighbors
-            neighs,dists,kball = kdtree.kFRSearchArray(newpoints,samplingdelta**2,0,samplingdelta*0.01)
-            volumepoints_pow.append(r_[volumepoints_pow[-1],newpoints[kball==0]])
-        # compute all points inside the swept volume
         sweptvolume = None
         if numangles > 0:
+            # compute all points inside the swept volume
+            maxbit = int(log2(numangles))
+            for i in range(maxbit):
+                kdtree = pyANN.KDTree(volumepoints_pow[-1])
+                R = rotationMatrixFromAxisAngle(axis,angles[2**i])
+                newpoints = dot(volumepoints_pow[-1],transpose(R))
+                # only choose points that do not have neighbors
+                neighs,dists,kball = kdtree.kFRSearchArray(newpoints,samplingdelta**2,0,samplingdelta*0.01)
+                volumepoints_pow.append(r_[volumepoints_pow[-1],newpoints[kball==0]])
             curangle = 0
             for i in range(maxbit+1):
                 if numangles&(1<<i):
