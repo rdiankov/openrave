@@ -54,7 +54,8 @@ In order to render the ik solutions, create a new robot for every solution and m
 
 .. code-block:: python
 
-  newrobot = env.ReadRobotXMLFile(robot.GetXMLFilename())
+  newrobot = RaveCreateRobot(env,robot.GetXMLId())
+  newrobot.Clone(robot,0)
   for link in newrobot.GetLinks():
       for geom in link.GetGeometries():
           geom.SetTransparency(transparency)

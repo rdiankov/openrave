@@ -271,7 +271,8 @@ Code fragment from `databases.inversereachability`
             newrobots = []
             for goal in goals:
                 Tgrasp,T,values = goal
-                newrobot = self.env.ReadRobotXMLFile(self.robot.GetXMLFilename())
+                newrobot = RaveCreateRobot(self.env,self.robot.GetXMLId())
+                newrobot.Clone(self.robot,0)
                 newrobot.SetName(self.robot.GetName())
                 for link in newrobot.GetLinks():
                     for geom in link.GetGeometries():
