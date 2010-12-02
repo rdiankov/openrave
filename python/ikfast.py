@@ -2114,6 +2114,9 @@ class IKFastSolver(AutoReloader):
         raise self.CannotSolveError('cannot solve equations %s'%str(raweqns))
 
     def solvePairVariables(self,raweqns,var0,var1):
+        # make sure both variables are hinges
+        if not self.IsHinge(var0.name) or not self.IsHinge(var1.name):
+            raise self.CannotSolveError('pairwise variables only supports hinge joints')
         cvar0 = Symbol('c%s'%var0.name)
         svar0 = Symbol('s%s'%var0.name)
         cvar1 = Symbol('c%s'%var1.name)

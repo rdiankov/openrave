@@ -32,6 +32,10 @@ using namespace std;
 #include <dom/domTypes.h>
 #include <dom/domElements.h>
 
+#include <locale>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/date_time/time_facet.hpp>
+
 class ColladaWriter : public daeErrorHandler
 {
  public:
@@ -110,10 +114,16 @@ class ColladaWriter : public daeErrorHandler
         //create the required asset tag
         domAssetRef asset = daeSafeCast<domAsset>( _dom->add( COLLADA_ELEMENT_ASSET ) );
         {
-            //domAsset::domCreatedRef created = daeSafeCast<domAsset::domCreated>( asset->add( COLLADA_ELEMENT_CREATED ) );
-            //created->setValue("2009-04-06T17:01:00.891550");
-            //domAsset::domModifiedRef modified = daeSafeCast<domAsset::domModified>( asset->add( COLLADA_ELEMENT_MODIFIED ) );
-            //modified->setValue("2009-04-06T17:01:00.891550");
+            // facet becomes owned by locale, so no need to explicitly delete
+            boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%Y-%m-%dT%H:%M:%s");
+            std::stringstream ss;
+            ss.imbue(std::locale(ss.getloc(), facet));
+            ss << boost::posix_time::second_clock::local_time();
+
+            domAsset::domCreatedRef created = daeSafeCast<domAsset::domCreated>( asset->add( COLLADA_ELEMENT_CREATED ) );
+            created->setValue(ss.str().c_str());
+            domAsset::domModifiedRef modified = daeSafeCast<domAsset::domModified>( asset->add( COLLADA_ELEMENT_MODIFIED ) );
+            modified->setValue(ss.str().c_str());
 
             domAsset::domContributorRef contrib = daeSafeCast<domAsset::domContributor>( asset->add( COLLADA_TYPE_CONTRIBUTOR ) );
             domAsset::domContributor::domAuthoring_toolRef authoringtool = daeSafeCast<domAsset::domContributor::domAuthoring_tool>( contrib->add( COLLADA_ELEMENT_AUTHORING_TOOL ) );
