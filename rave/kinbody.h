@@ -480,7 +480,7 @@ public:
 
     /// \brief Helper class to save and restore the entire kinbody state.
     ///
-    /// Options can be passed to the constructor in order to choose which parameters to save (see SaveParameters)
+    /// Options can be passed to the constructor in order to choose which parameters to save (see \ref SaveParameters)
     class RAVE_API KinBodyStateSaver
     {
     public:
@@ -760,9 +760,11 @@ public:
         AO_ActiveDOFs = 2, ///< return only link pairs that have an active in its path
     };
 
-    /// \return all possible link pairs that could get in collision
+    /// \brief return all possible link pairs that could get in collision.
+    /// \param adjacentoptions a bitmask of \ref AdjacentOptions values
     virtual const std::set<int>& GetNonAdjacentLinks(int adjacentoptions=0) const;
-    /// \return all possible link pairs whose collisions are ignored.
+
+    /// \brief return all possible link pairs whose collisions are ignored.
     virtual const std::set<int>& GetAdjacentLinks() const;
     
     virtual UserDataPtr GetPhysicsData() const { return _pPhysicsData; }
@@ -787,7 +789,7 @@ public:
     /// registered callbacks are called to update the users of the changes. Note that the callbacks will
     /// block the thread that made the parameter change.
     /// \param callback 
-    /// \param properties a mask of the set of properties that the callback should be called for when they change
+    /// \param properties a mask of the \ref KinBodyProperty values that the callback should be called for when they change
     virtual boost::shared_ptr<void> RegisterChangeCallback(int properties, const boost::function<void()>& callback);
 
     virtual void serialize(std::ostream& o, int options) const;

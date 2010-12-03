@@ -2815,8 +2815,8 @@ char KinBody::DoesAffect(int jointindex, int linkindex ) const
 const std::set<int>& KinBody::GetNonAdjacentLinks(int adjacentoptions) const
 {
     CHECK_INTERNAL_COMPUTATION;
-    int requestedoptions = _nNonAdjacentLinkCache&adjacentoptions;
-    if( requestedoptions != adjacentoptions ) {
+    if( (_nNonAdjacentLinkCache&adjacentoptions) != adjacentoptions ) {
+        int requestedoptions = (~_nNonAdjacentLinkCache)&adjacentoptions;
         // find out what needs to computed
         if( requestedoptions & AO_Enabled ) {
             _setNonAdjacentLinks.at(AO_Enabled).clear();

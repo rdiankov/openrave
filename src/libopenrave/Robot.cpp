@@ -1667,8 +1667,8 @@ bool RobotBase::InitFromData(const std::string& data, const std::list<std::pair<
 const std::set<int>& RobotBase::GetNonAdjacentLinks(int adjacentoptions) const
 {
     CHECK_INTERNAL_COMPUTATION;
-    int requestedoptions = _nNonAdjacentLinkCache&adjacentoptions;
-    if( requestedoptions != adjacentoptions ) {
+    if( (_nNonAdjacentLinkCache&adjacentoptions) != adjacentoptions ) {
+        int requestedoptions = (~_nNonAdjacentLinkCache)&adjacentoptions;
         // find out what needs to computed
         boost::array<uint8_t,4> compute={{0,0,0,0}};
         if( requestedoptions & AO_Enabled ) {
@@ -1685,7 +1685,7 @@ const std::set<int>& RobotBase::GetNonAdjacentLinks(int adjacentoptions) const
                 }
             }
         }
-        if( requestedoptions & (AO_Enabled|AO_ActiveDOFs) ) {
+        if( requestedoptions & ~(AO_Enabled|AO_ActiveDOFs) ) {
             throw openrave_exception(str(boost::format("RobotBase::GetNonAdjacentLinks does not support adjacentoptions %d")%adjacentoptions),ORE_InvalidArguments);
         }
 
